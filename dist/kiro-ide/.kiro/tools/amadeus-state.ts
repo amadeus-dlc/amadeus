@@ -999,7 +999,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {

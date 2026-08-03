@@ -1,6 +1,14 @@
 # ビジネス概要
 
-## scope-grid 面間同期の業務境界（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## registry drift guard の業務境界（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+- **目的**: [Issue #2037](https://github.com/amadeus-dlc/amadeus/issues/2037) の文書バックフィルとは分離し、CLI が実際に受理する verb とエラー時の `Valid:` 一覧、および stage schema が受理するフィールド集合と参照文書の機械レジストリを双方向に照合する。今回の価値は「欠落した3 verb／複数 field を個別に直すこと」ではなく、次の追加時に同型 drift を CI で止める再発防止にある。
+- **現存する利用者影響**: `amadeus-state.ts` は 33 verb を dispatch する一方、未知 verb の診断は 30 verb しか列挙せず、`set-construction-iteration`、`archive`、`unarchive` を案内できない。stage field は実装が25件を受理するのに、権威ある仕様表は9件不足し、英日 Field reference は意図的に判断を要する9見出しだけを詳説する。このため「実装できるが発見・説明できない」契約が蓄積している。
+- **成功境界**: 実装由来の集合を正とし、CLI dispatch ↔ `Valid:`、schema accepted fields ↔ 英日文書の machine registry を多集合・cardinality・空抽出拒否つきで比較する。negative tamper で dispatch-only、phantom help、docs omission、empty extraction が実際に赤くなることを要求する。
+- **スコープ境界**: 生成済み harness 面を手編集せず `packages/framework` の正本と docs を直し、既存 `package.ts --check` / `promote:self:check` に投影整合を委ねる。Issue #2037 が求める文書本文の完全な補修、CLI UX 全体の再設計、stage schema の新フィールド追加は本 intent に含めない。
+- **次段の裁定**: Field reference の全25件を H3 化するのではなく、全25件の機械レジストリを冒頭に置き、判断を要する既存H3を維持する案を推奨する。`stage-definition.md` の欠落9件と `when` の「reserved」記述、`t62` の stale 前提を同じ intent で是正するかは Requirements Analysis で明文化する。
+
+## scope-grid 面間同期の業務境界（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: Issue #2033（クロスレビュー 2 名 CONFIRMED_WITH_REFINEMENTS 済み）の self-fix。利用者影響は「同じ scope を選んでも起動したハーネスによって実行ステージ列が変わる」こと — 2026-07-28 の self-feature lightening（4 ステージ SKIP 化）が `.claude` 1 面にしか着地せず、他 4 面は決定前の 18 ステージ路線のまま 4 か月運用された。公開契約の破壊的変更はなく、是正は決定済みの姿へ 4 面を揃える止血と、面間差分を検出する再発防止に閉じる。業務構造の変化は患部外（#2017 リネーム等）のみで、`architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 

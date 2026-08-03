@@ -1,6 +1,25 @@
 # 依存関係
 
-## scope-grid 面間同期の依存関係（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## registry drift guard の依存関係（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### 内部依存グラフ
+
+```text
+amadeus-state.ts source ──> verb extractors ──> pure comparator ──> unit guard
+stage-schema arrays ─────> readonly accepted export ─┐
+EN/JA docs registry ─────> docs extractor ──────────┼─> pure comparator ─> unit guard
+stage spec table ─────────> spec extractor（裁定時）┘
+source/docs changed paths ─> detect-ci-changes.sh ─────> guard execution
+core source ─> package.ts ─> 7 dist ─> promote-self ─> 5 root faces
+```
+
+- CLI比較は1ファイル内の2投影を読むだけで、handler実装や状態機械へ依存しない。`t250` / `t258` は対象verbの挙動証拠だがregistry guardのoracleにはしない。
+- stage比較は schema の既存 `REQUIRED_FIELDS` / `OPTIONAL_FIELDS` に依存する。新たな手書き25件配列をproduction正本として作ると同型driftを再生産するため避ける。
+- docs guardは英日2ファイルへの変更で必ず起動する必要がある。現在の `detect-ci-changes.sh` は `docs/**` だけでは `full=true` にしないため、test本体を追加するだけでは閉包しない。
+- authoritative specを比較対象へ含める場合、欠落9件とactive `when` の矛盾を先に是正しないとguard導入時点で意図どおり赤になる。これは欠陥の証明であり、waiveしてgreen化してはならない。
+- 外部依存追加は不要。Bun/TypeScript/既存test helperとMarkdown抽出で完結する。
+
+## scope-grid 面間同期の依存関係（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 外部依存の追加なし。内部依存は 3 本 — センサー正本 → 5 面コピー（byte-identical、`bun scripts/package.ts` + `bun run promote:self` で機械同期）、センサー manifest ⇔ 出力スキーマ、stage frontmatter（`code-generation.md:39-44`）→ センサー id（`t93.test.ts:106` / `t89.test.ts:366` が pin）。データ側の grid 5 面は互いに複製関係にあるが同期する機構が現状存在しない — それ自体が本 intent の患部。dist 同期面: センサー正本を触る場合は dist 7 面 + self-install 5 面のツールコピー再生成が PR に同梱される（grid データ自体は dist に `self-*` 行を持たないため対象外）。変更面が他の進行中 intent と交差する兆候は区間にない（患部 9 パスとも 0 コミット）。
 

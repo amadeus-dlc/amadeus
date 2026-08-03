@@ -1,0 +1,16 @@
+{
+  "electionId": "E-260803-CG-S13-Z0",
+  "kind": "learning-selection",
+  "question": "Code Generation の学習候補は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "新しいpracticeまたはsensorを永続化せず、承認ゲートへ進む"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

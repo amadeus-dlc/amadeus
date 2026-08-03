@@ -84,6 +84,40 @@ by hand; edit the YAML and recompile.
 The authoritative spec has a complete field table with types and constraints.
 This section adds narrative on the fields that need judgment calls.
 
+The following versioned registry is the machine-readable completeness surface.
+Its field names must match the schema; the narrative subsections below remain a
+deliberate subset.
+
+<!-- amadeus-stage-field-registry:v1:start -->
+| Field |
+| --- |
+| `slug` |
+| `phase` |
+| `execution` |
+| `condition` |
+| `lead_agent` |
+| `support_agents` |
+| `mode` |
+| `produces` |
+| `consumes` |
+| `requires_stage` |
+| `inputs` |
+| `outputs` |
+| `number` |
+| `name` |
+| `for_each` |
+| `workspace_requires` |
+| `optional_produces` |
+| `produces_kinds` |
+| `sensors` |
+| `scopes` |
+| `reviewer` |
+| `reviewer_max_iterations` |
+| `bundle` |
+| `when` |
+| `required_sections` |
+<!-- amadeus-stage-field-registry:v1:end -->
+
 ### `requires_stage`
 
 Encodes dependency edges. Two roles:
@@ -179,12 +213,11 @@ artifact Y is moot because Y's producer is SKIP in this scope." That's
 advisory, not blocking — the user has already opted into the
 truncation by picking the scope.
 
-**What v0.10.0 adds.** The reserved `when:` primitive (see "Reserved"
-section below) will let authors express richer predicates —
-`when: producer-in-plan`, `when: mode == brownfield`,
-`when: scope != poc`. Today's `required: true` + `conditional_on:
-brownfield|greenfield` pair covers the two dimensions v0.3.0 needs;
-`when:` generalises it.
+**Active `when:` support.** A stage may declare
+`when: {producer-in-plan: <artifact-slug>}` to make its applicability depend on
+the named artifact's producer being present in the plan. Other predicates are
+not part of the current schema. `consumes[].conditional_on` continues to cover
+the brownfield/greenfield split on individual consumes.
 
 ### `consumes[].conditional_on`
 
@@ -376,7 +409,6 @@ prevents future contributions from colliding with ad-hoc additions.
 
 | Key | Likely release | What it will do |
 |-----|----------------|-----------------|
-| `when` | v0.10.0 fitness compiler | Structured condition. Compiles `condition` prose into machine-enforceable logic. Supersedes `consumes[].conditional_on` and generalises today's scope-aware `consumes[].required` with richer predicates (`producer-in-plan`, `mode == brownfield`, `scope != poc`) |
 | `on_failure` | v0.8.0 Ralph loop | Declarative error recovery — "if this stage fails, jump back to X" or "retry with adjusted inputs". Moves revision semantics out of `stage-protocol-recovery.md` prose |
 | `blocks_on` | v0.4.0 Construction (if surfaced) | Completion dependency without data read — splits today's overloaded `requires_stage` (which conflates "I consume your output" with "I run after you") |
 | `timeout` | v0.5.0 sensor binding | Execution budget (deadline). Homed in sensor bindings, not stage frontmatter |

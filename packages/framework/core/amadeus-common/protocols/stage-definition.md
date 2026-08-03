@@ -41,12 +41,16 @@ and completion messages.
 ## Authored fields
 
 Top-level authored fields (plus three `consumes[]` subfields). All required
-unless marked optional. The schema in `stage-schema.ts`
-copies this table verbatim.
+unless marked optional. The accepted-field collection exported by
+`stage-schema.ts` is the executable source; the registry drift guard keeps this
+complete table synchronized with it.
 
+<!-- amadeus-stage-field-registry:v1:start -->
 | Field | Type | Required | Enum / Constraint |
 |-------|------|----------|--------------------|
 | `slug` | string | yes | kebab-case; must match filename stem |
+| `number` | string | optional | `<digits>.<digits>` stage number |
+| `name` | string | optional | non-empty display name; defaults to the stage heading or title-cased slug |
 | `phase` | string | yes | `initialization` \| `ideation` \| `inception` \| `construction` \| `operation` (lowercase) |
 | `execution` | string | yes | `ALWAYS` \| `CONDITIONAL` |
 | `condition` | string | yes | free-form; describe always-on rationale for `ALWAYS`, branching condition for `CONDITIONAL` |
@@ -57,26 +61,34 @@ copies this table verbatim.
 | `workspace_requires` | boolean | optional | Default `false`. `true` marks a stage that must write source code to the workspace root, not just planning docs under the per-intent record dir. The stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/complete-workflow) then requires a file outside the `amadeus/` workspace tree and the harness dir before the stage can complete: a stage that wrote only its `produces[]` markdown but no code is refused. Today only `code-generation` declares it |
 | `produces` | string[] | yes | empty allowed; lowercase-kebab artifact names — see [Artifact Vocabulary](../../../../../docs/reference/16-artifact-vocabulary.md) for rules and the live registry tool |
 | `optional_produces` | string[] | optional | unique lowercase-kebab artifact names that a stage may omit for a unit; must be disjoint from `produces`. Excluded from per-unit completion coverage, but included in `directive.produces`, repeated as the conditional subset in `directive.optional_produces`, and included in the artifact registry, producer lookup, and required-sections template eligibility |
+| `produces_kinds` | object | optional | map from a `produces` or `optional_produces` artifact to a non-empty, duplicate-free list of supported Unit kinds |
 | `consumes` | object[] | yes | empty allowed; each entry `{artifact, required, conditional_on?}` |
 | `consumes[].artifact` | string | yes per entry | lowercase-kebab |
-| `consumes[].required` | boolean | yes per entry | Scoped to the active plan. `true` means "if the producing stage runs, this consume must be satisfied" — not a global assertion that the artifact always exists. Scopes that skip the producer (e.g., `fix` skipping `units-generation`) make the consume moot; the stage body handles graceful degradation. The reserved `when:` primitive will eventually let authors express richer predicates |
+| `consumes[].required` | boolean | yes per entry | Scoped to the active plan. `true` means "if the producing stage runs, this consume must be satisfied" — not a global assertion that the artifact always exists. Scopes that skip the producer (e.g., `fix` skipping `units-generation`) make the consume moot; the stage body handles graceful degradation |
 | `consumes[].conditional_on` | string | optional | `brownfield` \| `greenfield`. Omit for unconditional consumes — no `always` value |
 | `requires_stage` | string[] | yes | empty allowed; each entry a known stage slug. Two roles: (1) semantic data dependency; (2) presentation-order edge for stages with no semantic link but a fixed display order. Primary input to computed `display_order` |
+| `sensors` | string[] | optional | non-empty sensor IDs resolved from the sensor registry |
 | `scopes` | string[] | optional | each entry a scope name with a matching `{{HARNESS_DIR}}/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `amadeus-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
+| `reviewer` | string | optional | registered agent slug invoked for the post-stage review loop |
+| `reviewer_max_iterations` | positive integer | optional | review-loop cap; requires `reviewer` and defaults to `2` when omitted |
+| `bundle` | string | optional | non-empty bundle identifier |
+| `when` | object | optional | exactly `{producer-in-plan: <artifact-slug>}`; the stage is applicable only when the named producer is in the plan |
+| `required_sections` | string[] | optional | non-empty list of non-empty required output section names |
 | `inputs` | string | yes | human prose (preserves today's `**Inputs**:` line) |
 | `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` and `optional_produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`amadeus-docs/…` or `amadeus/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
+<!-- amadeus-stage-field-registry:v1:end -->
 
 ---
 
-## Computed fields (NOT authored)
+## Compiler-derived fields and defaults
 
-Two fields appear in `stage-graph.json` but are derived by the compile step,
-not authored in YAML.
+`display_order` is derived by the compile step and is not authored in YAML.
+`name` may be authored; when omitted, the compiler derives its display value.
 
 | Field | Derivation |
 |-------|------------|
 | `display_order` | `<phase-prefix>.<sequence>`. Phase prefix: `initialization=0`, `ideation=1`, `inception=2`, `construction=3`, `operation=4`. Sequence: topological sort of `requires_stage` edges filtered to this phase, slug-alphabetical tiebreak for parallel stages |
-| `name` | Title-case of the slug (hyphens → spaces), or the H1 heading of the stage file |
+| `name` | Authored `name`, otherwise the H1 heading or title-cased slug |
 
 ---
 
@@ -194,13 +206,12 @@ subgraphForScope, validateScope, artifactsRegistry; plus compile, compile
 
 ## Future extensions — reserved namespace
 
-Fields not active today but reserved by intent. No stage declares
-them; the schema rejects unknown keys. Naming them here prevents
+Fields not active today but reserved by intent. The schema rejects these
+keys. Naming them here prevents
 future contributor additions from colliding with planned primitives.
 
 | Key | Purpose |
 |-----|---------|
-| `when` | Structured replacement for prose `condition`. Supersedes `consumes[].conditional_on` and generalises the scope-aware semantics of `consumes[].required` with richer predicates (e.g. `producer-in-plan`, `mode == brownfield`) |
 | `on_failure` | Declarative error recovery (jump-back, retry-with-adjusted-inputs). Moves revision semantics out of `stage-protocol-recovery.md` prose |
 | `blocks_on` | Completion dependency without data read. Splits today's overloaded `requires_stage` (which conflates "I consume your output" with "I run after you") |
 | `timeout`, `retry` | Execution budgets. Homed in sensor bindings and loop config, not stage frontmatter (mirrors Claude Code's task-API design — no primitive-level retry/timeout) |

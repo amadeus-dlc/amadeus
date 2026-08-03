@@ -813,5 +813,12 @@
     "dirName": "260802-codex-duration-bounds",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc39a-516f-7b89-9fc6-97a1052a7855",
+    "slug": "registry-drift-guard",
+    "dirName": "260802-registry-drift-guard",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

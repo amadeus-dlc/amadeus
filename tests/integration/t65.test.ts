@@ -319,7 +319,7 @@ beforeAll(() => {
   const topoMatches = JSON.stringify(jsonOrder) === JSON.stringify(topoOrder);
 
   // Reserved-keys check.
-  const RESERVED = ["when", "on_failure", "blocks_on", "timeout", "retry"];
+  const RESERVED = ["on_failure", "blocks_on", "timeout", "retry"];
   const reservedHits: Aggregate["reservedHits"] = [];
   for (const p of parsed) {
     for (const k of RESERVED) {
@@ -509,9 +509,8 @@ describe("t65 shape guards (in-process)", () => {
     expect(agg.initNonEmpty).toEqual([]);
   });
 
-  // .sh #19: "no stage contains reserved keys (when, on_failure, blocks_on,
-  // timeout, retry)"
-  test("no stage contains reserved keys (when, on_failure, blocks_on, timeout, retry)", () => {
+  // .sh #19: "no stage contains reserved keys (on_failure, blocks_on, timeout, retry)"
+  test("no stage contains reserved keys (on_failure, blocks_on, timeout, retry)", () => {
     expect(agg.reservedHits).toEqual([]);
   });
 

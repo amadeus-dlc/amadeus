@@ -1,6 +1,15 @@
 # 技術スタック
 
-## scope-grid 面間同期の技術断面（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## registry drift guard の技術断面（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+- Runtime / package manager: Bun `1.3.13`。長寿命serviceやdatabaseはなく、短命CLIとして実行する。
+- Language / type system: TypeScript `6`、ESM、`tsc --noEmit`。抽出・比較helperはnode互換の文字列処理だけで実装でき、外部依存は不要。
+- Lint: Biome `2.5.5`（formatter無効）。既存近傍スタイルを維持する。
+- Test: Bun test、総テスト847本。対象既存suite `t209` / `t248` / `t62` / `t250` / `t258` は164 pass、316 assertions、0 failだがregistry一致は未検証。
+- Docs: Markdown + YAML frontmatter。machine registryは既存 `mirror-docs-contract` のmarker先例に合わせ、Markdown本文から決定的に抽出可能な表またはfenced blockとする。
+- Distribution: `scripts/package.ts` が7 distを生成し、promote-selfが5 root harness treeを同期する。正本変更後の生成整合は既存 `dist:check` / `promote:self:check` に委ねる。
+
+## scope-grid 面間同期の技術断面（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 技術スタックに変化なし。患部は Bun / TypeScript の既存ツール層と JSON データのみで、新規外部依存を要さない。区間の技術面の変化は患部外 — `#2017` の `amadeus-layered-config` → `amadeus-config` 全域リネーム（167 ファイル）、`#2012` の formal-model-check 全登録モデル対応、plugin compose 読取境界の fail-closed 化、fatal-latch 系 loud fail 徹底で、詳細は `architecture.md` 現在節と `re-scans/260802-scope-grid-face-sync.md` に委ねる。
 

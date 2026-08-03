@@ -1,6 +1,21 @@
 # API ドキュメント
 
-## scope-grid 面間同期が触れる内部契約（260802-scope-grid-face-sync、現在、observed `47574fbab`）
+## registry drift guard が対象とする契約（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### CLI 契約
+
+- 呼出形: `bun <harness>/tools/amadeus-state.ts <verb> [args]`。実 dispatch は33 verb。
+- 未知 verb のエラー契約: `Unknown subcommand: <value>. Valid: ...`。現在の `Valid:` は30 verbで、`set-construction-iteration`、`archive`、`unarchive` が欠ける。phantom verb はない。
+- drift guard の契約候補: dispatch集合と表示集合の missing/extra/duplicate/empty を分離して返し、エラーメッセージはどちら側の欠落かを示す。順序を公開契約として固定するかは Requirements Analysis で裁定する。
+
+### stage frontmatter 契約
+
+- accepted top-level fields は25件: `slug`, `phase`, `execution`, `condition`, `lead_agent`, `support_agents`, `mode`, `produces`, `consumes`, `requires_stage`, `inputs`, `outputs`, `number`, `name`, `for_each`, `workspace_requires`, `optional_produces`, `produces_kinds`, `sensors`, `scopes`, `reviewer`, `reviewer_max_iterations`, `bundle`, `when`, `required_sections`。
+- `emitStageFrontmatter` の `FIELD_ORDER` も同じ25件で、現時点の集合差分は0。
+- `when` は `{ "producer-in-plan": string }` として schema/parser/emitter が受理・検証する active field である。authoritative spec と英日 reference の「reserved」説明は実装契約と矛盾する。
+- docs machine registry は完全性検査用であり、既存の詳細H3を全項目へ増やす要求ではない。英日双方で同じ25件を保持することを契約候補とする。
+
+## scope-grid 面間同期が触れる内部契約（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 
 - 判断: 公開 CLI 契約の変更なし（`/amadeus --scope <name>` の語彙・引数は不変）。触れる内部契約は 2 点 — (1) センサー出力スキーマ: `Finding`（`amadeus-sensor-self-scope-consistency.ts:26-32`）の `reason` 列挙と manifest の `output_schema`（`sensors/amadeus-self-scope-consistency.md:12-20`）が対で、cell-mismatch 系 reason と stage / expected / actual フィールドの追加は両者同時改訂を要する。(2) `scope-grid.json` の flat スキーマ（top-level = scope 名、値 = stages マップ `<slug>` → `EXECUTE` / `SKIP`）自体は不変で、是正はセル値の書き換えに閉じる。詳細は `code-structure.md` 現在節の挿入点表を正本とする。
 
