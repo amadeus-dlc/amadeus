@@ -249,8 +249,18 @@ function applyRuntimeEvent(
         lastCompletedInvocationId: event.invocationId,
         awaitingHumanReason: null,
       };
-    case "LOOP_ROUTE_APPLIED":
-      return { ...projection, lastRouteId: event.routeId };
+    case "LOOP_ROUTE_APPLIED": {
+      if (event.targetEvent === null) return { ...projection, lastRouteId: event.routeId };
+      const cycleIndex = monitor.cycle.indexOf(event.targetEvent);
+      return {
+        ...projection,
+        lastRouteId: event.routeId,
+        lastSemanticEventId: event.targetEvent,
+        matchedPrefix: cycleIndex < 0 ? 0 : cycleIndex + 1,
+        cycleCount: 0,
+        epoch: projection.epoch + 1,
+      };
+    }
     case "LOOP_LATCH_SET":
       return { ...projection, latch: event.latch, pendingJudge: null };
     case "LOOP_LATCH_CLEARED":
@@ -325,7 +335,7 @@ function judgeRequest(
     judgeInstructionId: monitor.judgeInstruction.id,
     evidenceFingerprint: reservation.evidenceFingerprint,
     routeConstraintFingerprint: reservation.constraintFingerprint,
-    allowedRouteIds: [...monitor.routeConstraint.routeIds],
+    allowedRouteIds: [...reservation.routeConstraint.routeIds],
     trace: { ...reservation.trace },
   };
 }
@@ -343,6 +353,7 @@ function matchingJudgeResult(
     result.evidenceFingerprint === reservation.evidenceFingerprint &&
     result.constraintFingerprint === reservation.constraintFingerprint &&
     tracesEqual(result.trace, reservation.trace) &&
+    reservation.routeConstraint.routeIds.includes(result.routeId) &&
     routeById(monitor, result.routeId) !== null;
 }
 
