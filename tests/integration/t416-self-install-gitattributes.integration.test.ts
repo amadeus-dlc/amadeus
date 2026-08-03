@@ -54,10 +54,12 @@ describe("t416 generated gitignore semantics", () => {
         `${gitignoreExpectation(SELF_INSTALL_ALLOWLIST).join("\n")}\n`,
       );
       for (const path of [
+        ".agents/rules/amadeus-codex-suffix.md",
+        ".agents/rules/amadeus.md",
+        ".agents/rules/generated.md",
         ".claude/hooks/amadeus-dispatch.ts",
         ".claude/hooks/generated.ts",
         ".codex/config.toml",
-        ".agents/rules/amadeus.md",
       ]) {
         mkdirSync(join(fixture, path.slice(0, path.lastIndexOf("/"))), { recursive: true });
         writeFileSync(join(fixture, path), "fixture\n");
@@ -68,7 +70,9 @@ describe("t416 generated gitignore semantics", () => {
       expect(check(".claude/hooks/amadeus-dispatch.ts")).toBe(1);
       expect(check(".claude/hooks/generated.ts")).toBe(0);
       expect(check(".codex/config.toml")).toBe(1);
-      expect(check(".agents/rules/amadeus.md")).toBe(0);
+      expect(check(".agents/rules/amadeus-codex-suffix.md")).toBe(1);
+      expect(check(".agents/rules/amadeus.md")).toBe(1);
+      expect(check(".agents/rules/generated.md")).toBe(0);
     } finally {
       rmSync(fixture, { recursive: true, force: true });
     }

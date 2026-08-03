@@ -1,5 +1,7 @@
 # Generated harness projections are ignored by Git. Keep the tracked
 # project-local bootstrap and configuration allowlist visible for review.
+.agents/rules/amadeus-codex-suffix.md -linguist-generated
+.agents/rules/amadeus.md -linguist-generated
 .claude/CLAUDE.md -linguist-generated
 .claude/hooks/amadeus-dispatch.ts -linguist-generated
 .claude/settings.json -linguist-generated

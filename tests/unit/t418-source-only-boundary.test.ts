@@ -20,6 +20,8 @@ describe("t418 source-only generated path policy", () => {
 
   test("excludes exact tracked allowlist entries and classifies preserved runtime as untracked", () => {
     for (const path of [
+      ".agents/rules/amadeus-codex-suffix.md",
+      ".agents/rules/amadeus.md",
       ".claude/settings.json",
       ".claude/hooks/amadeus-dispatch.ts",
       ".codex/config.toml",

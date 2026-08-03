@@ -20,6 +20,8 @@ function withTrackedPath(path: string, depth: 1 | 2 = 1): SelfInstallAllowlist {
 describe("t416 self-install allowlist canonical catalog", () => {
   test("classifies the measured tracked, runtime-preserved, and per-user entries", () => {
     expect(SELF_INSTALL_ALLOWLIST.tracked).toEqual([
+      { path: ".agents/rules/amadeus-codex-suffix.md", depth: 2 },
+      { path: ".agents/rules/amadeus.md", depth: 2 },
       { path: ".claude/CLAUDE.md", depth: 1 },
       { path: ".claude/settings.json", depth: 1 },
       { path: ".codex/config.toml", depth: 1 },
@@ -41,6 +43,8 @@ describe("t416 self-install allowlist canonical catalog", () => {
 describe("t416 gitattributes expectation", () => {
   test("derives tracked review exceptions plus the historical Codex hooks exception", () => {
     expect(gitattributesExpectation(SELF_INSTALL_ALLOWLIST)).toEqual([
+      ".agents/rules/amadeus-codex-suffix.md -linguist-generated",
+      ".agents/rules/amadeus.md -linguist-generated",
       ".claude/CLAUDE.md -linguist-generated",
       ".claude/hooks/amadeus-dispatch.ts -linguist-generated",
       ".claude/settings.json -linguist-generated",
@@ -56,6 +60,9 @@ describe("t416 gitignore expectation", () => {
   test("derives generated faces, depth-one exceptions, and dispatcher parent re-inclusion", () => {
     expect(gitignoreExpectation(SELF_INSTALL_ALLOWLIST)).toEqual([
       "/.agents/**",
+      "!/.agents/rules/",
+      "!/.agents/rules/amadeus-codex-suffix.md",
+      "!/.agents/rules/amadeus.md",
       "/.claude/**",
       "!/.claude/CLAUDE.md",
       "!/.claude/hooks/",
@@ -75,6 +82,8 @@ describe("t416 gitignore expectation", () => {
 describe("t416 promote-self preserved compatibility view", () => {
   test("is the union of tracked paths and runtime-preserved paths", () => {
     expect(preserved(SELF_INSTALL_ALLOWLIST)).toEqual([
+      ".agents/rules/amadeus-codex-suffix.md",
+      ".agents/rules/amadeus.md",
       ".claude/CLAUDE.md",
       ".claude/settings.json",
       ".codex/config.toml",

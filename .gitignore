@@ -18,6 +18,9 @@ node_modules/
 # re-included below.
 /dist/**
 /.agents/**
+!/.agents/rules/
+!/.agents/rules/amadeus-codex-suffix.md
+!/.agents/rules/amadeus.md
 /.claude/**
 !/.claude/CLAUDE.md
 !/.claude/hooks/

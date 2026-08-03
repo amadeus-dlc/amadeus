@@ -92,6 +92,8 @@ function assertAllowlist(allowlist: SelfInstallAllowlist): void {
 
 export const SELF_INSTALL_ALLOWLIST: SelfInstallAllowlist = {
   tracked: [
+    { path: ".agents/rules/amadeus-codex-suffix.md", depth: 2 },
+    { path: ".agents/rules/amadeus.md", depth: 2 },
     { path: ".claude/CLAUDE.md", depth: 1 },
     { path: ".claude/settings.json", depth: 1 },
     { path: ".codex/config.toml", depth: 1 },

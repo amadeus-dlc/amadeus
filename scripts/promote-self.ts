@@ -567,10 +567,7 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   for (const [rel, want] of expected) {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) {
-      // The imported Codex suffix is an untracked self-install artifact: a
-      // clean checkout has no file until --apply runs. Existing bytes remain
-      // fail-closed through the normal comparison below.
-      if (rel !== CODEX_SUFFIX_REL) problems.push(`MISSING: ${rel}`);
+      problems.push(`MISSING: ${rel}`);
       continue;
     }
     const got = readFileSync(abs);
