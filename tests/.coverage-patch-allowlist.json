@@ -1795,6 +1795,12 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "5288-5290",
+    "reason": "The handleMerge call site for mergeScopedCheckboxProgress is reachable only through the spawned state CLI, so Bun does not attribute these three adapter rows to the parent LCOV report. The extracted merge decision is driven in-process by tests/integration/t-text-mutation-state-seams.integration.test.ts across winning, losing, and malformed-state paths; only the spawn-only result unpacking remains unmeasured.",
+    "expiry": "remove when handleMerge gains an in-process driver or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "4030",
     "reason": "Type-only continuation of the targeted rejection reservation/session pair. Bun attributes a zero-hit DA row to this erased annotation even though t365 executes the targeted branch and proves the verified session is reused through consume.",
     "expiry": "remove when Bun no longer emits coverage rows for erased multiline type annotations"
