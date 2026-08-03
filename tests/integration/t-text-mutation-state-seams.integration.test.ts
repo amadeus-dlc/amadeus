@@ -1,3 +1,4 @@
+// covers: function:skipStageContent, function:handleSkip, function:mergeScopedCheckboxProgress
 // size: medium
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -52,6 +53,7 @@ describe("state text mutation in-process seams", () => {
       "- [ ] functional-design — EXECUTE",
       "- [x] functional-design — EXECUTE",
     );
+    expect(advanced).not.toBe(content);
     const winner = mergeScopedCheckboxProgress(
       content,
       advanced,
@@ -73,6 +75,7 @@ describe("state text mutation in-process seams", () => {
     expect(loser.conflictResolution).toContain("functional-design:deferred-to:a-bolt");
 
     const missingUnit = advanced.replace("Per unit: widget-cart", "Per unit: missing-unit");
+    expect(missingUnit).not.toBe(advanced);
     expect(mergeScopedCheckboxProgress(
       content,
       missingUnit,

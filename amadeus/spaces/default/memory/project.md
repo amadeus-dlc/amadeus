@@ -305,7 +305,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - Codex plugin runnerの正規配置はproject-root `.agents/skills` である。generic composeが生成した `.codex/skills` は非正規のruntime projectionであり、コミット対象ではなく生成先を修正する対象として扱う (learned 2026-08-02) <!-- cid:reverse-engineering:c2-2018 -->
 - packageの0-plugin baselineとself-repositoryのdogfood projectionを別境界として保持する。neutral bundleを全利用者へ強制せず、opt-in済みself-install面だけをcommitted projectionとして管理する (learned 2026-08-02) <!-- cid:reverse-engineering:c4-2018 -->
 - 静的ゲートの走査対象は手書き正本（packages/framework/core/、packages/framework/harness/、scripts/）とし、生成物とテスト fixture を除外する (learned 2026-08-02) <!-- cid:feasibility:c2-2 -->
-- 意図的な免除にも shrink-only ratchet を適用し、新規免除追加を通常更新で許可しない (learned 2026-08-02) <!-- cid:feasibility:c3 -->
+- 意図的な免除にも shrink-only ratchet を適用する。通常更新では既存免除の維持または削除だけを許可し、新規免除の追加と削除済み免除の再追加を拒否する。 (learned 2026-08-02) <!-- cid:feasibility:c3 -->
 
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->

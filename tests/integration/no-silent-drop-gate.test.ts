@@ -153,7 +153,7 @@ function artifact(root: string, path: string, value: unknown): { path: string; d
 }
 
 function bootstrapRepository(): { root: string; baseRevision: string; artifactPaths: string[] } {
-  const root = mkdtempSync(join(REPO_ROOT, ".nsd-bootstrap-"));
+  const root = mkdtempSync(join(tmpdir(), "nsd-bootstrap-"));
   temporaryDirectories.push(root);
   for (const path of ["packages/framework/core", "packages/framework/harness", "scripts", "tests/no-silent-drop/bootstrap"]) {
     mkdirSync(join(root, path), { recursive: true });
@@ -604,9 +604,9 @@ describe("no-silent-drop AST rules", () => {
       source: "try { work(); } catch {}",
       candidates: [],
     }])).toThrow("structural/semantic candidate coverage mismatch");
-    expect(() => assertSafeRelativePath("/absolute/evidence.json")).toThrow("path escapes");
-    expect(() => assertSafeRelativePath("../escape.json")).toThrow("path escapes");
-    expect(() => assertSafeRelativePath("tests/evidence.json")).not.toThrow();
+    expect(() => assertSafeRelativePath("/absolute/evidence.json", REPO_ROOT)).toThrow("path escapes");
+    expect(() => assertSafeRelativePath("../escape.json", REPO_ROOT)).toThrow("path escapes");
+    expect(() => assertSafeRelativePath("tests/evidence.json", REPO_ROOT)).not.toThrow();
   });
 
   test("semantic contracts reject unresolved and malformed persistence or mutation helpers", () => {
@@ -1092,7 +1092,11 @@ describe("no-silent-drop boundaries", () => {
   });
 
   test("CLI writes one JSON document to stdout", () => {
-    const result = spawnSync("bun", ["run", "no-silent-drop"], { cwd: REPO_ROOT, encoding: "utf8" });
+    const result = spawnSync("bun", ["run", "no-silent-drop"], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
     expect(result.status).toBe(0);
     expect(result.stdout.trim().split("\n")).toHaveLength(1);
     expect(JSON.parse(result.stdout)).toEqual({

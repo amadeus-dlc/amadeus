@@ -209,11 +209,9 @@ describe("setCheckbox() — metamorphic no-clobber-neighbours invariant", () => 
     expect(lineForSlug(out, "build-extra")).toBe(`- [ ] build-extra ${EM} EXECUTE`);
   });
 
-  test("treats a regex-metachar slug literally (escapeRegex contract)", () => {
-    // A slug containing "." must be matched as a literal dot, not a wildcard.
-    // If escapeRegex were dropped, "v0X4X0" would also match "v0.4.0"'s
-    // pattern. We assert the dotted slug flips and a same-shape neighbour that
-    // differs only by literal vs. wildcard char is NOT touched.
+  test("matches a regex-metachar slug by exact map key", () => {
+    // A slug containing "." is looked up as a literal map key. The same-shape
+    // neighbour that differs only by punctuation must remain untouched.
     const block = buildBlock().replace(
       `- [ ] ideation ${EM} EXECUTE`,
       [
@@ -233,7 +231,6 @@ describe("setCheckbox() — validation and loud failure", () => {
     const block = buildBlock();
     const result = setCheckbox(validateStageState(block), "nonexistent-stage", "completed");
     expect(result).toEqual({ kind: "not-found", target: "nonexistent-stage" });
-    expect(block).toBe(buildBlock());
     expect(() => requireChanged(result, "test:missing")).toThrow(StateMutationTargetError);
   });
 

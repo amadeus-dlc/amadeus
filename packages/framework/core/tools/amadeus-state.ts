@@ -1398,6 +1398,7 @@ export function handleCheckbox(args: string[]): void {
     if (eqIdx <= 0) error(`Invalid slug=state pair: ${pair}`);
     const slug = pair.slice(0, eqIdx);
     const stateStr = pair.slice(eqIdx + 1);
+    if (!findStageBySlug(slug)) error(`Unknown stage: ${slug}`);
     if (!isCheckboxState(stateStr)) {
       error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
     }
@@ -2267,7 +2268,7 @@ export function handleFinalize(args: string[]): void {
   // 1. Mark completed
   content = requireChanged(
     setCheckbox(validateStageState(content), completedSlug, "completed"),
-    `complete-workflow:${completedSlug}`,
+    `finalize:${completedSlug}`,
   );
 
   // 2. Sync Completed counter to actual [x] count

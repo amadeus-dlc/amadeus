@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 582,
+    "total": 585,
     "enumeratedByClass": {
-      "function": 337,
+      "function": 340,
       "audit": 81,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 170,
+      "function": 173,
       "audit": 35,
       "scope": 10,
       "stage": 8,
@@ -1988,6 +1988,22 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:handleSkip",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-text-mutation-state-seams.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t48-audit-event-emitters.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:HARNESS_DIR_TO_TYPE",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2638,6 +2654,18 @@
         },
         {
           "file": "tests/unit/t397-composed-scope-drop-compose.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:mergeScopedCheckboxProgress",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-text-mutation-state-seams.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3819,6 +3847,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:skipStageContent",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-text-mutation-state-seams.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

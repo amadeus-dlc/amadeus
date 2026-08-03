@@ -5,6 +5,7 @@
 // with the other framework hooks (t132/t231/doctor). Any failure is a single
 // stderr warning and a zero exit so the session is never blocked
 // (BR-U2-4 fail-loud/continue).
+import { writeSync } from "node:fs";
 import { readHookStdin, resolveProjectDirFromHook } from "../tools/amadeus-lib.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import { handlePluginCli, pluginHostRootFromHook } from "../tools/amadeus-plugin.ts";
@@ -27,12 +28,13 @@ initProcessObservability(
 try {
   const code = handlePluginCli(["compose", "--if-stale", "--project-root", hostRoot]);
   if (code !== 0) {
-    console.error(
-      `amadeus-plugin: auto-compose failed for ${hostRoot} (non-blocking); run \`amadeus-plugin.ts compose --project-root ${hostRoot}\` to retry`,
+    writeSync(
+      2,
+      `amadeus-plugin: auto-compose failed for ${hostRoot} (non-blocking); run \`amadeus-plugin.ts compose --project-root ${hostRoot}\` to retry\n`,
     );
   }
 } catch (err) {
-  console.error(`amadeus-plugin: auto-compose error for ${hostRoot} (non-blocking): ${String(err)}`);
+  writeSync(2, `amadeus-plugin: auto-compose error for ${hostRoot} (non-blocking): ${String(err)}\n`);
   process.exit(0);
 }
 process.exit(0);

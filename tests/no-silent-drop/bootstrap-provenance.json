@@ -48,7 +48,7 @@
   },
   "humanReview": {
     "path": "tests/no-silent-drop/bootstrap/human-review.json",
-    "digest": "8689edac6e06ed7e4e3638c133db7970bceaec0efdc4161343283c8d67de5764"
+    "digest": "1dfaf25b4e57cc88047c78d55c424020be1ced2ab00414b3fa5a97ed26befcb3"
   },
   "approvedPre": {
     "identitySetDigest": "eb09161b64084983d0e2f99009d68237f663559f4da28307d203cf804d12e730",

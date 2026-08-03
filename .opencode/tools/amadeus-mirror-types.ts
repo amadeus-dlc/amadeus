@@ -224,7 +224,7 @@ export type WriteOutcome<T = MirrorStateSnapshot> =
   | {
       kind: "io-failure";
       summary: string;
-      phase?: "pre-commit" | "durability-unknown";
+      phase?: "durability-unknown";
     };
 
 export type MarkerOutcome =

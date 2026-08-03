@@ -132,7 +132,9 @@ export function findingFingerprint(
   return digest(["no-silent-drop:v1", ruleId, file, normalizeSnippet(snippet), String(ordinal)].join("\0"));
 }
 
-export function passResult(extra: Pick<GateResult & { status: "pass" }, "evidence" | "candidate"> = {}): GateResult {
+export function passResult(
+  extra: Pick<Extract<GateResult, { status: "pass" }>, "evidence" | "candidate"> = {},
+): GateResult {
   return { schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [], ...extra };
 }
 

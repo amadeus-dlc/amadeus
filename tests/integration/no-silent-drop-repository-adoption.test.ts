@@ -21,6 +21,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FULL_SHA = "0123456789abcdef0123456789abcdef01234567";
 const BOOTSTRAP_BASE_SHA = "47574fbabf274e11cb8e0b37bf35a0309a7b3d42";
 const temporaryDirectories: string[] = [];
+let closedRegistryTemplate: ReturnType<typeof emptyEvidenceRegistry> | undefined;
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
@@ -122,16 +123,20 @@ function evidenceFixture(): { root: string; registry: ReturnType<typeof emptyEvi
     `${JSON.stringify({ schemaVersion: 1, testedRevision: FULL_SHA, evidence }, null, 2)}\n`,
   );
 
-  let registry = emptyEvidenceRegistry(FULL_SHA);
-  for (const id of ADOPTION_RECEIPT_IDS) {
-    registry = closeEvidenceReceipt(registry, {
-      schemaVersion: 1,
-      id,
-      currentRevision: FULL_SHA,
-      evidenceDigest: evidenceDigestForReceipt(id, FULL_SHA, root),
-      pass: true,
-    }, root);
+  if (closedRegistryTemplate === undefined) {
+    let closed = emptyEvidenceRegistry(FULL_SHA);
+    for (const id of ADOPTION_RECEIPT_IDS) {
+      closed = closeEvidenceReceipt(closed, {
+        schemaVersion: 1,
+        id,
+        currentRevision: FULL_SHA,
+        evidenceDigest: evidenceDigestForReceipt(id, FULL_SHA, root),
+        pass: true,
+      }, root);
+    }
+    closedRegistryTemplate = closed;
   }
+  const registry = structuredClone(closedRegistryTemplate);
   writeFileSync(
     join(root, "tests", "no-silent-drop", "adoption-evidence.json"),
     `${JSON.stringify(registry, null, 2)}\n`,

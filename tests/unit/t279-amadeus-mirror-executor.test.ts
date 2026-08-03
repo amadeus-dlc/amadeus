@@ -291,7 +291,7 @@ describe("t279 applyTransition seam", () => {
       false,
       undefined,
       true,
-    )).toMatchObject({ kind: "failed", summary: "state compare-and-set conflict" });
+    )).toMatchObject({ kind: "failed", phase: "pre-commit", summary: "state compare-and-set conflict" });
     expect(applyTransition(
       sequencedStore([stateDocument(EMPTY_MIRROR_STATE)]),
       ctx,
@@ -301,7 +301,7 @@ describe("t279 applyTransition seam", () => {
       false,
       undefined,
       true,
-    )).toMatchObject({ kind: "failed", summary: "exclusive state claim was not written" });
+    )).toMatchObject({ kind: "failed", phase: "pre-commit", summary: "exclusive state claim was not written" });
   });
 
   test("conflict recovery reports invalid, unreadable, and repeatedly changing state", () => {

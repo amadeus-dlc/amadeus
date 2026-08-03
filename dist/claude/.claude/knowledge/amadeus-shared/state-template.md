@@ -52,42 +52,42 @@
 - [ ] state-init — EXECUTE
 
 ### IDEATION PHASE
-- [ ] intent-capture — [EXECUTE/SKIP: reason]
-- [ ] market-research — [EXECUTE/SKIP: reason]
-- [ ] feasibility — [EXECUTE/SKIP: reason]
-- [ ] scope-definition — [EXECUTE/SKIP: reason]
-- [ ] team-formation — [EXECUTE/SKIP: reason]
-- [ ] rough-mockups — [EXECUTE/SKIP: reason]
-- [ ] approval-handoff — [EXECUTE/SKIP: reason]
+- [ ] intent-capture — EXECUTE
+- [ ] market-research — EXECUTE
+- [ ] feasibility — EXECUTE
+- [ ] scope-definition — EXECUTE
+- [ ] team-formation — EXECUTE
+- [ ] rough-mockups — EXECUTE
+- [ ] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [ ] reverse-engineering — [EXECUTE/SKIP: reason]
-- [ ] practices-discovery — [EXECUTE/SKIP: reason]
-- [ ] requirements-analysis
-- [ ] user-stories — [EXECUTE/SKIP: reason]
-- [ ] refined-mockups — [EXECUTE/SKIP: reason]
-- [ ] application-design — [EXECUTE/SKIP: reason]
-- [ ] units-generation — [EXECUTE/SKIP: reason]
-- [ ] delivery-planning
+- [ ] reverse-engineering — EXECUTE
+- [ ] practices-discovery — EXECUTE
+- [ ] requirements-analysis — EXECUTE
+- [ ] user-stories — EXECUTE
+- [ ] refined-mockups — EXECUTE
+- [ ] application-design — EXECUTE
+- [ ] units-generation — EXECUTE
+- [ ] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [unit-name]
-- [ ] functional-design — [EXECUTE/SKIP: reason]
-- [ ] nfr-requirements — [EXECUTE/SKIP: reason]
-- [ ] nfr-design — [EXECUTE/SKIP: reason]
-- [ ] infrastructure-design — [EXECUTE/SKIP: reason]
-- [ ] code-generation
-- [ ] build-and-test
-- [ ] ci-pipeline — [EXECUTE/SKIP: reason]
+- [ ] functional-design — EXECUTE
+- [ ] nfr-requirements — EXECUTE
+- [ ] nfr-design — EXECUTE
+- [ ] infrastructure-design — EXECUTE
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
-- [ ] deployment-pipeline — [EXECUTE/SKIP: reason]
-- [ ] environment-provisioning — [EXECUTE/SKIP: reason]
-- [ ] deployment-execution — [EXECUTE/SKIP: reason]
-- [ ] observability-setup — [EXECUTE/SKIP: reason]
-- [ ] incident-response — [EXECUTE/SKIP: reason]
-- [ ] performance-validation — [EXECUTE/SKIP: reason]
-- [ ] feedback-optimization — [EXECUTE/SKIP: reason]
+- [ ] deployment-pipeline — EXECUTE
+- [ ] environment-provisioning — EXECUTE
+- [ ] deployment-execution — EXECUTE
+- [ ] observability-setup — EXECUTE
+- [ ] incident-response — EXECUTE
+- [ ] performance-validation — EXECUTE
+- [ ] feedback-optimization — EXECUTE
 
 ## Current Status
 - **Lifecycle Phase**: [INITIALIZATION/IDEATION/INCEPTION/CONSTRUCTION/OPERATION]

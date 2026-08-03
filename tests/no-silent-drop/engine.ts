@@ -255,18 +255,19 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
   if (mode === "census-evidence") return passResult({ evidence });
 
   if (mode === "check") {
+    if (baseline === null) throw new InfraFailure("BASELINE_MISSING", "baseline is required in check mode");
     const trustedSha = trustedBaseSha(options.baseRevision);
     if (trustedSha) {
       const previous = loadTrustedPreviousLedgers(
         repoRoot,
         trustedSha,
-        baseline as NonNullable<typeof baseline>,
+        baseline,
         exemptions,
       );
-      assertShrinkOnly(baseline as NonNullable<typeof baseline>, previous.baseline);
+      assertShrinkOnly(baseline, previous.baseline);
       assertExemptionsShrinkOnly(exemptions, previous.exemptions);
     }
-    const added = addedFindings(findings, baseline as NonNullable<typeof baseline>);
+    const added = addedFindings(findings, baseline);
     return added.length > 0 ? violationResult(added) : passResult();
   }
 

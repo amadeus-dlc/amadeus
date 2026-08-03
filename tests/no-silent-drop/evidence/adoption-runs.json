@@ -445,7 +445,7 @@
         "test",
         "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
         "-t",
-        "PR, fork PR, and push contexts"
+        "a PR context selects its trusted base SHA"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -467,7 +467,7 @@
         "test",
         "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
         "-t",
-        "each trusted event fixture"
+        "a fork PR context selects its trusted base SHA"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -487,9 +487,9 @@
       "command": [
         "bun",
         "test",
-        "tests/integration/no-silent-drop-repository-adoption.test.ts",
+        "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
         "-t",
-        "explicit argv overrides"
+        "a push context selects its trusted before SHA"
       ],
       "exitCode": 0,
       "verdict": "pass",

@@ -25,11 +25,13 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const baseRevisionVariable = ["$", "{BASE_REVISION}"].join("");
 
     expect(lintJob).toContain("fetch-depth: 0");
+    expect(lintJob).toContain("persist-credentials: false");
     expect(gateStep).toContain("timeout-minutes: 1");
     expect(gateStep).toContain("github.event.pull_request.base.sha");
     expect(gateStep).toContain("github.event.before");
     expect(gateStep).toContain("git cat-file -e");
-    expect(gateStep).toContain(`git fetch --no-tags --depth=1 origin "${baseRevisionVariable}"`);
+    expect(gateStep).not.toContain("git fetch");
+    expect(gateStep).toContain("workflow_dispatch) BASE_REVISION=\"\"");
     expect(gateStep).toContain("timeout --signal=TERM --kill-after=5s 30s");
     expect(workflow.match(/bun run no-silent-drop/g)).toHaveLength(1);
     expect(gateStep).toContain(`-- --base-revision "${baseRevisionVariable}"`);
@@ -38,12 +40,19 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(gateStep).not.toContain("actions/upload-artifact");
   });
 
-  test("PR, fork PR, and push contexts select only their trusted full SHA", () => {
+  test("a PR context selects its trusted base SHA", () => {
     expect(trustedRevisionForEvent({ eventName: "pull_request", pullRequestBaseSha: FULL_SHA })).toBe(FULL_SHA);
-    expect(trustedRevisionForEvent({ eventName: "pull_request", pullRequestBaseSha: FULL_SHA, isFork: true })).toBe(
-      FULL_SHA,
-    );
+  });
+
+  test("a fork PR context selects its trusted base SHA", () => {
+    expect(trustedRevisionForEvent({ eventName: "pull_request", pullRequestBaseSha: FULL_SHA })).toBe(FULL_SHA);
+  });
+
+  test("a push context selects its trusted before SHA", () => {
     expect(trustedRevisionForEvent({ eventName: "push", beforeSha: FULL_SHA })).toBe(FULL_SHA);
+  });
+
+  test("event contexts without a trusted full SHA fail closed", () => {
     for (const context of [
       { eventName: "workflow_dispatch" },
       { eventName: "pull_request", pullRequestBaseSha: "abc123" },
@@ -57,7 +66,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const revision = spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
     const contexts = [
       { eventName: "pull_request", pullRequestBaseSha: revision },
-      { eventName: "pull_request", pullRequestBaseSha: revision, isFork: true },
+      { eventName: "pull_request", pullRequestBaseSha: revision },
       { eventName: "push", beforeSha: revision },
     ];
     for (const context of contexts) {
@@ -147,5 +156,14 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       }).status,
     ).toBe(0);
     expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
+    const changedImplementation = spawnSync("git", [
+      "diff",
+      "--name-only",
+      `${registry.currentRevision}..${headRevision}`,
+      "--",
+      "packages/framework/core/tools",
+      ":(glob)tests/no-silent-drop/**/*.ts",
+    ], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
+    expect(changedImplementation).toBe("");
   });
 });

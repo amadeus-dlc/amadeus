@@ -107,11 +107,11 @@ function transact(original: string, requested: readonly Mutation[]): Transaction
     const result = target.dimension === "checkbox"
       ? setCheckbox(state, target.slug, "completed")
       : setStageSuffix(state, target.slug, "SKIP");
-    // Each production setter reparses once to verify its postcondition.
-    counters.parse += 1;
     if (result.kind === "not-found") {
       return { kind: "not-found", target: result.target, counters };
     }
+    // Each successful production setter reparses once to verify its postcondition.
+    counters.parse += 1;
     current = requireChanged(result, `perf:${target.dimension}`);
     counters.parse += 1;
     state = validateStageState(current);
@@ -221,7 +221,7 @@ describe("validated stage-text mutation performance", () => {
       cpuModel: cpus()[0]?.model ?? "unknown",
     };
     console.log(`TEXT_MUTATION_BENCHMARK ${JSON.stringify(benchmarkRecord)}`);
-    expect(elapsed.every((sample) => sample <= LATENCY_LIMIT_MS)).toBe(true);
+    expect(Math.max(...elapsed)).toBeLessThanOrEqual(LATENCY_LIMIT_MS);
     expect(rssDeltaMiB).toBeLessThanOrEqual(RSS_LIMIT_MIB);
   }, 120_000);
 });

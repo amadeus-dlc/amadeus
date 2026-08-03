@@ -313,8 +313,11 @@ function validateCurrentArtifactBindings(
   currentExemptions: ExemptionDoc,
   post: ReturnType<typeof validateEvidenceBundle>,
 ): void {
-  const baselineBytes = readFileSync(CANONICAL_PATHS.baseline(repoRoot), "utf8");
-  const exemptionsBytes = readFileSync(CANONICAL_PATHS.exemptions(repoRoot), "utf8");
+  const baselineBytes = readArtifact(repoRoot, provenance.candidate, "bootstrap.candidate");
+  const exemptionsBytes = readArtifact(repoRoot, {
+    path: EXEMPTIONS_PATH,
+    digest: provenance.initialExemptions.bytesDigest,
+  }, "bootstrap.initialExemptions");
   const currentIdentities = currentBaseline.entries.map((entry) => entry.fingerprint);
   const exemptionIdentities = currentExemptions.entries.map((entry) => entry.fingerprint);
 

@@ -54,7 +54,6 @@ type StateResult =
   | {
       kind: "ok";
       snapshot: MirrorStateSnapshot;
-      commit: "clean" | "outbox-pending";
     }
   | {
       kind: "failed";
@@ -146,7 +145,6 @@ export function applyTransition(
     return {
       kind: "ok",
       snapshot: result.value,
-      commit: result.value.auditOutbox ? "outbox-pending" : "clean",
     };
   }
   if (result.kind === "invalid") {
@@ -238,7 +236,7 @@ function prepareInvocation(
       localState,
       transition,
       operationId,
-      existing !== undefined,
+      existing !== null,
     ),
     operationId,
   };

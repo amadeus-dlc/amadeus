@@ -115,11 +115,7 @@ export function parseSource(ast: AstGrepModule, file: string, source: string): P
   }
   const errorNodes = nodes.filter((node) => node.kind() === "ERROR");
   if (errorNodes.length > 0) {
-    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
-    const syntaxErrors = (sourceFile as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] }).parseDiagnostics ?? [];
-    if (syntaxErrors.length > 0 || errorNodes.some((node) => /\b(?:catch|applyTransition)\b/.test(node.text()))) {
-      throw new InfraFailure("SCAN_PARTIAL", `${file}: source contains an unparseable candidate AST region`);
-    }
+    throw new InfraFailure("SCAN_PARTIAL", `${file}: source contains an unparseable candidate AST region`);
   }
   const candidates = nodes
     .filter((node) => node.kind() !== "program" && node.kind() !== "ERROR")
@@ -803,10 +799,15 @@ function semanticCandidates(
   return findings;
 }
 
+function isNsd003Function(node: ts.Node): node is ts.FunctionDeclaration & { name: ts.Identifier } {
+  return ts.isFunctionDeclaration(node) && node.body !== undefined && node.name !== undefined
+    && NSD003_FUNCTIONS.has(node.name.text);
+}
+
 function catalogImplementationNames(sourceFile: ts.SourceFile): string[] {
   const names: string[] = [];
   const visit = (node: ts.Node): void => {
-    if (ts.isFunctionDeclaration(node) && node.body && node.name && NSD003_FUNCTIONS.has(node.name.text)) {
+    if (isNsd003Function(node)) {
       names.push(node.name.text);
     }
     ts.forEachChild(node, visit);
@@ -834,7 +835,7 @@ function semanticCandidateForNode(
       exemptionReason: intentionalDropReason(sourceFile, node) ?? undefined,
     };
   }
-  if (!ts.isFunctionDeclaration(node) || !node.name || !NSD003_FUNCTIONS.has(node.name.text)) return null;
+  if (!isNsd003Function(node)) return null;
   if (!node.body) throw new InfraFailure("RULE_INVALID", `${node.name.text} has no analyzable implementation`);
   return nsd003Safe(node.name.text, node, checker)
     ? null
@@ -895,17 +896,13 @@ export function scanParsedSources(parsedSources: readonly ParsedSource[]): Seman
   return { findings, exemptionEligible };
 }
 
-export function findingsFromParsed(parsedSources: readonly ParsedSource[]): Finding[] {
-  return scanParsedSources(parsedSources).findings;
-}
-
 export function scanSourceForTest(file: string, source: string, repoRoot: string): Finding[] {
   const ast = loadVerifiedAstGrep(repoRoot);
-  return findingsFromParsed([parseSource(ast, file, source)]);
+  return scanParsedSources([parseSource(ast, file, source)]).findings;
 }
 
-export function assertSafeRelativePath(path: string): void {
-  if (isAbsolute(path) || relative(resolve("."), resolve(path)).startsWith("..")) {
+export function assertSafeRelativePath(path: string, repoRoot: string): void {
+  if (isAbsolute(path) || relative(repoRoot, resolve(repoRoot, path)).startsWith("..")) {
     throw new InfraFailure("BASELINE_INVALID", `path escapes the repository: ${path}`);
   }
 }

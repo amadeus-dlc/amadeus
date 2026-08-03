@@ -50,7 +50,6 @@ export type RevisionEventContext = {
   readonly eventName: string;
   readonly pullRequestBaseSha?: string;
   readonly beforeSha?: string;
-  readonly isFork?: boolean;
 };
 
 export function trustedRevisionForEvent(context: RevisionEventContext): string {

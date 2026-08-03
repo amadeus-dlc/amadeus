@@ -41,7 +41,7 @@ export interface ParseArgsIo {
   help(): never;
 }
 
-function testTimeoutMs(value: string, io: ParseArgsIo): number {
+function parseTestTimeoutMs(value: string, io: ParseArgsIo): number {
   if (!/^[1-9][0-9]*$/.test(value) || Number(value) > MAX_TEST_TIMEOUT_MS) {
     io.fail(
       `ERROR: --test-timeout-ms requires a positive integer at most ${MAX_TEST_TIMEOUT_MS} (got: '${value || "<missing>"}')\n`,
@@ -143,7 +143,7 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
       }
       case "--test-timeout-ms": {
         const value = argv[++i] ?? "";
-        out.testTimeoutMs = testTimeoutMs(value, io);
+      out.testTimeoutMs = parseTestTimeoutMs(value, io);
         break;
       }
       case "--help":

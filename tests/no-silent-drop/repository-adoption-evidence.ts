@@ -315,7 +315,12 @@ function readArtifactCollection(
   if (bytes === undefined) return undefined;
   const actualDigest = sha256(bytes);
   if (actualDigest !== artifact.sha256) problems.push(`artifact digest mismatch: ${artifact.path}`);
-  const parsed = readJson(absolutePath, problems);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    problems.push(`cannot parse JSON evidence ${artifact.path}: ${String(error)}`);
+  }
   if (!isRecord(parsed) || !hasExactKeys(parsed, COLLECTION_KEYS) || parsed.schemaVersion !== 1 ||
     !Array.isArray(parsed.runs)) {
     problems.push(`artifact collection schema is invalid: ${artifact.path}`);
