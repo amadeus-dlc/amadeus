@@ -869,5 +869,12 @@
     "dirName": "260803-harness-live-e2e",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc782-d6de-7a7c-b704-bfe10d0be118",
+    "slug": "state-integrity",
+    "dirName": "260803-state-integrity",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

@@ -1,6 +1,6 @@
 # コード品質評価
 
-## advisory 人間選択の品質所見（260803-advisory-human-choice、現在、observed `498c3034a`）
+## advisory 人間選択の品質所見（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された強み
 
@@ -27,6 +27,56 @@
 - directive発行前error、現行 `run-stage` と将来 `dispatch-subagent` の共通境界。
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
+
+## state integrity の品質所見（260803-state-integrity、現在、observed `6c15af23a`）
+
+本節の file:line はすべて observed `6c15af23a` 時点。実測手順・全数列挙・引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+### 実測された強み
+
+- **既定ノブでの audit lock は fail-CLOSED である。** 予算を使い切る競合下の decisive run は 41 成功 + 19 の loud な非ゼロ終了 = 60 で、無音損失ゼロ。相互排他は完全に保たれ、失われた作業はすべて `exit 1` として表面化した。`withAuditLock` は予算枯渇で `AuditLockAcquireError` を throw する（`amadeus-lib.ts:6520-6521`）。baseline run（既定・20 並行）も `FINAL=20 NONZERO_EXITS=0`。
+- **CAS steal は reap mutex と nonce rename で正しく直列化されている。** steal の勝者は 1 プロセスに限定される。欠陥は「誰が勝つか」ではなく「そもそも steal 入口を通すべきでない対象を通す」点にある。
+- **`withAuditLock` の per-identity depth counter が nested-append の自己 EEXIST を防いでいる。** これは `amadeus-audit.ts:429-433` で明示的に設計意図として記録された緩和であり、当該ケースでは有効に機能している。
+- **欠陥はコードベース自身が文書化している。** `amadeus-audit.ts:429-433` は分岐 B の帰結を "leaving the outer critical section running with no lock at all, silently" と verbatim で記す。未知の欠陥ではなく、既知だが一般ケースが未閉包の欠陥である。
+- **ロック機構は差分区間 49 コミットで論理不変。** `7c29e33f7` は checkbox/text-mutation 領域のみを変え、ロックコードは +237 行シフトしただけで byte 単位で不変（`git show … | grep '^@@'` が hunk header 1 件）。したがってレビュー verdict の file:line は observed SHA でそのまま有効である。
+- **`Completed` には既に共有書き手が存在する。** `rebuildDerivedPlanFields`（`amadeus-lib.ts:5781-5784`）は定義 E を単一箇所で導出し `handleRecompose` から消費されている。統一の受け皿はゼロから作る必要がない。
+- **no-silent-drop ゲートが `7c29e33f7` で新設された。** `setCheckbox` / `setStageSuffix` の戻り値が判別ユニオン化され、`requireChanged`（`:5660-5667`）の呼び出し点が 19 箇所に整備済み。今回の是正はこの新しい規律の上に載る。
+
+### 現存する欠陥・空白
+
+| 所見 | 実測 | リスク |
+| --- | --- | --- |
+| 分岐 B の CAS 後検証が構造的に不活性 | `stampMatches(dead, owner)`（`:6153-6154`）は同一 `pid + startedAtMs` を要求するが live holder は stamp を更新しない（`writeOwnerStamp` は `:6344` の 1 回のみ） | 守るべきケースを一切拒否できない。6/6 の run で 20 増分中 14–16 が無音消失、全プロセス exit 0。**S1-FATAL 相当** |
+| acquire の fail-open | `finalizeAuditLockAcquire:6345` — `writeOwnerStamp` 失敗でも `dead-or-over-age` なら `true` | stamp を永久に持たない live lock が生まれ、grace 経過後にタイミングの幸運なしで steal される。**唯一の決定的な分岐 A 経路** |
+| 分岐 A の CAS 後検証が入口述語の再評価 | `stampMatches(dead, null)`（`:6144-6152`）が `:6294` と同じ述語を見る | 独立検査として機能しない。ただし grace ノブ単独では 0/6 で実測到達せず、限界的 |
+| heartbeat 不在 | `owner.startedAtMs` は acquire 時刻のまま更新経路がない | 健全な長時間 holder と wedge した holder が観測上区別不能。over-age 判定の前提が成立しない |
+| ロック bucket の不整合 | `handleSet`/`handleCheckbox` は per-intent、`handlePark`/`handleUnpark` 他 8 サイトは同一 state file を workspace sentinel bucket で変更 | 1 ファイルに 2 つの mutex。env ノブ不要で成立する相互排他欠陥。**code-derived、未実測** |
+| ロックされていない state RMW 6 箇所 | `amadeus-jump.ts:370→627`、`amadeus-bolt.ts:872→889`/`927→954`、`amadeus-utility.ts:5162→5244`/`5561→5578`、`amadeus-lib.ts:5843→5888` | うち 3 箇所が `Completed` を書く。`amadeus-jump.ts` と `amadeus-bolt.ts` はロックプリミティブを import すらしていない |
+| `Completed` の三定義並存 | R（生カウント）／E（EXECUTE 実効）／G（graph 由来）が 9 書き手に分散 | 3 定義すべてが append-only の audit 行と CLI JSON へ到達する。監査記録が定義依存で不整合になる |
+| `Completed > Total Stages` が構造的に成立しうる | `rebuildDerivedPlanFields` は `Total Stages = executeStages.length`（`:5780`）、定義 R は SKIP 行の `[x]` も数える | `t394` が守ろうとする不変条件を定義 R の書き手が破りうる |
+| approve 検証器の自己参照 | `amadeus-state.ts:3377` が `getField(…,"Completed") !== String(countCheckboxes(…))` を評価 | **書き手と同じ定義で再計算するため乖離検出が構造的に不可能。repo `Forbidden` の検証劇場に該当**（自己参照比較で fail-closed を演じている） |
+| 定義の矛盾 pin | R は `tests/e2e/t52-*:118` と `t-tui-kiro-fix-scope.serial.test.ts:143`、E は `tests/integration/t394-*:126-144` | どの定義を選んでも既存テストが最低 1 本壊れる。実装判断ではなく仕様判断 |
+| 予算と grace の結合 | acquire 予算 5000 ms（`:6360-6361`）＝ `unstampedGraceMs()` 既定 5000 ms（`:6113`） | unstamped dir が合法的に steal 可能になる時刻が waiter の最終リトライと一致する脆い結合（機序ではなくタイミング一致） |
+
+### 最大の CI リスク — NSD001
+
+audit lock の実装はほぼ全体が `try { … } catch { /* comment */ }` の silent-continue で構成されている: `writeOwnerStamp:6013`、`readOwnerStamp:6060`、`removeLockDirIfOwned:6048`、`lockDirMtimeMs:6122`、`reapStaleLock` finally `:6210`、`acquireReapMutex:6241/:6250/:6258/:6263/:6269`、`reapStaleLockUnderMutex:6306/:6316/:6319/:6327`、`finalizeAuditLockAcquire:6350`、`acquireAuditLock:6372/:6380`。これらは現在 `tests/no-silent-drop/baseline.json`（217 エントリ、うち `amadeus-lib.ts` 35 / `amadeus-state.ts` 10）で grandfather されている。
+
+**#1906 のパッチがこれらの catch を編集すると再 fingerprint され、NSD001 が新規コードとして発火する**（`ci.yml:154`、`tests/no-silent-drop/ast-scan.ts:845-846`）。各 catch に承認済み failure terminal を残すか、同一 PR で根拠付きの baseline 更新を入れる方針を**実装前に**決める必要がある。別ゲート `bun tests/unchecked-cast-guard.ts --check`（`ci.yml:169`）も走る。加えて `resyncOneIntent` は `NSD003_FUNCTIONS`（`ast-scan.ts:16`）の追跡対象であり、その UNLOCKED RMW に手を入れる場合は戻り値の扱いも同時に満たす必要がある。
+
+### 推奨検証設計
+
+1. **分岐 B の落ちる実証を先に用意する。** `AMADEUS_LOCK_STALE_MS` を短縮し critical section を閾値超過させる並行ハーネスで、修正前に無音損失が実測されること（赤）と、修正後に損失ゼロまたは loud 失敗のみになること（緑）を対で固定する。既定ノブでの fail-closed 挙動（41+19=60）は退行検出のベースラインとして併せて pin する。
+2. **`:6345` の fail-open には、stamp 書込失敗を注入する決定的テストを置く。** 「mkdir 成功・stamp なし・holder 続行」という事後条件を再現し、waiter が critical section へ侵入しないことを assert する。注入面は `cid:code-generation:injection-surface-verify` に従いテストが実際に読む面へ行う。
+3. **`Completed` は定義裁定の確定後に単一関数へ集約する。** 裁定前の実装着手は禁止（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。集約後は `Completed <= Total Stages` を全書き手経路で成立する不変条件として assert し、矛盾 pin されたテストは裁定に沿って明示改訂する。
+4. **approve 検証器を正準定義へ接続し、乖離を注入して赤を実証する。** 自己参照のまま残すと `Forbidden` の検証劇場が温存される。書き手と読み手が別定義であることをテストで固定する。
+5. **bucket 統一を採る場合は、同一 state file への 2 経路（`handleSet --intent X` と `handlePark`）が同一 mutex を取ることを直接 assert する。** 現行 `t164` は現在の bucket 意味論を pin しているため、改訂の意図をテスト名とコメントで明示する。
+6. **UNLOCKED RMW をロックする場合は、`amadeus-jump.ts` / `amadeus-bolt.ts` へのロックプリミティブ導入が新規依存であることを設計に記録する。** 両ファイルは現在ロックを一切 import していない。
+7. 正本修正後は typecheck、lint、対象テスト、`test:ci`、`dist:check`、`promote:self:check` を実行する。生成物を直接編集しない。`packages/framework/core/` のコメントへ `scripts/<file>` トークンを持ち込まない（`t258-boundary-guard`）。
+
+品質上の最大リスクは、(i) ロックの fail-open を別の fail-open へ置き換えること、(ii) `Completed` の第 4 定義を作ってしまうこと、(iii) 検証器を自己参照のまま「修正済み」と扱うことである。いずれも受け入れ基準に落ちる実証を含めて閉じる。
 
 ## registry drift guard の品質所見（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 

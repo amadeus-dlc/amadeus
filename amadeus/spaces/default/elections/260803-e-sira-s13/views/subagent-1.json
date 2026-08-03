@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SIRA-S13",
+  "voter": "subagent-1",
+  "question": "260803-state-integrity / requirements-analysis ステージの §13 学習候補 c1-c7 のうち、memory 層へ persist する集合として conductor の提案を採用するか。候補の全文は配布ビューの選択肢説明に含まれる。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用集合を変更すべき",
+      "description": "c1 / c4 / c7 の一部を落とす、あるいは c2 / c3 / c5 / c6 のいずれかを採用へ回す。留保には具体的な増減と根拠(既存 cid との重複可否、規範としての一般化可能性、独立 cid にすべきか既存 cid への追補にすべきか)を必ず記す。とくに c1 が既存 cid:requirements-analysis:c3-260729-open-bug-batch および project.md の c5(既存実装の流儀で決まる事項はユーザーに問わない)と重複しないか、c4 がハーネス固有知識として persist に値するかを検討すること。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "提案どおり c1 / c4 / c7 を採用し、c2 / c3 / c5 / c6 を不採用とする",
+      "description": "【採用】c1 = クロスレビュー verdict が『統一先は仕様判断であり未裁定』と明言していても、Issue 本文が canonical(共有 writer rebuildDerivedPlanFields)を逐語で指名していれば未裁定ではなく、質問でなく執行として確定する。レビュアーの『未裁定』というメタ判断は一次証拠(Issue 本文)を上書きしない。既存 cid:requirements-analysis:c3-260729-open-bug-batch(Issue 本文の要求を質問票へ正本として固定)への追補面。ユーザー指摘(逐語『issueでわかることは質問するな』)が起点。/ c4 = Claude Code の Agent ツールは run_in_background: false を指定してもサブエージェントを非同期起動しうる。その場合ターンが終了して Stop hook が発火し cid:code-generation:conductor-sync-subagent-collection に違反する。回収手段はサブエージェント transcript(JSONL)のサイズ安定 + 最終行の role/type が assistant:text になることを有界ループで監視する前景待機。あわせて symlink に対する stat -f%z は空を返すため wc -c を使う(壊れた計装が待機ロジックを無効化した実測)。/ c7 = 上流成果物(RE 報告)の全称的断定(『いかなる統一も既存テストを最低1本は必ず壊す』)を、要件段で無検証のまま受け入れ基準へ昇格させない。成立条件を分解して未実測部分を特定し、受け入れ基準を検証可能な形(『赤になること』でなく『生カウント意味論をピン留めしたままにしないこと』+ 実装時の赤/緑記録)へ置き換える。【不採用】c2 = cid:requirements-analysis:always-elect が既決する『既決 contract への機械的適用は執行』の適用報告であり規範追加ではない。/ c3 = cid:requirements-analysis:no-election-judgment-gate の遵守記録。/ c5 = reviewer iteration 2 で scope を再実行せず invocationId を再利用した手続き逸脱。complete-review が exit 0 で受理し Review ブロックも正しく着地したため実害がなく、SKILL 本文が既に『repeat the whole reviewer flow』と規定している。/ c6 = 本 intent 固有のスコープ判断(前提 A-1)であり requirements.md に記録済みで一般化する規範を持たない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "0件(何も persist しない)",
+      "description": "7候補すべてが既存ノルムの適用報告・遵守記録・intent 固有判断に留まり、memory 層へ追加すべき新規知識はないと判断する。"
+    }
+  ]
+}

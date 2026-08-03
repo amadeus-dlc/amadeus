@@ -754,5 +754,17 @@
     "dirName": "260804-e-hle-bt13",
     "createdAt": "2026-08-04T00:41:43Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SIRE-S13",
+    "dirName": "260803-e-sire-s13",
+    "createdAt": "2026-08-03T12:34:35Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SIRA-S13",
+    "dirName": "260803-e-sira-s13",
+    "createdAt": "2026-08-03T13:31:04Z",
+    "status": "recorded"
   }
 ]
