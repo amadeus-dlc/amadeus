@@ -1,0 +1,64 @@
+{
+  "description": "Reads that claim a domain type for a JSON value taken off disk without proving it (#1980 FR-3a). Shrink-only: adding a cast fails CI. Regenerate with: bun tests/unchecked-cast-guard.ts --update",
+  "direction": "shrink-only",
+  "total": 36,
+  "sites": {
+    "packages/framework/core/otel/relay.ts": {
+      "json-parse-as": 3
+    },
+    "packages/framework/core/tools/amadeus-election-store.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-execution-projection.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-graph.ts": {
+      "json-parse-as": 3
+    },
+    "packages/framework/core/tools/amadeus-harness.ts": {
+      "json-parse-as": 3
+    },
+    "packages/framework/core/tools/amadeus-includes.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-lib.ts": {
+      "json-parse-as": 2
+    },
+    "packages/framework/core/tools/amadeus-migrate.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-orchestrate.ts": {
+      "json-parse-as": 2
+    },
+    "packages/framework/core/tools/amadeus-plugin-activation.ts": {
+      "json-parse-as": 2
+    },
+    "packages/framework/core/tools/amadeus-plugin-compose.ts": {
+      "json-parse-as": 4
+    },
+    "packages/framework/core/tools/amadeus-plugin-selection.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-plugin.ts": {
+      "json-parse-as": 1
+    },
+    "packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts": {
+      "json-parse-as": 1
+    },
+    "scripts/amadeus-election-migrate.ts": {
+      "json-parse-as": 2
+    },
+    "scripts/distribution-transaction.ts": {
+      "json-parse-as": 2
+    },
+    "scripts/metrics-snapshot.ts": {
+      "json-parse-as": 1
+    },
+    "scripts/plugin-projection.ts": {
+      "json-parse-as": 2
+    },
+    "scripts/promote-self.ts": {
+      "json-parse-as": 3
+    }
+  }
+}

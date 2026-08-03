@@ -2568,6 +2568,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t420-unchecked-cast-guard-cli.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }
