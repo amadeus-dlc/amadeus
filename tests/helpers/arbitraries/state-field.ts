@@ -1,15 +1,11 @@
-// Arbitraries for property-based tests over the state file's `- **Field**: value`
-// text layer (#1980, Bolt 2, unit state-pbt). The predicate for "this field
-// exists" lives in packages/framework/core/tools/amadeus-lib.ts (fieldExists,
-// backed by the fieldLineRegex that setField/setFieldStrict share) — this module
-// never restates it. Instead the two content generators satisfy their domain
-// CONSTRUCTIVELY: one always emits the field's line, the other never does, so
-// the properties need no fc.pre filter that would quietly shrink the run count.
+// Arbitraries for the state file's `- **Field**: value` text layer (#1980). The
+// "this field exists" predicate stays in amadeus-lib.ts (fieldExists) — this
+// module never restates it. The two content generators satisfy their domain
+// CONSTRUCTIVELY (one always emits the field's line, the other never does), so
+// the properties need no fc.pre filter that would shrink the run count.
 //
 // Field names deliberately include regex metacharacters: all three functions run
-// the name through escapeRegex, so a name like "Field.With*Meta" is legal and
-// exercises that escaping. Line terminators in names are excluded for the same
-// reason values exclude them (see fieldValueArb).
+// the name through escapeRegex, so those names are legal and exercise it.
 
 import fc from "fast-check";
 
@@ -30,10 +26,8 @@ const FIELD_NAMES = [
 
 const fieldNameArb: fc.Arbitrary<string> = fc.constantFrom(...FIELD_NAMES);
 
-// Surrounding noise: headings and OTHER field lines. Derived from the same name
-// pool with a suffix so a noise line can never be the target field's line —
-// `- **Current Stage Other**:` does not match the anchored `- **Current Stage**:`
-// matcher, which is exactly the near-miss the generator wants present.
+// Noise: headings and OTHER field lines, suffixed so a noise line can never be
+// the target's — `- **X Other**:` misses the anchored `- **X**:` matcher.
 const noiseLineArb: fc.Arbitrary<string> = fc.oneof(
   fc.constantFrom("# Amadeus State", "## Progress", "", "<!-- comment -->"),
   fieldNameArb.map((name) => `- **${name} Other**: noise`),
@@ -44,7 +38,7 @@ const noiseBlockArb: fc.Arbitrary<string[]> = fc.array(noiseLineArb, { maxLength
 // The value already sitting on the field line before the property overwrites it.
 const initialValueArb: fc.Arbitrary<string> = fc.constantFrom("", "old", "pending", "  spaced  ");
 
-// A content that CONTAINS the field's line, wrapped in noise on both sides.
+// Contains the field's line, wrapped in noise on both sides.
 export const stateContentWithFieldArb: fc.Arbitrary<{ content: string; field: string }> = fc
   .tuple(fieldNameArb, noiseBlockArb, noiseBlockArb, initialValueArb)
   .map(([field, before, after, initial]) => ({
@@ -52,10 +46,8 @@ export const stateContentWithFieldArb: fc.Arbitrary<{ content: string; field: st
     field,
   }));
 
-// A content that OMITS the field's line. Near-miss lines (the name with a prefix
-// or a suffix inside the bold markers) are included on purpose: they must not be
-// mistaken for the field, so this generator also guards against a loosened
-// matcher.
+// Omits the field's line. The near-miss lines are deliberate: they must not be
+// mistaken for the field, so this also guards against a loosened matcher.
 export const stateContentWithoutFieldArb: fc.Arbitrary<{ content: string; field: string }> = fc
   .tuple(fieldNameArb, noiseBlockArb, noiseBlockArb)
   .map(([field, before, after]) => ({
@@ -70,16 +62,13 @@ export const stateContentWithoutFieldArb: fc.Arbitrary<{ content: string; field:
     field,
   }));
 
-// Values that survive the write⇔read round-trip. Two exclusions, both measured
-// against the implementation rather than assumed:
-//   - the four JS line terminators (LF, CR, U+2028, U+2029), which `.` never
-//     matches and which the m-flag `$` anchors before, so the tail is unreadable;
-//   - `$`, because setField writes via String.prototype.replace, where $&, $`,
-//     $', $n and $$ expand into something other than the value.
-// Excluding `$` outright is stronger than strictly necessary ("$x" is harmless)
-// and keeps the predicate a single-character test. Everything else stays in:
-// the empty string, leading/trailing whitespace, tabs and non-ASCII all remain
-// reachable so the property does not hollow out.
+// Values that survive the round-trip. Two exclusions, both measured against the
+// implementation: the four JS line terminators (`.` never matches them and the
+// m-flag `$` anchors before them, so the tail is unreadable), and `$` (setField
+// writes via String.prototype.replace, where $&, $`, $', $n and $$ expand into
+// something other than the value). Excluding `$` outright is stronger than
+// necessary but keeps the predicate a single-character test. Everything else
+// stays: empty string, surrounding whitespace, tabs and non-ASCII.
 const EXCLUDED_FROM_VALUES = /[\n\r\u2028\u2029$]/g;
 
 const valueBodyArb: fc.Arbitrary<string> = fc
@@ -88,9 +77,8 @@ const valueBodyArb: fc.Arbitrary<string> = fc
 
 const padArb: fc.Arbitrary<string> = fc.constantFrom("", " ", "  ", "\t", " \t ");
 
-// The empty and whitespace-only cases are drawn explicitly rather than left to
-// the body generator: they are the boundary getField's trim collapses to "", and
-// sampling showed the composed generator reaches them too rarely to rely on.
+// Empty and whitespace-only drawn explicitly: they are the boundary trim
+// collapses to "", and sampling showed the composed generator rarely reaches them.
 export const fieldValueArb: fc.Arbitrary<string> = fc.oneof(
   { arbitrary: fc.constantFrom("", " ", "   ", "\t"), weight: 1 },
   {
