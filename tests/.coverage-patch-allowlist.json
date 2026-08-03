@@ -85,13 +85,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
-    "lines": "476-477",
+    "lines": "494-495",
     "reason": "Defensive readdirSync catch after mkdirSync(root, {recursive:true}) already succeeded. Normal I/O creation failures are covered; reaching this second guard requires a permission or filesystem race between mkdir and readdir.",
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-mkdir readdir failure"
   },
   {
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
-    "lines": "491",
+    "lines": "509",
     "reason": "Defensive election-directory mkdirSync catch after the registry append has committed and after the same root was created and read successfully. Normal root creation, registry-write, and store-write I/O failures are covered; reaching this row requires a permission or filesystem race between the registry append and the directory mkdir.",
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-registry directory creation failure"
   },
