@@ -36,14 +36,17 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
-  test("untracked distribution and absent Kiro root faces do not request drift checks", () => {
-    expect(
-      detectChanges([
-        "dist/claude/.claude/tools/generated.ts",
-        ".kiro/tools/generated.ts",
-        ".kiro-ide/tools/generated.ts",
-      ]),
-    ).toEqual({ full: "false", drift: "false", coverage: "false" });
+  test("untracked distribution changes request the source-only drift guard", () => {
+    expect(detectChanges(["dist/claude/.claude/tools/generated.ts"])).toEqual({
+      full: "false",
+      drift: "true",
+      coverage: "false",
+    });
+  });
+
+  test("absent Kiro root faces do not request drift checks", () => {
+    expect(detectChanges([".kiro/tools/generated.ts", ".kiro-ide/tools/generated.ts"]))
+      .toEqual({ full: "false", drift: "false", coverage: "false" });
     expect(detectChanges([".codex/config.toml"])).toMatchObject({ drift: "true" });
   });
 

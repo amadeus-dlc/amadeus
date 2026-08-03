@@ -7,7 +7,11 @@ coverage=false
 
 while IFS= read -r -d '' path; do
   case "${path}" in
-    dist/*|.kiro/*|.kiro-ide/*)
+    dist/*)
+      drift=true
+      continue
+      ;;
+    .kiro/*|.kiro-ide/*)
       continue
       ;;
   esac
