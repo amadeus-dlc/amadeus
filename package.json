@@ -9,9 +9,8 @@
   "scripts": {
     "build": "bun run dist && bun run promote:self",
     "dist": "bun scripts/package.ts",
-    "dist:check": "bun scripts/package.ts --check",
     "promote:self": "bun scripts/promote-self.ts --apply",
-    "promote:self:check": "bun scripts/promote-self.ts --check",
+    "source-only:check": "bun scripts/source-only-boundary.ts",
     "distribution:check": "bun scripts/mirror-distribution-check.ts && bun scripts/mirror-docs-contract.ts && bun scripts/scan-public-projections.ts",
     "distribution:recover": "bun scripts/distribution-transaction.ts recover",
     "distribution:benchmark": "bun scripts/mirror-distribution-benchmark.ts",

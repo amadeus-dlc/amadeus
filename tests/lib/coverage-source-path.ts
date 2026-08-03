@@ -43,7 +43,7 @@ export function normalizeCoverageSourcePath(
       const relativeToTemp = pathUnderRoot(normalizedPath, tempRoot, context.repoRoot);
       if (relativeToTemp === null) continue;
       const packagedHarness = relativeToTemp.match(
-        /^amadeus-pkg-(kiro-ide|claude|codex|kiro|cursor|opencode)-[A-Za-z0-9]+\/(\.claude|\.codex|\.kiro|\.cursor|\.opencode)\/(.+)$/,
+        /^amadeus-(?:pkg|candidate)-(kiro-ide|claude|codex|kiro|cursor|opencode)-[A-Za-z0-9]+\/(\.claude|\.codex|\.kiro|\.cursor|\.opencode)\/(.+)$/,
       );
       if (!packagedHarness) continue;
       const [, harness, harnessDir, source] = packagedHarness;

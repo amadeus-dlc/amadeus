@@ -25,7 +25,7 @@ scope メタ: `--scope book` 明示のみ(keywords なし)、depth=Standard。
 book-pack/scripts/apply-pack.sh <workspace-root>   # <workspace-root>/.claude が対象
 ```
 
-処理内容: 新規/fork ステージと agent・scope のコピー → 流用6ステージの `scopes:` に book を追記 → stage-graph.json の番号事前ピン(application-design を 2.9 へ退避し book-structure-design を 2.6 に挿入 — compile のエラーメッセージが公認する renumber 手段)→ `amadeus-graph.ts compile`。冪等。
+Steps: copy the new and forked stages, agents, and scope metadata → add `book` to the `scopes:` frontmatter of the six reused stages → pre-pin stage numbers in the source-owned `stage-identities.json` (move application-design to 2.9 and insert book-structure-design at 2.6) → run `amadeus-graph.ts compile`. The operation is idempotent.
 
 ## 検証
 

@@ -152,11 +152,11 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "kimi"],
     ]);
     expect(packageFreshnessArgs("check")).toEqual([
-      ["scripts/package.ts", "claude", "--check"],
-      ["scripts/package.ts", "codex", "--check"],
-      ["scripts/package.ts", "cursor", "--check"],
-      ["scripts/package.ts", "opencode", "--check"],
-      ["scripts/package.ts", "kimi", "--check"],
+      ["scripts/package.ts", "claude"],
+      ["scripts/package.ts", "codex"],
+      ["scripts/package.ts", "cursor"],
+      ["scripts/package.ts", "opencode"],
+      ["scripts/package.ts", "kimi"],
     ]);
   });
 

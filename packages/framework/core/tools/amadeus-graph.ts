@@ -20,7 +20,8 @@
 //     gate runtime iteration today.
 //
 // Compile is the YAML -> JSON transform. Core stages bootstrap number + name
-// from today's stage-graph.json so their historical bytes remain stable.
+// from the source-owned stage-identities.json so a clean checkout can build
+// without a committed stage-graph.json.
 // Plugin stages may author either field in frontmatter; authored values take
 // precedence and are projected without changing the core-stage fallback.
 //
@@ -71,6 +72,7 @@ import {
   mustGet,
   mustPop,
   mustShift,
+  parseBoltDag,
   parseStageFrontmatter,
   planFilePath,
   resolveProjectDir,
@@ -212,6 +214,47 @@ function stagesDir(): string {
  *  that set/unset the env mid-process see the change. */
 function stageGraphPath(): string {
   return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
+}
+
+type StageIdentity = Pick<GraphStage, "slug" | "number" | "name">;
+
+function loadStageIdentities(): StageIdentity[] {
+  const path = join(DATA_DIR, "stage-identities.json");
+  const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+  if (!Array.isArray(parsed)) throw new Error(`Stage identities must be an array at ${path}`);
+  const identities: StageIdentity[] = [];
+  const slugs = new Set<string>();
+  for (const entry of parsed) {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      !("slug" in entry) ||
+      !("number" in entry) ||
+      !("name" in entry) ||
+      typeof entry.slug !== "string" ||
+      typeof entry.number !== "string" ||
+      typeof entry.name !== "string" ||
+      !/^\d+\.\d+$/.test(entry.number) ||
+      entry.name.length === 0
+    ) {
+      throw new Error(`Invalid stage identity in ${path}`);
+    }
+    if (slugs.has(entry.slug)) throw new Error(`Duplicate stage identity "${entry.slug}" in ${path}`);
+    slugs.add(entry.slug);
+    identities.push({ slug: entry.slug, number: entry.number, name: entry.name });
+  }
+  return identities;
+}
+
+function compileIdentitySeed(): StageIdentity[] {
+  if (process.env.AMADEUS_STAGE_GRAPH) return loadStageGraph();
+  const identities = loadStageIdentities();
+  if (!existsSync(stageGraphPath())) return identities;
+  const identitySlugs = new Set(identities.map((entry) => entry.slug));
+  const compiledOnly = loadStageGraph()
+    .filter((entry) => !identitySlugs.has(entry.slug))
+    .map(({ slug, number, name }) => ({ slug, number, name }));
+  return [...identities, ...compiledOnly];
 }
 
 // The relocated method ("memory") is harness-neutral and lives at the
@@ -2103,8 +2146,8 @@ function pluginsHostRoot(): string {
   return process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(dirname(stagesDir()));
 }
 
-/** Regenerate stage-graph.json from the 31 YAML stage files.
- *  Bootstraps absent number + name from the existing JSON while preserving
+/** Regenerate stage-graph.json from the stage definition files.
+ *  Bootstraps absent number + name from the source-owned identity seed while preserving
  *  optional authored plugin metadata. Asserts the
  *  edge-local invariant: every requires_stage edge points from a
  *  higher-numbered stage to a lower-numbered one. Also transposes each
@@ -2116,10 +2159,9 @@ export function compileStageGraph(): {
   gridJson: string;
   stages: GraphStage[];
 } {
-  // Harvest number + name mappings from existing JSON. A slug already in
-  // the JSON keeps its pinned number + name (the "computed not authored,
-  // stable thereafter" contract); a NEW slug is auto-seeded below.
-  const existing = loadStageGraph();
+  // Harvest number + name mappings from the source-owned identity seed. An
+  // explicit AMADEUS_STAGE_GRAPH fixture remains the test/plugin override.
+  const existing = compileIdentitySeed();
   const numberBySlug = new Map(existing.map((s) => [s.slug, s.number]));
   const nameBySlug = new Map(existing.map((s) => [s.slug, s.name]));
 
@@ -2494,45 +2536,81 @@ function buildGraphStage(
   return stage;
 }
 
-function runCompileCheck(): void {
-  const { json, gridJson } = compileStageGraph();
-  const graphOnDisk = readFileSync(stageGraphPath(), "utf-8");
-  if (json !== graphOnDisk) {
-    console.error(
-      "stage-graph.json is out of date. Run `bun amadeus-graph.ts compile` to regenerate."
-    );
-    process.exit(1);
+export type ScopeGridSurface = {
+  readonly path: string;
+  readonly json: string;
+};
+
+function canonicalGrid(json: string): string {
+  const parsed = JSON.parse(json) as ScopeGrid;
+  const sorted: ScopeGrid = {};
+  for (const key of Object.keys(parsed).sort()) sorted[key] = parsed[key];
+  return canonicalScopeGridJson(sorted);
+}
+
+export function graphCompileInvariantViolations(
+  gridJson: string,
+  surfaces: readonly ScopeGridSurface[],
+  parseDag: typeof parseBoltDag = parseBoltDag,
+): readonly string[] {
+  const violations: string[] = [];
+  const expectedGrid = canonicalGrid(gridJson);
+  for (const surface of surfaces) {
+    try {
+      if (canonicalGrid(surface.json) !== expectedGrid) {
+        violations.push(`(iii) scope grid differs at ${surface.path}`);
+      }
+    } catch (error) {
+      violations.push(`(iii) scope grid is invalid at ${surface.path}: ${errorMessage(error)}`);
+    }
   }
-  // The scope grid is the second compiled artifact (the transpose of every
-  // stage's scopes:). Same drift discipline as stage-graph.json — a stale
-  // grid (someone edited a stage's scopes: without recompiling) fails CI.
-  // Read the grid path lazily so a missing grid file reports the same way
-  // as a stale one rather than throwing an unhandled ENOENT. The on-disk
-  // bytes are re-emitted through the canonical emitter before comparing:
-  // the composer APPENDS its approved entry (insertion order, end of file)
-  // while the emitter sorts scope keys, so a purely positional difference
-  // must not read as drift — only a real content difference (a cell, a
-  // scope, a stage set) fails the check.
-  let gridOnDisk: string;
-  try {
-    gridOnDisk = readFileSync(scopeGridPath(), "utf-8");
-  } catch {
-    gridOnDisk = "";
+  const dagProbe = parseDag(
+    "```yaml\nunits:\n  - name: source\n    depends_on: []\n  - name: sink\n    depends_on: [source]\n```\n",
+  );
+  if (
+    !dagProbe.ok ||
+    dagProbe.units.length !== 2 ||
+    JSON.stringify(dagProbe.batches) !== JSON.stringify([["source"], ["sink"]])
+  ) {
+    violations.push("(iv) bolt_dag edge block no longer satisfies the parseBoltDag ok contract");
   }
-  try {
-    const parsed = JSON.parse(gridOnDisk) as ScopeGrid;
-    const sorted: ScopeGrid = {};
-    for (const k of Object.keys(parsed).sort()) sorted[k] = parsed[k];
-    gridOnDisk = canonicalScopeGridJson(sorted);
-  } catch {
-    /* unparseable/missing grid: compare the raw bytes (guaranteed drift) */
+  return violations;
+}
+
+export function discoverScopeGridSurfaces(projectDir: string): ScopeGridSurface[] {
+  const paths: string[] = [];
+  for (const entry of readdirSync(projectDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith(".")) continue;
+    const path = join(projectDir, entry.name, "tools", "data", "scope-grid.json");
+    if (existsSync(path)) paths.push(path);
   }
-  if (gridJson !== gridOnDisk) {
-    console.error(
-      "scope-grid.json is out of date. Run `bun amadeus-graph.ts compile` to regenerate."
-    );
-    process.exit(1);
+  const distDir = join(projectDir, "dist");
+  if (existsSync(distDir)) {
+    for (const harness of readdirSync(distDir, { withFileTypes: true })) {
+      if (!harness.isDirectory()) continue;
+      const harnessRoot = join(distDir, harness.name);
+      for (const face of readdirSync(harnessRoot, { withFileTypes: true })) {
+        if (!face.isDirectory() || !face.name.startsWith(".")) continue;
+        const path = join(harnessRoot, face.name, "tools", "data", "scope-grid.json");
+        if (existsSync(path)) paths.push(path);
+      }
+    }
   }
+  return paths
+    .sort()
+    .map((path) => ({ path: toPosix(relative(projectDir, path)), json: readFileSync(path, "utf-8") }));
+}
+
+export function runCompileCheck(projectDir: string = resolveProjectDir()): void {
+  const { gridJson } = compileStageGraph();
+  const violations = graphCompileInvariantViolations(
+    gridJson,
+    discoverScopeGridSurfaces(projectDir),
+  );
+  if (violations.length > 0) {
+    throw new Error(`compile invariant check failed:\n${violations.join("\n")}`);
+  }
+  console.log("compile invariant check: OK (i)-(v)");
 }
 
 // --- CLI ---
@@ -2784,7 +2862,7 @@ Common forms:
                                        (--strict rejects a starved required input;
                                        --keywords rejects keywords an existing scope claims)
   amadeus-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
-  amadeus-graph compile --check          CI drift guard (exit 1 on mismatch)
+  amadeus-graph compile --check          Validate source compilation invariants
   amadeus-graph resolve <name>           Emit .amadeus-plan.json for a scope (AMADEUS_GRAPH_RESOLVE=1)
   amadeus-graph export                   Emit designer-facing bundle (stdout)
   amadeus-graph export --check           CI drift guard against fixture

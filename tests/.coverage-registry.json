@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 582,
+    "total": 585,
     "enumeratedByClass": {
-      "function": 331,
+      "function": 334,
       "audit": 81,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 162,
+      "function": 164,
       "audit": 35,
       "scope": 15,
       "stage": 8,
@@ -1595,6 +1595,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:discoverScopeGridSurfaces",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t418-graph-compile-surfaces.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:discoverSiblingRepos",
       "minMechanism": "none",
       "coveredBy": [
@@ -1928,6 +1940,13 @@
     {
       "unitClass": "function",
       "unitId": "function:GRANT_ID_RE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:graphCompileInvariantViolations",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3614,6 +3633,18 @@
         {
           "file": "tests/integration/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:runCompileCheck",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t418-graph-compile-surfaces.integration.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

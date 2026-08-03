@@ -33,6 +33,17 @@ describe("t416 self-install gitattributes consistency", () => {
 });
 
 describe("t416 generated gitignore semantics", () => {
+  test("the repository source-only patterns match the canonical allowlist", () => {
+    const expected = ["/dist/**", ...gitignoreExpectation(SELF_INSTALL_ALLOWLIST)];
+    const generatedSurfacePattern =
+      /^!?\/(?:dist|\.agents|\.claude|\.codex|\.cursor|\.kimi-code|\.opencode)(?:\/|$)/;
+    const actual = readFileSync(join(REPO_ROOT, ".gitignore"), "utf-8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => generatedSurfacePattern.test(line));
+    expect(actual).toEqual(expected);
+  });
+
   test("re-includes the dispatcher hierarchy without exposing adjacent generated hooks", () => {
     mkdirSync(join(REPO_ROOT, "tmp"), { recursive: true });
     const fixture = mkdtempSync(join(REPO_ROOT, "tmp", "t416-gitignore-"));
