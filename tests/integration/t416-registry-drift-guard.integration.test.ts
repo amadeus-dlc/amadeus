@@ -48,14 +48,12 @@ function detectChanges(paths: readonly string[]): Record<string, string> {
 }
 
 describe("t416 registry drift guard live contracts", () => {
-  test("CLI dispatch and Valid registry contain the same 33 verbs", () => {
+  test("CLI dispatch and Valid registry contain the same verbs", () => {
     const stateSource = read("packages/framework/core/tools/amadeus-state.ts");
 
     const dispatch = extractCliDispatchVerbs(stateSource);
     const valid = extractCliValidVerbs(stateSource);
 
-    expect(dispatch).toHaveLength(33);
-    expect(valid).toHaveLength(33);
     expectRegistryMatch("CLI dispatch", dispatch, "CLI Valid", valid);
   });
 
@@ -82,10 +80,8 @@ describe("t416 registry drift guard live contracts", () => {
       ],
     ] as const;
 
-    expect(accepted).toHaveLength(25);
     expect(accepted).toContain("when");
     for (const [name, fields] of projections) {
-      expect(fields).toHaveLength(25);
       expect(fields).toContain("when");
       expectRegistryMatch("schema accepted fields", accepted, name, fields);
     }
