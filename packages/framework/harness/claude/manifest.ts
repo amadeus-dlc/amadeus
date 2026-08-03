@@ -18,6 +18,8 @@ import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import { mirrorCoreSkillDirectory } from "../projections.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
+export { PROJECT_INSTRUCTIONS } from "./project-instructions.ts";
+
 interface HookSpec {
   path: string;
 }
