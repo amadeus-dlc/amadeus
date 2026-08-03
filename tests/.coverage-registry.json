@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 162,
+      "function": 164,
       "audit": 35,
       "scope": 10,
       "stage": 8,
@@ -1815,6 +1815,10 @@
         {
           "file": "tests/integration/t224-state-set-failclosed.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -1922,8 +1926,13 @@
       "unitClass": "function",
       "unitId": "function:getField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3714,8 +3723,13 @@
       "unitClass": "function",
       "unitId": "function:setField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
