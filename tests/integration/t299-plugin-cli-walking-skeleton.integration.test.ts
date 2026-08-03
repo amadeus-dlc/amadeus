@@ -48,6 +48,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
 const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
 const PLUGIN = "formal-model-check";
 const OWNED_STAGE = `plugins/${PLUGIN}/stages/${PLUGIN}.md`;
@@ -115,6 +116,12 @@ function hashSurface(root: string): string {
   };
   walk(root);
   return h.digest("hex");
+}
+
+function installFixtureHarness(root: string): void {
+  for (const name of readdirSync(CORE_ROOT)) {
+    cpSync(join(CORE_ROOT, name), join(root, name), { recursive: true });
+  }
 }
 
 beforeEach(() => {
@@ -215,10 +222,10 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
   // SessionStart hook would (a spawned subprocess), not by checking a settings
   // wiring exists (verification theatre). We assert the real subprocess reached
   // and ran the engine — it wrote the composition record. (The post-apply
-  // recompile spawns amadeus-runtime.ts compile against a synthetic host, which
-  // has no runtime graph, so the process exits non-zero after committing — the
-  // record write is the proof the compose entry actually ran.)
+  // fixture-local core copy keeps recompile and runner generation inside the
+  // disposable host while preserving the real process boundary.
   test("SessionStart command really starts and reaches compose (BR-U2-6, not verification theatre)", () => {
+    installFixtureHarness(host);
     const cli = join(REPO_ROOT, "packages", "framework", "core", "tools", "amadeus-plugin.ts");
     const res = spawnSync("bun", [cli, "compose", "--if-stale", "--project-root", host], {
       encoding: "utf-8",
@@ -229,8 +236,9 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
     const record = createNodeBackend(host).readComposition();
     expect(record.plugins.has(PLUGIN)).toBe(true);
     expect(existsSync(join(host, OWNED_STAGE))).toBe(true);
-    // It was a real process (spawn produced a real exit status), not a stubbed call.
-    expect(res.status === null ? -1 : res.status).toBeGreaterThanOrEqual(0);
+    expect(existsSync(join(host, "tools", "data", "stage-graph.json"))).toBe(true);
+    expect(existsSync(join(host, "skills", `amadeus-${PLUGIN}`, "SKILL.md"))).toBe(true);
+    expect(res.status).toBe(0);
   });
 
   // BR-U2-11: the compose apply path writes a DropsRecord skeleton (empty for the
