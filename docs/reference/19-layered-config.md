@@ -41,6 +41,7 @@ The accepted JSON shape is:
   "mirror-projects": [],
   "auto-solo-election": true,
   "auto-file-findings": "prompt",
+  "max-parallel-units": 4,
   "plugins": ["formal-model-check"]
 }
 ```
@@ -50,7 +51,11 @@ keys, non-object roots, values outside the `auto-mirror` mode set, malformed
 Project targets, and non-boolean `auto-solo-election` values. Defaults are
 `autoMirror: "prompt"`, an empty Project list, and
 `autoSoloElection: false`. `auto-file-findings` accepts the same mode set as
-`auto-mirror` and defaults to `autoFileFindings: "prompt"`. `plugins` is a
+`auto-mirror` and defaults to `autoFileFindings: "prompt"`.
+`max-parallel-units` accepts integers from 1 through the hard cap 4 and defaults
+to 4. The swarm engine resolves it per Intent and bakes
+`min(batch size, resolved value)` into `invoke-swarm.cap`; a per-invocation
+`--concurrency` may only narrow that value. `plugins` is a
 project-only, sorted unique name array and defaults to `[]`; its presence at the
 Space or Intent layer is a configuration error.
 

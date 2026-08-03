@@ -139,7 +139,9 @@ const OPTIONAL_FIELDS = [
   "required_sections",
 ] as const;
 
-const KNOWN_FIELDS = new Set<string>([...REQUIRED_FIELDS, ...OPTIONAL_FIELDS]);
+export const ACCEPTED_STAGE_FIELDS = [...REQUIRED_FIELDS, ...OPTIONAL_FIELDS] as const;
+
+const KNOWN_FIELDS = new Set<string>(ACCEPTED_STAGE_FIELDS);
 
 // Kebab-case: start with lowercase letter, followed by lowercase letters,
 // digits, or hyphens. Spec says "kebab-case; must match filename stem".

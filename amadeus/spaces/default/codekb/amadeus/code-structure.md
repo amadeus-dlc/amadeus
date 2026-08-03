@@ -1,6 +1,29 @@
 # コード構造
 
-## source-only 構成移行の患部配置（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の患部配置（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### 正本と投影境界
+
+| グループ | 正本／対象 | 役割 |
+| --- | --- | --- |
+| CLI registry | `packages/framework/core/tools/amadeus-state.ts` | switch dispatch 33件と default `Valid:` 30件が同居する患部 |
+| stage schema | `packages/framework/core/tools/amadeus-stage-schema.ts` | `REQUIRED_FIELDS` 12件、`OPTIONAL_FIELDS` 13件、`KNOWN_FIELDS` の構成元 |
+| frontmatter emitter | `packages/framework/core/tools/amadeus-lib.ts` | `emitStageFrontmatter` の `FIELD_ORDER` 25件。schemaとの現差分0 |
+| authoritative spec | `packages/framework/core/amadeus-common/protocols/stage-definition.md` | authored field table と reserved namespace。実装との9件差分、`when` 矛盾あり |
+| public docs | `docs/reference/15-stage-definition.md` / `.ja.md` | 判断重視の詳細H3。新設machine registryの配置候補 |
+| CI routing | `scripts/detect-ci-changes.sh` | 対象docs変更を registry test 実行へ到達させる配線点 |
+| tests | `tests/unit/`、`tests/integration/` | pure helper、実ファイル一致、negative tamper、CI route を配置する既存層 |
+
+core の正本は `scripts/package.ts` から7 `dist` へ配布され、`promote:self` から5 root harness tree へ投影される。`amadeus-state.ts` と `amadeus-stage-schema.ts` は現時点で全生成コピーと SHA 一致しているため、実装時も正本だけを編集し、生成面は `bun scripts/package.ts` と `bun run promote:self`、検証面は既存 `dist:check` / `promote:self:check` を用いる。
+
+### 既存 seam の再利用
+
+- `tests/unit/t209-stop-hook-state-verb-carveout.test.ts:89-106` は実 switch の `case` を source-derived で列挙し、抽出件数 `>20` と既知read-only trioを pin して空抽出を拒否する。CLI guard の起点として再利用できる。
+- `tests/integration/event-registry-drift.test.ts` は双方向・cardinality・negative tamper を備えた比較器の先例である。
+- `tests/unit/t111.test.ts`、`tests/unit/t132-hooks-doc-count-sync.test.ts`、`tests/integration/t145-packaging-parity.test.ts`、`tests/integration/t287-mirror-docs-contract.integration.test.ts` は forward/reverse、docs inventory、packaging parity、machine-readable marker の既存パターンを提供する。
+- `t250` と `t258` は欠落3 verbの挙動を既に検証するが、help一覧との一致は検証しない。`t248` は optional field の parse/emit/validation を検証するが、schema・spec・docsの集合一致は検証しない。
+
+## source-only 構成移行の患部配置（260802-source-only-dist、履歴、observed `63e69d922`）
 
 本節の file:line はすべて observed `63e69d922` 時点。全数・再実測コマンド・出力は `re-scans/260802-source-only-dist.md` を正本とする。
 

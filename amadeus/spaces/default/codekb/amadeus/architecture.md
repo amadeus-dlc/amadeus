@@ -1,6 +1,32 @@
 # アーキテクチャ
 
-## source-only 構成移行の配布境界アーキテクチャ（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の対象機構（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+本節は Developer Code Scan を observed `64b44a9f8c8c79aff876d3275b194f39ead62a49` で合成した現在断面である。正本・テスト・文書の詳細は `re-scans/260802-registry-drift-guard.md` を参照する。
+
+### 境界と責務
+
+| 境界 | 現在の責務 | drift |
+| --- | --- | --- |
+| `amadeus-state.ts` dispatch | 33 verb を handler へ配送 | `Valid:` は手書き30件。dispatch-only 3件 |
+| `amadeus-stage-schema.ts` | required 12 + optional 13 = 25 top-level field を受理・検証 | accepted 集合は非exportで、文書検査が正本を直接参照できない |
+| `amadeus-lib.ts` emitter | `FIELD_ORDER` 25件で frontmatter を直列化 | schema との差分は0だが、一致を固定する registry test がない |
+| `stage-definition.md` | 「schema が表を逐語コピー」と宣言する権威ある仕様 | `number`、`name`、`produces_kinds`、`sensors`、`reviewer`、`reviewer_max_iterations`、`bundle`、`when`、`required_sections` の9件欠落。`when` を reserved とする |
+| `docs/reference/15-stage-definition*.md` | 利用判断が難しい field を英日で詳説 | H3 は top-level 9件相当であり、全25件表ではない。machine registry 不在 |
+| `detect-ci-changes.sh` | 変更パスから full/drift/coverage 実行を決定 | `docs/**` のみでは full test が起動せず、docs-only drift が unit guard を迂回する |
+
+設計境界は「抽出」「比較」「配線」の3つに分ける。抽出器は source text から集合を返す純粋関数、比較器は expected/actual の双方向差分・重複・空集合を返す純粋関数、テストと CI は実ファイルをこれらへ渡す adapter とする。schema の accepted 集合だけは既存 `REQUIRED_FIELDS` / `OPTIONAL_FIELDS` を readonly export して再利用し、新しい手書き25件リストを正本として増やさない。
+
+### 設計判断候補とトレードオフ
+
+1. **推奨 — machine registry + 詳細H3の二層文書**: 英日 Field reference 冒頭に全25件の machine-readable table/marker を置き、既存H3は判断を要する項目の narrative として維持する。完全性と可読性を分離できる一方、machine block の英日 parity を検査対象に含める必要がある。
+2. **代替 — 全25件をH3化**: 見出し集合だけで完全性を検査できるが、16件分の薄い重複説明を作り、同文書が明示する「judgement-heavy narrative」という責務を壊すため不採用候補。
+3. **代替 — schema source と docs を正規表現で直接比較する単一テスト**: 初期実装は短いが、抽出失敗が空集合同士の green になる危険と、CLI/docs の別registryへ再利用できないため不採用候補。
+4. **代替 — docs lint のみ**: 文書漏れは捕捉できるが dispatch/help の同型欠陥と empty extraction を閉じず、再発防止の共通機構にならないため不採用候補。
+
+セキュリティ／コンプライアンス上、新しい外部I/O・権限・個人情報は導入しない。リスクは検査の fail-open と診断の誤誘導であり、空抽出拒否、重複検出、negative tamper、source-derived expected により防御する。
+
+## source-only 構成移行の配布境界アーキテクチャ（260802-source-only-dist、履歴、observed `63e69d922`）
 
 本節の file:line はすべて observed `63e69d922`（`chore: mark .agents/** as linguist-generated to collapse it in PR diffs (#2057)`、origin/main tip = 作業ツリー HEAD）時点の実測。患部全数・区間 touch 判定・引用再確認は `re-scans/260802-source-only-dist.md` を正本とする。差分リフレッシュの base は直近かつ祖先である `47574fbab`（`git merge-base --is-ancestor 47574fbab 63e69d922` exit 0）、区間は 16 commits / `576 files changed, 51928 insertions(+), 2012 deletions(-)`。
 
@@ -23,6 +49,42 @@
 - **bootstrap の鶏卵構造**: dogfood 面は「dist から promote された成果物」でありながら「リポジトリ自身の実行基盤」でもある。具体的には `.claude/settings.json` が 12 個の hook command 参照（`"command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/<tool>.ts\""` 形式が 11 本 = `:57` mint-presence / `:68` session-start / `:79` session-end / `:90` audit-logger / `:94` sensor-fire / `:103` sync-statusline / `:112` mint-presence 再掲 / `:121` runtime-compile / `:132` validate-state / `:143` log-subagent / `:154` stop、加えて statusline `:48`）を持ち、参照先の実体は `.claude/hooks/` に 13 本存在する（未参照 2 本 = `amadeus-log-subagent-start.ts` と `amadeus-plugin-compose.ts`。後者は Claude Code の settings 以外の経路から起動される想定 — 本節では**推測**として記録し、確定は本 intent の requirements 段に委ねる）。同様に `AGENTS.md`（18,937 B / 162 行）は `:1` の `@.agents/rules/amadeus.md` で `.agents` 面へ依存し、`:92` の `# AI-DLC on Codex CLI` マーカーを境に手書き prefix（1-91 行、5,983 B）と生成 suffix（92-162 行、12,954 B）へ分かれる。**dist を消しても dogfood 面は残さなければリポジトリ自身が動かない**ため、source-only 化は「dist は消すが dogfood 面（`.claude` 等）は残す」という非対称を要求する。この非対称は promote-self の入力（`managedDirs` の src = `dist/`）が消えることと直接衝突し、`:355-359` の再帰 build 経路を正式な入力源へ昇格させるか、promote の意味論自体を「ビルド結果から直接展開」へ変えるかの設計判断になる。あわせて `AGENTS.md:90` の手編集禁止規約は「dist をコミットする」前提の文言（`bun scripts/package.ts` を実行して**再生成ツリーをコミットせよ**）で書かれており、文言改訂の対象。
 
 - **scope 正本の所在と面間乖離**: scope prose は「stock 10 種」と「self-\* / installer-distribution」で所在が非対称である。stock 10 種（chore / enterprise / feature / fix / infra / mvp / poc / refactor / security-patch / workshop）は `packages/framework/core/scopes/` に正本を持ち dist 7 面へ投影される。一方 **`amadeus-self-*.md` 4 種と `amadeus-installer-distribution.md` は `packages/` にも `dist/` にも `plugins/` にも `contrib/` にも 1 件も存在せず**（`find` 実測 0 件）、dogfood 面にのみ実在する。self-\* 4 種は dot 5 面（`.claude` / `.codex` / `.cursor` / `.opencode` / `.kimi-code`）に揃うが `.agents` には 0 件（`.agents/` は `rules` と `skills` の 2 ディレクトリのみで `scopes/` を持たない）。`amadeus-installer-distribution.md` に至っては `.claude` と `.kimi-code` の **2 面のみ**で、面間乖離が現存する。grid 側も同型で、`.claude/tools/data/scope-grid.json` が 15 キーなのに対し `dist/claude/.claude/tools/data/scope-grid.json` は 10 キー（差分 5 = self-\* 4 + installer-distribution）。source-only 化で dist を非コミット化すると、**正本を持たないこれらの scope は「どこから復元されるのか」が未定義になる** — dogfood 面が唯一の実体である以上、dist 消去は復元不能な単一障害点を作りうる。この構造は前断面（260802-scope-grid-face-sync）が扱った grid セル値の面間乖離とは別の層（prose ファイルの実在そのものの乖離）であり、両者は独立に現存する。
+
+## Interaction Diagrams
+
+### CLI verb registry の検査フロー
+
+```mermaid
+flowchart LR
+  S["amadeus-state.ts source"] --> D["dispatch verb extractor"]
+  S --> H["Valid list extractor"]
+  D --> C["pure bidirectional comparator"]
+  H --> C
+  C --> R{"same multiset and cardinality?"}
+  R -->|yes| P["test passes"]
+  R -->|no or empty| F["test fails with missing / phantom / duplicate"]
+```
+
+テキスト代替: `amadeus-state.ts` の同じ source text から switch の実dispatch集合と `Valid:` の表示集合を独立抽出し、純粋比較器が双方向差分・件数・空抽出を判定する。どちらか一方だけの追加、phantom 表示、重複、抽出失敗は test failure になる。
+
+### stage field registry の文書同期フロー
+
+```mermaid
+sequenceDiagram
+  participant Schema as Stage schema
+  participant Registry as Accepted-field export
+  participant Docs as EN/JA machine registry
+  participant Guard as Registry guard test
+  participant CI as detect-ci-changes
+  Schema->>Registry: REQUIRED_FIELDS + OPTIONAL_FIELDS (25)
+  Docs->>Guard: machine-readable field names
+  Registry->>Guard: implementation-derived field names
+  Guard->>Guard: forward/reverse/cardinality/empty checks
+  CI->>Guard: run for source or target-doc changes
+  Guard-->>CI: pass or actionable drift report
+```
+
+テキスト代替: schema の既存2配列から accepted 集合を公開し、英日文書の machine registry と test で照合する。source変更だけでなく対象 docs-only 変更でも test が走るよう `detect-ci-changes.sh` を配線し、生成コピーの同期は既存 package/promote drift guard が担う。
 
 ## scope-grid 面間同期の対象機構（260802-scope-grid-face-sync、履歴、observed `47574fbab`）
 

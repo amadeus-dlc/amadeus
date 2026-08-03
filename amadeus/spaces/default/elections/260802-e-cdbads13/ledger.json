@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBADS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。stage diary の5候補を実測した。c1(7 package面と unavailable capability)は AGENTS.md:90 および project.md:94,100-101 の正本→全配布面同期規則の適用で、対象7面という集合は本Intent固有。c2(audit-first durable正本)は docs/reference/12-state-machine.md:11 の audit-first atomicity の適用。c3(4 Boltで最初の実利用時に段階抽出)は AGENTS.md:33 の speculative実装禁止と既決Issue列への適用。c4(canonical reserve writer一本化)とc5(dependency-aware continue)は decisions.md のADR-05/06/09に検証契約付きで保持された本Intent固有のコンポーネント境界・障害方針であり、team/project memoryへ一般化すると適用範囲を不当に広げる。新規恒久ノルムなし、留保なし。",
+      "submittedAt": "2026-08-02T04:09:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBADS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "5候補をmemory、設計成果物、既存memory規則と独立照合した。c1は全配布面同期の既存規則を現行7面へ適用した目録、c2・c4・c5はそれぞれADR-02・単一writer公開契約・ADR-09に保持されたIntent固有設計判断、c3はinception規則の先行着地禁止と小さく検証可能な再編を4 Issueへ適用した配送判断である。新しい横断practiceとしてproject/team memoryへ重複追加する必要はない。",
+      "submittedAt": "2026-08-02T04:09:21Z"
+    }
+  ],
+  "late": []
+}

@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 575,
+    "total": 576,
     "enumeratedByClass": {
       "function": 331,
-      "audit": 80,
+      "audit": 81,
       "scope": 10,
       "stage": 32,
       "hook": 13,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 162,
-      "audit": 34,
+      "audit": 35,
       "scope": 10,
       "stage": 8,
       "hook": 13,
@@ -735,6 +735,18 @@
         {
           "file": "tests/integration/t28-integration-test-strategy.test.ts",
           "mechanism": "sdk"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "UNIT_POOL_EVENT_SET_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t135-invoke-swarm.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -5220,6 +5232,10 @@
         {
           "file": "tests/e2e/t07-audit-fork-merge.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t414-bolt-partial-merge-recovery.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -5267,6 +5283,10 @@
       "coveredBy": [
         {
           "file": "tests/e2e/t12-bolt-runtime-graph-fork.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t414-bolt-partial-merge-recovery.test.ts",
           "mechanism": "cli"
         },
         {

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CDBDPS13",
+  "voter": "dp13-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。c1はorg/projectの既存walking-skeleton規範を#1602へ具体化したIntent内判断である。c2は本Intentの技術DAGとユーザー承認済みfeedback-propagation順に固有であり、一般化可能なdependency/risk-first優先はproject memoryに既存である。c3はteamのno-AI-mergeとprojectの手動release境界を今回のexternal-dependency-mapへ適用したもので、新規ノルムではない。",
+  "submittedAt": "2026-08-02T04:44:17Z"
+}

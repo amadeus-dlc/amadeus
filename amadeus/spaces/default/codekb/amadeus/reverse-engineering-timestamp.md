@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260802-source-only-dist）
+## 実行メタデータ（現在: 260802-registry-drift-guard）
+
+- Date: `2026-08-02T18:00:19Z`
+- Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（本 intent の過去recordはなし。`re-scans/` のうち最新時刻 `2026-08-02T10:27:57Z` で共有 freshness pointer にも採用された `260802-scope-grid-face-sync` の observed を最新の記録済み祖先として選択。dirty worktree保全のため今回のpreflightではtrunk統合・追加git操作を行わず、既存recordの系譜記録を根拠とした）
+- Observed commit: `64b44a9f8c8c79aff876d3275b194f39ead62a49`（ユーザー指定の観測HEAD。dirty worktreeを保全し、scanによるsource変更なし）
+- Scope: `self-fix`、Brownfield、単一repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: Issue #2037の文書バックフィルと分離したregistry drift再発防止。CLI dispatch 33 ↔ `Valid:` 30、stage schema accepted 25 ↔ emitter 25 ↔ authoritative spec欠落9、EN/JA Field referenceのmachine registry不在、docs-only CI迂回を対象とした。
+- Scan mode: Developer Code Scanの完全要点をArchitectがlive sourceの主要seam（state switch/default、schema required/optional、emitter order、英日H3、authoritative table/reserved節、CI change detector）と照合して合成。テストはDeveloper scanで対象5 suite 164 pass / 316 assertions / 0 fail。Architect synthesisではテスト再実行なし。
+- Current decision: 全25 fieldのmachine registryを英日Field reference冒頭へ置き、judgement-heavy H3は維持する二層案を推奨。schema既存配列をreadonly exportし、pure extraction/comparison helper、双方向/cardinality/empty/negative tamper、docs-path CI配線で閉じる。
+- Requirements Analysisへ送る裁定: (1) CLI表示順を契約化するか集合一致だけにするか、(2) machine registryの表現と英日parity、(3) authoritative spec欠落9件とactive `when`、stale `t62`を同一intentで直すか、(4) docs-only change detectorの最小対象path。
+- Updated artifacts: 9共有成果物の現在断面を更新し、直前の `260802-scope-grid-face-sync` を本文保持のまま履歴へ降格。per-intent record `re-scans/260802-registry-drift-guard.md` を新設。
+- Per-intent record: `re-scans/260802-registry-drift-guard.md`
+
+## 実行メタデータ（履歴: 260802-source-only-dist）
 
 - Date: `2026-08-02T17:20:00Z`
 - Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（前回 observed = 260802-scope-grid-face-sync。祖先性実測: `git merge-base --is-ancestor 47574fbab 63e69d922` exit 0）
@@ -11,7 +24,7 @@
 - Focus: Issue #2043（source-only 構成移行 + Release Asset 配布）。患部 7 点 — (1) `.gitignore:16-19` の COMMITTED 契約（`# dist/ is generated, COMMITTED, and drift-guarded` + `!/dist/`）= 反転の起点、(2) installer 3 ファイル同時変更（`packages/setup/src/internal/payload-factory.ts:38`,`:44` + `internal/resolved-version-factory.ts:5` + `ports/http.ts:5`）、(3) `.github/workflows/release.yml:133-158` の `github-release` ジョブ（`files:` 入力なし = Release Asset ゼロ、checkout / bun / build も不在）、(4) drift guard 群（`.github/workflows/ci.yml:243-247`,`:254-255` + `scripts/detect-ci-changes.sh:20` の `dist/*` トリガ）、(5) `scripts/promote-self.ts:53-60` の `managedDirs`（6 面写像の src がすべて `dist/`。緩和材料 = `:355-359` の再帰 build 呼び出しで promote が build を内包）、(6) `AGENTS.md:90` の手編集禁止規約（dist コミット前提の文言 = 改訂対象）、(7) `installer-distribution` scope の面間乖離（`.claude` / `.kimi-code` の 2 面のみ）。差分リフレッシュ: 直近かつ祖先である `47574fbab` を base とし、全 file:line を observed で再実測。患部 9 パスのうち区間内コミットがあるのは `scripts/package.ts` の 1 件のみ（`#2031` `8448fdc6e` = `writeHarnessData` への `name` 追加）で、配布契約は不変。Issue #2043 cite（SHA `8e5dc6c4`）からの行番号シフトも `scripts/package.ts` のみ（`:212` 以降 +4、`:808` 以降 +8）。
 - Updated artifacts: 実質更新 3 件 = `architecture.md`（配布三層構造、promote-self の写像と build 内包、installer の codeload → `dist/` 解決経路、`release.yml` の asset 不在、drift guard 3 種の source-only 化での意味変化、bootstrap 鶏卵構造 = settings.json 11 参照 / hooks 13 本・`AGENTS.md:1` import と `:92` マーカー境界、scope 正本不在と面間乖離）、`code-structure.md`（患部 B1〜B11 の file:line 表、区間 touch 判定表、変更面の同時性）、`code-quality-assessment.md`（テスト所在、`release.yml` の github-release ジョブがテスト空白地帯、tests の `dist/` 参照 423 件、ガード沈黙が既存テストで検出できない fail-open、#2043 cite の鮮度、未参照フック 2 本）。判断 1 行のみ 5 件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260802-source-only-dist.md`。
 - Developer scan からの訂正: スキャン所見 B10 の「`packages/` `plugins/` `contrib/` `dist/` に scope 正本ゼロ」は不正確で、実測では stock 10 種（chore / enterprise / feature / fix / infra / mvp / poc / refactor / security-patch / workshop）が `packages/framework/core/scopes/` に正本を持ち dist 7 面へ投影されている。正本ゼロなのは **`amadeus-self-*.md` 4 種と `amadeus-installer-distribution.md` の 5 scope に限られる**（`find packages dist plugins contrib` で 0 件）。合成時に是正した。あわせて installer 3 ファイルの実パスは `packages/setup/src/internal/` と `packages/setup/src/ports/` 配下（スキャン所見はディレクトリ prefix を省略していた）。
-- 現在マーカーの降格: 直前の現在断面 `260802-scope-grid-face-sync`（observed `47574fbab`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、現在、` 出現数は 1 件（`grep -c` 実測）。
+- 現在マーカーの降格: 直前の現在断面 `260802-scope-grid-face-sync`（observed `47574fbab`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、履歴、` 出現数は 1 件（`grep -c` 実測）。
 - Per-intent record: `re-scans/260802-source-only-dist.md`（区間実測、患部 B1〜B11 の全文相当、テスト所在、患部サマリ、実測コマンドと出力を含む）。
 
 ## 実行メタデータ（履歴: 260802-scope-grid-face-sync）

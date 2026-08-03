@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBSDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立確認の結果、恒久学習候補0件が妥当。scope-definition-questions.md の判断は、4 Issue 固有の Must 優先度、#1602→#1998→#1999→#1919 の依存順、1 Issue=1 Bolt/PR、当該 Intent の統合 workload と fresh-session dogfood という実行・完了境界であり、scope-document.md と intent-backlog.md に十分保存されている。project.md 冒頭も一時的な intent 制約は intent record に置くと定める。唯一一般化し得る『Codex で顕在化しても共有 core 契約なら影響 harness の停止性・予算・終了理由・adapter 証拠を共有契約として扱う』判断は、既に cid:feasibility:c5 として project.md に存在し、再追加は重複になる。また 1 Issue 境界と PR 分割も cid:reverse-engineering:free_text_1 が既に被覆する。stage diary はテンプレートのみで新規の反復可能な観測差分もないため、新規規則を導く根拠はない。",
+      "submittedAt": "2026-08-02T02:43:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBSDS13",
+      "voter": "subagent-2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-02T03:10:00Z"
+    }
+  ],
+  "late": []
+}

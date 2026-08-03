@@ -1,6 +1,21 @@
 # API ドキュメント
 
-## source-only 構成移行が触れる内部契約（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard が対象とする契約（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### CLI 契約
+
+- 呼出形: `bun <harness>/tools/amadeus-state.ts <verb> [args]`。実 dispatch は33 verb。
+- 未知 verb のエラー契約: `Unknown subcommand: <value>. Valid: ...`。現在の `Valid:` は30 verbで、`set-construction-iteration`、`archive`、`unarchive` が欠ける。phantom verb はない。
+- drift guard の契約候補: dispatch集合と表示集合の missing/extra/duplicate/empty を分離して返し、エラーメッセージはどちら側の欠落かを示す。順序を公開契約として固定するかは Requirements Analysis で裁定する。
+
+### stage frontmatter 契約
+
+- accepted top-level fields は25件: `slug`, `phase`, `execution`, `condition`, `lead_agent`, `support_agents`, `mode`, `produces`, `consumes`, `requires_stage`, `inputs`, `outputs`, `number`, `name`, `for_each`, `workspace_requires`, `optional_produces`, `produces_kinds`, `sensors`, `scopes`, `reviewer`, `reviewer_max_iterations`, `bundle`, `when`, `required_sections`。
+- `emitStageFrontmatter` の `FIELD_ORDER` も同じ25件で、現時点の集合差分は0。
+- `when` は `{ "producer-in-plan": string }` として schema/parser/emitter が受理・検証する active field である。authoritative spec と英日 reference の「reserved」説明は実装契約と矛盾する。
+- docs machine registry は完全性検査用であり、既存の詳細H3を全項目へ増やす要求ではない。英日双方で同じ25件を保持することを契約候補とする。
+
+## source-only 構成移行が触れる内部契約（260802-source-only-dist、履歴、observed `63e69d922`）
 
 - 判断: 区間（`47574fbab..63e69d922`）に本書の主題（CLI 契約・内部 API 面）への実質変更なし（判断 1 行）。`/amadeus` の公開 CLI 契約は不変で、`bun run dist` / `dist:check` / `promote:self` / `promote:self:check` のスクリプト契約も語彙・引数ともに現状維持。触れうる内部契約は 2 点に限られ、いずれも実装判断が確定してから記述する — (1) installer の配布元契約（`resolved-version-factory.ts:5` の `CODELOAD_BASE` と `:14` の `archiveUrl()`、`http.ts:5` の `ALLOWED_HOSTS`、`payload-factory.ts:38` の展開後 `dist/` レイアウト前提の 3 者が一体の契約を成す）、(2) `harness.json` スキーマ（`scripts/package.ts:210-215`、区間で `name` フィールドが追加済み = `#2031`）。詳細は `code-structure.md` 現在節の患部配置表を正本とする。測定 ref: observed `63e69d922`。
 

@@ -380,7 +380,7 @@ describe("t245 reviewer protocol production caller", () => {
     const transcript = JSON.parse(local.output().stdout).transcript;
     const acceptedResult = {
       ...reviewResult(transcript, [current.requested]),
-      findings: ["first finding"],
+      findings: ["FOLLOW-UP | first finding"],
     };
 
     local.replaceInput(reviewCarrier(
@@ -574,6 +574,19 @@ describe("t245 reviewer protocol production caller", () => {
     }), "review verdict must be READY or NOT-READY");
     reject((current) => reviewCarrier(current.directive, {
       ...reviewResult(),
+      findings: ["Major | legacy severity"],
+    }), "must start with BLOCKER |, FOLLOW-UP |, or NIT |");
+    reject((current) => reviewCarrier(current.directive, {
+      ...reviewResult(),
+      findings: ["BLOCKER | reproduced requirement violation"],
+    }), "READY review must not contain BLOCKER findings");
+    reject((current) => reviewCarrier(current.directive, {
+      ...reviewResult(),
+      verdict: "NOT-READY",
+      findings: ["FOLLOW-UP | possible simplification"],
+    }), "NOT-READY review requires at least one BLOCKER finding");
+    reject((current) => reviewCarrier(current.directive, {
+      ...reviewResult(),
       scopeTranscript: "not-an-array",
     }), "scope transcript must be an array");
     reject((current) => reviewCarrier(
@@ -694,26 +707,26 @@ describe("t245 reviewer protocol production caller", () => {
     const cases = [
       {
         name: "summary substring and findings replacement",
-        initial: result("alpha beta", ["first finding"]),
-        replay: result("alpha", ["different finding"]),
+        initial: result("alpha beta", ["FOLLOW-UP | first finding"]),
+        replay: result("alpha", ["FOLLOW-UP | different finding"]),
         mutate: (content: string) => content,
       },
       {
         name: "findings replacement",
-        initial: result("alpha beta", ["first finding"]),
-        replay: result("alpha beta", ["different finding"]),
+        initial: result("alpha beta", ["FOLLOW-UP | first finding"]),
+        replay: result("alpha beta", ["FOLLOW-UP | different finding"]),
         mutate: (content: string) => content,
       },
       {
         name: "findings order",
-        initial: result("alpha beta", ["first finding", "second finding"]),
-        replay: result("alpha beta", ["second finding", "first finding"]),
+        initial: result("alpha beta", ["FOLLOW-UP | first finding", "NIT | second finding"]),
+        replay: result("alpha beta", ["NIT | second finding", "FOLLOW-UP | first finding"]),
         mutate: (content: string) => content,
       },
       {
         name: "stored summary whitespace",
-        initial: result("alpha beta", ["first finding"]),
-        replay: result("alpha beta", ["first finding"]),
+        initial: result("alpha beta", ["FOLLOW-UP | first finding"]),
+        replay: result("alpha beta", ["FOLLOW-UP | first finding"]),
         mutate: (content: string) => content.replace(
           "\nalpha beta\n",
           "\nalpha beta  \n",
@@ -998,6 +1011,25 @@ describe("t245 reviewer protocol production caller", () => {
     const artifact = readFileSync(join(current.root, current.primary), "utf8");
     expect(artifact.match(/## Review — Iteration 1/g)).toHaveLength(1);
     expect(artifact).toContain("**Scope decision:** none");
+  });
+
+  test("accepts NOT-READY only with a closed-severity BLOCKER", () => {
+    const current = fixture();
+    const input = reviewCarrier(current.directive, {
+      ...reviewResult(),
+      verdict: "NOT-READY",
+      findings: [
+        "BLOCKER | FR-1 fails the declared boundary reproduction",
+        "FOLLOW-UP | simplify the adapter in a later change",
+      ],
+    });
+    const completed = run(current, "complete-review", input);
+
+    expect(completed.status).toBe(0);
+    expect(JSON.parse(completed.stdout)).toMatchObject({ ready: false });
+    const artifact = readFileSync(join(current.root, current.primary), "utf8");
+    expect(artifact).toContain("BLOCKER | FR-1 fails");
+    expect(artifact).toContain("FOLLOW-UP | simplify");
   });
 
   test("rejects an existing Review block when a required field is missing", () => {

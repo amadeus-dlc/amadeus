@@ -1,6 +1,14 @@
 # ビジネス概要
 
-## source-only 構成移行の業務境界（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の業務境界（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+- **目的**: [Issue #2037](https://github.com/amadeus-dlc/amadeus/issues/2037) の文書バックフィルとは分離し、CLI が実際に受理する verb とエラー時の `Valid:` 一覧、および stage schema が受理するフィールド集合と参照文書の機械レジストリを双方向に照合する。今回の価値は「欠落した3 verb／複数 field を個別に直すこと」ではなく、次の追加時に同型 drift を CI で止める再発防止にある。
+- **現存する利用者影響**: `amadeus-state.ts` は 33 verb を dispatch する一方、未知 verb の診断は 30 verb しか列挙せず、`set-construction-iteration`、`archive`、`unarchive` を案内できない。stage field は実装が25件を受理するのに、権威ある仕様表は9件不足し、英日 Field reference は意図的に判断を要する9見出しだけを詳説する。このため「実装できるが発見・説明できない」契約が蓄積している。
+- **成功境界**: 実装由来の集合を正とし、CLI dispatch ↔ `Valid:`、schema accepted fields ↔ 英日文書の machine registry を多集合・cardinality・空抽出拒否つきで比較する。negative tamper で dispatch-only、phantom help、docs omission、empty extraction が実際に赤くなることを要求する。
+- **スコープ境界**: 生成済み harness 面を手編集せず `packages/framework` の正本と docs を直し、既存 `package.ts --check` / `promote:self:check` に投影整合を委ねる。Issue #2037 が求める文書本文の完全な補修、CLI UX 全体の再設計、stage schema の新フィールド追加は本 intent に含めない。
+- **次段の裁定**: Field reference の全25件を H3 化するのではなく、全25件の機械レジストリを冒頭に置き、判断を要する既存H3を維持する案を推奨する。`stage-definition.md` の欠落9件と `when` の「reserved」記述、`t62` の stale 前提を同じ intent で是正するかは Requirements Analysis で明文化する。
+
+## source-only 構成移行の業務境界（260802-source-only-dist、履歴、observed `63e69d922`）
 
 - 判断: 区間（`47574fbab..63e69d922`）に本書の主題（業務ドメイン・利用者価値の構造）への実質変更なし（判断 1 行）。Issue #2043 は「生成物 `dist/` をリポジトリから外し、配布を Release Asset へ移す」という**配布形態の変更**であり、利用者が得る価値（`/amadeus` によるワークフロー実行、installer による導入）そのものは不変。利用者影響が生じうるのは導入経路の一点 — installer が現在 codeload のソース tarball 内 `dist/` を読む（`packages/setup/src/internal/payload-factory.ts:38`）ため、配布元の変更は導入手順の互換性判断を伴う。業務構造の変化は患部外（区間の大半は `#2031` / `#2049` の dist 再生成と metrics スナップショット）で、詳細は `architecture.md` 現在節と `re-scans/260802-source-only-dist.md` に委ねる。測定 ref: observed `63e69d922`。
 

@@ -83,6 +83,7 @@ const UTC_SECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const INTEGRATION_ID = /^[A-Z][A-Z0-9_-]*-\d+$/;
 const INVOCATION_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const FINDING_SEVERITY = /^(BLOCKER|FOLLOW-UP|NIT) \| /;
 const REVIEW_MARKER = (iteration: number): string =>
   `## Review — Iteration ${iteration}`;
 
@@ -185,6 +186,13 @@ function canonicalFindings(value: unknown): string[] {
     throw new Error(
       "review findings must not contain duplicate canonical entries",
     );
+  }
+  for (const [index, finding] of findings.entries()) {
+    if (!FINDING_SEVERITY.test(finding)) {
+      throw new Error(
+        `review findings[${index}] must start with BLOCKER |, FOLLOW-UP |, or NIT |`,
+      );
+    }
   }
   return findings;
 }
@@ -399,6 +407,13 @@ function parseReviewResult(value: unknown): ReviewResult {
   const iteration = positiveInteger(result.iteration, "review iteration");
   const summary = singleLine(result.summary, "review summary");
   const findings = canonicalFindings(result.findings);
+  const hasBlocker = findings.some((finding) => finding.startsWith("BLOCKER | "));
+  if (result.verdict === "READY" && hasBlocker) {
+    throw new Error("READY review must not contain BLOCKER findings");
+  }
+  if (result.verdict === "NOT-READY" && !hasBlocker) {
+    throw new Error("NOT-READY review requires at least one BLOCKER finding");
+  }
   if (!Array.isArray(result.scopeTranscript)) {
     throw new Error("scope transcript must be an array");
   }

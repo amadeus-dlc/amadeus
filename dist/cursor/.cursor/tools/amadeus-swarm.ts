@@ -12,7 +12,9 @@
 // this tool owns the convergence verdict + merge + audit (determinism); the human
 // grants autonomy and takes the baton on the envelope (judgement).
 //
-// THREE STATELESS SUBCOMMANDS (no iteration counter, no persisted state):
+// The verdict commands remain stateless. Fixed-pool commands delegate every
+// queue/slot mutation to the audit-folded C2 single writer; harnesses report
+// native facts and never own scheduling counters.
 //   prepare  --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <n>]
 //            [--degraded-from <subagent|claude-ultra|codex-ultra>] [--repo <name>]
 //       Fork an isolated git worktree per unit (amadeus-worktree create +
@@ -36,6 +38,11 @@
 //       is GENUINELY converged (green AND untampered), non-zero otherwise. Emits
 //       no audit — it informs the conductor's retry decision (knowledge), it does
 //       not commit anything. Same input → same verdict, however many times called.
+//   retry <unit> --retry-class <class> --effect-status <status>
+//          --cause-code <code> --source-surface <surface> --delivery-id <id>
+//       Exact-allowlist recovery gate. Atomically reserves one extra retry from
+//       the canonical recoverable-retry budget (default 2, hard cap 3). A failed
+//       check alone is never authority to re-spawn a worker.
 //   finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd>
 //            [--test-file <path>] [--reasons <unit>=<reason>,...]
 //       The AUTHORITATIVE gate. The conductor's claimed-converged set is an
@@ -50,15 +57,10 @@
 //       judges WHY a unit gave up; the tool only records it, never for a claimed
 //       unit, whose reason is always the tool's own re-verify verdict).
 //
-// WHY STATELESS / NO CAP CONSTANT. "The cap" is three jobs on three concerns — the
-// verdict (determinism -> check), the retry decision (knowledge -> the conductor,
-// which judges "one more try vs unsatisfiable"), and the runaway backstop
-// (determinism -> the harness 8-block Stop-hook ceiling). A per-unit counter here
-// would make determinism do the knowledge job and is redundant on the other
-// drivers (an ultra driver's cap is its own bound; /goal's is its
-// turn-clause). So this tool holds none of it: check is advisory, finalize is
-// authoritative (re-verifies at the merge gate), so a red unit cannot merge even
-// if the conductor lies or misremembers.
+// Retry judgement and retry authority remain distinct: the conductor supplies
+// observed native facts, while the exact allowlist and durable C2 budget decide
+// whether another dispatch is permitted. `check` remains advisory and `finalize`
+// remains authoritative, so a red unit cannot merge even if the conductor lies.
 //
 // COMPOSES existing tools, does NOT reimplement them:
 //   - amadeus-worktree create        -> the isolated git worktree per unit
@@ -71,15 +73,38 @@
 //     (BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
-import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } from "./amadeus-lib.ts";
+import {
+  getField,
+  parseArgs,
+  recordDir,
+  resolveConstructionRepo,
+  resolveProjectDir,
+  stateFilePath,
+  worktreePath,
+} from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  classifyRetry,
+  createBudgetPolicy,
+  defaultBudgetPolicy,
+  retryBackoffMs,
+  type RetryFacts,
+} from "./amadeus-convergence-policy.ts";
+import { reserveStageBudget } from "./amadeus-convergence-runtime.ts";
+import { resolveAmadeusConfig, type AmadeusConfigIssue } from "./amadeus-config.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+  type UnitPoolMutationResult,
+} from "./amadeus-unit-pool-runtime.ts";
+import { UNIT_POOL_OUTCOMES, type UnitPoolOutcome } from "./amadeus-unit-pool.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -434,6 +459,63 @@ function emitBoltFailed(pd: string, unit: string, errorSummary: string): void {
 
 // --- prepare ----------------------------------------------------------------
 
+interface PreparedUnit {
+  unit: string;
+  ok: boolean;
+  worktree_path?: string;
+  error?: string;
+}
+
+function stopOnIncompletePrepare(
+  batch: string,
+  base: string,
+  concurrency: number,
+  prepared: readonly PreparedUnit[],
+): void {
+  if (prepared.every((entry) => entry.ok)) return;
+  console.log(JSON.stringify({ batch, base, concurrency, units: prepared }, null, 2));
+  process.exit(2);
+}
+
+function formatConfigIssues(issues: readonly AmadeusConfigIssue[]): string {
+  return issues.map((issue) =>
+    issue.kind === "read-failure"
+      ? `${issue.layer} (${issue.path}): ${issue.summary}`
+      : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`
+  ).join(" | ");
+}
+
+function readDegradedFrom(flags: Record<string, string>): DriverName | undefined {
+  const value = flags["degraded-from"] as DriverName | undefined;
+  if (value !== undefined && !DRIVER_VALUES.includes(value)) {
+    fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
+  }
+  return value;
+}
+
+function emitDegradeIfRequested(projectDir: string, batch: string, requested: DriverName | undefined): void {
+  if (requested !== undefined) emitSwarmDegraded(projectDir, batch, requested);
+}
+
+function resolvePrepareConcurrency(
+  projectDir: string,
+  flags: Record<string, string>,
+  unitCount: number,
+): number {
+  const resolvedConfig = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
+  if (resolvedConfig.kind === "invalid") {
+    fail(`invalid swarm configuration: ${formatConfigIssues(resolvedConfig.issues)}`);
+  }
+  if (flags.concurrency !== undefined && !/^[1-9][0-9]*$/.test(flags.concurrency)) {
+    fail("--concurrency must be a positive integer");
+  }
+  const override = flags.concurrency === undefined ? resolvedConfig.config.maxParallelUnits : Number(flags.concurrency);
+  if (override > resolvedConfig.config.maxParallelUnits) {
+    fail(`--concurrency may only narrow max-parallel-units (${resolvedConfig.config.maxParallelUnits})`);
+  }
+  return Math.min(unitCount, resolvedConfig.config.maxParallelUnits, override);
+}
+
 function handlePrepare(rest: string[]): void {
   const { flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -448,6 +530,7 @@ function handlePrepare(rest: string[]): void {
   if (units.length === 0) {
     fail("--units resolved to an empty list");
   }
+  const degradedFrom = readDegradedFrom(flags);
 
   // P7: the construction repo this batch targets. resolveConstructionRepo errors
   // on a multi-repo intent with no --repo (forwarded as the batch failure), infers
@@ -465,30 +548,9 @@ function handlePrepare(rest: string[]): void {
   }
 
   const base = flags.base ?? currentBranch(repoCwd);
-  const concurrency =
-    flags.concurrency && /^[1-9][0-9]*$/.test(flags.concurrency)
-      ? flags.concurrency
-      : String(units.length);
+  const concurrency = resolvePrepareConcurrency(projectDir, flags, units.length);
 
-  // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
-  // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
-  // only learns a degrade happened via this flag.
-  if (flags["degraded-from"]) {
-    const requested = flags["degraded-from"] as DriverName;
-    if (!DRIVER_VALUES.includes(requested)) {
-      fail(`--degraded-from must be one of: ${DRIVER_VALUES.join(", ")}`);
-    }
-    emitSwarmDegraded(projectDir, flags.batch, requested);
-  }
-
-  emitSwarmStarted(projectDir, flags.batch, units, concurrency);
-
-  const prepared: {
-    unit: string;
-    ok: boolean;
-    worktree_path?: string;
-    error?: string;
-  }[] = [];
+  const prepared: PreparedUnit[] = [];
   // Forward the RESOLVED repo name (not the raw flag) so every sibling primitive
   // anchors to the same repo — an inferred lone repo is passed explicitly too, so
   // create/merge/discard never re-resolve to a different repo than prepare chose.
@@ -535,15 +597,34 @@ function handlePrepare(rest: string[]): void {
     prepared.push({ unit, ok: true, worktree_path: worktreeDir });
   }
 
+  // A partially prepared batch has no dispatch authority. Persisting the pool
+  // before every worktree exists would leave a non-terminal queue that finalize
+  // cannot drain because the conductor never received a complete worker set.
+  stopOnIncompletePrepare(flags.batch, base, concurrency, prepared);
+
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  const initialized = pool.initialEnqueue({
+    idempotencyKey: `unit-pool:${flags.batch}:initial-enqueue`,
+    batchId: flags.batch,
+    cap: concurrency,
+    units: units.map((unitId) => ({ unitId, dependsOn: [] })),
+  });
+  if (!initialized.ok) fail(`unit pool initialization failed: ${initialized.reason}`);
+
+  // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
+  // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
+  // only learns a degrade happened via this flag.
+  emitDegradeIfRequested(projectDir, flags.batch, degradedFrom);
+
+  emitSwarmStarted(projectDir, flags.batch, units, String(concurrency));
+
   console.log(
     JSON.stringify(
-      { batch: flags.batch, base, concurrency: Number(concurrency), units: prepared },
+      { batch: flags.batch, base, concurrency, units: prepared, pool: initialized.projection },
       null,
       2
     )
   );
-  // Exit 2 if any worktree failed to fork — the conductor must take the baton.
-  process.exit(prepared.some((p) => !p.ok) ? 2 : 0);
 }
 
 // --- check ------------------------------------------------------------------
@@ -589,6 +670,163 @@ function handleCheck(rest: string[]): void {
   if (verdict.tampered) out.detail = "protected test file was modified";
   console.log(JSON.stringify(out));
   process.exit(genuine ? 0 : 1);
+}
+
+// --- retry ------------------------------------------------------------------
+
+const RETRY_CLASSES: readonly RetryFacts["retryClass"][] = [
+  "recoverable-transient",
+  "non-retryable",
+  "unknown",
+];
+const RETRY_EFFECTS: readonly RetryFacts["effectStatus"][] = [
+  "no-effect-confirmed",
+  "effect-possible",
+  "unknown",
+];
+const SWARM_RETRY_SURFACES: readonly RetryFacts["sourceSurface"][] = [
+  "swarm-dispatch",
+  "swarm-worker-start",
+  "swarm-result-collection",
+];
+
+function includesValue<T extends string>(values: readonly T[], value: string | undefined): value is T {
+  return value !== undefined && (values as readonly string[]).includes(value);
+}
+
+/**
+ * Authorize one extra native retry before a conductor re-dispatches work.
+ * A red convergence check is not itself retry authority: callers must provide
+ * one exact recoverable/no-effect fact tuple and a stable native delivery id.
+ */
+export function handleRetry(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
+  const { positional, flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const unit = positional[0] ?? flags.unit;
+  if (!unit) fail("retry requires a unit name (positional `retry <unit>` or --unit <unit>)");
+  if (!includesValue(RETRY_CLASSES, flags["retry-class"])) {
+    fail(`--retry-class must be one of: ${RETRY_CLASSES.join(", ")}`);
+  }
+  if (!includesValue(RETRY_EFFECTS, flags["effect-status"])) {
+    fail(`--effect-status must be one of: ${RETRY_EFFECTS.join(", ")}`);
+  }
+  if (!flags["cause-code"]) fail("retry requires --cause-code <code>");
+  if (!includesValue(SWARM_RETRY_SURFACES, flags["source-surface"])) {
+    fail(`--source-surface must be one of: ${SWARM_RETRY_SURFACES.join(", ")}`);
+  }
+  if (!flags["delivery-id"]) fail("retry requires --delivery-id <stable native failure id>");
+  const allowlistVersion = Number.parseInt(flags["allowlist-version"] ?? "1", 10);
+  const facts: RetryFacts = {
+    retryClass: flags["retry-class"],
+    effectStatus: flags["effect-status"],
+    causeCode: flags["cause-code"],
+    sourceSurface: flags["source-surface"],
+  };
+  const classification = classifyRetry(facts, allowlistVersion);
+  if (classification.kind !== "retryable") {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: classification.reasonCode,
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+
+  const configuredCap = process.env.AMADEUS_SWARM_RETRY_CAP;
+  const policyResult = configuredCap
+    ? createBudgetPolicy({
+        kind: "recoverable-retry",
+        effectiveCap: Number(configuredCap),
+        hardCap: 3,
+        configVersion: "convergence-v1",
+      })
+    : defaultBudgetPolicy("recoverable-retry");
+  if (!policyResult.ok) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "budget-policy-mismatch",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+
+  const activeRecord = recordDir(projectDir);
+  const statePath = stateFilePath(projectDir);
+  if (activeRecord === null || !existsSync(statePath)) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "state-inconsistent",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+  const state = readFileSync(statePath, "utf-8");
+  const stage = getField(state, "Current Stage")?.trim() ?? "";
+  const rawRevision = Number.parseInt(getField(state, "Revision Count") ?? "0", 10);
+  const revision = Number.isInteger(rawRevision) && rawRevision >= 0 ? rawRevision : 0;
+  if (stage.length === 0) {
+    console.log(
+      JSON.stringify({
+        kind: "retry-refused",
+        reasonCode: "state-inconsistent",
+        recommendedNextAction: "halt-and-ask",
+      }),
+    );
+    exit(2);
+    return;
+  }
+  const reserved = reserveStageBudget({
+    projectDir,
+    intentUuid: basename(activeRecord),
+    stageSlug: stage,
+    stageInstanceId: `${stage}@${revision}`,
+    revision,
+    agent: getField(state, "Active Agent") ?? "amadeus-conductor",
+    budgetKind: "recoverable-retry",
+    subjectId: unit,
+    policy: policyResult.value,
+    lastDurableProgress: `${stage}:${getField(state, "Status") ?? "running"}`,
+    deliveryIdentity: flags["delivery-id"],
+    deduplicateDelivery: true,
+  });
+  if (reserved.kind === "reserved") {
+    console.log(
+      JSON.stringify({
+        kind: "retry-authorized",
+        unit,
+        retryOrdinal: reserved.consumed,
+        remaining: reserved.remaining,
+        backoffMs: retryBackoffMs(reserved.consumed),
+        ruleId: classification.ruleId,
+      }),
+    );
+    exit(0);
+    return;
+  }
+  console.log(
+    JSON.stringify(
+      reserved.kind === "exhausted"
+        ? { kind: "retry-refused", termination: reserved.termination }
+        : {
+            kind: "retry-refused",
+            reasonCode: reserved.reason,
+            recommendedNextAction: "halt-and-ask",
+          },
+    ),
+  );
+  exit(2);
 }
 
 // --- finalize ---------------------------------------------------------------
@@ -645,6 +883,31 @@ export function handleFinalize(
   const allUnits = flags.units ? splitCsv(flags.units) : claimed.slice();
   const claimedFailure = claimedUnitsFailureEnvelope(batch, allUnits, claimed);
   if (claimedFailure) { finishFinalizeInputFailure(claimedFailure, exit); return; }
+  const poolProjection = createUnitPoolCoordinator(
+    createAuditUnitPoolRepository(projectDir),
+  ).readProjection(batch);
+  if (
+    poolProjection.batchId === null ||
+    poolProjection.phase !== "terminal" || poolProjection.queue.length > 0 || poolProjection.active.length > 0
+  ) {
+    finishFinalizeInputFailure(
+      {
+        batch,
+        units: allUnits.map((unit) => ({
+          unit,
+          status: "failed",
+          reason: "error",
+          detail: "fixed Unit pool is not terminal; dispatch must pass through acquire/confirm/settle",
+        })),
+        converged: 0,
+        failed: allUnits.length,
+        merge_failures: [],
+      },
+      exit,
+    );
+    return;
+  }
+  const poolOutcomes = new Map(poolProjection.terminal.map((unit) => [unit.unitId, unit.outcome] as const));
   const claimedSet = new Set(claimed);
   const testFile = flags["test-file"];
   const checkCmd = flags["check-cmd"];
@@ -679,6 +942,16 @@ export function handleFinalize(
   const genuine: string[] = [];
   for (const unit of allUnits) {
     if (claimedSet.has(unit)) {
+      const poolOutcome = poolOutcomes.get(unit);
+      if (poolOutcome !== "succeeded") {
+        results.push({
+          unit,
+          status: "failed",
+          reason: "error",
+          detail: `fixed Unit pool outcome is ${poolOutcome ?? "missing"}, not succeeded`,
+        });
+        continue;
+      }
       const verdict = verdictFor(unit, projectDir, checkCmd, testFile);
       if (!verdict.exists) {
         results.push({
@@ -833,6 +1106,153 @@ export function handleResolve(
   exit(0);
 }
 
+// --- fixed Unit pool -------------------------------------------------------
+
+function requiredBatch(flags: Record<string, string>): string {
+  if (!flags.batch || !/^[1-9][0-9]*$/.test(flags.batch)) fail("pool command requires --batch <positive integer>");
+  return flags.batch;
+}
+
+function poolKey(flags: Record<string, string>, fallback: string): string {
+  return flags["idempotency-key"] ?? fallback;
+}
+
+function printPoolMutation(result: UnitPoolMutationResult): void {
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(result.ok ? 0 : 2);
+}
+
+export function handleInitialEnqueue(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  if (!flags.units) fail("initial-enqueue requires --units <comma-separated unit names>");
+  const units = splitCsv(flags.units);
+  if (units.length === 0) fail("--units resolved to an empty list");
+  const config = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
+  if (config.kind === "invalid") fail(`invalid swarm configuration: ${formatConfigIssues(config.issues)}`);
+  const requested = flags.cap === undefined ? config.config.maxParallelUnits : Number(flags.cap);
+  if (!Number.isInteger(requested) || requested < 1 || requested > config.config.maxParallelUnits) {
+    fail(`--cap must be an integer from 1 through ${config.config.maxParallelUnits}`);
+  }
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.initialEnqueue({
+    idempotencyKey: poolKey(flags, `unit-pool:${batchId}:initial-enqueue`),
+    batchId,
+    cap: Math.min(units.length, requested),
+    units: units.map((unitId) => ({ unitId, dependsOn: [] })),
+  }));
+}
+
+export function handleAcquire(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  if (!flags["idempotency-key"]) fail("acquire requires --idempotency-key <stable-delivery-id>");
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.acquire({
+    idempotencyKey: `unit-pool:${batchId}:acquire:${flags["idempotency-key"]}`,
+    batchId,
+  }));
+}
+
+function requiredAttempt(flags: Record<string, string>, command: string): string {
+  if (!flags.attempt) fail(`${command} requires --attempt <attempt-id>`);
+  return flags.attempt;
+}
+
+export function handleConfirmDispatch(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  const attemptId = requiredAttempt(flags, "confirm-dispatch");
+  if (!flags["native-handle"]) fail("confirm-dispatch requires --native-handle <handle>");
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.confirmDispatch({
+    idempotencyKey: poolKey(flags, `unit-pool:${batchId}:confirm:${attemptId}`),
+    batchId,
+    attemptId,
+    nativeHandle: flags["native-handle"],
+  }));
+}
+
+export function handleRecordReconciliation(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  const attemptId = requiredAttempt(flags, "record-reconciliation");
+  const effect = flags.effect;
+  if (effect !== "no-effect-confirmed" && effect !== "effect-possible" && effect !== "unknown") {
+    fail("--effect must be no-effect-confirmed, effect-possible, or unknown");
+  }
+  if (!flags["reconciliation-kind"]) fail("record-reconciliation requires --reconciliation-kind <kind>");
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.recordReconciliation({
+    idempotencyKey: flags["idempotency-key"] ?? `unit-pool:${batchId}:reconcile:${attemptId}:${flags["reconciliation-kind"]}:${effect}`,
+    batchId,
+    attemptId,
+    reconciliationKind: flags["reconciliation-kind"],
+    effect,
+  }));
+}
+
+function poolOutcome(flags: Record<string, string>, command: string): UnitPoolOutcome {
+  if (!UNIT_POOL_OUTCOMES.includes(flags.outcome as UnitPoolOutcome)) {
+    fail(`${command} requires --outcome <${UNIT_POOL_OUTCOMES.join("|")}>`);
+  }
+  return flags.outcome as UnitPoolOutcome;
+}
+
+export function handleSettle(rest: string[], command: "settle-release" | "settle-release-requeue" | "settle-release-cancel-dependents"): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  const attemptId = requiredAttempt(flags, command);
+  const outcome = poolOutcome(flags, command);
+  const request = { idempotencyKey: poolKey(flags, `unit-pool:${batchId}:${command}:${attemptId}`), batchId, attemptId };
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  if (command === "settle-release-requeue") {
+    if (outcome !== "dispatch-not-started") fail("settle-release-requeue requires --outcome dispatch-not-started");
+    printPoolMutation(coordinator.settleReleaseRequeue({ ...request, outcome }));
+  } else if (command === "settle-release-cancel-dependents") {
+    printPoolMutation(coordinator.settleReleaseCancelDependents({ ...request, outcome }));
+  } else {
+    printPoolMutation(coordinator.settleRelease({ ...request, outcome }));
+  }
+}
+
+export function handleTerminateBatch(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  const results = ["completed", "partial-failure", "cancelled", "terminated"] as const;
+  if (!results.includes(flags.result as (typeof results)[number])) fail(`--result must be one of: ${results.join(", ")}`);
+  const queuedOutcome = flags["queued-outcome"];
+  if (queuedOutcome !== "batch-unsafe" && queuedOutcome !== "cancelled") fail("--queued-outcome must be batch-unsafe or cancelled");
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.terminateBatch({
+    idempotencyKey: poolKey(flags, `unit-pool:${batchId}:terminate`),
+    batchId,
+    result: flags.result as (typeof results)[number],
+    queuedOutcome,
+  }));
+}
+
+export function handleLateResult(rest: string[]): void {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  const batchId = requiredBatch(flags);
+  const attemptId = requiredAttempt(flags, "late-result-observed");
+  const outcome = poolOutcome(flags, "late-result-observed");
+  const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  printPoolMutation(coordinator.lateResultObserved({
+    idempotencyKey: poolKey(flags, `unit-pool:${batchId}:late:${attemptId}:${outcome}`),
+    batchId,
+    attemptId,
+    outcome,
+  }));
+}
+
 // --- shared helpers ---------------------------------------------------------
 
 function splitCsv(value: string): string[] {
@@ -895,16 +1315,42 @@ function main(): void {
     case "check":
       handleCheck(rest);
       break;
+    case "retry":
+      handleRetry(rest);
+      break;
     case "finalize":
       handleFinalize(rest);
       break;
     case "resolve":
       handleResolve(rest);
       break;
+    case "initial-enqueue":
+      handleInitialEnqueue(rest);
+      break;
+    case "acquire":
+      handleAcquire(rest);
+      break;
+    case "confirm-dispatch":
+      handleConfirmDispatch(rest);
+      break;
+    case "record-reconciliation":
+      handleRecordReconciliation(rest);
+      break;
+    case "settle-release":
+    case "settle-release-requeue":
+    case "settle-release-cancel-dependents":
+      handleSettle(rest, subcommand);
+      break;
+    case "terminate-batch":
+      handleTerminateBatch(rest);
+      break;
+    case "late-result-observed":
+      handleLateResult(rest);
+      break;
     default:
       console.error(
         JSON.stringify({
-          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, finalize, resolve`,
+          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, retry, finalize, resolve, initial-enqueue, acquire, confirm-dispatch, record-reconciliation, settle-release, settle-release-requeue, settle-release-cancel-dependents, terminate-batch, late-result-observed`,
         })
       );
       process.exit(1);

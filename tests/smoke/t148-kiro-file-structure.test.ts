@@ -89,14 +89,13 @@ describe("t148 dist/kiro file structure", () => {
     }
   });
 
-  test("IDE-native tools: frontmatter grant on delegation targets - kiro-ide ONLY", () => {
+  test("IDE-native tools: builders can write while reviewers remain read-only", () => {
     // The Kiro IDE resolves a delegated subagent's tools from the agent .md
     // frontmatter, not from the agent-v1 JSON the CLI reads (field-proven:
     // a dispatched composer without the grant ran toolless). The kiro-ide
     // manifest injects the grant during projection; it must land on every
     // delegation target there and must NOT leak into any other harness's
-    // agents (on Claude a `tools:` frontmatter field would RESTRICT the
-    // agent to non-Claude tool names, breaking it).
+    // agents with Kiro's lower-case tool names.
     const IDE_AGENTS = join(REPO_ROOT, "dist", "kiro-ide", ".kiro", "agents");
     const fmToolsOf = (p: string): string | undefined =>
       /^tools:\s*(.+)$/m.exec(
@@ -105,28 +104,35 @@ describe("t148 dist/kiro file structure", () => {
     // The delegation-target roster IS the set of hand-authored agent JSONs
     // (minus the conductor amadeus.json) - derive it from disk so a future
     // delegate added without a grant reds here instead of shipping toolless
-    // (the original field bug). Every delegate gets read+write+shell:
-    // builders author artifacts and reviewers append a `## Review` section
-    // to the primary artifact (stage protocol 12a - the same fs_write their
-    // CLI JSONs grant). Every NON-delegate kiro-ide agent must have NO grant
-    // (catches the injection landing on the wrong file).
+    // (the original field bug). Builders get read+write+shell. Reviewers get
+    // read only; the conductor's validated complete-review adapter owns the
+    // Review write. Every NON-delegate kiro-ide agent must have NO grant.
     const delegates = readdirSync(IDE_AGENTS)
       .filter((n) => n.endsWith("-agent.json"))
       .map((n) => n.replace(/\.json$/, ".md"));
+    const reviewers = new Set([
+      "amadeus-architecture-reviewer-agent.md",
+      "amadeus-product-lead-agent.md",
+    ]);
     expect(delegates.length).toBeGreaterThanOrEqual(5);
     for (const f of readdirSync(IDE_AGENTS).filter((n) => n.endsWith(".md"))) {
       if (delegates.includes(f)) {
-        expect(fmToolsOf(join(IDE_AGENTS, f))).toBe(`["read", "write", "shell"]`);
+        expect(fmToolsOf(join(IDE_AGENTS, f))).toBe(
+          reviewers.has(f) ? `["read"]` : `["read", "write", "shell"]`,
+        );
       } else {
         expect(fmToolsOf(join(IDE_AGENTS, f))).toBeUndefined();
       }
     }
-    // Leak guard: the grant is IDE-native and must not ship anywhere else.
-    for (const tree of [
-      join(REPO_ROOT, "dist", "claude", ".claude", "agents"),
-      join(K, "agents"), // dist/kiro (CLI)
-      join(REPO_ROOT, "dist", "codex", ".codex", "agents"),
-    ]) {
+    // Kiro's lower-case grant must not leak to other harnesses. Claude uses
+    // its own exact-cased read-only allowlist for the same two reviewers.
+    const claudeAgents = join(REPO_ROOT, "dist", "claude", ".claude", "agents");
+    for (const f of readdirSync(claudeAgents).filter((n) => n.endsWith(".md"))) {
+      expect(fmToolsOf(join(claudeAgents, f))).toBe(
+        reviewers.has(f) ? "[Read, Grep, Glob]" : undefined,
+      );
+    }
+    for (const tree of [join(K, "agents"), join(REPO_ROOT, "dist", "codex", ".codex", "agents")]) {
       for (const f of readdirSync(tree).filter((n) => n.endsWith(".md"))) {
         expect(fmToolsOf(join(tree, f))).toBeUndefined();
       }

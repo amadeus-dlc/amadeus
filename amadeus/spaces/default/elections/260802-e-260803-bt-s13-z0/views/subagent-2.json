@@ -1,0 +1,13 @@
+{
+  "electionId": "E-260803-BT-S13-Z0",
+  "voter": "subagent-2",
+  "question": "Build and Test の学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存size drift guardが期待どおり機能したため、新しいpracticeまたはsensorを重複永続化せず承認ゲートへ進む"
+    }
+  ]
+}

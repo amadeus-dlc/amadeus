@@ -648,18 +648,16 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
   // Kiro's stop adapter (case "stop", amadeus-kiro-adapter.ts:303-314) synthesizes
   // {hook_event_name:"Stop", stop_hook_active:false} with NO transcript_path. So
   // the core hook's conversational carve-out (tier 3) is structurally inert on
-  // Kiro: the RUN-MODE-AWARE no-progress cap (blockCap, amadeus-stop.ts:122-137) is
+  // Kiro: the RUN-MODE-AWARE durable continuation cap is
   // the ONLY release path for a chatting / pausing human. These two tests pin
   // that contract deterministically:
-  //   - interactive (no autonomy field) -> cap 2: a 2nd identical no-progress
-  //     stop RELEASES (the human is freed after one nudge).
+  //   - interactive (no autonomy field) -> cap 2: the first two deliveries are
+  //     authorized and cap+1 RELEASES.
   //   - autonomous Construction -> cap 8: still blocks on call 3 (an unattended
   //     run keeps the loop alive; only a real hang ever hits 8).
-  // The per-project guard counter persists under the active record's
-  // .amadeus-stop-hook/block-count.json (stopHookDir, amadeus-lib.ts:1620), so the
-  // SAME scratch project is reused across the repeated calls - consecutive
-  // no-progress blocks at one unchanging signature, which is exactly what the
-  // counter measures.
+  // The canonical budget is audit-backed under the active record, so the SAME
+  // scratch project is reused across repeated calls to prove that hook process
+  // restarts cannot reset the stage-scoped count.
 
   /** Run the kiro adapter stop target with CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
    *  explicitly REMOVED, so the mode-aware default cap applies regardless of the
@@ -686,13 +684,13 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
     return { stdout: r.stdout ?? "", code: r.status ?? -1 };
   }
 
-  test("12: INTERACTIVE CAP RELEASE - Kiro stop blocks once then releases at the default cap 2 (no transcript -> cap is the chat release path)", () => {
+  test("12: INTERACTIVE CAP RELEASE - Kiro stop permits cap 2 then releases cap+1 (no transcript -> cap is the chat release path)", () => {
     // Interactive: state has NO Construction Autonomy Mode field, so the
     // mode-aware default cap is INTERACTIVE_BLOCK_CAP=2. The brownfield-feature
     // fixture (Current Stage requirements-analysis [-], no [?]/[R] carve-out, no
     // questions file) yields a pending run-stage, so without the cap the hook
-    // would block forever. Repeated identical no-progress stops at the same
-    // signature: block on call 1, RELEASE on call 2 (count reaches 2 == cap).
+    // would block forever. Repeated deliveries to the same stage instance:
+    // calls 1 and 2 BLOCK, then cap+1 RELEASES on call 3.
     const dir = scratchProject(true);
     try {
       // Guard the premise: the override must NOT be set in this process (the
@@ -707,8 +705,14 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
 
       const second = runStopNoCapEnv(dir);
       expect(second.code).toBe(0);
-      // At cap 2 the 2nd no-progress block RELEASES: silent allow, no decision.
-      expect(second.stdout.trim()).toBe("");
+      const out2 = JSON.parse(second.stdout) as { decision?: string; reason?: string };
+      expect(out2.decision).toBe("block");
+      expect(out2.reason ?? "").not.toBe("");
+
+      const third = runStopNoCapEnv(dir);
+      expect(third.code).toBe(0);
+      // The cap-th delivery is permitted; cap+1 is a silent release.
+      expect(third.stdout.trim()).toBe("");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

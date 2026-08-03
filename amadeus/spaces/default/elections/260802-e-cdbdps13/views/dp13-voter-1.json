@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBDPS13",
+  "voter": "dp13-voter-1",
+  "question": "Delivery Planningの§13候補3件は本Intent固有の配送判断であり、project/team memoryへ追加する新規学習は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1は#1602固有のwalking skeleton、c2は今回の不確実性に対する順序判断、c3は本Intentの外部依存境界として成果物に保持する"
+    }
+  ]
+}

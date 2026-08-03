@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBDPS13",
+      "voter": "dp13-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測で Delivery Planning diary の実エントリは3件のみで、c1は project.md の既存 walking-skeleton 規範を #1602 の core→adapter→audit→projection→package 縦スライスへ適用した当該Issue固有判断、c2は #1602→#1998→#1999→#1919 のDAGとユーザー回答に基づく当該Intent固有の経済順序、c3は team.md の人間merge境界と project.md の手動release/publish規範を当該Intentの外部依存境界へ適用したものだった。3件とも bolt-plan.md、risk-and-sequencing-rationale.md、delivery-planning-questions.md に保持済みで、新規の横断規則はない。",
+      "submittedAt": "2026-08-02T04:44:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBDPS13",
+      "voter": "dp13-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。c1はorg/projectの既存walking-skeleton規範を#1602へ具体化したIntent内判断である。c2は本Intentの技術DAGとユーザー承認済みfeedback-propagation順に固有であり、一般化可能なdependency/risk-first優先はproject memoryに既存である。c3はteamのno-AI-mergeとprojectの手動release境界を今回のexternal-dependency-mapへ適用したもので、新規ノルムではない。",
+      "submittedAt": "2026-08-02T04:44:17Z"
+    }
+  ],
+  "late": []
+}

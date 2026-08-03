@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDB-BT-ZERO",
+  "voter": "subagent-2",
+  "question": "build-and-test の学習候補を 0 件として最終承認ゲートへ進めてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "Interpretations・Deviations・Tradeoffs・Open questions に記録がなく、永続化する学習候補はない"
+    }
+  ]
+}

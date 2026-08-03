@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260803-CG-S13-Z0",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "配布ビューには新規 practice または sensor として永続化すべき学習候補が示されておらず、0件のまま承認ゲートへ進む提案を全面的に支持する。",
+  "submittedAt": "2026-08-02T23:22:51Z"
+}

@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-02T03:47:07Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBRA13",
+      "voter": "requirements-voter-2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。operation tree、初期 allowlist、budget 遷移、adapter inventory は、いずれも本 Intent の対象機構・受け入れ境界・実装順序を具体化する要件であり、複数 Intent に一般化できる新しいチーム規律とは区別される。共有 core と harness adapter の責務分離も既存境界の適用であるため、memory へ重複転記せず requirements 成果物に保持する判断を留保なく支持する。",
+      "submittedAt": "2026-08-02T03:46:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBRA13",
+      "voter": "requirements-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "4候補はいずれも本Intent固有の要件具体化、または既存の共有core／harness境界の適用であり、project/team memoryへ昇格すべき新規かつ反復可能な恒久規則ではないため、0件で可と判断する。",
+      "submittedAt": "2026-08-02T03:46:44Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBSDS13",
+  "voter": "subagent-2",
+  "question": "Scope Definition の判断は Intent 固有の成果物に保存済みであり、project/team memory へ追加する恒久学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "Scopeの優先度・harness範囲・完了境界は本 Intent の成果物に保持し、恒久ルールへ重複追加しない"
+    }
+  ]
+}

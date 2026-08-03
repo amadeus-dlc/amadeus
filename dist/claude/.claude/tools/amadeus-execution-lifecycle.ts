@@ -29,6 +29,13 @@ import {
 } from "./amadeus-execution-contract.ts";
 import type { ExecutionEnvironmentSnapshot } from "./amadeus-harness-capability.ts";
 import {
+  evaluateBudget,
+  terminationReason,
+  type BudgetKind,
+  type BudgetPolicyV1,
+  type TerminationReasonV1,
+} from "./amadeus-convergence-policy.ts";
+import {
   auditBlockField,
   findAllEvents,
   readAllAuditShards,
@@ -45,7 +52,17 @@ export type ExecutionRefusal =
   | { readonly kind: "projection-pending-rebuild"; readonly persisted: true }
   | { readonly kind: "not-found"; readonly persisted: false }
   | { readonly kind: "invalid-transition"; readonly persisted: false }
-  | { readonly kind: "digest-mismatch"; readonly persisted: true };
+  | { readonly kind: "digest-mismatch"; readonly persisted: true }
+  | {
+      readonly kind: "budget-exhausted";
+      readonly persisted: true;
+      readonly termination: TerminationReasonV1;
+    }
+  | {
+      readonly kind: "budget-policy-mismatch";
+      readonly persisted: false;
+      readonly termination: TerminationReasonV1;
+    };
 
 export type DispatchState = "reserved" | "claimed" | "dispatch-confirmed" | "terminal";
 
@@ -62,6 +79,27 @@ export interface ExecutionReservation {
   readonly claimAcquiredAt?: string;
   readonly nativeAcceptedAt?: string;
   readonly startedAt: Fact<string>;
+  readonly budget?: BudgetReservation;
+}
+
+export interface BudgetSubject {
+  readonly rootOperationId: string;
+  readonly kind: BudgetKind;
+  readonly subjectId: string;
+}
+
+export interface BudgetPolicySnapshot extends BudgetPolicyV1 {
+  readonly capturedAtEventId: string;
+}
+
+export interface BudgetReservation {
+  readonly subject: BudgetSubject;
+  readonly policySnapshot: BudgetPolicySnapshot;
+  readonly value: number;
+}
+
+export interface BudgetTerminationRecord extends TerminationReasonV1 {
+  readonly subject: BudgetSubject;
 }
 
 export interface CanonicalCommitReceipt {
@@ -116,9 +154,11 @@ export type StartOperationRequest = BeginRootRequest | BeginChildRequest;
 export interface AtomicReserveRequest {
   readonly operationId: string;
   readonly idempotencyKey: string;
-  readonly budgetKind: string;
+  readonly budgetKind: BudgetKind;
   readonly subjectId: string;
   readonly semanticAttemptOrdinal: number;
+  readonly policy: BudgetPolicyV1;
+  readonly lastDurableProgress: string;
   readonly slotId?: string;
 }
 
@@ -185,6 +225,7 @@ export interface ExecutionProjection {
   readonly operations: readonly LogicalOperation[];
   readonly reservations: readonly ExecutionReservation[];
   readonly attempts: readonly ExecutionAttempt[];
+  readonly budgetTerminations: readonly BudgetTerminationRecord[];
   readonly eventSets: readonly ExecutionEventSet[];
 }
 
@@ -199,6 +240,7 @@ export type ExecutionEvent =
   | { readonly type: "reservation-updated"; readonly reservation: ExecutionReservation }
   | { readonly type: "attempt-started"; readonly start: AttemptStart }
   | { readonly type: "attempt-finished"; readonly finished: AttemptFinished }
+  | { readonly type: "budget-exhausted"; readonly termination: BudgetTerminationRecord }
   | { readonly type: "operation-finished"; readonly finished: OperationFinished };
 
 export interface ExecutionEventSet {
@@ -388,6 +430,7 @@ export function foldExecutionEventSets(
   const operations = new Map<string, LogicalOperation>();
   const reservations = new Map<string, ExecutionReservation>();
   const attempts = new Map<string, ExecutionAttempt>();
+  const budgetTerminations = new Map<string, BudgetTerminationRecord>();
   const selectedSets: ExecutionEventSet[] = [];
 
   for (const set of sets) {
@@ -401,6 +444,8 @@ export function foldExecutionEventSets(
         attempts.set(event.start.attempt.attemptId, event.start.attempt);
       } else if (event.type === "attempt-finished") {
         attempts.set(event.finished.attempt.attemptId, event.finished.attempt);
+      } else if (event.type === "budget-exhausted") {
+        budgetTerminations.set(JSON.stringify(event.termination.subject), event.termination);
       } else {
         operations.set(event.finished.operation.operationId, event.finished.operation);
       }
@@ -419,6 +464,7 @@ export function foldExecutionEventSets(
     attempts: [...attempts.values()].filter(
       (attempt) => query.operationId === undefined || attempt.operationId === query.operationId,
     ),
+    budgetTerminations: [...budgetTerminations.values()],
     eventSets: selectedSets,
   };
 }
@@ -447,6 +493,7 @@ function appendFailure(): Result<never, ExecutionRefusal> {
 type StartOperationResult = Result<ExecutionStarted, ExecutionRefusal>;
 type OperationStartedEvent = Extract<ExecutionEvent, { type: "operation-started" }>;
 type ReservationUpdatedEvent = Extract<ExecutionEvent, { type: "reservation-updated" }>;
+type BudgetExhaustedEvent = Extract<ExecutionEvent, { type: "budget-exhausted" }>;
 
 function startRefusal<T = ExecutionStarted>(
   kind: "idempotency-conflict" | "invalid-transition" | "not-found",
@@ -466,6 +513,61 @@ function reservationUpdatedEvent(
   return set.events.find(
     (candidate): candidate is ReservationUpdatedEvent =>
       candidate.type === "reservation-updated",
+  );
+}
+
+function budgetExhaustedEvent(set: ExecutionEventSet): BudgetExhaustedEvent | undefined {
+  return set.events.find(
+    (candidate): candidate is BudgetExhaustedEvent => candidate.type === "budget-exhausted",
+  );
+}
+
+function replayedBudgetReservation(
+  existing: ExecutionEventSet,
+  payloadFingerprint: string,
+): Result<ExecutionReservation, ExecutionRefusal> {
+  if (existing.payloadFingerprint !== payloadFingerprint) {
+    return {
+      ok: false,
+      error: { kind: "idempotency-conflict", persisted: false },
+    };
+  }
+  const reservation = reservationUpdatedEvent(existing)?.reservation;
+  if (reservation !== undefined) return { ok: true, value: reservation };
+  const exhausted = budgetExhaustedEvent(existing)?.termination;
+  return exhausted === undefined
+    ? {
+        ok: false,
+        error: { kind: "invalid-transition", persisted: false },
+      }
+    : {
+        ok: false,
+        error: { kind: "budget-exhausted", persisted: true, termination: exhausted },
+      };
+}
+
+function sameBudgetSubject(
+  reservation: ExecutionReservation,
+  subject: BudgetSubject,
+): boolean {
+  return (
+    reservation.budget?.subject.rootOperationId === subject.rootOperationId &&
+    reservation.budget.subject.kind === subject.kind &&
+    reservation.budget.subject.subjectId === subject.subjectId
+  );
+}
+
+function sameBudgetPolicy(
+  snapshot: BudgetPolicySnapshot,
+  policy: BudgetPolicyV1,
+): boolean {
+  return (
+    snapshot.schemaVersion === policy.schemaVersion &&
+    snapshot.kind === policy.kind &&
+    snapshot.effectiveCap === policy.effectiveCap &&
+    snapshot.hardCap === policy.hardCap &&
+    snapshot.configVersion === policy.configVersion &&
+    snapshot.configDigest === policy.configDigest
   );
 }
 
@@ -647,25 +749,15 @@ export function createExecutionLifecycleCoordinator(
         budgetKind: request.budgetKind,
         subjectId: request.subjectId,
         semanticAttemptOrdinal: request.semanticAttemptOrdinal,
+        policy: request.policy,
+        lastDurableProgress: request.lastDurableProgress,
         slotId: request.slotId,
       });
       try {
         return options.repository.transaction((sets, append) => {
           const existing = existingForKey(sets, request.idempotencyKey);
           if (existing !== undefined) {
-            if (existing.payloadFingerprint !== payloadFingerprint) {
-              return {
-                ok: false,
-                error: { kind: "idempotency-conflict", persisted: false },
-              } as const;
-            }
-            const reservation = reservationUpdatedEvent(existing)?.reservation;
-            return reservation === undefined
-              ? ({
-                  ok: false,
-                  error: { kind: "invalid-transition", persisted: false },
-                } as const)
-              : ({ ok: true, value: reservation } as const);
+            return replayedBudgetReservation(existing, payloadFingerprint);
           }
 
           const projection = foldExecutionEventSets(sets, { operationId: request.operationId });
@@ -682,12 +774,88 @@ export function createExecutionLifecycleCoordinator(
               error: { kind: "invalid-transition", persisted: false },
             } as const;
           }
+          const subject: BudgetSubject = {
+            rootOperationId: operation.rootOperationId,
+            kind: request.budgetKind,
+            subjectId: request.subjectId,
+          };
+          const subjectReservations = projection.reservations.filter((reservation) =>
+            sameBudgetSubject(reservation, subject),
+          );
+          const existingSnapshot = subjectReservations[0]?.budget?.policySnapshot;
+          if (
+            existingSnapshot !== undefined &&
+            !sameBudgetPolicy(existingSnapshot, request.policy)
+          ) {
+            return {
+              ok: false,
+              error: {
+                kind: "budget-policy-mismatch",
+                persisted: false,
+                termination: terminationReason({
+                  reasonCode: "budget-policy-mismatch",
+                  budget: {
+                    state: "available",
+                    value: {
+                      consumed: subjectReservations.length,
+                      cap: existingSnapshot.effectiveCap,
+                    },
+                  },
+                  lastDurableProgress: request.lastDurableProgress,
+                  rootOperationId: operation.rootOperationId,
+                }),
+              },
+            } as const;
+          }
+          const priorTermination = projection.budgetTerminations.find(
+            (termination) =>
+              termination.subject.rootOperationId === subject.rootOperationId &&
+              termination.subject.kind === subject.kind &&
+              termination.subject.subjectId === subject.subjectId,
+          );
+          if (priorTermination !== undefined) {
+            return {
+              ok: false,
+              error: {
+                kind: "budget-exhausted",
+                persisted: true,
+                termination: priorTermination,
+              },
+            } as const;
+          }
+          const decision = evaluateBudget(subjectReservations.length, {
+            rootOperationId: operation.rootOperationId,
+            subjectId: request.subjectId,
+            policy: request.policy,
+            lastDurableProgress: request.lastDurableProgress,
+          });
+          if (decision.kind === "exhausted") {
+            const termination: BudgetTerminationRecord = {
+              ...decision.termination,
+              subject,
+            };
+            const set = eventSet(
+              operation.rootOperationId,
+              request.idempotencyKey,
+              payloadFingerprint,
+              [{ type: "budget-exhausted", termination }],
+            );
+            append(set);
+            return {
+              ok: false,
+              error: {
+                kind: "budget-exhausted",
+                persisted: true,
+                termination,
+              },
+            } as const;
+          }
           const reservation: ExecutionReservation = {
             reservationId: executionStableId("reservation", [
               request.operationId,
               request.budgetKind,
               request.subjectId,
-              request.semanticAttemptOrdinal,
+              request.idempotencyKey,
             ]),
             operationId: request.operationId,
             idempotencyKey: request.idempotencyKey,
@@ -696,6 +864,19 @@ export function createExecutionLifecycleCoordinator(
             consumedAt: null,
             ...(request.slotId ? { slotId: request.slotId } : {}),
             startedAt: { state: "incomplete", missingFields: ["nativeStartedAt"] },
+            budget: {
+              subject,
+              policySnapshot: {
+                ...request.policy,
+                capturedAtEventId: executionStableId("reservation", [
+                  request.operationId,
+                  request.budgetKind,
+                  request.subjectId,
+                  request.idempotencyKey,
+                ]),
+              },
+              value: decision.nextValue,
+            },
           };
           const set = eventSet(
             operation.rootOperationId,

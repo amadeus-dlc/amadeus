@@ -1,0 +1,17 @@
+{
+  "electionId": "E-CDBRES13",
+  "kind": "learnings-selection",
+  "question": "Reverse Engineering の判断は CodeKB／per-intent record と既存 project memory に保存済みであり、project/team memory へ追加する恒久学習候補は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "今回の所有境界・base・UNKNOWNは Intent record に保持し、既存規則と重複する恒久学習を追加しない"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

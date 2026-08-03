@@ -78,6 +78,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   FIXTURES_DIR,
@@ -170,6 +171,86 @@ function runRef(proj: string, args: string[]): RefResult {
   return { rc: res.status ?? -1, out: res.stdout ?? "" };
 }
 
+interface PoolAttempt {
+  readonly attemptId: string;
+  readonly unitId: string;
+  readonly dispatchConfirmed: boolean;
+}
+
+interface PoolProjection {
+  readonly phase: string;
+  readonly active: readonly PoolAttempt[];
+}
+
+function poolMutation(result: RefResult, action: string): PoolProjection {
+  const body = JSON.parse(result.out);
+  if (result.rc !== 0 || !body.ok) {
+    throw new Error(`unable to ${action} test Unit: ${body.reason ?? "unknown"}`);
+  }
+  return body.projection;
+}
+
+function acquirePoolAttempt(proj: string, batchId: string, step: number): PoolProjection {
+  return poolMutation(runRef(proj, [
+    "acquire",
+    "--batch",
+    batchId,
+    "--idempotency-key",
+    `e2e-acquire-${step}`,
+  ]), "acquire");
+}
+
+function confirmPoolAttempt(proj: string, batchId: string, attempt: PoolAttempt): PoolProjection {
+  return poolMutation(runRef(proj, [
+    "confirm-dispatch",
+    "--batch",
+    batchId,
+    "--attempt",
+    attempt.attemptId,
+    "--native-handle",
+    `native-${attempt.unitId}`,
+    "--idempotency-key",
+    `e2e-confirm-${attempt.attemptId}`,
+  ]), "confirm dispatch for");
+}
+
+function settlePoolAttempt(
+  proj: string,
+  batchId: string,
+  attempt: PoolAttempt,
+  outcome: "succeeded" | "failed",
+): PoolProjection {
+  return poolMutation(runRef(proj, [
+    "settle-release",
+    "--batch",
+    batchId,
+    "--attempt",
+    attempt.attemptId,
+    "--outcome",
+    outcome,
+    "--idempotency-key",
+    `e2e-settle-${attempt.attemptId}`,
+  ]), "settle");
+}
+
+/** Drive the fixed pool to a terminal state before exercising finalize. */
+function terminalizePool(
+  proj: string,
+  batchId: string,
+  outcomes: Readonly<Record<string, "succeeded" | "failed">> = {},
+): void {
+  let step = 0;
+  let projection: PoolProjection | null = null;
+  while (projection?.phase !== "terminal") {
+    if (!projection?.active[0]) projection = acquirePoolAttempt(proj, batchId, step);
+    const attempt = projection.active[0];
+    if (!attempt) throw new Error("pool acquisition produced no active attempt");
+    if (!attempt.dispatchConfirmed) projection = confirmPoolAttempt(proj, batchId, attempt);
+    projection = settlePoolAttempt(proj, batchId, attempt, outcomes[attempt.unitId] ?? "succeeded");
+    step += 1;
+  }
+}
+
 /** Concatenate every audit shard (audit/*.jsonl) for the seeded record — the swarm
  *  tool writes SWARM_* rows to its own per-clone shard alongside fixture.jsonl. */
 const auditBody = (p: string): string => {
@@ -188,10 +269,7 @@ function auditRecords(p: string): {
   event: string | null;
   fields?: Record<string, string>;
 }[] {
-  return auditBody(p)
-    .split("\n")
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> });
+  return auditRowsFrom(auditBody(p));
 }
 
 /** Exact record count of one event type (STRONGER than grep -q). */
@@ -238,6 +316,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const c3 = runRef(proj, ["check", "beta", "--check-cmd", "test -f impl.txt"]);
     expect(c3.rc).not.toBe(0);
     expect(JSON.parse(c3.out).converged).toBe(false);
+
+    terminalizePool(proj, "1");
 
     // --- Case 6: finalize the genuinely converged alpha (claimed) — merges back
     // + emits SWARM_UNIT_CONVERGED, envelope converged:1, exit 0.
@@ -334,6 +414,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
   test("7 lying-conductor: falsely-claimed-converged unit re-verify-refused", () => {
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "2", "--units", "win,lie", "--base", "main"]);
+    terminalizePool(proj, "2");
     // `win` genuinely converges; `lie` does NOT (no impl) but is falsely claimed.
     writeFileSync(join(wtPath(proj, "win"), "win.txt"), "done\n");
     const f = runRef(proj, [
@@ -372,6 +453,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // anchored.
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "2", "--units", "wn,le", "--base", "main"]);
+    terminalizePool(proj, "2");
     writeFileSync(join(wtPath(proj, "wn"), "wn.txt"), "done\n");
     const f = runRef(proj, [
       "finalize",
@@ -406,6 +488,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       { cwd: proj, encoding: "utf-8" },
     );
     runRef(proj, ["prepare", "--batch", "1", "--units", "delta", "--base", "main"]);
+    terminalizePool(proj, "1");
     writeFileSync(join(wtPath(proj, "delta"), "spec", "unit.test"), "TAMPERED\n");
     const f = runRef(proj, [
       "finalize",
@@ -489,6 +572,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
   test("12 conductor attribution: --reasons unsatisfiable lands the typed reason (envelope + audit)", () => {
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "1", "--units", "stuck", "--base", "main"]);
+    terminalizePool(proj, "1", { stuck: "failed" });
     // `stuck` gets no impl and is NOT claimed; the conductor attributes unsatisfiable.
     const f = runRef(proj, [
       "finalize",
@@ -527,6 +611,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
   test("13 --reasons cannot override the lying-conductor guard: claimed-but-red stays error", () => {
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "1", "--units", "sneaky", "--base", "main"]);
+    terminalizePool(proj, "1");
     // sneaky is CLAIMED converged but no impl exists; the conductor also tries to
     // dress the failure as unsatisfiable via --reasons. The tool must ignore that
     // and report error (claimed-but-red).
@@ -556,23 +641,16 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
 
   // ===========================================================================
   // Case 14 (issue #674): a unit that genuinely re-verifies converged but whose
-  // merge-back fails must NOT be reported as converged. `finalize` merges via
-  // `amadeus-bolt release-merge` + `amadeus-bolt complete --merge` (:590-594),
-  // which delegates ONLY to state/audit/runtime-graph consolidation (no git
-  // content-level merge lives in this path — real code-level conflicts are
-  // resolved by a separate, out-of-tooling git-merge step per SKILL.md Step
-  // 6.5). The genuine, real production failure mode of `complete --merge`
-  // reachable through this delegate chain is `amadeus-state merge`'s own
-  // idempotency guard: "already merged: not in Bolt Refs" (amadeus-state.ts
-  // handleMerge). We reproduce it for real (no hold-merge — finalize's own
-  // release-merge would clear a hold anyway, per the issue's fixture note) by
-  // actually completing the unit's merge out-of-band BEFORE finalize runs, so
-  // finalize's own merge-back call for the SAME unit genuinely fails against
-  // real state.
+  // merge-back fails must NOT be reported as converged. A clean re-run after a
+  // completed merge is now deliberately idempotent, so this fixture introduces
+  // ambiguous STATE_MERGED evidence after the out-of-band merge. The recovery
+  // verifier must fail closed rather than guessing which canonical-looking row
+  // is authoritative, and the referee must preserve its merge-failure verdict.
   // ===========================================================================
   test("14 finalize: merge-back failure is NOT reported converged (issue #674)", () => {
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "3", "--units", "mu", "--base", "main"]);
+    terminalizePool(proj, "3");
     writeFileSync(join(wtPath(proj, "mu"), "impl.txt"), "done\n");
 
     // Out-of-band pre-merge: a real, successful `release-merge` + `complete
@@ -606,10 +684,18 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // fixture doesn't isolate the merge-back failure this case targets.
     expect(preMerge.status).toBe(0);
 
+    // Duplicate the canonical-looking STATE_MERGED row into a second shard.
+    // This is explicit tamper/ambiguity evidence, not a string-matched stderr
+    // simulation: complete --merge must inspect the ledger and fail closed.
+    const stateMergedLine = auditBody(proj)
+      .split("\n")
+      .find((line) => line.includes('\"eventName\":\"amadeus.state.merged\"'));
+    expect(stateMergedLine).toBeDefined();
+    writeFileSync(join(seededAuditDir(proj), "ambiguous-state-merged.jsonl"), `${stateMergedLine}\n`);
+
     // finalize re-verifies "mu": the check command still passes (genuinely
-    // converged on re-verify), so it enters the merge-back loop. Its
-    // release-merge is idempotent (no-op); its complete --merge REALLY fails
-    // now — "mu" is no longer in main's Bolt Refs.
+    // converged on re-verify), so it enters merge-back. Recovery then refuses
+    // the two STATE_MERGED rows as ambiguous evidence.
     const f = runRef(proj, [
       "finalize",
       "--batch",

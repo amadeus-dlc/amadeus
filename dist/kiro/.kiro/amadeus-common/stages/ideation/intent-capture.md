@@ -60,7 +60,7 @@ Then follow the unified question flow from stage-protocol.md section 3: offer Gu
 After all answers collected:
 1. Confirm ALL [Answer]: tags are filled in
 2. Run ambiguity detection and contradiction analysis
-3. Create follow-up questions if needed
+3. Apply the material-ambiguity definition and single follow-up-round budget in stage-protocol.md §3
 
 ### Step 5: Generate Artifacts
 

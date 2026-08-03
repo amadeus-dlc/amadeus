@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
   JOURNAL_SCHEMA_VERSION,
@@ -31,6 +31,10 @@ import {
 } from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
+import {
+  assessAuditMergeRecovery,
+  type MergeRecoveryAssessment,
+} from "./amadeus-merge-recovery.ts";
 // Type-only: the runtime binding is required lazily (see
 // emitCanonicalAuditEvent below), so this import erases at compile time.
 import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
@@ -189,9 +193,12 @@ const VALID_EVENT_TYPES = new Set([
   "MEMORY_EMPTY",
   "RULE_LEARNED",
   "SENSOR_PROPOSED",
-  // Swarm lifecycle — all emit from the swarm referee amadeus-swarm.ts (the
-  // per-Unit pair + batch tally from `finalize`; SWARM_STARTED + SWARM_DEGRADED
-  // from `prepare`). See CHANGELOG + audit-format.md.
+  // Swarm lifecycle — UNIT_POOL_EVENT_SET_COMMITTED emits from the C2
+  // single-writer tools/amadeus-unit-pool-runtime.ts; the remaining six
+  // SWARM_* events emit from the swarm referee amadeus-swarm.ts (the per-Unit
+  // pair + batch tally from `finalize`; SWARM_STARTED + SWARM_DEGRADED from
+  // `prepare`). See CHANGELOG + audit-format.md.
+  "UNIT_POOL_EVENT_SET_COMMITTED",
   "SWARM_STARTED",
   "SWARM_UNIT_CONVERGED",
   "SWARM_UNIT_FAILED",
@@ -225,6 +232,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
   EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
+  UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
   SESSION_COMPACTED: "Session Compacted",
@@ -865,40 +873,56 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   const mainAuditPath = auditFilePath(projectDir, intent, space);
   const wtPath = worktreePath(projectDir, slug);
   // Same MAIN clone-id token the fork used → the SAME worktree shard on merge.
-  const wtAuditPath = worktreeAuditFilePath(wtPath, recordPrefix, projectDir);
-
-  if (!existsSync(wtAuditPath)) {
-    jsonError(`worktree audit not found at ${wtAuditPath}; nothing to merge`);
+  let mergeContext: AuditMergeContext;
+  try {
+    mergeContext = resolveAuditMergeContext(wtPath, recordPrefix, projectDir, slug);
+  } catch (error) {
+    jsonError(errorMessage(error));
   }
+  const { wtAuditPath, anchor, delta, entries } = mergeContext;
   if (!existsSync(mainAuditPath)) {
     jsonError(`main audit not found at ${mainAuditPath}; start a workflow first (describe what to build, e.g. /amadeus "build the auth service")`);
   }
 
-  const wtContent = readFileSync(wtAuditPath, "utf-8");
-
-  // Locate the most recent AUDIT_FORKED record matching this slug and pull
-  // its anchor fields (boundary, source hash, fork timestamp).
-  let anchor: ForkAnchor | null;
-  try {
-    anchor = findForkAnchor(wtContent, slug);
-  } catch (e) {
-    jsonError(errorMessage(e));
-  }
-  if (!anchor) {
-    jsonError(`worktree audit missing AUDIT_FORKED entry for slug ${slug}`);
-  }
   const { boundary, sourceHash } = anchor;
   // forkTs anchors the audit-of-intent correlation tag for any post-emit
   // failure on this merge — doctor joins this back to the matching
   // AUDIT_FORKED row in main audit by exact-string timestamp match.
   const forkTs = anchor.forkTs;
 
+  const recovery = assessAuditMergeRecovery(
+    projectDir,
+    slug,
+    anchor,
+    entries,
+    intent,
+    space,
+  );
+  if (recovery.status === "invalid") jsonError(recovery.detail);
+  if (recovery.status === "verified") {
+    jsonSuccess({
+      emitted: "AUDIT_MERGED",
+      slug,
+      entries_merged: entries,
+      source_audit_hash: sourceHash,
+      fork_boundary: boundary,
+      reentrant: true,
+    });
+    return;
+  }
+
   // Sanity check: re-hash main audit's first `boundary` units; refuse if it
   // disagrees with the recorded Source Audit Hash. Catches the case where
   // the prefix has been edited (length-preserving mutation) or truncated
   // (length less than boundary — hash differs because we hash fewer bytes
   // than were originally hashed).
-  const mainText = readFileSync(mainAuditPath, "utf-8");
+  const sourceMainAuditPath = join(dirname(mainAuditPath), basename(wtAuditPath));
+  if (!existsSync(sourceMainAuditPath)) {
+    jsonError(
+      `main audit source shard not found at ${sourceMainAuditPath}; refusing to verify fork prefix`,
+    );
+  }
+  const mainText = readFileSync(sourceMainAuditPath, "utf-8");
   const prefixMismatch = auditPrefixMismatch(mainText, boundary, sourceHash);
   if (prefixMismatch !== null) {
     jsonError(prefixMismatch);
@@ -906,11 +930,6 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
 
   // Everything after the record that closes the AUDIT_FORKED anchor is the
   // post-fork delta, extracted as verbatim storage text.
-  const delta = extractPostForkDelta(wtContent, anchor.forkBlock);
-  if (delta === null) {
-    jsonError(`worktree audit malformed — no separator after AUDIT_FORKED block for slug ${slug}`);
-  }
-
   // Acquire outer lock with extended budget for parallel-Bolt contention.
   // Defaults: 200 retries × 100ms = 20s, sized for N=4-8 contention. The
   // AMADEUS_AUDIT_LOCK_RETRIES env var lets tests dial this down so the
@@ -951,7 +970,7 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
   try {
     merged = withAuditLock(
       projectDir,
-      () => mergeDeltaUnderLock(projectDir, mainAuditPath, delta, { slug, sourceHash, boundary, forkTs }, intent, space),
+      () => mergeDeltaUnderLock(projectDir, sourceMainAuditPath, delta, { slug, sourceHash, boundary, forkTs }, intent, space),
       intent,
       space,
       { maxRetries: lockRetries, retryMs: lockRetryMs },
@@ -969,6 +988,82 @@ export function handleAuditMerge(args: string[], projectDir: string): void {
     fork_boundary: boundary,
     audit_timestamp: merged.result.timestamp,
   });
+}
+
+type AuditMergeContext = {
+  wtAuditPath: string;
+  anchor: ForkAnchor;
+  delta: string;
+  entries: number;
+};
+
+function resolveAuditMergeContext(
+  wtPath: string,
+  recordPrefix: string | null,
+  projectDir: string,
+  slug: string,
+): AuditMergeContext {
+  const expectedPath = worktreeAuditFilePath(wtPath, recordPrefix, projectDir);
+  const auditDir = dirname(expectedPath);
+  let names: string[];
+  try {
+    names = readdirSync(auditDir).filter((name) => name.endsWith(".jsonl")).sort();
+  } catch {
+    throw new Error(`worktree audit not found at ${expectedPath}; nothing to merge`);
+  }
+  const candidates: AuditMergeContext[] = [];
+  for (const name of names) {
+    const candidatePath = join(auditDir, name);
+    const content = readFileSync(candidatePath, "utf-8");
+    const anchor = findForkAnchor(content, slug);
+    if (anchor === null) continue;
+    const delta = extractPostForkDelta(content, anchor.forkBlock);
+    if (delta === null) {
+      throw new Error(`worktree audit malformed — no separator after AUDIT_FORKED block for slug ${slug}`);
+    }
+    candidates.push({
+      wtAuditPath: candidatePath,
+      anchor,
+      delta,
+      entries: countDeltaRecords(delta),
+    });
+  }
+  if (candidates.length === 0) {
+    throw new Error(`worktree audit missing AUDIT_FORKED entry for slug ${slug}`);
+  }
+  if (candidates.length !== 1) {
+    throw new Error(
+      `ambiguous worktree audit evidence for slug ${slug}: expected 1 fork shard, found ${candidates.length}`,
+    );
+  }
+  return candidates[0]!;
+}
+
+export function verifyAuditMergeRecovery(
+  projectDir: string,
+  slug: string,
+  intent?: string,
+  space?: string,
+): MergeRecoveryAssessment {
+  try {
+    const recordPrefix = relativeRecordDir(projectDir, intent, space);
+    const context = resolveAuditMergeContext(
+      worktreePath(projectDir, slug),
+      recordPrefix,
+      projectDir,
+      slug,
+    );
+    return assessAuditMergeRecovery(
+      projectDir,
+      slug,
+      context.anchor,
+      context.entries,
+      intent,
+      space,
+    );
+  } catch (error) {
+    return { status: "invalid", detail: errorMessage(error) };
+  }
 }
 
 // The audit-merge critical section, called with the audit lock already held.
@@ -1008,13 +1103,21 @@ export function mergeDeltaUnderLock(
   let entriesMerged = 0;
   let result: AppendAuditResult;
   try {
-    if (delta.trim() !== "") {
+    const deltaRecords = splitJournalLines(delta);
+    const mainRecords = new Set(splitJournalLines(readFileSync(mainAuditPath, "utf-8")));
+    const recordsAlreadyPresent = deltaRecords.filter((record) => mainRecords.has(record)).length;
+    if (recordsAlreadyPresent !== 0 && recordsAlreadyPresent !== deltaRecords.length) {
+      throw new Error(
+        `partial audit delta evidence for slug ${coords.slug}: ${recordsAlreadyPresent}/${deltaRecords.length} records already present; refusing to duplicate or guess`,
+      );
+    }
+    if (delta.trim() !== "" && recordsAlreadyPresent === 0) {
       // Delta is already a sequence of well-formed journal records (one
       // JSONL line each). Append verbatim — running it back through an emit
       // would re-mint each record's identity.
       appendFileSync(mainAuditPath, delta, "utf-8");
-      entriesMerged = countDeltaRecords(delta);
     }
+    entriesMerged = deltaRecords.length;
     result = emitCanonicalAuditEvent(
       "AUDIT_MERGED",
       {

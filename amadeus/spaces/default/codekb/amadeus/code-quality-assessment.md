@@ -1,6 +1,36 @@
 # コード品質評価
 
-## source-only 構成移行の品質所見（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の品質所見（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### 実測された強み
+
+- 既存対象suite `t209` / `t248` / `t62` / `t250` / `t258` は164 pass、316 assertions、0 fail。欠落verbとactive fieldの挙動自体は既存テストに支えられている。
+- `t209:89-106` は実sourceのswitch caseを列挙し、件数下限と既知要素で抽出のvacuous greenを防ぐ先例を持つ。
+- `event-registry-drift` は双方向多集合比較、cardinality、negative tamper、pure comparatorを既に実践している。新規frameworkではなく既存品質パターンの横展開で足りる。
+- schema accepted集合25件とemitter `FIELD_ORDER` 25件は現時点で一致し、core正本と全生成コピーもSHA一致している。修正前の投影基盤は健全である。
+
+### 現存する欠陥・空白
+
+| 所見 | 実測 | リスク |
+| --- | --- | --- |
+| CLI help registry drift | dispatch 33 / `Valid:` 30、missing 3、phantom 0 | 正規verbが未知に見え、運用・診断を誤る |
+| schema↔authoritative spec drift | accepted 25に対し仕様表は9件欠落 | 「逐語コピー」という規範が偽になり、次の実装者が古い仕様を正とする |
+| active/reserved 矛盾 | schema/parser/testは`when`をactive受理、spec/docsはreserved | 実装・文書・testのoracleが三分する |
+| docs完全性の検査空白 | EN/JA H3は同形だがmachine registryなし | `produces_kinds`、`required_sections`、`bundle`等の欠落をCIが観測できない |
+| docs-only CI迂回 | `detect-ci-changes.sh` はdocs変更だけでfull=false | guardをunit testに置いても対象docs PRで走らない |
+| positive-only coverage | t250/t258は挙動、t248はparse/emitを検証 | 一覧集合の片側追加や抽出失敗を止めない |
+
+### 推奨検証設計
+
+1. schemaの既存required/optional配列をreadonly exportし、accepted集合の唯一の実装由来seamにする。
+2. CLI source、authoritative table、EN/JA machine registryを読む純粋extractorと、missing/extra/duplicate/emptyを返す純粋comparatorを作る。
+3. live file一致に加え、dispatch-only追加、phantom `Valid:`、docs omission、空抽出、重複のnegative tamperを個別に落とす。
+4. 対象英日docs pathを `detect-ci-changes.sh` のtest-running changeへ配線し、docs-only PRでもguardを走らせる。
+5. 正本の修正後にtypecheck、lint、対象test、`test:ci`、`dist:check`、`promote:self:check`を実行する。生成物を直接直さない。
+
+品質上の最大リスクは、同じ情報を別の手書き定数へ複製して新しいdrift源を作ることと、抽出器が0件を返して比較がgreenになることである。accepted集合のsource-derived化と空抽出拒否を受け入れ基準に含める。
+
+## source-only 構成移行の品質所見（260802-source-only-dist、履歴、observed `63e69d922`）
 
 本節の file:line と件数はすべて observed `63e69d922` 時点の実測。実測コマンドと出力は `re-scans/260802-source-only-dist.md` を正本とする。
 

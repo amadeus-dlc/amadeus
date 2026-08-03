@@ -65,6 +65,11 @@ const manifest: HarnessManifest = {
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
   ],
 
+  frontmatterAdditions: [
+    { file: "agents/amadeus-product-lead-agent.md", lines: ["tools: [Read, Grep, Glob]"] },
+    { file: "agents/amadeus-architecture-reviewer-agent.md", lines: ["tools: [Read, Grep, Glob]"] },
+  ],
+
   rulesRename: "amadeus-rules",
 
   // The cursor adapter lives inside the core-copied hooks/ dir — exempt the

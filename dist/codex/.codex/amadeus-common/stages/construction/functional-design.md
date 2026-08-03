@@ -105,7 +105,8 @@ Collect answers following stage-protocol.md §3 question flow (offer interaction
 - Check for contradictions between answers
 - Flag missing details needed for artifact generation
 
-If ANY ambiguity found: create follow-up questions and resolve before proceeding.
+Apply the material-ambiguity definition and single follow-up-round budget in
+stage-protocol.md §3.
 
 ### Step 5: Generate Artifacts
 

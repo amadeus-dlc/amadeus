@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBFS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 5,
+      "goa": 2,
+      "reservation": "project-level practice としては、影響を受ける複数 harness にまたがる性能・停止性・予算契約を変更する Intent に適用範囲を限定し、『全 harness』を未影響 harness まで含む無条件の全称規則にしないこと。",
+      "rationale": "候補5は、環境依存の性能改善率と、共有 core が保証すべき停止性・予算・終了理由の安全契約を分離しており、このリポジトリの packages/framework/core と packages/framework/harness/<name> の境界、および harness 専用実装を core へ漏出させない既存 project rule と整合する。候補1〜3は Codex を一次 cohort／dogfood 対象とする本 Intent 固有の射程を含み、候補4は既存の全成果物への是正伝播規則と重複が大きい。候補5は今後の cross-harness 性能・有界性変更にも再利用できる一方、停止性等と無関係な Intent や未影響 harness へ一律適用すると過剰一般化になるため、適用条件を限定する留保付きで賛成する。",
+      "submittedAt": "2026-08-02T02:28:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBFS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Codex を一次対象とする部分は、共有 core を変更し Codex で先行実測する Intent に限定し、harness 固有 Intent や別 harness が一次実証面となる変更へ無条件に適用しない。",
+      "rationale": "共有 core の合否を全 supported harness 共通の conformance 契約とし、harness 固有差を adapter と live probe の証拠へ閉じ込める原則は、このマルチハーネス・プロジェクトの既存 core/harness 境界を補強し、他 Intent にも再利用できる。既存 project.md に完全な重複や org.md との矛盾はない。ただし Codex を効果測定・dogfood の一次対象とする部分は、共有 core を変更し Codex で先行実測する Intent に限定すべきであり、harness 固有 Intent や別 harness が一次実証面となる変更へ無条件に一般化しないことを留保する。",
+      "submittedAt": "2026-08-02T02:28:51Z"
+    }
+  ],
+  "late": []
+}

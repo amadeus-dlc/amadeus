@@ -16,7 +16,8 @@
 // rest on the conductor's good behaviour: when the conductor tries to end its
 // turn, this hook runs the engine (`amadeus-orchestrate next`) and, if a
 // directive is still PENDING, blocks the stop and injects the directive back
-// via `reason`. The conductor cannot quit until the engine answers `done`.
+// via `reason`. A report's next directive continues for run-stage,
+// invoke-swarm, and print; human-wait, error, parked, and done stop the loop.
 // Enforced by the harness, not by the LLM remembering.
 //
 // The reason is an ON-TASK CONTINUATION — it names the work the conductor
@@ -26,23 +27,12 @@
 // training, so a buggy or compromised engine can only ever CONTINUE sanctioned
 // work, never hijack the session.
 //
-// Two bounds keep a stuck loop from trapping the session (a stuck block is the
-// ONE way to trap a session, so this is the safety-critical part):
-//   1. `stop_hook_active` — Claude Code sets this true when the current stop is
-//      itself the product of a prior Stop-hook block. We read it as a signal
-//      that we are already inside a blocked sequence.
-//   2. A NO-PROGRESS counter — consecutive blocks with no intervening workflow
-//      advance (no `report` ran, so the position signature is unchanged). It is
-//      persisted across the rapid-fire blocks in a transient file under
-//      amadeus-docs/.amadeus-stop-hook/. Under a no-progress ceiling exposed as
-//      CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, once the count reaches the cap we LET GO
-//      (allow the stop). The default ceiling is run-mode aware: an unattended
-//      autonomous Construction run keeps the long ceiling (8, the loop must run
-//      to completion with no human to release it), while an INTERACTIVE run uses
-//      a low ceiling (2, issue #365 itself recommends BLOCK_CAP=2 as the
-//      workaround) so a human who just wants to pause/chat is released after one
-//      nudge, not eight. When the workflow advances, the signature changes and
-//      the counter resets to 0, so a healthy loop is never throttled.
+// A canonical stop-continuation budget keeps a stuck loop from trapping the
+// session. The budget is audit-backed, scoped to the stage instance/revision,
+// survives hook restarts and compaction, and is unaffected by unrelated audit
+// rows. Its mode defaults are interactive=2 and autonomous/gated=8, with hard
+// cap 10. The cap-th continuation is permitted; cap+1 is rejected durably.
+// `stop_hook_active` is transport context only and never resets the budget.
 //
 // Five human-wait / terminal carve-outs keep the hook from punishing a turn
 // that ended because it is waiting on the human, is conversational, or ran a
@@ -100,10 +90,16 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
-  auditFilePath,
+  createBudgetPolicy,
+  defaultBudgetPolicy,
+  type BudgetPolicyV1,
+  type StopBudgetMode,
+} from "../tools/amadeus-convergence-policy.ts";
+import { reserveStageBudget } from "../tools/amadeus-convergence-runtime.ts";
+import {
   COMPOSE_MARKER_RELATIVE_PATH,
   COMPOSE_MARKER_TTL_MS,
   consumeMigrationStopLatch,
@@ -116,20 +112,19 @@ import {
   isoTimestamp,
   parseCheckboxes,
   readHookStdin,
+  recordDir,
   recordHookDrop,
   resolveProjectDirFromHook,
   stageDir,
   stateFilePath,
-  stopHookDir,
   harnessDir,
   type MarkerObservation,
 } from "../tools/amadeus-lib.ts";
 
 const HOOK_NAME = "stop";
 
-// The block-cap ceiling: the maximum number of consecutive no-progress blocks
-// before the hook releases the session. Exposed as an env var so a fork can
-// tune it. An explicit CLAUDE_CODE_STOP_HOOK_BLOCK_CAP always wins. With no
+// The effective durable continuation cap. Exposed as an env var so a fork can
+// lower or raise it within the canonical hard cap. With no
 // override the default is RUN-MODE aware:
 //   - autonomous Construction -> 8 (the long ceiling SPIKE 1 validated). An
 //     unattended run has no human to release it, so the loop must run far before
@@ -137,30 +132,48 @@ const HOOK_NAME = "stop";
 //   - interactive (everything else) -> 2. Issue #365 itself recommends
 //     CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=2 as the workaround: a human who pauses or
 //     just chats mid-workflow is released after a single nudge, not eight. A
-//     healthy loop is still never throttled because real progress (a `report`)
-//     changes the signature and resets the counter to 0 well before 2.
 // A non-numeric / non-positive override falls back to the mode default rather
 // than disabling the guard — the guard must never be silently turned off.
-function blockCap(stateContent: string): number {
+export function stopContinuationBlockCap(stateContent: string): number {
   const raw = process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP;
-  const fallback = defaultBlockCap(stateContent);
+  const fallback = stopContinuationDefaultCap(stateContent);
   if (!raw) return fallback;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 && n <= STOP_CONTINUATION_HARD_CAP ? n : fallback;
 }
 
 // The mode-aware default cap (used when no env override is set).
-function defaultBlockCap(stateContent: string): number {
-  return getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous"
+export function stopContinuationDefaultCap(stateContent: string): number {
+  const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
+  return mode === "autonomous" || mode === "gated"
     ? AUTONOMOUS_BLOCK_CAP
     : INTERACTIVE_BLOCK_CAP;
 }
 const AUTONOMOUS_BLOCK_CAP = 8;
 const INTERACTIVE_BLOCK_CAP = 2;
+const STOP_CONTINUATION_HARD_CAP = 10;
+
+export function stopBudgetMode(stateContent: string): StopBudgetMode {
+  const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
+  return mode === "autonomous" || mode === "gated" ? mode : "interactive";
+}
+
+export function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
+  const configuredCap = stopContinuationBlockCap(stateContent);
+  const policy = process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
+    ? createBudgetPolicy({
+        kind: "stop-continuation",
+        effectiveCap: configuredCap,
+        hardCap: STOP_CONTINUATION_HARD_CAP,
+        configVersion: "convergence-v1",
+      })
+    : defaultBudgetPolicy("stop-continuation", stopBudgetMode(stateContent));
+  return policy.ok ? policy.value : null;
+}
 
 // Upper bound on the `amadeus-orchestrate next` consultation. A `next` that never
-// returns must not hang the hook for the whole turn (a session trap the
-// block-count guard cannot see — it only counts blocks that complete). The
+// returns must not hang the hook for the whole turn (a separate session trap
+// that no completed-delivery budget can observe). The
 // read-only engine answers in well under a second normally; 10s is generous
 // headroom. On timeout the spawn returns non-zero and runEngineNextKind fails
 // OPEN (allows the stop).
@@ -233,32 +246,8 @@ function blockStop(reason: string): never {
   process.exit(0);
 }
 
-// --- Recursion guard: a durable no-progress counter ---------------------------
-//
-// We persist a tiny JSON record keyed on the workflow's PROGRESS SIGNATURE: the
-// Current Stage slug plus the audit-tail length (record count of the audit shards). A
-// `report` that advances the workflow pivots the stage and/or appends audit
-// rows, so the signature changes — that is how we detect "progress was made
-// since the last block". When the signature is unchanged across two blocks, no
-// report ran in between (no progress) and we increment the counter; when it
-// changes, the loop is healthy and we reset to 0.
-//
-// The file lives under the gitignored amadeus-docs/.amadeus-stop-hook/ alongside
-// the other transient framework state. It is keyed off the project dir, so it
-// is per-workflow and survives across the rapid-fire blocks within one stuck
-// turn (the blocks happen in the same project; each re-invocation re-reads it).
-
-interface GuardRecord {
-  signature: string;
-  count: number; // consecutive no-progress blocks observed at this signature
-}
-
-function guardFilePath(): string {
-  return join(stopHookDir(projectDir), "block-count.json");
-}
-
 // The Current Stage slug from the state file. Factored from the regex the
-// signature and continuation both used inline (was duplicated at two sites);
+// budget and continuation both use; returns "" when the field is absent.
 // returns "" when the field is absent. Matches `**Current Stage**:`, with or
 // without the bold markers / backticks, exactly as before.
 function currentStageSlug(stateContent: string): string {
@@ -266,121 +255,45 @@ function currentStageSlug(stateContent: string): string {
   return (stageMatch?.[1] ?? "").trim();
 }
 
-// The current workflow position signature. Cheap, deterministic, and changes
-// exactly when a report advances the workflow. We read the state file's
-// Current Stage line and the audit length without importing the heavier state
-// parser — a substring + line-count is enough and cannot throw on odd content.
-function progressSignature(stateContent: string): string {
+// Reserve one continuation against the canonical stage budget. Audit rows,
+// hook invocations, sessions and compact/resume are deliberately absent from
+// the BudgetSubject identity; only a real stage/revision transition creates a
+// new subject. Canonical write or state failures release the stop safely.
+export function decideStopContinuation(
+  resolvedProjectDir: string,
+  stateContent: string,
+  stopHookActive: boolean,
+  sessionId: string | undefined,
+): boolean {
+  const policy = stopBudgetPolicy(stateContent);
   const stage = currentStageSlug(stateContent);
-  let auditLen = 0;
-  try {
-    const auditPath = auditFilePath(projectDir);
-    if (existsSync(auditPath)) {
-      auditLen = readFileSync(auditPath, "utf-8").split("\n").length;
-    }
-  } catch {
-    // Unreadable audit — treat as length 0; the stage component still varies.
-  }
-  return `${stage}::${auditLen}`;
-}
-
-function readGuard(): GuardRecord | null {
-  try {
-    const path = guardFilePath();
-    if (!existsSync(path)) return null;
-    const raw: unknown = JSON.parse(readFileSync(path, "utf-8"));
-    if (
-      raw !== null &&
-      typeof raw === "object" &&
-      "signature" in raw &&
-      typeof (raw as { signature: unknown }).signature === "string" &&
-      "count" in raw &&
-      typeof (raw as { count: unknown }).count === "number"
-    ) {
-      return raw as GuardRecord;
-    }
-  } catch {
-    // Corrupt / unreadable guard file — treat as no prior record (count 0).
-  }
-  return null;
-}
-
-function writeGuard(record: GuardRecord): void {
-  try {
-    const dir = stopHookDir(projectDir);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(guardFilePath(), JSON.stringify(record), "utf-8");
-  } catch {
-    // If we cannot persist the counter we still proceed; the stop_hook_active
-    // flag remains a second, native bound (see decideBlock). Worst case the
-    // counter under-counts — never over-blocks — because an unwritable record
-    // reads back as count 0, and the stop_hook_active escape hatch still fires.
-  }
-}
-
-// Decide whether to block, accounting for the recursion bounds. Returns true to
-// block (work is pending and we are within the no-progress budget), false to
-// RELEASE (let go — the ceiling is hit, so a stuck loop cannot trap the turn).
-//
-// PROGRESS is authoritative. The workflow position signature (Current Stage +
-// audit-tail length) changes exactly when a `report` advances the workflow, so:
-//   - signature CHANGED since the prior block  → progress was made; RESET the
-//     streak to 1. A healthy loop that keeps advancing is never throttled, even
-//     if the conductor forgets to consult the engine on every single turn.
-//   - signature UNCHANGED from the prior block → no progress (no report ran);
-//     INCREMENT the streak. This is the genuinely-stuck case the cap bounds.
-// stop_hook_active is a secondary signal used ONLY to seed the streak when
-// there is no prior record yet but Claude Code already reports this stop as the
-// product of a prior block (so a sequence we are joining mid-flight starts at 2,
-// not 1). It NEVER overrides an observed signature change — progress always
-// wins, so the counter can only climb on real no-progress and can therefore
-// only ever make us release SOONER under a true hang, never trap a live loop.
-// Once the streak reaches the cap we RELEASE: a stuck loop must always let go.
-function decideBlock(stateContent: string, stopHookActive: boolean): boolean {
-  const cap = blockCap(stateContent);
-  const signature = progressSignature(stateContent);
-  const prior = readGuard();
-
-  const sameSignature = prior !== null && prior.signature === signature;
-
-  let nextCount: number;
-  if (sameSignature) {
-    // No progress since the prior block at this signature — extend the streak.
-    nextCount = prior.count + 1;
-  } else if (prior === null && stopHookActive) {
-    // No prior record, but Claude Code flags this as a post-block stop: we are
-    // joining a sequence already in flight. Seed at 2 (this is at least the
-    // second block) rather than under-counting from 1.
-    nextCount = 2;
-  } else {
-    // Either a fresh first block, or the signature changed (progress was made):
-    // start a new streak.
-    nextCount = 1;
-  }
-
-  // Persist the updated counter for the NEXT invocation in this sequence.
-  writeGuard({ signature, count: nextCount });
-
-  // RELEASE when the no-progress streak has reached the cap. This is the
-  // hardest acceptance criterion: a stuck loop must always let go.
-  if (nextCount >= cap) {
-    return false; // let go
-  }
-
-  return true; // within budget — block and re-feed the pending work
-}
-
-// Reset the guard once the loop reaches `done` (or any allow path with state),
-// so the next stuck sequence starts its count from scratch rather than
-// inheriting a stale streak from an earlier, since-resolved hang.
-function resetGuard(): void {
-  try {
-    const dir = stopHookDir(projectDir);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(guardFilePath(), JSON.stringify({ signature: "", count: 0 }), "utf-8");
-  } catch {
-    // Non-fatal — a stale streak only ever makes us release SOONER, never trap.
-  }
+  const activeRecordDir = recordDir(resolvedProjectDir);
+  if (policy === null || stage.length === 0 || activeRecordDir === null) return false;
+  const revision = Number.parseInt(getField(stateContent, "Revision Count") ?? "0", 10);
+  const stageRevision = Number.isInteger(revision) && revision >= 0 ? revision : 0;
+  const stageInstanceId = `${stage}@${stageRevision}`;
+  const result = reserveStageBudget({
+    projectDir: resolvedProjectDir,
+    intentUuid: basename(activeRecordDir),
+    stageSlug: stage,
+    stageInstanceId,
+    revision: stageRevision,
+    agent: getField(stateContent, "Active Agent") ?? "amadeus-conductor",
+    budgetKind: "stop-continuation",
+    subjectId: stageInstanceId,
+    policy,
+    lastDurableProgress: `${stage}:${getField(stateContent, "Status") ?? "running"}`,
+    deliveryIdentity: `${sessionId ?? "anonymous"}:${stopHookActive ? "recursive" : "initial"}`,
+  });
+  if (result.kind === "reserved") return true;
+  recordHookDrop(
+    resolvedProjectDir,
+    HOOK_NAME,
+    result.kind === "exhausted"
+      ? `stop continuation budget exhausted (${policy.effectiveCap}/${policy.effectiveCap})`
+      : `stop continuation budget refused (${result.reason})`,
+  );
+  return false;
 }
 
 // --- Human-wait carve-out -----------------------------------------------------
@@ -805,7 +718,7 @@ function runEngineNextKind(): string | null {
   if (!existsSync(enginePath)) return null;
   // The spawn MUST be time-bounded. Without a timeout a hung `next` (an engine
   // that never returns) would hang this hook for the whole turn — a session
-  // trap by a path the block-count guard cannot see. On timeout spawnSync
+  // trap by a path the completed-delivery budget cannot observe. On timeout spawnSync
   // returns with a non-zero/absent exitCode (and sets `proc.error`), which the
   // null-return below treats as "engine could not be consulted" → fail OPEN
   // (allow the stop). Mirrors amadeus-sensor-fire.ts's bounded spawn.
@@ -855,7 +768,10 @@ export function continuationReason(
     "You haven't finished the forwarding loop yet. Run " +
     `\`bun ${harnessDir()}/tools/amadeus-orchestrate.ts next\`, act on the directive it ` +
     "emits, then run `amadeus-orchestrate report --stage <stage> --result <outcome>` to commit " +
-    "the transition. Repeat until the engine answers `done`. " +
+    "the transition. Complete only this directive's declared completion conditions and do " +
+    "not search for additional improvements. Treat the directive returned by the report as " +
+    "the next loop step: continue for `run-stage`, `invoke-swarm`, and `print`; human-wait " +
+    "(`ask` or `select-intent`), `error`, `parked`, and `done` end the loop. " +
     "If instead you mean to pause this workflow for now (and resume in a later " +
     `session), run \`bun ${harnessDir()}/tools/amadeus-orchestrate.ts park\` to park it ` +
     "cleanly at this inter-stage boundary - never mark stages complete just to end the turn."
@@ -965,17 +881,15 @@ if (kind === null) {
   allowStop();
 }
 
-// `done` → the workflow is complete; allow the turn to end and clear the guard
-// so a future stuck sequence starts fresh.
+// `done` → the workflow is complete; allow the turn to end.
 if (kind === "done") {
-  resetGuard();
   allowStop();
 }
 
 // `parked` -> the workflow was intentionally parked mid-flow (issue #367); a
 // human resumes it later with /amadeus --resume. This is the SUPPORTED
-// multi-session exit: allow the turn to end and clear the guard exactly like
-// `done`, so the conductor parks at a clean inter-stage boundary instead of
+// multi-session exit: allow the turn to end, so the conductor parks at a clean
+// inter-stage boundary instead of
 // rubber-stamping the remaining stages to force a `done`. Terminal allow only
 // (never a new block), so it can never trap a session.
 //
@@ -985,7 +899,7 @@ if (kind === "done") {
 // park would strand the swarm/Bolt run waiting on someone who was told they
 // weren't needed. When autonomous, decline the parked allow and fall through to
 // the cap-bounded block below (the loop stays alive; a genuine hang still
-// releases via the no-progress cap). This mirrors isPendingQuestionStop's
+// releases via the durable continuation cap). This mirrors isPendingQuestionStop's
 // identical guard (:391) for consistency across every carve-out in this hook.
 if (kind === "parked") {
   if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
@@ -995,7 +909,6 @@ if (kind === "parked") {
       "parked directive seen under autonomous Construction; declining the parked allow (an unattended run must not self-park), falling through to the cap-bounded block",
     );
   } else {
-    resetGuard();
     allowStop();
   }
 }
@@ -1080,12 +993,17 @@ if (isConversationalStop(stateContent, transcriptPath, transcriptFormat)) {
 // present-gate / ask / print / error). Decide whether to block, honouring the
 // recursion bounds. When the bounds say release, LET GO — a stuck loop must
 // never trap the session.
-const shouldBlock = decideBlock(stateContent, stopHookActive);
+const shouldBlock = decideStopContinuation(
+  projectDir,
+  stateContent,
+  stopHookActive,
+  migrationSessionId,
+);
 if (!shouldBlock) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    `recursion guard released the stop (no-progress block cap ${blockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
+    `durable continuation budget released the stop (cap ${stopContinuationBlockCap(stateContent)} reached; stop_hook_active=${stopHookActive})`,
   );
   allowStop();
 }

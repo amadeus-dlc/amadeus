@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBRA13",
+  "voter": "requirements-voter-2",
+  "question": "Requirements Analysisの4候補はIntent固有の要件判断または既存の共有core／harness境界の適用であり、project/team memoryへ追加する恒久学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "operation tree、初期allowlist、budget遷移、adapter inventoryは本Intentのrequirementsに保持し、既存ノルムと重複する恒久規則を追加しない"
+    }
+  ]
+}

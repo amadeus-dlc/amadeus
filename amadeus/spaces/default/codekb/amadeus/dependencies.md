@@ -1,6 +1,25 @@
 # 依存関係
 
-## source-only 構成移行の依存関係（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の依存関係（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+### 内部依存グラフ
+
+```text
+amadeus-state.ts source ──> verb extractors ──> pure comparator ──> unit guard
+stage-schema arrays ─────> readonly accepted export ─┐
+EN/JA docs registry ─────> docs extractor ──────────┼─> pure comparator ─> unit guard
+stage spec table ─────────> spec extractor（裁定時）┘
+source/docs changed paths ─> detect-ci-changes.sh ─────> guard execution
+core source ─> package.ts ─> 7 dist ─> promote-self ─> 5 root faces
+```
+
+- CLI比較は1ファイル内の2投影を読むだけで、handler実装や状態機械へ依存しない。`t250` / `t258` は対象verbの挙動証拠だがregistry guardのoracleにはしない。
+- stage比較は schema の既存 `REQUIRED_FIELDS` / `OPTIONAL_FIELDS` に依存する。新たな手書き25件配列をproduction正本として作ると同型driftを再生産するため避ける。
+- docs guardは英日2ファイルへの変更で必ず起動する必要がある。現在の `detect-ci-changes.sh` は `docs/**` だけでは `full=true` にしないため、test本体を追加するだけでは閉包しない。
+- authoritative specを比較対象へ含める場合、欠落9件とactive `when` の矛盾を先に是正しないとguard導入時点で意図どおり赤になる。これは欠陥の証明であり、waiveしてgreen化してはならない。
+- 外部依存追加は不要。Bun/TypeScript/既存test helperとMarkdown抽出で完結する。
+
+## source-only 構成移行の依存関係（260802-source-only-dist、履歴、observed `63e69d922`）
 
 - 判断: 区間（`47574fbab..63e69d922`）に本書の主題（依存関係）への実質変更なし（判断 1 行）。外部依存の追加なし。内部依存は配布の三層に沿って 4 本 — (1) 正本（`packages/framework/core/` + `packages/framework/harness/<name>/manifest.ts` 7 面）→ `dist/<harness>/`（`scripts/package.ts`）、(2) `dist/` → dogfood 面 6 面（`scripts/promote-self.ts:53-60` の `managedDirs`、src がすべて `dist/…` = **dist 消去で入力が消える単方向依存**。ただし `:355-359` の再帰 build 呼び出しにより promote は build を内包しており、入力源の置換余地がある）、(3) codeload アーカイブ → installer（`packages/setup` の URL 生成・許可ホスト・展開後レイアウトの 3 ファイルが一体で、配布元変更時は同時改訂が必須）、(4) CI ガード → 上記全体（`ci.yml:243-247` の `dist:check` / `promote:self:check` は committed `dist/` の実在に依存し、`detect-ci-changes.sh:20` の `dist/*` パターンが発火トリガの一員）。加えて scope prose の self-\* 4 種と installer-distribution は `packages/` / `dist/` に正本を持たず dogfood 面が唯一の実体であるため（`find` 実測 0 件）、dist 非コミット化は復元元不在の依存を露出させる。dist 同期面: 配布系スクリプトを触る変更は従来どおり dist 7 面 + self-install 6 面の再生成が PR に同梱される。詳細は `architecture.md` / `code-structure.md` の現在節を正本とする。測定 ref: observed `63e69d922`。
 

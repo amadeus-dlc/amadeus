@@ -77,8 +77,7 @@ Create `<record>/inception/application-design/application-design-questions.md` w
 
 Collect answers following stage-protocol.md §3 question flow (offer interaction mode choice, collect answers, write back to file).
 - MANDATORY ambiguity analysis: scan for vague language, contradictions, missing details
-- Create follow-up questions if ANY ambiguity found
-- Resolve all ambiguities before proceeding
+- Apply the material-ambiguity definition and single follow-up-round budget in stage-protocol.md §3
 
 ### Step 5: Generate Design Artifacts
 

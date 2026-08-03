@@ -1,6 +1,15 @@
 # 技術スタック
 
-## source-only 構成移行の技術断面（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の技術断面（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+- Runtime / package manager: Bun `1.3.13`。長寿命serviceやdatabaseはなく、短命CLIとして実行する。
+- Language / type system: TypeScript `6`、ESM、`tsc --noEmit`。抽出・比較helperはnode互換の文字列処理だけで実装でき、外部依存は不要。
+- Lint: Biome `2.5.5`（formatter無効）。既存近傍スタイルを維持する。
+- Test: Bun test、総テスト847本。対象既存suite `t209` / `t248` / `t62` / `t250` / `t258` は164 pass、316 assertions、0 failだがregistry一致は未検証。
+- Docs: Markdown + YAML frontmatter。machine registryは既存 `mirror-docs-contract` のmarker先例に合わせ、Markdown本文から決定的に抽出可能な表またはfenced blockとする。
+- Distribution: `scripts/package.ts` が7 distを生成し、promote-selfが5 root harness treeを同期する。正本変更後の生成整合は既存 `dist:check` / `promote:self:check` に委ねる。
+
+## source-only 構成移行の技術断面（260802-source-only-dist、履歴、observed `63e69d922`）
 
 - 判断: 区間（`47574fbab..63e69d922`）に本書の主題（技術スタック）への実質変更なし（判断 1 行）。患部は Bun / TypeScript の既存ツール層と GitHub Actions 設定・`.gitignore` に閉じ、新規外部依存を要さない。関与する既存の外部要素は 3 つで、いずれも現行スタック内 — GitHub Actions の `softprops/action-gh-release@…v2`（`release.yml:152-154`、Release Asset 添付に用いる場合は既存アクションの `files:` 入力で足りる）、`oven-sh/setup-bun@v2` + bun 1.3.13（`release.yml:174-177` / `ci.yml:234-237`）、codeload / api.github.com への HTTPS 取得（`packages/setup/src/ports/http.ts:5` の `ALLOWED_HOSTS`）。配布元を Release Asset へ移す場合は許可ホスト集合の見直しが技術面の唯一の実質論点で、ランタイム・言語・ビルドツールの変更は不要。区間の技術面の変化は患部外（`#2031` の `harness.json` への `name` 追加と全 7 面 dist 再生成、`#2057` の `.gitattributes` linguist-generated 化）で、詳細は `architecture.md` 現在節に委ねる。測定 ref: observed `63e69d922`。
 

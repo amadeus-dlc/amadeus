@@ -1,0 +1,13 @@
+{
+  "electionId": "E-CDBUGS13",
+  "voter": "ugs13-voter-2",
+  "question": "Units Generationの§13候補6件は、既存stage責務の適用または本Intent固有のUnit/アーキテクチャ判断であり、project/team memoryへ追加する新規学習は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1/c3は既存stage境界、c2/c6はIntent固有設計、c4/c5は今回のdelivery判断として成果物に保持する"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T00:24:14Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDB-BT-ZERO",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測の結果、build-and-test の memory.md は Interpretations・Deviations・Tradeoffs・Open questions の全区分が空で、learnings-selections.json も selections 0件・free_text 0件だった。full regression も754 files・10,239 assertions・0 failureで、永続化すべき未解決の学習候補は確認できないため、「0件で可」を支持する。",
+      "submittedAt": "2026-08-03T00:23:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDB-BT-ZERO",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "build-and-test の memory.md を独立に確認し、Interpretations・Deviations・Tradeoffs・Open questions の実記録件数が 0 件であることを実測した。永続化候補なしとして最終承認ゲートへ進める判断を支持する。",
+      "submittedAt": "2026-08-03T00:23:38Z"
+    }
+  ],
+  "resolutions": []
+}

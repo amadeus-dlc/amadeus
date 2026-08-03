@@ -28,8 +28,19 @@ import {
   emitSwarmStarted,
   emitUnitConverged,
   emitUnitFailed,
+  handleAcquire,
+  handleConfirmDispatch,
   handleFinalize,
+  handleInitialEnqueue,
+  handleLateResult,
+  handleRecordReconciliation,
+  handleSettle,
+  handleTerminateBatch,
 } from "../../dist/claude/.claude/tools/amadeus-swarm.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+} from "../../dist/claude/.claude/tools/amadeus-unit-pool-runtime.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { ensureContextManager } from "../../dist/claude/.claude/otel/context.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
@@ -223,9 +234,15 @@ describe("finalize drives the taxonomy through the seam", () => {
   }
 
   test("a claimed unit with no worktree fails, returns the baton and closes the batch", () => {
-    // No prepare ran, so the unit has no worktree: finalize refuses the merge
-    // and writes the failure trio. Exit 2 is the "conductor takes the baton"
-    // signal, which is what makes this the honest driver for those emitters.
+    // Finalize requires an initialized terminal pool. Drive one Unit through its
+    // complete pool lifecycle without creating a worktree; re-verification then
+    // fails on the absent worktree and writes the failure trio.
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    pool.initialEnqueue({ idempotencyKey: "init", batchId: "1", cap: 1, units: [{ unitId: "u1", dependsOn: [] }] });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "1" });
+    const attempt = pool.readProjection("1").active[0];
+    pool.confirmDispatch({ idempotencyKey: "confirm", batchId: "1", attemptId: attempt.attemptId, nativeHandle: "native-u1" });
+    pool.settleRelease({ idempotencyKey: "settle", batchId: "1", attemptId: attempt.attemptId, outcome: "succeeded" });
     const code = callFinalize([
       "--batch",
       "1",
@@ -248,5 +265,186 @@ describe("finalize drives the taxonomy through the seam", () => {
     expect(emitted).toContain("amadeus.swarm.completed");
     // Never a converged row for a unit that did not land on the trunk.
     expect(emitted).not.toContain("amadeus.swarm.unit.converged");
+  });
+
+  test("finalize rejects a batch whose fixed pool was never initialized", () => {
+    expect(callFinalize([
+      "--batch",
+      "2",
+      "--units",
+      "u2",
+      "--claimed",
+      "u2",
+      "--check-cmd",
+      "true",
+      "--project-dir",
+      proj,
+    ])).toBe(2);
+  });
+
+  test("finalize rejects a claimed Unit whose pool outcome was not successful", () => {
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    pool.initialEnqueue({ idempotencyKey: "init-3", batchId: "3", cap: 1, units: [{ unitId: "u3", dependsOn: [] }] });
+    pool.acquire({ idempotencyKey: "acquire-3", batchId: "3" });
+    const attempt = pool.readProjection("3").active[0];
+    pool.confirmDispatch({ idempotencyKey: "confirm-3", batchId: "3", attemptId: attempt.attemptId, nativeHandle: "native-u3" });
+    pool.settleRelease({ idempotencyKey: "settle-3", batchId: "3", attemptId: attempt.attemptId, outcome: "failed" });
+
+    expect(callFinalize([
+      "--batch",
+      "3",
+      "--units",
+      "u3",
+      "--claimed",
+      "u3",
+      "--check-cmd",
+      "true",
+      "--project-dir",
+      proj,
+    ])).toBe(2);
+  });
+});
+
+describe("fixed-pool CLI handlers are driven in-process", () => {
+  class ExitSignal extends Error {
+    constructor(readonly code: number) {
+      super(`exit ${code}`);
+    }
+  }
+
+  function callHandler(run: () => void): number {
+    const origExit = process.exit.bind(process);
+    const origLog = console.log;
+    const origError = console.error;
+    process.exit = ((code?: number) => {
+      throw new ExitSignal(code ?? 0);
+    }) as typeof process.exit;
+    console.log = () => {};
+    console.error = () => {};
+    try {
+      run();
+      return 0;
+    } catch (error) {
+      if (error instanceof ExitSignal) return error.code;
+      throw error;
+    } finally {
+      process.exit = origExit;
+      console.log = origLog;
+      console.error = origError;
+    }
+  }
+
+  const projectArgs = () => ["--project-dir", proj];
+
+  test("the pool subcommands commit one complete lifecycle through the audit repository", () => {
+    expect(callHandler(() => handleInitialEnqueue([
+      "--batch", "4", "--units", "u1,u2", "--cap", "1", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleAcquire([
+      "--batch", "4", "--idempotency-key", "delivery-u1", ...projectArgs(),
+    ]))).toBe(0);
+
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    const first = pool.readProjection("4").active[0];
+    expect(callHandler(() => handleConfirmDispatch([
+      "--batch", "4", "--attempt", first.attemptId, "--native-handle", "native-u1", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleSettle([
+      "--batch", "4", "--attempt", first.attemptId, "--outcome", "succeeded", ...projectArgs(),
+    ], "settle-release"))).toBe(0);
+    expect(callHandler(() => handleLateResult([
+      "--batch", "4", "--attempt", first.attemptId, "--outcome", "failed", ...projectArgs(),
+    ]))).toBe(0);
+
+    const second = pool.readProjection("4").active[0];
+    expect(callHandler(() => handleSettle([
+      "--batch", "4", "--attempt", second.attemptId, "--outcome", "dispatch-not-started", ...projectArgs(),
+    ], "settle-release-requeue"))).toBe(0);
+    const retried = pool.readProjection("4").active[0];
+    expect(callHandler(() => handleConfirmDispatch([
+      "--batch", "4", "--attempt", retried.attemptId, "--native-handle", "native-u2", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleSettle([
+      "--batch", "4", "--attempt", retried.attemptId, "--outcome", "failed", ...projectArgs(),
+    ], "settle-release-cancel-dependents"))).toBe(0);
+    expect(pool.readProjection("4")).toMatchObject({ phase: "terminal", result: "partial-failure" });
+  });
+
+  test("reconciliation and explicit termination handlers preserve their typed outcomes", () => {
+    expect(callHandler(() => handleInitialEnqueue([
+      "--batch", "5", "--units", "u1,u2", "--cap", "1", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleAcquire([
+      "--batch", "5", "--idempotency-key", "delivery-uncertain", ...projectArgs(),
+    ]))).toBe(0);
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    const uncertain = pool.readProjection("5").active[0];
+    expect(callHandler(() => handleRecordReconciliation([
+      "--batch", "5", "--attempt", uncertain.attemptId,
+      "--reconciliation-kind", "worker-start", "--effect", "unknown", ...projectArgs(),
+    ]))).toBe(0);
+    expect(pool.readProjection("5")).toMatchObject({ phase: "terminal", result: "terminated" });
+
+    expect(callHandler(() => handleInitialEnqueue([
+      "--batch", "6", "--units", "u3,u4", "--cap", "1", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleTerminateBatch([
+      "--batch", "6", "--result", "cancelled", "--queued-outcome", "cancelled", ...projectArgs(),
+    ]))).toBe(0);
+    expect(pool.readProjection("6")).toMatchObject({ phase: "terminal", result: "cancelled" });
+  });
+
+  test("pool subcommands reject incomplete or out-of-domain native facts", () => {
+    expect(callHandler(() => handleInitialEnqueue([
+      "--batch", "7", "--units", "u1", "--cap", "0", ...projectArgs(),
+    ]))).toBe(1);
+    expect(callHandler(() => handleAcquire(["--batch", "7", ...projectArgs()]))).toBe(1);
+    expect(callHandler(() => handleConfirmDispatch([
+      "--batch", "7", "--attempt", "attempt", ...projectArgs(),
+    ]))).toBe(1);
+    expect(callHandler(() => handleRecordReconciliation([
+      "--batch", "7", "--attempt", "attempt", "--effect", "invalid", ...projectArgs(),
+    ]))).toBe(1);
+    expect(callHandler(() => handleSettle([
+      "--batch", "7", "--attempt", "attempt", "--outcome", "failed", ...projectArgs(),
+    ], "settle-release-requeue"))).toBe(1);
+    expect(callHandler(() => handleTerminateBatch([
+      "--batch", "7", "--result", "invalid", "--queued-outcome", "cancelled", ...projectArgs(),
+    ]))).toBe(1);
+    expect(callHandler(() => handleTerminateBatch([
+      "--batch", "7", "--result", "cancelled", "--queued-outcome", "invalid", ...projectArgs(),
+    ]))).toBe(1);
+    expect(callHandler(() => handleLateResult([
+      "--batch", "7", "--outcome", "failed", ...projectArgs(),
+    ]))).toBe(1);
+  });
+
+  test("finalize records a typed conductor reason for an unclaimed terminal Unit", () => {
+    expect(callHandler(() => handleInitialEnqueue([
+      "--batch", "8", "--units", "u8", "--cap", "1", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleAcquire([
+      "--batch", "8", "--idempotency-key", "delivery-u8", ...projectArgs(),
+    ]))).toBe(0);
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+    const attempt = pool.readProjection("8").active[0];
+    expect(callHandler(() => handleConfirmDispatch([
+      "--batch", "8", "--attempt", attempt.attemptId, "--native-handle", "native-u8", ...projectArgs(),
+    ]))).toBe(0);
+    expect(callHandler(() => handleSettle([
+      "--batch", "8", "--attempt", attempt.attemptId, "--outcome", "failed", ...projectArgs(),
+    ], "settle-release"))).toBe(0);
+
+    expect(callHandler(() => handleFinalize([
+      "--batch", "8", "--units", "u8", "--reasons", "u8=budget-exhausted",
+      "--check-cmd", "true", ...projectArgs(),
+    ]))).toBe(2);
+    const records = shardRecords().filter((record) => record.schemaVersion === 2);
+    const emitted = records.map((record) => record.eventName);
+    const failed = records.find((record) => record.eventName === "amadeus.swarm.unit.failed");
+    expect(emitted).toContain("amadeus.swarm.unit.failed");
+    expect(failed?.attributes?.Reason).toBe("budget-exhausted");
+    expect(emitted).toContain("amadeus.swarm.baton.returned");
+    expect(emitted).toContain("amadeus.swarm.completed");
   });
 });

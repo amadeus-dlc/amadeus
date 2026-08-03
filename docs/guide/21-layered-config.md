@@ -29,7 +29,8 @@ Later, more specific levels override earlier levels key by key. For example,
 
 ```json
 {
-  "auto-solo-election": false
+  "auto-solo-election": false,
+  "max-parallel-units": 4
 }
 ```
 
@@ -38,7 +39,8 @@ The `payments` space can opt in to automatic solo elections in
 
 ```json
 {
-  "auto-solo-election": true
+  "auto-solo-election": true,
+  "max-parallel-units": 2
 }
 ```
 
@@ -53,6 +55,7 @@ value. Other spaces continue to use `false`.
 | `mirror-projects` | project target array | `[]` | Maps an intent to GitHub Project targets and optional status names |
 | `auto-solo-election` | boolean | `false` | Enables automatic solo elections for design deviations, blockers, and §13 learning selection |
 | `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls filing confirmed Amadeus defects and concerns to `amadeus-dlc/amadeus` |
+| `max-parallel-units` | integer `1..4` | `4` | Hard-bounds simultaneously active Unit workers for one Intent; later layers override earlier ones |
 | `plugins` | array of plugin names | `[]` | Selects plugins to reconcile into the current harness; valid only in Global Config |
 
 `plugins` is the project opt-in source of truth and is intentionally not

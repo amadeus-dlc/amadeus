@@ -1,6 +1,21 @@
 # コンポーネント棚卸し
 
-## source-only 構成移行の対象コンポーネント（260802-source-only-dist、現在、observed `63e69d922`）
+## registry drift guard の対象コンポーネント（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+
+| コンポーネント | 責務 | 依存 | 健全性 |
+| --- | --- | --- | --- |
+| state CLI dispatcher | verb→handler配送、未知verb診断 | handler群、`error()` | at-risk: dispatch 33 vs表示30 |
+| stage schema validator | authored fieldのclosed-world検証 | `REQUIRED_FIELDS`、`OPTIONAL_FIELDS` | healthy実装 / at-risk公開registry不在 |
+| frontmatter parser/emitter | YAML subsetのparse/emit | schema型、`FIELD_ORDER` | healthy: accepted集合25と一致 |
+| authoritative stage spec | field型・制約の規範 | schemaとの同期宣言 | degraded: 9 field欠落、`when`矛盾 |
+| EN/JA Field reference | 判断を要するfieldの利用解説 | authoritative spec | healthyな意図的要約 / at-risk完全性registry不在 |
+| registry extraction helper（候補） | source/docsから集合抽出 | textのみ | 新設候補。pure・空抽出拒否が必要 |
+| registry comparator（候補） | 双方向差分・cardinality・duplicate | 抽出結果 | 新設候補。event registry先例を再利用 |
+| CI change detector | 変更path→test tier | shell case registry | degraded: 対象docs-only変更をfull testへ送らない |
+| packaging/promote pipeline | core正本→7 dist→5 root face | `scripts/package.ts`、promote-self | healthy:既存drift guardあり |
+| registry guard tests（候補） | live file一致 + tamper negative | 上記pure helper、fixture text | 新設候補。unitを中心にCI route検証を追加 |
+
+## source-only 構成移行の対象コンポーネント（260802-source-only-dist、履歴、observed `63e69d922`）
 
 - 判断: 区間（`47574fbab..63e69d922`）に本書の主題（コンポーネント台帳）への実質変更なし（判断 1 行）。新規コンポーネントの新設は見通しになく、対象は既存の 4 グループ — (1) 生成系スクリプト（`scripts/package.ts` 963 行 / `scripts/promote-self.ts` 689 行）、(2) installer（`packages/setup` の `internal/resolved-version-factory.ts` / `internal/payload-factory.ts` / `ports/http.ts`）、(3) CI・リリース設定（`.github/workflows/ci.yml` `:225-255` / `.github/workflows/release.yml` `:133-158` / `scripts/detect-ci-changes.sh` / `.gitignore`）、(4) 配布・消費面（`dist/` 8 ディレクトリ = 7 ハーネス + `dist/plugins/`、dogfood 面 6 面、ルート `AGENTS.md` / `CLAUDE.md`）。ハーネス面の集合は `discoverHarnessNames`（`scripts/package.ts:92-97`）が `manifest.ts` の実在で機械発見するため台帳のハードコードは不在（実測 7 件）。患部一覧は `code-structure.md` 現在節と `re-scans/260802-source-only-dist.md` を正本とする。測定 ref: observed `63e69d922`。
 

@@ -5,6 +5,7 @@
 // accepts exactly `off | prompt | auto` and defaults to `prompt`;
 // `auto-file-findings` uses the same modes and default;
 // `auto-solo-election` accepts only a boolean and defaults to `false`.
+// `max-parallel-units` accepts integers 1..4 and defaults to the hard cap 4.
 // Invalid values are configuration errors and are never coerced.
 //
 // Responsibilities are split:
@@ -49,6 +50,7 @@ const AUTO_MIRROR_KEY = "auto-mirror";
 const MIRROR_PROJECTS_KEY = "mirror-projects";
 const AUTO_SOLO_ELECTION_KEY = "auto-solo-election";
 const AUTO_FILE_FINDINGS_KEY = "auto-file-findings";
+const MAX_PARALLEL_UNITS_KEY = "max-parallel-units";
 const PLUGINS_KEY = "plugins";
 // "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
 // the mirror parser must tolerate the key so both subsystems can share the
@@ -58,6 +60,7 @@ const ALLOWED_KEYS: readonly string[] = [
   MIRROR_PROJECTS_KEY,
   AUTO_SOLO_ELECTION_KEY,
   AUTO_FILE_FINDINGS_KEY,
+  MAX_PARALLEL_UNITS_KEY,
   "observability",
   PLUGINS_KEY,
 ];
@@ -82,6 +85,7 @@ export type AmadeusConfigKey =
   | "mirror-projects"
   | "auto-solo-election"
   | "auto-file-findings"
+  | "max-parallel-units"
   | "plugins";
 
 export type AmadeusConfig = Readonly<{
@@ -89,6 +93,7 @@ export type AmadeusConfig = Readonly<{
   projects: readonly MirrorProjectTarget[];
   autoSoloElection: boolean;
   autoFileFindings: MirrorMode;
+  maxParallelUnits: number;
   plugins: readonly string[];
 }>;
 
@@ -406,6 +411,7 @@ type LayerClassification = Readonly<{
   projects?: readonly MirrorProjectTarget[];
   autoSoloElection?: boolean;
   autoFileFindings?: MirrorMode;
+  maxParallelUnits?: number;
   plugins?: readonly string[];
   issues: readonly LayerIssue[];
 }>;
@@ -415,6 +421,7 @@ type ResolvedLayerValues = {
   projects?: readonly MirrorProjectTarget[];
   autoSoloElection?: boolean;
   autoFileFindings?: MirrorMode;
+  maxParallelUnits?: number;
   plugins?: readonly string[];
 };
 
@@ -455,6 +462,19 @@ function parseOptionalMode(
     key,
     actualType: valueKind(rawValue),
     expected: MODE_EXPECTED,
+  });
+  return undefined;
+}
+
+function parseOptionalMaxParallelUnits(rawValue: unknown, issues: LayerIssue[]): number | undefined {
+  if (rawValue === undefined) return undefined;
+  if (Number.isInteger(rawValue) && Number(rawValue) >= 1 && Number(rawValue) <= 4) {
+    return Number(rawValue);
+  }
+  issues.push({
+    key: MAX_PARALLEL_UNITS_KEY,
+    actualType: valueKind(rawValue),
+    expected: "integer from 1 through 4",
   });
   return undefined;
 }
@@ -533,6 +553,8 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     issues,
   );
 
+  const maxParallelUnits = parseOptionalMaxParallelUnits(rawValue[MAX_PARALLEL_UNITS_KEY], issues);
+
   const plugins = parseOptionalPlugins(rawValue[PLUGINS_KEY], issues);
 
   return {
@@ -541,6 +563,7 @@ function classifyRawValue(rawValue: unknown): LayerClassification {
     ...(projects === undefined ? {} : { projects }),
     ...(autoSoloElection === undefined ? {} : { autoSoloElection }),
     ...(autoFileFindings === undefined ? {} : { autoFileFindings }),
+    maxParallelUnits,
     ...(plugins === undefined ? {} : { plugins }),
   };
 }
@@ -564,6 +587,10 @@ function mergeLayerValues(
   }
   if (classified.autoFileFindings !== undefined) {
     target.autoFileFindings = classified.autoFileFindings;
+    contributed = true;
+  }
+  if (classified.maxParallelUnits !== undefined) {
+    target.maxParallelUnits = classified.maxParallelUnits;
     contributed = true;
   }
   if (classified.plugins !== undefined) {
@@ -609,6 +636,17 @@ function mergeConfigLayer(
   };
 }
 
+function resolvedConfig(values: ResolvedLayerValues): AmadeusConfig {
+  return {
+    autoMirror: values.mode ?? "prompt",
+    projects: values.projects ?? [],
+    autoSoloElection: values.autoSoloElection ?? false,
+    autoFileFindings: values.autoFileFindings ?? "prompt",
+    maxParallelUnits: values.maxParallelUnits ?? 4,
+    plugins: values.plugins ?? [],
+  };
+}
+
 // Pure schema + precedence over collected layers. Every invalid layer is
 // reported (never a partial config or a fallback), and only when all layers
 // are valid is a mode resolved with the highest present layer winning.
@@ -635,13 +673,7 @@ export function parseAmadeusConfigLayers(
   if (issues.length > 0) return { kind: "invalid", issues };
   return {
     kind: "resolved",
-    config: {
-      autoMirror: resolved.mode ?? "prompt",
-      projects: resolved.projects ?? [],
-      autoSoloElection: resolved.autoSoloElection ?? false,
-      autoFileFindings: resolved.autoFileFindings ?? "prompt",
-      plugins: resolved.plugins ?? [],
-    },
+    config: resolvedConfig(resolved),
     sources,
   };
 }

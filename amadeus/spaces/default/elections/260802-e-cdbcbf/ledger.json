@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CDBCBF",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "既存 worktree と commit e7b4f7be を保持しつつ、欠落した監査 shard を正規に復旧して同じ Bolt の finalize を再実行すれば、監査不整合を残さず Construction を継続できるため",
+      "submittedAt": "2026-08-02T12:33:39Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CDBCBF",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "失敗原因が監査 shard の欠落として特定されており、既存 worktree と commit e7b4f7be を保持したまま正規復旧して同じ finalize を再実行できるため",
+      "submittedAt": "2026-08-02T00:00:00Z"
+    }
+  ],
+  "late": []
+}
