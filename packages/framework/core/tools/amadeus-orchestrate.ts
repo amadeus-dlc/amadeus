@@ -1929,6 +1929,7 @@ function resolveConsumes(
   unit: string,
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): ResolvedConsume[] {
   const resolved: ResolvedConsume[] = [];
   for (const consume of consumes) {
@@ -1936,6 +1937,17 @@ function resolveConsumes(
       consume.conditional_on &&
       projectType &&
       consume.conditional_on !== projectType
+    ) {
+      continue;
+    }
+    const producer = producersOf(consume.artifact)[0];
+    if (
+      unitKind !== undefined &&
+      producer !== undefined &&
+      !requiredArtifactsForUnit(
+        { produces: [consume.artifact], produces_kinds: producer.produces_kinds },
+        unitKind,
+      ).includes(consume.artifact)
     ) {
       continue;
     }
@@ -2127,7 +2139,7 @@ function buildRunStageDirective(
   unitKind?: UnitKind,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
-    node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx,
+    node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx, unitKind,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
   const resolvedProduces = resolveProduces(
@@ -3221,7 +3233,8 @@ function emitSwarmOrPerUnit(
 // `unit` defaults to the {unit-name} placeholder — the faithful emission for
 // every caller that has no concrete Unit of Work. The degrade path (a scope that
 // SKIPs units-generation) passes the unit directory it resolved off disk so the
-// emitted paths are real, not placeholder-shaped.
+// emitted paths are real, not placeholder-shaped, and passes its validated kind
+// so artifact applicability stays identical to the compiled-DAG path.
 function emitRunStageForSlug(
   slug: string,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -3230,6 +3243,7 @@ function emitRunStageForSlug(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
   unit: string = UNIT_NAME_PLACEHOLDER,
+  unitKind?: UnitKind,
 ): void {
   const node = nodeForSlug(slug);
   if (!node) {
@@ -3247,6 +3261,7 @@ function emitRunStageForSlug(
     stateContent,
     recordPrefix,
     codekbCtx,
+    unitKind,
   );
   if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
@@ -3515,6 +3530,7 @@ function emitPerUnitRunStage(
       recordPrefix,
       codekbCtx,
       picked.unit,
+      unitKinds.get(picked.unit),
     );
     return;
   }

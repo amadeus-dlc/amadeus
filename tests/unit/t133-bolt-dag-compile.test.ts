@@ -215,6 +215,8 @@ function readGraph(proj: string): any {
 interface SensorResult {
   pass: boolean;
   edge_block?: string;
+  missing_unit_kinds?: string[];
+  findings_count?: number;
   raw: string;
 }
 
@@ -226,7 +228,13 @@ function runSensor(outputPath: string): SensorResult {
   );
   const raw = res.stdout ?? "";
   const parsed = JSON.parse(raw.trim());
-  return { pass: parsed.pass, edge_block: parsed.edge_block, raw };
+  return {
+    pass: parsed.pass,
+    edge_block: parsed.edge_block,
+    missing_unit_kinds: parsed.missing_unit_kinds,
+    findings_count: parsed.findings_count,
+    raw,
+  };
 }
 
 const VALID_BLOCK = [
@@ -240,6 +248,36 @@ const VALID_BLOCK = [
   "    depends_on: []",
   "  - name: ui",
   "    depends_on: [api]",
+  "```",
+].join("\n");
+
+const TAGGED_BLOCK = [
+  "```yaml",
+  "units:",
+  "  - name: api",
+  "    kind: service",
+  "    depends_on: []",
+  "  - name: schema",
+  "    kind: spec",
+  "    depends_on: [api]",
+  "  - name: web",
+  "    kind: ui",
+  "    depends_on: [api]",
+  "  - name: bundle",
+  "    kind: packaging",
+  "    depends_on: [web]",
+  "  - name: shared",
+  "    kind: library",
+  "    depends_on: []",
+  "```",
+].join("\n");
+
+const INVALID_KIND_BLOCK = [
+  "```yaml",
+  "units:",
+  "  - name: broken",
+  "    kind: worker",
+  "    depends_on: []",
   "```",
 ].join("\n");
 
@@ -280,6 +318,15 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     const g = readGraph(proj);
     // auth+db (no deps) batch 0, sorted; api (deps satisfied) batch 1; ui batch 2.
     expect(g.bolt_dag.batches).toEqual([["auth", "db"], ["api"], ["ui"]]);
+  }, 30000);
+
+  test("compile preserves all five canonical unit kinds in the runtime graph", () => {
+    const proj = makeProject();
+    writeUowd(proj, TAGGED_BLOCK);
+    expect(runCompile(proj).status).toBe(0);
+    expect(
+      readGraph(proj).bolt_dag.units.map((unit: { kind?: string }) => unit.kind),
+    ).toEqual(["service", "spec", "ui", "packaging", "library"]);
   }, 30000);
 
   // ---- 3: byte-identical re-compile (determinism) --------------------------
@@ -348,13 +395,29 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
   // ---- 7-9: sensor edge-block validation -----------------------------------
   test("sensor: valid block → pass:true, edge_block:ok [.sh test 7]", () => {
     const proj = makeProject();
-    writeUowd(
-      proj,
-      ["```yaml", "units:", "  - name: a", "    depends_on: []", "  - name: b", "    depends_on: [a]", "```"].join("\n"),
-    );
+    writeUowd(proj, TAGGED_BLOCK);
     const r = runSensor(uowdPath(proj));
     expect(r.pass).toBe(true);
     expect(r.edge_block).toBe("ok");
+    expect(r.missing_unit_kinds).toEqual([]);
+  }, 30000);
+
+  test("sensor: kindless units fail and identify every missing unit", () => {
+    const proj = makeProject();
+    writeUowd(proj, VALID_BLOCK);
+    const r = runSensor(uowdPath(proj));
+    expect(r.pass).toBe(false);
+    expect(r.edge_block).toBe("ok");
+    expect(r.findings_count).toBeGreaterThanOrEqual(1);
+    expect(r.missing_unit_kinds).toEqual(["api", "auth", "db", "ui"]);
+  }, 30000);
+
+  test("sensor: invalid kind uses the shared parser malformed result", () => {
+    const proj = makeProject();
+    writeUowd(proj, INVALID_KIND_BLOCK);
+    const r = runSensor(uowdPath(proj));
+    expect(r.pass).toBe(false);
+    expect(r.edge_block).toBe("malformed");
   }, 30000);
 
   test("sensor: cyclic block → pass:false, edge_block:cyclic [.sh test 8]", () => {

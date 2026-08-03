@@ -13,6 +13,9 @@ interface Result {
 	// parseBoltDag so a malformed or cyclic DAG fails loud at the 2.7 gate,
 	// upstream of the runtime compiler that reads the same block.
 	edge_block?: "ok" | "absent" | "malformed" | "cyclic";
+	// Unit names whose valid DAG rows omit the producer-required kind. Present
+	// only for unit-of-work-dependency.md after the shared parser succeeds.
+	missing_unit_kinds?: string[];
 	// Populated only when a team/framework template resolves for this output
 	// (TPL — template-override layer). "applied" once the template's `##`
 	// heading set becomes the expected set this output is verified against;
@@ -116,6 +119,25 @@ function resolveTemplatePath(stem: string, flags: Flags): string | null {
 function fail(msg: string): never {
 	process.stderr.write(`amadeus-sensor-required-sections: ${msg}\n`);
 	process.exit(1);
+}
+
+function validateBoltDagKinds(body: string): {
+	edgeBlock: "ok" | "absent" | "malformed" | "cyclic";
+	missingUnitKinds?: string[];
+	findingsCount: number;
+} {
+	const parsed = parseBoltDag(body);
+	if (!parsed.ok) {
+		return { edgeBlock: parsed.reason, findingsCount: 1 };
+	}
+	const missingUnitKinds = parsed.units
+		.filter((unit) => unit.kind === undefined)
+		.map((unit) => unit.name);
+	return {
+		edgeBlock: "ok",
+		missingUnitKinds,
+		findingsCount: missingUnitKinds.length,
+	};
 }
 
 export function main(argv: string[] = process.argv.slice(2)): void {
@@ -235,12 +257,12 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 	// to the template branch above — the edge-block check still applies even if a
 	// template for unit-of-work-dependency resolves.)
 	if (basename(flags.outputPath) === "unit-of-work-dependency.md") {
-		const parsed = parseBoltDag(body);
-		const edge_block = parsed.ok ? "ok" : parsed.reason;
-		result.edge_block = edge_block;
-		if (edge_block !== "ok") {
+		const validation = validateBoltDagKinds(body);
+		result.edge_block = validation.edgeBlock;
+		result.missing_unit_kinds = validation.missingUnitKinds;
+		if (validation.findingsCount > 0) {
 			pass = false;
-			findings_count += 1;
+			findings_count += validation.findingsCount;
 		}
 	}
 
