@@ -671,6 +671,55 @@ describe("t279 create", () => {
     )).toMatchObject({ kind: "safety-blocked", warning: { retryable: true } });
   });
 
+  test("complete preserves an unknown durability outcome when the committed receipt is already visible", () => {
+    const gateway = new FakeGateway();
+    const ctx = context("create", gateway);
+    const receipt = {
+      key: mirrorEventKey(ctx.event),
+      event: ctx.event,
+      operationId: "op-1",
+      status: "attempted" as const,
+      preparedAt: NOW,
+      attemptedAt: NOW,
+      createIdentity: identity(),
+    };
+    const initial: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: { [receipt.key]: receipt },
+    };
+    const store = memoryStore(initial);
+    const writeDocumentAtomic = store.ports.writeDocumentAtomic;
+    let writes = 0;
+
+    const outcome = complete(
+      {
+        ...store.ports,
+        writeDocumentAtomic(text) {
+          writes += 1;
+          const committed = writeDocumentAtomic(text);
+          return writes === 1
+            ? { kind: "durability-unknown", summary: "directory fsync failed" }
+            : committed;
+        },
+      },
+      ctx,
+      initial,
+      receipt,
+      issue(),
+      false,
+    );
+
+    expect(outcome).toMatchObject({
+      kind: "safety-blocked",
+      warning: {
+        classification: "state-write",
+        effect: "outcome-unknown",
+        summary: "directory fsync failed",
+      },
+    });
+    expect(store.state().receipts[receipt.key]?.status).toBe("succeeded");
+  });
+
   test("a durable authorization binding mismatch blocks before readiness", async () => {
     const gateway = new FakeGateway();
     const ctx = context("create", gateway);

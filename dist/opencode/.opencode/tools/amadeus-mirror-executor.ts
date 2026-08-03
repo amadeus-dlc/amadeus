@@ -731,7 +731,7 @@ export function complete(
       };
     }
   }
-  return stateFailure(context, receipt.operationId, result.summary);
+  return transitionFailure(context, receipt.operationId, result);
 }
 
 async function readiness(
