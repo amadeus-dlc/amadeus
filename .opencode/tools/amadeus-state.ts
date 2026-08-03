@@ -85,6 +85,7 @@ import {
   setIntentDocsOnly,
   setOrInsertField,
   type ScopedCheckboxLine,
+  type StageEntry,
   stageLineKey,
   stageIndex,
   standingGrantSatisfiesGate,
@@ -2022,6 +2023,140 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   }
 }
 
+function advanceScopeOrError(content: string): string {
+  const scope = getField(content, "Scope");
+  if (!scope) {
+    error("State file has no Scope field. Refusing to advance — fix the state file first.");
+  }
+  if (!validScopes().has(scope)) {
+    error(`State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`);
+  }
+  return scope;
+}
+
+function resolveAdvanceNextStage(
+  positional: readonly string[],
+  completedSlug: string,
+  scope: string,
+  content: string,
+): StageEntry {
+  let nextSlug: string;
+  if (positional.length >= 2) {
+    nextSlug = positional[1];
+    const stateOverrides = parseStateStageSuffixes(content);
+    const nextAction = stateOverrides.get(nextSlug) ?? loadScopeMapping()[scope]?.stages[nextSlug];
+    if (nextAction === "SKIP") {
+      error(
+        `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`,
+      );
+    }
+  } else {
+    const next = nextInScopeStage(completedSlug, scope, content);
+    if (!next) {
+      error(
+        `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
+          `Use 'complete-workflow' if this was the final stage.`,
+      );
+    }
+    nextSlug = next.slug;
+  }
+  const nextStage = findStageBySlug(nextSlug);
+  if (!nextStage) error(`Unknown stage: ${nextSlug}`);
+  return nextStage;
+}
+
+function inspectCompletedAdvanceState(
+  pd: string,
+  content: string,
+  completedSlug: string,
+): {
+  alreadyMarkedCompleted: boolean;
+  currentStageField: string | null;
+  stageCompletedAlreadyAudited: boolean;
+} {
+  const completedCbBefore = stageCheckboxOrError(
+    content,
+    completedSlug,
+    `advance:complete:${completedSlug}`,
+  );
+  const currentStageField = getField(content, "Current Stage");
+  const alreadyMarkedCompleted = completedCbBefore.state === "completed";
+  if (completedSlug !== currentStageField && !alreadyMarkedCompleted) {
+    error(
+      `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
+        completedCbBefore.state
+      }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`,
+    );
+  }
+  return {
+    alreadyMarkedCompleted,
+    currentStageField,
+    stageCompletedAlreadyAudited:
+      alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug),
+  };
+}
+
+function isAdvanceReplay(
+  content: string,
+  nextSlug: string,
+  currentStageField: string | null,
+  alreadyMarkedCompleted: boolean,
+  stageCompletedAlreadyAudited: boolean,
+): boolean {
+  const nextCbBefore = stageCheckboxOrError(content, nextSlug, `advance:start:${nextSlug}`);
+  const nextAlreadyStarted =
+    nextCbBefore.state === "in-progress" ||
+    nextCbBefore.state === "awaiting-approval" ||
+    nextCbBefore.state === "revising";
+  return (
+    alreadyMarkedCompleted &&
+    stageCompletedAlreadyAudited &&
+    nextAlreadyStarted &&
+    currentStageField === nextSlug
+  );
+}
+
+function emitAdvanceAudit(
+  pd: string,
+  content: string,
+  completedStage: StageEntry,
+  nextStage: StageEntry,
+  scope: string,
+  completedCount: number,
+  alreadyMarkedCompleted: boolean,
+  stageCompletedAlreadyAudited: boolean,
+): string {
+  const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
+  try {
+    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
+      emitAudit(pd, "STAGE_COMPLETED", {
+        Stage: completedStage.slug,
+        Details: `Stage ${completedStage.name} completed`,
+      });
+    }
+    if (crossesPhaseBoundary) {
+      content = markPhaseVerified(content, completedStage.phase);
+      content = setPhaseProgress(content, nextStage.phase, "Active");
+      emitAudit(pd, "PHASE_COMPLETED", {
+        "From phase": completedStage.phase,
+        "To phase": nextStage.phase,
+        "Stages completed": String(completedCount),
+      });
+      emitAudit(pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
+      });
+      emitAudit(pd, "PHASE_STARTED", { Phase: nextStage.phase, Scope: scope });
+    }
+    emitAudit(pd, "STAGE_STARTED", {
+      Stage: nextStage.slug,
+      Agent: nextStage.lead_agent,
+    });
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
+  return content;
+}
+
 export function handleAdvance(args: string[]): void {
   // Keep only the positional <completed-slug> [<next-slug>]; any flags are
   // filtered out so they are not misread as the next slug.
@@ -2047,17 +2182,7 @@ export function handleAdvance(args: string[]): void {
 
   // Scope is authoritative for deriving next stage — refuse silent "feature"
   // fallback when the state file is missing or corrupted. Adversarial finding.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
+  const scope = advanceScopeOrError(content);
 
   // Slug validation — `advance <slug>` is a post-gate-approval transition.
   // The caller must have just finished <completedSlug>. Silently accepting
@@ -2068,54 +2193,15 @@ export function handleAdvance(args: string[]): void {
   //   1. completedSlug matches `Current Stage` (normal post-approve flow);
   //   2. completedSlug is already `[x]` (idempotent replay / approve-first).
   // Anything else errors.
-  const completedCbBefore = stageCheckboxOrError(
-    content,
-    completedSlug,
-    `advance:complete:${completedSlug}`,
-  );
-  const currentStageField = getField(content, "Current Stage");
-  const matchesCurrent = completedSlug === currentStageField;
-  const alreadyMarkedCompleted = completedCbBefore.state === "completed";
-  const stageCompletedAlreadyAudited =
-    alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
-  if (!matchesCurrent && !alreadyMarkedCompleted) {
-    error(
-      `Cannot advance "${completedSlug}": Current Stage is "${currentStageField}" and "${completedSlug}" is ${
-        completedCbBefore.state
-      }. Pass the slug that's actually active, or use 'skip' / 'complete-workflow'.`
-    );
-  }
+  const { alreadyMarkedCompleted, currentStageField, stageCompletedAlreadyAudited } =
+    inspectCompletedAdvanceState(pd, content, completedSlug);
 
   // If next-slug was not provided, derive it from the scope AND state file.
   // The state file's EXECUTE/SKIP suffix (set by handleInit with Greenfield
   // overrides) and per-stage checkbox state take precedence over the
   // scope-mapping.json defaults.
-  let nextSlug: string;
-  if (positional.length >= 2) {
-    nextSlug = positional[1];
-    // Validate the caller-supplied next slug is in scope AND not already
-    // SKIP-stamped in the state file. Symmetric with single-arg form.
-    const stateOverrides = parseStateStageSuffixes(content);
-    const nextAction =
-      stateOverrides.get(nextSlug) ??
-      loadScopeMapping()[scope]?.stages[nextSlug];
-    if (nextAction === "SKIP") {
-      error(
-        `Cannot advance to "${nextSlug}": stage is SKIP for scope "${scope}" (or state file). Pick the next EXECUTE stage or use 'skip'.`
-      );
-    }
-  } else {
-    const next = nextInScopeStage(completedSlug, scope, content);
-    if (!next) {
-      error(
-        `No next in-scope stage after "${completedSlug}" for scope "${scope}". ` +
-          `Use 'complete-workflow' if this was the final stage.`
-      );
-    }
-    nextSlug = next.slug;
-  }
-  const nextStage = findStageBySlug(nextSlug);
-  if (!nextStage) error(`Unknown stage: ${nextSlug}`);
+  const nextStage = resolveAdvanceNextStage(positional, completedSlug, scope, content);
+  const nextSlug = nextStage.slug;
 
   const dirCheck = advanceDirectionCheck(
     stageIndex(completedSlug),
@@ -2133,20 +2219,13 @@ export function handleAdvance(args: string[]): void {
   // states — in-progress, awaiting-approval, revising. Matching only
   // in-progress let a stale replay demote a gate-held `[?]`/`[R]` next stage
   // back to `[-]` and re-emit STAGE_STARTED.
-  const nextCbBefore = stageCheckboxOrError(
+  const isReplay = isAdvanceReplay(
     content,
     nextSlug,
-    `advance:start:${nextSlug}`,
+    currentStageField,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
   );
-  const nextAlreadyStarted =
-    nextCbBefore.state === "in-progress" ||
-    nextCbBefore.state === "awaiting-approval" ||
-    nextCbBefore.state === "revising";
-  const isReplay =
-    alreadyMarkedCompleted &&
-    stageCompletedAlreadyAudited &&
-    nextAlreadyStarted &&
-    currentStageField === nextSlug;
   if (isReplay) {
     console.log(
       JSON.stringify({
@@ -2213,44 +2292,16 @@ export function handleAdvance(args: string[]): void {
 
   // 4. Atomic audit emission — audit-first, then state write.
   // If audit fails, throw before touching state (writeStateFile below is skipped).
-  try {
-    // Emit STAGE_COMPLETED only if approve didn't already emit it.
-    if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
-      emitAudit(pd, "STAGE_COMPLETED", {
-        Stage: completedSlug,
-        Details: `Stage ${completedStage.name} completed`,
-      });
-    }
-    if (crossesPhaseBoundary) {
-      // Phase Progress roll-up, in the SAME boundary branch as the PHASE_* audit
-      // so the ledger and the roll-up can never disagree (#836): close the
-      // completed stage's phase (→ Verified — it just went [x]) and enter the
-      // next stage's phase (→ Active). Content is written after this try; a
-      // failing emitAudit exits before writeStateFile, so the flip is discarded
-      // with the rest. Intermediate phases an advance skips over entirely were
-      // already stamped Skipped at init time.
-      content = markPhaseVerified(content, completedStage.phase);
-      content = setPhaseProgress(content, nextStage.phase, "Active");
-      emitAudit(pd, "PHASE_COMPLETED", {
-        "From phase": completedStage.phase,
-        "To phase": nextStage.phase,
-        "Stages completed": String(completedCount),
-      });
-      emitAudit(pd, "PHASE_VERIFIED", {
-        "Phase boundary": `${completedStage.phase} → ${nextStage.phase}`,
-      });
-      emitAudit(pd, "PHASE_STARTED", {
-        Phase: nextStage.phase,
-        Scope: scope,
-      });
-    }
-    emitAudit(pd, "STAGE_STARTED", {
-      Stage: nextSlug,
-      Agent: nextStage.lead_agent,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+  content = emitAdvanceAudit(
+    pd,
+    content,
+    completedStage,
+    nextStage,
+    scope,
+    completedCount,
+    alreadyMarkedCompleted,
+    stageCompletedAlreadyAudited,
+  );
 
   operationWriteState(pd, content);
 
