@@ -107,14 +107,16 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    // The census shrank 217 -> 216 when #1906 removed the fail-open catch that let
-    // finalizeAuditLockAcquire swallow a failed lock finalization: that catch was the
-    // NSD001 identity b775faf8 in amadeus-lib.ts, and deleting the silent-continue path
-    // deletes the finding. So the pre-approved set loses one more identity (10 -> 11)
-    // while its issue set is unchanged, because b775faf8 was already filed under #1979.
-    expect(result.evidence.counts).toEqual({ C_pre: 216, B_pre: 216, B0: 216 });
-    expect(baseline.entries).toHaveLength(216);
-    expect(removed).toHaveLength(11);
+    // The census only ever shrinks, so these numbers move whenever a silent-drop
+    // path is deleted. 217 -> 215 was #2151; 215 -> 214 is #1906, which removed the
+    // fail-open catch that let finalizeAuditLockAcquire swallow a failed lock
+    // finalization. That catch was the NSD001 identity b775faf8 in amadeus-lib.ts,
+    // so deleting the silent-continue path deletes the finding, and the pre-approved
+    // set loses one more identity (12 -> 13). The issue set is unchanged because
+    // b775faf8 was already filed under #1979.
+    expect(result.evidence.counts).toEqual({ C_pre: 214, B_pre: 214, B0: 214 });
+    expect(baseline.entries).toHaveLength(214);
+    expect(removed).toHaveLength(13);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
       new Set(["#1874", "#1878", "#1979"]),

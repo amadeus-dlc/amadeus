@@ -36,6 +36,30 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  test("untracked distribution changes request the source-only drift guard", () => {
+    expect(detectChanges(["dist/claude/.claude/tools/generated.ts"])).toEqual({
+      full: "false",
+      drift: "true",
+      coverage: "false",
+    });
+  });
+
+  test("source-only tracking rules request the drift guard", () => {
+    for (const path of [".gitignore", ".gitattributes"]) {
+      expect(detectChanges([path]), path).toEqual({
+        full: "false",
+        drift: "true",
+        coverage: "false",
+      });
+    }
+  });
+
+  test("absent Kiro root faces do not request drift checks", () => {
+    expect(detectChanges([".kiro/tools/generated.ts", ".kiro-ide/tools/generated.ts"]))
+      .toEqual({ full: "false", drift: "false", coverage: "false" });
+    expect(detectChanges([".codex/config.toml"])).toMatchObject({ drift: "true" });
+  });
+
   test("ordinary project Markdown skips CI validation", () => {
     expect(detectChanges(["amadeus/spaces/default/memory/project.md"])).toEqual({
       full: "false",
@@ -78,14 +102,18 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(lintJob).toContain("bun run lint");
     expect(lintJob).toContain("bun tests/complexity-gate.ts --check");
     expect(contractJob).toContain("bun run distribution:check");
+    for (const generatedConsumerJob of [typecheckJob, lintJob, contractJob]) {
+      expect(generatedConsumerJob).toContain("bun run build");
+    }
     expect(testsJob).toContain("pip install lizard==1.23.0");
     expect(testsJob).toContain("bun run test:ci -- -P 4");
     expect(driftJob).toContain("needs: changes");
     expect(driftJob).toContain(
       `if: \${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}`,
     );
-    expect(driftJob).toContain("bun run dist:check");
-    expect(driftJob).toContain("bun run promote:self:check");
+    expect(driftJob).toContain("bun run source-only:check");
+    expect(driftJob).toContain("bun run build");
+    expect(driftJob).toContain("amadeus-graph.ts compile --check");
   });
 
   test("performance verification stays out of the blocking pipeline", () => {
@@ -114,6 +142,7 @@ describe("t222 CI snapshot publication boundary", () => {
         "distribution-contract",
         "plugin-conformance-e2e",
         "tests",
+        "reproducible-build",
         "drift-check",
         "coverage",
       ]),
@@ -163,6 +192,14 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(headJob).toContain("bun tests/coverage-patch-gate.ts --check");
     expect(headJob).toContain("bun run coverage:ci -- -P 4");
     expect(headJob).toContain("fetch-depth: 0");
+    expect(headJob).toContain("- name: Fetch pull request base");
+    expect(headJob).toContain(`BASE_REF: \${{ github.event.pull_request.base.ref }}`);
+    expect(headJob).toContain(
+      `git fetch --no-tags origin "+refs/heads/\${BASE_REF}:refs/remotes/origin/\${BASE_REF}"`,
+    );
+    expect(headJob.indexOf("- name: Fetch pull request base")).toBeLessThan(
+      headJob.indexOf("- name: Patch coverage gate"),
+    );
     expect(headJob).toContain(`AMADEUS_PATCH_BASE_REF: origin/\${{ github.event.pull_request.base.ref }}`);
     // relative gate (E-CV2): live merge-base measurement compared through the
     // project-gate baseline seam, verdict-independent base run, cache keyed by
@@ -187,7 +224,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - drift-check\n      - coverage",
+      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
@@ -203,6 +240,9 @@ describe("t222 CI snapshot publication boundary", () => {
       `require_result "plugin-conformance-e2e" "\${{ needs.plugin-conformance-e2e.result }}"`,
     );
     expect(ciSuccessJob).toContain(`require_result "tests" "\${{ needs.tests.result }}"`);
+    expect(ciSuccessJob).toContain(
+      `require_result "reproducible-build" "\${{ needs.reproducible-build.result }}"`,
+    );
     expect(ciSuccessJob).toContain(`require_result "drift-check" "\${{ needs.drift-check.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
   });
@@ -231,12 +271,15 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(snapshotJob).toContain("timeout-minutes: 5");
     expect(snapshotJob).toContain("shell: bash");
     expect(snapshotJob).toContain("name: amadeus-coverage-report");
-    expect(snapshotJob).toContain("uses: actions/create-github-app-token@v3");
+    expect(snapshotJob).toContain(
+      "uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3",
+    );
     expect(snapshotJob).toContain(`client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}`);
     expect(snapshotJob).toContain(`private-key: \${{ secrets.METRICS_BOT_PRIVATE_KEY }}`);
     expect(snapshotJob).toContain("permission-contents: write");
     expect(snapshotJob).toContain("permission-pull-requests: write");
     expect(snapshotJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
+    expect(snapshotJob).toContain("persist-credentials: false");
     expect(snapshotJob).toContain("bun scripts/metrics-publication.ts snapshot");
     expect(snapshotJob).toContain('--target-sha "$GITHUB_SHA"');
     expect(snapshotJob).not.toContain("GITHUB_RUN_ATTEMPT");

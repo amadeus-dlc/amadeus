@@ -491,12 +491,16 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
   } else {
     const baseRef = process.env.AMADEUS_PATCH_BASE_REF ?? "origin/main";
     // three-dot: diff against the merge-base of baseRef and HEAD in one call
-    const diff = spawnSync("git", ["diff", "--unified=0", `${baseRef}...HEAD`], {
+    const diff = spawnSync(
+      "git",
+      ["diff", "--unified=0", "--diff-filter=ACMR", `${baseRef}...HEAD`],
+      {
       cwd: repoRoot,
       encoding: "utf8",
       env: process.env,
       maxBuffer: 64 * 1024 * 1024,
-    });
+      },
+    );
     if (diff.status !== 0) {
       console.error(`coverage-patch-gate: git diff ${baseRef}...HEAD failed: ${diff.stderr}`);
       return 1;

@@ -25,7 +25,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkHarness, runCli, unreferencedSources } from "../../scripts/package.ts";
+import { runCli, unreferencedSources, writeHarness } from "../../scripts/package.ts";
 
 describe("unreferencedSources — #735 source-side diff", () => {
   test("reports the sources the build never read, sorted", () => {
@@ -69,34 +69,29 @@ function purgeProbe(): void {
   rmSync(CODEX_PROBE, { force: true });
 }
 
-describe("checkHarness in-process — #735 source scan against the real trees", () => {
+describe("writeHarness in-process — #735 source scan against the real trees", () => {
   afterEach(purgeProbe);
 
   test("codex (emit harness) clean → no UNREFERENCED problems", () => {
     // Exercises buildTree's read-set recording, emit's readHarnessSource
     // consumption (codex composes its orchestrator SKILL.md through it), the
     // require.cache harvest of the codex module graph, and the clean source scan.
-    const problems = checkHarness("codex");
-    const unref = problems.filter((p) => p.startsWith("UNREFERENCED in source:"));
-    if (unref.length > 0) console.error("unexpected UNREFERENCED:\n" + unref.join("\n"));
-    expect(unref).toEqual([]);
+    expect(() => writeHarness("codex")).not.toThrow();
   }, CHECK_TIMEOUT_MS);
 
   test("kiro (non-emit harness) clean → no UNREFERENCED problems", () => {
     // Covers the harnessSrcRoot+sep require.cache boundary for a second harness
     // dir (the trailing separator is what keeps "kiro" from matching "kiro-ide").
-    const problems = checkHarness("kiro");
-    const unref = problems.filter((p) => p.startsWith("UNREFERENCED in source:"));
-    if (unref.length > 0) console.error("unexpected UNREFERENCED:\n" + unref.join("\n"));
-    expect(unref).toEqual([]);
+    expect(() => writeHarness("kiro")).not.toThrow();
   }, CHECK_TIMEOUT_MS);
 
-  test("planted stale source under harness/codex/ → checkHarness reports it (red path)", () => {
+  test("planted stale source under harness/codex/ → writeHarness rejects it (red path)", () => {
     purgeProbe();
     writeFileSync(CODEX_PROBE, "coverage probe — never referenced\n");
     try {
-      const problems = checkHarness("codex");
-      expect(problems).toContain("UNREFERENCED in source: codex/.coverage-probe-735.md");
+      expect(() => writeHarness("codex")).toThrow(
+        "UNREFERENCED in source: codex/.coverage-probe-735.md",
+      );
     } finally {
       purgeProbe();
     }
@@ -119,10 +114,8 @@ describe("runCli in-process — CLI dispatch branches (bun --coverage skips spaw
     expect(runCli(["codex", "trust", "--project", "/tmp/amadeus-cli-probe"])).toBe(0);
   });
 
-  test("--check over an unbacked harness name → skip + empty check, exit code 0", () => {
-    // Covers the absent-skip branch and the check success path with zero
-    // problems, without spawning a real build (no manifest ⇒ present is empty).
-    expect(runCli([NO_SUCH_HARNESS, "--check"])).toBe(0);
+  test("the retired --check verb fails loudly", () => {
+    expect(runCli([NO_SUCH_HARNESS, "--check"])).toBe(2);
   });
 
   test("write mode over an unbacked harness name → empty write loop, exit code 0", () => {
@@ -132,14 +125,4 @@ describe("runCli in-process — CLI dispatch branches (bun --coverage skips spaw
     expect(runCli([NO_SUCH_HARNESS])).toBe(0);
   });
 
-  test("--check with a planted stale source → FAILED branch, exit code 1", () => {
-    purgeProbe();
-    writeFileSync(CODEX_PROBE, "coverage probe — never referenced\n");
-    try {
-      expect(runCli(["codex", "--check"])).toBe(1);
-    } finally {
-      purgeProbe();
-    }
-    expect(existsSync(CODEX_PROBE)).toBe(false);
-  }, CHECK_TIMEOUT_MS);
 });

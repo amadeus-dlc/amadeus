@@ -848,5 +848,19 @@
     "dirName": "260802-record-roundtrip-pbt",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc698-ba1f-7467-b6b6-57c4b5b50140",
+    "slug": "advisory-human-choice",
+    "dirName": "260803-advisory-human-choice",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc36b-87d2-716a-8457-76dc3372a2c0",
+    "slug": "source-only-dist",
+    "dirName": "260802-source-only-dist",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

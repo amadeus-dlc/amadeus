@@ -51,8 +51,8 @@ export const REQUIRED_GATES = [
   "targeted-tests",
   "typecheck",
   "lint:check",
-  "dist:check",
-  "promote:self:check",
+  "source-only:check",
+  "graph-invariants",
   "full-ci",
 ] as const;
 

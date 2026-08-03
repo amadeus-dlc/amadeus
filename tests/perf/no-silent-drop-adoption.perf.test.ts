@@ -2,7 +2,6 @@
 // size: medium
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { join } from "node:path";
 import { assertShrinkOnly } from "../no-silent-drop/ledger.ts";
@@ -13,18 +12,15 @@ import {
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
-function bootstrapBaseRevision(): string {
-  const provenance = JSON.parse(
-    readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
-  ) as { bootstrapBaseRevision?: unknown };
-  expect(provenance.bootstrapBaseRevision).toBeString();
-  const revision = provenance.bootstrapBaseRevision as string;
-  const resolved = spawnSync("git", ["cat-file", "-e", `${revision}^{commit}`], {
+function trustedBaseRevision(): string {
+  const resolved = spawnSync("git", ["merge-base", "HEAD", "origin/main"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
   expect(resolved.error).toBeUndefined();
   expect(resolved.status).toBe(0);
+  const revision = resolved.stdout.trim();
+  expect(revision).toMatch(/^[0-9a-f]{40}$/);
   return revision;
 }
 
@@ -43,7 +39,7 @@ function timedGate(baseRevision: string): number {
 
 describe("no-silent-drop repository adoption performance", () => {
   test("five fresh processes and their immediate repeats stay below 15 seconds", () => {
-    const baseRevision = bootstrapBaseRevision();
+    const baseRevision = trustedBaseRevision();
     const cold: number[] = [];
     const warm: number[] = [];
     // "cold" is the first fresh process in each pair; "warm" is its immediate

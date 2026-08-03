@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260803-RE-S13-Z0",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。c1 は project.md の cid:reverse-engineering:c1（既存 CodeKB の差分リフレッシュ）と同一であり、c2 は cid:reverse-engineering:c1-xrev-scan-mode および c1-xrev-single-issue（クロスレビュー済み単発 Issue の患部スポット再実測）の機械的適用である。Issue #2129 の2独立レビューはいずれも target SHA 498c3034a78bd432dc426f9f807b79c8ae980762 と file:line を提示し、HEAD=origin/main=同 SHA、関連28テストも 28 pass / 0 fail だったため、新規 practice/sensor の空白は認めない。",
+  "submittedAt": "2026-08-03T08:12:13Z"
+}

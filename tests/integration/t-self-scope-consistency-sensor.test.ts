@@ -127,7 +127,7 @@ describe("self-scope-consistency sensor", () => {
     });
   });
 
-  test("passes when all five dogfood harnesses expose the canonical self scopes", () => {
+  test("passes when all five dogfood harnesses expose every promoted scope", () => {
     const root = fixtureRoot();
     for (const harness of HARNESSES) seedHarness(root, harness);
     expect(evaluateSelfScopeConsistency(root).pass).toBe(true);

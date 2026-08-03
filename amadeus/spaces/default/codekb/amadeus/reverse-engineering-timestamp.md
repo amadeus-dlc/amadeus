@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260802-registry-drift-guard）
+## 実行メタデータ（現在: 260803-advisory-human-choice）
+
+- Date: `2026-08-03T08:00:01Z`
+- Base commit: `a8e1ce025a918310ab7d803270bb6fc6b649c598`（本intentのprior recordはなし。他 `re-scans/` 中で日付が最新の `260802-plugin-projection-parity` のobservedを採用）
+- Observed commit: `498c3034a78bd432dc426f9f807b79c8ae980762`（conductor実測のHEAD = origin/main）
+- Ancestry: `git merge-base --is-ancestor a8e1ce025a918310ab7d803270bb6fc6b649c598 498c3034a78bd432dc426f9f807b79c8ae980762` は exit 0。距離は42 commits。
+- Scope: `self-fix`、Brownfield、単一repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: [Issue #2129](https://github.com/amadeus-dlc/amadeus/issues/2129)。`requirements-analysis` / per-unit `functional-design` / `build-and-test` のadvisory発火、main / `--single` directive、pending消費とlatch、report入力、human presence / gate approval、stage protocol §11a、audit registryを対象に、人間選択receipt状態機械の有無を確認した。
+- Finding: advisoryの発火・通知は存在するが、advisory固有の選択を入力・保持・検証する状態機械はない。一般 `HUMAN_TURN` / standing grant / `GATE_APPROVED` は意味相関したreceiptではない。実際のAI発話内容と実損量は凍結証拠上INCONCLUSIVE。
+- Verification: Developer scanのテスト結果を再利用。対象2 integration filesはexit 0、28 pass、0 fail、107 expect。Architect synthesisでは再実行なし。
+- Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260802-registry-drift-guard` 節を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-advisory-human-choice.md` を新設。
+- Per-intent record: `re-scans/260803-advisory-human-choice.md`
+
+## 実行メタデータ（履歴: 260802-registry-drift-guard）
 
 - Date: `2026-08-02T18:00:19Z`
 - Base commit: `47574fbabf274e11cb8e0b37bf35a0309a7b3d42`（本 intent の過去recordはなし。`re-scans/` のうち最新時刻 `2026-08-02T10:27:57Z` で共有 freshness pointer にも採用された `260802-scope-grid-face-sync` の observed を最新の記録済み祖先として選択。dirty worktree保全のため今回のpreflightではtrunk統合・追加git操作を行わず、既存recordの系譜記録を根拠とした）

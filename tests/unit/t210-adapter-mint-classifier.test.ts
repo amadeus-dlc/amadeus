@@ -52,6 +52,7 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { guardAdvisoryChoices } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -315,6 +316,36 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
       const current = fireCodexState(dir, ["get", "Current Stage"]);
       expect(current.rc).toBe(0);
       expect(current.out.trim()).toBe("user-stories");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("Codex exact advisory choice correlates the HUMAN_TURN with a protected receipt", () => {
+    const adapter = ADAPTERS[0];
+    const dir = scratchProject(adapter.distTree, adapter.installDir);
+    const advisory = {
+      plugin: "formal-model-check",
+      code: "never-run" as const,
+      message: "advisory: formal-model-check has no recorded verdict",
+      stage: "build-and-test",
+      target: "specs/tla",
+      specIdentity: "sha256:codex-adapter-boundary",
+    };
+    try {
+      expect(guardAdvisoryChoices(dir, "build-and-test", [advisory]).kind).toBe("hold");
+
+      const mintRc = fireMint(dir, adapter.adapterRel, adapter.mintTarget, mintPayload(dir, "1"));
+
+      expect(mintRc).toBe(0);
+      expect(eventCount(dir, "HUMAN_TURN")).toBe(1);
+      const store = JSON.parse(
+        readFileSync(join(seededRecordDir(dir), ".amadeus-advisory-choice.json"), "utf-8"),
+      ) as { receipts: Array<{ choice: string }> };
+      expect(store.receipts.map((receipt) => receipt.choice)).toEqual(["run-now"]);
+      const held = guardAdvisoryChoices(dir, "build-and-test", [advisory]);
+      expect(held.kind).toBe("hold");
+      if (held.kind === "hold") expect(held.runRequired).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

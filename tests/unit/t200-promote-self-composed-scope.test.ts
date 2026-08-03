@@ -30,6 +30,8 @@ import { describe, expect, test } from "bun:test";
 import {
   COMPOSED_SCOPE_RE,
   SCOPE_GRID_RE,
+} from "../../packages/framework/core/tools/data/self-install-allowlist.ts";
+import {
   mergeScopeGrid,
   scopeGridInSync,
 } from "../../scripts/promote-self.ts";

@@ -1,6 +1,23 @@
 # コンポーネント棚卸し
 
-## registry drift guard の対象コンポーネント（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択に関わるコンポーネント（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+| コンポーネント | 責務 | 依存 | 健全性 |
+| --- | --- | --- | --- |
+| plugin activation evaluator | readinessからadvisory shapeを作る | model-map、対象asset、stage | healthy: 発火済み |
+| pending advisory latch | `(plugin, code)` 単位で同一runの再発行を抑止 | activation result | healthyな重複抑止 / at-risk: 人間選択前に消費可能 |
+| orchestration router | main / single / per-unit directiveを発行 | activation、stage graph、report | degraded: receipt前提なし |
+| directive serializer | advisoryのplugin/code/message/stageを運ぶ | directive schema | at-risk: 選択入力面なし |
+| report parser | stage結果をengineへ返す | main / single flag schema | degraded: receipt flagなし |
+| presence / gate state | human turnとstage approvalを検証する | audit、reservation、grant | healthyな汎用機構 / advisory意味には不適合 |
+| audit event registry | canonical 81 eventの属性・writerを規定 | `amadeus-audit`、docs、drift test | at-risk: advisory固有receiptなし |
+| stage protocol §11a | advisoryを人間へ提示し判断させる | conductor | degraded: proseを状態機械が強制しない |
+| formal-model-check stage | 承認済み時点で形式モデルを実行する | plugin composition、model-map | healthyな後段実行器 / 上流判断の代替ではない |
+| t378 / t381 suites | directive field、3 checkpoint、latchを検証 | integration fixtures | healthyな現行回帰 / receipt面は未被覆 |
+
+候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
+
+## registry drift guard の対象コンポーネント（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 | コンポーネント | 責務 | 依存 | 健全性 |
 | --- | --- | --- | --- |
@@ -1240,4 +1257,3 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
-

@@ -21,7 +21,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -43,7 +43,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -63,7 +63,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -85,7 +85,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -97,7 +97,7 @@
         "tests/no-silent-drop-gate.ts",
         "check",
         "--base-revision",
-        "47574fbabf274e11cb8e0b37bf35a0309a7b3d42"
+        "9e699ea799eab3d250b752fb099943926d94a232"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -107,7 +107,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -129,7 +129,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -152,7 +152,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -174,7 +174,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -199,7 +199,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -219,7 +219,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -239,7 +239,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -264,7 +264,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -290,7 +290,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -312,7 +312,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -334,7 +334,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -354,7 +354,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -373,7 +373,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -393,7 +393,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -402,8 +402,8 @@
       "runName": "primary",
       "command": [
         "bun",
-        "scripts/package.ts",
-        "--check"
+        "run",
+        "source-only:check"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -413,7 +413,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -423,7 +423,8 @@
       "command": [
         "bun",
         "scripts/promote-self.ts",
-        "--check"
+        "--check",
+        "--no-build"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -433,7 +434,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -455,7 +456,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -477,7 +478,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -499,7 +500,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -521,7 +522,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     },
     {
       "schemaVersion": 1,
@@ -543,7 +544,7 @@
           "status": "pass"
         }
       ],
-      "testedRevision": "7c29e33f7cd6677a0233776bc87a4acaf88ff545"
+      "testedRevision": "3734885cbfc03aa97f655ca61da1cdd533fdea3e"
     }
   ]
 }

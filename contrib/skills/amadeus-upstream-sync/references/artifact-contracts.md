@@ -45,8 +45,8 @@ this shape. Use ISO 8601 UTC timestamps and full Git SHAs.
       "targeted tests",
       "bun run typecheck",
       "bun run lint:check",
-      "bun run dist:check",
-      "bun run promote:self:check",
+      "isolated-build reproducibility",
+      "bun run source-only:check",
       "bun run test:ci"
     ],
     "completed": []

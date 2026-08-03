@@ -60,7 +60,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **deslop** | Pull Request を出す前に実行するパス。AI slop(不要なコメント、過剰防御の分岐、周辺コードと不整合なパターン)を挙動を変えずに除去します。 |
 | **Directive(ディレクティブ)** | **Engine** が各 `next` で発行する型付き命令(例: `run-stage`、`ask`、`print`、`done`、`invoke-swarm`)。**Conductor** に次に何をするかを正確に伝えます。[エンジンとスキルシステム](../reference/17-skill-system.ja.md) を参照。 |
 | **Distillation round(蒸留ラウンド)** | 週次のローリング・ポストモーテムに統合されたノルムの棚卸し。高チャーンのルールを機械化・一般化・退役・維持のいずれかへ裁定します。 |
-| **Distribution(ディストリビューション)** | 1 つのハーネス用の、生成・コミット・ドリフトガードされた `dist/<harness>/` ツリー(例: `dist/claude/`、`dist/kiro/`、`dist/codex/`)。ユーザーはそれをプロジェクトにコピーし、メンテナは決して手編集しません。**Packager** が **Core** から生成します。 |
+| **Distribution(ディストリビューション)** | 1つのハーネス用に生成される `dist/<harness>/` ツリー(例: `dist/claude/`、`dist/kiro/`、`dist/codex/`)。source repositoryでは未追跡で使い捨てのローカルbuild出力です。release CIがclean checkoutからbuildし、全ハーネスをバージョン付きGitHub Release Assetとして公開します。**Packager** が **Core** から生成します。 |
 | **E-code** | 個々の選挙とその裁定に付く識別子(例: `E-PM10`)。成果物は裁定を E-code で参照します。 |
 | **Election(選挙)** | 判断を要する事項を、単独の決定者ではなく独立した投票で裁定する仕組み。実施は選挙 CLI の typed directive loop が担います。**Gradients of Agreement**、**Blind distribution** を参照。 |
 | **Engine(エンジン)** | ステージ間ルーティングをすべて所有する決定論的オーケストレーションツール(`amadeus-orchestrate.ts`、サブコマンド `next`/`report`) — スコープ解決、ステージ順序付け、ジャンプ、resume、ゲート状態 — し、**Conductor** が従う型付き **Directive** を発行します。[エンジンとスキルシステム](../reference/17-skill-system.ja.md) を参照。 |
@@ -97,7 +97,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **Operating mode(実行形態)** | ワークフローをソロモード(1 エージェントが各役割を順に担う)で回すか、チームモード(leader、conductor、builder、reviewer を別セッションが担う)で回すか。チームモードは `AMADEUS_OPERATING_MODE=team` の明示マーカーがある場合のみ成立し、品質契約はどちらでも同一です。 |
 | **Orchestrator(オーケストレーター)** | ワークフローがどう駆動されるかの包括的な用語: 次に何が起こるかを決める決定論的な **Engine** と、それを実行する **Conductor**(`SKILL.md`)。`/amadeus` 経由で起動します。[エンジンとスキルシステム](../reference/17-skill-system.ja.md) を参照。 |
 | **origin:bootstrap** | 欠陥コードがこのリポジトリでの作業ではなく上流の bootstrap 初期実装に由来すると判明したバグに付けるラベル。 |
-| **Packager(パッケージャ)** | `scripts/package.ts` — **Core** + 各 **Manifest** からすべての `dist/<harness>/` **Distribution** を再生成するビルド。`bun scripts/package.ts` がすべてをビルドし、`--check` は CI で実行されるバイトパリティのドリフトガードです。 |
+| **Packager(パッケージャ)** | `scripts/package.ts` — **Core** + 各 **Manifest** からローカルの全 `dist/<harness>/` **Distribution** を再生成するbuild。`bun scripts/package.ts` がすべてをbuildし、CIはコミット済み出力との比較ではなく、隔離した2回のbuild比較で再現性を検証します。 |
 | **Parallel batch(並列バッチ)** | 依存関係が満たされ、互いに依存しない Bolt のグループで、オーケストレーターによって並行実行されます。バッチの終わりの単一の承認ゲートがその中のすべての Bolt をカバーします。 |
 | **Park(パーク)** | ワークフローを再開可能な状態で一時停止すること(再開は `unpark`)。開いたままのゲートはパークをまたいで保存されます。 |
 | **Phase(フェーズ)** | ライフサイクルの 5 つの主要区分の 1 つ: Initialization(0)、Ideation(1)、Inception(2)、Construction(3)、Operation(4)。各フェーズは 3〜8 のステージを含みます(Initialization 3、Ideation 7、Inception 8、Construction 7、Operation 7)。 |

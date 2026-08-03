@@ -1,6 +1,13 @@
 # 技術スタック
 
-## registry drift guard の技術断面（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択の技術断面（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+- **スタック変更なし**: Bun `1.3.13`、TypeScript / ESM、Biome、Bun test、Markdown stage protocol、JSONL audit journalという既存構成の問題であり、新しいruntime、service、database、外部libraryは観測されない。
+- **wire**: advisoryはstderrだけではなく、`run-stage` directiveのtyped `advisories` fieldにも載る。したがって旧来の「build-and-testはstderr-only」という理解は現行コードには当てはまらない。欠陥は通知チャネルの欠如ではなく、人間選択を入力・保持・検証する状態機械の欠如である。
+- **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
+- **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
+
+## registry drift guard の技術断面（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 - Runtime / package manager: Bun `1.3.13`。長寿命serviceやdatabaseはなく、短命CLIとして実行する。
 - Language / type system: TypeScript `6`、ESM、`tsc --noEmit`。抽出・比較helperはnode互換の文字列処理だけで実装でき、外部依存は不要。
@@ -512,4 +519,3 @@ export 済み `handleDoctor` の monkeypatch 型 in-process テストは6ファ�
 ## 記録系 round-trip PBT の技術断面（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 技術スタックに追加なし。PBT 基盤 `fast-check`（#697 で導入済み、`devDependencies`）と Bun / TypeScript の既存ツール層だけで足り、新規外部依存を要さない。実行面も既存の `tests/run-tests.ts`（`:117` が `--ci = smoke + unit + integration` を宣言）へ載るだけで、新規 CI ジョブは要らない（深掘りは `AMADEUS_PBT_DEEP=1` × 既存 `--release` tier の env 階層で分離 — 規約の現況と揺れは `code-quality-assessment.md` 現在節）。区間の技術面の変化は患部外 — #2031 の execution observability baseline（`execution-*` 新モジュール群、audit event types 79→80）で、詳細は `architecture.md` 現在節と `re-scans/260802-record-roundtrip-pbt.md` に委ねる。
-

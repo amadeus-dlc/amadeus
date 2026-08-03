@@ -37,6 +37,11 @@ scopes:
   - security-patch
   - workshop
   - chore
+  - installer-distribution
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 inputs: ALL code generation outputs across all units
 outputs: build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md (under this stage's record dir, engine-resolved)
 ---

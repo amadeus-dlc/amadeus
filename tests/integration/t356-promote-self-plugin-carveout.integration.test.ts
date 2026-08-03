@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
 import {
   DistributionRecoveryError,
   DistributionTransactionCoordinator,
@@ -92,7 +93,13 @@ beforeEach(async () => {
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
-  write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
+  const claudeOnboarding = "@.claude/rules/amadeus.md\n\n# Claude onboarding\n";
+  write(".claude/CLAUDE.md", claudeOnboarding);
+  write("CLAUDE.md", `${PROJECT_INSTRUCTIONS}${claudeOnboarding}`);
+  write(
+    "AGENTS.md",
+    "@.agents/rules/amadeus.md\n@.agents/rules/amadeus-codex-suffix.md\n\n# Project rules\n",
+  );
   // Materialize an in-sync stock self install first.
   expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
   expect(await promoteSelfMain(["--no-build"], root)).toBe(0);

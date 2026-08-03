@@ -20,22 +20,22 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 586,
+    "total": 595,
     "enumeratedByClass": {
-      "function": 341,
+      "function": 344,
       "audit": 81,
-      "scope": 10,
+      "scope": 15,
       "stage": 32,
-      "hook": 13,
+      "hook": 14,
       "subcommand": 102,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 175,
+      "function": 177,
       "audit": 35,
-      "scope": 10,
+      "scope": 15,
       "stage": 8,
-      "hook": 13,
+      "hook": 14,
       "subcommand": 83,
       "render-surface": 7
     }
@@ -1608,6 +1608,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:discoverScopeGridSurfaces",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t418-graph-compile-surfaces.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:discoverSiblingRepos",
       "minMechanism": "none",
       "coveredBy": [
@@ -1950,6 +1962,13 @@
     {
       "unitClass": "function",
       "unitId": "function:GRANT_ID_RE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:graphCompileInvariantViolations",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3710,6 +3729,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:runCompileCheck",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t418-graph-compile-surfaces.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:runIntentLifecycleTransactionLocked",
       "minMechanism": "none",
       "coveredBy": [],
@@ -4535,6 +4566,18 @@
     },
     {
       "unitClass": "hook",
+      "unitId": "amadeus-dispatch",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/hook-dispatcher.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
       "unitId": "amadeus-log-subagent",
       "minMechanism": "none",
       "coveredBy": [
@@ -5019,6 +5062,18 @@
     },
     {
       "unitClass": "scope",
+      "unitId": "installer-distribution",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
       "unitId": "mvp",
       "minMechanism": "none",
       "coveredBy": [
@@ -5073,6 +5128,54 @@
         {
           "file": "tests/smoke/t130-scope-runners.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-document",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-feature",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-fix",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "self-refactor",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-scope-promotion-canonical.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

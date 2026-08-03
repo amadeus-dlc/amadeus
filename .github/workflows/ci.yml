@@ -39,7 +39,7 @@ jobs:
       coverage: ${{ steps.filter.outputs.coverage }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -78,15 +78,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Typecheck (tsc --noEmit, both tsconfigs)
         run: bun run typecheck
@@ -99,13 +102,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
@@ -168,6 +171,9 @@ jobs:
       - name: Unchecked-cast guard (JSON read paths, shrink-only ratchet)
         run: bun tests/unchecked-cast-guard.ts --check
 
+      - name: Build generated distributions
+        run: bun run build
+
       # FR-MIG-4: the six-condition deletion gate for the legacy audit writer.
       # --check does not fail the job — BLOCKED is the expected state for the
       # whole migration period, and a permanently red job gets ignored. What CI
@@ -179,7 +185,7 @@ jobs:
 
       - name: Upload deletion gate report (FR-MIG-4 evidence, BR-16)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: amadeus-deletion-gate-report
           path: deletion-gate-report.json
@@ -200,15 +206,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Intent Mirror distribution contract
         run: bun run distribution:check
@@ -226,15 +235,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Plugin conformance journey (e2e)
         run: bun test tests/e2e/t341-plugin-conformance-journey.serial.test.ts
@@ -247,18 +259,21 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Install lizard (CCN measurement, pinned - the suite's complexity-gate tests spawn it)
         run: pip install lizard==1.23.0
@@ -268,43 +283,111 @@ jobs:
 
       - name: Upload dynamic test-size report (#684 Phase D / #699, advisory)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: amadeus-test-size-report
           path: tests/logs/test-size-report.json
           if-no-files-found: warn
           retention-days: 14
 
+  reproducible-build:
+    name: Reproducible build
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Build isolated distributions
+        run: |
+          set -euo pipefail
+          REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
+
+          prepare_tree() {
+            local tree="$1"
+            if [[ -e "${tree}" ]]; then
+              echo "::error::isolated build tree already exists: ${tree}"
+              exit 1
+            fi
+            git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"
+            git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"
+            (cd "${tree}" && bun install --frozen-lockfile)
+            (cd "${tree}" && bun run build)
+            local version
+            version="$(cd "${tree}" && bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')"
+            (cd "${tree}" && bun scripts/release-dist.ts --version "${version}")
+          }
+
+          mkdir -p "${REPRO_ROOT}"
+          prepare_tree "${REPRO_ROOT}/tree-a"
+          prepare_tree "${REPRO_ROOT}/tree-b"
+
+      - name: Compare generated outputs and release assets
+        run: |
+          set -euo pipefail
+          REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
+          GENERATED_OUTPUTS=(
+            dist
+            .claude
+            .codex
+            .agents
+            .cursor
+            .opencode
+            .kimi-code
+            AGENTS.md
+            CLAUDE.md
+            release-assets
+          )
+
+          for output in "${GENERATED_OUTPUTS[@]}"; do
+            tree_a="${REPRO_ROOT}/tree-a/${output}"
+            tree_b="${REPRO_ROOT}/tree-b/${output}"
+            if [[ ! -e "${tree_a}" || ! -e "${tree_b}" ]]; then
+              echo "::error::isolated build output is missing: ${output}"
+              exit 1
+            fi
+            if ! diff -qr "${tree_a}" "${tree_b}"; then
+              echo "::error::isolated builds produced different bytes: ${output}"
+              exit 1
+            fi
+          done
+
   drift-check:
-    name: Dist and self-install drift
+    name: Source-only and graph invariants
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Dist drift guard
-        run: bun run dist:check
+      - name: Source-only boundary guard
+        run: bun run source-only:check
 
-      - name: Self-install drift guard
-        run: bun run promote:self:check
+      - name: Build generated distributions
+        run: bun run build
 
-      # Committed stage-graph.json / scope-grid.json vs a compile of THIS
-      # repository's stages, scopes and composed plugins (#1863). t124 / t66
-      # only compile fixture trees, t184 compares slug sets and t110 is a
-      # golden master — none of them sees a field-level drift in the real
-      # section, which is how a partial regeneration went undetected.
-      - name: Compiled graph drift guard
+      - name: Compiled graph invariant guard
         run: bun .claude/tools/amadeus-graph.ts compile --check
 
   coverage-head:
@@ -318,17 +401,26 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
+      - name: Fetch pull request base
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
 
       - name: Install lizard (CCN measurement, pinned - the suite's complexity-gate tests spawn it)
         run: pip install lizard==1.23.0
@@ -356,7 +448,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: amadeus-coverage-report
           path: |
@@ -376,13 +468,13 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up bun
         if: ${{ github.event_name == 'pull_request' }}
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
@@ -397,7 +489,7 @@ jobs:
       - name: Restore base coverage cache
         if: ${{ github.event_name == 'pull_request' }}
         id: base-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /tmp/base-coverage-totals.json
           key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}
@@ -408,6 +500,13 @@ jobs:
           set -euo pipefail
           git checkout --detach "${{ steps.merge-base.outputs.sha }}"
           bun install --frozen-lockfile
+          build_script="$(bun -e 'const pkg = await Bun.file("package.json").json(); process.stdout.write(pkg.scripts?.build ?? "")')"
+          if [[ -n "${build_script}" ]]; then
+            bun run build
+          else
+            # The merge-base of this transition predates the root build alias.
+            bun run dist && bun run promote:self
+          fi
           status=0
           bun run coverage:ci -- -P 4 || status=$?
           if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
@@ -421,7 +520,7 @@ jobs:
 
       - name: Upload base coverage totals
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: amadeus-base-coverage-totals
           path: /tmp/base-coverage-totals.json
@@ -449,24 +548,24 @@ jobs:
 
       - name: Checkout
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up bun
         if: ${{ github.event_name == 'pull_request' }}
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
       - name: Download head coverage totals
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: amadeus-coverage-report
           path: coverage
 
       - name: Download base coverage totals
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: amadeus-base-coverage-totals
           path: /tmp
@@ -505,7 +604,7 @@ jobs:
     steps:
       - name: Create GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}
           private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
@@ -513,13 +612,14 @@ jobs:
           permission-pull-requests: write
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
 
       - name: Set up bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.13
 
@@ -530,7 +630,7 @@ jobs:
         run: pip install lizard==1.23.0
 
       - name: Download coverage totals
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: amadeus-coverage-report
           path: coverage
@@ -800,6 +900,7 @@ jobs:
       - distribution-contract
       - plugin-conformance-e2e
       - tests
+      - reproducible-build
       - drift-check
       - coverage
     if: ${{ always() }}
@@ -826,6 +927,7 @@ jobs:
               require_result "distribution-contract" "${{ needs.distribution-contract.result }}"
               require_result "plugin-conformance-e2e" "${{ needs.plugin-conformance-e2e.result }}"
               require_result "tests" "${{ needs.tests.result }}"
+              require_result "reproducible-build" "${{ needs.reproducible-build.result }}"
               require_result "drift-check" "${{ needs.drift-check.result }}"
               ran=true
               ;;

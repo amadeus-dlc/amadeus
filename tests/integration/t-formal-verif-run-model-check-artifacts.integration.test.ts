@@ -56,12 +56,31 @@ describe("run-model-check artifact publisher", () => {
       stderr: new Uint8Array(),
       startedAt: "2026-07-24T00:00:00.000Z",
       finishedAt: "2026-07-24T00:00:01.000Z",
+      advisory: {
+        target: "specs/tla",
+        specIdentity: `sha256:${"a".repeat(64)}`,
+        instance: "019fc698-ba1f-7000-8000-000000000001",
+      },
+      sourceProvenance: {
+        modelPath: "specs/tla/FormalElection.tla",
+        cfgPath: "specs/tla/FormalElection.cfg",
+        moduleIdentity: "registered-module",
+        cfgIdentity: "registered-cfg",
+        moduleSha256: "b".repeat(64),
+        cfgSha256: "c".repeat(64),
+      },
     });
     expect(published.ok).toBe(true);
     if (!published.ok) return;
     expect(existsSync(join(out, ".scratch"))).toBe(false);
     const manifest = JSON.parse(readFileSync(join(out, "manifest.json"), "utf8")) as ModelCheckManifest;
     expect(manifest.expectedArtifacts).toContain("completion-marker.json");
+    expect(manifest.advisory).toEqual({
+      target: "specs/tla",
+      specIdentity: `sha256:${"a".repeat(64)}`,
+      instance: "019fc698-ba1f-7000-8000-000000000001",
+    });
+    expect(manifest.sourceProvenance?.modelPath).toBe("specs/tla/FormalElection.tla");
     for (const artifact of manifest.artifacts) {
       const bytes = readFileSync(join(out, artifact.path));
       expect(bytes.byteLength).toBe(artifact.bytes);

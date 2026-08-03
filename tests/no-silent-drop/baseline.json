@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "direction": "shrink-only",
   "generatedFrom": {
-    "revision": "a849ca62f71144feb9d60686a23c845e727c9ae1",
-    "censusDigest": "ce03dbe08e2330b09676e7d7282f2294d930d9ca55509c80743a6227a9886021",
-    "approvalDigest": "90bcb19b2b52dde72a43dc3b8de358964d65e5999506e224012bfd380e2a26b6",
-    "previousDigest": "4e8999f9acbb670f47e01e28d7db22eb40267812082be6be86f1e1f13c9687b8"
+    "revision": "05b0ea333c53b9fddfc0848dfd21f828daa9e361",
+    "censusDigest": "0d4a48fd75bc44f31db6036ae0cac54dcbc16979807c5e4bc5da5bcc86177181",
+    "approvalDigest": "9350fa456bb413933ff592172739bf15c50207f5ce60607ccffe2a7b5697e6b3",
+    "previousDigest": "9c1e7275074a145cc0ecf1b60fe48e01b8dcfe9a46ddd058677cfeb351df196e"
   },
   "entries": [
     {
@@ -453,15 +453,6 @@
       "fingerprint": "37b746130c097f0d310d4dbbd9a26a10f31132170f03272e486e53230a71df7e",
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-observability.ts",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "383492fd06cbe0d66ed5baf8f6a3405cfccff99de971229193542d605744c860",
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/tools/amadeus-graph.ts",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"
@@ -1623,15 +1614,6 @@
       "fingerprint": "ce145e9660608c16e7b23de9652b3c2630a5c36811dce716930d8d1da8d08d7f",
       "ruleId": "NSD001",
       "file": "packages/framework/core/otel/metrics-instruments.ts",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "cf6bb3c5bd637f51b632b9b935f246a625d7bf52ecb19ddf1033262b54d4e8fb",
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/tools/amadeus-graph.ts",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"

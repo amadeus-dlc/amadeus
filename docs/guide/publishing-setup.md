@@ -11,8 +11,9 @@
 The repo has **one version**: `packages/setup/package.json`'s version drives
 the `vX.Y.Z` release tags, and `AMADEUS_VERSION` plus the README badge are
 kept equal to it (t68 guards the alignment; the release-it `after:bump` hook
-runs `scripts/release-version-sync.ts`, which also regenerates `dist/` and
-the self-install trees so the release commit ships everything in sync). One
+runs `scripts/release-version-sync.ts`). Generated `dist/` and self-install
+trees remain untracked; the release workflow rebuilds them from the released
+commit and publishes the distribution asset. One
 tag is simultaneously the npm release of `@amadeus-dlc/setup` and the GitHub
 tag the installer resolves framework distributions from. Release notes are
 generated into the GitHub Release at release time — there is no CHANGELOG
@@ -65,9 +66,9 @@ Confirm all three before touching a version number:
 `packages/setup/package.json`'s `version` is an independent semver starting
 at `0.1.0` (FR-017, BR-P06). **The release workflow bumps it for you** —
 pick the bump level when dispatching (chapter 5); release-it bumps it, the
-`after:bump` hook syncs `AMADEUS_VERSION`, the README badge, and the
-regenerated `dist/` + self-install trees, and the whole set is committed,
-tagged `vX.Y.Z`, and pushed to `main` in one go. The release commit lands on
+`after:bump` hook syncs `AMADEUS_VERSION` and the README badge, and those
+tracked version surfaces are committed, tagged `vX.Y.Z`, and pushed to `main`
+in one go. Generated output remains ignored and is rebuilt by the release job. The release commit lands on
 `main` without a PR — an explicit, team-recorded exception to the PR rule,
 limited to the release version sync.
 
@@ -85,10 +86,13 @@ version (one version axis — t68 enforces it).
 
 ```bash
 # from the repo root
+bun install --frozen-lockfile
+bun run build
 cd packages/setup && bun run build && cd -
 
 bun run typecheck
 bun run lint
+bun run source-only:check
 
 bash tests/run-tests.sh --ci
 ```
@@ -98,10 +102,9 @@ The CI profile includes the pack-contract test
 (`tests/integration/setup-files-drift.test.ts`) — both must be green before
 proceeding.
 
-Then run the real-network E2E, which exercises the actual GitHub codeload
-archive shape (a single top-level wrapper directory) against the live
-repository — the only guard against a GitHub archive-format drift breaking
-installs in the field:
+Then run the real-network E2E, which exercises the live GitHub distribution
+paths: a verified Release Asset for current versions and the source-archive
+fallback only for versions published before the asset boundary:
 
 ```bash
 AMADEUS_SETUP_E2E_NETWORK=1 bash tests/run-tests.sh --release
@@ -146,21 +149,25 @@ From the Actions tab, run **Release @amadeus-dlc/setup** on `main` and pick
 the bump level (patch / minor / major). One run does everything:
 
 1. release-it bumps `packages/setup/package.json`; the `after:bump` hook
-   (`scripts/release-version-sync.ts`) syncs `AMADEUS_VERSION`, the README
-   badge, and the regenerated `dist/` + self-install trees; the whole set is
-   committed, tagged `vX.Y.Z`, and pushed to `main` (config:
+   (`scripts/release-version-sync.ts`) syncs `AMADEUS_VERSION` and the README
+   badge; the tracked version surfaces are committed, tagged `vX.Y.Z`, and
+   pushed to `main` (config:
    `packages/setup/.release-it.json`)
-2. softprops/action-gh-release creates the GitHub Release with
-   auto-generated notes
-3. `dist/cli.js` is built fresh and published with
+2. `build-dist` checks out that exact commit, installs with Bun 1.3.13, builds
+   every harness, runs the full CI test profile, enforces the source-only
+   boundary and graph invariants, and creates a deterministic
+   `amadeus-dist-vX.Y.Z.tar.gz`, its manifest, and `SHA256SUMS`
+3. softprops/action-gh-release creates the GitHub Release with auto-generated
+   notes and attaches all three distribution files
+4. `dist/cli.js` is built fresh and published with
    `npm publish --provenance --access public` (a prerelease version is
    automatically published with `--tag next` and never touches `latest`)
-4. post-publish verification is performed manually with Bun after registry
+5. post-publish verification is performed manually with Bun after registry
    propagation completes
 
-The release does not re-run tests: every commit on `main` already passed
-the five CI quality gates at PR time, and the bump commit itself is
-release-it's one-line version change.
+The release deliberately re-runs the full CI test profile before constructing
+the asset. The release job owns the public distribution bytes; a local `dist/`
+edit cannot enter the Git history or this clean-checkout build.
 
 The **first release** needs no special handling: with no `v*` tag in the
 repo, the dispatch skips the bump and releases the committed version as-is
@@ -170,8 +177,9 @@ committed package version and point at `main`) and runs notes → build →
 publish.
 
 To rehearse without releasing, dispatch with `dry-run: true` —
-release-it runs with `--dry-run` (no commit/tag/push) and `npm publish
---dry-run` replaces the real publish; no `NPM_TOKEN` is needed.
+release-it runs with `--dry-run` (no commit/tag/push), distribution asset
+creation is skipped, and `npm publish --dry-run` replaces the real publish; no
+`NPM_TOKEN` is needed.
 
 ### Fallback: manual publish (no provenance)
 

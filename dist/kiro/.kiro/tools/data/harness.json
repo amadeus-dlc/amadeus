@@ -1,9 +1,0 @@
-{
-  "name": "kiro",
-  "harnessDir": ".kiro",
-  "rulesSubdir": "steering",
-  "stageEntry": {
-    "kind": "runner",
-    "root": ".kiro/skills"
-  }
-}

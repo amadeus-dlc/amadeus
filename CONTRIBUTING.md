@@ -12,16 +12,19 @@ This file covers the project-wide conventions (reporting, PR flow, security, lic
 
 AI-DLC ships to many CLI harnesses (today Claude Code, Kiro CLI, and Codex CLI) from a single hand-authored source. The layout has three zones:
 
-- **`core/`** — the harness-neutral source of truth (tools, stages, agents, rules, scopes, sensors, knowledge, hooks, session skills). **Edit here.**
-- **`harness/<name>/`** — the thin per-harness surface (`manifest.ts`, the orchestrator skill, harness-specific files). **Edit here.**
-- **`dist/<harness>/`** — generated, committed, and drift-guarded. **Never hand-edit** — `bun scripts/package.ts --check` fails CI on any drift.
+- **`packages/framework/core/`** — the harness-neutral source of truth (tools, stages, agents, rules, scopes, sensors, knowledge, hooks, session skills). **Edit here.**
+- **`packages/framework/harness/<name>/`** — the thin per-harness surface (`manifest.ts`, the orchestrator skill, harness-specific files). **Edit here.**
+- **`dist/<harness>/`** — ignored, disposable local build output. It is produced from the two source trees above and packaged as a versioned GitHub Release Asset by the release workflow.
 
-After editing `core/` or `harness/<name>/`, regenerate the distributions:
+After a fresh clone, install dependencies and build before starting a harness:
 
 ```bash
-bun scripts/package.ts            # regenerate every dist/<harness>/
-bun scripts/package.ts --check    # byte-parity drift guard (run in CI)
+bun install --frozen-lockfile
+bun run build
+# start the harness you are developing
 ```
+
+`bun run build` generates every `dist/<harness>/` tree and this repository's local self-install surfaces. These outputs stay untracked. CI compares two isolated builds for byte reproducibility and runs `bun run source-only:check` to enforce the Git boundary.
 
 Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.md).
 
@@ -44,9 +47,9 @@ AI-DLC separates stages, agents, skills, templates, and artifacts. Each concept 
 
 Before submitting a PR, verify:
 
-- You edited the hand-authored source in `core/` or `harness/<name>/`, **not** `dist/`.
-- You ran `bun scripts/package.ts` and committed the regenerated `dist/` trees alongside your source change.
-- `bun scripts/package.ts --check` reports no drift.
+- You edited the hand-authored source in `packages/framework/core/` or `packages/framework/harness/<name>/`, **not** generated output.
+- You ran `bun run build`; generated `dist/` and self-install files remain untracked.
+- `bun run source-only:check` reports `source-only boundary: clean`.
 - `bun tests/run-tests.ts` passes (see [Testing](docs/reference/09-testing.md)).
 - User-visible changes bump `core/tools/amadeus-version.ts`, the README version badge, and add a matching `CHANGELOG.md` entry in the same commit (see the Changelog Policy in [`AGENTS.md`](AGENTS.md)).
 - Stale stage names, paths, or flags do not remain in examples, docs, or generated output (grep `docs/` and `README.md` when renaming anything).

@@ -214,9 +214,10 @@ describe("Codex hooks ownership", () => {
 
     expect(git(projectDir, "status", "--short")).toBe("");
     expect(sourceTracksActive()).toBe(false);
-    expect(git(ROOT, "ls-files", "--error-unmatch", ".codex/hooks.json.example")).toBe(
-      ".codex/hooks.json.example",
-    );
+    expect(
+      run(ROOT, ["git", "ls-files", "--error-unmatch", ".codex/hooks.json.example"])
+        .exitCode,
+    ).toBe(1);
     expect(git(projectDir, "check-ignore", ".codex/hooks.json")).toBe(".codex/hooks.json");
     expect(readFileSync(canonicalPath)).toEqual(canonicalBefore);
     const active = JSON.parse(readFileSync(activePath, "utf8")) as {

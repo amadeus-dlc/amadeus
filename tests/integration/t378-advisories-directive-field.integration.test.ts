@@ -316,8 +316,8 @@ describe("t378 stage-protocol relay norm", () => {
   });
 });
 
-describe("t378 next carries advisories on stdout", () => {
-  test("firing condition -> the emitted directive carries advisories AND the stderr line", () => {
+describe("t378 next holds before stage body", () => {
+  test("firing condition -> await-advisory-choice replaces run-stage and preserves the stderr line", () => {
     host = makeChangedHost();
     setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
     setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
@@ -328,13 +328,21 @@ describe("t378 next carries advisories on stdout", () => {
     handleNext([], proj);
 
     const directive = JSON.parse(logs.join("\n").trim()) as {
+      kind: string;
       stage: string;
-      advisories?: { plugin: string; code: string; message: string; stage: string }[];
+      question?: string;
+      options?: string[];
+      advisories?: { plugin: string; code: string; message: string; checkpoint: string }[];
     };
+    expect(directive.kind).toBe("await-advisory-choice");
     expect(directive.stage).toBe("build-and-test");
+    expect(directive.options).toEqual(["今すぐ実行する", "リスクを承知して延期する"]);
     expect(directive.advisories?.length).toBe(1);
     expect(directive.advisories?.[0].code).toBe("changed");
-    expect(directive.advisories?.[0].stage).toBe("build-and-test");
+    expect(directive.advisories?.[0].checkpoint).toBe("build-and-test");
+    expect(directive.question).toBe(
+      `${directive.advisories?.[0].message}\n\n各advisoryについて次のいずれかを選択してください。`,
+    );
     // stderr is preserved (L5): the human channel did not move.
     expect(errs.join("\n")).toContain(`${ACTIVATION_PLUGIN} spec hash CHANGED`);
   });

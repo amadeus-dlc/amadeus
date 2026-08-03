@@ -31,6 +31,8 @@ import { describe, expect, test } from "bun:test";
 import {
   PLUGIN_ENGINE_STATE_RE,
   STAGE_GRAPH_RE,
+} from "../../packages/framework/core/tools/data/self-install-allowlist.ts";
+import {
   isPluginOwned,
   mergeStageGraph,
   parsePluginLedger,

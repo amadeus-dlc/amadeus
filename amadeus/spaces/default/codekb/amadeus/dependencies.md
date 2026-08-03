@@ -1,6 +1,33 @@
 # 依存関係
 
-## registry drift guard の依存関係（260802-registry-drift-guard、現在、observed `64b44a9f8`）
+## advisory 人間選択の依存関係（260803-advisory-human-choice、現在、observed `498c3034a`）
+
+### 現行依存方向
+
+```text
+plugin readiness / model-map
+  -> amadeus-plugin-activation.ts
+  -> pending advisory + (plugin, code) latch
+  -> amadeus-orchestrate.ts (main / single / per-unit)
+  -> amadeus-directive.ts advisories
+  -> conductor + stage-protocol.md section 11a
+  -> stage body
+
+human turn / standing grant / gate approval
+  -> amadeus-state.ts + audit registry
+  -X-> advisory-specific choice (missing semantic correlation)
+
+stage report
+  -> main / single report parser
+  -X-> advisory receipt validation (missing input)
+```
+
+- activationからdirectiveまでは一方向に閉じているが、人間選択からorchestratorへ戻る依存辺がない。pending消費とlatchはこの戻り辺を待たない。
+- `functional-design` はUnit DAGに依存して複数の `gate:false` directiveを出し、最終 `gate:true` へ合流する。最初のdirectiveでlatch済みになるため、final report guardだけを追加しても時間依存を閉じられない。
+- `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
+- canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
+
+## registry drift guard の依存関係（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
 ### 内部依存グラフ
 
@@ -806,4 +833,3 @@ doctor core の明示すべき依存は、個別 checks、env、cache、session 
 ## 記録系 round-trip PBT の依存関係（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 外部依存の追加なし（`fast-check` は #697 で導入済み）。内部依存は 3 本 — (1) テスト → 被検コーデックの import 面が dist 出荷コピー（`t204` / `t352` / `t364`）と core 正本（`t274` / `t275`）の 2 流儀に割れており、新規分の統一方針を設計段で確定する必要がある、(2) 読み側 fail-closed 化 → 消費側呼出元（election は `Store.load` `amadeus-election-store.ts:503-510`、state は `transitionMirrorBoundaryReceipt` 等）のエラー分岐、(3) core/tools 改修 → dist 7 ハーネス + self-install 面の機械同期（`bun scripts/package.ts` + `bun run promote:self`、`dist:check` / `promote:self:check` / `t258-boundary-guard` が連動）。患部 10 パスのうち区間内コミットは `amadeus-lib.ts`（1、#2031 の +1 行）と `amadeus-audit.ts`（1、#2031 の +5 行）のみで、他 8 パスは 0 — 他の進行中 intent と交差する兆候は区間にない。
-

@@ -7,8 +7,8 @@
 エンジン、ステートマシン、監査ログ、グラフ、swarm レフェリー、learnings ゲートは
 すべてのディストリビューションでバイト単位で同一であり、異なるのはシェルだけです。
 このツリーは `bun scripts/package.ts cursor` によって
-`packages/framework/core/` + `packages/framework/harness/cursor/` から
-**生成** されます。手編集しないでください(ドリフトガードが CI で失敗します)。
+`packages/framework/core/` + `packages/framework/harness/cursor/` から未追跡のローカル出力として
+**生成**されます。release CIはクリーンcheckoutから再生成します。
 
 ## 前提条件
 
@@ -93,7 +93,7 @@ deny(ここでは不使用)、その他のコードは fail-open です。アダ
 
 ```bash
 bun scripts/package.ts cursor        # packages/framework/core + harness/cursor から dist/cursor を再生成
-bun scripts/package.ts --check       # CI ドリフトガード(全ハーネス)
+bun run source-only:check            # 生成物がGit境界の外にあることを検査
 ```
 
 ## 次のステップ

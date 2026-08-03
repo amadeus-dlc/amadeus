@@ -1,9 +1,0 @@
-{
-  "name": "claude",
-  "harnessDir": ".claude",
-  "rulesSubdir": "rules",
-  "stageEntry": {
-    "kind": "runner",
-    "root": ".claude/skills"
-  }
-}

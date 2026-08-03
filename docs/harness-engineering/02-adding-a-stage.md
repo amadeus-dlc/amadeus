@@ -128,8 +128,10 @@ your new stage file in and recompiles the graph:
 
 ```bash
 bun scripts/package.ts            # regenerate every harness from packages/framework/core/ + packages/framework/harness/
-bun scripts/package.ts --check    # the CI drift guard — run before committing
+bun run source-only:check         # confirm generated output remains outside the Git boundary
 ```
+
+The generated trees remain untracked. CI recompiles them in two isolated workspaces and compares the results byte-for-byte.
 
 The runtime reads a compiled artifact, `<harness-dir>/tools/data/stage-graph.json`
 (e.g. `.claude/tools/data/stage-graph.json` in an installed Claude tree),
@@ -145,8 +147,8 @@ Either way the authoring flow is a one-way pipeline — edit YAML in `packages/f
 the packager (or `compile` against an installed tree), the JSON updates, and the
 runtime loader (`loadStageGraph()`) picks up the new node unchanged. Never edit
 `stage-graph.json` by hand; it is a build artifact, and a hand-edit will be
-overwritten on the next compile. The full pipeline diagram and the CI drift
-guard are in
+overwritten on the next compile. The full pipeline diagram and the CI invariant
+check are in
 [Authoring flow](../reference/15-stage-definition.md#authoring-flow).
 
 ### 5. Verify it appears — and in which scopes
@@ -252,10 +254,10 @@ the Developer Reference.
   typo can't ship a graph that 404s at run time. The reserved `orchestrator`
   slug (the conductor itself, used on the bootstrap initialization stages) is
   exempt — it has no agent file.
-- **CI drift guard.** `bun .claude/tools/amadeus-graph.ts compile --check` exits
-  `0` on a clean tree and exits `1` if any stage YAML was edited without
-  recompiling the JSON. CI runs this, so a forgotten `compile` blocks the merge
-  with a clear message rather than shipping a stale graph.
+- **CI invariant check.** `bun .claude/tools/amadeus-graph.ts compile --check`
+  compiles the authoritative stage sources and validates graph invariants. It
+  exits `0` when they hold and fails loudly on invalid frontmatter, references,
+  sensors, scope grids, or Bolt DAG edges.
 - **Phase rule attachment.** Because the stage declares its phase by directory,
   the matching `phases/<phase>.md` rule layer attaches at compile time —
   you don't wire that edge yourself.

@@ -20,8 +20,6 @@ import {
   ACTIVATION_PLUGIN,
   ACTIVATION_STATE_FILE,
   ACTIVATION_WATCH_GLOBS,
-  computeSpecHash,
-  readActivationState,
   recordActivationVerdict,
 } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import {
@@ -165,17 +163,13 @@ describe("t322 FR-7(a): --single-free reach of a composed plugin stage", () => {
   });
 });
 
-describe("t322 flow 4: verdict recorded on formal-model-check completion", () => {
-  test("report --single --stage formal-model-check --result completed writes SpecHashState", () => {
+describe("t322 flow 4: stage completion alone is not a formal verdict", () => {
+  test("report --single --stage formal-model-check --result completed does not write SpecHashState", () => {
     composeAndCompile();
     proj = createTestProject();
     seedStateFile(proj, FIX_BUILD_STAGE); // an active intent so the audit shard resolves
     handleReport(["--single", "--stage", ACTIVATION_PLUGIN, "--result", "completed"], proj);
-    expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(true);
-    // The hash is taken over the SPEC root (the project root); the state it is
-    // compared against is host state.
-    const current = computeSpecHash(hostProjectRoot, ACTIVATION_WATCH_GLOBS);
-    expect(current.ok && readActivationState(host)?.lastVerdictHash === current.hash).toBe(true);
+    expect(existsSync(join(host, ACTIVATION_STATE_FILE))).toBe(false);
     expect(logs.join("\n")).toContain('"kind":"done"');
   });
 });
@@ -216,14 +210,16 @@ describe("t322 flow 2: advisory before build-and-test", () => {
     // structured field — never as loose prose on the directive channel.
     const stdout = logs.join("\n").trim();
     const directive = JSON.parse(stdout) as {
+      question: string;
       advisories?: { message: string }[];
     };
     expect(directive.advisories?.length).toBe(1);
     expect(directive.advisories?.[0].message).toContain("spec hash CHANGED");
-    // Nothing outside the JSON: stripping the advisories field leaves no trace
-    // of the advisory text anywhere else in the emitted bytes.
-    const withoutAdvisories = { ...directive, advisories: undefined };
-    expect(JSON.stringify(withoutAdvisories)).not.toContain("spec hash CHANGED");
+    // The fail-closed choice question repeats the same verbatim message so it
+    // remains visible even when a renderer focuses on the question field.
+    const advisoryMessage = directive.advisories?.[0]?.message;
+    expect(advisoryMessage).toBeDefined();
+    expect(directive.question).toContain(advisoryMessage!);
   });
 
   test("composed + spec unchanged -> no advisory (current is silent)", () => {

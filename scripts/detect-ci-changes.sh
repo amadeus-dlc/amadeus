@@ -7,6 +7,16 @@ coverage=false
 
 while IFS= read -r -d '' path; do
   case "${path}" in
+    dist/*)
+      drift=true
+      continue
+      ;;
+    .kiro/*|.kiro-ide/*)
+      continue
+      ;;
+  esac
+
+  case "${path}" in
     *.ts|*.tsx|*.mts|*.cts|\
     bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|\
     .github/workflows/ci.yml|\
@@ -18,7 +28,8 @@ while IFS= read -r -d '' path; do
 
   case "${path}" in
     packages/framework/*|\
-    dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|.cursor/*|.opencode/*|.kimi-code/*|\
+    .agents/*|.claude/*|.codex/*|.cursor/*|.opencode/*|.kimi-code/*|\
+    .gitignore|.gitattributes|\
     AGENTS.md|CLAUDE.md)
       drift=true
       ;;
