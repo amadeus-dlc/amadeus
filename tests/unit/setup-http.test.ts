@@ -53,6 +53,24 @@ describe("createHttp — getJson()", () => {
 });
 
 describe("createHttp — release asset redirects", () => {
+  test("refuses an untrusted initial URL before calling fetch", async () => {
+    const original = globalThis.fetch;
+    const contacted: string[] = [];
+    globalThis.fetch = (async (input) => {
+      contacted.push(String(input));
+      return new Response("archive", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const http = createHttp({ apiTimeoutMs: 1000, archiveTimeoutMs: 1000 });
+      const result = await http.downloadArchive(new URL("https://example.com/untrusted.tar.gz"));
+
+      expect(result.type).toBe("err");
+      expect(contacted).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   test("allows the exact GitHub release hosts and follows the redirect manually", async () => {
     const original = globalThis.fetch;
     const contacted: string[] = [];
