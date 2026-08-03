@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T00:46:02Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RA-2072-LEARNINGS-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測で0件が妥当と判断した。(1) Requirements Analysis の requirements.md は、正常系を committed projection、runtime compose を欠損・stale時の補助修復とし、fresh worktreeで初回利用可能かつ起動後Git cleanを完成条件にしている。(2) この判断は project.md:301 の既存 cid:reverse-engineering:c1-2018 が『動的な自己修復だけではない』『決定的なplugin投影をversion管理』『fresh worktreeで初回から利用可能かつ起動後もGit clean』として同じ規則を既に正本化している。(3) RA memoryの実エントリは旧要件を流用せずcommitted projectionを正常系にするという同規則の適用であり、RA learnings-selections.jsonも selections=[] である。(4) package未選択baseline/self-install dogfood分離とCodex runner正規配置も project.md:302-303 の既存Reverse Engineering学習が被覆する。したがって新しいproject ruleを追加すると重複する。",
+      "submittedAt": "2026-08-03T00:44:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RA-2072-LEARNINGS-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1を全面支持する。独立実測では、Requirements AnalysisのFR-2/FR-4とNFR-2は、project.mdの既存Reverse Engineering学習cid:reverse-engineering:c1-2018（決定的投影をversion管理し、fresh worktreeで初回利用可能かつ起動後Git clean）を要件化している。FR-3はcid:reverse-engineering:c2-2018（Codex runnerの正規配置はproject-root .agents/skills、.codex/skillsは非正規）と一致し、FR-5はcid:reverse-engineering:c4-2018（packageの0-plugin baselineとself-repository dogfood projectionの分離）と一致する。requirements-analysis/learnings-selections.jsonも空配列であり、今回の成果物から既存3規則と直交する再利用可能なproject ruleは確認できないため、新規追加0件が妥当である。",
+      "submittedAt": "2026-08-03T00:44:58Z"
+    }
+  ],
+  "resolutions": []
+}

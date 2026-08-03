@@ -212,6 +212,7 @@ function writeHarnessData(treeRoot: string, m: HarnessManifest): void {
     name: m.name,
     harnessDir: m.harnessDir,
     rulesSubdir: m.rulesRename ?? "rules",
+    stageEntry: m.stageEntry,
   };
   const dst = join(treeRoot, HARNESS_DATA);
   mkdirSync(dirname(dst), { recursive: true });

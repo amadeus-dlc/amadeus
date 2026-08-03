@@ -22,7 +22,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promoteSelfMain } from "../../scripts/promote-self.ts";
+import { DistributionTransactionCoordinator } from "../../scripts/distribution-transaction.ts";
+import {
+  applyDistributionUpdates,
+  misplacedPluginProjectionFiles,
+  promoteSelfMain,
+} from "../../scripts/promote-self.ts";
 
 let root: string;
 
@@ -156,5 +161,41 @@ describe("t356 composed-plugin state through promote-self", () => {
       json([STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "formal-model-check" }]),
     );
     expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+  });
+
+  test("detects Codex runner and Kiro self-install misplacements without flagging local files", () => {
+    write(".codex/skills/amadeus-formal-model-check/SKILL.md", "misplaced runner");
+    write(".kiro/plugins/formal-model-check/stages/formal-model-check.md", "misplaced plugin");
+    write(".codex/local/user.txt", "unmanaged local file");
+    const expected = new Map<string, Buffer>([
+      [".codex/.amadeus-plugin-src/formal-model-check/plugin.json", Buffer.from("{}")],
+      [".codex/.amadeus-plugin-composition.json", Buffer.from(json(COMPOSITION_RECORD))],
+      [".agents/skills/amadeus-formal-model-check/SKILL.md", Buffer.from("runner")],
+    ]);
+    expect(misplacedPluginProjectionFiles(expected, root)).toEqual([
+      ".codex/skills/amadeus-formal-model-check/SKILL.md",
+      ".kiro/plugins/formal-model-check/stages/formal-model-check.md",
+    ]);
+  });
+
+  test("a mid-transaction failure is recovered to every preimage before returning", () => {
+    write("a.txt", "old-a");
+    write("b.txt", "old-b");
+    let injected = false;
+    const coordinator = new DistributionTransactionCoordinator(root, {
+      checkpoint: (checkpoint) => {
+        if (!injected && checkpoint === "target-renamed") {
+          injected = true;
+          throw new Error("injected projection failure");
+        }
+      },
+    });
+    expect(() => applyDistributionUpdates(root, [
+      { path: "a.txt", bytes: Buffer.from("new-a") },
+      { path: "b.txt", bytes: Buffer.from("new-b") },
+    ], coordinator)).toThrow("injected projection failure");
+    expect(readFileSync(join(root, "a.txt"), "utf-8")).toBe("old-a");
+    expect(readFileSync(join(root, "b.txt"), "utf-8")).toBe("old-b");
+    expect(coordinator.pendingJournalCount()).toBe(0);
   });
 });

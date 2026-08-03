@@ -1,0 +1,29 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "c1-2018",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "plugin parityの合格条件は動的な自己修復だけではない。Claude Codeのdogfood状態と同様に決定的なplugin投影をversion管理し、fresh worktreeで初回から利用可能かつ起動後もGit cleanであることを正しいゴールとして扱う",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2-2018",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Codex plugin runnerの正規配置はproject-root `.agents/skills` である。generic composeが生成した `.codex/skills` は非正規のruntime projectionであり、コミット対象ではなく生成先を修正する対象として扱う",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c4-2018",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "packageの0-plugin baselineとself-repositoryのdogfood projectionを別境界として保持する。neutral bundleを全利用者へ強制せず、opt-in済みself-install面だけをcommitted projectionとして管理する",
+      "source": "orchestrator"
+    }
+  ]
+}

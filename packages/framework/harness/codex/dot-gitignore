@@ -56,6 +56,11 @@ amadeus/spaces/*/intents/.amadeus-*
 # into ledger.json. Untracked so a not-yet-voted voter cannot read a peer's
 # choice/GoA/rationale through `git status` / `git diff` (Issue #1773).
 amadeus/spaces/*/elections/*/pending/
+# Plugin reconciliation telemetry and crash-recovery state are machine-local.
+**/.amadeus-plugin-audit.json
+**/.amadeus-plugin-drops.json
+**/.amadeus-plugin-journal.json
+**/.amadeus-plugin-lock/
 #
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
 # for these): amadeus/spaces/*/memory/** · amadeus/spaces/*/codekb/** ·

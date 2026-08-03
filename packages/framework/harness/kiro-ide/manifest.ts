@@ -22,6 +22,7 @@ const manifest: HarnessManifest = {
   name: "kiro-ide",
   mirrorSurface: "kiro-ide",
   harnessDir: ".kiro",
+  stageEntry: { kind: "runner", root: ".kiro/skills" },
 
   // Same core projection as kiro CLI.
   coreDirs: [

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-RE-2072-LEARNINGS-1",
+  "voter": "subagent-1",
+  "question": "ユーザーが選択したReverse Engineeringの推奨学習候補3件をproject.mdへ採用してよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "推奨3候補を採用",
+      "description": "plugin parityの合格条件、Codex runnerの正規配置、package baselineとself-repository投影の境界をproject.mdのCorrectionsへ残す"
+    }
+  ]
+}

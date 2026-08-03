@@ -27,20 +27,7 @@
     ],
     "inputs": "none (first stage after session start)",
     "outputs": "the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": []
   },
   {
@@ -73,20 +60,7 @@
     ],
     "inputs": "none (scans filesystem)",
     "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": []
   },
   {
@@ -119,20 +93,7 @@
     ],
     "inputs": "workspace classification from workspace-detection, scope from orchestrator",
     "outputs": "<record>/amadeus-state.md (full populated version, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": []
   },
   {
@@ -167,40 +128,23 @@
     ],
     "inputs": "User's project description ($ARGUMENTS), scope selection",
     "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -242,40 +186,23 @@
     ],
     "inputs": "Intent statement from intent-capture stage",
     "outputs": "competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -334,40 +261,23 @@
     ],
     "inputs": "Intent statement from intent-capture stage, market research from market-research stage (if executed)",
     "outputs": "feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -420,40 +330,23 @@
     ],
     "inputs": "Intent statement, feasibility assessment, constraint register",
     "outputs": "scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -503,40 +396,23 @@
     ],
     "inputs": "Scope definition, intent backlog, feasibility assessment",
     "outputs": "team-assessment.md, skill-matrix.md, mob-composition.md, team-formation-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -591,40 +467,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "Intent statement, scope definition, intent backlog",
     "outputs": "wireframes.md, user-flow.md, rough-mockups-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -699,40 +558,23 @@
     ],
     "inputs": "All Ideation phase artifacts (intent, market research, feasibility, scope, team, mockups)",
     "outputs": "initiative-brief.md, decision-log.md, approval-handoff-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -782,40 +624,23 @@
     ],
     "inputs": "<record>/amadeus-state.md",
     "outputs": "amadeus/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -891,40 +716,23 @@
     ],
     "inputs": "<record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts",
     "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's amadeus-team.md and amadeus-project.md.",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -997,40 +805,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "RE artifacts (if brownfield), user's project description (from <record>/audit/<host>-<clone>.jsonl)",
     "outputs": "requirements.md, requirements-analysis-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1091,40 +882,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/requirements-analysis/requirements.md, RE artifacts (if brownfield)",
     "outputs": "stories.md, personas.md, user-stories-assessment.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1189,40 +963,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "Rough mockups from rough-mockups stage, user stories from user-stories stage, requirements from requirements-analysis stage",
     "outputs": "mockups.md, interaction-spec.md, design-system-mapping.md, accessibility-checklist.md, refined-mockups-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1291,40 +1048,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced), RE artifacts (if brownfield)",
     "outputs": "components.md, component-methods.md, services.md, component-dependency.md, decisions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1395,40 +1135,23 @@
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/application-design/ (all design artifacts), <record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced)",
     "outputs": "unit-of-work.md, unit-of-work-dependency.md, unit-of-work-story-map.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1503,40 +1226,23 @@
     ],
     "inputs": "All Inception artifacts (requirements, stories, mockups, architecture, units)",
     "outputs": "bolt-plan.md, team-allocation.md, risk-and-sequencing-rationale.md, external-dependency-map.md, delivery-planning-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1630,52 +1336,35 @@
     "reviewer_max_iterations": 2,
     "inputs": "unit-of-work.md, unit-of-work-story-map.md, requirements.md, application design artifacts",
     "outputs": "business-logic-model.md, business-rules.md, domain-entities.md, CONDITIONAL: frontend-components.md (under this stage's per-unit record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1757,52 +1446,35 @@
     "reviewer_max_iterations": 2,
     "inputs": "functional design artifacts, requirements.md, RE artifacts",
     "outputs": "performance-requirements.md, security-requirements.md, scalability-requirements.md, reliability-requirements.md, tech-stack-decisions.md (under this stage's per-unit record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -1893,52 +1565,35 @@
     "reviewer_max_iterations": 2,
     "inputs": "NFR requirements artifacts, functional design artifacts",
     "outputs": "performance-design.md, security-design.md, scalability-design.md, reliability-design.md, logical-components.md (under this stage's per-unit record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2044,52 +1699,35 @@
     "reviewer_max_iterations": 2,
     "inputs": "NFR design artifacts, application design, functional design",
     "outputs": "deployment-architecture.md, infrastructure-services.md, monitoring-design.md, cicd-pipeline.md, CONDITIONAL: shared-infrastructure.md (under this stage's per-unit record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2174,52 +1812,35 @@
     "reviewer_max_iterations": 2,
     "inputs": "ALL prior design artifacts for this unit",
     "outputs": "application code + code-generation-plan.md, code-summary.md (under this stage's per-unit record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       },
       {
         "id": "event-registry-drift",
-        "path": ".claude/sensors/amadeus-event-registry-drift.md",
+        "path": ".cursor/sensors/amadeus-event-registry-drift.md",
         "matches": "**/{event-registry,amadeus-audit}.ts",
         "category": "code-quality"
       },
       {
         "id": "self-scope-consistency",
-        "path": ".claude/sensors/amadeus-self-scope-consistency.md",
+        "path": ".cursor/sensors/amadeus-self-scope-consistency.md",
         "matches": "**/{scopes/amadeus-self-*.md,tools/data/scope-grid.json}",
         "category": "framework-integrity"
       }
@@ -2278,46 +1899,29 @@
     ],
     "inputs": "ALL code generation outputs across all units",
     "outputs": "build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2371,54 +1975,67 @@
     ],
     "inputs": "Code generation output from code-generation stage, build/test results from build-and-test stage",
     "outputs": "ci-config.md, quality-gates.md, ci-pipeline-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/construction.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "linter",
-        "path": ".claude/sensors/amadeus-linter.md",
+        "path": ".cursor/sensors/amadeus-linter.md",
         "matches": "**/*.{ts,js}",
         "category": "code-quality"
       },
       {
         "id": "type-check",
-        "path": ".claude/sensors/amadeus-type-check.md",
+        "path": ".cursor/sensors/amadeus-type-check.md",
         "matches": "**/*.{ts,tsx}",
         "category": "code-quality"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
+      }
+    ]
+  },
+  {
+    "slug": "formal-model-check",
+    "number": "3.8",
+    "name": "Formal Model Check",
+    "phase": "construction",
+    "plugin_source": true,
+    "execution": "CONDITIONAL",
+    "condition": "Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).",
+    "lead_agent": "amadeus-quality-agent",
+    "support_agents": [],
+    "mode": "inline",
+    "produces": [],
+    "consumes": [],
+    "requires_stage": [],
+    "sensors": [
+      "model-completeness"
+    ],
+    "scopes": [],
+    "inputs": "all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.",
+    "outputs": "the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.",
+    "rules_in_context": [],
+    "sensors_applicable": [
+      {
+        "id": "model-completeness",
+        "path": ".cursor/sensors/amadeus-model-completeness.md",
+        "matches": "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}",
+        "category": "formal-verification"
       }
     ]
   },
@@ -2474,40 +2091,23 @@
     ],
     "inputs": "CI pipeline config from ci-pipeline stage, infrastructure design from infrastructure-design stage",
     "outputs": "cd-config.md, deployment-strategy.md, rollback-runbook.md, deployment-pipeline-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2562,40 +2162,23 @@
     ],
     "inputs": "Infrastructure design from infrastructure-design stage, CD pipeline config from deployment-pipeline stage",
     "outputs": "environment-inventory.md, validation-report.md, environment-provisioning-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2655,40 +2238,23 @@
     ],
     "inputs": "CD pipeline config from deployment-pipeline stage, provisioned environments from environment-provisioning stage, built artifacts from Construction",
     "outputs": "deployment-log.md, smoke-test-results.md, health-check-report.md, deployment-execution-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2753,40 +2319,23 @@
     ],
     "inputs": "NFR design from nfr-design stage, infrastructure design from infrastructure-design stage, deployed application",
     "outputs": "dashboards.md, alarms.md, slo-config.md, log-queries.md, tracing-config.md, anomaly-config.md, observability-setup-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2845,40 +2394,23 @@
     ],
     "inputs": "Observability setup from observability-setup stage, NFR design from nfr-design stage, infrastructure design from infrastructure-design stage",
     "outputs": "runbooks.md, incident-plan.md, escalation-matrix.md, incident-response-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -2939,40 +2471,23 @@
     ],
     "inputs": "NFR requirements from nfr-requirements stage, NFR design from nfr-design stage, deployed application, observability data from observability-setup stage",
     "outputs": "load-test-plan.md, test-results.md, nfr-validation-matrix.md, performance-validation-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }
@@ -3041,40 +2556,23 @@
     ],
     "inputs": "All Operation phase artifacts, production monitoring data",
     "outputs": "slo-report.md, cost-analysis.md, drift-report.md, feedback-loop.md, feedback-optimization-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
-      }
-    ],
+    "rules_in_context": [],
     "sensors_applicable": [
       {
         "id": "required-sections",
-        "path": ".claude/sensors/amadeus-required-sections.md",
+        "path": ".cursor/sensors/amadeus-required-sections.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "upstream-coverage",
-        "path": ".claude/sensors/amadeus-upstream-coverage.md",
+        "path": ".cursor/sensors/amadeus-upstream-coverage.md",
         "matches": "**/{amadeus-docs,intents,codekb}/**",
         "category": "document-shape"
       },
       {
         "id": "answer-evidence",
-        "path": ".claude/sensors/amadeus-answer-evidence.md",
+        "path": ".cursor/sensors/amadeus-answer-evidence.md",
         "matches": "**/*-questions.md",
         "category": "governance"
       }

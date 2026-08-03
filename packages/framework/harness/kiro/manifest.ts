@@ -25,6 +25,7 @@ const manifest: HarnessManifest = {
   name: "kiro",
   mirrorSurface: "kiro",
   harnessDir: ".kiro",
+  stageEntry: { kind: "runner", root: ".kiro/skills" },
 
   // Same core projection as claude, EXCEPT: rules→steering, and the
   // orchestrator skill (skills/amadeus/) is authored, not core.

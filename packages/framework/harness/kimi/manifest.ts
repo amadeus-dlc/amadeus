@@ -33,6 +33,7 @@ const manifest: HarnessManifest = {
   name: "kimi",
   mirrorSurface: "kimi",
   harnessDir: ".kimi-code",
+  stageEntry: { kind: "runner", root: ".kimi-code/skills" },
 
   // core/<src> → <harnessDir>/<dst>. Same projection as claude (8 dirs,
   // rules→rules with NO rename) + the six harness-neutral session skills

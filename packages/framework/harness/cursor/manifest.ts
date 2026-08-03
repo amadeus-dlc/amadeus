@@ -28,6 +28,7 @@ const manifest: HarnessManifest = {
   name: "cursor",
   mirrorSurface: "cursor",
   harnessDir: ".cursor",
+  stageEntry: { kind: "command", path: ".cursor/commands/amadeus.md" },
 
   // Core projection: identical 8 dirs to codex/opencode — rules→amadeus-rules,
   // NO skills dir (the command is emitted to .cursor/commands/ by emit). Persona

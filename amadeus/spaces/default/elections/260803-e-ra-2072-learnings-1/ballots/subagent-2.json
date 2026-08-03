@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-RA-2072-LEARNINGS-1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "候補1を全面支持する。独立実測では、Requirements AnalysisのFR-2/FR-4とNFR-2は、project.mdの既存Reverse Engineering学習cid:reverse-engineering:c1-2018（決定的投影をversion管理し、fresh worktreeで初回利用可能かつ起動後Git clean）を要件化している。FR-3はcid:reverse-engineering:c2-2018（Codex runnerの正規配置はproject-root .agents/skills、.codex/skillsは非正規）と一致し、FR-5はcid:reverse-engineering:c4-2018（packageの0-plugin baselineとself-repository dogfood projectionの分離）と一致する。requirements-analysis/learnings-selections.jsonも空配列であり、今回の成果物から既存3規則と直交する再利用可能なproject ruleは確認できないため、新規追加0件が妥当である。",
+  "submittedAt": "2026-08-03T00:44:58Z"
+}

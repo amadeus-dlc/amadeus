@@ -33,6 +33,7 @@ const manifest: HarnessManifest = {
   name: "opencode",
   mirrorSurface: "opencode",
   harnessDir: ".opencode",
+  stageEntry: { kind: "command", path: ".opencode/commands/amadeus.md" },
 
   // Core projection: identical to codex — rules→amadeus-rules, NO skills dir
   // (the command is emitted to .opencode/commands/ by emit). Persona .md files

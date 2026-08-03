@@ -1,5 +1,9 @@
 {
   "name": "codex",
   "harnessDir": ".codex",
-  "rulesSubdir": "amadeus-rules"
+  "rulesSubdir": "amadeus-rules",
+  "stageEntry": {
+    "kind": "runner",
+    "root": ".agents/skills"
+  }
 }

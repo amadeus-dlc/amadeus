@@ -24,10 +24,11 @@
 // full-frontmatter-stage host is out of the mechanism's current scope.
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
+import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
 import {
   resolveProjectDirFromHook,
   resyncStateToStageGraph,
@@ -228,6 +229,7 @@ export type PluginCliDeps = {
   makeTx: (hostRoot: string, backend: WorkspaceBackend) => WorkspaceTransaction;
   recompile: (projectRoot: string) => boolean;
   generateRunners: (projectRoot: string) => boolean;
+  derivedProjectionCurrent?: (hostRoot: string, record: PluginRecord) => boolean;
   recordDrops: (hostRoot: string, plugin: string, entries: readonly DropEntry[]) => void;
   clearDrops: (hostRoot: string, plugin: string) => void;
   stagingEntryState: (dst: string, src: string) => StagingEntryState;
@@ -370,11 +372,17 @@ function spawnRecompile(projectRoot: string): boolean {
 // and the caller reports an apply-stage failure rather than leaving the host
 // with a composed stage nobody can type.
 function spawnRunnerGen(projectRoot: string): boolean {
+  const entry = harnessStageEntry(join(projectRoot, "tools", "data"));
+  if (entry?.kind === "command") return true;
+  const projectDir = projectDirOfHostRoot(projectRoot);
+  const runnerRoot = entry?.kind === "runner"
+    ? join(projectDir, ...entry.root.split("/"))
+    : join(projectRoot, "skills");
   const res = observeSubprocessSpan(
     telemetryProjectDir(projectRoot),
     "amadeus-runner-gen:write",
     () =>
-      spawnSync("bun", [join(resolveHarnessToolsDir(projectRoot), "amadeus-runner-gen.ts"), "write"], {
+      spawnSync("bun", [join(resolveHarnessToolsDir(projectRoot), "amadeus-runner-gen.ts"), "write", "--out", runnerRoot], {
         cwd: projectRoot,
         stdio: "ignore",
         env: process.env,
@@ -475,6 +483,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     makeTx: nodeTx,
     recompile: spawnRecompile,
     generateRunners: spawnRunnerGen,
+    derivedProjectionCurrent,
     recordDrops: recordPluginDrops,
     clearDrops: clearPluginDrops,
     stagingEntryState,
@@ -685,8 +694,39 @@ export function isRecordCurrent(
     const recorded = record.plugins.get(plugin.name);
     if (recorded === undefined) return false;
     if (!digestsEqual(ownedRecordDigests(plugin), recorded.ownedContentDigests)) return false;
+    if (!hostProjectionCurrent(backend, recorded)) return false;
+    if (!(deps.derivedProjectionCurrent?.(hostRoot, recorded) ?? true)) return false;
   }
   return true;
+}
+
+function hostProjectionCurrent(backend: WorkspaceBackend, record: PluginRecord): boolean {
+  for (const [path, digest] of record.ownedContentDigests) {
+    const bytes = backend.readHost(path);
+    if (bytes === undefined) return false;
+    const actual = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    if (actual !== digest) return false;
+  }
+  return true;
+}
+
+function derivedProjectionCurrent(hostRoot: string, record: PluginRecord): boolean {
+  const graphPath = join(hostRoot, "tools", "data", "stage-graph.json");
+  let graphSlugs: Set<string>;
+  try {
+    const graph = JSON.parse(readFileSync(graphPath, "utf-8")) as Array<{ slug?: unknown }>;
+    if (!Array.isArray(graph)) return false;
+    graphSlugs = new Set(graph.flatMap((node) => typeof node.slug === "string" ? [node.slug] : []));
+  } catch {
+    return false;
+  }
+  const slugs = record.stageIndex.map((stage) => stage.slug);
+  if (slugs.some((slug) => !graphSlugs.has(slug))) return false;
+  const entry = harnessStageEntry(join(hostRoot, "tools", "data"));
+  if (entry?.kind === "command") return existsSync(join(projectDirOfHostRoot(hostRoot), ...entry.path.split("/")));
+  const root = entry?.kind === "runner" ? entry.root : `${basename(hostRoot)}/skills`;
+  const projectDir = projectDirOfHostRoot(hostRoot);
+  return slugs.every((slug) => existsSync(join(projectDir, ...root.split("/"), `amadeus-${slug}`, "SKILL.md")));
 }
 
 function digestsEqual(a: ReadonlyMap<string, string>, b: ReadonlyMap<string, string>): boolean {
@@ -788,7 +828,11 @@ function describeTreeFailure(result: PluginCliResult): string {
 }
 
 type ResolvedPluginSelection = Extract<PluginSelectionOutcome, { kind: "resolved" }>;
-type ReconcileStep = { failure: PluginCliResult | null; changed: boolean };
+type ReconcileStep = {
+  failure: PluginCliResult | null;
+  changed: boolean;
+  preservedGrantTimestamps?: ReadonlyMap<string, string>;
+};
 
 function validateSelectedSources(selection: ResolvedPluginSelection, hostRoot: string): PluginCliResult | null {
   for (const name of selection.plugins) {
@@ -847,18 +891,26 @@ function dropChangedCompositions(
   const record = backend.readComposition();
   const discovered = deps.discoverPlugins(pluginSourceRootOf(hostRoot));
   let changed = false;
+  const preservedGrantTimestamps = new Map<string, string>();
   for (const plugin of discovered.filter((candidate): candidate is DiscoveredPlugin => candidate.manifest !== null)) {
     const composed = record.plugins.get(plugin.name);
-    if (composed === undefined || digestsEqual(ownedRecordDigests(plugin), composed.ownedContentDigests)) continue;
+    if (composed === undefined) continue;
+    const sourceCurrent = digestsEqual(ownedRecordDigests(plugin), composed.ownedContentDigests);
+    const hostCurrent = hostProjectionCurrent(backend, composed);
+    const derivedCurrent = deps.derivedProjectionCurrent?.(hostRoot, composed) ?? true;
+    if (sourceCurrent && hostCurrent && derivedCurrent) continue;
+    if (sourceCurrent && composed.trustGrant !== null) {
+      preservedGrantTimestamps.set(plugin.name, composed.trustGrant.grantTimestamp);
+    }
     const dropped = handleDrop(
       { kind: "drop", name: plugin.name, projectRoot: hostRoot },
       deps,
-      { updateSelection: false, removeManagedStaging: false },
+      { updateSelection: false, removeManagedStaging: false, allowOwnedDrift: !hostCurrent },
     );
-    if (dropped.kind !== "dropped") return { failure: dropped, changed };
+    if (dropped.kind !== "dropped") return { failure: dropped, changed, preservedGrantTimestamps };
     changed = true;
   }
-  return { failure: null, changed };
+  return { failure: null, changed, preservedGrantTimestamps };
 }
 
 function applyStalePlugins(
@@ -866,6 +918,7 @@ function applyStalePlugins(
   hostRoot: string,
   backend: WorkspaceBackend,
   deps: PluginCliDeps,
+  preservedGrantTimestamps: ReadonlyMap<string, string> = new Map(),
 ): PluginCliResult | number {
   let applied = 0;
   for (const plugin of stale) {
@@ -877,7 +930,10 @@ function applyStalePlugins(
         message: `plugin "${plugin.name}" rejected: ${inspected.errors.map((error) => error.message).join("; ")}`,
       };
     }
-    const result = deps.applyPluginPlan(inspected.plan, deps.makeTx(hostRoot, backend));
+    const tx = deps.makeTx(hostRoot, backend);
+    const preservedTimestamp = preservedGrantTimestamps.get(plugin.name);
+    if (preservedTimestamp !== undefined) tx.now = () => preservedTimestamp;
+    const result = deps.applyPluginPlan(inspected.plan, tx);
     if (result.kind !== "committed") {
       return { kind: "failure", stage: "apply", message: `plugin "${plugin.name}" apply ${result.kind}` };
     }
@@ -936,8 +992,13 @@ function handleCompose(
   const record = backend.readComposition();
   const stale = discovered
     .filter((d): d is DiscoveredPlugin => d.manifest !== null)
-    .filter((d) => isStale(d, record));
-  const applied = applyStalePlugins(stale, hostRoot, backend, deps);
+    .filter((d) => {
+      const recorded = record.plugins.get(d.name);
+      return isStale(d, record) || recorded === undefined ||
+        !hostProjectionCurrent(backend, recorded) ||
+        !(deps.derivedProjectionCurrent?.(hostRoot, recorded) ?? true);
+    });
+  const applied = applyStalePlugins(stale, hostRoot, backend, deps, changed.preservedGrantTimestamps);
   return typeof applied === "number" ? finishCompose(hostRoot, applied, deps) : applied;
 }
 
@@ -1070,7 +1131,7 @@ function persistDropSelection(
 function handleDrop(
   cmd: Extract<PluginCliCommand, { kind: "drop" }>,
   deps: PluginCliDeps,
-  options: { updateSelection: boolean; removeManagedStaging: boolean } = {
+  options: { updateSelection: boolean; removeManagedStaging: boolean; allowOwnedDrift?: boolean } = {
     updateSelection: true,
     removeManagedStaging: true,
   },
@@ -1092,7 +1153,7 @@ function handleDrop(
   if (record === undefined) {
     return fail({ kind: "failure", stage: "plan", message: `plugin "${cmd.name}" is not composed` });
   }
-  const plan = deps.planPluginDrop(record, host);
+  const plan = deps.planPluginDrop(record, host, { allowOwnedDrift: options.allowOwnedDrift });
   if (plan.rejections.length > 0) {
     return fail({ kind: "failure", stage: "plan", message: `drop rejected: ${plan.rejections.map((e) => e.message).join("; ")}` });
   }

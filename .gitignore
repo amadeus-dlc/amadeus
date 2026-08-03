@@ -71,6 +71,12 @@ amadeus/spaces/*/intents/.amadeus-*
 # choice/GoA/rationale through `git status` / `git diff` (Issue #1773).
 amadeus/spaces/*/elections/*/pending/
 
+# Plugin reconciliation telemetry and crash-recovery state are machine-local.
+**/.amadeus-plugin-audit.json
+**/.amadeus-plugin-drops.json
+**/.amadeus-plugin-journal.json
+**/.amadeus-plugin-lock/
+
 # Local-only — pins shfmt formatting to project style via a local
 # auto-format tool. Not committed; contributors who do not use it do not need it.
 .editorconfig

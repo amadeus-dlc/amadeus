@@ -771,17 +771,24 @@ function maxOrder(ledger: SharedFileLedger): number {
 // rebuilt from the base plus the REMAINING plugins' contributions. Any drift,
 // user edit, or identity mismatch populates `rejections` (three-surface-invariant
 // reject); user-authored paths outside the record are never touched.
-export function planPluginDrop(record: PluginRecord, host: HostSnapshot): PluginDropPlan {
+export function planPluginDrop(
+  record: PluginRecord,
+  host: HostSnapshot,
+  options: { allowOwnedDrift?: boolean } = {},
+): PluginDropPlan {
   const rejections: PluginError[] = [];
   const removals: string[] = [];
   for (const path of record.ownedPaths) {
     if (!host.paths.has(path)) {
+      if (options.allowOwnedDrift) continue;
       rejections.push({ kind: "clobber", message: `owned path "${path}" already absent`, locus: path });
       continue;
     }
     const current = host.files.get(path);
     const expectedDigest = record.ownedContentDigests.get(path);
     if (current === undefined || expectedDigest === undefined || digestBytes(current) !== expectedDigest) {
+      if (options.allowOwnedDrift && current !== undefined) removals.push(path);
+      if (options.allowOwnedDrift) continue;
       rejections.push({ kind: "clobber", message: `owned path "${path}" drifted from trust grant`, locus: path });
       continue;
     }

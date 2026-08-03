@@ -526,5 +526,17 @@
     "dirName": "260802-e-260803-bt-s13-z0",
     "createdAt": "2026-08-02T23:50:37Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-RE-2072-LEARNINGS-1",
+    "dirName": "260802-e-re-2072-learnings-1",
+    "createdAt": "2026-08-02T23:25:15Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RA-2072-LEARNINGS-1",
+    "dirName": "260803-e-ra-2072-learnings-1",
+    "createdAt": "2026-08-03T00:43:08Z",
+    "status": "recorded"
   }
 ]

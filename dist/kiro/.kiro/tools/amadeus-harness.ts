@@ -147,6 +147,35 @@ export function harnessPackageName(): string | null {
   }
 }
 
+export type HarnessStageEntry =
+  | { kind: "runner"; root: string }
+  | { kind: "command"; path: string };
+
+function validRelativeProjectPath(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 &&
+    !value.startsWith("/") && !/^[A-Za-z]:[\\/]/u.test(value) &&
+    !value.split(/[\\/]/u).includes("..");
+}
+
+/** Read the packaged native entry surface for composed stages. */
+export function harnessStageEntry(dataDir: string = DATA_DIR): HarnessStageEntry | null {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(join(dataDir, "harness.json"), "utf-8"),
+    ) as { stageEntry?: { kind?: unknown; root?: unknown; path?: unknown } };
+    const entry = parsed.stageEntry;
+    if (entry?.kind === "runner" && validRelativeProjectPath(entry.root)) {
+      return { kind: "runner", root: entry.root };
+    }
+    if (entry?.kind === "command" && validRelativeProjectPath(entry.path)) {
+      return { kind: "command", path: entry.path };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function rulesSubdir(): string {
   if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
   if (process.env.AMADEUS_HARNESS_DIR) {
