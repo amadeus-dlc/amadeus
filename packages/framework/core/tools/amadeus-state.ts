@@ -2147,10 +2147,6 @@ function emitAdvanceAudit(
       });
       emitAudit(pd, "PHASE_STARTED", { Phase: nextStage.phase, Scope: scope });
     }
-    emitAudit(pd, "STAGE_STARTED", {
-      Stage: nextStage.slug,
-      Agent: nextStage.lead_agent,
-    });
   } catch (cause) {
     error(`Audit emission failed: ${errorMessage(cause)}`);
   }
@@ -2302,6 +2298,14 @@ export function handleAdvance(args: string[]): void {
     alreadyMarkedCompleted,
     stageCompletedAlreadyAudited,
   );
+  try {
+    emitAudit(pd, "STAGE_STARTED", {
+      Stage: nextSlug,
+      Agent: nextStage.lead_agent,
+    });
+  } catch (cause) {
+    error(`Audit emission failed: ${errorMessage(cause)}`);
+  }
 
   operationWriteState(pd, content);
 
