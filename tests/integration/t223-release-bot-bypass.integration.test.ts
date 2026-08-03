@@ -72,6 +72,7 @@ describe("t223 release bot bypass boundary", () => {
     const releaseToken = findStep("github-release", "Create GitHub App token");
     const downloadAssets = findStep("github-release", "Download release assets");
     const createRelease = findStep("github-release", "Create GitHub Release with generated notes");
+    const buildDistCheckout = findStep("build-dist", "Checkout released commit");
     const checkout = findStep("publish", "Checkout released commit");
     const publish = findStep("publish", "Publish to npm");
 
@@ -86,6 +87,8 @@ describe("t223 release bot bypass boundary", () => {
         `release-assets/amadeus-dist-v\${{ needs.prepare.outputs.version }}.manifest.json\n` +
         `release-assets/SHA256SUMS\n`,
     );
+    expect(buildDistCheckout?.with?.ref).toBe(`\${{ needs.prepare.outputs.sha }}`);
+    expect(buildDistCheckout?.with?.["persist-credentials"]).toBe(false);
     expect(checkout?.with?.ref).toBe(`\${{ needs.prepare.outputs.sha }}`);
     expect(publish?.run).toContain(`\${{ ${dryRun} }}`);
     expect(publish?.run).toContain("args+=(--tag next)");

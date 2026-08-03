@@ -145,6 +145,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
 
       - name: Set up bun
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}

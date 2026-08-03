@@ -228,6 +228,7 @@ describe("u7 CI build-before-test contract", () => {
     );
 
     const drift = jobByName("drift-check");
+    expect(stepByName(drift, "Checkout").with?.["persist-credentials"]).toBe(false);
     expect(stepByName(drift, "Source-only boundary guard").run).toBe(
       "bun run source-only:check",
     );
