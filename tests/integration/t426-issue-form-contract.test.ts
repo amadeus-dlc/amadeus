@@ -1,0 +1,318 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { REPO_ROOT } from "../harness/fixtures.ts";
+
+type FormElement = {
+  type: string;
+  id?: string;
+  attributes?: {
+    label?: string;
+    options?: Array<string | { label: string; required?: boolean }>;
+    value?: string;
+  };
+  validations?: { required?: boolean };
+};
+
+type IssueForm = {
+  name: string;
+  description: string;
+  title?: string;
+  labels?: string[];
+  body: FormElement[];
+};
+
+const FORM_DIR = join(REPO_ROOT, ".github", "ISSUE_TEMPLATE");
+const WORKFLOW_PATH = join(REPO_ROOT, ".github", "workflows", "issue-labels.yml");
+const TEAM_NORM_PATH = join(REPO_ROOT, "amadeus", "spaces", "default", "memory", "team.md");
+
+const formTypes = ["bug", "enhancement", "documentation", "question"] as const;
+type FormType = (typeof formTypes)[number];
+
+const commonElements = [
+  ["duplicate-check", "checkboxes"],
+  ["context", "textarea"],
+  ["evidence", "textarea"],
+  ["desired-outcome", "textarea"],
+  ["impact", "textarea"],
+  ["related-work", "textarea"],
+  ["priority", "dropdown"],
+] as const;
+
+const typeSpecificElements: Record<FormType, ReadonlyArray<readonly [string, string]>> = {
+  bug: [
+    ["environment", "textarea"],
+    ["reproduction", "textarea"],
+    ["mechanism", "textarea"],
+    ["severity", "dropdown"],
+    ["cause-location", "dropdown"],
+    ["provenance", "textarea"],
+  ],
+  enhancement: [
+    ["elevator-pitch", "textarea"],
+    ["alternatives", "textarea"],
+  ],
+  documentation: [["audience-and-surface", "textarea"]],
+  question: [["decision-options", "textarea"]],
+};
+
+const priorityOptions = [
+  "未選択",
+  "P0 — 正しさ・安全性の破綻",
+  "P1 — 重要だが回避可能",
+  "P2 — 通常",
+  "P3 — いつか対応",
+];
+
+function loadForm(type: FormType): IssueForm {
+  return Bun.YAML.parse(readFileSync(join(FORM_DIR, `${type}.yml`), "utf8")) as IssueForm;
+}
+
+function elementsById(form: IssueForm): Map<string, FormElement & { id: string }> {
+  return new Map(
+    form.body
+      .filter((element): element is FormElement & { id: string } => typeof element.id === "string")
+      .map((element) => [element.id, element] as const),
+  );
+}
+
+function requireElement(
+  byId: Map<string, FormElement & { id: string }>,
+  id: string,
+  type: string,
+): void {
+  const element = byId.get(id);
+  expect(element, `missing field: ${id}`).toBeDefined();
+  expect(element?.type, `wrong field type: ${id}`).toBe(type);
+  if (element?.type === "checkboxes") {
+    const options = element.attributes?.options ?? [];
+    expect(options.length).toBeGreaterThan(0);
+    expect(
+      options.every((option) => typeof option === "object" && option.required === true),
+      `every checkbox must be required: ${id}`,
+    ).toBe(true);
+    return;
+  }
+  expect(element?.validations?.required, `field must be required: ${id}`).toBe(true);
+}
+
+describe("t426 Issue Form contract", () => {
+  test("manual Issue taxonomy is closed and blank Issues are disabled", () => {
+    const config = Bun.YAML.parse(readFileSync(join(FORM_DIR, "config.yml"), "utf8")) as {
+      blank_issues_enabled: boolean;
+      contact_links: unknown[];
+    };
+
+    expect(config.blank_issues_enabled).toBe(false);
+    expect(config.contact_links).toEqual([]);
+    for (const type of formTypes) {
+      const form = loadForm(type);
+      expect(form.labels).toEqual([type]);
+      expect(form.body[0]?.attributes?.value).toContain(
+        `<!-- amadeus-issue-form:v1 type=${type} -->`,
+      );
+    }
+  });
+
+  test("all four forms enforce the same common body and priority taxonomy", () => {
+    for (const type of formTypes) {
+      const form = loadForm(type);
+      const byId = elementsById(form);
+      for (const [id, elementType] of commonElements) requireElement(byId, id, elementType);
+      expect(byId.get("priority")?.attributes?.options).toEqual(priorityOptions);
+
+      const labels = form.body.flatMap((element) => element.attributes?.label ?? []);
+      expect(new Set(labels).size, `duplicate field label in ${type}`).toBe(labels.length);
+    }
+  });
+
+  test("each form adds only its type-specific required fields", () => {
+    for (const type of formTypes) {
+      const byId = elementsById(loadForm(type));
+      for (const [id, elementType] of typeSpecificElements[type]) {
+        requireElement(byId, id, elementType);
+      }
+
+      const forbidden = formTypes
+        .filter((other) => other !== type)
+        .flatMap((other) => typeSpecificElements[other])
+        .map(([id]) => id);
+      for (const id of forbidden) expect(byId.has(id), `${type} must not require ${id}`).toBe(false);
+    }
+  });
+
+  test("bug classification requires active severity and cause selection", () => {
+    const byId = elementsById(loadForm("bug"));
+    expect(byId.get("severity")?.attributes?.options).toEqual([
+      "未選択",
+      "S1-FATAL — データ・監査・ゲート整合性の破壊、誤マージ誘発、ワークフロー停止",
+      "S2-CRITICAL — 主要機能の誤動作、または回避策のない偽 green・偽赤",
+      "S3-MAJOR — 回避策のある誤動作、または限定条件での発現",
+      "S4-MINOR — 軽微、エッジケース、表示層",
+    ]);
+    expect(byId.get("cause-location")?.attributes?.options).toEqual([
+      "未選択",
+      "要件での見落とし",
+      "設計判断の誤り",
+      "設計は正しいが実装が逸脱",
+      "origin:bootstrap",
+      "外部要因",
+      "未特定",
+    ]);
+  });
+
+  test("the team norm separates common, type-specific, mirror, and post-filing rules", () => {
+    const norm = readFileSync(TEAM_NORM_PATH, "utf8");
+
+    for (const cid of [
+      "issue-taxonomy",
+      "issue-type-decision",
+      "issue-canonical-body",
+      "pre-filing-dup-and-branch-check",
+      "issue-cross-review",
+      "issue-type-specific-body",
+      "intent-first-mirror-issue",
+    ]) {
+      expect(norm, `missing canonical norm: ${cid}`).toContain(`cid:requirements-analysis:${cid}`);
+    }
+    expect(norm).toContain("`bug` / `enhancement` / `documentation` / `question`");
+    expect(norm).toContain("**完了条件**を上から順に判定");
+    expect(norm).toContain("`.github/ISSUE_TEMPLATE/{bug,enhancement,documentation,question}.yml`");
+    expect(norm).toContain("`.github/workflows/issue-labels.yml`");
+    expect(norm).not.toContain("cid:requirements-analysis:bug-issue-canonical-body");
+    expect(norm).not.toContain("`.github/workflows/bug-labels.yml`");
+  });
+
+  test("the workflow reconciles common and bug-specific labels", async () => {
+    const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
+      on: { issues: { types: string[] } };
+      jobs: {
+        sync: {
+          if: string;
+          permissions: { contents: string; issues: string };
+          steps: Array<{ uses?: string; with?: { script?: string } }>;
+        };
+      };
+    };
+    const job = workflow.jobs.sync;
+    const script = job.steps[0]?.with?.script;
+
+    expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
+    expect(job.permissions).toEqual({ contents: "read", issues: "write" });
+    expect(job.if).toContain("### 優先度（いつ対応するか）");
+    expect(job.steps[0]?.uses).toBe(
+      "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3",
+    );
+    expect(script).toBeDefined();
+
+    const bug = await executeWorkflow(
+      script ?? "",
+      issueBody("bug", "P2 — 通常", [
+        ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+        ["原因の所在", "origin:bootstrap"],
+      ]),
+      ["bug", "P1", "S4-MINOR", "external"],
+    );
+    expect(bug.failures).toEqual([]);
+    expect(bug.added).toEqual([["P2", "S3-MAJOR", "origin:bootstrap"]]);
+    expect(bug.removed.sort()).toEqual(["P1", "S4-MINOR"]);
+
+    const enhancement = await executeWorkflow(
+      script ?? "",
+      issueBody("enhancement", "P3 — いつか対応", [["エレベーターピッチ", "価値仮説"]]),
+      ["bug", "P2", "S3-MAJOR", "origin:bootstrap"],
+    );
+    expect(enhancement.failures).toEqual([]);
+    expect(enhancement.added).toEqual([["enhancement", "P3"]]);
+    expect(enhancement.removed.sort()).toEqual(["P2", "S3-MAJOR", "bug", "origin:bootstrap"]);
+
+    const documentation = await executeWorkflow(
+      script ?? "",
+      issueBody("documentation", "P2 — 通常", [["対象読者・ドキュメント面", "利用者向けガイド"]]),
+      ["enhancement", "P1"],
+    );
+    expect(documentation.failures).toEqual([]);
+    expect(documentation.added).toEqual([["documentation", "P2"]]);
+    expect(documentation.removed.sort()).toEqual(["P1", "enhancement"]);
+
+    const question = await executeWorkflow(
+      script ?? "",
+      issueBody("question", "P1 — 重要だが回避可能", [["回答してほしい問い・選択肢", "A/B"]]),
+      ["documentation", "P3"],
+    );
+    expect(question.failures).toEqual([]);
+    expect(question.added).toEqual([["question", "P1"]]);
+    expect(question.removed.sort()).toEqual(["P3", "documentation"]);
+  });
+
+  test("the workflow rejects untouched placeholder classifications", async () => {
+    const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
+      jobs: { sync: { steps: Array<{ with?: { script?: string } }> } };
+    };
+    const result = await executeWorkflow(
+      workflow.jobs.sync.steps[0]?.with?.script ?? "",
+      issueBody("bug", "未選択", [
+        ["重大度（どれだけ深刻か）", "未選択"],
+        ["原因の所在", "未選択"],
+      ]),
+      ["bug"],
+    );
+
+    expect(result.failures).toEqual(["Issue Form から種別/P分類を取得できませんでした"]);
+    expect(result.added).toEqual([]);
+    expect(result.removed).toEqual([]);
+
+    const ambiguous = await executeWorkflow(
+      workflow.jobs.sync.steps[0]?.with?.script ?? "",
+      issueBody("bug", "P2 — 通常", [
+        ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+        ["原因の所在", "未特定"],
+        ["エレベーターピッチ", "誤って混在した別種別フィールド"],
+      ]),
+      ["bug"],
+    );
+    expect(ambiguous.failures).toEqual(["Issue Form から種別/P分類を取得できませんでした"]);
+    expect(ambiguous.added).toEqual([]);
+    expect(ambiguous.removed).toEqual([]);
+  });
+});
+
+function issueBody(
+  type: FormType,
+  priority: string,
+  fields: ReadonlyArray<readonly [string, string]> = [],
+): string {
+  return [
+    `<!-- amadeus-issue-form:v1 type=${type} -->`,
+    "",
+    "### 優先度（いつ対応するか）",
+    "",
+    priority,
+    ...fields.flatMap(([label, value]) => ["", `### ${label}`, "", value]),
+  ].join("\n");
+}
+
+async function executeWorkflow(script: string, body: string, labels: string[]) {
+  const added: string[][] = [];
+  const removed: string[] = [];
+  const failures: string[] = [];
+  const context = {
+    payload: { issue: { number: 42, labels: labels.map((name) => ({ name })), body } },
+    repo: { owner: "amadeus-dlc", repo: "amadeus" },
+  };
+  const github = {
+    rest: {
+      issues: {
+        addLabels: async ({ labels: next }: { labels: string[] }) => added.push(next),
+        removeLabel: async ({ name }: { name: string }) => removed.push(name),
+      },
+    },
+  };
+  const core = { setFailed: (message: string) => failures.push(message) };
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
+    ...args: string[]
+  ) => (context: unknown, github: unknown, core: unknown) => Promise<void>;
+
+  await new AsyncFunction("context", "github", "core", script)(context, github, core);
+  return { added, removed, failures };
+}

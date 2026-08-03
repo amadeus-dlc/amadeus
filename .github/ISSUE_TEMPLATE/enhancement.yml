@@ -1,0 +1,102 @@
+name: 機能・改善提案
+description: 新機能や改善案を、価値仮説・根拠・完了条件とともに提案します
+title: "enhancement: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- amadeus-issue-form:v1 type=enhancement -->
+        事実・観測・仮説を区別して記載してください。秘密情報や認証情報は含めないでください。
+
+        フォーム送信時に、`enhancement` と選択した P コード（例: `P2`）が同名ラベルとして自動付与されます。
+
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: 重複・現行状態の確認
+      description: 重複や、現行ブランチでは実現済みの内容を起票しないため、両方を確認してください。
+      options:
+        - label: open/closed の両方を対象に、同じ課題・提案・質問の Issue を検索しました
+          required: true
+        - label: origin/main と関連する open/merged PR を確認し、現行状態でも起票が必要だと確認しました
+          required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・対象範囲
+      description: 解決したい課題や満たしたいニーズと、対象となる利用者・機能・範囲を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 根拠・実測証拠
+      description: ユーザーの声、利用データ、実行結果、file:line、既存仕様など、提案を支える根拠を記載してください。未収集ならその事実と理由を記載します。
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: 期待結果・完了条件
+      description: 実現したい結果と、完了を第三者が確認できる条件を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影響・価値
+      description: 対象利用者への価値、影響範囲、導入しない場合の影響を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-work
+    attributes:
+      label: 関連 Issue・PR・intent
+      description: 関連する Issue、PR、intent record、調査資料を記載してください。無い場合は「なし」と記載します。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度（いつ対応するか）
+      description: 選択肢先頭の P コードが、フォーム送信時に同名ラベルへ反映されます。
+      options:
+        - 未選択
+        - P0 — 正しさ・安全性の破綻
+        - P1 — 重要だが回避可能
+        - P2 — 通常
+        - P3 — いつか対応
+    validations:
+      required: true
+
+  - type: textarea
+    id: elevator-pitch
+    attributes:
+      label: エレベーターピッチ
+      description: 7行の正書式を崩さず、代替手段と差別化を含む価値仮説を記載してください。
+      placeholder: |
+        [潜在的なニーズを満たしたり、潜在的な課題を解決したり] したい
+        [対象顧客] 向けの、
+        [プロダクト名] というプロダクトは、
+        [プロダクトのカテゴリー] です。
+        これは [重要な利点、対価に見合う説得力のある理由] ができ、
+        [代替手段の最右翼] とは違って、
+        [差別化の決定的な特徴] が備わっている。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 代替案・非採用理由
+      description: 現在の代替手段と、提案を採用する価値が上回る理由を記載してください。
+    validations:
+      required: true
