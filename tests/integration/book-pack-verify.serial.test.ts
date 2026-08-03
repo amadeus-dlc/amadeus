@@ -2,7 +2,8 @@
 // directory whose apply/verify scripts depend on engine couplings that no
 // other gate watches — the bolt_dag fixed artifact path, artifact-producer
 // uniqueness, the `for_each` per-unit contract, stage-number bootstrap /
-// renumber semantics, the scope transpose, and the frontmatter schema. A
+// source-owned identity renumber semantics, the scope transpose, and the
+// frontmatter schema. A
 // framework change can break the pack without touching any shipped surface,
 // so this test runs the pack's own deterministic verifier (which builds a
 // throwaway workspace under the system temp dir, applies the pack, and

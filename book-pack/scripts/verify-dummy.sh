@@ -42,13 +42,16 @@ rm -rf "$TMP/.claude/plugins" "$TMP/.claude/.amadeus-plugin-"*
 CL="$TMP/.claude"
 
 echo "--- A. graph shape ---"
-python3 - "$CL/tools/data/stage-graph.json" <<'PY'
+python3 - "$CL/tools/data/stage-graph.json" "$CL/tools/data/stage-identities.json" <<'PY'
 import json, sys
 graph = json.load(open(sys.argv[1]))
 by = {s["slug"]: s for s in graph}
+identities = {s["slug"]: s for s in json.load(open(sys.argv[2]))}
 def num(slug):
     return tuple(map(int, by[slug]["number"].split(".")))
 assert len(graph) == 35, f"expected 35 stages, got {len(graph)}"
+assert identities["application-design"]["number"] == "2.9", identities["application-design"]
+assert identities["book-structure-design"]["number"] == "2.6", identities["book-structure-design"]
 assert num("book-structure-design") < num("units-generation"), "structure must precede units"
 assert by["application-design"]["number"] == "2.9", by["application-design"]["number"]
 assert by["chapter-drafting"]["for_each"] == "unit-of-work"
