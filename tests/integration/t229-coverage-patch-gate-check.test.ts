@@ -313,6 +313,21 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(selector.fingerprint).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
+  test("main: --create-selector fails closed for a missing source and invalid range", () => {
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+    try {
+      expect(main(["--create-selector", "missing.ts", "1"], repoRoot)).toBe(1);
+      expect(main(["--create-selector", "tracked.ts", "99"], repoRoot)).toBe(1);
+    } finally {
+      console.error = originalError;
+    }
+
+    expect(errors.join("\n")).toContain("source not found");
+    expect(errors.join("\n")).toContain("line range 99 exceeds tracked.ts");
+  });
+
   test("allowlist that is not an array throws", () => {
     expect(() => parseAllowlist(JSON.stringify({ file: "x" }))).toThrow(/must be a JSON array/);
   });

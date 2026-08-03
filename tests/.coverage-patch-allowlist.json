@@ -2833,6 +2833,28 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
+    "file": "tests/coverage-patch-gate.ts",
+    "selector": {
+      "function": "createSemanticSelector",
+      "fingerprint": "sha256:304a33ad2e7370eb33fa0994a371e31ce265e6e4c582dfc16cb9740296219436",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive deterministic tie-breaker for equal-width overlapping named scopes. TypeScript AST containment cannot currently produce two distinct non-module function scopes with the same source width around one target, so the branch is retained as a stable fail-closed ordering rule.",
+    "expiry": "remove when a supported TypeScript construct or injected scope seam can exercise equal-width overlapping named scopes"
+  },
+  {
+    "file": "tests/coverage-patch-gate.ts",
+    "selector": {
+      "function": "createSemanticSelector",
+      "fingerprint": "sha256:a60408a7cc7fd3ee8846e37669ef5d5f5ea46e5ef315936189db2d4ecb377df8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive uniqueness failure after expanding the fingerprint to the complete selected scope. A full non-empty scope can match only once within itself, so this guard is unreachable for a valid TypeScript AST but remains fail closed against future resolver changes.",
+    "expiry": "remove when selector generation accepts an injected scope model that can make a complete scope fingerprint ambiguous"
+  },
+  {
     "file": "tests/deletion-gate.ts",
     "selector": {
       "function": "measureCallsites",

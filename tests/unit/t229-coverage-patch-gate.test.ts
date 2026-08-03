@@ -186,6 +186,22 @@ describe("t229 allowlist contract (E-CV1 Q1=A reservations)", () => {
     expect(resolveSemanticSelector("example.ts", source, functionSelector)).toEqual({ start: 3, end: 3 });
   });
 
+  test("object-property arrows and named callback expressions have stable semantic scopes", () => {
+    const source = [
+      "const handlers = {",
+      "  run: () => {",
+      "    return 1;",
+      "  },",
+      "};",
+      "register(function namedWorker() {",
+      "  return 2;",
+      "});",
+    ].join("\n");
+
+    expect(createSemanticSelector("example.ts", source, "3").function).toBe("run");
+    expect(createSemanticSelector("example.ts", source, "7").function).toBe("namedWorker");
+  });
+
   test("class members carry the class name prefix", () => {
     const source = [
       "export class Runtime {",
@@ -262,6 +278,14 @@ describe("t229 allowlist contract (E-CV1 Q1=A reservations)", () => {
     expect(() =>
       parseAllowlist(
         JSON.stringify([{ file: "x.ts", selector: { ...VALID_SELECTOR, targetLines: "1-2-3" }, reason: "r" }]),
+      ),
+    ).toThrow(/malformed allowlist entry/);
+  });
+
+  test("selector fields outside the semantic contract throw", () => {
+    expect(() =>
+      parseAllowlist(
+        JSON.stringify([{ file: "x.ts", selector: { ...VALID_SELECTOR, anchorLines: 0 }, reason: "r" }]),
       ),
     ).toThrow(/malformed allowlist entry/);
   });
