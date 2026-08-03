@@ -19,7 +19,7 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -125,6 +125,12 @@ function snapshot(root: string): Map<string, string> {
   return result;
 }
 
+function installerPrivateRoot(target: string): string {
+  const canonical = realpathSync(target);
+  const identity = createHash("sha256").update(canonical).digest("hex").slice(0, 20);
+  return join(dirname(canonical), `.amadeus-installer-private-${identity}`);
+}
+
 async function runCli(cliPath: string, args: readonly string[], port: number): Promise<SpawnResult> {
   return spawnAsync(
     process.execPath,
@@ -180,15 +186,18 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
         expect(upgraded.stderr).toBe("");
         expect(upgraded.status).toBe(0);
 
-        const sharedBasename = sharedRelPath.split("/").pop();
-        const backups = readdirSync(dirname(sharedPath)).filter((name) => name.startsWith(`${sharedBasename}.`) && name.endsWith(".bk"));
-        expect(backups.length).toBe(1);
-        expect(readFileSync(join(dirname(sharedPath), backups[0] as string), "utf8")).toBe(customizedContent);
+        // Credential-bearing shared files are retained outside the project in
+        // the owner-only installer store, never as an inventory-visible .bk.
+        expect(readdirSync(dirname(sharedPath)).some((name) => name.endsWith(".bk"))).toBe(false);
+        const privateSnapshot = snapshot(installerPrivateRoot(target));
+        const customizedDigest = createHash("md5").update(customizedContent).digest("hex");
+        expect([...privateSnapshot.values()]).toContain(customizedDigest);
 
         // The manifest still records the upgrade (BR-U14: upgradedTo).
         const manifestAfter = JSON.parse(readFileSync(join(target, MANIFEST_RELATIVE_PATH), "utf8"));
         expect(manifestAfter.sourceTag).toBe(FIXTURE_TAG);
       } finally {
+        rmSync(installerPrivateRoot(target), { recursive: true, force: true });
         rmSync(target, { recursive: true, force: true });
         await close();
       }
@@ -212,6 +221,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
       expect(installed.status).toBe(0);
       await fn(target, port, cliPath);
     } finally {
+      rmSync(installerPrivateRoot(target), { recursive: true, force: true });
       rmSync(target, { recursive: true, force: true });
       await close();
     }

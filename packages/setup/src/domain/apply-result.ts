@@ -4,7 +4,7 @@ import type { Result } from "../shared/result.ts";
 
 export type ApplyFailure = {
   readonly path: string;
-  readonly operation: "copy" | "backup" | "mkdir";
+  readonly operation: "copy" | "backup" | "mkdir" | "lock" | "preflight" | "journal" | "rollback" | "recovery";
   readonly detail: string;
 };
 
