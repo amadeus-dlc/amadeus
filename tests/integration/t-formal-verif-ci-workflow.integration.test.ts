@@ -55,6 +55,8 @@ const BASELINE_SHA = readFileSync(
 //     typecheck, lint deletion-gate, and distribution-contract jobs.
 //   - 260803-source-only-dist review follow-up: disable checkout credential
 //     persistence in the drift-check job.
+//   - 260804-source-only-dist CI follow-up: fetch the pull request base before
+//     evaluating patch coverage against its remote-tracking ref.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

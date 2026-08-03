@@ -192,6 +192,14 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(headJob).toContain("bun tests/coverage-patch-gate.ts --check");
     expect(headJob).toContain("bun run coverage:ci -- -P 4");
     expect(headJob).toContain("fetch-depth: 0");
+    expect(headJob).toContain("- name: Fetch pull request base");
+    expect(headJob).toContain(`BASE_REF: \${{ github.event.pull_request.base.ref }}`);
+    expect(headJob).toContain(
+      `git fetch --no-tags origin "+refs/heads/\${BASE_REF}:refs/remotes/origin/\${BASE_REF}"`,
+    );
+    expect(headJob.indexOf("- name: Fetch pull request base")).toBeLessThan(
+      headJob.indexOf("- name: Patch coverage gate"),
+    );
     expect(headJob).toContain(`AMADEUS_PATCH_BASE_REF: origin/\${{ github.event.pull_request.base.ref }}`);
     // relative gate (E-CV2): live merge-base measurement compared through the
     // project-gate baseline seam, verdict-independent base run, cache keyed by
