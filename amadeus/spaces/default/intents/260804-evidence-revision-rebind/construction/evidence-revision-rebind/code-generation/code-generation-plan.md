@@ -125,3 +125,18 @@
 
 - FOLLOW-UP | AC-6の本番同等経路によるpost-merge実行証跡は、計画とサマリーの双方で未完了として正しく切り分けられています。マージ後に成功したrun、対象revision、生成された証跡を受入記録へ追記してください。
 - NIT | Code Generationの完了条件とpost-merge受入条件が別時点で成立することは記述されています。後続担当者の誤読を避けるため、未チェック項目の責任stageを明記すると追跡性がさらに明確になります。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-04T06:06:03Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+再rebase後の revision 同一性、ledger trust-chain、派生証跡の再bind、実測検証値、後続stage責任が一貫して更新されており、未解決BLOCKERは確認されませんでした。
+
+### Findings
+
+- FOLLOW-UP | AC-6 の post-merge 実行証跡は引き続き将来条件ですが、回収責任stageが明記され、Code Generation の完了条件と混同されない状態になっています。指定stageで成功run、対象revision、生成証跡を受入記録へ反映してください。
+- NIT | thermo-nuclear maintainability観点では、許可成果物に示されたCLI・domain・adapterの責務分離、原子的rollback、安定JSON契約、異常系を含む集中テストから、巨大条件分岐・循環依存・責務漏出を示す具体的証拠はありません。改善のみを目的とする追加分割は現時点では不要です。

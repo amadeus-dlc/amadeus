@@ -4,7 +4,7 @@
 
 承認済み `requirements.md` の FR-1〜FR-8、NFR-1〜NFR-4、AC-1〜AC-12 に基づき、no-silent-drop adoption evidence のpure rebindとmain-push reconciliationを実装した。`self-fix` scopeによりuser stories、application design、units generation、各Construction design artifactは生成されていないため、承認済み要件とReverse Engineeringの実測を直接の入力とした。欠落artifactの内容は補完していない。
 
-`origin/main` の `12bf94ea6d7e13a03e124036258a683af3cc8e7e` へrebaseした後、実装・異常系coverage・監査をclean HEAD `bef16a27fb1d2ae4c025816b7565ed88a637ec1e` まで確定し、そのSHAへ3層bundleをpure rebindした。evidence-only commitは `41835d4dcc9e0ad5a0979ff248eaada0bdb626bf` であり、同commitをevent revisionとしたreconcileは `REBIND_NOOP`、`targetRevision=null`、validation `ok=true` で閉じた。
+push直前に進んだ `origin/main` の `be381078c32b1babf5880d0f4925ffa690b83f64` へ再rebaseした。main更新後のbase ledger bytesへ `baseline.json` と `exemptions.json` のtrust chainを進め、clean HEAD `f723d625c0646247cb7f5c4b76cfb6524dc4ff2d` へ3層bundleをpure rebindした。evidence-only commitは `2101e49f5ffa66351bf831d3fa6d122ba12636c4` であり、同commitをevent revisionとしたreconcileは `REBIND_NOOP`、`targetRevision=null`、validation `ok=true` で閉じた。
 
 ## 作成・変更ファイル
 
@@ -18,7 +18,7 @@
 | `tests/integration/t427-no-silent-drop-evidence-rebind.integration.test.ts` | 24／24／25 revision、25 artifact、23 receipt、正準不動点、冪等性、tamper、schema／I/O、transaction、4 status envelope、CLI入力異常系を検証した。 |
 | `tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts` | 実Git repositoryと決定的command portでpure trust境界、squash identity proof、全negative tree差分、rollback失敗、binding競合、commit後／push時競合を検証した。 |
 | `tests/integration/t427-no-silent-drop-evidence-workflow.integration.test.ts` | workflowのmain-only、最小権限、CI非依存、有限timeout、直列化、CLI境界を構造検証した。 |
-| `tests/no-silent-drop/adoption-evidence.json`、`adoption-evidence-manifest.json`、`evidence/adoption-runs.json` | clean HEAD `bef16a27…` へ決定的に再bindした3つの派生証跡。個別手編集は行っていない。 |
+| `tests/no-silent-drop/adoption-evidence.json`、`adoption-evidence-manifest.json`、`evidence/adoption-runs.json` | clean HEAD `f723d625…` へ決定的に再bindした3つの派生証跡。個別手編集は行っていない。 |
 
 ## 主要な実装判断
 
@@ -45,15 +45,15 @@
 ## 検証結果
 
 - pure rebind: revision field `24 / 24 / 25`、artifact digest `25`、receipt digest `23`、変更pathは派生3ファイルだけ。
-- focused test: `83 pass / 0 fail / 331 expect`。`t413` は `10 pass / 0 fail`。
-- no-silent-drop gate: trusted base `12bf94ea6d7e13a03e124036258a683af3cc8e7e` に対して `NO_SILENT_DROP_OK`。
+- focused test: `81 pass / 0 fail / 407 expect`。`t413` は `10 pass / 0 fail`。
+- no-silent-drop gate: trusted base `be381078c32b1babf5880d0f4925ffa690b83f64` に対して `NO_SILENT_DROP_OK`。
 - `bun run typecheck`: exit 0。
 - `bun run lint`: exit 0。repository既存の `407 warnings / 12 infos` のみで、変更3 TypeScriptファイルの限定Biomeはwarning／errorなし。
 - `bun run distribution:check`: 412 payload、4 docs／44 topics、416 public projectionがすべてPASS。
-- `bun run test:ci`: rebase後の実装時点で796 files／10,713 assertions／0 fail。coverage closure後の最終HEADは同じCI集合を `bun run coverage:ci` で796 files／10,718 assertions／0 fail。
-- project coverage gate: `91.4352%`（baseline `40.9395%`、`+50.4957pp`）。
+- `bun run coverage:ci`: 最終rebaseとtrust chain更新後のHEADで796 files／10,718 assertions／0 fail。
+- project coverage gate: `91.4351%`（baseline `40.9395%`、`+50.4956pp`）。
 - patch coverage gate: added lines `812 / 812` covered、allowlist `0`、uncovered `0`。
-- reconcile: event `41835d4d…`、binding `bef16a27…`、`REBIND_NOOP`、validation `ok=true`。
+- reconcile: event `2101e49f…`、binding `f723d625…`、`REBIND_NOOP`、validation `ok=true`。
 
 ## 計画との差分と残作業
 
