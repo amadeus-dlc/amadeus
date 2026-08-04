@@ -5549,7 +5549,7 @@ function verifyPreparedWorkflowCompletion(
       `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
     );
   }
-  if (config.config.autoMirror === "off") return;
+  if (config.config.intentMirror.github.issue.mode === "off") return;
   const entries = readIntentRegistry(pd, space).filter((entry) =>
     recordDirMatches(entry, intent)
   );

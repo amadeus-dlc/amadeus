@@ -1,7 +1,7 @@
-// t369 — the auto-solo election hook lives in the harness-neutral protocol.
+// t369 — the automatic solo election hook lives in the harness-neutral protocol.
 // Layer: integration (reads the tracked canonical, dist, and self-install trees).
 //
-// Issue #1735: the auto-solo activation rules only existed in the election
+// Issue #1735: the automatic solo activation rules only existed in the election
 // SKILL, which a conductor reads when it already decided to hold an election.
 // The trigger has to be where the conductor already is — the stage protocol's
 // §13 learnings ritual and its halt-and-ask seam, plus the conductor persona's
@@ -27,9 +27,9 @@ const ROOT = join(import.meta.dir, "..", "..");
 
 // Harness dir differs per distribution, so the open command is matched by shape
 // rather than by a literal path.
-const OPEN_COMMAND = /tools\/amadeus-election\.ts open --trigger auto-solo/;
-const DISABLED_ENVELOPE = '{"opened":null,"reason":"auto-solo-election-disabled"}';
-const CONFIG_KEY = '"auto-solo-election": true';
+const OPEN_COMMAND = /tools\/amadeus-election\.ts open --trigger auto/;
+const DISABLED_ENVELOPE = '{"opened":null,"reason":"solo-election-manual-trigger-required"}';
+const CONFIG_KEY = '`solo-election.trigger.mode` to `auto`';
 
 // Every surface that must carry the hook: the canonical source plus each
 // generated distribution and self-install copy.
@@ -87,12 +87,12 @@ function haltAndAskSection(content: string): string {
 // the section carries the whole hook. The real guard and its falling proof both
 // go through this one predicate.
 function findMissingHookMarker(section: string): string | null {
-  if (!OPEN_COMMAND.test(section)) return "open --trigger auto-solo";
+  if (!OPEN_COMMAND.test(section)) return "open --trigger auto";
   if (!section.includes(DISABLED_ENVELOPE)) return DISABLED_ENVELOPE;
   return null;
 }
 
-describe("t369 auto-solo hook is baked into the harness-neutral protocol (#1735)", () => {
+describe("t369 automatic solo hook is baked into the harness-neutral protocol (#1735)", () => {
   test("every stage-protocol surface carries the hook in §13", () => {
     for (const path of protocolSurfaces()) {
       expect(existsSync(path)).toBe(true);
@@ -126,7 +126,7 @@ describe("t369 auto-solo hook is baked into the harness-neutral protocol (#1735)
     // send every conductor into an unopenable election.
     for (const path of [...protocolSurfaces(), ...conductorSurfaces()]) {
       expect(readFileSync(path, "utf8")).toMatch(
-        /open --trigger auto-solo --file <definition\.json>/,
+        /open --trigger auto --file <definition\.json>/,
       );
     }
   });
@@ -137,8 +137,8 @@ describe("t369 auto-solo hook is baked into the harness-neutral protocol (#1735)
       "utf8",
     );
     const section = sectionThirteen(canonical);
-    expect(findMissingHookMarker(section.replace(/--trigger auto-solo/g, "--trigger explicit"))).toBe(
-      "open --trigger auto-solo",
+    expect(findMissingHookMarker(section.replace(/--trigger auto/g, "--trigger manual"))).toBe(
+      "open --trigger auto",
     );
     expect(findMissingHookMarker(section.replace(DISABLED_ENVELOPE, ""))).toBe(DISABLED_ENVELOPE);
   });
@@ -189,7 +189,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
     const output = JSON.parse(surfaced.stdout);
     expect(output.stage_slug).toBe(STAGE_SLUG);
     expect(output.phase).toBe(PHASE);
-    // An empty candidate list would leave the auto-solo hook nothing to route.
+    // An empty candidate list would leave the automatic solo hook nothing to route.
     expect(output.candidates).toHaveLength(1);
     expect(output.candidates[0].source_heading).toBe("Deviations");
   });
@@ -199,7 +199,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
     const opened = runShippedTool(proj, "amadeus-election.ts", [
       "open",
       "--trigger",
-      "auto-solo",
+      "auto",
       "--file",
       join(proj, PAYLOAD_NAME),
     ]);
@@ -213,7 +213,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
     const opened = runShippedTool(proj, "amadeus-election.ts", [
       "open",
       "--trigger",
-      "auto-solo",
+      "auto",
     ]);
     expect(opened.status).toBe(2);
     expect(opened.stdout).toBe("");

@@ -226,7 +226,7 @@ export function completionMirrorDisposition(
       message: `Invalid mirror configuration: ${details}`,
     };
   }
-  return resolved.config.autoMirror === "off"
+  return resolved.config.intentMirror.github.issue.mode === "off"
     ? { kind: "immediate" }
     : { kind: "defer" };
 }

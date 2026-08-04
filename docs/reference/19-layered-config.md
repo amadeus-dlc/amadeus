@@ -4,127 +4,90 @@
 
 > Part of the [Developer Reference](00-overview.md)
 
-The layered configuration resolver is a read-only component shared by mirror
-routing, solo-election activation, and Amadeus finding filing. Its source of truth is
-`packages/framework/core/tools/amadeus-config.ts`.
+`packages/framework/core/tools/amadeus-config.ts` is the source of truth for
+the read-only layered configuration resolver. Its registry defines every
+supported leaf path, default, allowed layer, replacement merge rule, and
+domain parser.
 
-## Contract
+## Layers and merge semantics
 
-`resolveAmadeusConfig(projectDir, intentDir?, space?, hooks?)` derives and reads
-these paths:
+The resolver reads these optional, Git-shared files in order:
 
 ```text
-<workspace>/amadeus/config.json
-<workspace>/amadeus/spaces/<space>/config.json
-<workspace>/amadeus/spaces/<space>/intents/<intentDir>/config.json
+Project: amadeus/config.json
+Space:   amadeus/spaces/<space>/config.json
+Intent:  amadeus/spaces/<space>/intents/<intent>/config.json
 ```
 
-The resolver uses explicit selectors when supplied and otherwise resolves the
-active space and intent. It performs no caching, retry, or write operation.
+Later layers replace earlier values per leaf. Arrays replace rather than
+append. An absent leaf inherits, an empty object is a no-op, and `null` is
+invalid. Any invalid file or leaf rejects the whole result after all
+diagnostics have been collected. The resolver never caches, retries, or
+writes.
 
-Each level produces `parsed`, `absent`, or `invalid`. `ENOENT`, including a
-dangling symbolic link, means `absent`; other I/O failures mean `invalid`.
-After parsing all levels, it either returns every invalid level and all errors
-collected within it, or applies Global, Space, then Intent values independently
-per key.
-
-The operation is atomic from the caller's perspective: an invalid level never
-produces a partial resolved configuration.
-
-## Schema
-
-The accepted JSON shape is:
+## Canonical schema
 
 ```json
 {
-  "auto-mirror": "prompt",
-  "mirror-projects": [],
-  "auto-solo-election": true,
-  "auto-file-findings": "prompt",
-  "max-parallel-units": 4,
-  "plugins": ["formal-model-check"]
+  "intent-mirror": {
+    "github": {
+      "issue": { "mode": "prompt" },
+      "project": { "targets": [] }
+    }
+  },
+  "solo-election": { "trigger": { "mode": "manual" } },
+  "finding": {
+    "github": { "issue": { "creation": { "mode": "prompt" } } }
+  },
+  "swarm": { "unit": { "concurrency": { "limit": 4 } } },
+  "plugin": { "activation": { "names": [] } }
 }
 ```
 
-The closed key allowlist is the schema boundary. The parser rejects unknown
-keys, non-object roots, values outside the `auto-mirror` mode set, malformed
-Project targets, and non-boolean `auto-solo-election` values. Defaults are
-`autoMirror: "prompt"`, an empty Project list, and
-`autoSoloElection: false`. `auto-file-findings` accepts the same mode set as
-`auto-mirror` and defaults to `autoFileFindings: "prompt"`.
-`max-parallel-units` accepts integers from 1 through the hard cap 4 and defaults
-to 4. The swarm engine resolves it per Intent and bakes
-`min(batch size, resolved value)` into `invoke-swarm.cap`; a per-invocation
-`--concurrency` may only narrow that value. `plugins` is a
-project-only, sorted unique name array and defaults to `[]`; its presence at the
-Space or Intent layer is a configuration error.
+| Path | Values and default | Layers |
+|------|--------------------|--------|
+| `intent-mirror.github.issue.mode` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
+| `intent-mirror.github.project.targets` | target array; `[]` | Project, Space, Intent |
+| `solo-election.trigger.mode` | `manual \| auto`; `manual` | Project, Space, Intent |
+| `finding.github.issue.creation.mode` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
+| `swarm.unit.concurrency.limit` | integer `1..4`; `4` | Project, Space, Intent |
+| `plugin.activation.names` | sorted unique plugin-name array; `[]` | Project only |
 
-## Solo-election integration
+Unknown paths and legacy flat keys are errors. Legacy-key diagnostics identify
+the structured replacement; the resolver does not migrate or alias them.
+`observability` remains delegated to its existing resolver and is tolerated at
+the root without becoming part of this registry.
 
-An automatic solo-election open uses `open --trigger auto-solo`. The CLI
-resolves configuration before reading the definition or writing the election
-store. Unless `autoSoloElection` is `true`, it returns
-`{"opened":null,"reason":"auto-solo-election-disabled"}` and writes nothing.
-Ordinary `open` remains the explicit activation path.
+## Project targets and plugins
 
-## Finding-filer integration
+Each Project target requires `project: "<owner>/<positive integer>"` and may
+set a non-empty `phase-field` (default `Intent Phase`) plus non-empty
+`status-names` values for `ideation`, `inception`, `construction`, `operation`,
+and `done`. Normalized duplicate Project identities are rejected; input order
+is preserved.
 
-`amadeus-finding.ts file` resolves configuration before any GitHub readiness
-check or mutation. `"off"` returns without contacting GitHub, `"prompt"`
-returns an approval-required outcome, and `"auto"` proceeds through the
-finding coordinator. `--approved` is the explicit human path for `"off"` and
-`"prompt"`.
+Plugin names must be unique, 1–64 characters, and match
+`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`. They are normalized to ascending
+order because activation is a set.
 
-The coordinator targets only `amadeus-dlc/amadeus`. It hashes the caller's
-stable fingerprint into a body marker, searches open and closed Issues through
-the GitHub Gateway, and creates only after a zero-match result. One match is
-reused; multiple matches fail closed. The create call requires a
-coordinator-minted permit bound to the repository and exact body marker.
-Defects use the repository's existing `bug` label; concerns use `enhancement`.
-The Issue body is read through the shared descriptor-based contained-file
-reader, which rejects symlinks, workspace escapes, non-regular files, growth
-beyond 64 KiB, and identity changes before or during the read.
+## CLI integrations
 
-## Phase-boundary integration
-
-`amadeus-orchestrate.ts` resolves the configuration after detecting a verified
-phase boundary and before choosing the mirror directive.
-
-- Invalid resolution emits an error directive and stops routing.
-- `autoMirror: "auto"` emits a print directive that runs the fixed lifecycle
-  boundary command. The mirror coordinator selects guarded `create` when no
-  Mirror Issue exists and guarded `sync` when one does.
-- `autoMirror: "prompt"` is the only mode that emits an ask directive. When no
-  Mirror Issue exists, `create` is included alongside `sync` and `skip`.
-- `autoMirror: "off"` emits neither a mirror question nor a GitHub mutation.
-
-The durable identity and receipt protocol makes interrupted automatic create
-or sync retry-safe: `pending` is recorded before the lifecycle operation and
-`completed` after success. If remote create succeeds but local persistence
-fails, retry converges on the same Issue instead of creating a duplicate.
+- Automatic elections use `open --trigger auto`; manual opens use
+  `--trigger manual` (the default). When the resolved mode is `manual`, an
+  automatic request returns
+  `{"opened":null,"reason":"solo-election-manual-trigger-required"}`.
+- Finding creation uses the `create-github-issue` subcommand. The resolved
+  mode gates GitHub access before readiness checks or mutation.
+- Swarm concurrency flags may narrow, but never exceed, the resolved limit.
 
 ## Tests
 
-The contract is covered by:
-
-- `tests/unit/t257-amadeus-config.test.ts` for parsing, merging,
-  defaults, path derivation, and reader behavior;
-- `tests/integration/t257-amadeus-config.integration.test.ts` for real
-  filesystem precedence and failure cases;
-- `tests/integration/t265-engine-boundary.integration.test.ts` for all six
-  mode-by-Issue boundary combinations;
-- `tests/e2e/t265-engine-boundary.test.ts` for automatic lifecycle delegation
-  and receipt recovery.
-- `tests/unit/t366-amadeus-finding-coordinator.test.ts` for mode routing,
-  marker idempotency, and duplicate handling;
-- `tests/integration/t366-amadeus-finding-cli.integration.test.ts` for the
-  public CLI boundary;
-- `tests/integration/t368-amadeus-finding-cli.integration.test.ts` for invalid arguments, unsafe
-  body files, and exit-code behavior;
-- `tests/integration/t368-safe-contained-file.integration.test.ts` for
-  descriptor-bound containment and size enforcement;
-- `tests/integration/t367-amadeus-finding-protocol.integration.test.ts` for the
-  all-stage finding admission contract.
+- `tests/unit/t431-structured-config.test.ts` covers schema, defaults,
+  precedence, replacement, normalization, and legacy diagnostics.
+- `tests/integration/t257-amadeus-config.integration.test.ts` covers real
+  filesystem resolution and read safety.
+- Election, finding, mirror, swarm, and plugin integration suites cover their
+  public CLI and consumer boundaries.
 
 For placement and user examples, see
 [Layered Configuration](../guide/21-layered-config.md).

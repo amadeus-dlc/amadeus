@@ -1,12 +1,10 @@
 // amadeus-config.ts — shared layered configuration resolver.
 //
-// Resolves the supported settings from the three git-shared layers
-// (global -> space -> intent, later layers winning per key). `auto-mirror`
-// accepts exactly `off | prompt | auto` and defaults to `prompt`;
-// `auto-file-findings` uses the same modes and default;
-// `auto-solo-election` accepts only a boolean and defaults to `false`.
-// `max-parallel-units` accepts integers 1..4 and defaults to the hard cap 4.
-// Invalid values are configuration errors and are never coerced.
+// Resolves structured settings from the three git-shared layers
+// (project -> space -> intent, later layers winning per leaf). The registry
+// below is the machine-readable source for paths, defaults, allowed layers,
+// replacement merge semantics, and domain parsers. Invalid values are
+// configuration errors and are never coerced.
 //
 // Responsibilities are split:
 //   - readAmadeusConfigLayers — the ONLY filesystem owner. Resolves the three
@@ -42,28 +40,7 @@ import type {
 const MAX_CONFIG_BYTES = 1024 * 1024;
 
 const VALID_MODES: readonly MirrorMode[] = ["off", "prompt", "auto"];
-const LAYER_ORDER: readonly ConfigLayer[] = ["global", "space", "intent"];
-
-// The complete allowlist of configuration keys. A key outside this set is a
-// configuration error in every layer.
-const AUTO_MIRROR_KEY = "auto-mirror";
-const MIRROR_PROJECTS_KEY = "mirror-projects";
-const AUTO_SOLO_ELECTION_KEY = "auto-solo-election";
-const AUTO_FILE_FINDINGS_KEY = "auto-file-findings";
-const MAX_PARALLEL_UNITS_KEY = "max-parallel-units";
-const PLUGINS_KEY = "plugins";
-// "observability" is owned by amadeus-observability.ts (Issue #1628 Phase 2):
-// the mirror parser must tolerate the key so both subsystems can share the
-// layered config.json files, but it never interprets the value.
-const ALLOWED_KEYS: readonly string[] = [
-  AUTO_MIRROR_KEY,
-  MIRROR_PROJECTS_KEY,
-  AUTO_SOLO_ELECTION_KEY,
-  AUTO_FILE_FINDINGS_KEY,
-  MAX_PARALLEL_UNITS_KEY,
-  "observability",
-  PLUGINS_KEY,
-];
+const LAYER_ORDER: readonly ConfigLayer[] = ["project", "space", "intent"];
 
 const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
   "ideation",
@@ -73,28 +50,42 @@ const VALID_PHASE_KEYS: readonly MirrorPhaseKey[] = [
   "done",
 ];
 
-const MODE_EXPECTED = "off | prompt | auto";
 const PROJECTS_EXPECTED =
   'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }';
-const BOOLEAN_EXPECTED = "boolean";
 
-export type ConfigLayer = "global" | "space" | "intent";
+export type ConfigLayer = "project" | "space" | "intent";
 
 export type AmadeusConfigKey =
-  | "auto-mirror"
-  | "mirror-projects"
-  | "auto-solo-election"
-  | "auto-file-findings"
-  | "max-parallel-units"
-  | "plugins";
+  | "intent-mirror.github.issue.mode"
+  | "intent-mirror.github.project.targets"
+  | "solo-election.trigger.mode"
+  | "finding.github.issue.creation.mode"
+  | "swarm.unit.concurrency.limit"
+  | "plugin.activation.names";
+
+export type SoloElectionTriggerMode = "manual" | "auto";
 
 export type AmadeusConfig = Readonly<{
-  autoMirror: MirrorMode;
-  projects: readonly MirrorProjectTarget[];
-  autoSoloElection: boolean;
-  autoFileFindings: MirrorMode;
-  maxParallelUnits: number;
-  plugins: readonly string[];
+  intentMirror: Readonly<{
+    github: Readonly<{
+      issue: Readonly<{ mode: MirrorMode }>;
+      project: Readonly<{ targets: readonly MirrorProjectTarget[] }>;
+    }>;
+  }>;
+  soloElection: Readonly<{
+    trigger: Readonly<{ mode: SoloElectionTriggerMode }>;
+  }>;
+  finding: Readonly<{
+    github: Readonly<{
+      issue: Readonly<{ creation: Readonly<{ mode: MirrorMode }> }>;
+    }>;
+  }>;
+  swarm: Readonly<{
+    unit: Readonly<{ concurrency: Readonly<{ limit: number }> }>;
+  }>;
+  plugin: Readonly<{
+    activation: Readonly<{ names: readonly string[] }>;
+  }>;
 }>;
 
 export type AmadeusConfigLayerInput = Readonly<{
@@ -206,7 +197,7 @@ function readFailure(
     kind: "read-failure",
     layer,
     path,
-    key: "auto-mirror",
+    key: "intent-mirror.github.issue.mode",
     summary,
     expected: "readable configuration",
   };
@@ -232,7 +223,7 @@ export function readAmadeusConfigLayers(
   const intent = activeIntent(projectDir, space, explicitIntentDir);
 
   const candidates: { layer: ConfigLayer; abs: string }[] = [
-    { layer: "global", abs: join(root, "config.json") },
+    { layer: "project", abs: join(root, "config.json") },
     { layer: "space", abs: join(root, "spaces", space, "config.json") },
   ];
   if (intent !== null) {
@@ -400,31 +391,6 @@ function parseProjects(value: unknown): ProjectsParse {
   return { ok: true, projects };
 }
 
-type LayerIssue = Readonly<{
-  key: AmadeusConfigKey;
-  actualType: string;
-  expected: string;
-}>;
-
-type LayerClassification = Readonly<{
-  mode?: MirrorMode;
-  projects?: readonly MirrorProjectTarget[];
-  autoSoloElection?: boolean;
-  autoFileFindings?: MirrorMode;
-  maxParallelUnits?: number;
-  plugins?: readonly string[];
-  issues: readonly LayerIssue[];
-}>;
-
-type ResolvedLayerValues = {
-  mode?: MirrorMode;
-  projects?: readonly MirrorProjectTarget[];
-  autoSoloElection?: boolean;
-  autoFileFindings?: MirrorMode;
-  maxParallelUnits?: number;
-  plugins?: readonly string[];
-};
-
 const PLUGIN_NAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 function parsePlugins(value: unknown): readonly string[] | null {
@@ -437,213 +403,309 @@ function parsePlugins(value: unknown): readonly string[] | null {
   return names.sort();
 }
 
-function parseOptionalPlugins(rawValue: unknown, issues: LayerIssue[]): readonly string[] | undefined {
-  if (rawValue === undefined) return undefined;
-  const parsed = parsePlugins(rawValue);
-  if (parsed !== null) return parsed;
-  issues.push({
-    key: PLUGINS_KEY,
-    actualType: valueKind(rawValue),
-    expected: "unique array of valid plugin names",
-  });
-  return undefined;
+type ConfigLeafValue =
+  | MirrorMode
+  | SoloElectionTriggerMode
+  | number
+  | readonly MirrorProjectTarget[]
+  | readonly string[];
+
+type LeafParseOutcome =
+  | { ok: true; value: ConfigLeafValue }
+  | { ok: false; actualType: string; expected: string };
+
+export type AmadeusConfigRegistryEntry = Readonly<{
+  path: AmadeusConfigKey;
+  domain: string;
+  layers: readonly ConfigLayer[];
+  merge: "replace";
+  defaultValue: ConfigLeafValue;
+  parse: (value: unknown) => LeafParseOutcome;
+  legacy: Readonly<{
+    key: string;
+    valueConversion: string;
+  }>;
+}>;
+
+function parseMode(value: unknown): LeafParseOutcome {
+  return VALID_MODES.includes(value as MirrorMode)
+    ? { ok: true, value: value as MirrorMode }
+    : { ok: false, actualType: valueKind(value), expected: "off | prompt | auto" };
 }
 
-function parseOptionalMode(
-  rawValue: unknown,
-  key: Extract<AmadeusConfigKey, "auto-mirror" | "auto-file-findings">,
+function parseElectionMode(value: unknown): LeafParseOutcome {
+  return value === "manual" || value === "auto"
+    ? { ok: true, value }
+    : { ok: false, actualType: valueKind(value), expected: "manual | auto" };
+}
+
+function parseTargets(value: unknown): LeafParseOutcome {
+  const parsed = parseProjects(value);
+  return parsed.ok
+    ? { ok: true, value: parsed.projects }
+    : { ok: false, actualType: parsed.actualType, expected: PROJECTS_EXPECTED };
+}
+
+function parseConcurrencyLimit(value: unknown): LeafParseOutcome {
+  return Number.isInteger(value) && Number(value) >= 1 && Number(value) <= 4
+    ? { ok: true, value: Number(value) }
+    : {
+        ok: false,
+        actualType: valueKind(value),
+        expected: "integer from 1 through 4",
+      };
+}
+
+function parsePluginNames(value: unknown): LeafParseOutcome {
+  const parsed = parsePlugins(value);
+  return parsed === null
+    ? {
+        ok: false,
+        actualType: valueKind(value),
+        expected: "unique array of valid plugin names",
+      }
+    : { ok: true, value: parsed };
+}
+
+const ALL_LAYERS: readonly ConfigLayer[] = ["project", "space", "intent"];
+
+export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
+  {
+    path: "intent-mirror.github.issue.mode",
+    domain: "intent-mirror",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: "prompt",
+    parse: parseMode,
+    legacy: { key: "auto-mirror", valueConversion: "unchanged" },
+  },
+  {
+    path: "intent-mirror.github.project.targets",
+    domain: "intent-mirror",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: [],
+    parse: parseTargets,
+    legacy: { key: "mirror-projects", valueConversion: "unchanged" },
+  },
+  {
+    path: "solo-election.trigger.mode",
+    domain: "solo-election",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: "manual",
+    parse: parseElectionMode,
+    legacy: {
+      key: "auto-solo-election",
+      valueConversion: "false -> manual; true -> auto",
+    },
+  },
+  {
+    path: "finding.github.issue.creation.mode",
+    domain: "finding",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: "prompt",
+    parse: parseMode,
+    legacy: { key: "auto-file-findings", valueConversion: "unchanged" },
+  },
+  {
+    path: "swarm.unit.concurrency.limit",
+    domain: "swarm",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: 4,
+    parse: parseConcurrencyLimit,
+    legacy: { key: "max-parallel-units", valueConversion: "unchanged" },
+  },
+  {
+    path: "plugin.activation.names",
+    domain: "plugin",
+    layers: ["project"],
+    merge: "replace",
+    defaultValue: [],
+    parse: parsePluginNames,
+    legacy: { key: "plugins", valueConversion: "unchanged" },
+  },
+];
+
+const LEGACY_KEY_REPLACEMENTS = new Map(
+  AMADEUS_CONFIG_REGISTRY.map((entry) => [
+    entry.legacy.key,
+    { path: entry.path, valueConversion: entry.legacy.valueConversion },
+  ]),
+);
+
+type LayerIssue = Readonly<{
+  key: AmadeusConfigKey;
+  actualType: string;
+  expected: string;
+}>;
+
+const CONFIG_LEAF_PATHS = new Set(
+  AMADEUS_CONFIG_REGISTRY.map((entry) => entry.path),
+);
+const CONFIG_PREFIX_PATHS = new Set<string>();
+for (const leaf of CONFIG_LEAF_PATHS) {
+  const segments = leaf.split(".");
+  for (let index = 1; index < segments.length; index += 1) {
+    CONFIG_PREFIX_PATHS.add(segments.slice(0, index).join("."));
+  }
+}
+
+function rawLeaf(root: Record<string, unknown>, path: AmadeusConfigKey): unknown {
+  let value: unknown = root;
+  for (const segment of path.split(".")) {
+    if (!isPlainObject(value)) return undefined;
+    value = value[segment];
+  }
+  return value;
+}
+
+function appendUnknownPathIssue(
+  key: string,
+  path: string,
+  prefix: string,
   issues: LayerIssue[],
-): MirrorMode | undefined {
-  if (rawValue === undefined) return undefined;
-  if (VALID_MODES.includes(rawValue as MirrorMode)) {
-    return rawValue as MirrorMode;
-  }
+): void {
+  const replacement = prefix === "" ? LEGACY_KEY_REPLACEMENTS.get(key) : undefined;
   issues.push({
-    key,
-    actualType: valueKind(rawValue),
-    expected: MODE_EXPECTED,
+    key: replacement?.path ?? "intent-mirror.github.issue.mode",
+    actualType:
+      replacement === undefined ? `unknown key ${path}` : `legacy key ${key}`,
+    expected:
+      replacement === undefined
+        ? "documented structured configuration path"
+        : `use ${replacement.path}; value conversion: ${replacement.valueConversion}`,
   });
-  return undefined;
 }
 
-function parseOptionalMaxParallelUnits(rawValue: unknown, issues: LayerIssue[]): number | undefined {
-  if (rawValue === undefined) return undefined;
-  if (Number.isInteger(rawValue) && Number(rawValue) >= 1 && Number(rawValue) <= 4) {
-    return Number(rawValue);
-  }
-  issues.push({
-    key: MAX_PARALLEL_UNITS_KEY,
-    actualType: valueKind(rawValue),
-    expected: "integer from 1 through 4",
-  });
-  return undefined;
-}
-
-// Judge one present layer's raw value. The whole config object is validated: a
-// non-object root, an unknown property, or an invalid value for either key is
-// rejected rather than silently reduced. An empty object is valid and
-// contributes nothing. Both keys are judged independently so one layer can
-// report both errors at once.
-function classifyRawValue(rawValue: unknown): LayerClassification {
-  if (!isPlainObject(rawValue)) {
-    return {
-      issues: [
-        {
-          key: AUTO_MIRROR_KEY,
-          actualType: valueKind(rawValue),
-          expected: MODE_EXPECTED,
-        },
-      ],
-    };
-  }
-  const unknownKeys = Object.keys(rawValue).filter(
-    (key) => !ALLOWED_KEYS.includes(key),
+function appendPrefixTypeIssue(path: string, child: unknown, issues: LayerIssue[]): void {
+  const descendant = AMADEUS_CONFIG_REGISTRY.find((entry) =>
+    entry.path.startsWith(`${path}.`),
   );
-  if (unknownKeys.length > 0) {
-    return {
-      issues: [
-        {
-          key: AUTO_MIRROR_KEY,
-          actualType: `object with unknown key(s): ${unknownKeys.join(", ")}`,
-          expected: MODE_EXPECTED,
-        },
-      ],
-    };
+  issues.push({
+    key: descendant?.path ?? "intent-mirror.github.issue.mode",
+    actualType: valueKind(child),
+    expected: "object",
+  });
+}
+
+function collectSchemaIssues(
+  value: Record<string, unknown>,
+  prefix: string,
+  issues: LayerIssue[],
+): void {
+  for (const [key, child] of Object.entries(value)) {
+    const path = prefix === "" ? key : `${prefix}.${key}`;
+    if (path === "observability") {
+      continue;
+    }
+    if (key.includes(".")) {
+      appendUnknownPathIssue(key, path, prefix, issues);
+      continue;
+    }
+    if (CONFIG_LEAF_PATHS.has(path as AmadeusConfigKey)) continue;
+    if (!CONFIG_PREFIX_PATHS.has(path)) {
+      appendUnknownPathIssue(key, path, prefix, issues);
+      continue;
+    }
+    if (!isPlainObject(child)) {
+      appendPrefixTypeIssue(path, child, issues);
+      continue;
+    }
+    collectSchemaIssues(child, path, issues);
+  }
+}
+
+function schemaIssues(rawValue: unknown): LayerIssue[] {
+  if (!isPlainObject(rawValue)) {
+    return [
+      {
+        key: "intent-mirror.github.issue.mode",
+        actualType: valueKind(rawValue),
+        expected: "object",
+      },
+    ];
   }
 
   const issues: LayerIssue[] = [];
-  const mode = parseOptionalMode(
-    rawValue[AUTO_MIRROR_KEY],
-    AUTO_MIRROR_KEY,
-    issues,
-  );
+  collectSchemaIssues(rawValue, "", issues);
+  return issues;
+}
 
-  let projects: readonly MirrorProjectTarget[] | undefined;
-  const rawProjects = rawValue[MIRROR_PROJECTS_KEY];
-  if (rawProjects !== undefined) {
-    const parsed = parseProjects(rawProjects);
-    if (parsed.ok) {
-      projects = parsed.projects;
-    } else {
+function parseLayer(
+  layer: AmadeusConfigLayerInput,
+): { values: Map<AmadeusConfigKey, ConfigLeafValue>; issues: LayerIssue[] } {
+  const issues = schemaIssues(layer.rawValue);
+  const values = new Map<AmadeusConfigKey, ConfigLeafValue>();
+  if (!isPlainObject(layer.rawValue)) return { values, issues };
+
+  for (const entry of AMADEUS_CONFIG_REGISTRY) {
+    const raw = rawLeaf(layer.rawValue, entry.path);
+    if (raw === undefined) continue;
+    if (!entry.layers.includes(layer.layer)) {
       issues.push({
-        key: MIRROR_PROJECTS_KEY,
+        key: entry.path,
+        actualType: `${layer.layer}-layer value`,
+        expected: `${entry.path} may be configured only in amadeus/config.json`,
+      });
+      continue;
+    }
+    const parsed = entry.parse(raw);
+    if (parsed.ok) values.set(entry.path, parsed.value);
+    else {
+      issues.push({
+        key: entry.path,
         actualType: parsed.actualType,
-        expected: PROJECTS_EXPECTED,
+        expected: parsed.expected,
       });
     }
   }
-
-  let autoSoloElection: boolean | undefined;
-  const rawAutoSoloElection = rawValue[AUTO_SOLO_ELECTION_KEY];
-  if (rawAutoSoloElection !== undefined) {
-    if (typeof rawAutoSoloElection === "boolean") {
-      autoSoloElection = rawAutoSoloElection;
-    } else {
-      issues.push({
-        key: AUTO_SOLO_ELECTION_KEY,
-        actualType: valueKind(rawAutoSoloElection),
-        expected: BOOLEAN_EXPECTED,
-      });
-    }
-  }
-
-  const autoFileFindings = parseOptionalMode(
-    rawValue[AUTO_FILE_FINDINGS_KEY],
-    AUTO_FILE_FINDINGS_KEY,
-    issues,
-  );
-
-  const maxParallelUnits = parseOptionalMaxParallelUnits(rawValue[MAX_PARALLEL_UNITS_KEY], issues);
-
-  const plugins = parseOptionalPlugins(rawValue[PLUGINS_KEY], issues);
-
-  return {
-    issues,
-    ...(mode === undefined ? {} : { mode }),
-    ...(projects === undefined ? {} : { projects }),
-    ...(autoSoloElection === undefined ? {} : { autoSoloElection }),
-    ...(autoFileFindings === undefined ? {} : { autoFileFindings }),
-    maxParallelUnits,
-    ...(plugins === undefined ? {} : { plugins }),
-  };
+  return { values, issues };
 }
 
-function mergeLayerValues(
-  target: ResolvedLayerValues,
-  classified: LayerClassification,
-): boolean {
-  let contributed = false;
-  if (classified.mode !== undefined) {
-    target.mode = classified.mode;
-    contributed = true;
-  }
-  if (classified.projects !== undefined) {
-    target.projects = classified.projects;
-    contributed = true;
-  }
-  if (classified.autoSoloElection !== undefined) {
-    target.autoSoloElection = classified.autoSoloElection;
-    contributed = true;
-  }
-  if (classified.autoFileFindings !== undefined) {
-    target.autoFileFindings = classified.autoFileFindings;
-    contributed = true;
-  }
-  if (classified.maxParallelUnits !== undefined) {
-    target.maxParallelUnits = classified.maxParallelUnits;
-    contributed = true;
-  }
-  if (classified.plugins !== undefined) {
-    target.plugins = classified.plugins;
-    contributed = true;
-  }
-  return contributed;
-}
-
-function layerConfigIssues(
-  layer: AmadeusConfigLayerInput,
-  classified: LayerClassification,
-): AmadeusConfigIssue[] {
-  return classified.issues.map((issue) => ({
-    kind: "invalid-value",
-    layer: layer.layer,
-    path: layer.path,
-    key: issue.key,
-    actualType: issue.actualType,
-    expected: issue.expected,
-  }));
-}
-
-function mergeConfigLayer(
-  layer: AmadeusConfigLayerInput,
-  resolved: ResolvedLayerValues,
-): { issues: AmadeusConfigIssue[]; contributed: boolean } {
-  const classified = classifyRawValue(layer.rawValue);
-  const issues = layerConfigIssues(layer, classified);
-  if (layer.layer !== "global" && classified.plugins !== undefined) {
-    issues.push({
-      kind: "invalid-value",
-      layer: layer.layer,
-      path: layer.path,
-      key: PLUGINS_KEY,
-      actualType: "project-only key",
-      expected: "plugins may be configured only in amadeus/config.json",
-    });
+function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>): AmadeusConfig {
+  function value(path: AmadeusConfigKey): ConfigLeafValue {
+    const entry = AMADEUS_CONFIG_REGISTRY.find((candidate) => candidate.path === path);
+    if (entry === undefined) throw new Error(`Missing config registry entry: ${path}`);
+    return values.get(path) ?? entry.defaultValue;
   }
   return {
-    issues,
-    contributed: issues.length === 0 && mergeLayerValues(resolved, classified),
-  };
-}
-
-function resolvedConfig(values: ResolvedLayerValues): AmadeusConfig {
-  return {
-    autoMirror: values.mode ?? "prompt",
-    projects: values.projects ?? [],
-    autoSoloElection: values.autoSoloElection ?? false,
-    autoFileFindings: values.autoFileFindings ?? "prompt",
-    maxParallelUnits: values.maxParallelUnits ?? 4,
-    plugins: values.plugins ?? [],
+    intentMirror: {
+      github: {
+        issue: { mode: value("intent-mirror.github.issue.mode") as MirrorMode },
+        project: {
+          targets: value("intent-mirror.github.project.targets") as readonly MirrorProjectTarget[],
+        },
+      },
+    },
+    soloElection: {
+      trigger: {
+        mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode,
+      },
+    },
+    finding: {
+      github: {
+        issue: {
+          creation: {
+            mode: value("finding.github.issue.creation.mode") as MirrorMode,
+          },
+        },
+      },
+    },
+    swarm: {
+      unit: {
+        concurrency: {
+          limit: value("swarm.unit.concurrency.limit") as number,
+        },
+      },
+    },
+    plugin: {
+      activation: {
+        names: value("plugin.activation.names") as readonly string[],
+      },
+    },
   };
 }
 
@@ -651,7 +713,7 @@ function resolvedConfig(values: ResolvedLayerValues): AmadeusConfig {
 // reported (never a partial config or a fallback), and only when all layers
 // are valid is a mode resolved with the highest present layer winning.
 // `sources` lists every layer that specified a valid value, in
-// global -> space -> intent order; the last one is the winner.
+// project -> space -> intent order; the last one is the winner.
 export function parseAmadeusConfigLayers(
   layers: readonly AmadeusConfigLayerInput[],
 ): AmadeusConfigOutcome {
@@ -663,11 +725,22 @@ export function parseAmadeusConfigLayers(
 
   const issues: AmadeusConfigIssue[] = [];
   const sources: string[] = [];
-  const resolved: ResolvedLayerValues = {};
+  const resolved = new Map<AmadeusConfigKey, ConfigLeafValue>();
   for (const layer of ordered) {
-    const merged = mergeConfigLayer(layer, resolved);
-    issues.push(...merged.issues);
-    if (merged.contributed) sources.push(layer.path);
+    const parsed = parseLayer(layer);
+    const layerIssues: AmadeusConfigIssue[] = parsed.issues.map((issue) => ({
+      kind: "invalid-value",
+      layer: layer.layer,
+      path: layer.path,
+      key: issue.key,
+      actualType: issue.actualType,
+      expected: issue.expected,
+    }));
+    issues.push(...layerIssues);
+    if (layerIssues.length === 0 && parsed.values.size > 0) {
+      for (const [path, value] of parsed.values) resolved.set(path, value);
+      sources.push(layer.path);
+    }
   }
 
   if (issues.length > 0) return { kind: "invalid", issues };

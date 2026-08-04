@@ -311,12 +311,24 @@ function fixture(options: FixtureOptions = {}) {
   writeFileSync(
     join(root, "amadeus", "config.json"),
     JSON.stringify({
-      "auto-mirror": "auto",
-      "mirror-projects": (options.boards ?? [{ project: BOARD_A }]).map((board) => ({
-        project: canonical(board.project),
-        ...(board.phaseField ? { "phase-field": board.phaseField } : {}),
-        ...(board.statusNames ? { "status-names": board.statusNames } : {}),
-      })),
+      "intent-mirror": {
+        github: {
+          issue: { mode: "auto" },
+          project: {
+            targets: (options.boards ?? [{ project: BOARD_A }]).map(
+              (board) => ({
+                project: canonical(board.project),
+                ...(board.phaseField
+                  ? { "phase-field": board.phaseField }
+                  : {}),
+                ...(board.statusNames
+                  ? { "status-names": board.statusNames }
+                  : {}),
+              }),
+            ),
+          },
+        },
+      },
     }),
   );
   const real = createMirrorStateStorePorts({
@@ -686,7 +698,7 @@ describe("t349 summaries", () => {
     expect(row.summary).toContain('"Building"');
     expect(row.summary).toContain("add that option to the board");
     expect(row.summary).toContain("`status-names` override");
-    expect(row.summary).toContain("mirror-projects");
+    expect(row.summary).toContain("intent-mirror.github.project.targets");
   });
 
   test("a permission failure names the board and the scope, and proposes no re-auth", async () => {

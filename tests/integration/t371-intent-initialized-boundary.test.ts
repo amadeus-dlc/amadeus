@@ -130,7 +130,7 @@ function seedIntent(
   if (options.mode !== undefined) {
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": options.mode }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: options.mode } } } }),
     );
   }
   const path = seededStateFile(project);

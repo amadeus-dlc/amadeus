@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-finding:file
+// covers: subcommand:amadeus-finding:create-github-issue
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -26,14 +26,14 @@ afterEach(() => {
   }
 });
 
-describe("amadeus-finding file", () => {
+describe("amadeus-finding create-github-issue", () => {
   test("prompt mode returns an approval candidate without contacting GitHub", () => {
     const root = mkdtempSync(join(tmpdir(), "amadeus-finding-cli-"));
     roots.push(root);
     mkdirSync(join(root, "amadeus"), { recursive: true });
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ "auto-file-findings": "prompt" })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
       "utf-8",
     );
     const bodyFile = join(root, "finding.md");
@@ -43,7 +43,7 @@ describe("amadeus-finding file", () => {
       process.execPath,
       [
         TOOL,
-        "file",
+        "create-github-issue",
         "--project-dir",
         root,
         "--kind",
@@ -76,7 +76,7 @@ describe("amadeus-finding file", () => {
     mkdirSync(join(root, "amadeus"), { recursive: true });
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ "auto-file-findings": "prompt" })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
       "utf-8",
     );
     writeFileSync(join(root, "finding.md"), "Observed evidence.", "utf-8");
@@ -85,7 +85,7 @@ describe("amadeus-finding file", () => {
       process.execPath,
       [
         TOOL,
-        "file",
+        "create-github-issue",
         "--project-dir",
         root,
         "--kind",

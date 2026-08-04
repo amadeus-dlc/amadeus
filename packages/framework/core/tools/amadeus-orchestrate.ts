@@ -606,7 +606,7 @@ function emitMirrorBoundaryIfNeeded(
   }
   return emitConfiguredMirrorBoundary(
     boundary,
-    resolved.config.autoMirror,
+    resolved.config.intentMirror.github.issue.mode,
     intent,
     space,
   );
@@ -3231,7 +3231,10 @@ function emitConfiguredSwarm(projectDir: string, units: string[]): void {
   const directive = {
     kind: "invoke-swarm" as const,
     units,
-    cap: Math.min(units.length, config.config.maxParallelUnits),
+    cap: Math.min(
+      units.length,
+      config.config.swarm.unit.concurrency.limit,
+    ),
   };
   const repos = intentRepos(projectDir);
   emit(repos.length === 1 ? { ...directive, repo: repos[0] } : directive);

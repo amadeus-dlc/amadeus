@@ -33,7 +33,7 @@ function project(): string {
 function paths(root: string, space: string, intent: string) {
   const base = join(root, "amadeus");
   return {
-    global: join(base, "config.json"),
+    project: join(base, "config.json"),
     space: join(base, "spaces", space, "config.json"),
     intent: join(base, "spaces", space, "intents", intent, "config.json"),
   };
@@ -42,6 +42,10 @@ function paths(root: string, space: string, intent: string) {
 function writeConfig(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value)}\n`, "utf-8");
+}
+
+function mirror(mode: unknown): unknown {
+  return { "intent-mirror": { github: { issue: { mode } } } };
 }
 
 function setActiveSpace(root: string, space: string): void {
@@ -68,61 +72,73 @@ function snapshot(root: string): string[] {
 
 describe("t257 resolve against real files", () => {
   test("all three absent resolves to the default prompt mode", () => {
-    expect(resolveAmadeusConfig(project(), INTENT)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: "prompt", projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
-      sources: [],
-    });
+    const outcome = resolveAmadeusConfig(project(), INTENT);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.intentMirror.github.issue.mode).toBe("prompt");
+      expect(outcome.sources).toEqual([]);
+    }
   });
 
-  test("intent wins over space and global", () => {
+  test("intent wins over space and project", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "off" });
-    writeConfig(p.space, { "auto-mirror": "off" });
-    writeConfig(p.intent, { "auto-mirror": "auto" });
+    writeConfig(p.project, mirror("off"));
+    writeConfig(p.space, mirror("off"));
+    writeConfig(p.intent, mirror("auto"));
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
-    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+    }
   });
 
   test("project plugins resolve sorted and space/intent declarations fail project-only", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { plugins: ["zeta", "alpha"] });
+    writeConfig(p.project, {
+      plugin: { activation: { names: ["zeta", "alpha"] } },
+    });
     const resolved = resolveAmadeusConfig(root, INTENT);
     expect(resolved.kind).toBe("resolved");
-    if (resolved.kind === "resolved") expect(resolved.config.plugins).toEqual(["alpha", "zeta"]);
+    if (resolved.kind === "resolved") {
+      expect(resolved.config.plugin.activation.names).toEqual(["alpha", "zeta"]);
+    }
 
-    writeConfig(p.space, { plugins: ["alpha"] });
+    writeConfig(p.space, {
+      plugin: { activation: { names: ["alpha"] } },
+    });
     const invalid = resolveAmadeusConfig(root, INTENT);
     expect(invalid.kind).toBe("invalid");
     if (invalid.kind === "invalid") {
       expect(invalid.issues[0]).toMatchObject({
         layer: "space",
-        key: "plugins",
-        expected: "plugins may be configured only in amadeus/config.json",
+        key: "plugin.activation.names",
+        expected:
+          "plugin.activation.names may be configured only in amadeus/config.json",
       });
     }
   });
 
-  test("space wins over global when intent is absent", () => {
+  test("space wins over project when intent is absent", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "off" });
-    writeConfig(p.space, { "auto-mirror": "auto" });
+    writeConfig(p.project, mirror("off"));
+    writeConfig(p.space, mirror("auto"));
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
-    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+    }
   });
 
   test("an explicit intent directory is read", () => {
     const root = project();
-    writeConfig(paths(root, "default", INTENT).intent, { "auto-mirror": "auto" });
+    writeConfig(paths(root, "default", INTENT).intent, mirror("auto"));
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.autoMirror).toBe("auto");
+      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
       expect(outcome.sources).toEqual([
         join("amadeus", "spaces", "default", "intents", INTENT, "config.json"),
       ]);
@@ -132,18 +148,20 @@ describe("t257 resolve against real files", () => {
   test("resolves within a non-default active space", () => {
     const root = project();
     setActiveSpace(root, "team");
-    writeConfig(paths(root, "team", INTENT).intent, { "auto-mirror": "auto" });
+    writeConfig(paths(root, "team", INTENT).intent, mirror("auto"));
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
-    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+    }
   });
 
   test("a single invalid layer fails the whole resolution", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "auto" });
-    writeConfig(p.space, { "auto-mirror": "auto" });
-    writeConfig(p.intent, { "auto-mirror": true });
+    writeConfig(p.project, mirror("auto"));
+    writeConfig(p.space, mirror("auto"));
+    writeConfig(p.intent, mirror(true));
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
@@ -158,8 +176,8 @@ describe("t257 resolve against real files", () => {
   test("a dangling final-component symlink is rejected", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    mkdirSync(dirname(p.global), { recursive: true });
-    symlinkSync(join(root, "amadeus", "does-not-exist.json"), p.global);
+    mkdirSync(dirname(p.project), { recursive: true });
+    symlinkSync(join(root, "amadeus", "does-not-exist.json"), p.project);
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
     if (outcome.kind === "invalid") {
@@ -182,9 +200,9 @@ describe("t257 resolve against real files", () => {
   test("rejects a config path swapped to an outside symlink before open", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "auto" });
+    writeConfig(p.project, mirror("auto"));
     const outside = join(project(), "outside.json");
-    writeConfig(outside, { "auto-mirror": "off" });
+    writeConfig(outside, mirror("off"));
     const resolveWithHook = resolveAmadeusConfig as unknown as (
       projectDir: string,
       explicitIntentDir: string,
@@ -195,10 +213,10 @@ describe("t257 resolve against real files", () => {
 
     const outcome = resolveWithHook(root, INTENT, undefined, {
       beforeOpen(path) {
-        if (path !== p.global || swapped) return;
+        if (path !== p.project || swapped) return;
         swapped = true;
-        renameSync(p.global, `${p.global}.original`);
-        symlinkSync(outside, p.global);
+        renameSync(p.project, `${p.project}.original`);
+        symlinkSync(outside, p.project);
       },
     });
 
@@ -213,8 +231,8 @@ describe("t257 resolve against real files", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
     const target = join(root, "amadeus", "inside.json");
-    writeConfig(target, { "auto-mirror": "auto" });
-    symlinkSync(target, p.global);
+    writeConfig(target, mirror("auto"));
+    symlinkSync(target, p.project);
 
     const outcome = resolveAmadeusConfig(root, INTENT);
 
@@ -227,15 +245,15 @@ describe("t257 resolve against real files", () => {
   test("rejects a regular file whose device/inode changes before open", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "auto" });
+    writeConfig(p.project, mirror("auto"));
     const replacement = join(root, "amadeus", "replacement.json");
-    writeConfig(replacement, { "auto-mirror": "off" });
+    writeConfig(replacement, mirror("off"));
 
     const outcome = resolveAmadeusConfig(root, INTENT, undefined, {
       beforeOpen(path) {
-        if (path !== p.global) return;
-        renameSync(p.global, `${p.global}.original`);
-        renameSync(replacement, p.global);
+        if (path !== p.project) return;
+        renameSync(p.project, `${p.project}.original`);
+        renameSync(replacement, p.project);
       },
     });
 
@@ -252,9 +270,9 @@ describe("t257 resolve against real files", () => {
   test("resolution never writes to the workspace", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
-    writeConfig(p.global, { "auto-mirror": "off" });
+    writeConfig(p.project, mirror("off"));
     writeConfig(p.space, {});
-    writeConfig(p.intent, { "auto-mirror": "auto" });
+    writeConfig(p.intent, mirror("auto"));
     const before = snapshot(root);
     expect(resolveAmadeusConfig(root, INTENT).kind).toBe("resolved");
     expect(snapshot(root)).toEqual(before);

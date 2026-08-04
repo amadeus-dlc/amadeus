@@ -1,9 +1,9 @@
-// covers: function:fileAmadeusFinding
+// covers: function:createGithubIssueForFinding
 // size: small
 
 import { describe, expect, test } from "bun:test";
 import {
-  fileAmadeusFinding,
+  createGithubIssueForFinding,
   type FindingCoordinatorDependencies,
 } from "../../packages/framework/core/tools/amadeus-finding.ts";
 import type {
@@ -23,12 +23,12 @@ const githubFailure: Extract<GitHubGatewayOutcome<unknown>, { kind: "failure" }>
   effect: "no-effect-confirmed",
 };
 
-describe("fileAmadeusFinding", () => {
+describe("createGithubIssueForFinding", () => {
   test("invalid configuration fails closed without accessing GitHub", async () => {
     const unexpected = async (): Promise<never> => {
       throw new Error("GitHub must not be accessed");
     };
-    const outcome = await fileAmadeusFinding(
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: "/project",
         kind: "defect",
@@ -62,7 +62,7 @@ describe("fileAmadeusFinding", () => {
     const unexpected = async (): Promise<never> => {
       throw new Error("GitHub must not be accessed");
     };
-    const outcome = await fileAmadeusFinding(
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: "/project",
         kind: "concern",
@@ -73,7 +73,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          autoFileFindings: mode,
+          creationMode: mode,
         }),
         gateway: {
           readiness: unexpected,
@@ -93,7 +93,7 @@ describe("fileAmadeusFinding", () => {
     const dependencies: FindingCoordinatorDependencies = {
       resolveConfig: () => ({
         kind: "resolved",
-        autoFileFindings: "auto",
+        creationMode: "auto",
       }),
       gateway: {
         readiness: async () => ok(undefined),
@@ -126,8 +126,8 @@ describe("fileAmadeusFinding", () => {
       fingerprint: "tests:default-parallelism-doc-drift",
     };
 
-    const created = await fileAmadeusFinding(input, dependencies);
-    const retried = await fileAmadeusFinding(input, dependencies);
+    const created = await createGithubIssueForFinding(input, dependencies);
+    const retried = await createGithubIssueForFinding(input, dependencies);
 
     expect(created).toMatchObject({
       kind: "created",
@@ -147,7 +147,7 @@ describe("fileAmadeusFinding", () => {
 
   test("a closed marker match is reported as CLOSED, never re-created", async () => {
     let createCalls = 0;
-    const outcome = await fileAmadeusFinding(
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: "/project",
         kind: "defect" as const,
@@ -158,7 +158,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          autoFileFindings: "auto",
+          creationMode: "auto",
         }),
         gateway: {
           readiness: async () => ok(undefined),
@@ -197,7 +197,7 @@ describe("fileAmadeusFinding", () => {
 
   test("maps an actionable concern to the existing enhancement label", async () => {
     let createLabels: readonly string[] = [];
-    const outcome = await fileAmadeusFinding(
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: "/project",
         kind: "concern",
@@ -208,7 +208,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          autoFileFindings: "auto",
+          creationMode: "auto",
         }),
         gateway: {
           readiness: async () => ok(undefined),
@@ -238,7 +238,7 @@ describe("fileAmadeusFinding", () => {
   test.each(["readiness", "search", "create"] as const)(
     "maps a %s failure to the typed GitHub outcome",
     async (failureAt) => {
-      const outcome = await fileAmadeusFinding(
+      const outcome = await createGithubIssueForFinding(
         {
           projectDir: "/project",
           kind: "defect",
@@ -249,7 +249,7 @@ describe("fileAmadeusFinding", () => {
         {
           resolveConfig: () => ({
             kind: "resolved",
-            autoFileFindings: "auto",
+            creationMode: "auto",
           }),
           gateway: {
             readiness: async () =>
@@ -294,7 +294,7 @@ describe("fileAmadeusFinding", () => {
       body: "marker is filtered by the fake gateway",
       state: "OPEN",
     });
-    const outcome = await fileAmadeusFinding(
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: "/project",
         kind: "defect",
@@ -305,7 +305,7 @@ describe("fileAmadeusFinding", () => {
       {
         resolveConfig: () => ({
           kind: "resolved",
-          autoFileFindings: "auto",
+          creationMode: "auto",
         }),
         gateway: {
           readiness: async () => ok(undefined),

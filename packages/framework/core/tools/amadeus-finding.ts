@@ -37,11 +37,11 @@ export type FindingCoordinatorDependencies = Readonly<{
 export type FindingConfigOutcome =
   | Readonly<{
       kind: "resolved";
-      autoFileFindings: "off" | "prompt" | "auto";
+      creationMode: "off" | "prompt" | "auto";
     }>
   | Readonly<{ kind: "invalid" }>;
 
-export type FindingFileOutcome =
+export type FindingIssueCreationOutcome =
   | Readonly<{
       kind: "created" | "existing";
       issueNumber: number;
@@ -75,19 +75,19 @@ function issueUrl(issueNumber: number): string {
   return `https://github.com/${AMADEUS_REPOSITORY.canonical}/issues/${issueNumber}`;
 }
 
-export async function fileAmadeusFinding(
+export async function createGithubIssueForFinding(
   input: AmadeusFindingInput,
   dependencies: FindingCoordinatorDependencies,
-): Promise<FindingFileOutcome> {
+): Promise<FindingIssueCreationOutcome> {
   const marker = findingMarker(input.fingerprint);
   const resolved = dependencies.resolveConfig(input.projectDir);
   if (resolved.kind === "invalid") {
     return { kind: "failure", reason: "invalid-config", marker };
   }
-  if (!input.approved && resolved.autoFileFindings === "off") {
+  if (!input.approved && resolved.creationMode === "off") {
     return { kind: "disabled", marker };
   }
-  if (!input.approved && resolved.autoFileFindings === "prompt") {
+  if (!input.approved && resolved.creationMode === "prompt") {
     return { kind: "approval-required", marker };
   }
 
@@ -144,12 +144,12 @@ export const defaultFindingDependencies = {
       ? { kind: "invalid" }
       : {
           kind: "resolved",
-          autoFileFindings: outcome.config.autoFileFindings,
+          creationMode: outcome.config.finding.github.issue.creation.mode,
         };
   },
 } satisfies Pick<FindingCoordinatorDependencies, "resolveConfig">;
 
-type FileCommand = Readonly<{
+type CreateGithubIssueCommand = Readonly<{
   projectDir: string;
   kind: FindingKind;
   title: string;
@@ -158,12 +158,12 @@ type FileCommand = Readonly<{
   approved: boolean;
 }>;
 
-type CollectedFileFlags = Readonly<{
+type CollectedCreationFlags = Readonly<{
   values: Map<string, string>;
   approved: boolean;
 }>;
 
-const FILE_VALUE_FLAGS = new Set([
+const CREATION_VALUE_FLAGS = new Set([
   "--project-dir",
   "--kind",
   "--title",
@@ -171,7 +171,7 @@ const FILE_VALUE_FLAGS = new Set([
   "--fingerprint",
 ]);
 
-function collectFileFlags(argv: readonly string[]): CollectedFileFlags {
+function collectCreationFlags(argv: readonly string[]): CollectedCreationFlags {
   const values = new Map<string, string>();
   let approved = false;
   for (let index = 1; index < argv.length; index += 1) {
@@ -180,7 +180,7 @@ function collectFileFlags(argv: readonly string[]): CollectedFileFlags {
       approved = true;
       continue;
     }
-    if (flag === undefined || !FILE_VALUE_FLAGS.has(flag)) {
+    if (flag === undefined || !CREATION_VALUE_FLAGS.has(flag)) {
       throw new Error(`unknown argument: ${flag}`);
     }
     const value = argv[index + 1];
@@ -193,7 +193,7 @@ function collectFileFlags(argv: readonly string[]): CollectedFileFlags {
   return { values, approved };
 }
 
-function requiredFileValue(
+function requiredCreationValue(
   values: ReadonlyMap<string, string>,
   flag: string,
   maxLength?: number,
@@ -216,15 +216,19 @@ function findingKind(value: string): FindingKind {
   return value;
 }
 
-function parseFileCommand(argv: readonly string[]): FileCommand {
-  if (argv[0] !== "file") throw new Error("expected the file subcommand");
-  const { values, approved } = collectFileFlags(argv);
+function parseCreateGithubIssueCommand(
+  argv: readonly string[],
+): CreateGithubIssueCommand {
+  if (argv[0] !== "create-github-issue") {
+    throw new Error("expected the create-github-issue subcommand");
+  }
+  const { values, approved } = collectCreationFlags(argv);
   return {
-    projectDir: requiredFileValue(values, "--project-dir"),
-    kind: findingKind(requiredFileValue(values, "--kind")),
-    title: requiredFileValue(values, "--title", 256),
-    bodyFile: requiredFileValue(values, "--body-file"),
-    fingerprint: requiredFileValue(values, "--fingerprint", 512),
+    projectDir: requiredCreationValue(values, "--project-dir"),
+    kind: findingKind(requiredCreationValue(values, "--kind")),
+    title: requiredCreationValue(values, "--title", 256),
+    bodyFile: requiredCreationValue(values, "--body-file"),
+    fingerprint: requiredCreationValue(values, "--fingerprint", 512),
     approved,
   };
 }
@@ -251,8 +255,8 @@ export async function runFindingCli(
   dependencies: FindingCoordinatorDependencies,
 ): Promise<FindingCliResult> {
   try {
-    const command = parseFileCommand(argv);
-    const outcome = await fileAmadeusFinding(
+    const command = parseCreateGithubIssueCommand(argv);
+    const outcome = await createGithubIssueForFinding(
       {
         projectDir: command.projectDir,
         kind: command.kind,

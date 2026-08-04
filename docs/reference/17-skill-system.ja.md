@@ -113,7 +113,7 @@ flowchart LR
 
 | サブコマンド | 役割 | 発行 |
 |------------|------|------|
-| `prepare --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <1..4>] [--degraded-from <subagent\|claude-ultra\|codex-ultra>]` | `max-parallel-units` を解決し、正準 FIFO pool を初期化して全 Unit の worktree を作る。 | `SWARM_STARTED`、`UNIT_POOL_EVENT_SET_COMMITTED`(loud downgrade 時は `SWARM_DEGRADED` も)。 |
+| `prepare --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <1..4>] [--degraded-from <subagent\|claude-ultra\|codex-ultra>]` | `swarm.unit.concurrency.limit` を解決し、正準 FIFO pool を初期化して全 Unit の worktree を作る。 | `SWARM_STARTED`、`UNIT_POOL_EVENT_SET_COMMITTED`(loud downgrade 時は `SWARM_DEGRADED` も)。 |
 | `acquire` / `confirm-dispatch` / `record-reconciliation` / `settle-release*` / `terminate-batch` / `late-result-observed` | cap 以下の slot reservation、native start fact、release と次の dependency-ready FIFO Unit の promotion、drain/termination を原子的に行う。 | `UNIT_POOL_EVENT_SET_COMMITTED`。 |
 | `check <unit> --check-cmd <cmd> [--test-file <path>]` | ステートレスな単一ユニット判定: プロジェクト自身の check コマンドを実行(exit 0 = green、権威あるシグナル — ワーカーの自己申告は決して信頼されない)し、保護されたファイルを fork-git のベースラインと比較する anti-tamper を行う。`{converged, tampered, reason}` を表示し、genuinely converged の場合にのみ exit 0。 | なし(advisory; コンダクターのリトライ決定に情報を与える)。 |
 | `finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd> [--test-file <path>] [--reasons <unit>=<reason>,…]` | 権威あるゲート: どのマージよりも前に**すべての claimed ユニットで check を再実行**し(`--claimed` で名指しされたがディスク上では red のユニットはマージを拒否され、失敗エンベロープに入る — lying-conductor ガード)、その後 genuine passes の直列化された HOLD-MERGE のマージバック。exit 0(バッチが収束しマージされた)または 2(失敗エンベロープ)。 | `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED` / `SWARM_BATON_RETURNED` / `SWARM_COMPLETED`。 |

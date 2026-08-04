@@ -79,7 +79,10 @@ function projectHost(selected: boolean, supplied: boolean): { project: string; h
   const host = join(project, ".codex");
   mkdirSync(host, { recursive: true });
   mkdirSync(join(project, "amadeus"), { recursive: true });
-  writeFileSync(join(project, "amadeus", "config.json"), `${JSON.stringify({ plugins: selected ? [PLUGIN] : [] })}\n`);
+  writeFileSync(
+    join(project, "amadeus", "config.json"),
+    `${JSON.stringify({ plugin: { activation: { names: selected ? [PLUGIN] : [] } } })}\n`,
+  );
   if (supplied) cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
   return { project, host };
 }

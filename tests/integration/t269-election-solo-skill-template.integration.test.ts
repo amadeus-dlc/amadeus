@@ -9,7 +9,7 @@ const SKILL_PATH = join(ROOT, "packages", "framework", "core", "skills", "amadeu
 const TEAM_PATH = join(ROOT, "amadeus", "spaces", "default", "memory", "team.md");
 
 const ACTIVATION_RULES =
-  "自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `\"auto-solo-election\": true` がある場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto-solo` を必ず付け、`{\"opened\":null,\"reason\":\"auto-solo-election-disabled\"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `false`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。";
+  "自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{\"opened\":null,\"reason\":\"solo-election-manual-trigger-required\"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。";
 
 const FIXED_PROCEDURE =
   "手順: 配布ビューを読む → 独立に証拠を実測する → ballot JSON(voterKind: \"subagent\", voter: <指定名>)を作成する → vote verb を自分の Bash で実行する → 受理 JSON を確認してから完了報告する。投票完了までターンを終えない。";

@@ -1,4 +1,4 @@
-// Fixture seeder for the issue #1735 auto-solo §13 probes.
+// Fixture seeder for the issue #1735 automatic solo §13 probes.
 //
 // `amadeus-learnings.ts surface` reads the state file, requires its
 // `Current Stage` to equal the requested slug, and resolves the diary through
@@ -110,7 +110,7 @@ export function seedAutoSoloS13Project(proj: string): void {
   // Solo auto-election is opt-in; this is the layered config the §13 hook reads.
   writeFileSync(
     join(proj, "amadeus", "config.json"),
-    `${JSON.stringify({ "auto-solo-election": true }, null, 2)}\n`,
+    `${JSON.stringify({ "solo-election": { trigger: { mode: "auto" } } }, null, 2)}\n`,
     "utf-8",
   );
 
