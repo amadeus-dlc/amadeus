@@ -3486,9 +3486,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:78f8ec6b10ed7f785f5334823f7bed3b71b70f23f18530237715606e68fcd1e9",
-      "anchorLines": 46,
-      "targetLines": "1-46"
+      "fingerprint": "sha256:a38019bbe255814b001a342c4f78f75ab472de1f216d672993d0dbcf8a39a21f",
+      "anchorLines": 44,
+      "targetLines": "1-44"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
