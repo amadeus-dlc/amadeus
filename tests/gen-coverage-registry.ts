@@ -264,6 +264,7 @@ export const TOOL_DESCRIPTORS: readonly ToolDescriptor[] = [
   { file: "amadeus-state.ts", kind: "switch", anchor: "subcommand" },
   { file: "amadeus-audit.ts", kind: "switch", anchor: "subcommand" },
   { file: "amadeus-bolt.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-bolt.ts", kind: "object", anchor: "handlers" },
   { file: "amadeus-jump.ts", kind: "switch", anchor: "subcommand" },
   { file: "amadeus-log.ts", kind: "switch", anchor: "subcommand" },
   { file: "amadeus-worktree.ts", kind: "switch", anchor: "subcommand" },
@@ -301,7 +302,7 @@ function balancedBlock(src: string, openIdx: number): string {
  *  Reads only top-level keys, not keys nested in handler bodies. */
 export function parseObjectDispatchKeys(src: string, anchor: string): string[] {
   // Anchor the const declaration; tolerate a type annotation before `=`.
-  const declRe = new RegExp(`\\bconst\\s+${anchor}\\b[^=]*=\\s*\\{`);
+  const declRe = new RegExp(`\\bconst\\s+${anchor}\\b[^\\n]*=\\s*\\{`);
   const m = declRe.exec(src);
   if (!m) return [];
   const block = balancedBlock(src, m.index);
@@ -372,7 +373,7 @@ export function subcommandsForTool(d: ToolDescriptor): string[] {
 export function independentSubcommandCount(d: ToolDescriptor): number {
   const src = readFileSync(join(TOOLS_DIR, d.file), "utf-8");
   if (d.kind === "object") {
-    const declRe = new RegExp(`\\bconst\\s+${d.anchor}\\b[^=]*=\\s*\\{`);
+    const declRe = new RegExp(`\\bconst\\s+${d.anchor}\\b[^\\n]*=\\s*\\{`);
     const m = declRe.exec(src);
     if (!m) return 0;
     const block = balancedBlock(src, m.index);

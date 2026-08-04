@@ -138,7 +138,7 @@ The orchestrator picks up at the per-Bolt loop. Because the worktree already exi
 
 ### 4. Merge and push
 
-When the gate approves, the standard `amadeus-bolt complete --merge --slug user-profile-api` flow merges the worktree state and audit back into the participant's local main. **Push the updated state file to origin** (`git push origin main`) — the participant's local merge updates `amadeus-state.md` (e.g., setting `Construction Autonomy Mode: autonomous` after the ladder prompt fires for the first claimant), and other participants must pull that file before they resume to inherit the workflow's mode. The conductor dispatches `amadeus-pipeline-deploy-agent` to read the team's branching strategy from `amadeus/spaces/<space>/memory/team.md` and pick the merge target + strategy. The audit log brackets each dispatch with `MERGE_DISPATCH_INVOKED` → `MERGE_DISPATCH_RETURNED` (or `MERGE_DISPATCH_FALLBACK` if the agent timed out and the conductor fell back to `org.md` defaults). Inspecting these rows after the workshop is the quickest way to confirm the team's affirmed branching was actually honoured.
+When the gate approves, the standard `amadeus-bolt complete --merge --slug user-profile-api` flow merges the worktree state and audit back into the participant's local main. **Push the updated state file to origin** (`git push origin main`) so other participants inherit the canonical Intent autonomy projection and workflow state before resuming. The conductor dispatches `amadeus-pipeline-deploy-agent` to read the team's branching strategy from `amadeus/spaces/<space>/memory/team.md` and pick the merge target + strategy. The audit log brackets each dispatch with `MERGE_DISPATCH_INVOKED` → `MERGE_DISPATCH_RETURNED` (or `MERGE_DISPATCH_FALLBACK` if the agent timed out and the conductor fell back to `org.md` defaults).
 
 ```bash
 # After amadeus-bolt complete --merge succeeds — push the merged target branch
@@ -187,13 +187,13 @@ bun .claude/tools/amadeus-bolt.ts complete --merge --slug user-profile-api
 git push origin main                      # publishes the merged result
 ```
 
-After the skeleton merges, the conductor fires the **ladder prompt** once: "How should the remaining Bolts run? Continue autonomously / Gate every Bolt." The group's choice persists in `amadeus-state.md` as `Construction Autonomy Mode`. Bob picks up that choice on his next `git fetch --all` — Alice and Bob don't need to coordinate it verbally.
+Workshop keeps Intent autonomy at `none`, so the group reviews the walking-skeleton and later batch gates. There is no post-skeleton ladder. Bob picks up the canonical mode projection on his next `git pull --ff-only`.
 
-> **What if `bolt-plan.md` marked a Bolt as walking-skeleton but practices says skeleton-off?** Practices wins. The orchestrator emits a `PRACTICES_OVERRIDE` audit row recording the conflict (`Reason: bolt-plan-marker-conflict`, plus the practices stance and the bolt-plan marker) and the marked Bolt runs as a regular Bolt — no always-gate, no ladder prompt. Practices is the team's standing voice; bolt-plan is one workflow's interpretation.
+> **What if `bolt-plan.md` marked a Bolt as walking-skeleton but practices says skeleton-off?** Practices wins. The orchestrator emits a `PRACTICES_OVERRIDE` audit row recording the conflict and the marked Bolt runs as a regular Bolt. Its gate still follows the Intent mode table.
 
 ### Parallel Bolts — Alice + Bob
 
-Both run `git fetch --all` to pick up Alice's merged main. (Both blocks below assume trunk-based — substitute `--base develop` for gitflow teams or `--base release/<version>` for release-branch teams, same as Alice's solo skeleton block above.)
+Both run `git pull --ff-only` to pick up Alice's merged main. (Both blocks below assume trunk-based — substitute `--base develop` for gitflow teams or `--base release/<version>` for release-branch teams, same as Alice's solo skeleton block above.)
 
 ```bash
 # Alice picks billing-service
@@ -328,7 +328,7 @@ The contract:
 3. **Bolts in `Bolt Refs` with a `STATE_FORKED` row but no `STATE_MERGED`**: orchestrator re-enters Phase 3 (resume code-gen).
 4. **Bolts in `Bolt Refs` with `STATE_MERGED` already**: skipped — already merged.
 5. **Survivors with `Merge-Held: true` in their forked state**: not merged. The orchestrator detects this deterministically by running `amadeus-worktree info --slug <slug>` and checking the `merge_held: boolean` field in the JSON envelope (set by the post-merge fold-in — orchestrator doesn't have to parse state files manually). It re-renders the unresolved failed-Bolt AUQs first; once cleared via `amadeus-bolt release-merge --slug <slug>`, dispatches the held merges in original batch order.
-6. **Walking-skeleton ladder prompt unset**: if the resuming session sees `Construction Autonomy Mode: unset` and the skeleton is already `[x]`, the ladder prompt fires to the resuming engineer. Whoever resumes first sets the mode; subsequent resumers inherit it via `git pull`.
+6. **Intent autonomy unavailable**: fail closed and ask for an explicit `none|semi|full` selection; never infer authority from a legacy Construction mode field. Subsequent participants inherit the canonical projection via `git pull`.
 
 Practices and autonomy mode are explicit committed artifacts in the shared repo — there's no magic state synchronisation between machines. Pull, resume, continue.
 

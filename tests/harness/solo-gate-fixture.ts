@@ -1,37 +1,23 @@
-// Shared fixture for the solo standing-grant gate transaction suites. Every
-// tests/integration/t-solo-gate-transaction*.test.ts file builds the same
-// workspace — a seeded intent whose inception gate is open, an issued standing
-// grant, and a routed carrier — so that construction lives here once and each
-// suite stays a single responsibility.
+// Shared fixture for targeted-human solo gate approval tests.
 
-import { parseAuditRecords } from "./fixtures.ts";
 import { resetOtelPerProject } from "./otel-reset.ts";
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { plantV1AuditRow } from "./v1-audit-fixture.ts";
+import type { StageEntry } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
-  directiveSelfCheckExamples,
-  type RunStageDirective,
-} from "../../packages/framework/core/tools/amadeus-directive.ts";
-import {
-  auditShardName,
-  type StageEntry,
-} from "../../packages/framework/core/tools/amadeus-lib.ts";
-import {
-  routeSoloStandingGrantDirective,
-  validateSoloStandingGrantById,
-} from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
+  armPresenceReservation,
+  hostSessionCapability,
+  mintHumanPresence,
+} from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 import {
   createTestProject,
   DEFAULT_INTENT_UUID,
   seededRecordDir,
-  seededStateFile,
   seedStateFile,
 } from "./fixtures.ts";
 import { useRealScopeData } from "./real-scope-data.ts";
-
 
 export const REPO_ROOT = join(import.meta.dir, "..", "..");
 export const STATE = join(
@@ -51,23 +37,19 @@ export const MINT = join(
   "amadeus-mint-presence.ts",
 );
 export const GRAPH_PATH = join(REPO_ROOT, ".codex", "tools", "data", "stage-graph.json");
-// The in-process half of these suites resolves the workflow scope through the
-// compiled scope-grid (standingGrantSatisfiesGate), so the same real data face
-// the spawned tools get via stateEnv must also be visible to this process.
-// Installed for the module's lifetime: every importer needs it for every test.
-useRealScopeData();
 export const GRAPH = JSON.parse(readFileSync(GRAPH_PATH, "utf-8")) as StageEntry[];
 export const STAGE = "requirements-analysis";
-export const GRANT_ID = "cafe0001";
 export const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
 export const SESSION_ID = "trusted-solo-session";
+
+useRealScopeData();
+
 const roots: string[] = [];
 
 export function cleanupSoloGateRoots(): void {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
   roots.length = 0;
 }
-
 
 export function stateEnv(root: string): Record<string, string> {
   return {
@@ -108,161 +90,9 @@ export function captureStdout(fn: () => void): string {
   return lines.join("\n");
 }
 
-export function appendGrant(
-  root: string,
-  expiresAt: string,
-  grantId: string = GRANT_ID,
-): string {
-  const intent = seededRecordDir(root).split("/").at(-1)!;
-  const human = plantV1AuditRow("HUMAN_TURN", {}, root, intent);
-  plantV1AuditRow(
-    "GRANT_ISSUED",
-    {
-      "Grant Id": grantId,
-      Scope: "stage-gates",
-      "Expires At": expiresAt,
-      "Includes Phase Boundary": "true",
-      "Issuer Space": "default",
-      "Issuer Intent": intent,
-      "Issuer Shard": auditShardName(root),
-      "Issuer Human Ts": human.timestamp,
-    },
-    root,
-    intent,
-  );
-  return human.timestamp;
-}
-
-// Scan-budget fixture sizes: E = every audit event registered in the space,
-// E_owner = the receipt owner's own events.
-export const SPACE_EVENT_BUDGET = 100;
-export const OWNER_EVENT_BUDGET = 50;
-export const SCAN_PASSES = [
-  "candidate-selection",
-  "receipt-lookup",
-  "owner-revalidation",
-] as const;
-
-// Count the rows the standing-grant SCANNER counts, across both journal
-// schemas. This has to agree with amadeus-grant-authorization.ts's own
-// predicate (auditBlockField(block, "Event") !== null), which decodes v1 and v2
-// alike: a v1-only count here silently under-reports once a grant emitter
-// migrates, so padAuditFixture lays one filler too many and the shard ends up
-// holding E_owner + 1 scanner-visible events — the scan-budget assertion then
-// fails by exactly one, blaming the production scan for a fixture arithmetic
-// error.
-function auditEventCount(content: string): number {
-  return parseAuditRecords(content).filter((record) => record.event !== null).length;
-}
-
-function fillerEvents(count: number): string {
-  let blocks = "";
-  for (let index = 0; index < count; index++) {
-    blocks += `${JSON.stringify({
-      schemaVersion: 1,
-      seq: index + 1,
-      cloneId: "fillerclone01",
-      intentId: "filler-intent",
-      timestamp: "2026-07-25T00:00:00.000Z",
-      heading: "FILLER",
-      event: "HEALTH_CHECKED",
-      fields: { Index: String(index) },
-    })}\n`;
-  }
-  return blocks;
-}
-
-// Grow the workspace to the E / E_owner budget: pad the owner's shard up to
-// E_owner and park the remaining space events in a second registered intent.
-export function padAuditFixture(
-  root: string,
-  owner: string,
-): { readonly spaceEvents: number; readonly ownerEvents: number } {
-  const ownerShard = join(owner, "audit", auditShardName(root));
-  const ownerContent = readFileSync(ownerShard, "utf-8");
-  const ownerPad = OWNER_EVENT_BUDGET - auditEventCount(ownerContent);
-  if (ownerPad < 0) throw new Error(`owner fixture already exceeds E_owner: ${-ownerPad}`);
-  writeFileSync(ownerShard, ownerContent + fillerEvents(ownerPad));
-
-  const intentsDir = join(root, "amadeus", "spaces", "default", "intents");
-  const filler = "filler-intent-0000abcd";
-  mkdirSync(join(intentsDir, filler, "audit"), { recursive: true });
-  writeFileSync(
-    join(intentsDir, filler, "amadeus-state.md"),
-    readFileSync(join(owner, "amadeus-state.md"), "utf-8"),
-  );
-  writeFileSync(
-    join(intentsDir, filler, "audit", "filler-clone.jsonl"),
-    fillerEvents(SPACE_EVENT_BUDGET - OWNER_EVENT_BUDGET),
-  );
-  const registryPath = join(intentsDir, "intents.json");
-  const registry: Array<Record<string, unknown>> = JSON.parse(readFileSync(registryPath, "utf-8"));
-  writeFileSync(
-    registryPath,
-    `${JSON.stringify(
-      [
-        ...registry,
-        {
-          uuid: "33333333-3333-4333-8333-333333333333",
-          slug: "filler-intent",
-          dirName: filler,
-          status: "in-flight",
-        },
-      ],
-      null,
-      2,
-    )}\n`,
-  );
-  const ownerEvents = auditEventCount(readFileSync(ownerShard, "utf-8"));
-  return { spaceEvents: ownerEvents + (SPACE_EVENT_BUDGET - OWNER_EVENT_BUDGET), ownerEvents };
-}
-
-export function revokeGrant(root: string, humanTs: string, grantId: string): void {
-  const intent = seededRecordDir(root).split("/").at(-1)!;
-  plantV1AuditRow(
-    "GRANT_REVOKED",
-    {
-      "Grant Id": grantId,
-      "Issuer Space": "default",
-      "Issuer Intent": intent,
-      "Issuer Shard": auditShardName(root),
-      "Issuer Human Ts": humanTs,
-    },
-    root,
-    intent,
-  );
-}
-
-// Rewrite the issued grant's Issuer Intent so the owner-lock revalidation sees
-// an issuer that is not the receipt owner (TR-23), without touching any other
-// audit field.
-export function breakGrantIssuerIntent(root: string): void {
-  const shard = join(seededRecordDir(root), "audit", auditShardName(root));
-  const content = readFileSync(shard, "utf-8");
-  const intent = seededRecordDir(root).split("/").at(-1)!;
-  let rewritten = false;
-  const lines = content.split("\n").map((line) => {
-    if (line === "") return line;
-    const record = JSON.parse(line) as { fields?: Record<string, string> };
-    if (record.fields?.["Issuer Intent"] !== intent) return line;
-    record.fields["Issuer Intent"] = "some-other-intent-00000001";
-    rewritten = true;
-    return JSON.stringify(record);
-  });
-  if (!rewritten) {
-    throw new Error(`breakGrantIssuerIntent: no record carries Issuer Intent ${intent}`);
-  }
-  writeFileSync(shard, lines.join("\n"));
-}
-
-export function setup(expiresAt: string, routeNow: number): {
-  readonly root: string;
-  readonly owner: string;
-  readonly humanTs: string;
-} {
+export function setup(..._retiredGrantArguments: unknown[]): { readonly root: string; readonly owner: string } {
   const root = createTestProject();
   roots.push(root);
-  // A new workspace begins here — drop the previous case's OTel registration.
   resetOtelPerProject();
   seedStateFile(root, "state-mid-inception.md");
   const registryPath = join(
@@ -273,51 +103,35 @@ export function setup(expiresAt: string, routeNow: number): {
     "intents",
     "intents.json",
   );
-  const registry: Array<Record<string, unknown>> = JSON.parse(readFileSync(registryPath, "utf-8"));
+  const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Array<Record<string, unknown>>;
   registry[0].dirName = seededRecordDir(root).split("/").at(-1)!;
   writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
   const phaseCheck = join(seededRecordDir(root), "verification");
   mkdirSync(phaseCheck, { recursive: true });
-  writeFileSync(
-    join(phaseCheck, "phase-check-inception.md"),
-    "# Inception phase check\n",
-  );
+  writeFileSync(join(phaseCheck, "phase-check-inception.md"), "# Inception phase check\n");
   expect(runState(root, ["gate-start", STAGE]).status).toBe(0);
-  const humanTs = appendGrant(root, expiresAt);
-  const state = readFileSync(seededStateFile(root), "utf-8");
-  const ownerIntent = seededRecordDir(root).split("/").at(-1)!;
-  const validation = validateSoloStandingGrantById(
-    root,
-    ownerIntent,
-    GRANT_ID,
-    STAGE,
-    state,
-    GRAPH,
-    routeNow,
-  );
-  if (validation.kind !== "valid") throw new Error(`fixture grant is invalid: ${validation.reason}`);
-  const example = directiveSelfCheckExamples.find(
-    (candidate) => candidate.kind === "run-stage" && candidate.gate === true,
-  );
-  if (example === undefined || example.kind !== "run-stage") throw new Error("run-stage fixture is unavailable");
-  const routedInput: RunStageDirective = {
-    ...example,
-    stage: STAGE,
-    phase: "inception",
-    gate: true,
-  };
-  const directive = routeSoloStandingGrantDirective({
-    directive: routedInput,
+  return { root, owner: seededRecordDir(root) };
+}
+
+export function armAndMintTargetedApproval(
+  root: string,
+): { readonly targetIntentId: string; readonly reservationId: string } {
+  const marker = armPresenceReservation({
     projectDir: root,
-    stateContent: state,
-    graph: GRAPH,
-    operatingMode: "solo",
-    nowMs: routeNow,
-    routeIdFactory: () => ROUTE_ID,
+    sessionId: SESSION_ID,
+    space: "default",
+    targetIntentId: DEFAULT_INTENT_UUID,
+    stage: STAGE,
+    routeId: ROUTE_ID,
   });
-  expect(directive.standing_grant_id).toBe(GRANT_ID);
-  expect(directive.standing_grant_route_id).toBe(ROUTE_ID);
-  return { root, owner: seededRecordDir(root), humanTs };
+  mintHumanPresence({
+    projectDir: root,
+    capability: hostSessionCapability(SESSION_ID),
+  });
+  return {
+    targetIntentId: marker.targetIntentId,
+    reservationId: marker.reservationId,
+  };
 }
 
 export function switchCursorToNonOwner(root: string): string {
@@ -352,8 +166,6 @@ export const SOLO_ENV_KEYS = [
 
 let savedEnv: Record<string, string | undefined> = {};
 
-// Point the in-process handlers at a fixture workspace, remembering the ambient
-// values so restoreSoloEnv can put them back.
 export function useSoloEnv(root: string): void {
   savedEnv = {};
   for (const key of SOLO_ENV_KEYS) savedEnv[key] = process.env[key];

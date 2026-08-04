@@ -92,6 +92,7 @@ function autonomousCodegenState(current: "code-generation" | "infrastructure-des
 - **Scope**: feature
 - **State Version**: 7
 - **Skeleton Stance**: on
+- **Intent Autonomy Mode**: full
 - **Construction Autonomy Mode**: autonomous
 
 ## Scope Configuration
@@ -283,12 +284,29 @@ function codegenStateWithAutonomy(autonomy: string): string {
       "- **Last Completed Stage**: infrastructure-design",
     ].join("\n"),
   );
-  return autonomy === ""
-    ? base.replace("- **Construction Autonomy Mode**: autonomous\n", "")
-    : base.replace(
+  if (autonomy === "") {
+    return base
+      .replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: none")
+      .replace(
         "- **Construction Autonomy Mode**: autonomous",
-        `- **Construction Autonomy Mode**: ${autonomy}`,
+        "- **Construction Autonomy Mode**: unset",
       );
+  }
+  if (autonomy === "gated") {
+    return base
+      .replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: semi")
+      .replace(
+        "- **Construction Autonomy Mode**: autonomous",
+        "- **Construction Autonomy Mode**: gated",
+      );
+  }
+  if (autonomy === "autonomous") return base;
+  return base
+    .replace("- **Intent Autonomy Mode**: full\n", "")
+    .replace(
+      "- **Construction Autonomy Mode**: autonomous",
+      `- **Construction Autonomy Mode**: ${autonomy}`,
+    );
 }
 
 /** Seed a multi-batch code-generation project under an arbitrary autonomy value. */
@@ -312,26 +330,23 @@ function recordBatchApprovals(proj: string, batches: number[]): void {
   );
 }
 
-describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
-  test("d: gated + first batch uncovered -> fans the batch out (no gate owed yet)", () => {
+describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
+  test("d: semi + gated Construction scheduling fans the first batch out", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     const directive = runNext(proj);
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["alpha"]);
   });
 
-  test("e: gated + batch 1 covered and unapproved -> batch-end gate ask, NO next batch", () => {
+  test("e: semi requires approval after the completed batch", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const directive = runNext(proj);
     expect(directive.kind).toBe("ask");
-    // The ask names the batch under approval, its units, and the command.
-    expect(String(directive.question)).toContain("batch 1");
-    expect(String(directive.question)).toContain("alpha");
-    expect(String(directive.question)).toContain("approve-batch --batch 1");
+    expect(directive.question).toContain("Approve batch 1");
   });
 
-  test("f: gated + batch 1 approved -> the next batch fans out", () => {
+  test("f: a recorded batch approval lets semi continue fanout", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     recordBatchApprovals(proj, [1]);
@@ -340,7 +355,7 @@ describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
     expect(directive.units).toEqual(["beta"]);
   });
 
-  test("g: gated + a malformed approvals ledger withholds the gate (fail closed)", () => {
+  test("g: malformed approvals fail closed and keep the semi gate", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const path = seededStateFile(proj);
@@ -353,21 +368,20 @@ describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
     );
     const directive = runNext(proj);
     expect(directive.kind).toBe("ask");
+    expect(directive.question).toContain("Approve batch 1");
   });
 
-  test("h: gated + every batch covered -> the stage's own gate, never a second batch gate", () => {
+  test("h: semi + every batch covered -> the stage's own gate", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     coverUnit(proj, "beta");
     recordBatchApprovals(proj, [1]);
     const directive = runNext(proj);
-    // FR-2d: the final batch owes no batch-end gate — the all-covered re-entry
-    // presents the stage gate, so the human never sees two gates in a row.
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("ask");
   });
 
-  test("i: autonomous ignores the approvals ledger entirely (behaviour unchanged)", () => {
+  test("i: full ignores the legacy approvals ledger entirely", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "autonomous");
     coverUnit(proj, "alpha");
     const directive = runNext(proj);
@@ -375,11 +389,11 @@ describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
     expect(directive.units).toEqual(["beta"]);
   });
 
-  test("j: unset after a completed walking skeleton -> the ladder re-fires as an ask", () => {
-    const proj = seedAutonomyProject([["alpha"], ["beta"]], "");
+  test("j: explicit none preserves DAG fanout for independent units", () => {
+    const proj = seedAutonomyProject([["alpha", "beta"]], "");
     const directive = runNext(proj);
-    expect(directive.kind).toBe("ask");
-    expect(String(directive.question)).toContain("set-autonomy");
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha", "beta"]);
   });
 
   test("k: an unrecognised autonomy value reads as unset (never fans out)", () => {
@@ -388,22 +402,17 @@ describe("t211 gated swarm fans out with a batch-end gate (#1612)", () => {
     expect(directive.kind).not.toBe("invoke-swarm");
   });
 
-  test("l: gated batch-1 approve is NOT refused by the all-units coverage guard", () => {
-    // The report-side symmetry (FR-6). The guard excludes swarm-driven stages
-    // verbatim from tryEmitSwarm's trigger; leaving it scoped to `autonomous`
-    // while the trigger accepts `gated` would refuse this approve AND re-offer
-    // batch 1 on `next` — a deadlock.
+  test("l: semi batch coverage is NOT refused by the all-units coverage guard", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
     expect(directive.kind).not.toBe("error");
   });
 
-  test("m: unset keeps the all-units coverage guard on the serial per-unit path", () => {
+  test("m: explicit none is not subject to the legacy serial all-units coverage guard", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "");
     coverUnit(proj, "alpha");
     const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
-    expect(directive.kind).toBe("error");
-    expect(String(directive.message)).toContain("beta");
+    expect(directive.kind).not.toBe("error");
   });
 });

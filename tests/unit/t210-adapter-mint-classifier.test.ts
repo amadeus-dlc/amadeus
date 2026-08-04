@@ -52,7 +52,11 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { guardAdvisoryChoices } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  advisoryChoicePresentationFields,
+  guardAdvisoryChoices,
+} from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -197,10 +201,10 @@ function fireMint(dir: string, adapterRel: string, target: string, stdin: string
   return r.status ?? -1;
 }
 
-function mintPayload(dir: string, prompt: string): string {
+function mintPayload(dir: string, prompt: string, sessionId = "sess-1"): string {
   return JSON.stringify({
     hook_event_name: "UserPromptSubmit",
-    session_id: "sess-1",
+    session_id: sessionId,
     cwd: dir,
     prompt,
   });
@@ -215,6 +219,18 @@ function fireCodexState(dir: string, args: string[]): { rc: number; out: string 
     { cwd: dir, encoding: "utf-8", env, timeout: 30_000 },
   );
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+}
+
+function presentPendingAdvisory(dir: string, stage: string): void {
+  const store = JSON.parse(
+    readFileSync(join(seededRecordDir(dir), ".amadeus-advisory-choice.json"), "utf-8"),
+  ) as { pending: Array<{ closedAt?: string; identity: { checkpoint: string; advisoryInstance: string } }> };
+  const instances = store.pending
+    .filter((pending) => pending.closedAt === undefined && pending.identity.checkpoint === stage)
+    .map((pending) => pending.identity.advisoryInstance);
+  const fields = advisoryChoicePresentationFields(dir, stage, instances);
+  if (!fields.ok) throw new Error(fields.reason);
+  plantV1AuditRow("DECISION_RECORDED", fields.value, dir);
 }
 
 describe("t210 non-claude adapters classify the UserPromptSubmit payload before minting (#811)", () => {
@@ -321,7 +337,7 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
     }
   });
 
-  test("Codex exact advisory choice correlates the HUMAN_TURN with a protected receipt", () => {
+  test("Codex exact advisory choice requires the immediately preceding protected presentation", () => {
     const adapter = ADAPTERS[0];
     const dir = scratchProject(adapter.distTree, adapter.installDir);
     const advisory = {
@@ -335,11 +351,19 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
     try {
       expect(guardAdvisoryChoices(dir, "build-and-test", [advisory]).kind).toBe("hold");
 
-      const mintRc = fireMint(dir, adapter.adapterRel, adapter.mintTarget, mintPayload(dir, "1"));
+      const unpresentedRc = fireMint(dir, adapter.adapterRel, adapter.mintTarget, mintPayload(dir, "1"));
+      expect(unpresentedRc).toBe(0);
+      let store = JSON.parse(
+        readFileSync(join(seededRecordDir(dir), ".amadeus-advisory-choice.json"), "utf-8"),
+      ) as { receipts: Array<{ choice: string }> };
+      expect(store.receipts).toHaveLength(0);
+
+      presentPendingAdvisory(dir, "build-and-test");
+      const mintRc = fireMint(dir, adapter.adapterRel, adapter.mintTarget, mintPayload(dir, "1", "sess-2"));
 
       expect(mintRc).toBe(0);
-      expect(eventCount(dir, "HUMAN_TURN")).toBe(1);
-      const store = JSON.parse(
+      expect(eventCount(dir, "HUMAN_TURN")).toBe(2);
+      store = JSON.parse(
         readFileSync(join(seededRecordDir(dir), ".amadeus-advisory-choice.json"), "utf-8"),
       ) as { receipts: Array<{ choice: string }> };
       expect(store.receipts.map((receipt) => receipt.choice)).toEqual(["run-now"]);

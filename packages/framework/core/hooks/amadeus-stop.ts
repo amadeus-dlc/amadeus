@@ -54,8 +54,8 @@
 //      before asking (stage-protocol.md §3); an unanswered tag is a positive
 //      signal that a question is pending, so we ALLOW the stop then too
 //      (isPendingQuestionStop below). Strictly gated: it never fires under
-//      autonomous Construction (the loop must keep running there), and any miss
-//      — no file, all answered, autonomous, or a read error — falls through to
+//      Intent autonomy `full` (the loop must keep running there), and any miss
+//      — no file, all answered, full, or a read error — falls through to
 //      the cap-bounded block, so a genuine mid-stage quit is still nudged.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
 //      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
@@ -66,7 +66,7 @@
 //      the run-mode-aware cap above is its safety net) and ALLOW the stop when
 //      the most recent genuine human prompt was answered with zero engine calls
 //      (isConversationalStop below). POSITIVE-CONFIRMATION only and fail-closed:
-//      it never fires under autonomous Construction, and any engine call in the
+//      it never fires under Intent autonomy `full`, and any engine call in the
 //      responding turn, an unreadable transcript, no human prompt found, or any
 //      parse miss falls through to the cap-bounded block. It only ever ALLOWS;
 //      it can never block more.
@@ -99,6 +99,7 @@ import {
   type StopBudgetMode,
 } from "../tools/amadeus-convergence-policy.ts";
 import { reserveStageBudget } from "../tools/amadeus-convergence-runtime.ts";
+import { readProductionAutonomyProjection } from "../tools/amadeus-intent-autonomy-production.ts";
 import {
   COMPOSE_MARKER_RELATIVE_PATH,
   COMPOSE_MARKER_TTL_MS,
@@ -126,7 +127,7 @@ const HOOK_NAME = "stop";
 // The effective durable continuation cap. Exposed as an env var so a fork can
 // lower or raise it within the canonical hard cap. With no
 // override the default is RUN-MODE aware:
-//   - autonomous Construction -> 8 (the long ceiling SPIKE 1 validated). An
+//   - semi/full Intent autonomy -> 8 (the long ceiling SPIKE 1 validated). An
 //     unattended run has no human to release it, so the loop must run far before
 //     letting go; only a genuine hang should ever hit the cap there.
 //   - interactive (everything else) -> 2. Issue #365 itself recommends
@@ -144,8 +145,8 @@ export function stopContinuationBlockCap(stateContent: string): number {
 
 // The mode-aware default cap (used when no env override is set).
 export function stopContinuationDefaultCap(stateContent: string): number {
-  const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
-  return mode === "autonomous" || mode === "gated"
+  const mode = intentAutonomyMode(stateContent);
+  return mode === "semi" || mode === "full"
     ? AUTONOMOUS_BLOCK_CAP
     : INTERACTIVE_BLOCK_CAP;
 }
@@ -154,8 +155,26 @@ const INTERACTIVE_BLOCK_CAP = 2;
 const STOP_CONTINUATION_HARD_CAP = 10;
 
 export function stopBudgetMode(stateContent: string): StopBudgetMode {
-  const mode = getField(stateContent, "Construction Autonomy Mode")?.trim();
-  return mode === "autonomous" || mode === "gated" ? mode : "interactive";
+  const mode = intentAutonomyMode(stateContent);
+  return mode === "full" ? "autonomous" : mode === "semi" ? "gated" : "interactive";
+}
+
+function intentAutonomyMode(stateContent: string): "none" | "semi" | "full" | null {
+  const mode = getField(stateContent, "Intent Autonomy Mode")?.trim();
+  return mode === "none" || mode === "semi" || mode === "full" ? mode : null;
+}
+
+function isFullyAutonomousIntent(
+  stateContent: string,
+  resolvedProjectDir: string = projectDir,
+): boolean {
+  if (intentAutonomyMode(stateContent) !== "full") return false;
+  try {
+    const projection = readProductionAutonomyProjection(resolvedProjectDir);
+    return projection?.mode === "full" && projection.currentGrant?.state === "active";
+  } catch {
+    return false;
+  }
 }
 
 export function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
@@ -332,7 +351,7 @@ export function decideStopContinuation(
 // the conductor's questions file rather than checkbox state.) Any parse error
 // falls through too: fail-open is the only safe failure mode for a hook that can
 // otherwise trap a turn.
-function isHumanWaitStop(stateContent: string): boolean {
+export function isHumanWaitStop(stateContent: string): boolean {
   try {
     const slug = currentStageSlug(stateContent);
     if (slug.length === 0) return false;
@@ -361,8 +380,7 @@ function isHumanWaitStop(stateContent: string): boolean {
 //      current stage's dir (amadeus-docs/<phase>/<slug>/, mirroring memoryPathFor)
 //      has at least one `[Answer]:` tag that is empty or underscores-only. No
 //      file, all answered, or any read error → false (fall through to the cap).
-//   2. AUTONOMY GUARD — never fires under autonomous Construction
-//      (`Construction Autonomy Mode: autonomous`). There the loop MUST keep
+//   2. AUTONOMY GUARD — never fires under Intent autonomy `full`. There the loop MUST keep
 //      running unattended (gates are skipped; a failure halt-and-asks via its
 //      own path), so a stray open question must not release the stop and strand
 //      the run waiting on a human who was told they weren't needed.
@@ -374,9 +392,9 @@ function isHumanWaitStop(stateContent: string): boolean {
 // underscores"). Scans the stage dir for any *-questions.md (the canonical name
 // is `<slug>-questions.md`, but matching the suffix is robust to the per-unit
 // Construction `{unit}` path segment the engine does not yet resolve).
-function hasPendingQuestion(slug: string, phase: string): boolean {
+function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: string = projectDir): boolean {
   if (slug.length === 0 || phase.length === 0) return false;
-  const stageDirPath = stageDir(projectDir, phase.toLowerCase(), slug);
+  const stageDirPath = stageDir(resolvedProjectDir, phase.toLowerCase(), slug);
   if (!existsSync(stageDirPath)) return false;
   let files: string[];
   try {
@@ -398,10 +416,10 @@ function hasPendingQuestion(slug: string, phase: string): boolean {
 }
 
 // The tier-2 carve-out decision: the current stage is [-] in-progress, a
-// question is pending, and we are NOT in autonomous Construction.
-function isPendingQuestionStop(stateContent: string): boolean {
+// question is pending, and Intent autonomy is not `full`.
+export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard — keep the loop alive
     }
     const slug = currentStageSlug(stateContent);
@@ -409,7 +427,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
     const row = parseCheckboxes(stateContent).find((c) => c.slug === slug);
     if (row?.state !== "in-progress") return false; // positive [-] only
     const phase = getField(stateContent, "Lifecycle Phase") ?? "";
-    return hasPendingQuestion(slug, phase);
+    return hasPendingQuestion(slug, phase, resolvedProjectDir);
   } catch {
     // Unparseable / odd content — fall through to decideBlock (never trap).
     return false;
@@ -427,7 +445,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
 // `amadeus/.amadeus-compose-pending` before presenting the gate (the engine's
 // compose dispatch print instructs it) and deletes it on approve/reject, the
 // same disk-signal discipline as tier-2's <slug>-questions.md. AUTONOMY GUARD:
-// never fires under autonomous Construction (an unattended run has no human to
+// never fires under Intent autonomy `full` (an unattended run has no human to
 // answer the gate; a stray marker must not strand it). Fail-open: any read
 // error falls through to the cap-bounded block. Front/report composes are
 // unaffected (cold start has no state file; the hook allows before this).
@@ -436,7 +454,7 @@ export function isPendingComposeStop(
   stateContent: string,
   deps: PendingComposeStopDeps = realPendingComposeStopDeps,
 ): boolean {
-  if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+  if (isFullyAutonomousIntent(stateContent, deps.projectDir)) {
     return false;
   }
 
@@ -490,7 +508,7 @@ export function isPendingComposeStop(
 //      shows a genuine human prompt answered with zero engine calls. A missing
 //      path, unreadable file, no human prompt found, or ANY engine call in the
 //      responding turn returns false (fall through to the cap-bounded block).
-//   2. AUTONOMY GUARD: never fires under autonomous Construction. There the
+//   2. AUTONOMY GUARD: never fires under Intent autonomy `full`. There the
 //      loop must keep running unattended; there is no human chatting to release.
 // Fail-closed throughout: any error returns false and the cap-bounded block stands.
 
@@ -520,7 +538,7 @@ function isInjectedHookFeedback(text: string): boolean {
 // both delivered formats; returns true ONLY with positive evidence. `format`
 // distinguishes Claude's message-shaped JSONL from Codex's {type,payload}
 // rollout. Fail-closed on every miss.
-function transcriptIsConversational(transcriptPath: string, format: "claude" | "codex"): boolean {
+export function transcriptIsConversational(transcriptPath: string, format: "claude" | "codex"): boolean {
   let raw: string;
   try {
     raw = readFileSync(transcriptPath, "utf-8");
@@ -688,13 +706,14 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
 // it shows a conversational ending turn. `transcriptPath`/`format` come from the
 // Stop payload (Claude / Codex); both are absent on Kiro, where this returns
 // false and the low interactive cap handles the chat case instead.
-function isConversationalStop(
+export function isConversationalStop(
   stateContent: string,
   transcriptPath: string | null,
   format: "claude" | "codex",
+  resolvedProjectDir: string = projectDir,
 ): boolean {
   try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard: keep the loop alive
     }
     if (transcriptPath === null || transcriptPath.length === 0) return false;
@@ -713,8 +732,8 @@ function isConversationalStop(
 // because we will not trap a turn on the engine's behalf when we cannot read a
 // directive. We pass --project-dir explicitly so the engine resolves the same
 // workspace regardless of the spawned process's cwd.
-function runEngineNextKind(): string | null {
-  const enginePath = join(projectDir, harnessDir(), "tools", "amadeus-orchestrate.ts");
+export function runEngineNextKind(resolvedProjectDir: string = projectDir): string | null {
+  const enginePath = join(resolvedProjectDir, harnessDir(), "tools", "amadeus-orchestrate.ts");
   if (!existsSync(enginePath)) return null;
   // The spawn MUST be time-bounded. Without a timeout a hung `next` (an engine
   // that never returns) would hang this hook for the whole turn — a session
@@ -723,7 +742,7 @@ function runEngineNextKind(): string | null {
   // null-return below treats as "engine could not be consulted" → fail OPEN
   // (allow the stop). Mirrors amadeus-sensor-fire.ts's bounded spawn.
   const proc = Bun.spawnSync({
-    cmd: ["bun", enginePath, "next", "--project-dir", projectDir],
+    cmd: ["bun", enginePath, "next", "--project-dir", resolvedProjectDir],
     stdout: "pipe",
     stderr: "pipe",
     timeout: ENGINE_TIMEOUT_MS,
@@ -893,24 +912,12 @@ if (kind === "done") {
 // rubber-stamping the remaining stages to force a `done`. Terminal allow only
 // (never a new block), so it can never trap a session.
 //
-// AUTONOMY GUARD (salvaged from the #365 suspend branch): an unattended
-// autonomous Construction run (`Construction Autonomy Mode: autonomous`) MUST
-// keep moving and never self-park. There is no human to resume it later, so a
-// park would strand the swarm/Bolt run waiting on someone who was told they
-// weren't needed. When autonomous, decline the parked allow and fall through to
-// the cap-bounded block below (the loop stays alive; a genuine hang still
-// releases via the durable continuation cap). This mirrors isPendingQuestionStop's
-// identical guard (:391) for consistency across every carve-out in this hook.
+// A parked directive is terminal for the current turn in every mode. In `full`
+// it can represent REPAIR_STALLED, NORM_CONFLICT, or another explicit safe-stop
+// envelope; keeping the Stop loop alive would defeat that safety boundary. The
+// Intent grant remains a separate projection and is not revoked by this allow.
 if (kind === "parked") {
-  if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
-    recordHookDrop(
-      projectDir,
-      HOOK_NAME,
-      "parked directive seen under autonomous Construction; declining the parked allow (an unattended run must not self-park), falling through to the cap-bounded block",
-    );
-  } else {
-    allowStop();
-  }
+  allowStop();
 }
 
 // `ask` / `select-intent` → the engine is explicitly waiting for human input.
@@ -956,7 +963,7 @@ if (isPendingQuestionStop(stateContent)) {
 
 // Pending-compose carve-out (tier 2b): an in-flight compose proposal is
 // awaiting the human's approve/edit/reject (the conductor's marker file is on
-// disk) and we are NOT in autonomous Construction - the conductor is parked on
+// disk) and Intent autonomy is not `full` - the conductor is parked on
 // the human exactly like a stage gate, so allow the turn to end instead of
 // nudging it back into stage execution mid-compose. Positive-confirmation only
 // (the marker), autonomy-guarded, fail-open (see isPendingComposeStop).

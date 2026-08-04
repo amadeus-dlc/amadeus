@@ -91,7 +91,16 @@ function codegenState(opts: {
   autonomy?: string;
   scope?: string;
 }): string {
-  const autonomyLine = opts.autonomy ? `\n- **Construction Autonomy Mode**: ${opts.autonomy}` : "";
+  const autonomyLine =
+    opts.autonomy === "autonomous"
+      ? "\n- **Intent Autonomy Mode**: full\n- **Construction Autonomy Mode**: autonomous"
+      : opts.autonomy === "gated"
+        ? "\n- **Intent Autonomy Mode**: semi\n- **Construction Autonomy Mode**: autonomous"
+        : opts.autonomy === "none"
+          ? "\n- **Intent Autonomy Mode**: none\n- **Construction Autonomy Mode**: unset"
+        : opts.autonomy
+          ? `\n- **Intent Autonomy Mode**: ${opts.autonomy}\n- **Construction Autonomy Mode**: unset`
+          : "";
   const skeletonBox = opts.skeleton === "complete" ? "x" : "-";
   return `# AI-DLC State Tracking
 
@@ -207,14 +216,11 @@ describe("t403 the guard stays silent on every legitimate serial path (AC-1c / N
     expect(directive.gate).toBe(false);
   });
 
-  test("e: a width-1 batch is serial by plan, so an unset grant gets the plain ladder", () => {
-    const proj = seedProject([["alpha"], ["beta"]], { skeleton: "complete" });
+  test("e: explicit none preserves the declared DAG fan-out", () => {
+    const proj = seedProject([["alpha", "beta"]], { skeleton: "complete", autonomy: "none" });
     const directive = runNext(proj);
-    expect(directive.kind).toBe("ask");
-    const text = humanText(directive);
-    expect(text).toContain("set-autonomy");
-    // The plain ladder, NOT the guard: no declared parallelism was broken.
-    expect(text).not.toContain(GUARD_OBSERVED_MARKER);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha", "beta"]);
   });
 
   test("f: no compiled DAG at all keeps today's degrade behaviour", () => {

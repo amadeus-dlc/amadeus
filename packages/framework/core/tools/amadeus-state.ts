@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
@@ -24,19 +24,16 @@ import {
   type CheckboxState,
   codekbDir,
   countCheckboxes,
-  DEFAULT_STANDING_GRANT_TTL_MS,
   docsOnlyDeclaration,
   emitError,
   errorMessage,
   extractMarkdownSection,
   fieldExists,
-  findActiveStandingGrant,
   findStageBySlug,
   findAllEvents,
   firstInScopeStageOfPhase,
   getField,
   loadStageGraph,
-  holdsAuditLock,
   humanActedSinceGate,
   humanPresenceGuardDisabled,
   isAutonomousMode,
@@ -54,7 +51,6 @@ import {
   PHASE_NUMBERS,
   parseCheckboxes,
   parseScopedCheckboxes,
-  parseIntentStatus,
   parseRefsList,
   parseStateStageSuffixes,
   readAllAuditShards,
@@ -89,7 +85,6 @@ import {
   type StageEntry,
   stageLineKey,
   stageIndex,
-  standingGrantSatisfiesGate,
   stagesInScope,
   transitionIntentStatusLocked,
   validateStageState,
@@ -107,14 +102,10 @@ import {
   worktreeStateFilePath,
   writeStateFile,
   writeFileAtomic,
-  UUID_V7_RE,
 } from "./amadeus-lib.js";
 import {
   classifyApprovalAuthority,
-  resolveStandingGrantRouteReceipt,
-  type StandingGrantScanObserver,
-  validateStandingGrantWithinLedger,
-} from "./amadeus-grant-authorization.ts";
+} from "./amadeus-approval-authorization.ts";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
@@ -139,6 +130,12 @@ import {
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
+import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import {
+  commitProductionIntentCompletion,
+  commitProductionStageGateDecision,
+  productionStageAutonomy,
+} from "./amadeus-intent-autonomy-production.ts";
 import {
   authorizeMainConductor,
   callerAuthorizationError,
@@ -991,12 +988,6 @@ function main(): void {
       case "delegate-rejection":
         handleDelegateRejection(args.slice(1));
         break;
-      case "grant-standing-delegation":
-        handleGrantStandingDelegation(args.slice(1));
-        break;
-      case "revoke-standing-delegation":
-        handleRevokeStandingDelegation(args.slice(1));
-        break;
       case "reject":
         handleReject(args.slice(1));
         break;
@@ -1041,7 +1032,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -2588,6 +2579,12 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     ...(reason ? { reason } : {}),
   });
 
+  const autonomyCompletion = commitProductionIntentCompletion({
+    projectDir: pd,
+    ...(stateOperationTarget?.intent ? { intent: stateOperationTarget.intent } : {}),
+    ...(stateOperationTarget?.space ? { space: stateOperationTarget.space } : {}),
+  });
+  assertIntentAutonomyCompletion(autonomyCompletion);
   if (!stateAlreadyCompleted) {
     operationWriteState(pd, content);
   }
@@ -2615,9 +2612,36 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       status: "Completed",
       reason: reason || null,
       timestamp,
+      workflow_result: completionWorkflowResultEnvelope(autonomyCompletion),
     })
   );
   });
+}
+
+function assertIntentAutonomyCompletion(
+  completion: ReturnType<typeof commitProductionIntentCompletion>,
+): void {
+  if (!completion.ok && completion.error !== "active-intent-required") {
+    error(`Intent autonomy completion failed: ${completion.error}`);
+  }
+}
+
+function completionWorkflowResultEnvelope(
+  completion: ReturnType<typeof commitProductionIntentCompletion>,
+): Record<string, unknown> | null {
+  if (!completion.ok) return null;
+  const result = completion.result.result;
+  return {
+    outcome: result.outcome,
+    reason_code: result.reasonCode,
+    retryable: result.retryable,
+    intent_uuid: result.intentUuid,
+    autonomy_mode: result.autonomyMode,
+    workflow_execution_state: "completed",
+    grant: result.grant,
+    evidence_fingerprint: result.evidenceFingerprint,
+    resume_condition: result.resumeCondition,
+  };
 }
 
 // Terminal completion flips the target intent's registry row to "complete".
@@ -2853,20 +2877,42 @@ function gateStartForTarget(args: string[], pd: string): void {
 // delegation's GATE slot is consumed only by GATE_APPROVED / GATE_REJECTED — an
 // interview QUESTION_ANSWERED no longer consumes it (a HUMAN_TURN is still
 // consumed by any resolution; see humanActedSinceGate for the full semantics).
-// Returns the standing-grant id that opened the gate (a `Grant Id` to stamp on
-// GATE_APPROVED), or null when a live human turn / carve-out opened it. A refusal
-// exits via error(). Standing grants (#1125) are evaluated ONLY on the approve
-// verb and ONLY in team mode: a reject is never grant-covered ( user ruling X),
-// so handleReject's call can never reach the grant branch.
+// Returns the Intent grant id that opened the gate (a `Grant Id` to stamp on
+// GATE_APPROVED), or null when a live human turn / test carve-out opened it. A
+// refusal exits via error().
 function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
   slug: string,
   verb: "approve" | "reject"
 ): string | null {
-  if (isAutonomousMode(content)) {
-    // skip the presence check — autonomous Construction has no human at the gate
-    return null;
+  if (verb === "approve") {
+    const graph = loadStageGraph();
+    const stage = findStageBySlug(slug);
+    const scope = getField(content, "Scope") ?? "feature";
+    const firstConstruction = firstInScopeStageOfPhase("construction", scope);
+    if (stage !== undefined) {
+      const next = nextInScopeStage(slug, scope, content);
+      const stageAutonomyInput = {
+        projectDir: pd,
+        stage: slug,
+        phase: stage.phase,
+        graphRevision: autonomyDigest(graph),
+        walkingSkeleton: stage.phase === "construction" && firstConstruction?.slug === slug,
+        phaseBoundary: next === null || next.phase !== stage.phase,
+      };
+      const context = productionStageAutonomy(stageAutonomyInput);
+      if (context.autoApprove) {
+        const decision = commitProductionStageGateDecision({
+          ...stageAutonomyInput,
+          stateContent: content,
+        });
+        if (decision.kind === "decided" || decision.kind === "already-decided") {
+          return decision.grantId;
+        }
+        error(`Intent autonomy refused automatic approval for "${slug}": ${decision.reason}`);
+      }
+    }
   }
   if (humanPresenceGuardDisabled()) {
     // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
@@ -2879,15 +2925,6 @@ function assertHumanPresentForGateResolution(
     // event (one human turn drives both open and this resolution). Cascade-safety
     // + freshness fall out of order; no marker file / turn counter.
     return null;
-  }
-  // No fresh human turn at this gate. A team-mode standing grant (#1125) may open
-  // an APPROVE gate it covers without a per-gate human turn — evaluated here so a
-  // grant absence leaves the original refusal behaviour byte-for-byte unchanged.
-  if (verb === "approve" && process.env.AMADEUS_OPERATING_MODE === "team") {
-    const grant = findActiveStandingGrant(pd, Date.now());
-    if (grant && standingGrantSatisfiesGate(grant, slug, content, loadStageGraph())) {
-      return grant.grantId;
-    }
   }
   error(
     `Refusing to ${verb} "${slug}": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then ${verb}. (autonomous Construction is exempt)`
@@ -3484,7 +3521,7 @@ function approveUnderLock(
   }
 }
 
-export function handleApprove(args: string[], observer?: StandingGrantScanObserver): void {
+export function handleApprove(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
   const flags = parseApproveFlags(args.slice(1));
@@ -3497,70 +3534,6 @@ export function handleApprove(args: string[], observer?: StandingGrantScanObserv
   if (authority.kind === "invalid") {
     console.error(JSON.stringify({ error: `Invalid approval authority: ${authority.reason}` }));
     process.exit(1);
-  }
-
-  if (authority.kind === "grant-backed") {
-    const space = activeSpace(pd);
-    withAuditLock(
-      pd,
-      () => {
-        const resolution = resolveStandingGrantRouteReceipt(pd, authority.routeId, observer);
-        if (resolution.kind !== "resolved") {
-          console.error(
-            JSON.stringify({
-              error:
-                `Standing grant route receipt cardinality must be exactly one; got ${resolution.count}`,
-            }),
-          );
-          process.exit(1);
-        }
-        const targetIntentId = intentUuidForRecord(pd, resolution.intent, space);
-        if (targetIntentId === null) {
-          console.error(
-            JSON.stringify({
-              error: "Standing grant route receipt owner is not exactly one in-flight intent",
-            }),
-          );
-          process.exit(1);
-        }
-        withStateOperationTarget({ intent: resolution.intent, space }, () => {
-          operationWithLock(pd, () => {
-            const freshState = operationReadState(pd);
-            if (
-              resolution.receipt.stage !== slug ||
-              resolution.receipt.grantId !== authority.grantId
-            ) {
-              printAwaitApproval(slug, targetIntentId);
-              return;
-            }
-            const validation = validateStandingGrantWithinLedger(
-              pd,
-              resolution.intent,
-              authority.grantId,
-              slug,
-              freshState,
-              loadStageGraph(),
-              Date.now(),
-              resolution.ledger,
-              observer,
-            );
-            if (validation.kind !== "valid") {
-              printAwaitApproval(slug, targetIntentId);
-              return;
-            }
-            runWithoutTransitionOutput(() => {
-              approveUnderLock(pd, slug, undefined, {
-                grantId: authority.grantId,
-              }, flags.deferWorkflowCompletion);
-            });
-            console.log(JSON.stringify({ kind: "approved" }));
-          });
-        });
-      },
-      undefined,
-      space,
-    );
-    return;
   }
 
   if (authority.kind === "targeted-human") {
@@ -3692,47 +3665,26 @@ function getFlagValue(args: string[], flag: string): string | undefined {
 
 type ApproveFlags = {
   readonly userInput?: string;
-  readonly standingGrantId?: string;
-  readonly standingGrantRouteId?: string;
   readonly targetIntentId?: string;
   readonly presenceReservationId?: string;
   readonly deferWorkflowCompletion: boolean;
 };
 
 function parseApproveFlags(args: string[]): ApproveFlags {
+  if (
+    args.includes("--standing-grant-id") ||
+    args.includes("--standing-grant-route-id")
+  ) {
+    error(
+      "Standing-grant approval carriers are retired; select Intent autonomy instead.",
+    );
+  }
   return {
     userInput: getFlagValue(args, "--user-input"),
-    standingGrantId: getFlagValue(args, "--standing-grant-id"),
-    standingGrantRouteId: getFlagValue(args, "--standing-grant-route-id"),
     targetIntentId: getFlagValue(args, "--target-intent-id"),
     presenceReservationId: getFlagValue(args, "--presence-reservation-id"),
     deferWorkflowCompletion: args.includes("--defer-workflow-completion"),
   };
-}
-
-function intentUuidForRecord(
-  pd: string,
-  intent: string,
-  space: string,
-): string | null {
-  const matches = readIntentRegistry(pd, space).filter(
-    (entry) =>
-      entry.dirName === intent &&
-      entry.status === "in-flight" &&
-      UUID_V7_RE.test(entry.uuid),
-  );
-  return matches.length === 1 ? matches[0].uuid : null;
-}
-
-function printAwaitApproval(stage: string, targetIntentId: string): void {
-  console.log(
-    JSON.stringify({
-      kind: "await-approval",
-      stage,
-      reason: "standing-grant-no-longer-authorizes",
-      target_intent_id: targetIntentId,
-    }),
-  );
 }
 
 function runWithoutTransitionOutput(fn: () => void): void {
@@ -3782,23 +3734,9 @@ function recoverCompletedTargetedApproval(
 // `amadeus-audit append` entry; it is written only by the UserPromptSubmit hook
 // in-process). Refuses when no fresh human turn backs this call, which is exactly
 // what stops an autopilot conductor from self-delegating its own gate open.
-// Resolve the standing-grant id (#1125) that authorises a delegation lacking a
-// fresh human turn, or exit via error() when none covers the target's gate. Only
-// reached when the grounding gate found no human turn; a team-mode standing grant
-// covering the TARGET intent's gate (judged against its own Scope + Skeleton
-// Stance) is the sole way past. `targetRecord` is the already-validated target
-// record dir.
-function standingGrantForDelegation(pd: string, slug: string, targetRecord: string): string {
-  const grant =
-    process.env.AMADEUS_OPERATING_MODE === "team"
-      ? findActiveStandingGrant(pd, Date.now())
-      : null;
-  if (grant) {
-    const targetState = readFileSync(join(targetRecord, "amadeus-state.md"), "utf-8");
-    if (standingGrantSatisfiesGate(grant, slug, targetState, loadStageGraph())) {
-      return grant.grantId;
-    }
-  }
+// Delegation remains grounded in a fresh real human turn. Legacy standing
+// grants are replayable diagnostics only and cannot open this path.
+function rejectUngroundedDelegation(): never {
   error(
     "Refusing to delegate approval: no real human turn on this session since the last gate resolution. Acknowledge the approval as a human, then delegate."
   );
@@ -3817,10 +3755,7 @@ export function handleDelegateApproval(args: string[]): void {
   const userInput = getFlagValue(args, "--user-input");
   const pd = resolveProjectDir(projectDir);
 
-  // Target must be a real, locally-present intent record — never scaffold one
-  // here. Resolved BEFORE the grounding gate (#1125) so a covering standing grant
-  // can be evaluated against the TARGET intent's own state (its Scope + Skeleton
-  // Stance decide whether the grant covers this gate).
+  // Target must be a real, locally-present intent record — never scaffold one.
   const targetRecord = recordDir(pd, toIntent, toSpace);
   if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
     error(`delegate-approval: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`);
@@ -3830,12 +3765,9 @@ export function handleDelegateApproval(args: string[]): void {
   // gate resolution. humanActedSinceGate reads the hook-written HUMAN_TURN
   // ledger — unforgeable by any tool a model can call — so this is the anti-
   // autopilot guard. Honour the same deterministic off-switch as the approve
-  // path so suite tests can bypass it. When no fresh human turn backs this call,
-  // a team-mode standing grant (#1125) covering the target's gate may authorise
-  // the delegation; the grant id is then stamped on the DELEGATED_APPROVAL row.
-  let grantId: string | null = null;
+  // path so suite tests can bypass it.
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
-    grantId = standingGrantForDelegation(pd, slug, targetRecord);
+    rejectUngroundedDelegation();
   }
 
   // Issuer coordinates the conductor verifies against: this session's active
@@ -3871,14 +3803,12 @@ export function handleDelegateApproval(args: string[]): void {
     "Issuer Human Ts": issuerHumanTs,
   };
   if (userInput) fields["User Input"] = userInput;
-  // Record which standing grant (#1125) authorised a human-turn-less delegation.
-  if (grantId) fields["Grant Id"] = grantId;
   // Targeted, and the targeting IS the correctness here: toIntent/toSpace name
   // the ledger being delegated INTO, which is not the issuer's own. Dropping
   // the pair would not throw — it would silently record the approval against
-  // whatever the active cursor happens to be. `User Input` and `Grant Id` are
-  // registry-optional, so a standing-grant delegation that carries neither
-  // still satisfies the required set.
+  // whatever the active cursor happens to be. `User Input` is
+  // registry-optional, so a delegation without it still satisfies the required
+  // set.
   const res = emitAuditEvent("DELEGATED_APPROVAL", fields, pd, toIntent, toSpace);
 
   console.log(
@@ -3960,8 +3890,11 @@ function handleDelegateRejection(args: string[]): void {
   // Target must be a real, locally-present intent record — never scaffold one here.
   const targetRecord = recordDir(pd, toIntent, toSpace);
   if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
+    const targetLabel = toSpace
+      ? `${toIntent} (space ${toSpace})`
+      : toIntent;
     error(
-      `delegate-rejection: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`
+      `delegate-rejection: target intent record not found: ${targetLabel}`
     );
   }
 
@@ -3991,171 +3924,6 @@ function handleDelegateRejection(args: string[]): void {
       timestamp: res.timestamp,
     })
   );
-}
-
-// Collect this (leader) session's issuer provenance coordinates — the active
-// intent record dir, its own audit shard filename, and the timestamp of the
-// latest grounding HUMAN_TURN in that shard. Shared by the standing-grant verbs
-// (#1125); mirrors the inline collection in delegate-approval / delegate-rejection
-// (same shape) so a grant carries the identical coordinates a delegation does and
-// verifyDelegatedProvenance can prove its grounding. Exits via error() on any
-// anomaly (no active intent, unresolvable shard dir, no HUMAN_TURN on disk).
-function collectIssuerProvenance(
-  pd: string,
-  verb: string
-): { issuerSpace: string; issuerIntent: string; issuerShard: string; issuerHumanTs: string } {
-  const issuerSpace = activeSpace(pd);
-  const issuerIntent = activeIntent(pd, issuerSpace);
-  if (!issuerIntent) {
-    error(`${verb}: no active intent on this (leader) session to ground the grant`);
-  }
-  const shardDir = auditShardDir(pd, issuerIntent, issuerSpace);
-  if (shardDir === null) error(`${verb}: cannot resolve this session's audit shard dir`);
-  const issuerShard = auditShardName(pd);
-  let issuerHumanTs: string | null = null;
-  try {
-    const turns = findAllEvents(readFileSync(join(shardDir, issuerShard), "utf-8"), "HUMAN_TURN");
-    if (turns.length > 0) issuerHumanTs = turns[turns.length - 1].timestamp;
-  } catch {
-    // fall through to the guard below
-  }
-  if (!issuerHumanTs) {
-    error(`${verb}: no HUMAN_TURN in this session's own audit shard (${issuerShard}); cannot ground the grant`);
-  }
-  return { issuerSpace, issuerIntent, issuerShard, issuerHumanTs };
-}
-
-// grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
-//
-// Standing delegation grants (Issue #1125): a leader session, driven by a real
-// human turn on its own ledger, issues a TIME-BOXED standing grant that opens
-// stage-gate approvals across the team for the grant's TTL without a per-gate
-// human turn. Team-mode only (env is the sole arbiter — org.md operating-mode
-// rule). Phase-boundary gates are EXCLUDED by default and require the explicit
-// --include-phase-boundary opt-in. GRANT_ISSUED carries the same issuer
-// provenance coordinates a delegation does, so the gate's verifier proves the
-// grounding rather than trusting it. Minting is refused at the general audit CLI
-// (presence-protected), so only this verb — backed by a real HUMAN_TURN — writes
-// the grant.
-export function handleGrantStandingDelegation(args: string[]): void {
-  const pd = resolveProjectDir(projectDir);
-
-  // (1) Mode validation is shared by issue, revoke, route, and commit. Both
-  // canonical modes may issue a grant; an unknown value is refused before any
-  // audit mutation.
-  const operatingMode = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
-  if (operatingMode.kind === "invalid") {
-    error(
-      `Refusing to grant standing delegation: invalid AMADEUS_OPERATING_MODE "${operatingMode.raw}" (expected "solo" or "team").`
-    );
-  }
-
-  // (2) Grounding gate — a real human must have acted on THIS session since the
-  // last gate resolution (same predicate + off-switch as delegate-approval).
-  if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
-    error(
-      "Refusing to grant standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the grant as a human, then grant."
-    );
-  }
-
-  // (3) Scope — defaults to "stage-gates"; that is the only supported value.
-  const scope = getFlagValue(args, "--scope") ?? "stage-gates";
-  if (scope !== "stage-gates") {
-    error(
-      `Refusing to grant standing delegation: unsupported --scope "${scope}" (only "stage-gates").`
-    );
-  }
-
-  // (4) TTL — defaults to DEFAULT_STANDING_GRANT_TTL_MS; an explicit value is
-  // parsed to a number and must be finite and positive (parse-don't-validate at
-  // the boundary — a type-invalid string is a loud refusal, never a fail-open).
-  let ttlMs = DEFAULT_STANDING_GRANT_TTL_MS;
-  const ttlRaw = getFlagValue(args, "--ttl-ms");
-  if (ttlRaw !== undefined) {
-    const parsed = Number(ttlRaw);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      error(
-        `Refusing to grant standing delegation: --ttl-ms must be a finite positive number, got "${ttlRaw}".`
-      );
-    }
-    ttlMs = parsed;
-  }
-
-  // (5) Phase-boundary opt-in (boolean flag).
-  const includePhaseBoundary = args.includes("--include-phase-boundary");
-  const userInput = getFlagValue(args, "--user-input");
-
-  // (6) Issuer provenance + emit GRANT_ISSUED into this session's active intent
-  // shard (default resolution — the same shard the grounding HUMAN_TURN lives in).
-  const { issuerSpace, issuerIntent, issuerShard, issuerHumanTs } =
-    collectIssuerProvenance(pd, "grant-standing-delegation");
-  const grantId = randomBytes(4).toString("hex");
-  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
-
-  const fields: Record<string, string> = {
-    "Grant Id": grantId,
-    Scope: scope,
-    "Expires At": expiresAt,
-    "Includes Phase Boundary": includePhaseBoundary ? "true" : "false",
-    "Issuer Space": issuerSpace,
-    "Issuer Intent": issuerIntent,
-    "Issuer Shard": issuerShard,
-    "Issuer Human Ts": issuerHumanTs,
-  };
-  if (userInput) fields["User Input"] = userInput;
-  emitAudit(pd, "GRANT_ISSUED", fields);
-
-  // (7) Human-readable summary to stderr; machine-readable JSON to stdout.
-  const humanLine = includePhaseBoundary
-    ? "phase-boundary gates: INCLUDED (--include-phase-boundary)"
-    : "phase-boundary gates: EXCLUDED (default; pass --include-phase-boundary to opt in)";
-  process.stderr.write(`${humanLine}\n`);
-  console.log(
-    JSON.stringify({
-      grant_id: grantId,
-      scope,
-      expires_at: expiresAt,
-      includes_phase_boundary: includePhaseBoundary,
-    })
-  );
-}
-
-// revoke-standing-delegation --grant-id <8-hex id>
-//
-// Cancel an outstanding standing grant (#1125) by id. Same grounding + team-mode
-// gates as issuance. Emits GRANT_REVOKED (Grant Id reference + issuer coordinates)
-// into this session's active intent shard; findActiveStandingGrant treats any
-// grant whose id appears in a GRANT_REVOKED block as invalid, even before expiry.
-export function handleRevokeStandingDelegation(args: string[]): void {
-  const pd = resolveProjectDir(projectDir);
-
-  const operatingMode = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
-  if (operatingMode.kind === "invalid") {
-    error(
-      `Refusing to revoke standing delegation: invalid AMADEUS_OPERATING_MODE "${operatingMode.raw}" (expected "solo" or "team").`
-    );
-  }
-  if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
-    error(
-      "Refusing to revoke standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the revocation as a human, then revoke."
-    );
-  }
-  const grantId = getFlagValue(args, "--grant-id");
-  if (!grantId) error("revoke-standing-delegation requires --grant-id <8-hex id>");
-  if (!/^[0-9a-f]{8}$/.test(grantId)) {
-    error(`revoke-standing-delegation: --grant-id must be an 8-hex id, got "${grantId}".`);
-  }
-
-  const { issuerSpace, issuerIntent, issuerShard, issuerHumanTs } =
-    collectIssuerProvenance(pd, "revoke-standing-delegation");
-  emitAudit(pd, "GRANT_REVOKED", {
-    "Grant Id": grantId,
-    "Issuer Space": issuerSpace,
-    "Issuer Intent": issuerIntent,
-    "Issuer Shard": issuerShard,
-    "Issuer Human Ts": issuerHumanTs,
-  });
-  console.log(JSON.stringify({ revoked_grant_id: grantId }));
 }
 
 // reject <slug> [--feedback <text>] — transition [?] → [R], emit GATE_REJECTED + STAGE_REVISING, increment Revision Count.

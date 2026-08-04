@@ -17,7 +17,7 @@
 // unknown-key rejection per kind. The shape guard reuses isPlainObject from
 // amadeus-lib.ts.
 
-import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
+import { isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
 
 // --- Public types ---
 
@@ -91,6 +91,13 @@ export interface RunStageDirective {
   // reviewer_max_iterations — how many review cycles before escalating to the
   // human. Default 2 when reviewer is present. Absent when no reviewer.
   reviewer_max_iterations?: number;
+  // Intent-scoped autonomy metadata is present only after a human selected
+  // semi/full. The conductor still runs the full quality ritual; auto approval
+  // changes only the final human-wait boundary.
+  intent_autonomy_mode?: "semi" | "full";
+  autonomy_auto_approve?: boolean;
+  intent_grant_id?: string;
+  quality_repair?: "active" | "error";
   // conductor_persona — set ONLY on the first run-stage of a workflow (decision
   // D-E, SPIKE 6). The engine reads `.claude/amadeus-common/conductor.md` and bakes
   // its contents here so the conductor receives its execution-quality charter
@@ -140,10 +147,6 @@ export interface RunStageDirective {
   // are applied. This lets every harness load the governance protocol without
   // re-deriving the phase transition from the graph.
   phase_boundary?: "ideation" | "inception" | "construction";
-  // Optional solo standing-grant carrier. The runtime validator enforces that
-  // both fields are present together and exactly match their canonical formats.
-  standing_grant_id?: string;
-  standing_grant_route_id?: string;
   // advisories — plugin activation advisories raised at THIS checkpoint (U5 /
   // FR-B2). The machine-readable half of a signal that used to exist only as a
   // stderr line: the conductor reads this field and relays each entry to the
@@ -328,9 +331,7 @@ export interface ParkedDirective {
 export interface AwaitApprovalDirective {
   kind: "await-approval";
   stage: string;
-  reason:
-    | "standing-grant-no-longer-authorizes"
-    | "kimi-human-approval-required";
+  reason: "kimi-human-approval-required";
   target_intent_id: string;
   presence_reservation_id: string;
 }
@@ -399,22 +400,21 @@ const RUN_STAGE_FIELDS = [
   "stage_file",
   "reviewer",
   "reviewer_max_iterations",
+  "intent_autonomy_mode",
+  "autonomy_auto_approve",
+  "intent_grant_id",
+  "quality_repair",
   "conductor_persona",
   "unit",
   "consumes_absent",
   "next_stage",
   "phase_boundary",
-  "standing_grant_id",
-  "standing_grant_route_id",
   "advisories",
 ] as const;
 
 // dispatch-subagent = run-stage fields + `worker`.
 const DISPATCH_SUBAGENT_FIELDS = [
-  ...RUN_STAGE_FIELDS.filter(
-    (field) =>
-      field !== "standing_grant_id" && field !== "standing_grant_route_id",
-  ),
+  ...RUN_STAGE_FIELDS,
   "worker",
 ] as const;
 
@@ -603,6 +603,10 @@ function checkRunStageShared(
   // an optional string, reviewer_max_iterations an optional positive integer.
   checkOptionalString(o, "reviewer", kind, errors);
   checkOptionalPositiveInteger(o, "reviewer_max_iterations", kind, errors);
+  checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);
+  checkOptionalBoolean(o, "autonomy_auto_approve", kind, errors);
+  checkOptionalString(o, "intent_grant_id", kind, errors);
+  checkOptionalEnum(o, "quality_repair", ["active", "error"] as const, kind, errors);
   // unit: optional on a run-stage directive (present only on a per-unit
   // Construction directive resolved to a concrete Unit of Work). A present
   // value must be a string; absent is valid.
@@ -619,7 +623,6 @@ function checkRunStageShared(
   // key's absence is the encoding of silence — but an explicitly empty array is
   // still structurally valid rather than an error.
   checkOptionalAdvisories(o, "advisories", kind, errors);
-  if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
 }
 
 function checkOptionalPhaseBoundary(
@@ -636,28 +639,6 @@ function checkOptionalPhaseBoundary(
   }
 }
 
-function checkStandingGrantCarrier(
-  o: Record<string, unknown>,
-  errors: string[],
-): void {
-  const hasGrantId = "standing_grant_id" in o;
-  const hasRouteId = "standing_grant_route_id" in o;
-  if (hasGrantId !== hasRouteId) {
-    errors.push("run-stage: standing grant carrier fields must be present together");
-    return;
-  }
-  if (!hasGrantId) return;
-  if (typeof o.standing_grant_id !== "string" || !GRANT_ID_RE.test(o.standing_grant_id)) {
-    errors.push("run-stage: standing_grant_id must be 8 lowercase hex");
-  }
-  if (
-    typeof o.standing_grant_route_id !== "string" ||
-    !UUID_V4_RE.test(o.standing_grant_route_id)
-  ) {
-    errors.push("run-stage: standing_grant_route_id must be UUID v4");
-  }
-}
-
 function checkAwaitApproval(
   o: Record<string, unknown>,
   errors: string[],
@@ -666,10 +647,7 @@ function checkAwaitApproval(
   checkString(o, "reason", "await-approval", errors);
   checkString(o, "target_intent_id", "await-approval", errors);
   checkString(o, "presence_reservation_id", "await-approval", errors);
-  if (
-    o.reason !== "standing-grant-no-longer-authorizes" &&
-    o.reason !== "kimi-human-approval-required"
-  ) {
+  if (o.reason !== "kimi-human-approval-required") {
     errors.push(
       "await-approval: reason must be a recognized approval fallback",
     );
@@ -814,6 +792,32 @@ function checkOptionalString(
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${kind}: ${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalBoolean(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  if (typeof o[field] !== "boolean") {
+    errors.push(`${kind}: ${field} must be boolean, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalEnum<T extends string>(
+  o: Record<string, unknown>,
+  field: string,
+  allowed: readonly T[],
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  const value = o[field];
+  if (typeof value !== "string" || !allowed.includes(value as T)) {
+    errors.push(`${kind}: ${field} must be one of ${allowed.join(" | ")}, got ${describe(value)}`);
   }
 }
 
@@ -1156,7 +1160,7 @@ export const directiveSelfCheckExamples: Directive[] = [
     {
       kind: "await-approval",
       stage: "code-generation",
-      reason: "standing-grant-no-longer-authorizes",
+      reason: "kimi-human-approval-required",
       target_intent_id: "00000000-0000-7000-8000-000000000001",
       presence_reservation_id: "12345678-1234-4abc-8def-1234567890ab",
     },

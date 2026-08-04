@@ -92,12 +92,12 @@ Events are organized into 19 categories:
 | **Initialization** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` |
 | **Navigation** | 5 | `SCOPE_CHANGED`, `SCOPE_DETECTED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `RECOMPOSED` |
 | **Interaction** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` |
-| **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` |
+| **Legacy Standing Grant Observations** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` (replay/doctor only; no new authority) |
 | **Artifact** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED` (audit-logger hook), `ARTIFACT_REUSED` |
 | **Subagent** | 2 | `SUBAGENT_STARTED` (log-subagent-start hook, only on harnesses that expose a dispatch seam), `SUBAGENT_COMPLETED` (log-subagent hook) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` |
-| **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` |
+| **Construction Bolt + Legacy Mode** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` (legacy observation) |
 | **Worktree** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` |
 | **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` |
 | **Merge Dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` |

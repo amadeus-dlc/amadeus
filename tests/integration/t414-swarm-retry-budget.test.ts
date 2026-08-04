@@ -104,9 +104,9 @@ function invalidRetry(args: string[]): { code: number; body: unknown } {
 }
 
 test("stop policy helpers bound overrides and reserve against the source adapter", () => {
-  const interactive = "- **Construction Autonomy Mode**: interactive\n";
-  const autonomous = "- **Construction Autonomy Mode**: autonomous\n";
-  const gated = "- **Construction Autonomy Mode**: gated\n";
+  const interactive = "- **Intent Autonomy Mode**: none\n- **Construction Autonomy Mode**: gated\n";
+  const autonomous = "- **Intent Autonomy Mode**: full\n- **Construction Autonomy Mode**: autonomous\n";
+  const gated = "- **Intent Autonomy Mode**: semi\n- **Construction Autonomy Mode**: autonomous\n";
   expect(stopContinuationDefaultCap(interactive)).toBe(2);
   expect(stopContinuationDefaultCap(autonomous)).toBe(8);
   expect(stopContinuationDefaultCap(gated)).toBe(8);

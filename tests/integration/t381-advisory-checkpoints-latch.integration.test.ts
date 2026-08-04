@@ -317,7 +317,7 @@ describe("t381 both emit paths enforce the advisory hold", () => {
     expect(logs.join("\n")).toContain("unresolved advisory choice");
   });
 
-  test("receiptなしのapproval carrier reportもauthority処理前に拒否される", () => {
+  test("廃止済みstanding-grant carrierはadvisory処理前に拒否される", () => {
     seedComposedProject();
     seedStateFile(proj, FIX_REQUIREMENTS);
     handleNext([], proj);
@@ -330,7 +330,7 @@ describe("t381 both emit paths enforce the advisory hold", () => {
       "--standing-grant-route-id", "00000000-0000-4000-8000-000000000001",
     ], proj);
     expect(JSON.parse(logs.join("\n")).kind).toBe("error");
-    expect(logs.join("\n")).toContain("unresolved advisory choice");
+    expect(logs.join("\n")).toContain("Standing-grant approval carriers are retired");
   });
 
   test("--single (the stage-runner path) carries advisories too", () => {

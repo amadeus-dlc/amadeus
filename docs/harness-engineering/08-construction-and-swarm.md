@@ -34,7 +34,7 @@ worth holding the whole picture before you touch any one knob.
 | The team's autonomy **posture** (a standing default) | you, the harness engineer | a rule in `packages/framework/core/memory/{team,project}.md` (data) |
 | What Units **can** parallelise | you, the harness engineer | the `units-generation` stage and its dependency DAG (data) |
 | The **convergence check** the swarm trusts | you, the harness engineer | your project's own build/test command + a protected spec (data + project config) |
-| The actual autonomy **grant** for this project | the human | the ladder prompt at runtime |
+| The actual Intent autonomy **mode/grant** | the human | Intent-scoped `none|semi|full` selection and grant confirmation |
 | The swarm **driver** selection | the operator | the `AMADEUS_USE_SWARM` environment variable |
 | The convergence **verdict**, merge-back, and audit | a tool | `amadeus-swarm.ts` (code → Developer Reference) |
 
@@ -52,23 +52,21 @@ demands. The shipped default lives in the org rule you author at
 (`org.md:28-42`). Read it as the framework's stance:
 
 - The **walking-skeleton Bolt runs first** for greenfield scopes — `mvp`,
-  `enterprise`, `feature`, `poc`, `workshop`, `infra`. Bolt 1 is solo and gated,
-  and the user approves it before the remaining Bolts run.
+  `enterprise`, `feature`, `poc`, `workshop`, `infra`. Bolt 1 is solo and has a
+  real gate; `full` may decide it inside the confirmed grant, while `none` and
+  `semi` wait for a human.
 - The **skeleton ceremony is skipped** for incremental scopes — `fix`,
   `chore`, `refactor`, `security-patch`. There is nothing to bootstrap on an existing
   codebase, so the first Bolt runs like any other.
-- After Bolt 1 ships, the **ladder prompt** fires once: "How should the
-  remaining Bolts run?" with two options, continue autonomously or gate every
-  Bolt. The chosen answer persists as `Construction Autonomy Mode` in
-  the intent's `amadeus-state.md` (under its record dir). The engine enforces
-  the prompt: past a completed walking skeleton an unset grant makes `next`
-  re-fire the ladder as an `ask` rather than executing the next Bolt.
-- `gated` selects the approval **frequency**, not the execution shape. A
-  parallel batch still fans out as a swarm under `gated`; the engine simply
-  stops at a **batch-end gate** — one `ask` covering the whole finished batch,
-  cleared by `amadeus-bolt approve-batch --batch <n>` — before it offers the
-  next batch. The final batch owes no batch-end gate: the stage's own gate
-  covers it, so gates never stack.
+- The human selects Intent autonomy as `none`, `semi`, or `full` before
+  unattended decisions. `semi` pre-approves in-phase gates but waits at phase
+  boundaries and questions. `full` requires confirmation of the displayed
+  Intent-scoped grant and may decide authorised gates and questions through
+  Intent completion.
+- Autonomy selects approval **authority**, not execution shape. Every mode fans
+  out dependency-independent Units. `none` stops at a human batch-end gate;
+  `semi` and `full` may continue according to their mode table. The final batch
+  uses the stage's own gate, so gates never stack.
 
 You shape this posture the same way you shape any rule, through the
 strict-additive layers from [Rules and the Learning Loop](05-rules-and-the-loop.md):
@@ -76,9 +74,8 @@ edit `team.md` for a team-wide stance, or `project.md` for a durable
 deviation on one project. You leave `org.md` alone — it is framework-shipped
 and inherited.
 
-What you set is the **default and the guidance**. The grant stays with the human
-at the ladder prompt, who makes the per-project call. Your rule prose is what the
-agent reads going into that prompt, so it frames the recommendation; the judgment
+What you set is the **default and the guidance**. Mode changes and `full` grant
+operations stay with a real human turn. Your rule prose frames the recommendation; the judgment
 of whether *this* project runs hands-off stays with the person at the gate. That
 is the determinism-knowledge-judgment line drawn straight through one prompt: you
 author the standing guidance (data), the agent presents it (knowledge), the human
@@ -94,21 +91,21 @@ bullet under `## Walking Skeleton` in `packages/framework/core/memory/team.md`:
 ## Walking Skeleton
 
 Until our team has shipped three clean autonomous batches, the recommended
-answer at the ladder prompt is **gate every Bolt**. Reviewers see each Bolt's
+Intent autonomy mode is **none**. Reviewers see each Bolt's
 diff before the next one starts. Revisit this default once our convergence
 checks have proven reliable.
 ```
 
 This stacks on top of the org default — the skeleton-first / skip-ceremony split
-is unchanged, and your team prose joins the agent's context at the ladder prompt.
-The human can still pick "continue autonomously" if a given project warrants it;
+is unchanged, and your team prose joins the agent's context at mode selection.
+The human can still pick `semi` or confirm a `full` grant if a given project warrants it;
 your rule shapes the recommendation while leaving the choice open. The change
 bites at the next workflow's compile boundary, exactly like every other rule edit
 — an edit mid-workflow does not retroactively change the run in flight.
 
-A team graduating to hands-off Construction for a trusted scope writes the mirror
-bullet: "For `feature` scope on this codebase, the recommended ladder answer is
-continue autonomously once the walking skeleton is green." Same file, same
+A team graduating to hands-off execution for a trusted scope writes the mirror
+bullet: "For `feature` scope on this codebase, recommend `full` and display its
+scope and decision policies for human confirmation." Same file, same
 heading, opposite recommendation.
 
 ---
@@ -309,7 +306,7 @@ and the `bolt_dag` node schema is in
 [Orchestrator](../reference/03-orchestrator.md).
 
 The user-facing side of what your posture rule governs — the walking-skeleton
-gate, the ladder prompt, the autonomy mode — is walked in
+gate and Intent autonomy mode/grant selection — is walked in
 [Phases and Stages § Construction](../guide/04-phases-and-stages.md) in the User
 Guide, and the six `SWARM_*` audit events you will see in the log are catalogued
 in [State and Audit](../guide/10-state-and-audit.md).

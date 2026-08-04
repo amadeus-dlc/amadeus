@@ -10,7 +10,7 @@
 //
 // Measured 2026-07-26 on opencode 1.18.3: the runtime triggers
 // `chat.message` with `{sessionID, agent, model, messageID, variant}` — a
-// stable per-session identity — so a solo standing-grant fallback armed in THIS
+// stable per-session identity — so a presence reservation armed for THIS
 // session mints its targeted owner HUMAN_TURN with the same semantics as
 // Claude, Codex, Cursor and Kiro CLI. When the payload carries no usable
 // identity the capability is `unavailable` and the ordinary untargeted

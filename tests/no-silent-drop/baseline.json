@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "direction": "shrink-only",
   "generatedFrom": {
-    "revision": "b97929d340b7d951d1dd842aea19425af18be531",
-    "censusDigest": "c287c52b60e88159c0f302476f058cbaee6c0f46303fed56deef19f6df305ec8",
-    "approvalDigest": "d888f26d233fb8043ca7ad2fee8a983a18d8770447fd147c3142e5a0d3ca9e2e",
-    "previousDigest": "096a9558999c593a2e13a1a20dd78ce3a6a408287db2c3e4702b11607ad3e141"
+    "revision": "ddb8ae1cd8291b07b3883ca7acad3db047bcb280",
+    "censusDigest": "b6bf74ffc7810e2a619424bf3992eeeab321b511f9fe8cce9876808b5ea34c2c",
+    "approvalDigest": "0e92854570e9dacf4664fd19ff7074b8538b32fd59283d1d48252925015ca6df",
+    "previousDigest": "91b11692bdbc92f171d3157df93985401e733ef55decbe81490b5e3a50be582c"
   },
   "entries": [
     {
@@ -694,15 +694,6 @@
     },
     {
       "fingerprint": "562d2a30466115fd7f1427284158d7219ef5ff14207c9e8edf6490aa09acfad7",
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/tools/amadeus-state.ts",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
-      "fingerprint": "56fefececd27707e8c9ab14ec11fe58de312898a34d8ed9368dbf21a061dd1b7",
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-state.ts",
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",

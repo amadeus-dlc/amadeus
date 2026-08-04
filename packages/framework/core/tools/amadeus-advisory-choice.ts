@@ -4,14 +4,17 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   activeIntent,
   activeIntentUuid,
+  auditBlockField,
   auditFilePath,
   auditShardName,
   docsRoot,
   findAllEvents,
   isPlainObject,
+  splitAuditRecords,
   withAuditLock,
   writeFileAtomic,
 } from "./amadeus-lib.ts";
+import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
 import {
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
@@ -56,6 +59,8 @@ export type AdvisoryChoiceReceipt = {
   choice: AdvisoryChoice;
   humanTurn: HumanTurnProvenance;
   recordedAt: string;
+  revokedAt?: string;
+  revocationReason?: "misattributed-unpresented-choice";
 };
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; reason: string };
@@ -346,7 +351,22 @@ export function parseAdvisoryChoiceReceipt(value: unknown): ParseResult<Advisory
   if (!nonEmptyString(value.recordedAt) || Number.isNaN(Date.parse(value.recordedAt))) {
     return { ok: false, reason: "recordedAt is invalid" };
   }
+  const revocationProblem = receiptRevocationProblem(value);
+  if (revocationProblem !== null) return { ok: false, reason: revocationProblem };
   return { ok: true, value: value as unknown as AdvisoryChoiceReceipt };
+}
+
+function receiptRevocationProblem(value: Record<string, unknown>): string | null {
+  if ((value.revokedAt === undefined) !== (value.revocationReason === undefined)) {
+    return "receipt revocation fields must appear together";
+  }
+  if (value.revokedAt === undefined) return null;
+  if (!nonEmptyString(value.revokedAt) || Number.isNaN(Date.parse(value.revokedAt))) {
+    return "revokedAt is invalid";
+  }
+  return value.revocationReason === "misattributed-unpresented-choice"
+    ? null
+    : "revocationReason is invalid";
 }
 
 export function createPendingAdvisory(
@@ -375,6 +395,14 @@ function identityKey(identity: AdvisoryIdentity): string {
   ]);
 }
 
+function activeReceiptMatches(
+  receipt: AdvisoryChoiceReceipt,
+  pending: PendingAdvisory,
+): boolean {
+  return receipt.revokedAt === undefined &&
+    identityKey(receipt.identity) === identityKey(pending.identity);
+}
+
 function correlationKey(identity: Omit<AdvisoryIdentity, "advisoryInstance">): string {
   return JSON.stringify([
     identity.plugin,
@@ -394,7 +422,7 @@ export function evaluateAdvisoryHold(
   const unresolved: PendingAdvisory[] = [];
   for (const item of pending) {
     const receipt = receipts
-      .filter((candidate) => identityKey(candidate.identity) === identityKey(item.identity))
+      .filter((candidate) => activeReceiptMatches(candidate, item))
       .at(-1);
     if (receipt === undefined) unresolved.push(item);
     else matched.push(receipt);
@@ -475,6 +503,92 @@ function directiveItem(pending: PendingAdvisory): AdvisoryChoiceDirectiveItem {
   };
 }
 
+const ADVISORY_PRESENTATION_RATIONALE_PREFIX = "Advisory instances: ";
+
+function advisoryPresentationRationale(pending: readonly PendingAdvisory[]): string {
+  const question = renderAdvisoryChoiceQuestion(pending);
+  return `${ADVISORY_PRESENTATION_RATIONALE_PREFIX}${pending.map((item) => item.identity.advisoryInstance).join(",")}; question-sha256:${createHash("sha256").update(question).digest("hex")}`;
+}
+
+export function advisoryChoicePresentationFields(
+  projectDir: string,
+  stage: string,
+  advisoryInstances: readonly string[],
+): ParseResult<Record<string, string>> {
+  return withAuditLock(projectDir, () => {
+    if (!nonEmptyString(stage) || advisoryInstances.length === 0 || advisoryInstances.some((item) => !nonEmptyString(item))) {
+      return { ok: false, reason: "stage and advisory instances are required" };
+    }
+    const storeResult = readStore(projectDir);
+    if (!storeResult.ok) return storeResult;
+    const intentRun = intentRunIdentity(projectDir);
+    if (intentRun === null) return { ok: false, reason: "active intent is unresolved" };
+    const byInstance = new Map(
+      storeResult.value.pending
+        .filter((pending) =>
+          pending.closedAt === undefined
+          && pending.identity.checkpoint === stage
+          && pending.identity.intentRun === intentRun
+        )
+        .map((pending) => [pending.identity.advisoryInstance, pending] as const),
+    );
+    const pending = advisoryInstances.map((instance) => byInstance.get(instance));
+    if (pending.some((item) => item === undefined) || new Set(advisoryInstances).size !== advisoryInstances.length) {
+      return { ok: false, reason: "advisory instances do not match the open checkpoint" };
+    }
+    return {
+      ok: true,
+      value: {
+        Stage: stage,
+        Decision: renderAdvisoryChoiceQuestion(pending as PendingAdvisory[]),
+        Options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label).join(","),
+        Rationale: advisoryPresentationRationale(pending as PendingAdvisory[]),
+      },
+    };
+  });
+}
+
+function hasMatchingAdvisoryPresentation(
+  projectDir: string,
+  pending: readonly PendingAdvisory[],
+  humanTurn: HumanTurnProvenance,
+): boolean {
+  if (pending.length === 0) return false;
+  let blocks: string[];
+  try {
+    blocks = splitAuditRecords(readFileSync(auditFilePath(projectDir), "utf-8"));
+  } catch {
+    return false;
+  }
+  const currentIndex = blocks.findIndex((block) =>
+    auditBlockField(block, "Event") === "HUMAN_TURN"
+    && auditBlockField(block, "Timestamp") === humanTurn.timestamp
+    && createHash("sha256").update(block).digest("hex") === humanTurn.eventIdentity
+  );
+  if (currentIndex < 0) return false;
+  let previousHumanIndex = -1;
+  for (let index = currentIndex - 1; index >= 0; index -= 1) {
+    if (auditBlockField(blocks[index]!, "Event") === "HUMAN_TURN") {
+      previousHumanIndex = index;
+      break;
+    }
+  }
+  const expected = {
+    Stage: pending[0]!.identity.checkpoint,
+    Decision: renderAdvisoryChoiceQuestion(pending),
+    Options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label).join(","),
+    Rationale: advisoryPresentationRationale(pending),
+  };
+  for (let index = currentIndex - 1; index > previousHumanIndex; index -= 1) {
+    const block = blocks[index]!;
+    if (auditBlockField(block, "Event") !== "DECISION_RECORDED") continue;
+    return ["Stage", "Options", "Rationale"].every((field) =>
+      auditBlockField(block, field) === expected[field as keyof typeof expected]
+    );
+  }
+  return false;
+}
+
 export function guardAdvisoryChoices(
   projectDir: string,
   stage: string,
@@ -552,7 +666,7 @@ function hasVerifiedModelCheckAttempt(
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
   const attempts = receipts.filter((receipt) =>
-    identityKey(receipt.identity) === identityKey(pending.identity) && receipt.choice === "run-now"
+    activeReceiptMatches(receipt, pending) && receipt.choice === "run-now"
   ).length;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     if (verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt).kind === "verified-not-detected") return true;
@@ -596,7 +710,7 @@ function resolveRunRequiredHold(
   const directiveItems: AdvisoryChoiceDirectiveItem[] = [];
   const formalChecks: AdvisoryFormalCheckRoute[] = [];
   for (const pending of pendingItems) {
-    const matching = receipts.filter((receipt) => identityKey(receipt.identity) === identityKey(pending.identity));
+    const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
     if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
@@ -692,12 +806,11 @@ export function advisoryReportHoldReason(projectDir: string, stage: string): str
     const failures = verdict.pending.flatMap((item) => {
       if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
       const latest = verdict.receipts
-        .filter((receipt) => identityKey(receipt.identity) === identityKey(item.identity))
+        .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
       if (latest?.choice !== "run-now") return [];
       const attempt = storeResult.value.receipts.filter((receipt) =>
-        identityKey(receipt.identity) === identityKey(item.identity)
-        && receipt.choice === "run-now"
+        activeReceiptMatches(receipt, item) && receipt.choice === "run-now"
       ).length;
       const outcome = verifyAdvisoryModelCheckOutcome(projectDir, item, attempt);
       if (outcome.kind === "verified-not-detected") return [];
@@ -727,13 +840,25 @@ function acceptsFreshChoice(
   pending: PendingAdvisory,
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
-  const matching = receipts.filter((receipt) => identityKey(receipt.identity) === identityKey(pending.identity));
+  const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
   const latest = matching.at(-1);
   if (latest === undefined) return true;
   if (latest.choice === "defer-with-risk") return false;
   const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
   const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
   return outcome.kind === "detected" || outcome.kind === "harness-error" || outcome.kind === "invalid";
+}
+
+function isGroundedHumanTurn(projectDir: string, humanTurn: HumanTurnProvenance): boolean {
+  try {
+    return findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN")
+      .some((event) =>
+        event.timestamp === humanTurn.timestamp
+        && createHash("sha256").update(event.block).digest("hex") === humanTurn.eventIdentity
+      );
+  } catch {
+    return false;
+  }
 }
 
 export function recordProtectedAdvisoryChoice(
@@ -749,17 +874,7 @@ export function recordProtectedAdvisoryChoice(
     if (!storeResult.ok) return false;
     const store = storeResult.value;
     if (humanTurn.shard !== auditShardName(projectDir)) return false;
-    let grounded = false;
-    try {
-      grounded = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN")
-        .some((event) =>
-          event.timestamp === humanTurn.timestamp
-          && createHash("sha256").update(event.block).digest("hex") === humanTurn.eventIdentity
-        );
-    } catch {
-      return false;
-    }
-    if (!grounded) return false;
+    if (!isGroundedHumanTurn(projectDir, humanTurn)) return false;
     if (store.receipts.some((receipt) =>
       receipt.humanTurn.eventIdentity === humanTurn.eventIdentity
       && receipt.humanTurn.shard === humanTurn.shard
@@ -771,6 +886,7 @@ export function recordProtectedAdvisoryChoice(
         acceptsFreshChoice(projectDir, pending, store.receipts),
     );
     if (open.length === 0) return false;
+    if (!hasMatchingAdvisoryPresentation(projectDir, open, humanTurn)) return false;
     for (const pending of open) {
       store.receipts.push({
         schema: 1,
@@ -783,4 +899,69 @@ export function recordProtectedAdvisoryChoice(
     writeStore(projectDir, store);
     return true;
   });
+}
+
+export function revokeMisattributedAdvisoryChoice(
+  projectDir: string,
+  advisoryInstance: string,
+  humanTurnIdentity: string,
+  now: string = new Date().toISOString(),
+): { ok: true } | { ok: false; reason: string } {
+  return withAuditLock(projectDir, () => {
+    const storeResult = readStore(projectDir);
+    if (!storeResult.ok) return { ok: false, reason: storeResult.reason };
+    const open = storeResult.value.pending.filter((item) =>
+      item.closedAt === undefined && item.identity.advisoryInstance === advisoryInstance
+    );
+    if (open.length === 0) return { ok: false, reason: "open advisory instance not found" };
+    const matching = storeResult.value.receipts.filter((receipt) =>
+      receipt.revokedAt === undefined
+      && receipt.humanTurn.eventIdentity === humanTurnIdentity
+      && open.some((pending) => identityKey(receipt.identity) === identityKey(pending.identity))
+    );
+    const receipt = matching.at(-1);
+    if (receipt === undefined) {
+      return { ok: false, reason: "matching latest receipt not found" };
+    }
+    const pending = open.find((item) => identityKey(item.identity) === identityKey(receipt.identity));
+    if (pending === undefined) return { ok: false, reason: "open advisory identity not found" };
+    if (receipt.choice !== "run-now") return { ok: false, reason: "only run-now receipts can be corrected" };
+    if (hasMatchingAdvisoryPresentation(projectDir, [pending], receipt.humanTurn)) {
+      return { ok: false, reason: "receipt is grounded in a matching advisory presentation" };
+    }
+    const attempt = matching.filter((item) => item.choice === "run-now").length;
+    if (verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt).kind !== "not-run") {
+      return { ok: false, reason: "model-check evidence exists for this receipt" };
+    }
+    receipt.revokedAt = now;
+    receipt.revocationReason = "misattributed-unpresented-choice";
+    writeStore(projectDir, storeResult.value);
+    return { ok: true };
+  });
+}
+
+function cliFlag(args: string[], name: string): string | null {
+  const index = args.indexOf(name);
+  return index >= 0 && index + 1 < args.length ? args[index + 1]! : null;
+}
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  if (args[0] !== "correct-misattributed") {
+    console.error("Usage: amadeus-advisory-choice.ts correct-misattributed --advisory-instance <id> --human-turn <sha256> [--project-dir <path>]");
+    process.exit(1);
+  }
+  const advisoryInstance = cliFlag(args, "--advisory-instance");
+  const humanTurn = cliFlag(args, "--human-turn");
+  const projectDir = resolve(cliFlag(args, "--project-dir") ?? process.cwd());
+  if (advisoryInstance === null || humanTurn === null) {
+    console.error("Missing --advisory-instance or --human-turn");
+    process.exit(1);
+  }
+  const result = revokeMisattributedAdvisoryChoice(projectDir, advisoryInstance, humanTurn);
+  if (!result.ok) {
+    console.error(result.reason);
+    process.exit(1);
+  }
+  console.log(JSON.stringify({ corrected: true, advisory_instance: advisoryInstance }));
 }

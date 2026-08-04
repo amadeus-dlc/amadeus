@@ -19,6 +19,8 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
+import { projectIntentAutonomyStatus } from "./amadeus-intent-autonomy-runtime.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
@@ -111,7 +113,6 @@ import {
   setStageSuffix,
   scopeGridPath,
   scopesDir,
-  findActiveStandingGrant,
   stagesInScope,
   stateFilePath,
   withAuditLock,
@@ -316,6 +317,38 @@ function handleVersion(): void {
 // status
 // ---------------------------------------------------------------------------
 
+// `null` is the rendered "unavailable" terminal, not a swallowed failure: a
+// status read must never trap the caller on an unreadable audit projection, and
+// renderAutonomyStatus says so out loud.
+function readStatusAutonomy(
+  projectDir: string,
+  intent: string | undefined,
+  space: string | undefined,
+): ReturnType<typeof projectIntentAutonomyStatus> | null {
+  try {
+    const projection = readProductionAutonomyProjection(projectDir, intent, space);
+    return projection === null ? null : projectIntentAutonomyStatus(projection);
+  } catch {
+    return null;
+  }
+}
+
+function renderAutonomyStatus(
+  autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null,
+): string {
+  if (autonomy === null) return "Autonomy:       unavailable (audit projection unavailable)";
+  return [
+    `Autonomy:       ${autonomy.autonomyMode}`,
+    `Grant:          ${autonomy.grant === null ? "none" : `${autonomy.grant.id} (${autonomy.grant.state})`}`,
+    `Grant Scope:    ${autonomy.grant?.scopeFingerprint ?? "none"}`,
+    `Workflow State: ${autonomy.workflowExecutionState ?? "completed"}`,
+    `Policies:       ${autonomy.grant?.policyCount ?? 0}`,
+    `Unreviewed:     ${autonomy.unreviewedAutoDecisionCount}`,
+    `Stop Reason:    ${autonomy.suspendedReason ?? "none"}`,
+    `Resume:         ${autonomy.resumeCondition === null ? "none" : JSON.stringify(autonomy.resumeCondition)}`,
+  ].join("\n");
+}
+
 function handleStatus(projectDir: string, flags: Record<string, string>): void {
   // --intent <record> / --space <name> target a specific intent's status
   // (vision §5); omitted -> the active record.
@@ -345,6 +378,7 @@ To get started:
   const activeAgent = getField(content, "Active Agent") || "None";
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
+  const autonomy = readStatusAutonomy(projectDir, flags.intent, flags.space);
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
@@ -440,6 +474,24 @@ To get started:
     phaseProgress += `  ${(phaseLabels[p] || p).padEnd(16)} ${bar} ${done}/${phaseCheckboxes.length}\n`;
   }
 
+  if (flags.json === "true") {
+    process.stdout.write(`${JSON.stringify({
+      project,
+      scope,
+      phase,
+      currentStage,
+      status: statusLine,
+      activeAgent,
+      completion: { completed, total, skipped, percent: pct },
+      lastCompleted,
+      nextStage,
+      autonomy,
+    })}\n`);
+    return;
+  }
+
+  const autonomyLines = renderAutonomyStatus(autonomy);
+
   const output = `AI-DLC Workflow Status
 ==============================
 Project:        ${project}
@@ -449,6 +501,7 @@ Current Stage:  ${stageDisplay}
 Status:         ${statusLine}
 Active Agent:   ${activeAgent}
 Completion:     ${completed}/${total} stages (${pct}%)${skipped > 0 ? ` — ${skipped} skipped` : ""}
+${autonomyLines}
 
 Phase Progress:
 ${phaseProgress}
@@ -621,6 +674,31 @@ function doctorArtifactNames(graph: readonly DeepReadonly<GraphStage>[]): string
   return [...names].sort();
 }
 
+function resolvePiDoctorChecks(
+  projectDir: string,
+  resolvedHarnessDir: string,
+  platform: NodeJS.Platform,
+  piAgentDir: string,
+): readonly PiDoctorCheck[] {
+  if (resolvedHarnessDir !== ".pi") return [];
+  const piExecutable = Bun.which("pi") ?? undefined;
+  const piVersionOutput = piExecutable === undefined
+    ? ""
+    : (Bun.spawnSync([piExecutable, "--version"], {
+        stdout: "pipe",
+        stderr: "ignore",
+        timeout: 5_000,
+      }).stdout?.toString() ?? "");
+  return probePiDoctor({
+    projectDir,
+    platform,
+    bunVersion: Bun.version,
+    piExecutable,
+    piVersionOutput,
+    piAgentDir,
+  });
+}
+
 export function resolveDoctorContext(projectDir: string): DoctorContext {
   const resolvedHarnessDir = harnessDir();
   const resolvedRulesSubdir = rulesSubdir();
@@ -653,21 +731,8 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const teamPrerequisites = deepFreezeDoctorSnapshot(
     detectTeamPrerequisites(process.env, probeExecutable),
   );
-  const piPath = resolvedHarnessDir === ".pi" ? Bun.which("pi") ?? undefined : undefined;
-  const piVersionOutput = piPath === undefined
-    ? ""
-    : (Bun.spawnSync([piPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "");
   const piDoctorChecks = deepFreezeDoctorSnapshot(
-    resolvedHarnessDir === ".pi"
-      ? probePiDoctor({
-        projectDir,
-        platform,
-        bunVersion: Bun.version,
-        piExecutable: piPath,
-        piVersionOutput,
-        piAgentDir,
-      })
-      : [],
+    resolvePiDoctorChecks(projectDir, resolvedHarnessDir, platform, piAgentDir),
   );
   // The plugin host root is the HARNESS dir under the project dir (#1591 ruling
   // B) — the same root compose writes to and the engine reads plugin stages
@@ -1268,26 +1333,6 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
   return classifyPhaseProgressConsistency(scanned);
 }
 
-// Standing delegation grant status (#1125). Reports the newest currently-valid
-// standing grant (its scope, remaining TTL in minutes, phase-boundary opt-in, and
-// issuer intent) or "none" when per-gate approval is in force. Always pass:true —
-// the presence OR absence of a grant is a healthy state, this is informational.
-// `now` is a parameter so the in-process test drives it deterministically.
-export function standingGrantDoctorCheck(projectDir: string, now: number): DoctorCheck {
-  const grant = findActiveStandingGrant(projectDir, now);
-  if (grant === null) {
-    return { pass: true, label: "Standing delegation grant: none (per-gate approval required)" };
-  }
-  const remainingMin = Math.max(0, Math.round((grant.expiresAtMs - now) / 60000));
-  const phaseBoundary = grant.includesPhaseBoundary ? "INCLUDED" : "EXCLUDED";
-  return {
-    pass: true,
-    label:
-      `Standing delegation grant: ${grant.scope} / ${remainingMin}m left / ` +
-      `phase-boundary ${phaseBoundary} / issuer ${grant.issuerIntent}`,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Elections registry ⇄ directory drift (advisory) — U4 doctor-drift-check.
 //
@@ -1870,18 +1915,13 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // tested settingsDoctorCheck seam and handleDoctor wiring is covered by t257.
   results.push(settingsDoctorCheck(projectDir));
 
-  // 4c. Standing delegation grant (#1125) — informational: is a team-mode
-  // standing grant currently opening stage gates, or is per-gate approval in
-  // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
-  results.push(standingGrantDoctorCheck(projectDir, nowMs));
-
-  // 4d. Elections registry ⇄ directory drift (advisory) — does the default
+  // 4c. Elections registry ⇄ directory drift (advisory) — does the default
   // space's elections.json agree with the on-disk election dirs? Always
   // pass:true (ruling E-SRCAD3); judgment lives in the in-process-tested
   // electionsRegistryDriftDoctorCheck / composeElectionsDriftLabel seam.
   results.push(electionsRegistryDriftDoctorCheck(projectDir));
 
-  // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
+  // 4d. Workspace shell ready (P4: no --init artifact to check). Readiness is the
   // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
   // default space's memory dir present (the source of truth the native include
   // resolves). Three states — see classifyWorkspaceShellState (#844): engine dir
@@ -4592,6 +4632,8 @@ ${stageProgress}
 - **Current Stage**: ${firstPostInit}
 - **Next Stage**: ${nextStageName}
 - **Status**: Running
+- **Intent Autonomy Mode**: none
+- **Intent Grant**: none
 - **Construction Autonomy Mode**: unset
 - **Last Updated**: ${ts}
 
