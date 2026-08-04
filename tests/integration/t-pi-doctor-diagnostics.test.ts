@@ -122,6 +122,23 @@ describe("Pi doctor closed diagnostics", () => {
     expect(packageCheck?.observed).toContain("invalid resource descriptor");
   });
 
+  test("keeps skill resources inside the closed amadeus skill directory", () => {
+    const fixture = healthyFixture();
+    const catalogPath = join(fixture.projectDir, ".pi", "tools", "data", "harness.json");
+    const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
+    catalog.resources[0] = {
+      ...catalog.resources[0],
+      kind: "skill",
+      load: "native",
+      destination: ".pi/skills/unowned.md",
+    };
+    writeJson(catalogPath, catalog);
+
+    const packageCheck = diagnose(fixture).find((row) => row.id === "pi.package-resource");
+    expect(packageCheck?.pass).toBe(false);
+    expect(packageCheck?.observed).toContain("invalid resource descriptor");
+  });
+
   test("structured snapshots and rendered labels redact paths, credentials, and secrets", () => {
     const fixture = healthyFixture();
     const checks = diagnose(fixture, {
@@ -135,6 +152,17 @@ describe("Pi doctor closed diagnostics", () => {
     expect(output).not.toContain("top-secret");
 
     const raw = `${fixture.projectDir} ${fixture.agentDir} https://alice:hunter2@example.test token=abc123`;
+    const injected: PiDoctorCheck = {
+      id: "pi.project-trust",
+      pass: false,
+      observed: raw,
+      expected: raw,
+      remediation: raw,
+    };
+    const injectedLabel = piDoctorCheckLabel(injected, fixture.projectDir, fixture.agentDir);
+    expect(injectedLabel).not.toContain(fixture.projectDir);
+    expect(injectedLabel).not.toContain("hunter2");
+    expect(injectedLabel).not.toContain("abc123");
     const redacted = redactPiDoctorText(raw, fixture.projectDir, fixture.agentDir);
     expect(redacted).not.toContain(fixture.projectDir);
     expect(redacted).not.toContain("hunter2");

@@ -104,9 +104,8 @@ async function applyAndPersist(
   const applied = ports.transactionCoordinator === undefined
     ? await Applier.create(ports.applyWrite).apply(plan, target)
     : await ports.transactionCoordinator.apply(plan, target, manifest);
-  if (applied.hasFailures() || ports.transactionCoordinator !== undefined) {
-    return { applied, manifestError: null };
-  }
+  if (applied.hasFailures()) return { applied, manifestError: null };
+  if (ports.transactionCoordinator !== undefined) return { applied, manifestError: null };
   const written = await ports.manifestIo.write(target, manifest);
   return { applied, manifestError: written.type === "err" ? written.error : null };
 }

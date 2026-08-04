@@ -155,6 +155,34 @@ describe("SetupTransactionCoordinator", () => {
     expect(retried.hasFailures()).toBe(false);
   });
 
+  test("retries when another contender removes the same stale lock first", async () => {
+    const sample = fixture();
+    writeFileSync(join(sample.source, "amadeus-tool.ts"), "new\n");
+    const entries = [entry("amadeus-tool.ts", "new\n", "add")];
+    const lockDir = join(sample.privateRoot, "lock");
+    mkdirSync(lockDir, { recursive: true, mode: 0o700 });
+    chmodSync(sample.privateRoot, 0o700);
+    chmodSync(lockDir, 0o700);
+    const priorOwner = Bun.spawn([process.execPath, "-e", "process.exit(0)"], { stdout: "ignore", stderr: "ignore" });
+    await priorOwner.exited;
+    writeFileSync(join(lockDir, "owner.json"), `${JSON.stringify({ pid: priorOwner.pid })}\n`);
+    chmodSync(join(lockDir, "owner.json"), 0o600);
+    let removedByContender = false;
+
+    const result = await SetupTransactionCoordinator.create({
+      privateRoot: () => sample.privateRoot,
+      beforeIo: (event) => {
+        if (!removedByContender && event.operation === "remove-stale-lock-owner") {
+          removedByContender = true;
+          rmSync(lockDir, { recursive: true });
+        }
+      },
+    }).apply(plan(sample.source, entries), sample.target, manifest(entries));
+
+    expect(removedByContender, JSON.stringify(result.failures())).toBe(true);
+    expect(result.hasFailures()).toBe(false);
+  });
+
   test("reports both the apply and rollback failures without masking the original", async () => {
     const sample = fixture();
     writeFileSync(join(sample.target, "amadeus-tool.ts"), "old\n");
@@ -175,6 +203,26 @@ describe("SetupTransactionCoordinator", () => {
     expect(result.hasFailures()).toBe(true);
     expect(result.failures()[0]?.detail).toContain("apply injection");
     expect(result.failures()[0]?.detail).toContain("rollback also failed");
+  });
+
+  test("reports both the committed cleanup failure and its failed recovery", async () => {
+    const sample = fixture();
+    writeFileSync(join(sample.source, "amadeus-tool.ts"), "new\n");
+    const entries = [entry("amadeus-tool.ts", "new\n", "add")];
+    let cleanupAttempts = 0;
+    const result = await SetupTransactionCoordinator.create({
+      privateRoot: () => sample.privateRoot,
+      beforeIo: (event) => {
+        if (event.operation !== "unlink" || !event.path.includes("/staging/")) return;
+        cleanupAttempts += 1;
+        throw new Error(cleanupAttempts === 1 ? "initial cleanup injection" : "recovery cleanup injection");
+      },
+    }).apply(plan(sample.source, entries), sample.target, manifest(entries));
+
+    expect(result.hasFailures()).toBe(true);
+    expect(result.failures()[0]?.operation).toBe("recovery");
+    expect(result.failures()[0]?.detail).toContain("initial cleanup injection");
+    expect(result.failures()[0]?.detail).toContain("recovery cleanup injection");
   });
 
   test("every durability I/O ordinal leaves either the complete old state or the complete committed state", async () => {
@@ -215,22 +263,27 @@ describe("SetupTransactionCoordinator", () => {
   });
 
   test("case-fold and Unicode collisions fail before journal, staging, or payload mutation", async () => {
-    const { target, source, privateRoot } = fixture();
-    writeFileSync(join(source, "Tool.ts"), "one\n");
-    writeFileSync(join(source, "tool.ts"), "two\n");
-    const entries = [entry("Tool.ts", "one\n", "add"), entry("tool.ts", "two\n", "add")];
+    for (const [left, right] of [
+      ["Tool.ts", "tool.ts"],
+      ["caf\u00e9.ts", "cafe\u0301.ts"],
+    ] as const) {
+      const { target, source, privateRoot } = fixture();
+      writeFileSync(join(source, left), "one\n");
+      writeFileSync(join(source, right), "two\n");
+      const entries = [entry(left, "one\n", "add"), entry(right, "two\n", "add")];
 
-    const result = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).apply(
-      plan(source, entries),
-      target,
-      manifest(entries),
-    );
+      const result = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).apply(
+        plan(source, entries),
+        target,
+        manifest(entries),
+      );
 
-    expect(result.hasFailures()).toBe(true);
-    expect(result.failures()[0]?.operation).toBe("preflight");
-    expect(readdirSync(target)).toEqual([]);
-    expect(readdirSync(join(privateRoot, "active"))).toEqual([]);
-    expect(readdirSync(source).every((name) => !name.startsWith(".amadeus-setup-manifest-"))).toBe(true);
+      expect(result.hasFailures()).toBe(true);
+      expect(result.failures()[0]?.operation).toBe("preflight");
+      expect(readdirSync(target)).toEqual([]);
+      expect(readdirSync(join(privateRoot, "active"))).toEqual([]);
+      expect(readdirSync(source).every((name) => !name.startsWith(".amadeus-setup-manifest-"))).toBe(true);
+    }
   });
 
   test("symlinks and permission-weakened private roots are rejected fail-closed", async () => {

@@ -273,7 +273,7 @@ function acquireLock(fs: DurableFs, lockDir: string): void {
   try {
     createCompleteLock(fs, lockDir);
   } catch (cause) {
-    if (!isCode(cause, "EEXIST")) throw cause;
+    if (!isLockOccupied(cause)) throw cause;
     const metadataPath = join(lockDir, "owner.json");
     let owner: { pid: number };
     try {
@@ -286,18 +286,29 @@ function acquireLock(fs: DurableFs, lockDir: string): void {
     }
     // A dead PID is the only stealable state. PID reuse remains fail-closed:
     // a live reused PID is treated as the owner rather than guessed stale.
-    fs.step("remove-stale-lock-owner", metadataPath);
-    unlinkSync(metadataPath);
-    fs.step("remove-stale-lock-dir", lockDir);
-    rmdirSync(lockDir);
+    removeStaleLockPath(fs, "remove-stale-lock-owner", metadataPath, () => unlinkSync(metadataPath));
+    removeStaleLockPath(fs, "remove-stale-lock-dir", lockDir, () => rmdirSync(lockDir));
     try {
       createCompleteLock(fs, lockDir);
     } catch (retryCause) {
-      if (isCode(retryCause, "EEXIST")) {
+      if (isLockOccupied(retryCause)) {
         throw new TransactionBlocked("lock", lockDir, "target was locked by another process during stale-lock recovery");
       }
       throw retryCause;
     }
+  }
+}
+
+function isLockOccupied(cause: unknown): boolean {
+  return isCode(cause, "EEXIST") || isCode(cause, "ENOTEMPTY");
+}
+
+function removeStaleLockPath(fs: DurableFs, operation: string, path: string, remove: () => void): void {
+  fs.step(operation, path);
+  try {
+    remove();
+  } catch (cause) {
+    if (!isCode(cause, "ENOENT")) throw cause;
   }
 }
 
@@ -492,7 +503,15 @@ function applyPrepared(tx: OpenTransaction, journal: Journal): void {
     archiveJournal(tx, journal);
   } catch (cause) {
     if (journal.phase === "commit-decided" || journal.phase === "committed") {
-      cleanupCommitted(tx, journal);
+      try {
+        cleanupCommitted(tx, journal);
+      } catch (cleanupCause) {
+        throw new TransactionBlocked(
+          "recovery",
+          journalPath(tx, journal.id),
+          `apply failed (${String(cause)}); committed cleanup also failed (${String(cleanupCause)})`,
+        );
+      }
     } else {
       try {
         rollback(tx, journal);

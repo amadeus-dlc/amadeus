@@ -232,8 +232,8 @@ assistant text only. The guardian authenticates control messages and owns the
 child process group. Terminal outcomes are committed to the replay store before
 they are reported; a replay of the same delivery starts no second child.
 Version, executable identity, unsupported OS, timeout, cancellation, PID/PGID
-reuse ambiguity, malformed RPC, output bounds, replay conflict, and credential-
-like request fields all fail closed.
+reuse ambiguity, malformed RPC, output bounds, replay conflict, and
+credential-like request fields all fail closed.
 
 The driver is invoked only through the deterministic swarm permit lifecycle:
 prepare, acquire, driver-accepted confirm, check, settle/release, and terminal

@@ -655,7 +655,9 @@ export class PiBridgeJournal {
     for (const name of readFileNames(this.#journalDir).filter((item) => item.endsWith(".json")).sort()) {
       const path = join(this.#journalDir, name);
       assertNoSymlink(path);
-      const verified = JSON.parse(readFileSync(path, "utf8")) as JournalRecord;
+      const candidate = JSON.parse(readFileSync(path, "utf8")) as Partial<JournalRecord>;
+      if (sessionIdDigest !== undefined && candidate.event?.sessionIdDigest !== sessionIdDigest) continue;
+      const verified = candidate as JournalRecord;
       if (
         verified.version !== 1
         || (verified.sequence !== undefined && (!Number.isSafeInteger(verified.sequence) || verified.sequence < 1))

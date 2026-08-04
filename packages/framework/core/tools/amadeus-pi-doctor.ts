@@ -128,28 +128,28 @@ function catalogResource(value: unknown): CatalogResource | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   const mapping = catalogResourceMapping(row.kind);
-  if (mapping === null || !validCatalogResourceFields(row, mapping.family, mapping.load)) return null;
+  if (mapping === null || !validCatalogResourceFields(row, mapping.destinationPrefix, mapping.load)) return null;
   return row as unknown as CatalogResource;
 }
 
-function catalogResourceMapping(kind: unknown): { family: string; load: CatalogResource["load"] } | null {
-  if (kind === "skill") return { family: "skills", load: "native" };
-  if (kind === "question-annex") return { family: "skills", load: "annex" };
-  if (kind === "extension") return { family: "extensions", load: "native" };
-  if (kind === "driver") return { family: "drivers", load: "internal" };
+function catalogResourceMapping(kind: unknown): { destinationPrefix: string; load: CatalogResource["load"] } | null {
+  if (kind === "skill") return { destinationPrefix: ".pi/skills/amadeus/", load: "native" };
+  if (kind === "question-annex") return { destinationPrefix: ".pi/skills/amadeus/", load: "annex" };
+  if (kind === "extension") return { destinationPrefix: ".pi/extensions/", load: "native" };
+  if (kind === "driver") return { destinationPrefix: ".pi/drivers/", load: "internal" };
   return null;
 }
 
 function validCatalogResourceFields(
   row: Record<string, unknown>,
-  family: string,
+  destinationPrefix: string,
   expectedLoad: CatalogResource["load"],
 ): boolean {
   if (
     typeof row.source !== "string" || !safeRelativePath(row.source) ||
     typeof row.destination !== "string" || !safeRelativePath(row.destination) ||
     row.load !== expectedLoad ||
-    !row.destination.startsWith(`.pi/${family}/`) ||
+    !row.destination.startsWith(destinationPrefix) ||
     typeof row.sha256 !== "string" || !SHA256.test(row.sha256)
   ) return false;
   return true;

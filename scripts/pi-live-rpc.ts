@@ -11,6 +11,7 @@ import {
 } from "../packages/framework/core/tools/amadeus-execution-lifecycle.ts";
 import { readAllAuditShards } from "../packages/framework/core/tools/amadeus-lib.ts";
 import { executePiChild } from "../packages/framework/harness/pi/drivers/amadeus-pi-driver.ts";
+import { isSupportedPiVersion } from "./pi-conformance-evidence.ts";
 
 export const PI_LIVE_SKIP_REASONS = [
   "opt-in-disabled",
@@ -184,6 +185,7 @@ export async function runPiLiveRpc(
   if (identity === null || !identity.clean) return { status: "failed", reason: "formal-source-not-clean" };
   const version = piVersion(piExecutable);
   if (version === null) return { status: "failed", reason: "pi-version-unavailable" };
+  if (!isSupportedPiVersion(version)) return { status: "failed", reason: "pi-version-unsupported" };
 
   const lifecycle = liveLifecycle();
   const parent = lifecycle.startOperation({

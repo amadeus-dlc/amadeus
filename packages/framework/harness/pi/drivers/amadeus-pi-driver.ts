@@ -324,6 +324,15 @@ function groupExtinct(pgid: number): boolean {
   }
 }
 
+function writeGuardianControl(stdin: { write(value: string): boolean }, value: string): boolean {
+  try {
+    stdin.write(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface LiveRunResult {
   readonly output: string;
   readonly reason: string | null;
@@ -389,23 +398,27 @@ async function runGuardian(
   const failFirst = (value: string): void => {
     if (reason === null) reason = value;
   };
+  guardian.stdin.once("error", () => {
+    failFirst("guardian-control-write-failed");
+    guardian.kill("SIGKILL");
+  });
+  const writeControl = (value: string): void => {
+    if (writeGuardianControl(guardian.stdin, value)) return;
+    failFirst("guardian-control-write-failed");
+    guardian.kill("SIGKILL");
+  };
   const sendTerminate = (kind: "cancelled" | "timed-out" | "driver-refused"): void => {
     if (accepted === null) {
       guardian.kill("SIGKILL");
       return;
     }
-    try {
-      guardian.stdin.write(signedControl({
-        kind: "terminate",
-        runId,
-        nonce: accepted.nonce,
-        seq: 2,
-        reason: kind,
-      }, driverKeys.privateKey));
-    } catch {
-      failFirst("guardian-control-write-failed");
-      return;
-    }
+    writeControl(signedControl({
+      kind: "terminate",
+      runId,
+      nonce: accepted.nonce,
+      seq: 2,
+      reason: kind,
+    }, driverKeys.privateKey));
   };
 
   const done = new Promise<void>((resolve) => {
@@ -470,7 +483,7 @@ async function runGuardian(
         sendTerminate("driver-refused");
         return;
       }
-      guardian.stdin.write(signedControl({
+      writeControl(signedControl({
         kind: "go",
         runId,
         nonce: accepted.nonce,

@@ -212,7 +212,7 @@ function resourceDescriptors(
   if (m.resources === undefined) return undefined;
   const harnessSrcRoot = join(HARNESS_ROOT, m.name);
   return m.resources.map((resource) => {
-    const sourcePath = join(harnessSrcRoot, ...resource.source.split("/"));
+    const sourcePath = requiredResourceSource(m.name, harnessSrcRoot, resource.source);
     const bytes = transform(sourcePath, readFileSync(sourcePath), m.harnessDir, m.rulesRename);
     return {
       ...resource,

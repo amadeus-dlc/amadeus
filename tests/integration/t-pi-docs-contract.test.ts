@@ -54,17 +54,17 @@ describe("Pi user and maintainer documentation contract", () => {
       "pi install ./amadeus -l",
       "https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>",
       "/skill:amadeus --doctor",
-      "source",
-      "interactive",
       "provider credential",
-      "sandbox",
-      "trust",
     ]) {
       expect(english).toContain(text);
       expect(japanese).toContain(text);
     }
     expect(english).toContain("currently has no uninstall subcommand");
     expect(japanese).toContain("現在 uninstall subcommand がありません");
+    expect(english).toContain("source is\nexactly `interactive`");
+    expect(japanese).toContain("source が厳密に\n`interactive`");
+    expect(english).toContain("project trust is an execution decision, not a sandbox");
+    expect(japanese).toContain("project trust は実行許可の判断であって、sandbox ではありません");
   });
 
   test("projects every manifest resource and public lifecycle event into both maintainer inventories", () => {

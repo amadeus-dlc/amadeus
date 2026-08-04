@@ -345,6 +345,46 @@ describe("Pi bridge journal", () => {
       "pi:v1:session:a-second",
     ]);
   });
+
+  test("ignores a foreign session record before opening its sealed payload", () => {
+    const root = project();
+    const journal = new PiBridgeJournal(root);
+    const currentSession = "6".repeat(64);
+    const foreignSession = "7".repeat(64);
+    const base = {
+      schemaVersion: 1,
+      profile: "pi-coding-agent/0.83",
+      occurredAt: "2026-08-04T00:00:00.000Z",
+      safe: {},
+    } as const;
+    journal.prepare({
+      ...base,
+      sessionIdDigest: foreignSession,
+      eventKey: "pi:v1:session:foreign",
+      fingerprint: "1".repeat(64),
+      kind: "session-started",
+    }, { type: "session_start" });
+    journal.prepare({
+      ...base,
+      sessionIdDigest: currentSession,
+      eventKey: "pi:v1:session:current",
+      fingerprint: "2".repeat(64),
+      kind: "session-started",
+    }, { type: "session_start" });
+
+    const journalDir = join(root, "amadeus", ".amadeus-sessions", "pi-lifecycle", "journal");
+    for (const name of readdirSync(journalDir)) {
+      const path = join(journalDir, name);
+      const record = JSON.parse(readFileSync(path, "utf8"));
+      if (record.event.sessionIdDigest !== foreignSession) continue;
+      record.sealedPayload.ciphertext = "tampered";
+      writeFileSync(path, `${JSON.stringify(record)}\n`);
+    }
+
+    expect(journal.prepared(currentSession).map(({ event }) => event.eventKey)).toEqual([
+      "pi:v1:session:current",
+    ]);
+  });
 });
 
 describe("default canonical core commit port", () => {

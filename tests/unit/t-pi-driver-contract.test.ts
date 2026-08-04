@@ -116,4 +116,19 @@ describe("Pi RPC collector", () => {
     collector.acceptLine("not-json");
     expect(collector.observation().semanticFailure).toBe("rpc-correlation-failed");
   });
+
+  test("fails closed when one RPC line exceeds its byte cap", () => {
+    const collector = createPiRpcCollector("request-1", 100, 4);
+    collector.acceptLine("12345");
+    expect(collector.observation().semanticFailure).toBe("rpc-line-cap-exceeded");
+  });
+
+  test("fails closed when assistant text exceeds the output byte cap", () => {
+    const collector = createPiRpcCollector("request-1", 4);
+    collector.acceptLine(JSON.stringify({
+      type: "message_end",
+      message: { role: "assistant", content: [{ type: "text", text: "12345" }] },
+    }));
+    expect(collector.observation().semanticFailure).toBe("output-cap-exceeded");
+  });
 });

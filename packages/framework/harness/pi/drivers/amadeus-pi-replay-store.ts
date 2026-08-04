@@ -99,6 +99,27 @@ function writeAtomic(path: string, bytes: Buffer | string): void {
   renameSync(temp, path);
 }
 
+function writeExclusive(path: string, bytes: Buffer): boolean {
+  ensurePrivateDirectory(dirname(path));
+  let fd: number;
+  try {
+    fd = openSync(
+      path,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
+  try {
+    writeFileSync(fd, bytes);
+  } finally {
+    closeSync(fd);
+  }
+  return true;
+}
+
 function parseRecord(bytes: Buffer): PiDeliveryRecord {
   const value = JSON.parse(bytes.toString("utf8")) as Partial<PiDeliveryRecord>;
   if (
@@ -165,7 +186,7 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
   const readKey = (create: boolean): Buffer => {
     if (!existsSync(keyPath)) {
       if (!create) throw new Error("vault-key-missing");
-      writeAtomic(keyPath, randomBytes(KEY_BYTES));
+      writeExclusive(keyPath, randomBytes(KEY_BYTES));
     }
     assertPrivateRegularFile(keyPath);
     const key = readNoFollow(keyPath);
@@ -277,8 +298,15 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
     recoverPending(limit) {
       if (!Number.isSafeInteger(limit) || limit < 1) return [];
       const recovered: PiDeliveryRecord[] = [];
+      let leaves: string[];
       try {
-        for (const leaf of readdirSync(recordsDir).sort().slice(0, limit)) {
+        leaves = readdirSync(recordsDir).sort();
+      } catch {
+        return recovered;
+      }
+      for (const leaf of leaves) {
+        if (recovered.length >= limit) break;
+        try {
           const path = join(recordsDir, leaf);
           assertPrivateRegularFile(path);
           const record = parseRecord(readNoFollow(path));
@@ -293,9 +321,9 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
             : { ...record, status: "quarantined", updatedAt: now() };
           putRecord(terminal);
           recovered.push(terminal);
+        } catch {
+          // One unreadable record must not erase or block other recoveries.
         }
-      } catch {
-        return [];
       }
       return recovered;
     },

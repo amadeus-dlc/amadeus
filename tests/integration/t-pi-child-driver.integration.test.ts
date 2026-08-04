@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -154,7 +155,7 @@ describe("Pi child driver process boundary", () => {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 100);
     const cancelledResult = await executePiChild(
-      { ...cancelled.base, deliveryKey: "cancel-1", prompt: "cancel" },
+      { ...cancelled.base, deliveryKey: "cancel-1", prompt: "cancel", timeoutMs: 100 },
       {
         runtimeDir: join(cancelled.root, "runtime"),
         piExecutable: cancelled.fakePi,
@@ -181,5 +182,24 @@ describe("Pi child driver process boundary", () => {
     expect(store.recoverPending(1)[0]?.status).toBe("quarantined");
     expect(() => process.kill(foreign.pid, 0)).not.toThrow();
     expect(existsSync(join(root, "runtime", "records"))).toBe(true);
+  });
+
+  test("pending recovery applies its limit after filtering and preserves earlier successes", () => {
+    const { root } = fixture();
+    const runtimeDir = join(root, "runtime");
+    const store = createPiReplayStore(runtimeDir);
+    const keys = (["recover:a", "recover:b", "recover:c"].sort((left, right) =>
+      createHash("sha256").update(left).digest("hex").localeCompare(createHash("sha256").update(right).digest("hex")))
+    ) as Parameters<typeof store.reserve>[0][];
+    for (const key of keys) expect(store.reserve(key, "fingerprint").kind).toBe("reserved");
+    expect(store.closeNoLaunch(keys[0], "fingerprint", "already-terminal")).toBe(true);
+
+    const limited = store.recoverPending(1);
+    expect(limited.map((record) => record.deliveryKey)).toEqual([keys[1]]);
+
+    const corruptPath = join(runtimeDir, "records", `${createHash("sha256").update(keys[1]).digest("hex")}.json`);
+    writeFileSync(corruptPath, "not-json\n");
+    const remaining = store.recoverPending(2);
+    expect(remaining.map((record) => record.deliveryKey)).toEqual([keys[2]]);
   });
 });

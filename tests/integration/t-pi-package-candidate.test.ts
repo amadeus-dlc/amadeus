@@ -52,6 +52,7 @@ describe("Pi package candidate graph", () => {
 
   test("changes the candidate identity when any catalog resource hash changes", () => {
     const graph = buildPiCandidateGraph(ROOT);
+    expect(graph.resources.length).toBeGreaterThan(0);
     const mutated = graph.resources.map((resource, index) => index === 0 ? { ...resource, sha256: "0".repeat(64) } : resource);
     expect(piCatalogDigest(mutated)).not.toBe(graph.catalogDigest);
   });

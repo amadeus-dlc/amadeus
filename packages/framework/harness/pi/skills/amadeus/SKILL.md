@@ -25,6 +25,13 @@ Forward the user's invocation text unchanged on the first call:
 bun .pi/tools/amadeus-orchestrate.ts next <arguments>
 ```
 
+`<arguments>`, `<original description>`, and similar notation below denotes
+separate argv values, not shell text interpolation. Never concatenate external
+text into a command string. Use the host tool's argv form when available; when
+Pi exposes only its shell command field, apply POSIX shell quoting to every
+external value before constructing the command. Shell metacharacters in a user
+description are data and must never become syntax.
+
 This is a hard routing rule for every invocation, including after compaction
 and while an intent is active. The first engine call must contain every token
 from the current skill invocation. A bare `next` is a protocol violation when
@@ -72,7 +79,8 @@ Treat the directive returned by `report` as the next loop step. Continue for
   `report --user-input "<resolved answer>"`. When another question names a
   continuation command, run that exact command once.
 - `select-intent`: render the supplied options and stop. Pass the opaque
-  selection token and the exact answer to the command named by the directive.
+  selection token and the exact answer as separately quoted argv values to the
+  command named by the directive.
 - `error`: print the engine message verbatim and stop.
 - `parked`: state that the workflow is parked and can resume with
   `/skill:amadeus --resume`.
