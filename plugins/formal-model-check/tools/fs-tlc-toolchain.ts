@@ -1494,6 +1494,96 @@ class FsTlcRuntime {
   }
 }
 
+function verifiedAuxiliaryModulePaths(
+  cwd: string,
+  modulePath: string,
+  modelReceipt: ModelCheckReceipt,
+): VerifiedAuxiliaryModulePaths {
+  if (!isVerifiedTlaModelReceipt(modelReceipt)) return Object.freeze([]);
+  return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
+    const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
+    const canonicalPath = realpathSync(requestedPath);
+    if (
+      canonicalPath !== requestedPath
+      || !pathInside(cwd, canonicalPath)
+      || !lstatSync(canonicalPath).isFile()
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "WORKSPACE_PATH",
+        "auxiliary modules must be canonical sibling files inside the closed workspace",
+      );
+    }
+    if (
+      sourceIdentity(
+        canonicalPath,
+        "amadeus.formal-verif.tla.module.v1",
+        "PreparationError",
+      ) !== auxiliary.moduleBytesIdentity
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "SOURCE_IDENTITY",
+        `auxiliary module ${auxiliary.name} differs from the selected model receipt`,
+      );
+    }
+    return Object.freeze({
+      path: canonicalPath,
+      moduleBytesIdentity: auxiliary.moduleBytesIdentity,
+    });
+  }));
+}
+
+function verifyPlannedModelSources(
+  input: PlannedTlcPrepareInput,
+  cwd: string,
+  modulePath: string,
+  cfgPath: string,
+): VerifiedAuxiliaryModulePaths {
+  const model = validateModelCheckReceipt(input.modelReceipt);
+  if (!model.ok) {
+    toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
+  }
+  if (
+    sourceIdentity(
+      modulePath,
+      "amadeus.formal-verif.tla.module.v1",
+      "PreparationError",
+    ) !== model.value.moduleBytesIdentity
+    || sourceIdentity(
+      cfgPath,
+      "amadeus.formal-verif.tla.cfg.v1",
+      "PreparationError",
+    ) !== model.value.cfgBytesIdentity
+  ) {
+    toolchainAbort(
+      "PreparationError",
+      "SOURCE_IDENTITY",
+      "model or cfg bytes differ from the selected model receipt",
+    );
+  }
+  if (isVerifiedTlaModelReceipt(model.value)) {
+    const expected = model.value.vocabulary;
+    const actual = input.vocabulary;
+    if (
+      actual.moduleName !== expected.moduleName
+      || actual.namedInvariants.length !== expected.namedInvariants.length
+      || actual.namedInvariants.some((name, index) => name !== expected.namedInvariants[index])
+      || actual.traceStateVariables.length !== expected.traceStateVariables.length
+      || actual.traceStateVariables.some(
+        (name, index) => name !== expected.traceStateVariables[index],
+      )
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "MODEL_RECEIPT",
+        "trace vocabulary differs from the selected model receipt",
+      );
+    }
+  }
+  return verifiedAuxiliaryModulePaths(cwd, modulePath, model.value);
+}
+
 class FsPlannedTlcRuntime {
   readonly #issued = new WeakSet<PreparedPlannedTlcRun>();
   readonly #auxiliaryModulePaths = new WeakMap<
@@ -1537,96 +1627,6 @@ class FsPlannedTlcRuntime {
     return { cwd, modulePath, cfgPath };
   }
 
-  #verifiedAuxiliaryModulePaths(
-    cwd: string,
-    modulePath: string,
-    modelReceipt: ModelCheckReceipt,
-  ): VerifiedAuxiliaryModulePaths {
-    if (!isVerifiedTlaModelReceipt(modelReceipt)) return Object.freeze([]);
-    return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
-      const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
-      const canonicalPath = realpathSync(requestedPath);
-      if (
-        canonicalPath !== requestedPath
-        || !pathInside(cwd, canonicalPath)
-        || !lstatSync(canonicalPath).isFile()
-      ) {
-        toolchainAbort(
-          "PreparationError",
-          "WORKSPACE_PATH",
-          "auxiliary modules must be canonical sibling files inside the closed workspace",
-        );
-      }
-      if (
-        sourceIdentity(
-          canonicalPath,
-          "amadeus.formal-verif.tla.module.v1",
-          "PreparationError",
-        ) !== auxiliary.moduleBytesIdentity
-      ) {
-        toolchainAbort(
-          "PreparationError",
-          "SOURCE_IDENTITY",
-          `auxiliary module ${auxiliary.name} differs from the selected model receipt`,
-        );
-      }
-      return Object.freeze({
-        path: canonicalPath,
-        moduleBytesIdentity: auxiliary.moduleBytesIdentity,
-      });
-    }));
-  }
-
-  #verifyModelSources(
-    input: PlannedTlcPrepareInput,
-    cwd: string,
-    modulePath: string,
-    cfgPath: string,
-  ): VerifiedAuxiliaryModulePaths {
-    const model = validateModelCheckReceipt(input.modelReceipt);
-    if (!model.ok) {
-      toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
-    }
-    if (
-      sourceIdentity(
-        modulePath,
-        "amadeus.formal-verif.tla.module.v1",
-        "PreparationError",
-      ) !== model.value.moduleBytesIdentity
-      || sourceIdentity(
-        cfgPath,
-        "amadeus.formal-verif.tla.cfg.v1",
-        "PreparationError",
-      ) !== model.value.cfgBytesIdentity
-    ) {
-      toolchainAbort(
-        "PreparationError",
-        "SOURCE_IDENTITY",
-        "model or cfg bytes differ from the selected model receipt",
-      );
-    }
-    if (isVerifiedTlaModelReceipt(model.value)) {
-      const expected = model.value.vocabulary;
-      const actual = input.vocabulary;
-      if (
-        actual.moduleName !== expected.moduleName
-        || actual.namedInvariants.length !== expected.namedInvariants.length
-        || actual.namedInvariants.some((name, index) => name !== expected.namedInvariants[index])
-        || actual.traceStateVariables.length !== expected.traceStateVariables.length
-        || actual.traceStateVariables.some(
-          (name, index) => name !== expected.traceStateVariables[index],
-        )
-      ) {
-        toolchainAbort(
-          "PreparationError",
-          "MODEL_RECEIPT",
-          "trace vocabulary differs from the selected model receipt",
-        );
-      }
-    }
-    return this.#verifiedAuxiliaryModulePaths(cwd, modulePath, model.value);
-  }
-
   #prepareScratch(scratchPath: string): { scratchRoot: string; standardModuleDirectory: string } {
     const scratchRoot = realpathSync(scratchPath);
     if (!lstatSync(scratchRoot).isDirectory()) {
@@ -1656,7 +1656,7 @@ class FsPlannedTlcRuntime {
     try {
       this.artifacts.verifyIssuedArtifact(input.artifact);
       const { cwd, modulePath, cfgPath } = this.#canonicalInputs(input);
-      const auxiliaryModulePaths = this.#verifyModelSources(
+      const auxiliaryModulePaths = verifyPlannedModelSources(
         input,
         cwd,
         modulePath,
