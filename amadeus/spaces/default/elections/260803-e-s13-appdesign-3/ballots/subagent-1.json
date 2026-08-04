@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-S13-APPDESIGN-3",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "active intent 260803-intent-autonomy の Application Design memory.md を実測し、Interpretations・Deviations・Tradeoffs・Open questions の全区分に実記録がなく、テンプレートコメントのみであることを確認した。直近の HUMAN_TURN 後に生成された learning-election.json も追加なしを反映した zero-confirm 定義であり、永続化対象 0 件は証拠と整合する。",
+  "submittedAt": "2026-08-03T09:29:05Z"
+}

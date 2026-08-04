@@ -17,7 +17,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 | チームの自律性 **姿勢**(既定のデフォルト) | あなた、ハーネスエンジニア | `packages/framework/core/memory/{team,project}.md` のルール(データ) |
 | Unit が **並列化できる** もの | あなた、ハーネスエンジニア | `units-generation` ステージとその依存 DAG(データ) |
 | スウォームが信頼する **収束チェック** | あなた、ハーネスエンジニア | プロジェクト自身の build/test コマンド + 保護された spec(データ + プロジェクト設定) |
-| このプロジェクトの実際の自律性 **付与** | 人間 | ランタイムのラダープロンプト |
+| 実際のIntent自律 **mode/grant** | 人間 | Intent-scopedな`none|semi|full`選択とgrant確認 |
 | スウォーム **ドライバ** の選択 | オペレーター | `AMADEUS_USE_SWARM` 環境変数 |
 | 収束の **評決**、マージバック、監査 | ツール | `amadeus-swarm.ts`(コード → Developer Reference) |
 
@@ -29,14 +29,14 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 チームがまず制御したいのは、Construction がどれだけの手取り足取りを要求するかです。同梱のデフォルトは、あなたが `packages/framework/core/memory/org.md` の `## Walking Skeleton` 見出しの下に執筆する org ルール(`org.md:28-42`)に存在します。フレームワークのスタンスとして読んでください:
 
-- グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独・ゲート付きで、残りの Bolt が実行される前にユーザーがそれを承認します。
+- グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独で実在するgateを持ち、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。
 - インクリメンタルなスコープ — `fix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
-- Bolt 1 の出荷後、**ラダープロンプト** が一度発火します: 「残りの Bolt はどう実行しますか?」に2つの選択肢 — 自律的に続行、またはすべての Bolt をゲート。選ばれた回答は intent の `amadeus-state.md`(そのレコードディレクトリ配下)に `Construction Autonomy Mode` として永続化されます。エンジンはこのプロンプトを強制します: walking skeleton 完了後に付与が unset のままなら、`next` は次の Bolt を実行せずラダーを `ask` として再提示します。
-- `gated` が選ぶのは承認の **頻度** であって実行の形ではありません。`gated` でも並列バッチはスウォームとしてファンアウトし、エンジンは **バッチ末尾ゲート** — 完了したバッチ全体をカバーする1つの `ask`、`amadeus-bolt approve-batch --batch <n>` で解除 — で停止してから次のバッチを提示します。最終バッチにバッチ末尾ゲートは不要です: ステージ本体のゲートがそれを兼ねるため、ゲートが二重になることはありません。
+- 人間は無人裁定の前にIntent自律レベルを`none` / `semi` / `full`から選びます。`semi`はphase内gateを事前承認し、phase境界と質問では人間を待ちます。`full`は表示されたIntent-scoped grantの確認を必須とし、認可範囲内でIntent完了までgateと質問を裁定できます。
+- autonomyが選ぶのは承認 **authority**であり、実行形状ではありません。全modeで依存のないUnitをfan-outします。`none`はhuman batch-end gateで待ち、`semi` / `full`は各mode表に従って続行できます。最終batchはstage自身のgateを使うため、gateは重複しません。
 
 あなたはこの姿勢を、他のどのルールも形づくるのと同じ方法で、[Rules and the Learning Loop](05-rules-and-the-loop.ja.md) の strict-additive レイヤーを通じて形づくります: チーム全体のスタンスには `team.md` を、1つのプロジェクトの恒久的な逸脱には `project.md` を編集します。`org.md` はそのままにします — それはフレームワーク同梱で継承されます。
 
-あなたが設定するのは **デフォルトとガイダンス** です。付与はラダープロンプトにいる人間のもとに留まり、その人がプロジェクトごとの判断を下します。あなたのルールの散文は、エージェントがそのプロンプトに入る際に読むものであり、推奨を枠づけます。*この* プロジェクトが手放しで実行されるかどうかの判断は、ゲートにいる人のもとに留まります。それが1つのプロンプトを貫いて引かれた、決定性・知識・判断の境界線です: あなたが既定のガイダンス(データ)を執筆し、エージェントがそれを提示し(知識)、人間が決定します(判断)。
+あなたが設定するのは **デフォルトとガイダンス** です。mode変更と`full` grant操作は実在するhuman turnに留まります。ルールの散文は推奨を形づくりますが、*この*プロジェクトを手放しで実行する判断は人間に留まります。
 
 ### 実例 — チームがデフォルトですべての Bolt をゲートするようにする
 
@@ -46,14 +46,14 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 ## Walking Skeleton
 
 Until our team has shipped three clean autonomous batches, the recommended
-answer at the ladder prompt is **gate every Bolt**. Reviewers see each Bolt's
+Intent autonomy mode is **none**. Reviewers see each Bolt's
 diff before the next one starts. Revisit this default once our convergence
 checks have proven reliable.
 ```
 
-これは org のデフォルトの上に積み重なります — スケルトン優先 / セレモニースキップの分割は変わらず、あなたのチームの散文はラダープロンプトでエージェントのコンテキストに加わります。人間は、あるプロジェクトがそれに値するなら依然として「continue autonomously」を選べます。あなたのルールは推奨を形づくりつつ、選択を開いたままにします。変更は次のワークフローのコンパイル境界で効き始めます — 他のすべてのルール編集とまったく同じで、ワークフロー途中の編集が進行中の実行を遡って変えることはありません。
+これはorgのデフォルトの上に積み重なります。人間は必要なら`semi`を選ぶか`full` grantを確認できます。ルールは推奨を形づくりつつ選択を開いたままにし、変更は次のworkflowのcompile境界で効き始めます。
 
-信頼されたスコープに対して手放しの Construction へと昇格するチームは、鏡像の箇条書きを書きます: 「このコードベースの `feature` スコープでは、walking skeleton がグリーンになったら推奨されるラダーの回答は continue autonomously」。同じファイル、同じ見出し、正反対の推奨です。
+信頼されたscopeで手放し実行へ進むteamは、鏡像の箇条書きを書きます: 「このcodebaseの`feature` scopeでは`full`を推奨し、scopeと事前裁定方針を人間の確認用に表示する」。同じfile、同じ見出し、反対の推奨です。
 
 ---
 
@@ -139,7 +139,7 @@ checks have proven reliable.
 
 この3つすべての規範的な契約は [Skill System § 6](../reference/17-skill-system.ja.md#6-the-swarm-referee-the-driver-seam-and-the-bolt-dag) にあり、`bolt_dag` ノードのスキーマは [Runtime Graph](../reference/13-runtime-graph.ja.md) にあります。コンダクター自身の章は [Orchestrator](../reference/03-orchestrator.ja.md) です。
 
-あなたの姿勢ルールが統治するもののユーザー向けの側面 — walking-skeleton ゲート、ラダープロンプト、自律モード — は、User Guide の [Phases and Stages § Construction](../guide/04-phases-and-stages.ja.md) で歩まれ、ログで目にする6つの `SWARM_*` 監査イベントは [State and Audit](../guide/10-state-and-audit.ja.md) にカタログ化されています。
+あなたの姿勢ルールが統治するユーザー向け側面 — walking-skeleton gateとIntent autonomy mode/grant選択 — は、User Guide の [Phases and Stages § Construction](../guide/04-phases-and-stages.ja.md) で説明され、ログで目にする6つの`SWARM_*`監査イベントは [State and Audit](../guide/10-state-and-audit.ja.md) にカタログ化されています。
 
 ---
 

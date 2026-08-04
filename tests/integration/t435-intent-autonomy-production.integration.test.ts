@@ -1,0 +1,326 @@
+// covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts, file:packages/framework/core/tools/amadeus-autonomy-review-production.ts, subcommand:amadeus-bolt:set-autonomy, subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report
+// size: medium
+
+import { afterEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
+import {
+  commitProductionIntentCompletion,
+  productionStageAutonomy,
+  readProductionAutonomyProjection,
+} from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+
+const BUN = process.execPath;
+
+function run(
+  projectDir: string,
+  tool: string,
+  args: string[],
+  guard = false,
+): { readonly status: number; readonly output: string } {
+  const env = { ...process.env };
+  env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+  if (guard) delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  const result = spawnSync(BUN, [join(projectDir, ".claude", "tools", tool), ...args, "--project-dir", projectDir], {
+    cwd: projectDir,
+    encoding: "utf8",
+    env,
+  });
+  return { status: result.status ?? -1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+}
+
+function recordDir(projectDir: string): string {
+  const intents = join(projectDir, "amadeus", "spaces", "default", "intents");
+  const active = readFileSync(join(intents, "active-intent"), "utf8").trim();
+  return join(intents, active);
+}
+
+function state(projectDir: string): string {
+  return readFileSync(join(recordDir(projectDir), "amadeus-state.md"), "utf8");
+}
+
+function appendLedgerEvent(projectDir: string, event: "HUMAN_TURN" | "QUESTION_ANSWERED"): void {
+  const auditDir = join(recordDir(projectDir), "audit");
+  mkdirSync(auditDir, { recursive: true });
+  const path = join(auditDir, "production-autonomy-test.jsonl");
+  const seq = existsSync(path)
+    ? readFileSync(path, "utf8").split("\n").filter(Boolean).length + 1
+    : 1;
+  appendFileSync(path, `${JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: "production-autonomy-test",
+    intentId: "production-autonomy-test",
+    timestamp: new Date().toISOString(),
+    heading: event === "HUMAN_TURN" ? "Human Turn" : "Question Answered",
+    event,
+    fields: {},
+  })}\n`);
+}
+
+function auditEvents(projectDir: string): string[] {
+  const auditDir = join(recordDir(projectDir), "audit");
+  return readdirSync(auditDir)
+    .flatMap((name) => readFileSync(join(auditDir, name), "utf8").split("\n"))
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .map((row) => String(row.event ?? (row.attributes as Record<string, unknown> | undefined)?.Event ?? ""));
+}
+
+function selectFullAutonomy(projectDir: string): { readonly status: number; readonly output: string } {
+  const preview = run(projectDir, "amadeus-bolt.ts", ["preview-autonomy"]);
+  expect(preview.status).toBe(0);
+  const digest = (JSON.parse(preview.output.trim()) as { displayDigest: string }).displayDigest;
+  appendLedgerEvent(projectDir, "HUMAN_TURN");
+  return run(
+    projectDir,
+    "amadeus-bolt.ts",
+    ["set-autonomy", "--mode", "full", "--confirmed-display-digest", digest],
+    true,
+  );
+}
+
+function bornProject(): string {
+  const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+  const result = spawnSync(
+    BUN,
+    [join(projectDir, ".claude", "tools", "amadeus-utility.ts"), "intent-birth", "--scope", "feature", "--project-dir", projectDir],
+    { cwd: projectDir, encoding: "utf8", env: { ...process.env } },
+  );
+  const birth = { status: result.status ?? -1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+  expect(birth.status).toBe(0);
+  return projectDir;
+}
+
+let projectDir = "";
+afterEach(() => {
+  if (projectDir) cleanupTestProject(projectDir);
+  projectDir = "";
+});
+
+describe("Intent-scoped autonomy production path", () => {
+  test("semi is human-grounded, activates quality repair, and auto-approves an internal stage without a fresh HUMAN_TURN", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const selected = run(projectDir, "amadeus-bolt.ts", ["set-autonomy", "--mode", "semi"], true);
+    expect(selected.status).toBe(0);
+    expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: semi");
+    expect(state(projectDir)).toContain("- **Intent Grant**: none");
+
+    const directive = run(projectDir, "amadeus-orchestrate.ts", ["next"]);
+    if (directive.status !== 0) throw new Error(directive.output);
+    const parsed = JSON.parse(directive.output.trim()) as Record<string, unknown>;
+    expect(parsed.intent_autonomy_mode).toBe("semi");
+    expect(parsed.autonomy_auto_approve).toBe(true);
+    expect(parsed.quality_repair).toBe("active");
+    expect(productionStageAutonomy({
+      projectDir,
+      stage: "approval-handoff",
+      phase: "ideation",
+      graphRevision: `sha256:${"a".repeat(64)}`,
+      walkingSkeleton: false,
+      phaseBoundary: true,
+    }).autoApprove).toBe(false);
+
+    const stage = String(parsed.stage);
+    expect(run(projectDir, "amadeus-state.ts", ["gate-start", stage]).status).toBe(0);
+    appendLedgerEvent(projectDir, "QUESTION_ANSWERED");
+    const reported = run(
+      projectDir,
+      "amadeus-orchestrate.ts",
+      ["report", "--stage", stage, "--result", "approved"],
+      true,
+    );
+    expect(reported.status).toBe(0);
+    expect(reported.output).toContain('"kind":"done"');
+    expect(auditEvents(projectDir).filter((event) => event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length)
+      .toBeGreaterThanOrEqual(2);
+  });
+
+  test("full emits an active Intent grant and authorizes the walking-skeleton gate", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const selected = selectFullAutonomy(projectDir);
+    expect(selected.status).toBe(0);
+    const grantId = (JSON.parse(selected.output.trim()) as { grant_id: string }).grant_id;
+    expect(grantId).toStartWith("intent-grant-");
+    expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: full");
+    expect(state(projectDir)).toContain(`- **Intent Grant**: ${grantId}`);
+
+    const directive = run(projectDir, "amadeus-orchestrate.ts", ["next"]);
+    if (directive.status !== 0) throw new Error(directive.output);
+    const parsed = JSON.parse(directive.output.trim()) as Record<string, unknown>;
+    expect(parsed.intent_autonomy_mode).toBe("full");
+    expect(parsed.autonomy_auto_approve).toBe(true);
+    expect(parsed.intent_grant_id).toBe(grantId);
+    expect(parsed.quality_repair).toBe("active");
+    expect(productionStageAutonomy({
+      projectDir,
+      stage: "approval-handoff",
+      phase: "ideation",
+      graphRevision: `sha256:${"a".repeat(64)}`,
+      walkingSkeleton: false,
+      phaseBoundary: true,
+    }).autoApprove).toBe(true);
+  });
+
+  test("mode selection refuses when no real HUMAN_TURN grounds it", () => {
+    projectDir = bornProject();
+    const selected = run(projectDir, "amadeus-bolt.ts", ["set-autonomy", "--mode", "full"], true);
+    expect(selected.status).not.toBe(0);
+    expect(selected.output).toContain("PROVENANCE_REQUIRED");
+    expect(auditEvents(projectDir)).not.toContain("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
+  });
+
+  test("full resolves a production question and records loud recommendation degradation", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(selectFullAutonomy(projectDir).status).toBe(0);
+    const inputPath = join(projectDir, "question-decision.json");
+    writeFileSync(inputPath, JSON.stringify({
+      stage: "code-generation",
+      phase: "construction",
+      questionId: "choose-repair",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+    }));
+    const decision = run(projectDir, "amadeus-bolt.ts", ["decide-question", "--input", inputPath]);
+    expect(decision.status).toBe(0);
+    const parsed = JSON.parse(decision.output.trim()) as {
+      kind: string;
+      decision: { selectedOptionId: string; decider: string; degradedCapability: { reason: string } | null };
+    };
+    expect(parsed.kind).toBe("decided");
+    expect(parsed.decision.selectedOptionId).toBe("minimal-fix");
+    expect(parsed.decision.decider).toBe("agent-recommendation");
+    expect(parsed.decision.degradedCapability?.reason).toBe("native-solo-election-result-unavailable");
+
+    const machineStatus = run(projectDir, "amadeus-utility.ts", ["status", "--json"]);
+    expect(machineStatus.status).toBe(0);
+    expect(JSON.parse(machineStatus.output.trim())).toMatchObject({
+      autonomy: {
+        autonomyMode: "full",
+        workflowExecutionState: "running",
+        unreviewedAutoDecisionCount: 1,
+      },
+    });
+    const humanStatus = run(projectDir, "amadeus-utility.ts", ["status"]);
+    expect(humanStatus.output).toContain("Autonomy:       full");
+    expect(humanStatus.output).toContain("Grant Scope:");
+    expect(humanStatus.output).toContain("Unreviewed:     1");
+    expect(humanStatus.output).toContain("Resume:         none");
+
+    const listed = run(projectDir, "amadeus-bolt.ts", ["list-auto-decisions", "--state", "unreviewed"]);
+    if (listed.status !== 0) throw new Error(listed.output);
+    const page = JSON.parse(listed.output.trim()) as { items: { decisionId: string; safeQuestion: string }[] };
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]?.safeQuestion).toBe("Which repair strategy should be used?");
+    const detail = run(projectDir, "amadeus-bolt.ts", ["get-auto-decision", "--decision", page.items[0]!.decisionId]);
+    expect(detail.status).toBe(0);
+    expect(JSON.parse(detail.output.trim())).toMatchObject({ selectedOptionId: "minimal-fix", reviewState: "unreviewed" });
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const reviewed = run(projectDir, "amadeus-bolt.ts", [
+      "review-auto-decision", "--decision", page.items[0]!.decisionId, "--choice", "accept",
+    ], true);
+    expect(reviewed.status).toBe(0);
+    expect(JSON.parse(reviewed.output.trim())).toMatchObject({ state: "accepted", remediation: null });
+    expect(auditEvents(projectDir)).toContain("AUTO_DECISION_REVIEWED");
+    const accepted = run(projectDir, "amadeus-bolt.ts", ["list-auto-decisions", "--state", "accepted"]);
+    expect(accepted.status).toBe(0);
+    const acceptedPage = JSON.parse(accepted.output.trim()) as { items: unknown[] };
+    expect(acceptedPage.items).toHaveLength(1);
+  });
+
+  test("Core Intent completion terminalizes a full grant without any live receipt", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(selectFullAutonomy(projectDir).status).toBe(0);
+    expect(process.env.AMADEUS_INTENT_COMPLETION_LIVE).not.toBe("1");
+    const completed = commitProductionIntentCompletion({ projectDir });
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) return;
+    expect(completed.result.result.outcome).toBe("completed");
+    expect(completed.result.result.grant?.state).toBe("completed");
+    const projection = readProductionAutonomyProjection(projectDir);
+    expect(projection?.workflowExecutionState).toBeNull();
+    expect(projection?.currentGrant).toBeNull();
+  });
+
+  test("full repairs repeated quality failures, replans once, and durably parks a stalled loop", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(selectFullAutonomy(projectDir).status).toBe(0);
+    const inputPath = join(projectDir, "quality-observation.json");
+    writeFileSync(inputPath, JSON.stringify({
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "build-and-test-1",
+        boltId: "bolt-1",
+        observations: [{
+          kind: "reviewer",
+          invocationId: "review-1",
+          verifierId: "quality-reviewer",
+          validationReceipt: `sha256:${"a".repeat(64)}`,
+          verdict: "NOT-READY",
+          blockers: [{
+            findingId: "blocker-a",
+            artifactId: "build-test-results",
+            failureFingerprint: `sha256:${"b".repeat(64)}`,
+          }],
+        }],
+      },
+      replanContext: "Use a fresh repair context after the first non-progress threshold.",
+    }));
+    const outcomes = Array.from({ length: 7 }, () => {
+      const result = run(projectDir, "amadeus-bolt.ts", ["observe-quality", "--input", inputPath]);
+      if (result.status !== 0) throw new Error(result.output);
+      return JSON.parse(result.output.trim()) as {
+        kind: string;
+        qualityScopeId?: string;
+        workflowResult?: { reasonCode: string; grant: { state: string } };
+      };
+    });
+    expect(outcomes.map((result) => result.kind)).toEqual([
+      "repair", "repair", "repair", "replanned", "repair", "repair", "parked",
+    ]);
+    expect(outcomes.at(-1)?.workflowResult).toMatchObject({
+      reasonCode: "REPAIR_STALLED",
+      grant: { state: "active" },
+    });
+    const projection = readProductionAutonomyProjection(projectDir);
+    expect(projection?.workflowExecutionState).toBe("suspended");
+    expect(projection?.currentGrant?.state).toBe("active");
+
+    const replayed = run(projectDir, "amadeus-bolt.ts", ["observe-quality", "--input", inputPath]);
+    expect(replayed.status).toBe(0);
+    expect(JSON.parse(replayed.output.trim())).toMatchObject({ kind: "parked" });
+
+    const resumePath = join(projectDir, "quality-resume.json");
+    writeFileSync(resumePath, JSON.stringify({
+      qualityScopeId: outcomes.at(-1)!.qualityScopeId,
+      basis: "human-retry",
+    }));
+    const prematureResume = run(projectDir, "amadeus-bolt.ts", ["resume-quality", "--input", resumePath]);
+    expect(prematureResume.status).not.toBe(0);
+    expect(prematureResume.output).toContain("fresh-human-retry-required");
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const resumed = run(projectDir, "amadeus-bolt.ts", ["resume-quality", "--input", resumePath]);
+    if (resumed.status !== 0) throw new Error(resumed.output);
+    expect(resumed.status).toBe(0);
+    expect(JSON.parse(resumed.output.trim())).toMatchObject({
+      kind: "resumed",
+      qualityScopeId: outcomes.at(-1)!.qualityScopeId,
+      workflowResult: "running",
+    });
+    const resumedProjection = readProductionAutonomyProjection(projectDir);
+    expect(resumedProjection?.workflowExecutionState).toBe("running");
+    expect(resumedProjection?.currentGrant?.state).toBe("active");
+  });
+});

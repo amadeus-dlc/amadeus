@@ -1,0 +1,87 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-04T01:18:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-S13-CODEGEN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 5,
+      "reservation": null,
+      "rationale": "ステージメモリの各区分に実記録がなく、学習候補も未解決事項も確認できないため、永続化対象は0件で妥当です。",
+      "submittedAt": "2026-08-04T01:16:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-S13-CODEGEN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 5,
+      "reservation": null,
+      "rationale": "ステージ記録の各欄に実観測がなく、学習候補も未解決事項も示されていないため、永続化対象は0件で妥当です。",
+      "submittedAt": "2026-08-04T01:16:39Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-S13-CODEGEN-1",
+        "voter": "subagent-1",
+        "submittedAt": "2026-08-04T01:16:32Z"
+      },
+      "electionId": "E-S13-CODEGEN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "GOAは1が全面支持を表すため訂正します。ステージメモリに学習候補も未解決事項もないという判断と、選択肢1への支持は変更しません。",
+      "submittedAt": "2026-08-04T01:18:27Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-S13-CODEGEN-1",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-04T01:16:39Z"
+      },
+      "electionId": "E-S13-CODEGEN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "GoA 1が全面支持を表す尺度であるため訂正します。ステージ記録に実観測がなく永続化対象を0件とする判断自体は変更しません。",
+      "submittedAt": "2026-08-04T01:18:31Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "discussion-needed",
+      "resolution": "discussed",
+      "resumedTo": "collecting",
+      "at": "2026-08-04T01:18:04Z"
+    }
+  ]
+}

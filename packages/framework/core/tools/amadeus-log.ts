@@ -10,6 +10,7 @@ import { emitEvent } from "../otel/logger-provider.ts";
 import type { RegisteredEventName } from "../otel/event-registry.ts";
 import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import { advisoryChoicePresentationFields } from "./amadeus-advisory-choice.ts";
 import {
   emitError,
   errorMessage,
@@ -121,6 +122,29 @@ function handleDecision(args: string[]): void {
   );
 }
 
+// --- Subcommand: advisory-decision ---
+// Usage: amadeus-log advisory-decision --stage <slug> --instances <csv>
+//
+// Records the exact pending advisory question immediately before it is shown.
+// The prompt hook accepts an ordinal answer only when this is the last
+// interaction decision since the previous HUMAN_TURN.
+function handleAdvisoryDecision(args: string[]): void {
+  const { flags } = parseFlags(args);
+  if (!flags.stage) error("Missing --stage <slug>");
+  if (!flags.instances) error("Missing --instances <csv>");
+  const instances = flags.instances.split(",").map((item) => item.trim()).filter(Boolean);
+  const pd = resolveActiveProjectDir(projectDir);
+  const fields = advisoryChoicePresentationFields(pd, flags.stage, instances);
+  if (!fields.ok) error(`Invalid advisory presentation: ${fields.reason}`);
+  assertMutationAllowed();
+  try {
+    emitAudit("DECISION_RECORDED", fields.value);
+  } catch (e) {
+    error(`Audit emission failed: ${errorMessage(e)}`);
+  }
+  console.log(JSON.stringify({ emitted: "DECISION_RECORDED", stage: flags.stage, advisory_instances: instances }));
+}
+
 // --- Subcommand: answer ---
 // Usage: amadeus-log answer --stage <slug> --details <text>
 //
@@ -211,8 +235,11 @@ function main(): void {
       case "answer":
         handleAnswer(filteredArgs.slice(1));
         break;
+      case "advisory-decision":
+        handleAdvisoryDecision(filteredArgs.slice(1));
+        break;
       default:
-        error(`Unknown subcommand: ${subcommand}. Valid: decision, answer`);
+        error(`Unknown subcommand: ${subcommand}. Valid: decision, advisory-decision, answer`);
     }
   } catch (e) {
     error(errorMessage(e));

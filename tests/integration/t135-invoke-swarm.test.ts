@@ -99,10 +99,10 @@ afterEach(() => {
 
 /**
  * Seed a Construction-phase project parked at code-generation (in-flight) with
- * a bolt_dag batch on runtime-graph.json. `autonomy` is the value injected as
- * `Construction Autonomy Mode` (or "" to omit the field). Mirrors the .sh's
- * seed_codegen_project. The compiled batch DAG is the milestone 15 shape: one
- * topological level of units a, b.
+ * a bolt_dag batch on runtime-graph.json. Legacy fixture labels map onto the
+ * Intent-scoped mode plus the internal Construction scheduling projection.
+ * The compiled batch DAG is the milestone 15 shape: one topological level of
+ * units a, b.
  */
 function seedCodegenProject(autonomy: string): string {
   const proj = createTestProject();
@@ -118,10 +118,15 @@ function seedCodegenProject(autonomy: string): string {
     "- **Current Stage**: code-generation",
   );
   if (autonomy) {
-    // Add the autonomy field right after the Scope line.
+    const autonomyFields =
+      autonomy === "autonomous"
+        ? "- **Intent Autonomy Mode**: full\n- **Construction Autonomy Mode**: autonomous"
+        : autonomy === "gated"
+          ? "- **Intent Autonomy Mode**: semi\n- **Construction Autonomy Mode**: autonomous"
+          : `- **Construction Autonomy Mode**: ${autonomy}`;
     state = state.replace(
       /^(- \*\*Scope\*\*: .*)$/m,
-      `$1\n- **Construction Autonomy Mode**: ${autonomy}`,
+      `$1\n${autonomyFields}`,
     );
   }
   writeFileSync(statePath, state);
@@ -350,12 +355,9 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     expect(runNext(proj).directive.cap).toBe(3);
   }, 30000);
 
-  // 2: issue #1612 — `gated` is an APPROVAL-FREQUENCY grant, not a swarm veto.
-  // stage-protocol.md § "Subsequent Bolt gate" says the Bolt-level gate is
-  // presented per batch in gated mode ("For parallel batches the gate covers every Bolt in the batch"),
-  // so a gated run STILL fans the batch out; it just gates at the batch boundary.
-  // The pre-fix engine returned run-stage here and serialised the DAG.
-  test("2: gated autonomy -> engine still fans out the batch (batch-end gate, not serialisation)", () => {
+  // Semi-autonomous Intent execution still preserves the declared parallel
+  // topology; its human boundaries are enforced by Intent-level authorization.
+  test("2: semi autonomy -> engine still fans out the batch", () => {
     const { directive } = runNext(seedCodegenProject("gated"));
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["a", "b"]);

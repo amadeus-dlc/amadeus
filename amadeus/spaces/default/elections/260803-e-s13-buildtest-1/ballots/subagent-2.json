@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-S13-BUILDTEST-1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Build and Test の memory.md では Interpretations、Deviations、Tradeoffs、Open questions がすべて空であり、§13 の候補抽出契約上、永続化対象は0件となる。build-test-results.md も未解決の製品BLOCKERなしと明記している。",
+  "submittedAt": "2026-08-03T17:12:19Z"
+}

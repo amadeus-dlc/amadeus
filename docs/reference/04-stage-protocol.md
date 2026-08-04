@@ -780,7 +780,7 @@ brief analysis, skip optional stages:
 |------|-----------|
 | **AIDLC** | AI-Driven Development Life Cycle — the methodology this system implements. See **Lifecycle**. |
 | **Approval gate** | An interactive checkpoint at the end of each stage where you choose to approve the work, request changes, or (after 3 revisions) accept as-is. Initialization stages skip approval gates. |
-| **Bolt** | The unit of Construction execution: one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once after all Bolts complete, not per-Bolt. The first Bolt in Construction is the walking skeleton. See also: [parallel batch], [walking skeleton], [ladder prompt]. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
+| **Bolt** | The unit of Construction execution: one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once after all Bolts complete, not per-Bolt. The first Bolt in Construction is the walking skeleton. See also: [parallel batch], [walking skeleton], [autonomy mode]. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
 | **Artifact** | A versioned markdown document produced by a stage and stored in the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`). Examples: `requirements.md`, `code-summary.md`, `initiative-brief.md`. |
 | **Component** | A logical building block within a module (class, function group, UI component). |
 | **Control loop** | The feedforward/feedback pairing of **Rules** (standing decisions applied before work) and **Sensors** (deterministic checks fired on outputs) that steers and verifies a stage. (Distinct from a **Harness**, the CLI distribution sense.) |
@@ -791,7 +791,7 @@ brief analysis, skip optional stages:
 | **Harness** | A CLI distribution of the AI-DLC core — one capable command-line agent that the harness-neutral **Core** is rendered onto. The set is open and growable (today: Claude Code, Codex CLI, Cursor, Kimi Code, Kiro CLI, Kiro IDE, OpenCode). *Note — "harness" carries four senses in this repo, by context:* (1) **this canonical CLI-distribution sense**; (2) the rule+sensor **control loop** (older usage, now renamed — see **Control loop**); (3) the `packages/framework/harness/<name>/` source-surface directory; (4) the `tests/harness/` test-helper directory. Only sense 1 is "a harness" in user docs. |
 | **Inline execution** | The default execution mode where the orchestrator loads an agent persona and executes the stage directly in conversation. Supports real-time user interaction. |
 | **Inline stage** | A stage that runs directly in the orchestrator conversation rather than being delegated. See **Inline execution**. |
-| **Ladder prompt** | The single prompt shown at the end of the walking-skeleton Bolt asking you to choose "continue autonomously" or "gate every Bolt". Your choice is recorded as the autonomy mode and governs all remaining Bolts. |
+| **Ladder prompt (legacy)** | The retired post-walking-skeleton `autonomous|gated` choice. New work selects Intent autonomy as `none|semi|full`; legacy records are diagnostic only. |
 | **Lead agent** | The agent persona primarily responsible for a stage's work. |
 | **Lifecycle** | The AI-DLC methodology as a whole: the AI-Driven Development Life Cycle. A single execution of the methodology is a workflow. |
 | **Module** | A code-level organizational boundary within a service (package, namespace). |
@@ -806,7 +806,7 @@ brief analysis, skip optional stages:
 | **Subagent execution** | An execution mode where the orchestrator delegates stage work to a separate Claude Code subprocess via the Task tool. The subagent runs autonomously without user interaction. Used for stages 2.1 (reverse-engineering) and 3.5 (code-generation). |
 | **Subagent stage** | A stage that delegates its execution to a subagent instead of running inline. See **Subagent execution**. |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
-| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Always gated and interactive so you can confirm the overall shape before the rest of Construction runs. The ladder prompt fires immediately after approval. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
 <!-- glossary:projection:end -->
 
 ---
@@ -918,11 +918,14 @@ learnings → gate.
    artifact with a **READY** or **NOT-READY** verdict.
 3. **Verdict.** READY → proceed to the learnings ritual then the gate. NOT-READY
    with iterations remaining below `reviewer_max_iterations` (default 2) → the lead
-   agent re-runs to address the findings and the reviewer re-checks. NOT-READY with
-   iterations exhausted → proceed to the gate with the unresolved findings noted.
+   agent re-runs to address the findings and the reviewer re-checks. In `semi` or
+   `full`, any remaining NOT-READY finding becomes a blocking quality obligation:
+   repair/replan continues until healthy or parks as `REPAIR_STALLED`. In `none`,
+   exhausted findings proceed to the human gate with the unresolved findings noted.
 
-The reviewer never blocks — the human always has final say at the gate — and does
-not fire for stages without a `reviewer` field. See the `reviewer` /
+The reviewer does not directly mutate workflow state and does not fire for stages
+without a `reviewer` field; the Quality Repair plugin owns blocking convergence in
+`semi` and `full`. See the `reviewer` /
 `reviewer_max_iterations` frontmatter fields in [Stage Definition](15-stage-definition.md).
 
 ---

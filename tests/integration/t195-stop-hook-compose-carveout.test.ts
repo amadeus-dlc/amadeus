@@ -79,9 +79,9 @@ function makeProject(): string {
   return proj;
 }
 
-function seedActive(proj: string, opts: { autonomy?: string } = {}): void {
-  const autonomyLine = opts.autonomy
-    ? `- **Construction Autonomy Mode**: ${opts.autonomy}\n`
+function seedActive(proj: string, opts: { intentAutonomy?: string } = {}): void {
+  const autonomyLine = opts.intentAutonomy
+    ? `- **Intent Autonomy Mode**: ${opts.intentAutonomy}\n`
     : "";
   writeFileSync(
     seededStateFile(proj),
@@ -123,9 +123,9 @@ describe("t195 pending-compose Stop-hook carve-out (tier 2b)", () => {
     expect(r.out).toContain('"decision":"block"');
   });
 
-  test("3: marker present under AUTONOMOUS construction -> BLOCK (autonomy guard)", () => {
+  test("3: marker present under full Intent autonomy -> BLOCK (autonomy guard)", () => {
     const proj = makeProject();
-    seedActive(proj, { autonomy: "autonomous" });
+    seedActive(proj, { intentAutonomy: "full" });
     writeFileSync(markerPath(proj), "pending\n", "utf-8");
     const r = runHook(proj);
     expect(r.out).toContain('"decision":"block"');

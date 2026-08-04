@@ -1,5 +1,5 @@
 // covers: file:packages/framework/core/tools/amadeus-harness-registry.ts
-// size: small
+// size: medium
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";

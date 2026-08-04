@@ -29,3 +29,17 @@ PR / GitHub / merge semantics、外部runner / supervisor、credential発行・�
 - opt-in live seamは5 harnessすべての実credential-attestationが存在する場合だけ実行し、欠落時は明示的にskipする。
 - `bun run typecheck`、対象Biome、coverage freshness、全integration、`bun scripts/package.ts --check`、`bun run promote:self:check`、`git diff --check`がgreenである。
 - live実行0件をpassとして扱わず、credential不足を非terminal blockerとして記録する。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-04T01:15:20Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U5はUnit間の直列依存を保ちつつ、5 harness native scenarioを独立実行可能にし、同一revisionへ束縛されたattested receiptを任意の適合性証拠として扱う。欠損・skip・不一致をlive passには数えない一方、Core terminal completionからは切り離す。宣言された検証証跡にも失敗はない。
+
+### Findings
+
+- None

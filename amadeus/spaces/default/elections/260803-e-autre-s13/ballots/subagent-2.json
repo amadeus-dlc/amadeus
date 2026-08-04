@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AUTRE-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "observed affe83afe 上で対象4領域を再検索し候補語彙8種がすべて0件であることを確認した。静的contractと不在claimは固定できる一方、5 harnessのlive smoke等は未実行と成果物に明記されており、確認済みと扱わない規律は証拠境界を正確に保つ。",
+  "submittedAt": "2026-08-03T04:47:42Z"
+}

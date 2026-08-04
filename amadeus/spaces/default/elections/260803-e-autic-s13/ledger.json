@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-AUTIC-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 3,
+      "reservation": "候補2は新規の独立規範として重複追加せず、既存 cid:intent-capture:c4-2 の今回 Intent への適用証拠として統合し、Issue番号と実装順はこの Intent 固有の記録に留めること。",
+      "rationale": "候補2を選ぶ。独立実測では、amadeus/spaces/default/memory/project.md:12 に『大規模 initiative を規模だけで複数 intent へ分割せず、Unit 設計と Construction Bolt で分割し、依存グラフを確認する』という既存規範 cid:intent-capture:c4-2 があり、team.md:115 に Bolt を独立に切る既定がある。今回の intent-statement.md:40,48 と amadeus-state.md:4 は #2095→#2096→#2067 統合を1つの Intent 内の独立検証可能 Bolt として具体化しており、既存規範への適合が実証されている。一方、候補1を将来の一般規範として『Issueを正本』とすると、team.md:55,135 の『Intent record が仕様の正本で、Issue は record からの一方向ミラー』という既存規範と衝突する。intent-statement.md:53-55 の Issue Fidelity Rule は当該3 Issueの初期 contract に暗黙補完を加えず、9件の不足・矛盾を後続裁定へ送るという本 Intent 固有の安全策としては妥当だが、project 全体の一般則にはそのまま昇格できない。したがって、矛盾なく永続化できるのは候補2の一般原理であり、ただし既存 cid への追補として扱う。自案非採用時の受容度: 候補1は『当該3 Issueの初期 contract を入力根拠とするが、裁定後の正本は Intent record』と適用範囲を限定して team.md の正本規範との衝突を除けば GoA6 で受容する。",
+      "submittedAt": "2026-08-03T03:56:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-AUTIC-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "既存の cid:intent-capture:c4-2 と重複するため、独立規範を新設せず、今回の3 Issueの依存順を同 cid の適用実例として追補してください。",
+      "rationale": "#2096 は #2095 を Blocker、#2067 を Consumer と明記し、#2067 も #2095 と #2096 を Blocker としているため、#2095→#2096→#2067統合の順序は一次証拠から確定する。project.md には論理的に1つのinitiativeを1 Intentに保ち、Unit/Boltで分割する既存則があり候補2はこれと整合する。候補1は今回のIntent限定のユーザー指示としては妥当だが、恒久的なproject規範にするとteam.mdの『Intent recordを仕様の正本、Issueを一方向の共有ビュー』と衝突する。",
+      "submittedAt": "2026-08-03T03:55:54Z"
+    }
+  ],
+  "late": []
+}

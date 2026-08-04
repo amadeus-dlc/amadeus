@@ -78,8 +78,7 @@ describe("t403 guardMessage assembles the three-part contract (FR-4 / AC-4a)", (
     // The redirect exit reuses the existing ladder vocabulary rather than
     // inventing a second command for the same answer.
     expect(AUTONOMY_LADDER_EXIT).toContain("set-autonomy");
-    expect(AUTONOMY_LADDER_EXIT).toContain("autonomous");
-    expect(AUTONOMY_LADDER_EXIT).toContain("gated");
+    expect(AUTONOMY_LADDER_EXIT).toContain("none|semi|full");
     // The weight is the measured basis, not an exhortation.
     expect(PLAN_DRIFT_WEIGHT).toMatch(/\d/);
   });

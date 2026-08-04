@@ -349,6 +349,7 @@ function autonomousCodegenState(): string {
 - **Scope**: feature
 - **State Version**: 7
 - **Skeleton Stance**: on
+- **Intent Autonomy Mode**: full
 - **Construction Autonomy Mode**: autonomous
 
 ## Scope Configuration

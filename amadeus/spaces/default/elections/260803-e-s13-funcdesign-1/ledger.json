@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-S13-FUNCDESIGN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提示された候補はいずれも今回固有の設計判断またはレビュー履歴であり、ユーザーも保存なし・追加なしを選択しているため、再利用可能な永続学習として採択すべき内容はないと判断した。",
+      "submittedAt": "2026-08-03T15:07:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-S13-FUNCDESIGN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "今回固有の設計判断とレビュー履歴は反復利用可能な一般則ではなく、ユーザーも保存なし・追加なしを選択しているため、永続化対象を0件とする判断を全面的に支持する。",
+      "submittedAt": "2026-08-03T15:08:09Z"
+    }
+  ],
+  "late": []
+}

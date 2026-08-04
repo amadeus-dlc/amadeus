@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AUTSD-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1 は intent-statement.md の Issue Fidelity Rule（Issue contract を正本とし、それ以外は Issue どおり実行）を scope-document.md:90-93 と intent-backlog.md:7-25 の Must-have 分類へ一貫して接続する、今後も再利用可能な実行規範である。対して c2 は project.md:200 の『raw WSJF より dependency と risk-first を優先』と実質重複するため、新規永続化候補としては c1 を選ぶ。",
+  "submittedAt": "2026-08-03T04:06:42Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AUTIC-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 3,
+  "reservation": "候補2は新規の独立規範として重複追加せず、既存 cid:intent-capture:c4-2 の今回 Intent への適用証拠として統合し、Issue番号と実装順はこの Intent 固有の記録に留めること。",
+  "rationale": "候補2を選ぶ。独立実測では、amadeus/spaces/default/memory/project.md:12 に『大規模 initiative を規模だけで複数 intent へ分割せず、Unit 設計と Construction Bolt で分割し、依存グラフを確認する』という既存規範 cid:intent-capture:c4-2 があり、team.md:115 に Bolt を独立に切る既定がある。今回の intent-statement.md:40,48 と amadeus-state.md:4 は #2095→#2096→#2067 統合を1つの Intent 内の独立検証可能 Bolt として具体化しており、既存規範への適合が実証されている。一方、候補1を将来の一般規範として『Issueを正本』とすると、team.md:55,135 の『Intent record が仕様の正本で、Issue は record からの一方向ミラー』という既存規範と衝突する。intent-statement.md:53-55 の Issue Fidelity Rule は当該3 Issueの初期 contract に暗黙補完を加えず、9件の不足・矛盾を後続裁定へ送るという本 Intent 固有の安全策としては妥当だが、project 全体の一般則にはそのまま昇格できない。したがって、矛盾なく永続化できるのは候補2の一般原理であり、ただし既存 cid への追補として扱う。自案非採用時の受容度: 候補1は『当該3 Issueの初期 contract を入力根拠とするが、裁定後の正本は Intent record』と適用範囲を限定して team.md の正本規範との衝突を除けば GoA6 で受容する。",
+  "submittedAt": "2026-08-03T03:56:30Z"
+}

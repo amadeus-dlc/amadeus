@@ -1,6 +1,6 @@
-// Credential-attested five-harness Intent completion (#2067).
+// Credential-attested five-harness live verification (#2067).
 //
-// Core owns cohort/receipt/terminal invariants. Harness adapters own only
+// Core owns cohort/receipt verification invariants. Harness adapters own only
 // credential authorization and native observation. No GitHub, PR, merge,
 // deployment, runner, or supervisor semantics belong here.
 
@@ -28,6 +28,9 @@ export type StableId = string;
 export type Sha256Digest = string;
 export type CompletionHarnessId = HarnessDescriptor["id"];
 export const INTENT_COMPLETION_TRANSACTION_COMMITTED_EVENT = "INTENT_COMPLETION_TRANSACTION_COMMITTED";
+// Live verification is optional evidence. The production workflow completion
+// path must never import this module or wait for a receipt cohort.
+export const CORE_INTENT_COMPLETION_REQUIRES_LIVE_RECEIPTS = false as const;
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
@@ -1102,6 +1105,20 @@ function completedGrant(current: AutonomyProjection): IntentGrant | null {
   return current.currentGrant === null ? null : { ...current.currentGrant, state: "completed" };
 }
 
+function canPlanTerminalCommit(input: {
+  readonly current: AutonomyProjection;
+  readonly evaluation: Extract<IntentCompletionEvaluation, { check: { kind: "complete" } }>;
+}): boolean {
+  const evidence = input.evaluation.check.evidence;
+  return input.current.intentUuid === evidence.intentUuid &&
+    input.current.workflowExecutionState === "running" &&
+    input.current.pendingExercise === null &&
+    input.current.parkEnvelope === null &&
+    Number.isSafeInteger(input.evaluation.sourceAuditRevision) &&
+    Number.isSafeInteger(input.evaluation.sourceStateProjectionRevision) &&
+    input.evaluation.sourceStateProjectionRevision !== Number.MAX_SAFE_INTEGER;
+}
+
 export function planTerminalCommit(input: {
   readonly current: AutonomyProjection;
   readonly evaluation: Extract<IntentCompletionEvaluation, { check: { kind: "complete" } }>;
@@ -1112,11 +1129,7 @@ export function planTerminalCommit(input: {
     return failure("ILLEGAL_STATE", "autonomy", error instanceof Error ? error.message : String(error));
   }
   const evidence = input.evaluation.check.evidence;
-  if (input.current.intentUuid !== evidence.intentUuid || input.current.workflowExecutionState !== "running" ||
-    input.current.pendingExercise !== null || input.current.parkEnvelope !== null ||
-    !Number.isSafeInteger(input.evaluation.sourceAuditRevision) ||
-    !Number.isSafeInteger(input.evaluation.sourceStateProjectionRevision) ||
-    input.evaluation.sourceStateProjectionRevision === Number.MAX_SAFE_INTEGER) {
+  if (!canPlanTerminalCommit(input)) {
     return failure("ILLEGAL_STATE", "terminalPlan", "only a stable running complete evaluation can terminate");
   }
   const grant = completedGrant(input.current);

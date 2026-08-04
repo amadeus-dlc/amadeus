@@ -1,0 +1,13 @@
+{
+  "electionId": "E-S13-APPDESIGN-3",
+  "voter": "subagent-1",
+  "question": "Application Design の永続化対象となる学習候補を 0 件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "stage memory に学習候補がなく、ユーザーも追加なしを選択したため、永続化する学習を 0 件とする。"
+    }
+  ]
+}

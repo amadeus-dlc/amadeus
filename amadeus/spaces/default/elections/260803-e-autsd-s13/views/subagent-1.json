@@ -1,0 +1,19 @@
+{
+  "electionId": "E-AUTSD-S13",
+  "voter": "subagent-1",
+  "question": "Scope Definitionで記録した学習候補のうち、今後の実行規範として永続化する候補を選んでください。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "数値スコアではなく依存順で優先する",
+      "description": "価値・工数の実測値がない場合は架空のWSJF/RICE点数を作らず、明示された依存順を使う。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "Issue受け入れ条件をすべてMust-haveとして扱う",
+      "description": "ユーザーがIssueどおりの実行を指定したため、Issueに明記された条件をnice-to-haveへ降格しない。→ project.md ## Corrections"
+    }
+  ]
+}

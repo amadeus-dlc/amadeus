@@ -375,16 +375,18 @@ function validatePersistedReviewEvent(
 function validatePersistedReviewState(persisted: AutonomyReviewPersistenceState): void {
   const decisionIds = new Set(persisted.autonomy.autoDecisions.map((decision) => decision.decisionId));
   const reviewed = new Set<string>();
-  const firstReviewRevision = persisted.auditRevision - persisted.reviews.length + 1;
+  let priorReviewRevision = 0;
   let extensionHead: string | null = null;
   let extensionRevision = 0;
-  for (const [index, event] of persisted.reviews.entries()) {
+  for (const event of persisted.reviews) {
     if (event.eventType !== AUTO_DECISION_REVIEWED_EVENT || event.targetIntentUuid !== persisted.intentUuid ||
-      !decisionIds.has(event.decisionId) || reviewed.has(event.decisionId)) {
+      !decisionIds.has(event.decisionId) || reviewed.has(event.decisionId) ||
+      event.projectionRevision <= priorReviewRevision || event.projectionRevision > persisted.auditRevision) {
       throw new Error("invalid-autonomy-review-persistence-events");
     }
     reviewed.add(event.decisionId);
-    validatePersistedReviewEvent(persisted, event, firstReviewRevision + index);
+    priorReviewRevision = event.projectionRevision;
+    validatePersistedReviewEvent(persisted, event, event.projectionRevision);
     if (persisted.lifecycle !== "completed") continue;
     extensionRevision += 1;
     extensionHead = stableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
@@ -913,6 +915,8 @@ export function reviewAuditFields(event: AutoDecisionReviewedEvent): Readonly<Re
     "Review Actor": event.actorId,
     "Source Human Turn": event.sourceHumanTurnId,
     "Audit Transaction Id": event.transactionId,
+    "Event Identity": event.eventIdentity,
+    "Projection Revision": String(event.projectionRevision),
     "Payload Digest": event.payloadDigest,
     "Payload V1": event.payloadV1,
   };

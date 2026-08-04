@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "Issue受け入れ条件をすべてMust-haveとして扱う"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "Issue受け入れ条件をすべてMust-haveとして扱う",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "数値スコアではなく依存順で優先する",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T04:07:46Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-AUTSD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1 は intent-statement.md の Issue Fidelity Rule（Issue contract を正本とし、それ以外は Issue どおり実行）を scope-document.md:90-93 と intent-backlog.md:7-25 の Must-have 分類へ一貫して接続する、今後も再利用可能な実行規範である。対して c2 は project.md:200 の『raw WSJF より dependency と risk-first を優先』と実質重複するため、新規永続化候補としては c1 を選ぶ。",
+      "submittedAt": "2026-08-03T04:06:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-AUTSD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1を全面支持する。intent-capture-questions.md Q5にはユーザーの逐語指示『抜け漏れ・矛盾を指摘し、それ以外はIssueどおり』が記録され、intent-statement.mdはIssue contractを正本化し、scope-definition-questions.md Q2も3 Issueの受け入れ条件を全てMust-haveとしたうえで2026-08-03T04:02:47Zに承認されている。したがって、明示的にIssueどおりの実行を求められた場合に受け入れ条件をnice-to-haveへ降格しない規範は、今回の解釈事故を防ぐ再利用可能な条件付き規範である。対して候補2はproject.mdの既存 cid:scope-definition:c3（raw WSJFよりdependencyとrisk-firstを優先）に既に包含され、新規persistは重複となる。",
+      "submittedAt": "2026-08-03T04:06:55Z"
+    }
+  ],
+  "resolutions": []
+}

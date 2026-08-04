@@ -1,0 +1,19 @@
+{
+  "electionId": "E-AUTIC-S13",
+  "voter": "subagent-2",
+  "question": "Intent Capture で記録した学習候補のうち、今後の実行規範として永続化する候補を選んでください。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "1つのumbrella Intentで依存順を維持する",
+      "description": "#2095、#2096、#2067統合を独立検証可能なBoltに分け、Intentの目的と実装順を分離する。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "3件のIssueを正本として扱う",
+      "description": "Issueに未記載の仕様は暗黙補完せず、抜け漏れと矛盾だけを明示して後続stageへ渡す。→ project.md ## Corrections"
+    }
+  ]
+}

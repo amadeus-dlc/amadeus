@@ -298,17 +298,19 @@ function seedActiveWithCheckbox(
  */
 function seedInProgressWithQuestions(
   proj: string,
-  opts: { slug?: string; phase?: string; questions?: string; autonomy?: string } = {},
+  opts: { slug?: string; phase?: string; questions?: string; autonomy?: string; intentMode?: string } = {},
 ): void {
   const slug = opts.slug ?? "requirements-analysis";
   const phase = opts.phase ?? "inception";
   const autonomyLine = opts.autonomy
     ? `- **Construction Autonomy Mode**: ${opts.autonomy}\n`
     : "";
+  const intentMode = opts.intentMode ?? (opts.autonomy === "autonomous" ? "full" : undefined);
+  const intentModeLine = intentMode ? `- **Intent Autonomy Mode**: ${intentMode}\n` : "";
   writeFileSync(
     seededStateFile(proj),
     `- **Workflow**: feature\n- **Scope**: feature\n- **Lifecycle Phase**: ${phase.toUpperCase()}\n` +
-      `- **Current Stage**: ${slug}\n${autonomyLine}` +
+      `- **Current Stage**: ${slug}\n${intentModeLine}${autonomyLine}` +
       `\n## Stage Progress\n- [-] ${slug} — EXECUTE\n`,
     "utf-8",
   );
@@ -743,19 +745,12 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(exhausted.out).toBe("");
   }, 30000);
 
-  // (b2)(3) AUTONOMY GUARD - salvaged from #365. A `parked` directive under
-  // autonomous Construction must NOT release the stop: an unattended swarm/Bolt
-  // run has no human to resume it, so the parked allow is suppressed and the
-  // turn falls through to the cap-bounded block (the loop stays alive). Mirror
-  // of the (f) pending-question autonomy guard.
-  test("(b2) parked under Construction Autonomy Mode=autonomous still BLOCKS", () => {
+  test("(b2) parked under Intent autonomy full ALLOWS a safe abnormal stop", () => {
     const proj = makeProject();
-    // Seed an active workflow flagged autonomous (reuse the autonomy seed).
     seedInProgressWithQuestions(proj, { autonomy: "autonomous" });
     const r = runHook(proj, '{"stop_hook_active":false}', "parked");
     expect(r.rc).toBe(0);
-    // The parked allow is declined; the hook blocks instead.
-    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+    expect(r.out).toBe("");
   }, 30000);
 
   // =========================================================================
@@ -936,7 +931,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(f) AUTONOMY GUARD — [-] + blank question BUT Construction Autonomy Mode=autonomous still BLOCKS", () => {
+  test("(f) AUTONOMY GUARD — full + blank question still BLOCKS", () => {
     const proj = makeProject();
     // The exact regression the autonomy gate prevents: in an autonomous
     // Construction run the loop must keep moving even with a stray open
@@ -950,6 +945,20 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(f) semi + blank question ALLOWS because questions remain human-owned", () => {
+    const proj = makeProject();
+    seedInProgressWithQuestions(proj, {
+      slug: "code-generation",
+      phase: "construction",
+      autonomy: "autonomous",
+      intentMode: "semi",
+      questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
+    });
+    const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    expect(r.rc).toBe(0);
+    expect(r.out).toBe("");
   }, 30000);
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {
