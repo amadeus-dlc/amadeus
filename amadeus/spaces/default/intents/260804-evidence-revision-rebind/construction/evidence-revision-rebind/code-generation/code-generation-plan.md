@@ -96,15 +96,32 @@
 
 ### Step 9: 現行 bundle を clean HEAD へ復旧し、全回帰を実測する
 
-- [ ] 実装・unit／integration／workflow testを先にcommitし、clean branch HEADを実測してから、そのHEADをtargetにCLIのpure rebindを実行する。
-- [ ] 生成差分が `adoption-evidence.json`、`adoption-evidence-manifest.json`、`evidence/adoption-runs.json` の3ファイルだけであることを確認し、後続のevidence-only commitへ含める。JSON個別手編集を正規手順にしない。
-- [ ] `validateEvidenceRegistry(...).ok === true`、`t413` **10 pass／0 fail**、`bun tests/no-silent-drop-gate.ts check --base-revision <trusted-base>` の `NO_SILENT_DROP_OK` を実測する。
-- [ ] focused unit／integration／workflow tests、no-silent-drop repository adoption tests、`bun run lint`、`bun run typecheck`、`bun run test:ci` を実行する。coverageは単独所有で `bun run coverage:ci` を実行し、追加行の未被覆を確認する。
-- [ ] PR内ではAC-6をfixture／workflow contractで再現し、着地後の実runで最新main tipの `CI Success` とbot rebind commitを最終受け入れ証拠として確認する。
+- [x] 実装・unit／integration／workflow testを先にcommitし、clean branch HEADを実測してから、そのHEADをtargetにCLIのpure rebindを実行する。
+- [x] 生成差分が `adoption-evidence.json`、`adoption-evidence-manifest.json`、`evidence/adoption-runs.json` の3ファイルだけであることを確認し、後続のevidence-only commitへ含める。JSON個別手編集を正規手順にしない。
+- [x] `validateEvidenceRegistry(...).ok === true`、`t413` **10 pass／0 fail**、`bun tests/no-silent-drop-gate.ts check --base-revision <trusted-base>` の `NO_SILENT_DROP_OK` を実測する。
+- [x] focused unit／integration／workflow tests、no-silent-drop repository adoption tests、`bun run lint`、`bun run typecheck`、`bun run test:ci` を実行する。coverageは単独所有で `bun run coverage:ci` を実行し、追加行の未被覆を確認する。
+- [ ] PR内ではAC-6をfixture／workflow contractで再現し、着地後の実runで最新main tipの `CI Success` とbot rebind commitを最終受け入れ証拠として確認する。後半の実run確認はBuild and Testで追跡し、main着地後にDeployment Executionで回収する。
 - トレース: FR-5〜FR-8、NFR-1〜NFR-4、AC-1〜AC-12、テスト要件8。
+
+最後の未完了項目はmain着地後にだけ観測できる受入確認であり、本stage内ではfixture／workflow contractまで完了している。コード生成時点の実装・検証・証跡復旧は完了している。
 
 ## 完了判定
 
-- 全Stepのチェックが完了し、許可されたコード・workflow・test・3台帳以外に意図しない変更がない。
+- Code Generationで実行可能な全チェックが完了し、許可されたコード・workflow・test・3台帳以外に意図しない変更がない。main着地後にだけ観測可能なAC-6の実run確認は、後続stageの受入条件として未チェックを維持する。
 - 要件の件数、2段階tree比較、main-only収束、fail-closed述語を縮小していない。
 - 未解決 BLOCKER はない。CLI名、内部配置、独立workflow採用は、上記の推奨構成で確定する。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-04T05:44:25Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+要求、実装計画、実装・検証サマリーは整合しており、未解決の実装阻害・安全性欠陥・要求違反は確認されませんでした。
+
+### Findings
+
+- FOLLOW-UP | AC-6の本番同等経路によるpost-merge実行証跡は、計画とサマリーの双方で未完了として正しく切り分けられています。マージ後に成功したrun、対象revision、生成された証跡を受入記録へ追記してください。
+- NIT | Code Generationの完了条件とpost-merge受入条件が別時点で成立することは記述されています。後続担当者の誤読を避けるため、未チェック項目の責任stageを明記すると追跡性がさらに明確になります。
