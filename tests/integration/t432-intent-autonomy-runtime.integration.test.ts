@@ -253,7 +253,7 @@ describe("Intent autonomy durable coordinator", () => {
     ]);
   });
 
-  test("walking skeleton is human in semi and grant-backed in full", () => {
+  test("walking skeleton is human in semi and Intent-grant-backed in full", () => {
     const { coordinator } = fullRuntime();
     const result = coordinator.decide(decisionInput({
       occurrence: gate("walking-skeleton"),

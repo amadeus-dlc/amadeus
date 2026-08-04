@@ -184,15 +184,8 @@ A decline reason added later without a branch here lands on `violation` rather t
 
 ### Legacy standing delegation grants (#1125)
 
-Standing delegation grants are retired as an authorisation mechanism. `grant-standing-delegation` refuses new issuance and directs the user to Intent-scoped `none|semi|full`. Existing `GRANT_ISSUED`, `GRANT_REVOKED`, and `GATE_AUTHORIZATION_SELECTED` observations remain readable for replay and doctor diagnostics, but they never create or restore authority and are never converted into a `full` grant.
+Standing delegation grants are retired as an authorisation mechanism. The `grant-standing-delegation` and `revoke-standing-delegation` commands, grant carriers, route receipts, and active-grant doctor status no longer exist. Existing `GRANT_ISSUED`, `GRANT_REVOKED`, and `GATE_AUTHORIZATION_SELECTED` observations remain readable only by replay and migration projection code; they never create or restore authority and are never converted into a `full` grant.
 
-```
-amadeus-state grant-standing-delegation  # refused: retired
-amadeus-state revoke-standing-delegation --grant-id <8-hex id>
-```
-
-- Revocation remains available, with real-human provenance, so a historical unexpired record can be terminated explicitly.
-- `amadeus --doctor` reports legacy observations as migration diagnostics and explains that they do not authorise work.
 - `semi` replaces the common in-phase gate-skipping use case without issuing a grant. `full` uses a new Intent-scoped grant bound to one Intent UUID, with no TTL or usage budget; its issue, replacement, exercise, revocation, and completion are canonical audit transactions.
 
 ---
@@ -270,9 +263,9 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` captures the rejection reason |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` records a leader session's human-grounded approval into a remote conductor intent's audit dir; carries the issuer `(space, intent, shard, HUMAN_TURN timestamp)` the conductor's gate verifies (#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` records a leader session's human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` — opens only a reject gate (#685) |
-| `GRANT_ISSUED` | Reserved legacy observation | Historical standing-grant evidence remains readable for replay and doctor diagnostics; new authority is issued only through an Intent-scoped autonomy transaction |
-| `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` cancels an outstanding standing grant by `Grant Id`, grounded in a real human turn on the leader's own ledger (#1125) |
-| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | the solo-mode router records the exact standing grant it selected for one stage-route attempt — `Route Id`, `Stage`, `Grant Id` — before the carrier reaches the conductor, so the later approve can re-verify the same grant against the receipt owner (#1466) |
+| `GRANT_ISSUED` | Reserved legacy observation | Historical standing-grant evidence remains readable by replay and migration projection code only |
+| `GRANT_REVOKED` | Reserved legacy observation | Historical revocation evidence; no live emitter |
+| `GATE_AUTHORIZATION_SELECTED` | Reserved legacy observation | Historical route evidence; no live emitter |
 
 ### User interaction
 
@@ -316,7 +309,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `SESSION_RESUMED` | `hooks/amadeus-session-start.ts` | `source=resume` |
 | `SESSION_COMPACTED` | `hooks/amadeus-validate-state.ts` | Emitted at PreCompact (not at next SessionStart) to avoid duplication |
 | `SESSION_ENDED` | `hooks/amadeus-session-end.ts` | Includes `Reason` field from Claude Code |
-| `HUMAN_TURN` | `tools/amadeus-presence-reservation.ts` | One per real human prompt or answered question widget; the approval/interview gate requires one since the last gate resolution. The append lives in the canonical presence seam (`mintHumanPresence` for an ordinary turn, `mintArmedPresenceReservation` for a solo standing-grant fallback armed in the same host session); the trusted prompt-submit hook and each harness prompt adapter call that seam and never append on their own (#1466) |
+| `HUMAN_TURN` | `tools/amadeus-presence-reservation.ts` | One per real human prompt or answered question widget; the approval/interview gate requires one since the last gate resolution. The append lives in the canonical presence seam (`mintHumanPresence` for an ordinary turn, `mintArmedPresenceReservation` for a targeted continuation armed in the same host session); the trusted prompt-submit hook and each harness prompt adapter call that seam and never append on their own (#1466) |
 | `SUBAGENT_STARTED` | `hooks/amadeus-log-subagent-start.ts` | Records subagent dispatch; only on harnesses with a start seam (Claude PreToolUse{Task}, Kimi SubagentStart) |
 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` | Records subagent completion via SubagentStop hook |
 

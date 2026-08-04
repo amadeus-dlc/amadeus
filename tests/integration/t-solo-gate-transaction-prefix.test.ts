@@ -8,15 +8,10 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  handleReport,
-} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import {
   auditShardName,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   consumePresenceReservation,
-  hostSessionCapability,
-  mintHumanPresence,
   readPresenceReservation,
 } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 import {
@@ -26,11 +21,9 @@ import {
   seedGoalReceiptForFinalStage,
 } from "../harness/fixtures.ts";
 import {
-  GRANT_ID,
-  ROUTE_ID,
-  SESSION_ID,
   STAGE,
-  captureStdout,
+  SESSION_ID,
+  armAndMintTargetedApproval,
   cleanupSoloGateRoots,
   restoreSoloEnv,
   setup,
@@ -89,37 +82,20 @@ describe("targeted approval prefix arms", () => {
     restoreSoloEnv();
   });
 
-  // A workspace whose grant has already expired, with the fallback reservation
-  // armed and minted: the state every case below starts from.
+  // A workspace with a targeted-human reservation armed and minted: the state
+  // every case below starts from.
   function fallbackFixture(): {
     root: string;
     owner: string;
     ids: { targetIntentId: string; reservationId: string };
   } {
-    const expiredAt = Date.now() - 1_000;
-    const { root, owner } = setup(new Date(expiredAt).toISOString(), expiredAt - 1_000);
+    const { root, owner } = setup();
     useSoloEnv(root);
-    const fallback = JSON.parse(
-      captureStdout(() => {
-        handleReport(
-          [
-            "--stage", STAGE, "--result", "approved",
-            "--standing-grant-id", GRANT_ID,
-            "--standing-grant-route-id", ROUTE_ID,
-          ],
-          root,
-        );
-      }),
-    ) as { kind: string; target_intent_id: string; presence_reservation_id: string };
-    expect(fallback.kind).toBe("await-approval");
-    mintHumanPresence({ projectDir: root, capability: hostSessionCapability(SESSION_ID) });
+    const ids = armAndMintTargetedApproval(root);
     return {
       root,
       owner,
-      ids: {
-        targetIntentId: fallback.target_intent_id,
-        reservationId: fallback.presence_reservation_id,
-      },
+      ids,
     };
   }
 

@@ -84,6 +84,12 @@ type ResolvedIntent = {
   readonly intentUuid: string;
 };
 
+const LEGACY_STANDING_GRANT_AUDIT_EVENTS = [
+  "GRANT_ISSUED",
+  "GRANT_REVOKED",
+  "GATE_AUTHORIZATION_SELECTED",
+] as const;
+
 function resolveIntent(projectDir: string, intent?: string, requestedSpace?: string): ResolvedIntent | null {
   const space = requestedSpace ?? activeSpace(projectDir);
   const intentDir = activeIntent(projectDir, space, intent);
@@ -96,7 +102,7 @@ function resolveIntent(projectDir: string, intent?: string, requestedSpace?: str
 function coordinatorFor(projectDir: string, resolved: ResolvedIntent): IntentAutonomyCoordinator {
   const audit = readAllAuditShards(projectDir, resolved.intentDir, resolved.space);
   const legacyModeHistory = findAllEvents(audit, "AUTONOMY_MODE_SET").length > 0;
-  const legacyStandingGrants = findAllEvents(audit, "GRANT_ISSUED").flatMap((row) => {
+  const legacyStandingGrants = findAllEvents(audit, LEGACY_STANDING_GRANT_AUDIT_EVENTS[0]).flatMap((row) => {
     const grantId = auditBlockField(row.block, "Grant Id");
     if (grantId === null) return [];
     return [{

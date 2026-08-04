@@ -127,20 +127,11 @@ const VALID_EVENT_TYPES = new Set([
   // DELEGATED_APPROVAL (verified by verifyDelegatedProvenance); verb-scoped so it
   // can ONLY open a reject gate, never an approve gate.
   "DELEGATED_REJECTION",
-  // Standing delegation grants (Issue #1125): a leader session, driven by a real
-  // human turn on its own ledger, issues a time-boxed standing grant that opens
-  // stage-gate approvals across the team for the grant's TTL without a per-gate
-  // human turn. GRANT_ISSUED carries the same issuer provenance coordinates as the
-  // delegations (space, intent, shard, HUMAN_TURN timestamp) plus scope, expiry,
-  // and phase-boundary opt-in; GRANT_REVOKED cancels an outstanding grant by id.
-  // Both are minted ONLY by the trusted in-process writers (amadeus-state
-  // grant-standing-delegation / revoke-standing-delegation) and refused at the
-  // general audit CLI, exactly like the presence/provenance events.
+  // Historical standing-grant observations remain parseable for replay and
+  // migration projection. There is no live writer for these events.
   "GRANT_ISSUED",
   "GRANT_REVOKED",
-  // Solo standing-grant route receipt (#1466). This protected immutable fact
-  // binds the route carrier to the exact stage and Grant Id selected by the
-  // trusted router; the general audit CLI must not be able to fabricate it.
+  // Historical route selection observation; no live writer.
   "GATE_AUTHORIZATION_SELECTED",
   // Artifact events (hook-emitted)
   "ARTIFACT_CREATED",
@@ -1233,10 +1224,8 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   "HUMAN_TURN",
   "DELEGATED_APPROVAL",
   "DELEGATED_REJECTION",
-  // Standing grants carry the same human-provenance weight as the delegations —
-  // a fabricated GRANT_ISSUED would open every stage gate for its TTL, so the
-  // general audit CLI must refuse to mint them (only grant-standing-delegation /
-  // revoke-standing-delegation, backed by a real HUMAN_TURN, may write them).
+  // Legacy event shapes remain read-only. Refuse new rows so fabricated history
+  // cannot influence replay or migration projections.
   "GRANT_ISSUED",
   "GRANT_REVOKED",
   "GATE_AUTHORIZATION_SELECTED",
