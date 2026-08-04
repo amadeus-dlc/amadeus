@@ -176,6 +176,14 @@ describe("regressionClass", () => {
     expect(regressionClass("coverage", "percent", 80, 81)).toBe("");
     expect(regressionClass("dist_size", "bytes", 100, 200)).toBe("regressed");
   });
+  test("only the open bug backlog worsens on increase; cumulative occurrence never classifies", () => {
+    expect(regressionClass("bugs", "open", 15, 16)).toBe("regressed");
+    expect(regressionClass("bugs", "open", 16, 15)).toBe("");
+    expect(regressionClass("bugs", "open", 15, 15)).toBe("");
+    expect(regressionClass("bugs", "open", null, 15)).toBe("");
+    expect(regressionClass("bugs", "total", 278, 300)).toBe("");
+    expect(regressionClass("bugs", "fixed", 250, 240)).toBe("");
+  });
   test("failure counters are prev-agnostic: non-zero is always regressed", () => {
     expect(regressionClass("tests", "failedFiles", undefined, 1)).toBe("regressed");
     expect(regressionClass("tests", "failedAssertions", 0, 2)).toBe("regressed");
@@ -202,6 +210,12 @@ describe("renderHtml regression highlighting", () => {
   test("the legend line is present and static", () => {
     const html = renderHtml(pair("coverage", { percent: 80 }, { percent: 81 }));
     expect(html).toContain("直前スナップショットからの劣化");
+    expect(html).toContain("バグ open 増");
+  });
+  test("a growing open bug backlog is highlighted in chart and table", () => {
+    const html = renderHtml(pair("bugs", { open: 15 }, { open: 16 }));
+    expect(html).toContain('circle class="regressed"');
+    expect(html).toContain('td class="regressed"');
   });
 });
 

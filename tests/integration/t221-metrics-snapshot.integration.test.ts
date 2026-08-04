@@ -22,12 +22,24 @@ function fixture(): string {
   git(root, ["init", "-q", "--initial-branch=main"]); git(root, ["config", "user.email", "test@example.com"]); git(root, ["config", "user.name", "test"]); git(root, ["add", "."]); git(root, ["commit", "-q", "-m", "fixture"]);
   return root;
 }
+const MUTATED_VARS = ["AMADEUS_METRICS_ROOT", "AMADEUS_COMPLEXITY_ROOTS", "GH_TOKEN", "GITHUB_TOKEN"] as const;
+function applyEnv(values: Record<string, string | undefined>): void {
+  for (const [name, value] of Object.entries(values)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+}
 function cli(root: string, verb: "--write" | "--check") {
   const started = performance.now();
+  const childEnv: Record<string, string | undefined> = { ...process.env, AMADEUS_METRICS_ROOT: root, AMADEUS_COMPLEXITY_ROOTS: join(root, "scripts") };
+  // bugs is network-backed: a contributor's ambient token would make the run
+  // reach GitHub, so the fixture pins the collector to its skip path.
+  delete childEnv.GH_TOKEN;
+  delete childEnv.GITHUB_TOKEN;
   const result = spawnSync(process.execPath, [join(import.meta.dir, "../../scripts/metrics-snapshot.ts"), verb], {
     cwd: root,
     encoding: "utf8",
-    env: { ...process.env, AMADEUS_METRICS_ROOT: root, AMADEUS_COMPLEXITY_ROOTS: join(root, "scripts") },
+    env: childEnv,
   });
   return { ...result, elapsed: performance.now() - started };
 }
@@ -43,7 +55,8 @@ describe("t221 snapshot writer and real CLI", () => {
       expect(env.listFiles(join(root, "missing"))).toEqual([]);
       expect(env.listFiles(join(root, "tests"))).toContain(join(root, "tests", "unit", "x.test.ts"));
       expect(env.exec(["git", "rev-parse", "HEAD"])).toHaveLength(40);
-      expect(collectors.map((collector) => collector.collect(env)).every((result) => result.ok)).toBe(true);
+      const tokenless: CollectEnv = { ...env, envVar: (name) => (name.endsWith("TOKEN") ? undefined : process.env[name]) };
+      expect(collectors.map((collector) => collector.collect(tokenless)).map((result) => result.ok)).toEqual([true, true, true, true, true, true, "skipped"]);
     } finally {
       if (previousRoots === undefined) delete process.env.AMADEUS_COMPLEXITY_ROOTS;
       else process.env.AMADEUS_COMPLEXITY_ROOTS = previousRoots;
@@ -61,56 +74,52 @@ describe("t221 snapshot writer and real CLI", () => {
   });
   test("main writes success and failure to the matching process stream", () => {
     const root = fixture();
-    const previousRoot = process.env.AMADEUS_METRICS_ROOT;
-    const previousComplexityRoots = process.env.AMADEUS_COMPLEXITY_ROOTS;
+    const previous = Object.fromEntries(MUTATED_VARS.map((name) => [name, process.env[name]]));
     const stdout: string[] = [];
     const stderr: string[] = [];
     const stdoutWrite = process.stdout.write;
     const stderrWrite = process.stderr.write;
-    process.env.AMADEUS_METRICS_ROOT = root;
-    process.env.AMADEUS_COMPLEXITY_ROOTS = join(root, "scripts");
+    // Tokens cleared for the same reason as in cli(): bugs must stay offline.
+    applyEnv({ AMADEUS_METRICS_ROOT: root, AMADEUS_COMPLEXITY_ROOTS: join(root, "scripts"), GH_TOKEN: undefined, GITHUB_TOKEN: undefined });
     process.stdout.write = ((value: string) => { stdout.push(value); return true; }) as typeof process.stdout.write;
     process.stderr.write = ((value: string) => { stderr.push(value); return true; }) as typeof process.stderr.write;
     try {
       expect(main(["--check"])).toBe(0);
       expect(main([])).toBe(1);
-      expect(stdout.join("")).toContain("CHECK OK 6 collectors");
+      expect(stdout.join("")).toContain("CHECK OK 6 collectors (skipped: bugs)");
       expect(stderr.join("")).toContain("Usage:");
     } finally {
       process.stdout.write = stdoutWrite;
       process.stderr.write = stderrWrite;
-      if (previousRoot === undefined) delete process.env.AMADEUS_METRICS_ROOT;
-      else process.env.AMADEUS_METRICS_ROOT = previousRoot;
-      if (previousComplexityRoots === undefined) delete process.env.AMADEUS_COMPLEXITY_ROOTS;
-      else process.env.AMADEUS_COMPLEXITY_ROOTS = previousComplexityRoots;
+      applyEnv(previous);
     }
   });
   test("atomic writer creates distinct files for distinct captures", () => {
     const root = fixture();
-    const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40) };
+    const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40), envVar: () => undefined };
     const collector: Collector = { name: "x", collect: () => ({ ok: true, name: "x", tool: "x", tool_version: "1", values: { n: 1 } }) };
     const one = writeSnapshotAtomic(root, runSnapshot(env, [collector], new Date("2026-01-01T00:00:00.000Z")));
     const two = writeSnapshotAtomic(root, runSnapshot(env, [collector], new Date("2026-01-01T00:00:00.001Z")));
     expect(one).not.toBe(two); expect(existsSync(`${one}.tmp`)).toBe(false); expect(JSON.parse(readFileSync(two, "utf8")).schema_version).toBe(1);
   });
   test("collision never overwrites", () => {
-    const root = fixture(); const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40) };
+    const root = fixture(); const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40), envVar: () => undefined };
     const snapshot = runSnapshot(env, [], new Date("2026-01-01T00:00:00Z")); const path = writeSnapshotAtomic(root, snapshot); const before = readFileSync(path, "utf8");
     expect(() => writeSnapshotAtomic(root, snapshot)).toThrow("already exists"); expect(readFileSync(path, "utf8")).toBe(before);
   });
   test("writer failure leaves no partial json", () => {
     const root = fixture(); rmSync(join(root, "metrics"), { recursive: true, force: true }); writeFileSync(join(root, "metrics"), "not-a-directory");
-    const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40) };
+    const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40), envVar: () => undefined };
     expect(() => writeSnapshotAtomic(root, runSnapshot(env, []))).toThrow();
     expect(readdirSync(root).filter((name) => name.endsWith(".json"))).toEqual([]);
   });
   test("real --write runs all collectors under 10 seconds and two runs create distinct files", () => {
     const root = fixture(); const first = cli(root, "--write"); const second = cli(root, "--write");
-    expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors .+\.json$/); expect(first.elapsed).toBeLessThan(10_000);
+    expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors \(skipped: bugs\) .+\.json$/); expect(first.elapsed).toBeLessThan(10_000);
     expect(second.status).toBe(0); expect(readdirSync(join(root, "metrics")).filter((name) => name.endsWith(".json"))).toHaveLength(2);
   }, 20_000);
   test("real --check runs all collectors without writing", () => {
     const root = fixture(); const result = cli(root, "--check");
-    expect(result.status).toBe(0); expect(result.stdout.trim()).toBe("CHECK OK 6 collectors"); expect(existsSync(join(root, "metrics"))).toBe(false);
+    expect(result.status).toBe(0); expect(result.stdout.trim()).toBe("CHECK OK 6 collectors (skipped: bugs)"); expect(existsSync(join(root, "metrics"))).toBe(false);
   }, 10_000);
 });
