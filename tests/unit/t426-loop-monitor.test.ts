@@ -322,6 +322,25 @@ describe("loop monitor delivery reducer", () => {
     expect(() => createJudgeRouteConstraint(monitor, ["unknown"])).toThrow(
       "loop-monitor-route-constraint-unknown-route",
     );
+    expect(() => createJudgeRouteConstraint(monitor, ["replan", "replan"])).toThrow(
+      "loop-monitor-route-constraint-duplicate-route",
+    );
+  });
+
+  test("rejects a delivery whose route constraint no longer resolves against the monitor", () => {
+    const monitor = compiled();
+    const tampered = {
+      ...delivery(monitor, "quality-check", null, "tampered-route"),
+      routeConstraint: {
+        routeIds: ["replan", "replan"],
+        fingerprint: monitor.routeConstraint.fingerprint,
+      },
+    };
+    expect(applyLoopDelivery(createLoopMonitorProjection(partition, monitor), monitor, tampered)).toEqual({
+      ok: false,
+      status: "CONFLICT",
+      reason: "route-constraint-mismatch",
+    });
   });
 
   test("delivery construction admits identifiers and digests only, never raw evidence", () => {

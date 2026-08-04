@@ -3,13 +3,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   cleanupTestProject,
   createTestProject,
   DEFAULT_RECORD_DIR,
   seededAuditShard,
+  setupIntegrationProject,
 } from "../harness/fixtures.ts";
 
 import {
@@ -28,6 +29,7 @@ import {
   type QualityReplanPort,
 } from "../../packages/framework/core/tools/amadeus-quality-repair-runtime.ts";
 import {
+  createAuditQualityRepairRepository,
   decodeQualityRepairTransaction,
   readQualityRepairTransactionsFromAudit,
   replayQualityRepairScope,
@@ -770,6 +772,47 @@ describe("Quality Repair production coordinator", () => {
     }
   });
 
+  test("persists Quality Repair transactions through the audit repository and replays them across sessions", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    try {
+      const record = "quality-audit-00000000";
+      const intentsRoot = join(projectDir, "amadeus", "spaces", "default", "intents");
+      mkdirSync(join(intentsRoot, record, "audit"), { recursive: true });
+      writeFileSync(join(projectDir, "amadeus", "active-space"), "default\n", "utf-8");
+      writeFileSync(join(intentsRoot, "active-intent"), `${record}\n`, "utf-8");
+
+      const activation = resolveQualityPluginActivation({
+        mode: "semi",
+        projection: emptyQualityPluginProjection("intent-1"),
+        contribution: createFirstPartyQualityContribution(2),
+      });
+      if (activation.kind !== "active") throw new Error("expected active contribution");
+      const repository = createAuditQualityRepairRepository({ projectDir, intent: record, space: "default" });
+      const observed = createQualityRepairCoordinator({ activation, repository }).recordEvidence(
+        batch(activation.graph.graphRevision, null),
+        trace,
+      );
+      expect(observed.kind).toBe("repair");
+      expect(readQualityRepairTransactionsFromAudit(projectDir, record, "default")).toHaveLength(1);
+
+      const reloaded = createAuditQualityRepairRepository({ projectDir, intent: record, space: "default" });
+      expect(reloaded.readTransactions()).toEqual(repository.readTransactions());
+      expect(replayQualityRepairScope(reloaded, observed.snapshot.qualityScopeId)).toMatchObject({
+        status: { outcome: "active", workflowExecutionState: "running" },
+        transactionCount: 1,
+      });
+
+      const resumedCoordinator = createQualityRepairCoordinator({ activation, repository: reloaded });
+      expect(resumedCoordinator.recordEvidence(
+        batch(activation.graph.graphRevision, observed.snapshot),
+        trace,
+      )).toMatchObject({ kind: "repair" });
+      expect(readQualityRepairTransactionsFromAudit(projectDir, record, "default")).toHaveLength(2);
+    } finally {
+      cleanupTestProject(projectDir);
+    }
+  });
+
   test("validates every stalled-resume prerequisite before accepting improved evidence", () => {
     const empty = runtime();
     expect(empty.coordinator.status("missing-scope")).toBeNull();
@@ -844,6 +887,43 @@ describe("Quality Repair production coordinator", () => {
       batch(stalled.activation.graph.graphRevision, resumedState.latestSnapshot, []),
       trace,
     )).toMatchObject({ kind: "repair" });
+  });
+
+  test("fails closed when the evidence resume cannot commit its loop delivery", () => {
+    const stalled = reachStalledRuntime();
+    const evidenceAlternative = stalled.status.resumeCondition.alternatives.find((item) =>
+      item.kind === "evidence-change"
+    )!;
+    // Reject only the append the resume delivery flows through, leaving the
+    // quality transaction and every loop read intact.
+    const rejectingRepository = {
+      ...stalled.repository,
+      loopRepository: {
+        ...stalled.repository.loopRepository,
+        transaction: ((partition, body) =>
+          stalled.repository.loopRepository.transaction(partition, (sets) =>
+            body(sets, () => {
+              throw new Error("resume-append-rejected");
+            }))) as typeof stalled.repository.loopRepository.transaction,
+      },
+    };
+    const coordinator = createQualityRepairCoordinator({
+      activation: stalled.activation,
+      repository: rejectingRepository,
+    });
+
+    const before = rejectingRepository.readTransactions().length;
+    expect(coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: batch(stalled.activation.graph.graphRevision, stalled.previous, []),
+      trace,
+    })).toEqual({ kind: "CONFLICT", reason: "quality-loop-evidence-resume-failed" });
+    expect(rejectingRepository.readTransactions()).toHaveLength(before);
+    expect(coordinator.status(stalled.status.qualityScopeId)).toMatchObject({
+      outcome: "parked",
+      stopReason: "REPAIR_STALLED",
+    });
   });
 
   test("resumes a stalled sensor obligation from a newly verified success receipt", () => {
