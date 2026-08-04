@@ -41,6 +41,27 @@ describe("Pi child request contract", () => {
     expect(parsePiChildRequest({ ...request, role: "admin" })).toEqual({ ok: false, reason: "role-invalid" });
     expect(parsePiChildRequest({ ...request, apiKey: "secret" })).toEqual({ ok: false, reason: "request-shape-invalid" });
   });
+
+  test("rejects every bounded identity and parent-execution field", () => {
+    expect(parsePiChildRequest({ ...request, deliveryKey: "bad key" })).toEqual({ ok: false, reason: "delivery-key-invalid" });
+    expect(parsePiChildRequest({ ...request, childOrdinal: 0 })).toEqual({ ok: false, reason: "child-ordinal-invalid" });
+    expect(parsePiChildRequest({ ...request, outputLimitBytes: Number.MAX_SAFE_INTEGER })).toEqual({
+      ok: false,
+      reason: "output-limit-invalid",
+    });
+    expect(parsePiChildRequest({ ...request, parentExecution: [] })).toEqual({
+      ok: false,
+      reason: "parent-execution-invalid",
+    });
+    expect(parsePiChildRequest({ ...request, parentExecution: { operationId: "", rootOperationId: "root" } })).toEqual({
+      ok: false,
+      reason: "parent-execution-invalid",
+    });
+    expect(parsePiChildRequest({
+      ...request,
+      parentExecution: { operationId: "parent", rootOperationId: "root", parentOperationId: "" },
+    })).toEqual({ ok: false, reason: "parent-execution-invalid" });
+  });
 });
 
 describe("Pi RPC collector", () => {
@@ -115,6 +136,12 @@ describe("Pi RPC collector", () => {
     collector.acceptLine(JSON.stringify({ id: "wrong", type: "response", command: "prompt", success: true }));
     collector.acceptLine("not-json");
     expect(collector.observation().semanticFailure).toBe("rpc-correlation-failed");
+  });
+
+  test("rejects an event without a string type", () => {
+    const collector = createPiRpcCollector("request-1", 100);
+    collector.acceptLine("{}");
+    expect(collector.observation().semanticFailure).toBe("rpc-event-invalid");
   });
 
   test("fails closed when one RPC line exceeds its byte cap", () => {

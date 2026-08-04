@@ -3932,28 +3932,6 @@
     "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
   },
   {
-    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver-contract.ts",
-    "selector": {
-      "function": "parsePiChildRequest",
-      "fingerprint": "sha256:d7f01a3fbd03814dbc882f4aa894b5ec513e7778a0d2e1d47299a97e4f4c0d34",
-      "anchorLines": 23,
-      "targetLines": "1-23"
-    },
-    "reason": "The request and stream rejection fallbacks are asserted by the Pi driver contract and spawned child-driver suites; the residual rows are defensive protocol guards or multiline error construction that Bun leaves unstamped.",
-    "expiry": "remove when the driver protocol rejection matrix is fully attributed in-process"
-  },
-  {
-    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver-contract.ts",
-    "selector": {
-      "function": "acceptLine",
-      "fingerprint": "sha256:4f87bae482641faeb7c6bfa0eb5c4436f1ac7dda18b53ac51e26e298e8399295",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "The request and stream rejection fallbacks are asserted by the Pi driver contract and spawned child-driver suites; the residual rows are defensive protocol guards or multiline error construction that Bun leaves unstamped.",
-    "expiry": "remove when the driver protocol rejection matrix is fully attributed in-process"
-  },
-  {
     "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
     "selector": {
       "function": "captureExecutableSnapshot",
