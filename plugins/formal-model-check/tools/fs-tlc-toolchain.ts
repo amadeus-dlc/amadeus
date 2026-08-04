@@ -5,8 +5,10 @@ import { createConnection, createServer } from "node:net";
 import {
   chmodSync,
   closeSync,
+  constants as fsConstants,
   copyFileSync,
   existsSync,
+  fchmodSync,
   fsyncSync,
   fstatSync,
   ftruncateSync,
@@ -38,6 +40,7 @@ import {
   isVerifiedTlaModelReceipt,
   validateModelCheckReceipt,
   type ModelCheckReceipt,
+  type ModelCheckReceiptBundle,
 } from "./tla-model-receipt.ts";
 import {
   createJdkDistributionManifest,
@@ -321,6 +324,19 @@ type VerifiedAuxiliaryModulePaths = readonly Readonly<{
   path: string;
   moduleBytesIdentity: string;
 }>[];
+
+type VerifiedPlannedModelSources = Readonly<{
+  modelReceipt: ModelCheckReceipt;
+  moduleBytes: Uint8Array;
+  cfgBytes: Uint8Array;
+  auxiliaryModulePaths: VerifiedAuxiliaryModulePaths;
+}>;
+
+type VerifiedSourceBinding = Readonly<{
+  path: string;
+  identity: string;
+  domain: string;
+}>;
 
 export interface PlannedTlcOutcome {
   readonly raw: RawTlcOutcome;
@@ -661,6 +677,66 @@ function sourceIdentity(
     return canonicalIdentity(source, domain).sha256;
   } catch (cause) {
     toolchainAbort(kind, "SOURCE_DRIFT", "model source is not valid UTF-8", cause);
+  }
+}
+
+function writeStagedSource(
+  stagedPath: string,
+  bytes: Uint8Array,
+): void {
+  const fd = openSync(stagedPath, "wx", 0o600);
+  try {
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const written = writeSync(fd, bytes, offset, bytes.byteLength - offset, offset);
+      if (written <= 0) toolchainAbort("PreparationError", "SOURCE_STAGING", "staged source write was partial");
+      offset += written;
+    }
+    fsyncSync(fd);
+    fchmodSync(fd, 0o444);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function readVerifiedSourceBytes(
+  path: string,
+  domain: string,
+  expectedIdentity: string,
+  code: "SOURCE_DRIFT" | "SOURCE_IDENTITY",
+): Uint8Array {
+  let fd: number;
+  try {
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (cause) {
+    toolchainAbort("PreparationError", code, "model source cannot be opened without following links", cause);
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > METADATA_BYTES) {
+      toolchainAbort("PreparationError", code, "model source is not a capped regular file");
+    }
+    const buffer = new Uint8Array(METADATA_BYTES + 1);
+    let byteLength = 0;
+    for (;;) {
+      const length = readSync(fd, buffer, byteLength, buffer.byteLength - byteLength, null);
+      if (length === 0) break;
+      byteLength += length;
+      if (byteLength > METADATA_BYTES) {
+        toolchainAbort("PreparationError", code, "model source grew beyond its byte cap");
+      }
+    }
+    const bytes = new Uint8Array(buffer.subarray(0, byteLength));
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (canonicalIdentity(source, domain).sha256 !== expectedIdentity) {
+      toolchainAbort("PreparationError", code, "model source changed while staging verified bytes");
+    }
+    return bytes;
+  } catch (cause) {
+    if (cause instanceof ToolchainFailure) throw cause;
+    toolchainAbort("PreparationError", code, "model source is not valid UTF-8", cause);
+  } finally {
+    closeSync(fd);
   }
 }
 
@@ -1514,19 +1590,6 @@ function verifiedAuxiliaryModulePaths(
         "auxiliary modules must be canonical sibling files inside the closed workspace",
       );
     }
-    if (
-      sourceIdentity(
-        canonicalPath,
-        "amadeus.formal-verif.tla.module.v1",
-        "PreparationError",
-      ) !== auxiliary.moduleBytesIdentity
-    ) {
-      toolchainAbort(
-        "PreparationError",
-        "SOURCE_IDENTITY",
-        `auxiliary module ${auxiliary.name} differs from the selected model receipt`,
-      );
-    }
     return Object.freeze({
       path: canonicalPath,
       moduleBytesIdentity: auxiliary.moduleBytesIdentity,
@@ -1534,34 +1597,63 @@ function verifiedAuxiliaryModulePaths(
   }));
 }
 
+function snapshotModelReceipt(bundle: ModelCheckReceiptBundle): ModelCheckReceipt {
+  const invariantSourceMap = Object.freeze(Object.fromEntries(
+    Object.entries(bundle.invariantSourceMap).map(([name, location]) => [
+      name,
+      Object.freeze({ ...location }),
+    ]),
+  ));
+  if (isVerifiedTlaModelReceipt(bundle)) {
+    return Object.freeze({
+      schema: bundle.schema,
+      modelName: bundle.modelName,
+      modelIdentity: bundle.modelIdentity,
+      moduleBytesIdentity: bundle.moduleBytesIdentity,
+      cfgBytesIdentity: bundle.cfgBytesIdentity,
+      auxiliaryModules: Object.freeze(bundle.auxiliaryModules.map((module) => Object.freeze({ ...module }))),
+      vocabulary: Object.freeze({
+        moduleName: bundle.vocabulary.moduleName,
+        namedInvariants: Object.freeze([...bundle.vocabulary.namedInvariants]),
+        traceStateVariables: Object.freeze([...bundle.vocabulary.traceStateVariables]),
+      }),
+      invariantSourceMap,
+    });
+  }
+  return Object.freeze({
+    modelIdentity: bundle.modelIdentity,
+    moduleBytesIdentity: bundle.moduleBytesIdentity,
+    cfgBytesIdentity: bundle.cfgBytesIdentity,
+    profileIdentity: bundle.profileIdentity,
+    publicContractIdentity: bundle.publicContractIdentity,
+    namedInvariantFormulas: Object.freeze({ ...bundle.namedInvariantFormulas }),
+    invariantSourceMap,
+    freezeRevision: bundle.freezeRevision,
+  });
+}
+
 function verifyPlannedModelSources(
   input: PlannedTlcPrepareInput,
   cwd: string,
   modulePath: string,
   cfgPath: string,
-): VerifiedAuxiliaryModulePaths {
+): VerifiedPlannedModelSources {
   const model = validateModelCheckReceipt(input.modelReceipt);
   if (!model.ok) {
     toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
   }
-  if (
-    sourceIdentity(
-      modulePath,
-      "amadeus.formal-verif.tla.module.v1",
-      "PreparationError",
-    ) !== model.value.moduleBytesIdentity
-    || sourceIdentity(
-      cfgPath,
-      "amadeus.formal-verif.tla.cfg.v1",
-      "PreparationError",
-    ) !== model.value.cfgBytesIdentity
-  ) {
-    toolchainAbort(
-      "PreparationError",
-      "SOURCE_IDENTITY",
-      "model or cfg bytes differ from the selected model receipt",
-    );
-  }
+  readVerifiedSourceBytes(
+    modulePath,
+    "amadeus.formal-verif.tla.module.v1",
+    model.value.moduleBytesIdentity,
+    "SOURCE_IDENTITY",
+  );
+  readVerifiedSourceBytes(
+    cfgPath,
+    "amadeus.formal-verif.tla.cfg.v1",
+    model.value.cfgBytesIdentity,
+    "SOURCE_IDENTITY",
+  );
   if (isVerifiedTlaModelReceipt(model.value)) {
     const expected = model.value.vocabulary;
     const actual = input.vocabulary;
@@ -1581,14 +1673,58 @@ function verifyPlannedModelSources(
       );
     }
   }
-  return verifiedAuxiliaryModulePaths(cwd, modulePath, model.value);
+  return Object.freeze({
+    modelReceipt: snapshotModelReceipt(model.value),
+    moduleBytes: new Uint8Array(model.value.moduleBytes),
+    cfgBytes: new Uint8Array(model.value.cfgBytes),
+    auxiliaryModulePaths: verifiedAuxiliaryModulePaths(cwd, modulePath, model.value),
+  });
+}
+
+function preparePlannedScratch(scratchPath: string): {
+  scratchRoot: string;
+  standardModuleDirectory: string;
+  stagedSourceDirectory: string;
+} {
+  const scratchRoot = realpathSync(scratchPath);
+  if (!lstatSync(scratchRoot).isDirectory()) {
+    toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
+  }
+  const standardModuleDirectory = join(scratchRoot, ".tlc-stdlib");
+  if (!existsSync(standardModuleDirectory)) mkdirSync(standardModuleDirectory, { mode: 0o700 });
+  if (
+    realpathSync(standardModuleDirectory) !== standardModuleDirectory
+    || !lstatSync(standardModuleDirectory).isDirectory()
+    || readdirSync(standardModuleDirectory).length !== 0
+  ) {
+    toolchainAbort(
+      "PreparationError",
+      "STDLIB_ORIGIN",
+      "planned standard-module directory is unsafe or not empty",
+    );
+  }
+  const stagedSourceDirectory = join(scratchRoot, ".tlc-inputs");
+  mkdirSync(stagedSourceDirectory, { mode: 0o700 });
+  if (
+    realpathSync(stagedSourceDirectory) !== stagedSourceDirectory
+    || !lstatSync(stagedSourceDirectory).isDirectory()
+    || (lstatSync(stagedSourceDirectory).mode & 0o077) !== 0
+    || readdirSync(stagedSourceDirectory).length !== 0
+  ) {
+    toolchainAbort(
+      "PreparationError",
+      "SOURCE_STAGING",
+      "planned source staging directory is unsafe or not empty",
+    );
+  }
+  return { scratchRoot, standardModuleDirectory, stagedSourceDirectory };
 }
 
 class FsPlannedTlcRuntime {
   readonly #issued = new WeakSet<PreparedPlannedTlcRun>();
-  readonly #auxiliaryModulePaths = new WeakMap<
+  readonly #sourceBindings = new WeakMap<
     PreparedPlannedTlcRun,
-    VerifiedAuxiliaryModulePaths
+    readonly VerifiedSourceBinding[]
   >();
 
   constructor(
@@ -1627,44 +1763,65 @@ class FsPlannedTlcRuntime {
     return { cwd, modulePath, cfgPath };
   }
 
-  #prepareScratch(scratchPath: string): { scratchRoot: string; standardModuleDirectory: string } {
-    const scratchRoot = realpathSync(scratchPath);
-    if (!lstatSync(scratchRoot).isDirectory()) {
-      toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
-    }
-    const standardModuleDirectory = join(scratchRoot, ".tlc-stdlib");
-    if (!existsSync(standardModuleDirectory)) {
-      mkdirSync(standardModuleDirectory, { mode: 0o700 });
-    }
-    if (
-      realpathSync(standardModuleDirectory) !== standardModuleDirectory
-      || !lstatSync(standardModuleDirectory).isDirectory()
-      || readdirSync(standardModuleDirectory).length !== 0
-    ) {
-      toolchainAbort(
-        "PreparationError",
-        "STDLIB_ORIGIN",
-        "planned standard-module directory is unsafe or not empty",
-      );
-    }
-    return { scratchRoot, standardModuleDirectory };
-  }
-
   async prepare(
     input: PlannedTlcPrepareInput,
   ): Promise<Result<PreparedPlannedTlcRun, TlcToolchainError>> {
     try {
       this.artifacts.verifyIssuedArtifact(input.artifact);
       const { cwd, modulePath, cfgPath } = this.#canonicalInputs(input);
-      const auxiliaryModulePaths = verifyPlannedModelSources(
+      const verifiedSources = verifyPlannedModelSources(
         input,
         cwd,
         modulePath,
         cfgPath,
       );
-      const { scratchRoot, standardModuleDirectory } = this.#prepareScratch(
+      const verifiedAuxiliarySources = verifiedSources.auxiliaryModulePaths.map(
+        ({ path, moduleBytesIdentity }) => ({
+          path,
+          bytes: readVerifiedSourceBytes(
+            path,
+            "amadeus.formal-verif.tla.module.v1",
+            moduleBytesIdentity,
+            "SOURCE_IDENTITY",
+          ),
+          identity: moduleBytesIdentity,
+        }),
+      );
+      const { scratchRoot, standardModuleDirectory, stagedSourceDirectory } = preparePlannedScratch(
         input.scratchRoot,
       );
+      const stagedSources = [
+        {
+          stagedPath: join(stagedSourceDirectory, basename(modulePath)),
+          bytes: verifiedSources.moduleBytes,
+          identity: verifiedSources.modelReceipt.moduleBytesIdentity,
+          domain: "amadeus.formal-verif.tla.module.v1",
+        },
+        {
+          stagedPath: join(stagedSourceDirectory, basename(cfgPath)),
+          bytes: verifiedSources.cfgBytes,
+          identity: verifiedSources.modelReceipt.cfgBytesIdentity,
+          domain: "amadeus.formal-verif.tla.cfg.v1",
+        },
+        ...verifiedAuxiliarySources.map(({ path, bytes, identity }) => ({
+          stagedPath: join(stagedSourceDirectory, basename(path)),
+          bytes,
+          identity,
+          domain: "amadeus.formal-verif.tla.module.v1",
+        })),
+      ] as const;
+      if (new Set(stagedSources.map(({ stagedPath }) => stagedPath)).size !== stagedSources.length) {
+        toolchainAbort("PreparationError", "SOURCE_STAGING", "staged model source names must be unique");
+      }
+      for (const source of stagedSources) {
+        writeStagedSource(source.stagedPath, source.bytes);
+      }
+      syncDirectory(stagedSourceDirectory);
+      const stagedModulePath = stagedSources[0].stagedPath;
+      const stagedCfgPath = stagedSources[1].stagedPath;
+      const sourceBindings = Object.freeze(stagedSources.map(({ stagedPath, identity, domain }) =>
+        Object.freeze({ path: stagedPath, identity, domain })
+      ));
       const environmentSnapshot = await input.planner.snapshotEnvironment({
         runId: input.runId,
         workspaceRoot: cwd,
@@ -1690,8 +1847,8 @@ class FsPlannedTlcRuntime {
         "-metadir",
         join(scratchRoot, "states"),
         "-config",
-        cfgPath,
-        modulePath,
+        stagedCfgPath,
+        stagedModulePath,
       ]);
       const environment = environmentSnapshot.value.kind === "DARWIN"
         ? Object.freeze({
@@ -1707,10 +1864,14 @@ class FsPlannedTlcRuntime {
           });
       const prepared: PreparedPlannedTlcRun = Object.freeze({
         artifact: input.artifact,
-        modelReceipt: input.modelReceipt,
-        vocabulary: input.vocabulary,
-        modulePath,
-        cfgPath,
+        modelReceipt: verifiedSources.modelReceipt,
+        vocabulary: Object.freeze({
+          moduleName: input.vocabulary.moduleName,
+          namedInvariants: Object.freeze([...input.vocabulary.namedInvariants]),
+          traceStateVariables: Object.freeze([...input.vocabulary.traceStateVariables]),
+        }),
+        modulePath: stagedModulePath,
+        cfgPath: stagedCfgPath,
         cwd,
         standardModuleDirectory,
         scratchRoot,
@@ -1720,7 +1881,7 @@ class FsPlannedTlcRuntime {
         environmentSnapshot: environmentSnapshot.value,
         environment,
       });
-      this.#auxiliaryModulePaths.set(prepared, auxiliaryModulePaths);
+      this.#sourceBindings.set(prepared, sourceBindings);
       this.#issued.add(prepared);
       return { ok: true, value: prepared };
     } catch (cause) {
@@ -1742,22 +1903,17 @@ class FsPlannedTlcRuntime {
     prepared: PreparedPlannedTlcRun,
     kind: "InvocationError" | "NormalizationError",
   ): void {
-    const auxiliaryModulePaths = this.#auxiliaryModulePaths.get(prepared);
-    if (auxiliaryModulePaths === undefined) {
-      toolchainAbort(kind, "CAPABILITY", "prepared run has no issued auxiliary module binding");
+    const sourceBindings = this.#sourceBindings.get(prepared);
+    if (sourceBindings === undefined) {
+      toolchainAbort(kind, "CAPABILITY", "prepared run has no issued source binding");
     }
-    for (const [path, identity, domain] of [
-      [prepared.modulePath, prepared.modelReceipt.moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"],
-      [prepared.cfgPath, prepared.modelReceipt.cfgBytesIdentity, "amadeus.formal-verif.tla.cfg.v1"],
-      ...auxiliaryModulePaths.map(({ path, moduleBytesIdentity }) =>
-        [path, moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"] as const
-      ),
-    ] as const) {
+    for (const binding of sourceBindings) {
+      const path = binding.path;
       try {
         if (
           realpathSync(path) !== path
-          || !pathInside(prepared.cwd, path)
-          || sourceIdentity(path, domain, kind) !== identity
+          || !pathInside(prepared.scratchRoot, path)
+          || sourceIdentity(path, binding.domain, kind) !== binding.identity
         ) {
           toolchainAbort(kind, "SOURCE_DRIFT", "model, cfg, or auxiliary module changed across the process seam");
         }

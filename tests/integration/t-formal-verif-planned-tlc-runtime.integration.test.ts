@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   mkdtempSync,
   mkdirSync,
@@ -103,10 +104,17 @@ describe("planned TLC filesystem runtime", () => {
     const source = loadRunModelCheckSource(modelPath, cfgPath);
     if (!source.ok) throw new Error(JSON.stringify(source.error));
 
-    let mode: "drift" | "overflow" | "timeout" | "complete" = "drift";
+    let mode: "drift" | "overflow" | "timeout" | "race" | "complete" | "staged-drift" = "drift";
     let activeModelPath = modelPath;
     let activeScratch = scratch;
     let activeAuxiliaryModules: readonly string[] = [];
+    let activeWorkspaceModelPath = modelPath;
+    let activeWorkspaceCfgPath = cfgPath;
+    let activeWorkspaceAuxiliaryPaths: readonly string[] = [];
+    let stagedModelBytesDuringRace: Uint8Array | undefined;
+    let stagedCfgBytesDuringRace: Uint8Array | undefined;
+    let stagedAuxiliaryBytesDuringRace: readonly Uint8Array[] = [];
+    let spawnedSourcePathsDuringRace: readonly string[] = [];
     let spawns = 0;
     const signals: string[] = [];
     const reservations = new Set<string>();
@@ -150,10 +158,42 @@ describe("planned TLC filesystem runtime", () => {
           : new Promise<void>(() => {}),
       },
       process: {
-        spawn: () => {
+        spawn: (input) => {
           spawns += 1;
+          activeModelPath = input.argv.at(-1)!;
+          if (mode === "race") {
+            const workspaceModelBytes = new Uint8Array(readFileSync(activeWorkspaceModelPath));
+            const workspaceCfgBytes = new Uint8Array(readFileSync(activeWorkspaceCfgPath));
+            const workspaceAuxiliaryBytes = activeWorkspaceAuxiliaryPaths.map((path) =>
+              new Uint8Array(readFileSync(path))
+            );
+            const configIndex = input.argv.lastIndexOf("-config");
+            const stagedCfgPath = input.argv[configIndex + 1]!;
+            writeFileSync(activeWorkspaceModelPath, "---- MODULE Replaced ----\nRace == TRUE\n====\n");
+            writeFileSync(activeWorkspaceCfgPath, "SPECIFICATION Race\n");
+            for (const path of activeWorkspaceAuxiliaryPaths) {
+              writeFileSync(path, "---- MODULE ReplacedAuxiliary ----\nRace == TRUE\n====\n");
+            }
+            stagedModelBytesDuringRace = new Uint8Array(readFileSync(activeModelPath));
+            stagedCfgBytesDuringRace = new Uint8Array(readFileSync(stagedCfgPath));
+            const stagedAuxiliaryPaths = activeWorkspaceAuxiliaryPaths.map((path) =>
+              join(dirname(activeModelPath), basename(path))
+            );
+            stagedAuxiliaryBytesDuringRace = stagedAuxiliaryPaths.map((path) =>
+              new Uint8Array(readFileSync(path))
+            );
+            spawnedSourcePathsDuringRace = [stagedCfgPath, activeModelPath, ...stagedAuxiliaryPaths];
+            writeFileSync(activeWorkspaceModelPath, workspaceModelBytes);
+            writeFileSync(activeWorkspaceCfgPath, workspaceCfgBytes);
+            activeWorkspaceAuxiliaryPaths.forEach((path, index) => {
+              writeFileSync(path, workspaceAuxiliaryBytes[index]!);
+            });
+          } else if (mode === "staged-drift") {
+            chmodSync(activeModelPath, 0o600);
+            writeFileSync(activeModelPath, "---- MODULE FormalElection ----\nStagedDrift == TRUE\n====\n");
+          }
           let resolveStatus!: (status: { exitCode: number | null; signal: string | null }) => void;
-          const status = mode === "complete"
+          const status = mode === "complete" || mode === "race" || mode === "staged-drift"
             ? Promise.resolve({ exitCode: 0, signal: null })
             : new Promise<{ exitCode: number | null; signal: string | null }>(
                 (resolve) => { resolveStatus = resolve; },
@@ -163,7 +203,7 @@ describe("planned TLC filesystem runtime", () => {
               ? (async function* () {
                   yield new Uint8Array(MAX_TLC_STREAM_BYTES + 1);
                 })()
-              : mode === "complete"
+              : mode === "complete" || mode === "race" || mode === "staged-drift"
                 ? (async function* () {
                     yield completeOutput(
                       realpathSync(activeModelPath),
@@ -261,6 +301,21 @@ describe("planned TLC filesystem runtime", () => {
     });
     expect(signals).toEqual(["SIGTERM", "SIGKILL"]);
 
+    const verifiedModelBytes = new Uint8Array(readFileSync(modelPath));
+    const verifiedCfgBytes = new Uint8Array(readFileSync(cfgPath));
+    mode = "race";
+    const raced = await toolchain.runPlanned(prepared.value);
+    expect(raced.ok && raced.value.exploration).toMatchObject({ kind: "COMPLETE" });
+    expect(stagedModelBytesDuringRace).toEqual(verifiedModelBytes);
+    expect(stagedCfgBytesDuringRace).toEqual(verifiedCfgBytes);
+    expect(spawnedSourcePathsDuringRace.every((path) =>
+      dirname(path) === join(realpathSync(scratch), ".tlc-inputs")
+    )).toBe(true);
+    expect(spawnedSourcePathsDuringRace).not.toContain(modelPath);
+    expect(spawnedSourcePathsDuringRace).not.toContain(cfgPath);
+    expect(new Uint8Array(readFileSync(modelPath))).toEqual(verifiedModelBytes);
+    expect(new Uint8Array(readFileSync(cfgPath))).toEqual(verifiedCfgBytes);
+
     mode = "complete";
     const complete = await toolchain.runPlanned(prepared.value);
     expect(complete.ok && complete.value.exploration).toMatchObject({
@@ -270,6 +325,13 @@ describe("planned TLC filesystem runtime", () => {
       statesLeftOnQueue: 0,
       searchDepth: 9,
     });
+
+    mode = "staged-drift";
+    expect(await toolchain.runPlanned(prepared.value)).toMatchObject({
+      ok: false,
+      error: { kind: "NormalizationError", code: "SOURCE_DRIFT" },
+    });
+    mode = "complete";
 
     const mirrorScratch = join(root, "mirror-scratch");
     mkdirSync(mirrorScratch);
@@ -336,9 +398,14 @@ describe("planned TLC filesystem runtime", () => {
     activeModelPath = mirrorModelPath;
     activeScratch = mirrorScratch;
     activeAuxiliaryModules = ["MirrorLifecycleCore"];
+    activeWorkspaceModelPath = mirrorModelPath;
+    activeWorkspaceCfgPath = mirrorCfgPath;
+    activeWorkspaceAuxiliaryPaths = [mirrorCorePath];
     const mirrorPrepared = await prepareMirror(mirrorSource.value.modelReceipt);
+    if (!mirrorPrepared.ok) throw new Error(JSON.stringify(mirrorPrepared.error));
     expect(mirrorPrepared.ok).toBe(true);
-    if (!mirrorPrepared.ok) return;
+    const verifiedMirrorCoreBytes = new Uint8Array(readFileSync(mirrorCorePath));
+    mode = "race";
     const mirrorComplete = await toolchain.runPlanned(mirrorPrepared.value);
     expect(mirrorComplete.ok && mirrorComplete.value.exploration).toMatchObject({
       kind: "COMPLETE",
@@ -349,7 +416,12 @@ describe("planned TLC filesystem runtime", () => {
       completionMarker: "Model checking completed. No error has been found.",
       terminationReason: "EXHAUSTED",
     });
+    expect(stagedAuxiliaryBytesDuringRace).toEqual([verifiedMirrorCoreBytes]);
+    expect(spawnedSourcePathsDuringRace).not.toContain(mirrorModelPath);
+    expect(spawnedSourcePathsDuringRace).not.toContain(mirrorCfgPath);
+    expect(spawnedSourcePathsDuringRace).not.toContain(mirrorCorePath);
 
+    mode = "complete";
     for (const auxiliaryModules of [
       [],
       ["MirrorLifecycleCore", "MirrorLifecycleCore"],
@@ -365,7 +437,7 @@ describe("planned TLC filesystem runtime", () => {
 
     activeAuxiliaryModules = ["MirrorLifecycleCore"];
     const spawnsBeforeSourceRemoval = spawns;
-    rmSync(mirrorCorePath);
+    rmSync(join(dirname(mirrorPrepared.value.modulePath), "MirrorLifecycleCore.tla"));
     expect(await toolchain.runPlanned(mirrorPrepared.value)).toMatchObject({
       ok: false,
       error: { kind: "InvocationError", code: "SOURCE_DRIFT" },
