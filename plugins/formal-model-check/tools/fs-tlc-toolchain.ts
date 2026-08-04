@@ -1681,11 +1681,7 @@ function verifyPlannedModelSources(
   });
 }
 
-function preparePlannedScratch(scratchPath: string): {
-  scratchRoot: string;
-  standardModuleDirectory: string;
-  stagedSourceDirectory: string;
-} {
+function preparePlannedScratch(scratchPath: string) {
   const scratchRoot = realpathSync(scratchPath);
   if (!lstatSync(scratchRoot).isDirectory()) {
     toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
