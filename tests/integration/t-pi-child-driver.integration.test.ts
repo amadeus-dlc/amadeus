@@ -224,5 +224,61 @@ describe("Pi child driver process boundary", () => {
     })).toBe(false);
     expect(store.markRunning(key, "fingerprint")).toBe(false);
     expect(store.commitTerminal(key, "fingerprint", { kind: "failed", reason: "unused" }, "")).toBe(false);
+
+    writeFileSync(recordPath, "{}\n");
+    expect(store.reserve(key, "fingerprint").kind).toBe("quarantined");
+  });
+
+  test("a conflicting fingerprint quarantines the existing delivery", () => {
+    const { root } = fixture();
+    const store = createPiReplayStore(join(root, "runtime"));
+    const key = "conflicting-fingerprint" as Parameters<typeof store.reserve>[0];
+
+    expect(store.reserve(key, "first").kind).toBe("reserved");
+    expect(store.reserve(key, "second").kind).toBe("conflict");
+    expect(store.reserve(key, "first").kind).toBe("quarantined");
+  });
+
+  test("vault corruption and key loss never replay plaintext", () => {
+    for (const [suffix, sealed] of [["short", Buffer.alloc(1)], ["bad-tag", Buffer.alloc(28)]] as const) {
+      const { root } = fixture();
+      const runtimeDir = join(root, "runtime");
+      const store = createPiReplayStore(runtimeDir);
+      const key = `vault-${suffix}` as Parameters<typeof store.reserve>[0];
+      const leaf = createHash("sha256").update(key).digest("hex");
+      expect(store.reserve(key, "fingerprint").kind).toBe("reserved");
+      expect(store.commitTerminal(key, "fingerprint", { kind: "succeeded", reason: "done" }, "secret")).toBe(true);
+
+      const recordPath = join(runtimeDir, "records", `${leaf}.json`);
+      const record = JSON.parse(readFileSync(recordPath, "utf8"));
+      record.terminal.vaultDigest = createHash("sha256").update(sealed).digest("hex");
+      writeFileSync(recordPath, `${JSON.stringify(record)}\n`);
+      writeFileSync(join(runtimeDir, "vault", `${leaf}.aead`), sealed);
+
+      expect(store.reserve(key, "fingerprint").kind).toBe("vault-tampered");
+    }
+
+    const { root } = fixture();
+    const runtimeDir = join(root, "runtime");
+    const store = createPiReplayStore(runtimeDir);
+    const key = "vault-key-loss" as Parameters<typeof store.reserve>[0];
+    expect(store.reserve(key, "fingerprint").kind).toBe("reserved");
+    expect(store.commitTerminal(key, "fingerprint", { kind: "succeeded", reason: "done" }, "secret")).toBe(true);
+    rmSync(join(runtimeDir, "vault.key"));
+    expect(store.reserve(key, "fingerprint").kind).toBe("key-loss");
+  });
+
+  test("unsafe record permissions and a missing record directory fail closed", () => {
+    const { root } = fixture();
+    const runtimeDir = join(root, "runtime");
+    const store = createPiReplayStore(runtimeDir);
+    const key = "unsafe-record" as Parameters<typeof store.reserve>[0];
+    expect(store.reserve(key, "fingerprint").kind).toBe("reserved");
+    const recordPath = join(runtimeDir, "records", `${createHash("sha256").update(key).digest("hex")}.json`);
+    chmodSync(recordPath, 0o644);
+    expect(store.reserve(key, "fingerprint").kind).toBe("visibility-failure");
+
+    rmSync(join(runtimeDir, "records"), { recursive: true });
+    expect(store.recoverPending(1)).toEqual([]);
   });
 });
