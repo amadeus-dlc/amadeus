@@ -6,11 +6,23 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
+  applyProductionAutonomyMode,
   commitProductionIntentCompletion,
+  commitProductionQualityObservation,
+  commitProductionQuestionDecision,
+  commitProductionStageGateDecision,
+  previewProductionAutonomyGrant,
   productionStageAutonomy,
   readProductionAutonomyProjection,
+  resumeProductionQuality,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import {
+  commitProductionDecisionReview,
+  getProductionAutoDecision,
+  listProductionAutoDecisions,
+} from "../../packages/framework/core/tools/amadeus-autonomy-review-production.ts";
 
 const BUN = process.execPath;
 
@@ -96,11 +108,110 @@ function bornProject(): string {
 
 let projectDir = "";
 afterEach(() => {
+  resetOtelPerProject();
   if (projectDir) cleanupTestProject(projectDir);
   projectDir = "";
 });
 
 describe("Intent-scoped autonomy production path", () => {
+  test("drives the production adapters in-process across the full autonomous lifecycle", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+
+    const stateContent = state(projectDir);
+    const preview = previewProductionAutonomyGrant({ projectDir, stateContent });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    const applied = applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "full",
+      confirmedDisplayDigest: preview.preview.displayDigest,
+    });
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+
+    const gateInput = {
+      projectDir,
+      stateContent,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"a".repeat(64)}`,
+      walkingSkeleton: false,
+    } as const;
+    expect(commitProductionStageGateDecision(gateInput).kind).toBe("decided");
+    expect(commitProductionStageGateDecision(gateInput).kind).toBe("already-decided");
+
+    const question = commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+      questionId: "direct-production-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+    });
+    expect(question.kind).toBe("decided");
+
+    const listed = listProductionAutoDecisions({ projectDir, reviewState: "unreviewed" });
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) return;
+    const decisionId = listed.page.items.find((item) => item.selectedOptionId === "minimal-fix")?.decisionId;
+    expect(decisionId).toBeDefined();
+    if (decisionId === undefined) return;
+    expect(getProductionAutoDecision({ projectDir, decisionId })).toMatchObject({
+      ok: true,
+      detail: { selectedOptionId: "minimal-fix", reviewState: "unreviewed" },
+    });
+    const evidence = {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: "direct-build-and-test-1",
+      boltId: "direct-bolt-1",
+      observations: [{
+        kind: "reviewer" as const,
+        invocationId: "direct-review-1",
+        verifierId: "quality-reviewer",
+        validationReceipt: `sha256:${"c".repeat(64)}`,
+        verdict: "NOT-READY" as const,
+        blockers: [{
+          findingId: "direct-blocker-a",
+          artifactId: "build-test-results",
+          failureFingerprint: `sha256:${"d".repeat(64)}`,
+        }],
+      }],
+    };
+    const qualityOutcomes = Array.from({ length: 7 }, () => commitProductionQualityObservation({
+      projectDir,
+      evidence,
+      replanContext: "Use a fresh repair context after the first non-progress threshold.",
+    }));
+    expect(qualityOutcomes.map((result) => result.kind)).toEqual([
+      "repair", "repair", "repair", "replanned", "repair", "repair", "parked",
+    ]);
+    const parked = qualityOutcomes.at(-1);
+    if (parked?.kind !== "parked") return;
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: parked.qualityScopeId,
+      basis: "human-retry",
+    })).toMatchObject({ kind: "resumed", workflowResult: "running" });
+    expect(commitProductionDecisionReview({ projectDir, decisionId, choice: "accept" })).toMatchObject({
+      ok: true,
+      receipt: { state: "accepted", remediation: null },
+    });
+    expect(listProductionAutoDecisions({ projectDir, reviewState: "accepted" })).toMatchObject({
+      ok: true,
+      page: { items: [{ decisionId }] },
+    });
+    expect(commitProductionIntentCompletion({ projectDir })).toMatchObject({
+      ok: true,
+      result: { result: { outcome: "completed" } },
+    });
+  });
+
   test("semi is human-grounded, activates quality repair, and auto-approves an internal stage without a fresh HUMAN_TURN", () => {
     projectDir = bornProject();
     appendLedgerEvent(projectDir, "HUMAN_TURN");
