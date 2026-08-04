@@ -32,8 +32,7 @@ type Workflow = {
 describe("t427 main-only evidence reconciliation workflow", () => {
   test("is structurally main-only, independent from CI Success, finite, and serialized", () => {
     const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as Workflow;
-    expect(workflow.on?.push?.branches).toEqual(["main"]);
-    expect(workflow.on?.pull_request).toBeUndefined();
+    expect(workflow.on).toEqual({ push: { branches: ["main"] } });
     expect(workflow.permissions).toEqual({ contents: "read" });
     expect(workflow.concurrency).toEqual({
       group: "no-silent-drop-evidence-reconcile-main",
@@ -58,8 +57,14 @@ describe("t427 main-only evidence reconciliation workflow", () => {
       "permission-pull-requests": "read",
     });
     const checkout = steps.find((step) => step.name === "Checkout event revision");
-    expect(checkout?.with).toMatchObject({ ref: expression("github.sha"), "fetch-depth": 0 });
+    expect(checkout?.with).toMatchObject({
+      ref: expression("github.sha"),
+      "fetch-depth": 0,
+      token: expression("steps.app-token.outputs.token"),
+      "persist-credentials": true,
+    });
     const reconcile = steps.find((step) => step.name === "Reconcile evidence revision");
+    expect(reconcile?.env).toMatchObject({ GH_TOKEN: expression("steps.app-token.outputs.token") });
     expect(reconcile?.run).toContain("bun scripts/no-silent-drop-evidence.ts reconcile");
     expect(reconcile?.run).toContain('--event-revision "$GITHUB_SHA"');
     expect(reconcile?.run).toContain('--repository "$GITHUB_REPOSITORY"');
