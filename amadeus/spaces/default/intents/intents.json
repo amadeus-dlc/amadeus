@@ -876,5 +876,12 @@
     "dirName": "260803-state-integrity",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fca5b-db81-7bf9-97e1-4de243cf62c4",
+    "slug": "evidence-revision-rebind",
+    "dirName": "260804-evidence-revision-rebind",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

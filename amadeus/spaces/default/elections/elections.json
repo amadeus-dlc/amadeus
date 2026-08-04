@@ -766,5 +766,11 @@
     "dirName": "260803-e-sira-s13",
     "createdAt": "2026-08-03T13:31:04Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SIA-CGS13",
+    "dirName": "260803-e-sia-cgs13",
+    "createdAt": "2026-08-03T17:37:13Z",
+    "status": "recorded"
   }
 ]

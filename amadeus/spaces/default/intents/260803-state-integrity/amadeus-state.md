@@ -38,8 +38,6 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-08-03T14:46:34Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -82,7 +80,7 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
+- [?] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
@@ -102,7 +100,7 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-08-03T14:46:34Z
+- **Last Updated**: 2026-08-03T23:01:44Z
 
 ## Session Resume Point
 - **Last Completed Stage**: requirements-analysis
