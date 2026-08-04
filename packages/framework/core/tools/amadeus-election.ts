@@ -495,10 +495,8 @@ export function handleNotify(
   // FR-1b: `collecting` stays open to notify so the dispatch-ack resend lane
   // (3 min, max 2 resends) keeps working; the five post-collection states do
   // not accept a distribution.
-  const guarded = requireState(root, electionId, "notify", ["open", "collecting"]);
-  if (!guarded.ok) return guarded.error;
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
+  const loaded = requireState(root, electionId, "notify", ["open", "collecting"]);
+  if (!loaded.ok) return loaded.error;
   const voters = loaded.value.election.voters;
   const transport = buildTransport(transportKind, new Set(voters), agmsg);
   if (typeof transport === "string") return fail(transport);
@@ -572,21 +570,20 @@ function requireState(
   electionId: string,
   verb: string,
   allowed: readonly ElectionState[],
-): Result<ElectionState, number> {
+): Result<Extract<ReturnType<typeof Store.load>, { ok: true }>["value"], number> {
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return err(storeFail("load", loaded.error));
-  const state = loaded.value.state;
-  if (!allowed.includes(state)) {
-    return err(fail(`invalid-transition: ${verb} requires state ${allowed.join("/")}, got ${state}`));
+  if (!allowed.includes(loaded.value.state)) {
+    return err(
+      fail(`invalid-transition: ${verb} requires state ${allowed.join("/")}, got ${loaded.value.state}`),
+    );
   }
-  return ok(state);
+  return ok(loaded.value);
 }
 
 export function handleTally(root: string, electionId: string): number {
-  const guarded = requireState(root, electionId, "tally", ["collecting"]);
-  if (!guarded.ok) return guarded.error;
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
+  const loaded = requireState(root, electionId, "tally", ["collecting"]);
+  if (!loaded.ok) return loaded.error;
   const ledger = Store.ledger(root, electionId);
   if (!ledger.ok) return storeFail("ledger", ledger.error);
   const result = tally(loaded.value.election, ledger.value.ballots);
