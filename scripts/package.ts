@@ -697,12 +697,12 @@ function piPackageProblemsForHarness(name: string): string[] {
     .map((problem) => `PI PACKAGE: ${problem}`);
 }
 
-export function writeHarness(name: string): void {
+export function writeHarness(name: string, distRoot = join(REPO_ROOT, "dist")): void {
   const m = loadManifest(name);
   const packageProblems = piPackageProblemsForHarness(name);
   if (packageProblems.length > 0)
     throw new Error(`[${name}] invalid package metadata: ${packageProblems.join("; ")}`);
-  const distDir = join(REPO_ROOT, "dist", name);
+  const distDir = join(distRoot, name);
   assertResourceDestinationsSafe(m, distDir);
   const candidate = mkdtempSync(join(tmpdir(), `amadeus-candidate-${name}-`));
   try {

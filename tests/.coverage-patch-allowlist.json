@@ -4143,17 +4143,6 @@
   {
     "file": "scripts/package.ts",
     "selector": {
-      "function": "resourcePathProblem",
-      "fingerprint": "sha256:e00b10c318dcdf2bb142e10db05c1a2b5bcfd9349f5d9ad1678bf56e6e914a9f",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Missing generated resources are accepted before clean-sweep regeneration; direct coverage would require mutating the shared dist tree while package tests run in parallel.",
-    "expiry": "remove when resource destination inspection accepts an isolated root manifest fixture"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
       "function": "piMetadataFromRootPackage",
       "fingerprint": "sha256:8c94ffc2cf14f2f60f2b4e0014020b9d7be92c62d01f6bfe97b94057c62bd680",
       "anchorLines": 1,

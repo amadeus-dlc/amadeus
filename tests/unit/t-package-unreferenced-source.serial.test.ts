@@ -22,7 +22,7 @@
 // readHarnessSource consumption. An in-process call exercises all of them.
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCli, unreferencedSources, writeHarness } from "../../scripts/package.ts";
@@ -86,7 +86,13 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
   }, CHECK_TIMEOUT_MS);
 
   test("pi projects its closed resource catalog and package metadata in process", () => {
-    expect(() => writeHarness("pi")).not.toThrow();
+    const isolatedDistRoot = mkdtempSync(join(import.meta.dir, "..", "..", ".amadeus-package-pi-"));
+    try {
+      expect(() => writeHarness("pi", isolatedDistRoot)).not.toThrow();
+      expect(existsSync(join(isolatedDistRoot, "pi", ".pi", "skills", "amadeus", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(isolatedDistRoot, { recursive: true, force: true });
+    }
   }, CHECK_TIMEOUT_MS);
 
   test("planted stale source under harness/codex/ → writeHarness rejects it (red path)", () => {
