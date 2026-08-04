@@ -4902,17 +4902,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
     "selector": {
-      "function": "commitProductionQualityObservation",
-      "fingerprint": "sha256:ab4c6b9a6cec5638489ddf7020c9af861d401346900f927ad914325558583094",
-      "anchorLines": 48,
-      "targetLines": "1-48"
-    },
-    "reason": "t435 drives the complete production lifecycle in-process and also verifies the public CLI boundary; this residual range is a defensive, invalid-input, replay, or process-boundary arm not naturally reachable in the valid lifecycle.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
-    "selector": {
       "function": "parkProductionQuality",
       "fingerprint": "sha256:b078470437fd5f427ed3c4a4174260403fcde51d8eabd9e8730a9b0e1d4641ca",
       "anchorLines": 1,
