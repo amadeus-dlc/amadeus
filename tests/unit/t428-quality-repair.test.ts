@@ -83,6 +83,7 @@ describe("first-party Quality Repair contribution", () => {
     const optedIn = planNoneModeQualitySetting(initial, true, {
       verified: true,
       eventType: "HUMAN_TURN",
+      actor: "human",
       turnId: "turn-1",
     });
     expect(optedIn.ok).toBe(true);
@@ -103,7 +104,7 @@ describe("first-party Quality Repair contribution", () => {
     expect(planNoneModeQualitySetting(
       { ...emptyQualityPluginProjection("intent-1"), intentUuid: "invalid intent" },
       true,
-      { verified: true, eventType: "HUMAN_TURN", turnId: "turn-1" },
+      { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" },
     )).toMatchObject({ ok: false, error: { code: "INTENT_MISMATCH" } });
     expect(() => createFirstPartyQualityContribution(0)).toThrow("quality-repair-threshold-must-be-positive");
     expect(qualityDigest({ intentUuid: "intent-1" })).toStartWith("sha256:");

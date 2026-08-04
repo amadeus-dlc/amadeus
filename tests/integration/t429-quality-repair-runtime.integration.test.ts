@@ -307,12 +307,12 @@ describe("Quality Repair production coordinator", () => {
     expect(coordinator.resume({
       qualityScopeId: status.qualityScopeId,
       alternativeIdentity: "wrong-alternative",
-      humanRetry: { verified: true, eventType: "HUMAN_TURN", turnId: "turn-1" },
+      humanRetry: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" },
     })).toMatchObject({ kind: "CONFLICT" });
     const resumed = coordinator.resume({
       qualityScopeId: status.qualityScopeId,
       alternativeIdentity: humanAlternative.identity,
-      humanRetry: { verified: true, eventType: "HUMAN_TURN", turnId: "turn-1" },
+      humanRetry: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" },
     });
     expect(resumed.kind).toBe("resumed");
     if (resumed.kind !== "resumed") return;
@@ -711,7 +711,7 @@ describe("Quality Repair production coordinator", () => {
     expect(qualityOnlyCoordinator.resume({
       qualityScopeId: stalled.status.qualityScopeId,
       alternativeIdentity: humanAlternative.identity,
-      humanRetry: { verified: true, eventType: "HUMAN_TURN", turnId: "recovery-turn" },
+      humanRetry: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "recovery-turn" },
     })).toEqual({ kind: "CONFLICT", reason: "quality-loop-latch-clear-failed" });
   });
 
@@ -768,6 +768,7 @@ describe("Quality Repair production coordinator", () => {
       humanRetry: {
         verified: false,
         eventType: "HUMAN_TURN",
+        actor: "human",
         turnId: "unverified-turn",
       } as unknown as VerifiedHumanTurn,
     })).toEqual({ kind: "CONFLICT", reason: "quality-human-retry-not-verified" });
@@ -786,16 +787,34 @@ describe("Quality Repair production coordinator", () => {
       evidence: batch(stalled.activation.graph.graphRevision, stalled.previous),
     })).toEqual({ kind: "CONFLICT", reason: "quality-evidence-did-not-improve" });
 
+    expect(stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: batch(stalled.activation.graph.graphRevision, stalled.previous, []),
+    })).toEqual({ kind: "CONFLICT", reason: "quality-resume-trace-missing" });
+
     const resumed = stalled.coordinator.resume({
       qualityScopeId: stalled.status.qualityScopeId,
       alternativeIdentity: evidenceAlternative.identity,
       evidence: batch(stalled.activation.graph.graphRevision, stalled.previous, []),
+      trace,
     });
     expect(resumed.kind).toBe("resumed");
+    if (resumed.kind !== "resumed") throw new Error("expected evidence resume");
     expect(stalled.coordinator.status(stalled.status.qualityScopeId)).toMatchObject({
       outcome: "active",
       workflowExecutionState: "running",
     });
+    const resumeTransaction = stalled.repository.readTransactions().at(-1)!;
+    expect(resumeTransaction.loopEventSets.flatMap((set) => set.events.map((event) => event.type))).toEqual([
+      "LOOP_LATCH_CLEARED",
+      "WORKFLOW_UNPARKED",
+      "LOOP_DELIVERY_OBSERVED",
+    ]);
+    expect(stalled.coordinator.recordEvidence({
+      ...batch(stalled.activation.graph.graphRevision, null, []),
+      epochStartEventIdentity: resumed.projection.epochStartEventIdentity,
+    }, trace)).toMatchObject({ kind: "repair" });
   });
 
   test("resumes a stalled sensor obligation from a newly verified success receipt", () => {
@@ -831,6 +850,7 @@ describe("Quality Repair production coordinator", () => {
       qualityScopeId: status.qualityScopeId,
       alternativeIdentity: evidenceAlternative.identity,
       evidence: sensorBatch(instance.activation.graph.graphRevision, previous, "passed"),
+      trace,
     })).toMatchObject({ kind: "resumed" });
   });
 
@@ -872,6 +892,7 @@ describe("Quality Repair production coordinator", () => {
         false,
         `sha256:${"5".repeat(64)}`,
       ),
+      trace,
     })).toMatchObject({ kind: "resumed" });
   });
 });

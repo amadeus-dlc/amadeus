@@ -475,6 +475,7 @@ export interface QualityRepairCoordinator {
     readonly alternativeIdentity: string;
     readonly humanRetry?: VerifiedHumanTurn;
     readonly evidence?: QualityEvidenceBatchInput;
+    readonly trace?: LoopTraceContext;
   }):
     | { readonly kind: "resumed"; readonly projection: QualityEpochProjection }
     | { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string };
@@ -762,7 +763,8 @@ export function createQualityRepairCoordinator(options: {
       if (alternative === undefined) return { kind: "CONFLICT", reason: "quality-resume-alternative-mismatch" };
       let basis: "evidence-change" | "human-retry";
       let resumeEvidenceReceipt: string;
-      let evidenceFingerprint: string | undefined;
+      let resumeEvidence: QualityEvidenceSnapshot | null = null;
+      let resumeTrace: LoopTraceContext | null = null;
       if (alternative.kind === "human-retry") {
         if (request.humanRetry?.verified !== true || request.humanRetry.eventType !== "HUMAN_TURN") {
           return { kind: "CONFLICT", reason: "quality-human-retry-not-verified" };
@@ -788,9 +790,11 @@ export function createQualityRepairCoordinator(options: {
           )
         );
         if (!strictSubset && !newSuccess) return { kind: "CONFLICT", reason: "quality-evidence-did-not-improve" };
+        if (request.trace === undefined) return { kind: "CONFLICT", reason: "quality-resume-trace-missing" };
         basis = "evidence-change";
         resumeEvidenceReceipt = qualityDigest(normalized.snapshot.verifierSuccessReceipts);
-        evidenceFingerprint = normalized.snapshot.snapshotFingerprint;
+        resumeEvidence = normalized.snapshot;
+        resumeTrace = request.trace;
       }
       const epochStartEventIdentity = qualityStableId("quality-epoch-start", [
         prior.epoch.qualityEpochId,
@@ -815,13 +819,36 @@ export function createQualityRepairCoordinator(options: {
         pendingReplan: null,
       };
       return repository.transaction(prior.qualityScopeId, (appendQuality) => {
-        const cleared = loop.clearLatch({
-          partition: prior.partition,
-          evidenceFingerprint,
-          humanRetry: basis === "human-retry" ? request.humanRetry : undefined,
-        });
-        if (cleared.kind !== "cleared") {
-          return { kind: "CONFLICT", reason: "quality-loop-latch-clear-failed" } as const;
+        if (basis === "human-retry") {
+          const cleared = loop.clearLatch({
+            partition: prior.partition,
+            humanRetry: request.humanRetry,
+          });
+          if (cleared.kind !== "cleared") {
+            return { kind: "CONFLICT", reason: "quality-loop-latch-clear-failed" } as const;
+          }
+        } else {
+          const evidencePlan = planQualityDelivery(prior.epoch, resumeEvidence!);
+          const evidenceRuntime = runtimeProjection(
+            prior.partition,
+            evidencePlan.nextProjection,
+            resumeEvidence!,
+            evidencePlan.progress,
+            prior,
+          );
+          const currentLoop = loop.readProjection(prior.partition);
+          const delivery = qualityDelivery(
+            activation,
+            evidenceRuntime,
+            evidencePlan,
+            "QUALITY_STRICT_PROGRESS",
+            currentLoop.chainHead,
+            resumeTrace!,
+          );
+          const observed = loop.observeDelivery(delivery);
+          if (observed.kind !== "observed") {
+            return { kind: "CONFLICT", reason: "quality-loop-evidence-resume-failed" } as const;
+          }
         }
         appendQuality({
           type: "QUALITY_EPOCH_STARTED",
