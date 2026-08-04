@@ -1,5 +1,22 @@
 # 技術スタック
 
+## TLA+ authoring調査時の技術断面（260804-tla-authoring、現在、observed `7172aea8d`）
+
+| 技術 | version / 用途 |
+| --- | --- |
+| Bun | 1.3.13。workspace、CLI、`bun:test`、build orchestration |
+| TypeScript | `^6.0.3`、ES modules、strict / noEmit |
+| Biome | 2.5.5。lint、cognitive complexity >15はwarning |
+| fast-check | `^4.9.0`。property-based tests |
+| TLC artifact | 1.7.4をSHA-256固定取得。出力parserはTLC2 2.19契約 |
+| OpenJDK | 26.0.1。local TLC runtime |
+| Docker fallback | digest-pinned `eclipse-temurin:26-jdk` |
+| GitHub | Issues / PR / Projects / Actions / release assets |
+
+HTTP service、database、long-running serverはなく、authoring機能も既存の短命CLI・Markdown stage・JSON receipt境界へ統合する前提で評価する。新規外部runtime依存はIssue #2161の成立条件ではない。
+
+rebase後区間では設定参照がstructured configへ移行したが、formal activation/advisory、plugin projection、TLC runtimeの技術選択と意味論は変わっていない。
+
 ## advisory 人間選択の技術断面（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **スタック変更なし**: Bun `1.3.13`、TypeScript / ESM、Biome、Bun test、Markdown stage protocol、JSONL audit journalという既存構成の問題であり、新しいruntime、service、database、外部libraryは観測されない。
@@ -7,7 +24,7 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## no-silent-drop evidence 再バインドの技術断面（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence 再バインドの技術断面（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節の測定 ref は observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`。詳細は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
 

@@ -1,5 +1,26 @@
 # コード品質評価
 
+## TLA+ authoring調査の品質所見（260804-tla-authoring、現在、observed `7172aea8d`）
+
+| 検証 | 実測 | 判定 |
+| --- | --- | --- |
+| fresh focused formal suite | 44 pass / 0 fail / 168 expect、exit 0 | canonical sourceはgreen |
+| plugin projection/package 2 files（旧`be6a8085` scan） | 18 pass / 0 fail、exit 0 | manifest準拠はgreenだがimport closureを未検査 |
+| composed Codex `run-model-check.ts --help` | `Cannot find module './tla-model-receipt.ts'`、exit 1 | 配布runtimeはred |
+| typecheck | exit 0 | green |
+| graph compile check | exit 0 | green |
+| lint | exit 0、407 warnings、10 infos | warning debtを許容したgreen |
+
+canonical 44 passとcomposed exit 1のfresh対照は、direct source testだけでは配布実行可能性を証明しないことを示す。`tla-model-receipt.ts`を登録しても次に`tla-module-deps.ts`で失敗するため、同根の未登録sourceは全数2件として扱う。M7/M8の `BLOCKER` 候補だが、修復方式とintent帰属はRequirements Analysisで裁定する。
+
+その他の品質断面:
+
+- coverage baselineは7,225 / 17,648 lines（約40.94%）。baseline比とpatch zero-hitのratchetはあるが絶対coverageは高くない。
+- formal-model-check CI jobは`workflow_dispatch`限定で、required `CI Success`集約には含まれない。
+- runtime/plugin/setup/scriptsのTODO/FIXME/HACK実質0件。文書化は厚いが、文書化された手作業とstage所有の実行工程が乖離している。
+- 最大ファイルは`amadeus-lib.ts` 8,778行、`amadeus-utility.ts` 6,281行、`amadeus-orchestrate.ts` 5,623行、`amadeus-state.ts` 5,597行。formal側は`fs-tlc-toolchain.ts` 2,197行。
+- model registrationは手作業JSON追加であり、requirement/design identity、coverage、staleness、proof、review approvalを一つに束縛するschema/transaction境界はない。
+
 ## advisory 人間選択の品質所見（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された強み
@@ -28,7 +49,7 @@
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
-## no-silent-drop evidence 再バインドの品質所見（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence 再バインドの品質所見（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。実測手順・全数列挙・引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
 

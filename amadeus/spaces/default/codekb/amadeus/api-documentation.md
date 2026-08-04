@@ -1,5 +1,24 @@
 # API ドキュメント
 
+## TLA+ authoring関連契約（260804-tla-authoring、現在、observed `7172aea8d`）
+
+### 現存する契約
+
+- `model-map.json` schema v2: sorted nonempty models、model/cfg identity、canonical implementation entries、optional auxiliaries、`namedInvariants`、`traceStateVariables`。rebase後は既存2 rowのimplementation SHA pinのみ更新され、schema・model数・vocabularyは不変。
+- `ModelCheckReceipt`: `FormalElection`はfrozen receipt、その他はverified-source receipt。PR #2176でselected model/config、registered identity、aux transcriptとの束縛が追加された。
+- `AdvisoryIdentity`: plugin / code / checkpoint / target / specIdentity / intentRun / advisoryInstance。
+- `run-model-check.ts` と `run-model-check-ci.ts run|verify`: 登録モデルを局所または全件実行。outcomeはexit 0=`NOT_DETECTED`、1=`DETECTED`、2=`HARNESS_ERROR`。
+- `amadeus-sensor-model-completeness.ts check|updateModelMap [--impl-only]`: 既存map rowのdrift検査・再発行・意味不変宣言。
+
+### 不在の契約
+
+- 要求・FR・cid・裁定・design identityから適用判定を作るAPI。
+- 新規model rowと `.tla` / `.cfg` / reduction / trace evidenceを一つのtransactionで登録するAPI。
+- requirement/designからnamed invariantまでの全数coverageを検証するAPI。
+- proof、独立review、人間承認をregistrationへ束縛するauthoring receipt API。
+
+`updateModelMap`は既存 `map.models.map(...)` の再発行器であり、新規row生成APIではない。既存CLIを新規authoring APIと見なしてM1/M5/M7を満たしたことにはできない。また、plugin manifestに `tla-model-receipt.ts` / `tla-module-deps.ts` がないため、canonical APIがgreenでもcomposed Codexではimport解決前にexit 1となる。
+
 ## advisory のdirective／report契約（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行wire契約
@@ -15,7 +34,7 @@
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
 
-## no-silent-drop evidence 再バインドが対象とする契約（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence 再バインドが対象とする契約（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。本 intent が触れるのは公開 CLI 契約ではなく、**台帳3層の内部束縛契約とゲート CLI の subcommand 面**である。
 

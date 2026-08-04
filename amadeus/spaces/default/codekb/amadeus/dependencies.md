@@ -1,5 +1,35 @@
 # 依存関係
 
+## TLA+ authoringの依存断面（260804-tla-authoring、現在、observed `7172aea8d`）
+
+### 現行依存
+
+```text
+orchestrator
+  -> plugin activation / advisory choice
+  -> explicit formal-model-check handoff
+
+formal-model-check stage
+  -> model-map / source loader
+  -> module dependency resolver
+  -> verified receipt
+  -> TLC planner / toolchain
+  -> artifact publisher
+```
+
+### 未配線依存
+
+- requirements / functional design artifacts → applicability判定。
+- applicability → author / revise / `--impl-only` / non-targetの排他的分岐。
+- trace + proof + independent review + human approval → atomic model registration。
+- registration →既存executorの対象選択と現在要求に相関したverdict receipt。
+
+### 配布依存の欠落
+
+plugin sourceは `plugin.json` のclosed `tools` 宣言からbundle → composition `ownedPaths` → harness runtimeへ到達する。`run-model-check-source.ts`等が `tla-model-receipt.ts`を、loaderが`tla-module-deps.ts`をimportする一方、両ファイルはmanifest未登録である。このためcanonical dependency graphは閉じていても、composed graphは閉じない。package/projection testsはmanifest準拠を検査するだけでimport closureを検査しない。
+
+外部依存はTLC jar、OpenJDK/Docker、GitHub release取得に限定され、#2161でdatabaseやservice追加は不要である。
+
 ## advisory 人間選択の依存関係（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行依存方向
@@ -27,7 +57,7 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
-## no-silent-drop evidence 再バインドの依存関係（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence 再バインドの依存関係（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。**新規の外部依存・service・network I/O は不要**であり、関係するのはリポジトリ内部の依存方向と台帳間の束縛方向のみである。
 

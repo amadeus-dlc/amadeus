@@ -1,5 +1,14 @@
 # ビジネス概要
 
+## TLA+ model authoring の業務境界（260804-tla-authoring、現在、observed `7172aea8d`）
+
+- **目的**: [Issue #2161](https://github.com/amadeus-dlc/amadeus/issues/2161) は、現在の要求・設計から形式検証の適用可否を判断し、必要ならモデルを新規作成または改訂して、proof・review・登録を経て既存 `formal-model-check` へ渡す監査可能な価値鎖を成立させる `self-feature` である。既存モデルの無関係な `NOT_DETECTED` だけでは完了できないことが利用者価値の中心である。
+- **現行能力**: model-map v2、2登録モデル、source/implementation drift、`--impl-only`、TLC完全探索、selected-model receipt、advisory相関、falling/vacuity/reductionの手順と実例は再利用できる。
+- **現行の断線**: core 32 stage + plugin 1 stageの全33 stageに、要求・設計を入力として `.tla` / `.cfg` / reduction / trace / `model-map.json` の新規作成・改訂を完了条件まで所有する実行可能ownerは0件。実在する `formal-model-check` は `consumes: []` / `produces: []` / `requires_stage: []` / `scopes: []` の登録済みモデル実行専用である。
+- **Must境界**: scope M1〜M8は、適用判定、新規authoring、意味変更時の改訂、`--impl-only`、非対象receipt、全数trace、staleness、proof/review、未知題材E2E、既存2モデル互換を一つの鎖として要求する。新規stageか既存stage overlayかは本scanでは確定せず、Requirements Analysis / Application Designへ送る。
+- **`BLOCKER`候補**: plugin manifestが `tla-model-receipt.ts` と `tla-module-deps.ts` を登録していない。canonical source直実行のfresh focused suiteは44 pass / 168 expectでも、composed Codexの `run-model-check.ts --help` は最初のmissing importでexit 1になる。M7のexecutor handoffとM8の全harness互換に直接抵触するため、Requirements Analysisで「同Intent内修復」または「hard dependency付き別Issue」を裁定する。修復を伴わない完了は現行Must outcomesと矛盾する。
+- **非拡張境界**: TLC実行器の全面再実装、全変更へのTLA+強制、LLM生成自体の決定論化、既存2モデルのverdict identity変更は含めない。
+
 ## 形式検査 advisory の人間判断境界（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **利用者価値**: [Issue #2129](https://github.com/amadeus-dlc/amadeus/issues/2129) は、形式モデル検査を早期に実行するか、リスクを認識して後へ送るかを人間が選べる状態を守る。対象は `requirements-analysis`、per-unit の `functional-design`、`build-and-test` の3チェックポイントであり、後段の `formal-model-check` 実行可否とは別の上流判断である。
@@ -9,7 +18,7 @@
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
-## no-silent-drop evidence の revision 再バインドの業務境界（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence の revision 再バインドの業務境界（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節の測定 ref はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 `git merge-base --is-ancestor` exit 0、距離 11）。全数列挙・実測手順は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
 

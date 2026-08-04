@@ -1,5 +1,20 @@
 # リバースエンジニアリング実施記録
 
+## 実行メタデータ（現在: 260804-tla-authoring）
+
+- Date: `2026-08-04`
+- Base commit: `9458bbda85eb7257310a80882b4858dc6ce3d1fc`
+- Observed commit: `7172aea8dacb2a187d71697cbc8561c1614e25a4`（= `origin/main` / worktree HEAD）
+- Ancestry / distance: `git merge-base --is-ancestor 9458bbda85eb7257310a80882b4858dc6ce3d1fc 7172aea8dacb2a187d71697cbc8561c1614e25a4` はexit 0、距離21 commits。旧observed `be6a8085b9b8ff7e3b384dcaf34653cae29f307f`は新observedのancestorではない（exit 1、rebase履歴）。
+- Scope: `self-feature`、Brownfield、単一repo `amadeus`、Depth: Standard、Test Strategy: Comprehensive。
+- Focus: [Issue #2161](https://github.com/amadeus-dlc/amadeus/issues/2161)。要求・設計→適用判定→author/revise/impl-only/non-target→trace/staleness→proof/review→registration→既存executorの責務鎖、authoring owner、model-map/receipt/advisory、plugin配布閉包を調査。
+- Differential size: base→observedは828 files、+61,315 / -2,642。旧observed→新observedは祖先差分ではなくtree deltaで6 commits / 73 files / +1,453 / -1,913。主なdeltaはstructured config導入と関連docs/testsで、#2161の核心は不変。PR #2176のselected-model receipt一般化とPR #2178の`--out`衝突契約も維持される。
+- Current finding: 全33 stageでauthoring ownerは0件。model-map v2、2モデル、drift、`--impl-only`、TLC/receipt/proof実例は再利用可能だが、要求/design identity、trace coverage、staleness、proof/review receipt、atomic registrationは未配線。
+- Tracked `BLOCKER` candidate: `plugin.json`が`tla-model-receipt.ts`と`tla-module-deps.ts`を登録していない。fresh canonical focused suite 44 pass / 168 expectに対し、composed Codexは最初のmissing importでexit 1。M7/M8への帰属と修復方式をRequirements Analysisへ送る。
+- Verification: rebase後Developer delta scanでfocused formal 44 pass / 0 fail / 168 expect、composed Codex exit 1、静的検査`UNLISTED:tla-model-receipt.ts` / `UNLISTED:tla-module-deps.ts`。初回scanのtypecheck / lint / projection / graph結果は旧observedの履歴証拠であり、新observedでは再実行していない。
+- Updated artifacts: 共有9成果物へ本断面を追加し、過去断面を本文保持。per-intent record `re-scans/260804-tla-authoring.md`を新設。
+- Per-intent record: `re-scans/260804-tla-authoring.md`
+
 ## 実行メタデータ（履歴: 260803-advisory-human-choice）
 
 - Date: `2026-08-03T08:00:01Z`
@@ -13,7 +28,7 @@
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260802-registry-drift-guard` 節を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-advisory-human-choice.md` を新設。
 - Per-intent record: `re-scans/260803-advisory-human-choice.md`
 
-## 実行メタデータ（現在: 260804-evidence-revision-rebind）
+## 実行メタデータ（履歴: 260804-evidence-revision-rebind）
 
 - Date: `2026-08-04`
 - Base commit: `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性を `git merge-base --is-ancestor 498c3034a 9458bbda8` exit 0 で実測確認。observed からの距離 `11`（`git rev-list --count`）。**直前記録 `260803-state-integrity` の observed `6c15af23a` は observed の祖先ではない**（`--is-ancestor` exit 1 を実測）— ローカル merge コミットを observed に記録したことによる非祖先化であり、`cid:reverse-engineering:c2-observed-mainline-commit` が防ごうとした事象そのもの。記録済み observed のうち祖先かつ距離最小である `498c3034a` を `cid:reverse-engineering:rescan-base-ancestry` に従い base とした）

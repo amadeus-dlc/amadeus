@@ -897,5 +897,12 @@
     "dirName": "260804-goal-reconciliation-guar",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fccb7-8e76-7054-b227-8a42de94bba5",
+    "slug": "tla-authoring",
+    "dirName": "260804-tla-authoring",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

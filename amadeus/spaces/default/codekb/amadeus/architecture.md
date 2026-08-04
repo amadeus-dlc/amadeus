@@ -1,5 +1,65 @@
 # アーキテクチャ
 
+## TLA+ authoring value chain の現行断面（260804-tla-authoring、現在、observed `7172aea8d`）
+
+### 境界と責務
+
+| 境界 | 現行責務 | #2161に対する空白 |
+| --- | --- | --- |
+| Requirements / Design | Markdown成果物とidentityを生成 | 形式モデル適用判定へ渡す正規入力がない |
+| activation / advisory | `specs/tla/**` のhash変化を3 checkpointで通知（`amadeus-plugin-activation.ts:42`、`amadeus-orchestrate.ts:1378,1401`） | 要求本文・design identityを判定せず、authoringを起動しない |
+| model completeness | 既存rowのsource/impl driftと`--impl-only`を検査 | 新規model row、要求→invariant trace、proof/review receiptを作れない |
+| `formal-model-check` | model-map登録済みモデルをTLC実行しverdictを正規化 | `consumes` / `produces` / upstream ownerがなく、供給責務を持たない |
+| plugin composition | manifestのclosed tools一覧をhostへ複製。structured config化後もprojection責務は不変 | `plugin-projection.ts:208-226`は掲載済みfileの存在/安全性だけを検査し、import closureを検査しない |
+
+### Interaction Diagram: 要求からexecutorまで
+
+実線は#2161が要求する価値鎖、破線の注記は現行断線である。配置方式（新規stage / overlay）は未裁定であり、この図は責務順序だけを示す。
+
+```mermaid
+flowchart LR
+  R[要求とdesign identity] --> A[形式モデル適用判定]
+  A -->|新規対象| N[author]
+  A -->|意味変更| V[revise]
+  A -->|意味不変| I[impl-only receipt]
+  A -->|非対象| X[理由と人間承認receipt]
+  N --> T[trace coverageとstaleness]
+  V --> T
+  I --> T
+  X --> T
+  T --> P[TLC・falling・vacuity proof]
+  P --> G[独立reviewと人間gate]
+  G --> M[model-map registration]
+  M --> E[既存formal-model-check executor]
+  R -. 現行は入力未配線 .-> E
+```
+
+テキスト代替: 要求/設計 → 適用判定 → author / revise / impl-only / non-target → trace・staleness → proof → review・人間gate → registration → 既存executor。
+
+### Interaction Diagram: canonicalからcomposed runtimeまで
+
+```mermaid
+flowchart LR
+  C[plugins/formal-model-check canonical source] --> J[plugin.json tools manifest]
+  J --> B[dist plugin bundle]
+  B --> O[composition ownedPaths]
+  O --> H[composed harness plugin]
+  H --> R[run-model-check runtime]
+  C --> D[tla-model-receipt.ts]
+  C --> M[tla-module-deps.ts]
+  D -. manifest未登録 .-> J
+  M -. manifest未登録 .-> J
+  R --> F[missing importでexit 1]
+```
+
+テキスト代替: canonical sourceはmanifestに列挙されたtoolだけがbundle、ownedPaths、composed runtimeへ到達する。`tla-model-receipt.ts` と `tla-module-deps.ts` はcanonical treeに存在して依存されるがmanifestにないため、composed runtimeから欠落する。
+
+### 設計判断へ送る事項
+
+- authoring ownerの配置、requirement/design identity粒度、trace/reduction/proof receipt schema、登録の原子性は未裁定。Reverse Engineeringでは方式を固定しない。
+- import-closure欠陥はM7/M8の `BLOCKER` 候補としてRequirements Analysisへ送る。最小選択肢は同Intent内の同根修復、または別Issueをhard dependency化すること。単なる見送りはMustと矛盾する。
+- 既存executor、verdict normalization、FormalElection / MirrorLifecycle identityは保護境界であり、authoring責務との分離を維持する。
+
 ## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された境界
@@ -55,7 +115,7 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## no-silent-drop evidence registry の revision 束縛構造（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+## no-silent-drop evidence registry の revision 束縛構造（260804-evidence-revision-rebind、履歴、observed `9458bbda8`）
 
 本節は Developer Code Scan を observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）で合成し、Architect が主要 seam を verbatim 実読で二重化した現在断面である。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 exit 0、距離 11）。実測手順・全数列挙・引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
 
