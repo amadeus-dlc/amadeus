@@ -1235,7 +1235,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "emitMirrorBoundaryIfNeeded",
-      "fingerprint": "sha256:88a8eab632332a66b20df9a9feec5a5a610e423b6b7786b5f5fbe52b7a89f188",
+      "fingerprint": "sha256:9fc57a951ff72a538f212f4ee1f716a7ea247716ddb16ff56d0f8cf4ef69f2e6",
       "anchorLines": 11,
       "targetLines": "1-11"
     },
@@ -3221,9 +3221,20 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:7411797210aeccf68c833eb5e41c776e0c7a9ed06a20a9ee5dd3a49c99cf3da2",
-      "anchorLines": 76,
-      "targetLines": "1-76"
+      "fingerprint": "sha256:bd4d2e8d007dd66054f41f03bc86092739ff23fde57bc22cd2ca96c6ae433296",
+      "anchorLines": 30,
+      "targetLines": "1-30"
+    },
+    "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:78f8ec6b10ed7f785f5334823f7bed3b71b70f23f18530237715606e68fcd1e9",
+      "anchorLines": 46,
+      "targetLines": "1-46"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
