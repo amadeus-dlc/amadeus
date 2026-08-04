@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "direction": "shrink-only",
   "generatedFrom": {
-    "revision": "b97929d340b7d951d1dd842aea19425af18be531",
-    "censusDigest": "c287c52b60e88159c0f302476f058cbaee6c0f46303fed56deef19f6df305ec8",
-    "approvalDigest": "d888f26d233fb8043ca7ad2fee8a983a18d8770447fd147c3142e5a0d3ca9e2e",
-    "previousDigest": "e9e40ffa2d19c7a064b38e70feb078dc23c4c4f23555b140f5bfa0891cdf86ad"
+    "revision": "77a0c43060f487ca0f68c426fd5df765f8e77fc4",
+    "censusDigest": "b6bf74ffc7810e2a619424bf3992eeeab321b511f9fe8cce9876808b5ea34c2c",
+    "approvalDigest": "0e92854570e9dacf4664fd19ff7074b8538b32fd59283d1d48252925015ca6df",
+    "previousDigest": "d816c20ffb927445a2172a48784d8da825fcdad94733ae10d2b9168d2e7c3757"
   },
   "entries": [
     {
