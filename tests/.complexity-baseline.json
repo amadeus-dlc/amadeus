@@ -114,7 +114,19 @@
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "handleDelegateRejection",
       "ordinal": 0,
-      "ccn": 20
+      "ccn": 16
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "handleLookup",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "handlePracticesPromote",
+      "ordinal": 0,
+      "ccn": 26
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
