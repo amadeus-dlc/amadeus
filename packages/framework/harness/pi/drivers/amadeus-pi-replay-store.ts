@@ -194,6 +194,27 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
     return key;
   };
 
+  const recoverLeaf = (leaf: string): PiDeliveryRecord | null => {
+    try {
+      const path = join(recordsDir, leaf);
+      assertPrivateRegularFile(path);
+      const record = parseRecord(readNoFollow(path));
+      if (record.status === "terminal" || record.status === "quarantined") return null;
+      const terminal: PiDeliveryRecord = record.status === "reserved"
+        ? {
+            ...record,
+            status: "terminal",
+            terminal: { kind: "dispatch-not-started", reason: "reserved-before-launch-recovered", vaultDigest: null },
+            updatedAt: now(),
+          }
+        : { ...record, status: "quarantined", updatedAt: now() };
+      putRecord(terminal);
+      return terminal;
+    } catch {
+      return null;
+    }
+  };
+
   return {
     reserve(deliveryKey, fingerprint) {
       let existing: PiDeliveryRecord | null;
@@ -306,24 +327,8 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
       }
       for (const leaf of leaves) {
         if (recovered.length >= limit) break;
-        try {
-          const path = join(recordsDir, leaf);
-          assertPrivateRegularFile(path);
-          const record = parseRecord(readNoFollow(path));
-          if (record.status === "terminal" || record.status === "quarantined") continue;
-          const terminal: PiDeliveryRecord = record.status === "reserved"
-            ? {
-                ...record,
-                status: "terminal",
-                terminal: { kind: "dispatch-not-started", reason: "reserved-before-launch-recovered", vaultDigest: null },
-                updatedAt: now(),
-              }
-            : { ...record, status: "quarantined", updatedAt: now() };
-          putRecord(terminal);
-          recovered.push(terminal);
-        } catch {
-          // One unreadable record must not erase or block other recoveries.
-        }
+        const recoveredRecord = recoverLeaf(leaf);
+        if (recoveredRecord !== null) recovered.push(recoveredRecord);
       }
       return recovered;
     },
