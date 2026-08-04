@@ -140,7 +140,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・7つのパッケージ対象ハーネス生成物・5つの self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとする。`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への継続同意として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
+`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・パッケージ対象ハーネス生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとする。`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への継続同意として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
 
 <!-- amadeus:practices-promote:END -->
 
