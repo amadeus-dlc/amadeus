@@ -36,7 +36,7 @@ const EXPECTED_TARGETS = [
   "tests/unit/t418-state-receipts-codec.pbt.test.ts",
   "tests/unit/t419-state-field-codec.pbt.test.ts",
   "tests/unit/t274-amadeus-mirror-state-codec.test.ts",
-] as const;
+];
 
 describe("scheduled deep PBT workflow", () => {
   test("is independent from blocking CI and supports daily plus manual runs", () => {
