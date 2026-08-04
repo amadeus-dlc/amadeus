@@ -281,4 +281,32 @@ describe("Pi child driver process boundary", () => {
     rmSync(join(runtimeDir, "records"), { recursive: true });
     expect(store.recoverPending(1)).toEqual([]);
   });
+
+  test("filesystem write failures remain closed", () => {
+    if (process.platform === "win32") return;
+
+    const conflict = fixture();
+    const conflictRuntime = join(conflict.root, "runtime");
+    const conflictStore = createPiReplayStore(conflictRuntime);
+    const conflictKey = "conflict-write-failure" as Parameters<typeof conflictStore.reserve>[0];
+    expect(conflictStore.reserve(conflictKey, "first").kind).toBe("reserved");
+    chmodSync(join(conflictRuntime, "records"), 0o500);
+    try {
+      expect(conflictStore.reserve(conflictKey, "second").kind).toBe("visibility-failure");
+    } finally {
+      chmodSync(join(conflictRuntime, "records"), 0o700);
+    }
+
+    const keyFailure = fixture();
+    const keyRuntime = join(keyFailure.root, "runtime");
+    const keyStore = createPiReplayStore(keyRuntime);
+    const key = "key-write-failure" as Parameters<typeof keyStore.reserve>[0];
+    expect(keyStore.reserve(key, "fingerprint").kind).toBe("reserved");
+    chmodSync(keyRuntime, 0o500);
+    try {
+      expect(keyStore.commitTerminal(key, "fingerprint", { kind: "succeeded", reason: "done" }, "secret")).toBe(false);
+    } finally {
+      chmodSync(keyRuntime, 0o700);
+    }
+  });
 });

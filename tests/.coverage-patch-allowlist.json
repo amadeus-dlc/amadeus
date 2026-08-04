@@ -4099,28 +4099,6 @@
   {
     "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
     "selector": {
-      "function": "writeExclusive",
-      "fingerprint": "sha256:b5babb0b5cdc2806c89b3a841804894066bf2a53750efc863221cf6fb3939aa7",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
-    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
-  },
-  {
-    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
-    "selector": {
-      "function": "reserve",
-      "fingerprint": "sha256:6947cdab0946ef992da2451fe07cbba165ae1d67feb04d4e5960a0652e36795c",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
-    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
-  },
-  {
-    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
-    "selector": {
       "function": "reserve",
       "fingerprint": "sha256:51ea722a4a962b55616b3b1a518a721f96eba14421027288946531439423d8b2",
       "anchorLines": 2,
