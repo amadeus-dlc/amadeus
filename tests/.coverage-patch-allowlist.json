@@ -7109,5 +7109,16 @@
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "selector": {
+      "function": "removeTemporaryBestEffort",
+      "fingerprint": "sha256:7ecf29e34a64f393cbd47f8bf76fcf5cd6db5c1a98320109742a008874cb022f",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "This defensive boundary preserves the original atomic-write failure when the secondary temporary-file cleanup itself throws; deterministically forcing that cleanup failure would require replacing the filesystem primitive solely for coverage attribution.",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
   }
 ]
