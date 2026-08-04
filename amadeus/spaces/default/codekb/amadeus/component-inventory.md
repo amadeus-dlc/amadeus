@@ -17,7 +17,28 @@
 
 候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
 
-## state integrity の対象コンポーネント（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドの対象コンポーネント（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+| コンポーネント | パス | 本 intent での役割 |
+| --- | --- | --- |
+| evidence registry（正本） | `tests/no-silent-drop/adoption-evidence.json` | `currentRevision` 24（top 1 + receipt 23）/ `evidenceDigest` 23 を保持 |
+| evidence manifest | `tests/no-silent-drop/adoption-evidence-manifest.json` | `testedRevision` 24 / `artifact.sha256` 25 を保持 |
+| 成果物レコード | `tests/no-silent-drop/evidence/adoption-runs.json` | run 25 件の `testedRevision` を保持 |
+| registry 検証器 | `tests/no-silent-drop/repository-adoption.ts` | `validateEvidenceRegistry` — receipt revision（`:182`）と digest（`:183-187`） |
+| evidence 検証器 | `tests/no-silent-drop/repository-adoption-evidence.ts` | manifest/entry/run の revision（`:197` / `:268` / `:360`）と `canonicalBinding`（`:333-351`） |
+| ゲート CLI | `tests/no-silent-drop-gate.ts` | `:35` stdout JSON 一本。書込 API 0 件 |
+| ゲートエンジン | `tests/no-silent-drop/engine.ts` | `:49` `Mode` 4種（`check` / `census-evidence` / `approve-evidence` / `baseline-candidate`） |
+| bootstrap 検証 | `tests/no-silent-drop/bootstrap.ts` | `:331` postRevision 等値 / `:427-428` preRevision 到達性 / `:493-495` fallback 分岐 |
+| bootstrap provenance | `tests/no-silent-drop/bootstrap-provenance.json` | 導入コミット `7c29e33f7` 以降未更新。candidate digest 乖離・postRevision 不在 |
+| 統合検査 | `tests/integration/t413-no-silent-drop-ci-adoption.test.ts` | `:151-174` の到達性・digest・鮮度 assertion |
+| 併存検査 | `tests/integration/no-silent-drop-repository-adoption.test.ts` | 検証器の単体検査。write 19 件はすべて `mkdtempSync` 由来の temp root 宛 |
+| CI 集約 | `.github/workflows/ci.yml` | `:893-906` `ci-success`（唯一の必須チェック） |
+
+ゲート実装の `.ts` は **8ファイル**（上表の gate / engine / bootstrap / repository-adoption / repository-adoption-evidence + `ast-scan.ts` / `ledger.ts` / `model.ts`）で、**全8ファイルの書込 API 出現数が 0**（Architect が observed で独立再計算）。台帳を書くコンポーネントは棚卸しに存在しない。
+
+## state integrity の対象コンポーネント（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。
 

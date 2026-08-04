@@ -7,7 +7,18 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## state integrity の技術断面（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドの技術断面（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の測定 ref は observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`。詳細は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+- 技術スタックの変更はない。Bun / TypeScript / `bun test` / GitHub Actions の既存構成内で閉じる。新規の外部ツール・ランタイム・言語は不要。
+- 依拠する外部ツールは **git のみ**（`git cat-file -e` / `git merge-base --is-ancestor` / `git diff` — いずれも `t413…test.ts:155-172` から `spawnSync` で駆動）。この git 依存が、スカッシュマージ運用と組み合わさって欠陥の機序そのものになっている。
+- digest は Node/Bun 標準の sha256（`repository-adoption-evidence.ts` の `readArtifactCollection` が `sha256(bytes)` を算出）。追加の暗号ライブラリ依存はない。
+- 再現・検証は repo 外 scratch clone（`file://` transport で smart transport 強制、observed へ detach、`bun install --frozen-lockfile` exit 0）で成立する。`--single-branch` クローンだけでは PR ブランチのオブジェクトが入らないため、追加の ref 削除・`gc --prune=now` を経ずに CI 形（`:157` / exit 128）を再現できる。
+- CI 面: `ci.yml:893-906` の `ci-success` 集約ジョブが唯一の必須チェック。`paths-ignore` により docs / record-only PR は `Tests` が skipped になる（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot`）。
+- 区間（`498c3034a..9458bbda8`、11 コミット）の技術的な大変化は `9458bbda8`（PR #2152）による生成物の Git 追跡除去（`dist` 3951 ほか計 7283 files の差分、実質変更 227 files）。患部の技術前提には影響しない。
+
+## state integrity の技術断面（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 **本差分は技術スタックそのものを変えない。** 患部は `packages/framework/core/tools/` の既存 TypeScript ロジック（ロックプリミティブと state フィールド導出）に閉じており、新規の外部依存・service・database・network I/O は不要である。以下は observed `6c15af23a` での測定 ref 更新と、本 intent が実際に依存する層の再確認に留める。
 

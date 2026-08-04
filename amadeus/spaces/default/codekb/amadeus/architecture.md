@@ -55,7 +55,76 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## state integrity（audit lock 相互排他と `Completed` 定義）の対象機構（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence registry の revision 束縛構造（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節は Developer Code Scan を observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）で合成し、Architect が主要 seam を verbatim 実読で二重化した現在断面である。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 exit 0、距離 11）。実測手順・全数列挙・引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+> **測定 ref の注意。** 本 intent の worktree（HEAD `668e88665`）は observed と同一ではなく、台帳3ファイルと t413 が内容差分を持つ（`cmp` 実測で DIFF）。本節の file:line・引用はすべて `git show "${OBS}:<path>"` で observed 断面から抽出した。zsh では `git show "${VAR}:path"` とブレース必須（`:t` / `:h` が履歴修飾子として解釈される）。
+
+### 台帳3層とリビジョンフィールド（observed 実測）
+
+| 台帳 | フィールド | 出現数 | 内訳 |
+| --- | --- | --- | --- |
+| `tests/no-silent-drop/adoption-evidence.json` | `currentRevision` | 24 | top-level 1 + receipt 23 |
+| `tests/no-silent-drop/adoption-evidence-manifest.json` | `testedRevision` | 24 | top-level 1 + evidence entry 23 |
+| `tests/no-silent-drop/evidence/adoption-runs.json` | `testedRevision` | 25 | run レコード 25（top-level なし） |
+
+全出現が到達不能 SHA `3734885cbfc03aa97f655ca61da1cdd533fdea3e` で、`git grep -c <sha> 9458bbda8 -- .` はこの3ファイル（24 / 24 / 25 = 73箇所）のみをヒットする。
+
+### 読み手と効く検査
+
+| フィールド | 読み手（observed 行） | 効く検査 |
+| --- | --- | --- |
+| registry top-level `currentRevision` | `t413…test.ts:157`（`git cat-file -e`）、`:159-163`（`merge-base --is-ancestor`）、`:164`（`validateEvidenceRegistry(registry, registry.currentRevision)`）、`:168`（`git diff` の左端） | **到達性**（#2156）+ 鮮度 diff（#2153） |
+| registry receipt `currentRevision` | `repository-adoption.ts:182` `if (candidate.currentRevision !== expectedRevision) problems.push(\`receipt ${candidate.id} revision mismatch\`)` | registry 内部整合 |
+| registry receipt `evidenceDigest` | `repository-adoption.ts:183-187`（`expectedDigests.get(receiptId)` 一致） | 台帳↔manifest の digest 束縛 |
+| manifest top-level `testedRevision` | `repository-adoption-evidence.ts:360` `if (rawManifest.testedRevision !== expectedRevision) problems.push("evidence manifest revision mismatch")` | manifest↔registry 束縛 |
+| manifest entry `testedRevision` | `repository-adoption-evidence.ts:197` `if (value.testedRevision !== expectedRevision) problems.push(\`evidence ${value.id} revision mismatch\`)` | 同上 |
+| `adoption-runs.json` run `testedRevision` | `repository-adoption-evidence.ts:268` `if (summary.testedRevision !== entry.testedRevision) problems.push(\`${label} revision mismatch\`)` | 成果物レコード↔manifest 束縛 |
+
+**欠陥機序**: `t413…test.ts:157` / `:159` だけが「台帳に永続化した SHA を後日 git で解決する」検査である。スカッシュマージ運用では PR ブランチ tip は着地後 `main` に存在しないため、自ブランチ tip を記録して着地した瞬間に到達不能へ反転する。PR 上では記録 SHA が到達可能で緑になるため、**PR CI でもレビューでも構造的に捕捉できない**。原因の所在は #1979 の**設計**（`cid:requirements-analysis:bug-intent-linkage`）。
+
+### digest 不動点（`canonicalBinding`）
+
+`repository-adoption-evidence.ts:333-351` の `canonicalBinding()` は digest 入力に (a) `entry.testedRevision`（`:337`）と (b) 成果物ファイルの実測バイト digest（`:343`、`artifactDigests` は `readArtifactCollection` が `sha256(bytes)` で構成）を含む。したがって束縛は3層の**不動点**をなす:
+
+1. `adoption-runs.json` の `testedRevision` 書き換え → ファイルバイトが変わる
+2. → manifest の `artifact.sha256`（25エントリ）を更新しないと `artifact digest mismatch`
+3. → `canonicalBinding` の入力が2面とも変わる → registry の `evidenceDigest`（23 receipt）を再計算しないと `evidence digest does not match repository evidence`
+
+**この不動点は機械的に計算可能で閉じる。** repo 外 scratch clone（observed へ detach、`bun install --frozen-lockfile` exit 0）での段階実測:
+
+| 段階 | 操作 | `validateEvidenceRegistry` の problems |
+| --- | --- | --- |
+| A | registry + manifest のみ SHA 置換 | **48 件**（run 単位 `revision mismatch` 25 + receipt 単位 digest 23） |
+| B | + `adoption-runs.json` も置換し manifest の `artifact.sha256` を更新 | **23 件**（digest 面のみ） |
+| C | + `evidenceDigestForReceipt()` で 23 receipt の `evidenceDigest` 再計算 | **0 件 / `ok: true`** |
+
+段階 C で `bun test tests/integration/t413-no-silent-drop-ci-adoption.test.ts` → `10 pass / 0 fail`、`bun tests/no-silent-drop-gate.ts check --base-revision 9e699ea79…` → `NO_SILENT_DROP_OK`。機械的に書き換わるフィールドは **73 + 23 + 25 = 121 箇所**。
+
+> **「修復不能」前提の反証。** Issue 本文と両クロスレビューが置いていた「evidence bundle の再 adoption に生成ツールが無いため修復不能」は成立しない（[Issue #2156 の訂正コメント](https://github.com/amadeus-dlc/amadeus/issues/2156)、2026-08-04T01:37:53Z）。**不在なのは再生成ロジックではなく書込経路**である。この評価は codekb 全体の前提として維持すること。
+
+### 書込経路の不在
+
+observed の `tests/no-silent-drop/` 配下 + `tests/no-silent-drop-gate.ts` の `.ts` は8ファイル（`gate` / `ast-scan` / `bootstrap` / `engine` / `ledger` / `model` / `repository-adoption-evidence` / `repository-adoption`）。各ファイルの `grep -cE 'writeFileSync|Bun\.write|appendFileSync|createWriteStream|writeFile\(|mkdirSync'` は **全8ファイルで 0**（Architect が observed で独立再計算）。CLI モードは `engine.ts:49` の `"check" | "census-evidence" | "approve-evidence" | "baseline-candidate"` の4種で、出力は `tests/no-silent-drop-gate.ts:35` の `process.stdout.write(...)` のみ。**正本3台帳を書く経路はリポジトリに存在しない**ため、再バインドの実施手段自体を本 intent が新設する必要がある。
+
+### 同一設計クラスの3件目 — bootstrap fallback
+
+`bootstrap-provenance.json` は同じ「台帳に永続化した値がマージ運用で陳腐化する」クラスで**既に恒久破損**している。
+
+- `candidate.digest`（`607988a05…`）が現行 `baseline.json` のバイト（`9c1e72750…`）と乖離。乖離は `a2f08658e`（PR #2127）から始まり、provenance 側は導入コミット `7c29e33f7` 以降一度も更新されていない。
+- `bootstrap.ts:331` の等値（`currentBaseline.generatedFrom.revision === provenance.postRevision`）も破れている（`69338a56f…` ≠ `fc49f8de2…`）。
+- `postRevision` は mainline のみのクローンでは**オブジェクトとして存在しない**（`git cat-file -e` exit 128）。現時点で赤にならないのは、到達性検査（`bootstrap.ts:427-428` の `gitObjectExists` + `isAncestor`）が `preRevision` にのみ適用され、`postRevision` は `:331` と `:432` の等値比較にしか使われないため。
+- さらに `validateBootstrap` 自体、`bootstrap.ts:493-495` により**信頼ベース SHA に `baseline.json` が存在しない場合だけ**呼ばれる。CI の実運用ベースは常にゲート導入後の SHA なので git 経路が選ばれ、この破損は顕在化しない。
+
+**評価: fail-closed 側のため偽緑は生まないが、fallback は事実上死んでいる。** 本 intent の射程に含めるかは裁定事項。
+
+### 設計含意（要件段へ）
+
+- 即時の再バインドは `main` を緑に戻すが、**次に registry を更新する PR で必ず再発する**。恒久解は「着地後に main SHA へ再バインドする経路」か「PR ブランチ SHA を記録できない構造」のいずれかで、前者はマージ時点で台帳を更新する経路を要し、後者は `t413:157/:159` の到達性検査の意味論変更を伴う。
+- `baseline-proof` receipt の再現性は再バインドの障害では**ない**（`--base-revision 9e699ea79…` は再バインド前後とも exit 0 / pass）。両レビュアーが INCONCLUSIVE とした未確定事項は解消済み。
+
+## state integrity（audit lock 相互排他と `Completed` 定義）の対象機構（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節は Developer Code Scan を observed `6c15af23af32c89ca2ab18738cbb01b849da634b` で合成し、Architect が主要 seam を verbatim 実読で二重化した現在断面である。実測手順・全数列挙・引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。差分 base は `a8e1ce025`（祖先性を `git merge-base --is-ancestor` exit 0 で確認）。
 
@@ -119,7 +188,7 @@ sequenceDiagram
 
 セキュリティ／コンプライアンス上、新しい外部 I/O・権限・個人情報は導入しない。主リスクは (i) ロックの fail-open を別の fail-open へ置き換えること、(ii) `Completed` の第 4 定義を作ってしまうこと、(iii) NSD001 ゲート（`ci.yml:154`）がロックの catch ブロック編集で再 fingerprint されて発火することである。
 
-## Interaction Diagrams（260803-state-integrity、現在）
+## Interaction Diagrams（履歴: 260803-state-integrity、2026-08-03）
 
 ### 分岐 B — 不活性 CAS 検証による相互排他破れ
 
