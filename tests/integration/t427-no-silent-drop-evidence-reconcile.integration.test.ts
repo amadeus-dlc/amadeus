@@ -203,6 +203,18 @@ describe("t427 pure rebind trust boundary", () => {
     expect(result.stderr).not.toContain("command timed out");
   });
 
+  test("captures a two-megabyte command output", () => {
+    const expectedBytes = 2_000_000;
+    const result = systemCommandRunner.run([
+      process.execPath,
+      "-e",
+      `process.stdout.write("x".repeat(${expectedBytes}))`,
+    ]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toHaveLength(expectedBytes);
+    expect(result.stderr).toBe("");
+  });
+
   test("accepts only a clean target equal to HEAD and emits one JSON line from the CLI", () => {
     const root = initRepository();
     const head = must(root, ["git", "rev-parse", "HEAD"]);

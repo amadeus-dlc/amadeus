@@ -22,6 +22,7 @@ export type CommandRunner = {
 };
 
 export const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
+const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
 export const systemCommandRunner: CommandRunner = {
   run(command, options = {}) {
@@ -31,6 +32,7 @@ export const systemCommandRunner: CommandRunner = {
       encoding: "utf8",
       env: process.env,
       timeout: timeoutMs,
+      maxBuffer: COMMAND_MAX_BUFFER_BYTES,
     });
     const timedOut = result.error !== undefined &&
       "code" in result.error &&
