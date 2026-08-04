@@ -790,5 +790,11 @@
     "dirName": "260804-e-260804-err-cg-s13-z0",
     "createdAt": "2026-08-04T05:45:20Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260804-ERR-BT-S13-Z0",
+    "dirName": "260804-e-260804-err-bt-s13-z0",
+    "createdAt": "2026-08-04T06:35:32Z",
+    "status": "recorded"
   }
 ]

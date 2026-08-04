@@ -1,0 +1,17 @@
+{
+  "electionId": "E-260804-ERR-BT-S13-Z0",
+  "kind": "learning-selection",
+  "question": "Build and Test の学習候補は0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.mdとsurface結果に候補がなく、確認した矛盾はIssue固有のrouting／artifact契約差として成果物へ記録済みのため、新しいproject/team practiceまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
