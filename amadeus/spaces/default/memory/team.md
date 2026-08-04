@@ -140,7 +140,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・6ハーネスの生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとし、`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create・sync・安全な close に限る継続同意として扱う。
+`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・7つのパッケージ対象ハーネス生成物・5つの self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとし、`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create・sync・安全な close に限る継続同意として扱う。
 
 <!-- amadeus:practices-promote:END -->
 
