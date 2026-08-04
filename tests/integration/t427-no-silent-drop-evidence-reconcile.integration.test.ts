@@ -1,6 +1,7 @@
 // covers: cli:no-silent-drop-evidence, workflow:no-silent-drop-evidence-reconcile, contract:no-silent-drop:identity-only-rebind
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   cpSync,
@@ -32,6 +33,14 @@ const tempRoots: string[] = [];
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 const MOCK_TREE = "b".repeat(40);
+const LEDGER_RATCHET_PATHS = [
+  "tests/no-silent-drop/baseline.json",
+  "tests/no-silent-drop/exemptions.json",
+] as const;
+
+function sha256(bytes: Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
 
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
@@ -90,6 +99,7 @@ type ReconcileRunnerOptions = {
   failPush?: boolean;
   failCommit?: boolean;
   failFocused?: boolean;
+  failGate?: boolean;
   failGitHub?: boolean;
 };
 
@@ -166,6 +176,10 @@ function interceptedCommand(
     return options.failFocused
       ? { status: 1, stdout: "", stderr: "focused failure" }
       : { status: 0, stdout: "10 pass\n0 fail\n", stderr: "" };
+  }
+  if (key === "bun tests/no-silent-drop-gate.ts") {
+    if (options.failGate) return { status: 2, stdout: "", stderr: "no-silent-drop failure" };
+    return { status: 0, stdout: '{"status":"pass","code":"NO_SILENT_DROP_OK"}\n', stderr: "" };
   }
   if (key === "git ls-remote") {
     const remoteTip = remoteTips.shift() ?? options.remoteTip;
@@ -390,7 +404,7 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(noOpResult).toMatchObject({ status: "no-op", code: "REBIND_NOOP", bindingRevision: MOCK_EVENT });
   });
 
-  test("proves both trees, pushes one evidence commit, then no-ops on the rebind commit push", () => {
+  test("proves both trees, pushes one evidence-and-ledger commit, then no-ops on the rebind commit push", () => {
     const fixture = squashFixture();
     const first = runEvidenceCommand([
       "reconcile",
@@ -404,8 +418,16 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(rebindCommit).not.toBe(fixture.landing);
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(rebindCommit);
     expect(must(fixture.root, ["git", "diff", "--name-only", `${fixture.landing}..${rebindCommit}`]).split("\n").sort()).toEqual(
-      [...EVIDENCE_BUNDLE_PATHS].sort(),
+      [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS].sort(),
     );
+    const baseline = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[0]), "utf8"));
+    const exemptions = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[1]), "utf8"));
+    expect(baseline.generatedFrom.previousDigest).toBe(sha256(Buffer.from(
+      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[0]}`]).stdout,
+    )));
+    expect(exemptions.previousDigest).toBe(sha256(Buffer.from(
+      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[1]}`]).stdout,
+    )));
 
     const second = runEvidenceCommand([
       "reconcile",
@@ -494,10 +516,11 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(result).toMatchObject({ status: "error", code: "REBIND_PR_HEAD_UNAVAILABLE" });
   });
 
-  test("rolls back a focused-validation failure and supersedes a stale remote tip without pushing", () => {
-    for (const mode of ["focused", "stale"] as const) {
+  test("rolls back focused validation failures and supersedes a stale remote tip without pushing", () => {
+    for (const mode of ["focused", "gate", "stale"] as const) {
       const fixture = squashFixture();
-      const original = EVIDENCE_BUNDLE_PATHS.map((path) => readFileSync(join(fixture.root, path)));
+      const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+      const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
       const result = runEvidenceCommand([
         "reconcile",
         "--event-revision",
@@ -506,10 +529,14 @@ describe("t427 squash identity proof and main convergence", () => {
         "amadeus-dlc/amadeus",
       ], {
         repositoryRoot: fixture.root,
-        runner: hybridRunner(fixture, mode === "focused" ? { failFocused: true } : { remoteTip: "d".repeat(40) }),
+        runner: hybridRunner(fixture, mode === "focused"
+          ? { failFocused: true }
+          : mode === "gate"
+            ? { failGate: true }
+            : { remoteTip: "d".repeat(40) }),
       });
-      expect(result.status).toBe(mode === "focused" ? "error" : "superseded");
-      expect(EVIDENCE_BUNDLE_PATHS.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
+      expect(result.status).toBe(mode === "stale" ? "superseded" : "error");
+      expect(reconcilePaths.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
       expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
     }
   });

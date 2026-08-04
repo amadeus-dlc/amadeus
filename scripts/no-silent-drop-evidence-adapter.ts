@@ -336,7 +336,7 @@ export class NoSilentDropEvidenceAdapter {
     return tree;
   }
 
-  assertOnlyEvidenceChanges(expectedPaths: readonly string[]): void {
+  assertOnlyExpectedChanges(expectedPaths: readonly string[]): void {
     const status = this.run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"]);
     if (status.status !== 0) {
       throw new EvidenceRebindError("REBIND_GIT_FAILED", `cannot inspect worktree changes: ${commandDetail(status)}`);
@@ -350,11 +350,11 @@ export class NoSilentDropEvidenceAdapter {
     }).sort();
     const expected = [...expectedPaths].sort();
     if (JSON.stringify(paths) !== JSON.stringify(expected)) {
-      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "working tree changes are not exactly the three evidence files");
+      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "working tree changes do not match the operation allowlist");
     }
   }
 
-  runFocusedValidation(): void {
+  runFocusedValidation(eventRevision: string): void {
     const result = this.run([
       "bun",
       "test",
@@ -364,16 +364,26 @@ export class NoSilentDropEvidenceAdapter {
     if (result.status !== 0) {
       throw new EvidenceRebindError("REBIND_FOCUSED_VALIDATION_FAILED", `t413 failed: ${commandDetail(result)}`);
     }
+    const gate = this.run([
+      "bun",
+      "tests/no-silent-drop-gate.ts",
+      "check",
+      "--base-revision",
+      eventRevision,
+    ]);
+    if (gate.status !== 0) {
+      throw new EvidenceRebindError("REBIND_FOCUSED_VALIDATION_FAILED", `no-silent-drop failed: ${commandDetail(gate)}`);
+    }
   }
 
-  commitEvidenceChanges(paths: readonly string[]): string {
+  commitReconcileChanges(paths: readonly string[]): string {
     this.mustRun(["git", "add", "--", ...paths], "REBIND_COMMIT_FAILED");
     const staged = this.mustRun(["git", "diff", "--cached", "--name-only", "-z"], "REBIND_COMMIT_FAILED")
       .split("\0")
       .filter(Boolean)
       .sort();
     if (JSON.stringify(staged) !== JSON.stringify([...paths].sort())) {
-      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "staged changes are not exactly the evidence allowlist");
+      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "staged changes do not match the reconcile allowlist");
     }
     this.mustRun(
       ["git", "commit", "-m", "fix(no-silent-drop): rebind adoption evidence"],
@@ -382,7 +392,7 @@ export class NoSilentDropEvidenceAdapter {
     return this.headRevision();
   }
 
-  clearEvidenceIndex(paths: readonly string[]): void {
+  clearReconcileIndex(paths: readonly string[]): void {
     const result = this.run(["git", "restore", "--staged", "--", ...paths]);
     if (result.status !== 0) {
       throw new EvidenceRebindError(

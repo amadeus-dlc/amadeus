@@ -2,6 +2,7 @@
 import {
   type AppliedBundle,
   applyReboundBundle,
+  buildReconcileBundle,
   buildReboundBundle,
   errorEnvelope,
   EvidenceRebindError,
@@ -90,7 +91,7 @@ function runPureRebind(command: RebindCommand, adapter: NoSilentDropEvidenceAdap
       });
     }
     applied = applyReboundBundle(adapter.repositoryRoot, bundle);
-    adapter.assertOnlyEvidenceChanges(bundle.paths);
+    adapter.assertOnlyExpectedChanges(bundle.paths);
     return successEnvelope({
       status: "changed",
       code: "REBIND_OK",
@@ -115,7 +116,7 @@ function rollbackOrReplaceError(
   if (applied === null) return originalError;
   const rollbackProblems = [
     recoveryFailure(() => rollbackAppliedBundle(adapter.repositoryRoot, applied)),
-    recoveryFailure(() => adapter.clearEvidenceIndex(applied.paths)),
+    recoveryFailure(() => adapter.clearReconcileIndex(applied.paths)),
   ].filter((problem): problem is string => problem !== null);
   if (rollbackProblems.length > 0) {
     return new EvidenceRebindError(
@@ -151,7 +152,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     adapter.proveIdentityOnlyRebind(command.eventRevision, bindingRevision, command.repository);
-    const bundle = buildReboundBundle(adapter.repositoryRoot, command.eventRevision);
+    const bundle = buildReconcileBundle(adapter.repositoryRoot, command.eventRevision);
     if (bundle.bindingRevision !== bindingRevision) {
       throw new EvidenceRebindError("REBIND_BINDING_CHANGED", "binding revision changed during reconciliation");
     }
@@ -164,8 +165,8 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     applied = applyReboundBundle(adapter.repositoryRoot, bundle);
-    adapter.assertOnlyEvidenceChanges(bundle.paths);
-    adapter.runFocusedValidation();
+    adapter.assertOnlyExpectedChanges(bundle.paths);
+    adapter.runFocusedValidation(command.eventRevision);
     if (adapter.remoteMainTip() !== command.eventRevision) {
       rollbackAppliedBundle(adapter.repositoryRoot, applied);
       applied = null;
@@ -177,7 +178,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
         targetRevision: command.eventRevision,
       });
     }
-    adapter.commitEvidenceChanges(bundle.paths);
+    adapter.commitReconcileChanges(bundle.paths);
     committed = true;
     if (adapter.remoteMainTip() !== command.eventRevision) {
       return successEnvelope({
