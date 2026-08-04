@@ -528,17 +528,6 @@
     "expiry": "remove when Bun attributes spawned CLI coverage"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-grant-authorization.ts",
-    "selector": {
-      "function": "visitAuditShard",
-      "fingerprint": "sha256:2503c743dc126c8603c44ea089fb80d7eeb4cd35b00a9108d7f9dee5705378b5",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "Shard read failure AFTER realpathSync already resolved the same path (TOCTOU window). Measured on this branch: chmod 000 makes realpathSync itself fail with EACCES on macOS, and readFileSync of a directory is EISDIR on macOS but returns \"\" on Linux (cid:code-generation:bun-readfilesync-dir-platform-divergence), so no portable injection reaches this catch. The resolve-failure sibling is covered in-process by the dangling-symlink case in tests/integration/t-solo-standing-grant-domain.test.ts.",
-    "expiry": "remove when the standing grant scan receives an injectable filesystem port for the realpath-to-read race"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
     "selector": {
       "function": "validateGrid",
@@ -691,17 +680,6 @@
     },
     "reason": "Generic callback parameter and conditional return type lines are runtime-erased; t258 drives the lifecycle preflight callback in-process, but Bun stamps the multiline type declaration DA:0.",
     "expiry": "remove if the signatures are collapsed or Bun LCOV stops stamping erased type lines"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "selector": {
-      "function": "collectRevokedGrantIds",
-      "fingerprint": "sha256:acf64cf8abf8200c6a1d300697804f9e0a3c8c1c38850f89b1e3f47413fe0307",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Defensive `catch {}` in findActiveStandingGrant that returns null so a verification defect can never wedge a gate (design contract E-SDG: throws collapse to per-gate approval, never fail-open at the check). No natural corpus input throws inside the scan (listIntentDirs / readAllAuditShards / StandingGrant.parse / verifyDelegatedProvenance all swallow their own IO errors), so the catch arm is unreachable by a black-box test; the happy scan and every classification branch are covered in-process by t-standing-grant.",
-    "expiry": "remove if the scan grows a throw path a test can inject"
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
@@ -1718,28 +1696,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "handleAuthorizedApprovalReport",
-      "fingerprint": "sha256:f9f54032dda41006ae2206f08c563920b1150b0cf5050783d67c22d1ad92ddf7",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
-    "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "selector": {
-      "function": "handleAuthorizedApprovalReport",
-      "fingerprint": "sha256:0bee6803d47ac43e76889e394add0dcf75c3e9acb391890ca9ec3aad5719e39e",
-      "anchorLines": 4,
-      "targetLines": "2-3"
-    },
-    "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
-    "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "selector": {
       "function": "<module>",
       "fingerprint": "sha256:5490377cfd485960787fc0c716b79bae41b72512220d8405173fc1c2e95d214a",
       "anchorLines": 13,
@@ -1752,9 +1708,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:215ddd84f8fd634559a21d9c33b6f7fb7fd4f672909ea47506d2fe1be9886390",
-      "anchorLines": 16,
-      "targetLines": "1-16"
+      "fingerprint": "sha256:b40db357b66ccd25a709bc5e74403b5b9b73896b5bdd5b929ed2dc6532de93f0",
+      "anchorLines": 22,
+      "targetLines": "1-22"
     },
     "reason": "Mirror report early returns, active-state resolution, and malformed Receipt handling are covered by generated-CLI report tests in t265 integration; spawned execution is not merged into LCOV.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
@@ -3240,17 +3196,6 @@
     "expiry": "remove if the SDK substrate joins default CI"
   },
   {
-    "file": "tests/harness/solo-gate-fixture.ts",
-    "selector": {
-      "function": "breakGrantIssuerIntent",
-      "fingerprint": "sha256:7a37ee13eba613a2af24b74b7995a4b441baf4aa74512d05d6a61500f93142c4",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Fail-closed guard in breakGrantIssuerIntent: throws only when no record carries the seeded Issuer Intent, which the fixture construction makes impossible; the guard exists so a future seeding change fails loud instead of silently no-opping (the exact defect class this rewrite fixed).",
-    "expiry": "remove if a negative-fixture test drives the throw"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completionAuditEvents",
@@ -3381,28 +3326,6 @@
     },
     "reason": "main() dispatch case for the mirror-initial-create verb (#1750). main() is the CLI entry — never imported, so the case, its handler call, and its break are only reached in a spawned child; the handler itself is driven in-process by tests/integration/t371-intent-initialized-boundary.test.ts.",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "main",
-      "fingerprint": "sha256:baf4ff5c884c432a187633a6c77b208d3e0622c6bf5cf7dab096c03470a0fc3f",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
-    "expiry": "remove when main() gains an in-process argv driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "main",
-      "fingerprint": "sha256:e034962e5a9ea1059a9d74ded16d48b5e5fa736dde83220c8005508526c15f3b",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
-    "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
@@ -6311,9 +6234,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "routeMainWorkflowDirective",
-      "fingerprint": "sha256:d5be94ea908e4a8c62d81a08c4d1d56b3dfeb86dde318c3e163c8d671c2e5341",
-      "anchorLines": 7,
-      "targetLines": "1-7"
+      "fingerprint": "sha256:bd5955ca2b31e47566c81e57b7848475fdfdd684607ad2c1febb622b13915a1f",
+      "anchorLines": 5,
+      "targetLines": "1-5"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -6600,17 +6523,6 @@
       "fingerprint": "sha256:41dc3dfda08d978402b7f0d39c12d03ee9ae52c11f4014be9792420e8d0b0c0d",
       "anchorLines": 16,
       "targetLines": "1-16"
-    },
-    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "handleGrantStandingDelegation",
-      "fingerprint": "sha256:a17b7946288707201a668d783426a3013f87b27d6c473c5edfcacd6c906ba14a",
-      "anchorLines": 2,
-      "targetLines": "1-2"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"

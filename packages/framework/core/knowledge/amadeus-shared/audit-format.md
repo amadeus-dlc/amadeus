@@ -129,15 +129,15 @@ the instance-specific `.amadeus-advisory-check/` directory.
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input, Grant Id | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
-### Standing Delegation Grants (3 events)
+### Legacy Standing Delegation Grant Observations (3 events)
 
-Human-grounded in both solo and team modes. A session driven by a real human turn on its own ledger issues a time-boxed standing grant that may authorize covered stage gates for the grant's TTL (default 4 hours) without a per-gate human turn. Team mode retains its existing leader/delegation authorization path; solo mode uses the route receipt and commit-time revalidation path. Phase-boundary gates are EXCLUDED by default and require the `--include-phase-boundary` opt-in. Lifecycle events carry issuer provenance coordinates and all three events are minted only by trusted in-process writers (refused at the general audit CLI).
+These event shapes are retained only so replay and migration projection code can read historical ledgers. No live command or router emits them, and none of them authorizes work. The general audit CLI continues to refuse them so new rows cannot masquerade as history.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `GRANT_ISSUED` | Historical standing-grant evidence retained for replay and doctor diagnostics | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | Reserved legacy observation |
-| `GRANT_REVOKED` | Human-grounded session revokes a standing grant id (Issue #1125, solo support #1466) | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | `tools/amadeus-state.ts revoke-standing-delegation` |
-| `GATE_AUTHORIZATION_SELECTED` | Solo-mode router records the exact standing grant selected for one stage-route attempt before emitting its carrier (Issue #1466) | Route Id, Stage, Grant Id | — | trusted in-process route writer |
+| `GRANT_ISSUED` | Historical standing-grant evidence | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | Reserved legacy observation |
+| `GRANT_REVOKED` | Historical standing-grant revocation | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | Reserved legacy observation |
+| `GATE_AUTHORIZATION_SELECTED` | Historical standing-grant route selection | Route Id, Stage, Grant Id | — | Reserved legacy observation |
 
 ### Artifact Events (3 events — hook-emitted)
 

@@ -184,15 +184,8 @@ gate-start  →  [?] AwaitingApproval
 
 ### 旧スタンディング委任グラント(#1125)
 
-スタンディング委任グラントは認可機構として廃止されています。`grant-standing-delegation`は新規発行を拒否し、Intent-scopedな`none|semi|full`を案内します。既存の`GRANT_ISSUED`、`GRANT_REVOKED`、`GATE_AUTHORIZATION_SELECTED`観測はreplay・doctor診断用に読み取れますが、認可を生成・復元せず、`full` grantへ自動変換されません。
+スタンディング委任グラントは認可機構として廃止されています。`grant-standing-delegation`と`revoke-standing-delegation`のコマンド、grant carrier、route receipt、active grantのdoctor表示は存在しません。既存の`GRANT_ISSUED`、`GRANT_REVOKED`、`GATE_AUTHORIZATION_SELECTED`観測はreplay・migration projectionコードだけが読み取ります。これらが認可を生成・復元することはなく、`full` grantへ自動変換されることもありません。
 
-```
-amadeus-state grant-standing-delegation  # refused: retired
-amadeus-state revoke-standing-delegation --grant-id <8-hex id>
-```
-
-- revokeは実在するhuman provenanceを要求したまま維持し、未失効の履歴recordを明示的に終了できます。
-- `amadeus --doctor`は旧観測をmigration診断として表示し、認可に使われないことを説明します。
 - `semi`はgrantを発行せず、従来のphase内gate省略用途を置き換えます。`full`は1つのIntent UUIDへ束縛された新しいIntent-scoped grantを使い、TTL・使用回数budgetを持ちません。発行、置換、行使、revoke、completeはcanonical audit transactionです。
 
 ---
@@ -261,9 +254,9 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` が却下理由を捕捉 |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` が leader セッションの人間承認を、リモートの conductor intent の監査ディレクトリへ記録。conductor のゲートが検証する発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` が leader セッションの人間却下を、リモートの conductor intent の監査ディレクトリへ記録。`DELEGATED_APPROVAL` の verb 対称ミラーで、reject ゲートのみを開く(#685) |
-| `GRANT_ISSUED` | Reserved legacy observation | 過去の常任グラント証跡は replay と doctor 診断のため読み取り可能なまま維持する。新しい権限は Intent-scoped autonomy transaction からのみ発行する |
-| `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` が未失効のスタンディンググラントを `Grant Id` で取り消す。leader 自身の台帳の実 human turn に接地(#1125) |
-| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | ソロモードのルーターが、1回のステージルーティング試行で選択したスタンディンググラントそのもの — `Route Id`、`Stage`、`Grant Id` — を、キャリアが conductor に到達する前に記録する。後の approve が同じグラントをレシート所有者と照合して再検証できるようにするため(#1466) |
+| `GRANT_ISSUED` | Reserved legacy observation | replayとmigration projectionコードだけが読む過去の常任グラント証跡 |
+| `GRANT_REVOKED` | Reserved legacy observation | 過去のrevoke証跡。live emitterは存在しない |
+| `GATE_AUTHORIZATION_SELECTED` | Reserved legacy observation | 過去のroute証跡。live emitterは存在しない |
 
 ### User interaction
 

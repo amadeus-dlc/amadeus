@@ -262,7 +262,7 @@ if (target === "verb-intercept") {
   // (#755/#811). Fail-open: a prompt-absent payload still mints (the core hook's
   // contract). The mint runs through the CANONICAL seam (mintHumanPresence) —
   // this adapter only normalizes Kiro's session_id into HostSessionCapability so
-  // a solo standing-grant fallback armed in THIS session mints its targeted
+  // a presence reservation armed for THIS session mints its targeted
   // owner HUMAN_TURN exactly as on the other harnesses.
   try {
     const cwd = kiro.cwd ?? process.cwd();

@@ -62,10 +62,11 @@ the session-resume onboarding a returning session reads.
 
 - **Only presence minting is wired**: OpenCode has no shell-command hook
   mechanism — its extension surface is JS plugins. Presence minting rides the
-  `chat.message` plugin hook (which carries a stable `sessionID`), so a solo
-  standing-grant continuation works here as on every other harness. Audit
-  emission and sensor firing, which ride hooks elsewhere, are still **not
-  active**; see [Hook mapping](#hook-mapping-1049).
+  `chat.message` plugin hook (which carries a stable `sessionID`), so
+  session-bound targeted presence minting works here as on every other harness.
+  Retired standing-grant carriers are explicitly rejected. Audit emission and
+  sensor firing, which ride hooks elsewhere, are still **not active**; see
+  [Hook mapping](#hook-mapping-1049).
 - **`$amadeus --version`** reports `amadeus 0.1.2` (exit 0).
 - **`$amadeus --doctor`** degrades to advisory only — it misfires the `.claude`
   prerequisite block and does not enumerate other worktrees, neither of which
