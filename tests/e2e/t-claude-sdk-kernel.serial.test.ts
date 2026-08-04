@@ -9,6 +9,7 @@ import {
   ClaudeAmbientCredentialSource,
   ClaudeScratchAllocator,
 } from "../harness/live-e2e/claude.ts";
+import { sanitizeText } from "../harness/live-e2e/contract.ts";
 import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
 import {
@@ -29,7 +30,7 @@ const SKIP_REASON = claudeSdkLiveRequirementsSkipReason({
 
 describe("Claude SDK live E2E kernel", () => {
   test.skipIf(SKIP_REASON !== null)(
-    `records a real claude-sdk structured journey${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
+    `records a real claude-sdk structured journey${SKIP_REASON ? ` [SKIP: ${sanitizeText(SKIP_REASON, 120)}]` : ""}`,
     async () => {
       const result = await runLiveJourney(
         new ClaudeSdkAdapter({ distributionDir: CLAUDE_DIST, parentEnv: process.env }),

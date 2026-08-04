@@ -9,6 +9,7 @@ import {
 } from "../harness/live-e2e/claude.ts";
 import { createClaudeStructuredJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
+import { ResourceRegistrar } from "../harness/live-e2e/resources.ts";
 
 function createFixture(helpFlags = true, outputFlood = false): {
   readonly root: string;
@@ -65,6 +66,64 @@ process.stdout.write(${outputFlood ? '"x".repeat(1_048_577)' : `JSON.stringify({
 }
 
 describe("Claude print live adapter", () => {
+  test("prepare defers credential exposure until child environment resolution", async () => {
+    const fixture = createFixture();
+    const scratchRoot = join(fixture.root, "scratch");
+    const scratch = {
+      root: scratchRoot,
+      projectDir: join(scratchRoot, "project"),
+      homeDir: join(scratchRoot, "home"),
+      state: "ready" as const,
+    };
+    mkdirSync(scratch.projectDir, { recursive: true });
+    mkdirSync(scratch.homeDir, { recursive: true });
+    let exposeCount = 0;
+    const credentialSource = {
+      async canLease() {
+        return true;
+      },
+      async lease() {
+        return {
+          key: "ANTHROPIC_API_KEY",
+          expose() {
+            exposeCount += 1;
+            return "secret-fixture-value";
+          },
+          async release() {},
+        };
+      },
+    };
+    const registrar = new ResourceRegistrar();
+    registrar.registerPlanned({
+      id: "scratch-root",
+      kind: "scratch-root",
+      locator: "temporary-directory",
+      credentialBearing: false,
+    });
+    registrar.markCreated("scratch-root");
+    const adapter = new ClaudePrintAdapter({
+      claudeBin: fixture.binary,
+      distributionDir: fixture.distribution,
+      parentEnv: { PATH: process.env.PATH },
+    });
+    try {
+      const prepared = await adapter.prepare({ scratch, registrar, credentialSource });
+      expect(prepared.ok).toBe(true);
+      if (!prepared.ok) throw new Error(prepared.error.diagnostic);
+      expect(exposeCount).toBe(0);
+      expect(prepared.value.environmentKeys).toContain("ANTHROPIC_API_KEY");
+      expect(prepared.value.resolveEnvironment().ANTHROPIC_API_KEY).toBe("secret-fixture-value");
+      expect(exposeCount).toBe(1);
+      await adapter.cleanup({
+        scratch,
+        prepared: prepared.value,
+        registeredResources: registrar.snapshot(),
+      });
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
   test("fake CLI proves project-only settings, exact env, structured anchor, cleanup, and ledger", async () => {
     const fixture = createFixture();
     const allocator = new ClaudeScratchAllocator({

@@ -319,7 +319,6 @@ export class ClaudePrintAdapter implements LiveAdapter {
         ...base.value,
         HOME: context.scratch.homeDir,
         TMPDIR: join(context.scratch.root, "tmp"),
-        [binding.key]: binding.expose(),
       };
       return {
         ok: true,
@@ -327,8 +326,8 @@ export class ClaudePrintAdapter implements LiveAdapter {
           cwd: context.scratch.projectDir,
           executable: this.#options.claudeBin,
           args,
-          environmentKeys: Object.keys(environment),
-          resolveEnvironment: () => ({ ...environment }),
+          environmentKeys: [...Object.keys(environment), binding.key],
+          resolveEnvironment: () => ({ ...environment, [binding.key]: binding.expose() }),
           registeredResourceIds: [resourceId],
         },
       };

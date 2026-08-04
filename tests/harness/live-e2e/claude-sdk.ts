@@ -261,15 +261,12 @@ async function collectEvents(
     if (totalBytes > CLAUDE_SDK_TOTAL_EVENT_LIMIT) fail("total-event-limit");
     if (failureKind !== undefined) continue;
     pending += decoder.decode(item.value, { stream: true });
-    const queuedLines: string[] = [];
     for (;;) {
       const newline = pending.indexOf("\n");
       if (newline < 0) break;
-      queuedLines.push(pending.slice(0, newline));
+      const line = pending.slice(0, newline);
       pending = pending.slice(newline + 1);
-    }
-    for (const [index, line] of queuedLines.entries()) {
-      acceptLine(line, queuedLines.length - index);
+      acceptLine(line, 0);
     }
     if (Buffer.byteLength(pending) > CLAUDE_SDK_SINGLE_EVENT_LIMIT) fail("single-event-limit");
   }

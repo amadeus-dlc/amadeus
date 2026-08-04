@@ -8,7 +8,7 @@ import { ClaudeAmbientCredentialSource, ClaudeScratchAllocator } from "../harnes
 import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
 
-type FixtureMode = "success" | "duplicate" | "timeout" | "overflow";
+type FixtureMode = "success" | "single-chunk-seventeen" | "duplicate" | "timeout" | "overflow";
 
 function createFixture(mode: FixtureMode): {
   readonly root: string;
@@ -43,18 +43,34 @@ writeFileSync(${JSON.stringify(observation)}, JSON.stringify({
   hasCredentialEnv: Boolean(process.env.ANTHROPIC_API_KEY),
   settings: JSON.parse(readFileSync(join(process.cwd(), ".claude", "settings.json"), "utf8")),
 }));
-const events = [
+const baselineEvents = [
   { kind: "tool", ordinal: 0, toolName: "Bash", isError: false, byteLength: 3, digest: "tool" },
   { kind: "state", ordinal: 1, present: false, digest: "state" },
   { kind: "audit", ordinal: 2, eventCount: 0, digest: "audit" },
   { kind: "assistant", ordinal: 3, byteLength: 2, digest: "assistant" },
   { kind: "terminal", ordinal: 4, type: "result", subtype: "success", isError: false, numTurns: 1, permissionDenialsCount: 0, hasLateEvent: false },
 ];
+const events = ${JSON.stringify(mode)} === "single-chunk-seventeen" ? [
+  ...Array.from({ length: 13 }, (_, ordinal) => ({
+    kind: "tool",
+    ordinal,
+    toolName: "Bash",
+    isError: false,
+    byteLength: 3,
+    digest: \`tool-\${ordinal}\`,
+  })),
+  { kind: "state", ordinal: 13, present: false, digest: "state" },
+  { kind: "audit", ordinal: 14, eventCount: 0, digest: "audit" },
+  { kind: "assistant", ordinal: 15, byteLength: 2, digest: "assistant" },
+  { kind: "terminal", ordinal: 16, type: "result", subtype: "success", isError: false, numTurns: 1, permissionDenialsCount: 0, hasLateEvent: false },
+] : baselineEvents;
 if (${JSON.stringify(mode)} === "timeout") {
   process.on("SIGUSR1", () => {});
   await new Promise(() => {});
 } else if (${JSON.stringify(mode)} === "overflow") {
   process.stdout.write(JSON.stringify({ kind: "tool", ordinal: 0, padding: "x".repeat(65_537) }) + "\\n");
+} else if (${JSON.stringify(mode)} === "single-chunk-seventeen") {
+  process.stdout.write(events.map((event) => JSON.stringify(event)).join("\\n") + "\\n");
 } else {
   for (const event of events) process.stdout.write(JSON.stringify(event) + "\\n");
   if (${JSON.stringify(mode)} === "duplicate") {
@@ -188,6 +204,26 @@ describe("Claude SDK live adapter", () => {
       expect(result).toMatchObject({
         ok: true,
         value: { kind: "recorded", outcome: { code: "AMADEUS_LIVE_E2E:FAIL:ASSERTION_FAILED" } },
+      });
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  test("seventeen valid events in one stdout chunk do not consume queue capacity", async () => {
+    const fixture = createFixture("single-chunk-seventeen");
+    try {
+      const result = await runLiveJourney(
+        adapter(fixture),
+        createClaudeSdkJourney(10_000),
+        liveContext(fixture, new TrackingCredentialSource()),
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        value: {
+          kind: "recorded",
+          outcome: { code: "AMADEUS_LIVE_E2E:PASS:SUCCESS" },
+        },
       });
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
