@@ -206,49 +206,84 @@ function initialProjection(
   };
 }
 
+type RuntimeEventOf<Type extends LoopMonitorEvent["type"]> = Extract<LoopMonitorEvent, { readonly type: Type }>;
+
+type RuntimeEventHandlers = {
+  readonly [Type in LoopMonitorEvent["type"]]: (
+    projection: LoopMonitorRuntimeProjection,
+    monitor: CompiledLoopMonitor,
+    event: RuntimeEventOf<Type>,
+  ) => LoopMonitorRuntimeProjection;
+};
+
+function applyObservedDelivery(
+  projection: LoopMonitorRuntimeProjection,
+  monitor: CompiledLoopMonitor,
+  event: RuntimeEventOf<"LOOP_DELIVERY_OBSERVED">,
+): LoopMonitorRuntimeProjection {
+  const result = applyLoopDelivery(projection, monitor, event.delivery);
+  if (!result.ok) throw new Error(`invalid-loop-monitor-audit:${result.status}:${result.reason}`);
+  return { ...projection, ...result.projection };
+}
+
+function applyJudgeReservation(
+  projection: LoopMonitorRuntimeProjection,
+  reservation: LoopJudgeReservation,
+): LoopMonitorRuntimeProjection {
+  if (projection.pendingJudge?.invocationId !== reservation.invocationId) {
+    throw new Error("invalid-loop-monitor-audit:judge-reservation-mismatch");
+  }
+  return projection;
+}
+
+function applyJudgeAttempt(
+  projection: LoopMonitorRuntimeProjection,
+  event: RuntimeEventOf<"LOOP_JUDGE_ATTEMPT_STARTED">,
+): LoopMonitorRuntimeProjection {
+  if (projection.pendingJudge?.invocationId !== event.invocationId || projection.judgeRedispatchAttempts !== 0) {
+    throw new Error("invalid-loop-monitor-audit:judge-attempt-mismatch");
+  }
+  return { ...projection, judgeRedispatchAttempts: 1 };
+}
+
+function applyJudgeCompletion(
+  projection: LoopMonitorRuntimeProjection,
+  event: RuntimeEventOf<"LOOP_JUDGE_COMPLETED">,
+): LoopMonitorRuntimeProjection {
+  return {
+    ...projection,
+    pendingJudge: null,
+    judgeRedispatchAttempts: 0,
+    lastCompletedInvocationId: event.invocationId,
+    awaitingHumanReason: null,
+  };
+}
+
+const RUNTIME_EVENT_HANDLERS = {
+  LOOP_DELIVERY_OBSERVED: applyObservedDelivery,
+  LOOP_MONITOR_TRIGGERED: (projection, _monitor, event) =>
+    applyJudgeReservation(projection, event.reservation),
+  LOOP_JUDGE_STARTED: (projection, _monitor, event) => applyJudgeReservation(projection, event.reservation),
+  LOOP_JUDGE_ATTEMPT_STARTED: (projection, _monitor, event) => applyJudgeAttempt(projection, event),
+  LOOP_JUDGE_RESULT_OBSERVED: (projection) => projection,
+  LOOP_JUDGE_COMPLETED: (projection, _monitor, event) => applyJudgeCompletion(projection, event),
+  LOOP_ROUTE_APPLIED: (projection, _monitor, event) => ({ ...projection, lastRouteId: event.routeId }),
+  LOOP_LATCH_SET: (projection, _monitor, event) => ({ ...projection, latch: event.latch, pendingJudge: null }),
+  LOOP_LATCH_CLEARED: (projection) => ({ ...projection, latch: null, awaitingHumanReason: null }),
+  WORKFLOW_UNPARKED: (projection) => projection,
+  LOOP_JUDGE_AWAITING_HUMAN: (projection, _monitor, event) => ({
+    ...projection,
+    awaitingHumanReason: event.reason,
+  }),
+} satisfies RuntimeEventHandlers;
+
 function applyRuntimeEvent(
   projection: LoopMonitorRuntimeProjection,
   monitor: CompiledLoopMonitor,
   event: LoopMonitorEvent,
 ): LoopMonitorRuntimeProjection {
-  switch (event.type) {
-    case "LOOP_DELIVERY_OBSERVED": {
-      const result = applyLoopDelivery(projection, monitor, event.delivery);
-      if (!result.ok) throw new Error(`invalid-loop-monitor-audit:${result.status}:${result.reason}`);
-      return { ...projection, ...result.projection };
-    }
-    case "LOOP_MONITOR_TRIGGERED":
-    case "LOOP_JUDGE_STARTED":
-      if (projection.pendingJudge?.invocationId !== event.reservation.invocationId) {
-        throw new Error("invalid-loop-monitor-audit:judge-reservation-mismatch");
-      }
-      return projection;
-    case "LOOP_JUDGE_ATTEMPT_STARTED":
-      if (projection.pendingJudge?.invocationId !== event.invocationId || projection.judgeRedispatchAttempts !== 0) {
-        throw new Error("invalid-loop-monitor-audit:judge-attempt-mismatch");
-      }
-      return { ...projection, judgeRedispatchAttempts: 1 };
-    case "LOOP_JUDGE_RESULT_OBSERVED":
-      return projection;
-    case "LOOP_JUDGE_COMPLETED":
-      return {
-        ...projection,
-        pendingJudge: null,
-        judgeRedispatchAttempts: 0,
-        lastCompletedInvocationId: event.invocationId,
-        awaitingHumanReason: null,
-      };
-    case "LOOP_ROUTE_APPLIED":
-      return { ...projection, lastRouteId: event.routeId };
-    case "LOOP_LATCH_SET":
-      return { ...projection, latch: event.latch, pendingJudge: null };
-    case "LOOP_LATCH_CLEARED":
-      return { ...projection, latch: null, awaitingHumanReason: null };
-    case "WORKFLOW_UNPARKED":
-      return projection;
-    case "LOOP_JUDGE_AWAITING_HUMAN":
-      return { ...projection, awaitingHumanReason: event.reason };
-  }
+  const handler = RUNTIME_EVENT_HANDLERS[event.type];
+  return handler(projection, monitor, event as never);
 }
 
 export function foldLoopMonitorEventSets(
