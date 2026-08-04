@@ -68,3 +68,4 @@
 - `codekb/amadeus/component-inventory.md`
 - team-practices: `memory/team.md`、`memory/project.md`、`memory/phases/inception.md`
 - Primary Issue: [#2161](https://github.com/amadeus-dlc/amadeus/issues/2161)
+
