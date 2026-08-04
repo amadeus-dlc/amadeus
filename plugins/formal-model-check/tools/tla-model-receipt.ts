@@ -76,9 +76,8 @@ function exactPlainObject(value: unknown, keys: readonly string[]): value is Rec
 
 function invariantSourceMap(
   source: VerifiedModelSource,
+  names: readonly string[],
 ): Result<Record<string, TlaInvariantSourceLocation>, ModelCheckReceiptValidationError> {
-  const names = source.model.vocabulary?.namedInvariants;
-  if (names === undefined) return reject(`model ${source.model.name} has no declared vocabulary`);
   const locations = tlaInvariantSourceMap(source.moduleSource, names);
   return locations.ok
     ? locations
@@ -93,12 +92,12 @@ export function createVerifiedTlaModelReceipt(
   if (source.model.name === TLA_EXECUTION_MODEL_NAME) {
     return reject(`${TLA_EXECUTION_MODEL_NAME} requires the frozen model receipt`);
   }
-  const locations = invariantSourceMap(source);
-  if (!locations.ok) return locations;
   const vocabulary = source.model.vocabulary;
   if (vocabulary === undefined) {
     return reject(`model ${source.model.name} has no declared vocabulary`);
   }
+  const locations = invariantSourceMap(source, vocabulary.namedInvariants);
+  if (!locations.ok) return locations;
   const identityInput = {
     schema: VERIFIED_RECEIPT_SCHEMA,
     modelName: source.model.name,
