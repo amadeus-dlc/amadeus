@@ -21,4 +21,4 @@ bun run coverage:ci
 - focused 5ファイルが失敗0で完了し、`t413` は `10 pass / 0 fail` となる。
 - 関連PR 0件／複数、pagination不完了、base／merge SHA不一致、祖先不一致、非派生差分、base drift、rename／mode／object type／1 byte差分、PR ref取得不能を変更なしで拒否する。
 - stale remote tip は force／retryなしで `superseded`、rebind commit push は追加commitなしの `REBIND_NOOP` となる。
-- workflow は main-only、`CI Success` 非依存、有限 timeout、安定 concurrency、許可3 path、最小権限を構造として満たす。
+- workflow は main-only、`CI Success` 非依存、有限 timeout、安定 concurrency、reconciliationの正確な5 path、最小権限を構造として満たす。pure rebind／identity proofの境界は3 pathのまま維持する。

@@ -2607,16 +2607,6 @@
     "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
   },
   {
-    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
-    "selector": {
-      "function": "FsPlannedTlcRuntime.#execute",
-      "fingerprint": "sha256:7a4f59197e85a481b15bbe716f12d11563a721ff501b7f937aa5cf329c97eaf6",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
-  },
-  {
     "file": "plugins/formal-model-check/tools/node-ci-model-check-port.ts",
     "selector": {
       "function": "runCiCommand",

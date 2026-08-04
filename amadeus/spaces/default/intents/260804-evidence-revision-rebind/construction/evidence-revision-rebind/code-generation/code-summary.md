@@ -12,7 +12,7 @@ push直前に進んだ `origin/main` の `be381078c32b1babf5880d0f4925ffa690b83f
 | --- | --- |
 | `tests/no-silent-drop/repository-adoption-evidence.ts` | receipt digestの正準計算を `evidenceDigestForEntry()` として共有し、既存validatorとrebindの定義差を除去した。 |
 | `tests/no-silent-drop/evidence-rebind.ts` | 3層bundleの決定的変換、正準validatorを用いた隔離候補検証、件数集計、原子的置換とrollback、共通JSON envelope、secret redactionを実装した。未使用だった `receiptIdsFromRegistry()` はcoverage closure時に削除した。 |
-| `scripts/no-silent-drop-evidence-adapter.ts` | Git trust境界、関連PRの全page解決、2段階tree証明、3 path allowlist、focused validation、commit、remote-tip guard、fast-forward pushを実装した。 |
+| `scripts/no-silent-drop-evidence-adapter.ts` | Git trust境界、関連PRの全page解決、2段階tree証明、pure rebind／identity proofの3 path境界、reconciliation commitの5 path allowlist、focused validation、commit、remote-tip guard、fast-forward pushを実装した。 |
 | `scripts/no-silent-drop-evidence.ts` | `rebind`／`reconcile` CLI、安定したstatus／code、stdout 1行JSON+LF、rollbackとstaged index復旧を実装した。 |
 | `.github/workflows/no-silent-drop-evidence-reconcile.yml` | `main` push専用でCI成功条件から独立したreconciliation workflowを追加した。既存GitHub App credential、有限timeout、安定concurrencyを使用する。 |
 | `tests/integration/t427-no-silent-drop-evidence-rebind.integration.test.ts` | 24／24／25 revision、25 artifact、23 receipt、正準不動点、冪等性、tamper、schema／I/O、transaction、4 status envelope、CLI入力異常系を検証した。 |
@@ -26,7 +26,7 @@ push直前に進んだ `origin/main` の `be381078c32b1babf5880d0f4925ffa690b83f
 2. pure rebindはlocal branchにattachedな `target === clean HEAD`、reconcileはdetached checkoutも許容する `event === clean HEAD` とし、trust境界を分離した。
 3. reconcileは現行bindingがeventに対して到達可能・整合済みならrevision不一致でもno-opとする。到達不能時だけ、関連merged PRの一意解決、binding→PR headの派生3 path除外recursive tree一致、PR head→landingのroot tree一致を順に要求する。
 4. bundleの適用とrollbackは同じ一時ファイル／backup／rename transactionを用いる。commit前の失敗ではworking treeに加えてstaged indexも復旧し、rollback自体の失敗は `REBIND_ROLLBACK_FAILED` として元エラーより優先して報告する。
-5. pushはremote `main` tipをcommit前とpush前に再確認し、stale runはforce／retryせず `superseded` とする。
+5. reconciliation commitは派生3ファイルとledger 2ファイルからなる正確な5ファイルに限定する。pushはremote `main` tipをcommit前とpush前に再確認し、stale runはforce／retryせず `superseded` とする。
 6. workflow shellは3層計算を持たず、CLIの1行envelopeをjob summaryへ転送し、CLIのexit codeを維持する。
 
 ## 要求駆動のnegative coverage

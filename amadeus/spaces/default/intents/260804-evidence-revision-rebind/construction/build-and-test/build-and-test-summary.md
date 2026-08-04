@@ -17,7 +17,7 @@ Build、型検査、lint、複雑度、distribution、focused test、full covera
 | E2E | plugin conformance journey | PASS |
 | Full regression | smoke、unit、integration、coverage | PASS |
 | Performance | 有限timeout、安定concurrency、full runner完走 | PASS（専用数値NFRなし） |
-| Security | 最小権限、secret非露出、3 path allowlist、fail-closed | PASS |
+| Security | 最小権限、secret非露出、pure rebind／identity proofの3 path境界、reconciliationの5 path allowlist、fail-closed | PASS |
 | Dependency audit | repository全体のtransitive dependency | CONDITIONAL（既存advisory 22件、依存差分0） |
 | Post-merge acceptance | AC-6の実main run、bot commit、最新tipのCI収束 | PENDING |
 

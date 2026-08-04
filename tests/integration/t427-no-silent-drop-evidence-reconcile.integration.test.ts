@@ -1,6 +1,7 @@
 // covers: cli:no-silent-drop-evidence, workflow:no-silent-drop-evidence-reconcile, contract:no-silent-drop:identity-only-rebind
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   cpSync,
@@ -32,6 +33,14 @@ const tempRoots: string[] = [];
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 const MOCK_TREE = "b".repeat(40);
+const LEDGER_RATCHET_PATHS = [
+  "tests/no-silent-drop/baseline.json",
+  "tests/no-silent-drop/exemptions.json",
+] as const;
+
+function sha256(bytes: Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
 
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
@@ -89,7 +98,9 @@ type ReconcileRunnerOptions = {
   remoteTips?: string[];
   failPush?: boolean;
   failCommit?: boolean;
+  failRollback?: boolean;
   failFocused?: boolean;
+  failGate?: boolean;
   failGitHub?: boolean;
 };
 
@@ -167,6 +178,10 @@ function interceptedCommand(
       ? { status: 1, stdout: "", stderr: "focused failure" }
       : { status: 0, stdout: "10 pass\n0 fail\n", stderr: "" };
   }
+  if (key === "bun tests/no-silent-drop-gate.ts") {
+    if (options.failGate) return { status: 2, stdout: "", stderr: "no-silent-drop failure" };
+    return { status: 0, stdout: '{"status":"pass","code":"NO_SILENT_DROP_OK"}\n', stderr: "" };
+  }
   if (key === "git ls-remote") {
     const remoteTip = remoteTips.shift() ?? options.remoteTip;
     if (remoteTip !== undefined) return commandResult(0, `${remoteTip}\trefs/heads/main\n`);
@@ -176,6 +191,9 @@ function interceptedCommand(
   }
   if (key === "git commit" && options.failCommit) {
     return { status: 1, stdout: "", stderr: "commit rejected" };
+  }
+  if (key === "git reset" && options.failRollback) {
+    return { status: 1, stdout: "", stderr: "rollback rejected" };
   }
   return undefined;
 }
@@ -390,7 +408,7 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(noOpResult).toMatchObject({ status: "no-op", code: "REBIND_NOOP", bindingRevision: MOCK_EVENT });
   });
 
-  test("proves both trees, pushes one evidence commit, then no-ops on the rebind commit push", () => {
+  test("proves both trees, pushes one evidence-and-ledger commit, then no-ops on the rebind commit push", () => {
     const fixture = squashFixture();
     const first = runEvidenceCommand([
       "reconcile",
@@ -404,8 +422,16 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(rebindCommit).not.toBe(fixture.landing);
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(rebindCommit);
     expect(must(fixture.root, ["git", "diff", "--name-only", `${fixture.landing}..${rebindCommit}`]).split("\n").sort()).toEqual(
-      [...EVIDENCE_BUNDLE_PATHS].sort(),
+      [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS].sort(),
     );
+    const baseline = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[0]), "utf8"));
+    const exemptions = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[1]), "utf8"));
+    expect(baseline.generatedFrom.previousDigest).toBe(sha256(Buffer.from(
+      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[0]}`]).stdout,
+    )));
+    expect(exemptions.previousDigest).toBe(sha256(Buffer.from(
+      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[1]}`]).stdout,
+    )));
 
     const second = runEvidenceCommand([
       "reconcile",
@@ -494,10 +520,11 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(result).toMatchObject({ status: "error", code: "REBIND_PR_HEAD_UNAVAILABLE" });
   });
 
-  test("rolls back a focused-validation failure and supersedes a stale remote tip without pushing", () => {
-    for (const mode of ["focused", "stale"] as const) {
+  test("rolls back focused validation failures and supersedes a stale remote tip without pushing", () => {
+    for (const mode of ["focused", "gate", "stale"] as const) {
       const fixture = squashFixture();
-      const original = EVIDENCE_BUNDLE_PATHS.map((path) => readFileSync(join(fixture.root, path)));
+      const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+      const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
       const result = runEvidenceCommand([
         "reconcile",
         "--event-revision",
@@ -506,16 +533,22 @@ describe("t427 squash identity proof and main convergence", () => {
         "amadeus-dlc/amadeus",
       ], {
         repositoryRoot: fixture.root,
-        runner: hybridRunner(fixture, mode === "focused" ? { failFocused: true } : { remoteTip: "d".repeat(40) }),
+        runner: hybridRunner(fixture, mode === "focused"
+          ? { failFocused: true }
+          : mode === "gate"
+            ? { failGate: true }
+            : { remoteTip: "d".repeat(40) }),
       });
-      expect(result.status).toBe(mode === "focused" ? "error" : "superseded");
-      expect(EVIDENCE_BUNDLE_PATHS.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
+      expect(result.status).toBe(mode === "stale" ? "superseded" : "error");
+      expect(reconcilePaths.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
       expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
     }
   });
 
   test("keeps remote main unchanged when the fast-forward push fails", () => {
     const fixture = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
     const result = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -525,10 +558,83 @@ describe("t427 squash identity proof and main convergence", () => {
     ], { repositoryRoot: fixture.root, runner: hybridRunner(fixture, { failPush: true }) });
     expect(result).toMatchObject({ status: "error", code: "REBIND_PUSH_FAILED" });
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(fixture.landing);
+    expect(reconcilePaths.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
+    expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
+    expect(command(fixture.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+  });
+
+  test("rolls back pre-push failures but preserves an unknown push outcome for recovery", () => {
+    const beforePush = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const beforePushOriginal = reconcilePaths.map((path) => readFileSync(join(beforePush.root, path)));
+    const beforePushResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      beforePush.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: beforePush.root,
+      runner: hybridRunner(beforePush, { remoteTips: [beforePush.landing, "unavailable"] }),
+    });
+    expect(beforePushResult).toMatchObject({ status: "error", code: "REBIND_REMOTE_TIP_FAILED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(beforePush.root, path)))).toEqual(beforePushOriginal);
+    expect(must(beforePush.root, ["git", "rev-parse", "HEAD"])).toBe(beforePush.landing);
+    expect(command(beforePush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+
+    const unknownPush = squashFixture();
+    const unknownOriginal = reconcilePaths.map((path) => readFileSync(join(unknownPush.root, path)));
+    const unknownResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      unknownPush.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: unknownPush.root,
+      runner: hybridRunner(unknownPush, {
+        failPush: true,
+        remoteTips: [unknownPush.landing, unknownPush.landing, "unavailable"],
+      }),
+    });
+    expect(unknownResult).toMatchObject({ status: "error", code: "REBIND_PUSH_OUTCOME_UNKNOWN" });
+    expect(unknownResult.error?.message).toContain("reconcile commit retained");
+    expect(unknownResult.error?.message).toContain("verify origin/main before retrying from the event revision");
+    expect(reconcilePaths.map((path) => readFileSync(join(unknownPush.root, path)))).not.toEqual(unknownOriginal);
+    expect(must(unknownPush.root, ["git", "rev-parse", "HEAD^"])).toBe(unknownPush.landing);
+    expect(must(unknownPush.root, ["git", "diff", "--name-only", `${unknownPush.landing}..HEAD`]).split("\n").sort())
+      .toEqual([...reconcilePaths].sort());
+    expect(command(unknownPush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+    expect(must(unknownPush.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(unknownPush.landing);
+  });
+
+  test("reports a committed rollback failure after a pre-push error", () => {
+    const fixture = squashFixture();
+    const result = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      fixture.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: fixture.root,
+      runner: hybridRunner(fixture, {
+        remoteTips: [fixture.landing, "unavailable"],
+        failRollback: true,
+      }),
+    });
+    expect(result).toMatchObject({ status: "error", code: "REBIND_ROLLBACK_FAILED" });
+    expect(result.error?.message).toContain("committed rollback failed");
+    expect(result.error?.message).toContain("rollback rejected");
+    expect(must(fixture.root, ["git", "rev-parse", "HEAD^"])).toBe(fixture.landing);
+    expect(command(fixture.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+    expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(fixture.landing);
   });
 
   test("reports supersession after commit and after a rejected push", () => {
     const afterCommit = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const afterCommitOriginal = reconcilePaths.map((path) => readFileSync(join(afterCommit.root, path)));
     const afterCommitResult = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -540,8 +646,12 @@ describe("t427 squash identity proof and main convergence", () => {
       runner: hybridRunner(afterCommit, { remoteTips: [afterCommit.landing, "d".repeat(40)] }),
     });
     expect(afterCommitResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(afterCommit.root, path)))).toEqual(afterCommitOriginal);
+    expect(must(afterCommit.root, ["git", "rev-parse", "HEAD"])).toBe(afterCommit.landing);
+    expect(command(afterCommit.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
 
     const afterPush = squashFixture();
+    const afterPushOriginal = reconcilePaths.map((path) => readFileSync(join(afterPush.root, path)));
     const afterPushResult = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -556,6 +666,9 @@ describe("t427 squash identity proof and main convergence", () => {
       }),
     });
     expect(afterPushResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(afterPush.root, path)))).toEqual(afterPushOriginal);
+    expect(must(afterPush.root, ["git", "rev-parse", "HEAD"])).toBe(afterPush.landing);
+    expect(command(afterPush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
   });
 
   test("restores both index and worktree when the evidence commit fails", () => {

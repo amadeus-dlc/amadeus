@@ -58,7 +58,7 @@
 - [x] `rebind --target-revision <sha>` と `reconcile --event-revision <sha> --repository <owner/name>` を責務分離し、両者の rebind 計算は Step 2 の同じ関数を呼ぶ。
 - [x] 全 status で `schemaVersion`、`operation`、`status`、`code`、`eventRevision`、`bindingRevision`、`targetRevision`、`changed`、`counts`、`paths`、`validation`、`error` の field／型を固定する。
 - [x] stdout は UTF-8 JSON object 1行+末尾LFだけ、進捗／診断は stderr だけとし、`changed`／`no-op`／`superseded` は exit 0、`error` は非0にする。`REBIND_OK`、`REBIND_NOOP`、`REBIND_SUPERSEDED` と入力／検証／I/O／credential／push競合を区別する安定 code を実装する。
-- [x] commit 前に focused validator と回帰試験を実行し、staged／working diff が派生3ファイルだけであることを再検査する。Conventional Commit の1 commitを event revision の子孫として作る。
+- [x] commit 前に focused validator と回帰試験を実行し、staged／working diff が派生3ファイルとledger 2ファイルからなる正確な5ファイルだけであることを再検査する。pure rebindの変更境界とidentity proofの除外対象は派生3ファイルのまま維持し、reconciliationではConventional Commit の1 commitを event revision の子孫として作る。
 - [x] push直前に remote `main` tip を再取得し、event revision から進んでいれば commit を pushせず `superseded` とする。force、non-fast-forward、無条件 retry、credential fallback を禁止する。
 - トレース: FR-3、FR-4、FR-6〜FR-8、NFR-2〜NFR-4、AC-5〜AC-10。
 
@@ -81,7 +81,7 @@
 ### Step 7: 一時 Git repository による Comprehensive integration tests を実装する
 
 - [x] clean HEADだけを受理し、ancestor target、dirty index、dirty working tree、未解決 targetを変更前に拒否する pure rebind trust test を実装する。
-- [x] 3段階不整合、部分書込み failure injection、rollback後の元bytes一致、再実行収束、3ファイル以外の差分拒否を検証する。
+- [x] 3段階不整合、部分書込み failure injection、rollback後の元bytes一致、再実行収束、pure rebindの3ファイル以外とreconciliationの5ファイル以外の差分拒否を検証する。
 - [x] fake GitHub全page応答と実Git tree fixtureで、唯一のmerged PR、binding祖先、3派生fileだけの差分、PR head／landing root tree一致のhappy pathを検証する。
 - [x] 0件／複数PR、pagination欠落、base／merge SHA不一致、祖先不一致、非派生差分、base drift、rename、mode、object type、1 byte差分、PR ref取得不能を個別に注入し、変更なし／fail-closedを検証する。
 - [x] rebind commit push後は `status=no-op`／`code=REBIND_NOOP`／`targetRevision=null`／追加commitなし、近接pushの古いrunは`superseded`、credential／push失敗はremote main不変となることを検証する。
@@ -89,7 +89,7 @@
 
 ### Step 8: workflow contract と既存 test runner の配線を検証する
 
-- [x] workflow test は `Bun.YAML.parse` を用い、main-only trigger、GitHub App token、`CI Success`失敗から独立した起動、許可3ファイル限定、concurrency、finite timeout、loop guard、stale tip guardを構造で検査する。
+- [x] workflow test は `Bun.YAML.parse` を用い、main-only trigger、GitHub App token、`CI Success`失敗から独立した起動、reconciliationの正確な5ファイル限定、concurrency、finite timeout、loop guard、stale tip guardを構造で検査する。
 - [x] `tests/run-tests.ts` の既存自動検出を使い、unit／integration testを通常の `bun run test:ci` へ載せる。別の Vitest／Jest config や別枠 QA suite は新設しない。
 - [x] `tsconfig.json` が `scripts/**/*.ts`、`tsconfig.tests.json` が `tests/**/*.ts` を既に含むことを確認し、既存 `package.json` の `test:ci`／`coverage:ci`／`typecheck`／`lint` をそのまま test configuration として利用する。変更が不要なら設定ファイルを触らない。
 - トレース: テスト要件3、8、NFR-3、NFR-4、AC-6〜AC-10。

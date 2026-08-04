@@ -18,7 +18,7 @@
 | FR-1〜FR-5、AC-1〜AC-5、AC-11 | `evidence-rebind.ts`、CLI、正準digest／validator、派生3 JSON | 24 / 24 / 25 revision、25 artifact、23 receipt、tamper／rollback、clean HEAD trust、`t413`、gate | Fully traced / PASS |
 | FR-2、FR-6〜FR-8、AC-6〜AC-10、AC-12 | Git adapter、関連PR全page解決、2段階tree証明、main-only reconcile workflow | 一時Git repository、PR 0／複数、pagination、tree差分、stale tip、credential／push failure、workflow構造 | Fully traced / fixture PASS |
 | NFR-1 | 到達性・artifact digest・receipt digestの同時不動点、原子的適用 | rebase後の赤→正規rebind→緑、reconcile no-op、隔離2回build | PASS |
-| NFR-2 | 既存GitHub App最小権限、secret redaction、3 path allowlist | focused security regression、workflow構造、失敗時remote不変 | PASS |
+| NFR-2 | 既存GitHub App最小権限、secret redaction、pure rebind／identity proofの3 path境界、reconciliationの5 path allowlist | focused security regression、workflow構造、失敗時remote不変 | PASS |
 | NFR-3 | 既存正準関数共有、schema列挙、CLI／domain／adapter分離 | typecheck、lint、complexity、focused negative coverage | PASS |
 | NFR-4 | main-only、有限timeout、安定concurrency、stale-tip guard | workflow contract、full suite、reconcile no-op | PASS |
 
