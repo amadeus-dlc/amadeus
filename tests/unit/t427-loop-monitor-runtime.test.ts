@@ -13,10 +13,12 @@ import {
 import {
   createLoopMonitorCoordinator,
   createMemoryLoopMonitorRepository,
+  foldLoopMonitorEventSets,
   replayLoopMonitorPartition,
   renderLoopMonitorStatus,
   type JudgePort,
   type JudgeResult,
+  type LoopMonitorEventSet,
   verifyHumanRetry,
 } from "../../packages/framework/core/tools/amadeus-loop-monitor-runtime.ts";
 
@@ -155,6 +157,47 @@ describe("Loop Monitor Judge runtime", () => {
     )).toMatchObject({ kind: "CONFLICT", reason: "causal-fork" });
   });
 
+  test("rejects contradictory canonical Judge histories while folding exact retries", () => {
+    const { repository, partition, routeGraph } = reserveJudge();
+    const monitor = routeGraph.loopMonitors[0]!;
+    const sets = repository.readEventSets(partition);
+    const reservationSet = sets.at(-1)!;
+    expect(foldLoopMonitorEventSets([...sets, reservationSet], partition, monitor)).toEqual(
+      foldLoopMonitorEventSets(sets, partition, monitor),
+    );
+    expect(() => foldLoopMonitorEventSets([
+      ...sets,
+      { ...reservationSet, payloadFingerprint: `sha256:${"d".repeat(64)}` },
+    ], partition, monitor)).toThrow("invalid-loop-monitor-audit:event-set-id-conflict");
+
+    const reservationMismatch: LoopMonitorEventSet = {
+      ...reservationSet,
+      events: reservationSet.events.map((event) => event.type === "LOOP_MONITOR_TRIGGERED"
+        ? { ...event, reservation: { ...event.reservation, invocationId: "judge-mismatched" } }
+        : event),
+    };
+    expect(() => foldLoopMonitorEventSets(
+      [...sets.slice(0, -1), reservationMismatch],
+      partition,
+      monitor,
+    )).toThrow("invalid-loop-monitor-audit:judge-reservation-mismatch");
+
+    const attemptMismatch: LoopMonitorEventSet = {
+      ...reservationSet,
+      eventSetId: "attempt-mismatch",
+      idempotencyKey: "attempt-mismatch",
+      events: [{
+        type: "LOOP_JUDGE_ATTEMPT_STARTED",
+        invocationId: "judge-mismatched",
+        attempt: 1,
+        attestationId: "attestation-mismatched",
+        trace,
+      }],
+    };
+    expect(() => foldLoopMonitorEventSets([...sets, attemptMismatch], partition, monitor))
+      .toThrow("invalid-loop-monitor-audit:judge-attempt-mismatch");
+  });
+
   test("dispatches only with a committed permit and records observed -> completed -> route in order", () => {
     const { repository, coordinator, partition, reserved, routeGraph } = reserveJudge();
     let dispatches = 0;
@@ -182,6 +225,10 @@ describe("Loop Monitor Judge runtime", () => {
     expect(coordinator.dispatchJudge(forged, port)).toMatchObject({
       kind: "CONFLICT",
       reason: "dispatch-permit-not-committed",
+    });
+    expect(coordinator.dispatchJudge({ ...reserved.permit, invocationId: "judge-mismatched" }, port)).toEqual({
+      kind: "CONFLICT",
+      reason: "dispatch-permit-invocation-mismatch",
     });
     expect(dispatches).toBe(1);
   });
@@ -213,7 +260,7 @@ describe("Loop Monitor Judge runtime", () => {
   });
 
   test("effect-possible reconciliation fails closed without another dispatch", () => {
-    const { coordinator, partition, reserved } = reserveJudge();
+    const { repository, coordinator, partition, reserved, routeGraph } = reserveJudge();
     let dispatches = 0;
     const port: JudgePort = {
       dispatch() {
@@ -229,7 +276,105 @@ describe("Loop Monitor Judge runtime", () => {
       kind: "AWAITING_HUMAN",
       reason: "judge-effect-possible",
     });
+    expect(replayLoopMonitorPartition(repository, routeGraph, partition).status.outcome).toBe("awaiting-human");
+    expect(coordinator.resumeJudge(partition, port)).toMatchObject({
+      kind: "AWAITING_HUMAN",
+      reason: "judge-effect-possible",
+    });
     expect(dispatches).toBe(1);
+  });
+
+  test("preserves the first awaiting-human reason during reentrant reconciliation", () => {
+    const { coordinator, partition, reserved } = reserveJudge();
+    const innerPort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "inner-native" }),
+      reconcile: () => ({ kind: "unknown", reason: "inner-unknown" }),
+    };
+    const outerPort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "outer-native" }),
+      reconcile() {
+        expect(coordinator.resumeJudge(partition, innerPort)).toMatchObject({
+          kind: "AWAITING_HUMAN",
+          reason: "judge-effect-unknown",
+        });
+        return { kind: "effect-possible", reason: "outer-effect-possible" };
+      },
+    };
+    expect(coordinator.dispatchJudge(reserved.permit, outerPort).kind).toBe("pending");
+    expect(coordinator.resumeJudge(partition, outerPort)).toMatchObject({
+      kind: "AWAITING_HUMAN",
+      reason: "judge-effect-unknown",
+    });
+  });
+
+  test("reuses completed Judge outcomes and rejects a late conflicting result", () => {
+    const reconciled = reserveJudge();
+    const reconcilePort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "reconcile-native" }),
+      reconcile: (request) => ({
+        kind: "completed",
+        result: resultFor(request.invocationId, reconciled.routeGraph),
+      }),
+    };
+    expect(reconciled.coordinator.dispatchJudge(reconciled.reserved.permit, reconcilePort).kind).toBe("pending");
+    expect(reconciled.coordinator.resumeJudge(reconciled.partition, reconcilePort)).toMatchObject({
+      kind: "route-applied",
+      routeId: "repair",
+    });
+
+    const completeReentrantly = (conflictingOuterResult: boolean) => {
+      const instance = reserveJudge();
+      let nested = false;
+      const innerPort: JudgePort = {
+        dispatch: (request) => ({
+          kind: "completed",
+          result: resultFor(request.invocationId, instance.routeGraph),
+        }),
+        reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+      };
+      const outerPort: JudgePort = {
+        dispatch(request) {
+          if (!nested) {
+            nested = true;
+            expect(instance.coordinator.dispatchJudge(instance.reserved.permit, innerPort)).toMatchObject({
+              kind: "route-applied",
+              routeId: "repair",
+            });
+          }
+          return {
+            kind: "completed",
+            result: resultFor(
+              conflictingOuterResult ? "judge-late-conflict" : request.invocationId,
+              instance.routeGraph,
+            ),
+          };
+        },
+        reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+      };
+      return instance.coordinator.dispatchJudge(instance.reserved.permit, outerPort);
+    };
+    expect(completeReentrantly(false)).toMatchObject({ kind: "route-applied", routeId: "repair" });
+    expect(completeReentrantly(true)).toEqual({ kind: "CONFLICT", reason: "judge-invocation-not-pending" });
+  });
+
+  test("stops an outer redispatch when reentrant reconciliation consumes the retry", () => {
+    const { coordinator, partition, reserved } = reserveJudge();
+    const innerPort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "inner-redispatch" }),
+      reconcile: () => ({ kind: "no-effect-attested", attestationId: "inner-attestation" }),
+    };
+    const outerPort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "outer-redispatch" }),
+      reconcile() {
+        expect(coordinator.resumeJudge(partition, innerPort).kind).toBe("pending");
+        return { kind: "no-effect-attested", attestationId: "outer-attestation" };
+      },
+    };
+    expect(coordinator.dispatchJudge(reserved.permit, outerPort).kind).toBe("pending");
+    expect(coordinator.resumeJudge(partition, outerPort)).toMatchObject({
+      kind: "AWAITING_HUMAN",
+      reason: "judge-redispatch-exhausted",
+    });
   });
 
   test("persists the safe result observation but rejects provider identity, route, or trace mismatch", () => {
@@ -281,6 +426,29 @@ describe("Loop Monitor latch", () => {
       "WORKFLOW_UNPARKED",
     ]);
     expect(coordinator.readProjection(partition).latch).toBeNull();
+
+    const implicit = reserveJudge();
+    expect(implicit.coordinator.dispatchJudge(implicit.reserved.permit, {
+      dispatch: (request) => ({
+        kind: "completed",
+        result: resultFor(request.invocationId, implicit.routeGraph, "repair-stalled"),
+      }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    }).kind).toBe("latched");
+    const changedDelivery = delivery(
+      implicit.routeGraph,
+      implicit.partition,
+      "repair",
+      implicit.q2.deliveryId,
+      "implicit-evidence-change",
+      evidenceB,
+    );
+    expect(implicit.coordinator.observeDelivery(changedDelivery).kind).toBe("observed");
+    expect(implicit.repository.readEventSets(implicit.partition).at(-1)?.events.map((event) => event.type)).toEqual([
+      "LOOP_LATCH_CLEARED",
+      "WORKFLOW_UNPARKED",
+      "LOOP_DELIVERY_OBSERVED",
+    ]);
   });
 
   test("a real verified HUMAN_TURN clears the latch and status/replay expose the stop contract", () => {
@@ -300,6 +468,10 @@ describe("Loop Monitor latch", () => {
       partition,
     );
     expect(replay.status.outcome).toBe("parked");
+    expect(() => replayLoopMonitorPartition(repository, routeGraph, {
+      ...partition,
+      graphRevision: `sha256:${"f".repeat(64)}`,
+    })).toThrow("loop-monitor-replay-graph-revision-mismatch");
 
     const latchedStatus = coordinator.readProjection(partition);
     const humanRetry = verifyHumanRetry({ eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" });
