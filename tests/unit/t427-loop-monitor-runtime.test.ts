@@ -321,6 +321,31 @@ describe("Loop Monitor latch", () => {
     expect(verifyHumanRetry({ eventType: "HUMAN_TURN", actor: "agent", turnId: "turn-2" })).toBeNull();
   });
 
+  test("rejects a forged verified retry that is not attributed to a human actor", () => {
+    const { coordinator, partition, reserved, routeGraph } = reserveJudge();
+    const port: JudgePort = {
+      dispatch(request) {
+        return { kind: "completed", result: resultFor(request.invocationId, routeGraph, "repair-stalled") };
+      },
+      reconcile() {
+        return { kind: "unknown", reason: "not-used" };
+      },
+    };
+    expect(coordinator.dispatchJudge(reserved.permit, port).kind).toBe("latched");
+
+    const forgedRetry = {
+      verified: true,
+      eventType: "HUMAN_TURN",
+      actor: "agent",
+      turnId: "forged-turn",
+    } as unknown as NonNullable<Parameters<typeof coordinator.clearLatch>[0]["humanRetry"]>;
+    expect(coordinator.clearLatch({ partition, humanRetry: forgedRetry })).toEqual({
+      kind: "CONFLICT",
+      reason: "latch-clear-not-authorized",
+    });
+    expect(coordinator.readProjection(partition).latch).not.toBeNull();
+  });
+
   test("live smoke requires safe external authorization before the canonical event is committed", () => {
     const { repository, coordinator, partition } = reserveJudge();
     const denied = coordinator.authorizeLiveSmoke(partition, `sha256:${"d".repeat(64)}`, {

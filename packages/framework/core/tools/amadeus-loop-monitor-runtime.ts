@@ -403,6 +403,7 @@ export type LoopMonitorCoordinatorResult =
 export interface VerifiedHumanTurn {
   readonly verified: true;
   readonly eventType: "HUMAN_TURN";
+  readonly actor: "human";
   readonly turnId: string;
 }
 
@@ -412,7 +413,7 @@ export function verifyHumanRetry(value: {
   readonly turnId: string;
 }): VerifiedHumanTurn | null {
   return value.eventType === "HUMAN_TURN" && value.actor === "human" && value.turnId.length > 0
-    ? { verified: true, eventType: "HUMAN_TURN", turnId: value.turnId }
+    ? { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: value.turnId }
     : null;
 }
 
@@ -762,9 +763,10 @@ export function createLoopMonitorCoordinator(options: {
         if (current.latch === null) return { kind: "CONFLICT", reason: "latch-not-set" };
         const evidenceChanged = request.evidenceFingerprint !== undefined &&
           request.evidenceFingerprint !== current.latch.evidenceFingerprint;
-        const humanRetry = request.humanRetry?.verified === true &&
-          request.humanRetry.eventType === "HUMAN_TURN";
-        if (!evidenceChanged && !humanRetry) {
+        const humanRetry = request.humanRetry?.verified === true
+          ? verifyHumanRetry(request.humanRetry)
+          : null;
+        if (!evidenceChanged && humanRetry === null) {
           return { kind: "CONFLICT", reason: "latch-clear-not-authorized" };
         }
         const basis = evidenceChanged ? "evidence-change" as const : "human-retry" as const;
@@ -774,7 +776,7 @@ export function createLoopMonitorCoordinator(options: {
             monitorId: monitor.id,
             priorEvidenceFingerprint: current.latch.evidenceFingerprint,
             basis,
-            humanTurnId: request.humanRetry?.turnId ?? null,
+            humanTurnId: humanRetry?.turnId ?? null,
           },
           { type: "WORKFLOW_UNPARKED", monitorId: monitor.id, reasonCode: current.latch.reasonCode },
         ]));
