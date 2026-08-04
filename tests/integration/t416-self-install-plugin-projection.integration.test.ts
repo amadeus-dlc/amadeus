@@ -85,9 +85,23 @@ describe("t416 deterministic self-install plugin projections", () => {
     const empty = mkdtempSync(join(tmpdir(), "amadeus-t416-empty-"));
     scratch.push(missing, empty);
     mkdirSync(join(empty, "amadeus"), { recursive: true });
-    writeFileSync(join(empty, "amadeus", "config.json"), '{"plugins":[]}\n');
+    writeFileSync(join(empty, "amadeus", "config.json"), '{"plugin":{"activation":{"names":[]}}}\n');
     expect(buildSelfInstallProjection("claude", missing).expectedPaths.size).toBe(0);
     expect(buildSelfInstallProjection("codex", empty).expectedPaths.size).toBe(0);
+  });
+
+  test("invalid structured configuration fails closed", () => {
+    const invalid = mkdtempSync(join(tmpdir(), "amadeus-t416-invalid-"));
+    scratch.push(invalid);
+    mkdirSync(join(invalid, "amadeus"), { recursive: true });
+    writeFileSync(
+      join(invalid, "amadeus", "config.json"),
+      '{"plugin":{"activation":{"names":"formal-model-check"}}}\n',
+    );
+
+    expect(() => buildSelfInstallProjection("codex", invalid)).toThrow(
+      /SELF_INSTALL rejected: amadeus\/config\.json plugin\.activation\.names/,
+    );
   });
 
   test("compile fixture environment cannot change committed projection bytes", () => {

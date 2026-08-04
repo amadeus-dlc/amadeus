@@ -107,9 +107,17 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     const removed = provenance.approvedPre.entries.filter(
       (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
     );
-    expect(result.evidence.counts).toEqual({ C_pre: 215, B_pre: 215, B0: 215 });
-    expect(baseline.entries).toHaveLength(215);
-    expect(removed).toHaveLength(12);
+    // The census only ever shrinks, so these numbers move whenever a silent-drop
+    // path is deleted. 217 -> 215 was #2151; 215 -> 214 is #1906, which removed the
+    // fail-open catch that let finalizeAuditLockAcquire swallow a failed lock
+    // finalization. That catch was the NSD001 identity b775faf8 in amadeus-lib.ts,
+    // so deleting the silent-continue path deletes the finding, and the pre-approved
+    // set loses one more identity (12 -> 13). The issue set is unchanged because
+    // b775faf8 was already filed under #1979.
+    expect(result.evidence.counts).toEqual({ C_pre: 214, B_pre: 214, B0: 214 });
+    expect(baseline.entries).toHaveLength(214);
+    expect(removed).toHaveLength(13);
+    expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
       new Set(["#1874", "#1878", "#1979"]),
     );
@@ -162,6 +170,12 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       }).status,
     ).toBe(0);
     expect(validateEvidenceRegistry(registry, registry.currentRevision)).toEqual({ ok: true });
+    // Freshness is asserted over the gate's own implementation only. packages/framework/core/tools
+    // is the corpus the gate scans, not the gate: it changes with ordinary feature and fix work, so
+    // including it would demand a 23-receipt re-adoption of the evidence bundle on every commit that
+    // touches a scanned file — and that bundle has no generator, so the demand is unsatisfiable
+    // rather than merely expensive. Staleness of the recorded census against a changed corpus is a
+    // real gap, tracked separately as #2153; it needs an evidence-regeneration path, not a pin here.
     const changedImplementation = spawnSync("git", [
       "diff",
       "--name-only",

@@ -16,6 +16,13 @@ import {
 import { join } from "node:path";
 import { runMirrorLifecycleBoundary } from "../../packages/framework/core/tools/amadeus-mirror-lifecycle.ts";
 import {
+  createGoalReconciliationReceipt,
+  createInitialGoalLineage,
+  writeGoalReconciliationReceipt,
+  writeInitialGoalLineage,
+} from "../../packages/framework/core/tools/amadeus-goal-reconciliation.ts";
+import { workflowCompletionContextDigest } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
+import {
   mirrorEventIdentity,
   mirrorEventKey,
 } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
@@ -86,15 +93,60 @@ function terminalFixture() {
     join(ROOT, "tests", "fixtures", "state-fix-final-construction.md"),
     "utf-8",
   );
-  writeFileSync(
-    fx.statePath,
-    `${fixtureState.replace(
+  const lineage = createInitialGoalLineage({
+    intentId: INTENT_UUID,
+    statement: "Complete the mirrored workflow",
+    scope: "fix",
+    createdAt: NOW,
+  });
+  const currentGoal = lineage.revisions[0];
+  const terminalState = `${fixtureState.replace(
       "## Runtime State",
       "## Runtime State\n" +
         "- **Workflow Completion Instance**: completion-terminal\n" +
         "- **Workflow Completion Stage**: build-and-test\n" +
-        "- **Workflow Completion Status**: pending",
-    )}\n${renderMirrorStateBlock(linkedState())}\n`,
+        "- **Workflow Completion Status**: pending\n" +
+        `- **Goal ID**: ${lineage.goalId}\n` +
+        "- **Current Goal Revision**: 0\n" +
+        `- **Current Goal Digest**: ${currentGoal.digest}`,
+    )}\n${renderMirrorStateBlock(linkedState())}\n`;
+  writeFileSync(fx.statePath, terminalState);
+  const recordDir = join(
+    fx.root,
+    "amadeus",
+    "spaces",
+    fx.space,
+    "intents",
+    INTENT_DIR,
+  );
+  writeInitialGoalLineage(recordDir, lineage);
+  writeGoalReconciliationReceipt(
+    recordDir,
+    createGoalReconciliationReceipt({
+      lineage,
+      scope: "fix",
+      finalStage: "build-and-test",
+      completionInstance: "completion-terminal",
+      completionContextDigest: workflowCompletionContextDigest(
+        terminalState,
+        "build-and-test",
+      ),
+      items: [
+        {
+          id: "goal-statement",
+          verdict: "ACHIEVED",
+          evidence: [
+            {
+              kind: "deterministic-check",
+              reference: "fixture:mirror-completion",
+              digest: "0".repeat(64),
+            },
+          ],
+        },
+      ],
+      humanRulingReference: null,
+      createdAt: NOW,
+    }),
   );
   const intents = join(
     fx.root,
@@ -980,10 +1032,16 @@ describe("t346 prompt Project face", () => {
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
       JSON.stringify({
-        "auto-mirror": "prompt",
-        "mirror-projects": [
-          { project: canonical(BOARD_A), "phase-field": "Lifecycle" },
-        ],
+        "intent-mirror": {
+          github: {
+            issue: { mode: "prompt" },
+            project: {
+              targets: [
+                { project: canonical(BOARD_A), "phase-field": "Lifecycle" },
+              ],
+            },
+          },
+        },
       }),
     );
     if (failure !== "none") {

@@ -201,10 +201,10 @@ describe("t222 CI snapshot publication boundary", () => {
       headJob.indexOf("- name: Patch coverage gate"),
     );
     expect(headJob).toContain(`AMADEUS_PATCH_BASE_REF: origin/\${{ github.event.pull_request.base.ref }}`);
-    // relative gate (E-CV2): live merge-base measurement compared through the
-    // project-gate baseline seam, verdict-independent base run, cache keyed by
-    // merge-base sha, artifact completeness verified before comparison
-    expect(coverageJob).toContain("Relative coverage gate (head vs merge-base)");
+    // absolute + relative gate: versioned floor plus live merge-base measurement
+    // through the project-gate baseline seam, verdict-independent base run,
+    // cache keyed by merge-base sha, artifacts verified before comparison
+    expect(coverageJob).toContain("Project coverage gate (absolute and merge-base-relative)");
     expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
     expect(baseJob).toContain(`key: relative-coverage-base-\${{ steps.merge-base.outputs.sha }}`);
     expect(baseJob).toContain("base coverage artifacts incomplete");
@@ -279,7 +279,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(snapshotJob).toContain("permission-contents: write");
     expect(snapshotJob).toContain("permission-pull-requests: write");
     expect(snapshotJob).toContain(`token: \${{ steps.app-token.outputs.token }}`);
-    expect(snapshotJob).toContain("persist-credentials: false");
+    expect(snapshotJob).toContain("persist-credentials: true");
     expect(snapshotJob).toContain("bun scripts/metrics-publication.ts snapshot");
     expect(snapshotJob).toContain('--target-sha "$GITHUB_SHA"');
     expect(snapshotJob).not.toContain("GITHUB_RUN_ATTEMPT");

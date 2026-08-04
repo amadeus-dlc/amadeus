@@ -125,16 +125,17 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
     const N = 12;
     const GENERATIONS = 8;
     // The seeded lock is reclaimable because its owner PID is DEAD (ESRCH) — the
-    // reaper reclaims a dead owner regardless of age. So we keep the stale
-    // threshold LARGE (10 min): the winner's own freshly-acquired lock (its real,
-    // alive PID + a now stamp) is then UNDER age and must NOT be robbed by the
-    // losers — that protection is exactly what makes "exactly one wins" hold. A
-    // tiny threshold would (correctly) make the winner's fresh lock instantly
-    // over-age and let the losers reap IT too, defeating the test's premise. A
-    // generous unstamped grace covers the winner's brief mkdir→stamp gap.
+    // reaper reclaims a dead owner regardless of age. The winner's own
+    // freshly-acquired lock (real, alive PID) must then NOT be robbed by the
+    // losers — that protection is exactly what makes "exactly one wins" hold.
+    // The threshold is set TINY on purpose (#1906): the winner's lock is
+    // instantly over-age, so "exactly one wins" is now carried by LIVENESS
+    // alone. This test previously had to pin a 10-minute threshold to pass,
+    // because an over-age live holder was reapable and the losers robbed the
+    // winner. A generous unstamped grace still covers the mkdir→stamp gap.
     const env = {
       ...process.env,
-      AMADEUS_LOCK_STALE_MS: "600000",
+      AMADEUS_LOCK_STALE_MS: "1",
       AMADEUS_LOCK_UNSTAMPED_GRACE_MS: "10000",
     };
     for (let g = 0; g < GENERATIONS; g++) {
@@ -159,23 +160,27 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
   }, 120000);
 
   // -------------------------------------------------------------------------
-  // A live, UNDER-AGE holder is never robbed under contention: seed a FRESH
-  // this-not-applicable... seed a live (current test PID), under-age lock, then
-  // fire N contenders. ZERO may win — the reaper must refuse to reclaim a fresh
-  // live holder even with many processes hammering it.
+  // A LIVE holder is never robbed under contention, at any age: seed a live
+  // (current test PID) lock, run the contenders under a 1ms staleness threshold
+  // so the holder counts as over-age from the first instant, then fire N of
+  // them. ZERO may win — liveness alone must hold the line (#1906).
   // -------------------------------------------------------------------------
-  test("a fresh live holder is never reclaimed under N-way contention [zero winners]", async () => {
+  test("a live holder is never reclaimed under N-way contention, even over-age [zero winners]", async () => {
     const lockDir = auditLockDir(proj, INTENT, SPACE);
     rmSync(lockDir, { recursive: true, force: true });
     mkdirSync(lockDir, { recursive: true });
-    // Owner = THIS test process (alive), stamp = now (under any sane threshold).
+    // Owner = THIS test process (alive). The stamp age is irrelevant now — the
+    // contenders run with a 1ms threshold, so this counts as over-age at once.
     const now = Math.floor(performance.timeOrigin + performance.now());
     writeFileSync(
       join(lockDir, "owner.json"),
       JSON.stringify({ pid: process.pid, startedAtMs: now }),
       "utf-8",
     );
-    const env = { ...process.env, AMADEUS_LOCK_STALE_MS: "600000" }; // 10 min
+    // Tiny threshold (#1906): the seeded live holder is over-age immediately, so
+    // zero winners proves the refusal comes from liveness, not from the age
+    // window. Pre-fix this same env made every contender a winner.
+    const env = { ...process.env, AMADEUS_LOCK_STALE_MS: "1" };
     const N = 12;
     const procs = Array.from({ length: N }, () =>
       Bun.spawn({ cmd: [BUN, driver], stdout: "pipe", stderr: "ignore", env }),
@@ -183,7 +188,7 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
     await Promise.all(procs.map((p) => p.exited));
     const outs = await Promise.all(procs.map((p) => new Response(p.stdout).text()));
     const wins = outs.filter((o) => o.trim() === "WON").length;
-    // The live, under-age holder is never robbed → no contender acquires.
+    // The live holder is never robbed → no contender acquires.
     expect(wins).toBe(0);
     // The original live lock dir is intact (the CAS restore never destroyed it).
     expect(existsSync(lockDir)).toBe(true);

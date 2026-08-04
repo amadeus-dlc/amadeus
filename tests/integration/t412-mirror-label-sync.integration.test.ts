@@ -130,7 +130,7 @@ describe("mirror boundary label sync wiring", () => {
     ]);
   });
 
-  test("a suppressed mirror (auto-mirror off) performs no label operations", async () => {
+  test("a suppressed mirror (intent-mirror.github.issue.mode off) performs no label operations", async () => {
     const fx = fixtureWithRefs({ mode: "off" });
     const gateway = new ProjectGateway(markerBody());
     const labels = fakeLabelGateway();

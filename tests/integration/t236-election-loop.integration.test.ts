@@ -82,30 +82,30 @@ describe("t236 election directive loop", () => {
     );
     expect(existsSync(registryPath)).toBe(false);
 
-    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({
       opened: null,
-      reason: "auto-solo-election-disabled",
+      reason: "solo-election-manual-trigger-required",
     });
     expect(existsSync(registryPath)).toBe(false);
 
     mkdirSync(join(projectDir, "amadeus"), { recursive: true });
     writeFileSync(
       join(projectDir, "amadeus", "config.json"),
-      JSON.stringify({ "auto-solo-election": false }),
+      JSON.stringify({ "solo-election": { trigger: { mode: "manual" } } }),
     );
-    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({
       opened: null,
-      reason: "auto-solo-election-disabled",
+      reason: "solo-election-manual-trigger-required",
     });
     expect(existsSync(registryPath)).toBe(false);
 
     writeFileSync(
       join(projectDir, "amadeus", "config.json"),
-      JSON.stringify({ "auto-solo-election": true }),
+      JSON.stringify({ "solo-election": { trigger: { mode: "auto" } } }),
     );
-    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(0);
+    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({ opened: "E-AUTO-OPTIN", views: 2 });
     expect(
       existsSync(
@@ -114,7 +114,7 @@ describe("t236 election directive loop", () => {
     ).toBe(true);
   });
 
-  test("invalid auto-solo-election config stops automatic open without writes", () => {
+  test("invalid automatic solo-election config stops automatic open without writes", () => {
     const definition = writeJson("invalid-auto-def.json", {
       ...DEF,
       electionId: "E-AUTO-INVALID",
@@ -123,11 +123,13 @@ describe("t236 election directive loop", () => {
     mkdirSync(join(projectDir, "amadeus"), { recursive: true });
     writeFileSync(
       join(projectDir, "amadeus", "config.json"),
-      JSON.stringify({ "auto-solo-election": "true" }),
+      JSON.stringify({ "solo-election": { trigger: { mode: "true" } } }),
     );
 
-    expect(run(["open", "--trigger", "auto-solo", "--file", definition])).toBe(1);
-    expect(errs.at(-1)).toContain("auto-solo-election expected boolean");
+    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(1);
+    expect(errs.at(-1)).toContain(
+      "solo-election.trigger.mode expected manual | auto",
+    );
     expect(existsSync(join(electionsRoot(projectDir), "elections.json"))).toBe(
       false,
     );

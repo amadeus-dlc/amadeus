@@ -2,9 +2,9 @@
 // coverage-project-gate.ts — the self-hosted PROJECT coverage gate.
 //
 // WHAT THIS IS. A deterministic replacement for Codecov's project status. It
-// compares the whole-suite line coverage of this commit against a committed
-// baseline and fails CI if coverage dropped by more than 0.02 percentage
-// points. The population is the normalized LCOV total emitted by the runner
+// compares the whole-suite line coverage of this commit against an absolute
+// minimum and a committed baseline. Both policy conditions must pass. The
+// population is the normalized LCOV total emitted by the runner
 // (coverage/coverage-totals.json) — the SAME number the coverage HTML reports,
 // which deliberately differs from Codecov's project % (see docs/reference/
 // 09-testing.md § "Project Coverage Gate"). What matters here is before/after
@@ -15,11 +15,13 @@
 //
 // THE VERDICT IS EXACT. Percentages are display-only derivations. The pass/fail
 // decision is computed with BigInt so it never rounds: pass iff
-//   current% >= baseline% - 0.02pp
+//   current% >= minimumBasisPoints / 100
+//   AND current% >= baseline% - maximumRelativeDropBasisPoints / 100 pp
 // which, cleared of division, is
-//   10000·ch·bl - 10000·bh·cl >= -2·cl·bl
+//   10000·ch >= minimumBasisPoints·cl
+//   AND 10000·ch·bl - 10000·bh·cl >= -maximumRelativeDropBasisPoints·cl·bl
 // (ch/cl = current hits/lines, bh/bl = baseline hits/lines). Exact equality at
-// -0.02pp passes.
+// either configured boundary passes.
 //
 // Run:
 //   bun tests/coverage-project-gate.ts --check    # CI gate (exit 1 on drop/error)
@@ -39,6 +41,7 @@ import { fileURLToPath } from "node:url";
 // Tests point these at a temp tree to PROVE the gate without touching real files.
 //   AMADEUS_COVERAGE_TOTALS            — the current-commit emit to read
 //   AMADEUS_COVERAGE_PROJECT_BASELINE  — the committed baseline to compare against
+//   AMADEUS_COVERAGE_PROJECT_POLICY    — the versioned absolute/relative policy
 // ---------------------------------------------------------------------------
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(TESTS_DIR, "..");
@@ -52,6 +55,11 @@ function baselinePath(): string {
     process.env.AMADEUS_COVERAGE_PROJECT_BASELINE ?? join(TESTS_DIR, ".coverage-project-baseline.json")
   );
 }
+function policyPath(): string {
+  return (
+    process.env.AMADEUS_COVERAGE_PROJECT_POLICY ?? join(TESTS_DIR, ".coverage-project-policy.json")
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types.
@@ -61,20 +69,37 @@ export interface Totals {
   lines: number;
 }
 
+export interface CoveragePolicy {
+  minimumProjectLineCoverageBasisPoints: number;
+  maximumRelativeDropBasisPoints: number;
+}
+
 export type FailReason =
-  | "DROP_EXCEEDED"
+  | "ABSOLUTE_MINIMUM_NOT_MET"
+  | "RELATIVE_DROP_EXCEEDED"
+  | "MULTIPLE_REQUIREMENTS_NOT_MET"
   | "MISSING_CURRENT"
   | "MISSING_BASELINE"
+  | "MISSING_POLICY"
   | "MALFORMED"
+  | "MALFORMED_POLICY"
   | "EMPTY_POPULATION";
 
 export type GateResult =
-  | { kind: "pass"; currentPct: number; basePct: number; deltaPp: number }
+  | {
+      kind: "pass";
+      currentPct: number;
+      basePct: number;
+      deltaPp: number;
+      minimumBasisPoints: number;
+      relativeToleranceBasisPoints: number;
+    }
   | { kind: "fail"; reason: FailReason; detail: string };
 
 // A loaded totals file: either absent (file missing) or the raw text we read.
 // evaluateGate does all parsing so the verdict has a single source of truth.
 export type LoadedTotals = { present: false } | { present: true; text: string };
+export type LoadedPolicy = LoadedTotals;
 
 // ---------------------------------------------------------------------------
 // Parsing. Parse, don't validate: a successful parse yields a Totals whose
@@ -112,24 +137,77 @@ function parseTotalsText(text: string): ParseOutcome {
   return { ok: true, totals: { hits: obj.hits, lines: obj.lines } };
 }
 
+type PolicyParseOutcome =
+  | { ok: true; policy: CoveragePolicy }
+  | { ok: false; detail: string };
+
+function parsePolicyText(text: string): PolicyParseOutcome {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    return { ok: false, detail: `invalid JSON: ${(err as Error).message}` };
+  }
+  if (typeof raw !== "object" || raw === null) {
+    return { ok: false, detail: `expected a JSON object, got ${typeof raw}` };
+  }
+  const obj = raw as Record<string, unknown>;
+  if (obj.schemaVersion !== 1) {
+    return { ok: false, detail: `schemaVersion must be 1, got ${JSON.stringify(obj.schemaVersion)}` };
+  }
+  for (const field of [
+    "minimumProjectLineCoverageBasisPoints",
+    "maximumRelativeDropBasisPoints",
+  ] as const) {
+    const value = obj[field];
+    if (!isNonNegativeInteger(value) || value > 10000) {
+      return {
+        ok: false,
+        detail: `${field} must be an integer from 0 to 10000, got ${JSON.stringify(value)}`,
+      };
+    }
+  }
+  return {
+    ok: true,
+    policy: {
+      minimumProjectLineCoverageBasisPoints: obj.minimumProjectLineCoverageBasisPoints as number,
+      maximumRelativeDropBasisPoints: obj.maximumRelativeDropBasisPoints as number,
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // The exact verdict. Display percentages are derived separately; the pass/fail
 // comparison uses BigInt so it never rounds.
 // ---------------------------------------------------------------------------
-function passesThreshold(current: Totals, base: Totals): boolean {
+function passesAbsoluteMinimum(current: Totals, minimumBasisPoints: number): boolean {
+  return 10000n * BigInt(current.hits) >= BigInt(minimumBasisPoints) * BigInt(current.lines);
+}
+
+function passesRelativeThreshold(
+  current: Totals,
+  base: Totals,
+  maximumRelativeDropBasisPoints: number,
+): boolean {
   const ch = BigInt(current.hits);
   const cl = BigInt(current.lines);
   const bh = BigInt(base.hits);
   const bl = BigInt(base.lines);
-  // current% >= base% - 0.02pp, cleared of division (cl, bl > 0 here).
-  return 10000n * ch * bl - 10000n * bh * cl >= -2n * cl * bl;
+  return (
+    10000n * ch * bl - 10000n * bh * cl >=
+    -BigInt(maximumRelativeDropBasisPoints) * cl * bl
+  );
 }
 
 function pct(t: Totals): number {
   return t.lines === 0 ? 100 : (t.hits / t.lines) * 100;
 }
 
-export function evaluateGate(current: LoadedTotals, base: LoadedTotals): GateResult {
+export function evaluateGate(
+  current: LoadedTotals,
+  base: LoadedTotals,
+  policyInput: LoadedPolicy,
+): GateResult {
   if (!current.present) {
     return { kind: "fail", reason: "MISSING_CURRENT", detail: "coverage totals emit not found" };
   }
@@ -144,6 +222,13 @@ export function evaluateGate(current: LoadedTotals, base: LoadedTotals): GateRes
   if (!bs.ok) {
     return { kind: "fail", reason: "MALFORMED", detail: `baseline: ${bs.detail}` };
   }
+  if (!policyInput.present) {
+    return { kind: "fail", reason: "MISSING_POLICY", detail: "coverage project policy not found" };
+  }
+  const policy = parsePolicyText(policyInput.text);
+  if (!policy.ok) {
+    return { kind: "fail", reason: "MALFORMED_POLICY", detail: `policy: ${policy.detail}` };
+  }
   if (cur.totals.lines === 0) {
     return { kind: "fail", reason: "EMPTY_POPULATION", detail: "current has 0 lines" };
   }
@@ -155,18 +240,45 @@ export function evaluateGate(current: LoadedTotals, base: LoadedTotals): GateRes
   const basePct = pct(bs.totals);
   const deltaPp = currentPct - basePct;
 
-  if (!passesThreshold(cur.totals, bs.totals)) {
+  const minimumBasisPoints = policy.policy.minimumProjectLineCoverageBasisPoints;
+  const relativeToleranceBasisPoints = policy.policy.maximumRelativeDropBasisPoints;
+  const absolutePasses = passesAbsoluteMinimum(cur.totals, minimumBasisPoints);
+  const relativePasses = passesRelativeThreshold(
+    cur.totals,
+    bs.totals,
+    relativeToleranceBasisPoints,
+  );
+  if (!absolutePasses || !relativePasses) {
+    const failedConditions = [
+      ...(!absolutePasses ? ["absolute minimum"] : []),
+      ...(!relativePasses ? ["relative tolerance"] : []),
+    ];
+    const reason: FailReason =
+      failedConditions.length === 2
+        ? "MULTIPLE_REQUIREMENTS_NOT_MET"
+        : absolutePasses
+          ? "RELATIVE_DROP_EXCEEDED"
+          : "ABSOLUTE_MINIMUM_NOT_MET";
     return {
       kind: "fail",
-      reason: "DROP_EXCEEDED",
+      reason,
       detail:
-        `coverage dropped by more than 0.02pp: ` +
-        `current ${cur.totals.hits}/${cur.totals.lines} (${currentPct.toFixed(4)}%) vs ` +
-        `baseline ${bs.totals.hits}/${bs.totals.lines} (${basePct.toFixed(4)}%), ` +
+        `failed: ${failedConditions.join(", ")}; ` +
+        `current ${cur.totals.hits}/${cur.totals.lines} (${currentPct.toFixed(4)}%), ` +
+        `absolute minimum ${(minimumBasisPoints / 100).toFixed(2)}%, ` +
+        `merge-base ${bs.totals.hits}/${bs.totals.lines} (${basePct.toFixed(4)}%), ` +
+        `relative tolerance ${(relativeToleranceBasisPoints / 100).toFixed(2)}pp, ` +
         `delta ${deltaPp.toFixed(4)}pp`,
     };
   }
-  return { kind: "pass", currentPct, basePct, deltaPp };
+  return {
+    kind: "pass",
+    currentPct,
+    basePct,
+    deltaPp,
+    minimumBasisPoints,
+    relativeToleranceBasisPoints,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -179,20 +291,24 @@ function load(path: string): LoadedTotals {
 
 const USAGE =
   "usage: bun tests/coverage-project-gate.ts <--check | --update>\n" +
-  "  --check   compare coverage/coverage-totals.json against the committed baseline (CI gate)\n" +
+  "  --check   enforce the absolute minimum and relative baseline tolerance (CI gate)\n" +
   "  --update  rewrite tests/.coverage-project-baseline.json from the current emit";
 
 export function runCheck(): number {
-  const result = evaluateGate(load(totalsPath()), load(baselinePath()));
+  const result = evaluateGate(load(totalsPath()), load(baselinePath()), load(policyPath()));
   if (result.kind === "fail") {
     console.error(`PROJECT COVERAGE GATE FAILED [${result.reason}]: ${result.detail}`);
     console.error(`  current emit:      ${totalsPath()}`);
     console.error(`  committed baseline: ${baselinePath()}`);
+    console.error(`  coverage policy:    ${policyPath()}`);
     return 1;
   }
   console.log(
     `project coverage gate: OK — current ${result.currentPct.toFixed(4)}%, ` +
-      `baseline ${result.basePct.toFixed(4)}%, delta ${result.deltaPp.toFixed(4)}pp`,
+      `absolute minimum ${(result.minimumBasisPoints / 100).toFixed(2)}%, ` +
+      `merge-base ${result.basePct.toFixed(4)}%, ` +
+      `relative tolerance ${(result.relativeToleranceBasisPoints / 100).toFixed(2)}pp, ` +
+      `delta ${result.deltaPp.toFixed(4)}pp`,
   );
   return 0;
 }

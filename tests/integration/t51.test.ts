@@ -54,7 +54,8 @@
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -72,6 +73,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
 const UTIL = join(TOOLS, "amadeus-utility.ts");
 const STATE = join(TOOLS, "amadeus-state.ts");
+const GOAL = join(TOOLS, "amadeus-goal.ts");
 
 // P4: init births a per-intent record (amadeus/spaces/<space>/intents/<slug>-<id8>/);
 // state lands at <record>/amadeus-state.md and audit in per-clone shards under
@@ -148,6 +150,46 @@ function walkStage(proj: string, slug: string): void {
   }
 }
 
+function reconcileGoal(proj: string): void {
+  const proof = "fix workflow evidence\n";
+  writeFileSync(join(proj, "goal-proof.txt"), proof);
+  writeFileSync(
+    join(proj, "goal-items.json"),
+    JSON.stringify([
+      {
+        id: "goal-statement",
+        verdict: "ACHIEVED",
+        evidence: [
+          {
+            kind: "deterministic-check",
+            reference: "goal-proof.txt",
+            digest: createHash("sha256").update(proof).digest("hex"),
+          },
+        ],
+      },
+    ]),
+  );
+  const result = spawnSync(
+    BUN,
+    [
+      GOAL,
+      "reconcile",
+      "--items",
+      "goal-items.json",
+      "--final-stage",
+      "build-and-test",
+      "--completion-instance",
+      "terminal:build-and-test",
+      "--project-dir",
+      proj,
+    ],
+    { encoding: "utf8", env: { ...process.env } },
+  );
+  if ((result.status ?? -1) !== 0) {
+    throw new Error(`Goal reconcile failed: ${result.stdout ?? ""}${result.stderr ?? ""}`);
+  }
+}
+
 /** Parse a JSONL audit buffer into records (blank lines skipped). */
 function auditRecords(content: string): Array<Record<string, unknown>> {
   return content
@@ -184,6 +226,7 @@ beforeAll(() => {
   runInit(PROJ);
   walkStage(PROJ, "requirements-analysis");
   walkStage(PROJ, "code-generation");
+  reconcileGoal(PROJ);
   walkStage(PROJ, "build-and-test");
 }, 60000);
 

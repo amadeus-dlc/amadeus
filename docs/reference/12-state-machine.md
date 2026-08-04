@@ -234,6 +234,15 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | Human-authorized unarchive transaction; emitted once per operation ID |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | Canonical audit-first execution lifecycle event set committed atomically |
 
+### Goal lifecycle
+
+| Event | Emitter | Notes |
+|---|---|---|
+| `GOAL_CHANGE_PROPOSED` | `tools/amadeus-goal.ts` | Records an immutable, unapproved Goal revision or legacy migration proposal |
+| `GOAL_REVISION_APPROVED` | `tools/amadeus-goal.ts` | Records direct human approval of the proposed Goal revision |
+| `GOAL_RECONCILED` | `tools/amadeus-goal.ts` | Records an evidence-bound reconciliation receipt for the current approved Goal |
+| `LEGACY_GOAL_MIGRATED` | `tools/amadeus-goal.ts` | Records direct human approval of a legacy Goal migration receipt |
+
 ### Phase lifecycle
 
 | Event | Emitter | Notes |
@@ -385,6 +394,14 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 | `MEMORY_EMPTY` | `tools/amadeus-runtime.ts` | Stage approval's runtime-graph compile found memory.md missing or with zero non-blank entries under §13's four headings |
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | The learning gate persisted a kept learning as a dated practice entry to `amadeus/spaces/<space>/memory/{project,team}.md` |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter |
+
+### Loop monitor
+
+The Loop Monitor commits delivery observations, cycle triggers, Judge reservations and results, closed-route applications, and latch transitions as one canonical event set. The per-clone Replay Index is a repairable projection of this audit source of truth.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
 
 ### Swarm
 

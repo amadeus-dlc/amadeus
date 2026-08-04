@@ -33,6 +33,9 @@
 ## Runtime State
 - **Revision Count**: 0
 - **Execution Projection Digest**: [latest required-projected canonical execution event-set digest]
+- **Goal ID**: [immutable Goal identity]
+- **Current Goal Revision**: [latest human-approved revision number]
+- **Current Goal Digest**: [SHA-256 digest of the approved revision]
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

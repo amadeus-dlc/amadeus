@@ -808,5 +808,11 @@
     "dirName": "260803-e-pi-nfrd-s13",
     "createdAt": "2026-08-03T15:16:29Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-GRG-RA-S13-C1",
+    "dirName": "260804-e-grg-ra-s13-c1",
+    "createdAt": "2026-08-04T04:03:45Z",
+    "status": "recorded"
   }
 ]

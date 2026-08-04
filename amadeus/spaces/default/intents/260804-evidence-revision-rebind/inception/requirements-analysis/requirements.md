@@ -92,11 +92,11 @@ PRが0件または複数、baseが`main`以外、未merge、`merge_commit_sha`�
 
 ### FR-3: 原子的・fail-closed な書込み
 
-再バインド操作は、全更新結果をメモリまたは隔離された一時領域で構築し、完全な bundle 検証が成功した場合にだけ3ファイルを同じ Git commit へ含めなければならない。
+再バインド操作は、全更新結果をメモリまたは隔離された一時領域で構築し、完全な bundle 検証が成功した場合にだけFR-1の3ファイルを原子的に適用しなければならない。pure rebindはこの3ファイルだけを変更する。reconciliationは、更新後bundleのdigestを記録するFR-6のledger 2ファイルも同じtransactionで進め、正確な5ファイルを1つのGit commitへ含める。
 
 - parse、schema、参照、digest、revision、I/O のいずれかが失敗した場合、push 可能な部分更新を残さない。
 - 検証前または検証失敗後に成功を報告しない。
-- 許可された3ファイル以外を変更しない。
+- pure rebindではFR-1の3ファイル以外、reconciliationではFR-6の5ファイル以外を変更しない。
 - force push、履歴改変、到達性検査の緩和を行わない。
 
 同じ target と同じ bundle に再実行した場合は byte-identical な no-op として exit 0 を返す。途中失敗後の再実行でも同じ最終結果へ収束しなければならない。
@@ -153,14 +153,14 @@ rebind／reconcile は UTF-8 のJSON objectを **stdoutへ1行だけ**出力し�
 
 自動収束が変更を必要とする場合は、次を満たす1 commit を main へ追加する。
 
-- 変更は FR-1 の3ファイルだけである。
+- 変更は FR-1 の3ファイルと、reconciliation により更新後 bundle のdigestを記録する `tests/no-silent-drop/baseline.json`／`tests/no-silent-drop/exemptions.json` の2ファイルを合わせた、正確な5ファイルだけである。pure rebind と squash identity proof の除外対象は FR-1 の3ファイルだけとし、この5ファイル許可を流用してはならない。
 - commit 前に focused validator と回帰試験が成功している。
 - commit message は Conventional Commits に従う。
 - commit は処理対象 landing SHA の子孫であり、non-fast-forward push を行わない。
 
 ### FR-7: ループと競合の防止
 
-rebind commit 自身が main push workflow を再起動した場合、binding revision は直前のlanding SHA、event revisionはrebind commit SHAとなる。両者が異なっていても、bundleがevent revisionに対して到達可能かつ整合済みで、差分がrebind対象の3 JSONだけならFR-2の第2項により no-op とし、rebind commit を連鎖生成してはならない。
+rebind commit 自身が main push workflow を再起動した場合、binding revision は直前のlanding SHA、event revisionはrebind commit SHAとなる。両者が異なっていても、bundleがevent revisionに対して到達可能かつ整合済みで、直前のreconciliation commitの差分がFR-6の正確な5ファイルだけならFR-2の第2項により no-op とし、rebind commit を連鎖生成してはならない。この停止条件は、pure rebind と squash identity proof が除外する派生3ファイルの境界を拡張しない。
 
 複数の main push が近接した場合は reconciliation を直列化し、push 直前に remote main tip を再検証する。処理中に main が先へ進んだ場合、古い landing SHA を target にした commit を pushせず、superseded として終了するか最新 event の処理へ委ねる。force、無条件 retry、stale checkout からの上書きを禁止する。
 
@@ -206,11 +206,11 @@ rebind commit 自身が main push workflow を再起動した場合、binding re
 | AC-3 | revision だけを置換する | validator が残る digest 不整合を拒否し、成功扱いしない |
 | AC-4 | artifact digest まで更新し receipt digest を更新しない | validator が receipt 不整合を拒否し、成功扱いしない |
 | AC-5 | 不正SHA、未解決SHA、非祖先SHAを指定する | 変更なし、型付き診断、非0終了 |
-| AC-6 | main に evidence 更新PRをスカッシュマージする | binding revision→最終PR headは3派生fileを除く全tree entryが一致し、最終PR head→landingはroot tree全体が一致することを証明した後だけ、bot が landing SHA へ rebind commit を追加する。landing run の単発赤は許容するが、最新 main tip の `CI Success` は緑へ収束する |
+| AC-6 | main に evidence 更新PRをスカッシュマージする | binding revision→最終PR headは3派生fileを除く全tree entryが一致し、最終PR head→landingはroot tree全体が一致することを証明した後だけ、bot が landing SHA へFR-6の正確な5ファイルからなるrebind commitを追加する。landing run の単発赤は許容するが、最新 main tip の `CI Success` は緑へ収束する |
 | AC-7 | rebind commit の push で workflow が再起動する | binding revisionは親landing SHAのままでもevent revisionに対するbundle検証が成功するため、JSON envelopeは `status=no-op`／`code=REBIND_NOOP`／`targetRevision=null`、追加commitなし |
 | AC-8 | 2つの main push が近接し古いrunのcheckoutがstaleになる | 古いrunは pushせず superseded、最新runだけが整合したfast-forward commitを作る |
 | AC-9 | GitHub App secret または push が失敗する | mainへの部分変更なし、job非成功、targetとerror codeが可視化される |
-| AC-10 | 3ファイル以外へ意図しない差分がある | commit/pushを拒否する |
+| AC-10 | pure rebindで派生3ファイル以外、またはreconciliation commitでFR-6の5ファイル以外へ意図しない差分がある | commit/pushを拒否する |
 | AC-11 | PR／手動文脈でpure rebindを実行する | clean checkoutかつtargetがHEADと完全一致する場合だけ変更を生成する。祖先SHA、dirty index、dirty working treeでは変更なし・非0終了 |
 | AC-12 | landing commitに関連するmerged PRを解決する | 全pageからbase=`main`・merged・merge SHA一致の一意なPRを解決し、binding→PR headの非派生全tree entry一致とPR head→landingのroot tree一致時だけrebindする。0件／複数／pagination不完了／祖先不一致／base drift／1 byte不一致はfail-closed |
 
@@ -260,7 +260,7 @@ main 着地後にのみ成立する AC-6 は、PR 内では fixture／workflow c
 2. **自動修復がCI失敗に依存すると起動不能**: reconciliation を `CI Success`／`t413` の成功依存から外し、main push で独立起動する。
 3. **bot commit が再びbotを起動する無限ループ**: event revisionとbinding revisionの等値ではなく、既存bindingのままevent revisionに対するbundle検証が成功することを停止条件とし、追加commitを作らない。
 4. **近接pushで古いSHAへ戻す競合**: 直列化と push 直前の remote tip 再検証により stale write を拒否する。
-5. **3ファイルの部分更新**: 全bundle検証後に同じcommitへまとめ、失敗時はpush可能な部分状態を残さない。
+5. **派生3ファイルとledger 2ファイルの部分更新**: 全bundle検証後にFR-6の正確な5ファイルを同じreconciliation commitへまとめ、失敗時はpush可能な部分状態を残さない。pure rebindは派生3ファイルだけを原子的に更新する。
 6. **同根のbootstrap欠陥が黙って残る**: 本 intent へ混在させず、受け入れ条件を持つ [Issue #2162](https://github.com/amadeus-dlc/amadeus/issues/2162) として追跡可能にした。
 7. **identityだけを書き換えて未試験コードへ証拠を付け替える危険**: binding revision→最終PR headは3派生台帳以外の全tree entry一致、最終PR head→landingは除外なしのroot tree一致を要求する。PR changed filesに現れないbase driftを含め、証明不能・不一致ならfail-closedとした。
 8. **機械可読出力の解釈差**: versioned JSON envelope、型、status、code、stdout/stderr境界、exit codeを固定した。

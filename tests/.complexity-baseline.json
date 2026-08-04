@@ -21,6 +21,12 @@
       "ccn": 23
     },
     {
+      "path": "packages/framework/core/tools/amadeus-goal.ts",
+      "name": "(anonymous)",
+      "ordinal": 8,
+      "ccn": 27
+    },
+    {
       "path": "packages/framework/core/tools/amadeus-jump.ts",
       "name": "handleExecute",
       "ordinal": 0,
@@ -106,12 +112,6 @@
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
-      "name": "(anonymous)",
-      "ordinal": 15,
-      "ccn": 30
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "handleDelegateRejection",
       "ordinal": 0,
       "ccn": 20
@@ -192,13 +192,7 @@
       "path": "scripts/package.ts",
       "name": "buildTree",
       "ordinal": 0,
-      "ccn": 22
-    },
-    {
-      "path": "scripts/package.ts",
-      "name": "checkHarness",
-      "ordinal": 0,
-      "ccn": 25
+      "ccn": 23
     }
   ]
 }

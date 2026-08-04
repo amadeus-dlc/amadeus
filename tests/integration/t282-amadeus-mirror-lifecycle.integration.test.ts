@@ -208,7 +208,7 @@ function fixture(): {
 }
 
 function completionProject(
-  config: unknown = { "auto-mirror": "prompt" },
+  config: unknown = { "intent-mirror": { github: { issue: { mode: "prompt" } } } },
 ): string {
   const root = mkdtempSync(join(tmpdir(), "t282-completion-"));
   roots.push(root);
@@ -272,7 +272,7 @@ function adapterFixture(
   mkdirSync(join(root, "amadeus"), { recursive: true });
   writeFileSync(
     join(root, "amadeus", "config.json"),
-    JSON.stringify({ "auto-mirror": "auto" }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }),
   );
   const real = createMirrorStateStorePorts({
     projectDir: root,
@@ -327,7 +327,20 @@ function boundaryInput(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
+        config: {
+          intentMirror: {
+            github: {
+              issue: { mode },
+              project: { targets: [] },
+            },
+          },
+          soloElection: { trigger: { mode: "manual" } },
+          finding: {
+            github: { issue: { creation: { mode: "prompt" } } },
+          },
+          swarm: { unit: { concurrency: { limit: 4 } } },
+          plugin: { activation: { names: [] } },
+        },
         sources: [],
       }),
     },
@@ -385,7 +398,7 @@ async function seedManualCreateReconciliationPrompt(
 ): Promise<string> {
   writeFileSync(
     join(fx.root, "amadeus", "config.json"),
-    JSON.stringify({ "auto-mirror": "prompt" }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
   );
   const pending = await runMirrorLifecycleBoundary(
     {
@@ -419,7 +432,7 @@ async function seedManualSyncReconciliationPrompt(
 ): Promise<string> {
   writeFileSync(
     join(fx.root, "amadeus", "config.json"),
-    JSON.stringify({ "auto-mirror": "prompt" }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
   );
   const created = await runMirrorLifecycleBoundary(
     {
@@ -473,7 +486,7 @@ describe("t282 workflow completion disposition", () => {
   });
 
   test("reports invalid mirror value and read-failure configuration branches", () => {
-    const invalidValue = completionProject({ "auto-mirror": true });
+    const invalidValue = completionProject({ "intent-mirror": { github: { issue: { mode: true } } } });
     expect(completionMirrorDisposition(invalidValue)).toMatchObject({
       kind: "error",
       message: expect.stringContaining(
@@ -486,7 +499,7 @@ describe("t282 workflow completion disposition", () => {
     mkdirSync(join(readFailure, "amadeus", "config.json"));
     expect(completionMirrorDisposition(readFailure)).toMatchObject({
       kind: "error",
-      message: expect.stringContaining("global (amadeus/config.json)"),
+      message: expect.stringContaining("project (amadeus/config.json)"),
     });
   });
 
@@ -495,11 +508,11 @@ describe("t282 workflow completion disposition", () => {
     ["prompt", { kind: "defer" }],
     ["auto", { kind: "defer" }],
   ] as const)(
-    "maps auto-mirror=%s to the completion disposition",
+    "maps intent-mirror.github.issue.mode=%s to the completion disposition",
     (mode, expected) => {
       expect(
         completionMirrorDisposition(
-          completionProject({ "auto-mirror": mode }),
+          completionProject({ "intent-mirror": { github: { issue: { mode: mode } } } }),
         ),
       ).toEqual(expected);
     },
@@ -803,7 +816,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": "prompt" }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
     );
     const exitCode = await runMirrorLifecycleMain(
       [
@@ -856,7 +869,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const suppressed = adapterFixture();
     writeFileSync(
       join(suppressed.root, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": "off" }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "off" } } } }),
     );
     const suppressedExit = await runMirrorLifecycleMain(
       [
@@ -931,7 +944,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": "prompt" }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const runtime = {
@@ -1131,7 +1144,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": "prompt" }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const runtime = {
@@ -1236,7 +1249,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": "prompt" }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const request = {

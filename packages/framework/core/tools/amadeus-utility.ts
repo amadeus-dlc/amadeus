@@ -156,6 +156,10 @@ import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
+import {
+  createInitialGoalLineage,
+  writeInitialGoalLineage,
+} from "./amadeus-goal-reconciliation.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -4235,9 +4239,16 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     // else the scope token. The full --arguments text still flows to the audit
     // Request + state Project fields below (verbose prose belongs there, not the dir).
     const slug = slugify(slugSource, 24);
-    birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
+    const born = birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
 
     const ts = isoTimestamp();
+    const initialGoal = createInitialGoalLineage({
+      intentId: born.uuid,
+      statement: description || scope,
+      scope,
+      createdAt: ts,
+    });
+    writeInitialGoalLineage(born.recordDir, initialGoal);
 
     // ---- Audit bootstrap + birth events (relocated from the old --init) ----
 
@@ -4311,7 +4322,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       Details: "Per-intent artifact dirs + space-level knowledge/ ensured",
     });
 
-    handleIntentBirthStateBuild(projectDir, flags, scope, ts, classifiedScan);
+    handleIntentBirthStateBuild(
+      projectDir,
+      flags,
+      scope,
+      ts,
+      classifiedScan,
+      initialGoal,
+    );
   });
 }
 
@@ -4350,6 +4368,7 @@ function handleIntentBirthStateBuild(
   scope: string,
   ts: string,
   classifiedScan: ClassifiedWorkspaceScan,
+  initialGoal: ReturnType<typeof createInitialGoalLineage>,
 ): void {
   const depthOverride = flags.depth;
   const testStrategyOverride = flags["test-strategy"];
@@ -4556,6 +4575,9 @@ function handleIntentBirthStateBuild(
 ## Runtime State
 - **Revision Count**: 0
 - **Execution Projection Digest**:
+- **Goal ID**: ${initialGoal.goalId}
+- **Current Goal Revision**: ${initialGoal.currentRevision}
+- **Current Goal Digest**: ${initialGoal.revisions[initialGoal.currentRevision].digest}
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

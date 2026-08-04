@@ -201,7 +201,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
   });
 
   // --- Test 3: t28 audit count unchanged BY THIS PR's discriminator reuse ---
-  test("3: framework event count includes the two lifecycle transaction events", () => {
+  test("3: framework event count includes Goal and Loop Monitor lifecycle events", () => {
     // The .sh read t28's pinned $TS_COUNT. Under milestone 4, t28 is now a
     // .test.ts (no `assert_eq N "$TS_COUNT"` line to grep), so pin the SAME
     // observable against the SOURCE OF TRUTH instead — VALID_EVENT_TYPES in
@@ -221,7 +221,9 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // plus GATE_AUTHORIZATION_SELECTED (#1466 solo standing-grant route receipt, +1) = 78,
     // plus SUBAGENT_STARTED (U4, the subagent interval's opening half, +1) = 79,
     // plus EXECUTION_EVENT_SET_COMMITTED (#1602 audit-first lifecycle, +1) = 80,
-    // plus UNIT_POOL_EVENT_SET_COMMITTED (#1919 fixed-width Unit pool, +1) = 81.
+    // plus UNIT_POOL_EVENT_SET_COMMITTED (#1919 fixed-width Unit pool, +1) = 81,
+    // plus LOOP_MONITOR_EVENT_SET_COMMITTED (durable Loop Monitor stream, +1) = 82,
+    // plus the four Goal Lifecycle events (+4) = 86.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -229,7 +231,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(81);
+    expect(count).toBe(86);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

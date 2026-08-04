@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 595,
+    "total": 600,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 81,
+      "audit": 86,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -31,8 +31,8 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 176,
-      "audit": 35,
+      "function": 177,
+      "audit": 40,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -219,6 +219,42 @@
     },
     {
       "unitClass": "audit",
+      "unitId": "GOAL_CHANGE_PROPOSED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GOAL_RECONCILED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GOAL_REVISION_APPROVED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
       "unitId": "GRANT_ISSUED",
       "minMechanism": "none",
       "coveredBy": [],
@@ -286,6 +322,30 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEGACY_GOAL_MIGRATED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t429-legacy-goal-migration.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LOOP_MONITOR_EVENT_SET_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t426-loop-monitor-replay-index.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -899,6 +959,14 @@
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
@@ -1574,8 +1642,13 @@
       "unitClass": "function",
       "unitId": "function:detectLeakedLocks",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3413,6 +3486,14 @@
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
@@ -6217,6 +6298,10 @@
       "unitId": "amadeus-state complete-workflow",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"

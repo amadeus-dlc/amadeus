@@ -74,7 +74,10 @@ function deps(options: {
 
 function writeSelection(plugins: readonly string[]): void {
   mkdirSync(join(project, "amadeus"), { recursive: true });
-  writeFileSync(join(project, "amadeus", "config.json"), `${JSON.stringify({ plugins }, null, 2)}\n`);
+  writeFileSync(
+    join(project, "amadeus", "config.json"),
+    `${JSON.stringify({ plugin: { activation: { names: plugins } } }, null, 2)}\n`,
+  );
 }
 
 function writeFixturePlugin(name: string): void {
@@ -102,7 +105,10 @@ afterEach(() => rmSync(project, { recursive: true, force: true }));
 
 describe("t415 project opt-in reconciliation", () => {
   test("doctor reports invalid project configuration", () => {
-    writeFileSync(join(project, "amadeus", "config.json"), JSON.stringify({ plugins: PLUGIN }));
+    writeFileSync(
+      join(project, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { activation: { names: PLUGIN } } }),
+    );
     const result = runPluginCli(["doctor", "--project-root", host], deps());
     expect(result.kind).toBe("doctor");
     if (result.kind !== "doctor") return;
@@ -281,9 +287,10 @@ describe("t415 project opt-in reconciliation", () => {
     expect(createNodeBackend(host).readComposition().plugins.has("alpha-plugin")).toBe(true);
     expect(createNodeBackend(host).readComposition().plugins.has("beta-plugin")).toBe(true);
     expect(applies).toEqual(new Map([["alpha-plugin", 1], ["beta-plugin", 2]]));
-    expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([
-      "alpha-plugin",
-      "beta-plugin",
-    ]);
+    expect(
+      JSON.parse(
+        readFileSync(join(project, "amadeus", "config.json"), "utf-8"),
+      ).plugin.activation.names,
+    ).toEqual(["alpha-plugin", "beta-plugin"]);
   });
 });

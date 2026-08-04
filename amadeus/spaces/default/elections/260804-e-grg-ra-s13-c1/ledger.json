@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GRG-RA-S13-C1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1の保存を支持する（GoA 1）。requirements.md は Goal を人間が所有し、オーケストレーターは current approved goal と aggregate output / evidence の照合責任を負うと明確に分離している。さらに FR-2 は AI の権限を逸脱検出と change proposal 作成に限定し、通常の stage 承認・一括委任・standing delegation・artifact 書換えでは Goal revision を有効化できず、専用ゲートでの人間の直接的な明示操作だけを許す。この分離は全 workflow 終端経路と今後の要件起草に再利用される横断的な判断規範であり、今回限りの設計詳細ではない。memory.md の Interpretation に発生根拠があり、既存の org/team/project memory を検索しても同義の Goal Ownership / Goal revision 規範はなく、org.md の Corrections は空で競合もないため、project.md ## Corrections への永続化に新規性と適合性がある。",
+      "submittedAt": "2026-08-04T04:05:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GRG-RA-S13-C1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Requirements Analysis で人間が明示確定した Q4 の回答、および requirements.md の原則・FR-2・FR-3が一貫して、ゴール変更権限を人間に限定し、オーケストレーターを逸脱検出・提案・照合の責任主体としている。通常のstage承認やstanding delegationによる黙示的なGoal revisionを防ぐ再利用可能なプロジェクト規律であり、Correctionsへの保存を全面的に支持する。",
+      "submittedAt": "2026-08-04T04:05:15Z"
+    }
+  ],
+  "late": []
+}

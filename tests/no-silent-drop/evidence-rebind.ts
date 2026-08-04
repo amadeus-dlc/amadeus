@@ -29,6 +29,10 @@ export const EVIDENCE_BUNDLE_PATHS = [
   EVIDENCE_REGISTRY_PATH,
   EVIDENCE_RUNS_PATH,
 ] as const;
+export const RECONCILE_LEDGER_PATHS = [
+  "tests/no-silent-drop/baseline.json",
+  "tests/no-silent-drop/exemptions.json",
+] as const;
 
 export type RebindCounts = {
   registryRevisions: number;
@@ -122,9 +126,9 @@ function sha256(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function readBundleBytes(repositoryRoot: string): Map<string, Buffer> {
+function readPathBytes(repositoryRoot: string, paths: readonly string[]): Map<string, Buffer> {
   const bytes = new Map<string, Buffer>();
-  for (const path of EVIDENCE_BUNDLE_PATHS) {
+  for (const path of paths) {
     try {
       bytes.set(path, readFileSync(join(repositoryRoot, path)));
     } catch (error) {
@@ -341,7 +345,7 @@ function retargetRegistry(
 
 export function buildReboundBundle(repositoryRoot: string, requestedTarget: string): ReboundBundle {
   const targetRevision = fullSha(requestedTarget, "target revision");
-  const originalBytes = readBundleBytes(repositoryRoot);
+  const originalBytes = readPathBytes(repositoryRoot, EVIDENCE_BUNDLE_PATHS);
   const registry = parseJson(originalBytes.get(EVIDENCE_REGISTRY_PATH) as Buffer, EVIDENCE_REGISTRY_PATH);
   const manifest = parseJson(originalBytes.get(EVIDENCE_MANIFEST_PATH) as Buffer, EVIDENCE_MANIFEST_PATH);
   const runsDocument = parseJson(originalBytes.get(EVIDENCE_RUNS_PATH) as Buffer, EVIDENCE_RUNS_PATH);
@@ -398,6 +402,35 @@ export function buildReboundBundle(repositoryRoot: string, requestedTarget: stri
         }
       : zeroCounts(),
     paths: [...paths].sort(),
+    originalBytes,
+    candidateBytes,
+  };
+}
+
+export function buildReconcileBundle(repositoryRoot: string, requestedTarget: string): ReboundBundle {
+  const evidenceBundle = buildReboundBundle(repositoryRoot, requestedTarget);
+  if (!evidenceBundle.changed) return evidenceBundle;
+  const ledgerBytes = readPathBytes(repositoryRoot, RECONCILE_LEDGER_PATHS);
+  const originalBytes = new Map([...evidenceBundle.originalBytes, ...ledgerBytes]);
+  const candidateBytes = new Map(evidenceBundle.candidateBytes);
+
+  const baselineBytes = ledgerBytes.get(RECONCILE_LEDGER_PATHS[0]) as Buffer;
+  const baseline = parseJson(baselineBytes, RECONCILE_LEDGER_PATHS[0]);
+  record(baseline.generatedFrom, `${RECONCILE_LEDGER_PATHS[0]}.generatedFrom`).previousDigest = sha256(baselineBytes);
+  candidateBytes.set(RECONCILE_LEDGER_PATHS[0], jsonBytes(baseline));
+
+  const exemptionsBytes = ledgerBytes.get(RECONCILE_LEDGER_PATHS[1]) as Buffer;
+  const exemptions = parseJson(exemptionsBytes, RECONCILE_LEDGER_PATHS[1]);
+  exemptions.previousDigest = sha256(exemptionsBytes);
+  candidateBytes.set(RECONCILE_LEDGER_PATHS[1], jsonBytes(exemptions));
+
+  const paths = [...EVIDENCE_BUNDLE_PATHS, ...RECONCILE_LEDGER_PATHS]
+    .filter((path) => !originalBytes.get(path)?.equals(candidateBytes.get(path) as Buffer))
+    .sort();
+  return {
+    ...evidenceBundle,
+    changed: paths.length > 0,
+    paths,
     originalBytes,
     candidateBytes,
   };

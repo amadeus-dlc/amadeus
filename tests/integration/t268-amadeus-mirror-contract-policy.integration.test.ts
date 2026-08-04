@@ -61,7 +61,9 @@ function importSources(file: string): string[] {
 describe("t268 one-way C0->C1->C2 flow", () => {
   test("a resolved lifecycle mode drives a policy decision", () => {
     const root = project();
-    writeConfig(globalPath(root), { "auto-mirror": "auto" });
+    writeConfig(globalPath(root), {
+      "intent-mirror": { github: { issue: { mode: "auto" } } },
+    });
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind !== "resolved") return;
@@ -72,7 +74,7 @@ describe("t268 one-way C0->C1->C2 flow", () => {
     );
     const decision = decideMirrorAction({
       kind: "lifecycle",
-      mode: outcome.config.autoMirror,
+      mode: outcome.config.intentMirror.github.issue.mode,
       event,
       state: {
         revision: 1,
@@ -91,7 +93,7 @@ describe("t268 filesystem security", () => {
   test("a symlink escaping the workspace root is a read failure", () => {
     const root = project();
     const outside = join(root, "outside.json");
-    writeFileSync(outside, JSON.stringify({ "auto-mirror": "auto" }), "utf-8");
+    writeFileSync(outside, JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }), "utf-8");
     mkdirSync(dirname(globalPath(root)), { recursive: true });
     symlinkSync(outside, globalPath(root));
     const outcome = resolveAmadeusConfig(root, INTENT);
@@ -106,7 +108,7 @@ describe("t268 filesystem security", () => {
   test("a config file above the size limit is a read failure", () => {
     const root = project();
     mkdirSync(dirname(globalPath(root)), { recursive: true });
-    const oversize = `{"auto-mirror":"auto"}${" ".repeat(1024 * 1024 + 16)}`;
+    const oversize = `{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}${" ".repeat(1024 * 1024 + 16)}`;
     writeFileSync(globalPath(root), oversize, "utf-8");
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
@@ -119,7 +121,7 @@ describe("t268 filesystem security", () => {
 
   test.skipIf(isRoot)("an unreadable config file is a read failure", () => {
     const root = project();
-    writeConfig(globalPath(root), { "auto-mirror": "auto" });
+    writeConfig(globalPath(root), { "intent-mirror": { github: { issue: { mode: "auto" } } } });
     chmodSync(globalPath(root), 0o000);
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");

@@ -547,8 +547,8 @@ function initializeBoundary(
   return {
     kind: "ready",
     state,
-    mode: config.config.autoMirror,
-    projects: config.config.projects,
+    mode: config.config.intentMirror.github.issue.mode,
+    projects: config.config.intentMirror.github.project.targets,
     fallbackEvent,
   };
 }

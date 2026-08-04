@@ -32,10 +32,17 @@ describe("t415 project plugin selection", () => {
       message: expect.stringContaining("configuration is not valid JSON"),
     });
 
-    writeFileSync(config, JSON.stringify({ plugins: "formal-model-check" }));
+    writeFileSync(
+      config,
+      JSON.stringify({
+        plugin: { activation: { names: "formal-model-check" } },
+      }),
+    );
     expect(resolvePluginSelection(host)).toMatchObject({
       kind: "invalid",
-      message: expect.stringContaining("plugins unique array of valid plugin names"),
+      message: expect.stringContaining(
+        "plugin.activation.names unique array of valid plugin names",
+      ),
     });
   });
 

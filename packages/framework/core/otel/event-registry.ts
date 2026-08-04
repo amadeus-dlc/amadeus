@@ -1,6 +1,6 @@
 // event-registry.ts — the typed Event Registry (FR-EVT-1).
 //
-// The canonical half of the registry covers the full 81-event audit
+// The canonical half of the registry covers the full 86-event audit
 // vocabulary (#1672; VALID_EVENT_TYPES in tools/amadeus-audit.ts) — every
 // canonical name maps 1:1 onto the EXISTING v1 audit event vocabulary so the
 // current readers understand the records unchanged. The telemetry half
@@ -14,7 +14,7 @@
 //      sites (BR-2);
 //   2. unit test — tests/unit/event-registry-drift.test.ts asserts the
 //      four-set equality (state-machine references == canonical registry ==
-//      exporter accept set == journal reader decode set) with the 81
+//      exporter accept set == journal reader decode set) with the 86
 //      cardinality pinned, so vacuous equality fails;
 //   3. sensor — sensors/amadeus-event-registry-drift.md runs the same
 //      extraction at gate time.
@@ -24,7 +24,7 @@
 
 export type Durability = "canonical" | "telemetry";
 
-// The 19 vocabulary categories of audit-format.md's Event Registry, plus
+// The 21 vocabulary categories of audit-format.md's Event Registry, plus
 // "telemetry" for events that never reach the journal. The category lets the
 // drift guard catch misclassification (a state-lifecycle event demoted to
 // telemetry).
@@ -48,6 +48,8 @@ export type EventCategory =
   | "sensor"
   | "learning"
   | "swarm"
+  | "goal-lifecycle"
+  | "loop-monitor"
   | "telemetry";
 
 export type EventDef = {
@@ -74,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 81;
+export const EXPECTED_CANONICAL_COUNT = 86;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -99,7 +101,18 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Scope", "Details"],
-    optionalAttributes: ["Reason", "Completion Instance"],
+    optionalAttributes: [
+      "Reason",
+      "Completion Instance",
+      "Goal Id",
+      "Goal Revision",
+      "Goal Digest",
+      "Goal Receipt Id",
+      "Goal Receipt Digest",
+      "Goal Verdict",
+      "Goal Evidence Count",
+      "Goal Human Ruling",
+    ],
     schemaVersion: 1,
   },
   {
@@ -118,6 +131,43 @@ export const REGISTERED_EVENTS = [
     category: "workflow-lifecycle",
     requiredAttributes: [],
     optionalAttributes: ["Timestamp"],
+    schemaVersion: 1,
+  },
+  // --- Goal Lifecycle (4) ---
+  {
+    name: "amadeus.goal.change.proposed",
+    auditEvent: "GOAL_CHANGE_PROPOSED",
+    durability: "canonical",
+    category: "goal-lifecycle",
+    requiredAttributes: ["Intent", "Proposal Id", "Proposal Digest"],
+    optionalAttributes: ["Goal Id", "Parent Revision"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.goal.revision.approved",
+    auditEvent: "GOAL_REVISION_APPROVED",
+    durability: "canonical",
+    category: "goal-lifecycle",
+    requiredAttributes: ["Intent", "Goal Id", "Goal Revision", "Goal Digest", "Proposal Id", "Human Turn Timestamp"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.goal.reconciled",
+    auditEvent: "GOAL_RECONCILED",
+    durability: "canonical",
+    category: "goal-lifecycle",
+    requiredAttributes: ["Intent", "Goal Id", "Goal Revision", "Goal Digest", "Goal Receipt Id", "Goal Receipt Digest", "Goal Verdict", "Completion Instance"],
+    optionalAttributes: ["Goal Human Ruling"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.goal.legacy.migrated",
+    auditEvent: "LEGACY_GOAL_MIGRATED",
+    durability: "canonical",
+    category: "goal-lifecycle",
+    requiredAttributes: ["Intent", "Goal Id", "Goal Revision", "Goal Digest", "Goal Receipt Id", "Human Turn Timestamp"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -144,6 +194,15 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Root Operation Id", "Event Set Digest", "Event Set"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.loop_monitor.event_set.committed",
+    auditEvent: "LOOP_MONITOR_EVENT_SET_COMMITTED",
+    durability: "canonical",
+    category: "loop-monitor",
+    requiredAttributes: ["Partition Key", "Event Set Id", "Event Set"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

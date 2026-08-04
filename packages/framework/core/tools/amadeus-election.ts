@@ -63,7 +63,7 @@ import {
 } from "./amadeus-config.ts";
 
 const USAGE =
-  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger explicit|auto-solo] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
+  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger manual|auto] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
 
 // Every actionable directive names the verb to execute and the report result
 // that commits the transition (FR-0: the caller forwards, never maps). verb
@@ -346,8 +346,8 @@ export function handleTriggeredOpen(
   filePath: string,
   trigger: string,
 ): number {
-  if (trigger === "explicit") return handleOpen(root, filePath);
-  if (trigger !== "auto-solo") {
+  if (trigger === "manual") return handleOpen(root, filePath);
+  if (trigger !== "auto") {
     return fail(`open: unknown trigger "${trigger}"`);
   }
   const resolved = resolveAmadeusConfig(projectDir);
@@ -356,8 +356,8 @@ export function handleTriggeredOpen(
       `open: invalid configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,
     );
   }
-  if (!resolved.config.autoSoloElection) {
-    out({ opened: null, reason: "auto-solo-election-disabled" });
+  if (resolved.config.soloElection.trigger.mode !== "auto") {
+    out({ opened: null, reason: "solo-election-manual-trigger-required" });
     return 0;
   }
   return handleOpen(root, filePath);
@@ -662,7 +662,7 @@ const VERBS: Record<
   open: (root, a, projectDir) =>
     a.file === null
       ? usageFail()
-      : handleTriggeredOpen(projectDir, root, a.file, a.trigger ?? "explicit"),
+      : handleTriggeredOpen(projectDir, root, a.file, a.trigger ?? "manual"),
   next: (root, a) => (a.electionId === null ? usageFail() : handleNext(root, a.electionId)),
   report: (root, a) =>
     a.electionId === null || a.result === null

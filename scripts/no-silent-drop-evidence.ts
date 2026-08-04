@@ -2,6 +2,7 @@
 import {
   type AppliedBundle,
   applyReboundBundle,
+  buildReconcileBundle,
   buildReboundBundle,
   errorEnvelope,
   EvidenceRebindError,
@@ -90,7 +91,7 @@ function runPureRebind(command: RebindCommand, adapter: NoSilentDropEvidenceAdap
       });
     }
     applied = applyReboundBundle(adapter.repositoryRoot, bundle);
-    adapter.assertOnlyEvidenceChanges(bundle.paths);
+    adapter.assertOnlyExpectedChanges(bundle.paths);
     return successEnvelope({
       status: "changed",
       code: "REBIND_OK",
@@ -115,7 +116,7 @@ function rollbackOrReplaceError(
   if (applied === null) return originalError;
   const rollbackProblems = [
     recoveryFailure(() => rollbackAppliedBundle(adapter.repositoryRoot, applied)),
-    recoveryFailure(() => adapter.clearEvidenceIndex(applied.paths)),
+    recoveryFailure(() => adapter.clearReconcileIndex(applied.paths)),
   ].filter((problem): problem is string => problem !== null);
   if (rollbackProblems.length > 0) {
     return new EvidenceRebindError(
@@ -135,6 +136,22 @@ function recoveryFailure(recover: () => void): string | null {
   }
 }
 
+function rollbackCommittedOrReplaceError(
+  adapter: NoSilentDropEvidenceAdapter,
+  eventRevision: string,
+  originalError: unknown,
+): unknown {
+  if (originalError instanceof EvidenceRebindError && originalError.code === "REBIND_PUSH_OUTCOME_UNKNOWN") {
+    return originalError;
+  }
+  const rollbackProblem = recoveryFailure(() => adapter.rollbackReconcileCommit(eventRevision));
+  if (rollbackProblem === null) return originalError;
+  return new EvidenceRebindError(
+    "REBIND_ROLLBACK_FAILED",
+    `operation failed and committed rollback failed: ${rollbackProblem}`,
+  );
+}
+
 function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAdapter): RebindEnvelope {
   let bindingRevision: string | null = null;
   let applied: AppliedBundle | null = null;
@@ -151,7 +168,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     adapter.proveIdentityOnlyRebind(command.eventRevision, bindingRevision, command.repository);
-    const bundle = buildReboundBundle(adapter.repositoryRoot, command.eventRevision);
+    const bundle = buildReconcileBundle(adapter.repositoryRoot, command.eventRevision);
     if (bundle.bindingRevision !== bindingRevision) {
       throw new EvidenceRebindError("REBIND_BINDING_CHANGED", "binding revision changed during reconciliation");
     }
@@ -164,8 +181,8 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     applied = applyReboundBundle(adapter.repositoryRoot, bundle);
-    adapter.assertOnlyEvidenceChanges(bundle.paths);
-    adapter.runFocusedValidation();
+    adapter.assertOnlyExpectedChanges(bundle.paths);
+    adapter.runFocusedValidation(command.eventRevision);
     if (adapter.remoteMainTip() !== command.eventRevision) {
       rollbackAppliedBundle(adapter.repositoryRoot, applied);
       applied = null;
@@ -177,9 +194,10 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
         targetRevision: command.eventRevision,
       });
     }
-    adapter.commitEvidenceChanges(bundle.paths);
+    adapter.commitReconcileChanges(bundle.paths);
     committed = true;
     if (adapter.remoteMainTip() !== command.eventRevision) {
+      adapter.rollbackReconcileCommit(command.eventRevision);
       return successEnvelope({
         status: "superseded",
         code: "REBIND_SUPERSEDED",
@@ -189,6 +207,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     if (adapter.pushFastForward(command.eventRevision) === "superseded") {
+      adapter.rollbackReconcileCommit(command.eventRevision);
       return successEnvelope({
         status: "superseded",
         code: "REBIND_SUPERSEDED",
@@ -208,7 +227,9 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
     });
   } catch (error) {
     return errorEnvelope(
-      committed ? error : rollbackOrReplaceError(adapter, applied, error),
+      committed
+        ? rollbackCommittedOrReplaceError(adapter, command.eventRevision, error)
+        : rollbackOrReplaceError(adapter, applied, error),
       {
         eventRevision: command.eventRevision,
         bindingRevision,

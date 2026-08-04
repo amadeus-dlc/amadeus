@@ -22,7 +22,7 @@
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・Release Asset 配布・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、`bash tests/run-tests.sh --ci` に加え、Project Coverage Gate の固定絶対下限と merge-base 相対許容低下幅の両条件、Patch Coverage Gate、plugin-conformance-e2e を含む現行のブロッキング集合全体をすべて満たすこととする。Project Coverage Gate の絶対条件と相対条件は代替関係ではなく AND 条件であり、片方だけの通過を coverage 達成と扱わない。ユーザー可視の契約(CLI 契約・Release Asset 配布・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
@@ -93,8 +93,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
 - NEVER walking-skeleton stance が有効なとき、standing grant に walking-skeleton gate を認可させない。 (affirmed 2026-07-25)
 - NEVER 想定内の grant 失効・取消・scope 不一致 fallback を、`ERROR_LOGGED` を発生させる fatal error 経路へ流さない。 (affirmed 2026-07-25)
-- NEVER accept legacy boolean values for `auto-mirror`. (affirmed 2026-07-24)
-- NEVER extend `auto-mirror: auto` consent to Pull Request merge, release, publish, deployment, or unrelated external actions. (affirmed 2026-07-24)
+- NEVER accept boolean values for `intent-mirror.github.issue.mode`. (affirmed 2026-07-24)
+- NEVER extend `intent-mirror.github.issue.mode = auto` consent to Pull Request merge, release, publish, deployment, or unrelated external actions. (affirmed 2026-07-24)
 - NEVER automatically edit or close an Issue whose Amadeus ownership provenance is absent or inconsistent. (affirmed 2026-07-24)
 - NEVER treat a GitHub mirror failure as permission to silently lose synchronization state or permanently stop the AI-DLC workflow. (affirmed 2026-07-24)
 - NEVER add a backward-compatibility shim, generic tracker transport, scheduler, daemon, or unrelated large-module refactor for this Intent. (affirmed 2026-07-24)
@@ -117,7 +117,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS harness 専用ツールを `packages/framework/core/tools/` に置かない — 全6ハーネス manifest の coreDirs が tools を投影するため構造的に全ハーネス dist へ漏出する。harness 専用は `packages/framework/harness/<name>/tools/`+harnessFiles 投影に置く(core 中立層/harness 表層境界の具体化。E-770-CGBT 2026-07-18 採用 3/3 — e4 提案+e1 GoA1+e3 GoA2 留保=小型1行統合。票: 初回配信 11:42Z 頃 → e3 11:43:21Z(0件)→ e4 11:44:07Z(本候補提案)→ e1 11:44:22Z(GoA3 留保)→ 追加ラウンド配信 11:44Z 台 → e1 11:44:55Z(採用 GoA1)→ e3 11:45:06Z(採用 GoA2)→ 開票 11:45Z 台。実測根拠: E-770-CG2 裁定(reviewer が core/tools 配置の漏出を捕捉、manifest 6面 :26-:39 実測)+#1212 実装(harnessFiles 化で漏出0)) (learned 2026-07-18) <!-- cid:code-generation:harness-tools-placement -->
 - ALWAYS active scope が `self-feature` なら、既存コードを変更する場合も最初の Construction Bolt に walking-skeleton gate を維持する。 (affirmed 2026-07-25)
 - ALWAYS 認可に関わる変更を directive contract、state transition、audit invariant、race、team-mode regression、harness drift のテストで検証する。 (affirmed 2026-07-25)
-- ALWAYS treat an explicit `auto-mirror: auto` value as standing consent only for the active Intent's bounded mirror create, sync, and provenance-verified close operations. (affirmed 2026-07-24)
+- ALWAYS 明示的な `intent-mirror.github.issue.mode = auto` は、active Intent に限定した mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への standing consent として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(revised 2026-08-04; implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
 - ALWAYS keep the Intent record as the source of truth and synchronize the GitHub mirror in one direction from record to Issue. (affirmed 2026-07-24)
 - ALWAYS make mirror retries idempotent across partial GitHub success and local-state write failure. (affirmed 2026-07-24)
 - ALWAYS verify Amadeus ownership provenance and workflow landing before automatically closing a mirror Issue. (affirmed 2026-07-24)
@@ -312,6 +312,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - cid:code-generation:conductor-sync-subagent-collection への追補(E-SIRA-S13 採用 2-0 — 両票 GoA 2、留保転記 = 対象ハーネス名と実測日を本文へ焼き込み週次蒸留で退役判定できる形にする): **Claude Code(実測 2026-08-03)では、Agent ツールに run_in_background: false を指定してもサブエージェントが非同期起動しうる。** 既存則が名指しする同期回収手段(TaskOutput block=true)はこの経路を塞がず、ターンが終了して Stop hook が発火する。conductor は起動直後に、サブエージェント transcript(JSONL)を有界ループで監視する前景待機へ切り替える — 完了条件は最終行の role/type が assistant:text になること、退避条件はサイズが一定時間不変であること。監視に stat -f%z を使わない(transcript は symlink 経由で参照され空文字を返し、待機ロジックが無音で機能しなくなる)— wc -c を使う。回収後は transcript 全体を読まず、最終の assistant text メッセージのみを抽出して消費する(全文読み込みは conductor のコンテキストを溢れさせる)。ハーネス挙動は世代交代しうるため、次回以降の週次蒸留で本追補の現存を再判定する (learned 2026-08-03) <!-- cid:requirements-analysis:c4-agent-async-despite-sync-flag -->
 - cid:requirements-analysis:citation-reservation-preservation の鏡像面(E-SIRA-S13 採用 2-0 — 両票 GoA 2): 既存則は上流の**留保**を落とさず転記することを縛るが、その対称面 — **上流成果物の留保なき全称断定**(『いかなる X も必ず Y を壊す』等)を、下流が無検証のまま受け入れ基準へ昇格させないこと — は未被覆だった。下流ステージは断定の成立条件を分解し、未実測の部分を特定したうえで、受け入れ基準を検証可能な形へ置き換える: 『壊れること(赤になること)』を合格条件にせず『改めるべき意味論を実際に改めたこと』を合格条件にし、赤/緑の実測は実装段の記録要求として残す。上流がその断定について権威ある一次証拠を示している場合はこの限りでない。既存の関連則は自成果物における全称命題の回避(モジュール別に保証機構を書く)を定めるが、上流の全称断定を受理する側の規律は別面である (learned 2026-08-03) <!-- cid:requirements-analysis:c7-upstream-universal-claim-unverified -->
 - Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する (learned 2026-08-03) <!-- cid:application-design:c1-pi-harness -->
+- Goal Ownershipを人間のゴール所有権とオーケストレーターの照合責任に分離する。AIは逸脱検出とchange proposal作成までに限定し、通常のstage承認、一括委任、standing delegationでGoal revisionを有効化できない。人間が変更を承認しない場合は、実装をcurrent approved goalへ戻すリカバリーを保つ。 (learned 2026-08-04) <!-- cid:requirements-analysis:c1-goal-ownership -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->

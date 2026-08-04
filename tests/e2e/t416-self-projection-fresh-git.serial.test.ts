@@ -61,7 +61,12 @@ function freshProjectedCheckout(selected = true): string {
   cpSync(join(REPO_ROOT, "dist", "codex", ".agents"), join(root, ".agents"), { recursive: true });
   mkdirSync(join(root, "amadeus"), { recursive: true });
   if (selected) cpSync(join(REPO_ROOT, "amadeus", "config.json"), join(root, "amadeus", "config.json"));
-  else writeFileSync(join(root, "amadeus", "config.json"), `${JSON.stringify({ plugins: [] }, null, 2)}\n`);
+  else {
+    writeFileSync(
+      join(root, "amadeus", "config.json"),
+      `${JSON.stringify({ plugin: { activation: { names: [] } } }, null, 2)}\n`,
+    );
+  }
   cpSync(join(REPO_ROOT, "amadeus", "spaces", "default", "memory"), join(root, "amadeus", "spaces", "default", "memory"), {
     recursive: true,
   });

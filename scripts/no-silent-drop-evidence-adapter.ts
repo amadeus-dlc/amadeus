@@ -22,6 +22,7 @@ export type CommandRunner = {
 };
 
 export const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
+const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
 export const systemCommandRunner: CommandRunner = {
   run(command, options = {}) {
@@ -31,6 +32,7 @@ export const systemCommandRunner: CommandRunner = {
       encoding: "utf8",
       env: process.env,
       timeout: timeoutMs,
+      maxBuffer: COMMAND_MAX_BUFFER_BYTES,
     });
     const timedOut = result.error !== undefined &&
       "code" in result.error &&
@@ -334,7 +336,7 @@ export class NoSilentDropEvidenceAdapter {
     return tree;
   }
 
-  assertOnlyEvidenceChanges(expectedPaths: readonly string[]): void {
+  assertOnlyExpectedChanges(expectedPaths: readonly string[]): void {
     const status = this.run(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"]);
     if (status.status !== 0) {
       throw new EvidenceRebindError("REBIND_GIT_FAILED", `cannot inspect worktree changes: ${commandDetail(status)}`);
@@ -348,11 +350,11 @@ export class NoSilentDropEvidenceAdapter {
     }).sort();
     const expected = [...expectedPaths].sort();
     if (JSON.stringify(paths) !== JSON.stringify(expected)) {
-      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "working tree changes are not exactly the three evidence files");
+      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "working tree changes do not match the operation allowlist");
     }
   }
 
-  runFocusedValidation(): void {
+  runFocusedValidation(eventRevision: string): void {
     const result = this.run([
       "bun",
       "test",
@@ -362,16 +364,26 @@ export class NoSilentDropEvidenceAdapter {
     if (result.status !== 0) {
       throw new EvidenceRebindError("REBIND_FOCUSED_VALIDATION_FAILED", `t413 failed: ${commandDetail(result)}`);
     }
+    const gate = this.run([
+      "bun",
+      "tests/no-silent-drop-gate.ts",
+      "check",
+      "--base-revision",
+      eventRevision,
+    ]);
+    if (gate.status !== 0) {
+      throw new EvidenceRebindError("REBIND_FOCUSED_VALIDATION_FAILED", `no-silent-drop failed: ${commandDetail(gate)}`);
+    }
   }
 
-  commitEvidenceChanges(paths: readonly string[]): string {
+  commitReconcileChanges(paths: readonly string[]): string {
     this.mustRun(["git", "add", "--", ...paths], "REBIND_COMMIT_FAILED");
     const staged = this.mustRun(["git", "diff", "--cached", "--name-only", "-z"], "REBIND_COMMIT_FAILED")
       .split("\0")
       .filter(Boolean)
       .sort();
     if (JSON.stringify(staged) !== JSON.stringify([...paths].sort())) {
-      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "staged changes are not exactly the evidence allowlist");
+      throw new EvidenceRebindError("REBIND_UNEXPECTED_CHANGE", "staged changes do not match the reconcile allowlist");
     }
     this.mustRun(
       ["git", "commit", "-m", "fix(no-silent-drop): rebind adoption evidence"],
@@ -380,7 +392,27 @@ export class NoSilentDropEvidenceAdapter {
     return this.headRevision();
   }
 
-  clearEvidenceIndex(paths: readonly string[]): void {
+  rollbackReconcileCommit(eventRevision: string): void {
+    this.assertClean();
+    const head = this.headRevision();
+    const ancestry = this.mustRun(
+      ["git", "rev-list", "--parents", "-n", "1", head],
+      "REBIND_ROLLBACK_FAILED",
+    ).split(/\s+/);
+    if (ancestry.length !== 2 || ancestry[0] !== head || ancestry[1] !== eventRevision) {
+      throw new EvidenceRebindError(
+        "REBIND_ROLLBACK_FAILED",
+        "reconcile commit is not a direct child of the event revision",
+      );
+    }
+    this.mustRun(["git", "reset", "--hard", eventRevision], "REBIND_ROLLBACK_FAILED");
+    if (this.headRevision() !== eventRevision) {
+      throw new EvidenceRebindError("REBIND_ROLLBACK_FAILED", "reconcile commit rollback did not restore event HEAD");
+    }
+    this.assertClean();
+  }
+
+  clearReconcileIndex(paths: readonly string[]): void {
     const result = this.run(["git", "restore", "--staged", "--", ...paths]);
     if (result.status !== 0) {
       throw new EvidenceRebindError(
@@ -403,9 +435,27 @@ export class NoSilentDropEvidenceAdapter {
   }
 
   pushFastForward(expectedRemoteTip: string): "pushed" | "superseded" {
-    const result = this.run(["git", "push", "origin", "HEAD:refs/heads/main"]);
+    let result: CommandResult;
+    try {
+      result = this.run(["git", "push", "origin", "HEAD:refs/heads/main"]);
+    } catch (error) {
+      throw new EvidenceRebindError(
+        "REBIND_PUSH_OUTCOME_UNKNOWN",
+        `push outcome could not be observed; reconcile commit retained; verify origin/main before retrying from the event revision: ${String(error)}`,
+      );
+    }
     if (result.status !== 0) {
-      if (this.remoteMainTip() !== expectedRemoteTip) return "superseded";
+      let remoteTip: string;
+      try {
+        remoteTip = this.remoteMainTip();
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new EvidenceRebindError(
+          "REBIND_PUSH_OUTCOME_UNKNOWN",
+          `push failed and remote state could not be confirmed; reconcile commit retained; verify origin/main before retrying from the event revision: ${detail}`,
+        );
+      }
+      if (remoteTip !== expectedRemoteTip) return "superseded";
       throw new EvidenceRebindError("REBIND_PUSH_FAILED", `fast-forward push failed: ${commandDetail(result)}`);
     }
     return "pushed";
