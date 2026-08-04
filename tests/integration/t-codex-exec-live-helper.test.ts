@@ -76,6 +76,10 @@ describe("codex exec live E2E helper", () => {
         ...input,
         env: { ...input.env, PATH: "/path/that/does/not/exist" },
       })).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=codex)");
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { AMADEUS_CODEX_EXEC_LIVE: "1", PATH: binDir },
+      })).toBe("set OPENAI_API_KEY to provide an isolated Codex credential lease");
     } finally {
       rmSync(binDir, { recursive: true, force: true });
     }

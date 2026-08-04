@@ -2923,39 +2923,6 @@
   {
     "file": "tests/harness/codex-exec-live.ts",
     "selector": {
-      "function": "codexExecLiveRequirementsSkipReason",
-      "fingerprint": "sha256:6c170a04f9f6bef5aae25bce450360812ef2e5f440a5050734cb80e10db72811",
-      "anchorLines": 18,
-      "targetLines": "1-18"
-    },
-    "reason": "Codex version and auth preflight arms are covered by t-codex-exec-live-gate for the GitHub Actions skip path; local codex/auth probe arms require AMADEUS_CODEX_EXEC_LIVE and are disabled on CI.",
-    "expiry": "remove when the requirements helper receives an injectable probe port or live E2E runs on CI"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "installCodexExecAuth",
-      "fingerprint": "sha256:60c96f959b6fad2cf4ad7a7cec660a26d9a95c885b0cc771782de7659ccb8e52",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Missing-auth fail-closed throw in installCodexExecAuth; success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when auth installation is injectable for in-process failure injection"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "setupCodexExecHome",
-      "fingerprint": "sha256:1de9bf3bc70cc3c159d29427927f3ce19ceb28c603c5cfecff581a85f6b1bbfc",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "setupCodexExecHome cleanup on auth-install failure; the success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when home setup receives an injectable filesystem port"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
       "function": "writeCodexExecHomeConfig",
       "fingerprint": "sha256:8b5f1ceb063464006d6bfb284c6bf661f47a0a2701c4d1ab52ccb00a6f2fb3bb",
       "anchorLines": 4,
