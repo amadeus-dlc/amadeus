@@ -136,6 +136,22 @@ function recoveryFailure(recover: () => void): string | null {
   }
 }
 
+function rollbackCommittedOrReplaceError(
+  adapter: NoSilentDropEvidenceAdapter,
+  eventRevision: string,
+  originalError: unknown,
+): unknown {
+  if (originalError instanceof EvidenceRebindError && originalError.code === "REBIND_PUSH_OUTCOME_UNKNOWN") {
+    return originalError;
+  }
+  const rollbackProblem = recoveryFailure(() => adapter.rollbackReconcileCommit(eventRevision));
+  if (rollbackProblem === null) return originalError;
+  return new EvidenceRebindError(
+    "REBIND_ROLLBACK_FAILED",
+    `operation failed and committed rollback failed: ${rollbackProblem}`,
+  );
+}
+
 function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAdapter): RebindEnvelope {
   let bindingRevision: string | null = null;
   let applied: AppliedBundle | null = null;
@@ -211,7 +227,9 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
     });
   } catch (error) {
     return errorEnvelope(
-      committed ? error : rollbackOrReplaceError(adapter, applied, error),
+      committed
+        ? rollbackCommittedOrReplaceError(adapter, command.eventRevision, error)
+        : rollbackOrReplaceError(adapter, applied, error),
       {
         eventRevision: command.eventRevision,
         bindingRevision,

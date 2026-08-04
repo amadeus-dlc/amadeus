@@ -435,9 +435,27 @@ export class NoSilentDropEvidenceAdapter {
   }
 
   pushFastForward(expectedRemoteTip: string): "pushed" | "superseded" {
-    const result = this.run(["git", "push", "origin", "HEAD:refs/heads/main"]);
+    let result: CommandResult;
+    try {
+      result = this.run(["git", "push", "origin", "HEAD:refs/heads/main"]);
+    } catch (error) {
+      throw new EvidenceRebindError(
+        "REBIND_PUSH_OUTCOME_UNKNOWN",
+        `push outcome could not be observed; reconcile commit retained; verify origin/main before retrying from the event revision: ${String(error)}`,
+      );
+    }
     if (result.status !== 0) {
-      if (this.remoteMainTip() !== expectedRemoteTip) return "superseded";
+      let remoteTip: string;
+      try {
+        remoteTip = this.remoteMainTip();
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new EvidenceRebindError(
+          "REBIND_PUSH_OUTCOME_UNKNOWN",
+          `push failed and remote state could not be confirmed; reconcile commit retained; verify origin/main before retrying from the event revision: ${detail}`,
+        );
+      }
+      if (remoteTip !== expectedRemoteTip) return "superseded";
       throw new EvidenceRebindError("REBIND_PUSH_FAILED", `fast-forward push failed: ${commandDetail(result)}`);
     }
     return "pushed";

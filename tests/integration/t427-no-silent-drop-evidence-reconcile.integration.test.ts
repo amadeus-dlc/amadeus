@@ -543,6 +543,8 @@ describe("t427 squash identity proof and main convergence", () => {
 
   test("keeps remote main unchanged when the fast-forward push fails", () => {
     const fixture = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
     const result = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -552,6 +554,54 @@ describe("t427 squash identity proof and main convergence", () => {
     ], { repositoryRoot: fixture.root, runner: hybridRunner(fixture, { failPush: true }) });
     expect(result).toMatchObject({ status: "error", code: "REBIND_PUSH_FAILED" });
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(fixture.landing);
+    expect(reconcilePaths.map((path) => readFileSync(join(fixture.root, path)))).toEqual(original);
+    expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
+    expect(command(fixture.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+  });
+
+  test("rolls back pre-push failures but preserves an unknown push outcome for recovery", () => {
+    const beforePush = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const beforePushOriginal = reconcilePaths.map((path) => readFileSync(join(beforePush.root, path)));
+    const beforePushResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      beforePush.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: beforePush.root,
+      runner: hybridRunner(beforePush, { remoteTips: [beforePush.landing, "unavailable"] }),
+    });
+    expect(beforePushResult).toMatchObject({ status: "error", code: "REBIND_REMOTE_TIP_FAILED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(beforePush.root, path)))).toEqual(beforePushOriginal);
+    expect(must(beforePush.root, ["git", "rev-parse", "HEAD"])).toBe(beforePush.landing);
+    expect(command(beforePush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+
+    const unknownPush = squashFixture();
+    const unknownOriginal = reconcilePaths.map((path) => readFileSync(join(unknownPush.root, path)));
+    const unknownResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      unknownPush.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: unknownPush.root,
+      runner: hybridRunner(unknownPush, {
+        failPush: true,
+        remoteTips: [unknownPush.landing, unknownPush.landing, "unavailable"],
+      }),
+    });
+    expect(unknownResult).toMatchObject({ status: "error", code: "REBIND_PUSH_OUTCOME_UNKNOWN" });
+    expect(unknownResult.error?.message).toContain("reconcile commit retained");
+    expect(unknownResult.error?.message).toContain("verify origin/main before retrying from the event revision");
+    expect(reconcilePaths.map((path) => readFileSync(join(unknownPush.root, path)))).not.toEqual(unknownOriginal);
+    expect(must(unknownPush.root, ["git", "rev-parse", "HEAD^"])).toBe(unknownPush.landing);
+    expect(must(unknownPush.root, ["git", "diff", "--name-only", `${unknownPush.landing}..HEAD`]).split("\n").sort())
+      .toEqual([...reconcilePaths].sort());
+    expect(command(unknownPush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+    expect(must(unknownPush.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(unknownPush.landing);
   });
 
   test("reports supersession after commit and after a rejected push", () => {
