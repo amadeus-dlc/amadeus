@@ -5778,5 +5778,302 @@
     },
     "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "latestHumanTurnId",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "previewProductionAutonomyGrant",
+      "fingerprint": "sha256:11ce000d2ae7b37eeee53cf73c3e022a31469c918bf36eeb32029adf782d6f97",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "commitProductionStageGateDecision",
+      "fingerprint": "sha256:b6d8fd2fba7482e8cb2bfe948a8ed24e0d18b277caf721a2c71bf3a0af055b99",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "commitProductionQualityObservation",
+      "fingerprint": "sha256:e66ef456603551084bf53d76c582e489e4766fe62d369cf74bb5a8fed018e0d0",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "commitProductionQualityObservation",
+      "fingerprint": "sha256:e4b2391478392a4b8409f95e1cebfd60ac1b387858ed88a29d787853b1282886",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "parkProductionQuality",
+      "fingerprint": "sha256:b078470437fd5f427ed3c4a4174260403fcde51d8eabd9e8730a9b0e1d4641ca",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "qualityResumeAlreadyCommitted",
+      "fingerprint": "sha256:6e44bbb2786e8237776c2783ff5ca7c4a573bbc100d8e1cfbc2e390f11e5f3e1",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "qualityResumeAlreadyCommitted",
+      "fingerprint": "sha256:850ab9dd7f0b2a4c7bba5ad680018e0a87ad6acba2d174b2dc865d094507d063",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "prepareProductionQualityResume",
+      "fingerprint": "sha256:53e922de96ec3641d7d22458e6f9d787dc859ed3579be1860db6d318b0dbd4bb",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "sameTransaction",
+      "fingerprint": "sha256:e0f97500d42de30259401bb90252dffcc6553f4b927976aed2f5664601800e15",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransaction",
+      "fingerprint": "sha256:d8b5ca79a4b590a70d21932fc642c4ef6de25dffc83b7a430eae0e364da8c410",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransaction",
+      "fingerprint": "sha256:531cf600eec4e0c13aa90e0dbae91f530dc567961944b29b9d1c0af9339cc1dd",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransaction",
+      "fingerprint": "sha256:f4dec81ba5a51ea047609e623170d666da3bbe19ff4d0a8ac90fa71692e60f68",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransactionPrecondition",
+      "fingerprint": "sha256:25dd00bca5cf19949647879d7fea0799c68c365a3f451bb022ccf2be528bf12d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransactionPrecondition",
+      "fingerprint": "sha256:2a7a38b450537fd21e2b0a3e33d8facf925409ed2b710177672e4913f258ab75",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "validateAutonomyTransactionPrecondition",
+      "fingerprint": "sha256:d9840143b9323376d68477be1ddd0c7d03c83ef590d9f777a220f46891026fa6",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "createMemoryIntentAutonomyRepository",
+      "fingerprint": "sha256:97daef3107d283f00099aca34f8b80e6acffaacaa0137e307de63001b30b5522",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "apply",
+      "fingerprint": "sha256:3837e9251a9ee3c532bfec4e19b5dfe4d0547e3ac6abeff9b187df44bf6ad7b7",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "parkProjection",
+      "fingerprint": "sha256:721b1c3c146b72e6761976be44345b852355cf63638e6ec975c3003a4071cf6e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "createIntentAutonomyCoordinator",
+      "fingerprint": "sha256:e409e1eaf609f6dc4fe2ff2ff2330b226e9123dbe24e4f802cfd4dbd7cddd848",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "commitPark",
+      "fingerprint": "sha256:9690204990e664167579d76fa2463abac1786db675ef33fb1399faa58f15798d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "createSelectedGateDecision",
+      "fingerprint": "sha256:7472cd237d4d0b4768d0919ec033c2f2418c6addbd2a25f1aca0456dc5d535de",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "applySemiDecision",
+      "fingerprint": "sha256:eba83d614c2e7ee4703e73cfd780b315be47ba370c8b9ffb946f95cd4790f10b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "decide",
+      "fingerprint": "sha256:070b2f56fbbe5da3e4f658434718fbe55cfec1fb877d71fd68e413673d13ce22",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "park",
+      "fingerprint": "sha256:2e95beb2d513dce1850b612f77ba6a7023ee3d97aebd27b6300dfa5dab33d00b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "resume",
+      "fingerprint": "sha256:7dc575c48a55c135ff4b68e4d095a287e655d48293d655f770f02dcdd3a7816b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "complete",
+      "fingerprint": "sha256:817d63339d9a2ca70f0be92083c1c2d1add84691d563e8f2fdb6cf01c6775d38",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]
