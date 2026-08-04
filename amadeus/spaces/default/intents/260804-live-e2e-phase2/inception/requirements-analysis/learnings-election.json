@@ -1,0 +1,16 @@
+{
+  "electionId": "E-HLE2-RAS13",
+  "kind": "learnings-selection",
+  "question": "260804-live-e2e-phase2 requirements-analysis の §13 学習選定。候補c1/c3はKiro ACP/TUIに対する本Intent固有の受け入れ裁定であり、requirements.mdとquestions recordへ保持済み。候補c2『既存Intent・Scope・Issueで確定済みの境界を再質問しない』はproject.mdの既存規則『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』と意味が重複する。新規project/team memoryまたはsensorの永続化は0件でよいか。成果物、候補、既存memory層を独立実測して投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1/c3はIntent recordへ保持し、c2は既存project規則を再利用して恒久ルールやsensorを重複追加しない"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

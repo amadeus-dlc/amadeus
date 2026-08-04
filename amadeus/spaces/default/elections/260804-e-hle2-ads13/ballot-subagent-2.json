@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE2-ADS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を全面支持する。独立実測では、c1の『正本に記載済みの設計境界を再質問しない』はapplication-design/memory.md:5の適用記録であり、project.md:314の既存恒久規則『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』およびteam.md:59の既決規範適用則と意味・判断述語が一致する。c2はrequirements.md:27-33のFR-09〜FR-15とdecisions.md:66-94のADR-03に、ACP/TUI別のprobe、contract/integration、transport自身のlive green、不能時follow-upとして保持済みである。c3はapplication-design-questions.md:12-23のユーザー回答Aとdecisions.md:36-64のADR-02に、legacy mechanicsを再利用し旧policy/lifecycleを削除して共通runLiveJourneyへ一本化するIntent固有裁定として保持済みである。新しい横断規律や決定的sensor述語はなく、恒久memoryまたはsensorの追加は重複正本を生むため不要である。",
+  "submittedAt": "2026-08-04T11:51:01Z"
+}

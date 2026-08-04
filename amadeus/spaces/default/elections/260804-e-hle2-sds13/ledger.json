@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測の結果、0件で可。対象stageのmemory.mdは4見出しすべて例示コメントのみで実エントリ0件、learnings-election.jsonも候補を持たず、Open questionsも0件だった。scope-document/intent-backlog/questionsは、承認済みintent-statementとIssue #1717のPhase 2（Kimi接続、Kiro CLI ACP/TUIの接続または条件付き後続Issue、Kiro IDE GUI/CDPとPhase 3の除外）をM1〜M6/P2-01〜05へ具体化したIntent固有recordであり、新規の横断規則を導いていない。先行Intent 260803-harness-live-e2eの同型Scope裁定E-HLE-SDS13も、Issue固有境界・前段スキップ・dependency/risk-first・後続実測を恒久化0件として2–0（GoA 1x2）で採用済み。project memoryにはself-featureの既定とrisk-firstの既存cidがあり、重複persistは不要で、新たに機械検出すべき決定的違反条件もない。",
+      "submittedAt": "2026-08-04T08:54:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測で、scope-definition/memory.md は4区分すべて実エントリ0件、learnings-election.json は単一選択肢『0件で可』であることを確認した。scope-document.md と intent-backlog.md の Must/二択完了/対象外は、承認済み intent-statement.md および現行 Issue #1717 の Phase 2（Kimi print、Kiro CLI ACP/TUI、Kiro IDE GUI/CDP除外）を具体化しており、新しい恒久ルールを導いていない。先行 Intent 260803-harness-live-e2e の Scope Definition も同じ正本を用い、learnings-selections.json は selections=[]、audit は『追加なし』裁定後に gate approved を記録している。memory 層には既に Issueと承認済み成果物の決定を再質問しない規則、Kimi公式仕様の検証規則、全ハーネス生成物同期規則が存在し、今回固有のPhase 2境界を重複persistする必要はない。sensor候補となる反復可能な新規失敗形も観測されていない。",
+      "submittedAt": "2026-08-04T08:54:21Z"
+    }
+  ],
+  "late": []
+}

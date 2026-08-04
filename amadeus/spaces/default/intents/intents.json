@@ -897,5 +897,12 @@
     "dirName": "260804-goal-reconciliation-guar",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fcbdf-d303-765e-b24a-33db12b4b828",
+    "slug": "live-e2e-phase2",
+    "dirName": "260804-live-e2e-phase2",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
