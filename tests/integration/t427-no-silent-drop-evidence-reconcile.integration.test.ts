@@ -98,6 +98,7 @@ type ReconcileRunnerOptions = {
   remoteTips?: string[];
   failPush?: boolean;
   failCommit?: boolean;
+  failRollback?: boolean;
   failFocused?: boolean;
   failGate?: boolean;
   failGitHub?: boolean;
@@ -190,6 +191,9 @@ function interceptedCommand(
   }
   if (key === "git commit" && options.failCommit) {
     return { status: 1, stdout: "", stderr: "commit rejected" };
+  }
+  if (key === "git reset" && options.failRollback) {
+    return { status: 1, stdout: "", stderr: "rollback rejected" };
   }
   return undefined;
 }
@@ -602,6 +606,29 @@ describe("t427 squash identity proof and main convergence", () => {
       .toEqual([...reconcilePaths].sort());
     expect(command(unknownPush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
     expect(must(unknownPush.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(unknownPush.landing);
+  });
+
+  test("reports a committed rollback failure after a pre-push error", () => {
+    const fixture = squashFixture();
+    const result = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      fixture.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: fixture.root,
+      runner: hybridRunner(fixture, {
+        remoteTips: [fixture.landing, "unavailable"],
+        failRollback: true,
+      }),
+    });
+    expect(result).toMatchObject({ status: "error", code: "REBIND_ROLLBACK_FAILED" });
+    expect(result.error?.message).toContain("committed rollback failed");
+    expect(result.error?.message).toContain("rollback rejected");
+    expect(must(fixture.root, ["git", "rev-parse", "HEAD^"])).toBe(fixture.landing);
+    expect(command(fixture.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
+    expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(fixture.landing);
   });
 
   test("reports supersession after commit and after a rejected push", () => {
