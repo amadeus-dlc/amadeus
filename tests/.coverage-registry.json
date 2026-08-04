@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 599,
+    "total": 600,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 85,
+      "audit": 86,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 177,
-      "audit": 39,
+      "audit": 40,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -331,6 +331,18 @@
         {
           "file": "tests/integration/t429-legacy-goal-migration.integration.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LOOP_MONITOR_EVENT_SET_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t426-loop-monitor-replay-index.integration.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
