@@ -1,7 +1,7 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -10,6 +10,7 @@ import {
   type CanonicalEventCommitPort,
   createAmadeusPiExtension,
   DefaultCanonicalEventCommitPort,
+  PiBridgeJournal,
   type PiCanonicalEvent,
   type PiExtensionApi,
   type PiExtensionContext,
@@ -238,6 +239,28 @@ describe("Amadeus Pi lifecycle adapter", () => {
     expect(JSON.parse(readFileSync(persistedOutbox, "utf8")).status).toBe("turn-observed");
   });
 
+  test("accepts a token appended after agent_start when that same turn settles", async () => {
+    const root = project();
+    const pi = new FakePi(root);
+    createAmadeusPiExtension({ commitPort: new MemoryCommitPort() })(pi);
+    await pi.emit("session_start", fixture.events.session_start);
+    await pi.emit("agent_settled", fixture.events.agent_settled);
+
+    const firstToken = JSON.parse(readFileSync(outboxPath(root), "utf8")).token as string;
+    const continuation = pi.entries.pop();
+    expect(continuation?.customType).toBe("amadeus-continuation");
+
+    pi.leafId = "leaf-overtaking-human-turn";
+    await pi.emit("agent_start", fixture.events.agent_start);
+    pi.entries.push(continuation!);
+    await pi.emit("agent_settled", fixture.events.agent_settled);
+
+    const next = JSON.parse(readFileSync(outboxPath(root), "utf8")) as { status: string; token: string };
+    expect(pi.notifications).toEqual([]);
+    expect(next.status).toBe("entry-appended");
+    expect(next.token).not.toBe(firstToken);
+  });
+
   test("reinjects fresh core mission after compaction without trusting summary or triggering a turn", async () => {
     const root = project();
     const pi = new FakePi(root);
@@ -252,7 +275,67 @@ describe("Amadeus Pi lifecycle adapter", () => {
   });
 });
 
+describe("Pi bridge journal", () => {
+  test("preserves observation order when multiple events share one millisecond", () => {
+    const root = project();
+    const journal = new PiBridgeJournal(root);
+    const sessionIdDigest = "6".repeat(64);
+    const base = {
+      schemaVersion: 1,
+      profile: "pi-coding-agent/0.83",
+      sessionIdDigest,
+      occurredAt: "2026-08-04T00:00:00.000Z",
+      safe: {},
+    } as const;
+    journal.prepare({
+      ...base,
+      eventKey: "pi:v1:session:z-first",
+      fingerprint: "1".repeat(64),
+      kind: "session-started",
+    }, { type: "session_start" });
+    journal.prepare({
+      ...base,
+      eventKey: "pi:v1:session:a-second",
+      fingerprint: "2".repeat(64),
+      kind: "input-received",
+    }, { type: "input" });
+
+    expect(journal.prepared(sessionIdDigest).map(({ event }) => event.eventKey)).toEqual([
+      "pi:v1:session:z-first",
+      "pi:v1:session:a-second",
+    ]);
+  });
+});
+
 describe("default canonical core commit port", () => {
+  test("projects a Pi lifecycle heartbeat into the canonical doctor health directory", async () => {
+    const root = project();
+    const port = new DefaultCanonicalEventCommitPort(root);
+    const event: PiCanonicalEvent = {
+      schemaVersion: 1,
+      profile: "pi-coding-agent/0.83",
+      eventKey: "pi:v1:session:input:heartbeat",
+      fingerprint: "9".repeat(64),
+      kind: "input-received",
+      sessionIdDigest: "8".repeat(64),
+      occurredAt: "2026-08-04T00:00:00Z",
+      safe: { source: "rpc", textDigest: "7".repeat(64), imageCount: 0 },
+      sealedPayloadRef: "amadeus/.amadeus-sessions/pi-lifecycle/journal/heartbeat.json",
+    };
+
+    expect((await port.commitOnce(event)).ok).toBe(true);
+    expect(existsSync(join(
+      root,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      "260804-pi-test",
+      ".amadeus-hooks-health",
+      "pi-extension.last",
+    ))).toBe(true);
+  });
+
   test("narrows malformed and non-canonical audit rows before identity matching", async () => {
     const root = project();
     const auditDir = join(root, "amadeus", "spaces", "default", "intents", "260804-pi-test", "audit");

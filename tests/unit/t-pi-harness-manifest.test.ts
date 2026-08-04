@@ -5,12 +5,37 @@
 
 import { describe, expect, test } from "bun:test";
 import piManifest from "../../packages/framework/harness/pi/manifest.ts";
+// @ts-expect-error Bun's text loader supports Markdown; tsc has no *.md declaration.
+import skill from "../../packages/framework/harness/pi/skills/amadeus/SKILL.md" with {
+  type: "text",
+};
 import {
   isNormalizedRelativePath,
   validateHarnessManifest,
 } from "../../scripts/harness-manifest.ts";
 
 describe("Pi harness manifest", () => {
+  test("routes fresh-workflow answers back through next instead of a verdict-only report", () => {
+    expect(skill).toContain("For a fresh-workflow routing question");
+    expect(skill).toMatch(/re-run\s+`next --scope <resolved scope> <original description>`/u);
+    expect(skill).toMatch(/re-run\s+`next compose <original description>`/u);
+    expect(skill).not.toContain(
+      '`report --user-input "<resolved answer>"` without stage or result flags',
+    );
+  });
+
+  test("requires phase verification before reporting a boundary approval", () => {
+    expect(skill).toContain("directive.phase_boundary");
+    expect(skill).toContain("phase-check-<phase>.md");
+    expect(skill).toMatch(/before reporting approval/u);
+  });
+
+  test("keeps utility flags on the first engine call even with an active intent", () => {
+    expect(skill).toContain("A bare `next` is a protocol violation");
+    expect(skill).toContain("`--status` → `bun .pi/tools/amadeus-orchestrate.ts next --status`");
+    expect(skill).toContain("An active intent does not override a utility flag");
+  });
+
   test("declares the native runtime, canonical stage entry, and closed resource catalog", () => {
     expect(validateHarnessManifest(piManifest)).toEqual([]);
     expect(piManifest.stageEntry).toEqual({ kind: "runner", root: ".pi/skills" });

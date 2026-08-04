@@ -38,6 +38,7 @@ type CoreRuntime = {
   readonly getEventDefByAuditEvent: (auditEvent: string) => { readonly name: string };
   readonly getField: (content: string, field: string) => string | null;
   readonly handlePluginCli: (args: string[]) => number;
+  readonly hooksHealthDir: (projectDir: string) => string;
   readonly journalSchemaVersionV2: number;
   readonly readAllAuditShards: (projectDir: string) => string;
   readonly recoveryFilePath: (projectDir: string) => string;
@@ -67,6 +68,7 @@ async function loadCoreRuntime(): Promise<CoreRuntime> {
       || typeof lib.activeSpace !== "function"
       || typeof lib.auditCloneId !== "function"
       || typeof lib.getField !== "function"
+      || typeof lib.hooksHealthDir !== "function"
       || typeof lib.readAllAuditShards !== "function"
       || typeof lib.recoveryFilePath !== "function"
       || typeof lib.stateFilePath !== "function"
@@ -83,6 +85,7 @@ async function loadCoreRuntime(): Promise<CoreRuntime> {
       getEventDefByAuditEvent: registry.getEventDefByAuditEvent,
       getField: lib.getField,
       handlePluginCli: plugin.handlePluginCli,
+      hooksHealthDir: lib.hooksHealthDir,
       journalSchemaVersionV2: journal.JOURNAL_SCHEMA_VERSION_V2,
       readAllAuditShards: lib.readAllAuditShards,
       recoveryFilePath: lib.recoveryFilePath,
@@ -542,6 +545,7 @@ function readFileNames(dir: string): string[] {
 
 type JournalRecord = {
   readonly version: 1;
+  readonly sequence?: number;
   readonly event: PiCanonicalEvent;
   readonly sealedPayload: SealedEnvelope;
   readonly state: "prepared" | "committed";
@@ -567,6 +571,19 @@ export class PiBridgeJournal {
     return join(this.#journalDir, `${digest(eventKey)}.json`);
   }
 
+  #nextSequence(): number {
+    let maximum = 0;
+    let recordCount = 0;
+    for (const name of readFileNames(this.#journalDir).filter((item) => item.endsWith(".json"))) {
+      const path = join(this.#journalDir, name);
+      assertNoSymlink(path);
+      const raw = JSON.parse(readFileSync(path, "utf8")) as JournalRecord;
+      recordCount++;
+      if (Number.isSafeInteger(raw.sequence) && (raw.sequence ?? 0) > maximum) maximum = raw.sequence!;
+    }
+    return Math.max(maximum, recordCount) + 1;
+  }
+
   prepare(event: Omit<PiCanonicalEvent, "sealedPayloadRef">, rawPayload: unknown): PiCanonicalEvent {
     const path = this.#path(event.eventKey);
     const sealedPayloadRef = relative(this.#projectDir, path).split(sep).join("/");
@@ -580,6 +597,7 @@ export class PiBridgeJournal {
     }
     writeAtomic(path, `${JSON.stringify({
       version: 1,
+      sequence: this.#nextSequence(),
       event: complete,
       sealedPayload: this.#vault.seal(rawPayload),
       state: "prepared",
@@ -591,7 +609,11 @@ export class PiBridgeJournal {
     const path = this.#path(eventKey);
     assertNoSymlink(path);
     const parsed = JSON.parse(readFileSync(path, "utf8")) as JournalRecord;
-    if (parsed.version !== 1 || parsed.event.eventKey !== eventKey) {
+    if (
+      parsed.version !== 1
+      || (parsed.sequence !== undefined && (!Number.isSafeInteger(parsed.sequence) || parsed.sequence < 1))
+      || parsed.event.eventKey !== eventKey
+    ) {
       throw new Error(`invalid Pi journal record for ${eventKey}`);
     }
     this.#vault.open(parsed.sealedPayload);
@@ -618,9 +640,13 @@ export class PiBridgeJournal {
         && (sessionIdDigest === undefined || verified.event.sessionIdDigest === sessionIdDigest)
       ) records.push(verified);
     }
-    return records.sort((left, right) =>
-      left.event.occurredAt.localeCompare(right.event.occurredAt)
-      || left.event.eventKey.localeCompare(right.event.eventKey));
+    return records.sort((left, right) => {
+      if (left.sequence !== undefined && right.sequence !== undefined) return left.sequence - right.sequence;
+      if (left.sequence !== undefined) return 1;
+      if (right.sequence !== undefined) return -1;
+      return left.event.occurredAt.localeCompare(right.event.occurredAt)
+        || left.event.eventKey.localeCompare(right.event.eventKey);
+    });
   }
 
   sealLocal(value: unknown): SealedEnvelope {
@@ -797,6 +823,7 @@ export class DefaultCanonicalEventCommitPort implements CanonicalEventCommitPort
           if (prior.fingerprint !== event.fingerprint) {
             return { ok: false, reason: "conflict", detail: `event key reused with a different fingerprint: ${event.eventKey}` };
           }
+          writeAtomic(join(core.hooksHealthDir(this.#projectDir), "pi-extension.last"), `${isoTimestamp()}\n`);
           return { ok: true, receipt: { ...prior, disposition: "duplicate" } };
         }
 
@@ -865,6 +892,7 @@ export class DefaultCanonicalEventCommitPort implements CanonicalEventCommitPort
           stateValidation,
         };
         writeAtomic(path, `${JSON.stringify({ version: 1, receipt } satisfies PersistedCoreReceipt)}\n`);
+        writeAtomic(join(core.hooksHealthDir(this.#projectDir), "pi-extension.last"), `${isoTimestamp()}\n`);
         return { ok: true, receipt };
       });
     } catch (error) {
@@ -940,7 +968,7 @@ class PiContinuationOutbox {
     writeAtomic(this.#path, `${JSON.stringify({ ...prior, status: "entry-appended", updatedAt: isoTimestamp() })}\n`);
   }
 
-  observeAgentStart(entries: readonly PiSessionEntry[]): boolean {
+  observeTurnEvidence(entries: readonly PiSessionEntry[]): boolean {
     const prior = this.read();
     if (
       prior === null
@@ -1150,7 +1178,7 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
       } else if (parsed.type === "tool_execution_end") {
         current.tools.delete(parsed.toolCallId);
       } else if (parsed.type === "agent_start") {
-        current.outbox.observeAgentStart(context.sessionManager.getEntries());
+        current.outbox.observeTurnEvidence(context.sessionManager.getEntries());
       } else if (parsed.type === "session_before_compact") {
         current.mission.checkpoint(await continuationMessage(current.projectDir));
       } else if (parsed.type === "session_compact") {
@@ -1164,6 +1192,7 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
           }, { triggerTurn: false });
         }
       } else if (parsed.type === "agent_settled") {
+        current.outbox.observeTurnEvidence(context.sessionManager.getEntries());
         const message = await continuationMessage(current.projectDir);
         if (message !== null) {
           const pending = current.outbox.prepare();

@@ -25,6 +25,18 @@ Forward the user's invocation text unchanged on the first call:
 bun .pi/tools/amadeus-orchestrate.ts next <arguments>
 ```
 
+This is a hard routing rule for every invocation, including after compaction
+and while an intent is active. The first engine call must contain every token
+from the current skill invocation. A bare `next` is a protocol violation when
+the invocation contains flags or free text. In particular:
+
+- `--status` → `bun .pi/tools/amadeus-orchestrate.ts next --status`
+- `--doctor` → `bun .pi/tools/amadeus-orchestrate.ts next --doctor`
+- `--resume` → `bun .pi/tools/amadeus-orchestrate.ts next --resume`
+
+An active intent does not override a utility flag. A terminal utility directive
+must be printed and stopped; it never falls through to the current stage.
+
 For a stage directive, report exactly once after its declared completion
 conditions are satisfied:
 
@@ -51,8 +63,14 @@ Treat the directive returned by `report` as the next loop step. Continue for
   succeeded when the driver is missing, incompatible, or returns no accepted
   native handle.
 - `ask`: render `directive.question` as numbered prose using
-  `question-rendering.md`, then end the turn. On the answering turn, call
-  `report --user-input "<resolved answer>"` without stage or result flags.
+  `question-rendering.md`, then end the turn. For a fresh-workflow routing question
+  (`Starting a ...` or `No stock scope clearly fits ...`), preserve the original
+  description from the first invocation. After a scope confirmation, re-run
+  `next --scope <resolved scope> <original description>`; after a compose choice,
+  re-run `next compose <original description>`. Do not send either answer to
+  verdict-only `report`. For a resume question, pass the resolved answer through
+  `report --user-input "<resolved answer>"`. When another question names a
+  continuation command, run that exact command once.
 - `select-intent`: render the supplied options and stop. Pass the opaque
   selection token and the exact answer to the command named by the directive.
 - `error`: print the engine message verbatim and stop.
@@ -69,6 +87,13 @@ answer questions or approve gates.
 Load `.pi/amadeus-common/protocols/stage-protocol.md` for every stage. Load its
 recovery companion on resume or after a mid-stage change, and its governance
 companion at phase boundaries.
+
+When a `run-stage` directive carries `directive.phase_boundary`, load the
+governance companion and write
+`<record>/verification/phase-check-<phase>.md` before reporting approval. The
+field is computed after scope overrides, so it also covers an early phase exit
+where the phase's usual final stage was skipped. Never report first and try to
+repair a rejected transition afterward.
 
 For a per-unit directive, write only beneath the current unit's declared
 construction path. Run any declared reviewer inside its runtime-scoped
