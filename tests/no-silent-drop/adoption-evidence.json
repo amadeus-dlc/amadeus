@@ -1,166 +1,166 @@
 {
   "schemaVersion": 1,
-  "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
+  "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
   "receipts": [
     {
       "schemaVersion": 1,
       "id": "shape-fixtures",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "f6a5fce00b5cf03b20d2fd6f548ce9ef7a2f28d1d9c8253ff84d37ad19d956e6",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "42af945e428c9d872d6dce6b3ea461966e9dad06347b04ec56f0d2321c10eac8",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "census-pre",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "a3ad48beafa9667328a0c6f950399407a32cfa184c2112d770ec93ec3cb9ca27",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "fe22df1c5e874eeaf787bf69717025e0cac7a32cbd8e2d56a7974ed22f19f5d5",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "census-post",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "55a76323f8312e2eb29c946d745627e3493704e4fe4e11aa779ada936748a271",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "14611432de8a8ef6d5a3de10a7b41099b72ae1f83e7cf18966fa83681fd0e696",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "classification-precision",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "ca4784e4357462899c15e16f08142dac15fb1c426d54cdeec5ecd80476fc7650",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "cd3b302b00df789f2e1c9fa8f1bc082c58b7d37cbe9c4c4e71247e0fb65c0299",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "baseline-proof",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "4f48b5291adba361aebc662366b1f1602653aaa8a6f2a49d6cf50f3d2dc73e8d",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "a34873d8db4f7a74d3a9b9bd62afe964b424698cddbd372e764ba8322ebe5a23",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "failure-matrix",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "cf339641ad2500d44aa04bb2dd5f2083dba27eaf91285c4345472ea0f3cdea8e",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "a19e98ef866c5d1a1e7b605ec51f68ffe22eb6f276678cbdb055e813b3c45abe",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "u2-u3-regressions",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "52887340df4a448e05cf629a9d3696296d1fa939e87061afd7bd65f8209e2143",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "3c5feb9070631c3c83acf08ae2a3c373c22353bf9415cdd9763c961a4515e77a",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "full-test",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "4677ae5b284f8df115d375270db2743ad10ee086ba965325e44c2aeeaa4bfa8d",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "fa3fdb0ae966e1499c830414eb3426201c0bfe05c6cae54b29ab5e9bfeb348e9",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "lint",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "4bb786bd619bd757015f809d26e34446367a2c9ed7ec37a3207d445ed0628775",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "e1317365c6f6c21b442e800f55f9499b75e11946b74eceafc74935685f7ebf84",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "typecheck",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "80e6cde06d984c28a80a91eeb9530174eef207c9076c44d41f1310ee652d259a",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "441e95ff025bf969fddef9ea030e4e78c99c78a31237314637b5f04fd75cf37a",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "coverage",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "ac1451e5fb834e31349035b0ba77de99faa44c07c44487df393e0e5b2f401f82",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "b64fa3946bd6c23c0582f9891eabdf468d4aa34d763c6c71e896f302ff27da53",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "cold-warm-5x2",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "974f50035579a1abedcba8e8ed254d7d852450e5abc3d265f81d18d4276bd8df",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "bf4a3688d717c2074f4266e9e6e758609aeae9e1f9be4da2198b9f30740d74b8",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "capacity-r0-r2-r4",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "fdf25f9c1cf07d58391ef42c51118e3632efa0a0e99ede0e1e8a495318617c05",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "449702e61cf990d3d9de2875913212e5e2bfef1383069fa7c048b575f72f3d6b",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "u1-complexity",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "d7c27aab96212bfb982b87303c08963f10374fb00ec819480cb9d56b0de6a340",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "36a99babb178282ed71d98998529edee77d3b14f84c933ef62da8d66edc95bb4",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "package-apply",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "e8b791b0c67dbb3952a06b346a6cdee5bf5fe0178c2b4d18ae6d61202cc7b695",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "26c812e7d7f946bae2052cc937b157c87b4a78225ac2371a05bbd90c416c2f20",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "promotion-apply",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "53cc3afd36687642ab5f10a9e8c36857585b532f04ed3a608de0275502db8fae",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "bcd1342eecf3a0414d12a8e86eba9f7beadd05aa4d961ad8b56fd7a1144d2efb",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "package-check",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "1cfacd239b7f2b861886074e336c34208d65c65273431359ead267cd873909b6",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "11e6f71650db92716c07b5427dec1119edea73a5d7f7fd953d5647e221bdcb10",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "promotion-check",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "dd3aab449c771a9326d045d63073c8ca5b9cb97b20473844a0da679bc9a2f7d2",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "48773f5f1945ee5609636381bea3918c7a49684428a7f102966839b0ce36af38",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-pr-base",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "2d480f190af7b8909d35414ffd847e79e4d9e14ac9830c35aeba09f53fdca44b",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "aec456d3459ad63216305af761751a2687684445d86a4f17b0211f795496e4dd",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-fork-base",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "361e0fcac331debb6c25d57dbc945d1d62530138dcac5c2dc7c34ad182ed1e58",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "8cecd3cbf2502c355941d3959f90b4f4c5a2064153305e99079b2f1a024dfd9b",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-push-before",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "cc8c8ed3c9a968c098926126c00ea21b7f97b54b4825d1da9f2bf12cdb68fd9b",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "efe8e9fdeb28d46c3957c2e23c242b0eb06230a8008a455f75c9ac0f26a66f88",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "hang-deadline",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "dab0cbab94d93f05fbc6354ce2aa03fed681c725f6ca6bdcf3fcef333498c347",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "4c2c9af00efa7e6ce58fd7b9524c72cd855740bbfb783480ffa63201b3180a51",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "workflow-structure",
-      "currentRevision": "a3a61846904861b5993cb773c9d4bc502eca1f7b",
-      "evidenceDigest": "49cfdade5870ed44f664776b63d949b02d0c4db603f5f214c2847503b78a2799",
+      "currentRevision": "24c3560ec5cba510a75597572e8648d32605efba",
+      "evidenceDigest": "359b0eab9de2324cab6b0a7d70f71d33b4543dc18b01dde3ec2ba55e4d4011a8",
       "pass": true
     }
   ]
