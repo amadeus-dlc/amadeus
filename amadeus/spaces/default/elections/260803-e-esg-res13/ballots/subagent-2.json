@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ESG-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c6 は既存 cid の2度目の違反実例であり、反復性そのものを追補化する余地は残るが、conductor-sync-subagent-collection と disk-evidence-early-takeover の記載は既に本件の挙動を規定しきっており新規増分にならないと判断した。",
+  "rationale": "6候補すべてを memory/project.md・team.md の既存 cid と突き合わせて実測した結果、いずれも既存規範の執行実例か intent 固有の調査結果に収まる。c1=team.md:201 cid:reverse-engineering:rescan-base-ancestry がまさに『祖先かつ距離最小』を規定し、re-scans/260803-election-state-guard.md の base 選定はその逐語執行。c2=project.md:290 (E-OBB5-RES13) が免除条件を『当該引用が observed と一致する SHA で検証済みであること』と既に確定させ、project.md:299 (E-RRP-RES13) が『レビュー対象 SHA ≠ observed のときは全引用を再解決』と再確認済み。本件の verdict SHA a3f58c73e ≠ observed 498c3034a という判定と全引用再解決は既定の2度目の適用であり、区間 touch の確認は根拠の補強であって新しい判定手順ではない(むしろ E-OBB5-RES13 は touch 単独を免除根拠に拡大しないと明示している)。c3=project.md:158 cid:re-sensors-codekb-filter-mismatch が『常に matches-rejection・RE の検証は実質 conductor 手動確認』と規定済みで、PASSED 4件/FAILED 0件は既知挙動どおり。c4 は Issue #2125 の患部範囲(無ガード2箇所・35セル中受理5セル・第4破損経路)という当該 intent 固有の調査結果で、他 intent へ移送可能な規範ではなく codekb / RA 成果物に残るべき事実。c5=team.md:97 cid:pre-filing-dup-and-branch-check の執行(既存 OPEN #1622 へ追記・重複起票せず)で、ピン転位そのものは #1622 の実測データ。c6 も team.md:215 と team.md:234 の2 cid が違反面と引き取り面を両方カバーしており、ディスク実測(9ファイルの mtime が reset 時刻のまま)→TaskStop→引き取りは disk-evidence-early-takeover の記述どおりの経路。よって persist 相当の新規追補は0件。",
+  "submittedAt": "2026-08-03T08:19:37Z"
+}

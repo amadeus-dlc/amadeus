@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ESG-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "6候補すべてを実測照合した結果、新規追補に相当するものはない。c1: team.md:201 cid:reverse-engineering:rescan-base-ancestry が「祖先かつ距離最小」を既に規定しており、re-scans/260803-election-state-guard.md の51件祖先性判定→71fcdf106 採用はその執行実例そのもの。c2: 免除条件は project.md:290 (E-OBB5-RES13) が既に「当該引用が observed と一致する SHA で検証済みであること」と限定し、project.md:299 (E-RRP-RES13) が SHA≠observed かつ区間 touch ありで全再解決した先行実測(260802-record-roundtrip-pbt)を既に記載している。本件 a3f58c73e(37コミット前・amadeus-election-store.ts +25/-3)は同一構図の2例目で、判定手順に新条件を一切足していない(「再解決したが行番号は不変だった」は規則でなく事実)。c3: project.md:158 cid:reverse-engineering:re-sensors-codekb-filter-mismatch が answer-evidence の構造的 matches-rejection と conductor 手動確認による補完を既に規定済み、PASSED 4件は既知挙動の再現。c4: 無ガード2箇所(handleNotify:406 / store:710)、35セル中受理5セル、第4の破損経路はいずれも Issue #2125 固有の調査結果で、他 intent へ転用可能な一般則を含まない — re-scan 成果物と Issue 側に残るべきで memory persist 不要。c5: team.md:97 cid:requirements-analysis:pre-filing-dup-and-branch-check の「起票前に既存 Issue を検索し重複起票しない」の執行実例(既存 OPEN #1622 へ追記)。c6: conductor-sync-subagent-collection (team.md:215) の違反は規則の反証でなく既存規則の妥当性を再確認するのみであり、ディスク mtime 実測にもとづく TaskStop→引き取りは disk-evidence-early-takeover (team.md:234) が規定する「完了兆候の実測時点で早期切替、検証は省略しない」の教科書的執行(state 値集合・TRANSITIONS・行ピンを conductor が独立再実測している点まで既存則どおり)。既存 cid の執行実例を再 persist することは memory の希釈にあたるため 0件を選ぶ。",
+  "submittedAt": "2026-08-03T08:18:26Z"
+}
