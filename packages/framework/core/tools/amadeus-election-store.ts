@@ -702,15 +702,13 @@ export const Store = {
     // re-tallies, but the human rulings already given must survive — FR-4b).
     const prior = readJson<{ resolutions?: unknown[] }>(join(dir, "tally.json"));
     const resolutions = prior.ok ? (prior.value.resolutions ?? []) : [];
-    const w = writeStoreFile(
+    // The `tallied` timeline row is NOT booked here (#2125 FR-2a): tally fixes
+    // the ballot set, but the audit row belongs to the state-machine commit,
+    // which happens in report --result tallied. Booking it here let a bare
+    // tally append `tallied` from any state.
+    return writeStoreFile(
       join(dir, "tally.json"),
       JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots, resolutions }, null, 2),
     );
-    if (!w.ok) return w;
-    return Store.appendTimeline(root, electionId, {
-      kind: "tallied",
-      at: talliedAt,
-      detail: `tally: ${result.kind}`,
-    });
   },
 };

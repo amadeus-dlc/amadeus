@@ -60,10 +60,43 @@ export const GoaFreq = {
 export type { TimelineEvent } from "./amadeus-election-model";
 
 export type VerifyFinding = {
-  kind: "reservation-count" | "ballot-count" | "freq-mismatch" | "timeline-order";
+  kind: "reservation-count" | "ballot-count" | "freq-mismatch" | "timeline-order" | "kind-order";
   expected: string | number;
   actual: string | number;
 };
+
+// --- kind-order (state-machine legality) check class (#2125 FR-3) ----------
+
+// Caller-supplied context for the kind-order class: which election is being
+// verified (for the FR-3d ledger exemption) and the hold resolutions recorded
+// in tally.json (a `resumedTo: "collecting"` resolution is a lawful reopen and
+// grants one reopen of the collection segment — FR-3b). Kept structural so
+// verifySelf stays pure: no fs, no clock, no store types.
+export type KindOrderContext = {
+  readonly electionId: string;
+  readonly resolutions: ReadonlyArray<{ readonly resumedTo?: string }>;
+};
+
+// FR-3d: known-broken records that predate the #2125 guards. These timelines
+// are faithful records of real operation sequences and are never rewritten
+// (C-1), so verify exempts them from the kind-order class by name. Mechanical
+// rescan at implementation ref (segment model with reopen budget) over
+// amadeus/spaces/default/elections/*/timeline.json; 260803-e-esg-res13 is this
+// intent's own §13 election, broken by an out-of-band tally while the intent
+// was in flight.
+const KIND_ORDER_LEDGER: ReadonlySet<string> = new Set([
+  "E-CCCRA",
+  "E-TCRRA1",
+  "260724-e-hpugs13",
+  "260724-e-tlau2",
+  "260730-e-obb2-cgs13",
+  "260801-e-cpg-u2abs",
+  "260801-e-omsb4-dev",
+  "260803-e-esg-res13",
+  "260803-e-pi-nfrd-s13",
+  "260803-e-rrp-fmcs13",
+  "260803-e-sia-cgs13",
+]);
 
 // All findings are enumerated — verifySelf never stops at the first (FR-6b).
 export type VerifyResult = Result<void, VerifyFinding[]>;
@@ -196,6 +229,7 @@ export function verifySelf(
   ballots: Ballot[],
   storedFreq: GoaFreq,
   timeline: TimelineEvent[],
+  kindOrder?: KindOrderContext,
 ): VerifyResult {
   const findings: VerifyFinding[] = [];
   if (counts.ledger !== counts.materialized) {
@@ -218,6 +252,36 @@ export function verifySelf(
     const prev = timeline[i - 1].receivedAt ?? timeline[i - 1].at;
     const cur = timeline[i].receivedAt ?? timeline[i].at;
     if (cur < prev) findings.push({ kind: "timeline-order", expected: prev, actual: cur });
+  }
+  // kind-order (#2125 FR-3): state-machine legality of the event SEQUENCE,
+  // judged by position only — `at`/`receivedAt` never enter (orthogonal to
+  // timeline-order, which owns the clock axis). A `tallied` closes the
+  // collection segment; any later ballot / distributed / tallied is lawful
+  // only against the reopen budget: one credit per `resumedTo: "collecting"`
+  // hold resolution, and one credit reopens the whole segment until the next
+  // tallied closes it again (FR-3b). Ledgered pre-guard records are exempt by
+  // name (FR-3d).
+  if (kindOrder !== undefined && !KIND_ORDER_LEDGER.has(kindOrder.electionId)) {
+    let credits = kindOrder.resolutions.filter((r) => r.resumedTo === "collecting").length;
+    let closed = false;
+    for (const [i, e] of timeline.entries()) {
+      if (!closed) {
+        if (e.kind === "tallied") closed = true;
+        continue;
+      }
+      if (e.kind === "ballot" || e.kind === "distributed" || e.kind === "tallied") {
+        if (credits > 0) {
+          credits--;
+          closed = e.kind === "tallied";
+        } else {
+          findings.push({
+            kind: "kind-order",
+            expected: "no ballot/distributed/tallied after tallied without a collecting reopen",
+            actual: `${e.kind}#${i}`,
+          });
+        }
+      }
+    }
   }
   return findings.length === 0 ? ok(undefined) : err(findings);
 }
