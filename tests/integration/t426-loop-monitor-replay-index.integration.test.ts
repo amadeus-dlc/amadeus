@@ -2,7 +2,7 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,14 +17,18 @@ import {
   type LoopMonitorEventSet,
 } from "../../packages/framework/core/tools/amadeus-loop-monitor-runtime.ts";
 import {
+  createAuditLoopMonitorRepository,
   createDurableLoopMonitorRepository,
+  decodeLoopMonitorEventSet,
   initializeLoopMonitorReplayIndex,
   LOOP_MONITOR_REPLAY_INDEX_FILE,
   LOOP_MONITOR_REPLAY_WAL_FILE,
   LoopMonitorReplayIncompleteError,
   mergeLoopMonitorEventSets,
   repairLoopMonitorReplayIndex,
+  readLoopMonitorEventSetsFromAudit,
 } from "../../packages/framework/core/tools/amadeus-loop-monitor-replay.ts";
+import { setupIntegrationProject } from "../harness/fixtures.ts";
 
 function graph(): CompiledLoopMonitorGraph {
   const result = compileLoopMonitorManifest({
@@ -82,6 +86,45 @@ function tempRoot(): string {
 }
 
 describe("durable Loop Monitor Replay Index", () => {
+  test("audit adapter persists canonical event sets and rebuilds its replay index", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    roots.push(projectDir);
+    const record = "loop-audit-00000000";
+    const intentsRoot = join(projectDir, "amadeus", "spaces", "default", "intents");
+    mkdirSync(join(intentsRoot, record, "audit"), { recursive: true });
+    writeFileSync(join(projectDir, "amadeus", "active-space"), "default\n", "utf-8");
+    writeFileSync(join(intentsRoot, "active-intent"), `${record}\n`, "utf-8");
+    const root = tempRoot();
+    initializeLoopMonitorReplayIndex(root);
+    const repository = createAuditLoopMonitorRepository({
+      projectDir,
+      intent: record,
+      space: "default",
+      indexDir: root,
+    });
+    const observed = createLoopMonitorCoordinator({ graph: compiled, repository }).observeDelivery(
+      delivery("a", null, "audit-a"),
+    );
+    if (observed.kind !== "observed") throw new Error(JSON.stringify(observed));
+    expect(observed.kind).toBe("observed");
+    const canonical = readLoopMonitorEventSetsFromAudit(projectDir, record, "default");
+    expect(canonical).toHaveLength(1);
+    expect(decodeLoopMonitorEventSet(JSON.stringify(canonical[0]))).toEqual(canonical[0]);
+    expect(() => decodeLoopMonitorEventSet("{}"))
+      .toThrow("invalid-loop-monitor-event-set");
+
+    rmSync(join(root, LOOP_MONITOR_REPLAY_INDEX_FILE), { force: true });
+    expect(() => repository.readEventSets(partition)).toThrow(LoopMonitorReplayIncompleteError);
+    repairLoopMonitorReplayIndex(root, repository.readCanonicalForRepair());
+    expect(repository.readEventSets(partition)).toHaveLength(1);
+    expect(repository.isCommitted({
+      receiptId: "loop-receipt-missing",
+      partitionKey: canonical[0]!.partitionKey,
+      eventSetId: "missing-event-set",
+      eventSetDigest: `sha256:${"0".repeat(64)}`,
+    })).toBe(false);
+  });
+
   test("normal cold resume reads only the requested index partition", () => {
     const root = tempRoot();
     const canonical: LoopMonitorEventSet[] = [];
