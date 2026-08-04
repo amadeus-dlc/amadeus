@@ -80,7 +80,7 @@ Per unit: [TBD]
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
 - [x] code-generation — EXECUTE
-- [-] build-and-test — EXECUTE
+- [?] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
 
@@ -99,7 +99,7 @@ Per unit: [TBD]
 - **Next Stage**: none
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-08-04T06:18:22Z
+- **Last Updated**: 2026-08-04T06:41:58Z
 
 ## Session Resume Point
 - **Last Completed Stage**: code-generation
