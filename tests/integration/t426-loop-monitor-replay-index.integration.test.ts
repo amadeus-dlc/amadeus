@@ -102,9 +102,9 @@ describe("durable Loop Monitor Replay Index", () => {
       space: "default",
       indexDir: root,
     });
-    const observed = createLoopMonitorCoordinator({ graph: compiled, repository }).observeDelivery(
-      delivery("a", null, "audit-a"),
-    );
+    const coordinator = createLoopMonitorCoordinator({ graph: compiled, repository });
+    const first = delivery("a", null, "audit-a");
+    const observed = coordinator.observeDelivery(first);
     if (observed.kind !== "observed") throw new Error(JSON.stringify(observed));
     expect(observed.kind).toBe("observed");
     const canonical = readLoopMonitorEventSetsFromAudit(projectDir, record, "default");
@@ -127,6 +127,17 @@ describe("durable Loop Monitor Replay Index", () => {
       eventSetId: "missing-event-set",
       eventSetDigest: `sha256:${"0".repeat(64)}`,
     })).toBe(false);
+
+    let predecessor = first.deliveryId;
+    let reservation: ReturnType<typeof coordinator.observeDelivery> | null = null;
+    for (const [index, eventId] of ["b", "a", "b", "a"].entries()) {
+      const current = delivery(eventId, predecessor, `reservation-${index}`);
+      reservation = coordinator.observeDelivery(current);
+      predecessor = current.deliveryId;
+    }
+    expect(reservation).toMatchObject({ kind: "judge-reserved" });
+    expect(readLoopMonitorEventSetsFromAudit(projectDir, record, "default").at(-1)?.events.map((event) => event.type))
+      .toEqual(["LOOP_DELIVERY_OBSERVED", "LOOP_MONITOR_TRIGGERED", "LOOP_JUDGE_STARTED"]);
   });
 
   test("normal cold resume reads only the requested index partition", () => {

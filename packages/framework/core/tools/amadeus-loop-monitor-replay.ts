@@ -158,7 +158,7 @@ function validReservation(value: unknown): boolean {
     typeof value.monitorId === "string" && Number.isInteger(value.epoch) &&
     typeof value.triggerDeliveryId === "string" && typeof value.graphRevision === "string" &&
     typeof value.evidenceFingerprint === "string" && typeof value.constraintFingerprint === "string" &&
-    validRouteConstraint(value.routeConstraint) && validTrace(value.trace);
+    validTrace(value.trace);
 }
 
 function validLatch(value: unknown): boolean {
