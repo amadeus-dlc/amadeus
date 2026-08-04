@@ -57,6 +57,8 @@ const BASELINE_SHA = readFileSync(
 //     persistence in the drift-check job.
 //   - 260804-source-only-dist CI follow-up: fetch the pull request base before
 //     evaluating patch coverage against its remote-tracking ref.
+//   - 260804-metrics-snapshot-auth (#2182): preserve the short-lived GitHub App
+//     credential in the metrics-snapshot write job until its plain git push.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
