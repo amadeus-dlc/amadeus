@@ -477,8 +477,8 @@ bash tests/run-tests.sh       # POSIX compatibility wrapper
                 # driver traces to tests/logs/
 --filter PAT    # Only run tests whose filename matches extended regex PAT
 --parallel N    # Run up to N test files concurrently within a tier (alias: -P N).
-                # Default: min(available CPU cores, 4). Smoke and unit tiers
-                # are always serial.
+                # Default: min(available CPU cores, 4). Smoke is always serial;
+                # files containing .serial. stay serial in any tier.
 ```
 
 Live SDK and TUI harness drivers default to project-only Claude setting sources.
@@ -497,7 +497,7 @@ explicitly to keep those files on their in-test SKIP path.
 
 `--parallel N` (or `-P N`) runs up to N test files concurrently within a tier. By default the runner uses the smaller of the available CPU count and `4`; pass `-P 1` for a serial debugging run.
 
-**When it helps.** Integration and e2e levels each spend most of their wall-clock on `claude -p` subprocess startup and LLM turns. These tests are already filesystem-isolated — `setup_integration_project` scaffolds a fresh `$PROJ` per test — so they can run side-by-side without interfering.
+**When it helps.** Unit, integration, and e2e levels run files concurrently. Unit files are isolated processes; integration and e2e tests additionally scaffold isolated workspaces, so independent files can run side-by-side without interfering.
 
 **Spike results (2026-05-06, Opus 4.7 via Bedrock):**
 
@@ -508,7 +508,7 @@ explicitly to keep those files on their in-test SKIP path.
 
 All 8 parallel calls observed `cache_read=73789` — Bedrock prompt caching stays warm across concurrent workers. No throttling or corruption observed at 8-way.
 
-**What stays serial.** Smoke and unit tiers ignore `--parallel` and run serially regardless. They already complete in seconds and their interleaved output would hurt debuggability for no wall-clock gain. The preflight gate (`tests/integration/t19.test.ts`) also runs serially because the LLM tiers depend on its exit status.
+**What stays serial.** The smoke tier ignores `--parallel` and runs serially. Any file whose name contains `.serial.` also runs before its tier's parallel band. Use that suffix only for a demonstrated shared-state or ordering dependency. The preflight gate (`tests/integration/t19.test.ts`) also runs serially because the LLM tiers depend on its exit status.
 
 **Output under parallelism.** `START` markers stream live (several can appear back-to-back before the first `DONE` — that's the visible signal workers are concurrent). In normal/verbose mode, each worker's TAP body is buffered and flushed to stdout as one contiguous block under a directory-mutex (`mkdir $LOG_DIR/.stdout.lock`, atomic on POSIX — works on macOS bash 3.2 without `flock`). So `ok`/`not ok` lines from different files never interleave; stdout reads top-to-bottom like a serial run, just with the file completion order determined by how long each test took rather than dispatch order. In `--debug` mode, Bun stdout/stderr streams live while still being written to each per-test log; parallel debug output is prefixed by file basename so overlapping live workers remain attributable. SDK/TUI/Kiro-ACP driver traces are written beside the logs as `$LOG_DIR/sdk-drive-*.ndjson`, `$LOG_DIR/tui-drive-*.ndjson`, and `$LOG_DIR/kiro-acp-drive-*.ndjson`; their exact filenames depend on process IDs and TUI session names, so the runner prints the glob at startup and at each test start. The Kiro-ACP trace records the live `kiro-cli acp` turn event-by-event (spawn, prompt start, each `tool_call`/`tool_call_update` with its verbatim output preview, permission answers, the spawned process's stderr, and the terminal `result`/`timeout`/`end`), so a `session/prompt` timeout can be diagnosed after the fact — distinguishing a turn that was progressing (real tool calls firing) from one that stalled.
 

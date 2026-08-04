@@ -4525,7 +4525,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t07-hook-audit-logger.test.ts",
+          "file": "tests/unit/t07-hook-audit-logger.serial.test.ts",
           "mechanism": "cli"
         },
         {

@@ -134,8 +134,8 @@ OUTPUT MODIFIERS (combinable with any tier/profile):
                   driver traces to tests/logs/
   --filter PAT    Only run tests whose filename matches extended regex PAT
   --parallel N    Run up to N test files concurrently within a tier (alias: -P N).
-                  Default: min(available CPU cores, 4). Smoke and unit tiers
-                  always run serially.
+                  Default: min(available CPU cores, 4). Smoke always runs
+                  serially; files containing .serial. stay serial in any tier.
                   Recommended range: 1-8. See docs/reference/09-testing.md.
   --test-timeout-ms N
                   Per-test Bun timeout in milliseconds (default: ${DEFAULT_TEST_TIMEOUT_MS};
@@ -788,7 +788,7 @@ async function runFilesPartitioned(
   collector: SizeCollector,
   excludes: string[] = [],
 ): Promise<void> {
-  const pinnedSerial = level === "smoke" || level === "unit";
+  const pinnedSerial = level === "smoke";
   const serialFiles: string[] = [];
   const parallelFiles: string[] = [];
   const liveSerialFiles: string[] = [];
@@ -808,7 +808,7 @@ async function runFilesPartitioned(
 }
 
 async function runTier(level: Level, label: string, collector: SizeCollector): Promise<void> {
-  const effectiveParallel = level === "smoke" || level === "unit" ? 1 : args.parallel;
+  const effectiveParallel = level === "smoke" ? 1 : args.parallel;
   process.stdout.write("\n");
   process.stdout.write(
     effectiveParallel > 1 ? `## ${label} (parallel=${effectiveParallel})\n` : `## ${label}\n`,
@@ -836,7 +836,7 @@ function printSummary(collector: SizeCollector): void {
   // Observability only — MUST NOT affect the process exit code (t112 pins
   // exit == failed-file count). Any failure here is swallowed.
   try {
-    printSizeMatrix();
+    printSizeMatrix(collector);
     reportDynamicSizes(collector);
   } catch {
     // size reporting is best-effort; never let it perturb the runner's contract
@@ -902,44 +902,27 @@ function reportDynamicSizes(collector: SizeCollector): void {
 
 // Derived-size distribution (#684 / #696). Size (small/medium/large) is the
 // pyramid axis and is INDEPENDENT of the scope tier (the directory). This
-// reports the scope×size matrix so the pyramid shape is observable per run;
-// it does not gate. Also reports how many files carry a `// size:` annotation.
-function printSizeMatrix(): void {
+// reports the executed files' scope×size matrix so filtered runs stay cheap;
+// it does not gate. Also reports how many executed files carry a `// size:` annotation.
+function printSizeMatrix(collector: SizeCollector): void {
   const scopes = ["smoke", "unit", "integration", "e2e"] as const;
   const counts: Record<string, Record<TestSize, number>> = {};
   for (const s of [...scopes, "other"]) counts[s] = { small: 0, medium: 0, large: 0 };
   let annotated = 0;
   let total = 0;
-  const testsRoot = join(SCRIPT_DIR);
-  const walk = (dir: string): void => {
-    let entries: import("node:fs").Dirent[];
+  for (const file of collector.durations.keys()) {
+    let src: string;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      src = readFileSync(file, "utf-8");
     } catch {
-      return;
+      continue;
     }
-    for (const e of entries) {
-      const p = join(dir, e.name);
-      if (e.isDirectory()) {
-        if (e.name === "node_modules" || e.name === "logs") continue;
-        walk(p);
-      } else if (e.name.endsWith(".test.ts")) {
-        let src: string;
-        try {
-          src = readFileSync(p, "utf-8");
-        } catch {
-          continue;
-        }
-        const size = classifyTestSize(src).size;
-        const relPath = relative(testsRoot, p).replace(/\\/g, "/");
-        const scope = (scopes as readonly string[]).find((s) => relPath.startsWith(`${s}/`)) ?? "other";
-        counts[scope][size]++;
-        if (parseSizeAnnotation(src).declared !== null) annotated++;
-        total++;
-      }
-    }
-  };
-  walk(testsRoot);
+    const size = classifyTestSize(src).size;
+    const scope = scopeOfFile(file);
+    counts[scope][size]++;
+    if (parseSizeAnnotation(src).declared !== null) annotated++;
+    total++;
+  }
   process.stdout.write("------------------------------\n");
   process.stdout.write("Derived test-size matrix (scope × size; size is the pyramid axis, not the directory)\n");
   process.stdout.write(`  ${"scope".padEnd(12)}${"small".padStart(7)}${"medium".padStart(8)}${"large".padStart(7)}\n`);
@@ -1129,8 +1112,8 @@ async function main(): Promise<number> {
 
   // Real-time benchmarks (#1830 FR-1). Held out of --ci so a loaded shared
   // runner cannot turn wall-clock measurement into a red build. No exclude set,
-  // so the plain runTier path applies: parallel like integration/e2e (only
-  // smoke and unit are pinned serial).
+  // so the plain runTier path applies: parallel like unit/integration/e2e
+  // (only smoke is pinned serial).
   if (args.runPerf) {
     await runTier("perf", "Performance Tests (real-time benchmarks)", sizeCollector);
   }

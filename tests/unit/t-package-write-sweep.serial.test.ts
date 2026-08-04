@@ -1,4 +1,4 @@
-// t-package-write-sweep: regression guard for GitHub #771.
+// t-package-write-sweep: serial regression guard for GitHub #771.
 //
 // covers: file:scripts/package.ts (writeHarness project-root post-sweep)
 // in-process by design: writeHarness/checkHarness are driven via direct import,

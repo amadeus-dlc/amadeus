@@ -106,7 +106,7 @@ bash tests/run-tests.sh --e2e
 # Filter by pattern
 bash tests/run-tests.sh --integration --filter "t25|t26"
 
-# Run tests concurrently within a level (larger levels benefit most; smoke/unit stay serial)
+# Run tests concurrently within a level (smoke stays serial; .serial. files are pinned)
 bash tests/run-tests.sh --all --parallel 4
 bash tests/run-tests.sh --integration -P 8
 
