@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ESG-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c5 の被覆は historical-section-cite-check-at-observed を file:line/履歴節 から 件数/observed 宣言つき現在節 へ一段一般化することに依存するため、将来この一般化が争点化したら cite-fix-sweeps-whole-record への1行追補(ref 拘束値は伝播対象外)で閉じることに反対しない。",
+  "rationale": "0件(全候補が既存 cid の執行実例または intent 固有の調査結果)を支持。実測: c1 = memory.md Interpretations 12:15:18Z が『全問ユーザー専権と判定し選挙は行わず guided で裁定受領・承認 TS を questions ヘッダへ記載』と記録しており、team.md:220 no-election-judgment-gate の『判定申告→承認→記入』3段順序と issue-selection-user-decides の適用そのもの。新規規範なし。c2 = Issue #2125 の記述誤り2件(amadeus-election-store.ts:707 の materialize が late を集計に入れない / amadeus-election-model.ts:175 の kind 4種では reopen も state 遷移も記録されず (c) が timeline 単独で実現不能)は当該 intent の実測結果であり、他 intent へ再利用可能な規範形をとらない — requirements.md FR-3c/FR-3d と裁定 Q7=A に既に固定済みで persist 不要。c3 = requirements.md:119 A-2 の『tests/ の election 系はいずれも一時ディレクトリ fixture、実 elections/ を走査するのは elections.json の実在確認のみ』は team.md:219 absence-claim-grep-verify が要求する反証確認の実施記録そのもの。c4 = memory.md Deviations が『delegated-review-analysis-with-owned-verdict 追補(E-LSSADS13)が定める機械検証可能クラスに当たるため conductor の実測固定で閉じた』と明示し、閉包を4つの機械確認で示している — 追補の適用限定(予算消費後の残余是正)にも合致し、規則の拡張ではない。c5 = codekb 側『破損記録7件』(architecture.md:3015 / reverse-engineering-timestamp.md:12)は当該節が冒頭で observed 498c3034a を宣言しており、260803-e-esg-res13(20:11:06)不在の断面では正しい。判断は (i) team.md:258 measurement-ref-in-artifacts(件数・実測値は測定 ref を明記して書く)と (ii) project.md:228 historical-section-cite-check-at-observed(observed 宣言を持つ節は HEAD でなく宣言 ref で照合する — 断面の見分けが真偽の分水嶺)の組み合わせで導かれる。さらに cite-fix-sweeps-whole-record(project.md:248)の射程は『誤引用』の全域伝播であって、宣言 ref 下で正しい値は初めから伝播対象に入らない。実際の処置(codekb 非改変+requirements.md:75 への ref 差説明追記、measurement-ref-in-artifacts を明示引用)は既存規範の正しい執行であり、新規追補には当たらない。",
+  "submittedAt": "2026-08-03T12:23:20Z"
+}

@@ -850,6 +850,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
+    "slug": "election-state-guard",
+    "dirName": "260803-election-state-guard",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fc698-ba1f-7467-b6b6-57c4b5b50140",
     "slug": "advisory-human-choice",
     "dirName": "260803-advisory-human-choice",
