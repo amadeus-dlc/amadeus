@@ -30,7 +30,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "5cb665f7c1adda84665aa31cf5197ea453021e35b56a5d8f8965879a1689a49a"
+          "sha256": "d52010a0189e05ed6415eab3e59b153d51de35672ab79234860c78b55d2f13bb"
         }
       ],
       "vocabulary": {
@@ -73,7 +73,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
-          "sha256": "f046728b6f3285ea018bf4fd9c4db38e7ec8b45e4ebcca1ec910f3dc65d1ea6b"
+          "sha256": "452a279d41dacc55923e1792cadb857e29a07cf91d5c412f502b1e5a6a17d5cf"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-mirror-project-reconciliation-reducer.ts",

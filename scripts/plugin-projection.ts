@@ -69,6 +69,7 @@ import {
   type ReadOnlyFs,
   nodeReadOnlyFs,
 } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import { parseAmadeusConfigLayers } from "../packages/framework/core/tools/amadeus-config.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "../packages/framework/core/tools/amadeus-plugin.ts";
 export { type ReadOnlyFs, nodeReadOnlyFs };
 
@@ -999,12 +1000,23 @@ export function buildSelfInstallProjection(
   if (!existsSync(configPath)) {
     return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [], artifacts: new Map() };
   }
-  const config = JSON.parse(readFileSync(configPath, "utf-8")) as { plugins?: unknown };
-  if (config.plugins !== undefined &&
-    (!Array.isArray(config.plugins) || config.plugins.some((plugin) => typeof plugin !== "string"))) {
-    throw new PluginValidationError(["SELF_INSTALL rejected: amadeus/config.json plugins must be a string array"]);
+  const config = parseAmadeusConfigLayers([
+    {
+      layer: "project",
+      path: "amadeus/config.json",
+      present: true,
+      rawValue: JSON.parse(readFileSync(configPath, "utf-8")),
+    },
+  ]);
+  if (config.kind === "invalid") {
+    throw new PluginValidationError(
+      config.issues.map(
+        (issue) =>
+          `SELF_INSTALL rejected: ${issue.path} ${issue.key} ${issue.expected}`,
+      ),
+    );
   }
-  if (!Array.isArray(config.plugins) || config.plugins.length === 0) {
+  if (config.config.plugin.activation.names.length === 0) {
     return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [], artifacts: new Map() };
   }
   const artifacts = projectInTemporaryWorkspace(repoRoot, name);

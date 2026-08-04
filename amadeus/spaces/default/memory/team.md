@@ -28,7 +28,7 @@ Amadeus は、同じ `org → team → project → phase → stage` ルールを
 
 ソロモードでは、2体の fresh subagent(`subagent-1`, `subagent-2`)による選挙を正規の選挙形態として認める。conductor(main agent)は選挙管理委員として amadeus-election CLI の指令ループを駆動し、自らは投票しない。subagent 票は実在の実行主体による実在の票であり、「存在しないメンバーや投票結果を捏造しない」規範に矛盾しない。
 
-**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `"auto-solo-election": true` がある場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto-solo` を必ず付け、`{"opened":null,"reason":"auto-solo-election-disabled"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `false`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
+**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{"opened":null,"reason":"solo-election-manual-trigger-required"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
 
 2-0 で即採用できる場合は選挙結果を採用する。票が割れたケース(`split` hold・棄権を含む hold・ブロック hold・再議論後も追加議論が残存する場合)はユーザーへエスカレーションする。
 
@@ -140,7 +140,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・パッケージ対象ハーネス生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとする。`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への継続同意として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
+`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・パッケージ対象ハーネス生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとする。`intent-mirror.github.issue.mode = auto` の明示設定は、その Intent に属する mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への継続同意として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
 
 <!-- amadeus:practices-promote:END -->
 

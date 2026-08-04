@@ -85,7 +85,7 @@ describe("t416 deterministic self-install plugin projections", () => {
     const empty = mkdtempSync(join(tmpdir(), "amadeus-t416-empty-"));
     scratch.push(missing, empty);
     mkdirSync(join(empty, "amadeus"), { recursive: true });
-    writeFileSync(join(empty, "amadeus", "config.json"), '{"plugins":[]}\n');
+    writeFileSync(join(empty, "amadeus", "config.json"), '{"plugin":{"activation":{"names":[]}}}\n');
     expect(buildSelfInstallProjection("claude", missing).expectedPaths.size).toBe(0);
     expect(buildSelfInstallProjection("codex", empty).expectedPaths.size).toBe(0);
   });

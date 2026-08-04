@@ -331,7 +331,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     expect(directive.cap).toBe(2);
   }, 30000);
 
-  test("1c: invoke-swarm bakes the intent-over-space-over-project max-parallel-units cap", () => {
+  test("1c: invoke-swarm bakes the intent-over-space-over-project swarm.unit.concurrency.limit cap", () => {
     const proj = seedCodegenProject("autonomous");
     writeFileSync(
       join(seededRecordDir(proj), "inception", "units-generation", "unit-of-work-dependency.md"),
@@ -342,9 +342,9 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
       units: ["a", "b", "c", "d"].map((name) => ({ name, depends_on: [] })),
       batches: [["a", "b", "c", "d"]],
     } }));
-    writeFileSync(join(proj, "amadeus", "config.json"), JSON.stringify({ "max-parallel-units": 2 }));
-    writeFileSync(join(proj, "amadeus", "spaces", "default", "config.json"), JSON.stringify({ "max-parallel-units": 3 }));
-    writeFileSync(join(seededRecordDir(proj), "config.json"), JSON.stringify({ "max-parallel-units": 1 }));
+    writeFileSync(join(proj, "amadeus", "config.json"), JSON.stringify({ swarm: { unit: { concurrency: { limit: 2 } } } }));
+    writeFileSync(join(proj, "amadeus", "spaces", "default", "config.json"), JSON.stringify({ swarm: { unit: { concurrency: { limit: 3 } } } }));
+    writeFileSync(join(seededRecordDir(proj), "config.json"), JSON.stringify({ swarm: { unit: { concurrency: { limit: 1 } } } }));
     expect(runNext(proj).directive.cap).toBe(1);
     unlinkSync(join(seededRecordDir(proj), "config.json"));
     expect(runNext(proj).directive.cap).toBe(3);

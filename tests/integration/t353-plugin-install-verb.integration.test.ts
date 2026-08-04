@@ -261,7 +261,11 @@ describe("t353 plugin install verb (U2, #1597)", () => {
       const result = runPluginCli(["install", source, "--project-root", harness], deps());
       expect(result).toEqual({ kind: "installed", name: PLUGIN, composeOutcome: "composed" });
       expect(readFileSync(join(project, "plugins", PLUGIN, "plugin.json"))).toEqual(readFileSync(join(source, "plugin.json")));
-      expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([PLUGIN]);
+      expect(
+        JSON.parse(
+          readFileSync(join(project, "amadeus", "config.json"), "utf-8"),
+        ).plugin.activation.names,
+      ).toEqual([PLUGIN]);
       expect(existsSync(join(harness, PLUGIN_SOURCE_DIR_NAME, PLUGIN, "plugin.json"))).toBe(true);
       expect(createNodeBackend(harness).readComposition().plugins.has(PLUGIN)).toBe(true);
     } finally {
@@ -300,7 +304,10 @@ describe("t353 plugin install verb (U2, #1597)", () => {
     const harness = join(project, ".codex");
     mkdirSync(harness, { recursive: true });
     mkdirSync(join(project, "amadeus"), { recursive: true });
-    writeFileSync(join(project, "amadeus", "config.json"), "{\n  \"plugins\": []\n}\n");
+    writeFileSync(
+      join(project, "amadeus", "config.json"),
+      '{\n  "plugin": { "activation": { "names": [] } }\n}\n',
+    );
     const baseline = treeSnapshot(project);
     try {
       const injected = deps(options);

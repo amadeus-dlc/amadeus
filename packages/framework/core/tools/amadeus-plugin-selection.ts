@@ -55,12 +55,20 @@ export function resolvePluginSelection(hostRoot: string): PluginSelectionOutcome
       message: outcome.issues.map((issue) => `${issue.path}: ${issue.key} ${issue.expected}`).join("; "),
     };
   }
-  const global = read.layers.find((layer) => layer.layer === "global" && layer.present)?.rawValue;
-  const explicit = typeof global === "object"
-    && global !== null
-    && !Array.isArray(global)
-    && Object.hasOwn(global, "plugins");
-  return { kind: "resolved", projectDir, plugins: outcome.config.plugins, explicit };
+  const project = read.layers.find(
+    (layer) => layer.layer === "project" && layer.present,
+  )?.rawValue;
+  const explicit =
+    typeof project === "object" &&
+    project !== null &&
+    !Array.isArray(project) &&
+    "plugin" in project;
+  return {
+    kind: "resolved",
+    projectDir,
+    plugins: outcome.config.plugin.activation.names,
+    explicit,
+  };
 }
 
 export function observePluginSelection(
@@ -90,7 +98,9 @@ export function observePluginSelection(
 export function writeProjectPlugins(projectDir: string, plugins: readonly string[]): void {
   const path = join(projectDir, "amadeus", "config.json");
   const current = existsSync(path) ? JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown> : {};
-  current.plugins = [...new Set(plugins)].sort();
+  current.plugin = {
+    activation: { names: [...new Set(plugins)].sort() },
+  };
   mkdirSync(dirname(path), { recursive: true });
   const temp = `${path}.tmp-${process.pid}`;
   writeFileSync(temp, `${JSON.stringify(current, null, 2)}\n`);

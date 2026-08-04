@@ -1,13 +1,44 @@
 {
-  "auto-mirror": "auto",
-  "auto-file-findings": "auto",
-  "auto-solo-election": true,
-  "plugins": [
-    "formal-model-check"
-  ],
-  "mirror-projects": [
-    {
-      "project": "amadeus-dlc/5"
+  "intent-mirror": {
+    "github": {
+      "issue": {
+        "mode": "auto"
+      },
+      "project": {
+        "targets": [
+          {
+            "project": "amadeus-dlc/5"
+          }
+        ]
+      }
     }
-  ]
+  },
+  "solo-election": {
+    "trigger": {
+      "mode": "auto"
+    }
+  },
+  "finding": {
+    "github": {
+      "issue": {
+        "creation": {
+          "mode": "auto"
+        }
+      }
+    }
+  },
+  "swarm": {
+    "unit": {
+      "concurrency": {
+        "limit": 4
+      }
+    }
+  },
+  "plugin": {
+    "activation": {
+      "names": [
+        "formal-model-check"
+      ]
+    }
+  }
 }

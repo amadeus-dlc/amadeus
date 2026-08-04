@@ -4,102 +4,54 @@
 
 > Part of the [AI-DLC documentation](../README.md) · [User Guide](00-introduction.md)
 
-Amadeus resolves repository-shared settings at three levels. Use the highest
-level that matches the audience for the setting:
+Amadeus resolves Git-shared settings from Project, Space, and Intent files:
 
 | Level | File | Applies to |
 |-------|------|------------|
-| Global Config | `amadeus/config.json` | Every space and intent in the repository |
-| Space Config | `amadeus/spaces/<space>/config.json` | Every intent in one space |
-| Intent Config | `amadeus/spaces/<space>/intents/<intent>/config.json` | One intent |
+| Project | `amadeus/config.json` | The repository |
+| Space | `amadeus/spaces/<space>/config.json` | One space |
+| Intent | `amadeus/spaces/<space>/intents/<intent>/config.json` | One intent |
 
-All three files are optional and intended to be committed to Git. There is no
-machine-local configuration level.
+All files are optional. Resolution order is `Project → Space → Intent`; a
+later value replaces the same leaf from an earlier file. Arrays replace rather
+than append.
 
-## Precedence
+## Example
 
-Amadeus reads the files in this order:
-
-```text
-Global Config → Space Config → Intent Config
-```
-
-Later, more specific levels override earlier levels key by key. For example,
-`amadeus/config.json` may keep solo elections manual by default:
+Project defaults:
 
 ```json
 {
-  "auto-solo-election": false,
-  "max-parallel-units": 4
+  "solo-election": { "trigger": { "mode": "manual" } },
+  "swarm": { "unit": { "concurrency": { "limit": 4 } } },
+  "plugin": { "activation": { "names": ["formal-model-check"] } }
 }
 ```
 
-The `payments` space can opt in to automatic solo elections in
-`amadeus/spaces/payments/config.json`:
+Space override:
 
 ```json
 {
-  "auto-solo-election": true,
-  "max-parallel-units": 2
+  "solo-election": { "trigger": { "mode": "auto" } },
+  "swarm": { "unit": { "concurrency": { "limit": 2 } } }
 }
 ```
 
-Every intent in that space uses `true` unless its Intent Config overrides the
-value. Other spaces continue to use `false`.
+## Supported paths
 
-## Supported settings
+| Path | Values | Default |
+|------|--------|---------|
+| `intent-mirror.github.issue.mode` | `off \| prompt \| auto` | `prompt` |
+| `intent-mirror.github.project.targets` | Project target array | `[]` |
+| `solo-election.trigger.mode` | `manual \| auto` | `manual` |
+| `finding.github.issue.creation.mode` | `off \| prompt \| auto` | `prompt` |
+| `swarm.unit.concurrency.limit` | integer `1..4` | `4` |
+| `plugin.activation.names` | plugin-name array; Project only | `[]` |
 
-| Key | Type | Default | Effect |
-|-----|------|---------|--------|
-| `auto-mirror` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls mirror synchronization at verified phase boundaries |
-| `mirror-projects` | project target array | `[]` | Maps an intent to GitHub Project targets and optional status names |
-| `auto-solo-election` | boolean | `false` | Enables automatic solo elections for design deviations, blockers, and §13 learning selection |
-| `auto-file-findings` | `"off"` \| `"prompt"` \| `"auto"` | `"prompt"` | Controls filing confirmed Amadeus defects and concerns to `amadeus-dlc/amadeus` |
-| `max-parallel-units` | integer `1..4` | `4` | Hard-bounds simultaneously active Unit workers for one Intent; later layers override earlier ones |
-| `plugins` | array of plugin names | `[]` | Selects plugins to reconcile into the current harness; valid only in Global Config |
+Configuration is fail-closed. Unknown paths, legacy flat keys, `null`, malformed
+JSON, unreadable files, and invalid values reject the whole result. Diagnostics
+for legacy keys name the new structured path; no compatibility alias is
+provided.
 
-`plugins` is the project opt-in source of truth and is intentionally not
-overridable by Space or Intent Config. Names must be unique, 1–64 characters,
-match `^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`, and are processed in sorted
-order. Editing the array directly is supported; the next session reconciles the
-current harness from project `plugins/<name>/` without touching other harnesses.
-
-`auto-solo-election` controls automatic activation only. When it is absent or
-`false`, a user can still explicitly request an election. Specification
-changes and other human-only escalation decisions never become election
-eligible.
-
-`auto-file-findings` applies only to confirmed, actionable findings owned by
-Amadeus and not already covered by the active intent. The deterministic filer
-searches open and closed Issues by a stable marker before creating anything.
-It never files secrets, private workspace information, speculative ideas, or
-application-project findings.
-
-```json
-{
-  "auto-file-findings": "auto"
-}
-```
-
-Use `"prompt"` to require approval for each candidate or `"off"` to disable
-automatic filing. An explicit human request can still approve one filing.
-Filed defects use the existing `bug` label and concerns use `enhancement`.
-
-## Validation and failure behavior
-
-Configuration is fail-closed:
-
-- the root value must be a JSON object;
-- unknown keys are rejected;
-- each setting must match the type in the table above;
-- malformed JSON or an unreadable configuration file is an error;
-- a missing file is treated as an absent level;
-- if any present level is invalid, Amadeus rejects the whole resolved
-  configuration instead of applying the remaining levels.
-
-When a configuration error stops phase-boundary routing, fix every reported
-level and run the workflow again. Errors include their level (`global`,
-`space`, or `intent`) so that the affected file can be identified.
-
-For the implementation contract, see
-[Layered Configuration Resolver](../reference/19-layered-config.md).
+See [Layered Configuration Resolver](../reference/19-layered-config.md) for the
+complete target and validation contract.

@@ -195,7 +195,7 @@ describe("t340 drop restores the filesystem baseline (FR-3, #1586)", () => {
     mkdirSync(harness, { recursive: true });
     cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
     mkdirSync(join(project, "amadeus"), { recursive: true });
-    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugin": { "activation": { "names": ["${PLUGIN}"] } }\n}\n`);
     try {
       expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
       const baseline = treeSnapshot(project);
@@ -219,7 +219,7 @@ describe("t340 drop restores the filesystem baseline (FR-3, #1586)", () => {
     mkdirSync(harness, { recursive: true });
     cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
     mkdirSync(join(project, "amadeus"), { recursive: true });
-    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugin": { "activation": { "names": ["${PLUGIN}"] } }\n}\n`);
     try {
       expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
       const owned = join(harness, "plugins", PLUGIN, "stages", `${PLUGIN}.md`);
@@ -239,7 +239,7 @@ describe("t340 drop restores the filesystem baseline (FR-3, #1586)", () => {
     mkdirSync(harness, { recursive: true });
     cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
     mkdirSync(join(project, "amadeus"), { recursive: true });
-    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugins": ["${PLUGIN}"]\n}\n`);
+    writeFileSync(join(project, "amadeus", "config.json"), `{\n  "plugin": { "activation": { "names": ["${PLUGIN}"] } }\n}\n`);
     try {
       expect(handlePluginCli(["compose", "--if-stale", "--project-root", harness], deps())).toBe(0);
       const marker = join(harness, ".amadeus-plugin-src", PLUGIN, "user-owned.txt");
@@ -247,7 +247,11 @@ describe("t340 drop restores the filesystem baseline (FR-3, #1586)", () => {
       expect(handlePluginCli(["drop", PLUGIN, "--project-root", harness], deps())).toBe(0);
       expect(readFileSync(marker, "utf-8")).toBe("preserve\n");
       expect(existsSync(join(project, "plugins", PLUGIN, "plugin.json"))).toBe(true);
-      expect(JSON.parse(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).plugins).toEqual([]);
+      expect(
+        JSON.parse(
+          readFileSync(join(project, "amadeus", "config.json"), "utf-8"),
+        ).plugin.activation.names,
+      ).toEqual([]);
     } finally {
       rmSync(project, { recursive: true, force: true });
     }

@@ -413,7 +413,7 @@ describe("t115 final gated approve -> complete-workflow (report -> amadeus-state
     const p = projWithState("state-final-stage.md");
     writeFileSync(
       join(p, "amadeus", "config.json"),
-      '{"auto-mirror":"off"}\n',
+      '{"intent-mirror":{"github":{"issue":{"mode":"off"}}}}\n',
     );
     seedGoalReceiptForFinalStage(p, "feedback-optimization");
 
@@ -482,7 +482,7 @@ describe("t115 re-report on a completed workflow", () => {
     const p = projWithState("state-final-stage.md");
     writeFileSync(
       join(p, "amadeus", "config.json"),
-      '{"auto-mirror":"off"}\n',
+      '{"intent-mirror":{"github":{"issue":{"mode":"off"}}}}\n',
     );
     seedGoalReceiptForFinalStage(p, "feedback-optimization");
 

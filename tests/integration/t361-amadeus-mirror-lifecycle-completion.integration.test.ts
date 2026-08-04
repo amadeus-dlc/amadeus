@@ -1032,10 +1032,16 @@ describe("t346 prompt Project face", () => {
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
       JSON.stringify({
-        "auto-mirror": "prompt",
-        "mirror-projects": [
-          { project: canonical(BOARD_A), "phase-field": "Lifecycle" },
-        ],
+        "intent-mirror": {
+          github: {
+            issue: { mode: "prompt" },
+            project: {
+              targets: [
+                { project: canonical(BOARD_A), "phase-field": "Lifecycle" },
+              ],
+            },
+          },
+        },
       }),
     );
     if (failure !== "none") {

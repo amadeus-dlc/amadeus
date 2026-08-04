@@ -25,7 +25,7 @@ function project(): { root: string; body: string } {
   mkdirSync(join(root, "amadeus"), { recursive: true });
   writeFileSync(
     join(root, "amadeus", "config.json"),
-    `${JSON.stringify({ "auto-file-findings": "prompt" })}\n`,
+    `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
     "utf-8",
   );
   const body = join(root, "finding.md");
@@ -35,7 +35,7 @@ function project(): { root: string; body: string } {
 
 function argv(root: string, body: string): string[] {
   return [
-    "file",
+    "create-github-issue",
     "--project-dir",
     root,
     "--kind",
@@ -77,12 +77,12 @@ describe("runFindingCli", () => {
     const { root } = project();
     expect(defaultFindingDependencies.resolveConfig(root)).toEqual({
       kind: "resolved",
-      autoFileFindings: "prompt",
+      creationMode: "prompt",
     });
 
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ "auto-file-findings": "sometimes" })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "sometimes" } } } } })}\n`,
       "utf-8",
     );
     expect(defaultFindingDependencies.resolveConfig(root)).toEqual({
@@ -176,7 +176,7 @@ describe("runFindingCli", () => {
       ...unreachableDependencies,
       resolveConfig: () => ({
         kind: "resolved",
-        autoFileFindings: "prompt",
+        creationMode: "prompt",
       }),
     });
 
@@ -193,7 +193,7 @@ describe("runFindingCli", () => {
     const result = await runFindingCli([...argv(root, body), "--approved"], {
       resolveConfig: () => ({
         kind: "resolved",
-        autoFileFindings: "prompt",
+        creationMode: "prompt",
       }),
       gateway: {
         readiness: async () => {

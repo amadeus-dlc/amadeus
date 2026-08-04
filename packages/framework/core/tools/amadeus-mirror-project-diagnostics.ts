@@ -139,7 +139,7 @@ function optionMissingSummary(
     `${project} declares no "${phaseField}" option named exactly "${expected}" ` +
     "(the match is exact — case and spacing included). Either add that option to " +
     "the board, or map this phase onto one of the options it already has with a " +
-    "`status-names` override for this Project in `mirror-projects`."
+    "`status-names` override for this Project in `intent-mirror.github.project.targets`."
   );
 }
 
@@ -276,7 +276,10 @@ export async function diagnoseMirrorProjects(
     target.intentDir,
     target.space,
   );
-  const configured = config.kind === "resolved" ? config.config.projects : [];
+  const configured =
+    config.kind === "resolved"
+      ? config.config.intentMirror.github.project.targets
+      : [];
   const ledger = state.projectSync?.projects ?? [];
   if (configured.length === 0 && ledger.length === 0) return [];
   if (state.issueNumber === null || target.snapshot === null) return [];

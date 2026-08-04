@@ -506,11 +506,17 @@ function resolvePrepareConcurrency(
   if (flags.concurrency !== undefined && !/^[1-9][0-9]*$/.test(flags.concurrency)) {
     fail("--concurrency must be a positive integer");
   }
-  const override = flags.concurrency === undefined ? resolvedConfig.config.maxParallelUnits : Number(flags.concurrency);
-  if (override > resolvedConfig.config.maxParallelUnits) {
-    fail(`--concurrency may only narrow max-parallel-units (${resolvedConfig.config.maxParallelUnits})`);
+  const configuredLimit = resolvedConfig.config.swarm.unit.concurrency.limit;
+  const override =
+    flags.concurrency === undefined
+      ? configuredLimit
+      : Number(flags.concurrency);
+  if (override > configuredLimit) {
+    fail(
+      `--concurrency may only narrow swarm.unit.concurrency.limit (${configuredLimit})`,
+    );
   }
-  return Math.min(unitCount, resolvedConfig.config.maxParallelUnits, override);
+  return Math.min(unitCount, configuredLimit, override);
 }
 
 function handlePrepare(rest: string[]): void {
@@ -1128,9 +1134,15 @@ export function handleInitialEnqueue(rest: string[]): void {
   if (units.length === 0) fail("--units resolved to an empty list");
   const config = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
   if (config.kind === "invalid") fail(`invalid swarm configuration: ${formatConfigIssues(config.issues)}`);
-  const requested = flags.cap === undefined ? config.config.maxParallelUnits : Number(flags.cap);
-  if (!Number.isInteger(requested) || requested < 1 || requested > config.config.maxParallelUnits) {
-    fail(`--cap must be an integer from 1 through ${config.config.maxParallelUnits}`);
+  const configuredLimit = config.config.swarm.unit.concurrency.limit;
+  const requested =
+    flags.cap === undefined ? configuredLimit : Number(flags.cap);
+  if (
+    !Number.isInteger(requested) ||
+    requested < 1 ||
+    requested > configuredLimit
+  ) {
+    fail(`--cap must be an integer from 1 through ${configuredLimit}`);
   }
   const coordinator = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
   printPoolMutation(coordinator.initialEnqueue({
