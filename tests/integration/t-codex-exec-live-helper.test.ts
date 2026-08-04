@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import {
+  codexExecLiveRequirementsSkipReason,
   initializeCodexExecProject,
   setupCodexExecHome,
   setupCodexExecProject,
@@ -52,6 +54,33 @@ function gitTrackedFiles(projectDir: string): string[] {
 }
 
 describe("codex exec live E2E helper", () => {
+  test("requirements probe uses the adapter's allow-listed PATH", () => {
+    const binDir = mkdtempSync(join(tmpdir(), "codex-live-path-"));
+    const codexBin = join(binDir, "codex");
+    writeFileSync(codexBin, "#!/bin/sh\necho 'codex-cli 0.146.0'\n", "utf8");
+    chmodSync(codexBin, 0o755);
+    const input = {
+      env: {
+        AMADEUS_CODEX_EXEC_LIVE: "1",
+        OPENAI_API_KEY: "fixture-key",
+      },
+      codexBin: "codex",
+      distributionDir: process.cwd(),
+    };
+    try {
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: binDir },
+      })).toBeNull();
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: "/path/that/does/not/exist" },
+      })).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=codex)");
+    } finally {
+      rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+
   test("canonical project setup activates the distribution without copying source auth", () => {
     const fixture = createCodexHarnessFixture();
     const project = setupCodexExecProject({

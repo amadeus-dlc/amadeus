@@ -28,7 +28,7 @@ function createFixture(helpFlags = true, outputFlood = false): {
     : "--print";
   writeFileSync(
     binary,
-    `#!/usr/bin/env bun
+    `#!${process.execPath}
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 if (process.argv.includes("--version")) {
@@ -217,7 +217,7 @@ describe("Claude print live adapter", () => {
       });
       expect(result).toMatchObject({
         ok: true,
-        value: { kind: "skipped", outcome: { code: "AMADEUS_LIVE_E2E:SKIP:CREDENTIAL_UNAVAILABLE" } },
+        value: { kind: "skipped", outcome: { code: "AMADEUS_LIVE_E2E:SKIP:AUTH_UNAVAILABLE" } },
       });
       expect(allocator.allocationCount).toBe(0);
     } finally {

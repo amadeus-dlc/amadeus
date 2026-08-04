@@ -1,4 +1,4 @@
-import { codeMatchesStatus, LIVE_CODES, type LiveStatus } from "../contract.ts";
+import { codeMatchesStatus, LIVE_CODES, type LiveCode, type LiveStatus } from "../contract.ts";
 import type { ValidatedContractCase } from "./contract-case.ts";
 
 export const CANONICAL_LIVE_CODES = LIVE_CODES;

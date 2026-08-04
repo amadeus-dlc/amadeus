@@ -1,8 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { REPO_ROOT } from "../harness/fixtures.ts";
 import {
   codeMatchesStatus,
   sanitizeEvidence,
@@ -25,32 +21,10 @@ import {
   renderCapabilityMatrix,
   updateCapabilityMatrix,
 } from "../harness/live-e2e/projector.ts";
-import {
-  currentGitSha,
-  LIVE_E2E_LEDGER,
-  liveScratchLeakCheck,
-} from "../harness/live-e2e/testing/live-kernel.ts";
 import { collectBounded } from "../harness/live-e2e/stream.ts";
 import { parseVersion, versionAtLeast } from "../harness/live-e2e/version.ts";
 
 describe("live E2E production kernel", () => {
-  test("live kernel helpers keep ledgers external and report scratch leaks", async () => {
-    expect(LIVE_E2E_LEDGER.startsWith(REPO_ROOT)).toBe(false);
-    expect(currentGitSha()).toMatch(/^[a-f0-9]{40}$/);
-    const root = mkdtempSync(join(tmpdir(), "live-kernel-leak-"));
-    const target = {
-      scratch: { root, homeDir: join(root, "home"), projectDir: join(root, "project"), state: "ready" as const },
-      registeredResources: [],
-    };
-    try {
-      expect(await liveScratchLeakCheck(target)).toEqual(["scratch root remained after cleanup"]);
-      rmSync(root, { recursive: true, force: true });
-      expect(await liveScratchLeakCheck(target)).toEqual([]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   test("shared stream and version helpers preserve bounds and comparison", async () => {
     const stream = new Response("abcdef").body;
     if (stream === null) throw new Error("fixture stream is unavailable");

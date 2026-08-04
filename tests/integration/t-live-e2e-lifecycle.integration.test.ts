@@ -20,6 +20,12 @@ import {
   type RecordedLiveRunReceipt,
 } from "../harness/live-e2e/ledger.ts";
 import { LIVE_CAPABILITIES } from "../harness/live-e2e/registry.ts";
+import { REPO_ROOT } from "../harness/fixtures.ts";
+import {
+  currentGitSha,
+  LIVE_E2E_LEDGER,
+  liveScratchLeakCheck,
+} from "../harness/live-e2e/testing/live-kernel.ts";
 
 function fixtureRoot(): string {
   return mkdtempSync(join(tmpdir(), "amadeus-live-kernel-"));
@@ -167,11 +173,30 @@ function context(root: string, adapter: FakeAdapter): LiveRunContext {
 }
 
 describe("live E2E lifecycle", () => {
+  test("live kernel helpers keep ledgers external and report scratch leaks", async () => {
+    expect(LIVE_E2E_LEDGER.startsWith(REPO_ROOT)).toBe(false);
+    expect(currentGitSha()).toMatch(/^[a-f0-9]{40}$/);
+    const root = mkdtempSync(join(tmpdir(), "live-kernel-leak-"));
+    const target = {
+      scratch: { root, homeDir: join(root, "home"), projectDir: join(root, "project"), state: "ready" as const },
+      registeredResources: [],
+    };
+    try {
+      expect(await liveScratchLeakCheck(target)).toEqual(["scratch root remained after cleanup"]);
+      rmSync(root, { recursive: true, force: true });
+      expect(await liveScratchLeakCheck(target)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("gate denial performs no preflight, scratch, process, or ledger work", async () => {
     const root = fixtureRoot();
     const adapter = new FakeAdapter();
-    const denied = context(root, adapter);
-    denied.env = { AMADEUS_CODEX_EXEC_LIVE: "1", GITHUB_ACTIONS: "true" };
+    const denied = {
+      ...context(root, adapter),
+      env: { AMADEUS_CODEX_EXEC_LIVE: "1", GITHUB_ACTIONS: "true" },
+    };
     try {
       const result = await runLiveJourney(adapter, journey(), denied);
       expect(result).toMatchObject({

@@ -26,7 +26,7 @@ function createFixture(): {
   writeFileSync(join(distribution, ".codex", "config.toml.example"), "# Fixture\n", "utf8");
   writeFileSync(
     binary,
-    `#!/usr/bin/env bun
+    `#!${process.execPath}
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 if (process.argv.includes("--version")) {
