@@ -204,12 +204,14 @@ export function createMemoryIntentAutonomyRepository(options: {
   };
 }
 
-function transactionFor(input: {
+interface TransactionForInput {
   readonly transactionId: string;
   readonly before: AutonomyProjection | null;
   readonly after: AutonomyProjection;
   readonly events: readonly AutonomyRuntimeEvent[];
-}): IntentAutonomyTransaction {
+}
+
+function transactionFor(input: TransactionForInput): IntentAutonomyTransaction {
   return {
     schemaVersion: 1,
     transactionId: input.transactionId,
@@ -334,13 +336,15 @@ function completedResult(
   }) as WorkflowResult & { readonly outcome: "completed" };
 }
 
-function parkProjection(input: {
+interface ParkProjectionInput {
   readonly projection: AutonomyProjection;
   readonly triggerOccurrenceId: string;
   readonly reason: StopReason;
   readonly resumeCondition: ResumeCondition;
   readonly monitorLatchIdentity: string | null;
-}): { readonly after: AutonomyProjection; readonly envelope: ParkEnvelope } {
+}
+
+function parkProjection(input: ParkProjectionInput): { readonly after: AutonomyProjection; readonly envelope: ParkEnvelope } {
   validateResumeCondition(input.reason, input.resumeCondition);
   if ((input.reason === "REPAIR_STALLED") !== (input.monitorLatchIdentity !== null)) {
     throw new Error("illegal-monitor-latch-combination");
@@ -744,11 +748,13 @@ export function createIntentAutonomyCoordinator(options: {
   };
 }
 
-export function resolveIntentQualityActivation(input: {
+interface ResolveIntentQualityActivationInput {
   readonly autonomy: AutonomyProjection;
   readonly qualityProjection: QualityPluginProjection;
   readonly contribution: NormalizedQualityContribution | null;
-}): QualityPluginActivation {
+}
+
+export function resolveIntentQualityActivation(input: ResolveIntentQualityActivationInput): QualityPluginActivation {
   assertLegalAutonomyProjection(input.autonomy);
   return resolveQualityPluginActivation({
     mode: input.autonomy.mode,

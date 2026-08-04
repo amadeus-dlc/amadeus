@@ -18,6 +18,7 @@ import {
   readProductionAutonomyProjection,
   resumeProductionQuality,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import { main as boltMain } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 
 const BUN = process.execPath;
 
@@ -725,4 +726,67 @@ describe("Intent-scoped autonomy production path", () => {
     expect(resumedProjection?.workflowExecutionState).toBe("running");
     expect(resumedProjection?.currentGrant?.state).toBe("active");
   }, 120_000);
+
+  test("bolt autonomy verbs drive the shipped handlers in-process", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const policiesPath = join(projectDir, "policies.json");
+    writeFileSync(policiesPath, JSON.stringify([{
+      sourceText: "Prefer the minimal fix for repair-strategy questions.",
+      selector: "repair-strategy",
+      optionId: "minimal-fix",
+    }]));
+    boltMain(["--project-dir", projectDir, "preview-autonomy", "--policies-file", policiesPath]);
+    const preview = previewProductionAutonomyGrant({
+      projectDir,
+      stateContent: state(projectDir),
+    });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    boltMain([
+      "--project-dir", projectDir,
+      "set-autonomy", "--mode", "full",
+      "--confirmed-display-digest", preview.preview.displayDigest,
+    ]);
+    expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: full");
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("full");
+
+    const questionPath = join(projectDir, "question-decision-inprocess.json");
+    writeFileSync(questionPath, JSON.stringify({
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"e".repeat(64)}`,
+      questionId: "choose-repair-inprocess",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+    }));
+    boltMain(["--project-dir", projectDir, "decide-question", "--input", questionPath]);
+
+    const observationPath = join(projectDir, "quality-observation-inprocess.json");
+    writeFileSync(observationPath, JSON.stringify({
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "build-and-test-inprocess",
+        boltId: "bolt-inprocess",
+        observations: [{
+          kind: "reviewer",
+          invocationId: "review-inprocess-1",
+          verifierId: "quality-reviewer",
+          validationReceipt: `sha256:${"c".repeat(64)}`,
+          verdict: "NOT-READY",
+          blockers: [{
+            findingId: "blocker-inprocess",
+            artifactId: "build-test-results",
+            failureFingerprint: `sha256:${"d".repeat(64)}`,
+          }],
+        }],
+      },
+      replanContext: "Use a fresh repair context after the first non-progress threshold.",
+    }));
+    boltMain(["--project-dir", projectDir, "observe-quality", "--input", observationPath]);
+    expect(readProductionAutonomyProjection(projectDir)?.workflowExecutionState).toBe("running");
+  }, 60_000);
 });

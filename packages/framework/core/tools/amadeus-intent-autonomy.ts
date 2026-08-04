@@ -96,12 +96,14 @@ export interface DecisionPolicy {
   readonly confirmedByHumanTurnId: string;
 }
 
-export function normalizeDecisionPolicies(input: {
+interface NormalizeDecisionPoliciesInput {
   readonly grantIdentitySeed: string;
   readonly scopeFingerprint: string;
   readonly humanTurnId: string;
   readonly policies: readonly DecisionPolicyInput[];
-}): readonly DecisionPolicy[] {
+}
+
+export function normalizeDecisionPolicies(input: NormalizeDecisionPoliciesInput): readonly DecisionPolicy[] {
   if (!SAFE_ID.test(input.grantIdentitySeed) || !SHA256.test(input.scopeFingerprint) ||
     !SAFE_ID.test(input.humanTurnId)) throw new Error("invalid-policy-normalization-context");
   const normalized = input.policies.map((policy) => {
@@ -204,10 +206,12 @@ export function assertLegalAutonomyProjection(projection: AutonomyProjection): v
   if (projection.parkEnvelope !== null) validateResumeCondition(projection.parkEnvelope.reason, projection.parkEnvelope.resumeCondition);
 }
 
-export function createAutonomyProjection(input: {
+interface CreateAutonomyProjectionInput {
   readonly intentUuid: string;
   readonly legacyStandingGrants?: readonly LegacyStandingGrantRecord[];
-}): AutonomyProjection {
+}
+
+export function createAutonomyProjection(input: CreateAutonomyProjectionInput): AutonomyProjection {
   if (!SAFE_ID.test(input.intentUuid)) throw new Error("invalid-intent-uuid");
   const legacy = [...(input.legacyStandingGrants ?? [])].sort((left, right) => bytewise(left.eventIdentity, right.eventIdentity));
   const modeProvenance: ModeProvenance = legacy.length === 0
@@ -322,12 +326,14 @@ function issueGrant(
   };
 }
 
-export function grantIssuanceDisplayDigest(input: {
+interface GrantIssuanceDisplayDigestInput {
   readonly intentUuid: string;
   readonly principalId: string;
   readonly scope: GrantScopeDescriptor;
   readonly policies: readonly DecisionPolicy[];
-}): string {
+}
+
+export function grantIssuanceDisplayDigest(input: GrantIssuanceDisplayDigestInput): string {
   return autonomyDigest({ ...input, policySetDigest: autonomyDigest(input.policies) });
 }
 
@@ -411,10 +417,12 @@ export interface DecisionOptionEffectRegistry {
   resolve(optionId: string): DecisionOptionEffect | null;
 }
 
-export function createDecisionOptionEffectRegistry(input: {
+interface CreateDecisionOptionEffectRegistryInput {
   readonly revision: string;
   readonly effects: readonly DecisionOptionEffect[];
-}): DecisionOptionEffectRegistry {
+}
+
+export function createDecisionOptionEffectRegistry(input: CreateDecisionOptionEffectRegistryInput): DecisionOptionEffectRegistry {
   if (!SHA256.test(input.revision)) throw new Error("invalid-effect-registry-revision");
   const byOption = new Map<string, DecisionOptionEffect>();
   for (const effect of input.effects) {
@@ -577,7 +585,7 @@ function uniqueOption(facts: readonly DecisionFact[]): DecisionFact | null | "co
   return options.size === 1 ? facts[0]! : "conflict";
 }
 
-function decisionRecord(input: {
+interface DecisionRecordInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
   readonly selectedOptionId: string;
@@ -586,7 +594,9 @@ function decisionRecord(input: {
   readonly basisFingerprint: string;
   readonly actorId: string;
   readonly degradedCapability?: AutoDecisionRecord["degradedCapability"];
-}): AutoDecisionRecord {
+}
+
+function decisionRecord(input: DecisionRecordInput): AutoDecisionRecord {
   if (!input.occurrence.optionIds.includes(input.selectedOptionId) || !SAFE_ID.test(input.actorId) ||
     !SHA256.test(input.basisFingerprint)) throw new Error("invalid-auto-decision");
   const grant = input.projection.currentGrant;
@@ -617,12 +627,14 @@ function decisionRecord(input: {
   };
 }
 
-function resolveConfirmedPolicy(input: {
+interface ResolveConfirmedPolicyInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
   readonly grant: IntentGrant;
   readonly actorId: string;
-}): AutoDecisionResolution | null {
+}
+
+function resolveConfirmedPolicy(input: ResolveConfirmedPolicyInput): AutoDecisionResolution | null {
   const policies = input.grant.policies.filter((policy) =>
     policy.selector === input.occurrence.selector &&
     policy.scopeFingerprint === input.grant.scope.scopeFingerprint &&
@@ -643,13 +655,15 @@ function resolveConfirmedPolicy(input: {
   }) };
 }
 
-export function createGateAutoDecision(input: {
+interface CreateGateAutoDecisionInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
   readonly actorId: string;
   readonly selectedOptionId: string;
   readonly basisKind: "mode-semi" | "grant-gate";
-}): AutoDecisionRecord {
+}
+
+export function createGateAutoDecision(input: CreateGateAutoDecisionInput): AutoDecisionRecord {
   if (input.occurrence.kind === "question") throw new Error("gate-decision-requires-gate-occurrence");
   if (input.basisKind === "mode-semi" && input.projection.mode !== "semi") {
     throw new Error("semi-gate-requires-semi-mode");
@@ -671,7 +685,7 @@ export function createGateAutoDecision(input: {
   });
 }
 
-export function resolveAutoDecision(input: {
+interface ResolveAutoDecisionInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
   readonly actorId: string;
@@ -680,7 +694,9 @@ export function resolveAutoDecision(input: {
   readonly applicableNormFacts: readonly DecisionFact[];
   readonly pastHumanRulings: readonly DecisionFact[];
   readonly capability: DecisionCapabilityPort;
-}): AutoDecisionResolution {
+}
+
+export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisionResolution {
   const { projection, occurrence } = input;
   const grant = projection.currentGrant;
   if (projection.mode !== "full" || grant === null) return { kind: "invalid", reason: "full-grant-required" };
@@ -731,12 +747,14 @@ export type EffectAuthorization =
   | { readonly ok: true; readonly effect: DecisionOptionEffect }
   | { readonly ok: false; readonly reason: "UNKNOWN_EFFECT" | "PAYLOAD_MISMATCH" | "PROHIBITED_EFFECT" | "SCOPE_OUT" | "NORM_DRIFT" };
 
-export function authorizeDecisionEffect(input: {
+interface AuthorizeDecisionEffectInput {
   readonly grant: IntentGrant;
   readonly selectedOptionId: string;
   readonly currentNormFingerprint: string;
   readonly registry: DecisionOptionEffectRegistry;
-}): EffectAuthorization {
+}
+
+export function authorizeDecisionEffect(input: AuthorizeDecisionEffectInput): EffectAuthorization {
   const effect = input.registry.resolve(input.selectedOptionId);
   if (effect === null) return { ok: false, reason: "UNKNOWN_EFFECT" };
   if (effect.payloadFingerprint !== autonomyDigest(effect.payload)) return { ok: false, reason: "PAYLOAD_MISMATCH" };
@@ -763,14 +781,16 @@ export interface GrantExerciseReservation {
   readonly currentNormFingerprint: string;
 }
 
-export function createGrantExerciseReservation(input: {
+interface CreateGrantExerciseReservationInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
   readonly decision: AutoDecisionRecord;
   readonly effect: DecisionOptionEffect;
   readonly effectRegistryRevision: string;
   readonly currentNormFingerprint: string;
-}): GrantExerciseReservation {
+}
+
+export function createGrantExerciseReservation(input: CreateGrantExerciseReservationInput): GrantExerciseReservation {
   const grant = input.projection.currentGrant;
   if (input.projection.mode !== "full" || grant === null || input.decision.grantId !== grant.grantId ||
     input.decision.selectedOptionId !== input.effect.optionId) throw new Error("grant-exercise-not-authorized");
@@ -805,13 +825,15 @@ export function createGrantExerciseReservation(input: {
   };
 }
 
-export function revalidateGrantExerciseReservation(input: {
+interface RevalidateGrantExerciseReservationInput {
   readonly projection: AutonomyProjection;
   readonly reservation: GrantExerciseReservation;
   readonly occurrence: InteractionOccurrence;
   readonly registry: DecisionOptionEffectRegistry;
   readonly currentNormFingerprint: string;
-}): { readonly valid: true } | { readonly valid: false; readonly reason: string } {
+}
+
+export function revalidateGrantExerciseReservation(input: RevalidateGrantExerciseReservationInput): { readonly valid: true } | { readonly valid: false; readonly reason: string } {
   const { projection, reservation, occurrence } = input;
   const grant = projection.currentGrant;
   if (projection.mode !== "full" || grant === null || grant.grantId !== reservation.grantId) return { valid: false, reason: "grant-changed" };

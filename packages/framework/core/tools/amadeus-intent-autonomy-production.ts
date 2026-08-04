@@ -139,11 +139,13 @@ export function readProductionAutonomyProjection(
   return resolved === null ? null : coordinatorFor(projectDir, resolved).readProjection();
 }
 
-export function commitProductionIntentCompletion(input: {
+interface CommitProductionIntentCompletionInput {
   readonly projectDir: string;
   readonly intent?: string;
   readonly space?: string;
-}): { readonly ok: true; readonly result: Exclude<ReturnType<IntentAutonomyCoordinator["complete"]>, { readonly error: string }> } |
+}
+
+export function commitProductionIntentCompletion(input: CommitProductionIntentCompletionInput): { readonly ok: true; readonly result: Exclude<ReturnType<IntentAutonomyCoordinator["complete"]>, { readonly error: string }> } |
   { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir, input.intent, input.space);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
@@ -156,14 +158,16 @@ function interactionKind(input: { readonly walkingSkeleton: boolean; readonly ph
   return input.phaseBoundary ? "phase-gate" : "stage-gate";
 }
 
-function occurrence(input: {
+interface OccurrenceInput {
   readonly projection: AutonomyProjection;
   readonly stage: string;
   readonly phase: string;
   readonly graphRevision: string;
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
-}) {
+}
+
+function occurrence(input: OccurrenceInput) {
   const kind = interactionKind(input);
   return createInteractionOccurrence({
     intentUuid: input.projection.intentUuid,
@@ -188,14 +192,16 @@ function qualityState(projection: AutonomyProjection): ProductionAutonomyContext
   return activation.kind;
 }
 
-export function productionStageAutonomy(input: {
+interface ProductionStageAutonomyInput {
   readonly projectDir: string;
   readonly stage: string;
   readonly phase: string;
   readonly graphRevision: string;
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
-}): ProductionAutonomyContext {
+}
+
+export function productionStageAutonomy(input: ProductionStageAutonomyInput): ProductionAutonomyContext {
   const projection = readProductionAutonomyProjection(input.projectDir);
   if (projection === null) {
     return {
@@ -254,10 +260,12 @@ function latestHumanTurnId(projectDir: string, resolved: ResolvedIntent): string
   return latest?.turnId ?? null;
 }
 
-function grantScope(input: {
+interface GrantScopeInput {
   readonly projection: AutonomyProjection;
   readonly stateContent: string;
-}): GrantScopeDescriptor {
+}
+
+function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
   const scopeId = getField(input.stateContent, "Scope") ?? "intent";
   const fingerprints = fallbackFingerprints(input.projection.intentUuid, scopeId);
   return {
@@ -280,12 +288,14 @@ function fallbackFingerprints(
   };
 }
 
-function grantDisplayDigest(input: {
+interface GrantDisplayDigestInput {
   readonly intentUuid: string;
   readonly principalId: string;
   readonly scope: GrantScopeDescriptor;
   readonly policies: readonly DecisionPolicyInput[];
-}): string {
+}
+
+function grantDisplayDigest(input: GrantDisplayDigestInput): string {
   return autonomyDigest({
     intentUuid: input.intentUuid,
     principalId: input.principalId,
@@ -298,12 +308,14 @@ function grantDisplayDigest(input: {
   });
 }
 
-export function previewProductionAutonomyGrant(input: {
+interface PreviewProductionAutonomyGrantInput {
   readonly projectDir: string;
   readonly stateContent: string;
   readonly principalId?: string;
   readonly policies?: readonly DecisionPolicyInput[];
-}): { readonly ok: true; readonly preview: {
+}
+
+export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyGrantInput): { readonly ok: true; readonly preview: {
   readonly intentUuid: string;
   readonly principalId: string;
   readonly scope: GrantScopeDescriptor;
@@ -328,14 +340,16 @@ export function previewProductionAutonomyGrant(input: {
   };
 }
 
-function prepareFullGrantCommand(input: {
+interface PrepareFullGrantCommandInput {
   readonly before: AutonomyProjection;
   readonly stateContent: string;
   readonly principalId: string;
   readonly humanTurnId: string;
   readonly policies: readonly DecisionPolicyInput[];
   readonly confirmedDisplayDigest?: string;
-}): { readonly ok: true; readonly command: HumanAutonomyCommand; readonly issuanceDigest: string } |
+}
+
+function prepareFullGrantCommand(input: PrepareFullGrantCommandInput): { readonly ok: true; readonly command: HumanAutonomyCommand; readonly issuanceDigest: string } |
   { readonly ok: false; readonly error: string } {
   const scope = grantScope({ projection: input.before, stateContent: input.stateContent });
   const expectedDisplayDigest = grantDisplayDigest({
@@ -381,14 +395,16 @@ function prepareNonFullCommand(
   };
 }
 
-export function applyProductionAutonomyMode(input: {
+interface ApplyProductionAutonomyModeInput {
   readonly projectDir: string;
   readonly stateContent: string;
   readonly mode: AutonomyMode;
   readonly principalId?: string;
   readonly policies?: readonly DecisionPolicyInput[];
   readonly confirmedDisplayDigest?: string;
-}): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
+}
+
+export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeInput): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
   const humanTurnId = latestHumanTurnId(input.projectDir, resolved);
@@ -427,7 +443,7 @@ export function applyProductionAutonomyMode(input: {
   return { ok: true, projection: coordinator.readProjection() };
 }
 
-export function commitProductionStageGateDecision(input: {
+interface CommitProductionStageGateDecisionInput {
   readonly projectDir: string;
   readonly stateContent: string;
   readonly stage: string;
@@ -435,7 +451,9 @@ export function commitProductionStageGateDecision(input: {
   readonly graphRevision: string;
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
-}): { readonly kind: "not-authorized"; readonly reason: string } |
+}
+
+export function commitProductionStageGateDecision(input: CommitProductionStageGateDecisionInput): { readonly kind: "not-authorized"; readonly reason: string } |
   { readonly kind: "already-decided"; readonly grantId: string | null } |
   { readonly kind: "decided"; readonly grantId: string | null; readonly result: AutonomyDecisionResult } {
   const resolved = resolveIntent(input.projectDir);
@@ -732,12 +750,14 @@ function freshHumanRetryTurn(
   return turn === undefined ? null : { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: turn.timestamp };
 }
 
-function qualityResumeAlreadyCommitted(input: {
+interface QualityResumeAlreadyCommittedInput {
   readonly repository: QualityRepairRepository;
   readonly qualityScopeId: string;
   readonly alternativeIdentity: string;
   readonly monitorLatchIdentity: string;
-}): boolean {
+}
+
+function qualityResumeAlreadyCommitted(input: QualityResumeAlreadyCommittedInput): boolean {
   let stalledEvidenceFingerprint: string | null = null;
   let resumedAlternativeIdentity: string | null = null;
   for (const transaction of input.repository.readTransactions()) {
