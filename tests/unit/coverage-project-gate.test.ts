@@ -222,6 +222,15 @@ describe("evaluateGate: malformed / empty inputs", () => {
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
+  test("unsafe integer hits (beyond 2^53 - 1) => MALFORMED", () => {
+    const r = evaluateGate(
+      { present: true, text: '{"schemaVersion":1,"hits":9007199254740993,"lines":9007199254740993}' },
+      present(totals(1, 2)),
+      policy(),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+  });
+
   test("hits > lines => MALFORMED", () => {
     const r = evaluateGate(
       present({ schemaVersion: 1, hits: 3, lines: 2 }),

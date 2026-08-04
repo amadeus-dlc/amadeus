@@ -107,8 +107,11 @@ export type LoadedPolicy = LoadedTotals;
 // ---------------------------------------------------------------------------
 type ParseOutcome = { ok: true; totals: Totals } | { ok: false; detail: string };
 
+// Number.isSafeInteger (not isInteger): JSON.parse silently rounds integers
+// beyond 2^53 - 1, so a merely-integer check would accept a value that no
+// longer equals the original input and corrupt the BigInt arithmetic below.
 function isNonNegativeInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function parseTotalsText(text: string): ParseOutcome {
