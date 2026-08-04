@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SIA-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c5 と c7 は独立 cid を新設せず既存 cid への追補として persist すべき — c5 は cid:code-generation:deviation-stop-before-implement / cid:requirements-analysis:implementation-deviation-election ファミリの『計画段での無申告な受け入れ基準縮小』面、c7 は cid:code-generation:falling-proof-injection-one-set の『commit 間 diff を読むゲートでは注入もコミットしないと観測できない』面として1行統合する。",
+  "rationale": "record を独立実測した。memory.md:9(previousDigest 契約と baseline-candidate 自体が同 assert に塞がれる実測)、:10(spot-check 最大1件)、:17(BLOCKER 2件の根因 = 計画段で受け入れ基準を単発 assert へ縮小)、:22(--base-revision 自己比較の縮退)、:24(注入コミット→赤→reset→残渣ゼロの1セット)、:25(閾値強化型改訂は対角実測でのみ実効を示せる)を確認。引用の実在も直読で確認した — tests/no-silent-drop/bootstrap.ts:498-501 は current baseline previousDigest does not bind the trusted base bytes の assert 本体、.claude/tools/amadeus-reviewer-runtime.ts:437-441 は scopeTranscript/requestedReads の length>1 で only one spot-check request is allowed per invocation を throw する箇所で、いずれも候補文どおり。既存 cid の重複検査: c2 は cid:code-generation:c5-ratchet-census-at-final-base(census の base 選定)と隣接するが previousDigest の自己参照・baseline-candidate の自己封鎖・census-evidence→approval→baseline-candidate の再バインド順序は未被覆。c3 は cid:code-generation:checkread-degrade-scope-unavailable / degrade-scope-unit-dir-layout の §12a ファミリと同族だが requestedReads/scopeTranscript の cardinality 契約は未被覆。c6/c8 は local-ci-red-assertion-verbatim・falling-proof 系のいずれにも未被覆。c1 は cid:code-generation:cg-handover-plan-audit の実践報告そのもので新規性なし、c4 は intent 固有の裁定経緯で c2 に吸収されるため不採用に同意。choice 1 が c5 を『c2・c6 の一般形に吸収』とする点は成立しない — c2 は台帳契約、c6 は赤の帰属手法であり、いずれも受け入れ基準の述語縮小を覆わない。BLOCKER 2件の実測根因である c5 の脱落は再発防止の主要面を落とすため choice 2 を採る。choice 3 は c3(exit 1 ループを構造的に防ぐハーネス知識)と c6(誤帰属を防いだ手法)を落としており狭すぎる。自案が採られない場合の受容度: choice 1 は 6(不本意だが受容可)、choice 3 は 7(重大な不同意)。",
+  "submittedAt": "2026-08-03T17:39:55Z"
+}
