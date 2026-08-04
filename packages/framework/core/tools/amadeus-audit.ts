@@ -83,6 +83,10 @@ const VALID_EVENT_TYPES = new Set([
   "WORKFLOW_UNPARKED",
   "INTENT_ARCHIVED",
   "INTENT_UNARCHIVED",
+  "GOAL_CHANGE_PROPOSED",
+  "GOAL_REVISION_APPROVED",
+  "GOAL_RECONCILED",
+  "LEGACY_GOAL_MIGRATED",
   // Harness-neutral execution lifecycle batches (#1602). One row is one
   // canonical event set; required projections consume its digest after append.
   "EXECUTION_EVENT_SET_COMMITTED",
@@ -231,6 +235,10 @@ export const EVENT_HEADINGS: Record<string, string> = {
   WORKFLOW_UNPARKED: "Workflow Unparked",
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
+  GOAL_CHANGE_PROPOSED: "Goal Change Proposed",
+  GOAL_REVISION_APPROVED: "Goal Revision Approved",
+  GOAL_RECONCILED: "Goal Reconciled",
+  LEGACY_GOAL_MIGRATED: "Legacy Goal Migrated",
   EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
   UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
@@ -425,6 +433,26 @@ export type JournalAppendOutcome =
   | { readonly appended: true }
   | { readonly appended: false; readonly reason: "intent-complete" };
 
+// A sealed legacy Intent needs exactly one post-proposal HUMAN_TURN so a human
+// can authorize reconstruction. The exception closes as soon as
+// approve-legacy-migration creates goal-lineage.json; ordinary CLI minting is
+// still rejected because this predicate accepts only the journal event name.
+function allowsSealedLegacyHumanTurn(
+  eventName: string,
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): boolean {
+  if (eventName !== "amadeus.human.turn") return false;
+  const shardDir = auditShardDir(projectDir, intent, space);
+  if (shardDir === null) return false;
+  const goalDir = join(dirname(shardDir), "goal");
+  const proposals = join(goalDir, "legacy-proposals");
+  return !existsSync(join(goalDir, "goal-lineage.json")) &&
+    existsSync(proposals) &&
+    readdirSync(proposals).some((name) => name.endsWith(".json"));
+}
+
 // Locked via withAuditLock, NOT a bare acquire (E-U8PRE O-L1). The canonical
 // emit path reaches this from arbitrary depth, including from inside a section
 // that already holds the lock for the same identity. A bare acquire hits EEXIST
@@ -445,7 +473,10 @@ export function appendJournalRecordV2(
       // Post-complete audit stop (#1248): once the target intent's registry row
       // is "complete", the ledger is sealed and the append is suppressed. Gated
       // on the definite "complete" only; "unknown" falls through to the append.
-      if (intentStatusForAudit(projectDir, intent, space) === "complete") {
+      if (
+        intentStatusForAudit(projectDir, intent, space) === "complete" &&
+        !allowsSealedLegacyHumanTurn(record.eventName, projectDir, intent, space)
+      ) {
         const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
         process.stderr.write(
           `amadeus-audit: suppressed ${record.eventName} v2 append — target intent ${targetDir} is complete (#1248)\n`
@@ -477,7 +508,11 @@ function escapeFieldValues(fields: Record<string, string>): Record<string, strin
 // append seal while retaining the closed event vocabulary. The caller owns the
 // workspace lock and has already reserved a HUMAN_TURN in `shardName`.
 export function appendLifecycleAuditEntryUnlocked(
-  eventType: "INTENT_ARCHIVED" | "INTENT_UNARCHIVED",
+  eventType:
+    | "INTENT_ARCHIVED"
+    | "INTENT_UNARCHIVED"
+    | "GOAL_CHANGE_PROPOSED"
+    | "LEGACY_GOAL_MIGRATED",
   fields: Record<string, string>,
   projectDir: string,
   intent: string,

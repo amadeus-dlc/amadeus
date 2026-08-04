@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GRG-RA-S13-C1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Requirements Analysis で人間が明示確定した Q4 の回答、および requirements.md の原則・FR-2・FR-3が一貫して、ゴール変更権限を人間に限定し、オーケストレーターを逸脱検出・提案・照合の責任主体としている。通常のstage承認やstanding delegationによる黙示的なGoal revisionを防ぐ再利用可能なプロジェクト規律であり、Correctionsへの保存を全面的に支持する。",
+  "submittedAt": "2026-08-04T04:05:15Z"
+}

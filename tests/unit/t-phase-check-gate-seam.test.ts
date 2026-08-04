@@ -35,6 +35,7 @@ import {
   cleanupTestProject,
   createTestProject,
   removeWorkspaceRecord,
+  seedGoalReceiptForFinalStage,
   seededRecordDir,
   seededStateFile,
   seedStateFile,
@@ -77,6 +78,15 @@ function seedReqProduces(proj: string): void {
   const dir = join(seededRecordDir(proj), "inception", "requirements-analysis");
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "requirements.md"), "# reqs\n");
+}
+
+function seedBuildProduces(proj: string): void {
+  const dir = join(seededRecordDir(proj), "construction", "build-and-test");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "build-test-results.md"), "# green\n");
+  const sourceDir = join(proj, "src");
+  mkdirSync(sourceDir, { recursive: true });
+  writeFileSync(join(sourceDir, "index.ts"), "export {};\n");
 }
 
 // Write verification/phase-check-<phase>.md under the seeded record.
@@ -234,12 +244,10 @@ describe("t-phase-check-gate-seam: complete-workflow gate (#886)", () => {
   beforeEach(() => {
     proj = createTestProject();
     resetOtelPerProject();
-    // complete-workflow treats the given slug as final and closes its phase;
-    // requirements-analysis (inception, non-workspace_requires) keeps the test
-    // off the workspace_requires source-work path.
-    seedStateFile(proj, "state-mid-inception.md");
+    seedStateFile(proj, "state-fix-final-construction.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
     saveEnv();
-    seedReqProduces(proj);
+    seedBuildProduces(proj);
   });
   afterEach(() => {
     restoreEnv();
@@ -249,20 +257,20 @@ describe("t-phase-check-gate-seam: complete-workflow gate (#886)", () => {
   test("refuses closing the final phase when the artifact is absent", () => {
     setEnv(true);
     const before = readFileSync(seededStateFile(proj), "utf-8");
-    const r = captureExit(() => handleCompleteWorkflow(["requirements-analysis"]));
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
     const after = readFileSync(seededStateFile(proj), "utf-8");
     expect(r.threw).toBe(true);
-    expect(r.stderr).toContain("phase-check-inception.md");
+    expect(r.stderr).toContain("phase-check-construction.md");
     expect(after).toBe(before);
   });
 
   test("proceeds when the artifact is present", () => {
     setEnv(true);
-    seedPhaseCheck(proj, "inception");
-    const r = captureExit(() => handleCompleteWorkflow(["requirements-analysis"]));
+    seedPhaseCheck(proj, "construction");
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
     expect(r.threw).toBe(false);
     const state = readFileSync(seededStateFile(proj), "utf-8");
-    expect(state).toContain("- **Inception**: Verified");
+    expect(state).toContain("- **Construction**: Verified");
     expect(state).toContain("- **Status**: Completed");
   });
 });

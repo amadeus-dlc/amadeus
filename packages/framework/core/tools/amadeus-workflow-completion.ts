@@ -2,9 +2,22 @@ import {
   activeIntent,
   activeSpace,
   getField,
+  nextInScopeStage,
+  readIntentRegistry,
+  recordDir,
+  recordDirMatches,
   setOrInsertField,
+  validScopes,
 } from "./amadeus-lib.ts";
+import { basename, dirname, resolve } from "node:path";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import {
+  authorizeGoalCompletion,
+  goalCompletionContextDigest,
+  type GoalReconciliationReceipt,
+  readGoalLineage,
+  readGoalReconciliationReceipt,
+} from "./amadeus-goal-reconciliation.ts";
 
 export type WorkflowCompletionPreparation = Readonly<{
   instance: string;
@@ -76,6 +89,115 @@ export function prepareWorkflowCompletion(
 export type CompletionMirrorDisposition =
   | { kind: "defer" | "immediate" }
   | { kind: "error"; message: string };
+
+export function workflowCompletionContextDigest(
+  content: string,
+  finalStage: string,
+): string {
+  const scope = getField(content, "Scope")?.trim();
+  if (!scope) throw new Error("Workflow completion requires a Scope field");
+  const executionProjection = [
+    getField(content, "Stages to Execute") ?? "",
+    getField(content, "Stages to Skip") ?? "",
+    getField(content, "Execution Projection Digest") ?? "",
+  ].join("\n");
+  return goalCompletionContextDigest({ scope, finalStage, executionProjection });
+}
+
+function registeredIntentUuid(projectDir: string, recordDirectory: string): string {
+  const intentsDirectory = dirname(recordDirectory);
+  if (basename(intentsDirectory) !== "intents") {
+    throw new Error("Workflow completion record is not a registered Intent directory");
+  }
+  const space = basename(dirname(intentsDirectory));
+  const intent = basename(recordDirectory);
+  const registeredDirectory = recordDir(projectDir, intent, space);
+  if (
+    registeredDirectory === null ||
+    resolve(registeredDirectory) !== resolve(recordDirectory)
+  ) {
+    throw new Error("Workflow completion record does not match the Intent registry");
+  }
+  const entry = readIntentRegistry(projectDir, space).find((candidate) =>
+    recordDirMatches(candidate, intent)
+  );
+  if (!entry) throw new Error("Workflow completion Intent UUID is missing from the registry");
+  return entry.uuid;
+}
+
+export function authorizeWorkflowCompletion(input: {
+  readonly projectDir: string;
+  readonly recordDir: string;
+  readonly content: string;
+  readonly completedSlug: string;
+  readonly completionInstance: string;
+}): GoalReconciliationReceipt {
+  const scope = getField(input.content, "Scope")?.trim();
+  if (!scope) throw new Error("Workflow completion requires a Scope field");
+  if (!validScopes().has(scope)) {
+    throw new Error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`,
+    );
+  }
+  if (nextInScopeStage(input.completedSlug, scope, input.content) !== null) {
+    throw new Error(
+      `Workflow completion target ${input.completedSlug} is not the final in-scope stage`,
+    );
+  }
+  const lineage = readGoalLineage(input.recordDir);
+  const current = lineage.revisions[lineage.currentRevision];
+  const stateGoalId = getField(input.content, "Goal ID")?.trim();
+  const stateRevision = getField(input.content, "Current Goal Revision")?.trim();
+  const stateDigest = getField(input.content, "Current Goal Digest")?.trim();
+  if (
+    stateGoalId !== lineage.goalId ||
+    stateRevision !== String(lineage.currentRevision) ||
+    stateDigest !== current.digest
+  ) {
+    throw new Error("Goal lineage does not match the workflow state projection");
+  }
+  const receipt = readGoalReconciliationReceipt(
+    input.recordDir,
+    input.completionInstance,
+  );
+  const authorization = authorizeGoalCompletion({
+    intentId: registeredIntentUuid(input.projectDir, input.recordDir),
+    lineage,
+    receipt,
+    scope,
+    finalStage: input.completedSlug,
+    completionInstance: input.completionInstance,
+    completionContextDigest: workflowCompletionContextDigest(
+      input.content,
+      input.completedSlug,
+    ),
+  });
+  if (authorization.kind === "rejected") {
+    throw new Error(`Goal reconciliation refused completion: ${authorization.reason}`);
+  }
+  return authorization.receipt;
+}
+
+export function authorizePersistedCompletedWorkflow(input: {
+  readonly projectDir: string;
+  readonly recordDir: string;
+  readonly content: string;
+}): GoalReconciliationReceipt {
+  const completedSlug = getField(input.content, "Last Completed Stage")?.trim();
+  if (!completedSlug || completedSlug === "none") {
+    throw new Error(
+      "Completed workflow is missing a valid Last Completed Stage",
+    );
+  }
+  const prepared = workflowCompletionPreparation(input.content);
+  return authorizeWorkflowCompletion({
+    projectDir: input.projectDir,
+    recordDir: input.recordDir,
+    content: input.content,
+    completedSlug,
+    completionInstance: prepared?.instance ?? `terminal:${completedSlug}`,
+  });
+}
 
 export function completionMirrorDisposition(
   projectDir: string,

@@ -223,6 +223,8 @@ import {
   parseMirrorInitialCreateReceipt,
 } from "./amadeus-state.ts";
 import {
+  authorizePersistedCompletedWorkflow,
+  authorizeWorkflowCompletion,
   type WorkflowCompletionPreparation,
   completionMirrorDisposition,
   workflowCompletionPreparation,
@@ -573,6 +575,23 @@ function emitMirrorBoundaryIfNeeded(
     emit(errorDirective("Mirror boundary cannot resolve the active intent."));
     return true;
   }
+  if (boundary.completion !== null) {
+    const recordDir = completionRecordDir(projectDir, intent, space);
+    try {
+      authorizeWorkflowCompletion({
+        projectDir,
+        recordDir,
+        content: stateContent,
+        completedSlug: boundary.completion.stage,
+        completionInstance: boundary.completion.instance,
+      });
+    } catch (cause) {
+      emit(errorDirective(
+        `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`,
+      ));
+      return true;
+    }
+  }
   const resolved = resolveAmadeusConfig(projectDir, intent, space);
   if (resolved.kind === "invalid") {
     const details = resolved.issues
@@ -591,6 +610,26 @@ function emitMirrorBoundaryIfNeeded(
     intent,
     space,
   );
+}
+
+function completionRecordDir(
+  projectDir: string,
+  intentOverride?: string,
+  spaceOverride?: string,
+): string {
+  return join(
+    projectDir,
+    relativeRecordDir(projectDir, intentOverride, spaceOverride) ?? "amadeus-docs",
+  );
+}
+
+function completedRecoveryError(cause: unknown): string {
+  const detail = errorMessage(cause);
+  if (detail.includes("Goal lineage is missing")) {
+    return `${detail}. Run amadeus-goal.ts legacy-propose, then ` +
+      "amadeus-goal.ts approve-legacy-migration before retrying completion.";
+  }
+  return detail;
 }
 
 function emitDeferredCompletionBoundary(
@@ -2970,7 +3009,25 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     stateContent,
   );
   if (!next) {
-    // No stage left to run — the workflow is complete.
+    if (getField(stateContent, "Status")?.trim() !== "Completed") {
+      emit(errorDirective(
+        `No in-scope stage remains after ${currentSlug}, but the workflow completion transaction is not committed.`,
+      ));
+      return;
+    }
+    const recordDir = completionRecordDir(pd);
+    try {
+      authorizePersistedCompletedWorkflow({
+        projectDir: pd,
+        recordDir,
+        content: stateContent,
+      });
+    } catch (cause) {
+      emit(errorDirective(
+        `Goal reconciliation refused completed recovery: ${completedRecoveryError(cause)}`,
+      ));
+      return;
+    }
     emit({
       kind: "done",
       reason: `Workflow complete — no in-scope stage remains after ${currentSlug} (scope: ${scope}).`,
@@ -4980,6 +5037,19 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
         }
       }
       if (status === "Completed") {
+        const recordDir = completionRecordDir(pd);
+        try {
+          authorizePersistedCompletedWorkflow({
+            projectDir: pd,
+            recordDir,
+            content: stateContent,
+          });
+        } catch (cause) {
+          emit(errorDirective(
+            `Goal reconciliation refused completed recovery: ${completedRecoveryError(cause)}`,
+          ));
+          return;
+        }
         emit({
           kind: "done",
           reason:

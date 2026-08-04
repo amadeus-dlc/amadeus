@@ -146,10 +146,12 @@ import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {
+  authorizeWorkflowCompletion,
   prepareWorkflowCompletion,
   type WorkflowCompletionPreparation,
   workflowCompletionPreparation,
 } from "./amadeus-workflow-completion.ts";
+import type { GoalReconciliationReceipt } from "./amadeus-goal-reconciliation.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -569,6 +571,7 @@ function emitWorkflowCompletionAuditRows(input: {
   completionInstance: string;
   alreadyMarkedCompleted: boolean;
   stageCompletedAlreadyAudited: boolean;
+  receipt: GoalReconciliationReceipt;
   reason?: string;
 }): void {
   const scope = getField(input.content, "Scope");
@@ -618,7 +621,19 @@ function emitWorkflowCompletionAuditRows(input: {
       Scope: scope,
       Details: `Scope: ${scope}, ${input.completedCount} stages completed`,
       "Completion Instance": input.completionInstance,
+      "Goal Id": input.receipt.goalId,
+      "Goal Revision": String(input.receipt.goalRevision),
+      "Goal Digest": input.receipt.goalDigest,
+      "Goal Receipt Id": input.receipt.receiptId,
+      "Goal Receipt Digest": input.receipt.evidenceDigest,
+      "Goal Verdict": input.receipt.overallVerdict,
+      "Goal Evidence Count": String(
+        input.receipt.items.reduce((count, item) => count + item.evidence.length, 0),
+      ),
     };
+    if (input.receipt.humanRulingReference !== null) {
+      workflowFields["Goal Human Ruling"] = input.receipt.humanRulingReference;
+    }
     if (input.reason) workflowFields.Reason = input.reason;
     if (!existingEvents.has("WORKFLOW_COMPLETED")) {
       emitAudit(input.pd, "WORKFLOW_COMPLETED", workflowFields);
@@ -2390,6 +2405,11 @@ export function handleFinalize(args: string[]): void {
   const nextAfterNext = nextStage ? nextInScopeStage(nextStage.slug, scope, content) : null;
   const timestamp = isoTimestamp();
 
+  if (nextStage === null) {
+    completeWorkflowForTarget([completedSlug], pd);
+    return;
+  }
+
   // Phase-check artifact gate (#886). finalize flips markPhaseVerified for the
   // completed phase on BOTH the terminal branch (no next stage) and the
   // boundary-crossing branch (next stage in a different phase) below — gate
@@ -2401,26 +2421,13 @@ export function handleFinalize(args: string[]): void {
   }
 
   // 4. Update state fields (but do NOT mark next stage [-] or set In Progress)
-  if (nextStage) {
-    content = setField(content, "Current Stage", nextStage.slug);
-    content = setField(content, "Next Stage", nextAfterNext ? nextAfterNext.slug : "none");
-    content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
-    content = setField(content, "Active Agent", nextStage.lead_agent);
-    // Phase Progress roll-up on a boundary-crossing finalize: close the
-    // completed phase (→ Verified) and enter the next (→ Active) — same
-    // transaction as the field updates (#836). Mirrors handleAdvance.
-    if (completedStage.phase !== nextStage.phase) {
-      content = markPhaseVerified(content, completedStage.phase);
-      content = setPhaseProgress(content, nextStage.phase, "Active");
-    }
-  } else {
-    content = setField(content, "Current Stage", "none");
-    content = setField(content, "Next Stage", "none");
-    content = setField(content, "Status", "Completed");
-    content = setField(content, "In Progress", "none");
-    // Terminal finalize (no next stage): the final phase is now complete →
-    // Verified, in lock-step with Status: Completed (#836).
+  content = setField(content, "Current Stage", nextStage.slug);
+  content = setField(content, "Next Stage", nextAfterNext ? nextAfterNext.slug : "none");
+  content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
+  content = setField(content, "Active Agent", nextStage.lead_agent);
+  if (completedStage.phase !== nextStage.phase) {
     content = markPhaseVerified(content, completedStage.phase);
+    content = setPhaseProgress(content, nextStage.phase, "Active");
   }
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "Last Updated", timestamp);
@@ -2505,6 +2512,22 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
   const completionInstance = completion?.instance ??
     `terminal:${completedSlug}`;
+  const completionRecord = operationRecordDir(pd);
+  if (completionRecord === null) {
+    error("Goal reconciliation refused completion: Intent record is unresolved");
+  }
+  let completionReceipt: GoalReconciliationReceipt;
+  try {
+    completionReceipt = authorizeWorkflowCompletion({
+      projectDir: pd,
+      recordDir: completionRecord,
+      content,
+      completedSlug,
+      completionInstance,
+    });
+  } catch (cause) {
+    error(`Goal reconciliation refused completion: ${errorMessage(cause)}`);
+  }
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";
 
@@ -2563,6 +2586,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     completionInstance,
     alreadyMarkedCompleted,
     stageCompletedAlreadyAudited,
+    receipt: completionReceipt,
     ...(reason ? { reason } : {}),
   });
 
@@ -3421,8 +3445,9 @@ function approveUnderLock(
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
   content = setField(content, "Last Completed Stage", slug);
+  const completionInstance = `terminal:${slug}`;
   if (deferWorkflowCompletion) {
-    content = prepareWorkflowCompletion(content, slug, timestamp);
+    content = prepareWorkflowCompletion(content, slug, completionInstance);
   }
 
   const nextStateIssue = approvalNextStateIssue(content, slug, timestamp, recoveredRevision);
@@ -3447,7 +3472,7 @@ function approveUnderLock(
     console.log(JSON.stringify({
       completed: slug,
       status: "completion-pending",
-      completion_instance: timestamp,
+      completion_instance: completionInstance,
     }));
   } else {
     handleCompleteWorkflow([slug]);

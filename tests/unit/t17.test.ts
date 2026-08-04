@@ -54,6 +54,7 @@ import {
   FIXTURES_DIR,
   resetAidlcEnv,
   seedAuditFile,
+  seedGoalReceiptForFinalStage,
   seededAuditShard,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -427,11 +428,10 @@ describe("t17 advance emission + complete-workflow", () => {
   });
 
   test("27: complete-workflow sets Status=Completed", () => {
-    // .sh reuses the SAME $PROJ from Test 26 (no fresh create), then re-seeds the
-    // state file before complete-workflow. Mirror that: seed mid-ideation fresh.
     proj = createTestProject();
-    seedStateFile(proj, MID_IDEATION);
-    expect(runState(proj, ["complete-workflow", "scope-definition"]).combined).toContain(
+    seedStateFile(proj, "state-fix-final-construction.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
+    expect(runState(proj, ["complete-workflow", "build-and-test"]).combined).toContain(
       '"status":"Completed"',
     );
   });

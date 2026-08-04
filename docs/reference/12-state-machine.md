@@ -234,6 +234,15 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | Human-authorized unarchive transaction; emitted once per operation ID |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | Canonical audit-first execution lifecycle event set committed atomically |
 
+### Goal lifecycle
+
+| Event | Emitter | Notes |
+|---|---|---|
+| `GOAL_CHANGE_PROPOSED` | `tools/amadeus-goal.ts` | Records an immutable, unapproved Goal revision or legacy migration proposal |
+| `GOAL_REVISION_APPROVED` | `tools/amadeus-goal.ts` | Records direct human approval of the proposed Goal revision |
+| `GOAL_RECONCILED` | `tools/amadeus-goal.ts` | Records an evidence-bound reconciliation receipt for the current approved Goal |
+| `LEGACY_GOAL_MIGRATED` | `tools/amadeus-goal.ts` | Records direct human approval of a legacy Goal migration receipt |
+
 ### Phase lifecycle
 
 | Event | Emitter | Notes |

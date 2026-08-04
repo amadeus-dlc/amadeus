@@ -229,7 +229,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(81);
+    expect(count).toBe(85);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

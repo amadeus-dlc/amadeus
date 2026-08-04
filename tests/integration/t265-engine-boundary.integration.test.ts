@@ -28,6 +28,7 @@ import {
   DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
+  seedGoalReceiptForFinalStage,
   seedStateFile,
 } from "../harness/fixtures.ts";
 import {
@@ -364,6 +365,7 @@ function seedFinalCompletionProject(
     join(record, "verification", "phase-check-construction.md"),
     "# Construction Phase Check\n",
   );
+  seedGoalReceiptForFinalStage(project, "build-and-test");
   return statePath;
 }
 
@@ -651,6 +653,11 @@ describe("t265 receipt recovery and reports", () => {
           "- **Workflow Completion Stage**: build-and-test\n" +
           "- **Workflow Completion Status**: pending",
       ),
+    );
+    seedGoalReceiptForFinalStage(
+      project,
+      "build-and-test",
+      "completion-instance-1",
     );
     const first = parseDirective(run(ENGINE, ["next"]));
     expect(first.kind).toBe("print");
@@ -1035,7 +1042,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     [
       "missing",
       (state: string) => state.replace(/- \*\*Scope\*\*: [^\n]+\n/u, ""),
-      "no Scope field",
+      "requires a Scope field",
     ],
     [
       "invalid",
@@ -1233,6 +1240,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
       join(root, "amadeus", "config.json"),
       '{"auto-mirror":"auto"}',
     );
+    seedGoalReceiptForFinalStage(root, STAGE);
     const nonOwner = switchCursorToNonOwner(root);
     const nonOwnerBefore = readFileSync(
       join(nonOwner, "amadeus-state.md"),

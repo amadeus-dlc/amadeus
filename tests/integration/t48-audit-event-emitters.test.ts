@@ -58,8 +58,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Keep this static drift detector self-contained. t52 copies only dist/, docs/
+// and tests/ into a sandbox; importing the general fixture module would pull in
+// canonical runtime modules that intentionally are not part of that sandbox.
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 
 const DOC = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
 const TOOLS_DIR = join(AMADEUS_SRC, "tools");
@@ -96,11 +102,14 @@ const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 //   emit seam (otel/audit-emit.ts), amadeus-audit.ts's lazily-required wrapper
 //   around it, and amadeus-lib.ts's ERROR_LOGGED row.
 //
+//   emitGoalAudit / emitSealedGoalAudit — the Goal lifecycle adapters for
+//   ordinary and legacy-completed intents respectively.
+//
 // Prefix pairs that make the ordering load-bearing: appendAuditEntry precedes
 // its ...ViaEvents/...Unlocked forms, emitCanonical its ...AuditEvent form, and
 // emitAudit its ...Event form — each longer name is listed first.
 const EMITTERS =
-  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|emitCanonicalAuditEvent|getEventDefByAuditEvent|emitErrorAuditRow|appendAuditEntry|appendAuditEvent|emitAuditEvent|emitSwarmAudit|emitCanonical|emitAudit)";
+  "(appendAuditEntryViaEvents|appendAuditEntryUnlocked|emitCanonicalAuditEvent|emitSealedGoalAudit|getEventDefByAuditEvent|emitErrorAuditRow|appendAuditEntry|appendAuditEvent|emitAuditEvent|emitSwarmAudit|emitGoalAudit|emitCanonical|emitAudit)";
 
 /** Strip line comments so a commented-out emission does not count.
  *  Mirrors the .sh decommented(): drop //-prefixed lines and JSDoc *-lines. */
