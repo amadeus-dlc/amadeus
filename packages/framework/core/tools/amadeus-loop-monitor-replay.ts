@@ -94,17 +94,21 @@ function walPath(indexDir: string): string {
   return join(indexDir, LOOP_MONITOR_REPLAY_WAL_FILE);
 }
 
+function removeTemporaryBestEffort(path: string): void {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    return;
+  }
+}
+
 function writeJsonAtomic(path: string, value: unknown): void {
   const temporary = `${path}.tmp-${randomUUID()}`;
   try {
     writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
     renameSync(temporary, path);
   } catch (cause) {
-    try {
-      rmSync(temporary, { force: true });
-    } catch {
-      // Preserve the original write or rename failure.
-    }
+    removeTemporaryBestEffort(temporary);
     throw cause;
   }
 }

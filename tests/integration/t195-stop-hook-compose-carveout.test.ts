@@ -34,6 +34,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   applyProductionAutonomyMode,
   previewProductionAutonomyGrant,
@@ -73,6 +74,7 @@ process.exit(0);
 
 const tempDirs: string[] = [];
 afterAll(() => {
+  resetOtelPerProject();
   for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
@@ -113,6 +115,7 @@ function seedActive(proj: string, opts: { intentAutonomy?: string } = {}): void 
 }
 
 function seedFullIntentGrant(proj: string): void {
+  resetOtelPerProject();
   writeFileSync(
     pinnedShardPath(proj),
     `${readFileSync(pinnedShardPath(proj), "utf-8")}${auditRow(2, "HUMAN_TURN")}\n`,
