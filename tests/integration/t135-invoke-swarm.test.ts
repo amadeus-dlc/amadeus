@@ -6,10 +6,10 @@
 //
 //   (1,2,7) THE ENGINE — `bun amadeus-orchestrate.ts next`. A Construction-phase
 //     project parked at code-generation (in-flight) with a runtime-graph.json
-//     carrying a bolt_dag batch. With `Construction Autonomy Mode: autonomous`
-//     the engine emits {"kind":"invoke-swarm","units":[...]} naming the batch;
-//     with the grant gated/unset it falls back to a run-stage for
-//     code-generation. (7) the structural skeleton guard: under fix scope —
+//     carrying a bolt_dag batch. With full Intent autonomy the engine emits
+//     {"kind":"invoke-swarm","units":[...]} naming the batch; semi/gated
+//     execution without a canonical grant asks for human confirmation instead.
+//     (7) the structural skeleton guard: under fix scope —
 //     where code-generation IS the walking-skeleton gate stage — the engine
 //     NEVER swarms even with autonomy granted (Bolt 1 is always human-gated).
 //
@@ -56,7 +56,7 @@
 // Old TAP -> new test parity (1:1, every .sh `ok`/`assert_eq` -> a named test):
 //   .sh (1) kind == invoke-swarm                 -> "1: autonomy granted + eligible batch -> engine emits invoke-swarm"
 //   .sh (1) units == ["a","b"]                    -> "1b: invoke-swarm names the batch units off the compiled bolt_dag"
-//   .sh (2) kind|stage == run-stage|code-generation -> "2: gated autonomy -> engine falls back to run-stage (no swarm)"
+//   .sh (2) current contract asks for canonical Intent autonomy -> "2: semi/gated autonomy -> human confirmation ask"
 //   .sh (7) kind == run-stage (fix skeleton)   -> "7: skeleton-gate stage is never swarmed even under autonomy"
 //   .sh (3) SWARM_STARTED in audit                -> "3: SWARM_STARTED emitted at batch start (prepare)"
 //   .sh (4) SWARM_COMPLETED + converged/failed tally -> "4: SWARM_COMPLETED emitted with converged/failed tally"
@@ -355,12 +355,28 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     expect(runNext(proj).directive.cap).toBe(3);
   }, 30000);
 
-  // Semi-autonomous Intent execution still preserves the declared parallel
-  // topology; its human boundaries are enforced by Intent-level authorization.
-  test("2: semi autonomy -> engine still fans out the batch", () => {
+  // A hand-edited semi/gated projection is not execution authority. Only a
+  // canonical full Intent grant may dispatch the swarm; otherwise the engine
+  // preserves the declared parallel topology by asking the human to establish
+  // the batch gate policy instead of silently serialising the batch.
+  test("2: semi/gated autonomy -> engine asks for human confirmation", () => {
     const { directive } = runNext(seedCodegenProject("gated"));
-    expect(directive.kind).toBe("invoke-swarm");
-    expect(directive.units).toEqual(["a", "b"]);
+    expect(directive.kind).toBe("ask");
+    expect(directive.kind).not.toBe("invoke-swarm");
+    expect(directive.units).toBeUndefined();
+    expect(String(directive.question)).toContain(
+      "compiled Bolt DAG declares batch 1 2 units wide (a, b)",
+    );
+    expect(String(directive.question)).toContain(
+      "canonical Intent autonomy is unavailable",
+    );
+    expect(String(directive.question)).toContain(
+      "cannot determine the batch gate policy",
+    );
+    expect(String(directive.question)).toContain(
+      "amadeus-bolt set-autonomy --mode none|semi|full",
+    );
+    expect(String(directive.question)).toContain("required human confirmation");
   }, 30000);
 
   // 2b: unset autonomy AFTER the walking skeleton completed (state-construction.md
