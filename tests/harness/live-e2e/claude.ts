@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -22,7 +21,9 @@ import type {
 import { type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
-import type { ResourceRegistrar } from "./resources.ts";
+import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
+import { collectBounded } from "./stream.ts";
+import { parseVersion, type Version, versionAtLeast } from "./version.ts";
 
 export const CLAUDE_PRINT_PROMPT =
   "Return the status object required by the JSON schema. Do not use tools.";
@@ -48,11 +49,8 @@ const CAPABILITY = (() => {
   return resolved.value;
 })();
 const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "ANTHROPIC_API_KEY" };
-const NATIVE_KEYCHAIN_BINDING = "__AMADEUS_CLAUDE_NATIVE_KEYCHAIN__";
 const STDOUT_LIMIT_BYTES = 1_048_576;
 const STDERR_LIMIT_BYTES = 262_144;
-
-type Version = readonly [number, number, number];
 
 export interface ClaudeFamilyContext {
   parseVersion(text: string): Version | null;
@@ -64,15 +62,10 @@ export interface ClaudeFamilyContext {
 export function createClaudeFamilyContext(): ClaudeFamilyContext {
   return {
     parseVersion(text) {
-      const match = text.match(/(\d+)\.(\d+)\.(\d+)/);
-      return match === null ? null : [Number(match[1]), Number(match[2]), Number(match[3])];
+      return parseVersion(text);
     },
     versionAtLeast(actual, minimum) {
-      for (let index = 0; index < 3; index += 1) {
-        if (actual[index] > minimum[index]) return true;
-        if (actual[index] < minimum[index]) return false;
-      }
-      return true;
+      return versionAtLeast(actual, minimum);
     },
     writeProjectSettings(projectDir) {
       const settingsDir = join(projectDir, ".claude");
@@ -95,25 +88,15 @@ export function createClaudeFamilyContext(): ClaudeFamilyContext {
   };
 }
 
-export interface ClaudeAmbientCredentialSourceOptions {
-  readonly nativeKeychainAvailable?: boolean;
-}
-
 export class ClaudeAmbientCredentialSource implements CredentialSourcePort {
   readonly #apiKey: string | undefined;
-  readonly #nativeKeychainAvailable: boolean;
 
-  constructor(
-    env: Readonly<Record<string, string | undefined>>,
-    options: ClaudeAmbientCredentialSourceOptions = {},
-  ) {
+  constructor(env: Readonly<Record<string, string | undefined>>) {
     this.#apiKey = env.ANTHROPIC_API_KEY || undefined;
-    this.#nativeKeychainAvailable = options.nativeKeychainAvailable === true;
   }
 
   async canLease(declaration: CredentialDeclaration): Promise<boolean> {
-    return declaration.childKey === CREDENTIAL_DECLARATION.childKey &&
-      (this.#apiKey !== undefined || this.#nativeKeychainAvailable);
+    return declaration.childKey === CREDENTIAL_DECLARATION.childKey && this.#apiKey !== undefined;
   }
 
   async lease(declaration: CredentialDeclaration): Promise<CredentialBinding> {
@@ -123,7 +106,7 @@ export class ClaudeAmbientCredentialSource implements CredentialSourcePort {
     let value = this.#apiKey;
     let active = true;
     return {
-      key: value === undefined ? NATIVE_KEYCHAIN_BINDING : declaration.childKey,
+      key: declaration.childKey,
       expose: () => {
         if (!active) throw new Error("credential binding was released");
         return value ?? "";
@@ -133,26 +116,6 @@ export class ClaudeAmbientCredentialSource implements CredentialSourcePort {
         active = false;
       },
     };
-  }
-}
-
-export function probeClaudeNativeCredential(
-  claudeBin: string,
-  parentEnv: Readonly<Record<string, string | undefined>>,
-): boolean {
-  const base = buildChildEnvironment(parentEnv, CAPABILITY.environment);
-  if (!base.ok) return false;
-  const result = spawnSync(claudeBin, ["auth", "status", "--json"], {
-    encoding: "utf8",
-    env: base.value,
-    maxBuffer: 64 * 1024,
-  });
-  if (result.status !== 0) return false;
-  try {
-    const status = JSON.parse(result.stdout) as { loggedIn?: unknown };
-    return status.loggedIn === true;
-  } catch {
-    return false;
   }
 }
 
@@ -187,7 +150,7 @@ export class ClaudeScratchAllocator implements ScratchAllocator {
       mkdirSync(homeDir, { recursive: true });
       mkdirSync(join(root, "tmp"), { recursive: true });
       (this.#options.family ?? createClaudeFamilyContext()).writeProjectSettings(projectDir);
-      initializeGit(projectDir);
+      initializeGit(projectDir, homeDir, process.env);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
       rmSync(root, { recursive: true, force: true });
@@ -196,13 +159,31 @@ export class ClaudeScratchAllocator implements ScratchAllocator {
   }
 }
 
-function initializeGit(projectDir: string): void {
+function initializeGit(
+  projectDir: string,
+  homeDir: string,
+  parentEnv: Readonly<Record<string, string | undefined>>,
+): void {
+  const base = buildChildEnvironment(parentEnv, CAPABILITY.environment);
+  if (!base.ok) throw new Error(`git environment rejected ${base.error.key}`);
+  const env = {
+    ...base.value,
+    HOME: homeDir,
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_SYSTEM: "/dev/null",
+  };
   for (const args of [
     ["init", "-q"],
     ["add", "-A"],
-    ["-c", "user.email=live@example.invalid", "-c", "user.name=Amadeus Live", "commit", "-qm", "install"],
+    [
+      "-c", "user.email=live@example.invalid",
+      "-c", "user.name=Amadeus Live",
+      "-c", "commit.gpgsign=false",
+      "-c", "core.hooksPath=",
+      "commit", "-qm", "install",
+    ],
   ]) {
-    const result = spawnSync("git", args, { cwd: projectDir, encoding: "utf8" });
+    const result = spawnSync("git", args, { cwd: projectDir, encoding: "utf8", env, timeout: 30_000 });
     if (result.status !== 0) throw new Error(`git ${args[0]} failed: ${sanitizeText(result.stderr)}`);
   }
 }
@@ -236,6 +217,7 @@ function probeClaudeCli(
     encoding: "utf8",
     env: base.value,
     maxBuffer: 64 * 1024,
+    timeout: 15_000,
   });
   if (version.status !== 0) {
     return {
@@ -243,12 +225,14 @@ function probeClaudeCli(
     };
   }
   const parsed = family.parseVersion(version.stdout);
-  if (parsed === null || !family.versionAtLeast(parsed, [2, 1, 220])) {
+  const minimum = family.parseVersion(CAPABILITY.minimumVersion);
+  if (minimum === null) throw new Error(`invalid minimumVersion: ${CAPABILITY.minimumVersion}`);
+  if (parsed === null || !family.versionAtLeast(parsed, minimum)) {
     return {
       measuredVersion: parsed?.join("."),
       findings: [{
         code: "AMADEUS_LIVE_E2E:SKIP:VERSION_UNSUPPORTED",
-        diagnostic: "Claude version is below 2.1.220",
+        diagnostic: `Claude version is below ${CAPABILITY.minimumVersion}`,
       }],
     };
   }
@@ -256,6 +240,7 @@ function probeClaudeCli(
     encoding: "utf8",
     env: base.value,
     maxBuffer: 1024 * 1024,
+    timeout: 15_000,
   });
   const missingFlags = CLAUDE_REQUIRED_HELP_FLAGS.filter((flag) => !help.stdout.includes(flag));
   return {
@@ -269,50 +254,13 @@ function probeClaudeCli(
   };
 }
 
-interface CollectedOutput {
-  readonly digest: string;
-  readonly bytes: Uint8Array;
-  readonly overflowed: boolean;
-}
-
-async function collectBounded(
-  stream: ReadableStream<Uint8Array>,
-  limit: number,
-): Promise<CollectedOutput> {
-  const reader = stream.getReader();
-  const hash = createHash("sha256");
-  const chunks: Uint8Array[] = [];
-  let buffered = 0;
-  let total = 0;
-  let overflowed = false;
-  for (;;) {
-    const item = await reader.read();
-    if (item.done) break;
-    hash.update(item.value);
-    total += item.value.byteLength;
-    if (buffered < limit) {
-      const remaining = limit - buffered;
-      const retained = item.value.byteLength <= remaining ? item.value : item.value.slice(0, remaining);
-      chunks.push(retained);
-      buffered += retained.byteLength;
-    }
-    if (total > limit) overflowed = true;
-  }
-  const bytes = new Uint8Array(buffered);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return { digest: hash.digest("hex"), bytes, overflowed };
-}
-
 export class ClaudePrintAdapter implements LiveAdapter {
   readonly capability = CAPABILITY;
   readonly #options: ClaudePrintAdapterOptions;
   readonly #family: ClaudeFamilyContext;
   #binding: CredentialBinding | undefined;
   #activeProcess: Bun.Subprocess | undefined;
+  #registrar: ResourceRegistrar | undefined;
 
   constructor(options: ClaudePrintAdapterOptions) {
     this.#options = options;
@@ -336,6 +284,7 @@ export class ClaudePrintAdapter implements LiveAdapter {
   async prepare(
     context: PrepareContext,
   ): Promise<Result<PreparedRun, Readonly<{ kind: "prepare-failed"; diagnostic: string }>>> {
+    this.#registrar = context.registrar;
     const resourceId = "claude-credential-binding";
     context.registrar.registerPlanned({
       id: resourceId,
@@ -366,14 +315,11 @@ export class ClaudePrintAdapter implements LiveAdapter {
         "0.25",
       ];
       const binding = this.#binding;
-      const credentialEnvironment = binding.key === NATIVE_KEYCHAIN_BINDING
-        ? {}
-        : { [binding.key]: binding.expose() };
       const environment = {
         ...base.value,
         HOME: context.scratch.homeDir,
         TMPDIR: join(context.scratch.root, "tmp"),
-        ...credentialEnvironment,
+        [binding.key]: binding.expose(),
       };
       return {
         ok: true,
@@ -393,7 +339,9 @@ export class ClaudePrintAdapter implements LiveAdapter {
 
   async execute(run: PreparedRun, signal: AbortSignal): Promise<AdapterExecution> {
     const processHandle = Bun.spawn({
-      cmd: [run.executable, ...run.args, run.prompt ?? ""],
+      cmd: run.prompt === undefined
+        ? [run.executable, ...run.args]
+        : [run.executable, ...run.args, run.prompt],
       cwd: run.cwd,
       env: run.resolveEnvironment(),
       stdin: "ignore",
@@ -410,7 +358,7 @@ export class ClaudePrintAdapter implements LiveAdapter {
     return {
       exitCode,
       timedOut: signal.aborted,
-      aborted: signal.aborted,
+      aborted: false,
       stdoutDigest: stdout.digest,
       stderrDigest: stderr.digest,
       structured: this.#family.normalizeJsonEnvelope(stdout.bytes, stdout.overflowed || stderr.overflowed),
@@ -435,6 +383,7 @@ export class ClaudePrintAdapter implements LiveAdapter {
     if (this.#binding !== undefined) {
       try {
         await this.#binding.release();
+        this.#registrar?.markReleased("claude-credential-binding");
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
@@ -443,16 +392,12 @@ export class ClaudePrintAdapter implements LiveAdapter {
     }
     try {
       rmSync(target.scratch.root, { recursive: true, force: true });
+      this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));
     }
-    const attempted = target.registeredResources.map((resource) => resource.id);
-    return {
-      attemptedResourceIds: attempted,
-      releasedResourceIds: failures.length === 0 ? attempted : [],
-      retainedResourceIds: failures.length === 0 ? [] : attempted,
-      failures,
-      leakFindings: [],
-    };
+    const receipt = cleanupReceiptFromRegistrar(this.#registrar, target, failures);
+    this.#registrar = undefined;
+    return receipt;
   }
 }

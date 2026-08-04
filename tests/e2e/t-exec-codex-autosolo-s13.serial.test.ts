@@ -26,7 +26,7 @@
 //
 // LIVE GATE: disabled on GitHub Actions. Locally, requires
 // AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary (AMADEUS_CODEX_BIN or
-// PATH) + AMADEUS_CODEX_EXEC_AUTH_HOME pointing to a normal Codex auth.json.
+// PATH) and OPENAI_API_KEY.
 // Skips cleanly otherwise.
 
 import { describe, expect, test } from "bun:test";
@@ -49,7 +49,6 @@ import {
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
-const AUTH_HOME = process.env.AMADEUS_CODEX_EXEC_AUTH_HOME;
 const OPENAI_MODEL = process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
@@ -63,7 +62,6 @@ const SKIP_REASON = codexExecLiveRequirementsSkipReason({
 
 const PROJECT_SETUP = {
   prefix: "codex-autosolo-s13-",
-  authHome: AUTH_HOME,
   distributionDir: CODEX_DIST,
   repositoryRoot: REPO_ROOT,
   model: OPENAI_MODEL,

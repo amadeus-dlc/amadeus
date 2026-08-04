@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { claudeSdkLiveRequirementsSkipReason, claudeSdkLiveSkipReason } from "../harness/claude-sdk-live.ts";
 import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { capabilityById } from "../harness/live-e2e/registry.ts";
+import { sdkWorkerExitCode, sdkWorkerProbeSurface } from "../harness/live-e2e/claude-sdk-worker.ts";
 import { buildRedGreenEvidence } from "../harness/live-e2e/testing/evidence.ts";
 import {
   adjudicateClaudeSdkContract,
@@ -33,6 +34,27 @@ function baseline(): ClaudeSdkContractObservation {
 }
 
 describe("Claude SDK live contract", () => {
+  test("worker probe reports measured surfaces and rejects error terminals", () => {
+    expect(sdkWorkerProbeSurface()).toMatchObject({ query: true, abort: true });
+    expect(sdkWorkerExitCode([])).toBe(1);
+    expect(sdkWorkerExitCode([{
+      type: "result",
+      subtype: "error",
+      is_error: true,
+      num_turns: 1,
+      permissionDenialsCount: 0,
+      raw: {},
+    }])).toBe(1);
+    expect(sdkWorkerExitCode([{
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      num_turns: 1,
+      permissionDenialsCount: 0,
+      raw: {},
+    }])).toBe(0);
+  });
+
   test("GHA hard deny returns before SDK, dist, or auth probes", () => {
     expect(claudeSdkLiveRequirementsSkipReason({
       env: { GITHUB_ACTIONS: "true", AMADEUS_CLAUDE_SDK_LIVE: "1" },
@@ -88,10 +110,10 @@ describe("Claude SDK live contract", () => {
     );
     expect(assertion.passed).toBe(true);
     for (const mutant of [
-      [...events, { ...events[3], ordinal: 4 }],
+      events.map((event) => event.kind === "terminal" ? { ...event, subtype: "error" } : event),
       events.map((event) => event.kind === "terminal" ? { ...event, permissionDenialsCount: 1 } : event),
       events.map((event) => event.kind === "terminal" ? { ...event, hasLateEvent: true } : event),
-      events.filter((event) => event.kind !== "assistant"),
+      events.map((event) => event.kind === "assistant" ? { ...event, byteLength: 0 } : event),
     ]) {
       const result = await createClaudeSdkJourney().assert(
         {

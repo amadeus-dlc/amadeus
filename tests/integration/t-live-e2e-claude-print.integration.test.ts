@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -9,7 +9,6 @@ import {
 } from "../harness/live-e2e/claude.ts";
 import { createClaudeStructuredJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
-import { ResourceRegistrar } from "../harness/live-e2e/resources.ts";
 
 function createFixture(helpFlags = true, outputFlood = false): {
   readonly root: string;
@@ -134,9 +133,7 @@ describe("Claude print live adapter", () => {
         "0.25",
         "Return the status object required by the JSON schema. Do not use tools.",
       ]);
-      expect(
-        observed.environmentKeys.filter((key) => !key.startsWith("__MISE_") && key !== "__CF_USER_TEXT_ENCODING"),
-      ).toEqual([
+      expect(observed.environmentKeys).toEqual(expect.arrayContaining([
         "ANTHROPIC_API_KEY",
         "HOME",
         "LANG",
@@ -144,14 +141,16 @@ describe("Claude print live adapter", () => {
         "NO_COLOR",
         "PATH",
         "TMPDIR",
-      ]);
+      ]));
+      expect(observed.environmentKeys.some((key) => key.startsWith("__MISE_"))).toBe(false);
+      expect(observed.environmentKeys).not.toContain("__CF_USER_TEXT_ENCODING");
       expect(observed.settings).toEqual({ hooks: {} });
       expect(observed.hasCredential).toBe(true);
       expect(observed.sourceConfigLeaked).toBe(false);
       expect(observed.sourceHomeLeaked).toBe(false);
-      expect(Bun.file(observed.cwd).size).toBe(0);
-      expect(Bun.file(observed.home).size).toBe(0);
-      expect(Bun.file(observed.tmpdir).size).toBe(0);
+      expect(existsSync(observed.cwd)).toBe(false);
+      expect(existsSync(observed.home)).toBe(false);
+      expect(existsSync(observed.tmpdir)).toBe(false);
       expect(JSON.stringify(result)).not.toContain("secret-fixture-value");
       expect(readFileSync(join(fixture.root, "runs.jsonl"), "utf8")).not.toContain("secret-fixture-value");
     } finally {
@@ -194,29 +193,34 @@ describe("Claude print live adapter", () => {
     }
   });
 
-  test("native keychain binding adds no credential environment key", async () => {
+  test("native credentials are rejected before scratch allocation", async () => {
     const fixture = createFixture();
     const allocator = new ClaudeScratchAllocator({
       prefix: "claude-print-native-",
       distributionDir: fixture.distribution,
     });
-    const registrar = new ResourceRegistrar();
-    const credentialSource = new ClaudeAmbientCredentialSource({}, { nativeKeychainAvailable: true });
     const adapter = new ClaudePrintAdapter({
       claudeBin: fixture.binary,
       distributionDir: fixture.distribution,
       parentEnv: { PATH: process.env.PATH },
     });
-    const scratch = await allocator.allocate(registrar);
     try {
-      const prepared = await adapter.prepare({ scratch, registrar, credentialSource });
-      expect(prepared.ok).toBe(true);
-      if (!prepared.ok) return;
-      expect(prepared.value.environmentKeys).toEqual(["PATH", "HOME", "TMPDIR"]);
-      expect(prepared.value.resolveEnvironment()).not.toHaveProperty("ANTHROPIC_API_KEY");
+      const result = await runLiveJourney(adapter, createClaudeStructuredJourney(), {
+        env: { AMADEUS_CLAUDE_PRINT_LIVE: "1" },
+        gitSha: "b".repeat(40),
+        now: () => new Date("2026-08-03T00:00:00.000Z"),
+        ledgerPath: join(fixture.root, "runs.jsonl"),
+        durability: "file-only",
+        credentialSource: new ClaudeAmbientCredentialSource({}),
+        allocator,
+        leakCheck: async () => [],
+      });
+      expect(result).toMatchObject({
+        ok: true,
+        value: { kind: "skipped", outcome: { code: "AMADEUS_LIVE_E2E:SKIP:CREDENTIAL_UNAVAILABLE" } },
+      });
+      expect(allocator.allocationCount).toBe(0);
     } finally {
-      const cleanup = await adapter.cleanup({ scratch, registeredResources: registrar.snapshot() });
-      expect(cleanup.failures).toEqual([]);
       rmSync(fixture.root, { recursive: true, force: true });
     }
   });

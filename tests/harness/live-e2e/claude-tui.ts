@@ -19,7 +19,7 @@ import { createClaudeFamilyContext, type ClaudeFamilyContext } from "./claude.ts
 import { digest, type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
-import type { ResourceRegistrar } from "./resources.ts";
+import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
 
 export const CLAUDE_TUI_ANCHOR_FILE = ".amadeus-live-tui-anchor.json";
 export const CLAUDE_TUI_PROMPT =
@@ -36,6 +36,7 @@ const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "ANTHROPIC_API
 const MAX_PANE_BYTES = 1_048_576;
 const MAX_PANE_LINES = 16_384;
 const MAX_PANE_LINE_BYTES = 65_536;
+const READY_PROMPT_PATTERN = /^\s*❯\s*$/mu;
 
 export interface TmuxCommandResult {
   readonly exitCode: number | null;
@@ -90,6 +91,7 @@ export interface ClaudeTuiAdapterOptions {
   readonly tmux?: TmuxCommandPort;
   readonly createRunId?: () => string;
   readonly pollIntervalMs?: number;
+  readonly readyTimeoutMs?: number;
 }
 
 function shellQuote(value: string): string {
@@ -252,14 +254,10 @@ export class ClaudeTuiAdapter implements LiveAdapter {
         return { ok: false, error: { kind: "prepare-failed", diagnostic: `environment policy rejected ${base.error.key}` } };
       }
       const binding = this.#binding;
-      const credentialEnvironment = binding.key === CREDENTIAL_DECLARATION.childKey
-        ? { [binding.key]: binding.expose() }
-        : {};
       const environment = {
         ...base.value,
         HOME: context.scratch.homeDir,
         TMPDIR: join(context.scratch.root, "tmp"),
-        ...credentialEnvironment,
       };
       return {
         ok: true,
@@ -267,8 +265,8 @@ export class ClaudeTuiAdapter implements LiveAdapter {
           cwd: context.scratch.projectDir,
           executable: this.#options.claudeBin,
           args: ["--setting-sources", "project", "--permission-mode", "acceptEdits"],
-          environmentKeys: Object.keys(environment),
-          resolveEnvironment: () => ({ ...environment }),
+          environmentKeys: [...Object.keys(environment), binding.key],
+          resolveEnvironment: () => ({ ...environment, [binding.key]: binding.expose() }),
           registeredResourceIds: ["claude-tui-credential", "claude-tui-server", "claude-tui-session"],
         },
       };
@@ -336,7 +334,7 @@ export class ClaudeTuiAdapter implements LiveAdapter {
           },
         };
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, this.#options.pollIntervalMs ?? 50));
+      await new Promise<void>((resolve) => setTimeout(resolve, this.#options.pollIntervalMs ?? 250));
     }
   }
 
@@ -359,19 +357,14 @@ export class ClaudeTuiAdapter implements LiveAdapter {
     }
     try {
       rmSync(target.scratch.root, { recursive: true, force: true });
+      this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));
     }
-    const attempted = target.registeredResources.map((resource) => resource.id);
     this.#identity = undefined;
+    const receipt = cleanupReceiptFromRegistrar(this.#registrar, target, failures);
     this.#registrar = undefined;
-    return {
-      attemptedResourceIds: attempted,
-      releasedResourceIds: failures.length === 0 ? attempted : [],
-      retainedResourceIds: failures.length === 0 ? [] : attempted,
-      failures,
-      leakFindings: [],
-    };
+    return receipt;
   }
 
   #privateCommand(args: readonly string[], options?: TmuxCommandOptions): TmuxCommandResult {
@@ -383,6 +376,7 @@ export class ClaudeTuiAdapter implements LiveAdapter {
   async #waitForReady(
     signal: AbortSignal,
   ): Promise<Readonly<{ ok: true }> | Readonly<{ ok: false; execution: AdapterExecution }>> {
+    const deadline = Date.now() + (this.#options.readyTimeoutMs ?? 30_000);
     for (;;) {
       if (signal.aborted) {
         return {
@@ -394,8 +388,11 @@ export class ClaudeTuiAdapter implements LiveAdapter {
       if (commandFailed(captured)) return { ok: false, execution: this.#failedExecution(captured.stderr) };
       const issue = paneLimitIssue(captured.stdout);
       if (issue !== null) return { ok: false, execution: this.#failedExecution(issue, captured.stdout) };
-      if (captured.stdout.trim() !== "") return { ok: true };
-      await new Promise<void>((resolve) => setTimeout(resolve, this.#options.pollIntervalMs ?? 50));
+      if (READY_PROMPT_PATTERN.test(captured.stdout)) return { ok: true };
+      if (Date.now() >= deadline) {
+        return { ok: false, execution: this.#failedExecution("Claude TUI readiness timed out", captured.stdout) };
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, this.#options.pollIntervalMs ?? 250));
     }
   }
 

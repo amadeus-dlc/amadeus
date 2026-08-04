@@ -24,13 +24,13 @@ describe("Claude TUI live contract", () => {
     expect(capabilityById("claude-tui")).toMatchObject({
       ok: true,
       value: {
+        minimumVersion: "2.1.220",
         transport: "tui",
         optInKey: "AMADEUS_TUI_LIVE",
         anchorKinds: ["file", "state"],
       },
     });
-    expect(await createClaudeTuiJourney().assert(
-      {
+    const execution = {
         exitCode: 0,
         timedOut: false,
         aborted: false,
@@ -42,8 +42,19 @@ describe("Claude TUI live contract", () => {
           paneDigest: "pane",
           sessionDigest: "session",
         },
-      },
+      } as const;
+    expect(await createClaudeTuiJourney().assert(
+      execution,
       { root: "scratch", homeDir: "home", projectDir: "project", state: "ready" },
     )).toMatchObject({ passed: true });
+    for (const structured of [
+      { ...execution.structured, anchorVerified: false },
+      { ...execution.structured, inputCount: 2 },
+    ]) {
+      expect(await createClaudeTuiJourney().assert(
+        { ...execution, structured },
+        { root: "scratch", homeDir: "home", projectDir: "project", state: "ready" },
+      )).toMatchObject({ passed: false });
+    }
   });
 });

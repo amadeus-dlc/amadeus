@@ -10,6 +10,7 @@ export interface LiveCapability {
   readonly transport: string;
   readonly optInKey: string;
   readonly minimumVersion: string;
+  /** Reference version used for the last capability measurement, not a runtime probe result. */
   readonly measuredVersion: string;
   readonly status: CapabilityStatus;
   readonly anchorKinds: readonly ("exit" | "schema" | "file" | "state" | "tool" | "audit")[];
@@ -54,7 +55,7 @@ export const LIVE_CAPABILITIES = [
       sensitiveKeys: ["ANTHROPIC_API_KEY"],
       sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
     },
-    isolationSummary: "fresh project/home; project settings only; native keychain or env credential lease",
+    isolationSummary: "fresh project/home; project settings only; environment credential lease",
   },
   {
     id: "claude-sdk",
@@ -109,7 +110,7 @@ export function validateCapabilityRegistry(
     ) {
       findings.push({ kind: "incomplete-supported", adapterId: capability.id });
     }
-    if (capability.status === "unsupported" && !capability.followUpIssue) {
+    if (capability.status !== "supported" && !capability.followUpIssue) {
       findings.push({ kind: "missing-issue", adapterId: capability.id });
     }
   }
@@ -123,4 +124,10 @@ export function capabilityById(
   return capability === undefined
     ? { ok: false, error: { kind: "unknown-adapter", adapterId: id } }
     : { ok: true, value: capability };
+}
+
+export function requireCapability(id: LiveAdapterId): LiveCapability {
+  const resolved = capabilityById(id);
+  if (!resolved.ok) throw new Error(`${id} capability is not registered`);
+  return resolved.value;
 }

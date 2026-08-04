@@ -70,8 +70,8 @@ function emitResult(result: DriveResult): void {
     byteLength: byteLength(result.assistantText),
     digest: digest(result.assistantText),
   })}\n`);
-  for (const terminal of result.resultEvents ?? []) {
-    emitTerminal(terminal, ordinal++, lateAfterTerminal(result.messageTypes ?? []));
+  for (const terminal of result.resultEvents) {
+    emitTerminal(terminal, ordinal++, lateAfterTerminal(result.messageTypes));
   }
 }
 
@@ -88,18 +88,35 @@ function emitTerminal(terminal: ResultEvent, ordinal: number, hasLateEvent: bool
   })}\n`);
 }
 
+export function sdkWorkerExitCode(resultEvents: readonly ResultEvent[]): 0 | 1 {
+  return resultEvents.length > 0 && resultEvents.every((event) => event.is_error !== true) ? 0 : 1;
+}
+
+export function sdkWorkerProbeSurface(): Readonly<{
+  version: string | null;
+  query: boolean;
+  abort: boolean;
+}> {
+  return {
+    version: probeClaudeSdkVersion(),
+    query: typeof query === "function",
+    abort: typeof AbortController === "function",
+  };
+}
+
 async function main(): Promise<number> {
-  const frameBytes = new Uint8Array(await Bun.stdin.arrayBuffer());
-  let frame: CredentialFrame;
-  try {
-    frame = parseCredentialFrame(frameBytes);
-  } finally {
-    frameBytes.fill(0);
-  }
   const abortController = new AbortController();
   const onAbort = () => abortController.abort();
   process.on("SIGUSR1", onAbort);
-  if (frame.secret.length > 0 && !frame.childKey.startsWith("__")) {
+  const frameBytes = new Uint8Array(await Bun.stdin.arrayBuffer());
+  const frame: CredentialFrame = (() => {
+  try {
+      return parseCredentialFrame(frameBytes);
+  } finally {
+    frameBytes.fill(0);
+  }
+  })();
+  if (frame.secret.length > 0) {
     process.env[frame.childKey] = frame.secret;
   }
   try {
@@ -111,23 +128,16 @@ async function main(): Promise<number> {
       abortSignal: abortController.signal,
     });
     emitResult(result);
-    return (result.resultEvents?.length ?? 0) > 0 ? 0 : 1;
+    return sdkWorkerExitCode(result.resultEvents);
   } finally {
     process.off("SIGUSR1", onAbort);
-    if (!frame.childKey.startsWith("__")) delete process.env[frame.childKey];
-    frame = { runNonce: "", generation: 0, childKey: "", secret: "" };
+    delete process.env[frame.childKey];
   }
 }
 
 if (import.meta.main) {
   if (process.argv.includes("--probe")) {
-    process.stdout.write(JSON.stringify({
-      version: probeClaudeSdkVersion(),
-      query: typeof query === "function",
-      abort: typeof AbortController === "function",
-      projectSettings: true,
-      structuredResult: true,
-    }));
+    process.stdout.write(JSON.stringify(sdkWorkerProbeSurface()));
   } else {
     main().then(
       (code) => process.exit(code),

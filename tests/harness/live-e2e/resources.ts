@@ -44,3 +44,20 @@ export class ResourceRegistrar {
     return resource;
   }
 }
+
+export function cleanupReceiptFromRegistrar(
+  registrar: ResourceRegistrar | undefined,
+  target: CleanupTarget,
+  failures: readonly string[],
+): CleanupReceipt {
+  const attempted = target.registeredResources.map((resource) => resource.id);
+  const current = registrar?.snapshot() ?? target.registeredResources;
+  return {
+    attemptedResourceIds: attempted,
+    releasedResourceIds: current.filter((resource) => resource.state === "released").map((resource) => resource.id),
+    retainedResourceIds: current.filter((resource) => resource.state === "created").map((resource) => resource.id),
+    failures,
+    leakFindings: [],
+  };
+}
+import type { CleanupReceipt, CleanupTarget } from "./adapter.ts";

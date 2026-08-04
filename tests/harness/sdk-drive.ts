@@ -122,9 +122,9 @@ export interface DriveResult {
   /** The SDK's terminal result event, or undefined if the stream never ended. */
   resultEvent: ResultEvent | undefined;
   /** Every terminal event in stream order; live adapters reject duplicates. */
-  resultEvents?: ResultEvent[];
+  resultEvents: ResultEvent[];
   /** SDK message kinds in stream order for structural ordering checks. */
-  messageTypes?: string[];
+  messageTypes: string[];
   /** Contents of amadeus-docs/amadeus-state.md after the run, if it exists. */
   stateFile?: string;
   /** Audit event-type strings parsed from amadeus-docs/audit.md, in file order. */
@@ -355,9 +355,11 @@ export function resolveDriveSdkSettings(
     ? undefined
     : readClaudeSettings(SHIPPED_SETTINGS);
   const projectSettingsPath = join(projectDir, ".claude", "settings.json");
-  const project = projectSettingsPath === SHIPPED_SETTINGS
-    ? shipped
-    : readClaudeSettings(projectSettingsPath);
+  const project = opts.settingsAuthority === "project-only"
+    ? readClaudeSettings(projectSettingsPath)
+    : projectSettingsPath === SHIPPED_SETTINGS
+      ? shipped
+      : readClaudeSettings(projectSettingsPath);
 
   const explicitModel = opts.model?.trim();
   const shippedModel = settingsModel(shipped);
@@ -456,9 +458,13 @@ export async function driveAidlc(
   });
 
   const abortController = new AbortController();
-  const forwardAbort = () => abortController.abort();
+  let parentAborted = opts.abortSignal?.aborted === true;
+  const forwardAbort = () => {
+    parentAborted = true;
+    abortController.abort();
+  };
   opts.abortSignal?.addEventListener("abort", forwardAbort, { once: true });
-  if (opts.abortSignal?.aborted) abortController.abort();
+  if (parentAborted) abortController.abort();
   let timedOut = false;
   let stoppedAfterAskUserQuestion = false;
   let stoppedAfterToolResult = false;
@@ -645,7 +651,7 @@ export async function driveAidlc(
     // it only when WE aborted; rethrow genuine SDK failures so they're visible.
     if (
       !(
-        (timedOut || stoppedAfterAskUserQuestion || stoppedAfterToolResult) &&
+        (timedOut || stoppedAfterAskUserQuestion || stoppedAfterToolResult || parentAborted) &&
         abortController.signal.aborted
       )
     ) {

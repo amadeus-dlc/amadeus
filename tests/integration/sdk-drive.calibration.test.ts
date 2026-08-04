@@ -314,6 +314,8 @@ describe("sdk-drive calibration (known-answer)", () => {
       ],
       assistantText: "",
       resultEvent: undefined,
+      resultEvents: [],
+      messageTypes: [],
       askedQuestions: [],
     };
 
@@ -327,6 +329,8 @@ describe("sdk-drive calibration (known-answer)", () => {
       toolResults: [],
       assistantText: "",
       resultEvent: undefined,
+      resultEvents: [],
+      messageTypes: [],
       askedQuestions: [],
     };
     expect(() =>
@@ -348,6 +352,8 @@ describe("sdk-drive calibration (known-answer)", () => {
       ],
       assistantText: "",
       resultEvent: undefined,
+      resultEvents: [],
+      messageTypes: [],
       askedQuestions: [],
     };
     expect(() =>

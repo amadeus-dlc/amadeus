@@ -18,12 +18,17 @@ import type {
   ScratchAllocator,
   ScratchReceipt,
 } from "./adapter.ts";
-import { digest, type Result, sanitizeText } from "./contract.ts";
+import { type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
-import { LIVE_CAPABILITIES } from "./registry.ts";
-import type { ResourceRegistrar } from "./resources.ts";
+import { requireCapability } from "./registry.ts";
+import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
+import { collectBounded } from "./stream.ts";
+import { parseVersion, versionAtLeast } from "./version.ts";
 
 const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "OPENAI_API_KEY" };
+const CAPABILITY = requireCapability("codex-exec");
+const STDOUT_LIMIT_BYTES = 1_048_576;
+const STDERR_LIMIT_BYTES = 262_144;
 
 export class EnvironmentCredentialSource implements CredentialSourcePort {
   readonly #env: Readonly<Record<string, string | undefined>>;
@@ -116,27 +121,12 @@ export interface CodexExecAdapterOptions {
   readonly model?: string;
 }
 
-function parseVersion(text: string): readonly [number, number, number] | null {
-  const match = text.match(/(\d+)\.(\d+)\.(\d+)/);
-  return match === null ? null : [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function versionAtLeast(
-  actual: readonly [number, number, number],
-  minimum: readonly [number, number, number],
-): boolean {
-  for (let index = 0; index < 3; index += 1) {
-    if (actual[index] > minimum[index]) return true;
-    if (actual[index] < minimum[index]) return false;
-  }
-  return true;
-}
-
 export class CodexExecAdapter implements LiveAdapter {
-  readonly capability = LIVE_CAPABILITIES[0];
+  readonly capability = CAPABILITY;
   readonly #options: CodexExecAdapterOptions;
   #binding: CredentialBinding | undefined;
   #activeProcess: Bun.Subprocess | undefined;
+  #registrar: ResourceRegistrar | undefined;
 
   constructor(options: CodexExecAdapterOptions) {
     this.#options = options;
@@ -181,6 +171,7 @@ export class CodexExecAdapter implements LiveAdapter {
   }
 
   async prepare(context: PrepareContext): Promise<Result<PreparedRun, { kind: "prepare-failed"; diagnostic: string }>> {
+    this.#registrar = context.registrar;
     const resourceId = "codex-credential-binding";
     context.registrar.registerPlanned({
       id: resourceId,
@@ -238,12 +229,13 @@ export class CodexExecAdapter implements LiveAdapter {
       signal,
     });
     this.#activeProcess = processHandle;
-    const stdoutPromise = new Response(processHandle.stdout).text();
-    const stderrPromise = new Response(processHandle.stderr).text();
+    const stdoutPromise = collectBounded(processHandle.stdout, STDOUT_LIMIT_BYTES);
+    const stderrPromise = collectBounded(processHandle.stderr, STDERR_LIMIT_BYTES);
     const exitCode = await processHandle.exited;
     const [stdout, stderr] = await Promise.all([stdoutPromise, stderrPromise]);
     this.#activeProcess = undefined;
-    const structured = stdout
+    const stdoutText = new TextDecoder().decode(stdout.bytes);
+    const structured = stdoutText
       .split("\n")
       .filter(Boolean)
       .flatMap((line) => {
@@ -255,12 +247,12 @@ export class CodexExecAdapter implements LiveAdapter {
       })
       .at(-1);
     return {
-      exitCode,
+      exitCode: stdout.overflowed || stderr.overflowed ? 1 : exitCode,
       timedOut: signal.aborted,
-      aborted: signal.aborted,
-      stdoutDigest: digest(stdout),
-      stderrDigest: digest(stderr),
-      structured,
+      aborted: signal.aborted || stdout.overflowed || stderr.overflowed,
+      stdoutDigest: stdout.digest,
+      stderrDigest: stderr.digest,
+      structured: stdout.overflowed ? undefined : structured,
     };
   }
 
@@ -269,7 +261,12 @@ export class CodexExecAdapter implements LiveAdapter {
     if (this.#activeProcess !== undefined) {
       try {
         this.#activeProcess.kill();
-        await this.#activeProcess.exited;
+        await Promise.race([
+          this.#activeProcess.exited,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Codex reap timed out")), 10_000)
+          ),
+        ]);
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
@@ -279,6 +276,7 @@ export class CodexExecAdapter implements LiveAdapter {
     if (this.#binding !== undefined) {
       try {
         await this.#binding.release();
+        this.#registrar?.markReleased("codex-credential-binding");
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
@@ -287,16 +285,12 @@ export class CodexExecAdapter implements LiveAdapter {
     }
     try {
       rmSync(target.scratch.root, { recursive: true, force: true });
+      this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));
     }
-    const attempted = target.registeredResources.map((resource) => resource.id);
-    return {
-      attemptedResourceIds: attempted,
-      releasedResourceIds: failures.length === 0 ? attempted : [],
-      retainedResourceIds: [],
-      failures,
-      leakFindings: [],
-    };
+    const receipt = cleanupReceiptFromRegistrar(this.#registrar, target, failures);
+    this.#registrar = undefined;
+    return receipt;
   }
 }

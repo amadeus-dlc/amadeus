@@ -31,7 +31,19 @@ export function renderCapabilityMatrix(
       const evidence = green === undefined
         ? capability.followUpIssue ?? "—"
         : `${green.gitSha} @ ${green.recordedAt}`;
-      return `| ${capability.id} | ${capability.harness} | ${capability.transport} | \`${capability.optInKey}\` | hard deny | ${escapeCell(capability.isolationSummary)} | ${capability.anchorKinds.join(", ")} | ${state} | ${capability.minimumVersion} / ${capability.measuredVersion} | ${evidence} |`;
+      const cells = [
+        capability.id,
+        capability.harness,
+        capability.transport,
+        `\`${capability.optInKey}\``,
+        "hard deny",
+        capability.isolationSummary,
+        capability.anchorKinds.join(", "),
+        state,
+        `${capability.minimumVersion} / ${capability.measuredVersion}`,
+        evidence,
+      ].map(escapeCell);
+      return `| ${cells.join(" | ")} |`;
     });
   return [
     MATRIX_START,
@@ -72,5 +84,6 @@ export function checkCapabilityMatrix(
 export function updateCapabilityMatrix(currentDocument: string, expectedBlock: string): string {
   const actual = currentBlock(currentDocument);
   if (actual === null) throw new Error("generated matrix block is missing");
-  return currentDocument.replace(actual, expectedBlock);
+  const start = currentDocument.indexOf(actual);
+  return currentDocument.slice(0, start) + expectedBlock + currentDocument.slice(start + actual.length);
 }

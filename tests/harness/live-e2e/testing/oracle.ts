@@ -1,19 +1,7 @@
-import { codeMatchesStatus, type LiveCode, type LiveStatus } from "../contract.ts";
+import { codeMatchesStatus, LIVE_CODES, type LiveStatus } from "../contract.ts";
 import type { ValidatedContractCase } from "./contract-case.ts";
 
-export const CANONICAL_LIVE_CODES = [
-  "AMADEUS_LIVE_E2E:SKIP:CI_FORBIDDEN",
-  "AMADEUS_LIVE_E2E:SKIP:OPT_IN_REQUIRED",
-  "AMADEUS_LIVE_E2E:SKIP:BINARY_MISSING",
-  "AMADEUS_LIVE_E2E:SKIP:VERSION_UNSUPPORTED",
-  "AMADEUS_LIVE_E2E:SKIP:DIST_MISSING",
-  "AMADEUS_LIVE_E2E:SKIP:AUTH_UNAVAILABLE",
-  "AMADEUS_LIVE_E2E:SKIP:CAPABILITY_UNSUPPORTED",
-  "AMADEUS_LIVE_E2E:TIMEOUT:JOURNEY_TIMEOUT",
-  "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED",
-  "AMADEUS_LIVE_E2E:FAIL:ASSERTION_FAILED",
-  "AMADEUS_LIVE_E2E:PASS:SUCCESS",
-] as const satisfies readonly LiveCode[];
+export const CANONICAL_LIVE_CODES = LIVE_CODES;
 
 export type AssertionId =
   | "TERMINAL_EXPECTATION"

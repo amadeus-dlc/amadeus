@@ -91,6 +91,14 @@ describe("Claude print live contract", () => {
         assertion: "SETTINGS_PROJECT_ONLY" as const,
         mutant: { ...baseline(), args: ["-p", "--setting-sources", "user,project,local"] },
       },
+      {
+        id: "duplicate-setting-sources",
+        assertion: "SETTINGS_PROJECT_ONLY" as const,
+        mutant: {
+          ...baseline(),
+          args: ["-p", "--setting-sources", "project", "--setting-sources", "user"],
+        },
+      },
     ];
     for (const contractCase of cases) {
       expect(buildRedGreenEvidence({

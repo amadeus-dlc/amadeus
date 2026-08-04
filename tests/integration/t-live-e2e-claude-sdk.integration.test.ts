@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CredentialBinding, CredentialDeclaration, CredentialSourcePort } from "../harness/live-e2e/adapter.ts";
-import { ClaudeSdkAdapter } from "../harness/live-e2e/claude-sdk.ts";
+import { ClaudeSdkAdapter, type ClaudeSdkAdapterOptions } from "../harness/live-e2e/claude-sdk.ts";
 import { ClaudeAmbientCredentialSource, ClaudeScratchAllocator } from "../harness/live-e2e/claude.ts";
 import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
@@ -32,10 +32,11 @@ const newline = input.indexOf("\\n");
 const declaredLength = Number(input.slice(0, newline));
 const payload = input.slice(newline + 1);
 const frame = JSON.parse(payload);
+const secondReadLength = (await Bun.stdin.text()).length;
 writeFileSync(${JSON.stringify(observation)}, JSON.stringify({
   declaredLength,
   payloadLength: new TextEncoder().encode(payload).byteLength,
-  frameReads: 1,
+  secondReadLength,
   childKey: frame.childKey,
   receivedSecret: frame.secret === "sdk-secret-canary",
   environmentKeys: Object.keys(process.env).filter((key) => !key.startsWith("__MISE_")).sort(),
@@ -61,9 +62,8 @@ if (${JSON.stringify(mode)} === "timeout") {
   }
 }
 `,
-    { encoding: "utf8", mode: 0o700 },
+    { encoding: "utf8" },
   );
-  chmodSync(worker, 0o700);
   return { root, worker, distribution, observation };
 }
 
@@ -106,7 +106,10 @@ function liveContext(fixture: ReturnType<typeof createFixture>, credentialSource
   };
 }
 
-function adapter(fixture: ReturnType<typeof createFixture>, overrides = {}): ClaudeSdkAdapter {
+function adapter(
+  fixture: ReturnType<typeof createFixture>,
+  overrides: Partial<ClaudeSdkAdapterOptions> = {},
+): ClaudeSdkAdapter {
   return new ClaudeSdkAdapter({
     distributionDir: fixture.distribution,
     parentEnv: {
@@ -147,14 +150,14 @@ describe("Claude SDK live adapter", () => {
       const observed = JSON.parse(readFileSync(fixture.observation, "utf8")) as {
         declaredLength: number;
         payloadLength: number;
-        frameReads: number;
+        secondReadLength: number;
         receivedSecret: boolean;
         environmentKeys: string[];
         hasCredentialEnv: boolean;
         settings: unknown;
       };
       expect(observed.declaredLength).toBe(observed.payloadLength);
-      expect(observed.frameReads).toBe(1);
+      expect(observed.secondReadLength).toBe(0);
       expect(observed.receivedSecret).toBe(true);
       expect(observed.hasCredentialEnv).toBe(false);
       expect(observed.environmentKeys.filter((key) => key !== "__CF_USER_TEXT_ENCODING")).toEqual([

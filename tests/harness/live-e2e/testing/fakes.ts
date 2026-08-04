@@ -52,6 +52,7 @@ export class ScriptedLiveAdapter implements LiveAdapter {
       credentialBearing: true,
     });
     this.#binding = await context.credentialSource.lease({ childKey: "FIXTURE_CREDENTIAL" });
+    const binding = this.#binding;
     context.registrar.markCreated(`${this.#options.runId}-credential`);
     if (this.#options.fault === "prepare-throw") throw new Error("injected prepare fault");
     return {
@@ -60,8 +61,8 @@ export class ScriptedLiveAdapter implements LiveAdapter {
         cwd: context.scratch.projectDir,
         executable: "offline-fake",
         args: [],
-        environmentKeys: ["PATH", this.#binding.key],
-        resolveEnvironment: () => ({ PATH: "/fixture/bin", [this.#binding?.key ?? "FIXTURE_CREDENTIAL"]: "canary" }),
+        environmentKeys: ["PATH", binding.key],
+        resolveEnvironment: () => ({ PATH: "/fixture/bin", [binding.key]: "canary" }),
         registeredResourceIds: [`${this.#options.runId}-credential`],
       },
     };
@@ -70,17 +71,23 @@ export class ScriptedLiveAdapter implements LiveAdapter {
   async execute(_run: PreparedRun, signal: AbortSignal): Promise<AdapterExecution> {
     this.#record("spawn");
     if (this.#options.fault === "timeout") {
+      const abort = () => {
+        this.#record("abort");
+        this.#record("reap");
+      };
+      if (signal.aborted) abort();
+      else {
       await new Promise<void>((resolve) => {
         signal.addEventListener(
           "abort",
           () => {
-            this.#record("abort");
-            this.#record("reap");
+            abort();
             resolve();
           },
           { once: true },
         );
       });
+      }
       return this.#execution(null, true, true);
     }
     return this.#options.fault === "execute-failure"

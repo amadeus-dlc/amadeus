@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { evaluateLiveGate } from "../harness/live-e2e/policy.ts";
-import { LIVE_CAPABILITIES } from "../harness/live-e2e/registry.ts";
+import { capabilityById, LIVE_CAPABILITIES } from "../harness/live-e2e/registry.ts";
 import {
   strictOptInPropertyCases,
   type ContractCase,
   validateContractCase,
 } from "../harness/live-e2e/testing/contract-case.ts";
 import { buildRedGreenEvidence } from "../harness/live-e2e/testing/evidence.ts";
+import { ScriptedLiveAdapter } from "../harness/live-e2e/testing/fakes.ts";
+import { cleanupReceiptFromRegistrar, ResourceRegistrar } from "../harness/live-e2e/resources.ts";
 import {
   adjudicateContractCase,
   type BoundaryCall,
@@ -63,6 +65,41 @@ function observation(overrides: Partial<ContractObservation> = {}): ContractObse
 }
 
 describe("live E2E adversarial test kit", () => {
+  test("cleanup receipts reflect registrar state instead of failure count", () => {
+    const registrar = new ResourceRegistrar();
+    registrar.registerPlanned({ id: "planned", kind: "fixture", locator: "planned", credentialBearing: false });
+    registrar.registerPlanned({ id: "created", kind: "fixture", locator: "created", credentialBearing: true });
+    registrar.registerPlanned({ id: "released", kind: "fixture", locator: "released", credentialBearing: true });
+    registrar.markCreated("created");
+    registrar.markCreated("released");
+    registrar.markReleased("released");
+    const registeredResources = registrar.snapshot();
+    expect(cleanupReceiptFromRegistrar(registrar, {
+      scratch: { root: ".", homeDir: ".", projectDir: ".", state: "ready" },
+      registeredResources,
+    }, [])).toMatchObject({
+      attemptedResourceIds: ["planned", "created", "released"],
+      releasedResourceIds: ["released"],
+      retainedResourceIds: ["created"],
+    });
+  });
+
+  test("scripted timeout handles an already-aborted signal", async () => {
+    const adapter = new ScriptedLiveAdapter({ runId: "pre-aborted", fault: "timeout" });
+    const controller = new AbortController();
+    controller.abort();
+    const result = await adapter.execute({
+      cwd: ".",
+      executable: "offline-fake",
+      args: [],
+      environmentKeys: [],
+      resolveEnvironment: () => ({}),
+      registeredResourceIds: [],
+    }, controller.signal);
+    expect(result).toMatchObject({ timedOut: true, aborted: true });
+    expect(adapter.calls.map((call) => call.boundary)).toEqual(["spawn", "abort", "reap"]);
+  });
+
   test("validates deterministic single-fault cases and the one cleanup/leak aggregate", () => {
     expect(validateContractCase({
       id: "valid-case",
@@ -75,13 +112,23 @@ describe("live E2E adversarial test kit", () => {
         code: "AMADEUS_LIVE_E2E:PASS:SUCCESS",
       },
     }).ok).toBe(true);
-    expect(validateContractCase({ ...validated(), faults: ["cleanup", "leak"] }).ok).toBe(true);
+    expect(validateContractCase({
+      id: "cleanup-leak-case",
+      requirementIds: ["FR-10"],
+      seed: 1717,
+      faults: ["cleanup", "leak"],
+      expectedTerminal: { kind: "run-error", errorKind: "cleanup-barrier-failed" },
+    }).ok).toBe(true);
     expect(validateContractCase({
       ...validated(),
       faults: ["cleanup"],
       expectedTerminal: { kind: "run-error", errorKind: "cleanup-barrier-failed" },
     })).toMatchObject({ ok: true });
     expect(validateContractCase({ ...validated(), faults: ["timeout", "leak"] })).toMatchObject({
+      ok: false,
+      error: { kind: "invalid-fault-plan" },
+    });
+    expect(validateContractCase({ ...validated(), faults: ["typo" as never] })).toMatchObject({
       ok: false,
       error: { kind: "invalid-fault-plan" },
     });
@@ -93,7 +140,11 @@ describe("live E2E adversarial test kit", () => {
     for (const propertyCase of first) {
       const decision = evaluateLiveGate(
         { AMADEUS_CODEX_EXEC_LIVE: propertyCase.value },
-        LIVE_CAPABILITIES[0],
+        (() => {
+          const capability = capabilityById("codex-exec");
+          if (!capability.ok) throw new Error("codex-exec capability is unavailable");
+          return capability.value;
+        })(),
       );
       expect(decision.kind).toBe(propertyCase.expected === "allow" ? "allow" : "skip");
     }
@@ -254,5 +305,25 @@ describe("live E2E adversarial test kit", () => {
       failedAssertionIds: ["ENV_ALLOW_LIST"],
       proven: true,
     });
+    expect(() => buildRedGreenEvidence({
+      caseId: "empty-assertions",
+      seed: 1717,
+      requirementIds: ["FR-4"],
+      baseline,
+      mutant,
+      expectedAssertionIds: [],
+    })).toThrow("expected assertions must not be empty");
+    const multiFailure = adjudicateContractCase(validated(), observation({
+      childEnvironmentKeys: ["HOME"],
+      observedCanaryIds: ["ambient-secret"],
+    }));
+    expect(() => buildRedGreenEvidence({
+      caseId: "unexpected-assertion",
+      seed: 1717,
+      requirementIds: ["FR-4"],
+      baseline,
+      mutant: multiFailure,
+      expectedAssertionIds: ["ENV_ALLOW_LIST"],
+    })).toThrow("mutant failed unexpected assertions");
   });
 });

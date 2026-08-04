@@ -67,6 +67,7 @@ export function createClaudeSdkJourney(timeoutMs = 90_000): LiveJourney {
         events.filter((event) => event.kind === kind).length === 1
       );
       const passed = execution.exitCode === 0 &&
+        terminal !== undefined &&
         !execution.timedOut &&
         !execution.aborted &&
         execution.structured?.truncated !== true &&

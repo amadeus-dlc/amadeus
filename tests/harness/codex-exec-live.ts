@@ -11,7 +11,9 @@ import {
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { buildChildEnvironment } from "./live-e2e/policy.ts";
-import { LIVE_CAPABILITIES } from "./live-e2e/registry.ts";
+import { requireCapability } from "./live-e2e/registry.ts";
+
+const CAPABILITY = requireCapability("codex-exec");
 
 export function codexExecLiveSkipReason(
   env: Readonly<Record<string, string | undefined>>,
@@ -29,7 +31,7 @@ export function codexExecChildEnvironment(
   home: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): NodeJS.ProcessEnv {
-  const isolated = buildChildEnvironment(env, LIVE_CAPABILITIES[0].environment);
+  const isolated = buildChildEnvironment(env, CAPABILITY.environment);
   if (!isolated.ok) throw new Error(`Codex child environment rejected ${isolated.error.key}`);
   return {
     ...isolated.value,
@@ -53,11 +55,13 @@ export function codexExecLiveRequirementsSkipReason({
   const environmentReason = codexExecLiveSkipReason(env);
   if (environmentReason !== null) return environmentReason;
 
-  const probeEnvironment = buildChildEnvironment(env, LIVE_CAPABILITIES[0].environment);
+  const probeEnvironment = buildChildEnvironment(env, CAPABILITY.environment);
   const version = probeEnvironment.ok
-    ? spawnSync(codexBin, ["--version"], {
+      ? spawnSync(codexBin, ["--version"], {
         encoding: "utf-8",
         env: probeEnvironment.value,
+        maxBuffer: 64 * 1024,
+        timeout: 15_000,
       })
     : null;
   const match = (version?.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
@@ -83,10 +87,7 @@ export interface CodexExecHome {
   cleanup: () => void;
 }
 
-export function setupCodexExecHome(
-  prefix: string,
-  _legacyAuthHome: string | undefined,
-): CodexExecHome {
+export function setupCodexExecHome(prefix: string): CodexExecHome {
   const root = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   const home = join(root, "codex-home");
   const cleanup = (): void => rmSync(root, { recursive: true, force: true });
@@ -193,7 +194,6 @@ export function initializeCodexExecProject({
 
 export interface SetupCodexExecProjectOptions {
   prefix: string;
-  authHome: string | undefined;
   distributionDir: string;
   repositoryRoot: string;
   model: string;
@@ -207,14 +207,13 @@ export interface CodexExecProject extends CodexExecHome {
 
 export function setupCodexExecProject({
   prefix,
-  authHome,
   distributionDir,
   repositoryRoot,
   model,
   rulesDir,
   prepareProject,
 }: SetupCodexExecProjectOptions): CodexExecProject {
-  const scratch = setupCodexExecHome(prefix, authHome);
+  const scratch = setupCodexExecHome(prefix);
   const proj = join(scratch.root, "proj");
   try {
     cpSync(join(distributionDir, ".codex"), join(proj, ".codex"), { recursive: true });

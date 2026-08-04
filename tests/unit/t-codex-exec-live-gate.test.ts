@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   codexExecChildEnvironment,
   codexExecLiveRequirementsSkipReason,
@@ -39,17 +42,30 @@ describe("codex exec live E2E gate", () => {
   });
 
   test("the requirements probe uses the same allow-listed PATH as the adapter", () => {
-    expect(
-      codexExecLiveRequirementsSkipReason({
+    const binDir = mkdtempSync(join(tmpdir(), "codex-live-path-"));
+    const codexBin = join(binDir, "codex");
+    writeFileSync(codexBin, "#!/bin/sh\necho 'codex-cli 0.146.0'\n", "utf8");
+    chmodSync(codexBin, 0o755);
+    const input = {
         env: {
           AMADEUS_CODEX_EXEC_LIVE: "1",
           OPENAI_API_KEY: "fixture-key",
-          PATH: "/path/that/does/not/exist",
         },
-        codexBin: "bun",
+        codexBin: "codex",
         distributionDir: process.cwd(),
-      }),
-    ).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=bun)");
+      };
+    try {
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: binDir },
+      })).toBeNull();
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: "/path/that/does/not/exist" },
+      })).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=codex)");
+    } finally {
+      rmSync(binDir, { recursive: true, force: true });
+    }
   });
 
   test("the child environment exposes only the scratch auth home", () => {

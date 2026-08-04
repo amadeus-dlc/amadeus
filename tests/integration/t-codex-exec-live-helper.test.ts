@@ -18,21 +18,17 @@ import {
 
 interface CodexHarnessFixture {
   root: string;
-  authHome: string;
   distributionDir: string;
   repositoryRoot: string;
 }
 
 function createCodexHarnessFixture(): CodexHarnessFixture {
   const root = mkdtempSync(join(tmpdir(), "codex-live-helper-fixture-"));
-  const authHome = join(root, "source-auth");
   const distributionDir = join(root, "dist", "codex");
   const repositoryRoot = join(root, "framework");
   mkdirSync(join(distributionDir, ".codex"), { recursive: true });
   mkdirSync(join(distributionDir, ".agents", "skills", "fixture"), { recursive: true });
   mkdirSync(join(repositoryRoot, "scripts"), { recursive: true });
-  mkdirSync(authHome, { recursive: true });
-  writeFileSync(join(authHome, "auth.json"), "{}\n", "utf-8");
   writeFileSync(join(distributionDir, ".codex", "config.toml.example"), "# config\n", "utf-8");
   writeFileSync(join(distributionDir, ".codex", "hooks.json.example"), "{}\n", "utf-8");
   writeFileSync(
@@ -46,7 +42,7 @@ function createCodexHarnessFixture(): CodexHarnessFixture {
     'process.stdout.write("[features]\\nfixture = true\\n");\n',
     "utf-8",
   );
-  return { root, authHome, distributionDir, repositoryRoot };
+  return { root, distributionDir, repositoryRoot };
 }
 
 function gitTrackedFiles(projectDir: string): string[] {
@@ -60,7 +56,6 @@ describe("codex exec live E2E helper", () => {
     const fixture = createCodexHarnessFixture();
     const project = setupCodexExecProject({
       prefix: "codex-exec-project-",
-      authHome: fixture.authHome,
       distributionDir: fixture.distributionDir,
       repositoryRoot: fixture.repositoryRoot,
       model: "fixture-model",
@@ -92,7 +87,6 @@ describe("codex exec live E2E helper", () => {
       expect(() =>
         setupCodexExecProject({
           prefix: "codex-exec-failure-",
-          authHome: fixture.authHome,
           distributionDir: fixture.distributionDir,
           repositoryRoot: join(fixture.root, "missing-framework"),
           model: "fixture-model",
@@ -115,7 +109,7 @@ describe("codex exec live E2E helper", () => {
   test("external CODEX_HOME stays untracked and is deleted even when the workspace is kept", () => {
     const fixture = createCodexHarnessFixture();
     const workspace = mkdtempSync(join(tmpdir(), "codex-journey-workspace-"));
-    const auth = setupCodexExecHome("codex-journey-auth-", fixture.authHome);
+    const auth = setupCodexExecHome("codex-journey-auth-");
     const originalKeepTemp = process.env.AMADEUS_KEEP_TEMP;
     try {
       mkdirSync(join(workspace, ".home"), { recursive: true });

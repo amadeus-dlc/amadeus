@@ -1,5 +1,6 @@
 import type { LiveCapability } from "./registry.ts";
 import type { LiveCode, Result, SanitizedEvidence } from "./contract.ts";
+import type { LedgerOptions } from "./ledger.ts";
 import type { CleanupResource, ResourceRegistrar } from "./resources.ts";
 
 export interface PreflightFinding {
@@ -116,11 +117,12 @@ export interface LiveJourney {
 }
 
 export interface LiveRunContext {
-  env: Readonly<Record<string, string | undefined>>;
+  readonly env: Readonly<Record<string, string | undefined>>;
   readonly gitSha: string;
   readonly now: () => Date;
   readonly ledgerPath: string;
   readonly durability: "file-and-directory" | "file-only";
+  readonly ledgerOptions?: LedgerOptions;
   readonly credentialSource: CredentialSourcePort;
   readonly allocator: ScratchAllocator;
   readonly leakCheck: (target: CleanupTarget) => Promise<readonly string[]>;

@@ -4,8 +4,6 @@
 // all present. It never falls back to the user's Codex home or auth files.
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { codexExecLiveRequirementsSkipReason } from "../harness/codex-exec-live.ts";
 import {
@@ -15,29 +13,25 @@ import {
 } from "../harness/live-e2e/codex.ts";
 import { createCodexAnchorJourney } from "../harness/live-e2e/journey.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
+import { sanitizeText } from "../harness/live-e2e/contract.ts";
+import {
+  currentGitSha,
+  LIVE_E2E_LEDGER,
+  liveScratchLeakCheck,
+} from "../harness/live-e2e/testing/live-kernel.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
-const LEDGER = join(REPO_ROOT, "tests", "harness", "live-e2e", "runs.jsonl");
 const SKIP_REASON = codexExecLiveRequirementsSkipReason({
   env: process.env,
   codexBin: CODEX_BIN,
   distributionDir: CODEX_DIST,
 });
 
-function currentGitSha(): string {
-  const result = spawnSync("git", ["rev-parse", "HEAD"], {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) throw new Error("unable to resolve the current Git SHA");
-  return result.stdout.trim();
-}
-
 describe("Codex live E2E kernel", () => {
   test.skipIf(SKIP_REASON !== null)(
-    `records a real codex-exec anchor journey${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
+    `records a real codex-exec anchor journey${SKIP_REASON ? ` [SKIP: ${sanitizeText(SKIP_REASON, 120)}]` : ""}`,
     async () => {
       const adapter = new CodexExecAdapter({
         codexBin: CODEX_BIN,
@@ -49,15 +43,14 @@ describe("Codex live E2E kernel", () => {
         env: process.env,
         gitSha: currentGitSha(),
         now: () => new Date(),
-        ledgerPath: LEDGER,
+        ledgerPath: LIVE_E2E_LEDGER,
         durability: "file-and-directory",
         credentialSource: new EnvironmentCredentialSource(process.env),
         allocator: new CodexScratchAllocator({
           prefix: "amadeus-codex-live-",
           distributionDir: CODEX_DIST,
         }),
-        leakCheck: async (target) =>
-          existsSync(target.scratch.root) ? ["scratch root remained after cleanup"] : [],
+        leakCheck: liveScratchLeakCheck,
       });
       expect(result).toMatchObject({
         ok: true,

@@ -73,7 +73,6 @@ export type LedgerLockStatus =
 
 interface LedgerOwnerToken {
   readonly pid: number;
-  readonly startedAtMs: number;
   readonly token: string;
 }
 
@@ -106,12 +105,11 @@ function readOwner(path: string): LedgerOwnerToken | null {
     const parsed = JSON.parse(readFileSync(ownerPath(path), "utf8")) as Partial<LedgerOwnerToken>;
     if (
       typeof parsed.pid !== "number" ||
-      typeof parsed.startedAtMs !== "number" ||
       typeof parsed.token !== "string"
     ) {
       return null;
     }
-    return { pid: parsed.pid, startedAtMs: parsed.startedAtMs, token: parsed.token };
+    return { pid: parsed.pid, token: parsed.token };
   } catch {
     return null;
   }
@@ -212,16 +210,17 @@ function acquireLedgerLock(path: string, options: LedgerOptions): Result<LedgerO
   const retryMs = options.retryMs ?? 100;
   const owner: LedgerOwnerToken = {
     pid: process.pid,
-    startedAtMs: Date.now() - Math.floor(process.uptime() * 1000),
     token: randomUUID(),
   };
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    let created = false;
     try {
       mkdirSync(lockPath);
+      created = true;
       writeFileSync(ownerPath(path), `${JSON.stringify(owner)}\n`, { flag: "wx", mode: 0o600 });
       return { ok: true, value: owner };
     } catch {
-      if (readOwner(path)?.token === owner.token) {
+      if (created) {
         rmSync(lockPath, { recursive: true, force: true });
         return { ok: false, error: ledgerError("write-failed", "lock owner stamp failed") };
       }

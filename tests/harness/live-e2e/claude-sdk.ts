@@ -19,10 +19,9 @@ import type {
 import { type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
-import type { ResourceRegistrar } from "./resources.ts";
+import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
 
 export const CLAUDE_SDK_PROMPT = "echo ok";
-export const CLAUDE_SDK_MINIMUM_VERSION = "0.3.158";
 export const CLAUDE_SDK_SINGLE_EVENT_LIMIT = 65_536;
 export const CLAUDE_SDK_TOTAL_EVENT_LIMIT = 1_048_576;
 export const CLAUDE_SDK_EVENT_COUNT_LIMIT = 4_096;
@@ -36,6 +35,8 @@ const CAPABILITY = (() => {
   return resolved.value;
 })();
 const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "ANTHROPIC_API_KEY" };
+const CREDENTIAL_RESOURCE_ID = "claude-sdk-credential-binding";
+const WORKER_RESOURCE_ID = "claude-sdk-worker-group";
 const DEFAULT_WORKER = fileURLToPath(new URL("./claude-sdk-worker.ts", import.meta.url));
 const PACKAGE_JSON = fileURLToPath(new URL("../../../package.json", import.meta.url));
 
@@ -84,7 +85,7 @@ function versionTuple(value: string): readonly number[] | null {
 
 export function isClaudeSdkVersionSupported(actual: string): boolean {
   const left = versionTuple(actual);
-  const right = versionTuple(CLAUDE_SDK_MINIMUM_VERSION);
+  const right = versionTuple(CAPABILITY.minimumVersion);
   if (left === null || right === null) return false;
   for (let index = 0; index < 3; index += 1) {
     if (left[index] > right[index]) return true;
@@ -131,17 +132,14 @@ function probeWorkerSurface(options: ClaudeSdkAdapterOptions): {
     const surface = probe.status === 0
       ? JSON.parse(probe.stdout) as Readonly<Record<string, unknown>>
       : undefined;
-    const supported = surface?.query === true &&
-      surface.abort === true &&
-      surface.projectSettings === true &&
-      surface.structuredResult === true;
+    const supported = surface?.query === true && surface.abort === true;
     return {
       measuredVersion: typeof surface?.version === "string" ? surface.version : undefined,
       finding: supported
         ? undefined
         : {
             code: "AMADEUS_LIVE_E2E:SKIP:CAPABILITY_UNSUPPORTED",
-            diagnostic: "Claude SDK query, abort, project settings, or structured result surface is unavailable",
+            diagnostic: "Claude SDK query or abort surface is unavailable",
           },
     };
   } catch {
@@ -165,7 +163,7 @@ function workerProbe(options: ClaudeSdkAdapterOptions): {
   if (measuredVersion === undefined || !isClaudeSdkVersionSupported(measuredVersion)) {
     findings.push({
       code: "AMADEUS_LIVE_E2E:SKIP:VERSION_UNSUPPORTED",
-      diagnostic: `Claude Agent SDK ${CLAUDE_SDK_MINIMUM_VERSION} or newer is required`,
+      diagnostic: `Claude Agent SDK ${CAPABILITY.minimumVersion} or newer is required`,
     });
   }
   if (!existsSync(options.workerScript ?? DEFAULT_WORKER)) {
@@ -202,12 +200,13 @@ function isWorkerEvent(value: unknown): value is ClaudeSdkWorkerEvent {
 function lineLimitKind(
   line: string,
   eventCount: number,
+  queuedEventCount: number,
   retainedBytes: number,
 ): EventCollection["failureKind"] {
   const lineBytes = Buffer.byteLength(line);
   if (eventCount > CLAUDE_SDK_EVENT_COUNT_LIMIT) return "event-count-limit";
   if (lineBytes > CLAUDE_SDK_SINGLE_EVENT_LIMIT) return "single-event-limit";
-  if (eventCount > CLAUDE_SDK_QUEUE_EVENT_LIMIT) return "queue-event-limit";
+  if (queuedEventCount > CLAUDE_SDK_QUEUE_EVENT_LIMIT) return "queue-event-limit";
   if (retainedBytes + lineBytes > CLAUDE_SDK_QUEUE_BYTE_LIMIT) return "queue-byte-limit";
   return undefined;
 }
@@ -239,11 +238,11 @@ async function collectEvents(
     failureKind = kind;
     onLimit();
   };
-  const acceptLine = (line: string) => {
+  const acceptLine = (line: string, queuedEventCount: number) => {
     if (line.length === 0) return;
     eventCount += 1;
     const lineBytes = Buffer.byteLength(line);
-    const limitKind = lineLimitKind(line, eventCount, retainedBytes);
+    const limitKind = lineLimitKind(line, eventCount, queuedEventCount, retainedBytes);
     if (limitKind !== undefined) fail(limitKind);
     retainedBytes += lineBytes;
     if (failureKind !== undefined) return;
@@ -262,18 +261,21 @@ async function collectEvents(
     if (totalBytes > CLAUDE_SDK_TOTAL_EVENT_LIMIT) fail("total-event-limit");
     if (failureKind !== undefined) continue;
     pending += decoder.decode(item.value, { stream: true });
+    const queuedLines: string[] = [];
     for (;;) {
       const newline = pending.indexOf("\n");
       if (newline < 0) break;
-      const line = pending.slice(0, newline);
+      queuedLines.push(pending.slice(0, newline));
       pending = pending.slice(newline + 1);
-      acceptLine(line);
+    }
+    for (const [index, line] of queuedLines.entries()) {
+      acceptLine(line, queuedLines.length - index);
     }
     if (Buffer.byteLength(pending) > CLAUDE_SDK_SINGLE_EVENT_LIMIT) fail("single-event-limit");
   }
   if (failureKind === undefined) {
     pending += decoder.decode();
-    acceptLine(pending);
+    acceptLine(pending, pending.length === 0 ? 0 : 1);
   }
   return {
     digest: hash.digest("hex"),
@@ -299,14 +301,12 @@ async function collectBytes(stream: ReadableStream<Uint8Array>, limit: number): 
 }
 
 function credentialFrame(binding: CredentialBinding): Uint8Array {
-  let secret = binding.expose();
   const payload = new TextEncoder().encode(JSON.stringify({
     runNonce: randomUUID(),
     generation: 1,
     childKey: binding.key,
-    secret,
+    secret: binding.expose(),
   }));
-  secret = "";
   const prefix = new TextEncoder().encode(`${payload.byteLength}\n`);
   const frame = new Uint8Array(prefix.byteLength + payload.byteLength);
   frame.set(prefix);
@@ -346,16 +346,14 @@ export class ClaudeSdkAdapter implements LiveAdapter {
   async prepare(
     context: PrepareContext,
   ): Promise<Result<PreparedRun, Readonly<{ kind: "prepare-failed"; diagnostic: string }>>> {
-    const credentialId = "claude-sdk-credential-binding";
-    const workerId = "claude-sdk-worker-group";
     context.registrar.registerPlanned({
-      id: credentialId,
+      id: CREDENTIAL_RESOURCE_ID,
       kind: "credential-binding",
       locator: "anonymous-pipe",
       credentialBearing: true,
     });
     context.registrar.registerPlanned({
-      id: workerId,
+      id: WORKER_RESOURCE_ID,
       kind: "process-group",
       locator: "run-owned-worker",
       credentialBearing: true,
@@ -363,7 +361,7 @@ export class ClaudeSdkAdapter implements LiveAdapter {
     this.#registrar = context.registrar;
     try {
       this.#binding = await context.credentialSource.lease(CREDENTIAL_DECLARATION);
-      context.registrar.markCreated(credentialId);
+      context.registrar.markCreated(CREDENTIAL_RESOURCE_ID);
       const base = buildChildEnvironment(this.#options.parentEnv, this.capability.environment);
       if (!base.ok) {
         return { ok: false, error: { kind: "prepare-failed", diagnostic: `environment policy rejected ${base.error.key}` } };
@@ -381,7 +379,7 @@ export class ClaudeSdkAdapter implements LiveAdapter {
           args: [this.#options.workerScript ?? DEFAULT_WORKER],
           environmentKeys: Object.keys(environment),
           resolveEnvironment: () => ({ ...environment }),
-          registeredResourceIds: [credentialId, workerId],
+          registeredResourceIds: [CREDENTIAL_RESOURCE_ID, WORKER_RESOURCE_ID],
         },
       };
     } catch (error) {
@@ -423,7 +421,7 @@ export class ClaudeSdkAdapter implements LiveAdapter {
       detached: process.platform !== "win32",
     });
     this.#activeWorker = worker;
-    this.#registrar?.markCreated("claude-sdk-worker-group");
+    this.#registrar?.markCreated(WORKER_RESOURCE_ID);
     const frame = credentialFrame(this.#binding);
     if (typeof worker.stdin === "object" && worker.stdin !== null && "write" in worker.stdin) {
       worker.stdin.write(frame);
@@ -440,6 +438,7 @@ export class ClaudeSdkAdapter implements LiveAdapter {
     const stderr = collectBytes(worker.stderr, CLAUDE_SDK_STDERR_LIMIT);
     const exitCode = await worker.exited;
     this.#activeWorker = undefined;
+    this.#registrar?.markReleased(WORKER_RESOURCE_ID);
     signal.removeEventListener("abort", abort);
     const [eventOutput, errorOutput] = await Promise.all([stdout, stderr]);
     const outputFailure = eventOutput.failureKind !== undefined || errorOutput.truncated;
@@ -462,9 +461,11 @@ export class ClaudeSdkAdapter implements LiveAdapter {
 
   async cleanup(target: CleanupTarget): Promise<CleanupReceipt> {
     const failures = [...this.#supervisorFailures];
+    this.#supervisorFailures = [];
     if (this.#activeWorker !== undefined) {
       try {
         await this.#beginEscalation(this.#activeWorker);
+        this.#registrar?.markReleased(WORKER_RESOURCE_ID);
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
@@ -474,6 +475,7 @@ export class ClaudeSdkAdapter implements LiveAdapter {
     if (this.#binding !== undefined) {
       try {
         await this.#binding.release();
+        this.#registrar?.markReleased(CREDENTIAL_RESOURCE_ID);
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
@@ -482,16 +484,12 @@ export class ClaudeSdkAdapter implements LiveAdapter {
     }
     try {
       rmSync(target.scratch.root, { recursive: true, force: true });
+      this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));
     }
-    const attempted = target.registeredResources.map((resource) => resource.id);
-    return {
-      attemptedResourceIds: attempted,
-      releasedResourceIds: failures.length === 0 ? attempted : [],
-      retainedResourceIds: failures.length === 0 ? [] : attempted,
-      failures,
-      leakFindings: [],
-    };
+    const receipt = cleanupReceiptFromRegistrar(this.#registrar, target, failures);
+    this.#registrar = undefined;
+    return receipt;
   }
 }

@@ -45,6 +45,7 @@ export interface ContractCaseIssue {
 }
 
 function validFaultPlan(faults: readonly FaultPoint[]): boolean {
+  if (faults.some((fault) => !FAULT_POINTS.includes(fault))) return false;
   if (faults.length <= 1) return true;
   return faults.length === 2 && faults.includes("cleanup") && faults.includes("leak");
 }

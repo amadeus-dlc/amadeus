@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -179,7 +179,7 @@ describe("live E2E lifecycle", () => {
         value: { kind: "skipped", outcome: { code: "AMADEUS_LIVE_E2E:SKIP:CI_FORBIDDEN" } },
       });
       expect(adapter.events).toEqual([]);
-      expect(Bun.file(denied.ledgerPath).size).toBe(0);
+      expect(existsSync(denied.ledgerPath)).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

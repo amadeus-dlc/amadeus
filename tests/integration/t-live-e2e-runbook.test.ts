@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
+import { REPO_ROOT } from "../harness/fixtures.ts";
 import { checkCapabilityMatrix, renderCapabilityMatrix } from "../harness/live-e2e/projector.ts";
 import { parseRunLedger } from "../harness/live-e2e/ledger.ts";
 import { LIVE_CAPABILITIES } from "../harness/live-e2e/registry.ts";
 
-const DOCUMENT_PATH = resolve("docs/harness-engineering/live-e2e.md");
-const LEDGER_PATH = resolve("tests/harness/live-e2e/runs.jsonl");
+const DOCUMENT_PATH = join(REPO_ROOT, "docs", "harness-engineering", "live-e2e.md");
+const LEDGER_PATH = join(REPO_ROOT, "tests", "harness", "live-e2e", "runs.jsonl");
 
 describe("live E2E runbook contract", () => {
   test("documents every registry adapter and mandatory operational boundary", () => {
@@ -26,8 +27,8 @@ describe("live E2E runbook contract", () => {
     }
     expect(document).toContain("GitHub Actions");
     expect(document).toContain("dist/<harness>");
-    expect(document).toContain("driver");
-    expect(document).toContain("installer");
+    expect(document).toContain("a harness driver (including Claude print, SDK, or TUI)");
+    expect(document).toContain("or the installer, identify every affected adapter in the registry");
     expect(document).toContain("tests/harness/live-e2e/runs.jsonl");
   });
 

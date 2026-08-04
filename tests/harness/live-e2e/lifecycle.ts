@@ -287,7 +287,7 @@ export async function runLiveJourney(
     outcome: stages.outcome,
     cleanup,
   });
-  const appended = await appendRunReceipt(context.ledgerPath, receipt);
+  const appended = await appendRunReceipt(context.ledgerPath, receipt, context.ledgerOptions);
   if (!appended.ok) {
     return { ok: false, error: { kind: "ledger-write-failed", receipt, cause: appended.error } };
   }

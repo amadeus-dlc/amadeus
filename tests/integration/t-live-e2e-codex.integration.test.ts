@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
@@ -110,8 +110,8 @@ describe("Codex live adapter", () => {
       expect(readFileSync(join(fixture.root, "runs.jsonl"), "utf8")).not.toContain(
         "sk-fixture-secret",
       );
-      expect(Bun.file(observed.codeHome).size).toBe(0);
-      expect(Bun.file(observed.cwd).size).toBe(0);
+      expect(existsSync(observed.codeHome)).toBe(false);
+      expect(existsSync(observed.cwd)).toBe(false);
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }

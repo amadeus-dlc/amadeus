@@ -1,4 +1,9 @@
 import type { AssertionId, OracleResult } from "./oracle.ts";
+import {
+  CLAUDE_BASE_ENVIRONMENT,
+  CLAUDE_SIDE_EFFECT_CALLS,
+  sameStringSet,
+} from "./claude-contract-common.ts";
 
 export interface ClaudeSdkContractObservation {
   readonly ciDenied: boolean;
@@ -22,22 +27,15 @@ export interface ClaudeSdkContractObservation {
   };
 }
 
-const SIDE_EFFECT_CALLS = new Set(["probe", "lease", "scratch", "spawn", "ledger"]);
-const EXPECTED_ENV = ["HOME", "LANG", "LC_ALL", "NO_COLOR", "PATH", "TMPDIR"];
-
-function sameSet(left: readonly string[], right: readonly string[]): boolean {
-  return [...new Set(left)].sort().join("\0") === [...new Set(right)].sort().join("\0");
-}
-
 export function adjudicateClaudeSdkContract(observation: ClaudeSdkContractObservation): OracleResult {
   const failed = new Set<AssertionId>();
-  if (observation.ciDenied && observation.boundaryCalls.some((call) => SIDE_EFFECT_CALLS.has(call))) {
+  if (observation.ciDenied && observation.boundaryCalls.some((call) => CLAUDE_SIDE_EFFECT_CALLS.has(call))) {
     failed.add("POLICY_CI_ZERO_CALLS");
   }
   if (observation.gateAllowed !== (observation.optInValue === "1")) {
     failed.add("POLICY_STRICT_OPT_IN");
   }
-  if (!sameSet(observation.childEnvironmentKeys, EXPECTED_ENV)) {
+  if (!sameStringSet(observation.childEnvironmentKeys, CLAUDE_BASE_ENVIRONMENT)) {
     failed.add("ENV_ALLOWLIST_EXACT");
   }
   if (observation.settingSources.length !== 1 || observation.settingSources[0] !== "project") {

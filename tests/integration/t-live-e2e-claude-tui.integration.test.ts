@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ClaudeAmbientCredentialSource, ClaudeScratchAllocator } from "../harness/live-e2e/claude.ts";
@@ -22,11 +22,13 @@ interface TmuxCall {
 class FakePrivateTmux implements TmuxCommandPort {
   readonly calls: TmuxCall[] = [];
   readonly #failKillServer: boolean;
+  readonly #ready: boolean;
   #projectDir: string | undefined;
   #prompt = "";
 
-  constructor(failKillServer = false) {
+  constructor(failKillServer = false, ready = true) {
     this.#failKillServer = failKillServer;
+    this.#ready = ready;
   }
 
   run(args: readonly string[], options: TmuxCommandOptions = {}): TmuxCommandResult {
@@ -42,7 +44,9 @@ class FakePrivateTmux implements TmuxCommandPort {
     if (command === "kill-server" && this.#failKillServer) {
       return { exitCode: 1, stdout: "", stderr: "injected server cleanup failure" };
     }
-    const pane = command === "capture-pane" ? "Claude Code ready\nanchor complete\n" : "";
+    const pane = command === "capture-pane"
+      ? this.#ready ? "Claude Code ready\n❯ \nanchor complete\n" : "Claude Code loading\n"
+      : "";
     return { exitCode: 0, stdout: pane, stderr: "" };
   }
 
@@ -67,7 +71,13 @@ function fixture(): Readonly<{ root: string; binary: string; distribution: strin
   return { root, binary, distribution };
 }
 
-async function runFixture(root: string, binary: string, distribution: string, tmux: FakePrivateTmux) {
+async function runFixture(
+  root: string,
+  binary: string,
+  distribution: string,
+  tmux: FakePrivateTmux,
+  readyTimeoutMs?: number,
+) {
   return runLiveJourney(
     new ClaudeTuiAdapter({
       claudeBin: binary,
@@ -82,6 +92,7 @@ async function runFixture(root: string, binary: string, distribution: string, tm
       tmux,
       createRunId: () => RUN_ID,
       pollIntervalMs: 1,
+      readyTimeoutMs,
     }),
     createClaudeTuiJourney(),
     {
@@ -137,7 +148,26 @@ describe("Claude TUI live adapter", () => {
           originalOutcome: { code: "AMADEUS_LIVE_E2E:PASS:SUCCESS" },
         },
       });
-      expect(Bun.file(join(item.root, "runs.jsonl")).size).toBe(0);
+      expect(existsSync(join(item.root, "runs.jsonl"))).toBe(false);
+    } finally {
+      rmSync(item.root, { recursive: true, force: true });
+    }
+  });
+
+  test("startup output without an input prompt reaches the readiness deadline", async () => {
+    const item = fixture();
+    try {
+      const result = await runFixture(
+        item.root,
+        item.binary,
+        item.distribution,
+        new FakePrivateTmux(false, false),
+        0,
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        value: { kind: "recorded", outcome: { code: "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED" } },
+      });
     } finally {
       rmSync(item.root, { recursive: true, force: true });
     }

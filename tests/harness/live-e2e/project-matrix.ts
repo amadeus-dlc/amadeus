@@ -1,15 +1,18 @@
 #!/usr/bin/env bun
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseRunLedger } from "./ledger.ts";
 import { checkCapabilityMatrix, renderCapabilityMatrix, updateCapabilityMatrix } from "./projector.ts";
 import { LIVE_CAPABILITIES } from "./registry.ts";
 
-const DOCUMENT = resolve("docs/harness-engineering/live-e2e.md");
-const LEDGER = resolve("tests/harness/live-e2e/runs.jsonl");
+const REPO_ROOT = join(import.meta.dir, "../../..");
+const DOCUMENT = join(REPO_ROOT, "docs/harness-engineering/live-e2e.md");
+const LEDGER = join(REPO_ROOT, "tests/harness/live-e2e/runs.jsonl");
 
 export function runMatrixCommand(command: "render" | "update" | "check"): number {
-  const parsed = parseRunLedger(readFileSync(LEDGER, "utf8"), { ledgerPath: LEDGER });
+  const parsed = parseRunLedger(existsSync(LEDGER) ? readFileSync(LEDGER, "utf8") : "", {
+    ledgerPath: LEDGER,
+  });
   if (!parsed.ok) {
     process.stderr.write(`${parsed.error.kind}: ${parsed.error.diagnostic}\n`);
     return 1;
