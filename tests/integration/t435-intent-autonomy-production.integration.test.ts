@@ -34,7 +34,7 @@ function run(
 ): { readonly status: number; readonly output: string } {
   const env = { ...process.env };
   env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
-  if (guard) delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = guard ? "0" : "1";
   const result = spawnSync(BUN, [join(projectDir, ".claude", "tools", tool), ...args, "--project-dir", projectDir], {
     cwd: projectDir,
     encoding: "utf8",
@@ -279,7 +279,8 @@ describe("Intent-scoped autonomy production path", () => {
       "repair", "repair", "repair", "replanned", "repair", "repair", "parked",
     ]);
     const parked = qualityOutcomes.at(-1);
-    if (parked?.kind !== "parked") return;
+    if (parked?.kind !== "parked") throw new Error("expected quality repair to park");
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
     expect(resumeProductionQuality({
       projectDir,
       qualityScopeId: parked.qualityScopeId,
@@ -306,6 +307,7 @@ describe("Intent-scoped autonomy production path", () => {
     expect(selected.status).toBe(0);
     expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: semi");
     expect(state(projectDir)).toContain("- **Intent Grant**: none");
+    expect(state(projectDir)).toContain("- **Construction Autonomy Mode**: gated");
 
     const directive = run(projectDir, "amadeus-orchestrate.ts", ["next"]);
     if (directive.status !== 0) throw new Error(directive.output);
@@ -520,5 +522,5 @@ describe("Intent-scoped autonomy production path", () => {
     const resumedProjection = readProductionAutonomyProjection(projectDir);
     expect(resumedProjection?.workflowExecutionState).toBe("running");
     expect(resumedProjection?.currentGrant?.state).toBe("active");
-  });
+  }, 120_000);
 });

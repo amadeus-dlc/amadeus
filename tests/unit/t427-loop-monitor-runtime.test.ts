@@ -98,12 +98,16 @@ function reserveJudge(routeGraph = graph()) {
   return { repository, coordinator, partition, reserved, routeGraph, q2 };
 }
 
-function resultFor(invocationId: string, routeId = "repair"): JudgeResult {
+function resultFor(
+  invocationId: string,
+  routeGraph: CompiledLoopMonitorGraph,
+  routeId = "repair",
+): JudgeResult {
   return {
     invocationId,
     routeId,
     evidenceFingerprint: evidenceA,
-    constraintFingerprint: graph().loopMonitors[0]!.routeConstraint.fingerprint,
+    constraintFingerprint: routeGraph.loopMonitors[0]!.routeConstraint.fingerprint,
     trace,
   };
 }
@@ -146,15 +150,18 @@ describe("Loop Monitor Judge runtime", () => {
     expect(coordinator.observeDelivery(
       delivery(compiled, partition, "repair", first.deliveryId, "forked-successor"),
     )).toMatchObject({ kind: "CONFLICT", reason: "causal-fork" });
+    expect(coordinator.observeDelivery(
+      delivery(compiled, partition, "quality-check", null, "second-root"),
+    )).toMatchObject({ kind: "CONFLICT", reason: "causal-fork" });
   });
 
   test("dispatches only with a committed permit and records observed -> completed -> route in order", () => {
-    const { repository, coordinator, partition, reserved } = reserveJudge();
+    const { repository, coordinator, partition, reserved, routeGraph } = reserveJudge();
     let dispatches = 0;
     const port: JudgePort = {
       dispatch(request) {
         dispatches += 1;
-        return { kind: "completed", result: resultFor(request.invocationId) };
+        return { kind: "completed", result: resultFor(request.invocationId, routeGraph) };
       },
       reconcile() {
         return { kind: "unknown", reason: "not-used" };
@@ -226,12 +233,12 @@ describe("Loop Monitor Judge runtime", () => {
   });
 
   test("persists the safe result observation but rejects provider identity, route, or trace mismatch", () => {
-    const { repository, coordinator, partition, reserved } = reserveJudge();
+    const { repository, coordinator, partition, reserved, routeGraph } = reserveJudge();
     const port: JudgePort = {
       dispatch(request) {
         return {
           kind: "completed",
-          result: { ...resultFor(request.invocationId), routeId: "undeclared" },
+          result: { ...resultFor(request.invocationId, routeGraph), routeId: "undeclared" },
         };
       },
       reconcile() {
@@ -254,7 +261,7 @@ describe("Loop Monitor latch", () => {
     const { repository, coordinator, partition, reserved, routeGraph, q2 } = reserveJudge();
     const port: JudgePort = {
       dispatch(request) {
-        return { kind: "completed", result: resultFor(request.invocationId, "repair-stalled") };
+        return { kind: "completed", result: resultFor(request.invocationId, routeGraph, "repair-stalled") };
       },
       reconcile() {
         return { kind: "unknown", reason: "not-used" };
@@ -277,10 +284,10 @@ describe("Loop Monitor latch", () => {
   });
 
   test("a real verified HUMAN_TURN clears the latch and status/replay expose the stop contract", () => {
-    const { repository, coordinator, partition, reserved } = reserveJudge();
+    const { repository, coordinator, partition, reserved, routeGraph } = reserveJudge();
     const port: JudgePort = {
       dispatch(request) {
-        return { kind: "completed", result: resultFor(request.invocationId, "repair-stalled") };
+        return { kind: "completed", result: resultFor(request.invocationId, routeGraph, "repair-stalled") };
       },
       reconcile() {
         return { kind: "unknown", reason: "not-used" };

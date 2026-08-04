@@ -293,7 +293,12 @@ function codegenStateWithAutonomy(autonomy: string): string {
       );
   }
   if (autonomy === "gated") {
-    return base.replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: semi");
+    return base
+      .replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: semi")
+      .replace(
+        "- **Construction Autonomy Mode**: autonomous",
+        "- **Construction Autonomy Mode**: gated",
+      );
   }
   if (autonomy === "autonomous") return base;
   return base
@@ -326,22 +331,22 @@ function recordBatchApprovals(proj: string, batches: number[]): void {
 }
 
 describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
-  test("d: semi + first batch uncovered -> fans the batch out", () => {
+  test("d: semi + gated Construction scheduling fans the first batch out", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     const directive = runNext(proj);
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["alpha"]);
   });
 
-  test("e: semi + batch 1 covered -> next batch fans out without a legacy batch gate", () => {
+  test("e: semi requires approval after the completed batch", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const directive = runNext(proj);
-    expect(directive.kind).toBe("invoke-swarm");
-    expect(directive.units).toEqual(["beta"]);
+    expect(directive.kind).toBe("ask");
+    expect(directive.question).toContain("Approve batch 1");
   });
 
-  test("f: stale legacy batch approval does not alter semi fanout", () => {
+  test("f: a recorded batch approval lets semi continue fanout", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     recordBatchApprovals(proj, [1]);
@@ -350,7 +355,7 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.units).toEqual(["beta"]);
   });
 
-  test("g: malformed legacy approvals do not block semi fanout", () => {
+  test("g: malformed approvals fail closed and keep the semi gate", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const path = seededStateFile(proj);
@@ -362,8 +367,8 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
       ),
     );
     const directive = runNext(proj);
-    expect(directive.kind).toBe("invoke-swarm");
-    expect(directive.units).toEqual(["beta"]);
+    expect(directive.kind).toBe("ask");
+    expect(directive.question).toContain("Approve batch 1");
   });
 
   test("h: semi + every batch covered -> the stage's own gate", () => {

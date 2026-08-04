@@ -1615,9 +1615,10 @@ type AutonomyMode = "autonomous" | "gated";
 function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
   const intentMode = stateContent ? getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim() : null;
   if (intentMode === "none") return "gated";
-  if (intentMode !== "semi" && intentMode !== "full") return null;
   const scheduling = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() : null;
-  return scheduling === "autonomous" ? "autonomous" : null;
+  if (intentMode === "semi") return scheduling === "gated" ? "gated" : null;
+  if (intentMode === "full") return scheduling === "autonomous" ? "autonomous" : null;
+  return null;
 }
 
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
@@ -3116,8 +3117,8 @@ function owedBatchGate(
 // trigger condition holds:
 //   - the slug resolves to a Construction stage that is the per-unit build stage
 //     (for_each:unit-of-work + mode:subagent — code-generation today);
-//   - canonical Intent autonomy supplies a scheduling projection (`none` fans
-//     out and stops at batch-end human gates; `semi`/`full` fan out without an
+//   - canonical Intent autonomy supplies a scheduling projection (`none` and
+//     `semi` fan out and stop at batch-end human gates; only `full` skips the
 //     in-phase batch wait; legacy mode fields alone never authorise fan-out);
 //   - the compiled Bolt/unit DAG yields a batch with uncovered units.
 // Three outcomes, then:

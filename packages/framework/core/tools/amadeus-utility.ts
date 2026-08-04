@@ -320,7 +320,7 @@ function handleVersion(): void {
 function renderAutonomyStatus(
   autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null,
 ): string {
-  if (autonomy === null) return "Autonomy:       none (audit projection unavailable)";
+  if (autonomy === null) return "Autonomy:       unavailable (audit projection unavailable)";
   return [
     `Autonomy:       ${autonomy.autonomyMode}`,
     `Grant:          ${autonomy.grant === null ? "none" : `${autonomy.grant.id} (${autonomy.grant.state})`}`,
@@ -362,12 +362,17 @@ To get started:
   const activeAgent = getField(content, "Active Agent") || "None";
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
-  const autonomyProjection = readProductionAutonomyProjection(
-    projectDir,
-    flags.intent,
-    flags.space,
-  );
-  const autonomy = autonomyProjection === null ? null : projectIntentAutonomyStatus(autonomyProjection);
+  let autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null = null;
+  try {
+    const autonomyProjection = readProductionAutonomyProjection(
+      projectDir,
+      flags.intent,
+      flags.space,
+    );
+    autonomy = autonomyProjection === null ? null : projectIntentAutonomyStatus(autonomyProjection);
+  } catch {
+    autonomy = null;
+  }
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
@@ -673,7 +678,11 @@ function resolvePiDoctorChecks(
   const piExecutable = Bun.which("pi") ?? undefined;
   const piVersionOutput = piExecutable === undefined
     ? ""
-    : (Bun.spawnSync([piExecutable, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "");
+    : (Bun.spawnSync([piExecutable, "--version"], {
+        stdout: "pipe",
+        stderr: "ignore",
+        timeout: 5_000,
+      }).stdout?.toString() ?? "");
   return probePiDoctor({
     projectDir,
     platform,

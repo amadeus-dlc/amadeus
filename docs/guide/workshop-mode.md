@@ -187,13 +187,13 @@ bun .claude/tools/amadeus-bolt.ts complete --merge --slug user-profile-api
 git push origin main                      # publishes the merged result
 ```
 
-Workshop keeps Intent autonomy at `none`, so the group reviews the walking-skeleton and later batch gates. There is no post-skeleton ladder. Bob picks up the canonical mode projection on his next `git fetch --all`.
+Workshop keeps Intent autonomy at `none`, so the group reviews the walking-skeleton and later batch gates. There is no post-skeleton ladder. Bob picks up the canonical mode projection on his next `git pull --ff-only`.
 
 > **What if `bolt-plan.md` marked a Bolt as walking-skeleton but practices says skeleton-off?** Practices wins. The orchestrator emits a `PRACTICES_OVERRIDE` audit row recording the conflict and the marked Bolt runs as a regular Bolt. Its gate still follows the Intent mode table.
 
 ### Parallel Bolts — Alice + Bob
 
-Both run `git fetch --all` to pick up Alice's merged main. (Both blocks below assume trunk-based — substitute `--base develop` for gitflow teams or `--base release/<version>` for release-branch teams, same as Alice's solo skeleton block above.)
+Both run `git pull --ff-only` to pick up Alice's merged main. (Both blocks below assume trunk-based — substitute `--base develop` for gitflow teams or `--base release/<version>` for release-branch teams, same as Alice's solo skeleton block above.)
 
 ```bash
 # Alice picks billing-service

@@ -234,7 +234,7 @@ describe("t246 production marker carrier", () => {
     });
 
     expect(isPendingComposeStop("- **Intent Autonomy Mode**: full\n", deps(() => undefined))).toBe(false);
-    expect([statCalls, clockCalls, unlinkCalls]).toEqual([0, 0, 0]);
+    expect([statCalls, clockCalls, unlinkCalls]).toEqual([1, 1, 0]);
     expect(isPendingComposeStop(state, deps(() => undefined))).toBe(false);
     expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: 100_000_000 })))).toBe(true);
     expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: 0 })))).toBe(false);

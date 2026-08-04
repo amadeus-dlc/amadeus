@@ -36,6 +36,7 @@ describe("opt-in five-harness credential seam", () => {
         })]),
         stdout: "pipe",
         stderr: "pipe",
+        timeout: 25_000,
       });
       const [exitCode, stdout, stderr] = await Promise.all([
         child.exited,
@@ -43,7 +44,9 @@ describe("opt-in five-harness credential seam", () => {
         new Response(child.stderr).text(),
       ]);
       if (exitCode !== 0) throw new Error(`${descriptor.id} live command failed (${exitCode}): ${stderr}`);
-      const receipt = JSON.parse(stdout.trim().split("\n").at(-1) ?? "") as Record<string, unknown>;
+      const output = stdout.trim();
+      if (output.length === 0) throw new Error(`${descriptor.id} live command produced no receipt`);
+      const receipt = JSON.parse(output.split("\n").at(-1)!) as Record<string, unknown>;
       return { descriptor, receipt };
     }));
     for (const { descriptor, receipt } of receipts) {

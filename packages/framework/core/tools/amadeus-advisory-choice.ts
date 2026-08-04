@@ -395,6 +395,14 @@ function identityKey(identity: AdvisoryIdentity): string {
   ]);
 }
 
+function activeReceiptMatches(
+  receipt: AdvisoryChoiceReceipt,
+  pending: PendingAdvisory,
+): boolean {
+  return receipt.revokedAt === undefined &&
+    identityKey(receipt.identity) === identityKey(pending.identity);
+}
+
 function correlationKey(identity: Omit<AdvisoryIdentity, "advisoryInstance">): string {
   return JSON.stringify([
     identity.plugin,
@@ -414,10 +422,7 @@ export function evaluateAdvisoryHold(
   const unresolved: PendingAdvisory[] = [];
   for (const item of pending) {
     const receipt = receipts
-      .filter((candidate) =>
-        candidate.revokedAt === undefined
-        && identityKey(candidate.identity) === identityKey(item.identity)
-      )
+      .filter((candidate) => activeReceiptMatches(candidate, item))
       .at(-1);
     if (receipt === undefined) unresolved.push(item);
     else matched.push(receipt);
@@ -661,9 +666,7 @@ function hasVerifiedModelCheckAttempt(
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
   const attempts = receipts.filter((receipt) =>
-    receipt.revokedAt === undefined
-    && identityKey(receipt.identity) === identityKey(pending.identity)
-    && receipt.choice === "run-now"
+    activeReceiptMatches(receipt, pending) && receipt.choice === "run-now"
   ).length;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     if (verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt).kind === "verified-not-detected") return true;
@@ -707,10 +710,7 @@ function resolveRunRequiredHold(
   const directiveItems: AdvisoryChoiceDirectiveItem[] = [];
   const formalChecks: AdvisoryFormalCheckRoute[] = [];
   for (const pending of pendingItems) {
-    const matching = receipts.filter((receipt) =>
-      receipt.revokedAt === undefined
-      && identityKey(receipt.identity) === identityKey(pending.identity)
-    );
+    const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
     if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
@@ -806,16 +806,11 @@ export function advisoryReportHoldReason(projectDir: string, stage: string): str
     const failures = verdict.pending.flatMap((item) => {
       if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
       const latest = verdict.receipts
-        .filter((receipt) =>
-          receipt.revokedAt === undefined
-          && identityKey(receipt.identity) === identityKey(item.identity)
-        )
+        .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
       if (latest?.choice !== "run-now") return [];
       const attempt = storeResult.value.receipts.filter((receipt) =>
-        receipt.revokedAt === undefined
-        && identityKey(receipt.identity) === identityKey(item.identity)
-        && receipt.choice === "run-now"
+        activeReceiptMatches(receipt, item) && receipt.choice === "run-now"
       ).length;
       const outcome = verifyAdvisoryModelCheckOutcome(projectDir, item, attempt);
       if (outcome.kind === "verified-not-detected") return [];
@@ -845,10 +840,7 @@ function acceptsFreshChoice(
   pending: PendingAdvisory,
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
-  const matching = receipts.filter((receipt) =>
-    receipt.revokedAt === undefined
-    && identityKey(receipt.identity) === identityKey(pending.identity)
-  );
+  const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
   const latest = matching.at(-1);
   if (latest === undefined) return true;
   if (latest.choice === "defer-with-risk") return false;
@@ -918,18 +910,21 @@ export function revokeMisattributedAdvisoryChoice(
   return withAuditLock(projectDir, () => {
     const storeResult = readStore(projectDir);
     if (!storeResult.ok) return { ok: false, reason: storeResult.reason };
-    const pending = storeResult.value.pending.find((item) =>
+    const open = storeResult.value.pending.filter((item) =>
       item.closedAt === undefined && item.identity.advisoryInstance === advisoryInstance
     );
-    if (pending === undefined) return { ok: false, reason: "open advisory instance not found" };
+    if (open.length === 0) return { ok: false, reason: "open advisory instance not found" };
     const matching = storeResult.value.receipts.filter((receipt) =>
       receipt.revokedAt === undefined
-      && receipt.identity.advisoryInstance === advisoryInstance
+      && receipt.humanTurn.eventIdentity === humanTurnIdentity
+      && open.some((pending) => identityKey(receipt.identity) === identityKey(pending.identity))
     );
     const receipt = matching.at(-1);
-    if (receipt === undefined || receipt.humanTurn.eventIdentity !== humanTurnIdentity) {
+    if (receipt === undefined) {
       return { ok: false, reason: "matching latest receipt not found" };
     }
+    const pending = open.find((item) => identityKey(item.identity) === identityKey(receipt.identity));
+    if (pending === undefined) return { ok: false, reason: "open advisory identity not found" };
     if (receipt.choice !== "run-now") return { ok: false, reason: "only run-now receipts can be corrected" };
     if (hasMatchingAdvisoryPresentation(projectDir, [pending], receipt.humanTurn)) {
       return { ok: false, reason: "receipt is grounded in a matching advisory presentation" };

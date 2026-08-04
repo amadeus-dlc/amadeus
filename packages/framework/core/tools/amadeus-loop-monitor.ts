@@ -622,6 +622,8 @@ function edgeConflict(projection: LoopMonitorProjection, delivery: LoopDelivery)
 }
 
 function historyLimit(monitor: CompiledLoopMonitor): number {
+  // This is the pattern-matching window, not the durable idempotency index.
+  // Runtime duplicate and causal-fork checks scan all committed event sets.
   return Math.max(monitor.threshold + 1, monitor.cycle.length + 1);
 }
 

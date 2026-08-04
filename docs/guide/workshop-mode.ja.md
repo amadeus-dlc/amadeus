@@ -185,7 +185,7 @@ Construction ステージは worktree 内で実行され、Bolt の終わりの�
 ゲートが承認すると、標準の `amadeus-bolt complete --merge --slug user-profile-api`
 フローが worktree の状態と監査を参加者のローカル main にマージバックします。
 **更新された状態ファイルを origin に push してください**(`git push origin main`)—
-参加者のローカルマージは`amadeus-state.md`のcanonicalなIntent autonomy projectionと
+参加者のローカルマージは`amadeus-state.md`のcanonicalなintent autonomy projectionと
 workflow stateを更新します。他の参加者はそれらを継承するためresume前にそのfileをpull
 しなければなりません。コンダクターは `amadeus-pipeline-deploy-agent` をディスパッチして
 `amadeus/spaces/<space>/memory/team.md` からチームのブランチ戦略を読み、マージ
@@ -251,15 +251,15 @@ bun .claude/tools/amadeus-bolt.ts complete --merge --slug user-profile-api
 git push origin main                      # マージ結果を公開
 ```
 
-WorkshopはIntent autonomyを`none`に保つため、groupがwalking-skeletonと後続batch gateを
-reviewします。post-skeleton ladderはありません。Bobは次の`git fetch --all`でcanonicalな
+Workshopはintent autonomyを`none`に保つため、groupがwalking-skeletonと後続batch gateを
+reviewします。post-skeleton ladderはありません。Bobは次の`git pull --ff-only`でcanonicalな
 mode projectionを取得します。
 
-> **`bolt-plan.md` がBoltをwalking-skeletonとマークしたがpracticesがskeleton-offと言う場合は?** Practicesが勝ちます。orchestratorは`PRACTICES_OVERRIDE`を記録し、marked Boltを通常Boltとして実行します。そのgateもIntent mode表に従います。
+> **`bolt-plan.md` がBoltをwalking-skeletonとマークしたがpracticesがskeleton-offと言う場合は?** Practicesが勝ちます。orchestratorは`PRACTICES_OVERRIDE`を記録し、marked Boltを通常Boltとして実行します。そのgateもintent mode表に従います。
 
 ### 並列 Bolt — Alice + Bob
 
-両者とも `git fetch --all` を実行して Alice のマージ済み main を拾います。(以下の
+両者とも `git pull --ff-only` を実行して Alice のマージ済み main を拾います。(以下の
 両ブロックはトランクベースを前提 — gitflow チームでは `--base develop`、リリース
 ブランチのチームでは `--base release/<version>` に置き換える。上の Alice のソロ
 skeleton ブロックと同様。)
@@ -432,7 +432,7 @@ AUQ をすべて先に解決し、次に `amadeus-bolt release-merge --slug <slu
 3. **`Bolt Refs` にあり `STATE_FORKED` 行はあるが `STATE_MERGED` がない Bolt**: オーケストレーターは Phase 3 に再突入します(コード生成の resume)。
 4. **`Bolt Refs` にありすでに `STATE_MERGED` を持つ Bolt**: スキップ — すでにマージ済み。
 5. **フォーク状態に `Merge-Held: true` を持つ生存者**: 未マージ。オーケストレーターは `amadeus-worktree info --slug <slug>` を実行して JSON エンベロープの `merge_held: boolean` フィールド(post-merge の fold-in で設定される — オーケストレーターは状態ファイルを手動でパースする必要がない)をチェックすることで、これを決定論的に検出します。未解決の失敗 Bolt AUQ をまず再レンダリングし、`amadeus-bolt release-merge --slug <slug>` でクリアされると、保留されたマージを元のバッチ順でディスパッチします。
-6. **Intent autonomyが利用不能**: fail closedにして明示的な`none|semi|full`選択を求め、旧Construction mode fieldから認可を推論しない。後続参加者は`git pull`でcanonical projectionを継承します。
+6. **intent autonomyが利用不能**: fail closedにして明示的な`none|semi|full`選択を求め、旧Construction mode fieldから認可を推論しない。後続参加者は`git pull`でcanonical projectionを継承します。
 
 Practices と autonomy mode は共有リポジトリの明示的なコミット済み成果物です — マシン
 間の魔法のような状態同期はありません。Pull、resume、continue。

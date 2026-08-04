@@ -936,7 +936,7 @@ function classifyReceiptSet(
     values.push(receipt);
     byHarness.set(receipt.harnessId, values);
   }
-  const missing = cohort.harnessIds.filter((harnessId) => (byHarness.get(harnessId)?.length ?? 0) !== 1);
+  const missing = cohort.harnessIds.filter((harnessId) => (byHarness.get(harnessId)?.length ?? 0) === 0);
   const duplicates = [...byHarness.values()]
     .filter((values) => values.length > 1)
     .flatMap((values) => values.map((receipt) => receipt.receiptId));

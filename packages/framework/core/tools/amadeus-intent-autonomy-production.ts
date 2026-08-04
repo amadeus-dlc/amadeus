@@ -5,6 +5,9 @@
 // transaction, and the human mode command. Harnesses consume the same projected
 // Core file; no harness-specific autonomy branch is permitted here.
 
+import { readFileSync } from "node:fs";
+import { basename } from "node:path";
+
 import {
   autonomyDigest,
   authorizeInteraction,
@@ -48,6 +51,7 @@ import {
   activeIntentUuid,
   activeSpace,
   auditBlockField,
+  auditShards,
   findAllEvents,
   getField,
   humanActedSinceGate,
@@ -115,6 +119,7 @@ function coordinatorFor(projectDir: string, resolved: ResolvedIntent): IntentAut
     projectDir,
     intent: resolved.intentDir,
     space: resolved.space,
+    audit,
   });
   return createIntentAutonomyCoordinator({
     initialProjection: createAutonomyProjection({
@@ -224,11 +229,29 @@ function authorizeProductionOccurrence(
 
 function latestHumanTurnId(projectDir: string, resolved: ResolvedIntent): string | null {
   if (!humanActedSinceGate(projectDir)) return null;
-  const turns = findAllEvents(
-    readAllAuditShards(projectDir, resolved.intentDir, resolved.space),
-    "HUMAN_TURN",
-  );
-  return turns.at(-1)?.timestamp ?? null;
+  let latest: { readonly timestamp: string; readonly turnId: string } | null = null;
+  for (const shardPath of auditShards(projectDir, resolved.intentDir, resolved.space)) {
+    let shard: string;
+    try {
+      shard = readFileSync(shardPath, "utf-8");
+    } catch {
+      continue;
+    }
+    for (const turn of findAllEvents(shard, "HUMAN_TURN")) {
+      const turnId = autonomyDigest({
+        intentUuid: resolved.intentUuid,
+        intentDir: resolved.intentDir,
+        space: resolved.space,
+        shard: basename(shardPath),
+        blockDigest: autonomyDigest(turn.block),
+      });
+      if (latest === null || turn.timestamp > latest.timestamp ||
+        (turn.timestamp === latest.timestamp && turnId > latest.turnId)) {
+        latest = { timestamp: turn.timestamp, turnId };
+      }
+    }
+  }
+  return latest?.turnId ?? null;
 }
 
 function grantScope(input: {
@@ -236,15 +259,24 @@ function grantScope(input: {
   readonly stateContent: string;
 }): GrantScopeDescriptor {
   const scopeId = getField(input.stateContent, "Scope") ?? "intent";
-  const scopeFingerprint = autonomyDigest({ intentUuid: input.projection.intentUuid, scopeId });
+  const fingerprints = fallbackFingerprints(input.projection.intentUuid, scopeId);
   return {
     intentUuid: input.projection.intentUuid,
     scopeId,
-    scopeFingerprint,
-    normFingerprint: autonomyDigest({ scopeId, rules: "resolved-rules-in-context-v1" }),
+    ...fingerprints,
     allowedInteractionKinds: ALL_INTERACTIONS,
     permissionBoundaryFingerprint: autonomyDigest("native-host-permission-boundary-v1"),
     prohibitedEffects: PROHIBITED_EFFECTS,
+  };
+}
+
+function fallbackFingerprints(
+  intentUuid: string,
+  scopeId: string,
+): { readonly scopeFingerprint: string; readonly normFingerprint: string } {
+  return {
+    scopeFingerprint: autonomyDigest({ intentUuid, scopeId }),
+    normFingerprint: autonomyDigest({ scopeId, rules: "resolved-rules-in-context-v1" }),
   };
 }
 
@@ -416,10 +448,12 @@ export function commitProductionStageGateDecision(input: {
   if (projection.autoDecisions.some((decision) => decision.occurrenceId === target.occurrenceId)) {
     return { kind: "already-decided", grantId: projection.currentGrant?.grantId ?? null };
   }
-  const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ??
-    autonomyDigest({ intentUuid: projection.intentUuid, scope: getField(input.stateContent, "Scope") ?? "intent" });
-  const normFingerprint = projection.currentGrant?.scope.normFingerprint ??
-    autonomyDigest({ scopeFingerprint, rules: "resolved-rules-in-context-v1" });
+  const fallback = fallbackFingerprints(
+    projection.intentUuid,
+    getField(input.stateContent, "Scope") ?? "intent",
+  );
+  const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ?? fallback.scopeFingerprint;
+  const normFingerprint = projection.currentGrant?.scope.normFingerprint ?? fallback.normFingerprint;
   const payload = { action: "approve-stage", stage: input.stage };
   const effect = {
     effectId: `approve-stage-${input.stage}`,
@@ -486,8 +520,9 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     optionIds: input.optionIds,
     graphRevision: input.graphRevision,
   });
-  const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ?? autonomyDigest("no-grant");
-  const normFingerprint = projection.currentGrant?.scope.normFingerprint ?? autonomyDigest("no-grant-norm");
+  const fallback = fallbackFingerprints(projection.intentUuid, "intent");
+  const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ?? fallback.scopeFingerprint;
+  const normFingerprint = projection.currentGrant?.scope.normFingerprint ?? fallback.normFingerprint;
   const effects = input.optionIds.map((optionId) => {
     const payload = { action: "answer-question", questionId: input.questionId, optionId };
     return {
