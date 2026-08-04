@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   isSupportedPiVersion,
   PI_MILESTONE_IDS,
+  runPiConformanceEvidenceCli,
   validatePiFormalEvidence,
 } from "../../scripts/pi-conformance-evidence.ts";
 import { dispatchPiLiveChild, runPiLiveRpc } from "../../scripts/pi-live-rpc.ts";
@@ -149,8 +150,59 @@ describe("Pi formal evidence admission", () => {
     expect(validatePiFormalEvidence(incomplete).status).toBe("invalid");
   });
 
+  test("rejects every untyped nested evidence shape and invalid terminal value", () => {
+    for (const malformed of [
+      { ...evidence(), candidate: null },
+      { ...evidence(), runs: null },
+      { ...evidence(), runs: [null, run("linux")] },
+      { ...evidence(), windowsNegative: null },
+      { ...evidence(), windowsNegative: { platform: "linux", doctorCheckId: "pi.os", rejected: true } },
+    ]) {
+      expect(validatePiFormalEvidence(malformed).status).toBe("invalid");
+    }
+
+    const badRpc = evidence();
+    badRpc.runs[0]!.rpc = null as unknown as typeof badRpc.runs[0]["rpc"];
+    expect(validatePiFormalEvidence(badRpc).status).toBe("invalid");
+
+    const badTuiShape = evidence();
+    badTuiShape.runs[0]!.tui = null as unknown as typeof badTuiShape.runs[0]["tui"];
+    expect(validatePiFormalEvidence(badTuiShape).status).toBe("invalid");
+
+    const badTuiValues = evidence();
+    badTuiValues.runs[0]!.tui = {
+      status: "failed",
+      humanTurnCount: 0,
+      gateApprovedCount: Number.NaN,
+      transcriptDigest: "not-a-digest",
+    } as unknown as typeof badTuiValues.runs[0]["tui"];
+    expect(validatePiFormalEvidence(badTuiValues).status).toBe("invalid");
+  });
+
   test("does not promote an ordinary non-opted-in live check to formal evidence", async () => {
     expect(await runPiLiveRpc({})).toEqual({ status: "skipped", reason: "opt-in-disabled" });
     expect(validatePiFormalEvidence({ status: "skipped", reason: "opt-in-disabled" }).status).toBe("invalid");
+  });
+
+  test("drives usage, green, invalid, and unreadable CLI outcomes in process", () => {
+    const outputs: string[] = [];
+    const ports = {
+      readEvidence: () => JSON.stringify(evidence()),
+      writeOutput: (line: string) => outputs.push(line),
+    };
+
+    expect(runPiConformanceEvidenceCli([], ports)).toBe(1);
+    expect(JSON.parse(outputs.pop() as string).problems[0]).toContain("usage:");
+    expect(runPiConformanceEvidenceCli(["evidence.json"], ports)).toBe(0);
+    expect(JSON.parse(outputs.pop() as string).status).toBe("green");
+    expect(runPiConformanceEvidenceCli(["evidence.json"], { ...ports, readEvidence: () => "{}" })).toBe(1);
+    expect(JSON.parse(outputs.pop() as string).status).toBe("invalid");
+    expect(runPiConformanceEvidenceCli(["evidence.json"], {
+      ...ports,
+      readEvidence: () => {
+        throw new Error("fixture read failure");
+      },
+    })).toBe(1);
+    expect(JSON.parse(outputs.pop() as string).problems).toContain("evidence file is unreadable or invalid JSON");
   });
 });

@@ -196,23 +196,34 @@ export function validatePiFormalEvidence(value: unknown): PiFormalEvidenceResult
     : { status: "invalid", problems };
 }
 
-function main(): void {
-  const path = process.argv[2];
+export type PiConformanceEvidenceCliPorts = {
+  readonly readEvidence: (path: string) => string;
+  readonly writeOutput: (line: string) => void;
+};
+
+const defaultCliPorts: PiConformanceEvidenceCliPorts = {
+  readEvidence: (path) => readFileSync(path, "utf8"),
+  writeOutput: (line) => process.stdout.write(line),
+};
+
+export function runPiConformanceEvidenceCli(
+  argv: readonly string[],
+  ports: PiConformanceEvidenceCliPorts = defaultCliPorts,
+): number {
+  const path = argv[0];
   if (path === undefined) {
-    process.stdout.write(`${JSON.stringify({ status: "invalid", problems: ["usage: bun scripts/pi-conformance-evidence.ts <evidence.json>"] })}\n`);
-    process.exitCode = 1;
-    return;
+    ports.writeOutput(`${JSON.stringify({ status: "invalid", problems: ["usage: bun scripts/pi-conformance-evidence.ts <evidence.json>"] })}\n`);
+    return 1;
   }
   try {
-    const input: unknown = JSON.parse(readFileSync(path, "utf8"));
+    const input: unknown = JSON.parse(ports.readEvidence(path));
     const result = validatePiFormalEvidence(input);
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-    process.exitCode = result.status === "green" ? 0 : 1;
+    ports.writeOutput(`${JSON.stringify(result)}\n`);
+    return result.status === "green" ? 0 : 1;
   } catch {
-    process.stdout.write(`${JSON.stringify({ status: "invalid", problems: ["evidence file is unreadable or invalid JSON"] })}\n`);
-    process.exitCode = 1;
-    return;
+    ports.writeOutput(`${JSON.stringify({ status: "invalid", problems: ["evidence file is unreadable or invalid JSON"] })}\n`);
+    return 1;
   }
 }
 
-if (import.meta.main) main();
+if (import.meta.main) process.exitCode = runPiConformanceEvidenceCli(process.argv.slice(2));
