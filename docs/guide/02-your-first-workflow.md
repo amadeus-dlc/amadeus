@@ -161,7 +161,7 @@ Construction builds the solution **Bolt by Bolt**. A [Bolt](glossary.md) is one 
 
 The walking skeleton has a real gate, resolved according to the Intent autonomy mode. `none` and `semi` wait for you; `full` may decide it within a human-confirmed Intent-scoped grant. Select the mode before unattended decisions:
 
-```
+```text
 Intent autonomy
   ▸ none — humans decide every gate and question
   ▸ semi — pre-approve in-phase gates; ask at phase boundaries and questions

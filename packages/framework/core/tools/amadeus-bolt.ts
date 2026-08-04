@@ -972,7 +972,7 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
         confirmedDisplayDigest: flags["confirmed-display-digest"],
       });
       if (!applied.ok) error(`Intent autonomy update failed: ${applied.error}`);
-      const schedulingMode = flags.mode === "none" ? "gated" : "autonomous";
+      const schedulingMode = flags.mode === "full" ? "autonomous" : "gated";
       let updated = setOrInsertField(content, "## Current Status", "Intent Autonomy Mode", flags.mode);
       updated = setOrInsertField(
         updated,

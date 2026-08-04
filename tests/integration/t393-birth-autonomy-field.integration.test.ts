@@ -25,6 +25,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, REPO_ROOT, setupIntegrationProject } from "../harness/fixtures.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 
@@ -84,10 +85,17 @@ describe("t393 birth scaffold: Construction Autonomy Mode", () => {
 
   test("legacy gated mode reaches the new mode validation, not a missing-field failure", () => {
     const proj = bornProject();
+    const stateBefore = readState(proj);
+    const auditBefore = readAllAuditShards(proj);
     const r = run(proj, "amadeus-bolt.ts", ["set-autonomy", "--mode", "gated"]);
     expect(r.out).not.toContain("Field not found");
     expect(r.status).toBe(1);
     expect(r.out).toContain("Must be 'none', 'semi', or 'full'");
+    expect(readState(proj)).toBe(stateBefore);
+    const auditAfter = readAllAuditShards(proj);
+    const committedBefore = auditBefore.match(/INTENT_AUTONOMY_TRANSACTION_COMMITTED/g)?.length ?? 0;
+    const committedAfter = auditAfter.match(/INTENT_AUTONOMY_TRANSACTION_COMMITTED/g)?.length ?? 0;
+    expect(committedAfter).toBe(committedBefore);
   });
 });
 

@@ -2894,29 +2894,20 @@ function assertHumanPresentForGateResolution(
     const scope = getField(content, "Scope") ?? "feature";
     const firstConstruction = firstInScopeStageOfPhase("construction", scope);
     if (stage !== undefined) {
-      const context = productionStageAutonomy({
+      const next = nextInScopeStage(slug, scope, content);
+      const stageAutonomyInput = {
         projectDir: pd,
         stage: slug,
         phase: stage.phase,
         graphRevision: autonomyDigest(graph),
         walkingSkeleton: stage.phase === "construction" && firstConstruction?.slug === slug,
-        phaseBoundary: (() => {
-          const next = nextInScopeStage(slug, scope, content);
-          return next === null || next.phase !== stage.phase;
-        })(),
-      });
+        phaseBoundary: next === null || next.phase !== stage.phase,
+      };
+      const context = productionStageAutonomy(stageAutonomyInput);
       if (context.autoApprove) {
         const decision = commitProductionStageGateDecision({
-          projectDir: pd,
+          ...stageAutonomyInput,
           stateContent: content,
-          stage: slug,
-          phase: stage.phase,
-          graphRevision: autonomyDigest(graph),
-          walkingSkeleton: stage.phase === "construction" && firstConstruction?.slug === slug,
-          phaseBoundary: (() => {
-            const next = nextInScopeStage(slug, scope, content);
-            return next === null || next.phase !== stage.phase;
-          })(),
         });
         if (decision.kind === "decided" || decision.kind === "already-decided") {
           return decision.grantId;

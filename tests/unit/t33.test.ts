@@ -370,8 +370,12 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
   // Test 10: the removed legacy mode cannot mint authority.
   test("set-autonomy rejects the legacy autonomous mode without emitting authority", () => {
     proj = setupConstructionProject();
+    const stateBefore = readState(proj);
+    const committedBefore = auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length;
     expect(runBolt(proj, "set-autonomy", "--mode", "autonomous").status).toBe(1);
+    expect(readState(proj)).toBe(stateBefore);
     expect(auditRecords(proj).some((r) => r.event === "AUTONOMY_MODE_SET")).toBe(false);
+    expect(auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toHaveLength(committedBefore);
   });
 
   // Test 11: set-autonomy updates Construction Autonomy Mode in state file
@@ -384,8 +388,11 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
   // Test 12: gated was also a legacy spelling and is rejected.
   test("set-autonomy rejects the legacy gated mode", () => {
     proj = setupConstructionProject();
+    const stateBefore = readState(proj);
+    const committedBefore = auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length;
     expect(runBolt(proj, "set-autonomy", "--mode", "gated").status).toBe(1);
-    expect(readState(proj)).toMatch(/Construction Autonomy Mode.*gated/);
+    expect(readState(proj)).toBe(stateBefore);
+    expect(auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toHaveLength(committedBefore);
   });
 
   // Test 13: set-autonomy --mode bogus exits 1

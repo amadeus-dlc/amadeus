@@ -4616,28 +4616,6 @@
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
     "selector": {
-      "function": "isPendingQuestionStop",
-      "fingerprint": "sha256:5d5bab9707f7f5f4d82b15c33670395be7ac2e663d3d4b0b11e93522aa50107b",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "The Stop-hook suites and t413 drive continuation, budget, and fail-open behavior through the spawned hook while the source decision seam is covered in-process; Bun does not merge child hook coverage into the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "selector": {
-      "function": "isConversationalStop",
-      "fingerprint": "sha256:5d5bab9707f7f5f4d82b15c33670395be7ac2e663d3d4b0b11e93522aa50107b",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "The Stop-hook suites and t413 drive continuation, budget, and fail-open behavior through the spawned hook while the source decision seam is covered in-process; Bun does not merge child hook coverage into the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/hooks/amadeus-stop.ts",
-    "selector": {
       "function": "<module>",
       "fingerprint": "sha256:562821b9fa9f8717f99abfce189b200b90775401567039a296b96b5776a7a8b5",
       "anchorLines": 3,
@@ -4675,17 +4653,6 @@
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
       "targetLines": "1"
-    },
-    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
-    "selector": {
-      "function": "revokeMisattributedAdvisoryChoice",
-      "fingerprint": "sha256:dfe7f8ba66df29b9aef53f911cf0d4f170160407ccf66201eb825dd0736afccc",
-      "anchorLines": 5,
-      "targetLines": "1-5"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4785,17 +4752,6 @@
       "fingerprint": "sha256:ec57ad49a31e1b6e182c248348546eec13771ff0ea3ab5111972aa81aa466b1c",
       "anchorLines": 14,
       "targetLines": "1-14"
-    },
-    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-bolt.ts",
-    "selector": {
-      "function": "handleSetAutonomy",
-      "fingerprint": "sha256:4068c08ace1becb2f7e0e1b34147c28e0a7e2ee0aa2a1d43d6d09c415221d18a",
-      "anchorLines": 37,
-      "targetLines": "1-37"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -5089,17 +5045,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
     "selector": {
-      "function": "apply",
-      "fingerprint": "sha256:16779af5cc6e511f17681f5bf9ccb5b76b951297dd075ec28b9a3cd9775e5a6e",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
-    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
-    "selector": {
       "function": "transactionFor",
       "fingerprint": "sha256:cbdef952d9daf225f4aaa089302f8b156dec8dab36235dd4eb4f971b7411ae45",
       "anchorLines": 4,
@@ -5126,17 +5071,6 @@
       "fingerprint": "sha256:e409e1eaf609f6dc4fe2ff2ff2330b226e9123dbe24e4f802cfd4dbd7cddd848",
       "anchorLines": 2,
       "targetLines": "1-2"
-    },
-    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
-    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
-    "selector": {
-      "function": "commitPark",
-      "fingerprint": "sha256:c8b5470fe1ea8f7ad945dd0eeb774098436f46388243fa9bf5303e21e74e10b3",
-      "anchorLines": 14,
-      "targetLines": "1-14"
     },
     "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
@@ -5188,32 +5122,10 @@
   {
     "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
     "selector": {
-      "function": "resume",
-      "fingerprint": "sha256:4092748f1f1f21a9d76205f1976133ded6b15fd3d3374d946d5d3ea83ce73539",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
-    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
-    "selector": {
       "function": "recordInvocationFailure",
       "fingerprint": "sha256:daeea4b62ee30e8be154162f185734a2e8b80e4b8ba7d37aeb88068336cb98b6",
       "anchorLines": 6,
       "targetLines": "1-6"
-    },
-    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
-    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
-    "selector": {
-      "function": "complete",
-      "fingerprint": "sha256:ffda44f254a76505e58562c4c35d3e8cd8cc5b05c1f8457ef9bfc8ad7d3416a6",
-      "anchorLines": 10,
-      "targetLines": "1-10"
     },
     "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
@@ -5335,17 +5247,6 @@
       "fingerprint": "sha256:656c53ec681e7659505e2f1ea22dca644533e08f4fd0d817bb19b472088cb6d3",
       "anchorLines": 13,
       "targetLines": "1-13"
-    },
-    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
-    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy.ts",
-    "selector": {
-      "function": "resolveAutoDecision",
-      "fingerprint": "sha256:bc0fb8699e37ac5c19d089130a1b5b6f7a374fc46088d2f44159414eb041395c",
-      "anchorLines": 53,
-      "targetLines": "1-53"
     },
     "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
@@ -5846,10 +5747,516 @@
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleIntentBirthStateBuild",
+      "fingerprint": "sha256:58b9c1bbd9c34f029abe6c216d7d4e8ed3584feef622845f043940363b55af9e",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "isFullyAutonomousIntent",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "revokeMisattributedAdvisoryChoice",
+      "fingerprint": "sha256:b0317fb883446a1db6ba29c8c2a33540ccbaf457da8b0efd0d6b732158cd8046",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "revokeMisattributedAdvisoryChoice",
+      "fingerprint": "sha256:c0856e961a74772708b83908e2470c8ef6dfbd473080872b8e41cf50351f9d86",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "selector": {
+      "function": "parseApprovalProcessResult",
+      "fingerprint": "sha256:4872e9da245873225257904f5e4efb3f879a6a6859d2a43daf4cc5431f70f171",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "selector": {
+      "function": "parseApprovalProcessResult",
+      "fingerprint": "sha256:fcccd9507f8aeee4339dace474ee8b368b08eeacefd52f355876ef2f81d323b6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "selector": {
+      "function": "parseApprovalProcessResult",
+      "fingerprint": "sha256:7137e81f52de4a4e9d31a40770ee88199c0adb4d86099b88fb913379508e3d79",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleSetAutonomy",
+      "fingerprint": "sha256:2be98f0d626a46344948677a458582586e0306b00ee929f56ea2b980fb88d4df",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleSetAutonomy",
+      "fingerprint": "sha256:0dc1b3db0516ea985c2b96cf8cb66bcb56422af9d25184b04ed38ba96ca17f92",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "coordinatorFor",
+      "fingerprint": "sha256:831347c139841dd6bf384ec38178bf6e508d5cceda8022197a215b65e2cd1212",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "latestHumanTurnId",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "selector": {
+      "function": "readIntentAutonomyTransactionsFromAudit",
+      "fingerprint": "sha256:2ea8eaadea031f772e3978306eb543b47d03bd02c2a72da736457aa0bea60029",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "selector": {
+      "function": "createAuditIntentAutonomyRepository",
+      "fingerprint": "sha256:8e36a32e68294953eeb2a5f1aa6a90abfdbacb30dcbbd776a73e302c26483ac2",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "apply",
+      "fingerprint": "sha256:3837e9251a9ee3c532bfec4e19b5dfe4d0547e3ac6abeff9b187df44bf6ad7b7",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "commitPark",
+      "fingerprint": "sha256:9690204990e664167579d76fa2463abac1786db675ef33fb1399faa58f15798d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "resume",
+      "fingerprint": "sha256:7dc575c48a55c135ff4b68e4d095a287e655d48293d655f770f02dcdd3a7816b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "complete",
+      "fingerprint": "sha256:817d63339d9a2ca70f0be92083c1c2d1add84691d563e8f2fdb6cf01c6775d38",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy.ts",
+    "selector": {
+      "function": "resolveConfirmedPolicy",
+      "fingerprint": "sha256:073c84ae6697ced05f7a9d2b77462eadf828184148e54cc6ed5b470489341fde",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy.ts",
+    "selector": {
+      "function": "resolveAutoDecision",
+      "fingerprint": "sha256:c40d7cb5afaadf39350bdadaae16f4ea8bd0f1d8ab830d3311fb1f4ea9202c82",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy.ts",
+    "selector": {
+      "function": "resolveAutoDecision",
+      "fingerprint": "sha256:4b975f717bf842f425875916babf958f5729b1143a8d853e607e7b1eae5db0de",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "selector": {
+      "function": "validReservation",
+      "fingerprint": "sha256:b32f68e18c08cd09f5841631532ab44cf5429940e8d793dfc2f3d1d56e1bb0ac",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "selector": {
+      "function": "validLatch",
+      "fingerprint": "sha256:1acf59856ca8def500c8d3419d5b63aad95a5d67f2e50f556c9c0974d1943c95",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "selector": {
+      "function": "validDelivery",
+      "fingerprint": "sha256:ae9d16b236ae5d44c69701a1f270c7fb14b2de4815d8a5a6e42aa8643b760910",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleAuthorizedApprovalReport",
+      "fingerprint": "sha256:cfa199bae211e5ff8d7062a830bd08c4b0a051409626810052cb5dcbcf110432",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleAuthorizedApprovalReport",
+      "fingerprint": "sha256:31aad5e75190683bba92b33bb4feb5f213578d77122d36cc96f6cf1c74eba127",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "selector": {
+      "function": "validQualityEventPayload",
+      "fingerprint": "sha256:750e0e563cd5e20b7f25dff9ccdbd79b9ce266d3926e6f2eea7e1faf771f4cbc",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "foldQualityProjections",
+      "fingerprint": "sha256:96b1d1a4f54a7d198ad545b9682a0610c2f284e47e82f95fd9ac492330134dca",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "foldQualityProjections",
+      "fingerprint": "sha256:cdab0a683c156eedfe288fb6060fe4160b35c9e35ec270b7941127a280923fca",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "recordEvidence",
+      "fingerprint": "sha256:920ed92250a5434c971bca8c4554d489360859f00581c68b47531fa2981321c2",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "recordEvidence",
+      "fingerprint": "sha256:282f6e616d5f34e09b58025a3fba7529925fd677b2c2bfda2c88fcfccd71a469",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "recordEvidence",
+      "fingerprint": "sha256:86bd96129c350a327c839da8beaaed1534bf886e34774b9044ba5d26dc5b51a0",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "recordEvidence",
+      "fingerprint": "sha256:ef60bae51ed6da03c1ebd8733724534d877e9cbc64e02cca546f874de8a94b29",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "resume",
+      "fingerprint": "sha256:63af679e3392eaead7cc1035d212740ef6b148df6741d366b9bfa87ff6ece2a7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:37769e6d8e7686a7d5c5b641f7fe78bb4cba2199089233221799cbf1099dbea3",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:b4d8303355c6e12ad12fbdc4a8722f800fd15676e72aee33c176bc4f2dda64a3",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:04528158a09541afdc96b5f3bbe67f40070963d863657e53e4184af80e4d4d30",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:c1c7f8f8715306500cbc607f29ab93229a85525ef5a820efeb2f565aed152d12",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:1cd0d9c5587a1b19fc51162e69bc50f3e2b12cd9d2010c3fdf4ad19485636b71",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:92a2be51b15b70f2f20e8a168676c16795d7ff501ce6910b97f8da0db5ac1dcd",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:8ce03f98345d07b26f782365dfb32dc6bd8bdc2624e69b21c610c1e6be200e33",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:e61882efc1b9a127c7d4f64bd76c4cc9978a0b5a5f2e70a506cb62d152c35967",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "normalizeObservation",
+      "fingerprint": "sha256:eafed7ce28337ca31199a2103b3cef5eb1ebbbe8c415a868a347cb4e3c9eea45",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "t428/t429/t430 and the in-process t435 lifecycle cover quality evidence, repair, replan, stall, replay, park, and resume; this residual range is a defensive, malformed-state, or injected-failure arm outside the valid production flow.",
+    "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:58749312216aac386559a2ab8a392ba115e04a6a415a5333e61194d7d18f6589",
+      "function": "main",
+      "fingerprint": "sha256:bd6239ffd577302bc6102cf6a75e746655316182e67b312b1c93a0a870ecd755",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "assertIntentAutonomyCompletion",
+      "fingerprint": "sha256:b59d3c9a685f69bebcbd68ac1ab452712688b91fda0dd87662a897439dbd4a30",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "assertHumanPresentForGateResolution",
+      "fingerprint": "sha256:9e5fee724f7686650746bc1c959a4bf7c99506671a7db8830fe4a049e2205548",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "assertHumanPresentForGateResolution",
+      "fingerprint": "sha256:3ee6cf2d69465706c4c69b4396d00b2b445e75a52dff488b162a50311f32dc7d",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "assertHumanPresentForGateResolution",
+      "fingerprint": "sha256:fe930fab9fe5e195740d6c7ed2559cbd579bde4f989cc461ee07b5785eb51d3c",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -5859,19 +6266,52 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "assertHumanPresentForGateResolution",
-      "fingerprint": "sha256:41dc3dfda08d978402b7f0d39c12d03ee9ae52c11f4014be9792420e8d0b0c0d",
-      "anchorLines": 16,
-      "targetLines": "1-16"
+      "function": "rejectUngroundedDelegation",
+      "fingerprint": "sha256:ae58c0fa5cff70b7e808e1f5b5fb932edaea3c9b48e65e170e6b5413f684b349",
+      "anchorLines": 1,
+      "targetLines": "1"
     },
-    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleDelegateApproval",
+      "fingerprint": "sha256:d67f1011303ed4c8953e26acf488f167bfb1e6ea584c1698e331e60fe5453059",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleDelegateRejection",
+      "fingerprint": "sha256:47ae762466410f2a216a7d7001cc2330e56c4b4ef2e1b624ebd964464ef1d038",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleDelegateRejection",
+      "fingerprint": "sha256:12f9072cc7e76fe7bef5e2d41dc09d7faf15af17b8413f3e941db058ec62eb67",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
+    "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "renderAutonomyStatus",
-      "fingerprint": "sha256:480613c7ef68b04cecfcc454ac236ecd8802799a5ac39478eb0a2567df03472d",
+      "fingerprint": "sha256:92a73d7aee92b2287fca5cfded8db53471325ce43e37ba7473fe46c23e071a8e",
       "anchorLines": 13,
       "targetLines": "1-13"
     },
@@ -5882,9 +6322,9 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "handleStatus",
-      "fingerprint": "sha256:496b24d4c6c9392c168ba59a1293234bf8afa9bfa2625754422426189584f76b",
-      "anchorLines": 129,
-      "targetLines": "1-129"
+      "fingerprint": "sha256:340edd1d99deea3fd41033c0072653ee4462e132a645ad974824bda2e4c3c930",
+      "anchorLines": 6,
+      "targetLines": "1-6"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -5892,10 +6332,43 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "handleIntentBirthStateBuild",
-      "fingerprint": "sha256:58b9c1bbd9c34f029abe6c216d7d4e8ed3584feef622845f043940363b55af9e",
-      "anchorLines": 2,
-      "targetLines": "1-2"
+      "function": "handleStatus",
+      "fingerprint": "sha256:5b46083fd31c9df681c3be9bdf3b176174f79389ebcfa1ae8fcdfcc6d8ee5822",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:c36ea98b326f7d7e8379d660735f79464e3dd0b440a90ca8ec6be08b2745b9a0",
+      "anchorLines": 14,
+      "targetLines": "1-14"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:3d9a0588e96005fc7ba0a7ffc9391bc655f6fe447cbb29990abd6f80c8f7c724",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:3503446ade1d9ab03ad5de5e19f4b3058274ee9a80f4b02ce794d0c5ca153d8c",
+      "anchorLines": 1,
+      "targetLines": "1"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"

@@ -782,7 +782,7 @@ Key terms used throughout AI-DLC documentation:
 | Term | Definition |
 |------|-----------|
 | **AIDLC** | AI-Driven Development Life Cycle — the methodology this system implements. See **Lifecycle**. |
-| **Bolt** | The unit of Construction execution: one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once after all Bolts complete, not per-Bolt. The first Bolt in Construction is the walking skeleton. See also: [parallel batch], [walking skeleton], [ladder prompt]. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
+| **Bolt** | The unit of Construction execution: one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once after all Bolts complete, not per-Bolt. The first Bolt in Construction is the walking skeleton. See also: [parallel batch], [walking skeleton], [autonomy mode]. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
 | **Artifact** | A versioned markdown document produced by a stage and stored in the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`). Examples: `requirements.md`, `code-summary.md`, `initiative-brief.md`. |
 | **Component** | A logical building block within a module (class, function group, UI component). |
 | **Control loop** | The feedforward/feedback pairing of **Rules** (standing decisions applied before work) and **Sensors** (deterministic checks fired on outputs) that steers and verifies a stage. (Distinct from a **Harness**, the CLI distribution sense.) |
@@ -791,7 +791,7 @@ Key terms used throughout AI-DLC documentation:
 | **Generation** | Stages that produce executable code (Code Generation, Build and Test). Contrast **Planning**. |
 | **Guardrail** | The body sections inside a Rule file in the space memory layer (`amadeus/spaces/<space>/memory/`) — `## Forbidden`, `## Mandated`, and the phase-rule guardrail headings — that express prescriptive behavioural constraints. The container is a Rule; "guardrail" names the prescriptive content within it. See **Rule**. |
 | **Harness** | A CLI distribution of the AI-DLC core — one capable command-line agent that the harness-neutral **Core** is rendered onto. The set is open and growable (today: Claude Code, Codex CLI, Cursor, Kimi Code, Kiro CLI, Kiro IDE, OpenCode). *Note — "harness" carries four senses in this repo, by context:* (1) **this canonical CLI-distribution sense**; (2) the rule+sensor **control loop** (older usage, now renamed — see **Control loop**); (3) the `packages/framework/harness/<name>/` source-surface directory; (4) the `tests/harness/` test-helper directory. Only sense 1 is "a harness" in user docs. |
-| **Ladder prompt** | The single prompt shown at the end of the walking-skeleton Bolt asking you to choose "continue autonomously" or "gate every Bolt". Your choice is recorded as the autonomy mode and governs all remaining Bolts. |
+| **Ladder prompt (legacy)** | The retired post-walking-skeleton `autonomous|gated` choice. New work selects Intent autonomy as `none|semi|full`; legacy records are diagnostic only. |
 | **Lifecycle** | The AI-DLC methodology as a whole: the AI-Driven Development Life Cycle. A single execution of the methodology is a workflow. |
 | **Module** | A code-level organizational boundary within a service (package, namespace). |
 | **Parallel batch** | A group of Bolts whose dependencies are satisfied and that don't depend on each other, run concurrently by the orchestrator. A single approval gate at the end of the batch covers every Bolt in it. |
@@ -803,7 +803,7 @@ Key terms used throughout AI-DLC documentation:
 | **Service** | A deployable process or container (API server, worker, frontend app). |
 | **Stage** | One of the 32 discrete steps in the lifecycle. Each stage has a lead agent, defined inputs/outputs, and follows the stage protocol. Stages are numbered by phase (e.g., 1.1, 2.4, 3.5). |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
-| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the selected Intent autonomy mode; only `full` may auto-approve it under an active grant. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
 <!-- glossary:projection:end -->
 
 ---

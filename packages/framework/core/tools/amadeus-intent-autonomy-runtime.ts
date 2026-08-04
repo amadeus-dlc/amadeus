@@ -105,6 +105,15 @@ export interface IntentAutonomyRepository {
   readTransactions(intentUuid?: string): readonly IntentAutonomyTransaction[];
 }
 
+function transactionReceipt(transaction: IntentAutonomyTransaction): IntentAutonomyCommitReceipt {
+  return {
+    transactionId: transaction.transactionId,
+    transactionDigest: autonomyDigest(transaction),
+    intentUuid: transaction.intentUuid,
+    projectionRevision: transaction.projection.projectionRevision,
+  };
+}
+
 function sameTransaction(
   left: IntentAutonomyTransaction,
   right: IntentAutonomyTransaction,
@@ -163,7 +172,7 @@ export function createMemoryIntentAutonomyRepository(options: {
     const existing = byId.get(transaction.transactionId);
     if (existing !== undefined) {
       if (!sameTransaction(existing, transaction)) throw new Error("intent-autonomy-transaction-conflict");
-      return receipt(existing);
+      return transactionReceipt(existing);
     }
     validateAutonomyTransaction(transaction);
     validateAutonomyTransactionPrecondition(transaction, byIntent.get(transaction.intentUuid));
@@ -173,16 +182,7 @@ export function createMemoryIntentAutonomyRepository(options: {
       options.onCommit?.(transaction);
       transactions.push(transaction);
     }
-    return receipt(transaction);
-  }
-
-  function receipt(transaction: IntentAutonomyTransaction): IntentAutonomyCommitReceipt {
-    return {
-      transactionId: transaction.transactionId,
-      transactionDigest: autonomyDigest(transaction),
-      intentUuid: transaction.intentUuid,
-      projectionRevision: transaction.projection.projectionRevision,
-    };
+    return transactionReceipt(transaction);
   }
 
   const seeded = [...transactions];
@@ -391,6 +391,13 @@ export function createIntentAutonomyCoordinator(options: {
     return repository.commit(transactionFor({ transactionId, before, after, events }));
   }
 
+  function committedReceipt(transactionId: string): IntentAutonomyCommitReceipt {
+    const transaction = repository.readTransactions(intentUuid)
+      .find((candidate) => candidate.transactionId === transactionId);
+    if (transaction === undefined) throw new Error("intent-autonomy-transaction-missing");
+    return transactionReceipt(transaction);
+  }
+
   function commitPark(
     projection: AutonomyProjection,
     triggerOccurrenceId: string,
@@ -404,12 +411,7 @@ export function createIntentAutonomyCoordinator(options: {
         autonomyDigest(existing.resumeCondition) === autonomyDigest(resumeCondition)) {
         return {
           result: parkedResult(projection),
-          receipt: {
-            transactionId: existing.parkTransactionId,
-            transactionDigest: autonomyDigest(existing),
-            intentUuid,
-            projectionRevision: projection.projectionRevision,
-          },
+          receipt: committedReceipt(existing.parkTransactionId),
         };
       }
       throw new Error("workflow-already-suspended");
@@ -655,28 +657,32 @@ export function createIntentAutonomyCoordinator(options: {
       }
     },
     resume(input) {
-      const before = current();
-      const envelope = before.parkEnvelope;
-      if (before.workflowExecutionState !== "suspended" || envelope === null) return { error: "workflow-not-suspended" };
-      validateResumeCondition(envelope.reason, input.condition);
-      if (input.triggerOccurrenceId !== envelope.triggerOccurrenceId) return { error: "resume-trigger-mismatch" };
-      if (input.condition.identity !== envelope.resumeCondition.identity || input.condition.status !== "satisfied") {
-        return { error: "resume-condition-not-satisfied" };
+      try {
+        const before = current();
+        const envelope = before.parkEnvelope;
+        if (before.workflowExecutionState !== "suspended" || envelope === null) return { error: "workflow-not-suspended" };
+        validateResumeCondition(envelope.reason, input.condition);
+        if (input.triggerOccurrenceId !== envelope.triggerOccurrenceId) return { error: "resume-trigger-mismatch" };
+        if (input.condition.identity !== envelope.resumeCondition.identity || input.condition.status !== "satisfied") {
+          return { error: "resume-condition-not-satisfied" };
+        }
+        const latchError = clearRepairStalledLatch(envelope, input);
+        if (latchError !== null) return { error: latchError };
+        const after: AutonomyProjection = {
+          ...before,
+          workflowExecutionState: "running",
+          parkEnvelope: null,
+          projectionRevision: before.projectionRevision + 1,
+        };
+        return commit(before, after, autonomyStableId("autonomy-unpark", [envelope.parkTransactionId, input.condition]), [{
+          type: "WORKFLOW_UNPARKED",
+          parkTransactionId: envelope.parkTransactionId,
+          satisfiedConditionIdentity: input.condition.identity,
+          basis: input.basis,
+        }]);
+      } catch (cause) {
+        return { error: cause instanceof Error ? cause.message : String(cause) };
       }
-      const latchError = clearRepairStalledLatch(envelope, input);
-      if (latchError !== null) return { error: latchError };
-      const after: AutonomyProjection = {
-        ...before,
-        workflowExecutionState: "running",
-        parkEnvelope: null,
-        projectionRevision: before.projectionRevision + 1,
-      };
-      return commit(before, after, autonomyStableId("autonomy-unpark", [envelope.parkTransactionId, input.condition]), [{
-        type: "WORKFLOW_UNPARKED",
-        parkTransactionId: envelope.parkTransactionId,
-        satisfiedConditionIdentity: input.condition.identity,
-        basis: input.basis,
-      }]);
     },
     recordInvocationFailure(input) {
       const before = current();
@@ -705,12 +711,11 @@ export function createIntentAutonomyCoordinator(options: {
       const before = current();
       if (before.workflowExecutionState === null) {
         const completedGrant = before.terminalGrantHistory.findLast((grant) => grant.state === "completed") ?? null;
-        return { result: completedResult(before, completedGrant), receipt: {
-          transactionId: autonomyStableId("autonomy-complete-existing", before.intentUuid),
-          transactionDigest: autonomyDigest(before),
-          intentUuid: before.intentUuid,
-          projectionRevision: before.projectionRevision,
-        } };
+        const completion = repository.readTransactions(intentUuid).findLast((transaction) =>
+          transaction.events.some((event) => event.type === "WORKFLOW_EXECUTION_COMPLETED")
+        );
+        if (completion === undefined) return { error: "intent-autonomy-completion-transaction-missing" };
+        return { result: completedResult(before, completedGrant), receipt: transactionReceipt(completion) };
       }
       if (before.workflowExecutionState !== "running" || before.pendingExercise !== null || before.parkEnvelope !== null) {
         return { error: "workflow-not-completable" };

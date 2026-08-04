@@ -163,7 +163,7 @@ walking skeletonには実在するgateがあり、Intent自律レベルに従っ
 `semi`は人間を待ち、`full`は人間が確認したIntent-scoped grant内で裁定できます。
 無人裁定の前にmodeを選びます:
 
-```
+```text
 Intent autonomy
   ▸ none — humans decide every gate and question
   ▸ semi — pre-approve in-phase gates; ask at phase boundaries and questions

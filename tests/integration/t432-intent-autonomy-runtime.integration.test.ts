@@ -12,6 +12,7 @@ import {
   createInteractionOccurrence,
   grantIssuanceDisplayDigest,
   normalizeDecisionPolicies,
+  resolveAutoDecision,
   type AutonomyProjection,
   type DecisionCapabilityPort,
   type DecisionOptionEffect,
@@ -228,6 +229,38 @@ describe("Intent autonomy durable coordinator", () => {
     expect(counters).toEqual({ elect: 0, recommend: 0 });
   });
 
+  test("conflicting confirmed policies fail before norm, history, or election fallback", () => {
+    const counters = { elect: 0, recommend: 0 };
+    const { coordinator } = fullRuntime();
+    const projection = coordinator.readProjection();
+    const grant = projection.currentGrant;
+    if (grant === null) throw new Error("full runtime did not issue a grant");
+    const policies = normalizeDecisionPolicies({
+      grantIdentitySeed: "conflicting-policy-seed",
+      scopeFingerprint: grant.scope.scopeFingerprint,
+      humanTurnId: grant.humanTurnId,
+      policies: [
+        { sourceText: "Accept this selector", selector: "selector-1", optionId: "accept" },
+        { sourceText: "Reject this selector", selector: "selector-1", optionId: "reject" },
+      ],
+    });
+    const result = resolveAutoDecision({
+      projection: {
+        ...projection,
+        currentGrant: { ...grant, policies, policySetDigest: autonomyDigest(policies) },
+      },
+      occurrence: question(),
+      actorId: "codex",
+      scopeLineageFingerprint: SCOPE_FP,
+      currentNormFingerprint: NORM,
+      applicableNormFacts: [],
+      pastHumanRulings: [],
+      capability: capability(true, counters),
+    });
+    expect(result).toEqual({ kind: "invalid", reason: "confirmed-policy-conflict" });
+    expect(counters).toEqual({ elect: 0, recommend: 0 });
+  });
+
   test("semi phase-internal gate emits AUTO_DECIDED without grant exercise", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
     const repository = createMemoryIntentAutonomyRepository();
@@ -254,6 +287,26 @@ describe("Intent autonomy durable coordinator", () => {
   });
 
   test("walking skeleton is human in semi and Intent-grant-backed in full", () => {
+    const initial = createAutonomyProjection({ intentUuid: INTENT });
+    const semiCoordinator = createIntentAutonomyCoordinator({
+      initialProjection: initial,
+      repository: createMemoryIntentAutonomyRepository(),
+    });
+    const semiCommand = semiCoordinator.applyHumanCommand({ kind: "set-mode", mode: "semi" }, {
+      targetIntentUuid: INTENT,
+      principalId: "principal-1",
+      humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" },
+      commandOccurrenceId: "semi-command-1",
+      expectedProjectionRevision: initial.projectionRevision,
+      confirmedDisplayDigest: autonomyDigest({ intentUuid: INTENT, mode: "semi" }),
+    });
+    if ("error" in semiCommand) throw new Error(semiCommand.error);
+    expect(semiCoordinator.decide(decisionInput({
+      occurrence: gate("walking-skeleton"),
+      registry: registry(effect("approve")),
+      gateApprovalOptionId: "approve",
+    })).kind).toBe("human-required");
+
     const { coordinator } = fullRuntime();
     const result = coordinator.decide(decisionInput({
       occurrence: gate("walking-skeleton"),
@@ -276,7 +329,7 @@ describe("Intent autonomy durable coordinator", () => {
   });
 
   test("REPAIR_STALLED requires the U1 latch seam and clears it before unpark", () => {
-    const { coordinator } = fullRuntime();
+    const { coordinator, repository } = fullRuntime();
     const pending: ResumeCondition = {
       kind: "quality-evidence-or-human",
       identity: "quality-resume-1",
@@ -290,6 +343,15 @@ describe("Intent autonomy durable coordinator", () => {
       monitorLatchIdentity: "loop-latch-1",
     });
     expect("result" in parked && parked.result.outcome).toBe("parked");
+    const replayedPark = coordinator.park({
+      triggerOccurrenceId: "quality-trigger-1",
+      reason: "REPAIR_STALLED",
+      resumeCondition: pending,
+      monitorLatchIdentity: "loop-latch-1",
+    });
+    if ("error" in parked || "error" in replayedPark) throw new Error("park failed");
+    expect(replayedPark.receipt).toEqual(parked.receipt);
+    expect(parked.receipt.transactionDigest).toBe(autonomyDigest(repository.readTransactions(INTENT).at(-1)));
     expect(coordinator.resume({
       triggerOccurrenceId: "quality-trigger-1",
       condition: { ...pending, status: "satisfied", evidenceFingerprint: autonomyDigest("quality-after") },
@@ -302,6 +364,21 @@ describe("Intent autonomy durable coordinator", () => {
         return { kind: "cleared", projection: {} };
       },
     } as unknown as LoopMonitorCoordinator;
+    const throwingLoopMonitor = {
+      clearLatch() {
+        throw new Error("latch-clear-failed");
+      },
+    } as unknown as LoopMonitorCoordinator;
+    expect(coordinator.resume({
+      triggerOccurrenceId: "quality-trigger-1",
+      condition: { ...pending, status: "satisfied", evidenceFingerprint: autonomyDigest("quality-after") },
+      basis: "evidence-change",
+      loopMonitor: {
+        coordinator: throwingLoopMonitor,
+        partition: { intentUuid: INTENT, monitorId: "quality-repair", stageInstanceId: "stage-1", graphRevision: GRAPH },
+        evidenceFingerprint: autonomyDigest("quality-after"),
+      },
+    })).toEqual({ error: "latch-clear-failed" });
     const resumed = coordinator.resume({
       triggerOccurrenceId: "quality-trigger-1",
       condition: { ...pending, status: "satisfied", evidenceFingerprint: autonomyDigest("quality-after") },
@@ -316,6 +393,18 @@ describe("Intent autonomy durable coordinator", () => {
     expect(clearCalls).toBe(1);
     expect(coordinator.readProjection().workflowExecutionState).toBe("running");
     expect(coordinator.readProjection().currentGrant?.state).toBe("active");
+  });
+
+  test("completion replay returns the original transaction receipt", () => {
+    const { coordinator, repository } = fullRuntime();
+    const completed = coordinator.complete();
+    if ("error" in completed) throw new Error(completed.error);
+    const replayed = coordinator.complete();
+    if ("error" in replayed) throw new Error(replayed.error);
+    expect(replayed.receipt).toEqual(completed.receipt);
+    expect(completed.receipt.transactionDigest).toBe(
+      autonomyDigest(repository.readTransactions(INTENT).at(-1)),
+    );
   });
 
   test("terminal invocation failure records immutable authorization state and no retry", () => {

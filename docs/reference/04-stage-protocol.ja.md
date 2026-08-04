@@ -678,7 +678,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Harness(ハーネス)** | AI-DLC コアの CLI ディストリビューション — ハーネス中立な **Core** がレンダリングされる、1 つの有能なコマンドラインエージェント。このセットはオープンで成長可能です(今日: Claude Code、Codex CLI、Cursor、Kimi Code、Kiro CLI、Kiro IDE、OpenCode)。*注 — このリポジトリでは「harness」は文脈によって 4 つの意味を持ちます:* (1) **この正典的な CLI ディストリビューションの意味**; (2) rule+sensor の **control loop**(古い用法、現在は改名 — **Control loop** を参照); (3) `packages/framework/harness/<name>/` のソースサーフェスディレクトリ; (4) `tests/harness/` のテストヘルパーディレクトリ。ユーザードキュメントで「a harness」と言えるのは意味 1 だけです。 |
 | **Inline execution(インライン実行)** | オーケストレーターがエージェントペルソナをロードし、会話内で直接ステージを実行するデフォルトの実行モード。リアルタイムのユーザー対話をサポートします。 |
 | **Inline stage(インラインステージ)** | 委譲せず、オーケストレーターの会話内で直接実行されるステージ。**Inline execution** を参照。 |
-| **Ladder prompt(旧ラダープロンプト)** | 廃止されたwalking-skeleton後の`autonomous|gated`選択。新しいworkはIntent自律レベルを`none|semi|full`から選び、旧recordは診断専用です。 |
+| **Ladder prompt(旧ラダープロンプト)** | 廃止されたwalking-skeleton後の`autonomous|gated`選択。新しいworkはintent自律レベルを`none|semi|full`から選び、旧recordは診断専用です。 |
 | **Lead agent(リードエージェント)** | ステージの作業に主として責任を持つエージェントペルソナ。 |
 | **Lifecycle(ライフサイクル)** | AI-DLC 方法論の全体: AI-Driven Development Life Cycle。方法論の 1 回の実行がワークフローです。 |
 | **Module(モジュール)** | サービス内のコードレベルの組織境界(パッケージ、名前空間)。 |
@@ -693,7 +693,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Subagent execution(サブエージェント実行)** | オーケストレーターが Task ツール経由でステージ作業を別の Claude Code サブプロセスに委譲する実行モード。サブエージェントはユーザー対話なしで自律的に実行します。ステージ 2.1(reverse-engineering)と 3.5(code-generation)で使われます。 |
 | **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
 | **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
-| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。gateはIntent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
+| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。gateはintent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
 <!-- glossary:projection:end -->
 
 ---
