@@ -377,7 +377,7 @@ switch (target) {
     //
     // The mint itself goes through the CANONICAL seam (mintHumanPresence): this
     // adapter only normalizes Codex's session_id into the HostSessionCapability
-    // union, so a solo standing-grant fallback armed in THIS session mints its
+    // union, so a presence reservation armed for THIS session mints its
     // targeted owner HUMAN_TURN with the same semantics as every other harness.
     try {
       const machineInjected =

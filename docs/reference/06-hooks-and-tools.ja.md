@@ -357,7 +357,7 @@ Next Action: resume current stage
 | **Initialization Events** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` | `tools/amadeus-utility.ts` |
 | **Navigation Events** | 5 | `SCOPE_CHANGED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `SCOPE_DETECTED`, `RECOMPOSED` | `tools/amadeus-utility.ts` |
 | **Interaction Events** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` | `tools/amadeus-log.ts`, `tools/amadeus-state.ts` |
-| **旧常任グラント観測** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | replay/doctor診断。明示的な旧grant revokeだけ`tools/amadeus-state.ts`に残る |
+| **旧常任グラント観測** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | 過去auditのread-onlyなreplay/migration projectionのみ。liveの発行・revoke・route選択は存在しない |
 | **Artifact Events** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | `hooks/amadeus-audit-logger.ts`, `tools/amadeus-state.ts` |
 | **Subagent Events** | 2 | `SUBAGENT_STARTED`, `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent-start.ts`, `hooks/amadeus-log-subagent.ts` |
 | **Utility Events** | 1 | `HEALTH_CHECKED` | `tools/amadeus-utility.ts` |

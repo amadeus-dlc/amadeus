@@ -86,7 +86,6 @@ import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
-  type AwaitApprovalDirective,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -134,12 +133,10 @@ import {
   firstInScopeStageOfPhase,
   getField,
   intentRepos,
-  isPlainObject,
   listIntents,
   nextInScopeStage,
   normalizeUnitKind,
   parseCheckboxes,
-  parseIntentStatus,
   ownPhase,
   parseApprovedSwarmBatches,
   planGuardMessage,
@@ -170,18 +167,14 @@ import {
   resolveOperatingMode,
   type IntentInfo,
   type IntentLifecycleAuditEvent,
-  type OperatingMode,
   withIntentLifecyclePreflight,
   withAuditLock,
   emitErrorAuditRow,
 } from "./amadeus-lib.ts";
 import {
   classifyApprovalAuthority,
-  findStandingGrantRouteReceiptById,
-  type GrantApprovalProcessResult,
-  parseGrantApprovalProcessResult,
-  routeSoloStandingGrantDirective,
-} from "./amadeus-grant-authorization.ts";
+  parseApprovalProcessResult,
+} from "./amadeus-approval-authorization.ts";
 import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
 import { productionStageAutonomy } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
@@ -1590,9 +1583,8 @@ const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
 // but nfr-requirements EXECUTEs and is what isSkeletonGateStage matches), so an
 // `infra` Construction workflow emits gate:"unresolved" at nfr-requirements and
 // resolves through this set like any other greenfield scope.
-// Canonical set now lives in amadeus-lib.ts (shared with the standing-grant
-// skeleton exclusion — PR #1147 e3 review Major-1); re-exported semantics are
-// identical to the inline set this replaced.
+// Canonical set lives in amadeus-lib.ts; re-exported semantics are identical
+// to the inline set this replaced.
 // (imported below as SKELETON_ON_SCOPES)
 
 // Read the recorded skeleton stance from state, or null if the round-trip has
@@ -2200,12 +2192,8 @@ function routeMainWorkflowDirective(
     directive.autonomy_auto_approve = autonomy.autoApprove;
     directive.quality_repair = autonomy.qualityRepair === "error" ? "error" : "active";
     if (autonomy.grantId !== null) directive.intent_grant_id = autonomy.grantId;
-    // Intent-scoped autonomy supersedes legacy standing grants. Do not attach
-    // the old carrier after a human has selected the new mode.
     return directive;
   }
-  // Legacy standing delegation remains replayable for migration diagnostics,
-  // but is no longer an authorization route for live gates (#2067).
   return directive;
 }
 
@@ -4034,8 +4022,6 @@ const FORWARD_RESULTS = new Set(["approved", "completed", "complete", "done"]);
 interface ReportFlags {
   result?: string;
   userInput?: string;
-  standingGrantId?: string;
-  standingGrantRouteId?: string;
   targetIntentId?: string;
   presenceReservationId?: string;
   reason?: string;
@@ -4063,12 +4049,6 @@ function parseReportFlags(args: string[]): ReportFlags {
     } else if (a === "--reason" && i + 1 < args.length) {
       flags.reason = args[i + 1];
       i++;
-    } else if (a === "--standing-grant-id") {
-      flags.standingGrantId = args[i + 1] ?? "";
-      if (i + 1 < args.length) i++;
-    } else if (a === "--standing-grant-route-id") {
-      flags.standingGrantRouteId = args[i + 1] ?? "";
-      if (i + 1 < args.length) i++;
     } else if (a === "--target-intent-id") {
       flags.targetIntentId = args[i + 1] ?? "";
       if (i + 1 < args.length) i++;
@@ -4360,7 +4340,7 @@ function approveArgs(
   return args;
 }
 
-// The two carrier-bearing arms of the approval authority union. Declared at
+// The carrier-bearing arm of the approval authority union. Declared at
 // module scope: an inline Exclude<> annotation is runtime-erased yet still
 // stamped DA:0 by Bun's LCOV.
 type CarrierApprovalAuthority = Exclude<
@@ -4373,13 +4353,6 @@ function authorizedApprovalIntent(
   slug: string,
   authority: CarrierApprovalAuthority,
 ): string | null {
-  if (authority.kind === "grant-backed") {
-    const selected = findStandingGrantRouteReceiptById(pd, authority.routeId);
-    return selected?.receipt.stage === slug &&
-        selected.receipt.grantId === authority.grantId
-      ? selected.intent
-      : null;
-  }
   try {
     const selected = readPresenceReservation(pd, authority.reservationId);
     return selected?.targetIntentId === authority.targetIntentId &&
@@ -4521,24 +4494,15 @@ function handleAuthorizedApprovalReport(
   if (deferWorkflowCompletion) {
     approve.push("--defer-workflow-completion");
   }
-  if (authority.kind === "grant-backed") {
-    approve.push(
-      "--standing-grant-id",
-      authority.grantId,
-      "--standing-grant-route-id",
-      authority.routeId,
-    );
-  } else {
-    approve.push(
-      "--user-input",
-      authority.userInput,
-      "--target-intent-id",
-      authority.targetIntentId,
-      "--presence-reservation-id",
-      authority.reservationId,
-    );
-  }
-  const processResult = parseGrantApprovalProcessResult(spawnState(pd, approve));
+  approve.push(
+    "--user-input",
+    authority.userInput,
+    "--target-intent-id",
+    authority.targetIntentId,
+    "--presence-reservation-id",
+    authority.reservationId,
+  );
+  const processResult = parseApprovalProcessResult(spawnState(pd, approve));
   if (processResult.kind === "fatal-error") {
     emit(errorDirective(
       `Transition rejected by amadeus-state.ts approve for "${slug}"` +
@@ -4550,44 +4514,6 @@ function handleAuthorizedApprovalReport(
     emit(errorDirective(
       `Approval process protocol error for "${slug}": ${processResult.detail}`,
     ));
-    return;
-  }
-  if (processResult.kind === "await-approval") {
-    if (authority.kind !== "grant-backed" || processResult.stage !== slug) {
-      emit(errorDirective(`Unexpected await-approval outcome for "${slug}".`));
-      return;
-    }
-    const sessionId = trustedHostSessionId(pd);
-    if (!sessionId) {
-      emit(errorDirective(
-        "Cannot arm human continuation without trusted host session identity.",
-      ));
-      return;
-    }
-    let reservation: PresenceReservation;
-    try {
-      reservation = armPresenceReservation({
-        projectDir: pd,
-        sessionId,
-        space: activeSpace(pd),
-        targetIntentId: processResult.targetIntentId,
-        stage: slug,
-        routeId: authority.routeId,
-      });
-    } catch (cause) {
-      emit(errorDirective(
-        `Cannot arm human continuation for "${slug}": ${errorMessage(cause)}`,
-      ));
-      return;
-    }
-    const directive: AwaitApprovalDirective = {
-      kind: "await-approval",
-      stage: slug,
-      reason: "standing-grant-no-longer-authorizes",
-      target_intent_id: processResult.targetIntentId,
-      presence_reservation_id: reservation.reservationId,
-    };
-    emit(directive);
     return;
   }
   if (deferWorkflowCompletion) {
@@ -4608,13 +4534,20 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
+  if (
+    args.includes("--standing-grant-id") ||
+    args.includes("--standing-grant-route-id")
+  ) {
+    emit(errorDirective(
+      "Standing-grant approval carriers are retired; select Intent autonomy instead.",
+    ));
+    return;
+  }
   const flags = parseReportFlags(args);
   const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
   const authority = classifyApprovalAuthority({
     operatingMode: modeResult.kind === "valid" ? modeResult.mode : modeResult.raw,
     userInput: flags.userInput,
-    standingGrantId: flags.standingGrantId,
-    standingGrantRouteId: flags.standingGrantRouteId,
     targetIntentId: flags.targetIntentId,
     presenceReservationId: flags.presenceReservationId,
   });

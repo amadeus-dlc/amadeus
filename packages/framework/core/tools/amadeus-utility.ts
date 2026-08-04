@@ -113,7 +113,6 @@ import {
   setStageSuffix,
   scopeGridPath,
   scopesDir,
-  findActiveStandingGrant,
   stagesInScope,
   stateFilePath,
   withAuditLock,
@@ -1319,26 +1318,6 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
   return classifyPhaseProgressConsistency(scanned);
 }
 
-// Standing delegation grant status (#1125). Reports the newest currently-valid
-// standing grant (its scope, remaining TTL in minutes, phase-boundary opt-in, and
-// issuer intent) or "none" when per-gate approval is in force. Always pass:true —
-// the presence OR absence of a grant is a healthy state, this is informational.
-// `now` is a parameter so the in-process test drives it deterministically.
-export function standingGrantDoctorCheck(projectDir: string, now: number): DoctorCheck {
-  const grant = findActiveStandingGrant(projectDir, now);
-  if (grant === null) {
-    return { pass: true, label: "Standing delegation grant: none (per-gate approval required)" };
-  }
-  const remainingMin = Math.max(0, Math.round((grant.expiresAtMs - now) / 60000));
-  const phaseBoundary = grant.includesPhaseBoundary ? "INCLUDED" : "EXCLUDED";
-  return {
-    pass: true,
-    label:
-      `Standing delegation grant: ${grant.scope} / ${remainingMin}m left / ` +
-      `phase-boundary ${phaseBoundary} / issuer ${grant.issuerIntent}`,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Elections registry ⇄ directory drift (advisory) — U4 doctor-drift-check.
 //
@@ -1921,18 +1900,13 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // tested settingsDoctorCheck seam and handleDoctor wiring is covered by t257.
   results.push(settingsDoctorCheck(projectDir));
 
-  // 4c. Standing delegation grant (#1125) — informational: is a team-mode
-  // standing grant currently opening stage gates, or is per-gate approval in
-  // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
-  results.push(standingGrantDoctorCheck(projectDir, nowMs));
-
-  // 4d. Elections registry ⇄ directory drift (advisory) — does the default
+  // 4c. Elections registry ⇄ directory drift (advisory) — does the default
   // space's elections.json agree with the on-disk election dirs? Always
   // pass:true (ruling E-SRCAD3); judgment lives in the in-process-tested
   // electionsRegistryDriftDoctorCheck / composeElectionsDriftLabel seam.
   results.push(electionsRegistryDriftDoctorCheck(projectDir));
 
-  // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
+  // 4d. Workspace shell ready (P4: no --init artifact to check). Readiness is the
   // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
   // default space's memory dir present (the source of truth the native include
   // resolves). Three states — see classifyWorkspaceShellState (#844): engine dir

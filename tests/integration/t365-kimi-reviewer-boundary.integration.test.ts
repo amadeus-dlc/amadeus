@@ -1688,7 +1688,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       space: "default",
       targetIntentId: DEFAULT_INTENT_UUID,
       stage: "requirements-analysis",
-      // A standing-grant fallback retains its grant route id; it is distinct
+      // A targeted continuation retains its route id; it is distinct
       // from the newly minted human-continuation reservation id.
       routeId: "55555555-5555-4555-8555-555555555555",
       reservationIdFactory: () =>

@@ -702,15 +702,6 @@
       ]
     },
     {
-      "fingerprint": "56fefececd27707e8c9ab14ec11fe58de312898a34d8ed9368dbf21a061dd1b7",
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/tools/amadeus-state.ts",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
       "fingerprint": "58e7e053e23232264721dd577fa14bcdf1548d36ae99f8a138b589c11065bfa3",
       "ruleId": "NSD001",
       "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",

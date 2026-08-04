@@ -117,8 +117,8 @@ if (target === "mint") {
       // `env: { USER_PROMPT: userPrompt }` only, the contextual-hook executor
       // does the same, and the documented hook schema exposes no session field
       // or command template variable. So the capability is `unavailable` and the canonical
-      // seam mints the ordinary untargeted HUMAN_TURN. A solo standing-grant
-      // targeted continuation therefore does not fire here (fail-closed); it is
+      // seam mints the ordinary untargeted HUMAN_TURN. A session-bound targeted
+      // reservation therefore does not fire here (fail-closed); it is
       // NEVER degraded onto a shared workspace key, the PID, or the cursor.
       mintHumanPresence({
         projectDir,
