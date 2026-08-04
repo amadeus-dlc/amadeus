@@ -446,7 +446,7 @@ export interface CanonicalCommitReceipt {
 
 export type CanonicalCommitResult =
   | { readonly ok: true; readonly receipt: CanonicalCommitReceipt }
-  | { readonly ok: false; readonly reason: "conflict" | "write-failed"; readonly detail: string };
+  | { readonly ok: false; readonly reason: "conflict" | "intent-unavailable" | "write-failed"; readonly detail: string };
 
 export interface CanonicalEventCommitPort {
   commitOnce(event: PiCanonicalEvent): Promise<CanonicalCommitResult> | CanonicalCommitResult;
@@ -618,7 +618,9 @@ export class PiBridgeJournal {
         && (sessionIdDigest === undefined || verified.event.sessionIdDigest === sessionIdDigest)
       ) records.push(verified);
     }
-    return records;
+    return records.sort((left, right) =>
+      left.event.occurredAt.localeCompare(right.event.occurredAt)
+      || left.event.eventKey.localeCompare(right.event.eventKey));
   }
 
   sealLocal(value: unknown): SealedEnvelope {
@@ -812,7 +814,14 @@ export class DefaultCanonicalEventCommitPort implements CanonicalEventCommitPort
         if (mapping !== null) {
           if (existing === null) {
             const space = core.activeSpace(this.#projectDir);
-            const intent = core.activeIntent(this.#projectDir, space) ?? "workspace";
+            const intent = core.activeIntent(this.#projectDir, space);
+            if (intent === null) {
+              return {
+                ok: false,
+                reason: "intent-unavailable",
+                detail: "canonical lifecycle audit is deferred until the first intent exists",
+              };
+            }
             const definition = core.getEventDefByAuditEvent(mapping.event);
             const outcome = core.appendJournalRecordV2({
               schemaVersion: core.journalSchemaVersionV2,
@@ -1118,6 +1127,66 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
       return initialized;
     }
 
+    async function commitPrepared(current: NonNullable<typeof initialized>): Promise<boolean> {
+      for (const pending of current.journal.prepared(current.sessionIdDigest)) {
+        const result = await current.commitPort.commitOnce(pending.event);
+        if (!result.ok) {
+          if (result.reason === "intent-unavailable") return false;
+          throw new Error(`${result.reason}: ${result.detail}`);
+        }
+        current.journal.commit(pending.event.eventKey, result.receipt);
+      }
+      return true;
+    }
+
+    async function applyEventEffects(
+      parsed: ParsedPi083Event,
+      current: NonNullable<typeof initialized>,
+      context: PiExtensionContext,
+      auditDurable: boolean,
+    ): Promise<void> {
+      if (parsed.type === "tool_execution_start") {
+        current.tools.set(parsed.toolCallId, { toolName: parsed.toolName, argsDigest: digest(parsed.args) });
+      } else if (parsed.type === "tool_execution_end") {
+        current.tools.delete(parsed.toolCallId);
+      } else if (parsed.type === "agent_start") {
+        current.outbox.observeAgentStart(context.sessionManager.getEntries());
+      } else if (parsed.type === "session_before_compact") {
+        current.mission.checkpoint(await continuationMessage(current.projectDir));
+      } else if (parsed.type === "session_compact") {
+        const mission = current.mission.mission();
+        if (mission !== null) {
+          pi.sendMessage({
+            customType: "amadeus-mission-recovery",
+            content: mission,
+            display: false,
+            details: { sessionIdDigest: current.sessionIdDigest },
+          }, { triggerTurn: false });
+        }
+      } else if (parsed.type === "agent_settled") {
+        const message = await continuationMessage(current.projectDir);
+        if (message !== null) {
+          const pending = current.outbox.prepare();
+          pi.appendEntry("amadeus-continuation-outbox", {
+            token: pending.token,
+            status: "prepared",
+            sessionIdDigest: current.sessionIdDigest,
+          });
+          current.outbox.entryAppended(pending.token);
+          pi.sendMessage({
+            customType: "amadeus-continuation",
+            content: message,
+            display: false,
+            details: { token: pending.token, sessionIdDigest: current.sessionIdDigest },
+          }, { triggerTurn: true, deliverAs: "nextTurn" });
+        }
+      } else if (parsed.type === "session_start") {
+        current.outbox.reconcile(context.sessionManager.getEntries());
+        if (auditDurable) current.health.reconciled();
+        await autoComposePlugins(current.projectDir, context);
+      }
+    }
+
     async function commit(expected: Pi083EventName, raw: unknown, context: PiExtensionContext): Promise<void> {
       if (!registrationGate.open) return;
       const current = runtime(context, expected === "session_start");
@@ -1145,7 +1214,7 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
       const facts = safeFacts(parsed);
       const eventFingerprint = digest({ kind: eventKind(parsed), facts });
       try {
-        const canonical = current.journal.prepare({
+        current.journal.prepare({
           schemaVersion: PI_CANONICAL_EVENT_VERSION,
           profile: PI_EXTENSION_PROFILE,
           eventKey,
@@ -1155,55 +1224,8 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
           occurredAt: isoTimestamp(),
           safe: facts,
         }, parsed);
-        const result = await current.commitPort.commitOnce(canonical);
-        if (!result.ok) throw new Error(`${result.reason}: ${result.detail}`);
-        current.journal.commit(eventKey, result.receipt);
-
-        if (parsed.type === "tool_execution_start") {
-          current.tools.set(parsed.toolCallId, { toolName: parsed.toolName, argsDigest: digest(parsed.args) });
-        } else if (parsed.type === "tool_execution_end") {
-          current.tools.delete(parsed.toolCallId);
-        } else if (parsed.type === "agent_start") {
-          current.outbox.observeAgentStart(context.sessionManager.getEntries());
-        } else if (parsed.type === "session_before_compact") {
-          current.mission.checkpoint(await continuationMessage(current.projectDir));
-        } else if (parsed.type === "session_compact") {
-          const mission = current.mission.mission();
-          if (mission !== null) {
-            pi.sendMessage({
-              customType: "amadeus-mission-recovery",
-              content: mission,
-              display: false,
-              details: { sessionIdDigest: current.sessionIdDigest },
-            }, { triggerTurn: false });
-          }
-        } else if (parsed.type === "agent_settled") {
-          const message = await continuationMessage(current.projectDir);
-          if (message !== null) {
-            const pending = current.outbox.prepare();
-            pi.appendEntry("amadeus-continuation-outbox", {
-              token: pending.token,
-              status: "prepared",
-              sessionIdDigest: current.sessionIdDigest,
-            });
-            current.outbox.entryAppended(pending.token);
-            pi.sendMessage({
-              customType: "amadeus-continuation",
-              content: message,
-              display: false,
-              details: { token: pending.token, sessionIdDigest: current.sessionIdDigest },
-            }, { triggerTurn: true, deliverAs: "nextTurn" });
-          }
-        } else if (parsed.type === "session_start") {
-          current.outbox.reconcile(context.sessionManager.getEntries());
-          for (const pending of current.journal.prepared(current.sessionIdDigest)) {
-            const result = await current.commitPort.commitOnce(pending.event);
-            if (!result.ok) throw new Error(`journal reconciliation failed: ${result.detail}`);
-            current.journal.commit(pending.event.eventKey, result.receipt);
-          }
-          current.health.reconciled();
-          await autoComposePlugins(current.projectDir, context);
-        }
+        const auditDurable = await commitPrepared(current);
+        await applyEventEffects(parsed, current, context, auditDurable);
       } catch (error) {
         current.health.block(String(error), eventKey);
         context.ui?.notify("Amadeus Pi lifecycle adapter blocked; run doctor for details.", "error");

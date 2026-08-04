@@ -83,7 +83,11 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-election", dst: "skills/amadeus-election" },
     { src: "skills/amadeus-plugin", dst: "skills/amadeus-plugin" },
   ],
-  harnessFiles: [],
+  harnessFiles: [
+    // Project-local Pi lifecycle state is machine-local. Install the shared
+    // workspace ignore contract beside .pi/ so a healthy session stays clean.
+    { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
+  ],
   onboarding: { dst: "AGENTS.md", projectRoot: true, fills: onboardingFills },
   rulesRename: null,
   authoredExempt: [],

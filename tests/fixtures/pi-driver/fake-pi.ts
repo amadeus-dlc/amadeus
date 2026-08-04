@@ -21,6 +21,8 @@ lines.on("line", (line) => {
     return;
   }
   const failed = command.message === "fail";
+  const providerMismatch = command.message === "provider-check"
+    && process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex";
   process.stdout.write(`${JSON.stringify({ type: "agent_start" })}\n`);
   process.stdout.write(`${JSON.stringify({
     type: "message_end",
@@ -28,11 +30,11 @@ lines.on("line", (line) => {
       role: "assistant",
       content: [
         { type: "thinking", thinking: "must not leak" },
-        { type: "text", text: failed ? "partial" : "OK" },
+        { type: "text", text: failed || providerMismatch ? "partial" : "OK" },
         { type: "toolCall", name: "bash", arguments: { command: "must not leak" } },
       ],
-      stopReason: failed ? "error" : "stop",
-      ...(failed ? { errorMessage: "provider failed" } : {}),
+      stopReason: failed || providerMismatch ? "error" : "stop",
+      ...(failed || providerMismatch ? { errorMessage: "provider failed" } : {}),
     },
   })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_end", willRetry: false })}\n`);

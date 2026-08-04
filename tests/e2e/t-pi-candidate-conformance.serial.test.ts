@@ -23,6 +23,12 @@ function writeJson(path: string, value: unknown): void {
 }
 
 describe("Pi candidate cross-unit conformance", () => {
+  test("ships the project gitignore needed to keep Pi runtime state out of candidate commits", () => {
+    const gitignore = readFileSync(join(ROOT, "dist", "pi", ".gitignore"), "utf8");
+    expect(gitignore).toContain("amadeus/.amadeus-clone-id");
+    expect(gitignore).toContain("amadeus/.amadeus-sessions/");
+  });
+
   test("keeps generated catalog, complete install diagnostics, event source boundary, and Windows negative coherent", () => {
     const root = mkdtempSync(join(tmpdir(), "amadeus-pi-conformance-"));
     scratch.push(root);

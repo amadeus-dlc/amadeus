@@ -96,6 +96,7 @@ export type PiChildDriverResult =
 export interface PiDriverOptions {
   readonly runtimeDir?: string;
   readonly piExecutable?: string;
+  readonly providerId?: string;
   readonly guardianPath?: string;
   readonly replayStore?: PiReplayStore;
   readonly lifecycle?: ExecutionLifecycleCoordinator;
@@ -347,6 +348,7 @@ async function runGuardian(
       String(request.outputLimitBytes + 8 * 1024 * 1024),
       "--stderr-limit-bytes",
       String(STDERR_LIMIT_BYTES),
+      ...(options.providerId === undefined ? [] : ["--provider-id", options.providerId]),
     ],
     {
       cwd: request.projectDir,

@@ -20,9 +20,14 @@ afterEach(() => {
   while (cleanup.length > 0) rmSync(cleanup.pop()!, { recursive: true, force: true });
 });
 
-function seedProject(): string {
+function freshProject(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-pi-integration-"));
   cleanup.push(root);
+  mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
+  return root;
+}
+
+function activateIntent(root: string): void {
   const intents = join(root, "amadeus", "spaces", "default", "intents");
   const intent = join(intents, "260804-pi-integration");
   mkdirSync(intent, { recursive: true });
@@ -44,6 +49,11 @@ function seedProject(): string {
       "",
     ].join("\n"),
   );
+}
+
+function seedProject(): string {
+  const root = freshProject();
+  activateIntent(root);
   return root;
 }
 
@@ -51,6 +61,7 @@ class RuntimePi implements PiExtensionApi {
   readonly handlers = new Map<string, PiExtensionHandler>();
   readonly entries: Array<Record<string, unknown>> = [];
   readonly sent: Array<Record<string, unknown>> = [];
+  readonly notifications: string[] = [];
   readonly context: PiExtensionContext;
   leaf = "leaf-start";
   failSend = false;
@@ -63,7 +74,7 @@ class RuntimePi implements PiExtensionApi {
         getLeafId: () => this.leaf,
         getEntries: () => this.entries,
       },
-      ui: { notify: () => {} },
+      ui: { notify: (message) => this.notifications.push(message) },
     };
   }
 
@@ -105,6 +116,27 @@ function outboxPath(root: string): string {
 }
 
 describe("Pi lifecycle adapter with the real canonical core port", () => {
+  test("defers fresh-project lifecycle audit until the first intent exists without blocking", async () => {
+    const root = freshProject();
+    const pi = new RuntimePi(root);
+    createAmadeusPiExtension()(pi);
+
+    await pi.emit("session_start", fixture.events.session_start);
+    pi.leaf = "leaf-human";
+    await pi.emit("input", fixture.events.input_interactive);
+    expect(pi.notifications).toEqual([]);
+
+    activateIntent(root);
+    await pi.emit("tool_execution_start", fixture.events.tool_execution_start);
+    await pi.emit("tool_execution_end", fixture.events.tool_execution_end);
+
+    const audit = readAllAuditShards(root);
+    expect((audit.match(/SESSION_STARTED/g) ?? [])).toHaveLength(1);
+    expect((audit.match(/HUMAN_TURN/g) ?? [])).toHaveLength(1);
+    expect(audit.indexOf("SESSION_STARTED")).toBeLessThan(audit.indexOf("HUMAN_TURN"));
+    expect(pi.notifications).toEqual([]);
+  });
+
   test("writes one presence row only for interactive input and keeps raw prompts out of audit", async () => {
     const root = seedProject();
     const pi = new RuntimePi(root);

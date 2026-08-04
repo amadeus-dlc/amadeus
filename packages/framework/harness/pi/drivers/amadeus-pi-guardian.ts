@@ -7,6 +7,7 @@ import { createInterface } from "node:readline";
 interface GuardianArgs {
   readonly piExecutable: string;
   readonly piArgv0: string;
+  readonly providerId?: string;
   readonly runId: string;
   readonly driverPublicKey: string;
   readonly snapshotDigest: string;
@@ -61,6 +62,7 @@ function parseArgs(argv: readonly string[]): GuardianArgs {
   const snapshotDigest = values.get("--snapshot-digest");
   const stdoutLimitBytes = Number(values.get("--stdout-limit-bytes"));
   const stderrLimitBytes = Number(values.get("--stderr-limit-bytes"));
+  const providerId = values.get("--provider-id");
   if (
     !piExecutable ||
     !piArgv0 ||
@@ -70,11 +72,21 @@ function parseArgs(argv: readonly string[]): GuardianArgs {
     !Number.isSafeInteger(stdoutLimitBytes) ||
     stdoutLimitBytes < 1 ||
     !Number.isSafeInteger(stderrLimitBytes) ||
-    stderrLimitBytes < 1
+    stderrLimitBytes < 1 ||
+    (providerId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(providerId))
   ) {
     throw new Error("guardian-args-invalid");
   }
-  return { piExecutable, piArgv0, runId, driverPublicKey, snapshotDigest, stdoutLimitBytes, stderrLimitBytes };
+  return {
+    piExecutable,
+    piArgv0,
+    ...(providerId === undefined ? {} : { providerId }),
+    runId,
+    driverPublicKey,
+    snapshotDigest,
+    stdoutLimitBytes,
+    stderrLimitBytes,
+  };
 }
 
 function bytes(value: unknown): Buffer {
@@ -225,7 +237,12 @@ function run(args: GuardianArgs): void {
       closeGroup("go-replayed");
       return;
     }
-    child = spawn(args.piExecutable, ["--mode", "rpc", "--no-session"], {
+    child = spawn(args.piExecutable, [
+      "--mode",
+      "rpc",
+      "--no-session",
+      ...(args.providerId === undefined ? [] : ["--provider", args.providerId]),
+    ], {
       argv0: args.piArgv0,
       cwd: process.cwd(),
       shell: false,

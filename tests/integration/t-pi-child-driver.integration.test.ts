@@ -86,6 +86,21 @@ describe("Pi child driver process boundary", () => {
     expect(readFileSync(count, "utf8").trim().split("\n")).toHaveLength(1);
   });
 
+  test("passes an explicit non-secret provider identifier to the Pi RPC child", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    const result = await executePiChild(
+      { ...base, deliveryKey: "provider-1", prompt: "provider-check" },
+      {
+        runtimeDir: join(root, "runtime"),
+        piExecutable: fakePi,
+        lifecycle,
+        providerId: "openai-codex",
+      },
+    );
+
+    expect(result).toEqual({ kind: "succeeded", output: "OK", replayed: false });
+  });
+
   test("timeout and cancellation remain terminal failures and reap the guardian group", async () => {
     const timed = fixture();
     const timedResult = await executePiChild(

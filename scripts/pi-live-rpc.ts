@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import {
   createExecutionLifecycleCoordinator,
   createMemoryExecutionRepository,
+  type ExecutionLifecycleCoordinator,
 } from "../packages/framework/core/tools/amadeus-execution-lifecycle.ts";
 import { readAllAuditShards } from "../packages/framework/core/tools/amadeus-lib.ts";
 import { executePiChild } from "../packages/framework/harness/pi/drivers/amadeus-pi-driver.ts";
@@ -89,6 +90,17 @@ function liveLifecycle() {
   });
 }
 
+type PiLiveDispatch = typeof executePiChild;
+
+export function dispatchPiLiveChild(
+  request: Parameters<PiLiveDispatch>[0],
+  lifecycle: ExecutionLifecycleCoordinator,
+  providerId: string,
+  dispatch: PiLiveDispatch = executePiChild,
+) {
+  return dispatch(request, { lifecycle, providerId });
+}
+
 /**
  * Run only when AMADEUS_PI_LIVE_RPC=1. The provider identifier is evidence
  * metadata; provider credentials stay in Pi's normal user configuration.
@@ -129,7 +141,7 @@ export async function runPiLiveRpc(
   if (!parent.ok) return { status: "failed", reason: "parent-operation-not-started" };
 
   const before = readAllAuditShards(projectDir);
-  const result = await executePiChild({
+  const result = await dispatchPiLiveChild({
     schemaVersion: 1,
     deliveryKey: `pi-live:${identity.commit}:${Date.now()}`,
     role: "support",
@@ -142,7 +154,7 @@ export async function runPiLiveRpc(
     childOrdinal: 1,
     timeoutMs: 120_000,
     outputLimitBytes: 64 * 1024,
-  });
+  }, lifecycle, providerId);
   const after = readAllAuditShards(projectDir);
   const humanTurnCount = countMarker(after, "HUMAN_TURN") - countMarker(before, "HUMAN_TURN");
   const gateApprovedCount = countMarker(after, "GATE_APPROVED") - countMarker(before, "GATE_APPROVED");

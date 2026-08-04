@@ -7,7 +7,7 @@ import {
   PI_MILESTONE_IDS,
   validatePiFormalEvidence,
 } from "../../scripts/pi-conformance-evidence.ts";
-import { runPiLiveRpc } from "../../scripts/pi-live-rpc.ts";
+import { dispatchPiLiveChild, runPiLiveRpc } from "../../scripts/pi-live-rpc.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const TRACE_PATH = join(ROOT, "tests", "conformance", "pi-m1-m10-trace.md");
@@ -90,6 +90,26 @@ describe("Pi M1-M10 trace", () => {
 });
 
 describe("Pi formal evidence admission", () => {
+  test("dispatches the live child through the lifecycle that owns its parent operation", async () => {
+    const lifecycle = {} as Parameters<typeof dispatchPiLiveChild>[1];
+    let receivedLifecycle: unknown;
+    let receivedProviderId: unknown;
+    const result = await dispatchPiLiveChild(
+      {},
+      lifecycle,
+      "openai-codex",
+      async (_request, options) => {
+        receivedLifecycle = options?.lifecycle;
+        receivedProviderId = options?.providerId;
+        return { kind: "dispatch-not-started", reason: "test-stop", output: "", replayed: false };
+      },
+    );
+
+    expect(receivedLifecycle).toBe(lifecycle);
+    expect(receivedProviderId).toBe("openai-codex");
+    expect(result.kind).toBe("dispatch-not-started");
+  });
+
   test("admits exactly one macOS and Linux green run plus the Windows negative", () => {
     expect(validatePiFormalEvidence(evidence()).status).toBe("green");
   });
