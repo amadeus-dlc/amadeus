@@ -1,4 +1,5 @@
 // covers: file:tools/amadeus-goal-reconciliation.ts, function:parseGoalLineage, function:parseGoalReconciliationReceipt, function:authorizeGoalCompletion
+// size: medium
 
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -106,7 +107,7 @@ function initialLineage(successMetrics: readonly string[] = []) {
   });
 }
 
-function deterministicEvidence(reference = "tests/unit/t427-goal-reconciliation.test.ts") {
+function deterministicEvidence(reference = "tests/integration/t427-goal-reconciliation.test.ts") {
   return { kind: "deterministic-check" as const, reference, digest: SHA_A };
 }
 

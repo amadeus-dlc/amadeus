@@ -7,7 +7,7 @@
       "anchorLines": 5,
       "targetLines": "1-5"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. The function body and its validation are covered directly by t427 unit tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "reason": "These lines contain only the multiline TypeScript input type. The function body and its validation are covered directly by t427 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -18,7 +18,7 @@
       "anchorLines": 7,
       "targetLines": "1-7"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Initial and legacy revision-zero bodies and validation are covered directly by t427 unit tests; the signature has no runtime statement.",
+    "reason": "These lines contain only the multiline TypeScript input type. Initial and legacy revision-zero bodies and validation are covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -29,7 +29,7 @@
       "anchorLines": 6,
       "targetLines": "1-6"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Legacy lineage creation and round-trip validation are covered directly by t427 unit tests; the signature has no runtime statement.",
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy lineage creation and round-trip validation are covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -40,7 +40,7 @@
       "anchorLines": 3,
       "targetLines": "1-3"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Context digest creation is covered directly by t427 unit and workflow authorization tests; the signature has no runtime statement.",
+    "reason": "These lines contain only the multiline TypeScript input type. Context digest creation is covered directly by t427 integration and workflow authorization tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -51,7 +51,7 @@
       "anchorLines": 7,
       "targetLines": "1-7"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Every authorization acceptance and rejection branch is covered directly by t427 unit tests; the signature has no runtime statement.",
+    "reason": "These lines contain only the multiline TypeScript input type. Every authorization acceptance and rejection branch is covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -62,7 +62,7 @@
       "anchorLines": 11,
       "targetLines": "1-11"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Proposal creation, parsing, persistence, collision, tamper, and approval paths are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Proposal creation, parsing, persistence, collision, tamper, and approval paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -73,7 +73,7 @@
       "anchorLines": 10,
       "targetLines": "1-10"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Legacy proposal creation, paired evidence validation, persistence, collision, and tamper paths are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy proposal creation, paired evidence validation, persistence, collision, and tamper paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -84,7 +84,7 @@
       "anchorLines": 4,
       "targetLines": "1-4"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Current, stale, ordinary, and legacy-reconstruction approval paths are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Current, stale, ordinary, and legacy-reconstruction approval paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -95,7 +95,7 @@
       "anchorLines": 4,
       "targetLines": "1-4"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Persisted proposal approval and lineage write-back are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Persisted proposal approval and lineage write-back are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -106,7 +106,7 @@
       "anchorLines": 8,
       "targetLines": "1-8"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Receipt creation, persistence, evidence binding, and complete-current-Goal item validation are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Receipt creation, persistence, evidence binding, and complete-current-Goal item validation are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -117,7 +117,7 @@
       "anchorLines": 5,
       "targetLines": "1-5"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Successful, non-final, invalid-scope, projection-mismatch, and stale-receipt paths are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Successful, non-final, invalid-scope, projection-mismatch, and stale-receipt paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
@@ -128,7 +128,7 @@
       "anchorLines": 3,
       "targetLines": "1-3"
     },
-    "reason": "These lines contain only the multiline TypeScript input type. Successful persisted authorization and missing Last Completed Stage rejection are covered directly by t427 unit tests.",
+    "reason": "These lines contain only the multiline TypeScript input type. Successful persisted authorization and missing Last Completed Stage rejection are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
