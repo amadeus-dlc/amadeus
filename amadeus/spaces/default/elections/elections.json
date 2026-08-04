@@ -772,5 +772,17 @@
     "dirName": "260803-e-sia-cgs13",
     "createdAt": "2026-08-03T17:37:13Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260804-ERR-RE-S13-Z0",
+    "dirName": "260804-e-260804-err-re-s13-z0",
+    "createdAt": "2026-08-04T02:18:23Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260804-ERR-RA-S13-Z0",
+    "dirName": "260804-e-260804-err-ra-s13-z0",
+    "createdAt": "2026-08-04T03:12:01Z",
+    "status": "recorded"
   }
 ]
