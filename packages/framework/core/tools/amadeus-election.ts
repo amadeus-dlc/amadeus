@@ -200,10 +200,11 @@ export function handleReport(
   // A tallied report lands on "hold" when the fixed tally result is a hold —
   // the hold state is reached only through a real tally outcome.
   let to = transition.to;
+  let tally: ReturnType<typeof readTally> = null;
   if (result === "tallied") {
-    const t = readTally(root, electionId);
-    if (t === null) return fail("invalid-transition: tallied reported but tally.json missing");
-    if (t.result.kind === "hold") to = "hold";
+    tally = readTally(root, electionId);
+    if (tally === null) return fail("invalid-transition: tallied reported but tally.json missing");
+    if (tally.result.kind === "hold") to = "hold";
   }
   // Issue #1458: the distributed report is where the subagent transport's
   // deferred records land. notify only books the outcomes it could observe
@@ -216,6 +217,20 @@ export function handleReport(
   }
   const set = Store.setState(root, electionId, to);
   if (!set.ok) return storeFail("setState", set.error);
+  // #2125 FR-2b: the `tallied` audit row is booked by the transition commit,
+  // not by the tally write, and it carries tally.json's talliedAt so the
+  // late-lane classification axis and the timeline can never diverge.
+  if (tally !== null) {
+    if (tally.talliedAt === undefined) {
+      return fail("invalid-transition: tallied committed but tally.json lacks talliedAt");
+    }
+    const booked = Store.appendTimeline(root, electionId, {
+      kind: "tallied",
+      at: tally.talliedAt,
+      detail: `tally: ${tally.result.kind}`,
+    });
+    if (!booked.ok) return storeFail("appendTimeline", booked.error);
+  }
   out({ committed: result, state: to });
   return 0;
 }
