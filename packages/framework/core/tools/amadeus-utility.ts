@@ -317,6 +317,22 @@ function handleVersion(): void {
 // status
 // ---------------------------------------------------------------------------
 
+// `null` is the rendered "unavailable" terminal, not a swallowed failure: a
+// status read must never trap the caller on an unreadable audit projection, and
+// renderAutonomyStatus says so out loud.
+function readStatusAutonomy(
+  projectDir: string,
+  intent: string | undefined,
+  space: string | undefined,
+): ReturnType<typeof projectIntentAutonomyStatus> | null {
+  try {
+    const projection = readProductionAutonomyProjection(projectDir, intent, space);
+    return projection === null ? null : projectIntentAutonomyStatus(projection);
+  } catch {
+    return null;
+  }
+}
+
 function renderAutonomyStatus(
   autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null,
 ): string {
@@ -362,17 +378,7 @@ To get started:
   const activeAgent = getField(content, "Active Agent") || "None";
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
-  let autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null = null;
-  try {
-    const autonomyProjection = readProductionAutonomyProjection(
-      projectDir,
-      flags.intent,
-      flags.space,
-    );
-    autonomy = autonomyProjection === null ? null : projectIntentAutonomyStatus(autonomyProjection);
-  } catch {
-    autonomy = null;
-  }
+  const autonomy = readStatusAutonomy(projectDir, flags.intent, flags.space);
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
