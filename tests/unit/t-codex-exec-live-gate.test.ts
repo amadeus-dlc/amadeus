@@ -38,6 +38,20 @@ describe("codex exec live E2E gate", () => {
     );
   });
 
+  test("the requirements probe uses the same allow-listed PATH as the adapter", () => {
+    expect(
+      codexExecLiveRequirementsSkipReason({
+        env: {
+          AMADEUS_CODEX_EXEC_LIVE: "1",
+          OPENAI_API_KEY: "fixture-key",
+          PATH: "/path/that/does/not/exist",
+        },
+        codexBin: "bun",
+        distributionDir: process.cwd(),
+      }),
+    ).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=bun)");
+  });
+
   test("the child environment exposes only the scratch auth home", () => {
     expect(
       codexExecChildEnvironment("/scratch/codex-home", {

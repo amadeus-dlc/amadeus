@@ -53,9 +53,16 @@ export function codexExecLiveRequirementsSkipReason({
   const environmentReason = codexExecLiveSkipReason(env);
   if (environmentReason !== null) return environmentReason;
 
-  const version = spawnSync(codexBin, ["--version"], { encoding: "utf-8" });
-  const match = (version.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
+  const probeEnvironment = buildChildEnvironment(env, LIVE_CAPABILITIES[0].environment);
+  const version = probeEnvironment.ok
+    ? spawnSync(codexBin, ["--version"], {
+        encoding: "utf-8",
+        env: probeEnvironment.value,
+      })
+    : null;
+  const match = (version?.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
   if (
+    version === null ||
     version.status !== 0 ||
     match === null ||
     (Number(match[1]) === 0 && Number(match[2]) < 139)
