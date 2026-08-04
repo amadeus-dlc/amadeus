@@ -23,7 +23,7 @@
     "tests/unit/t-jump-phase-events-seam.test.ts",
     "tests/unit/t-learnings-persist-seam.test.ts",
     "tests/unit/t-memory-seed.test.ts",
-    "tests/unit/t-package-unreferenced-source.test.ts",
+    "tests/unit/t-package-unreferenced-source.serial.test.ts",
     "tests/unit/t-package-write-sweep.serial.test.ts",
     "tests/unit/t-phase-check-gate-seam.test.ts",
     "tests/unit/t-phase-progress-rollup-seam.test.ts",

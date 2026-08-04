@@ -18,7 +18,7 @@
 // WHY IN-PROCESS. bun --coverage does not instrument spawned subprocesses, so a
 // CLI-spawn test would leave writeHarness's new sweep lines uncovered and trip
 // the codecov/patch gate. Driving writeHarness + checkHarness in-process (same
-// idiom as t-package-unreferenced-source.test.ts) executes and covers them.
+// idiom as t-package-unreferenced-source.serial.test.ts) executes and covers them.
 //
 // TARGET HARNESS. `kiro` — its committed root face carries a projectRoot
 // AGENTS.md and .gitignore, so the sweep's expected-set logic is exercised
