@@ -817,4 +817,98 @@ describe("t236 election directive loop", () => {
     expect(run(["report", "--election", "E-SOLO2", "--result", "hold-resolved", "--resolution", "choice:1"])).toBe(0);
     expect((lastJson() as { resumedTo?: string }).resumedTo).toBe("tallied");
   });
+
+  // --- Issue #2125: verb-side fail-closed state guards ----------------------
+
+  // Force the on-disk state without going through the machine, so a single
+  // election can be replayed against every state the guard must reject.
+  function forceState(state: string): void {
+    const path = electionPath("election.json");
+    const file = JSON.parse(readFileSync(path, "utf8"));
+    writeFileSync(path, JSON.stringify({ ...file, state }));
+  }
+
+  // FR-1a: tally is only legal out of `collecting`. Every other state must exit
+  // 1 with no write at all — tally.json must not appear and timeline.json must
+  // stay byte-identical (NFR-1 fail-closed).
+  test("#2125 FR-1a: tally outside collecting exits 1 and writes nothing", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    const tallyPath = electionPath("tally.json");
+    const timelinePath = electionPath("timeline.json");
+    for (const state of ["draft", "open", "tallied", "rendered", "recorded", "hold"]) {
+      forceState(state);
+      const before = readFileSync(timelinePath, "utf8");
+      expect(run(["tally", "--election", "E-LOOP1"])).toBe(1);
+      expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("invalid-transition");
+      expect(existsSync(tallyPath)).toBe(false);
+      expect(readFileSync(timelinePath, "utf8")).toBe(before);
+    }
+    // collecting is accepted (the guard rejects state, not the verb)
+    forceState("collecting");
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(existsSync(tallyPath)).toBe(true);
+  });
+
+  // FR-1b: notify accepts `open` (first distribution) and `collecting` (the
+  // dispatch-ack resend lane, 3 min / max 2), and rejects the other five states
+  // with no timeline write.
+  test("#2125 FR-1b: notify is accepted in open/collecting and rejected elsewhere", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    const timelinePath = electionPath("timeline.json");
+    const fake = join(projectDir, "fake-send.sh");
+    writeFileSync(fake, "#!/bin/sh\nexit 0\n");
+    chmodSync(fake, 0o755);
+    const agmsg = [
+      "--transport", "agmsg", "--team", "amadeus", "--from", "leader", "--send-script", fake,
+    ];
+    for (const state of ["draft", "tallied", "rendered", "recorded", "hold"]) {
+      forceState(state);
+      const before = readFileSync(timelinePath, "utf8");
+      expect(run(["notify", "--election", "E-LOOP1", ...agmsg])).toBe(1);
+      expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("invalid-transition");
+      expect(readFileSync(timelinePath, "utf8")).toBe(before);
+    }
+    for (const state of ["open", "collecting"]) {
+      forceState(state);
+      expect(run(["notify", "--election", "E-LOOP1", ...agmsg])).toBe(0);
+    }
+  });
+
+  // FR-2: the `tallied` timeline row belongs to the transition commit, not to
+  // the tally write. Its `at` stays the tally.json talliedAt, so the late-lane
+  // classification axis and the timeline agree.
+  test("#2125 FR-2: the tallied row is booked by report, carrying tally.json's talliedAt", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+
+    // tally alone fixes the ballot set but books nothing on the timeline
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    const tallied = (): Array<{ kind: string; at: string }> =>
+      (JSON.parse(readFileSync(electionPath("timeline.json"), "utf8")) as Array<{
+        kind: string;
+        at: string;
+      }>).filter((e) => e.kind === "tallied");
+    expect(tallied().length).toBe(0);
+
+    // the transition commit books exactly one, stamped with talliedAt
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    const talliedAt = JSON.parse(readFileSync(electionPath("tally.json"), "utf8")).talliedAt;
+    expect(tallied().length).toBe(1);
+    expect(tallied()[0]?.at).toBe(talliedAt);
+
+    // a second tallied report is refused by the existing from-check, so the
+    // row can never be duplicated through the machine
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("invalid-transition");
+    expect(tallied().length).toBe(1);
+  });
 });

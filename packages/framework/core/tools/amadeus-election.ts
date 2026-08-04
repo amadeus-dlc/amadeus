@@ -392,6 +392,11 @@ export function handleNotify(
   transportKind: string,
   agmsg: { team: string | null; from: string | null; sendScript: string | null },
 ): number {
+  // FR-1b: `collecting` stays open to notify so the dispatch-ack resend lane
+  // (3 min, max 2 resends) keeps working; the five post-collection states do
+  // not accept a distribution.
+  const guarded = requireState(root, electionId, "notify", ["open", "collecting"]);
+  if (!guarded.ok) return guarded.error;
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
   const voters = loaded.value.election.voters;
@@ -454,7 +459,31 @@ export function handleStatus(root: string, electionId: string): number {
   return 0;
 }
 
+// Issue #2125 (FR-1a/FR-1c): the verbs carry their own fail-closed state check.
+// report commits transitions and guards them; the verbs that WRITE the audit
+// surfaces (tally's tally.json, notify's timeline rows) used to run from any
+// state, so a tally out of `tallied` re-fixed the ballot set and a notify out
+// of `recorded` booked a distribution after the record was sealed. The check
+// lives here, in the CLI layer: the store stays a pure persistence surface
+// (FR-1c) and the rejection happens before the first write (NFR-1).
+function requireState(
+  root: string,
+  electionId: string,
+  verb: string,
+  allowed: readonly ElectionState[],
+): Result<ElectionState, number> {
+  const loaded = Store.load(root, electionId);
+  if (!loaded.ok) return err(storeFail("load", loaded.error));
+  const state = loaded.value.state;
+  if (!allowed.includes(state)) {
+    return err(fail(`invalid-transition: ${verb} requires state ${allowed.join("/")}, got ${state}`));
+  }
+  return ok(state);
+}
+
 export function handleTally(root: string, electionId: string): number {
+  const guarded = requireState(root, electionId, "tally", ["collecting"]);
+  if (!guarded.ok) return guarded.error;
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
   const ledger = Store.ledger(root, electionId);
