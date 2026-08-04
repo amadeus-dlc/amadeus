@@ -42,10 +42,15 @@ describe("codex exec live E2E gate", () => {
     expect(
       codexExecChildEnvironment("/scratch/codex-home", {
         AMADEUS_CODEX_EXEC_AUTH_HOME: "/real/codex-home",
+        HOME: "/real/home",
         PATH: "/bin",
+        OPENAI_API_KEY: "sk-fixture",
+        UNRELATED_SECRET: "must-not-leak",
       }),
     ).toEqual({
       CODEX_HOME: "/scratch/codex-home",
+      HOME: "/scratch/codex-home",
+      OPENAI_API_KEY: "sk-fixture",
       PATH: "/bin",
     });
   });

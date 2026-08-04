@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-AD13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "『0件で可』を全面的に支持する。c1はApplication Design成果物がBun test process内の短命local harnessでありAWS resource/network service/database/daemonを追加しないというIssue #1717固有の境界で、project.md cid:nfr-design:c1の『CLI/libraryへ常駐service向け機構を機械適用しない』既存規範の適用事例である。c2はユーザー裁定に基づくTypeScript capability registry・append-only JSONL run ledger・Markdown導出viewの正本構造で、ADR-003、components C7-C9、component-dependencyのwriter/reader表へ固定済みであり、project.md cid:requirements-analysis:c2のmachine registryとnarrative分離の具体化に留まる。projection driftとledger破損は既にcontract test、fail-closed validation、projector checkとして設計内で閉じるため別sensorは不要。c3はIssue #1717のpolicy/result/lifecycle deep moduleとharness×transport adapterの責務分離で、ADR-001/002と5成果物へ一貫して保存済みのarchitecture decisionであり、他Intentへ一律適用する行動規範へ一般化すべきでない。3件とも新規の横断practiceまたはstage sensorではない。",
+  "submittedAt": "2026-08-03T11:59:47Z"
+}

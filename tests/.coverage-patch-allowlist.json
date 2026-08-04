@@ -2923,39 +2923,6 @@
   {
     "file": "tests/harness/codex-exec-live.ts",
     "selector": {
-      "function": "codexExecLiveRequirementsSkipReason",
-      "fingerprint": "sha256:6c170a04f9f6bef5aae25bce450360812ef2e5f440a5050734cb80e10db72811",
-      "anchorLines": 18,
-      "targetLines": "1-18"
-    },
-    "reason": "Codex version and auth preflight arms are covered by t-codex-exec-live-gate for the GitHub Actions skip path; local codex/auth probe arms require AMADEUS_CODEX_EXEC_LIVE and are disabled on CI.",
-    "expiry": "remove when the requirements helper receives an injectable probe port or live E2E runs on CI"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "installCodexExecAuth",
-      "fingerprint": "sha256:60c96f959b6fad2cf4ad7a7cec660a26d9a95c885b0cc771782de7659ccb8e52",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Missing-auth fail-closed throw in installCodexExecAuth; success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when auth installation is injectable for in-process failure injection"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "setupCodexExecHome",
-      "fingerprint": "sha256:1de9bf3bc70cc3c159d29427927f3ce19ceb28c603c5cfecff581a85f6b1bbfc",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "setupCodexExecHome cleanup on auth-install failure; the success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when home setup receives an injectable filesystem port"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
       "function": "writeCodexExecHomeConfig",
       "fingerprint": "sha256:8b5f1ceb063464006d6bfb284c6bf661f47a0a2701c4d1ab52ccb00a6f2fb3bb",
       "anchorLines": 4,
@@ -3699,5 +3666,170 @@
     },
     "reason": "Defense-in-depth invariant: resolveRunRequiredHold filters verified-not-detected before rendering a hold result, so modelCheckResultText cannot receive that variant through its only caller. Detected, harness-error, not-run, and invalid rendering are exercised through the protected advisory choice integration tests.",
     "expiry": "remove if modelCheckResultText becomes public or gains a caller that can pass verified-not-detected"
+  },
+  {
+    "file": "tests/harness/live-e2e/codex.ts",
+    "selector": {
+      "function": "CodexExecAdapter.cleanup",
+      "fingerprint": "sha256:256826ec26b54f46aef765feb9b471bfd826fe0c8c262f73eeb096d445bbe46c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The reap deadline is constructed only while cleaning an active real Codex child. Offline lifecycle tests exercise cleanup success and failure through fake adapters; CI intentionally does not spawn a credential-bearing live Codex journey.",
+    "expiry": "remove when CodexExecAdapter receives an injectable child-process port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "inspectLedgerLock",
+      "fingerprint": "sha256:943abd9b87fa2659e45fcf60684df3fe550db8a4bbf262886582059fb3e36207",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This fail-closed branch requires the lock directory to disappear or become unreadable between existsSync and statSync. Fresh, stale, live-owner, dead-owner, and malformed-owner states are covered deterministically; the remaining TOCTOU race is not reproducible without an injected filesystem port.",
+    "expiry": "remove when lock inspection receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "reapLedgerLock",
+      "fingerprint": "sha256:101c0684cd934046393dc8235c42fbd221671607ea5aed96e31c930fdbd32964",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This rollback handles a lock owner becoming live after the two-phase recovery check and rename. Tests prove live owners are never stolen and dead owners are reaped; forcing the identity transition at this exact race boundary requires an injected process/filesystem port.",
+    "expiry": "remove when lock reaping receives injectable process and filesystem ports"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "reapLedgerLock",
+      "fingerprint": "sha256:c9bb1b7662439312172ba0a3031914b1986bfac85f281f29c61d722fee8fca6f",
+      "anchorLines": 4,
+      "targetLines": "2-3"
+    },
+    "reason": "The generic recovery failure belt covers rename/removal races after recoverability was established. Deterministic tests cover blocked reaping and successful stale/dead reaping; inducing a post-check filesystem race needs an injectable filesystem port.",
+    "expiry": "remove when lock reaping receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "acquireLedgerLock",
+      "fingerprint": "sha256:d53c91a7d36af7981e7ad47d0670de5a1ffea393bd0cf2c74dd9e165b3969e10",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This cleanup and classification branch requires mkdirSync to succeed while the immediately following exclusive owner stamp fails. Lock timeout and normal acquisition are covered; deterministic owner-stamp fault injection requires a filesystem port.",
+    "expiry": "remove when lock acquisition receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "persistNewReceipt",
+      "fingerprint": "sha256:e6010284a9050d26148907a13c15711890c45650099cd822e9bf6872bfe00078",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The rename failure mapping is a fail-closed filesystem boundary after a successful durable temporary write. Successful atomic rename, directory fsync failure, and recovery are covered; a deterministic rename-only failure requires an injected filesystem port.",
+    "expiry": "remove when receipt persistence receives an injectable rename port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "persistNewReceipt",
+      "fingerprint": "sha256:9861c84bd0a244f27d65efd0e06cc9362e65fa5cf0d3069926319fcbc17fb436",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Revalidation can fail only if another actor replaces the just-renamed ledger before the immediate read-back. Idempotency, conflict detection, pending durability, and successful persistence are covered; this exact concurrent replacement race needs an injected filesystem port.",
+    "expiry": "remove when receipt persistence receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:db97f83a5208d3d8e3414a397c8500bb2c95615e4bca5f3f816185f6fb2704af",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "These result/message accumulators execute only inside the real Claude Agent SDK drive. Pure helpers and the isolated SDK worker contract are covered offline; credential-bearing live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:843f2bcf0ed3c6d97200901883ade1614e39e15942741de0dad64c8d9b20559b",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "Parent abort forwarding is wired around a real Claude Agent SDK query. Worker abort handling and lifecycle timeout cleanup are covered offline; CI cannot start the credential-bearing SDK stream needed to execute this wiring.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:acf383fe5565019e0c4df20e63e5907c772836ea35fd071759c131da23b093c8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Message-type capture is reached only while iterating the real Claude Agent SDK stream. The downstream worker event contract is covered offline; live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:c4cdef576b3aaebb1f5c6ababe11304647dc1cdf0031f77ac40509d2a341221c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Result-event accumulation is reached only from a real Claude Agent SDK result message. Result classification and bounded worker emission are covered offline; credential-bearing SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:3ab331e01f2983e0ec336aec11641420922fd59be844436c4c12558a9da8ad0c",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The swallowed-abort predicate is evaluated only when the real SDK generator throws after an orchestrator-owned abort. Timeout/abort/reap semantics are covered through offline adapters; CI cannot start the credential-bearing SDK stream.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:632a7604d46b15ed641e742fc92a9be33b3faf6d84cf2f11e16978cac526ffe6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Parent abort-listener removal is the finally path of a real Claude Agent SDK drive. Equivalent worker signal cleanup is covered offline; CI intentionally does not open the live SDK stream.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:7010987299eca06e4ae230d52182050831957f753574691bea6861c15e842961",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The final result arrays are populated only by iterating the real Claude Agent SDK stream. Their consumer and worker serialization contracts are covered offline; credential-bearing live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/live-e2e/claude-sdk-worker.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:ca90a4c8a4fd675317499709615673768bcb0d4c86a59ef13e3308dfc9cd6cfc",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The main guard is exercised by the worker CLI probe integration test, which asserts the spawned process exit and probe payload. Bun does not merge that child process module row into the parent LCOV report.",
+    "expiry": "remove when Bun merges spawned worker coverage into the parent report"
   }
 ]

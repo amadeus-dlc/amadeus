@@ -1,0 +1,10 @@
+{
+  "electionId": "E-HLE-RA13-ZERO",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を全面支持する。c3はteam.mdの既決上位規範を蒸し返さず真に未決だけを問う規則、project.mdの確定済み裁定を再質問しない規則、stage正本の既知事項抽出→gap特定→質問生成と重複する。Q2/Q3削除は既存契約の適用・是正事例である。c1/c2/c4はIssue固有の正本指定、TUI opt-in裁定、transport境界としてrequirements、質問票、Intent diaryに保存済みで、新規rule/sensorは不要。",
+  "submittedAt": "2026-08-03T11:01:40Z"
+}

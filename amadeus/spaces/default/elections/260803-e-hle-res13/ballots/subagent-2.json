@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-HLE-RES13",
+    "voter": "subagent-2",
+    "submittedAt": "2026-08-03T09:52:00Z"
+  },
+  "electionId": "E-HLE-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件採用には同意するが、re-scans/260803-harness-live-e2e.md:21 に旧値『42コミット区間』が1箇所残っているため、stage承認前に最終実測値46へ訂正すること。これは新規恒久ルール候補ではなく、訂正済み成果物内の局所的な転記残りとして扱う。",
+  "rationale": "訂正後の独立実測では HEAD=origin/main=52a082af7d13c537fad65b1204c9760e28b73f61、HEAD...origin/main=0/0、base a8e1ce025..HEAD=46 commits、差分規模1,593 files/+174,787/-6,561で一致し、498c303..HEADの追加4コミットは tests/harness・tests/run-tests.ts・Cursor/OpenCode manifest/plugin・関連docsの焦点面に差分0件だった。memory.md、scan-notes.md、per-intent re-scan、共有9 CodeKB成果物はいずれも最終observedへ再接地され、選択4テストの58 pass/132 assertions/0 failも記録されている。c1はRE stage正本:77-87/:143-149のlast-writer-wins derived-cache契約、c3はIssue #1717固有のCodeKB設計境界で新規memory対象ではない。c2の系譜誤読もRE stage正本:75-87のtrunk統合契約、team.mdのrescan-base-ancestry/base-advance-regrounding、project.mdのc2-observed-mainline-commitにより検出・是正すべき既存規則の準拠問題であり、今回の訂正で閉包した。従ってproject/team memoryまたはsensorへの新規persistは0件が妥当。",
+  "submittedAt": "2026-08-03T10:23:00Z"
+}

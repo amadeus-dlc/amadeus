@@ -1,0 +1,16 @@
+{
+  "electionId": "E-HLE-RA13-ZERO",
+  "kind": "learnings-selection",
+  "question": "E-HLE-RA13の単一候補定義には『追加なし』の選択肢がなく、split後のHuman Resolution『追加なし』を同選挙のchoice語彙へ記録できなかったため、本選挙を§13 kept setの訂正版正本とする。requirements-analysisのc1〜c4はIntent成果物に保持し、新規project/team ruleまたはsensorは0件でよいか。c3の再質問防止は既存team/project/stage-protocol規則の適用事例として扱う。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "ユーザー裁定どおり恒久ルール・センサーを追加せず、全候補をIntent recordに保持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-RES13",
+  "voter": "subagent-2",
+  "question": "260803-harness-live-e2e reverse-engineering の §13 学習選定。c1はstage契約済みのCodeKB last-writer-wins更新、c2は今回のGit系譜に依存する状況判断、c3はIssue #1717固有の設計境界であり、いずれもCodeKB/Intent recordに保存済みである。project/team memoryへ追加する新規の恒久ルールまたはセンサーは0件でよいか。memory、CodeKB、既存memory層を独立実測して投票する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "3候補は既存契約、状況判断、Intent固有設計としてrecordに保持し、横断memoryやセンサーへ過剰一般化しない"
+    }
+  ]
+}

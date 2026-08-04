@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-04T00:59:02Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-BT13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "最終化前にRepository CIの再実行結果と初回単発失敗の分類根拠をIntent成果物へ記録すること。",
+      "rationale": "memory.mdは学習候補・open questionとも0件なので、新規ルールまたはセンサーは不要である。ただし投票時点のbuild-test-results.mdはRepository CIと主要検査を未実行としており、再実行結果の記録を0件確定の条件とする。",
+      "submittedAt": "2026-08-04T00:41:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-BT13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 3,
+      "reservation": "0件採用前にRepository CIの再実行結果と初回単発失敗の分類根拠をIntent成果物へ記録すること。",
+      "rationale": "memory.mdは学習候補・open questionとも0件で、恒久ルール追加は不要である。一方、投票時点のbuild-test-results.mdではCI再実行根拠が未記録のため、実測結果の追記を条件とする。",
+      "submittedAt": "2026-08-04T00:41:55Z"
+    }
+  ],
+  "resolutions": []
+}

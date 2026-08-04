@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-ICS13",
+  "voter": "subagent-2",
+  "question": "260803-harness-live-e2e intent-capture の §13 学習選定。候補 c1 は既存 cid:intent-capture:c1 と cid:requirements-analysis:no-election-for-decided-norms の適用実例、候補 c2 は Issue #1717 固有の完了境界であり Intent record に保存済みであるため、project/team memory へ恒久化する新規学習は0件でよいか。record、Issue #1717、memory 層を独立実測して投票する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1 は既存規則の適用、c2 は本 Intent 固有の範囲裁定として record に保持し、恒久ルールを重複追加しない"
+    }
+  ]
+}

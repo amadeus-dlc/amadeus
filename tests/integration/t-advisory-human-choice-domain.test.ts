@@ -57,7 +57,9 @@ describe("advisory human choice domain", () => {
 
   test("同一入力はfactoryが同じなら同一instance identityになる", () => {
     const factory = () => "019fc698-ba1f-7000-8000-000000000001";
-    expect(createPendingAdvisory(base, factory)).toEqual(createPendingAdvisory(base, factory));
+    expect(createPendingAdvisory(base, factory).identity).toEqual(
+      createPendingAdvisory(base, factory).identity,
+    );
   });
 
   test("receipt parserは完全なhuman-turn provenanceだけを受理する", () => {

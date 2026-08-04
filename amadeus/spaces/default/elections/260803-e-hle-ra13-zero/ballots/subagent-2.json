@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-RA13-ZERO",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件を全面支持する。c1/c2/c4はIntent固有の正本・裁定・設計境界としてrequirements.mdとquestionsに保存済み。c3はteam/project/stage-protocolの既決事項を再質問せずmaterial uncertaintyだけを問う既存契約の適用例であり、重複project ruleまたはsensorを追加する新規性はない。",
+  "submittedAt": "2026-08-03T11:01:40Z"
+}

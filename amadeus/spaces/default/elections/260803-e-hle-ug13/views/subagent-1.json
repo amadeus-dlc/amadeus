@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-UG13",
+  "voter": "subagent-1",
+  "question": "units-generationのc1/c2はIssue #1717固有の12 Unit分解とtransport別粒度としてIntent成果物に保持し、新規project/team ruleまたはsensorは0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、2候補をIntent recordに保持する"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-UG13-R2",
+  "voter": "subagent-1",
+  "question": "units-generation再実行の新規c2/c3/c5はIssue #1717固有のwalking-skeleton再分割としてIntent成果物に保持し、新規project/team ruleまたはsensorは0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、新規3候補をIntent recordに保持する"
+    }
+  ]
+}

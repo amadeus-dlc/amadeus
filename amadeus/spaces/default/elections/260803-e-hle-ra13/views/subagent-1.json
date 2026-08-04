@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-RA13",
+  "voter": "subagent-1",
+  "question": "260803-harness-live-e2e requirements-analysis の §13 学習選定。c3『Issueや承認済み上流成果物で確定済みの事項は質問せず、正本間の矛盾または要件上の抜け漏れだけを質問する』を project.md の恒久ルール候補として保持すべきか。c1/c2/c4はIntent固有の正本・裁定・設計境界として成果物に保存済みのため、恒久ルールへ重複追加しない提案とする。既存org/team/project規則との重複・新規性を独立実測して投票する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c3をproject rule候補として保持",
+      "description": "Requirements Analysisの質問を、上流で未解決の矛盾・抜け漏れに限定する訂正を恒久化する"
+    }
+  ]
+}

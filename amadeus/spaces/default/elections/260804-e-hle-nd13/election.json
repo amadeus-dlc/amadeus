@@ -1,0 +1,17 @@
+{
+  "electionId": "E-HLE-ND13",
+  "kind": "learnings-selection",
+  "question": "nfr-designのmemoryに学習候補とopen questionはなく、cleanup barrierとledger commitの修正は承認済みApplication Design/Functional Design契約の伝播である。新規project/team ruleまたはsensorは0件でよいか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、設計修正をIntent成果物に保持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

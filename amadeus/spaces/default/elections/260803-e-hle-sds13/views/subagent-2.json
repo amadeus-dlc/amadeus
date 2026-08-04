@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-SDS13",
+  "voter": "subagent-2",
+  "question": "260803-harness-live-e2e scope-definition の §13 学習選定。memory の判断は Issue #1717 固有のスコープ境界、前段スキップの事実、依存順序、後続実測事項であり、既存の project/team memory に追加する新規の恒久ルールまたはセンサーは0件でよいか。scope成果物、Issue #1717、既存memory層を独立実測して投票する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "判断と未確定事項は本Intentのrecordに保持し、横断memoryやセンサーへ重複・過剰一般化しない"
+    }
+  ]
+}

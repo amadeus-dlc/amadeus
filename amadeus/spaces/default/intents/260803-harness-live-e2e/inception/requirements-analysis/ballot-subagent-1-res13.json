@@ -1,0 +1,10 @@
+{
+  "electionId": "E-HLE-RA13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "『Issue』を一律に正本扱いせず、『当該stageの入力正本として明示されたIssueまたは承認済み上流成果物』に限定する。独立cidを増やすより、既存requirements-analysis規則への追補統合を推奨する。",
+  "rationale": "c3は既存規則と完全重複しない。team.mdの既決規範やproject.mdのintent-capture規則、既存実装パターン規則は射程が限定される。Requirements Analysisの入力正本で確定済みの事項を再質問しない規則は未被覆で、今回Q2/Q3削除の再作業が発生した。stage正本は既知事項抽出とgap質問を示すが、Step 7の『常に質問』に誤読余地があるため、限定文言での恒久化は妥当。",
+  "submittedAt": "2026-08-03T10:53:32Z"
+}

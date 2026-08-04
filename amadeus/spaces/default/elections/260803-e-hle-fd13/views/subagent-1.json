@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-FD13",
+  "voter": "subagent-1",
+  "question": "functional-designのmemoryに学習候補とopen questionはなく、今回のcleanup barrierとledger commitの修正は承認済みApplication Design契約の伝播である。新規project/team ruleまたはsensorは0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、設計修正をIntent成果物に保持する"
+    }
+  ]
+}

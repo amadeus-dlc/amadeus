@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import {
+  codexExecLiveRequirementsSkipReason,
   initializeCodexExecProject,
   setupCodexExecHome,
   setupCodexExecProject,
@@ -18,21 +20,17 @@ import {
 
 interface CodexHarnessFixture {
   root: string;
-  authHome: string;
   distributionDir: string;
   repositoryRoot: string;
 }
 
 function createCodexHarnessFixture(): CodexHarnessFixture {
   const root = mkdtempSync(join(tmpdir(), "codex-live-helper-fixture-"));
-  const authHome = join(root, "source-auth");
   const distributionDir = join(root, "dist", "codex");
   const repositoryRoot = join(root, "framework");
   mkdirSync(join(distributionDir, ".codex"), { recursive: true });
   mkdirSync(join(distributionDir, ".agents", "skills", "fixture"), { recursive: true });
   mkdirSync(join(repositoryRoot, "scripts"), { recursive: true });
-  mkdirSync(authHome, { recursive: true });
-  writeFileSync(join(authHome, "auth.json"), "{}\n", "utf-8");
   writeFileSync(join(distributionDir, ".codex", "config.toml.example"), "# config\n", "utf-8");
   writeFileSync(join(distributionDir, ".codex", "hooks.json.example"), "{}\n", "utf-8");
   writeFileSync(
@@ -46,7 +44,7 @@ function createCodexHarnessFixture(): CodexHarnessFixture {
     'process.stdout.write("[features]\\nfixture = true\\n");\n',
     "utf-8",
   );
-  return { root, authHome, distributionDir, repositoryRoot };
+  return { root, distributionDir, repositoryRoot };
 }
 
 function gitTrackedFiles(projectDir: string): string[] {
@@ -56,11 +54,41 @@ function gitTrackedFiles(projectDir: string): string[] {
 }
 
 describe("codex exec live E2E helper", () => {
-  test("canonical project setup activates the distribution and completes git, trust, and config", () => {
+  test("requirements probe uses the adapter's allow-listed PATH", () => {
+    const binDir = mkdtempSync(join(tmpdir(), "codex-live-path-"));
+    const codexBin = join(binDir, "codex");
+    writeFileSync(codexBin, "#!/bin/sh\necho 'codex-cli 0.146.0'\n", "utf8");
+    chmodSync(codexBin, 0o755);
+    const input = {
+      env: {
+        AMADEUS_CODEX_EXEC_LIVE: "1",
+        OPENAI_API_KEY: "fixture-key",
+      },
+      codexBin: "codex",
+      distributionDir: process.cwd(),
+    };
+    try {
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: binDir },
+      })).toBeNull();
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { ...input.env, PATH: "/path/that/does/not/exist" },
+      })).toBe("codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=codex)");
+      expect(codexExecLiveRequirementsSkipReason({
+        ...input,
+        env: { AMADEUS_CODEX_EXEC_LIVE: "1", PATH: binDir },
+      })).toBe("set OPENAI_API_KEY to provide an isolated Codex credential lease");
+    } finally {
+      rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+
+  test("canonical project setup activates the distribution without copying source auth", () => {
     const fixture = createCodexHarnessFixture();
     const project = setupCodexExecProject({
       prefix: "codex-exec-project-",
-      authHome: fixture.authHome,
       distributionDir: fixture.distributionDir,
       repositoryRoot: fixture.repositoryRoot,
       model: "fixture-model",
@@ -75,6 +103,7 @@ describe("codex exec live E2E helper", () => {
       expect(relative(project.proj, project.home).startsWith(`..${sep}`)).toBe(true);
       expect(trackedFiles).toContain("prepared.txt");
       expect(trackedFiles.some((file) => file.endsWith("auth.json"))).toBe(false);
+      expect(existsSync(join(project.home, "auth.json"))).toBe(false);
       expect(readFileSync(join(project.home, "config.toml"), "utf-8")).toContain(
         'model = "fixture-model"',
       );
@@ -84,20 +113,19 @@ describe("codex exec live E2E helper", () => {
     }
   });
 
-  test("canonical project setup rolls back copied auth and distribution when trust fails", () => {
+  test("canonical project setup rolls back isolated home and distribution when trust fails", () => {
     const fixture = createCodexHarnessFixture();
     let scratchRoot: string | undefined;
     try {
       expect(() =>
         setupCodexExecProject({
           prefix: "codex-exec-failure-",
-          authHome: fixture.authHome,
           distributionDir: fixture.distributionDir,
           repositoryRoot: join(fixture.root, "missing-framework"),
           model: "fixture-model",
           prepareProject: (projectDir) => {
             scratchRoot = dirname(projectDir);
-            expect(existsSync(join(scratchRoot, "codex-home", "auth.json"))).toBe(true);
+            expect(existsSync(join(scratchRoot, "codex-home", "auth.json"))).toBe(false);
             expect(existsSync(join(projectDir, ".codex", "config.toml"))).toBe(true);
             writeFileSync(join(projectDir, "prepared.txt"), "prepared\n", "utf-8");
           },
@@ -114,7 +142,7 @@ describe("codex exec live E2E helper", () => {
   test("external CODEX_HOME stays untracked and is deleted even when the workspace is kept", () => {
     const fixture = createCodexHarnessFixture();
     const workspace = mkdtempSync(join(tmpdir(), "codex-journey-workspace-"));
-    const auth = setupCodexExecHome("codex-journey-auth-", fixture.authHome);
+    const auth = setupCodexExecHome("codex-journey-auth-");
     const originalKeepTemp = process.env.AMADEUS_KEEP_TEMP;
     try {
       mkdirSync(join(workspace, ".home"), { recursive: true });
