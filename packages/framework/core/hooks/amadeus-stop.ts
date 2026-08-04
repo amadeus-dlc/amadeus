@@ -341,7 +341,7 @@ export function decideStopContinuation(
 // the conductor's questions file rather than checkbox state.) Any parse error
 // falls through too: fail-open is the only safe failure mode for a hook that can
 // otherwise trap a turn.
-function isHumanWaitStop(stateContent: string): boolean {
+export function isHumanWaitStop(stateContent: string): boolean {
   try {
     const slug = currentStageSlug(stateContent);
     if (slug.length === 0) return false;
@@ -382,9 +382,9 @@ function isHumanWaitStop(stateContent: string): boolean {
 // underscores"). Scans the stage dir for any *-questions.md (the canonical name
 // is `<slug>-questions.md`, but matching the suffix is robust to the per-unit
 // Construction `{unit}` path segment the engine does not yet resolve).
-function hasPendingQuestion(slug: string, phase: string): boolean {
+function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: string = projectDir): boolean {
   if (slug.length === 0 || phase.length === 0) return false;
-  const stageDirPath = stageDir(projectDir, phase.toLowerCase(), slug);
+  const stageDirPath = stageDir(resolvedProjectDir, phase.toLowerCase(), slug);
   if (!existsSync(stageDirPath)) return false;
   let files: string[];
   try {
@@ -407,7 +407,7 @@ function hasPendingQuestion(slug: string, phase: string): boolean {
 
 // The tier-2 carve-out decision: the current stage is [-] in-progress, a
 // question is pending, and Intent autonomy is not `full`.
-function isPendingQuestionStop(stateContent: string): boolean {
+export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
   try {
     if (isFullyAutonomousIntent(stateContent)) {
       return false; // autonomy guard — keep the loop alive
@@ -417,7 +417,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
     const row = parseCheckboxes(stateContent).find((c) => c.slug === slug);
     if (row?.state !== "in-progress") return false; // positive [-] only
     const phase = getField(stateContent, "Lifecycle Phase") ?? "";
-    return hasPendingQuestion(slug, phase);
+    return hasPendingQuestion(slug, phase, resolvedProjectDir);
   } catch {
     // Unparseable / odd content — fall through to decideBlock (never trap).
     return false;
@@ -528,7 +528,7 @@ function isInjectedHookFeedback(text: string): boolean {
 // both delivered formats; returns true ONLY with positive evidence. `format`
 // distinguishes Claude's message-shaped JSONL from Codex's {type,payload}
 // rollout. Fail-closed on every miss.
-function transcriptIsConversational(transcriptPath: string, format: "claude" | "codex"): boolean {
+export function transcriptIsConversational(transcriptPath: string, format: "claude" | "codex"): boolean {
   let raw: string;
   try {
     raw = readFileSync(transcriptPath, "utf-8");
@@ -696,7 +696,7 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
 // it shows a conversational ending turn. `transcriptPath`/`format` come from the
 // Stop payload (Claude / Codex); both are absent on Kiro, where this returns
 // false and the low interactive cap handles the chat case instead.
-function isConversationalStop(
+export function isConversationalStop(
   stateContent: string,
   transcriptPath: string | null,
   format: "claude" | "codex",
@@ -721,8 +721,8 @@ function isConversationalStop(
 // because we will not trap a turn on the engine's behalf when we cannot read a
 // directive. We pass --project-dir explicitly so the engine resolves the same
 // workspace regardless of the spawned process's cwd.
-function runEngineNextKind(): string | null {
-  const enginePath = join(projectDir, harnessDir(), "tools", "amadeus-orchestrate.ts");
+export function runEngineNextKind(resolvedProjectDir: string = projectDir): string | null {
+  const enginePath = join(resolvedProjectDir, harnessDir(), "tools", "amadeus-orchestrate.ts");
   if (!existsSync(enginePath)) return null;
   // The spawn MUST be time-bounded. Without a timeout a hung `next` (an engine
   // that never returns) would hang this hook for the whole turn — a session
@@ -731,7 +731,7 @@ function runEngineNextKind(): string | null {
   // null-return below treats as "engine could not be consulted" → fail OPEN
   // (allow the stop). Mirrors amadeus-sensor-fire.ts's bounded spawn.
   const proc = Bun.spawnSync({
-    cmd: ["bun", enginePath, "next", "--project-dir", projectDir],
+    cmd: ["bun", enginePath, "next", "--project-dir", resolvedProjectDir],
     stdout: "pipe",
     stderr: "pipe",
     timeout: ENGINE_TIMEOUT_MS,
