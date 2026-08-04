@@ -1,7 +1,7 @@
 // Canonical audit adapter and replay entry point for Quality Repair (#2096).
 
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
-import { decodeLoopMonitorEventSet } from "./amadeus-loop-monitor-replay.ts";
+import { validEventSet } from "./amadeus-loop-monitor-replay.ts";
 import { qualityDigest } from "./amadeus-quality-repair.ts";
 import {
   createMemoryQualityRepairRepository,
@@ -96,20 +96,11 @@ function validQualityEvent(value: unknown): value is QualityRuntimeEvent {
     validProjection(value.projection) && validQualityEventPayload(value);
 }
 
-function validLoopEventSet(value: unknown): boolean {
-  try {
-    decodeLoopMonitorEventSet(JSON.stringify(value));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function validTransaction(value: unknown): value is QualityRepairTransaction {
   return isRecord(value) && value.schemaVersion === 1 && typeof value.transactionId === "string" &&
     typeof value.qualityScopeId === "string" && Array.isArray(value.qualityEvents) &&
     value.qualityEvents.every(validQualityEvent) && Array.isArray(value.loopEventSets) &&
-    value.loopEventSets.every(validLoopEventSet);
+    value.loopEventSets.every(validEventSet);
 }
 
 export function decodeQualityRepairTransaction(encoded: string): QualityRepairTransaction {
