@@ -16,6 +16,7 @@ const TOOL_FILES = [
   "amadeus-intent-autonomy.ts",
   "amadeus-intent-autonomy-runtime.ts",
   "amadeus-intent-autonomy-replay.ts",
+  "amadeus-intent-autonomy-production.ts",
 ] as const;
 
 const currentHarnessCohort = [

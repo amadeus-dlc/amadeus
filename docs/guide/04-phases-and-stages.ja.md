@@ -212,7 +212,7 @@ flowchart TD
 
 ### Construction が現在の形になっている理由
 
-Construction は **Bolt ごと**に実行されます — [作業単位](glossary.ja.md)ごとに各ステージの後で承認ゲートを設ける形(3 ユニットのプロジェクトで 15 個のゲート)と、最後に 1 回だけレビューする形(build-and-test ゲートに 15,000 行が到達する)の中間の道です。各 [Bolt](glossary.ja.md) は、あるユニット(または依存関係でつながった小さなユニット群)に対するステージ 3.1〜3.5 の 1 回の通過です。最初の Bolt は **walking skeleton** です — ゲート付きかつインタラクティブで、アーキテクチャを実証する最小の end-to-end スライスです。それが出荷されると、**ラダープロンプト**がちょうど 1 回だけ発火します:「残りは自律的に続行しますか、それとも Bolt ごとにゲートしますか?」。あなたの回答は状態に記録され、ワークフロー内の残りすべての Bolt を統制します。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、最後にすべてに対して 1 回だけ実行されます。
+Construction は **Bolt ごと**に実行されます — [作業単位](glossary.ja.md)ごとに各ステージの後で承認ゲートを設ける形と、最後に 1 回だけレビューする形の中間です。各 [Bolt](glossary.ja.md) は、あるユニット(または依存関係でつながった小さなユニット群)に対するステージ 3.1〜3.5 の 1 回の通過です。最初の Bolt は **walking skeleton** で、アーキテクチャを実証する最小のend-to-endスライスです。そのgateはIntent全体の`none|semi|full`自律レベル表に従い、人間が確認したIntent grantを持つ`full`だけが自動裁定できます。ステージ3.6(Build and Test)と3.7(CI Pipeline)は、最後にすべてに対して1回だけ実行されます。
 
 この形により、早期の信頼チェックポイントと意図的な自律性の選択が得られ、2.8 ですでに計画された Bolt に合わせたサイズのレビュー可能なスライスが提供されます。
 
@@ -224,14 +224,11 @@ flowchart TD
     READ[/"Read bolt-plan.md (from 2.8)\n+ unit-of-work-dependency.md (from 2.7)"/]
 
     BOLT1["Bolt 1 — Walking Skeleton\n(stages 3.1–3.5)"]
-    GATE1{{"Walking-skeleton gate\nAlways presented"}}
-
-    LADDER{"Ladder prompt\n(fires once)"}
-    MODE_AUTO["Continue autonomously\nConstruction Autonomy Mode: autonomous"]
-    MODE_GATED["Gate every Bolt\nConstruction Autonomy Mode: gated"]
+    MODE{"Intent autonomy\nnone | semi | full"}
+    GATE1{{"Walking-skeleton gate\nfull may auto-decide"}}
 
     NEXT_BATCH["Next Bolt (or parallel batch)\n(stages 3.1–3.5)"]
-    GATE_N{{"Bolt/batch gate\n(skipped if autonomous)"}}
+    GATE_N{{"Bolt/batch gate\nresolved by Intent mode"}}
 
     MORE{"More Bolts?"}
 
@@ -239,11 +236,7 @@ flowchart TD
     S37["3.7 CI Pipeline\n(amadeus-pipeline-deploy-agent)\nCONDITIONAL — once"]
     VG3{{"Verification Gate:\nConstruction → Operation"}}
 
-    START --> READ --> BOLT1 --> GATE1 --> LADDER
-    LADDER --> MODE_AUTO
-    LADDER --> MODE_GATED
-    MODE_AUTO --> NEXT_BATCH
-    MODE_GATED --> NEXT_BATCH
+    START --> MODE --> READ --> BOLT1 --> GATE1 --> NEXT_BATCH
     NEXT_BATCH --> GATE_N
     GATE_N --> MORE
     MORE -->|"Yes"| NEXT_BATCH
@@ -254,16 +247,14 @@ flowchart TD
 
     style BOLT1 fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style GATE1 fill:#ffcc80,stroke:#e65100,color:#1f2328
-    style LADDER fill:#fff59d,stroke:#f57f17,color:#1f2328
-    style MODE_AUTO fill:#c8e6c9,stroke:#388e3c,color:#1f2328
-    style MODE_GATED fill:#f8bbd0,stroke:#c2185b,color:#1f2328
+    style MODE fill:#fff59d,stroke:#f57f17,color:#1f2328
     style NEXT_BATCH fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style S36 fill:#c8e6c9,stroke:#388e3c,color:#1f2328
     style S37 fill:#fff9c4,stroke:#f9a825,color:#1f2328
     style VG3 fill:#ef9a9a,stroke:#c62828,color:#1f2328
 ```
 
-<!-- Text fallback: Begin Construction → read bolt-plan.md and unit-of-work-dependency.md → execute Bolt 1 (walking skeleton, stages 3.1–3.5) → walking-skeleton gate (always) → ladder prompt (fires once, choose autonomous or gated) → loop executing remaining Bolts (each covers 3.1–3.5) with or without per-Bolt gate depending on mode → once all Bolts are done, run 3.6 Build and Test then optionally 3.7 CI Pipeline → Verification Gate 3. -->
+<!-- Text fallback: Intent自律レベル（none / semi / full）を選択 → Construction開始 → Bolt計画と依存DAGを読む → walking skeletonを実行 → mode表に従ってgateを裁定 → 依存しないBoltを並列batchで実行 → mode表に従ってbatch gateを裁定 → Build and Testと任意CIを1回実行 → Verification Gate 3。 -->
 
 ### 並列 Bolt バッチ
 
@@ -273,36 +264,34 @@ flowchart TD
 flowchart LR
     A["Bolt A\n(walking skeleton)"]
     GA{{"Walking-skeleton gate"}}
-    L{"Ladder prompt"}
 
     subgraph BATCH["Parallel batch (Bolts B + C)"]
         B["Bolt B"]
         C["Bolt C"]
     end
 
-    GBC{{"Batch gate\n(skipped if autonomous)"}}
+    GBC{{"Batch gate\nresolved by Intent mode"}}
 
-    A --> GA --> L --> BATCH --> GBC
+    A --> GA --> BATCH --> GBC
 
     style A fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style GA fill:#ffcc80,stroke:#e65100,color:#1f2328
-    style L fill:#fff59d,stroke:#f57f17,color:#1f2328
     style B fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style C fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style BATCH fill:#fff3e0,stroke:#e65100,color:#1f2328
     style GBC fill:#ffcc80,stroke:#e65100,color:#1f2328
 ```
 
-<!-- Text fallback: Bolt A (walking skeleton) runs first, followed by its gate and the ladder prompt. When B and C both depend only on A, they form a parallel batch that executes concurrently. A single batch-level gate covers both Bolts (or is skipped if the user chose "Continue autonomously"). -->
+<!-- Text fallback: Bolt A（walking skeleton）を最初に実行し、そのgateはIntent mode表に従う。BとCがAだけに依存する場合は並列batchとして同時実行し、単一のbatch-level gateをIntent modeに従って裁定する。 -->
 
 コンダクター(ライブの `/amadeus` セッション)は、1 ターンで複数の `Task` 呼び出しを発行することで並列 Bolt をディスパッチします — Claude Code に組み込まれた並列性により、各 Bolt の Code Generation ステージが並行して実行されます。質問の収集と設計成果物の生成は、依然として Bolt ごとに実行されます(それらは軽量であり、質問への回答はいずれにせよユーザーを通じて直列化する必要があるためです)。
 
-### 失敗時の halt-and-ask
+### 失敗時の品質収束
 
-失敗は、自律モードであっても常に Construction を停止します。それが、自律モードが中断する唯一の場面です。
+`semi` / `full`ではblockingな指摘を承認扱いにしません。必須のQuality Repair Pluginが証拠を健全にするまでrepairまたはreplanします。
 
-- 単独の Bolt が失敗した場合、Construction は直ちに停止し、**retry**(その Bolt だけを再実行)、**skip**(`[S]` とマークして続行 — 依存する Bolt もおそらく失敗します)、または **abort**(Construction 全体を停止)を提示します。
-- 並列バッチ内の 1 つの Bolt が失敗し、他が成功した場合、コンダクターはバッチ全体の完了を待ち、成功した Bolt の成果物をディスク上に保存し、失敗した Bolt に対してのみ同じ retry / skip / abort の選択肢を提示します。
+- repairは失敗した作業だけを再実行し、成功した並列兄弟の成果物と完了状態を維持します。
+- 非生産的なrepair loopは`REPAIR_STALLED`としてparkし、activeな`full` grantを維持したまま、証拠変更または検証済みhuman retryの再開条件を記録します。
 
 ### ステージリファレンス
 
@@ -320,9 +309,9 @@ flowchart LR
 
 - 各 Bolt 内では、ステージ 3.1〜3.4 の質問は、成果物が生成される前に Bolt のユニット全体にわたって単一のインタラクティブなパスで収集されます。単一の Bolt レベルの回答ゲートが、設計成果物の開始前にすべての回答を確認します。
 - `stages/construction/code-generation.md` 内のユニットごとの承認ゲートは、通常の Bolt 実行中は**コンダクターによって抑制されます**。単一の Bolt レベル(またはバッチレベル)のゲートがそれを置き換えます。
-- ラダープロンプトは、ワークフローごとにちょうど 1 回だけ発火します — walking-skeleton ゲートの後です。あなたの回答は `amadeus-state.md` に `Construction Autonomy Mode` として記録され、セッション再開時にも尊重されます。
+- Intent自律レベルは`none|semi|full`としてcanonicalに記録され、旧Construction mode fieldはスケジューリングprojectionとしてだけ残ります。
 - 並列バッチには、複数の `Task` 実行可能なサブエージェントスロットが利用可能である必要があります — 並行性の制約については [エージェント](06-agents.ja.md) を参照してください。
-- 計画は拘束力を持ちます: コンパイル済み Bolt DAG があるバッチを並列と宣言した以上、実行がそれらのユニットを黙って 1 つずつ構築することはできません。ラダーが未回答であれば、エンジンは直列へフォールバックせずラダーを再提示します。計画のほうが誤っている場合 — それらのユニットが本当に直列である場合 — の出口は、その依存関係を理由とともに `unit-of-work-dependency.md` に記録し、runtime-graph の compile を再実行してからワークフローを再実行することです。ファンアウトしなかったバッチについて Construction の approve が拒否された場合も同じ手順です。[State Machine](../reference/12-state-machine.ja.md) § 「計画整合ガード」を参照してください。
+- 計画は拘束力を持ちます: コンパイル済みBolt DAGがbatchを並列と宣言した以上、どのautonomy modeでもそれらのUnitを黙って1つずつ構築できません。canonical mode stateが欠けていれば、直列へfallbackせずIntent modeの選択を求めます。計画が誤っている場合は、依存関係と理由を`unit-of-work-dependency.md`へ記録し、runtime graphを再compileしてworkflowを再実行します。[State Machine](../reference/12-state-machine.ja.md) §「計画整合ガード」を参照してください。
 
 ---
 

@@ -8159,15 +8159,15 @@ export function guardMessage(parts: GuardMessageParts): string {
 // exits. One const per line for the same LCOV reason as the markers above.
 export const PLAN_DRIFT_WEIGHT = "A parallel batch that runs serially is plan drift the record never shows: across 18 audited intents, 4 declared parallel Bolts and shipped them one at a time, because the plan lived in prose and never became a directive (issue #1892).";
 export const PLAN_CORRECTION_EXIT = "Correct the plan, not the run: record the dependency that makes these units serial (with its reason) in unit-of-work-dependency.md, re-run `bun <harness>/tools/amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.";
-export const AUTONOMY_LADDER_EXIT = "Answer the walking-skeleton ladder: `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `amadeus-bolt set-autonomy --mode gated` (a gate at every batch boundary), then re-run `next`.";
+export const AUTONOMY_LADDER_EXIT = "Select Intent autonomy with `amadeus-bolt set-autonomy --mode none|semi|full`, complete any required human confirmation, then re-run `next`.";
 
 // Why `tryEmitSwarm` did not fan a batch out. Every refusal in that function
 // lands on exactly one arm, which is what lets the caller tell a legitimate
 // serial fallback apart from a plan the run is about to break.
 //
 // `autonomy-unset` splits in two on purpose. Before the walking skeleton ships,
-// an unset grant is the legitimate initial state (the ladder has not fired
-// yet); after it ships, an unset grant means the ladder's answer is owed. The
+// an unset legacy projection is tolerated; after it ships, a missing canonical
+// Intent autonomy selection must be repaired before planned fan-out. The
 // two need opposite handling, so they are separate arms rather than one arm
 // carrying a boolean — a value the caller would have to remember to check.
 export type SwarmDecline =
@@ -8180,7 +8180,7 @@ export type SwarmDecline =
 
 // What the engine should do about a decline. `redirect` and `violation` carry
 // the same payload but are separate arms because they lead to DIFFERENT exits
-// (the autonomy ladder vs a plan correction); folding them into one arm with an
+// (Intent autonomy selection vs a plan correction); folding them into one arm with an
 // `exit` field would turn the caller's branch into a value check and let the
 // two exits be swapped without the type noticing.
 //
@@ -8254,7 +8254,7 @@ export function planGuardMessage(
   const named = verdict.units.join(", ");
   const declared = `the compiled Bolt DAG declares batch ${verdict.batchNumber} ${verdict.declaredWidth} units wide (${named}), so the plan says these units run in parallel`;
   if (verdict.kind === "redirect") {
-    const observation = `${declared}, but Construction Autonomy Mode is unset — the walking-skeleton ladder has not been answered, so the run cannot fan the batch out and would fall back to building them one at a time.`;
+    const observation = `${declared}, but canonical Intent autonomy is unavailable, so the run cannot determine the batch gate policy and would fall back to building the units one at a time.`;
     return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: AUTONOMY_LADDER_EXIT });
   }
   const observation = `${declared} — but this run is about to issue them serially, one unit per \`next\`.`;

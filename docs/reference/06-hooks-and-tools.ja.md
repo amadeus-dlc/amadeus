@@ -253,8 +253,8 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 2. **AI-DLC外では無操作:** プロジェクトディレクトリ下にアクティブintentの `amadeus-state.md` がなければ強制すべきものは何もない — ストップを許可する。フロントマターの `Stop` マッチャーはすでにフックを `/amadeus` にスコープしている。これは非AI-DLCセッションが決してブロックされないための多層防御である。
 3. **エンジンをコンポーズ:** `bun .claude/tools/amadeus-orchestrate.ts next --project-dir <dir>` を実行し、ディレクティブの `kind` をパースする。状態を再導出はしない — エンジンをコンポーズする。
 4. **`done` → 許可:** ディレクティブが `done` ならワークフローは完了。フックは何も発行せず exit 0 し(先例の非ブロッキングパターン)、再帰カウンターをクリアする。
-5. **`parked` -> 許可:** ディレクティブが `parked` なら、ワークフローは後のセッションのために意図的にフロー途中でパークされた(`amadeus-orchestrate park`)。フックは `done` と同様にストップを許可しカウンターをクリアする。これはサポートされたマルチセッションの出口である。これがなければ唯一のクリーンなストップは `done` であり、長いワークフローのエージェントは残りのステージを機械的に承認することでしか到達できない(#367)。**自律性ガード(#365):** `parked` の許可は自律的Construction(`Construction Autonomy Mode: autonomous`)では抑制されるため、そこでの `parked` ディレクティブはキャップ境界のブロックに落ち、ループは動き続ける。
-6. **Human-wait -> 許可:** ディレクティブが保留中でも、コンダクターが正しく人間の上でパークしている(または単にチャットしている)場合、フックはストップを許可し、ナッジをスパムするのではなくドロップを記録する。4つのケースが該当する: 現在のステージのチェックボックスが確定的に `[?]` 承認待ち、`[R]` リビジョン中、`<slug>-questions.md` に未回答の `[Answer]:` タグを**伴う** `[-]` 進行中(保留中のステージ途中の明確化質問)、または終了するターンが会話的だった(人間の直近のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る) — 後の2つは自律的Constructionでは抑制される。ポジティブ確認のみ: その他の状態、チェックボックス行なし、オープンな質問なし、トランスクリプトなし / 人間のプロンプトなし / 応答ターンでのエンジン呼び出しあり、またはパースエラーは下記のブロックに落ちる。後述の「Human-wait カーブアウト」を参照。
+5. **`parked` -> 許可:** ディレクティブが`parked`なら明示的な安全停止に到達しているため、全Intent modeでstopを許可しcounterをclearする。`full`では`REPAIR_STALLED` / `NORM_CONFLICT`など異常停止を安全に終える経路であり、汎用manual park commandは無人実行を安易に中断しないようguardを維持する。`full` grantは明示的にrevokeまたはcompleteしない限り別projectionとしてactiveを維持する。
+6. **Human-wait -> 許可:** ディレクティブが保留中でも、コンダクターが正しく人間の上でパークしている(または単にチャットしている)場合、フックはストップを許可し、ナッジをスパムするのではなくドロップを記録する。4つのケースが該当する: 現在のステージのチェックボックスが確定的に `[?]` 承認待ち、`[R]` リビジョン中、`<slug>-questions.md` に未回答の `[Answer]:` タグを**伴う** `[-]` 進行中、または終了するターンが会話的だった — 後の2つを抑制するのはIntent autonomy `full`だけである。`semi`の質問は人間所有なので即座にstopを許可する。
 7. **保留中 -> ブロックして注入:** その他の(保留中の)ディレクティブ - `run-stage`、`dispatch-subagent`、`invoke-swarm`、`present-gate`、`ask`、`print`、`error` - に対しては `{"decision":"block","reason":<オンタスクの継続>}` を出力し、同じセッションが次の手を注入された状態で再開する。注入される `reason` はクリーンな一時停止の代替として `amadeus-orchestrate park` も名指しするため、長いワークフローを止めたいコンダクターは前進する代わりにパークする。
 8. **フェイルオープン:** 予期しない障害(読めない状態、非ゼロ終了するエンジンやパース可能なディレクティブを返さないエンジン、不正なstdin)ではストップを許可しドロップを記録する。フェイルオープンは、そうでなければターンをトラップしうるフックにとって唯一の安全な障害モードである。
 
@@ -269,8 +269,8 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 
 - **Esc は無料。** Stopフックはユーザー割り込み(Esc)では発火しないため、手動割り込みが決してトラップされない — そのケースにコードは不要。
 - **承認ゲートは無料ではない。** Stopフックは、コンダクターが `AskUserQuestion` の回答を待つためにターンを終えるとき*発火する*。承認ゲート(現在のステージが `[?]` 承認待ち)や Request-Changes ループ(`[R]` リビジョン中)では、エンジンは進行中のステージに対して保留中の `run-stage` を再発行し続けるため、カーブアウトがなければフックはキャップが尽きるまでブロックして転送ループのナッジを再注入する — インタラクティブなゲートでは紛らわしい。そこで現在のステージのチェックボックスが確定的に `[?]`/`[R]` のとき、フックはストップを許可する。これは**ポジティブ確認のみかつフェイルオープン**である。より容易に解放するだけで、より多くブロックすることは決してない。チェックボックス行の欠落や任意のパースエラーはキャップ境界のブロックに落ちるため、本物のステージ途中の終了は依然としてナッジされる。
-- **ステージ途中の明確化質問も無料ではない。** そうした質問はステージを `[-]` 進行中でパークする — 怠惰な終了と同じチェックボックス状態なので、`[-]` だけではカーブアウトできない。しかしコンダクターは質問する前に空の `[Answer]:` タグを持つ `<slug>-questions.md` を作成しなければならない(ステージプロトコル§3)ため、未回答のタグは質問が保留中であるというポジティブなシグナルである。現在の `[-]` ステージの質問ファイルに未回答のタグがあるとき、フックはストップを許可する。これは**厳密にゲートされている**: 自律的Construction(`Construction Autonomy Mode: autonomous`)では決して発火せず(そこではループが無人で走り続けなければならない)、いかなるミス — ファイルなし、すべて回答済み、自律、または読み取りエラー — でもキャップ境界のブロックに落ちるため、本物のステージ途中の終了は依然としてナッジされる。(残余ケースへの即時緩和: `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=1`。)
-- **会話的なターンも無料ではない。** アクティブなワークフロー中に、単にチャットしたい人間(質問する、決定を議論する)はループに引き戻されるべきではない。フックはハーネスのトランスクリプトを読み、直近の本物の人間のプロンプトがワークフローエンジンの関与**なし**に回答されたとき(コンダクターがそのプロンプト以降 `amadeus-orchestrate` も `amadeus-state` も実行しなかった)ストップを許可する。読み取り専用のクエリ(`--status`、`--doctor`、`--help`、`--version`)は関与として**カウントされない**ため、`--status` で回答された「今どのステージ?」も依然としてチャットとして該当する。ClaudeとCodexはStopペイロードで `transcript_path` を配信する。**Kiroは配信しない**ため、Kiroではこのカーブアウトは不活性で、実行モード対応のインタラクティブキャップ(2)が、チャット中の人間を8回でなく1回のナッジ後に解放するリリースパスとなる。これは**厳密にゲートされフェイルクローズ**である: 自律的Constructionでは決して発火せず、欠落または読めないトランスクリプト、人間のプロンプトが見つからない、または応答ターンでの任意のエンジン呼び出しはキャップ境界のブロックに落ちるため、ワークフローに関与してからループの途中で終了したコンダクターは依然としてナッジされる。これは常にALLOWするだけ — より多くブロックすることは決してない。
+- **ステージ途中の明確化質問も無料ではない。** 質問はstageを`[-]`にするため、未回答`[Answer]:`をpositive signalとしてstopを許可する。このcarve-outを抑制するのはIntent autonomy `full`だけで、`semi`の質問は人間へ戻す。
+- **会話的なターンも無料ではない。** workflow engine呼出しなしで人間の直近promptへ回答した場合、transcriptから確認してstopを許可する。read-only queryはengagementに数えない。transcriptを持たないharnessはmode-aware capに依存する。このcarve-outを抑制するのもIntent autonomy `full`だけである。
 
 > **sensor-fire フックのアドバイザリー契約との対比。** `amadeus-sensor-fire.ts` は明示的な*never-block*契約を持つ(`{decision: block}` を決して返さない。`t95` Case 7 でアサート)。それは*そのフックの*アドバイザリー契約であり、ブロッキングのフレームワーク全体での禁止ではない。`Stop` フックがループ強制のために `block` を使うのは、別の承認済み契約である。
 
@@ -357,12 +357,12 @@ Next Action: resume current stage
 | **Initialization Events** | 3 | `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED` | `tools/amadeus-utility.ts` |
 | **Navigation Events** | 5 | `SCOPE_CHANGED`, `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED`, `SCOPE_DETECTED`, `RECOMPOSED` | `tools/amadeus-utility.ts` |
 | **Interaction Events** | 6 | `DECISION_RECORDED`, `GATE_APPROVED`, `GATE_REJECTED`, `QUESTION_ANSWERED`, `DELEGATED_APPROVAL`, `DELEGATED_REJECTION` | `tools/amadeus-log.ts`, `tools/amadeus-state.ts` |
-| **Standing Delegation Grants** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-state.ts`, `tools/amadeus-grant-authorization.ts` (trusted in-process route writer) |
+| **旧常任グラント観測** | 3 | `GRANT_ISSUED`, `GRANT_REVOKED`, `GATE_AUTHORIZATION_SELECTED` | replay/doctor診断。明示的な旧grant revokeだけ`tools/amadeus-state.ts`に残る |
 | **Artifact Events** | 3 | `ARTIFACT_CREATED`, `ARTIFACT_UPDATED`, `ARTIFACT_REUSED` | `hooks/amadeus-audit-logger.ts`, `tools/amadeus-state.ts` |
 | **Subagent Events** | 2 | `SUBAGENT_STARTED`, `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent-start.ts`, `hooks/amadeus-log-subagent.ts` |
 | **Utility Events** | 1 | `HEALTH_CHECKED` | `tools/amadeus-utility.ts` |
 | **Error/Recovery Events** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `tools/amadeus-lib.ts`, `tools/amadeus-state.ts` |
-| **Construction Bolt Events** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` |
+| **Construction Bolt + 旧Mode Events** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts`。`AUTONOMY_MODE_SET`はreplay/doctor専用 |
 | **Worktree** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` | `tools/amadeus-worktree.ts`, `tools/amadeus-state.ts`, `tools/amadeus-audit.ts` |
 | **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` | `tools/amadeus-state.ts` |
 | **Merge Dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` |

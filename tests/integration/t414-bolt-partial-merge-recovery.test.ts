@@ -328,12 +328,21 @@ describe("t414 complete --merge partial-success recovery", () => {
 
     appendFileSync(
       seededStateFile(projectDir),
-      "\n- **Construction Autonomy Mode**: autonomous\n",
+      "\n- **Construction Autonomy Mode**: unset\n",
       "utf-8",
     );
-    const autonomy = directCommand(projectDir, "set-autonomy", ["--mode", "gated"]);
+    appendEvidence(projectDir, "HUMAN_TURN", "direct-lifecycle");
+    const preview = directCommand(projectDir, "preview-autonomy", []);
+    expect(preview.status, preview.out).toBe(0);
+    const displayDigest = (JSON.parse(preview.out) as { displayDigest: string }).displayDigest;
+    const autonomy = directCommand(projectDir, "set-autonomy", [
+      "--mode",
+      "full",
+      "--confirmed-display-digest",
+      displayDigest,
+    ]);
     expect(autonomy.status, autonomy.out).toBe(0);
-    expect(autonomy.out).toContain('"mode":"gated"');
+    expect(autonomy.out).toContain('"mode":"full"');
 
     const approval = directCommand(projectDir, "approve-batch", ["--batch", "2"]);
     expect(approval.status).toBe(0);

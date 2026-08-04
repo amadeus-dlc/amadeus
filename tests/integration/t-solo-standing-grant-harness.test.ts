@@ -66,7 +66,7 @@ const CONTRACT_TOOLS = [
 const CONTRACT_MARKERS: Array<[string, readonly string[]]> = [
   ["amadeus-directive.ts", ["standing_grant_id", "standing_grant_route_id", "target_intent_id", "presence_reservation_id"]],
   ["amadeus-orchestrate.ts", ["--standing-grant-id", "--standing-grant-route-id", "--target-intent-id", "--presence-reservation-id"]],
-  ["amadeus-state.ts", ["classifyApprovalAuthority", "GRANT_ISSUED", "GRANT_REVOKED"]],
+  ["amadeus-state.ts", ["classifyApprovalAuthority", "GRANT_REVOKED"]],
   // The authorization domain module owns route-receipt minting and the approval
   // authority classification; the orchestrator and state CLI above carry only
   // the flags and the call sites.

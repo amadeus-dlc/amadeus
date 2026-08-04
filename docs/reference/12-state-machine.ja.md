@@ -136,7 +136,7 @@ stateDiagram-v2
 
 **Artifact guard (issue #366).** ステージを `[x]` としてマークするすべての遷移(`approve`、`advance`、`finalize`、`complete-workflow`)は、完了させる前に決定論的な成果物チェックを実行します。これにより、ディスク上に作業の証拠なしにステージを `[x]` としてマークすることはできません(完了サブコマンドがガードなしの裏口となることはありません)。`produces[]` を宣言するステージは、それらの成果物のうち少なくとも1つが存在していなければなりません(アクティブな intent の record ディレクトリ `amadeus/spaces/<space>/intents/<slug>-<id8>/<phase>/<slug>/` 配下、ユニットごとの Construction ステージについてはその record の `construction/<unit>/<slug>/`、あるいは codekb ステージについては `amadeus/spaces/<space>/codekb/<repo>/`)。`workspace_requires: true` のステージは、加えて `amadeus/` ワークスペースツリーおよびハーネスディレクトリの外側での実際のソース作業の証拠を示さなければなりません。git ワークスペースではそれはコミットされていない/追跡されていない非ドキュメント変更、または直近のコミット内の非ドキュメントパスを意味します(これにより本セッションのコードをブラウンフィールドのベースラインと区別しつつ、commit-then-approve を通します)。それ以外の場合はシェルを使わないファイルシステム存在チェックです。チェックが失敗すると、コマンドは非ゼロで終了し何も書き込みません: 遷移は拒否されます(`Refusing to complete "<slug>": ...`)。`produces[]` を宣言しないステージ(Initialization フェーズ)は空虚に通過します。`AMADEUS_SKIP_ARTIFACT_GUARD=1` でバイパスします。
 
-**Park (issue #365/#367).** `amadeus-orchestrate park` は、いずれのステージも進行させずに `Parked` / `Parked At Stage` ランタイムマーカーを書き込みます(`amadeus-state.ts park` 経由、これが `WORKFLOW_PARKED` を発行します)。続く単純な `next` は終端の `parked` ディレクティブを再発行し、Stop フックがターンを終了させます。これにより、長い workflow は残りのステージを機械的に承認して `done` に到達する代わりに、セッションをまたいで一時停止できます。`/amadeus --resume` は続行前にマーカーをクリアします(`unpark` が `WORKFLOW_UNPARKED` を発行)。無人の自律的 Construction 実行(`Construction Autonomy Mode: autonomous`)は park を拒否します: ツールと Stop フックの `parked` allow の両方が autonomous モード下で辞退するため、再開する人間がいなくてもループは動き続けます。
+**Park (issue #365/#367).** 無人の`full`実行以外では、`amadeus-orchestrate park`がstageを進めずに`Parked` / `Parked At Stage` runtime markerを書きます。Intent autonomyは別途、`REPAIR_STALLED`や`NORM_CONFLICT`など明示的な安全停止理由へdurableなsuspended projectionを使います。Stop hookは発行済み`parked` directiveを全modeで許可し、activeな`full` grantはrevokeまたはcompleteまでworkflow実行状態とは独立してactiveを維持します。
 
 ### Revision loop
 
@@ -178,24 +178,22 @@ gate-start  →  [?] AwaitingApproval
 
 **承認時突合。** ゲート付き code-generation の approve で、エンジンは宣言バッチを監査証跡と突き合わせて読み直します — started 側は `SWARM_STARTED` と `SWARM_DEGRADED`(degrade したバッチも並列に走っており、サブエージェント floor へ落ちただけです)、completed 側は `SWARM_COMPLETED`、そして全シャードを横断して読みます。ある worktree で prepare され別の worktree で finalize されたバッチは、その行を 2 つのファイルに残すためです。計画が並列と宣言したのにファンアウトの記録がないバッチは approve を拒否し、最初の 1 件ではなく未充足のバッチ全数を名指しします。walking-skeleton ゲートステージは適用除外です。エンジン自身がそこでのファンアウトを拒否するため、SWARM 行がないことは逸脱ではなく遵守だからです。既知の制約が 1 つあります: 証跡は append-only で行はバッチ番号で照合されるため、replan 後は旧計画の SWARM 行が同じバッチ番号を充足しえます — 実績と compile 世代の相関付けは [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953) で追跡しています。
 
-**出口。** `redirect` には自律ラダーで答えます — `amadeus-bolt set-autonomy --mode autonomous`(Bolt ごとのゲートなし)または `--mode gated`(各バッチ境界にゲート)を実行し、`next` を再実行します。`violation` と拒否された approve には、実行ではなく計画を訂正して答えます。それらのユニットを直列にする依存関係を、その理由とともに `unit-of-work-dependency.md` に記録し、`amadeus-runtime.ts compile` を再実行してから `next` を再実行します。計画が正しく逸脱が意図的である場合は、先に裁定にかけてください。
+**出口。** `redirect`には`amadeus-bolt set-autonomy --mode none|semi|full`でIntent自律レベルを選択して答え、`next`を再実行します。`full`ではさらに、表示されたIntent-scoped grantを実在するhuman turnで確認する必要があります。`violation` と拒否された approve には、実行ではなく計画を訂正して答えます。それらのユニットを直列にする依存関係を、その理由とともに `unit-of-work-dependency.md` に記録し、`amadeus-runtime.ts compile` を再実行してから `next` を再実行します。計画が正しく逸脱が意図的である場合は、先に裁定にかけてください。
 
 **absence と defect。** ガードは判定の基準となる宣言幅を必要とするため、コンパイル済み DAG がない実行は決して violation になりません。コンパイルは DAG が欠ける 2 通りを区別します。正当な absence はちょうど 2 状態に限られます — スコープが units-generation をスキップする(`scope-skips-units`)、またはステージがまだ成果物を produce していない(`units-pending`)— そして理由を `bolt_dag_absence` に記録して exit 0 で終わります。それ以外はすべて defect で、コンパイルを失敗させ、グラフを書かず(stale なグラフは除去し)、非ゼロで終了します: units-generation completed 後の成果物欠落、不整形なエッジブロック、循環したエッジブロックです — [Runtime Graph](13-runtime-graph.ja.md) § "The Bolt/unit dependency DAG (`bolt_dag`)" を参照してください。
 
-### スタンディング委任グラント(チームモード、#1125)
+### 旧スタンディング委任グラント(#1125)
 
-委任承認(#671)は実 human turn 1回につきリモートゲートを1つだけ開きます。長時間のエージェントチーム実行ではリーダーが毎ゲートを再承認することになります。**スタンディング委任グラント**はこれを償却します。リーダーセッションが自身の台帳の実 `HUMAN_TURN` に接地したうえで、TTL の間、ゲートごとの人間ターンなしにチーム全体のステージゲート承認を開く時限的グラントを発行します。
+スタンディング委任グラントは認可機構として廃止されています。`grant-standing-delegation`は新規発行を拒否し、Intent-scopedな`none|semi|full`を案内します。既存の`GRANT_ISSUED`、`GRANT_REVOKED`、`GATE_AUTHORIZATION_SELECTED`観測はreplay・doctor診断用に読み取れますが、認可を生成・復元せず、`full` grantへ自動変換されません。
 
 ```
-amadeus-state grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
+amadeus-state grant-standing-delegation  # refused: retired
 amadeus-state revoke-standing-delegation --grant-id <8-hex id>
 ```
 
-- **チームモード専用。** `AMADEUS_OPERATING_MODE=team` が唯一の判定元です。ソロモードは各ゲートを直接承認し、発行を拒否します。ゲートでのグラント参照もチームモードでのみ行われます。
-- **デフォルト TTL は4時間**(`DEFAULT_STANDING_GRANT_TTL_MS`。通常の作業セッション長)。経過後はグラントが自動的に失効し、ゲートごとの承認へ戻ります。env オーバーライドは意図的に設けず、自動承認ウィンドウは固定・監査可能な定数のままにします。
-- **フェーズ境界ゲートはデフォルトで除外(EXCLUDED)。** `--include-phase-boundary` でオプトインします。**walking-skeleton ゲート**(`Skeleton Stance` が `on` の間の、スコープ実行列の先頭 construction ステージ)は決して自動被覆されません。残りの Bolt を走らせる前に人間がスケルトンを確認する必要があります。
-- **プロベナンスは信頼ではなく証明。** `GRANT_ISSUED` は委任と同じ発行元座標(`Issuer Space/Intent/Shard/Human Ts`)を保持し、ゲートは `verifyDelegatedProvenance` が接地の `HUMAN_TURN` の実在を発行元シャードで確認した場合にのみグラントを honour します。`GRANT_ISSUED` / `GRANT_REVOKED` は presence-protected で、一般の `amadeus-audit append` CLI は mint を拒否するため、実 human turn を伴うこれらの verb だけが書き込めます。
-- 実 human turn ではなくグラントがゲートを開いた場合、結果の `GATE_APPROVED`(または `DELEGATED_APPROVAL`)行に、どのグラントが承認したかを記録する `Grant Id` フィールドが載ります。`amadeus --doctor` は現在有効なグラント(scope・残 TTL・phase-boundary オプトイン・発行元)または `none` を報告します。
+- revokeは実在するhuman provenanceを要求したまま維持し、未失効の履歴recordを明示的に終了できます。
+- `amadeus --doctor`は旧観測をmigration診断として表示し、認可に使われないことを説明します。
+- `semi`はgrantを発行せず、従来のphase内gate省略用途を置き換えます。`full`は1つのIntent UUIDへ束縛された新しいIntent-scoped grantを使い、TTL・使用回数budgetを持ちません。発行、置換、行使、revoke、completeはcanonical audit transactionです。
 
 ---
 
@@ -263,7 +261,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` が却下理由を捕捉 |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` が leader セッションの人間承認を、リモートの conductor intent の監査ディレクトリへ記録。conductor のゲートが検証する発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` が leader セッションの人間却下を、リモートの conductor intent の監査ディレクトリへ記録。`DELEGATED_APPROVAL` の verb 対称ミラーで、reject ゲートのみを開く(#685) |
-| `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` が leader セッションの時限的スタンディンググラントを記録。TTL の間、ゲートごとの人間ターンなしにチームモードのステージゲートを開く。`Grant Id`、`Scope`、`Expires At`、`Includes Phase Boundary` と発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#1125) |
+| `GRANT_ISSUED` | Reserved legacy observation | 過去の常任グラント証跡は replay と doctor 診断のため読み取り可能なまま維持する。新しい権限は Intent-scoped autonomy transaction からのみ発行する |
 | `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` が未失効のスタンディンググラントを `Grant Id` で取り消す。leader 自身の台帳の実 human turn に接地(#1125) |
 | `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | ソロモードのルーターが、1回のステージルーティング試行で選択したスタンディンググラントそのもの — `Route Id`、`Stage`、`Grant Id` — を、キャリアが conductor に到達する前に記録する。後の approve が同じグラントをレシート所有者と照合して再検証できるようにするため(#1466) |
 
@@ -299,7 +297,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | 並列バッチ用の CSV bolt 名を受け付ける |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | 先行する `BOLT_STARTED` とペア |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts`(`fail` + `abort`) | `--succeeded-siblings` が並列バッチの生存者を捕捉。`abort` はサブ分類のため `Reason: aborted` フィールドを追加 |
-| `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | `Construction Autonomy Mode` フィールドをアトミックに更新。まずフィールドの存在を検証(audit-first) |
+| `AUTONOMY_MODE_SET` | Reserved legacy observation | 過去の Construction モード証跡は replay と doctor 診断のため読み取り可能なまま維持するが、権限の発行・復元には使わない |
 
 ### Session
 

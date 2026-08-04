@@ -30,7 +30,7 @@ Every stage (except the 3 stages in the Initialization phase: workspace-scaffold
 
 ### HARD STOP RULE (non-negotiable)
 
-When you present an approval gate question, you MUST end your turn immediately and wait for the user's explicit response. Do NOT call any tool until the user has typed their choice in a new message. An approval gate is a mandatory human checkpoint that cannot be inferred, auto-approved, or skipped.
+When a gate requires human adjudication (`none`, or a `semi` phase boundary), you MUST end your turn immediately after presenting it and wait for the user's explicit response. Do NOT call any tool until the user has typed their choice in a new message. A directive carrying `autonomy_auto_approve: true` is different: the audit-backed Intent authorization has already selected the gate effect, so after the full quality ritual the conductor reports approval without presenting a human question or synthesizing `HUMAN_TURN`.
 
 ### NO EMERGENT BEHAVIOR RULE
 Construction and Operation stages MUST use standardized 2-option completion messages. DO NOT create 3-option menus or other emergent navigation patterns. Only IDEATION and INCEPTION stages may conditionally include a 3rd option (to add a previously skipped stage). Any deviation from these patterns is a protocol violation.
@@ -94,38 +94,43 @@ If "Accept as-is" selected: log the decision in `<record>/audit/<host>-<clone>.j
 
 After the 2nd revision cycle (before the escape hatch activates), include a note in the approval question: "After one more revision, an 'Accept as-is' option will become available."
 
-### Construction Bolt gates (walking skeleton + ladder + halt-and-ask)
+### Intent-scoped autonomy at Construction gates
 
 Construction introduces three gate patterns that differ from the standard per-stage approval gate. See SKILL.md §CONSTRUCTION Flow for the complete orchestrator behaviour.
 
-**Walking-skeleton gate (first Bolt, always present)**
+**Walking-skeleton gate**
 
-The first Bolt in Construction (the walking skeleton) always presents a Bolt-level approval gate regardless of any autonomy-mode setting. The gate covers the Bolt's design artifacts and generated code together. Audit: emit `GATE_APPROVED` as usual; the enclosing `BOLT_COMPLETED` ties the gate to the Bolt.
+The first Bolt in Construction follows the same Intent mode as every other gate. `full` may auto-approve it under the active Intent grant after quality is READY; `none` and `semi` require the human. The gate covers the Bolt's design artifacts and generated code together. Audit: automatic approval records `AUTO_DECIDED`; the enclosing `BOLT_COMPLETED` ties the gate to the Bolt.
 
-**Ladder prompt (fires once, immediately after walking skeleton gate)**
+**Mode selection**
 
-After the walking skeleton's gate approves, present exactly one ladder prompt:
+Intent autonomy is selected explicitly by a real human and is not inferred from headless invocation or a previous answer:
 
 ```question
-prompt: "The walking skeleton shipped. How should the remaining Bolts run?"
+prompt: "How autonomously should this Intent run?"
 header: Autonomy
 multiSelect: false
 options:
-  - label: Continue autonomously
-    description: Run remaining Bolts without gates. Failures still halt and ask.
-  - label: Gate every Bolt
-    description: Present an approval gate after each Bolt (or parallel batch).
+  - label: none
+    description: A human decides gates and questions.
+  - label: semi
+    description: Phase-internal gates advance automatically; phase boundaries and questions wait for a human.
+  - label: full
+    description: An Intent-scoped grant decides stage/phase gates and questions through Intent completion.
 ```
 
-- Record the answer in `amadeus-state.md` as `Construction Autonomy Mode: autonomous` or `Construction Autonomy Mode: gated`.
-- Emit `AUTONOMY_MODE_SET` audit event with the chosen mode.
-- Session resume: if `Construction Autonomy Mode: unset` but the walking skeleton is already `[x]` complete, re-fire the ladder prompt before executing the next Bolt. The engine enforces this: `next` emits an `ask` (the ladder) and no run-stage / invoke-swarm until `amadeus-bolt set-autonomy --mode <autonomous|gated>` records the answer.
+- The default is always `none`.
+- Record `none` / `semi` through `amadeus-bolt set-autonomy --mode <mode>`. For `full`, first run `amadeus-bolt preview-autonomy [--policies-file <normalized-json>]`, display its principal, grant scope, and normalized pre-decision policies, then wait for explicit human confirmation. After that real human turn, run `amadeus-bolt set-autonomy --mode full --confirmed-display-digest <preview-digest> [--policies-file <same-file>]`. The user supplies policies as natural language; the conductor, not the user, owns the normalized JSON carrier.
+- The canonical authorization is the Intent audit. `Construction Autonomy Mode` is only an internal scheduling projection; legacy values never authorize a gate.
+- Legacy standing delegation remains replayable for migration diagnostics but cannot authorize new work.
 
-**Subsequent Bolt gate (per autonomy mode)**
+**Subsequent gates (per Intent mode)**
 
-For Bolts after the walking skeleton, the Bolt-level gate is presented only if `Construction Autonomy Mode: gated`. In `autonomous` mode the gate is skipped. For parallel batches the gate covers every Bolt in the batch (single gate, not one per Bolt).
+`none` requires a human for stage and phase gates. `semi` auto-approves gates within a phase but requires a human at a phase boundary. `full` auto-approves both under the active Intent grant. For parallel batches, execution may still fan out; authorization mode and execution shape are separate axes.
 
-`gated` selects the approval FREQUENCY, not the execution shape: a parallel batch still fans out as a swarm under `gated`, and the engine presents the batch's single gate as an `ask` once the batch is complete and before the NEXT batch is offered. `amadeus-bolt approve-batch --batch <n>` records the approval (state field `Swarm Gated Batch Approvals`, audited as `GATE_APPROVED`); until it is recorded the engine will not offer the following batch. The FINAL batch owes no batch-end gate — the stage's own gate on the all-covered re-entry covers it, so gates never stack.
+Quality failure is never approval. In `semi` and `full`, the conductor writes the closed blocking observations and its fresh replan context to a machine-local carrier and runs `amadeus-bolt observe-quality --input <carrier>` before each repair. `repair` / `replanned` reruns the same closed checks; `READY` may proceed; `parked` is a hard stop whose result envelope must be surfaced without another LLM repair attempt. The first-party Quality Repair contribution and Loop Monitor persist the evidence history, replan once at the first threshold, and eventually park nonproductive repair as `REPAIR_STALLED` while retaining an active `full` grant. After the user explicitly retries, or after strictly improved evidence exists, the conductor writes a machine-local resume carrier and runs `amadeus-bolt resume-quality --input <carrier>`; only a `resumed` result restarts the forwarding loop. The user is never asked to author carrier JSON.
+
+For a question under `full`, the conductor writes the normalized question, stable option IDs, applicable norm/history facts, recommendation, and (when available) the native solo-election result to a machine-local JSON carrier, then runs `amadeus-bolt decide-question --input <carrier>`. Use the returned `decided.effect.optionId` as the answer and record it in the questions file; `parked` is a hard stop, and any `human-required`, `conflict`, or `aborted` result fails closed. The user is never asked to author JSON. When no election result is available, the Core records loud degradation before using the recommendation.
 
 **Halt-and-ask on failure**
 
@@ -448,7 +453,7 @@ When the orchestrator runs a Bolt in phased mode:
 4. **A single Bolt-level answers gate** confirms the Bolt's answers across all stages before design artifacts begin.
 5. **Design artifacts**: Stage files execute in ARTIFACT-ONLY mode — reading the approved answers and generating artifacts. No human interaction during generation.
 6. **Code generation (3.5)**: Per-Unit Task delegation to the amadeus-developer-agent. The stage file's per-Unit approval gate is **suppressed by the orchestrator** — a single Bolt-level gate (or batch-level gate for parallel batches) replaces it.
-7. **Bolt gate**: Walking skeleton — always present. Subsequent Bolts — per `Construction Autonomy Mode`. Failure always halts and asks regardless of mode. See SKILL.md §CONSTRUCTION Flow for the ladder prompt, autonomy mode, and halt-and-ask details.
+7. **Bolt gate**: Every gate follows `none/semi/full`, including the Walking Skeleton. Quality failure enters repair rather than approval; nonproductive repair parks with a typed reason. See SKILL.md §CONSTRUCTION Flow for the Intent autonomy and halt/repair details.
 
 **Engine-driven per-unit iteration.** The orchestration engine now drives the per-Unit loop for the inline per-Unit design stages (functional-design, nfr-requirements, nfr-design, infrastructure-design) the same way it always has for code-generation: on a `next` that lands on an in-flight per-Unit stage (off the swarm path), the engine emits ONE `run-stage` directive per Unit, in Bolt build order, carrying the resolved Unit name in `directive.unit` and its artifact paths. `directive.produces` contains every output candidate; `directive.optional_produces` identifies the subset to write only when the matching `CONDITIONAL` stage instruction applies. The per-Unit ARTIFACTS on disk are the coverage ledger (a Unit is done for a stage once all required frontmatter `produces` exist under `construction/<unit>/<stage>/`; `optional_produces` may be absent); the engine substitutes the next uncovered Unit on each `next`. The stage's per-Unit gate is **suppressed** (`gate: false`) on every not-yet-covered Unit, and the stage's real gate is presented exactly once, on the re-entry after the LAST Unit's artifacts land on disk, so a single stage-level approval covers all Units and cannot be reached until every Unit is built (the same "per-Unit gate suppressed, single gate replaces it" rule point 6 already states for code-generation, now applied across all five per-Unit stages, and enforced deterministically: `report --result approved` on a not-yet-completed per-Unit stage is refused while any Unit is uncovered). A scope with no compiled Unit list degrades to one single-iteration directive (unchanged behaviour).
 
@@ -814,7 +819,7 @@ Key terms used throughout AI-DLC documentation:
 | **Service** | A deployable process or container (API server, worker, frontend app). |
 | **Stage** | One of the 32 discrete steps in the lifecycle. Each stage has a lead agent, defined inputs/outputs, and follows the stage protocol. Stages are numbered by phase (e.g., 1.1, 2.4, 3.5). |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
-| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Always gated and interactive so you can confirm the overall shape before the rest of Construction runs. The ladder prompt fires immediately after approval. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the selected Intent autonomy mode; only `full` may auto-approve it under an active grant. |
 <!-- glossary:projection:end -->
 
 ---
@@ -954,8 +959,17 @@ The canonical user-visible `question` is rendered by
 message in array order. Present that `question` verbatim; do not substitute a
 summary or reconstruct it in a harness adapter.
 
+Immediately before presenting the question, record its protected presentation
+through `amadeus-log.ts advisory-decision --stage <stage> --instances <csv>`.
+The tool validates the exact open advisory identities and emits the existing
+`DECISION_RECORDED` event with a digest of the canonical question. An ordinal or
+label is accepted only from the next grounded `HUMAN_TURN` in the same audit
+shard. Any intervening human turn expires the presentation. Pending advisory
+state alone is never proof that this question was shown.
+
 The engine persists one identity per pending advisory and accepts a choice only
-from the trusted human-prompt hook. Re-run `next` after the human answers. A
+from the trusted human-prompt hook after that protected presentation. Re-run
+`next` after the human answers. A
 risk defer releases only that checkpoint. A run-now answer returns
 `run_required: true` plus one or more structured `formal_checks`; execute each
 `command` exactly as supplied, then re-run `next`. Only a complete, non-partial,

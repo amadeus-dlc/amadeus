@@ -19,6 +19,8 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
+import { projectIntentAutonomyStatus } from "./amadeus-intent-autonomy-runtime.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
@@ -316,6 +318,22 @@ function handleVersion(): void {
 // status
 // ---------------------------------------------------------------------------
 
+function renderAutonomyStatus(
+  autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null,
+): string {
+  if (autonomy === null) return "Autonomy:       none (audit projection unavailable)";
+  return [
+    `Autonomy:       ${autonomy.autonomyMode}`,
+    `Grant:          ${autonomy.grant === null ? "none" : `${autonomy.grant.id} (${autonomy.grant.state})`}`,
+    `Grant Scope:    ${autonomy.grant?.scopeFingerprint ?? "none"}`,
+    `Workflow State: ${autonomy.workflowExecutionState ?? "completed"}`,
+    `Policies:       ${autonomy.grant?.policyCount ?? 0}`,
+    `Unreviewed:     ${autonomy.unreviewedAutoDecisionCount}`,
+    `Stop Reason:    ${autonomy.suspendedReason ?? "none"}`,
+    `Resume:         ${autonomy.resumeCondition === null ? "none" : JSON.stringify(autonomy.resumeCondition)}`,
+  ].join("\n");
+}
+
 function handleStatus(projectDir: string, flags: Record<string, string>): void {
   // --intent <record> / --space <name> target a specific intent's status
   // (vision §5); omitted -> the active record.
@@ -345,6 +363,12 @@ To get started:
   const activeAgent = getField(content, "Active Agent") || "None";
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
+  const autonomyProjection = readProductionAutonomyProjection(
+    projectDir,
+    flags.intent,
+    flags.space,
+  );
+  const autonomy = autonomyProjection === null ? null : projectIntentAutonomyStatus(autonomyProjection);
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
@@ -440,6 +464,24 @@ To get started:
     phaseProgress += `  ${(phaseLabels[p] || p).padEnd(16)} ${bar} ${done}/${phaseCheckboxes.length}\n`;
   }
 
+  if (flags.json === "true") {
+    process.stdout.write(`${JSON.stringify({
+      project,
+      scope,
+      phase,
+      currentStage,
+      status: statusLine,
+      activeAgent,
+      completion: { completed, total, skipped, percent: pct },
+      lastCompleted,
+      nextStage,
+      autonomy,
+    })}\n`);
+    return;
+  }
+
+  const autonomyLines = renderAutonomyStatus(autonomy);
+
   const output = `AI-DLC Workflow Status
 ==============================
 Project:        ${project}
@@ -449,6 +491,7 @@ Current Stage:  ${stageDisplay}
 Status:         ${statusLine}
 Active Agent:   ${activeAgent}
 Completion:     ${completed}/${total} stages (${pct}%)${skipped > 0 ? ` — ${skipped} skipped` : ""}
+${autonomyLines}
 
 Phase Progress:
 ${phaseProgress}
@@ -4592,6 +4635,8 @@ ${stageProgress}
 - **Current Stage**: ${firstPostInit}
 - **Next Stage**: ${nextStageName}
 - **Status**: Running
+- **Intent Autonomy Mode**: none
+- **Intent Grant**: none
 - **Construction Autonomy Mode**: unset
 - **Last Updated**: ${ts}
 
