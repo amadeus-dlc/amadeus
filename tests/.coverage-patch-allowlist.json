@@ -1,5 +1,236 @@
 [
   {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createInitialGoalLineage",
+      "fingerprint": "sha256:aa9db9fd606387f2fc77dde113fc248ac0677b6ee629199547afb5955253769d",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body and its validation are covered directly by t427 unit tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createRevisionZeroLineage",
+      "fingerprint": "sha256:643e898cf6780993049f58b618db994663ac9a2c1af80cf72601ce959528363d",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Initial and legacy revision-zero bodies and validation are covered directly by t427 unit tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createLegacyGoalLineage",
+      "fingerprint": "sha256:e4749fa3fae250f2a0b7a18f1bbe36b4c5be389ded28f11019b107bb9bed3281",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy lineage creation and round-trip validation are covered directly by t427 unit tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "goalCompletionContextDigest",
+      "fingerprint": "sha256:ba5bff0b9100b74358805c0b8a13a8de2d3982a8a5b0c6fb440e1ad4706a6ef5",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Context digest creation is covered directly by t427 unit and workflow authorization tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "authorizeGoalCompletion",
+      "fingerprint": "sha256:c168e473d32f10a0a5afdbe778d616e2309a0fe38304d6afc36ff315304f2b0a",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Every authorization acceptance and rejection branch is covered directly by t427 unit tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createGoalChangeProposal",
+      "fingerprint": "sha256:18aca6abf94a5d3e152c090556fcff051692d855b40c420a6994d9bfcbc13dd5",
+      "anchorLines": 9,
+      "targetLines": "1-9"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Proposal creation, parsing, persistence, collision, tamper, and approval paths are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createLegacyGoalMigrationProposal",
+      "fingerprint": "sha256:9415851a8974065f9d2127e99522db74335590e384767224d5628a208c1fd7c4",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy proposal creation, paired evidence validation, persistence, collision, and tamper paths are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "buildApprovedGoalRevision",
+      "fingerprint": "sha256:66735cde53f940fb6343fa9df856d9695d18e6de9bd87d089b274c92d8661f54",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Current, stale, ordinary, and legacy-reconstruction approval paths are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "approveGoalRevision",
+      "fingerprint": "sha256:ec662b2ef0cee60e6ee0a5685f6be9d90be76de3c5946b65574c517c759c1c87",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Persisted proposal approval and lineage write-back are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createGoalReconciliationReceipt",
+      "fingerprint": "sha256:39e25bde59f93ca6f7793b14b930c2b7ba282f075a2430ff79e87ef850336c4f",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Receipt creation, persistence, evidence binding, and complete-current-Goal item validation are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "selector": {
+      "function": "authorizeWorkflowCompletion",
+      "fingerprint": "sha256:804ac7039322be3ad4f3a8f2c471be032de8a996ad673ac719a8778a607f2a3e",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Successful, non-final, invalid-scope, projection-mismatch, and stale-receipt paths are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "selector": {
+      "function": "authorizePersistedCompletedWorkflow",
+      "fingerprint": "sha256:3fc260a67f73826372182342cc0b30149608a397747ad0fde39651be606b73cf",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Successful persisted authorization and missing Last Completed Stage rejection are covered directly by t427 unit tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-audit.ts",
+    "selector": {
+      "function": "appendLifecycleAuditEntryUnlocked",
+      "fingerprint": "sha256:73cf0edc195997e6e54fb79d7ad1b9294d5ba52a7398fc23519a3a63efb577d8",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These four added lines are TypeScript-only event union members and have no runtime statements for Bun to attribute. The writer behavior is exercised in-process by t205 and t258, while the new Goal event variants are exercised through the shipped CLI by t428 and t429.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "emitMirrorBoundaryIfNeeded",
+      "fingerprint": "sha256:13bdf3783dbdfcc0df1fc168d85992605e7d5a716b4a70e1cdebfc6ed7498fd1",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 integration; spawned execution is not attributed to parent Bun LCOV.",
+    "expiry": "remove when record resolution and directive emission are injectable in-process or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleNext",
+      "fingerprint": "sha256:e84147b94fbbd5941295e231c2d1fd4937ceb7aa9d6b57c7430575d04e8fdf31",
+      "anchorLines": 18,
+      "targetLines": "1-18"
+    },
+    "reason": "Completed-workflow recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration. handleNext is a process-bound dispatcher, so Bun does not attribute its spawned execution to parent LCOV.",
+    "expiry": "remove when handleNext receives injected state, authorization, and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleReport",
+      "fingerprint": "sha256:75cb03a3307078259f5a84718528edd83c2e8a0f45f1d04f065268c0647c2476",
+      "anchorLines": 12,
+      "targetLines": "1-12"
+    },
+    "reason": "Final-report recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration and t265 E2E. handleReport is executed in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleReport receives injected state, authorization, and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "emitWorkflowCompletionAuditRows",
+      "fingerprint": "sha256:5d99e8e2c8db4268cb4d1c0274c8613e861f53443b74596a12e8adaf5f92e1cc",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This added line is a TypeScript-only receipt property in the function parameter type and has no runtime statement for Bun to attribute. Workflow completion audit behavior is exercised through t427 integration.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "emitWorkflowCompletionAuditRows",
+      "fingerprint": "sha256:ecb613100b94fe3ee6044af090b23deff4d92ff2a9590dd0e318c34241c0eff4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The optional human-ruling audit projection is exercised by the shipped Goal reconciliation CLI journey in t427 integration. The state command runs as a child process and its line is not attributed to parent Bun LCOV.",
+    "expiry": "remove when workflow completion audit emission has an in-process port or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:dad2087b02664f45043c3d7697af749d3f3d25a6a5c7912ef234f47b9ceabc70",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This fail-closed CLI guard is reachable only after target resolution but before the Intent record adapter resolves. complete-workflow success and refusal contracts are exercised through t427 integration; the private process-exit boundary is not parent-LCOV visible.",
+    "expiry": "remove when operationRecordDir and error exit handling are injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "approveUnderLock",
+      "fingerprint": "sha256:049b3c1fd35044f2b853b8aba12d7f87754434e0f468a8462c0e16b0623dc0bf",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Final approval preparation is asserted by the generated state CLI test 'grant-backed final approval defers completion and preserves the active non-owner Intent' in t265 integration. Spawned state mutation is outside parent Bun LCOV.",
+    "expiry": "remove when approval state commits are driven through an in-process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "approveUnderLock",
+      "fingerprint": "sha256:b641456b263d49f0e79992384c030bee31741f8c1bc91b61df7061bc19f8cb84",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The completion-pending instance result is asserted by the generated state CLI in t265 integration. The result row is emitted by a child process and is not parent-LCOV visible.",
+    "expiry": "remove when approval output is driven through an in-process port or Bun merges child-process coverage"
+  },
+  {
     "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
     "selector": {
       "function": "<module>",
