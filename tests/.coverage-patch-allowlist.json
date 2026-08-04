@@ -6306,5 +6306,82 @@
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "commitProductionQualityObservation",
+      "fingerprint": "sha256:e66ef456603551084bf53d76c582e489e4766fe62d369cf74bb5a8fed018e0d0",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t435 drives the complete production lifecycle in-process and also verifies the public CLI boundary; this residual line is a defensive CONFLICT/INCOMPLETE or judge-error arm not naturally reachable in the valid lifecycle.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "commitProductionQualityObservation",
+      "fingerprint": "sha256:e4b2391478392a4b8409f95e1cebfd60ac1b387858ed88a29d787853b1282886",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "t435 drives the complete production lifecycle in-process and also verifies the public CLI boundary; this residual line is a defensive CONFLICT/INCOMPLETE or judge-error arm not naturally reachable in the valid lifecycle.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "readStatusAutonomy",
+      "fingerprint": "sha256:f403d872a7c6cee0fede5295605bf6775eff271a41afdfbac054a39998c7df81",
+      "anchorLines": 9,
+      "targetLines": "1-9"
+    },
+    "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:b09a3d03be778e3280ef917f37444dfe4ef251706c207c5f30cdb22f1b56b4e8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:c36ea98b326f7d7e8379d660735f79464e3dd0b440a90ca8ec6be08b2745b9a0",
+      "anchorLines": 14,
+      "targetLines": "1-14"
+    },
+    "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:3d9a0588e96005fc7ba0a7ffc9391bc655f6fe447cbb29990abd6f80c8f7c724",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "handleStatus",
+      "fingerprint": "sha256:3503446ade1d9ab03ad5de5e19f4b3058274ee9a80f4b02ce794d0c5ca153d8c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The status command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or status rendering that Bun does not attribute to the parent LCOV report.",
+    "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]

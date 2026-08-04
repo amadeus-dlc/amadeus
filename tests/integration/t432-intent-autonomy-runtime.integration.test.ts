@@ -395,6 +395,51 @@ describe("Intent autonomy durable coordinator", () => {
     expect(coordinator.readProjection().currentGrant?.state).toBe("active");
   });
 
+  test("a monitor-latch input on a non-REPAIR_STALLED resume is rejected", () => {
+    const { coordinator } = fullRuntime();
+    const pending: ResumeCondition = {
+      kind: "human-or-capability",
+      identity: "human-resume-1",
+      status: "pending",
+      evidenceFingerprint: null,
+    };
+    const parked = coordinator.park({
+      triggerOccurrenceId: "human-trigger-1",
+      reason: "AWAITING_HUMAN",
+      resumeCondition: pending,
+    });
+    expect("result" in parked && parked.result.outcome).toBe("parked");
+    expect(coordinator.resume({
+      triggerOccurrenceId: "human-trigger-1",
+      condition: { ...pending, status: "satisfied" },
+      basis: "human-retry",
+      loopMonitor: { clearedLatchReceipt: { identity: "loop-latch-1", verified: true } },
+    })).toEqual({ error: "monitor-latch-not-applicable" });
+  });
+
+  test("a cleared-latch receipt for a different latch identity is rejected", () => {
+    const { coordinator } = fullRuntime();
+    const pending: ResumeCondition = {
+      kind: "quality-evidence-or-human",
+      identity: "quality-resume-2",
+      status: "pending",
+      evidenceFingerprint: autonomyDigest("quality-before-2"),
+    };
+    const parked = coordinator.park({
+      triggerOccurrenceId: "quality-trigger-2",
+      reason: "REPAIR_STALLED",
+      resumeCondition: pending,
+      monitorLatchIdentity: "loop-latch-2",
+    });
+    expect("result" in parked && parked.result.outcome).toBe("parked");
+    expect(coordinator.resume({
+      triggerOccurrenceId: "quality-trigger-2",
+      condition: { ...pending, status: "satisfied", evidenceFingerprint: autonomyDigest("quality-after-2") },
+      basis: "evidence-change",
+      loopMonitor: { clearedLatchReceipt: { identity: "other-latch", verified: true } },
+    })).toEqual({ error: "monitor-latch-clear-receipt-mismatch" });
+  });
+
   test("completion replay returns the original transaction receipt", () => {
     const { coordinator, repository } = fullRuntime();
     const completed = coordinator.complete();
