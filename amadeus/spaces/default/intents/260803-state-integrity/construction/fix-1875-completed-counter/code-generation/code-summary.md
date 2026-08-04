@@ -45,6 +45,16 @@ approve 検証ケースは、完了済み SKIP 行を含み `Completed` が raw 
 
 approve 検証の反証 fixture は、旧 raw 検証なら `null`、共有 writer 基準なら `completed count` となることを同一 state 上で比較する。新たな本番 test-only export は追加していない。
 
+## GitHub CI 回帰と是正
+
+GitHub CI run `30917084332` では、t265 の final-report prepare 16 件と t361 の terminal-completion crash recovery 7 件が回帰した。
+
+根本原因は、plan を変更しない state transition が `rebuildDerivedPlanFieldsFromState(...).content` を採用し、`Completed` に加えて `Stages to Execute`、`Stages to Skip`、`Total Stages` まで再描画したことにある。legacy state の数値だけの `Stages to Skip` が注釈付き表現へ変わり、`workflowCompletionContextDigest` が identity とする execution projection bytes を変更した。その結果、approve 後の completion prepare と terminal replay が既存の goal reconciliation receipt を `receipt completion context has changed` として拒否した。
+
+是正として state adapter を `rebuildCompletedFieldFromState` へ改名し、full `rebuildDerivedPlanFields` で正準 `completedCount` を算出した後、返却する `content` は元 state の `Completed` だけを `setField` する Completed-only adapter にした。state transition、jump、approve 検証、workflow completion はこの adapter を使う。plan 自体を変更する init、scope-change、recompose、resync は引き続き full `rebuildDerivedPlanFields` を使う。
+
+この是正後のローカルテスト／build は指示により未実行であり、修正後の GitHub CI で検証する。
+
 ## 検証結果
 
 - レビュー修正前の `bun run typecheck`: exit 0

@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   getField,
-  rebuildDerivedPlanFieldsFromState,
+  rebuildCompletedFieldFromState,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
@@ -182,7 +182,7 @@ describe("Completed canonical counter", () => {
     const legacyIssue = getField(content, "Completed") === String(rawCompletedCount(content))
       ? null
       : "completed count";
-    const canonical = rebuildDerivedPlanFieldsFromState(content).content;
+    const canonical = rebuildCompletedFieldFromState(content).content;
     const canonicalIssue = getField(content, "Completed") === getField(canonical, "Completed")
       ? null
       : "completed count";

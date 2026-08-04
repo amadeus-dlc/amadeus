@@ -61,7 +61,7 @@ import {
   readCurrentSessionId,
   readIntentRegistry,
   readStateFile,
-  rebuildDerivedPlanFieldsFromState,
+  rebuildCompletedFieldFromState,
   recordDirMatches,
   requireChanged,
   recoverBoltDag,
@@ -1467,7 +1467,7 @@ export function handleCheckbox(args: string[]): void {
     );
   }
 
-  const rebuilt = rebuildDerivedPlanFieldsFromState(content);
+  const rebuilt = rebuildCompletedFieldFromState(content);
   content = rebuilt.content;
   const completedCount = rebuilt.completedCount;
 
@@ -2298,7 +2298,7 @@ export function handleAdvance(args: string[]): void {
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "Next Action", `Execute ${nextStage.name}`);
 
-  const rebuilt = rebuildDerivedPlanFieldsFromState(content);
+  const rebuilt = rebuildCompletedFieldFromState(content);
   content = rebuilt.content;
   const completedCount = rebuilt.completedCount;
 
@@ -2380,7 +2380,7 @@ export function handleFinalize(args: string[]): void {
   );
 
   // 2. Sync derived plan fields to the effective EXECUTE plan.
-  const rebuilt = rebuildDerivedPlanFieldsFromState(content);
+  const rebuilt = rebuildCompletedFieldFromState(content);
   content = rebuilt.content;
   const completedCount = rebuilt.completedCount;
 
@@ -2555,7 +2555,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       setCheckbox(validateStageState(content), completedSlug, "completed"),
       `complete-workflow:${completedSlug}`,
     );
-    content = rebuildDerivedPlanFieldsFromState(content).content;
+    content = rebuildCompletedFieldFromState(content).content;
     content = setField(content, "Status", "Completed");
     if (completion !== null) {
       content = setOrInsertField(
@@ -2572,7 +2572,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     content = setField(content, "Next Action", "Workflow complete");
     content = markPhaseVerified(content, completedStage.phase);
   }
-  const completedCount = rebuildDerivedPlanFieldsFromState(content).completedCount;
+  const completedCount = rebuildCompletedFieldFromState(content).completedCount;
 
   emitWorkflowCompletionAuditRows({
     pd,
@@ -3397,7 +3397,7 @@ function approvalNextStateIssue(
   if (getField(content, "Last Completed Stage") !== slug) return "last completed stage";
   if (getField(content, "Last Updated") !== timestamp) return "last updated";
   const canonicalCompleted = getField(
-    rebuildDerivedPlanFieldsFromState(content).content,
+    rebuildCompletedFieldFromState(content).content,
     "Completed",
   );
   if (getField(content, "Completed") !== canonicalCompleted) return "completed count";
@@ -3445,7 +3445,7 @@ function approveUnderLock(
     `approve:${slug}`,
   );
   content = setField(content, "Last Updated", timestamp);
-  content = rebuildDerivedPlanFieldsFromState(content).content;
+  content = rebuildCompletedFieldFromState(content).content;
   content = setField(content, "Last Completed Stage", slug);
   const completionInstance = `terminal:${slug}`;
   if (deferWorkflowCompletion) {

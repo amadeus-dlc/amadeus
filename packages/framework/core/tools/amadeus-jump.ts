@@ -22,7 +22,7 @@ import {
   parseCheckboxes,
   parseStateStageSuffixes,
   readStateFile,
-  rebuildDerivedPlanFieldsFromState,
+  rebuildCompletedFieldFromState,
   requireChanged,
   resolveProjectDir,
   resolveStage,
@@ -560,7 +560,7 @@ export function handleExecute(args: string[]): void {
   content = setField(content, "In Progress", targetSlug);
   content = setField(content, "Next Action", `Execute ${targetStage.name}`);
 
-  const rebuilt = rebuildDerivedPlanFieldsFromState(content, graph);
+  const rebuilt = rebuildCompletedFieldFromState(content, graph);
   content = rebuilt.content;
   const completedCount = rebuilt.completedCount;
 

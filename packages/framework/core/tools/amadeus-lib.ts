@@ -5785,18 +5785,22 @@ export function rebuildDerivedPlanFields(
   return { content: next, executeStages, completedCount };
 }
 
-/** Rebuild derived fields from the effective plan recorded in a state file. */
-export function rebuildDerivedPlanFieldsFromState(
+/** Rebuild only Completed from the effective plan recorded in a state file. */
+export function rebuildCompletedFieldFromState(
   content: string,
   graph: StageEntry[] = loadStageGraph(),
-): DerivedPlanFields {
+): Pick<DerivedPlanFields, "content" | "completedCount"> {
   const scope = getField(content, "Scope") ?? "";
   const scopeStages = loadScopeMapping()[scope]?.stages ?? {};
   const stateOverrides = parseStateStageSuffixes(content);
-  return rebuildDerivedPlanFields(content, graph, (slug) => {
+  const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) => {
     const action = stateOverrides.get(slug) ?? scopeStages[slug];
     return action === "EXECUTE" ? "EXECUTE" : "SKIP";
   });
+  return {
+    content: setField(content, "Completed", String(rebuilt.completedCount)),
+    completedCount: rebuilt.completedCount,
+  };
 }
 
 // --- Post-compose state re-sync (#1849) --------------------------------------
