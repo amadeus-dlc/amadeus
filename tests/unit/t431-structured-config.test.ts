@@ -158,6 +158,22 @@ describe("t431 structured config", () => {
     expect(outcome.kind).toBe("invalid");
   });
 
+  test("rejects flat dotted keys instead of silently using defaults", () => {
+    const outcome = parseAmadeusConfigLayers([
+      present("project", { "intent-mirror.github.issue.mode": "auto" }),
+    ]);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind !== "invalid") return;
+    expect(outcome.issues).toContainEqual({
+      kind: "invalid-value",
+      layer: "project",
+      path: "amadeus/project.json",
+      key: "intent-mirror.github.issue.mode",
+      actualType: "unknown key intent-mirror.github.issue.mode",
+      expected: "documented structured configuration path",
+    });
+  });
+
   test("normalizes project targets and rejects duplicate identities", () => {
     const rawTarget = {
       project: "Amadeus-DLC/5",

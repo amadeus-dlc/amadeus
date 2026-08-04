@@ -598,9 +598,14 @@ function collectSchemaIssues(
 ): void {
   for (const [key, child] of Object.entries(value)) {
     const path = prefix === "" ? key : `${prefix}.${key}`;
-    if (path === "observability" || CONFIG_LEAF_PATHS.has(path as AmadeusConfigKey)) {
+    if (path === "observability") {
       continue;
     }
+    if (key.includes(".")) {
+      appendUnknownPathIssue(key, path, prefix, issues);
+      continue;
+    }
+    if (CONFIG_LEAF_PATHS.has(path as AmadeusConfigKey)) continue;
     if (!CONFIG_PREFIX_PATHS.has(path)) {
       appendUnknownPathIssue(key, path, prefix, issues);
       continue;
