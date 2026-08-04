@@ -42,6 +42,8 @@ import {
 import {
   createTestProject,
   DEFAULT_INTENT_UUID,
+  seedGoalReceiptForFinalStage,
+  seedStateFile,
   seededRecordDir,
 } from "../harness/fixtures.ts";
 
@@ -649,6 +651,33 @@ describe("workflow completion authorization", () => {
 
   test("rejects non-final, projection-mismatched, stale, and incomplete completion state", () => {
     const fixture = authorizedFixture();
+    const flatRecordDir = join(fixture.projectDir, "amadeus-docs");
+    writeInitialGoalLineage(flatRecordDir, fixture.lineage);
+    writeGoalReconciliationReceipt(flatRecordDir, fixture.receipt);
+    expect(() => authorizeWorkflowCompletion({
+      projectDir: fixture.projectDir,
+      recordDir: flatRecordDir,
+      content: fixture.content,
+      completedSlug: "build-and-test",
+      completionInstance: fixture.completionInstance,
+    })).toThrow(/not a registered Intent directory/i);
+
+    const aliasRecordDir = join(
+      temporaryRecord(),
+      "foreign-space",
+      "intents",
+      "foreign-record",
+    );
+    writeInitialGoalLineage(aliasRecordDir, fixture.lineage);
+    writeGoalReconciliationReceipt(aliasRecordDir, fixture.receipt);
+    expect(() => authorizeWorkflowCompletion({
+      projectDir: fixture.projectDir,
+      recordDir: aliasRecordDir,
+      content: fixture.content,
+      completedSlug: "build-and-test",
+      completionInstance: fixture.completionInstance,
+    })).toThrow(/does not match the Intent registry/i);
+
     expect(() => authorizeWorkflowCompletion({
       projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
@@ -723,6 +752,32 @@ describe("workflow completion authorization", () => {
       completedSlug: "build-and-test",
       completionInstance: fixture.completionInstance,
     })).toThrow(/another Intent/i);
+  });
+
+  test("fixture reconciliation covers every persisted success metric", () => {
+    const projectDir = createTestProject();
+    temporaryDirectories.push(projectDir);
+    const recordDir = seededRecordDir(projectDir);
+    seedStateFile(projectDir, "state-fix-final-construction.md");
+    const lineage = createInitialGoalLineage({
+      intentId: DEFAULT_INTENT_UUID,
+      statement: "Ship a verified goal guard",
+      successMetrics: ["Every completion is receipt-bound"],
+      scope: "fix",
+      createdAt: "2026-08-04T00:00:00.000Z",
+    });
+    writeInitialGoalLineage(recordDir, lineage);
+
+    seedGoalReceiptForFinalStage(projectDir, "build-and-test");
+    const receipt = readGoalReconciliationReceipt(
+      recordDir,
+      "terminal:build-and-test",
+    );
+
+    expect(receipt.items.map((item) => item.id)).toEqual([
+      "goal-statement",
+      "success-metric-1",
+    ]);
   });
 });
 

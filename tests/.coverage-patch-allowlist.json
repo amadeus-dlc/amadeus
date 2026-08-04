@@ -176,6 +176,39 @@
     "expiry": "remove when handleReport receives injected state, authorization, and output ports"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "completedRecoveryError",
+      "fingerprint": "sha256:42fe01d57b0d1c256d360f7fa01bd12ce178df7ef1053a8fe71b94e4b8f9e9f6",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "The legacy migration recovery text is asserted through both generated orchestrator CLI recovery paths in t429 integration. This private formatter is reached only inside spawned dispatchers, so Bun does not attribute it to parent LCOV.",
+    "expiry": "remove when completed-workflow recovery is injected and tested in-process or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleNext",
+      "fingerprint": "sha256:7e7dedd64f9db58e4473654f7c8d8f205b17603e3986e70988732379a17c3119",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The completed-workflow recovery refusal and legacy migration instruction are asserted through the generated next CLI in t429 integration. handleNext executes in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleNext completion recovery receives injected authorization and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleReport",
+      "fingerprint": "sha256:ef58860e329655f59e7751821aec6db6268169e42fda91f5c5bef6774cdc909e",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The already-completed report recovery refusal and legacy migration instruction are asserted through the generated report CLI in t429 integration. handleReport executes in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleReport completion recovery receives injected authorization and output ports"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "emitWorkflowCompletionAuditRows",
