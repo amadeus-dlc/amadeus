@@ -15,6 +15,7 @@ import {
   createMemoryQualityRepairRepository,
   createQualityRepairCoordinator,
   renderQualityRepairStatus,
+  type QualityRepairTransaction,
   type QualityReplanPort,
 } from "../../packages/framework/core/tools/amadeus-quality-repair-runtime.ts";
 import {
@@ -24,6 +25,7 @@ import {
 import type {
   JudgeDispatchRequest,
   JudgePort,
+  VerifiedHumanTurn,
 } from "../../packages/framework/core/tools/amadeus-loop-monitor-runtime.ts";
 
 const trace = { traceId: "0123456789abcdef0123456789abcdef", spanId: "0123456789abcdef" };
@@ -76,6 +78,30 @@ function batch(
   };
 }
 
+function sensorBatch(
+  graphRevision: string,
+  previousSnapshot: QualityEvidenceSnapshot | null,
+  status: "failed" | "passed",
+): QualityEvidenceBatchInput {
+  return {
+    providerId: "quality-evidence-v1",
+    intentUuid: "intent-1",
+    monitorId: "quality-repair",
+    stageInstanceId: "sensor-stage-1",
+    boltId: "sensor-bolt-1",
+    graphRevision,
+    previousSnapshot,
+    observations: [{
+      kind: "sensor",
+      sensorId: "type-check",
+      blocking: true,
+      status,
+      outputId: "typecheck-output",
+      terminalReceipt: `sha256:${"9".repeat(64)}`,
+    }],
+  };
+}
+
 function judgePort(): { readonly port: JudgePort; readonly requests: JudgeDispatchRequest[] } {
   const requests: JudgeDispatchRequest[] = [];
   return {
@@ -117,6 +143,35 @@ const replanPort: QualityReplanPort = {
     return { kind: "unknown", reason: "not-used" };
   },
 };
+
+function reachFirstThreshold() {
+  const instance = runtime();
+  let previous: QualityEvidenceSnapshot | null = null;
+  let result: ReturnType<typeof instance.coordinator.recordEvidence> | null = null;
+  for (let index = 0; index < 3; index += 1) {
+    result = instance.coordinator.recordEvidence(batch(instance.activation.graph.graphRevision, previous), trace);
+    previous = result.snapshot;
+  }
+  if (result?.kind !== "judge-reserved") throw new Error("missing first threshold");
+  return { ...instance, previous, threshold: result };
+}
+
+function reachStalledRuntime() {
+  const instance = reachFirstThreshold();
+  instance.coordinator.dispatchJudge(instance.threshold.permit, judgePort().port, replanPort);
+  let previous = instance.previous;
+  let result: ReturnType<typeof instance.coordinator.recordEvidence> | null = null;
+  for (let index = 0; index < 2; index += 1) {
+    result = instance.coordinator.recordEvidence(batch(instance.activation.graph.graphRevision, previous), trace);
+    previous = result.snapshot;
+  }
+  if (result?.kind !== "judge-reserved") throw new Error("missing stalled threshold");
+  const stalled = instance.coordinator.dispatchJudge(result.permit, judgePort().port, replanPort);
+  if (stalled.kind !== "REPAIR_STALLED") throw new Error("missing stalled latch");
+  const status = instance.coordinator.status(result.snapshot.qualityScopeId);
+  if (status === null) throw new Error("missing stalled status");
+  return { ...instance, previous, status };
+}
 
 describe("Quality Repair production coordinator", () => {
   test("does not Judge at T-1, replans at first T, and latches at post-replan T", () => {
@@ -317,5 +372,262 @@ describe("Quality Repair production coordinator", () => {
     const result = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
     expect(result).toMatchObject({ kind: "INCOMPLETE" });
     expect(repository.readTransactions()).toEqual([]);
+  });
+
+  test("fails closed when threshold reservation or its deterministic action is incomplete", () => {
+    const thresholdActivation = resolveQualityPluginActivation({
+      mode: "semi",
+      projection: emptyQualityPluginProjection("intent-1"),
+      contribution: createFirstPartyQualityContribution(2),
+    });
+    if (thresholdActivation.kind !== "active") throw new Error("expected active contribution");
+    const thresholdBase = createMemoryQualityRepairRepository();
+    let rejectThreshold = false;
+    const thresholdRepository = {
+      ...thresholdBase,
+      loopRepository: {
+        ...thresholdBase.loopRepository,
+        transaction: ((partition, body) => {
+          if (rejectThreshold) throw new Error("injected-threshold-write-failure");
+          return thresholdBase.loopRepository.transaction(partition, body);
+        }) as typeof thresholdBase.loopRepository.transaction,
+      },
+    };
+    const thresholdCoordinator = createQualityRepairCoordinator({
+      activation: thresholdActivation,
+      repository: thresholdRepository,
+    });
+    const first = thresholdCoordinator.recordEvidence(batch(thresholdActivation.graph.graphRevision, null), trace);
+    const second = thresholdCoordinator.recordEvidence(
+      batch(thresholdActivation.graph.graphRevision, first.snapshot),
+      trace,
+    );
+    rejectThreshold = true;
+    expect(thresholdCoordinator.recordEvidence(
+      batch(thresholdActivation.graph.graphRevision, second.snapshot),
+      trace,
+    )).toMatchObject({
+      kind: "INCOMPLETE",
+      reason: "quality-threshold-did-not-reserve-judge",
+    });
+
+    const actionBase = createMemoryQualityRepairRepository();
+    let transactionCount = 0;
+    const actionRepository = {
+      ...actionBase,
+      loopRepository: {
+        ...actionBase.loopRepository,
+        transaction: ((partition, body) => {
+          transactionCount += 1;
+          if (transactionCount === 2) throw new Error("injected-action-write-failure");
+          return actionBase.loopRepository.transaction(partition, body);
+        }) as typeof actionBase.loopRepository.transaction,
+      },
+    };
+    const actionCoordinator = createQualityRepairCoordinator({
+      activation: thresholdActivation,
+      repository: actionRepository,
+    });
+    expect(actionCoordinator.recordEvidence(batch(thresholdActivation.graph.graphRevision, null), trace)).toMatchObject({
+      kind: "INCOMPLETE",
+      reason: "canonical-write-failed:injected-action-write-failure",
+    });
+    expect(actionRepository.readTransactions()).toHaveLength(1);
+    expect(actionRepository.readTransactions()[0]?.qualityEvents).toEqual([]);
+  });
+
+  test("rejects conflicting repository history and preserves transaction boundaries", () => {
+    const { activation, repository, coordinator } = runtime();
+    const observed = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
+    const canonical = repository.readTransactions()[0]!;
+
+    const duplicateHistory = createMemoryQualityRepairRepository({ initialTransactions: [canonical, canonical] });
+    expect(duplicateHistory.readProjection(observed.snapshot.qualityScopeId)?.latestSnapshot?.snapshotFingerprint).toBe(
+      observed.snapshot.snapshotFingerprint,
+    );
+
+    const conflictingTransaction: QualityRepairTransaction = { ...canonical, qualityEvents: [] };
+    const conflictingHistory = createMemoryQualityRepairRepository({
+      initialTransactions: [canonical, conflictingTransaction],
+    });
+    expect(() => conflictingHistory.readProjection(observed.snapshot.qualityScopeId)).toThrow(
+      "quality-repair-transaction-conflict",
+    );
+
+    const wrongScopeTransaction: QualityRepairTransaction = { ...canonical, qualityScopeId: "wrong-scope" };
+    const wrongScopeHistory = createMemoryQualityRepairRepository({ initialTransactions: [wrongScopeTransaction] });
+    expect(() => wrongScopeHistory.readProjection("wrong-scope")).toThrow(
+      "quality-repair-projection-scope-mismatch",
+    );
+
+    expect(repository.transaction("outer-scope", () =>
+      repository.transaction("outer-scope", () => "same-scope"))).toBe("same-scope");
+    expect(() => repository.transaction("outer-scope", () =>
+      repository.transaction("inner-scope", () => "unreachable"))).toThrow(
+      "quality-repair-nested-scope-mismatch",
+    );
+
+    const projection = repository.readProjection(observed.snapshot.qualityScopeId)!;
+    const committedSet = canonical.loopEventSets[0]!;
+    const before = repository.readTransactions().length;
+    expect(repository.loopRepository.transaction(projection.partition, () => "empty")).toBe("empty");
+    expect(repository.readTransactions()).toHaveLength(before);
+    expect(repository.loopRepository.transaction(projection.partition, (_sets, append) => append(committedSet))).toMatchObject({
+      eventSetId: committedSet.eventSetId,
+    });
+    expect(() => repository.loopRepository.transaction(projection.partition, (_sets, append) =>
+      append({ ...committedSet, payloadFingerprint: `sha256:${"c".repeat(64)}` }))).toThrow(
+      "quality-repair-loop-event-set-conflict",
+    );
+    expect(() => repository.loopRepository.transaction(projection.partition, (_sets, append) =>
+      append({ ...committedSet, partitionKey: "wrong-partition" }))).toThrow(
+      "quality-repair-loop-partition-mismatch",
+    );
+  });
+
+  test("fails closed for stale and incomplete evidence without advancing durable state", () => {
+    const { activation, repository, coordinator } = runtime();
+    const first = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
+    const before = repository.readTransactions().length;
+    const stale = {
+      ...first.snapshot,
+      snapshotFingerprint: `sha256:${"0".repeat(64)}`,
+    };
+
+    expect(coordinator.recordEvidence(batch(activation.graph.graphRevision, stale), trace)).toMatchObject({
+      kind: "CONFLICT",
+      reason: "quality-previous-snapshot-not-current",
+      snapshot: first.snapshot,
+    });
+    expect(() => coordinator.recordEvidence({
+      ...batch(activation.graph.graphRevision, null),
+      observations: [],
+    }, trace)).toThrow("quality-evidence-INCOMPLETE");
+    expect(repository.readTransactions()).toHaveLength(before);
+  });
+
+  test("surfaces non-started Judge and bounded replan outcomes", () => {
+    const pendingJudge = reachFirstThreshold();
+    const notStartedPort: JudgePort = {
+      dispatch: () => ({ kind: "not-started", reason: "judge-unavailable" }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    };
+    expect(pendingJudge.coordinator.dispatchJudge(
+      pendingJudge.threshold.permit,
+      notStartedPort,
+      replanPort,
+    )).toEqual({ kind: "CONFLICT", reason: "quality-judge-route-not-replan" });
+
+    const uncertainReplan = reachFirstThreshold();
+    const effectPossiblePort: QualityReplanPort = {
+      dispatch: () => ({ kind: "effect-possible", reason: "remote-state-uncertain" }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    };
+    expect(uncertainReplan.coordinator.dispatchJudge(
+      uncertainReplan.threshold.permit,
+      judgePort().port,
+      effectPossiblePort,
+    )).toEqual({ kind: "AWAITING_HUMAN", reason: "quality-replan-effect-possible" });
+
+    const boundedReplan = reachFirstThreshold();
+    const noEffectPort: QualityReplanPort = {
+      dispatch: (request) => ({ kind: "no-effect-confirmed", attestationId: `no-effect-${request.attemptNo}` }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    };
+    expect(boundedReplan.coordinator.dispatchJudge(
+      boundedReplan.threshold.permit,
+      judgePort().port,
+      noEffectPort,
+    )).toEqual({ kind: "AWAITING_HUMAN", reason: "quality-replan-attempts-exhausted" });
+  });
+
+  test("validates every stalled-resume prerequisite before accepting improved evidence", () => {
+    const empty = runtime();
+    expect(empty.coordinator.status("missing-scope")).toBeNull();
+    expect(empty.coordinator.resumeReplan("missing-scope", replanPort)).toEqual({
+      kind: "CONFLICT",
+      reason: "quality-replan-attempt-not-pending",
+    });
+    expect(empty.coordinator.resume({
+      qualityScopeId: "missing-scope",
+      alternativeIdentity: "missing-alternative",
+    })).toEqual({ kind: "CONFLICT", reason: "quality-stalled-latch-not-found" });
+
+    const stalled = reachStalledRuntime();
+    const evidenceAlternative = stalled.status.resumeCondition.alternatives.find((item) =>
+      item.kind === "evidence-change"
+    )!;
+    const humanAlternative = stalled.status.resumeCondition.alternatives.find((item) => item.kind === "human-retry")!;
+
+    expect(stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: humanAlternative.identity,
+      humanRetry: {
+        verified: false,
+        eventType: "HUMAN_TURN",
+        turnId: "unverified-turn",
+      } as unknown as VerifiedHumanTurn,
+    })).toEqual({ kind: "CONFLICT", reason: "quality-human-retry-not-verified" });
+    expect(stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+    })).toEqual({ kind: "CONFLICT", reason: "quality-resume-evidence-missing" });
+    expect(stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: { ...batch(stalled.activation.graph.graphRevision, stalled.previous), observations: [] },
+    })).toMatchObject({ kind: "INCOMPLETE" });
+    expect(stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: batch(stalled.activation.graph.graphRevision, stalled.previous),
+    })).toEqual({ kind: "CONFLICT", reason: "quality-evidence-did-not-improve" });
+
+    const resumed = stalled.coordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: batch(stalled.activation.graph.graphRevision, stalled.previous, []),
+    });
+    expect(resumed.kind).toBe("resumed");
+    expect(stalled.coordinator.status(stalled.status.qualityScopeId)).toMatchObject({
+      outcome: "active",
+      workflowExecutionState: "running",
+    });
+  });
+
+  test("resumes a stalled sensor obligation from a newly verified success receipt", () => {
+    const instance = runtime();
+    let previous: QualityEvidenceSnapshot | null = null;
+    let threshold: ReturnType<typeof instance.coordinator.recordEvidence> | null = null;
+    for (let index = 0; index < 3; index += 1) {
+      threshold = instance.coordinator.recordEvidence(
+        sensorBatch(instance.activation.graph.graphRevision, previous, "failed"),
+        trace,
+      );
+      previous = threshold.snapshot;
+    }
+    if (threshold?.kind !== "judge-reserved") throw new Error("missing sensor replan threshold");
+    instance.coordinator.dispatchJudge(threshold.permit, judgePort().port, replanPort);
+    for (let index = 0; index < 2; index += 1) {
+      threshold = instance.coordinator.recordEvidence(
+        sensorBatch(instance.activation.graph.graphRevision, previous, "failed"),
+        trace,
+      );
+      previous = threshold.snapshot;
+    }
+    if (threshold?.kind !== "judge-reserved") throw new Error("missing sensor stalled threshold");
+    expect(instance.coordinator.dispatchJudge(threshold.permit, judgePort().port, replanPort).kind).toBe(
+      "REPAIR_STALLED",
+    );
+    const status = instance.coordinator.status(threshold.snapshot.qualityScopeId);
+    if (status === null) throw new Error("missing sensor stalled status");
+    const evidenceAlternative = status.resumeCondition.alternatives.find((item) => item.kind === "evidence-change");
+    if (evidenceAlternative === undefined) throw new Error("missing sensor evidence alternative");
+
+    expect(instance.coordinator.resume({
+      qualityScopeId: status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: sensorBatch(instance.activation.graph.graphRevision, previous, "passed"),
+    })).toMatchObject({ kind: "resumed" });
   });
 });

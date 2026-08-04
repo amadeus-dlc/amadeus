@@ -11,6 +11,7 @@ import {
   normalizeQualityEvidence,
   planNoneModeQualitySetting,
   planQualityDelivery,
+  qualityDigest,
   recordQualityReplan,
   resolveQualityPluginActivation,
   type QualityEvidenceBatchInput,
@@ -26,7 +27,7 @@ const scope = {
   graphRevision: "sha256:graph-1",
 };
 
-function reviewer(blockerIds: readonly string[]): QualityObservation {
+function reviewer(blockerIds: readonly string[]): Extract<QualityObservation, { readonly kind: "reviewer" }> {
   return {
     kind: "reviewer",
     invocationId: "review-1",
@@ -97,6 +98,16 @@ describe("first-party Quality Repair contribution", () => {
       "repair-stalled",
     ]);
   });
+
+  test("rejects invalid plugin identities and contribution thresholds", () => {
+    expect(planNoneModeQualitySetting(
+      { ...emptyQualityPluginProjection("intent-1"), intentUuid: "invalid intent" },
+      true,
+      { verified: true, eventType: "HUMAN_TURN", turnId: "turn-1" },
+    )).toMatchObject({ ok: false, error: { code: "INTENT_MISMATCH" } });
+    expect(() => createFirstPartyQualityContribution(0)).toThrow("quality-repair-threshold-must-be-positive");
+    expect(qualityDigest({ intentUuid: "intent-1" })).toStartWith("sha256:");
+  });
 });
 
 describe("blocking evidence normalization", () => {
@@ -166,6 +177,119 @@ describe("blocking evidence normalization", () => {
     });
     expect(result).toMatchObject({ ok: false, error: { code: "SCOPE_MISMATCH" } });
   });
+
+  test("normalizes incomplete, successful, and conflicting evidence fail closed", () => {
+    const invalidIdentityCases: readonly QualityObservation[] = [
+      { ...reviewer(["blocker-a"]), invocationId: "invalid invocation" },
+      {
+        kind: "sensor",
+        sensorId: "invalid sensor",
+        blocking: true,
+        status: "failed",
+        outputId: "lint-output",
+        terminalReceipt: `sha256:${"1".repeat(64)}`,
+      },
+      {
+        kind: "produce",
+        outputId: "invalid output",
+        required: true,
+        status: "missing",
+        verifierId: "artifact-verifier",
+        receipt: null,
+      },
+      {
+        kind: "condition",
+        conditionKind: "completion",
+        conditionId: "invalid condition",
+        status: "unsatisfied",
+        verifierId: "test-runner",
+        receipt: null,
+      },
+    ];
+    for (const observation of invalidIdentityCases) {
+      expect(normalizeQualityEvidence(batch([observation]))).toMatchObject({
+        ok: false,
+        error: { code: "INCOMPLETE" },
+      });
+    }
+
+    const incompleteReviewer = normalizeQualityEvidence(batch([{
+      ...reviewer([]),
+      verdict: "NOT READY",
+      validationReceipt: "invalid",
+    }]));
+    expect(incompleteReviewer).toMatchObject({
+      ok: true,
+      snapshot: { unresolved: [{ sourceCategory: "reviewer", failureKind: "evidence-incomplete" }] },
+    });
+
+    const fallbackFingerprint = normalizeQualityEvidence(batch([{
+      ...reviewer(["blocker-a"]),
+      blockers: [{ findingId: "blocker-a", artifactId: "code-summary", failureFingerprint: "invalid" }],
+    }]));
+    expect(fallbackFingerprint).toMatchObject({
+      ok: true,
+      snapshot: { unresolved: [{ sourceCategory: "reviewer", failureKind: "blocker" }] },
+    });
+
+    const receipt = `sha256:${"2".repeat(64)}`;
+    const successes = normalizeQualityEvidence(batch([
+      {
+        kind: "sensor",
+        sensorId: "type-check",
+        blocking: true,
+        status: "passed",
+        outputId: "typecheck-output",
+        terminalReceipt: receipt,
+      },
+      {
+        kind: "produce",
+        outputId: "code-summary",
+        required: true,
+        status: "present",
+        verifierId: "artifact-verifier",
+        receipt,
+      },
+      {
+        kind: "condition",
+        conditionKind: "completion",
+        conditionId: "tests-green",
+        status: "satisfied",
+        verifierId: "test-runner",
+        receipt,
+      },
+    ]));
+    expect(successes).toMatchObject({ ok: true, snapshot: { unresolved: [] } });
+    if (!successes.ok) throw new Error(successes.error.message);
+    expect(successes.snapshot.verifierSuccessReceipts).toHaveLength(3);
+
+    const previous = snapshot(["blocker-a"]);
+    expect(normalizeQualityEvidence({
+      ...batch([reviewer(["blocker-a"])], previous),
+      epochStartEventIdentity: "different-epoch-start",
+    })).toMatchObject({ ok: false, error: { code: "SCOPE_MISMATCH" } });
+
+    const conflicting = reviewer(["blocker-a"]);
+    expect(normalizeQualityEvidence(batch([
+      conflicting,
+      {
+        ...conflicting,
+        blockers: [{
+          findingId: "blocker-a",
+          artifactId: "different-artifact",
+          failureFingerprint: `sha256:${"3".repeat(64)}`,
+        }],
+      },
+    ]))).toMatchObject({
+      ok: false,
+      error: { code: "INCOMPLETE", message: "conflicting duplicate quality obligation" },
+    });
+
+    expect(normalizeQualityEvidence(batch([]))).toMatchObject({
+      ok: false,
+      error: { code: "INCOMPLETE" },
+    });
+  });
 });
 
 describe("bounded convergence", () => {
@@ -229,5 +353,38 @@ describe("bounded convergence", () => {
       consecutiveNonProgress: 0,
       replanSinceLastProgress: false,
     });
+  });
+
+  test("classifies regression and churn and rejects invalid delivery inputs", () => {
+    const a1 = snapshot(["blocker-a"]);
+    const b1 = snapshot(["blocker-b"], a1);
+    const a2 = snapshot(["blocker-a"], b1);
+    let regressionEpoch = createQualityEpochProjection(a1, 2);
+    regressionEpoch = planQualityDelivery(regressionEpoch, a1).nextProjection;
+    regressionEpoch = planQualityDelivery(regressionEpoch, b1).nextProjection;
+    expect(planQualityDelivery(regressionEpoch, a2).progress).toMatchObject({
+      kind: "threshold",
+      pattern: "regression",
+    });
+
+    const c1 = snapshot(["blocker-c"], b1);
+    let churnEpoch = createQualityEpochProjection(a1, 2);
+    churnEpoch = planQualityDelivery(churnEpoch, a1).nextProjection;
+    churnEpoch = planQualityDelivery(churnEpoch, b1).nextProjection;
+    expect(planQualityDelivery(churnEpoch, c1).progress).toMatchObject({
+      kind: "threshold",
+      pattern: "churn",
+    });
+
+    expect(() => planQualityDelivery(
+      createQualityEpochProjection(a1, 2),
+      { ...a1, qualityScopeId: "other-scope" },
+    )).toThrow("quality-delivery-scope-mismatch");
+    expect(() => recordQualityReplan(createQualityEpochProjection(a1, 2), {
+      judgeInvocationId: "invalid invocation",
+      planDigest: "invalid",
+      agentId: "repair-agent",
+      contextId: "context-1",
+    })).toThrow("quality-replan-receipt-invalid");
   });
 });
