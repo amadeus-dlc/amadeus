@@ -627,9 +627,9 @@ function emitWorkflowCompletionAuditRows(input: {
       "Goal Receipt Id": input.receipt.receiptId,
       "Goal Receipt Digest": input.receipt.evidenceDigest,
       "Goal Verdict": input.receipt.overallVerdict,
-      "Goal Evidence": input.receipt.items
-        .flatMap((item) => item.evidence.map((evidence) => evidence.reference))
-        .join(", "),
+      "Goal Evidence Count": String(
+        input.receipt.items.reduce((count, item) => count + item.evidence.length, 0),
+      ),
     };
     if (input.receipt.humanRulingReference !== null) {
       workflowFields["Goal Human Ruling"] = input.receipt.humanRulingReference;

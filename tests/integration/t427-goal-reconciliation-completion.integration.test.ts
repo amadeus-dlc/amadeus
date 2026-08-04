@@ -88,7 +88,8 @@ function reconcileAchieved(
   project: string,
   finalStage = "build-and-test",
   completionInstance = `terminal:${finalStage}`,
-): void {
+  includeCompletionInstance = true,
+): { receipt: { completionInstance: string } } {
   const evidencePath = join(project, "goal-proof.txt");
   const evidence = "goal guard verified\n";
   writeFileSync(evidencePath, evidence);
@@ -109,23 +110,25 @@ function reconcileAchieved(
       },
     ]),
   );
+  const reconcileArgs = [
+    GOAL,
+    "reconcile",
+    "--items",
+    itemsPath,
+    "--final-stage",
+    finalStage,
+  ];
+  if (includeCompletionInstance) {
+    reconcileArgs.push("--completion-instance", completionInstance);
+  }
+  reconcileArgs.push("--project-dir", project);
   const reconcile = spawnSync(
     process.execPath,
-    [
-      GOAL,
-      "reconcile",
-      "--items",
-      itemsPath,
-      "--final-stage",
-      finalStage,
-      "--completion-instance",
-      completionInstance,
-      "--project-dir",
-      project,
-    ],
+    reconcileArgs,
     { encoding: "utf8", env: toolEnv },
   );
   expect(reconcile.status, `${reconcile.stdout}${reconcile.stderr}`).toBe(0);
+  return JSON.parse(reconcile.stdout) as { receipt: { completionInstance: string } };
 }
 
 function runComplete(
@@ -160,6 +163,13 @@ function runComplete(
   );
 }
 
+function runGoal(project: string, args: string[]) {
+  return spawnSync(process.execPath, [GOAL, ...args, "--project-dir", project], {
+    encoding: "utf8",
+    env: toolEnv,
+  });
+}
+
 function setFinalStageState(
   project: string,
   record: string,
@@ -190,6 +200,30 @@ function setFinalStageState(
 }
 
 describe("Goal receipt is a terminal completion precondition", () => {
+  test("derives the prepared completion instance and rejects an explicit conflict", () => {
+    const { project, record } = birth();
+    setFinalStageState(project, record, "prepared-completion-1");
+    const reconciled = reconcileAchieved(
+      project,
+      "build-and-test",
+      "unused",
+      false,
+    );
+    expect(reconciled.receipt.completionInstance).toBe("prepared-completion-1");
+
+    const conflict = runGoal(project, [
+      "reconcile",
+      "--items",
+      "goal-items.json",
+      "--final-stage",
+      "build-and-test",
+      "--completion-instance",
+      "different-completion",
+    ]);
+    expect(conflict.status).not.toBe(0);
+    expect(`${conflict.stdout}${conflict.stderr}`).toMatch(/conflicts with prepared/i);
+  });
+
   test("accepts an evidence-bound direct human ruling for the current Goal", () => {
     const { project, record } = birth();
     resetOtelPerProject();
@@ -371,6 +405,46 @@ describe("Goal receipt is a terminal completion precondition", () => {
     }>;
     expect(registry.find((entry) => entry.dirName === record)?.status).toBe("complete");
     expect(existsSync(join(intents, "active-intent"))).toBe(false);
+  });
+
+  test("rejects an ACHIEVED receipt from an older approved Goal revision", () => {
+    const { project, record } = birth();
+    reconcileAchieved(project);
+
+    const proposed = runGoal(project, [
+      "propose",
+      "--statement",
+      "Revised goal after the old receipt",
+      "--reason",
+      "The human owner changed the approved target",
+      "--impact",
+      "Invalidates the revision-zero receipt",
+    ]);
+    expect(proposed.status, `${proposed.stdout}${proposed.stderr}`).toBe(0);
+    const proposalId = JSON.parse(proposed.stdout).proposal.proposalId as string;
+    resetOtelPerProject();
+    emitAuditEvent("HUMAN_TURN", {}, project, record, "default");
+    const approved = runGoal(project, [
+      "approve-revision",
+      "--proposal",
+      proposalId,
+      "--user-input",
+      "approve revision one",
+    ]);
+    expect(approved.status, `${approved.stdout}${approved.stderr}`).toBe(0);
+
+    const intents = join(project, "amadeus", "spaces", "default", "intents");
+    const statePath = join(intents, record, "amadeus-state.md");
+    const registryPath = join(intents, "intents.json");
+    const stateBefore = readFileSync(statePath, "utf8");
+    const registryBefore = readFileSync(registryPath, "utf8");
+    const complete = runComplete(project, record);
+
+    expect(complete.status).not.toBe(0);
+    expect(`${complete.stdout}${complete.stderr}`).toMatch(/revision is stale/i);
+    expect(readFileSync(statePath, "utf8")).toBe(stateBefore);
+    expect(readFileSync(registryPath, "utf8")).toBe(registryBefore);
+    expect(auditEvents(project, record)).not.toContain("WORKFLOW_COMPLETED");
   });
 
   test.each([

@@ -576,12 +576,7 @@ function emitMirrorBoundaryIfNeeded(
     return true;
   }
   if (boundary.completion !== null) {
-    const recordPrefix = relativeRecordDir(projectDir, intent, space);
-    if (recordPrefix === null) {
-      emit(errorDirective("Mirror boundary cannot resolve the intent record."));
-      return true;
-    }
-    const recordDir = join(projectDir, recordPrefix);
+    const recordDir = completionRecordDir(projectDir, intent, space);
     try {
       authorizeWorkflowCompletion({
         projectDir,
@@ -615,6 +610,26 @@ function emitMirrorBoundaryIfNeeded(
     intent,
     space,
   );
+}
+
+function completionRecordDir(
+  projectDir: string,
+  intentOverride?: string,
+  spaceOverride?: string,
+): string {
+  return join(
+    projectDir,
+    relativeRecordDir(projectDir, intentOverride, spaceOverride) ?? "amadeus-docs",
+  );
+}
+
+function completedRecoveryError(cause: unknown): string {
+  const detail = errorMessage(cause);
+  if (detail.includes("Goal lineage is missing")) {
+    return `${detail}. Run amadeus-goal.ts legacy-propose, then ` +
+      "amadeus-goal.ts approve-legacy-migration before retrying completion.";
+  }
+  return detail;
 }
 
 function emitDeferredCompletionBoundary(
@@ -3000,7 +3015,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       ));
       return;
     }
-    const recordDir = join(pd, recordPrefix ?? "amadeus-docs");
+    const recordDir = completionRecordDir(pd);
     try {
       authorizePersistedCompletedWorkflow({
         projectDir: pd,
@@ -3009,7 +3024,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       });
     } catch (cause) {
       emit(errorDirective(
-        `Goal reconciliation refused completed recovery: ${errorMessage(cause)}`,
+        `Goal reconciliation refused completed recovery: ${completedRecoveryError(cause)}`,
       ));
       return;
     }
@@ -5022,7 +5037,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
         }
       }
       if (status === "Completed") {
-        const recordDir = join(pd, relativeRecordDir(pd) ?? "amadeus-docs");
+        const recordDir = completionRecordDir(pd);
         try {
           authorizePersistedCompletedWorkflow({
             projectDir: pd,
@@ -5031,7 +5046,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
           });
         } catch (cause) {
           emit(errorDirective(
-            `Goal reconciliation refused completed recovery: ${errorMessage(cause)}`,
+            `Goal reconciliation refused completed recovery: ${completedRecoveryError(cause)}`,
           ));
           return;
         }

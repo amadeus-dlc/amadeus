@@ -156,7 +156,9 @@ function requireVerdict(value: unknown, label: string): GoalVerdict {
 function canonicalJson(value: JsonValue): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+  const entries = Object.entries(value).sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0
+  );
   return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
 }
 
@@ -389,23 +391,47 @@ export function parseGoalReconciliationReceipt(raw: string): GoalReconciliationR
   ) {
     throw new Error("human-ruling evidence requires humanRulingReference");
   }
+  const intentId = requireString(row.intentId, "intentId");
+  const goalId = requireString(row.goalId, "goalId");
+  const goalRevision = requireInteger(row.goalRevision, "goalRevision");
+  const goalDigestValue = requireDigest(row.goalDigest, "goalDigest");
+  const completionInstance = requireString(row.completionInstance, "completionInstance");
+  const completionContextDigest = requireDigest(
+    row.completionContextDigest,
+    "completionContextDigest",
+  );
+  const evidenceDigest = requireDigest(row.evidenceDigest, "evidenceDigest");
+  const expectedEvidenceDigest = goalDigest(items as unknown as readonly JsonValue[]);
+  if (evidenceDigest !== expectedEvidenceDigest) {
+    throw new Error("evidenceDigest does not match the receipt items");
+  }
+  const receiptId = requireString(row.receiptId, "receiptId");
+  const expectedReceiptId = `receipt-${goalDigest({
+    intentId,
+    goalId,
+    goalRevision,
+    goalDigest: goalDigestValue,
+    completionInstance,
+    completionContextDigest,
+    evidenceDigest,
+  }).slice(0, 32)}`;
+  if (receiptId !== expectedReceiptId) {
+    throw new Error("receiptId does not match the receipt identity");
+  }
   return {
     schemaVersion: GOAL_SCHEMA_VERSION,
-    receiptId: requireString(row.receiptId, "receiptId"),
-    intentId: requireString(row.intentId, "intentId"),
-    goalId: requireString(row.goalId, "goalId"),
-    goalRevision: requireInteger(row.goalRevision, "goalRevision"),
-    goalDigest: requireDigest(row.goalDigest, "goalDigest"),
+    receiptId,
+    intentId,
+    goalId,
+    goalRevision,
+    goalDigest: goalDigestValue,
     scope: requireString(row.scope, "scope"),
     finalStage: requireString(row.finalStage, "finalStage"),
-    completionInstance: requireString(row.completionInstance, "completionInstance"),
-    completionContextDigest: requireDigest(
-      row.completionContextDigest,
-      "completionContextDigest",
-    ),
+    completionInstance,
+    completionContextDigest,
     items,
     overallVerdict,
-    evidenceDigest: requireDigest(row.evidenceDigest, "evidenceDigest"),
+    evidenceDigest,
     humanRulingReference,
     createdAt: requireIsoTimestamp(row.createdAt, "createdAt"),
   };
@@ -535,7 +561,7 @@ export function createGoalChangeProposal(input: {
   readonly reason: string;
   readonly unmetCurrentGoalItems: readonly string[];
   readonly impact: string;
-  readonly evidence: readonly GoalEvidenceReference[];
+  readonly evidence?: readonly GoalEvidenceReference[];
   readonly createdAt: string;
   readonly createdBy?: GoalChangeProposal["createdBy"];
 }): GoalChangeProposal {
@@ -558,7 +584,7 @@ export function createGoalChangeProposal(input: {
     successMetricsBefore: [...current.successMetrics],
     unmetCurrentGoalItems: [...input.unmetCurrentGoalItems],
     impact: requireString(input.impact, "impact"),
-    evidence: [...input.evidence],
+    evidence: [...(input.evidence ?? [])],
     createdBy: input.createdBy ?? "ai-change-proposal",
   };
 }
@@ -634,7 +660,7 @@ export function writeGoalChangeProposal(recordDir: string, proposal: GoalChangeP
   if (existsSync(path)) {
     const existing = parseGoalChangeProposal(readFileSync(path, "utf8"));
     if (canonicalJson(existing as unknown as JsonObject) !== canonicalJson(parsed as unknown as JsonObject)) {
-      throw new Error("Goal change proposal identity collision");
+      throw new Error("Goal change proposal has the same identity but different content");
     }
     return;
   }

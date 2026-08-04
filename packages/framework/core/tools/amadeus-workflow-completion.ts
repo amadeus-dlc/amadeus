@@ -3,9 +3,13 @@ import {
   activeSpace,
   getField,
   nextInScopeStage,
+  readIntentRegistry,
+  recordDir,
+  recordDirMatches,
   setOrInsertField,
   validScopes,
 } from "./amadeus-lib.ts";
+import { basename, dirname, resolve } from "node:path";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
   authorizeGoalCompletion,
@@ -100,6 +104,27 @@ export function workflowCompletionContextDigest(
   return goalCompletionContextDigest({ scope, finalStage, executionProjection });
 }
 
+function registeredIntentUuid(projectDir: string, recordDirectory: string): string {
+  const intentsDirectory = dirname(recordDirectory);
+  if (basename(intentsDirectory) !== "intents") {
+    throw new Error("Workflow completion record is not a registered Intent directory");
+  }
+  const space = basename(dirname(intentsDirectory));
+  const intent = basename(recordDirectory);
+  const registeredDirectory = recordDir(projectDir, intent, space);
+  if (
+    registeredDirectory === null ||
+    resolve(registeredDirectory) !== resolve(recordDirectory)
+  ) {
+    throw new Error("Workflow completion record does not match the Intent registry");
+  }
+  const entry = readIntentRegistry(projectDir, space).find((candidate) =>
+    recordDirMatches(candidate, intent)
+  );
+  if (!entry) throw new Error("Workflow completion Intent UUID is missing from the registry");
+  return entry.uuid;
+}
+
 export function authorizeWorkflowCompletion(input: {
   readonly projectDir: string;
   readonly recordDir: string;
@@ -136,7 +161,7 @@ export function authorizeWorkflowCompletion(input: {
     input.completionInstance,
   );
   const authorization = authorizeGoalCompletion({
-    intentId: lineage.intentId,
+    intentId: registeredIntentUuid(input.projectDir, input.recordDir),
     lineage,
     receipt,
     scope,

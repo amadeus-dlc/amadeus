@@ -123,6 +123,8 @@ describe("legacy Goal migration", () => {
     expect(refused.status).toBe(0);
     expect(JSON.parse(refused.stdout)).toMatchObject({ kind: "error" });
     expect(refused.stdout).toMatch(/Goal lineage is missing/i);
+    expect(refused.stdout).toMatch(/legacy-propose/i);
+    expect(refused.stdout).toMatch(/approve-legacy-migration/i);
     expect(readFileSync(statePath)).toEqual(legacyBytes);
 
     const proposed = runGoal(project, intent, [

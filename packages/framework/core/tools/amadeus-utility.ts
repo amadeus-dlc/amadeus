@@ -158,7 +158,6 @@ import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
 import {
   createInitialGoalLineage,
-  readGoalLineage,
   writeInitialGoalLineage,
 } from "./amadeus-goal-reconciliation.ts";
 
@@ -4323,7 +4322,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       Details: "Per-intent artifact dirs + space-level knowledge/ ensured",
     });
 
-    handleIntentBirthStateBuild(projectDir, flags, scope, ts, classifiedScan);
+    handleIntentBirthStateBuild(
+      projectDir,
+      flags,
+      scope,
+      ts,
+      classifiedScan,
+      initialGoal,
+    );
   });
 }
 
@@ -4362,8 +4368,8 @@ function handleIntentBirthStateBuild(
   scope: string,
   ts: string,
   classifiedScan: ClassifiedWorkspaceScan,
+  initialGoal: ReturnType<typeof createInitialGoalLineage>,
 ): void {
-  const initialGoal = readGoalLineage(docsDir(projectDir));
   const depthOverride = flags.depth;
   const testStrategyOverride = flags["test-strategy"];
   // ---- Workspace detection (stage 0.2) ----

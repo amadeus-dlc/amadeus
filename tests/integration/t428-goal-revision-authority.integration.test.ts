@@ -7,6 +7,10 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { emitAuditEvent } from "../../packages/framework/core/otel/audit-emit.ts";
+import {
+  findAllEvents,
+  readAllAuditShards,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   cleanupTestProject,
@@ -106,6 +110,24 @@ describe("Goal revision authority", () => {
     expect(approval.revision).toBe(1);
     expect(approval.digest).toMatch(/^[0-9a-f]{64}$/);
 
+    const statePath = join(
+      project,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      intent,
+      "amadeus-state.md",
+    );
+    const staleProjection = readFileSync(statePath, "utf8")
+      .replace("- **Current Goal Revision**: 1", "- **Current Goal Revision**: 0")
+      .replace(
+        `- **Current Goal Digest**: ${approval.digest}`,
+        `- **Current Goal Digest**: ${"0".repeat(64)}`,
+      );
+    writeFileSync(statePath, staleProjection);
+    resetOtelPerProject();
+    emitAuditEvent("HUMAN_TURN", {}, project, intent, "default");
     const repeated = runGoal(project, [
       "approve-revision",
       "--proposal",
@@ -114,20 +136,15 @@ describe("Goal revision authority", () => {
       "approve revision",
     ]);
     expect(repeated.status, `${repeated.stdout}${repeated.stderr}`).toBe(0);
-    const state = readFileSync(
-      join(
-        project,
-        "amadeus",
-        "spaces",
-        "default",
-        "intents",
-        intent,
-        "amadeus-state.md",
-      ),
-      "utf8",
-    );
+    const state = readFileSync(statePath, "utf8");
     expect(state).toContain("- **Current Goal Revision**: 1");
     expect(state).toContain(`- **Current Goal Digest**: ${approval.digest}`);
+    expect(
+      findAllEvents(
+        readAllAuditShards(project, intent, "default"),
+        "GOAL_REVISION_APPROVED",
+      ),
+    ).toHaveLength(1);
 
     const proof = "approved revision verified\n";
     writeFileSync(join(project, "revision-proof.txt"), proof);

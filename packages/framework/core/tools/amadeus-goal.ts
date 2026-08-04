@@ -40,7 +40,10 @@ import {
   writeGoalLineage,
   writeGoalReconciliationReceipt,
 } from "./amadeus-goal-reconciliation.ts";
-import { workflowCompletionContextDigest } from "./amadeus-workflow-completion.ts";
+import {
+  workflowCompletionContextDigest,
+  workflowCompletionPreparation,
+} from "./amadeus-workflow-completion.ts";
 
 type GoalTarget = {
   readonly projectDir: string;
@@ -147,27 +150,29 @@ function emitSealedGoalAudit(
 
 function handlePropose(args: readonly string[]): void {
   const selected = target(args);
-  const lineage = readGoalLineage(selected.recordDir);
-  const createdAt = isoTimestamp();
-  const proposal = createGoalChangeProposal({
-    lineage,
-    statementAfter: requiredFlag(args, "--statement"),
-    successMetricsAfter: jsonStringArray(flag(args, "--success-metrics"), "--success-metrics"),
-    reason: requiredFlag(args, "--reason"),
-    unmetCurrentGoalItems: jsonStringArray(
-      flag(args, "--unmet-current-items"),
-      "--unmet-current-items",
-    ),
-    impact: requiredFlag(args, "--impact"),
-    evidence: [],
-    createdAt,
-    createdBy: args.includes("--human-proposal")
-      ? "human-change-proposal"
-      : "ai-change-proposal",
-  });
+  let proposal: ReturnType<typeof createGoalChangeProposal> | null = null;
   withAuditLock(
     selected.projectDir,
     () => {
+      const lineage = readGoalLineage(selected.recordDir);
+      proposal = createGoalChangeProposal({
+        lineage,
+        statementAfter: requiredFlag(args, "--statement"),
+        successMetricsAfter: jsonStringArray(
+          flag(args, "--success-metrics"),
+          "--success-metrics",
+        ),
+        reason: requiredFlag(args, "--reason"),
+        unmetCurrentGoalItems: jsonStringArray(
+          flag(args, "--unmet-current-items"),
+          "--unmet-current-items",
+        ),
+        impact: requiredFlag(args, "--impact"),
+        createdAt: isoTimestamp(),
+        createdBy: args.includes("--human-proposal")
+          ? "human-change-proposal"
+          : "ai-change-proposal",
+      });
       writeGoalChangeProposal(selected.recordDir, proposal);
       emitGoalAudit(selected, "GOAL_CHANGE_PROPOSED", {
         Intent: selected.intent,
@@ -180,6 +185,7 @@ function handlePropose(args: readonly string[]): void {
     selected.intent,
     selected.space,
   );
+  if (proposal === null) fail("Goal change proposal was not created");
   process.stdout.write(`${JSON.stringify({ kind: "goal-change-proposed", proposal })}\n`);
 }
 
@@ -201,7 +207,8 @@ function handleApproveRevision(args: readonly string[]): void {
       const before = readGoalLineage(selected.recordDir);
       const existing = before.revisions[before.currentRevision];
       let updated = before;
-      if (existing.approvalReference !== approvalReference) {
+      const proposalMarker = `:proposal:${proposal.proposalId}`;
+      if (!existing.approvalReference.includes(proposalMarker)) {
         updated = buildApprovedGoalRevision({
           lineage: before,
           proposal,
@@ -296,9 +303,7 @@ function handleLegacyPropose(args: readonly string[]): void {
       writeLegacyGoalMigrationProposal(selected.recordDir, proposal);
       emitSealedGoalAudit(selected, "GOAL_CHANGE_PROPOSED", {
         Intent: selected.intent,
-        "Goal Id": `legacy-pending:${proposal.proposalId}`,
         "Proposal Id": proposal.proposalId,
-        "Parent Revision": "legacy-none",
         "Proposal Digest": goalDigest(proposal),
       });
     },
@@ -486,7 +491,7 @@ function handleReconcile(args: readonly string[]): void {
   const selected = target(args);
   const itemsPath = requiredFlag(args, "--items");
   const finalStage = requiredFlag(args, "--final-stage");
-  const completionInstance = requiredFlag(args, "--completion-instance");
+  const explicitCompletionInstance = flag(args, "--completion-instance")?.trim() || null;
   const sourcePath = evidenceFilePath(selected.projectDir, itemsPath);
   const items = parseGoalReconciliationItems(readFileSync(sourcePath, "utf8"));
   const humanRulingReference = validateReceiptEvidence(selected, items);
@@ -497,6 +502,19 @@ function handleReconcile(args: readonly string[]): void {
       const state = readStateFile(selected.projectDir, selected.intent, selected.space);
       const scope = getField(state, "Scope")?.trim();
       if (!scope) fail("Workflow state has no Scope");
+      const prepared = workflowCompletionPreparation(state);
+      if (
+        explicitCompletionInstance !== null &&
+        prepared !== null &&
+        explicitCompletionInstance !== prepared.instance
+      ) {
+        fail(
+          `--completion-instance conflicts with prepared workflow instance ${prepared.instance}`,
+        );
+      }
+      const completionInstance = explicitCompletionInstance ??
+        prepared?.instance ??
+        `terminal:${finalStage}`;
       const receipt = createGoalReconciliationReceipt({
         lineage,
         scope,

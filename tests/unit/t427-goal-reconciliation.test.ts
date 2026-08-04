@@ -39,6 +39,11 @@ import {
   authorizeWorkflowCompletion,
   workflowCompletionContextDigest,
 } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
+import {
+  createTestProject,
+  DEFAULT_INTENT_UUID,
+  seededRecordDir,
+} from "../harness/fixtures.ts";
 
 const INTENT_ID = "0198a988-7bc3-7000-8000-000000000001";
 const OTHER_INTENT_ID = "0198a988-7bc3-7000-8000-000000000002";
@@ -147,39 +152,21 @@ function achievedReceipt() {
     finalStage: "build-and-test",
     executionProjection: "3.6",
   });
-  return {
+  const receipt = createGoalReconciliationReceipt({
     lineage,
-    receipt: {
-      schemaVersion: 1 as const,
-      receiptId: "receipt-terminal-build-and-test",
-      intentId: INTENT_ID,
-      goalId: lineage.goalId,
-      goalRevision: 0,
-      goalDigest: lineage.revisions[0].digest,
-      scope: "self-fix",
-      finalStage: "build-and-test",
-      completionInstance: "terminal:build-and-test",
-      completionContextDigest,
-      items: [
-        {
-          id: "metric-1",
-          verdict: "ACHIEVED" as const,
-          evidence: [
-            {
-              kind: "deterministic-check" as const,
-              reference: "tests/integration/t427.test.ts",
-              digest: SHA_A,
-            },
-          ],
-        },
-      ],
-      overallVerdict: "ACHIEVED" as const,
-      evidenceDigest: SHA_B,
-      humanRulingReference: null,
-      createdAt: "2026-08-04T01:00:00.000Z",
-    },
+    scope: "self-fix",
+    finalStage: "build-and-test",
+    completionInstance: "terminal:build-and-test",
     completionContextDigest,
-  };
+    items: [{
+      id: "goal-statement",
+      verdict: "ACHIEVED",
+      evidence: [deterministicEvidence("tests/integration/t427.test.ts")],
+    }],
+    humanRulingReference: null,
+    createdAt: "2026-08-04T01:00:00.000Z",
+  });
+  return { lineage, receipt, completionContextDigest };
 }
 
 describe("goal reconciliation codec", () => {
@@ -326,22 +313,35 @@ describe("goal reconciliation codec", () => {
   });
 
   test("validates aggregate and human-ruling receipt invariants", () => {
-    const { receipt } = achievedReceipt();
+    const { lineage, receipt, completionContextDigest } = achievedReceipt();
     const humanReference = "audit:HUMAN_TURN:2026-08-04T00:30:00.000Z";
-    const human = {
-      ...receipt,
+    const human = createGoalReconciliationReceipt({
+      lineage,
+      scope: "self-fix",
+      finalStage: "build-and-test",
+      completionInstance: "terminal:build-and-test",
+      completionContextDigest,
       items: [{
         id: "goal-statement",
-        verdict: "ACHIEVED" as const,
+        verdict: "ACHIEVED",
         evidence: [{
-          kind: "human-ruling" as const,
+          kind: "human-ruling",
           reference: humanReference,
           digest: SHA_A,
         }],
       }],
       humanRulingReference: humanReference,
-    };
+      createdAt: "2026-08-04T01:00:00.000Z",
+    });
     expect(parseGoalReconciliationReceipt(JSON.stringify(human))).toEqual(human);
+    expect(() => parseGoalReconciliationReceipt(JSON.stringify({
+      ...receipt,
+      evidenceDigest: SHA_A,
+    }))).toThrow(/evidenceDigest/i);
+    expect(() => parseGoalReconciliationReceipt(JSON.stringify({
+      ...receipt,
+      receiptId: "receipt-tampered",
+    }))).toThrow(/receiptId/i);
 
     for (const invalid of [
       "{",
@@ -426,7 +426,9 @@ describe("goal proposal and revision lifecycle", () => {
       goalProposalPath(record, proposal.proposalId),
       JSON.stringify({ ...proposal, impact: "Different content" }),
     );
-    expect(() => writeGoalChangeProposal(record, proposal)).toThrow(/collision/i);
+    expect(() => writeGoalChangeProposal(record, proposal)).toThrow(
+      /same identity.*different content/i,
+    );
 
     expect(() => buildApprovedGoalRevision({
       lineage,
@@ -596,8 +598,15 @@ describe("Goal reconciliation persistence", () => {
 
 describe("workflow completion authorization", () => {
   function authorizedFixture() {
-    const recordDir = temporaryRecord();
-    const lineage = initialLineage();
+    const projectDir = createTestProject();
+    temporaryDirectories.push(projectDir);
+    const recordDir = seededRecordDir(projectDir);
+    const lineage = createInitialGoalLineage({
+      intentId: DEFAULT_INTENT_UUID,
+      statement: "Ship a verified goal guard",
+      scope: "self-fix",
+      createdAt: "2026-08-04T00:00:00.000Z",
+    });
     const content = completionState(lineage);
     const completionInstance = "terminal:build-and-test";
     writeInitialGoalLineage(recordDir, lineage);
@@ -619,20 +628,20 @@ describe("workflow completion authorization", () => {
       createdAt: "2026-08-04T05:00:00.000Z",
     });
     writeGoalReconciliationReceipt(recordDir, receipt);
-    return { recordDir, lineage, content, completionInstance, receipt };
+    return { projectDir, recordDir, lineage, content, completionInstance, receipt };
   }
 
   test("authorizes the current final-stage receipt directly and after persistence", () => {
     const fixture = authorizedFixture();
     expect(authorizeWorkflowCompletion({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content,
       completedSlug: "build-and-test",
       completionInstance: fixture.completionInstance,
     })).toEqual(fixture.receipt);
     expect(authorizePersistedCompletedWorkflow({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content,
     })).toEqual(fixture.receipt);
@@ -641,7 +650,7 @@ describe("workflow completion authorization", () => {
   test("rejects non-final, projection-mismatched, stale, and incomplete completion state", () => {
     const fixture = authorizedFixture();
     expect(() => authorizeWorkflowCompletion({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content,
       completedSlug: "requirements-analysis",
@@ -649,7 +658,7 @@ describe("workflow completion authorization", () => {
     })).toThrow(/not the final/i);
 
     expect(() => authorizeWorkflowCompletion({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content.replace(fixture.lineage.goalId, "another-goal"),
       completedSlug: "build-and-test",
@@ -657,7 +666,7 @@ describe("workflow completion authorization", () => {
     })).toThrow(/projection/i);
 
     expect(() => authorizeWorkflowCompletion({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content.replace("- **Scope**: self-fix", "- **Scope**: invented"),
       completedSlug: "build-and-test",
@@ -669,7 +678,7 @@ describe("workflow completion authorization", () => {
       "- **Execution Projection Digest**: projection-2",
     );
     expect(() => authorizeWorkflowCompletion({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: staleContent,
       completedSlug: "build-and-test",
@@ -677,13 +686,43 @@ describe("workflow completion authorization", () => {
     })).toThrow(/reconciliation refused completion/i);
 
     expect(() => authorizePersistedCompletedWorkflow({
-      projectDir: fixture.recordDir,
+      projectDir: fixture.projectDir,
       recordDir: fixture.recordDir,
       content: fixture.content.replace(
         "- **Last Completed Stage**: build-and-test",
         "- **Last Completed Stage**: none",
       ),
     })).toThrow(/Last Completed Stage/i);
+  });
+
+  test("rejects a self-consistent lineage whose Intent ID differs from the registry", () => {
+    const fixture = authorizedFixture();
+    const foreignLineage = initialLineage();
+    const content = completionState(foreignLineage);
+    writeGoalLineage(fixture.recordDir, foreignLineage);
+    const receipt = createGoalReconciliationReceipt({
+      lineage: foreignLineage,
+      scope: "self-fix",
+      finalStage: "build-and-test",
+      completionInstance: fixture.completionInstance,
+      completionContextDigest: workflowCompletionContextDigest(content, "build-and-test"),
+      items: [{
+        id: "goal-statement",
+        verdict: "ACHIEVED",
+        evidence: [deterministicEvidence()],
+      }],
+      humanRulingReference: null,
+      createdAt: "2026-08-04T05:30:00.000Z",
+    });
+    writeGoalReconciliationReceipt(fixture.recordDir, receipt);
+
+    expect(() => authorizeWorkflowCompletion({
+      projectDir: fixture.projectDir,
+      recordDir: fixture.recordDir,
+      content,
+      completedSlug: "build-and-test",
+      completionInstance: fixture.completionInstance,
+    })).toThrow(/another Intent/i);
   });
 });
 

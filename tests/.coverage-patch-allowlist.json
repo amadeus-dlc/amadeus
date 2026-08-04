@@ -58,9 +58,9 @@
     "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
     "selector": {
       "function": "createGoalChangeProposal",
-      "fingerprint": "sha256:18aca6abf94a5d3e152c090556fcff051692d855b40c420a6994d9bfcbc13dd5",
-      "anchorLines": 9,
-      "targetLines": "1-9"
+      "fingerprint": "sha256:204088aaa0b3c39866097acdfc04cee5148e8218bde6148aff8203ebeee47dfd",
+      "anchorLines": 11,
+      "targetLines": "1-11"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Proposal creation, parsing, persistence, collision, tamper, and approval paths are covered directly by t427 unit tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -146,9 +146,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "emitMirrorBoundaryIfNeeded",
-      "fingerprint": "sha256:13bdf3783dbdfcc0df1fc168d85992605e7d5a716b4a70e1cdebfc6ed7498fd1",
-      "anchorLines": 2,
-      "targetLines": "1-2"
+      "fingerprint": "sha256:ed0187a3e7f2f1e730ee83efec2fc69ab615027cde212b0d5734ad23be804649",
+      "anchorLines": 17,
+      "targetLines": "1-17"
     },
     "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 integration; spawned execution is not attributed to parent Bun LCOV.",
     "expiry": "remove when record resolution and directive emission are injectable in-process or Bun merges child-process coverage"
@@ -157,9 +157,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleNext",
-      "fingerprint": "sha256:e84147b94fbbd5941295e231c2d1fd4937ceb7aa9d6b57c7430575d04e8fdf31",
-      "anchorLines": 18,
-      "targetLines": "1-18"
+      "fingerprint": "sha256:4dfe5ea3efa5d46f1a1889dfae96c47eea3d05ecceea445e9ef58aa48f77de14",
+      "anchorLines": 20,
+      "targetLines": "1-20"
     },
     "reason": "Completed-workflow recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration. handleNext is a process-bound dispatcher, so Bun does not attribute its spawned execution to parent LCOV.",
     "expiry": "remove when handleNext receives injected state, authorization, and output ports"
@@ -168,9 +168,9 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:75cb03a3307078259f5a84718528edd83c2e8a0f45f1d04f065268c0647c2476",
-      "anchorLines": 12,
-      "targetLines": "1-12"
+      "fingerprint": "sha256:eda652837aee67d9208bcf0f92dee56edd726ceb65e3ab9ab319f465c109abe0",
+      "anchorLines": 20,
+      "targetLines": "1-20"
     },
     "reason": "Final-report recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration and t265 E2E. handleReport is executed in a child process outside parent Bun LCOV.",
     "expiry": "remove when handleReport receives injected state, authorization, and output ports"
@@ -1476,10 +1476,10 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:7098e331d3f79e5f78e86e9af732b9eca3817de0c8e8d65eb52067f827dfff25",
-      "anchorLines": 29,
-      "targetLines": "1-29"
+      "function": "appendOrchestrateLifecycleEvent",
+      "fingerprint": "sha256:afc1615a8d008bd96f7dfb936356a5803983de33e0d7c4db5f008b4002af02ff",
+      "anchorLines": 15,
+      "targetLines": "1-15"
     },
     "reason": "The archived-next lifecycle audit adapter is exercised through the generated orchestrator CLI by t259; the spawned main path is not attributed to the parent Bun LCOV process.",
     "expiry": "remove when the orchestrator CLI emitter and lifecycle audit adapter are injected in-process"

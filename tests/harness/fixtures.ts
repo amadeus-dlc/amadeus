@@ -42,6 +42,7 @@ import {
   createGoalReconciliationReceipt,
   createInitialGoalLineage,
   goalLineagePath,
+  readGoalLineage,
   writeGoalReconciliationReceipt,
   writeInitialGoalLineage,
 } from "../../packages/framework/core/tools/amadeus-goal-reconciliation.ts";
@@ -268,22 +269,31 @@ export function seedGoalReceiptForFinalStage(
   let state = readFileSync(statePath, "utf8");
   const scope = getField(state, "Scope")?.trim();
   if (!scope) throw new Error("Goal fixture requires a Scope field");
-  const lineage = createInitialGoalLineage({
-    intentId: DEFAULT_INTENT_UUID,
-    statement: "Exercise the seeded terminal transition",
-    scope,
-    createdAt: "2026-08-04T00:00:00.000Z",
-  });
+  const lineageFile = goalLineagePath(recDir);
+  const lineage = existsSync(lineageFile)
+    ? readGoalLineage(recDir)
+    : createInitialGoalLineage({
+      intentId: DEFAULT_INTENT_UUID,
+      statement: "Exercise the seeded terminal transition",
+      scope,
+      createdAt: "2026-08-04T00:00:00.000Z",
+    });
+  const current = lineage.revisions[lineage.currentRevision];
   state = setOrInsertField(state, "## Runtime State", "Goal ID", lineage.goalId);
-  state = setOrInsertField(state, "## Runtime State", "Current Goal Revision", "0");
+  state = setOrInsertField(
+    state,
+    "## Runtime State",
+    "Current Goal Revision",
+    String(lineage.currentRevision),
+  );
   state = setOrInsertField(
     state,
     "## Runtime State",
     "Current Goal Digest",
-    lineage.revisions[0].digest,
+    current.digest,
   );
   writeFileSync(statePath, state);
-  if (!existsSync(goalLineagePath(recDir))) writeInitialGoalLineage(recDir, lineage);
+  if (!existsSync(lineageFile)) writeInitialGoalLineage(recDir, lineage);
   const receipt = createGoalReconciliationReceipt({
     lineage,
     scope,
@@ -302,6 +312,17 @@ export function seedGoalReceiptForFinalStage(
           },
         ],
       },
+      ...current.successMetrics.map((_, index) => ({
+        id: `success-metric-${index + 1}`,
+        verdict: "ACHIEVED" as const,
+        evidence: [
+          {
+            kind: "deterministic-check" as const,
+            reference: `fixture:terminal-transition:metric-${index + 1}`,
+            digest: "0".repeat(64),
+          },
+        ],
+      })),
     ],
     humanRulingReference: null,
     createdAt: "2026-08-04T00:00:00.000Z",

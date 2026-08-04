@@ -433,6 +433,10 @@ export type JournalAppendOutcome =
   | { readonly appended: true }
   | { readonly appended: false; readonly reason: "intent-complete" };
 
+// A sealed legacy Intent needs exactly one post-proposal HUMAN_TURN so a human
+// can authorize reconstruction. The exception closes as soon as
+// approve-legacy-migration creates goal-lineage.json; ordinary CLI minting is
+// still rejected because this predicate accepts only the journal event name.
 function allowsSealedLegacyHumanTurn(
   eventName: string,
   projectDir: string,
