@@ -664,6 +664,27 @@ function doctorArtifactNames(graph: readonly DeepReadonly<GraphStage>[]): string
   return [...names].sort();
 }
 
+function resolvePiDoctorChecks(
+  projectDir: string,
+  resolvedHarnessDir: string,
+  platform: NodeJS.Platform,
+  piAgentDir: string,
+): readonly PiDoctorCheck[] {
+  if (resolvedHarnessDir !== ".pi") return [];
+  const piExecutable = Bun.which("pi") ?? undefined;
+  const piVersionOutput = piExecutable === undefined
+    ? ""
+    : (Bun.spawnSync([piExecutable, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "");
+  return probePiDoctor({
+    projectDir,
+    platform,
+    bunVersion: Bun.version,
+    piExecutable,
+    piVersionOutput,
+    piAgentDir,
+  });
+}
+
 export function resolveDoctorContext(projectDir: string): DoctorContext {
   const resolvedHarnessDir = harnessDir();
   const resolvedRulesSubdir = rulesSubdir();
@@ -696,21 +717,8 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const teamPrerequisites = deepFreezeDoctorSnapshot(
     detectTeamPrerequisites(process.env, probeExecutable),
   );
-  const piPath = resolvedHarnessDir === ".pi" ? Bun.which("pi") ?? undefined : undefined;
-  const piVersionOutput = piPath === undefined
-    ? ""
-    : (Bun.spawnSync([piPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "");
   const piDoctorChecks = deepFreezeDoctorSnapshot(
-    resolvedHarnessDir === ".pi"
-      ? probePiDoctor({
-        projectDir,
-        platform,
-        bunVersion: Bun.version,
-        piExecutable: piPath,
-        piVersionOutput,
-        piAgentDir,
-      })
-      : [],
+    resolvePiDoctorChecks(projectDir, resolvedHarnessDir, platform, piAgentDir),
   );
   // The plugin host root is the HARNESS dir under the project dir (#1591 ruling
   // B) — the same root compose writes to and the engine reads plugin stages
