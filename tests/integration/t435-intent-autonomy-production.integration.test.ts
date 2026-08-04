@@ -19,6 +19,7 @@ import {
   resumeProductionQuality,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import { main as boltMain } from "../../packages/framework/core/tools/amadeus-bolt.ts";
+import { runUtilityMain } from "../../packages/framework/core/tools/amadeus-utility.ts";
 
 const BUN = process.execPath;
 
@@ -788,5 +789,24 @@ describe("Intent-scoped autonomy production path", () => {
     }));
     boltMain(["--project-dir", projectDir, "observe-quality", "--input", observationPath]);
     expect(readProductionAutonomyProjection(projectDir)?.workflowExecutionState).toBe("running");
+  }, 60_000);
+
+  test("utility status renders the autonomy projection in-process", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const savedArgv = process.argv;
+    const savedGraph = process.env.AMADEUS_STAGE_GRAPH;
+    process.env.AMADEUS_STAGE_GRAPH = join(projectDir, ".claude", "tools", "data", "stage-graph.json");
+    try {
+      process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--project-dir", projectDir];
+      runUtilityMain();
+      process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--json", "--project-dir", projectDir];
+      runUtilityMain();
+    } finally {
+      process.argv = savedArgv;
+      if (savedGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = savedGraph;
+    }
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("full");
   }, 60_000);
 });
