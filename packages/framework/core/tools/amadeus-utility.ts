@@ -362,17 +362,14 @@ To get started:
   const activeAgent = getField(content, "Active Agent") || "None";
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
-  let autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null = null;
-  try {
-    const autonomyProjection = readProductionAutonomyProjection(
-      projectDir,
-      flags.intent,
-      flags.space,
-    );
-    autonomy = autonomyProjection === null ? null : projectIntentAutonomyStatus(autonomyProjection);
-  } catch {
-    autonomy = null;
-  }
+  const autonomyProjection = readProductionAutonomyProjection(
+    projectDir,
+    flags.intent,
+    flags.space,
+  );
+  const autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null = autonomyProjection === null
+    ? null
+    : projectIntentAutonomyStatus(autonomyProjection);
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
