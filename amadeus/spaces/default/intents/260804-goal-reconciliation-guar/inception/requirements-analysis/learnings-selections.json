@@ -1,0 +1,13 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c1-goal-ownership",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Goal Ownershipを人間のゴール所有権とオーケストレーターの照合責任に分離する。AIは逸脱検出とchange proposal作成までに限定し、通常のstage承認、一括委任、standing delegationでGoal revisionを有効化できない。人間が変更を承認しない場合は、実装をcurrent approved goalへ戻すリカバリーを保つ。",
+      "source": "orchestrator"
+    }
+  ]
+}
