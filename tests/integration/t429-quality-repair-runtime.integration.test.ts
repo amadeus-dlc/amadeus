@@ -2,6 +2,15 @@
 // size: medium
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
+import {
+  cleanupTestProject,
+  createTestProject,
+  DEFAULT_RECORD_DIR,
+  seededAuditShard,
+} from "../harness/fixtures.ts";
 
 import {
   createFirstPartyQualityContribution,
@@ -20,6 +29,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-quality-repair-runtime.ts";
 import {
   decodeQualityRepairTransaction,
+  readQualityRepairTransactionsFromAudit,
   replayQualityRepairScope,
 } from "../../packages/framework/core/tools/amadeus-quality-repair-replay.ts";
 import type {
@@ -99,6 +109,43 @@ function sensorBatch(
       outputId: "typecheck-output",
       terminalReceipt: `sha256:${"9".repeat(64)}`,
     }],
+  };
+}
+
+function mixedSensorBatch(
+  graphRevision: string,
+  previousSnapshot: QualityEvidenceSnapshot | null,
+  includeSecondFailure: boolean,
+  successReceipt: string,
+): QualityEvidenceBatchInput {
+  const failed = (outputId: string): QualityObservation => ({
+    kind: "sensor",
+    sensorId: "type-check",
+    blocking: true,
+    status: "failed",
+    outputId,
+    terminalReceipt: `sha256:${"8".repeat(64)}`,
+  });
+  return {
+    providerId: "quality-evidence-v1",
+    intentUuid: "intent-1",
+    monitorId: "quality-repair",
+    stageInstanceId: "mixed-sensor-stage-1",
+    boltId: "mixed-sensor-bolt-1",
+    graphRevision,
+    previousSnapshot,
+    observations: [
+      failed("typecheck-output"),
+      ...(includeSecondFailure ? [failed("lint-output")] : []),
+      {
+        kind: "sensor",
+        sensorId: "type-check",
+        blocking: true,
+        status: "passed",
+        outputId: "typecheck-output",
+        terminalReceipt: successReceipt,
+      },
+    ],
   };
 }
 
@@ -221,6 +268,13 @@ describe("Quality Repair production coordinator", () => {
     ]);
     expect(renderQualityRepairStatus(status!)).toContain("REPAIR_STALLED");
 
+    const decodedEventTypes = repository.readTransactions().flatMap((transaction) =>
+      decodeQualityRepairTransaction(JSON.stringify(transaction)).qualityEvents.map((event) => event.type)
+    );
+    expect(decodedEventTypes).toContain("QUALITY_REPLAN_RESERVED");
+    expect(decodedEventTypes).toContain("QUALITY_REPLAN_RECORDED");
+    expect(decodedEventTypes).toContain("REPAIR_STALLED");
+
     const before = repository.readTransactions().length;
     expect(coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace).kind).toBe("REPAIR_STALLED");
     expect(repository.readTransactions()).toHaveLength(before);
@@ -271,6 +325,12 @@ describe("Quality Repair production coordinator", () => {
       "LOOP_LATCH_CLEARED",
       "WORKFLOW_UNPARKED",
     ]);
+    const decodedEpochStart = decodeQualityRepairTransaction(JSON.stringify(transaction));
+    expect(decodedEpochStart.qualityEvents).toMatchObject([{
+      type: "QUALITY_EPOCH_STARTED",
+      priorQualityEpochId: status.qualityEpochId,
+      satisfiedAlternativeIdentity: humanAlternative.identity,
+    }]);
     const replayed = createQualityRepairCoordinator({ activation, repository });
     expect(replayed.status(status.qualityScopeId)?.qualityEpochId).toBe(resumed.projection.qualityEpochId);
   });
@@ -483,6 +543,23 @@ describe("Quality Repair production coordinator", () => {
       append({ ...committedSet, partitionKey: "wrong-partition" }))).toThrow(
       "quality-repair-loop-partition-mismatch",
     );
+
+    const committedByHook: QualityRepairTransaction[] = [];
+    let lockEntered = false;
+    const hookedRepository = createMemoryQualityRepairRepository({
+      initialTransactions: [],
+      onCommit: (transaction) => committedByHook.push(transaction),
+      transactionLock: (body) => {
+        lockEntered = true;
+        return body();
+      },
+    });
+    hookedRepository.transaction(canonical.qualityScopeId, (append) => {
+      for (const event of canonical.qualityEvents) append(event);
+    });
+    expect(lockEntered).toBe(true);
+    expect(committedByHook).toHaveLength(1);
+    expect(hookedRepository.readProjection(canonical.qualityScopeId)?.latestSnapshot).toEqual(observed.snapshot);
   });
 
   test("fails closed for stale and incomplete evidence without advancing durable state", () => {
@@ -539,6 +616,146 @@ describe("Quality Repair production coordinator", () => {
       judgePort().port,
       noEffectPort,
     )).toEqual({ kind: "AWAITING_HUMAN", reason: "quality-replan-attempts-exhausted" });
+  });
+
+  test("rejects late replan outcomes after a concurrent reconciliation wins", () => {
+    const lateCompletion = reachFirstThreshold();
+    let reconciledKind = "not-run";
+    const completionAfterReconcile: QualityReplanPort = {
+      dispatch(request) {
+        const reconciled = lateCompletion.coordinator.resumeReplan(request.qualityScopeId, {
+          dispatch: () => ({ kind: "unknown", reason: "not-used" }),
+          reconcile: (pending) => ({
+            kind: "completed",
+            receipt: {
+              judgeInvocationId: pending.judgeInvocationId,
+              planDigest: `sha256:${"1".repeat(64)}`,
+              agentId: "reconcile-agent",
+              contextId: "reconcile-context",
+            },
+          }),
+        });
+        reconciledKind = reconciled.kind;
+        return {
+          kind: "completed",
+          receipt: {
+            judgeInvocationId: request.judgeInvocationId,
+            planDigest: `sha256:${"2".repeat(64)}`,
+            agentId: "late-agent",
+            contextId: "late-context",
+          },
+        };
+      },
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    };
+    expect(lateCompletion.coordinator.dispatchJudge(
+      lateCompletion.threshold.permit,
+      judgePort().port,
+      completionAfterReconcile,
+    )).toEqual({ kind: "CONFLICT", reason: "quality-replan-attempt-not-pending" });
+    expect(reconciledKind).toBe("replanned");
+
+    const lateNoEffect = reachFirstThreshold();
+    const noEffectAfterReconcile: QualityReplanPort = {
+      dispatch(request) {
+        lateNoEffect.coordinator.resumeReplan(request.qualityScopeId, {
+          dispatch: () => ({ kind: "unknown", reason: "not-used" }),
+          reconcile: (pending) => ({
+            kind: "completed",
+            receipt: {
+              judgeInvocationId: pending.judgeInvocationId,
+              planDigest: `sha256:${"3".repeat(64)}`,
+              agentId: "reconcile-agent",
+              contextId: "reconcile-context",
+            },
+          }),
+        });
+        return { kind: "no-effect-confirmed", attestationId: "late-no-effect" };
+      },
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    };
+    expect(lateNoEffect.coordinator.dispatchJudge(
+      lateNoEffect.threshold.permit,
+      judgePort().port,
+      noEffectAfterReconcile,
+    )).toEqual({ kind: "CONFLICT", reason: "quality-replan-attempt-not-pending" });
+  });
+
+  test("fails closed when the Quality projection and Loop latch disagree", () => {
+    const outOfOrder = reachFirstThreshold();
+    outOfOrder.coordinator.dispatchJudge(outOfOrder.threshold.permit, judgePort().port, replanPort);
+    let previous = outOfOrder.previous;
+    let threshold: ReturnType<typeof outOfOrder.coordinator.recordEvidence> | null = null;
+    for (let index = 0; index < 2; index += 1) {
+      threshold = outOfOrder.coordinator.recordEvidence(
+        batch(outOfOrder.activation.graph.graphRevision, previous),
+        trace,
+      );
+      previous = threshold.snapshot;
+    }
+    if (threshold?.kind !== "judge-reserved") throw new Error("missing stalled threshold");
+    const current = outOfOrder.repository.readProjection(threshold.snapshot.qualityScopeId)!;
+    const alteredProjection = {
+      ...current,
+      lastProgress: { kind: "initial" as const, threshold: 2 },
+    };
+    outOfOrder.repository.transaction(current.qualityScopeId, (append) => append({
+      type: "QUALITY_SNAPSHOT_OBSERVED",
+      snapshotFingerprint: current.latestSnapshot!.snapshotFingerprint,
+      progress: alteredProjection.lastProgress,
+      projection: alteredProjection,
+    }));
+    expect(outOfOrder.coordinator.dispatchJudge(threshold.permit, judgePort().port, replanPort)).toEqual({
+      kind: "CONFLICT",
+      reason: "quality-stall-route-out-of-order",
+    });
+
+    const stalled = reachStalledRuntime();
+    const qualityOnlyRepository = createMemoryQualityRepairRepository({
+      initialTransactions: stalled.repository.readTransactions().map((transaction) => ({
+        ...transaction,
+        loopEventSets: [],
+      })),
+    });
+    const qualityOnlyCoordinator = createQualityRepairCoordinator({
+      activation: stalled.activation,
+      repository: qualityOnlyRepository,
+    });
+    const humanAlternative = stalled.status.resumeCondition.alternatives.find((item) => item.kind === "human-retry")!;
+    expect(qualityOnlyCoordinator.resume({
+      qualityScopeId: stalled.status.qualityScopeId,
+      alternativeIdentity: humanAlternative.identity,
+      humanRetry: { verified: true, eventType: "HUMAN_TURN", turnId: "recovery-turn" },
+    })).toEqual({ kind: "CONFLICT", reason: "quality-loop-latch-clear-failed" });
+  });
+
+  test("rejects conflicting canonical Quality Repair transactions in the audit ledger", () => {
+    const projectDir = createTestProject();
+    try {
+      const source = runtime();
+      source.coordinator.recordEvidence(batch(source.activation.graph.graphRevision, null), trace);
+      const canonical = source.repository.readTransactions()[0]!;
+      const conflicting: QualityRepairTransaction = { ...canonical, qualityEvents: [] };
+      const shard = seededAuditShard(projectDir);
+      mkdirSync(dirname(shard), { recursive: true });
+      const row = (transaction: QualityRepairTransaction, seq: number) => JSON.stringify({
+        schemaVersion: 1,
+        seq,
+        cloneId: "quality-repair-test",
+        intentId: "quality-repair-test",
+        timestamp: `2026-08-04T00:00:0${seq}.000Z`,
+        heading: "Quality Repair Transaction Committed",
+        event: "QUALITY_REPAIR_TRANSACTION_COMMITTED",
+        fields: { Transaction: JSON.stringify(transaction) },
+      });
+      writeFileSync(shard, `${row(canonical, 1)}\n${row(conflicting, 2)}\n`);
+
+      expect(() => readQualityRepairTransactionsFromAudit(projectDir, DEFAULT_RECORD_DIR, "default")).toThrow(
+        "invalid-quality-repair-audit-row:transaction-conflict",
+      );
+    } finally {
+      cleanupTestProject(projectDir);
+    }
   });
 
   test("validates every stalled-resume prerequisite before accepting improved evidence", () => {
@@ -628,6 +845,47 @@ describe("Quality Repair production coordinator", () => {
       qualityScopeId: status.qualityScopeId,
       alternativeIdentity: evidenceAlternative.identity,
       evidence: sensorBatch(instance.activation.graph.graphRevision, previous, "passed"),
+    })).toMatchObject({ kind: "resumed" });
+  });
+
+  test("accepts a replacement verifier receipt while the unresolved set shrinks", () => {
+    const instance = runtime();
+    let previous: QualityEvidenceSnapshot | null = null;
+    let threshold: ReturnType<typeof instance.coordinator.recordEvidence> | null = null;
+    for (let index = 0; index < 3; index += 1) {
+      threshold = instance.coordinator.recordEvidence(
+        mixedSensorBatch(instance.activation.graph.graphRevision, previous, true, `sha256:${"4".repeat(64)}`),
+        trace,
+      );
+      previous = threshold.snapshot;
+    }
+    if (threshold?.kind !== "judge-reserved") throw new Error("missing mixed sensor replan threshold");
+    instance.coordinator.dispatchJudge(threshold.permit, judgePort().port, replanPort);
+    for (let index = 0; index < 2; index += 1) {
+      threshold = instance.coordinator.recordEvidence(
+        mixedSensorBatch(instance.activation.graph.graphRevision, previous, true, `sha256:${"4".repeat(64)}`),
+        trace,
+      );
+      previous = threshold.snapshot;
+    }
+    if (threshold?.kind !== "judge-reserved") throw new Error("missing mixed sensor stalled threshold");
+    expect(instance.coordinator.dispatchJudge(threshold.permit, judgePort().port, replanPort).kind).toBe(
+      "REPAIR_STALLED",
+    );
+    const status = instance.coordinator.status(threshold.snapshot.qualityScopeId);
+    if (status === null) throw new Error("missing mixed sensor stalled status");
+    const evidenceAlternative = status.resumeCondition.alternatives.find((item) => item.kind === "evidence-change");
+    if (evidenceAlternative === undefined) throw new Error("missing mixed sensor evidence alternative");
+
+    expect(instance.coordinator.resume({
+      qualityScopeId: status.qualityScopeId,
+      alternativeIdentity: evidenceAlternative.identity,
+      evidence: mixedSensorBatch(
+        instance.activation.graph.graphRevision,
+        previous,
+        false,
+        `sha256:${"5".repeat(64)}`,
+      ),
     })).toMatchObject({ kind: "resumed" });
   });
 });
