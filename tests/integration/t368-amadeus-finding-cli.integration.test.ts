@@ -92,6 +92,11 @@ describe("runFindingCli", () => {
 
   test.each([
     [
+      "wrong subcommand",
+      (args: string[]) => args.map((value, index) => (index === 0 ? "create-issue" : value)),
+      "expected the create-github-issue subcommand",
+    ],
+    [
       "unknown argument",
       (args: string[]) => [...args, "--unknown"],
       "unknown argument: --unknown",

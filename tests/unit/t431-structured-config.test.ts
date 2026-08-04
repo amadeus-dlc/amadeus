@@ -258,6 +258,26 @@ describe("t431 structured config", () => {
     ).toBe("invalid");
   });
 
+  test("rejects non-object roots and structured prefixes", () => {
+    expect(
+      parseAmadeusConfigLayers([present("project", null)]).kind,
+    ).toBe("invalid");
+
+    const prefix = parseAmadeusConfigLayers([
+      present("project", { "intent-mirror": false }),
+    ]);
+    expect(prefix.kind).toBe("invalid");
+    if (prefix.kind !== "invalid") return;
+    expect(prefix.issues).toContainEqual({
+      kind: "invalid-value",
+      layer: "project",
+      path: "amadeus/project.json",
+      key: "intent-mirror.github.issue.mode",
+      actualType: "boolean",
+      expected: "object",
+    });
+  });
+
   test("aggregates unknown paths, invalid modes, and out-of-range limits", () => {
     const outcome = parseAmadeusConfigLayers([
       present("project", {
