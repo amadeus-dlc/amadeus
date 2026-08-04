@@ -10,7 +10,7 @@ import {
   MATRIX_START,
   updateCapabilityMatrix,
 } from "../harness/live-e2e/projector.ts";
-import { capabilityById, LIVE_CAPABILITIES, validateCapabilityRegistry } from "../harness/live-e2e/registry.ts";
+import { capabilityById, validateCapabilityRegistry } from "../harness/live-e2e/registry.ts";
 import {
   strictOptInPropertyCases,
   type ContractCase,
@@ -190,8 +190,10 @@ describe("live E2E adversarial test kit", () => {
   });
 
   test("reports incomplete supported capabilities", () => {
+    const codex = capabilityById("codex-exec");
+    if (!codex.ok) throw new Error(codex.error.kind);
     expect(validateCapabilityRegistry([{
-      ...LIVE_CAPABILITIES[0],
+      ...codex.value,
       measuredVersion: "",
       anchorKinds: [],
     }])).toEqual([{ kind: "incomplete-supported", adapterId: "codex-exec" }]);

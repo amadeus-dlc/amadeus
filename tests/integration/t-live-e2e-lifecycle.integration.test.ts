@@ -491,9 +491,12 @@ describe("live E2E lifecycle", () => {
     const root = fixtureRoot();
     const ledger = join(root, "runs.jsonl");
     try {
-      expect(await appendRunReceipt(ledger, { ...receipt(), durability: "file-and-directory" }, {
+      const fsyncFailure = await appendRunReceipt(ledger, { ...receipt(), durability: "file-and-directory" }, {
         fsyncDirectory: () => { throw new Error("fsync /private/tmp/secret failed"); },
-      })).toMatchObject({ ok: false, error: { kind: "write-failed" } });
+      });
+      expect(fsyncFailure).toMatchObject({ ok: false, error: { kind: "write-failed" } });
+      if (fsyncFailure.ok) throw new Error("expected directory fsync failure");
+      expect(fsyncFailure.error.diagnostic).not.toContain("/private/tmp/secret");
       const newer = { ...receipt("b".repeat(64)), recordedAt: "2026-08-04T00:00:00.000Z" };
       const failed = {
         ...receipt("c".repeat(64)),

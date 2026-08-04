@@ -3745,17 +3745,6 @@
     "expiry": "remove when receipt persistence receives an injectable filesystem port"
   },
   {
-    "file": "tests/harness/live-e2e/lifecycle.ts",
-    "selector": {
-      "function": "runLiveJourney",
-      "fingerprint": "sha256:4114ba5455966bae46042d9f1598eb31b3f0d691ddf5749214b2be56ccf2f58a",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "The adapter outcome constructors and contract taxonomy enforce matching status/code pairs before this defense-in-depth check. Every supported terminal class is covered; reaching the mismatch requires a contract-violating adapter result cast.",
-    "expiry": "remove if adapter outcomes become untyped external input"
-  },
-  {
     "file": "tests/harness/sdk-drive.ts",
     "selector": {
       "function": "driveAidlc",

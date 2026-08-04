@@ -136,18 +136,20 @@ export async function runSdkWorker(ports: SdkWorkerPorts = DEFAULT_PORTS): Promi
   const abortController = new AbortController();
   const onAbort = () => abortController.abort();
   ports.onSignal("SIGUSR1", onAbort);
-  const frameBytes = await ports.readFrameBytes();
-  const frame: CredentialFrame = (() => {
-    try {
-      return parseCredentialFrame(frameBytes);
-    } finally {
-      frameBytes.fill(0);
-    }
-  })();
-  if (frame.secret.length > 0) {
-    ports.env[frame.childKey] = frame.secret;
-  }
+  let childKey: string | undefined;
   try {
+    const frameBytes = await ports.readFrameBytes();
+    const frame: CredentialFrame = (() => {
+      try {
+        return parseCredentialFrame(frameBytes);
+      } finally {
+        frameBytes.fill(0);
+      }
+    })();
+    childKey = frame.childKey;
+    if (frame.secret.length > 0) {
+      ports.env[frame.childKey] = frame.secret;
+    }
     const result = await ports.drive(CLAUDE_SDK_PROMPT, {
       projectDir: ports.cwd(),
       permissionMode: "bypassPermissions",
@@ -159,7 +161,7 @@ export async function runSdkWorker(ports: SdkWorkerPorts = DEFAULT_PORTS): Promi
     return sdkWorkerExitCode(result.resultEvents);
   } finally {
     ports.offSignal("SIGUSR1", onAbort);
-    delete ports.env[frame.childKey];
+    if (childKey !== undefined) delete ports.env[childKey];
   }
 }
 

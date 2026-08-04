@@ -175,6 +175,18 @@ describe("Claude SDK live contract", () => {
     expect(signals).toEqual(["on:SIGUSR1", "off:SIGUSR1"]);
   });
 
+  test("worker removes its abort handler when credential parsing fails", async () => {
+    const bytes = new TextEncoder().encode("2\n{}");
+    const signals: string[] = [];
+    await expect(runSdkWorker(workerPorts({
+      readFrameBytes: async () => bytes,
+      onSignal: (signal) => signals.push(`on:${signal}`),
+      offSignal: (signal) => signals.push(`off:${signal}`),
+    }))).rejects.toThrow("frame is invalid");
+    expect(bytes.every((byte) => byte === 0)).toBe(true);
+    expect(signals).toEqual(["on:SIGUSR1", "off:SIGUSR1"]);
+  });
+
   test("worker dispatches probe and maps promise rejection to exit one", async () => {
     const output: string[] = [];
     expect(await dispatchSdkWorker(["worker", "--probe"], workerPorts({ write: (line) => output.push(line) })))

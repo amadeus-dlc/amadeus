@@ -10,7 +10,6 @@ import type {
   ScratchReceipt,
 } from "./adapter.ts";
 import {
-  codeMatchesStatus,
   digest,
   type LiveOutcome,
   type Result,
@@ -273,9 +272,6 @@ export async function runLiveJourney(
         originalOutcome: stages.outcome,
       },
     };
-  }
-  if (!codeMatchesStatus(stages.outcome.status, stages.outcome.code)) {
-    return { ok: false, error: { kind: "contract-invalid", cause: "outcome status/code mismatch" } };
   }
   const receipt = recordedReceipt({
     adapter,
