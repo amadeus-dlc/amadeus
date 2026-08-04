@@ -1,7 +1,8 @@
 // covers: file:packages/framework/core/tools/amadeus-loop-monitor-replay.ts
 // size: medium
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as nodeFs from "node:fs";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -86,6 +87,61 @@ function tempRoot(): string {
 }
 
 describe("durable Loop Monitor Replay Index", () => {
+  test("atomic index writes clean up temporary files without masking the write failure", () => {
+    const root = tempRoot();
+    const index = join(root, LOOP_MONITOR_REPLAY_INDEX_FILE);
+    mkdirSync(index);
+    const remove = nodeFs.rmSync;
+    let temporaryCleanupAttempts = 0;
+    const removeSpy = spyOn(nodeFs, "rmSync").mockImplementation((path, options) => {
+      if (String(path).startsWith(`${index}.tmp-`)) {
+        temporaryCleanupAttempts += 1;
+        if (temporaryCleanupAttempts === 2) throw new Error("cleanup-failed");
+      }
+      return remove(path, options);
+    });
+    try {
+      expect(() => repairLoopMonitorReplayIndex(root, [])).toThrow();
+      expect(() => repairLoopMonitorReplayIndex(root, [])).toThrow();
+      expect(temporaryCleanupAttempts).toBe(2);
+    } finally {
+      removeSpy.mockRestore();
+    }
+  });
+
+  test("event-set decoding validates latch fields and delivery references", () => {
+    const root = tempRoot();
+    const canonical: LoopMonitorEventSet[] = [];
+    initializeLoopMonitorReplayIndex(root);
+    const repository = createDurableLoopMonitorRepository({
+      indexDir: root,
+      appendCanonical: (set) => canonical.push(set),
+      readCanonicalForRepair: () => canonical,
+    });
+    createLoopMonitorCoordinator({ graph: compiled, repository }).observeDelivery(delivery("a", null, "decode-a"));
+    const deliverySet = JSON.parse(JSON.stringify(canonical[0])) as Record<string, unknown>;
+    const deliveryEvents = deliverySet.events as Array<Record<string, unknown>>;
+    const observedDelivery = deliveryEvents[0]!.delivery as Record<string, unknown>;
+    const payload = observedDelivery.payload as Record<string, unknown>;
+    payload.references = [{ kind: "artifact", id: "result", digest: `sha256:${"c".repeat(64)}` }];
+    expect(decodeLoopMonitorEventSet(JSON.stringify(deliverySet))).toEqual(deliverySet);
+
+    const latchSet = JSON.parse(JSON.stringify(canonical[0])) as Record<string, unknown>;
+    latchSet.events = [{
+      type: "LOOP_LATCH_SET",
+      latch: {
+        monitorId: "monitor",
+        epoch: 1,
+        evidenceFingerprint: `sha256:${"d".repeat(64)}`,
+        invocationId: "invocation",
+        routeId: "continue",
+        reasonCode: "human-review-required",
+        resumeCondition: "human-retry",
+      },
+    }];
+    expect(decodeLoopMonitorEventSet(JSON.stringify(latchSet))).toEqual(latchSet);
+  });
+
   test("audit adapter persists canonical event sets and rebuilds its replay index", () => {
     const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
     roots.push(projectDir);
