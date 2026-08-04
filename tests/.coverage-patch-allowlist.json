@@ -4143,79 +4143,24 @@
   {
     "file": "scripts/package.ts",
     "selector": {
-      "function": "resourceDescriptors",
-      "fingerprint": "sha256:67698293c40c820856f60e15a4147f17b58e6ea85939b3e6c0281acf59621cea",
-      "anchorLines": 7,
-      "targetLines": "1-7"
-    },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
-      "function": "requiredResourceSource",
-      "fingerprint": "sha256:ee72fb42567cba57d5c237053c25769f065a9b3d7ea9852aa96ad8e07c872901",
-      "anchorLines": 10,
-      "targetLines": "1-10"
-    },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
-      "function": "copyManifestResources",
-      "fingerprint": "sha256:fe6c785662a1b4fa8af6afa67b306b6f9dca963d46551020ee79fe79b09c5227",
-      "anchorLines": 7,
-      "targetLines": "1-7"
-    },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
       "function": "resourcePathProblem",
-      "fingerprint": "sha256:e5839dc9f476510205d8773006dd46bb6788a6c53341c4ee3855169b146fd84e",
-      "anchorLines": 15,
-      "targetLines": "1-15"
-    },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
-      "function": "resourceDestinationProblems",
-      "fingerprint": "sha256:82594b8a188fbe11a62f50ef5d3f872e84d8628be24c55ce6afdccd6e5a970c0",
+      "fingerprint": "sha256:e00b10c318dcdf2bb142e10db05c1a2b5bcfd9349f5d9ad1678bf56e6e914a9f",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+    "reason": "Missing generated resources are accepted before clean-sweep regeneration; direct coverage would require mutating the shared dist tree while package tests run in parallel.",
+    "expiry": "remove when resource destination inspection accepts an isolated root manifest fixture"
   },
   {
     "file": "scripts/package.ts",
     "selector": {
       "function": "piMetadataFromRootPackage",
-      "fingerprint": "sha256:a374bd2f3b1527b93985be2a86b4b79694d4d40196609810e9493524cd4a92db",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
-  },
-  {
-    "file": "scripts/package.ts",
-    "selector": {
-      "function": "piPackageProblemsForHarness",
-      "fingerprint": "sha256:7d4891508bf1caa93976472e68b619c1205c5fc9217c19375b9c427c4a8a41e7",
+      "fingerprint": "sha256:8c94ffc2cf14f2f60f2b4e0014020b9d7be92c62d01f6bfe97b94057c62bd680",
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
-    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+    "reason": "The malformed root package fallback requires replacing the repository package.json during a parallel packaging test.",
+    "expiry": "remove when root package loading accepts an injected reader"
   },
   {
     "file": "scripts/pi-live-rpc.ts",

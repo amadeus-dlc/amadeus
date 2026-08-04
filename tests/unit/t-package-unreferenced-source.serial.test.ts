@@ -85,6 +85,10 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
     expect(() => writeHarness("kiro")).not.toThrow();
   }, CHECK_TIMEOUT_MS);
 
+  test("pi projects its closed resource catalog and package metadata in process", () => {
+    expect(() => writeHarness("pi")).not.toThrow();
+  }, CHECK_TIMEOUT_MS);
+
   test("planted stale source under harness/codex/ → writeHarness rejects it (red path)", () => {
     purgeProbe();
     writeFileSync(CODEX_PROBE, "coverage probe — never referenced\n");
