@@ -51,7 +51,7 @@ describe("Pi user and maintainer documentation contract", () => {
       "Linux",
       "Windows",
       "--harness pi",
-      "pi install -l /absolute/path/to/amadeus",
+      "pi install ./amadeus -l",
       "https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>",
       "/skill:amadeus --doctor",
       "source",
