@@ -7,14 +7,17 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import {
+  closeSync,
   existsSync,
+  fsyncSync,
   mkdirSync,
+  openSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import {
@@ -102,11 +105,22 @@ function removeTemporaryBestEffort(path: string): void {
   }
 }
 
+function syncPath(path: string): void {
+  const descriptor = openSync(path, "r");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function writeJsonAtomic(path: string, value: unknown): void {
   const temporary = `${path}.tmp-${randomUUID()}`;
   try {
     writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+    syncPath(temporary);
     renameSync(temporary, path);
+    syncPath(dirname(path));
   } catch (cause) {
     removeTemporaryBestEffort(temporary);
     throw cause;
@@ -468,14 +482,14 @@ export function createDurableLoopMonitorRepository(options: {
         return body(existing, (set) => {
           if (set.partitionKey !== key) throw new Error("loop-monitor-replay-partition-mismatch");
           const eventSetDigest = digest(set);
-          const wal: ReplayWal = { schemaVersion: 1, partitionKey: key, eventSet: set, eventSetDigest };
-          writeJsonAtomic(walPath(options.indexDir), wal);
-          options.appendCanonical(set);
           const currentPartition = transactionIndex.partitions[key];
           const duplicate = currentPartition?.eventSets.find((candidate) => candidate.eventSetId === set.eventSetId);
           if (duplicate !== undefined && digest(duplicate) !== eventSetDigest) {
             throw new Error("loop-monitor-replay-event-set-conflict");
           }
+          const wal: ReplayWal = { schemaVersion: 1, partitionKey: key, eventSet: set, eventSetDigest };
+          writeJsonAtomic(walPath(options.indexDir), wal);
+          options.appendCanonical(set);
           const nextSets = duplicate === undefined
             ? [...(currentPartition?.eventSets ?? []), set]
             : [...(currentPartition?.eventSets ?? [])];

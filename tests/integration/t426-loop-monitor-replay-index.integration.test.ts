@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-loop-monitor-replay.ts
+// covers: file:packages/framework/core/tools/amadeus-loop-monitor-replay.ts audit:LOOP_MONITOR_EVENT_SET_COMMITTED
 // size: medium
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
@@ -86,6 +86,17 @@ function tempRoot(): string {
   return root;
 }
 
+function incompleteCode(action: () => unknown): LoopMonitorReplayIncompleteError["code"] {
+  try {
+    action();
+  } catch (cause) {
+    expect(cause).toBeInstanceOf(LoopMonitorReplayIncompleteError);
+    if (cause instanceof LoopMonitorReplayIncompleteError) return cause.code;
+    throw cause;
+  }
+  throw new Error("expected-loop-monitor-replay-incomplete");
+}
+
 describe("durable Loop Monitor Replay Index", () => {
   test("atomic index writes clean up temporary files without masking the write failure", () => {
     const root = tempRoot();
@@ -109,6 +120,28 @@ describe("durable Loop Monitor Replay Index", () => {
     }
   });
 
+  test("atomic index writes sync the temporary file before rename and the directory after rename", () => {
+    const root = tempRoot();
+    const operations: string[] = [];
+    const sync = nodeFs.fsyncSync;
+    const rename = nodeFs.renameSync;
+    const syncSpy = spyOn(nodeFs, "fsyncSync").mockImplementation((fileDescriptor) => {
+      operations.push("fsync");
+      sync(fileDescriptor);
+    });
+    const renameSpy = spyOn(nodeFs, "renameSync").mockImplementation((oldPath, newPath) => {
+      operations.push("rename");
+      rename(oldPath, newPath);
+    });
+    try {
+      repairLoopMonitorReplayIndex(root, []);
+    } finally {
+      renameSpy.mockRestore();
+      syncSpy.mockRestore();
+    }
+    expect(operations).toEqual(["fsync", "rename", "fsync"]);
+  });
+
   test("event-set decoding validates latch fields and delivery references", () => {
     const root = tempRoot();
     const canonical: LoopMonitorEventSet[] = [];
@@ -119,26 +152,39 @@ describe("durable Loop Monitor Replay Index", () => {
       readCanonicalForRepair: () => canonical,
     });
     createLoopMonitorCoordinator({ graph: compiled, repository }).observeDelivery(delivery("a", null, "decode-a"));
-    const deliverySet = JSON.parse(JSON.stringify(canonical[0])) as Record<string, unknown>;
-    const deliveryEvents = deliverySet.events as Array<Record<string, unknown>>;
-    const observedDelivery = deliveryEvents[0]!.delivery as Record<string, unknown>;
-    const payload = observedDelivery.payload as Record<string, unknown>;
-    payload.references = [{ kind: "artifact", id: "result", digest: `sha256:${"c".repeat(64)}` }];
+    const baseSet = canonical[0]!;
+    const observed = baseSet.events[0]!;
+    if (observed.type !== "LOOP_DELIVERY_OBSERVED") throw new Error("expected-observed-delivery");
+    const deliverySet: LoopMonitorEventSet = {
+      ...baseSet,
+      events: [{
+        ...observed,
+        delivery: {
+          ...observed.delivery,
+          payload: {
+            ...observed.delivery.payload,
+            references: [{ kind: "artifact", id: "result", digest: `sha256:${"c".repeat(64)}` }],
+          },
+        },
+      }],
+    };
     expect(decodeLoopMonitorEventSet(JSON.stringify(deliverySet))).toEqual(deliverySet);
 
-    const latchSet = JSON.parse(JSON.stringify(canonical[0])) as Record<string, unknown>;
-    latchSet.events = [{
-      type: "LOOP_LATCH_SET",
-      latch: {
-        monitorId: "monitor",
-        epoch: 1,
-        evidenceFingerprint: `sha256:${"d".repeat(64)}`,
-        invocationId: "invocation",
-        routeId: "continue",
-        reasonCode: "human-review-required",
-        resumeCondition: "human-retry",
-      },
-    }];
+    const latchSet: LoopMonitorEventSet = {
+      ...baseSet,
+      events: [{
+        type: "LOOP_LATCH_SET",
+        latch: {
+          monitorId: "monitor",
+          epoch: 1,
+          evidenceFingerprint: `sha256:${"d".repeat(64)}`,
+          invocationId: "invocation",
+          routeId: "continue",
+          reasonCode: "human-review-required",
+          resumeCondition: "human-retry",
+        },
+      }],
+    };
     expect(decodeLoopMonitorEventSet(JSON.stringify(latchSet))).toEqual(latchSet);
   });
 
@@ -235,18 +281,46 @@ describe("durable Loop Monitor Replay Index", () => {
       appendCanonical: (set) => canonical.push(set),
       readCanonicalForRepair: () => canonical,
     });
-    expect(() => missing.readEventSets(partition)).toThrow(LoopMonitorReplayIncompleteError);
+    expect(incompleteCode(() => missing.readEventSets(partition))).toBe("INDEX_MISSING");
 
     initializeLoopMonitorReplayIndex(root);
     writeFileSync(join(root, LOOP_MONITOR_REPLAY_INDEX_FILE), "{broken\n");
-    expect(() => missing.readEventSets(partition)).toThrow(LoopMonitorReplayIncompleteError);
+    expect(incompleteCode(() => missing.readEventSets(partition))).toBe("INDEX_CORRUPT");
     repairLoopMonitorReplayIndex(root, canonical);
     expect(missing.readEventSets(partition)).toEqual([]);
 
     writeFileSync(join(root, LOOP_MONITOR_REPLAY_WAL_FILE), "{}\n");
-    expect(() => missing.readEventSets(partition)).toThrow(LoopMonitorReplayIncompleteError);
+    expect(incompleteCode(() => missing.readEventSets(partition))).toBe("WAL_PENDING");
     repairLoopMonitorReplayIndex(root, canonical);
     expect(existsSync(join(root, LOOP_MONITOR_REPLAY_WAL_FILE))).toBe(false);
+  });
+
+  test("duplicate digest conflicts fail before WAL or canonical side effects", () => {
+    const root = tempRoot();
+    const canonical: LoopMonitorEventSet[] = [];
+    let canonicalAppends = 0;
+    initializeLoopMonitorReplayIndex(root);
+    const repository = createDurableLoopMonitorRepository({
+      indexDir: root,
+      appendCanonical: (set) => {
+        canonicalAppends += 1;
+        canonical.push(set);
+      },
+      readCanonicalForRepair: () => canonical,
+    });
+    createLoopMonitorCoordinator({ graph: compiled, repository }).observeDelivery(delivery("a", null, "duplicate-a"));
+    const committed = canonical[0]!;
+    const conflicting: LoopMonitorEventSet = {
+      ...committed,
+      payloadFingerprint: `sha256:${"f".repeat(64)}`,
+    };
+
+    expect(() => repository.transaction(partition, (_sets, append) => append(conflicting)))
+      .toThrow("loop-monitor-replay-event-set-conflict");
+    expect(canonicalAppends).toBe(1);
+    expect(canonical).toEqual([committed]);
+    expect(existsSync(join(root, LOOP_MONITOR_REPLAY_WAL_FILE))).toBe(false);
+    expect(repository.readEventSets(partition)).toEqual([committed]);
   });
 
   test("a crash after canonical append leaves a loud WAL and repair reconstructs the partition", () => {
