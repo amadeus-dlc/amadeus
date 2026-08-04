@@ -149,4 +149,64 @@ describe("Pi harness manifest", () => {
       expect.stringContaining("load must be internal"),
     ]));
   });
+
+  test("rejects every untyped stage-entry and native-runtime shape", () => {
+    expect(validateHarnessManifest({ ...piManifest, stageEntry: null })).toContain("stageEntry must be an object");
+    expect(validateHarnessManifest({ ...piManifest, stageEntry: { kind: "unknown" } })).toContain(
+      "stageEntry.kind must be runner or command",
+    );
+    expect(validateHarnessManifest({ ...piManifest, stageEntry: { kind: "runner", root: "../skills", extra: true } })).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("stageEntry has unknown field"),
+        "stageEntry.root must be a normalized project-relative path",
+      ]),
+    );
+    expect(validateHarnessManifest({ ...piManifest, stageEntry: { kind: "command", path: ".pi/command.ts" } })).toEqual([]);
+    expect(validateHarnessManifest({ ...piManifest, stageEntry: { kind: "command", path: "/command.ts", extra: true } })).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("stageEntry has unknown field"),
+        "stageEntry.path must be a normalized project-relative path",
+      ]),
+    );
+
+    expect(validateHarnessManifest({ ...piManifest, nativeRuntime: null })).toContain("nativeRuntime must be an object");
+    expect(validateHarnessManifest({
+      ...piManifest,
+      nativeRuntime: {
+        package: "",
+        minimumVersion: "",
+        projectTrust: "managed",
+        trustIsSandbox: true,
+        autoApproveProjectTrust: true,
+        mutateTrustStore: true,
+        extra: true,
+      },
+    })).toEqual(expect.arrayContaining([
+      expect.stringContaining("nativeRuntime has unknown field"),
+      "nativeRuntime.package must be a non-empty string",
+      "nativeRuntime.minimumVersion must be a non-empty string",
+      "nativeRuntime.projectTrust must be native",
+      "nativeRuntime.trustIsSandbox must be false",
+      "nativeRuntime.autoApproveProjectTrust must be false",
+      "nativeRuntime.mutateTrustStore must be false",
+    ]));
+  });
+
+  test("rejects every untyped resource catalog shape", () => {
+    expect(validateHarnessManifest({ ...piManifest, resources: null })).toContain("resources must be an array");
+    expect(validateHarnessManifest({ ...piManifest, resources: [null] })).toContain("resources[0] must be an object");
+    expect(validateHarnessManifest({
+      ...piManifest,
+      resources: [{ kind: "bogus", source: "../driver.ts", destination: "/driver.ts", load: "native", extra: true }],
+    })).toEqual(expect.arrayContaining([
+      expect.stringContaining("resources[0] has unknown field"),
+      "resources[0].source is unsafe",
+      "resources[0].destination is unsafe",
+      "resources[0].kind is invalid",
+    ]));
+    expect(validateHarnessManifest({
+      ...piManifest,
+      resources: [{ kind: "driver", source: "drivers/driver.ts", destination: 42, load: "internal" }],
+    })).toContain("resources[0].destination is unsafe");
+  });
 });

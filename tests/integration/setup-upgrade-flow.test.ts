@@ -16,9 +16,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../packages/setup/src/cli.ts";
 import type { CliPorts } from "../../packages/setup/src/cli.ts";
+import { ManifestError } from "../../packages/setup/src/domain/manifest.ts";
 import type { Http } from "../../packages/setup/src/ports/http.ts";
 import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts";
-import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
+import { createFsRead, createFsWrite, createTmpWrite, IoError } from "../../packages/setup/src/ports/fsops.ts";
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
@@ -290,14 +291,10 @@ describe("upgrade pipeline — apply-failure order-of-operations (REL-U01/BR-U15
     try {
       expect(await installV1(target)).toBe(0);
       const beforeManifest = readManifest(target);
-      // Genuine (not faked) apply failure: replace the tools directory with a
-      // regular file so the applier's real mkdir/copy for amadeus-runtime.ts
-      // fails with ENOTDIR/EEXIST.
-      rmSync(join(target, ".claude", "tools"), { recursive: true, force: true });
-      writeFileSync(join(target, ".claude", "tools"), "not a directory");
 
       const archive = buildCodeloadFixture("amadeus-1.1.0", v2Entries());
       const realManifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const realApplyWrite = createApplyWrite();
       const ports: CliPorts = {
         ...realPorts(archive, "v1.1.0"),
         manifestIo: {
@@ -305,6 +302,10 @@ describe("upgrade pipeline — apply-failure order-of-operations (REL-U01/BR-U15
           write: () => {
             throw new Error("BR-U15 violation: manifestIo.write must not be called after an apply failure");
           },
+        },
+        applyWrite: {
+          ...realApplyWrite,
+          copyFile: async () => Result.err(IoError.of("fixture apply failure")),
         },
         verifyRead: {
           fileExists: () => {
@@ -319,6 +320,38 @@ describe("upgrade pipeline — apply-failure order-of-operations (REL-U01/BR-U15
       const exitCode = await main(["upgrade", "--harness", "claude", "--target", target, "--yes"], ports);
       expect(exitCode).toBe(1);
       expect(readManifest(target)).toEqual(beforeManifest);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("a manifest write failure is surfaced after apply and before verification", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-upgrade-flow-manifest-error-"));
+    try {
+      expect(await installV1(target)).toBe(0);
+      const beforeManifest = readManifest(target);
+      const archive = buildCodeloadFixture("amadeus-1.1.0", v2Entries());
+      const realManifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const ports: CliPorts = {
+        ...realPorts(archive, "v1.1.0"),
+        manifestIo: {
+          read: (dir) => realManifestIo.read(dir),
+          write: async () => Result.err(ManifestError.io("fixture manifest write failure")),
+        },
+        verifyRead: {
+          fileExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+          dirExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+        },
+      };
+
+      const exitCode = await main(["upgrade", "--harness", "claude", "--target", target, "--yes"], ports);
+      expect(exitCode).toBe(1);
+      expect(readManifest(target)).toEqual(beforeManifest);
+      expect(readFileSync(join(target, ".claude", "tools", "amadeus-runtime.ts"), "utf8")).toBe("export const runtime = 2;\n");
     } finally {
       rmSync(target, { recursive: true, force: true });
     }

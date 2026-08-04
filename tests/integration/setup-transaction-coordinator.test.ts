@@ -91,6 +91,7 @@ describe("SetupTransactionCoordinator", () => {
     );
 
     expect(result.hasFailures()).toBe(false);
+    expect(result.manifestFiles().type).toBe("ok");
     expect(readFileSync(join(target, "config", "settings.json"), "utf8")).toBe("new\n");
     expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(true);
     expect(readdirSync(join(target, "config"))).toEqual(["settings.json"]);
@@ -106,6 +107,29 @@ describe("SetupTransactionCoordinator", () => {
       expect(lstatSync(retained).mode & 0o077).toBe(0);
     }
     expect(lstatSync(privateRoot).mode & 0o077).toBe(0);
+  });
+
+  test("derives a private root by default and recovers an idle target", async () => {
+    const { root, target, source } = fixture();
+    writeFileSync(join(source, "amadeus-tool.ts"), "new\n");
+    const entries = [entry("amadeus-tool.ts", "new\n", "add")];
+    const coordinator = SetupTransactionCoordinator.create();
+
+    const result = await coordinator.apply(plan(source, entries), target, manifest(entries));
+
+    expect(result.hasFailures()).toBe(false);
+    expect(readdirSync(root).some((name) => name.startsWith(".amadeus-installer-private-"))).toBe(true);
+    expect(await coordinator.recover(target)).toEqual([]);
+  });
+
+  test("returns a classified recovery failure when the target parent is absent", async () => {
+    const { root, privateRoot } = fixture();
+    const missingTarget = join(root, "missing-parent", "project");
+
+    const failures = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).recover(missingTarget);
+
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.operation).toBe("journal");
   });
 
   test("a failure immediately before candidate installation rolls back the captured original", async () => {

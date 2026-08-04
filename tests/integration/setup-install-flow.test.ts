@@ -18,6 +18,7 @@ import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setu
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { SetupTransactionCoordinator } from "../../packages/setup/src/modules/setup-transaction-coordinator.ts";
+import { ManifestError } from "../../packages/setup/src/domain/manifest.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
 import {
@@ -352,6 +353,36 @@ describe("install pipeline — apply-failure order-of-operations (review correct
 
       const exitCode = await main(["install", "--harness", "claude", "--target", target, "--yes"], ports);
       expect(exitCode).toBe(1);
+      expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(false);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("a manifest write failure is surfaced after apply and before verification", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-manifest-error-"));
+    try {
+      const archive = buildCodeloadFixture("amadeus-1.2.3", CLAUDE_FIXTURE_ENTRIES);
+      const realManifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const ports: CliPorts = {
+        ...realPorts(archive),
+        manifestIo: {
+          read: (dir) => realManifestIo.read(dir),
+          write: async () => Result.err(ManifestError.io("fixture manifest write failure")),
+        },
+        verifyRead: {
+          fileExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+          dirExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+        },
+      };
+
+      const exitCode = await main(["install", "--harness", "claude", "--target", target, "--yes"], ports);
+      expect(exitCode).toBe(1);
+      expect(existsSync(join(target, ".claude", "tools", "amadeus-runtime.ts"))).toBe(true);
       expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(false);
     } finally {
       rmSync(target, { recursive: true, force: true });
