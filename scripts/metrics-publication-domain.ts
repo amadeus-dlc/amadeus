@@ -64,6 +64,7 @@ export type OwnershipContext = {
   repository: string;
   botLogin: string;
   targetSha?: string;
+  capturedAt?: string;
 };
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -115,12 +116,12 @@ export function isFullSha(value: string): boolean {
   return /^[0-9a-f]{40}$/.test(value);
 }
 
-function parseSnapshotText(file: ChangedFile): { sha: string } | null {
+function parseSnapshotText(file: ChangedFile): { sha: string; capturedAt: string } | null {
   if (file.text === undefined) return null;
   const parsed = parseSnapshot(file.text, file.path);
   if (parsed.kind === "error" || !isFullSha(parsed.snapshot.commit)) return null;
   if (!file.path.includes(parsed.snapshot.commit.slice(0, 12))) return null;
-  return { sha: parsed.snapshot.commit };
+  return { sha: parsed.snapshot.commit, capturedAt: parsed.snapshot.captured_at };
 }
 
 function snapshotBranchTarget(branch: string): string | null {
@@ -189,6 +190,16 @@ function snapshotBranchEvidence(raw: JsonRecord, context: OwnershipContext, targ
   ]);
 }
 
+// Backfill pins captured_at to the source evidence time: a candidate whose snapshot carries any
+// other captured_at (or path) must not be reusable, otherwise a leftover open PR for the same
+// commit would auto-merge the wrong timestamp instead of failing closed.
+function matchesEvidenceCapture(files: ChangedFile[], capturedAt: string, targetSha: string): boolean {
+  if (files.length !== 1) return false;
+  const file = files[0];
+  const expectedPath = `metrics/${capturedAt.replace(/[:.]/g, "-")}-${targetSha.slice(0, 12)}.json`;
+  return file.path === expectedPath && parseSnapshotText(file)?.capturedAt === capturedAt;
+}
+
 export function verifySnapshotOwnership(rawValue: unknown, context: OwnershipContext): Ownership {
   const raw = requireRecord(rawValue, "candidate");
   const files = requireFiles(raw.files);
@@ -196,10 +207,15 @@ export function verifySnapshotOwnership(rawValue: unknown, context: OwnershipCon
   const candidateEvidence = isPullRequest(raw)
     ? snapshotPullRequestEvidence(raw, context, targetSha)
     : snapshotBranchEvidence(raw, context, targetSha);
+  const captureEvidence: Array<[boolean, string]> =
+    context.capturedAt === undefined
+      ? []
+      : [[matchesEvidenceCapture(files, context.capturedAt, targetSha), "evidence captured_at"]];
   return ownership([
     ...missingEvidence([
       [isFullSha(targetSha), "target full SHA"],
       [isSnapshotOnly(files, targetSha), "JSON-only full-SHA diff"],
+      ...captureEvidence,
     ]),
     ...candidateEvidence,
   ]);

@@ -1,5 +1,7 @@
 name: Metrics Maintenance
 
+run-name: Metrics maintenance for ${{ github.event.client_payload.target_sha }}
+
 on:
   repository_dispatch:
     types: [metrics-maintenance]
