@@ -94,14 +94,16 @@ export function autonomyReviewStableId(prefix: string, digest: string): string {
   return `${prefix}-${digest.slice("sha256:".length, "sha256:".length + 32)}`;
 }
 
-export function nextReviewExtensionHead(input: {
+interface NextReviewExtensionHeadInput {
   readonly completionSealDigest: string | null;
   readonly previousExtensionHead: string | null;
   readonly eventIdentity: string;
   readonly payloadDigest: string;
   readonly transactionId: string;
   readonly revision: number;
-}): string {
+}
+
+export function nextReviewExtensionHead(input: NextReviewExtensionHeadInput): string {
   return autonomyReviewStableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
     { tag: "completion-seal", value: input.completionSealDigest },
     { tag: "previous-extension", value: input.previousExtensionHead },
@@ -677,12 +679,14 @@ export interface AutonomyReviewService {
   replaceIntent(seed: ReviewIntentSeed): void;
 }
 
-export function createMemoryAutonomyReviewService(options: {
+interface MemoryAutonomyReviewServiceOptions {
   readonly intents?: readonly ReviewIntentSeed[];
   readonly humanTurns?: readonly HumanReviewTurnSeed[];
   readonly redactor?: SafeDecisionRedactor;
   readonly snapshot?: AutonomyReviewPersistenceSnapshot;
-} = {}): AutonomyReviewService {
+}
+
+export function createMemoryAutonomyReviewService(options: MemoryAutonomyReviewServiceOptions = {}): AutonomyReviewService {
   const intents = new Map<string, IntentState>();
   const humanTurns = new Map<string, HumanReviewTurnSeed>();
   const redactor = options.redactor ?? { redact: (): { value: null; status: "withheld" } => ({ value: null, status: "withheld" }) };

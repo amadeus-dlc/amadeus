@@ -247,12 +247,14 @@ function reviewService(projectDir: string, target: ReviewTarget) {
   });
 }
 
-export function listProductionAutoDecisions(input: {
+interface ListProductionAutoDecisionsInput {
   readonly projectDir: string;
   readonly intent?: string;
   readonly reviewState?: "not-applicable" | "unreviewed" | "accepted" | "flagged";
   readonly pageSize?: number;
-}): { readonly ok: true; readonly page: DecisionPage } | { readonly ok: false; readonly error: string } {
+}
+
+export function listProductionAutoDecisions(input: ListProductionAutoDecisionsInput): { readonly ok: true; readonly page: DecisionPage } | { readonly ok: false; readonly error: string } {
   try {
     const target = resolveReviewTarget(input.projectDir, input.intent);
     if (target === null) return { ok: false, error: "review-target-not-found" };
@@ -268,11 +270,13 @@ export function listProductionAutoDecisions(input: {
   }
 }
 
-export function getProductionAutoDecision(input: {
+interface GetProductionAutoDecisionInput {
   readonly projectDir: string;
   readonly intent?: string;
   readonly decisionId: string;
-}): { readonly ok: true; readonly detail: DecisionDetail } | { readonly ok: false; readonly error: string } {
+}
+
+export function getProductionAutoDecision(input: GetProductionAutoDecisionInput): { readonly ok: true; readonly detail: DecisionDetail } | { readonly ok: false; readonly error: string } {
   try {
     const target = resolveReviewTarget(input.projectDir, input.intent);
     if (target === null) return { ok: false, error: "review-target-not-found" };

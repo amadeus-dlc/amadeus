@@ -912,6 +912,13 @@ describe("production review projection", () => {
         "default",
       )).toBe(true);
 
+      // A completed intent is no longer an active review SOURCE: the command
+      // must fail closed rather than mint a review from a sealed lifecycle.
+      expect(commitProductionDecisionReview({ projectDir, decisionId, choice: "accept" })).toEqual({
+        ok: false,
+        error: "active-source-and-review-target-required",
+      });
+
       expect(listProductionAutoDecisions({
         projectDir,
         intent: DEFAULT_INTENT_UUID,

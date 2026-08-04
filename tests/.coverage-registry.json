@@ -92,7 +92,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t433-autonomy-review-observability.test.ts",
+          "file": "tests/integration/t433-autonomy-review-observability.test.ts",
           "mechanism": "none"
         }
       ],
