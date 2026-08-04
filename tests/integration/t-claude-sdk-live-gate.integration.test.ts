@@ -1,8 +1,22 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { claudeSdkLiveRequirementsSkipReason, claudeSdkLiveSkipReason } from "../harness/claude-sdk-live.ts";
 import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { capabilityById } from "../harness/live-e2e/registry.ts";
-import { sdkWorkerExitCode, sdkWorkerProbeSurface } from "../harness/live-e2e/claude-sdk-worker.ts";
+import {
+  dispatchSdkWorker,
+  emitResult,
+  exitSdkWorker,
+  lateAfterTerminal,
+  parseCredentialFrame,
+  runSdkWorker,
+  sdkWorkerExitCode,
+  sdkWorkerProbeSurface,
+  type SdkWorkerPorts,
+} from "../harness/live-e2e/claude-sdk-worker.ts";
+import type { DriveResult } from "../harness/sdk-drive.ts";
 import { buildRedGreenEvidence } from "../harness/live-e2e/testing/evidence.ts";
 import {
   adjudicateClaudeSdkContract,
@@ -33,6 +47,56 @@ function baseline(): ClaudeSdkContractObservation {
   };
 }
 
+function credentialBytes(secret = "fixture-secret"): Uint8Array {
+  const payload = new TextEncoder().encode(JSON.stringify({
+    runNonce: "nonce",
+    generation: 1,
+    childKey: "ANTHROPIC_API_KEY",
+    secret,
+  }));
+  return new Uint8Array([...new TextEncoder().encode(`${payload.byteLength}\n`), ...payload]);
+}
+
+function driveResult(isError = false): DriveResult {
+  return {
+    toolResults: [{
+      toolName: "Write",
+      input: {},
+      toolUseId: "tool-1",
+      resultText: "written",
+      isError: false,
+    }],
+    assistantText: "done",
+    resultEvent: undefined,
+    resultEvents: [{
+      type: "result",
+      subtype: isError ? "error" : "success",
+      is_error: isError,
+      num_turns: 1,
+      permissionDenialsCount: 0,
+      raw: {},
+    }],
+    messageTypes: ["assistant", "result", "assistant"],
+    askedQuestions: [],
+    stateFile: "state",
+    auditEvents: ["audit"],
+  };
+}
+
+function workerPorts(overrides: Partial<SdkWorkerPorts> = {}): SdkWorkerPorts {
+  const env: Record<string, string | undefined> = {};
+  return {
+    readFrameBytes: async () => credentialBytes(),
+    drive: async () => driveResult(),
+    cwd: () => "/fixture/project",
+    env,
+    onSignal: () => {},
+    offSignal: () => {},
+    write: () => {},
+    ...overrides,
+  };
+}
+
 describe("Claude SDK live contract", () => {
   test("worker probe reports measured surfaces and rejects error terminals", () => {
     expect(sdkWorkerProbeSurface()).toMatchObject({ query: true, abort: true });
@@ -55,6 +119,87 @@ describe("Claude SDK live contract", () => {
     }])).toBe(0);
   });
 
+  test("worker validates framed credentials and detects late events", () => {
+    expect(parseCredentialFrame(credentialBytes())).toMatchObject({
+      runNonce: "nonce",
+      generation: 1,
+      childKey: "ANTHROPIC_API_KEY",
+      secret: "fixture-secret",
+    });
+    expect(() => parseCredentialFrame(new Uint8Array())).toThrow("prefix is missing");
+    expect(() => parseCredentialFrame(new TextEncoder().encode("2\n{}"))).toThrow("frame is invalid");
+    expect(() => parseCredentialFrame(new TextEncoder().encode("3\n{}"))).toThrow("length mismatch");
+    expect(lateAfterTerminal(["assistant", "result"])).toBe(false);
+    expect(lateAfterTerminal(["assistant", "result", "assistant"])).toBe(true);
+  });
+
+  test("worker emits bounded structured records", () => {
+    const lines: string[] = [];
+    emitResult(driveResult(), (line) => lines.push(line));
+    const records = lines.map((line) => JSON.parse(line));
+    expect(records.map((record) => record.kind)).toEqual([
+      "tool",
+      "state",
+      "audit",
+      "assistant",
+      "terminal",
+    ]);
+    expect(records.at(-1)).toMatchObject({ isError: false, hasLateEvent: true });
+  });
+
+  test("worker installs abort handling, zeroes the frame, and clears credential state", async () => {
+    const bytes = credentialBytes();
+    const env: Record<string, string | undefined> = {};
+    const signals: string[] = [];
+    let observedCredential: string | undefined;
+    const code = await runSdkWorker(workerPorts({
+      readFrameBytes: async () => bytes,
+      env,
+      onSignal: (signal) => signals.push(`on:${signal}`),
+      offSignal: (signal) => signals.push(`off:${signal}`),
+      drive: async (_prompt, options) => {
+        observedCredential = env.ANTHROPIC_API_KEY;
+        expect(options).toMatchObject({
+          projectDir: "/fixture/project",
+          permissionMode: "bypassPermissions",
+          settingSources: ["project"],
+          settingsAuthority: "project-only",
+        });
+        return driveResult();
+      },
+    }));
+    expect(code).toBe(0);
+    expect(observedCredential).toBe("fixture-secret");
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(bytes.every((byte) => byte === 0)).toBe(true);
+    expect(signals).toEqual(["on:SIGUSR1", "off:SIGUSR1"]);
+  });
+
+  test("worker dispatches probe and maps promise rejection to exit one", async () => {
+    const output: string[] = [];
+    expect(await dispatchSdkWorker(["worker", "--probe"], workerPorts({ write: (line) => output.push(line) })))
+      .toBe(0);
+    expect(JSON.parse(output.join(""))).toMatchObject({ query: true, abort: true });
+
+    const exits: number[] = [];
+    exitSdkWorker(Promise.resolve(0), (code) => exits.push(code));
+    exitSdkWorker(Promise.reject(new Error("boom")), (code) => exits.push(code));
+    await Bun.sleep(0);
+    expect(exits).toEqual([0, 1]);
+  });
+
+  test("worker CLI delegates its probe through the main guard", () => {
+    const result = Bun.spawnSync({
+      cmd: [process.execPath, "tests/harness/live-e2e/claude-sdk-worker.ts", "--probe"],
+      cwd: process.cwd(),
+      env: process.env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout.toString())).toMatchObject({ query: true, abort: true });
+  });
+
   test("GHA hard deny returns before SDK, dist, or auth probes", () => {
     expect(claudeSdkLiveRequirementsSkipReason({
       env: { GITHUB_ACTIONS: "true", AMADEUS_CLAUDE_SDK_LIVE: "1" },
@@ -72,6 +217,33 @@ describe("Claude SDK live contract", () => {
       );
     },
   );
+
+  test("requirements probe checks SDK version, distribution, and API-key auth", () => {
+    const root = mkdtempSync(join(tmpdir(), "claude-sdk-gate-"));
+    const packageJsonPath = join(root, "package.json");
+    const distributionDir = join(root, "dist");
+    const env = { AMADEUS_CLAUDE_SDK_LIVE: "1", ANTHROPIC_API_KEY: "fixture-key" };
+    try {
+      writeFileSync(packageJsonPath, JSON.stringify({ dependencies: { "@anthropic-ai/claude-agent-sdk": "0.3.157" } }));
+      expect(claudeSdkLiveRequirementsSkipReason({ env, claudeBin: "unused", distributionDir, packageJsonPath }))
+        .toContain("Claude Agent SDK >= 0.3.158 is unavailable");
+
+      writeFileSync(packageJsonPath, JSON.stringify({ devDependencies: { "@anthropic-ai/claude-agent-sdk": "0.3.158" } }));
+      expect(claudeSdkLiveRequirementsSkipReason({ env, claudeBin: "unused", distributionDir, packageJsonPath }))
+        .toBe(`distributable missing: ${distributionDir}`);
+      mkdirSync(distributionDir);
+      expect(claudeSdkLiveRequirementsSkipReason({
+        env: { ...env, ANTHROPIC_API_KEY: undefined },
+        claudeBin: "unused",
+        distributionDir,
+        packageJsonPath,
+      })).toBe("provide ANTHROPIC_API_KEY");
+      expect(claudeSdkLiveRequirementsSkipReason({ env, claudeBin: "unused", distributionDir, packageJsonPath }))
+        .toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
   test("registry and journey expose the approved SDK contract", async () => {
     expect(capabilityById("claude-sdk")).toMatchObject({

@@ -140,11 +140,13 @@ export class ScriptedLiveAdapter implements LiveAdapter {
   }
 }
 
-export function createScriptedJourney(input: Readonly<{
-  id?: string;
-  timeoutMs?: number;
-  fault?: Extract<FaultPoint, "assertion">;
-}> = {}): LiveJourney {
+export interface ScriptedJourneyInput {
+  readonly id?: string;
+  readonly timeoutMs?: number;
+  readonly fault?: Extract<FaultPoint, "assertion">;
+}
+
+export function createScriptedJourney(input: ScriptedJourneyInput = {}): LiveJourney {
   return {
     id: input.id ?? "offline-contract-journey",
     prompt: "offline fixture prompt",
@@ -158,12 +160,14 @@ export function createScriptedJourney(input: Readonly<{
   };
 }
 
-export function allocateOfflineScratch(root: string, runId: string, registrar: ResourceRegistrar): Readonly<{
-  root: string;
-  homeDir: string;
-  projectDir: string;
-  state: "ready";
-}> {
+export interface OfflineScratch {
+  readonly root: string;
+  readonly homeDir: string;
+  readonly projectDir: string;
+  readonly state: "ready";
+}
+
+export function allocateOfflineScratch(root: string, runId: string, registrar: ResourceRegistrar): OfflineScratch {
   const scratch = join(root, runId);
   const homeDir = join(scratch, "home");
   const projectDir = join(scratch, "project");

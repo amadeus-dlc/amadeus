@@ -53,7 +53,7 @@ export interface TmuxCommandPort {
   run(args: readonly string[], options?: TmuxCommandOptions): TmuxCommandResult;
 }
 
-class SpawnSyncTmuxCommandPort implements TmuxCommandPort {
+export class SpawnSyncTmuxCommandPort implements TmuxCommandPort {
   readonly #tmuxBin: string;
 
   constructor(tmuxBin: string) {

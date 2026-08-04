@@ -1,13 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { evaluateLiveGate } from "../harness/live-e2e/policy.ts";
-import { capabilityById, LIVE_CAPABILITIES } from "../harness/live-e2e/registry.ts";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createCodexAnchorJourney } from "../harness/live-e2e/journey.ts";
+import { buildChildEnvironment, evaluateLiveGate } from "../harness/live-e2e/policy.ts";
+import {
+  checkCapabilityMatrix,
+  MATRIX_END,
+  MATRIX_START,
+  updateCapabilityMatrix,
+} from "../harness/live-e2e/projector.ts";
+import { capabilityById, LIVE_CAPABILITIES, validateCapabilityRegistry } from "../harness/live-e2e/registry.ts";
 import {
   strictOptInPropertyCases,
   type ContractCase,
   validateContractCase,
 } from "../harness/live-e2e/testing/contract-case.ts";
 import { buildRedGreenEvidence } from "../harness/live-e2e/testing/evidence.ts";
-import { ScriptedLiveAdapter } from "../harness/live-e2e/testing/fakes.ts";
+import {
+  allocateOfflineScratch,
+  createScriptedJourney,
+  ScriptedLiveAdapter,
+} from "../harness/live-e2e/testing/fakes.ts";
 import { cleanupReceiptFromRegistrar, ResourceRegistrar } from "../harness/live-e2e/resources.ts";
 import {
   adjudicateContractCase,
@@ -65,6 +79,17 @@ function observation(overrides: Partial<ContractObservation> = {}): ContractObse
 }
 
 describe("live E2E adversarial test kit", () => {
+  test("matches typed run-error and contract-error terminals", () => {
+    expect(adjudicateContractCase(
+      validated({ expectedTerminal: { kind: "run-error", errorKind: "cleanup-barrier-failed" } }),
+      observation({ terminal: { kind: "run-error", errorKind: "cleanup-barrier-failed" } }),
+    ).pass).toBe(true);
+    expect(adjudicateContractCase(
+      validated({ expectedTerminal: { kind: "contract-error", errorKind: "contract-invalid" } }),
+      observation({ terminal: { kind: "contract-error", errorKind: "contract-invalid" } }),
+    ).pass).toBe(true);
+  });
+
   test("cleanup receipts reflect registrar state instead of failure count", () => {
     const registrar = new ResourceRegistrar();
     registrar.registerPlanned({ id: "planned", kind: "fixture", locator: "planned", credentialBearing: false });
@@ -132,6 +157,100 @@ describe("live E2E adversarial test kit", () => {
       ok: false,
       error: { kind: "invalid-fault-plan" },
     });
+    expect(validateContractCase({ ...validated(), id: "INVALID" })).toMatchObject({
+      ok: false,
+      error: { kind: "invalid-id" },
+    });
+    expect(validateContractCase({ ...validated(), requirementIds: [] })).toMatchObject({
+      ok: false,
+      error: { kind: "missing-requirement" },
+    });
+    expect(validateContractCase({ ...validated(), seed: -1 })).toMatchObject({
+      ok: false,
+      error: { kind: "invalid-seed" },
+    });
+  });
+
+  test("rejects forbidden child-environment declarations and copies approved values", () => {
+    expect(buildChildEnvironment({ PATH: "/bin" }, {
+      allowedKeys: ["PATH"],
+      sensitiveKeys: [],
+      sourcePathKeys: [],
+    })).toEqual({ ok: true, value: { PATH: "/bin" } });
+    expect(buildChildEnvironment({}, {
+      allowedKeys: ["SECRET"],
+      sensitiveKeys: ["SECRET"],
+      sourcePathKeys: [],
+    })).toMatchObject({ ok: false, error: { kind: "sensitive-key", key: "SECRET" } });
+    expect(buildChildEnvironment({}, {
+      allowedKeys: ["HOME"],
+      sensitiveKeys: [],
+      sourcePathKeys: ["HOME"],
+    })).toMatchObject({ ok: false, error: { kind: "source-path-key", key: "HOME" } });
+  });
+
+  test("reports incomplete supported capabilities", () => {
+    expect(validateCapabilityRegistry([{
+      ...LIVE_CAPABILITIES[0],
+      measuredVersion: "",
+      anchorKinds: [],
+    }])).toEqual([{ kind: "incomplete-supported", adapterId: "codex-exec" }]);
+  });
+
+  test("checks and updates only the generated capability block", () => {
+    const actual = `${MATRIX_START}\nold\n${MATRIX_END}`;
+    const expected = `${MATRIX_START}\nnew\n${MATRIX_END}`;
+    expect(checkCapabilityMatrix(`before\n${actual}\nafter`, expected)).toMatchObject({
+      ok: false,
+      error: { kind: "generated-block-drift" },
+    });
+    expect(updateCapabilityMatrix(`before\n${actual}\nafter`, expected)).toBe(`before\n${expected}\nafter`);
+  });
+
+  test("scripted fixture helpers allocate scratch and exercise assertion faults", async () => {
+    const root = mkdtempSync(join(tmpdir(), "live-e2e-hardening-"));
+    const registrar = new ResourceRegistrar();
+    try {
+      const scratch = allocateOfflineScratch(root, "run-1", registrar);
+      expect(scratch).toMatchObject({ state: "ready" });
+      expect(await createScriptedJourney().assert({
+        exitCode: 0,
+        timedOut: false,
+        aborted: false,
+        stdoutDigest: "stdout",
+        stderrDigest: "stderr",
+        structured: { status: "ok" },
+      }, scratch)).toMatchObject({ passed: true });
+      expect(await createScriptedJourney({ fault: "assertion" }).assert({
+        exitCode: 0,
+        timedOut: false,
+        aborted: false,
+        stdoutDigest: "stdout",
+        stderrDigest: "stderr",
+        structured: { status: "ok" },
+      }, scratch)).toMatchObject({ passed: false });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("Codex anchor treats malformed anchor JSON as a failed assertion", async () => {
+    const root = mkdtempSync(join(tmpdir(), "live-e2e-anchor-"));
+    const projectDir = join(root, "project");
+    try {
+      mkdirSync(projectDir);
+      await Bun.write(join(projectDir, ".amadeus-live-anchor.json"), "{broken");
+      expect(await createCodexAnchorJourney().assert({
+        exitCode: 0,
+        timedOut: false,
+        aborted: false,
+        stdoutDigest: "stdout",
+        stderrDigest: "stderr",
+        structured: { type: "result" },
+      }, { root, homeDir: join(root, "home"), projectDir, state: "ready" })).toMatchObject({ passed: false });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("generates a reproducible strict opt-in property corpus", () => {
@@ -325,5 +444,13 @@ describe("live E2E adversarial test kit", () => {
       mutant: multiFailure,
       expectedAssertionIds: ["ENV_ALLOW_LIST"],
     })).toThrow("mutant failed unexpected assertions");
+    expect(() => buildRedGreenEvidence({
+      caseId: "missing-expected-assertion",
+      seed: 1717,
+      requirementIds: ["FR-4"],
+      baseline,
+      mutant,
+      expectedAssertionIds: ["SECRET_CANARY_ABSENT"],
+    })).toThrow("mutant did not fail the expected assertion");
   });
 });

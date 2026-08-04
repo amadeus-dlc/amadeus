@@ -68,6 +68,11 @@ interface ByteCollection {
   readonly truncated: boolean;
 }
 
+interface ClaudeSdkManifest {
+  readonly dependencies?: Readonly<Record<string, unknown>>;
+  readonly devDependencies?: Readonly<Record<string, unknown>>;
+}
+
 export interface ClaudeSdkAdapterOptions {
   readonly distributionDir: string;
   readonly parentEnv: Readonly<Record<string, string | undefined>>;
@@ -96,10 +101,7 @@ export function isClaudeSdkVersionSupported(actual: string): boolean {
 
 export function probeClaudeSdkVersion(packageJsonPath = PACKAGE_JSON): string | null {
   try {
-    const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      dependencies?: Readonly<Record<string, unknown>>;
-      devDependencies?: Readonly<Record<string, unknown>>;
-    };
+    const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8")) as ClaudeSdkManifest;
     const declared = manifest.dependencies?.["@anthropic-ai/claude-agent-sdk"] ??
       manifest.devDependencies?.["@anthropic-ai/claude-agent-sdk"];
     return typeof declared === "string" && versionTuple(declared) !== null ? declared : null;
@@ -108,10 +110,12 @@ export function probeClaudeSdkVersion(packageJsonPath = PACKAGE_JSON): string | 
   }
 }
 
-function probeWorkerSurface(options: ClaudeSdkAdapterOptions): {
+interface WorkerSurfaceProbe {
   readonly measuredVersion?: string;
   readonly finding?: PreflightFinding;
-} {
+}
+
+function probeWorkerSurface(options: ClaudeSdkAdapterOptions): WorkerSurfaceProbe {
   if (options.sdkVersion !== undefined || !existsSync(options.workerScript ?? DEFAULT_WORKER)) return {};
   const isolated = buildChildEnvironment(options.parentEnv, CAPABILITY.environment);
   if (!isolated.ok) {
@@ -152,10 +156,12 @@ function probeWorkerSurface(options: ClaudeSdkAdapterOptions): {
   }
 }
 
-function workerProbe(options: ClaudeSdkAdapterOptions): {
+interface WorkerProbe {
   readonly measuredVersion?: string;
   readonly findings: readonly PreflightFinding[];
-} {
+}
+
+function workerProbe(options: ClaudeSdkAdapterOptions): WorkerProbe {
   const surface = probeWorkerSurface(options);
   const measuredVersion = surface.measuredVersion ?? options.sdkVersion ?? probeClaudeSdkVersion() ?? undefined;
   const findings: PreflightFinding[] = [];

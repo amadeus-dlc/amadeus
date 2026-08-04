@@ -188,9 +188,7 @@ async function cleanupRun(
       ...(cleanupFailure === undefined ? [] : [cleanupFailure]),
       ...(leakFailure === undefined ? [] : [leakFailure]),
     ].map((value) => sanitizeText(value)),
-    leakFindings: [...(adapterReceipt?.leakFindings ?? []), ...commonLeaks].map((value) =>
-      sanitizeText(value),
-    ),
+    leakFindings: [...(adapterReceipt?.leakFindings ?? []), ...commonLeaks].map((value) => sanitizeText(value)),
   };
 }
 

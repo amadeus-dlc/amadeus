@@ -3,14 +3,14 @@ import { digest } from "./contract.ts";
 import { CLAUDE_SDK_PROMPT, probeClaudeSdkVersion } from "./claude-sdk.ts";
 import { driveAidlc, type DriveResult, type ResultEvent } from "../sdk-drive.ts";
 
-interface CredentialFrame {
+export interface CredentialFrame {
   readonly runNonce: string;
   readonly generation: number;
   readonly childKey: string;
   readonly secret: string;
 }
 
-function parseCredentialFrame(bytes: Uint8Array): CredentialFrame {
+export function parseCredentialFrame(bytes: Uint8Array): CredentialFrame {
   const newline = bytes.indexOf(10);
   if (newline <= 0) throw new Error("credential frame prefix is missing");
   const declared = Number(new TextDecoder().decode(bytes.slice(0, newline)));
@@ -35,15 +35,18 @@ function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function lateAfterTerminal(messageTypes: readonly string[]): boolean {
+export function lateAfterTerminal(messageTypes: readonly string[]): boolean {
   const terminal = messageTypes.indexOf("result");
   return terminal >= 0 && messageTypes.slice(terminal + 1).some((kind) => kind !== "result");
 }
 
-function emitResult(result: DriveResult): void {
+export function emitResult(
+  result: DriveResult,
+  write: (line: string) => void = (line) => process.stdout.write(line),
+): void {
   let ordinal = 0;
   for (const tool of result.toolResults) {
-    process.stdout.write(`${JSON.stringify({
+    write(`${JSON.stringify({
       kind: "tool",
       ordinal: ordinal++,
       toolName: tool.toolName,
@@ -52,31 +55,36 @@ function emitResult(result: DriveResult): void {
       digest: digest(tool.resultText),
     })}\n`);
   }
-  process.stdout.write(`${JSON.stringify({
+  write(`${JSON.stringify({
     kind: "state",
     ordinal: ordinal++,
     present: result.stateFile !== undefined,
     digest: digest(result.stateFile ?? ""),
   })}\n`);
-  process.stdout.write(`${JSON.stringify({
+  write(`${JSON.stringify({
     kind: "audit",
     ordinal: ordinal++,
     eventCount: result.auditEvents?.length ?? 0,
     digest: digest(JSON.stringify(result.auditEvents ?? [])),
   })}\n`);
-  process.stdout.write(`${JSON.stringify({
+  write(`${JSON.stringify({
     kind: "assistant",
     ordinal: ordinal++,
     byteLength: byteLength(result.assistantText),
     digest: digest(result.assistantText),
   })}\n`);
   for (const terminal of result.resultEvents) {
-    emitTerminal(terminal, ordinal++, lateAfterTerminal(result.messageTypes));
+    emitTerminal(terminal, ordinal++, lateAfterTerminal(result.messageTypes), write);
   }
 }
 
-function emitTerminal(terminal: ResultEvent, ordinal: number, hasLateEvent: boolean): void {
-  process.stdout.write(`${JSON.stringify({
+function emitTerminal(
+  terminal: ResultEvent,
+  ordinal: number,
+  hasLateEvent: boolean,
+  write: (line: string) => void,
+): void {
+  write(`${JSON.stringify({
     kind: "terminal",
     ordinal,
     type: terminal.type,
@@ -104,44 +112,75 @@ export function sdkWorkerProbeSurface(): Readonly<{
   };
 }
 
-async function main(): Promise<number> {
+export interface SdkWorkerPorts {
+  readonly readFrameBytes: () => Promise<Uint8Array>;
+  readonly drive: typeof driveAidlc;
+  readonly cwd: () => string;
+  readonly env: Record<string, string | undefined>;
+  readonly onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
+  readonly offSignal: (signal: NodeJS.Signals, listener: () => void) => void;
+  readonly write: (line: string) => void;
+}
+
+const DEFAULT_PORTS: SdkWorkerPorts = {
+  readFrameBytes: async () => new Uint8Array(await Bun.stdin.arrayBuffer()),
+  drive: driveAidlc,
+  cwd: () => process.cwd(),
+  env: process.env,
+  onSignal: (signal, listener) => process.on(signal, listener),
+  offSignal: (signal, listener) => process.off(signal, listener),
+  write: (line) => process.stdout.write(line),
+};
+
+export async function runSdkWorker(ports: SdkWorkerPorts = DEFAULT_PORTS): Promise<number> {
   const abortController = new AbortController();
   const onAbort = () => abortController.abort();
-  process.on("SIGUSR1", onAbort);
-  const frameBytes = new Uint8Array(await Bun.stdin.arrayBuffer());
+  ports.onSignal("SIGUSR1", onAbort);
+  const frameBytes = await ports.readFrameBytes();
   const frame: CredentialFrame = (() => {
-  try {
+    try {
       return parseCredentialFrame(frameBytes);
-  } finally {
-    frameBytes.fill(0);
-  }
+    } finally {
+      frameBytes.fill(0);
+    }
   })();
   if (frame.secret.length > 0) {
-    process.env[frame.childKey] = frame.secret;
+    ports.env[frame.childKey] = frame.secret;
   }
   try {
-    const result = await driveAidlc(CLAUDE_SDK_PROMPT, {
-      projectDir: process.cwd(),
+    const result = await ports.drive(CLAUDE_SDK_PROMPT, {
+      projectDir: ports.cwd(),
       permissionMode: "bypassPermissions",
       settingSources: ["project"],
       settingsAuthority: "project-only",
       abortSignal: abortController.signal,
     });
-    emitResult(result);
+    emitResult(result, ports.write);
     return sdkWorkerExitCode(result.resultEvents);
   } finally {
-    process.off("SIGUSR1", onAbort);
-    delete process.env[frame.childKey];
+    ports.offSignal("SIGUSR1", onAbort);
+    delete ports.env[frame.childKey];
   }
 }
 
-if (import.meta.main) {
-  if (process.argv.includes("--probe")) {
-    process.stdout.write(JSON.stringify(sdkWorkerProbeSurface()));
-  } else {
-    main().then(
-      (code) => process.exit(code),
-      () => process.exit(1),
-    );
+export async function dispatchSdkWorker(
+  argv: readonly string[],
+  ports: SdkWorkerPorts = DEFAULT_PORTS,
+): Promise<number> {
+  if (argv.includes("--probe")) {
+    ports.write(JSON.stringify(sdkWorkerProbeSurface()));
+    return 0;
   }
+  return runSdkWorker(ports);
+}
+
+export function exitSdkWorker(
+  result: Promise<number>,
+  exit: (code: number) => void = (code) => process.exit(code),
+): void {
+  result.then(exit, () => exit(1));
+}
+
+if (import.meta.main) {
+  exitSdkWorker(dispatchSdkWorker(process.argv));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -15,6 +15,7 @@ import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
 import {
   appendRunReceipt,
   inspectLedgerLock,
+  latestGreenByAdapter,
   parseRunLedger,
   recoverRunReceipt,
   type RecordedLiveRunReceipt,
@@ -63,6 +64,7 @@ function receipt(id = "a".repeat(64)): RecordedLiveRunReceipt {
 class FakeAdapter implements LiveAdapter {
   readonly capability = LIVE_CAPABILITIES[0];
   prepareThrows = false;
+  prepareRejects = false;
   cleanupThrows = false;
   execution: AdapterExecution = {
     exitCode: 0,
@@ -88,6 +90,9 @@ class FakeAdapter implements LiveAdapter {
       credentialBearing: true,
     });
     if (this.prepareThrows) throw new Error("prepare exploded with sk-secret");
+    if (this.prepareRejects) {
+      return { ok: false as const, error: { kind: "prepare-failed" as const, diagnostic: "lease denied" } };
+    }
     context.registrar.markCreated("adapter-partial");
     return {
       ok: true as const,
@@ -232,6 +237,73 @@ describe("live E2E lifecycle", () => {
     }
   });
 
+  test("invalid contracts and allocator failures stop before adapter execution", async () => {
+    const root = fixtureRoot();
+    const adapter = new FakeAdapter();
+    try {
+      expect(await runLiveJourney(adapter, {
+        ...journey(),
+        retryPolicy: { maxAttempts: 3 as never },
+      }, context(root, adapter))).toMatchObject({
+        ok: false,
+        error: { kind: "contract-invalid", cause: "journey maxAttempts must be one or two" },
+      });
+      expect(await runLiveJourney(adapter, journey(), {
+        ...context(root, adapter),
+        allocator: { allocate: async () => { throw new Error("allocation /private/tmp/secret failed"); } },
+      })).toMatchObject({
+        ok: false,
+        error: { kind: "contract-invalid", cause: expect.not.stringContaining("/private/tmp") },
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("prepare rejection is recorded and leak-check exceptions close the cleanup barrier", async () => {
+    const root = fixtureRoot();
+    const adapter = new FakeAdapter();
+    adapter.prepareRejects = true;
+    try {
+      expect(await runLiveJourney(adapter, journey(), context(root, adapter))).toMatchObject({
+        ok: true,
+        value: { kind: "recorded", outcome: { code: "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED" } },
+      });
+      expect(await runLiveJourney(adapter, journey(), {
+        ...context(root, adapter),
+        leakCheck: async () => { throw new Error("leak probe failed"); },
+      })).toMatchObject({
+        ok: false,
+        error: {
+          kind: "cleanup-barrier-failed",
+          cleanup: { failures: ["Error: leak probe failed"] },
+        },
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("ledger lock failure is surfaced from a completed journey", async () => {
+    const root = fixtureRoot();
+    const adapter = new FakeAdapter();
+    const liveContext = context(root, adapter);
+    const lock = `${liveContext.ledgerPath}.lock`;
+    try {
+      mkdirSync(lock, { recursive: true });
+      writeFileSync(join(lock, "owner.json"), JSON.stringify({ pid: process.pid, token: "live" }));
+      expect(await runLiveJourney(adapter, journey(), {
+        ...liveContext,
+        ledgerOptions: { maxRetries: 0 },
+      })).toMatchObject({
+        ok: false,
+        error: { kind: "ledger-write-failed", cause: { kind: "lock-timeout" } },
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("cleanup barrier failure suppresses the ledger and preserves the timeout as secondary context", async () => {
     const root = fixtureRoot();
     const adapter = new FakeAdapter();
@@ -308,6 +380,74 @@ describe("live E2E lifecycle", () => {
     }
   });
 
+  test("unstamped locks distinguish fresh, stale, and blocked reaping", async () => {
+    const root = fixtureRoot();
+    const ledger = join(root, "runs.jsonl");
+    const lock = `${ledger}.lock`;
+    try {
+      mkdirSync(lock);
+      expect(inspectLedgerLock(ledger, { unstampedGraceMs: 60_000 })).toMatchObject({
+        ok: true,
+        value: { kind: "unstamped-fresh" },
+      });
+      utimesSync(lock, new Date(0), new Date(0));
+      expect(inspectLedgerLock(ledger, { unstampedGraceMs: 0 })).toMatchObject({
+        ok: true,
+        value: { kind: "unstamped-stale" },
+      });
+      mkdirSync(`${lock}.reap`);
+      expect(await appendRunReceipt(ledger, receipt(), {
+        maxRetries: 0,
+        unstampedGraceMs: 0,
+      })).toMatchObject({ ok: false, error: { kind: "lock-timeout" } });
+      rmSync(`${lock}.reap`, { recursive: true, force: true });
+      expect(await appendRunReceipt(ledger, receipt(), {
+        maxRetries: 1,
+        retryMs: 1,
+        unstampedGraceMs: 0,
+      })).toEqual({ ok: true, value: "appended" });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("invalid owners and receipts fail closed", () => {
+    const root = fixtureRoot();
+    const ledger = join(root, "runs.jsonl");
+    const lock = `${ledger}.lock`;
+    try {
+      mkdirSync(lock);
+      writeFileSync(join(lock, "owner.json"), JSON.stringify({ pid: "bad", token: 1 }));
+      expect(inspectLedgerLock(ledger, { unstampedGraceMs: 60_000 })).toMatchObject({
+        ok: true,
+        value: { kind: "unstamped-fresh" },
+      });
+      const invalids = [
+        { ...receipt(), recordedAt: "not-a-date" },
+        { ...receipt(), adapterId: "unknown" },
+        { ...receipt(), outcome: { ...receipt().outcome, status: "failure" } },
+        { ...receipt(), measuredVersion: "/private/tmp/secret" },
+      ];
+      for (const invalid of invalids) {
+        expect(parseRunLedger(`${JSON.stringify(invalid)}\n`)).toMatchObject({
+          ok: false,
+          error: { kind: "invalid-receipt" },
+        });
+      }
+      const duplicate = receipt();
+      expect(parseRunLedger([
+        JSON.stringify(duplicate),
+        JSON.stringify({ ...duplicate, journeyId: "conflicting-journey" }),
+      ].join("\n"))).toMatchObject({ ok: false, error: { kind: "receipt-conflict" } });
+      expect(parseRunLedger("", { ledgerPath: join(root, "missing", "runs.jsonl") })).toEqual({
+        ok: true,
+        value: [],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("a durable pending marker blocks green reads until explicit recovery", async () => {
     const root = fixtureRoot();
     const ledger = join(root, "runs.jsonl");
@@ -325,10 +465,46 @@ describe("live E2E lifecycle", () => {
         ok: false,
         error: { kind: "pending-durability" },
       });
+      expect(await appendRunReceipt(ledger, recorded)).toMatchObject({
+        ok: false,
+        error: { kind: "pending-durability" },
+      });
+      expect(await recoverRunReceipt(ledger, { ...recorded, journeyId: "mismatch" })).toMatchObject({
+        ok: false,
+        error: { kind: "receipt-conflict" },
+      });
+      expect(await recoverRunReceipt(ledger, recorded, {
+        fsyncDirectory: () => { throw new Error("recovery fsync failed"); },
+      })).toMatchObject({ ok: false, error: { kind: "fsync-failed" } });
       expect(await recoverRunReceipt(ledger, recorded)).toEqual({
         ok: true,
         value: "already-present",
       });
+      expect(await recoverRunReceipt(join(root, "second.jsonl"), receipt("b".repeat(64))))
+        .toEqual({ ok: true, value: "appended" });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("first directory fsync failures are sanitized and latest green receipts are selected", async () => {
+    const root = fixtureRoot();
+    const ledger = join(root, "runs.jsonl");
+    try {
+      expect(await appendRunReceipt(ledger, { ...receipt(), durability: "file-and-directory" }, {
+        fsyncDirectory: () => { throw new Error("fsync /private/tmp/secret failed"); },
+      })).toMatchObject({ ok: false, error: { kind: "write-failed" } });
+      const newer = { ...receipt("b".repeat(64)), recordedAt: "2026-08-04T00:00:00.000Z" };
+      const failed = {
+        ...receipt("c".repeat(64)),
+        recordedAt: "2026-08-05T00:00:00.000Z",
+        outcome: {
+          ...receipt().outcome,
+          status: "failure" as const,
+          code: "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED" as const,
+        },
+      };
+      expect(latestGreenByAdapter([receipt(), failed, newer]).get("codex-exec")?.receiptId).toBe(newer.receiptId);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

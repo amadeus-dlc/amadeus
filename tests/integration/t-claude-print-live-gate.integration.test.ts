@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { claudePrintLiveRequirementsSkipReason, claudePrintLiveSkipReason } from "../harness/claude-print-live.ts";
 import { createClaudeStructuredJourney } from "../harness/live-e2e/journey.ts";
 import { capabilityById } from "../harness/live-e2e/registry.ts";
@@ -40,6 +43,53 @@ describe("Claude print live contract", () => {
       );
     },
   );
+
+  test("requirements probe checks version, help flags, distribution, and API-key auth", () => {
+    const root = mkdtempSync(join(tmpdir(), "claude-print-gate-"));
+    const claudeBin = join(root, "claude");
+    const distributionDir = join(root, "dist");
+    const env = {
+      AMADEUS_CLAUDE_PRINT_LIVE: "1",
+      ANTHROPIC_API_KEY: "fixture-key",
+      PATH: process.env.PATH,
+    };
+    const writeClaude = (version: string, help: string) => {
+      writeFileSync(
+        claudeBin,
+        `#!/bin/sh\nif [ "$1" = "--version" ]; then printf '%s\\n' '${version}'; else printf '%s\\n' '${help}'; fi\n`,
+      );
+      chmodSync(claudeBin, 0o755);
+    };
+    try {
+      expect(claudePrintLiveRequirementsSkipReason({
+        env,
+        claudeBin: join(root, "missing"),
+        distributionDir,
+      })).toContain("claude >= 2.1.220 not found");
+
+      writeClaude("2.1.220", "--print");
+      expect(claudePrintLiveRequirementsSkipReason({ env, claudeBin, distributionDir })).toBe(
+        "claude print structured-output capability is unavailable",
+      );
+
+      writeClaude(
+        "2.1.220",
+        "--print --setting-sources --tools --no-session-persistence --output-format --json-schema --max-budget-usd",
+      );
+      expect(claudePrintLiveRequirementsSkipReason({ env, claudeBin, distributionDir })).toBe(
+        `distributable missing: ${distributionDir}`,
+      );
+      mkdirSync(distributionDir);
+      expect(claudePrintLiveRequirementsSkipReason({
+        env: { ...env, ANTHROPIC_API_KEY: undefined },
+        claudeBin,
+        distributionDir,
+      })).toBe("provide ANTHROPIC_API_KEY");
+      expect(claudePrintLiveRequirementsSkipReason({ env, claudeBin, distributionDir })).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
   test("registry and journey expose the approved closed contract", async () => {
     const capability = capabilityById("claude-print");
