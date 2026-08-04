@@ -51,6 +51,8 @@ describe("Pi RPC collector", () => {
       type: "message_end",
       message: {
         role: "assistant",
+        provider: "openai-codex-account-2",
+        model: "gpt-5.6-sol",
         content: [
           { type: "thinking", thinking: "hidden" },
           { type: "text", text: "visible" },
@@ -60,7 +62,52 @@ describe("Pi RPC collector", () => {
       },
     }));
     collector.acceptLine(JSON.stringify({ type: "agent_settled" }));
-    expect(collector.observation()).toEqual({ output: "visible", semanticFailure: null, settled: true });
+    expect(collector.observation()).toEqual({
+      output: "visible",
+      semanticFailure: null,
+      settled: true,
+      providerId: "openai-codex-account-2",
+      modelId: "gpt-5.6-sol",
+    });
+  });
+
+  test("admits a successful multi-account continuation after an exhausted account", () => {
+    const collector = createPiRpcCollector("request-1", 100);
+    collector.acceptLine(JSON.stringify({ id: "request-1", type: "response", command: "prompt", success: true }));
+    collector.acceptLine(JSON.stringify({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        provider: "openai-codex",
+        model: "gpt-5.6-sol",
+        content: [],
+        stopReason: "error",
+        errorMessage: "usage limit has been reached",
+      },
+    }));
+    collector.acceptLine(JSON.stringify({ type: "agent_end", willRetry: false }));
+    collector.acceptLine(JSON.stringify({ type: "agent_settled" }));
+    collector.acceptLine(JSON.stringify({ type: "agent_start" }));
+    collector.acceptLine(JSON.stringify({
+      type: "message_end",
+      message: {
+        role: "assistant",
+        provider: "openai-codex-account-2",
+        model: "gpt-5.6-sol",
+        content: [{ type: "text", text: "OK" }],
+        stopReason: "stop",
+      },
+    }));
+    collector.acceptLine(JSON.stringify({ type: "agent_end", willRetry: false }));
+    collector.acceptLine(JSON.stringify({ type: "agent_settled" }));
+
+    expect(collector.observation()).toEqual({
+      output: "OK",
+      semanticFailure: null,
+      settled: true,
+      providerId: "openai-codex-account-2",
+      modelId: "gpt-5.6-sol",
+    });
   });
 
   test("first semantic failure wins", () => {

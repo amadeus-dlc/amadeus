@@ -35,6 +35,7 @@ function run(platform: "darwin" | "linux") {
     platform,
     piVersion: "0.83.0",
     providerId: "anthropic/claude-test",
+    modelId: "claude-test",
     executedAt: "2026-08-04T00:00:00.000Z",
     rpc: {
       status: "passed",
@@ -83,6 +84,7 @@ describe("Pi M1-M10 trace", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.properties.runs.minItems).toBe(2);
     expect(schema.properties.runs.maxItems).toBe(2);
+    expect(schema.$defs.formalRun.required).toContain("modelId");
     expect(Object.keys(schema.$defs.assertions.properties)).toEqual([...PI_MILESTONE_IDS]);
     expect(schema.properties.windowsNegative.properties.platform.const).toBe("win32");
     expect(schema.properties.windowsNegative.properties.doctorCheckId.const).toBe("pi.os");
@@ -99,7 +101,7 @@ describe("Pi formal evidence admission", () => {
       {},
       lifecycle,
       "openai-codex",
-      "gpt-5.4-mini",
+      undefined,
       async (_request, options) => {
         receivedLifecycle = options?.lifecycle;
         receivedProviderId = options?.providerId;
@@ -110,7 +112,7 @@ describe("Pi formal evidence admission", () => {
 
     expect(receivedLifecycle).toBe(lifecycle);
     expect(receivedProviderId).toBe("openai-codex");
-    expect(receivedModelId).toBe("gpt-5.4-mini");
+    expect(receivedModelId).toBeUndefined();
     expect(result.kind).toBe("dispatch-not-started");
   });
 

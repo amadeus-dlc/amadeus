@@ -28,6 +28,8 @@ export interface PiTerminalRecord {
   readonly kind: "succeeded" | "failed" | "cancelled" | "timed-out" | "dispatch-not-started";
   readonly reason: string;
   readonly vaultDigest: string | null;
+  readonly providerId?: string;
+  readonly modelId?: string;
 }
 
 export interface PiDeliveryRecord {

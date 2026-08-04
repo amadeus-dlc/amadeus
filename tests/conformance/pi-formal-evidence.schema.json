@@ -53,11 +53,12 @@
     "formalRun": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["platform", "piVersion", "providerId", "executedAt", "rpc", "tui", "assertions"],
+      "required": ["platform", "piVersion", "providerId", "modelId", "executedAt", "rpc", "tui", "assertions"],
       "properties": {
         "platform": { "enum": ["darwin", "linux"] },
         "piVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
         "providerId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+        "modelId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
         "executedAt": { "type": "string", "format": "date-time" },
         "rpc": {
           "type": "object", "additionalProperties": false,

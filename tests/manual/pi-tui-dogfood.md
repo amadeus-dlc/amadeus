@@ -28,7 +28,9 @@ evidence file.
 - [ ] Verify the canonical audit contains a new `HUMAN_TURN` for that input and
       a corresponding `GATE_APPROVED` after the answer is accepted.
 - [ ] Let the agent settle and verify that any automatic continuation begins
-      only after the token-bound `agent_start` observation.
+      only after the token-bound `agent_start` observation, or—when the token
+      is appended after `agent_start`—after the same live process observes it
+      at `agent_settled`. A restarted process must not infer that observation.
 - [ ] Exercise one tool call and verify paired start/end lifecycle evidence.
 - [ ] Trigger compaction and verify the canonical mission is reinjected without
       trusting the model-generated summary and without minting human presence.
@@ -40,11 +42,14 @@ Run the packaged child driver only with explicit opt-in:
 
 ```bash
 AMADEUS_PI_LIVE_RPC=1 \
-AMADEUS_PI_LIVE_PROVIDER_ID='<provider-id>' \
-AMADEUS_PI_LIVE_MODEL_ID='<model-id>' \
+AMADEUS_PI_LIVE_PROVIDER_ID='openai-codex' \
 AMADEUS_PI_LIVE_PROJECT_DIR='<clean-installed-project>' \
 bun scripts/pi-live-rpc.ts
 ```
+
+Leave `AMADEUS_PI_LIVE_MODEL_ID` unset when `pi-multi-account` owns account and
+model routing. The result records the provider account and model selected by Pi.
+Set the model variable only for an intentional single-account override.
 
 - [ ] Require `status=passed`; a typed `status=skipped` is not formal evidence.
 - [ ] Require `rpcChildSucceeded=true`, `humanTurnCount=0`, and

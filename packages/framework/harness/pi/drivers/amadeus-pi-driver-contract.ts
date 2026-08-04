@@ -126,6 +126,8 @@ export interface PiRpcObservation {
   readonly output: string;
   readonly semanticFailure: string | null;
   readonly settled: boolean;
+  readonly providerId?: string;
+  readonly modelId?: string;
 }
 
 export interface PiRpcCollector {
@@ -140,11 +142,14 @@ export function createPiRpcCollector(
 ): PiRpcCollector {
   let promptAccepted = false;
   let settled = false;
-  let failure: string | null = null;
+  let protocolFailure: string | null = null;
+  let agentFailure: string | null = null;
   let output = "";
+  let providerId: string | undefined;
+  let modelId: string | undefined;
 
   const failFirst = (reason: string): void => {
-    if (failure === null) failure = reason;
+    if (protocolFailure === null) protocolFailure = reason;
   };
 
   return {
@@ -173,11 +178,25 @@ export function createPiRpcCollector(
         promptAccepted = true;
         return;
       }
+      if (event.type === "agent_start") {
+        settled = false;
+        agentFailure = null;
+        output = "";
+        return;
+      }
       if (event.type === "message_end") {
         const message = event.message;
         if (!isRecord(message) || message.role !== "assistant") return;
+        if (typeof message.provider === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(message.provider)) {
+          providerId = message.provider;
+        }
+        if (typeof message.model === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(message.model)) {
+          modelId = message.model;
+        }
         if (message.stopReason === "error" || typeof message.errorMessage === "string") {
-          failFirst("agent-failed");
+          agentFailure = "agent-failed";
+        } else {
+          agentFailure = null;
         }
         if (!Array.isArray(message.content)) return;
         for (const block of message.content) {
@@ -192,7 +211,6 @@ export function createPiRpcCollector(
       }
       if (event.type === "agent_end") {
         if (!promptAccepted) failFirst("rpc-prompt-not-accepted");
-        if (event.willRetry === true) failFirst("provider-retry-unsettled");
         return;
       }
       if (event.type === "agent_settled") {
@@ -201,7 +219,13 @@ export function createPiRpcCollector(
       }
     },
     observation() {
-      return { output, semanticFailure: failure, settled };
+      return {
+        output,
+        semanticFailure: protocolFailure ?? agentFailure,
+        settled,
+        ...(providerId === undefined ? {} : { providerId }),
+        ...(modelId === undefined ? {} : { modelId }),
+      };
     },
   };
 }

@@ -9,6 +9,7 @@ if (process.argv.includes("--version")) {
 }
 
 const lines = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
+lines.on("close", () => process.exit(0));
 lines.on("line", (line) => {
   const command = JSON.parse(line) as { type?: string; id?: string; message?: string };
   if (command.type === "abort") return;
@@ -24,23 +25,31 @@ lines.on("line", (line) => {
   const providerMismatch = command.message === "provider-check"
     && (
       process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex"
-      || process.argv[process.argv.indexOf("--model") + 1] !== "gpt-5.4-mini"
+      || process.argv[process.argv.indexOf("--model") + 1] !== "gpt-5.6-luna"
     );
+  const routingMismatch = command.message === "routing-check"
+    && (
+      process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex"
+      || process.argv.includes("--model")
+    );
+  const routed = command.message === "routing-check";
   process.stdout.write(`${JSON.stringify({ type: "agent_start" })}\n`);
   process.stdout.write(`${JSON.stringify({
     type: "message_end",
     message: {
       role: "assistant",
+      provider: routed ? "openai-codex-account-2" : "openai-codex",
+      model: routed ? "gpt-5.6-sol" : "gpt-5.6-luna",
       content: [
         { type: "thinking", thinking: "must not leak" },
-        { type: "text", text: failed || providerMismatch ? "partial" : "OK" },
+        { type: "text", text: failed || providerMismatch || routingMismatch ? "partial" : "OK" },
         { type: "toolCall", name: "bash", arguments: { command: "must not leak" } },
       ],
-      stopReason: failed || providerMismatch ? "error" : "stop",
-      ...(failed || providerMismatch ? { errorMessage: "provider failed" } : {}),
+      stopReason: failed || providerMismatch || routingMismatch ? "error" : "stop",
+      ...(failed || providerMismatch || routingMismatch ? { errorMessage: "provider failed" } : {}),
     },
   })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_end", willRetry: false })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_settled" })}\n`);
-  setTimeout(() => process.exit(0), 10);
+  if (command.message !== "wait-for-eof") setTimeout(() => process.exit(0), 10);
 });

@@ -9,6 +9,7 @@ export interface PiFormalRun {
   readonly platform: "darwin" | "linux";
   readonly piVersion: string;
   readonly providerId: string;
+  readonly modelId: string;
   readonly executedAt: string;
   readonly rpc: {
     readonly status: "passed";
@@ -102,6 +103,7 @@ function validateRunIdentity(run: Record<string, unknown>, path: string, problem
   if (run.platform !== "darwin" && run.platform !== "linux") problems.push(`${path}.platform is unsupported`);
   if (!isSupportedPiVersion(run.piVersion)) problems.push(`${path}.piVersion must be >= 0.83.0`);
   if (!isProviderId(run.providerId)) problems.push(`${path}.providerId is invalid or credential-like`);
+  if (!isProviderId(run.modelId)) problems.push(`${path}.modelId is invalid or credential-like`);
   if (!isIsoTimestamp(run.executedAt)) problems.push(`${path}.executedAt must be an ISO timestamp`);
 }
 
@@ -136,7 +138,7 @@ function validateTui(value: unknown, path: string, problems: string[]): void {
 function validateRun(value: unknown, index: number, problems: string[]): value is PiFormalRun {
   const path = `runs[${index}]`;
   const run = record(value);
-  if (run === null || !exactKeys(run, ["assertions", "executedAt", "piVersion", "platform", "providerId", "rpc", "tui"])) {
+  if (run === null || !exactKeys(run, ["assertions", "executedAt", "modelId", "piVersion", "platform", "providerId", "rpc", "tui"])) {
     problems.push(`${path} has an invalid closed shape`);
     return false;
   }

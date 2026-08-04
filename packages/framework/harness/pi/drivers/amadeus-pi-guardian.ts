@@ -47,6 +47,48 @@ const CONTROL_LINE_CAP = 4 * 1024 * 1024 + 4096;
 const RPC_LINE_CAP = 1024 * 1024;
 const TERM_GRACE_MS = 250;
 const KILL_GRACE_MS = 750;
+const FAILED_SETTLE_GRACE_MS = 1_000;
+
+interface RpcCompletionController {
+  readonly acceptLine: (line: string, finish: () => void) => void;
+  readonly dispose: () => void;
+}
+
+function createRpcCompletionController(): RpcCompletionController {
+  let latestAssistantFailed = false;
+  let failedSettleTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearFailedSettle = (): void => {
+    if (failedSettleTimer !== undefined) clearTimeout(failedSettleTimer);
+    failedSettleTimer = undefined;
+  };
+  return {
+    acceptLine(line, finish) {
+      let event: unknown;
+      try {
+        event = JSON.parse(line);
+      } catch {
+        return;
+      }
+      if (!isRecord(event)) return;
+      if (event.type === "agent_start") {
+        clearFailedSettle();
+        latestAssistantFailed = false;
+        return;
+      }
+      if (event.type === "message_end" && isRecord(event.message) && event.message.role === "assistant") {
+        latestAssistantFailed = event.message.stopReason === "error" || typeof event.message.errorMessage === "string";
+        return;
+      }
+      if (event.type !== "agent_settled") return;
+      if (!latestAssistantFailed) {
+        finish();
+        return;
+      }
+      failedSettleTimer = setTimeout(finish, FAILED_SETTLE_GRACE_MS);
+    },
+    dispose: clearFailedSettle,
+  };
+}
 
 function parseArgs(argv: readonly string[]): GuardianArgs {
   const values = new Map<string, string>();
@@ -254,6 +296,7 @@ function run(args: GuardianArgs): void {
       detached: false,
       stdio: ["pipe", "pipe", "pipe"],
     });
+    const completion = createRpcCompletionController();
     child.once("error", () => {
       emit({ kind: "failure", runId: args.runId, reason: "pi-spawn-failed" });
       closeGroup("pi-spawn-failed");
@@ -268,6 +311,7 @@ function run(args: GuardianArgs): void {
         return;
       }
       emit({ kind: "rpc", runId: args.runId, line: rpcLine });
+      completion.acceptLine(rpcLine, () => child?.stdin.end());
     });
     child.stderr.on("data", (chunk: Buffer) => {
       stderrBytes += chunk.length;
@@ -277,6 +321,7 @@ function run(args: GuardianArgs): void {
       }
     });
     child.once("close", (code, signalName) => {
+      completion.dispose();
       emit({
         kind: "exit",
         runId: args.runId,

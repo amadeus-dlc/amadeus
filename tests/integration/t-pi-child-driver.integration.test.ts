@@ -81,8 +81,14 @@ describe("Pi child driver process boundary", () => {
     const count = join(root, "count.txt");
     const request = { ...base, deliveryKey: "success-1", prompt: `success:${count}` };
     const options = { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle };
-    expect(await executePiChild(request, options)).toEqual({ kind: "succeeded", output: "OK", replayed: false });
-    expect(await executePiChild(request, options)).toEqual({ kind: "succeeded", output: "OK", replayed: true });
+    expect(await executePiChild(request, options)).toMatchObject({
+      kind: "succeeded",
+      output: "OK",
+      replayed: false,
+      providerId: "openai-codex",
+      modelId: "gpt-5.6-luna",
+    });
+    expect(await executePiChild(request, options)).toMatchObject({ kind: "succeeded", output: "OK", replayed: true });
     expect(readFileSync(count, "utf8").trim().split("\n")).toHaveLength(1);
   });
 
@@ -95,11 +101,41 @@ describe("Pi child driver process boundary", () => {
         piExecutable: fakePi,
         lifecycle,
         providerId: "openai-codex",
-        modelId: "gpt-5.4-mini",
+        modelId: "gpt-5.6-luna",
       },
     );
 
-    expect(result).toEqual({ kind: "succeeded", output: "OK", replayed: false });
+    expect(result).toMatchObject({ kind: "succeeded", output: "OK", replayed: false });
+  });
+
+  test("lets Pi route the provider family to an account-specific model and records the actual selection", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    const result = await executePiChild(
+      { ...base, deliveryKey: "routing-1", prompt: "routing-check" },
+      {
+        runtimeDir: join(root, "runtime"),
+        piExecutable: fakePi,
+        lifecycle,
+        providerId: "openai-codex",
+      },
+    );
+
+    expect(result).toMatchObject({
+      kind: "succeeded",
+      output: "OK",
+      providerId: "openai-codex-account-2",
+      modelId: "gpt-5.6-sol",
+    });
+  });
+
+  test("closes a settled one-shot RPC child instead of timing out", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    const result = await executePiChild(
+      { ...base, deliveryKey: "settled-1", prompt: "wait-for-eof", timeoutMs: 1_000 },
+      { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle },
+    );
+
+    expect(result.kind).toBe("succeeded");
   });
 
   test("timeout and cancellation remain terminal failures and reap the guardian group", async () => {

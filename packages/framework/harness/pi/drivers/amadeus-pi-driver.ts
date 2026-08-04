@@ -80,7 +80,13 @@ interface GuardianEnvelope {
 }
 
 export type PiChildDriverResult =
-  | { readonly kind: "succeeded"; readonly output: string; readonly replayed: boolean }
+  | {
+      readonly kind: "succeeded";
+      readonly output: string;
+      readonly replayed: boolean;
+      readonly providerId?: string;
+      readonly modelId?: string;
+    }
   | {
       readonly kind: "failed" | "cancelled" | "timed-out" | "dispatch-not-started";
       readonly reason: string;
@@ -249,7 +255,15 @@ function signedControl(payload: Record<string, unknown>, privateKey: KeyObject):
 function mapReplay(record: { readonly terminal?: PiTerminalRecord }, output: string): PiChildDriverResult {
   const terminal = record.terminal;
   if (!terminal) return { kind: "quarantined", reason: "terminal-record-invalid", replayed: true };
-  if (terminal.kind === "succeeded") return { kind: "succeeded", output, replayed: true };
+  if (terminal.kind === "succeeded") {
+    return {
+      kind: "succeeded",
+      output,
+      replayed: true,
+      ...(terminal.providerId === undefined ? {} : { providerId: terminal.providerId }),
+      ...(terminal.modelId === undefined ? {} : { modelId: terminal.modelId }),
+    };
+  }
   return { kind: terminal.kind, reason: terminal.reason, output, replayed: true };
 }
 
@@ -316,6 +330,8 @@ interface LiveRunResult {
   readonly termination: "normal" | "cancelled" | "timed-out";
   readonly cleanupOk: boolean;
   readonly attemptStart: AttemptStart | null;
+  readonly providerId?: string;
+  readonly modelId?: string;
 }
 
 async function runGuardian(
@@ -498,7 +514,12 @@ async function runGuardian(
   };
   options.abortSignal?.addEventListener("abort", abort, { once: true });
   if (options.abortSignal?.aborted) abort();
-  await Promise.race([done, new Promise<void>((resolve) => setTimeout(resolve, request.timeoutMs + CLEANUP_WAIT_MS))]);
+  let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+  const cleanupDeadline = new Promise<void>((resolve) => {
+    cleanupTimer = setTimeout(resolve, request.timeoutMs + CLEANUP_WAIT_MS);
+  });
+  await Promise.race([done, cleanupDeadline]);
+  if (cleanupTimer !== undefined) clearTimeout(cleanupTimer);
   clearTimeout(timeout);
   options.abortSignal?.removeEventListener("abort", abort);
   if (!closed) failFirst("guardian-reap-timeout");
@@ -508,7 +529,15 @@ async function runGuardian(
   if (termination === "normal" && !exitSeen) failFirst("guardian-exit-unobserved");
   const cleanupOk = acceptedPgid === null ? closed : closed && groupExtinct(acceptedPgid);
   if (!cleanupOk) failFirst("guardian-group-not-extinct");
-  return { output: observation.output, reason, termination, cleanupOk, attemptStart };
+  return {
+    output: observation.output,
+    reason,
+    termination,
+    cleanupOk,
+    attemptStart,
+    ...(observation.providerId === undefined ? {} : { providerId: observation.providerId }),
+    ...(observation.modelId === undefined ? {} : { modelId: observation.modelId }),
+  };
 }
 
 function terminalKind(run: LiveRunResult): PiTerminalRecord["kind"] {
@@ -576,11 +605,22 @@ export async function executePiChild(rawRequest: unknown, options: PiDriverOptio
     reason = "attempt-start-missing";
   }
   const finalKind: PiTerminalRecord["kind"] = reason === null ? kind : kind === "cancelled" || kind === "timed-out" ? kind : "failed";
-  if (!store.commitTerminal(request.deliveryKey, fingerprint, { kind: finalKind, reason: reason ?? "pi-child-succeeded" }, run.output)) {
+  if (!store.commitTerminal(request.deliveryKey, fingerprint, {
+    kind: finalKind,
+    reason: reason ?? "pi-child-succeeded",
+    ...(run.providerId === undefined ? {} : { providerId: run.providerId }),
+    ...(run.modelId === undefined ? {} : { modelId: run.modelId }),
+  }, run.output)) {
     return { kind: "failed", reason: "terminal-replay-commit-failed", output: "", replayed: false };
   }
   return finalKind === "succeeded"
-    ? { kind: "succeeded", output: run.output, replayed: false }
+    ? {
+        kind: "succeeded",
+        output: run.output,
+        replayed: false,
+        ...(run.providerId === undefined ? {} : { providerId: run.providerId }),
+        ...(run.modelId === undefined ? {} : { modelId: run.modelId }),
+      }
     : { kind: finalKind, reason: reason ?? "pi-child-failed", output: run.output, replayed: false };
 }
 

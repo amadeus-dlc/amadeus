@@ -29,6 +29,7 @@ export type PiLiveRpcResult =
       readonly platform: "darwin" | "linux";
       readonly piVersion: string;
       readonly providerId: string;
+      readonly modelId: string;
       readonly verificationCommit: string;
       readonly executedAt: string;
       readonly assertions: {
@@ -59,6 +60,10 @@ interface LiveProviderSelection {
   readonly modelId?: string;
 }
 
+type LiveOutcomeValidation =
+  | { readonly ok: false; readonly reason: string }
+  | { readonly ok: true; readonly providerId: string; readonly modelId: string };
+
 function liveProviderSelection(environment: LiveEnvironment): LiveProviderSelection {
   const providerId = safeProviderId(environment.AMADEUS_PI_LIVE_PROVIDER_ID);
   if (providerId === null) return { ok: false };
@@ -73,6 +78,37 @@ function livePlatform(): "darwin" | "linux" | null {
   if (process.platform === "darwin") return "darwin";
   if (process.platform === "linux") return "linux";
   return null;
+}
+
+function providerBelongsToFamily(providerId: string, familyId: string): boolean {
+  return providerId === familyId || new RegExp(`^${familyId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-account-\\d+$`).test(providerId);
+}
+
+function observedProvider(
+  providerId: string | undefined,
+  modelId: string | undefined,
+): { readonly providerId: string; readonly modelId: string } | null {
+  return providerId === undefined || modelId === undefined ? null : { providerId, modelId };
+}
+
+function validateLiveOutcome(
+  requestedProviderId: string,
+  actualProviderId: string | undefined,
+  actualModelId: string | undefined,
+  humanTurnCount: number,
+  gateApprovedCount: number,
+  output: string,
+): LiveOutcomeValidation {
+  const provider = observedProvider(actualProviderId, actualModelId);
+  if (provider === null) return { ok: false, reason: "provider-observation-missing" };
+  if (!providerBelongsToFamily(provider.providerId, requestedProviderId)) {
+    return { ok: false, reason: "provider-family-mismatch" };
+  }
+  if (humanTurnCount !== 0 || gateApprovedCount !== 0) {
+    return { ok: false, reason: "rpc-presence-boundary-violated" };
+  }
+  if (!output.includes("AMADEUS_PI_LIVE_OK")) return { ok: false, reason: "live-output-mismatch" };
+  return { ok: true, ...provider };
 }
 
 function gitIdentity(projectDir: string): { readonly commit: string; readonly clean: boolean } | null {
@@ -184,15 +220,21 @@ export async function runPiLiveRpc(
   const humanTurnCount = countMarker(after, "HUMAN_TURN") - countMarker(before, "HUMAN_TURN");
   const gateApprovedCount = countMarker(after, "GATE_APPROVED") - countMarker(before, "GATE_APPROVED");
   if (result.kind !== "succeeded") return { status: "failed", reason: `driver-${result.kind}` };
-  if (humanTurnCount !== 0 || gateApprovedCount !== 0) {
-    return { status: "failed", reason: "rpc-presence-boundary-violated" };
-  }
-  if (!result.output.includes("AMADEUS_PI_LIVE_OK")) return { status: "failed", reason: "live-output-mismatch" };
+  const outcome = validateLiveOutcome(
+    providerId,
+    result.providerId,
+    result.modelId,
+    humanTurnCount,
+    gateApprovedCount,
+    result.output,
+  );
+  if (!outcome.ok) return { status: "failed", reason: outcome.reason };
   return {
     status: "passed",
     platform,
     piVersion: version,
-    providerId,
+    providerId: outcome.providerId,
+    modelId: outcome.modelId,
     verificationCommit: identity.commit,
     executedAt: new Date().toISOString(),
     assertions: {
