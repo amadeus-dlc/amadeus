@@ -5791,7 +5791,14 @@ export function rebuildCompletedFieldFromState(
   graph: StageEntry[] = loadStageGraph(),
 ): Pick<DerivedPlanFields, "content" | "completedCount"> {
   const scope = getField(content, "Scope") ?? "";
-  const scopeStages = loadScopeMapping()[scope]?.stages ?? {};
+  const scopeStages = loadScopeMapping()[scope]?.stages;
+  if (!scopeStages) {
+    // An empty fallback would make every non-overridden stage SKIP-effective
+    // and silently zero Completed on a broken state file — fail before writing.
+    throw new Error(
+      `State file has invalid Scope "${scope}" — cannot rebuild Completed against an unknown plan.`,
+    );
+  }
   const stateOverrides = parseStateStageSuffixes(content);
   const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) => {
     const action = stateOverrides.get(slug) ?? scopeStages[slug];

@@ -3387,7 +3387,10 @@ function approvalScopeIssue(content: string): string | null {
   return null;
 }
 
-function approvalNextStateIssue(
+// Exported for the integration contract test: approve's post-commit state
+// validation must reject a Completed counter that diverges from the shared
+// canonical writer (#1875).
+export function approvalNextStateIssue(
   content: string,
   slug: string,
   timestamp: string,
