@@ -3831,5 +3831,885 @@
     },
     "reason": "The main guard is exercised by the worker CLI probe integration test, which asserts the spawned process exit and probe payload. Bun does not merge that child process module row into the parent LCOV report.",
     "expiry": "remove when Bun merges spawned worker coverage into the parent report"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "closeProbeFile",
+      "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "readRegularFileNoFollow",
+      "fingerprint": "sha256:939f31699304788b06b4965a0ceebc12ad9d4bf43eda4a7efcd3c942e350774f",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "catalogMinimumVersion",
+      "fingerprint": "sha256:f9cef3a6b07b1096f293745a31b90281c243e19f06ccffe1d81343a11773a989",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "catalogResourceMapping",
+      "fingerprint": "sha256:8de110f1847c3739404cbd69e4d47da5d71b6c82a1326d25a4cff48caaa53d60",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "parseCatalog",
+      "fingerprint": "sha256:55e7f67beabd623753052429c7680a487f157857db4c40d372d54b00c36934eb",
+      "anchorLines": 24,
+      "targetLines": "1-24"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "nearestTrustDecision",
+      "fingerprint": "sha256:6671ee4950330f7038a8b3f864cd9389387283e963b9bd282240b694d7d8d4b7",
+      "anchorLines": 13,
+      "targetLines": "1-13"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "filesBelow",
+      "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "validateResourceFamily",
+      "fingerprint": "sha256:6e506e2e2149c0f635b4efa4d81e57c1df7bdc7ae5ef8ce46fc85e9437bd509f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "installerCatalogReceipt",
+      "fingerprint": "sha256:1be44ee05e9e64c93cf951bc5f08305c7e99e6d012de9214d1e2fcf0bc031977",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver-contract.ts",
+    "selector": {
+      "function": "parsePiChildRequest",
+      "fingerprint": "sha256:d7f01a3fbd03814dbc882f4aa894b5ec513e7778a0d2e1d47299a97e4f4c0d34",
+      "anchorLines": 23,
+      "targetLines": "1-23"
+    },
+    "reason": "The request and stream rejection fallbacks are asserted by the Pi driver contract and spawned child-driver suites; the residual rows are defensive protocol guards or multiline error construction that Bun leaves unstamped.",
+    "expiry": "remove when the driver protocol rejection matrix is fully attributed in-process"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver-contract.ts",
+    "selector": {
+      "function": "acceptLine",
+      "fingerprint": "sha256:7eee48c6b88763c6baada0c9720638f31093ef3780184a8c96bb961752686342",
+      "anchorLines": 49,
+      "targetLines": "1-49"
+    },
+    "reason": "The request and stream rejection fallbacks are asserted by the Pi driver contract and spawned child-driver suites; the residual rows are defensive protocol guards or multiline error construction that Bun leaves unstamped.",
+    "expiry": "remove when the driver protocol rejection matrix is fully attributed in-process"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "captureExecutableSnapshot",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "defaultClock",
+      "fingerprint": "sha256:44789ec98999940b7309252814379eafc199acc94ce79837d02545d52bec0cc8",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "runtimeDirFor",
+      "fingerprint": "sha256:2a5f3b91072826a2caa559238579bdfb64c1a83b5e578c2bf39e970c7878ea48",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "parseEnvelope",
+      "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "verifyEnvelope",
+      "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "mapReplay",
+      "fingerprint": "sha256:d06f2f94b0676667c34c5eafa991d3d17f6eabe8d69d0699c3a7d03724b865c7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "sendTerminate",
+      "fingerprint": "sha256:2d32c7032f8cc2287e92e08fb430aa9e040418920ca27ba44706672467b971d9",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "runGuardian",
+      "fingerprint": "sha256:8145eee1719533d14a2e6643f2059f70bc272d06a8653526b1fd9af69e00cd14",
+      "anchorLines": 83,
+      "targetLines": "1-83"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "executePiChild",
+      "fingerprint": "sha256:22d359bc5498f000e2d28bbd96e2d9b3d608643e639c91bf530e015ad0d90c95",
+      "anchorLines": 54,
+      "targetLines": "1-54"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:8126c9fbf51ad4d7abbc57713cf767a68c95d64f82d1d3de1d7df2b6a2115381",
+      "anchorLines": 16,
+      "targetLines": "1-16"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "assertPrivateRegularFile",
+      "fingerprint": "sha256:4c79877e21217e6adba121834c570ea486db602d1350fa8d6708f67fa05987ca",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "parseRecord",
+      "fingerprint": "sha256:37cce28f595fbd98400d51dbf6455f0ec9c5667706e395764e311e603e27f8d5",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "reserve",
+      "fingerprint": "sha256:f6a26a337e4b252e0942e36cce5d3fd846a20ac5bc4298565ab7bcd27b1b8927",
+      "anchorLines": 47,
+      "targetLines": "1-47"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "acceptGuardian",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "markRunning",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "commitTerminal",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "closeNoLaunch",
+      "fingerprint": "sha256:13f977ee96944a409288b193a2cab3187e8843962cf7fcc0a0690217faec1d34",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "recoverPending",
+      "fingerprint": "sha256:6557d9d1d3c7d3515918a226d4b0b8368e1e81d16a08557a11a4856c29207d74",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "ExtensionHealthLatch.snapshot",
+      "fingerprint": "sha256:20632b0ed0819d370ef027988145340bef4d845093a93d1e4d94e24c23098c08",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "auditMapping",
+      "fingerprint": "sha256:f85e7a3dc66639492ef16009f2e56b1203cc12efc810c3d15e24adc35fa7624b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "readStateValidity",
+      "fingerprint": "sha256:d7f99a799238ca76add9c01a2cd60996326e425d58f2d08c28572a6308b55e5b",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "PiContinuationOutbox.reconcile",
+      "fingerprint": "sha256:99133ea4783696cea989bab1b359d65366c895442e00e1f3d2e8e93aa2d864f1",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "amadeusPiExtension",
+      "fingerprint": "sha256:92a11927241e5dbcefd1d18c8d095cff2e2478eb97403f904e5fa2cad26831da",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/setup/src/cli.ts",
+    "selector": {
+      "function": "runInstall",
+      "fingerprint": "sha256:57780dc5cc919ff63db0a17903cb9b83e44e6fedc11ff1cae561a0042e4bf688",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi install and upgrade transaction failures are asserted through the spawned setup CLI flow; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when setup CLI dispatch is driven in-process or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/setup/src/cli.ts",
+    "selector": {
+      "function": "runUpgrade",
+      "fingerprint": "sha256:d02530dd207185c2530336139850b87c3c9a5f8cb42a3b75beb4b0e4d1a5cb19",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The Pi install and upgrade transaction failures are asserted through the spawned setup CLI flow; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when setup CLI dispatch is driven in-process or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/setup/src/modules/setup-transaction-coordinator.ts",
+    "selector": {
+      "function": "apply",
+      "fingerprint": "sha256:41b03224c40976eb4cea4896f5e12542684f2b9c40fe8f402ae8800fd9ea2aad",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The transaction coordinator suite covers apply, rollback, recovery, and lock contention; these residual rows require a filesystem/PID race after an already successful operation or are defensive result fallbacks without an injectable OS seam.",
+    "expiry": "remove when the transaction coordinator receives injectable filesystem and process-liveness ports"
+  },
+  {
+    "file": "packages/setup/src/modules/setup-transaction-coordinator.ts",
+    "selector": {
+      "function": "recover",
+      "fingerprint": "sha256:a6f344fc7b637d699edf109cecd328ebf08306700ae8d24501bbcddaa9523b5e",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "The transaction coordinator suite covers apply, rollback, recovery, and lock contention; these residual rows require a filesystem/PID race after an already successful operation or are defensive result fallbacks without an injectable OS seam.",
+    "expiry": "remove when the transaction coordinator receives injectable filesystem and process-liveness ports"
+  },
+  {
+    "file": "packages/setup/src/modules/setup-transaction-coordinator.ts",
+    "selector": {
+      "function": "defaultPrivateRoot",
+      "fingerprint": "sha256:d2e7135874e351d8123e0d908ad010e86e752e5c17dce4b0843aec529bd197c3",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The transaction coordinator suite covers apply, rollback, recovery, and lock contention; these residual rows require a filesystem/PID race after an already successful operation or are defensive result fallbacks without an injectable OS seam.",
+    "expiry": "remove when the transaction coordinator receives injectable filesystem and process-liveness ports"
+  },
+  {
+    "file": "packages/setup/src/modules/setup-transaction-coordinator.ts",
+    "selector": {
+      "function": "processAlive",
+      "fingerprint": "sha256:70170e8ed62b8d97aa1fd5b60fde3f593199796fbcd883c2fb5478abbde200b7",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The transaction coordinator suite covers apply, rollback, recovery, and lock contention; these residual rows require a filesystem/PID race after an already successful operation or are defensive result fallbacks without an injectable OS seam.",
+    "expiry": "remove when the transaction coordinator receives injectable filesystem and process-liveness ports"
+  },
+  {
+    "file": "packages/setup/src/modules/setup-transaction-coordinator.ts",
+    "selector": {
+      "function": "manifestFiles",
+      "fingerprint": "sha256:a3da6cd82b7d773b0051b77a476fc7678b3768a0e4b391c9c9b8aa9ee27ed7bf",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The transaction coordinator suite covers apply, rollback, recovery, and lock contention; these residual rows require a filesystem/PID race after an already successful operation or are defensive result fallbacks without an injectable OS seam.",
+    "expiry": "remove when the transaction coordinator receives injectable filesystem and process-liveness ports"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateStageEntry",
+      "fingerprint": "sha256:df4e58cf06779a3f4dbc6f9868130e58f80824c14f7c2cd716dba27b24b14791",
+      "anchorLines": 17,
+      "targetLines": "1-17"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateRuntime",
+      "fingerprint": "sha256:120cd68ced3dbeb64493e1b282dd10fe26a18fd45c2e2320be568271039b0d45",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "resourceKind",
+      "fingerprint": "sha256:f9cef3a6b07b1096f293745a31b90281c243e19f06ccffe1d81343a11773a989",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateResourcePaths",
+      "fingerprint": "sha256:83f15c82b0ee1724e53ae5abacff72d554583518eb4b1ee96ddf03510d78f84e",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateResourceKind",
+      "fingerprint": "sha256:ba8f50154efecbdab7c82b5a4906d0fda9675a1a2e54ae62de0383780120c796",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateResource",
+      "fingerprint": "sha256:4354aa77e654bd6cddda944873ddf4fbd53c6d48c475dd8b046829786354b158",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/harness-manifest.ts",
+    "selector": {
+      "function": "validateResources",
+      "fingerprint": "sha256:3bb9d7f54309b0c09950bf1365106add6df1ec3a2e266c8ba0675107974febd0",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The manifest suite covers the canonical Pi catalog and collision/rejection behavior; these residual schema-shape guards reject authoring states that cannot be produced by the typed canonical manifest.",
+    "expiry": "remove when every manifest validator guard has a direct untyped fixture"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "resourceDescriptors",
+      "fingerprint": "sha256:c0fcd14e238bc96dc3a960048c2066b0ffb32df109222489ac1a2913bbcf4415",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "requiredResourceSource",
+      "fingerprint": "sha256:ee72fb42567cba57d5c237053c25769f065a9b3d7ea9852aa96ad8e07c872901",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "copyManifestResources",
+      "fingerprint": "sha256:fe6c785662a1b4fa8af6afa67b306b6f9dca963d46551020ee79fe79b09c5227",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "resourcePathProblem",
+      "fingerprint": "sha256:e5839dc9f476510205d8773006dd46bb6788a6c53341c4ee3855169b146fd84e",
+      "anchorLines": 15,
+      "targetLines": "1-15"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "resourceDestinationProblems",
+      "fingerprint": "sha256:82594b8a188fbe11a62f50ef5d3f872e84d8628be24c55ce6afdccd6e5a970c0",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "piMetadataFromRootPackage",
+      "fingerprint": "sha256:a374bd2f3b1527b93985be2a86b4b79694d4d40196609810e9493524cd4a92db",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "piPackageProblemsForHarness",
+      "fingerprint": "sha256:7d4891508bf1caa93976472e68b619c1205c5fc9217c19375b9c427c4a8a41e7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Pi resource projection, hashing, and package validation are asserted by package-candidate and reproducible-build subprocesses; Bun does not merge spawned packaging coverage into the parent report.",
+    "expiry": "remove when package projection is driven in-process or Bun merges spawned packaging coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "record",
+      "fingerprint": "sha256:f9cef3a6b07b1096f293745a31b90281c243e19f06ccffe1d81343a11773a989",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateRpc",
+      "fingerprint": "sha256:1f5538b0b3d2bb4ed0bc6a7ae54a26380e21d013752ebd0283ccf779b7f9ed54",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateTui",
+      "fingerprint": "sha256:cf744a083b5cede58d3a41374b5ef9183a1bf4a1741f711c849aaf947cebcad6",
+      "anchorLines": 9,
+      "targetLines": "1-9"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateRun",
+      "fingerprint": "sha256:b5d6308b6dc152791b8d769c4d32dde54c9f8d3744c444272451b84d37eaacec",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateCandidate",
+      "fingerprint": "sha256:bbece5b83dcdb300a217cbb7fff00e6ee5e185f5b820358a82de6e5e5ff3edd4",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateRuns",
+      "fingerprint": "sha256:a7ef6f9187fab8136aab3123a51cd7b5cfc8285929b11d6fd9d2b19a4edc59ff",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "validateWindowsNegative",
+      "fingerprint": "sha256:38503c48c248664689eb3c6a388e178a4f1efee3ea7987892cfcf8da024bf2e8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-conformance-evidence.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:42db1edef0a6b83d0abeea71647477bd09db5aed1f867d055742b45c328c6254",
+      "anchorLines": 15,
+      "targetLines": "1-15"
+    },
+    "reason": "The conformance evidence suite invokes the shipped evidence CLI and asserts admitted and rejected evidence; Bun does not merge the spawned validator coverage into the parent report.",
+    "expiry": "remove when the evidence CLI has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "countMarker",
+      "fingerprint": "sha256:67640070025d3e47811d5c28c11e2b28f2c87912e2f5a8829d9f4469b420b2a6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "safeProviderId",
+      "fingerprint": "sha256:36900db73de7f189be6d5df6f085a7883539b30f752066df142af1c8837a2225",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "liveProviderSelection",
+      "fingerprint": "sha256:4a7bad9a92ec7adb85f85640e374c76e14ed212fbc1887fe9c1597734fa54f49",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "livePlatform",
+      "fingerprint": "sha256:f1f1a736d09a2b05c547d39ec46258053928ff8ee461a7fec6378574121b9f88",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "providerBelongsToFamily",
+      "fingerprint": "sha256:4b67c8dbdb2bcaf0bdb68e1da9047ddb628f517c9a55e6b07b492a564b2cbf35",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "observedProvider",
+      "fingerprint": "sha256:9a0542a8d512621898e5d9b5a92a9aef8f40bfe0a5dc2ad0f767220efc54c6bf",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "validateLiveOutcome",
+      "fingerprint": "sha256:1b248b49196a1dae476ef62f5c7ddaeb12546cbe0124f66ad4929a6ec0fd81c4",
+      "anchorLines": 17,
+      "targetLines": "1-17"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "gitIdentity",
+      "fingerprint": "sha256:f285881c62df30b12f22e627fc3c2f39c6737fab21bf1914c01337a878c91af4",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "piVersion",
+      "fingerprint": "sha256:8a0a651c11855ed309d967ae7046d2422e695bf6ba6cc05b0c883e85b42ec47b",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "liveLifecycle",
+      "fingerprint": "sha256:3360f8c6cb0c27d75b9e5487e9a58b29820c845cb7f902cb116bc655560fdcf1",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "projectRequired",
+      "fingerprint": "sha256:72c2c99799401a60258ec85206528fba13740b0663bb1f93458c3153c5062913",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "rebuildRequired",
+      "fingerprint": "sha256:42be2999c04ba0cdb24ce3a11b03e64e4e2cbfce1a758801d641f451cd13863e",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "projectTelemetry",
+      "fingerprint": "sha256:abd18963016e0ab15c8ab36867eb628b69132a191894b25649e551b8fbdd2a56",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "runPiLiveRpc",
+      "fingerprint": "sha256:852019dff6732e545e777e8bdcb2071ccd9c7b3a7359279b81169b1c4d31071e",
+      "anchorLines": 73,
+      "targetLines": "1-73"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:c8fef17c81fb5a87e8a96c3a4d15c2f9cf7d3dd63bde41505ef125141cafcdcb",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-package.ts",
+    "selector": {
+      "function": "gitPiSourceIdentity",
+      "fingerprint": "sha256:d15f2b78867aacb7bc56ed83fa2a523df33d9a2dbf23ed9e32e24b9e70a9eccb",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "The package-candidate suite covers canonical local and Git identities; these two short-circuit canonicalization rows are defensive malformed-URL guards whose observable rejection is asserted at the package boundary.",
+    "expiry": "remove when the Git URL parser port supports direct branch instrumentation"
+  },
+  {
+    "file": "tests/lib/no-silent-drop-trusted-base.ts",
+    "selector": {
+      "function": "noSilentDropTrustedBase",
+      "fingerprint": "sha256:8de110f1847c3739404cbd69e4d47da5d71b6c82a1326d25a4cff48caaa53d60",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Trusted-base resolution is exercised by the spawned no-silent-drop gate suites; Bun does not merge the child gate process coverage into the parent report.",
+    "expiry": "remove when trusted-base resolution is driven in-process or Bun merges spawned gate coverage"
   }
 ]
