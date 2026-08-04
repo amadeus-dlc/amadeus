@@ -98,6 +98,43 @@ describe("first-party Quality Repair contribution", () => {
       "replan",
       "repair-stalled",
     ]);
+    expect(active.graph.loopMonitors[0]?.routes.find((route) => route.id === "replan")).toMatchObject({
+      kind: "transition",
+      targetEvent: "QUALITY_NON_PROGRESS",
+    });
+    expect(active.graph.loopMonitors[0]?.transitionTable).not.toHaveProperty("QUALITY_REPLAN");
+  });
+
+  test("fails closed for tampered contributions and records none-mode opt-out", () => {
+    const contribution = createFirstPartyQualityContribution(2);
+    expect(resolveQualityPluginActivation({
+      mode: "full",
+      projection: emptyQualityPluginProjection("intent-1"),
+      contribution: { ...contribution, contentDigest: qualityDigest("tampered") },
+    })).toMatchObject({ kind: "error", error: { code: "ACTIVATION_FAILED" } });
+
+    const invalidRules = contribution.routeRules.map((rule) =>
+      rule.routeId === "repair-stalled" ? { ...rule, disposition: "continue" as const } : rule
+    );
+    const { contentDigest: _contentDigest, ...content } = contribution;
+    const invalidContribution = { ...content, routeRules: invalidRules };
+    expect(resolveQualityPluginActivation({
+      mode: "full",
+      projection: emptyQualityPluginProjection("intent-1"),
+      contribution: { ...invalidContribution, contentDigest: qualityDigest(invalidContribution) },
+    })).toMatchObject({ kind: "error", error: { code: "ACTIVATION_FAILED" } });
+
+    const optedOut = planNoneModeQualitySetting(emptyQualityPluginProjection("intent-1"), false, {
+      verified: true,
+      eventType: "HUMAN_TURN",
+      actor: "human",
+      turnId: "turn-opt-out",
+    });
+    expect(optedOut).toMatchObject({
+      ok: true,
+      projection: { noneModeOptedIn: false, provenanceTurnId: null },
+      event: { type: "QUALITY_REPAIR_OPTED_OUT" },
+    });
   });
 
   test("rejects invalid plugin identities and contribution thresholds", () => {
@@ -222,6 +259,21 @@ describe("blocking evidence normalization", () => {
     expect(incompleteReviewer).toMatchObject({
       ok: true,
       snapshot: { unresolved: [{ sourceCategory: "reviewer", failureKind: "evidence-incomplete" }] },
+    });
+    expect(normalizeQualityEvidence(batch([{
+      ...reviewer([]),
+      verdict: "NOT-READY",
+      validationReceipt: "invalid",
+    }]))).toMatchObject({
+      ok: true,
+      snapshot: { unresolved: [{ sourceCategory: "reviewer", failureKind: "evidence-incomplete" }] },
+    });
+    expect(normalizeQualityEvidence(batch([{
+      ...reviewer(["blocker-a"]),
+      verdict: "READY",
+    }]))).toMatchObject({
+      ok: false,
+      error: { code: "INCOMPLETE", message: "reviewer-verdict-conflicts-with-blockers" },
     });
 
     const fallbackFingerprint = normalizeQualityEvidence(batch([{
@@ -353,6 +405,27 @@ describe("bounded convergence", () => {
     expect(progress.nextProjection).toMatchObject({
       consecutiveNonProgress: 0,
       replanSinceLastProgress: false,
+    });
+  });
+
+  test("keeps a converged empty snapshot out of the non-progress counter", () => {
+    const first = snapshot([]);
+    const second = snapshot([], first);
+    let epoch = createQualityEpochProjection(first, 2);
+    const initial = planQualityDelivery(epoch, first);
+    expect(initial).toMatchObject({
+      progress: { kind: "strict-progress" },
+      nextProjection: { consecutiveNonProgress: 0, replanSinceLastProgress: false },
+      routeIds: [],
+      deterministicAction: null,
+    });
+    epoch = initial.nextProjection;
+    const repeated = planQualityDelivery(epoch, second);
+    expect(repeated).toMatchObject({
+      progress: { kind: "strict-progress" },
+      nextProjection: { consecutiveNonProgress: 0, replanSinceLastProgress: false },
+      routeIds: [],
+      deterministicAction: null,
     });
   });
 

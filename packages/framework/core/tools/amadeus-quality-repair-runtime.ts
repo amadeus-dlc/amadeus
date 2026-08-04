@@ -3,6 +3,7 @@
 import {
   createJudgeRouteConstraint,
   createLoopDelivery,
+  type CompiledLoopMonitor,
   type LoopMonitorPartition,
   type LoopTraceContext,
 } from "./amadeus-loop-monitor.ts";
@@ -118,6 +119,7 @@ export interface QualityRepairRepository {
     body: (appendQuality: (event: QualityRuntimeEvent) => void) => T,
   ): T;
   readProjection(qualityScopeId: string): QualityRuntimeProjection | null;
+  readProjectionByPartition(partition: LoopMonitorPartition): QualityRuntimeProjection | null;
   readTransactions(): readonly QualityRepairTransaction[];
 }
 
@@ -129,13 +131,6 @@ function loopReceipt(set: LoopMonitorEventSet): LoopMonitorCommitReceipt {
     eventSetDigest,
     partitionKey: set.partitionKey,
   };
-}
-
-function foldQualityProjection(
-  transactions: readonly QualityRepairTransaction[],
-  qualityScopeId: string,
-): QualityRuntimeProjection | null {
-  return foldQualityProjections(transactions).get(qualityScopeId) ?? null;
 }
 
 function foldQualityProjections(
@@ -170,11 +165,31 @@ export function createMemoryQualityRepairRepository(options: {
 } = {}): QualityRepairRepository {
   const transactions: QualityRepairTransaction[] = [...(options.initialTransactions ?? [])];
   const lock = options.transactionLock ?? (<T>(body: () => T): T => body());
+  let projectionCache: ReadonlyMap<string, QualityRuntimeProjection> | null = null;
+  let partitionIndex: ReadonlyMap<string, string> | null = null;
   let active: {
     readonly qualityScopeId: string;
     readonly qualityEvents: QualityRuntimeEvent[];
     readonly loopEventSets: LoopMonitorEventSet[];
   } | null = null;
+
+  function projections(): ReadonlyMap<string, QualityRuntimeProjection> {
+    if (projectionCache !== null) return projectionCache;
+    const nextProjections = foldQualityProjections(transactions);
+    const nextIndex = new Map<string, string>();
+    for (const [qualityScopeId, projection] of nextProjections) {
+      const key = loopMonitorPartitionKey(projection.partition);
+      if (!nextIndex.has(key)) nextIndex.set(key, qualityScopeId);
+    }
+    projectionCache = nextProjections;
+    partitionIndex = nextIndex;
+    return nextProjections;
+  }
+
+  function invalidateProjections(): void {
+    projectionCache = null;
+    partitionIndex = null;
+  }
 
   function allLoopSets(partition: LoopMonitorPartition): LoopMonitorEventSet[] {
     const key = loopMonitorPartitionKey(partition);
@@ -203,11 +218,13 @@ export function createMemoryQualityRepairRepository(options: {
         });
       }
       const qualityScopeId = qualityStableId("quality-loop-only", [loopMonitorPartitionKey(partition)]);
-      let result: ReturnType<typeof body> | undefined;
+      const notExecuted = Symbol("quality-repair-loop-only-transaction-not-executed");
+      let result: ReturnType<typeof body> | typeof notExecuted = notExecuted;
       repository.transaction(qualityScopeId, () => {
         result = loopRepository.transaction(partition, body);
       });
-      return result as ReturnType<typeof body>;
+      if (result === notExecuted) throw new Error("quality-repair-loop-only-transaction-not-executed");
+      return result;
     },
     readEventSets(partition) {
       return allLoopSets(partition);
@@ -245,6 +262,7 @@ export function createMemoryQualityRepairRepository(options: {
             const transaction = { schemaVersion: 1 as const, transactionId, ...staged };
             options.onCommit?.(transaction);
             transactions.push(transaction);
+            invalidateProjections();
           }
           return result;
         } finally {
@@ -253,7 +271,12 @@ export function createMemoryQualityRepairRepository(options: {
       });
     },
     readProjection(qualityScopeId) {
-      return foldQualityProjection(transactions, qualityScopeId);
+      return projections().get(qualityScopeId) ?? null;
+    },
+    readProjectionByPartition(partition) {
+      const cached = projections();
+      const qualityScopeId = partitionIndex?.get(loopMonitorPartitionKey(partition));
+      return qualityScopeId === undefined ? null : cached.get(qualityScopeId) ?? null;
     },
     readTransactions() {
       return transactions.map((transaction) => ({
@@ -419,14 +442,13 @@ function createPartition(snapshot: QualityEvidenceSnapshot): LoopMonitorPartitio
 }
 
 function qualityDelivery(
-  activation: ActiveQualityActivation,
+  monitor: CompiledLoopMonitor,
   runtime: QualityRuntimeProjection,
   plan: QualityDeliveryPlan,
   eventId: "QUALITY_CHECK" | "QUALITY_NON_PROGRESS" | "QUALITY_STRICT_PROGRESS",
   predecessorDeliveryId: string | null,
   trace: LoopTraceContext,
 ) {
-  const monitor = activation.graph.loopMonitors[0]!;
   const routeConstraint = plan.routeIds.length === 0
     ? monitor.routeConstraint
     : createJudgeRouteConstraint(monitor, plan.routeIds);
@@ -462,6 +484,115 @@ function qualityDelivery(
   });
 }
 
+function resumeEvidenceImproved(
+  snapshot: QualityEvidenceSnapshot,
+  latch: RepairStalledLatch,
+): boolean {
+  const candidateIds = new Set(snapshot.unresolved.map((item) => item.obligationId));
+  const latchedIds = new Set(latch.unresolvedObligationIds);
+  const strictSubset = candidateIds.size < latchedIds.size && [...candidateIds].every((id) => latchedIds.has(id));
+  const newSuccess = snapshot.verifierSuccessReceipts.some((receipt) =>
+    latchedIds.has(receipt.obligationId) && !latch.verifierSuccessReceipts.some(
+      (priorReceipt) => priorReceipt.obligationId === receipt.obligationId &&
+        priorReceipt.receiptDigest === receipt.receiptDigest,
+    )
+  );
+  return strictSubset || newSuccess;
+}
+
+interface QualityResumeRequest {
+  readonly qualityScopeId: string;
+  readonly alternativeIdentity: string;
+  readonly humanRetry?: VerifiedHumanTurn;
+  readonly evidence?: QualityEvidenceBatchInput;
+  readonly trace?: LoopTraceContext;
+}
+
+type QualityResumeBasis =
+  | {
+      readonly ok: true;
+      readonly kind: "human-retry";
+      readonly receipt: string;
+      readonly humanRetry: VerifiedHumanTurn;
+    }
+  | {
+      readonly ok: true;
+      readonly kind: "evidence-change";
+      readonly receipt: string;
+      readonly evidence: QualityEvidenceBatchInput;
+      readonly trace: LoopTraceContext;
+    }
+  | {
+      readonly ok: false;
+      readonly result: { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string };
+    };
+
+function resolveResumeBasis(
+  alternative: RepairStalledResumeAlternative,
+  request: QualityResumeRequest,
+  latch: RepairStalledLatch,
+): QualityResumeBasis {
+  if (alternative.kind === "human-retry") {
+    if (request.humanRetry?.verified !== true || request.humanRetry.eventType !== "HUMAN_TURN") {
+      return { ok: false, result: { kind: "CONFLICT", reason: "quality-human-retry-not-verified" } };
+    }
+    return {
+      ok: true,
+      kind: "human-retry",
+      receipt: qualityDigest([request.humanRetry.turnId, alternative.identity]),
+      humanRetry: request.humanRetry,
+    };
+  }
+  if (request.evidence === undefined) {
+    return { ok: false, result: { kind: "CONFLICT", reason: "quality-resume-evidence-missing" } };
+  }
+  const normalized = normalizeQualityEvidence(request.evidence);
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      result: {
+        kind: normalized.error.code === "INCOMPLETE" ? "INCOMPLETE" : "CONFLICT",
+        reason: normalized.error.message,
+      },
+    };
+  }
+  if (!resumeEvidenceImproved(normalized.snapshot, latch)) {
+    return { ok: false, result: { kind: "CONFLICT", reason: "quality-evidence-did-not-improve" } };
+  }
+  if (request.trace === undefined) {
+    return { ok: false, result: { kind: "CONFLICT", reason: "quality-resume-trace-missing" } };
+  }
+  return {
+    ok: true,
+    kind: "evidence-change",
+    receipt: qualityDigest(normalized.snapshot.verifierSuccessReceipts),
+    evidence: request.evidence,
+    trace: request.trace,
+  };
+}
+
+function rebaseResumeEvidence(
+  basis: Extract<QualityResumeBasis, { readonly ok: true }>,
+  epochStartEventIdentity: string,
+):
+  | { readonly ok: true; readonly snapshot: QualityEvidenceSnapshot | null }
+  | { readonly ok: false; readonly result: { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string } } {
+  if (basis.kind === "human-retry") return { ok: true, snapshot: null };
+  const normalized = normalizeQualityEvidence({
+    ...basis.evidence,
+    previousSnapshot: null,
+    epochStartEventIdentity,
+  });
+  if (normalized.ok) return { ok: true, snapshot: normalized.snapshot };
+  return {
+    ok: false,
+    result: {
+      kind: normalized.error.code === "INCOMPLETE" ? "INCOMPLETE" : "CONFLICT",
+      reason: normalized.error.message,
+    },
+  };
+}
+
 export interface QualityRepairCoordinator {
   recordEvidence(input: QualityEvidenceBatchInput, trace: LoopTraceContext): QualityObserveResult;
   dispatchJudge(
@@ -470,13 +601,7 @@ export interface QualityRepairCoordinator {
     replanPort: QualityReplanPort,
   ): QualityJudgeResult;
   resumeReplan(qualityScopeId: string, replanPort: QualityReplanPort): QualityJudgeResult;
-  resume(request: {
-    readonly qualityScopeId: string;
-    readonly alternativeIdentity: string;
-    readonly humanRetry?: VerifiedHumanTurn;
-    readonly evidence?: QualityEvidenceBatchInput;
-    readonly trace?: LoopTraceContext;
-  }):
+  resume(request: QualityResumeRequest):
     | { readonly kind: "resumed"; readonly projection: QualityEpochProjection }
     | { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string };
   status(qualityScopeId: string): QualityRepairStatusEnvelope | null;
@@ -487,18 +612,13 @@ export function createQualityRepairCoordinator(options: {
   readonly repository: QualityRepairRepository;
 }): QualityRepairCoordinator {
   const { activation, repository } = options;
+  const monitor = activation.graph.loopMonitors[0];
+  if (monitor === undefined) throw new Error("quality-repair-monitor-missing");
   const loop = createLoopMonitorCoordinator({ graph: activation.graph, repository: repository.loopRepository });
-  const threshold = activation.graph.loopMonitors[0]!.threshold;
+  const threshold = monitor.threshold;
 
   function readByPartition(partition: LoopMonitorPartition): QualityRuntimeProjection | null {
-    const partitionKey = loopMonitorPartitionKey(partition);
-    const projections = foldQualityProjections(repository.readTransactions());
-    for (const candidate of projections.values()) {
-      if (loopMonitorPartitionKey(candidate.partition) === partitionKey) {
-        return candidate;
-      }
-    }
-    return null;
+    return repository.readProjectionByPartition(partition);
   }
 
   function status(qualityScopeId: string): QualityRepairStatusEnvelope | null {
@@ -624,7 +744,7 @@ export function createQualityRepairCoordinator(options: {
         };
         const currentLoop = loop.readProjection(partition);
         const delivery = qualityDelivery(
-          activation,
+          monitor,
           nextRuntime,
           plan,
           plan.monitorEvent,
@@ -656,7 +776,7 @@ export function createQualityRepairCoordinator(options: {
         }
         if (plan.progress.kind !== "strict-progress") {
           const action = qualityDelivery(
-            activation,
+            monitor,
             nextRuntime,
             plan,
             "QUALITY_NON_PROGRESS",
@@ -761,56 +881,29 @@ export function createQualityRepairCoordinator(options: {
       const latch = prior.stalledLatch;
       const alternative = latch.resumeCondition.alternatives.find((item) => item.identity === request.alternativeIdentity);
       if (alternative === undefined) return { kind: "CONFLICT", reason: "quality-resume-alternative-mismatch" };
-      let basis: "evidence-change" | "human-retry";
-      let resumeEvidenceReceipt: string;
-      let resumeEvidence: QualityEvidenceSnapshot | null = null;
-      let resumeTrace: LoopTraceContext | null = null;
-      if (alternative.kind === "human-retry") {
-        if (request.humanRetry?.verified !== true || request.humanRetry.eventType !== "HUMAN_TURN") {
-          return { kind: "CONFLICT", reason: "quality-human-retry-not-verified" };
-        }
-        basis = "human-retry";
-        resumeEvidenceReceipt = qualityDigest([request.humanRetry.turnId, alternative.identity]);
-      } else {
-        if (request.evidence === undefined) return { kind: "CONFLICT", reason: "quality-resume-evidence-missing" };
-        const normalized = normalizeQualityEvidence(request.evidence);
-        if (!normalized.ok) {
-          return {
-            kind: normalized.error.code === "INCOMPLETE" ? "INCOMPLETE" : "CONFLICT",
-            reason: normalized.error.message,
-          };
-        }
-        const candidateIds = new Set(normalized.snapshot.unresolved.map((item) => item.obligationId));
-        const latchedIds = new Set(latch.unresolvedObligationIds);
-        const strictSubset = candidateIds.size < latchedIds.size && [...candidateIds].every((id) => latchedIds.has(id));
-        const newSuccess = normalized.snapshot.verifierSuccessReceipts.some((receipt) =>
-          latchedIds.has(receipt.obligationId) && !latch.verifierSuccessReceipts.some(
-            (priorReceipt) => priorReceipt.obligationId === receipt.obligationId &&
-              priorReceipt.receiptDigest === receipt.receiptDigest,
-          )
-        );
-        if (!strictSubset && !newSuccess) return { kind: "CONFLICT", reason: "quality-evidence-did-not-improve" };
-        if (request.trace === undefined) return { kind: "CONFLICT", reason: "quality-resume-trace-missing" };
-        basis = "evidence-change";
-        resumeEvidenceReceipt = qualityDigest(normalized.snapshot.verifierSuccessReceipts);
-        resumeEvidence = normalized.snapshot;
-        resumeTrace = request.trace;
-      }
+      const basis = resolveResumeBasis(alternative, request, latch);
+      if (!basis.ok) return basis.result;
       const epochStartEventIdentity = qualityStableId("quality-epoch-start", [
         prior.epoch.qualityEpochId,
         alternative.identity,
-        resumeEvidenceReceipt,
+        basis.receipt,
       ]);
+      const resumedEvidence = rebaseResumeEvidence(basis, epochStartEventIdentity);
+      if (!resumedEvidence.ok) return resumedEvidence.result;
+      const resumedSnapshot = resumedEvidence.snapshot;
       const template: QualityEvidenceSnapshot = {
-        ...prior.latestSnapshot,
+        ...(resumedSnapshot ?? prior.latestSnapshot),
         epochStartEventIdentity,
-        qualityEpochId: qualityStableId("quality-epoch", [prior.qualityScopeId, epochStartEventIdentity]),
+        qualityEpochId: resumedSnapshot?.qualityEpochId ??
+          qualityStableId("quality-epoch", [prior.qualityScopeId, epochStartEventIdentity]),
       };
-      const nextEpoch = createQualityEpochProjection(template, prior.epoch.threshold);
+      const initialEpoch = createQualityEpochProjection(template, prior.epoch.threshold);
+      const resumePlan = resumedSnapshot === null ? null : planQualityDelivery(initialEpoch, resumedSnapshot);
+      const nextEpoch = resumePlan?.nextProjection ?? initialEpoch;
       const projection: QualityRuntimeProjection = {
         ...prior,
         epoch: nextEpoch,
-        latestSnapshot: null,
+        latestSnapshot: resumedSnapshot,
         lastProgress: null,
         observationSequence: 0,
         stalledLatch: null,
@@ -819,31 +912,23 @@ export function createQualityRepairCoordinator(options: {
         pendingReplan: null,
       };
       return repository.transaction(prior.qualityScopeId, (appendQuality) => {
-        if (basis === "human-retry") {
+        if (basis.kind === "human-retry") {
           const cleared = loop.clearLatch({
             partition: prior.partition,
-            humanRetry: request.humanRetry,
+            humanRetry: basis.humanRetry,
           });
           if (cleared.kind !== "cleared") {
             return { kind: "CONFLICT", reason: "quality-loop-latch-clear-failed" } as const;
           }
         } else {
-          const evidencePlan = planQualityDelivery(prior.epoch, resumeEvidence!);
-          const evidenceRuntime = runtimeProjection(
-            prior.partition,
-            evidencePlan.nextProjection,
-            resumeEvidence!,
-            evidencePlan.progress,
-            prior,
-          );
           const currentLoop = loop.readProjection(prior.partition);
           const delivery = qualityDelivery(
-            activation,
-            evidenceRuntime,
-            evidencePlan,
+            monitor,
+            projection,
+            resumePlan!,
             "QUALITY_STRICT_PROGRESS",
             currentLoop.chainHead,
-            resumeTrace!,
+            basis.trace,
           );
           const observed = loop.observeDelivery(delivery);
           if (observed.kind !== "observed") {
@@ -854,7 +939,7 @@ export function createQualityRepairCoordinator(options: {
           type: "QUALITY_EPOCH_STARTED",
           priorQualityEpochId: prior.epoch.qualityEpochId,
           satisfiedAlternativeIdentity: alternative.identity,
-          resumeEvidenceReceipt,
+          resumeEvidenceReceipt: basis.receipt,
           projection,
         });
         return { kind: "resumed", projection: nextEpoch } as const;

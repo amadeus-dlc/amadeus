@@ -19,20 +19,20 @@ const TOOL_FILES = [
 ] as const;
 
 const currentHarnessCohort = [
-  { name: "claude", dir: ".claude", manifest: claudeManifest },
-  { name: "codex", dir: ".codex", manifest: codexManifest },
-  { name: "cursor", dir: ".cursor", manifest: cursorManifest },
-  { name: "opencode", dir: ".opencode", manifest: opencodeManifest },
-  { name: "kimi", dir: ".kimi-code", manifest: kimiManifest },
+  { name: "claude", manifest: claudeManifest },
+  { name: "codex", manifest: codexManifest },
+  { name: "cursor", manifest: cursorManifest },
+  { name: "opencode", manifest: opencodeManifest },
+  { name: "kimi", manifest: kimiManifest },
 ] as const;
 
 describe("Quality Repair current five-harness projection", () => {
-  for (const { name, dir, manifest } of currentHarnessCohort) {
+  for (const { name, manifest } of currentHarnessCohort) {
     test(`${name} consumes the shared quality runtime without a harness Core fork`, () => {
       expect(manifest.coreDirs).toContainEqual({ src: "tools", dst: "tools" });
       for (const file of TOOL_FILES) {
         const source = readFileSync(join(ROOT, "packages", "framework", "core", "tools", file), "utf8");
-        const projected = readFileSync(join(ROOT, "dist", name, dir, "tools", file), "utf8");
+        const projected = readFileSync(join(ROOT, "dist", name, manifest.harnessDir, "tools", file), "utf8");
         expect(projected, `${name}:${file}`).toBe(source);
       }
     });

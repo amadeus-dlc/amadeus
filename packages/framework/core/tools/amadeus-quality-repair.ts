@@ -156,10 +156,9 @@ function qualityContributionContent(threshold: number) {
       judgeInstructionId: instructionId,
       routes: ["repair", "replan", "repair-stalled"],
       transitionTable: {
-        QUALITY_CHECK: ["QUALITY_NON_PROGRESS", "QUALITY_STRICT_PROGRESS", "QUALITY_REPLAN"],
+        QUALITY_CHECK: ["QUALITY_NON_PROGRESS", "QUALITY_STRICT_PROGRESS"],
         QUALITY_NON_PROGRESS: ["QUALITY_CHECK", "QUALITY_STRICT_PROGRESS"],
-        QUALITY_STRICT_PROGRESS: ["QUALITY_CHECK"],
-        QUALITY_REPLAN: ["QUALITY_CHECK"],
+        QUALITY_STRICT_PROGRESS: ["QUALITY_CHECK", "QUALITY_STRICT_PROGRESS"],
       },
     }],
     runtimeLimits: { maxPendingDeliveries: threshold + 1 },
@@ -401,6 +400,14 @@ function validDigest(value: string | null): value is string {
   return value !== null && SHA256.test(value);
 }
 
+function obligationIdOf(
+  sourceCategory: QualitySourceCategory,
+  stageInstanceId: string,
+  identity: unknown,
+): string {
+  return stableId("quality-obligation", [sourceCategory, stageInstanceId, identity]);
+}
+
 function obligation(
   input: QualityEvidenceBatchInput,
   sourceCategory: QualitySourceCategory,
@@ -411,7 +418,7 @@ function obligation(
   failureFingerprint: string,
 ): QualityObligation {
   return {
-    obligationId: stableId("quality-obligation", [sourceCategory, input.stageInstanceId, identity]),
+    obligationId: obligationIdOf(sourceCategory, input.stageInstanceId, identity),
     sourceCategory,
     failureKind,
     stageInstanceId: input.stageInstanceId,
@@ -431,7 +438,10 @@ function normalizeObservation(
     if (!validId(observation.invocationId) || !validId(observation.verifierId)) {
       throw new Error("reviewer-identity-incomplete");
     }
-    if (observation.verdict === "READY") return { obligations: [], successes: [] };
+    if (observation.verdict === "READY") {
+      if (observation.blockers.length === 0) return { obligations: [], successes: [] };
+      throw new Error("reviewer-verdict-conflicts-with-blockers");
+    }
     if (!validDigest(observation.validationReceipt) || observation.blockers.length === 0) {
       return {
         obligations: [obligation(
@@ -465,9 +475,9 @@ function normalizeObservation(
     if (!validId(observation.sensorId) || !validId(observation.outputId)) {
       throw new Error("sensor-identity-incomplete");
     }
-    const obligationId = stableId("quality-obligation", ["sensor", input.stageInstanceId, [observation.sensorId, observation.outputId]]);
     if (!observation.blocking) return { obligations: [], successes: [] };
     if (observation.status === "passed") {
+      const obligationId = obligationIdOf("sensor", input.stageInstanceId, [observation.sensorId, observation.outputId]);
       return {
         obligations: [],
         successes: validDigest(observation.terminalReceipt)
@@ -493,9 +503,9 @@ function normalizeObservation(
     if (!validId(observation.outputId) || !validId(observation.verifierId)) {
       throw new Error("produce-identity-incomplete");
     }
-    const obligationId = stableId("quality-obligation", ["produce", input.stageInstanceId, observation.outputId]);
     if (!observation.required) return { obligations: [], successes: [] };
     if (observation.status === "present") {
+      const obligationId = obligationIdOf("produce", input.stageInstanceId, observation.outputId);
       return {
         obligations: [],
         successes: validDigest(observation.receipt)
@@ -520,8 +530,8 @@ function normalizeObservation(
     throw new Error("condition-identity-incomplete");
   }
   const category = observation.conditionKind;
-  const obligationId = stableId("quality-obligation", [category, input.stageInstanceId, observation.conditionId]);
   if (observation.status === "satisfied") {
+    const obligationId = obligationIdOf(category, input.stageInstanceId, observation.conditionId);
     return {
       obligations: [],
       successes: validDigest(observation.receipt)
@@ -679,6 +689,15 @@ function isStrictSubset(current: Set<string>, previous: Set<string>): boolean {
   return current.size < previous.size && [...current].every((id) => previous.has(id));
 }
 
+function isStrictProgress(
+  previous: QualityEvidenceSnapshot | null,
+  snapshot: QualityEvidenceSnapshot,
+): boolean {
+  if (snapshot.unresolved.length === 0) return true;
+  return previous !== null &&
+    isStrictSubset(obligationIds(snapshot), obligationIds(previous)) && snapshot.addedIds.length === 0;
+}
+
 function classifyPattern(
   window: readonly QualityEvidenceSnapshot[],
   threshold: number,
@@ -724,15 +743,12 @@ export function planQualityDelivery(
     throw new Error("quality-delivery-scope-mismatch");
   }
   const previous = projection.window.at(-1) ?? null;
-  const strictProgress = previous !== null &&
-    isStrictSubset(obligationIds(snapshot), obligationIds(previous)) && snapshot.addedIds.length === 0;
+  const strictProgress = isStrictProgress(previous, snapshot);
   const window = [...projection.window, snapshot].slice(-(projection.threshold + 1));
   let progress: QualityProgress;
   let consecutiveNonProgress = projection.consecutiveNonProgress;
   let replanSinceLastProgress = projection.replanSinceLastProgress;
-  if (previous === null) {
-    progress = { kind: "initial", threshold: projection.threshold };
-  } else if (strictProgress) {
+  if (strictProgress) {
     progress = {
       kind: "strict-progress",
       resolvedIds: snapshot.resolvedIds,
@@ -740,6 +756,8 @@ export function planQualityDelivery(
     };
     consecutiveNonProgress = 0;
     replanSinceLastProgress = false;
+  } else if (previous === null) {
+    progress = { kind: "initial", threshold: projection.threshold };
   } else {
     consecutiveNonProgress += 1;
     if (consecutiveNonProgress >= projection.threshold) {
@@ -765,7 +783,7 @@ export function planQualityDelivery(
     nextProjection,
     monitorEvent: progress.kind === "strict-progress" ? "QUALITY_STRICT_PROGRESS" : "QUALITY_CHECK",
     routeIds: progress.kind === "threshold" ? [progress.requiredRoute] : [],
-    deterministicAction: progress.kind === "threshold" ? null : "repair",
+    deterministicAction: ["threshold", "strict-progress"].includes(progress.kind) ? null : "repair",
   };
 }
 

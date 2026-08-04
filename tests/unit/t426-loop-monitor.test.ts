@@ -79,6 +79,7 @@ function delivery(
   predecessorDeliveryId: string | null,
   upstreamEventIdentity: string,
   payloadFingerprint = `sha256:${"b".repeat(64)}`,
+  routeConstraint = monitor.routeConstraint,
 ) {
   return createLoopDelivery({
     partition,
@@ -91,7 +92,7 @@ function delivery(
       references: [{ kind: "artifact", id: "code-summary", digest: `sha256:${"c".repeat(64)}` }],
     },
     evidence,
-    routeConstraint: monitor.routeConstraint,
+    routeConstraint,
     trace,
   });
 }
@@ -410,6 +411,38 @@ describe("loop monitor delivery reducer", () => {
       `sha256:${"d".repeat(64)}`,
     );
     expect(applyLoopDelivery(projection, monitor, conflicting)).toMatchObject({
+      ok: false,
+      status: "CONFLICT",
+      reason: "delivery-identity-payload-conflict",
+    });
+  });
+
+  test("binds route constraints into delivery identity and rejects full/subset reuse in either arrival order", () => {
+    const monitor = compiled();
+    const subsetConstraint = createJudgeRouteConstraint(monitor, [monitor.routeConstraint.routeIds[0]!]);
+    const full = delivery(monitor, "quality-check", null, "same-route-identity");
+    const subset = delivery(
+      monitor,
+      "quality-check",
+      null,
+      "same-route-identity",
+      full.payloadFingerprint,
+      subsetConstraint,
+    );
+
+    expect(full.deliveryId).not.toBe(subset.deliveryId);
+    const fullFirst = accepted(
+      applyLoopDelivery(createLoopMonitorProjection(partition, monitor), monitor, full),
+    );
+    expect(applyLoopDelivery(fullFirst, monitor, subset)).toMatchObject({
+      ok: false,
+      status: "CONFLICT",
+      reason: "delivery-identity-payload-conflict",
+    });
+    const subsetFirst = accepted(
+      applyLoopDelivery(createLoopMonitorProjection(partition, monitor), monitor, subset),
+    );
+    expect(applyLoopDelivery(subsetFirst, monitor, full)).toMatchObject({
       ok: false,
       status: "CONFLICT",
       reason: "delivery-identity-payload-conflict",

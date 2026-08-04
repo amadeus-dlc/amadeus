@@ -334,7 +334,8 @@ function deliveryReplayDecision(
       const observed = event.delivery;
       if (observed.upstreamEventIdentity === delivery.upstreamEventIdentity) {
         return observed.deliveryId === delivery.deliveryId &&
-            observed.payloadFingerprint === delivery.payloadFingerprint
+            observed.payloadFingerprint === delivery.payloadFingerprint &&
+            observed.routeConstraint.fingerprint === delivery.routeConstraint.fingerprint
           ? "duplicate"
           : "identity-conflict";
       }

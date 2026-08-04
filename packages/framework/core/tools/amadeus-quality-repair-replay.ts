@@ -1,6 +1,7 @@
 // Canonical audit adapter and replay entry point for Quality Repair (#2096).
 
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
+import { decodeLoopMonitorEventSet } from "./amadeus-loop-monitor-replay.ts";
 import { qualityDigest } from "./amadeus-quality-repair.ts";
 import {
   createMemoryQualityRepairRepository,
@@ -55,11 +56,15 @@ function validProjectionProgress(value: Record<string, unknown>): boolean {
 }
 
 function validProjectionOptionals(value: Record<string, unknown>): boolean {
-  return (value.latestSnapshot === null || isRecord(value.latestSnapshot)) &&
+  return (value.latestSnapshot === null ||
+      (isRecord(value.latestSnapshot) && Array.isArray(value.latestSnapshot.unresolved) &&
+        Array.isArray(value.latestSnapshot.verifierSuccessReceipts))) &&
     (value.lastProgress === null || isRecord(value.lastProgress)) &&
-    (value.stalledLatch === null || isRecord(value.stalledLatch)) &&
+    (value.stalledLatch === null ||
+      (isRecord(value.stalledLatch) && Array.isArray(value.stalledLatch.unresolvedObligationIds))) &&
     (value.lastReplanReceipt === null || isRecord(value.lastReplanReceipt)) &&
-    (value.pendingReplan === null || isRecord(value.pendingReplan));
+    (value.pendingReplan === null ||
+      (isRecord(value.pendingReplan) && typeof value.pendingReplan.attemptIdentity === "string"));
 }
 
 function validProjection(value: unknown): value is QualityRuntimeProjection {
@@ -91,12 +96,20 @@ function validQualityEvent(value: unknown): value is QualityRuntimeEvent {
     validProjection(value.projection) && validQualityEventPayload(value);
 }
 
+function validLoopEventSet(value: unknown): boolean {
+  try {
+    decodeLoopMonitorEventSet(JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function validTransaction(value: unknown): value is QualityRepairTransaction {
   return isRecord(value) && value.schemaVersion === 1 && typeof value.transactionId === "string" &&
     typeof value.qualityScopeId === "string" && Array.isArray(value.qualityEvents) &&
     value.qualityEvents.every(validQualityEvent) && Array.isArray(value.loopEventSets) &&
-    value.loopEventSets.every((set) => isRecord(set) && typeof set.eventSetId === "string" &&
-      Array.isArray(set.events));
+    value.loopEventSets.every(validLoopEventSet);
 }
 
 export function decodeQualityRepairTransaction(encoded: string): QualityRepairTransaction {

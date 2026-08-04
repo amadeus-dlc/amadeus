@@ -532,6 +532,7 @@ export function createLoopDelivery(input: CreateLoopDeliveryInput): LoopDelivery
     input.partition,
     input.upstreamEventIdentity,
     input.payloadFingerprint,
+    input.routeConstraint.fingerprint,
   ]).slice("sha256:".length)}`;
   return immutableDelivery(input, deliveryId);
 }
@@ -764,7 +765,11 @@ export function applyLoopDelivery(
   }
   const known = knownDelivery(projection, delivery);
   if (known !== undefined) {
-    if (known.deliveryId === delivery.deliveryId && known.payloadFingerprint === delivery.payloadFingerprint) {
+    if (
+      known.deliveryId === delivery.deliveryId &&
+      known.payloadFingerprint === delivery.payloadFingerprint &&
+      known.routeConstraint.fingerprint === delivery.routeConstraint.fingerprint
+    ) {
       return { ok: true, projection, duplicate: true, pending: false, judgeReservation: null };
     }
     return { ok: false, status: "CONFLICT", reason: "delivery-identity-payload-conflict" };

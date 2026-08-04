@@ -221,6 +221,28 @@ function reachStalledRuntime() {
 }
 
 describe("Quality Repair production coordinator", () => {
+  test("rejects an active contribution without a compiled monitor", () => {
+    const { activation, repository } = runtime();
+    expect(() => createQualityRepairCoordinator({
+      activation: { ...activation, graph: { ...activation.graph, loopMonitors: [] } },
+      repository,
+    })).toThrow("quality-repair-monitor-missing");
+  });
+
+  test("keeps consecutive clean snapshots active without deterministic repair actions", () => {
+    const { activation, repository, coordinator } = runtime();
+    const first = coordinator.recordEvidence(batch(activation.graph.graphRevision, null, []), trace);
+    const second = coordinator.recordEvidence(batch(activation.graph.graphRevision, first.snapshot, []), trace);
+
+    expect(first).toMatchObject({ kind: "repair", progress: { kind: "strict-progress" } });
+    expect(second).toMatchObject({
+      kind: "repair",
+      progress: { kind: "strict-progress" },
+      projection: { consecutiveNonProgress: 0 },
+    });
+    expect(repository.readTransactions().flatMap((transaction) => transaction.loopEventSets)).toHaveLength(2);
+  });
+
   test("does not Judge at T-1, replans at first T, and latches at post-replan T", () => {
     const { activation, repository, coordinator } = runtime();
     let previous: QualityEvidenceSnapshot | null = null;
@@ -236,7 +258,7 @@ describe("Quality Repair production coordinator", () => {
     previous = third.snapshot;
 
     const firstJudge = judgePort();
-    if (third.kind !== "judge-reserved") return;
+    if (third.kind !== "judge-reserved") throw new Error("missing first threshold");
     const replanned = coordinator.dispatchJudge(third.permit, firstJudge.port, replanPort);
     expect(replanned.kind).toBe("replanned");
     expect(firstJudge.requests).toHaveLength(1);
@@ -248,7 +270,7 @@ describe("Quality Repair production coordinator", () => {
     const fifth = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
     expect(fifth.kind).toBe("judge-reserved");
     previous = fifth.snapshot;
-    if (fifth.kind !== "judge-reserved") return;
+    if (fifth.kind !== "judge-reserved") throw new Error("missing stalled threshold");
     const secondJudge = judgePort();
     const stalled = coordinator.dispatchJudge(fifth.permit, secondJudge.port, replanPort);
     expect(stalled.kind).toBe("REPAIR_STALLED");
@@ -315,7 +337,7 @@ describe("Quality Repair production coordinator", () => {
       humanRetry: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" },
     });
     expect(resumed.kind).toBe("resumed");
-    if (resumed.kind !== "resumed") return;
+    if (resumed.kind !== "resumed") throw new Error("missing resumed projection");
     expect(resumed.projection.qualityEpochId).not.toBe(status.qualityEpochId);
     expect(resumed.projection.window).toEqual([]);
 
@@ -514,9 +536,13 @@ describe("Quality Repair production coordinator", () => {
     );
 
     const projection = repository.readProjection(observed.snapshot.qualityScopeId)!;
+    expect(repository.readProjectionByPartition(projection.partition)?.qualityScopeId).toBe(
+      observed.snapshot.qualityScopeId,
+    );
     const committedSet = canonical.loopEventSets[0]!;
     const before = repository.readTransactions().length;
     expect(repository.loopRepository.transaction(projection.partition, () => "empty")).toBe("empty");
+    expect(repository.loopRepository.transaction(projection.partition, () => undefined)).toBeUndefined();
     expect(repository.readTransactions()).toHaveLength(before);
     expect(repository.loopRepository.transaction(projection.partition, (_sets, append) => append(committedSet))).toMatchObject({
       eventSetId: committedSet.eventSetId,
@@ -801,9 +827,12 @@ describe("Quality Repair production coordinator", () => {
     });
     expect(resumed.kind).toBe("resumed");
     if (resumed.kind !== "resumed") throw new Error("expected evidence resume");
+    const resumedState = stalled.repository.readProjection(stalled.status.qualityScopeId)!;
     expect(stalled.coordinator.status(stalled.status.qualityScopeId)).toMatchObject({
       outcome: "active",
       workflowExecutionState: "running",
+      unresolvedObligationIds: [],
+      evidenceFingerprint: resumedState.latestSnapshot?.snapshotFingerprint,
     });
     const resumeTransaction = stalled.repository.readTransactions().at(-1)!;
     expect(resumeTransaction.loopEventSets.flatMap((set) => set.events.map((event) => event.type))).toEqual([
@@ -811,10 +840,10 @@ describe("Quality Repair production coordinator", () => {
       "WORKFLOW_UNPARKED",
       "LOOP_DELIVERY_OBSERVED",
     ]);
-    expect(stalled.coordinator.recordEvidence({
-      ...batch(stalled.activation.graph.graphRevision, null, []),
-      epochStartEventIdentity: resumed.projection.epochStartEventIdentity,
-    }, trace)).toMatchObject({ kind: "repair" });
+    expect(stalled.coordinator.recordEvidence(
+      batch(stalled.activation.graph.graphRevision, resumedState.latestSnapshot, []),
+      trace,
+    )).toMatchObject({ kind: "repair" });
   });
 
   test("resumes a stalled sensor obligation from a newly verified success receipt", () => {
