@@ -251,6 +251,57 @@ describe("loop monitor manifest compiler", () => {
       }
     }
   });
+
+  test("treats constructor as a transition event only when it is an own row", () => {
+    const constructorContributions: LoopMonitorContributions = {
+      evidenceProviders: contributions.evidenceProviders,
+      judgeInstructions: contributions.judgeInstructions,
+      routes: [{ id: "constructor-route", kind: "transition", targetEvent: "constructor" }],
+    };
+    const missingRow = compileLoopMonitorManifest({
+      ...manifest(),
+      loopMonitors: [{
+        ...monitorSpec(),
+        cycle: ["constructor"],
+        ignoreEvents: [],
+        routes: ["constructor-route"],
+        transitionTable: { repair: [] },
+      }],
+    }, constructorContributions);
+    expect(missingRow.ok).toBe(false);
+    if (!missingRow.ok) {
+      expect(missingRow.errors.map((item) => item.message)).toContain(
+        'cycle event "constructor" has no transition row',
+      );
+      expect(missingRow.errors.map((item) => item.message)).toContain(
+        'route target "constructor" has no transition row',
+      );
+    }
+
+    const declared = compileLoopMonitorManifest({
+      ...manifest(),
+      loopMonitors: [{
+        ...monitorSpec(),
+        cycle: ["constructor"],
+        ignoreEvents: [],
+        routes: ["constructor-route"],
+        transitionTable: { constructor: ["constructor"] },
+      }],
+    }, constructorContributions);
+    expect(declared.ok).toBe(true);
+    if (declared.ok) {
+      expect(Object.getPrototypeOf(declared.graph.loopMonitors[0]!.transitionTable)).toBeNull();
+      expect(Object.hasOwn(declared.graph.loopMonitors[0]!.transitionTable, "constructor")).toBe(true);
+    }
+
+    const monitor = compiled();
+    const constructorDelivery = delivery(monitor, "constructor", null, "constructor-event");
+    expect(applyLoopDelivery(createLoopMonitorProjection(partition, monitor), monitor, constructorDelivery)).toEqual({
+      ok: false,
+      status: "CONFLICT",
+      reason: "unknown-event",
+    });
+  });
 });
 
 describe("loop monitor delivery reducer", () => {
@@ -289,6 +340,27 @@ describe("loop monitor delivery reducer", () => {
     const atThreshold = applyLoopDelivery(projection, monitor, q3);
     expect(atThreshold.ok && atThreshold.judgeReservation?.triggerDeliveryId).toBe(q3.deliveryId);
     expect(atThreshold.ok && atThreshold.projection.cycleCount).toBe(2);
+  });
+
+  test("reserves another Judge after the threshold while no reservation is pending", () => {
+    const monitor = compiled(1);
+    let projection = createLoopMonitorProjection(partition, monitor);
+    const q1 = delivery(monitor, "quality-check", null, "retry-q1");
+    projection = accepted(applyLoopDelivery(projection, monitor, q1));
+    const r1 = delivery(monitor, "repair", q1.deliveryId, "retry-r1");
+    projection = accepted(applyLoopDelivery(projection, monitor, r1));
+    const q2 = delivery(monitor, "quality-check", r1.deliveryId, "retry-q2");
+    const firstReservation = applyLoopDelivery(projection, monitor, q2);
+    expect(firstReservation.ok && firstReservation.judgeReservation).not.toBeNull();
+    if (!firstReservation.ok) return;
+
+    projection = { ...firstReservation.projection, pendingJudge: null };
+    const r2 = delivery(monitor, "repair", q2.deliveryId, "retry-r2");
+    projection = accepted(applyLoopDelivery(projection, monitor, r2));
+    const q3 = delivery(monitor, "quality-check", r2.deliveryId, "retry-q3");
+    const secondReservation = applyLoopDelivery(projection, monitor, q3);
+    expect(secondReservation.ok && secondReservation.judgeReservation).not.toBeNull();
+    expect(secondReservation.ok && secondReservation.projection.cycleCount).toBe(2);
   });
 
   test("a legal natural exit resets the epoch without starting a Judge", () => {

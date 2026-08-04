@@ -98,7 +98,7 @@ function bytewise(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
 }
 
-function canonicalJson(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (isRecord(value)) {
     return `{${Object.keys(value).sort(bytewise).map((key) =>
@@ -108,7 +108,7 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-function digest(value: unknown): string {
+export function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
 }
 
@@ -185,7 +185,7 @@ function parseTransitionTable(
     error(errors, "INVALID_MANIFEST", path, "must be a non-empty transition object");
     return null;
   }
-  const table: Record<string, readonly string[]> = {};
+  const table = Object.create(null) as Record<string, readonly string[]>;
   for (const eventId of Object.keys(value).sort(bytewise)) {
     if (eventId.length === 0) {
       error(errors, "INVALID_MANIFEST", path, "transition event id must not be empty");
@@ -235,7 +235,7 @@ function parseMonitor(
     error(errors, "INVALID_MANIFEST", `${path}.ignoreEvents`, `must not intersect cycle: ${overlap.join(", ")}`);
   }
   for (const eventId of cycle) {
-    if (!(eventId in transitionTable)) {
+    if (!Object.hasOwn(transitionTable, eventId)) {
       error(errors, "UNKNOWN_REFERENCE", `${path}.transitionTable`, `cycle event "${eventId}" has no transition row`);
     }
   }
@@ -355,7 +355,7 @@ export function compileLoopMonitorManifest(
       selectedRoutes.forEach((route, routeIndex) => {
         if (route === undefined) {
           error(errors, "UNKNOWN_REFERENCE", `loopMonitors[${index}].routes[${routeIndex}]`, `unknown route "${monitor.routes[routeIndex]}"`);
-        } else if (route.kind === "transition" && !(route.targetEvent in monitor.transitionTable)) {
+        } else if (route.kind === "transition" && !Object.hasOwn(monitor.transitionTable, route.targetEvent)) {
           error(errors, "UNKNOWN_REFERENCE", `loopMonitors[${index}].routes[${routeIndex}]`, `route target "${route.targetEvent}" has no transition row`);
         }
       });
@@ -628,7 +628,7 @@ function applySemanticEvent(
   monitor: CompiledLoopMonitor,
   delivery: LoopDelivery,
 ): LoopDeliveryResult {
-  if (!(delivery.eventId in monitor.transitionTable) && !monitor.ignoreEvents.includes(delivery.eventId)) {
+  if (!Object.hasOwn(monitor.transitionTable, delivery.eventId) && !monitor.ignoreEvents.includes(delivery.eventId)) {
     return { ok: false, status: "CONFLICT", reason: "unknown-event" };
   }
   const appendedHistory = [...projection.history, delivery].slice(-historyLimit(monitor));
@@ -658,7 +658,7 @@ function applySemanticEvent(
     if (matchedPrefix === monitor.cycle.length) {
       cycleCount += 1;
       matchedPrefix = 1;
-      if (cycleCount === monitor.threshold && projection.pendingJudge === null) {
+      if (cycleCount >= monitor.threshold && projection.pendingJudge === null) {
         judgeReservation = reserveJudge(projection, monitor, delivery);
       }
     } else {
