@@ -1,4 +1,4 @@
-// covers: protocol:auto-file-findings
+// covers: protocol:finding.github.issue.creation.mode
 // size: medium
 
 import { describe, expect, test } from "bun:test";
@@ -12,11 +12,14 @@ const PROTOCOL = join(
 );
 
 describe("automatic Amadeus finding protocol", () => {
-  test("routes confirmed out-of-scope findings through the deterministic filer", () => {
+  test("routes confirmed out-of-scope findings through deterministic GitHub Issue creation", () => {
     const protocol = readFileSync(PROTOCOL, "utf-8");
 
-    expect(protocol).toContain('"auto-file-findings": "off" | "prompt" | "auto"');
-    expect(protocol).toContain("bun {{HARNESS_DIR}}/tools/amadeus-finding.ts file");
+    expect(protocol).toContain("finding.github.issue.creation.mode");
+    expect(protocol).toContain("off | prompt | auto");
+    expect(protocol).toContain(
+      "bun {{HARNESS_DIR}}/tools/amadeus-finding.ts create-github-issue",
+    );
     expect(protocol).toContain("amadeus-dlc/amadeus");
     expect(protocol).toContain("existing Issue");
     expect(protocol).toContain("secrets or private workspace information");

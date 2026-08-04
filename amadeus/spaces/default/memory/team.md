@@ -28,7 +28,7 @@ Amadeus は、同じ `org → team → project → phase → stage` ルールを
 
 ソロモードでは、2体の fresh subagent(`subagent-1`, `subagent-2`)による選挙を正規の選挙形態として認める。conductor(main agent)は選挙管理委員として amadeus-election CLI の指令ループを駆動し、自らは投票しない。subagent 票は実在の実行主体による実在の票であり、「存在しないメンバーや投票結果を捏造しない」規範に矛盾しない。
 
-**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `"auto-solo-election": true` がある場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto-solo` を必ず付け、`{"opened":null,"reason":"auto-solo-election-disabled"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `false`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
+**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{"opened":null,"reason":"solo-election-manual-trigger-required"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
 
 2-0 で即採用できる場合は選挙結果を採用する。票が割れたケース(`split` hold・棄権を含む hold・ブロック hold・再議論後も追加議論が残存する場合)はユーザーへエスカレーションする。
 
@@ -112,7 +112,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
   [差別化の決定的な特徴] が備わっている。
   ```
   代替手段・差別化が空文(「特になし」等)ならレビューで差し戻す。ミラー Issue の概要にも同じ7行を使うが、正本は record とする (user decision 2026-08-01; amended 2026-08-03) <!-- cid:requirements-analysis:issue-elevator-pitch -->
-- `bug` は共通本文の背景に症状を明記し、観測環境・対象リビジョン、再現手順、機序、重大度S、原因の所在、原因の根拠・導入経緯を追加する。機序が未特定なら「未特定」と書き、仮説を事実として断定しない。欠陥コードが intent に遡れる場合は record または intent 名+導入コミットと、要件見落とし/設計判断誤り/実装逸脱のどれかを該当成果物に基づき記載する。bootstrap 由来は `origin:bootstrap` とし intent 遡及の対象外とする (user decision 2026-07-10; amended 2026-08-03) <!-- cid:requirements-analysis:bug-intent-linkage -->
+- `bug` は共通本文の背景に症状を明記し、観測環境・対象リビジョン、ハーネス名、ハーネスバージョン、Amadeus バージョン、再現手順、機序、重大度S、原因の所在、原因の根拠・導入経緯を追加する。機序が未特定なら「未特定」と書き、仮説を事実として断定しない。欠陥コードが intent に遡れる場合は record または intent 名+導入コミットと、要件見落とし/設計判断誤り/実装逸脱のどれかを該当成果物に基づき記載する。bootstrap 由来は `origin:bootstrap` とし intent 遡及の対象外とする (user decision 2026-07-10; amended 2026-08-04) <!-- cid:requirements-analysis:bug-intent-linkage -->
 - `bug` の重大度は優先度と独立した S1-FATAL=データ・監査・ゲート整合性の破壊/誤マージ誘発/ワークフロー停止、S2-CRITICAL=主要機能の誤動作・回避策のない偽green/偽赤、S3-MAJOR=回避策のある誤動作・限定条件での発現、S4-MINOR=軽微・エッジケース・表示層の4段階とする。起票時に種別/P/Sを同時付与し、bootstrap 由来と判明した時点で `origin:bootstrap` を付ける (user decision 2026-07-10; amended 2026-08-03) <!-- cid:requirements-analysis:bug-severity-labels -->
 - `documentation` は対象読者、正本、対訳・生成物・参照元など同期が必要なドキュメント面を追加する。`question` は回答してほしい問い、既知の選択肢とトレードオフ、事実確認なら確認方法を追加する。この2種に bug の再現・機序・S分類や enhancement の価値ピッチを強制しない (user decision 2026-08-03) <!-- cid:requirements-analysis:issue-type-specific-body -->
 
@@ -140,7 +140,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・6ハーネスの生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとし、`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create・sync・安全な close に限る継続同意として扱う。
+`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・パッケージ対象ハーネス生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとする。`intent-mirror.github.issue.mode = auto` の明示設定は、その Intent に属する mirror の create と sync、および Amadeus の所有 provenance を確認した close に加え、次のラベル同期への継続同意として扱う。`intent-initialized` および `intent-capture-approved` 境界では、リンク済みの mirror Issue と Intent record の `Project` フィールドが参照する関連 Issue に `in-progress` ラベルを付与する。`workflow-completed` 境界では、同じ集合からラベルを除去する。ラベル同期は fail-open とし、失敗を警告として記録して workflow を継続する。(implemented by PR #2016; user decision 2026-08-02; reaffirmed 2026-08-04)
 
 <!-- amadeus:practices-promote:END -->
 

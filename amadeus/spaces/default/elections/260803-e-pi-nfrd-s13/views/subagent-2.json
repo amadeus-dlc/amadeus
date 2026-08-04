@@ -1,0 +1,17 @@
+{
+  "electionId": "E-PI-NFRD-S13",
+  "voter": "subagent-2",
+  "question": "260803-pi-harness / nfr-design の学習候補は0件。memory_entries_total=0、candidates=[]、parked_open_questions=[]であり、新規practiceまたはsensorを追加しない提案を独立確認する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "追加候補あり"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

@@ -146,10 +146,20 @@ import {
   doctorPluginRows,
   readDoctorPluginObservation,
 } from "./amadeus-plugin.ts";
+import {
+  type PiDoctorCheck,
+  piDoctorCheckLabel,
+  probePiDoctor,
+  redactPiDoctorText,
+} from "./amadeus-pi-doctor.ts";
 import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
+import {
+  createInitialGoalLineage,
+  writeInitialGoalLineage,
+} from "./amadeus-goal-reconciliation.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -527,6 +537,7 @@ export interface DoctorContext {
   readonly homeDir: string | undefined;
   readonly codexHomeDir: string;
   readonly kimiHomeDir: string;
+  readonly piAgentDir: string;
   readonly defaultScope: string;
   readonly migrationDoctor: boolean;
   readonly heartbeatSwapTarget: string | undefined;
@@ -538,6 +549,7 @@ export interface DoctorContext {
   readonly scopeMapping: DeepReadonly<Record<string, ScopeDefinition>>;
   readonly artifactNames: readonly string[];
   readonly teamPrerequisites: readonly PrereqStatus[];
+  readonly piDoctorChecks: readonly PiDoctorCheck[];
   // Plugin state read once at context resolution (read-only). handleDoctor
   // projects this into the --doctor plugin section (U5), so the report stays
   // deterministic over a single snapshot rather than re-reading disk.
@@ -622,6 +634,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   // home, which would point doctor at a different config.toml than the one the
   // installer wired.
   const kimiHomeDir = process.env.KIMI_CODE_HOME ?? join(homedir(), ".kimi-code");
+  const piAgentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
   const defaultScope = (process.env.AMADEUS_DEFAULT_SCOPE ?? "").trim();
   const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
   const testMode = process.env.NODE_ENV === "test";
@@ -640,6 +653,22 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const teamPrerequisites = deepFreezeDoctorSnapshot(
     detectTeamPrerequisites(process.env, probeExecutable),
   );
+  const piPath = resolvedHarnessDir === ".pi" ? Bun.which("pi") ?? undefined : undefined;
+  const piVersionOutput = piPath === undefined
+    ? ""
+    : (Bun.spawnSync([piPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "");
+  const piDoctorChecks = deepFreezeDoctorSnapshot(
+    resolvedHarnessDir === ".pi"
+      ? probePiDoctor({
+        projectDir,
+        platform,
+        bunVersion: Bun.version,
+        piExecutable: piPath,
+        piVersionOutput,
+        piAgentDir,
+      })
+      : [],
+  );
   // The plugin host root is the HARNESS dir under the project dir (#1591 ruling
   // B) — the same root compose writes to and the engine reads plugin stages
   // back from. Reading the project dir here reported "0 installed" against a
@@ -656,6 +685,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
     homeDir,
     codexHomeDir,
     kimiHomeDir,
+    piAgentDir,
     defaultScope,
     migrationDoctor,
     heartbeatSwapTarget,
@@ -667,6 +697,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
     scopeMapping,
     artifactNames,
     teamPrerequisites,
+    piDoctorChecks,
     pluginObservation,
   });
 }
@@ -1503,6 +1534,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     homeDir,
     codexHomeDir,
     kimiHomeDir,
+    piAgentDir,
     defaultScope,
     migrationDoctor,
     heartbeatSwapTarget,
@@ -1514,6 +1546,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     scopeMapping,
     artifactNames,
     teamPrerequisites,
+    piDoctorChecks,
     pluginObservation,
   } = context;
   const results: DoctorCheckResult[] = [];
@@ -1636,7 +1669,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
         });
       }
     }
-  } else {
+  } else if (harness !== ".pi") {
     // Kiro / Codex: the wiring config is not settings.json (it is
     // agents/amadeus.json / hooks.json — checked below). The core hook bodies
     // ship in every tree plus an authored adapter, so probe the explicit roster.
@@ -1776,6 +1809,14 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
         ? "kimi hook probe: adapter fired (advisory)"
         : "kimi hook probe: unverified — the adapter did not exit 0 (advisory; hooks are auxiliary, the workflow still runs)",
     });
+  } else if (harness === ".pi") {
+    for (const row of piDoctorChecks) {
+      results.push({
+        pass: row.pass,
+        label: piDoctorCheckLabel(row, projectDir, piAgentDir),
+        fix: row.remediation,
+      });
+    }
   } else {
     const settingsPath = join(projectDir, harness, "settings.json");
     results.push({
@@ -1788,7 +1829,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // 4b. Dual-harness coexistence (D-11): another harness tree installed AND a
   // workflow active is supported-but-untested — warn (advisory pass with a
   // visible label), never block.
-  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor", ".kimi-code"].filter(
+  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor", ".kimi-code", ".pi"].filter(
     (h) => h !== harness && existsSync(join(projectDir, h, "tools", "amadeus-lib.ts")),
   );
   if (
@@ -2962,6 +3003,9 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   }
   output += `${"\u2500".repeat(37)}\n`;
   output += `${passed} passed, ${failed} failed\n`;
+  if (harness === ".pi") {
+    output = redactPiDoctorText(output, projectDir, piAgentDir, homeDir);
+  }
 
   // Audit only if an audit shard already existed when doctor started (cold-safe —
   // see auditExists above). A pristine project gets the stdout report and no
@@ -4195,9 +4239,16 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     // else the scope token. The full --arguments text still flows to the audit
     // Request + state Project fields below (verbose prose belongs there, not the dir).
     const slug = slugify(slugSource, 24);
-    birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
+    const born = birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
 
     const ts = isoTimestamp();
+    const initialGoal = createInitialGoalLineage({
+      intentId: born.uuid,
+      statement: description || scope,
+      scope,
+      createdAt: ts,
+    });
+    writeInitialGoalLineage(born.recordDir, initialGoal);
 
     // ---- Audit bootstrap + birth events (relocated from the old --init) ----
 
@@ -4271,7 +4322,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       Details: "Per-intent artifact dirs + space-level knowledge/ ensured",
     });
 
-    handleIntentBirthStateBuild(projectDir, flags, scope, ts, classifiedScan);
+    handleIntentBirthStateBuild(
+      projectDir,
+      flags,
+      scope,
+      ts,
+      classifiedScan,
+      initialGoal,
+    );
   });
 }
 
@@ -4310,6 +4368,7 @@ function handleIntentBirthStateBuild(
   scope: string,
   ts: string,
   classifiedScan: ClassifiedWorkspaceScan,
+  initialGoal: ReturnType<typeof createInitialGoalLineage>,
 ): void {
   const depthOverride = flags.depth;
   const testStrategyOverride = flags["test-strategy"];
@@ -4516,6 +4575,9 @@ function handleIntentBirthStateBuild(
 ## Runtime State
 - **Revision Count**: 0
 - **Execution Projection Digest**:
+- **Goal ID**: ${initialGoal.goalId}
+- **Current Goal Revision**: ${initialGoal.currentRevision}
+- **Current Goal Digest**: ${initialGoal.revisions[initialGoal.currentRevision].digest}
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

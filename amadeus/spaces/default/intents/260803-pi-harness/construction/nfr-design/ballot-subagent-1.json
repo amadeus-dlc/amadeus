@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PI-NFRD-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "memoryの全headingに実entryがなく、candidateとopen questionも0件であり、既存project ruleへ昇格すべき新規の反復可能な規律・検証checkを示す証拠がないため、追加候補なしで妥当と判断する。",
+  "submittedAt": "2026-08-03T14:30:00Z"
+}

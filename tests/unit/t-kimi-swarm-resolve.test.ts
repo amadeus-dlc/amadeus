@@ -2,8 +2,8 @@
 // covers: file:packages/framework/core/tools/amadeus-swarm.ts
 //
 // t-kimi-swarm-resolve — the kimi harness joins the swarm driver resolution
-// (core-harness-enums, FR-4b). Kimi adds ONLY a HARNESS_VALUES member: the
-// resolution itself is the inherited resolveDriver contract (subagent floor,
+// (core-harness-enums, FR-4b). Its resolution remains the inherited contract:
+// a subagent floor,
 // ultra drivers degrade off their native harness, anything else fail-closed —
 // BR-5: no kimi ultra driver is ever introduced). The 16-cell matrix for the
 // four original harnesses lives in t233-driver-resolution.test.ts; this file
@@ -53,11 +53,11 @@ describe("resolveDriver — kimi harness (inherited contract)", () => {
 
 describe("HARNESS_VALUES / DRIVER_VALUES vocabulary (BR-5)", () => {
   test("kimi is a harness member, spelled out (not derived)", () => {
-    expect(HARNESS_VALUES).toEqual(["claude", "codex", "kiro", "kiro-ide", "kimi"]);
+    expect(HARNESS_VALUES).toEqual(["claude", "codex", "kiro", "kiro-ide", "kimi", "pi"]);
   });
 
-  test("no kimi ultra driver exists — the driver vocabulary is untouched", () => {
-    expect(DRIVER_VALUES).toEqual(["subagent", "claude-ultra", "codex-ultra"]);
+  test("no kimi ultra driver exists in the expanded vocabulary", () => {
+    expect(DRIVER_VALUES).toEqual(["subagent", "claude-ultra", "codex-ultra", "pi"]);
   });
 });
 

@@ -61,6 +61,19 @@ a zero-plugin build.
 
 ## Working with models
 
+All execution surfaces resolve targets from `specs/tla/model-map.json`. The
+local runner selects one registered pair from the explicit `--model` / `--cfg`
+paths and binds source bytes, vocabulary, and receipt to that same model. CI
+and diagnostic runners check every registered pair when `--model` is omitted,
+or exactly one registered pair with `--model <registered-name>`; unknown names
+and source drift fail closed. `FormalElection` retains its frozen receipt,
+while every other registered model uses a receipt derived from its verified
+source.
+
+For local runs, pass a fresh, previously unused directory to `--out`. The
+publisher fails closed with `OUT_CONFLICT` (`HARNESS_ERROR`, exit 2) if that
+directory already exists; use a new output path when rerunning the check.
+
 Two reference chapters cover the model lifecycle around this stage:
 
 - [Keeping a Formal Model in Step with Its Implementation](../../docs/reference/21-formal-model-following.md)

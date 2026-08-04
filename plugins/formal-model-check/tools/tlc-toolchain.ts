@@ -2,10 +2,15 @@ import { canonicalIdentity } from "./canonical.ts";
 import { isUtcInstant, type CellResult, type Result } from "./contract.ts";
 import {
   validateFrozenTlaModelReceipt,
-  type FrozenTlaModelBundle,
   type FrozenTlaModelReceipt,
   type TlaInvariantSourceLocation,
 } from "./tla-arm.ts";
+import {
+  isVerifiedTlaModelReceipt,
+  validateModelCheckReceipt,
+  type ModelCheckReceipt,
+  type ModelCheckReceiptBundle,
+} from "./tla-model-receipt.ts";
 import {
   TLA_MODEL_MAP_PATH,
   type ModelLoadError,
@@ -152,7 +157,7 @@ export interface TlcOutputInput {
   expectedModulePath: string;
   expectedStandardModuleDirectory: string;
   verifiedArtifactDescriptorIdentity: string;
-  modelReceipt: FrozenTlaModelReceipt;
+  modelReceipt: ModelCheckReceipt;
   vocabulary: TraceVocabulary;
 }
 export interface CompleteTlcExploration {
@@ -241,10 +246,70 @@ const STANDARD_MODULES = ["Naturals", "Sequences", "FiniteSets", "TLC"] as const
 function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | null {
   if (line === `Parsing file ${input.expectedModulePath}`) return input.expectedModuleName;
   const directory = input.expectedStandardModuleDirectory.replace(/\/+$/, "");
-  return STANDARD_MODULES.find((module) => line === `Parsing file ${directory}/${module}.tla`) ?? null;
+  const standard = STANDARD_MODULES.find(
+    (module) => line === `Parsing file ${directory}/${module}.tla`,
+  );
+  if (standard !== undefined) return standard;
+  if (!isVerifiedTlaModelReceipt(input.modelReceipt)) return null;
+  const modelDirectory = input.expectedModulePath.replace(/[\\/][^\\/]+$/, "");
+  return input.modelReceipt.auxiliaryModules.find(
+    ({ name }) => line === `Parsing file ${modelDirectory}/${name}.tla`,
+  )?.name ?? null;
 }
 
 type EnvelopeRead = { ok: true; envelope: TlcEnvelope; next: number; repeat: boolean } | { ok: false; error: FailedTlcExploration };
+
+function verifiedModuleTranscriptIsValid(
+  transcript: readonly string[],
+  input: TlcOutputInput & { readonly modelReceipt: Extract<ModelCheckReceipt, { schema: string }> },
+): boolean {
+  const parsed = transcript.filter((entry) => entry.startsWith("P:"));
+  const semantic = transcript.filter((entry) => entry.startsWith("S:"));
+  const required = [
+    input.expectedModuleName,
+    ...input.modelReceipt.auxiliaryModules.map(({ name }) => name),
+  ];
+  const parsedNames = parsed.map((entry) => entry.slice(2));
+  const semanticNames = semantic.map((entry) => entry.slice(2));
+  const standardModules = new Set<string>(STANDARD_MODULES);
+  const standardParsed = parsedNames.filter((name) => standardModules.has(name));
+  const standardSemantic = semanticNames.filter((name) => standardModules.has(name));
+  const exactlyOnce = (names: readonly string[], name: string) =>
+    names.filter((candidate) => candidate === name).length === 1;
+  const firstSemantic = transcript.findIndex((entry) => entry.startsWith("S:"));
+  return parsed[0] === `P:${input.expectedModuleName}`
+    && semantic.at(-1) === `S:${input.expectedModuleName}`
+    && firstSemantic > 0
+    && transcript.slice(firstSemantic).every((entry) => entry.startsWith("S:"))
+    && required.every((name) => exactlyOnce(parsedNames, name) && exactlyOnce(semanticNames, name))
+    && parsedNames.length === new Set(parsedNames).size
+    && semanticNames.length === new Set(semanticNames).size
+    && standardParsed.length > 0
+    && standardParsed.length === standardSemantic.length
+    && standardParsed.every((name) => standardSemantic.includes(name))
+    && parsedNames.every((name) => required.includes(name) || standardModules.has(name))
+    && semanticNames.every((name) => required.includes(name) || standardModules.has(name));
+}
+
+function moduleTranscriptIsValid(
+  transcript: readonly string[],
+  input: TlcOutputInput,
+): boolean {
+  if (isVerifiedTlaModelReceipt(input.modelReceipt)) {
+    return verifiedModuleTranscriptIsValid(transcript, {
+      ...input,
+      modelReceipt: input.modelReceipt,
+    });
+  }
+  const expected = [
+    `P:${input.expectedModuleName}`,
+    ...STANDARD_MODULES.map((module) => `P:${module}`),
+    ...STANDARD_MODULES.map((module) => `S:${module}`),
+    `S:${input.expectedModuleName}`,
+  ];
+  return transcript.length === expected.length
+    && transcript.every((entry, index) => entry === expected[index]);
+}
 
 function readEnvelope(lines: string[], startIndex: number): EnvelopeRead {
   const start = START.exec(lines[startIndex]!);
@@ -300,17 +365,8 @@ function parseEnvelopes(output: string, input: TlcOutputInput): TlcEnvelope[] | 
     envelopes.push(read.envelope);
     index = read.next;
   }
-  const expectedTranscript = [
-    `P:${input.expectedModuleName}`,
-    ...STANDARD_MODULES.map((module) => `P:${module}`),
-    ...STANDARD_MODULES.map((module) => `S:${module}`),
-    `S:${input.expectedModuleName}`,
-  ];
-  if (
-    moduleTranscript.length !== expectedTranscript.length
-    || moduleTranscript.some((entry, index) => entry !== expectedTranscript[index])
-  ) {
-    return failed("GRAMMAR", "SANY module transcript differs from the fixed expected sequence");
+  if (!moduleTranscriptIsValid(moduleTranscript, input)) {
+    return failed("GRAMMAR", "SANY module transcript differs from the receipt-bound model graph");
   }
   return envelopes;
 }
@@ -511,7 +567,7 @@ function completeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], stati
   };
 }
 
-function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], statistics: TlcStatistics, depth: number, model: FrozenTlaModelBundle): TlcExploration {
+function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], statistics: TlcStatistics, depth: number, model: ModelCheckReceiptBundle): TlcExploration {
   if (input.exitCode !== 12 || count(parsed, 2110) !== 1 || count(parsed, 2121) !== 1 || count(parsed, 2217) < 2) {
     return failed("OUTCOME_MISMATCH", "counterexample markers and exit code disagree");
   }
@@ -535,12 +591,15 @@ function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[],
   };
 }
 
-// Deliberately NOT generalized (ADR-10): the frozen model receipt is pinned to
-// the FormalElection vocabulary, so the output binding stays FormalElection
-// scoped. Do not parameterize the module name here.
-function hasFrozenModelOutputBinding(input: TlcOutputInput): boolean {
-  return input.expectedModuleName === "FormalElection"
-    && input.expectedModulePath.split(/[\\/]/).at(-1) === "FormalElection.tla"
+// ADR-10 keeps the frozen receipt and binding byte-identical for FormalElection.
+// Verified-source receipts bind their declared model name without weakening
+// the frozen branch or inferring a model from process output.
+function hasModelOutputBinding(input: TlcOutputInput): boolean {
+  const expectedName = isVerifiedTlaModelReceipt(input.modelReceipt)
+    ? input.modelReceipt.modelName
+    : "FormalElection";
+  return input.expectedModuleName === expectedName
+    && input.expectedModulePath.split(/[\\/]/).at(-1) === `${expectedName}.tla`
     && input.expectedStandardModuleDirectory.startsWith("/");
 }
 
@@ -549,7 +608,7 @@ function hasFrozenModelOutputBinding(input: TlcOutputInput): boolean {
 // NO behavior trace (2121/2217) and NO statistics/depth markers (2199/2194) —
 // measured 2026-07-22 against the D4 invalid-timestamp fixture (issue #1359).
 // It is a valid one-state counterexample; statistics are null, never invented.
-function initialStateCounterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: FrozenTlaModelBundle): TlcExploration {
+function initialStateCounterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: ModelCheckReceiptBundle): TlcExploration {
   if (input.exitCode !== 12 || count(parsed, 2107) !== 1 || count(parsed, 2110) !== 0 || count(parsed, 2121) !== 0 || count(parsed, 2217) !== 0 || count(parsed, 2193) !== 0) {
     return failed("OUTCOME_MISMATCH", "initial-state counterexample markers and exit code disagree");
   }
@@ -585,9 +644,9 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   if (input.verifiedArtifactDescriptorIdentity !== FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY) {
     return failed("GRAMMAR", "TLC output is not bound to the fixed verified artifact descriptor");
   }
-  const model = validateFrozenTlaModelReceipt(input.modelReceipt);
+  const model = validateModelCheckReceipt(input.modelReceipt);
   if (!model.ok) return failed("GRAMMAR", `TLC output model receipt is invalid: ${model.error.message}`);
-  if (!hasFrozenModelOutputBinding(input)) return failed("GRAMMAR", "TLC output module path is not bound to the frozen model");
+  if (!hasModelOutputBinding(input)) return failed("GRAMMAR", "TLC output module path is not bound to the model receipt");
   const decoded = decodeChunks(input.chunks);
   if (typeof decoded !== "string") return decoded;
   const parsed = parseEnvelopes(decoded, input);
@@ -598,7 +657,7 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   return statisticsShapeExploration(input, parsed, model.value);
 }
 
-function statisticsShapeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: FrozenTlaModelBundle): TlcExploration {
+function statisticsShapeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: ModelCheckReceiptBundle): TlcExploration {
   const statistics = parseStatistics(only(parsed, 2199)!.payload);
   const depth = parseDepth(only(parsed, 2194)!.payload);
   if (statistics === null || depth === null) return failed("GRAMMAR", "invalid statistics or depth payload");

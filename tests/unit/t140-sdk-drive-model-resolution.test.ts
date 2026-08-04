@@ -75,4 +75,18 @@ describe("sdk-drive model resolution", () => {
       expect(resolved.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("explicit-opus");
     });
   });
+
+  test("project-only authority reads project settings directly", () => {
+    withTempProject((projectDir) => {
+      writeProjectSettings(projectDir, {
+        model: "project-model",
+        env: { PROJECT_ONLY: "1" },
+      });
+
+      const resolved = resolveDriveSdkSettings(projectDir, { settingsAuthority: "project-only" });
+
+      expect(resolved.model).toBe("project-model");
+      expect(resolved.env.PROJECT_ONLY).toBe("1");
+    });
+  });
 });

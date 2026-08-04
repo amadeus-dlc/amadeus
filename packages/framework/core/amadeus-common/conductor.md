@@ -99,14 +99,14 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
      user's call, whatever the config says. Do not open an election; take it
      to the user for a ruling.
   2. Otherwise, in solo mode, when the layered config (`amadeus/config.json`
-     → space → intent) resolves `"auto-solo-election": true`, put the
+     → space → intent) resolves `solo-election.trigger.mode` to `auto`, put the
      deviation to an election: write a definition JSON carrying `electionId`,
      `kind`, `question`, `choices` (one per way forward) and `voters`, then run
-     `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`
+     `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`
      — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger
-     is evaluated). On `{"opened":null,"reason":"auto-solo-election-disabled"}`
+     is evaluated). On `{"opened":null,"reason":"solo-election-manual-trigger-required"}`
      no election is created and the deviation goes to the user for a ruling.
-  3. Otherwise (team mode, or the config is unset or `false`): do not open an
+  3. Otherwise (team mode, or the config is unset or `manual`): do not open an
      election from this hook; stop and take the deviation to the user for a
      ruling (in team mode, through the team's own decision protocol).
 - **Keep / Modify / Redo** — when the user requests changes at a gate, decide

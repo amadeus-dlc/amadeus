@@ -862,5 +862,40 @@
     "dirName": "260802-source-only-dist",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc6a6-d525-7ff7-951b-49f8eba49fa4",
+    "slug": "harness-live-e2e",
+    "dirName": "260803-harness-live-e2e",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc782-d6de-7a7c-b704-bfe10d0be118",
+    "slug": "state-integrity",
+    "dirName": "260803-state-integrity",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019fca5b-db81-7bf9-97e1-4de243cf62c4",
+    "slug": "evidence-revision-rebind",
+    "dirName": "260804-evidence-revision-rebind",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
+    "slug": "pi-harness",
+    "dirName": "260803-pi-harness",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fcacc-48af-7c69-b0b1-b9da1583cd62",
+    "slug": "goal-reconciliation-guar",
+    "dirName": "260804-goal-reconciliation-guar",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

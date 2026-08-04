@@ -10,6 +10,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
+import { buildChildEnvironment } from "./live-e2e/policy.ts";
+import { requireCapability } from "./live-e2e/registry.ts";
+
+const CAPABILITY = requireCapability("codex-exec");
 
 export function codexExecLiveSkipReason(
   env: Readonly<Record<string, string | undefined>>,
@@ -27,9 +31,14 @@ export function codexExecChildEnvironment(
   home: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): NodeJS.ProcessEnv {
-  const childEnv: NodeJS.ProcessEnv = { ...env, CODEX_HOME: home };
-  delete childEnv.AMADEUS_CODEX_EXEC_AUTH_HOME;
-  return childEnv;
+  const isolated = buildChildEnvironment(env, CAPABILITY.environment);
+  if (!isolated.ok) throw new Error(`Codex child environment rejected ${isolated.error.key}`);
+  return {
+    ...isolated.value,
+    HOME: home,
+    CODEX_HOME: home,
+    ...(env.OPENAI_API_KEY === undefined ? {} : { OPENAI_API_KEY: env.OPENAI_API_KEY }),
+  };
 }
 
 export interface CodexExecLiveRequirements {
@@ -46,9 +55,18 @@ export function codexExecLiveRequirementsSkipReason({
   const environmentReason = codexExecLiveSkipReason(env);
   if (environmentReason !== null) return environmentReason;
 
-  const version = spawnSync(codexBin, ["--version"], { encoding: "utf-8" });
-  const match = (version.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
+  const probeEnvironment = buildChildEnvironment(env, CAPABILITY.environment);
+  const version = probeEnvironment.ok
+      ? spawnSync(codexBin, ["--version"], {
+        encoding: "utf-8",
+        env: probeEnvironment.value,
+        maxBuffer: 64 * 1024,
+        timeout: 15_000,
+      })
+    : null;
+  const match = (version?.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);
   if (
+    version === null ||
     version.status !== 0 ||
     match === null ||
     (Number(match[1]) === 0 && Number(match[2]) < 139)
@@ -57,23 +75,10 @@ export function codexExecLiveRequirementsSkipReason({
   }
   if (!existsSync(distributionDir)) return `distributable missing: ${distributionDir}`;
 
-  const authHome = env.AMADEUS_CODEX_EXEC_AUTH_HOME;
-  if (authHome === undefined) {
-    return "set AMADEUS_CODEX_EXEC_AUTH_HOME to a Codex auth directory";
+  if (env.OPENAI_API_KEY === undefined || env.OPENAI_API_KEY === "") {
+    return "set OPENAI_API_KEY to provide an isolated Codex credential lease";
   }
-  const authPath = join(authHome, "auth.json");
-  if (!existsSync(authPath)) return `Codex auth missing: ${authPath}`;
   return null;
-}
-
-function installCodexExecAuth(authHome: string | undefined, home: string): void {
-  if (authHome === undefined) {
-    throw new Error("AMADEUS_CODEX_EXEC_AUTH_HOME is required");
-  }
-  const authPath = join(authHome, "auth.json");
-  if (!existsSync(authPath)) throw new Error(`Codex auth missing: ${authPath}`);
-  mkdirSync(home, { recursive: true });
-  cpSync(authPath, join(home, "auth.json"));
 }
 
 export interface CodexExecHome {
@@ -82,15 +87,12 @@ export interface CodexExecHome {
   cleanup: () => void;
 }
 
-export function setupCodexExecHome(
-  prefix: string,
-  authHome: string | undefined,
-): CodexExecHome {
+export function setupCodexExecHome(prefix: string): CodexExecHome {
   const root = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   const home = join(root, "codex-home");
   const cleanup = (): void => rmSync(root, { recursive: true, force: true });
   try {
-    installCodexExecAuth(authHome, home);
+    mkdirSync(home, { recursive: true });
     return { root, home, cleanup };
   } catch (error) {
     cleanup();
@@ -192,7 +194,6 @@ export function initializeCodexExecProject({
 
 export interface SetupCodexExecProjectOptions {
   prefix: string;
-  authHome: string | undefined;
   distributionDir: string;
   repositoryRoot: string;
   model: string;
@@ -206,14 +207,13 @@ export interface CodexExecProject extends CodexExecHome {
 
 export function setupCodexExecProject({
   prefix,
-  authHome,
   distributionDir,
   repositoryRoot,
   model,
   rulesDir,
   prepareProject,
 }: SetupCodexExecProjectOptions): CodexExecProject {
-  const scratch = setupCodexExecHome(prefix, authHome);
+  const scratch = setupCodexExecHome(prefix);
   const proj = join(scratch.root, "proj");
   try {
     cpSync(join(distributionDir, ".codex"), join(proj, ".codex"), { recursive: true });

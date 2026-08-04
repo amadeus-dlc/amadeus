@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SIRE-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用2件は本 intent 固有の数値・固有名を落とした一般形で persist すること — c5 は「20並列/6/6」でなく『自然再現率が低い並行欠陥は、repo 外 scratch に base dir を固定した N 並列プロセスから対象モジュールを直接 import するハーネスで再現率を実測して決着させる』と書き、c3 は独立 cid でなく既存 cid:reverse-engineering:c1-xrev-scan-mode への追補(verdict が割れた場合の裁定面)として統合するのが妥当と考える。",
+  "rationale": "実読による検証結果。【不採用4件は妥当】c1 は team.md:201 rescan-base-ancestry が git merge-base --is-ancestor による祖先性判定まで逐語で既定済みで、diary(memory.md:5)は a8e1ce025 採用の実行記録にとどまる。c2 は project.md:290 c1-xrev-scan-mode + :299 c1-xrev-single-issue が単発 xrev Issue への適用範囲と免除条件(レビュー対象 SHA と observed の一致)まで既定済みで、memory.md:6 はその免除条件が成立した側の適用報告(260802 は不成立側)にすぎず規範追加はない。c4 は Deviations『なし』で学習内容ゼロ。c6 は project.md:14 c4-subagent-structural-guard の (1)『調査・レビュー等の read-only 作業は explore(書込不可)サブエージェントに限定する』の逐語再述。【採用2件は新規性あり】c3: team.md の issue-cross-review は独立エビデンスを要求するが2名の実測が食い違った場合の裁定先を定めず、c1-xrev-scan-mode も verdict を Developer scan の入力とする規定にとどまり『機序の一意確定を RE が担う』という責務境界は未被覆。re-scans/260803-state-integrity.md:103-106 に『両レビュアーとも部分的に正しく reviewer-2 の機序が支配的』『分岐 B は決定的に到達可能・分岐 A は grace ノブ単独では 0/6』と実際に決着した記録があり、xrev 起点 intent 全般に効く一般則になる。c5: team.md:162 scratch-script-discipline は scratch の場所と汚染防止のみ、c1-coverage-single-owner は coverage 計測の単独所有、bun-coverage-spawn-blindspot は計測面の in-process seam を扱うにとどまり、『低再現率の並行欠陥を決定的再現へ持ち込む手法』は未被覆。re-scans:92-101 に AMADEUS_LOCK_BASE_DIR を scratchpad へ固定した 20 並行 bun プロセスのハーネスと staleB 6/6 損失・graceA 0/6 の対照が実測記録されており、ロック/レース系 intent 一般へ転用可能。なお再検証で1点補正: re-scans:94 の実体は『20 並行 bun プロセスが各々対象を直接駆動』であり、配布ビュー説明の『直接 import する20並列ハーネス』は in-process 単一プロセスと誤読されうるため、persist 文では実体どおり複数プロセス並行と書くべきである。",
+  "submittedAt": "2026-08-03T12:37:56Z"
+}

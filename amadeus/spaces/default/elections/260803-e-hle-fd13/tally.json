@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T23:59:41Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-FD13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "functional-designのmemoryは実質空で、cleanup barrierとledger commitの契約は人間承認済みADR-009をIntent内のFunctional Designへ伝播する設計判断である。project.mdも一時的なIntent制約はIntent recordへ置く方針を明記し、レビュー修正の伝播規則も既存のため、新規project/team ruleやsensorは重複・過剰一般化になる。",
+      "submittedAt": "2026-08-03T23:57:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-FD13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件判断には同意するが、本票はFunctional Design成果物の完全性承認を含まない。現成果物にはcleanup failureをcleanup-barrier-failedではなくexecution failureとして扱う記述が残るため、ADR-009との整合は別途確認が必要である。",
+      "rationale": "functional-design/memory.mdはテンプレートコメントのみで、学習候補・open questionとも実記録は0件。cleanup barrierとledger commitの分離は、人間承認済みADR-009およびcomponent-dependencyのIntent固有契約であり、今回の作業から新たな横断的team/project規範や決定的sensor述語を昇格させる根拠はない。したがって学習永続化は0件でよい。",
+      "submittedAt": "2026-08-03T23:57:45Z"
+    }
+  ],
+  "resolutions": []
+}

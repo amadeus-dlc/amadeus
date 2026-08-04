@@ -303,15 +303,15 @@ describe("deriveUnreferenced", () => {
 });
 
 describe("self-install closed union", () => {
-  test("the five faces are a strict subset of the seven package faces", () => {
+  test("the five faces are a strict subset of the eight package faces", () => {
     for (const h of SELF_INSTALL_HARNESSES) expect(PACKAGE_HARNESSES).toContain(h);
     expect(SELF_INSTALL_HARNESSES).toHaveLength(5);
-    expect(PACKAGE_HARNESSES).toHaveLength(7);
+    expect(PACKAGE_HARNESSES).toHaveLength(8);
   });
 
-  test("isSelfInstallHarness accepts the five, rejects kiro/kiro-ide", () => {
+  test("isSelfInstallHarness accepts the five, rejects non-promoted faces", () => {
     for (const h of ["claude", "codex", "cursor", "opencode", "kimi"]) expect(isSelfInstallHarness(h)).toBe(true);
-    for (const h of ["kiro", "kiro-ide", "unknown"]) expect(isSelfInstallHarness(h)).toBe(false);
+    for (const h of ["kiro", "kiro-ide", "pi", "unknown"]) expect(isSelfInstallHarness(h)).toBe(false);
   });
 
   test("assertSelfInstallHarness / buildSelfInstallProjection reject kiro-ide loudly", () => {
@@ -328,6 +328,7 @@ describe("self-install closed union", () => {
     expect(rows.get("opencode")?.stageEntry).toEqual({ kind: "command", path: ".opencode/commands/amadeus.md" });
     expect(rows.get("kiro")?.stageEntry.kind).toBe("runner");
     expect(rows.get("kiro-ide")?.stageEntry.kind).toBe("runner");
+    expect(rows.get("pi")?.stageEntry).toEqual({ kind: "runner", root: ".pi/skills" });
     expect(JSON.stringify(rows.get("codex"))).not.toContain(".codex/skills");
   });
 });

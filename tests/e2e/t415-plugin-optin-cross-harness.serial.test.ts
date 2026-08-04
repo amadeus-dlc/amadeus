@@ -59,7 +59,7 @@ function freshProject(face: Face, selected = true): string {
   mkdirSync(join(project, "amadeus"), { recursive: true });
   writeFileSync(
     join(project, "amadeus", "config.json"),
-    `${JSON.stringify({ plugins: selected ? [PLUGIN] : [] }, null, 2)}\n`,
+    `${JSON.stringify({ plugin: { activation: { names: selected ? [PLUGIN] : [] } } }, null, 2)}\n`,
   );
   cpSync(FIXTURE, join(project, "plugins", PLUGIN), { recursive: true });
   return project;

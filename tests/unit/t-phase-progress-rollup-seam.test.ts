@@ -33,6 +33,7 @@ import {
 import {
   cleanupTestProject,
   createTestProject,
+  seedGoalReceiptForFinalStage,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -110,6 +111,7 @@ describe("t-phase-progress-rollup-seam: complete-workflow verifies the final pha
     // Construction Active. complete-workflow must flip it Verified in lock-step
     // with Status: Completed — the direct closure of the #836 symptom.
     seedStateFile(proj, "state-fix-final-construction.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -139,6 +141,7 @@ describe("t-phase-progress-rollup-seam: finalize verifies the final phase (#836)
   beforeEach(() => {
     proj = createTestProject();
     seedStateFile(proj, "state-fix-final-construction.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });
@@ -196,6 +199,7 @@ describe("t-phase-progress-rollup-seam: full fix drive leaves no Active/Pending 
     // A faithful fix roll-up right after init (with the init fix applied):
     // Initialization Verified, Ideation/Operation Skipped, Inception Active.
     seedStateFile(proj, "state-fix-postinit.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
     prev = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = proj;
   });

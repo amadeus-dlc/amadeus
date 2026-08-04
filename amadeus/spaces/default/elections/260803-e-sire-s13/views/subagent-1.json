@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SIRE-S13",
+  "voter": "subagent-1",
+  "question": "260803-state-integrity / reverse-engineering ステージの §13 学習候補 c1-c6 のうち、memory 層へ persist する集合として conductor の提案を採用するか。候補の全文は配布ビューの選択肢説明に含まれる。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "提案どおり c3 と c5 を採用し、c1/c2/c4/c6 を不採用とする",
+      "description": "【採用】c3 = reviewer 2名の実測が割れた論点(#1906 でどの steal 経路が到達可能か)を RE の scan 段で決着させた。クロスレビューは『欠陥の実在』までを担い、機序の一意確定は RE の仕事、という切り分けが機能した。/ c5 = フル coverage 負荷を使えない制約下(cid:code-generation:c1-coverage-single-owner)で、repo 外 scratch から対象モジュールを直接 import する20並列ハーネスを組む手法。起票時の再現率 1/2 に対し branch B で 6/6 の決定的再現を得た。【不採用】c1 = 既存 cid:reverse-engineering:rescan-base-ancestry の再述で新規知識なし。/ c2 = 既存 cid:reverse-engineering:c1-xrev-scan-mode および c1-xrev-single-issue の適用報告であり規範追加ではない。/ c4 = Deviations『なし』の記録で学習内容を持たない。/ c6 = 既存 cid:functional-design:c4-subagent-structural-guard の再述。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "0件(何も persist しない)",
+      "description": "6候補すべてが既存ノルムの再述または記録に留まり、memory 層へ追加すべき新規知識はないと判断する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "採用集合を変更すべき",
+      "description": "c3/c5 の一方または両方を落とす、あるいは c1/c2/c4/c6 のいずれかを採用へ回す。留保に具体的な増減とその根拠(既存 cid との重複可否、規範としての一般化可能性)を必ず記す。"
+    }
+  ]
+}

@@ -40,7 +40,7 @@ import { planMerge, renderManagedBlock } from "../packages/setup/src/domain/kimi
 import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
 import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
-// The self-install face set is defined ONCE, next to the seven package faces it
+// The self-install face set is defined ONCE, next to the eight package faces it
 // is deliberately narrower than. This script consumes it; it never re-declares
 // an equal-valued list under another name (#1575).
 import { buildSelfInstallProjection, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";

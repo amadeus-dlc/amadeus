@@ -29,7 +29,7 @@
 //   :278/:286 "=== DONE <name> (<STATUS>) ===" closes each file.
 //   :556     each tier `find $RESULTS_DIR -name '*.meta' -delete` — the sidecar
 //            dir ends a run empty (aggregated and cleared).
-//   :573     smoke|unit force effective_parallel=1.
+//   :573     smoke forces effective_parallel=1; unit honours --parallel.
 //   :576-579 a tier prints "## <label> (parallel=N)" ONLY when
 //            effective_parallel > 1; otherwise the bare "## <label>".
 //   :662-666 integration level tags its banner with $PARALLEL (>1).
@@ -395,11 +395,11 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     expect(banner).toContain("(parallel=4)");
   }, PER_TEST_TIMEOUT);
 
-  test("default parallelism agrees with the Japanese testing guide", () => {
+  test("unit tier uses default parallelism documented by the Japanese testing guide", () => {
     const expectedParallel = Math.min(availableParallelism(), 4);
-    const r = run(["--integration", "--filter", "t104"]);
+    const r = run(["--unit", "--filter", "t05.test"]);
     const banner =
-      r.out.split("\n").find((line) => line.startsWith("## Integration Tests")) ?? "";
+      r.out.split("\n").find((line) => line.startsWith("## Unit Tests")) ?? "";
     const guide = readFileSync(JAPANESE_TESTING_GUIDE, "utf-8");
 
     expect(r.status).toBe(0);

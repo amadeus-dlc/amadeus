@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260804-ERR-RA-S13-Z0",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "表示された候補はIssue固有の要件閉包であり、永続化すべき新規practiceまたはsensorは示されていない。",
+  "submittedAt": "2026-08-04T03:12:24Z"
+}

@@ -1,5 +1,269 @@
 [
   {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createInitialGoalLineage",
+      "fingerprint": "sha256:aa9db9fd606387f2fc77dde113fc248ac0677b6ee629199547afb5955253769d",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body and its validation are covered directly by t427 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createRevisionZeroLineage",
+      "fingerprint": "sha256:643e898cf6780993049f58b618db994663ac9a2c1af80cf72601ce959528363d",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Initial and legacy revision-zero bodies and validation are covered directly by t427 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createLegacyGoalLineage",
+      "fingerprint": "sha256:e4749fa3fae250f2a0b7a18f1bbe36b4c5be389ded28f11019b107bb9bed3281",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy lineage creation and round-trip validation are covered directly by t427 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "goalCompletionContextDigest",
+      "fingerprint": "sha256:ba5bff0b9100b74358805c0b8a13a8de2d3982a8a5b0c6fb440e1ad4706a6ef5",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Context digest creation is covered directly by t427 integration and workflow authorization tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "authorizeGoalCompletion",
+      "fingerprint": "sha256:c168e473d32f10a0a5afdbe778d616e2309a0fe38304d6afc36ff315304f2b0a",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Every authorization acceptance and rejection branch is covered directly by t427 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createGoalChangeProposal",
+      "fingerprint": "sha256:204088aaa0b3c39866097acdfc04cee5148e8218bde6148aff8203ebeee47dfd",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Proposal creation, parsing, persistence, collision, tamper, and approval paths are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createLegacyGoalMigrationProposal",
+      "fingerprint": "sha256:9415851a8974065f9d2127e99522db74335590e384767224d5628a208c1fd7c4",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Legacy proposal creation, paired evidence validation, persistence, collision, and tamper paths are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "buildApprovedGoalRevision",
+      "fingerprint": "sha256:66735cde53f940fb6343fa9df856d9695d18e6de9bd87d089b274c92d8661f54",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Current, stale, ordinary, and legacy-reconstruction approval paths are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "approveGoalRevision",
+      "fingerprint": "sha256:ec662b2ef0cee60e6ee0a5685f6be9d90be76de3c5946b65574c517c759c1c87",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Persisted proposal approval and lineage write-back are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "selector": {
+      "function": "createGoalReconciliationReceipt",
+      "fingerprint": "sha256:39e25bde59f93ca6f7793b14b930c2b7ba282f075a2430ff79e87ef850336c4f",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Receipt creation, persistence, evidence binding, and complete-current-Goal item validation are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "selector": {
+      "function": "authorizeWorkflowCompletion",
+      "fingerprint": "sha256:804ac7039322be3ad4f3a8f2c471be032de8a996ad673ac719a8778a607f2a3e",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Successful, non-final, invalid-scope, projection-mismatch, and stale-receipt paths are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "selector": {
+      "function": "authorizePersistedCompletedWorkflow",
+      "fingerprint": "sha256:3fc260a67f73826372182342cc0b30149608a397747ad0fde39651be606b73cf",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Successful persisted authorization and missing Last Completed Stage rejection are covered directly by t427 integration tests.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-audit.ts",
+    "selector": {
+      "function": "appendLifecycleAuditEntryUnlocked",
+      "fingerprint": "sha256:73cf0edc195997e6e54fb79d7ad1b9294d5ba52a7398fc23519a3a63efb577d8",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These four added lines are TypeScript-only event union members and have no runtime statements for Bun to attribute. The writer behavior is exercised in-process by t205 and t258, while the new Goal event variants are exercised through the shipped CLI by t428 and t429.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "emitMirrorBoundaryIfNeeded",
+      "fingerprint": "sha256:ed0187a3e7f2f1e730ee83efec2fc69ab615027cde212b0d5734ad23be804649",
+      "anchorLines": 17,
+      "targetLines": "1-17"
+    },
+    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 integration; spawned execution is not attributed to parent Bun LCOV.",
+    "expiry": "remove when record resolution and directive emission are injectable in-process or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleNext",
+      "fingerprint": "sha256:4dfe5ea3efa5d46f1a1889dfae96c47eea3d05ecceea445e9ef58aa48f77de14",
+      "anchorLines": 20,
+      "targetLines": "1-20"
+    },
+    "reason": "Completed-workflow recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration. handleNext is a process-bound dispatcher, so Bun does not attribute its spawned execution to parent LCOV.",
+    "expiry": "remove when handleNext receives injected state, authorization, and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleReport",
+      "fingerprint": "sha256:eda652837aee67d9208bcf0f92dee56edd726ceb65e3ab9ab319f465c109abe0",
+      "anchorLines": 20,
+      "targetLines": "1-20"
+    },
+    "reason": "Final-report recovery and missing-receipt rejection are asserted through the generated orchestrator CLI in t427 integration and t265 E2E. handleReport is executed in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleReport receives injected state, authorization, and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "completedRecoveryError",
+      "fingerprint": "sha256:42fe01d57b0d1c256d360f7fa01bd12ce178df7ef1053a8fe71b94e4b8f9e9f6",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "The legacy migration recovery text is asserted through both generated orchestrator CLI recovery paths in t429 integration. This private formatter is reached only inside spawned dispatchers, so Bun does not attribute it to parent LCOV.",
+    "expiry": "remove when completed-workflow recovery is injected and tested in-process or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleNext",
+      "fingerprint": "sha256:7e7dedd64f9db58e4473654f7c8d8f205b17603e3986e70988732379a17c3119",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The completed-workflow recovery refusal and legacy migration instruction are asserted through the generated next CLI in t429 integration. handleNext executes in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleNext completion recovery receives injected authorization and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleReport",
+      "fingerprint": "sha256:ef58860e329655f59e7751821aec6db6268169e42fda91f5c5bef6774cdc909e",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The already-completed report recovery refusal and legacy migration instruction are asserted through the generated report CLI in t429 integration. handleReport executes in a child process outside parent Bun LCOV.",
+    "expiry": "remove when handleReport completion recovery receives injected authorization and output ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "emitWorkflowCompletionAuditRows",
+      "fingerprint": "sha256:5d99e8e2c8db4268cb4d1c0274c8613e861f53443b74596a12e8adaf5f92e1cc",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This added line is a TypeScript-only receipt property in the function parameter type and has no runtime statement for Bun to attribute. Workflow completion audit behavior is exercised through t427 integration.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "emitWorkflowCompletionAuditRows",
+      "fingerprint": "sha256:ecb613100b94fe3ee6044af090b23deff4d92ff2a9590dd0e318c34241c0eff4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The optional human-ruling audit projection is exercised by the shipped Goal reconciliation CLI journey in t427 integration. The state command runs as a child process and its line is not attributed to parent Bun LCOV.",
+    "expiry": "remove when workflow completion audit emission has an in-process port or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:dad2087b02664f45043c3d7697af749d3f3d25a6a5c7912ef234f47b9ceabc70",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This fail-closed CLI guard is reachable only after target resolution but before the Intent record adapter resolves. complete-workflow success and refusal contracts are exercised through t427 integration; the private process-exit boundary is not parent-LCOV visible.",
+    "expiry": "remove when operationRecordDir and error exit handling are injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "approveUnderLock",
+      "fingerprint": "sha256:049b3c1fd35044f2b853b8aba12d7f87754434e0f468a8462c0e16b0623dc0bf",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Final approval preparation is asserted by the generated state CLI test 'grant-backed final approval defers completion and preserves the active non-owner Intent' in t265 integration. Spawned state mutation is outside parent Bun LCOV.",
+    "expiry": "remove when approval state commits are driven through an in-process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "approveUnderLock",
+      "fingerprint": "sha256:b641456b263d49f0e79992384c030bee31741f8c1bc91b61df7061bc19f8cb84",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The completion-pending instance result is asserted by the generated state CLI in t265 integration. The result row is emitted by a child process and is not parent-LCOV visible.",
+    "expiry": "remove when approval output is driven through an in-process port or Bun merges child-process coverage"
+  },
+  {
     "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
     "selector": {
       "function": "<module>",
@@ -1235,7 +1499,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "emitMirrorBoundaryIfNeeded",
-      "fingerprint": "sha256:88a8eab632332a66b20df9a9feec5a5a610e423b6b7786b5f5fbe52b7a89f188",
+      "fingerprint": "sha256:9fc57a951ff72a538f212f4ee1f716a7ea247716ddb16ff56d0f8cf4ef69f2e6",
       "anchorLines": 11,
       "targetLines": "1-11"
     },
@@ -1245,10 +1509,10 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:7098e331d3f79e5f78e86e9af732b9eca3817de0c8e8d65eb52067f827dfff25",
-      "anchorLines": 29,
-      "targetLines": "1-29"
+      "function": "appendOrchestrateLifecycleEvent",
+      "fingerprint": "sha256:afc1615a8d008bd96f7dfb936356a5803983de33e0d7c4db5f008b4002af02ff",
+      "anchorLines": 15,
+      "targetLines": "1-15"
     },
     "reason": "The archived-next lifecycle audit adapter is exercised through the generated orchestrator CLI by t259; the spawned main path is not attributed to the parent Bun LCOV process.",
     "expiry": "remove when the orchestrator CLI emitter and lifecycle audit adapter are injected in-process"
@@ -2343,16 +2607,6 @@
     "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
   },
   {
-    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
-    "selector": {
-      "function": "FsPlannedTlcRuntime.#execute",
-      "fingerprint": "sha256:7a4f59197e85a481b15bbe716f12d11563a721ff501b7f937aa5cf329c97eaf6",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
-  },
-  {
     "file": "plugins/formal-model-check/tools/node-ci-model-check-port.ts",
     "selector": {
       "function": "runCiCommand",
@@ -2923,39 +3177,6 @@
   {
     "file": "tests/harness/codex-exec-live.ts",
     "selector": {
-      "function": "codexExecLiveRequirementsSkipReason",
-      "fingerprint": "sha256:6c170a04f9f6bef5aae25bce450360812ef2e5f440a5050734cb80e10db72811",
-      "anchorLines": 18,
-      "targetLines": "1-18"
-    },
-    "reason": "Codex version and auth preflight arms are covered by t-codex-exec-live-gate for the GitHub Actions skip path; local codex/auth probe arms require AMADEUS_CODEX_EXEC_LIVE and are disabled on CI.",
-    "expiry": "remove when the requirements helper receives an injectable probe port or live E2E runs on CI"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "installCodexExecAuth",
-      "fingerprint": "sha256:60c96f959b6fad2cf4ad7a7cec660a26d9a95c885b0cc771782de7659ccb8e52",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Missing-auth fail-closed throw in installCodexExecAuth; success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when auth installation is injectable for in-process failure injection"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
-      "function": "setupCodexExecHome",
-      "fingerprint": "sha256:1de9bf3bc70cc3c159d29427927f3ce19ceb28c603c5cfecff581a85f6b1bbfc",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "setupCodexExecHome cleanup on auth-install failure; the success path is exercised by t-codex-exec-live-helper integration.",
-    "expiry": "remove when home setup receives an injectable filesystem port"
-  },
-  {
-    "file": "tests/harness/codex-exec-live.ts",
-    "selector": {
       "function": "writeCodexExecHomeConfig",
       "fingerprint": "sha256:8b5f1ceb063464006d6bfb284c6bf661f47a0a2701c4d1ab52ccb00a6f2fb3bb",
       "anchorLines": 4,
@@ -3254,9 +3475,20 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:7411797210aeccf68c833eb5e41c776e0c7a9ed06a20a9ee5dd3a49c99cf3da2",
-      "anchorLines": 76,
-      "targetLines": "1-76"
+      "fingerprint": "sha256:bd4d2e8d007dd66054f41f03bc86092739ff23fde57bc22cd2ca96c6ae433296",
+      "anchorLines": 30,
+      "targetLines": "1-30"
+    },
+    "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:78f8ec6b10ed7f785f5334823f7bed3b71b70f23f18530237715606e68fcd1e9",
+      "anchorLines": 46,
+      "targetLines": "1-46"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
@@ -3407,9 +3639,9 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:c5f40a813889d670fe169aaf1b6f24a27f918a655932df07c0c6552b588e1a68",
-      "anchorLines": 48,
-      "targetLines": "1-48"
+      "fingerprint": "sha256:3da2c5fcc23c1ada7ca31ba49f32487fcf4ecf0e212987cebd9a9f8b63a74ca1",
+      "anchorLines": 54,
+      "targetLines": "1-54"
     },
     "reason": "Prepare validation and configuration helpers are owned by the spawned swarm CLI. tests/integration/t135-invoke-swarm.test.ts exercises valid preparation, invalid degraded drivers, capped concurrency, and partial-prepare refusal through the shipped command; Bun cannot attribute child-process execution to parent LCOV.",
     "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
@@ -3451,9 +3683,9 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:27c4b3c3c8a89fc53041b9dc6e3213375bfdd1e5f922e189d861f3e773f97924",
-      "anchorLines": 142,
-      "targetLines": "1-142"
+      "fingerprint": "sha256:bd4bb1a87c0de36c50f1f0e0e2b0937096982d270700992569206e0983a64969",
+      "anchorLines": 148,
+      "targetLines": "1-148"
     },
     "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution.",
     "expiry": "remove when fixed-pool handlers receive injectable argv, repository, output, and exit ports"
@@ -3699,5 +3931,665 @@
     },
     "reason": "Defense-in-depth invariant: resolveRunRequiredHold filters verified-not-detected before rendering a hold result, so modelCheckResultText cannot receive that variant through its only caller. Detected, harness-error, not-run, and invalid rendering are exercised through the protected advisory choice integration tests.",
     "expiry": "remove if modelCheckResultText becomes public or gains a caller that can pass verified-not-detected"
+  },
+  {
+    "file": "tests/harness/live-e2e/codex.ts",
+    "selector": {
+      "function": "CodexExecAdapter.cleanup",
+      "fingerprint": "sha256:256826ec26b54f46aef765feb9b471bfd826fe0c8c262f73eeb096d445bbe46c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The reap deadline is constructed only while cleaning an active real Codex child. Offline lifecycle tests exercise cleanup success and failure through fake adapters; CI intentionally does not spawn a credential-bearing live Codex journey.",
+    "expiry": "remove when CodexExecAdapter receives an injectable child-process port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "inspectLedgerLock",
+      "fingerprint": "sha256:943abd9b87fa2659e45fcf60684df3fe550db8a4bbf262886582059fb3e36207",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This fail-closed branch requires the lock directory to disappear or become unreadable between existsSync and statSync. Fresh, stale, live-owner, dead-owner, and malformed-owner states are covered deterministically; the remaining TOCTOU race is not reproducible without an injected filesystem port.",
+    "expiry": "remove when lock inspection receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "reapLedgerLock",
+      "fingerprint": "sha256:101c0684cd934046393dc8235c42fbd221671607ea5aed96e31c930fdbd32964",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This rollback handles a lock owner becoming live after the two-phase recovery check and rename. Tests prove live owners are never stolen and dead owners are reaped; forcing the identity transition at this exact race boundary requires an injected process/filesystem port.",
+    "expiry": "remove when lock reaping receives injectable process and filesystem ports"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "reapLedgerLock",
+      "fingerprint": "sha256:c9bb1b7662439312172ba0a3031914b1986bfac85f281f29c61d722fee8fca6f",
+      "anchorLines": 4,
+      "targetLines": "2-3"
+    },
+    "reason": "The generic recovery failure belt covers rename/removal races after recoverability was established. Deterministic tests cover blocked reaping and successful stale/dead reaping; inducing a post-check filesystem race needs an injectable filesystem port.",
+    "expiry": "remove when lock reaping receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "acquireLedgerLock",
+      "fingerprint": "sha256:d53c91a7d36af7981e7ad47d0670de5a1ffea393bd0cf2c74dd9e165b3969e10",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This cleanup and classification branch requires mkdirSync to succeed while the immediately following exclusive owner stamp fails. Lock timeout and normal acquisition are covered; deterministic owner-stamp fault injection requires a filesystem port.",
+    "expiry": "remove when lock acquisition receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "persistNewReceipt",
+      "fingerprint": "sha256:e6010284a9050d26148907a13c15711890c45650099cd822e9bf6872bfe00078",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The rename failure mapping is a fail-closed filesystem boundary after a successful durable temporary write. Successful atomic rename, directory fsync failure, and recovery are covered; a deterministic rename-only failure requires an injected filesystem port.",
+    "expiry": "remove when receipt persistence receives an injectable rename port"
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "selector": {
+      "function": "persistNewReceipt",
+      "fingerprint": "sha256:9861c84bd0a244f27d65efd0e06cc9362e65fa5cf0d3069926319fcbc17fb436",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Revalidation can fail only if another actor replaces the just-renamed ledger before the immediate read-back. Idempotency, conflict detection, pending durability, and successful persistence are covered; this exact concurrent replacement race needs an injected filesystem port.",
+    "expiry": "remove when receipt persistence receives an injectable filesystem port"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:db97f83a5208d3d8e3414a397c8500bb2c95615e4bca5f3f816185f6fb2704af",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "These result/message accumulators execute only inside the real Claude Agent SDK drive. Pure helpers and the isolated SDK worker contract are covered offline; credential-bearing live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:843f2bcf0ed3c6d97200901883ade1614e39e15942741de0dad64c8d9b20559b",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "Parent abort forwarding is wired around a real Claude Agent SDK query. Worker abort handling and lifecycle timeout cleanup are covered offline; CI cannot start the credential-bearing SDK stream needed to execute this wiring.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:acf383fe5565019e0c4df20e63e5907c772836ea35fd071759c131da23b093c8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Message-type capture is reached only while iterating the real Claude Agent SDK stream. The downstream worker event contract is covered offline; live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:c4cdef576b3aaebb1f5c6ababe11304647dc1cdf0031f77ac40509d2a341221c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Result-event accumulation is reached only from a real Claude Agent SDK result message. Result classification and bounded worker emission are covered offline; credential-bearing SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:3ab331e01f2983e0ec336aec11641420922fd59be844436c4c12558a9da8ad0c",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The swallowed-abort predicate is evaluated only when the real SDK generator throws after an orchestrator-owned abort. Timeout/abort/reap semantics are covered through offline adapters; CI cannot start the credential-bearing SDK stream.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:632a7604d46b15ed641e742fc92a9be33b3faf6d84cf2f11e16978cac526ffe6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Parent abort-listener removal is the finally path of a real Claude Agent SDK drive. Equivalent worker signal cleanup is covered offline; CI intentionally does not open the live SDK stream.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "selector": {
+      "function": "driveAidlc",
+      "fingerprint": "sha256:7010987299eca06e4ae230d52182050831957f753574691bea6861c15e842961",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The final result arrays are populated only by iterating the real Claude Agent SDK stream. Their consumer and worker serialization contracts are covered offline; credential-bearing live SDK calls are prohibited on CI.",
+    "expiry": "remove when driveAidlc receives an injectable SDK query stream"
+  },
+  {
+    "file": "tests/harness/live-e2e/claude-sdk-worker.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:ca90a4c8a4fd675317499709615673768bcb0d4c86a59ef13e3308dfc9cd6cfc",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The main guard is exercised by the worker CLI probe integration test, which asserts the spawned process exit and probe payload. Bun does not merge that child process module row into the parent LCOV report.",
+    "expiry": "remove when Bun merges spawned worker coverage into the parent report"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "closeProbeFile",
+      "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "readRegularFileNoFollow",
+      "fingerprint": "sha256:939f31699304788b06b4965a0ceebc12ad9d4bf43eda4a7efcd3c942e350774f",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "catalogMinimumVersion",
+      "fingerprint": "sha256:f9cef3a6b07b1096f293745a31b90281c243e19f06ccffe1d81343a11773a989",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "catalogResourceMapping",
+      "fingerprint": "sha256:8de110f1847c3739404cbd69e4d47da5d71b6c82a1326d25a4cff48caaa53d60",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "parseCatalog",
+      "fingerprint": "sha256:55e7f67beabd623753052429c7680a487f157857db4c40d372d54b00c36934eb",
+      "anchorLines": 24,
+      "targetLines": "1-24"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "nearestTrustDecision",
+      "fingerprint": "sha256:6671ee4950330f7038a8b3f864cd9389387283e963b9bd282240b694d7d8d4b7",
+      "anchorLines": 13,
+      "targetLines": "1-13"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "filesBelow",
+      "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "validateResourceFamily",
+      "fingerprint": "sha256:6e506e2e2149c0f635b4efa4d81e57c1df7bdc7ae5ef8ce46fc85e9437bd509f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "selector": {
+      "function": "installerCatalogReceipt",
+      "fingerprint": "sha256:1be44ee05e9e64c93cf951bc5f08305c7e99e6d012de9214d1e2fcf0bc031977",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
+    "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "captureExecutableSnapshot",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "defaultClock",
+      "fingerprint": "sha256:496b330bd178a8f5ce5035ca5d1ab6366c839c7536a4e2cca47f13c781231717",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "wallNow",
+      "fingerprint": "sha256:d5de09c6213b58b41be2c6e057656963aa3453c5a2941a9fcc3e9931f89b71e6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "monotonicNowMs",
+      "fingerprint": "sha256:d9deabb4ca237538fbe452bb1903c9b8bf5849521f01825da7cef8fd6cd715d4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "runtimeDirFor",
+      "fingerprint": "sha256:2a5f3b91072826a2caa559238579bdfb64c1a83b5e578c2bf39e970c7878ea48",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "parseEnvelope",
+      "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "verifyEnvelope",
+      "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "mapReplay",
+      "fingerprint": "sha256:d06f2f94b0676667c34c5eafa991d3d17f6eabe8d69d0699c3a7d03724b865c7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "writeGuardianControl",
+      "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "runGuardian",
+      "fingerprint": "sha256:4c22db38a15da023c3d3a3562f86e5e8e53bc1d753e39e6df1321a93a91a27d4",
+      "anchorLines": 111,
+      "targetLines": "1-111"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "writeControl",
+      "fingerprint": "sha256:827d16949ccca347aa12f032d068b5accc11a30b45b3ca0397e4bedf006838a7",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "executePiChild",
+      "fingerprint": "sha256:22d359bc5498f000e2d28bbd96e2d9b3d608643e639c91bf530e015ad0d90c95",
+      "anchorLines": 54,
+      "targetLines": "1-54"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:8126c9fbf51ad4d7abbc57713cf767a68c95d64f82d1d3de1d7df2b6a2115381",
+      "anchorLines": 16,
+      "targetLines": "1-16"
+    },
+    "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
+    "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "selector": {
+      "function": "reserve",
+      "fingerprint": "sha256:51ea722a4a962b55616b3b1a518a721f96eba14421027288946531439423d8b2",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
+    "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "ExtensionHealthLatch.snapshot",
+      "fingerprint": "sha256:20632b0ed0819d370ef027988145340bef4d845093a93d1e4d94e24c23098c08",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "auditMapping",
+      "fingerprint": "sha256:f85e7a3dc66639492ef16009f2e56b1203cc12efc810c3d15e24adc35fa7624b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "readStateValidity",
+      "fingerprint": "sha256:d7f99a799238ca76add9c01a2cd60996326e425d58f2d08c28572a6308b55e5b",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "PiContinuationOutbox.reconcile",
+      "fingerprint": "sha256:99133ea4783696cea989bab1b359d65366c895442e00e1f3d2e8e93aa2d864f1",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "selector": {
+      "function": "amadeusPiExtension",
+      "fingerprint": "sha256:92a11927241e5dbcefd1d18c8d095cff2e2478eb97403f904e5fa2cad26831da",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
+    "expiry": "remove when the Pi host state and extension registration ports become injectable"
+  },
+  {
+    "file": "scripts/package.ts",
+    "selector": {
+      "function": "piMetadataFromRootPackage",
+      "fingerprint": "sha256:8c94ffc2cf14f2f60f2b4e0014020b9d7be92c62d01f6bfe97b94057c62bd680",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The malformed root package fallback requires replacing the repository package.json during a parallel packaging test.",
+    "expiry": "remove when root package loading accepts an injected reader"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "countMarker",
+      "fingerprint": "sha256:67640070025d3e47811d5c28c11e2b28f2c87912e2f5a8829d9f4469b420b2a6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "safeProviderId",
+      "fingerprint": "sha256:36900db73de7f189be6d5df6f085a7883539b30f752066df142af1c8837a2225",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "liveProviderSelection",
+      "fingerprint": "sha256:4a7bad9a92ec7adb85f85640e374c76e14ed212fbc1887fe9c1597734fa54f49",
+      "anchorLines": 7,
+      "targetLines": "1-7"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "livePlatform",
+      "fingerprint": "sha256:f1f1a736d09a2b05c547d39ec46258053928ff8ee461a7fec6378574121b9f88",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "providerBelongsToFamily",
+      "fingerprint": "sha256:4b67c8dbdb2bcaf0bdb68e1da9047ddb628f517c9a55e6b07b492a564b2cbf35",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "observedProvider",
+      "fingerprint": "sha256:9a0542a8d512621898e5d9b5a92a9aef8f40bfe0a5dc2ad0f767220efc54c6bf",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "validateLiveOutcome",
+      "fingerprint": "sha256:1b248b49196a1dae476ef62f5c7ddaeb12546cbe0124f66ad4929a6ec0fd81c4",
+      "anchorLines": 17,
+      "targetLines": "1-17"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "gitIdentity",
+      "fingerprint": "sha256:f285881c62df30b12f22e627fc3c2f39c6737fab21bf1914c01337a878c91af4",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "piVersion",
+      "fingerprint": "sha256:8a0a651c11855ed309d967ae7046d2422e695bf6ba6cc05b0c883e85b42ec47b",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "liveLifecycle",
+      "fingerprint": "sha256:3360f8c6cb0c27d75b9e5487e9a58b29820c845cb7f902cb116bc655560fdcf1",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "monotonicNowMs",
+      "fingerprint": "sha256:0f8045b8c42221401fc61d47eabe5b546f9ac67c77fc0a0356bf5ac6972eedc1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "projectRequired",
+      "fingerprint": "sha256:72c2c99799401a60258ec85206528fba13740b0663bb1f93458c3153c5062913",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "rebuildRequired",
+      "fingerprint": "sha256:42be2999c04ba0cdb24ce3a11b03e64e4e2cbfce1a758801d641f451cd13863e",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "projectTelemetry",
+      "fingerprint": "sha256:abd18963016e0ab15c8ab36867eb628b69132a191894b25649e551b8fbdd2a56",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "runPiLiveRpc",
+      "fingerprint": "sha256:c6626f221ee1e9ed330a135fb97677a26cabb49833b8efab7539b29d152f0676",
+      "anchorLines": 74,
+      "targetLines": "1-74"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:c8fef17c81fb5a87e8a96c3a4d15c2f9cf7d3dd63bde41505ef125141cafcdcb",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
+    "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
   }
 ]

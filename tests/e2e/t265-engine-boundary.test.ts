@@ -28,6 +28,7 @@ import {
   DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
+  seedGoalReceiptForFinalStage,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
@@ -205,7 +206,7 @@ describe("t265 workflow completion lifecycle", () => {
     );
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"auto-mirror":"auto"}',
+      '{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}',
     );
     const record = join(
       project,
@@ -232,6 +233,7 @@ describe("t265 workflow completion lifecycle", () => {
       join(record, "verification", "phase-check-construction.md"),
       "# Construction Phase Check\n",
     );
+    seedGoalReceiptForFinalStage(project, "build-and-test");
 
     const intents = join(
       project,

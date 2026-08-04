@@ -42,6 +42,7 @@ const WIRING_SITE: Record<PackageHarness, string> = {
   kiro: "packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts",
   "kiro-ide": "packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts",
   opencode: "packages/framework/harness/opencode/plugins/amadeus-opencode-plugin.ts",
+  pi: "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
 };
 
 const HARNESS_DIR: Record<PackageHarness, string> = {
@@ -52,6 +53,7 @@ const HARNESS_DIR: Record<PackageHarness, string> = {
   kiro: ".kiro",
   "kiro-ide": ".kiro",
   opencode: ".opencode",
+  pi: ".pi",
 };
 
 function siteContainsCompose(harness: PackageHarness, relPath: string): boolean {

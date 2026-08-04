@@ -28,6 +28,7 @@ import {
   DEFAULT_RECORD_DIR,
   FIXTURES_DIR,
   seededStateFile,
+  seedGoalReceiptForFinalStage,
   seedStateFile,
 } from "../harness/fixtures.ts";
 import {
@@ -254,8 +255,13 @@ function seedBoundary(
     writeFileSync(
       join(project, "amadeus", "config.json"),
       JSON.stringify({
-        "auto-mirror":
-          options.mode ?? (options.auto ? "auto" : "prompt"),
+        "intent-mirror": {
+          github: {
+            issue: {
+              mode: options.mode ?? (options.auto ? "auto" : "prompt"),
+            },
+          },
+        },
       }),
     );
   }
@@ -318,7 +324,7 @@ function directCompletionFailure(args: string[]): string {
 }
 
 function seedFinalCompletionProject(
-  config: unknown = { "auto-mirror": "auto" },
+  config: unknown = { "intent-mirror": { github: { issue: { mode: "auto" } } } },
 ): string {
   project = createTestProject();
   seedStateFile(
@@ -364,6 +370,7 @@ function seedFinalCompletionProject(
     join(record, "verification", "phase-check-construction.md"),
     "# Construction Phase Check\n",
   );
+  seedGoalReceiptForFinalStage(project, "build-and-test");
   return statePath;
 }
 
@@ -652,6 +659,11 @@ describe("t265 receipt recovery and reports", () => {
           "- **Workflow Completion Status**: pending",
       ),
     );
+    seedGoalReceiptForFinalStage(
+      project,
+      "build-and-test",
+      "completion-instance-1",
+    );
     const first = parseDirective(run(ENGINE, ["next"]));
     expect(first.kind).toBe("print");
     expect(first.message).toContain(
@@ -768,7 +780,7 @@ describe("t265 receipt recovery and reports", () => {
 
   test("invalid config fails closed without changing state", () => {
     seedBoundary("inception", { mirror: true });
-    writeFileSync(join(project, "amadeus", "config.json"), '{"auto-mirror":"yes"}');
+    writeFileSync(join(project, "amadeus", "config.json"), '{"intent-mirror":{"github":{"issue":{"mode":"yes"}}}}');
     const before = readFileSync(seededStateFile(project), "utf-8");
     const result = run(ENGINE, ["next"]);
     expect(result.stdout).toContain('"kind":"error"');
@@ -974,7 +986,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
   });
 
   test("final report refuses an invalid completion mirror configuration before mutation", () => {
-    const statePath = seedFinalCompletionProject({ "auto-mirror": true });
+    const statePath = seedFinalCompletionProject({ "intent-mirror": { github: { issue: { mode: true } } } });
     const before = readFileSync(statePath, "utf-8");
 
     const directive = finalReport(project);
@@ -1003,7 +1015,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     const { statePath } = prepareWorkflowCompletion();
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"auto-mirror":"off"}',
+      '{"intent-mirror":{"github":{"issue":{"mode":"off"}}}}',
     );
     const before = readFileSync(statePath, "utf-8");
 
@@ -1035,7 +1047,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     [
       "missing",
       (state: string) => state.replace(/- \*\*Scope\*\*: [^\n]+\n/u, ""),
-      "no Scope field",
+      "requires a Scope field",
     ],
     [
       "invalid",
@@ -1118,7 +1130,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     const { completionInstance } = prepareWorkflowCompletion();
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"auto-mirror":true}',
+      '{"intent-mirror":{"github":{"issue":{"mode":true}}}}',
     );
 
     expect(
@@ -1231,8 +1243,9 @@ describe("t265 in-process completion and carrier boundaries", () => {
     );
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      '{"auto-mirror":"auto"}',
+      '{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}',
     );
+    seedGoalReceiptForFinalStage(root, STAGE);
     const nonOwner = switchCursorToNonOwner(root);
     const nonOwnerBefore = readFileSync(
       join(nonOwner, "amadeus-state.md"),
@@ -1488,7 +1501,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     );
     writeFileSync(
       join(malformed.root, "amadeus", "config.json"),
-      '{"auto-mirror":"auto"}',
+      '{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}',
     );
     useSoloEnv(malformed.root);
     try {
@@ -1520,7 +1533,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     );
     writeFileSync(
       join(invalid.root, "amadeus", "config.json"),
-      '{"auto-mirror":true}',
+      '{"intent-mirror":{"github":{"issue":{"mode":true}}}}',
     );
     useSoloEnv(invalid.root);
     try {

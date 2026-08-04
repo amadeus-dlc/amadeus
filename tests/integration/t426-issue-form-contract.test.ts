@@ -42,6 +42,9 @@ const commonElements = [
 const typeSpecificElements: Record<FormType, ReadonlyArray<readonly [string, string]>> = {
   bug: [
     ["environment", "textarea"],
+    ["harness", "dropdown"],
+    ["harness-version", "input"],
+    ["amadeus-version", "input"],
     ["reproduction", "textarea"],
     ["mechanism", "textarea"],
     ["severity", "dropdown"],
@@ -161,6 +164,20 @@ describe("t426 Issue Form contract", () => {
     ]);
   });
 
+  test("bug reports identify the supported harness distribution", () => {
+    const byId = elementsById(loadForm("bug"));
+    expect(byId.get("harness")?.attributes?.options).toEqual([
+      "claude",
+      "codex",
+      "cursor",
+      "kimi",
+      "kiro",
+      "kiro-ide",
+      "opencode",
+      "ハーネス非依存",
+    ]);
+  });
+
   test("the team norm separates common, type-specific, mirror, and post-filing rules", () => {
     const norm = readFileSync(TEAM_NORM_PATH, "utf8");
 
@@ -179,6 +196,9 @@ describe("t426 Issue Form contract", () => {
     expect(norm).toContain("**完了条件**を上から順に判定");
     expect(norm).toContain("`.github/ISSUE_TEMPLATE/{bug,enhancement,documentation,question}.yml`");
     expect(norm).toContain("`.github/workflows/issue-labels.yml`");
+    for (const field of ["ハーネス名", "ハーネスバージョン", "Amadeus バージョン"]) {
+      expect(norm, `missing bug field contract: ${field}`).toContain(field);
+    }
     expect(norm).not.toContain("cid:requirements-analysis:bug-issue-canonical-body");
     expect(norm).not.toContain("`.github/workflows/bug-labels.yml`");
   });

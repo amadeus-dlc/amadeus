@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-UG13-R2",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "org.md と project.md は greenfield/self-feature の walking-skeleton、最初の Construction Bolt の小さな end-to-end slice、1 Unit / 1 Bolt / 1 PR を既に恒久規則として定めている。Units Generation 再実行の U01 縦断化、U02 hardening 分離、後続 transport Unit の配置は Issue #1717 固有の分解として成果物内で完結し、新しい反復欠陥の述語や機械判定可能な sensor 条件を示す実測はないため、team/project rule または sensor を追加せず 0 件とするのが妥当。",
+  "submittedAt": "2026-08-03T12:51:39Z"
+}

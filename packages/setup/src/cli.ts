@@ -6,18 +6,20 @@
 // (BR-I06: 0=success, 1=runtime failure, 2=usage error).
 
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InstallInputs, ParsedCommand, UsageError } from "./domain/command.ts";
+import type { ApplyResult } from "./domain/apply-result.ts";
 import { engineDirNameFor } from "./domain/engine-layout.ts";
 import { Installation } from "./domain/installation.ts";
-import { Manifest } from "./domain/manifest.ts";
+import { Manifest, ManifestFiles, type ManifestError } from "./domain/manifest.ts";
 import { Plan } from "./domain/plan.ts";
 import { UpgradeRefusal, UpgradeSource } from "./domain/upgrade.ts";
 import { NextSteps } from "./domain/verify-result.ts";
 import { Applier } from "./modules/applier.ts";
 import { type KimiHooksPorts, renderHooksError, runHooksMerge } from "./modules/kimi-hooks.ts";
 import { createManifestIo, type ManifestIo } from "./modules/manifest-io.ts";
+import { SetupTransactionCoordinator, type SetupTransactionCoordinator as SetupTransactionCoordinatorPort } from "./modules/setup-transaction-coordinator.ts";
 import * as reporter from "./modules/reporter.ts";
 import { createFetcher } from "./modules/fetcher.ts";
 import { createResolver } from "./modules/resolver.ts";
@@ -44,6 +46,9 @@ export type CliPorts = {
   readonly http: Http;
   readonly createTmpWrite: (prefix: string) => Promise<Result<TmpWrite, IoError>>;
   readonly applyWrite: ApplyWrite;
+  // Optional preserves source compatibility for embedders with fake ports.
+  // createDefaultPorts always supplies the transactional production path.
+  readonly transactionCoordinator?: SetupTransactionCoordinatorPort;
   readonly verifyRead: VerifyRead;
   // FR-5a: the kimi flow's hook wiring (Bolt 3's runHooksMerge) takes its own
   // port bag so tests fake the config fs/tty independently of the install's.
@@ -59,6 +64,7 @@ export function createDefaultPorts(): CliPorts {
     http: createHttp({ apiTimeoutMs: API_TIMEOUT_MS, archiveTimeoutMs: ARCHIVE_TIMEOUT_MS }),
     createTmpWrite,
     applyWrite,
+    transactionCoordinator: SetupTransactionCoordinator.create(),
     verifyRead: createVerifyRead(),
     kimiHooks: {
       tty,
@@ -88,6 +94,21 @@ export async function main(argv: readonly string[], ports: CliPorts = createDefa
 }
 
 type Mode = "interactive" | "non-interactive";
+
+async function applyAndPersist(
+  plan: Plan,
+  target: string,
+  manifest: Manifest,
+  ports: CliPorts,
+): Promise<{ readonly applied: ApplyResult; readonly manifestError: ManifestError | null }> {
+  const applied = ports.transactionCoordinator === undefined
+    ? await Applier.create(ports.applyWrite).apply(plan, target)
+    : await ports.transactionCoordinator.apply(plan, target, manifest);
+  if (applied.hasFailures()) return { applied, manifestError: null };
+  if (ports.transactionCoordinator !== undefined) return { applied, manifestError: null };
+  const written = await ports.manifestIo.write(target, manifest);
+  return { applied, manifestError: written.type === "err" ? written.error : null };
+}
 
 // Shared by runInstall/runUpgrade (both subcommands take the same --harness/
 // --target/--yes flags, per the CLI Contract's symmetric grammar): resolves
@@ -246,13 +267,9 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       }
     }
 
-    const applied = await Applier.create(ports.applyWrite).apply(plan, inputs.target);
-    if (applied.hasFailures()) {
-      console.error(reporter.renderApplyFailure(applied));
-      return 1;
-    }
-
-    const filesResult = applied.manifestFiles();
+    const filesResult = ManifestFiles.fromEntries(
+      plan.entries().map((entry) => ({ path: entry.path, class: entry.class, required: entry.required, md5: entry.md5 })),
+    );
     if (filesResult.type === "err") {
       console.error(reporter.renderError(filesResult.error));
       return 1;
@@ -263,9 +280,13 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       harness: inputs.harness,
       installStartedAt: plan.startedAtIso,
     });
-    const written = await ports.manifestIo.write(inputs.target, manifest);
-    if (written.type === "err") {
-      console.error(reporter.renderError(written.error));
+    const { applied, manifestError } = await applyAndPersist(plan, inputs.target, manifest, ports);
+    if (applied.hasFailures()) {
+      console.error(reporter.renderApplyFailure(applied));
+      return 1;
+    }
+    if (manifestError !== null) {
+      console.error(reporter.renderError(manifestError));
       return 1;
     }
 
@@ -350,13 +371,9 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       if (!proceed) return 1;
     }
 
-    const applied = await Applier.create(ports.applyWrite).apply(plan, inputs.target);
-    if (applied.hasFailures()) {
-      console.error(reporter.renderApplyFailure(applied));
-      return 1;
-    }
-
-    const filesResult = applied.manifestFiles();
+    const filesResult = ManifestFiles.fromEntries(
+      plan.entries().map((entry) => ({ path: entry.path, class: entry.class, required: entry.required, md5: entry.md5 })),
+    );
     if (filesResult.type === "err") {
       console.error(reporter.renderError(filesResult.error));
       return 1;
@@ -369,9 +386,13 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       files: filesResult.value,
       meta: { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.startedAtIso },
     });
-    const written = await ports.manifestIo.write(inputs.target, newManifest);
-    if (written.type === "err") {
-      console.error(reporter.renderError(written.error));
+    const { applied, manifestError } = await applyAndPersist(plan, inputs.target, newManifest, ports);
+    if (applied.hasFailures()) {
+      console.error(reporter.renderApplyFailure(applied));
+      return 1;
+    }
+    if (manifestError !== null) {
+      console.error(reporter.renderError(manifestError));
       return 1;
     }
 

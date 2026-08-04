@@ -1,6 +1,6 @@
 # ビジネス概要
 
-## 形式検査 advisory の人間判断境界（260803-advisory-human-choice、現在、observed `498c3034a`）
+## 形式検査 advisory の人間判断境界（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **利用者価値**: [Issue #2129](https://github.com/amadeus-dlc/amadeus/issues/2129) は、形式モデル検査を早期に実行するか、リスクを認識して後へ送るかを人間が選べる状態を守る。対象は `requirements-analysis`、per-unit の `functional-design`、`build-and-test` の3チェックポイントであり、後段の `formal-model-check` 実行可否とは別の上流判断である。
 - **現状の成立範囲**: plugin activation は advisory を生成し、engine は `run-stage` directive の `advisories` と stderr に載せられる。既存テスト28件は、この発火・directive掲載・同一run内の `(plugin, code)` latchを固定している。
@@ -8,6 +8,28 @@
 - **影響範囲**: main / `--single`、初回 / 再入 / 新session / spec変更、not-ready / changed / never-run / current / not-composed、通常stage / per-unit stage、現行 `run-stage` / 将来の `dispatch-subagent` を同じ契約で扱う必要がある。特に `functional-design` は最初の `gate:false` directive でadvisoryが消費・latchされ、全unit後の `gate:true` では再提示されない。
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
+
+## no-silent-drop evidence の revision 再バインドの業務境界（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の測定 ref はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 `git merge-base --is-ancestor` exit 0、距離 11）。全数列挙・実測手順は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+- 対象: [Issue #2156](https://github.com/amadeus-dlc/amadeus/issues/2156)（`bug` / `P0` / `S1-FATAL`、クロスレビュー2名 `XREV-2156-20260804` CONFIRMED_WITH_REFINEMENTS 成立済み）。scope は `self-fix`、Depth: Minimal。
+- 利用者影響: **`main` の必須チェックが不成立で、マージ経路が全面停止している。** 必須チェックは ruleset `main`（id `18843917`、`enforcement: active`）の `required_status_checks` = `['CI Success']` の1件のみ（classic protection は 404 `Branch not protected`）だが、`CI Success` は `ci.yml:893-906` の `needs: [changes, typecheck, lint, distribution-contract, plugin-conformance-e2e, tests, reproducible-build, drift-check, coverage]` + `if: ${{ always() }}` の集約ジョブであるため、`tests` の赤がそのまま必須チェックの赤になる。
+- 例外: `paths-ignore` により record / docs-only PR は `Tests` が skipped となり着地しうる（実例 `498c3034a`）。「以後の全 PR がブロック」は厳密には過大であり、同時にこの迂回が導入時の赤を長期間不可視にした一因でもある（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` の再演）。
+- 出荷単位: 業務構造・公開契約の変更はない。是正は (a) 台帳3層の revision 再バインドによる止血と、(b) 「PR ブランチ SHA が台帳へ入らない／着地後に main SHA へ再バインドされる」再発防止の2面に閉じる。(b) の方式は未裁定であり、**即時の再バインドだけでは次に registry を更新する PR で再発する**。
+- 業務上の性質: この欠陥は **PR 上では原理的に観測できない**。PR ブランチでは記録 SHA が到達可能なので緑になり、スカッシュ着地の瞬間に到達不能へ反転する。レビューでも PR CI でも捕捉できないため、同一設計から4回中3回再発した（記録元の追跡はレビュー verdict 2件が独立に一致）。
+
+## state integrity の業務境界（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+- **目的**: [Issue #1906](https://github.com/amadeus-dlc/amadeus/issues/1906)（P2 / S1-FATAL / `origin:bootstrap`）の audit lock 相互排他破れと、[Issue #1875](https://github.com/amadeus-dlc/amadeus/issues/1875)（P3 / S4-MINOR / `origin:bootstrap`）の `Completed` カウンタ定義三分裂を是正する。両 Issue とも本 observed SHA でクロスレビュー2名成立済み。価値は「1 件の競合を塞ぐこと」ではなく、**監査記録と state の整合性が無音で壊れる経路を閉じること**にある。
+- **現存する利用者影響（#1906）**: audit lock の reaper には 2 つの steal 分岐があり、うち **live-owner-over-age 分岐（分岐 B）は CAS 後検証が構造的に不活性**である。生きている holder は取得後に stamp を更新しないため、検証は守るべきケースそのものに対して必ず通過する。critical section が `lockStaleMs()` を超えるだけで相互排他が破れ、実測では 20 並行増分のうち 14–16 が**全プロセス exit 0 のまま**失われた。もう一方の分岐（old-unstamped-dir、分岐 A）は単独では到達しにくいが、acquire の fail-open（`amadeus-lib.ts:6345`）により、一時的な stamp 書込失敗が**恒久的に steal 可能な live lock** へ変換され、タイミングの幸運なしに成立する。監査シャードは append-only であるため、ここでの無音損失は後から検出も復元もできない。
+- **重要な訂正 — 既定構成は fail-CLOSED である**: 既定ノブ下の decisive run は 41 成功 + 19 の loud な非ゼロ終了 = 60 で、無音損失ゼロだった。失われた作業はすべて `exit 1` として表面化する。**Issue 原文の「全プロセスが exit 0 のまま増分が消える」という記述は既定構成の挙動を描写していない。** 無音損失は `lockStaleMs()` を下回る短い閾値、または stamp 書込失敗という前提条件の下で発現する。この訂正は要件のリスク記述に反映する必要がある。
+- **現存する利用者影響（#1875）**: `Completed` フィールドに 3 つの定義（生カウント R / EXECUTE 実効 E / graph 由来 G）が並存し、9 箇所の書き手に分散している。3 定義すべてが append-only の audit 行と CLI JSON へ到達するため、**同じワークフローの進捗が、どのコマンドが最後に書いたかによって別の数値として記録される**。さらに approve の fail-closed 検証器（`amadeus-state.ts:3377`）は自分が書いたのと同じ定義で再計算するため、乖離を検出することが構造的に不可能で、検証しているように見えて何も守っていない。
+- **成功境界**: (i) 相互排他が破れる経路を、無音ではなく loud failure か正しい排他のどちらかへ倒すこと、(ii) `Completed` を単一の正準定義から単一の書き手経路で導出し、検証器をその正準定義へ接続すること。いずれも「落ちる実証」— 修正前に赤くなり修正後に緑になるテスト — を受け入れ基準に含める。
+- **スコープ境界**: 生成済み harness 面（7 dist + 5 self-install の計 12 コピー）を手編集せず `packages/framework/core/` の正本を直し、投影整合は既存 `dist:check` / `promote:self:check` に委ねる。ロック機構の全面再設計、監査シャード形式の変更、`Completed` 以外の派生フィールドの整理は本 intent に含めない。ロック bucket の統一と UNLOCKED な state RMW のロック化を含めるかは裁定事項とする。
+- **次段の裁定**: (1) 3 定義のどれを正準とするか — 定義 R と E は既存 e2e / integration テストで**矛盾して pin されており**、どの裁定でも既存テストの明示改訂が必然的に発生する（仕様判断であり実装判断ではない）、(2) live PID の over-age reap を heartbeat 付きで残すか除くか — 除く場合は wedge holder の回復手段を別途定義する必要があり、現行挙動は `amadeus-audit.ts:429-433` で意図的と文書化されている、(3) bucket 統一と UNLOCKED RMW のロック化を本 intent に含めるか繰り延べるか、(4) 2 つの Bolt を直列化するか — 生成面 12 コピーは分割しても衝突するため並行化の実益は限定的である。
 
 ## registry drift guard の業務境界（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 

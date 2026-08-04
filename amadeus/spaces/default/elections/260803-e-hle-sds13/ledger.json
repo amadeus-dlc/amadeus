@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: scope memory 4点は、(1) Phase 1〜3と実装/根拠付き後続Issueの二択、(2) feasibility-assessment/constraint-register不在、(3) dependency-firstかつ安全リスク先行、(4) Cursor/OpenCode能力の後続実測である。Issue #1717本文の段階的ロールアウト Phase 1〜3・各面の接続または根拠付き後続Issue・Phase 3の実機確認と一致し、scope-document/intent-backlog/questionsへIntent固有の境界・順序・未確定事項として既に固定済み。横断面も team.md の既決事項を蒸し返さない規律(no-election-for-decided-norms)と project.md/team.md の依存または共有ファイル競合だけを直列化する既存規律で被覆される。前段成果物不在は今回の実行計画上の事実であり、未確認能力はRE/後続設計の実測対象なので、恒久memoryやセンサーへ一般化する新規差分はない。0件で可。",
+      "submittedAt": "2026-08-03T08:29:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。scope-definition成果物4点、amadeus-state.md、Issue #1717本文、team/project memory、既存sensor manifestを独立実測した。memoryの4観測はIntent固有または既存規範の適用である。(1) Phase 1〜3と実装/証拠付き後続Issueの二択はIssue #1717の段階的ロールアウトと受け入れ条件の転記、(2) feasibility-assessment/constraint-register不在はstateでfeasibilityが明示SKIPされた実行事実、(3) dependency-first + risk-firstは既存cid:scope-definition:c3に包含、(4) Cursor/OpenCode未確認はIssue #1717がPhase 3のcapability spikeとして既に指定し本recordの後続実測事項である。既決事項を再質問しない判断もcid:intent-capture:c1の適用。横断memoryへ追加するとIssue固有境界の過剰一般化または重複になり、sensor化できる新しい決定的違反条件もない。",
+      "submittedAt": "2026-08-03T08:29:13Z"
+    }
+  ],
+  "late": []
+}

@@ -275,16 +275,22 @@ export function createProjectFixture(options: FixtureOptions = {}) {
   writeFileSync(
     join(root, "amadeus", "config.json"),
     JSON.stringify({
-      "auto-mirror": options.mode ?? "auto",
-      "mirror-projects": (options.boards ?? [BOARD_A]).map((board) => ({
-        project: canonical(board),
-        ...(options.phaseField
-          ? { "phase-field": options.phaseField }
-          : {}),
-        ...(options.statusNames
-          ? { "status-names": options.statusNames }
-          : {}),
-      })),
+      "intent-mirror": {
+        github: {
+          issue: { mode: options.mode ?? "auto" },
+          project: {
+            targets: (options.boards ?? [BOARD_A]).map((board) => ({
+              project: canonical(board),
+              ...(options.phaseField
+                ? { "phase-field": options.phaseField }
+                : {}),
+              ...(options.statusNames
+                ? { "status-names": options.statusNames }
+                : {}),
+            })),
+          },
+        },
+      },
     }),
   );
   const real = createMirrorStateStorePorts({

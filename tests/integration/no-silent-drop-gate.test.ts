@@ -56,6 +56,7 @@ import {
   InfraFailure,
   violationResult,
 } from "../no-silent-drop/model.ts";
+import { noSilentDropTrustedBase } from "../lib/no-silent-drop-trusted-base.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const revision = (...args: string[]): string | null => {
@@ -63,11 +64,8 @@ const revision = (...args: string[]): string | null => {
   const value = result.status === 0 ? result.stdout.trim() : "";
   return /^[0-9a-f]{40}$/.test(value) ? value : null;
 };
-const headRevision = revision("rev-parse", "HEAD");
-const mergeBaseRevision = revision("merge-base", "HEAD", "origin/main");
-const TRUSTED_BASE_REVISION = mergeBaseRevision !== null && mergeBaseRevision !== headRevision
-  ? mergeBaseRevision
-  : revision("rev-parse", "HEAD^")
+const TRUSTED_BASE_REVISION = noSilentDropTrustedBase(REPO_ROOT)
+  ?? revision("rev-parse", "HEAD^")
     ?? JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
     ).bootstrapBaseRevision as string;
@@ -822,6 +820,28 @@ describe("no-silent-drop ledger", () => {
 });
 
 describe("no-silent-drop boundaries", () => {
+  test("trusted-base lookup returns null when no ancestor baseline matches", () => {
+    const root = mkdtempSync(join(tmpdir(), "nsd-trusted-base-miss-"));
+    temporaryDirectories.push(root);
+    const baselineDir = join(root, "tests", "no-silent-drop");
+    mkdirSync(baselineDir, { recursive: true });
+    writeFileSync(
+      join(baselineDir, "baseline.json"),
+      `${JSON.stringify({ generatedFrom: { previousDigest: "f".repeat(64) } })}\n`,
+    );
+    for (const args of [
+      ["init"],
+      ["config", "user.email", "fixture@example.test"],
+      ["config", "user.name", "Fixture"],
+      ["add", "tests/no-silent-drop/baseline.json"],
+      ["commit", "-m", "fixture"],
+    ]) {
+      expect(spawnSync("git", args, { cwd: root, encoding: "utf8" }).status).toBe(0);
+    }
+
+    expect(noSilentDropTrustedBase(root)).toBeNull();
+  });
+
   test("check mode fails closed without a trusted base revision", async () => {
     expect(await runGate("check", REPO_ROOT)).toMatchObject({
       status: "error",

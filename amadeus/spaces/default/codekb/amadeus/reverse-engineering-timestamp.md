@@ -1,6 +1,6 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260803-advisory-human-choice）
+## 実行メタデータ（履歴: 260803-advisory-human-choice）
 
 - Date: `2026-08-03T08:00:01Z`
 - Base commit: `a8e1ce025a918310ab7d803270bb6fc6b649c598`（本intentのprior recordはなし。他 `re-scans/` 中で日付が最新の `260802-plugin-projection-parity` のobservedを採用）
@@ -12,6 +12,37 @@
 - Verification: Developer scanのテスト結果を再利用。対象2 integration filesはexit 0、28 pass、0 fail、107 expect。Architect synthesisでは再実行なし。
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260802-registry-drift-guard` 節を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-advisory-human-choice.md` を新設。
 - Per-intent record: `re-scans/260803-advisory-human-choice.md`
+
+## 実行メタデータ（現在: 260804-evidence-revision-rebind）
+
+- Date: `2026-08-04`
+- Base commit: `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性を `git merge-base --is-ancestor 498c3034a 9458bbda8` exit 0 で実測確認。observed からの距離 `11`（`git rev-list --count`）。**直前記録 `260803-state-integrity` の observed `6c15af23a` は observed の祖先ではない**（`--is-ancestor` exit 1 を実測）— ローカル merge コミットを observed に記録したことによる非祖先化であり、`cid:reverse-engineering:c2-observed-mainline-commit` が防ごうとした事象そのもの。記録済み observed のうち祖先かつ距離最小である `498c3034a` を `cid:reverse-engineering:rescan-base-ancestry` に従い base とした）
+- Observed commit: `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`。`cid:reverse-engineering:c2-observed-mainline-commit` によりローカル merge でなく mainline 系譜のコミットを記録した。本 worktree の HEAD `668e88665` は observed と**同一ではなく**、台帳3ファイルと t413 が内容差分を持つため、全 file:line は `git show "${OBS}:<path>"` で observed から抽出している）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal
+- Focus: [Issue #2156](https://github.com/amadeus-dlc/amadeus/issues/2156)（`bug` / `P0` / `S1-FATAL`）— no-silent-drop の evidence registry が PR ブランチ SHA を `currentRevision` に固定しており、スカッシュ着地後に到達不能となって `main` の必須チェック（`CI Success`）を赤で固定している。参考として [Issue #2153](https://github.com/amadeus-dlc/amadeus/issues/2153)（同一テスト内の別 assertion）。
+- Scan mode: **xrev scan mode**（`cid:reverse-engineering:c1-xrev-scan-mode` / 単発 Issue への拡張 `c1-xrev-single-issue`）。クロスレビュー2名の verdict（`XREV-2156-20260804`、いずれも CONFIRMED_WITH_REFINEMENTS）を Developer scan の一次入力とし、Architect が主要 seam を observed 断面の verbatim 実読で二重化した（`t413:151-174` / `repository-adoption.ts:182-187` / `repository-adoption-evidence.ts:197,268,333-345,360` / `engine.ts:49` / `gate.ts:35` / `bootstrap.ts:331,427-433,493-497` / `ci.yml:893-906` の8 seam、引用不一致 0 件）。件数はすべて observed で独立再計算（`currentRevision` 24 / manifest `testedRevision` 24 / run `testedRevision` 25 / `evidenceDigest` 23 / manifest `sha256` 25 / 書込 API 8ファイル全 0）。coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。
+- **行番号再解決の免除: APPLIES（適用される）** — 両 verdict の `<!-- target-sha: 9458bbda85eb7257310a80882b4858dc6ce3d1fc -->` が observed と同一であり、E-OBB5-RES13 の免除条件「当該引用が observed と一致する SHA で検証済みであること」を満たす。**免除の根拠は touch の有無ではない**（患部9パスは base 区間で `M` = 変更あり）。
+- 区間規模: `git diff --name-only 498c3034a 9458bbda8 | wc -l` = **7283 files**。支配的変化は `9458bbda8`（PR #2152）の生成物 Git 追跡除去（`D dist` 3951 / `D .claude` 580 / `D .kimi-code` 578 / `D .codex` 552 / `D .opencode` 539 / `D .cursor` 536 / `D .agents` 94）。生成物・`amadeus/` record・`metrics/` を除く実質変更は **227 files**。
+- Current decision: 欠陥機序は確定した — `t413…test.ts:157/:159` だけが「台帳に永続化した SHA を後日 git で解決する」検査であり、スカッシュ運用では PR ブランチ tip が着地後に消えるため、着地の瞬間に到達不能へ反転する。PR 上では緑になるため PR CI でもレビューでも構造的に捕捉できず、evidence 更新4回のうち3回で再発した（導入コミット `7c29e33f7` 自身の CI が既に赤）。**「修復不能」の前提は反証された**: 再バインドは3層の不動点（SHA 置換 73箇所 → `adoption-runs.json` の sha256 を manifest 25エントリへ反映 → 23 receipt の `evidenceDigest` 再計算 = 計 121 箇所）として機械的に計算可能で、`validateEvidenceRegistry` が `ok: true`、`t413` が `10 pass / 0 fail`、ゲートが `NO_SILENT_DROP_OK` へ閉じる（repo 外 scratch clone で conductor が独立再現）。**不在なのは再生成ロジックではなく書込経路**である（`tests/no-silent-drop/` 配下 + gate の `.ts` 8ファイルで書込 API 0 件、CLI モードは `engine.ts:49` の4種のみ）。
+- Requirements Analysis へ送る裁定: **(1) 恒久解の方式** — 「着地後に main SHA へ再バインドする経路」か「PR ブランチ SHA を記録できない構造」か。**即時の再バインドだけでは次に registry を更新する PR で再発する**ため、止血のみで閉じない。前者はマージ時点で台帳を更新する経路を要し、後者は `t413:157/:159` の到達性検査の意味論変更を伴う。**(2) `bootstrap-provenance.json` の同クラス破損を本 intent の射程に含めるか** — `candidate.digest` 乖離（`607988a05…` vs 現行 `baseline.json` の `9c1e72750…`、乖離は `a2f08658e` / PR #2127 から）、`bootstrap.ts:331` の等値破れ（`69338a56f…` ≠ `fc49f8de2…`）、bootstrap fallback の恒久 fail-closed。fail-closed のため偽緑は生まないが fallback は事実上死んでいる。**(3) [#2153](https://github.com/amadeus-dlc/amadeus/issues/2153) との関係** — `t413:165-173` の path spec は独立の欠陥だが、**同一テスト・同一 test 名を共有する**ため片方だけ直しても test 単位の赤が残りうる。同一 intent で扱うか。
+- 新規所見（Issue 本文にもレビューにも未記載）: (a) bootstrap fallback は observed で既に恒久破損（上記(2)。同一設計クラスの3件目）、(b) `postRevision` は mainline のみのクローンでは「非祖先」ではなく**オブジェクトとして存在しない**（`git cat-file -e` exit 128）。reviewer-1 の「非祖先 + `--contains` 0件」は複数 remote を持つツリーでの観測であり、CI の fresh clone では 128 形になる、(c) verdict の「23 receipt 全件が `primary revision mismatch`」は実測では **run 単位 25 件**で、うち4件は `primary` 以外の run 名。発生元は `canonicalBinding` ではなく `repository-adoption-evidence.ts:268`、(d) `t413:164` は期待値に registry 自身のフィールドを渡す自己参照 assertion であり、台帳の外部妥当性を検査しない、(e) 直前 intent の observed `6c15af23a` がローカル merge のため本 observed の非祖先になっており、`cid:reverse-engineering:c2-observed-mainline-commit` の違反実例が実測で現存した。
+- 反証された未確定事項: 「`baseline-proof` receipt は台帳再バインド後に構造的に再現しない（exit 2 / `bootstrap.candidate exact-bytes digest mismatch`）」は**成立しない**。記録コマンドどおりの `--base-revision 9e699ea79…` は再バインド前後とも exit 0 / `NO_SILENT_DROP_OK`。当該エラーは `bootstrap.ts:493-495` により「信頼ベースに `baseline.json` が存在しない場合」にのみ発火し、pristine observed でも `--base-revision 47574fbab…` で同一に再現する（再バインド非依存）。両レビュアーが INCONCLUSIVE とした点は解消。
+- Updated artifacts: 9 共有成果物の現在断面を更新し、直前の `260803-state-integrity` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260804-evidence-revision-rebind.md` を新設。
+- Per-intent record: `re-scans/260804-evidence-revision-rebind.md`
+
+## 実行メタデータ（履歴: 260803-state-integrity）
+
+- Date: `2026-08-03`
+- Base commit: `a8e1ce025a918310ab7d803270bb6fc6b649c598`（`git merge-base --is-ancestor` exit 0 で祖先性を実測確認。HEAD から 42 コミット手前の最近祖先を `cid:reverse-engineering:rescan-base-ancestry` に従って選択。直近記録 `260802-registry-drift-guard` の observed `64b44a9f8` は本 worktree HEAD の祖先ではないため不採用）
+- Observed commit: `498c3034a78bd432dc426f9f807b79c8ae980762`（worktree HEAD、`git rev-parse` exit 0。scan による source 変更なし）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal
+- Focus: audit lock の相互排他破れ（[Issue #1906](https://github.com/amadeus-dlc/amadeus/issues/1906)、P2 / S1-FATAL / `origin:bootstrap`）と `Completed` カウンタ定義の三分裂（[Issue #1875](https://github.com/amadeus-dlc/amadeus/issues/1875)、P3 / S4-MINOR / `origin:bootstrap`）。両 Issue とも本 observed SHA でクロスレビュー2名成立済み。
+- Scan mode: **xrev scan mode**（`cid:reverse-engineering:c1-xrev-scan-mode`、単発のクロスレビュー済み Issue への拡張 `c1-xrev-single-issue`）。両 Issue のレビュー verdict を Developer scan の一次入力とし、Architect が主要 seam 9 箇所を verbatim 実読で二重化した（引用不一致 0 件）。**行番号再解決の免除は適用される（APPLIES）** — 理由: レビュアーが引用した file:line はすべて本 observed SHA `498c3034a` で検証されており、レビュー対象 SHA == observed SHA が成立する。coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。
+- Current decision: #1906 の相互排他破れは 2 つの steal 分岐に分解される。支配的なのは分岐 B（live-owner-over-age、`amadeus-lib.ts:6274-6282` / `:6296-6300`）で、CAS 後検証は **構造的に不活性**（live holder は stamp を更新しないため `stampMatches` が守るべきケースで必ず通過する）。6/6 の scratch run が 20 増分中 14–16 を失い全プロセス exit 0。分岐 A（old-unstamped-dir）は grace ノブ単独では 0/6 だが、`finalizeAuditLockAcquire:6345` の fail-open が一時的な stamp 書込失敗を恒久的に steal 可能な live lock へ変換し決定的にする。**既定ノブでの挙動は fail-CLOSED**（41 成功 + 19 loud 非ゼロ終了 = 60、無音損失ゼロ）であり、Issue 原文の記述は既定構成を描写していない。最小かつ高価値の修正は `:6345` を fail closed にすること。#1875 は `Completed` に 3 定義（R=生カウント / E=EXECUTE 実効 / G=graph 由来）が並存し、`amadeus-state.ts:3377` の approve 検証器は自分が書いたのと同じ定義で再計算するため乖離検出が構造的に不可能（検証劇場）。
+- Requirements Analysis へ送る裁定: (1) 3 つの `Completed` 定義のどれを正準とするか — R と E は既存 e2e/integration テストで矛盾して pin されており、いずれの裁定も既存テストの明示改訂を伴う、(2) live PID の over-age reap を heartbeat 付きで残すか除くか — 除く場合の wedge holder 回復手段を定義する必要があり、`amadeus-audit.ts:429-433` は現行挙動を意図的と文書化している、(3) ロック bucket 統一と UNLOCKED な RMW のロック化を本 intent に含めるか繰り延べるか（`t164` の bucket 意味論 pin 改訂と `resyncOneIntent` の扱いを含む）、(4) Bolt 直列化か唯一の綺麗な並行分割か — 生成面 12 コピーは分割しても衝突するため並行化の実益は限定的、(5) 付随: NSD001 の対処方針（ロック catch 編集は baseline 再 fingerprint を伴う）。
+- 新規所見（どちらの Issue にも記載なし）: (a) ロックは heartbeat を持たない — `owner.startedAtMs` は acquire 時刻のまま更新されず、健全な長時間 holder と wedge した holder が区別不能、(b) ロック bucket が不整合 — `handleSet`/`handleCheckbox` は per-intent bucket、`handlePark`/`handleUnpark` 他は同一 state file を workspace sentinel bucket で変更する（**code-derived、未実測**）、(c) `resyncOneIntent`（`amadeus-lib.ts:5843→5888`）は `Completed` を書く UNLOCKED な state RMW である。
+- Updated artifacts: 9 共有成果物の現在断面を更新し、直前の `260802-registry-drift-guard` を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-state-integrity.md` を新設。
+- Per-intent record: `re-scans/260803-state-integrity.md`
 
 ## 実行メタデータ（履歴: 260802-registry-drift-guard）
 

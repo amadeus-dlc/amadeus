@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SIRA-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "3件とも独立 cid ではなく既存 cid への追補として persist し、intent 固有の固有名・数値を落とした一般形で書くこと — c1 は cid:reverse-engineering:c1-xrev-mechanism-resolution / cid:requirements-analysis:always-elect のクロスレビュー権限境界ファミリへ、c4 は cid:code-generation:conductor-sync-subagent-collection(現行本文の『Claude Code では TaskOutput block=true』が今回の非同期起動実測で不十分と判明した面)への追補へ、c7 は team.md:citation-reservation-preservation(上流の留保の保存)の鏡像面(留保なき全称断定の無検証昇格禁止)へ寄せる。",
+  "rationale": "独立検証: (1) memory 層を grep して重複可否を確認した。`grep -n 'c3-260729-open-bug-batch' *.md phases/*.md` → project.md:281 のみ。同 cid の本文は『Issue 本文の要求を現行 stage の質問票へ正本として固定する』であって、レビュアーの『未裁定』というメタ判断と一次証拠が競合したときの優劣を定めていない。project.md:263(cid:requirements-analysis:c5)は『既存実装の流儀で決まる事項はユーザーに問わない』であり、対象は既存実装の idiom であって Issue 本文の逐語指名ではない。team.md:62(always-elect)は『権威ある一次証拠→執行』を既決するが、二次情報(レビュー verdict)がその一次証拠の裁定状態を否定した場合の扱いは未被覆。よって c1 の核(二次のメタ判断は一次証拠を上書きしない)は新規と判断した。ただし本日 persist 済みの project.md:310(cid:reverse-engineering:c1-xrev-mechanism-resolution — クロスレビューが担うのは欠陥の実在であって機序の一意確定ではない)と同一ファミリのため、追補が妥当と考える(留保)。(2) c4: `grep -n 'disk-evidence-early-takeover|conductor-sync-subagent-collection|spawned-agent-result-delivery' *.md` → team.md:175 / :216 / :235。team.md:216 は『Claude Code では TaskOutput block=true』と手段を名指しするが、今回は run_in_background:false でも非同期起動して Stop hook が2回発火した(diary Deviations 2026-08-03T13:15Z)。既存本文の手段が現ハーネスで不成立という反証を含むため、単なる遵守記録ではなく既存 cid の是正情報にあたる。stat -f%z が symlink で空を返し wc -c へ是正した点も『壊れた計装が対照実測を汚染する』クラス(team.md instrumentation-syntax-check)の実測補強として意味がある。(3) c7: `grep -n '上流' *.md` → team.md:201(citation-reservation-preservation)は『留保部の転記』を縛るが、留保なき全称断定の検証を要求していない。project.md:246(estimates-not-acceptance-criteria)は数値推定に限定される。c7 が扱う『定性的な全称断定の受け入れ基準への昇格』は両者の隙間で未被覆。成果物側でも実施を確認した — requirements.md:140『現に赤かったか否かに関わらず、生カウント意味論をピン留めしたままにしない』が、RE 断定『必ず赤になる』を検証可能形へ置換した実体。(4) 不採用側の妥当性も確認した。c2/c3 は questions ファイル冒頭(選挙不要判定節、Q4/Q5 の撤回根拠に always-elect と c6 を逐語引用)がまさに既決ノルムの適用報告であり、規範追加はない。c5 は SKILL 本文が既に repeat the whole reviewer flow を規定し実害ゼロ(complete-review exit 0・Review ブロック着地)。c6 は requirements.md 前提 A-1 として record に記録済みの intent 固有判断。よって3件採用・4件不採用の集合自体は支持する。",
+  "submittedAt": "2026-08-03T14:05:00Z"
+}

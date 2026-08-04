@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-UG13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "『0件で可』を全面的に支持する。c1の共通基盤2件+adapter別transport slice 10件、全Unit kind: libraryという分解は、Issue #1717の12 surfaceとApplication Design C1〜C9の所有境界から導いた当該Intent固有のDAGである。既存project.md cid:units-generation:c1はDelivery Planning前に各Unitの独立実装可能性を検証することを既に要求し、team.md cid:requirements-analysis:parallel-boltsは真の依存だけを直列化する。c2のClaude SDK/TUIとKiro ACP/TUI/IDEをtransport別Unitにする判断は、driver所有path、fake/live検証、C5+C6 concrete sliceを排他的に閉じるための同規範の適用である。review iteration 1でC6所有重複とunsupported closure不足を検出し、iteration 2では全Unitが排他的・独立実装可能、DAG非循環、FR/NFR trace整合と確認済み。12 Unit exact-once、canonical kind、declared depends_on、single rootはunit-of-work-dependency.mdの機械可読DAGとvalidationで閉じており、transport粒度は意味判断なので新規sensorにも適さない。よってc1/c2はIntent recordへ保持し、横断rule/sensorへ一般化しないのが妥当である。",
+  "submittedAt": "2026-08-03T12:17:22Z"
+}

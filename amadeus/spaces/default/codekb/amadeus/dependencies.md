@@ -1,6 +1,6 @@
 # 依存関係
 
-## advisory 人間選択の依存関係（260803-advisory-human-choice、現在、observed `498c3034a`）
+## advisory 人間選択の依存関係（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行依存方向
 
@@ -26,6 +26,112 @@ stage report
 - `functional-design` はUnit DAGに依存して複数の `gate:false` directiveを出し、最終 `gate:true` へ合流する。最初のdirectiveでlatch済みになるため、final report guardだけを追加しても時間依存を閉じられない。
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
+
+## no-silent-drop evidence 再バインドの依存関係（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。**新規の外部依存・service・network I/O は不要**であり、関係するのはリポジトリ内部の依存方向と台帳間の束縛方向のみである。
+
+### 台帳間の依存方向（不動点の閉路）
+
+```
+adoption-runs.json (testedRevision 25)
+        │ バイト digest
+        ▼
+adoption-evidence-manifest.json (testedRevision 24 / artifact.sha256 25)
+        │ canonicalBinding = f(testedRevision, artifact digest)
+        ▼
+adoption-evidence.json (currentRevision 24 / evidenceDigest 23)
+        │ registry.currentRevision を自身の期待値として渡す
+        ▼
+t413…test.ts:164 validateEvidenceRegistry(registry, registry.currentRevision)
+```
+
+`testedRevision` を1箇所でも変えると下流2段の digest が連鎖して変わるため、**単層の書き換えは必ず不整合を残す**（段階 A で 48 problems、段階 B で 23、段階 C で 0）。逆に3層を順に処理すれば決定的に閉じる。
+
+### コード依存
+
+- `t413…test.ts` → `repository-adoption.ts`（`validateEvidenceRegistry`）→ `repository-adoption-evidence.ts`（`canonicalBinding` / `parseManifestEntries` / `readArtifactCollection`）。
+- `tests/no-silent-drop-gate.ts` → `engine.ts`（`Mode` 4種）→ 各検証器。**書込側の依存は一切ない**（8ファイルの書込 API 出現数 0）。
+- `bootstrap.ts` → `bootstrap-provenance.json`。`:493-495` の条件により、信頼ベースに `baseline.json` が存在する通常運用ではこの依存経路は**呼ばれない**（fallback 専用）。
+
+### 外部依存
+
+- `git`（`spawnSync` 経由）。台帳に永続化した SHA の到達性が git の実際の履歴に依存する構造が欠陥の根である。
+- GitHub ruleset `main`（id `18843917`）→ `CI Success`（`ci.yml:893-906`）→ `tests` / `coverage` ほか9ジョブ。必須チェックの依存はこの1本のみ。
+
+### 直列化点
+
+台帳3ファイルは単一の不動点として同時に更新される必要がある。分割コミット・分割 PR で段階更新すると中間状態が必ず赤になるため、再バインドは**1変更単位で閉じる**必要がある（要件段の制約として引き継ぐ）。
+
+## state integrity の依存関係（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
+
+本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。**新規の外部依存・service・network I/O は不要**である。関係するのはすべてリポジトリ内部の依存方向である。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+### ロック依存の方向
+
+```
+呼び出し側 36 箇所（state / presence-reservation / utility / runtime / sensor /
+grant-authorization / audit / learnings / orchestrate / graph）
+        │
+        ▼
+withAuditLock（depth counter・identity 解決）
+        │
+        ├─► auditLockIdentity :5960-5966 ── bucket 決定（per-intent / workspace sentinel）
+        │
+        ▼
+acquireAuditLock :6360 ── 予算 51 試行 / 5000 ms
+        │
+        ├─► reapStaleLock → acquireReapMutex → reapStaleLockUnderMutex :6284
+        │        ├─ 分岐 A :6285-6295（判定 :6294、grace）
+        │        └─ 分岐 B :6296-6300（liveOwnerMayBeReaped :6274、stale）
+        │                └─► CAS rename → stampMatches :6142-6154
+        │
+        └─► finalizeAuditLockAcquire :6337-6356 ── writeOwnerStamp :6013
+                                                    （:6345 に fail-open）
+```
+
+**depth counter を経由しない bare 依存**（`withAuditLock` の再入保護を受けない）: `amadeus-audit.ts:549`、`amadeus-mirror-state-store.ts:457`（`enterAuditLock`）/`:477`、`packages/framework/core/otel/fatal-latch.ts:99`（削減予算 `(5, 50)` = 250 ms）。ロックの予算・方針を変更する場合、これら 4 箇所は `withAuditLock` 経由の呼び出しと別の前提に立つため個別に確認する必要がある。
+
+**`withLockedIntentRegistry`（`amadeus-lib.ts:2289`）は `intents.json` を守るため意図的に workspace スコープ**である。`handleUnpark` は `withIntentLifecyclePreflight` → `withLockedIntentRegistry` → `withAuditLock(projectDir, …)` の経路で state file にも到達するため、bucket 統一は「registry ロック」と「state file ロック」を分離する依存構造の変更を要する。
+
+### `Completed` の依存の方向
+
+```
+state file の [x] 行 ──► countCheckboxes :5669 ──► 定義 R ──┐
+                    └─► parseCheckboxes + effective ──► 定義 E ─┤──► Completed フィールド
+stage graph ──────────► initialization 段数 ──────► 定義 G ──┘         │
+                                                                        ├─► audit 行（append-only）
+                                                                        ├─► CLI JSON
+                                                                        └─► approvalNextStateIssue :3377
+                                                                              └─► 定義 R を再計算（循環）
+```
+
+検証器 `:3377` が定義 R に依存し、かつ定義 R の書き手が同じ関数群に含まれるため、**読み手と書き手の依存が循環しており独立検証になっていない**。是正は「書き手を単一化する」ことと「検証器を正準定義へ接続する」ことの 2 つの独立した依存変更を要する。
+
+`rebuildDerivedPlanFields`（`amadeus-lib.ts:5781-5784`）は定義 E の唯一の共有書き手であり、`handleRecompose`（locked）と `resyncOneIntent`（UNLOCKED）から消費される。一方 `handleScopeChange`（`amadeus-utility.ts:5236`）はこの共有書き手に依存せず**独自の inline コピー**を持つ。定義統一はこの重複依存の解消を含む。
+
+### ロックプリミティブへの新規依存が必要になる箇所
+
+`amadeus-jump.ts` と `amadeus-bolt.ts` は現在ロックプリミティブを一切 import していない。両ファイルの UNLOCKED な state RMW（`amadeus-jump.ts:370→627`、`amadeus-bolt.ts:872→889`/`927→954`）をロックする判断は、**新しいモジュール依存の導入**にあたる。裁定でスコープに含める場合、この依存追加を設計に明示する。
+
+### CI ゲートへの依存
+
+| ゲート | 起点 | 本 intent との関係 |
+| --- | --- | --- |
+| no-silent-drop | `ci.yml:154` → `package.json:24` → `bun tests/no-silent-drop-gate.ts check --base-revision <base>`。規則 `tests/no-silent-drop/ast-scan.ts:845-846, :16`、baseline `tests/no-silent-drop/baseline.json`（217 エントリ、`amadeus-lib.ts` 35 / `amadeus-state.ts` 10） | **最大の CI リスク**。ロックの catch ブロック（`:6013`、`:6048`、`:6060`、`:6122`、`:6210`、`:6241`/`:6250`/`:6258`/`:6263`/`:6269`、`:6306`/`:6316`/`:6319`/`:6327`、`:6350`、`:6372`/`:6380`）は現在 grandfather 済みで、編集すると再 fingerprint されて NSD001 が発火する |
+| unchecked-cast-guard | `ci.yml:169` → `bun tests/unchecked-cast-guard.ts --check` | 併走する |
+| `dist:check` / `promote:self:check` | blocking | `packages/framework/core/` 変更後に必須 |
+| `t258-boundary-guard` | 全 dist コピーに適用 | `packages/framework/core/` のコメントへ `scripts/<file>` トークンを持ち込むと落ちる |
+
+`NSD003_FUNCTIONS`（`ast-scan.ts:16`）は `persistBlocked` / `setCheckbox` / `setStageSuffix` / `resyncOneIntent` を追跡する。`resyncOneIntent` は本 intent の UNLOCKED RMW 所見の対象でもあり、手を入れる場合は戻り値の扱いも同時に満たす必要がある。
+
+### 配布面の依存 — 2 パッチが必ず衝突する理由
+
+`packages/framework/core/tools/<file>` は 12 個のコミット済みコピーへ投影される（7 dist: `claude`/`codex`/`cursor`/`kimi`/`kiro`/`kiro-ide`/`opencode` + 5 self-install: `.claude`/`.codex`/`.cursor`/`.opencode`/`.kimi-code`。`.kiro/tools` と `.kiro-ide/tools` は dist 専用のため repo root に存在しない）。両パッチとも `amadeus-lib.ts` を触るため、**Bolt をどう分割しても 12 コピーの生成面で衝突する**。
+
+ソース面の交差は `amadeus-state.ts:1444-1460`（`handleCheckbox`）、`amadeus-jump.ts:564`、`amadeus-utility.ts` の `handleScopeChange` の 3 点である。`cid:code-generation:c6` の非交差判定は実ファイル目録で行うため、ソース・生成面の双方で交差する現状では**直列化が推奨**となる。並行が必要な場合の唯一の綺麗な分割は「Bolt A = `amadeus-lib.ts` のロックプリミティブのみ（`:6337-6356` + `:6274-6300` + `:6360-6361`）、bucket 統一と RMW ロックは繰り延べ／Bolt B = #1875」であり、この場合でも生成面の衝突は残る。
 
 ## registry drift guard の依存関係（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 

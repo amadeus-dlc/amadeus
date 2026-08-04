@@ -86,12 +86,47 @@ body:
     id: environment
     attributes:
       label: 観測環境・対象リビジョン
-      description: 対象 SHA、ブランチ、OS、Bun/Amadeus バージョンなど、再現に必要な環境を記載してください。
+      description: 対象 SHA、ブランチ、OS、Bun バージョンなど、Amadeus とハーネス以外の再現に必要な環境を記載してください。
       placeholder: |
         - revision:
         - branch:
         - OS:
-        - Bun / Amadeus:
+        - Bun:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: harness
+    attributes:
+      label: ハーネス名
+      description: 不具合を観測したハーネスを選択してください。複数で再現する場合は、その他のハーネスを補足欄に記載してください。
+      options:
+        - claude
+        - codex
+        - cursor
+        - kimi
+        - kiro
+        - kiro-ide
+        - opencode
+        - ハーネス非依存
+    validations:
+      required: true
+
+  - type: input
+    id: harness-version
+    attributes:
+      label: ハーネスバージョン
+      description: 不具合を観測したハーネスのバージョンを記載してください。ハーネス非依存の場合は「該当なし」と記載してください。
+      placeholder: "例: 0.139.0"
+    validations:
+      required: true
+
+  - type: input
+    id: amadeus-version
+    attributes:
+      label: Amadeus バージョン
+      description: 不具合を観測した Amadeus のバージョンを記載してください。開発中のバージョンの場合は、対象リビジョンも併記してください。
+      placeholder: "例: 0.1.0"
     validations:
       required: true
 

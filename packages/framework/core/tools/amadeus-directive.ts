@@ -134,6 +134,12 @@ export interface RunStageDirective {
   // Absent on gate:false directives (per-unit iteration steps, initialization) and
   // on --single runs (an isolated run that does not advance). FR-2 item 10.
   next_stage?: string | null;
+  // phase_boundary — the phase whose verification artifact must exist BEFORE
+  // this gate is approved. Present only when a gate-carrying main-workflow
+  // directive exits Ideation, Inception, or Construction after scope overrides
+  // are applied. This lets every harness load the governance protocol without
+  // re-deriving the phase transition from the graph.
+  phase_boundary?: "ideation" | "inception" | "construction";
   // Optional solo standing-grant carrier. The runtime validator enforces that
   // both fields are present together and exactly match their canonical formats.
   standing_grant_id?: string;
@@ -397,6 +403,7 @@ const RUN_STAGE_FIELDS = [
   "unit",
   "consumes_absent",
   "next_stage",
+  "phase_boundary",
   "standing_grant_id",
   "standing_grant_route_id",
   "advisories",
@@ -606,12 +613,27 @@ function checkRunStageShared(
   // next_stage: optional; if present must be a string (a stage slug) OR null (the
   // explicit terminal signal). Absent on gate:false / --single directives.
   checkOptionalNullableString(o, "next_stage", kind, errors);
+  checkOptionalPhaseBoundary(o, kind, errors);
   // advisories: optional (present ONLY when a plugin activation advisory
   // actually fires at this checkpoint). An EMPTY array is never emitted — the
   // key's absence is the encoding of silence — but an explicitly empty array is
   // still structurally valid rather than an error.
   checkOptionalAdvisories(o, "advisories", kind, errors);
   if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
+}
+
+function checkOptionalPhaseBoundary(
+  o: Record<string, unknown>,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!("phase_boundary" in o)) return;
+  const value = o.phase_boundary;
+  if (value !== "ideation" && value !== "inception" && value !== "construction") {
+    errors.push(
+      `${kind}: phase_boundary must be ideation, inception, or construction, got ${typeof value === "string" ? JSON.stringify(value) : describe(value)}`,
+    );
+  }
 }
 
 function checkStandingGrantCarrier(

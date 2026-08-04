@@ -22,6 +22,7 @@ Pick your harness:
 | **OpenCode** | `$amadeus` | [AI-DLC on OpenCode](opencode.md) — prerequisites, manual install, session skills, why hooks aren't wired yet. |
 | **Cursor** | `/amadeus` | [AI-DLC on Cursor](cursor.md) — prerequisites, manual install, the 8-event hook wiring. |
 | **Kimi Code** (≥ 0.29.0) | `/skill:amadeus` | [AI-DLC on Kimi Code](kimi-code.md) — prerequisites, installer + user-level hook wiring, what's different on Kimi. |
+| **Pi Coding Agent** (≥ 0.83.0) | `/skill:amadeus` | [AI-DLC on Pi Coding Agent](pi.md) — native trust, setup and package activation, gate constraints, doctor, and lifecycle/driver failures. |
 
 AI-DLC on Kiro (IDE or CLI) works best with **Claude Opus 4.8**, which requires a **paid Kiro plan**.
 

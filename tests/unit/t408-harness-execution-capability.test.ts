@@ -15,7 +15,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-harness.ts";
 
 describe("shared harness capability adapters", () => {
-  test("all seven packages use the same policy-free port", () => {
+  test("all eight packages use the same policy-free port", () => {
     expect(Object.keys(HARNESS_CAPABILITY_PORTS).sort()).toEqual([
       "claude",
       "codex",
@@ -24,6 +24,7 @@ describe("shared harness capability adapters", () => {
       "kiro",
       "kiro-ide",
       "opencode",
+      "pi",
     ]);
     for (const port of Object.values(HARNESS_CAPABILITY_PORTS)) {
       expect(port.capabilities().state).toBe("available");
@@ -117,6 +118,7 @@ describe("shared harness capability adapters", () => {
       "kiro",
       "opencode",
       "kimi",
+      "pi",
     ] as const) {
       expect(executionHarnessFrom(harness)).toBe(harness);
     }

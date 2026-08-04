@@ -59,25 +59,31 @@ closeにはverified provenance、同一repository、workflow landed、final sync
 Pull Request、release、deploy、daemon、pollingはIntent Mirrorの対象外です。
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"mirror-projects","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"auto-mirror","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"intent-mirror.github.project.targets","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"intent-mirror.github.issue.mode","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
 ## Project board
 
-`mirror-projects`は、このIntentが同期するGitHub Project boardを列挙します。各要素は`project: "<owner>/<number>"`でboardを1件指定し、任意の`phase-field`でライフサイクル用single-select field名を、`status-names`でphaseキーからoption名への上書きを指定できます。`phase-field`の既定値は`Intent Phase`です。phaseキーは`ideation`、`inception`、`construction`、`operation`、`done`で、未知のキーは無視せずエラーにします。
+`intent-mirror.github.project.targets`は、このIntentが同期するGitHub Project boardを列挙します。各要素は`project: "<owner>/<number>"`でboardを1件指定し、任意の`phase-field`でライフサイクル用single-select field名を、`status-names`でphaseキーからoption名への上書きを指定できます。`phase-field`の既定値は`Intent Phase`です。phaseキーは`ideation`、`inception`、`construction`、`operation`、`done`で、未知のキーは無視せずエラーにします。
 
 ```json
 {
-  "mirror-projects": [
-    { "project": "acme/7" },
-    {
-      "project": "acme/12",
-      "phase-field": "Lifecycle",
-      "status-names": { "construction": "In Progress" }
+  "intent-mirror": {
+    "github": {
+      "project": {
+        "targets": [
+          { "project": "acme/7" },
+          {
+            "project": "acme/12",
+            "phase-field": "Lifecycle",
+            "status-names": { "construction": "In Progress" }
+          }
+        ]
+      }
     }
-  ]
+  }
 }
 ```
 
-このキーは層ごとに解決され、値を持つ最後の層が前の層のリストへマージせず全置換します。したがってSpaceやIntentの層では、対象boardの完全な集合を書きます。`mirror-projects`は`auto-mirror`とは独立です — モードは操作を実行するかどうかを決め、このキーはその操作がどのboardへ及ぶかを決めます。
+このキーは層ごとに解決され、値を持つ最後の層が前の層のリストへマージせず全置換します。したがってSpaceやIntentの層では、対象boardの完全な集合を書きます。`intent-mirror.github.project.targets`は`intent-mirror.github.issue.mode`とは独立です — モードは操作を実行するかどうかを決め、このキーはその操作がどのboardへ及ぶかを決めます。
 
 Lifecycleの正本値は`phase-field`が指すsingle-select（既定値`Intent Phase`）へ書き込みます。標準の`Status`は補助同期であり、進行中Intentは`In progress`、完了Intentは`Done`へ移し、parkedまたはarchived中は現在値を維持します。補助Statusのfield・option不足や更新失敗は、ライフサイクルfieldのreconcileやIssue closeを阻害しません。
 

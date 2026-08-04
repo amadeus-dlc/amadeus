@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-AD13",
+  "voter": "subagent-1",
+  "question": "application-designのc1〜c3はIssue #1717固有のlocal test-harness境界、registry/JSONL/Markdown正本裁定、共通deep moduleとtransport adapter分離としてIntent成果物に保持し、新規project/team ruleまたはsensorは0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、3候補をIntent recordに保持する"
+    }
+  ]
+}

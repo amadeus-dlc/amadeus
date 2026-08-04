@@ -182,6 +182,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
       `${registry.currentRevision}..${headRevision}`,
       "--",
       ":(glob)tests/no-silent-drop/**/*.ts",
+      "tests/no-silent-drop-gate.ts",
     ], { cwd: REPO_ROOT, encoding: "utf8" }).stdout.trim();
     expect(changedImplementation).toBe("");
   });

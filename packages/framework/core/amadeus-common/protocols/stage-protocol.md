@@ -20,7 +20,7 @@ Before and during EVERY stage, verify:
 4. [ ] **Task transitions + state sync** — Mark previous task `completed`, then `TaskUpdate({ ..., status: "in_progress", activeForm: "Running [Stage] [slug]" })`. The `[slug]` suffix triggers the PostToolUse hook that syncs the state file. `amadeus-orchestrate.ts report --stage <slug> --result approved` auto-advances to the next in-scope stage (or completes the workflow on the final stage) — do NOT call `advance` separately after approval. (§4)
 5. [ ] **Stage ritual is ATOMIC** — once a stage starts, EVERY step in its protocol fires: questions → artifact → reviewer (if declared) → learnings → gate. No step is skippable based on inferred user intent. "Skip to stage X" means skip INTERMEDIATE stages, NOT shortcut the TARGET stage's ritual. If a user jumps forward from a stage at its gate, the current stage's learnings ritual (§13) MUST fire before the jump executes.
 6. [ ] **Autonomy is NEVER inferred** — a user saying "go with recommended" or "pick the best answers" for one stage is a ONE-TIME instruction for THAT stage only. It does NOT create a standing rule. The next stage starts fresh with its declared autonomy mode. The ONLY way to get autonomous mode is: (a) the directive explicitly carries `autonomy: autonomous`, OR (b) the human explicitly says "run this autonomous" for the specific stage being proposed. NEVER carry forward an autonomy inference from a previous stage. NEVER self-answer questions without explicit permission for THIS stage.
-7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic finding filer and the resolved `"auto-file-findings"` mode. Never improvise a direct GitHub mutation. (§14)
+7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic GitHub Issue creator and the resolved `finding.github.issue.creation.mode`. Never improvise a direct GitHub mutation. (§14)
 
 ---
 
@@ -139,8 +139,8 @@ When a Bolt's code-generation returns failure, **always halt regardless of auton
 
 **Solo auto-election hook — which branch rules the halt.** Exactly one of these two branches runs, and the first one that applies wins:
 
-1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `"auto-solo-election": true`** — the blocker goes to an election INSTEAD OF the prompt below. Write a definition JSON carrying `electionId`, `kind`, `question`, `choices` (one per option above — retry / skip / abort) and `voters`, then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. The election's ruling selects the option to take, and the prompt below is not presented.
-2. **Every other case** — team mode, config absent or `false`, or the CLI answering `{"opened":null,"reason":"auto-solo-election-disabled"}` (which writes nothing) — present the halt-and-ask prompt below exactly as written. This is the default branch.
+1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `solo-election.trigger.mode` to `auto`** — the blocker goes to an election INSTEAD OF the prompt below. Write a definition JSON carrying `electionId`, `kind`, `question`, `choices` (one per option above — retry / skip / abort) and `voters`, then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. The election's ruling selects the option to take, and the prompt below is not presented.
+2. **Every other case** — team mode, config absent or `manual`, or the CLI answering `{"opened":null,"reason":"solo-election-manual-trigger-required"}` (which writes nothing) — present the halt-and-ask prompt below exactly as written. This is the default branch.
 
 The orchestrator runs `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
 
@@ -1107,14 +1107,15 @@ Trigger after Step N-1 (completion message rendered) and before Step N (approval
 3. **Render the structured question + free-text channel.** For each candidate, render one option whose `label` is the candidate `summary` (verbatim) and whose `description` names the routed destination (e.g. `→ project.md ## Corrections`) plus a "promote to team?" affordance. Never label an option with only the candidate id — `❌ "Persist c5 only (Recommended)"` is a protocol violation: the human cannot judge what `c5` is from the label, so the `summary` (not the id) must be the visible `label`. After `multiSelect` returns, correlate each kept label back to its candidate `id` + `source_heading`. Then **always** ask "Anything to add for next time?"; for any non-empty response, ask the user to pick one of the four diary headings (Interpretation / Deviation / Tradeoff / Open question). **The diary-heading pick is the only classification asked of the user.** From it, the orchestrator routes the learning to the fitting practice heading in the method file (KNOWLEDGE): a testing learning → `## Testing Posture`, a prohibition → `## Forbidden`, anything general → `## Corrections` (the default). The user never picks the destination heading directly — the orchestrator routes by fit, and the tool ensure-exists the heading before it writes.
 
    **Solo auto-election hook.** In solo mode, when the layered config
-   (`amadeus/config.json` → space → intent) resolves `"auto-solo-election": true`,
+   (`amadeus/config.json` → space → intent) resolves
+   `solo-election.trigger.mode` to `auto`,
    do not settle the kept set alone — put the selection (including a zero-candidate
    proposal) to an election. Write a definition JSON carrying `electionId`, `kind`,
    `question`, `choices` (one per candidate, or the single "0 件で可" choice for a
    zero-candidate proposal) and `voters`, then run
-   `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto-solo --file <definition.json>`.
+   `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`.
    `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is
-   evaluated. If the CLI answers `{"opened":null,"reason":"auto-solo-election-disabled"}`,
+   evaluated. If the CLI answers `{"opened":null,"reason":"solo-election-manual-trigger-required"}`,
    no election is created: fall back to the user's ruling on the same selection.
 
 4. **Admission conflict-check (before any write).** For each kept learning candidate, compare the proposed practice line against `org.md`'s matching `## <section>` (matched by the routed heading — the single-line variant of the §5 admission gate). This comparison is a section-level LLM check (knowledge → orchestrator-LLM). If the practice contradicts an org guardrail, surface the conflicting org sentence inline; the user **revises, skips this candidate, or escalates** (judgement → user; there is no user-override path). Only conflict-clear or user-escalated selections proceed to the write. Sensor manifests have no org-section analogue and skip this check.
@@ -1168,12 +1169,12 @@ Two reasons: (1) framework upgrades to a stage file would conflict with workflow
 
 ---
 
-## 14. Automatic Amadeus Finding Filing
+## 14. Automatic Amadeus Finding Issue Creation
 
 When stage work exposes a confirmed defect or actionable engineering concern
-owned by Amadeus itself, route it through the deterministic finding filer. The
-layered setting is `"auto-file-findings": "off" | "prompt" | "auto"` and its
-default is `"prompt"`. The fixed remote target is
+owned by Amadeus itself, route it through the deterministic GitHub Issue creator. The
+layered setting is `finding.github.issue.creation.mode` with values
+`off | prompt | auto`; its default is `prompt`. The fixed remote target is
 `amadeus-dlc/amadeus`; this setting never files application-project issues.
 The upstream target is deliberate: an Amadeus-owned defect observed in ANY
 workspace — including forks and end-user projects — belongs to the framework's
@@ -1195,7 +1196,7 @@ ownership are never auto-filed. Surface them to the human instead. Work already
 in scope is fixed and tested in the active intent rather than duplicated as a
 new Issue.
 
-### Deterministic filing
+### Deterministic creation
 
 Create a concise public body file under the current stage's artifact directory.
 It must include summary, evidence or reproduction, expected-versus-actual
@@ -1206,7 +1207,7 @@ signature; never include timestamps, worktree paths, or secrets.
 Run:
 
 ```bash
-bun {{HARNESS_DIR}}/tools/amadeus-finding.ts file \
+bun {{HARNESS_DIR}}/tools/amadeus-finding.ts create-github-issue \
   --project-dir <workspace-root> \
   --kind <defect|concern> \
   --title "<concise title>" \

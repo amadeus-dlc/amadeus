@@ -41,20 +41,21 @@ describe("run-model-check CLI", () => {
     expect(lines[1]).toBe("run-model-check: HARNESS_ERROR (MISSING_ARG)");
   });
 
-  for (const expected of [
-    { outcome: "NOT_DETECTED", exitCode: 0 },
-    { outcome: "DETECTED", exitCode: 1 },
-  ] as const) {
-    test(`returns exit ${expected.exitCode} and a manifest-last ${expected.outcome} result`, () => {
+  for (const modelName of ["FormalElection", "MirrorLifecycle"] as const) {
+    for (const expected of [
+      { outcome: "NOT_DETECTED", exitCode: 0 },
+      { outcome: "DETECTED", exitCode: 1 },
+    ] as const) {
+      test(`${modelName} returns exit ${expected.exitCode} and a manifest-last ${expected.outcome} result`, () => {
       const root = mkdtempSync(join(tmpdir(), "run-model-check-e2e-"));
       roots.push(root);
       const workspace = join(root, "workspace");
       mkdirSync(workspace);
-      const model = join(workspace, "FormalElection.tla");
-      const cfg = join(workspace, "FormalElection.cfg");
+      const model = join(workspace, `${modelName}.tla`);
+      const cfg = join(workspace, `${modelName}.cfg`);
       const out = join(root, "out");
-      cpSync("specs/tla/FormalElection.tla", model);
-      cpSync("specs/tla/FormalElection.cfg", cfg);
+      cpSync(`specs/tla/${modelName}.tla`, model);
+      cpSync(`specs/tla/${modelName}.cfg`, cfg);
       const result = Bun.spawnSync([
         "bun",
         "tests/formal-verif/support/run-model-check-cli-fixture.ts",
@@ -83,6 +84,10 @@ describe("run-model-check CLI", () => {
         schema: "amadeus.model-check-manifest.v1",
         outcome: expected.outcome,
         exitCode: expected.exitCode,
+        sourceProvenance: {
+          modelPath: `specs/tla/${modelName}.tla`,
+          cfgPath: `specs/tla/${modelName}.cfg`,
+        },
       });
       for (const artifact of manifest.artifacts) {
         const bytes = readFileSync(join(out, artifact.path));
@@ -92,6 +97,7 @@ describe("run-model-check CLI", () => {
         }).toEqual({ bytes: artifact.bytes, sha256: artifact.sha256 });
       }
     });
+    }
   }
 
   for (const failure of ["REALPATH", "CACHE_MKDIR", "PUBLISHER_THROW_ONCE"] as const) {

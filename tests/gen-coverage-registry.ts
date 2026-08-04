@@ -1104,11 +1104,9 @@ export interface CheckResult {
   messages: string[];
 }
 
-export function runCheck(): CheckResult {
+export function runCheck(rows: RegistryRow[] = buildRegistry().rows): CheckResult {
   const messages: string[] = [];
   let ok = true;
-
-  const { rows } = buildRegistry();
 
   // GUARD (a): non-empty per class.
   const empties = emptyClasses(rows);

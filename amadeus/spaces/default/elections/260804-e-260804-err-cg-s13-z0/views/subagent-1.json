@@ -1,0 +1,13 @@
+{
+  "electionId": "E-260804-ERR-CG-S13-Z0",
+  "voter": "subagent-1",
+  "question": "Code Generation の学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "memory.mdに候補がなく、新しいproject/team practiceまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ]
+}

@@ -67,6 +67,7 @@ interface Directive {
   gate?: unknown;
   units?: unknown;
   next_stage?: unknown;
+  phase_boundary?: unknown;
   [k: string]: unknown;
 }
 
@@ -177,6 +178,24 @@ describe("t250 item 10 gate-next-stage-naming: directive projects next_stage", (
     expect(directive.next_stage).toBe("application-design");
   });
 
+  test("b2: a scoped early phase exit explicitly names the required phase check", () => {
+    const proj = seedInception("intent-capture", [
+      ["intent-capture", "-", "EXECUTE"],
+      ["market-research", " ", "SKIP"],
+      ["feasibility", " ", "SKIP"],
+      ["scope-definition", " ", "SKIP"],
+      ["team-formation", " ", "SKIP"],
+      ["rough-mockups", " ", "SKIP"],
+      ["approval-handoff", " ", "SKIP"],
+      ["reverse-engineering", " ", "SKIP"],
+      ["practices-discovery", " ", "SKIP"],
+      ["requirements-analysis", " ", "EXECUTE"],
+    ]);
+    const directive = runNext(proj);
+    expect(directive.next_stage).toBe("requirements-analysis");
+    expect(directive.phase_boundary).toBe("ideation");
+  });
+
   test("c: terminal stage -> next_stage is explicit null", () => {
     // The last stage in the compiled graph (feedback-optimization) is in-flight:
     // no stage follows it, so there is no in-scope successor regardless of scope
@@ -267,6 +286,15 @@ describe("t250 item 10 validator: next_stage is string | null", () => {
     expect(r.valid).toBe(false);
     expect(r.valid ? [] : r.errors).toContain(
       "run-stage: next_stage must be string or null, got number",
+    );
+  });
+
+  test("phase_boundary accepts only a phase that requires a phase-check artifact", () => {
+    expect(validateDirective({ ...NEXT_STAGE_RUN_STAGE, phase_boundary: "ideation" }).valid).toBe(true);
+    const invalid = validateDirective({ ...NEXT_STAGE_RUN_STAGE, phase_boundary: "operation" });
+    expect(invalid.valid).toBe(false);
+    expect(invalid.valid ? [] : invalid.errors).toContain(
+      'run-stage: phase_boundary must be ideation, inception, or construction, got "operation"',
     );
   });
 });

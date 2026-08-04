@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T12:01:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-AD13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "『0件で可』を全面的に支持する。c1はApplication Design成果物がBun test process内の短命local harnessでありAWS resource/network service/database/daemonを追加しないというIssue #1717固有の境界で、project.md cid:nfr-design:c1の『CLI/libraryへ常駐service向け機構を機械適用しない』既存規範の適用事例である。c2はユーザー裁定に基づくTypeScript capability registry・append-only JSONL run ledger・Markdown導出viewの正本構造で、ADR-003、components C7-C9、component-dependencyのwriter/reader表へ固定済みであり、project.md cid:requirements-analysis:c2のmachine registryとnarrative分離の具体化に留まる。projection driftとledger破損は既にcontract test、fail-closed validation、projector checkとして設計内で閉じるため別sensorは不要。c3はIssue #1717のpolicy/result/lifecycle deep moduleとharness×transport adapterの責務分離で、ADR-001/002と5成果物へ一貫して保存済みのarchitecture decisionであり、他Intentへ一律適用する行動規範へ一般化すべきでない。3件とも新規の横断practiceまたはstage sensorではない。",
+      "submittedAt": "2026-08-03T11:59:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-AD13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1はproject memoryのno deployment infrastructure方針をIssue #1717固有のlocal live E2E test-harnessへ適用した判断であり、ADR-001に十分保持されている。c2はhuman決定をADR-003と設計成果物がtyped TypeScript registry=static capability正本、JSONL=live run正本、Markdown=derived projectionとして明示しており、横断的な行動規範ではない。c3もADR-001/002がcommon policy/result/lifecycle deep moduleとCLI・SDK・tmux・ACP・CDP transport adapterの責務境界をFR/NFRへ追跡可能に保持している。この分離を全projectへ恒久一般化すると適用範囲を過剰に広げる。既存project memoryにはmachine registryとnarrative projectionの分離規範もあり、追加sensorで決定論的に検査すべき新述語もないため、新規project/team ruleおよびsensorは0件で可と判断する。",
+      "submittedAt": "2026-08-03T12:00:04Z"
+    }
+  ],
+  "resolutions": []
+}

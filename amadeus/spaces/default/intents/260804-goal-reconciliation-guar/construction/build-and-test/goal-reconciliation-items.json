@@ -1,0 +1,66 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260804-goal-reconciliation-guar/construction/build-and-test/build-test-results.md",
+        "digest": "8292d17b0c194b87b25ab9485f4d938d90505cfe56ab76628748dc4f2168ceec"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-04T06:47:45Z",
+        "digest": "af5ecf24293a951ffa64861cda469097cd1bf627b57e79a3c3d2a5c687f5f612"
+      }
+    ]
+  },
+  {
+    "id": "success-metric-1",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260804-goal-reconciliation-guar/construction/build-and-test/build-test-results.md",
+        "digest": "8292d17b0c194b87b25ab9485f4d938d90505cfe56ab76628748dc4f2168ceec"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-04T06:47:45Z",
+        "digest": "af5ecf24293a951ffa64861cda469097cd1bf627b57e79a3c3d2a5c687f5f612"
+      }
+    ]
+  },
+  {
+    "id": "success-metric-2",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260804-goal-reconciliation-guar/construction/goal-reconciliation-guard/code-generation/code-summary.md",
+        "digest": "74d98693385b14fe233f3d9a124625b258722c25eb226cbfd9fde9f67dd7a6d4"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-04T06:47:45Z",
+        "digest": "af5ecf24293a951ffa64861cda469097cd1bf627b57e79a3c3d2a5c687f5f612"
+      }
+    ]
+  },
+  {
+    "id": "success-metric-3",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260804-goal-reconciliation-guar/construction/build-and-test/build-test-results.md",
+        "digest": "8292d17b0c194b87b25ab9485f4d938d90505cfe56ab76628748dc4f2168ceec"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-04T06:47:45Z",
+        "digest": "af5ecf24293a951ffa64861cda469097cd1bf627b57e79a3c3d2a5c687f5f612"
+      }
+    ]
+  }
+]

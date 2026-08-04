@@ -9,8 +9,11 @@ import type { Result } from "./contract.ts";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-  type FrozenTlaModelReceipt,
 } from "./tla-arm.ts";
+import {
+  createVerifiedTlaModelReceipt,
+  type ModelCheckReceipt,
+} from "./tla-model-receipt.ts";
 import {
   loadVerifiedTlaSources,
   type ModelLoadError,
@@ -25,7 +28,7 @@ import { traceVocabularyFor, type TraceVocabulary } from "./tlc-toolchain.ts";
 export interface RunModelCheckSource {
   readonly source: VerifiedModelSource;
   readonly vocabulary: TraceVocabulary;
-  readonly modelReceipt: FrozenTlaModelReceipt;
+  readonly modelReceipt: ModelCheckReceipt;
   readonly modelPath: string;
   readonly cfgPath: string;
   readonly workspaceRoot: string;
@@ -69,6 +72,31 @@ function sourceDrift(path: string, detail: string): Result<never, SourceDriftErr
 function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
   return left.byteLength === right.byteLength
     && left.every((byte, index) => byte === right[index]);
+}
+
+function modelReceiptFor(
+  source: VerifiedModelSource,
+): Result<ModelCheckReceipt, SourceDriftError> {
+  if (source.model.name === TLA_EXECUTION_MODEL_NAME) {
+    const publicContractIdentity = createHash("sha256")
+      .update(source.model.entries.map(({ sha256 }) => sha256).join("\n"))
+      .digest("hex");
+    try {
+      return {
+        ok: true,
+        value: createFrozenTlaModelReceipt(
+          generateFrozenTlaModel({ publicContractIdentity }, source),
+        ),
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "frozen model generation failed";
+      return sourceDrift(source.model.model.path, detail);
+    }
+  }
+  const verified = createVerifiedTlaModelReceipt(source);
+  return verified.ok
+    ? verified
+    : sourceDrift(source.model.model.path, verified.error.message);
 }
 
 function verifiedPath(
@@ -128,9 +156,6 @@ export function loadRunModelCheckSource(
   const requestedName = basename(model.value, ".tla");
   const selected = selectVerifiedModel(canonical.value, requestedName);
   if (!selected.ok) return selected;
-  const frozen = selectVerifiedModel(canonical.value, TLA_EXECUTION_MODEL_NAME);
-  if (!frozen.ok) return frozen;
-
   let modelBytes: Uint8Array;
   let cfgBytes: Uint8Array;
   try {
@@ -151,12 +176,8 @@ export function loadRunModelCheckSource(
     return sourceDrift(cfgPath, "cfg bytes differ from the verified U1 source");
   }
 
-  const publicContractIdentity = createHash("sha256")
-    .update(frozen.value.model.entries.map(({ sha256 }) => sha256).join("\n"))
-    .digest("hex");
-  // The frozen receipt stays pinned to FormalElection (ADR-10) even though the
-  // byte-pin above is model-selected.
-  const bundle = generateFrozenTlaModel({ publicContractIdentity });
+  const modelReceipt = modelReceiptFor(selected.value);
+  if (!modelReceipt.ok) return modelReceipt;
   const vocabulary = traceVocabularyFor(selected.value.model);
   if (!vocabulary.ok) return vocabulary;
   return {
@@ -164,7 +185,7 @@ export function loadRunModelCheckSource(
     value: {
       source: selected.value,
       vocabulary: vocabulary.value,
-      modelReceipt: createFrozenTlaModelReceipt(bundle),
+      modelReceipt: modelReceipt.value,
       modelPath: model.value,
       cfgPath: cfg.value,
       workspaceRoot: dirname(model.value),

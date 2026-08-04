@@ -12,8 +12,9 @@ This is a supplement to `stage-protocol.md` — the main protocol still applies.
 At each phase transition (Ideation→Inception (approval-handoff→reverse-engineering), Inception→Construction (delivery-planning→functional-design), Construction→Operation (ci-pipeline→deployment-pipeline)), run traceability verification.
 
 ### When to verify
-- After the last stage of each phase is approved
-- Before the first stage of the next phase begins
+- After the last stage's outputs and review are complete
+- Before reporting approval for the gate whose `run-stage` directive carries
+  `phase_boundary`; the approval transition is fail-closed until the artifact exists
 - On demand if the user requests verification via `/amadeus --status`
 
 ### Verification process

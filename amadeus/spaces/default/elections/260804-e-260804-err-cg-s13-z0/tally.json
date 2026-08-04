@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-04T05:48:56Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260804-ERR-CG-S13-Z0",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "対象のCode Generation memory.mdは実エントリ0件で、learnings surfaceもmemory_entries_total=0、candidates=[]、parked_open_questions=[]だったため、新規practiceまたはsensorの永続化候補は0件で可と判断する。",
+      "submittedAt": "2026-08-04T05:48:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260804-ERR-CG-S13-Z0",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Code Generation の memory.md はテンプレートコメントのみで、surface 実測も memory_entries_total=0、candidates=[]、parked_open_questions=[] だったため、永続化候補0件で承認ゲートへ進める。",
+      "submittedAt": "2026-08-04T05:48:29Z"
+    }
+  ],
+  "resolutions": []
+}

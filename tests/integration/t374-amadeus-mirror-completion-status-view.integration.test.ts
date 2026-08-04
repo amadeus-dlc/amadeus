@@ -76,7 +76,7 @@ function makeWorkspace(completion: "pending" | "absent"): string {
         : []),
     ].join("\n"),
   );
-  writeFileSync(join(root, "amadeus", "config.json"), JSON.stringify({ "auto-mirror": "auto" }));
+  writeFileSync(join(root, "amadeus", "config.json"), JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }));
   return root;
 }
 

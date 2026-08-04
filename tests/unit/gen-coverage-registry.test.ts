@@ -62,12 +62,13 @@ const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = join(__FILE_DIR, "..");
 const REPO_ROOT = join(__FILE_DIR, "..", "..");
 const TOOL = join(TESTS_DIR, "gen-coverage-registry.ts");
+const liveRegistry = buildRegistry();
 
 // ---------------------------------------------------------------------------
 // 1. ENUMERATION NON-EMPTY per class (anti-rot guard a).
 // ---------------------------------------------------------------------------
 describe("enumeration is non-empty for every unit class (anti-rot guard a)", () => {
-  const { rows } = buildRegistry();
+  const { rows } = liveRegistry;
 
   test("emptyClasses() reports no empty class against real source", () => {
     expect(emptyClasses(rows)).toEqual([]);
@@ -123,7 +124,7 @@ describe("guarantee-principle gate (mechanism >= minMechanism)", () => {
     // Pick the first subcommand unit. Its minMechanism is `cli`. No shipped
     // test today claims it at cli mechanism, so it must be UNCOVERED — proving
     // a hypothetical .none. claim would be gated out, never counted as covered.
-    const { rows } = buildRegistry();
+    const { rows } = liveRegistry;
     const sub = rows.find((r) => r.unitClass === "subcommand");
     expect(sub).toBeDefined();
     expect(sub!.minMechanism).toBe("cli");
@@ -415,7 +416,7 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
   });
 
   test("ratchetFromRows derives covered-count-per-class from the rows", () => {
-    const { rows } = buildRegistry();
+    const { rows } = liveRegistry;
     const r = ratchetFromRows(rows);
     // Sanity: function covered count equals the rows' covered functions.
     const fnCovered = rows.filter(
@@ -427,7 +428,7 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
 
 describe("ratchet parsing (parse, don't validate — malformed input is a diagnosis, not a crash)", () => {
   test("valid ratchet text parses to the proven coveredByClass", () => {
-    const doc = ratchetFromRows(buildRegistry().rows);
+    const doc = ratchetFromRows(liveRegistry.rows);
     const r = parseRatchetText(`${JSON.stringify(doc, null, 2)}\n`);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.coveredByClass).toEqual(doc.coveredByClass);
@@ -470,7 +471,7 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
   });
 
   test("missing unit-class key => MALFORMED detail (a conflict can delete a line)", () => {
-    const doc = ratchetFromRows(buildRegistry().rows);
+    const doc = ratchetFromRows(liveRegistry.rows);
     const covered = { ...doc.coveredByClass } as Record<string, number>;
     delete covered.hook;
     const r = parseRatchetText(JSON.stringify({ coveredByClass: covered }));
@@ -486,18 +487,18 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
       // Corrupt committed ratchet -> MALFORMED diagnosis, not a crash.
       writeFileSync(ratchet, "<<<<<<< HEAD conflict garbage\n");
       process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
-      const bad = runCheck();
+      const bad = runCheck(liveRegistry.rows);
       expect(bad.ok).toBe(false);
       expect(bad.messages.join("\n")).toContain("RATCHET FAILED [MALFORMED]");
       // Missing ratchet -> the existing does-not-exist diagnosis still fires.
       process.env.AMADEUS_COVERAGE_RATCHET = join(root, "nope.json");
-      const missing = runCheck();
+      const missing = runCheck(liveRegistry.rows);
       expect(missing.ok).toBe(false);
       expect(missing.messages.join("\n")).toContain("does not exist");
       // A VALID ratchet still flows into the drop comparison: an inflated
       // baseline (reality < baseline) fails with the DROPPED diagnosis, and
       // the honest baseline passes -> the parser did not weaken the ratchet.
-      const doc = ratchetFromRows(buildRegistry().rows);
+      const doc = ratchetFromRows(liveRegistry.rows);
       const inflated = {
         ...doc,
         coveredByClass: {
@@ -507,11 +508,11 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
       };
       writeFileSync(ratchet, `${JSON.stringify(inflated, null, 2)}\n`);
       process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
-      const dropped = runCheck();
+      const dropped = runCheck(liveRegistry.rows);
       expect(dropped.ok).toBe(false);
       expect(dropped.messages.join("\n")).toContain("DROPPED");
       writeFileSync(ratchet, `${JSON.stringify(doc, null, 2)}\n`);
-      expect(runCheck().ok).toBe(true);
+      expect(runCheck(liveRegistry.rows).ok).toBe(true);
     } finally {
       if (prev === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
       else process.env.AMADEUS_COVERAGE_RATCHET = prev;

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-ICS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測では、Issue #1717 本文が Phase 1〜3、各ハーネスの接続または根拠付き後続 Issue への接続、最終 capability matrix までを固有の完了境界として明記し、Intent record の intent-statement.md:41-45 と memory.md:13 がその境界を保存している。一方、既決入力を再質問せず成果物へ反映する手順は project.md の cid:intent-capture:c1、memory 層の既決規範をそのまま適用する原則は team.md の cid:requirements-analysis:no-election-for-decided-norms に既に存在する。c1 は既存規範の適用実例、c2 は本 Intent 固有記録であり、新規の一般化可能な規律はない。",
+  "submittedAt": "2026-08-03T08:10:48Z"
+}

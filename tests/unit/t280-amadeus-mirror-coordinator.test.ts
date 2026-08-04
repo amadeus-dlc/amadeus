@@ -110,7 +110,20 @@ function input(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode, projects: [], autoSoloElection: false, autoFileFindings: "prompt", maxParallelUnits: 4, plugins: [] },
+        config: {
+          intentMirror: {
+            github: {
+              issue: { mode },
+              project: { targets: [] },
+            },
+          },
+          soloElection: { trigger: { mode: "manual" } },
+          finding: {
+            github: { issue: { creation: { mode: "prompt" } } },
+          },
+          swarm: { unit: { concurrency: { limit: 4 } } },
+          plugin: { activation: { names: [] } },
+        },
         sources: ["/project/amadeus/config.json"],
       }),
     },
@@ -193,7 +206,7 @@ describe("t280 mode routing", () => {
               kind: "invalid-value",
               layer: "space",
               path: "/project/amadeus/config.json",
-              key: "auto-mirror",
+              key: "intent-mirror.github.issue.mode",
               actualType: "boolean",
               expected: "off | prompt | auto",
             },
@@ -217,9 +230,9 @@ describe("t280 mode routing", () => {
           issues: [
             {
               kind: "read-failure",
-              layer: "global",
+              layer: "project",
               path: "/project/amadeus/config.json",
-              key: "auto-mirror",
+              key: "intent-mirror.github.issue.mode",
               summary: "permission denied",
               expected: "readable configuration",
             },
@@ -229,7 +242,7 @@ describe("t280 mode routing", () => {
     });
     expect(outcome.kind).toBe("continued");
     expect(store.state().warnings[0]?.summary).toContain(
-      "global: permission denied",
+      "project: permission denied",
     );
   });
 

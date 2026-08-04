@@ -64,6 +64,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
@@ -86,6 +88,7 @@ process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 
 const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const GOAL = join(AMADEUS_SRC, "tools", "amadeus-goal.ts");
 
 // Spawn a state/utility subcommand via the SAME bun that runs this test
 // (process.execPath), cwd-independent. Mirrors t51's `bun "$STATE" ...` calls.
@@ -115,6 +118,41 @@ function walkStage(slug: string, proj: string): void {
   expect(ap.status).toBe(0);
 }
 
+function reconcileGoal(proj: string): void {
+  const proof = "fix workflow evidence\n";
+  writeFileSync(join(proj, "goal-proof.txt"), proof);
+  writeFileSync(
+    join(proj, "goal-items.json"),
+    JSON.stringify([
+      {
+        id: "goal-statement",
+        verdict: "ACHIEVED",
+        evidence: [
+          {
+            kind: "deterministic-check",
+            reference: "goal-proof.txt",
+            digest: createHash("sha256").update(proof).digest("hex"),
+          },
+        ],
+      },
+    ]),
+  );
+  const result = run(
+    GOAL,
+    [
+      "reconcile",
+      "--items",
+      "goal-items.json",
+      "--final-stage",
+      "build-and-test",
+      "--completion-instance",
+      "terminal:build-and-test",
+    ],
+    proj,
+  );
+  expect(result.status).toBe(0);
+}
+
 // Each audit block carries `**Timestamp**: <iso>` + `**Event**: <TYPE>`
 // (amadeus-audit.ts). P4 shards audit per clone, so a multi-spawn drive lands its
 // blocks across several shards; readAllAuditShards concatenates them (block
@@ -130,11 +168,16 @@ function eventSequence(proj: string): string[] {
     .split("\n")
     .filter((line) => line.trim().length > 0)
     .forEach((line, pos) => {
-      const rec = JSON.parse(line) as { event: string | null; timestamp: string };
+      const rec = JSON.parse(line) as {
+        attributes?: { Event?: string };
+        event?: string | null;
+        timestamp: string;
+      };
       // append-raw records carry event: null — they are not part of the typed
       // terminal-ordering contract this file pins.
-      if (rec.event === null) return;
-      parsed.push({ ts: rec.timestamp, event: rec.event, pos });
+      const event = rec.attributes?.Event ?? rec.event;
+      if (!event) return;
+      parsed.push({ ts: rec.timestamp, event, pos });
     });
   parsed.sort((a, b) => (a.ts === b.ts ? a.pos - b.pos : a.ts < b.ts ? -1 : 1));
   return parsed.map((p) => p.event);
@@ -162,6 +205,7 @@ function driveFixToCompletion(): { proj: string } {
   // SKIP-overridden on greenfield; init pre-completes the 3 init stages).
   walkStage("requirements-analysis", proj);
   walkStage("code-generation", proj);
+  reconcileGoal(proj);
   walkStage("build-and-test", proj); // final stage -> handleCompleteWorkflow
 
   return { proj };
@@ -272,7 +316,7 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     expect(replay.stdout + replay.stderr).toContain("awaiting-approval");
     // And the error's audit row was refused by the post-complete seal — the
     // suppression note proves the sealed-ledger path ran, not a silent no-op.
-    expect(replay.stderr).toContain("suppressed ERROR_LOGGED append");
+    expect(replay.stderr).toContain("suppressed amadeus.operation.failed v2 append");
 
     // The IDEMPOTENCY contract on the audit FILE: still exactly one
     // WORKFLOW_COMPLETED (no duplicate terminal event) and no extra

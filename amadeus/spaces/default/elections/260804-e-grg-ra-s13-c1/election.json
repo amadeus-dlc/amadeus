@@ -1,0 +1,17 @@
+{
+  "electionId": "E-GRG-RA-S13-C1",
+  "kind": "learning-selection",
+  "question": "Requirements Analysis の学習候補『Goal Ownershipを人間のゴール所有権とオーケストレーターの照合責任に分離した』を project.md の Corrections に保存してよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "Goal Ownershipを人間のゴール所有権とオーケストレーターの照合責任に分離した",
+      "description": "AIは逸脱検出とchange proposal作成までに限定し、Goal revisionは専用の人間承認だけで有効化する。保存先: project.md ## Corrections"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
