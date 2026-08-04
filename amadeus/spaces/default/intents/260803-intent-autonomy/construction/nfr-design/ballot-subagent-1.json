@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-S13-NFRDESIGN-1",
+    "voter": "subagent-1",
+    "submittedAt": "2026-08-03T15:47:30Z"
+  },
+  "electionId": "E-S13-NFRDESIGN-1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 6,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "人間裁定を踏まえて再評価した。未要求の数値SLOやクラウド構成を捏造せず、確定済みの契約から計算量・partition・atomicityを設計する規範は、NFR設計全般で要求の過剰解釈を防ぎ、実装可能性と追跡可能性を保つため再利用性が高い。候補6の永続化を全面的に支持する。",
+  "submittedAt": "2026-08-03T15:49:20Z"
+}

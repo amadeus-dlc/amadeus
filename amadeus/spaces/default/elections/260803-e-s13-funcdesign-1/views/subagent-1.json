@@ -1,0 +1,13 @@
+{
+  "electionId": "E-S13-FUNCDESIGN-1",
+  "voter": "subagent-1",
+  "question": "Functional Design の永続化対象となる学習候補を 0 件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "候補は今回固有の設計判断またはレビュー履歴であり、ユーザーも保存なし・追加なしを選択したため、永続化する学習を 0 件とする。"
+    }
+  ]
+}

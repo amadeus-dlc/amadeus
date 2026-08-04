@@ -82,12 +82,12 @@ describe("t393 birth scaffold: Construction Autonomy Mode", () => {
     expect(section(state, "Current Status")).toContain("- **Construction Autonomy Mode**: unset");
   });
 
-  test("set-autonomy succeeds on a born state (no 'Field not found' fail-closed)", () => {
+  test("legacy gated mode reaches the new mode validation, not a missing-field failure", () => {
     const proj = bornProject();
     const r = run(proj, "amadeus-bolt.ts", ["set-autonomy", "--mode", "gated"]);
     expect(r.out).not.toContain("Field not found");
-    expect(r.status).toBe(0);
-    expect(readState(proj)).toContain("- **Construction Autonomy Mode**: gated");
+    expect(r.status).toBe(1);
+    expect(r.out).toContain("Must be 'none', 'semi', or 'full'");
   });
 });
 

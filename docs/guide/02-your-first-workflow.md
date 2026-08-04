@@ -159,17 +159,18 @@ Construction builds the solution **Bolt by Bolt**. A [Bolt](glossary.md) is one 
 ─── Construction: Bolt 1 — notification-core (walking skeleton) ───────────
 ```
 
-The walking skeleton is **always gated** — you review its design artifacts and generated code before any other Bolt runs. Immediately after approval, the **ladder prompt** fires exactly once:
+The walking skeleton has a real gate, resolved according to the Intent autonomy mode. `none` and `semi` wait for you; `full` may decide it within a human-confirmed Intent-scoped grant. Select the mode before unattended decisions:
 
 ```
-The walking skeleton shipped. How should the remaining Bolts run?
-  ▸ Continue autonomously
-  ▸ Gate every Bolt
+Intent autonomy
+  ▸ none — humans decide every gate and question
+  ▸ semi — pre-approve in-phase gates; ask at phase boundaries and questions
+  ▸ full — decide authorised gates and questions through Intent completion
 ```
 
-Your answer is recorded in `amadeus-state.md` as `Construction Autonomy Mode` and governs every remaining Bolt in this workflow (session resume respects it). Stage 3.5 (Code Generation) runs as a subagent for each Unit inside the Bolt; the per-Unit gate in that stage file is suppressed — a single Bolt-level (or batch-level) gate replaces it.
+The selection is recorded in the Intent audit and projected to `amadeus-state.md`; `full` is activated only after you confirm the displayed grant scope, policies, and principal. Stage 3.5 (Code Generation) runs as a subagent for each Unit inside the Bolt; the per-Unit gate in that stage file is suppressed — a single Bolt-level (or batch-level) gate replaces it.
 
-Bolts whose dependencies are satisfied and that don't depend on each other run in a **parallel batch** — the orchestrator issues multiple `Task` calls in a single turn. A failure always halts and asks for retry / skip / abort, even when you've chosen autonomous mode.
+Bolts whose dependencies are satisfied and that don't depend on each other run in a **parallel batch** in every mode — the mode changes approval, not scheduling width. In `semi` and `full`, blocking defects enter repair/replan until healthy; a non-productive loop parks as `REPAIR_STALLED` without revoking an active grant.
 
 After all Bolts complete, stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once across the whole solution.
 

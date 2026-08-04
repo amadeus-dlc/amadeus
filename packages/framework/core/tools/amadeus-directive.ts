@@ -91,6 +91,13 @@ export interface RunStageDirective {
   // reviewer_max_iterations — how many review cycles before escalating to the
   // human. Default 2 when reviewer is present. Absent when no reviewer.
   reviewer_max_iterations?: number;
+  // Intent-scoped autonomy metadata is present only after a human selected
+  // semi/full. The conductor still runs the full quality ritual; auto approval
+  // changes only the final human-wait boundary.
+  intent_autonomy_mode?: "semi" | "full";
+  autonomy_auto_approve?: boolean;
+  intent_grant_id?: string;
+  quality_repair?: "active" | "error";
   // conductor_persona — set ONLY on the first run-stage of a workflow (decision
   // D-E, SPIKE 6). The engine reads `.claude/amadeus-common/conductor.md` and bakes
   // its contents here so the conductor receives its execution-quality charter
@@ -399,6 +406,10 @@ const RUN_STAGE_FIELDS = [
   "stage_file",
   "reviewer",
   "reviewer_max_iterations",
+  "intent_autonomy_mode",
+  "autonomy_auto_approve",
+  "intent_grant_id",
+  "quality_repair",
   "conductor_persona",
   "unit",
   "consumes_absent",
@@ -603,6 +614,10 @@ function checkRunStageShared(
   // an optional string, reviewer_max_iterations an optional positive integer.
   checkOptionalString(o, "reviewer", kind, errors);
   checkOptionalPositiveInteger(o, "reviewer_max_iterations", kind, errors);
+  checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);
+  checkOptionalBoolean(o, "autonomy_auto_approve", kind, errors);
+  checkOptionalString(o, "intent_grant_id", kind, errors);
+  checkOptionalEnum(o, "quality_repair", ["active", "error"] as const, kind, errors);
   // unit: optional on a run-stage directive (present only on a per-unit
   // Construction directive resolved to a concrete Unit of Work). A present
   // value must be a string; absent is valid.
@@ -814,6 +829,32 @@ function checkOptionalString(
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${kind}: ${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalBoolean(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  if (typeof o[field] !== "boolean") {
+    errors.push(`${kind}: ${field} must be boolean, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalEnum<T extends string>(
+  o: Record<string, unknown>,
+  field: string,
+  allowed: readonly T[],
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  const value = o[field];
+  if (typeof value !== "string" || !allowed.includes(value as T)) {
+    errors.push(`${kind}: ${field} must be one of ${allowed.join(" | ")}, got ${describe(value)}`);
   }
 }
 

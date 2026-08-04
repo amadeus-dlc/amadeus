@@ -241,7 +241,7 @@ flowchart TD
 - `[x]` 完了(ユーザーが承認)
 - `[S]` スキップ(init 時にスコープ除外、`skip` でカット、または `--stage`/`--phase` ジャンプでバイパス)
 
-Construction フェーズセクションは特別です: Bolt 単位で実行されるため(下記の [Construction Execution](#construction-execution) を参照)、チェックボックスは `bolt-plan.md` で定義された各 Bolt 内の各 Unit ごとに一度ずつ現れます。さらに、`Construction Autonomy Mode: [unset|autonomous|gated]` が **Current Status** の下に記録されます — ラダープロンプトが発火した後に書かれ、セッション再開時に尊重されます。
+Construction フェーズセクションは特別です: Bolt 単位で実行されるため(下記の [Construction Execution](#construction-execution) を参照)、チェックボックスは `bolt-plan.md` で定義された各 Bolt 内の各 Unit ごとに一度ずつ現れます。正規状態には`Intent Autonomy Mode: none|semi|full`、Intent-level実行状態、nullableなIntent grantを記録します。`Construction Autonomy Mode`は互換性のための導出済みスケジューリングprojectionであり、認可の正本ではありません。
 
 ### リカバリのパンくず
 
@@ -434,14 +434,14 @@ Bolt ごとの構造:
 3. Task ツール(`subagent_type="amadeus-developer-agent"`)を介してユニットごとにステージ 3.5 Code Generation をディスパッチする。`code-generation.md` 内のユニットごとの承認ゲートはオーケストレーターにより **抑制** される。
 4. 単一の Bolt レベル(またはバッチレベル)の承認ゲートを提示する。
 
-`bolt-plan.md` の最初の Bolt は **walking skeleton** です — そのゲートは autonomy モードに関わらず常に提示されます。walking-skeleton ゲートが承認された直後、オーケストレーターはワークフローごとに正確に一度 **ラダープロンプト** を発火し、`amadeus-state.md` に `Construction Autonomy Mode: autonomous|gated` を記録し、`AUTONOMY_MODE_SET` を発行します。残りの Bolt はそのモードを尊重します。
+自律レベルはwalking skeleton後のラダープロンプトではなく、Intent全体に対して`none` / `semi` / `full`から選択します。`none`ではstage gate、phase gate、質問を人間が裁定します。`semi`ではphase内gateを事前承認済みとして扱い、phase境界と質問は人間を待ちます。`full`では、人間が発行したIntent-scoped grantの認可範囲内でstage gate、phase gate、質問を自動裁定し、Intent完了まで進めます。walking skeletonにも同じ表を適用し、`full`だけがそのgateを自動裁定できます。旧常任グラントと`AUTONOMY_MODE_SET`記録はreplay・診断用に残りますが、認可には使いません。
 
 並列実行可能な Bolt(依存前提条件を満たし、相互依存なし)は **バッチ** を形成します。オーケストレーターはバッチ内で質問/設計を Bolt ごとに逐次実行し、その後 **単一のアシスタントメッセージで N 個の `Task` 呼び出し** を発行してステージ 3.5 Code Generation を並列にディスパッチします。フレームワークは N 個のサブエージェントセッションを並行して起動します。結果はオーケストレーターの次のターンで到着します。単一のバッチレベルゲートがバッチ内のすべての Bolt をカバーします。監査ログは、`BOLT_STARTED`/`BOLT_COMPLETED` の `Batch` フィールドを介して並列 Bolt を結び付けます。
 
-失敗処理は **halt-and-ask** で、autonomy モードに関わらず実行されます:
+blockingなreviewer指摘、sensor、必須成果物、完了条件はquality obligationです。`semi` / `full`ではfirst-party Quality Repair Pluginを必須とし、証拠が健全になるまでrepairまたはreplanします。生産的な進捗が止まった場合は`REPAIR_STALLED`としてparkし、activeなIntent grantを維持したまま明示的な再開条件を記録します。mode表で人間を必要とするgateは引き続き人間を待ちます。
 
-- 単独 Bolt の失敗: 停止し、`BOLT_FAILED` を発行し、retry / skip / abort を提示する。
-- 並列バッチの部分失敗: すべての並列 Task が返るのを待ち、成功した Bolt の成果物をディスク上に保持し、`Succeeded=[names]` 付きで `BOLT_FAILED` を発行し、失敗した Bolt にスコープした同じ選択肢を提示する。Retry は失敗した Bolt のみを再実行する。バッチの兄弟は `[x]` のまま。
+- 単独Boltの失敗は`BOLT_FAILED`を記録し、影響を受けた作業だけをrepairします。
+- 並列バッチの部分失敗では、すべてのTaskの完了を待ち、成功した兄弟の成果物を保持し、失敗した作業だけをrepair対象にします。独立した兄弟は完了状態のままです。
 
 ```mermaid
 sequenceDiagram
@@ -453,11 +453,9 @@ sequenceDiagram
     participant BC as Subagent (Bolt C)
 
     O->>O: Read bolt-plan.md + unit-of-work-dependency.md
-    O->>U: Run Bolt A (walking skeleton) — questions, design, code-gen
-    U->>O: Approve walking-skeleton gate
-    O->>U: Ladder prompt (fires once)
-    U->>O: "Continue autonomously"
-    O->>O: Write Construction Autonomy Mode: autonomous; emit AUTONOMY_MODE_SET
+    U->>O: Select full and confirm the Intent-scoped grant
+    O->>O: Atomically record mode, grant, scope, policies, and human provenance
+    O->>O: Run Bolt A (walking skeleton); decide its gate within the grant
 
     Note over O,T: Bolts B + C eligible in parallel batch
     O->>T: Task(B code-gen) + Task(C code-gen) in ONE message
@@ -468,12 +466,12 @@ sequenceDiagram
     BB-->>O: Bolt B artifacts + summary
     BC-->>O: Bolt C artifacts + summary
     O->>O: Emit BOLT_COMPLETED for B and C (shared Batch=N)
-    Note over O,U: No gate — autonomous mode. A failure would force halt-and-ask regardless.
+    Note over O,U: Blocking defects enter repair/replan; a non-productive loop parks with the grant intact.
 
     O->>O: All Bolts done → run 3.6 Build and Test, then 3.7 CI Pipeline
 ```
 
-<!-- Text fallback: The orchestrator reads bolt-plan.md and the dependency DAG. It runs Bolt A as the walking skeleton, the user approves the gate, and the ladder prompt fires once. User picks "Continue autonomously", orchestrator writes Construction Autonomy Mode and emits AUTONOMY_MODE_SET. For Bolts B and C (eligible in parallel), the orchestrator issues both Task calls in a single message; the framework runs them concurrently; the orchestrator receives both results in the next turn and emits BOLT_COMPLETED for each with a shared Batch field. No gate because autonomy mode is autonomous — a failure would still halt. Once all Bolts are done, 3.6 and 3.7 run once at the end. -->
+<!-- Text fallback: 人間がfullを選び、無人裁定の前にIntent-scoped grantを確認する。オーケストレーターはwalking skeletonにも他のBoltと同じmode規則を適用する。依存関係のないBolt BとCを並列実行し、両方の結果を記録して、blockingな不備をboundedなrepair/replanへ渡す。非生産的なloopはgrantを維持したままparkする。全Boltが健全になった後、3.6と3.7を最後に一度ずつ実行する。 -->
 
 並列ディスパッチ下の状態と監査の安全性: `amadeus-audit.ts` は mkdir ベースのロックを使うので並行 append は安全です。`amadeus-state.ts advance` はロックされていませんが、オーケストレーターは自然に状態書き込みを直列化します — Task 結果が返った後にのみ書き込み、実行中には書き込まないためです。状態レースのリスクはありません。
 

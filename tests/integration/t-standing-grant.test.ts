@@ -377,24 +377,24 @@ describe("R-8: the CLI cannot mint grant events (presence-protected)", () => {
 });
 
 describe("verb refusals (spawned amadeus-state.ts)", () => {
-  test("grant-standing-delegation succeeds in solo mode (env unset)", () => {
+  test("grant-standing-delegation is retired in solo mode", () => {
     const { root, intent } = scaffold();
     plantV1AuditRow("HUMAN_TURN", {}, root, intent);
     const r = runState(root, ["grant-standing-delegation"], {
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1", // isolate the team-mode refusal
     });
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain('"scope":"stage-gates"');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
-  test("RED: --ttl-ms 'five' is a loud refusal (type-invalid, no fail-open)", () => {
+  test("legacy --ttl-ms issuance is retired before option-specific handling", () => {
     const { root } = scaffold();
     const r = runState(root, ["grant-standing-delegation", "--ttl-ms", "five"], {
       AMADEUS_OPERATING_MODE: "team",
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
     });
     expect(r.status).toBe(1);
-    expect(r.stderr).toContain("finite positive number");
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
   test("revoke-standing-delegation succeeds in solo mode (env unset)", () => {
@@ -418,7 +418,7 @@ describe("verb refusals (spawned amadeus-state.ts)", () => {
   });
 });
 
-describe("issuance round-trip (spawned) — team mode honours, solo ignores", () => {
+describe("legacy standing-grant authorization is retired", () => {
   // Build a full issuer shard by hand so the spawned subprocess (which computes
   // its own shard filename from the pinned clone-id) reads the SAME file. The
   // shard holds a HUMAN_TURN (grounds the grant), a GRANT_ISSUED (grounded in it),
@@ -497,24 +497,15 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
     return { root, issuer, target };
   }
 
-  test("WHITE: team mode issues a grant-authorised delegation and stamps the Grant Id", () => {
+  test("team mode ignores a legacy grant and refuses delegation", () => {
     const { root, target } = seedDelegateScenario();
     const r = runState(
       root,
       ["delegate-approval", "requirements-analysis", "--to-intent", target],
       { AMADEUS_OPERATING_MODE: "team" },
     );
-    expect(r.status).toBe(0);
-    expect(r.stdout).toContain('"delegated":true');
-    const targetShard = readFileSync(
-      join(root, "amadeus", "spaces", "default", "intents", target, "audit", shardName()),
-      "utf-8",
-    );
-    expect(
-      records(targetShard).some(
-        (r) => r.event === "DELEGATED_APPROVAL" && r.fields?.["Grant Id"] === "55556666",
-      ),
-    ).toBe(true);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("no real human turn");
   });
 
   test("RED: solo mode ignores the grant and refuses the same delegation", () => {
@@ -632,7 +623,7 @@ describe("in-process handler seams (coverage)", () => {
   beforeEach(saveEnv);
   afterEach(restoreEnv);
 
-  test("handleGrantStandingDelegation: happy path emits a grant and prints JSON", () => {
+  test("handleGrantStandingDelegation: retired path emits no grant", () => {
     const proj = seamProject();
     seedHumanTurn(proj);
     process.env.AMADEUS_OPERATING_MODE = "team";
@@ -640,55 +631,40 @@ describe("in-process handler seams (coverage)", () => {
     const r = captureIO(() =>
       handleCanonicalGrantStandingDelegation(["--include-phase-boundary"])
     );
-    expect(r.threw).toBe(false);
-    const output = JSON.parse(r.stdout) as Record<string, unknown>;
-    expect(Object.keys(output)).toEqual([
-      "grant_id",
-      "scope",
-      "expires_at",
-      "includes_phase_boundary",
-    ]);
-    expect(output.scope).toBe("stage-gates");
-    expect(r.stderr).toBe("phase-boundary gates: INCLUDED (--include-phase-boundary)\n");
-    expect(findActiveStandingGrant(proj, Date.now())?.includesPhaseBoundary).toBe(true);
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
+    expect(findActiveStandingGrant(proj, Date.now())).toBeNull();
   });
 
-  test("handleGrantStandingDelegation: solo output and lifecycle fields match team shape", () => {
+  test("handleGrantStandingDelegation: solo mode is also retired", () => {
     const proj = seamProject();
     seedHumanTurn(proj);
     delete process.env.AMADEUS_OPERATING_MODE;
     delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
     const r = captureIO(() => handleCanonicalGrantStandingDelegation([]));
-    expect(r.threw).toBe(false);
-    expect(r.stdout).toContain('"scope":"stage-gates"');
-    expect(r.stderr).toContain("EXCLUDED");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
     const issued = records(audit).filter((r) => r.event === "GRANT_ISSUED");
-    expect(issued.length).toBe(1);
-    expect(issued[0]!.fields?.["Issuer Intent"]).toBeDefined();
+    expect(issued.length).toBe(0);
   });
 
-  test("handleGrantStandingDelegation: refuses a bad --scope and a bad --ttl-ms", () => {
+  test("handleGrantStandingDelegation: every legacy issuance shape is retired", () => {
     const proj = seamProject();
     seedHumanTurn(proj);
     process.env.AMADEUS_OPERATING_MODE = "team";
     process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
     expect(captureIO(() =>
       handleCanonicalGrantStandingDelegation(["--scope", "everything"])
-    ).stderr).toContain(
-      "unsupported --scope",
-    );
+    ).stderr).toContain("grant-standing-delegation is retired");
     expect(captureIO(() =>
       handleCanonicalGrantStandingDelegation(["--ttl-ms", "five"])
-    ).stderr).toContain(
-      "finite positive number",
-    );
-    // A valid explicit TTL takes the happy branch.
+    ).stderr).toContain("grant-standing-delegation is retired");
     const r = captureIO(() =>
       handleCanonicalGrantStandingDelegation(["--ttl-ms", "60000"])
     );
-    expect(r.threw).toBe(false);
-    expect(r.stderr).toContain("EXCLUDED");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
   test("handleGrantStandingDelegation: refuses when no fresh human turn backs the call", () => {
@@ -700,7 +676,7 @@ describe("in-process handler seams (coverage)", () => {
     delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
     const r = captureIO(() => handleCanonicalGrantStandingDelegation([]));
     expect(r.threw).toBe(true);
-    expect(r.stderr).toContain("since the last gate resolution");
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
   test("handleGrantStandingDelegation: refuses when no active intent grounds the grant", () => {
@@ -712,7 +688,7 @@ describe("in-process handler seams (coverage)", () => {
     process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1"; // skip grounding → reach collectIssuerProvenance
     const r = captureIO(() => handleCanonicalGrantStandingDelegation([]));
     expect(r.threw).toBe(true);
-    expect(r.stderr).toContain("no active intent");
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
   test("handleGrantStandingDelegation: guard-disabled reaches the no-HUMAN_TURN issuer check", () => {
@@ -721,7 +697,7 @@ describe("in-process handler seams (coverage)", () => {
     process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1"; // skip grounding → reach collectIssuerProvenance
     const r = captureIO(() => handleCanonicalGrantStandingDelegation([]));
     expect(r.threw).toBe(true);
-    expect(r.stderr).toContain("no HUMAN_TURN in this session");
+    expect(r.stderr).toContain("grant-standing-delegation is retired");
   });
 
   test("handleRevokeStandingDelegation: happy path emits GRANT_REVOKED", () => {
@@ -769,14 +745,14 @@ describe("in-process handler seams (coverage)", () => {
     process.env.AMADEUS_OPERATING_MODE = "unexpected";
     const before = readFileSync(seededAuditShardPath(proj), "utf-8");
     expect(captureIO(() => handleCanonicalGrantStandingDelegation([])).stderr)
-      .toContain("invalid AMADEUS_OPERATING_MODE");
+      .toContain("grant-standing-delegation is retired");
     expect(captureIO(() =>
       handleCanonicalRevokeStandingDelegation(["--grant-id", "aabbccdd"])
     ).stderr).toContain("invalid AMADEUS_OPERATING_MODE");
     expect(readFileSync(seededAuditShardPath(proj), "utf-8")).toBe(before);
   });
 
-  test("handleDelegateApproval: a covering grant authorises the delegation in-process", () => {
+  test("handleDelegateApproval: a covering legacy grant cannot authorise delegation", () => {
     const proj = seamProject();
     const ht = seedHumanTurn(proj);
     // A resolution AFTER the turn → humanActedSinceGate is false → grant path.
@@ -806,8 +782,8 @@ describe("in-process handler seams (coverage)", () => {
     const r = captureIO(() =>
       handleDelegateApproval(["requirements-analysis", "--to-intent", target]),
     );
-    expect(r.threw).toBe(false);
-    expect(r.stdout).toContain('"delegated":true');
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("no real human turn");
   });
 
   test("handleDelegateApproval: refuses when no grant covers and no human turn (solo)", () => {
@@ -889,16 +865,17 @@ describe("in-process handler seams (coverage)", () => {
     return proj;
   }
 
-  test("handleApprove: a covering opt-in grant opens the gate and stamps the Grant Id", () => {
+  test("handleApprove: a covering legacy grant cannot open the gate", () => {
     const proj = setupApprovable({ grant: "opt-in", team: true });
     const r = captureIO(() => handleApprove(["requirements-analysis"]));
-    expect(r.threw).toBe(false);
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("a real human has not acted at this gate");
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
     expect(
       records(audit).some(
         (r) => r.event === "GATE_APPROVED" && r.fields?.["Grant Id"] === "beef0002",
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test("handleApprove: refuses when no grant covers and no fresh human turn", () => {
@@ -916,13 +893,14 @@ describe("in-process handler seams (coverage)", () => {
     expect(r.threw).toBe(false);
   });
 
-  test("handleApprove: autonomous mode skips the presence check", () => {
+  test("handleApprove: legacy autonomous field alone cannot skip presence", () => {
     const proj = setupApprovable({ grant: "none", team: false });
     // Mark the workflow autonomous so isAutonomousMode short-circuits the check.
     const sf = seededStateFile(proj);
     writeFileSync(sf, `${readFileSync(sf, "utf-8")}- **Construction Autonomy Mode**: autonomous\n`, "utf-8");
     const r = captureIO(() => handleApprove(["requirements-analysis"]));
-    expect(r.threw).toBe(false);
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("a real human has not acted at this gate");
   });
 
   // The seeded record's dir NAME (issuer intent for grant provenance).

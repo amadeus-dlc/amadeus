@@ -1,0 +1,75 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-S13-NFRDESIGN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 10,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "decision selectionとeffect authorizationの分離は、特定のIntentや状態遷移に依存せず、権限境界を持つあらゆるワークフローへ適用できる。判断結果がそのまま副作用の実行権限になる混同を防ぐため、安全性・監査可能性・テスト容易性を横断的に高める実行規範として最も再利用可能性が高い。",
+      "submittedAt": "2026-08-03T15:47:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-S13-NFRDESIGN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 5,
+      "reservation": null,
+      "rationale": "数値根拠のないSLOや未要求のクラウド構成を創作せず、計算量・partition・atomicityという検証可能な性質でNFRを設計する原則は、対象ドメインや実装基盤を問わず再利用可能性が最も高い。",
+      "submittedAt": "2026-08-03T15:47:42Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-S13-NFRDESIGN-1",
+        "voter": "subagent-1",
+        "submittedAt": "2026-08-03T15:47:30Z"
+      },
+      "electionId": "E-S13-NFRDESIGN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "人間裁定を踏まえて再評価した。未要求の数値SLOやクラウド構成を捏造せず、確定済みの契約から計算量・partition・atomicityを設計する規範は、NFR設計全般で要求の過剰解釈を防ぎ、実装可能性と追跡可能性を保つため再利用性が高い。候補6の永続化を全面的に支持する。",
+      "submittedAt": "2026-08-03T15:49:20Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-S13-NFRDESIGN-1",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-03T15:47:42Z"
+      },
+      "electionId": "E-S13-NFRDESIGN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 5,
+      "reservation": null,
+      "rationale": "人間裁定に同意する。未要求の数値SLOやクラウド構成を捏造せず、根拠のある計算量・partition・atomicityでNFRを設計する原則は、異なるUnit・工程・技術基盤へ広く再利用できる。",
+      "submittedAt": "2026-08-03T15:49:21Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-S13-NFRDESIGN-1",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-03T15:49:21Z"
+      },
+      "electionId": "E-S13-NFRDESIGN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補6への賛成意思は変わらない。GoAコードの訂正に従いfavorを示すgoa=1へ修正する。",
+      "submittedAt": "2026-08-03T15:50:12Z"
+    }
+  ],
+  "late": []
+}

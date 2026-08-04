@@ -1,0 +1,13 @@
+{
+  "electionId": "E-S13-BUILDTEST-1",
+  "voter": "subagent-2",
+  "question": "Build and Testの永続化対象となる学習候補を0件としてよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "stage memoryに学習候補も未解決事項もないため、永続化する学習を0件とする。"
+    }
+  ]
+}

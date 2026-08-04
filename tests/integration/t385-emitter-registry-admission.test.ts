@@ -68,6 +68,7 @@ const EMITTER_FUNCTIONS = [
 // Call sites whose field object is assembled from runtime input. Each entry is
 // (file, event); the count is what makes a NEW one visible.
 const UNRESOLVED_SITES = [
+  "packages/framework/core/tools/amadeus-log.ts:DECISION_RECORDED",
   "packages/framework/core/tools/amadeus-state.ts:PRACTICES_AFFIRMED",
   "packages/framework/core/tools/amadeus-state.ts:PRACTICES_DISCOVERED",
   "packages/framework/core/tools/amadeus-state.ts:PRACTICES_OVERRIDE",

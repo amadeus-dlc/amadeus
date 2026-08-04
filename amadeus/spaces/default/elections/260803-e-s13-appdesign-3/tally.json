@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T09:30:12Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-S13-APPDESIGN-3",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "active intent 260803-intent-autonomy の Application Design memory.md を実測し、Interpretations・Deviations・Tradeoffs・Open questions の全区分に実記録がなく、テンプレートコメントのみであることを確認した。直近の HUMAN_TURN 後に生成された learning-election.json も追加なしを反映した zero-confirm 定義であり、永続化対象 0 件は証拠と整合する。",
+      "submittedAt": "2026-08-03T09:29:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-S13-APPDESIGN-3",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測で application-design/memory.md は規定4セクションを持つ一方、コメント・見出し・空行・説明引用を除く実エントリが0件だった。さらに audit の HUMAN_TURN(seq 845)直後に生成された learning-election.json(seq 846)は選択肢を『0件で可』の1件だけとしており、選挙定義および配布ビューとも一致する。永続化すべき新規学習候補を示す一次記録がないため、0件提案を留保なく支持する。",
+      "submittedAt": "2026-08-03T09:29:31Z"
+    }
+  ],
+  "resolutions": []
+}

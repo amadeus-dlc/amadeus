@@ -36,9 +36,9 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **agmsg** | チームモードで使うエージェント間メッセージングの skill(送信 / 受信箱 / ack)。未登録の宛先でも成功が返るため不達が無音になり、対応を求めるメッセージは必ず ack とセットで運用します。 |
 | **AIDLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論。**Lifecycle** を参照。 |
 | **Approval gate(承認ゲート)** | 各ステージの終わりにある対話的なチェックポイント。作業を承認するか、変更を要求するか、(3 回の改訂後に)そのまま受け入れるかを選びます。Initialization ステージは承認ゲートをスキップします。 |
-| **Autonomy mode(自律モード)** | walking-skeleton のラダープロンプト後に `amadeus-state.md`(`Construction Autonomy Mode`)に記録される設定。`autonomous`(後続の Bolt はゲートなしで実行)または `gated`(各 Bolt が承認を求める — 並列バッチではバッチ全体を1つのバッチ末尾ゲートがカバーし、`amadeus-bolt approve-batch --batch <n>` で解除する)のいずれか。プロンプト前は `unset` がデフォルト。walking skeleton 完了後に `unset` のままの場合、エンジンはそのまま実行せずラダーを再提示する。 |
+| **Autonomy mode(自律レベル)** | Intent auditを正本として記録する`none / semi / full`の選択。`none`（既定）はgateと質問を人間が裁定し、`semi`はphase内gateを自動承認してphase境界と質問を人間へ戻し、`full`は人間が発行したIntent-scoped grantの範囲でIntent完了までgateと質問を裁定する。headless起動や旧`unset/gated/autonomous`だけでは昇格しない。 |
 | **Blind distribution(blind 配布)** | 提案者の推奨や先行票を伏せて選挙候補を配ること。各投票者が独立に判断できるようにするためで、推奨と先行票は開票後に公開します。 |
-| **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[ladder prompt]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
+| **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[autonomy mode]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
 | **Builder(ビルダー)** | Unit を実装するチームモードの帽子 — コードを書き、検証を実行し、結果を報告します。自分の実装を自分でレビューすることはありません。**Conductor**、**Reviewer**、**Leader** を参照。 |
 | **Artifact(成果物)** | ステージが生成し、intent のレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)に保存されるバージョン管理された markdown ドキュメント。例: `requirements.md`、`code-summary.md`、`initiative-brief.md`。 |
 | **Audit trail(監査証跡)** | intent のレコードディレクトリ内 `audit/` にある append-only のイベントログ。per-clone の JSONL シャード(`<host>-<clone>.jsonl`)として書かれ、読み手が glob してタイムスタンプでマージします。intent から本番までの完全なトレーサビリティのため、正準イベントタクソノミーを ISO タイムスタンプ付きで記録します。 |
@@ -79,7 +79,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **Intent** | space の `intents.json` レジストリの行(`{uuid, slug, dirName, scope, repos, status}`)として追跡される作業の単位。独自の [Record dir] を `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` に持ちます。`<YYMMDD>` はコンパクトな UTC 日付接頭辞(例: `260624` = 2026-06-24)でレコードが時系列にソートされ、`<label>` はリクエストの短い kebab-case のエッセンスです。同日・同ラベルの衝突は数値カウンタ(`-2`、`-3`、…)で解決します。正典的で衝突しない id は、ディレクトリ接尾辞ではなくレジストリ行に格納された時間順序 UUIDv7 です。エンジンは最初の `/amadeus` で最初の intent を auto-birth します。`active-intent` ポインタが現在のものを選択します。**Space**、**Record dir** を参照。 |
 | **Kiro** | Kiro ハーネス — 今日の AI-DLC のハーネスディストリビューションの 1 つで、`packages/framework/core/` から `dist/kiro/`(CLI)と `dist/kiro-ide/`(IDE)に生成され、AIDLC メソッドは Kiro のエージェントリソース glob 経由で `amadeus/spaces/<space>/memory/` から読まれます。`/amadeus` で起動します。[Kiro IDE で AI-DLC を実行する](harnesses/kiro-ide.ja.md) と [Kiro CLI で AI-DLC を実行する](harnesses/kiro-cli.ja.md) を参照。 |
 | **Knowledge** | ステージ開始時にエージェントがロードする参照資料。2 階層: 方法論 knowledge(フレームワークに `<harness-dir>/knowledge/` として同梱)とチーム knowledge(ユーザー管理、space レベルのドメイン knowledge、`amadeus/spaces/<space>/knowledge/` — 自由形式、ブートストラップ時は空、space 内のすべての intent で共有)。 |
-| **Ladder prompt(ラダープロンプト)** | walking-skeleton Bolt の終わりに表示される単一のプロンプト。「continue autonomously」か「gate every Bolt」を選ぶよう求めます。あなたの選択は autonomy mode として記録され、残りすべての Bolt を統治します。 |
+| **Ladder prompt(旧ラダープロンプト)** | 廃止されたwalking-skeleton後の`autonomous|gated`選択。新しいworkはIntent自律レベルを`none|semi|full`から選び、旧recordは診断専用です。 |
 | **Lead agent(リードエージェント)** | ステージの作業に主として責任を持つエージェントペルソナ。 |
 | **Leader(リーダー)** | ユーザーとメンバーの間を中継し、ゲートを執行し、選挙を配信・集計し、Issue と Pull Request を管理するチームモードの帽子。leader は実装しません。**Builder**、**Conductor**、**Reviewer** を参照。 |
 | **Learning loop(学習ループ)** | ステージ内の是正を持続的なプラクティスとセンサーに変えるメカニズム。ステージ中にオーケストレーターは観察を `memory.md` に記録し、承認ゲートでそれらを表面化させ、どれを残すかをあなたが確認します。確認された各学習は space メモリレイヤー(`amadeus/spaces/<space>/memory/project.md`、ワンクリックで `memory/team.md` に昇格)にプラクティスとして書かれる — または新しいセンサーを scaffold する — ため、次のワークフローで適用されます。[ルールと学習ループ](09-rules-and-the-learning-loop.ja.md) を参照。 |
@@ -129,7 +129,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
 | **Swarm** | prepare → 並列 fan-out → check → finalize で、複数の Construction Unit をそれぞれ独自の worktree で並行実装する機構(`amadeus-swarm.ts`)。 |
 | **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
-| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。残りの Construction が実行される前に全体の形を確認できるよう、常にゲートされ対話的です。ラダープロンプトは承認直後に発火します。 |
+| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。gateはIntent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
 | **Utility command(ユーティリティコマンド)** | `/amadeus` に渡される非ワークフローのフラグ(`--status`、`--doctor`、`--version`、`--stage`、`--phase`、`--scope` など)。フルワークフローを実行せずに特定の操作を行います。 |
 | **Verification theatre(検証劇場)** | 実行結果から導出されない検証 — ハードコードされた status、自己参照比較、両分岐が同一の条件式、どのコードも消費しないフィールド。偽の信頼を生む分だけ、ゲートが無いことより悪いものとして扱います。 |
 | **Workflow(ワークフロー)** | `/amadeus` の起動からステージ完了までの、AI-DLC ライフサイクルの 1 回のエンドツーエンド実行。特定のタスク(feature、fix など)にスコープされます。 |

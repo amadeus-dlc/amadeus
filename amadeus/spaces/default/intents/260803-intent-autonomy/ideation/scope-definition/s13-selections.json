@@ -1,0 +1,13 @@
+{
+  "stage_slug": "scope-definition",
+  "selections": [
+    {
+      "candidate_id": "c1-2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "ユーザーがIssueどおりの実行を指定した場合、Issueに明記された受け入れ条件をnice-to-haveへ降格せず、すべてMust-haveとして扱う。",
+      "source": "orchestrator"
+    }
+  ]
+}

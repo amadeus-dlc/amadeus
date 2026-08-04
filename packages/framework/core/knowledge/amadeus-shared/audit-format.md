@@ -90,7 +90,11 @@ Formal-model-check checkpoint choices use an authoritative side ledger at
 lock. Each pending row binds plugin/code, checkpoint, target, spec identity,
 intent run, and advisory instance. Each receipt adds the canonical choice and
 the exact physical `HUMAN_TURN` coordinates: shard, timestamp, and SHA-256 of
-the event record. A stage report is refused while any matching row is
+the event record. The choice is accepted only when the immediately preceding
+interaction decision is the tool-validated advisory presentation for those
+exact instances. A correction may mark a legacy, unpresented run-now receipt as
+revoked only while the advisory remains open and no model-check evidence exists;
+the revoked row stays in the side ledger and no longer resolves the hold. A stage report is refused while any matching row is
 unresolved. The ordinary audit shard still supplies the human turn and stage
 lifecycle; the side ledger supplies the advisory-specific correlation that a
 general approval event cannot express. Local run-now evidence is retained in
@@ -131,7 +135,7 @@ Human-grounded in both solo and team modes. A session driven by a real human tur
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `GRANT_ISSUED` | Human-grounded session issues a time-boxed standing stage-gate grant (Issue #1125, solo support #1466) | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | `tools/amadeus-state.ts grant-standing-delegation` |
+| `GRANT_ISSUED` | Historical standing-grant evidence retained for replay and doctor diagnostics | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | Reserved legacy observation |
 | `GRANT_REVOKED` | Human-grounded session revokes a standing grant id (Issue #1125, solo support #1466) | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | `tools/amadeus-state.ts revoke-standing-delegation` |
 | `GATE_AUTHORIZATION_SELECTED` | Solo-mode router records the exact standing grant selected for one stage-route attempt before emitting its carrier (Issue #1466) | Route Id, Stage, Grant Id | — | trusted in-process route writer |
 
@@ -180,7 +184,7 @@ Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.
 | `BOLT_STARTED` | Orchestrator begins a Bolt (or parallel batch of Bolts) | Bolt names, Batch number, Walking skeleton | Bolt slug | `tools/amadeus-bolt.ts start` |
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Bolt names, Batch number | Bolt slug | `tools/amadeus-bolt.ts complete` |
 | `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug, Reason, Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
-| `AUTONOMY_MODE_SET` | User answered the ladder prompt after the walking skeleton | Mode | — | `tools/amadeus-bolt.ts set-autonomy` |
+| `AUTONOMY_MODE_SET` | Historical Construction-mode evidence retained for replay and doctor diagnostics | Mode | — | Reserved legacy observation |
 
 ### Worktree (7 events)
 

@@ -1,0 +1,19 @@
+{
+  "electionId": "E-AUTRE-S13",
+  "voter": "subagent-2",
+  "question": "Reverse Engineeringで記録した学習候補のうち、今後の実行規範として永続化する候補を選んでください。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "最新origin/mainを隔離worktreeで差分scanする",
+      "description": "active worktreeに未コミットのユーザー変更がありmainも前進している場合、mergeを混ぜず隔離worktreeでobserved commitを固定して実測する。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "静的証拠を確定しlive挙動は未確認として残す",
+      "description": "Reverse Engineeringでは静的contractの所在と不在claimを固定し、未実行のharness live挙動を確認済みと扱わない。→ project.md ## Corrections"
+    }
+  ]
+}

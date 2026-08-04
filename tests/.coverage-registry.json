@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 604,
+    "total": 612,
     "enumeratedByClass": {
       "function": 344,
       "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 102,
+      "subcommand": 110,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -5674,6 +5674,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt decide-question",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt dispatch-event",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5730,6 +5737,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt get-auto-decision",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt hold-merge",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5739,6 +5753,27 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt list-auto-decisions",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt observe-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt preview-autonomy",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
@@ -5754,6 +5789,20 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt resume-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt review-auto-decision",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5763,6 +5812,10 @@
         },
         {
           "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t435-intent-autonomy-production.integration.test.ts",
           "mechanism": "cli"
         },
         {
@@ -6012,6 +6065,18 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-log advisory-decision",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-advisory-human-choice-boundaries.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "UNDER-MECHANISM"
     },
     {
       "unitClass": "subcommand",

@@ -216,7 +216,7 @@ flowchart TD
 
 ### Why Construction works the way it does
 
-Construction runs **Bolt by Bolt** — the middle path between a gate after every stage per [unit of work](glossary.md) (fifteen gates for a three-unit project) and one review at the very end (15,000 lines landing at a single build-and-test gate). Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton** — gated and interactive: the smallest end-to-end slice that proves the architecture. Once that ships, the **ladder prompt** fires exactly once: "continue autonomously, or gate every Bolt?" Your answer is recorded in state and governs every remaining Bolt in the workflow. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
+Construction runs **Bolt by Bolt** — the middle path between a gate after every stage per [unit of work](glossary.md) and one review at the very end. Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton**, the smallest end-to-end slice that proves the architecture. Its gate follows the Intent-wide `none|semi|full` autonomy table; only `full` may decide it within a human-confirmed Intent grant. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
 
 The shape gives you an early confidence checkpoint and a deliberate autonomy choice, with reviewable slices sized to the Bolts 2.8 already planned.
 
@@ -228,14 +228,11 @@ flowchart TD
     READ[/"Read bolt-plan.md (from 2.8)\n+ unit-of-work-dependency.md (from 2.7)"/]
 
     BOLT1["Bolt 1 — Walking Skeleton\n(stages 3.1–3.5)"]
-    GATE1{{"Walking-skeleton gate\nAlways presented"}}
-
-    LADDER{"Ladder prompt\n(fires once)"}
-    MODE_AUTO["Continue autonomously\nConstruction Autonomy Mode: autonomous"]
-    MODE_GATED["Gate every Bolt\nConstruction Autonomy Mode: gated"]
+    MODE{"Intent autonomy\nnone | semi | full"}
+    GATE1{{"Walking-skeleton gate\nfull may auto-decide"}}
 
     NEXT_BATCH["Next Bolt (or parallel batch)\n(stages 3.1–3.5)"]
-    GATE_N{{"Bolt/batch gate\n(skipped if autonomous)"}}
+    GATE_N{{"Bolt/batch gate\nresolved by Intent mode"}}
 
     MORE{"More Bolts?"}
 
@@ -243,11 +240,7 @@ flowchart TD
     S37["3.7 CI Pipeline\n(amadeus-pipeline-deploy-agent)\nCONDITIONAL — once"]
     VG3{{"Verification Gate:\nConstruction → Operation"}}
 
-    START --> READ --> BOLT1 --> GATE1 --> LADDER
-    LADDER --> MODE_AUTO
-    LADDER --> MODE_GATED
-    MODE_AUTO --> NEXT_BATCH
-    MODE_GATED --> NEXT_BATCH
+    START --> MODE --> READ --> BOLT1 --> GATE1 --> NEXT_BATCH
     NEXT_BATCH --> GATE_N
     GATE_N --> MORE
     MORE -->|"Yes"| NEXT_BATCH
@@ -258,16 +251,14 @@ flowchart TD
 
     style BOLT1 fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style GATE1 fill:#ffcc80,stroke:#e65100,color:#1f2328
-    style LADDER fill:#fff59d,stroke:#f57f17,color:#1f2328
-    style MODE_AUTO fill:#c8e6c9,stroke:#388e3c,color:#1f2328
-    style MODE_GATED fill:#f8bbd0,stroke:#c2185b,color:#1f2328
+    style MODE fill:#fff59d,stroke:#f57f17,color:#1f2328
     style NEXT_BATCH fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style S36 fill:#c8e6c9,stroke:#388e3c,color:#1f2328
     style S37 fill:#fff9c4,stroke:#f9a825,color:#1f2328
     style VG3 fill:#ef9a9a,stroke:#c62828,color:#1f2328
 ```
 
-<!-- Text fallback: Begin Construction → read bolt-plan.md and unit-of-work-dependency.md → execute Bolt 1 (walking skeleton, stages 3.1–3.5) → walking-skeleton gate (always) → ladder prompt (fires once, choose autonomous or gated) → loop executing remaining Bolts (each covers 3.1–3.5) with or without per-Bolt gate depending on mode → once all Bolts are done, run 3.6 Build and Test then optionally 3.7 CI Pipeline → Verification Gate 3. -->
+<!-- Text fallback: Select Intent autonomy (none, semi, or full) → begin Construction → read the Bolt plan and dependency DAG → execute the walking skeleton → resolve its gate under the mode table → execute dependency-independent Bolts in parallel batches → resolve each batch gate under the mode table → run Build and Test and optional CI once → Verification Gate 3. -->
 
 ### Parallel Bolt batches
 
@@ -277,36 +268,34 @@ When two Bolts share their dependency prerequisite (for example, Bolts B and C b
 flowchart LR
     A["Bolt A\n(walking skeleton)"]
     GA{{"Walking-skeleton gate"}}
-    L{"Ladder prompt"}
 
     subgraph BATCH["Parallel batch (Bolts B + C)"]
         B["Bolt B"]
         C["Bolt C"]
     end
 
-    GBC{{"Batch gate\n(skipped if autonomous)"}}
+    GBC{{"Batch gate\nresolved by Intent mode"}}
 
-    A --> GA --> L --> BATCH --> GBC
+    A --> GA --> BATCH --> GBC
 
     style A fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style GA fill:#ffcc80,stroke:#e65100,color:#1f2328
-    style L fill:#fff59d,stroke:#f57f17,color:#1f2328
     style B fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style C fill:#bbdefb,stroke:#1565c0,color:#1f2328
     style BATCH fill:#fff3e0,stroke:#e65100,color:#1f2328
     style GBC fill:#ffcc80,stroke:#e65100,color:#1f2328
 ```
 
-<!-- Text fallback: Bolt A (walking skeleton) runs first, followed by its gate and the ladder prompt. When B and C both depend only on A, they form a parallel batch that executes concurrently. A single batch-level gate covers both Bolts (or is skipped if the user chose "Continue autonomously"). -->
+<!-- Text fallback: Bolt A (walking skeleton) runs first and its gate follows the Intent mode table. When B and C both depend only on A, they form a parallel batch that executes concurrently. A single batch-level gate covers both Bolts and is resolved according to Intent mode. -->
 
 The conductor (the live `/amadeus` session) dispatches parallel Bolts by issuing multiple `Task` calls in a single turn — Claude Code's built-in parallelism runs the Code Generation stage for each Bolt concurrently. Question collection and design-artifact generation still run per-Bolt (they're cheap, and question answers have to be serialized through the user anyway).
 
-### Halt-and-ask on failure
+### Quality convergence on failure
 
-Failures always stop Construction, even in autonomous mode. That's the one place autonomous mode interrupts.
+In `semi` and `full`, blocking findings are not treated as approval. The required Quality Repair plugin repairs or replans until the evidence is healthy.
 
-- If a solo Bolt fails, Construction halts immediately and offers **retry** (re-run just that Bolt), **skip** (mark it `[S]` and continue — dependent Bolts will likely also fail), or **abort** (stop Construction entirely).
-- If one Bolt in a parallel batch fails while others succeed, the conductor waits for the whole batch to finish, preserves the successful Bolts' artifacts on disk, and presents the same retry / skip / abort choice for the failed Bolt only.
+- Repair reruns only failed work; successful parallel siblings retain their artifacts and completed state.
+- A non-productive repair loop parks as `REPAIR_STALLED`, preserves any active `full` grant, and records evidence-change or verified human-retry resume conditions.
 
 ### Stage reference
 
@@ -324,9 +313,9 @@ Failures always stop Construction, even in autonomous mode. That's the one place
 
 - Within each Bolt, questions for stages 3.1–3.4 are collected in a single interactive pass across the Bolt's Units before any artifacts generate. A single Bolt-level answers gate confirms all answers before design artifacts begin.
 - The per-Unit approval gate inside `stages/construction/code-generation.md` is **suppressed by the conductor** during normal Bolt execution. A single Bolt-level (or batch-level) gate replaces it.
-- The ladder prompt fires exactly once per workflow — after the walking-skeleton gate. Your answer is recorded as `Construction Autonomy Mode` in `amadeus-state.md` and honoured on session resume.
+- Intent autonomy is recorded canonically as `none|semi|full`; the legacy Construction mode field is only a scheduling projection.
 - Parallel batches require multiple `Task`-capable subagent slots to be available — see [Agents](06-agents.md) for concurrency constraints.
-- The plan is binding: once the compiled Bolt DAG declares a batch parallel, a run cannot quietly build those Units one at a time. If the ladder has not been answered yet, the engine asks it again instead of falling back to serial. If the plan itself is wrong — those Units really are serial — the way out is to record the dependency (with its reason) in `unit-of-work-dependency.md`, re-run the runtime-graph compile, then re-run the workflow; the same applies when a Construction approve is refused for a batch that never fanned out. See [State Machine](../reference/12-state-machine.md) § "Plan-integrity guards".
+- The plan is binding: once the compiled Bolt DAG declares a batch parallel, no autonomy mode may quietly build those Units one at a time. Missing canonical mode state asks for an Intent-mode selection instead of falling back to serial. If the plan itself is wrong, record the dependency and its reason in `unit-of-work-dependency.md`, recompile the runtime graph, and rerun the workflow. See [State Machine](../reference/12-state-machine.md) § "Plan-integrity guards".
 
 ---
 

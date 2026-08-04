@@ -810,6 +810,60 @@
     "status": "recorded"
   },
   {
+    "electionId": "E-AUTIC-S13",
+    "dirName": "260803-e-autic-s13",
+    "createdAt": "2026-08-03T03:53:41Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-AUTSD-S13",
+    "dirName": "260803-e-autsd-s13",
+    "createdAt": "2026-08-03T04:05:13Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-AUTRE-S13",
+    "dirName": "260803-e-autre-s13",
+    "createdAt": "2026-08-03T04:45:55Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-APPDESIGN-3",
+    "dirName": "260803-e-s13-appdesign-3",
+    "createdAt": "2026-08-03T09:27:32Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-UNITSGEN-1",
+    "dirName": "260803-e-s13-unitsgen-1",
+    "createdAt": "2026-08-03T10:51:03Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-FUNCDESIGN-1",
+    "dirName": "260803-e-s13-funcdesign-1",
+    "createdAt": "2026-08-03T15:06:29Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-NFRDESIGN-1",
+    "dirName": "260803-e-s13-nfrdesign-1",
+    "createdAt": "2026-08-03T15:46:56Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-BUILDTEST-1",
+    "dirName": "260803-e-s13-buildtest-1",
+    "createdAt": "2026-08-03T17:10:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-S13-CODEGEN-1",
+    "dirName": "260804-e-s13-codegen-1",
+    "createdAt": "2026-08-04T01:15:53Z",
+    "status": "recorded"
+  },
+  {
     "electionId": "E-GRG-RA-S13-C1",
     "dirName": "260804-e-grg-ra-s13-c1",
     "createdAt": "2026-08-04T04:03:45Z",

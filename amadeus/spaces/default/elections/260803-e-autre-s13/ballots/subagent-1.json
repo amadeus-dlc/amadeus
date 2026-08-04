@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AUTRE-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "observed affe83afe 上で Construction Autonomy Mode と reviewer_max_iterations の静的 contract を再確認し、指定8語の対象範囲検索も0件と再現できた。一方、RE記録は5 harness の live smoke・実行時挙動を未実行と明記する。静的に確認した事実と未実行の live 挙動を分離する規律は、不在 claim の過大一般化を防ぎ、特定の dirty worktree 状況に限られない。候補1は今回の Git 状態で妥当だが、既存の observed mainline commit / rescan base 規律と一部重なるため、候補2を支持する。",
+  "submittedAt": "2026-08-03T04:47:18Z"
+}

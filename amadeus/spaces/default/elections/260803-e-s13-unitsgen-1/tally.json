@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T10:53:37Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-S13-UNITSGEN-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測で memory_entries_total=0、candidates=[]、parked_open_questions=[] を確認し、監査ログ上のユーザー回答も No additions だったため、永続化対象0件を支持する。",
+      "submittedAt": "2026-08-03T10:52:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-S13-UNITSGEN-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。active intent 260803-intent-autonomy の units-generation/memory.md を実読し、Interpretations・Deviations・Tradeoffs・Open questions の全区分に実エントリがなく、コメント例だけであることを確認した。さらに audit seq 1061 で §13 の追加学習確認が提示され、seq 1063 でユーザー回答が No additions と記録され、その後 seq 1064 で zero-confirm 選挙定義が作成された順序も実測した。記録済み学習候補もユーザー追加もないため、永続化対象0件が妥当。",
+      "submittedAt": "2026-08-03T10:52:59Z"
+    }
+  ],
+  "resolutions": []
+}

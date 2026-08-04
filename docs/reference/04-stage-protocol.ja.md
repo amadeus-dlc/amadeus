@@ -667,7 +667,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 |------|-----------|
 | **AIDLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論。**Lifecycle** を参照。 |
 | **Approval gate(承認ゲート)** | 各ステージの終わりにある対話的なチェックポイント。作業を承認するか、変更を要求するか、(3 回の改訂後に)そのまま受け入れるかを選びます。Initialization ステージは承認ゲートをスキップします。 |
-| **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[ladder prompt]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
+| **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[autonomy mode]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
 | **Artifact(成果物)** | ステージが生成し、intent のレコードディレクトリ(`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)に保存されるバージョン管理された markdown ドキュメント。例: `requirements.md`、`code-summary.md`、`initiative-brief.md`。 |
 | **Component(コンポーネント)** | モジュール内の論理的な構成要素(クラス、関数グループ、UI コンポーネント)。 |
 | **Control loop(制御ループ)** | ステージを方向づけ検証する、**Rules**(作業前に適用される standing decision)と **Sensors**(出力に対して発火する決定論的チェック)のフィードフォワード/フィードバックのペアリング。(**Harness** とは別物です — こちらは CLI ディストリビューションの意味。) |
@@ -678,7 +678,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Harness(ハーネス)** | AI-DLC コアの CLI ディストリビューション — ハーネス中立な **Core** がレンダリングされる、1 つの有能なコマンドラインエージェント。このセットはオープンで成長可能です(今日: Claude Code、Codex CLI、Cursor、Kimi Code、Kiro CLI、Kiro IDE、OpenCode)。*注 — このリポジトリでは「harness」は文脈によって 4 つの意味を持ちます:* (1) **この正典的な CLI ディストリビューションの意味**; (2) rule+sensor の **control loop**(古い用法、現在は改名 — **Control loop** を参照); (3) `packages/framework/harness/<name>/` のソースサーフェスディレクトリ; (4) `tests/harness/` のテストヘルパーディレクトリ。ユーザードキュメントで「a harness」と言えるのは意味 1 だけです。 |
 | **Inline execution(インライン実行)** | オーケストレーターがエージェントペルソナをロードし、会話内で直接ステージを実行するデフォルトの実行モード。リアルタイムのユーザー対話をサポートします。 |
 | **Inline stage(インラインステージ)** | 委譲せず、オーケストレーターの会話内で直接実行されるステージ。**Inline execution** を参照。 |
-| **Ladder prompt(ラダープロンプト)** | walking-skeleton Bolt の終わりに表示される単一のプロンプト。「continue autonomously」か「gate every Bolt」を選ぶよう求めます。あなたの選択は autonomy mode として記録され、残りすべての Bolt を統治します。 |
+| **Ladder prompt(旧ラダープロンプト)** | 廃止されたwalking-skeleton後の`autonomous|gated`選択。新しいworkはIntent自律レベルを`none|semi|full`から選び、旧recordは診断専用です。 |
 | **Lead agent(リードエージェント)** | ステージの作業に主として責任を持つエージェントペルソナ。 |
 | **Lifecycle(ライフサイクル)** | AI-DLC 方法論の全体: AI-Driven Development Life Cycle。方法論の 1 回の実行がワークフローです。 |
 | **Module(モジュール)** | サービス内のコードレベルの組織境界(パッケージ、名前空間)。 |
@@ -693,7 +693,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | **Subagent execution(サブエージェント実行)** | オーケストレーターが Task ツール経由でステージ作業を別の Claude Code サブプロセスに委譲する実行モード。サブエージェントはユーザー対話なしで自律的に実行します。ステージ 2.1(reverse-engineering)と 3.5(code-generation)で使われます。 |
 | **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
 | **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
-| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。残りの Construction が実行される前に全体の形を確認できるよう、常にゲートされ対話的です。ラダープロンプトは承認直後に発火します。 |
+| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。gateはIntent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
 <!-- glossary:projection:end -->
 
 ---
@@ -788,9 +788,9 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 1. **Invoke.** `directive.reviewer` で名指しされたエージェントへ委譲し、ステージ定義パス、Q&A ファイル、生成された成果物パス、フロントマターの任意の検証ツールを渡す — ビルダーの `memory.md` やプランは決して渡さない。レビュアーが独立した判断を形成するため。
 2. **Review.** レビュアーは定義、Q&A、成果物を読み、リストされた検証ツールを実行し、**READY** または **NOT-READY** の判定とともに `## Review` セクションを主要成果物に append する。
-3. **Verdict.** READY → learnings の儀式、その後ゲートへ進む。NOT-READY でイテレーションが `reviewer_max_iterations`(デフォルト2)未満で残っている → リードエージェントが指摘に対処するため再実行し、レビュアーが再チェックする。NOT-READY でイテレーションが尽きた → 未解決の指摘を注記してゲートへ進む。
+3. **Verdict.** READY → learnings の儀式、その後ゲートへ進む。NOT-READY でイテレーションが `reviewer_max_iterations`(デフォルト2)未満で残っている → リードエージェントが指摘に対処するため再実行し、レビュアーが再チェックする。`semi` / `full`でNOT-READYが残ればblockingなquality obligationとなり、健全になるまでrepair/replanするか、`REPAIR_STALLED`としてparkする。`none`でイテレーションが尽きた場合だけ、未解決の指摘を注記してhuman gateへ進む。
 
-レビュアーは決してブロックしません — 人間が常にゲートで最終決定権を持ちます — そして `reviewer` フィールドのないステージでは発火しません。[Stage Definition](15-stage-definition.ja.md) の `reviewer` / `reviewer_max_iterations` フロントマターフィールドを参照。
+レビュアー自身はworkflow stateを直接変更せず、`reviewer`フィールドのないstageでは発火しません。`semi` / `full`のblockingな収束はQuality Repair Pluginが所有します。[Stage Definition](15-stage-definition.ja.md) の `reviewer` / `reviewer_max_iterations` フロントマターフィールドを参照。
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 実装結果
 
-U5 `five-harness-intent-completion`（Issue #2067）を、現行5 harnessのcredential-attested receiptをexactly onceで要求するharness-neutral Coreとして実装した。receipt cohortが完全一致した場合だけ、completion evidence、full grant completion、workflow clear、`WORKFLOW_COMPLETED`を固定順序の単一terminal transactionでcommitする。credentialまたはnative capabilityが不足する場合は `AWAITING_HUMAN` のままとし、completion evidenceを生成しない。
+U5 `five-harness-intent-completion`（Issue #2067）は、現行5 harnessのcredential-attested receiptを検証するharness-neutralなopt-in適合性機構として実装した。receipt cohortの完全一致はlive verification evidenceの条件であり、CoreのIntent completion条件ではない。credentialまたはnative capabilityが不足する場合はliveを理由付きskipとし、通常のworkflow completionを妨げない。
 
 ## 主な変更
 
@@ -12,7 +12,7 @@ U5 `five-harness-intent-completion`（Issue #2067）を、現行5 harnessのcred
 - `packages/framework/core/tools/amadeus-intent-completion.ts`
   - credential-attested authorization、reconcile-first reservation、single-use dispatch permit、canonical dispatch claim、native idempotency receipt検証を実装した。
   - auth / audit / Judge / automatic decision evidenceを検証し、missing、duplicate、skip、forgery、revision / binding mismatchをfail-closedにした。
-  - all-five completion evidence、terminal transaction、completion seal、memory ledger、snapshot reload、idempotent replay、U4 completed review seedを実装した。
+  - all-five live verification evidence、検証transaction、memory ledger、snapshot reload、idempotent replay、U4 completed review seedを実装した。Core terminal pathはこのevidenceをimportしない。
 - `packages/framework/core/tools/amadeus-loop-monitor-runtime.ts`、`amadeus-intent-autonomy.ts`、`amadeus-intent-autonomy-runtime.ts`
   - live authorization metadataを後方互換で拡張し、terminal projectionとしてworkflow / current grantのclearを合法化した。
   - terminal live completion capabilityを有効化した。
@@ -31,8 +31,8 @@ U5 `five-harness-intent-completion`（Issue #2067）を、現行5 harnessのcred
 
 - credential / attestation metadataがないauthorizationは `PROVENANCE_REQUIRED` で拒否する。
 - receiptはimplementation revision、package digest、registry revision、scenario revision、Intent / grant、native operation / attemptへ束縛する。
-- 5 harnessのどれか1件でも欠落・重複・不一致ならterminal transactionを開始しない。
-- terminal transactionは部分receiptを成功として返さず、event identitiesとprojection revisionの完全一致を要求する。
+- 5 harnessのどれか1件でも欠落・重複・不一致ならlive verification transactionを開始しない。
+- live verification transactionは部分receiptを成功として返さず、event identitiesとprojection revisionの完全一致を要求する。
 - PR / GitHub / merge、外部runner / supervisor、credential管理はCoreへ含めていない。
 
 ## 検証結果
@@ -59,7 +59,7 @@ U5 `five-harness-intent-completion`（Issue #2067）を、現行5 harnessのcred
 
 ## Live verification
 
-実live completionは0件である。`AMADEUS_INTENT_COMPLETION_LIVE=1` と次の5 attestationがそろっていないため、U5 live seamは1件skipした。
+実live verificationは0件である。`AMADEUS_INTENT_COMPLETION_LIVE=1` とnative command設定がそろっていないため、U5 live seamは1件skipした。
 
 - `AMADEUS_CLAUDE_LIVE_ATTESTATION`
 - `AMADEUS_CODEX_LIVE_ATTESTATION`
@@ -67,8 +67,8 @@ U5 `five-harness-intent-completion`（Issue #2067）を、現行5 harnessのcred
 - `AMADEUS_OPENCODE_LIVE_ATTESTATION`
 - `AMADEUS_KIMI_LIVE_ATTESTATION`
 
-このskipはcompletion成功ではない。credential / attestation不足は設計どおり非terminal `AWAITING_HUMAN` であり、test double以外のreceiptやattestationは生成していない。
+このskipはlive passではないが、Core Intent completionのblockerでもない。test double以外のreceiptやattestationは生成していない。
 
 ## 残作業
 
-U5のコード実装残はない。実credential-attestationを利用したall-five live receiptの取得だけが環境依存の外部検証として残る。
+実credential-attestationを利用したall-five live receiptの取得は環境依存の任意検証として残る。Core Intent completionとは独立して後から実行できる。

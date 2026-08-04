@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "静的証拠を確定しlive挙動は未確認として残す"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "最新origin/mainを隔離worktreeで差分scanする",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "静的証拠を確定しlive挙動は未確認として残す",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T04:48:26Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-AUTRE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "observed affe83afe 上で Construction Autonomy Mode と reviewer_max_iterations の静的 contract を再確認し、指定8語の対象範囲検索も0件と再現できた。一方、RE記録は5 harness の live smoke・実行時挙動を未実行と明記する。静的に確認した事実と未実行の live 挙動を分離する規律は、不在 claim の過大一般化を防ぎ、特定の dirty worktree 状況に限られない。候補1は今回の Git 状態で妥当だが、既存の observed mainline commit / rescan base 規律と一部重なるため、候補2を支持する。",
+      "submittedAt": "2026-08-03T04:47:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-AUTRE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "observed affe83afe 上で対象4領域を再検索し候補語彙8種がすべて0件であることを確認した。静的contractと不在claimは固定できる一方、5 harnessのlive smoke等は未実行と成果物に明記されており、確認済みと扱わない規律は証拠境界を正確に保つ。",
+      "submittedAt": "2026-08-03T04:47:42Z"
+    }
+  ],
+  "resolutions": []
+}

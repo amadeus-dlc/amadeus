@@ -50,6 +50,8 @@ export type AutonomyRuntimeEvent =
     }
   | { readonly type: "INTENT_GRANT_ISSUED"; readonly grant: IntentGrant }
   | { readonly type: "INTENT_GRANT_REVOKED"; readonly grant: IntentGrant }
+  | { readonly type: "INTENT_GRANT_COMPLETED"; readonly grant: IntentGrant }
+  | { readonly type: "WORKFLOW_EXECUTION_COMPLETED" }
   | { readonly type: "INTENT_GRANT_EXERCISE_RESERVED"; readonly reservation: GrantExerciseReservation }
   | {
       readonly type: "INTENT_GRANT_EXERCISED";
@@ -256,6 +258,11 @@ export interface ResumeInput {
     readonly partition: LoopMonitorPartition;
     readonly evidenceFingerprint?: string;
     readonly humanRetry?: Parameters<LoopMonitorCoordinator["clearLatch"]>[0]["humanRetry"];
+  } | {
+    readonly clearedLatchReceipt: {
+      readonly identity: string;
+      readonly verified: true;
+    };
   };
 }
 
@@ -275,6 +282,8 @@ export interface IntentAutonomyCoordinator {
     readonly failureClass: string;
     readonly sanitizedEvidenceFingerprint: string;
   }): { readonly result: WorkflowResult; readonly receipt: IntentAutonomyCommitReceipt } | { readonly error: string };
+  complete(): { readonly result: WorkflowResult & { readonly outcome: "completed" }; readonly receipt: IntentAutonomyCommitReceipt } |
+    { readonly error: string };
   readProjection(): AutonomyProjection;
 }
 
@@ -306,6 +315,23 @@ function failedResult(projection: AutonomyProjection, failure: InvocationFailure
     resumeCondition: null,
     failureRef: failure.transactionId,
   });
+}
+
+function completedResult(
+  projection: AutonomyProjection,
+  completedGrant: IntentGrant | null,
+): WorkflowResult & { readonly outcome: "completed" } {
+  return parseWorkflowResult({
+    outcome: "completed",
+    reasonCode: null,
+    retryable: false,
+    intentUuid: projection.intentUuid,
+    autonomyMode: projection.mode,
+    grant: completedGrant === null ? null : { id: completedGrant.grantId, state: "completed" },
+    evidenceFingerprint: null,
+    resumeCondition: null,
+    failureRef: null,
+  }) as WorkflowResult & { readonly outcome: "completed" };
 }
 
 function parkProjection(input: {
@@ -587,6 +613,12 @@ export function createIntentAutonomyCoordinator(options: {
       return input.loopMonitor === undefined ? null : "monitor-latch-not-applicable";
     }
     if (input.loopMonitor === undefined || envelope.monitorLatchIdentity === null) return "monitor-latch-clear-required";
+    if ("clearedLatchReceipt" in input.loopMonitor) {
+      return input.loopMonitor.clearedLatchReceipt.verified === true &&
+          input.loopMonitor.clearedLatchReceipt.identity === envelope.monitorLatchIdentity
+        ? null
+        : "monitor-latch-clear-receipt-mismatch";
+    }
     const cleared = input.loopMonitor.coordinator.clearLatch({
       partition: input.loopMonitor.partition,
       evidenceFingerprint: input.loopMonitor.evidenceFingerprint,
@@ -667,6 +699,40 @@ export function createIntentAutonomyCoordinator(options: {
       const receipt = commit(before, after, transactionId, [{ type: "INVOCATION_FAILED", failure }]);
       return { result: failedResult(after, failure), receipt };
     },
+    complete() {
+      const before = current();
+      if (before.workflowExecutionState === null) {
+        const completedGrant = before.terminalGrantHistory.findLast((grant) => grant.state === "completed") ?? null;
+        return { result: completedResult(before, completedGrant), receipt: {
+          transactionId: autonomyStableId("autonomy-complete-existing", before.intentUuid),
+          transactionDigest: autonomyDigest(before),
+          intentUuid: before.intentUuid,
+          projectionRevision: before.projectionRevision,
+        } };
+      }
+      if (before.workflowExecutionState !== "running" || before.pendingExercise !== null || before.parkEnvelope !== null) {
+        return { error: "workflow-not-completable" };
+      }
+      const grant = before.currentGrant === null ? null : { ...before.currentGrant, state: "completed" as const };
+      const after: AutonomyProjection = {
+        ...before,
+        workflowExecutionState: null,
+        currentGrant: null,
+        terminalGrantHistory: grant === null ? before.terminalGrantHistory : [...before.terminalGrantHistory, grant],
+        projectionRevision: before.projectionRevision + 1,
+      };
+      assertLegalAutonomyProjection(after);
+      const receipt = commit(
+        before,
+        after,
+        autonomyStableId("autonomy-complete", [before.intentUuid, before.projectionRevision]),
+        [
+          ...(grant === null ? [] : [{ type: "INTENT_GRANT_COMPLETED" as const, grant }]),
+          { type: "WORKFLOW_EXECUTION_COMPLETED" },
+        ],
+      );
+      return { result: completedResult(after, grant), receipt };
+    },
     readProjection: current,
   };
 }
@@ -697,7 +763,8 @@ export interface IntentAutonomyStatusEnvelope {
   readonly resumeCondition: ResumeCondition | null;
   readonly legacyStandingGrantCount: number;
   readonly unreviewedAutoDecisionCount: number;
-  readonly terminalLiveCompletionCapable: true;
+  readonly liveVerificationAvailable: true;
+  readonly coreCompletionRequiresLiveReceipts: false;
 }
 
 export function projectIntentAutonomyStatus(projection: AutonomyProjection): IntentAutonomyStatusEnvelope {
@@ -716,6 +783,7 @@ export function projectIntentAutonomyStatus(projection: AutonomyProjection): Int
     resumeCondition: projection.parkEnvelope?.resumeCondition ?? null,
     legacyStandingGrantCount: projection.legacyStandingGrantIds.length,
     unreviewedAutoDecisionCount: projection.autoDecisions.filter((decision) => decision.reviewState === "unreviewed").length,
-    terminalLiveCompletionCapable: true,
+    liveVerificationAvailable: true,
+    coreCompletionRequiresLiveReceipts: false,
   };
 }

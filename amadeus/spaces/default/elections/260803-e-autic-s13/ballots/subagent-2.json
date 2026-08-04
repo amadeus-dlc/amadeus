@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AUTIC-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "既存の cid:intent-capture:c4-2 と重複するため、独立規範を新設せず、今回の3 Issueの依存順を同 cid の適用実例として追補してください。",
+  "rationale": "#2096 は #2095 を Blocker、#2067 を Consumer と明記し、#2067 も #2095 と #2096 を Blocker としているため、#2095→#2096→#2067統合の順序は一次証拠から確定する。project.md には論理的に1つのinitiativeを1 Intentに保ち、Unit/Boltで分割する既存則があり候補2はこれと整合する。候補1は今回のIntent限定のユーザー指示としては妥当だが、恒久的なproject規範にするとteam.mdの『Intent recordを仕様の正本、Issueを一方向の共有ビュー』と衝突する。",
+  "submittedAt": "2026-08-03T03:55:54Z"
+}

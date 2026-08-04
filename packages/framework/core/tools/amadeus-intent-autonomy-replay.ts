@@ -13,7 +13,13 @@ import {
   type IntentAutonomyTransaction,
 } from "./amadeus-intent-autonomy-runtime.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
-import { findAllEvents, readAllAuditShards, withAuditLock } from "./amadeus-lib.ts";
+import {
+  auditBlockField,
+  findAllEvents,
+  readAllAuditShards,
+  splitAuditRecords,
+  withAuditLock,
+} from "./amadeus-lib.ts";
 
 export const INTENT_AUTONOMY_AUDIT_EVENT = "INTENT_AUTONOMY_TRANSACTION_COMMITTED";
 
@@ -76,11 +82,13 @@ export function intentAutonomyAuditFields(transaction: IntentAutonomyTransaction
 }
 
 function field(block: string, name: string): string | null {
+  if (block.startsWith("{")) return auditBlockField(block, name);
   const match = block.match(new RegExp(`^${name}:\\s*(.*)$`, "m"));
   return match?.[1]?.trim() ?? null;
 }
 
 function eventBlocks(audit: string): string[] {
+  if (audit.trimStart().startsWith("{")) return splitAuditRecords(audit);
   return audit.split(/\n(?=Event:\s*)/).map((block) => block.trim()).filter(Boolean);
 }
 
@@ -127,8 +135,7 @@ export function readIntentAutonomyTransactionsFromAudit(
     readAllAuditShards(projectDir, intent, space),
     "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
   );
-  const blocks = rows.map((row) => row.block).join("\n");
-  return readIntentAutonomyTransactions(blocks);
+  return readIntentAutonomyTransactions(rows.map((row) => row.block).join("\n"));
 }
 
 export function createAuditIntentAutonomyRepository(options: {

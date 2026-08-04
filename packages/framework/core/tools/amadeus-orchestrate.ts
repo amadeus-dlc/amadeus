@@ -182,6 +182,8 @@ import {
   parseGrantApprovalProcessResult,
   routeSoloStandingGrantDirective,
 } from "./amadeus-grant-authorization.ts";
+import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import { productionStageAutonomy } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { projectSensorInvocation } from "./amadeus-sensor-invocation.ts";
@@ -1602,18 +1604,15 @@ function readSkeletonStance(stateContent: string | null): SkeletonStance | null 
   return VALID_SKELETON_STANCES.has(lower) ? (lower as SkeletonStance) : null;
 }
 
-// The state field recording the human's autonomy grant at the walking-skeleton
-// ladder (stage-protocol.md "Ladder prompt" — set via `amadeus-bolt set-autonomy
-// --mode <autonomous|gated>`). BOTH recorded grants activate the swarm fan-out:
-// `autonomous` runs the batches back to back, `gated` runs the same batches but
-// stops at a batch-end gate (stage-protocol.md § "Subsequent Bolt gate" — "For
-// parallel batches the gate covers every Bolt in the batch"). Issue #1612: reading `gated` as a
-// swarm VETO serialised every parallel Unit, which the spec never asked for.
-// Only an absent, empty or unrecognised value reads as unset — the safe side,
-// which never fans out and (past the walking skeleton) re-fires the ladder.
+// `Construction Autonomy Mode` remains an internal scheduling projection for
+// old swarm code. Authorization comes exclusively from the audit-backed
+// `Intent Autonomy Mode`; a legacy autonomous/gated field by itself is never
+// authoritative and therefore fails closed to no swarm.
 const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
 
-// The two grants the ladder can record. `null` is the third state (unset).
+// Compatibility scheduling modes. Authorization is resolved separately from
+// Intent autonomy; `gated` still fans out a batch and waits before the next one.
 type AutonomyMode = "autonomous" | "gated";
 
 // Read the recorded Construction autonomy mode as a discriminated three-valued
@@ -1622,10 +1621,11 @@ type AutonomyMode = "autonomous" | "gated";
 // hand-edited state file) narrows to null rather than to a grant — the swarm
 // never activates on a value the engine could not recognise.
 function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
-  const raw = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD) : null;
-  if (!raw) return null;
-  const value = raw.trim();
-  return value === "autonomous" || value === "gated" ? value : null;
+  const intentMode = stateContent ? getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim() : null;
+  if (intentMode === "none") return "gated";
+  if (intentMode !== "semi" && intentMode !== "full") return null;
+  const scheduling = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() : null;
+  return scheduling === "autonomous" ? "autonomous" : null;
 }
 
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
@@ -1763,8 +1763,8 @@ function isSkeletonGateStage(node: GraphStage, scope: string): boolean {
 // predicate is the skeleton-gate stage's own checkbox — derived state the engine
 // writes at approval — not a weak proxy such as an artifact directory existing
 // (observed-entity-from-failure-mode): a half-run Bolt 1 leaves directories but
-// never a completed checkbox. Drives the ladder re-fire (stage-protocol.md
-// § "Ladder prompt", session-resume rule).
+// never a completed checkbox. Used only to distinguish legacy/unmigrated state
+// before and after the first construction gate.
 function skeletonGateCompleted(stateContent: string | null, scope: string): boolean {
   if (stateContent === null) return false;
   const first = firstInScopeStageOfPhase("construction", scope);
@@ -1772,33 +1772,15 @@ function skeletonGateCompleted(stateContent: string | null, scope: string): bool
   return checkboxStateOf(parseCheckboxes(stateContent), first.slug) === "completed";
 }
 
-// The ladder re-fire question (stage-protocol.md § "Ladder prompt"). Emitted when the
-// walking skeleton is complete but no autonomy grant is recorded; names the
-// exact command that records either answer so the run can resume.
-const AUTONOMY_LADDER_QUESTION =
-  "The walking skeleton is complete but Construction Autonomy Mode is unset. " +
-  "How should the remaining Bolts run — continue autonomously (no per-Bolt gate), " +
-  "or gate every Bolt (a batch-end gate for each parallel batch)? Record the answer " +
-  "with `amadeus-bolt set-autonomy --mode autonomous` or " +
-  "`amadeus-bolt set-autonomy --mode gated`, then re-run `next`.";
-
 // Resolve the determined boolean gate for the skeleton-gate stage once the
 // conductor's classified stance is in hand. The round-trip's whole point is to
 // turn "unresolved" into a DETERMINED boolean; this function is that resolution.
 //
-// The faithful answer (SKILL.md:655-720 — the per-Bolt steps + the walking-
-// skeleton section) is that the FIRST construction stage gates in every stance.
-// Both skeleton-on AND skeleton-off present a gate at Bolt 1: skeleton-on forces
-// an always-gate "regardless of Construction Autonomy Mode" (SKILL.md Step 5 /
-// "When skeleton-on" §1); skeleton-off runs Bolt 1 "as a regular Bolt with the
-// standard batch-gate path", and since `Construction Autonomy Mode` is `unset`
-// (treated as `gated`) until the post-Bolt-1 ladder prompt sets it, that batch
-// gate IS presented (it is only skipped when `autonomous`, which cannot be true
-// before Bolt 1 ships). The stance changes the CEREMONY (solo + always-gate +
-// ladder prompt vs regular Bolt + batch gate) — orchestration the conductor
-// runs — not whether a gate is presented at Bolt 1. The gate axis is on for all
-// construction work (only bootstrap init stages auto-proceed; gate-axis ≠
-// execution-axis). So the resolved value is `true` for every stance.
+// The first construction stage remains a real gate in every skeleton stance.
+// Intent autonomy decides who resolves that gate: `full` may auto-decide it
+// within the confirmed grant, while `none` and `semi` require a human. The
+// stance changes the ceremony, not whether the gate exists, so this structural
+// answer remains `true` for every stance.
 //
 // Why the round-trip still earns its keep: the engine cannot EMIT a boolean it
 // has not determined. Classifying the prose is what rules out a stance that
@@ -1812,11 +1794,10 @@ const AUTONOMY_LADDER_QUESTION =
 function resolveSkeletonGate(stance: SkeletonStance, scope: string): boolean {
   switch (stance) {
     case "on":
-      // skeleton-on: always-gate at Bolt 1.
+      // skeleton-on: Bolt 1 has a gate; Intent autonomy resolves authority.
       return true;
     case "off":
-      // skeleton-off: regular Bolt; the standard gate is still presented at
-      // Bolt 1 (autonomy is gated until the post-Bolt-1 ladder sets it).
+      // skeleton-off: regular Bolt; its standard gate still exists.
       return true;
     case "scope-dependent": {
       // Fall back to the scope-mapping defaults to SELECT the ceremony
@@ -2198,12 +2179,34 @@ function routeMainWorkflowDirective(
   codekbCtx: CodekbCtx | undefined,
 ): RunStageDirective {
   if (stateContent === null || codekbCtx === undefined) return directive;
-  return routeSoloStandingGrantDirective({
-    directive,
+  const scope = getField(stateContent, "Scope") ?? DEFAULT_SCOPE;
+  const firstConstruction = firstInScopeStageOfPhase("construction", scope);
+  const next = directive.next_stage === undefined || directive.next_stage === null
+    ? null
+    : nodeForSlug(directive.next_stage);
+  const phaseBoundary = directive.next_stage === null ||
+    (next !== null && next !== undefined && next.phase !== directive.phase);
+  const autonomy = productionStageAutonomy({
     projectDir: codekbCtx.projectDir,
-    stateContent,
-    graph: loadGraph(),
+    stage: directive.stage,
+    phase: directive.phase,
+    graphRevision: autonomyDigest(loadGraph()),
+    walkingSkeleton:
+      directive.phase === "construction" && firstConstruction?.slug === directive.stage,
+    phaseBoundary,
   });
+  if (autonomy.mode === "semi" || autonomy.mode === "full") {
+    directive.intent_autonomy_mode = autonomy.mode;
+    directive.autonomy_auto_approve = autonomy.autoApprove;
+    directive.quality_repair = autonomy.qualityRepair === "error" ? "error" : "active";
+    if (autonomy.grantId !== null) directive.intent_grant_id = autonomy.grantId;
+    // Intent-scoped autonomy supersedes legacy standing grants. Do not attach
+    // the old carrier after a human has selected the new mode.
+    return directive;
+  }
+  // Legacy standing delegation remains replayable for migration diagnostics,
+  // but is no longer an authorization route for live gates (#2067).
+  return directive;
 }
 
 function buildRunStageDirective(
@@ -3125,9 +3128,9 @@ function owedBatchGate(
 // trigger condition holds:
 //   - the slug resolves to a Construction stage that is the per-unit build stage
 //     (for_each:unit-of-work + mode:subagent — code-generation today);
-//   - the human recorded a grant at the walking-skeleton ladder (Construction
-//     Autonomy Mode: autonomous OR gated — gated fans out the same batches and
-//     stops at a batch-end gate, issue #1612; only unset refuses to fan out);
+//   - canonical Intent autonomy supplies a scheduling projection (`none` fans
+//     out and stops at batch-end human gates; `semi`/`full` fan out without an
+//     in-phase batch wait; legacy mode fields alone never authorise fan-out);
 //   - the compiled Bolt/unit DAG yields a batch with uncovered units.
 // Three outcomes, then:
 //   - all conditions hold and no batch-end gate is owed: emit
@@ -3140,14 +3143,9 @@ function owedBatchGate(
 //   - any condition misses: emit nothing and return false, so the caller falls
 //     back to the normal run-stage emit (which keeps its computed gate,
 //     including the skeleton round-trip sentinel).
-// The skeleton Bolt 1 is protected two ways: temporally (autonomy stays
-// unset until the ladder fires after Bolt 1 ships) AND structurally — the
-// isSkeletonGateStage guard below refuses to swarm the walking-skeleton gate stage
-// regardless of autonomy state. The structural guard matters for scopes where the
-// per-unit build stage (code-generation) IS the skeleton-gate stage (poc / fix /
-// security-patch): there the skeleton's always-gated approval must never be bypassed
-// by a stray autonomous setting, so the engine enforces it rather than trusting the
-// conductor's ordering.
+// The skeleton Bolt 1 is structurally excluded from swarm dispatch. For scopes
+// where code-generation is the skeleton-gate stage, the gate still exists and
+// the Intent autonomy coordinator determines whether `full` may auto-decide it.
 //
 // The return is a discriminated outcome rather than a boolean: a caller that
 // only knows "did not fan out" cannot tell a scope with no units from a run
@@ -3254,16 +3252,15 @@ function tryEmitSwarm(
   if (!node) return notSwarmStage;
   if (node.phase !== "construction") return notSwarmStage;
   if (node.for_each !== SWARM_FOR_EACH || node.mode !== SWARM_MODE) return notSwarmStage;
-  // Never swarm the walking-skeleton gate stage — Bolt 1 is always gated and
-  // human-approved before any batch fans out (structural defense-in-depth).
+  // Never swarm the walking-skeleton gate stage. Its gate may be human-resolved
+  // or full-grant-resolved, but the skeleton remains a single structural slice.
   // Declined before the DAG is read: this stage never swarms, so reading the
   // plan here would be I/O with nothing to decide.
   if (isSkeletonGateStage(node, scope)) {
     return { kind: "declined", decline: { kind: "skeleton-gate" }, pendingBatch: null };
   }
-  // The plan is now read BEFORE the grant is checked. The guard needs the
-  // declared width to judge an unanswered ladder, and this is the same read the
-  // granted path already performed — moved earlier, not added.
+  // Read the plan before Intent autonomy so the guard can preserve a declared
+  // parallel width even when canonical mode state is unavailable.
   const selection = selectSwarmBatch(node, projectDir, recordPrefix, codekbCtx);
   if (selection.kind === "declined") return selection.value;
   const autonomyOutcome = autonomySwarmOutcome(stateContent, scope, selection.value);
@@ -3314,9 +3311,8 @@ function emitSwarmOrPerUnit(
     return;
   }
   const message = planGuardMessage(verdict);
-  // An unanswered ladder is a question, not a fault: it goes out as the same
-  // `ask` the ladder has always used, so the answer path is unchanged. Anything
-  // else is the run breaking its own plan, and stops.
+  // Missing canonical Intent autonomy is a recoverable selection question;
+  // anything else means the run is breaking its own plan and stops.
   emit(verdict.kind === "redirect" ? askDirective(message) : errorDirective(message));
 }
 
@@ -3582,19 +3578,6 @@ function emitPerUnitRunStage(
   // the gate and re-enters here to begin per-unit iteration.
   if (isSkeletonGateStage(node, scope) && readSkeletonStance(stateContent) === null) {
     emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
-    return;
-  }
-
-  // LADDER precedence (issue #1612, stage-protocol.md § "Ladder prompt",
-  // session-resume rule). Once the walking
-  // skeleton is complete, `Construction Autonomy Mode` must carry the human's
-  // answer before any further Bolt runs. A session that resumes with the field
-  // still unset used to serialise silently; the engine now re-fires the ladder
-  // as an `ask` and emits no work until `set-autonomy` records the choice. Only
-  // AFTER the skeleton — an unset grant before it is the legitimate initial
-  // state and keeps today's behaviour.
-  if (skeletonGateCompleted(stateContent, scope) && readAutonomyMode(stateContent) === null) {
-    emit(askDirective(AUTONOMY_LADDER_QUESTION));
     return;
   }
 

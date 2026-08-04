@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-S13-NFRDESIGN-1",
+    "voter": "subagent-2",
+    "submittedAt": "2026-08-03T15:49:21Z"
+  },
+  "electionId": "E-S13-NFRDESIGN-1",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 6,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "候補6への賛成意思は変わらない。GoAコードの訂正に従いfavorを示すgoa=1へ修正する。",
+  "submittedAt": "2026-08-03T15:50:12Z"
+}

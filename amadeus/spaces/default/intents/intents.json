@@ -892,6 +892,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead",
+    "slug": "intent-autonomy",
+    "dirName": "260803-intent-autonomy",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fcacc-48af-7c69-b0b1-b9da1583cd62",
     "slug": "goal-reconciliation-guar",
     "dirName": "260804-goal-reconciliation-guar",

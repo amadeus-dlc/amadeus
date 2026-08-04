@@ -217,7 +217,7 @@ function setAutonomous(proj: string): void {
   const statePath = seededStateFile(proj);
   const state = readFileSync(statePath, "utf-8").replace(
     /^(- \*\*Scope\*\*: .*)$/m,
-    "$1\n- **Construction Autonomy Mode**: autonomous",
+    "$1\n- **Intent Autonomy Mode**: full\n- **Construction Autonomy Mode**: autonomous",
   );
   writeFileSync(statePath, state);
 }

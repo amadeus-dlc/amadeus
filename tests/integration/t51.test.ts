@@ -40,7 +40,8 @@
 //   - .sh L117 count_event STAGE_AWAITING_APPROVAL == 3  -> "STAGE_AWAITING_APPROVAL fires 3x".
 //   - .sh L118 count_event GATE_APPROVED == 3            -> "GATE_APPROVED fires 3x".
 //   - .sh L123 first event == WORKFLOW_STARTED           -> "WORKFLOW_STARTED is first event".
-//   - .sh L127 last event == WORKFLOW_COMPLETED          -> "WORKFLOW_COMPLETED is last event".
+//   - .sh L127 WORKFLOW_COMPLETED closes the lifecycle stream; Intent autonomy
+//     terminalization commits immediately after it.
 //   - .sh L131-138 final-stage GATE_APPROVED line < STAGE_COMPLETED line ->
 //       "GATE_APPROVED precedes STAGE_COMPLETED for final stage" (same observable,
 //       last-occurrence line ordering) PLUS a STRONGER per-gated-stage check that
@@ -291,9 +292,10 @@ describe("t51 fix event parity — CLI contract (migrated from t51-fix-event-par
     expect(stream[0]).toBe("WORKFLOW_STARTED");
   });
 
-  test("12: WORKFLOW_COMPLETED is last event", () => {
+  test("12: WORKFLOW_COMPLETED is followed only by Intent autonomy terminalization", () => {
     const stream = eventStream(readAudit(PROJ));
-    expect(stream[stream.length - 1]).toBe("WORKFLOW_COMPLETED");
+    expect(stream[stream.length - 2]).toBe("WORKFLOW_COMPLETED");
+    expect(stream[stream.length - 1]).toBe("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
   });
 
   test("13: GATE_APPROVED precedes STAGE_COMPLETED for final stage", () => {

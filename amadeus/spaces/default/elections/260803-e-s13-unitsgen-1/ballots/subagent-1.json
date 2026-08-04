@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-S13-UNITSGEN-1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測で memory_entries_total=0、candidates=[]、parked_open_questions=[] を確認し、監査ログ上のユーザー回答も No additions だったため、永続化対象0件を支持する。",
+  "submittedAt": "2026-08-03T10:52:18Z"
+}

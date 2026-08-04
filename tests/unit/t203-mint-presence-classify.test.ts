@@ -52,9 +52,11 @@ import {
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
+  advisoryChoicePresentationFields,
   closeAdvisoryInstancesForStage,
   guardAdvisoryChoices,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   beginModelCheckArtifacts,
   publishModelCheckArtifacts,
@@ -187,6 +189,18 @@ function advisoryReceipts(proj: string): Array<{
   return store.receipts;
 }
 
+function presentPendingAdvisory(proj: string, stage: string): void {
+  const store = JSON.parse(
+    readFileSync(join(seededRecordDir(proj), ".amadeus-advisory-choice.json"), "utf-8"),
+  ) as { pending: Array<{ closedAt?: string; identity: { checkpoint: string; advisoryInstance: string } }> };
+  const instances = store.pending
+    .filter((pending) => pending.closedAt === undefined && pending.identity.checkpoint === stage)
+    .map((pending) => pending.identity.advisoryInstance);
+  const fields = advisoryChoicePresentationFields(proj, stage, instances);
+  if (!fields.ok) throw new Error(fields.reason);
+  plantV1AuditRow("DECISION_RECORDED", fields.value, proj);
+}
+
 let proj: string;
 
 describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)", () => {
@@ -219,12 +233,14 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
 
   test("列挙済みchoiceだけがpending advisory receiptになりholdを解除する", () => {
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
   });
 
   test("raw plain exact choice carrierは同じhook呼出しでHUMAN_TURNとreceiptを相関する", () => {
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    presentPendingAdvisory(proj, "functional-design");
 
     expect(mint(proj, "1")).toBe(0);
 
@@ -237,6 +253,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     "raw defer choice carrier %s はfresh receiptとして相関する",
     (carrier) => {
       expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+      presentPendingAdvisory(proj, "functional-design");
 
       expect(mint(proj, carrier)).toBe(0);
 
@@ -260,6 +277,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (first.kind !== "hold") throw new Error("expected hold");
     const instance = first.advisories[0]!.advisory_instance;
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -271,6 +289,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
 
   test("run-now待機中の別gate choiceは重複receiptやretry attemptを作らない", () => {
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -286,6 +305,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
 
   test("検証済みNOT_DETECTED後のapproval 1は重複run-now receiptを作らない", () => {
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -300,6 +320,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
 
   test("旧adapterがNOT_DETECTED後に作った重複receiptは検証済みattemptを無効化しない", () => {
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -326,6 +347,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (first.kind !== "hold") throw new Error("expected initial hold");
     const instance = first.advisories[0]!.advisory_instance;
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -334,6 +356,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     if (detected.kind !== "hold") throw new Error("expected detected hold");
     expect(detected.runRequired).toBe(false);
     expect(detected.advisories[0]?.result).toContain("counterexample-1");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const retry = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (retry.kind !== "hold") throw new Error("expected retry route");
@@ -352,6 +375,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (first.kind !== "hold") throw new Error("expected initial hold");
     const instance = first.advisories[0]!.advisory_instance;
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const routed = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (routed.kind !== "hold") throw new Error("expected run route");
@@ -360,6 +384,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     if (failed.kind !== "hold") throw new Error("expected harness error hold");
     expect(failed.advisories[0]?.advisory_instance).toBe(instance);
     expect(failed.advisories[0]?.result).toContain("HARNESS_ERROR TLC_START_FAILED");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
     const receipts = advisoryReceipts(proj);
     expect(receipts.map((receipt) => receipt.choice)).toEqual(["run-now", "defer-with-risk"]);
@@ -371,6 +396,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
   test("stage完了後の同一発火は新しいinstanceになる", () => {
     const first = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
     if (first.kind !== "hold") throw new Error("expected hold");
+    presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("リスクを承知して延期する"))).toBe(0);
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("allow");
     closeAdvisoryInstancesForStage(proj, "functional-design");
