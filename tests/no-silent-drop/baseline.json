@@ -1449,15 +1449,6 @@
       ]
     },
     {
-      "fingerprint": "b775faf8b32b1244821b3298d8e7652100e8f1ecb9c15e0ecbcf569ec1844ef4",
-      "ruleId": "NSD001",
-      "file": "packages/framework/core/tools/amadeus-lib.ts",
-      "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
-      "issues": [
-        "#1979"
-      ]
-    },
-    {
       "fingerprint": "b835d6456660263b175eb5902c656f3c693407f7ced66efafc57838fd7c9dced",
       "ruleId": "NSD001",
       "file": "packages/framework/core/tools/amadeus-lib.ts",
