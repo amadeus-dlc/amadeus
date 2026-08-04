@@ -195,15 +195,15 @@ export function handleReport(
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
   if (loaded.value.state !== transition.from) {
-    return fail(`invalid-transition: ${result} requires state ${transition.from}, got ${loaded.value.state}`);
+    return reportStateMismatch(root, electionId, result, transition.from, loaded.value.state);
   }
-  // A tallied report lands on "hold" when the fixed tally result is a hold —
-  // the hold state is reached only through a real tally outcome.
   let to = transition.to;
+  let tally: TalliedCommit | null = null;
   if (result === "tallied") {
-    const t = readTally(root, electionId);
-    if (t === null) return fail("invalid-transition: tallied reported but tally.json missing");
-    if (t.result.kind === "hold") to = "hold";
+    const resolved = resolveTalliedCommit(root, electionId);
+    if (!resolved.ok) return resolved.error;
+    tally = resolved.value;
+    if (tally.result.kind === "hold") to = "hold";
   }
   // Issue #1458: the distributed report is where the subagent transport's
   // deferred records land. notify only books the outcomes it could observe
@@ -216,7 +216,106 @@ export function handleReport(
   }
   const set = Store.setState(root, electionId, to);
   if (!set.ok) return storeFail("setState", set.error);
+  // #2125 FR-2b: the `tallied` audit row is booked by the transition commit,
+  // not by the tally write. If this append fails after the commit, the repair
+  // path above completes the unit on the next report run.
+  if (tally !== null) {
+    const booked = bookTalliedRow(root, electionId, tally);
+    if (!booked.ok) return booked.error;
+  }
   out({ committed: result, state: to });
+  return 0;
+}
+
+// Refusal — or repair — for a report whose from-state does not match. #2125
+// recovery: if a prior tallied commit advanced the state but its audit row
+// failed to land (exit 1 after setState), the record is left with state
+// tallied/hold and no `tallied` timeline row. Re-running the report completes
+// that unit instead of refusing — append-only, never a duplicate (the row's
+// presence is what gates the repair).
+function reportStateMismatch(
+  root: string,
+  electionId: string,
+  result: string,
+  requiredFrom: ElectionState,
+  state: ElectionState,
+): number {
+  if (result === "tallied" && (state === "tallied" || state === "hold")) {
+    return repairTalliedRow(root, electionId, state);
+  }
+  return fail(`invalid-transition: ${result} requires state ${requiredFrom}, got ${state}`);
+}
+
+type TalliedCommit = NonNullable<ReturnType<typeof readTally>> & { talliedAt: string };
+
+// Resolve the tallied commit BEFORE the state advances (#2125): tally.json
+// must exist and carry talliedAt, so a malformed tally can never advance the
+// state and then fail the audit append (NFR-1).
+function resolveTalliedCommit(
+  root: string,
+  electionId: string,
+): Result<TalliedCommit, number> {
+  const tally = readTally(root, electionId);
+  if (tally === null) {
+    return err(fail("invalid-transition: tallied reported but tally.json missing"));
+  }
+  // readTally trusts JSON.parse; the commit consumes result.kind and
+  // talliedAt, so both are validated here — a corrupt record must be refused,
+  // not crash past the guard (fail-closed).
+  const kind = (tally as { result?: { kind?: unknown } }).result?.kind;
+  if (kind !== "hold" && kind !== "established") {
+    return err(fail("invalid-transition: tallied reported but tally.json is malformed (result.kind)"));
+  }
+  if (tally.talliedAt === undefined) {
+    return err(fail("invalid-transition: tallied reported but tally.json lacks talliedAt"));
+  }
+  return ok({ ...tally, talliedAt: tally.talliedAt });
+}
+
+// The `tallied` audit row carries tally.json's talliedAt so the late-lane
+// classification axis and the timeline can never diverge (#2125 FR-2b).
+function bookTalliedRow(
+  root: string,
+  electionId: string,
+  tally: TalliedCommit,
+): Result<void, number> {
+  const booked = Store.appendTimeline(root, electionId, {
+    kind: "tallied",
+    at: tally.talliedAt,
+    // receivedAt is the append instant (#1262 receipt axis): verifySelf checks
+    // monotonicity on receivedAt for every post-migration row.
+    receivedAt: normalizeAt(new Date().toISOString()),
+    detail: `tally: ${tally.result.kind}`,
+  });
+  if (!booked.ok) return err(storeFail("appendTimeline", booked.error));
+  return ok(undefined);
+}
+
+// Complete a tallied commit whose audit row is missing (#2125 recovery): the
+// state already reads tallied/hold, tally.json is intact, but the timeline has
+// no `tallied` row — the exact residue of an appendTimeline failure after
+// setState. Only that residue is repairable; a record that already carries the
+// row keeps the plain invalid-transition refusal (no duplication window).
+function repairTalliedRow(
+  root: string,
+  electionId: string,
+  state: "tallied" | "hold",
+): number {
+  const resolved = resolveTalliedCommit(root, electionId);
+  if (!resolved.ok) return resolved.error;
+  // The duplicate guard below needs the real timeline; an unreadable file must
+  // refuse the repair, not read as "no rows yet" and open a duplication window.
+  const timeline = readTimeline(root, electionId);
+  if (!Array.isArray(timeline)) {
+    return fail("invalid-transition: tallied repair refused — timeline.json is missing or unreadable");
+  }
+  const events: TimelineEvent[] = timeline;
+  if (events.some((e) => e.kind === "tallied")) {
+    return fail(`invalid-transition: tallied requires state collecting, got ${state}`);
+  }
+  const booked = bookTalliedRow(root, electionId, resolved.value);
+  if (!booked.ok) return booked.error;
+  out({ committed: "tallied", state, repaired: "tallied-row" });
   return 0;
 }
 
@@ -239,6 +338,7 @@ function bookReportedDeliveries(
     const appended = Store.appendTimeline(root, electionId, {
       kind: "distributed",
       at: record.at,
+      receivedAt: normalizeAt(new Date().toISOString()),
       detail: `delivered via ${record.transport}: ${record.voter} (${record.provenance})`,
       voter: record.voter,
     });
@@ -392,8 +492,11 @@ export function handleNotify(
   transportKind: string,
   agmsg: { team: string | null; from: string | null; sendScript: string | null },
 ): number {
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
+  // FR-1b: `collecting` stays open to notify so the dispatch-ack resend lane
+  // (3 min, max 2 resends) keeps working; the five post-collection states do
+  // not accept a distribution.
+  const loaded = requireState(root, electionId, "notify", ["open", "collecting"]);
+  if (!loaded.ok) return loaded.error;
   const voters = loaded.value.election.voters;
   const transport = buildTransport(transportKind, new Set(voters), agmsg);
   if (typeof transport === "string") return fail(transport);
@@ -406,6 +509,7 @@ export function handleNotify(
       const booked = Store.appendTimeline(root, electionId, {
         kind: "distributed",
         at: d.result.value.record.at,
+        receivedAt: normalizeAt(new Date().toISOString()),
         detail: `delivered via agmsg: ${d.voter}`,
         voter: d.voter,
       });
@@ -454,9 +558,32 @@ export function handleStatus(root: string, electionId: string): number {
   return 0;
 }
 
-export function handleTally(root: string, electionId: string): number {
+// Issue #2125 (FR-1a/FR-1c): the verbs carry their own fail-closed state check.
+// report commits transitions and guards them; the verbs that WRITE the audit
+// surfaces (tally's tally.json, notify's timeline rows) used to run from any
+// state, so a tally out of `tallied` re-fixed the ballot set and a notify out
+// of `recorded` booked a distribution after the record was sealed. The check
+// lives here, in the CLI layer: the store stays a pure persistence surface
+// (FR-1c) and the rejection happens before the first write (NFR-1).
+function requireState(
+  root: string,
+  electionId: string,
+  verb: string,
+  allowed: readonly ElectionState[],
+): Result<Extract<ReturnType<typeof Store.load>, { ok: true }>["value"], number> {
   const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
+  if (!loaded.ok) return err(storeFail("load", loaded.error));
+  if (!allowed.includes(loaded.value.state)) {
+    return err(
+      fail(`invalid-transition: ${verb} requires state ${allowed.join("/")}, got ${loaded.value.state}`),
+    );
+  }
+  return ok(loaded.value);
+}
+
+export function handleTally(root: string, electionId: string): number {
+  const loaded = requireState(root, electionId, "tally", ["collecting"]);
+  if (!loaded.ok) return loaded.error;
   const ledger = Store.ledger(root, electionId);
   if (!ledger.ok) return storeFail("ledger", ledger.error);
   const result = tally(loaded.value.election, ledger.value.ballots);
@@ -583,7 +710,13 @@ export function handleVerify(root: string, electionId: string): number {
   const ledger = Store.ledger(root, electionId);
   if (!ledger.ok) return storeFail("verify", ledger.error);
   const counts = { ledger: ledger.value.ballots.length, materialized: ballots.length };
-  const self = verifySelf(counts, resolved, storedFreq.value, timeline);
+  // #2125 FR-3 wiring: hand verifySelf the kind-order context — the election
+  // id (FR-3d ledger exemption) and tally.json's hold resolutions (a
+  // collecting reopen is the only lawful source of a post-tallied segment).
+  const self = verifySelf(counts, resolved, storedFreq.value, timeline, {
+    electionId,
+    resolutions: t.resolutions ?? [],
+  });
   if (!self.ok) return fail(`verify: self-check findings ${JSON.stringify(self.error)}`);
   out({ verified: electionId });
   return 0;

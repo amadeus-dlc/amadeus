@@ -219,7 +219,10 @@ describe("t235 election-store", () => {
     expect(timeline.some((e: { kind: string }) => e.kind === "late")).toBe(true);
   });
 
-  test("materialize fixes the ballot set and books a tallied timeline event", () => {
+  // Revised for #2125 FR-2a: materialize ends at the tally.json write. The
+  // `tallied` timeline row belongs to the state-machine commit (report
+  // --result tallied), so a bare materialize must book nothing.
+  test("materialize fixes the ballot set and books no timeline event", () => {
     expect(Store.create(root, election()).ok).toBe(true);
     expect(Store.appendBallot(root, "E-STORE-1", ballot("alice"), RECV).ok).toBe(true);
     const result = {
@@ -237,7 +240,7 @@ describe("t235 election-store", () => {
     );
     expect(materialized.voter).toBe("alice");
     const timeline = JSON.parse(readFileSync(join(electionDir(), "timeline.json"), "utf8"));
-    expect(timeline.some((e: { kind: string }) => e.kind === "tallied")).toBe(true);
+    expect(timeline.some((e: { kind: string }) => e.kind === "tallied")).toBe(false);
   });
 
   // --- U1 ballot-acceptance-failclosed (BR-3 unknown-ref) -------------------

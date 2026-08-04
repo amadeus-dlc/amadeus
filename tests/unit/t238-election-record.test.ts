@@ -193,6 +193,97 @@ describe("t238 election-record", () => {
     if (!allBad.ok) expect(allBad.error.length).toBe(3);
   });
 
+  // --- Issue #2125 FR-3: kind-order (state-machine legality) check class ---
+
+  // A minimal lawful history: one distribution, one ballot, one tally. The
+  // kind-order check must judge by POSITION only (FR-3 acceptance: neither
+  // `at` nor `receivedAt` may enter the judgement), so the timestamps here are
+  // monotonic purely to keep the orthogonal timeline-order class quiet.
+  function lawfulTimeline(): TimelineEvent[] {
+    return [
+      { kind: "distributed", at: "2026-07-19T00:00:00Z", detail: "" },
+      { kind: "ballot", at: "2026-07-19T00:01:00Z", detail: "", voter: "alice" },
+      { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
+    ];
+  }
+
+  function kindOrderFindings(
+    timeline: TimelineEvent[],
+    ctx: { electionId: string; resolutions: ReadonlyArray<{ resumedTo?: string }> },
+  ) {
+    const ballots = [ballot("alice", 1), ballot("bob", 6)];
+    const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+    const r = verifySelf({ ledger: 2, materialized: 2 }, ballots, freq, timeline, ctx);
+    return r.ok ? [] : r.error.filter((f) => f.kind === "kind-order");
+  }
+
+  test("#2125 FR-3c: the three unlawful post-tallied patterns each yield a kind-order finding", () => {
+    const ctx = { electionId: "E-TEST-1", resolutions: [] };
+    const dupTallied = [
+      ...lawfulTimeline(),
+      { kind: "tallied", at: "2026-07-19T00:03:00Z", detail: "" } as TimelineEvent,
+    ];
+    expect(kindOrderFindings(dupTallied, ctx).length).toBe(1);
+
+    const talliedThenDistributed = [
+      ...lawfulTimeline(),
+      { kind: "distributed", at: "2026-07-19T00:03:00Z", detail: "" } as TimelineEvent,
+    ];
+    expect(kindOrderFindings(talliedThenDistributed, ctx).length).toBe(1);
+
+    const talliedThenBallot = [
+      ...lawfulTimeline(),
+      { kind: "ballot", at: "2026-07-19T00:03:00Z", detail: "", voter: "bob" } as TimelineEvent,
+    ];
+    expect(kindOrderFindings(talliedThenBallot, ctx).length).toBe(1);
+  });
+
+  test("#2125 FR-3b: a collecting reopen sanctions the whole reopened segment", () => {
+    const reopened: TimelineEvent[] = [
+      ...lawfulTimeline(),
+      { kind: "ballot", at: "2026-07-19T00:03:00Z", detail: "", voter: "bob" },
+      { kind: "tallied", at: "2026-07-19T00:04:00Z", detail: "" },
+    ];
+    // Without the resolution the segment is unlawful…
+    expect(
+      kindOrderFindings(reopened, { electionId: "E-TEST-1", resolutions: [] }).length,
+    ).toBeGreaterThan(0);
+    // …with resumedTo: "collecting" the reopen budget covers it entirely.
+    expect(
+      kindOrderFindings(reopened, {
+        electionId: "E-TEST-1",
+        resolutions: [{ resumedTo: "collecting" }],
+      }).length,
+    ).toBe(0);
+    // A non-collecting resolution grants no budget.
+    expect(
+      kindOrderFindings(reopened, {
+        electionId: "E-TEST-1",
+        resolutions: [{ resumedTo: "tallied" }],
+      }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  test("#2125 FR-3d: ledgered known-broken elections are exempt from the class", () => {
+    const dupTallied = [
+      ...lawfulTimeline(),
+      { kind: "tallied", at: "2026-07-19T00:03:00Z", detail: "" } as TimelineEvent,
+    ];
+    expect(
+      kindOrderFindings(dupTallied, { electionId: "E-CCCRA", resolutions: [] }).length,
+    ).toBe(0);
+  });
+
+  test("#2125 FR-3: without a kind-order context the class does not run (caller opt-in)", () => {
+    const ballots = [ballot("alice", 1), ballot("bob", 6)];
+    const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+    const dupTallied = [
+      ...lawfulTimeline(),
+      { kind: "tallied", at: "2026-07-19T00:03:00Z", detail: "" } as TimelineEvent,
+    ];
+    expect(verifySelf({ ledger: 2, materialized: 2 }, ballots, freq, dupTallied).ok).toBe(true);
+  });
+
   // BR-R5: render output is deterministic (same input -> deep-equal output).
   test("BR-R5: renderPersistDraft is deterministic across runs", () => {
     const e = election();
