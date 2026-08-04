@@ -899,11 +899,13 @@ describe("t236 election directive loop", () => {
       }>).filter((e) => e.kind === "tallied");
     expect(tallied().length).toBe(0);
 
-    // the transition commit books exactly one, stamped with talliedAt
+    // the transition commit books exactly one, stamped with talliedAt and
+    // carrying the receipt instant (#1262 axis verifySelf checks)
     expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
     const talliedAt = JSON.parse(readFileSync(electionPath("tally.json"), "utf8")).talliedAt;
     expect(tallied().length).toBe(1);
     expect(tallied()[0]?.at).toBe(talliedAt);
+    expect((tallied()[0] as { receivedAt?: string }).receivedAt).toBeDefined();
 
     // a second tallied report is refused by the existing from-check, so the
     // row can never be duplicated through the machine
@@ -919,6 +921,13 @@ describe("t236 election directive loop", () => {
     expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
     expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
     expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("tally.json missing");
+    expect(JSON.parse(readFileSync(electionPath("election.json"), "utf8")).state).toBe("collecting");
+
+    // A tally.json that parses but lacks a result shape is refused the same
+    // way — fail-closed on corrupt records, never a crash past the guard.
+    writeFileSync(electionPath("tally.json"), JSON.stringify({ talliedAt: "2026-07-19T00:03:00Z" }));
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("invalid-transition");
     expect(JSON.parse(readFileSync(electionPath("election.json"), "utf8")).state).toBe("collecting");
   });
 
@@ -970,6 +979,12 @@ describe("t236 election directive loop", () => {
     // The commit landed. This DEF's single-ballot tally is a hold outcome, so
     // the state reads hold — only the audit row is missing.
     expect(state()).toBe("hold");
+
+    // While the timeline is still unreadable the repair itself is refused —
+    // the duplicate guard cannot run against bytes it cannot parse.
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("repair refused");
+
     writeFileSync(timelinePath, goodTimeline);
     expect(talliedRows().length).toBe(0);
 

@@ -259,6 +259,13 @@ function resolveTalliedCommit(
   if (tally === null) {
     return err(fail("invalid-transition: tallied reported but tally.json missing"));
   }
+  // readTally trusts JSON.parse; the commit consumes result.kind and
+  // talliedAt, so both are validated here — a corrupt record must be refused,
+  // not crash past the guard (fail-closed).
+  const kind = (tally as { result?: { kind?: unknown } }).result?.kind;
+  if (kind !== "hold" && kind !== "established") {
+    return err(fail("invalid-transition: tallied reported but tally.json is malformed (result.kind)"));
+  }
   if (tally.talliedAt === undefined) {
     return err(fail("invalid-transition: tallied reported but tally.json lacks talliedAt"));
   }
@@ -275,6 +282,9 @@ function bookTalliedRow(
   const booked = Store.appendTimeline(root, electionId, {
     kind: "tallied",
     at: tally.talliedAt,
+    // receivedAt is the append instant (#1262 receipt axis): verifySelf checks
+    // monotonicity on receivedAt for every post-migration row.
+    receivedAt: normalizeAt(new Date().toISOString()),
     detail: `tally: ${tally.result.kind}`,
   });
   if (!booked.ok) return err(storeFail("appendTimeline", booked.error));
@@ -293,8 +303,13 @@ function repairTalliedRow(
 ): number {
   const resolved = resolveTalliedCommit(root, electionId);
   if (!resolved.ok) return resolved.error;
+  // The duplicate guard below needs the real timeline; an unreadable file must
+  // refuse the repair, not read as "no rows yet" and open a duplication window.
   const timeline = readTimeline(root, electionId);
-  const events: TimelineEvent[] = Array.isArray(timeline) ? timeline : [];
+  if (!Array.isArray(timeline)) {
+    return fail("invalid-transition: tallied repair refused — timeline.json is missing or unreadable");
+  }
+  const events: TimelineEvent[] = timeline;
   if (events.some((e) => e.kind === "tallied")) {
     return fail(`invalid-transition: tallied requires state collecting, got ${state}`);
   }
@@ -323,6 +338,7 @@ function bookReportedDeliveries(
     const appended = Store.appendTimeline(root, electionId, {
       kind: "distributed",
       at: record.at,
+      receivedAt: normalizeAt(new Date().toISOString()),
       detail: `delivered via ${record.transport}: ${record.voter} (${record.provenance})`,
       voter: record.voter,
     });
@@ -495,6 +511,7 @@ export function handleNotify(
       const booked = Store.appendTimeline(root, electionId, {
         kind: "distributed",
         at: d.result.value.record.at,
+        receivedAt: normalizeAt(new Date().toISOString()),
         detail: `delivered via agmsg: ${d.voter}`,
         voter: d.voter,
       });
