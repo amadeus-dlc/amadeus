@@ -1,0 +1,13 @@
+{
+  "electionId": "E-260804-ERR-RE-S13-Z0",
+  "voter": "subagent-1",
+  "question": "Reverse Engineering の学習候補は0件でよいか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1/c2/c5/c6は既存ルールの適用または既存cidの再確認で、c3/c4はIssue #2156固有の事実であるため、新しいpracticeまたはsensorを永続化せず承認ゲートへ進む"
+    }
+  ]
+}

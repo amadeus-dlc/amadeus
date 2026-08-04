@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、現在、observed `498c3034a`）
+## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された境界
 
@@ -54,6 +54,195 @@ sequenceDiagram
   Engine->>Conductor: "Final directive, gate true, advisory absent"
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
+
+## no-silent-drop evidence registry の revision 束縛構造（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節は Developer Code Scan を observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）で合成し、Architect が主要 seam を verbatim 実読で二重化した現在断面である。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 exit 0、距離 11）。実測手順・全数列挙・引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+> **測定 ref の注意。** 本 intent の worktree（HEAD `668e88665`）は observed と同一ではなく、台帳3ファイルと t413 が内容差分を持つ（`cmp` 実測で DIFF）。本節の file:line・引用はすべて `git show "${OBS}:<path>"` で observed 断面から抽出した。zsh では `git show "${VAR}:path"` とブレース必須（`:t` / `:h` が履歴修飾子として解釈される）。
+
+### 台帳3層とリビジョンフィールド（observed 実測）
+
+| 台帳 | フィールド | 出現数 | 内訳 |
+| --- | --- | --- | --- |
+| `tests/no-silent-drop/adoption-evidence.json` | `currentRevision` | 24 | top-level 1 + receipt 23 |
+| `tests/no-silent-drop/adoption-evidence-manifest.json` | `testedRevision` | 24 | top-level 1 + evidence entry 23 |
+| `tests/no-silent-drop/evidence/adoption-runs.json` | `testedRevision` | 25 | run レコード 25（top-level なし） |
+
+全出現が到達不能 SHA `3734885cbfc03aa97f655ca61da1cdd533fdea3e` で、`git grep -c <sha> 9458bbda8 -- .` はこの3ファイル（24 / 24 / 25 = 73箇所）のみをヒットする。
+
+### 読み手と効く検査
+
+| フィールド | 読み手（observed 行） | 効く検査 |
+| --- | --- | --- |
+| registry top-level `currentRevision` | `t413…test.ts:157`（`git cat-file -e`）、`:159-163`（`merge-base --is-ancestor`）、`:164`（`validateEvidenceRegistry(registry, registry.currentRevision)`）、`:168`（`git diff` の左端） | **到達性**（#2156）+ 鮮度 diff（#2153） |
+| registry receipt `currentRevision` | `repository-adoption.ts:182` `if (candidate.currentRevision !== expectedRevision) problems.push(\`receipt ${candidate.id} revision mismatch\`)` | registry 内部整合 |
+| registry receipt `evidenceDigest` | `repository-adoption.ts:183-187`（`expectedDigests.get(receiptId)` 一致） | 台帳↔manifest の digest 束縛 |
+| manifest top-level `testedRevision` | `repository-adoption-evidence.ts:360` `if (rawManifest.testedRevision !== expectedRevision) problems.push("evidence manifest revision mismatch")` | manifest↔registry 束縛 |
+| manifest entry `testedRevision` | `repository-adoption-evidence.ts:197` `if (value.testedRevision !== expectedRevision) problems.push(\`evidence ${value.id} revision mismatch\`)` | 同上 |
+| `adoption-runs.json` run `testedRevision` | `repository-adoption-evidence.ts:268` `if (summary.testedRevision !== entry.testedRevision) problems.push(\`${label} revision mismatch\`)` | 成果物レコード↔manifest 束縛 |
+
+**欠陥機序**: `t413…test.ts:157` / `:159` だけが「台帳に永続化した SHA を後日 git で解決する」検査である。スカッシュマージ運用では PR ブランチ tip は着地後 `main` に存在しないため、自ブランチ tip を記録して着地した瞬間に到達不能へ反転する。PR 上では記録 SHA が到達可能で緑になるため、**PR CI でもレビューでも構造的に捕捉できない**。原因の所在は #1979 の**設計**（`cid:requirements-analysis:bug-intent-linkage`）。
+
+### digest 不動点（`canonicalBinding`）
+
+`repository-adoption-evidence.ts:333-351` の `canonicalBinding()` は digest 入力に (a) `entry.testedRevision`（`:337`）と (b) 成果物ファイルの実測バイト digest（`:343`、`artifactDigests` は `readArtifactCollection` が `sha256(bytes)` で構成）を含む。したがって束縛は3層の**不動点**をなす:
+
+1. `adoption-runs.json` の `testedRevision` 書き換え → ファイルバイトが変わる
+2. → manifest の `artifact.sha256`（25エントリ）を更新しないと `artifact digest mismatch`
+3. → `canonicalBinding` の入力が2面とも変わる → registry の `evidenceDigest`（23 receipt）を再計算しないと `evidence digest does not match repository evidence`
+
+**この不動点は機械的に計算可能で閉じる。** repo 外 scratch clone（observed へ detach、`bun install --frozen-lockfile` exit 0）での段階実測:
+
+| 段階 | 操作 | `validateEvidenceRegistry` の problems |
+| --- | --- | --- |
+| A | registry + manifest のみ SHA 置換 | **48 件**（run 単位 `revision mismatch` 25 + receipt 単位 digest 23） |
+| B | + `adoption-runs.json` も置換し manifest の `artifact.sha256` を更新 | **23 件**（digest 面のみ） |
+| C | + `evidenceDigestForReceipt()` で 23 receipt の `evidenceDigest` 再計算 | **0 件 / `ok: true`** |
+
+段階 C で `bun test tests/integration/t413-no-silent-drop-ci-adoption.test.ts` → `10 pass / 0 fail`、`bun tests/no-silent-drop-gate.ts check --base-revision 9e699ea79…` → `NO_SILENT_DROP_OK`。機械的に書き換わるフィールドは **73 + 23 + 25 = 121 箇所**。
+
+> **「修復不能」前提の反証。** Issue 本文と両クロスレビューが置いていた「evidence bundle の再 adoption に生成ツールが無いため修復不能」は成立しない（[Issue #2156 の訂正コメント](https://github.com/amadeus-dlc/amadeus/issues/2156)、2026-08-04T01:37:53Z）。**不在なのは再生成ロジックではなく書込経路**である。この評価は codekb 全体の前提として維持すること。
+
+### 書込経路の不在
+
+observed の `tests/no-silent-drop/` 配下 + `tests/no-silent-drop-gate.ts` の `.ts` は8ファイル（`gate` / `ast-scan` / `bootstrap` / `engine` / `ledger` / `model` / `repository-adoption-evidence` / `repository-adoption`）。各ファイルの `grep -cE 'writeFileSync|Bun\.write|appendFileSync|createWriteStream|writeFile\(|mkdirSync'` は **全8ファイルで 0**（Architect が observed で独立再計算）。CLI モードは `engine.ts:49` の `"check" | "census-evidence" | "approve-evidence" | "baseline-candidate"` の4種で、出力は `tests/no-silent-drop-gate.ts:35` の `process.stdout.write(...)` のみ。**正本3台帳を書く経路はリポジトリに存在しない**ため、再バインドの実施手段自体を本 intent が新設する必要がある。
+
+### 同一設計クラスの3件目 — bootstrap fallback
+
+`bootstrap-provenance.json` は同じ「台帳に永続化した値がマージ運用で陳腐化する」クラスで**既に恒久破損**している。
+
+- `candidate.digest`（`607988a05…`）が現行 `baseline.json` のバイト（`9c1e72750…`）と乖離。乖離は `a2f08658e`（PR #2127）から始まり、provenance 側は導入コミット `7c29e33f7` 以降一度も更新されていない。
+- `bootstrap.ts:331` の等値（`currentBaseline.generatedFrom.revision === provenance.postRevision`）も破れている（`69338a56f…` ≠ `fc49f8de2…`）。
+- `postRevision` は mainline のみのクローンでは**オブジェクトとして存在しない**（`git cat-file -e` exit 128）。現時点で赤にならないのは、到達性検査（`bootstrap.ts:427-428` の `gitObjectExists` + `isAncestor`）が `preRevision` にのみ適用され、`postRevision` は `:331` と `:432` の等値比較にしか使われないため。
+- さらに `validateBootstrap` 自体、`bootstrap.ts:493-495` により**信頼ベース SHA に `baseline.json` が存在しない場合だけ**呼ばれる。CI の実運用ベースは常にゲート導入後の SHA なので git 経路が選ばれ、この破損は顕在化しない。
+
+**評価: fail-closed 側のため偽緑は生まないが、fallback は事実上死んでいる。** 本 intent の射程に含めるかは裁定事項。
+
+### 設計含意（要件段へ）
+
+- 即時の再バインドは `main` を緑に戻すが、**次に registry を更新する PR で必ず再発する**。恒久解は「着地後に main SHA へ再バインドする経路」か「PR ブランチ SHA を記録できない構造」のいずれかで、前者はマージ時点で台帳を更新する経路を要し、後者は `t413:157/:159` の到達性検査の意味論変更を伴う。
+- `baseline-proof` receipt の再現性は再バインドの障害では**ない**（`--base-revision 9e699ea79…` は再バインド前後とも exit 0 / pass）。両レビュアーが INCONCLUSIVE とした未確定事項は解消済み。
+
+## state integrity（audit lock 相互排他と `Completed` 定義）の対象機構（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
+
+本節は Developer Code Scan を observed `6c15af23af32c89ca2ab18738cbb01b849da634b` で合成し、Architect が主要 seam を verbatim 実読で二重化した現在断面である。実測手順・全数列挙・引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。差分 base は `a8e1ce025`（祖先性を `git merge-base --is-ancestor` exit 0 で確認）。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+### 患部となる 2 つの機構
+
+| 機構 | 現在の責務 | 欠陥 |
+| --- | --- | --- |
+| audit lock（`amadeus-lib.ts:5937-6600`） | mkdir ベースの相互排他 + stale lock の reap。`withAuditLock` が per-identity depth counter で再入を許す | reaper に 2 つの steal 分岐があり、うち 1 つは CAS 後検証が構造的に不活性。acquire の fail-open が 1 箇所 |
+| `auditLockIdentity`（`:5960-5966`） | `intent` 有無で per-intent / workspace-sentinel の bucket を決定 | 同一 state file を 2 つの異なる bucket 下で変更する呼び出し点が併存する |
+| `countCheckboxes`（`:5669`） | `[x]` 行の生カウント。EXECUTE/SKIP suffix に対して定義盲目 | `Completed` の定義 R を供給 |
+| `rebuildDerivedPlanFields`（`:5781-5784`） | EXECUTE 実効の完了数と `Total Stages` を同時に導出 | `Completed` の定義 E を供給。R とは同一 state file 上で両立しない |
+| `approvalNextStateIssue`（`amadeus-state.ts:3377`） | approve の fail-closed 検証 | 自分が書いたのと同じ定義で再計算するため乖離検出が構造的に不可能 |
+
+### 相互排他破れの構造 — 2 つの steal 分岐
+
+`reapStaleLockUnderMutex`（`amadeus-lib.ts:6284-6331`）が CAS steal へ落ちる経路はちょうど 2 つで、どちらも CAS 後の `stampMatches` 検証を持つが、その検証の強度が非対称である。
+
+- **分岐 A（old-unstamped-dir、`:6285-6295`）** — 入口述語は「stamp なし かつ dir 齢 > `unstampedGraceMs()`（`:6294`）」。CAS 後の `stampMatches(dead, null)`（`:6144-6152`）は**同じ述語**を再評価するだけで、入口を通り変化していない dir を却下できない。ただし reaper が holder の `mkdir` 後に 2 回以上の追加 syscall を要するため、grace ノブ単独では実測到達しない（6/6 で損失ゼロ）。
+- **分岐 B（live-owner-over-age、`:6296-6300` → `liveOwnerMayBeReaped:6274-6282`）** — 入口述語は「所有者が生存 かつ `now - owner.startedAtMs > lockStaleMs()`」。CAS 後の `stampMatches(dead, owner)`（`:6153-6154`）は同一 `pid + startedAtMs` を要求するが、**生きている holder は stamp を決して更新しない**（`writeOwnerStamp` は acquire 時 1 回のみ、`:6344`）。したがって stamp は常に一致し、**検証は守るべきケースそのものに対して必ず通過する。この CAS は構造的に不活性である。**
+
+分岐 B が支配的な相互排他破れであり、必要条件は **critical section 継続時間 > `lockStaleMs()`** だけである（6/6 の scratch run が 20 増分中 14–16 を失い、全プロセスが exit 0）。コードベース自身が `amadeus-audit.ts:429-433` でこの挙動を "leaving the outer critical section running with no lock at all, silently" と記述しており、適用済みの緩和は nested-append ケースに対する depth counter だけである。
+
+分岐 A は `finalizeAuditLockAcquire:6344-6345` の fail-open 経由で決定的になる — `writeOwnerStamp` が失敗しても `dead-or-over-age` 方針なら `true` を返すため、**stamp を永久に持たない live lock** が生まれ、grace 経過後は無条件に steal される。実測でも waiter が holder の critical section 内へ侵入し、双方 exit 0 で増分 1 件が無音消失した。
+
+**既定ノブでの挙動は fail-CLOSED である。** 予算を使い切る競合下で 41 成功 + 19 の loud な非ゼロ終了 = 60、無音損失ゼロ。`withAuditLock` は予算枯渇で `AuditLockAcquireError` を throw する（`:6520-6521`）。Issue 原文の「全プロセスが exit 0 のまま増分が消える」という記述は既定構成を描写していない。
+
+### heartbeat 不在（新規所見）
+
+`owner.startedAtMs` は acquire 時刻であり、section 継続中に更新される経路が存在しない。その結果、**健全な長時間 holder と wedge した holder が観測上区別できない**。分岐 B のいかなる修正も、stamp heartbeat を導入するか、live PID の reap を禁じて wedge holder の回復を別機構へ移すかのどちらかを選ぶ必要がある。これは設計判断であり裁定を要する。
+
+### ロック bucket の不整合（新規所見、code-derived・未実測）
+
+`auditLockIdentity` は `intent === undefined` のとき identity を `projectDir + WORKSPACE_LOCK_SENTINEL` にする。したがって 2 引数の `withAuditLock(pd, fn)` は、body がどの record の state file を書こうと workspace bucket を取る。bucket 引数は callback の**閉じ行**に現れるため、開き行の grep では bucket を誤分類する。
+
+- per-intent bucket: `handleSet`（`:1079`→`:1133`）、`handleCheckbox`（`:1444`→`:1460`）、`:5157`→`:5241`、`:5359`→`:5414`
+- workspace sentinel bucket: `:1159`、`:1193`、`:1237`、`:1269`、`:2341`、`:3634`、`:4338`、`:5466`
+
+`handlePark`（`:1269`）と `handleUnpark`（`:1334` → `withLockedIntentRegistry` → `amadeus-lib.ts:2289`）はアクティブ intent の state file を workspace bucket で変更し、`handleSet --intent X` は同じファイルを per-intent bucket で変更する。**1 つのファイルに 2 人の書き手がいて互いに異なる mutex を取るため、相互排他しない。** env ノブを必要としない点で reaper race とは独立した欠陥である。`handleSet` のコメント（`:1063-1064`、`:1076-1077`）が主張する "LOCK == WRITE" は当該関数単体では成立するが state CLI 全体では大域的に偽である。**この経路の lost update は実測再現していない（live record と 2 並行 CLI 起動が必要で repo state を変更するため）。**
+
+### `Completed` の三定義
+
+| 定義 | 導出 | 主な書き手 |
+| --- | --- | --- |
+| R（生カウント） | `countCheckboxes(content,"completed")` — SKIP 行の `[x]` も数える | `amadeus-state.ts:1455`、`:2286`、`:2367`、`:2536`/`:2554`、`:3422`、`amadeus-jump.ts:564` |
+| E（EXECUTE 実効） | `parseCheckboxes(next).filter(c => c.state === "completed" && effective(c.slug) === "EXECUTE")` | `amadeus-lib.ts:5781`（共有書き手）、`amadeus-utility.ts:5236`（**独自 inline コピー**） |
+| G（graph 由来） | `graph.filter(s => s.phase === "initialization").length` | `amadeus-utility.ts:4433` → テンプレート `:4513` → audit `:4568` |
+
+3 定義すべてが append-only の audit 行と CLI JSON へ到達する。構造的帰結として、`rebuildDerivedPlanFields` は同一関数内で `Total Stages` を `executeStages.length` と定義する（`:5780`）ため、**定義 R の書き手は同一 state file 上で `Completed > Total Stages` を成立させうる**。`t394` の `Completed <= Total Stages` assert はこの不変条件を守る意図である。
+
+`approvalNextStateIssue`（`amadeus-state.ts:3377`）は fail-closed な approve 検証として `getField(content,"Completed") !== String(countCheckboxes(content,"completed"))` を評価するが、直前の書き手と同じ定義 R で再計算するため、**定義の乖離を検出することが構造的に不可能**である。repo `Forbidden` の「検証劇場」— 検証結果を実行結果から導出せず自己参照比較で構築する形 — に該当する。
+
+### 設計判断候補とトレードオフ
+
+1. **推奨 — `:6345` の fail-open を閉じる（両方針で fail closed）**: 唯一の *決定的* な分岐 A 経路を消す最小 surgical な変更。影響範囲は `amadeus-lib.ts:6337-6356` に限局し、`t145` の fail-closed acquire 契約とも整合する。ただし分岐 B は残る。
+2. **分岐 B — heartbeat 案**: section 継続中に `startedAtMs` を更新し、over-age 判定を実効化する。wedge holder の回復手段（`amadeus-audit.ts:429-433` が意図的と文書化）を保存できる一方、**新規機構の追加**であり、更新周期と失敗時の挙動を新たに設計する必要がある。
+3. **分岐 B — live reap 廃止案**: `dead-owner-only` を普遍方針にする。機構は減るが、文書化済みの wedge holder 回復を削除するため代替手段を要する。`t161`/`t163`/`t-reap-mutex` が現行 steal 意味論を pin しており明示改訂が要る。
+4. **bucket 統一案**: `withLockedIntentRegistry` は `intents.json` のため意図的に workspace スコープであり、単純な per-intent 化はできない。「registry ロック」と「state file ロック」を分離する設計変更となり、`t164` の bucket 意味論 pin 改訂を伴う。影響範囲が最も大きく、本 intent へ含めるかは裁定事項。
+5. **`Completed` 定義の統一**: 単一関数へ全書き手を通す方向は一意だが、**どの定義を正準とするかは仕様判断**である。R は `t52`/`t-tui-kiro-fix-scope.serial` に、E は `t394` に矛盾して pin されており、いずれの裁定も既存テストの明示改訂を必然的に伴う（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+
+セキュリティ／コンプライアンス上、新しい外部 I/O・権限・個人情報は導入しない。主リスクは (i) ロックの fail-open を別の fail-open へ置き換えること、(ii) `Completed` の第 4 定義を作ってしまうこと、(iii) NSD001 ゲート（`ci.yml:154`）がロックの catch ブロック編集で再 fingerprint されて発火することである。
+
+## Interaction Diagrams（履歴: 260803-state-integrity、2026-08-03）
+
+### 分岐 B — 不活性 CAS 検証による相互排他破れ
+
+```mermaid
+sequenceDiagram
+  participant H as Holder（critical section 実行中）
+  participant R as Reaper（別プロセス）
+  participant D as lock dir
+  H->>D: mkdir + writeOwnerStamp（1 回のみ）
+  Note over H: startedAtMs は以後更新されない
+  R->>D: mkdir 失敗（EEXIST）
+  R->>D: readOwnerStamp → 生存 PID
+  R->>R: now - startedAtMs が lockStaleMs() を超過？ → yes
+  R->>D: CAS rename（nonce path へ）
+  R->>R: stampMatches(dead, owner)？ → 常に一致
+  R-->>D: steal 成立、新規 lock を取得
+  Note over H,R: Holder はロックなしで section 継続。双方 exit 0
+```
+
+テキスト代替: holder は acquire 時に一度だけ stamp を書き、以後更新しない。reaper は「生存 PID かつ acquire から `lockStaleMs()` 超過」で steal 入口を通り、CAS 後の検証は同じ `pid + startedAtMs` の一致を見る。holder が stamp を更新しない以上この検証は必ず通過するため、守るべきケースを一切拒否できない。結果として holder はロックを失ったまま critical section を走り続け、両プロセスとも正常終了する。
+
+### 分岐 A — acquire の fail-open が生む恒久 steal 可能 lock
+
+```mermaid
+flowchart TD
+  A["mkdir 成功"] --> B["writeOwnerStamp"]
+  B -->|成功| C["acquire 成功・stamp あり"]
+  B -->|失敗| D{"reapPolicy"}
+  D -->|dead-or-over-age| E["acquire 成功・stamp なし（:6345）"]
+  D -->|それ以外| F["fail closed"]
+  E --> G["dir 齢 > unstampedGraceMs()"]
+  G --> H["reaper が無条件に steal"]
+```
+
+テキスト代替: `finalizeAuditLockAcquire` は `writeOwnerStamp` が失敗しても `dead-or-over-age` 方針なら acquire 成功を返す。この lock は stamp を永久に持たないため、grace 経過後は分岐 A の入口述語を無条件に満たし、タイミングの幸運なしに steal される。fail closed に倒せば、この決定的経路は消える。
+
+### `Completed` 定義の分岐と自己参照検証
+
+```mermaid
+flowchart LR
+  S["state file の [x] 行"] --> R["定義 R: countCheckboxes"]
+  S --> E["定義 E: EXECUTE 実効 filter"]
+  G["stage graph"] --> GG["定義 G: initialization 段数"]
+  R --> W1["state.ts 6 サイト / jump.ts 1 サイト"]
+  E --> W2["lib.ts 共有書き手 / utility.ts inline コピー"]
+  GG --> W3["state 初期化テンプレート"]
+  W1 --> F["Completed フィールド"]
+  W2 --> F
+  W3 --> F
+  F --> V["approvalNextStateIssue（:3377）"]
+  V --> R
+```
+
+テキスト代替: 同一の `Completed` フィールドへ 3 つの独立した定義が書き込み、いずれも audit 行と CLI JSON へ到達する。approve 検証器は定義 R を読み手として再計算するが、これは書き手の一部と同一の定義であるため、定義間の乖離を検出できない。検証器を正準定義へ接続することと、書き手を単一関数へ集約することは別々の是正である。
 
 ## registry drift guard の対象機構（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 

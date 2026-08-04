@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260804-ERR-BT-S13-Z0",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測で、(1) build-and-test/memory.md は4つのH2配下が例示コメントのみ、surface 実行結果も memory_entries_total=0・candidates=[]・parked_open_questions=[]、(2) stage prose の test-results.md と engine の build-test-results.md の差は既存 cid:build-and-test:c1-engine-directive-results-name および cid:build-and-test:c2-mirror-review-fixes がすでに正本名を定める適用実例、(3) self-fix scope で Build and Test consumes の {unit-name} が未解決になる面は既存 cid:code-generation:degrade-scope-unit-dir-layout と cid:reverse-engineering:c1-pinned-behavior-ruling の既知契約、(4) AC-6 の post-merge 実runは Deployment Execution が SKIP のため現workflow内では観測不能だが、build-and-test成果物と construction phase-check に PENDING／CONDITIONAL PASS として明記され、OPEN の Issue #2156へ回収先が一意化されていることを確認した。新規の再利用可能な規範または機械検査を導く未記録の反復証拠はない。",
+  "submittedAt": "2026-08-04T06:38:19Z"
+}

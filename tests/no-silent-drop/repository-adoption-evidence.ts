@@ -32,13 +32,13 @@ export type AdoptionReceiptId = (typeof ADOPTION_RECEIPT_IDS)[number];
 
 type EvidenceVerdict = "pass";
 
-type ArtifactReference = {
+export type ArtifactReference = {
   readonly path: string;
   readonly sha256: string;
   readonly recordId: string;
 };
 
-type EvidenceRun = {
+export type EvidenceRun = {
   readonly name: string;
   readonly command: readonly string[];
   readonly artifact: ArtifactReference;
@@ -46,7 +46,7 @@ type EvidenceRun = {
   readonly verdict: EvidenceVerdict;
 };
 
-type EvidenceEntry = {
+export type EvidenceEntry = {
   readonly schemaVersion: 1;
   readonly id: AdoptionReceiptId;
   readonly testedRevision: string;
@@ -350,6 +350,13 @@ function canonicalBinding(entry: EvidenceEntry, artifactDigests: ReadonlyMap<str
   });
 }
 
+export function evidenceDigestForEntry(
+  entry: EvidenceEntry,
+  artifactDigests: ReadonlyMap<string, string>,
+): string {
+  return sha256(canonicalBinding(entry, artifactDigests));
+}
+
 function parseManifestEntries(rawManifest: unknown, expectedRevision: string, problems: string[]): EvidenceEntry[] {
   if (!isRecord(rawManifest)) {
     problems.push("evidence manifest must be an object");
@@ -445,7 +452,7 @@ export function validateEvidenceBundle(repositoryRoot: string, expectedRevision:
   validateNoExtraRecords(collections, referencedRecords, problems);
   const artifactDigests = new Map([...collections].map(([path, collection]) => [path, collection.digest]));
   const digests = new Map<AdoptionReceiptId, string>();
-  for (const entry of entries.values()) digests.set(entry.id, sha256(canonicalBinding(entry, artifactDigests)));
+  for (const entry of entries.values()) digests.set(entry.id, evidenceDigestForEntry(entry, artifactDigests));
   return { entries, digests, problems };
 }
 

@@ -1,6 +1,6 @@
 # API ドキュメント
 
-## advisory のdirective／report契約（260803-advisory-human-choice、現在、observed `498c3034a`）
+## advisory のdirective／report契約（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行wire契約
 
@@ -14,6 +14,106 @@
 - Issue #2129 が想定する「今すぐ実行」と「リスクを認識して延期」の意味を、どの入力面で受け、どの遷移まで有効とするかはRequirements Analysisで決める。
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
+
+## no-silent-drop evidence 再バインドが対象とする契約（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。本 intent が触れるのは公開 CLI 契約ではなく、**台帳3層の内部束縛契約とゲート CLI の subcommand 面**である。
+
+### 台帳束縛契約（すべて内部・検証器が強制）
+
+| 契約 | 強制点 | 破れたときの problem 文字列 |
+| --- | --- | --- |
+| registry の receipt は top-level revision と一致 | `repository-adoption.ts:182` | `receipt <id> revision mismatch` |
+| registry の receipt digest は manifest 由来 digest と一致 | `repository-adoption.ts:183-187` | `receipt <id> evidence digest does not match repository evidence` |
+| manifest top-level revision は期待 revision と一致 | `repository-adoption-evidence.ts:360` | `evidence manifest revision mismatch` |
+| manifest entry revision は期待 revision と一致 | `repository-adoption-evidence.ts:197` | `evidence <id> revision mismatch` |
+| 成果物レコードの revision は manifest entry と一致 | `repository-adoption-evidence.ts:268` | `<label> revision mismatch` |
+| 成果物 digest は実バイト digest と一致 | `repository-adoption-evidence.ts` の `artifactDigests` 経路 | `artifact digest mismatch` |
+
+`canonicalBinding()`（`repository-adoption-evidence.ts:333-351`）が `entry.testedRevision`（`:337`）と成果物の実バイト digest（`:343`）の両方を digest 入力に取るため、これらは**独立に満たせる契約ではなく3層の不動点**をなす。
+
+### ゲート CLI 契約
+
+- `engine.ts:49` `export type Mode = "check" | "census-evidence" | "approve-evidence" | "baseline-candidate";` — **4種のみ**。
+- 出力は `tests/no-silent-drop-gate.ts:35` `process.stdout.write(\`${JSON.stringify(result)}\n\`)` の JSON 一本。
+- **台帳を書く subcommand は存在しない。** 再バインドを CLI 契約として表現するなら `Mode` の拡張（= 公開 CLI 契約の追加）になる。この選択は未裁定。
+- 検証者向け注意: `bun tests/no-silent-drop-gate.ts` は引数なしでも exit 0 で usage JSON を返す。**exit code で可否を読まないこと**（両クロスレビューの手法メモ）。
+
+### CI 契約
+
+- 必須チェックは ruleset `main`（id `18843917`、`enforcement: active`）の `required_status_checks` = `['CI Success']` **1件のみ**。classic protection は `branches/main/protection` が 404 `Branch not protected`。
+- `CI Success` は集約ジョブ: `ci.yml:893` `ci-success:` / `:894` `name: CI Success` / `:896` `needs:` / `:897-905` の9依存 / `:906` `if: ${{ always() }}`。Issue 本文の `ci.yml:894-906` は observed では **`:893-906`**（精密化）。
+
+### t413 assertion 契約（#2156 と #2153 の切り分け）
+
+| 行 | assertion | 帰属 |
+| --- | --- | --- |
+| `:157` | `git cat-file -e ${registry.currentRevision}^{commit}` → 0 | **#2156**（fresh clone 形・CI の実失敗行） |
+| `:158-163` | `merge-base --is-ancestor currentRevision headRevision` → 0 | **#2156**（オブジェクト在るフルクローン形） |
+| `:164` | `validateEvidenceRegistry(registry, registry.currentRevision)` → `{ok:true}` | どちらでもない（自己参照的期待値のため現状は緑。**不完全な再バインドでここが赤になる**） |
+| `:165-173` | `git diff --name-only ${currentRevision}..${headRevision} -- packages/framework/core/tools ':(glob)tests/no-silent-drop/**/*.ts'` が空 | **#2153**（path spec が被検査対象 `core/tools` を含む） |
+
+両者は独立であり、#2156 を再バインドで閉じても #2153 の面は生き続ける。ただし**同一テスト・同一 test 名**を共有するため、片方だけ直しても test 名単位では赤が残りうる。
+
+## state integrity が対象とする契約（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
+
+本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。本 intent が触れるのは公開 CLI 契約ではなく、**内部の相互排他契約と state フィールドの意味論契約**である。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+### `withAuditLock` / `acquireAuditLock` の内部契約
+
+| 契約要素 | 現在の定義 | 変更が波及する面 |
+| --- | --- | --- |
+| bucket 決定 | `auditLockIdentity(projectDir, intent?, space?)`（`amadeus-lib.ts:5960-5966`）。`intent` 未指定 → `${projectDir}\x00${WORKSPACE_LOCK_SENTINEL}`、指定時 → `${projectDir}\x00${space}\x00${intent}` | `t164-shard-ordering-and-lock-bucket` が現行意味論を pin |
+| 呼び出し形 | bucket 引数は callback の**後**に置く（`withAuditLock(pd, fn, intent, space)`）。したがって bucket は callback の閉じ行に現れる | 開き行だけの grep による bucket 分類は誤りになる |
+| 再入 | per-identity depth counter により同一 identity の nested acquire は再入する | `amadeus-audit.ts:429-433` が設計意図を記録 |
+| 予算 | `acquireAuditLock(projectDir, maxRetries = 50, retryMs = 100, intent?)`（`:6360-6361`）→ mkdir 試行 51 回・sleep 50 回 = 5000 ms | `fatal-latch.ts:99` は `(5, 50)` = 250 ms で呼ぶ |
+| 枯渇時の挙動 | `AuditLockAcquireError` を throw（`:6520-6521`） | `t380` / `t388` がエラーの形を pin。`t145` が fail-closed acquire 契約を pin |
+| acquire 成否 | `finalizeAuditLockAcquire`（`:6337-6356`）— `writeOwnerStamp` 成功で `true`。**失敗しても `dead-or-over-age` 方針なら `true`（`:6345`、fail-open）**、それ以外は cleanup して `false` | fail closed 化は `t145` の契約と整合する方向の変更 |
+| reap 方針 | `AuditLockReapPolicy` = `dead-or-over-age` ／ それ以外。`liveOwnerMayBeReaped`（`:6274-6282`）は前者でのみ live PID を reap 対象にする | 方針の意味変更は `t161` / `t163` / `t-reap-mutex` に当たる |
+
+### 環境変数ノブ
+
+| ノブ | 既定 | 定義 | 役割 |
+| --- | --- | --- | --- |
+| `AMADEUS_LOCK_STALE_MS` | `DEFAULT_LOCK_STALE_MS` = 10 分（`amadeus-lib.ts:5945`） | `lockStaleMs()` | live owner の over-age 判定閾値（分岐 B の入口） |
+| `AMADEUS_LOCK_UNSTAMPED_GRACE_MS` | `5000`（`:6107-6114`） | `unstampedGraceMs()` | unstamped dir の猶予（分岐 A の入口、判定は `:6294` の厳密比較 `>`） |
+| `AMADEUS_LOCK_BASE_DIR` | OS temp 既定 | lock dir の基底 | 実測ハーネスの隔離に使用 |
+
+既定の acquire 予算 5000 ms と `unstampedGraceMs()` 既定 5000 ms が一致しており、unstamped dir が合法的に steal 可能になる時刻が waiter の最終リトライ機会と重なる。これは機序ではなくタイミング上の脆い結合である。
+
+### `Completed` フィールドの契約
+
+`Completed` は state file の派生フィールドであり、**現在 3 つの定義が並存する**。
+
+| 定義 | 導出式 | 供給元 |
+| --- | --- | --- |
+| R | `countCheckboxes(content, "completed")`（`amadeus-lib.ts:5669`）— `[x]` の生カウント。SKIP suffix 行も数える | `amadeus-state.ts:1455`、`:2286`、`:2367`、`:2536`/`:2554`、`:3422`、`amadeus-jump.ts:564` |
+| E | `parseCheckboxes(next).filter(c => c.state === "completed" && effective(c.slug) === "EXECUTE")`（`amadeus-lib.ts:5781`） | `rebuildDerivedPlanFields`（共有書き手）、`amadeus-utility.ts:5236`（inline コピー） |
+| G | `graph.filter(s => s.phase === "initialization").length`（`amadeus-utility.ts:4433`） | state 初期化テンプレート `:4513` |
+
+関連契約: 同一関数 `rebuildDerivedPlanFields` が `Total Stages = executeStages.length`（`:5780`）を書く。したがって定義 R の書き手は `Completed > Total Stages` を成立させうる。`t394` はこの不変条件（`Completed <= Total Stages`）を assert する。
+
+**外部から観測できる面（変更時に利用者影響が出る箇所）:**
+
+- CLI JSON 出力: `amadeus-state.ts:1459`（`completed_count`）、`:2318`、`:2433`、`:2592`、`amadeus-jump.ts:638`（`completed_count`）
+- append-only audit 行: `amadeus-state.ts:605`（`"Stages completed"`）、`:619`（`Details: Scope: …, N stages completed`）、`:2143`、`amadeus-jump.ts:132`、`amadeus-utility.ts:4568`（`WORKSPACE_INITIALISED`）
+- approve の fail-closed 検証: `amadeus-state.ts:3377` — `getField(content,"Completed") !== String(countCheckboxes(content,"completed"))` なら `"completed count"` を返す
+
+**定義を変えると audit 行の数値の意味が変わる。** 監査記録は append-only であるため過去行は再解釈されず、切替点を跨いで同一フィールドが別定義になる。要件はこの切替の扱い（過去行の解釈規約を記すか、resync で現在断面のみ整合させるか）を明示する必要がある。
+
+### text mutation の契約（`7c29e33f7` で導入、#1875 の是正が乗る基盤）
+
+- `TextMutationResult`（`amadeus-lib.ts:5425`）= `changed | not-found` の判別ユニオン
+- `StateMutationTargetError`（`:5450`）
+- `requireChanged(result, operation)`（`:5660-5667`）— `not-found` で throw。呼び出し点 19（`amadeus-state.ts` 11 / `amadeus-jump.ts` 5 / `amadeus-utility.ts` 3）
+- `setCheckbox` / `setStageSuffix`（`:5599` / `:5629` / `:5645`）はユニオンを返す
+- `countCheckboxes`（`:5669`）の意味論はこの変更で**不変**のまま残された
+
+### 本 intent が変えない契約
+
+公開 CLI の verb 集合、`amadeus-orchestrate` の directive スキーマ、監査シャードの行形式、stage frontmatter スキーマはいずれも患部外であり、本差分では変更されない。
 
 ## registry drift guard が対象とする契約（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 

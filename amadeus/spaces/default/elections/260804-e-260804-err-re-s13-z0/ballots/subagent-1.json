@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-260804-ERR-RE-S13-Z0",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1/c2/c5/c6 は既存 cid の適用または再確認であり、c3/c4 は Issue #2156 固有の実施事実である。汎用化して永続 practice または sensor を追加する未被覆の再発パターンは示されていない。",
+  "submittedAt": "2026-08-04T00:00:00Z"
+}

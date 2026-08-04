@@ -1,11 +1,36 @@
 # 技術スタック
 
-## advisory 人間選択の技術断面（260803-advisory-human-choice、現在、observed `498c3034a`）
+## advisory 人間選択の技術断面（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **スタック変更なし**: Bun `1.3.13`、TypeScript / ESM、Biome、Bun test、Markdown stage protocol、JSONL audit journalという既存構成の問題であり、新しいruntime、service、database、外部libraryは観測されない。
 - **wire**: advisoryはstderrだけではなく、`run-stage` directiveのtyped `advisories` fieldにも載る。したがって旧来の「build-and-testはstderr-only」という理解は現行コードには当てはまらない。欠陥は通知チャネルの欠如ではなく、人間選択を入力・保持・検証する状態機械の欠如である。
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
+
+## no-silent-drop evidence 再バインドの技術断面（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の測定 ref は observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`。詳細は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+- 技術スタックの変更はない。Bun / TypeScript / `bun test` / GitHub Actions の既存構成内で閉じる。新規の外部ツール・ランタイム・言語は不要。
+- 依拠する外部ツールは **git のみ**（`git cat-file -e` / `git merge-base --is-ancestor` / `git diff` — いずれも `t413…test.ts:155-172` から `spawnSync` で駆動）。この git 依存が、スカッシュマージ運用と組み合わさって欠陥の機序そのものになっている。
+- digest は Node/Bun 標準の sha256（`repository-adoption-evidence.ts` の `readArtifactCollection` が `sha256(bytes)` を算出）。追加の暗号ライブラリ依存はない。
+- 再現・検証は repo 外 scratch clone（`file://` transport で smart transport 強制、observed へ detach、`bun install --frozen-lockfile` exit 0）で成立する。`--single-branch` クローンだけでは PR ブランチのオブジェクトが入らないため、追加の ref 削除・`gc --prune=now` を経ずに CI 形（`:157` / exit 128）を再現できる。
+- CI 面: `ci.yml:893-906` の `ci-success` 集約ジョブが唯一の必須チェック。`paths-ignore` により docs / record-only PR は `Tests` が skipped になる（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot`）。
+- 区間（`498c3034a..9458bbda8`、11 コミット）の技術的な大変化は `9458bbda8`（PR #2152）による生成物の Git 追跡除去（`dist` 3951 ほか計 7283 files の差分、実質変更 227 files）。患部の技術前提には影響しない。
+
+## state integrity の技術断面（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
+
+**本差分は技術スタックそのものを変えない。** 患部は `packages/framework/core/tools/` の既存 TypeScript ロジック（ロックプリミティブと state フィールド導出）に閉じており、新規の外部依存・service・database・network I/O は不要である。以下は observed `6c15af23a` での測定 ref 更新と、本 intent が実際に依存する層の再確認に留める。
+
+> **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
+
+- Runtime / package manager: Bun。ロックは OS の `mkdir` 原子性と `rename` に依存する自前実装であり、外部ロックライブラリを使わない。stamp は `owner.json` としてファイル書込で保持する。
+- Language / type system: TypeScript、ESM、`tsc --noEmit`。`7c29e33f7`（PR #2088）が `TextMutationResult` 判別ユニオン（`amadeus-lib.ts:5425`）と `StateMutationTargetError`（`:5450`）を導入し、text mutation の失敗を型で運ぶ規律が入った。#1875 の是正はこの基盤の上に載る。
+- Lint: Biome（formatter 無効）。既存近傍スタイルを維持する。
+- Test: Bun test。本 intent に荷重を持つのはロック関連 34 ファイル（`t161` / `t163` / `t-reap-mutex` / `t164` / `t145` / `t380` / `t388` ほか）と `Completed` を pin する e2e / integration / unit 群。並行性の実測は `AMADEUS_LOCK_BASE_DIR` を隔離ディレクトリへ固定した複数プロセスのハーネスで行う（本 scan の実測もこの方式）。
+- **ゲート（本 intent で新たに拘束力を持つ層）**: `7c29e33f7` が no-silent-drop ゲートを追加した — `ci.yml:154` → `package.json:24` → `bun tests/no-silent-drop-gate.ts check --base-revision <base>`、規則は `tests/no-silent-drop/ast-scan.ts:845-846, :16`（NSD001/002/003）、baseline は `tests/no-silent-drop/baseline.json` の 217 エントリ。**audit lock の catch ブロック群は現在 grandfather 済みで、編集すると再 fingerprint されて NSD001 が発火する。** 併せて `ci.yml:169` の `bun tests/unchecked-cast-guard.ts --check` が走る。
+- Distribution: `bun scripts/package.ts` が 7 dist（`claude`/`codex`/`cursor`/`kimi`/`kiro`/`kiro-ide`/`opencode`）を生成し、`bun run promote:self` が repo root の 5 self-install ツリー（`.claude`/`.codex`/`.cursor`/`.opencode`/`.kimi-code`）を同期する。`.kiro/tools` と `.kiro-ide/tools` は dist 専用で repo root に存在しない。core tool 1 ファイルあたりのコミット済みコピーは 12。整合は blocking の `dist:check` / `promote:self:check` に委ね、生成物を直接編集しない（`cid:build-and-test:bt-dist-regen-seven-harnesses`、`cid:code-generation:c1-1569-shipped-comment-vocab`）。
+- Coverage: 本 scan では `cid:code-generation:c1-coverage-single-owner` に従い coverage 実行を一切行っていない。
 
 ## registry drift guard の技術断面（260802-registry-drift-guard、履歴、observed `64b44a9f8`）
 
