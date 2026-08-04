@@ -71,6 +71,7 @@ import {
   getProductionAutoDecision,
   listProductionAutoDecisions,
 } from "./amadeus-autonomy-review-production.ts";
+import { reviewCommandContentDigest } from "./amadeus-autonomy-review.ts";
 import { autonomyDigest, type DecisionPolicyInput } from "./amadeus-intent-autonomy.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
@@ -972,6 +973,25 @@ function handleListAutoDecisions(args: string[], explicitProjectDir?: string): v
   console.log(JSON.stringify(result.page));
 }
 
+// Recompute the confirmation digest for a (decision, choice, flag metadata)
+// tuple. One definition feeds both the preview surface and the commit path so
+// the displayed digest and the verified digest cannot drift.
+function reviewConfirmationDigest(
+  targetIntentUuid: string,
+  decisionId: string,
+  choice: "accept" | "flag",
+  classification: "contract-defect" | "specification-change" | "unspecified" | undefined,
+  note: string | undefined,
+): string {
+  return reviewCommandContentDigest({
+    targetIntentUuid,
+    decisionId,
+    choice,
+    flagClassification: choice === "flag" ? classification ?? "unspecified" : null,
+    safeNoteDigest: choice === "flag" && note !== undefined ? autonomyDigest(note) : null,
+  });
+}
+
 function handleGetAutoDecision(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.decision) error("Missing --decision <decision-id>");
@@ -981,6 +1001,17 @@ function handleGetAutoDecision(args: string[], explicitProjectDir?: string): voi
     decisionId: flags.decision,
   });
   if (!result.ok) error(`Auto-decision detail failed: ${result.error}`);
+  if (flags.choice === "accept" || flags.choice === "flag") {
+    const digest = reviewConfirmationDigest(
+      result.detail.intentUuid,
+      flags.decision,
+      flags.choice,
+      flags.classification as "contract-defect" | "specification-change" | "unspecified" | undefined,
+      flags.note,
+    );
+    console.log(JSON.stringify({ ...result.detail, confirmedReviewDigest: digest }));
+    return;
+  }
   console.log(JSON.stringify(result.detail));
 }
 
@@ -992,6 +1023,9 @@ function handleReviewAutoDecision(args: string[], explicitProjectDir?: string): 
   if (classification !== undefined && !["contract-defect", "specification-change", "unspecified"].includes(classification)) {
     error(`Invalid --classification: ${classification}`);
   }
+  if (!flags["confirmed-review-digest"]) {
+    error("Missing --confirmed-review-digest <sha256:...> (preview it with get-auto-decision --choice)");
+  }
   const result = commitProductionDecisionReview({
     projectDir: resolveBoltProjectDir(explicitProjectDir),
     intent: flags.intent,
@@ -999,6 +1033,7 @@ function handleReviewAutoDecision(args: string[], explicitProjectDir?: string): 
     choice: flags.choice,
     flagClassification: classification as "contract-defect" | "specification-change" | "unspecified" | undefined,
     note: flags.note,
+    confirmedContentDigest: flags["confirmed-review-digest"],
   });
   if (!result.ok) error(`Auto-decision review failed: ${result.error}`);
   console.log(JSON.stringify(result.receipt));

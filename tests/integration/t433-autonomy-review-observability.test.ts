@@ -2,12 +2,14 @@
 // covers: audit:AUTO_DECISION_REVIEWED
 
 import { describe, expect, test } from "bun:test";
-import { appendFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   bindHumanReviewCommand,
   canonicalContractValueDigest,
+  canonicalTupleDigest,
   createMemoryAutonomyReviewService,
   evaluateReviewHarnessSuite,
   projectHumanReviewStatus,
@@ -15,6 +17,7 @@ import {
   projectReviewTelemetry,
   REQUIRED_REVIEW_HARNESSES,
   reviewAuditFields,
+  reviewCommandContentDigest,
   type HumanReviewCommandBinding,
   type ReviewIntentSeed,
   type ReviewStatusInput,
@@ -39,6 +42,7 @@ import {
   listProductionAutoDecisions,
 } from "../../packages/framework/core/tools/amadeus-autonomy-review-production.ts";
 import {
+  readAllAuditShards,
   transitionIntentStatusLocked,
   withLockedIntentRegistry,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -789,6 +793,53 @@ describe("status, telemetry and harness projection", () => {
   });
 });
 
+describe("projection event-set digest contract", () => {
+  test("orders entries by closed event type then event id and dedupes identical pairs", () => {
+    // Two decisions whose ids invert insertion order; the digest embedded in
+    // the page cursor must equal the CONTRACT ordering (type order first, then
+    // event id bytes) recomputed here — never a sort of the entry digests.
+    const first = decision(ACTIVE, "zz");
+    const second = decision(ACTIVE, "aa");
+    const service = createMemoryAutonomyReviewService({
+      intents: [seed(ACTIVE, "active", [first, second])],
+    });
+    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 1 });
+    if (!page.ok) throw new Error(JSON.stringify(page.error));
+    if (page.value.nextCursor === null) throw new Error("expected a next cursor");
+    const entry = (record: AutoDecisionRecord) => {
+      const payloadDigest = canonicalContractValueDigest("auto-decision", record);
+      return canonicalTupleDigest("amadeus.decision-projection-event.v1", [
+        { tag: "event-type", value: "AUTO_DECIDED" },
+        { tag: "event-id", value: record.decisionId },
+        { tag: "decision-payload-digest", value: payloadDigest.ok ? payloadDigest.value : null },
+        { tag: "subject-payload-digest", value: canonicalTupleDigest("amadeus.decision-subject.v1", [
+          { tag: "principal", value: record.principalId },
+          { tag: "actor", value: record.actorId },
+        ]) },
+        { tag: "review-payload-digest", value: null },
+      ]);
+    };
+    const expected = canonicalTupleDigest("amadeus.decision-projection-event-set.v1", [
+      { tag: "target-intent", value: ACTIVE },
+      { tag: "event-count", value: "2" },
+      { tag: "event", value: entry(second) },
+      { tag: "event", value: entry(first) },
+    ]);
+    expect(page.value.nextCursor.projectionEventSetDigest).toBe(expected);
+  });
+
+  test("closes a duplicated event id with diverging payloads as a projection-set CONFLICT", () => {
+    const clash = { ...decision(ACTIVE, "dup"), principalId: "principal-2" };
+    const service = createMemoryAutonomyReviewService({
+      intents: [seed(ACTIVE, "active", [decision(ACTIVE, "dup"), clash])],
+    });
+    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 10 });
+    expect(page.ok).toBe(false);
+    if (page.ok) return;
+    expect(page.error).toMatchObject({ code: "CONFLICT", locus: "projectionEventSet" });
+  });
+});
+
 describe("production review projection", () => {
   test("rejects a stored review whose consumed HUMAN_TURN is missing", () => {
     const projectDir = setupIntegrationProject({ withState: "state-construction.md", stripEnvScope: true });
@@ -838,6 +889,13 @@ describe("production review projection", () => {
         projectDir,
         decisionId: "decision-next",
         choice: "accept",
+        confirmedContentDigest: reviewCommandContentDigest({
+          targetIntentUuid: DEFAULT_INTENT_UUID,
+          decisionId: "decision-next",
+          choice: "accept",
+          flagClassification: null,
+          safeNoteDigest: null,
+        }),
       })).toEqual({ ok: false, error: "PROVENANCE_REQUIRED" });
     } finally {
       resetOtelPerProject();
@@ -871,12 +929,46 @@ describe("production review projection", () => {
         election: { optionId: "accept", evidenceFingerprint: `sha256:${"b".repeat(64)}` },
       });
       expect(decided.kind).toBe("decided");
+      const decidedLater = commitProductionQuestionDecision({
+        projectDir,
+        stage: "code-generation",
+        phase: "construction",
+        graphRevision: `sha256:${"a".repeat(64)}`,
+        questionId: "post-seal-review-question",
+        selector: "post-seal-review-selector",
+        question: "Which post-seal option should be selected?",
+        optionIds: ["accept", "reject"],
+        recommendedOptionId: "accept",
+        election: { optionId: "accept", evidenceFingerprint: `sha256:${"d".repeat(64)}` },
+      });
+      expect(decidedLater.kind).toBe("decided");
 
       const unreviewed = listProductionAutoDecisions({ projectDir, reviewState: "unreviewed" });
       if (!unreviewed.ok) throw new Error(unreviewed.error);
-      const decisionId = unreviewed.page.items[0]?.decisionId;
-      if (decisionId === undefined) throw new Error("expected a production decision");
-      expect(commitProductionDecisionReview({ projectDir, decisionId, choice: "accept" })).toMatchObject({
+      const decisionId = unreviewed.page.items.find((item) => item.safeQuestion?.includes("reviewed option"))?.decisionId;
+      const laterDecisionId = unreviewed.page.items.find((item) => item.safeQuestion?.includes("post-seal option"))?.decisionId;
+      if (decisionId === undefined || laterDecisionId === undefined) throw new Error("expected two production decisions");
+
+      // OBS-R09/OBS-R12: a fresh human turn does not authorize arbitrary
+      // caller-supplied content — the confirmation digest must match.
+      expect(commitProductionDecisionReview({
+        projectDir,
+        decisionId,
+        choice: "accept",
+        confirmedContentDigest: `sha256:${"9".repeat(64)}`,
+      })).toEqual({ ok: false, error: "PROVENANCE_REQUIRED:confirmed-content-digest-mismatch" });
+      expect(commitProductionDecisionReview({
+        projectDir,
+        decisionId,
+        choice: "accept",
+        confirmedContentDigest: reviewCommandContentDigest({
+          targetIntentUuid: DEFAULT_INTENT_UUID,
+          decisionId,
+          choice: "accept",
+          flagClassification: null,
+          safeNoteDigest: null,
+        }),
+      })).toMatchObject({
         ok: true,
         receipt: { state: "accepted", remediation: null },
       });
@@ -914,25 +1006,70 @@ describe("production review projection", () => {
 
       // A completed intent is no longer an active review SOURCE: the command
       // must fail closed rather than mint a review from a sealed lifecycle.
-      expect(commitProductionDecisionReview({ projectDir, decisionId, choice: "accept" })).toEqual({
+      expect(commitProductionDecisionReview({
+        projectDir,
+        decisionId,
+        choice: "accept",
+        confirmedContentDigest: reviewCommandContentDigest({
+          targetIntentUuid: DEFAULT_INTENT_UUID,
+          decisionId,
+          choice: "accept",
+          flagClassification: null,
+          safeNoteDigest: null,
+        }),
+      })).toEqual({
         ok: false,
         error: "active-source-and-review-target-required",
       });
 
+      // OBS-R08: with a NEW active source intent, the completed target stays
+      // reviewable — the row lands on the SOURCE journal (the target's is
+      // sealed by #1248) and the union read re-attributes it to the target.
+      const birth = spawnSync(
+        process.execPath,
+        [join(projectDir, ".claude", "tools", "amadeus-utility.ts"), "intent-birth", "--scope", "feature", "--project-dir", projectDir],
+        { cwd: projectDir, encoding: "utf8", env: { ...process.env } },
+      );
+      expect(birth.status).toBe(0);
+      const sourceDir = readFileSync(
+        join(projectDir, "amadeus", "spaces", "default", "intents", "active-intent"),
+        "utf8",
+      ).trim();
+      expect(sourceDir).not.toBe(DEFAULT_RECORD_DIR);
+      emitAuditEventGuarded("HUMAN_TURN", {}, projectDir, sourceDir, "default");
+      const targetShardBefore = readAllAuditShards(projectDir, DEFAULT_RECORD_DIR, "default");
+      expect(commitProductionDecisionReview({
+        projectDir,
+        intent: DEFAULT_INTENT_UUID,
+        decisionId: laterDecisionId,
+        choice: "accept",
+        confirmedContentDigest: reviewCommandContentDigest({
+          targetIntentUuid: DEFAULT_INTENT_UUID,
+          decisionId: laterDecisionId,
+          choice: "accept",
+          flagClassification: null,
+          safeNoteDigest: null,
+        }),
+      })).toMatchObject({ ok: true, receipt: { state: "accepted" } });
+      expect(readAllAuditShards(projectDir, DEFAULT_RECORD_DIR, "default")).toBe(targetShardBefore);
+      expect(
+        readAllAuditShards(projectDir, sourceDir, "default").includes("AUTO_DECISION_REVIEWED"),
+      ).toBe(true);
       expect(listProductionAutoDecisions({
         projectDir,
         intent: DEFAULT_INTENT_UUID,
         reviewState: "accepted",
       })).toMatchObject({
         ok: true,
-        page: { items: [{ decisionId, reviewState: "accepted" }] },
+        page: { items: [expect.objectContaining({ decisionId }), expect.objectContaining({ decisionId: laterDecisionId })] },
       });
+
       expect(getProductionAutoDecision({ projectDir, intent: DEFAULT_RECORD_DIR, decisionId })).toMatchObject({
         ok: true,
         detail: { decisionId, reviewState: "accepted", reviewReceipt: { state: "accepted" } },
       });
       expect(listProductionAutoDecisions({ projectDir, intent: "fixture", reviewState: "accepted" }))
-        .toMatchObject({ ok: true, page: { items: [{ decisionId }] } });
+        .toMatchObject({ ok: true, page: { items: [expect.objectContaining({ decisionId }), expect.objectContaining({ decisionId: laterDecisionId })] } });
 
       expect(withLockedIntentRegistry(
         projectDir,
@@ -959,7 +1096,18 @@ describe("production review projection", () => {
       }, projectDir, DEFAULT_RECORD_DIR, "default");
       expect(listProductionAutoDecisions({ projectDir, intent: DEFAULT_INTENT_UUID })).toMatchObject({ ok: false });
       expect(getProductionAutoDecision({ projectDir, intent: DEFAULT_INTENT_UUID, decisionId })).toMatchObject({ ok: false });
-      expect(commitProductionDecisionReview({ projectDir, decisionId, choice: "accept" })).toMatchObject({ ok: false });
+      expect(commitProductionDecisionReview({
+        projectDir,
+        decisionId,
+        choice: "accept",
+        confirmedContentDigest: reviewCommandContentDigest({
+          targetIntentUuid: DEFAULT_INTENT_UUID,
+          decisionId,
+          choice: "accept",
+          flagClassification: null,
+          safeNoteDigest: null,
+        }),
+      })).toMatchObject({ ok: false });
     } finally {
       resetOtelPerProject();
       cleanupTestProject(projectDir);

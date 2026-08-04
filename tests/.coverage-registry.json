@@ -93,7 +93,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t433-autonomy-review-observability.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

@@ -237,6 +237,28 @@ export interface BoundHumanReviewCommand {
   readonly commandBindingDigest: string;
 }
 
+// The pre-turn confirmation digest (OBS-R09/OBS-R12): binds WHAT the human is
+// confirming — target, decision, choice, and the flag metadata with explicit
+// nulls — before any turn exists, so the commit can prove the turn followed a
+// display of exactly this content. Occurrence and turn ids are deliberately
+// excluded: they are minted at commit time and would make the digest
+// unobtainable at preview time.
+export function reviewCommandContentDigest(input: {
+  readonly targetIntentUuid: string;
+  readonly decisionId: string;
+  readonly choice: ReviewChoice;
+  readonly flagClassification: HumanReviewCommandBinding["flagClassification"];
+  readonly safeNoteDigest: string | null;
+}): string {
+  return canonicalTupleDigest("amadeus.review-command-content.v1", [
+    { tag: "target-intent", value: input.targetIntentUuid },
+    { tag: "decision", value: input.decisionId },
+    { tag: "choice", value: input.choice },
+    { tag: "flag-classification", value: input.flagClassification },
+    { tag: "safe-note-digest", value: input.safeNoteDigest },
+  ]);
+}
+
 export function bindHumanReviewCommand(input: HumanReviewCommandBinding & { readonly sourceHumanTurnId: string }): BoundHumanReviewCommand {
   const command: HumanReviewCommandBinding = {
     sourceIntentUuid: input.sourceIntentUuid,
@@ -392,6 +414,15 @@ function validatePersistedReviewEvent(
   }
 }
 
+// A sealed (#1248) completed target cannot grow its own journal, so post-seal
+// reviews land on a SOURCE journal and legitimately carry a projection revision
+// past the target's audit revision — that overflow is exactly what the review
+// extension chain fingerprints. Active targets keep the strict in-journal bound.
+function withinPersistedRevisionBound(persisted: AutonomyReviewPersistenceState, revision: number): boolean {
+  if (persisted.lifecycle === "completed" && persisted.completionSealDigest !== null) return true;
+  return revision <= persisted.auditRevision;
+}
+
 function validatePersistedReviewState(persisted: AutonomyReviewPersistenceState): void {
   const decisionIds = new Set(persisted.autonomy.autoDecisions.map((decision) => decision.decisionId));
   const reviewed = new Set<string>();
@@ -401,7 +432,7 @@ function validatePersistedReviewState(persisted: AutonomyReviewPersistenceState)
   for (const event of persisted.reviews) {
     if (event.eventType !== AUTO_DECISION_REVIEWED_EVENT || event.targetIntentUuid !== persisted.intentUuid ||
       !decisionIds.has(event.decisionId) || reviewed.has(event.decisionId) ||
-      event.projectionRevision <= priorReviewRevision || event.projectionRevision > persisted.auditRevision) {
+      event.projectionRevision <= priorReviewRevision || !withinPersistedRevisionBound(persisted, event.projectionRevision)) {
       throw new Error("invalid-autonomy-review-persistence-events");
     }
     reviewed.add(event.decisionId);
@@ -449,10 +480,14 @@ function queryFingerprint(query: DecisionQuery): string {
   ]);
 }
 
-function eventSetDigest(state: IntentState): string {
+// The set contract sorts entries by the CLOSED event-type order (AUTO_DECIDED,
+// then AUTO_DECISION_REVIEWED), then canonical event id — never by entry-digest
+// bytes — dedupes identical (id, digest) pairs, and closes a same-id
+// different-digest pair as a CONFLICT rather than encoding both.
+function eventSetDigest(state: IntentState): ContractResult<string> {
   const decisions = state.autonomy.autoDecisions.map((decision) => {
     const payloadDigest = canonicalContractValueDigest("auto-decision", decision);
-    return canonicalTupleDigest("amadeus.decision-projection-event.v1", [
+    return { typeOrder: 0, eventId: decision.decisionId, digest: canonicalTupleDigest("amadeus.decision-projection-event.v1", [
       { tag: "event-type", value: "AUTO_DECIDED" },
       { tag: "event-id", value: decision.decisionId },
       { tag: "decision-payload-digest", value: payloadDigest.ok ? payloadDigest.value : null },
@@ -461,20 +496,34 @@ function eventSetDigest(state: IntentState): string {
         { tag: "actor", value: decision.actorId },
       ]) },
       { tag: "review-payload-digest", value: null },
-    ]);
+    ]) };
   });
-  const reviews = state.reviews.map((review) => canonicalTupleDigest("amadeus.decision-projection-event.v1", [
+  const reviews = state.reviews.map((review) => ({ typeOrder: 1, eventId: review.eventIdentity, digest: canonicalTupleDigest("amadeus.decision-projection-event.v1", [
     { tag: "event-type", value: AUTO_DECISION_REVIEWED_EVENT },
     { tag: "event-id", value: review.eventIdentity },
     { tag: "decision-payload-digest", value: null },
     { tag: "subject-payload-digest", value: null },
     { tag: "review-payload-digest", value: review.payloadDigest },
-  ]));
-  return canonicalTupleDigest("amadeus.decision-projection-event-set.v1", [
+  ]) }));
+  const ordered = [...decisions, ...reviews].sort(
+    (left, right) => (left.typeOrder - right.typeOrder) || compareUtf8(left.eventId, right.eventId),
+  );
+  const deduped: typeof ordered = [];
+  for (const entry of ordered) {
+    const previous = deduped.at(-1);
+    if (previous !== undefined && previous.typeOrder === entry.typeOrder && previous.eventId === entry.eventId) {
+      if (previous.digest !== entry.digest) {
+        return failure("CONFLICT", "projectionEventSet", `duplicate event id ${entry.eventId} with diverging entry digests`);
+      }
+      continue;
+    }
+    deduped.push(entry);
+  }
+  return success(canonicalTupleDigest("amadeus.decision-projection-event-set.v1", [
     { tag: "target-intent", value: state.intentUuid },
-    { tag: "event-count", value: String(decisions.length + reviews.length) },
-    ...[...decisions, ...reviews].sort(compareUtf8).map((digest) => ({ tag: "event", value: digest })),
-  ]);
+    { tag: "event-count", value: String(deduped.length) },
+    ...deduped.map((entry) => ({ tag: "event", value: entry.digest })),
+  ]));
 }
 
 function cursorDigest(cursor: Omit<DecisionCursor, "cursorDigest">): string {
@@ -759,7 +808,9 @@ export function createMemoryAutonomyReviewService(options: MemoryAutonomyReviewS
       return failure("CONFLICT", "lifecycle", "target lifecycle does not match query");
     }
     const fingerprint = queryFingerprint(query);
-    const projectionDigest = eventSetDigest(state);
+    const projectionSet = eventSetDigest(state);
+    if (!projectionSet.ok) return projectionSet;
+    const projectionDigest = projectionSet.value;
     const validCursor = validateCursorSnapshot(query, state, fingerprint, projectionDigest);
     if (!validCursor.ok) return validCursor;
     const summaries = state.autonomy.autoDecisions.map((decision) => summarize(state, decision))

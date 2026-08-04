@@ -22,6 +22,7 @@ import {
   type IntentLifecycle,
   type ReviewChoice,
   type ReviewIntentSeed,
+  reviewCommandContentDigest,
 } from "./amadeus-autonomy-review.ts";
 import { autonomyDigest, autonomyIsRecord } from "./amadeus-intent-autonomy.ts";
 import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
@@ -187,7 +188,27 @@ function readStoredReviews(projectDir: string, target: ReviewTarget): readonly A
     readAllAuditShards(projectDir, target.dirName, target.space),
     "AUTO_DECISION_REVIEWED",
   );
-  return rows.map((row) => parsedReviewEvent(row.block));
+  const own = rows.map((row) => parsedReviewEvent(row.block));
+  if (target.lifecycle === "active") return own;
+  // A completed target's journal is sealed, so post-seal review rows live on
+  // whichever ACTIVE intent recorded them (OBS-R08). Union every sibling
+  // intent's shards and re-attribute by the payload's target uuid; identical
+  // event identities dedupe so a pre-seal row read twice stays one event.
+  const seen = new Set(own.map((event) => event.eventIdentity));
+  const extension: AutoDecisionReviewedEvent[] = [];
+  for (const sibling of listIntents(projectDir, target.space)) {
+    if (sibling.dirName === null || sibling.dirName === target.dirName) continue;
+    for (const row of findAllEvents(
+      readAllAuditShards(projectDir, sibling.dirName, target.space),
+      "AUTO_DECISION_REVIEWED",
+    )) {
+      const event = parsedReviewEvent(row.block);
+      if (event.targetIntentUuid !== target.intentUuid || seen.has(event.eventIdentity)) continue;
+      seen.add(event.eventIdentity);
+      extension.push(event);
+    }
+  }
+  return [...own, ...extension];
 }
 
 function reviewExtension(
@@ -294,6 +315,7 @@ type ProductionDecisionReviewInput = {
   readonly choice: ReviewChoice;
   readonly flagClassification?: HumanReviewCommandBinding["flagClassification"];
   readonly note?: string;
+  readonly confirmedContentDigest: string;
 };
 
 type ProductionDecisionReviewResult = { readonly ok: true; readonly receipt: DecisionReviewReceipt } |
@@ -317,6 +339,20 @@ function commitDecisionReviewLocked(
   }
   const latestTurn = turns.slice(consumedTurnIndex + 1).at(-1);
   if (latestTurn === undefined) return { ok: false, error: "PROVENANCE_REQUIRED" };
+  // OBS-R09/OBS-R12: the human turn attests to displayed CONTENT, not to
+  // whatever the caller supplies afterwards. The commit recomputes the content
+  // digest the preview displayed and refuses a mismatch, so the flag payload
+  // cannot be swapped after the turn.
+  const expectedContentDigest = reviewCommandContentDigest({
+    targetIntentUuid: target.intentUuid,
+    decisionId: input.decisionId,
+    choice: input.choice,
+    flagClassification: input.choice === "flag" ? input.flagClassification ?? "unspecified" : null,
+    safeNoteDigest: input.choice === "flag" && input.note !== undefined ? autonomyDigest(input.note) : null,
+  });
+  if (input.confirmedContentDigest !== expectedContentDigest) {
+    return { ok: false, error: "PROVENANCE_REQUIRED:confirmed-content-digest-mismatch" };
+  }
   const binding = bindHumanReviewCommand({
     sourceIntentUuid: source.intentUuid,
     targetIntentUuid: target.intentUuid,
@@ -356,12 +392,16 @@ function commitDecisionReviewLocked(
   if (!reviewed.ok) return { ok: false, error: `${reviewed.error.code}:${reviewed.error.locus}` };
   const event = service.readReviewEvents(target.intentUuid).at(-1);
   if (event === undefined) return { ok: false, error: "review-event-not-produced" };
+  // OBS-R08: a completed target's journal is sealed (#1248) — post-seal review
+  // rows land on the ACTIVE SOURCE journal instead. The payload carries the
+  // target intent uuid, so readStoredReviews re-attributes them on read.
+  const ledger = target.lifecycle === "completed" ? source : target;
   emitAuditEventGuarded(
     "AUTO_DECISION_REVIEWED",
     { ...reviewAuditFields(event) },
     input.projectDir,
-    target.dirName,
-    target.space,
+    ledger.dirName,
+    ledger.space,
   );
   return { ok: true, receipt: reviewed.value };
 }
