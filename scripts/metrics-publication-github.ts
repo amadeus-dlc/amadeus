@@ -382,6 +382,7 @@ export class SnapshotCliPort implements SnapshotPublisherPort {
           repository: this.#context.repository,
           botLogin: this.#context.botLogin,
           targetSha: this.#context.targetSha,
+          capturedAt: this.#context.capturedAt,
         }) as PublicationBranch);
       } catch (error) {
         problems.push(`${remote.name}: ${error instanceof Error ? error.message : String(error)}`);

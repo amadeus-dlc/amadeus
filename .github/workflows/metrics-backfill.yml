@@ -186,6 +186,9 @@ jobs:
           unzip -q "$ARCHIVE" -d coverage
           jq -e '.hits | numbers' coverage/coverage-totals.json >/dev/null
           jq -e '.lines | numbers' coverage/coverage-totals.json >/dev/null
+          for field in files failedFiles assertions failedAssertions; do
+            jq -e --arg field "$field" '.[$field] | numbers' coverage/tests-totals.json >/dev/null
+          done
           jq -e '.failedFiles == 0 and .failedAssertions == 0' coverage/tests-totals.json >/dev/null
 
       - name: Get GitHub App user ID
@@ -205,6 +208,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -euo pipefail
           IDS="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/metrics-maintenance.yml/runs?event=repository_dispatch&per_page=100" \
             --jq '[.workflow_runs[].id | tostring] | join(",")')"
           echo "ids=$IDS" >> "$GITHUB_OUTPUT"

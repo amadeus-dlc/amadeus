@@ -587,6 +587,47 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     expect(state.dispatches).toBe(2);
   }, 30_000);
 
+  test("backfill fails closed on an open snapshot PR carrying a different captured_at", async () => {
+    const sha = headSha();
+    run(repository, ["git", "switch", "--detach", sha]);
+    const stalePath = `metrics/2026-07-30T00-00-00-000Z-${sha.slice(0, 12)}.json`;
+    writeFileSync(
+      join(repository, stalePath),
+      `${JSON.stringify({ schema_version: 1, captured_at: "2026-07-30T00:00:00.000Z", commit: sha, collectors: {} }, null, 2)}\n`,
+    );
+    run(repository, ["git", "add", stalePath]);
+    run(repository, ["git", "commit", "-m", "stale snapshot"]);
+    const branch = `metrics/snapshot-${sha}`;
+    run(repository, ["git", "push", "origin", `HEAD:refs/heads/${branch}`]);
+    const oid = run(repository, ["git", "rev-parse", "HEAD"]);
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    state.pullRequests.push({
+      number: state.nextNumber++,
+      url: "https://example.test/pull/900",
+      state: "OPEN",
+      mergeStateStatus: "CLEAN",
+      mergedAt: null,
+      headRefName: branch,
+      headRefOid: oid,
+      headRepository: { nameWithOwner: REPOSITORY },
+      author: { login: BOT_LOGIN },
+      title: `[amadeus:metrics-snapshot:v1] ${sha}`,
+      body: `<!-- amadeus:metrics-snapshot:v1 sha=${sha} -->`,
+      files: [{ path: stalePath, additions: 6, deletions: 0 }],
+    });
+    writeFileSync(statePath, JSON.stringify(state));
+    expect(await publishSnapshot(sha, "2026-07-29T23:45:00Z")).toBe(1);
+    run(repository, ["git", "fetch", "origin", "main"]);
+    const landed = run(repository, ["git", "ls-tree", "-r", "--name-only", "origin/main", "--", "metrics/"])
+      .split("\n")
+      .filter((file) => file.endsWith(".json"));
+    const finalState = JSON.parse(readFileSync(statePath, "utf8"));
+    expect(landed).toHaveLength(0);
+    expect(finalState.merges).toBe(0);
+    expect(finalState.pullRequests[0].state).toBe("OPEN");
+    expect(run(repository, ["git", "ls-remote", "--heads", "origin", `refs/heads/${branch}`])).toContain(branch);
+  }, 30_000);
+
   test("three different SHAs do not conflict and maintenance converges to one stable branch generation", async () => {
     for (const label of ["change-one", "change-two", "change-three"]) {
       expect(await publishSnapshot(addMainCommit(label))).toBe(0);

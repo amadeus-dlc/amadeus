@@ -169,6 +169,31 @@ describe("t222 snapshot ownership is an AND contract", () => {
     });
   }
 
+  test("evidence captured_at owns the candidate when backfill pins it", () => {
+    const context = { repository: REPOSITORY, botLogin: BOT_LOGIN, targetSha: TARGET_SHA, capturedAt: "2026-07-30T00:00:00.000Z" };
+    expect(verifySnapshotOwnership(valid, context)).toEqual({ ok: true });
+  });
+
+  test("mismatched captured_at rejects ownership under backfill", () => {
+    const context = { repository: REPOSITORY, botLogin: BOT_LOGIN, targetSha: TARGET_SHA, capturedAt: "2026-07-31T00:00:00.000Z" };
+    const result = verifySnapshotOwnership(valid, context);
+    expect(result).toEqual({ ok: false, missing: ["evidence captured_at"] });
+  });
+
+  test("matching captured_at with a wrong path rejects ownership under backfill", () => {
+    const context = { repository: REPOSITORY, botLogin: BOT_LOGIN, targetSha: TARGET_SHA, capturedAt: "2026-07-30T00:00:00.000Z" };
+    const misplaced = snapshotPr({
+      files: [{ path: `metrics/2026-07-31T00-00-00-000Z-${TARGET_SHA.slice(0, 12)}.json`, additions: 1, deletions: 0, text: validSnapshotText() }],
+    });
+    expect(verifySnapshotOwnership(misplaced, context)).toMatchObject({ ok: false });
+  });
+
+  test("unreadable snapshot text rejects ownership under backfill", () => {
+    const context = { repository: REPOSITORY, botLogin: BOT_LOGIN, targetSha: TARGET_SHA, capturedAt: "2026-07-30T00:00:00.000Z" };
+    const unreadable = snapshotPr({ files: [{ path: SNAPSHOT_PATH, additions: 1, deletions: 0 }] });
+    expect(verifySnapshotOwnership(unreadable, context)).toMatchObject({ ok: false });
+  });
+
   test("incomplete API fields are parse failures, not absent candidates", () => {
     expect(() => parseSnapshotCandidate({ ...valid, author: undefined })).toThrow("author is missing");
   });
