@@ -182,7 +182,9 @@ describe("regressionClass", () => {
     expect(regressionClass("bugs", "open", 15, 15)).toBe("");
     expect(regressionClass("bugs", "open", null, 15)).toBe("");
     expect(regressionClass("bugs", "total", 278, 300)).toBe("");
+    expect(regressionClass("bugs", "total", 300, 278)).toBe("");
     expect(regressionClass("bugs", "fixed", 250, 240)).toBe("");
+    expect(regressionClass("bugs", "fixed", 240, 250)).toBe("");
   });
   test("failure counters are prev-agnostic: non-zero is always regressed", () => {
     expect(regressionClass("tests", "failedFiles", undefined, 1)).toBe("regressed");

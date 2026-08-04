@@ -56,7 +56,10 @@ describe("t221 snapshot writer and real CLI", () => {
       expect(env.listFiles(join(root, "tests"))).toContain(join(root, "tests", "unit", "x.test.ts"));
       expect(env.exec(["git", "rev-parse", "HEAD"])).toHaveLength(40);
       const tokenless: CollectEnv = { ...env, envVar: (name) => (name.endsWith("TOKEN") ? undefined : process.env[name]) };
-      expect(collectors.map((collector) => collector.collect(tokenless)).map((result) => result.ok)).toEqual([true, true, true, true, true, true, "skipped"]);
+      const results = collectors.map((collector) => collector.collect(tokenless)).map((result) => ({ name: result.name, ok: result.ok }));
+      expect(results).toHaveLength(7);
+      expect(results.filter((result) => result.ok === true)).toHaveLength(6);
+      expect(results.filter((result) => result.ok === "skipped").map((result) => result.name)).toEqual(["bugs"]);
     } finally {
       if (previousRoots === undefined) delete process.env.AMADEUS_COMPLEXITY_ROOTS;
       else process.env.AMADEUS_COMPLEXITY_ROOTS = previousRoots;

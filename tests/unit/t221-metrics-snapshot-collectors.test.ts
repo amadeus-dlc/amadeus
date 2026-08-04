@@ -20,6 +20,7 @@ const TOTALS: Record<string, number> = {
   "is:open": 15,
   "is:closed": 263,
   "is:closed reason:completed": 250,
+  "is:closed -reason:completed": 20,
   "label:S1-FATAL": 9,
   "label:S2-CRITICAL": 29,
   "label:S3-MAJOR": 133,
@@ -52,14 +53,14 @@ function bugsEnv(vars: Record<string, string>, remote = "git@github.com:o/r.git"
 const searchQueries = (commands: string[][]): string[] => commands.filter((command) => command[1] === "api").map((command) => command[6]);
 
 describe("t221 bugs collector", () => {
-  test("one total_count query per value, with rejected derived from closed minus fixed", () => {
+  test("one total_count query per value, rejected coming from its own query rather than closed minus fixed", () => {
     const { env, commands } = bugsEnv({ GH_TOKEN: "t", GITHUB_REPOSITORY: "o/r" });
     expect(bugs.collect(env)).toEqual({
       ok: true,
       name: "bugs",
       tool: "gh",
       tool_version: "gh version 2.60.1 (2026-01-15)",
-      values: { total: 278, open: 15, closed: 263, fixed: 250, rejected: 13, s1_fatal: 9, s2_critical: 29, s3_major: 133, s4_minor: 51 },
+      values: { total: 278, open: 15, closed: 263, fixed: 250, rejected: 20, s1_fatal: 9, s2_critical: 29, s3_major: 133, s4_minor: 51 },
     });
     expect(commands[0]).toEqual([
       "gh", "api", "-X", "GET", "search/issues", "-f", "q=repo:o/r is:issue label:bug", "-f", "advanced_search=true", "--jq", ".total_count",
@@ -69,6 +70,7 @@ describe("t221 bugs collector", () => {
       "q=repo:o/r is:issue label:bug is:open",
       "q=repo:o/r is:issue label:bug is:closed",
       "q=repo:o/r is:issue label:bug is:closed reason:completed",
+      "q=repo:o/r is:issue label:bug is:closed -reason:completed",
       "q=repo:o/r is:issue label:bug label:S1-FATAL",
       "q=repo:o/r is:issue label:bug label:S2-CRITICAL",
       "q=repo:o/r is:issue label:bug label:S3-MAJOR",

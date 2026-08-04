@@ -131,19 +131,24 @@ export const collectors: Collector[] = [
   // and `fixed` cumulative repair, so per-period rates are derived downstream by
   // diffing the series. The only network-backed collector: without a token it
   // skips (the snapshot proceeds without it), with a token any failed call is
-  // fatal rather than silently partial. open + closed is deliberately not
-  // asserted against total — the calls are not atomic w.r.t. issue activity.
+  // fatal rather than silently partial. Every value is its own total_count
+  // query rather than derived from another — the calls are not atomic w.r.t.
+  // issue activity, so no value is safe to compute from two others.
   { name: "bugs", collect: (env) => guarded("bugs", () => {
     if ((env.envVar("GH_TOKEN") ?? env.envVar("GITHUB_TOKEN")) === undefined) {
       return { ok: "skipped", name: "bugs", reason: "neither GH_TOKEN nor GITHUB_TOKEN is set" };
     }
     const repository = githubRepository(env);
     const count = (filter: string) => bugCount(env, repository, filter);
-    const totals = { total: count(""), open: count("is:open"), closed: count("is:closed"), fixed: count("is:closed reason:completed") };
+    const totals = {
+      total: count(""),
+      open: count("is:open"),
+      closed: count("is:closed"),
+      fixed: count("is:closed reason:completed"),
+      rejected: count("is:closed -reason:completed"),
+    };
     const severity = { s1_fatal: count("label:S1-FATAL"), s2_critical: count("label:S2-CRITICAL"), s3_major: count("label:S3-MAJOR"), s4_minor: count("label:S4-MINOR") };
-    return successful("bugs", "gh", env.exec(["gh", "--version"]).split("\n")[0].trim(), {
-      ...totals, rejected: totals.closed - totals.fixed, ...severity,
-    });
+    return successful("bugs", "gh", env.exec(["gh", "--version"]).split("\n")[0].trim(), { ...totals, ...severity });
   }) },
 ];
 

@@ -26,12 +26,12 @@ or network access is needed: charts are inline SVG with zero dependencies.
 ## The `bugs` collector
 
 `bugs` counts GitHub issues labeled `bug` — the project's bug ledger — through
-eight Search API `total_count` queries: `total` (cumulative occurrence), `open`,
+nine Search API `total_count` queries: `total` (cumulative occurrence), `open`,
 `closed`, `fixed` (closed as completed — cumulative repair), `rejected`
-(`closed - fixed`, i.e. wontfix/duplicate/not-planned), and one count per
-severity label (`s1_fatal`, `s2_critical`, `s3_major`, `s4_minor`). Only
-cumulative counts are stored; per-period rates are derived by diffing the
-series.
+(closed with any other reason, via `is:closed -reason:completed`, i.e.
+wontfix/duplicate/not-planned), and one count per severity label (`s1_fatal`,
+`s2_critical`, `s3_major`, `s4_minor`). Only cumulative counts are stored;
+per-period rates are derived by diffing the series.
 
 It is the one network-backed collector, so it has two modes:
 
