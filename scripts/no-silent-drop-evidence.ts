@@ -113,17 +113,10 @@ function rollbackOrReplaceError(
   originalError: unknown,
 ): unknown {
   if (applied === null) return originalError;
-  const rollbackProblems: string[] = [];
-  try {
-    rollbackAppliedBundle(adapter.repositoryRoot, applied);
-  } catch (rollbackError) {
-    rollbackProblems.push(rollbackError instanceof Error ? rollbackError.message : String(rollbackError));
-  }
-  try {
-    adapter.clearEvidenceIndex(applied.paths);
-  } catch (indexError) {
-    rollbackProblems.push(indexError instanceof Error ? indexError.message : String(indexError));
-  }
+  const rollbackProblems = [
+    recoveryFailure(() => rollbackAppliedBundle(adapter.repositoryRoot, applied)),
+    recoveryFailure(() => adapter.clearEvidenceIndex(applied.paths)),
+  ].filter((problem): problem is string => problem !== null);
   if (rollbackProblems.length > 0) {
     return new EvidenceRebindError(
       "REBIND_ROLLBACK_FAILED",
@@ -131,6 +124,15 @@ function rollbackOrReplaceError(
     );
   }
   return originalError;
+}
+
+function recoveryFailure(recover: () => void): string | null {
+  try {
+    recover();
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
 }
 
 function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAdapter): RebindEnvelope {
