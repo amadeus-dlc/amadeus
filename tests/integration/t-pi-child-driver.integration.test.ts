@@ -143,19 +143,21 @@ describe("Pi child driver process boundary", () => {
     expect(result.kind).toBe("succeeded");
   });
 
-  test("timeout and cancellation remain terminal failures and reap the guardian group", async () => {
+  test("timeout remains a terminal failure and reaps the guardian group", async () => {
     const timed = fixture();
     const timedResult = await executePiChild(
       { ...timed.base, deliveryKey: "timeout-1", prompt: "hang", timeoutMs: 100 },
       { runtimeDir: join(timed.root, "runtime"), piExecutable: timed.fakePi, lifecycle: timed.lifecycle },
     );
     expect(timedResult.kind).toBe("timed-out");
+  });
 
+  test("cancellation remains a terminal failure and reaps the guardian group", async () => {
     const cancelled = fixture();
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 100);
     const cancelledResult = await executePiChild(
-      { ...cancelled.base, deliveryKey: "cancel-1", prompt: "cancel", timeoutMs: 100 },
+      { ...cancelled.base, deliveryKey: "cancel-1", prompt: "cancel" },
       {
         runtimeDir: join(cancelled.root, "runtime"),
         piExecutable: cancelled.fakePi,
