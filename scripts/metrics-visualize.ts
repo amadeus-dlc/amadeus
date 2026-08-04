@@ -58,6 +58,9 @@ const REGRESSION_RULES: Record<string, RegressionRule> = {
   "tests.failedFiles": { worse: (_prev, curr) => curr !== 0 },
   "tests.failedAssertions": { worse: (_prev, curr) => curr !== 0 },
   "dist_size.bytes": { worse: (prev, curr) => prev !== null && curr > prev },
+  // Only the open backlog worsens; a rising bugs.total can equally mean better
+  // detection, so cumulative occurrence is deliberately left unhighlighted.
+  "bugs.open": { worse: (prev, curr) => prev !== null && curr > prev },
 };
 
 // "regressed" when the latest value worsened against the previous one (or is
@@ -266,7 +269,7 @@ export function renderHtml(series: Snapshot[]): string {
     `<style>${STYLE}</style></head><body>`,
     "<h1>メトリクス定点観測ダッシュボード</h1>",
     `<p class="meta">${escapeHtml(meta)}</p>`,
-    '<p class="legend">赤 = 直前スナップショットからの劣化(coverage 低下・CCN 増・テスト失敗・dist 肥大)</p>',
+    '<p class="legend">赤 = 直前スナップショットからの劣化(coverage 低下・CCN 増・テスト失敗・dist 肥大・バグ open 増)</p>',
     discoverCollectors(series).map((c) => renderCollectorSection(series, c)).join(""),
     "</body></html>",
   ].join("\n");

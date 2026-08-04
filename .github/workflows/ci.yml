@@ -610,6 +610,7 @@ jobs:
           private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
+          permission-issues: read
 
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
