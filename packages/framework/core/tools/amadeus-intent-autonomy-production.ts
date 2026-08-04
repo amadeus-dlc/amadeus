@@ -581,6 +581,18 @@ export type ProductionQualityResumeResult =
   | { readonly kind: "resumed"; readonly qualityScopeId: string; readonly workflowResult: "running" }
   | { readonly kind: "error"; readonly reason: string };
 
+// Derived, not sampled: the production adapter has no ambient span, and the
+// Quality Repair coordinator requires a trace on every evidence-bearing call.
+function productionQualityTrace(
+  intentUuid: string,
+  stageInstanceId: string,
+): { readonly traceId: string; readonly spanId: string } {
+  return {
+    traceId: qualityDigest([intentUuid, stageInstanceId]).slice("sha256:".length, 39),
+    spanId: qualityDigest(stageInstanceId).slice("sha256:".length, 23),
+  };
+}
+
 function deterministicQualityJudge(): JudgePort {
   return {
     dispatch(request) {
@@ -650,10 +662,7 @@ export function commitProductionQualityObservation(
     intentUuid: autonomy.intentUuid,
     graphRevision: activation.graph.graphRevision,
     previousSnapshot: prior?.latestSnapshot ?? null,
-  }, {
-    traceId: qualityDigest([autonomy.intentUuid, input.evidence.stageInstanceId]).slice("sha256:".length, 39),
-    spanId: qualityDigest(input.evidence.stageInstanceId).slice("sha256:".length, 23),
-  });
+  }, productionQualityTrace(autonomy.intentUuid, input.evidence.stageInstanceId));
   if (observed.kind === "CONFLICT" || observed.kind === "INCOMPLETE") {
     return { kind: "error", reason: observed.reason };
   }
@@ -838,11 +847,15 @@ function commitQualityResumeIfRequired(
     ? freshHumanRetryTurn(input.projectDir, context.resolved)
     : undefined;
   if (input.basis === "human-retry" && humanRetry === null) return "fresh-human-retry-required";
+  const evidence = productionQualityResumeEvidence(input, context);
   const resumed = context.quality.resume({
     qualityScopeId: input.qualityScopeId,
     alternativeIdentity: context.alternativeIdentity,
     humanRetry: humanRetry ?? undefined,
-    evidence: productionQualityResumeEvidence(input, context),
+    evidence,
+    ...(evidence === undefined
+      ? {}
+      : { trace: productionQualityTrace(evidence.intentUuid, evidence.stageInstanceId) }),
   });
   return resumed.kind === "resumed" ? null : resumed.reason;
 }

@@ -48,7 +48,11 @@ function state(projectDir: string): string {
   return readFileSync(join(recordDir(projectDir), "amadeus-state.md"), "utf8");
 }
 
-function appendLedgerEvent(projectDir: string, event: "HUMAN_TURN" | "QUESTION_ANSWERED"): void {
+function appendLedgerEvent(
+  projectDir: string,
+  event: "HUMAN_TURN" | "QUESTION_ANSWERED" | "GRANT_ISSUED",
+  fields: Record<string, string> = {},
+): void {
   const auditDir = join(recordDir(projectDir), "audit");
   mkdirSync(auditDir, { recursive: true });
   const path = join(auditDir, "production-autonomy-test.jsonl");
@@ -63,7 +67,7 @@ function appendLedgerEvent(projectDir: string, event: "HUMAN_TURN" | "QUESTION_A
     timestamp: new Date().toISOString(),
     heading: event === "HUMAN_TURN" ? "Human Turn" : "Question Answered",
     event,
-    fields: {},
+    fields,
   })}\n`);
 }
 
@@ -99,6 +103,20 @@ function bornProject(): string {
   const birth = { status: result.status ?? -1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
   expect(birth.status).toBe(0);
   return projectDir;
+}
+
+function applyFullAutonomyInProcess(projectDir: string): void {
+  appendLedgerEvent(projectDir, "HUMAN_TURN");
+  const stateContent = state(projectDir);
+  const preview = previewProductionAutonomyGrant({ projectDir, stateContent });
+  expect(preview.ok).toBe(true);
+  if (!preview.ok) return;
+  expect(applyProductionAutonomyMode({
+    projectDir,
+    stateContent,
+    mode: "full",
+    confirmedDisplayDigest: preview.preview.displayDigest,
+  })).toMatchObject({ ok: true, projection: { mode: "full" } });
 }
 
 let projectDir = "";
@@ -270,6 +288,238 @@ describe("Intent-scoped autonomy production path", () => {
     expect(commitProductionIntentCompletion({ projectDir })).toMatchObject({
       ok: true,
       result: { result: { outcome: "completed" } },
+    });
+  });
+
+  test("legacy standing grants remain diagnostic and cannot authorize production gates", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "GRANT_ISSUED", { "Grant Id": "legacy-standing-grant-1" });
+
+    const projection = readProductionAutonomyProjection(projectDir);
+    expect(projection).toMatchObject({
+      mode: "none",
+      currentGrant: null,
+      legacyStandingGrantIds: ["legacy-standing-grant-1"],
+      modeProvenance: { kind: "legacy-fail-closed" },
+      migrationDiagnostics: [{
+        kind: "legacy-non-authoritative",
+        legacyGrantId: "legacy-standing-grant-1",
+        recommendedHumanAction: "select-intent-autonomy-mode",
+      }],
+    });
+    expect(productionStageAutonomy({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"1".repeat(64)}`,
+      walkingSkeleton: false,
+    })).toMatchObject({
+      mode: "none",
+      autoApprove: false,
+      grantId: null,
+      qualityRepair: "disabled",
+    });
+  });
+
+  test("full grant confirmation binds policies and human downgrade revokes without reusing the grant", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const stateContent = state(projectDir);
+    const policies = [{
+      sourceText: "  Prefer the minimal repair  ",
+      selector: "repair-strategy",
+      optionId: "minimal-fix",
+    }] as const;
+    const preview = previewProductionAutonomyGrant({
+      projectDir,
+      stateContent,
+      principalId: "human-owner",
+      policies,
+    });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "full",
+      principalId: "human-owner",
+      policies,
+      confirmedDisplayDigest: `sha256:${"0".repeat(64)}`,
+    })).toEqual({ ok: false, error: "CONFIRMATION_REQUIRED" });
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
+
+    const full = applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "full",
+      principalId: "human-owner",
+      policies,
+      confirmedDisplayDigest: preview.preview.displayDigest,
+    });
+    expect(full).toMatchObject({
+      ok: true,
+      projection: {
+        mode: "full",
+        currentGrant: { principalId: "human-owner" },
+      },
+    });
+    if (!full.ok) return;
+    expect(full.projection.currentGrant?.policies).toHaveLength(1);
+    expect(full.projection.currentGrant?.policies[0]).toMatchObject({
+      selector: "repair-strategy",
+      normalizedOptionRule: { kind: "exact-option", optionId: "minimal-fix" },
+    });
+    expect(full.projection.currentGrant?.policies[0]?.sourceTextDigest).toStartWith("sha256:");
+
+    const auditBeforeConflict = auditEvents(projectDir);
+    expect(() => commitProductionQualityObservation({
+      projectDir,
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "conflicting-review-stage",
+        boltId: "conflicting-review-bolt",
+        observations: [{
+          kind: "reviewer",
+          invocationId: "conflicting-review",
+          verifierId: "quality-reviewer",
+          validationReceipt: `sha256:${"2".repeat(64)}`,
+          verdict: "NOT-READY",
+          blockers: [{
+            findingId: "duplicate-finding",
+            artifactId: "first-artifact",
+            failureFingerprint: `sha256:${"3".repeat(64)}`,
+          }, {
+            findingId: "duplicate-finding",
+            artifactId: "second-artifact",
+            failureFingerprint: `sha256:${"4".repeat(64)}`,
+          }],
+        }],
+      },
+      replanContext: "Conflicting evidence must fail closed.",
+    })).toThrow("quality-evidence-INCOMPLETE:conflicting duplicate quality obligation");
+    expect(auditEvents(projectDir)).toEqual(auditBeforeConflict);
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    const semi = applyProductionAutonomyMode({ projectDir, stateContent, mode: "semi" });
+    expect(semi).toMatchObject({
+      ok: true,
+      projection: {
+        mode: "semi",
+        currentGrant: null,
+        terminalGrantHistory: [{ state: "revoked" }],
+      },
+    });
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(applyProductionAutonomyMode({ projectDir, stateContent, mode: "none" })).toMatchObject({
+      ok: true,
+      projection: { mode: "none", currentGrant: null },
+    });
+    expect(commitProductionQualityObservation({
+      projectDir,
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "none-mode-stage",
+        boltId: "none-mode-bolt",
+        observations: [],
+      },
+      replanContext: "none mode keeps the existing human path",
+    })).toEqual({ kind: "error", reason: "none-default-off" });
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: "not-stalled",
+      basis: "human-retry",
+    })).toEqual({ kind: "error", reason: "quality-repair-stall-not-active" });
+  });
+
+  test("full uses an available solo election without recommendation degradation", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+
+    const decision = commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"5".repeat(64)}`,
+      questionId: "production-solo-election",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+      election: {
+        optionId: "broad-refactor",
+        evidenceFingerprint: `sha256:${"6".repeat(64)}`,
+      },
+    });
+    expect(decision).toMatchObject({
+      kind: "decided",
+      decision: {
+        selectedOptionId: "broad-refactor",
+        decider: "solo-election",
+        degradedCapability: null,
+      },
+    });
+  });
+
+  test("REPAIR_STALLED resumes from strict evidence improvement without a human retry", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const stalledEvidence = {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: "evidence-resume-stage",
+      boltId: "evidence-resume-bolt",
+      observations: [{
+        kind: "reviewer" as const,
+        invocationId: "evidence-resume-review",
+        verifierId: "quality-reviewer",
+        validationReceipt: `sha256:${"7".repeat(64)}`,
+        verdict: "NOT-READY" as const,
+        blockers: [{
+          findingId: "evidence-resume-blocker",
+          artifactId: "build-test-results",
+          failureFingerprint: `sha256:${"8".repeat(64)}`,
+        }],
+      }],
+    };
+    const outcomes = Array.from({ length: 7 }, () => commitProductionQualityObservation({
+      projectDir,
+      evidence: stalledEvidence,
+      replanContext: "Replan once, then stop the fixed-point repair loop.",
+    }));
+    expect(outcomes.map((result) => result.kind)).toEqual([
+      "repair", "repair", "repair", "replanned", "repair", "repair", "parked",
+    ]);
+    const parked = outcomes.at(-1);
+    if (parked?.kind !== "parked") throw new Error("expected production quality to park");
+
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: parked.qualityScopeId,
+      basis: "evidence-change",
+      evidence: {
+        ...stalledEvidence,
+        observations: [{
+          kind: "reviewer",
+          invocationId: "evidence-resume-review",
+          verifierId: "quality-reviewer",
+          validationReceipt: `sha256:${"9".repeat(64)}`,
+          verdict: "READY",
+          blockers: [],
+        }],
+      },
+    })).toEqual({
+      kind: "resumed",
+      qualityScopeId: parked.qualityScopeId,
+      workflowResult: "running",
+    });
+    expect(readProductionAutonomyProjection(projectDir)).toMatchObject({
+      workflowExecutionState: "running",
+      currentGrant: { state: "active" },
+      parkEnvelope: null,
     });
   });
 
