@@ -90,6 +90,7 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
     try {
       expect(() => writeHarness("pi", isolatedDistRoot)).not.toThrow();
       expect(existsSync(join(isolatedDistRoot, "pi", ".pi", "skills", "amadeus", "SKILL.md"))).toBe(true);
+      expect(() => writeHarness("pi", isolatedDistRoot)).not.toThrow();
     } finally {
       rmSync(isolatedDistRoot, { recursive: true, force: true });
     }

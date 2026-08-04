@@ -820,6 +820,28 @@ describe("no-silent-drop ledger", () => {
 });
 
 describe("no-silent-drop boundaries", () => {
+  test("trusted-base lookup returns null when no ancestor baseline matches", () => {
+    const root = mkdtempSync(join(tmpdir(), "nsd-trusted-base-miss-"));
+    temporaryDirectories.push(root);
+    const baselineDir = join(root, "tests", "no-silent-drop");
+    mkdirSync(baselineDir, { recursive: true });
+    writeFileSync(
+      join(baselineDir, "baseline.json"),
+      `${JSON.stringify({ generatedFrom: { previousDigest: "f".repeat(64) } })}\n`,
+    );
+    for (const args of [
+      ["init"],
+      ["config", "user.email", "fixture@example.test"],
+      ["config", "user.name", "Fixture"],
+      ["add", "tests/no-silent-drop/baseline.json"],
+      ["commit", "-m", "fixture"],
+    ]) {
+      expect(spawnSync("git", args, { cwd: root, encoding: "utf8" }).status).toBe(0);
+    }
+
+    expect(noSilentDropTrustedBase(root)).toBeNull();
+  });
+
   test("check mode fails closed without a trusted base revision", async () => {
     expect(await runGate("check", REPO_ROOT)).toMatchObject({
       status: "error",
