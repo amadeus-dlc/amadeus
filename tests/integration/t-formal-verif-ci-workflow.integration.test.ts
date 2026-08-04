@@ -57,6 +57,8 @@ const BASELINE_SHA = readFileSync(
 //     operational boundary.
 //   - 260804-metrics-snapshot-auth (#2182): preserve the short-lived GitHub App
 //     credential in the metrics-snapshot write job until its plain git push.
+//   - Issue #2186: require both absolute and merge-base-relative project
+//     coverage before the patch coverage gate runs.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
