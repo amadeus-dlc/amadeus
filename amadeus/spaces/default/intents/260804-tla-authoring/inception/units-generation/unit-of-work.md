@@ -28,7 +28,7 @@
 ### U2: applicability-hold（library）
 
 - **責務**: 適用判定の 4 分岐と receipt 生成（C1）、hold 評価器（C9）、および既存 engine advisory checkpoint への結線（plugin.json への advisory code 宣言 + `tla-authoring.ts applicability` / `hold` サブコマンド）。
-- **境界**: 判定と hold の評価のみ。永続化は U1（C4）へ委譲。checkpoint 機構そのもの（engine 側）には触れない（decisions.md ADR-6）。
+- **境界**: 判定と hold の評価のみ。永続化は U1（C4）へ委譲。checkpoint 機構そのもの（発火点・directive 契約・解除規則）には触れない（decisions.md ADR-6）。（改訂追記 2026-08-04T18:29:01Z 人間裁定: U2 functional-design 冒頭の実読確認で「plugin 宣言だけで結線・engine 無変更」の前提が否定され、ADR-6 は宣言駆動化へ改訂 — engine の advisory 供給面を plugin.json 宣言読取へ一般化する小さな engine 変更が U2 のスコープに入る。改訂後の正は decisions.md ADR-6 改訂注記と U2 の functional-design / nfr-design 成果物）
 - **配備モデル**: リポジトリ内 CLI + plugin manifest 宣言。
 - **主対応**: FR-001、FR-003、FR-004、FR-005、FR-007、AC-001〜AC-004、AC-006。
 - **実装注意**: §11a checkpoint の fail-closed 機械強制の実読確認（application-design レビュー FOLLOW-UP-1）をこの unit の functional-design 冒頭で行い、否定される場合は ADR-6 の再裁定を人間へ返す。

@@ -28,6 +28,7 @@
 
 - **Definition of Done**: 判定 4 分岐 + receipt 生成 + C9 hold 判定表が fixture で green。**着手前に §11a checkpoint の fail-closed 機械強制を実読確認**（application-design レビュー FOLLOW-UP-1。否定なら halt して ADR-6 再裁定を人間へ）。advisory code の plugin.json 宣言。
 - **確信仮説**: 「既存 advisory checkpoint 機構に plugin 側評価器を載せるだけで、engine 無変更のまま hold を強制できる」（ADR-6 の最大リスク前提の検証）。
+- **改訂追記（2026-08-04T18:29:01Z 人間裁定）**: DoD の実読確認は functional-design U2 冒頭で前倒し実施済み — 前提「plugin.json 宣言だけで結線でき engine 変更不要」は否定され、halt → ADR-6 再裁定は既に発火・解決済み（宣言駆動化へ改訂）。確信仮説は「checkpoint 機構（発火点・解除規則）無変更のまま、advisory 供給面の宣言読取一般化（小さな engine 変更）で hold を強制できる」へ読み替える。Bolt 2 着手時の実読確認ステップは完了済みとして扱う。
 - **期待デモ**: applicability receipt 不在の fixture で hold verdict、current な terminal receipt で no-hold verdict。
 
 ### Bolt 3: U3 authoring-referees（バッチ 2）

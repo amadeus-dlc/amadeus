@@ -85,12 +85,12 @@
 
 | ADR | 対応 FR/NFR | 可逆性 | 新規機構の導入 |
 |---|---|---|---|
-| ADR-1 hybrid 配置（checkpoint 注入） | FR-001〜FR-010, NFR-004 | 中 | plugin stage 1 つ + advisory code（既存機構に載る） |
+| ADR-1 hybrid 配置（checkpoint 注入） | FR-001〜FR-010, NFR-004 | 中 | plugin stage 1 つ + advisory code（ADR-6 改訂により供給面は宣言読取へ一般化 — ADR-6 改訂注記参照） |
 | ADR-2 stable ID digest | FR-003, FR-006, FR-007 | 中 | pure module のみ |
 | ADR-3 bundle + atomic replace | FR-010, NFR-002, NFR-003 | 高 | 新規 store 1 面（log/replay 等は不採用） |
 | ADR-4 import-closure guard | FR-011, NFR-005 | 高 | pure guard 1 つ + projection 組込 |
 | ADR-5 executor 無変更 | FR-013, NFR-004 | 高 | なし（再利用のみ） |
-| ADR-6 hold 強制 = checkpoint + C9 | FR-003, FR-007, AC-001/002/006 | 高 | pure evaluator 1 つ（engine 無変更） |
+| ADR-6 hold 強制 = checkpoint + C9（改訂 2026-08-04T18:29:01Z: 宣言駆動化） | FR-003, FR-007, AC-001/002/006 | 中（改訂で変更） | pure evaluator 1 つ + engine の advisory 供給面の宣言読取一般化（小さな engine 変更 — checkpoint の発火点・解除規則は不変。ADR-6 改訂注記参照） |
 | ADR-7 terminal route receipt | FR-004, FR-005, NFR-002 | 高 | store への kind 追加のみ |
 
 後方互換レイヤー・移行シムは導入しない（`memory/phases/inception.md`: 根拠のない互換維持を design に持ち込まない）。model-map エントリへの bundle 参照フィールド追加は ADR-3 の確定事項であり、既存 schema 検証・completeness sensor への影響確認（exactObject 制約の実読と schemaVersion 裁定）を Functional Design の明示タスクとする。

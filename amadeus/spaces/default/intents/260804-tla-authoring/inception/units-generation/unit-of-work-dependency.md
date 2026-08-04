@@ -43,7 +43,7 @@ units:
 
 - **CLI 契約**: 全 unit 間の実行時統合は `tla-authoring.ts` のサブコマンド（identity / bundle / applicability / hold / trace / proof / commit）の JSON stdout + exit code 契約に集約する（services.md § 通信契約）。
 - **ファイル契約**: evidence store（`specs/tla-evidence/`、書き手 U1=C4 のみ）、`model-map.json`（書き手 U4=C6 のみ）、plugin.json manifest（U2 の advisory code 宣言 + U6 の修復が同一ファイルに触れる — 唯一のファイル重複。加算的な別セクションであり衝突しない）。
-- **engine 契約**: U2 の advisory 結線は既存 checkpoint 機構（stage-protocol §11a）への供給のみで、engine 側の変更を要しない（decisions.md ADR-6。前提の実読確認は U2 functional-design 冒頭）。
+- **engine 契約**: U2 の advisory 結線は既存 checkpoint 機構（stage-protocol §11a）への供給として設計する。（改訂追記 2026-08-04T18:29:01Z 人間裁定: 前提の実読確認を U2 functional-design 冒頭で実施した結果「engine 側の変更を要しない」は否定され、ADR-6 は宣言駆動化へ改訂 — advisory 供給面の宣言読取一般化という小さな engine 変更を含む。checkpoint の発火点・解除規則・report 拒否は不変）
 - **既存 executor 契約**: U3 → 既存 TLC toolchain は child process、U4 → 既存 `formal-model-check` stage へは model-map 経由の handoff のみ（FR-013 の保護境界に変更辺なし）。
 
 ## 並行開発の機会
