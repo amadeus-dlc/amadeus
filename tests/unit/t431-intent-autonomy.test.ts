@@ -17,8 +17,10 @@ import {
   normalizeDecisionPolicies,
   parseWorkflowResult,
   planHumanAutonomyCommand,
+  projectGrantReference,
   revalidateGrantExerciseReservation,
   resolveAutoDecision,
+  validateResumeCondition,
   type AutonomyProjection,
   type DecisionCapabilityPort,
   type DecisionFact,
@@ -234,6 +236,13 @@ describe("Intent autonomy mode and grant aggregate", () => {
     const full = fullProjection();
     expect(() => assertLegalAutonomyProjection({ ...full, currentGrant: null })).toThrow("mode-grant-combination");
     expect(() => assertLegalAutonomyProjection({ ...full, mode: "none" })).toThrow("mode-grant-combination");
+    expect(() => assertLegalAutonomyProjection({
+      ...full,
+      currentGrant: {
+        ...full.currentGrant!,
+        scope: { ...full.currentGrant!.scope, scopeId: "invalid scope" },
+      },
+    })).toThrow("invalid-grant-scope");
   });
 });
 
@@ -306,6 +315,25 @@ describe("gate and question decision contract", () => {
 
   test("full covers walking skeleton using the same grant rule", () => {
     expect(authorizeInteraction(fullProjection(), occurrence("walking-skeleton", ["approve"])).kind).toBe("full-grant");
+  });
+
+  test("authorization rejects cross-Intent and out-of-scope interactions", () => {
+    const full = fullProjection();
+    expect(authorizeInteraction(full, { ...occurrence(), intentUuid: "other-intent" })).toMatchObject({
+      kind: "human-required",
+      reason: "SCOPE_OUT",
+    });
+    const stageOnly = {
+      ...full,
+      currentGrant: {
+        ...full.currentGrant!,
+        scope: { ...full.currentGrant!.scope, allowedInteractionKinds: ["stage-gate"] as const },
+      },
+    };
+    expect(authorizeInteraction(stageOnly, occurrence("walking-skeleton", ["approve"]))).toMatchObject({
+      kind: "human-required",
+      reason: "SCOPE_OUT",
+    });
   });
 
   test("semi and grant gate decisions are queue-inapplicable", () => {
@@ -406,6 +434,25 @@ describe("gate and question decision contract", () => {
     expect(result.record.decider).toBe("agent-recommendation");
     expect(result.record.degradedCapability?.reason).toBe("native-election-unavailable");
     expect(result.record.reviewState).toBe("unreviewed");
+  });
+
+  test("a valid solo election is recorded as an unreviewed decision", () => {
+    const projection = fullProjection("accept");
+    const withoutPolicies = { ...projection, currentGrant: { ...projection.currentGrant!, policies: [] } };
+    const result = resolveAutoDecision({
+      projection: withoutPolicies,
+      occurrence: occurrence(),
+      actorId: "codex",
+      scopeLineageFingerprint: SCOPE_FP,
+      currentNormFingerprint: NORM,
+      applicableNormFacts: [],
+      pastHumanRulings: [],
+      capability: capability(true),
+    });
+    expect(result).toMatchObject({
+      kind: "decided",
+      record: { selectedOptionId: "accept", decider: "solo-election", reviewState: "unreviewed" },
+    });
   });
 });
 
@@ -552,5 +599,42 @@ describe("effect authorization and workflow result", () => {
       resumeCondition: { kind: "human-unpark", identity: "resume-1", status: "pending", evidenceFingerprint: null },
       failureRef: null,
     })).toThrow("invalid-workflow-result");
+  });
+
+  test("workflow result projection accepts valid terminal and failed outcomes", () => {
+    const initial = createAutonomyProjection({ intentUuid: INTENT });
+    expect(projectGrantReference(initial)).toBeNull();
+    const full = fullProjection();
+    expect(projectGrantReference(full)).toMatchObject({ state: "active" });
+
+    const failed = {
+      outcome: "failed",
+      reasonCode: null,
+      retryable: false,
+      intentUuid: INTENT,
+      autonomyMode: "none",
+      grant: null,
+      evidenceFingerprint: autonomyDigest("failure"),
+      resumeCondition: null,
+      failureRef: "failure-1",
+    } as const;
+    expect(parseWorkflowResult(failed)).toEqual(failed);
+    const completed = {
+      outcome: "completed",
+      reasonCode: null,
+      retryable: false,
+      intentUuid: INTENT,
+      autonomyMode: "none",
+      grant: null,
+      evidenceFingerprint: null,
+      resumeCondition: null,
+      failureRef: null,
+    } as const;
+    expect(parseWorkflowResult(completed)).toEqual(completed);
+    expect(() => parseWorkflowResult({ ...completed, autonomyMode: "invalid" })).toThrow("invalid-workflow-result");
+
+    const resume = { kind: "human-unpark", identity: "resume-1", status: "pending", evidenceFingerprint: null } as const;
+    expect(() => validateResumeCondition("USER_PARKED", resume)).not.toThrow();
+    expect(() => validateResumeCondition("NORM_CONFLICT", resume)).toThrow("ILLEGAL_STATE:resume-condition");
   });
 });
