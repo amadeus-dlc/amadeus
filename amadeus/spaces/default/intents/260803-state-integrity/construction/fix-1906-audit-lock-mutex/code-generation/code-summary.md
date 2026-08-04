@@ -260,3 +260,17 @@ conductor が同一ブランチに対して実行した全回を隠さず載せ�
 - 上記以外の NFR-3 のゲートには依存が無い。
 
 したがって未解決分は「現行 AC を今は満たすが、evidence 再生成が必要になった時点で `t413` を再び塞ぐ」性質の負債である。`#2153` で追跡する。
+
+## 着地状況(2026-08-04 追記)
+
+| 項目 | 状態 |
+| --- | --- |
+| PR | [#2155](https://github.com/amadeus-dlc/amadeus/pull/2155)(base `main`、`mergeable: MERGEABLE`、`mergeStateStatus: BLOCKED`) |
+| レビュースレッド | 2件とも実測反証のうえ返信・resolve 済み(未解決 0件) |
+| CI | 赤4件(`CI Success` / `Coverage Report` / `Coverage Report (head)` / `Tests`)。**すべて main 由来** — `origin/main` の run `30837153546` と失敗ジョブ集合がバイト同一で、失敗テストは `t413` の1件のみ |
+| ブロッカー | [#2156](https://github.com/amadeus-dlc/amadeus/issues/2156)(P0 / S1-FATAL)。intent `260804-evidence-revision-rebind` で対応中 |
+| ステージ | ゲートはユーザー承認済み。engine の `workspace_requires` が実装の本線面を要求するため、PR 着地まで `report --result approved` は通らない |
+
+**着地順の依存**: #2156 の止血 PR(NSD 台帳の再バインドのみ、JSON 3ファイル)を先に着地させると main が緑に戻り、本 PR の CI も緑になる。ただし止血 PR は本 PR が持つ NSD 台帳(`9458bbda8` 接地)と競合するため、着地後に機械的な再バインドで再接地する必要がある。
+
+**Bolt B(#1875 / FR-5〜FR-8)は未着手。** 本 unit は Bolt A のみを対象とする。
