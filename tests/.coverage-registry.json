@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 177,
-      "audit": 39,
+      "audit": 40,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -339,8 +339,13 @@
       "unitClass": "audit",
       "unitId": "LOOP_MONITOR_EVENT_SET_COMMITTED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t426-loop-monitor-replay-index.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
