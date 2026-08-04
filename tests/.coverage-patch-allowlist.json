@@ -6053,5 +6053,27 @@
     },
     "reason": "The verb is driven in-process by t435 and the line executes on that path; bun's union-merged lcov stamps this flag-read line 0 in the parent report (loaded-only chunk artifact), the bun-inbody attribution class.",
     "expiry": "remove when bun's union merge attributes the line, or the handler gains a dedicated in-process lcov driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review-production.ts",
+    "selector": {
+      "function": "commitProductionDecisionReview",
+      "fingerprint": "sha256:6596f0e61c1718154f1ecd81dee83126576ee17ec85fb0dd6c47c4bfadf2fc12",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Defensive catch converting an unexpected lock/journal throw into a typed error; the review commit's reachable failure arms are typed returns pinned by t433, so this arm only fires on infrastructure faults not reproducible in-process.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleReviewAutoDecision",
+      "fingerprint": "sha256:8cd42ca44cfc1e429ac54c895629dd38fa0a41a7d0d0c03a852d7f99d0bddfd4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "CLI flag-validation arm: error() exits the process, so the missing-digest branch is spawn-only; the confirmed path is driven in-process by t435.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]

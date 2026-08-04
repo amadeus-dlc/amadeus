@@ -797,6 +797,7 @@ describe("Intent-scoped autonomy production path", () => {
     if (!unreviewed.ok) throw new Error(unreviewed.error);
     const decisionId = unreviewed.page.items[0]?.decisionId;
     if (decisionId === undefined) throw new Error("expected an unreviewed production decision");
+    boltMain(["--project-dir", projectDir, "get-auto-decision", "--decision", decisionId]);
     boltMain(["--project-dir", projectDir, "get-auto-decision", "--decision", decisionId, "--choice", "accept"]);
     appendLedgerEvent(projectDir, "HUMAN_TURN");
     const confirmed = reviewCommandContentDigest({

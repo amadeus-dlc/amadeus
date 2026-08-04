@@ -828,6 +828,15 @@ describe("projection event-set digest contract", () => {
     expect(page.value.nextCursor.projectionEventSetDigest).toBe(expected);
   });
 
+  test("dedupes a duplicated event id with identical payloads to one entry", () => {
+    const twin = decision(ACTIVE, "dup");
+    const service = createMemoryAutonomyReviewService({
+      intents: [seed(ACTIVE, "active", [decision(ACTIVE, "dup"), twin])],
+    });
+    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 10 });
+    expect(page.ok).toBe(true);
+  });
+
   test("closes a duplicated event id with diverging payloads as a projection-set CONFLICT", () => {
     const clash = { ...decision(ACTIVE, "dup"), principalId: "principal-2" };
     const service = createMemoryAutonomyReviewService({

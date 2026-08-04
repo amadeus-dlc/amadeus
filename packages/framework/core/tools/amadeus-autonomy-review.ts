@@ -243,13 +243,15 @@ export interface BoundHumanReviewCommand {
 // display of exactly this content. Occurrence and turn ids are deliberately
 // excluded: they are minted at commit time and would make the digest
 // unobtainable at preview time.
-export function reviewCommandContentDigest(input: {
+interface ReviewCommandContentDigestInput {
   readonly targetIntentUuid: string;
   readonly decisionId: string;
   readonly choice: ReviewChoice;
   readonly flagClassification: HumanReviewCommandBinding["flagClassification"];
   readonly safeNoteDigest: string | null;
-}): string {
+}
+
+export function reviewCommandContentDigest(input: ReviewCommandContentDigestInput): string {
   return canonicalTupleDigest("amadeus.review-command-content.v1", [
     { tag: "target-intent", value: input.targetIntentUuid },
     { tag: "decision", value: input.decisionId },
