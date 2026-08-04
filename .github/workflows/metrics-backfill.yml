@@ -325,7 +325,7 @@ jobs:
             sleep 5
           done
           [[ -n "$MAINTENANCE_RUN_ID" ]]
-          timeout 330s gh run watch "$MAINTENANCE_RUN_ID" --exit-status
+          timeout 330s gh run watch "$MAINTENANCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
           [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/metrics/maintenance" --jq 'length')" == "0" ]]
           [[ "$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "metrics/maintenance" --json number --jq 'length')" == "0" ]]
           gh api -H "Accept: application/vnd.github.raw+json" \
