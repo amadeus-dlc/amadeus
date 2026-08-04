@@ -46,7 +46,7 @@
 //   .sh test 4 (every MD event in TS)                 -> "every audit-format.md event appears in amadeus-audit.ts"
 //   .sh test 5 (EVENT_HEADINGS has every TS event)    -> "EVENT_HEADINGS maps every VALID_EVENT_TYPES member"
 //   .sh test 6 (assert_eq TS_COUNT MD_COUNT)          -> "event counts match across the two files"
-//   .sh test 7 (assert_eq TS_COUNT - baseline pin)    -> "VALID_EVENT_TYPES.size === 88 (baseline pin)"
+//   .sh test 7 (assert_eq TS_COUNT - baseline pin)    -> "VALID_EVENT_TYPES.size === 89 (baseline pin)"
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -76,8 +76,9 @@ const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.
 // +LEGACY_GOAL_MIGRATED take it to 85;
 // +LOOP_MONITOR_EVENT_SET_COMMITTED (#2095) takes it to 86;
 // +QUALITY_REPAIR_TRANSACTION_COMMITTED (#2096) takes it to 87;
-// +INTENT_AUTONOMY_TRANSACTION_COMMITTED (#2067) takes it to 88.
-const CANONICAL_COUNT = 88;
+// +INTENT_AUTONOMY_TRANSACTION_COMMITTED (#2067) takes it to 88;
+// +AUTO_DECISION_REVIEWED (#2067) takes it to 89.
+const CANONICAL_COUNT = 89;
 
 /** Slice the lines of `text` BETWEEN the first line matching `start` and the
  *  next line matching `end` (inclusive of both), reproducing `sed -n
@@ -180,7 +181,7 @@ describe("t28 audit event-type sync (migrated from t28-audit-event-sync.sh, plan
   // .sh test 7: assert_eq TS_COUNT - the canonical baseline pin, bumped when
   // events are added or removed. (#367 added WORKFLOW_PARKED/UNPARKED -> 69;
   // #369 removed TEST_RUN_MODE_ENABLED -> 68; HUMAN_TURN took it to 69; the adaptive composer added RECOMPOSED -> 70; #671 added DELEGATED_APPROVAL -> 71; #685 added DELEGATED_REJECTION -> 72; #499/#848 added GUARD_EXEMPTED -> 73; #1125 added GRANT_ISSUED + GRANT_REVOKED -> 75; lifecycle transactions add two -> 77.)
-  test("VALID_EVENT_TYPES.size === 88 (baseline pin) [.sh test 7]", () => {
+  test("VALID_EVENT_TYPES.size === 89 (baseline pin) [.sh test 7]", () => {
     expect(TS_EVENTS.length).toBe(CANONICAL_COUNT);
   });
 });
