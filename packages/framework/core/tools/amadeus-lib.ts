@@ -5785,6 +5785,20 @@ export function rebuildDerivedPlanFields(
   return { content: next, executeStages, completedCount };
 }
 
+/** Rebuild derived fields from the effective plan recorded in a state file. */
+export function rebuildDerivedPlanFieldsFromState(
+  content: string,
+  graph: StageEntry[] = loadStageGraph(),
+): DerivedPlanFields {
+  const scope = getField(content, "Scope") ?? "";
+  const scopeStages = loadScopeMapping()[scope]?.stages ?? {};
+  const stateOverrides = parseStateStageSuffixes(content);
+  return rebuildDerivedPlanFields(content, graph, (slug) => {
+    const action = stateOverrides.get(slug) ?? scopeStages[slug];
+    return action === "EXECUTE" ? "EXECUTE" : "SKIP";
+  });
+}
+
 // --- Post-compose state re-sync (#1849) --------------------------------------
 //
 // Composing a plugin grows the host stage graph. `next` reads the GRAPH and

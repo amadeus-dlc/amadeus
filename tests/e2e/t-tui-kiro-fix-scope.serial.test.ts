@@ -139,8 +139,8 @@ describe("t-tui-kiro-fix-scope (brownfield fix journey, numbered-prose gates)", 
         const state = readFileSync(stateFilePathFor(sandbox), "utf-8");
         expect(state).toMatch(/^- \*\*Scope\*\*: fix$/m);
         expect(state).toMatch(/brownfield/i);
-        const xCount = (state.match(/^- \[x\]/gm) ?? []).length;
-        expect(completedCount(sandbox)).toBe(xCount);
+        const completedExecute = (state.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
+        expect(completedCount(sandbox)).toBe(completedExecute);
 
         // Audit: the workflow really started and at least one gate approval
         // landed through the numbered-prose protocol.

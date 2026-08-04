@@ -82,9 +82,9 @@ const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
 
-/** Count `- [x]` completed-stage rows in a state-file string. */
+/** Count completed rows whose effective plan action is EXECUTE. */
 function completedCount(stateText: string): number {
-  return (stateText.match(/^- \[x\]/gm) ?? []).length;
+  return (stateText.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
 }
 
 describe("t52 /amadeus --init --scope fix state-file integrity (sdk)", () => {
@@ -109,8 +109,8 @@ describe("t52 /amadeus --init --scope fix state-file integrity (sdk)", () => {
         expect(r.stateFile).toBeDefined();
         const state = r.stateFile as string;
 
-        // .sh test 4: the Completed counter EQUALS the `- [x]` checkbox count —
-        // the framework's core state-integrity invariant the .sh asserted.
+        // .sh test 4: the Completed counter EQUALS completed EXECUTE-effective
+        // rows; completed SKIP rows are historical state, not plan progress.
         const counterStr = readStateField(state, "Completed");
         expect(counterStr).toBeDefined();
         const counter = Number.parseInt(counterStr as string, 10);
