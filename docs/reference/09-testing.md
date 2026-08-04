@@ -497,7 +497,7 @@ explicitly to keep those files on their in-test SKIP path.
 
 `--parallel N` (or `-P N`) runs up to N test files concurrently within a tier. By default the runner uses the smaller of the available CPU count and `4`; pass `-P 1` for a serial debugging run.
 
-**When it helps.** Unit, integration, and e2e levels run files concurrently. Unit files are isolated processes; integration and e2e tests additionally scaffold isolated workspaces, so independent files can run side-by-side without interfering.
+**When it helps.** Unit, integration, e2e, and perf levels run files concurrently. Unit and perf files are isolated processes; integration and e2e tests additionally scaffold isolated workspaces, so independent files can run side-by-side without interfering.
 
 **Spike results (2026-05-06, Opus 4.7 via Bedrock):**
 
