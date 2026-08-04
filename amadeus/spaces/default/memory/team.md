@@ -112,7 +112,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
   [差別化の決定的な特徴] が備わっている。
   ```
   代替手段・差別化が空文(「特になし」等)ならレビューで差し戻す。ミラー Issue の概要にも同じ7行を使うが、正本は record とする (user decision 2026-08-01; amended 2026-08-03) <!-- cid:requirements-analysis:issue-elevator-pitch -->
-- `bug` は共通本文の背景に症状を明記し、観測環境・対象リビジョン、再現手順、機序、重大度S、原因の所在、原因の根拠・導入経緯を追加する。機序が未特定なら「未特定」と書き、仮説を事実として断定しない。欠陥コードが intent に遡れる場合は record または intent 名+導入コミットと、要件見落とし/設計判断誤り/実装逸脱のどれかを該当成果物に基づき記載する。bootstrap 由来は `origin:bootstrap` とし intent 遡及の対象外とする (user decision 2026-07-10; amended 2026-08-03) <!-- cid:requirements-analysis:bug-intent-linkage -->
+- `bug` は共通本文の背景に症状を明記し、観測環境・対象リビジョン、ハーネス名、ハーネスバージョン、Amadeus バージョン、再現手順、機序、重大度S、原因の所在、原因の根拠・導入経緯を追加する。機序が未特定なら「未特定」と書き、仮説を事実として断定しない。欠陥コードが intent に遡れる場合は record または intent 名+導入コミットと、要件見落とし/設計判断誤り/実装逸脱のどれかを該当成果物に基づき記載する。bootstrap 由来は `origin:bootstrap` とし intent 遡及の対象外とする (user decision 2026-07-10; amended 2026-08-04) <!-- cid:requirements-analysis:bug-intent-linkage -->
 - `bug` の重大度は優先度と独立した S1-FATAL=データ・監査・ゲート整合性の破壊/誤マージ誘発/ワークフロー停止、S2-CRITICAL=主要機能の誤動作・回避策のない偽green/偽赤、S3-MAJOR=回避策のある誤動作・限定条件での発現、S4-MINOR=軽微・エッジケース・表示層の4段階とする。起票時に種別/P/Sを同時付与し、bootstrap 由来と判明した時点で `origin:bootstrap` を付ける (user decision 2026-07-10; amended 2026-08-03) <!-- cid:requirements-analysis:bug-severity-labels -->
 - `documentation` は対象読者、正本、対訳・生成物・参照元など同期が必要なドキュメント面を追加する。`question` は回答してほしい問い、既知の選択肢とトレードオフ、事実確認なら確認方法を追加する。この2種に bug の再現・機序・S分類や enhancement の価値ピッチを強制しない (user decision 2026-08-03) <!-- cid:requirements-analysis:issue-type-specific-body -->
 

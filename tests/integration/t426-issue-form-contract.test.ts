@@ -42,6 +42,9 @@ const commonElements = [
 const typeSpecificElements: Record<FormType, ReadonlyArray<readonly [string, string]>> = {
   bug: [
     ["environment", "textarea"],
+    ["harness", "dropdown"],
+    ["harness-version", "input"],
+    ["amadeus-version", "input"],
     ["reproduction", "textarea"],
     ["mechanism", "textarea"],
     ["severity", "dropdown"],
@@ -158,6 +161,21 @@ describe("t426 Issue Form contract", () => {
       "origin:bootstrap",
       "外部要因",
       "未特定",
+    ]);
+  });
+
+  test("bug reports identify the supported harness distribution", () => {
+    const byId = elementsById(loadForm("bug"));
+    expect(byId.get("harness")?.attributes?.options).toEqual([
+      "claude",
+      "codex",
+      "cursor",
+      "kimi",
+      "kiro",
+      "kiro-ide",
+      "opencode",
+      "pi",
+      "ハーネス非依存",
     ]);
   });
 
