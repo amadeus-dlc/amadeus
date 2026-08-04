@@ -236,6 +236,8 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One canonical Loop Monitor delivery, Judge, or latch transition committed atomically |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | One quality snapshot, progress, replan, stall, or resume transaction and its generic Monitor effects committed atomically |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | One Intent-scoped mode, grant, decision, workflow-effect, park, resume, or invocation-failure transaction committed atomically |
+| `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review.ts` | One human review of an immutable automatic decision, including post-completion review-chain continuation |
+| `INTENT_COMPLETION_TRANSACTION_COMMITTED` | `tools/amadeus-intent-completion.ts` | One atomic five-harness live-evidence, grant-completion, workflow-clear, and workflow-completion transaction |
 
 ### Goal lifecycle
 

@@ -429,8 +429,22 @@ export interface LiveAuthorizationPort {
     readonly intentUuid: string;
     readonly monitorId: string;
     readonly scopeDigest: string;
+    readonly harnessId?: string;
+    readonly implementationRevision?: string;
+    readonly packageDigest?: string;
+    readonly registryDigest?: string;
+    readonly scenarioDigest?: string;
   }):
-    | { readonly authorized: true; readonly authorizationId: string; readonly actorId: string }
+    | {
+        readonly authorized: true;
+        readonly authorizationId: string;
+        readonly actorId: string;
+        readonly environmentId?: string;
+        readonly issuerPrincipalId?: string;
+        readonly traceId?: string;
+        readonly spanId?: string;
+        readonly attestationDigest?: string;
+      }
     | { readonly authorized: false; readonly reason: string };
 }
 

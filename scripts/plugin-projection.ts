@@ -29,6 +29,12 @@ import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HarnessManifest, StageEntrySurface } from "./manifest-types.ts";
 import { transform } from "./harness-transform.ts";
+import {
+  PACKAGE_HARNESS_IDS,
+  SELF_INSTALL_HARNESS_IDS,
+  type PackageHarnessId,
+  type SelfInstallHarnessId,
+} from "../packages/framework/core/tools/amadeus-harness-registry.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HARNESS_ROOT = join(REPO_ROOT, "packages", "framework", "harness");
@@ -41,23 +47,14 @@ export const PLUGIN_MANIFEST = "plugin.json";
 // The eight faces the packager discovers from harness/<name>/manifest.ts. Named
 // here for the closed-matrix verification; the packager's own default target
 // list stays manifest-DISCOVERED, not this constant.
-export const PACKAGE_HARNESSES = [
-  "claude",
-  "codex",
-  "cursor",
-  "kiro",
-  "kiro-ide",
-  "opencode",
-  "kimi",
-  "pi",
-] as const;
-export type PackageHarness = (typeof PACKAGE_HARNESSES)[number];
+export const PACKAGE_HARNESSES = PACKAGE_HARNESS_IDS;
+export type PackageHarness = PackageHarnessId;
 
 // The self-install closed union: the five faces promote-self.ts reflects into
 // the project root. Intentionally NOT the eight package faces — a type + runtime
 // boundary that keeps kiro/kiro-ide/pi out of the project-local install.
-export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
-export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
+export const SELF_INSTALL_HARNESSES = SELF_INSTALL_HARNESS_IDS;
+export type SelfInstallHarness = SelfInstallHarnessId;
 
 // Read-only filesystem seam. Single definition lives in the core engine
 // (amadeus-plugin-compose.ts) so the dist-shipped engine carries no scripts/

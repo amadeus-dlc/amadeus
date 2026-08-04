@@ -352,7 +352,7 @@ describe("Intent autonomy durable coordinator", () => {
     expect(projectIntentAutonomyStatus(coordinator.readProjection())).toMatchObject({
       autonomyMode: "full",
       workflowExecutionState: "running",
-      terminalLiveCompletionCapable: false,
+      terminalLiveCompletionCapable: true,
       legacyStandingGrantCount: 0,
     });
   });

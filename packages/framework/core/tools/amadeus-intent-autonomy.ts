@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
 
 export type AutonomyMode = "none" | "semi" | "full";
-export type WorkflowExecutionState = "running" | "suspended";
+export type WorkflowExecutionState = "running" | "suspended" | null;
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
 export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
@@ -189,14 +189,16 @@ export function assertLegalAutonomyProjection(projection: AutonomyProjection): v
   if (!SAFE_ID.test(projection.intentUuid) || !Number.isSafeInteger(projection.projectionRevision) ||
     projection.projectionRevision < 0) throw new Error("ILLEGAL_STATE:projection-identity");
   const current = projection.currentGrant;
-  if ((projection.mode === "full") !== (current?.state === "active")) {
+  const isTerminal = projection.workflowExecutionState === null;
+  if (isTerminal ? current !== null : (projection.mode === "full") !== (current?.state === "active")) {
     throw new Error("ILLEGAL_STATE:mode-grant-combination");
   }
   if (current !== null) {
     if (current.scope.intentUuid !== projection.intentUuid) throw new Error("ILLEGAL_STATE:grant-intent");
     validateScope(current.scope, projection.intentUuid);
   }
-  if ((projection.workflowExecutionState === "suspended") !== (projection.parkEnvelope !== null)) {
+  if ((projection.workflowExecutionState === "suspended") !== (projection.parkEnvelope !== null) ||
+    (isTerminal && projection.parkEnvelope !== null)) {
     throw new Error("ILLEGAL_STATE:park-envelope");
   }
   if (projection.parkEnvelope !== null) validateResumeCondition(projection.parkEnvelope.reason, projection.parkEnvelope.resumeCondition);
@@ -912,6 +914,9 @@ export function parseWorkflowResult(value: unknown): WorkflowResult {
     throw new Error("invalid-workflow-result");
   }
   validateWorkflowOutcome(result);
-  if ((result.autonomyMode === "full") !== (result.grant?.state === "active")) throw new Error("invalid-workflow-result");
+  const expectedGrantState = result.outcome === "completed" ? "completed" : "active";
+  if ((result.autonomyMode === "full") !== (result.grant?.state === expectedGrantState)) {
+    throw new Error("invalid-workflow-result");
+  }
   return result;
 }
