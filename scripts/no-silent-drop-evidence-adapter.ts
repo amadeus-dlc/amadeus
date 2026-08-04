@@ -32,8 +32,9 @@ export const systemCommandRunner: CommandRunner = {
       env: process.env,
       timeout: timeoutMs,
     });
-    const timedOut = result.signal === "SIGTERM" ||
-      (result.error !== undefined && "code" in result.error && result.error.code === "ETIMEDOUT");
+    const timedOut = result.error !== undefined &&
+      "code" in result.error &&
+      result.error.code === "ETIMEDOUT";
     const stderr = result.stderr ?? "";
     const errorDetail = result.error === undefined ? "" : String(result.error);
     return {

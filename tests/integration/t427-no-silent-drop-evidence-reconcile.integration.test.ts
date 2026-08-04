@@ -194,6 +194,15 @@ describe("t427 pure rebind trust boundary", () => {
     expect(result.stderr).toContain("command timed out after 10ms (SIGTERM)");
   });
 
+  test("does not misclassify a child-initiated SIGTERM as a timeout", () => {
+    const result = systemCommandRunner.run(
+      [process.execPath, "-e", 'process.kill(process.pid, "SIGTERM")'],
+      { timeoutMs: 1_000 },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain("command timed out");
+  });
+
   test("accepts only a clean target equal to HEAD and emits one JSON line from the CLI", () => {
     const root = initRepository();
     const head = must(root, ["git", "rev-parse", "HEAD"]);
