@@ -1,7 +1,7 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: state 整合性バグ2件を修正する。(1) #1906: mkdir ベース監査ロックの相互排他が破れ、20並列 state 更新で全プロセス exit 0 のまま増分が無音消失する。真の欠陥は acquireAuditLock の mkdirSync -> writeOwnerStamp の2段構成と、stamp 書込失敗でも獲得成功を返す finalizeAuditLockAcquire の fail-open、および unstamped/over-age reap による生存ロックの横取り。同一ロックが監査ジャーナル append と gate 遷移15箇所を守るため S1-FATAL。(2) #1875: Completed カウンタの定義が生カウント/EXECUTE 実効/graph 由来の3種・書き手9箇所に分岐し、経路依存で発散する。両定義とも bootstrap 由来。クロスレビュー2名成立済み。
+- **Project**: state 整合性バグ2件を修正する。(1) #1906(P2 / S1-FATAL / origin:bootstrap): mkdir ベース監査ロックの相互排他が破れ、20並列 state 更新で全プロセス exit 0 のまま増分が無音消失する。真の欠陥は acquireAuditLock の mkdirSync -> writeOwnerStamp の2段構成と、stamp 書込失敗でも獲得成功を返す finalizeAuditLockAcquire の fail-open、および unstamped/over-age reap による生存ロックの横取り。同一ロックが監査ジャーナル append と gate 遷移15箇所を守るため S1-FATAL。(2) #1875(P3 / S4-MINOR / origin:bootstrap): Completed カウンタの定義が生カウント/EXECUTE 実効/graph 由来の3種・書き手9箇所に分岐し、経路依存で発散する。両定義とも bootstrap 由来。クロスレビュー2名成立済み。【進捗 2026-08-04】Bolt A(#1906)は実装・検証・§12a(READY, iteration 2/2)・§13(E-SIA-CGS13 2-0 で6件 persist)まで完了し PR #2155 を発行済み(base main、mergeable、レビュースレッド2件は実測反証のうえ resolve)。Bolt B(#1875 / FR-5〜FR-8 の Completed 正準化)は未着手。【ブロッカー】PR #2155 は #2156(no-silent-drop の evidence registry が main の CI を固定的に赤にする P0 / S1-FATAL)により CI 赤でマージ不可。#2156 は intent 260804-evidence-revision-rebind で対応中。着地順は #2156 の止血 PR → #2155 の順で、止血 PR 着地後は #2155 が持つ NSD 台帳(9458bbda8 接地)が競合するため機械的な再バインドによる再接地が要る。【派生 Issue】#2153(t413 の鮮度ピンが被検査対象を含む / 本 PR で path spec 限定して是正)、#2154(t-codex-exec-live-helper の負荷依存 flake / 本 Bolt と静的非交差)。
 - **Project Type**: Brownfield
 - **Scope**: self-fix
 - **Start Date**: 2026-08-03T12:04:28Z
@@ -10,7 +10,7 @@
 - **Harness**: claude-code
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
-- **Worktree Path**:
+- **Worktree Path**: .claude/worktrees/agent-a429e5a9ade2936e4 (branch worktree-agent-a429e5a9ade2936e4, base 9458bbda8)
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
 

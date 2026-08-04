@@ -1,7 +1,7 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: #2156: no-silent-drop の adoption-evidence が PR ブランチ SHA を currentRevision に記録するため、スカッシュマージ着地の瞬間に到達不能となり t413 が main 上で赤になる。必須チェック CI Success が不成立となり、コードに触れる全 PR がマージ不可。クロスレビュー2名成立(ESTABLISHED_WITH_REFINEMENTS)。再バインドは currentRevision 24箇所 + adoption-runs.json の testedRevision 25箇所 + manifest に及び、canonicalBinding が testedRevision を digest 入力に含むため SHA 置換だけでは閉じない。evidence 再生成経路が不在(#2153 と併せて扱う必要あり)。
+- **Project**: #2156: no-silent-drop の adoption-evidence が PR ブランチ SHA を currentRevision に記録するため、スカッシュマージ着地の瞬間に到達不能となり t413 が main 上で赤になる。必須チェックは ruleset main(id 18843917)の CI Success 1件のみで、これが不成立となりコードに触れる全 PR がマージ不可。クロスレビュー2名成立(ESTABLISHED_WITH_REFINEMENTS)。【RE で前提を訂正】起票時の「生成ツール不在のため修復不能」は反証された — 再バインドは3層の不動点計算(SHA 置換 24/24/25 → adoption-runs.json の sha256 を manifest の 25 artifact エントリへ再計算 → 23 receipt の evidenceDigest 再計算)で決定的に閉じ、validateEvidenceRegistry ok:true / t413 10 pass 0 fail / gate NO_SILENT_DROP_OK を実測(conductor が scratch clone で独立再現)。不在なのは再生成ロジックではなく書込経路(tests/no-silent-drop 配下の .ts に書込 API 0件)。両レビュアーが INCONCLUSIVE とした baseline-proof の再現性も反証済み(再バインド非依存)。【依存関係】本 Issue は intent 260803-state-integrity の PR #2155(#1906 / S1-FATAL の監査ロック修正)の着地を塞いでいる。
 - **Project Type**: Brownfield
 - **Scope**: self-fix
 - **Start Date**: 2026-08-04T01:20:45Z
