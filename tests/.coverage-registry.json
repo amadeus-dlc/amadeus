@@ -20,19 +20,19 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 600,
+    "total": 604,
     "enumeratedByClass": {
       "function": 339,
-      "audit": 88,
+      "audit": 89,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 105,
+      "subcommand": 108,
       "render-surface": 7
     },
     "coveredByClass": {
       "function": 175,
-      "audit": 42,
+      "audit": 43,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -81,6 +81,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t355-audit-merge-info-seams.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "AUTO_DECISION_REVIEWED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t433-autonomy-review-observability.test.ts",
           "mechanism": "none"
         }
       ],
@@ -5690,6 +5702,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt get-auto-decision",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt hold-merge",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5699,6 +5718,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt list-auto-decisions",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
@@ -5729,6 +5755,13 @@
     {
       "unitClass": "subcommand",
       "unitId": "amadeus-bolt resume-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt review-auto-decision",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
