@@ -148,6 +148,15 @@ describe("evaluateGate: malformed / empty inputs", () => {
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
   });
 
+  test("non-object policy JSON => MALFORMED_POLICY", () => {
+    const r = evaluateGate(
+      present(totals(1, 2)),
+      present(totals(1, 2)),
+      present(null),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
+  });
+
   test("wrong policy schemaVersion => MALFORMED_POLICY", () => {
     const r = evaluateGate(
       present(totals(1, 2)),
