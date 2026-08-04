@@ -5785,6 +5785,31 @@ export function rebuildDerivedPlanFields(
   return { content: next, executeStages, completedCount };
 }
 
+/** Rebuild only Completed from the effective plan recorded in a state file. */
+export function rebuildCompletedFieldFromState(
+  content: string,
+  graph: StageEntry[] = loadStageGraph(),
+): Pick<DerivedPlanFields, "content" | "completedCount"> {
+  const scope = getField(content, "Scope") ?? "";
+  const scopeStages = loadScopeMapping()[scope]?.stages;
+  if (!scopeStages) {
+    // An empty fallback would make every non-overridden stage SKIP-effective
+    // and silently zero Completed on a broken state file — fail before writing.
+    throw new Error(
+      `State file has invalid Scope "${scope}" — cannot rebuild Completed against an unknown plan.`,
+    );
+  }
+  const stateOverrides = parseStateStageSuffixes(content);
+  const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) => {
+    const action = stateOverrides.get(slug) ?? scopeStages[slug];
+    return action === "EXECUTE" ? "EXECUTE" : "SKIP";
+  });
+  return {
+    content: setField(content, "Completed", String(rebuilt.completedCount)),
+    completedCount: rebuilt.completedCount,
+  };
+}
+
 // --- Post-compose state re-sync (#1849) --------------------------------------
 //
 // Composing a plugin grows the host stage graph. `next` reads the GRAPH and

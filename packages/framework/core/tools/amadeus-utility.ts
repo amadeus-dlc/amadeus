@@ -4539,7 +4539,7 @@ function handleIntentBirthStateBuild(
     `- **Operation**: ${phaseStatus("operation")}`,
   ].join("\n");
 
-  const stateContent = `# AI-DLC State Tracking
+  let stateContent = `# AI-DLC State Tracking
 
 ## Project Information
 - **Project**: ${projectDesc}
@@ -4600,6 +4600,14 @@ ${stageProgress}
 - **Next Action**: Execute ${firstPostInit}
 - **Pending Artifacts**: none
 `;
+
+  stateContent = rebuildDerivedPlanFields(
+    stateContent,
+    graph,
+    (slug) => (adjustedMapping[slug] || scopeDef.stages[slug] || "SKIP") === "EXECUTE"
+      ? "EXECUTE"
+      : "SKIP",
+  ).content;
 
   writeStateFile(projectDir, stateContent);
 
@@ -5288,17 +5296,13 @@ export function handleScopeChange(projectDir: string, flags: Record<string, stri
     ? VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]
     : (newScopeDef.testStrategy ?? effectiveDepth);
   content = setField(content, "Test Strategy", effectiveTestStrategy);
-  content = setField(content, "Total Stages", String(executeStages.length));
-
-  // Recount completed based on actual [x] count of in-scope EXECUTE stages
-  const updatedCheckboxes = parseCheckboxes(content);
-  const executeSlugs = new Set(
-    graph.filter(s => (adjustedMapping[s.slug] || "SKIP") === "EXECUTE").map(s => s.slug)
+  const rebuilt = rebuildDerivedPlanFields(
+    content,
+    graph,
+    (slug) => (adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP",
   );
-  const completedCount = updatedCheckboxes.filter(
-    c => c.state === "completed" && executeSlugs.has(c.slug)
-  ).length;
-  content = setField(content, "Completed", String(completedCount));
+  content = rebuilt.content;
+  const completedCount = rebuilt.completedCount;
 
   // Update Last Updated timestamp
   content = setField(content, "Last Updated", isoTimestamp());

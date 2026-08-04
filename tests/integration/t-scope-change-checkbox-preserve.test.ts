@@ -21,6 +21,7 @@ import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
+  canonicalCompletedCount,
   cleanupTestProject,
   createTestProject,
   seedAuditFile,
@@ -64,7 +65,23 @@ function sixStateProj(): string {
   sedReplaceInFile(state, "- [ ] scope-definition", "- [R] scope-definition"); // revising
   sedReplaceInFile(state, "- [ ] team-formation", "- [-] team-formation"); // in-progress
   sedReplaceInFile(state, "- [ ] rough-mockups", "- [S] rough-mockups"); // skipped
+  // Legacy #1875 shape shared with the route matrix: a historical [x] row is
+  // now SKIP-effective while Completed still carries the raw [x] count.
+  sedReplaceInFile(state, "- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP");
+  const legacy = readFileSync(state, "utf-8");
+  // Guard the seeding itself: a silent no-op replace would leave raw and
+  // canonical Completed equal and the legacy-skew assertions vacuous.
+  if (!/^- \[x\] workspace-scaffold — SKIP/m.test(legacy)) {
+    throw new Error("fixture seeding failed: workspace-scaffold row was not flipped to SKIP");
+  }
+  const rawCompleted = (legacy.match(/^- \[x\]/gm) ?? []).length;
+  sedReplaceInFile(state, /^- \*\*Completed\*\*: \d+$/m, `- **Completed**: ${rawCompleted}`);
   return p;
+}
+
+function expectCanonicalCompleted(content: string): void {
+  const field = Number.parseInt(/^- \*\*Completed\*\*: (\d+)$/m.exec(content)?.[1] ?? "-1", 10);
+  expect(field).toBe(canonicalCompletedCount(content));
 }
 
 // Each case builds its own fixture project, and the canonical emit path
@@ -91,6 +108,7 @@ describe("t-scope-change-checkbox-preserve (#1015)", () => {
     expect(out).toMatch(/^- \[x\] intent-capture /m);
     expect(out).toMatch(/^- \[-\] team-formation /m);
     expect(out).toMatch(/^- \[S\] rough-mockups /m);
+    expectCanonicalCompleted(out);
   });
 
   test("scope-change leaves untouched pending stages as [ ] (FR-3c default)", () => {
@@ -99,6 +117,17 @@ describe("t-scope-change-checkbox-preserve (#1015)", () => {
     const out = readFileSync(seededStateFile(p), "utf-8");
     // reverse-engineering was [ ] in the fixture and stays [ ].
     expect(out).toMatch(/^- \[ \] reverse-engineering /m);
+  });
+
+  test("scope-change canonicalizes Completed when completed rows become SKIP-effective", () => {
+    const p = sixStateProj();
+    handleScopeChange(p, { scope: "fix" });
+    const out = readFileSync(seededStateFile(p), "utf-8");
+    expect(out).toMatch(/^- \[x\] intent-capture — SKIP/m);
+    expectCanonicalCompleted(out);
+    const rawCompleted = (out.match(/^- \[x\]/gm) ?? []).length;
+    const completed = Number.parseInt(/^- \*\*Completed\*\*: (\d+)$/m.exec(out)?.[1] ?? "-1", 10);
+    expect(completed).toBeLessThan(rawCompleted);
   });
 
   test("rewritten Stage Progress header carries the full six-state legend (FR-4a)", () => {
