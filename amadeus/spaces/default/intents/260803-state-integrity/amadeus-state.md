@@ -1,7 +1,7 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: state 整合性バグ2件を修正する。(1) #1906(P2 / S1-FATAL / origin:bootstrap): mkdir ベース監査ロックの相互排他が破れ、20並列 state 更新で全プロセス exit 0 のまま増分が無音消失する。真の欠陥は acquireAuditLock の mkdirSync -> writeOwnerStamp の2段構成と、stamp 書込失敗でも獲得成功を返す finalizeAuditLockAcquire の fail-open、および unstamped/over-age reap による生存ロックの横取り。同一ロックが監査ジャーナル append と gate 遷移15箇所を守るため S1-FATAL。(2) #1875(P3 / S4-MINOR / origin:bootstrap): Completed カウンタの定義が生カウント/EXECUTE 実効/graph 由来の3種・書き手9箇所に分岐し、経路依存で発散する。両定義とも bootstrap 由来。クロスレビュー2名成立済み。【進捗 2026-08-04】Bolt A(#1906)は実装・検証・§12a(READY, iteration 2/2)・§13(E-SIA-CGS13 2-0 で6件 persist)まで完了し PR #2155 を発行済み(base main、mergeable、レビュースレッド2件は実測反証のうえ resolve)。Bolt B(#1875 / FR-5〜FR-8 の Completed 正準化)は未着手。【ブロッカー】PR #2155 は #2156(no-silent-drop の evidence registry が main の CI を固定的に赤にする P0 / S1-FATAL)により CI 赤でマージ不可。#2156 は intent 260804-evidence-revision-rebind で対応中。着地順は #2156 の止血 PR → #2155 の順で、止血 PR 着地後は #2155 が持つ NSD 台帳(9458bbda8 接地)が競合するため機械的な再バインドによる再接地が要る。【派生 Issue】#2153(t413 の鮮度ピンが被検査対象を含む / 本 PR で path spec 限定して是正)、#2154(t-codex-exec-live-helper の負荷依存 flake / 本 Bolt と静的非交差)。
+- **Project**: state 整合性バグ2件を修正する。(1) #1906(P2 / S1-FATAL / origin:bootstrap): mkdir ベース監査ロックの相互排他が破れ、20並列 state 更新で全プロセス exit 0 のまま増分が無音消失する。真の欠陥は acquireAuditLock の mkdirSync -> writeOwnerStamp の2段構成と、stamp 書込失敗でも獲得成功を返す finalizeAuditLockAcquire の fail-open、および unstamped/over-age reap による生存ロックの横取り。同一ロックが監査ジャーナル append と gate 遷移15箇所を守るため S1-FATAL。(2) #1875(P3 / S4-MINOR / origin:bootstrap): Completed カウンタの定義が生カウント/EXECUTE 実効/graph 由来の3種・書き手9箇所に分岐し、経路依存で発散する。両定義とも bootstrap 由来。クロスレビュー2名成立済み。【進捗 2026-08-04】Bolt A(#1906)は実装・検証・§12a(READY, iteration 2/2)・§13(E-SIA-CGS13 2-0 で6件 persist)まで完了し PR #2155 を発行済み(base main、mergeable、レビュースレッド2件は実測反証のうえ resolve)。Bolt B(#1875 / FR-5〜FR-8 の Completed 正準化)は未着手。【ブロッカー】PR #2155 は #2156(no-silent-drop の evidence registry が main の CI を固定的に赤にする P0 / S1-FATAL)により CI 赤でマージ不可。#2156 は intent 260804-evidence-revision-rebind で対応中。着地順は #2156 の止血 PR → #2155 の順で、止血 PR 着地後は #2155 が持つ NSD 台帳(9458bbda8 接地)が競合するため機械的な再バインドによる再接地が要る。【派生 Issue】#2153(t413 の鮮度ピンが被検査対象を含む / 本 PR で path spec 限定して是正)、#2154(t-codex-exec-live-helper の負荷依存 flake / 本 Bolt と静的非交差)。【完了 2026-08-04】ブロッカー #2156 は intent 260804-evidence-revision-rebind で解消し、Bolt A の PR #2155 はマージ済み(2026-08-04)。#1906 は機序訂正(クロスレビュー REFRAME_REQUIRED の反映)を添えてクローズ済み。Bolt B(#1875 / Completed 正準化)は PR #2192 として実装され、main への rebase・レビュー指摘5件対応(invalid Scope の fail-fast 化、canonical カウント判定のテスト側共有ヘルパー集約、approve 検証の production validator 直呼び、legacy seeding の no-op ガード)を経てマージ済み(#1875 クローズ)。build-and-test 相当の検証は両 PR の CI ゲート(typecheck / lint / Tests / Coverage patch-gate)全通過で充足。本 state の完了反映は record-sync として手動同期(mirror-state ブロックの workflow-completed receipt は engine 外のため未鋳造)。
 - **Project Type**: Brownfield
 - **Scope**: self-fix
 - **Start Date**: 2026-08-03T12:04:28Z
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 7
-- **Completed**: 5
-- **In Progress**: code-generation
+- **Completed**: 7
+- **In Progress**: none
 
 ## Runtime State
 - **Revision Count**: 1
@@ -38,15 +38,13 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-08-04T01:56:37Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
 - **Initialization**: Verified
 - **Ideation**: Skipped
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -82,8 +80,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [?] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
 
@@ -98,15 +96,15 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
-- **Status**: Running
+- **Current Stage**: build-and-test
+- **Next Stage**: none
+- **Status**: Completed
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-08-04T01:56:37Z
+- **Last Updated**: 2026-08-04T18:54:11Z
 
 ## Session Resume Point
-- **Last Completed Stage**: requirements-analysis
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Workflow complete
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
