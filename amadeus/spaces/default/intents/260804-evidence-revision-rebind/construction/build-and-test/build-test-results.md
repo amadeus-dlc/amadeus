@@ -55,7 +55,7 @@ full suiteのwall-clock driftは7 filesで観測されたがassertion failureは
 
 ## Security結果
 
-- 最小権限、既存GitHub App token、追加secretなし、credential fallback禁止、secret redaction、3 path allowlist、force push禁止、validation／commit／push失敗の非0化をfocused testで確認した。
+- 最小権限、既存GitHub App token、追加secretなし、credential fallback禁止、secret redaction、pure rebind／identity proofの3 path境界、reconciliationの5 path allowlist、force push禁止、validation／commit／push失敗の非0化をfocused testで確認した。
 - `bun audit`: High 6 / Moderate 15 / Low 1、合計22 advisories。本intentは `package.json`／`bun.lock` を変更していない。主な到達経路は既存のAnthropic SDK／MCP／HTTP stackとrelease toolingのtransitive dependenciesである。
 - 依存advisoryはrepository全体のrelease readinessをCONDITIONALにするが、今回のNFR-2変更面にsecurity regressionは検出されていない。
 

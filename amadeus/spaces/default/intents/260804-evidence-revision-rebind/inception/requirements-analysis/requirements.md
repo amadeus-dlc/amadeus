@@ -92,11 +92,11 @@ PRが0件または複数、baseが`main`以外、未merge、`merge_commit_sha`�
 
 ### FR-3: 原子的・fail-closed な書込み
 
-再バインド操作は、全更新結果をメモリまたは隔離された一時領域で構築し、完全な bundle 検証が成功した場合にだけ3ファイルを同じ Git commit へ含めなければならない。
+再バインド操作は、全更新結果をメモリまたは隔離された一時領域で構築し、完全な bundle 検証が成功した場合にだけFR-1の3ファイルを原子的に適用しなければならない。pure rebindはこの3ファイルだけを変更する。reconciliationは、更新後bundleのdigestを記録するFR-6のledger 2ファイルも同じtransactionで進め、正確な5ファイルを1つのGit commitへ含める。
 
 - parse、schema、参照、digest、revision、I/O のいずれかが失敗した場合、push 可能な部分更新を残さない。
 - 検証前または検証失敗後に成功を報告しない。
-- 許可された3ファイル以外を変更しない。
+- pure rebindではFR-1の3ファイル以外、reconciliationではFR-6の5ファイル以外を変更しない。
 - force push、履歴改変、到達性検査の緩和を行わない。
 
 同じ target と同じ bundle に再実行した場合は byte-identical な no-op として exit 0 を返す。途中失敗後の再実行でも同じ最終結果へ収束しなければならない。
@@ -206,7 +206,7 @@ rebind commit 自身が main push workflow を再起動した場合、binding re
 | AC-3 | revision だけを置換する | validator が残る digest 不整合を拒否し、成功扱いしない |
 | AC-4 | artifact digest まで更新し receipt digest を更新しない | validator が receipt 不整合を拒否し、成功扱いしない |
 | AC-5 | 不正SHA、未解決SHA、非祖先SHAを指定する | 変更なし、型付き診断、非0終了 |
-| AC-6 | main に evidence 更新PRをスカッシュマージする | binding revision→最終PR headは3派生fileを除く全tree entryが一致し、最終PR head→landingはroot tree全体が一致することを証明した後だけ、bot が landing SHA へ rebind commit を追加する。landing run の単発赤は許容するが、最新 main tip の `CI Success` は緑へ収束する |
+| AC-6 | main に evidence 更新PRをスカッシュマージする | binding revision→最終PR headは3派生fileを除く全tree entryが一致し、最終PR head→landingはroot tree全体が一致することを証明した後だけ、bot が landing SHA へFR-6の正確な5ファイルからなるrebind commitを追加する。landing run の単発赤は許容するが、最新 main tip の `CI Success` は緑へ収束する |
 | AC-7 | rebind commit の push で workflow が再起動する | binding revisionは親landing SHAのままでもevent revisionに対するbundle検証が成功するため、JSON envelopeは `status=no-op`／`code=REBIND_NOOP`／`targetRevision=null`、追加commitなし |
 | AC-8 | 2つの main push が近接し古いrunのcheckoutがstaleになる | 古いrunは pushせず superseded、最新runだけが整合したfast-forward commitを作る |
 | AC-9 | GitHub App secret または push が失敗する | mainへの部分変更なし、job非成功、targetとerror codeが可視化される |
