@@ -315,8 +315,8 @@ from disk reds the gate.
 
 `tests/coverage-project-gate.ts` is a self-hosted replacement for Codecov's
 project status. It runs in CI (the `coverage` job, right after
-`bun run coverage:ci`) and fails the build when whole-suite line coverage drops
-too far below a committed baseline.
+`bun run coverage:ci`) and fails the build unless whole-suite line coverage
+satisfies both a fixed absolute minimum and a merge-base-relative tolerance.
 
 - **Population.** The gate's population is the **normalized LCOV total** the
   runner emits at `coverage/coverage-totals.json` (`{ "schemaVersion": 1,
@@ -327,24 +327,29 @@ too far below a committed baseline.
 - **It deliberately diverges from the Codecov UI.** Because the population
   differs from Codecov's (which honours `codecov.yml`'s `ignore`/`fixes`), the
   gate's absolute percentage will **not** match the project % in the Codecov
-  UI. That is expected and fine: this gate's job is **before/after
-  consistency**, not absolute parity with any external tool. The absolute number
-  is only ever compared against the previous commit's number computed the same
-  way.
-- **Pass rule.** The build passes iff `current% >= baseline% − 0.02pp`. The
-  verdict is computed with exact integer (BigInt) arithmetic, never floating
-  point, so a coverage that lands exactly `0.02pp` below the baseline passes and
-  one hit below that fails (`DROP_EXCEEDED`). Missing emit, missing baseline, a
-  malformed file (wrong `schemaVersion`, negative/non-integer values, or
-  `hits > lines`), and an empty population (`lines == 0`) each fail with a
-  distinct reason code on stderr.
+  UI. That is expected: the gate applies its own versioned policy to the same
+  normalized LCOV population on every revision.
+- **Policy.** `tests/.coverage-project-policy.json` is the versioned policy.
+  `minimumProjectLineCoverageBasisPoints` is the fixed absolute minimum and
+  `maximumRelativeDropBasisPoints` is the allowed drop from the merge base.
+  Both fields are required integers from 0 through 10000. One basis point is
+  `0.01` percentage points, so `9000` means `90.00%` and `2` means `0.02pp`.
+- **Pass rule.** The build passes iff both
+  `current% >= minimumProjectLineCoverageBasisPoints / 100` and
+  `current% >= mergeBase% − maximumRelativeDropBasisPoints / 100 pp` hold. The
+  verdict uses exact integer (`BigInt`) arithmetic, never floating point;
+  equality at either boundary passes. The gate reports current coverage, the
+  absolute minimum, merge-base coverage, relative tolerance, and every failed
+  condition. A missing or malformed emit, baseline, or policy; a schema mismatch;
+  an out-of-range policy value; and an empty population all fail closed.
 - **Updating the baseline.** The baseline lives at
   `tests/.coverage-project-baseline.json`. When a PR *improves* coverage, its
   author regenerates the baseline **in that same PR** by running
   `bun run coverage:ci` followed by `bun tests/coverage-project-gate.ts
   --update` (which transcribes the measured `hits`/`lines` — never hand-write
   the numbers). There is no automated bumping; the baseline only moves when a
-  human commits it.
+  human commits it. `--update` does not read or modify the fixed absolute
+  minimum in `tests/.coverage-project-policy.json`.
 - **Lowering the baseline.** Intentionally *lowering* the baseline (accepting
   less coverage) requires **explicit user approval recorded in the PR** — it is
   a deliberate policy decision, not a routine refresh.

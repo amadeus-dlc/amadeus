@@ -570,7 +570,7 @@ jobs:
           name: amadeus-base-coverage-totals
           path: /tmp
 
-      - name: Relative coverage gate (head vs merge-base)
+      - name: Project coverage gate (absolute and merge-base-relative)
         if: ${{ github.event_name == 'pull_request' }}
         env:
           AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json
@@ -578,7 +578,7 @@ jobs:
           set -euo pipefail
           bun tests/coverage-project-gate.ts --check | tee /tmp/relative-gate-summary.txt
           {
-            echo "## Relative Coverage Gate (head vs merge-base)"
+            echo "## Project Coverage Gate (absolute and merge-base-relative)"
             echo
             echo '```'
             cat /tmp/relative-gate-summary.txt

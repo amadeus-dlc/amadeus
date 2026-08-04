@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "minimumProjectLineCoverageBasisPoints": 9000,
+  "maximumRelativeDropBasisPoints": 2
+}
