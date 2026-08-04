@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PI-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.md は実エントリ0件で、Interpretations・Deviations・Tradeoffs・Open questions はすべて空だった。成果物5点も承認済み上流契約と既存のwalking-skeleton、TDD、worktree隔離、最大4並行等のpracticeを実行計画へ投影したもので、新規の再利用可能なpracticeまたはsensor候補は確認できないため、0件で可。",
+      "submittedAt": "2026-08-03T12:11:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PI-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memory.md は Interpretations / Deviations / Tradeoffs / Open questions の実エントリがすべて0件。成果物内の walking-skeleton-first、risk/dependency-first、TDD、worktree隔離、最大4並行、既決事項を再質問しない方針は既存の org/team/project 規範または承認済み上流契約の適用であり、数値WSJF不採用も既存の risk-first 規範と当該Intentの入力不足に基づく局所判断である。反復可能な新規practiceや決定的sensor条件はない。",
+      "submittedAt": "2026-08-03T12:12:28Z"
+    }
+  ],
+  "late": []
+}

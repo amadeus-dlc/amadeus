@@ -1,0 +1,43 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PI-NFRD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 4,
+      "reservation": null,
+      "rationale": "NFR設計の成果は各Unit固有の契約具体化であり、既存project ruleへ追加すべき再利用可能な新規学習候補や未解決事項は認めない。0件で妥当。",
+      "submittedAt": "2026-08-03T16:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PI-NFRD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "memoryの全headingに実entryがなく、candidateとopen questionも0件であり、既存project ruleへ昇格すべき新規の反復可能な規律・検証checkを示す証拠がないため、追加候補なしで妥当と判断する。",
+      "submittedAt": "2026-08-03T14:30:00Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-PI-NFRD-S13",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-03T16:00:00Z"
+      },
+      "electionId": "E-PI-NFRD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可に賛成する意図であり、前回のgoa=4は誤り。追加すべき再利用可能な学習候補や未解決事項は認めない。",
+      "submittedAt": "2026-08-03T16:05:00Z"
+    }
+  ],
+  "late": []
+}

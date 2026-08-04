@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PI-NFRD-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 4,
+  "reservation": null,
+  "rationale": "NFR設計の成果は各Unit固有の契約具体化であり、既存project ruleへ追加すべき再利用可能な新規学習候補や未解決事項は認めない。0件で妥当。",
+  "submittedAt": "2026-08-03T16:00:00Z"
+}

@@ -883,5 +883,12 @@
     "dirName": "260804-evidence-revision-rebind",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
+    "slug": "pi-harness",
+    "dirName": "260803-pi-harness",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]
