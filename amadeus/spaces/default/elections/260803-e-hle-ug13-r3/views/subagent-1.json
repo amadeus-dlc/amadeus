@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE-UG13-R3",
+  "voter": "subagent-1",
+  "question": "units-generation再々実行でsurfaceされたc1〜c5は過去2回の裁定対象と同一で、Phase証跡バリア追加から新規diary candidateは生成されていない。新規project/team ruleまたはsensorは0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、Phase証跡バリアはIntent成果物に保持する"
+    }
+  ]
+}

@@ -862,5 +862,12 @@
     "dirName": "260802-source-only-dist",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fc6a6-d525-7ff7-951b-49f8eba49fa4",
+    "slug": "harness-live-e2e",
+    "dirName": "260803-harness-live-e2e",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

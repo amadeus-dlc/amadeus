@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-03T13:40:35Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-UG13-R3",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1〜c5は過去2回の裁定対象と同一で、今回の再々実行でも新規diary candidateは生成されていないため、再利用可能な新規project/team ruleまたはsensorとして恒久化する増分根拠はない。Phase証跡バリアはIssue #1717のIntent成果物に保持すれば十分である。今後、別Intentでも同型の失敗が反復する、または既存機構で検出不能な一般化可能条件が新たに確認された場合はrule/sensor化を再評価する。",
+      "submittedAt": "2026-08-03T13:39:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-UG13-R3",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": "将来、別Intentでも同種の証跡欠落が独立に反復した場合は、恒久ruleまたはsensorへの昇格を再評価する。",
+      "rationale": "c1〜c5は過去2回の裁定対象と同一で、新規diary candidateもないため、反復可能な新規学習として恒久rule/sensorへ重複永続化する根拠はない。Phase証跡バリアはIssue #1717固有のIntent成果物に保持すれば十分である。",
+      "submittedAt": "2026-08-03T13:39:32Z"
+    }
+  ],
+  "resolutions": []
+}

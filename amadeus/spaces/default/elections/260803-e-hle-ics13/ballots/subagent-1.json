@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-ICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "選択肢1『0件で可』を全面支持する。独立実測では、project.md に cid:intent-capture:c1、team.md に cid:requirements-analysis:no-election-for-decided-norms が各1件あり、intent-capture-questions.md の既決照合は両既存規則の適用実例だった。gh issue view 1717 で Issue 本文が Phase 1〜3 全体を追跡する固有完了境界を明記していることを確認し、同境界は record の intent-statement.md Initial Scope Signal と memory.md Tradeoffs に保存済みだった。org/team/project memory には 260803-harness-live-e2e、Issue #1717、当該 Phase 1〜3 完了境界の恒久規則は存在せず、この Intent 固有裁定を追加すると適用範囲を過剰一般化する。したがって新規恒久学習は0件が妥当。",
+  "submittedAt": "2026-08-03T08:10:51Z"
+}

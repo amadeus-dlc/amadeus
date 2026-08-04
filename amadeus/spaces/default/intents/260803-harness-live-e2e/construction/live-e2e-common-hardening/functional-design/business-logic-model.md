@@ -56,9 +56,9 @@ raw secretを失敗messageやsnapshotへ保存しない。leak corpusは固定�
 | prepare before return | fake adapterがplanned/created resource後にthrow | partial resource cleanup、execution failure |
 | execute non-zero/throw | fake process result | cleanup+leak scan、execution failure |
 | timeout | fake processがabortまでblock | abort→reap→cleanup、journey timeout |
-| assertion mismatch | fake journey oracle | cleanup後にassertion failure、原文保持 |
-| cleanup failure | cleanup fakeがtyped failure | primary execution failure、元結果はsecondary |
-| leak finding | canaryをscratchへ残す | primary execution failure、green ledgerなし |
+| assertion mismatch | fake journey oracle | assertion failureを保持してcleanup barrierを実行し、barrier成功後だけC8 failure receipt |
+| cleanup failure | cleanup fakeがtyped failure | `cleanup-barrier-failed`、元結果はsecondary、C8 append 0回 |
+| leak finding | canaryをscratchへ残す | `cleanup-barrier-failed`、元結果はsecondary、C8 append 0回 |
 | ledger append failure | write/fsync/rename/revalidate fault | `ledger-write-failed`、green返却なし |
 
 各caseはfaultを1つだけ注入する。cleanupとleakの複合caseだけは両診断集約を検証するため明示的に2 faultを許可する。

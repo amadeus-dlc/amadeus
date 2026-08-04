@@ -1,0 +1,10 @@
+{
+  "electionId": "E-HLE-RA13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 7,
+  "reservation": null,
+  "rationale": "c3の恒久化に重大な不同意。team.mdとproject.mdには既決規範を質問対象にせず未決だけを問う規則があり、stage-protocolもprior contextから推論可能な質問を省きmaterial decisionに必要な最少数だけを問う。今回のQ2/Q3削除は既存契約の適用漏れ是正であり、新しい判断述語ではない。追加は同義規則の重複と未承認Issueの正本化誤読を招くため、Intent recordだけに保持すべき。",
+  "submittedAt": "2026-08-03T10:53:32Z"
+}

@@ -1,0 +1,59 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件採用には同意するが、c2の根拠記述は訂正が必要。記録された同一SHAを実測すると observed 498c3034a は origin/main 272cac2af の祖先で、origin/mainが3コミット先であり、『origin/mainが現HEADの祖先・取り込む差分なし』は逆である。これは team.md の既存再接地規則への違反として扱い、新規ルール化せず、stage承認前に記録訂正と既存規則に沿う処置を行うべきである。",
+      "rationale": "『0件で可』を支持する。c1は reverse-engineering stage正本のL143-149にある9共有成果物のrepo単位last-writer-wins derived-cache契約の適用で、実際に9/9成果物がIssue #1717断面を現在化し、旧registry drift guardを履歴保持しているため新規知識ではない。c3はCodeKB architecture L13-18に、共通policy/lifecycle/resultとadapter所有credential strategyのIssue #1717設計境界として既に固定され、CLI/SDK/TUI/ACP/CDPの認証・停止方式の相違に依存する設計判断であって、横断的な行動規則や決定的sensorではない。c2は独立git実測で記述が逆だったが、origin/main前進時のmerge-base実測・rebaseはteam.md L181に既存規則として存在するため、新規persist候補ではなく既存規則の違反・成果物訂正として処理するのが妥当である。",
+      "submittedAt": "2026-08-03T09:51:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 8,
+      "reservation": null,
+      "rationale": "c1 は reverse-engineering stage 正本:77-87/:143-149 に既定の repo keyed last-writer-wins derived cache であり、c3 は CodeKB re-scan:53-81 に保持された Issue #1717 固有の責務境界なので、両者の恒久化不要には同意する。しかし c2 の前提は独立実測と矛盾する。record は origin/main=272cac2 が observed HEAD=498c303 の祖先で HEAD が3コミット先とするが、git merge-base --is-ancestor 272cac2 498c303 は exit 1、逆向きは exit 0、merge-base=498c303、git rev-list --count 498c303..272cac2 は3で、実際は HEAD が trunk の3コミット後方である。両コミット時刻も origin/main 09:04:51Z、observed 07:10:27Z、stage記録09:44:49Zなので観測後のremote前進ではない。既存memoryに祖先述語の引数方向とahead/behindを両方向または left-right count で確定する直接規則はなく、Developer中間結果の逆向き記述を補正したと称しながら再度逆転した再発性もある。従って0件採用は新規学習候補を見落とすためブロックし、少なくとも『RE preflightのahead/behindは単一is-ancestorの言語化でなく、順序を明示した両方向検査または git rev-list --left-right --count origin/main...HEAD で確定する』をproject規則または機械検査候補として再審査すべき。",
+      "submittedAt": "2026-08-03T09:52:00Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-HLE-RES13",
+        "voter": "subagent-1",
+        "submittedAt": "2026-08-03T09:51:49Z"
+      },
+      "electionId": "E-HLE-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "訂正後の独立再実測により、選択肢1『0件で可』を留保なく支持する。c1はstage正本L143-149の9共有成果物last-writer-wins derived-cache契約の適用であり、9/9成果物が最終observed 52a082af7を現在断面として保持する。c2はHEADとorigin/mainが52a082af7d13c537fad65b1204c9760e28b73f61で一致し、HEAD...origin/mainは0/0、base a8e1ce025から46 commits・1,593 files・+174,787/-6,561を実測した。初回の系譜誤読はmemory.mdで誤読後のfast-forwardと両方向再検証として訂正され、追加4commitは6本のlive helperを変更していない。これは既存の再接地規則を適用して回収した事例で、新規恒久ルールやsensorを要しない。c3はIssue #1717固有のpolicy/lifecycle/result vocabularyとtransport adapter境界としてCodeKBに保存済みである。最終observed上で対象4テストも58 pass・132 assertions・0 failを再現したため、3候補はrecord/CodeKBに保持し横断memoryへ過剰一般化しない判断が妥当である。",
+      "submittedAt": "2026-08-03T10:22:52Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-HLE-RES13",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-03T09:52:00Z"
+      },
+      "electionId": "E-HLE-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件採用には同意するが、re-scans/260803-harness-live-e2e.md:21 に旧値『42コミット区間』が1箇所残っているため、stage承認前に最終実測値46へ訂正すること。これは新規恒久ルール候補ではなく、訂正済み成果物内の局所的な転記残りとして扱う。",
+      "rationale": "訂正後の独立実測では HEAD=origin/main=52a082af7d13c537fad65b1204c9760e28b73f61、HEAD...origin/main=0/0、base a8e1ce025..HEAD=46 commits、差分規模1,593 files/+174,787/-6,561で一致し、498c303..HEADの追加4コミットは tests/harness・tests/run-tests.ts・Cursor/OpenCode manifest/plugin・関連docsの焦点面に差分0件だった。memory.md、scan-notes.md、per-intent re-scan、共有9 CodeKB成果物はいずれも最終observedへ再接地され、選択4テストの58 pass/132 assertions/0 failも記録されている。c1はRE stage正本:77-87/:143-149のlast-writer-wins derived-cache契約、c3はIssue #1717固有のCodeKB設計境界で新規memory対象ではない。c2の系譜誤読もRE stage正本:75-87のtrunk統合契約、team.mdのrescan-base-ancestry/base-advance-regrounding、project.mdのc2-observed-mainline-commitにより検出・是正すべき既存規則の準拠問題であり、今回の訂正で閉包した。従ってproject/team memoryまたはsensorへの新規persistは0件が妥当。",
+      "submittedAt": "2026-08-03T10:23:00Z"
+    }
+  ],
+  "late": []
+}

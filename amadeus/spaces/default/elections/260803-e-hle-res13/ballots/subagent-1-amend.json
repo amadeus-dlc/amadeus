@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-HLE-RES13",
+    "voter": "subagent-1",
+    "submittedAt": "2026-08-03T09:51:49Z"
+  },
+  "electionId": "E-HLE-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "訂正後の独立再実測により、選択肢1『0件で可』を留保なく支持する。c1はstage正本L143-149の9共有成果物last-writer-wins derived-cache契約の適用であり、9/9成果物が最終observed 52a082af7を現在断面として保持する。c2はHEADとorigin/mainが52a082af7d13c537fad65b1204c9760e28b73f61で一致し、HEAD...origin/mainは0/0、base a8e1ce025から46 commits・1,593 files・+174,787/-6,561を実測した。初回の系譜誤読はmemory.mdで誤読後のfast-forwardと両方向再検証として訂正され、追加4commitは6本のlive helperを変更していない。これは既存の再接地規則を適用して回収した事例で、新規恒久ルールやsensorを要しない。c3はIssue #1717固有のpolicy/lifecycle/result vocabularyとtransport adapter境界としてCodeKBに保存済みである。最終observed上で対象4テストも58 pass・132 assertions・0 failを再現したため、3候補はrecord/CodeKBに保持し横断memoryへ過剰一般化しない判断が妥当である。",
+  "submittedAt": "2026-08-03T10:22:52Z"
+}

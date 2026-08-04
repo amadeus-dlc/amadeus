@@ -10,7 +10,7 @@ case ID、requirement IDs、seed、baseline/mutant種別、単一`FaultPoint`、
 
 ### ExpectedTerminal
 
-`{ kind: "live-code"; code: LiveCode } | { kind: "run-error"; errorKind: "ledger-write-failed" } | { kind: "contract-error"; errorKind: string }`のclosed union。policy/lifecycleの期待結果とledger/contract errorを型で混同しない。
+`{ kind: "live-code"; code: LiveCode } | { kind: "run-error"; errorKind: "cleanup-barrier-failed" | "ledger-write-failed" } | { kind: "contract-error"; errorKind: string }`のclosed union。policy/lifecycleの期待結果とcleanup/ledger/contract errorを型で混同しない。`cleanup-barrier-failed`はC8 append 0回、`ledger-write-failed`はbarrier成功後のreceiptを伴うが`closure-committed`未到達である。
 
 ### FaultPoint / FaultPlan
 

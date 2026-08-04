@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE-UG13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "『0件で可』を全面的に支持する。c1の共通基盤2件+adapter別transport slice 10件、全Unit kind: libraryという分解は、Issue #1717の12 surfaceとApplication Design C1〜C9の所有境界から導いた当該Intent固有のDAGである。既存project.md cid:units-generation:c1はDelivery Planning前に各Unitの独立実装可能性を検証することを既に要求し、team.md cid:requirements-analysis:parallel-boltsは真の依存だけを直列化する。c2のClaude SDK/TUIとKiro ACP/TUI/IDEをtransport別Unitにする判断は、driver所有path、fake/live検証、C5+C6 concrete sliceを排他的に閉じるための同規範の適用である。review iteration 1でC6所有重複とunsupported closure不足を検出し、iteration 2では全Unitが排他的・独立実装可能、DAG非循環、FR/NFR trace整合と確認済み。12 Unit exact-once、canonical kind、declared depends_on、single rootはunit-of-work-dependency.mdの機械可読DAGとvalidationで閉じており、transport粒度は意味判断なので新規sensorにも適さない。よってc1/c2はIntent recordへ保持し、横断rule/sensorへ一般化しないのが妥当である。",
+      "submittedAt": "2026-08-03T12:17:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE-UG13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1の共通基盤2 Unitとtransport別10 Unitという12 Unit分解は、Issue #1717のFR-1〜FR-11、Application Design C1〜C9、対象transport集合から導出された固有の実装境界であり、unit-of-work、machine-readable DAG、requirement/story mapに十分保持されている。c2のClaude SDK/TUIおよびKiro ACP/TUI/IDEをtransport別Unitにする判断も、既存driver所有path、fake/live検証、config seam、完了条件の差という当該transport集合固有の変更理由に基づく。既存inception memoryは既に、Unitを変更理由・依存方向で分割し循環を避けること、規模と再利用を正当化すること、adapterを実装・配線と同一Intentで着地することを要求しているため、全案件へ1 transport=1 Unitを追加規則化するのは過剰一般化になる。粒度の妥当性は意味論的で決定論的sensor述語にも適さず、成果物はレビューIteration 2で排他的・独立実装可能かつ非循環と確認済みである。したがって新規project/team ruleおよびsensorは0件で可と判断する。",
+      "submittedAt": "2026-08-03T12:17:53Z"
+    }
+  ],
+  "late": []
+}

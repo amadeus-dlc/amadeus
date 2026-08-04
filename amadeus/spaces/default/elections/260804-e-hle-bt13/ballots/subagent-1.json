@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-BT13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "最終化前にRepository CIの再実行結果と初回単発失敗の分類根拠をIntent成果物へ記録すること。",
+  "rationale": "memory.mdは学習候補・open questionとも0件なので、新規ルールまたはセンサーは不要である。ただし投票時点のbuild-test-results.mdはRepository CIと主要検査を未実行としており、再実行結果の記録を0件確定の条件とする。",
+  "submittedAt": "2026-08-04T00:41:50Z"
+}

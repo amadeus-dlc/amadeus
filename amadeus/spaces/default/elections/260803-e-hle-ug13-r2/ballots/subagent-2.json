@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE-UG13-R2",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "org.md は feature の walking-skeleton Bolt を最初に単独実行する一般則を、project.md は self-feature でも最初の Construction Bolt の gate を維持する一般則を、team.md は複数Unitを単一PRへ束ねない粒度規律を既に定めている。Units Generation 再実行成果物はこれらを Issue #1717 固有の U01 vertical walking skeleton、U02 hardening、U03〜U11 transport slice に具体化し、review iteration 2 で READY となっているため、c2/c3/c5 は Intent record に保持すれば十分で、新規 rule/sensor の一般化価値はない。",
+  "submittedAt": "2026-08-03T12:50:43Z"
+}

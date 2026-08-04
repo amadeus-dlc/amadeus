@@ -1,0 +1,10 @@
+{
+  "electionId": "E-HLE-ND13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "nfr-design/memory.mdの4区分はいずれも実エントリ0件で、全Unitのquestionsも追加質問0件。cleanup barrierとledger commitはAcceptedのADR-009およびApplication Design/Functional Designの既決契約をNFR成果物へ伝播した是正である。既存のproject規則review-fix-propagationとteam規則same-root-inventoryが同型の伝播漏れを既に包含しており、新規の恒久ルールやセンサーを追加する独立した学習根拠はない。",
+  "submittedAt": "2026-08-04T00:05:20Z"
+}

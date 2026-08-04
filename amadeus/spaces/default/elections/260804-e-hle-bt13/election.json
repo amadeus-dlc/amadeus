@@ -1,0 +1,17 @@
+{
+  "electionId": "E-HLE-BT13",
+  "kind": "learnings-selection",
+  "question": "build-and-testのmemoryに学習候補とopen questionはなく、初回CIの単発失敗は再実行ログで分類する。新規project/team ruleまたはsensorは0件でよいか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "恒久ルール・センサーを追加せず、検証結果と再実行根拠をIntent成果物に保持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
