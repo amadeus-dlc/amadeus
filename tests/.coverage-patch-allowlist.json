@@ -4392,27 +4392,5 @@
     },
     "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
     "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
-  },
-  {
-    "file": "scripts/pi-package.ts",
-    "selector": {
-      "function": "gitPiSourceIdentity",
-      "fingerprint": "sha256:d15f2b78867aacb7bc56ed83fa2a523df33d9a2dbf23ed9e32e24b9e70a9eccb",
-      "anchorLines": 8,
-      "targetLines": "1-8"
-    },
-    "reason": "The package-candidate suite covers canonical local and Git identities; these two short-circuit canonicalization rows are defensive malformed-URL guards whose observable rejection is asserted at the package boundary.",
-    "expiry": "remove when the Git URL parser port supports direct branch instrumentation"
-  },
-  {
-    "file": "tests/lib/no-silent-drop-trusted-base.ts",
-    "selector": {
-      "function": "noSilentDropTrustedBase",
-      "fingerprint": "sha256:8de110f1847c3739404cbd69e4d47da5d71b6c82a1326d25a4cff48caaa53d60",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Trusted-base resolution is exercised by the spawned no-silent-drop gate suites; Bun does not merge the child gate process coverage into the parent report.",
-    "expiry": "remove when trusted-base resolution is driven in-process or Bun merges spawned gate coverage"
   }
 ]

@@ -72,6 +72,9 @@ describe("Pi package candidate graph", () => {
       ["https://github.com/amadeus-dlc/amadeus.git/", revision],
       ["https://github.com/amadeus-dlc/./amadeus.git", revision],
       ["https://github.com/amadeus-dlc/../amadeus.git", revision],
+      ["https://%/amadeus.git", revision],
+      ["https://github.com/amadeus-dlc\\amadeus.git", revision],
+      ["https://github.com/amadeus-dlc/%2e%2e/amadeus.git", revision],
       ["https://github.com/amadeus-dlc/amadeus.git", "main"],
       ["https://github.com/amadeus-dlc/amadeus.git", "deadbeef"],
     ] as const) {
