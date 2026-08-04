@@ -5937,11 +5937,12 @@ export function resyncStateToStageGraph(
 // The reserved bucket for workspace-level mutations (intents.json, intent birth).
 export const WORKSPACE_LOCK_SENTINEL = "__workspace__";
 
-// Default stale-lock age threshold (ms). A lock whose owner is still alive but
-// whose stamp is older than this is treated as leaked (a wedged holder). Tunable
-// via AMADEUS_LOCK_STALE_MS for tests/ops. Conservative by default (10 min) so a
-// genuinely slow-but-live holder is never robbed on liveness alone — the PID
-// liveness check reclaims a dead owner immediately regardless of age.
+// Age threshold (ms) above which a LIVE owner's lock is REPORTED as leaked by
+// the detectLeakedLocks doctor probe. It is a diagnostic threshold only: the
+// acquire path never reclaims a live owner at any age (#1906), so a
+// slow-but-live holder is never robbed and only an explicit operator action
+// clears it. The acquire path reclaims a DEAD owner immediately, regardless of
+// age. Tunable via AMADEUS_LOCK_STALE_MS for tests/ops.
 export const DEFAULT_LOCK_STALE_MS = 10 * 60 * 1000;
 
 function lockStaleMs(): number {
@@ -6136,8 +6137,8 @@ function lockDirMtimeMs(lockDir: string): number | null {
 // re-acquire has a RECENT mtime (under grace) → mismatch → restore. A now-present
 // stamp (a live re-acquirer that already wrote owner.json) likewise mismatches.
 //
-// A concrete judged stamp (dead, or live-but-over-age) matches only if the moved
-// dir still carries the SAME pid + startedAtMs. A re-acquire rewrites owner.json
+// A concrete judged stamp (always a DEAD owner) matches only if the moved dir
+// still carries the SAME pid + startedAtMs. A re-acquire rewrites owner.json
 // with a different pid / fresher startedAtMs → mismatch → restore.
 function stampMatches(dir: string, judged: LockOwner | null): boolean {
   const now = readOwnerStamp(dir);
@@ -6154,12 +6155,13 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
   return now.pid === judged.pid && now.startedAtMs === judged.startedAtMs;
 }
 
-// Reclaim a lock when its owner is gone, and optionally when a live owner is
-// over-age. Unbounded async sections use dead-owner-only so duration can never
-// break mutual exclusion. Returns true iff THIS call freed the dir.
+// Reclaim a lock when its owner is gone (dead PID, or an over-grace UNSTAMPED
+// dir). A LIVE owner is never reclaimed at any age, so the duration of a
+// critical section can never break mutual exclusion (#1906). Returns true iff
+// THIS call freed the dir.
 //
 // MUTUAL-EXCLUSION SAFETY (compare-and-swap steal): the staleness DECISION (read
-// stamp, judge dead/over-age) and the steal are not one OS-atomic operation, so
+// stamp, judge the owner dead) and the steal are not one OS-atomic operation, so
 // a competing waiter can reap + re-mkdir + stamp a FRESH LIVE lock at the same
 // path in between. A "re-read stamp THEN rename" guard shrinks but does NOT
 // eliminate the window — the competitor can still re-acquire between the re-read
@@ -6200,10 +6202,10 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
 // stampMatches verify in step 2 is kept as defense-in-depth. A reaper killed
 // while holding the mutex is recovered by age (reapMutexStaleMs) via the same
 // CAS-rename idiom, and mutex loss is fail-safe: the waiter just retries.
-function reapStaleLock(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
+function reapStaleLock(lockDir: string): boolean {
   if (!acquireReapMutex(lockDir)) return false; // another reaper is mid-steal — let it finish
   try {
-    return reapStaleLockUnderMutex(lockDir, reapPolicy);
+    return reapStaleLockUnderMutex(lockDir);
   } finally {
     try {
       rmSync(reapMutexPath(lockDir), { recursive: true, force: true });
@@ -6271,17 +6273,7 @@ function acquireReapMutex(lockDir: string): boolean {
   }
 }
 
-function liveOwnerMayBeReaped(
-  owner: LockOwner,
-  reapPolicy: AuditLockReapPolicy,
-): boolean {
-  return (
-    reapPolicy === "dead-or-over-age" &&
-    lockAcquireEpochMs() - owner.startedAtMs > lockStaleMs()
-  );
-}
-
-function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolicy): boolean {
+function reapStaleLockUnderMutex(lockDir: string): boolean {
   const owner = readOwnerStamp(lockDir);
   if (owner === null) {
     // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
@@ -6294,9 +6286,15 @@ function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolic
     if (lockAcquireEpochMs() - mtime <= unstampedGraceMs()) return false;
     // else: an old unstamped dir → genuine leak, fall through to steal.
   } else if (ownerAlive(owner)) {
-    // Live owner: only reclaim if its stamp is over-age (a wedged-but-running
-    // holder) when the caller's critical section has a bounded duration.
-    if (!liveOwnerMayBeReaped(owner, reapPolicy)) return false;
+    // Live owner: NEVER reclaimed, at any age (#1906). Age cannot distinguish a
+    // wedged holder from one whose critical section is simply long, and the
+    // post-CAS stampMatches verify cannot catch the difference either — a live
+    // holder does not re-stamp, so the judged stamp always matches. Stealing on
+    // age alone therefore put two processes in the same section and silently
+    // lost both the state increment and the audit rows. A genuinely wedged live
+    // holder is reported (and cleared on request) by detectLeakedLocks, an
+    // explicitly-invoked operator probe, instead.
+    return false;
   }
   // STEP 1 — CAS swap: move the dir to a reaper-private nonce path. This is the
   // atomic arbiter; only one process wins the rename of a given dir.
@@ -6320,8 +6318,8 @@ function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolic
     }
     return false;
   }
-  // Legitimate steal: dead owner, live-but-over-age, or old-unstamped — AND the
-  // identity we grabbed matches what we judged. Remove the private dir.
+  // Legitimate steal: dead owner or old-unstamped — AND the identity we grabbed
+  // matches what we judged. Remove the private dir.
   try {
     rmSync(dead, { recursive: true, force: true });
   } catch {
@@ -6330,19 +6328,15 @@ function reapStaleLockUnderMutex(lockDir: string, reapPolicy: AuditLockReapPolic
   return true;
 }
 
-export type AuditLockReapPolicy =
-  | "dead-or-over-age"
-  | "dead-owner-only";
-
 function finalizeAuditLockAcquire(
   lockDir: string,
   key: string,
-  reapPolicy: AuditLockReapPolicy,
 ): boolean {
-  // Bounded audit sections may degrade to age-only. Unbounded sections require
-  // a live PID stamp and fail closed before entering their critical section.
+  // Every acquire requires a live PID stamp and fails closed before entering its
+  // critical section (#1906). An unstamped section is invisible to every
+  // liveness check, so a waiter walks in behind it; the acquire that cannot
+  // prove ownership must not report success.
   if (writeOwnerStamp(lockDir, key)) return true;
-  if (reapPolicy === "dead-or-over-age") return true;
   removeLockDirIfOwned(lockDir, key);
   if (existsSync(lockDir)) {
     try {
@@ -6355,28 +6349,33 @@ function finalizeAuditLockAcquire(
   return false;
 }
 
+// Take the audit lock, retrying past a live holder and reaping a reclaimable
+// one. "Reclaimable" means the owner is DEAD (ESRCH) or the dir is unstamped
+// past the grace window — never a live owner, however long it has held the lock
+// (#1906). Returns false when the budget is exhausted, and also when the lock
+// was mkdir'd but its owner stamp could not be written (fail closed rather than
+// enter the section unprovable).
 export function acquireAuditLock(
   projectDir: string,
   maxRetries = 50,
   retryMs = 100,
   intent?: string,
   space?: string,
-  reapPolicy: AuditLockReapPolicy = "dead-or-over-age",
 ): boolean {
   const lockDir = auditLockDir(projectDir, intent, space);
   const key = auditLockIdentity(projectDir, intent, space);
   for (let i = 0; i <= maxRetries; i++) {
     try {
       mkdirSync(lockDir);
-      return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
+      return finalizeAuditLockAcquire(lockDir, key);
     } catch {
       // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale
       // holder so a SIGKILL'd owner doesn't wedge every waiter for the full
       // retry budget. If we reap, retry the mkdir immediately (next loop turn).
-      if (reapStaleLock(lockDir, reapPolicy)) {
+      if (reapStaleLock(lockDir)) {
         try {
           mkdirSync(lockDir);
-          return finalizeAuditLockAcquire(lockDir, key, reapPolicy);
+          return finalizeAuditLockAcquire(lockDir, key);
         } catch {
           // another waiter beat us to the freed dir — fall through to sleep
         }
@@ -6384,6 +6383,10 @@ export function acquireAuditLock(
       if (i < maxRetries) {
         Bun.sleepSync(retryMs);
       }
+      // Explicit retry terminal (NSD001): this arm never swallows a failure —
+      // it hands control back to the loop, whose exhausted budget returns the
+      // loud `false` every caller checks.
+      continue;
     }
   }
   return false;

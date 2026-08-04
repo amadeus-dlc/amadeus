@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 599,
+    "total": 601,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 85,
+      "audit": 87,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -31,8 +31,8 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 176,
-      "audit": 39,
+      "function": 177,
+      "audit": 41,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -337,6 +337,18 @@
     },
     {
       "unitClass": "audit",
+      "unitId": "LOOP_MONITOR_EVENT_SET_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t426-loop-monitor-replay-index.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
       "unitId": "MEMORY_EMPTY",
       "minMechanism": "none",
       "coveredBy": [],
@@ -438,6 +450,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "QUALITY_REPAIR_TRANSACTION_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t429-quality-repair-runtime.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -947,6 +971,14 @@
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",
@@ -1622,8 +1654,13 @@
       "unitClass": "function",
       "unitId": "function:detectLeakedLocks",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3461,6 +3498,14 @@
         {
           "file": "tests/integration/t33-hook-concurrency.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t427-audit-lock-live-owner-no-steal.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t428-audit-lock-parallel-no-loss.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t161-per-intent-lock-reaper.test.ts",

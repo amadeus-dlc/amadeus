@@ -1,6 +1,6 @@
 // event-registry.ts — the typed Event Registry (FR-EVT-1).
 //
-// The canonical half of the registry covers the full 85-event audit
+// The canonical half of the registry covers the full 87-event audit
 // vocabulary (#1672; VALID_EVENT_TYPES in tools/amadeus-audit.ts) — every
 // canonical name maps 1:1 onto the EXISTING v1 audit event vocabulary so the
 // current readers understand the records unchanged. The telemetry half
@@ -14,7 +14,7 @@
 //      sites (BR-2);
 //   2. unit test — tests/unit/event-registry-drift.test.ts asserts the
 //      four-set equality (state-machine references == canonical registry ==
-//      exporter accept set == journal reader decode set) with the 81
+//      exporter accept set == journal reader decode set) with the 87
 //      cardinality pinned, so vacuous equality fails;
 //   3. sensor — sensors/amadeus-event-registry-drift.md runs the same
 //      extraction at gate time.
@@ -24,7 +24,7 @@
 
 export type Durability = "canonical" | "telemetry";
 
-// The 20 vocabulary categories of audit-format.md's Event Registry, plus
+// The 21 vocabulary categories of audit-format.md's Event Registry, plus
 // "telemetry" for events that never reach the journal. The category lets the
 // drift guard catch misclassification (a state-lifecycle event demoted to
 // telemetry).
@@ -49,6 +49,7 @@ export type EventCategory =
   | "learning"
   | "swarm"
   | "goal-lifecycle"
+  | "loop-monitor"
   | "telemetry";
 
 export type EventDef = {
@@ -75,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 85;
+export const EXPECTED_CANONICAL_COUNT = 87;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -193,6 +194,24 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: ["Root Operation Id", "Event Set Digest", "Event Set"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.loop_monitor.event_set.committed",
+    auditEvent: "LOOP_MONITOR_EVENT_SET_COMMITTED",
+    durability: "canonical",
+    category: "loop-monitor",
+    requiredAttributes: ["Partition Key", "Event Set Id", "Event Set"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.quality_repair.transaction.committed",
+    auditEvent: "QUALITY_REPAIR_TRANSACTION_COMMITTED",
+    durability: "canonical",
+    category: "loop-monitor",
+    requiredAttributes: ["Quality Scope Id", "Transaction Id", "Transaction"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

@@ -9,8 +9,8 @@
 // boundary rounds, or it fails open on a missing/malformed file, the whole
 // anti-regression guarantee is worthless. These tests pin:
 //
-//   1. evaluateGate's EXACT -0.02pp boundary: equality passes, one hit below
-//      fails DROP_EXCEEDED (BigInt, no float rounding).
+//   1. evaluateGate's absolute and relative conditions are both required, with
+//      exact boundaries (BigInt, no float rounding).
 //   2. Parse-don't-validate: wrong schemaVersion / negative / non-integer /
 //      hits>lines all fail MALFORMED; lines==0 fails EMPTY_POPULATION.
 //   3. Missing current / missing baseline fail with distinct reason codes.
@@ -27,7 +27,14 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { evaluateGate, type LoadedTotals, main, runCheck, runUpdate } from "../coverage-project-gate.ts";
+import {
+  evaluateGate,
+  type LoadedPolicy,
+  type LoadedTotals,
+  main,
+  runCheck,
+  runUpdate,
+} from "../coverage-project-gate.ts";
 
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = join(__FILE_DIR, "..");
@@ -42,13 +49,21 @@ function totals(hits: number, lines: number): Record<string, unknown> {
   return { schemaVersion: 1, hits, lines };
 }
 
+function policy(minimum = 0, relativeTolerance = 2): LoadedPolicy {
+  return present({
+    schemaVersion: 1,
+    minimumProjectLineCoverageBasisPoints: minimum,
+    maximumRelativeDropBasisPoints: relativeTolerance,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // 1. evaluateGate — the exact -0.02pp boundary.
 // ---------------------------------------------------------------------------
 describe("evaluateGate: exact -0.02pp boundary (BigInt, no rounding)", () => {
   test("exactly -0.02pp below baseline PASSES", () => {
     // baseline 100.00% (10000/10000); current 99.98% (9998/10000) => delta -0.02pp.
-    const r = evaluateGate(present(totals(9998, 10000)), present(totals(10000, 10000)));
+    const r = evaluateGate(present(totals(9998, 10000)), present(totals(10000, 10000)), policy());
     expect(r.kind).toBe("pass");
     if (r.kind === "pass") {
       expect(r.currentPct).toBeCloseTo(99.98, 6);
@@ -57,22 +72,60 @@ describe("evaluateGate: exact -0.02pp boundary (BigInt, no rounding)", () => {
     }
   });
 
-  test("a single hit beyond the -0.02pp boundary FAILS DROP_EXCEEDED", () => {
+  test("a single hit beyond the -0.02pp boundary FAILS RELATIVE_DROP_EXCEEDED", () => {
     // baseline 100% (1_000_000/1_000_000); boundary current% is 99.98% =
     // 999_800/1_000_000. One hit below that (999_799) is the minimal strict drop.
-    const r = evaluateGate(present(totals(999_799, 1_000_000)), present(totals(1_000_000, 1_000_000)));
+    const r = evaluateGate(
+      present(totals(999_799, 1_000_000)),
+      present(totals(1_000_000, 1_000_000)),
+      policy(),
+    );
     expect(r.kind).toBe("fail");
-    if (r.kind === "fail") expect(r.reason).toBe("DROP_EXCEEDED");
+    if (r.kind === "fail") expect(r.reason).toBe("RELATIVE_DROP_EXCEEDED");
   });
 
   test("a plain improvement PASSES", () => {
-    const r = evaluateGate(present(totals(950, 1000)), present(totals(900, 1000)));
+    const r = evaluateGate(present(totals(950, 1000)), present(totals(900, 1000)), policy());
     expect(r.kind).toBe("pass");
     if (r.kind === "pass") expect(r.deltaPp).toBeCloseTo(5, 6);
   });
 
   test("equal coverage PASSES", () => {
-    const r = evaluateGate(present(totals(873, 1000)), present(totals(873, 1000)));
+    const r = evaluateGate(present(totals(873, 1000)), present(totals(873, 1000)), policy());
+    expect(r.kind).toBe("pass");
+  });
+});
+
+describe("evaluateGate: absolute minimum AND relative tolerance", () => {
+  test("rejects when only the absolute minimum fails", () => {
+    const r = evaluateGate(present(totals(8999, 10000)), present(totals(8000, 10000)), policy(9000, 2));
+    expect(r.kind === "fail" && r.reason).toBe("ABSOLUTE_MINIMUM_NOT_MET");
+    expect(r.kind === "fail" && r.detail).toContain("failed: absolute minimum");
+  });
+
+  test("rejects when only the relative tolerance fails", () => {
+    const r = evaluateGate(present(totals(9000, 10000)), present(totals(9100, 10000)), policy(9000, 2));
+    expect(r.kind === "fail" && r.reason).toBe("RELATIVE_DROP_EXCEEDED");
+    expect(r.kind === "fail" && r.detail).toContain("failed: relative tolerance");
+  });
+
+  test("rejects and reports both failed conditions", () => {
+    const r = evaluateGate(present(totals(8999, 10000)), present(totals(9100, 10000)), policy(9000, 2));
+    expect(r.kind === "fail" && r.reason).toBe("MULTIPLE_REQUIREMENTS_NOT_MET");
+    expect(r.kind === "fail" && r.detail).toContain("failed: absolute minimum, relative tolerance");
+  });
+
+  test("passes exact equality at both boundaries", () => {
+    const r = evaluateGate(
+      present(totals(9000, 10000)),
+      present(totals(9002, 10000)),
+      policy(9000, 2),
+    );
+    expect(r.kind).toBe("pass");
+  });
+
+  test("passes when both conditions are exceeded", () => {
+    const r = evaluateGate(present(totals(9200, 10000)), present(totals(9100, 10000)), policy(9000, 2));
     expect(r.kind).toBe("pass");
   });
 });
@@ -81,60 +134,145 @@ describe("evaluateGate: exact -0.02pp boundary (BigInt, no rounding)", () => {
 // 2. evaluateGate — parse-don't-validate rejections.
 // ---------------------------------------------------------------------------
 describe("evaluateGate: malformed / empty inputs", () => {
+  test("missing policy => MISSING_POLICY", () => {
+    const r = evaluateGate(present(totals(1, 2)), present(totals(1, 2)), { present: false });
+    expect(r.kind === "fail" && r.reason).toBe("MISSING_POLICY");
+  });
+
+  test("invalid policy JSON => MALFORMED_POLICY", () => {
+    const r = evaluateGate(
+      present(totals(1, 2)),
+      present(totals(1, 2)),
+      { present: true, text: "{not json" },
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
+  });
+
+  test.each([null, "not an object"])("non-object policy JSON => MALFORMED_POLICY (%p)", (value) => {
+    const r = evaluateGate(
+      present(totals(1, 2)),
+      present(totals(1, 2)),
+      present(value),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
+  });
+
+  test("wrong policy schemaVersion => MALFORMED_POLICY", () => {
+    const r = evaluateGate(
+      present(totals(1, 2)),
+      present(totals(1, 2)),
+      present({
+        schemaVersion: 2,
+        minimumProjectLineCoverageBasisPoints: 9000,
+        maximumRelativeDropBasisPoints: 2,
+      }),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
+  });
+
+  test.each([
+    [{ schemaVersion: 1, maximumRelativeDropBasisPoints: 2 }, "minimumProjectLineCoverageBasisPoints"],
+    [{ schemaVersion: 1, minimumProjectLineCoverageBasisPoints: 9000 }, "maximumRelativeDropBasisPoints"],
+    [
+      {
+        schemaVersion: 1,
+        minimumProjectLineCoverageBasisPoints: 10001,
+        maximumRelativeDropBasisPoints: 2,
+      },
+      "minimumProjectLineCoverageBasisPoints",
+    ],
+    [
+      {
+        schemaVersion: 1,
+        minimumProjectLineCoverageBasisPoints: 9000,
+        maximumRelativeDropBasisPoints: -1,
+      },
+      "maximumRelativeDropBasisPoints",
+    ],
+  ])("invalid or missing policy field => MALFORMED_POLICY (%s)", (value, field) => {
+    const r = evaluateGate(present(totals(1, 2)), present(totals(1, 2)), present(value));
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
+    expect(r.kind === "fail" && r.detail).toContain(field);
+  });
+
   test("wrong schemaVersion => MALFORMED", () => {
-    const r = evaluateGate(present({ schemaVersion: 2, hits: 1, lines: 2 }), present(totals(1, 2)));
+    const r = evaluateGate(
+      present({ schemaVersion: 2, hits: 1, lines: 2 }),
+      present(totals(1, 2)),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
   test("negative hits => MALFORMED", () => {
-    const r = evaluateGate(present({ schemaVersion: 1, hits: -1, lines: 2 }), present(totals(1, 2)));
+    const r = evaluateGate(
+      present({ schemaVersion: 1, hits: -1, lines: 2 }),
+      present(totals(1, 2)),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
   test("non-integer lines => MALFORMED", () => {
-    const r = evaluateGate(present({ schemaVersion: 1, hits: 1, lines: 2.5 }), present(totals(1, 2)));
+    const r = evaluateGate(
+      present({ schemaVersion: 1, hits: 1, lines: 2.5 }),
+      present(totals(1, 2)),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
   test("hits > lines => MALFORMED", () => {
-    const r = evaluateGate(present({ schemaVersion: 1, hits: 3, lines: 2 }), present(totals(1, 2)));
+    const r = evaluateGate(
+      present({ schemaVersion: 1, hits: 3, lines: 2 }),
+      present(totals(1, 2)),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
   test("invalid JSON text => MALFORMED", () => {
-    const r = evaluateGate({ present: true, text: "{not json" }, present(totals(1, 2)));
+    const r = evaluateGate(
+      { present: true, text: "{not json" },
+      present(totals(1, 2)),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
   test("valid JSON that is not an object => MALFORMED", () => {
-    const r = evaluateGate({ present: true, text: "42" }, present(totals(1, 2)));
+    const r = evaluateGate({ present: true, text: "42" }, present(totals(1, 2)), policy());
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
     expect(r.kind === "fail" && r.detail).toContain("expected a JSON object");
   });
 
   test("malformed BASELINE (current fine) => MALFORMED naming the baseline side", () => {
-    const r = evaluateGate(present(totals(1, 2)), present({ schemaVersion: 9, hits: 1, lines: 2 }));
+    const r = evaluateGate(
+      present(totals(1, 2)),
+      present({ schemaVersion: 9, hits: 1, lines: 2 }),
+      policy(),
+    );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
     expect(r.kind === "fail" && r.detail).toContain("baseline:");
   });
 
   test("current lines == 0 => EMPTY_POPULATION", () => {
-    const r = evaluateGate(present(totals(0, 0)), present(totals(1, 2)));
+    const r = evaluateGate(present(totals(0, 0)), present(totals(1, 2)), policy());
     expect(r.kind === "fail" && r.reason).toBe("EMPTY_POPULATION");
   });
 
   test("baseline lines == 0 => EMPTY_POPULATION", () => {
-    const r = evaluateGate(present(totals(1, 2)), present(totals(0, 0)));
+    const r = evaluateGate(present(totals(1, 2)), present(totals(0, 0)), policy());
     expect(r.kind === "fail" && r.reason).toBe("EMPTY_POPULATION");
   });
 
   test("missing current => MISSING_CURRENT", () => {
-    const r = evaluateGate({ present: false }, present(totals(1, 2)));
+    const r = evaluateGate({ present: false }, present(totals(1, 2)), policy());
     expect(r.kind === "fail" && r.reason).toBe("MISSING_CURRENT");
   });
 
   test("missing baseline => MISSING_BASELINE", () => {
-    const r = evaluateGate(present(totals(1, 2)), { present: false });
+    const r = evaluateGate(present(totals(1, 2)), { present: false }, policy());
     expect(r.kind === "fail" && r.reason).toBe("MISSING_BASELINE");
   });
 });
@@ -150,7 +288,26 @@ function runGate(args: string[], env: Record<string, string>): ReturnType<typeof
 }
 
 describe("process boundary: --check via AMADEUS_COVERAGE_* seams", () => {
-  test("injected drop => exit 1 mentioning DROP_EXCEEDED", () => {
+  test("missing policy => exit 1 MISSING_POLICY", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-gate-nopolicy-"));
+    try {
+      const totalsPath = join(tmp, "coverage-totals.json");
+      const baselinePath = join(tmp, "baseline.json");
+      writeFileSync(totalsPath, JSON.stringify(totals(1000, 1000)));
+      writeFileSync(baselinePath, JSON.stringify(totals(1000, 1000)));
+      const res = runGate(["--check"], {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+        AMADEUS_COVERAGE_PROJECT_POLICY: join(tmp, "does-not-exist.json"),
+      });
+      expect(res.status).toBe(1);
+      expect(res.stderr).toContain("MISSING_POLICY");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("injected drop => exit 1 mentioning RELATIVE_DROP_EXCEEDED", () => {
     const tmp = mkdtempSync(join(tmpdir(), "cov-gate-drop-"));
     try {
       const totalsPath = join(tmp, "coverage-totals.json");
@@ -162,7 +319,7 @@ describe("process boundary: --check via AMADEUS_COVERAGE_* seams", () => {
         AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
       });
       expect(res.status).toBe(1);
-      expect(res.stderr).toContain("DROP_EXCEEDED");
+      expect(res.stderr).toContain("RELATIVE_DROP_EXCEEDED");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -251,14 +408,23 @@ describe("process boundary: --update", () => {
     try {
       const totalsPath = join(tmp, "coverage-totals.json");
       const baselinePath = join(tmp, "baseline.json");
+      const policyPath = join(tmp, "policy.json");
+      const originalPolicy = JSON.stringify({
+        schemaVersion: 1,
+        minimumProjectLineCoverageBasisPoints: 9000,
+        maximumRelativeDropBasisPoints: 2,
+      });
       writeFileSync(totalsPath, JSON.stringify(totals(1234, 2000)));
+      writeFileSync(policyPath, originalPolicy);
       const res = runGate(["--update"], {
         AMADEUS_COVERAGE_TOTALS: totalsPath,
         AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+        AMADEUS_COVERAGE_PROJECT_POLICY: policyPath,
       });
       expect(res.status).toBe(0);
       const written = JSON.parse(readFileSync(baselinePath, "utf8"));
       expect(written).toEqual({ schemaVersion: 1, hits: 1234, lines: 2000 });
+      expect(readFileSync(policyPath, "utf8")).toBe(originalPolicy);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

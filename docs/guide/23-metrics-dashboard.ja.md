@@ -16,11 +16,35 @@
 inline SVG です。
 
 - コレクタ(`ccn` / `coverage` / `loc` / `tests` / `test_pyramid` /
-  `dist_size`)ごとに1節、値キーごとに1本の折れ線チャート
+  `dist_size` / `bugs`)ごとに1節、値キーごとに1本の折れ線チャート
 - データ点にホバーすると `captured_at` と commit SHA(12桁)を表示。
   各チャート下の折りたたみ値表にも同じ列があり、ホバーなしでも遡れます
 - 赤の強調は直前スナップショットからの劣化(CCN 違反の増加・カバレッジ
-  低下・テスト失敗の非ゼロ・dist サイズ増)を示します
+  低下・テスト失敗の非ゼロ・dist サイズ増・open なバグの増加)を示します
+
+## `bugs` コレクタ
+
+`bugs` はプロジェクトのバグ台帳である `bug` ラベル付き GitHub issue を、
+Search API の `total_count` 9クエリで数えます: `total`(発生件数の累積)・
+`open`・`closed`・`fixed`(completed でクローズ = 修正件数の累積)・
+`rejected`(`is:closed -reason:completed` で数える、completed 以外の理由で
+クローズした件数。wontfix/duplicate/not-planned)・重大度ラベル
+ごとの件数(`s1_fatal` / `s2_critical` / `s3_major` / `s4_minor`)。保存するのは
+累積値のみで、期間あたりの発生率・修正率は時系列の差分から導出します。
+
+唯一のネットワーク依存コレクタのため、2つのモードがあります。
+
+- **`GH_TOKEN` も `GITHUB_TOKEN` も未設定** — コレクタはスキップします。
+  スナップショットは `bugs` エントリなしで書き込まれ、CLI がその旨を報告します
+  (例: `CHECK OK 6 collectors (skipped: bugs)`)。ローカル実行に資格情報は
+  不要です
+- **トークンあり** — `gh` 呼び出しが1つでも失敗したら、部分的なデータを
+  記録せずスナップショット全体を失敗させます。リポジトリは
+  `GITHUB_REPOSITORY`、なければ `origin` remote の URL から解決します
+
+CI には常にトークンがあります: `metrics-snapshot` job の GitHub App に
+`permission-issues: read` を付与しているため、公開されるスナップショットは
+必ず `bugs` を含みます。
 
 ## コマンド
 

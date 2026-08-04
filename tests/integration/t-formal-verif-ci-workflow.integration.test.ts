@@ -37,11 +37,6 @@ const BASELINE_SHA = readFileSync(
 //     ci-success's needs set is again untouched.
 //   - 260802-record-roundtrip-pbt U5 (#1980): the manual `pbt-deep` job, which
 //     runs this Intent's PBT under the AMADEUS_PBT_DEEP=1 budget (FR-5a).
-//     Added to ci.yml rather than as its own workflow because ci.yml already
-//     carries the same shape (formal-model-check is workflow_dispatch-only and
-//     absent from ci-success's needs), and a second workflow file would be the
-//     duplicate-generation this repo avoids. Left out of ci-success's needs so
-//     it stays non-blocking (FR-5b) and t222's pin stays untouched.
 //   - 260801-silent-drop-gate: the lint job's blocking semantic no-silent-drop
 //     invocation, kept in lint so ci-success retains its existing needs set.
 //   - 260801-silent-drop-gate review follow-up: normalize GitHub's all-zero
@@ -57,6 +52,15 @@ const BASELINE_SHA = readFileSync(
 //     persistence in the drift-check job.
 //   - 260804-source-only-dist CI follow-up: fetch the pull request base before
 //     evaluating patch coverage against its remote-tracking ref.
+//   - 260804-scheduled-pbt: move the non-blocking deep PBT job out of ci.yml and
+//     into its own daily/manual workflow, matching the performance tier's
+//     operational boundary.
+//   - 260804-metrics-snapshot-auth (#2182): preserve the short-lived GitHub App
+//     credential in the metrics-snapshot write job until its plain git push.
+//   - Issue #2186: require both absolute and merge-base-relative project
+//     coverage before the patch coverage gate runs.
+//   - PR #2205 (bugs collector): grant the metrics App token issues:read so
+//     the snapshot job's `bugs` collector can query the Search API.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

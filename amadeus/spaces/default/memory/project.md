@@ -22,7 +22,7 @@
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、`bash tests/run-tests.sh --ci` に加え、coverage ゲート(project/patch/relative)と plugin-conformance-e2e を含む現行のブロッキング集合全体とする。ユーザー可視の契約(CLI 契約・Release Asset 配布・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、隔離2回ビルドの再現性検査、`bun run source-only:check`、グラフ不変量検査、`bash tests/run-tests.sh --ci` に加え、Project Coverage Gate の固定絶対下限と merge-base 相対許容低下幅の両条件、Patch Coverage Gate、plugin-conformance-e2e を含む現行のブロッキング集合全体をすべて満たすこととする。Project Coverage Gate の絶対条件と相対条件は代替関係ではなく AND 条件であり、片方だけの通過を coverage 達成と扱わない。ユーザー可視の契約(CLI 契約・Release Asset 配布・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
