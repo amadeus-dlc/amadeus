@@ -335,20 +335,6 @@ describe("Quality Repair production coordinator", () => {
     expect(replayed.status(status.qualityScopeId)?.qualityEpochId).toBe(resumed.projection.qualityEpochId);
   });
 
-  test("reuses the generic committed live authorization seam", () => {
-    const { activation, repository, coordinator } = runtime();
-    const first = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
-    const denied = coordinator.authorizeLiveSmoke(first.snapshot.qualityScopeId, `sha256:${"e".repeat(64)}`, {
-      authorize: () => ({ authorized: false, reason: "not-authorized" }),
-    });
-    expect(denied).toMatchObject({ kind: "CONFLICT" });
-    const authorized = coordinator.authorizeLiveSmoke(first.snapshot.qualityScopeId, `sha256:${"e".repeat(64)}`, {
-      authorize: () => ({ authorized: true, authorizationId: "authorization-1", actorId: "human-1" }),
-    });
-    expect(authorized.kind).toBe("authorized");
-    expect(repository.readTransactions().at(-1)?.loopEventSets[0]?.events[0]?.type).toBe("LIVE_SMOKE_AUTHORIZED");
-  });
-
   test("reconciles before one attested no-effect successor and never admits attempt 2", () => {
     const { activation, repository, coordinator } = runtime();
     let previous: QualityEvidenceSnapshot | null = null;

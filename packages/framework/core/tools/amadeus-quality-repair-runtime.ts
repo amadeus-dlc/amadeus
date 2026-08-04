@@ -12,7 +12,6 @@ import {
   loopMonitorReceiptId,
   type CommittedJudgeDispatchPermit,
   type JudgePort,
-  type LiveAuthorizationPort,
   type LoopMonitorCommitReceipt,
   type LoopMonitorEventSet,
   type LoopMonitorRepository,
@@ -479,11 +478,6 @@ export interface QualityRepairCoordinator {
   }):
     | { readonly kind: "resumed"; readonly projection: QualityEpochProjection }
     | { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string };
-  authorizeLiveSmoke(
-    qualityScopeId: string,
-    scopeDigest: string,
-    port: LiveAuthorizationPort,
-  ): ReturnType<ReturnType<typeof createLoopMonitorCoordinator>["authorizeLiveSmoke"]>;
   status(qualityScopeId: string): QualityRepairStatusEnvelope | null;
 }
 
@@ -838,14 +832,6 @@ export function createQualityRepairCoordinator(options: {
         });
         return { kind: "resumed", projection: nextEpoch } as const;
       });
-    },
-
-    authorizeLiveSmoke(qualityScopeId, scopeDigest, port) {
-      const projection = repository.readProjection(qualityScopeId);
-      if (projection === null) return { kind: "CONFLICT", reason: "quality-projection-not-found" };
-      return repository.transaction(qualityScopeId, () =>
-        loop.authorizeLiveSmoke(projection.partition, scopeDigest, port)
-      );
     },
 
     status,

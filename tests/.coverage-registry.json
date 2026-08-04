@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 177,
-      "audit": 40,
+      "audit": 41,
       "scope": 15,
       "stage": 8,
       "hook": 14,

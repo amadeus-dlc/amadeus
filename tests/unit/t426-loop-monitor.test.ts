@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-loop-monitor.ts, audit:LOOP_MONITOR_TRANSACTION_COMMITTED
+// covers: file:packages/framework/core/tools/amadeus-loop-monitor.ts
 // size: medium
 
 import { describe, expect, test } from "bun:test";
