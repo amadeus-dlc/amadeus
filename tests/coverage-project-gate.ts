@@ -117,16 +117,26 @@ function isNonNegativeInteger(value: unknown): value is number {
 // Post-parse checks cannot see the original numeric token: JSON.parse rounds
 // a fractional literal like 9007199254740991.1 to a safe integer before any
 // validator runs. The reviver's source text is the only place the token
-// survives, so capture it there and require a plain digit run.
-type SourceReviver = (key: string, value: unknown, context?: { source?: string }) => unknown;
+// survives, so capture it there and require a plain digit run. Tokens are
+// recorded per holder object (the reviver's `this`) because the reviver also
+// fires for nested "hits"/"lines" keys, and a flat map would let a nested
+// integer overwrite — and mask — a fractional top-level token.
+type SourceReviver = (this: unknown, key: string, value: unknown, context?: { source?: string }) => unknown;
 
 function parseTotalsText(text: string): ParseOutcome {
-  const numericTokens = new Map<string, string>();
+  const tokensByHolder = new WeakMap<object, Map<string, string>>();
   let raw: unknown;
   try {
-    const reviver: SourceReviver = (key, value, context) => {
-      if ((key === "hits" || key === "lines") && typeof context?.source === "string") {
-        numericTokens.set(key, context.source);
+    const reviver: SourceReviver = function (key, value, context) {
+      if (
+        (key === "hits" || key === "lines") &&
+        typeof context?.source === "string" &&
+        typeof this === "object" &&
+        this !== null
+      ) {
+        const tokens = tokensByHolder.get(this) ?? new Map<string, string>();
+        tokens.set(key, context.source);
+        tokensByHolder.set(this, tokens);
       }
       return value;
     };
@@ -137,6 +147,7 @@ function parseTotalsText(text: string): ParseOutcome {
   if (typeof raw !== "object" || raw === null) {
     return { ok: false, detail: `expected a JSON object, got ${typeof raw}` };
   }
+  const numericTokens = tokensByHolder.get(raw) ?? new Map<string, string>();
   const obj = raw as Record<string, unknown>;
   if (obj.schemaVersion !== 1) {
     return { ok: false, detail: `schemaVersion must be 1, got ${JSON.stringify(obj.schemaVersion)}` };
