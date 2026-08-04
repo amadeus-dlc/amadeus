@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢1『0件で可』を全面支持する。独立実測: (1) c1 は project.md:314 の『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』と同じ射程で、delivery-planning/memory.md:5 はその適用記録である。(2) c2 は team.md:317-322 の Walking Skeleton 正本、とくに self-feature の新しい実行・検証・配布経路では最大リスクを端から端まで通す最小Boltを最初に置き人間ゲート後に広げる規則を、Kiro TUIへ適用したものに留まる。(3) c3/c4 は bolt-plan.md 冒頭・Bolt 1・risk-and-sequencing-rationale.md のDecision recordに、1 Unit = 1 Bolt = 1 PRおよびユーザー裁定AのKiro TUI risk-firstとして保持済みで、本Intent固有の経済順序である。(4) 分岐別規模はbolt-plan.mdのdirect/follow-up別レンジとして既に具体化され、Functional Design後に更新すると明記されている。共有file contentionもbolt-plan.mdの実行契約とteam-allocation.mdの直列開始・先行diff後再評価条件に保持されている。いずれも恒久memoryやsensorへ一般化すべき未被覆知識ではない。",
+      "submittedAt": "2026-08-04T12:47:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "project.md 314行の既存決定を再質問しない規則とteam.md Walking Skeleton規則を確認した。1 Unit = 1 Bolt = 1 PR、Kiro TUI risk-first、direct/follow-up別見積り、共有file contentionの再判定条件はdelivery-planningのmemory・bolt-plan・risk-and-sequencing-rationaleにIntent固有の裁定として保持済みであり、新規memoryまたはsensorを重複永続化する必要はない。",
+      "submittedAt": "2026-08-04T12:47:51Z"
+    }
+  ],
+  "late": []
+}

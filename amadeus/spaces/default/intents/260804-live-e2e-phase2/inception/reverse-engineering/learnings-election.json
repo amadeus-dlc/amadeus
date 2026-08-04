@@ -1,0 +1,16 @@
+{
+  "electionId": "E-HLE2-RES13",
+  "kind": "learnings-selection",
+  "question": "260804-live-e2e-phase2 reverse-engineering の §13 学習選定。memory_entries_total=0、candidates=[]、parked_open_questions=[]である。今回のKimi Code・Kiro CLI向け調査結果と未解決事項はCodeKBおよびIntent固有のre-scanに記録済みであり、新規project/team memoryまたはsensorの永続化は0件でよいか。CodeKB、re-scan、既存memory層を独立実測して投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "今回固有の実装調査と未解決事項はCodeKBおよびIntent recordへ保持し、恒久ルールやsensorを追加しない"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

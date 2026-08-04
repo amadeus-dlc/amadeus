@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HLE2-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測で0件が妥当と判断した。c1はproject.md:314の『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』と意味が重複する。c2はunits-generation.mdのstoriesがrequired:falseかつ『if produced』である既定契約を、SKIP済みstateに対してrequirementsのFR/NFR proxyで適用したものに留まる。c3はunits-generation-questions.md Q1でユーザーがAを直接裁定し、unit-of-work.mdでACP/TUI各Unitへprobeとconnected/follow-up成果を内包したIntent固有境界である。共有file contentionはunit-of-work-dependency.md、Kiro分岐別見積りはunit-of-work.md ReviewでいずれもDelivery Planningへの引継ぎとして記録済みで、恒久memory/sensorへ一般化する新規性はない。",
+  "submittedAt": "2026-08-04T12:26:33Z"
+}
