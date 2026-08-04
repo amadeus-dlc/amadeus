@@ -912,6 +912,16 @@ describe("t236 election directive loop", () => {
     expect(tallied().length).toBe(1);
   });
 
+  // The tallied pre-commit resolution refuses when tally.json never landed —
+  // the state must not advance on a report with nothing to commit.
+  test("#2125: tallied report without tally.json is refused before the commit", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("tally.json missing");
+    expect(JSON.parse(readFileSync(electionPath("election.json"), "utf8")).state).toBe("collecting");
+  });
+
   // The tallied commit and its audit row form a recoverable unit: a malformed
   // tally.json is rejected BEFORE the state commit, and an append failure
   // AFTER the commit is completed by re-running the report (repair path),
