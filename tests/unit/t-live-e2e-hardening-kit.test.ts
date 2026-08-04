@@ -76,6 +76,11 @@ describe("live E2E adversarial test kit", () => {
       },
     }).ok).toBe(true);
     expect(validateContractCase({ ...validated(), faults: ["cleanup", "leak"] }).ok).toBe(true);
+    expect(validateContractCase({
+      ...validated(),
+      faults: ["cleanup"],
+      expectedTerminal: { kind: "run-error", errorKind: "cleanup-barrier-failed" },
+    })).toMatchObject({ ok: true });
     expect(validateContractCase({ ...validated(), faults: ["timeout", "leak"] })).toMatchObject({
       ok: false,
       error: { kind: "invalid-fault-plan" },

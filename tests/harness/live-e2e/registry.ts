@@ -1,7 +1,7 @@
 import type { EnvironmentDeclaration } from "./policy.ts";
 import type { Result } from "./contract.ts";
 
-export type LiveAdapterId = "codex-exec" | "claude-print" | "claude-sdk";
+export type LiveAdapterId = "codex-exec" | "claude-print" | "claude-sdk" | "claude-tui";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
 export interface LiveCapability {
@@ -71,6 +71,22 @@ export const LIVE_CAPABILITIES = [
       sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
     },
     isolationSummary: "SDK-owned worker group; one-shot credential pipe; project settings only",
+  },
+  {
+    id: "claude-tui",
+    harness: "claude",
+    transport: "tui",
+    optInKey: "AMADEUS_TUI_LIVE",
+    minimumVersion: "2.1.220",
+    measuredVersion: "2.1.220",
+    status: "supported",
+    anchorKinds: ["file", "state"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR"],
+      sensitiveKeys: ["ANTHROPIC_API_KEY"],
+      sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
+    },
+    isolationSummary: "fresh project/home; project settings only; run-private tmux socket and session",
   },
 ] as const satisfies readonly LiveCapability[];
 

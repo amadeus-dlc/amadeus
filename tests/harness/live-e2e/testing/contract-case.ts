@@ -21,7 +21,10 @@ export type FaultPoint = (typeof FAULT_POINTS)[number];
 
 export type ExpectedTerminal =
   | Readonly<{ kind: "live-code"; status: LiveStatus; code: LiveCode }>
-  | Readonly<{ kind: "run-error"; errorKind: "ledger-write-failed" }>
+  | Readonly<{
+      kind: "run-error";
+      errorKind: "cleanup-barrier-failed" | "ledger-write-failed";
+    }>
   | Readonly<{ kind: "contract-error"; errorKind: string }>;
 
 export interface ContractCase {

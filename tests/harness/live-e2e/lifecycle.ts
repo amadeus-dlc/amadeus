@@ -31,6 +31,11 @@ import { ResourceRegistrar } from "./resources.ts";
 
 export type LiveRunError =
   | Readonly<{
+      kind: "cleanup-barrier-failed";
+      cleanup: CleanupReceipt;
+      originalOutcome: LiveOutcome;
+    }>
+  | Readonly<{
       kind: "ledger-write-failed";
       receipt: RecordedLiveRunReceipt;
       cause: LedgerError;
@@ -189,13 +194,10 @@ async function cleanupRun(
   };
 }
 
-function cleanupPrecedence(primary: LiveOutcome, cleanup: CleanupReceipt): LiveOutcome {
-  if (cleanup.failures.length === 0 && cleanup.leakFindings.length === 0) return primary;
-  return outcome(
-    "failure",
-    "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED",
-    `cleanup or leak verification failed; original=${primary.code}; failures=${cleanup.failures.join(",")}; leaks=${cleanup.leakFindings.join(",")}`,
-  );
+function cleanupBarrierIsClosed(cleanup: CleanupReceipt): boolean {
+  return cleanup.failures.length === 0 &&
+    cleanup.leakFindings.length === 0 &&
+    cleanup.retainedResourceIds.length === 0;
 }
 
 function recordedReceipt(input: {
@@ -264,8 +266,17 @@ export async function runLiveJourney(
     registeredResources: registrar.snapshot(),
   };
   const cleanup = await cleanupRun(adapter, context, target);
-  const finalOutcome = cleanupPrecedence(stages.outcome, cleanup);
-  if (!codeMatchesStatus(finalOutcome.status, finalOutcome.code)) {
+  if (!cleanupBarrierIsClosed(cleanup)) {
+    return {
+      ok: false,
+      error: {
+        kind: "cleanup-barrier-failed",
+        cleanup,
+        originalOutcome: stages.outcome,
+      },
+    };
+  }
+  if (!codeMatchesStatus(stages.outcome.status, stages.outcome.code)) {
     return { ok: false, error: { kind: "contract-invalid", cause: "outcome status/code mismatch" } };
   }
   const receipt = recordedReceipt({
@@ -273,7 +284,7 @@ export async function runLiveJourney(
     journey,
     context,
     measuredVersion: preflight.measuredVersion,
-    outcome: finalOutcome,
+    outcome: stages.outcome,
     cleanup,
   });
   const appended = await appendRunReceipt(context.ledgerPath, receipt);

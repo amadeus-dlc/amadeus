@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LiveJourney } from "./adapter.ts";
 import { CLAUDE_SDK_PROMPT, type ClaudeSdkWorkerEvent } from "./claude-sdk.ts";
+import { CLAUDE_TUI_PROMPT } from "./claude-tui.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
 
@@ -94,6 +95,35 @@ export function createClaudeSdkJourney(timeoutMs = 90_000): LiveJourney {
             terminalSubtype: terminal?.subtype,
             outputEvidence,
           })),
+          source: "assertion",
+        }],
+      };
+    },
+  };
+}
+
+export function createClaudeTuiJourney(): LiveJourney {
+  return {
+    id: "claude-tui-anchor-v1",
+    prompt: CLAUDE_TUI_PROMPT,
+    timeoutMs: 120_000,
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution) => {
+      const passed = execution.exitCode === 0 &&
+        execution.structured?.anchorVerified === true &&
+        execution.structured.inputCount === 1 &&
+        typeof execution.structured.paneDigest === "string" &&
+        typeof execution.structured.sessionDigest === "string";
+      return {
+        passed,
+        diagnostic: passed
+          ? "private TUI session, current-run file anchor, and bounded pane evidence passed"
+          : "Claude TUI anchor mismatch",
+        evidence: [{
+          kind: "claude-tui-anchor",
+          value: digest(
+            `${execution.exitCode}:${execution.structured?.anchorVerified}:${execution.structured?.inputCount}:${execution.structured?.paneDigest}`,
+          ),
           source: "assertion",
         }],
       };

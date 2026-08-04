@@ -207,7 +207,7 @@ describe("live E2E lifecycle", () => {
     }
   });
 
-  test("timeout aborts execution and cleanup failure takes precedence", async () => {
+  test("cleanup barrier failure suppresses the ledger and preserves the timeout as secondary context", async () => {
     const root = fixtureRoot();
     const adapter = new FakeAdapter();
     adapter.execution = { ...adapter.execution, timedOut: true };
@@ -215,15 +215,14 @@ describe("live E2E lifecycle", () => {
     try {
       const result = await runLiveJourney(adapter, journey(), context(root, adapter));
       expect(result).toMatchObject({
-        ok: true,
-        value: {
-          outcome: {
-            code: "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED",
-          },
+        ok: false,
+        error: {
+          kind: "cleanup-barrier-failed",
+          originalOutcome: { code: "AMADEUS_LIVE_E2E:TIMEOUT:JOURNEY_TIMEOUT" },
         },
       });
-      expect(JSON.stringify(result)).toContain("TIMEOUT:JOURNEY_TIMEOUT");
       expect(adapter.events).toContain("cleanup");
+      expect(Bun.file(join(root, "runs.jsonl")).size).toBe(0);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

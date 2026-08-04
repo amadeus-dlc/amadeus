@@ -6,7 +6,9 @@ This runbook describes the opt-in, local-only journey used to verify an Amadeus 
 
 Live journeys never run on GitHub Actions, even if an opt-in variable is set. Each adapter has a dedicated opt-in whose only accepted value is the exact string `1`. The child process receives a newly constructed allow-list environment and a short-lived credential lease; it does not receive or copy source auth files, user configuration, user hooks, source home paths, prompts, or full stdout/stderr in durable evidence.
 
-The `codex-exec` adapter requires `AMADEUS_CODEX_EXEC_LIVE=1`, Codex CLI 0.139.0 or newer, `dist/codex`, and an `OPENAI_API_KEY` credential lease. The `claude-print` adapter requires `AMADEUS_CLAUDE_PRINT_LIVE=1`, Claude Code 2.1.220 or newer with the measured print flags, and `dist/claude`. The `claude-sdk` adapter separately requires `AMADEUS_CLAUDE_SDK_LIVE=1`, Claude Agent SDK 0.3.158 or newer, and `dist/claude`. Claude authentication is either a short-lived `ANTHROPIC_API_KEY` binding or a native keychain credential confirmed by `claude auth status --json`; source `HOME`, `CLAUDE_CONFIG_DIR`, and user/local settings are never forwarded. The SDK adapter owns the SDK client and stream in an isolated worker group, transfers an environment credential through one length-prefixed stdin frame, and escalates abort to TERM and KILL before cleanup. Cleanup and credential-leak findings override an otherwise successful or timed-out run.
+The `codex-exec` adapter requires `AMADEUS_CODEX_EXEC_LIVE=1`, Codex CLI 0.139.0 or newer, `dist/codex`, and an `OPENAI_API_KEY` credential lease. The `claude-print` adapter requires `AMADEUS_CLAUDE_PRINT_LIVE=1`; the `claude-tui` adapter requires `AMADEUS_TUI_LIVE=1` and tmux. Both adapters require Claude Code 2.1.220 or newer with their measured flags and `dist/claude`. The `claude-sdk` adapter separately requires `AMADEUS_CLAUDE_SDK_LIVE=1`, Claude Agent SDK 0.3.158 or newer, and `dist/claude`. Claude authentication is either a short-lived `ANTHROPIC_API_KEY` binding or a native keychain credential confirmed by `claude auth status --json`; source `HOME`, `CLAUDE_CONFIG_DIR`, and user/local settings are never forwarded. The SDK adapter owns the SDK client and stream in an isolated worker group, transfers an environment credential through one length-prefixed stdin frame, and escalates abort to TERM and KILL before cleanup.
+
+Cleanup is a barrier, not another recorded outcome. A cleanup error, leak finding, or retained resource returns `cleanup-barrier-failed` and suppresses ledger append even when execution/assertion succeeded. Only the sequence `executed/asserted → cleanup-barrier-closed → ledger-appended|already-present → closure-committed` can release a PASS receipt or a supported matrix projection.
 
 ## Running a live journey
 
@@ -37,6 +39,15 @@ AMADEUS_CLAUDE_SDK_LIVE=1 ANTHROPIC_API_KEY='…' \
 
 The parent process imports no SDK client. It creates a fresh project/home, starts one SDK-owning worker group, sends the run-bound credential frame once, and drives the literal `echo ok` prompt with project-only settings. The worker emits only bounded, sanitized JSON events. Success requires exactly one terminal success result, positive turn count, zero permission denials, ordered state/audit observations, and non-empty tool-result or assistant-byte evidence. A 90-second deadline requests SDK abort, waits 10 seconds, then escalates to TERM for 5 seconds and KILL/reap for 5 seconds. A single event over 65,536 bytes, total event output over 1 MiB, more than 4,096 events, an in-memory queue over 16 events or 256 KiB, a duplicate or late terminal, or any cleanup/credential leak is non-green.
 
+Run the serial Claude TUI journey only from a clean local worktree:
+
+```bash
+AMADEUS_TUI_LIVE=1 ANTHROPIC_API_KEY='…' \
+  bun test --timeout 180000 tests/e2e/t-claude-tui-kernel.serial.test.ts
+```
+
+The TUI runner starts Claude with project-only settings and scratch-confined `acceptEdits` permission inside a run-private `tmux -S` server and session. It waits for a painted pane, sends one prompt bound to the 128-bit run ID, verifies the exact current-run file anchor, retains only bounded pane digests, and then closes session, server, credential, and scratch resources before the ledger can be called. It never lists, attaches to, or kills a session on the default tmux server.
+
 ## Ledger and matrix
 
 Recorded runs append atomically to `tests/harness/live-e2e/runs.jsonl`. A recorded receipt contains adapter/version/SHA/time/result and bounded digests, never raw credentials, absolute source paths, prompts, or full output. A pending durability marker is not green evidence; recover the identical receipt before projecting it.
@@ -56,6 +67,7 @@ The live test updates only the ledger. Maintainers explicitly run `update`, revi
 |---|---|---|---|---|---|---|---|---|---|
 | claude-print | claude | print | `AMADEUS_CLAUDE_PRINT_LIVE` | hard deny | fresh project/home; project settings only; native keychain or env credential lease | exit, schema, state | UNVERIFIED | 2.1.220 / 2.1.220 | — |
 | claude-sdk | claude | agent-sdk | `AMADEUS_CLAUDE_SDK_LIVE` | hard deny | SDK-owned worker group; one-shot credential pipe; project settings only | schema, tool, state, audit | UNVERIFIED | 0.3.158 / 0.3.158 | — |
+| claude-tui | claude | tui | `AMADEUS_TUI_LIVE` | hard deny | fresh project/home; project settings only; run-private tmux socket and session | file, state | UNVERIFIED | 2.1.220 / 2.1.220 | — |
 | codex-exec | codex | exec | `AMADEUS_CODEX_EXEC_LIVE` | hard deny | fresh project/home; env credential lease; no source config or hooks | exit, schema, file | UNVERIFIED | 0.139.0 / 0.146.0 | — |
 <!-- AMADEUS_LIVE_E2E_MATRIX:END -->
 
