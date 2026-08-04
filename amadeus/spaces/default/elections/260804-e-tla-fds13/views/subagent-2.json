@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TLA-FDS13",
+  "voter": "subagent-2",
+  "question": "intent 260804-tla-authoring の functional-design ステージ §13 学習選定。diary 9 候補のうち、conductor 提案は c8 の一般形 1 件のみを memory 層(project.md ## Corrections)へ persist し、他 8 件(c1〜c7, c9)は intent 固有の設計決定として record 固定に留める(不採用理由: いずれも本 intent の成果物・ADR に既に固定済みで、一般化価値がない)。各候補の実在根拠は record の construction/functional-design/memory.md(diary)で実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c8 のみ採用(提案どおり)",
+      "description": "persist 対象の c8 一般形: 「ADR が『既存機構に載るだけ・engine 無変更』と確約する場合、その機構の供給面(advisory code 等の語彙の産地・実行コマンドの構成点)が宣言駆動か engine 側ハードコードかを、設計段(遅くとも functional-design 冒頭)の実読で file:line 確定してから Decision に固定する — 発火点・解除規則の fail-closed 実測(存在の実測)だけでは『宣言だけで結線できる』ことは確定しない(実測: 260804-tla-authoring U2 FD 冒頭実読で ADR-6 の宣言駆動前提が否定され(formal_checks コマンドが engine 側固定)、人間裁定で ADR-6 を宣言駆動化へ改訂。cid:application-design:external-seam-vocab-measurement の『機構供給面』への追補)」。他 8 候補は不採用(intent 固有)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "採用集合の変更",
+      "description": "c8 以外の候補を採用に含める、または c8 の文面修正が必要(留保に具体を記す)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "0 件(c8 も不採用)",
+      "description": "9 候補すべてを record 固定のみとし、memory 層へは persist しない。"
+    }
+  ]
+}
