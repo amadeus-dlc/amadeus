@@ -13,6 +13,10 @@ import {
   type ResumeCondition,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
+import {
+  SELF_INSTALL_HARNESS_IDS,
+  type SelfInstallHarnessId,
+} from "./amadeus-harness-registry.ts";
 
 export const AUTO_DECISION_REVIEWED_EVENT = "AUTO_DECISION_REVIEWED";
 
@@ -592,7 +596,7 @@ function planDecisionReview(
     remediation,
   };
   const event: AutoDecisionReviewedEvent = {
-    eventType: AUTO_DECISION_REVIEWED_EVENT,
+    eventType: "AUTO_DECISION_REVIEWED",
     eventIdentity,
     transactionId,
     payloadDigest: payloadDigest.value,
@@ -1099,8 +1103,8 @@ export function projectReviewTelemetry(input: ReviewTelemetryInput): Readonly<Re
   return attributes;
 }
 
-export type ReviewHarnessId = "claude" | "codex" | "cursor" | "opencode" | "kimi";
-export const REQUIRED_REVIEW_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
+export type ReviewHarnessId = SelfInstallHarnessId;
+export const REQUIRED_REVIEW_HARNESSES = SELF_INSTALL_HARNESS_IDS;
 export interface ReviewHarnessContractResult {
   readonly harnessId: ReviewHarnessId;
   readonly fixtureId: string;

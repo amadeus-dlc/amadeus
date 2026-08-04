@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 602,
+    "total": 604,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 88,
+      "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 176,
-      "audit": 41,
+      "audit": 43,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -81,6 +81,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t355-audit-merge-info-seams.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "AUTO_DECISION_REVIEWED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t433-autonomy-review-observability.test.ts",
           "mechanism": "none"
         }
       ],
@@ -323,6 +335,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t434-intent-completion.test.ts",
           "mechanism": "none"
         }
       ],
