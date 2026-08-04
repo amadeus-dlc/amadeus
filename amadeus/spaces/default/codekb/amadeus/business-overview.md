@@ -1,6 +1,16 @@
 # ビジネス概要
 
-## state integrity の業務境界（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence の revision 再バインドの業務境界（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の測定 ref はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（= `origin/main`）。差分 base は `498c3034a78bd432dc426f9f807b79c8ae980762`（祖先性 `git merge-base --is-ancestor` exit 0、距離 11）。全数列挙・実測手順は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+- 対象: [Issue #2156](https://github.com/amadeus-dlc/amadeus/issues/2156)（`bug` / `P0` / `S1-FATAL`、クロスレビュー2名 `XREV-2156-20260804` CONFIRMED_WITH_REFINEMENTS 成立済み）。scope は `self-fix`、Depth: Minimal。
+- 利用者影響: **`main` の必須チェックが不成立で、マージ経路が全面停止している。** 必須チェックは ruleset `main`（id `18843917`、`enforcement: active`）の `required_status_checks` = `['CI Success']` の1件のみ（classic protection は 404 `Branch not protected`）だが、`CI Success` は `ci.yml:893-906` の `needs: [changes, typecheck, lint, distribution-contract, plugin-conformance-e2e, tests, reproducible-build, drift-check, coverage]` + `if: ${{ always() }}` の集約ジョブであるため、`tests` の赤がそのまま必須チェックの赤になる。
+- 例外: `paths-ignore` により record / docs-only PR は `Tests` が skipped となり着地しうる（実例 `498c3034a`）。「以後の全 PR がブロック」は厳密には過大であり、同時にこの迂回が導入時の赤を長期間不可視にした一因でもある（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` の再演）。
+- 出荷単位: 業務構造・公開契約の変更はない。是正は (a) 台帳3層の revision 再バインドによる止血と、(b) 「PR ブランチ SHA が台帳へ入らない／着地後に main SHA へ再バインドされる」再発防止の2面に閉じる。(b) の方式は未裁定であり、**即時の再バインドだけでは次に registry を更新する PR で再発する**。
+- 業務上の性質: この欠陥は **PR 上では原理的に観測できない**。PR ブランチでは記録 SHA が到達可能なので緑になり、スカッシュ着地の瞬間に到達不能へ反転する。レビューでも PR CI でも捕捉できないため、同一設計から4回中3回再発した（記録元の追跡はレビュー verdict 2件が独立に一致）。
+
+## state integrity の業務境界（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 > **測定 ref の訂正（Step 1 preflight の後追い実施）。** 本 intent の RE は、ステージ Step 1 の preflight（差分リフレッシュ前に trunk を統合する）を**当初スキップしたまま**走った。preflight は事後に是正パスとして実施され、observed はその統合後の HEAD `6c15af23a` である。統合した 6 コミットは患部ソース 6 ファイルを **1 行も変更していない**（`git diff --stat 498c3034a..origin/main -- packages/framework/core/tools/{amadeus-lib,amadeus-state,amadeus-audit,amadeus-jump,amadeus-utility,amadeus-bolt}.ts` が空出力・exit 0。Architect が独立に再実測）。したがって本節の行番号・引用はいずれも preflight 前後で不変である。経緯の全文は `re-scans/260803-state-integrity.md` §実行メタデータ。
 

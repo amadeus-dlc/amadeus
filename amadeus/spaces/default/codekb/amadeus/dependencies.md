@@ -1,6 +1,42 @@
 # 依存関係
 
-## state integrity の依存関係（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドの依存関係（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。**新規の外部依存・service・network I/O は不要**であり、関係するのはリポジトリ内部の依存方向と台帳間の束縛方向のみである。
+
+### 台帳間の依存方向（不動点の閉路）
+
+```
+adoption-runs.json (testedRevision 25)
+        │ バイト digest
+        ▼
+adoption-evidence-manifest.json (testedRevision 24 / artifact.sha256 25)
+        │ canonicalBinding = f(testedRevision, artifact digest)
+        ▼
+adoption-evidence.json (currentRevision 24 / evidenceDigest 23)
+        │ registry.currentRevision を自身の期待値として渡す
+        ▼
+t413…test.ts:164 validateEvidenceRegistry(registry, registry.currentRevision)
+```
+
+`testedRevision` を1箇所でも変えると下流2段の digest が連鎖して変わるため、**単層の書き換えは必ず不整合を残す**（段階 A で 48 problems、段階 B で 23、段階 C で 0）。逆に3層を順に処理すれば決定的に閉じる。
+
+### コード依存
+
+- `t413…test.ts` → `repository-adoption.ts`（`validateEvidenceRegistry`）→ `repository-adoption-evidence.ts`（`canonicalBinding` / `parseManifestEntries` / `readArtifactCollection`）。
+- `tests/no-silent-drop-gate.ts` → `engine.ts`（`Mode` 4種）→ 各検証器。**書込側の依存は一切ない**（8ファイルの書込 API 出現数 0）。
+- `bootstrap.ts` → `bootstrap-provenance.json`。`:493-495` の条件により、信頼ベースに `baseline.json` が存在する通常運用ではこの依存経路は**呼ばれない**（fallback 専用）。
+
+### 外部依存
+
+- `git`（`spawnSync` 経由）。台帳に永続化した SHA の到達性が git の実際の履歴に依存する構造が欠陥の根である。
+- GitHub ruleset `main`（id `18843917`）→ `CI Success`（`ci.yml:893-906`）→ `tests` / `coverage` ほか9ジョブ。必須チェックの依存はこの1本のみ。
+
+### 直列化点
+
+台帳3ファイルは単一の不動点として同時に更新される必要がある。分割コミット・分割 PR で段階更新すると中間状態が必ず赤になるため、再バインドは**1変更単位で閉じる**必要がある（要件段の制約として引き継ぐ）。
+
+## state integrity の依存関係（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。**新規の外部依存・service・network I/O は不要**である。関係するのはすべてリポジトリ内部の依存方向である。
 

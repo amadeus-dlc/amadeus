@@ -1,6 +1,46 @@
 # API ドキュメント
 
-## state integrity が対象とする契約（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドが対象とする契約（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。全数列挙は `re-scans/260804-evidence-revision-rebind.md` を正本とする。本 intent が触れるのは公開 CLI 契約ではなく、**台帳3層の内部束縛契約とゲート CLI の subcommand 面**である。
+
+### 台帳束縛契約（すべて内部・検証器が強制）
+
+| 契約 | 強制点 | 破れたときの problem 文字列 |
+| --- | --- | --- |
+| registry の receipt は top-level revision と一致 | `repository-adoption.ts:182` | `receipt <id> revision mismatch` |
+| registry の receipt digest は manifest 由来 digest と一致 | `repository-adoption.ts:183-187` | `receipt <id> evidence digest does not match repository evidence` |
+| manifest top-level revision は期待 revision と一致 | `repository-adoption-evidence.ts:360` | `evidence manifest revision mismatch` |
+| manifest entry revision は期待 revision と一致 | `repository-adoption-evidence.ts:197` | `evidence <id> revision mismatch` |
+| 成果物レコードの revision は manifest entry と一致 | `repository-adoption-evidence.ts:268` | `<label> revision mismatch` |
+| 成果物 digest は実バイト digest と一致 | `repository-adoption-evidence.ts` の `artifactDigests` 経路 | `artifact digest mismatch` |
+
+`canonicalBinding()`（`repository-adoption-evidence.ts:333-351`）が `entry.testedRevision`（`:337`）と成果物の実バイト digest（`:343`）の両方を digest 入力に取るため、これらは**独立に満たせる契約ではなく3層の不動点**をなす。
+
+### ゲート CLI 契約
+
+- `engine.ts:49` `export type Mode = "check" | "census-evidence" | "approve-evidence" | "baseline-candidate";` — **4種のみ**。
+- 出力は `tests/no-silent-drop-gate.ts:35` `process.stdout.write(\`${JSON.stringify(result)}\n\`)` の JSON 一本。
+- **台帳を書く subcommand は存在しない。** 再バインドを CLI 契約として表現するなら `Mode` の拡張（= 公開 CLI 契約の追加）になる。この選択は未裁定。
+- 検証者向け注意: `bun tests/no-silent-drop-gate.ts` は引数なしでも exit 0 で usage JSON を返す。**exit code で可否を読まないこと**（両クロスレビューの手法メモ）。
+
+### CI 契約
+
+- 必須チェックは ruleset `main`（id `18843917`、`enforcement: active`）の `required_status_checks` = `['CI Success']` **1件のみ**。classic protection は `branches/main/protection` が 404 `Branch not protected`。
+- `CI Success` は集約ジョブ: `ci.yml:893` `ci-success:` / `:894` `name: CI Success` / `:896` `needs:` / `:897-905` の9依存 / `:906` `if: ${{ always() }}`。Issue 本文の `ci.yml:894-906` は observed では **`:893-906`**（精密化）。
+
+### t413 assertion 契約（#2156 と #2153 の切り分け）
+
+| 行 | assertion | 帰属 |
+| --- | --- | --- |
+| `:157` | `git cat-file -e ${registry.currentRevision}^{commit}` → 0 | **#2156**（fresh clone 形・CI の実失敗行） |
+| `:158-163` | `merge-base --is-ancestor currentRevision headRevision` → 0 | **#2156**（オブジェクト在るフルクローン形） |
+| `:164` | `validateEvidenceRegistry(registry, registry.currentRevision)` → `{ok:true}` | どちらでもない（自己参照的期待値のため現状は緑。**不完全な再バインドでここが赤になる**） |
+| `:165-173` | `git diff --name-only ${currentRevision}..${headRevision} -- packages/framework/core/tools ':(glob)tests/no-silent-drop/**/*.ts'` が空 | **#2153**（path spec が被検査対象 `core/tools` を含む） |
+
+両者は独立であり、#2156 を再バインドで閉じても #2153 の面は生き続ける。ただし**同一テスト・同一 test 名**を共有するため、片方だけ直しても test 名単位では赤が残りうる。
+
+## state integrity が対象とする契約（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節の file:line はすべて observed `6c15af23a` 時点。全数列挙は `re-scans/260803-state-integrity.md` を正本とする。本 intent が触れるのは公開 CLI 契約ではなく、**内部の相互排他契約と state フィールドの意味論契約**である。
 

@@ -1,6 +1,38 @@
 # コード構造
 
-## state integrity の患部配置（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドの患部配置（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。差分 base は `498c3034a`（祖先性 exit 0、距離 11）。全数列挙と引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+### 患部ファイル（3層 + 検査 + ゲート実装）
+
+| 区分 | パス | 役割 | worktree vs observed |
+| --- | --- | --- | --- |
+| 台帳(正本) | `tests/no-silent-drop/adoption-evidence.json` | `currentRevision` 24 / `evidenceDigest` 23 | DIFF |
+| 台帳(manifest) | `tests/no-silent-drop/adoption-evidence-manifest.json` | `testedRevision` 24 / `artifact.sha256` 25 | DIFF |
+| 台帳(成果物レコード) | `tests/no-silent-drop/evidence/adoption-runs.json` | `testedRevision` 25 | DIFF |
+| 検査 | `tests/integration/t413-no-silent-drop-ci-adoption.test.ts` | `:151-174` の到達性・digest・鮮度 assertion | DIFF |
+| 検証器 | `tests/no-silent-drop/repository-adoption.ts` | `:182` receipt revision / `:183-187` digest | SAME |
+| 検証器 | `tests/no-silent-drop/repository-adoption-evidence.ts` | `:197` / `:268` / `:333-351` / `:360` | SAME |
+| ゲート CLI | `tests/no-silent-drop-gate.ts` / `engine.ts` | `:35` stdout のみ / `:49` mode 4種 | SAME |
+| bootstrap | `tests/no-silent-drop/bootstrap.ts` / `bootstrap-provenance.json` | `:331` / `:427-428` / `:432` / `:493-495` | SAME |
+| CI | `.github/workflows/ci.yml` | `:893-906` `ci-success` 集約 | — |
+
+**引用は必ず observed から取ること**（`git show "${OBS}:<path>"`）。この worktree（HEAD `668e88665`）は台帳3ファイルと t413 で observed と内容が異なる（`cmp` 実測）。
+
+### base 区間の touch 判定
+
+`git diff --name-status 498c3034a 9458bbda8` により、患部のうち `ci.yml` / t413 / `no-silent-drop-repository-adoption.test.ts` / 台帳6ファイルが区間内で **M**（変更あり）。にもかかわらず**行番号再解決は免除される** — 両クロスレビュー verdict の `<!-- target-sha: 9458bbda8… -->` が observed と同一で、レビュー対象 SHA == observed が成立するため（`cid:reverse-engineering:c1-xrev-single-issue` / E-OBB5-RES13）。免除の根拠は touch の有無ではない点を明記する。
+
+### 区間規模と支配的変化
+
+`git diff --name-only 498c3034a 9458bbda8 | wc -l` = **7283 files**。支配的な変更は `9458bbda8`（PR #2152）による生成物の Git 追跡除去（`--name-status` 分類集計: `D dist` 3951 / `D .claude` 580 / `D .kimi-code` 578 / `D .codex` 552 / `D .opencode` 539 / `D .cursor` 536 / `D .agents` 94）。生成物・`amadeus/` record・`metrics/` を除いた実質変更は **227 files**。区間の 11 コミット: `9458bbda8`(#2152) / `9e699ea79`(#2151) / `1f4498fcc`(#2150) / `3b3caf45c`(#2149) / `3972a5e01`(#2146) / `763ebf676`(#2142) / `7a51ace47`(#2141) / `52a082af7`(#2136) / `272cac2af`(#2138) / `dece5e59d`(#2137) / `a2f08658e`(#2127)。
+
+### 新設が要る配置面
+
+再バインドを実行する書込経路は存在しない（8ファイル 0 write / 4 subcommand が stdout のみ）。新設の配置先は `tests/no-silent-drop/`（既存検証器の隣）か `engine.ts:49` の `Mode` 拡張が自然な候補だが、方式は未裁定であり要件段の判断に委ねる。
+
+## state integrity の患部配置（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節の file:line はすべて observed `6c15af23a` 時点。全数列挙と引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。
 

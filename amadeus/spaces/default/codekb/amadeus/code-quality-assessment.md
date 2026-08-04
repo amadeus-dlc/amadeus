@@ -1,6 +1,61 @@
 # コード品質評価
 
-## state integrity の品質所見（260803-state-integrity、現在、observed `6c15af23a`）
+## no-silent-drop evidence 再バインドの品質所見（260804-evidence-revision-rebind、現在、observed `9458bbda8`）
+
+本節の file:line はすべて observed `9458bbda85eb7257310a80882b4858dc6ce3d1fc` 時点。実測手順・全数列挙・引用 spot-check は `re-scans/260804-evidence-revision-rebind.md` を正本とする。
+
+### 構造的な検出不能性（最重要）
+
+**この欠陥は PR 上では原理的に観測できない。** PR ブランチでは記録 SHA が到達可能なので t413 は緑になり、スカッシュ着地の瞬間に到達不能へ反転する。PR CI でもレビューでも捕捉できず、同一設計から反復再発した。両クロスレビューが独立に4世代を追跡し一致した結果:
+
+| 着地コミット | 記録 SHA | main の祖先 | main CI |
+| --- | --- | --- | --- |
+| `7c29e33f7`（#1979 / PR #2088、導入） | `fc49f8de2` | NO | **failure** |
+| `a2f08658e`（PR #2127） | `7c29e33f7` | **YES** | success |
+| `9e699ea79`（PR #2151） | `173cfbe6d` | NO | **failure** |
+| `9458bbda8`（PR #2152、現 main） | `3734885cb` | NO | **failure** |
+
+- **欠陥は出生時から存在した** — 導入コミット `7c29e33f7` 自身の CI が既に赤い。
+- **緑だった期間は偶然による** — `a2f08658e` がたまたま直前の mainline SHA を記録しただけで設計上の保証ではない。
+- 4回中3回が PR ブランチ SHA を記録している。再発率 3/4 は記入ミスではなく構造的欠落を示す。
+- 赤の起点は #2152 ではなく `9e699ea79`、さらに遡ると導入コミット自身。長期間不可視だったのは `paths-ignore` による `Tests` skip（実例 `498c3034a`）が一因。
+
+### 自己参照的 assertion
+
+`t413…test.ts:164` `validateEvidenceRegistry(registry, registry.currentRevision)` は期待値として registry 自身のフィールドを渡すため、**registry が内部整合でありさえすれば revision の正しさによらず緑になる**。この行は台帳の外部妥当性を何も検査しない。到達性を担保しているのは `:157` / `:159` の git 解決だけである（`cid:requirements-analysis:verification-numeric-parse` の自己参照比較クラスに近い）。不完全な再バインドを行うとこの行が初めて赤になる（段階 A/B）。
+
+### 検査対象と検査実装を混ぜた path spec
+
+`t413…test.ts:165-173` の鮮度 diff は path spec に `packages/framework/core/tools`（= 被検査対象）と `':(glob)tests/no-silent-drop/**/*.ts'`（= 検証器の実装）を同居させている。#2153 の主張どおり、これは「検証器の実装面」と「検証器が検査する対象面」を混同しており、対象面が動くたびに台帳更新を強制する。observed で live であることを実測（`core/tools` leg が非空、ゲート実装 leg は 0）。
+
+### 書込経路の不在は「修復不能」を意味しない
+
+Issue 本文と両クロスレビューは「evidence bundle の再 adoption 経路が無いため修復不能」を前提にしていたが、**反証された**（[Issue #2156 訂正コメント](https://github.com/amadeus-dlc/amadeus/issues/2156) 2026-08-04T01:37:53Z）。不動点は機械的に計算可能で `ok: true` / `10 pass 0 fail` / `NO_SILENT_DROP_OK` へ閉じる。**不在なのは再生成ロジックではなく書込経路である**（8ファイル 0 write / 4 subcommand が stdout のみ）。この評価を今後の成果物で退行させないこと。
+
+### クロスレビュー verdict との相違（精密化）
+
+- verdict は「23 receipt 全件が `primary revision mismatch`」と記述するが、実測の内訳は **run 単位 25 件**で、うち4件は名前が `primary` ではない（`full-test:normal` / `full-test:isolated-known-timeouts` / `coverage:normal` / `coverage:isolated-known-timeouts`）。
+- このメッセージの発生元は `canonicalBinding` ではなく `repository-adoption-evidence.ts:268`（`summaryMatchesRun`）。`canonicalBinding` が効くのは同時に出ている 23 件の digest 問題の方である。
+- Issue 本文の `ci.yml:894-906` は observed では `:893-906`。
+- 必須チェックは `CI Success` 1件のみ（本文の列挙は不正確だが、集約ジョブのため「マージ不可」の結論は成立）。
+- ローカルのフルクローンでは `:157` ではなく `:159` で落ちる（オブジェクトが PR ブランチ経由で在るため）。CI 形の再現には `file://` clone が要る。
+
+### 同一設計クラスの3件目 — bootstrap fallback の恒久破損
+
+`bootstrap-provenance.json` は `candidate.digest` 乖離（`a2f08658e` 以降）・`bootstrap.ts:331` の等値破れ・`postRevision` のオブジェクト不在という3重の破損を抱え、bootstrap fallback は**恒久 fail-closed**。CI の実運用ベースは常にゲート導入後の SHA なので `bootstrap.ts:493-495` の条件で git 経路が選ばれ顕在化しない。**fail-closed 側なので偽緑は生まないが、fallback は事実上死んでいる**（`cid:requirements-analysis:symmetric-pair-review` の片側実装クラス）。
+
+### 良い面
+
+- 検証器は3層の束縛を**すべて明示の problem 文字列で loud に報告する**（`revision mismatch` / `digest does not match` / `artifact digest mismatch`）。無音の fail-open はない。
+- 検証器側 `.ts` に書込 API が 0 件であることは、検証器が状態を持たない純検査であることの担保でもある。
+- ゲート導入時に t413 という到達性検査を置いたこと自体は正しく、実際に欠陥を検出し続けている。問題は検出時点が着地後である点に閉じる。
+
+### テスト空白
+
+- **台帳更新（再バインド）を検査するテストは存在しない** — 書込経路が無いため当然だが、新設時には「不動点が閉じること」を pin するテストが要る（段階 A/B が赤・段階 C が緑になる対照）。
+- `bootstrap-provenance.json` の整合（candidate digest / postRevision）を pin するテストも不在。fallback 経路が呼ばれないため、破損したまま全 CI が緑を維持している。
+
+## state integrity の品質所見（履歴: 260803-state-integrity、2026-08-03、observed `6c15af23a`）
 
 本節の file:line はすべて observed `6c15af23a` 時点。実測手順・全数列挙・引用 spot-check は `re-scans/260803-state-integrity.md` を正本とする。
 
