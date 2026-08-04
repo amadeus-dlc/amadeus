@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import {
   loopMonitorPartitionKey,
+  loopMonitorReceiptId,
   type LoopMonitorCommitReceipt,
   type LoopMonitorEvent,
   type LoopMonitorEventSet,
@@ -93,10 +94,23 @@ function walPath(indexDir: string): string {
   return join(indexDir, LOOP_MONITOR_REPLAY_WAL_FILE);
 }
 
+function removeTemporaryBestEffort(path: string): void {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    return;
+  }
+}
+
 function writeJsonAtomic(path: string, value: unknown): void {
   const temporary = `${path}.tmp-${randomUUID()}`;
-  writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-  renameSync(temporary, path);
+  try {
+    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+    renameSync(temporary, path);
+  } catch (cause) {
+    removeTemporaryBestEffort(temporary);
+    throw cause;
+  }
 }
 
 function emptyIndex(): ReplayIndex {
@@ -129,9 +143,81 @@ const EVENT_TYPES = new Set<LoopMonitorEvent["type"]>([
   "LIVE_SMOKE_AUTHORIZED",
 ]);
 
+function validTrace(value: unknown): boolean {
+  return isRecord(value) && typeof value.traceId === "string" && typeof value.spanId === "string";
+}
+
+function validRouteConstraint(value: unknown): boolean {
+  return isRecord(value) && Array.isArray(value.routeIds) &&
+    value.routeIds.every((routeId) => typeof routeId === "string") &&
+    typeof value.fingerprint === "string";
+}
+
+function validReservation(value: unknown): boolean {
+  return isRecord(value) && typeof value.invocationId === "string" &&
+    typeof value.monitorId === "string" && Number.isInteger(value.epoch) &&
+    typeof value.triggerDeliveryId === "string" && typeof value.graphRevision === "string" &&
+    typeof value.evidenceFingerprint === "string" && typeof value.constraintFingerprint === "string" &&
+    validRouteConstraint(value.routeConstraint) && validTrace(value.trace);
+}
+
+function validLatch(value: unknown): boolean {
+  return isRecord(value) && typeof value.monitorId === "string" && Number.isInteger(value.epoch) &&
+    typeof value.evidenceFingerprint === "string" && typeof value.invocationId === "string" &&
+    typeof value.routeId === "string" && typeof value.reasonCode === "string" &&
+    typeof value.resumeCondition === "string";
+}
+
+function validDelivery(value: unknown): value is LoopDelivery {
+  if (!isRecord(value) || typeof value.deliveryId !== "string" || !validPartition(value.partition) ||
+    typeof value.eventId !== "string" ||
+    (value.predecessorDeliveryId !== null && typeof value.predecessorDeliveryId !== "string") ||
+    typeof value.upstreamEventIdentity !== "string" || typeof value.payloadFingerprint !== "string" ||
+    !isRecord(value.payload) || typeof value.payload.stageId !== "string" ||
+    !Array.isArray(value.payload.references) || !isRecord(value.evidence) ||
+    typeof value.evidence.fingerprint !== "string" || !Array.isArray(value.evidence.obligationIds) ||
+    !validRouteConstraint(value.routeConstraint) || !validTrace(value.trace)) return false;
+  return value.payload.references.every((reference) =>
+    isRecord(reference) && typeof reference.kind === "string" &&
+    typeof reference.id === "string" && typeof reference.digest === "string"
+  ) && value.evidence.obligationIds.every((id) => typeof id === "string");
+}
+
 function validEvent(value: unknown): value is LoopMonitorEvent {
-  return isRecord(value) && typeof value.type === "string" &&
-    EVENT_TYPES.has(value.type as LoopMonitorEvent["type"]);
+  if (!isRecord(value) || typeof value.type !== "string" ||
+    !EVENT_TYPES.has(value.type as LoopMonitorEvent["type"])) return false;
+  switch (value.type as LoopMonitorEvent["type"]) {
+    case "LOOP_DELIVERY_OBSERVED":
+      return validDelivery(value.delivery);
+    case "LOOP_MONITOR_TRIGGERED":
+    case "LOOP_JUDGE_STARTED":
+      return validReservation(value.reservation);
+    case "LOOP_JUDGE_ATTEMPT_STARTED":
+      return typeof value.invocationId === "string" && value.attempt === 1 &&
+        typeof value.attestationId === "string" && validTrace(value.trace);
+    case "LOOP_JUDGE_RESULT_OBSERVED":
+      return isRecord(value.result) && typeof value.result.invocationId === "string" &&
+        typeof value.result.routeId === "string" && typeof value.result.evidenceFingerprint === "string" &&
+        typeof value.result.constraintFingerprint === "string" && validTrace(value.result.trace);
+    case "LOOP_JUDGE_COMPLETED":
+      return typeof value.invocationId === "string" && typeof value.routeId === "string";
+    case "LOOP_ROUTE_APPLIED":
+      return typeof value.invocationId === "string" && typeof value.routeId === "string" &&
+        (value.targetEvent === null || typeof value.targetEvent === "string");
+    case "LOOP_LATCH_SET":
+      return validLatch(value.latch);
+    case "LOOP_LATCH_CLEARED":
+      return typeof value.monitorId === "string" && typeof value.priorEvidenceFingerprint === "string" &&
+        (value.basis === "evidence-change" || value.basis === "human-retry") &&
+        (value.humanTurnId === null || typeof value.humanTurnId === "string");
+    case "WORKFLOW_UNPARKED":
+      return typeof value.monitorId === "string" && typeof value.reasonCode === "string";
+    case "LOOP_JUDGE_AWAITING_HUMAN":
+      return typeof value.invocationId === "string" && typeof value.reason === "string";
+    case "LIVE_SMOKE_AUTHORIZED":
+      return typeof value.authorizationId === "string" && typeof value.actorId === "string" &&
+        typeof value.scopeDigest === "string";
+  }
 }
 
 function validEventSet(value: unknown): value is LoopMonitorEventSet {
@@ -203,7 +289,7 @@ function readIndex(indexDir: string): ReplayIndex {
 function receiptFor(set: LoopMonitorEventSet): LoopMonitorCommitReceipt {
   const eventSetDigest = digest(set);
   return {
-    receiptId: `loop-receipt-${digest([set.eventSetId, eventSetDigest]).slice("sha256:".length, 71)}`,
+    receiptId: loopMonitorReceiptId(set.eventSetId, eventSetDigest),
     eventSetId: set.eventSetId,
     eventSetDigest,
     partitionKey: set.partitionKey,

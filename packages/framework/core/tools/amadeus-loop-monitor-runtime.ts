@@ -45,6 +45,10 @@ function stableId(namespace: string, value: unknown): string {
   return `${namespace}-${sha256(value).slice("sha256:".length, "sha256:".length + 32)}`;
 }
 
+export function loopMonitorReceiptId(eventSetId: string, eventSetDigest: string): string {
+  return stableId("loop-receipt", [eventSetId, eventSetDigest]);
+}
+
 export function loopMonitorPartitionKey(partition: LoopMonitorPartition): string {
   return stableId("loop-partition", [
     partition.intentUuid,
@@ -174,7 +178,7 @@ export function createMemoryLoopMonitorRepository(
         if (options.failAppend) throw new Error("injected-loop-monitor-append-failure");
         const eventSetDigest = sha256(set);
         const receipt: LoopMonitorCommitReceipt = {
-          receiptId: stableId("loop-receipt", [set.eventSetId, eventSetDigest]),
+          receiptId: loopMonitorReceiptId(set.eventSetId, eventSetDigest),
           eventSetId: set.eventSetId,
           eventSetDigest,
           partitionKey: key,
@@ -299,7 +303,6 @@ function deliveryReplayDecision(
           : "identity-conflict";
       }
       if (
-        delivery.predecessorDeliveryId !== null &&
         observed.predecessorDeliveryId === delivery.predecessorDeliveryId &&
         observed.deliveryId !== delivery.deliveryId
       ) {
