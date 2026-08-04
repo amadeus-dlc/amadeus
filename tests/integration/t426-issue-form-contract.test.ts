@@ -174,7 +174,6 @@ describe("t426 Issue Form contract", () => {
       "kiro",
       "kiro-ide",
       "opencode",
-      "pi",
       "ハーネス非依存",
     ]);
   });
@@ -197,6 +196,9 @@ describe("t426 Issue Form contract", () => {
     expect(norm).toContain("**完了条件**を上から順に判定");
     expect(norm).toContain("`.github/ISSUE_TEMPLATE/{bug,enhancement,documentation,question}.yml`");
     expect(norm).toContain("`.github/workflows/issue-labels.yml`");
+    for (const field of ["ハーネス名", "ハーネスバージョン", "Amadeus バージョン"]) {
+      expect(norm, `missing bug field contract: ${field}`).toContain(field);
+    }
     expect(norm).not.toContain("cid:requirements-analysis:bug-issue-canonical-body");
     expect(norm).not.toContain("`.github/workflows/bug-labels.yml`");
   });

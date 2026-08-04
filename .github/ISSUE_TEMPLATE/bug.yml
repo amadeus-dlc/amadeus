@@ -108,7 +108,6 @@ body:
         - kiro
         - kiro-ide
         - opencode
-        - pi
         - ハーネス非依存
     validations:
       required: true
