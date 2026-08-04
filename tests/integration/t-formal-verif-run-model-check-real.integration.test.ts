@@ -25,6 +25,7 @@ import { beginModelCheckArtifacts } from "../../plugins/formal-model-check/tools
 import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../plugins/formal-model-check/tools/run-model-check-execution.ts";
 import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../plugins/formal-model-check/tools/run-model-check-paths.ts";
 import { StderrModelCheckReporter } from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
+import { extractDiagnosticStatistics } from "../../plugins/formal-model-check/tools/run-model-check-diagnostic.ts";
 import { NodePlannerEnvironmentPort } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 
 const REAL_TLC_AVAILABLE = process.env.AMADEUS_RUN_REAL_TLC === "1"
@@ -61,38 +62,63 @@ describe("run-model-check real Darwin acceptance", () => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   });
 
-  test.skipIf(!REAL_TLC_ENABLED)(
-    "runs the production composition in-process without writing beside the model",
-    async () => {
-      const root = mkdtempSync(join(tmpdir(), "run-model-check-real-"));
-      roots.push(root);
-      const workspace = join(root, "workspace");
-      const evidence = join(root, "evidence");
-      mkdirSync(workspace);
-      mkdirSync(evidence);
-      const model = join(workspace, "FormalElection.tla");
-      const cfg = join(workspace, "FormalElection.cfg");
-      cpSync("specs/tla/FormalElection.tla", model);
-      cpSync("specs/tla/FormalElection.cfg", cfg);
+  for (const target of [
+    { name: "FormalElection", auxiliaryModules: [] },
+    { name: "MirrorLifecycle", auxiliaryModules: ["MirrorLifecycleCore"] },
+  ] as const) {
+    test.skipIf(!REAL_TLC_ENABLED)(
+      `runs the ${target.name} production composition in-process with completion evidence`,
+      async () => {
+        const root = mkdtempSync(join(tmpdir(), "run-model-check-real-"));
+        roots.push(root);
+        const workspace = join(root, "workspace");
+        const evidence = join(root, "evidence");
+        mkdirSync(workspace);
+        mkdirSync(evidence);
+        const model = join(workspace, `${target.name}.tla`);
+        const cfg = join(workspace, `${target.name}.cfg`);
+        cpSync(`specs/tla/${target.name}.tla`, model);
+        cpSync(`specs/tla/${target.name}.cfg`, cfg);
+        for (const auxiliary of target.auxiliaryModules) {
+          cpSync(`specs/tla/${auxiliary}.tla`, join(workspace, `${auxiliary}.tla`));
+        }
 
-      const result = await runModelCheck([
-        "--model", model,
-        "--cfg", cfg,
-        "--out", join(evidence, "run"),
-        "--provider", "sandbox-exec",
-      ]);
+        const result = await runModelCheck([
+          "--model", model,
+          "--cfg", cfg,
+          "--out", join(evidence, "run"),
+          "--provider", "sandbox-exec",
+        ]);
 
-      expect(result).toMatchObject({
-        exitCode: 0,
-        outcome: { kind: "NOT_DETECTED" },
-      });
-      expect(readdirSync(workspace).sort()).toEqual([
-        "FormalElection.cfg",
-        "FormalElection.tla",
-      ]);
-    },
-    180_000,
-  );
+        expect(result).toMatchObject({
+          exitCode: 0,
+          outcome: { kind: "NOT_DETECTED" },
+        });
+        expect(result.publishedDirectory).not.toBeNull();
+        const publishedDirectory = result.publishedDirectory!;
+        const completion = JSON.parse(
+          readFileSync(join(publishedDirectory, "completion-marker.json"), "utf8"),
+        );
+        expect(completion).toMatchObject({ complete: true });
+        const statistics = extractDiagnosticStatistics(
+          readFileSync(join(publishedDirectory, "tlc-stdout.bin"), "utf8"),
+        );
+        expect(statistics).toMatchObject({
+          completionMarker: "Model checking completed. No error has been found.",
+          statesLeftOnQueue: 0,
+        });
+        expect(statistics.generatedStates).toBeGreaterThan(0);
+        expect(statistics.distinctStates).toBeGreaterThan(0);
+        expect(statistics.searchDepth).toBeGreaterThan(0);
+        expect(readdirSync(workspace).sort()).toEqual([
+          `${target.name}.cfg`,
+          `${target.name}.tla`,
+          ...target.auxiliaryModules.map((name) => `${name}.tla`),
+        ].sort());
+      },
+      180_000,
+    );
+  }
 
   test.skipIf(!PERFORMANCE_ENABLED)(
     "measures one warm-up and five Darwin production runs",

@@ -7,9 +7,10 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   FIXED_TLC_RESERVATION_BYTES,
   FsTlcToolchain,
@@ -35,17 +36,32 @@ const envelope = (code: number, payload: string) =>
 // echo THAT directory, not the scratch root itself (#1737: a fixture shaped
 // after the parser's expectation instead of real TLC output kept the
 // wired-expectation mismatch green).
-function completeOutput(modelPath: string, standardModuleDirectory: string): Uint8Array {
+function completeOutput(
+  modelPath: string,
+  standardModuleDirectory: string,
+  auxiliaryModules: readonly string[] = [],
+): Uint8Array {
+  const modelName = basename(modelPath, ".tla");
   return new TextEncoder().encode([
     envelope(2262, "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)"),
     envelope(2187, "Running breadth-first search Model-Checking with fp 33 and seed 1 with 1 worker."),
     envelope(2220, "Starting SANY..."),
     [
       `Parsing file ${modelPath}`,
+      ...auxiliaryModules.map(
+        (module) => `Parsing file ${join(dirname(modelPath), `${module}.tla`)}`,
+      ),
       ...["Naturals", "Sequences", "FiniteSets", "TLC"].map(
         (module) => `Parsing file ${join(standardModuleDirectory, `${module}.tla`)}`,
       ),
-      ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElection"].map(
+      ...[
+        "Naturals",
+        "Sequences",
+        "FiniteSets",
+        "TLC",
+        ...[...auxiliaryModules].reverse(),
+        modelName,
+      ].map(
         (module) => `Semantic processing of module ${module}`,
       ),
       "",
@@ -88,6 +104,9 @@ describe("planned TLC filesystem runtime", () => {
     if (!source.ok) throw new Error(JSON.stringify(source.error));
 
     let mode: "drift" | "overflow" | "timeout" | "complete" = "drift";
+    let activeModelPath = modelPath;
+    let activeScratch = scratch;
+    let activeAuxiliaryModules: readonly string[] = [];
     let spawns = 0;
     const signals: string[] = [];
     const reservations = new Set<string>();
@@ -147,8 +166,9 @@ describe("planned TLC filesystem runtime", () => {
               : mode === "complete"
                 ? (async function* () {
                     yield completeOutput(
-                      realpathSync(modelPath),
-                      join(realpathSync(scratch), ".tlc-stdlib"),
+                      realpathSync(activeModelPath),
+                      join(realpathSync(activeScratch), ".tlc-stdlib"),
+                      activeAuxiliaryModules,
                     );
                   })()
                 : (async function* () {})(),
@@ -250,5 +270,97 @@ describe("planned TLC filesystem runtime", () => {
       statesLeftOnQueue: 0,
       searchDepth: 9,
     });
+
+    const mirrorScratch = join(root, "mirror-scratch");
+    mkdirSync(mirrorScratch);
+    const mirrorModelPath = join(workspace, "MirrorLifecycle.tla");
+    const mirrorCfgPath = join(workspace, "MirrorLifecycle.cfg");
+    const mirrorCorePath = join(workspace, "MirrorLifecycleCore.tla");
+    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModelPath);
+    cpSync("specs/tla/MirrorLifecycle.cfg", mirrorCfgPath);
+    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+    const mirrorSource = loadRunModelCheckSource(mirrorModelPath, mirrorCfgPath);
+    if (!mirrorSource.ok) throw new Error(JSON.stringify(mirrorSource.error));
+    const mirrorReceipt = mirrorSource.value.modelReceipt;
+    if (!("schema" in mirrorReceipt)) throw new Error("MirrorLifecycle must use a verified receipt");
+
+    const prepareMirror = (modelReceipt: typeof mirrorSource.value.modelReceipt) =>
+      toolchain.preparePlanned({
+        artifact: acquired.value,
+        modelReceipt,
+        vocabulary: mirrorSource.value.vocabulary,
+        modulePath: mirrorModelPath,
+        cfgPath: mirrorCfgPath,
+        subjectAlias: "run-model-check",
+        deadlineMs: 120_000,
+        runId: "00000000-0000-4000-8000-000000000002",
+        scratchRoot: mirrorScratch,
+        planner,
+      });
+
+    expect(await prepareMirror(source.value.modelReceipt)).toMatchObject({
+      ok: false,
+      error: { code: "SOURCE_IDENTITY" },
+    });
+    for (const forgedReceipt of [
+      { ...mirrorReceipt, modelName: "FormalElection" },
+      { ...mirrorReceipt, modelIdentity: "0".repeat(64) },
+      { ...mirrorReceipt, moduleBytesIdentity: "0".repeat(64) },
+      { ...mirrorReceipt, cfgBytesIdentity: "0".repeat(64) },
+      { ...mirrorReceipt, auxiliaryModules: [] },
+      { ...mirrorReceipt, vocabulary: { ...mirrorReceipt.vocabulary, moduleName: "FormalElection" } },
+      { ...mirrorReceipt, invariantSourceMap: {} },
+    ]) {
+      expect(await prepareMirror(forgedReceipt)).toMatchObject({
+        ok: false,
+        error: { code: "MODEL_RECEIPT" },
+      });
+    }
+
+    writeFileSync(mirrorModelPath, "---- MODULE MirrorLifecycle ----\n====\n");
+    expect(await prepareMirror(mirrorSource.value.modelReceipt)).toMatchObject({
+      ok: false,
+      error: { code: "SOURCE_IDENTITY" },
+    });
+
+    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModelPath);
+    const spawnsBeforeAuxiliaryFailures = spawns;
+    rmSync(mirrorCorePath);
+    expect((await prepareMirror(mirrorSource.value.modelReceipt)).ok).toBe(false);
+    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+    writeFileSync(mirrorCorePath, "---- MODULE MirrorLifecycleCore ----\n====\n");
+    expect((await prepareMirror(mirrorSource.value.modelReceipt)).ok).toBe(false);
+    expect(spawns).toBe(spawnsBeforeAuxiliaryFailures);
+    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+
+    activeModelPath = mirrorModelPath;
+    activeScratch = mirrorScratch;
+    activeAuxiliaryModules = ["MirrorLifecycleCore"];
+    const mirrorPrepared = await prepareMirror(mirrorSource.value.modelReceipt);
+    expect(mirrorPrepared.ok).toBe(true);
+    if (!mirrorPrepared.ok) return;
+    const mirrorComplete = await toolchain.runPlanned(mirrorPrepared.value);
+    expect(mirrorComplete.ok && mirrorComplete.value.exploration).toMatchObject({
+      kind: "COMPLETE",
+      generatedStates: 5_203_730,
+      distinctStates: 529_692,
+      statesLeftOnQueue: 0,
+      searchDepth: 9,
+      completionMarker: "Model checking completed. No error has been found.",
+      terminationReason: "EXHAUSTED",
+    });
+
+    for (const auxiliaryModules of [
+      [],
+      ["MirrorLifecycleCore", "MirrorLifecycleCore"],
+      ["MirrorLifecycleCore", "Injected"],
+    ]) {
+      activeAuxiliaryModules = auxiliaryModules;
+      const malformed = await toolchain.runPlanned(mirrorPrepared.value);
+      expect(malformed.ok && malformed.value.exploration).toMatchObject({
+        kind: "HARNESS_ERROR",
+        reason: "GRAMMAR",
+      });
+    }
   });
 });

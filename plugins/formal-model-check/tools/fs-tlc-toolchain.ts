@@ -35,6 +35,11 @@ import type {
 } from "./run-model-check-domain.ts";
 import { validateFrozenTlaModelReceipt } from "./tla-arm.ts";
 import {
+  isVerifiedTlaModelReceipt,
+  validateModelCheckReceipt,
+  type ModelCheckReceipt,
+} from "./tla-model-receipt.ts";
+import {
   createJdkDistributionManifest,
   createJdkSnapshotIdentity,
   createSandboxProbeReceipt,
@@ -285,7 +290,8 @@ export interface FsTlcToolchainDependencies {
   fault?(point: TlcCacheFaultPoint): void;
 }
 
-export interface PlannedTlcPrepareInput extends TlcPrepareInput {
+export interface PlannedTlcPrepareInput extends Omit<TlcPrepareInput, "modelReceipt"> {
+  readonly modelReceipt: ModelCheckReceipt;
   readonly runId: string;
   readonly scratchRoot: string;
   readonly planner: TlcSpawnPlanner;
@@ -293,7 +299,7 @@ export interface PlannedTlcPrepareInput extends TlcPrepareInput {
 
 export interface PreparedPlannedTlcRun {
   readonly artifact: VerifiedTlcArtifact;
-  readonly modelReceipt: TlcPrepareInput["modelReceipt"];
+  readonly modelReceipt: ModelCheckReceipt;
   readonly vocabulary: TlcPrepareInput["vocabulary"];
   readonly modulePath: string;
   readonly cfgPath: string;
@@ -310,6 +316,11 @@ export interface PreparedPlannedTlcRun {
     TZ: string;
   }>;
 }
+
+type VerifiedAuxiliaryModulePaths = readonly Readonly<{
+  path: string;
+  moduleBytesIdentity: string;
+}>[];
 
 export interface PlannedTlcOutcome {
   readonly raw: RawTlcOutcome;
@@ -638,11 +649,19 @@ function inspectJdk(rootPath: string, sealed = false): JdkDistributionManifest {
   return manifest.value;
 }
 
-function sourceIdentity(path: string, domain: string, kind: "InvocationError" | "NormalizationError"): string {
+function sourceIdentity(
+  path: string,
+  domain: string,
+  kind: "PreparationError" | "InvocationError" | "NormalizationError",
+): string {
   const stat = lstatSync(path);
   if (!stat.isFile() || stat.size > METADATA_BYTES) toolchainAbort(kind, "SOURCE_DRIFT", "model source is not a capped regular file");
-  const source = new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
-  return canonicalIdentity(source, domain).sha256;
+  try {
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
+    return canonicalIdentity(source, domain).sha256;
+  } catch (cause) {
+    toolchainAbort(kind, "SOURCE_DRIFT", "model source is not valid UTF-8", cause);
+  }
 }
 
 function readCappedMetadata(path: string): string {
@@ -1477,6 +1496,10 @@ class FsTlcRuntime {
 
 class FsPlannedTlcRuntime {
   readonly #issued = new WeakSet<PreparedPlannedTlcRun>();
+  readonly #auxiliaryModulePaths = new WeakMap<
+    PreparedPlannedTlcRun,
+    VerifiedAuxiliaryModulePaths
+  >();
 
   constructor(
     private readonly artifacts: FsTlcArtifactCache,
@@ -1513,28 +1536,95 @@ class FsPlannedTlcRuntime {
     const cfgPath = this.#canonicalWorkspaceFile(cwd, input.cfgPath);
     return { cwd, modulePath, cfgPath };
   }
-  #verifyFrozenBytes(
+
+  #verifiedAuxiliaryModulePaths(
+    cwd: string,
+    modulePath: string,
+    modelReceipt: ModelCheckReceipt,
+  ): VerifiedAuxiliaryModulePaths {
+    if (!isVerifiedTlaModelReceipt(modelReceipt)) return Object.freeze([]);
+    return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
+      const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
+      const canonicalPath = realpathSync(requestedPath);
+      if (
+        canonicalPath !== requestedPath
+        || !pathInside(cwd, canonicalPath)
+        || !lstatSync(canonicalPath).isFile()
+      ) {
+        toolchainAbort(
+          "PreparationError",
+          "WORKSPACE_PATH",
+          "auxiliary modules must be canonical sibling files inside the closed workspace",
+        );
+      }
+      if (
+        sourceIdentity(
+          canonicalPath,
+          "amadeus.formal-verif.tla.module.v1",
+          "PreparationError",
+        ) !== auxiliary.moduleBytesIdentity
+      ) {
+        toolchainAbort(
+          "PreparationError",
+          "SOURCE_IDENTITY",
+          `auxiliary module ${auxiliary.name} differs from the selected model receipt`,
+        );
+      }
+      return Object.freeze({
+        path: canonicalPath,
+        moduleBytesIdentity: auxiliary.moduleBytesIdentity,
+      });
+    }));
+  }
+
+  #verifyModelSources(
     input: PlannedTlcPrepareInput,
+    cwd: string,
     modulePath: string,
     cfgPath: string,
-  ): void {
-    const model = validateFrozenTlaModelReceipt(input.modelReceipt);
+  ): VerifiedAuxiliaryModulePaths {
+    const model = validateModelCheckReceipt(input.modelReceipt);
     if (!model.ok) {
       toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
     }
-    const sameBytes = (actual: Uint8Array, expected: Uint8Array) =>
-      actual.byteLength === expected.byteLength
-      && actual.every((byte, index) => byte === expected[index]);
     if (
-      !sameBytes(new Uint8Array(readFileSync(modulePath)), model.value.moduleBytes)
-      || !sameBytes(new Uint8Array(readFileSync(cfgPath)), model.value.cfgBytes)
+      sourceIdentity(
+        modulePath,
+        "amadeus.formal-verif.tla.module.v1",
+        "PreparationError",
+      ) !== model.value.moduleBytesIdentity
+      || sourceIdentity(
+        cfgPath,
+        "amadeus.formal-verif.tla.cfg.v1",
+        "PreparationError",
+      ) !== model.value.cfgBytesIdentity
     ) {
       toolchainAbort(
         "PreparationError",
         "SOURCE_IDENTITY",
-        "model or cfg bytes differ from the frozen receipt",
+        "model or cfg bytes differ from the selected model receipt",
       );
     }
+    if (isVerifiedTlaModelReceipt(model.value)) {
+      const expected = model.value.vocabulary;
+      const actual = input.vocabulary;
+      if (
+        actual.moduleName !== expected.moduleName
+        || actual.namedInvariants.length !== expected.namedInvariants.length
+        || actual.namedInvariants.some((name, index) => name !== expected.namedInvariants[index])
+        || actual.traceStateVariables.length !== expected.traceStateVariables.length
+        || actual.traceStateVariables.some(
+          (name, index) => name !== expected.traceStateVariables[index],
+        )
+      ) {
+        toolchainAbort(
+          "PreparationError",
+          "MODEL_RECEIPT",
+          "trace vocabulary differs from the selected model receipt",
+        );
+      }
+    }
+    return this.#verifiedAuxiliaryModulePaths(cwd, modulePath, model.value);
   }
 
   #prepareScratch(scratchPath: string): { scratchRoot: string; standardModuleDirectory: string } {
@@ -1566,7 +1656,12 @@ class FsPlannedTlcRuntime {
     try {
       this.artifacts.verifyIssuedArtifact(input.artifact);
       const { cwd, modulePath, cfgPath } = this.#canonicalInputs(input);
-      this.#verifyFrozenBytes(input, modulePath, cfgPath);
+      const auxiliaryModulePaths = this.#verifyModelSources(
+        input,
+        cwd,
+        modulePath,
+        cfgPath,
+      );
       const { scratchRoot, standardModuleDirectory } = this.#prepareScratch(
         input.scratchRoot,
       );
@@ -1625,6 +1720,7 @@ class FsPlannedTlcRuntime {
         environmentSnapshot: environmentSnapshot.value,
         environment,
       });
+      this.#auxiliaryModulePaths.set(prepared, auxiliaryModulePaths);
       this.#issued.add(prepared);
       return { ok: true, value: prepared };
     } catch (cause) {
@@ -1646,16 +1742,23 @@ class FsPlannedTlcRuntime {
     prepared: PreparedPlannedTlcRun,
     kind: "InvocationError" | "NormalizationError",
   ): void {
+    const auxiliaryModulePaths = this.#auxiliaryModulePaths.get(prepared);
+    if (auxiliaryModulePaths === undefined) {
+      toolchainAbort(kind, "CAPABILITY", "prepared run has no issued auxiliary module binding");
+    }
     for (const [path, identity, domain] of [
       [prepared.modulePath, prepared.modelReceipt.moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"],
       [prepared.cfgPath, prepared.modelReceipt.cfgBytesIdentity, "amadeus.formal-verif.tla.cfg.v1"],
+      ...auxiliaryModulePaths.map(({ path, moduleBytesIdentity }) =>
+        [path, moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"] as const
+      ),
     ] as const) {
       if (
         realpathSync(path) !== path
         || !pathInside(prepared.cwd, path)
         || sourceIdentity(path, domain, kind) !== identity
       ) {
-        toolchainAbort(kind, "SOURCE_DRIFT", "model or cfg changed across the process seam");
+        toolchainAbort(kind, "SOURCE_DRIFT", "model, cfg, or auxiliary module changed across the process seam");
       }
     }
   }

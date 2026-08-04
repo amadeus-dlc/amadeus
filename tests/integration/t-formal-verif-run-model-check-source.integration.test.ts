@@ -12,6 +12,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadRunModelCheckSource } from "../../plugins/formal-model-check/tools/run-model-check-source.ts";
+import { validateFrozenTlaModelReceipt } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import {
+  createVerifiedTlaModelReceipt,
+  validateModelCheckReceipt,
+} from "../../plugins/formal-model-check/tools/tla-model-receipt.ts";
 
 describe("run-model-check source adapter", () => {
   const roots: string[] = [];
@@ -39,6 +44,10 @@ describe("run-model-check source adapter", () => {
     expect(result.value.moduleName).toBe("FormalElection");
     expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
     expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
+    expect("schema" in result.value.modelReceipt).toBe(false);
+    expect(validateFrozenTlaModelReceipt(result.value.modelReceipt).ok).toBe(true);
+    expect(createVerifiedTlaModelReceipt(result.value.source).ok).toBe(false);
+    expect(validateModelCheckReceipt(null).ok).toBe(false);
     // The trace vocabulary rides the verified source: map-declared values,
     // moduleName from the model name (never a map-side duplicate).
     expect(result.value.vocabulary).toEqual({
@@ -128,11 +137,13 @@ describe("run-model-check source adapter", () => {
       namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],
       traceStateVariables: ["receipts", "issueNumber", "boundaryIdx"],
     });
+    expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
+    expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
     const electionPaths = copyCanonicalSource();
     const election = loadRunModelCheckSource(electionPaths.model, electionPaths.cfg);
     expect(election.ok).toBe(true);
     if (!election.ok) return;
-    expect(result.value.modelReceipt).toEqual(election.value.modelReceipt);
+    expect(result.value.modelReceipt).not.toEqual(election.value.modelReceipt);
   });
 
   test("rejects source drift and symlink inputs", () => {
