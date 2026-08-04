@@ -17,6 +17,7 @@ import {
   normalizeDecisionPolicies,
   parseWorkflowResult,
   planHumanAutonomyCommand,
+  revalidateGrantExerciseReservation,
   resolveAutoDecision,
   type AutonomyProjection,
   type DecisionCapabilityPort,
@@ -121,6 +122,44 @@ function fact(optionId: string, evidence: string): DecisionFact {
 }
 
 describe("Intent autonomy mode and grant aggregate", () => {
+  test("rejects malformed policy, projection, and command invariants", () => {
+    expect(() => normalizeDecisionPolicies({
+      grantIdentitySeed: "bad seed",
+      scopeFingerprint: SCOPE_FP,
+      humanTurnId: HUMAN.turnId,
+      policies: [],
+    })).toThrow("invalid-policy-normalization-context");
+    expect(() => normalizeDecisionPolicies({
+      grantIdentitySeed: "grant-seed",
+      scopeFingerprint: SCOPE_FP,
+      humanTurnId: HUMAN.turnId,
+      policies: [{ sourceText: "   ", selector: "selector-1", optionId: "accept" }],
+    })).toThrow("invalid-decision-policy");
+    expect(() => normalizeDecisionPolicies({
+      grantIdentitySeed: "grant-seed",
+      scopeFingerprint: SCOPE_FP,
+      humanTurnId: HUMAN.turnId,
+      policies: [
+        { sourceText: "same", selector: "selector-1", optionId: "accept" },
+        { sourceText: "same", selector: "selector-1", optionId: "accept" },
+      ],
+    })).toThrow("duplicate-decision-policy");
+    expect(() => createAutonomyProjection({ intentUuid: "bad intent" })).toThrow("invalid-intent-uuid");
+
+    const initial = createAutonomyProjection({ intentUuid: INTENT });
+    expect(() => assertLegalAutonomyProjection({ ...initial, projectionRevision: -1 })).toThrow("projection-identity");
+    expect(() => assertLegalAutonomyProjection({
+      ...initial,
+      workflowExecutionState: "suspended",
+      parkEnvelope: null,
+    })).toThrow("park-envelope");
+    expect(planHumanAutonomyCommand(initial, { kind: "replace-full", scope: scope(), policies: policies() }, context(initial, autonomyDigest("replace"))))
+      .toEqual({ ok: false, code: "INVALID_COMMAND" });
+    const full = fullProjection();
+    expect(planHumanAutonomyCommand(full, { kind: "issue-full", scope: scope(), policies: policies() }, context(full, autonomyDigest("issue"))))
+      .toEqual({ ok: false, code: "INVALID_COMMAND" });
+  });
+
   test("defaults to none without manufacturing human provenance", () => {
     const projection = createAutonomyProjection({ intentUuid: INTENT });
     expect(projection.mode).toBe("none");
@@ -199,6 +238,59 @@ describe("Intent autonomy mode and grant aggregate", () => {
 });
 
 describe("gate and question decision contract", () => {
+  test("rejects invalid gate and fallback decision inputs", () => {
+    const initial = createAutonomyProjection({ intentUuid: INTENT });
+    expect(() => createGateAutoDecision({
+      projection: initial,
+      occurrence: occurrence("question"),
+      actorId: "codex",
+      selectedOptionId: "accept",
+      basisKind: "mode-semi",
+    })).toThrow("gate-decision-requires-gate-occurrence");
+    expect(() => createGateAutoDecision({
+      projection: initial,
+      occurrence: occurrence("stage-gate", ["approve"]),
+      actorId: "codex",
+      selectedOptionId: "approve",
+      basisKind: "mode-semi",
+    })).toThrow("semi-gate-requires-semi-mode");
+    expect(() => createGateAutoDecision({
+      projection: initial,
+      occurrence: occurrence("stage-gate", ["approve"]),
+      actorId: "codex",
+      selectedOptionId: "approve",
+      basisKind: "grant-gate",
+    })).toThrow("grant-gate-requires-full-grant");
+
+    const projection = fullProjection("accept");
+    const withoutPolicies = { ...projection, currentGrant: { ...projection.currentGrant!, policies: [] } };
+    const decisionInput = {
+      projection: withoutPolicies,
+      occurrence: occurrence(),
+      actorId: "codex",
+      scopeLineageFingerprint: SCOPE_FP,
+      currentNormFingerprint: NORM,
+      applicableNormFacts: [],
+      pastHumanRulings: [],
+    } as const;
+    expect(resolveAutoDecision({ ...decisionInput, currentNormFingerprint: "bad", capability: capability() }))
+      .toEqual({ kind: "invalid", reason: "invalid-decision-context" });
+    expect(resolveAutoDecision({
+      ...decisionInput,
+      capability: {
+        ...capability(),
+        elect: () => ({ optionId: "missing", evidenceFingerprint: "bad" }),
+      },
+    })).toEqual({ kind: "invalid", reason: "invalid-election-result" });
+    expect(resolveAutoDecision({
+      ...decisionInput,
+      capability: {
+        ...capability(false),
+        unavailableReason: null,
+      },
+    })).toEqual({ kind: "invalid", reason: "invalid-recommendation-result" });
+  });
+
   test("none always returns human-required", () => {
     expect(authorizeInteraction(createAutonomyProjection({ intentUuid: INTENT }), occurrence("stage-gate", ["approve"])).kind).toBe("human-required");
   });
@@ -318,6 +410,38 @@ describe("gate and question decision contract", () => {
 });
 
 describe("effect authorization and workflow result", () => {
+  test("effect registry and authorization fail closed on drift", () => {
+    expect(() => createDecisionOptionEffectRegistry({ revision: "bad", effects: [] }))
+      .toThrow("invalid-effect-registry-revision");
+    expect(() => createDecisionOptionEffectRegistry({
+      revision: autonomyDigest("registry"),
+      effects: [{ ...effect(), payloadFingerprint: "bad" }],
+    })).toThrow("invalid-effect-registry");
+    expect(() => createDecisionOptionEffectRegistry({
+      revision: autonomyDigest("registry"),
+      effects: [effect(), effect()],
+    })).toThrow("invalid-effect-registry");
+
+    const grant = fullProjection().currentGrant!;
+    const scopeDrift = createDecisionOptionEffectRegistry({
+      revision: autonomyDigest("scope-registry"),
+      effects: [{ ...effect(), requiredScopeFingerprint: autonomyDigest("other-scope") }],
+    });
+    expect(authorizeDecisionEffect({ grant, selectedOptionId: "accept", currentNormFingerprint: NORM, registry: scopeDrift }))
+      .toEqual({ ok: false, reason: "SCOPE_OUT" });
+    const normDrift = createDecisionOptionEffectRegistry({
+      revision: autonomyDigest("norm-registry"),
+      effects: [{ ...effect(), applicableNormFingerprint: autonomyDigest("other-norm") }],
+    });
+    expect(authorizeDecisionEffect({ grant, selectedOptionId: "accept", currentNormFingerprint: NORM, registry: normDrift }))
+      .toEqual({ ok: false, reason: "NORM_DRIFT" });
+    const mutableEffect = effect();
+    const payloadDrift = createDecisionOptionEffectRegistry({ revision: autonomyDigest("payload-registry"), effects: [mutableEffect] });
+    (mutableEffect.payload as { action: string }).action = "tampered";
+    expect(authorizeDecisionEffect({ grant, selectedOptionId: "accept", currentNormFingerprint: NORM, registry: payloadDrift }))
+      .toEqual({ ok: false, reason: "PAYLOAD_MISMATCH" });
+  });
+
   test("effect registry is exact and allows only current reversible scope/norm", () => {
     const grant = fullProjection().currentGrant!;
     const registry = createDecisionOptionEffectRegistry({ revision: autonomyDigest("registry"), effects: [effect()] });
@@ -359,6 +483,44 @@ describe("effect authorization and workflow result", () => {
     expect(reservation).not.toHaveProperty("authorized");
   });
 
+  test("reservation revalidation reports each drift boundary", () => {
+    const base = fullProjection();
+    const target = occurrence();
+    const resolved = resolveAutoDecision({
+      projection: base,
+      occurrence: target,
+      actorId: "codex",
+      scopeLineageFingerprint: SCOPE_FP,
+      currentNormFingerprint: NORM,
+      applicableNormFacts: [],
+      pastHumanRulings: [],
+      capability: capability(),
+    });
+    if (resolved.kind !== "decided") throw new Error("decision expected");
+    const selectedEffect = effect();
+    const registry = createDecisionOptionEffectRegistry({
+      revision: autonomyDigest("reservation-registry"),
+      effects: [selectedEffect],
+    });
+    const reservation = createGrantExerciseReservation({
+      projection: base,
+      occurrence: target,
+      decision: resolved.record,
+      effect: selectedEffect,
+      effectRegistryRevision: registry.revision,
+      currentNormFingerprint: NORM,
+    });
+    const reserved = { ...base, projectionRevision: base.projectionRevision + 1, pendingExercise: reservation };
+    const validate = (projection: AutonomyProjection, candidate = target, selectedRegistry = registry, norm = NORM) =>
+      revalidateGrantExerciseReservation({ projection, reservation, occurrence: candidate, registry: selectedRegistry, currentNormFingerprint: norm });
+    expect(validate({ ...reserved, mode: "none", currentGrant: null })).toEqual({ valid: false, reason: "grant-changed" });
+    expect(validate({ ...reserved, projectionRevision: reserved.projectionRevision + 1 })).toEqual({ valid: false, reason: "projection-changed" });
+    expect(validate(reserved, { ...target, occurrenceId: "other-occurrence" })).toEqual({ valid: false, reason: "occurrence-changed" });
+    expect(validate(reserved, target, { ...registry, revision: autonomyDigest("changed-registry") })).toEqual({ valid: false, reason: "registry-changed" });
+    expect(validate(reserved, target, registry, autonomyDigest("changed-norm"))).toEqual({ valid: false, reason: "norm-changed" });
+    expect(validate(reserved)).toEqual({ valid: true });
+  });
+
   test("strict result parser rejects full without active grant", () => {
     expect(() => parseWorkflowResult({
       outcome: "completed",
@@ -369,6 +531,25 @@ describe("effect authorization and workflow result", () => {
       grant: null,
       evidenceFingerprint: null,
       resumeCondition: null,
+      failureRef: null,
+    })).toThrow("invalid-workflow-result");
+  });
+
+  test("strict result parser rejects malformed terminal and retry contracts", () => {
+    expect(() => parseWorkflowResult(null)).toThrow("invalid-workflow-result");
+    expect(() => parseWorkflowResult({ outcome: "unknown" })).toThrow("invalid-workflow-result");
+    expect(() => parseWorkflowResult({
+      outcome: "completed", reasonCode: "USER_PARKED", retryable: true, intentUuid: INTENT,
+      autonomyMode: "none", grant: null, evidenceFingerprint: null, resumeCondition: null, failureRef: null,
+    })).toThrow("invalid-workflow-result");
+    expect(() => parseWorkflowResult({
+      outcome: "failed", reasonCode: null, retryable: false, intentUuid: INTENT,
+      autonomyMode: "none", grant: null, evidenceFingerprint: "bad", resumeCondition: null, failureRef: "bad ref",
+    })).toThrow("invalid-workflow-result");
+    expect(() => parseWorkflowResult({
+      outcome: "parked", reasonCode: "USER_PARKED", retryable: false, intentUuid: INTENT,
+      autonomyMode: "none", grant: null, evidenceFingerprint: autonomyDigest("parked"),
+      resumeCondition: { kind: "human-unpark", identity: "resume-1", status: "pending", evidenceFingerprint: null },
       failureRef: null,
     })).toThrow("invalid-workflow-result");
   });

@@ -104,6 +104,13 @@ import {
 import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEventGuarded } from "../../dist/claude/.claude/otel/audit-emit.ts";
+import {
+  isConversationalStop,
+  isHumanWaitStop,
+  isPendingQuestionStop,
+  runEngineNextKind,
+  transcriptIsConversational,
+} from "../../packages/framework/core/hooks/amadeus-stop.ts";
 
 // Live-observed machine-injected turns, derived from the shared catalog so a
 // marker rename cannot leave stale copies here (#755). The tier-3 carve-out
@@ -645,6 +652,146 @@ function progressSig(proj: string): string {
 }
 
 describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from t121-stop-hook-enforce.sh, plan 13 + 3 human-wait carve-out cases)", () => {
+  test("classifies Claude transcripts in-process across synthetic turns and engine engagement", () => {
+    const proj = makeProject();
+    const transcript = join(proj, "direct-claude-transcript.jsonl");
+    const rows = [
+      "",
+      "partial-json",
+      JSON.stringify(null),
+      JSON.stringify({ type: "user" }),
+      JSON.stringify({
+        type: "user",
+        isMeta: true,
+        message: { role: "user", content: "Stop hook feedback: pending work" },
+      }),
+      JSON.stringify({
+        type: "user",
+        message: { role: "user", content: [{ type: "tool_result", content: "done" }] },
+      }),
+      JSON.stringify({
+        type: "user",
+        message: {
+          role: "user",
+          content: [{ type: "text", text: "The AIDLC workflow has a pending step; resume the forwarding loop." }],
+        },
+      }),
+      JSON.stringify({
+        type: "user",
+        message: { role: "user", content: TEAMMATE_INJECTED_TURN },
+      }),
+      JSON.stringify({
+        type: "user",
+        message: { role: "user", content: [{ type: "text", text: "continue the workflow" }] },
+      }),
+      JSON.stringify({
+        type: "assistant",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "working" },
+            {
+              type: "tool_use",
+              name: "Bash",
+              input: { command: "bun .claude/tools/amadeus-orchestrate.ts next" },
+            },
+          ],
+        },
+      }),
+    ];
+    writeFileSync(transcript, `${rows.join("\n")}\n`, "utf-8");
+    expect(transcriptIsConversational(transcript, "claude")).toBe(false);
+
+    const conversational = seedTranscript(proj, { format: "claude", engineCall: false });
+    expect(transcriptIsConversational(conversational, "claude")).toBe(true);
+    expect(transcriptIsConversational(join(proj, "missing.jsonl"), "claude")).toBe(false);
+  });
+
+  test("classifies Codex rollouts in-process across argument encodings", () => {
+    const proj = makeProject();
+    const transcript = join(proj, "rollout-direct-codex.jsonl");
+    const rows = [
+      JSON.stringify({ type: "other", payload: {} }),
+      JSON.stringify({ type: "response_item" }),
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "message", role: "user", content: "continue the workflow" },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "function_call", name: "Bash", arguments: "not-json" },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "function_call", name: "Bash", arguments: JSON.stringify("plain") },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: { type: "local_shell_call", action: { argv: ["bun", "noop"] } },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          name: "Bash",
+          arguments: JSON.stringify({ command: "bun .codex/tools/amadeus-orchestrate.ts next" }),
+        },
+      }),
+    ];
+    writeFileSync(transcript, `${rows.join("\n")}\n`, "utf-8");
+    expect(transcriptIsConversational(transcript, "codex")).toBe(false);
+
+    const conversational = seedTranscript(proj, { format: "codex", engineCall: false });
+    expect(transcriptIsConversational(conversational, "codex")).toBe(true);
+  });
+
+  test("classifies human-wait and pending-question stops in-process", () => {
+    expect(isHumanWaitStop("- **Current Stage**: requirements-analysis\n- [?] requirements-analysis — EXECUTE\n"))
+      .toBe(true);
+    expect(isHumanWaitStop("- **Current Stage**: requirements-analysis\n- [R] requirements-analysis — EXECUTE\n"))
+      .toBe(true);
+    expect(isHumanWaitStop("- **Current Stage**: requirements-analysis\n- [-] requirements-analysis — EXECUTE\n"))
+      .toBe(false);
+    expect(isHumanWaitStop("- [?] requirements-analysis — EXECUTE\n")).toBe(false);
+
+    const proj = makeProject();
+    seedInProgressWithQuestions(proj, {
+      phase: "inception",
+      questions: "## Questions\n\n[Answer]: ___\n",
+    });
+    const pending = readFileSync(seededStateFile(proj), "utf-8");
+    expect(isPendingQuestionStop(pending, proj)).toBe(true);
+    expect(isPendingQuestionStop(pending.replace("[-]", "[?]"), proj)).toBe(false);
+    seedInProgressWithQuestions(proj, {
+      phase: "inception",
+      questions: "## Questions\n\n[Answer]: ___\n",
+      intentMode: "full",
+    });
+    expect(isPendingQuestionStop(readFileSync(seededStateFile(proj), "utf-8"), proj)).toBe(false);
+    expect(isPendingQuestionStop("- **Current Stage**: missing\n", proj)).toBe(false);
+  });
+
+  test("reads the engine directive and conversational stop decision in-process", () => {
+    const proj = makeProject();
+    const enginePath = join(proj, ".claude", "tools", "amadeus-orchestrate.ts");
+    writeFileSync(enginePath, 'console.log(JSON.stringify({ kind: "run-stage" }));\n', "utf-8");
+    expect(runEngineNextKind(proj)).toBe("run-stage");
+    writeFileSync(enginePath, 'console.log(JSON.stringify({ kind: "done" }));\n', "utf-8");
+    expect(runEngineNextKind(proj)).toBe("done");
+    writeFileSync(enginePath, "process.exit(1);\n", "utf-8");
+    expect(runEngineNextKind(proj)).toBeNull();
+    writeFileSync(enginePath, "", "utf-8");
+    expect(runEngineNextKind(proj)).toBeNull();
+    writeFileSync(enginePath, 'console.log("not-json");\n', "utf-8");
+    expect(runEngineNextKind(proj)).toBeNull();
+    expect(runEngineNextKind(join(proj, "missing"))).toBeNull();
+
+    const transcript = seedTranscript(proj, { format: "claude", engineCall: false });
+    const semiState = "- **Intent Autonomy Mode**: semi\n";
+    expect(isConversationalStop(semiState, transcript, "claude")).toBe(true);
+    expect(isConversationalStop("- **Intent Autonomy Mode**: full\n", transcript, "claude")).toBe(false);
+    expect(isConversationalStop(semiState, null, "claude")).toBe(false);
+  });
   // =========================================================================
   // (a) Pending directive -> BLOCK + re-fed via reason. The block event MUST
   //     actually fire (§6-E non-golden).

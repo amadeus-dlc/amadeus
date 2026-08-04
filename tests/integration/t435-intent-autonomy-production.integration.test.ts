@@ -109,6 +109,67 @@ afterEach(() => {
 });
 
 describe("Intent-scoped autonomy production path", () => {
+  test("production adapters fail closed when no active Intent exists", () => {
+    projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    expect(readProductionAutonomyProjection(projectDir)).toBeNull();
+    expect(commitProductionIntentCompletion({ projectDir })).toEqual({ ok: false, error: "active-intent-required" });
+    expect(previewProductionAutonomyGrant({ projectDir, stateContent: "" })).toEqual({
+      ok: false,
+      error: "active-intent-required",
+    });
+    expect(applyProductionAutonomyMode({ projectDir, stateContent: "", mode: "semi" })).toEqual({
+      ok: false,
+      error: "active-intent-required",
+    });
+    expect(productionStageAutonomy({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"0".repeat(64)}`,
+      walkingSkeleton: false,
+    })).toMatchObject({
+      mode: "none",
+      autoApprove: false,
+      authorizationReason: "intent-autonomy-unavailable",
+      qualityRepair: "disabled",
+    });
+    expect(commitProductionStageGateDecision({
+      projectDir,
+      stateContent: "",
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"0".repeat(64)}`,
+      walkingSkeleton: false,
+    })).toEqual({ kind: "not-authorized", reason: "active-intent-required" });
+    expect(commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"0".repeat(64)}`,
+      questionId: "missing-intent-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy?",
+      optionIds: ["minimal-fix"],
+      recommendedOptionId: "minimal-fix",
+    })).toEqual({ kind: "human-required", reason: "active-intent-required", result: null });
+    expect(commitProductionQualityObservation({
+      projectDir,
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "missing-intent-stage",
+        boltId: "missing-intent-bolt",
+        observations: [],
+      },
+      replanContext: "none",
+    })).toEqual({ kind: "error", reason: "active-intent-required" });
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: "missing-quality-scope",
+      basis: "human-retry",
+    })).toEqual({ kind: "error", reason: "active-intent-required" });
+  });
+
   test("drives the production adapters in-process across the full autonomous lifecycle", () => {
     projectDir = bornProject();
     appendLedgerEvent(projectDir, "HUMAN_TURN");
@@ -125,6 +186,25 @@ describe("Intent-scoped autonomy production path", () => {
     });
     expect(applied.ok).toBe(true);
     if (!applied.ok) return;
+
+    expect(commitProductionQualityObservation({
+      projectDir,
+      evidence: {
+        providerId: "quality-evidence-v1",
+        monitorId: "quality-repair",
+        stageInstanceId: "direct-ready-stage",
+        boltId: "direct-ready-bolt",
+        observations: [{
+          kind: "reviewer",
+          invocationId: "direct-ready-review",
+          verifierId: "quality-reviewer",
+          validationReceipt: `sha256:${"9".repeat(64)}`,
+          verdict: "READY",
+          blockers: [],
+        }],
+      },
+      replanContext: "No replan is required for READY evidence.",
+    })).toMatchObject({ kind: "READY" });
 
     const gateInput = {
       projectDir,
@@ -178,6 +258,10 @@ describe("Intent-scoped autonomy production path", () => {
     ]);
     const parked = qualityOutcomes.at(-1);
     if (parked?.kind !== "parked") return;
+    // A `human-retry` resume needs a HUMAN_TURN newer than the stall. Audit
+    // timestamps are second-truncated, so the grounding turn appended before
+    // the park only outranks the stall when no second boundary was crossed.
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
     expect(resumeProductionQuality({
       projectDir,
       qualityScopeId: parked.qualityScopeId,
