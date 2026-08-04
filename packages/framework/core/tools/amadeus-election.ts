@@ -627,7 +627,13 @@ export function handleVerify(root: string, electionId: string): number {
   const ledger = Store.ledger(root, electionId);
   if (!ledger.ok) return storeFail("verify", ledger.error);
   const counts = { ledger: ledger.value.ballots.length, materialized: ballots.length };
-  const self = verifySelf(counts, resolved, storedFreq.value, timeline);
+  // #2125 FR-3 wiring: hand verifySelf the kind-order context — the election
+  // id (FR-3d ledger exemption) and tally.json's hold resolutions (a
+  // collecting reopen is the only lawful source of a post-tallied segment).
+  const self = verifySelf(counts, resolved, storedFreq.value, timeline, {
+    electionId,
+    resolutions: t.resolutions ?? [],
+  });
   if (!self.ok) return fail(`verify: self-check findings ${JSON.stringify(self.error)}`);
   out({ verified: electionId });
   return 0;

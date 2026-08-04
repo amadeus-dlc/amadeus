@@ -911,4 +911,38 @@ describe("t236 election directive loop", () => {
     expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("invalid-transition");
     expect(tallied().length).toBe(1);
   });
+
+  // FR-3 wiring: verify runs the kind-order class through the CLI. The guards
+  // above close the live windows, so the unlawful history is injected the way
+  // a legacy corruption looks on disk — a duplicate tallied row appended
+  // straight to timeline.json.
+  test("#2125 FR-3: verify exits 1 on a kind-order violation", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+
+    const timelinePath = electionPath("timeline.json");
+    const events = JSON.parse(readFileSync(timelinePath, "utf8")) as Array<{
+      kind: string;
+      at: string;
+    }>;
+    const dup = events.find((e) => e.kind === "tallied");
+    expect(dup).toBeDefined();
+    writeFileSync(timelinePath, JSON.stringify([...events, dup]));
+
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
+    expect(errs.at(-1) ?? "").toContain("kind-order");
+  });
 });
