@@ -182,45 +182,50 @@ describe("t427 deterministic no-silent-drop evidence rebind", () => {
 
   test("keeps every envelope field and status invariant", () => {
     const secret = "test-secret-value-that-must-not-escape";
+    const previousSecret = process.env.AMADEUS_TEST_PRIVATE_KEY;
     process.env.AMADEUS_TEST_PRIVATE_KEY = secret;
-    const success = successEnvelope({ status: "changed", code: "REBIND_OK", targetRevision: TARGET });
-    const noop = successEnvelope({ status: "no-op", code: "REBIND_NOOP" });
-    const superseded = successEnvelope({ status: "superseded", code: "REBIND_SUPERSEDED" });
-    const error = errorEnvelope(new Error(`credential ${secret}`));
-    delete process.env.AMADEUS_TEST_PRIVATE_KEY;
-    const envelopes = [success, noop, superseded, error];
-    const keys = Object.keys(success).sort();
-    for (const envelope of envelopes) {
-      expect(Object.keys(envelope).sort()).toEqual(keys);
-      expect(envelope.schemaVersion).toBe(1);
-      expect(typeof envelope.operation).toBe("string");
-      expect(typeof envelope.status).toBe("string");
-      expect(typeof envelope.code).toBe("string");
-      expect(envelope.eventRevision === null || typeof envelope.eventRevision === "string").toBeTrue();
-      expect(envelope.bindingRevision === null || typeof envelope.bindingRevision === "string").toBeTrue();
-      expect(envelope.targetRevision === null || typeof envelope.targetRevision === "string").toBeTrue();
-      expect(typeof envelope.changed).toBe("boolean");
-      expect(Object.values(envelope.counts).every((count) => Number.isInteger(count))).toBeTrue();
-      expect(Array.isArray(envelope.paths)).toBeTrue();
-      expect(typeof envelope.validation.ok).toBe("boolean");
-      expect(Array.isArray(envelope.validation.problems)).toBeTrue();
-      expect(envelope.error === null || (typeof envelope.error.code === "string" &&
-        typeof envelope.error.message === "string")).toBeTrue();
-      expect(Buffer.from(serializeEvidenceEnvelope(envelope), "utf8").toString("utf8")).toBe(
-        serializeEvidenceEnvelope(envelope),
-      );
-      expect(serializeEvidenceEnvelope(envelope).endsWith("\n")).toBeTrue();
-      expect(serializeEvidenceEnvelope(envelope).split("\n")).toHaveLength(2);
+    try {
+      const success = successEnvelope({ status: "changed", code: "REBIND_OK", targetRevision: TARGET });
+      const noop = successEnvelope({ status: "no-op", code: "REBIND_NOOP" });
+      const superseded = successEnvelope({ status: "superseded", code: "REBIND_SUPERSEDED" });
+      const error = errorEnvelope(new Error(`credential ${secret}`));
+      const envelopes = [success, noop, superseded, error];
+      const keys = Object.keys(success).sort();
+      for (const envelope of envelopes) {
+        expect(Object.keys(envelope).sort()).toEqual(keys);
+        expect(envelope.schemaVersion).toBe(1);
+        expect(typeof envelope.operation).toBe("string");
+        expect(typeof envelope.status).toBe("string");
+        expect(typeof envelope.code).toBe("string");
+        expect(envelope.eventRevision === null || typeof envelope.eventRevision === "string").toBeTrue();
+        expect(envelope.bindingRevision === null || typeof envelope.bindingRevision === "string").toBeTrue();
+        expect(envelope.targetRevision === null || typeof envelope.targetRevision === "string").toBeTrue();
+        expect(typeof envelope.changed).toBe("boolean");
+        expect(Object.values(envelope.counts).every((count) => Number.isInteger(count))).toBeTrue();
+        expect(Array.isArray(envelope.paths)).toBeTrue();
+        expect(typeof envelope.validation.ok).toBe("boolean");
+        expect(Array.isArray(envelope.validation.problems)).toBeTrue();
+        expect(envelope.error === null || (typeof envelope.error.code === "string" &&
+          typeof envelope.error.message === "string")).toBeTrue();
+        expect(Buffer.from(serializeEvidenceEnvelope(envelope), "utf8").toString("utf8")).toBe(
+          serializeEvidenceEnvelope(envelope),
+        );
+        expect(serializeEvidenceEnvelope(envelope).endsWith("\n")).toBeTrue();
+        expect(serializeEvidenceEnvelope(envelope).split("\n")).toHaveLength(2);
+      }
+      expect(success.changed).toBeTrue();
+      expect(noop.changed).toBeFalse();
+      expect(superseded.changed).toBeFalse();
+      expect(error.changed).toBeFalse();
+      expect(JSON.stringify(error)).not.toContain(secret);
+      expect(success.paths).toEqual([]);
+      expect(evidenceExitCode(success)).toBe(0);
+      expect(evidenceExitCode(noop)).toBe(0);
+      expect(evidenceExitCode(superseded)).toBe(0);
+      expect(evidenceExitCode(error)).toBe(1);
+    } finally {
+      if (previousSecret === undefined) delete process.env.AMADEUS_TEST_PRIVATE_KEY;
+      else process.env.AMADEUS_TEST_PRIVATE_KEY = previousSecret;
     }
-    expect(success.changed).toBeTrue();
-    expect(noop.changed).toBeFalse();
-    expect(superseded.changed).toBeFalse();
-    expect(error.changed).toBeFalse();
-    expect(JSON.stringify(error)).not.toContain(secret);
-    expect(success.paths).toEqual([]);
-    expect(evidenceExitCode(success)).toBe(0);
-    expect(evidenceExitCode(noop)).toBe(0);
-    expect(evidenceExitCode(superseded)).toBe(0);
-    expect(evidenceExitCode(error)).toBe(1);
   });
 });

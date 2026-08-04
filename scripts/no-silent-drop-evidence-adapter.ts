@@ -18,20 +18,30 @@ export type CommandResult = {
 };
 
 export type CommandRunner = {
-  run(command: readonly string[], options?: { cwd?: string }): CommandResult;
+  run(command: readonly string[], options?: { cwd?: string; timeoutMs?: number }): CommandResult;
 };
+
+export const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
 
 export const systemCommandRunner: CommandRunner = {
   run(command, options = {}) {
+    const timeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
     const result = spawnSync(command[0], command.slice(1), {
       cwd: options.cwd,
       encoding: "utf8",
       env: process.env,
+      timeout: timeoutMs,
     });
+    const timedOut = result.signal === "SIGTERM" ||
+      (result.error !== undefined && "code" in result.error && result.error.code === "ETIMEDOUT");
+    const stderr = result.stderr ?? "";
+    const errorDetail = result.error === undefined ? "" : String(result.error);
     return {
-      status: result.status ?? 1,
+      status: timedOut ? 124 : (result.status ?? 1),
       stdout: result.stdout ?? "",
-      stderr: result.stderr ?? (result.error === undefined ? "" : String(result.error)),
+      stderr: timedOut
+        ? [stderr.trim(), `command timed out after ${timeoutMs}ms (SIGTERM)`, errorDetail].filter(Boolean).join("\n")
+        : (stderr || errorDetail),
     };
   },
 };

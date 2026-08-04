@@ -18,6 +18,7 @@ import {
   type CommandResult,
   type CommandRunner,
   NoSilentDropEvidenceAdapter,
+  systemCommandRunner,
 } from "../../scripts/no-silent-drop-evidence-adapter.ts";
 import {
   applyReboundBundle,
@@ -63,6 +64,7 @@ function initRepository(): string {
   mkdirSync(join(root, "packages", "framework", "core", "tools"), { recursive: true });
   writeFileSync(join(root, "packages", "framework", "core", "tools", "fixture.ts"), "export const base = true;\n");
   must(root, ["git", "init", "-q"]);
+  must(root, ["git", "config", "core.fileMode", "true"]);
   must(root, ["git", "config", "user.name", "Evidence Bot"]);
   must(root, ["git", "config", "user.email", "evidence@example.test"]);
   must(root, ["git", "add", "."]);
@@ -80,6 +82,16 @@ type SquashFixture = {
 };
 
 type PullRequestDrift = "add" | "byte" | "rename" | "mode" | "object";
+
+type ReconcileRunnerOptions = {
+  pages?: unknown;
+  remoteTip?: string;
+  remoteTips?: string[];
+  failPush?: boolean;
+  failCommit?: boolean;
+  failFocused?: boolean;
+  failGitHub?: boolean;
+};
 
 function squashFixture(options: { pullRequestDrift?: PullRequestDrift; landingDrift?: boolean } = {}): SquashFixture {
   const root = initRepository();
@@ -122,15 +134,7 @@ function squashFixture(options: { pullRequestDrift?: PullRequestDrift; landingDr
 
 function hybridRunner(
   fixture: SquashFixture,
-  options: {
-    pages?: unknown;
-    remoteTip?: string;
-    remoteTips?: string[];
-    failPush?: boolean;
-    failCommit?: boolean;
-    failFocused?: boolean;
-    failGitHub?: boolean;
-  } = {},
+  options: ReconcileRunnerOptions = {},
 ): CommandRunner {
   const pullRequest = {
     number: 7,
@@ -149,15 +153,7 @@ function hybridRunner(
 
 function interceptedCommand(
   args: readonly string[],
-  options: {
-    pages?: unknown;
-    remoteTip?: string;
-    remoteTips?: string[];
-    failPush?: boolean;
-    failCommit?: boolean;
-    failFocused?: boolean;
-    failGitHub?: boolean;
-  },
+  options: ReconcileRunnerOptions,
   pullRequest: unknown,
   remoteTips: string[],
 ): CommandResult | undefined {
@@ -189,6 +185,15 @@ afterEach(() => {
 });
 
 describe("t427 pure rebind trust boundary", () => {
+  test("fails closed when a system command exceeds its finite deadline", () => {
+    const result = systemCommandRunner.run(
+      [process.execPath, "-e", "setTimeout(() => {}, 10_000)"],
+      { timeoutMs: 10 },
+    );
+    expect(result.status).toBe(124);
+    expect(result.stderr).toContain("command timed out after 10ms (SIGTERM)");
+  });
+
   test("accepts only a clean target equal to HEAD and emits one JSON line from the CLI", () => {
     const root = initRepository();
     const head = must(root, ["git", "rev-parse", "HEAD"]);
@@ -378,7 +383,7 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(rebindCommit).not.toBe(fixture.landing);
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(rebindCommit);
     expect(must(fixture.root, ["git", "diff", "--name-only", `${fixture.landing}..${rebindCommit}`]).split("\n").sort()).toEqual(
-      [...EVIDENCE_BUNDLE_PATHS],
+      [...EVIDENCE_BUNDLE_PATHS].sort(),
     );
 
     const second = runEvidenceCommand([
@@ -425,18 +430,23 @@ describe("t427 squash identity proof and main convergence", () => {
   });
 
   test("rejects add, byte, rename, mode, and object-type binding-to-PR drift plus landing root-tree drift", () => {
-    const cases: Array<{ pullRequestDrift?: PullRequestDrift; landingDrift?: boolean }> = [
-      { pullRequestDrift: "add" },
-      { pullRequestDrift: "byte" },
-      { pullRequestDrift: "rename" },
-      { pullRequestDrift: "mode" },
-      { pullRequestDrift: "object" },
-      { landingDrift: true },
+    const cases: Array<{
+      options: { pullRequestDrift?: PullRequestDrift; landingDrift?: boolean };
+      expected: string;
+    }> = [
+      { options: { pullRequestDrift: "add" }, expected: "differ outside the three derived evidence files" },
+      { options: { pullRequestDrift: "byte" }, expected: "differ outside the three derived evidence files" },
+      { options: { pullRequestDrift: "rename" }, expected: "differ outside the three derived evidence files" },
+      { options: { pullRequestDrift: "mode" }, expected: "differ outside the three derived evidence files" },
+      { options: { pullRequestDrift: "object" }, expected: "differ outside the three derived evidence files" },
+      { options: { landingDrift: true }, expected: "root trees differ" },
     ];
-    for (const options of cases) {
+    for (const { options, expected } of cases) {
       const fixture = squashFixture(options);
       const adapter = new NoSilentDropEvidenceAdapter(fixture.root, hybridRunner(fixture));
-      expect(() => adapter.proveIdentityOnlyRebind(fixture.landing, fixture.binding, "amadeus-dlc/amadeus")).toThrow();
+      expect(() =>
+        adapter.proveIdentityOnlyRebind(fixture.landing, fixture.binding, "amadeus-dlc/amadeus")
+      ).toThrow(expected);
       expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
     }
   });

@@ -11,6 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  ADOPTION_RECEIPT_IDS,
+  type AdoptionReceiptId,
   type EvidenceEntry,
   evidenceDigestForEntry,
 } from "./repository-adoption-evidence.ts";
@@ -149,6 +151,42 @@ function artifact(run: JsonRecord, label: string): JsonRecord {
   return record(run.artifact, `${label}.artifact`);
 }
 
+function isAdoptionReceiptId(value: unknown): value is AdoptionReceiptId {
+  return typeof value === "string" && ADOPTION_RECEIPT_IDS.some((receiptId) => receiptId === value);
+}
+
+function verifiedEvidenceEntry(entry: JsonRecord, label: string): EvidenceEntry {
+  if (entry.schemaVersion !== 1 || !isAdoptionReceiptId(entry.id) ||
+    typeof entry.testedRevision !== "string" || entry.verdict !== "pass") {
+    throw new EvidenceRebindError("REBIND_SCHEMA_INVALID", `${label} is not a valid evidence entry`);
+  }
+  const runs = evidenceRuns(entry, label).map((run, index) => {
+    const runLabel = `${label}.runs[${index}]`;
+    const command = array(run.command, `${runLabel}.command`);
+    const ref = artifact(run, runLabel);
+    if (!command.every((argument): argument is string => typeof argument === "string" && argument.length > 0) ||
+      typeof run.name !== "string" || run.name.length === 0 || !Number.isInteger(run.exitCode) ||
+      (run.exitCode as number) < 0 || run.verdict !== "pass" || typeof ref.path !== "string" ||
+      typeof ref.sha256 !== "string" || typeof ref.recordId !== "string" || ref.recordId.length === 0) {
+      throw new EvidenceRebindError("REBIND_SCHEMA_INVALID", `${runLabel} is not a valid evidence run`);
+    }
+    return {
+      name: run.name,
+      command,
+      artifact: { path: ref.path, sha256: ref.sha256, recordId: ref.recordId },
+      exitCode: run.exitCode as number,
+      verdict: "pass" as const,
+    };
+  });
+  return {
+    schemaVersion: entry.schemaVersion,
+    id: entry.id,
+    testedRevision: entry.testedRevision,
+    runs,
+    verdict: "pass",
+  };
+}
+
 function artifactDigestMap(repositoryRoot: string, entries: readonly JsonRecord[], runsBytes: Buffer): Map<string, string> {
   const digests = new Map<string, string>();
   for (const [entryIndex, entry] of entries.entries()) {
@@ -226,7 +264,10 @@ function candidateReceiptProblems(
       problems.push(`receipt ${String(receipt.id)} has no manifest entry`);
       continue;
     }
-    const expected = evidenceDigestForEntry(entry as unknown as EvidenceEntry, artifactDigests);
+    const expected = evidenceDigestForEntry(
+      verifiedEvidenceEntry(entry, `manifest entry ${String(entry.id)}`),
+      artifactDigests,
+    );
     if (receipt.evidenceDigest !== expected) problems.push(`receipt ${String(receipt.id)} digest mismatch`);
   }
   return problems;
@@ -290,7 +331,10 @@ function retargetRegistry(
     if (entry === undefined) {
       throw new EvidenceRebindError("REBIND_VALIDATION_FAILED", `missing manifest entry: ${String(receipt.id)}`);
     }
-    receipt.evidenceDigest = evidenceDigestForEntry(entry as unknown as EvidenceEntry, artifactDigests);
+    receipt.evidenceDigest = evidenceDigestForEntry(
+      verifiedEvidenceEntry(entry, `manifest entry ${String(entry.id)}`),
+      artifactDigests,
+    );
   }
   return receipts;
 }
