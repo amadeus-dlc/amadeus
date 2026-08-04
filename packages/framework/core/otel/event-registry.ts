@@ -253,6 +253,8 @@ export const REGISTERED_EVENTS = [
       "Redaction Status",
       "Trace Id",
       "Span Id",
+      "Event Identity",
+      "Projection Revision",
     ],
     schemaVersion: 1,
   },

@@ -112,6 +112,10 @@ describe("durable Loop Monitor Replay Index", () => {
     expect(decodeLoopMonitorEventSet(JSON.stringify(canonical[0]))).toEqual(canonical[0]);
     expect(() => decodeLoopMonitorEventSet("{}"))
       .toThrow("invalid-loop-monitor-event-set");
+    const malformed = JSON.parse(JSON.stringify(canonical[0])) as Record<string, unknown>;
+    malformed.events = [{ type: "LOOP_DELIVERY_OBSERVED" }];
+    expect(() => decodeLoopMonitorEventSet(JSON.stringify(malformed)))
+      .toThrow("invalid-loop-monitor-event-set");
 
     rmSync(join(root, LOOP_MONITOR_REPLAY_INDEX_FILE), { force: true });
     expect(() => repository.readEventSets(partition)).toThrow(LoopMonitorReplayIncompleteError);

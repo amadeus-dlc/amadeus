@@ -617,6 +617,32 @@ function decisionRecord(input: {
   };
 }
 
+function resolveConfirmedPolicy(input: {
+  readonly projection: AutonomyProjection;
+  readonly occurrence: InteractionOccurrence;
+  readonly grant: IntentGrant;
+  readonly actorId: string;
+}): AutoDecisionResolution | null {
+  const policies = input.grant.policies.filter((policy) =>
+    policy.selector === input.occurrence.selector &&
+    policy.scopeFingerprint === input.grant.scope.scopeFingerprint &&
+    input.occurrence.optionIds.includes(policy.normalizedOptionRule.optionId)
+  );
+  const options = new Set(policies.map((policy) => policy.normalizedOptionRule.optionId));
+  if (options.size > 1) return { kind: "invalid", reason: "confirmed-policy-conflict" };
+  if (options.size === 0) return null;
+  const selectedOptionId = [...options][0]!;
+  return { kind: "decided", record: decisionRecord({
+    projection: input.projection,
+    occurrence: input.occurrence,
+    selectedOptionId,
+    decider: "deterministic-engine",
+    basisKind: "confirmed-policy",
+    basisFingerprint: autonomyDigest(policies.map((policy) => policy.policyId)),
+    actorId: input.actorId,
+  }) };
+}
+
 export function createGateAutoDecision(input: {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
@@ -656,22 +682,13 @@ export function resolveAutoDecision(input: {
   readonly capability: DecisionCapabilityPort;
 }): AutoDecisionResolution {
   const { projection, occurrence } = input;
-  if (projection.mode !== "full" || projection.currentGrant === null) return { kind: "invalid", reason: "full-grant-required" };
+  const grant = projection.currentGrant;
+  if (projection.mode !== "full" || grant === null) return { kind: "invalid", reason: "full-grant-required" };
   if (!SHA256.test(input.scopeLineageFingerprint) || !SHA256.test(input.currentNormFingerprint)) {
     return { kind: "invalid", reason: "invalid-decision-context" };
   }
-  const policies = projection.currentGrant.policies.filter((policy) =>
-    policy.selector === occurrence.selector && policy.scopeFingerprint === projection.currentGrant!.scope.scopeFingerprint &&
-    occurrence.optionIds.includes(policy.normalizedOptionRule.optionId)
-  );
-  const policyOptions = new Set(policies.map((policy) => policy.normalizedOptionRule.optionId));
-  if (policyOptions.size === 1) {
-    const selectedOptionId = [...policyOptions][0]!;
-    return { kind: "decided", record: decisionRecord({
-      projection, occurrence, selectedOptionId, decider: "deterministic-engine", basisKind: "confirmed-policy",
-      basisFingerprint: autonomyDigest(policies.map((policy) => policy.policyId)), actorId: input.actorId,
-    }) };
-  }
+  const policy = resolveConfirmedPolicy({ projection, occurrence, grant, actorId: input.actorId });
+  if (policy !== null) return policy;
   const applicableNorms = input.applicableNormFacts.filter((fact) =>
     fact.selector === occurrence.selector && fact.normFingerprint === input.currentNormFingerprint &&
     occurrence.optionIds.includes(fact.optionId)
@@ -723,7 +740,7 @@ export function authorizeDecisionEffect(input: {
   const effect = input.registry.resolve(input.selectedOptionId);
   if (effect === null) return { ok: false, reason: "UNKNOWN_EFFECT" };
   if (effect.payloadFingerprint !== autonomyDigest(effect.payload)) return { ok: false, reason: "PAYLOAD_MISMATCH" };
-  if (effect.classification !== "workflow-reversible" || input.grant.scope.prohibitedEffects.includes(effect.classification as ProhibitedEffectClassification)) {
+  if (effect.classification !== "workflow-reversible") {
     return { ok: false, reason: "PROHIBITED_EFFECT" };
   }
   if (effect.requiredScopeFingerprint !== input.grant.scope.scopeFingerprint) return { ok: false, reason: "SCOPE_OUT" };

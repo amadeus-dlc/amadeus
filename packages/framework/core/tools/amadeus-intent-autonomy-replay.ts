@@ -131,10 +131,7 @@ export function readIntentAutonomyTransactionsFromAudit(
   intent?: string,
   space?: string,
 ): readonly IntentAutonomyTransaction[] {
-  const rows = findAllEvents(
-    readAllAuditShards(projectDir, intent, space),
-    "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
-  );
+  const rows = findAllEvents(readAllAuditShards(projectDir, intent, space), INTENT_AUTONOMY_AUDIT_EVENT);
   return readIntentAutonomyTransactions(rows.map((row) => row.block).join("\n"));
 }
 
@@ -142,12 +139,13 @@ export function createAuditIntentAutonomyRepository(options: {
   readonly projectDir: string;
   readonly intent?: string;
   readonly space?: string;
+  readonly audit?: string;
 }): IntentAutonomyRepository {
-  const initialTransactions = readIntentAutonomyTransactionsFromAudit(
-    options.projectDir,
-    options.intent,
-    options.space,
-  );
+  const initialTransactions = options.audit === undefined
+    ? readIntentAutonomyTransactionsFromAudit(options.projectDir, options.intent, options.space)
+    : readIntentAutonomyTransactions(
+      findAllEvents(options.audit, INTENT_AUTONOMY_AUDIT_EVENT).map((row) => row.block).join("\n"),
+    );
   return createMemoryIntentAutonomyRepository({
     initialTransactions,
     onCommit(transaction) {

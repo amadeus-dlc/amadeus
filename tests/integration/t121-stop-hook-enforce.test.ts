@@ -86,7 +86,6 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -101,6 +100,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEventGuarded } from "../../dist/claude/.claude/otel/audit-emit.ts";
@@ -111,6 +111,10 @@ import {
   runEngineNextKind,
   transcriptIsConversational,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
+import {
+  applyProductionAutonomyMode,
+  previewProductionAutonomyGrant,
+} from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 
 // Live-observed machine-injected turns, derived from the shared catalog so a
 // marker rename cannot leave stale copies here (#755). The tier-3 carve-out
@@ -251,6 +255,19 @@ function auditRow(seq: number): string {
   });
 }
 
+function humanTurnRow(seq: number): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: PINNED_CLONE_ID,
+    intentId: DEFAULT_RECORD_DIR,
+    timestamp: `2026-01-01T00:00:0${seq}.000Z`,
+    heading: "Human Turn",
+    event: "HUMAN_TURN",
+    fields: {},
+  });
+}
+
 /** Write the audit fixture into the pinned per-clone shard (the stop hook reads
  *  auditFilePath(projectDir) — that exact shard — for the progress signature). */
 function seedAuditShard(proj: string, body = `${auditRow(1)}\n`): void {
@@ -328,6 +345,25 @@ function seedInProgressWithQuestions(
     mkdirSync(stageDir, { recursive: true });
     writeFileSync(join(stageDir, `${slug}-questions.md`), opts.questions, "utf-8");
   }
+}
+
+function seedFullIntentGrant(proj: string): void {
+  resetOtelPerProject();
+  writeFileSync(
+    pinnedShardPath(proj),
+    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(2)}\n`,
+    "utf-8",
+  );
+  const stateContent = readFileSync(seededStateFile(proj), "utf-8");
+  const preview = previewProductionAutonomyGrant({ projectDir: proj, stateContent });
+  if (!preview.ok) throw new Error(preview.error);
+  const applied = applyProductionAutonomyMode({
+    projectDir: proj,
+    stateContent,
+    mode: "full",
+    confirmedDisplayDigest: preview.preview.displayDigest,
+  });
+  if (!applied.ok) throw new Error(applied.error);
 }
 
 /**
@@ -767,6 +803,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       questions: "## Questions\n\n[Answer]: ___\n",
       intentMode: "full",
     });
+    seedFullIntentGrant(proj);
     expect(isPendingQuestionStop(readFileSync(seededStateFile(proj), "utf-8"), proj)).toBe(false);
     expect(isPendingQuestionStop("- **Current Stage**: missing\n", proj)).toBe(false);
   });
@@ -789,7 +826,10 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const transcript = seedTranscript(proj, { format: "claude", engineCall: false });
     const semiState = "- **Intent Autonomy Mode**: semi\n";
     expect(isConversationalStop(semiState, transcript, "claude")).toBe(true);
-    expect(isConversationalStop("- **Intent Autonomy Mode**: full\n", transcript, "claude")).toBe(false);
+    seedInProgressWithQuestions(proj, { intentMode: "full" });
+    seedFullIntentGrant(proj);
+    const fullState = readFileSync(seededStateFile(proj), "utf-8");
+    expect(isConversationalStop(fullState, transcript, "claude", proj)).toBe(false);
     expect(isConversationalStop(semiState, null, "claude")).toBe(false);
   });
   // =========================================================================
@@ -1089,6 +1129,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       autonomy: "autonomous",
       questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
     });
+    seedFullIntentGrant(proj);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
@@ -1198,6 +1239,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     // Autonomous Construction: there is no human chatting to release, so the
     // conversational carve-out is suppressed and the loop stays alive.
     seedInProgressWithQuestions(proj, { autonomy: "autonomous" });
+    seedFullIntentGrant(proj);
     const tp = seedTranscript(proj, { format: "claude", engineCall: false });
     const r = runHook(
       proj,

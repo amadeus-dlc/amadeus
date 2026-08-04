@@ -104,6 +104,7 @@ async function buildFiveHarnessEvidence() {
     scenarioDigest: SCENARIO,
   };
   const authorizations: CommittedIntentLiveExecutionAuthorization[] = [];
+  const rawReceipts: RawIntentLiveReceipt[] = [];
   const validations: CommittedValidatedIntentLiveReceipt[] = [];
   for (const [index, harnessId] of cohort.value.harnessIds.entries()) {
     const authorizationService = createIntentLiveAuthorizationService({
@@ -176,6 +177,7 @@ async function buildFiveHarnessEvidence() {
       outcome: "passed",
       observation,
     };
+    rawReceipts.push(rawReceipt);
     const validator = createIntentLiveReceiptValidator({
       evidenceReader: {
         readAuthorizationSnapshot: () => ({ ok: true, value: {
@@ -210,26 +212,27 @@ async function buildFiveHarnessEvidence() {
       } }),
     },
   });
-  return { registry: registry.value, cohort: cohort.value, revision, authorizations, validations, evaluator };
+  return { registry: registry.value, cohort: cohort.value, revision, authorizations, rawReceipts, validations, evaluator };
 }
 
 describe("five-harness completion cohort", () => {
   test("registry resolves the exact current five while retaining Kiro rows", () => {
     const registry = validateHarnessRegistry();
     expect(registry.ok).toBe(true);
-    if (!registry.ok) return;
+    if (!registry.ok) throw new Error(registry.error.detail);
     expect(registry.value.descriptors.map((descriptor) => descriptor.id)).toContain("kiro");
     expect(registry.value.descriptors.map((descriptor) => descriptor.id)).toContain("kiro-ide");
     const cohort = resolveRequiredCompletionCohort(registry.value);
     expect(cohort.ok).toBe(true);
-    if (cohort.ok) expect(cohort.value.harnessIds).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
+    if (!cohort.ok) throw new Error(cohort.error.detail);
+    expect(cohort.value.harnessIds).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
   });
 
   test("credential absence is not pass and produces the designed non-terminal route", async () => {
     const registry = validateHarnessRegistry();
-    if (!registry.ok) return;
+    if (!registry.ok) throw new Error(registry.error.detail);
     const cohort = resolveRequiredCompletionCohort(registry.value);
-    if (!cohort.ok) return;
+    if (!cohort.ok) throw new Error(cohort.error.detail);
     const service = createIntentLiveAuthorizationService({
       port: { authorize: () => ({ authorized: false, reason: "credential-unavailable" }) },
     });
@@ -293,13 +296,13 @@ describe("receipt validation and terminal transaction", () => {
     });
     const reserved = coordinator.reserve({ authorization });
     expect(reserved.ok).toBe(true);
-    if (!reserved.ok) return;
+    if (!reserved.ok) throw new Error(reserved.error.detail);
     const committedReservation = coordinator.bindStateCommit({
       planned: reserved.value.reservation,
       audit: reserved.value.audit,
       receipt: commitReceipt("run-reservation-transaction", reserved.value.audit[0].eventIdentity, 11, 8),
     });
-    if (!committedReservation.ok) return;
+    if (!committedReservation.ok) throw new Error(committedReservation.error.detail);
     snapshot = {
       intentUuid: INTENT,
       auditRevision: 11,
@@ -308,7 +311,7 @@ describe("receipt validation and terminal transaction", () => {
       run: committedReservation.value,
     };
     const started = await coordinator.planNext({ intentUuid: INTENT, runId: committedReservation.value.runId });
-    if (!started.ok) return;
+    if (!started.ok) throw new Error(started.error.detail);
     const committedStarted = coordinator.bindTransitionCommit({
       prior: started.value.prior,
       next: started.value.next,
@@ -316,11 +319,12 @@ describe("receipt validation and terminal transaction", () => {
       receipt: commitReceipt("run-started-transaction", started.value.audit[0].eventIdentity, 12, 9),
     });
     expect(committedStarted.ok).toBe(true);
-    if (!committedStarted.ok || committedStarted.value.dispatchPermit === null) return;
+    if (!committedStarted.ok) throw new Error(committedStarted.error.detail);
+    if (committedStarted.value.dispatchPermit === null) throw new Error("run start did not produce a dispatch permit");
     snapshot = { ...snapshot, auditRevision: 12, stateProjectionRevision: 9, run: committedStarted.value.state };
     const claim = coordinator.claimDispatch(committedStarted.value.dispatchPermit);
     expect(claim.ok).toBe(true);
-    if (!claim.ok) return;
+    if (!claim.ok) throw new Error(claim.error.detail);
     const committedClaim = coordinator.bindDispatchClaimCommit({
       permit: committedStarted.value.dispatchPermit,
       prior: claim.value.prior,
@@ -328,7 +332,7 @@ describe("receipt validation and terminal transaction", () => {
       audit: claim.value.audit,
       receipt: commitReceipt("run-claim-transaction", claim.value.audit[0].eventIdentity, 13, 10),
     });
-    if (!committedClaim.ok) return;
+    if (!committedClaim.ok) throw new Error(committedClaim.error.detail);
     const claimedRun = {
       ...claim.value.claimed,
       stateEventIdentity: committedClaim.value.claimEventIdentity,
@@ -355,13 +359,14 @@ describe("receipt validation and terminal transaction", () => {
       validationEventIdentities: fixture.validations.map((receipt) => receipt.validationEventIdentity).reverse(),
     });
     expect(evaluation.ok).toBe(true);
-    if (!evaluation.ok || !isCompleteEvaluation(evaluation.value)) return;
+    if (!evaluation.ok) throw new Error(evaluation.error.detail);
+    if (!isCompleteEvaluation(evaluation.value)) throw new Error("expected complete five-harness evaluation");
     expect(evaluation.value.check.evidence.receiptIds).toEqual(fixture.cohort.harnessIds.map((id) => `receipt-${id}`));
     expect(parseCompletionEvidencePayload(evaluation.value.audit[0]).ok).toBe(true);
 
     const plan = planTerminalCommit({ current: fullProjection(), evaluation: evaluation.value });
     expect(plan.ok).toBe(true);
-    if (!plan.ok) return;
+    if (!plan.ok) throw new Error(plan.error.detail);
     expect(plan.value.orderedEvents.map((event) => event.eventType)).toEqual([
       "LIVE_COMPLETION_EVIDENCE_VALIDATED",
       "INTENT_GRANT_COMPLETED",
@@ -418,11 +423,33 @@ describe("receipt validation and terminal transaction", () => {
       revision: fixture.revision,
       validationEventIdentities: fixture.validations.map((receipt) => receipt.validationEventIdentity),
     });
-    expect(duplicate).toMatchObject({ ok: true, value: { check: { kind: "incomplete" }, audit: [] } });
+    expect(duplicate).toMatchObject({
+      ok: true,
+      value: {
+        check: {
+          kind: "incomplete",
+          missingHarnessIds: [],
+          rejectedReceiptIds: ["receipt-claude"],
+        },
+        audit: [],
+      },
+    });
 
     const authorization = fixture.authorizations[0];
+    const rawReceipt = fixture.rawReceipts[0]!;
     const skipped: RawIntentLiveReceipt = {
-      ...fixture.validations[0],
+      schemaVersion: rawReceipt.schemaVersion,
+      receiptId: rawReceipt.receiptId,
+      intentUuid: rawReceipt.intentUuid,
+      harnessId: rawReceipt.harnessId,
+      authorizationId: rawReceipt.authorizationId,
+      authorizationEventIdentity: rawReceipt.authorizationEventIdentity,
+      authorizationCommitTransactionId: rawReceipt.authorizationCommitTransactionId,
+      revision: rawReceipt.revision,
+      environmentId: rawReceipt.environmentId,
+      traceId: rawReceipt.traceId,
+      spanId: rawReceipt.spanId,
+      attestationDigest: rawReceipt.attestationDigest,
       outcome: "skipped",
       observation: null,
     };
@@ -457,9 +484,10 @@ describe("receipt validation and terminal transaction", () => {
       revision: fixture.revision,
       validationEventIdentities: fixture.validations.map((receipt) => receipt.validationEventIdentity),
     });
-    if (!evaluation.ok || !isCompleteEvaluation(evaluation.value)) return;
+    if (!evaluation.ok) throw new Error(evaluation.error.detail);
+    if (!isCompleteEvaluation(evaluation.value)) throw new Error("expected complete five-harness evaluation");
     const plan = planTerminalCommit({ current: createAutonomyProjection({ intentUuid: INTENT }), evaluation: evaluation.value });
-    if (!plan.ok) return;
+    if (!plan.ok) throw new Error(plan.error.detail);
     const rejected = acceptTerminalCommit({
       plan: plan.value,
       receipt: {

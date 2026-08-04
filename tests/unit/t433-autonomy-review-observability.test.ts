@@ -90,8 +90,9 @@ describe("autonomy decision read model", () => {
       intents: [seed(ACTIVE, "active", [decision(ACTIVE, "a"), decision(ACTIVE, "b")])],
     });
     const first = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", reviewState: "unreviewed", pageSize: 1 });
-    expect(first.ok).toBe(true);
-    if (!first.ok || first.value.nextCursor === null) return;
+    if (!first.ok) throw new Error(JSON.stringify(first.error));
+    expect(first.value.nextCursor).not.toBeNull();
+    if (first.value.nextCursor === null) throw new Error("expected a next cursor");
     service.replaceIntent(seed(ACTIVE, "active", [decision(ACTIVE, "a"), decision(ACTIVE, "b"), decision(ACTIVE, "c")]));
     const stale = service.listAutoDecisions({
       intentUuid: ACTIVE,

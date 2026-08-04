@@ -5,10 +5,12 @@
 // protected AUTO_DECISION_REVIEWED append path.
 
 import {
+  autonomyReviewStableId,
   bindHumanReviewCommand,
   canonicalContractValueDigest,
   canonicalTupleDigest,
   createMemoryAutonomyReviewService,
+  nextReviewExtensionHead,
   reviewAuditFields,
   type AutonomyReviewPersistenceSnapshot,
   type AutoDecisionReviewedEvent,
@@ -83,10 +85,6 @@ function currentSeed(projectDir: string, target: ReviewTarget): ReviewIntentSeed
   };
 }
 
-function stableId(prefix: string, digest: string): string {
-  return `${prefix}-${digest.slice("sha256:".length, "sha256:".length + 32)}`;
-}
-
 type ReviewAuditPayload = Record<string, unknown> & {
   readonly targetIntentUuid: string;
   readonly decisionId: string;
@@ -111,6 +109,22 @@ function parseReviewPayload(payloadV1: string, payloadDigest: string): ReviewAud
     typeof payload.auditTransactionId === "string",
     typeof payload.receiptProjectionRevision === "number",
     payload.lifecycleAtReview === "active" || payload.lifecycleAtReview === "completed",
+    typeof payload.reviewPrincipalRef === "string",
+    typeof payload.reviewActorRef === "string",
+    typeof payload.decisionPrincipalRef === "string",
+    typeof payload.decisionActorRef === "string",
+    typeof payload.decisionSource === "string",
+    typeof payload.safeBasisDigest === "string",
+    payload.grantId === null || typeof payload.grantId === "string",
+    typeof payload.sourceIntentUuid === "string",
+    typeof payload.sourceHumanTurnId === "string",
+    typeof payload.sourceHumanTurnEventId === "string",
+    typeof payload.commandOccurrenceId === "string",
+    typeof payload.commandBindingDigest === "string",
+    payload.remediation === null || typeof payload.remediation === "string",
+    payload.flagClassification === null || typeof payload.flagClassification === "string",
+    payload.safeNoteDigest === null || typeof payload.safeNoteDigest === "string",
+    payload.redactionStatus === "redacted" || payload.redactionStatus === "withheld",
   ].every(Boolean);
   if (!valid) throw new Error("invalid-review-audit-payload");
   return payload as ReviewAuditPayload;
@@ -122,7 +136,7 @@ function parsedReviewEvent(block: string): AutoDecisionReviewedEvent {
   if (payloadV1 === null || payloadDigest === null) throw new Error("invalid-review-audit-payload");
   const payload = parseReviewPayload(payloadV1, payloadDigest);
   const revision = payload.receiptProjectionRevision;
-  const eventIdentity = stableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
+  const eventIdentity = autonomyReviewStableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
     { tag: "review", value: payload.reviewId },
     { tag: "command-occurrence", value: String(payload.commandOccurrenceId) },
     { tag: "target-audit-revision", value: String(revision - 1) },
@@ -186,14 +200,14 @@ function reviewExtension(
   let revision = 0;
   for (const event of reviews) {
     revision += 1;
-    head = stableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
-      { tag: "completion-seal", value: seal },
-      { tag: "previous-extension", value: head },
-      { tag: "review-event", value: event.eventIdentity },
-      { tag: "review-payload-digest", value: event.payloadDigest },
-      { tag: "transaction", value: event.transactionId },
-      { tag: "extension-revision", value: String(revision) },
-    ]));
+    head = nextReviewExtensionHead({
+      completionSealDigest: seal,
+      previousExtensionHead: head,
+      eventIdentity: event.eventIdentity,
+      payloadDigest: event.payloadDigest,
+      transactionId: event.transactionId,
+      revision,
+    });
   }
   return { head, revision };
 }
@@ -287,7 +301,17 @@ function commitDecisionReviewLocked(
   source: ReviewTarget,
 ): ProductionDecisionReviewResult {
   const sourceAudit = readAllAuditShards(input.projectDir, source.dirName, source.space);
-  const latestTurn = findAllEvents(sourceAudit, "HUMAN_TURN").at(-1);
+  const turns = findAllEvents(sourceAudit, "HUMAN_TURN");
+  const latestPriorReview = readStoredReviews(input.projectDir, target)
+    .filter((event) => event.sourceIntentUuid === source.intentUuid)
+    .at(-1);
+  const consumedTurnIndex = latestPriorReview === undefined
+    ? -1
+    : turns.findLastIndex((turn) => turn.timestamp === latestPriorReview.sourceHumanTurnEventId);
+  if (latestPriorReview !== undefined && consumedTurnIndex < 0) {
+    return { ok: false, error: "PROVENANCE_REQUIRED" };
+  }
+  const latestTurn = turns.slice(consumedTurnIndex + 1).at(-1);
   if (latestTurn === undefined) return { ok: false, error: "PROVENANCE_REQUIRED" };
   const binding = bindHumanReviewCommand({
     sourceIntentUuid: source.intentUuid,

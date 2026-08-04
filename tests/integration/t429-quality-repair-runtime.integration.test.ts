@@ -174,7 +174,7 @@ describe("Quality Repair production coordinator", () => {
   test("atomically resumes a new epoch with the exact human alternative and replays across coordinators", () => {
     const { activation, repository, coordinator } = runtime();
     let previous: QualityEvidenceSnapshot | null = null;
-    const snapshots = [];
+    const snapshots: ReturnType<typeof coordinator.recordEvidence>[] = [];
     for (let index = 0; index < 3; index += 1) {
       const result = coordinator.recordEvidence(batch(activation.graph.graphRevision, previous), trace);
       previous = result.snapshot;
@@ -288,5 +288,34 @@ describe("Quality Repair production coordinator", () => {
     expect(() => decodeQualityRepairTransaction('{"schemaVersion":1}')).toThrow(
       "invalid-quality-repair-transaction",
     );
+    const malformed = JSON.parse(encoded) as Record<string, unknown>;
+    malformed.qualityEvents = [{ type: "QUALITY_SNAPSHOT_OBSERVED", projection: {} }];
+    expect(() => decodeQualityRepairTransaction(JSON.stringify(malformed))).toThrow(
+      "invalid-quality-repair-transaction",
+    );
+  });
+
+  test("does not advance quality projection when the loop delivery is incomplete", () => {
+    const contribution = createFirstPartyQualityContribution(2);
+    const activation = resolveQualityPluginActivation({
+      mode: "semi",
+      projection: emptyQualityPluginProjection("intent-1"),
+      contribution,
+    });
+    if (activation.kind !== "active") throw new Error("expected active contribution");
+    const base = createMemoryQualityRepairRepository();
+    const repository = {
+      ...base,
+      loopRepository: {
+        ...base.loopRepository,
+        transaction(): never {
+          throw new Error("injected-loop-write-failure");
+        },
+      },
+    };
+    const coordinator = createQualityRepairCoordinator({ activation, repository });
+    const result = coordinator.recordEvidence(batch(activation.graph.graphRevision, null), trace);
+    expect(result).toMatchObject({ kind: "INCOMPLETE" });
+    expect(repository.readTransactions()).toEqual([]);
   });
 });

@@ -122,21 +122,21 @@ describe("loop monitor manifest compiler", () => {
   });
 
   test("fails the whole compile on unknown fields and invalid schema invariants", () => {
-    const cases: unknown[] = [
-      { ...(manifest() as object), unknown: true },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), extra: true }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), cycle: [] }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), cycle: ["repair", "repair"] }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), ignoreEvents: ["repair"] }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), threshold: 0 }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), routes: [] }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), routes: ["repair", "repair"] }] },
-      { ...manifest(), loopMonitors: [{ ...monitorSpec(), evidenceProviderId: "missing" }] },
-      { ...(manifest() as object), runtimeLimits: { maxPendingDeliveries: Number.POSITIVE_INFINITY } },
+    const cases: [string, unknown][] = [
+      ["manifest unknown field", { ...(manifest() as object), unknown: true }],
+      ["monitor unknown field", { ...manifest(), loopMonitors: [{ ...monitorSpec(), extra: true }] }],
+      ["empty cycle", { ...manifest(), loopMonitors: [{ ...monitorSpec(), cycle: [] }] }],
+      ["duplicate cycle event", { ...manifest(), loopMonitors: [{ ...monitorSpec(), cycle: ["repair", "repair"] }] }],
+      ["ignored cycle event", { ...manifest(), loopMonitors: [{ ...monitorSpec(), ignoreEvents: ["repair"] }] }],
+      ["zero threshold", { ...manifest(), loopMonitors: [{ ...monitorSpec(), threshold: 0 }] }],
+      ["empty routes", { ...manifest(), loopMonitors: [{ ...monitorSpec(), routes: [] }] }],
+      ["duplicate route", { ...manifest(), loopMonitors: [{ ...monitorSpec(), routes: ["repair", "repair"] }] }],
+      ["missing provider", { ...manifest(), loopMonitors: [{ ...monitorSpec(), evidenceProviderId: "missing" }] }],
+      ["infinite pending limit", { ...(manifest() as object), runtimeLimits: { maxPendingDeliveries: Number.POSITIVE_INFINITY } }],
     ];
-    for (const value of cases) {
+    for (const [label, value] of cases) {
       const result = compileLoopMonitorManifest(value, contributions);
-      expect(result.ok).toBe(false);
+      expect(result.ok, label).toBe(false);
       if (!result.ok) expect(result.errors.length).toBeGreaterThan(0);
     }
   });

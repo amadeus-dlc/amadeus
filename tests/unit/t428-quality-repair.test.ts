@@ -217,7 +217,12 @@ describe("bounded convergence", () => {
     let epoch = createQualityEpochProjection(first, 2);
     epoch = planQualityDelivery(epoch, first).nextProjection;
     epoch = planQualityDelivery(epoch, same).nextProjection;
-    epoch = { ...epoch, replanSinceLastProgress: true };
+    epoch = recordQualityReplan(epoch, {
+      judgeInvocationId: "judge-progress-reset",
+      planDigest: `sha256:${"e".repeat(64)}`,
+      agentId: "repair-agent",
+      contextId: "fresh-context-progress-reset",
+    }).nextProjection;
     const progress = planQualityDelivery(epoch, reduced);
     expect(progress.progress.kind).toBe("strict-progress");
     expect(progress.nextProjection).toMatchObject({

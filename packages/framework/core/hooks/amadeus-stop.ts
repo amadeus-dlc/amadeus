@@ -99,6 +99,7 @@ import {
   type StopBudgetMode,
 } from "../tools/amadeus-convergence-policy.ts";
 import { reserveStageBudget } from "../tools/amadeus-convergence-runtime.ts";
+import { readProductionAutonomyProjection } from "../tools/amadeus-intent-autonomy-production.ts";
 import {
   COMPOSE_MARKER_RELATIVE_PATH,
   COMPOSE_MARKER_TTL_MS,
@@ -163,8 +164,17 @@ function intentAutonomyMode(stateContent: string): "none" | "semi" | "full" | nu
   return mode === "none" || mode === "semi" || mode === "full" ? mode : null;
 }
 
-function isFullyAutonomousIntent(stateContent: string): boolean {
-  return intentAutonomyMode(stateContent) === "full";
+function isFullyAutonomousIntent(
+  stateContent: string,
+  resolvedProjectDir: string = projectDir,
+): boolean {
+  if (intentAutonomyMode(stateContent) !== "full") return false;
+  try {
+    const projection = readProductionAutonomyProjection(resolvedProjectDir);
+    return projection?.mode === "full" && projection.currentGrant?.state === "active";
+  } catch {
+    return false;
+  }
 }
 
 export function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
@@ -409,7 +419,7 @@ function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: str
 // question is pending, and Intent autonomy is not `full`.
 export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
   try {
-    if (isFullyAutonomousIntent(stateContent)) {
+    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard — keep the loop alive
     }
     const slug = currentStageSlug(stateContent);
@@ -444,7 +454,7 @@ export function isPendingComposeStop(
   stateContent: string,
   deps: PendingComposeStopDeps = realPendingComposeStopDeps,
 ): boolean {
-  if (isFullyAutonomousIntent(stateContent)) {
+  if (isFullyAutonomousIntent(stateContent, deps.projectDir)) {
     return false;
   }
 
@@ -700,9 +710,10 @@ export function isConversationalStop(
   stateContent: string,
   transcriptPath: string | null,
   format: "claude" | "codex",
+  resolvedProjectDir: string = projectDir,
 ): boolean {
   try {
-    if (isFullyAutonomousIntent(stateContent)) {
+    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard: keep the loop alive
     }
     if (transcriptPath === null || transcriptPath.length === 0) return false;

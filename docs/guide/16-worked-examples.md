@@ -276,7 +276,7 @@ The walking-skeleton gate follows the same mode rules as every gate. Because thi
 
 The mode was selected at Intent scope:
 
-```
+```text
 Intent autonomy
   ▸ full
     Decide authorised gates and questions through Intent completion.
@@ -302,7 +302,7 @@ Both subagent Tasks return in the next turn. Blocking defects enter the required
 
 **What a failure would look like.** Suppose `notification-email`'s Code Generation returns with a broken SES mock. The conductor waits for `notification-preferences` to finish, preserves its artifacts, and records the failed quality obligation:
 
-```
+```text
 Bolt notification-preferences succeeded. Bolt notification-email failed during code generation:
   "SES client mock could not be constructed — check test config."
 

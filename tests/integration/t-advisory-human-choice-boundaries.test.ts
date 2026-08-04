@@ -450,7 +450,7 @@ describe("protected advisory choice persistence", () => {
         humanTurn.eventIdentity,
         "2026-08-03T12:00:01.000Z",
       )).toEqual({ ok: true });
-      expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("unresolved advisory choice");
+      expect(advisoryReportHoldReason(projectDir, pending.identity.checkpoint)).toContain("unresolved advisory choice");
     }
     {
       const { projectDir, pending } = project();
@@ -469,7 +469,7 @@ describe("protected advisory choice persistence", () => {
         projectDir,
         pending.identity.advisoryInstance,
         humanTurn.eventIdentity,
-      )).toMatchObject({ ok: false });
+      )).toEqual({ ok: false, reason: "model-check evidence exists for this receipt" });
     }
   });
 

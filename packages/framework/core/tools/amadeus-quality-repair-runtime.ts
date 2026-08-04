@@ -9,6 +9,7 @@ import {
 import {
   createLoopMonitorCoordinator,
   loopMonitorPartitionKey,
+  loopMonitorReceiptId,
   type CommittedJudgeDispatchPermit,
   type JudgePort,
   type LiveAuthorizationPort,
@@ -124,7 +125,7 @@ export interface QualityRepairRepository {
 function loopReceipt(set: LoopMonitorEventSet): LoopMonitorCommitReceipt {
   const eventSetDigest = qualityDigest(set);
   return {
-    receiptId: qualityStableId("loop-receipt", [set.eventSetId, eventSetDigest]),
+    receiptId: loopMonitorReceiptId(set.eventSetId, eventSetDigest),
     eventSetId: set.eventSetId,
     eventSetDigest,
     partitionKey: set.partitionKey,
@@ -135,25 +136,32 @@ function foldQualityProjection(
   transactions: readonly QualityRepairTransaction[],
   qualityScopeId: string,
 ): QualityRuntimeProjection | null {
-  let projection: QualityRuntimeProjection | null = null;
-  const eventDigests = new Map<string, string>();
+  return foldQualityProjections(transactions).get(qualityScopeId) ?? null;
+}
+
+function foldQualityProjections(
+  transactions: readonly QualityRepairTransaction[],
+): ReadonlyMap<string, QualityRuntimeProjection> {
+  const projections = new Map<string, QualityRuntimeProjection>();
+  const eventDigests = new Map<string, Map<string, string>>();
   for (const transaction of transactions) {
-    if (transaction.qualityScopeId !== qualityScopeId) continue;
     const transactionDigest = qualityDigest(transaction);
-    const prior = eventDigests.get(transaction.transactionId);
+    const scopeDigests = eventDigests.get(transaction.qualityScopeId) ?? new Map<string, string>();
+    const prior = scopeDigests.get(transaction.transactionId);
     if (prior !== undefined) {
       if (prior !== transactionDigest) throw new Error("quality-repair-transaction-conflict");
       continue;
     }
-    eventDigests.set(transaction.transactionId, transactionDigest);
+    scopeDigests.set(transaction.transactionId, transactionDigest);
+    eventDigests.set(transaction.qualityScopeId, scopeDigests);
     for (const event of transaction.qualityEvents) {
-      if (event.projection.qualityScopeId !== qualityScopeId) {
+      if (event.projection.qualityScopeId !== transaction.qualityScopeId) {
         throw new Error("quality-repair-projection-scope-mismatch");
       }
-      projection = event.projection;
+      projections.set(transaction.qualityScopeId, event.projection);
     }
   }
-  return projection;
+  return projections;
 }
 
 export function createMemoryQualityRepairRepository(options: {
@@ -488,9 +496,10 @@ export function createQualityRepairCoordinator(options: {
   const threshold = activation.graph.loopMonitors[0]!.threshold;
 
   function readByPartition(partition: LoopMonitorPartition): QualityRuntimeProjection | null {
-    for (const transaction of repository.readTransactions()) {
-      const candidate = foldQualityProjection(repository.readTransactions(), transaction.qualityScopeId);
-      if (candidate !== null && loopMonitorPartitionKey(candidate.partition) === loopMonitorPartitionKey(partition)) {
+    const partitionKey = loopMonitorPartitionKey(partition);
+    const projections = foldQualityProjections(repository.readTransactions());
+    for (const candidate of projections.values()) {
+      if (loopMonitorPartitionKey(candidate.partition) === partitionKey) {
         return candidate;
       }
     }
@@ -598,7 +607,7 @@ export function createQualityRepairCoordinator(options: {
       }
       const snapshot = normalized.snapshot;
       const prior = repository.readProjection(snapshot.qualityScopeId);
-      if (prior?.stalledLatch !== null && prior !== null &&
+      if (prior !== null && prior.stalledLatch !== null &&
         prior.stalledLatch.evidenceFingerprint === snapshot.snapshotFingerprint) {
         return {
           kind: "REPAIR_STALLED",
@@ -612,12 +621,12 @@ export function createQualityRepairCoordinator(options: {
       const partition = prior?.partition ?? createPartition(snapshot);
       const nextRuntime = runtimeProjection(partition, plan.nextProjection, snapshot, plan.progress, prior);
       return repository.transaction(snapshot.qualityScopeId, (appendQuality) => {
-        appendQuality({
+        const observation: QualityRuntimeEvent = {
           type: "QUALITY_SNAPSHOT_OBSERVED",
           snapshotFingerprint: snapshot.snapshotFingerprint,
           progress: plan.progress,
           projection: nextRuntime,
-        });
+        };
         const currentLoop = loop.readProjection(partition);
         const delivery = qualityDelivery(
           activation,
@@ -638,6 +647,7 @@ export function createQualityRepairCoordinator(options: {
               projection: plan.nextProjection,
             };
           }
+          appendQuality(observation);
           return {
             kind: "judge-reserved",
             snapshot,
@@ -669,6 +679,7 @@ export function createQualityRepairCoordinator(options: {
             };
           }
         }
+        appendQuality(observation);
         return { kind: "repair", snapshot, progress: plan.progress, projection: plan.nextProjection };
       });
     },

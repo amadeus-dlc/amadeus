@@ -104,7 +104,7 @@ Per unit: [unit-name]
 - **Status**: [Running/Completed]
 - **Intent Autonomy Mode**: [none/semi/full]
 - **Intent Grant**: [none/grant-id]
-- **Construction Autonomy Mode**: [internal scheduling projection]
+- **Construction Autonomy Mode**: unset
 - **Last Updated**: [ISO timestamp]
 
 ## Session Resume Point

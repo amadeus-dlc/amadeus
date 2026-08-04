@@ -308,7 +308,7 @@ architecture への整合を確認します。
 ### Construction フェーズ(ステージ 3.1-3.7)
 
 Construction は 2.8 のプランに従って **Bolt ごと** に実行されます。無人裁定の前に、
-このIntentへ`full`を選び、表示されたIntent-scoped grant（scope、事前裁定方針、principal）
+このintentへ`full`を選び、表示されたintent-scoped grant（scope、事前裁定方針、principal）
 を確認します。依存前提条件を満たしたBoltは並行実行されます。
 
 **Bolt 1: notification-core** — walking skeleton
@@ -322,13 +322,13 @@ amadeus-developer-agent サブエージェントに委譲します。
 - **3.1 Functional Design** — ドメインエンティティ(Notification、NotificationEvent)、ビジネスルール(重複排除、レートリミット)
 - **3.5 Code Generation** — イベントハンドラ、通知リポジトリ、アプリ内配信エンドポイント。ソース 3 ファイル、テスト 4 ファイル。
 
-Walking-skeleton gateにも他のgateと同じmode規則を適用します。このIntentは`full`なので、
+Walking-skeleton gateにも他のgateと同じmode規則を適用します。このintentは`full`なので、
 確認済みgrantの範囲内でengineが裁定できます。syntheticなhuman turnは作らず、選択肢、
 根拠、証拠、grant行使を記録します。
 
-自律レベルはIntentスコープで選択済みです:
+自律レベルはintentスコープで選択済みです:
 
-```
+```text
 Intent autonomy
   ▸ full
     Decide authorised gates and questions through Intent completion.
@@ -362,7 +362,7 @@ Constructionは3.6へ進みます。非生産的なloopはgrantを維持した�
 返ったとします。コンダクターは`notification-preferences`の完了を待ち、その成果物を
 ディスク上に保持し、失敗したquality obligationを記録します:
 
-```
+```text
 Bolt notification-preferences succeeded. Bolt notification-email failed during code generation:
   "SES client mock could not be constructed — check test config."
 
@@ -370,7 +370,7 @@ Quality route: repair notification-email from code generation.
 ```
 
 notification-emailだけを再実行し、Preferencesは`[x]`のままです。証拠が改善しなければ
-Pluginは一度replanします。その後も非生産的なrepairが続けばIntentを`REPAIR_STALLED`で
+Pluginは一度replanします。その後も非生産的なrepairが続けばintentを`REPAIR_STALLED`で
 parkし、再開に必要な証拠変更または検証済みhuman retry条件を表示します。
 
 **ステージ 3.6 — Build and Test**(amadeus-quality-agent、すべての Bolt 後に 1 回実行)
@@ -407,7 +407,7 @@ lint、build、test、セキュリティスキャンのステージを持つ CI 
 | 作業単位 | 1 | 3 |
 | Bolt ごとの Construction | いいえ(fix は単一 Bolt) | はい — 2 Bolt(walking skeleton + 1 並列バッチ) |
 | 条件付きステージ | ほとんどスキップ | ほとんど実行 |
-| 承認ゲート | 4 | Intent modeで決定。`full`は認可済みwalking-skeleton gateと後続gateを裁定可能 |
+| 承認ゲート | 4 | intent modeで決定。`full`は認可済みwalking-skeleton gateと後続gateを裁定可能 |
 
 ---
 
