@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amadeus-dlc.dev/schemas/pi-formal-evidence-v1.json",
+  "title": "Amadeus Pi formal conformance evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "candidate", "runs", "windowsNegative"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verificationCommit", "catalogDigest"],
+      "properties": {
+        "verificationCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "catalogDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "allOf": [
+        { "contains": { "type": "object", "properties": { "platform": { "const": "darwin" } }, "required": ["platform"] }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "type": "object", "properties": { "platform": { "const": "linux" } }, "required": ["platform"] }, "minContains": 1, "maxContains": 1 }
+      ],
+      "items": { "$ref": "#/$defs/formalRun" }
+    },
+    "windowsNegative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "doctorCheckId", "rejected"],
+      "properties": {
+        "platform": { "const": "win32" },
+        "doctorCheckId": { "const": "pi.os" },
+        "rejected": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10"],
+      "properties": {
+        "M1": { "const": true }, "M2": { "const": true }, "M3": { "const": true },
+        "M4": { "const": true }, "M5": { "const": true }, "M6": { "const": true },
+        "M7": { "const": true }, "M8": { "const": true }, "M9": { "const": true },
+        "M10": { "const": true }
+      }
+    },
+    "formalRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "piVersion", "providerId", "modelId", "executedAt", "rpc", "tui", "assertions"],
+      "properties": {
+        "platform": { "enum": ["darwin", "linux"] },
+        "piVersion": { "type": "string", "pattern": "^(?:[1-9][0-9]*\\.[0-9]+\\.[0-9]+|0\\.(?:8[4-9]|9[0-9]|[1-9][0-9]{2,})\\.[0-9]+)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$|^0\\.83\\.(?:0(?:\\+[0-9A-Za-z.-]+)?|[1-9][0-9]*(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?)$" },
+        "providerId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+        "modelId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+        "executedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$" },
+        "rpc": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "driverTerminal", "humanTurnCount", "gateApprovedCount", "outputDigest"],
+          "properties": {
+            "status": { "const": "passed" }, "driverTerminal": { "const": "succeeded" },
+            "humanTurnCount": { "const": 0 }, "gateApprovedCount": { "const": 0 },
+            "outputDigest": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "tui": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "humanTurnCount", "gateApprovedCount", "transcriptDigest"],
+          "properties": {
+            "status": { "const": "passed" },
+            "humanTurnCount": { "type": "integer", "minimum": 1 },
+            "gateApprovedCount": { "type": "integer", "minimum": 1 },
+            "transcriptDigest": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "assertions": { "$ref": "#/$defs/assertions" }
+      }
+    }
+  }
+}

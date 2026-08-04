@@ -2141,7 +2141,16 @@ function projectNextStage(
   stateContent: string | null,
 ): void {
   if (stateContent === null || directive.gate !== true) return;
-  directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
+  const next = nextInScopeStage(node.slug, scope, stateContent);
+  directive.next_stage = next?.slug ?? null;
+  const phaseBoundary = node.phase === "ideation"
+      || node.phase === "inception"
+      || node.phase === "construction"
+    ? node.phase
+    : undefined;
+  if (phaseBoundary !== undefined && (!next || next.phase !== node.phase)) {
+    directive.phase_boundary = phaseBoundary;
+  }
 }
 
 function routeMainWorkflowDirective(

@@ -10,6 +10,7 @@ export const MIRROR_SURFACE_IDS = [
   "kiro",
   "kiro-ide",
   "opencode",
+  "pi",
 ] as const;
 
 export type MirrorSurfaceId = (typeof MIRROR_SURFACE_IDS)[number];
@@ -136,6 +137,14 @@ const roots: Record<MirrorSurfaceId, ProjectionRoots> = {
     selfRoot: ".opencode",
     selfSkillRoot: ".opencode",
     manifest: "packages/framework/harness/opencode/manifest.ts",
+  },
+  pi: {
+    harnessDir: ".pi",
+    distRoot: "dist/pi/.pi",
+    distSkillRoot: "dist/pi/.pi",
+    selfRoot: null,
+    selfSkillRoot: null,
+    manifest: "packages/framework/harness/pi/manifest.ts",
   },
 };
 
@@ -278,7 +287,8 @@ export function validateMirrorProjectionRegistry(
         else targets.set(path, `${entry.surface}:${artifact.kind}`);
       }
     }
-    const includesSelf = !["kiro", "kiro-ide"].includes(entry.surface);
+    const projectionRoots = roots[entry.surface as MirrorSurfaceId];
+    const includesSelf = projectionRoots?.selfRoot != null;
     for (const artifact of entry.artifacts) {
       if (
         includesSelf &&

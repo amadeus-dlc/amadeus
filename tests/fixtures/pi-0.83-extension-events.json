@@ -1,0 +1,78 @@
+{
+  "profile": "@earendil-works/pi-coding-agent@0.83.0",
+  "source": "public ExtensionEvent type shapes captured from the v0.83.0 tag",
+  "events": {
+    "session_start": {
+      "type": "session_start",
+      "reason": "startup"
+    },
+    "session_shutdown": {
+      "type": "session_shutdown",
+      "reason": "quit"
+    },
+    "input_interactive": {
+      "type": "input",
+      "text": "continue the workflow",
+      "source": "interactive"
+    },
+    "input_rpc": {
+      "type": "input",
+      "text": "machine request",
+      "source": "rpc"
+    },
+    "input_extension": {
+      "type": "input",
+      "text": "extension request",
+      "source": "extension",
+      "streamingBehavior": "followUp"
+    },
+    "agent_start": {
+      "type": "agent_start"
+    },
+    "agent_end": {
+      "type": "agent_end",
+      "messages": []
+    },
+    "agent_settled": {
+      "type": "agent_settled"
+    },
+    "tool_execution_start": {
+      "type": "tool_execution_start",
+      "toolCallId": "call_083_fixture",
+      "toolName": "write",
+      "args": {
+        "path": "src/example.ts",
+        "content": "super-secret-fixture-content"
+      }
+    },
+    "tool_execution_end": {
+      "type": "tool_execution_end",
+      "toolCallId": "call_083_fixture",
+      "toolName": "write",
+      "result": {
+        "content": "super-secret-fixture-result"
+      },
+      "isError": false
+    },
+    "session_before_compact": {
+      "type": "session_before_compact",
+      "reason": "threshold",
+      "willRetry": false,
+      "preparation": {
+        "messagesToSummarize": []
+      },
+      "branchEntries": []
+    },
+    "session_compact": {
+      "type": "session_compact",
+      "reason": "threshold",
+      "willRetry": false,
+      "fromExtension": false,
+      "compactionEntry": {
+        "type": "compaction",
+        "id": "compact_083_fixture",
+        "summary": "UNTRUSTED SUMMARY MUST NOT BE REINJECTED"
+      }
+    }
+  }
+}

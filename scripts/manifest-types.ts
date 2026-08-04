@@ -64,6 +64,32 @@ export type StageEntrySurface =
   | { kind: "runner"; root: string }
   | { kind: "command"; path: string };
 
+/** A native harness resource copied from authored source into a project tree. */
+export type HarnessResource = Readonly<{
+  kind: "skill" | "question-annex" | "extension" | "driver";
+  /** Path relative to packages/framework/harness/<name>/. */
+  source: string;
+  /** Canonical project-root-relative destination, including the harness dir. */
+  destination: string;
+  /** Which loader owns the resource after installation. */
+  load: "native" | "annex" | "internal";
+}>;
+
+/** Generated descriptor row, bound to the authored source bytes. */
+export type HarnessResourceDescriptor = HarnessResource & Readonly<{
+  sha256: string;
+}>;
+
+/** Native runtime and trust facts declared by the authored harness manifest. */
+export type NativeRuntimeContract = Readonly<{
+  package: string;
+  minimumVersion: string;
+  projectTrust: "native";
+  trustIsSandbox: false;
+  autoApproveProjectTrust: false;
+  mutateTrustStore: false;
+}>;
+
 /**
  * How this harness's onboarding doc (CLAUDE.md / AGENTS.md) is generated from
  * the shared skeleton core/templates/onboarding.md. The packager renders the
@@ -91,6 +117,10 @@ export type HarnessManifest = {
   harnessDir: string;
   /** Project-root-relative native entry surface for composed stages. */
   stageEntry: StageEntrySurface;
+  /** Native runtime/version/trust contract when the harness has one. */
+  nativeRuntime?: NativeRuntimeContract;
+  /** Closed catalog of authored native resources. */
+  resources?: readonly HarnessResource[];
   /** core/<src> → <harnessDir>/<dst> projections. */
   coreDirs: DirMap[];
   /** harness/<name>/<src> → <harnessDir>/<dst> authored-file copies. */

@@ -796,5 +796,17 @@
     "dirName": "260804-e-260804-err-bt-s13-z0",
     "createdAt": "2026-08-04T06:35:32Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-PI-DPS13",
+    "dirName": "260803-e-pi-dps13",
+    "createdAt": "2026-08-03T12:10:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PI-NFRD-S13",
+    "dirName": "260803-e-pi-nfrd-s13",
+    "createdAt": "2026-08-03T15:16:29Z",
+    "status": "recorded"
   }
 ]

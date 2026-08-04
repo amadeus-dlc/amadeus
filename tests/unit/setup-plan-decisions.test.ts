@@ -120,6 +120,7 @@ describe("Plan decision examples (readable anchors)", () => {
   test("classify: amadeus- prefix ⇒ owned; memory segment ⇒ user-preserved; else shared", () => {
     expect(classify("tools/amadeus-orchestrate.ts")).toBe<FileClass>("owned");
     expect(classify("amadeus-state.md")).toBe<FileClass>("owned");
+    expect(classify(".pi/tools/data/harness.json")).toBe<FileClass>("owned");
     expect(classify("memory/org.md")).toBe<FileClass>("user-preserved");
     expect(classify("skills/amadeus/SKILL.md")).toBe<FileClass>("shared");
   });

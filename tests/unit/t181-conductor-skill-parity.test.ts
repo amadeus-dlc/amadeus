@@ -84,7 +84,7 @@ const CODEX_C2_TOKEN = "worktree-relative paths only";
 describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
 
-  test("the disk-derived harness-SKILL set covers all four shipped trees (no vacuous pass)", () => {
+  test("the disk-derived harness-SKILL set covers every shipped tree (no vacuous pass)", () => {
     // Floor guard (mirrors t156 §7): if the dir-detection silently matched zero
     // trees the positive/negative scans below would vacuously pass. Pin the
     // known four so a regression that hides a tree (or empties harness/) trips.
@@ -94,6 +94,7 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
       "packages/framework/harness/kimi/skills/amadeus/SKILL.md",
       "packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md",
       "packages/framework/harness/kiro/skills/amadeus/SKILL.md",
+      "packages/framework/harness/pi/skills/amadeus/SKILL.md",
     ]);
   });
 

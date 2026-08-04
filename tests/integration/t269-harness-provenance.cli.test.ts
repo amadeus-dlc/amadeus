@@ -41,13 +41,15 @@ function evalLib(
 }
 
 describe("t269 harness provenance detector", () => {
-  test("all seven explicit values are preserved exactly", () => {
+  test("all nine explicit values are preserved exactly", () => {
     const values: HarnessType[] = [
       "claude-code",
       "codex",
       "cursor",
       "opencode",
       "kiro",
+      "kimi",
+      "pi",
       "unknown",
       "manual",
     ];
@@ -88,7 +90,7 @@ describe("t269 harness provenance detector", () => {
     ).toBe("codex");
   });
 
-  test("script paths map five canonical dirs and reject an open-set dir", () => {
+  test("script paths map every canonical dir and reject an open-set dir", () => {
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t269-script-")));
     try {
       for (const [dir, type] of Object.entries(HARNESS_DIR_TO_TYPE)) {

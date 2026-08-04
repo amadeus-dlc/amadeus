@@ -7,7 +7,7 @@
 // setup-resolve-fetch-manifest.test.ts boundary-fake convention.
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../packages/setup/src/cli.ts";
@@ -17,6 +17,8 @@ import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts"
 import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
+import { SetupTransactionCoordinator } from "../../packages/setup/src/modules/setup-transaction-coordinator.ts";
+import { ManifestError } from "../../packages/setup/src/domain/manifest.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
 import {
@@ -48,12 +50,37 @@ const CLAUDE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("claude"
 // for the original four. Their engine dirs are .opencode / .cursor.
 const OPENCODE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("opencode", ".opencode");
 const CURSOR_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("cursor", ".cursor");
+const PI_FIXTURE_ENTRIES: TarFixtureEntry[] = [
+  ...harnessFixtureEntries("pi", ".pi"),
+  {
+    type: "file",
+    name: "dist/pi/.pi/tools/data/harness.json",
+    content: Buffer.from('{"name":"pi"}\n'),
+  },
+];
+
+function treeSnapshot(root: string): Map<string, string> {
+  const snapshot = new Map<string, string>();
+  function walk(dir: string, prefix = ""): void {
+    for (const name of readdirSync(dir).sort()) {
+      const full = join(dir, name);
+      const rel = prefix === "" ? name : `${prefix}/${name}`;
+      if (statSync(full).isDirectory()) walk(full, rel);
+      else snapshot.set(rel, readFileSync(full).toString("base64"));
+    }
+  }
+  walk(root);
+  return snapshot;
+}
 
 function fakeHttp(archive: Buffer): Http {
   const checksums = buildReleaseAssetChecksums(archive, "v1.2.3");
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) return Result.ok([{ tag_name: "v1.2.3", draft: false, prerelease: false }]);
+      if (path === "/repos/amadeus-dlc/amadeus/git/ref/tags/v1.2.3") {
+        return Result.ok({ ref: "refs/tags/v1.2.3", object: { type: "commit", sha: "0".repeat(40) } });
+      }
       throw new Error(`unexpected path in fixture: ${path}`);
     },
     async downloadArchive(url) {
@@ -103,6 +130,13 @@ function realPorts(archive: Buffer): CliPorts {
         throw new Error("kimi hook wiring must not run in this suite");
       },
     },
+  };
+}
+
+function transactionalPorts(archive: Buffer, privateRoot: string): CliPorts {
+  return {
+    ...realPorts(archive),
+    transactionCoordinator: SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }),
   };
 }
 
@@ -159,7 +193,7 @@ describe("install pipeline (fake network, real filesystem)", () => {
   });
 });
 
-describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () => {
+describe("install pipeline — opencode / cursor / pi harnesses", () => {
   test("installs opencode into .opencode and writes a manifest tagged opencode", async () => {
     const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-opencode-"));
     try {
@@ -199,7 +233,73 @@ describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () 
     }
   });
 
-  test("edge case: an unknown --harness value is a usage error (exit 2) listing all seven harnesses", async () => {
+  test("installs pi into .pi without changing the target package metadata", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-pi-"));
+    const packageJson = '{"name":"consumer","private":true}\n';
+    try {
+      writeFileSync(join(target, "package.json"), packageJson);
+      const archive = buildCodeloadFixture("amadeus-1.2.3", PI_FIXTURE_ENTRIES);
+      const exitCode = await main(["install", "--harness", "pi", "--target", target, "--yes"], realPorts(archive));
+      expect(exitCode).toBe(0);
+
+      expect(existsSync(join(target, ".pi", "tools", "amadeus-runtime.ts"))).toBe(true);
+      expect(readFileSync(join(target, "package.json"), "utf8")).toBe(packageJson);
+      const manifest = JSON.parse(readFileSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"), "utf8"));
+      expect(manifest.harness).toBe("pi");
+      expect(manifest.files.some((f: { path: string }) => f.path === "package.json")).toBe(false);
+      expect(manifest.files.find((f: { path: string }) => f.path === ".pi/tools/data/harness.json")).toMatchObject({
+        class: "owned",
+        required: true,
+      });
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("updates pi N to N+1 transactionally, retires unchanged owned resources, and makes same-version update a no-op", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-update-flow-pi-"));
+    const privateRoot = `${target}-private`;
+    const packageJson = '{"name":"consumer","private":true}\n';
+    const oldResource = { type: "file", name: "dist/pi/.pi/tools/amadeus-retired.ts", content: Buffer.from("old\n") } as const;
+    const newResource = { type: "file", name: "dist/pi/.pi/tools/amadeus-current.ts", content: Buffer.from("new\n") } as const;
+    try {
+      writeFileSync(join(target, "package.json"), packageJson);
+      const installed = await main(
+        ["install", "--harness", "pi", "--target", target, "--yes"],
+        transactionalPorts(buildCodeloadFixture("amadeus-1.2.3", [...PI_FIXTURE_ENTRIES, oldResource]), privateRoot),
+      );
+      expect(installed).toBe(0);
+
+      const manifestPath = join(target, "amadeus", ".installer", "amadeus-setup-manifest.json");
+      const priorManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      priorManifest.distributionVersion = "1.2.2";
+      priorManifest.sourceTag = "v1.2.2";
+      writeFileSync(manifestPath, `${JSON.stringify(priorManifest, null, 2)}\n`);
+
+      const nextArchive = buildCodeloadFixture("amadeus-1.2.3", [...PI_FIXTURE_ENTRIES, newResource]);
+      const upgraded = await main(
+        ["upgrade", "--harness", "pi", "--target", target, "--yes"],
+        transactionalPorts(nextArchive, privateRoot),
+      );
+      expect(upgraded).toBe(0);
+      expect(existsSync(join(target, ".pi", "tools", "amadeus-retired.ts"))).toBe(false);
+      expect(readFileSync(join(target, ".pi", "tools", "amadeus-current.ts"), "utf8")).toBe("new\n");
+      expect(readFileSync(join(target, "package.json"), "utf8")).toBe(packageJson);
+
+      const beforeNoop = treeSnapshot(target);
+      const noop = await main(
+        ["upgrade", "--harness", "pi", "--target", target, "--version", "1.2.3", "--yes"],
+        transactionalPorts(nextArchive, privateRoot),
+      );
+      expect(noop).toBe(0);
+      expect(treeSnapshot(target)).toEqual(beforeNoop);
+    } finally {
+      rmSync(privateRoot, { recursive: true, force: true });
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("edge case: an unknown --harness value is a usage error (exit 2) listing all eight harnesses", async () => {
     const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-badharness-"));
     const errors: string[] = [];
     const originalError = console.error;
@@ -211,7 +311,7 @@ describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () 
       const exitCode = await main(["install", "--harness", "foo", "--target", target, "--yes"], realPorts(archive));
       expect(exitCode).toBe(2);
       const message = errors.join("\n");
-      for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor", "kimi"]) {
+      for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor", "kimi", "pi"]) {
         expect(message).toContain(name);
       }
     } finally {
@@ -253,6 +353,36 @@ describe("install pipeline — apply-failure order-of-operations (review correct
 
       const exitCode = await main(["install", "--harness", "claude", "--target", target, "--yes"], ports);
       expect(exitCode).toBe(1);
+      expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(false);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("a manifest write failure is surfaced after apply and before verification", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-manifest-error-"));
+    try {
+      const archive = buildCodeloadFixture("amadeus-1.2.3", CLAUDE_FIXTURE_ENTRIES);
+      const realManifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const ports: CliPorts = {
+        ...realPorts(archive),
+        manifestIo: {
+          read: (dir) => realManifestIo.read(dir),
+          write: async () => Result.err(ManifestError.io("fixture manifest write failure")),
+        },
+        verifyRead: {
+          fileExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+          dirExists: () => {
+            throw new Error("verification must not run after a manifest write failure");
+          },
+        },
+      };
+
+      const exitCode = await main(["install", "--harness", "claude", "--target", target, "--yes"], ports);
+      expect(exitCode).toBe(1);
+      expect(existsSync(join(target, ".claude", "tools", "amadeus-runtime.ts"))).toBe(true);
       expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(false);
     } finally {
       rmSync(target, { recursive: true, force: true });

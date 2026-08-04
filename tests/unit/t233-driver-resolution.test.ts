@@ -19,8 +19,8 @@ import {
   resolveDriver,
 } from "../../packages/framework/core/tools/amadeus-swarm.ts";
 
-// The four harnesses, spelled out (not read from HARNESS_VALUES — see header).
-const HARNESSES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide"];
+// The harnesses are spelled out (not read from HARNESS_VALUES — see header).
+const HARNESSES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide", "kimi", "pi"];
 
 // The 16-cell decision matrix, written by hand from the FD decision table. Each
 // row pins raw × harness → the exact expected DriverResolution. The "other" row
@@ -72,6 +72,12 @@ describe("resolveDriver — 16-cell decision matrix", () => {
 });
 
 describe("resolveDriver — value semantics", () => {
+  test("Pi uses its RPC driver as the unset floor and degrades foreign ultra requests to that floor", () => {
+    expect(resolveDriver(undefined, "pi")).toEqual({ kind: "selected", driver: "pi" });
+    expect(resolveDriver("pi", "pi")).toEqual({ kind: "selected", driver: "pi" });
+    expect(resolveDriver("claude-ultra", "pi")).toEqual({ kind: "degraded", driver: "pi", requested: "claude-ultra" });
+    expect(resolveDriver("pi", "codex")).toEqual({ kind: "degraded", driver: "subagent", requested: "pi" });
+  });
   test("raw is NOT trimmed: a whitespace-padded ultra value is rejected (C-06)", () => {
     for (const harness of HARNESSES) {
       expect(resolveDriver(" claude-ultra", harness)).toEqual({

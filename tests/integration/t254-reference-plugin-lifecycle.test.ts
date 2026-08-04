@@ -173,7 +173,7 @@ function makeTx(root: string, backend: WorkspaceBackend, verifyOk = true): Works
 
 describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
   // -----------------------------------------------------------------------
-  // Part A — six-harness projection + neutral bundle (U09), driven by test-pro
+  // Part A — eight-harness projection + neutral bundle (U09), driven by test-pro
   // -----------------------------------------------------------------------
 
   test("0-plugin baseline: empty source root projects nothing (byte-neutral)", () => {
@@ -184,9 +184,9 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
     expect(existsSync(join(ws, "dist-empty", "plugins"))).toBe(false);
   });
 
-  test("every one of the seven package faces projects exactly the declared set, deterministically", () => {
+  test("every one of the eight package faces projects exactly the declared set, deterministically", () => {
     const plugin = discoverCanonical();
-    expect([...PACKAGE_HARNESSES]).toHaveLength(7);
+    expect([...PACKAGE_HARNESSES]).toHaveLength(8);
     for (const harness of PACKAGE_HARNESSES) {
       const first = buildPluginProjection(plugin, harness);
       const second = buildPluginProjection(plugin, harness);
