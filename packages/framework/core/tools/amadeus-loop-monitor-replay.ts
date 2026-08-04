@@ -154,7 +154,6 @@ const EVENT_TYPES = new Set<LoopMonitorEvent["type"]>([
   "LOOP_LATCH_CLEARED",
   "WORKFLOW_UNPARKED",
   "LOOP_JUDGE_AWAITING_HUMAN",
-  "LIVE_SMOKE_AUTHORIZED",
 ]);
 
 function validTrace(value: unknown): boolean {
@@ -228,9 +227,6 @@ function validEvent(value: unknown): value is LoopMonitorEvent {
       return typeof value.monitorId === "string" && typeof value.reasonCode === "string";
     case "LOOP_JUDGE_AWAITING_HUMAN":
       return typeof value.invocationId === "string" && typeof value.reason === "string";
-    case "LIVE_SMOKE_AUTHORIZED":
-      return typeof value.authorizationId === "string" && typeof value.actorId === "string" &&
-        typeof value.scopeDigest === "string";
   }
 }
 

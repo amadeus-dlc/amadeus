@@ -15,8 +15,7 @@ Loop Monitorは新しい常駐supervisorではない。既存の短命workflow e
 | `MonitorCoordinator` (M06) | event normalization、evidence取得、commit-before-dispatch、attempt 0/1 reconciliation | adapter effectをCore projectionから分離し、permitなしdispatchを拒否 |
 | `MonitorAuditStore` (M07) | atomic append、WAL、content identity index、partition replay、Judge attempt projection、status projection | per-clone physical writeをcausal mergeで収束し、redispatch budgetを耐久化 |
 | `JudgeAdapterPort` (S01) | `dispatch` / `reconcile` closed union、provider receipt | provider障害をpossible / unknownとして閉じ、無制限retryしない |
-| `LiveAuthorizationPort` (M08) | credential-attested safe metadataとauthorization plan | raw credentialをCore / auditへ渡さない |
-| `HarnessContractVerifier` (M09) | 5harness fixture、opt-in live、package / promote drift receipt | registry-derived cohortでCore分岐を防ぐ |
+| `HarnessContractVerifier` (M09) | 5 harness fixture、package / promote drift receipt | registry-derived cohortでCore分岐を防ぐ |
 | `MonitorRepairCommand` | 明示的なindex検査・再生成 | normal resumeから隔離し、repair中はworkflowをpark |
 
 ## Dependency direction
@@ -34,8 +33,7 @@ Judge attemptも同じ原則に従う。M06はattested `no-effect-confirmed`か�
 - Judge adapter不確定effect: 該当invocationだけを`AWAITING_HUMAN`へ移し、他Judgeを再dispatchしない。
 - Judge redispatch中のcrash: attempt 1 started eventを再生して同じattemptをreconcileし、attempt 2を作らない。
 - replay index破損: normal resumeを停止し、明示repairへ移す。canonical auditを破棄しない。
-- live authorization不備: live smokeだけを拒否し、contract fixture検証を失敗扱いにしない。
 
 ## Test seams
 
-graph source、plugin contribution、Evidence provider、AuditStore、JudgeAdapter、human-turn verifier、live authorization、registry、clock / hashをport化する。pure reducer fixture、crash injection、clone merge、redaction、5harness matrixをそれぞれ独立検証し、最終integrationでcommit receiptとtrace identityを接続する。
+graph source、plugin contribution、Evidence provider、AuditStore、JudgeAdapter、human-turn verifier、registry、clock / hashをport化する。pure reducer fixture、crash injection、clone merge、redaction、5 harness matrixをそれぞれ独立検証し、最終integrationでcommit receiptとtrace identityを接続する。

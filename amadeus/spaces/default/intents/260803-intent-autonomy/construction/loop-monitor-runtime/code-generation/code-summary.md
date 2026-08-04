@@ -7,7 +7,7 @@
 - canonical audit event-set を正とし、per-clone Replay Index を通常 resume 用の二次投影として追加した。index の欠落・破損・WAL 残存は明示 repair まで `INCOMPLETE` とし、clone merge は wall-clock ではなく content identity と causal dependency で順序付ける。
 - Judge は `LOOP_JUDGE_STARTED` の永続 reservation と commit receipt 由来 permit の後だけ dispatch する。resume は reconcile-first、attested no-effect の redispatch は最大 1 回、effect possible / unknown は `AWAITING_HUMAN` とする。
 - Judge result は observation を completion / route より先に記録し、invocation、evidence、constraint、trace、closed route の不一致を conflict にする。
-- evidence-bound latch、同一 evidence の短絡、evidence change または verified `HUMAN_TURN` による atomic clear/unpark、live smoke authorization port、status/replay 投影を追加した。
+- evidence-bound latch、同一 evidence の短絡、evidence change または verified `HUMAN_TURN` による atomic clear/unpark、status/replay 投影を追加した。
 - `LOOP_MONITOR_EVENT_SET_COMMITTED` を canonical audit vocabulary / OTel registry / audit format に追加した。
 - 共通 Core 3 ファイルを Claude Code、Codex、Cursor、OpenCode、Kimi Code の 5 harness へ同一 bytes で投影した。
 
