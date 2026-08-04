@@ -6,7 +6,7 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-08-04T12:20:09Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-developer-agent
 - **Harness**: codex
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 14
-- **Completed**: 11
-- **In Progress**: nfr-design
+- **Completed**: 12
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -78,9 +78,9 @@
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
 - [ ] nfr-requirements — SKIP
-- [-] nfr-design — EXECUTE
+- [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [ ] code-generation — EXECUTE
+- [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
@@ -96,15 +96,15 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: nfr-design
-- **Next Stage**: code-generation
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
-- **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-08-04T22:42:24Z
+- **Construction Autonomy Mode**: gated
+- **Last Updated**: 2026-08-04T23:30:10Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design
-- **Next Action**: Execute Nfr Design
+- **Last Completed Stage**: nfr-design
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
