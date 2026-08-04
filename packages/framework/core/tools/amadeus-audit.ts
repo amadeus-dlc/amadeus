@@ -91,6 +91,7 @@ const VALID_EVENT_TYPES = new Set([
   // canonical event set; required projections consume its digest after append.
   "EXECUTION_EVENT_SET_COMMITTED",
   "LOOP_MONITOR_EVENT_SET_COMMITTED",
+  "QUALITY_REPAIR_TRANSACTION_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -242,6 +243,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   LEGACY_GOAL_MIGRATED: "Legacy Goal Migrated",
   EXECUTION_EVENT_SET_COMMITTED: "Execution Event Set Committed",
   LOOP_MONITOR_EVENT_SET_COMMITTED: "Loop Monitor Event Set Committed",
+  QUALITY_REPAIR_TRANSACTION_COMMITTED: "Quality Repair Transaction Committed",
   UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",

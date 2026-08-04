@@ -166,6 +166,13 @@ describe("Loop Monitor Judge runtime", () => {
       deliveryId: `delivery-${"f".repeat(32)}`,
       payloadFingerprint: `sha256:${"f".repeat(64)}`,
     })).toMatchObject({ kind: "CONFLICT", reason: "upstream-identity-payload-conflict" });
+    expect(coordinator.observeDelivery({
+      ...first,
+      routeConstraint: {
+        routeIds: [first.routeConstraint.routeIds[0]!],
+        fingerprint: `sha256:${"f".repeat(64)}`,
+      },
+    })).toMatchObject({ kind: "CONFLICT", reason: "upstream-identity-payload-conflict" });
     expect(coordinator.observeDelivery(
       delivery(compiled, partition, "repair", first.deliveryId, "forked-successor"),
     )).toMatchObject({ kind: "CONFLICT", reason: "causal-fork" });
@@ -302,11 +309,13 @@ describe("Loop Monitor Judge runtime", () => {
       dispatch: (request) => ({ kind: "completed", result: resultFor(request.invocationId, routeGraph) }),
       reconcile: () => ({ kind: "unknown", reason: "not-used" }),
     }).kind).toBe("route-applied");
-    expect(coordinator.readProjection(partition).judgeRedispatchAttempts).toBe(0);
+    expect(coordinator.readProjection(partition)).toMatchObject({
+      judgeRedispatchAttempts: 0,
+      lastSemanticEventId: "repair",
+      matchedPrefix: 2,
+    });
 
-    const repair = delivery(routeGraph, partition, "repair", q2.deliveryId, "second-repair");
-    expect(coordinator.observeDelivery(repair).kind).toBe("observed");
-    const quality = delivery(routeGraph, partition, "quality-check", repair.deliveryId, "second-quality");
+    const quality = delivery(routeGraph, partition, "quality-check", q2.deliveryId, "second-quality");
     const second = coordinator.observeDelivery(quality);
     expect(second.kind).toBe("judge-reserved");
     if (second.kind !== "judge-reserved") throw new Error(`expected second Judge reservation, got ${second.kind}`);

@@ -75,6 +75,38 @@ export interface CompiledLoopMonitorGraph {
   readonly loopMonitors: readonly CompiledLoopMonitor[];
 }
 
+export function createJudgeRouteConstraint(
+  monitor: Pick<CompiledLoopMonitor, "routes">,
+  routeIds: readonly string[],
+): JudgeRouteConstraint {
+  if (routeIds.length === 0) throw new Error("loop-monitor-route-constraint-empty");
+  if (new Set(routeIds).size !== routeIds.length) {
+    throw new Error("loop-monitor-route-constraint-duplicate-route");
+  }
+  const requested = new Set(routeIds);
+  const routes = monitor.routes.filter((route) => requested.has(route.id));
+  if (routes.length !== routeIds.length) {
+    throw new Error("loop-monitor-route-constraint-unknown-route");
+  }
+  return {
+    routeIds: routes.map((route) => route.id),
+    fingerprint: digest(routes),
+  };
+}
+
+function isValidJudgeRouteConstraint(
+  monitor: CompiledLoopMonitor,
+  constraint: JudgeRouteConstraint,
+): boolean {
+  try {
+    const expected = createJudgeRouteConstraint(monitor, constraint.routeIds);
+    return expected.fingerprint === constraint.fingerprint &&
+      expected.routeIds.every((routeId, index) => routeId === constraint.routeIds[index]);
+  } catch {
+    return false;
+  }
+}
+
 export type LoopMonitorCompileResult =
   | { readonly ok: true; readonly graph: CompiledLoopMonitorGraph }
   | { readonly ok: false; readonly errors: readonly LoopMonitorCompileError[] };
@@ -363,10 +395,7 @@ export function compileLoopMonitorManifest(
         continue;
       }
       const exactRoutes = selectedRoutes as JudgeRouteDescriptor[];
-      const routeConstraint: JudgeRouteConstraint = {
-        routeIds: [...monitor.routes],
-        fingerprint: digest(exactRoutes),
-      };
+      const routeConstraint = createJudgeRouteConstraint({ routes: exactRoutes }, monitor.routes);
       compiled.push({
         id: monitor.id,
         cycle: [...monitor.cycle],
@@ -503,6 +532,7 @@ export function createLoopDelivery(input: CreateLoopDeliveryInput): LoopDelivery
     input.partition,
     input.upstreamEventIdentity,
     input.payloadFingerprint,
+    input.routeConstraint.fingerprint,
   ]).slice("sha256:".length)}`;
   return immutableDelivery(input, deliveryId);
 }
@@ -515,6 +545,7 @@ export interface LoopJudgeReservation {
   readonly graphRevision: string;
   readonly evidenceFingerprint: string;
   readonly constraintFingerprint: string;
+  readonly routeConstraint: JudgeRouteConstraint;
   readonly trace: LoopTraceContext;
 }
 
@@ -619,6 +650,10 @@ function reserveJudge(
     graphRevision: projection.partition.graphRevision,
     evidenceFingerprint: delivery.evidence.fingerprint,
     constraintFingerprint: delivery.routeConstraint.fingerprint,
+    routeConstraint: {
+      routeIds: [...delivery.routeConstraint.routeIds],
+      fingerprint: delivery.routeConstraint.fingerprint,
+    },
     trace: { ...delivery.trace },
   };
 }
@@ -725,12 +760,16 @@ export function applyLoopDelivery(
   if (!samePartition(projection.partition, delivery.partition) || delivery.partition.monitorId !== monitor.id) {
     return { ok: false, status: "CONFLICT", reason: "partition-mismatch" };
   }
-  if (delivery.routeConstraint.fingerprint !== monitor.routeConstraint.fingerprint) {
+  if (!isValidJudgeRouteConstraint(monitor, delivery.routeConstraint)) {
     return { ok: false, status: "CONFLICT", reason: "route-constraint-mismatch" };
   }
   const known = knownDelivery(projection, delivery);
   if (known !== undefined) {
-    if (known.deliveryId === delivery.deliveryId && known.payloadFingerprint === delivery.payloadFingerprint) {
+    if (
+      known.deliveryId === delivery.deliveryId &&
+      known.payloadFingerprint === delivery.payloadFingerprint &&
+      known.routeConstraint.fingerprint === delivery.routeConstraint.fingerprint
+    ) {
       return { ok: true, projection, duplicate: true, pending: false, judgeReservation: null };
     }
     return { ok: false, status: "CONFLICT", reason: "delivery-identity-payload-conflict" };

@@ -259,6 +259,23 @@ function applyJudgeCompletion(
   };
 }
 
+function applyRoute(
+  projection: LoopMonitorRuntimeProjection,
+  monitor: CompiledLoopMonitor,
+  event: RuntimeEventOf<"LOOP_ROUTE_APPLIED">,
+): LoopMonitorRuntimeProjection {
+  if (event.targetEvent === null) return { ...projection, lastRouteId: event.routeId };
+  const cycleIndex = monitor.cycle.indexOf(event.targetEvent);
+  return {
+    ...projection,
+    lastRouteId: event.routeId,
+    lastSemanticEventId: event.targetEvent,
+    matchedPrefix: cycleIndex < 0 ? 0 : cycleIndex + 1,
+    cycleCount: 0,
+    epoch: projection.epoch + 1,
+  };
+}
+
 const RUNTIME_EVENT_HANDLERS = {
   LOOP_DELIVERY_OBSERVED: applyObservedDelivery,
   LOOP_MONITOR_TRIGGERED: (projection, _monitor, event) =>
@@ -267,7 +284,7 @@ const RUNTIME_EVENT_HANDLERS = {
   LOOP_JUDGE_ATTEMPT_STARTED: (projection, _monitor, event) => applyJudgeAttempt(projection, event),
   LOOP_JUDGE_RESULT_OBSERVED: (projection) => projection,
   LOOP_JUDGE_COMPLETED: (projection, _monitor, event) => applyJudgeCompletion(projection, event),
-  LOOP_ROUTE_APPLIED: (projection, _monitor, event) => ({ ...projection, lastRouteId: event.routeId }),
+  LOOP_ROUTE_APPLIED: (projection, monitor, event) => applyRoute(projection, monitor, event),
   LOOP_LATCH_SET: (projection, _monitor, event) => ({ ...projection, latch: event.latch, pendingJudge: null }),
   LOOP_LATCH_CLEARED: (projection) => ({ ...projection, latch: null, awaitingHumanReason: null }),
   WORKFLOW_UNPARKED: (projection) => projection,
@@ -317,7 +334,8 @@ function deliveryReplayDecision(
       const observed = event.delivery;
       if (observed.upstreamEventIdentity === delivery.upstreamEventIdentity) {
         return observed.deliveryId === delivery.deliveryId &&
-            observed.payloadFingerprint === delivery.payloadFingerprint
+            observed.payloadFingerprint === delivery.payloadFingerprint &&
+            observed.routeConstraint.fingerprint === delivery.routeConstraint.fingerprint
           ? "duplicate"
           : "identity-conflict";
       }
@@ -347,7 +365,7 @@ function judgeRequest(
     judgeInstructionId: monitor.judgeInstruction.id,
     evidenceFingerprint: reservation.evidenceFingerprint,
     routeConstraintFingerprint: reservation.constraintFingerprint,
-    allowedRouteIds: [...monitor.routeConstraint.routeIds],
+    allowedRouteIds: [...reservation.routeConstraint.routeIds],
     trace: { ...reservation.trace },
   };
 }
@@ -365,6 +383,7 @@ function matchingJudgeResult(
     result.evidenceFingerprint === reservation.evidenceFingerprint &&
     result.constraintFingerprint === reservation.constraintFingerprint &&
     tracesEqual(result.trace, reservation.trace) &&
+    reservation.routeConstraint.routeIds.includes(result.routeId) &&
     routeById(monitor, result.routeId) !== null;
 }
 

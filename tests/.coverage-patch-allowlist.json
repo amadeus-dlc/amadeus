@@ -4591,5 +4591,93 @@
     },
     "reason": "This is the credential-bearing live Pi RPC journey. It is exercised only by the serial Pi candidate E2E with a real provider and is intentionally outside the smoke/unit/integration coverage run.",
     "expiry": "remove when coverage includes the live Pi candidate E2E or the live RPC transport becomes injectable"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "selector": {
+      "function": "resolveQualityPluginActivation",
+      "fingerprint": "sha256:9cbaae85537e8dc8a026001e0ed28eb538dad402543608a1a7cbc2e2d3b2e497",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Every activation branch is covered directly by the t428 unit and t429 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "createMemoryQualityRepairRepository",
+      "fingerprint": "sha256:6a770df7bfa06807e51565b1f265a96c9c00e6f3ac10aca0f637bd1dd529f9e0",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The in-memory repository's transaction and commit paths are covered directly by t429 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "createMemoryQualityRepairRepository",
+      "fingerprint": "sha256:01ade2dfdb20001585531e747b39508dd06735690eeddc50331635fcb5d01812",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript type annotation of the active local binding. This staged-transaction state is exercised directly by t429 integration tests; the annotation has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "createQualityRepairCoordinator",
+      "fingerprint": "sha256:9514bb56c20c53305bc3ce345b4c8113fb6fb9bea62d04d17c0774a6185a348f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. Coordinator construction and every dispatch/resume/status branch it exposes are covered directly by t429 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "rebaseResumeEvidence",
+      "fingerprint": "sha256:50d05ad16f9dfdce52605e81172dde639c634978c7c8cd6dd623616720fdb824",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "These lines contain only the multiline TypeScript return type annotation. Every resume-rebase branch is covered directly by t429 integration tests; the annotation has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "selector": {
+      "function": "rebaseResumeEvidence",
+      "fingerprint": "sha256:4375b264eea62aa8a742ba1c11ab24e413c29a11b541273ff7f6d679780579af",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "This is a defensive fail-closed propagation branch, not dead code by oversight. resolveResumeBasis already normalizes the identical evidence input (same identity fields and observations) before rebaseResumeEvidence runs, and the rebase re-normalization only strips previousSnapshot-dependent failure modes (scope/epoch mismatch), so a second normalizeQualityEvidence failure cannot occur today. The branch is kept so that if normalizeQualityEvidence grows a new failure mode in the future, the resume flow fails closed instead of silently resuming.",
+    "expiry": "remove if rebaseResumeEvidence gains a reachable failure mode or the resume flow stops re-normalizing evidence"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "selector": {
+      "function": "createAuditQualityRepairRepository",
+      "fingerprint": "sha256:32a5766c6bde07c0f6a4c0e2707acf84def94a5aa25333d9e6902654268002e8",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The audit repository's commit, reload, and replay paths are covered directly by t429 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "selector": {
+      "function": "replayQualityRepairScope",
+      "fingerprint": "sha256:5eecfbafe54e32327197aee81a425fbfcb7b5b5675a44d508afb37d385f927ae",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript return type annotation. Scope replay including the not-found rejection is covered directly by t429 integration tests; the annotation has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   }
 ]

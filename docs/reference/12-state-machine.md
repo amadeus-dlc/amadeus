@@ -395,13 +395,14 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | The learning gate persisted a kept learning as a dated practice entry to `amadeus/spaces/<space>/memory/{project,team}.md` |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter |
 
-### Loop monitor
+### Loop monitor and quality repair
 
-The Loop Monitor commits delivery observations, cycle triggers, Judge reservations and results, closed-route applications, and latch transitions as one canonical event set. The per-clone Replay Index is a repairable projection of this audit source of truth.
+The Loop Monitor commits delivery observations, cycle triggers, Judge reservations and results, closed-route applications, and latch transitions as one canonical event set. The Quality Repair runtime commits each quality snapshot, progress, replan, stall, or resume transaction together with its generic Loop Monitor effects. The per-clone Replay Index is a repairable projection of these audit sources of truth.
 
 | Event | Emitter | Trigger |
 |---|---|---|
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
+| `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | One quality snapshot, progress, replan, stall, or resume transaction and its generic Monitor effects committed atomically |
 
 ### Swarm
 

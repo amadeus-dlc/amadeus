@@ -230,7 +230,7 @@ function validEvent(value: unknown): value is LoopMonitorEvent {
   }
 }
 
-function validEventSet(value: unknown): value is LoopMonitorEventSet {
+export function validEventSet(value: unknown): value is LoopMonitorEventSet {
   return isRecord(value) && typeof value.eventSetId === "string" &&
     validPartition(value.partition) && typeof value.partitionKey === "string" &&
     value.partitionKey === loopMonitorPartitionKey(value.partition) &&
