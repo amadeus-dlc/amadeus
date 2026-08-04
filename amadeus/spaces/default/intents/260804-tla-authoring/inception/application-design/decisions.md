@@ -68,6 +68,7 @@
   - **C: 新規の engine gate 機構を追加** — 既存 checkpoint 機構と同型の停止機構を二重実装することになり、`memory/phases/inception.md` の再利用棚卸し要求と NFR-004 に反する。engine 変更は FR-013 の保護境界リスクも増やす。
 - **セキュリティ / コンプライアンス影響**: checkpoint の解除に人間相関と provenance 検証を要求する既存契約に載るため、hold の迂回は engine 側で拒否される。C9 は読取専用で新規権限を持たない。
 - **可逆性**: 高。advisory code と C9 の撤去で checkpoint 供給が消えるだけで、engine・既存 advisory は不変。
+- **改訂(2026-08-04T18:29:01Z 人間裁定、U2 functional-design 冒頭の実読確認による)**: レビュー iteration 2 FOLLOW-UP が要求した実読確認の結果 — (1) §11a checkpoint の fail-closed・人間相関必須は現行 HEAD で機械強制されている(`amadeus-advisory-choice.ts:739-758` の HUMAN_TURN provenance 照合、`:672` + `amadeus-orchestrate.ts:4321/4805/4838` の report 拒否。本 intent セッションでのライブ実測含む)= 肯定。(2)「plugin.json 宣言だけで新 advisory code + formal_checks を結線でき engine 変更不要」= **否定** — advisory code 語彙は `amadeus-plugin-activation.ts` の spec-hash 判定に、formal_checks コマンドは `amadeus-advisory-choice.ts:563-587` に engine 側ハードコード(モデルパスまで FormalElection 固定)。裁定: **Decision を「engine の advisory 供給面を plugin.json 宣言読取へ一般化する小さな engine 変更を含む」形へ改訂する(案 A)**。C9 は宣言で結線し、同類の第 2 ハードコードを避ける。checkpoint 機構の発火点・directive 契約・解除規則(provenance 検証)は引き続き無変更。executor / verdict 経路の保護境界(ADR-5、FR-013)は不侵。宣言 schema と engine 側一般化点の設計は U2 functional-design が所有する。可逆性は中へ変更(engine の宣言読取面が加わるため)。
 
 ## ADR-7: 全 4 経路の receipt を単一 evidence store に永続化（terminal route receipt）
 
