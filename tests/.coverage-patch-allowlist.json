@@ -4657,5 +4657,27 @@
     },
     "reason": "This is a defensive fail-closed propagation branch, not dead code by oversight. resolveResumeBasis already normalizes the identical evidence input (same identity fields and observations) before rebaseResumeEvidence runs, and the rebase re-normalization only strips previousSnapshot-dependent failure modes (scope/epoch mismatch), so a second normalizeQualityEvidence failure cannot occur today. The branch is kept so that if normalizeQualityEvidence grows a new failure mode in the future, the resume flow fails closed instead of silently resuming.",
     "expiry": "remove if rebaseResumeEvidence gains a reachable failure mode or the resume flow stops re-normalizing evidence"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "selector": {
+      "function": "createAuditQualityRepairRepository",
+      "fingerprint": "sha256:32a5766c6bde07c0f6a4c0e2707acf84def94a5aa25333d9e6902654268002e8",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The audit repository's commit, reload, and replay paths are covered directly by t429 integration tests; the signature has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "selector": {
+      "function": "replayQualityRepairScope",
+      "fingerprint": "sha256:5eecfbafe54e32327197aee81a425fbfcb7b5b5675a44d508afb37d385f927ae",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript return type annotation. Scope replay including the not-found rejection is covered directly by t429 integration tests; the annotation has no runtime statement.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   }
 ]
