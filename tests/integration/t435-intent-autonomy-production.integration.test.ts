@@ -1,7 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts, file:packages/framework/core/tools/amadeus-autonomy-review-production.ts, subcommand:amadeus-bolt:set-autonomy, subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report
 // size: medium
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,6 +18,16 @@ import {
   readProductionAutonomyProjection,
   resumeProductionQuality,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import { resolveIntentQualityActivation } from "../../packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts";
+import {
+  createAuditQualityRepairRepository,
+  replayQualityRepairScope,
+} from "../../packages/framework/core/tools/amadeus-quality-repair-replay.ts";
+import * as qualityRuntime from "../../packages/framework/core/tools/amadeus-quality-repair-runtime.ts";
+import {
+  createFirstPartyQualityContribution,
+  emptyQualityPluginProjection,
+} from "../../packages/framework/core/tools/amadeus-quality-repair.ts";
 import {
   commitProductionDecisionReview,
   getProductionAutoDecision,
@@ -55,25 +65,40 @@ function state(projectDir: string): string {
 
 function appendLedgerEvent(
   projectDir: string,
-  event: "HUMAN_TURN" | "QUESTION_ANSWERED" | "GRANT_ISSUED",
+  event:
+    | "HUMAN_TURN"
+    | "QUESTION_ANSWERED"
+    | "GRANT_ISSUED"
+    | "INTENT_COMPLETION_TRANSACTION_COMMITTED"
+    | "QUALITY_REPAIR_TRANSACTION_COMMITTED",
   fields: Record<string, string> = {},
-): void {
+): string {
   const auditDir = join(recordDir(projectDir), "audit");
   mkdirSync(auditDir, { recursive: true });
   const path = join(auditDir, "production-autonomy-test.jsonl");
   const seq = existsSync(path)
     ? readFileSync(path, "utf8").split("\n").filter(Boolean).length + 1
     : 1;
+  const timestamp = new Date().toISOString();
   appendFileSync(path, `${JSON.stringify({
     schemaVersion: 1,
     seq,
     cloneId: "production-autonomy-test",
     intentId: "production-autonomy-test",
-    timestamp: new Date().toISOString(),
-    heading: event === "HUMAN_TURN" ? "Human Turn" : "Question Answered",
+    timestamp,
+    heading: event === "HUMAN_TURN"
+      ? "Human Turn"
+      : event === "QUESTION_ANSWERED"
+      ? "Question Answered"
+      : event === "GRANT_ISSUED"
+      ? "Standing Grant Issued"
+      : event === "QUALITY_REPAIR_TRANSACTION_COMMITTED"
+      ? "Quality Repair Transaction Committed"
+      : "Intent Completion Transaction Committed",
     event,
     fields,
   })}\n`);
+  return timestamp;
 }
 
 function auditEvents(projectDir: string): string[] {
@@ -489,6 +514,375 @@ describe("Intent-scoped autonomy production path", () => {
         degradedCapability: null,
       },
     });
+  });
+
+  test("a completed Intent preserves its accepted review and completion seal", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const decision = commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"a".repeat(64)}`,
+      questionId: "completed-intent-review-target",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be retained?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+    });
+    expect(decision.kind).toBe("decided");
+    if (decision.kind !== "decided") return;
+
+    const intentsPath = join(projectDir, "amadeus", "spaces", "default", "intents", "intents.json");
+    const registry = JSON.parse(readFileSync(intentsPath, "utf8")) as Array<{
+      uuid: string;
+      slug: string;
+      dirName: string;
+      status: string;
+    }>;
+    const target = registry.find((intent) => intent.status === "in-flight");
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(commitProductionDecisionReview({
+      projectDir,
+      intent: target.slug,
+      decisionId: decision.decision.decisionId,
+      choice: "accept",
+    })).toMatchObject({
+      ok: true,
+      receipt: { state: "accepted", remediation: null },
+    });
+
+    expect(commitProductionIntentCompletion({ projectDir })).toMatchObject({
+      ok: true,
+      result: { result: { outcome: "completed" } },
+    });
+    const completionSealDigest = `sha256:${"b".repeat(64)}`;
+    appendLedgerEvent(projectDir, "INTENT_COMPLETION_TRANSACTION_COMMITTED", {
+      "Completion Seal Digest": completionSealDigest,
+    });
+    writeFileSync(intentsPath, `${JSON.stringify(
+      registry.map((intent) => intent.uuid === target.uuid ? { ...intent, status: "complete" } : intent),
+      null,
+      2,
+    )}\n`);
+
+    const sourceBirth = run(projectDir, "amadeus-utility.ts", [
+      "intent-birth",
+      "--scope",
+      "feature",
+      "--arguments",
+      "Review the completed autonomy decision",
+    ]);
+    expect(sourceBirth.status, sourceBirth.output).toBe(0);
+
+    expect(listProductionAutoDecisions({
+      projectDir,
+      intent: target.uuid,
+      reviewState: "accepted",
+      pageSize: 1,
+    })).toMatchObject({
+      ok: true,
+      page: {
+        items: [{ decisionId: decision.decision.decisionId, reviewState: "accepted" }],
+        nextCursor: null,
+      },
+    });
+    expect(getProductionAutoDecision({
+      projectDir,
+      intent: target.dirName,
+      decisionId: decision.decision.decisionId,
+    })).toMatchObject({
+      ok: true,
+      detail: {
+        reviewState: "accepted",
+        reviewReceipt: { state: "accepted", remediation: null },
+      },
+    });
+    expect(readProductionAutonomyProjection(projectDir, target.dirName)).toMatchObject({
+      workflowExecutionState: null,
+      currentGrant: null,
+    });
+  });
+
+  test("completed Intent review surfaces fail closed when the completion seal is missing", () => {
+    projectDir = bornProject();
+    const intentsPath = join(projectDir, "amadeus", "spaces", "default", "intents", "intents.json");
+    const registry = JSON.parse(readFileSync(intentsPath, "utf8")) as Array<{
+      uuid: string;
+      slug: string;
+      dirName: string;
+      status: string;
+    }>;
+    const target = registry.find((intent) => intent.status === "in-flight");
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+    writeFileSync(intentsPath, `${JSON.stringify(
+      registry.map((intent) => intent.uuid === target.uuid ? { ...intent, status: "complete" } : intent),
+      null,
+      2,
+    )}\n`);
+
+    const sourceBirth = run(projectDir, "amadeus-utility.ts", [
+      "intent-birth",
+      "--scope",
+      "feature",
+      "--arguments",
+      "Attempt to review an unsealed completed Intent",
+    ]);
+    expect(sourceBirth.status, sourceBirth.output).toBe(0);
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+
+    expect(listProductionAutoDecisions({ projectDir, intent: target.uuid })).toEqual({
+      ok: false,
+      error: "completed-intent-seal-not-found",
+    });
+    expect(getProductionAutoDecision({
+      projectDir,
+      intent: target.dirName,
+      decisionId: "missing-unsealed-decision",
+    })).toEqual({ ok: false, error: "completed-intent-seal-not-found" });
+    expect(commitProductionDecisionReview({
+      projectDir,
+      intent: target.slug,
+      decisionId: "missing-unsealed-decision",
+      choice: "flag",
+      flagClassification: "contract-defect",
+    })).toEqual({ ok: false, error: "completed-intent-seal-not-found" });
+  });
+
+  test("production resume reconciles a committed quality epoch after a crash before autonomy unpark", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const evidence = {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: "partial-resume-stage",
+      boltId: "partial-resume-bolt",
+      observations: [{
+        kind: "reviewer" as const,
+        invocationId: "partial-resume-review",
+        verifierId: "quality-reviewer",
+        validationReceipt: `sha256:${"c".repeat(64)}`,
+        verdict: "NOT-READY" as const,
+        blockers: [{
+          findingId: "partial-resume-blocker",
+          artifactId: "build-test-results",
+          failureFingerprint: `sha256:${"d".repeat(64)}`,
+        }],
+      }],
+    };
+    const outcomes = Array.from({ length: 7 }, () => commitProductionQualityObservation({
+      projectDir,
+      evidence,
+      replanContext: "Replan once before parking the partial-resume scenario.",
+    }));
+    const parked = outcomes.at(-1);
+    expect(outcomes.map((result) => result.kind)).toEqual([
+      "repair", "repair", "repair", "replanned", "repair", "repair", "parked",
+    ]);
+    if (parked?.kind !== "parked") throw new Error("expected partial-resume quality to park");
+
+    const autonomy = readProductionAutonomyProjection(projectDir);
+    if (autonomy === null) throw new Error("expected production autonomy projection");
+    const activation = resolveIntentQualityActivation({
+      autonomy,
+      qualityProjection: emptyQualityPluginProjection(autonomy.intentUuid),
+      contribution: createFirstPartyQualityContribution(3),
+    });
+    expect(activation.kind).toBe("active");
+    if (activation.kind !== "active") return;
+    const repository = createAuditQualityRepairRepository({ projectDir });
+    const quality = qualityRuntime.createQualityRepairCoordinator({ activation, repository });
+    const stalled = quality.status(parked.qualityScopeId);
+    expect(stalled).toMatchObject({
+      workflowExecutionState: "suspended",
+      stopReason: "REPAIR_STALLED",
+    });
+    if (stalled === null) return;
+    const humanAlternative = stalled.resumeCondition.alternatives.find((candidate) => candidate.kind === "human-retry");
+    expect(humanAlternative).toBeDefined();
+    if (humanAlternative === undefined) return;
+    const humanTurnId = appendLedgerEvent(projectDir, "HUMAN_TURN");
+
+    expect(quality.resume({
+      qualityScopeId: parked.qualityScopeId,
+      alternativeIdentity: humanAlternative.identity,
+      humanRetry: { verified: true, eventType: "HUMAN_TURN", turnId: humanTurnId },
+    })).toMatchObject({ kind: "resumed" });
+    expect(quality.status(parked.qualityScopeId)?.workflowExecutionState).toBe("running");
+    expect(readProductionAutonomyProjection(projectDir)).toMatchObject({
+      workflowExecutionState: "suspended",
+      currentGrant: { state: "active" },
+    });
+    const transactionCountAfterQualityCommit = repository.readTransactions().length;
+    expect(replayQualityRepairScope(
+      createAuditQualityRepairRepository({ projectDir }),
+      parked.qualityScopeId,
+    )).toMatchObject({
+      status: { workflowExecutionState: "running" },
+      transactionCount: transactionCountAfterQualityCommit,
+    });
+
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: parked.qualityScopeId,
+      basis: "human-retry",
+    })).toEqual({
+      kind: "resumed",
+      qualityScopeId: parked.qualityScopeId,
+      workflowResult: "running",
+    });
+    expect(createAuditQualityRepairRepository({ projectDir }).readTransactions()).toHaveLength(
+      transactionCountAfterQualityCommit,
+    );
+    expect(readProductionAutonomyProjection(projectDir)).toMatchObject({
+      workflowExecutionState: "running",
+      currentGrant: { state: "active" },
+      parkEnvelope: null,
+    });
+
+    const canonical = createAuditQualityRepairRepository({ projectDir })
+      .readTransactions()
+      .find((transaction) => transaction.qualityEvents.length > 0);
+    if (canonical === undefined) throw new Error("expected a durable quality transaction");
+    appendLedgerEvent(projectDir, "QUALITY_REPAIR_TRANSACTION_COMMITTED", {
+      "Quality Scope Id": canonical.qualityScopeId,
+      "Transaction Id": canonical.transactionId,
+      Transaction: JSON.stringify({ ...canonical, qualityEvents: [] }),
+    });
+    expect(() => createAuditQualityRepairRepository({ projectDir })).toThrow(
+      "invalid-quality-repair-audit-row:transaction-conflict",
+    );
+  });
+
+  test("production mode changes skip an unreadable audit shard after a verified human turn", () => {
+    projectDir = bornProject();
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    mkdirSync(join(recordDir(projectDir), "audit", "unreadable-shard.jsonl"));
+
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent: state(projectDir),
+      mode: "semi",
+    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
+  });
+
+  test("production quality observations translate internal boundary failures", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const createCoordinator = qualityRuntime.createQualityRepairCoordinator;
+    const coordinatorSpy = spyOn(qualityRuntime, "createQualityRepairCoordinator");
+    const evidence = {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: "fault-injection-stage",
+      boltId: "fault-injection-bolt",
+      observations: [{
+        kind: "reviewer" as const,
+        invocationId: "fault-injection-review",
+        verifierId: "quality-reviewer",
+        validationReceipt: `sha256:${"e".repeat(64)}`,
+        verdict: "NOT-READY" as const,
+        blockers: [{
+          findingId: "fault-injection-blocker",
+          artifactId: "build-test-results",
+          failureFingerprint: `sha256:${"f".repeat(64)}`,
+        }],
+      }],
+    };
+
+    try {
+      coordinatorSpy.mockImplementation((options) => ({
+        ...createCoordinator(options),
+        recordEvidence: () => ({ kind: "CONFLICT", reason: "injected-observation-conflict" }) as never,
+      }));
+      expect(commitProductionQualityObservation({
+        projectDir,
+        evidence,
+        replanContext: "Do not replan an injected observation conflict.",
+      })).toEqual({ kind: "error", reason: "injected-observation-conflict" });
+
+      coordinatorSpy.mockImplementation((options) => ({
+        ...createCoordinator(options),
+        recordEvidence: () => ({
+          kind: "judge-reserved",
+          snapshot: { unresolved: [{}], snapshotFingerprint: `sha256:${"1".repeat(64)}` },
+          permit: {},
+        }) as never,
+        dispatchJudge: () => ({ kind: "CONFLICT", reason: "injected-judge-conflict" }),
+      }));
+      expect(commitProductionQualityObservation({
+        projectDir,
+        evidence,
+        replanContext: "Do not replan an injected judge conflict.",
+      })).toEqual({ kind: "error", reason: "injected-judge-conflict" });
+
+      coordinatorSpy.mockImplementation((options) => ({
+        ...createCoordinator(options),
+        recordEvidence: () => ({
+          kind: "REPAIR_STALLED",
+          snapshot: {
+            unresolved: [{}],
+            stageInstanceId: evidence.stageInstanceId,
+            qualityScopeId: "injected-missing-status-scope",
+          },
+        }) as never,
+        status: () => null,
+      }));
+      expect(commitProductionQualityObservation({
+        projectDir,
+        evidence,
+        replanContext: "Do not replan an injected missing status.",
+      })).toEqual({ kind: "error", reason: "quality-stall-status-missing" });
+    } finally {
+      coordinatorSpy.mockRestore();
+    }
+  });
+
+  test("quality resume fails closed after the parked Intent is downgraded to none", () => {
+    projectDir = bornProject();
+    applyFullAutonomyInProcess(projectDir);
+    const evidence = {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: "disabled-resume-stage",
+      boltId: "disabled-resume-bolt",
+      observations: [{
+        kind: "reviewer" as const,
+        invocationId: "disabled-resume-review",
+        verifierId: "quality-reviewer",
+        validationReceipt: `sha256:${"2".repeat(64)}`,
+        verdict: "NOT-READY" as const,
+        blockers: [{
+          findingId: "disabled-resume-blocker",
+          artifactId: "build-test-results",
+          failureFingerprint: `sha256:${"3".repeat(64)}`,
+        }],
+      }],
+    };
+    const outcomes = Array.from({ length: 7 }, () => commitProductionQualityObservation({
+      projectDir,
+      evidence,
+      replanContext: "Park before disabling Quality Repair.",
+    }));
+    const parked = outcomes.at(-1);
+    expect(parked?.kind).toBe("parked");
+    if (parked?.kind !== "parked") return;
+
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent: state(projectDir),
+      mode: "none",
+    })).toMatchObject({ ok: true, projection: { mode: "none", workflowExecutionState: "suspended" } });
+    expect(resumeProductionQuality({
+      projectDir,
+      qualityScopeId: parked.qualityScopeId,
+      basis: "human-retry",
+    })).toEqual({ kind: "error", reason: "none-default-off" });
   });
 
   test("REPAIR_STALLED resumes from strict evidence improvement without a human retry", () => {
