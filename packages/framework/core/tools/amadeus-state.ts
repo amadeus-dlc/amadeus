@@ -101,7 +101,6 @@ import {
   worktreeStateFilePath,
   writeStateFile,
   writeFileAtomic,
-  UUID_V7_RE,
 } from "./amadeus-lib.js";
 import {
   classifyApprovalAuthority,
@@ -2587,9 +2586,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     ...(stateOperationTarget?.intent ? { intent: stateOperationTarget.intent } : {}),
     ...(stateOperationTarget?.space ? { space: stateOperationTarget.space } : {}),
   });
-  if (!autonomyCompletion.ok && autonomyCompletion.error !== "active-intent-required") {
-    error(`Intent autonomy completion failed: ${autonomyCompletion.error}`);
-  }
+  assertIntentAutonomyCompletion(autonomyCompletion);
   if (!stateAlreadyCompleted) {
     operationWriteState(pd, content);
   }
@@ -2621,6 +2618,14 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     })
   );
   });
+}
+
+function assertIntentAutonomyCompletion(
+  completion: ReturnType<typeof commitProductionIntentCompletion>,
+): void {
+  if (!completion.ok && completion.error !== "active-intent-required") {
+    error(`Intent autonomy completion failed: ${completion.error}`);
+  }
 }
 
 function completionWorkflowResultEnvelope(
@@ -3889,8 +3894,11 @@ function handleDelegateRejection(args: string[]): void {
   // Target must be a real, locally-present intent record — never scaffold one here.
   const targetRecord = recordDir(pd, toIntent, toSpace);
   if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
+    const targetLabel = toSpace
+      ? `${toIntent} (space ${toSpace})`
+      : toIntent;
     error(
-      `delegate-rejection: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`
+      `delegate-rejection: target intent record not found: ${targetLabel}`
     );
   }
 
