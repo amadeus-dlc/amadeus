@@ -41,6 +41,7 @@ Run the packaged child driver only with explicit opt-in:
 ```bash
 AMADEUS_PI_LIVE_RPC=1 \
 AMADEUS_PI_LIVE_PROVIDER_ID='<provider-id>' \
+AMADEUS_PI_LIVE_MODEL_ID='<model-id>' \
 AMADEUS_PI_LIVE_PROJECT_DIR='<clean-installed-project>' \
 bun scripts/pi-live-rpc.ts
 ```

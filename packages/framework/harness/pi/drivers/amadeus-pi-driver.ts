@@ -97,6 +97,7 @@ export interface PiDriverOptions {
   readonly runtimeDir?: string;
   readonly piExecutable?: string;
   readonly providerId?: string;
+  readonly modelId?: string;
   readonly guardianPath?: string;
   readonly replayStore?: PiReplayStore;
   readonly lifecycle?: ExecutionLifecycleCoordinator;
@@ -349,6 +350,7 @@ async function runGuardian(
       "--stderr-limit-bytes",
       String(STDERR_LIMIT_BYTES),
       ...(options.providerId === undefined ? [] : ["--provider-id", options.providerId]),
+      ...(options.modelId === undefined ? [] : ["--model-id", options.modelId]),
     ],
     {
       cwd: request.projectDir,

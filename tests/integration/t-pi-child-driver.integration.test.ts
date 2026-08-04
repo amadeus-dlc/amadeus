@@ -95,6 +95,7 @@ describe("Pi child driver process boundary", () => {
         piExecutable: fakePi,
         lifecycle,
         providerId: "openai-codex",
+        modelId: "gpt-5.4-mini",
       },
     );
 

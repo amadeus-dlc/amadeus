@@ -8,6 +8,7 @@ interface GuardianArgs {
   readonly piExecutable: string;
   readonly piArgv0: string;
   readonly providerId?: string;
+  readonly modelId?: string;
   readonly runId: string;
   readonly driverPublicKey: string;
   readonly snapshotDigest: string;
@@ -63,6 +64,7 @@ function parseArgs(argv: readonly string[]): GuardianArgs {
   const stdoutLimitBytes = Number(values.get("--stdout-limit-bytes"));
   const stderrLimitBytes = Number(values.get("--stderr-limit-bytes"));
   const providerId = values.get("--provider-id");
+  const modelId = values.get("--model-id");
   if (
     !piExecutable ||
     !piArgv0 ||
@@ -73,7 +75,8 @@ function parseArgs(argv: readonly string[]): GuardianArgs {
     stdoutLimitBytes < 1 ||
     !Number.isSafeInteger(stderrLimitBytes) ||
     stderrLimitBytes < 1 ||
-    (providerId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(providerId))
+    (providerId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(providerId)) ||
+    (modelId !== undefined && !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/.test(modelId))
   ) {
     throw new Error("guardian-args-invalid");
   }
@@ -81,6 +84,7 @@ function parseArgs(argv: readonly string[]): GuardianArgs {
     piExecutable,
     piArgv0,
     ...(providerId === undefined ? {} : { providerId }),
+    ...(modelId === undefined ? {} : { modelId }),
     runId,
     driverPublicKey,
     snapshotDigest,
@@ -242,6 +246,7 @@ function run(args: GuardianArgs): void {
       "rpc",
       "--no-session",
       ...(args.providerId === undefined ? [] : ["--provider", args.providerId]),
+      ...(args.modelId === undefined ? [] : ["--model", args.modelId]),
     ], {
       argv0: args.piArgv0,
       cwd: process.cwd(),

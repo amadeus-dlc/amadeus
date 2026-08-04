@@ -22,7 +22,10 @@ lines.on("line", (line) => {
   }
   const failed = command.message === "fail";
   const providerMismatch = command.message === "provider-check"
-    && process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex";
+    && (
+      process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex"
+      || process.argv[process.argv.indexOf("--model") + 1] !== "gpt-5.4-mini"
+    );
   process.stdout.write(`${JSON.stringify({ type: "agent_start" })}\n`);
   process.stdout.write(`${JSON.stringify({
     type: "message_end",

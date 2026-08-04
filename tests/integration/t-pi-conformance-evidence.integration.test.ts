@@ -94,19 +94,23 @@ describe("Pi formal evidence admission", () => {
     const lifecycle = {} as Parameters<typeof dispatchPiLiveChild>[1];
     let receivedLifecycle: unknown;
     let receivedProviderId: unknown;
+    let receivedModelId: unknown;
     const result = await dispatchPiLiveChild(
       {},
       lifecycle,
       "openai-codex",
+      "gpt-5.4-mini",
       async (_request, options) => {
         receivedLifecycle = options?.lifecycle;
         receivedProviderId = options?.providerId;
+        receivedModelId = options?.modelId;
         return { kind: "dispatch-not-started", reason: "test-stop", output: "", replayed: false };
       },
     );
 
     expect(receivedLifecycle).toBe(lifecycle);
     expect(receivedProviderId).toBe("openai-codex");
+    expect(receivedModelId).toBe("gpt-5.4-mini");
     expect(result.kind).toBe("dispatch-not-started");
   });
 

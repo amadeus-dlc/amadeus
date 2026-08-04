@@ -53,6 +53,28 @@ function safeProviderId(value: string | undefined): string | null {
     : null;
 }
 
+interface LiveProviderSelection {
+  readonly ok: boolean;
+  readonly providerId?: string;
+  readonly modelId?: string;
+}
+
+function liveProviderSelection(environment: LiveEnvironment): LiveProviderSelection {
+  const providerId = safeProviderId(environment.AMADEUS_PI_LIVE_PROVIDER_ID);
+  if (providerId === null) return { ok: false };
+  const configuredModelId = environment.AMADEUS_PI_LIVE_MODEL_ID;
+  if (configuredModelId === undefined) return { ok: true, providerId };
+  const modelId = safeProviderId(configuredModelId);
+  if (modelId === null) return { ok: false };
+  return { ok: true, providerId, modelId };
+}
+
+function livePlatform(): "darwin" | "linux" | null {
+  if (process.platform === "darwin") return "darwin";
+  if (process.platform === "linux") return "linux";
+  return null;
+}
+
 function gitIdentity(projectDir: string): { readonly commit: string; readonly clean: boolean } | null {
   const commit = spawnSync("git", ["-C", projectDir, "rev-parse", "HEAD"], { encoding: "utf8" });
   const status = spawnSync("git", ["-C", projectDir, "status", "--porcelain"], { encoding: "utf8" });
@@ -96,9 +118,10 @@ export function dispatchPiLiveChild(
   request: Parameters<PiLiveDispatch>[0],
   lifecycle: ExecutionLifecycleCoordinator,
   providerId: string,
+  modelId: string | undefined,
   dispatch: PiLiveDispatch = executePiChild,
 ) {
-  return dispatch(request, { lifecycle, providerId });
+  return dispatch(request, { lifecycle, providerId, ...(modelId === undefined ? {} : { modelId }) });
 }
 
 /**
@@ -110,13 +133,15 @@ export async function runPiLiveRpc(
   cwd = process.cwd(),
 ): Promise<PiLiveRpcResult> {
   if (environment.AMADEUS_PI_LIVE_RPC !== "1") return { status: "skipped", reason: "opt-in-disabled" };
-  if (process.platform !== "darwin" && process.platform !== "linux") {
-    return { status: "skipped", reason: "unsupported-platform" };
-  }
+  const platform = livePlatform();
+  if (platform === null) return { status: "skipped", reason: "unsupported-platform" };
   const piExecutable = Bun.which("pi");
   if (piExecutable === null) return { status: "skipped", reason: "pi-unavailable" };
-  const providerId = safeProviderId(environment.AMADEUS_PI_LIVE_PROVIDER_ID);
-  if (providerId === null) return { status: "skipped", reason: "provider-unavailable" };
+  const selection = liveProviderSelection(environment);
+  if (!selection.ok || selection.providerId === undefined) {
+    return { status: "skipped", reason: "provider-unavailable" };
+  }
+  const { providerId, modelId } = selection;
   const projectDir = realpathSync(environment.AMADEUS_PI_LIVE_PROJECT_DIR ?? cwd);
   if (!existsSync(join(projectDir, ".pi", "tools", "data", "harness.json"))) {
     return { status: "skipped", reason: "candidate-unavailable" };
@@ -154,7 +179,7 @@ export async function runPiLiveRpc(
     childOrdinal: 1,
     timeoutMs: 120_000,
     outputLimitBytes: 64 * 1024,
-  }, lifecycle, providerId);
+  }, lifecycle, providerId, modelId);
   const after = readAllAuditShards(projectDir);
   const humanTurnCount = countMarker(after, "HUMAN_TURN") - countMarker(before, "HUMAN_TURN");
   const gateApprovedCount = countMarker(after, "GATE_APPROVED") - countMarker(before, "GATE_APPROVED");
@@ -165,7 +190,7 @@ export async function runPiLiveRpc(
   if (!result.output.includes("AMADEUS_PI_LIVE_OK")) return { status: "failed", reason: "live-output-mismatch" };
   return {
     status: "passed",
-    platform: process.platform,
+    platform,
     piVersion: version,
     providerId,
     verificationCommit: identity.commit,
