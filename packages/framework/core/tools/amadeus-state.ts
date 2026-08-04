@@ -3387,7 +3387,7 @@ function approvalScopeIssue(content: string): string | null {
   return null;
 }
 
-export function approvalNextStateIssue(
+function approvalNextStateIssue(
   content: string,
   slug: string,
   timestamp: string,

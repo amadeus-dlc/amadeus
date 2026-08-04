@@ -32,15 +32,29 @@ tests/integration/t-completed-effective-counter.integration.test.ts
 2 pass / 0 fail
 ```
 
-2 件目は `Completed: 999` を注入し、approve 検証器が `completed count` を返すことを固定した。
+approve 検証ケースは、完了済み SKIP 行を含み `Completed` が raw `[x]` 数とは一致する state を注入する。これにより旧 raw 検証なら受理される一方、共有 writer 基準では `completed count` となる差を固定した。
+
+レビュー BLOCKER 対応では、共通の legacy fixture（`[x] workspace-scaffold — SKIP` を持ちながら `Completed` は raw `[x]` 数）を用いて経路横断契約を強化した。
+
+| 経路 | 契約の配置 |
+| --- | --- |
+| checkbox / advance / finalize / workflow completion / approve / jump | `tests/integration/t-completed-effective-counter.integration.test.ts` |
+| scope-change | `tests/integration/t-scope-change-checkbox-preserve.test.ts` |
+| recompose | `tests/unit/t194-recompose.test.ts`（既存の実 CLI・実 FS 契約を強化） |
+| resync / init seed | `tests/integration/t394-compose-state-resync.integration.test.ts` |
+
+approve 検証の反証 fixture は、旧 raw 検証なら `null`、共有 writer 基準なら `completed count` となることを同一 state 上で比較する。新たな本番 test-only export は追加していない。
 
 ## 検証結果
 
-- `bun run typecheck`: exit 0
-- `bun run lint`: exit 0（既存の complexity 等 407 warnings / 11 infos、error なし）
-- targeted canonical / re-sync: 17 pass / 0 fail
-- state / jump / scope-change / recompose の既存 targeted 群: exit 0
-- `bun run build`: exit 0（全 8 harness の dist 再生成と project-local self install 更新に成功）
+- レビュー修正前の `bun run typecheck`: exit 0
+- レビュー修正前の `bun run lint`: exit 0（既存の complexity 等 407 warnings / 11 infos、error なし）
+- レビュー修正前の targeted canonical / re-sync: 17 pass / 0 fail
+- レビュー修正前の state / jump / scope-change / recompose の既存 targeted 群: exit 0
+- レビュー修正前の `bun run build`: exit 0（全 8 harness の dist 再生成と project-local self install 更新に成功）
+- レビュー BLOCKER 対応後のローカルテスト／build は、レビュー指示により未実行
+
+**残る全ブロッキングゲートは GitHub CI [#2192](https://github.com/amadeus-dlc/amadeus/pull/2192) で検証中であり、現時点では未通過である。**
 
 ## 配布面
 
