@@ -102,14 +102,8 @@ export function localPiSourceIdentity(
 
 export function gitPiSourceIdentity(locator: string, revision: string, catalogDigest: string): PiSourceIdentity {
   if (!/^[0-9a-f]{40}$/u.test(revision)) return Object.freeze({ kind: "blocked", reason: "git source is not pinned to a full commit SHA" });
-  const sourceMatch = /^https:\/\/[^/?#]+(?<path>\/[^?#]*)$/u.exec(locator);
-  const originalPath = sourceMatch?.groups?.path;
-  if (
-    originalPath === undefined
-    || originalPath.startsWith("//")
-    || originalPath.endsWith("/")
-    || originalPath.split("/").slice(1).some((segment) => segment === "" || segment === "." || segment === "..")
-  ) return Object.freeze({ kind: "blocked", reason: "git source URL path is not canonical" });
+  const originalPath = canonicalGitSourcePath(locator);
+  if (originalPath === null) return Object.freeze({ kind: "blocked", reason: "git source URL path is not canonical" });
   let url: URL;
   try {
     url = new URL(locator);
@@ -123,4 +117,16 @@ export function gitPiSourceIdentity(locator: string, revision: string, catalogDi
     return Object.freeze({ kind: "blocked", reason: "git source URL path is not canonical" });
   }
   return Object.freeze({ kind: "formal", source: "git", revision, catalogDigest, locator: url.toString() });
+}
+
+function canonicalGitSourcePath(locator: string): string | null {
+  const sourceMatch = /^https:\/\/[^/?#]+(?<path>\/[^?#]*)$/u.exec(locator);
+  const originalPath = sourceMatch?.groups?.path;
+  if (
+    originalPath === undefined
+    || originalPath.startsWith("//")
+    || originalPath.endsWith("/")
+    || originalPath.split("/").slice(1).some((segment) => segment === "" || segment === "." || segment === "..")
+  ) return null;
+  return originalPath;
 }

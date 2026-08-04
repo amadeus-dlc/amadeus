@@ -127,22 +127,32 @@ function catalogMinimumVersion(record: Record<string, unknown>): string | null {
 function catalogResource(value: unknown): CatalogResource | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
-  const family = row.kind === "extension" ? "extensions"
-    : row.kind === "driver" ? "drivers"
-    : "skills";
-  const expectedLoad = row.kind === "question-annex" ? "annex"
-    : row.kind === "driver" ? "internal"
-    : "native";
+  const mapping = catalogResourceMapping(row.kind);
+  if (mapping === null || !validCatalogResourceFields(row, mapping.family, mapping.load)) return null;
+  return row as unknown as CatalogResource;
+}
+
+function catalogResourceMapping(kind: unknown): { family: string; load: CatalogResource["load"] } | null {
+  if (kind === "skill") return { family: "skills", load: "native" };
+  if (kind === "question-annex") return { family: "skills", load: "annex" };
+  if (kind === "extension") return { family: "extensions", load: "native" };
+  if (kind === "driver") return { family: "drivers", load: "internal" };
+  return null;
+}
+
+function validCatalogResourceFields(
+  row: Record<string, unknown>,
+  family: string,
+  expectedLoad: CatalogResource["load"],
+): boolean {
   if (
-    !["skill", "question-annex", "extension", "driver"].includes(String(row.kind)) ||
-    !["native", "annex", "internal"].includes(String(row.load)) ||
     typeof row.source !== "string" || !safeRelativePath(row.source) ||
     typeof row.destination !== "string" || !safeRelativePath(row.destination) ||
     row.load !== expectedLoad ||
     !row.destination.startsWith(`.pi/${family}/`) ||
     typeof row.sha256 !== "string" || !SHA256.test(row.sha256)
-  ) return null;
-  return row as unknown as CatalogResource;
+  ) return false;
+  return true;
 }
 
 function closedResourceFamilies(resources: readonly CatalogResource[]): boolean {
