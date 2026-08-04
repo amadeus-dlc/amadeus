@@ -4,10 +4,10 @@
 // commit-receipt-derived dispatch permits; they never own cycle counters,
 // idempotency decisions, retry budgets, or route validation.
 
-import { createHash } from "node:crypto";
 import {
   applyLoopDelivery,
   createLoopMonitorProjection,
+  digest as sha256,
   type CompiledLoopMonitor,
   type CompiledLoopMonitorGraph,
   type JudgeRouteDescriptor,
@@ -18,28 +18,6 @@ import {
   type LoopMonitorProjection,
   type LoopTraceContext,
 } from "./amadeus-loop-monitor.ts";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function bytewise(a: string, b: string): number {
-  return Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"));
-}
-
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (isRecord(value)) {
-    return `{${Object.keys(value).sort(bytewise).map((key) =>
-      `${JSON.stringify(key)}:${canonicalJson(value[key])}`
-    ).join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "null";
-}
-
-function sha256(value: unknown): string {
-  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
-}
 
 function stableId(namespace: string, value: unknown): string {
   return `${namespace}-${sha256(value).slice("sha256:".length, "sha256:".length + 32)}`;
@@ -121,13 +99,7 @@ export type LoopMonitorEvent =
       readonly humanTurnId: string | null;
     }
   | { readonly type: "WORKFLOW_UNPARKED"; readonly monitorId: string; readonly reasonCode: string }
-  | { readonly type: "LOOP_JUDGE_AWAITING_HUMAN"; readonly invocationId: string; readonly reason: string }
-  | {
-      readonly type: "LIVE_SMOKE_AUTHORIZED";
-      readonly authorizationId: string;
-      readonly actorId: string;
-      readonly scopeDigest: string;
-    };
+  | { readonly type: "LOOP_JUDGE_AWAITING_HUMAN"; readonly invocationId: string; readonly reason: string };
 
 export interface LoopMonitorEventSet {
   readonly eventSetId: string;
@@ -154,6 +126,11 @@ export interface CommittedJudgeDispatchPermit {
 }
 
 export interface LoopMonitorRepository {
+  /**
+   * Runs against a fixed committed snapshot. The callback must not re-enter a
+   * transaction or call any other repository method; appended sets are folded
+   * locally from the callback snapshot until the transaction returns.
+   */
   transaction<T>(
     partition: LoopMonitorPartition,
     body: (
@@ -170,29 +147,38 @@ export function createMemoryLoopMonitorRepository(
 ): LoopMonitorRepository {
   const byPartition = new Map<string, LoopMonitorEventSet[]>();
   const receipts = new Map<string, LoopMonitorCommitReceipt>();
+  let transactionActive = false;
   return {
     transaction(partition, body) {
       const key = loopMonitorPartitionKey(partition);
-      const sets = byPartition.get(key) ?? [];
-      return body(sets, (set) => {
-        if (options.failAppend) throw new Error("injected-loop-monitor-append-failure");
-        const eventSetDigest = sha256(set);
-        const receipt: LoopMonitorCommitReceipt = {
-          receiptId: loopMonitorReceiptId(set.eventSetId, eventSetDigest),
-          eventSetId: set.eventSetId,
-          eventSetDigest,
-          partitionKey: key,
-        };
-        sets.push(set);
-        byPartition.set(key, sets);
-        receipts.set(receipt.receiptId, receipt);
-        return receipt;
-      });
+      if (transactionActive) throw new Error("loop-monitor-transaction-reentrant");
+      transactionActive = true;
+      const sets = [...(byPartition.get(key) ?? [])];
+      try {
+        return body(sets, (set) => {
+          if (options.failAppend) throw new Error("injected-loop-monitor-append-failure");
+          const eventSetDigest = sha256(set);
+          const receipt: LoopMonitorCommitReceipt = {
+            receiptId: loopMonitorReceiptId(set.eventSetId, eventSetDigest),
+            eventSetId: set.eventSetId,
+            eventSetDigest,
+            partitionKey: key,
+          };
+          byPartition.set(key, [...(byPartition.get(key) ?? []), set]);
+          receipts.set(receipt.receiptId, receipt);
+          return receipt;
+        });
+      } finally {
+        transactionActive = false;
+      }
     },
     readEventSets(partition) {
-      return [...(byPartition.get(loopMonitorPartitionKey(partition)) ?? [])];
+      const key = loopMonitorPartitionKey(partition);
+      if (transactionActive) throw new Error("loop-monitor-transaction-external-read");
+      return [...(byPartition.get(key) ?? [])];
     },
     isCommitted(receipt) {
+      if (transactionActive) throw new Error("loop-monitor-transaction-external-read");
       const stored = receipts.get(receipt.receiptId);
       return stored !== undefined && stored.eventSetId === receipt.eventSetId &&
         stored.eventSetDigest === receipt.eventSetDigest && stored.partitionKey === receipt.partitionKey;
@@ -202,7 +188,6 @@ export function createMemoryLoopMonitorRepository(
 
 export interface LoopMonitorRuntimeProjection extends LoopMonitorProjection {
   readonly judgeRedispatchAttempts: 0 | 1;
-  readonly observedJudgeResult: JudgeResult | null;
   readonly lastCompletedInvocationId: string | null;
   readonly lastRouteId: string | null;
   readonly awaitingHumanReason: string | null;
@@ -215,7 +200,6 @@ function initialProjection(
   return {
     ...createLoopMonitorProjection(partition, monitor),
     judgeRedispatchAttempts: 0,
-    observedJudgeResult: null,
     lastCompletedInvocationId: null,
     lastRouteId: null,
     awaitingHumanReason: null,
@@ -245,11 +229,12 @@ function applyRuntimeEvent(
       }
       return { ...projection, judgeRedispatchAttempts: 1 };
     case "LOOP_JUDGE_RESULT_OBSERVED":
-      return { ...projection, observedJudgeResult: event.result };
+      return projection;
     case "LOOP_JUDGE_COMPLETED":
       return {
         ...projection,
         pendingJudge: null,
+        judgeRedispatchAttempts: 0,
         lastCompletedInvocationId: event.invocationId,
         awaitingHumanReason: null,
       };
@@ -260,7 +245,6 @@ function applyRuntimeEvent(
     case "LOOP_LATCH_CLEARED":
       return { ...projection, latch: null, awaitingHumanReason: null };
     case "WORKFLOW_UNPARKED":
-    case "LIVE_SMOKE_AUTHORIZED":
       return projection;
     case "LOOP_JUDGE_AWAITING_HUMAN":
       return { ...projection, awaitingHumanReason: event.reason };
@@ -397,6 +381,7 @@ export type LoopMonitorCoordinatorResult =
       readonly projection: LoopMonitorRuntimeProjection;
     }
   | { readonly kind: "cleared"; readonly projection: LoopMonitorRuntimeProjection }
+  | { readonly kind: "not-started"; readonly reason: string; readonly projection: LoopMonitorRuntimeProjection }
   | { readonly kind: "AWAITING_HUMAN"; readonly reason: string; readonly projection: LoopMonitorRuntimeProjection }
   | { readonly kind: "CONFLICT" | "INCOMPLETE"; readonly reason: string };
 
@@ -417,30 +402,14 @@ export function verifyHumanRetry(value: {
     : null;
 }
 
-export interface LiveAuthorizationPort {
-  authorize(request: {
-    readonly intentUuid: string;
-    readonly monitorId: string;
-    readonly scopeDigest: string;
-  }):
-    | { readonly authorized: true; readonly authorizationId: string; readonly actorId: string }
-    | { readonly authorized: false; readonly reason: string };
-}
-
 export interface LoopMonitorCoordinator {
   observeDelivery(delivery: LoopDelivery): LoopMonitorCoordinatorResult;
   dispatchJudge(permit: CommittedJudgeDispatchPermit, port: JudgePort): LoopMonitorCoordinatorResult;
   resumeJudge(partition: LoopMonitorPartition, port: JudgePort): LoopMonitorCoordinatorResult;
   clearLatch(request: {
     readonly partition: LoopMonitorPartition;
-    readonly evidenceFingerprint?: string;
     readonly humanRetry?: VerifiedHumanTurn;
   }): LoopMonitorCoordinatorResult;
-  authorizeLiveSmoke(
-    partition: LoopMonitorPartition,
-    scopeDigest: string,
-    port: LiveAuthorizationPort,
-  ): { readonly kind: "authorized"; readonly receipt: LoopMonitorCommitReceipt } | { readonly kind: "CONFLICT"; readonly reason: string };
   readProjection(partition: LoopMonitorPartition): LoopMonitorRuntimeProjection;
 }
 
@@ -548,12 +517,14 @@ export function createLoopMonitorCoordinator(options: {
       if (current.awaitingHumanReason !== null) {
         return { kind: "AWAITING_HUMAN", reason: current.awaitingHumanReason, projection: current };
       }
-      append(eventSet(partition, `judge-awaiting:${reservation.invocationId}`, reason, [{
+      const set = eventSet(partition, `judge-awaiting:${reservation.invocationId}`, reason, [{
         type: "LOOP_JUDGE_AWAITING_HUMAN",
         invocationId: reservation.invocationId,
         reason,
-      }]));
-      return { kind: "AWAITING_HUMAN", reason, projection: read(partition) };
+      }]);
+      append(set);
+      const projection = foldLoopMonitorEventSets([...sets, set], partition, monitor);
+      return { kind: "AWAITING_HUMAN", reason, projection };
     });
   }
 
@@ -602,8 +573,9 @@ export function createLoopMonitorCoordinator(options: {
           },
         });
       }
-      append(eventSet(partition, `judge-complete:${reservation.invocationId}`, result, events));
-      const projection = read(partition);
+      const set = eventSet(partition, `judge-complete:${reservation.invocationId}`, result, events);
+      append(set);
+      const projection = foldLoopMonitorEventSets([...sets, set], partition, monitor);
       return route.kind === "park"
         ? {
             kind: "latched",
@@ -639,6 +611,9 @@ export function createLoopMonitorCoordinator(options: {
     const outcome = port.dispatch(judgeRequest(monitor, reservation));
     if (outcome.kind === "completed") {
       return completeJudgeResult(permit.partition, monitor, outcome.result);
+    }
+    if (outcome.kind === "not-started") {
+      return { kind: "not-started", reason: outcome.reason, projection };
     }
     return { kind: "pending", projection };
   }
@@ -696,7 +671,7 @@ export function createLoopMonitorCoordinator(options: {
             events,
           );
           const receipt = append(set);
-          const projection = read(delivery.partition);
+          const projection = foldLoopMonitorEventSets([...sets, set], delivery.partition, monitor);
           if (decision.judgeReservation !== null) {
             return {
               kind: "judge-reserved",
@@ -738,10 +713,10 @@ export function createLoopMonitorCoordinator(options: {
       if (projection.judgeRedispatchAttempts >= 1) {
         return appendAwaitingHuman(partition, monitor, reservation, "judge-redispatch-exhausted");
       }
-      return repository.transaction(partition, (sets, append) => {
+      const redispatch = repository.transaction(partition, (sets, append) => {
         const current = foldLoopMonitorEventSets(sets, partition, monitor);
         if (current.judgeRedispatchAttempts >= 1) {
-          return appendAwaitingHuman(partition, monitor, reservation, "judge-redispatch-exhausted");
+          return { kind: "exhausted" as const };
         }
         const set = eventSet(partition, `judge-redispatch:${reservation.invocationId}`, reconciled, [{
           type: "LOOP_JUDGE_ATTEMPT_STARTED",
@@ -751,8 +726,15 @@ export function createLoopMonitorCoordinator(options: {
           trace: { ...reservation.trace },
         }]);
         const receipt = append(set);
-        return dispatch(committedPermit(partition, reservation.invocationId, receipt), port);
+        return {
+          kind: "committed" as const,
+          permit: committedPermit(partition, reservation.invocationId, receipt),
+        };
       });
+      if (redispatch.kind === "exhausted") {
+        return appendAwaitingHuman(partition, monitor, reservation, "judge-redispatch-exhausted");
+      }
+      return dispatch(redispatch.permit, port);
     },
 
     clearLatch(request) {
@@ -761,45 +743,25 @@ export function createLoopMonitorCoordinator(options: {
       return repository.transaction(request.partition, (sets, append) => {
         const current = foldLoopMonitorEventSets(sets, request.partition, monitor);
         if (current.latch === null) return { kind: "CONFLICT", reason: "latch-not-set" };
-        const evidenceChanged = request.evidenceFingerprint !== undefined &&
-          request.evidenceFingerprint !== current.latch.evidenceFingerprint;
         const humanRetry = request.humanRetry?.verified === true
           ? verifyHumanRetry(request.humanRetry)
           : null;
-        if (!evidenceChanged && humanRetry === null) {
+        if (humanRetry === null) {
           return { kind: "CONFLICT", reason: "latch-clear-not-authorized" };
         }
-        const basis = evidenceChanged ? "evidence-change" as const : "human-retry" as const;
-        append(eventSet(request.partition, `latch-clear:${current.latch.invocationId}:${basis}`, request, [
+        const set = eventSet(request.partition, `latch-clear:${current.latch.invocationId}:human-retry`, request, [
           {
             type: "LOOP_LATCH_CLEARED",
             monitorId: monitor.id,
             priorEvidenceFingerprint: current.latch.evidenceFingerprint,
-            basis,
-            humanTurnId: humanRetry?.turnId ?? null,
+            basis: "human-retry",
+            humanTurnId: humanRetry.turnId,
           },
           { type: "WORKFLOW_UNPARKED", monitorId: monitor.id, reasonCode: current.latch.reasonCode },
-        ]));
-        return { kind: "cleared", projection: read(request.partition) };
-      });
-    },
-
-    authorizeLiveSmoke(partition, scopeDigest, port) {
-      if (resolve(partition) === null) return { kind: "CONFLICT", reason: "partition-not-in-compiled-graph" };
-      const authorization = port.authorize({
-        intentUuid: partition.intentUuid,
-        monitorId: partition.monitorId,
-        scopeDigest,
-      });
-      if (!authorization.authorized) return { kind: "CONFLICT", reason: authorization.reason };
-      return repository.transaction(partition, (_sets, append) => {
-        const receipt = append(eventSet(partition, `live-smoke:${authorization.authorizationId}`, authorization, [{
-          type: "LIVE_SMOKE_AUTHORIZED",
-          authorizationId: authorization.authorizationId,
-          actorId: authorization.actorId,
-          scopeDigest,
-        }]));
-        return { kind: "authorized", receipt };
+        ]);
+        append(set);
+        const projection = foldLoopMonitorEventSets([...sets, set], request.partition, monitor);
+        return { kind: "cleared", projection };
       });
     },
 

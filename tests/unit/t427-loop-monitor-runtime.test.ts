@@ -14,6 +14,7 @@ import {
   createLoopMonitorCoordinator,
   createMemoryLoopMonitorRepository,
   foldLoopMonitorEventSets,
+  projectLoopMonitorStatus,
   replayLoopMonitorPartition,
   renderLoopMonitorStatus,
   type JudgePort,
@@ -115,6 +116,22 @@ function resultFor(
 }
 
 describe("Loop Monitor Judge runtime", () => {
+  test("repository transactions reject re-entry and external reads", () => {
+    const repository = createMemoryLoopMonitorRepository();
+    const routeGraph = graph();
+    const partition: LoopMonitorPartition = {
+      intentUuid: "intent-transaction-contract",
+      monitorId: "quality-repair",
+      stageInstanceId: "stage-transaction-contract",
+      graphRevision: routeGraph.graphRevision,
+    };
+
+    expect(() => repository.transaction(partition, () => repository.readEventSets(partition)))
+      .toThrow("loop-monitor-transaction-external-read");
+    expect(() => repository.transaction(partition, () => repository.transaction(partition, () => undefined)))
+      .toThrow("loop-monitor-transaction-reentrant");
+  });
+
   test("detects old duplicates, identity conflicts, and causal forks from the durable event-set index", () => {
     const compiled = graph(100);
     const repository = createMemoryLoopMonitorRepository();
@@ -257,6 +274,45 @@ describe("Loop Monitor Judge runtime", () => {
     });
     expect(dispatches).toBe(2);
     expect(reconciles).toBe(2);
+  });
+
+  test("preserves not-started reasons instead of reporting an in-flight Judge", () => {
+    const { coordinator, reserved } = reserveJudge();
+    const result = coordinator.dispatchJudge(reserved.permit, {
+      dispatch: () => ({ kind: "not-started", reason: "provider-unavailable" }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    });
+
+    expect(result).toMatchObject({
+      kind: "not-started",
+      reason: "provider-unavailable",
+    });
+  });
+
+  test("resets the redispatch attempt budget for the next Judge invocation", () => {
+    const { coordinator, partition, reserved, routeGraph, q2 } = reserveJudge();
+    const retryPort: JudgePort = {
+      dispatch: () => ({ kind: "accepted", nativeHandle: "redispatched" }),
+      reconcile: () => ({ kind: "no-effect-attested", attestationId: "no-effect-1" }),
+    };
+    expect(coordinator.resumeJudge(partition, retryPort).kind).toBe("pending");
+    expect(coordinator.readProjection(partition).judgeRedispatchAttempts).toBe(1);
+
+    expect(coordinator.dispatchJudge(reserved.permit, {
+      dispatch: (request) => ({ kind: "completed", result: resultFor(request.invocationId, routeGraph) }),
+      reconcile: () => ({ kind: "unknown", reason: "not-used" }),
+    }).kind).toBe("route-applied");
+    expect(coordinator.readProjection(partition).judgeRedispatchAttempts).toBe(0);
+
+    const repair = delivery(routeGraph, partition, "repair", q2.deliveryId, "second-repair");
+    expect(coordinator.observeDelivery(repair).kind).toBe("observed");
+    const quality = delivery(routeGraph, partition, "quality-check", repair.deliveryId, "second-quality");
+    const second = coordinator.observeDelivery(quality);
+    expect(second.kind).toBe("judge-reserved");
+    if (second.kind !== "judge-reserved") throw new Error(`expected second Judge reservation, got ${second.kind}`);
+    expect(second.invocationId).not.toBe(reserved.invocationId);
+    expect(second.projection.judgeRedispatchAttempts).toBe(0);
+    expect(coordinator.resumeJudge(partition, retryPort).kind).toBe("pending");
   });
 
   test("effect-possible reconciliation fails closed without another dispatch", () => {
@@ -403,7 +459,7 @@ describe("Loop Monitor Judge runtime", () => {
 
 describe("Loop Monitor latch", () => {
   test("short-circuits the same evidence and clears atomically on evidence change", () => {
-    const { repository, coordinator, partition, reserved, routeGraph, q2 } = reserveJudge();
+    const { coordinator, partition, reserved, routeGraph, q2 } = reserveJudge();
     const port: JudgePort = {
       dispatch(request) {
         return { kind: "completed", result: resultFor(request.invocationId, routeGraph, "repair-stalled") };
@@ -419,13 +475,12 @@ describe("Loop Monitor latch", () => {
       reasonCode: "REPAIR_STALLED",
     });
 
-    const changed = coordinator.clearLatch({ partition, evidenceFingerprint: evidenceB });
-    expect(changed.kind).toBe("cleared");
-    expect(repository.readEventSets(partition).at(-1)?.events.map((event) => event.type)).toEqual([
-      "LOOP_LATCH_CLEARED",
-      "WORKFLOW_UNPARKED",
-    ]);
-    expect(coordinator.readProjection(partition).latch).toBeNull();
+    const selfReported = coordinator.clearLatch({
+      partition,
+      evidenceFingerprint: evidenceB,
+    } as unknown as Parameters<typeof coordinator.clearLatch>[0]);
+    expect(selfReported).toEqual({ kind: "CONFLICT", reason: "latch-clear-not-authorized" });
+    expect(coordinator.readProjection(partition).latch).not.toBeNull();
 
     const implicit = reserveJudge();
     expect(implicit.coordinator.dispatchJudge(implicit.reserved.permit, {
@@ -449,6 +504,7 @@ describe("Loop Monitor latch", () => {
       "WORKFLOW_UNPARKED",
       "LOOP_DELIVERY_OBSERVED",
     ]);
+    expect(implicit.coordinator.readProjection(implicit.partition).latch).toBeNull();
   });
 
   test("a real verified HUMAN_TURN clears the latch and status/replay expose the stop contract", () => {
@@ -476,19 +532,8 @@ describe("Loop Monitor latch", () => {
     const latchedStatus = coordinator.readProjection(partition);
     const humanRetry = verifyHumanRetry({ eventType: "HUMAN_TURN", actor: "human", turnId: "turn-1" });
     expect(humanRetry).not.toBeNull();
-    expect(renderLoopMonitorStatus({
-      outcome: "parked",
-      partition,
-      epoch: latchedStatus.epoch,
-      matchedPrefix: latchedStatus.matchedPrefix,
-      cycleCount: latchedStatus.cycleCount,
-      threshold: 1,
-      pendingDeliveries: 0,
-      pendingJudgeInvocationId: null,
-      stopReason: latchedStatus.latch?.reasonCode ?? null,
-      evidenceFingerprint: latchedStatus.latch?.evidenceFingerprint ?? null,
-      resumeCondition: latchedStatus.latch?.resumeCondition ?? null,
-    })).toContain("Resume condition: evidence-change-or-human-retry");
+    expect(renderLoopMonitorStatus(projectLoopMonitorStatus(latchedStatus, routeGraph.loopMonitors[0]!)))
+      .toContain("Resume condition: evidence-change-or-human-retry");
     expect(coordinator.clearLatch({ partition, humanRetry: humanRetry! }).kind).toBe("cleared");
     expect(verifyHumanRetry({ eventType: "HUMAN_TURN", actor: "agent", turnId: "turn-2" })).toBeNull();
   });
@@ -516,18 +561,5 @@ describe("Loop Monitor latch", () => {
       reason: "latch-clear-not-authorized",
     });
     expect(coordinator.readProjection(partition).latch).not.toBeNull();
-  });
-
-  test("live smoke requires safe external authorization before the canonical event is committed", () => {
-    const { repository, coordinator, partition } = reserveJudge();
-    const denied = coordinator.authorizeLiveSmoke(partition, `sha256:${"d".repeat(64)}`, {
-      authorize: () => ({ authorized: false, reason: "no-human-authorization" }),
-    });
-    expect(denied).toEqual({ kind: "CONFLICT", reason: "no-human-authorization" });
-    const authorized = coordinator.authorizeLiveSmoke(partition, `sha256:${"d".repeat(64)}`, {
-      authorize: () => ({ authorized: true, authorizationId: "live-auth-1", actorId: "human-1" }),
-    });
-    expect(authorized.kind).toBe("authorized");
-    expect(repository.readEventSets(partition).at(-1)?.events[0]?.type).toBe("LIVE_SMOKE_AUTHORIZED");
   });
 });
