@@ -556,6 +556,8 @@ describe("t427 squash identity proof and main convergence", () => {
 
   test("reports supersession after commit and after a rejected push", () => {
     const afterCommit = squashFixture();
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const afterCommitOriginal = reconcilePaths.map((path) => readFileSync(join(afterCommit.root, path)));
     const afterCommitResult = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -567,8 +569,12 @@ describe("t427 squash identity proof and main convergence", () => {
       runner: hybridRunner(afterCommit, { remoteTips: [afterCommit.landing, "d".repeat(40)] }),
     });
     expect(afterCommitResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(afterCommit.root, path)))).toEqual(afterCommitOriginal);
+    expect(must(afterCommit.root, ["git", "rev-parse", "HEAD"])).toBe(afterCommit.landing);
+    expect(command(afterCommit.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
 
     const afterPush = squashFixture();
+    const afterPushOriginal = reconcilePaths.map((path) => readFileSync(join(afterPush.root, path)));
     const afterPushResult = runEvidenceCommand([
       "reconcile",
       "--event-revision",
@@ -583,6 +589,9 @@ describe("t427 squash identity proof and main convergence", () => {
       }),
     });
     expect(afterPushResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
+    expect(reconcilePaths.map((path) => readFileSync(join(afterPush.root, path)))).toEqual(afterPushOriginal);
+    expect(must(afterPush.root, ["git", "rev-parse", "HEAD"])).toBe(afterPush.landing);
+    expect(command(afterPush.root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
   });
 
   test("restores both index and worktree when the evidence commit fails", () => {

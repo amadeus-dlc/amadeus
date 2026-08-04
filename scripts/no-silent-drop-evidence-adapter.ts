@@ -392,6 +392,26 @@ export class NoSilentDropEvidenceAdapter {
     return this.headRevision();
   }
 
+  rollbackReconcileCommit(eventRevision: string): void {
+    this.assertClean();
+    const head = this.headRevision();
+    const ancestry = this.mustRun(
+      ["git", "rev-list", "--parents", "-n", "1", head],
+      "REBIND_ROLLBACK_FAILED",
+    ).split(/\s+/);
+    if (ancestry.length !== 2 || ancestry[0] !== head || ancestry[1] !== eventRevision) {
+      throw new EvidenceRebindError(
+        "REBIND_ROLLBACK_FAILED",
+        "reconcile commit is not a direct child of the event revision",
+      );
+    }
+    this.mustRun(["git", "reset", "--hard", eventRevision], "REBIND_ROLLBACK_FAILED");
+    if (this.headRevision() !== eventRevision) {
+      throw new EvidenceRebindError("REBIND_ROLLBACK_FAILED", "reconcile commit rollback did not restore event HEAD");
+    }
+    this.assertClean();
+  }
+
   clearReconcileIndex(paths: readonly string[]): void {
     const result = this.run(["git", "restore", "--staged", "--", ...paths]);
     if (result.status !== 0) {

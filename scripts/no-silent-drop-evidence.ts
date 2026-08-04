@@ -181,6 +181,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
     adapter.commitReconcileChanges(bundle.paths);
     committed = true;
     if (adapter.remoteMainTip() !== command.eventRevision) {
+      adapter.rollbackReconcileCommit(command.eventRevision);
       return successEnvelope({
         status: "superseded",
         code: "REBIND_SUPERSEDED",
@@ -190,6 +191,7 @@ function runReconcile(command: ReconcileCommand, adapter: NoSilentDropEvidenceAd
       });
     }
     if (adapter.pushFastForward(command.eventRevision) === "superseded") {
+      adapter.rollbackReconcileCommit(command.eventRevision);
       return successEnvelope({
         status: "superseded",
         code: "REBIND_SUPERSEDED",
