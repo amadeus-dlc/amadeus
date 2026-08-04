@@ -55,6 +55,8 @@ const BASELINE_SHA = readFileSync(
 //   - 260804-scheduled-pbt: move the non-blocking deep PBT job out of ci.yml and
 //     into its own daily/manual workflow, matching the performance tier's
 //     operational boundary.
+//   - 260804-metrics-snapshot-auth (#2182): preserve the short-lived GitHub App
+//     credential in the metrics-snapshot write job until its plain git push.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

@@ -456,11 +456,12 @@ function allowsSealedLegacyHumanTurn(
 // Locked via withAuditLock, NOT a bare acquire (E-U8PRE O-L1). The canonical
 // emit path reaches this from arbitrary depth, including from inside a section
 // that already holds the lock for the same identity. A bare acquire hits EEXIST
-// against the caller's OWN lock: it burns the retry budget and throws, and once
-// the holder has been in its section past DEFAULT_LOCK_STALE_MS the reaper
-// judges that live lock stale and steals it — leaving the outer critical section
-// running with no lock at all, silently. withAuditLock's per-identity depth
-// counter makes the nested append re-enter instead.
+// against the caller's OWN lock: it burns the retry budget and then throws, so
+// a long outer section deadlocks against itself. withAuditLock's per-identity
+// depth counter makes the nested append re-enter instead. (The acquire-side
+// reaper never compounds this into a steal — a live owner is not reclaimable at
+// any age, #1906. A holder genuinely wedged past DEFAULT_LOCK_STALE_MS is
+// surfaced by the detectLeakedLocks doctor probe, which clears it on request.)
 export function appendJournalRecordV2(
   record: Omit<JournalEntryV2, "seq">,
   projectDir: string,
