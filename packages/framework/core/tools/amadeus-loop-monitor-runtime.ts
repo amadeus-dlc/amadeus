@@ -427,11 +427,7 @@ export interface VerifiedHumanTurn {
   readonly turnId: string;
 }
 
-export function verifyHumanRetry(value: {
-  readonly eventType: string;
-  readonly actor: string;
-  readonly turnId: string;
-}): VerifiedHumanTurn | null {
+export function verifyHumanRetry(value: { readonly eventType: string; readonly actor: string; readonly turnId: string }): VerifiedHumanTurn | null {
   return value.eventType === "HUMAN_TURN" && value.actor === "human" && value.turnId.length > 0
     ? { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: value.turnId }
     : null;
@@ -505,11 +501,7 @@ export function replayLoopMonitorPartition(
   repository: LoopMonitorRepository,
   graph: CompiledLoopMonitorGraph,
   partition: LoopMonitorPartition,
-): {
-  readonly projection: LoopMonitorRuntimeProjection;
-  readonly status: LoopMonitorStatusEnvelope;
-  readonly eventSetCount: number;
-} {
+) {
   if (partition.graphRevision !== graph.graphRevision) {
     throw new Error("loop-monitor-replay-graph-revision-mismatch");
   }
