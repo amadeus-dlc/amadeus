@@ -11,7 +11,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import { loadRunModelCheckSource } from "../../plugins/formal-model-check/tools/run-model-check-source.ts";
+import {
+  generateFrozenTlaModel,
+  tlaInvariantSourceMap,
+  validateFrozenTlaModelReceipt,
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import { loadVerifiedTlaSources } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
+import {
+  createVerifiedTlaModelReceipt,
+  validateModelCheckReceipt,
+  validateVerifiedTlaModelReceipt,
+} from "../../plugins/formal-model-check/tools/tla-model-receipt.ts";
 
 describe("run-model-check source adapter", () => {
   const roots: string[] = [];
@@ -39,6 +51,10 @@ describe("run-model-check source adapter", () => {
     expect(result.value.moduleName).toBe("FormalElection");
     expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
     expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
+    expect("schema" in result.value.modelReceipt).toBe(false);
+    expect(validateFrozenTlaModelReceipt(result.value.modelReceipt).ok).toBe(true);
+    expect(createVerifiedTlaModelReceipt(result.value.source).ok).toBe(false);
+    expect(validateModelCheckReceipt(null).ok).toBe(false);
     // The trace vocabulary rides the verified source: map-declared values,
     // moduleName from the model name (never a map-side duplicate).
     expect(result.value.vocabulary).toEqual({
@@ -111,6 +127,99 @@ describe("run-model-check source adapter", () => {
     })).toEqual({ ok: false, error: modelFailure });
   });
 
+  test("returns source drift when the selected frozen source cannot produce a receipt", () => {
+    const paths = copyCanonicalSource();
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const sourcesWithoutVocabulary = {
+      ...loaded.value,
+      models: loaded.value.models.map((source) => source.model.name === "FormalElection"
+        ? { ...source, model: { ...source.model, vocabulary: undefined } }
+        : source),
+    };
+
+    expect(loadRunModelCheckSource(paths.model, paths.cfg, {
+      readBytes: (path) => new Uint8Array(readFileSync(path)),
+      loadVerifiedSources: () => ({ ok: true, value: sourcesWithoutVocabulary }),
+    })).toMatchObject({
+      ok: false,
+      error: {
+        kind: "SOURCE_DRIFT",
+        code: "SOURCE_DRIFT",
+        detail: expect.stringContaining("does not declare a vocabulary"),
+      },
+    });
+  });
+
+  test("returns source drift when a verified receipt names a missing invariant", () => {
+    const root = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-invalid-"));
+    roots.push(root);
+    const model = join(root, "MirrorLifecycle.tla");
+    const cfg = join(root, "MirrorLifecycle.cfg");
+    cpSync("specs/tla/MirrorLifecycle.tla", model);
+    cpSync("specs/tla/MirrorLifecycle.cfg", cfg);
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const sourcesWithMissingInvariant = {
+      ...loaded.value,
+      models: loaded.value.models.map((source) => source.model.name === "MirrorLifecycle"
+        ? {
+          ...source,
+          model: {
+            ...source.model,
+            vocabulary: {
+              ...source.model.vocabulary,
+              namedInvariants: [...(source.model.vocabulary?.namedInvariants ?? []), "MissingInvariant"],
+              traceStateVariables: source.model.vocabulary?.traceStateVariables ?? [],
+            },
+          },
+        }
+        : source),
+    };
+
+    expect(loadRunModelCheckSource(model, cfg, {
+      readBytes: (path) => new Uint8Array(readFileSync(path)),
+      loadVerifiedSources: () => ({ ok: true, value: sourcesWithMissingInvariant }),
+    })).toMatchObject({
+      ok: false,
+      error: {
+        kind: "SOURCE_DRIFT",
+        code: "SOURCE_DRIFT",
+        detail: expect.stringContaining("missing invariant formula MissingInvariant"),
+      },
+    });
+  });
+
+  test("locates invariant declarations with spaces or tabs by one shared rule", () => {
+    expect(tlaInvariantSourceMap(
+      "---- MODULE Example ----\nFirst   == TRUE\nSecond\t== TRUE\n====\n",
+      ["First", "Second"],
+    )).toEqual({
+      ok: true,
+      value: {
+        First: { line: 2, column: 1 },
+        Second: { line: 3, column: 1 },
+      },
+    });
+
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const source = loaded.value.models.find(({ model }) => model.name === "FormalElection");
+    expect(source).toBeDefined();
+    if (source === undefined) return;
+    const spacedSource = {
+      ...source,
+      moduleSource: source.moduleSource.replace("ChoiceWinner ==", "ChoiceWinner\t=="),
+    };
+    expect(generateFrozenTlaModel(
+      { publicContractIdentity: "a".repeat(64) },
+      spacedSource,
+    ).invariantSourceMap.ChoiceWinner).toEqual({ line: 269, column: 1 });
+  });
+
   test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {
     const mirror = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-"));
     roots.push(mirror);
@@ -128,11 +237,56 @@ describe("run-model-check source adapter", () => {
       namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],
       traceStateVariables: ["receipts", "issueNumber", "boundaryIdx"],
     });
+    expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
+    expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
+    const receipt = createVerifiedTlaModelReceipt(result.value.source);
+    expect(receipt.ok).toBe(true);
+    if (!receipt.ok) return;
+    const reordered = Object.fromEntries(Object.entries(receipt.value).reverse());
+    expect(validateModelCheckReceipt(reordered).ok).toBe(true);
+    const tamperedInput = {
+      ...receipt.value,
+      cfgBytesIdentity: "0".repeat(64),
+    };
+    const { modelIdentity: _modelIdentity, ...tamperedIdentityInput } = tamperedInput;
+    const tampered = {
+      ...tamperedInput,
+      modelIdentity: canonicalIdentity(
+        tamperedIdentityInput,
+        "amadeus.formal-verif.tla.verified-model.v1",
+      ).sha256,
+    };
+    expect(validateModelCheckReceipt(tampered).ok).toBe(false);
+    expect(validateVerifiedTlaModelReceipt({ ...receipt.value, unexpected: true })).toMatchObject({
+      ok: false,
+      error: { message: "receipt must have the exact verified-source model shape" },
+    });
+    expect(validateVerifiedTlaModelReceipt({ ...receipt.value, modelName: 1 })).toMatchObject({
+      ok: false,
+      error: { message: "receipt schema or model name is invalid" },
+    });
+    expect(validateVerifiedTlaModelReceipt({
+      ...receipt.value,
+      vocabulary: {
+        ...receipt.value.vocabulary,
+        namedInvariants: [1n],
+      },
+    })).toMatchObject({
+      ok: false,
+      error: { message: "receipt differs from the selected verified model" },
+    });
+    expect(createVerifiedTlaModelReceipt({
+      ...result.value.source,
+      model: { ...result.value.source.model, vocabulary: undefined },
+    })).toMatchObject({
+      ok: false,
+      error: { message: "model MirrorLifecycle has no declared vocabulary" },
+    });
     const electionPaths = copyCanonicalSource();
     const election = loadRunModelCheckSource(electionPaths.model, electionPaths.cfg);
     expect(election.ok).toBe(true);
     if (!election.ok) return;
-    expect(result.value.modelReceipt).toEqual(election.value.modelReceipt);
+    expect(result.value.modelReceipt).not.toEqual(election.value.modelReceipt);
   });
 
   test("rejects source drift and symlink inputs", () => {

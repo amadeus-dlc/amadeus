@@ -5,8 +5,10 @@ import { createConnection, createServer } from "node:net";
 import {
   chmodSync,
   closeSync,
+  constants as fsConstants,
   copyFileSync,
   existsSync,
+  fchmodSync,
   fsyncSync,
   fstatSync,
   ftruncateSync,
@@ -34,6 +36,12 @@ import type {
   TlcSpawnPlanner,
 } from "./run-model-check-domain.ts";
 import { validateFrozenTlaModelReceipt } from "./tla-arm.ts";
+import {
+  isVerifiedTlaModelReceipt,
+  validateModelCheckReceipt,
+  type ModelCheckReceipt,
+  type ModelCheckReceiptBundle,
+} from "./tla-model-receipt.ts";
 import {
   createJdkDistributionManifest,
   createJdkSnapshotIdentity,
@@ -285,7 +293,8 @@ export interface FsTlcToolchainDependencies {
   fault?(point: TlcCacheFaultPoint): void;
 }
 
-export interface PlannedTlcPrepareInput extends TlcPrepareInput {
+export interface PlannedTlcPrepareInput extends Omit<TlcPrepareInput, "modelReceipt"> {
+  readonly modelReceipt: ModelCheckReceipt;
   readonly runId: string;
   readonly scratchRoot: string;
   readonly planner: TlcSpawnPlanner;
@@ -293,7 +302,7 @@ export interface PlannedTlcPrepareInput extends TlcPrepareInput {
 
 export interface PreparedPlannedTlcRun {
   readonly artifact: VerifiedTlcArtifact;
-  readonly modelReceipt: TlcPrepareInput["modelReceipt"];
+  readonly modelReceipt: ModelCheckReceipt;
   readonly vocabulary: TlcPrepareInput["vocabulary"];
   readonly modulePath: string;
   readonly cfgPath: string;
@@ -310,6 +319,24 @@ export interface PreparedPlannedTlcRun {
     TZ: string;
   }>;
 }
+
+type VerifiedAuxiliaryModulePaths = readonly Readonly<{
+  path: string;
+  moduleBytesIdentity: string;
+}>[];
+
+type VerifiedPlannedModelSources = Readonly<{
+  modelReceipt: ModelCheckReceipt;
+  moduleBytes: Uint8Array;
+  cfgBytes: Uint8Array;
+  auxiliaryModulePaths: VerifiedAuxiliaryModulePaths;
+}>;
+
+type VerifiedSourceBinding = Readonly<{
+  path: string;
+  identity: string;
+  domain: string;
+}>;
 
 export interface PlannedTlcOutcome {
   readonly raw: RawTlcOutcome;
@@ -638,11 +665,79 @@ function inspectJdk(rootPath: string, sealed = false): JdkDistributionManifest {
   return manifest.value;
 }
 
-function sourceIdentity(path: string, domain: string, kind: "InvocationError" | "NormalizationError"): string {
+function sourceIdentity(
+  path: string,
+  domain: string,
+  kind: "PreparationError" | "InvocationError" | "NormalizationError",
+): string {
   const stat = lstatSync(path);
   if (!stat.isFile() || stat.size > METADATA_BYTES) toolchainAbort(kind, "SOURCE_DRIFT", "model source is not a capped regular file");
-  const source = new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
-  return canonicalIdentity(source, domain).sha256;
+  try {
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(readFileSync(path));
+    return canonicalIdentity(source, domain).sha256;
+  } catch (cause) {
+    toolchainAbort(kind, "SOURCE_DRIFT", "model source is not valid UTF-8", cause);
+  }
+}
+
+function writeStagedSource(
+  stagedPath: string,
+  bytes: Uint8Array,
+): void {
+  const fd = openSync(stagedPath, "wx", 0o600);
+  try {
+    let offset = 0;
+    while (offset < bytes.byteLength) {
+      const written = writeSync(fd, bytes, offset, bytes.byteLength - offset, offset);
+      if (written <= 0) toolchainAbort("PreparationError", "SOURCE_STAGING", "staged source write was partial");
+      offset += written;
+    }
+    fsyncSync(fd);
+    fchmodSync(fd, 0o444);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function readVerifiedSourceBytes(
+  path: string,
+  domain: string,
+  expectedIdentity: string,
+  code: "SOURCE_DRIFT" | "SOURCE_IDENTITY",
+): Uint8Array {
+  let fd: number;
+  try {
+    fd = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (cause) {
+    toolchainAbort("PreparationError", code, "model source cannot be opened without following links", cause);
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > METADATA_BYTES) {
+      toolchainAbort("PreparationError", code, "model source is not a capped regular file");
+    }
+    const buffer = new Uint8Array(METADATA_BYTES + 1);
+    let byteLength = 0;
+    for (;;) {
+      const length = readSync(fd, buffer, byteLength, buffer.byteLength - byteLength, null);
+      if (length === 0) break;
+      byteLength += length;
+      if (byteLength > METADATA_BYTES) {
+        toolchainAbort("PreparationError", code, "model source grew beyond its byte cap");
+      }
+    }
+    const bytes = new Uint8Array(buffer.subarray(0, byteLength));
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (canonicalIdentity(source, domain).sha256 !== expectedIdentity) {
+      toolchainAbort("PreparationError", code, "model source changed while staging verified bytes");
+    }
+    return bytes;
+  } catch (cause) {
+    if (cause instanceof ToolchainFailure) throw cause;
+    toolchainAbort("PreparationError", code, "model source is not valid UTF-8", cause);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function readCappedMetadata(path: string): string {
@@ -1475,8 +1570,158 @@ class FsTlcRuntime {
   }
 }
 
+function verifiedAuxiliaryModulePaths(
+  cwd: string,
+  modulePath: string,
+  modelReceipt: ModelCheckReceipt,
+): VerifiedAuxiliaryModulePaths {
+  if (!isVerifiedTlaModelReceipt(modelReceipt)) return Object.freeze([]);
+  return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
+    const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
+    const canonicalPath = realpathSync(requestedPath);
+    if (
+      canonicalPath !== requestedPath
+      || !pathInside(cwd, canonicalPath)
+      || !lstatSync(canonicalPath).isFile()
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "WORKSPACE_PATH",
+        "auxiliary modules must be canonical sibling files inside the closed workspace",
+      );
+    }
+    return Object.freeze({
+      path: canonicalPath,
+      moduleBytesIdentity: auxiliary.moduleBytesIdentity,
+    });
+  }));
+}
+
+function snapshotModelReceipt(bundle: ModelCheckReceiptBundle): ModelCheckReceipt {
+  const invariantSourceMap = Object.freeze(Object.fromEntries(
+    Object.entries(bundle.invariantSourceMap).map(([name, location]) => [
+      name,
+      Object.freeze({ ...location }),
+    ]),
+  ));
+  if (isVerifiedTlaModelReceipt(bundle)) {
+    return Object.freeze({
+      schema: bundle.schema,
+      modelName: bundle.modelName,
+      modelIdentity: bundle.modelIdentity,
+      moduleBytesIdentity: bundle.moduleBytesIdentity,
+      cfgBytesIdentity: bundle.cfgBytesIdentity,
+      auxiliaryModules: Object.freeze(bundle.auxiliaryModules.map((module) => Object.freeze({ ...module }))),
+      vocabulary: Object.freeze({
+        moduleName: bundle.vocabulary.moduleName,
+        namedInvariants: Object.freeze([...bundle.vocabulary.namedInvariants]),
+        traceStateVariables: Object.freeze([...bundle.vocabulary.traceStateVariables]),
+      }),
+      invariantSourceMap,
+    });
+  }
+  return Object.freeze({
+    modelIdentity: bundle.modelIdentity,
+    moduleBytesIdentity: bundle.moduleBytesIdentity,
+    cfgBytesIdentity: bundle.cfgBytesIdentity,
+    profileIdentity: bundle.profileIdentity,
+    publicContractIdentity: bundle.publicContractIdentity,
+    namedInvariantFormulas: Object.freeze({ ...bundle.namedInvariantFormulas }),
+    invariantSourceMap,
+    freezeRevision: bundle.freezeRevision,
+  });
+}
+
+function verifyPlannedModelSources(
+  input: PlannedTlcPrepareInput,
+  cwd: string,
+  modulePath: string,
+  cfgPath: string,
+): VerifiedPlannedModelSources {
+  const model = validateModelCheckReceipt(input.modelReceipt);
+  if (!model.ok) {
+    toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
+  }
+  readVerifiedSourceBytes(
+    modulePath,
+    "amadeus.formal-verif.tla.module.v1",
+    model.value.moduleBytesIdentity,
+    "SOURCE_IDENTITY",
+  );
+  readVerifiedSourceBytes(
+    cfgPath,
+    "amadeus.formal-verif.tla.cfg.v1",
+    model.value.cfgBytesIdentity,
+    "SOURCE_IDENTITY",
+  );
+  if (isVerifiedTlaModelReceipt(model.value)) {
+    const expected = model.value.vocabulary;
+    const actual = input.vocabulary;
+    if (
+      actual.moduleName !== expected.moduleName
+      || actual.namedInvariants.length !== expected.namedInvariants.length
+      || actual.namedInvariants.some((name, index) => name !== expected.namedInvariants[index])
+      || actual.traceStateVariables.length !== expected.traceStateVariables.length
+      || actual.traceStateVariables.some(
+        (name, index) => name !== expected.traceStateVariables[index],
+      )
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "MODEL_RECEIPT",
+        "trace vocabulary differs from the selected model receipt",
+      );
+    }
+  }
+  return Object.freeze({
+    modelReceipt: snapshotModelReceipt(model.value),
+    moduleBytes: new Uint8Array(model.value.moduleBytes),
+    cfgBytes: new Uint8Array(model.value.cfgBytes),
+    auxiliaryModulePaths: verifiedAuxiliaryModulePaths(cwd, modulePath, model.value),
+  });
+}
+
+function preparePlannedScratch(scratchPath: string) {
+  const scratchRoot = realpathSync(scratchPath);
+  if (!lstatSync(scratchRoot).isDirectory()) {
+    toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
+  }
+  const standardModuleDirectory = join(scratchRoot, ".tlc-stdlib");
+  if (!existsSync(standardModuleDirectory)) mkdirSync(standardModuleDirectory, { mode: 0o700 });
+  if (
+    realpathSync(standardModuleDirectory) !== standardModuleDirectory
+    || !lstatSync(standardModuleDirectory).isDirectory()
+    || readdirSync(standardModuleDirectory).length !== 0
+  ) {
+    toolchainAbort(
+      "PreparationError",
+      "STDLIB_ORIGIN",
+      "planned standard-module directory is unsafe or not empty",
+    );
+  }
+  const stagedSourceDirectory = join(scratchRoot, ".tlc-inputs");
+  mkdirSync(stagedSourceDirectory, { mode: 0o700 });
+  if (
+    realpathSync(stagedSourceDirectory) !== stagedSourceDirectory
+    || !lstatSync(stagedSourceDirectory).isDirectory()
+    || (lstatSync(stagedSourceDirectory).mode & 0o077) !== 0
+    || readdirSync(stagedSourceDirectory).length !== 0
+  ) {
+    toolchainAbort(
+      "PreparationError",
+      "SOURCE_STAGING",
+      "planned source staging directory is unsafe or not empty",
+    );
+  }
+  return { scratchRoot, standardModuleDirectory, stagedSourceDirectory };
+}
+
 class FsPlannedTlcRuntime {
   readonly #issued = new WeakSet<PreparedPlannedTlcRun>();
+  readonly #sourceBindings = new WeakMap<
+    PreparedPlannedTlcRun,
+    readonly VerifiedSourceBinding[]
+  >();
 
   constructor(
     private readonly artifacts: FsTlcArtifactCache,
@@ -1513,52 +1758,6 @@ class FsPlannedTlcRuntime {
     const cfgPath = this.#canonicalWorkspaceFile(cwd, input.cfgPath);
     return { cwd, modulePath, cfgPath };
   }
-  #verifyFrozenBytes(
-    input: PlannedTlcPrepareInput,
-    modulePath: string,
-    cfgPath: string,
-  ): void {
-    const model = validateFrozenTlaModelReceipt(input.modelReceipt);
-    if (!model.ok) {
-      toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
-    }
-    const sameBytes = (actual: Uint8Array, expected: Uint8Array) =>
-      actual.byteLength === expected.byteLength
-      && actual.every((byte, index) => byte === expected[index]);
-    if (
-      !sameBytes(new Uint8Array(readFileSync(modulePath)), model.value.moduleBytes)
-      || !sameBytes(new Uint8Array(readFileSync(cfgPath)), model.value.cfgBytes)
-    ) {
-      toolchainAbort(
-        "PreparationError",
-        "SOURCE_IDENTITY",
-        "model or cfg bytes differ from the frozen receipt",
-      );
-    }
-  }
-
-  #prepareScratch(scratchPath: string): { scratchRoot: string; standardModuleDirectory: string } {
-    const scratchRoot = realpathSync(scratchPath);
-    if (!lstatSync(scratchRoot).isDirectory()) {
-      toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
-    }
-    const standardModuleDirectory = join(scratchRoot, ".tlc-stdlib");
-    if (!existsSync(standardModuleDirectory)) {
-      mkdirSync(standardModuleDirectory, { mode: 0o700 });
-    }
-    if (
-      realpathSync(standardModuleDirectory) !== standardModuleDirectory
-      || !lstatSync(standardModuleDirectory).isDirectory()
-      || readdirSync(standardModuleDirectory).length !== 0
-    ) {
-      toolchainAbort(
-        "PreparationError",
-        "STDLIB_ORIGIN",
-        "planned standard-module directory is unsafe or not empty",
-      );
-    }
-    return { scratchRoot, standardModuleDirectory };
-  }
 
   async prepare(
     input: PlannedTlcPrepareInput,
@@ -1566,10 +1765,59 @@ class FsPlannedTlcRuntime {
     try {
       this.artifacts.verifyIssuedArtifact(input.artifact);
       const { cwd, modulePath, cfgPath } = this.#canonicalInputs(input);
-      this.#verifyFrozenBytes(input, modulePath, cfgPath);
-      const { scratchRoot, standardModuleDirectory } = this.#prepareScratch(
+      const verifiedSources = verifyPlannedModelSources(
+        input,
+        cwd,
+        modulePath,
+        cfgPath,
+      );
+      const verifiedAuxiliarySources = verifiedSources.auxiliaryModulePaths.map(
+        ({ path, moduleBytesIdentity }) => ({
+          path,
+          bytes: readVerifiedSourceBytes(
+            path,
+            "amadeus.formal-verif.tla.module.v1",
+            moduleBytesIdentity,
+            "SOURCE_IDENTITY",
+          ),
+          identity: moduleBytesIdentity,
+        }),
+      );
+      const { scratchRoot, standardModuleDirectory, stagedSourceDirectory } = preparePlannedScratch(
         input.scratchRoot,
       );
+      const stagedSources = [
+        {
+          stagedPath: join(stagedSourceDirectory, basename(modulePath)),
+          bytes: verifiedSources.moduleBytes,
+          identity: verifiedSources.modelReceipt.moduleBytesIdentity,
+          domain: "amadeus.formal-verif.tla.module.v1",
+        },
+        {
+          stagedPath: join(stagedSourceDirectory, basename(cfgPath)),
+          bytes: verifiedSources.cfgBytes,
+          identity: verifiedSources.modelReceipt.cfgBytesIdentity,
+          domain: "amadeus.formal-verif.tla.cfg.v1",
+        },
+        ...verifiedAuxiliarySources.map(({ path, bytes, identity }) => ({
+          stagedPath: join(stagedSourceDirectory, basename(path)),
+          bytes,
+          identity,
+          domain: "amadeus.formal-verif.tla.module.v1",
+        })),
+      ] as const;
+      if (new Set(stagedSources.map(({ stagedPath }) => stagedPath)).size !== stagedSources.length) {
+        toolchainAbort("PreparationError", "SOURCE_STAGING", "staged model source names must be unique");
+      }
+      for (const source of stagedSources) {
+        writeStagedSource(source.stagedPath, source.bytes);
+      }
+      syncDirectory(stagedSourceDirectory);
+      const stagedModulePath = stagedSources[0].stagedPath;
+      const stagedCfgPath = stagedSources[1].stagedPath;
+      const sourceBindings = Object.freeze(stagedSources.map(({ stagedPath, identity, domain }) =>
+        Object.freeze({ path: stagedPath, identity, domain })
+      ));
       const environmentSnapshot = await input.planner.snapshotEnvironment({
         runId: input.runId,
         workspaceRoot: cwd,
@@ -1595,8 +1843,8 @@ class FsPlannedTlcRuntime {
         "-metadir",
         join(scratchRoot, "states"),
         "-config",
-        cfgPath,
-        modulePath,
+        stagedCfgPath,
+        stagedModulePath,
       ]);
       const environment = environmentSnapshot.value.kind === "DARWIN"
         ? Object.freeze({
@@ -1612,10 +1860,14 @@ class FsPlannedTlcRuntime {
           });
       const prepared: PreparedPlannedTlcRun = Object.freeze({
         artifact: input.artifact,
-        modelReceipt: input.modelReceipt,
-        vocabulary: input.vocabulary,
-        modulePath,
-        cfgPath,
+        modelReceipt: verifiedSources.modelReceipt,
+        vocabulary: Object.freeze({
+          moduleName: input.vocabulary.moduleName,
+          namedInvariants: Object.freeze([...input.vocabulary.namedInvariants]),
+          traceStateVariables: Object.freeze([...input.vocabulary.traceStateVariables]),
+        }),
+        modulePath: stagedModulePath,
+        cfgPath: stagedCfgPath,
         cwd,
         standardModuleDirectory,
         scratchRoot,
@@ -1625,6 +1877,7 @@ class FsPlannedTlcRuntime {
         environmentSnapshot: environmentSnapshot.value,
         environment,
       });
+      this.#sourceBindings.set(prepared, sourceBindings);
       this.#issued.add(prepared);
       return { ok: true, value: prepared };
     } catch (cause) {
@@ -1646,16 +1899,28 @@ class FsPlannedTlcRuntime {
     prepared: PreparedPlannedTlcRun,
     kind: "InvocationError" | "NormalizationError",
   ): void {
-    for (const [path, identity, domain] of [
-      [prepared.modulePath, prepared.modelReceipt.moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"],
-      [prepared.cfgPath, prepared.modelReceipt.cfgBytesIdentity, "amadeus.formal-verif.tla.cfg.v1"],
-    ] as const) {
-      if (
-        realpathSync(path) !== path
-        || !pathInside(prepared.cwd, path)
-        || sourceIdentity(path, domain, kind) !== identity
-      ) {
-        toolchainAbort(kind, "SOURCE_DRIFT", "model or cfg changed across the process seam");
+    const sourceBindings = this.#sourceBindings.get(prepared);
+    if (sourceBindings === undefined) {
+      toolchainAbort(kind, "CAPABILITY", "prepared run has no issued source binding");
+    }
+    for (const binding of sourceBindings) {
+      const path = binding.path;
+      try {
+        if (
+          realpathSync(path) !== path
+          || !pathInside(prepared.scratchRoot, path)
+          || sourceIdentity(path, binding.domain, kind) !== binding.identity
+        ) {
+          toolchainAbort(kind, "SOURCE_DRIFT", "model, cfg, or auxiliary module changed across the process seam");
+        }
+      } catch (cause) {
+        if (cause instanceof ToolchainFailure) throw cause;
+        toolchainAbort(
+          kind,
+          "SOURCE_DRIFT",
+          "model, cfg, or auxiliary module changed across the process seam",
+          cause,
+        );
       }
     }
   }

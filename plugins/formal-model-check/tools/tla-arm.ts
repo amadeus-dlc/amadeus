@@ -2,6 +2,7 @@ import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
 import {
   type TlaModelPipelineError,
+  type VerifiedModelSource,
   type VerifiedTlaSource,
   loadVerifiedTlaSource,
 } from "./tla-model-loader.ts";
@@ -350,6 +351,26 @@ export interface TlaInvariantSourceLocation {
   column: number;
 }
 
+interface TlaInvariantDeclaration extends TlaInvariantSourceLocation {
+  readonly start: number;
+  readonly rhsStart: number;
+}
+
+function tlaInvariantDeclaration(
+  source: string,
+  name: string,
+): TlaInvariantDeclaration | undefined {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^${escapedName}[ \\t]*==`, "m").exec(source);
+  if (match === null) return undefined;
+  return {
+    start: match.index,
+    rhsStart: match.index + match[0].length,
+    line: source.slice(0, match.index).split("\n").length,
+    column: 1,
+  };
+}
+
 export interface FrozenTlaModelReceipt {
   modelIdentity: string;
   moduleBytesIdentity: string;
@@ -370,16 +391,17 @@ export interface FrozenTlaModelBundle extends FrozenTlaModelReceipt {
   cfgSource: string;
 }
 
-function invariantMap(
+export function tlaInvariantSourceMap(
   source: string,
   invariants: readonly string[],
-): Record<string, TlaInvariantSourceLocation> {
-  const lines = source.split("\n");
-  return Object.fromEntries(invariants.map((name) => {
-    const line = lines.findIndex((value) => value.startsWith(`${name} ==`));
-    if (line < 0) throw new Error(`missing invariant formula: ${name}`);
-    return [name, { line: line + 1, column: 1 }];
-  }));
+): Result<Record<string, TlaInvariantSourceLocation>, { readonly missingInvariant: string }> {
+  const locations: Record<string, TlaInvariantSourceLocation> = {};
+  for (const name of invariants) {
+    const declaration = tlaInvariantDeclaration(source, name);
+    if (declaration === undefined) return { ok: false, error: { missingInvariant: name } };
+    locations[name] = { line: declaration.line, column: declaration.column };
+  }
+  return { ok: true, value: locations };
 }
 
 function exactPlainObject(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
@@ -419,10 +441,12 @@ export function tlaCfgBytesIdentity(bytes: Uint8Array): Result<string, TlaSource
 }
 
 function invariantRhs(source: string, name: string, invariants: readonly string[]): string {
-  const start = source.indexOf(name + " ==");
-  const rhsStart = source.indexOf("==", start) + 2;
+  const declaration = tlaInvariantDeclaration(source, name);
+  if (declaration === undefined) throw new Error(`missing invariant RHS: ${name}`);
+  const { start, rhsStart } = declaration;
   const later = invariants
-    .map((candidate) => source.indexOf(candidate + " ==", rhsStart))
+    .map((candidate) => tlaInvariantDeclaration(source.slice(rhsStart), candidate))
+    .map((candidate) => candidate === undefined ? -1 : rhsStart + candidate.start)
     .filter((index) => index > rhsStart);
   const end = Math.min(...later, source.indexOf("Spec ==", rhsStart));
   if (start < 0 || rhsStart < 2 || end < rhsStart) throw new Error(`missing invariant RHS: ${name}`);
@@ -464,7 +488,7 @@ export function toTlaModelHarnessError(error: TlaModelPipelineError): TlaModelHa
 }
 
 function generateFrozenTlaModelFromSource(
-  source: VerifiedTlaSource,
+  source: VerifiedTlaSource | VerifiedModelSource,
   input: { publicContractIdentity: string },
   invariants: readonly string[],
 ): FrozenTlaModelBundle {
@@ -480,7 +504,10 @@ function generateFrozenTlaModelFromSource(
     maxHold: 1,
     workers: 1,
   }, "amadeus.formal-verif.tla.profile.v1");
-  const sourceMap = invariantMap(source.moduleSource, invariants);
+  const sourceMap = tlaInvariantSourceMap(source.moduleSource, invariants);
+  if (!sourceMap.ok) {
+    throw new Error(`missing invariant formula: ${sourceMap.error.missingInvariant}`);
+  }
   const formulas = Object.fromEntries(invariants.map((name) => [
     name,
     canonicalIdentity(invariantRhs(source.moduleSource, name, invariants), "amadeus.formal-verif.tla.invariant-formula.v1").sha256,
@@ -491,7 +518,7 @@ function generateFrozenTlaModelFromSource(
     profileIdentity: profileIdentity.sha256,
     publicContractIdentity: input.publicContractIdentity,
     namedInvariantFormulas: formulas,
-    invariantSourceMap: sourceMap,
+    invariantSourceMap: sourceMap.value,
     freezeRevision: 1,
   }, "amadeus.formal-verif.tla.bundle.v1").sha256;
   return {
@@ -505,12 +532,15 @@ function generateFrozenTlaModelFromSource(
     profileIdentity: profileIdentity.sha256,
     publicContractIdentity: input.publicContractIdentity,
     namedInvariantFormulas: formulas,
-    invariantSourceMap: sourceMap,
+    invariantSourceMap: sourceMap.value,
     freezeRevision: 1,
   };
 }
 
-export function generateFrozenTlaModel(input: { publicContractIdentity: string }): FrozenTlaModelBundle {
+export function generateFrozenTlaModel(
+  input: { publicContractIdentity: string },
+  selectedSource?: VerifiedModelSource,
+): FrozenTlaModelBundle {
   if (!exactPlainObject(input, ["publicContractIdentity"]) || !/^[0-9a-f]{64}$/.test(input.publicContractIdentity)) {
     throw new TypeError("expected only a lowercase SHA-256 publicContractIdentity");
   }
@@ -519,9 +549,10 @@ export function generateFrozenTlaModel(input: { publicContractIdentity: string }
   // lands, this becomes loadVerifiedTlaSources() + selectVerifiedModel(sources,
   // "FormalElection"); the singular call below is the pre-u2 spelling of the
   // same pin.
-  const source = loadVerifiedTlaSource();
+  const source = selectedSource === undefined ? loadVerifiedTlaSource() : { ok: true as const, value: selectedSource };
   if (!source.ok) throw toTlaModelHarnessError(source.error);
-  const invariants = namedInvariantsFor(source.value.executionModel);
+  const model = "model" in source.value ? source.value.model : source.value.executionModel;
+  const invariants = namedInvariantsFor(model);
   if (!invariants.ok) throw toTlaModelHarnessError(invariants.error);
   return generateFrozenTlaModelFromSource(source.value, input, invariants.value);
 }
