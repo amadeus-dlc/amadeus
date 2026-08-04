@@ -148,11 +148,11 @@ describe("evaluateGate: malformed / empty inputs", () => {
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
   });
 
-  test("non-object policy JSON => MALFORMED_POLICY", () => {
+  test.each([null, "not an object"])("non-object policy JSON => MALFORMED_POLICY (%p)", (value) => {
     const r = evaluateGate(
       present(totals(1, 2)),
       present(totals(1, 2)),
-      present(null),
+      present(value),
     );
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED_POLICY");
   });
