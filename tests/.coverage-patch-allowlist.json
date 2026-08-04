@@ -3639,9 +3639,9 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:c5f40a813889d670fe169aaf1b6f24a27f918a655932df07c0c6552b588e1a68",
-      "anchorLines": 48,
-      "targetLines": "1-48"
+      "fingerprint": "sha256:3da2c5fcc23c1ada7ca31ba49f32487fcf4ecf0e212987cebd9a9f8b63a74ca1",
+      "anchorLines": 54,
+      "targetLines": "1-54"
     },
     "reason": "Prepare validation and configuration helpers are owned by the spawned swarm CLI. tests/integration/t135-invoke-swarm.test.ts exercises valid preparation, invalid degraded drivers, capped concurrency, and partial-prepare refusal through the shipped command; Bun cannot attribute child-process execution to parent LCOV.",
     "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
@@ -3683,9 +3683,9 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:27c4b3c3c8a89fc53041b9dc6e3213375bfdd1e5f922e189d861f3e773f97924",
-      "anchorLines": 142,
-      "targetLines": "1-142"
+      "fingerprint": "sha256:bd4bb1a87c0de36c50f1f0e0e2b0937096982d270700992569206e0983a64969",
+      "anchorLines": 148,
+      "targetLines": "1-148"
     },
     "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution.",
     "expiry": "remove when fixed-pool handlers receive injectable argv, repository, output, and exit ports"
