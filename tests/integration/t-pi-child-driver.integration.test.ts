@@ -204,4 +204,25 @@ describe("Pi child driver process boundary", () => {
     const remaining = store.recoverPending(2);
     expect(remaining.map((record) => record.deliveryKey)).toEqual([keys[2]]);
   });
+
+  test("a malformed delivery record fails closed across every replay transition", () => {
+    const { root } = fixture();
+    const runtimeDir = join(root, "runtime");
+    const store = createPiReplayStore(runtimeDir);
+    const key = "malformed-record" as Parameters<typeof store.reserve>[0];
+    expect(store.reserve(key, "fingerprint").kind).toBe("reserved");
+
+    const recordPath = join(runtimeDir, "records", `${createHash("sha256").update(key).digest("hex")}.json`);
+    writeFileSync(recordPath, "not-json\n");
+
+    expect(store.reserve(key, "fingerprint").kind).toBe("quarantined");
+    expect(store.acceptGuardian(key, "fingerprint", {
+      pid: process.pid,
+      pgid: process.pid,
+      publicKey: "unused",
+      executableSnapshotDigest: "unused",
+    })).toBe(false);
+    expect(store.markRunning(key, "fingerprint")).toBe(false);
+    expect(store.commitTerminal(key, "fingerprint", { kind: "failed", reason: "unused" }, "")).toBe(false);
+  });
 });
