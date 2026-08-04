@@ -1,6 +1,6 @@
 // event-registry.ts — the typed Event Registry (FR-EVT-1).
 //
-// The canonical half of the registry covers the full 88-event audit
+// The canonical half of the registry covers the full 89-event audit
 // vocabulary (#1672; VALID_EVENT_TYPES in tools/amadeus-audit.ts) — every
 // canonical name maps 1:1 onto the EXISTING v1 audit event vocabulary so the
 // current readers understand the records unchanged. The telemetry half
@@ -14,7 +14,7 @@
 //      sites (BR-2);
 //   2. unit test — tests/unit/event-registry-drift.test.ts asserts the
 //      four-set equality (state-machine references == canonical registry ==
-//      exporter accept set == journal reader decode set) with the 88
+//      exporter accept set == journal reader decode set) with the 89
 //      cardinality pinned, so vacuous equality fails;
 //   3. sensor — sensors/amadeus-event-registry-drift.md runs the same
 //      extraction at gate time.
@@ -76,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 88;
+export const EXPECTED_CANONICAL_COUNT = 89;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -222,6 +222,38 @@ export const REGISTERED_EVENTS = [
     category: "grant",
     requiredAttributes: ["Intent Uuid", "Transaction Id", "Transaction Digest", "Transaction"],
     optionalAttributes: ["Principal", "Decider", "Actor", "Basis"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.auto_decision.reviewed",
+    auditEvent: "AUTO_DECISION_REVIEWED",
+    durability: "canonical",
+    category: "grant",
+    requiredAttributes: [
+      "Intent Uuid",
+      "Decision Id",
+      "Review Id",
+      "Choice",
+      "Lifecycle",
+      "Review Principal",
+      "Review Actor",
+      "Source Human Turn",
+      "Audit Transaction Id",
+      "Payload Digest",
+      "Payload V1",
+    ],
+    optionalAttributes: [
+      "Decision Principal",
+      "Decision Actor",
+      "Decision Source",
+      "Basis Digest",
+      "Grant Id",
+      "Remediation",
+      "Note Digest",
+      "Redaction Status",
+      "Trace Id",
+      "Span Id",
+    ],
     schemaVersion: 1,
   },
   // --- Phase Lifecycle (4) ---
