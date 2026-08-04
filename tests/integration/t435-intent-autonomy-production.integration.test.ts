@@ -19,6 +19,7 @@ import {
   resumeProductionQuality,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import { main as boltMain } from "../../packages/framework/core/tools/amadeus-bolt.ts";
+import { listProductionAutoDecisions } from "../../packages/framework/core/tools/amadeus-autonomy-review-production.ts";
 import { runUtilityMain } from "../../packages/framework/core/tools/amadeus-utility.ts";
 
 const BUN = process.execPath;
@@ -789,6 +790,18 @@ describe("Intent-scoped autonomy production path", () => {
     }));
     boltMain(["--project-dir", projectDir, "observe-quality", "--input", observationPath]);
     expect(readProductionAutonomyProjection(projectDir)?.workflowExecutionState).toBe("running");
+
+    boltMain(["--project-dir", projectDir, "list-auto-decisions", "--state", "unreviewed"]);
+    const unreviewed = listProductionAutoDecisions({ projectDir, reviewState: "unreviewed" });
+    if (!unreviewed.ok) throw new Error(unreviewed.error);
+    const decisionId = unreviewed.page.items[0]?.decisionId;
+    if (decisionId === undefined) throw new Error("expected an unreviewed production decision");
+    boltMain(["--project-dir", projectDir, "get-auto-decision", "--decision", decisionId]);
+    appendLedgerEvent(projectDir, "HUMAN_TURN");
+    boltMain(["--project-dir", projectDir, "review-auto-decision", "--decision", decisionId, "--choice", "accept"]);
+    const accepted = listProductionAutoDecisions({ projectDir, reviewState: "accepted" });
+    if (!accepted.ok) throw new Error(accepted.error);
+    expect(accepted.page.items.map((item) => item.decisionId)).toContain(decisionId);
   }, 60_000);
 
   test("utility status renders the autonomy projection in-process", () => {

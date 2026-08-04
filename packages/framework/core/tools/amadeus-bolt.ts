@@ -66,6 +66,11 @@ import {
   resumeProductionQuality,
   type ProductionQuestionDecisionInput,
 } from "./amadeus-intent-autonomy-production.ts";
+import {
+  commitProductionDecisionReview,
+  getProductionAutoDecision,
+  listProductionAutoDecisions,
+} from "./amadeus-autonomy-review-production.ts";
 import { autonomyDigest, type DecisionPolicyInput } from "./amadeus-intent-autonomy.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
@@ -952,6 +957,53 @@ function handleResumeQuality(args: string[], explicitProjectDir?: string): void 
   console.log(JSON.stringify(result));
 }
 
+function handleListAutoDecisions(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  const state = flags.state;
+  if (state !== undefined && !["not-applicable", "unreviewed", "accepted", "flagged"].includes(state)) {
+    error(`Invalid --state: ${state}`);
+  }
+  const result = listProductionAutoDecisions({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    reviewState: state as "not-applicable" | "unreviewed" | "accepted" | "flagged" | undefined,
+  });
+  if (!result.ok) error(`Auto-decision list failed: ${result.error}`);
+  console.log(JSON.stringify(result.page));
+}
+
+function handleGetAutoDecision(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.decision) error("Missing --decision <decision-id>");
+  const result = getProductionAutoDecision({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    decisionId: flags.decision,
+  });
+  if (!result.ok) error(`Auto-decision detail failed: ${result.error}`);
+  console.log(JSON.stringify(result.detail));
+}
+
+function handleReviewAutoDecision(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.decision) error("Missing --decision <decision-id>");
+  if (flags.choice !== "accept" && flags.choice !== "flag") error("Missing --choice <accept|flag>");
+  const classification = flags.classification;
+  if (classification !== undefined && !["contract-defect", "specification-change", "unspecified"].includes(classification)) {
+    error(`Invalid --classification: ${classification}`);
+  }
+  const result = commitProductionDecisionReview({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    decisionId: flags.decision,
+    choice: flags.choice,
+    flagClassification: classification as "contract-defect" | "specification-change" | "unspecified" | undefined,
+    note: flags.note,
+  });
+  if (!result.ok) error(`Auto-decision review failed: ${result.error}`);
+  console.log(JSON.stringify(result.receipt));
+}
+
 function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.mode) error("Missing --mode <none|semi|full>");
@@ -1119,6 +1171,9 @@ function handleAutonomySupportCommand(
     "decide-question": handleDecideQuestion,
     "observe-quality": handleObserveQuality,
     "resume-quality": handleResumeQuality,
+    "list-auto-decisions": handleListAutoDecisions,
+    "get-auto-decision": handleGetAutoDecision,
+    "review-auto-decision": handleReviewAutoDecision,
   };
   const handler = subcommand === undefined ? undefined : handlers[subcommand];
   if (handler === undefined) return false;

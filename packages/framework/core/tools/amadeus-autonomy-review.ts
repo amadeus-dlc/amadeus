@@ -13,6 +13,10 @@ import {
   type ResumeCondition,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
+import {
+  SELF_INSTALL_HARNESS_IDS,
+  type SelfInstallHarnessId,
+} from "./amadeus-harness-registry.ts";
 
 export const AUTO_DECISION_REVIEWED_EVENT = "AUTO_DECISION_REVIEWED";
 
@@ -86,8 +90,26 @@ export function canonicalTupleDigest(domain: string, atoms: readonly CanonicalTu
   return sha256(encodeCanonicalTuple(domain, atoms));
 }
 
-function stableId(prefix: string, digest: string): string {
+export function autonomyReviewStableId(prefix: string, digest: string): string {
   return `${prefix}-${digest.slice("sha256:".length, "sha256:".length + 32)}`;
+}
+
+export function nextReviewExtensionHead(input: {
+  readonly completionSealDigest: string | null;
+  readonly previousExtensionHead: string | null;
+  readonly eventIdentity: string;
+  readonly payloadDigest: string;
+  readonly transactionId: string;
+  readonly revision: number;
+}): string {
+  return autonomyReviewStableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
+    { tag: "completion-seal", value: input.completionSealDigest },
+    { tag: "previous-extension", value: input.previousExtensionHead },
+    { tag: "review-event", value: input.eventIdentity },
+    { tag: "review-payload-digest", value: input.payloadDigest },
+    { tag: "transaction", value: input.transactionId },
+    { tag: "extension-revision", value: String(input.revision) },
+  ]));
 }
 
 function encodeCanonicalValue(value: unknown): Buffer {
@@ -355,7 +377,7 @@ function validatePersistedReviewEvent(
     payload.receiptProjectionRevision !== expectedProjectionRevision || event.projectionRevision !== expectedProjectionRevision) {
     throw new Error("invalid-autonomy-review-persistence-payload");
   }
-  const expectedIdentity = stableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
+  const expectedIdentity = autonomyReviewStableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
     { tag: "review", value: event.receipt.reviewId },
     { tag: "command-occurrence", value: event.commandOccurrenceId },
     { tag: "target-audit-revision", value: String(expectedProjectionRevision - 1) },
@@ -371,26 +393,28 @@ function validatePersistedReviewEvent(
 function validatePersistedReviewState(persisted: AutonomyReviewPersistenceState): void {
   const decisionIds = new Set(persisted.autonomy.autoDecisions.map((decision) => decision.decisionId));
   const reviewed = new Set<string>();
-  const firstReviewRevision = persisted.auditRevision - persisted.reviews.length + 1;
+  let priorReviewRevision = 0;
   let extensionHead: string | null = null;
   let extensionRevision = 0;
-  for (const [index, event] of persisted.reviews.entries()) {
+  for (const event of persisted.reviews) {
     if (event.eventType !== AUTO_DECISION_REVIEWED_EVENT || event.targetIntentUuid !== persisted.intentUuid ||
-      !decisionIds.has(event.decisionId) || reviewed.has(event.decisionId)) {
+      !decisionIds.has(event.decisionId) || reviewed.has(event.decisionId) ||
+      event.projectionRevision <= priorReviewRevision || event.projectionRevision > persisted.auditRevision) {
       throw new Error("invalid-autonomy-review-persistence-events");
     }
     reviewed.add(event.decisionId);
-    validatePersistedReviewEvent(persisted, event, firstReviewRevision + index);
+    priorReviewRevision = event.projectionRevision;
+    validatePersistedReviewEvent(persisted, event, event.projectionRevision);
     if (persisted.lifecycle !== "completed") continue;
     extensionRevision += 1;
-    extensionHead = stableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
-      { tag: "completion-seal", value: persisted.completionSealDigest },
-      { tag: "previous-extension", value: extensionHead },
-      { tag: "review-event", value: event.eventIdentity },
-      { tag: "review-payload-digest", value: event.payloadDigest },
-      { tag: "transaction", value: event.transactionId },
-      { tag: "extension-revision", value: String(extensionRevision) },
-    ]));
+    extensionHead = nextReviewExtensionHead({
+      completionSealDigest: persisted.completionSealDigest,
+      previousExtensionHead: extensionHead,
+      eventIdentity: event.eventIdentity,
+      payloadDigest: event.payloadDigest,
+      transactionId: event.transactionId,
+      revision: extensionRevision,
+    });
   }
   if (persisted.lifecycle === "active") {
     if (persisted.reviewExtensionHead !== null || persisted.reviewExtensionRevision !== 0) {
@@ -534,13 +558,13 @@ function planDecisionReview(
   input: DecisionReviewCommand,
 ): ContractResult<PlannedDecisionReview> {
   const authorization = input.humanAuthorization;
-  const reviewId = stableId("review", canonicalTupleDigest("amadeus.decision-review.v1", [
+  const reviewId = autonomyReviewStableId("review", canonicalTupleDigest("amadeus.decision-review.v1", [
     { tag: "target-intent", value: state.intentUuid },
     { tag: "decision", value: decision.decisionId },
     { tag: "source-human-turn-event", value: authorization.sourceHumanTurnEventId },
     { tag: "choice", value: input.choice },
   ]));
-  const transactionId = stableId("review-transaction", canonicalTupleDigest("amadeus.decision-review-transaction.v1", [
+  const transactionId = autonomyReviewStableId("review-transaction", canonicalTupleDigest("amadeus.decision-review-transaction.v1", [
     { tag: "target-intent", value: state.intentUuid },
     { tag: "review", value: reviewId },
     { tag: "target-audit-revision", value: String(state.auditRevision) },
@@ -576,7 +600,7 @@ function planDecisionReview(
   };
   const payloadDigest = canonicalContractValueDigest("auto-decision-reviewed-payload", payload);
   if (!payloadDigest.ok) return payloadDigest;
-  const eventIdentity = stableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
+  const eventIdentity = autonomyReviewStableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
     { tag: "review", value: reviewId },
     { tag: "command-occurrence", value: authorization.commandOccurrenceId },
     { tag: "target-audit-revision", value: String(state.auditRevision) },
@@ -592,7 +616,7 @@ function planDecisionReview(
     remediation,
   };
   const event: AutoDecisionReviewedEvent = {
-    eventType: AUTO_DECISION_REVIEWED_EVENT,
+    eventType: "AUTO_DECISION_REVIEWED",
     eventIdentity,
     transactionId,
     payloadDigest: payloadDigest.value,
@@ -624,14 +648,14 @@ function planDecisionReview(
     return success({ event, receipt, reviewExtensionHead: null, reviewExtensionRevision: 0 });
   }
   const reviewExtensionRevision = state.reviewExtensionRevision + 1;
-  const reviewExtensionHead = stableId("review-extension", canonicalTupleDigest("amadeus.review-extension.v1", [
-    { tag: "completion-seal", value: state.completionSealDigest },
-    { tag: "previous-extension", value: state.reviewExtensionHead },
-    { tag: "review-event", value: eventIdentity },
-    { tag: "review-payload-digest", value: payloadDigest.value },
-    { tag: "transaction", value: transactionId },
-    { tag: "extension-revision", value: String(reviewExtensionRevision) },
-  ]));
+  const reviewExtensionHead = nextReviewExtensionHead({
+    completionSealDigest: state.completionSealDigest,
+    previousExtensionHead: state.reviewExtensionHead,
+    eventIdentity,
+    payloadDigest: payloadDigest.value,
+    transactionId,
+    revision: reviewExtensionRevision,
+  });
   return success({ event, receipt, reviewExtensionHead, reviewExtensionRevision });
 }
 
@@ -909,6 +933,8 @@ export function reviewAuditFields(event: AutoDecisionReviewedEvent): Readonly<Re
     "Review Actor": event.actorId,
     "Source Human Turn": event.sourceHumanTurnId,
     "Audit Transaction Id": event.transactionId,
+    "Event Identity": event.eventIdentity,
+    "Projection Revision": String(event.projectionRevision),
     "Payload Digest": event.payloadDigest,
     "Payload V1": event.payloadV1,
   };
@@ -1099,8 +1125,8 @@ export function projectReviewTelemetry(input: ReviewTelemetryInput): Readonly<Re
   return attributes;
 }
 
-export type ReviewHarnessId = "claude" | "codex" | "cursor" | "opencode" | "kimi";
-export const REQUIRED_REVIEW_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
+export type ReviewHarnessId = SelfInstallHarnessId;
+export const REQUIRED_REVIEW_HARNESSES = SELF_INSTALL_HARNESS_IDS;
 export interface ReviewHarnessContractResult {
   readonly harnessId: ReviewHarnessId;
   readonly fixtureId: string;
