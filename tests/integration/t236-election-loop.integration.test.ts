@@ -967,10 +967,9 @@ describe("t236 election directive loop", () => {
     const goodTimeline = readFileSync(timelinePath, "utf8");
     writeFileSync(timelinePath, "not-json");
     expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
-    // The commit landed (this DEF's single-ballot tally is a hold outcome, so
-    // the state reads hold; a decisive tally would read tallied) — only the
-    // audit row is missing.
-    expect(["tallied", "hold"]).toContain(state());
+    // The commit landed. This DEF's single-ballot tally is a hold outcome, so
+    // the state reads hold — only the audit row is missing.
+    expect(state()).toBe("hold");
     writeFileSync(timelinePath, goodTimeline);
     expect(talliedRows().length).toBe(0);
 
