@@ -81,12 +81,17 @@ function modelReceiptFor(
     const publicContractIdentity = createHash("sha256")
       .update(source.model.entries.map(({ sha256 }) => sha256).join("\n"))
       .digest("hex");
-    return {
-      ok: true,
-      value: createFrozenTlaModelReceipt(
-        generateFrozenTlaModel({ publicContractIdentity }),
-      ),
-    };
+    try {
+      return {
+        ok: true,
+        value: createFrozenTlaModelReceipt(
+          generateFrozenTlaModel({ publicContractIdentity }, source),
+        ),
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "frozen model generation failed";
+      return sourceDrift(source.model.model.path, detail);
+    }
   }
   const verified = createVerifiedTlaModelReceipt(source);
   return verified.ok

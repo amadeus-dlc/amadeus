@@ -4,6 +4,7 @@ import {
   type FrozenTlaModelBundle,
   type FrozenTlaModelReceipt,
   type TlaInvariantSourceLocation,
+  tlaInvariantSourceMap,
   validateFrozenTlaModelReceipt,
 } from "./tla-arm.ts";
 import {
@@ -14,6 +15,7 @@ import {
 import { TLA_EXECUTION_MODEL_NAME } from "./tla-model-map.ts";
 
 const VERIFIED_RECEIPT_SCHEMA = "amadeus.verified-tla-model-receipt.v1" as const;
+const VERIFIED_RECEIPT_IDENTITY_DOMAIN = "amadeus.formal-verif.tla.verified-model.v1";
 const VERIFIED_RECEIPT_KEYS = [
   "schema",
   "modelName",
@@ -77,15 +79,12 @@ function invariantSourceMap(
 ): Result<Record<string, TlaInvariantSourceLocation>, ModelCheckReceiptValidationError> {
   const names = source.model.vocabulary?.namedInvariants;
   if (names === undefined) return reject(`model ${source.model.name} has no declared vocabulary`);
-  const lines = source.moduleSource.split("\n");
-  const locations: Record<string, TlaInvariantSourceLocation> = {};
-  for (const name of names) {
-    const line = lines.findIndex((value) =>
-      value.startsWith(name) && /^\s*==/.test(value.slice(name.length)));
-    if (line < 0) return reject(`model ${source.model.name} is missing invariant formula ${name}`);
-    locations[name] = { line: line + 1, column: 1 };
-  }
-  return { ok: true, value: locations };
+  const locations = tlaInvariantSourceMap(source.moduleSource, names);
+  return locations.ok
+    ? locations
+    : reject(
+      `model ${source.model.name} is missing invariant formula ${locations.error.missingInvariant}`,
+    );
 }
 
 export function createVerifiedTlaModelReceipt(
@@ -125,7 +124,7 @@ export function createVerifiedTlaModelReceipt(
       ...identityInput,
       modelIdentity: canonicalIdentity(
         identityInput,
-        "amadeus.formal-verif.tla.verified-model.v1",
+        VERIFIED_RECEIPT_IDENTITY_DOMAIN,
       ).sha256,
     },
   };
@@ -160,7 +159,14 @@ export function validateVerifiedTlaModelReceipt(
   const expected = createVerifiedTlaModelReceipt(selected.value);
   if (!expected.ok) return expected;
   try {
-    if (JSON.stringify(input) !== JSON.stringify(expected.value)) {
+    const { modelIdentity, ...identityInput } = input;
+    const actualIdentity = canonicalIdentity(
+      identityInput,
+      VERIFIED_RECEIPT_IDENTITY_DOMAIN,
+    ).sha256;
+    if (typeof modelIdentity !== "string"
+      || actualIdentity !== expected.value.modelIdentity
+      || modelIdentity !== expected.value.modelIdentity) {
       return reject("receipt differs from the selected verified model");
     }
   } catch {

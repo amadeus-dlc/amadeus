@@ -362,5 +362,14 @@ describe("planned TLC filesystem runtime", () => {
         reason: "GRAMMAR",
       });
     }
+
+    activeAuxiliaryModules = ["MirrorLifecycleCore"];
+    const spawnsBeforeSourceRemoval = spawns;
+    rmSync(mirrorCorePath);
+    expect(await toolchain.runPlanned(mirrorPrepared.value)).toMatchObject({
+      ok: false,
+      error: { kind: "InvocationError", code: "SOURCE_DRIFT" },
+    });
+    expect(spawns).toBe(spawnsBeforeSourceRemoval);
   });
 });

@@ -11,8 +11,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import { loadRunModelCheckSource } from "../../plugins/formal-model-check/tools/run-model-check-source.ts";
-import { validateFrozenTlaModelReceipt } from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import {
+  generateFrozenTlaModel,
+  tlaInvariantSourceMap,
+  validateFrozenTlaModelReceipt,
+} from "../../plugins/formal-model-check/tools/tla-arm.ts";
+import { loadVerifiedTlaSources } from "../../plugins/formal-model-check/tools/tla-model-loader.ts";
 import {
   createVerifiedTlaModelReceipt,
   validateModelCheckReceipt,
@@ -120,6 +126,59 @@ describe("run-model-check source adapter", () => {
     })).toEqual({ ok: false, error: modelFailure });
   });
 
+  test("returns source drift when the selected frozen source cannot produce a receipt", () => {
+    const paths = copyCanonicalSource();
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const sourcesWithoutVocabulary = {
+      ...loaded.value,
+      models: loaded.value.models.map((source) => source.model.name === "FormalElection"
+        ? { ...source, model: { ...source.model, vocabulary: undefined } }
+        : source),
+    };
+
+    expect(loadRunModelCheckSource(paths.model, paths.cfg, {
+      readBytes: (path) => new Uint8Array(readFileSync(path)),
+      loadVerifiedSources: () => ({ ok: true, value: sourcesWithoutVocabulary }),
+    })).toMatchObject({
+      ok: false,
+      error: {
+        kind: "SOURCE_DRIFT",
+        code: "SOURCE_DRIFT",
+        detail: expect.stringContaining("does not declare a vocabulary"),
+      },
+    });
+  });
+
+  test("locates invariant declarations with spaces or tabs by one shared rule", () => {
+    expect(tlaInvariantSourceMap(
+      "---- MODULE Example ----\nFirst   == TRUE\nSecond\t== TRUE\n====\n",
+      ["First", "Second"],
+    )).toEqual({
+      ok: true,
+      value: {
+        First: { line: 2, column: 1 },
+        Second: { line: 3, column: 1 },
+      },
+    });
+
+    const loaded = loadVerifiedTlaSources();
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const source = loaded.value.models.find(({ model }) => model.name === "FormalElection");
+    expect(source).toBeDefined();
+    if (source === undefined) return;
+    const spacedSource = {
+      ...source,
+      moduleSource: source.moduleSource.replace("ChoiceWinner ==", "ChoiceWinner\t=="),
+    };
+    expect(generateFrozenTlaModel(
+      { publicContractIdentity: "a".repeat(64) },
+      spacedSource,
+    ).invariantSourceMap.ChoiceWinner).toEqual({ line: 269, column: 1 });
+  });
+
   test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {
     const mirror = mkdtempSync(join(tmpdir(), "run-model-check-source-mirror-"));
     roots.push(mirror);
@@ -139,6 +198,24 @@ describe("run-model-check source adapter", () => {
     });
     expect(result.value.modelReceipt.moduleBytesIdentity).toBe(result.value.source.moduleIdentity);
     expect(result.value.modelReceipt.cfgBytesIdentity).toBe(result.value.source.cfgIdentity);
+    const receipt = createVerifiedTlaModelReceipt(result.value.source);
+    expect(receipt.ok).toBe(true);
+    if (!receipt.ok) return;
+    const reordered = Object.fromEntries(Object.entries(receipt.value).reverse());
+    expect(validateModelCheckReceipt(reordered).ok).toBe(true);
+    const tamperedInput = {
+      ...receipt.value,
+      cfgBytesIdentity: "0".repeat(64),
+    };
+    const { modelIdentity: _modelIdentity, ...tamperedIdentityInput } = tamperedInput;
+    const tampered = {
+      ...tamperedInput,
+      modelIdentity: canonicalIdentity(
+        tamperedIdentityInput,
+        "amadeus.formal-verif.tla.verified-model.v1",
+      ).sha256,
+    };
+    expect(validateModelCheckReceipt(tampered).ok).toBe(false);
     const electionPaths = copyCanonicalSource();
     const election = loadRunModelCheckSource(electionPaths.model, electionPaths.cfg);
     expect(election.ok).toBe(true);

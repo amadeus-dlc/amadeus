@@ -1753,12 +1753,22 @@ class FsPlannedTlcRuntime {
         [path, moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"] as const
       ),
     ] as const) {
-      if (
-        realpathSync(path) !== path
-        || !pathInside(prepared.cwd, path)
-        || sourceIdentity(path, domain, kind) !== identity
-      ) {
-        toolchainAbort(kind, "SOURCE_DRIFT", "model, cfg, or auxiliary module changed across the process seam");
+      try {
+        if (
+          realpathSync(path) !== path
+          || !pathInside(prepared.cwd, path)
+          || sourceIdentity(path, domain, kind) !== identity
+        ) {
+          toolchainAbort(kind, "SOURCE_DRIFT", "model, cfg, or auxiliary module changed across the process seam");
+        }
+      } catch (cause) {
+        if (cause instanceof ToolchainFailure) throw cause;
+        toolchainAbort(
+          kind,
+          "SOURCE_DRIFT",
+          "model, cfg, or auxiliary module changed across the process seam",
+          cause,
+        );
       }
     }
   }
