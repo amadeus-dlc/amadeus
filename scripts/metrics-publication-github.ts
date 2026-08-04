@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   MAINTENANCE_BRANCH,
@@ -20,6 +20,7 @@ import {
   parseMaintenanceCandidate,
   parseSnapshotCandidate,
 } from "./metrics-publication-domain.ts";
+import { serializeSnapshot } from "./metrics-snapshot.ts";
 import { parseSnapshot } from "./metrics-timeseries.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -78,6 +79,7 @@ type SnapshotCliContext = {
   repository: string;
   botLogin: string;
   targetSha: string;
+  capturedAt?: string;
   runner: CommandRunner;
 };
 
@@ -185,7 +187,15 @@ function loadLandedSnapshots(context: SnapshotCliContext): { landed: LandedSnaps
       problems.push(`${file}: filename prefix does not match commit`);
       continue;
     }
-    if (parsed.snapshot.commit === context.targetSha) landed.push({ path: file, sha: parsed.snapshot.commit });
+    if (parsed.snapshot.commit !== context.targetSha) continue;
+    if (context.capturedAt !== undefined) {
+      const expectedPath = `metrics/${context.capturedAt.replace(/[:.]/g, "-")}-${context.targetSha.slice(0, 12)}.json`;
+      if (parsed.snapshot.captured_at !== context.capturedAt || file !== expectedPath) {
+        problems.push(`${file}: captured_at does not match the expected source evidence time`);
+        continue;
+      }
+    }
+    landed.push({ path: file, sha: parsed.snapshot.commit });
   }
   return { landed, problems };
 }
@@ -428,10 +438,19 @@ export class SnapshotCliPort implements SnapshotPublisherPort {
     if (untracked.length !== 1 || !untracked[0].startsWith("?? metrics/") || !untracked[0].endsWith(".json")) {
       throw new Error(`snapshot writer must create exactly one JSON file, observed: ${untracked.join(", ")}`);
     }
-    const path = untracked[0].slice(3);
+    let path = untracked[0].slice(3);
     const parsed = parseSnapshot(readFileSync(join(this.#context.repoRoot, path), "utf8"), path);
     if (parsed.kind === "error" || parsed.snapshot.commit !== this.#context.targetSha) {
       throw new Error(`generated snapshot does not represent ${this.#context.targetSha}`);
+    }
+    if (this.#context.capturedAt !== undefined) {
+      const nextPath = `metrics/${this.#context.capturedAt.replace(/[:.]/g, "-")}-${this.#context.targetSha.slice(0, 12)}.json`;
+      const source = join(this.#context.repoRoot, path);
+      const target = join(this.#context.repoRoot, nextPath);
+      if (nextPath !== path && existsSync(target)) throw new Error(`snapshot already exists: ${nextPath}`);
+      writeFileSync(source, serializeSnapshot({ ...parsed.snapshot, captured_at: this.#context.capturedAt }), "utf8");
+      if (nextPath !== path) renameSync(source, target);
+      path = nextPath;
     }
     command(this.#context, ["git", "switch", "--detach", "origin/main"]);
     command(this.#context, ["git", "add", "--", path]);
