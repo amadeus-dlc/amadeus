@@ -204,7 +204,10 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     const after = readState(proj);
     const totalAfter = Number(/- \*\*Total Stages\*\*: (\d+)/.exec(after)?.[1]);
-    expect(totalAfter).toBe(totalBefore - 1);
+    // Total counts EXECUTE-effective stages only: the recompose --skip removes
+    // market-research, and the rebuild also drops the hand-flipped
+    // workspace-scaffold — SKIP row that the stale Total still included.
+    expect(totalAfter).toBe(totalBefore - 2);
     expect(after).toMatch(/- \*\*Stages to Skip\*\*: .*market-research/);
     const completed = Number(/- \*\*Completed\*\*: (\d+)/.exec(after)?.[1]);
     const completedExecute = (after.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
