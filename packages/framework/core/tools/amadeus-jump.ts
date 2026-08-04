@@ -9,7 +9,6 @@ import {
 } from "./amadeus-state.ts";
 import {
   type CheckboxState,
-  countCheckboxes,
   emitError,
   errorMessage,
   findStageBySlug,
@@ -23,6 +22,7 @@ import {
   parseCheckboxes,
   parseStateStageSuffixes,
   readStateFile,
+  rebuildCompletedFieldFromState,
   requireChanged,
   resolveProjectDir,
   resolveStage,
@@ -560,9 +560,9 @@ export function handleExecute(args: string[]): void {
   content = setField(content, "In Progress", targetSlug);
   content = setField(content, "Next Action", `Execute ${targetStage.name}`);
 
-  // Count [x] checkboxes for Completed field
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+  const rebuilt = rebuildCompletedFieldFromState(content, graph);
+  content = rebuilt.content;
+  const completedCount = rebuilt.completedCount;
 
   // Find last completed stage before target
   const allCheckboxes = parseCheckboxes(content);

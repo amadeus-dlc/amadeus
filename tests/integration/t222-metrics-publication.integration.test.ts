@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { publicationMain } from "../../scripts/metrics-publication.ts";
+import { parsePublicationArgs, publicationMain } from "../../scripts/metrics-publication.ts";
 import type {
   MaintenanceInventory,
   PublicationBranch,
@@ -373,6 +373,19 @@ describe("t222 metrics publication adapters", () => {
         BOT_LOGIN,
       ]),
     ).toBe(2);
+    expect(
+      await publicationMain([
+        "snapshot",
+        "--target-sha",
+        targetSha,
+        "--captured-at",
+        "August 4 2026",
+        "--repository",
+        REPOSITORY,
+        "--bot-login",
+        BOT_LOGIN,
+      ]),
+    ).toBe(2);
     const runner: CommandRunner = {
       run() {
         throw "runner failed";
@@ -392,6 +405,45 @@ describe("t222 metrics publication adapters", () => {
         { runner, repoRoot: ROOT, nowMs: () => 0 },
       ),
     ).toBe(1);
+  });
+
+  test("captured-at accepts canonical UTC instants only in snapshot mode", () => {
+    const common = ["--repository", REPOSITORY, "--bot-login", BOT_LOGIN];
+    expect(
+      parsePublicationArgs([
+        "snapshot",
+        "--target-sha",
+        targetSha,
+        "--captured-at",
+        "2026-08-04T04:46:34Z",
+        ...common,
+      ]).capturedAt,
+    ).toBe("2026-08-04T04:46:34.000Z");
+    expect(
+      parsePublicationArgs([
+        "snapshot",
+        "--target-sha",
+        targetSha,
+        "--captured-at",
+        "2026-08-04T04:46:34.123Z",
+        ...common,
+      ]).capturedAt,
+    ).toBe("2026-08-04T04:46:34.123Z");
+    for (const capturedAt of ["2026-02-30T04:46:34Z", "2026-08-04T13:46:34+09:00"]) {
+      expect(() =>
+        parsePublicationArgs([
+          "snapshot",
+          "--target-sha",
+          targetSha,
+          "--captured-at",
+          capturedAt,
+          ...common,
+        ]),
+      ).toThrow("--captured-at must be an ISO date");
+    }
+    expect(() =>
+      parsePublicationArgs(["maintenance", "--captured-at", "2026-08-04T04:46:34Z", ...common]),
+    ).toThrow("--captured-at is only valid in snapshot mode");
   });
 });
 
@@ -450,23 +502,22 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     return run(repository, ["git", "rev-parse", "origin/main"]);
   }
 
-  async function publishSnapshot(sha: string): Promise<number> {
-    return publicationMain(
-      [
-        "snapshot",
-        "--target-sha",
-        sha,
-        "--repository",
-        REPOSITORY,
-        "--bot-login",
-        BOT_LOGIN,
-        "--deadline-seconds",
-        "10",
-        "--poll-seconds",
-        "1",
-      ],
-      { repoRoot: repository },
-    );
+  async function publishSnapshot(sha: string, capturedAt?: string): Promise<number> {
+    const args = [
+      "snapshot",
+      "--target-sha",
+      sha,
+      "--repository",
+      REPOSITORY,
+      "--bot-login",
+      BOT_LOGIN,
+      "--deadline-seconds",
+      "10",
+      "--poll-seconds",
+      "1",
+    ];
+    if (capturedAt !== undefined) args.push("--captured-at", capturedAt);
+    return publicationMain(args, { repoRoot: repository });
   }
 
   function addMainCommit(label: string): string {
@@ -517,6 +568,64 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     expect(jsonFiles).toHaveLength(1);
     expect(state.pullRequests).toHaveLength(1);
     expect(state.dispatches).toBe(3);
+  }, 30_000);
+
+  test("backfill preserves the source artifact timestamp", async () => {
+    const sha = headSha();
+    expect(await publishSnapshot(sha, "2026-07-29T23:45:00Z")).toBe(0);
+    expect(await publishSnapshot(sha, "2026-07-29T23:45:00Z")).toBe(0);
+    expect(await publishSnapshot(sha, "2026-07-29T23:46:00Z")).toBe(1);
+    run(repository, ["git", "fetch", "origin", "main"]);
+    const path = `metrics/2026-07-29T23-45-00-000Z-${sha.slice(0, 12)}.json`;
+    const snapshot = JSON.parse(run(repository, ["git", "show", `origin/main:${path}`]));
+    expect(snapshot).toMatchObject({
+      captured_at: "2026-07-29T23:45:00.000Z",
+      commit: sha,
+    });
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    expect(state.pullRequests).toHaveLength(1);
+    expect(state.dispatches).toBe(2);
+  }, 30_000);
+
+  test("backfill fails closed on an open snapshot PR carrying a different captured_at", async () => {
+    const sha = headSha();
+    run(repository, ["git", "switch", "--detach", sha]);
+    const stalePath = `metrics/2026-07-30T00-00-00-000Z-${sha.slice(0, 12)}.json`;
+    writeFileSync(
+      join(repository, stalePath),
+      `${JSON.stringify({ schema_version: 1, captured_at: "2026-07-30T00:00:00.000Z", commit: sha, collectors: {} }, null, 2)}\n`,
+    );
+    run(repository, ["git", "add", stalePath]);
+    run(repository, ["git", "commit", "-m", "stale snapshot"]);
+    const branch = `metrics/snapshot-${sha}`;
+    run(repository, ["git", "push", "origin", `HEAD:refs/heads/${branch}`]);
+    const oid = run(repository, ["git", "rev-parse", "HEAD"]);
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    state.pullRequests.push({
+      number: state.nextNumber++,
+      url: "https://example.test/pull/900",
+      state: "OPEN",
+      mergeStateStatus: "CLEAN",
+      mergedAt: null,
+      headRefName: branch,
+      headRefOid: oid,
+      headRepository: { nameWithOwner: REPOSITORY },
+      author: { login: BOT_LOGIN },
+      title: `[amadeus:metrics-snapshot:v1] ${sha}`,
+      body: `<!-- amadeus:metrics-snapshot:v1 sha=${sha} -->`,
+      files: [{ path: stalePath, additions: 6, deletions: 0 }],
+    });
+    writeFileSync(statePath, JSON.stringify(state));
+    expect(await publishSnapshot(sha, "2026-07-29T23:45:00Z")).toBe(1);
+    run(repository, ["git", "fetch", "origin", "main"]);
+    const landed = run(repository, ["git", "ls-tree", "-r", "--name-only", "origin/main", "--", "metrics/"])
+      .split("\n")
+      .filter((file) => file.endsWith(".json"));
+    const finalState = JSON.parse(readFileSync(statePath, "utf8"));
+    expect(landed).toHaveLength(0);
+    expect(finalState.merges).toBe(0);
+    expect(finalState.pullRequests[0].state).toBe("OPEN");
+    expect(run(repository, ["git", "ls-remote", "--heads", "origin", `refs/heads/${branch}`])).toContain(branch);
   }, 30_000);
 
   test("three different SHAs do not conflict and maintenance converges to one stable branch generation", async () => {

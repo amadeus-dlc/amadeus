@@ -531,7 +531,7 @@ Fields managed by the tools (matching state template format `- **Field**: value`
 - **Last Updated**: ISO timestamp
 - **Active Agent**: lead agent name from Stage Graph
 - **In Progress**: current stage slug
-- **Completed**: auto-synced by `checkbox` and `advance` commands (count of [x] stages)
+- **Completed**: all state-writing paths (`checkbox`, `advance`, `finalize`, workflow completion, approval, stage jump, scope change, recompose, initialization, and state re-sync) auto-sync this through the shared derived-plan writer; it counts only `[x]` stages whose effective plan action is `EXECUTE` (`SKIP`-effective historical completions do not count)
 
 **Stage advancement** (the most common operation — replaces all sed + cat for normal stage transitions):
 ```bash

@@ -57,6 +57,7 @@ import {
   readCurrentSessionId,
   readIntentRegistry,
   readStateFile,
+  rebuildCompletedFieldFromState,
   recordDirMatches,
   requireChanged,
   recoverBoltDag,
@@ -1457,9 +1458,9 @@ export function handleCheckbox(args: string[]): void {
     );
   }
 
-  // Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+  const rebuilt = rebuildCompletedFieldFromState(content);
+  content = rebuilt.content;
+  const completedCount = rebuilt.completedCount;
 
   writeStateFile(pd, content, resolvedIntent, space);
   console.log(JSON.stringify({ updated: true, checkboxes: changes.length, completed_count: completedCount }));
@@ -2288,9 +2289,9 @@ export function handleAdvance(args: string[]): void {
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "Next Action", `Execute ${nextStage.name}`);
 
-  // Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+  const rebuilt = rebuildCompletedFieldFromState(content);
+  content = rebuilt.content;
+  const completedCount = rebuilt.completedCount;
 
   // 4. Atomic audit emission — audit-first, then state write.
   // If audit fails, throw before touching state (writeStateFile below is skipped).
@@ -2369,9 +2370,10 @@ export function handleFinalize(args: string[]): void {
     `finalize:${completedSlug}`,
   );
 
-  // 2. Sync Completed counter to actual [x] count
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
+  // 2. Sync derived plan fields to the effective EXECUTE plan.
+  const rebuilt = rebuildCompletedFieldFromState(content);
+  content = rebuilt.content;
+  const completedCount = rebuilt.completedCount;
 
   // 3. Look up next in-scope stage. Refuse silent fallback on missing/invalid
   // Scope — matches handleAdvance's stance. Adversarial: pre-Phase-11 code
@@ -2544,11 +2546,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       setCheckbox(validateStageState(content), completedSlug, "completed"),
       `complete-workflow:${completedSlug}`,
     );
-    content = setField(
-      content,
-      "Completed",
-      String(countCheckboxes(content, "completed")),
-    );
+    content = rebuildCompletedFieldFromState(content).content;
     content = setField(content, "Status", "Completed");
     if (completion !== null) {
       content = setOrInsertField(
@@ -2565,7 +2563,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     content = setField(content, "Next Action", "Workflow complete");
     content = markPhaseVerified(content, completedStage.phase);
   }
-  const completedCount = countCheckboxes(content, "completed");
+  const completedCount = rebuildCompletedFieldFromState(content).completedCount;
 
   emitWorkflowCompletionAuditRows({
     pd,
@@ -3426,7 +3424,10 @@ function approvalScopeIssue(content: string): string | null {
   return null;
 }
 
-function approvalNextStateIssue(
+// Exported for the integration contract test: approve's post-commit state
+// validation must reject a Completed counter that diverges from the shared
+// canonical writer (#1875).
+export function approvalNextStateIssue(
   content: string,
   slug: string,
   timestamp: string,
@@ -3435,7 +3436,11 @@ function approvalNextStateIssue(
   if (getSlugState(content, slug) !== "completed") return "stage checkbox";
   if (getField(content, "Last Completed Stage") !== slug) return "last completed stage";
   if (getField(content, "Last Updated") !== timestamp) return "last updated";
-  if (getField(content, "Completed") !== String(countCheckboxes(content, "completed"))) return "completed count";
+  const canonicalCompleted = getField(
+    rebuildCompletedFieldFromState(content).content,
+    "Completed",
+  );
+  if (getField(content, "Completed") !== canonicalCompleted) return "completed count";
   if (recoveredRevision !== null && getField(content, "Revision Count") !== String(recoveredRevision)) return "revision count";
   return approvalScopeIssue(content);
 }
@@ -3480,7 +3485,7 @@ function approveUnderLock(
     `approve:${slug}`,
   );
   content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
+  content = rebuildCompletedFieldFromState(content).content;
   content = setField(content, "Last Completed Stage", slug);
   const completionInstance = `terminal:${slug}`;
   if (deferWorkflowCompletion) {

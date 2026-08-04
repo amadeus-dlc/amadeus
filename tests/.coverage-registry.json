@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 174,
+      "function": 175,
       "audit": 42,
       "scope": 15,
       "stage": 8,
@@ -3335,8 +3335,13 @@
       "unitClass": "function",
       "unitId": "function:rebuildDerivedPlanFields",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -5900,6 +5905,10 @@
           "mechanism": "sdk"
         },
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-transition-guard-audit.test.ts",
           "mechanism": "cli"
         },
@@ -6218,6 +6227,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-transition-guard-audit.test.ts",
           "mechanism": "cli"
         },
@@ -6241,6 +6254,10 @@
       "unitId": "amadeus-state approve",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t145-state-lock-concurrency.test.ts",
           "mechanism": "cli"
@@ -6290,6 +6307,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t256-state-intent-selector.test.ts",
           "mechanism": "cli"
         },
@@ -6305,6 +6326,10 @@
       "unitId": "amadeus-state complete-workflow",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",
           "mechanism": "cli"
@@ -6363,6 +6388,10 @@
       "unitId": "amadeus-state finalize",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"

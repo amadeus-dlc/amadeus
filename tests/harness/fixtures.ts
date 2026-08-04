@@ -247,6 +247,21 @@ export function toPortablePath(p: string): string {
 }
 
 /**
+ * Canonical Completed contract (#1875): completed `[x]` rows whose effective
+ * plan action is EXECUTE. The single test-side mirror of the counter the
+ * production writer (rebuildCompletedFieldFromState) maintains — assert
+ * against these helpers instead of re-inlining the row regex per test.
+ */
+export function canonicalCompletedSlugs(stateText: string): string[] {
+  return [...stateText.matchAll(/^- \[x\] (\S+) — EXECUTE(?: .*)?$/gm)].map((m) => m[1]);
+}
+
+/** Count of canonicalCompletedSlugs — the value the `Completed` field must hold. */
+export function canonicalCompletedCount(stateText: string): number {
+  return canonicalCompletedSlugs(stateText).length;
+}
+
+/**
  * Copy a state fixture into the default intent's record:
  * <proj>/amadeus/spaces/default/intents/<record>/amadeus-state.md. `fixturePath` may
  * be an absolute path or a bare fixture filename resolved against FIXTURES_DIR.

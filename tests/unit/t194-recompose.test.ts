@@ -39,6 +39,7 @@ import {
   handleRecompose,
 } from "../../packages/framework/core/tools/amadeus-utility.ts";
 import {
+  canonicalCompletedCount,
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -191,13 +192,28 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
 
   test("derived fields rebuilt: Total/Completed/Next Stage + --status counts track the plan", () => {
     const proj = bornProject();
+    const born = readState(proj);
+    const legacy = born
+      .replace("- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP")
+      .replace(
+        /^- \*\*Completed\*\*: \d+$/m,
+        `- **Completed**: ${(born.match(/^- \[x\]/gm) ?? []).length}`,
+      );
+    writeFileSync(statePathOf(proj), legacy, "utf-8");
     const before = readState(proj);
     const totalBefore = Number(/- \*\*Total Stages\*\*: (\d+)/.exec(before)?.[1]);
     run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     const after = readState(proj);
     const totalAfter = Number(/- \*\*Total Stages\*\*: (\d+)/.exec(after)?.[1]);
-    expect(totalAfter).toBe(totalBefore - 1);
+    // Total counts EXECUTE-effective stages only: the recompose --skip removes
+    // market-research, and the rebuild also drops the hand-flipped
+    // workspace-scaffold — SKIP row that the stale Total still included.
+    expect(totalAfter).toBe(totalBefore - 2);
     expect(after).toMatch(/- \*\*Stages to Skip\*\*: .*market-research/);
+    const completed = Number(/- \*\*Completed\*\*: (\d+)/.exec(after)?.[1]);
+    expect(completed).toBe(canonicalCompletedCount(after));
+    expect(after).toMatch(/^- \[x\] workspace-scaffold — SKIP/m);
+    expect(completed).toBeLessThan((after.match(/^- \[x\]/gm) ?? []).length);
     // --status counts against the recomposed plan (the static-grid divergence
     // this P4 closed): total in the progress line drops by 1 too.
     const status = run(proj, "amadeus-utility.ts", ["status"]);
