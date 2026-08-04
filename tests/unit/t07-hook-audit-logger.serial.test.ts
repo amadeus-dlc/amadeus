@@ -1,6 +1,6 @@
 // covers: hook:amadeus-audit-logger, function:appendAuditEntry
 //
-// t07 — amadeus-audit-logger.ts PostToolUse hook behaviour. Migrated from
+// t07 — serial amadeus-audit-logger.ts PostToolUse hook behaviour. Migrated from
 // tests/unit/t07-hook-audit-logger.sh (TAP plan 16). Mechanism: cli.
 //
 // WHY CLI (process-boundary, not in-process): the SUBJECT is a hook, not a

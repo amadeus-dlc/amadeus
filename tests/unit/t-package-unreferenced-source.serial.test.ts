@@ -1,4 +1,4 @@
-// t-package-unreferenced-source: unit coverage for the #735 source-unreferenced
+// t-package-unreferenced-source: serial unit coverage for the #735 source-unreferenced
 // diff (scripts/package.ts unreferencedSources).
 //
 // covers: file:scripts/package.ts (unreferencedSources — #735 source scan)

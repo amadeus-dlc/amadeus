@@ -224,7 +224,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "unit/t213-orchestrate-parked-new-intent.test.ts",
     "unit/t218-import-meta-main-guard.test.ts",
     "unit/t-runtime-dispatch-seam.test.ts",
-    "unit/t07-hook-audit-logger.test.ts",
+    "unit/t07-hook-audit-logger.serial.test.ts",
     "unit/t08.test.ts",
     "unit/t09.test.ts",
     "unit/t10-hook-session-start.test.ts",
