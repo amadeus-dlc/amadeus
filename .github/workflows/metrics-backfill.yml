@@ -314,7 +314,8 @@ jobs:
             CANDIDATES="$(jq -c --arg before "$BEFORE" --arg started "$PUBLISH_STARTED_AT" --arg title "$EXPECTED_TITLE" '
               [.workflow_runs[] as $run
                 | select($run.created_at >= $started and $run.display_title == $title)
-                | select(($before | contains("," + ($run.id | tostring) + ",")) | not)]
+                | select(($before | contains("," + ($run.id | tostring) + ",")) | not)
+                | $run]
             ' <<<"$RUNS_JSON")"
             COUNT="$(jq -r 'length' <<<"$CANDIDATES")"
             (( COUNT <= 1 ))
