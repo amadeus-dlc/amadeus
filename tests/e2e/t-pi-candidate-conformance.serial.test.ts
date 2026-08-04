@@ -1,6 +1,7 @@
 // Generated Pi candidate -> installed shape -> doctor and public-event closure.
 
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,6 +28,25 @@ describe("Pi candidate cross-unit conformance", () => {
     const gitignore = readFileSync(join(ROOT, "dist", "pi", ".gitignore"), "utf8");
     expect(gitignore).toContain("amadeus/.amadeus-clone-id");
     expect(gitignore).toContain("amadeus/.amadeus-sessions/");
+    expect(gitignore).toContain("!/.pi/vendor/**");
+  });
+
+  test("keeps the required Pi vendor runtime visible across a user-level vendor ignore", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-pi-gitignore-"));
+    scratch.push(root);
+    const projectDir = join(root, "project");
+    const excludesPath = join(root, "global-excludes");
+    cpSync(join(ROOT, "dist", "pi"), projectDir, { recursive: true });
+    writeFileSync(excludesPath, "vendor/\n");
+
+    expect(spawnSync("git", ["init", "--quiet", projectDir]).status).toBe(0);
+    expect(spawnSync("git", ["-C", projectDir, "config", "core.excludesFile", excludesPath]).status).toBe(0);
+    const status = spawnSync("git", ["-C", projectDir, "status", "--short", "--untracked-files=all"], {
+      encoding: "utf8",
+    });
+
+    expect(status.status).toBe(0);
+    expect(status.stdout).toContain("?? .pi/vendor/opentelemetry/api/index.js");
   });
 
   test("keeps generated catalog, complete install diagnostics, event source boundary, and Windows negative coherent", () => {

@@ -49,7 +49,14 @@ const CLAUDE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("claude"
 // for the original four. Their engine dirs are .opencode / .cursor.
 const OPENCODE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("opencode", ".opencode");
 const CURSOR_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("cursor", ".cursor");
-const PI_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("pi", ".pi");
+const PI_FIXTURE_ENTRIES: TarFixtureEntry[] = [
+  ...harnessFixtureEntries("pi", ".pi"),
+  {
+    type: "file",
+    name: "dist/pi/.pi/tools/data/harness.json",
+    content: Buffer.from('{"name":"pi"}\n'),
+  },
+];
 
 function treeSnapshot(root: string): Map<string, string> {
   const snapshot = new Map<string, string>();
@@ -239,6 +246,10 @@ describe("install pipeline — opencode / cursor / pi harnesses", () => {
       const manifest = JSON.parse(readFileSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"), "utf8"));
       expect(manifest.harness).toBe("pi");
       expect(manifest.files.some((f: { path: string }) => f.path === "package.json")).toBe(false);
+      expect(manifest.files.find((f: { path: string }) => f.path === ".pi/tools/data/harness.json")).toMatchObject({
+        class: "owned",
+        required: true,
+      });
     } finally {
       rmSync(target, { recursive: true, force: true });
     }

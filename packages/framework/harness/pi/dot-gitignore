@@ -39,3 +39,9 @@ amadeus/spaces/*/elections/*/pending/
 **/.amadeus-plugin-drops.json
 **/.amadeus-plugin-journal.json
 **/.amadeus-plugin-lock/
+
+# Amadeus ships its OpenTelemetry runtime under .pi/vendor/. Keep those
+# required files commit-visible even when a user-level Git excludes file has a
+# broad vendor/ rule.
+!/.pi/vendor/
+!/.pi/vendor/**

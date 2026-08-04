@@ -239,6 +239,7 @@ export function classify(relPath: string): FileClass {
   const segments = relPath.split("/");
   const basename = segments[segments.length - 1] ?? relPath;
   if (basename.startsWith("amadeus-")) return "owned";
+  if (segments.slice(-3).join("/") === "tools/data/harness.json") return "owned";
   if (segments.includes("memory")) return "user-preserved";
   return "shared";
 }
