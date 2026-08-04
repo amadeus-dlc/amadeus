@@ -195,31 +195,14 @@ export function handleReport(
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
   if (loaded.value.state !== transition.from) {
-    // #2125 recovery: if a prior tallied commit advanced the state but its
-    // audit row failed to land (exit 1 after setState), the record is left
-    // with state tallied/hold and no `tallied` timeline row. Re-running the
-    // report completes that unit instead of refusing — append-only, never a
-    // duplicate (the row's presence is what gates the repair).
-    if (
-      result === "tallied" &&
-      (loaded.value.state === "tallied" || loaded.value.state === "hold")
-    ) {
-      return repairTalliedRow(root, electionId, loaded.value.state);
-    }
-    return fail(`invalid-transition: ${result} requires state ${transition.from}, got ${loaded.value.state}`);
+    return reportStateMismatch(root, electionId, result, transition.from, loaded.value.state);
   }
-  // A tallied report lands on "hold" when the fixed tally result is a hold —
-  // the hold state is reached only through a real tally outcome. talliedAt is
-  // validated HERE, before the state commit, so a malformed tally.json can
-  // never advance the state and then fail the audit append (NFR-1).
   let to = transition.to;
-  let tally: ReturnType<typeof readTally> = null;
+  let tally: TalliedCommit | null = null;
   if (result === "tallied") {
-    tally = readTally(root, electionId);
-    if (tally === null) return fail("invalid-transition: tallied reported but tally.json missing");
-    if (tally.talliedAt === undefined) {
-      return fail("invalid-transition: tallied reported but tally.json lacks talliedAt");
-    }
+    const resolved = resolveTalliedCommit(root, electionId);
+    if (!resolved.ok) return resolved.error;
+    tally = resolved.value;
     if (tally.result.kind === "hold") to = "hold";
   }
   // Issue #1458: the distributed report is where the subagent transport's
@@ -234,20 +217,68 @@ export function handleReport(
   const set = Store.setState(root, electionId, to);
   if (!set.ok) return storeFail("setState", set.error);
   // #2125 FR-2b: the `tallied` audit row is booked by the transition commit,
-  // not by the tally write, and it carries tally.json's talliedAt so the
-  // late-lane classification axis and the timeline can never diverge. If this
-  // append fails after the commit, the repair path above completes the unit
-  // on the next report run.
-  if (tally !== null && tally.talliedAt !== undefined) {
-    const booked = Store.appendTimeline(root, electionId, {
-      kind: "tallied",
-      at: tally.talliedAt,
-      detail: `tally: ${tally.result.kind}`,
-    });
-    if (!booked.ok) return storeFail("appendTimeline", booked.error);
+  // not by the tally write. If this append fails after the commit, the repair
+  // path above completes the unit on the next report run.
+  if (tally !== null) {
+    const booked = bookTalliedRow(root, electionId, tally);
+    if (!booked.ok) return booked.error;
   }
   out({ committed: result, state: to });
   return 0;
+}
+
+// Refusal — or repair — for a report whose from-state does not match. #2125
+// recovery: if a prior tallied commit advanced the state but its audit row
+// failed to land (exit 1 after setState), the record is left with state
+// tallied/hold and no `tallied` timeline row. Re-running the report completes
+// that unit instead of refusing — append-only, never a duplicate (the row's
+// presence is what gates the repair).
+function reportStateMismatch(
+  root: string,
+  electionId: string,
+  result: string,
+  requiredFrom: ElectionState,
+  state: ElectionState,
+): number {
+  if (result === "tallied" && (state === "tallied" || state === "hold")) {
+    return repairTalliedRow(root, electionId, state);
+  }
+  return fail(`invalid-transition: ${result} requires state ${requiredFrom}, got ${state}`);
+}
+
+type TalliedCommit = NonNullable<ReturnType<typeof readTally>> & { talliedAt: string };
+
+// Resolve the tallied commit BEFORE the state advances (#2125): tally.json
+// must exist and carry talliedAt, so a malformed tally can never advance the
+// state and then fail the audit append (NFR-1).
+function resolveTalliedCommit(
+  root: string,
+  electionId: string,
+): Result<TalliedCommit, number> {
+  const tally = readTally(root, electionId);
+  if (tally === null) {
+    return err(fail("invalid-transition: tallied reported but tally.json missing"));
+  }
+  if (tally.talliedAt === undefined) {
+    return err(fail("invalid-transition: tallied reported but tally.json lacks talliedAt"));
+  }
+  return ok({ ...tally, talliedAt: tally.talliedAt });
+}
+
+// The `tallied` audit row carries tally.json's talliedAt so the late-lane
+// classification axis and the timeline can never diverge (#2125 FR-2b).
+function bookTalliedRow(
+  root: string,
+  electionId: string,
+  tally: TalliedCommit,
+): Result<void, number> {
+  const booked = Store.appendTimeline(root, electionId, {
+    kind: "tallied",
+    at: tally.talliedAt,
+    detail: `tally: ${tally.result.kind}`,
+  });
+  if (!booked.ok) return err(storeFail("appendTimeline", booked.error));
+  return ok(undefined);
 }
 
 // Complete a tallied commit whose audit row is missing (#2125 recovery): the
@@ -260,21 +291,15 @@ function repairTalliedRow(
   electionId: string,
   state: "tallied" | "hold",
 ): number {
-  const tally = readTally(root, electionId);
-  if (tally === null || tally.talliedAt === undefined) {
-    return fail(`invalid-transition: tallied requires state collecting, got ${state}`);
-  }
+  const resolved = resolveTalliedCommit(root, electionId);
+  if (!resolved.ok) return resolved.error;
   const timeline = readTimeline(root, electionId);
   const events: TimelineEvent[] = Array.isArray(timeline) ? timeline : [];
   if (events.some((e) => e.kind === "tallied")) {
     return fail(`invalid-transition: tallied requires state collecting, got ${state}`);
   }
-  const booked = Store.appendTimeline(root, electionId, {
-    kind: "tallied",
-    at: tally.talliedAt,
-    detail: `tally: ${tally.result.kind}`,
-  });
-  if (!booked.ok) return storeFail("appendTimeline", booked.error);
+  const booked = bookTalliedRow(root, electionId, resolved.value);
+  if (!booked.ok) return booked.error;
   out({ committed: "tallied", state, repaired: "tallied-row" });
   return 0;
 }

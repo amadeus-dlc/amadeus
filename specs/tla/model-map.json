@@ -30,7 +30,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "7cc37b8ea0860c93c77c5d91793918f456bfe0a3589c86a74b31df98817973bb"
+          "sha256": "c5b3b98b581cda5be0018d6282bea9429109bbf39538cf8c7ffb76602f056876"
         }
       ],
       "vocabulary": {
