@@ -38,6 +38,18 @@ import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { seedCustomHarness } from "./custom-harness.ts";
+import {
+  createGoalReconciliationReceipt,
+  createInitialGoalLineage,
+  goalLineagePath,
+  writeGoalReconciliationReceipt,
+  writeInitialGoalLineage,
+} from "../../packages/framework/core/tools/amadeus-goal-reconciliation.ts";
+import { workflowCompletionContextDigest } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
+import {
+  getField,
+  setOrInsertField,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(HARNESS_DIR, "..", "..");
@@ -243,6 +255,58 @@ export function seedStateFile(proj: string, fixturePath: string): void {
   mkdirSync(recDir, { recursive: true });
   const src = existsSync(fixturePath) ? fixturePath : join(FIXTURES_DIR, fixturePath);
   copyFileSync(src, join(recDir, "amadeus-state.md"));
+}
+
+/** Add the minimal current Goal and ACHIEVED receipt required by terminal tests. */
+export function seedGoalReceiptForFinalStage(
+  proj: string,
+  finalStage: string,
+  completionInstance = `terminal:${finalStage}`,
+): void {
+  const recDir = seededRecordDir(proj);
+  const statePath = seededStateFile(proj);
+  let state = readFileSync(statePath, "utf8");
+  const scope = getField(state, "Scope")?.trim();
+  if (!scope) throw new Error("Goal fixture requires a Scope field");
+  const lineage = createInitialGoalLineage({
+    intentId: DEFAULT_INTENT_UUID,
+    statement: "Exercise the seeded terminal transition",
+    scope,
+    createdAt: "2026-08-04T00:00:00.000Z",
+  });
+  state = setOrInsertField(state, "## Runtime State", "Goal ID", lineage.goalId);
+  state = setOrInsertField(state, "## Runtime State", "Current Goal Revision", "0");
+  state = setOrInsertField(
+    state,
+    "## Runtime State",
+    "Current Goal Digest",
+    lineage.revisions[0].digest,
+  );
+  writeFileSync(statePath, state);
+  if (!existsSync(goalLineagePath(recDir))) writeInitialGoalLineage(recDir, lineage);
+  const receipt = createGoalReconciliationReceipt({
+    lineage,
+    scope,
+    finalStage,
+    completionInstance,
+    completionContextDigest: workflowCompletionContextDigest(state, finalStage),
+    items: [
+      {
+        id: "goal-statement",
+        verdict: "ACHIEVED",
+        evidence: [
+          {
+            kind: "deterministic-check",
+            reference: "fixture:terminal-transition",
+            digest: "0".repeat(64),
+          },
+        ],
+      },
+    ],
+    humanRulingReference: null,
+    createdAt: "2026-08-04T00:00:00.000Z",
+  });
+  writeGoalReconciliationReceipt(recDir, receipt);
 }
 
 /**

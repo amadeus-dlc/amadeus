@@ -23,6 +23,9 @@ import {
   handleApprove,
 } from "../../packages/framework/core/tools/amadeus-state.ts";
 import {
+  seedGoalReceiptForFinalStage,
+} from "../harness/fixtures.ts";
+import {
   GRANT_ID,
   ROUTE_ID,
   SESSION_ID,
@@ -343,6 +346,7 @@ describe("targeted approval prefix arms", () => {
         .replace(/- \*\*Current Stage\*\*: .*/, `- **Current Stage**: ${STAGE}`)
         .replace(/ — EXECUTE/g, " — SKIP"),
     );
+    seedGoalReceiptForFinalStage(root, STAGE);
 
     const recovery = approve(ids);
 

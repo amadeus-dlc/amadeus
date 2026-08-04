@@ -29,19 +29,28 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (81 events, 19 categories)
+## Event Registry (85 events, 20 categories)
 
 ### Workflow Lifecycle (7 events)
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | ✓ `WORKFLOW_STARTED` | Scope determined, workflow begins | Scope, Request | Repos | `tools/amadeus-utility.ts init` |
-| ✓ `WORKFLOW_COMPLETED` | All in-scope stages done | Scope, Details | Reason | `tools/amadeus-state.ts complete-workflow` |
+| ✓ `WORKFLOW_COMPLETED` | All in-scope stages done with an ACHIEVED Goal receipt | Scope, Details | Reason, Completion Instance, Goal Id, Goal Revision, Goal Digest, Goal Receipt Id, Goal Receipt Digest, Goal Verdict, Goal Evidence, Goal Human Ruling | `tools/amadeus-state.ts complete-workflow` |
 | ✓ `WORKFLOW_PARKED` | Workflow parked mid-flow for a later session (no stage advanced) | Stage | Timestamp | `tools/amadeus-state.ts park` |
 | ✓ `WORKFLOW_UNPARKED` | Park marker cleared on explicit `--resume` re-entry | — | Timestamp | `tools/amadeus-state.ts unpark` |
 | `INTENT_ARCHIVED` | Human-authorized intent archive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts archive` |
 | `INTENT_UNARCHIVED` | Human-authorized intent unarchive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts unarchive` |
 | `EXECUTION_EVENT_SET_COMMITTED` | One audit-first execution lifecycle event set commits before required projections or native dispatch | Root Operation Id, Event Set Digest, Event Set | — | `tools/amadeus-execution-lifecycle.ts` |
+
+### Goal Lifecycle (4 events)
+
+| Event | When | Required | Optional | Emitter |
+|-------|------|----------|----------|---------|
+| `GOAL_CHANGE_PROPOSED` | AIまたは人間が未承認のGoal変更案を保存 | Intent, Goal Id, Proposal Id, Parent Revision, Proposal Digest | — | `tools/amadeus-goal.ts propose` |
+| `GOAL_REVISION_APPROVED` | 専用ゲート後の直接HUMAN_TURNがGoal revisionを承認 | Intent, Goal Id, Goal Revision, Goal Digest, Proposal Id, Human Turn Timestamp | — | `tools/amadeus-goal.ts approve-revision` |
+| `GOAL_RECONCILED` | current approved Goalに対するreceiptを保存 | Intent, Goal Id, Goal Revision, Goal Digest, Goal Receipt Id, Goal Receipt Digest, Goal Verdict, Completion Instance | Goal Human Ruling | `tools/amadeus-goal.ts reconcile` |
+| `LEGACY_GOAL_MIGRATED` | legacy Goal proposalと項目別裁定を人間が明示承認 | Intent, Goal Id, Goal Revision, Goal Digest, Goal Receipt Id, Human Turn Timestamp | — | `tools/amadeus-goal.ts approve-legacy-migration` |
 
 ### Phase Lifecycle (4 events)
 

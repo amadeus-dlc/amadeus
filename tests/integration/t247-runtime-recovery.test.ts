@@ -27,6 +27,7 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  seedGoalReceiptForFinalStage,
   seedStateFile,
   seededAuditShard,
   seededRecordDir,
@@ -891,6 +892,7 @@ describe("t247 recovery in-process coverage seams", () => {
     seedStateFile(project, join(FIXTURES_DIR, "state-final-stage.md"));
     expect(run(STATE, project, ["gate-start", "feedback-optimization"]).status).toBe(0);
     seedPhaseCheck(project, "operation");
+    seedGoalReceiptForFinalStage(project, "feedback-optimization");
     const completed = inProject(project, () => handleApprove(["feedback-optimization"]));
     expect(completed.code).toBeNull();
     expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Status**: Completed");

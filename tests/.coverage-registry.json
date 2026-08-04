@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 595,
+    "total": 599,
     "enumeratedByClass": {
       "function": 344,
-      "audit": 81,
+      "audit": 85,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 176,
-      "audit": 35,
+      "audit": 39,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -219,6 +219,42 @@
     },
     {
       "unitClass": "audit",
+      "unitId": "GOAL_CHANGE_PROPOSED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GOAL_RECONCILED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GOAL_REVISION_APPROVED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t428-goal-revision-authority.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
       "unitId": "GRANT_ISSUED",
       "minMechanism": "none",
       "coveredBy": [],
@@ -286,6 +322,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEGACY_GOAL_MIGRATED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t429-legacy-goal-migration.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -6217,6 +6265,10 @@
       "unitId": "amadeus-state complete-workflow",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"

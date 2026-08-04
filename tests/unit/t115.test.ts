@@ -100,6 +100,7 @@ import {
   DEFAULT_SPACE,
   FIXTURES_DIR,
   seededStateFile,
+  seedGoalReceiptForFinalStage,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
@@ -414,6 +415,7 @@ describe("t115 final gated approve -> complete-workflow (report -> amadeus-state
       join(p, "amadeus", "config.json"),
       '{"auto-mirror":"off"}\n',
     );
+    seedGoalReceiptForFinalStage(p, "feedback-optimization");
 
     const gs = state(["gate-start", "feedback-optimization"], p);
     expect(gs.status).toBe(0);
@@ -482,6 +484,7 @@ describe("t115 re-report on a completed workflow", () => {
       join(p, "amadeus", "config.json"),
       '{"auto-mirror":"off"}\n',
     );
+    seedGoalReceiptForFinalStage(p, "feedback-optimization");
 
     const gs = state(["gate-start", "feedback-optimization"], p);
     expect(gs.status).toBe(0);

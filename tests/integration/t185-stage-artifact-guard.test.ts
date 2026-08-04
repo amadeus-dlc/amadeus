@@ -45,6 +45,7 @@ import {
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
+  seedGoalReceiptForFinalStage,
   seededRecordDir,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -149,6 +150,8 @@ describe("t185: stage-completion artifact guard (#366)", () => {
   });
 
   test("complete-workflow REFUSES when no artifacts", () => {
+    seedStateFile(proj, "state-fix-final-construction.md");
+    seedGoalReceiptForFinalStage(proj, "build-and-test");
     const slug = field(proj, "Current Stage");
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     const r = guarded(proj, ["complete-workflow", slug]);
