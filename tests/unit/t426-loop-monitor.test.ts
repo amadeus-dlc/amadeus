@@ -139,6 +139,118 @@ describe("loop monitor manifest compiler", () => {
       if (!result.ok) expect(result.errors.length).toBeGreaterThan(0);
     }
   });
+
+  test("rejects malformed manifest and contribution boundaries", () => {
+    const manifestCases: readonly [string, unknown, string, string][] = [
+      ["non-object manifest", null, "$", "manifest must be an object"],
+      ["empty monitor list", { ...manifest(), loopMonitors: [] }, "loopMonitors", "must be a non-empty array"],
+      ["invalid runtime limits", { ...manifest(), runtimeLimits: null }, "runtimeLimits", "must be an object"],
+      ["non-object monitor", { ...manifest(), loopMonitors: [null] }, "loopMonitors[0]", "must be an object"],
+      ["empty monitor id", { ...manifest(), loopMonitors: [{ ...monitorSpec(), id: "" }] }, "loopMonitors[0].id", "must be a non-empty string"],
+      ["invalid cycle item", { ...manifest(), loopMonitors: [{ ...monitorSpec(), cycle: [""] }] }, "loopMonitors[0].cycle", "must be an array of non-empty strings"],
+      ["empty transition table", { ...manifest(), loopMonitors: [{ ...monitorSpec(), transitionTable: {} }] }, "loopMonitors[0].transitionTable", "must be a non-empty transition object"],
+      [
+        "empty transition id",
+        {
+          ...manifest(),
+          loopMonitors: [{
+            ...monitorSpec(),
+            transitionTable: { "": [], "quality-check": ["repair"], repair: ["quality-check"] },
+          }],
+        },
+        "loopMonitors[0].transitionTable",
+        "transition event id must not be empty",
+      ],
+      [
+        "missing cycle transition row",
+        {
+          ...manifest(),
+          loopMonitors: [{ ...monitorSpec(), transitionTable: { "quality-check": ["repair"] } }],
+        },
+        "loopMonitors[0].transitionTable",
+        'cycle event "repair" has no transition row',
+      ],
+      [
+        "unknown next transition",
+        {
+          ...manifest(),
+          loopMonitors: [{
+            ...monitorSpec(),
+            transitionTable: { "quality-check": ["missing"], repair: ["quality-check"] },
+          }],
+        },
+        "loopMonitors[0].transitionTable.quality-check",
+        'unknown transition event "missing"',
+      ],
+      [
+        "duplicate monitor id",
+        { ...manifest(), loopMonitors: [monitorSpec(), monitorSpec()] },
+        "loopMonitors",
+        "monitor ids must be unique",
+      ],
+    ];
+    for (const [label, value, path, message] of manifestCases) {
+      const result = compileLoopMonitorManifest(value, contributions);
+      expect(result.ok, label).toBe(false);
+      if (!result.ok) {
+        expect(result.errors.some((item) => item.path === path && item.message.includes(message)), label).toBe(true);
+      }
+    }
+
+    const contributionCases: readonly [string, LoopMonitorContributions, string, string][] = [
+      [
+        "invalid descriptor id",
+        { ...contributions, evidenceProviders: [{ id: "" }] },
+        "contributions.evidenceProviders[0]",
+        "descriptor id must be a non-empty string",
+      ],
+      [
+        "duplicate descriptor id",
+        { ...contributions, evidenceProviders: [{ id: "quality-summary" }, { id: "quality-summary" }] },
+        "contributions.evidenceProviders[1].id",
+        'duplicate descriptor "quality-summary"',
+      ],
+      [
+        "invalid route kind",
+        {
+          ...contributions,
+          routes: [{ id: "repair", kind: "invalid" } as never, ...contributions.routes.slice(1)],
+        },
+        "contributions.routes[0].kind",
+        "route kind must be transition or park",
+      ],
+      [
+        "missing Judge instruction",
+        { ...contributions, judgeInstructions: [] },
+        "loopMonitors[0].judgeInstructionId",
+        'unknown Judge instruction "quality-judge"',
+      ],
+      [
+        "missing route",
+        { ...contributions, routes: contributions.routes.filter((route) => route.id !== "replan") },
+        "loopMonitors[0].routes[1]",
+        'unknown route "replan"',
+      ],
+      [
+        "route target without transition row",
+        {
+          ...contributions,
+          routes: contributions.routes.map((route) => route.id === "replan"
+            ? { ...route, targetEvent: "missing-transition" }
+            : route),
+        },
+        "loopMonitors[0].routes[1]",
+        'route target "missing-transition" has no transition row',
+      ],
+    ];
+    for (const [label, candidate, path, message] of contributionCases) {
+      const result = compileLoopMonitorManifest(manifest(), candidate);
+      expect(result.ok, label).toBe(false);
+      if (!result.ok) {
+        expect(result.errors.some((item) => item.path === path && item.message.includes(message)), label).toBe(true);
+      }
+    }
+  });
 });
 
 describe("loop monitor delivery reducer", () => {
@@ -254,6 +366,45 @@ describe("loop monitor delivery reducer", () => {
       ok: false,
       status: "CONFLICT",
       reason: "unknown-event",
+    });
+  });
+
+  test("fails closed on unsafe trace, partition, route constraint, and transition boundaries", () => {
+    const monitor = compiled();
+    expect(() => createLoopDelivery({
+      partition,
+      eventId: "quality-check",
+      predecessorDeliveryId: null,
+      upstreamEventIdentity: "unsafe-trace",
+      payloadFingerprint: `sha256:${"b".repeat(64)}`,
+      payload: { stageId: "code-generation", references: [] },
+      evidence,
+      routeConstraint: monitor.routeConstraint,
+      trace: { ...trace, traceId: "invalid" },
+    })).toThrow("unsafe-loop-delivery:trace");
+
+    const start = createLoopMonitorProjection(partition, monitor);
+    const first = delivery(monitor, "quality-check", null, "boundary-first");
+    expect(applyLoopDelivery(start, monitor, {
+      ...first,
+      partition: { ...partition, intentUuid: "another-intent" },
+    })).toMatchObject({ ok: false, status: "CONFLICT", reason: "partition-mismatch" });
+    expect(applyLoopDelivery(start, monitor, {
+      ...first,
+      routeConstraint: { ...first.routeConstraint, fingerprint: `sha256:${"f".repeat(64)}` },
+    })).toMatchObject({ ok: false, status: "CONFLICT", reason: "route-constraint-mismatch" });
+
+    const afterFirst = accepted(applyLoopDelivery(start, monitor, first));
+    const invalidTransition = delivery(
+      monitor,
+      "quality-check",
+      first.deliveryId,
+      "invalid-transition",
+    );
+    expect(applyLoopDelivery(afterFirst, monitor, invalidTransition)).toMatchObject({
+      ok: false,
+      status: "CONFLICT",
+      reason: "invalid-transition",
     });
   });
 });
