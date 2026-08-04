@@ -136,15 +136,16 @@ describe("t394 forward direction: a graph stage with no state row", () => {
     const proj = bornProject();
     dropRow(proj, "user-stories");
     const legacy = readState(proj);
-    writeState(
-      proj,
-      legacy
-        .replace("- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP")
-        .replace(
-          /^- \*\*Completed\*\*: \d+$/m,
-          `- **Completed**: ${(legacy.match(/^- \[x\]/gm) ?? []).length}`,
-        ),
-    );
+    const seeded = legacy
+      .replace("- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP")
+      .replace(
+        /^- \*\*Completed\*\*: \d+$/m,
+        `- **Completed**: ${(legacy.match(/^- \[x\]/gm) ?? []).length}`,
+      );
+    // A silent no-op replace would seed no legacy skew and make the repair
+    // assertions vacuous — pin the flipped row before writing.
+    expect(seeded).toMatch(/^- \[x\] workspace-scaffold — SKIP/m);
+    writeState(proj, seeded);
     // The recorded workaround's shape: a hand-inserted row left the counters
     // alone. The legacy state also carries a completed SKIP-effective row with
     // the old raw counter. Re-sync must repair both derived-field skews.

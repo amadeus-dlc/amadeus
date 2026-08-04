@@ -4,11 +4,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { rebuildCompletedFieldFromState } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { approvalNextStateIssue } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
-  getField,
-  rebuildCompletedFieldFromState,
-} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import {
+  canonicalCompletedCount,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -59,10 +58,6 @@ function statePath(): string {
 
 function rawCompletedCount(content: string): number {
   return (content.match(/^- \[x\]/gm) ?? []).length;
-}
-
-function canonicalCompletedCount(content: string): number {
-  return (content.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
 }
 
 function completedField(content: string): number {
@@ -171,22 +166,27 @@ describe("Completed canonical counter", () => {
         .replace(/^- \*\*Last Updated\*\*: .*$/m, `- **Last Updated**: ${timestamp}`),
     );
 
-    // The former raw validator sees an internally consistent raw count and
-    // would return null; the canonical validator must reject the same state.
+    // Premise: the state is internally consistent under the raw counter (the
+    // pre-#1875 definition) but skewed against the canonical one.
     expect(completedField(content)).toBe(rawCompletedCount(content));
     expect(completedField(content)).not.toBe(canonicalCompletedCount(content));
-    expect(content).toMatch(/^- \[x\] feasibility — EXECUTE/m);
-    expect(getField(content, "Last Completed Stage")).toBe("feasibility");
-    expect(getField(content, "Last Updated")).toBe(timestamp);
 
-    const legacyIssue = getField(content, "Completed") === String(rawCompletedCount(content))
-      ? null
-      : "completed count";
+    // The production approve validator itself must reject the raw counter —
+    // and accept the same state once the shared writer canonicalizes it.
+    expect(approvalNextStateIssue(content, "feasibility", timestamp, null)).toBe(
+      "completed count",
+    );
     const canonical = rebuildCompletedFieldFromState(content).content;
-    const canonicalIssue = getField(content, "Completed") === getField(canonical, "Completed")
-      ? null
-      : "completed count";
-    expect(legacyIssue).toBeNull();
-    expect(canonicalIssue).toBe("completed count");
+    expect(approvalNextStateIssue(canonical, "feasibility", timestamp, null)).toBeNull();
+  });
+
+  test("rebuild refuses an invalid Scope instead of zeroing Completed", () => {
+    const content = readFileSync(MID_IDEATION, "utf-8").replace(
+      /^- \*\*Scope\*\*: .*$/m,
+      "- **Scope**: frobnicate",
+    );
+    expect(() => rebuildCompletedFieldFromState(content)).toThrow(
+      'invalid Scope "frobnicate"',
+    );
   });
 });

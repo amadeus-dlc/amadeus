@@ -32,6 +32,7 @@ import {
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { canonicalCompletedCount } from "../harness/fixtures.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -139,8 +140,7 @@ describe("t-tui-kiro-fix-scope (brownfield fix journey, numbered-prose gates)", 
         const state = readFileSync(stateFilePathFor(sandbox), "utf-8");
         expect(state).toMatch(/^- \*\*Scope\*\*: fix$/m);
         expect(state).toMatch(/brownfield/i);
-        const completedExecute = (state.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
-        expect(completedCount(sandbox)).toBe(completedExecute);
+        expect(completedCount(sandbox)).toBe(canonicalCompletedCount(state));
 
         // Audit: the workflow really started and at least one gate approval
         // landed through the numbered-prose protocol.

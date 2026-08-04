@@ -64,6 +64,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  canonicalCompletedCount,
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -81,11 +82,6 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
-
-/** Count completed rows whose effective plan action is EXECUTE. */
-function completedCount(stateText: string): number {
-  return (stateText.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
-}
 
 describe("t52 /amadeus --init --scope fix state-file integrity (sdk)", () => {
   // -------------------------------------------------------------------------
@@ -115,7 +111,7 @@ describe("t52 /amadeus --init --scope fix state-file integrity (sdk)", () => {
         expect(counterStr).toBeDefined();
         const counter = Number.parseInt(counterStr as string, 10);
         expect(Number.isNaN(counter)).toBe(false);
-        expect(counter).toBe(completedCount(state));
+        expect(counter).toBe(canonicalCompletedCount(state));
 
         // .sh test 5: stage ordering preserved — no `- [x]` row appears AFTER the
         // last `- [-]` in-progress row. (If there is no [-], ordering is trivially

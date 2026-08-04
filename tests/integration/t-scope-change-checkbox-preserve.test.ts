@@ -21,6 +21,7 @@ import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
+  canonicalCompletedCount,
   cleanupTestProject,
   createTestProject,
   seedAuditFile,
@@ -68,6 +69,11 @@ function sixStateProj(): string {
   // now SKIP-effective while Completed still carries the raw [x] count.
   sedReplaceInFile(state, "- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP");
   const legacy = readFileSync(state, "utf-8");
+  // Guard the seeding itself: a silent no-op replace would leave raw and
+  // canonical Completed equal and the legacy-skew assertions vacuous.
+  if (!/^- \[x\] workspace-scaffold — SKIP/m.test(legacy)) {
+    throw new Error("fixture seeding failed: workspace-scaffold row was not flipped to SKIP");
+  }
   const rawCompleted = (legacy.match(/^- \[x\]/gm) ?? []).length;
   sedReplaceInFile(state, /^- \*\*Completed\*\*: \d+$/m, `- **Completed**: ${rawCompleted}`);
   return p;
@@ -75,8 +81,7 @@ function sixStateProj(): string {
 
 function expectCanonicalCompleted(content: string): void {
   const field = Number.parseInt(/^- \*\*Completed\*\*: (\d+)$/m.exec(content)?.[1] ?? "-1", 10);
-  const completedExecute = (content.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
-  expect(field).toBe(completedExecute);
+  expect(field).toBe(canonicalCompletedCount(content));
 }
 
 // Each case builds its own fixture project, and the canonical emit path

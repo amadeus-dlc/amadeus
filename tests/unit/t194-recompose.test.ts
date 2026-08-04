@@ -39,6 +39,7 @@ import {
   handleRecompose,
 } from "../../packages/framework/core/tools/amadeus-utility.ts";
 import {
+  canonicalCompletedCount,
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -210,8 +211,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     expect(totalAfter).toBe(totalBefore - 2);
     expect(after).toMatch(/- \*\*Stages to Skip\*\*: .*market-research/);
     const completed = Number(/- \*\*Completed\*\*: (\d+)/.exec(after)?.[1]);
-    const completedExecute = (after.match(/^- \[x\] \S+ — EXECUTE(?: .*)?$/gm) ?? []).length;
-    expect(completed).toBe(completedExecute);
+    expect(completed).toBe(canonicalCompletedCount(after));
     expect(after).toMatch(/^- \[x\] workspace-scaffold — SKIP/m);
     expect(completed).toBeLessThan((after.match(/^- \[x\]/gm) ?? []).length);
     // --status counts against the recomposed plan (the static-grid divergence

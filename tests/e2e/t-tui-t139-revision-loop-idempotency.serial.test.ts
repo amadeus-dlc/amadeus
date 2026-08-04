@@ -75,6 +75,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
+import { canonicalCompletedSlugs } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
@@ -157,10 +158,7 @@ function readTerminal(sandbox: string): Terminal {
   );
   // The set of completed EXECUTE-effective stage slugs. Completed SKIP rows are
   // historical state and do not contribute to canonical plan progress.
-  const completedSlugs = (md.match(/^- \[x\] (\S+) — EXECUTE(?: .*)?$/gm) ?? [])
-    .map((l) => /^- \[x\] (\S+)/.exec(l)?.[1] ?? "")
-    .filter((slug) => slug !== "")
-    .sort();
+  const completedSlugs = canonicalCompletedSlugs(md).sort();
   return {
     scope,
     phase,
