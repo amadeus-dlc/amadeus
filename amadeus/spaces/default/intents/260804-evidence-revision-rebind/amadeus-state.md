@@ -35,6 +35,8 @@
 - **Revision Count**: 0
 - **Execution Projection Digest**:
 
+- **Parked**: 2026-08-04T01:21:07Z
+- **Parked At Stage**: reverse-engineering
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -97,9 +99,13 @@ Per unit: [TBD]
 - **Next Stage**: requirements-analysis
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-08-04T01:20:45Z
+- **Last Updated**: 2026-08-04T01:21:07Z
 
 ## Session Resume Point
 - **Last Completed Stage**: state-init
 - **Next Action**: Execute reverse-engineering
 - **Pending Artifacts**: none
+
+<!-- amadeus:mirror-state:v1:start -->
+{"schema":1,"revision":4,"issueNumber":2160,"provenance":{"schema":1,"createIdentity":{"schema":1,"intentUuid":"019fca5b-db81-7bf9-97e1-4de243cf62c4","intentDir":"260804-evidence-revision-rebind","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8f976b5f-0ab4-4233-a47a-778d7ccfc8b3","preparedAt":"2026-08-04T01:21:12.617Z"},"issueNumber":2160,"createdAt":"2026-08-04T01:21:12.617Z"},"receipts":{"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZjYTViLWRiODEtN2JmOS05N2UxLTRkZTI0M2NmNjJjNCIsInBhcmtlZCIsIjIwMjYtMDgtMDRUMDE6MjE6MDdaIiwiY3JlYXRlIl0":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZjYTViLWRiODEtN2JmOS05N2UxLTRkZTI0M2NmNjJjNCIsInBhcmtlZCIsIjIwMjYtMDgtMDRUMDE6MjE6MDdaIiwiY3JlYXRlIl0","event":{"intentUuid":"019fca5b-db81-7bf9-97e1-4de243cf62c4","boundary":{"kind":"parked","stage":"reverse-engineering","instance":"2026-08-04T01:21:07Z"},"operation":"create"},"operationId":"8f976b5f-0ab4-4233-a47a-778d7ccfc8b3","createdRevision":1,"projectSyncRevision":3,"status":"succeeded","preparedAt":"2026-08-04T01:21:12.617Z","attemptedAt":"2026-08-04T01:21:12.617Z","completedAt":"2026-08-04T01:21:12.617Z","projectSyncVerified":true,"createIdentity":{"schema":1,"intentUuid":"019fca5b-db81-7bf9-97e1-4de243cf62c4","intentDir":"260804-evidence-revision-rebind","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8f976b5f-0ab4-4233-a47a-778d7ccfc8b3","preparedAt":"2026-08-04T01:21:12.617Z"},"authorization":{"kind":"auto","event":{"intentUuid":"019fca5b-db81-7bf9-97e1-4de243cf62c4","boundary":{"kind":"parked","stage":"reverse-engineering","instance":"2026-08-04T01:21:07Z"},"operation":"create"},"operation":"create","boundaryInstance":"2026-08-04T01:21:07Z","receiptRevision":1,"resolvedMode":"auto"}}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":{"projects":[{"project":"amadeus-dlc/5","projectId":"PVT_kwDOEcw2nM4BeiIO","itemId":"PVTI_lADOEcw2nM4BeiIOzg1KSbU","phaseField":"Intent Phase","lastAppliedStatus":null,"state":"synced","updatedAt":"2026-08-04T01:21:12.617Z"}]}}
+<!-- amadeus:mirror-state:v1:end -->
