@@ -114,10 +114,23 @@ function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+// Post-parse checks cannot see the original numeric token: JSON.parse rounds
+// a fractional literal like 9007199254740991.1 to a safe integer before any
+// validator runs. The reviver's source text is the only place the token
+// survives, so capture it there and require a plain digit run.
+type SourceReviver = (key: string, value: unknown, context?: { source?: string }) => unknown;
+
 function parseTotalsText(text: string): ParseOutcome {
+  const numericTokens = new Map<string, string>();
   let raw: unknown;
   try {
-    raw = JSON.parse(text);
+    const reviver: SourceReviver = (key, value, context) => {
+      if ((key === "hits" || key === "lines") && typeof context?.source === "string") {
+        numericTokens.set(key, context.source);
+      }
+      return value;
+    };
+    raw = JSON.parse(text, reviver as Parameters<typeof JSON.parse>[1]);
   } catch (err) {
     return { ok: false, detail: `invalid JSON: ${(err as Error).message}` };
   }
@@ -133,6 +146,12 @@ function parseTotalsText(text: string): ParseOutcome {
   }
   if (!isNonNegativeInteger(obj.lines)) {
     return { ok: false, detail: `lines must be a non-negative integer, got ${JSON.stringify(obj.lines)}` };
+  }
+  for (const field of ["hits", "lines"] as const) {
+    const token = numericTokens.get(field);
+    if (token === undefined || !/^\d+$/.test(token)) {
+      return { ok: false, detail: `${field} must be written as a plain integer token, got ${token ?? "none"}` };
+    }
   }
   if (obj.hits > obj.lines) {
     return { ok: false, detail: `hits (${obj.hits}) must be <= lines (${obj.lines})` };

@@ -222,9 +222,27 @@ describe("evaluateGate: malformed / empty inputs", () => {
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
   });
 
-  test("unsafe integer hits (beyond 2^53 - 1) => MALFORMED", () => {
+  test("unsafe integer hits alone (beyond 2^53 - 1) => MALFORMED", () => {
     const r = evaluateGate(
-      { present: true, text: '{"schemaVersion":1,"hits":9007199254740993,"lines":9007199254740993}' },
+      { present: true, text: '{"schemaVersion":1,"hits":9007199254740993,"lines":1}' },
+      present(totals(1, 2)),
+      policy(),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+  });
+
+  test("unsafe integer lines alone (beyond 2^53 - 1) => MALFORMED", () => {
+    const r = evaluateGate(
+      { present: true, text: '{"schemaVersion":1,"hits":1,"lines":9007199254740993}' },
+      present(totals(1, 2)),
+      policy(),
+    );
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+  });
+
+  test("fractional token that rounds to a safe integer => MALFORMED", () => {
+    const r = evaluateGate(
+      { present: true, text: '{"schemaVersion":1,"hits":9007199254740991.1,"lines":9007199254740991.1}' },
       present(totals(1, 2)),
       policy(),
     );
