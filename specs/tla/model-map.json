@@ -18,11 +18,11 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
+          "sha256": "c143cfc61bc40de195441688808bb0f36143da31d02fb45d74c8f0cbef98c264"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "cec225b25f38b9b2ecbad8509894af0fa18f7a74cc8b8a345896654cb10ce030"
+          "sha256": "4385a7f88fcc1c6ecb3cdc0a75b53773d18353c1062fa83f8a18c83f61822b7e"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
@@ -30,7 +30,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "d52010a0189e05ed6415eab3e59b153d51de35672ab79234860c78b55d2f13bb"
+          "sha256": "7cc37b8ea0860c93c77c5d91793918f456bfe0a3589c86a74b31df98817973bb"
         }
       ],
       "vocabulary": {
