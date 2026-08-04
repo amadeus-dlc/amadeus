@@ -28,6 +28,9 @@ import {
 
 const SOURCE_ROOT = join(import.meta.dir, "../..");
 const tempRoots: string[] = [];
+const MOCK_EVENT = "e".repeat(40);
+const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
+const MOCK_TREE = "b".repeat(40);
 
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
@@ -36,6 +39,14 @@ function command(cwd: string, args: readonly string[]): CommandResult {
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? (result.error === undefined ? "" : String(result.error)),
   };
+}
+
+function commandResult(status = 0, stdout = "", stderr = ""): CommandResult {
+  return { status, stdout, stderr };
+}
+
+function commandKey(args: readonly string[]): string {
+  return `${args[0] ?? ""} ${args[1] ?? ""}`;
 }
 
 function must(cwd: string, args: readonly string[]): string {
@@ -114,6 +125,7 @@ function hybridRunner(
   options: {
     pages?: unknown;
     remoteTip?: string;
+    remoteTips?: string[];
     failPush?: boolean;
     failCommit?: boolean;
     failFocused?: boolean;
@@ -127,9 +139,10 @@ function hybridRunner(
     merge_commit_sha: fixture.landing,
     base: { ref: "main" },
   };
+  const remoteTips = [...(options.remoteTips ?? [])];
   return {
     run(args, runOptions = {}) {
-      return interceptedCommand(args, options, pullRequest) ?? command(runOptions.cwd ?? fixture.root, args);
+      return interceptedCommand(args, options, pullRequest, remoteTips) ?? command(runOptions.cwd ?? fixture.root, args);
     },
   };
 }
@@ -139,29 +152,33 @@ function interceptedCommand(
   options: {
     pages?: unknown;
     remoteTip?: string;
+    remoteTips?: string[];
     failPush?: boolean;
     failCommit?: boolean;
     failFocused?: boolean;
     failGitHub?: boolean;
   },
   pullRequest: unknown,
+  remoteTips: string[],
 ): CommandResult | undefined {
-  if (args[0] === "gh") {
+  const key = commandKey(args);
+  if (key === "gh api") {
     if (options.failGitHub) return { status: 1, stdout: "", stderr: "credential rejected" };
     return { status: 0, stdout: JSON.stringify(options.pages ?? [[pullRequest]]), stderr: "" };
   }
-  if (args[0] === "bun" && args[1] === "test") {
+  if (key === "bun test") {
     return options.failFocused
       ? { status: 1, stdout: "", stderr: "focused failure" }
       : { status: 0, stdout: "10 pass\n0 fail\n", stderr: "" };
   }
-  if (args[0] === "git" && args[1] === "ls-remote" && options.remoteTip !== undefined) {
-    return { status: 0, stdout: `${options.remoteTip}\trefs/heads/main\n`, stderr: "" };
+  if (key === "git ls-remote") {
+    const remoteTip = remoteTips.shift() ?? options.remoteTip;
+    if (remoteTip !== undefined) return commandResult(0, `${remoteTip}\trefs/heads/main\n`);
   }
-  if (args[0] === "git" && args[1] === "push" && options.failPush) {
+  if (key === "git push" && options.failPush) {
     return { status: 1, stdout: "", stderr: "push rejected" };
   }
-  if (args[0] === "git" && args[1] === "commit" && options.failCommit) {
+  if (key === "git commit" && options.failCommit) {
     return { status: 1, stdout: "", stderr: "commit rejected" };
   }
   return undefined;
@@ -225,9 +242,128 @@ describe("t427 pure rebind trust boundary", () => {
     expect(readFileSync(join(root, EVIDENCE_REGISTRY_PATH))).toEqual(original);
     expect(command(root, ["git", "status", "--porcelain=v1"]).stdout).toBe("");
   });
+
+  test("covers changed and already-bound pure rebind outcomes in-process", () => {
+    const changedRoot = initRepository();
+    const head = must(changedRoot, ["git", "rev-parse", "HEAD"]);
+    expect(runEvidenceCommand(["rebind", "--target-revision", head], { repositoryRoot: changedRoot })).toMatchObject({
+      status: "changed",
+      code: "REBIND_OK",
+      bindingRevision: expect.any(String),
+      targetRevision: head,
+    });
+
+    const noOpRoot = initRepository();
+    applyReboundBundle(noOpRoot, buildReboundBundle(noOpRoot, MOCK_EVENT));
+    const runner: CommandRunner = {
+      run(args) {
+        if (args[0] === "git" && args[1] === "rev-parse") return { status: 0, stdout: `${MOCK_EVENT}\n`, stderr: "" };
+        if (args[0] === "git" && args[1] === "symbolic-ref") {
+          return { status: 0, stdout: "refs/heads/evidence-test\n", stderr: "" };
+        }
+        return { status: 0, stdout: "", stderr: "" };
+      },
+    };
+    expect(runEvidenceCommand(["rebind", "--target-revision", MOCK_EVENT], {
+      repositoryRoot: noOpRoot,
+      runner,
+    })).toMatchObject({ status: "no-op", code: "REBIND_NOOP", bindingRevision: MOCK_EVENT });
+  });
+
+  test("reports a rollback failure when both file and index recovery fail", () => {
+    const root = initRepository();
+    let statusCalls = 0;
+    const handlers: Record<string, () => CommandResult> = {
+      "git rev-parse": () => commandResult(0, `${MOCK_EVENT}\n`),
+      "git symbolic-ref": () => commandResult(0, "refs/heads/evidence-test\n"),
+      "git status": () => {
+        statusCalls += 1;
+        if (statusCalls === 2) rmSync(join(root, "tests", "no-silent-drop"), { recursive: true });
+        return commandResult();
+      },
+      "git restore": () => commandResult(1, "", "index recovery rejected"),
+    };
+    const runner: CommandRunner = {
+      run(args) {
+        return handlers[commandKey(args)]?.() ?? commandResult();
+      },
+    };
+    expect(runEvidenceCommand(["rebind", "--target-revision", MOCK_EVENT], { repositoryRoot: root, runner })).toMatchObject({
+      status: "error",
+      code: "REBIND_ROLLBACK_FAILED",
+    });
+  });
 });
 
+function syntheticReconcileRunner(
+  root: string,
+  options: { bindingExists: boolean; mutateEvidenceTo?: string },
+): CommandRunner {
+  let catFileCalls = 0;
+  const handlers: Record<string, (args: readonly string[]) => CommandResult> = {
+    "git cat-file": () => {
+      catFileCalls += 1;
+      return commandResult(catFileCalls === 1 || options.bindingExists ? 0 : 1);
+    },
+    "git rev-parse": (args) => {
+      if (args[2]?.endsWith("^{tree}")) return commandResult(0, `${MOCK_TREE}\n`);
+      if (args[2]?.startsWith("refs/no-silent-drop/")) return commandResult(0, `${MOCK_PULL_REQUEST_HEAD}\n`);
+      return commandResult(0, `${MOCK_EVENT}\n`);
+    },
+    "git status": () => commandResult(),
+    "git ls-tree": () => commandResult(),
+    "gh api": () => {
+      if (options.mutateEvidenceTo !== undefined) {
+        applyReboundBundle(root, buildReboundBundle(root, options.mutateEvidenceTo));
+      }
+      return commandResult(0, JSON.stringify([[
+        {
+          number: 7,
+          state: "closed",
+          merged_at: "2026-08-04T00:00:00Z",
+          merge_commit_sha: MOCK_EVENT,
+          base: { ref: "main" },
+        },
+      ]]));
+    },
+  };
+  return {
+    run(args) {
+      return handlers[commandKey(args)]?.(args) ?? commandResult();
+    },
+  };
+}
+
 describe("t427 squash identity proof and main convergence", () => {
+  test("fails closed if the binding changes during reconciliation and no-ops an already-bound bundle", () => {
+    const changedRoot = initRepository();
+    const changedResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      MOCK_EVENT,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: changedRoot,
+      runner: syntheticReconcileRunner(changedRoot, { bindingExists: false, mutateEvidenceTo: "d".repeat(40) }),
+    });
+    expect(changedResult).toMatchObject({ status: "error", code: "REBIND_BINDING_CHANGED" });
+
+    const noOpRoot = initRepository();
+    applyReboundBundle(noOpRoot, buildReboundBundle(noOpRoot, MOCK_EVENT));
+    const noOpResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      MOCK_EVENT,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: noOpRoot,
+      runner: syntheticReconcileRunner(noOpRoot, { bindingExists: false }),
+    });
+    expect(noOpResult).toMatchObject({ status: "no-op", code: "REBIND_NOOP", bindingRevision: MOCK_EVENT });
+  });
+
   test("proves both trees, pushes one evidence commit, then no-ops on the rebind commit push", () => {
     const fixture = squashFixture();
     const first = runEvidenceCommand([
@@ -358,6 +494,37 @@ describe("t427 squash identity proof and main convergence", () => {
     ], { repositoryRoot: fixture.root, runner: hybridRunner(fixture, { failPush: true }) });
     expect(result).toMatchObject({ status: "error", code: "REBIND_PUSH_FAILED" });
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(fixture.landing);
+  });
+
+  test("reports supersession after commit and after a rejected push", () => {
+    const afterCommit = squashFixture();
+    const afterCommitResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      afterCommit.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: afterCommit.root,
+      runner: hybridRunner(afterCommit, { remoteTips: [afterCommit.landing, "d".repeat(40)] }),
+    });
+    expect(afterCommitResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
+
+    const afterPush = squashFixture();
+    const afterPushResult = runEvidenceCommand([
+      "reconcile",
+      "--event-revision",
+      afterPush.landing,
+      "--repository",
+      "amadeus-dlc/amadeus",
+    ], {
+      repositoryRoot: afterPush.root,
+      runner: hybridRunner(afterPush, {
+        failPush: true,
+        remoteTips: [afterPush.landing, afterPush.landing, "d".repeat(40)],
+      }),
+    });
+    expect(afterPushResult).toMatchObject({ status: "superseded", code: "REBIND_SUPERSEDED" });
   });
 
   test("restores both index and worktree when the evidence commit fails", () => {

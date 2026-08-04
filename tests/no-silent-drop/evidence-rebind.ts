@@ -15,7 +15,6 @@ import {
   evidenceDigestForEntry,
 } from "./repository-adoption-evidence.ts";
 import {
-  type AdoptionReceiptId,
   type EvidenceRegistry,
   validateEvidenceRegistry,
 } from "./repository-adoption.ts";
@@ -572,13 +571,4 @@ function redactSecrets(value: string): string {
     redacted = redacted.split(secret).join("[REDACTED]");
   }
   return redacted;
-}
-
-export function receiptIdsFromRegistry(repositoryRoot: string): AdoptionReceiptId[] {
-  const registry = parseJson(readFileSync(join(repositoryRoot, EVIDENCE_REGISTRY_PATH)), EVIDENCE_REGISTRY_PATH);
-  return array(registry.receipts, "registry.receipts").map((value, index) => {
-    const id = record(value, `registry.receipts[${index}]`).id;
-    if (typeof id !== "string") throw new EvidenceRebindError("REBIND_SCHEMA_INVALID", `receipt ${index} id is invalid`);
-    return id as AdoptionReceiptId;
-  });
 }

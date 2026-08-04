@@ -22,8 +22,10 @@ import {
 } from "../no-silent-drop/evidence-rebind.ts";
 import { validateEvidenceRegistry } from "../no-silent-drop/repository-adoption.ts";
 import {
+  evidenceMain,
   evidenceExitCode,
   parseEvidenceCommand,
+  runEvidenceCommand,
   serializeEvidenceEnvelope,
 } from "../../scripts/no-silent-drop-evidence.ts";
 
@@ -156,6 +158,26 @@ describe("t427 deterministic no-silent-drop evidence rebind", () => {
     });
     expect(() => parseEvidenceCommand(["rebind", "--target-revision", "abc123"])).toThrow();
     expect(() => parseEvidenceCommand(["rebind", "--target-revision", TARGET, "--target-revision", TARGET])).toThrow();
+    expect(() => parseEvidenceCommand(["rebind", "--target-revision"])).toThrow();
+    expect(() => parseEvidenceCommand(["reconcile", "--event-revision", TARGET, "--repository", "invalid"])).toThrow();
+    expect(() => parseEvidenceCommand(["unknown"])).toThrow();
+    expect(runEvidenceCommand(["unknown"])).toMatchObject({ status: "error", code: "REBIND_INPUT_INVALID" });
+  });
+
+  test("drives the exported CLI main in-process", () => {
+    let output = "";
+    const originalWrite = process.stdout.write;
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      output += String(chunk);
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      expect(evidenceMain(["unknown"])).toBe(1);
+    } finally {
+      process.stdout.write = originalWrite;
+    }
+    expect(output.endsWith("\n")).toBeTrue();
+    expect(JSON.parse(output)).toMatchObject({ status: "error", code: "REBIND_INPUT_INVALID" });
   });
 
   test("keeps every envelope field and status invariant", () => {
