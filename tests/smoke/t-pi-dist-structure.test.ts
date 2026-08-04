@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import piManifest from "../../packages/framework/harness/pi/manifest.ts";
+import { transform } from "../../scripts/harness-transform.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const DIST = join(ROOT, "dist", "pi");
@@ -17,7 +18,10 @@ function sourcePath(source: string): string {
 }
 
 function sourceSha256(source: string): string {
-  return createHash("sha256").update(readFileSync(sourcePath(source))).digest("hex");
+  const path = sourcePath(source);
+  return createHash("sha256")
+    .update(transform(path, readFileSync(path), piManifest.harnessDir, piManifest.rulesRename))
+    .digest("hex");
 }
 
 describe("Pi dist foundation", () => {
@@ -25,18 +29,22 @@ describe("Pi dist foundation", () => {
     const descriptorPath = join(DIST, ".pi", "tools", "data", "harness.json");
     expect(existsSync(descriptorPath)).toBe(true);
     const descriptor = JSON.parse(readFileSync(descriptorPath, "utf-8"));
+    const resources = piManifest.resources;
+    expect(resources).toBeDefined();
+    expect(resources?.length).toBeGreaterThan(0);
+    if (resources === undefined || resources.length === 0) throw new Error("Pi manifest resources are required");
     expect(descriptor).toEqual({
       name: "pi",
       harnessDir: ".pi",
       rulesSubdir: "rules",
       stageEntry: piManifest.stageEntry,
       nativeRuntime: piManifest.nativeRuntime,
-      resources: piManifest.resources?.map((resource) => ({
+      resources: resources.map((resource) => ({
         ...resource,
         sha256: sourceSha256(resource.source),
       })),
     });
-    for (const resource of piManifest.resources ?? []) {
+    for (const resource of resources) {
       expect(existsSync(join(DIST, ...resource.destination.split("/")))).toBe(true);
     }
     for (const resource of descriptor.resources) {
@@ -45,12 +53,13 @@ describe("Pi dist foundation", () => {
   });
 
   test("keeps authored resources byte-identical to the manifest catalog", () => {
-    for (const resource of piManifest.resources ?? []) {
+    const resources = piManifest.resources;
+    if (resources === undefined || resources.length === 0) throw new Error("Pi manifest resources are required");
+    for (const resource of resources) {
       const source = sourcePath(resource.source);
       const projected = join(DIST, ...resource.destination.split("/"));
-      expect(readFileSync(projected).equals(readFileSync(source))).toBe(true);
-      expect(createHash("sha256").update(readFileSync(projected)).digest("hex"))
-        .toBe(sourceSha256(resource.source));
+      const expected = transform(source, readFileSync(source), piManifest.harnessDir, piManifest.rulesRename);
+      expect(readFileSync(projected).equals(expected)).toBe(true);
     }
   });
 

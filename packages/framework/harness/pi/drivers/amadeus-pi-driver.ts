@@ -580,8 +580,7 @@ export async function executePiChild(rawRequest: unknown, options: PiDriverOptio
   const run = await runGuardian(request, snapshot, store, lifecycle, lifecycleStart, fingerprint, options);
   let reason = run.reason;
   const kind = terminalKind(run);
-  if (run.attemptStart !== null) {
-    const attemptFinished = lifecycle.finishAttempt({
+  const attemptFinished = run.attemptStart === null ? null : lifecycle.finishAttempt({
       idempotencyKey: `${request.deliveryKey}:finish-attempt`,
       start: run.attemptStart,
       outcome: {
@@ -589,19 +588,20 @@ export async function executePiChild(rawRequest: unknown, options: PiDriverOptio
         terminationReason: reason ?? "pi-child-succeeded",
       },
     });
-    const operationStart = lifecycleStart.operationStart;
-    const operationFinished = operationStart.ok
-      ? lifecycle.finishOperation({
+  const operationStart = lifecycleStart.operationStart;
+  const operationFinished = operationStart.ok
+    ? lifecycle.finishOperation({
           idempotencyKey: `${request.deliveryKey}:finish-operation`,
           start: operationStart.value.start,
           outcome: {
             outcome: kind === "succeeded" ? "succeeded" : kind === "cancelled" ? "cancelled" : "failed",
             terminationReason: reason ?? "pi-child-succeeded",
           },
-        })
-      : null;
-    if (!attemptFinished.ok || operationFinished === null || !operationFinished.ok) reason = "lifecycle-terminal-commit-failed";
-  } else if (kind === "succeeded") {
+      })
+    : null;
+  if ((attemptFinished !== null && !attemptFinished.ok) || (operationStart.ok && (operationFinished === null || !operationFinished.ok))) {
+    reason = "lifecycle-terminal-commit-failed";
+  } else if (run.attemptStart === null && kind === "succeeded") {
     reason = "attempt-start-missing";
   }
   const finalKind: PiTerminalRecord["kind"] = reason === null ? kind : kind === "cancelled" || kind === "timed-out" ? kind : "failed";

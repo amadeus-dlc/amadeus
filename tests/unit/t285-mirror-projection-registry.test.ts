@@ -107,4 +107,11 @@ describe("t285 projection registry", () => {
     ]));
   });
 
+  test("reports an unknown surface instead of throwing while checking self-install paths", () => {
+    const base = MIRROR_PROJECTIONS[0];
+    expect(validateMirrorProjectionRegistry([{ ...base, surface: "unknown" as never }])).toEqual(
+      expect.arrayContaining(["unknown: unknown surface"]),
+    );
+  });
+
 });

@@ -13,9 +13,12 @@ import {
 } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
   existsSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   readdirSync,
   renameSync,
@@ -387,12 +390,16 @@ function stableValue(value: unknown, seen = new Set<object>()): unknown {
   if (typeof value !== "object") return String(value);
   if (seen.has(value)) return "[circular]";
   seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => stableValue(item, seen));
-  return Object.fromEntries(
-    Object.entries(value as JsonObject)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, item]) => [key, stableValue(item, seen)]),
-  );
+  try {
+    if (Array.isArray(value)) return value.map((item) => stableValue(item, seen));
+    return Object.fromEntries(
+      Object.entries(value as JsonObject)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, stableValue(item, seen)]),
+    );
+  } finally {
+    seen.delete(value);
+  }
 }
 
 function stableJson(value: unknown): string {
@@ -477,6 +484,21 @@ function writeAtomic(path: string, value: string): void {
   renameSync(temporary, path);
 }
 
+function createExclusiveKey(path: string): boolean {
+  try {
+    const fd = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
+    try {
+      writeFileSync(fd, randomBytes(32).toString("base64"), "utf8");
+    } finally {
+      closeSync(fd);
+    }
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw error;
+  }
+}
+
 class SealedPayloadVault {
   readonly #keyPath: string;
   readonly #journalDir: string;
@@ -495,7 +517,8 @@ class SealedPayloadVault {
         && lstatSync(this.#journalDir).isDirectory()
         && readFileNames(this.#journalDir).some((name) => name.endsWith(".json"));
       if (hasJournal) throw new Error("Pi payload key is missing while journal records exist");
-      writeAtomic(this.#keyPath, randomBytes(32).toString("base64"));
+      mkdirSync(dirname(this.#keyPath), { recursive: true, mode: 0o700 });
+      createExclusiveKey(this.#keyPath);
     }
     const key = Buffer.from(readFileSync(this.#keyPath, "utf8").trim(), "base64");
     if (key.length !== 32) throw new Error("Pi payload key is invalid");
@@ -632,9 +655,14 @@ export class PiBridgeJournal {
     for (const name of readFileNames(this.#journalDir).filter((item) => item.endsWith(".json")).sort()) {
       const path = join(this.#journalDir, name);
       assertNoSymlink(path);
-      const raw = JSON.parse(readFileSync(path, "utf8")) as JournalRecord;
-      if (raw.version !== 1 || raw.event?.eventKey === undefined) throw new Error(`invalid Pi journal record: ${name}`);
-      const verified = this.read(raw.event.eventKey);
+      const verified = JSON.parse(readFileSync(path, "utf8")) as JournalRecord;
+      if (
+        verified.version !== 1
+        || (verified.sequence !== undefined && (!Number.isSafeInteger(verified.sequence) || verified.sequence < 1))
+        || verified.event?.eventKey === undefined
+        || this.#path(verified.event.eventKey) !== path
+      ) throw new Error(`invalid Pi journal record: ${name}`);
+      this.#vault.open(verified.sealedPayload);
       if (
         verified.state === "prepared"
         && (sessionIdDigest === undefined || verified.event.sessionIdDigest === sessionIdDigest)
@@ -1264,8 +1292,9 @@ export function createAmadeusPiExtension(options: AmadeusPiExtensionOptions = {}
 
     function handler(name: Pi083EventName): PiExtensionHandler {
       return (event, context) => {
-        serialized = serialized.then(() => commit(name, event, context));
-        return serialized;
+        const operation = serialized.catch(() => undefined).then(() => commit(name, event, context));
+        serialized = operation.then(() => undefined, () => undefined);
+        return operation;
       };
     }
 

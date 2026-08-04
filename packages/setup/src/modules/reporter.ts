@@ -1,5 +1,6 @@
 import type { ApplyResult } from "../domain/apply-result.ts";
 import type { UsageError } from "../domain/command.ts";
+import { HarnessName } from "../domain/harness.ts";
 import type { InstallAdmission, InstallationError } from "../domain/installation.ts";
 import type { ManifestError } from "../domain/manifest.ts";
 import type { FetchError } from "../domain/payload.ts";
@@ -17,12 +18,13 @@ export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestE
 // it never builds its own message text.
 
 export function renderHelp(): string {
+  const harnesses = HarnessName.all.join("|");
   return [
     "amadeus-setup",
     "",
     "Usage:",
-    "  amadeus-setup install [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi|pi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
-    "  amadeus-setup upgrade [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi|pi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
+    `  amadeus-setup install [--harness <${harnesses}>] [--target <path>] [--version <semver|tag>] [--yes] [--force]`,
+    `  amadeus-setup upgrade [--harness <${harnesses}>] [--target <path>] [--version <semver|tag>] [--yes] [--force]`,
     "  amadeus-setup            # this help; install/upgrade are never run implicitly",
   ].join("\n");
 }
@@ -141,7 +143,7 @@ export function renderError(err: ClassifiedError): string {
     case "unknown-flag":
       return `Unknown option: ${err.raw}. Run \`amadeus-setup\` with no arguments for usage.`;
     case "invalid-harness":
-      return `Invalid --harness value: "${err.raw}". Expected one of claude, codex, kiro, kiro-ide, opencode, cursor, kimi, pi.`;
+      return `Invalid --harness value: "${err.raw}". Expected one of ${HarnessName.all.join(", ")}.`;
     case "multiple-harnesses":
       return `Only one --harness is supported per run (got: ${err.raws.join(", ")}). Run once per harness.`;
     case "missing-required":

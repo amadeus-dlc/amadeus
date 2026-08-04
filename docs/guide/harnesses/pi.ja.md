@@ -79,10 +79,11 @@ candidate を確認した後、次のどちらかで project-local に activatio
 
 ```bash
 # Local source: full commit identity の clean repository を使う。
-pi install -l /absolute/path/to/amadeus
+cd /absolute/path/to
+pi install ./amadeus -l
 
 # Git source: credential を含まない canonical HTTPS と 40 桁の full commit SHA を使う。
-pi install -l https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>
+pi install https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha> -l
 ```
 
 local candidate を形式的に識別できるのは、worktree が clean で、
@@ -134,15 +135,15 @@ setup upgrade は transactional で、installer manifest の分類に従って u
 
 project-local な Pi Package registration では、`pi update --extensions` が pin されて
 いない package を更新します。Amadeus の Git candidate は pin を維持してください。
-新しい確認済み commit へ移る場合は `pi install -l <url>@<new-full-sha>` を明示的に実行し、
+新しい確認済み commit へ移る場合は `pi install <url>@<new-full-sha> -l` を明示的に実行し、
 完全な project distribution も同じ candidate へ upgrade します。新しい package entry と
 古い project-local runtime file を混在させないでください。
 
 ## uninstall
 
 `@amadeus-dlc/setup` には現在 uninstall subcommand がありません。`amadeus/` を recursive
-に削除しないでください。ここには version-controlled な intent record、audit shard、
-team memory、knowledge が含まれます。これらの record を保持したうえで、VCS と
+に削除しないでください。ここには version-controlled な intent のレコードディレクトリ、
+`audit/` シャード、`memory/team.md`、knowledge が含まれます。これらの record を保持したうえで、VCS と
 `amadeus/.installer/amadeus-setup-manifest.json` を根拠に、確認済みの installer-owned path
 だけを削除してください。shared file と user-owned file は project owner が明示的に
 決めない限り残します。
@@ -150,8 +151,8 @@ team memory、knowledge が含まれます。これらの record を保持した
 project-local な Pi Package registration は同じ source specifier で削除します。
 
 ```bash
-pi remove -l /absolute/path/to/amadeus
-pi remove -l https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>
+pi remove ./amadeus -l
+pi remove https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha> -l
 ```
 
 `pi uninstall` は `pi remove` の alias です。package registration を削除しても、setup が

@@ -72,13 +72,13 @@ function isIsoTimestamp(value: unknown): value is string {
 
 export function isSupportedPiVersion(value: unknown): value is string {
   if (typeof value !== "string") return false;
-  const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/.exec(value);
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/.exec(value);
   if (match === null) return false;
   const major = Number(match[1]);
   const minor = Number(match[2]);
   const patch = Number(match[3]);
-  const prerelease = value.includes("-");
-  return major > 0 || minor > 83 || (minor === 83 && (patch > 0 || !prerelease));
+  const prerelease = match[4] !== undefined;
+  return major > 0 || (major === 0 && (minor > 83 || (minor === 83 && (patch > 0 || !prerelease))));
 }
 
 function isProviderId(value: unknown): value is string {
@@ -87,16 +87,15 @@ function isProviderId(value: unknown): value is string {
     && !value.includes("://");
 }
 
-function validateAssertions(value: unknown, path: string, problems: string[]): value is Record<PiMilestoneId, true> {
+function validateAssertions(value: unknown, path: string, problems: string[]): void {
   const assertions = record(value);
   if (assertions === null || !exactKeys(assertions, PI_MILESTONE_IDS)) {
     problems.push(`${path}.assertions must contain exactly M1-M10`);
-    return false;
+    return;
   }
   for (const id of PI_MILESTONE_IDS) {
     if (assertions[id] !== true) problems.push(`${path}.assertions.${id} must be true`);
   }
-  return problems.length === 0;
 }
 
 function validateRunIdentity(run: Record<string, unknown>, path: string, problems: string[]): void {
@@ -135,18 +134,17 @@ function validateTui(value: unknown, path: string, problems: string[]): void {
   if (!isDigest(tui.transcriptDigest)) problems.push(`${path}.tui.transcriptDigest must be sha256`);
 }
 
-function validateRun(value: unknown, index: number, problems: string[]): value is PiFormalRun {
+function validateRun(value: unknown, index: number, problems: string[]): void {
   const path = `runs[${index}]`;
   const run = record(value);
   if (run === null || !exactKeys(run, ["assertions", "executedAt", "modelId", "piVersion", "platform", "providerId", "rpc", "tui"])) {
     problems.push(`${path} has an invalid closed shape`);
-    return false;
+    return;
   }
   validateRunIdentity(run, path, problems);
   validateRpc(run.rpc, path, problems);
   validateTui(run.tui, path, problems);
   validateAssertions(run.assertions, path, problems);
-  return problems.length === 0;
 }
 
 function validateCandidate(value: unknown, problems: string[]): void {

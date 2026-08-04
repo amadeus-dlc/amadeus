@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import piManifest from "../packages/framework/harness/pi/manifest.ts";
+import { transform } from "./harness-transform.ts";
 import type { HarnessResourceDescriptor } from "./manifest-types.ts";
 
 export type PiPackageMetadata = Readonly<{
@@ -59,10 +60,14 @@ export function expectedPiPackageMetadata(): PiPackageMetadata {
 
 export function buildPiCandidateGraph(repoRoot: string): PiCandidateGraph {
   const sourceRoot = join(repoRoot, "packages", "framework", "harness", "pi");
-  const resources = (piManifest.resources ?? []).map((resource) => Object.freeze({
-    ...resource,
-    sha256: createHash("sha256").update(readFileSync(join(sourceRoot, ...resource.source.split("/")))).digest("hex"),
-  }));
+  const resources = (piManifest.resources ?? []).map((resource) => {
+    const sourcePath = join(sourceRoot, ...resource.source.split("/"));
+    const projected = transform(sourcePath, readFileSync(sourcePath), piManifest.harnessDir, piManifest.rulesRename);
+    return Object.freeze({
+      ...resource,
+      sha256: createHash("sha256").update(projected).digest("hex"),
+    });
+  });
   const catalogDigest = piCatalogDigest(resources);
   return Object.freeze({
     catalogDigest,
@@ -97,6 +102,14 @@ export function localPiSourceIdentity(
 
 export function gitPiSourceIdentity(locator: string, revision: string, catalogDigest: string): PiSourceIdentity {
   if (!/^[0-9a-f]{40}$/u.test(revision)) return Object.freeze({ kind: "blocked", reason: "git source is not pinned to a full commit SHA" });
+  const sourceMatch = /^https:\/\/[^/?#]+(?<path>\/[^?#]*)$/u.exec(locator);
+  const originalPath = sourceMatch?.groups?.path;
+  if (
+    originalPath === undefined
+    || originalPath.startsWith("//")
+    || originalPath.endsWith("/")
+    || originalPath.split("/").slice(1).some((segment) => segment === "" || segment === "." || segment === "..")
+  ) return Object.freeze({ kind: "blocked", reason: "git source URL path is not canonical" });
   let url: URL;
   try {
     url = new URL(locator);
@@ -106,7 +119,7 @@ export function gitPiSourceIdentity(locator: string, revision: string, catalogDi
   if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || url.search !== "" || url.hash !== "") {
     return Object.freeze({ kind: "blocked", reason: "git source URL is not credential-free canonical HTTPS" });
   }
-  if (url.pathname.includes("..") || dirname(url.pathname) === ".") {
+  if (url.pathname !== originalPath || url.pathname.includes("..") || dirname(url.pathname) === ".") {
     return Object.freeze({ kind: "blocked", reason: "git source URL path is not canonical" });
   }
   return Object.freeze({ kind: "formal", source: "git", revision, catalogDigest, locator: url.toString() });

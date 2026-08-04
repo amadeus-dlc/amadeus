@@ -9,9 +9,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InstallInputs, ParsedCommand, UsageError } from "./domain/command.ts";
+import type { ApplyResult } from "./domain/apply-result.ts";
 import { engineDirNameFor } from "./domain/engine-layout.ts";
 import { Installation } from "./domain/installation.ts";
-import { Manifest, ManifestFiles } from "./domain/manifest.ts";
+import { Manifest, ManifestFiles, type ManifestError } from "./domain/manifest.ts";
 import { Plan } from "./domain/plan.ts";
 import { UpgradeRefusal, UpgradeSource } from "./domain/upgrade.ts";
 import { NextSteps } from "./domain/verify-result.ts";
@@ -93,6 +94,22 @@ export async function main(argv: readonly string[], ports: CliPorts = createDefa
 }
 
 type Mode = "interactive" | "non-interactive";
+
+async function applyAndPersist(
+  plan: Plan,
+  target: string,
+  manifest: Manifest,
+  ports: CliPorts,
+): Promise<{ readonly applied: ApplyResult; readonly manifestError: ManifestError | null }> {
+  const applied = ports.transactionCoordinator === undefined
+    ? await Applier.create(ports.applyWrite).apply(plan, target)
+    : await ports.transactionCoordinator.apply(plan, target, manifest);
+  if (applied.hasFailures() || ports.transactionCoordinator !== undefined) {
+    return { applied, manifestError: null };
+  }
+  const written = await ports.manifestIo.write(target, manifest);
+  return { applied, manifestError: written.type === "err" ? written.error : null };
+}
 
 // Shared by runInstall/runUpgrade (both subcommands take the same --harness/
 // --target/--yes flags, per the CLI Contract's symmetric grammar): resolves
@@ -264,20 +281,14 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       harness: inputs.harness,
       installStartedAt: plan.startedAtIso,
     });
-    const applied =
-      ports.transactionCoordinator === undefined
-        ? await Applier.create(ports.applyWrite).apply(plan, inputs.target)
-        : await ports.transactionCoordinator.apply(plan, inputs.target, manifest);
+    const { applied, manifestError } = await applyAndPersist(plan, inputs.target, manifest, ports);
     if (applied.hasFailures()) {
       console.error(reporter.renderApplyFailure(applied));
       return 1;
     }
-    if (ports.transactionCoordinator === undefined) {
-      const written = await ports.manifestIo.write(inputs.target, manifest);
-      if (written.type === "err") {
-        console.error(reporter.renderError(written.error));
-        return 1;
-      }
+    if (manifestError !== null) {
+      console.error(reporter.renderError(manifestError));
+      return 1;
     }
 
     const verify = await Verifier.create(ports.verifyRead).verify(inputs.target, manifest);
@@ -376,20 +387,14 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       files: filesResult.value,
       meta: { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.startedAtIso },
     });
-    const applied =
-      ports.transactionCoordinator === undefined
-        ? await Applier.create(ports.applyWrite).apply(plan, inputs.target)
-        : await ports.transactionCoordinator.apply(plan, inputs.target, newManifest);
+    const { applied, manifestError } = await applyAndPersist(plan, inputs.target, newManifest, ports);
     if (applied.hasFailures()) {
       console.error(reporter.renderApplyFailure(applied));
       return 1;
     }
-    if (ports.transactionCoordinator === undefined) {
-      const written = await ports.manifestIo.write(inputs.target, newManifest);
-      if (written.type === "err") {
-        console.error(reporter.renderError(written.error));
-        return 1;
-      }
+    if (manifestError !== null) {
+      console.error(reporter.renderError(manifestError));
+      return 1;
     }
 
     const verify = await Verifier.create(ports.verifyRead).verify(inputs.target, newManifest);

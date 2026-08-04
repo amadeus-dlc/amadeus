@@ -287,7 +287,8 @@ export function validateMirrorProjectionRegistry(
         else targets.set(path, `${entry.surface}:${artifact.kind}`);
       }
     }
-    const includesSelf = projectionRootsFor(entry.surface).selfRoot !== null;
+    const projectionRoots = roots[entry.surface as MirrorSurfaceId];
+    const includesSelf = projectionRoots?.selfRoot != null;
     for (const artifact of entry.artifacts) {
       if (
         includesSelf &&
@@ -310,10 +311,6 @@ export function validateMirrorProjectionRegistry(
     if (nested) findings.push(`root collision: ${paths[index]} contains ${nested}`);
   }
   return findings.sort();
-}
-
-function projectionRootsFor(surface: MirrorSurfaceId): ProjectionRoots {
-  return roots[surface];
 }
 
 export function mirrorProjection(surface: MirrorSurfaceId): MirrorProjection {

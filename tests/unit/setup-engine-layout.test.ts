@@ -28,7 +28,7 @@ describe("engineDirNameFor", () => {
 });
 
 describe("allEngineDirNames", () => {
-  test("includes .kimi-code so detection scans a kimi install (FR-5a)", () => {
+  test("includes .kimi-code and .pi so detection scans both installs", () => {
     expect(allEngineDirNames()).toContain(".kimi-code");
     expect(allEngineDirNames()).toContain(".pi");
   });

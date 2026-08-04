@@ -134,6 +134,49 @@ describe("SetupTransactionCoordinator", () => {
     expect(readdirSync(join(privateRoot, "active"))).toEqual([]);
   });
 
+  test("publishes lock metadata atomically so a pre-publication crash remains retryable", async () => {
+    const sample = fixture();
+    writeFileSync(join(sample.source, "amadeus-tool.ts"), "new\n");
+    const entries = [entry("amadeus-tool.ts", "new\n", "add")];
+    const failed = await SetupTransactionCoordinator.create({
+      privateRoot: () => sample.privateRoot,
+      beforeIo: (event) => {
+        if (event.operation === "lock-publish") throw new Error("crash before lock publication");
+      },
+    }).apply(plan(sample.source, entries), sample.target, manifest(entries));
+
+    expect(failed.hasFailures()).toBe(true);
+    expect(existsSync(join(sample.privateRoot, "lock"))).toBe(false);
+    const retried = await SetupTransactionCoordinator.create({ privateRoot: () => sample.privateRoot }).apply(
+      plan(sample.source, entries),
+      sample.target,
+      manifest(entries),
+    );
+    expect(retried.hasFailures()).toBe(false);
+  });
+
+  test("reports both the apply and rollback failures without masking the original", async () => {
+    const sample = fixture();
+    writeFileSync(join(sample.target, "amadeus-tool.ts"), "old\n");
+    writeFileSync(join(sample.source, "amadeus-tool.ts"), "new\n");
+    const entries = [entry("amadeus-tool.ts", "new\n")];
+    let applyFailed = false;
+    const result = await SetupTransactionCoordinator.create({
+      privateRoot: () => sample.privateRoot,
+      beforeIo: (event) => {
+        if (!applyFailed && event.operation === "link-no-clobber") {
+          applyFailed = true;
+          throw new Error("apply injection");
+        }
+        if (applyFailed && event.operation === "link-no-clobber") throw new Error("rollback injection");
+      },
+    }).apply(plan(sample.source, entries), sample.target, manifest(entries));
+
+    expect(result.hasFailures()).toBe(true);
+    expect(result.failures()[0]?.detail).toContain("apply injection");
+    expect(result.failures()[0]?.detail).toContain("rollback also failed");
+  });
+
   test("every durability I/O ordinal leaves either the complete old state or the complete committed state", async () => {
     const baseline = fixture();
     writeFileSync(join(baseline.target, "amadeus-tool.ts"), "old\n");

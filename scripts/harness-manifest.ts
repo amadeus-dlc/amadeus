@@ -159,7 +159,7 @@ function recordCaseFoldedPath(
   findings: string[],
 ): void {
   if (typeof raw !== "string") return;
-  const folded = raw.toLocaleLowerCase("en-US");
+  const folded = raw.normalize("NFC").toLocaleLowerCase("en-US");
   if (seen.has(folded)) findings.push(`${label}.${role} duplicates another resource after case-folding`);
   seen.add(folded);
 }

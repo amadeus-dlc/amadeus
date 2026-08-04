@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  isSupportedPiVersion,
   PI_MILESTONE_IDS,
   validatePiFormalEvidence,
 } from "../../scripts/pi-conformance-evidence.ts";
@@ -92,6 +93,12 @@ describe("Pi M1-M10 trace", () => {
 });
 
 describe("Pi formal evidence admission", () => {
+  test("distinguishes prerelease markers from build metadata at the 0.83.0 floor", () => {
+    expect(isSupportedPiVersion("0.83.0+build-1")).toBe(true);
+    expect(isSupportedPiVersion("0.83.0-rc.1+build-1")).toBe(false);
+    expect(isSupportedPiVersion("0.84.0-rc.1+build-1")).toBe(true);
+  });
+
   test("dispatches the live child through the lifecycle that owns its parent operation", async () => {
     const lifecycle = {} as Parameters<typeof dispatchPiLiveChild>[1];
     let receivedLifecycle: unknown;

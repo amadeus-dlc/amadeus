@@ -17,10 +17,10 @@ function median(values: readonly number[]): number {
   return ordered.length % 2 === 0 ? (lower + upper) / 2 : upper;
 }
 
-function elapsed(operation: () => unknown): number {
+function elapsed<T>(operation: () => T): { readonly ms: number; readonly value: T } {
   const started = performance.now();
-  expect(operation()).not.toBeNull();
-  return performance.now() - started;
+  const value = operation();
+  return { ms: performance.now() - started, value };
 }
 
 describe("Pi adapter overhead against the fixed Kimi baseline", () => {
@@ -40,13 +40,17 @@ describe("Pi adapter overhead against the fixed Kimi baseline", () => {
     const kimiMs: number[] = [];
     const piMs: number[] = [];
     for (let index = 0; index < MEASURED_RUNS; index += 1) {
-      kimiMs.push(elapsed(() => normalizePayload("mint", kimiFixture)));
-      piMs.push(elapsed(() => parsePi083Event("input", piFixture)));
+      const kimi = elapsed(() => normalizePayload("mint", kimiFixture));
+      const pi = elapsed(() => parsePi083Event("input", piFixture));
+      expect(kimi.value).not.toBeNull();
+      expect(pi.value).not.toBeNull();
+      kimiMs.push(kimi.ms);
+      piMs.push(pi.ms);
     }
 
     const kimiMedianMs = median(kimiMs);
     const piMedianMs = median(piMs);
-    const limitMs = Math.max(kimiMedianMs * 2, kimiMedianMs + 100);
+    const limitMs = Math.max(kimiMedianMs * 2, 1);
     expect(piMedianMs).toBeLessThanOrEqual(limitMs);
     console.log(JSON.stringify({
       warmUpRuns: WARM_UP_RUNS,

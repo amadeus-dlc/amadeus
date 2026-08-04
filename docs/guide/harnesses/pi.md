@@ -83,10 +83,11 @@ candidate:
 
 ```bash
 # Local source: use a clean repository at a full commit identity.
-pi install -l /absolute/path/to/amadeus
+cd /absolute/path/to
+pi install ./amadeus -l
 
 # Git source: use credential-free canonical HTTPS and a full 40-hex commit SHA.
-pi install -l https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>
+pi install https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha> -l
 ```
 
 A local candidate is formally identifiable only when its worktree is clean and
@@ -138,7 +139,7 @@ the installer manifest. Re-run doctor and review trust after the update.
 
 For a project-local Pi package registration, `pi update --extensions` updates
 unpinned packages. Amadeus Git candidates should remain pinned: move to a new
-reviewed commit explicitly with `pi install -l <url>@<new-full-sha>`, then
+reviewed commit explicitly with `pi install <url>@<new-full-sha> -l`, then
 upgrade the complete project distribution to the same candidate. Do not mix a
 new package entry with old project-local runtime files.
 
@@ -154,8 +155,8 @@ user-owned files unless the project owner explicitly decides otherwise.
 Remove a project-local Pi package registration with the same source specifier:
 
 ```bash
-pi remove -l /absolute/path/to/amadeus
-pi remove -l https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha>
+pi remove ./amadeus -l
+pi remove https://github.com/amadeus-dlc/amadeus.git@<full-commit-sha> -l
 ```
 
 `pi uninstall` is an alias for `pi remove`. Removing the package registration

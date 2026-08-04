@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import { createPiReplayStore } from "../../packages/framework/harness/pi/drivers
 
 const fixtureSource = fileURLToPath(new URL("../fixtures/pi-driver/fake-pi.ts", import.meta.url));
 const liveChildren: ReturnType<typeof Bun.spawn>[] = [];
+const fixtureRoots = new Set<string>();
 
 afterEach(() => {
   for (const child of liveChildren.splice(0)) {
@@ -21,10 +22,13 @@ afterEach(() => {
       // Already reaped.
     }
   }
+  for (const root of fixtureRoots) rmSync(root, { recursive: true, force: true });
+  fixtureRoots.clear();
 });
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "amadeus-pi-driver-"));
+  fixtureRoots.add(root);
   const fakePi = join(root, "pi");
   copyFileSync(fixtureSource, fakePi);
   chmodSync(fakePi, 0o700);

@@ -2,7 +2,7 @@
 
 > 言語: [English](README.md) | **日本語**
 
-**Amadeus-DLC はセルフホスト型の AI 開発ライフサイクルです。決定的なワークフローエンジンと、ゲート付き32ステージのメソドロジーを一度だけ記述し、7つのコーディングエージェントハーネスの上でネイティブに動かします。** あなたは「何を作るか」を記述するだけ — 11のドメイン専門家エージェントが ideation・inception・construction・operation を進め、プロンプトではなく**コードとして実装された状態機械**が、あなたが通すまですべての承認ゲートを保持します。
+**Amadeus-DLC はセルフホスト型の AI 開発ライフサイクルです。決定的なワークフローエンジンと、ゲート付き32ステージのメソドロジーを一度だけ記述し、8つのコーディングエージェントハーネスの上でネイティブに動かします。** あなたは「何を作るか」を記述するだけ — 11のドメイン専門家エージェントが ideation・inception・construction・operation を進め、プロンプトではなく**コードとして実装された状態機械**が、あなたが通すまですべての承認ゲートを保持します。
 
 ![version](https://img.shields.io/badge/version-0.1.3-blue)
 ![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)

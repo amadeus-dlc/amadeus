@@ -9,6 +9,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
   renameSync,
   writeFileSync,
 } from "node:fs";
@@ -277,7 +278,6 @@ export function createPiReplayStore(runtimeDir: string, now: () => string = () =
       if (!Number.isSafeInteger(limit) || limit < 1) return [];
       const recovered: PiDeliveryRecord[] = [];
       try {
-        const { readdirSync } = require("node:fs") as typeof import("node:fs");
         for (const leaf of readdirSync(recordsDir).sort().slice(0, limit)) {
           const path = join(recordsDir, leaf);
           assertPrivateRegularFile(path);

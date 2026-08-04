@@ -127,12 +127,19 @@ function catalogMinimumVersion(record: Record<string, unknown>): string | null {
 function catalogResource(value: unknown): CatalogResource | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
+  const family = row.kind === "extension" ? "extensions"
+    : row.kind === "driver" ? "drivers"
+    : "skills";
+  const expectedLoad = row.kind === "question-annex" ? "annex"
+    : row.kind === "driver" ? "internal"
+    : "native";
   if (
     !["skill", "question-annex", "extension", "driver"].includes(String(row.kind)) ||
     !["native", "annex", "internal"].includes(String(row.load)) ||
     typeof row.source !== "string" || !safeRelativePath(row.source) ||
     typeof row.destination !== "string" || !safeRelativePath(row.destination) ||
-    !row.destination.startsWith(".pi/") ||
+    row.load !== expectedLoad ||
+    !row.destination.startsWith(`.pi/${family}/`) ||
     typeof row.sha256 !== "string" || !SHA256.test(row.sha256)
   ) return null;
   return row as unknown as CatalogResource;

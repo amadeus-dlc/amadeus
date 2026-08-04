@@ -119,6 +119,21 @@ describe("Pi harness manifest", () => {
     ]));
   });
 
+  test("detects resource collisions after Unicode NFC normalization", () => {
+    const composed = "skills/caf\u00e9.md";
+    const decomposed = "skills/cafe\u0301.md";
+    const malformed = {
+      ...piManifest,
+      resources: [
+        { kind: "skill", source: composed, destination: `.pi/${composed}`, load: "native" },
+        { kind: "skill", source: decomposed, destination: `.pi/${decomposed}`, load: "native" },
+      ],
+    };
+    expect(validateHarnessManifest(malformed)).toEqual(expect.arrayContaining([
+      expect.stringContaining("case-folding"),
+    ]));
+  });
+
   test("rejects resources outside the declared harness directory and wrong loader roles", () => {
     const malformed = {
       ...piManifest,

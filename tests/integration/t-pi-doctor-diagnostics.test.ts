@@ -106,6 +106,22 @@ describe("Pi doctor closed diagnostics", () => {
     expect(failedIds(diagnose(fixture))).toEqual(["pi.package-resource"]);
   });
 
+  test("rejects kind, loader, and destination-family combinations that are individually valid", () => {
+    const fixture = healthyFixture();
+    const catalogPath = join(fixture.projectDir, ".pi", "tools", "data", "harness.json");
+    const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
+    catalog.resources[0] = {
+      ...catalog.resources[0],
+      kind: "skill",
+      load: "internal",
+      destination: ".pi/drivers/skill.md",
+    };
+    writeJson(catalogPath, catalog);
+    const packageCheck = diagnose(fixture).find((row) => row.id === "pi.package-resource");
+    expect(packageCheck?.pass).toBe(false);
+    expect(packageCheck?.observed).toContain("invalid resource descriptor");
+  });
+
   test("structured snapshots and rendered labels redact paths, credentials, and secrets", () => {
     const fixture = healthyFixture();
     const checks = diagnose(fixture, {

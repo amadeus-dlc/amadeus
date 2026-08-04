@@ -33,8 +33,8 @@ type DriverControl =
       readonly reason: "cancelled" | "timed-out" | "driver-refused";
     };
 
-interface SignedControl {
-  readonly payload: DriverControl;
+interface SignedControlEnvelope {
+  readonly payload: Record<string, unknown>;
   readonly signature: string;
 }
 
@@ -147,48 +147,43 @@ function isErrnoException(value: unknown): value is NodeJS.ErrnoException {
   return value instanceof Error && "code" in value && typeof value.code === "string";
 }
 
-function parseSignedControl(line: string): SignedControl | null {
+function parseSignedControl(line: string): SignedControlEnvelope | null {
   try {
     const value: unknown = JSON.parse(line);
     if (!isRecord(value) || !isRecord(value.payload) || typeof value.signature !== "string") return null;
-    const payload = value.payload;
-    if (
-      (payload.kind !== "go" && payload.kind !== "terminate")
-      || typeof payload.runId !== "string"
-      || typeof payload.nonce !== "string"
-      || typeof payload.seq !== "number"
-      || !Number.isSafeInteger(payload.seq)
-    ) return null;
-    if (payload.kind === "go") {
-      if (typeof payload.correlationId !== "string" || typeof payload.prompt !== "string") return null;
-      return {
-        payload: {
-          kind: "go",
-          runId: payload.runId,
-          nonce: payload.nonce,
-          seq: payload.seq,
-          correlationId: payload.correlationId,
-          prompt: payload.prompt,
-        },
-        signature: value.signature,
-      };
-    }
-    if (payload.reason !== "cancelled" && payload.reason !== "timed-out" && payload.reason !== "driver-refused") {
-      return null;
-    }
-    return {
-      payload: {
-        kind: "terminate",
-        runId: payload.runId,
-        nonce: payload.nonce,
-        seq: payload.seq,
-        reason: payload.reason,
-      },
-      signature: value.signature,
-    };
+    return { payload: value.payload, signature: value.signature };
   } catch {
     return null;
   }
+}
+
+function parseDriverControl(payload: Record<string, unknown>): DriverControl | null {
+  if (
+    (payload.kind !== "go" && payload.kind !== "terminate")
+    || typeof payload.runId !== "string"
+    || typeof payload.nonce !== "string"
+    || typeof payload.seq !== "number"
+    || !Number.isSafeInteger(payload.seq)
+  ) return null;
+  if (payload.kind === "go") {
+    if (typeof payload.correlationId !== "string" || typeof payload.prompt !== "string") return null;
+    return {
+      kind: "go",
+      runId: payload.runId,
+      nonce: payload.nonce,
+      seq: payload.seq,
+      correlationId: payload.correlationId,
+      prompt: payload.prompt,
+    };
+  }
+  if (payload.reason !== "cancelled" && payload.reason !== "timed-out" && payload.reason !== "driver-refused") return null;
+  return {
+    kind: "terminate",
+    runId: payload.runId,
+    nonce: payload.nonce,
+    seq: payload.seq,
+    reason: payload.reason,
+  };
 }
 
 type SignalResult = "sent" | "absent" | "failed";
@@ -261,22 +256,22 @@ function run(args: GuardianArgs): void {
       closeGroup("control-json-invalid");
       return;
     }
-    if (
-      !signed ||
-      typeof signed !== "object" ||
-      !signed.payload ||
-      typeof signed.signature !== "string" ||
-      !verify(null, bytes(signed.payload), driverPublicKey, Buffer.from(signed.signature, "base64")) ||
-      signed.payload.runId !== args.runId ||
-      signed.payload.nonce !== nonce ||
-      signed.payload.seq !== controlSeq + 1
-    ) {
+    if (!verify(null, bytes(signed.payload), driverPublicKey, Buffer.from(signed.signature, "base64"))) {
       closeGroup("control-authentication-failed");
       return;
     }
-    controlSeq = signed.payload.seq;
-    if (signed.payload.kind === "terminate") {
-      closeGroup(signed.payload.reason);
+    const control = parseDriverControl(signed.payload);
+    if (control === null) {
+      closeGroup("control-json-invalid");
+      return;
+    }
+    if (control.runId !== args.runId || control.nonce !== nonce || control.seq !== controlSeq + 1) {
+      closeGroup("control-authentication-failed");
+      return;
+    }
+    controlSeq = control.seq;
+    if (control.kind === "terminate") {
+      closeGroup(control.reason);
       return;
     }
     if (child !== null || controlSeq !== 1) {
@@ -300,6 +295,18 @@ function run(args: GuardianArgs): void {
     child.once("error", () => {
       emit({ kind: "failure", runId: args.runId, reason: "pi-spawn-failed" });
       closeGroup("pi-spawn-failed");
+    });
+    let stdinFailureEmitted = false;
+    child.stdin.on("error", (error) => {
+      if (stdinFailureEmitted) return;
+      stdinFailureEmitted = true;
+      emit({
+        kind: "failure",
+        runId: args.runId,
+        reason: "pi-stdin-write-failed",
+        cause: isErrnoException(error) ? error.code : String(error),
+      });
+      closeGroup("pi-stdin-write-failed");
     });
     const rpcLines = createInterface({ input: child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
     rpcLines.on("line", (rpcLine) => {
@@ -335,8 +342,8 @@ function run(args: GuardianArgs): void {
     });
     child.stdin.write(`${JSON.stringify({
       type: "prompt",
-      id: signed.payload.correlationId,
-      message: signed.payload.prompt,
+      id: control.correlationId,
+      message: control.prompt,
     })}\n`);
   };
 

@@ -16,7 +16,7 @@ orchestrator with \`/skill:amadeus\` followed by a scope or project description.
     agents_note: `Pi loads the persona documents as prose. Delegated Construction work is launched by the Amadeus Pi child driver; Pi does not provide a built-in subagent primitive.`,
     structure_extra: `- **Pi extension**: \`{{HARNESS_DIR}}/extensions/amadeus.ts\` — the native lifecycle adapter loaded by Pi after project trust.
 - **Pi child driver**: \`{{HARNESS_DIR}}/drivers/amadeus-pi-driver.ts\` — an Amadeus-internal execution resource, not a Pi auto-loaded extension.`,
-    guide_pointer: `See \`docs/guide/harnesses/pi-coding-agent.md\` for the Pi-specific install and trust flow.`,
+    guide_pointer: `See \`docs/guide/harnesses/pi.md\` for the Pi-specific install and trust flow.`,
     sections_before_resumption: `## Pi trust boundary
 
 Pi project trust authorizes project-local code to run with the user's normal

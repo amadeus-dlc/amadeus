@@ -6,7 +6,7 @@
 // compose trigger) into wired|degraded so that "wired AND degraded" and
 // "neither" are both unrepresentable — a silent gap (a face that is neither
 // wired nor degraded) cannot exist by construction. resolveFaceDisposition
-// applies it across the real 8-face matrix enumeration (BR-U1-7). The XOR全数
+// applies it across the real 8-face matrix enumeration (BR-U1-7). The XOR coverage
 // assert against real wiring lives in t327 (integration); this unit exercises
 // the classifier's four axis combinations and the enumeration mapping.
 

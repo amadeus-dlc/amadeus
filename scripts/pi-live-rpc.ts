@@ -54,11 +54,9 @@ function safeProviderId(value: string | undefined): string | null {
     : null;
 }
 
-interface LiveProviderSelection {
-  readonly ok: boolean;
-  readonly providerId?: string;
-  readonly modelId?: string;
-}
+type LiveProviderSelection =
+  | { readonly ok: false }
+  | { readonly ok: true; readonly providerId: string; readonly modelId?: string };
 
 type LiveOutcomeValidation =
   | { readonly ok: false; readonly reason: string }
@@ -174,7 +172,7 @@ export async function runPiLiveRpc(
   const piExecutable = Bun.which("pi");
   if (piExecutable === null) return { status: "skipped", reason: "pi-unavailable" };
   const selection = liveProviderSelection(environment);
-  if (!selection.ok || selection.providerId === undefined) {
+  if (!selection.ok) {
     return { status: "skipped", reason: "provider-unavailable" };
   }
   const { providerId, modelId } = selection;

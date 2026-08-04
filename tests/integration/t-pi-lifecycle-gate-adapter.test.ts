@@ -167,6 +167,46 @@ describe("Pi 0.83 closed ExtensionEvent parser", () => {
 });
 
 describe("Amadeus Pi lifecycle adapter", () => {
+  test("canonicalizes shared references like equivalent repeated values", async () => {
+    const shared = { value: 1 };
+    const firstPi = new FakePi(project());
+    const firstPort = new MemoryCommitPort();
+    createAmadeusPiExtension({ commitPort: firstPort })(firstPi);
+    await firstPi.emit("session_start", fixture.events.session_start);
+    await firstPi.emit("tool_execution_start", {
+      ...fixture.events.tool_execution_start,
+      args: { left: shared, right: shared },
+    });
+
+    const secondPi = new FakePi(project());
+    const secondPort = new MemoryCommitPort();
+    createAmadeusPiExtension({ commitPort: secondPort })(secondPi);
+    await secondPi.emit("session_start", fixture.events.session_start);
+    await secondPi.emit("tool_execution_start", {
+      ...fixture.events.tool_execution_start,
+      args: { left: { value: 1 }, right: { value: 1 } },
+    });
+
+    expect(firstPort.events.find((event) => event.kind === "tool-started")?.fingerprint)
+      .toBe(secondPort.events.find((event) => event.kind === "tool-started")?.fingerprint);
+  });
+
+  test("a rejected serialized event does not prevent the next event from committing", async () => {
+    const root = project();
+    const pi = new FakePi(root);
+    const port = new MemoryCommitPort();
+    createAmadeusPiExtension({ commitPort: port })(pi);
+    await pi.emit("session_start", fixture.events.session_start);
+    const handler = pi.handlers.get("input");
+    if (handler === undefined) throw new Error("missing input handler");
+    await expect(handler(fixture.events.input_interactive, { ...pi.context, cwd: `${root}-other` })).rejects.toThrow(
+      "cwd changed",
+    );
+    pi.leafId = "leaf-after-rejection";
+    await pi.emit("input", fixture.events.input_interactive);
+    expect(port.events.filter((event) => event.kind === "input-received")).toHaveLength(1);
+  });
+
   test("registers the closed event set and leaves partial registration mutation-free", async () => {
     const root = project();
     const pi = new FakePi(root);

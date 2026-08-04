@@ -66,6 +66,11 @@ describe("Pi package candidate graph", () => {
     expect(gitPiSourceIdentity("https://github.com/amadeus-dlc/amadeus.git", revision, digest).kind).toBe("formal");
     for (const [locator, ref] of [
       ["https://user:secret@github.com/amadeus-dlc/amadeus.git", revision],
+      ["https://github.com//amadeus-dlc/amadeus.git", revision],
+      ["https://github.com/amadeus-dlc//amadeus.git", revision],
+      ["https://github.com/amadeus-dlc/amadeus.git/", revision],
+      ["https://github.com/amadeus-dlc/./amadeus.git", revision],
+      ["https://github.com/amadeus-dlc/../amadeus.git", revision],
       ["https://github.com/amadeus-dlc/amadeus.git", "main"],
       ["https://github.com/amadeus-dlc/amadeus.git", "deadbeef"],
     ] as const) {

@@ -294,7 +294,7 @@ describe("t250 item 10 validator: next_stage is string | null", () => {
     const invalid = validateDirective({ ...NEXT_STAGE_RUN_STAGE, phase_boundary: "operation" });
     expect(invalid.valid).toBe(false);
     expect(invalid.valid ? [] : invalid.errors).toContain(
-      "run-stage: phase_boundary must be ideation, inception, or construction, got string",
+      'run-stage: phase_boundary must be ideation, inception, or construction, got "operation"',
     );
   });
 });

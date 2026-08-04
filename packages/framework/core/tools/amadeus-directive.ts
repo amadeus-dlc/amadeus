@@ -631,7 +631,7 @@ function checkOptionalPhaseBoundary(
   const value = o.phase_boundary;
   if (value !== "ideation" && value !== "inception" && value !== "construction") {
     errors.push(
-      `${kind}: phase_boundary must be ideation, inception, or construction, got ${describe(value)}`,
+      `${kind}: phase_boundary must be ideation, inception, or construction, got ${typeof value === "string" ? JSON.stringify(value) : describe(value)}`,
     );
   }
 }

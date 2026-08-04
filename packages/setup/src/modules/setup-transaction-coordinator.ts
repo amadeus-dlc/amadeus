@@ -122,6 +122,9 @@ class DurableFs {
   }
 
   rename(from: string, to: string): void {
+    // rename(2) itself may replace a destination that appears after this check.
+    // Callers use it only while holding the owner-only transaction lock and
+    // moving within the private 0700 root; public target installs use link().
     if (lstatIfExists(to) !== null) throw new TransactionBlocked("journal", to, `refusing to replace occupied path: ${to}`);
     this.step("rename", `${from} -> ${to}`);
     renameSync(from, to);
@@ -169,10 +172,7 @@ export namespace SetupTransactionCoordinator {
               throw cause;
             }
             applyPrepared(tx, prepared);
-            for (const entry of plan.entries()) {
-              if (entry.action !== "skip") applied.push(entry);
-              else applied.push(entry);
-            }
+            applied.push(...plan.entries());
             for (const entry of prepared.entries) {
               if (entry.backup !== null && entry.path !== MANIFEST_RELATIVE_PATH) backups.push(entry.backup);
             }
@@ -236,7 +236,8 @@ function openTransaction(targetInput: string, options: SetupTransactionOptions):
   const fs = new DurableFs(options.beforeIo);
   fs.mkdir(root, 0o700);
   assertPrivateDirectory(root);
-  if (statSync(root).dev !== statSync(dirname(target)).dev) {
+  const targetDevicePath = lstatIfExists(target) === null ? dirname(target) : target;
+  if (statSync(root).dev !== statSync(targetDevicePath).dev) {
     throw new TransactionBlocked("preflight", root, "private installer root is not on the target filesystem");
   }
   const activeDir = join(root, "active");
@@ -270,8 +271,7 @@ function assertPrivateDirectory(root: string): void {
 
 function acquireLock(fs: DurableFs, lockDir: string): void {
   try {
-    fs.step("lock-mkdir", lockDir);
-    mkdirSync(lockDir, { mode: 0o700 });
+    createCompleteLock(fs, lockDir);
   } catch (cause) {
     if (!isCode(cause, "EEXIST")) throw cause;
     const metadataPath = join(lockDir, "owner.json");
@@ -290,10 +290,37 @@ function acquireLock(fs: DurableFs, lockDir: string): void {
     unlinkSync(metadataPath);
     fs.step("remove-stale-lock-dir", lockDir);
     rmdirSync(lockDir);
-    fs.step("lock-mkdir", lockDir);
-    mkdirSync(lockDir, { mode: 0o700 });
+    try {
+      createCompleteLock(fs, lockDir);
+    } catch (retryCause) {
+      if (isCode(retryCause, "EEXIST")) {
+        throw new TransactionBlocked("lock", lockDir, "target was locked by another process during stale-lock recovery");
+      }
+      throw retryCause;
+    }
   }
-  fs.atomicJson(join(lockDir, "owner.json"), { schema: 1, pid: process.pid, nonce: randomUUID(), createdAt: new Date().toISOString() });
+}
+
+function createCompleteLock(fs: DurableFs, lockDir: string): void {
+  const temporary = `${lockDir}.${randomUUID()}.tmp`;
+  fs.step("lock-temp-mkdir", temporary);
+  mkdirSync(temporary, { mode: 0o700 });
+  try {
+    fs.atomicJson(join(temporary, "owner.json"), {
+      schema: 1,
+      pid: process.pid,
+      nonce: randomUUID(),
+      createdAt: new Date().toISOString(),
+    });
+    fs.step("lock-publish", `${temporary} -> ${lockDir}`);
+    renameSync(temporary, lockDir);
+    fs.fsyncDir(dirname(lockDir));
+  } catch (cause) {
+    const owner = join(temporary, "owner.json");
+    if (lstatIfExists(owner) !== null) unlinkSync(owner);
+    if (lstatIfExists(temporary) !== null) rmdirSync(temporary);
+    throw cause;
+  }
 }
 
 function releaseLock(tx: OpenTransaction): void {
@@ -467,7 +494,15 @@ function applyPrepared(tx: OpenTransaction, journal: Journal): void {
     if (journal.phase === "commit-decided" || journal.phase === "committed") {
       cleanupCommitted(tx, journal);
     } else {
-      rollback(tx, journal);
+      try {
+        rollback(tx, journal);
+      } catch (rollbackCause) {
+        throw new TransactionBlocked(
+          "recovery",
+          journalPath(tx, journal.id),
+          `apply failed (${String(cause)}); rollback also failed (${String(rollbackCause)})`,
+        );
+      }
     }
     throw cause;
   }
@@ -678,6 +713,10 @@ function retiredOwnedPaths(target: string, next: Manifest): string[] {
       .filter((entry) => {
         const current = targetPath(target, entry.path);
         const state = lstatIfExists(current);
+        // MD5 is retained solely for compatibility with the persisted manifest
+        // schema. This equality check decides whether an installer-owned retired
+        // file is unchanged; it is not a security-integrity primitive. A future
+        // schema revision can add SHA-256 without invalidating existing manifests.
         return state !== null && !state.isSymbolicLink() && state.isFile() && md5(current) === entry.md5;
       })
       .map((entry) => entry.path);

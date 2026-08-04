@@ -212,7 +212,8 @@ function resourceDescriptors(
   if (m.resources === undefined) return undefined;
   const harnessSrcRoot = join(HARNESS_ROOT, m.name);
   return m.resources.map((resource) => {
-    const bytes = readFileSync(join(harnessSrcRoot, ...resource.source.split("/")));
+    const sourcePath = join(harnessSrcRoot, ...resource.source.split("/"));
+    const bytes = transform(sourcePath, readFileSync(sourcePath), m.harnessDir, m.rulesRename);
     return {
       ...resource,
       sha256: createHash("sha256").update(bytes).digest("hex"),
