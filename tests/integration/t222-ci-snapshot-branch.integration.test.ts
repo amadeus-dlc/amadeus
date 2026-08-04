@@ -382,6 +382,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(yaml).toContain("coverage/tests-totals.json");
     expect(yaml).toContain("actions/workflows/metrics-maintenance.yml/runs");
     expect(yaml).toContain('gh run watch "$MAINTENANCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status');
+    // The correlation filter must project $run back out: after `as $run`, jq keeps
+    // the original input as `.`, so selects alone would collect the whole response.
+    expect(yaml).toContain("| $run]");
     expect(yaml).toContain("BEFORE_MAINTENANCE_RUN_IDS");
     expect(yaml).toContain('"Metrics maintenance for $TARGET_SHA"');
     expect(yaml).toContain('["app/" + $bot_slug, $bot_slug + "[bot]"]');
