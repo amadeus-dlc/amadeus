@@ -912,6 +912,67 @@ describe("t236 election directive loop", () => {
     expect(tallied().length).toBe(1);
   });
 
+  // The tallied commit and its audit row form a recoverable unit: a malformed
+  // tally.json is rejected BEFORE the state commit, and an append failure
+  // AFTER the commit is completed by re-running the report (repair path),
+  // never duplicated.
+  test("#2125: tallied commit + audit row are a recoverable unit", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+
+    const state = (): string =>
+      JSON.parse(readFileSync(electionPath("election.json"), "utf8")).state;
+    const talliedRows = (): Array<{ kind: string; at: string }> =>
+      (JSON.parse(readFileSync(electionPath("timeline.json"), "utf8")) as Array<{
+        kind: string;
+        at: string;
+      }>).filter((e) => e.kind === "tallied");
+
+    // Injection 1: tally.json without talliedAt is refused BEFORE the state
+    // commit — the state must still read collecting afterwards.
+    const tallyPath = electionPath("tally.json");
+    const goodTally = readFileSync(tallyPath, "utf8");
+    const { talliedAt: _dropped, ...rest } = JSON.parse(goodTally);
+    writeFileSync(tallyPath, JSON.stringify(rest));
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(JSON.parse(errs.at(-1) ?? "{}").error).toContain("talliedAt");
+    expect(state()).toBe("collecting");
+    expect(talliedRows().length).toBe(0);
+    writeFileSync(tallyPath, goodTally);
+
+    // Injection 2: the audit append fails after the commit (appendTimeline
+    // parses timeline.json before writing, so unparsable bytes make exactly
+    // that step fail) — state advances, row missing, exit 1.
+    const timelinePath = electionPath("timeline.json");
+    const goodTimeline = readFileSync(timelinePath, "utf8");
+    writeFileSync(timelinePath, "not-json");
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    // The commit landed (this DEF's single-ballot tally is a hold outcome, so
+    // the state reads hold; a decisive tally would read tallied) — only the
+    // audit row is missing.
+    expect(["tallied", "hold"]).toContain(state());
+    writeFileSync(timelinePath, goodTimeline);
+    expect(talliedRows().length).toBe(0);
+
+    // Recovery: re-running the report completes the unit — exactly one row,
+    // stamped with talliedAt, no duplication on a further run.
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    expect(talliedRows().length).toBe(1);
+    expect(talliedRows()[0]?.at).toBe(JSON.parse(goodTally).talliedAt);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(1);
+    expect(talliedRows().length).toBe(1);
+  });
+
   // FR-3 wiring: verify runs the kind-order class through the CLI. The guards
   // above close the live windows, so the unlawful history is injected the way
   // a legacy corruption looks on disk — a duplicate tallied row appended
