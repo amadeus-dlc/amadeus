@@ -37,9 +37,8 @@
 //          fire on every headless turn, so when the heartbeat
 //          (amadeus-docs/.amadeus-hooks-health/stop.last, amadeus-stop.ts:90) is
 //          absent we SKIP this sub-assertion (record the skip, never fail).
-//          When it IS present, the done branch ran resetGuard()
-//          (amadeus-stop.ts:241-248,357) which wrote block-count.json with
-//          count 0 — assert the parsed count === 0.
+//          When it IS present, the real hook ran and its terminal allow is
+//          already proven by the completed turn.
 //   4 pending directive -> the REAL hook BLOCKS, against the REAL engine
 //       -> seed state-final-stage (final stage [-], engine emits a real
 //          run-stage for feedback-optimization), pipe {"stop_hook_active":false}
@@ -54,9 +53,8 @@
 //          (deterministically confirmed on this fixture).
 //   6 recursion release against the REAL engine (light re-confirm; t121 owns
 //     the exhaustive matrix)
-//       -> seed state-final-stage + the no-progress counter AT the cap (8) with
-//          the project's matching progress signature
-//          (`${Current Stage}::${audit line count}`, amadeus-stop.ts:137) +
+//       -> seed state-final-stage, consume the canonical stage budget with eight
+//          distinct delivery identities, then invoke once more with
 //          stop_hook_active:true: the hook RELEASES (empty stdout, exit 0) and
 //          appends the drop record "recursion guard released the stop"
 //          (amadeus-stop.ts:370) to .amadeus-hooks-health/stop.drops — a stuck loop
@@ -109,9 +107,7 @@
 // Known-answer literals (read from the SHIPPED hook/tool/fixtures, not guessed):
 //   - Stop hook registration:    dist settings.json:110-118 (matcher "", amadeus-stop.ts)
 //   - heartbeat write:           amadeus-stop.ts:90 (stop.last)
-//   - guard file:                amadeus-stop.ts:130 (block-count.json)
-//   - progress signature:        amadeus-stop.ts:137 (`${stage}::${auditLines}`)
-//   - resetGuard on done/allow:  amadeus-stop.ts:241-248 (count 0), invoked :357
+//   - continuation budget:       amadeus-stop.ts:262 (canonical stage budget)
 //   - block JSON + reason:       amadeus-stop.ts:104,298-307
 //   - release + drop record:     amadeus-stop.ts:364-371 ("recursion guard released the stop")
 //   - block cap env:             amadeus-stop.ts:69 (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, default 8)
@@ -128,10 +124,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  auditFilePath,
   docsRoot,
   hooksHealthDir,
-  stopHookDir,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { assertToolResultContains } from "../harness/assert.ts";
 import {
@@ -155,12 +149,10 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const HOOK_SPAWN_TIMEOUT_MS = 60_000;
 
 const BUN = process.execPath;
-// P9 per-intent layout: the stop hook's guard / heartbeat / drops re-root under
-// the active intent's record (stopHookDir / hooksHealthDir). setupIntegrationProject
+// P9 per-intent layout: the stop hook's heartbeat / drops re-root under
+// the active intent's record (hooksHealthDir). setupIntegrationProject
 // seeds state into the record so the cursor resolves for both the in-process
 // resolvers below and the spawned hook.
-const guardPath = (proj: string): string =>
-  join(stopHookDir(proj), "block-count.json");
 const heartbeatPath = (proj: string): string =>
   join(hooksHealthDir(proj), "stop.last");
 const dropsPath = (proj: string): string =>
@@ -169,7 +161,7 @@ const dropsPath = (proj: string): string =>
 // Known-answer literals from the SHIPPED handlers (see header for cites).
 const STATUS_COMPLETED_LINE = "Status:         Completed"; // utility.ts:302 (padEnd shape confirmed by direct run)
 const PENDING_STAGE = "feedback-optimization"; // state-final-stage.md:90 ([-] final stage)
-const DROP_RECORD = "recursion guard released the stop"; // amadeus-stop.ts:370
+const DROP_RECORD = "durable continuation budget released the stop";
 
 /** Pipe a real Stop payload into the SHIPPED hook with the project's REAL
  *  engine resolved via CLAUDE_PROJECT_DIR. Returns exit code + trimmed stdout
@@ -191,26 +183,6 @@ function runRealHook(
     timeout: HOOK_SPAWN_TIMEOUT_MS,
   });
   return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
-}
-
-/** The hook's progress signature for a project — Current Stage + audit.md line
- *  count (amadeus-stop.ts:137) — so test 6 can seed the counter AT the cap under
- *  the matching key. Mirrors the .sh's progress_sig. */
-function progressSig(proj: string): string {
-  const s = readFileSync(seededStateFile(proj), "utf-8");
-  const m = s.match(/Current Stage\*{0,2}:?\s*`?([^\n`]*)`?/);
-  const stage = (m?.[1] ?? "").trim();
-  let auditLines = 0;
-  try {
-    // The hook reads its OWN resolved shard (auditFilePath) for the length, not
-    // the glob — resolve the identical shard so the signature matches. (withAudit
-    // seeds a DIFFERENT shard (fixture.md), so this resolved shard is absent →
-    // auditLines 0 on both sides, which is consistent.)
-    auditLines = readFileSync(auditFilePath(proj), "utf-8").split("\n").length;
-  } catch {
-    /* audit absent => 0 */
-  }
-  return `${stage}::${auditLines}`;
 }
 
 describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () => {
@@ -253,14 +225,11 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
 
         // .sh test 3 (GUARDED, the .sh's exact discipline): the skill-scoped
         // Stop hook does not fire on every headless turn. When the heartbeat is
-        // present, the done branch ran resetGuard() -> block-count.json count 0.
+        // present, the real hook fired; terminal completion proves it allowed.
         // When absent, record the skip explicitly — the run-to-done assertions
         // above hold either way (an un-fired hook simply lets the turn end).
         if (existsSync(heartbeatPath(proj))) {
-          const guard = JSON.parse(
-            readFileSync(guardPath(proj), "utf-8"),
-          ) as { count: number };
-          expect(guard.count).toBe(0);
+          expect(readFileSync(heartbeatPath(proj), "utf-8").trim()).not.toBe("");
         } else {
           // eslint-disable-next-line no-console
           console.log(
@@ -346,14 +315,19 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         withAudit: true,
       });
       try {
-        mkdirSync(stopHookDir(proj), { recursive: true });
-        const sig = progressSig(proj);
-        writeFileSync(
-          guardPath(proj),
-          JSON.stringify({ signature: sig, count: 8 }),
-          "utf-8",
+        for (let delivery = 1; delivery <= 8; delivery++) {
+          const reserved = runRealHook(
+            proj,
+            JSON.stringify({ stop_hook_active: true, session_id: `budget-${delivery}` }),
+            "8",
+          );
+          expect(JSON.parse(reserved.out)).toMatchObject({ decision: "block" });
+        }
+        const r = runRealHook(
+          proj,
+          '{"stop_hook_active":true,"session_id":"budget-exhausted"}',
+          "8",
         );
-        const r = runRealHook(proj, '{"stop_hook_active":true}', "8");
         // Released: empty stdout + exit 0 (the engine's directive IS pending,
         // but the cap wins — decideBlock :231 returns false at count >= cap).
         expect(r.rc).toBe(0);
@@ -521,14 +495,12 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   //   - the REAL `amadeus-state.ts park` exits NON-ZERO with stderr naming the
   //     autonomous refusal (amadeus-state.ts:420-424);
   //   - even if the Parked markers were somehow present, the hook's parked
-  //     branch DECLINES the allow under autonomous and falls through to the
-  //     cap-bounded BLOCK (amadeus-stop.ts:760-771), defence-in-depth beside the
-  //     tool refusal. We inject Parked markers + autonomous mode and assert the
-  //     real hook still BLOCKS (the real engine re-emits `parked`, but the hook
-  //     declines it). Deterministic (no model in the loop).
+  //     branch ALLOWS a durable safe-stop even under full autonomy. The generic
+  //     state-tool park still refuses an unattended run; an emitted parked
+  //     directive (for example REPAIR_STALLED) is terminal. Deterministic.
   // =========================================================================
   test(
-    "(real engine) park under Construction Autonomy Mode=autonomous: state.ts park refuses (non-zero, stderr names autonomous) and the hook declines a parked allow",
+    "(real engine) generic park is guarded in an unattended run, but an emitted parked directive safely ends the turn",
     () => {
       const proj = setupIntegrationProject({
         withState: "state-final-stage.md",
@@ -558,11 +530,8 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         expect(park.status).not.toBe(0);
         expect((park.stderr ?? "").toLowerCase()).toContain("autonomous");
 
-        // Defence-in-depth: even with the Parked markers present, the hook's
-        // parked branch declines the allow under autonomous. Inject the markers
-        // by hand (the tool refused to write them) and confirm the hook BLOCKS:
-        // the real engine re-emits `parked`, but the autonomy guard
-        // (amadeus-stop.ts:760-771) falls through to the cap-bounded block.
+        // Inject the markers by hand to represent an authorised abnormal-stop
+        // projection. The real engine re-emits `parked` and the hook allows it.
         const sf = seededStateFile(proj);
         sedReplaceInFile(
           sf,
@@ -571,9 +540,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         );
         const r = runRealHook(proj, '{"stop_hook_active":false}');
         expect(r.rc).toBe(0);
-        expect((JSON.parse(r.out) as { decision?: string }).decision).toBe(
-          "block",
-        );
+        expect(r.out).toBe("");
       } finally {
         cleanupTestProject(proj);
       }

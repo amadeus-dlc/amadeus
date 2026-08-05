@@ -263,28 +263,30 @@ Bolt sequence: Bolt 1 ships notification-core (walking skeleton — proves the e
 
 ### Construction Phase (stages 3.1-3.7)
 
-Construction runs **Bolt by Bolt** per the 2.8 plan. The first Bolt is the walking skeleton; the ladder prompt after it decides autonomy for the rest. Bolts with shared dependencies run in parallel.
+Construction runs **Bolt by Bolt** per the 2.8 plan. Before unattended decisions, you select `full` for this Intent and confirm the displayed Intent-scoped grant (scope, decision policies, and principal). Bolts whose dependency prerequisites are satisfied run in parallel.
 
-**Bolt 1: notification-core** — walking skeleton (always gated)
+**Bolt 1: notification-core** — walking skeleton
 
 This Bolt is the end-to-end slice that proves the event-handler pipeline works: a notification event arrives on the internal handler, lands in storage, and surfaces on the in-app delivery endpoint. The conductor opens it with a single round of questions across 3.1–3.4 for notification-core, then generates all design artifacts, then delegates code generation to a amadeus-developer-agent subagent.
 
 - **3.1 Functional Design** — Domain entities (Notification, NotificationEvent), business rules (deduplication, rate limiting)
 - **3.5 Code Generation** — Event handler, notification repository, in-app delivery endpoint. 3 source files, 4 test files.
 
-Walking-skeleton gate — you review the code summary for Bolt 1 and approve.
+The walking-skeleton gate follows the same mode rules as every gate. Because this Intent is `full`, the engine may decide it within the confirmed grant; it records the selected option, basis, evidence, and grant exercise instead of synthesising a human turn.
 
-Immediately after approval, the **ladder prompt** fires:
+The mode was selected at Intent scope:
 
+```text
+Intent autonomy
+  ▸ full
+    Decide authorised gates and questions through Intent completion.
+  ▸ semi
+    Pre-approve in-phase gates; ask at phase boundaries and questions.
+  ▸ none
+    Ask the human at every gate and question.
 ```
-The walking skeleton shipped. How should the remaining Bolts run?
-  ▸ Continue autonomously
-    Run remaining Bolts without gates. Failures still halt and ask.
-  ▸ Gate every Bolt
-    Present an approval gate after each Bolt (or parallel batch).
-```
 
-You've seen the shape work, so you pick **Continue autonomously**. The conductor records `Construction Autonomy Mode: autonomous` in `amadeus-state.md` and emits `AUTONOMY_MODE_SET`.
+You picked **full** and confirmed the grant before execution. The conductor atomically records the mode, grant, human provenance, scope, and normalised policies. Legacy standing grants do not authorise this run.
 
 **Bolt 2: notification-preferences + notification-email** — parallel batch
 
@@ -296,21 +298,18 @@ Both depend only on notification-core and don't depend on each other, so 2.8's p
 - **notification-email — 3.4 Infrastructure Design** — SQS queue, SES integration, CloudWatch alarm for dead-letter queue
 - **notification-email — 3.5 Code Generation** — Email renderer, SQS consumer, digest cron job. 4 source files, 5 test files.
 
-Both subagent Tasks return in the next turn. Because you chose autonomous, no batch gate — Construction proceeds straight to 3.6.
+Both subagent Tasks return in the next turn. Blocking defects enter the required quality repair/replan loop. Once the batch is healthy, `full` decides the authorised batch gate and Construction proceeds to 3.6. A non-productive loop parks as `REPAIR_STALLED` with the grant intact.
 
-**What a failure would look like.** Suppose `notification-email`'s Code Generation had returned with a broken SES mock. The conductor would wait for `notification-preferences` to finish, preserve its artifacts on disk, and present:
+**What a failure would look like.** Suppose `notification-email`'s Code Generation returns with a broken SES mock. The conductor waits for `notification-preferences` to finish, preserves its artifacts, and records the failed quality obligation:
 
-```
+```text
 Bolt notification-preferences succeeded. Bolt notification-email failed during code generation:
   "SES client mock could not be constructed — check test config."
 
-Options:
-  ▸ Retry         Re-run notification-email from code generation.
-  ▸ Skip          Mark notification-email skipped and continue. Dependent Bolts may also fail.
-  ▸ Abort         Stop Construction. Resume via /amadeus --stage code-generation.
+Quality route: repair notification-email from code generation.
 ```
 
-You'd pick **Retry**, fix the mock setup, and only notification-email re-runs. Preferences is already `[x]` complete.
+Only notification-email re-runs; Preferences remains `[x]`. If the evidence does not improve, the plugin replans once. Continued non-productive repair parks the Intent as `REPAIR_STALLED` and shows the evidence-change or verified human-retry conditions needed to resume.
 
 **Stage 3.6 — Build and Test** (amadeus-quality-agent, runs once after all Bolts)
 
@@ -344,7 +343,7 @@ Configures CI pipeline with lint, build, test, and security scan stages. Quality
 | Units of work | 1 | 3 |
 | Bolt-by-Bolt Construction | No (fix runs a single Bolt) | Yes — 2 Bolts (walking skeleton + 1 parallel batch) |
 | Conditional stages | Most skipped | Most executed |
-| Approval gates | 4 | Walking skeleton + ladder prompt; remaining Bolts per autonomy mode |
+| Approval gates | 4 | Determined by Intent mode; `full` may decide authorised walking-skeleton and later gates |
 
 ---
 

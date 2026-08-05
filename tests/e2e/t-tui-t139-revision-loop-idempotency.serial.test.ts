@@ -75,6 +75,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
+import { canonicalCompletedSlugs } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
@@ -155,11 +156,9 @@ function readTerminal(sandbox: string): Terminal {
     /Completed\*\*:[ \t]*(\d+)/.exec(md)?.[1] ?? "-1",
     10,
   );
-  // The set of completed stage slugs — the `- [x] <slug>` grid rows. Sorted so the
-  // cross-run comparison is order-independent (both runs complete the same SET).
-  const completedSlugs = (md.match(/^- \[x\] (\S+)/gm) ?? [])
-    .map((l) => l.replace(/^- \[x\] /, "").trim())
-    .sort();
+  // The set of completed EXECUTE-effective stage slugs. Completed SKIP rows are
+  // historical state and do not contribute to canonical plan progress.
+  const completedSlugs = canonicalCompletedSlugs(md).sort();
   return {
     scope,
     phase,

@@ -816,6 +816,48 @@
     "status": "recorded"
   },
   {
+    "electionId": "E-HLE2-ICS13",
+    "dirName": "260804-e-hle2-ics13",
+    "createdAt": "2026-08-04T08:36:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-SDS13",
+    "dirName": "260804-e-hle2-sds13",
+    "createdAt": "2026-08-04T08:53:11Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-RES13",
+    "dirName": "260804-e-hle2-res13",
+    "createdAt": "2026-08-04T09:10:27Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-RAS13",
+    "dirName": "260804-e-hle2-ras13",
+    "createdAt": "2026-08-04T09:40:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-ADS13",
+    "dirName": "260804-e-hle2-ads13",
+    "createdAt": "2026-08-04T11:49:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-UGS13",
+    "dirName": "260804-e-hle2-ugs13",
+    "createdAt": "2026-08-04T12:25:14Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE2-DPS13",
+    "dirName": "260804-e-hle2-dps13",
+    "createdAt": "2026-08-04T12:46:35Z",
+    "status": "recorded"
+  },
+  {
     "electionId": "E-TLA-FDS13",
     "dirName": "260804-e-tla-fds13",
     "createdAt": "2026-08-04T23:50:55Z",

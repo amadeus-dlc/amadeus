@@ -185,9 +185,8 @@ Construction ステージは worktree 内で実行され、Bolt の終わりの�
 ゲートが承認すると、標準の `amadeus-bolt complete --merge --slug user-profile-api`
 フローが worktree の状態と監査を参加者のローカル main にマージバックします。
 **更新された状態ファイルを origin に push してください**(`git push origin main`)—
-参加者のローカルマージは `amadeus-state.md` を更新し(例: 最初の claim 者に対して
-ラダープロンプトが発火した後の `Construction Autonomy Mode: autonomous` の設定)、
-他の参加者はワークフローのモードを継承するために resume 前にそのファイルを pull
+参加者のローカルマージは`amadeus-state.md`のcanonicalなintent autonomy projectionと
+workflow stateを更新します。他の参加者はそれらを継承するためresume前にそのfileをpull
 しなければなりません。コンダクターは `amadeus-pipeline-deploy-agent` をディスパッチして
 `amadeus/spaces/<space>/memory/team.md` からチームのブランチ戦略を読み、マージ
 ターゲット + 戦略を選びます。監査ログは各ディスパッチを `MERGE_DISPATCH_INVOKED` →
@@ -252,17 +251,15 @@ bun .claude/tools/amadeus-bolt.ts complete --merge --slug user-profile-api
 git push origin main                      # マージ結果を公開
 ```
 
-skeleton がマージされた後、コンダクターは **ラダープロンプト** を 1 回発火します:
-「How should the remaining Bolts run? Continue autonomously / Gate every Bolt.」
-グループの選択は `amadeus-state.md` に `Construction Autonomy Mode` として永続化
-されます。Bob は次の `git fetch --all` でその選択を拾います — Alice と Bob は口頭で
-調整する必要はありません。
+Workshopはintent autonomyを`none`に保つため、groupがwalking-skeletonと後続batch gateを
+reviewします。post-skeleton ladderはありません。Bobは次の`git pull --ff-only`でcanonicalな
+mode projectionを取得します。
 
-> **`bolt-plan.md` が Bolt を walking-skeleton とマークしたが practices が skeleton-off と言う場合は?** Practices が勝ちます。オーケストレーターは競合を記録する `PRACTICES_OVERRIDE` 監査行を発行し(`Reason: bolt-plan-marker-conflict`、加えて practices のスタンスと bolt-plan マーカー)、マークされた Bolt は通常の Bolt として実行されます — always-gate なし、ラダープロンプトなし。Practices はチームの standing な声で、bolt-plan は 1 つのワークフローの解釈です。
+> **`bolt-plan.md` がBoltをwalking-skeletonとマークしたがpracticesがskeleton-offと言う場合は?** Practicesが勝ちます。orchestratorは`PRACTICES_OVERRIDE`を記録し、marked Boltを通常Boltとして実行します。そのgateもintent mode表に従います。
 
 ### 並列 Bolt — Alice + Bob
 
-両者とも `git fetch --all` を実行して Alice のマージ済み main を拾います。(以下の
+両者とも `git pull --ff-only` を実行して Alice のマージ済み main を拾います。(以下の
 両ブロックはトランクベースを前提 — gitflow チームでは `--base develop`、リリース
 ブランチのチームでは `--base release/<version>` に置き換える。上の Alice のソロ
 skeleton ブロックと同様。)
@@ -435,7 +432,7 @@ AUQ をすべて先に解決し、次に `amadeus-bolt release-merge --slug <slu
 3. **`Bolt Refs` にあり `STATE_FORKED` 行はあるが `STATE_MERGED` がない Bolt**: オーケストレーターは Phase 3 に再突入します(コード生成の resume)。
 4. **`Bolt Refs` にありすでに `STATE_MERGED` を持つ Bolt**: スキップ — すでにマージ済み。
 5. **フォーク状態に `Merge-Held: true` を持つ生存者**: 未マージ。オーケストレーターは `amadeus-worktree info --slug <slug>` を実行して JSON エンベロープの `merge_held: boolean` フィールド(post-merge の fold-in で設定される — オーケストレーターは状態ファイルを手動でパースする必要がない)をチェックすることで、これを決定論的に検出します。未解決の失敗 Bolt AUQ をまず再レンダリングし、`amadeus-bolt release-merge --slug <slug>` でクリアされると、保留されたマージを元のバッチ順でディスパッチします。
-6. **Walking-skeleton ラダープロンプトが未設定**: resume するセッションが `Construction Autonomy Mode: unset` を見て skeleton がすでに `[x]` の場合、ラダープロンプトが resume するエンジニアに発火します。最初に resume した者がモードを設定し、後続の resume 者は `git pull` でそれを継承します。
+6. **intent autonomyが利用不能**: fail closedにして明示的な`none|semi|full`選択を求め、旧Construction mode fieldから認可を推論しない。後続参加者は`git pull`でcanonical projectionを継承します。
 
 Practices と autonomy mode は共有リポジトリの明示的なコミット済み成果物です — マシン
 間の魔法のような状態同期はありません。Pull、resume、continue。

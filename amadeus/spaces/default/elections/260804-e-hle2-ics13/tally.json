@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-04T08:38:31Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-ICS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢1『0件で可』を全面支持する。独立実測では、先行選挙 E-HLE-ICS13 が同じ原則を2票・GoA 1x2で裁定済みであり、今回の Intent record でも intent-statement.md に Kiro IDE GUI/CDP・Cursor・OpenCodeを対象外として明記し、memory.md に Phase 3除外と既決事項の非再質問を保存済みだった。共有 memory には cid:intent-capture:c1 と Intent record 正本規則が既存で、今回固有の Phase 2境界を project/team memory へ追加すると重複・過剰一般化になるため、新規恒久学習0件が妥当。",
+      "submittedAt": "2026-08-04T08:37:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-ICS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を全面支持する。独立実測では、先行選挙 E-HLE-ICS13 が、本Intent固有の範囲裁定はIntent recordへ保持し、既存一般則を恒久memoryへ重複追加しないという同型判断を2票・GoA1×2で確立している。現Intentでも intent-statement.md の Success Metrics と Initial Scope Signal が Kiro IDE GUI/CDP・Cursor・OpenCodeを対象外として明記し、stage memory.md が先行IntentとIssue #1717の再利用およびPhase 3除外を保存済みである。一方、既決事項を再質問せず成果物へ反映する一般則は project.md の cid:intent-capture:c1、memory層の既決規範をそのまま適用する一般則は team.md の cid:requirements-analysis:no-election-for-decided-norms に既に存在する。今回のc1は既存規範の適用実例であり、Kiro IDE GUI/CDPとPhase 3の除外は本Intent固有の境界なので、新規project/team memoryへの永続化は過剰一般化・重複となる。",
+      "submittedAt": "2026-08-04T08:37:43Z"
+    }
+  ],
+  "resolutions": []
+}

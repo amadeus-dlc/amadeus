@@ -288,6 +288,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(snapshotJob).not.toContain("git add -A metrics/");
     expect(maintenanceTrigger).toContain("repository_dispatch:");
     expect(maintenanceTrigger).toContain("types: [metrics-maintenance]");
+    expect(maintenanceYaml).toContain(
+      `run-name: Metrics maintenance for \${{ github.event.client_payload.target_sha }}`,
+    );
     expect(maintenanceConcurrency).toContain("group: metrics-maintenance");
     expect(maintenanceConcurrency).toContain("cancel-in-progress: false");
     expect(maintenanceJob).toContain("timeout-minutes: 5");
@@ -301,5 +304,92 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(uploadStep).toContain("name: amadeus-coverage-report");
     expect(uploadStep).toContain("coverage/coverage-totals.json");
     expect(uploadStep).toContain("coverage/tests-totals.json");
+  });
+
+  test("backfill workflow pins and verifies every missing source artifact", () => {
+    const yaml = readFileSync(
+      join(import.meta.dir, "../../.github/workflows/metrics-backfill.yml"),
+      "utf8",
+    );
+    const workflow = Bun.YAML.parse(yaml) as {
+      on?: { workflow_dispatch?: { inputs?: { source_run_id?: Record<string, unknown> } } };
+      concurrency?: unknown;
+      permissions?: Record<string, string>;
+      jobs?: Record<string, Record<string, unknown>>;
+    };
+    expect(workflow.on?.workflow_dispatch?.inputs?.source_run_id).toEqual({
+      description: "Source CI run",
+      required: true,
+      type: "choice",
+      options: [
+        "30878127506",
+        "30879623974",
+        "30886132865",
+        "30900354349",
+        "30905997559",
+        "30910129257",
+      ],
+    });
+    expect(workflow.concurrency).toBeUndefined();
+    expect(workflow.permissions).toEqual({ actions: "read", contents: "read", "pull-requests": "read" });
+    const publish = workflow.jobs?.publish;
+    const verify = workflow.jobs?.["verify-maintenance"];
+    expect(publish?.if).toBe(`\${{ github.ref == 'refs/heads/main' }}`);
+    expect(publish?.concurrency).toEqual({ group: "metrics-snapshot-main", "cancel-in-progress": false });
+    expect(publish?.["timeout-minutes"]).toBe(15);
+    expect(publish?.strategy).toBeUndefined();
+    expect(verify?.needs).toBe("publish");
+    expect(verify?.concurrency).toBeUndefined();
+    expect(verify?.["timeout-minutes"]).toBe(15);
+    const steps = (publish?.steps ?? []) as Array<Record<string, unknown>>;
+    const checkout = steps.find((step) => String(step.uses ?? "").startsWith("actions/checkout@"));
+    expect(checkout?.with).toMatchObject({
+      ref: `\${{ github.sha }}`,
+      token: `\${{ steps.app-token.outputs.token }}`,
+      "persist-credentials": true,
+    });
+    const resolve = steps.find((step) => step.name === "Resolve pinned source");
+    for (const value of [
+      "12bf94ea6d7e13a03e124036258a683af3cc8e7e",
+      "be381078c32b1babf5880d0f4925ffa690b83f64",
+      "509cd43c8c8868569d65e4c6b6d61355cea392c4",
+      "bb6cd40e01dfa205e3b58031d1b153c02c315a2f",
+      "bc512d9da9a82b39b9f39202bec6b83ef420c971",
+      "9fd329632ec608c304f737eecb8a102576731b67",
+      "b4eaf5f757d244ed659c8c41468b368adb214be2b503dbf1e97e93b7894fd4a6",
+      "2ba42992e0d6844f46d86a6d382c28108b33823880eef2096a845bf38c30a13a",
+      "e671dd1a3fdda46b79338d2038657cecb4f940d75159061183d59668d499f768",
+      "156bc0931e75fd811534c696078696247ec5c5b223648610e114f429a8e1e11b",
+      "7307786719efe2b11d355553c1b39723967e533e94e2ee104502aea962963a8e",
+      "f202f7772f4d816a68c2e8b848e6f13c7d3deb01e6c45503f14b74fd9c1ff22a",
+      "2026-08-04T04:46:34Z",
+      "2026-08-04T05:15:06Z",
+      "2026-08-04T07:10:10Z",
+      "2026-08-04T10:31:49Z",
+      "2026-08-04T11:52:53Z",
+      "2026-08-04T12:50:06Z",
+    ]) {
+      expect(resolve?.run).toContain(value);
+    }
+    expect(yaml).toContain('[[ "$OBSERVED_RUN_SHA" == "$TARGET_SHA" ]]');
+    expect(yaml).toContain('[[ "$OBSERVED_ARTIFACT_DIGEST" == "$ARTIFACT_DIGEST" ]]');
+    expect(yaml).toContain('[[ "$ACTUAL_DIGEST" == "$ARTIFACT_DIGEST" ]]');
+    expect(yaml).toContain('repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip');
+    expect(yaml).toContain('--captured-at "$CAPTURED_AT"');
+    expect(yaml).toContain("Verify landed snapshot");
+    expect(yaml).toContain('[[ "$MATCH_COUNT" == "1" ]]');
+    expect(yaml).toContain("coverage/coverage-totals.json");
+    expect(yaml).toContain("coverage/tests-totals.json");
+    expect(yaml).toContain("actions/workflows/metrics-maintenance.yml/runs");
+    expect(yaml).toContain('gh run watch "$MAINTENANCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status');
+    // The correlation filter must project $run back out: after `as $run`, jq keeps
+    // the original input as `.`, so selects alone would collect the whole response.
+    expect(yaml).toContain("| $run]");
+    expect(yaml).toContain("BEFORE_MAINTENANCE_RUN_IDS");
+    expect(yaml).toContain('"Metrics maintenance for $TARGET_SHA"');
+    expect(yaml).toContain('["app/" + $bot_slug, $bot_slug + "[bot]"]');
+    expect(yaml).toContain("application/vnd.github.raw+json");
+    expect(yaml).toContain("refs/heads/metrics/maintenance");
+    expect(yaml).toContain('--state open --head "metrics/maintenance"');
   });
 });

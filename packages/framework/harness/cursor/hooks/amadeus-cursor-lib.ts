@@ -124,7 +124,7 @@ export function reconstruct(target: string, env: CursorEnvelope): Reconstruction
       // core hook classifies machine-injected turns itself from the prompt text
       // (#755), so the shim forwards the prompt and does no classification.
       // session_id is forwarded when present so the core hook's canonical mint
-      // seam can resolve a solo standing-grant presence reservation armed in
+      // seam can resolve a session-bound presence reservation armed in
       // THIS session; absent, the core hook mints the ordinary HUMAN_TURN.
       // Advisory.
       const mintPayload: Record<string, unknown> = {

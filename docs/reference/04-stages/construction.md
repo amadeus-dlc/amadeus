@@ -41,20 +41,23 @@ from stage 2.7. A [Bolt](../../guide/glossary.md) is one pass through stages
 Bolts.
 
 ```
-Bolt 1 (walking skeleton) — always gated:
+Intent autonomy (selected before unattended decisions):
+  none → humans decide every gate and question
+  semi → in-phase gates are pre-approved; phase boundaries and questions wait
+  full → confirmed Intent grant may decide authorised gates and questions
+
+Bolt 1 (walking skeleton) — follows the same mode table:
   Questions (3.1–3.4 across the Bolt's Units in QUESTION-ONLY mode)
   → Answers gate (Bolt-level)
   Design artifacts (3.1–3.4 in ARTIFACT-ONLY mode)
   Code generation (3.5 per Unit via Task delegation)
-  → Walking-skeleton gate
-  → Ladder prompt (fires once): "autonomous" or "gated"
-  → Write Construction Autonomy Mode to state
+  → Walking-skeleton gate (`full` may decide it; `none`/`semi` wait)
 
-Bolt 2..N — autonomy mode governs the gate:
+Bolt 2..N — Intent autonomy governs the gate:
   (Parallel-eligible Bolts run as a batch; single batch-level gate covers
    every Bolt in it.)
   Questions → Answers gate (Bolt-level) → Design → Code-gen → Bolt/batch
-  gate (skipped if autonomous). Failure always halts and asks.
+  gate. Blocking defects enter repair/replan; non-productive loops park.
 
 After all Bolts:
   3.6 Build and Test (runs once across the full codebase)
@@ -75,11 +78,12 @@ assistant message. One batch-level gate covers them all. Audit events
 (`BOLT_STARTED`, `BOLT_COMPLETED`) carry a `Batch=N` field so siblings are
 recoverable from the log.
 
-**Failure handling.** A Bolt failure always halts Construction regardless
-of autonomy mode. Options are retry (re-run just the failed Bolt), skip
-(mark `[S]` and continue — dependent Bolts may also fail), or abort.
-Successful siblings in a parallel batch keep their `[x]` status and
-artifacts. See `stage-protocol.md` §1 "Construction Bolt gates" and
+**Failure handling.** In `semi` and `full`, blocking findings enter the required
+Quality Repair plugin. Repair is scoped to failed work; successful siblings in
+a parallel batch keep their `[x]` status and artifacts. The plugin repairs or
+replans until evidence is healthy, then parks as `REPAIR_STALLED` if progress is
+non-productive. The park preserves an active `full` grant and records explicit
+resume conditions. See `stage-protocol.md` §1 "Construction Bolt gates" and
 SKILL.md §CONSTRUCTION Flow for the canonical specification.
 
 ---

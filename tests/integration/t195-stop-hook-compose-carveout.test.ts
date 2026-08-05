@@ -22,17 +22,23 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   DEFAULT_RECORD_DIR,
+  DEFAULT_INTENT_UUID,
   DEFAULT_SPACE,
   intentsDirOf,
   seededAuditDir,
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import {
+  applyProductionAutonomyMode,
+  previewProductionAutonomyGrant,
+} from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -46,7 +52,20 @@ function pinnedShardPath(proj: string): string {
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 48) || "host";
-  return join(seededAuditDir(proj), `${host}-${PINNED_CLONE_ID}.md`);
+  return join(seededAuditDir(proj), `${host}-${PINNED_CLONE_ID}.jsonl`);
+}
+
+function auditRow(seq: number, event: "STAGE_STARTED" | "HUMAN_TURN"): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    seq,
+    cloneId: PINNED_CLONE_ID,
+    intentId: DEFAULT_INTENT_UUID,
+    timestamp: `2026-01-01T00:00:0${seq}.000Z`,
+    heading: event === "HUMAN_TURN" ? "Human Turn" : "Stage Started",
+    event,
+    fields: event === "STAGE_STARTED" ? { "Stage slug": "requirements-analysis" } : {},
+  });
 }
 
 const MOCK_ENGINE = `console.log(JSON.stringify({ kind: "run-stage", stage: "requirements-analysis" }));
@@ -70,24 +89,47 @@ function makeProject(): string {
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
-    `${JSON.stringify([{ uuid: "00000000-0000-7000-8000-000000000001", slug: "t195", status: "in-flight" }], null, 2)}\n`,
+    `${JSON.stringify([{
+      uuid: DEFAULT_INTENT_UUID,
+      slug: DEFAULT_RECORD_DIR.replace(/-[0-9a-f]+$/, ""),
+      status: "in-flight",
+    }], null, 2)}\n`,
     "utf-8",
   );
   writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   mkdirSync(seededAuditDir(proj), { recursive: true });
-  writeFileSync(pinnedShardPath(proj), "audit row 1\n", "utf-8");
+  writeFileSync(pinnedShardPath(proj), `${auditRow(1, "STAGE_STARTED")}\n`, "utf-8");
   return proj;
 }
 
-function seedActive(proj: string, opts: { autonomy?: string } = {}): void {
-  const autonomyLine = opts.autonomy
-    ? `- **Construction Autonomy Mode**: ${opts.autonomy}\n`
+function seedActive(proj: string, opts: { intentAutonomy?: string } = {}): void {
+  const autonomyLine = opts.intentAutonomy
+    ? `- **Intent Autonomy Mode**: ${opts.intentAutonomy}\n`
     : "";
   writeFileSync(
     seededStateFile(proj),
     `- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: requirements-analysis\n${autonomyLine}`,
     "utf-8",
   );
+}
+
+function seedFullIntentGrant(proj: string): void {
+  resetOtelPerProject();
+  writeFileSync(
+    pinnedShardPath(proj),
+    `${readFileSync(pinnedShardPath(proj), "utf-8")}${auditRow(2, "HUMAN_TURN")}\n`,
+    "utf-8",
+  );
+  const stateContent = readFileSync(seededStateFile(proj), "utf-8");
+  const preview = previewProductionAutonomyGrant({ projectDir: proj, stateContent });
+  if (!preview.ok) throw new Error(preview.error);
+  const applied = applyProductionAutonomyMode({
+    projectDir: proj,
+    stateContent,
+    mode: "full",
+    confirmedDisplayDigest: preview.preview.displayDigest,
+  });
+  if (!applied.ok) throw new Error(applied.error);
 }
 
 const markerPath = (proj: string): string => join(proj, "amadeus", ".amadeus-compose-pending");
@@ -123,9 +165,10 @@ describe("t195 pending-compose Stop-hook carve-out (tier 2b)", () => {
     expect(r.out).toContain('"decision":"block"');
   });
 
-  test("3: marker present under AUTONOMOUS construction -> BLOCK (autonomy guard)", () => {
+  test("3: marker present under full Intent autonomy -> BLOCK (autonomy guard)", () => {
     const proj = makeProject();
-    seedActive(proj, { autonomy: "autonomous" });
+    seedActive(proj, { intentAutonomy: "full" });
+    seedFullIntentGrant(proj);
     writeFileSync(markerPath(proj), "pending\n", "utf-8");
     const r = runHook(proj);
     expect(r.out).toContain('"decision":"block"');

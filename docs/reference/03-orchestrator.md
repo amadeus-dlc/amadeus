@@ -241,7 +241,7 @@ The state file at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/amadeus-state
 - `[x]` completed (approved by user)
 - `[S]` skipped (scope-excluded at init, cut via `skip`, or bypassed via `--stage`/`--phase` jump)
 
-The Construction phase section is special: it runs Bolt by Bolt (see [Construction Execution](#construction-execution) below), so the checkboxes appear once for each Unit within each Bolt defined in `bolt-plan.md`. Additionally, `Construction Autonomy Mode: [unset|autonomous|gated]` is recorded under **Current Status** — written after the ladder prompt fires and honoured on session resume.
+The Construction phase section is special: it runs Bolt by Bolt (see [Construction Execution](#construction-execution) below), so the checkboxes appear once for each Unit within each Bolt defined in `bolt-plan.md`. Canonical state records `Intent Autonomy Mode: none|semi|full`, the Intent-level execution state, and a nullable Intent grant. `Construction Autonomy Mode` remains a derived scheduling projection for compatibility, not an authorisation source.
 
 ### Recovery Breadcrumb
 
@@ -434,14 +434,14 @@ Per-Bolt structure:
 3. Dispatch stage 3.5 Code Generation per Unit via the Task tool (`subagent_type="amadeus-developer-agent"`). The per-Unit approval gate inside `code-generation.md` is **suppressed** by the orchestrator.
 4. Present a single Bolt-level (or batch-level) approval gate.
 
-The first Bolt in `bolt-plan.md` is the **walking skeleton** — its gate is always presented regardless of autonomy mode. Immediately after the walking-skeleton gate approves, the orchestrator fires the **ladder prompt** exactly once per workflow, records `Construction Autonomy Mode: autonomous|gated` in `amadeus-state.md`, and emits `AUTONOMY_MODE_SET`. Remaining Bolts honour that mode.
+Autonomy is selected for the whole Intent as `none`, `semi`, or `full`; it is not selected by a post-walking-skeleton ladder. In `none`, humans decide stage gates, phase gates, and questions. In `semi`, in-phase gates are pre-approved while phase boundaries and questions still wait for a human. In `full`, a human-issued Intent-scoped grant may decide authorised stage gates, phase gates, and questions through Intent completion. The walking skeleton follows the same table: only `full` may decide its gate automatically. Legacy standing grants and `AUTONOMY_MODE_SET` records remain available for replay and diagnosis but confer no authority.
 
 Bolts eligible to run in parallel (dependency prerequisites satisfied, no mutual dependency) form a **batch**. The orchestrator executes questions/design per-Bolt sequentially within the batch, then dispatches stage 3.5 Code Generation in parallel by issuing **N `Task` calls in a single assistant message**. The framework spawns N subagent sessions concurrently; results arrive in the orchestrator's next turn. A single batch-level gate covers all Bolts in the batch. Audit log ties parallel Bolts together via the `Batch` field on `BOLT_STARTED`/`BOLT_COMPLETED`.
 
-Failure handling is **halt-and-ask** and runs regardless of autonomy mode:
+Blocking reviewer findings, sensors, required outputs, and completion conditions are quality obligations. `semi` and `full` require the first-party Quality Repair plugin, which repairs or replans until the evidence is healthy. If the loop stops making productive progress it parks as `REPAIR_STALLED`, preserving any active Intent grant and recording an explicit resume condition. Human gates still apply wherever the mode table requires them.
 
-- Solo Bolt failure: halt, emit `BOLT_FAILED`, present retry / skip / abort.
-- Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts on disk, emit `BOLT_FAILED` with `Succeeded=[names]`, present the same choices scoped to the failed Bolt. Retry re-runs only the failed Bolt; the batch siblings stay `[x]`.
+- Solo Bolt failure records `BOLT_FAILED`; repair retries only the affected work.
+- Parallel batch partial failure waits for all parallel Tasks, preserves successful siblings, and scopes repair to failed work. Independent siblings remain complete.
 
 ```mermaid
 sequenceDiagram
@@ -453,11 +453,9 @@ sequenceDiagram
     participant BC as Subagent (Bolt C)
 
     O->>O: Read bolt-plan.md + unit-of-work-dependency.md
-    O->>U: Run Bolt A (walking skeleton) — questions, design, code-gen
-    U->>O: Approve walking-skeleton gate
-    O->>U: Ladder prompt (fires once)
-    U->>O: "Continue autonomously"
-    O->>O: Write Construction Autonomy Mode: autonomous; emit AUTONOMY_MODE_SET
+    U->>O: Select full and confirm the Intent-scoped grant
+    O->>O: Atomically record mode, grant, scope, policies, and human provenance
+    O->>O: Run Bolt A (walking skeleton); decide its gate within the grant
 
     Note over O,T: Bolts B + C eligible in parallel batch
     O->>T: Task(B code-gen) + Task(C code-gen) in ONE message
@@ -468,12 +466,12 @@ sequenceDiagram
     BB-->>O: Bolt B artifacts + summary
     BC-->>O: Bolt C artifacts + summary
     O->>O: Emit BOLT_COMPLETED for B and C (shared Batch=N)
-    Note over O,U: No gate — autonomous mode. A failure would force halt-and-ask regardless.
+    Note over O,U: Blocking defects enter repair/replan; a non-productive loop parks with the grant intact.
 
     O->>O: All Bolts done → run 3.6 Build and Test, then 3.7 CI Pipeline
 ```
 
-<!-- Text fallback: The orchestrator reads bolt-plan.md and the dependency DAG. It runs Bolt A as the walking skeleton, the user approves the gate, and the ladder prompt fires once. User picks "Continue autonomously", orchestrator writes Construction Autonomy Mode and emits AUTONOMY_MODE_SET. For Bolts B and C (eligible in parallel), the orchestrator issues both Task calls in a single message; the framework runs them concurrently; the orchestrator receives both results in the next turn and emits BOLT_COMPLETED for each with a shared Batch field. No gate because autonomy mode is autonomous — a failure would still halt. Once all Bolts are done, 3.6 and 3.7 run once at the end. -->
+<!-- Text fallback: The user selects full autonomy and confirms an Intent-scoped grant before unattended decisions. The orchestrator runs the walking skeleton under the same mode rules as every other Bolt. It dispatches dependency-independent Bolts B and C concurrently, records both results, and routes blocking defects through bounded repair/replan. A non-productive loop parks with the grant intact. Once all Bolts are healthy, stages 3.6 and 3.7 run once at the end. -->
 
 State and audit safety under parallel dispatch: `amadeus-audit.ts` uses mkdir-based locking so concurrent appends are safe. `amadeus-state.ts advance` is not locked, but the orchestrator serialises state writes naturally — it only writes after Task results return, not during. No state-race risk.
 

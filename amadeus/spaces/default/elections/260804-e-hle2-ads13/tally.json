@@ -1,0 +1,48 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-04T11:51:44Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-ADS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測により選択肢1『0件で可』を支持する。(1) c1はapplication-design/memory.mdのInterpretationsに記録されているが、project.mdの既存cid:application-design:c1-pi-harness『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』と意味・発動条件が重複し、新規規則ではない。(2) c2はrequirements.mdのFR-13〜FR-15とdecisions.mdのADR-03に、ACP/TUIを独立probeし各transport自身のcontract/integration/live greenを要求し、不成立時はfollowUpIssueへ閉じる条件として保持され、component-methods.mdのsupported/followUpIssue契約にも投影済みである。(3) c3はapplication-design-questions.mdのユーザー回答Q1=A、decisions.mdのADR-02、components.mdのC6境界として、legacy policy/lifecycleを残さずtransport mechanicsだけを再利用してrunLiveJourneyへ一本化するIntent固有裁定が保持されている。(4) reviewer由来のretry分類と二重失敗時error優先順位はmemory.mdのOpen questionsとして後続Functional/NFR Designへ明示送付済みである。したがって、既存memoryの重複追加やIntent固有ADRの恒久化、追加sensorを正当化する未保持の横断知見はなく、0件が最小十分である。",
+      "submittedAt": "2026-08-04T11:50:58Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-ADS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を全面支持する。独立実測では、c1の『正本に記載済みの設計境界を再質問しない』はapplication-design/memory.md:5の適用記録であり、project.md:314の既存恒久規則『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』およびteam.md:59の既決規範適用則と意味・判断述語が一致する。c2はrequirements.md:27-33のFR-09〜FR-15とdecisions.md:66-94のADR-03に、ACP/TUI別のprobe、contract/integration、transport自身のlive green、不能時follow-upとして保持済みである。c3はapplication-design-questions.md:12-23のユーザー回答Aとdecisions.md:36-64のADR-02に、legacy mechanicsを再利用し旧policy/lifecycleを削除して共通runLiveJourneyへ一本化するIntent固有裁定として保持済みである。新しい横断規律や決定的sensor述語はなく、恒久memoryまたはsensorの追加は重複正本を生むため不要である。",
+      "submittedAt": "2026-08-04T11:51:01Z"
+    }
+  ],
+  "resolutions": []
+}

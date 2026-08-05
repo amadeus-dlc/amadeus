@@ -20,19 +20,19 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 601,
+    "total": 600,
     "enumeratedByClass": {
-      "function": 344,
-      "audit": 87,
+      "function": 339,
+      "audit": 88,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 102,
+      "subcommand": 105,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 177,
-      "audit": 41,
+      "function": 175,
+      "audit": 42,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -315,6 +315,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -1625,13 +1637,6 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:DEFAULT_STANDING_GRANT_TTL_MS",
-      "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
-    },
-    {
-      "unitClass": "function",
       "unitId": "function:detectHarnessType",
       "minMechanism": "none",
       "coveredBy": [
@@ -1848,22 +1853,6 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:evaluateStandingGrantGateEligibility",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t-standing-grant-composed-scope.test.ts",
-          "mechanism": "none"
-        },
-        {
-          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
-          "mechanism": "none"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "function",
       "unitId": "function:EXECUTION_PROJECTION_DIGEST_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1919,13 +1908,6 @@
         }
       ],
       "status": "covered"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:findActiveStandingGrant",
-      "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -2030,13 +2012,6 @@
         }
       ],
       "status": "covered"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:GRANT_ID_RE",
-      "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3358,10 +3333,22 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:rebuildDerivedPlanFields",
+      "unitId": "function:rebuildCompletedFieldFromState",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:rebuildDerivedPlanFields",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3660,13 +3647,8 @@
       "unitClass": "function",
       "unitId": "function:resolveOperatingMode",
       "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
-          "mechanism": "none"
-        }
-      ],
-      "status": "covered"
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -4085,25 +4067,6 @@
       "coveredBy": [
         {
           "file": "tests/unit/t108.test.ts",
-          "mechanism": "none"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:StandingGrant",
-      "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:standingGrantSatisfiesGate",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t-standing-grant-composed-scope.test.ts",
           "mechanism": "none"
         }
       ],
@@ -5664,6 +5627,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt decide-question",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt dispatch-event",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5732,6 +5702,20 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt observe-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt preview-autonomy",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt release-merge",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5744,6 +5728,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt resume-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5753,6 +5744,10 @@
         },
         {
           "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t435-intent-autonomy-production.integration.test.ts",
           "mechanism": "cli"
         },
         {
@@ -5917,6 +5912,10 @@
           "mechanism": "sdk"
         },
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-transition-guard-audit.test.ts",
           "mechanism": "cli"
         },
@@ -6002,6 +6001,18 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-log advisory-decision",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-advisory-human-choice-boundaries.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "UNDER-MECHANISM"
     },
     {
       "unitClass": "subcommand",
@@ -6223,6 +6234,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-transition-guard-audit.test.ts",
           "mechanism": "cli"
         },
@@ -6246,6 +6261,10 @@
       "unitId": "amadeus-state approve",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t145-state-lock-concurrency.test.ts",
           "mechanism": "cli"
@@ -6295,6 +6314,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t256-state-intent-selector.test.ts",
           "mechanism": "cli"
         },
@@ -6310,6 +6333,10 @@
       "unitId": "amadeus-state complete-workflow",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",
           "mechanism": "cli"
@@ -6369,6 +6396,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -6426,13 +6457,6 @@
         }
       ],
       "status": "covered"
-    },
-    {
-      "unitClass": "subcommand",
-      "unitId": "amadeus-state grant-standing-delegation",
-      "minMechanism": "cli",
-      "coveredBy": [],
-      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
@@ -6568,13 +6592,6 @@
         }
       ],
       "status": "covered"
-    },
-    {
-      "unitClass": "subcommand",
-      "unitId": "amadeus-state revoke-standing-delegation",
-      "minMechanism": "cli",
-      "coveredBy": [],
-      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",

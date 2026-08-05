@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ESG-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c5 の『測定 ref に拘束された旧値は伝播させない』は cite-fix-sweeps-whole-record と measurement-ref-in-artifacts の合成から導出可能だが明文ではないため、将来 codekb 側に ref 注記が無い断面で過剰伝播が起きうる — 次回 PM で cite-fix 側へ1行の参照追記(『誤引用でなく ref 差なら伝播対象外』)を検討する余地を残す。",
+  "rationale": "実測判定: c1 = questions.md 冒頭が no-election-judgment-gate / escalation-canonical(4)/ issue-selection-user-decides を明示引用し、判定→承認 TS(2026-08-03T12:02:13Z)→[Answer] 記入の順序を守った執行実例。ソロで leader 承認をユーザー直エスカレーションに代替した点も役割不在時の縮退適用でありゲートの目的(裁定受領後に記入)を保持しているため新規規範ではない。c2 = Issue #2125 の記述誤り2件(store.ts:707 の late 非集計 / model.ts:175 の kind 4種で reopen 不可記録)は当該 intent の調査結果であり、規範化できる一般則を含まない(intent 固有、persist 不要)。c3 = A-2 の『全選挙記録を verify する CI は存在しない』を tests/ の全域走査で反証確認しており absence-claim-grep-verify の教科書的執行。c4 = memory.md Deviations が delegated-review-analysis-with-owned-verdict 追補(E-LSSADS13)の機械検証可能クラスを名指しし、閉包を4つの機械確認(旧件数残存1・三者一致・必須7節・センサー PASSED2/FAILED0)で固定しており、追補が想定した適用面そのもの。c5 = codekb architecture.md:2965 が『本節の file:line はすべて observed 498c3034a 時点』と ref を明記済みで、measurement-ref-in-artifacts の要求を既に満たしている。cite-fix-sweeps-whole-record の射程は『誤引用の是正の伝播』であり、ref 明記済みで当該断面では正しい値は誤引用ではないため、そもそも sweep の伝播対象外 — 非伝播は2 cid の合成で既定の範囲内に収まり、requirements.md:75 の ref 差説明追記がその正しい執行形。よって新規追補は0件。",
+  "submittedAt": "2026-08-03T12:25:41Z"
+}

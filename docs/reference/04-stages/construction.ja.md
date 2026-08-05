@@ -41,20 +41,23 @@ Construction は **Bolt ごと**に実行され、ステージ 2.8 の `bolt-pla
 されます。
 
 ```
-Bolt 1 (walking skeleton) — 常にゲートされる:
+Intent自律レベル（無人裁定の前に選択）:
+  none → すべてのgateと質問を人間が裁定
+  semi → phase内gateは事前承認済み、phase境界と質問は人間を待つ
+  full → 確認済みIntent grantが認可範囲内のgateと質問を裁定可能
+
+Bolt 1 (walking skeleton) — 同じmode表に従う:
   Questions (3.1–3.4 を Bolt のユニット横断で QUESTION-ONLY モードで)
   → Answers ゲート (Bolt レベル)
   Design artifacts (3.1–3.4 を ARTIFACT-ONLY モードで)
   Code generation (3.5 を Task 委譲でユニットごとに)
-  → Walking-skeleton ゲート
-  → Ladder プロンプト (1回発火): "autonomous" または "gated"
-  → Construction Autonomy Mode を state に書き込む
+  → Walking-skeleton gate（`full`は裁定可能、`none` / `semi`は人間を待つ）
 
-Bolt 2..N — autonomy モードがゲートを統括する:
+Bolt 2..N — Intent自律レベルがgateを統括する:
   (並列適格な Bolt はバッチとして実行される。単一のバッチレベルゲートが
    その中の全 Bolt をカバーする。)
   Questions → Answers ゲート (Bolt レベル) → Design → Code-gen → Bolt/batch
-  ゲート (autonomous ならスキップ)。失敗は常に停止して問い合わせる。
+  gate。blockingな不備はrepair/replanへ入り、非生産的なloopはparkする。
 
 全 Bolt の後:
   3.6 Build and Test (フルコードベース横断で1回実行)
@@ -74,12 +77,12 @@ N 個の `Task` 呼び出しを発行することにより並行してディス�
 `BOLT_COMPLETED`)は `Batch=N` フィールドを持つため、兄弟 Bolt はログから復旧
 可能です。
 
-**失敗処理。** Bolt の失敗は、autonomy モードに関わらず常に Construction を停止
-します。選択肢は retry(失敗した Bolt だけを再実行)、skip(`[S]` をマークして続行 —
-依存する Bolt も失敗する可能性がある)、または abort です。並列バッチ内で成功した
-兄弟 Bolt は `[x]` ステータスと成果物を保持します。正規の仕様については
-`stage-protocol.md` §1 "Construction Bolt gates" と SKILL.md §CONSTRUCTION Flow
-を参照してください。
+**失敗処理。** `semi` / `full`ではblockingな指摘を必須のQuality Repair Pluginへ
+渡します。repairは失敗した作業だけを対象とし、並列バッチ内で成功した兄弟Boltは
+`[x]`と成果物を保持します。証拠が健全になるまでrepairまたはreplanし、生産的な進捗が
+止まれば`REPAIR_STALLED`としてparkします。parkしてもactiveな`full` grantは維持され、
+明示的な再開条件を記録します。正規の仕様については`stage-protocol.md` §1
+"Construction Bolt gates" と SKILL.md §CONSTRUCTION Flowを参照してください。
 
 ---
 

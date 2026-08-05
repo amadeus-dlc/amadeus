@@ -2,14 +2,15 @@
 //
 // A bolt is one execution of stages 3.1-3.5 for a Unit (or small group of
 // dependency-linked Units). This tool owns BOLT_STARTED, BOLT_COMPLETED,
-// BOLT_FAILED, and AUTONOMY_MODE_SET emissions — separated from amadeus-state
-// to keep Construction-phase specifics out of the general state tool.
+// BOLT_FAILED emissions and the Intent-scoped autonomy command surface —
+// separated from amadeus-state to keep Construction-phase specifics out of the
+// general state tool. AUTONOMY_MODE_SET remains replay/doctor-only legacy data.
 // `abort` reuses BOLT_FAILED with a `Reason: aborted` field rather than
 // adding a new event type — keeps the audit count stable and uses field
 // taxonomy for sub-classification per the project pattern.
 //
-// AUTONOMY_MODE_SET also updates the Construction Autonomy Mode field in
-// amadeus-state.md atomically with its audit emission.
+// Intent autonomy commits update the canonical Intent Mode/Grant projection and
+// the compatibility Construction Autonomy Mode field in one transaction.
 //
 // Per-Bolt worktree lifecycle integration. The CLI surface mirrors the
 // lifecycle's three terminal states:
@@ -44,17 +45,28 @@ import {
   emitError,
   errorMessage,
   getField,
+  loadStageGraph,
   parseApprovedSwarmBatches,
   relativeRecordDir,
   readStateFile,
   resolveProjectDir,
   setFieldStrict,
   setOrInsertField,
+  withAuditLock,
   SWARM_BATCH_APPROVALS_FIELD,
   worktreePath,
   worktreeStateFilePath,
   writeStateFile,
 } from "./amadeus-lib.js";
+import {
+  applyProductionAutonomyMode,
+  commitProductionQualityObservation,
+  commitProductionQuestionDecision,
+  previewProductionAutonomyGrant,
+  resumeProductionQuality,
+  type ProductionQuestionDecisionInput,
+} from "./amadeus-intent-autonomy-production.ts";
+import { autonomyDigest, type DecisionPolicyInput } from "./amadeus-intent-autonomy.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
@@ -851,59 +863,145 @@ function handleDispatchEvent(args: string[], explicitProjectDir?: string): void 
 }
 
 // --- Subcommand: set-autonomy ---
-// Usage: amadeus-bolt set-autonomy --mode autonomous|gated
+// Usage: amadeus-bolt preview-autonomy [--policies-file <json>]
+//        amadeus-bolt set-autonomy --mode none|semi|full
+//          [--policies-file <json>] [--confirmed-display-digest <digest>]
 //
-// Emits AUTONOMY_MODE_SET AND updates the Construction Autonomy Mode field
-// in amadeus-state.md atomically (audit-first).
+// Commits the Intent-scoped autonomy transaction and updates both its canonical
+// state projection and the compatibility Construction scheduling projection.
+function readDecisionPolicyInputs(path: string | undefined): readonly DecisionPolicyInput[] {
+  if (path === undefined) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8"));
+  } catch (cause) {
+    error(`Invalid --policies-file: ${errorMessage(cause)}`);
+  }
+  if (!Array.isArray(parsed) || !parsed.every((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+    const value = entry as Record<string, unknown>;
+    return typeof value.sourceText === "string" && typeof value.selector === "string" &&
+      typeof value.optionId === "string";
+  })) {
+    error("Invalid --policies-file: expected an array of {sourceText, selector, optionId}");
+  }
+  return parsed as DecisionPolicyInput[];
+}
+
+function handlePreviewAutonomy(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  const pd = resolveBoltProjectDir(explicitProjectDir);
+  const result = previewProductionAutonomyGrant({
+    projectDir: pd,
+    stateContent: readStateFile(pd),
+    policies: readDecisionPolicyInputs(flags["policies-file"]),
+  });
+  if (!result.ok) error(`Intent autonomy preview failed: ${result.error}`);
+  console.log(JSON.stringify(result.preview));
+}
+
+function handleDecideQuestion(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.input) error("Missing --input <question-decision.json>");
+  let parsed: Omit<ProductionQuestionDecisionInput, "projectDir" | "graphRevision"> & { readonly graphRevision?: string };
+  try {
+    parsed = JSON.parse(readFileSync(flags.input, "utf8"));
+  } catch (cause) {
+    error(`Invalid --input: ${errorMessage(cause)}`);
+  }
+  const pd = resolveBoltProjectDir(explicitProjectDir);
+  const result = commitProductionQuestionDecision({
+    ...parsed,
+    projectDir: pd,
+    graphRevision: parsed.graphRevision ?? autonomyDigest(loadStageGraph()),
+  });
+  console.log(JSON.stringify(result));
+}
+
+function handleObserveQuality(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.input) error("Missing --input <quality-observation.json>");
+  let parsed: Omit<Parameters<typeof commitProductionQualityObservation>[0], "projectDir">;
+  try {
+    parsed = JSON.parse(readFileSync(flags.input, "utf8"));
+  } catch (cause) {
+    error(`Invalid --input: ${errorMessage(cause)}`);
+  }
+  const result = commitProductionQualityObservation({
+    ...parsed,
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+  });
+  if (result.kind === "error") error(`Quality observation failed: ${result.reason}`);
+  console.log(JSON.stringify(result));
+}
+
+function handleResumeQuality(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.input) error("Missing --input <quality-resume.json>");
+  let parsed: Omit<Parameters<typeof resumeProductionQuality>[0], "projectDir">;
+  try {
+    parsed = JSON.parse(readFileSync(flags.input, "utf8"));
+  } catch (cause) {
+    error(`Invalid --input: ${errorMessage(cause)}`);
+  }
+  const result = resumeProductionQuality({
+    ...parsed,
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+  });
+  if (result.kind === "error") error(`Quality resume failed: ${result.reason}`);
+  console.log(JSON.stringify(result));
+}
+
 function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
-  if (!flags.mode) error("Missing --mode <autonomous|gated>");
-  if (!["autonomous", "gated"].includes(flags.mode)) {
-    error(`Invalid --mode: ${flags.mode}. Must be 'autonomous' or 'gated'.`);
+  if (!flags.mode) error("Missing --mode <none|semi|full>");
+  if (!["none", "semi", "full"].includes(flags.mode)) {
+    error(`Invalid --mode: ${flags.mode}. Must be 'none', 'semi', or 'full'.`);
   }
 
   const pd = resolveBoltProjectDir(explicitProjectDir);
 
-  // Validate state-file shape BEFORE emitting audit. setFieldStrict throws if
-  // the field is absent (v4 state files or hand-edited files). If we emitted
-  // audit first and the field was missing, we'd leave an orphan
-  // AUTONOMY_MODE_SET in the audit journal with no corresponding state mutation —
-  // exactly the t59-class drift the refactor aims to prevent.
-  const content = readStateFile(pd);
-  let updated: string;
-  try {
-    updated = setFieldStrict(content, "Construction Autonomy Mode", flags.mode);
-  } catch (e) {
-    error(`State update failed: ${errorMessage(e)}`);
-  }
-
-  // Now audit-first: emit audit before writing the mutated state.
-  try {
-    emitAudit(pd, "AUTONOMY_MODE_SET", {
-      Mode: flags.mode,
+  if (["none", "semi", "full"].includes(flags.mode)) {
+    withAuditLock(pd, () => {
+      const content = readStateFile(pd);
+      const applied = applyProductionAutonomyMode({
+        projectDir: pd,
+        stateContent: content,
+        mode: flags.mode as "none" | "semi" | "full",
+        policies: readDecisionPolicyInputs(flags["policies-file"]),
+        confirmedDisplayDigest: flags["confirmed-display-digest"],
+      });
+      if (!applied.ok) error(`Intent autonomy update failed: ${applied.error}`);
+      const schedulingMode = flags.mode === "full" ? "autonomous" : "gated";
+      let updated = setOrInsertField(content, "## Current Status", "Intent Autonomy Mode", flags.mode);
+      updated = setOrInsertField(
+        updated,
+        "## Current Status",
+        "Intent Grant",
+        applied.projection.currentGrant?.grantId ?? "none",
+      );
+      updated = setFieldStrict(updated, "Construction Autonomy Mode", schedulingMode);
+      writeStateFile(pd, updated);
+      console.log(JSON.stringify({
+        emitted: "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
+        mode: flags.mode,
+        grant_id: applied.projection.currentGrant?.grantId ?? null,
+        state_updated: true,
+      }));
     });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
+    return;
   }
 
-  writeStateFile(pd, updated);
-
-  console.log(
-    JSON.stringify({
-      emitted: "AUTONOMY_MODE_SET",
-      mode: flags.mode,
-      state_updated: true,
-    })
-  );
+  error(`Invalid --mode: ${flags.mode}. Must be 'none', 'semi', or 'full'.`);
 }
 
 // --- Subcommand: approve-batch ---
 // Usage: amadeus-bolt approve-batch --batch <n>
 //
 // Records the human's approval at a gated swarm's BATCH-END gate (issue #1612).
-// Under `Construction Autonomy Mode: gated` the engine fans a parallel batch out
-// and then refuses the NEXT batch until the finished one is approved here — one
-// gate per batch, not one per Bolt (stage-protocol.md § "Subsequent Bolt gate").
+// Under Intent Mode `semi` (projected as `Construction Autonomy Mode: gated`)
+// the engine fans a parallel batch out and then refuses the NEXT batch until the
+// finished one is approved here — one gate per batch, not one per Bolt.
 // The approval is appended to the `Swarm Gated Batch Approvals` state field (a
 // comma-separated list of 1-origin batch numbers, inserted under
 // `## Current Status` on first use so the state template needs no bump — the
@@ -976,6 +1074,7 @@ export function handleBoltCommand(
   args: string[],
   explicitProjectDir?: string,
 ): void {
+  if (handleAutonomySupportCommand(subcommand, args, explicitProjectDir)) return;
   switch (subcommand) {
     case "start":
       handleStart(args, explicitProjectDir);
@@ -988,9 +1087,6 @@ export function handleBoltCommand(
       return;
     case "abort":
       handleAbort(args, explicitProjectDir);
-      return;
-    case "set-autonomy":
-      handleSetAutonomy(args, explicitProjectDir);
       return;
     case "approve-batch":
       handleApproveBatch(args, explicitProjectDir);
@@ -1006,10 +1102,28 @@ export function handleBoltCommand(
       return;
     default:
       error(
-        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, approve-batch, dispatch-event, hold-merge, release-merge`,
+        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, preview-autonomy, set-autonomy, decide-question, observe-quality, resume-quality, approve-batch, dispatch-event, hold-merge, release-merge`,
         explicitProjectDir,
       );
   }
+}
+
+function handleAutonomySupportCommand(
+  subcommand: string | undefined,
+  args: string[],
+  explicitProjectDir?: string,
+): boolean {
+  const handlers: Readonly<Record<string, (values: string[], project?: string) => void>> = {
+    "set-autonomy": handleSetAutonomy,
+    "preview-autonomy": handlePreviewAutonomy,
+    "decide-question": handleDecideQuestion,
+    "observe-quality": handleObserveQuality,
+    "resume-quality": handleResumeQuality,
+  };
+  const handler = subcommand === undefined ? undefined : handlers[subcommand];
+  if (handler === undefined) return false;
+  handler(args, explicitProjectDir);
+  return true;
 }
 
 export function main(rawArgs: string[] = process.argv.slice(2)): void {

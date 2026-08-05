@@ -1,0 +1,13 @@
+{
+  "electionId": "E-HLE2-ICS13",
+  "voter": "subagent-1",
+  "question": "260804-live-e2e-phase2 intent-capture の §13 学習選定。候補 c1『先行IntentとIssue #1717をPhase 2の正本として再利用した』は、先行Intentの選挙 E-HLE-ICS13 で既に『本Intent固有の範囲裁定はIntent recordへ保持し、恒久ルールを重複追加しない』と裁定済みの実例である。今回もKiro IDE GUI/CDPとPhase 3の除外をIntent recordへ保持し、新規project/team memoryへの永続化は0件でよいか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1は既存裁定の適用実例としてIntent recordに保持し、恒久ルールを重複追加しない"
+    }
+  ]
+}

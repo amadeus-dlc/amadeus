@@ -113,11 +113,15 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // finalization. That catch was the NSD001 identity b775faf8 in amadeus-lib.ts,
     // so deleting the silent-continue path deletes the finding, and the pre-approved
     // set loses one more identity (12 -> 13). The issue set is unchanged because
-    // b775faf8 was already filed under #1979.
-    expect(result.evidence.counts).toEqual({ C_pre: 214, B_pre: 214, B0: 214 });
-    expect(baseline.entries).toHaveLength(214);
-    expect(removed).toHaveLength(13);
+    // b775faf8 was already filed under #1979. 214 -> 213 is the standing-grant
+    // removal, which deleted the NSD001 identity 56fefece in amadeus-state.ts
+    // along with the authorization path that carried it (13 -> 14), and that
+    // identity was also filed under #1979.
+    expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
+    expect(baseline.entries).toHaveLength(213);
+    expect(removed).toHaveLength(14);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
+    expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
       new Set(["#1874", "#1878", "#1979"]),
     );

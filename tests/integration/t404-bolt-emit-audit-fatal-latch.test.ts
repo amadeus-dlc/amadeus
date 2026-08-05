@@ -68,9 +68,29 @@ function auditContent(proj: string): string {
 // (verifyJournalHealth, FR-EVT-5) latches it: an unparseable journal line.
 function corruptAuditShard(proj: string): void {
   const dir = join(recordDirOf(proj), "audit");
-  const shard = readdirSync(dir).find((f) => f.endsWith(".jsonl"));
+  const shard = readdirSync(dir).find(
+    (f) => f.endsWith(".jsonl") && f !== "t404-human.jsonl",
+  );
   if (!shard) throw new Error(`no audit shard under ${dir}`);
   appendFileSync(join(dir, shard), "not-a-journal-line\n", "utf-8");
+}
+
+function prepareFullAutonomy(proj: string): string {
+  const preview = run(proj, "amadeus-bolt.ts", ["preview-autonomy"]);
+  expect(preview.status).toBe(0);
+  const digest = (JSON.parse(preview.out.trim()) as { displayDigest: string }).displayDigest;
+  const auditDir = join(recordDirOf(proj), "audit");
+  appendFileSync(join(auditDir, "t404-human.jsonl"), `${JSON.stringify({
+    schemaVersion: 1,
+    seq: 1,
+    cloneId: "t404-human",
+    intentId: "t404-human",
+    timestamp: new Date().toISOString(),
+    heading: "Human Turn",
+    event: "HUMAN_TURN",
+    fields: {},
+  })}\n`);
+  return digest;
 }
 
 const tempDirs: string[] = [];
@@ -88,9 +108,16 @@ function bornProject(): string {
 describe("t404 bolt handlers under a latched process (#1959)", () => {
   test("latched set-autonomy fails loudly and writes NO state", () => {
     const proj = bornProject();
+    const digest = prepareFullAutonomy(proj);
     corruptAuditShard(proj);
 
-    const r = run(proj, "amadeus-bolt.ts", ["set-autonomy", "--mode", "gated"]);
+    const r = run(proj, "amadeus-bolt.ts", [
+      "set-autonomy",
+      "--mode",
+      "full",
+      "--confirmed-display-digest",
+      digest,
+    ]);
 
     expect(r.status).not.toBe(0);
     expect(r.out).toMatch(/fatal health latch/i);
@@ -112,14 +139,22 @@ describe("t404 bolt handlers under a latched process (#1959)", () => {
     expect(auditContent(proj)).not.toContain("GATE_APPROVED");
   });
 
-  test("unlatched set-autonomy behaves as before: state written, audit row present", () => {
+  test("unlatched set-autonomy commits Intent authority and its scheduling projection", () => {
     const proj = bornProject();
+    const digest = prepareFullAutonomy(proj);
 
-    const r = run(proj, "amadeus-bolt.ts", ["set-autonomy", "--mode", "gated"]);
+    const r = run(proj, "amadeus-bolt.ts", [
+      "set-autonomy",
+      "--mode",
+      "full",
+      "--confirmed-display-digest",
+      digest,
+    ]);
 
     expect(r.status).toBe(0);
-    expect(readState(proj)).toContain("- **Construction Autonomy Mode**: gated");
-    expect(auditContent(proj)).toContain("AUTONOMY_MODE_SET");
+    expect(readState(proj)).toContain("- **Intent Autonomy Mode**: full");
+    expect(readState(proj)).toContain("- **Construction Autonomy Mode**: autonomous");
+    expect(auditContent(proj)).toContain("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
   });
 });
 

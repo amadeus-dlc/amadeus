@@ -136,7 +136,7 @@ The `approve` command owns the full post-gate transition: it emits `GATE_APPROVE
 
 **Artifact guard (issue #366).** Every transition that marks a stage `[x]` (`approve`, `advance`, `finalize`, and `complete-workflow`) runs a deterministic artifact check before completing it, so a stage cannot be marked `[x]` without evidence of work on disk (no completing subcommand is an unguarded backdoor). A stage that declares `produces[]` must have at least one of those artifacts present (under the active intent's record dir `amadeus/spaces/<space>/intents/<slug>-<id8>/<phase>/<slug>/`, or that record's `construction/<unit>/<slug>/` for per-unit Construction stages, or `amadeus/spaces/<space>/codekb/<repo>/` for codekb stages); a stage with `workspace_requires: true` must additionally show evidence of real source work outside the `amadeus/` workspace tree and the harness dir. In a git workspace that means an uncommitted/untracked non-doc change or a non-doc path in the last commit (so it distinguishes this session's code from a brownfield baseline and still passes commit-then-approve); otherwise a shell-free filesystem-existence check. If the check fails the command exits non-zero and writes nothing: the transition is refused (`Refusing to complete "<slug>": ...`). Stages that declare no `produces[]` (the Initialization phase) pass vacuously. Bypass with `AMADEUS_SKIP_ARTIFACT_GUARD=1`.
 
-**Park (issue #365/#367).** `amadeus-orchestrate park` writes a `Parked` / `Parked At Stage` runtime marker (via `amadeus-state.ts park`, which emits `WORKFLOW_PARKED`) without advancing any stage; a subsequent plain `next` re-emits a terminal `parked` directive and the Stop hook lets the turn end, so a long workflow can pause across sessions instead of rubber-stamping the remaining stages to reach `done`. `/amadeus --resume` clears the marker (`unpark` emits `WORKFLOW_UNPARKED`) before continuing. An unattended autonomous Construction run (`Construction Autonomy Mode: autonomous`) refuses to park: both the tool and the Stop hook's `parked` allow decline under autonomous mode, so the loop keeps moving with no human to resume it.
+**Park (issue #365/#367).** Outside an unattended `full` run, `amadeus-orchestrate park` writes a `Parked` / `Parked At Stage` runtime marker (via `amadeus-state.ts park`, which emits `WORKFLOW_PARKED`) without advancing any stage; a subsequent plain `next` re-emits a terminal `parked` directive. Intent autonomy separately uses a durable suspended projection for explicit safe-stop reasons such as `REPAIR_STALLED` and `NORM_CONFLICT`. The Stop hook allows an emitted `parked` directive in every mode; an active `full` grant remains active and separate from workflow execution state until revoked or completed.
 
 ### Revision loop
 
@@ -178,24 +178,15 @@ A decline reason added later without a branch here lands on `violation` rather t
 
 **Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail — `SWARM_STARTED` and `SWARM_DEGRADED` on the started side (a degraded batch still ran in parallel; it only fell back to the subagent floor), `SWARM_COMPLETED` on the completed side, across every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift. One known limitation: the trail is append-only and the rows are matched by batch number, so after a replan a superseded plan's SWARM rows can still satisfy the same batch number — correlating evidence to a compile generation is tracked as [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953).
 
-**The exits.** A `redirect` is answered with the autonomy ladder — `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `--mode gated` (a gate at every batch boundary), then re-run `next`. A `violation` or a refused approve is answered by correcting the plan, not the run: record the dependency that makes those Units serial, with its reason, in `unit-of-work-dependency.md`, re-run `amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.
+**The exits.** A `redirect` is answered by selecting the Intent autonomy mode with `amadeus-bolt set-autonomy --mode none|semi|full`, then re-running `next`; `full` additionally requires the displayed Intent-scoped grant to be confirmed by a real human turn. A `violation` or a refused approve is answered by correcting the plan, not the run: record the dependency that makes those Units serial, with its reason, in `unit-of-work-dependency.md`, re-run `amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.
 
 **Absence versus defect.** A guard needs a declared width to judge against, so a run with no compiled DAG is never a violation. The compile separates the two ways a DAG can be missing. A legitimate absence is exactly one of two states — the scope skips units-generation (`scope-skips-units`), or the stage has not produced its artifact yet (`units-pending`) — and records `bolt_dag_absence` with that reason, exiting 0. Everything else is a defect that fails the compile, writes no graph (removing any stale one), and exits non-zero: an artifact missing after units-generation completed, a malformed edge block, or a cyclic one — see [Runtime Graph](13-runtime-graph.md) § "The Bolt/unit dependency DAG (`bolt_dag`)".
 
-### Standing delegation grants (team mode, #1125)
+### Legacy standing delegation grants (#1125)
 
-Delegated approval (#671) opens ONE remote gate per real human turn. In a long agent-team run that means the leader re-acknowledges every gate. A **standing delegation grant** amortises that: a leader session, grounded in a real `HUMAN_TURN` on its own ledger, issues a time-boxed grant that opens stage-gate approvals across the team for the grant's TTL without a per-gate human turn.
+Standing delegation grants are retired as an authorisation mechanism. The `grant-standing-delegation` and `revoke-standing-delegation` commands, grant carriers, route receipts, and active-grant doctor status no longer exist. Existing `GRANT_ISSUED`, `GRANT_REVOKED`, and `GATE_AUTHORIZATION_SELECTED` observations remain readable only by replay and migration projection code; they never create or restore authority and are never converted into a `full` grant.
 
-```
-amadeus-state grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
-amadeus-state revoke-standing-delegation --grant-id <8-hex id>
-```
-
-- **Team mode only.** `AMADEUS_OPERATING_MODE=team` is the sole arbiter; solo mode approves each gate directly and refuses issuance. The grant is likewise consulted at the gate ONLY in team mode.
-- **Default TTL is 4 hours** (`DEFAULT_STANDING_GRANT_TTL_MS`) — a normal working session — after which the grant lapses back to per-gate approval on its own. There is deliberately no env override; the auto-approval window stays a fixed, auditable constant.
-- **Phase-boundary gates are EXCLUDED by default.** Pass `--include-phase-boundary` to opt in. The **walking-skeleton gate** (the first in-scope construction stage while `Skeleton Stance` is `on`) is NEVER auto-covered — a human must see the skeleton before the remaining Bolts run.
-- **Provenance is proven, not trusted.** `GRANT_ISSUED` carries the same issuer coordinates as a delegation (`Issuer Space/Intent/Shard/Human Ts`); a gate honours the grant only after `verifyDelegatedProvenance` confirms the grounding `HUMAN_TURN` physically exists in the issuer shard. `GRANT_ISSUED` / `GRANT_REVOKED` are presence-protected — the general `amadeus-audit append` CLI refuses to mint them, so only these verbs (backed by a real human turn) write them.
-- When a grant — rather than a fresh human turn — opens a gate, the resulting `GATE_APPROVED` (or `DELEGATED_APPROVAL`) row carries a `Grant Id` field recording which grant authorised it. `amadeus --doctor` reports the currently-active grant (scope, remaining TTL, phase-boundary opt-in, issuer) or `none`.
+- `semi` replaces the common in-phase gate-skipping use case without issuing a grant. `full` uses a new Intent-scoped grant bound to one Intent UUID, with no TTL or usage budget; its issue, replacement, exercise, revocation, and completion are canonical audit transactions.
 
 ---
 
@@ -272,9 +263,9 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` captures the rejection reason |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` records a leader session's human-grounded approval into a remote conductor intent's audit dir; carries the issuer `(space, intent, shard, HUMAN_TURN timestamp)` the conductor's gate verifies (#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` records a leader session's human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` — opens only a reject gate (#685) |
-| `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` records a leader session's time-boxed standing grant that opens team-mode stage gates for its TTL without a per-gate human turn; carries `Grant Id`, `Scope`, `Expires At`, `Includes Phase Boundary`, and the issuer `(space, intent, shard, HUMAN_TURN timestamp)` (#1125) |
-| `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` cancels an outstanding standing grant by `Grant Id`, grounded in a real human turn on the leader's own ledger (#1125) |
-| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | the solo-mode router records the exact standing grant it selected for one stage-route attempt — `Route Id`, `Stage`, `Grant Id` — before the carrier reaches the conductor, so the later approve can re-verify the same grant against the receipt owner (#1466) |
+| `GRANT_ISSUED` | Reserved legacy observation | Historical standing-grant evidence remains readable by replay and migration projection code only |
+| `GRANT_REVOKED` | Reserved legacy observation | Historical revocation evidence; no live emitter |
+| `GATE_AUTHORIZATION_SELECTED` | Reserved legacy observation | Historical route evidence; no live emitter |
 
 ### User interaction
 
@@ -308,7 +299,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | Accepts CSV bolt names for parallel batches |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | Paired with a prior `BOLT_STARTED` |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts` (`fail` + `abort`) | `--succeeded-siblings` captures parallel-batch survivors; `abort` adds `Reason: aborted` field for sub-classification |
-| `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | Atomically updates `Construction Autonomy Mode` field; validates field exists first (audit-first) |
+| `AUTONOMY_MODE_SET` | Reserved legacy observation | Historical Construction-mode evidence remains readable for replay and doctor diagnostics; it does not issue or restore authority |
 
 ### Session
 
@@ -318,7 +309,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `SESSION_RESUMED` | `hooks/amadeus-session-start.ts` | `source=resume` |
 | `SESSION_COMPACTED` | `hooks/amadeus-validate-state.ts` | Emitted at PreCompact (not at next SessionStart) to avoid duplication |
 | `SESSION_ENDED` | `hooks/amadeus-session-end.ts` | Includes `Reason` field from Claude Code |
-| `HUMAN_TURN` | `tools/amadeus-presence-reservation.ts` | One per real human prompt or answered question widget; the approval/interview gate requires one since the last gate resolution. The append lives in the canonical presence seam (`mintHumanPresence` for an ordinary turn, `mintArmedPresenceReservation` for a solo standing-grant fallback armed in the same host session); the trusted prompt-submit hook and each harness prompt adapter call that seam and never append on their own (#1466) |
+| `HUMAN_TURN` | `tools/amadeus-presence-reservation.ts` | One per real human prompt or answered question widget; the approval/interview gate requires one since the last gate resolution. The append lives in the canonical presence seam (`mintHumanPresence` for an ordinary turn, `mintArmedPresenceReservation` for a targeted continuation armed in the same host session); the trusted prompt-submit hook and each harness prompt adapter call that seam and never append on their own (#1466) |
 | `SUBAGENT_STARTED` | `hooks/amadeus-log-subagent-start.ts` | Records subagent dispatch; only on harnesses with a start seam (Claude PreToolUse{Task}, Kimi SubagentStart) |
 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` | Records subagent completion via SubagentStop hook |
 
@@ -403,6 +394,7 @@ The Loop Monitor commits delivery observations, cycle triggers, Judge reservatio
 |---|---|---|
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | One quality snapshot, progress, replan, stall, or resume transaction and its generic Monitor effects committed atomically |
+| `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | One Intent-scoped mode, grant, decision, workflow-effect, park, resume, or invocation-failure transaction committed atomically |
 
 ### Swarm
 

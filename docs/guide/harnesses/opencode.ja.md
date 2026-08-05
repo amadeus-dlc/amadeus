@@ -63,9 +63,10 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 
 - **配線されているのは presence mint のみ**: OpenCode にはシェルコマンド型の
   フック機構がありません — 拡張サーフェスは JS プラグインです。presence mint は
-  安定した `sessionID` を運ぶ `chat.message` プラグインフックに乗るため、solo
-  standing-grant の継続は他ハーネスと同様に成立します。他ハーネスでフックに乗る
-  監査発行・センサー発火は依然として**動作しません**。下記
+  安定した `sessionID` を運ぶ `chat.message` プラグインフックに乗るため、sessionに
+  紐づくtargeted presence mintは他ハーネスと同様に成立します。廃止済みの
+  standing-grant carrierは明示的に拒否されます。他ハーネスでフックに乗る監査発行・
+  センサー発火は依然として**動作しません**。下記
   [フック対応表](#フック対応表-1049) を参照。
 - **`$amadeus --version`** は `amadeus 0.1.2` を報告します(exit 0)。
 - **`$amadeus --doctor`** は advisory のみに劣化します — `.claude` 前提ブロックの

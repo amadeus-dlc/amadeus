@@ -94,6 +94,15 @@ const MISSING_ROW_REFUSAL = "is not present in the state file";
 const NOT_IN_GRAPH_REFUSAL = "is not in the compiled graph";
 
 describe("t394 forward direction: a graph stage with no state row", () => {
+  test("intent birth seeds Completed from the same EXECUTE-effective definition", () => {
+    const state = readState(bornProject("fix"));
+    const completedExecute = parseCheckboxes(state).filter(
+      (row) => row.state === "completed" && row.suffix.startsWith("EXECUTE"),
+    );
+    expect(fieldOf(state, "Completed")).toBe(String(completedExecute.length));
+    expect(fieldOf(state, "Completed")).toBe("3");
+  });
+
   test("re-sync inserts the row and report stops refusing the transition", () => {
     const proj = bornProject();
     dropRow(proj, "user-stories");
@@ -126,8 +135,20 @@ describe("t394 forward direction: a graph stage with no state row", () => {
   test("derived fields are recomputed, so no Completed > Total skew survives", () => {
     const proj = bornProject();
     dropRow(proj, "user-stories");
+    const legacy = readState(proj);
+    const seeded = legacy
+      .replace("- [x] workspace-scaffold — EXECUTE", "- [x] workspace-scaffold — SKIP")
+      .replace(
+        /^- \*\*Completed\*\*: \d+$/m,
+        `- **Completed**: ${(legacy.match(/^- \[x\]/gm) ?? []).length}`,
+      );
+    // A silent no-op replace would seed no legacy skew and make the repair
+    // assertions vacuous — pin the flipped row before writing.
+    expect(seeded).toMatch(/^- \[x\] workspace-scaffold — SKIP/m);
+    writeState(proj, seeded);
     // The recorded workaround's shape: a hand-inserted row left the counters
-    // alone. Here the row is re-inserted by the re-sync, which must recount.
+    // alone. The legacy state also carries a completed SKIP-effective row with
+    // the old raw counter. Re-sync must repair both derived-field skews.
     resyncStateToStageGraph(proj);
 
     const state = readState(proj);
@@ -137,6 +158,10 @@ describe("t394 forward direction: a graph stage with no state row", () => {
 
     expect(fieldOf(state, "Total Stages")).toBe(String(executeRows.length));
     expect(fieldOf(state, "Completed")).toBe(String(completedExecute.length));
+    expect(state).toMatch(/^- \[x\] workspace-scaffold — SKIP/m);
+    expect(completedExecute.length).toBeLessThan(
+      rows.filter((r) => r.state === "completed").length,
+    );
     expect(Number(fieldOf(state, "Completed"))).toBeLessThanOrEqual(
       Number(fieldOf(state, "Total Stages")),
     );

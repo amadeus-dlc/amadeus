@@ -232,20 +232,16 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
     expect(eventCount(proj, "GATE_APPROVED")).toBe(2);
   });
 
-  // --- Scenario D: AUTONOMY carve-out ----------------------------------------
-  //
-  // state has `Construction Autonomy Mode: autonomous` -> approve COMMITS with NO
-  // HUMAN_TURN (swarm/Bolt has no human at the gate). The ledger is non-empty, so
-  // the pass is the autonomy carve-out, not the fail-open-empty-ledger path.
-  test("D: autonomous Construction approves with NO HUMAN_TURN (carve-out)", () => {
+  // --- Scenario D: legacy field is not authorization -------------------------
+  test("D: legacy autonomous Construction field cannot approve without HUMAN_TURN", () => {
     const slug = field(proj, "Current Stage");
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     setAutonomous(proj);
     guarded(proj, ["gate-start", slug]); // ledger non-empty, but no HUMAN_TURN
     const r = guarded(proj, ["approve", slug, "--user-input", "ok"]);
-    expect(r.rc).toBe(0);
-    expect(eventCount(proj, "GATE_APPROVED")).toBe(1);
-    expect(field(proj, "Current Stage")).not.toBe(slug);
+    expect(r.rc).not.toBe(0);
+    expect(eventCount(proj, "GATE_APPROVED")).toBe(0);
+    expect(field(proj, "Current Stage")).toBe(slug);
   });
 
   // --- Scenario E: STALE human turn ------------------------------------------
@@ -477,21 +473,19 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
     });
 
     // AC-675-3: the reject guard must go through the SAME humanActedSinceGate
-    // predicate approve uses (the shared assertHumanPresentForGateResolution
-    // helper), so its three legs — autonomy carve-out, suite bypass, and the
-    // ledger presence check — dispatch identically for both verbs. NOTE (#685):
+    // predicate approve uses. NOTE (#685):
     // delegated provenance inside that predicate is now VERB-SCOPED — a
     // delegated-approval opens ONLY approve and a delegated-rejection opens ONLY
     // reject — so the shared path no longer means an approval delegation opens a
-    // reject gate. Exercised here via the autonomy carve-out (verb-independent).
-    test("autonomous Construction rejects with NO HUMAN_TURN (carve-out, same as approve)", () => {
+    // reject gate. A legacy Construction field is not a substitute for either.
+    test("legacy autonomous Construction field cannot reject without HUMAN_TURN", () => {
       const slug = field(proj, "Current Stage");
       guarded(proj, ["checkbox", `${slug}=in-progress`]);
       setAutonomous(proj);
       guarded(proj, ["gate-start", slug]); // ledger non-empty, but no HUMAN_TURN
       const r = guarded(proj, ["reject", slug, "--feedback", "needs work"]);
-      expect(r.rc).toBe(0);
-      expect(eventCount(proj, "GATE_REJECTED")).toBe(1);
+      expect(r.rc).not.toBe(0);
+      expect(eventCount(proj, "GATE_REJECTED")).toBe(0);
     });
   });
 });

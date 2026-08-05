@@ -307,11 +307,11 @@ architecture への整合を確認します。
 
 ### Construction フェーズ(ステージ 3.1-3.7)
 
-Construction は 2.8 のプランに従って **Bolt ごと** に実行されます。最初の Bolt は
-walking skeleton で、その後のラダープロンプトが残りの自律性を決めます。共有依存を
-持つ Bolt は並行実行されます。
+Construction は 2.8 のプランに従って **Bolt ごと** に実行されます。無人裁定の前に、
+このintentへ`full`を選び、表示されたintent-scoped grant（scope、事前裁定方針、principal）
+を確認します。依存前提条件を満たしたBoltは並行実行されます。
 
-**Bolt 1: notification-core** — walking skeleton(常にゲート)
+**Bolt 1: notification-core** — walking skeleton
 
 この Bolt はイベントハンドラパイプラインが動作することを証明するエンドツーエンドの
 スライスです: 通知イベントが内部ハンドラに到着し、ストレージに落ち、アプリ内配信
@@ -322,21 +322,24 @@ amadeus-developer-agent サブエージェントに委譲します。
 - **3.1 Functional Design** — ドメインエンティティ(Notification、NotificationEvent)、ビジネスルール(重複排除、レートリミット)
 - **3.5 Code Generation** — イベントハンドラ、通知リポジトリ、アプリ内配信エンドポイント。ソース 3 ファイル、テスト 4 ファイル。
 
-Walking-skeleton ゲート — Bolt 1 のコードサマリーをレビューし承認します。
+Walking-skeleton gateにも他のgateと同じmode規則を適用します。このintentは`full`なので、
+確認済みgrantの範囲内でengineが裁定できます。syntheticなhuman turnは作らず、選択肢、
+根拠、証拠、grant行使を記録します。
 
-承認直後、**ラダープロンプト** が発火します:
+自律レベルはintentスコープで選択済みです:
 
+```text
+Intent autonomy
+  ▸ full
+    Decide authorised gates and questions through Intent completion.
+  ▸ semi
+    Pre-approve in-phase gates; ask at phase boundaries and questions.
+  ▸ none
+    Ask the human at every gate and question.
 ```
-The walking skeleton shipped. How should the remaining Bolts run?
-  ▸ Continue autonomously
-    Run remaining Bolts without gates. Failures still halt and ask.
-  ▸ Gate every Bolt
-    Present an approval gate after each Bolt (or parallel batch).
-```
 
-形が機能するのを見たので、**Continue autonomously** を選びます。コンダクターは
-`amadeus-state.md` に `Construction Autonomy Mode: autonomous` を記録し、
-`AUTONOMY_MODE_SET` を発行します。
+実行前に**full**を選び、grantを確認しました。コンダクターはmode、grant、human provenance、
+scope、正規化済み方針を原子的に記録します。旧常任グラントはこの実行を認可しません。
 
 **Bolt 2: notification-preferences + notification-email** — 並列バッチ
 
@@ -351,25 +354,24 @@ The walking skeleton shipped. How should the remaining Bolts run?
 - **notification-email — 3.4 Infrastructure Design** — SQS キュー、SES 統合、デッドレターキュー用の CloudWatch アラーム
 - **notification-email — 3.5 Code Generation** — メールレンダラー、SQS コンシューマ、ダイジェスト cron ジョブ。ソース 4 ファイル、テスト 5 ファイル。
 
-両方のサブエージェント Task は次のターンで返ります。自律を選んだので、バッチゲートは
-なし — Construction はそのまま 3.6 に進みます。
+両方のサブエージェントTaskは次のターンで返ります。blockingな不備は必須のquality
+repair/replan loopへ入ります。batchが健全になると、`full`が認可済みbatch gateを裁定し、
+Constructionは3.6へ進みます。非生産的なloopはgrantを維持したまま`REPAIR_STALLED`でparkします。
 
 **失敗はどう見えるか。** `notification-email` の Code Generation が壊れた SES モックで
-返ったとします。コンダクターは `notification-preferences` の完了を待ち、その成果物を
-ディスク上に保持し、次を提示します:
+返ったとします。コンダクターは`notification-preferences`の完了を待ち、その成果物を
+ディスク上に保持し、失敗したquality obligationを記録します:
 
-```
+```text
 Bolt notification-preferences succeeded. Bolt notification-email failed during code generation:
   "SES client mock could not be constructed — check test config."
 
-Options:
-  ▸ Retry         Re-run notification-email from code generation.
-  ▸ Skip          Mark notification-email skipped and continue. Dependent Bolts may also fail.
-  ▸ Abort         Stop Construction. Resume via /amadeus --stage code-generation.
+Quality route: repair notification-email from code generation.
 ```
 
-あなたは **Retry** を選び、モックのセットアップを修正すると、notification-email だけが
-再実行されます。Preferences はすでに `[x]` 完了です。
+notification-emailだけを再実行し、Preferencesは`[x]`のままです。証拠が改善しなければ
+Pluginは一度replanします。その後も非生産的なrepairが続けばintentを`REPAIR_STALLED`で
+parkし、再開に必要な証拠変更または検証済みhuman retry条件を表示します。
 
 **ステージ 3.6 — Build and Test**(amadeus-quality-agent、すべての Bolt 後に 1 回実行)
 
@@ -405,7 +407,7 @@ lint、build、test、セキュリティスキャンのステージを持つ CI 
 | 作業単位 | 1 | 3 |
 | Bolt ごとの Construction | いいえ(fix は単一 Bolt) | はい — 2 Bolt(walking skeleton + 1 並列バッチ) |
 | 条件付きステージ | ほとんどスキップ | ほとんど実行 |
-| 承認ゲート | 4 | walking skeleton + ラダープロンプト。残りの Bolt は autonomy mode 次第 |
+| 承認ゲート | 4 | intent modeで決定。`full`は認可済みwalking-skeleton gateと後続gateを裁定可能 |
 
 ---
 

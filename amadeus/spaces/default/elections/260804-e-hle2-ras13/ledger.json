@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測の結果、0件で可を支持する。project.md:314 に『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』という c2 と同義の恒久規則が既に存在する。今回の Intent 固有裁定は requirements.md:31-33 の FR-13〜FR-15（ACP/TUI 各 transport の integration/contract test、transport 自身の live green、不能時の条件付き後続 Issue）と requirements-analysis-questions.md:12-23 の Q1=A 回答に保持済みで、review も READY・欠落/矛盾なし。stage memory.md:5,9,13 は c1/c3 の裁定と c2 の既存規則適用を記録しており、新たな横断規則や決定的 sensor 述語を導く未被覆事項はない。重複 memory を追加すると同一規律の二重正本になるため、Intent record を保持し既存 project rule を再利用するのが妥当。",
+      "submittedAt": "2026-08-04T09:41:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HLE2-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測で、c1/c3のKiro ACP/TUI裁定は requirements.md のFR-09〜FR-15と requirements-analysis-questions.md のQ1=Aに、transport単位の直接接続条件・live green・条件付き後続Issueとして保持済みだった。c2はmemory.mdの『既存Intent・Scope・Issueで確定済みの境界を再質問しなかった』という適用記録であり、project.md:314の既存規則『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』と意味・判断述語が一致する。team.md:59にも既決規範を質問対象にしない一般則がある。新規機序・適用範囲の拡張はなく、恒久memoryやsensorの重複追加は不要。",
+      "submittedAt": "2026-08-04T09:41:55Z"
+    }
+  ],
+  "late": []
+}

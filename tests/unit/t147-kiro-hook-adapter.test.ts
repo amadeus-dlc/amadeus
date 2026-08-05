@@ -718,8 +718,8 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
     }
   });
 
-  test("13: AUTONOMOUS KEEPS CAP 8 - Kiro stop still blocks on call 3 under autonomous Construction (the long ceiling, not the interactive 2)", () => {
-    // Autonomous Construction (Construction Autonomy Mode: autonomous) keeps the
+  test("13: FULL KEEPS CAP 8 - Kiro stop still blocks on call 3 under full Intent autonomy (the long ceiling, not the interactive 2)", () => {
+    // Full Intent autonomy keeps the
     // long ceiling AUTONOMOUS_BLOCK_CAP=8. Same brownfield-feature engine state
     // (pending run-stage) but the autonomy field injected, so the carve-outs are
     // all gated off and only the cap can release. Three consecutive no-progress
@@ -737,12 +737,12 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
         statePath,
         base.replace(
           /^- \*\*Status\*\*: Running$/m,
-          "- **Status**: Running\n- **Construction Autonomy Mode**: autonomous",
+          "- **Status**: Running\n- **Intent Autonomy Mode**: full\n- **Construction Autonomy Mode**: autonomous",
         ),
         "utf-8",
       );
       // Confirm the field landed (premise guard).
-      expect(/Construction Autonomy Mode\*\*: autonomous/.test(readFileSync(statePath, "utf-8"))).toBe(
+      expect(/Intent Autonomy Mode\*\*: full/.test(readFileSync(statePath, "utf-8"))).toBe(
         true,
       );
 

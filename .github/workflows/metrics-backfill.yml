@@ -1,0 +1,334 @@
+name: Metrics Snapshot Backfill
+
+run-name: Metrics backfill from CI run ${{ inputs.source_run_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Source CI run
+        required: true
+        type: choice
+        options:
+          - "30878127506"
+          - "30879623974"
+          - "30886132865"
+          - "30900354349"
+          - "30905997559"
+          - "30910129257"
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  publish:
+    name: Publish verified snapshot
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: metrics-snapshot-main
+      cancel-in-progress: false
+    outputs:
+      before_maintenance_run_ids: ${{ steps.maintenance-before.outputs.ids }}
+      publish_started_at: ${{ steps.publish.outputs.started_at }}
+      target_sha: ${{ steps.source.outputs.target_sha }}
+    steps:
+      - name: Resolve pinned source
+        id: source
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$SOURCE_RUN_ID" in
+            30878127506)
+              TARGET_SHA=12bf94ea6d7e13a03e124036258a683af3cc8e7e
+              ARTIFACT_ID=8880430216
+              ARTIFACT_DIGEST=sha256:b4eaf5f757d244ed659c8c41468b368adb214be2b503dbf1e97e93b7894fd4a6
+              CAPTURED_AT=2026-08-04T04:46:34Z
+              ;;
+            30879623974)
+              TARGET_SHA=be381078c32b1babf5880d0f4925ffa690b83f64
+              ARTIFACT_ID=8880947104
+              ARTIFACT_DIGEST=sha256:2ba42992e0d6844f46d86a6d382c28108b33823880eef2096a845bf38c30a13a
+              CAPTURED_AT=2026-08-04T05:15:06Z
+              ;;
+            30886132865)
+              TARGET_SHA=509cd43c8c8868569d65e4c6b6d61355cea392c4
+              ARTIFACT_ID=8883369198
+              ARTIFACT_DIGEST=sha256:e671dd1a3fdda46b79338d2038657cecb4f940d75159061183d59668d499f768
+              CAPTURED_AT=2026-08-04T07:10:10Z
+              ;;
+            30900354349)
+              TARGET_SHA=bb6cd40e01dfa205e3b58031d1b153c02c315a2f
+              ARTIFACT_ID=8889052915
+              ARTIFACT_DIGEST=sha256:156bc0931e75fd811534c696078696247ec5c5b223648610e114f429a8e1e11b
+              CAPTURED_AT=2026-08-04T10:31:49Z
+              ;;
+            30905997559)
+              TARGET_SHA=bc512d9da9a82b39b9f39202bec6b83ef420c971
+              ARTIFACT_ID=8891303974
+              ARTIFACT_DIGEST=sha256:7307786719efe2b11d355553c1b39723967e533e94e2ee104502aea962963a8e
+              CAPTURED_AT=2026-08-04T11:52:53Z
+              ;;
+            30910129257)
+              TARGET_SHA=9fd329632ec608c304f737eecb8a102576731b67
+              ARTIFACT_ID=8892992970
+              ARTIFACT_DIGEST=sha256:f202f7772f4d816a68c2e8b848e6f13c7d3deb01e6c45503f14b74fd9c1ff22a
+              CAPTURED_AT=2026-08-04T12:50:06Z
+              ;;
+            *)
+              echo "unsupported source run: $SOURCE_RUN_ID" >&2
+              exit 1
+              ;;
+          esac
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+          echo "artifact_digest=$ARTIFACT_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "captured_at=$CAPTURED_AT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify source evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          TARGET_SHA: ${{ steps.source.outputs.target_sha }}
+          ARTIFACT_ID: ${{ steps.source.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ steps.source.outputs.artifact_digest }}
+          CAPTURED_AT: ${{ steps.source.outputs.captured_at }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          ARTIFACT_JSON="$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID")"
+          JOBS_JSON="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?per_page=100")"
+
+          OBSERVED_RUN_SHA="$(jq -r '.head_sha' <<<"$RUN_JSON")"
+          OBSERVED_REPOSITORY_ID="$(jq -r '.repository.id' <<<"$RUN_JSON")"
+          OBSERVED_ARTIFACT_DIGEST="$(jq -r '.digest' <<<"$ARTIFACT_JSON")"
+
+          [[ "$(jq -r '.id' <<<"$RUN_JSON")" == "$SOURCE_RUN_ID" ]]
+          [[ "$(jq -r '.name' <<<"$RUN_JSON")" == "CI" ]]
+          [[ "$(jq -r '.path' <<<"$RUN_JSON")" == ".github/workflows/ci.yml" ]]
+          [[ "$(jq -r '.event' <<<"$RUN_JSON")" == "push" ]]
+          [[ "$(jq -r '.head_branch' <<<"$RUN_JSON")" == "main" ]]
+          [[ "$OBSERVED_RUN_SHA" == "$TARGET_SHA" ]]
+          [[ "$(jq -r '.id' <<<"$ARTIFACT_JSON")" == "$ARTIFACT_ID" ]]
+          [[ "$(jq -r '.name' <<<"$ARTIFACT_JSON")" == "amadeus-coverage-report" ]]
+          [[ "$(jq -r '.expired' <<<"$ARTIFACT_JSON")" == "false" ]]
+          [[ "$(jq -r '.workflow_run.id' <<<"$ARTIFACT_JSON")" == "$SOURCE_RUN_ID" ]]
+          [[ "$(jq -r '.workflow_run.head_branch' <<<"$ARTIFACT_JSON")" == "main" ]]
+          [[ "$(jq -r '.workflow_run.head_sha' <<<"$ARTIFACT_JSON")" == "$TARGET_SHA" ]]
+          [[ "$(jq -r '.workflow_run.repository_id' <<<"$ARTIFACT_JSON")" == "$OBSERVED_REPOSITORY_ID" ]]
+          [[ "$OBSERVED_ARTIFACT_DIGEST" == "$ARTIFACT_DIGEST" ]]
+          [[ "$(jq -r '.created_at' <<<"$ARTIFACT_JSON")" == "$CAPTURED_AT" ]]
+          [[ "$(jq -r '[.jobs[] | select(.name == "Coverage Report (head)" and .conclusion == "success")] | length' <<<"$JOBS_JSON")" == "1" ]]
+          [[ "$(jq -r '[.jobs[] | select(.name == "Coverage Report" and .conclusion == "success")] | length' <<<"$JOBS_JSON")" == "1" ]]
+          [[ "$(jq -r '[.jobs[] | select(.name == "Metrics Snapshot" and .conclusion == "failure")] | length' <<<"$JOBS_JSON")" == "1" ]]
+
+          {
+            echo "## Verified backfill source"
+            echo
+            echo "- run: $SOURCE_RUN_ID"
+            echo "- target: $TARGET_SHA"
+            echo "- artifact: $ARTIFACT_ID"
+            echo "- digest: $ARTIFACT_DIGEST"
+            echo "- captured_at: $CAPTURED_AT (coverage artifact evidence time)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout trusted controller
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install lizard
+        run: pip install lizard==1.23.0
+
+      - name: Download and verify coverage artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.source.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ steps.source.outputs.artifact_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/amadeus-coverage-report-$ARTIFACT_ID.zip"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$ARCHIVE"
+          ACTUAL_DIGEST="sha256:$(sha256sum "$ARCHIVE" | cut -d' ' -f1)"
+          [[ "$ACTUAL_DIGEST" == "$ARTIFACT_DIGEST" ]]
+          mkdir coverage
+          unzip -q "$ARCHIVE" -d coverage
+          jq -e '.hits | numbers' coverage/coverage-totals.json >/dev/null
+          jq -e '.lines | numbers' coverage/coverage-totals.json >/dev/null
+          for field in files failedFiles assertions failedAssertions; do
+            jq -e --arg field "$field" '.[$field] | numbers' coverage/tests-totals.json >/dev/null
+          done
+          jq -e '.failedFiles == 0 and .failedAssertions == 0' coverage/tests-totals.json >/dev/null
+
+      - name: Get GitHub App user ID
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure GitHub App identity
+        run: |
+          git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email '${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+
+      - name: Capture maintenance run inventory
+        id: maintenance-before
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          IDS="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/metrics-maintenance.yml/runs?event=repository_dispatch&per_page=100" \
+            --jq '[.workflow_runs[].id | tostring] | join(",")')"
+          echo "ids=$IDS" >> "$GITHUB_OUTPUT"
+
+      - name: Publish immutable snapshot
+        id: publish
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_SHA: ${{ steps.source.outputs.target_sha }}
+          CAPTURED_AT: ${{ steps.source.outputs.captured_at }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "started_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          bun scripts/metrics-publication.ts snapshot \
+            --target-sha "$TARGET_SHA" \
+            --captured-at "$CAPTURED_AT" \
+            --repository "$GITHUB_REPOSITORY" \
+            --bot-login '${{ steps.app-token.outputs.app-slug }}[bot]' \
+            --deadline-seconds 270 \
+            --poll-seconds 5 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify landed snapshot
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BOT_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          TARGET_SHA: ${{ steps.source.outputs.target_sha }}
+          CAPTURED_AT: ${{ steps.source.outputs.captured_at }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          NORMALIZED_CAPTURED_AT="${CAPTURED_AT%Z}.000Z"
+          FILE_TIME="${NORMALIZED_CAPTURED_AT//[:.]/-}"
+          EXPECTED_PATH="metrics/$FILE_TIME-${TARGET_SHA:0:12}.json"
+          MATCH_COUNT=0
+          MATCHED_PATH=""
+          while IFS= read -r path; do
+            [[ "$path" == *.json ]] || continue
+            snapshot="$(git show "origin/main:$path")"
+            if jq -e --arg target "$TARGET_SHA" '.commit == $target' <<<"$snapshot" >/dev/null; then
+              MATCH_COUNT=$((MATCH_COUNT + 1))
+              MATCHED_PATH="$path"
+            fi
+          done < <(git ls-tree -r --name-only origin/main -- metrics/)
+          [[ "$MATCH_COUNT" == "1" ]]
+          [[ "$MATCHED_PATH" == "$EXPECTED_PATH" ]]
+
+          SNAPSHOT_FILE="$RUNNER_TEMP/landed-snapshot.json"
+          git show "origin/main:$EXPECTED_PATH" > "$SNAPSHOT_FILE"
+          jq -e --arg target "$TARGET_SHA" --arg captured "$NORMALIZED_CAPTURED_AT" \
+            '.commit == $target and .captured_at == $captured' "$SNAPSHOT_FILE" >/dev/null
+          for field in hits lines; do
+            [[ "$(jq -r ".collectors.coverage.values.$field" "$SNAPSHOT_FILE")" == \
+              "$(jq -r ".$field" coverage/coverage-totals.json)" ]]
+          done
+          for field in files failedFiles assertions failedAssertions; do
+            [[ "$(jq -r ".collectors.tests.values.$field" "$SNAPSHOT_FILE")" == \
+              "$(jq -r ".$field" coverage/tests-totals.json)" ]]
+          done
+
+          PR_JSON="$(gh pr list --state all --head "metrics/snapshot-$TARGET_SHA" --limit 100 \
+            --json state,mergeCommit,author,headRefName,body,files)"
+          [[ "$(jq -r '[.[] | select(.state == "MERGED")] | length' <<<"$PR_JSON")" == "1" ]]
+          jq -e --arg bot_slug "$BOT_SLUG" --arg target "$TARGET_SHA" --arg path "$EXPECTED_PATH" '
+            [.[] | select(.state == "MERGED")][0] as $pr
+            | $pr.author.is_bot == true
+              and (["app/" + $bot_slug, $bot_slug + "[bot]"] | index($pr.author.login) != null)
+              and $pr.headRefName == ("metrics/snapshot-" + $target)
+              and ($pr.body | contains("<!-- amadeus:metrics-snapshot:v1 sha=" + $target + " -->"))
+              and ($pr.files | length) == 1
+              and $pr.files[0].path == $path
+          ' <<<"$PR_JSON" >/dev/null
+          SNAPSHOT_MERGE_SHA="$(jq -r '[.[] | select(.state == "MERGED")][0].mergeCommit.oid' <<<"$PR_JSON")"
+          [[ "$SNAPSHOT_MERGE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/metrics/snapshot-$TARGET_SHA" --jq 'length')" == "0" ]]
+
+  verify-maintenance:
+    name: Verify maintenance convergence
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Wait for correlated maintenance run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_MAINTENANCE_RUN_IDS: ${{ needs.publish.outputs.before_maintenance_run_ids }}
+          PUBLISH_STARTED_AT: ${{ needs.publish.outputs.publish_started_at }}
+          TARGET_SHA: ${{ needs.publish.outputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEADLINE=$((SECONDS + 300))
+          MAINTENANCE_RUN_ID=""
+          BEFORE=",$BEFORE_MAINTENANCE_RUN_IDS,"
+          EXPECTED_TITLE="Metrics maintenance for $TARGET_SHA"
+          while (( SECONDS < DEADLINE )); do
+            RUNS_JSON="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/metrics-maintenance.yml/runs?event=repository_dispatch&per_page=100")"
+            CANDIDATES="$(jq -c --arg before "$BEFORE" --arg started "$PUBLISH_STARTED_AT" --arg title "$EXPECTED_TITLE" '
+              [.workflow_runs[] as $run
+                | select($run.created_at >= $started and $run.display_title == $title)
+                | select(($before | contains("," + ($run.id | tostring) + ",")) | not)
+                | $run]
+            ' <<<"$RUNS_JSON")"
+            COUNT="$(jq -r 'length' <<<"$CANDIDATES")"
+            (( COUNT <= 1 ))
+            if [[ "$COUNT" == "1" ]]; then
+              MAINTENANCE_RUN_ID="$(jq -r '.[0].id' <<<"$CANDIDATES")"
+              break
+            fi
+            sleep 5
+          done
+          [[ -n "$MAINTENANCE_RUN_ID" ]]
+          timeout 330s gh run watch "$MAINTENANCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/metrics/maintenance" --jq 'length')" == "0" ]]
+          [[ "$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "metrics/maintenance" --json number --jq 'length')" == "0" ]]
+          gh api -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/metrics/index.html?ref=main" \
+            | grep -Fq "${TARGET_SHA:0:12}"

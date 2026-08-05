@@ -102,7 +102,9 @@ Per unit: [unit-name]
 - **Current Stage**: [stage name]
 - **Next Stage**: [next stage name]
 - **Status**: [Running/Completed]
-- **Construction Autonomy Mode**: [unset/autonomous/gated]
+- **Intent Autonomy Mode**: [none/semi/full]
+- **Intent Grant**: [none/grant-id]
+- **Construction Autonomy Mode**: unset
 - **Last Updated**: [ISO timestamp]
 
 ## Session Resume Point

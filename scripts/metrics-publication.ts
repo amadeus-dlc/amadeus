@@ -13,6 +13,7 @@ import {
 type PublicationCliArgs = {
   mode: "snapshot" | "maintenance";
   targetSha?: string;
+  capturedAt?: string;
   repository: string;
   botLogin: string;
   deadlineSeconds: number;
@@ -20,7 +21,7 @@ type PublicationCliArgs = {
 };
 
 const PUBLICATION_USAGE =
-  "Usage: bun scripts/metrics-publication.ts snapshot --target-sha <sha> --repository <owner/repo> --bot-login <login> [--deadline-seconds <n>] [--poll-seconds <n>]\n       bun scripts/metrics-publication.ts maintenance --repository <owner/repo> --bot-login <login> [--deadline-seconds <n>] [--poll-seconds <n>]";
+  "Usage: bun scripts/metrics-publication.ts snapshot --target-sha <sha> --repository <owner/repo> --bot-login <login> [--captured-at <iso-date>] [--deadline-seconds <n>] [--poll-seconds <n>]\n       bun scripts/metrics-publication.ts maintenance --repository <owner/repo> --bot-login <login> [--deadline-seconds <n>] [--poll-seconds <n>]";
 
 function positiveNumber(value: string | undefined, flag: string): number {
   if (value === undefined || !/^[1-9][0-9]*$/.test(value)) throw new Error(`${flag} requires a positive integer`);
@@ -33,7 +34,14 @@ function parseMode(value: string | undefined): PublicationCliArgs["mode"] {
 }
 
 function parseOptionValues(argv: string[]): Map<string, string> {
-  const allowed = new Set(["--target-sha", "--repository", "--bot-login", "--deadline-seconds", "--poll-seconds"]);
+  const allowed = new Set([
+    "--target-sha",
+    "--captured-at",
+    "--repository",
+    "--bot-login",
+    "--deadline-seconds",
+    "--poll-seconds",
+  ]);
   const values = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
@@ -44,6 +52,20 @@ function parseOptionValues(argv: string[]): Map<string, string> {
     values.set(flag, value);
   }
   return values;
+}
+
+function parseCapturedAt(mode: PublicationCliArgs["mode"], value: string | undefined): string | undefined {
+  if (mode === "maintenance" && value !== undefined) throw new Error("--captured-at is only valid in snapshot mode");
+  if (value === undefined) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) {
+    throw new Error("--captured-at must be an ISO date");
+  }
+  const milliseconds = Date.parse(value);
+  const normalized = Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : "";
+  if (normalized !== (value.includes(".") ? value : value.replace(/Z$/, ".000Z"))) {
+    throw new Error("--captured-at must be an ISO date");
+  }
+  return normalized;
 }
 
 function parseTargetSha(mode: PublicationCliArgs["mode"], value: string | undefined): string | undefined {
@@ -58,6 +80,7 @@ export function parsePublicationArgs(argv: string[]): PublicationCliArgs {
   const mode = parseMode(argv[0]);
   const values = parseOptionValues(argv.slice(1));
   const targetSha = parseTargetSha(mode, values.get("--target-sha"));
+  const capturedAt = parseCapturedAt(mode, values.get("--captured-at"));
   const repository = values.get("--repository");
   const botLogin = values.get("--bot-login");
   if (repository === undefined || !/^[^/\s]+\/[^/\s]+$/.test(repository)) throw new Error("--repository must be owner/name");
@@ -65,6 +88,7 @@ export function parsePublicationArgs(argv: string[]): PublicationCliArgs {
   return {
     mode,
     targetSha,
+    capturedAt,
     repository,
     botLogin,
     deadlineSeconds: values.has("--deadline-seconds")
@@ -99,7 +123,10 @@ export async function publicationMain(
     };
     const result =
       args.mode === "snapshot"
-        ? await runSnapshotPublisher(new SnapshotCliPort({ ...context, targetSha: args.targetSha ?? "" }), runOptions)
+        ? await runSnapshotPublisher(
+            new SnapshotCliPort({ ...context, targetSha: args.targetSha ?? "", capturedAt: args.capturedAt }),
+            runOptions,
+          )
         : await runMaintenancePublisher(new MaintenanceCliPort(context), runOptions);
     console.log(JSON.stringify(result));
     return result.code;

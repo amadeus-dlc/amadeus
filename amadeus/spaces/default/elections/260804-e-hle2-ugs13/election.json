@@ -1,0 +1,17 @@
+{
+  "electionId": "E-HLE2-UGS13",
+  "kind": "learnings-selection",
+  "question": "260804-live-e2e-phase2 units-generation の §13 学習選定。候補c1『Issue・承認済み成果物の境界を再質問しない』はproject.mdの既存規則と重複する。c2のUser Stories SKIP時のrequirements proxyはステージ既定のfallback適用、c3のtransport Unitへのruntime probe内包は本Intent固有のUnit境界である。共有file contentionとKiro分岐別見積りはDelivery Planningへ引き継ぐIntent固有のopen questionである。新規project/team memoryまたはsensorの永続化は0件でよいか。成果物、候補、既存memory層を独立実測して投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "c1は既存project規則を再利用し、c2/c3とopen questionはIntent recordへ保持して恒久ルールやsensorを重複追加しない"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

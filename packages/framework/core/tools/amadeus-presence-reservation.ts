@@ -241,9 +241,8 @@ function secureKimiRouteMatches(
   marker: PresenceReservation,
 ): boolean {
   // The Kimi capability path always requires an exact carrier-bearing host
-  // event, including human continuations created after a standing grant
-  // becomes invalid. Other harnesses retain the historical route-less
-  // reservation behavior until they opt into the same host contract.
+  // event. Other harnesses retain the route-less reservation behavior until
+  // they opt into the same host contract.
   if (input.requireRouteBinding !== true) return true;
   const route = input.route;
   const isCarrierBearingHostEvent =

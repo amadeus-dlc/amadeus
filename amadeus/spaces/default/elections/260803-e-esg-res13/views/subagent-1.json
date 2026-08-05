@@ -1,0 +1,27 @@
+{
+  "electionId": "E-ESG-RES13",
+  "voter": "subagent-1",
+  "question": "260803-election-state-guard / reverse-engineering §13 学習選定。surface 候補6件: c1 = 差分 base を祖先性判定で 71fcdf106 に確定(既存 cid:reverse-engineering:rescan-base-ancestry の執行) / c2 = xrev scan mode を適用したが行番号再解決の免除条件が不成立(verdict SHA が observed より37コミット前・区間内に患部 touch)のため全引用を observed で再解決した(既存 cid:reverse-engineering:c1-xrev-single-issue + E-OBB5-RES13 追補の執行) / c3 = answer-evidence が codekb 出力に構造的不適合で matches-rejection、required-sections と upstream-coverage は PASSED 4件(既存 cid:reverse-engineering:re-sensors-codekb-filter-mismatch の執行) / c4 = Developer スキャンで Issue 記述より範囲が広いと確定(無ガード2箇所・35セル中受理5セル・第4の破損経路)。これは intent 固有の調査結果 / c5 = coverage-patch-allowlist の amadeus-election.ts:317 が無音転位、既存 #1622 へ重複起票せず追記(既存 cid:requirements-analysis:pre-filing-dup-and-branch-check + E-FSPBTS13 の執行) / c6 = サブエージェント待ちでターンを終え Stop hook を反復発火させた違反と、ディスク実測にもとづく conductor 引き取り(既存 cid:code-generation:conductor-sync-subagent-collection 違反 + disk-evidence-early-takeover の執行)。各候補が (a) 既存 cid の執行実例・intent 固有の調査結果(persist 不要)か (b) 新規追補(persist 相当)かを、diary・codekb 成果物・既存 cid を実測して判定し投票せよ。GoA 明記、2/3/6 は留保1文。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "上記以外の組み合わせ(留保で対象と理由を示す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c2 のみ採用(免除条件の判定手順の追補として persist)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "0件 — 全候補が既存 cid の執行実例または intent 固有の調査結果"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "c6 のみ採用(引き取り判断の追補として persist)"
+    }
+  ]
+}

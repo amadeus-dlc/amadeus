@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (87 events, 21 categories)
+## Event Registry (88 events, 21 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -90,7 +90,11 @@ Formal-model-check checkpoint choices use an authoritative side ledger at
 lock. Each pending row binds plugin/code, checkpoint, target, spec identity,
 intent run, and advisory instance. Each receipt adds the canonical choice and
 the exact physical `HUMAN_TURN` coordinates: shard, timestamp, and SHA-256 of
-the event record. A stage report is refused while any matching row is
+the event record. The choice is accepted only when the immediately preceding
+interaction decision is the tool-validated advisory presentation for those
+exact instances. A correction may mark a legacy, unpresented run-now receipt as
+revoked only while the advisory remains open and no model-check evidence exists;
+the revoked row stays in the side ledger and no longer resolves the hold. A stage report is refused while any matching row is
 unresolved. The ordinary audit shard still supplies the human turn and stage
 lifecycle; the side ledger supplies the advisory-specific correlation that a
 general approval event cannot express. Local run-now evidence is retained in
@@ -125,15 +129,15 @@ the instance-specific `.amadeus-advisory-check/` directory.
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input, Grant Id | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
-### Standing Delegation Grants (3 events)
+### Legacy Standing Delegation Grant Observations (3 events)
 
-Human-grounded in both solo and team modes. A session driven by a real human turn on its own ledger issues a time-boxed standing grant that may authorize covered stage gates for the grant's TTL (default 4 hours) without a per-gate human turn. Team mode retains its existing leader/delegation authorization path; solo mode uses the route receipt and commit-time revalidation path. Phase-boundary gates are EXCLUDED by default and require the `--include-phase-boundary` opt-in. Lifecycle events carry issuer provenance coordinates and all three events are minted only by trusted in-process writers (refused at the general audit CLI).
+These event shapes are retained only so replay and migration projection code can read historical ledgers. No live command or router emits them, and none of them authorizes work. The general audit CLI continues to refuse them so new rows cannot masquerade as history.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `GRANT_ISSUED` | Human-grounded session issues a time-boxed standing stage-gate grant (Issue #1125, solo support #1466) | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | `tools/amadeus-state.ts grant-standing-delegation` |
-| `GRANT_REVOKED` | Human-grounded session revokes a standing grant id (Issue #1125, solo support #1466) | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | `tools/amadeus-state.ts revoke-standing-delegation` |
-| `GATE_AUTHORIZATION_SELECTED` | Solo-mode router records the exact standing grant selected for one stage-route attempt before emitting its carrier (Issue #1466) | Route Id, Stage, Grant Id | — | trusted in-process route writer |
+| `GRANT_ISSUED` | Historical standing-grant evidence | Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input | Reserved legacy observation |
+| `GRANT_REVOKED` | Historical standing-grant revocation | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | Reserved legacy observation |
+| `GATE_AUTHORIZATION_SELECTED` | Historical standing-grant route selection | Route Id, Stage, Grant Id | — | Reserved legacy observation |
 
 ### Artifact Events (3 events — hook-emitted)
 
@@ -180,7 +184,7 @@ Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.
 | `BOLT_STARTED` | Orchestrator begins a Bolt (or parallel batch of Bolts) | Bolt names, Batch number, Walking skeleton | Bolt slug | `tools/amadeus-bolt.ts start` |
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Bolt names, Batch number | Bolt slug | `tools/amadeus-bolt.ts complete` |
 | `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug, Reason, Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
-| `AUTONOMY_MODE_SET` | User answered the ladder prompt after the walking skeleton | Mode | — | `tools/amadeus-bolt.ts set-autonomy` |
+| `AUTONOMY_MODE_SET` | Historical Construction-mode evidence retained for replay and doctor diagnostics | Mode | — | Reserved legacy observation |
 
 ### Worktree (7 events)
 
@@ -243,7 +247,7 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 | `RULE_LEARNED` | The learning gate persisted a kept learning as a practice line under the routed heading in `{project,team}.md` | Stage, Candidate-ID, Destination, Heading, Source | — | `tools/amadeus-learnings.ts persist` |
 | `SENSOR_PROPOSED` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter | Stage, Candidate-ID, Sensor ID, Manifest path, Matches, Destinations, Source | — | `tools/amadeus-learnings.ts persist` |
 
-### Loop Monitor and Quality Repair (2 events)
+### Loop Monitor, Quality Repair, and Intent Autonomy (3 events)
 
 The event set is the atomic canonical stream for delivery observation, cycle trigger, Judge reservation/result, closed route application, and latch transitions. The per-clone Replay Index is a repairable secondary projection and never replaces this audit source of truth.
 
@@ -251,6 +255,7 @@ The event set is the atomic canonical stream for delivery observation, cycle tri
 |-------|------|----------|----------|---------|
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | One atomic Loop Monitor delivery/Judge/latch transition commits | Partition Key, Event Set Id, Event Set | — | `tools/amadeus-loop-monitor-replay.ts` |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | One Quality snapshot/progress/replan/stall/resume transaction and its generic Monitor effects commit atomically | Quality Scope Id, Transaction Id, Transaction | — | `tools/amadeus-quality-repair-replay.ts` |
+| `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | One Intent-scoped mode/grant/decision/effect/park transaction commits atomically | Intent Uuid, Transaction Id, Transaction Digest, Transaction | Principal, Decider, Actor, Basis | `tools/amadeus-intent-autonomy-replay.ts` |
 
 ### Swarm (7 events)
 

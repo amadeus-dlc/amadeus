@@ -367,26 +367,32 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
     proj = "";
   });
 
-  // Test 10: set-autonomy emits AUTONOMY_MODE_SET
-  test("set-autonomy emits AUTONOMY_MODE_SET", () => {
+  // Test 10: the removed legacy mode cannot mint authority.
+  test("set-autonomy rejects the legacy autonomous mode without emitting authority", () => {
     proj = setupConstructionProject();
-    runBolt(proj, "set-autonomy", "--mode", "autonomous");
-    expect(auditRecords(proj).some((r) => r.event === "AUTONOMY_MODE_SET")).toBe(true);
+    const stateBefore = readState(proj);
+    const committedBefore = auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length;
+    expect(runBolt(proj, "set-autonomy", "--mode", "autonomous").status).toBe(1);
+    expect(readState(proj)).toBe(stateBefore);
+    expect(auditRecords(proj).some((r) => r.event === "AUTONOMY_MODE_SET")).toBe(false);
+    expect(auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toHaveLength(committedBefore);
   });
 
   // Test 11: set-autonomy updates Construction Autonomy Mode in state file
-  test("set-autonomy updates state field", () => {
+  test("set-autonomy legacy autonomous mode leaves state unchanged", () => {
     proj = setupConstructionProject();
     runBolt(proj, "set-autonomy", "--mode", "autonomous");
-    // .sh: assert_grep 'Construction Autonomy Mode.*autonomous' (basic regex)
-    expect(readState(proj)).toMatch(/Construction Autonomy Mode.*autonomous/);
+    expect(readState(proj)).toMatch(/Construction Autonomy Mode.*gated/);
   });
 
-  // Test 12: set-autonomy --mode gated is accepted
-  test("set-autonomy --mode gated updates state", () => {
+  // Test 12: gated was also a legacy spelling and is rejected.
+  test("set-autonomy rejects the legacy gated mode", () => {
     proj = setupConstructionProject();
-    runBolt(proj, "set-autonomy", "--mode", "gated");
-    expect(readState(proj)).toMatch(/Construction Autonomy Mode.*gated/);
+    const stateBefore = readState(proj);
+    const committedBefore = auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length;
+    expect(runBolt(proj, "set-autonomy", "--mode", "gated").status).toBe(1);
+    expect(readState(proj)).toBe(stateBefore);
+    expect(auditRecords(proj).filter((r) => r.event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toHaveLength(committedBefore);
   });
 
   // Test 13: set-autonomy --mode bogus exits 1
@@ -401,11 +407,12 @@ describe("t33 set-autonomy: emission, state update, validation", () => {
     expect(runBolt(proj, "set-autonomy").status).toBe(1);
   });
 
-  // Test 23: set-autonomy JSON ack includes state_updated:true
-  test("set-autonomy JSON ack includes state_updated:true", () => {
+  // Test 23: a rejected legacy request never acknowledges a state update.
+  test("set-autonomy legacy request has no state_updated acknowledgement", () => {
     proj = setupConstructionProject();
     const res = runBolt(proj, "set-autonomy", "--mode", "autonomous");
-    expect(res.out).toContain('"state_updated":true');
+    expect(res.status).toBe(1);
+    expect(res.out).not.toContain('"state_updated":true');
   });
 });
 

@@ -3827,188 +3827,6 @@ export function normalizeAuditShardLeaf(name: string): string {
   return name.replace(/\.md$/, ".jsonl");
 }
 
-// --- Standing delegation grants (Issue #1125) ---
-
-// Default time-to-live for a standing stage-gate grant: 4 hours. Fixed by the
-// E-SDG-RA Q4=A ruling (a normal working session's length) so a grant spans a
-// typical leader-away window and then lapses back to per-gate approval on its
-// own. No env override is provided ON PURPOSE (standing-approval-scope-limit):
-// the auto-approval window stays a fixed, auditable constant rather than a knob
-// a session could widen at runtime. Semantically DISTINCT from
-// DEFAULT_LOCK_STALE_MS — that bounds a stale audit LOCK; this bounds a
-// human-granted APPROVAL window (different meaning, different magnitude).
-export const DEFAULT_STANDING_GRANT_TTL_MS = 4 * 60 * 60 * 1000;
-
-// A parsed, currently-relevant standing grant. Built only via StandingGrant.parse
-// (class-free companion-object style): the type carries an isExpired predicate so
-// callers ask the grant rather than re-deriving the comparison.
-export type StandingGrant = {
-  readonly grantId: string;
-  readonly scope: "stage-gates";
-  readonly issuedAtMs: number;
-  readonly expiresAtMs: number;
-  readonly includesPhaseBoundary: boolean;
-  readonly issuerIntent: string;
-  readonly issuerShard: string;
-  readonly issuerHumanTs: string;
-  isExpired(nowMs: number): boolean;
-};
-
-// Field bundle for the StandingGrant factory (module-level named type so the
-// factory signature is a single runtime line — a multi-line inline type
-// annotation reads back as permanent DA:0 under bun --coverage).
-type StandingGrantFields = {
-  grantId: string;
-  issuedAtMs: number;
-  expiresAtMs: number;
-  includesPhaseBoundary: boolean;
-  issuerIntent: string;
-  issuerShard: string;
-  issuerHumanTs: string;
-};
-
-// Internal factory: a frozen StandingGrant literal whose isExpired closes over
-// expiresAtMs. The grant lapses the instant `now` reaches its expiry.
-function makeStandingGrant(f: StandingGrantFields): StandingGrant {
-  return Object.freeze({
-    grantId: f.grantId,
-    scope: "stage-gates" as const,
-    issuedAtMs: f.issuedAtMs,
-    expiresAtMs: f.expiresAtMs,
-    includesPhaseBoundary: f.includesPhaseBoundary,
-    issuerIntent: f.issuerIntent,
-    issuerShard: f.issuerShard,
-    issuerHumanTs: f.issuerHumanTs,
-    isExpired(nowMs: number): boolean {
-      return nowMs >= f.expiresAtMs;
-    },
-  });
-}
-
-// Companion object (parse seam). Separate value binding from the type of the same
-// name so callers read StandingGrant.parse(block) at the intended altitude.
-export const StandingGrant = {
-  // Build a StandingGrant from a GRANT_ISSUED audit block, or null when a required
-  // field is absent, the Scope is not "stage-gates", or Expires At is not a
-  // parseable date. Every unparseable block collapses to null so a malformed row
-  // can never masquerade as a valid grant.
-  parse(auditBlock: string): StandingGrant | null {
-    const event = auditBlockField(auditBlock, "Event");
-    const issuedAt = auditBlockField(auditBlock, "Timestamp");
-    const grantId = auditBlockField(auditBlock, "Grant Id");
-    const scope = auditBlockField(auditBlock, "Scope");
-    const expiresAt = auditBlockField(auditBlock, "Expires At");
-    const includes = auditBlockField(auditBlock, "Includes Phase Boundary");
-    const issuerSpace = auditBlockField(auditBlock, "Issuer Space");
-    const issuerIntent = auditBlockField(auditBlock, "Issuer Intent");
-    const issuerShard = auditBlockField(auditBlock, "Issuer Shard");
-    const issuerHumanTs = auditBlockField(auditBlock, "Issuer Human Ts");
-    if (
-      event !== "GRANT_ISSUED" ||
-      !issuedAt ||
-      !grantId ||
-      !/^[0-9a-f]{8}$/.test(grantId) ||
-      scope !== "stage-gates" ||
-      !expiresAt ||
-      (includes !== "true" && includes !== "false") ||
-      !issuerSpace ||
-      !/^[A-Za-z0-9._-]+$/.test(issuerSpace) ||
-      !issuerIntent ||
-      !issuerShard ||
-      !issuerHumanTs ||
-      Number.isNaN(Date.parse(issuerHumanTs)) ||
-      !/^[A-Za-z0-9._-]+$/.test(issuerIntent) ||
-      !AUDIT_SHARD_LEAF_RE.test(issuerShard)
-    ) {
-      return null;
-    }
-    const issuedAtMs = Date.parse(issuedAt);
-    const expiresAtMs = Date.parse(expiresAt);
-    if (Number.isNaN(issuedAtMs) || Number.isNaN(expiresAtMs)) return null;
-    return makeStandingGrant({
-      grantId,
-      issuedAtMs,
-      expiresAtMs,
-      includesPhaseBoundary: includes === "true",
-      issuerIntent,
-      issuerShard,
-      issuerHumanTs,
-    });
-  },
-};
-
-// Every Grant Id revoked by a GRANT_REVOKED block anywhere in the space. A
-// revocation may live in a different intent's shard than the issuance, so the
-// whole space is swept before any candidate is judged.
-function collectRevokedGrantIds(
-  projectDir: string,
-  space: string,
-  intents: string[],
-): Set<string> {
-  const revoked = new Set<string>();
-  for (const intent of intents) {
-    const audit = readAllAuditShards(projectDir, intent, space);
-    if (audit.length === 0) continue;
-    for (const ev of findAllEvents(audit, "GRANT_REVOKED")) {
-      const id = auditBlockField(ev.block, "Grant Id");
-      if (id) revoked.add(id);
-    }
-  }
-  return revoked;
-}
-
-// Judge ONE GRANT_ISSUED block: return the parsed grant when it qualifies as a
-// live grant, else null. Qualifies only when ALL hold: parse succeeds; scope is
-// "stage-gates"; it is not expired at `now`; its id is not revoked; and its
-// issuer HUMAN_TURN provenance physically exists (verifyDelegatedProvenance — the
-// grant block carries the same issuer coordinates a delegation does).
-function qualifiedStandingGrant(
-  projectDir: string,
-  block: string,
-  now: number,
-  revoked: Set<string>,
-): StandingGrant | null {
-  const grant = StandingGrant.parse(block);
-  if (grant === null) return null;
-  if (grant.scope !== "stage-gates") return null;
-  if (grant.isExpired(now)) return null;
-  if (revoked.has(grant.grantId)) return null;
-  if (!verifyDelegatedProvenance(projectDir, block)) return null;
-  return grant;
-}
-
-// Find the newest currently-valid standing grant across every intent's audit
-// shards in the active space, or null when none qualifies (see
-// qualifiedStandingGrant for the per-candidate predicate). Ties break to the
-// latest expiresAtMs. `now` is an argument (never Date.now() here) so the
-// decision is deterministic for a fixed corpus + clock. Every failure mode is
-// caught and collapses to null so a verification defect can never wedge a gate
-// (fail to per-gate approval, never fail open at the check).
-export function findActiveStandingGrant(
-  projectDir: string,
-  now: number,
-): StandingGrant | null {
-  try {
-    const space = activeSpace(projectDir);
-    const intents = listIntentDirs(projectDir, space);
-    const revoked = collectRevokedGrantIds(projectDir, space, intents);
-    let best: StandingGrant | null = null;
-    for (const intent of intents) {
-      const audit = readAllAuditShards(projectDir, intent, space);
-      if (audit.length === 0) continue;
-      for (const ev of findAllEvents(audit, "GRANT_ISSUED")) {
-        const grant = qualifiedStandingGrant(projectDir, ev.block, now, revoked);
-        if (grant && (best === null || grant.expiresAtMs > best.expiresAtMs)) {
-          best = grant;
-        }
-      }
-    }
-    return best;
-  } catch {
-    return null;
-  }
-}
-
 // Scopes whose walking-skeleton default is ON when the recorded stance is
 // "scope-dependent" (or the classify round-trip has not landed a value yet).
 // Canonical single definition — amadeus-orchestrate.ts imports this same set
@@ -4023,152 +3841,6 @@ export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
   "workshop",
   "infra",
 ]);
-
-const SKELETON_OFF_SCOPES: ReadonlySet<string> = new Set([
-  "fix",
-  "refactor",
-  "security-patch",
-  "chore",
-  "self-fix",
-  "self-refactor",
-  "self-document",
-  "amadeus-security-patch",
-  "amadeus-chore",
-]);
-
-export type WalkingSkeletonStance = "on" | "off" | "scope-dependent";
-
-export type StandingGrantGateContext = {
-  readonly gateRequired: boolean;
-  readonly isPhaseBoundary: boolean;
-  readonly isFirstConstructionGate: boolean;
-  readonly isPerUnitStage: boolean;
-  readonly isPerUnitFinalGate: boolean;
-  readonly scope: string;
-  readonly walkingSkeletonStance: WalkingSkeletonStance | undefined;
-};
-
-export type StandingGrantGateEligibility =
-  | { readonly kind: "eligible" }
-  | {
-      readonly kind: "ineligible";
-      readonly reason:
-        | "no-gate"
-        | "phase-boundary"
-        | "walking-skeleton"
-        | "per-unit-incomplete";
-    };
-
-function effectiveWalkingSkeleton(
-  stance: WalkingSkeletonStance | undefined,
-  scope: string,
-): boolean | null {
-  if (stance === "on") return true;
-  if (stance === "off") return false;
-  if (SKELETON_ON_SCOPES.has(scope)) return true;
-  if (SKELETON_OFF_SCOPES.has(scope)) return false;
-  return null;
-}
-
-export function evaluateStandingGrantGateEligibility(
-  grant: StandingGrant,
-  context: StandingGrantGateContext,
-): StandingGrantGateEligibility {
-  if (!context.gateRequired) return { kind: "ineligible", reason: "no-gate" };
-  if (context.isPhaseBoundary && !grant.includesPhaseBoundary) {
-    return { kind: "ineligible", reason: "phase-boundary" };
-  }
-  if (context.isPerUnitStage && !context.isPerUnitFinalGate) {
-    return { kind: "ineligible", reason: "per-unit-incomplete" };
-  }
-  if (
-    context.isFirstConstructionGate &&
-    effectiveWalkingSkeleton(context.walkingSkeletonStance, context.scope) !== false
-  ) {
-    return { kind: "ineligible", reason: "walking-skeleton" };
-  }
-  return { kind: "eligible" };
-}
-
-// The EXECUTE/SKIP row a workflow scope claims, or null when the scope cannot
-// be resolved. Same source the engine's own walk uses (loadScopeMapping →
-// compiled scope-grid), so the grant classifier and `next`/`advance` can never
-// disagree about which stages a scope runs. Composed scopes (self-feature,
-// self-fix, …) live ONLY in the grid — stage frontmatter carries the
-// stock vocabulary — which is why stage.scopes must never be read here (#1497).
-// FAIL-CLOSED: an unreadable grid, a missing scopes dir or an unknown scope
-// yields null and the caller then refuses to cover the gate (the human-approval
-// fallback), never a fatal error path — a data outage must not auto-approve.
-function scopeStageActions(scope: string): Record<string, "EXECUTE" | "SKIP"> | null {
-  if (scope === "") return null;
-  try {
-    return loadScopeMapping()[scope]?.stages ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// Decide whether a valid standing grant covers THIS gate. Single classifying
-// function. "In scope" is the scope's compiled EXECUTE row (scopeStageActions
-// above); an unresolvable scope is not covered at all.
-//   (a) phase-boundary gate — the slug's phase differs from the next in-scope
-//       stage's phase, OR there is no next stage (final) — is covered ONLY when
-//       the grant opted in via includesPhaseBoundary.
-//   (b) the FIRST in-scope construction stage is NEVER auto-covered (false)
-//       while the walking-skeleton gate is effectively on: recorded stance
-//       "on", or a non-"off" stance (raw "scope-dependent" / absent — the
-//       stance is persisted un-normalized) combined with a SKELETON_ON_SCOPES
-//       scope. Only an explicit "off" clears the exclusion — a human must see
-//       the skeleton before the remaining Bolts run.
-//   (c) any other ordinary stage gate is covered (true).
-// The per-unit axis is pinned to false/false, and that is SAFE rather than
-// unexamined (#1497 FR-3, measured): an intermediate per-unit iteration never
-// reaches this predicate. emitPerUnitRunStage stamps gate:false on every
-// not-yet-covered unit and emits it directly, bypassing the grant router; the
-// router itself returns untouched directives when gate !== true, so no route
-// receipt is minted; the solo grant-backed approve path requires exactly that
-// receipt, and approveUnderLock additionally requires the stage checkbox to sit
-// at awaiting-approval, which only a gate:true directive's gate-start produces.
-// The single per-unit directive that DOES carry a gate is the all-covered final
-// one, and for a final gate false/false and true/true are equivalent by
-// construction of evaluateStandingGrantGateEligibility (the per-unit-incomplete
-// branch requires isPerUnitStage && !isPerUnitFinalGate).
-// stateContent supplies Scope + Skeleton Stance; `graph` is the loaded stage
-// graph, passed in so the caller controls the read.
-export function standingGrantSatisfiesGate(
-  grant: StandingGrant,
-  slug: string,
-  stateContent: string,
-  graph: StageEntry[],
-): boolean {
-  const scope = getField(stateContent, "Scope") ?? "";
-  const actions = scopeStageActions(scope);
-  if (actions === null) return false;
-  const currentIndex = graph.findIndex((stage) => stage.slug === slug);
-  const current = currentIndex < 0 ? null : graph[currentIndex];
-  const inScope = (stage: StageEntry): boolean => actions[stage.slug] === "EXECUTE";
-  const next = currentIndex < 0
-    ? null
-    : graph.slice(currentIndex + 1).find(inScope) ?? null;
-  const crossesPhaseBoundary = !next || (current != null && next.phase !== current.phase);
-  const firstConstruction = graph.find(
-    (stage) => stage.phase === "construction" && inScope(stage),
-  );
-  const rawStance = getField(stateContent, "Skeleton Stance");
-  const walkingSkeletonStance =
-    rawStance === "on" || rawStance === "off" || rawStance === "scope-dependent"
-      ? rawStance
-      : undefined;
-  return evaluateStandingGrantGateEligibility(grant, {
-    gateRequired: true,
-    isPhaseBoundary: crossesPhaseBoundary,
-    isFirstConstructionGate: firstConstruction?.slug === slug,
-    isPerUnitStage: false,
-    isPerUnitFinalGate: false,
-    scope,
-    walkingSkeletonStance,
-  }).kind === "eligible";
-}
 
 // True when any stage sits at [?] (awaiting-approval) in the state file: the
 // "a gate is actually OPEN" predicate for the per-harness preToolUse floors.
@@ -4584,19 +4256,13 @@ export function worktreePath(projectDir: string, boltSlug: string): string {
 // repoDir resolves the on-disk dir for a repo name; it does NOT validate that the
 // dir exists or is a git repo (the caller does, where the git op runs).
 
-// Canonical UUID shapes. Reservation ids and standing-grant Route Ids are v4;
-// intent ids are v7. Every module that validates one of these — the grant
-// authorization domain, the presence reservation store, the state CLI, the
-// orchestrator's wire parser — tests against these two definitions, so a shape
-// can never drift between the minting side and the checking side.
+// Canonical UUID shapes. Reservation ids are v4; intent ids are v7. Every
+// module that validates one of these tests against these two definitions, so a
+// shape can never drift between the minting side and the checking side.
 export const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export const UUID_V7_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-// Standing-grant Grant Ids are the first eight hex digits of the issuing
-// audit row's hash — one shape shared by the wire parser and the domain.
-export const GRANT_ID_RE = /^[0-9a-f]{8}$/;
-
 // A repo name is a single path segment (no separators, no `..`) so it can only
 // resolve to an immediate child of the workspace — never escape it.
 export const REPO_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -5783,6 +5449,31 @@ export function rebuildDerivedPlanFields(
   ).length;
   next = setField(next, "Completed", String(completedCount));
   return { content: next, executeStages, completedCount };
+}
+
+/** Rebuild only Completed from the effective plan recorded in a state file. */
+export function rebuildCompletedFieldFromState(
+  content: string,
+  graph: StageEntry[] = loadStageGraph(),
+): Pick<DerivedPlanFields, "content" | "completedCount"> {
+  const scope = getField(content, "Scope") ?? "";
+  const scopeStages = loadScopeMapping()[scope]?.stages;
+  if (!scopeStages) {
+    // An empty fallback would make every non-overridden stage SKIP-effective
+    // and silently zero Completed on a broken state file — fail before writing.
+    throw new Error(
+      `State file has invalid Scope "${scope}" — cannot rebuild Completed against an unknown plan.`,
+    );
+  }
+  const stateOverrides = parseStateStageSuffixes(content);
+  const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) => {
+    const action = stateOverrides.get(slug) ?? scopeStages[slug];
+    return action === "EXECUTE" ? "EXECUTE" : "SKIP";
+  });
+  return {
+    content: setField(content, "Completed", String(rebuilt.completedCount)),
+    completedCount: rebuilt.completedCount,
+  };
 }
 
 // --- Post-compose state re-sync (#1849) --------------------------------------
@@ -8159,15 +7850,15 @@ export function guardMessage(parts: GuardMessageParts): string {
 // exits. One const per line for the same LCOV reason as the markers above.
 export const PLAN_DRIFT_WEIGHT = "A parallel batch that runs serially is plan drift the record never shows: across 18 audited intents, 4 declared parallel Bolts and shipped them one at a time, because the plan lived in prose and never became a directive (issue #1892).";
 export const PLAN_CORRECTION_EXIT = "Correct the plan, not the run: record the dependency that makes these units serial (with its reason) in unit-of-work-dependency.md, re-run `bun <harness>/tools/amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.";
-export const AUTONOMY_LADDER_EXIT = "Answer the walking-skeleton ladder: `amadeus-bolt set-autonomy --mode autonomous` (no per-Bolt gate) or `amadeus-bolt set-autonomy --mode gated` (a gate at every batch boundary), then re-run `next`.";
+export const AUTONOMY_LADDER_EXIT = "Select Intent autonomy with `amadeus-bolt set-autonomy --mode none|semi|full`, complete any required human confirmation, then re-run `next`.";
 
 // Why `tryEmitSwarm` did not fan a batch out. Every refusal in that function
 // lands on exactly one arm, which is what lets the caller tell a legitimate
 // serial fallback apart from a plan the run is about to break.
 //
 // `autonomy-unset` splits in two on purpose. Before the walking skeleton ships,
-// an unset grant is the legitimate initial state (the ladder has not fired
-// yet); after it ships, an unset grant means the ladder's answer is owed. The
+// an unset legacy projection is tolerated; after it ships, a missing canonical
+// Intent autonomy selection must be repaired before planned fan-out. The
 // two need opposite handling, so they are separate arms rather than one arm
 // carrying a boolean — a value the caller would have to remember to check.
 export type SwarmDecline =
@@ -8180,7 +7871,7 @@ export type SwarmDecline =
 
 // What the engine should do about a decline. `redirect` and `violation` carry
 // the same payload but are separate arms because they lead to DIFFERENT exits
-// (the autonomy ladder vs a plan correction); folding them into one arm with an
+// (Intent autonomy selection vs a plan correction); folding them into one arm with an
 // `exit` field would turn the caller's branch into a value check and let the
 // two exits be swapped without the type noticing.
 //
@@ -8254,7 +7945,7 @@ export function planGuardMessage(
   const named = verdict.units.join(", ");
   const declared = `the compiled Bolt DAG declares batch ${verdict.batchNumber} ${verdict.declaredWidth} units wide (${named}), so the plan says these units run in parallel`;
   if (verdict.kind === "redirect") {
-    const observation = `${declared}, but Construction Autonomy Mode is unset — the walking-skeleton ladder has not been answered, so the run cannot fan the batch out and would fall back to building them one at a time.`;
+    const observation = `${declared}, but canonical Intent autonomy is unavailable, so the run cannot determine the batch gate policy and would fall back to building the units one at a time.`;
     return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: AUTONOMY_LADDER_EXIT });
   }
   const observation = `${declared} — but this run is about to issue them serially, one unit per \`next\`.`;

@@ -159,17 +159,26 @@ Construction は **Bolt ごと** にソリューションを構築します。[B
 ─── Construction: Bolt 1 — notification-core (walking skeleton) ───────────
 ```
 
-walking skeleton は **常にゲートされます** — 他のどの Bolt が走る前にも、その設計成果物と生成コードをあなたがレビューします。承認の直後、**ラダープロンプト** がちょうど 1 回だけ発火します:
+walking skeletonには実在するgateがあり、Intent自律レベルに従って裁定されます。`none`と
+`semi`は人間を待ち、`full`は人間が確認したIntent-scoped grant内で裁定できます。
+無人裁定の前にmodeを選びます:
 
+```text
+Intent autonomy
+  ▸ none — humans decide every gate and question
+  ▸ semi — pre-approve in-phase gates; ask at phase boundaries and questions
+  ▸ full — decide authorised gates and questions through Intent completion
 ```
-The walking skeleton shipped. How should the remaining Bolts run?
-  ▸ Continue autonomously
-  ▸ Gate every Bolt
-```
 
-あなたの回答は `amadeus-state.md` に `Construction Autonomy Mode` として記録され、このワークフローの残りすべての Bolt を統制します(セッション再開でもそれを尊重します)。Stage 3.5(Code Generation)は、Bolt 内の各 Unit についてサブエージェントとして実行されます。そのステージファイル内の Unit ごとのゲートは抑制され — 単一の Bolt レベル(またはバッチレベル)のゲートがそれを置き換えます。
+選択はIntent auditへ記録され、`amadeus-state.md`へprojectionされます。`full`は表示された
+grant scope、方針、principalを人間が確認した後だけ有効になります。Stage 3.5(Code Generation)
+はBolt内の各Unitについてサブエージェントとして実行されます。そのステージファイル内の
+Unitごとのgateは抑制され、単一のBoltレベル（またはbatchレベル）gateが置き換えます。
 
-依存関係が満たされ、かつ互いに依存しない Bolt は **並列バッチ** で実行されます — オーケストレーターが単一のターンで複数の `Task` 呼び出しを発行します。失敗は常に停止して retry / skip / abort を尋ねます。自律モードを選んでいる場合でも同様です。
+依存関係が満たされ、かつ互いに依存しないBoltは、どのmodeでも**並列バッチ**で実行されます。
+modeが変えるのは承認方式であり、スケジューリング幅ではありません。`semi` / `full`では
+blockingな不備を健全になるまでrepair/replanし、非生産的なloopはactive grantをrevokeせず
+`REPAIR_STALLED`としてparkします。
 
 すべての Bolt が完了した後、ステージ 3.6(Build and Test)と 3.7(CI Pipeline)がソリューション全体に対して 1 回ずつ実行されます。
 

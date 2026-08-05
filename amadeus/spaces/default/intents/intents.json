@@ -850,6 +850,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
+    "slug": "election-state-guard",
+    "dirName": "260803-election-state-guard",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fc698-ba1f-7467-b6b6-57c4b5b50140",
     "slug": "advisory-human-choice",
     "dirName": "260803-advisory-human-choice",
@@ -875,7 +882,7 @@
     "slug": "state-integrity",
     "dirName": "260803-state-integrity",
     "scope": "self-fix",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019fca5b-db81-7bf9-97e1-4de243cf62c4",
@@ -897,6 +904,13 @@
     "dirName": "260804-goal-reconciliation-guar",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fcbdf-d303-765e-b24a-33db12b4b828",
+    "slug": "live-e2e-phase2",
+    "dirName": "260804-live-e2e-phase2",
+    "scope": "self-feature",
+    "status": "in-flight"
   },
   {
     "uuid": "019fccb7-8e76-7054-b227-8a42de94bba5",
