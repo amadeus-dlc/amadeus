@@ -340,6 +340,10 @@
         {
           "file": "tests/integration/t453-semi-ladder-runtime.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t458-advisory-auto-resolution.integration.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

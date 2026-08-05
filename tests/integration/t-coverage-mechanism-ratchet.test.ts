@@ -194,6 +194,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t433-autonomy-review-observability.test.ts",
     "integration/t45.test.ts",
     "integration/t455-semi-policy-cli.integration.test.ts",
+    "integration/t458-advisory-auto-resolution.integration.test.ts",
     "integration/t49.test.ts",
     "integration/t51.test.ts",
     "integration/t66.test.ts",

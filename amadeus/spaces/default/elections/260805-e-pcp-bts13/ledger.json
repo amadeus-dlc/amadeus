@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件採用を支持する。独立実測: (1) diary(construction/build-and-test/memory.md)の Interpretations 2件は、いずれも本文自身が既存 cid の適用であると明記している — 候補 c1 は「c2-unconditional-ready-boundary の適用」、候補 c2 は「c3-mirror-review-fixes の実践形」。(2) memory 層を grep で実測したところ、c1 が主張する内容は project.md:258 の cid:build-and-test:c2-unconditional-ready-boundary が既に逐語で規定済み — 同則は「AC 外の認定は requirements.md / RAID の実文照合で行い」「未検証面は verdict 節でなく申し送り節に列挙する」と定めており、今回の運用(未検証面3件 = 実 gh ライブ疎通・実 spawn・nsd rebind を requirements 実文照合で AC 外と確認し申し送りに列挙)はその述語をそのまま踏んだだけで、新しい判断規則も適用境界の精密化も加えていない。(3) 候補 c2 も project.md:36 の cid:build-and-test:c3-mirror-review-fixes「full CI再実行に加えて対象ファイルを再検証し、統合全体の信頼性とFR別の診断可能性を両立する」が既に規定する二面確保そのもので、build-test-results.md:11(フル CI 847 files / 11247 assertions / 0 fail)と :17(builder 独立実測 U2=843 / U3=847 ×2回連続)は既存則の実施記録であり規則の更新ではない。(4) 成果物 build-test-results.md:25-27 も verdict を「READY(申し送り付き — c2-unconditional-ready-boundary の実文照合)」と既存 cid 名で自己記述しており、新規 cid を要する未被覆面は現れていない。判定観点『既存ノルムの機械適用は新規学習でない』を両候補が満たすため persist は 0 件が正しい。memory 層の肥大と同義規則の二重化を避ける点でも 0 件が最小十分である。",
+      "submittedAt": "2026-08-05T12:44:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件採用を支持。独立実測: (1) diary(construction/build-and-test/memory.md)の候補2件はいずれも自己申告で既存ノルムの適用と明記 — c1 は逐語『c2-unconditional-ready-boundary の適用』、c2 は逐語『c3-mirror-review-fixes の実践形』。(2) 引用先ノルムの実在を grep で確認 — amadeus/spaces/default/memory/project.md:258 が c2-unconditional-ready-boundary(AC 外の未検証面は requirements 実文照合のうえ無条件 READY、未検証面は申し送り節へ列挙)、同 :36 が c3-mirror-review-fixes(full CI 再実行に加えて対象ファイルを再検証し統合信頼性と FR 別診断可能性を両立)。(3) 成果物 build-test-results.md の実行内容が両ノルムの規定手順と一致 — Verdict 節は逐語『READY(申し送り付き — c2-unconditional-ready-boundary の実文照合)』で未検証面3件(実 gh ライブ疎通・実 spawn 疎通・nsd rebind)を申し送り節へ列挙し AC 外を requirements.md 照合済みと明記、フル CI は conductor 統合断面(847 files / 11247 assertions / 0 fail)と builder 独立実測(U2=843 / U3=847 x2)の両面。いずれも既決ノルムの機械適用であって、ノルム本文が未被覆の新知見を含まない。判定観点『既存ノルムの機械適用は新規学習でない』をそのまま適用して 0 件。",
+      "submittedAt": "2026-08-05T12:40:36Z"
+    }
+  ],
+  "late": []
+}

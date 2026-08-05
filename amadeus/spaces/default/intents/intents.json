@@ -939,5 +939,12 @@
     "dirName": "260805-semi-redefine-autonomy-f",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fd067-5759-7053-bead-aff6ad5c1cac",
+    "slug": "pr-convergence-plugin",
+    "dirName": "260805-pr-convergence-plugin",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

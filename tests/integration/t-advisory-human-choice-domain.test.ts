@@ -29,10 +29,11 @@ function receipt(
   choice: AdvisoryChoiceReceipt["choice"] = "defer-with-risk",
 ): AdvisoryChoiceReceipt {
   return {
-    schema: 1,
+    schema: 2,
     identity: pending.identity,
     choice,
-    humanTurn: {
+    provenance: {
+      kind: "human-turn",
       timestamp: "2026-08-03T12:00:00.000Z",
       shard: "host-clone.jsonl",
       eventIdentity: "human-turn-event-1",
@@ -62,10 +63,13 @@ describe("advisory human choice domain", () => {
     );
   });
 
-  test("receipt parserは完全なhuman-turn provenanceだけを受理する", () => {
+  test("receipt parserは完全なprovenanceだけを受理する", () => {
     expect(parseAdvisoryChoiceReceipt(receipt()).ok).toBe(true);
-    expect(parseAdvisoryChoiceReceipt({ ...receipt(), humanTurn: { timestamp: "", shard: "x" } }).ok)
-      .toBe(false);
+    expect(parseAdvisoryChoiceReceipt({
+      ...receipt(),
+      provenance: { kind: "human-turn", timestamp: "", shard: "x" },
+    }).ok).toBe(false);
+    expect(parseAdvisoryChoiceReceipt({ ...receipt(), provenance: { kind: "unknown" } }).ok).toBe(false);
     expect(parseAdvisoryChoiceReceipt({ ...receipt(), choice: "approve" }).ok).toBe(false);
   });
 
