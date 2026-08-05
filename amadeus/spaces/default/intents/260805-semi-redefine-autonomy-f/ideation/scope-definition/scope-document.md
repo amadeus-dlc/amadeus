@@ -14,7 +14,7 @@
 4. **表示の同一語彙** — `--status` に加え statusline への Autonomy 表示追加(#2067 旧本文の残余)
 5. **旧仕様ピンの明示改訂** — テスト(`t431:313`、`t121:1138`)+ docs 11 ファイル(日英対訳同時)。走行単位の主張は「質問で止まらない」に限定(stop 継続予算 cap 8 は不変)
 6. **落ちる実証** — grant 不在 `--autonomy full` の fail-closed 停止を回帰テストで固定
-7. **advisory choice の無人解決経路**(ユーザー裁定 2026-08-05T06:03Z による追加) — `await-advisory-choice` は autonomy を一切参照せず(`amadeus-orchestrate.ts:781-800` の `applyPendingAdvisoryGuard` が `run-stage` を無条件に横取り、`amadeus-advisory-choice.ts` の autonomy 参照は grep 0 件)、受理側が `humanTurn: HumanTurnProvenance` を必須とし監査シャードの実 `HUMAN_TURN` と timestamp 一致を照合する(`amadeus-advisory-choice.ts:60`、`:343-349`、`:564-565`)。このため full grant 下でも advisory が1件 pending になるだけで headless 走行が切れる。full/semi の無人解決経路へ載せる(節目の扱い・run_required=true 時の強制実行との関係は requirements 段の裁定事項)
+7. **advisory choice の無人解決経路**(ユーザー裁定 2026-08-05T06:03Z による追加) — **特定プラグインに依存しない一般の欠落**である。`applyPendingAdvisoryGuard`(`amadeus-orchestrate.ts:781-800`)は pending advisory が1件でもあれば `run-stage` を無条件に `await-advisory-choice` へ差し替え、`guardAdvisoryChoices`(`amadeus-advisory-choice.ts:592-602`)は `advisories: readonly Advisory[]` を受けるだけで `advisory.plugin` を分岐条件に使わない(`:609-617` のとおり plugin は記録フィールド)。autonomy 参照は同ファイル全域で grep 0 件であり、代わりに受理側が `humanTurn: HumanTurnProvenance` を必須とし監査シャードの実 `HUMAN_TURN` と timestamp 一致を照合する(`:60`、`:343-349`、`:564-565`)。したがって **advisory を発火しうる任意のプラグイン**(現行の formal-model-check は一実例にすぎない。将来追加されるプラグインも同様)が1件 pending になるだけで、full grant 下の headless 走行が切れる。full/semi の無人解決経路へ載せる。要件は plugin 非依存の一般形で書き、特定プラグイン名を条件に含めない(節目の扱い・`run_required: true` 時の強制実行との関係は requirements 段の裁定事項)
 
 ### Out(明示的にやらない)
 

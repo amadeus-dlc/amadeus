@@ -15,7 +15,7 @@
 | P5 | 表示の同一語彙 | Must | P4 | statusline への Autonomy 描画追加、`--status` Policies 行の grant 非依存化、directive `intent_autonomy_mode` 消費側棚卸し |
 | P6 | docs / canonical 改訂 | Must | P2〜P5 | docs 11 ファイル(日英同時)+ #2067 canonical 表の改訂記録。走行単位の主張限定 |
 
-| P7 | advisory choice の無人解決 | Must | P1(認可基体)/ P2(質問解決コア) | `await-advisory-choice` を full/semi の無人解決経路へ載せる。`applyPendingAdvisoryGuard`(`amadeus-orchestrate.ts:781-800`)の横取りと `amadeus-advisory-choice.ts` の `humanTurn` 必須契約の改訂。ユーザー裁定 2026-08-05T06:03Z による追加(scope-document 承認系譜を参照) |
+| P7 | advisory choice の無人解決 | Must | P1(認可基体)/ P2(質問解決コア) | `await-advisory-choice` を full/semi の無人解決経路へ載せる。**plugin 非依存の一般形**(`guardAdvisoryChoices` は `advisory.plugin` を分岐条件に使わないため、advisory を出す任意のプラグインで発生する)。`applyPendingAdvisoryGuard`(`amadeus-orchestrate.ts:781-800`)の横取りと `amadeus-advisory-choice.ts` の `humanTurn` 必須契約の改訂。ユーザー裁定 2026-08-05T06:03Z による追加(scope-document 承認系譜を参照) |
 
 ## シーケンシング
 
