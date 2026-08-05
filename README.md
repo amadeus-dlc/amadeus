@@ -12,6 +12,8 @@
 ![Codex CLI](https://img.shields.io/badge/harness-Codex%20CLI-orange)
 ![OpenCode](https://img.shields.io/badge/harness-OpenCode-orange)
 ![Cursor](https://img.shields.io/badge/harness-Cursor-orange)
+![Kimi Code](https://img.shields.io/badge/harness-Kimi%20Code-orange)
+![Pi Coding Agent](https://img.shields.io/badge/harness-Pi%20Coding%20Agent-orange)
 
 > [!WARNING]
 > **Preview (pre-1.0) — under active development.** Interfaces, stage definitions, the agent roster, and the install model are still evolving, and breaking changes can land between releases. Pin a known-good version for anything you depend on, and review all generated output before you act on it.
@@ -81,7 +83,7 @@ The engine — state machine, audit log, referee — is byte-identical across ev
 | **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [Running on OpenCode](docs/guide/harnesses/opencode.md) |
 | **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Running on Kiro IDE](docs/guide/harnesses/kiro-ide.md) |
 | **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Running on Kiro CLI](docs/guide/harnesses/kiro-cli.md) |
-| **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Running on Kimi Code](docs/guide/harnesses/kimi-code.md) |
+| **Kimi Code** | ≥ 0.29.0 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Running on Kimi Code](docs/guide/harnesses/kimi-code.md) |
 | **Pi Coding Agent** | ≥ 0.83.0 | `bunx @amadeus-dlc/setup install --harness pi` | `/skill:amadeus` | [Running on Pi Coding Agent](docs/guide/harnesses/pi.md) |
 
 > [!NOTE]
@@ -121,7 +123,7 @@ On Windows, use *either* PowerShell *or* CMD, not both — your prompt shows `PS
 bunx @amadeus-dlc/setup install
 ```
 
-Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
+Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi` / `pi`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
@@ -296,7 +298,7 @@ amadeus/
 │   │   │   ├── skills/         #   session skills
 │   │   │   └── templates/      #   onboarding skeleton → each harness's CLAUDE.md / AGENTS.md
 │   │   └── harness/            # thin per-harness authored surfaces — small, divergent by design
-│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/
+│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/  pi/
 │   └── setup/                  # @amadeus-dlc/setup — the installer package
 │
 ├── scripts/
@@ -307,7 +309,7 @@ amadeus/
 │  ─────────── GENERATED, IGNORED, DISPOSABLE LOCAL OUTPUT ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # what users of each harness copy
-│   ├── codex/     opencode/    cursor/    kimi/
+│   ├── codex/     opencode/    cursor/    kimi/    pi/
 │
 │  ─────────── SUPPORTING ───────────
 ├── tests/                      # all-TypeScript suite (t*.test.ts)
