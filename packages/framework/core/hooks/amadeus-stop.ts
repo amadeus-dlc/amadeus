@@ -53,10 +53,13 @@
 //      conductor must write a `<slug>-questions.md` with blank [Answer]: tags
 //      before asking (stage-protocol.md §3); an unanswered tag is a positive
 //      signal that a question is pending, so we ALLOW the stop then too
-//      (isPendingQuestionStop below). Strictly gated: it never fires under
-//      Intent autonomy `full` (the loop must keep running there), and any miss
-//      — no file, all answered, full, or a read error — falls through to
-//      the cap-bounded block, so a genuine mid-stage quit is still nudged.
+//      (isPendingQuestionStop below). Strictly gated: it never fires for an
+//      Intent that holds the QUESTION CARVE-OUT — autonomy `full` with an
+//      active grant, or `semi` declared by a human command, both of which may
+//      rule on the question themselves and so must keep running (#2253) — and
+//      any miss — no file, all answered, carve-out held, or a read error —
+//      falls through to the cap-bounded block, so a genuine mid-stage quit is
+//      still nudged.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
 //      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
 //      nor amadeus-state since that prompt). Issue #365's broader reading: a human
