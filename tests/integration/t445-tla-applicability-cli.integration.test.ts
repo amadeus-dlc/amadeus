@@ -377,3 +377,41 @@ describe("advisory hold — the declared evaluator wrapper", () => {
     expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
   });
 });
+
+// The usage boundary of the two applicability verbs: a missing required flag
+// and a malformed governance file are exit-2 / exit-1 answers, never a silent
+// pass through to a judgement made on absent input.
+describe("applicability usage and input boundaries", () => {
+  test("judge without --declaration and --identity is a usage error", () => {
+    const { exitCode, body } = run(["applicability", "judge", "--store", storeRoot]);
+    expect(exitCode).toBe(2);
+    expect(String(body.error)).toContain("--declaration and --identity");
+  });
+
+  test("an approval file missing its three fields is a usage error", () => {
+    const { exitCode, body } = run([
+      "applicability", "receipt",
+      "--declaration", declaration("impl-only", ["FR-001"]),
+      "--identity", IDENTITY_A,
+      "--approval", writeJson("approval-partial.json", { shard: "clone.jsonl" }),
+      "--model-map", modelMapPath,
+      "--store", storeRoot,
+      "--audit-dir", workspace,
+    ]);
+    expect(exitCode).toBe(2);
+    expect(String(body.error)).toContain("shard, timestamp and eventIdentity");
+  });
+
+  test("an unparseable governance file fails closed rather than reading as no subjects", () => {
+    const path = join(workspace, "governed-unparseable.json");
+    writeFileSync(path, "{ not json", "utf8");
+    const { exitCode, body } = run([
+      "advisory", "hold",
+      "--subjects-file", path,
+      "--store", storeRoot,
+      "--model-map", modelMapPath,
+    ]);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
+  });
+});

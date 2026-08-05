@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   ApplicabilityJudge,
   AuthoringHoldEvaluator,
+  readModelMapSnapshot,
+  verifyHumanApproval,
 } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 
 // U2 C9 pin (business-rules.md BR-U2-13..17, business-logic-model.md §3).
@@ -153,5 +156,48 @@ describe("AuthoringHoldEvaluator.evaluate — the closed hold table", () => {
 
   test("an empty store holds instead of releasing (AC-001)", () => {
     expect(unwrap(evaluate(new Map())).kind).toBe("hold");
+  });
+});
+
+// The two readers the hold evaluator is fed from. Both take text, so they stay
+// in the pure layer with the rest of C9.
+describe("readModelMapSnapshot", () => {
+  const noBundles = () => null;
+
+  test("an unparseable map reads as unreadable rather than as an empty map", () => {
+    expect(readModelMapSnapshot("{ not json", noBundles)).toBeNull();
+  });
+
+  test("a model with no evidence link yet contributes no trace subjects", () => {
+    const snapshot = readModelMapSnapshot(
+      JSON.stringify({ models: [{ name: "Election", evidence: null }] }),
+      () => {
+        throw new Error("an unlinked model must not be resolved against the store");
+      },
+    );
+    expect(snapshot?.models).toEqual([{ name: "Election", traceSubjects: [] }]);
+  });
+
+  test("a linked bundle that cannot be resolved makes the whole map unreadable", () => {
+    const text = JSON.stringify({ models: [{ name: "Election", evidence: { digest: "a" } }] });
+    expect(readModelMapSnapshot(text, noBundles)).toBeNull();
+  });
+});
+
+describe("verifyHumanApproval", () => {
+  const approval = { shard: "s.jsonl", timestamp: "2026-08-05T00:00:00Z", eventIdentity: "" };
+
+  function withDigest(line: string) {
+    return { ...approval, eventIdentity: createHash("sha256").update(line).digest("hex") };
+  }
+
+  test("accepts a HUMAN_TURN record whose bytes and timestamp both match", () => {
+    const line = JSON.stringify({ timestamp: approval.timestamp, attributes: { Event: "HUMAN_TURN" } });
+    expect(verifyHumanApproval(line, withDigest(line))).toBe(true);
+  });
+
+  test("a digest-matching line that is not JSON is skipped rather than trusted", () => {
+    const line = "{ not json";
+    expect(verifyHumanApproval(line, withDigest(line))).toBe(false);
   });
 });

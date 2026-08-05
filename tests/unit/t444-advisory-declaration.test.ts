@@ -43,10 +43,27 @@ describe("parseAdvisoryDeclarations", () => {
       JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], evaluator: { argv: "bun hold" } }] }),
     ],
     ["advisories that are not a list", JSON.stringify({ advisories: {} })],
+    ["an entry that is not an object", JSON.stringify({ advisories: ["authoring-hold"] })],
+    [
+      "a formalCheck that is neither an object nor null",
+      JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], formalCheck: "bun run.ts" }] }),
+    ],
+    [
+      "a formalCheck without an argv array",
+      JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], formalCheck: { argv: [] } }] }),
+    ],
   ])("reports %s as invalid rather than dropping it", (_label, text) => {
     const parsed = parseAdvisoryDeclarations(text);
     expect(parsed.declarations).toEqual([]);
     expect(parsed.invalid.length).toBeGreaterThan(0);
+  });
+
+  test("reads a declaration whose formalCheck carries an argv vector", () => {
+    const parsed = parseAdvisoryDeclarations(JSON.stringify({
+      advisories: [{ ...DECLARATION.advisories[0], formalCheck: { argv: ["bun", "check.ts", "{out}"] } }],
+    }));
+    expect(parsed.invalid).toEqual([]);
+    expect(parsed.declarations[0]?.formalCheckArgv).toEqual(["bun", "check.ts", "{out}"]);
   });
 });
 
