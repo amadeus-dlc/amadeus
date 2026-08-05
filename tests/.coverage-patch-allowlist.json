@@ -6075,5 +6075,27 @@
     },
     "reason": "CLI flag-validation arm: error() exits the process, so the missing-digest branch is spawn-only; the confirmed path is driven in-process by t435.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review.ts",
+    "selector": {
+      "function": "put",
+      "fingerprint": "sha256:9f058a96ce21445c8a2dc2e68dcd6418400bf158dc4df47155c076b91c6e81b1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive arm: put() is only reachable from the constructor seeds today, where retained reviews are always empty; the guard exists so a future reseed API cannot orphan a terminal review.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleGetAutoDecision",
+      "fingerprint": "sha256:f91b9204be7a636743ec5e5e16bb0c4dc5cad748f4dd49a9ee8b9a7355eaab43",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "CLI flag-validation arm: error() exits the process, so the invalid --choice branch is spawn-only; the valid preview path is driven in-process by t435.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]

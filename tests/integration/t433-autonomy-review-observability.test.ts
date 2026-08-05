@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -388,6 +388,15 @@ describe("real-human review append", () => {
     };
     expect(() => createMemoryAutonomyReviewService({ snapshot: signedSnapshot(invalidIdentityValue) }))
       .toThrow("invalid-autonomy-review-persistence-identity");
+
+    const fieldMismatchValue = {
+      ...snapshot.value,
+      intents: snapshot.value.intents.map((intent) => intent.intentUuid === COMPLETED
+        ? { ...intent, reviews: intent.reviews.map((event) => ({ ...event, remediation: "self-feature" as const })) }
+        : intent),
+    };
+    expect(() => createMemoryAutonomyReviewService({ snapshot: signedSnapshot(fieldMismatchValue) }))
+      .toThrow("invalid-autonomy-review-persistence-payload");
 
     const duplicateEventValue = {
       ...snapshot.value,
@@ -828,6 +837,17 @@ describe("projection event-set digest contract", () => {
     expect(page.value.nextCursor.projectionEventSetDigest).toBe(expected);
   });
 
+  test("closes a decision whose canonical digest fails as a projection-set MALFORMED", () => {
+    const undigestable = { ...decision(ACTIVE, "bad"), degradedCapability: undefined } as unknown as AutoDecisionRecord;
+    const service = createMemoryAutonomyReviewService({
+      intents: [seed(ACTIVE, "active", [undigestable])],
+    });
+    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 10 });
+    expect(page.ok).toBe(false);
+    if (page.ok) return;
+    expect(page.error).toMatchObject({ code: "MALFORMED", locus: "projectionEventSet" });
+  });
+
   test("dedupes a duplicated event id with identical payloads to one entry", () => {
     const twin = decision(ACTIVE, "dup");
     const service = createMemoryAutonomyReviewService({
@@ -1083,6 +1103,39 @@ describe("production review projection", () => {
       expect(
         readAllAuditShards(projectDir, sourceDir, "default").includes("AUTO_DECISION_REVIEWED"),
       ).toBe(true);
+
+      // A sibling journal's garbage review row that does NOT name this target
+      // says nothing about it — the union read skips it and the surface stays
+      // up. A malformed row that DOES name the target stays fail-closed.
+      const malformedSeed = (marker: string) => `${JSON.stringify({
+        schemaVersion: 1,
+        seq: 99,
+        cloneId: `malformed-${marker}`,
+        intentId: sourceDir,
+        timestamp: new Date().toISOString(),
+        heading: "Auto Decision Reviewed",
+        event: "AUTO_DECISION_REVIEWED",
+        fields: { "Payload Digest": autonomyDigest(marker), "Payload V1": `{"marker":"${marker}"}` },
+      })}\n`;
+      appendFileSync(
+        join(projectDir, "amadeus", "spaces", "default", "intents", sourceDir, "audit", "malformed-foreign.jsonl"),
+        malformedSeed("foreign-target"),
+      );
+      expect(listProductionAutoDecisions({
+        projectDir,
+        intent: DEFAULT_INTENT_UUID,
+        reviewState: "accepted",
+      })).toMatchObject({ ok: true });
+      appendFileSync(
+        join(projectDir, "amadeus", "spaces", "default", "intents", sourceDir, "audit", "malformed-named.jsonl"),
+        malformedSeed(`names-${DEFAULT_INTENT_UUID}`),
+      );
+      expect(listProductionAutoDecisions({
+        projectDir,
+        intent: DEFAULT_INTENT_UUID,
+        reviewState: "accepted",
+      })).toMatchObject({ ok: false, error: "invalid-review-audit-payload" });
+      unlinkSync(join(projectDir, "amadeus", "spaces", "default", "intents", sourceDir, "audit", "malformed-named.jsonl"));
       expect(listProductionAutoDecisions({
         projectDir,
         intent: DEFAULT_INTENT_UUID,

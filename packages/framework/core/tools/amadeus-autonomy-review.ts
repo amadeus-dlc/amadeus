@@ -257,11 +257,18 @@ interface ReviewCommandContentDigestInput {
 // "unspecified" default for an unclassified flag, the note collapsed to its
 // digest). Preview, expected-value recomputation, and command binding all call
 // this, so the displayed digest and the verified digest cannot drift.
-export function normalizeReviewFlagMetadata(input: {
+interface ReviewFlagMetadataInput {
   readonly choice: ReviewChoice;
   readonly flagClassification?: HumanReviewCommandBinding["flagClassification"] | undefined;
   readonly noteDigest?: string | null;
-}): { readonly flagClassification: HumanReviewCommandBinding["flagClassification"]; readonly safeNoteDigest: string | null } {
+}
+
+interface NormalizedReviewFlagMetadata {
+  readonly flagClassification: HumanReviewCommandBinding["flagClassification"];
+  readonly safeNoteDigest: string | null;
+}
+
+export function normalizeReviewFlagMetadata(input: ReviewFlagMetadataInput): NormalizedReviewFlagMetadata {
   if (input.choice !== "flag") return { flagClassification: null, safeNoteDigest: null };
   return {
     flagClassification: input.flagClassification ?? "unspecified",
