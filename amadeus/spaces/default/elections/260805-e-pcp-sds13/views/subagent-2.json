@@ -1,0 +1,31 @@
+{
+  "electionId": "E-PCP-SDS13",
+  "voter": "subagent-2",
+  "question": "intent 260805-pr-convergence-plugin の scope-definition ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/ideation/scope-definition/memory.md)の候補2件について、memory 層へ persist する集合を選べ。実在根拠は diary と成果物(同ディレクトリの scope-document.md / intent-backlog.md / scope-definition-questions.md)で実測確認すること。候補 c1 = 「ステージ標準質問5問は intent-statement(Issue #1971)から一意導出できるため0問様式を採用。Issue 明示残置の3決定点は requirements 送付事項として固定」。候補 c2 = 「バックログは Must 5点のみ(Should/Could なし)。Issue 受け入れ目安が Must 面を全指名し非対象宣言が Won't を厳格化しているため(scope-definition:c2 既習形)」。判定観点: 各候補が既存 memory 層ノルムの機械適用にすぎないなら新規学習ではない。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "c1+c2 採用",
+      "description": "両候補を project.md へ persist する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1・c2 とも既存ノルム(issue-cross-review 既決非再質問系 / scope-definition:c2 既習形)の機械適用であり、新規学習として persist しない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c2 のみ採用",
+      "description": "c2 を project.md へ persist する。"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "c1 のみ採用",
+      "description": "c1 を project.md へ persist する。"
+    }
+  ]
+}
