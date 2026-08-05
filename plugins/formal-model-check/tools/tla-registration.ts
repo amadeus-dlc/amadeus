@@ -284,8 +284,9 @@ function ioFailure(cause: unknown): Result<never, RegistrationFailure> {
 }
 
 // A shard that cannot be read proves nothing, so it fails the check rather
-// than throwing out of the gate (fail-closed).
-function approvalVerifier(ports: RegistrationPorts): (approval: HumanApprovalRef) => boolean {
+// than throwing out of the gate (fail-closed). Exported so a caller that stops
+// before `commit` can still run the same six-precondition gate.
+export function approvalVerifier(ports: RegistrationPorts): (approval: HumanApprovalRef) => boolean {
   return (approval) => {
     try {
       return verifyHumanApproval(ports.readShard(approval.shard), approval);

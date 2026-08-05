@@ -46,7 +46,13 @@ import {
   type TraceRow,
 } from "./tla-referees.ts";
 import { createRefereeToolchain } from "./tla-referee-toolchain.ts";
-import { RegistrationCommitter, createRegistrationPorts } from "./tla-registration.ts";
+import {
+  RegistrationCommitter,
+  approvalVerifier,
+  checkPreconditions,
+  createRegistrationPorts,
+} from "./tla-registration.ts";
+import type { PreconditionFailure, RegistrationPorts } from "./tla-registration.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -677,12 +683,10 @@ function registrationCommit(flags: Record<string, string>): Emitted {
     return usageError("--preconditions must name a JSON object");
   }
 
-  // No applicability receipt means no identity to verify the bundle against,
-  // which is the same refusal the gate would reach on the route check.
+  const ports = createRegistrationPorts({ mapPath });
   const identity = subjectIdentityOf(candidate as Record<string, unknown>);
   if (identity === null) {
-    const failures = [{ kind: "precondition-missing", precondition: "applicability-route" }];
-    return failed({ kind: "preconditions-failed", failures });
+    return failed(routelessRefusal(candidate as Record<string, unknown>, ports));
   }
   const verified = EvidenceBundle.verify(store, { digest }, identity);
   if (!verified.ok) return failed(verified.error);
@@ -691,9 +695,30 @@ function registrationCommit(flags: Record<string, string>): Emitted {
     draftDocument.value,
     verified.value,
     candidate as Record<string, unknown>,
-    createRegistrationPorts({ mapPath }),
+    ports,
   );
   return committed.ok ? succeeded({ receipt: committed.value }) : failed(committed.error);
+}
+
+/**
+ * Without a bound identity the bundle cannot be verified, so the run stops
+ * here — but it stops with the whole gate's verdict, not just the one check
+ * that noticed. The route failure is added because the gate only inspects the
+ * route, so an applicability receipt missing its identity passes that check.
+ */
+function routelessRefusal(
+  candidate: Record<string, unknown>,
+  ports: RegistrationPorts,
+): { kind: "preconditions-failed"; failures: readonly PreconditionFailure[] } {
+  const checked = checkPreconditions(candidate, approvalVerifier(ports));
+  const collected: PreconditionFailure[] = checked.ok ? [] : [...checked.error];
+  const routeAlreadyFailed = collected.some(
+    (failure) => failure.kind === "precondition-missing" && failure.precondition === "applicability-route",
+  );
+  const failures = routeAlreadyFailed
+    ? collected
+    : [{ kind: "precondition-missing", precondition: "applicability-route" } as const, ...collected];
+  return { kind: "preconditions-failed", failures };
 }
 
 /** The subject identity the applicability receipt binds, if it carries one. */
