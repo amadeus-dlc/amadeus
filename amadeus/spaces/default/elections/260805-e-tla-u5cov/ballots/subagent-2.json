@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLA-U5COV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A の前提である「temp コピーが lcov に入らない」は bun の spawn 盲点という契約なき実装差に依存するため、collector 恒久修正(repo 外 SF 除外)の enhancement Issue 起票を A の完了条件として明示し、spawn 化後は BR-U5-09 の検証点が in-process 版と同等に残っていることを実測確認すること。",
+  "rationale": "独立実測: (1) tests/lib/coverage-source-path.ts:41-52 の temp 正規化写像は `amadeus-(pkg|candidate)-<harness>-...` にしか一致せず、t450 の mkdtemp prefix は `tla-authoring-host-` / `tla-authoring-work-`(tests/integration/t450-tla-authoring-stage-e2e.integration.test.ts:105,545)なので写像に該当せず、normalizeCoverageSourcePath は最後の return で SF を verbatim のまま通す。(2) tests/run-tests.ts:459-479 collectCoverageTotals は SF を無フィルタで合算するので、その verbatim SF がそのまま universe に加算される。この2点から、composed copy の in-process 動的 import(:399, :550)は canonical repo ソースへの被覆クレジットを一切生まないまま分母だけを膨らませる純粋な損失であり、spawn 化で失う計測上の便益は無い。よって A は覆いを削らずに機序の発生源を断つ最小変更であり、P5(surgical)と整合する。B は計測ゲートの意味論変更であり、org.md Mandated の落ちる実証と cid:code-generation:corpus-sweep-for-new-guards の両側実測を要するため、tests-only の機能 PR へ同乗させるべきでない(単独の intent で扱う方が安全)。BR-U5-09 についても、:693-700 が既に spawn で import closure を検査している先例があり、実プロセス実行は composed runtime の忠実性をむしろ上げる。",
+  "submittedAt": "2026-08-05T16:38:45Z"
+}
