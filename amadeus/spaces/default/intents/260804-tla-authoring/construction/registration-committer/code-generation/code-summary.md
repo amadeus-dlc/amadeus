@@ -1,6 +1,6 @@
 # Code Summary — U4 registration-committer(Bolt 5、バッチ 3)
 
-上流入力(consumes 全数): U4 functional-design / nfr-design 成果物(READY 確定)、code-generation-plan.md、bolt-plan.md Bolt 5 節。
+上流入力(consumes 全数): business-logic-model.md(commit 手順 1-6 の照合元)、business-rules.md(BR-U4-01/02/12〜18)、domain-entities.md(PreconditionFailure ユニオンと reviewer 独立性判定の照合元)、security-design.md(fail-closed 契約)、unit-of-work.md(U4 宣言境界)、requirements.md(FR-010)。
 
 ## 実装結果(実測)
 
@@ -12,7 +12,7 @@
 ## 独立レビュー(§12a 相当、iteration 1/1)
 
 - **READY(GoA 1 — 全面的支持)**(amadeus-architecture-reviewer-agent、read-only)
-- 確認観点: FD 逐語照合(6検査順序 / PreconditionFailure ユニオン / reviewer 独立性判定 / commit 手順 1-6 / MODEL_KEY_SETS = Q1 裁定)、互換シム混入なし、検証劇場なし、atomic replace + 競合検知の fail-closed(t449 の TOCTOU 決定的注入で intruderMap 無傷を実測)、e21d1cecd の意味論不変 + registration-then-resolve テストの handoff 実効、テスト形状(BR-U4-15〜18 個別充足)、surgical / slop なし
+- 確認観点: FD 逐語照合(business-logic-model.md §1(a)-(f) の6検査順序と commit 手順 1-6 / domain-entities.md の PreconditionFailure ユニオンと reviewer 独立性判定 / business-rules.md BR-U4 群 / security-design.md の fail-closed 契約 / MODEL_KEY_SETS = Q1 裁定)、互換シム混入なし、検証劇場なし、atomic replace + 競合検知の fail-closed(t449 の TOCTOU 決定的注入で intruderMap 無傷を実測)、e21d1cecd の意味論不変 + registration-then-resolve テストの handoff 実効、テスト形状(BR-U4-15〜18 個別充足)、surgical / slop なし
 - FOLLOW-UP 1件: dist 再生成の確認 → conductor が `bun run build` exit 0・dist へ evidenceBundle 投影・追跡差分なしを実測して閉包
 
 ## 検証(実測 exit code)
@@ -25,7 +25,7 @@
 ## 逸脱・裁定
 
 1. **申告1(一時登録面)→ ユーザー裁定「後続 Issue へ送る」(2026-08-05)**: 変異系実 TLC の解消先は Issue #2286(変異モデルの一時登録面 + hermetic TLC fixture jar)。U4 は承認済み FD(正規 map の atomic replace のみ)のまま着地
-2. **申告3(evidence→evidenceBundle 不一致)→ canonical-lift 執行**: U2 reader の `entry.evidence` は exactObject 検証下でどの実 map にも存在し得ない死に参照と conductor 実測で確定 — schema 正本 `evidenceBundle` へ統一(cid:code-generation:cross-unit-type-canonical-lift、単独コミット e21d1cecd、意味論不変)
+2. **申告3(evidence→evidenceBundle 不一致)→ canonical-lift 執行**(requirements.md FR-010 の handoff = 登録エントリを hold 評価器が解決できること、unit-of-work.md の U4 宣言境界内): U2 reader の `entry.evidence` は exactObject 検証下でどの実 map にも存在し得ない死に参照と conductor 実測で確定 — schema 正本 `evidenceBundle` へ統一(cid:code-generation:cross-unit-type-canonical-lift、単独コミット e21d1cecd、意味論不変)
 3. 申告2/4/5(軽微)は conductor 受理 — 逸脱なし
 
 ## 申し送り
