@@ -14,4 +14,5 @@
 ## Open questions
 
 - 2026-08-05T08:45:00Z — compile 再実行で bolt_dag 非 null(7 units)を確認(`cid:units-generation:recompile-before-construction-bolt-dag`)。
+- 2026-08-05T09:00:00Z — §13 選定はソロ選挙 E-SRA-UGS13 で確定(2-0 established、choice 1「0件」、GoA 2x2)。留保転記: (subagent-1) 不採用理由の cid 対応づけは FOLLOW-UP 4件中2件のみで残り2件は投票者が独立補完した / (両者収斂) hard/soft 辺強度注記は一般化の芽があるが対照実測がなく、後続 intent で強度未注記による並行機会喪失の実測が出たら §13 候補へ昇格を再検討する
 - 2026-08-05T08:45:00Z — §13 学習候補: 0件(FR 件数の機械再計算は既存 cid:requirements-analysis:ledger-count-mechanical-recalc の適用実例、production 層結線の宙吊り検出は既存 cid:requirements-analysis:enumeration-completeness-review の適用実例。新規の一般化価値なし)。
