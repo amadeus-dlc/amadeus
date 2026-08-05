@@ -4645,6 +4645,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t452-subagent-observability.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t09.test.ts",
           "mechanism": "cli"
         },

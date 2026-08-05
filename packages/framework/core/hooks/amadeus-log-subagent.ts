@@ -21,6 +21,13 @@ import {
   readHookStdin,
   resolveProjectDirFromHook,
 } from "../tools/amadeus-lib.ts";
+import { harnessDir } from "../tools/amadeus-harness.ts";
+import {
+  classifyAgentType,
+  isWarnableVerdict,
+  resolveAllowedAgentTypes,
+  sanitizeAdvisoryValue,
+} from "../tools/amadeus-subagent-observability.ts";
 
 // Drain stdin first: the payload's `cwd` is the top rung of project-dir
 // resolution (#1482), and the stream can only be read once.
@@ -48,6 +55,31 @@ try {
 
 // SubagentStop delivers agent_type as "" for generic Task agents (#845).
 const agentType = normalizeAgentType(parsed.agent_type);
+// #2279: an ad-hoc dispatch name used to land in the record indistinguishable
+// from a declared persona. Classify it against the allowed set and say so on
+// stderr, where whoever is driving the session will see it without opening the
+// audit trail. Advisory only: every failure here returns null, which drops the
+// verdict and leaves the emit below untouched — losing an audit row would cost
+// more than missing one check.
+function typeVerdictFor(agentType: string): string | null {
+  try {
+    const resolution = resolveAllowedAgentTypes(join(projectDir, harnessDir(), "agents"));
+    for (const warning of resolution.warnings) process.stderr.write(`advisory: ${warning}\n`);
+    const verdict = classifyAgentType(agentType, resolution);
+    if (isWarnableVerdict(verdict)) {
+      const shown = sanitizeAdvisoryValue(agentType);
+      process.stderr.write(
+        `advisory: subagent type "${shown}" is ${verdict} (allowed set: personas + builtin ledger) — see #2279\n`,
+      );
+    }
+    return verdict;
+  } catch (e) {
+    process.stderr.write(`advisory: subagent type check skipped: ${errorMessage(e)}\n`);
+    return null;
+  }
+}
+
+const typeVerdict = typeVerdictFor(agentType);
 const agentId: string = parsed.agent_id ?? "";
 const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
 
@@ -70,6 +102,7 @@ const fields: Record<string, string> = {
 };
 if (agentId) fields["Agent ID"] = agentId;
 if (agentMessage) fields.Message = agentMessage;
+if (typeVerdict) fields["Type Verdict"] = typeVerdict;
 
 try {
   // Stand up the canonical emit path before the first emit (emitEvent throws

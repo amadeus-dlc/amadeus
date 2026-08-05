@@ -627,7 +627,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "subagent",
     requiredAttributes: ["Agent Type"],
-    optionalAttributes: ["Agent ID", "Message"],
+    // `Type Verdict` is where the Agent Type sits relative to the allowed set
+    // (#2279) — optional because the check is advisory and skips itself rather
+    // than block the write.
+    optionalAttributes: ["Agent ID", "Message", "Type Verdict"],
     schemaVersion: 1,
   },
   // --- Utility Events (1) ---

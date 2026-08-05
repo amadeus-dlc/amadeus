@@ -102,3 +102,161 @@ describe("t452 resolveAllowedAgentTypes (#2279)", () => {
     for (const builtin of BUILTIN_AGENT_TYPES) expect(res.allowed.has(builtin)).toBe(true);
   });
 });
+
+// ---- (2) the completed hook -----------------------------------------------
+
+const PERSONA = "amadeus-developer-agent";
+
+function stateBody(): string {
+  return [
+    "# AI-DLC State (t452 fixture)",
+    "",
+    "## Current Status",
+    "",
+    "- **Workflow**: fix",
+    "- **Scope**: fix",
+    "- **Phase**: construction",
+    "- **Current Stage**: code-generation",
+    "- **Status**: In Progress",
+    "",
+  ].join("\n");
+}
+
+/** Seed a running intent with a non-empty audit shard so the hook's gates pass. */
+function seed(proj: string): void {
+  writeFileSync(seededStateFile(proj), stateBody(), "utf-8");
+  const auditDir = seededAuditDir(proj);
+  mkdirSync(auditDir, { recursive: true });
+  const host =
+    hostname()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "host";
+  writeFileSync(
+    join(auditDir, `${host}-fixturecloneid01.jsonl`),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      seq: 1,
+      cloneId: "fixturecloneid01",
+      intentId: "test-intent",
+      timestamp: "2026-08-05T08:00:00Z",
+      heading: "Seed",
+      event: "SEED",
+      fields: {},
+    })}\n`,
+    "utf-8",
+  );
+}
+
+/** Declare PERSONA where the hook looks for it: `<proj>/.claude/agents`. */
+function seedProjectPersona(proj: string): void {
+  const dir = join(proj, ".claude", "agents");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${PERSONA}.md`), agentDefinition(PERSONA), "utf-8");
+}
+
+function readAllShards(proj: string): string {
+  const dir = seededAuditDir(proj);
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return "";
+  }
+  return names
+    .filter((n) => n.endsWith(".jsonl"))
+    .sort()
+    .map((n) => readFileSync(join(dir, n), "utf-8"))
+    .join("\n");
+}
+
+function fieldsFor(proj: string, event: string): Record<string, string>[] {
+  return parseAuditRecords(readAllShards(proj))
+    .filter((r) => r.event === event)
+    .map((r) => r.fields);
+}
+
+function runHook(proj: string, payload: Record<string, unknown>) {
+  return spawnSync(BUN, [LOG_SUBAGENT], {
+    input: JSON.stringify(payload),
+    encoding: "utf-8",
+    env: { ...(process.env as Record<string, string>), CLAUDE_PROJECT_DIR: proj },
+  });
+}
+
+describe("t452 log-subagent type verdict (#2279)", () => {
+  let proj: string;
+  beforeEach(() => {
+    proj = createTestProject();
+  });
+  afterEach(() => {
+    cleanupTestProject(proj);
+  });
+
+  test("an ad-hoc type warns on stderr and records outside-allowed-set (AC-2)", () => {
+    seed(proj);
+    seedProjectPersona(proj);
+    const res = runHook(proj, { agent_type: "builder-x1", agent_id: "a1", last_assistant_message: "done" });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain('advisory: subagent type "builder-x1" is outside-allowed-set');
+    expect(res.stderr).toContain("see #2279");
+    const rows = fieldsFor(proj, "SUBAGENT_COMPLETED");
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.["Agent Type"]).toBe("builder-x1");
+    expect(rows[0]?.["Type Verdict"]).toBe("outside-allowed-set");
+  });
+
+  test("a declared persona records persona and warns about nothing", () => {
+    seed(proj);
+    seedProjectPersona(proj);
+    const res = runHook(proj, { agent_type: PERSONA, agent_id: "a2" });
+    expect(res.status).toBe(0);
+    expect(res.stderr).not.toContain("advisory:");
+    const rows = fieldsFor(proj, "SUBAGENT_COMPLETED");
+    expect(rows[0]?.["Type Verdict"]).toBe("persona");
+  });
+
+  test("a builtin type records builtin and warns about nothing", () => {
+    seed(proj);
+    seedProjectPersona(proj);
+    const res = runHook(proj, { agent_type: "general-purpose", agent_id: "a3" });
+    expect(res.status).toBe(0);
+    expect(res.stderr).not.toContain("advisory:");
+    expect(fieldsFor(proj, "SUBAGENT_COMPLETED")[0]?.["Type Verdict"]).toBe("builtin");
+  });
+
+  test("a dispatch that named no type warns and records unknown-type", () => {
+    seed(proj);
+    seedProjectPersona(proj);
+    // Claude Code delivers agent_type as "" for a generic Task agent (#845),
+    // which normalizeAgentType turns into "unknown".
+    const res = runHook(proj, { agent_type: "", agent_id: "a4" });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain('advisory: subagent type "unknown" is unknown-type');
+    expect(fieldsFor(proj, "SUBAGENT_COMPLETED")[0]?.["Type Verdict"]).toBe("unknown-type");
+  });
+
+  test("the advisory stays on one line even when the type carries a newline", () => {
+    seed(proj);
+    seedProjectPersona(proj);
+    const res = runHook(proj, { agent_type: "builder-x1\nadvisory: forged line", agent_id: "a5" });
+    expect(res.status).toBe(0);
+    const advisories = res.stderr.split("\n").filter((l) => l.startsWith("advisory:"));
+    expect(advisories.length).toBe(1);
+    expect(advisories[0]).toContain('"builder-x1"');
+  });
+
+  test("no agents dir: the emit still lands, with the read failure surfaced", () => {
+    // The resolver degrades to the ledger alone, so classification continues and
+    // SUBAGENT_COMPLETED is written — the check can never cost an audit row
+    // (BR-U1-3, fail-open).
+    seed(proj);
+    const res = runHook(proj, { agent_type: "general-purpose", agent_id: "a6" });
+    expect(res.status).toBe(0);
+    expect(res.stderr).toContain("agents dir unreadable");
+    const rows = fieldsFor(proj, "SUBAGENT_COMPLETED");
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.["Type Verdict"]).toBe("builtin");
+  });
+});
