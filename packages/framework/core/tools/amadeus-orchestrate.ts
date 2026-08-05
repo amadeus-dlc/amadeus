@@ -1231,9 +1231,7 @@ export function applyLaunchAutonomyDeclaration(
   if (stateContent === null) {
     return {
       kind: "error",
-      message:
-        "--autonomy needs an active intent. Start the workflow first, then declare the mode with " +
-        "`/amadeus --autonomy <none|semi|full>` or `amadeus-bolt set-autonomy --mode <none|semi|full>`.",
+      message: "--autonomy needs an active intent. Start the workflow first, then declare the mode with `/amadeus --autonomy <none|semi|full>` or `amadeus-bolt set-autonomy --mode <none|semi|full>`.",
     };
   }
   // 1 — the flag was passed with nothing to consume.
@@ -1289,9 +1287,7 @@ export function applyLaunchAutonomyDeclaration(
     if (preview !== null) console.error(`amadeus-orchestrate: grant preview: ${preview}`);
     return {
       kind: "error",
-      message:
-        "--autonomy full requires an issued grant. Run `amadeus-bolt preview-autonomy`, then " +
-        "`amadeus-bolt set-autonomy --mode full --confirmed-display-digest <digest>` to issue it.",
+      message: "--autonomy full requires an issued grant. Run `amadeus-bolt preview-autonomy`, then `amadeus-bolt set-autonomy --mode full --confirmed-display-digest <digest>` to issue it.",
     };
   }
   // 8 — delegate. The flag is not provenance: the write path's own HUMAN_TURN

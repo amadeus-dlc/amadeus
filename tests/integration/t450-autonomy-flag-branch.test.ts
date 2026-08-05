@@ -13,8 +13,9 @@
 // handleNext runs in-process (not spawned) so the branch registers in coverage.
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleNext, readLaunchAutonomyContext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -121,6 +122,16 @@ describe("t450 --autonomy branch in handleNext", () => {
     const { directive } = runNextInProcess(proj, ["--autonomy", "semi"]);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("PROVENANCE_REQUIRED");
+  });
+
+  test("a workspace read that throws surfaces as unreadable, not as a default", () => {
+    // A corrupt intents ledger behind an active cursor makes the projection
+    // read THROW (SyntaxError from the ledger parse), driving the catch arm of
+    // readLaunchAutonomyContext — distinct from the resolver's null returns.
+    proj = createTestProject();
+    seedStateFile(proj, MID_IDEATION);
+    writeFileSync(join(proj, "amadeus", "spaces", "default", "intents", "intents.json"), "{not json");
+    expect(readLaunchAutonomyContext(proj)).toEqual({ kind: "unreadable" });
   });
 
   test("the freeform intent text survives the flag", () => {
