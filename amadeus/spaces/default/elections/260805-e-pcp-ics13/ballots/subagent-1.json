@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-ICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件採用。両候補とも既存ノルム・既存機構の機械適用であり新規学習ではない。c1: 「クロスレビュー2名成立済み Issue を一次証拠として扱い既決事項を再質問しない」は cid:intent-capture:c1(project.md:187 裁定済み intent では質問を未決のみに絞る)、cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority(project.md:311 Issue 本文の逐語指名は執行事項)、cid:requirements-analysis:issue-cross-review(team.md:100)の合成適用にすぎない。0問様式も新規発明ではなく 260804-tla-authoring/ideation/intent-capture/intent-capture-questions.md の既習形(『対話モード/質問予算/実施した追加質問: 0問』+『追加質問なしの根拠』+『完全性確認』の3節構造)を写しただけで、本 intent の questions ファイルは同一骨格。c2: 後半の HUMAN_TURN 補償は cid:intent-capture:c5(project.md:259)の逐語適用。前半のグラント発行手順は CLI 自身が fail-closed で強制している契約であり、ノルムへ書いても機構の重複記述にしかならない — .claude/tools/amadeus-bolt.ts:872-875 の Usage が `preview-autonomy` → `set-autonomy --mode ... [--confirmed-display-digest <digest>]` を宣言し、.claude/tools/amadeus-intent-autonomy.ts:305-308 が digest 不一致で `confirmed-display-digest-mismatch` を throw、同 :280-285 が HUMAN_TURN 未検証時に PROVENANCE_REQUIRED を返す。手順逸脱は散文規範ではなく実行時に構造的に阻止されるため、persist しても実効ゼロで memory 層のチャーンだけが増える。",
+  "submittedAt": "2026-08-05T05:40:49Z"
+}

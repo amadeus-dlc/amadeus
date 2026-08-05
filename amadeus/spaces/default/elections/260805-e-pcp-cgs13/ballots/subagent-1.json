@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 本文は intent 固有の固有名(260805-pr-convergence-plugin / bolt-{seam-bridge,convergence-toolchain} / U1-U3 / batch 1)を落とし、次の一般形に限定する: (a) ハーネス管理の worktree 隔離セッション下では、engine ツール(bun 経由 spawn)が作った repo 内 worktree に対し conductor も subagent も直接の git 操作・Write が拒否されうる — ツール内部 spawn は通るがエージェントのコマンドは通らない非対称がある (b) その環境での並行 Bolt 実装の実効経路は、ハーネス管理の隔離ツリー(Agent の worktree isolation)で実装・コミットし、conductor が merge-base 起点の一括 diff apply + fidelity diff 空の機械確認で取り込み、検証コマンドを自ツリーで再実行することである (c) この経路では swarm referee(check/finalize)を使えないため、converged 表記を用いず代替の検証水準をゲートで明示開示する。適用範囲は『ハーネスが worktree 隔離ガードを課すセッション』に限定し、通常セッションの swarm 既定(team.md parallel-bolts)を置換しない。ガード文言・ツール名はハーネス世代で変わりうるため、次回週次蒸留ラウンドで現存を再判定する。",
+  "rationale": "c1 のみ採用。独立実測3点。(1) ガードの実在: 本投票セッション自身が worktree 隔離下にあり、複合 Bash コマンドが逐語『a worktree-isolated session's git operations must target its own worktree』で拒否された — 一次証拠として自己観測できる。(2) 実効経路の成立: scratchpad/bolt-u2-report2.md:3-5 が cwd = .claude/worktrees/agent-a180071329a90b1f6(ハーネス管理の隔離ツリー)、ブランチ worktree-agent-a180071329a90b1f6、コミット 130f46778 / e471c7d0b を記録し、同報告 :46-54 が git checkout <SHA> -- <file> による落ちる実証の復元と git status --short 空 / git diff --stat 空の機械確認まで実行できている — すなわち隔離ツリー内では git 操作が実際に許可された。E-PCP-CGBLK 裁定時に subagent-2 が『見込みであり未実測』として残した留保が、本 CG の実行で実測確定した。(3) 未被覆性: memory 層 grep で .amadeus/worktrees / 隔離セッション / isolation: / EnterWorktree はいずれも 0 hit。近接 cid はあるがどれも本面を被覆しない — team.md:parallel-bolts は swarm を既定と定めるだけで不成立環境を扱わず、cid:code-generation:c2(worktree ディスパッチ規律・resume 追補・fork 前コミット追補)は隔離の運用規律であって隔離ツリーの調達手段の非互換を扱わず、project.md:solo-bolt-worktree-required は本線ツリー実装の禁止、team.md:mirror-bulk-diff-apply は取込手段のみを定める。c1 はこれら既存則を組み合わせる前提となる『どのツリーで実装できるか』の環境事実であり、欠くと同じ2往復(builder 実装前停止 → ブロッカー選挙)が再演する。c2 は不採用: builder 申告の執行受理は cid:requirements-analysis:always-elect が定める『権威ある一次証拠から一意に導かれる機械的執行』の機械適用(diary Interpretations の4件はいずれも build fail-closed 実測・fail-closed 側への一意な倒し方・BR 準拠・辺集合不変で、判断ではなく執行)であり、engine の batch 統合発出も autonomy full グラント下の既定挙動の観測に留まる。判定観点『未被覆のハーネス運用知識のみ採用』に照らし、いずれも新規学習でない。",
+  "submittedAt": "2026-08-05T12:10:00Z"
+}

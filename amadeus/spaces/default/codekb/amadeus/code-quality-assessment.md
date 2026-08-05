@@ -1,5 +1,91 @@
 # コード品質評価
 
+## 成果物ガードの fail-open 経路と非対称（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙・実測手順は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### 品質所見1: 前進ガードと承認ガードが非対称である
+
+同じ「宣言 produces が存在するか」という問いに対し、engine は2つの異なる述語を持ち、厳しさが逆である。
+
+| 面 | 述語 | 判定 | 承認状態の参照 | バイパス |
+| --- | --- | --- | --- | --- |
+| per-unit ループ前進 | `amadeus-orchestrate.ts` `unitCovered` `:3452-3472` | **全件必須**（1件でも不在なら false） | なし（シグネチャに state 引数がない） | なし |
+| ステージ承認 | `amadeus-state.ts` `producesArtifactsExist` `:1683-1696` | **ANY**（`:1691-1694` が1件でも存在すれば true） | — | `AMADEUS_SKIP_ARTIFACT_GUARD=1`（`:1529`） |
+
+`unitCovered:3466-3470` verbatim:
+
+```ts
+  for (const name of names) {
+    const rel = resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx);
+    const abs = join(projectDir, ...rel.split("/"));
+    if (!existsSync(abs)) return false;
+  }
+```
+
+`producesArtifactsExist:1691-1694` verbatim:
+
+```ts
+  for (const dir of producesDirsForStage(pd, stage)) {
+    for (const name of produces) {
+      if (existsSync(join(dir, `${name}.md`))) return true;
+    }
+  }
+```
+
+**帰結**: ステージへ必須成果物を追加して実効的な fail-closed を得たい場合、その執行面は per-unit ループ前進（`unitCovered`）以外に存在しない。承認面は宣言 produces の1件でも書けば通過するため、必須性の担保にならない。
+
+### 品質所見2: fail-open 経路が3つある（うち1つはコメントと矛盾）
+
+| # | 所在 | 条件 | 結果 |
+| --- | --- | --- | --- |
+| ① | `amadeus-orchestrate.ts:3465` | `produces_kinds` により当該 unit kind への必須成果物が 0 件 | `return true`（covered 扱い） |
+| ② | `amadeus-state.ts:1689` | 宣言 produces が空 | `return true` |
+| ③ | `amadeus-state.ts:1677` | どの unit にも適用成果物がない | `return !hasApplicableArtifact` = `true` |
+
+③の `kindAwareArtifactsExist`（`:1653-1678`）は `producesArtifactsExist:1689-1690` が最初に呼ぶ kind-aware 分岐であり、①の approve 側の双子にあたる。さらに `:1675` は**最初に成果物が揃った1 unit で `true` を返す**ため、所見1の ANY 判定は kind-aware 経路にも及ぶ。
+
+**コメントと実装の食い違い（技術的負債シグナル）**: `unitCovered` 直上のコメント `:3448-3451` verbatim は
+
+```
+// stages declare required outputs, so the empty case is unreachable in
+// practice; an empty required set remains NOT covered so the engine never
+// silently skips a unit it cannot prove it ran.
+```
+
+と不変条件を宣言するが、この保証が成立するのは `declared.length === 0` の枝（`:3461` で `return false`）だけである。`produces_kinds` で絞られた `names.length === 0` の枝（`:3465`）は逆に `true` を返し、コメントが否定している「証明できない unit を無音で skip する」挙動そのものになる。`requiredArtifactsForUnit`（`amadeus-graph.ts:842-849`）が絞り込みの実体。
+
+**現時点の顕在化**: `code-generation.md` は `produces_kinds` を宣言していない（宣言は `functional-design` / `nfr-requirements` / `nfr-design` / `infrastructure-design` の4ステージのみ）ため今日は全 unit kind へ全 produces が適用され、この経路は踏まれない。ただし**新規 produces を追加する側が `produces_kinds` に触れると無音で fail-open へ落ちる**ため、ステージへ成果物を足す変更では受け入れ基準で封鎖する必要がある。`firstUncoveredBatch`（`:3079-3082`）は同一述語を `unitKinds.get(u)` 付きで呼ぶため同じ経路を継承する。
+
+### 品質所見3: plugin seam 機構が「半分だけ実装された非対称」である
+
+seam の語彙（`SEAM_NAMES` `amadeus-plugin-compose.ts:74`）、merge（`:424-435`）、適用（`:699-719`）、drop 復元（`:567-580`）は実装済みだが、**host stage の認識面（`parseHostStageSeams` `amadeus-plugin.ts:258-270`）と serializer（`serializeStageSeams` `:555`）が合成バイト形にしか対応していない**。実ステージ Markdown の 1 行目は `---` で、`/^stage: (.+)$/` に一致しないため、リポジトリ内のどの実ステージも HostStage にならない。
+
+これは `cid:requirements-analysis:symmetric-pair-review` が扱う「片側だけ実装された非対称」クラスタに属する。ただし**コードは自認しており、挙動は fail-closed** である点で無自覚な欠陥とは区別される:
+
+- `amadeus-plugin-compose.ts:552-554` のコメントが `the real frontmatter serializer is U11+` と未着地を明記
+- `tests/unit/t301-plugin-cli-seams.test.ts:7-10` が「t299 の buildHostSnapshot が供給する full-markdown stage files は `stage:` first-line match に失敗する」と記述
+- 実ステージへ seam を宣言した manifest は `inspectPlugin` が `unknown-seam` で **loud reject**（`collectSeamErrors` `:498-511`、probe 実測）
+
+**負債としての評価**: 無音の誤動作ではないため安全側だが、「seam 語彙に `produces` があるので既存ステージへ produces を足せる」という読み手の期待と実際の到達可能性が乖離している。plugin authoring の seam 契約は未文書化でもある（`docs/reference/*.md` に plugin seam の記述なし）。
+
+### 品質所見4: 型だけ存在して接続されていない面
+
+`amadeus-quality-repair.ts` の `QualityRequiredOutputDescriptor { outputId, stageSelector, verifierId, verificationConditionId }`（`:125-130`）は「ステージへ必須成果物を宣言する」形を型として持つが、`compileQualityContribution:242` verbatim `if (contribution.requiredOutputs.length !== 0) return null;` により非空を拒否し activation を失敗させる。first-party contribution 自身も `:211` で `requiredOutputs: []` を宣言し、消費者は repo 全域で 0 件（`grep -rn requiredOutputs packages scripts tests` のヒットは型定義・空宣言・ガード・`t428:95` の空 assert のみ）。
+
+fail-closed で塞がれているため誤動作はしないが、**未接続の型が接続済みに見える**リスクがあり、新規実装がここへ乗ろうとすると engine 改修が必要であることが型シグネチャからは読み取れない。
+
+### 品質所見5: 収束述語が二重定義になりうる
+
+`mergeStateStatus` の正規化は `scripts/metrics-publication-domain.ts:256-262` に既存し、`UNKNOWN` を pending へ落とす（= 成立させない）fail-closed 契約と、未知値の throw を持つ。PR 収束判定が同じ述語を新規に書くと、canonical 1定義の原則（construction phase guardrails）に反する二重定義になる。現状は metrics 公開ドメイン内の private 関数であり、共有するには移設が要る。
+
+### 良好な設計として維持されている面
+
+- **センサーの advisory 契約**: 出荷 8 センサーすべて `default_severity: advisory`、`amadeus-sensor.ts:573-574` は無条件 `process.exit(0)`、`severity` の分岐利用は `:271` の表示1箇所のみ。執行と観測が分離されている。
+- **3層 trust**: compose の `TrustGrant`（`amadeus-plugin-compose.ts:161-165`）、compile の `plugin_source` stamp（`amadeus-graph.ts:140-146`）、run の O_NOFOLLOW + 同一 inode 再読み（`:1889-1901` / `:1971`）と digest 形式検査（`:2061-2074`）。プラットフォーム非対応時も `throw` で fail-closed。
+- **drop の復元判定が台帳でなく FS 実測**: `pluginArtifactsAbsent`（`amadeus-plugin.ts:1190-1198`）に加え `hasEmptyAncestorDir`（`:1202-1211`）で空の親ディレクトリ残骸まで検査する。`cid:code-generation:observe-dont-ledger-under-parallelism` と同じ設計思想。
+- **import-closure guard の新設**（区間内 #2240、`scripts/plugin-projection.ts:880-946`）: 宣言と実依存の乖離を projection 時点で write-0 拒否する。
+
 ## advisory 人間選択の品質所見（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された強み
@@ -28,7 +114,7 @@
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
-## phase boundary approval の品質所見（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary approval の品質所見（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files、`+84296 / −11280`）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

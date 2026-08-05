@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-NDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "persist は既存 cid への追補として行い、独立 cid を新設しない。追補本文は intent 固有の固有名(U3 / plugin-packaging-e2e / convergence-toolchain / C8)を落とし、(a) upstream-coverage は stage frontmatter 宣言 consumes で判定され、produces_kinds による解決後の不在は免除にならない (b) 自 unit に実体が無い consumes は sibling unit の同名成果物を設計出典として実参照することで充足する、の2点の一般形に限定する。",
+  "rationale": "c1 のみ採用。c1 の実測: sensor detail .amadeus-sensors/nfr-design/upstream-coverage-10a8c921.md が Output path = construction/plugin-packaging-e2e/nfr-design/security-design.md、pass=false、consumes=[business-logic-model]、unreferenced=[business-logic-model] を記録している。packaging kind の U3 は produces_kinds により自 unit の business-logic-model を持たない(find 実測: 同 unit 配下の ND 成果物は security-design.md のみ、convergence-toolchain と seam-bridge は logical-components.md も産出)。是正後の security-design.md:3 が sibling unit convergence-toolchain の business-logic-model を設計出典として実参照し PASSED 化している。既存ファミリのいずれもこの面を被覆しない — project.md の c1-engine-produces-all-five は engine 完了判定、その RE 追補 c3-pcp-produceskinds-failopen は unitCovered / kindAwareArtifactsExist の artifact guard fail-open、nfr-requirements:upstream-coverage-conditional-consumes は conditional_on 面、nfr-design:c1-brief-skip-resolution は reviewer ブリーフへの負方向明示であり、いずれも produces_kinds 由来の consumes 不在時に sensor が何で判定し何で充足するかを定めていない。知識クラスの追補として実在価値がある。c2 は不採用: ND 依存図と FD 関数合成の全辺一致要求は既存の整合レビュー観点(functional-design:control-flow-diagram-completeness が制御フロー図への全要素包含を、cross-unit-type-verbatim-check / functional-design:c3 が cross-unit の逐語照合と全成果物 grep をすでに定める)の機械適用であり、reviewer BLOCKER→是正→READY は通常のレビュー往復の記録に留まる。判定観点『既存ノルム・機構仕様の機械適用は新規学習でない』に該当する。",
+  "submittedAt": "2026-08-05T09:10:58Z"
+}

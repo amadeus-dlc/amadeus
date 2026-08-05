@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-ADDEV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測により選択肢1が一意に導かれる。(1) 構造的不可能性の確定: scripts/import-closure-guard.ts:169-191 checkManifestClosure は closure 全 member に declared(manifest 宣言)と owned の両方を要求し、owned は scripts/plugin-projection.ts:919 で `plugin.artifacts.map(a => posix.join(pluginHostPrefix(name), a.relativePath))` として plugin bundle prefix 配下のみから構成される。packages/framework/core/tools/amadeus-github-gateway.ts はこの集合に入り得ず、実 import は :183 の missingFromOwnedPaths で必ず fail する。(2) 承認済み文書内の自己矛盾: 同一 requirements.md の NFR-4(:63)が `assertPluginImportClosure` 通過を必須と定めており、FR-4b(:38)の字義(core gateway への実 import)と両立不能。したがって FR-4b の字義固執は NFR-4 違反を強制する。改訂は逸脱ではなく矛盾解消であり、申告付き改訂が正しい処置(cid:requirements-analysis:implementation-deviation-election)。(3) 設計は既に本形へ収斂済み: components.md:41 が「plugin tools は core への import を持たない self-contained 構成とし、C5 が自前の gh argv 実行を持つ場合は gateway と同じ readiness 検査契約に従う」と記載しており、選択肢1は既存設計文の申告・ADR 固定にあたる。(4) 先例の実測: 既存 plugin formal-model-check の tools 全 import が plugin 内相対参照と node: builtin のみで core 参照ゼロ(grep 実測)— self-contained が plugin の既習形。(5) 選択肢3(収束 CLI を core/tools へ配置)の却下根拠: packages/framework/harness/claude/manifest.ts:55-56 の coreDirs が `{src: \"tools\", dst: \"tools\"}` を宣言し、同宣言を持つ manifest が 8 ハーネス全件(cursor/claude/codex/pi/kiro/kimi/kiro-ide/opencode の grep 実測)に存在するため、core/tools 配置は未 install 環境を含む全ハーネス dist へツール実体を漏出させる — cid:code-generation:harness-tools-placement の禁止形に正面から該当し、FR-5c の self-contained 正本化と opt-in 境界も弱める。(6) 選択肢2(guard 拡張)の却下根拠: #2240 で新設されたばかりのガードの意味(composed host での missing import 防止)を弱め、composed 環境における core tools 実在という新たな未検証前提を導入する。本 intent のスコープ外の engine 改修であり、org.md Forbidden(要求されていない互換レイヤーを足さない)および最小変更原則(P5)に反する。契約(readiness 検査・argv 配列・token 非保持・loud fail)は実装場所ではなく振る舞いで保たれるため、選択肢1は gh-scripts-boundary の要求を欠落なく満たす。ADR-6 で3案の比較を固定することを条件に賛成する。",
+  "submittedAt": "2026-08-05T06:59:29Z"
+}

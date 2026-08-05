@@ -1,5 +1,71 @@
 # コード構造
 
+## PR 収束プラグインの患部配置と区間デルタ（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、**27 commits / 474 files**）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### 区間デルタ — 患部10ファイルのうち touch は1本のみ
+
+`git diff --stat base..HEAD -- <患部10ファイル>` の全出力:
+
+```
+ scripts/plugin-projection.ts | 78 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 77 insertions(+), 1 deletion(-)
+```
+
+内容は **import-closure guard の新設**（`assertPluginImportClosure`、`:880-946`、#2240 / PR `09a3ccfec`）。plugin の `tools[]` から相対 import で到達可能な全モジュールが manifest 宣言かつ owned でなければ projection を write-0 で拒否する。symlink 脱出は `repoFileReader` の realpath 境界で封鎖。
+
+`amadeus-orchestrate.ts` / `amadeus-plugin.ts` / `amadeus-plugin-compose.ts` / `amadeus-plugin-activation.ts` / `amadeus-sensor.ts` / `amadeus-graph.ts` / `amadeus-state.ts` / `code-generation.md` / `amadeus/config.json` は**区間内で無変更**である。Issue #1971 のクロスレビューが引く行番号と現行行番号のシフト（`unitCovered` で +139 等）は base より前に生じたものであり、区間内の変更に起因しない。
+
+区間の主な着地: TLA+ authoring Bolt（#2239 / #2240）、Kiro CLI TUI live E2E（#2233）、intent autonomy 系（#2229 / #2234 / #2242）、metrics snapshot 群。
+
+### 患部の配置
+
+| 領域 | パス | 本 intent での役割 |
+| --- | --- | --- |
+| ガード述語（前進） | `packages/framework/core/tools/amadeus-orchestrate.ts` `:3452-3472` / `:3068-3085` / `:3526-3547` | fail-closed の唯一の実現面 |
+| ガード述語（承認） | `packages/framework/core/tools/amadeus-state.ts` `:1653-1678` / `:1683-1696` / `:1529` | ANY 判定 + fail-open 2経路 + env バイパス |
+| kind 絞り込み | `packages/framework/core/tools/amadeus-graph.ts` `:842-849` | `produces_kinds` の適用 |
+| plugin seam | `packages/framework/core/tools/amadeus-plugin-compose.ts` `:74` / `:424-435` / `:498-511` / `:555` / `:567-580` / `:699-719` | 拡張の主戦場 |
+| host stage 認識 | `packages/framework/core/tools/amadeus-plugin.ts` `:258-270` | 未着地面 |
+| scope opt-in | `packages/framework/core/tools/amadeus-graph.ts` `:1484-1502`（設計コメント `:1466-1483`） | opt-in stage が grid に不参加である理由 |
+| plugin 投影 / import 閉包 | `scripts/plugin-projection.ts` `:880-946` | 区間内で新設された制約 |
+| センサー実行 | `packages/framework/core/tools/amadeus-sensor.ts` `:29-31` / `:271` / `:573-574` | advisory 契約 |
+| 収束述語（既存） | `scripts/metrics-publication-domain.ts` `:256-262` | canonical 化の候補 |
+| gh 実行面 | `packages/framework/core/tools/amadeus-github-gateway.ts` `:112` / `:116` / `:247` / `:647` | 相乗り候補 |
+| 未接続 seam | `packages/framework/core/tools/amadeus-quality-repair.ts` `:125-130` / `:211` / `:242` | 第2候補（engine 改修が要る） |
+| 参照実装 | `plugins/formal-model-check/`（`plugin.json` / `stages/formal-model-check.md`） | 既習形の正本。`sensors` 記載は 0 |
+| plugin sensor manifest | `packages/framework/core/sensors/amadeus-model-completeness.md` | **core 側にある**（plugin バンドル内ではない） |
+
+### 成果物の落地パス
+
+`resolveArtifactPath`（`amadeus-orchestrate.ts:1897-1919`）の per-unit 分岐 `:1916` verbatim:
+
+```ts
+    return `${prefix}/construction/${unit}/${owner.slug}/${name}.md`;
+```
+
+→ 収束レポートを code-generation の produces へ足す場合、実在検査パスは `<record>/construction/<unit>/code-generation/<name>.md` になる。
+
+### テスト配置と採番
+
+本 intent に関係する既存テスト:
+
+| テスト | 層 | 対象 |
+| --- | --- | --- |
+| `tests/unit/t301-plugin-cli-seams.test.ts` | unit | `parseHostStageSeams` を `serializeStageSeams` バイト形に対して検証（`:7-10` のコメントが実 Markdown では一致しないことを明記） |
+| `tests/unit/t252-plugin-composition.test.ts` | unit | manifest parse / composition |
+| `tests/integration/t254-reference-plugin-lifecycle.test.ts` | integration | 参照 plugin のライフサイクル |
+| `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` | integration | CLI walking skeleton（`buildHostSnapshot` へ実 Markdown を供給） |
+| `tests/integration/t340-plugin-drop-fs-restore.integration.test.ts` | integration | drop の FS 実測復元 |
+| `tests/unit/t222-metrics-publication.test.ts` | unit | `parseMergeability` |
+
+**tNNN 採番**: 区間で t436〜t443 が新規着地し、observed の最大予約番号は **443**（`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sort -n | tail`）。本 intent は **t444 以降**を予約する（`cid:code-generation:swarm-test-number-reservation`）。実 FS を触る検証は integration 層へ置く（`cid:code-generation:fs-tests-integration-first`）。
+
+### ステージ本文の構造
+
+`packages/framework/core/amadeus-common/stages/**/*.md` は **32件**。PR 収束に関する語彙（`converge` / `reviewThread` / `gh pr ` / `pull request` / `収束` / `\bPR\b`）の出現は **全件 0 hit** で、ステージグラフ側に接続点は存在しない。
+
 ## advisory 人間選択の患部配置（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | 分類 | 正本／対象 | 今回の位置づけ |
@@ -15,7 +81,7 @@
 
 実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
 
-## phase boundary approval の患部配置（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary approval の患部配置（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

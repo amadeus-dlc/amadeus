@@ -1,0 +1,250 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "number": 2268,
+        "mergeable": "UNKNOWN",
+        "mergeStateStatus": "UNKNOWN",
+        "reviewThreads": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0wNVQwNzozNDo0OFrOlpNUgw=="
+          },
+          "nodes": [
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1Rq",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_\n\n**`tokens` のプロトタイプ継承プロパティが値として通ってしまう。**\n\n`DECLARED_CODE_RE` と同じ形の `{constructor}`、`{tostring}` ではなく `{constructor}` のようなトークン名は `/^\\{([a-z][a-z0-9-]*)\\}$/` にマッチします。`tokens[\"constructor\"]` は `Object.prototype` 由来の関数を返すため、`value === undefined` の判定を通過します。結果として `string[]` を返す契約が破れ、関数が `resolved` に入ります。\n\n呼び出し側の `amadeus-advisory-choice.ts` の `declaredFormalCheckRoute` は `resolved.map((argument) => JSON.stringify(argument))` を行うため、`JSON.stringify(fn)` が `undefined` を返し、コマンド文字列に `undefined` が混入します。「stale な宣言は大きく失敗する」という設計意図に反し、静かに壊れます。\n\n`Object.hasOwn` で自前プロパティだけを参照してください。\n\n\n\n\n<details>\n<summary>🐛 修正案</summary>\n\n```diff\n-    const value = tokens[match[1] as string];\n-    if (value === undefined) return null;\n+    const name = match[1] as string;\n+    if (!Object.hasOwn(tokens, name)) return null;\n+    const value = tokens[name] as string;\n     resolved.push(value);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function resolveArgvTokens(\n  argv: readonly string[],\n  tokens: Readonly<Record<string, string>>,\n): string[] | null {\n  const resolved: string[] = [];\n  for (const argument of argv) {\n    const match = /^\\{([a-z][a-z0-9-]*)\\}$/.exec(argument);\n    if (match === null) {\n      resolved.push(argument);\n      continue;\n    }\n    const name = match[1] as string;\n    if (!Object.hasOwn(tokens, name)) return null;\n    const value = tokens[name] as string;\n    resolved.push(value);\n  }\n  return resolved;\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🧰 Tools</summary>\n\n<details>\n<summary>🪛 OpenGrep (1.26.0)</summary>\n\n[ERROR] 135-135: Dynamic command passed to child_process.exec/execSync. Use child_process.execFile or spawn with an argument array instead.\n\n\n(coderabbit.command-injection.exec-js)\n\n</details>\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@packages/framework/core/tools/amadeus-advisory-declaration.ts` around lines\n129 - 145, Update resolveArgvTokens to read token values only when the name is\nan own property of tokens, using Object.hasOwn; return null for inherited or\nmissing properties so the function always returns strings and stale declarations\nfail explicitly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:potential_issue -->\n\n<!-- cr-comment:v1:bda61ee1788d20acf5072f4a -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n✅ Addressed in commit 734850b"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。Object.hasOwn の own-property 検査を挟み、{constructor} 等のプロトタイプ継承名は未知トークン(null)として拒否します。ピンテスト追加(t444-advisory-declaration「a prototype-inherited name is unknown」)。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`、確認しました。`Object.hasOwn` により、継承プロパティを未解決トークンとして fail-closed にできます。追加したピンテストもこの境界条件を固定します。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1Ry",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_🩺 Stability & Availability_ | _🟠 Major_ | _⚡ Quick win_\n\n**`spawnSync` に `timeout` と `maxBuffer` がない。**\n\n評価器はチェックポイント経路(`next`、`report`)から同期実行されます。プラグインの評価器がハングすると、CLI は無期限にブロックします。復旧手段はプロセス強制終了だけになります。\n\n`maxBuffer` も既定値のままです。stdout が既定上限を超えると出力が切り捨てられ、`verdictSummary` は「readable verdict なし」として hold します。fail-closed 側なので致命ではありませんが、原因が読み取れない hold になります。\n\n上限を明示してください。\n\n\n\n\n<details>\n<summary>🛡️ 修正案</summary>\n\n```diff\n     const result = spawnSync(argv[0] as string, [...argv.slice(1)], {\n       cwd: projectRoot,\n       env: process.env,\n       encoding: \"utf-8\",\n+      timeout: 60_000,\n+      maxBuffer: 8 * 1024 * 1024,\n     });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function spawnEvaluator(projectRoot: string): RunEvaluator {\n  return (argv) => {\n    const result = spawnSync(argv[0] as string, [...argv.slice(1)], {\n      cwd: projectRoot,\n      env: process.env,\n      encoding: \"utf-8\",\n      timeout: 60_000,\n      maxBuffer: 8 * 1024 * 1024,\n    });\n    return { status: result.status ?? 1, stdout: result.stdout ?? \"\" };\n  };\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@packages/framework/core/tools/amadeus-advisory-declaration.ts` around lines\n278 - 287, Update spawnEvaluator’s spawnSync options to set explicit timeout and\nmaxBuffer limits, using the project’s established configuration constants or\nvalues. Preserve the existing cwd, environment, encoding, and result mapping\nwhile ensuring hung evaluators terminate and large stdout does not get silently\ntruncated.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:potential_issue -->\n\n<!-- cr-comment:v1:b1d85c42ce88d4ca937f1220 -->\n\n<!-- This is an auto-generated reply by CodeRabbit -->\n\n✅ Confirmed as addressed by @j5ik2o\n\n<!-- This is an auto-generated comment by CodeRabbit -->"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。spawnEvaluator に timeout 60s / maxBuffer 8MB を明示。いずれの失敗も unreadable-verdict として fail-closed で hold します。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "<details>\n<summary>🧩 Analysis chain</summary>\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\ngit show --no-ext-diff --format=fuller --stat 734850b02 --\ngit show --no-ext-diff --format= -- \\\n  734850b02 -- packages/framework/core/tools/amadeus-advisory-declaration.ts\nprintf '\\n--- Current spawnEvaluator source ---\\n'\nsed -n '/export function spawnEvaluator/,/^}/p' \\\n  packages/framework/core/tools/amadeus-advisory-declaration.ts\n```\n\nLength of output: 6169\n\n---\n\n</details>\n\n`@j5ik2o`, 確認しました。\n\n`734850b02` は `spawnEvaluator` に `60_000` ms の `timeout` と 8 MiB の `maxBuffer` を追加します。既存の実行設定と結果マッピングは維持されています。\n\nタイムアウトまたはバッファ超過では readable `no-hold` verdict を生成できません。既存の fail-closed hold が適用されます。指摘は解決済みです。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1R5",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_📐 Maintainability & Code Quality_ | _🟠 Major_ | _⚡ Quick win_\n\n<details>\n<summary>🧩 Analysis chain</summary>\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\n# 重複宣言の有無を確認する。\nrg -nP 'export type DeclaredAdvisoryCode' --type=ts packages\n\n# ブランドを迂回する as キャストの箇所を洗い出す。\nrg -nP 'as (Advisory\\[\"code\"\\]|AdvisoryCode|DeclaredAdvisoryCode)' --type=ts packages tests\n```\n\nRepository: amadeus-dlc/amadeus\n\nLength of output: 543\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\nset -e\nprintf '%s\\n' '--- amadeus-plugin-activation.ts ---'\nsed -n '235,265p' packages/framework/core/tools/amadeus-plugin-activation.ts\nprintf '%s\\n' '--- amadeus-advisory-declaration.ts ---'\nsed -n '1,35p' packages/framework/core/tools/amadeus-advisory-declaration.ts\nsed -n '155,205p' packages/framework/core/tools/amadeus-advisory-declaration.ts\nprintf '%s\\n' '--- related type usage ---'\nrg -n -C 3 'AdvisoryCode|DeclaredAdvisoryCode|declaration\\.code|advisoryFromEvaluatorRun' packages/framework/core/tools tests/integration/t445-advisory-declaration-supply.integration.test.ts\n```\n\nRepository: amadeus-dlc/amadeus\n\nLength of output: 23420\n\n---\n\n🏁 Script executed:\n\n```shell\n#!/bin/bash\nset -e\nsed -n '35,115p' packages/framework/core/tools/amadeus-advisory-declaration.ts\nrg -n 'AdvisoryDeclaration|parseAdvisoryDeclarations\\(|declarations:' packages/framework/core/tools tests -g '*.ts'\n```\n\nRepository: amadeus-dlc/amadeus\n\nLength of output: 6815\n\n---\n\n\n\n</details>\n\n**ブランド生成をパーサ境界に限定してください。** `DeclaredAdvisoryCode` の重複宣言はありません。一方、`AdvisoryDeclaration.code` は `string` のままで、`advisoryFromEvaluatorRun` が `declaration.code as AdvisoryCode` と直接キャストしています。`AdvisoryDeclaration.code` をブランド型に変更し、パーサで検証済みの値だけを生成する `asDeclaredCode` にキャストを集約してください。\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:refactor_suggestion -->\n\n<!-- cr-comment:v1:aef3c2e01225efcee6d905f6 -->\n\n<!-- This is an auto-generated reply by CodeRabbit -->\n\n✅ Confirmed as addressed by @j5ik2o\n\n<!-- This is an auto-generated comment by CodeRabbit -->"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。AdvisoryDeclaration.code を DeclaredAdvisoryCode ブランドへ変更し、mint は parser 検証直後の asDeclaredCode に集約。下流の as AdvisoryCode キャストを削除しました。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`, 対応内容を確認しました。`DeclaredAdvisoryCode` の生成をパーサ検証直後に限定し、下流キャストを削除したため、この指摘は解消済みです。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1R8",
+              "isResolved": true,
+              "isOutdated": true,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_\n\n**`subjects` の非文字列要素を黙って捨てないでください。**\n\n`recordedReceipt` は `subjects` 配列から非文字列要素を `filter` で除去します。同ファイルの `readModelMapSnapshot` は不正な形状で `null` を返し、スナップショット全体を「読めない」として扱います。この2つは非対称です。\n\n影響: 破損した `subjects` を持つ receipt が、部分的な subject 集合のまま `registered()` を通過します。その結果、`tipReason` が `authoring-incomplete` を返さず hold を解放する可能性があります。BR-U2-16 の fail-closed 方針(部分的に読めた証拠を解放の根拠にしない)に反します。\n\n`subjects` に非文字列要素があるときは receipt 全体を `null` として扱ってください。\n\n\n\n\n\n<details>\n<summary>🛠️ 提案する修正</summary>\n\n```diff\n-  const subjects = Array.isArray(applicability.subjects)\n-    ? applicability.subjects.filter((subject): subject is string => typeof subject === \"string\")\n-    : [];\n+  if (!Array.isArray(applicability.subjects)) return null;\n+  const subjects = applicability.subjects;\n+  if (subjects.some((subject) => typeof subject !== \"string\")) return null;\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  if (!Array.isArray(applicability.subjects)) return null;\n  const subjects = applicability.subjects;\n  if (subjects.some((subject) => typeof subject !== \"string\")) return null;\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@plugins/formal-model-check/tools/tla-applicability.ts` around lines 260 -\n262, Update the subjects parsing in recordedReceipt so any non-string element\ncauses the entire receipt to return null, rather than filtering invalid values\nand continuing with a partial subject set. Preserve the existing empty-array\nbehavior and ensure valid subjects still follow the current receipt processing\npath.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:potential_issue -->\n\n<!-- cr-comment:v1:de1f31265442e77c166fadfe -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n✅ Addressed in commit 734850b"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。subjects に非文字列があれば receipt 全体を null として拒否(BR-U2-16 の fail-closed に整合)。ピンテスト追加(hold 表「corrupted subjects array is no receipt at all」= no-applicability-receipt で hold)。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`, 修正内容を確認しました。\n\n非文字列の `subjects` を含む receipt を全体として拒否し、`no-applicability-receipt` の hold を検証するテストも追加されています。BR-U2-16 の fail-closed 要件に整合します。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1R_",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_🗄️ Data Integrity & Integration_ | _🟠 Major_ | _⚡ Quick win_\n\n**読み取り失敗を「宣言なし」と同一視しないでください。fail-open になります。**\n\n`readTextFile` は不在(ENOENT)と読み取り失敗(EACCES、EISDIR など)を区別せずに `!file.ok` へ潰します。現在はどちらも `no-hold` を返します。\n\nこの関数の他の失敗経路は全て `failed` に倒れます。\n\n- L481: JSON パース失敗 → `governed-subjects-unreadable`\n- L485: 形状不正 → `governed-subjects-unreadable`\n- L456(`governedIdentity`): 文書の読み取り失敗 → `io-failure`\n\nL473-475 だけが非対称に `no-hold` へ倒れます。統治宣言ファイルが存在するのに読めない場合、authoring hold は黙って解除されます。PR の目的「release requires an evaluator no-hold verdict」を満たしません。\n\n不在のときだけ `no-hold` を返してください。それ以外の読み取り失敗は `failed` にしてください。\n\n\n\n\n\n<details>\n<summary>🛡️ 提案する修正</summary>\n\n```diff\n function advisoryHold(flags: Record<string, string>): Emitted {\n   const subjectsPath = flags[\"subjects-file\"] ?? DEFAULT_SUBJECTS_PATH;\n+  // A workspace that declares nothing governs nothing. Anything else that\n+  // blocks the read is a real failure, not a release.\n+  if (!existsSync(subjectsPath)) {\n+    return succeeded({ verdict: { kind: \"no-hold\" }, reason: \"no governed subjects are declared\" });\n+  }\n   const file = readTextFile(subjectsPath);\n   if (!file.ok) {\n-    return succeeded({ verdict: { kind: \"no-hold\" }, reason: \"no governed subjects are declared\" });\n+    return failed({ kind: \"governed-subjects-unreadable\", path: subjectsPath, detail: file.detail });\n   }\n```\n\n`existsSync` を `node:fs` からインポートしてください。`readTextFile` が失敗理由を返すなら、そちらで ENOENT を判別する方が I/O が1回で済みます。\n\n</details>\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@plugins/formal-model-check/tools/tla-authoring.ts` around lines 470 - 475,\nUpdate advisoryHold so only a missing subjects file returns the existing no-hold\nverdict; route all other read failures through failed with the established\nunreadable/I/O failure verdict and reason pattern. Use the failure information\nexposed by readTextFile to distinguish ENOENT from permission, directory, and\nother errors, avoiding an additional filesystem read where possible.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:potential_issue -->\n\n<!-- cr-comment:v1:7b7f3041941e34617634fa09 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n✅ Addressed in commit 734850b"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。ENOENT のみ「統治宣言なし=真の no-hold」(FD 委任裁定どおり)とし、それ以外の読取失敗は governed-subjects-unreadable で fail-closed。ピンテストは ELOOP(自己参照 symlink)で移植性のある実在-不可読を注入しています。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`、確認しました。`ENOENT` のみを `no-hold` とし、それ以外を `governed-subjects-unreadable` で fail-closed にする修正は、指摘内容を満たしています。`ELOOP` を使うピンテストも適切です。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1SA",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_📐 Maintainability & Code Quality_ | _🔵 Trivial_ | _⚡ Quick win_\n\n**`readFileSync` の相対パスが CWD に依存します。**\n\n141 行は `\"plugins/formal-model-check/plugin.json\"` を CWD 基準で読みます。このテストはリポジトリルートから `bun test` を実行した場合だけ通ります。同じファイル内の他の参照 (6-26 行の import) は `../../` のモジュール相対なので、規則が揃っていません。\n\n`import.meta.dir` 基準へ揃えてください。\n\n\n\n\n<details>\n<summary>♻️ 修正案</summary>\n\n```diff\n   test(\"parses with no invalid entries\", () => {\n-    const manifest = readFileSync(\"plugins/formal-model-check/plugin.json\", \"utf8\");\n+    const manifest = readFileSync(\n+      join(import.meta.dir, \"..\", \"..\", \"plugins\", \"formal-model-check\", \"plugin.json\"),\n+      \"utf8\",\n+    );\n     const parsed = parseAdvisoryDeclarations(manifest);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>📝 Committable suggestion</summary>\n\n> ‼️ **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\ndescribe(\"the shipped formal-model-check declaration\", () => {\n  test(\"parses with no invalid entries\", () => {\n    const manifest = readFileSync(\n      join(import.meta.dir, \"..\", \"..\", \"plugins\", \"formal-model-check\", \"plugin.json\"),\n      \"utf8\",\n    );\n    const parsed = parseAdvisoryDeclarations(manifest);\n    expect(parsed.invalid).toEqual([]);\n    expect(parsed.declarations.map((declaration) => declaration.code)).toEqual([\"authoring-hold\"]);\n    expect(parsed.declarations[0]?.checkpoints).toEqual([\n      \"requirements-analysis\",\n      \"functional-design\",\n      \"build-and-test\",\n    ]);\n  });\n});\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@tests/integration/t445-advisory-declaration-supply.integration.test.ts`\naround lines 139 - 151, Update the readFileSync call in the “the shipped\nformal-model-check declaration” test to resolve plugin.json relative to\nimport.meta.dir instead of the process CWD, preserving the existing manifest\nparsing and assertions.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:nitpick -->\n\n<!-- cr-comment:v1:adf6abbe84cede934c6c1772 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n✅ Addressed in commit 734850b"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。import.meta.dir 基準へ変更し CWD 依存を除去しました。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`、修正を確認しました。`import.meta.dir` 基準の解決により、テストの CWD 依存は除去されます。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Wk1SD",
+              "isResolved": true,
+              "isOutdated": true,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_📐 Maintainability & Code Quality_ | _🔵 Trivial_ | _⚡ Quick win_\n\n**ローカルの `Parts` 型と `as never` が本番型との乖離を隠します。**\n\n`Parts` は `{ kind: string; parts: Record<string, unknown> }` として本番の `EvidenceParts` から独立しています。`evaluate` 内で `as never` を通すため、`EvidenceParts` の形状が変わってもこのテストはコンパイルを通ります。型による回帰検知が働きません。\n\n`Parts` を `EvidenceParts` から導出してください。ブランド型が必要な箇所だけを局所的にキャストしてください。\n\n```ts\nimport type { EvidenceParts } from \"../../plugins/formal-model-check/tools/tla-evidence.ts\";\ntype Parts = EvidenceParts;\n```\n\nこれにより `terminal()` と `authoring()` のパート構成が本番契約から外れたときにコンパイルが失敗します。\n\n<details>\n<summary>🤖 Prompt for AI Agents</summary>\n\n```\nVerify each finding against current code. Fix only still-valid issues, skip the\nrest with a brief reason, keep changes minimal, and validate.\n\nIn `@tests/unit/t444-tla-applicability-hold.test.ts` around lines 47 - 78, Replace\nthe locally defined Parts shape with the imported EvidenceParts type from the\nTLA evidence module, and remove the broad as never casts in evaluate, terminal,\nand authoring. Add only narrow casts at locations requiring branded production\ntypes, preserving the existing test behavior while allowing EvidenceParts\nchanges to trigger compile-time failures.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:komodo -->\n\n<!-- cr-indicator-types:nitpick -->\n\n<!-- cr-comment:v1:c320e27c32ef3cfcbd5baa68 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n✅ Addressed in commit 734850b"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。Parts を EvidenceParts から導出し、本番契約の変化がコンパイル失敗として現れるようにしました。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "`@j5ik2o`、確認ありがとうございます。`Parts` を `EvidenceParts` から導出したため、本番契約の変更をテストのコンパイル時に検出できます。\n\n<!-- <review_comment_addressed> -->\n\n<sub>You are interacting with an AI system.</sub>\n\n<!-- This is an auto-generated reply by CodeRabbit -->"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
