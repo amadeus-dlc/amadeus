@@ -4,6 +4,10 @@
     {
       "slug": "formal-model-check",
       "path": "stages/formal-model-check.md"
+    },
+    {
+      "slug": "tla-authoring",
+      "path": "stages/tla-authoring.md"
     }
   ],
   "seams": [],
