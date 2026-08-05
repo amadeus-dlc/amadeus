@@ -1,0 +1,13 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "c2-2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Reverse Engineeringでは静的contractの所在と不在claimをfile:lineおよび検索範囲で固定し、実行していないharness live挙動を確認済みとして扱わない。",
+      "source": "orchestrator"
+    }
+  ]
+}

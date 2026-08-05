@@ -16,9 +16,11 @@ flowchart LR
   JR --> JI["Judge Invocation"]
   JI --> JRR["Judge Result Receipt"]
   JRR --> ML["Monitor Latch"]
+  LA["Live Execution Authorization"] --> CLA["Committed Authorization"]
+  CLA --> LR["Live Receipt"]
 ```
 
-テキスト代替: manifestからcompiled monitorが生成され、Monitor replay indexからcausal delivery chainを復元してmonitor epochへ適用する。thresholdでJudge reservation / invocation / resultが生成され、latch routeならMonitor Latchになる。
+テキスト代替: manifestからcompiled monitorが生成され、Monitor replay indexからcausal delivery chainを復元してmonitor epochへ適用する。thresholdでJudge reservation / invocation / resultが生成され、latch routeならMonitor Latchになる。live検証はauthorizationをaudit commitへ束縛してからreceiptを生成する別aggregateである。
 
 ## Entity catalog
 
@@ -38,6 +40,9 @@ flowchart LR
 | `JudgeTraceContext` | Value Object | `traceId + spanId` | M06 | reservation / result audit |
 | `MonitorLatch` | Entity | monitor + epoch + fingerprint | M02 | canonical audit projection |
 | `ResumeCondition` | Value Object | `kind + identity + fingerprint` | M00/M02 | latch / workflow event |
+| `LiveExecutionAuthorization` | Entity | `authorizationId` | M08 | protected audit plan |
+| `CommittedLiveExecutionAuthorization` | Proven Value | authorization + commit receipt | M08/M07 | derived from canonical commit |
+| `LiveReceipt` | Entity | `receiptId` | M09 raw / M08 validation | verification artifact / audit reference |
 | `DistributionDriftReceipt` | Entity | revision + projection digest | M09 | verification artifact |
 
 ## MonitorManifest
@@ -183,7 +188,7 @@ M01はdangling reference、duplicate ID、schema mismatchをcompile時に拒否�
 
 `JudgeResultReceipt`は`invocationId`、selected route、basis fingerprint、provider receipt identity、observation digestを持つ。pending reservationとの一致を証明したparsed valueだけがM02へ渡る。
 
-通常Judgeのreceiptはさらに`traceId / spanId`を持ち、reservationの`JudgeTraceContext`とexact matchしなければならない。
+通常Judgeのreceiptはさらに`traceId / spanId`を持ち、reservationの`JudgeTraceContext`とexact matchしなければならない。live authorizationのtraceとは別のentityだが、同じformat / redaction contractを使う。
 
 1 invocationに異なるresult digestが複数観測された場合は`CONFLICT`でparkし、後着を上書きしない。同一digestの再観測はno-opとする。
 
@@ -213,6 +218,29 @@ M02は`repair-stalled`等のdomain意味を知らない。M06 / consuming Plugin
 
 正確なevent名はEvent Registryで既存taxonomyとの衝突を検証して確定する。必要なfactとidentityはこの表から減らさない。
 
+## Live authorization aggregate
+
+### Lifecycle
+
+```mermaid
+stateDiagram-v2
+  [*] --> Proposed: credential-attested adapter
+  Proposed --> Committed: protected event commit receipt
+  Proposed --> Rejected: registry / revision / provenance mismatch
+  Committed --> Exercised: M09 live run
+  Exercised --> Validated: receipt exact-match + passed + Judge observed
+  Exercised --> Incomplete: skipped / failed / mismatch
+```
+
+テキスト代替: credential-attested adapterからsafe metadataを受け、protected eventをcommitしたものだけがlive runを認可する。実行receiptが全bindingへ一致し、passedかつJudge観測済みの場合だけvalidatedになる。
+
+### Invariants
+
+- `CommittedLiveExecutionAuthorization`はcommit receiptに自身のauthorization event identityが存在することを型で証明する。
+- secret / token / credential valueをattributeに持たない。
+- Intent、harness、revision、package digest、environment、issuer、trace、attestationを後から差し替えない。
+- U1のvalidated receiptは暫定verification evidenceであり、U5のterminal completion aggregateでは最終revisionへ再検証する。
+
 ## DistributionDriftReceipt
 
 `DistributionDriftReceipt`はimplementation revision、package digest、registry digest、7 package face / 6 host directory / 5 self-install faceのprojection digest、graph / package / promote各checkのcommand ID・exit code・output digestを持つ。
@@ -228,6 +256,7 @@ M02は`repair-stalled`等のdomain意味を知らない。M06 / consuming Plugin
 - M02はMonitorEpoch、JudgeReservation、MonitorLatchのpure transitionを所有する。
 - M06はS01 adapter invocationと各domain planの順序付けを所有するが、Monitor attributesを直接変更しない。
 - M07はevent append / read / transaction receiptを所有し、Monitor判断をしない。
+- M08はlive authorization proofを所有し、M09はlive execution / raw receiptだけを所有する。
 - harness adapterはdomain entityをforkせず、portのinput / closed output unionだけを実装する。
 
 ## Data retention and privacy
