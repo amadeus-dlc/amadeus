@@ -49,7 +49,7 @@
 1. **「起動の一手で走行水準を宣言し、そのまま無人で回したい」** — 現在 autonomy を選ぶ唯一の経路は Intent 誕生後の `amadeus-bolt set-autonomy` であり(`business-overview.md` 現在節「起動宣言(`--autonomy`)の価値」)、`claude -p`・夜間・CI といった非対話起動では宣言がプロンプト文依存になり再現性がない。ゴールは「起動コマンドが走行水準の決定的な契約になっている」状態である。`--autonomy` はコード面に存在しない(実測: `grep -rn -- "--autonomy" packages tests docs scripts specs plugins contrib` → **0 hit**、HEAD `17a1a7422`)。
 2. **「全部止まる」と「全部任せる」の間に、実用的な中間点がほしい** — 現行 `semi` は「phase 内のステージゲートだけを自動承認し、それ以外はすべて人間に戻す」水準であり(`business-overview.md` 現在節)、質問が出た時点で走行が切れるため走行単位が予測不能になる。ゴールは「日常判断は full と同じ自動裁定に載り、節目だけ人間に戻る」水準を得ることである。
 3. **「任せた結果を後から検収できる」状態を保ちたい** — `business-overview.md` 現在節「安全性の非対称」が指摘するとおり、梯子後段2段は `reviewState: "unreviewed"` で記録される。ゴールは「無人裁定が積み上がっても、節目で人間がまとめて検収できる」ことであり、走行の無停止そのものではない。
-4. **「人間ターンを要求する隠れた関門で headless 走行が切れない」ようにしたい** — advisory が1件 pending になるだけで `run-stage` が `await-advisory-choice` へ差し替わる(`scope-document.md` In-7)。これは特定プラグインの問題ではなく、advisory を出す任意のプラグインで起きる一般の欠落である。
+4. **「人間ターンを要求する隠れた関門で headless 走行が切れない」ようにしたい** — advisory が1件 pending になるだけで `run-stage` が `await-advisory-choice` へ差し替わる(`scope-document.md` In-7)。これは特定プラグインの問題ではなく、advisory を出す任意のプラグインで起きる一般の欠落である(**射程注記**: plugin 非依存性の主張は `guardAdvisoryChoices` の **hold 判定の面に限る**。`run_required` 経路は `formalCheckRoute` が実行コマンドをハードコードするため plugin 非依存でない — FR-ADV-5 を参照)。
 
 **ゴールでないもの**(誤読防止): 本 intent は「semi で phase を必ず完走できる」ことを主張しない。主張は「**質問で止まらない**」に限定する(Q3=A)。
 
@@ -77,7 +77,7 @@
 
 ### 領域 B: semi 質問の無人解決(Q3=A、In-1)
 
-- **FR-LAD-1(第1関門の semi 分岐改訂)** — `authorizeInteraction` の semi 分岐(`amadeus-intent-autonomy.ts:511-514`)を改訂し、`question` occurrence を認可基体つきで通す。現行 verbatim(`:511-514`):
+- **FR-LAD-1(第1関門の semi 分岐改訂)** — `authorizeInteraction` の semi 分岐(`amadeus-intent-autonomy.ts:510-514`)を改訂し、`question` occurrence を認可基体つきで通す。現行 verbatim(`:510-514`):
 
   ```
     if (projection.mode === "semi") {
@@ -117,7 +117,7 @@
 
 `architecture.md` 現在節「stop hook 側の非対称」の実測を根拠とする。cap の軸では semi は既に自律側(`hooks/amadeus-stop.ts:149-151`、verbatim `  return mode === "semi" || mode === "full"` / `    ? AUTONOMOUS_BLOCK_CAP` / `    : INTERACTIVE_BLOCK_CAP;`)、質問 carve-out の軸では非自律側(`:171` verbatim `  if (intentAutonomyMode(stateContent) !== "full") return false;`、続く `:174` verbatim `    return projection?.mode === "full" && projection.currentGrant?.state === "active";`)である。
 
-- **FR-STOP-1(述語の分割と呼び出し点の限定列挙)** — `isFullyAutonomousIntent`(`:167-176`)を**無条件に書き換えてはならない**。呼び出し点は実測で3箇所である(`grep -n 'isFullyAutonomousIntent' hooks/amadeus-stop.ts` の出力からの転記 — 定義 `:167` / 呼び出し `:422` / `:457` / `:716`)。本 intent が semi へ開く呼び出し点は **`:422` のみ**とする。
+- **FR-STOP-1(述語の分割と呼び出し点の限定列挙)** — `isFullyAutonomousIntent`(`:167-178`)を**無条件に書き換えてはならない**。呼び出し点は実測で3箇所である(`grep -n 'isFullyAutonomousIntent' hooks/amadeus-stop.ts` の出力からの転記 — 定義 `:167` / 呼び出し `:422` / `:457` / `:716`)。本 intent が semi へ開く呼び出し点は **`:422` のみ**とする。
 
   | 呼び出し点 | 関数 | verbatim | 本 intent での扱い |
   | --- | --- | --- | --- |
@@ -185,7 +185,7 @@
 
 `applyPendingAdvisoryGuard`(`tools/amadeus-orchestrate.ts:781-800`)は pending が1件でもあれば `run-stage` / `dispatch-subagent` を差し替える(`:784` verbatim `  if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return directive;`、`:793` verbatim `    kind: "await-advisory-choice",`)。判定側 `guardAdvisoryChoices`(`tools/amadeus-advisory-choice.ts:592-597`)は `advisories: readonly Advisory[]` を受けるのみで `advisory.plugin` を分岐条件に使わない。受理側 `recordProtectedAdvisoryChoice`(`:864-868`)は `humanTurn: HumanTurnProvenance` を必須引数に取り、`isGroundedHumanTurn`(`:852-861`)で監査シャードの実 `HUMAN_TURN` と timestamp・digest の一致を照合する。選択肢は2値(`:25-28` — `run-now` / `defer-with-risk`)。
 
-- **FR-ADV-1(第2 receipt 経路の新設)** — `applyPendingAdvisoryGuard` が hold を得た時点で、`await-advisory-choice` を返す**前に** autonomy 認可を通し、full/semi では梯子で選択肢を決める。無人裁定の receipt は `humanTurn` の代わりに `AUTO_DECIDED` の basisFingerprint を provenance とする第2経路で記録し、記録先を `AUTO_DECIDED` + unreviewed queue へ一本化する。
+- **FR-ADV-1(第2 receipt 経路の新設)** — `applyPendingAdvisoryGuard` が hold を得た時点で、`await-advisory-choice` を返す**前に** autonomy 認可を通し、full/semi では梯子で選択肢を決める。無人裁定の receipt は `humanTurn` の代わりに `AUTO_DECIDED` の basisFingerprint を provenance とする第2経路で記録し、記録先を `AUTO_DECIDED` + unreviewed queue へ一本化する。**用いる occurrence 種別**: Out(`InteractionKind` への `advisory-choice` 追加は非採用)により既存種別へ写像する。採用された Q4 選択肢 A の本文(`requirements-analysis-questions.md` の Q4-A)は「question 相当の occurrence を組み」と規定しており、本要件はこれを踏襲する — すなわち advisory の選択を `kind: "question"` の occurrence として組み、`selector` に advisory instance を含めて一意化する。**この写像が FR-AUTH-1 の scope 認可(occurrence 種別の許可集合)と整合することの確認は application-design の設計事項**とし、Open questions へ送る。
   - **受け入れ基準**: full grant 下で pending advisory が1件ある状態の `next` が `await-advisory-choice` ではなく `run-stage` を返し、その裁定が `AUTO_DECIDED` として記録される統合テストが green。
 - **FR-ADV-2(fail-closed の固定)** — 第2 receipt 経路は **autonomy 認可が成立したときのみ** `AUTO_DECIDED` basisFingerprint を provenance として受理する。**認可不成立時に第2経路へ落ちてはならない**(mode=none、grant 失効、scope 不一致のいずれでも人間経路へ戻る)。現行の人間経路保証(`:864-868` の humanTurn 必須 + `:852-861` の監査 HUMAN_TURN 照合)は等価な強度で維持する。
   - **受け入れ基準**: (1) mode=none で pending advisory がある場合に `await-advisory-choice` が返ることを assert。(2) 失効 grant / scope 不一致でも同様。(3) **落ちる実証**必須 — 認可判定を無条件 true に差し替えると (1)(2) が赤になることを実測して記録する。
@@ -209,7 +209,7 @@
 - **FR-DOC-1(docs の対訳同時改訂)** — docs の改訂対象は **22 ファイル = 11 対訳ペア**である(実測: `grep -rln "semi" docs/ | wc -l` → **22**)。`intent-statement.md:23` と `scope-document.md:15` が記す「11 ファイル」は対訳の片側のみを数えた値であり(`code-structure.md` 現在節「docs 面の所在」)、同期対象は 22 ファイルである。日英を同一変更で同期する。
   - **受け入れ基準**: 改訂後、`docs/` 配下で `semi` の意味論を旧定義(「phase 内ステージゲートのみ自動、質問は人間」)のまま述べる記述が 0 件であること。**grep の対象面は `docs/` に限定する** — codekb(`amadeus/spaces/default/codekb/`)と intent record(`amadeus/spaces/default/intents/`)は旧定義を実測記録として恒久保持する**記録面**であり、対象外とする(`cid:requirements-analysis:c1-ac-grep-surface-scope`)。日英ペアの両側が同一 PR に含まれること。
 - **FR-DOC-2(正本知識 `stage-protocol.md` の改訂)** — `packages/framework/core/amadeus-common/protocols/stage-protocol.md` の該当 **9 行**(実測: `grep -c "semi" <当該ファイル>` → **9**)のうち、`:33`(semi の phase 境界と auto-approve 手順)と `:131`(semi の正本1行定義)を直接反転する。`:105` / `:808`(walking skeleton は `none`/`semi` が人間待ち)は **保存**する(FR-LAD-5)。`:125` は起動フラグ追加に伴い同期する。`:133` / `:442` / `:118` / `:796` は `code-structure.md` 現在節の分類に従う。
-  - **受け入れ基準**: canonical 1 本のみを編集し(`git ls-files` 追跡は canonical 1 本、on-disk ミラーは 14 本 — `code-structure.md` 現在節の実測)、`bun run build` 後に追跡ファイルが不変であること。`:105` / `:808` が本 intent の diff に現れないこと。
+  - **受け入れ基準**: canonical 1 本のみを編集し(`git ls-files` 追跡は canonical 1 本、on-disk ミラーは 14 本 — `find . -path ./node_modules -prune -o -name "stage-protocol.md" -print | wc -l` → `14`(HEAD `17a1a7422` 実測。出力からの転記))、`bun run build` 後に追跡ファイルが不変であること。`:105` / `:808` が本 intent の diff に現れないこと。
 
 ---
 
@@ -240,7 +240,7 @@
 - **C-2(「節目」を判別する既存述語が無い)** — 現行で機械判別できるのは `occurrence.phase !== "phase-boundary"` と `occurrence.kind` の2軸のみであり、**`question` occurrence には phase 概念がない**(`business-overview.md` 現在節「リスクの所在」、`inception/reverse-engineering/memory.md:21`)。本 intent は Q3=A により「質問はすべて梯子へ載せる」ため新述語の新設を要さないが、将来「節目の質問」を設ける場合は述語の新設が前提になる。
 - **C-3(directive 面の値域は2値)** — `intent_autonomy_mode` は `"semi" | "full"` の2値で `none` を持たない(`tools/amadeus-directive.ts:97` / `:606`)。`--autonomy` の値域はこれと一致させる(FR-CLI-2)。
 - **C-4(互換投影の潰れ)** — `Construction Autonomy Mode` は `flags.mode === "full" ? "autonomous" : "gated"` により **`semi` と `none` がともに `gated` へ潰れる**(`tools/amadeus-bolt.ts:1071` verbatim `      const schedulingMode = flags.mode === "full" ? "autonomous" : "gated";`)。本 intent はこの投影を変更しない(Q3=A で budget mode 不変)。
-- **C-5(source-only 境界)** — `stage-protocol.md` は on-disk 14 本のミラーを持つが `git ls-files` 追跡は canonical 1 本のみ(`code-structure.md` 現在節)。編集は canonical のみ、他は再生成物。
+- **C-5(source-only 境界)** — `stage-protocol.md` は on-disk 14 本のミラーを持つが `git ls-files` 追跡は canonical 1 本のみ(件数は上記 `find ... | wc -l` の出力からの転記。`code-structure.md` 現在節は「`.claude/` 以下は同一内容ミラー」の質的記述のみで件数を持たない)。編集は canonical のみ、他は再生成物。
 - **C-6(READ_ONLY_FLAGS 不可)** — autonomy は監査済みの状態変更であるため、read-only フラグの絶対優先梯子(`tools/amadeus-orchestrate.ts:1014-1016`)へは入れられない。
 
 ### ビジネス的・組織的制約
@@ -254,7 +254,7 @@
 
 ## Assumptions
 
-- **A-1** — 患部ファイルの行番号は HEAD `17a1a7422` と codekb observed `2f255bc69` で同値である。**根拠**: `code-structure.md` 現在節「区間内の行シフト(患部ファイル別)」が `amadeus-intent-autonomy.ts` / `amadeus-stop.ts` / `amadeus-utility.ts` / `amadeus-orchestrate.ts` / `amadeus-statusline.ts` / `t431` / `t121` を「区間内無変更(行シフト 0)」と実測し、本文書が起草時に HEAD で再実測して同値を確認した。
+- **A-1** — 患部ファイルの行番号は HEAD `17a1a7422` と codekb observed `2f255bc69` で同値である。**根拠**: `code-structure.md` 現在節「区間内の行シフト(患部ファイル別)」が `amadeus-intent-autonomy.ts` / `amadeus-stop.ts` / `amadeus-utility.ts` / `amadeus-orchestrate.ts` / `amadeus-statusline.ts` / `t431` / `t121` を「区間内無変更(行シフト 0)」と実測し、本文書が起草時に HEAD で再実測して同値を確認した。**残る5ファイル**(`amadeus-bolt.ts` / `amadeus-intent-autonomy-production.ts` / `amadeus-intent-autonomy-runtime.ts` / `amadeus-advisory-choice.ts` / `amadeus-directive.ts`)は codekb の行シフト表に載っていないため、本文書の引用はすべて **HEAD `17a1a7422` での直接実測**であり observed 断面の転記ではない。特に `amadeus-bolt.ts` は区間内で `:961` 以降が +96 シフトしている(`code-structure.md` 現在節)ため、observed 断面の行番号を引かないこと。
 - **A-2** — `--autonomy` はコード面に一切結線されていない。**根拠**: `grep -rn -- "--autonomy" packages tests docs scripts specs plugins contrib` → 0 hit(HEAD 実測)。repo 全体の 51 hit は全件が本 intent の record・codekb・elections 配下である(`grep -rl` のディレクトリ集計出力からの転記)。
 - **A-3** — `semi` 関与テストは実質 13 ファイルである。**根拠**: `grep -rln "semi" tests/ --include="*.ts" | wc -l` → 14、うち `tests/unit/t97.test.ts` は `semicolon` の部分一致(`code-structure.md` 現在節が未確定事項として解消済み)。**未検証**: 13 ファイルの現況グリーン性は未実行である(`inception/reverse-engineering/memory.md:23` の未確定③)。code-generation の着手時にベースラインを実測すること。
 - **A-4** — semi の phase 内 auto-approve が `phase_boundary` directive を受け取らないことは**実 run 未検証**である(`inception/reverse-engineering/memory.md:23` の未確定①)。FR-LAD-5 の受け入れ基準はこの保証をテストで初めて固定する。
@@ -296,6 +296,8 @@
 
 ---
 
+- **OQ-ADV-K**(application-design へ)— FR-ADV-1 が advisory の選択を `kind: "question"` の occurrence へ写像する設計としたが、その写像が FR-AUTH-1 の semi 専用 authorization 型の scope 認可(許可する occurrence 種別の集合)および `selector` の一意化規約と整合するかは未設計。§12a reviewer(iteration 1、FOLLOW-UP)の指摘により明示。
+
 ## トレーサビリティ
 
 すべての FR/NFR は `intent-statement.md` の Success Metrics および `scope-document.md` の In 項目へ遡れる。
@@ -335,7 +337,7 @@
 | --- | --- | --- | --- | --- |
 | R1 | Q1 | subagent-2 | 「選択肢 A の欠点記述「modeProvenance は認可の器としては意味を拡張することになる」は過大評価である — `modeProvenance` は既に semi の認可述語(`amadeus-intent-autonomy.ts:512` の `projection.modeProvenance.kind !== "human-command"`、`:516` の `kind: "semi-mode-gate"`)かつ裁定 principal の供給元(`:602-604`)として機能している。B を採る理由は「A が不可能だから」ではなく「3責務を単一の型で明示でき `:702` の緩和が単一述語に閉じるから」と書き直すこと。」 | FR-AUTH-1「採用理由の明記」 |
 | R2 | Q3 | subagent-1 | 「承認済み上流(`scope-document.md:11` と `intent-statement.md:20`)がともに逐語「無人解決4段(方針なしは3段縮退)」と書いており、5段は RE の実測訂正(`inception/reverse-engineering/memory.md:8`)に基づく**訂正**である。requirements にこの訂正申告段落を置かないと無申告逸脱になる。」 | §訂正申告 申告1 |
-| R3 | Q3 | subagent-1 | 「In-1 が名指す `isFullyAutonomousIntent`(`amadeus-stop.ts:167-176`)は質問 carve-out(`:422`)だけでなく compose stop(`:457`)・conversational stop(`:716`)からも共有されており、無条件の書き換えは Q3=A が「不変」と主張する範囲外まで semi へ開く。**変更する呼び出し点を要件で列挙すること**。」 | FR-STOP-1 の呼び出し点表(3点)+ §Out of scope |
+| R3 | Q3 | subagent-1 | 「In-1 が名指す `isFullyAutonomousIntent`(`amadeus-stop.ts:167-178`)は質問 carve-out(`:422`)だけでなく compose stop(`:457`)・conversational stop(`:716`)からも共有されており、無条件の書き換えは Q3=A が「不変」と主張する範囲外まで semi へ開く。**変更する呼び出し点を要件で列挙すること**。」 | FR-STOP-1 の呼び出し点表(3点)+ §Out of scope |
 | R4 | Q4 | subagent-1 | 「第2 receipt 経路は fail-closed を受け入れ基準で固定すること — 現行の人間経路保証(`amadeus-advisory-choice.ts:864-868` の humanTurn 必須 + `:852-861` の監査 HUMAN_TURN 照合)を autonomy 認可成立時のみ `AUTO_DECIDED` basisFingerprint で代替し、**認可不成立時に第2経路へ落ちない**ことを落ちる実証込みで要求する。」 | FR-ADV-2 |
 | R5 | Q4 | subagent-2 | 「重複排除キー(`:875-878`)と提示照合(`:889`)も humanTurn 依存であり「2ファイルに閉じる」は過小評価。並存させると org.md Forbidden の二重実装に抵触するため**置換**とすること。」 | FR-ADV-3(測定注記付き) |
 | R6 | Q4 | subagent-2 | 「`run_required: true` の「強制実行のまま維持」は現行コードの追認ではない — `runRequired` は `:730` の `runRequired: formalChecks.length > 0` から導出され、`amadeus-directive.ts:684-688` は非空 `formal_checks` を要求するのみで defer-with-risk を禁じる強制は現行コードに無い。**新規要件化事項**として要件文へ明示すること。」 | FR-ADV-4「新規性の明示」 |
