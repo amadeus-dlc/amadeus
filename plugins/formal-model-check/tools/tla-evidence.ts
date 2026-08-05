@@ -7,7 +7,9 @@
 // The handler layer at the bottom of the file owns the store I/O and hands the
 // pure layer bytes. The CLI (tla-authoring.ts) only dispatches.
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Result } from "./contract.ts";
 
 // ---------------------------------------------------------------------------
@@ -374,4 +376,177 @@ export const EvidenceEnvelopeCodec = {
   parseBundleDigest,
   verifyBytes,
   resolveHeads,
+} as const;
+
+// ---------------------------------------------------------------------------
+// C4 handler layer: the evidence store (the only writer — BR-U1-01)
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_STORE_ROOT = "specs/tla-evidence";
+const STAGING_DIR = ".tmp";
+
+export interface EvidenceMeta {
+  readonly subjectIdentity: AggregateDigest;
+  readonly generatedAt: string;
+  readonly generatedBy: string;
+}
+
+function ioFailure(path: string, cause: unknown): Result<never, BundleFailure> {
+  return err<BundleFailure>({
+    kind: "io-failure",
+    path,
+    detail: cause instanceof Error ? cause.message : String(cause),
+  });
+}
+
+function readBytes(storeRoot: string, ref: EvidenceBundleRef): Result<Uint8Array, BundleFailure> {
+  const name = fileNameFor(ref);
+  try {
+    return ok(new Uint8Array(readFileSync(join(storeRoot, name))));
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
+      return err<BundleFailure>({ kind: "missing-part", parts: [name] });
+    }
+    return ioFailure(join(storeRoot, name), cause);
+  }
+}
+
+function predecessorPresent(storeRoot: string, predecessor: PredecessorRef): boolean {
+  return predecessor.kind === "root" || existsSync(join(storeRoot, fileNameFor({ digest: predecessor.digest })));
+}
+
+/** Stage the whole envelope in `.tmp/`, then rename — the final path never shows a partial file. */
+function build(
+  storeRoot: string,
+  evidence: EvidenceParts,
+  predecessor: PredecessorRef,
+  meta: EvidenceMeta,
+): Result<EvidenceBundleRef, BundleFailure> {
+  if (!predecessorPresent(storeRoot, predecessor)) {
+    return err<BundleFailure>({
+      kind: "predecessor-broken",
+      digest: (predecessor as { kind: "bundle"; digest: BundleDigest }).digest,
+    });
+  }
+
+  const envelope: EvidenceEnvelope = {
+    schema: 1,
+    subjectIdentity: meta.subjectIdentity,
+    evidence,
+    predecessor,
+    generatedAt: meta.generatedAt,
+    generatedBy: meta.generatedBy,
+  };
+  const bytes = canonicalBytes(envelope);
+  const ref: EvidenceBundleRef = { digest: bundleDigest(bytes) };
+  const finalPath = join(storeRoot, fileNameFor(ref));
+
+  if (existsSync(finalPath)) {
+    const existing = readBytes(storeRoot, ref);
+    if (!existing.ok) return existing;
+    // Content addressing makes a rebuild of identical input a no-op; differing
+    // bytes under the same digest mean the store itself is damaged.
+    return bundleDigest(existing.value) === ref.digest
+      ? ok(ref)
+      : err<BundleFailure>({ kind: "io-failure", path: finalPath, detail: "stored bytes do not match their digest" });
+  }
+
+  const stagingDir = join(storeRoot, STAGING_DIR);
+  const stagingPath = join(stagingDir, `${randomUUID()}.json`);
+  try {
+    mkdirSync(stagingDir, { recursive: true });
+    writeFileSync(stagingPath, bytes);
+    renameSync(stagingPath, finalPath);
+  } catch (cause) {
+    rmSync(stagingPath, { force: true });
+    return ioFailure(finalPath, cause);
+  }
+  return ok(ref);
+}
+
+function verify(
+  storeRoot: string,
+  ref: EvidenceBundleRef,
+  expectedIdentity: AggregateDigest,
+): Result<VerifiedBundle, BundleFailure> {
+  const bytes = readBytes(storeRoot, ref);
+  if (!bytes.ok) return bytes;
+  const verified = verifyBytes(bytes.value, ref, expectedIdentity);
+  if (!verified.ok) return verified;
+  // One generation deep: every generation checked its own predecessor at build
+  // time, so the chain stays sound by induction (business-logic-model.md §5).
+  const predecessor = verified.value.envelope.predecessor;
+  if (!predecessorPresent(storeRoot, predecessor)) {
+    return err<BundleFailure>({
+      kind: "predecessor-broken",
+      digest: (predecessor as { kind: "bundle"; digest: BundleDigest }).digest,
+    });
+  }
+  return verified;
+}
+
+function read(storeRoot: string, ref: EvidenceBundleRef): Result<EvidenceParts, BundleFailure> {
+  const bytes = readBytes(storeRoot, ref);
+  if (!bytes.ok) return bytes;
+  const envelope = parseEnvelope(bytes.value);
+  return envelope.ok ? ok(envelope.value.evidence) : envelope;
+}
+
+interface StoreEntry {
+  readonly ref: EvidenceBundleRef;
+  readonly predecessor: PredecessorRef;
+}
+
+function scan(storeRoot: string): Result<{ entries: readonly StoreEntry[]; corrupted: readonly CorruptedEntry[] }, BundleFailure> {
+  if (!existsSync(storeRoot)) return ok({ entries: [], corrupted: [] });
+  let names: readonly string[];
+  try {
+    names = readdirSync(storeRoot).filter((name) => name.endsWith(".json")).sort();
+  } catch (cause) {
+    return ioFailure(storeRoot, cause);
+  }
+
+  const entries: StoreEntry[] = [];
+  const corrupted: CorruptedEntry[] = [];
+  for (const name of names) {
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(readFileSync(join(storeRoot, name)));
+    } catch (cause) {
+      return ioFailure(join(storeRoot, name), cause);
+    }
+    const digest = bundleDigest(bytes);
+    if (fileNameFor({ digest }) !== name) {
+      corrupted.push({ path: name, reason: "digest-filename-mismatch" });
+      continue;
+    }
+    const envelope = parseEnvelope(bytes);
+    if (!envelope.ok) {
+      const unparseable = envelope.error.kind === "missing-part" && envelope.error.parts[0] === "<envelope>";
+      corrupted.push({ path: name, reason: unparseable ? "unparseable" : "schema-invalid" });
+      continue;
+    }
+    entries.push({ ref: { digest }, predecessor: envelope.value.predecessor });
+  }
+  return ok({ entries, corrupted });
+}
+
+function list(storeRoot: string): Result<EvidenceIndex, BundleFailure> {
+  const scanned = scan(storeRoot);
+  if (!scanned.ok) return scanned;
+  return ok({ refs: scanned.value.entries.map((entry) => entry.ref), corrupted: scanned.value.corrupted });
+}
+
+function head(storeRoot: string): Result<EvidenceIndex, BundleFailure> {
+  const scanned = scan(storeRoot);
+  if (!scanned.ok) return scanned;
+  return ok({ refs: resolveHeads(scanned.value.entries), corrupted: scanned.value.corrupted });
+}
+
+export const EvidenceBundle = {
+  build,
+  verify,
+  read,
+  list,
+  head,
 } as const;
