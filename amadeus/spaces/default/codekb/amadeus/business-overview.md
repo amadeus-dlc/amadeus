@@ -9,7 +9,7 @@
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
-## phase boundary 承認の業務境界（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary 承認の業務境界（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（祖先性 exit 0、距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

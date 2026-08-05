@@ -1,5 +1,51 @@
 # コンポーネント棚卸し
 
+## PR 収束プラグインの対象コンポーネント（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### plugin 機構を構成する5ファイル
+
+| ファイル | 行数 | 責務 | 本 intent との関係 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-plugin.ts` | 1534 | CLI（compose / compose-all / install / drop / doctor / status）、`buildHostSnapshot`、`parseHostStageSeams`（`:258-270`） | host stage 認識面の未着地箇所を所有 |
+| `packages/framework/core/tools/amadeus-plugin-compose.ts` | 1574 | manifest parse（`:325-345`）、`inspectPlugin`、`planPluginComposition`、seam / fragment 台帳、drop 再構築、`SEAM_NAMES`（`:74`）、`serializeStageSeams`（`:555`） | seam 機構の正本。拡張の主戦場 |
+| `packages/framework/core/tools/amadeus-plugin-activation.ts` | 469 | spec-hash advisory。`:35` verbatim `// The formal-model-check plugin is the sole activation target of this intent.` | **formal-model-check 専用**であり汎用ではない。新規 plugin は対象外 |
+| `packages/framework/core/tools/amadeus-plugin-selection.ts` | 157 | 汎用の opt-in 解決（`resolvePluginSelection` `:68-96` が `amadeus/config.json` の `plugin.activation.names` を読む） | 汎用面。新規 plugin もここで選択される |
+| `scripts/plugin-projection.ts` | 1105 | パッケージング / harness 投影 / import-closure guard（`:880-946`） | 区間内で唯一 touch された患部（+77行/−1行、#2240） |
+
+`amadeus-plugin-activation.ts` と `amadeus-plugin-selection.ts` の責務差は重要である。前者は参照実装1本に固定された advisory 機構、後者が汎用の opt-in 解決面であり、新規 plugin が乗るのは後者だけである。
+
+### ガード述語を所有するコンポーネント
+
+| コンポーネント | 所在 | 判定 |
+| --- | --- | --- |
+| per-unit ループ前進ガード | `amadeus-orchestrate.ts` `unitCovered` `:3452-3472` | produces **全件** `existsSync`。承認状態を参照しない（fail-closed） |
+| batch 選定 | 同 `firstUncoveredBatch` `:3068-3085` | `unitCovered` を `unitKinds.get(u)` 付きで呼ぶため fail-open を継承 |
+| 未被覆 unit 解決 | 同 `nextUncoveredUnit` `:3526-3547` | — |
+| 成果物パス解決 | 同 `resolveArtifactPath` `:1897-1919`（per-unit 分岐 `:1916`） | `<record>/construction/<unit>/<owner.slug>/<name>.md` |
+| kind 別必須成果物 | `amadeus-graph.ts` `requiredArtifactsForUnit` `:842-849` | `produces_kinds` による絞り込み |
+| approve 時ガード | `amadeus-state.ts` `producesArtifactsExist` `:1683-1696`（ANY ループ `:1691-1694`） | **1件でも存在すれば通す** |
+| approve 時 kind 別ガード | 同 `kindAwareArtifactsExist` `:1653-1678` | unit を走査し最初に揃った1 unit で true。`:1677` は適用成果物ゼロで true |
+| ガードバイパス | 同 `artifactGuardDisabled` `:1529` | `AMADEUS_SKIP_ARTIFACT_GUARD === "1"` |
+| ステージ成果物検証 | 同 `verifyStageArtifacts` `:1992-2002` | — |
+
+### センサー実行面
+
+`packages/framework/core/tools/amadeus-sensor.ts` — `:29-31` のコメントが「Sensor outcomes are advisory」と契約を明示し、`:573-574` は無条件 `process.exit(0)`。`severity` の分岐利用は `:271` の表示1箇所のみ。出荷センサーは `packages/framework/core/sensors/*.md` の **8件**（`amadeus-answer-evidence` / `amadeus-linter` / `amadeus-model-completeness` / `amadeus-event-registry-drift` / `amadeus-required-sections` / `amadeus-type-check` / `amadeus-upstream-coverage` / `amadeus-self-scope-consistency`）で、**全件 `default_severity: advisory`**。
+
+### PR 収束のための再利用候補コンポーネント（3件）
+
+| コンポーネント | 所在 | 再利用可能な面 | 制約 |
+| --- | --- | --- | --- |
+| `parseMergeability` | `scripts/metrics-publication-domain.ts:256-262` | `mergeStateStatus` を mergeable / pending / conflicting へ正規化。`UNKNOWN`→pending、未知値は throw | 現在は metrics 公開ドメイン内の private 関数。canonical 化するなら移設が要る |
+| GitHub gateway | `packages/framework/core/tools/amadeus-github-gateway.ts`（1034行） | `versionArgv()` `:112` / `authArgv()` `:116` の runnable / auth readiness、`parseHttpEnvelope` `:247`、`interpretGraphqlResult` `:647` | GraphQL は `amadeus-mirror-project-gateway.ts:79` が argv 配列で渡す既存形。plugin から使うと core への依存が生じ import-closure guard と交差する |
+| Quality Repair contribution | `packages/framework/core/tools/amadeus-quality-repair.ts` `QualityRequiredOutputDescriptor` `:125-130` | 「ステージへ必須成果物を宣言する」型そのもの | **未接続**。`compileQualityContribution:242` が非空 `requiredOutputs` を拒否し、消費者は repo 全域で 0 件 |
+
+### 接続点が存在しないことの確認
+
+ステージ本文 **32件**（`packages/framework/core/amadeus-common/stages/**/*.md`）に対する `grep -rniE 'converge|reviewThread|review thread|gh pr |pull request|レビュースレッド|収束'` は **0 hit**、`grep -rn '\bPR\b'` も **0 hit**。`reviewThreads` の実装コード hit も 0（record を除く）。収束スキル（`j5ik2o-gh-pr-converge-loop` / `j5ik2o-gh-pr-resolve-conflicts` / `j5ik2o-gh-pr-review-follow-up`）はハーネス側 `~/.agents/skills/` にのみ実在し、**リポジトリ内に正本を持たない**。
+
 ## advisory 人間選択に関わるコンポーネント（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | コンポーネント | 責務 | 依存 | 健全性 |
@@ -17,7 +63,7 @@
 
 候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
 
-## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。core tools は **103 → 116**。
 

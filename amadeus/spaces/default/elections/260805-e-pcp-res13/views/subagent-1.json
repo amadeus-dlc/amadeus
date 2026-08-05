@@ -1,0 +1,31 @@
+{
+  "electionId": "E-PCP-RES13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の reverse-engineering ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/inception/reverse-engineering/memory.md)の候補4件について、memory 層へ persist する集合を選べ。実在根拠は diary、codekb/amadeus/re-scans/260805-pr-convergence-plugin.md、reverse-engineering-timestamp.md 現在節で実測確認すること。候補 c1 = xrev scan mode の適用(全引用 observed 再解決+conductor スポット再実測)。候補 c2 = codekb センサー不適用の代替検証(既知 cid の機械適用)。候補 c3 = Architect 独立再実測が scan の行番号2件を訂正し、approve 側第3の fail-open(kindAwareArtifactsExist、amadeus-state.ts:1653-1678 の produces_kinds 起因 fail-open)を追加発見 — 2段独立検証の実効実測。候補 c4 = 書込範囲外 relabel の申告受理(c3-relabel 準拠の逸脱申告)。判定観点: 既存 memory 層ノルムの機械適用にすぎない候補は新規学習ではない。新規の運用知識(既存 cid が被覆しない具体機序)だけを採用する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1〜c4 すべて既存ノルム(c1-xrev-single-issue / re-sensors-codekb-filter-mismatch / c3-codekb-sensor / enumeration 系 / c3-relabel)の機械適用であり、新規学習として persist しない。c3 の第3 fail-open は codekb と requirements 送付事項に既に記録済みで、ノルムでなく成果物が担う。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c1+c3 採用",
+      "description": "c1(xrev 適用の実演)と c3 を persist する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c3 のみ採用",
+      "description": "「approve 側 fail-open は ANY ループだけでなく kindAwareArtifactsExist の kind-aware 分岐にも独立に存在する — produces を足す設計では3経路(unitCovered :3465 / kindAware :1677 / ANY :1691)を全数確認する」を project.md へ persist する(未被覆の具体機序として)。"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "他の組合せ",
+      "description": "上記以外の採用集合が妥当な場合(留保に組合せを明記)。"
+    }
+  ]
+}
