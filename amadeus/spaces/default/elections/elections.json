@@ -958,5 +958,11 @@
     "dirName": "260805-e-tla-u5cov",
     "createdAt": "2026-08-05T16:37:03Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-TLA-BTS13",
+    "dirName": "260805-e-tla-bts13",
+    "createdAt": "2026-08-05T23:03:37Z",
+    "status": "recorded"
   }
 ]
