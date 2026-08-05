@@ -18,6 +18,7 @@
 // amadeus-lib.ts.
 
 import { isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
+import type { AdvisoryCode } from "./amadeus-plugin-activation.ts";
 
 // --- Public types ---
 
@@ -173,7 +174,8 @@ export type DirectiveAdvisory = {
 
 export type AdvisoryChoiceDirectiveAdvisory = {
   plugin: string;
-  code: "not-ready" | "changed" | "never-run";
+  // The three activation kinds plus any plugin-declared code (ADR-6 revision).
+  code: AdvisoryCode;
   message: string;
   checkpoint: string;
   target: string;

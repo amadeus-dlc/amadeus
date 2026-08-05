@@ -28,6 +28,7 @@
     "tools/run-model-check-source.ts",
     "tools/run-model-check.ts",
     "tools/run-skeleton-ci.ts",
+    "tools/tla-applicability.ts",
     "tools/tla-arm.ts",
     "tools/tla-authoring.ts",
     "tools/tla-evidence.ts",
@@ -37,8 +38,25 @@
     "tools/tla-model-receipt.ts",
     "tools/tla-module-deps.ts",
     "tools/tlc-spawn-planner.ts",
-    "tools/tlc-toolchain.ts",
-    "tools/tla-evidence.ts",
-    "tools/tla-authoring.ts"
+    "tools/tlc-toolchain.ts"
+  ],
+  "advisories": [
+    {
+      "code": "authoring-hold",
+      "checkpoints": [
+        "requirements-analysis",
+        "functional-design",
+        "build-and-test"
+      ],
+      "evaluator": {
+        "argv": [
+          "bun",
+          "plugins/formal-model-check/tools/tla-authoring.ts",
+          "advisory",
+          "hold"
+        ]
+      },
+      "formalCheck": null
+    }
   ]
 }
