@@ -379,6 +379,17 @@ describe("registration commit on the real filesystem (FR-010)", () => {
     expect(readFileSync(mapPath, "utf8")).toEqual(before);
     expect(readFileSync(staging, "utf8")).toContain("Election");
   });
+
+  test("the real publish clears its staged file and rethrows when the write cannot land", () => {
+    const { root } = workspace();
+    const missingDir = join(root, "missing-dir");
+    // The staged path lives under a directory that does not exist, so the
+    // staging write itself throws and the port must leave nothing behind.
+    const ports = createRegistrationPorts({ mapPath: join(missingDir, "model-map.json") });
+
+    expect(() => ports.publish("{}")).toThrow();
+    expect(existsSync(missingDir)).toBe(false);
+  });
 });
 
 describe("registration hands the entry to the hold evaluator (FR-010 handoff)", () => {
