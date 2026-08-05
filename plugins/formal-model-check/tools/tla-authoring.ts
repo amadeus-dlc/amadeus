@@ -53,6 +53,7 @@ const USAGE = [
   "                        [--predecessor <root|digest>] [--generated-at <iso>] [--generated-by <name>]",
   "  applicability series --subjects <id,id,...>",
   "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
+  "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
 ].join("\n");
 
 interface Emitted {
@@ -318,7 +319,7 @@ function judgeContext(flags: Record<string, string>): JudgeContext | Emitted {
   };
 }
 
-function isEmitted(value: JudgeContext | Emitted): value is Emitted {
+function isEmitted<T extends object>(value: T | Emitted): value is Emitted {
   return "exitCode" in value;
 }
 
@@ -413,6 +414,84 @@ function holdEvaluate(flags: Record<string, string>): Emitted {
     : { exitCode: 1, body: { ok: false, verdict: verdict.value } };
 }
 
+// --- The advisory evaluator wrapper (business-logic-model.md §4/§5) ---
+//
+// The checkpoint knows no subjects, so the wrapper resolves them: a workspace
+// declares the documents and stable ids under formal-verification governance,
+// and the wrapper turns those into the identity and series the hold table
+// consumes. A workspace that declares nothing governs nothing, which is a real
+// no-hold rather than a suppressed one.
+
+export const DEFAULT_SUBJECTS_PATH = "specs/tla/authoring-subjects.json";
+
+interface GovernedSubjects {
+  readonly documents: ReadonlyArray<{ readonly path: string; readonly kind: DocKind }>;
+  readonly subjects: readonly string[];
+}
+
+function parseGovernedSubjects(value: unknown): GovernedSubjects | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { documents, subjects } = value as Record<string, unknown>;
+  if (!Array.isArray(documents) || documents.length === 0) return null;
+  if (!Array.isArray(subjects) || subjects.length === 0) return null;
+  if (subjects.some((subject) => typeof subject !== "string")) return null;
+  const parsed: Array<{ path: string; kind: DocKind }> = [];
+  for (const entry of documents) {
+    if (typeof entry !== "object" || entry === null) return null;
+    const { path, kind } = entry as Record<string, unknown>;
+    if (typeof path !== "string" || (kind !== "requirements" && kind !== "decisions")) return null;
+    parsed.push({ path, kind });
+  }
+  return { documents: parsed, subjects: subjects as string[] };
+}
+
+/** The aggregate identity of the governed subjects across the declared documents. */
+function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest {
+  const entries: Array<readonly [never, never]> = [];
+  const outstanding = new Set(governed.subjects);
+  for (const document of governed.documents) {
+    const file = readTextFile(document.path);
+    if (!file.ok) return failed({ kind: "io-failure", path: document.path, detail: file.detail });
+    const sections = IdentityDigest.extractStableSections(file.text, document.kind);
+    if (!sections.ok) return failed(sections.error);
+    for (const section of sections.value) {
+      if (!outstanding.delete(section.id as string)) continue;
+      entries.push([section.id, IdentityDigest.contentDigest(section.id, section.canonicalBody)] as never);
+    }
+  }
+  // A governed id the documents do not define makes the identity undefined, so
+  // the evaluation fails closed instead of digesting a smaller set.
+  if (outstanding.size > 0) return failed({ kind: "unresolvable-id", ids: [...outstanding] });
+  return IdentityDigest.aggregateDigest(entries);
+}
+
+function advisoryHold(flags: Record<string, string>): Emitted {
+  const subjectsPath = flags["subjects-file"] ?? DEFAULT_SUBJECTS_PATH;
+  const file = readTextFile(subjectsPath);
+  if (!file.ok) {
+    return succeeded({ verdict: { kind: "no-hold" }, reason: "no governed subjects are declared" });
+  }
+  let document: unknown;
+  try {
+    document = JSON.parse(file.text) as unknown;
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail });
+  }
+  const governed = parseGovernedSubjects(document);
+  if (governed === null) {
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail: "shape is invalid" });
+  }
+  const identity = governedIdentity(governed);
+  if (typeof identity !== "string") return identity;
+
+  return holdEvaluate({
+    ...flags,
+    identity,
+    series: ApplicabilityJudge.subjectSeriesKey(governed.subjects),
+  });
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
@@ -429,6 +508,7 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
     receipt: applicabilityReceipt,
     series: applicabilitySeries,
   },
+  advisory: { hold: advisoryHold },
 };
 
 // Commands that take flags directly, with no subcommand of their own.

@@ -29,7 +29,13 @@ import {
   statSync as fsStatSync,
   writeFileSync as fsWriteFileSync,
 } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join, posix, relative, sep } from "node:path";
+import {
+  declaredAdvisoriesForPlugin,
+  type DeclarationFs,
+  type RunEvaluator,
+} from "./amadeus-advisory-declaration.ts";
 import { evaluateTlaModelReadiness } from "./amadeus-formal-verif-model-map.ts";
 
 // The formal-model-check plugin is the sole activation target of this intent.
@@ -244,7 +250,14 @@ export function activationAdvisoryLine(judgment: ActivationJudgment): string | n
 
 // The two FIRING judgment kinds, 1:1 with judgeActivation's non-silent values.
 // `current` has no code because it produces no Advisory at all.
-export type AdvisoryCode = "not-ready" | "changed" | "never-run";
+export type ActivationAdvisoryCode = "not-ready" | "changed" | "never-run";
+
+// A plugin-declared advisory carries its own code (ADR-6 revision), so the code
+// space is the three activation kinds plus any declared slug. The branded arm
+// keeps a declared code from being written where an activation kind is meant
+// without going through the declaration parser's validation.
+export type DeclaredAdvisoryCode = string & { readonly __brand: "DeclaredAdvisoryCode" };
+export type AdvisoryCode = ActivationAdvisoryCode | DeclaredAdvisoryCode;
 
 export type Advisory = {
   // The plugin the advisory is about (formal-model-check today; the type is
@@ -271,7 +284,50 @@ export function activationAdvisoriesForHost(
   hostRoot: string,
   stage: string,
   fs: ActivationFs = defaultActivationFs,
+  runEvaluator: RunEvaluator = spawnEvaluator(specRootForHost(hostRoot)),
 ): Advisory[] {
+  return [
+    ...specHashAdvisories(hostRoot, stage, fs),
+    ...declaredAdvisories(hostRoot, stage, fs, runEvaluator),
+  ];
+}
+
+// Generalization point 1 of ADR-6 (revised): every composed plugin may declare
+// the advisories it evaluates itself, so a plugin needing a checkpoint hold
+// does not have to be carved into this module a second time. The spec-hash
+// advisory above keeps its own hard-coded path unchanged — the declaration
+// route is an addition, not a replacement (BR-U2-21).
+function declaredAdvisories(
+  hostRoot: string,
+  stage: string,
+  fs: ActivationFs,
+  runEvaluator: RunEvaluator,
+): Advisory[] {
+  const projectRoot = specRootForHost(hostRoot);
+  const declarationFs: DeclarationFs = {
+    existsSync: (path) => fs.existsSync(path),
+    readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),
+  };
+  return readCompositionPlugins(hostRoot, fs).flatMap(([plugin]) =>
+    declaredAdvisoriesForPlugin(projectRoot, plugin, stage, runEvaluator, declarationFs)
+  );
+}
+
+// Evaluators are launched as an argv array with no shell in between, so nothing
+// a manifest holds can be word-split or expanded (BR-U2-19). `env` is passed
+// explicitly because Bun does not fold a mutated process.env into a child.
+function spawnEvaluator(projectRoot: string): RunEvaluator {
+  return (argv) => {
+    const result = spawnSync(argv[0] as string, [...argv.slice(1)], {
+      cwd: projectRoot,
+      env: process.env,
+      encoding: "utf-8",
+    });
+    return { status: result.status ?? 1, stdout: result.stdout ?? "" };
+  };
+}
+
+function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): Advisory[] {
   if (!formalModelCheckComposed(hostRoot, fs)) return [];
   const judgment = resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs);
   // Narrow on the judgment (not on the line being non-null) so `code` is the

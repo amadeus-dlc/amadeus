@@ -330,3 +330,50 @@ describe("hold — the expected demo of Bolt 2", () => {
     expect((body.failure as { kind: string }).kind).toBe("corrupted-evidence");
   });
 });
+
+describe("advisory hold — the declared evaluator wrapper", () => {
+  function advisoryHold(subjectsFile: string): { exitCode: number; body: Record<string, unknown> } {
+    return run([
+      "advisory", "hold",
+      "--subjects-file", subjectsFile,
+      "--store", storeRoot,
+      "--model-map", modelMapPath,
+    ]);
+  }
+
+  test("a workspace governing no subjects is a real no-hold, evaluated not suppressed", () => {
+    const { exitCode, body } = advisoryHold(join(workspace, "absent.json"));
+    expect(exitCode).toBe(0);
+    expect((body.verdict as { kind: string }).kind).toBe("no-hold");
+    expect(String(body.reason)).toContain("no governed subjects");
+  });
+
+  test("a governed subject with no evidence holds", () => {
+    writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
+    const subjects = writeJson("governed.json", {
+      documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
+      subjects: ["FR-001"],
+    });
+    const { exitCode, body } = advisoryHold(subjects);
+    expect(exitCode).toBe(1);
+    expect((body.verdict as { kind: string }).kind).toBe("hold");
+  });
+
+  test("a governed id the documents do not define fails closed", () => {
+    writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
+    const subjects = writeJson("governed-missing.json", {
+      documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
+      subjects: ["FR-001", "FR-777"],
+    });
+    const { exitCode, body } = advisoryHold(subjects);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("unresolvable-id");
+  });
+
+  test("a malformed governance declaration fails closed rather than releasing", () => {
+    const subjects = writeJson("governed-broken.json", { documents: [], subjects: [] });
+    const { exitCode, body } = advisoryHold(subjects);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
+  });
+});

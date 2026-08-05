@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   activeIntent,
   activeIntentUuid,
@@ -15,6 +15,12 @@ import {
   writeFileAtomic,
 } from "./amadeus-lib.ts";
 import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
+import {
+  declaredFormalCheckArgv,
+  isDeclaredAdvisoryCode,
+  isKnownAdvisoryCode,
+  resolveArgvTokens,
+} from "./amadeus-advisory-declaration.ts";
 import {
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
@@ -110,7 +116,8 @@ export type AdvisoryChoiceGuardResult =
 const STORE_FILE = ".amadeus-advisory-choice.json";
 const MODEL_CHECK_DIR = ".amadeus-advisory-check";
 const CHOICES = new Set<string>(ADVISORY_CHOICE_OPTIONS.map((option) => option.choice));
-const CODES = new Set<string>(["not-ready", "changed", "never-run"]);
+// The three activation kinds plus any plugin-declared slug (ADR-6 revision).
+// Validation lives in the declaration parser so both sides read one rule.
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value === value.trim();
@@ -327,7 +334,7 @@ function parseIdentity(value: unknown): ParseResult<AdvisoryIdentity> {
   for (const key of required) {
     if (!nonEmptyString(value[key])) return { ok: false, reason: `identity.${key} must be a non-empty string` };
   }
-  if (!nonEmptyString(value.code) || !CODES.has(value.code)) {
+  if (!nonEmptyString(value.code) || !isKnownAdvisoryCode(value.code)) {
     return { ok: false, reason: "identity.code is invalid" };
   }
   return { ok: true, value: value as unknown as AdvisoryIdentity };
@@ -700,6 +707,43 @@ function formalCheckRoute(
   };
 }
 
+// Generalization point 2 of ADR-6 (revised): a declared advisory's run-now
+// command comes from its own manifest, resolved through the reserved tokens.
+// A declaration with no executable side (formalCheck: null) contributes no
+// route — its release is the plugin's own evaluator saying no-hold on the next
+// `next`, never a verification this engine invents on its behalf.
+function declaredFormalCheckRoute(
+  projectDir: string,
+  activationHostRoot: string | undefined,
+  pending: PendingAdvisory,
+  attempt: number,
+): AdvisoryFormalCheckRoute | null {
+  if (activationHostRoot === undefined) return null;
+  const argv = declaredFormalCheckArgv(
+    dirname(activationHostRoot),
+    pending.identity.plugin,
+    pending.identity.code,
+  );
+  if (argv === null) return null;
+  const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
+  const resolved = resolveArgvTokens([...argv], {
+    out: output,
+    "advisory-instance": pending.identity.advisoryInstance,
+    target: pending.identity.target,
+    "spec-identity": pending.identity.specIdentity,
+  });
+  if (resolved === null) return null;
+  mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
+  return {
+    stage: "formal-model-check",
+    command: resolved.map((argument) => JSON.stringify(argument)).join(" "),
+    output_dir: output,
+    target: pending.identity.target,
+    spec_identity: pending.identity.specIdentity,
+    advisory_instance: pending.identity.advisoryInstance,
+  };
+}
+
 function resolveRunRequiredHold(
   projectDir: string,
   stage: string,
@@ -712,6 +756,14 @@ function resolveRunRequiredHold(
   for (const pending of pendingItems) {
     const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
+    if (isDeclaredAdvisoryCode(pending.identity.code)) {
+      const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
+      const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
+      if (route === null) continue;
+      directiveItems.push(directiveItem(pending));
+      formalChecks.push(route);
+      continue;
+    }
     if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
     const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
