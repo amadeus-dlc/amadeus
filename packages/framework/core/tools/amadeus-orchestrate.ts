@@ -585,12 +585,7 @@ function emitMirrorBoundaryIfNeeded(
         completionInstance: boundary.completion.instance,
       });
     } catch (cause) {
-      const refusal = `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`;
-      emit(
-        cause instanceof WorkflowCompletionNotSettledError
-          ? awaitCompletionDirective(refusal)
-          : errorDirective(refusal),
-      );
+      emit(completionRefusalDirective(cause, `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`));
       return true;
     }
   }
@@ -976,6 +971,20 @@ function errorDirective(message: string): ErrorDirective {
 // recording contract (#839).
 function awaitCompletionDirective(reason: string): AwaitCompletionDirective {
   return { kind: "await-completion", reason };
+}
+
+// Which shape a refused completion takes. A completion the authority declines
+// to settle is a wait; every other cause — malformed state, a lineage that
+// contradicts the projection — is a genuine failure that keeps the error
+// directive and its ERROR_LOGGED evidence (#839). Exported as a pure seam
+// because both call sites sit inside spawn-only orchestration.
+export function completionRefusalDirective(
+  cause: unknown,
+  message: string,
+): AwaitCompletionDirective | ErrorDirective {
+  return cause instanceof WorkflowCompletionNotSettledError
+    ? awaitCompletionDirective(message)
+    : errorDirective(message);
 }
 
 // Workspace migration is outside the Intent lifecycle. Its public-routing
