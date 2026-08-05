@@ -56,6 +56,9 @@ const ORCHESTRATE = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amade
 const BUN = process.execPath;
 const PLUGIN = "formal-model-check";
 const STAGE_LANDING = "plugins/formal-model-check/stages/formal-model-check.md";
+// The plugin ships a second stage (U5 authoring-stage-e2e): the manifest's
+// declared set is pinned whole, so both stages are named here.
+const AUTHORING_LANDING = "plugins/formal-model-check/stages/tla-authoring.md";
 
 const tempDirs: string[] = [];
 function freshDir(prefix: string): string {
@@ -141,7 +144,7 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     // 1. Discover the SHIPPED neutral bundle and compose it into the temp host.
     const descriptor = discoverPlugins(BUNDLE_ROOT).find((p) => p.name === PLUGIN);
     expect(descriptor, "formal-model-check must be discoverable in dist/plugins").toBeDefined();
-    expect(descriptor?.manifest?.stages.map((stage) => stage.path)).toEqual([STAGE_LANDING]);
+    expect(descriptor?.manifest?.stages.map((stage) => stage.path)).toEqual([STAGE_LANDING, AUTHORING_LANDING]);
 
     // The stage lands exactly where the compile's plugin walk looks.
     expect(existsSync(join(host, STAGE_LANDING))).toBe(true);
