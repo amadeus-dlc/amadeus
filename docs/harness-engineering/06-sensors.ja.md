@@ -32,10 +32,11 @@
 | `amadeus-answer-evidence.md` | ステージの `*-questions.md` | 記入済みの `[Answer]` が裁定参照(E-code)またはリーダー承認タイムスタンプを持つこと |
 | `amadeus-linter.md` | `.ts` / `.js` コード出力 | 設定されたリンター(デフォルトは ESLint)をラップする |
 | `amadeus-type-check.md` | `.ts` / `.tsx` コード出力 | 設定された型チェッカー(デフォルトは `tsc`)をラップする |
+| `amadeus-event-registry-drift.md` | Event Registry と監査ツール | 監査イベント語彙、state-machine/hooks の参照集合、正典 Event Registry 集合の間の乖離および濃度ドリフト |
 | `amadeus-model-completeness.md` | TLA モデルとその正典実装ファイル | `FormalElection` TLA モデルと選挙実装との乖離 |
 | `amadeus-self-scope-consistency.md` | Amadeus の自己スコープファイルとコンパイル済みグリッド | 自己開発専用: 5つのドッグフード用ハーネス間で4つの `self-*` スコープが一致すること |
 
-そのすべてが `matches:` グロブ(詳細は下記)でゲートされます。最初の2つのドキュメント形状チェックは成果物ツリーにスコープし(同梱マニフェストは `**/{amadeus-docs,intents}/**` を持ちます — intent ごとのレコードツリーで、移行前のプロジェクト向けにレガシーの `amadeus-docs/` アームを残しています)、2つのコード品質チェックはそれぞれの言語グロブ(`**/*.{ts,js}`、`**/*.{ts,tsx}`)に、answer-evidence チェックは questions ファイル(`**/*-questions.md`)に、モデルチェックは比較対象の spec と実装のパスにスコープします。自己スコープチェックは通常のプロジェクトでは休止し、`self-*` スコープが存在するときだけ有効になります。自分のものを記述する前に、`amadeus-required-sections.md` を最初から最後まで読んでください — 同梱の中で最も小さく、フロントマターと散文本文という全体の形を示しています。
+そのすべてが `matches:` グロブ(詳細は下記)でゲートされます。最初の2つのドキュメント形状チェックは成果物ツリーにスコープし(同梱マニフェストは `**/{amadeus-docs,intents}/**` を持ちます — intent ごとのレコードツリーで、移行前のプロジェクト向けにレガシーの `amadeus-docs/` アームを残しています)、2つのコード品質チェックはそれぞれの言語グロブ(`**/*.{ts,js}`、`**/*.{ts,tsx}`)に、answer-evidence チェックは questions ファイル(`**/*-questions.md`)に、event-registry ドリフトチェックは比較対象のレジストリと監査ツールに、モデルチェックは比較対象の spec と実装のパスにスコープします。自己スコープチェックは通常のプロジェクトでは休止し、`self-*` スコープが存在するときだけ有効になります。自分のものを記述する前に、`amadeus-required-sections.md` を最初から最後まで読んでください — 同梱の中で最も小さく、フロントマターと散文本文という全体の形を示しています。
 
 ---
 
