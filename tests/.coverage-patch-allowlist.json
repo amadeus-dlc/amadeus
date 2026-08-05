@@ -6355,10 +6355,32 @@
     "file": "plugins/formal-model-check/tools/tla-authoring.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:6601b73c10f23f39b59a60dffb571969e36788102d08258e8217b64988e2091e",
+      "fingerprint": "sha256:68c52d65b6109f416bb181a5c8b18c602ecf7f770407b0aeb81d380e9133bf61",
       "anchorLines": 1,
       "targetLines": "1"
     },
     "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
+    "selector": {
+      "function": "runOnce",
+      "fingerprint": "sha256:af98c90e918326c337f9d3ce6e9c2dbc797929e733a7ff75f78be39b9010360d",
+      "anchorLines": 41,
+      "targetLines": "1-41"
+    },
+    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the standalone real-TLC probe (tests/formal-verif/support/tla-referee-real-toolchain-probe.ts, exercised per ruling A). The pre-toolchain rows of runOnce are driven in-process by t447 via a broken mutant.",
+    "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referees.ts",
+    "selector": {
+      "function": "prepareMutation",
+      "fingerprint": "sha256:bda3a97be133821caccd913666f0a89f89ab8c03a60cc4473e3d59d92a58c6e4",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The defensive catch around the mutant write/copy only fires when writeFileSync or cpSync throws inside a directory mkdtempSync just created; the portable injections (absent path, dangling symlink) are all absorbed earlier as typed failures, and a directory-shaped module diverges between macOS (EISDIR throw) and Linux (empty read), so a deterministic cross-platform red is not constructible (bun-readfilesync-dir-platform-divergence).",
+    "expiry": "remove if the workshop gains an injectable filesystem port"
   }
 ]
