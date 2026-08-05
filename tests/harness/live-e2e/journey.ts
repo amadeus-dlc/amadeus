@@ -5,6 +5,7 @@ import { CLAUDE_SDK_PROMPT, type ClaudeSdkWorkerEvent } from "./claude-sdk.ts";
 import { CLAUDE_TUI_PROMPT } from "./claude-tui.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
+import { KIRO_TUI_PROMPT } from "./kiro-tui.ts";
 
 export interface CodexAnchorJourneyOptions {
   readonly prompt?: string;
@@ -103,11 +104,25 @@ export function createClaudeSdkJourney(timeoutMs = 90_000): LiveJourney {
   };
 }
 
-export function createClaudeTuiJourney(): LiveJourney {
+interface TuiAnchorJourneySpec {
+  readonly id: string;
+  readonly prompt: string;
+  readonly timeoutMs: number;
+  readonly evidenceKind: string;
+  readonly passedDiagnostic: string;
+  readonly failedDiagnostic: string;
+}
+
+/**
+ * Rendered-TUI adapters share one anchor contract — private session, verified
+ * file anchor, single input, bounded pane digests — so the assertion lives in
+ * one factory and per-harness journeys differ only in identity and wording.
+ */
+function createTuiAnchorJourney(spec: TuiAnchorJourneySpec): LiveJourney {
   return {
-    id: "claude-tui-anchor-v1",
-    prompt: CLAUDE_TUI_PROMPT,
-    timeoutMs: 120_000,
+    id: spec.id,
+    prompt: spec.prompt,
+    timeoutMs: spec.timeoutMs,
     retryPolicy: { maxAttempts: 1 },
     assert: (execution) => {
       const passed = execution.exitCode === 0 &&
@@ -117,11 +132,9 @@ export function createClaudeTuiJourney(): LiveJourney {
         typeof execution.structured.sessionDigest === "string";
       return {
         passed,
-        diagnostic: passed
-          ? "private TUI session, current-run file anchor, and bounded pane evidence passed"
-          : "Claude TUI anchor mismatch",
+        diagnostic: passed ? spec.passedDiagnostic : spec.failedDiagnostic,
         evidence: [{
-          kind: "claude-tui-anchor",
+          kind: spec.evidenceKind,
           value: digest(
             `${execution.exitCode}:${execution.structured?.anchorVerified}:${execution.structured?.inputCount}:${execution.structured?.paneDigest}`,
           ),
@@ -130,6 +143,28 @@ export function createClaudeTuiJourney(): LiveJourney {
       };
     },
   };
+}
+
+export function createClaudeTuiJourney(): LiveJourney {
+  return createTuiAnchorJourney({
+    id: "claude-tui-anchor-v1",
+    prompt: CLAUDE_TUI_PROMPT,
+    timeoutMs: 120_000,
+    evidenceKind: "claude-tui-anchor",
+    passedDiagnostic: "private TUI session, current-run file anchor, and bounded pane evidence passed",
+    failedDiagnostic: "Claude TUI anchor mismatch",
+  });
+}
+
+export function createKiroTuiJourney(): LiveJourney {
+  return createTuiAnchorJourney({
+    id: "kiro-tui-anchor-v1",
+    prompt: KIRO_TUI_PROMPT,
+    timeoutMs: 180_000,
+    evidenceKind: "kiro-tui-anchor",
+    passedDiagnostic: "private Kiro TUI session, current-run file anchor, and bounded pane evidence passed",
+    failedDiagnostic: "Kiro TUI anchor mismatch",
+  });
 }
 
 export function createCodexAnchorJourney(options: CodexAnchorJourneyOptions = {}): LiveJourney {

@@ -22,6 +22,7 @@ import { type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
 import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
+import { initializeScratchGit } from "./scratch.ts";
 import { collectBounded } from "./stream.ts";
 import { parseVersion, type Version, versionAtLeast } from "./version.ts";
 
@@ -150,41 +151,12 @@ export class ClaudeScratchAllocator implements ScratchAllocator {
       mkdirSync(homeDir, { recursive: true });
       mkdirSync(join(root, "tmp"), { recursive: true });
       (this.#options.family ?? createClaudeFamilyContext()).writeProjectSettings(projectDir);
-      initializeGit(projectDir, homeDir, process.env);
+      initializeScratchGit(projectDir, homeDir, process.env, CAPABILITY.environment);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
       rmSync(root, { recursive: true, force: true });
       throw error;
     }
-  }
-}
-
-function initializeGit(
-  projectDir: string,
-  homeDir: string,
-  parentEnv: Readonly<Record<string, string | undefined>>,
-): void {
-  const base = buildChildEnvironment(parentEnv, CAPABILITY.environment);
-  if (!base.ok) throw new Error(`git environment rejected ${base.error.key}`);
-  const env = {
-    ...base.value,
-    HOME: homeDir,
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_SYSTEM: "/dev/null",
-  };
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    [
-      "-c", "user.email=live@example.invalid",
-      "-c", "user.name=Amadeus Live",
-      "-c", "commit.gpgsign=false",
-      "-c", "core.hooksPath=",
-      "commit", "-qm", "install",
-    ],
-  ]) {
-    const result = spawnSync("git", args, { cwd: projectDir, encoding: "utf8", env, timeout: 30_000 });
-    if (result.status !== 0) throw new Error(`git ${args[0]} failed: ${sanitizeText(result.stderr)}`);
   }
 }
 

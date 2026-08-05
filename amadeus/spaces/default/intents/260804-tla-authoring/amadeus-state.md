@@ -10,8 +10,8 @@
 - **Harness**: codex
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
-- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-import-closure-guard
-- **Bolt Refs**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-tla-evidence-foundation
+- **Bolt Refs**: [import-closure-guard]
 - **Practices Affirmed Timestamp**:
 
 - **Merge-Held**: false
