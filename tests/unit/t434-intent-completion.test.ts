@@ -368,6 +368,22 @@ describe("receipt validation and terminal transaction", () => {
     expect((await coordinator.dispatch(committedClaim.value))).toMatchObject({ ok: true, value: { outcome: "attached" } });
     expect(nativeStarts).toBe(1);
 
+    // A no-effect reconcile on a claimed run re-authorizes exactly one more
+    // dispatch, bounded by maxDispatches.
+    const redispatch = await coordinator.planNext({ intentUuid: INTENT, runId: claimedRun.runId });
+    expect(redispatch.ok).toBe(true);
+    if (!redispatch.ok) throw new Error(redispatch.error.detail);
+    expect(redispatch.value.next.status).toBe("redispatch-authorized");
+    expect(redispatch.value.next.dispatchesAuthorized).toBe(2);
+
+    // An effect-possible reconcile cannot attest a clean retry: the run closes
+    // as incomplete instead of re-dispatching.
+    reconcileResult = { ok: true, value: { kind: "effect-possible", proofDigest: null } };
+    const incomplete = await coordinator.planNext({ intentUuid: INTENT, runId: claimedRun.runId });
+    expect(incomplete.ok).toBe(true);
+    if (!incomplete.ok) throw new Error(incomplete.error.detail);
+    expect(incomplete.value.next.status).toBe("incomplete");
+
     // A native receipt whose idempotency key does not derive from THIS claim is
     // refused — the retry seam cannot attach a foreign operation.
     forgeDispatchKey = true;
@@ -456,6 +472,18 @@ describe("receipt validation and terminal transaction", () => {
     expect(() => createMemoryAutonomyReviewService({
       intents: [completedReviewSeed(plan.value, 14)],
     })).not.toThrow();
+  });
+
+  test("a reader receipt outside the requested validation set is refused", async () => {
+    const fixture = await buildFiveHarnessEvidence();
+    const identities = fixture.validations.map((receipt) => receipt.validationEventIdentity);
+    const evaluation = fixture.evaluator.evaluate({
+      intentUuid: INTENT,
+      cohort: fixture.cohort,
+      revision: fixture.revision,
+      validationEventIdentities: identities.slice(0, identities.length - 1),
+    });
+    expect(evaluation).toMatchObject({ ok: false, error: { code: "CONFLICT", locus: "validationSet" } });
   });
 
   test("missing, duplicate, skip, forged, and revision mismatch never create completion evidence", async () => {

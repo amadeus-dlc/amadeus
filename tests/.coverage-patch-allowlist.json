@@ -6097,5 +6097,203 @@
     },
     "reason": "CLI flag-validation arm: error() exits the process, so the invalid --choice branch is spawn-only; the valid preview path is driven in-process by t435.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "authorize",
+      "fingerprint": "sha256:be90dd51a48b1a1ffd9a750aa09e5f16cd68f2ef7ef4a1901e92829486df91f1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "authorize",
+      "fingerprint": "sha256:56e20d95bf3a9902202afddae3f83587cbed1fbf54b740735fd77881f52826bd",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:6791a05eb6a5e904cee5ede99bdd96f9a9ea2b164360361b696a745862e5beec",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "bindRunCommit",
+      "fingerprint": "sha256:a14c81b40cd028cfc81722b5d418d8c885c87a3919e85e5341be97e02d2fa996",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "bindTransitionCommit",
+      "fingerprint": "sha256:d1fa8234d347e792dcc466b0183df06e8899a2a467232a8dc75bf0e6d9f54c5e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "bindDispatchClaimCommit",
+      "fingerprint": "sha256:c9697fe79467c28b9cf183ad246f7b279fc94f534977634a8b6ee422ab4c420a",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "dispatch",
+      "fingerprint": "sha256:094c5377128ba15ad0207d39c3f04a9ba1ef42ef226943003d8cbcdd1975207b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "dispatch",
+      "fingerprint": "sha256:0f9a5c15b4a16d11de4507c38c8e02295616e318b5baddcec9fe089842ef6d5e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "validate",
+      "fingerprint": "sha256:f878867aae223c1781bf9f52037fe36117d7bf201a5f0240e9ea763675e8de47",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:e8fb0340fbc6d1d1f269f873c541b7b0f83b468afee4ce2ceaddefa207bc657d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "evaluate",
+      "fingerprint": "sha256:8217a86501f9405a74df10f1a68368f1fb94852f0dde07bfb0deabfae4c3947b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "evaluate",
+      "fingerprint": "sha256:e1274a0bbe2f4424b0d938e4cb0a67883355ccadbef927f2d2bbfefdcb80165e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "planTerminalCommit",
+      "fingerprint": "sha256:0b48e4b4a14154a8410cf50df721e8f03ebd67b64fbd8ae438eec9ab2e4fb6fe",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "planTerminalCommit",
+      "fingerprint": "sha256:566d24d39e935cafeec69578adf47de3256ef9bfd2ff45f807a9297fe4686ebf",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "planTerminalCommit",
+      "fingerprint": "sha256:8facb76af6f40556cb8d26efa96af750d426bf0331c24cc0f4fcd99a5a15f4f7",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "commit",
+      "fingerprint": "sha256:36646db9409e11195dc1bd165414df268be7585a5602fa058adf181c264786df",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "awaitingLiveCapability",
+      "fingerprint": "sha256:a869ca6251e309877bcc535067710977194ac48b62cdeb5495be7117e294b1b1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "selector": {
+      "function": "parseCompletionEvidencePayload",
+      "fingerprint": "sha256:413a2c93374cc0bcdab8ebb02954865cab94e8ac359ae10a063421640003da73",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]
