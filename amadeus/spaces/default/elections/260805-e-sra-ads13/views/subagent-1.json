@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-ADS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の application-design ステージ §13 学習選定。正本は record の inception/application-design/memory.md(全文を実読)。conductor 提案は 1 件採用: 「§12a reviewer は許可された read scope 外のコードを読めないため、設計成果物の**未検証の暗黙前提**を FOLLOW-UP 止まりにするしかない。conductor はこれを受け取ったら、その前提を自分で実測し、実害が確定したものは reviewer の深刻度に関わらず iteration を消費せず conductor 主導で是正する(実測が BLOCKER 相当かを分ける)。実測結果は是正方針とともに builder へ渡し、要件側にも同じ実測を反映する」を team.md または project.md へ persist。実測起点: 本ステージで reviewer が C13 の判定順について「新規 birth 直後の state に Intent Autonomy Mode が存在しない、という暗黙前提が実測で確定されていない」を FOLLOW-UP として提起 → conductor が `packages/framework/core/tools/amadeus-utility.ts:4635` の verbatim `- **Intent Autonomy Mode**: none` を実測し、state テンプレートが birth 時点で none を書くため設計どおりだと新規 Intent への `--autonomy semi` が常に loud 停止し FR-CLI-1/FR-CLI-3 の主用途が構造的に成立しないことを確定 → 判別子を modeProvenance へ変える ADR-13 の新設で解消。他候補は不採用: 5成果物の一括起草・OQ-ADV-K の ADR 化・質問ファイル非作成・F1〜F10 の是正記録・未確定4件の申し送りはいずれも本 intent 固有の運用記録または既存 cid の適用実例。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0 件",
+      "description": "既存 cid(cid:code-generation:c1-reviewer-scope-alignment / delegated-review-analysis-with-owned-verdict / verify-before-notify 等)でカバー済み、または一般化価値がないと判断する場合。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "採用集合の変更",
+      "description": "文面修正が必要、既存 cid への追補にすべき、または他候補も採用すべき(留保に具体を記す)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "reviewer 未検証前提の conductor 実測を採用",
+      "description": "提案どおり1件を persist する。他候補は record 固定のみ。"
+    }
+  ]
+}
