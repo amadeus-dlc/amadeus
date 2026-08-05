@@ -35,17 +35,17 @@
 
 | ケース群 | 対象 | 期待 |
 | --- | --- | --- |
-| A1(t440) | 型の責務検査 | `SemiAuthority` 型に 4 つ目の責務フィールドが無い(FR-AUTH-1 (1)) |
-| A2(t441) | 第1関門判定表 8 行 | business-logic-model.md §第1関門 の表どおり(FR-LAD-1: semi+question 認可 ∧ semi+walking-skeleton human-required の同時 green) |
-| A3(t441) | 不変条件 | 不正 projection(semiPolicies ∧ mode≠semi)が replay 経由で fail-closed 拒否。落ちる実証: 不変条件除去で赤(FR-AUTH-1 (3)) |
-| A4(t442, integration) | AUTO_DECIDED 記録 | semi 裁定 1 件が `SemiAuthority.fingerprint` 由来の basisFingerprint で記録(FR-AUTH-1 (2)) |
+| A1(t451) | 型の責務検査 | `SemiAuthority` 型に 4 つ目の責務フィールドが無い(FR-AUTH-1 (1)) |
+| A2(t452) | 第1関門判定表 8 行 | business-logic-model.md §第1関門 の表どおり(FR-LAD-1: semi+question 認可 ∧ semi+walking-skeleton human-required の同時 green) |
+| A3(t452) | 不変条件 | 不正 projection(semiPolicies ∧ mode≠semi)が replay 経由で fail-closed 拒否。落ちる実証: 不変条件除去で赤(FR-AUTH-1 (3)) |
+| A4(t453, integration) | AUTO_DECIDED 記録 | semi 裁定 1 件が `SemiAuthority.fingerprint` 由来の basisFingerprint で記録(FR-AUTH-1 (2)) |
 | A5(直接呼び出し) | 梯子入口 | `authority: null` → `invalid: "authorization-required"`。落ちる実証: ガード除去で赤(FR-AUTH-2 — `decide` 経由不可、引き取り B) |
-| A6(t442) | 梯子 5 段 | confirmed-policy 不在時に norm→history→solo-election→agent-recommendation の順降下、後段 2 段が `Unreviewed:` 行へ計上(FR-LAD-4) |
-| A7(t441/t442) | 節目と効果 | walking-skeleton / phase 境界 stage-gate が `human-required`、不可逆効果が `semi-gate-effect-not-authorized`。3 点とも反転で赤(FR-LAD-5) |
-| A8(t442) | grant 不在維持 | `--mode semi` 後 `currentGrant === null`(FR-AUTH-3) |
+| A6(t453) | 梯子 5 段 | confirmed-policy 不在時に norm→history→solo-election→agent-recommendation の順降下、後段 2 段が `Unreviewed:` 行へ計上(FR-LAD-4) |
+| A7(t452/t453) | 節目と効果 | walking-skeleton / phase 境界 stage-gate が `human-required`、不可逆効果が `semi-gate-effect-not-authorized`。3 点とも反転で赤(FR-LAD-5) |
+| A8(t453) | grant 不在維持 | `--mode semi` 後 `currentGrant === null`(FR-AUTH-3) |
 | A9(t431 分割) | FR-PIN-1 | 保存ピン(walking-skeleton)維持+反転ピン(stage-gate → `semi-authority`、question → 認可)— questions D5。あわせて `tests/.coverage-patch-allowlist.json` の行ピン同期(drift 無し)を確認する — 本 Unit は U-6(横断・行ピン機械 remap、`unit-of-work.md` §未確定事項の引き取り)の対象 4 Unit の 1 つであり、自 PR で `cid:code-generation:c1-allowlist-mechanical-remap` の機械 remap+`cid:code-generation:cg-allowlist-straddle-swell` の span 検査を実施する |
-| A10(t441) | C5 ガード | 梯子経由でない question への throw 維持(FR-LAD-3) |
-| A11(t442) | FR-LAD-2(第2関門ルーティング) | semi の `question` が `createSelectedGateDecision` を経由せず `resolveAutoDecision` に到達することを、梯子段の basisKind(`confirmed-policy` / `norm` / `history` / `solo-election` / `agent-recommendation` のいずれか)の記録で確認 |
+| A10(t452) | C5 ガード | 梯子経由でない question への throw 維持(FR-LAD-3) |
+| A11(t453) | FR-LAD-2(第2関門ルーティング) | semi の `question` が `createSelectedGateDecision` を経由せず `resolveAutoDecision` に到達することを、梯子段の basisKind(`confirmed-policy` / `norm` / `history` / `solo-election` / `agent-recommendation` のいずれか)の記録で確認 |
 
 落ちる実証はすべて「注入 → 赤の実測 → 復元 → 残渣ゼロ確認」の不可分 1 セット(NFR-1、`cid:code-generation:falling-proof-injection-one-set`)。
 

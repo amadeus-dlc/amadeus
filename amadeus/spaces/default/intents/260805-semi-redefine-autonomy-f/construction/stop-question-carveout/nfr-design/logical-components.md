@@ -17,7 +17,7 @@
 
 - **障害ドメイン**: stop hook プロセス(毎ターン起動・読み取り判定)1 つ。engine・監査 journal と書込面を共有しない(述語は読むだけ)。
 - **blast radius**(方向別に層別): **誤って carve-out を与えない側**(false 側の欠陥)は従来挙動への縮退 — stop が許可され人間が介入する(安全・現行と同一)。**誤って carve-out を与える側**(true 側の欠陥)の最大影響は「質問 pending の走行継続」だが、その質問の裁定自体は core Unit の認可基体+梯子が別プロセス境界で検査するため、carve-out 単独では無認可の裁定を作れない。cap(`AUTONOMOUS_BLOCK_CAP = 8`)が暴走の上限として独立に残る(FR-STOP-2 不変)。
-- **隔離戦略**: 新述語は export して t445(unit)で in-process 駆動(spawn 盲点回避 — FD D6)。実 FS(projection)を使うケースは t121 拡張(integration 層)。
+- **隔離戦略**: 新述語は export して t456(unit)で in-process 駆動(spawn 盲点回避 — FD D6)。実 FS(projection)を使うケースは t121 拡張(integration 層)。
 
 ## 共有資源
 
@@ -33,7 +33,7 @@ circuit breaker / cache / pooling / scaling / failover は**すべて非適用**
 ## 適用 NFR との対応(検証手段付き)
 
 - **NFR-1**(FR-STOP-1 維持側の面): security-design.md Q2/Q3 の落ちる実証(無条件共有化 → 赤)。
-- **NFR-4**: t445(unit)・t121 拡張(integration)を Red 先行で追加。FR-PIN-2 の反転は C11 変更と同一 PR。
+- **NFR-4**: t456(unit)・t121 拡張(integration)を Red 先行で追加。FR-PIN-2 の反転は C11 変更と同一 PR。
 - **NFR-5**: 編集正本 1 ファイル(+テスト 2 ファイル)、`bun run build` 後の追跡ファイル不変。
 - **NFR-7**: PR CI ブロッキング集合の全通過(allowlist remap は `cid:code-generation:c1-allowlist-mechanical-remap` の手順に従う)。
 - **NFR-2 / NFR-3 / NFR-6**: 非適用(security-design.md の分類表 — 本 Unit は読み取り述語のみで、裁定生成・parser・provenance 受理を持たない)。

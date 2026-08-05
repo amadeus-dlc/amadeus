@@ -47,9 +47,9 @@ function isQuestionCarveoutIntent(stateContent, resolvedProjectDir?): boolean
 
 semi の carve-out が「質問で止まらない」を実現するのは、core Unit の梯子が質問を裁定できることと組で初めて意味を持つ(`unit-of-work.md` §依存の理由 — yaml edge の stop → core は意味論的依存)。
 
-## 検証シーケンス(t445 + FR-PIN-2)
+## 検証シーケンス(t456 + FR-PIN-2)
 
-- **t445(unit)**: 新述語の判定表全行 — semi(human-command)→ true / semi(system-default)→ false / full(grant active)→ true / full(grant 不在)→ false / none → false / 不正値・catch → false。in-process 駆動(述語を export — D6)。
+- **t456(unit)**: 新述語の判定表全行 — semi(human-command)→ true / semi(system-default)→ false / full(grant active)→ true / full(grant 不在)→ false / none → false / 不正値・catch → false。in-process 駆動(述語を export — D6)。
 - **FR-STOP-1 (1)(integration、t121 拡張)**: semi の状態で `:422` 経路が carve-out を得る(質問 pending で stop しない)。
 - **FR-STOP-1 (2)(integration)**: semi の状態で `:457` / `:716` 経路が carve-out を得ない(従来どおり stop)。**落ちる実証**: 述語を無条件共有(`:457` / `:716` も carve-out 述語)へ戻すと赤 — 注入 → 赤 → 復元 → 残渣ゼロの 1 セット(NFR-1)。
 - **FR-PIN-2(t121:1138-1150 反転)**: D4 のとおり「semi + blank question ALLOWS」ピンを BLOCK(走行継続)期待へ反転し、テスト名を新意味論へ改訂。同一 PR で C11 変更と不可分。

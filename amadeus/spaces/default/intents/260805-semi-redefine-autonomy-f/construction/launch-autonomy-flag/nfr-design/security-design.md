@@ -10,20 +10,20 @@
 
 | # | 脅威 | 封鎖機構(FD 判定表) | 検証 |
 | --- | --- | --- | --- |
-| S1 | 起動フラグによる無儀式の `full` 昇格 | 判定 7: `full` かつ grant 不在 → `error` + preview 表示で fail-closed 停止(FR-CLI-4。FR-GRT-006 を緩めない) | t447 落ちる実証: fail-closed 反転 → 赤 |
-| S2 | `--autonomy none` による grant の側面効果的取消 | 判定 6: `none` かつ grant present → `error`(明示 revoke = `amadeus-bolt set-autonomy --mode none` を案内)。判定 5・6 が判定 8 より先にあることで `prepareNonFullCommand:385-390` の `revoke-full` 経路が起動フラグから構造的に到達不能(FD の判定順序根拠) | t447 落ちる実証: grant 判定の無条件 `"absent"` 化 → 赤 |
-| S3 | 人間が決めた mode の無言上書き | 判定 5: `declared === true`(`modeProvenance.kind === "human-command"` — ADR-13)かつ異値 → `error`。同値は no-op(監査イベントを増やさない) | t447: FR-CLI-3 (1)(2)(3) のケース+`declared` 無条件 `true` 化 → 赤 |
-| S4 | HUMAN_TURN 不在での mode 適用(provenance 偽装) | 判定 8: 適用は既存 `applyProductionAutonomyMode` へ委譲し、その `PROVENANCE_REQUIRED`(`amadeus-intent-autonomy-production.ts:409-411` — requirements.md FR-CLI-5 の verbatim)を relay。**フラグ自体を provenance とみなさない**。第 2 の書込経路を作らない(ADR-8)ため、provenance 検査の迂回路が構造的に存在しない | t447: HUMAN_TURN 不在ケース。NFR-6 の「落ちる実証」対象 |
+| S1 | 起動フラグによる無儀式の `full` 昇格 | 判定 7: `full` かつ grant 不在 → `error` + preview 表示で fail-closed 停止(FR-CLI-4。FR-GRT-006 を緩めない) | t450 落ちる実証: fail-closed 反転 → 赤 |
+| S2 | `--autonomy none` による grant の側面効果的取消 | 判定 6: `none` かつ grant present → `error`(明示 revoke = `amadeus-bolt set-autonomy --mode none` を案内)。判定 5・6 が判定 8 より先にあることで `prepareNonFullCommand:385-390` の `revoke-full` 経路が起動フラグから構造的に到達不能(FD の判定順序根拠) | t450 落ちる実証: grant 判定の無条件 `"absent"` 化 → 赤 |
+| S3 | 人間が決めた mode の無言上書き | 判定 5: `declared === true`(`modeProvenance.kind === "human-command"` — ADR-13)かつ異値 → `error`。同値は no-op(監査イベントを増やさない) | t450: FR-CLI-3 (1)(2)(3) のケース+`declared` 無条件 `true` 化 → 赤 |
+| S4 | HUMAN_TURN 不在での mode 適用(provenance 偽装) | 判定 8: 適用は既存 `applyProductionAutonomyMode` へ委譲し、その `PROVENANCE_REQUIRED`(`amadeus-intent-autonomy-production.ts:409-411` — requirements.md FR-CLI-5 の verbatim)を relay。**フラグ自体を provenance とみなさない**。第 2 の書込経路を作らない(ADR-8)ため、provenance 検査の迂回路が構造的に存在しない | t450: HUMAN_TURN 不在ケース。NFR-6 の「落ちる実証」対象 |
 
 ## 入力検証(loud、fail-closed)
 
 - **値域**: `none` / `semi` / `full` の 3 値全一致のみ受理(判定 2)。値なしは `autonomyMissingValue`(判定 1)。いずれも**loud エラー停止** — 対話プロンプトへのフォールバックや無音破棄をしない(FR-CLI-2)。parse 段(C12)は値を運ぶだけで検査せず、検査は C13 が一元所有(判定の単一所在)。
-- **値の consume**: `--autonomy` の値は必ず consume し、intent 自由文への漏洩(`flags.intent` 混入)を防ぐ(FR-CLI-1 — t446 で 3 値とも assert)。
+- **値の consume**: `--autonomy` の値は必ず consume し、intent 自由文への漏洩(`flags.intent` 混入)を防ぐ(FR-CLI-1 — t449 で 3 値とも assert)。
 - **読取失敗**: projection `unreadable` → 判定 3 で拒否側へ縮退(ADR-12)。近傍様式 `catch → false` はこの文脈では**緩和側へ反転する**ため意図的に採らない(FD アルゴリズム 3 の意味論適合照合の転記 — `cid:application-design:citation-semantics-check`)。
 
 ## 監査・秘密情報
 
-- 本 Unit 自身は監査イベントを**生成しない**(同値 no-op は増やさない、適用は既存経路が監査を書く)。`READ_ONLY_FLAGS` へ `--autonomy` を追加しない(autonomy は監査済みの状態変更 — FR-CLI-5 後半、検証は t447 H9 の in-process assert)。
+- 本 Unit 自身は監査イベントを**生成しない**(同値 no-op は増やさない、適用は既存経路が監査を書く)。`READ_ONLY_FLAGS` へ `--autonomy` を追加しない(autonomy は監査済みの状態変更 — FR-CLI-5 後半、検証は t450 H9 の in-process assert)。
 - 秘密情報・暗号: 該当なし(1 行理由)— argv の mode 名 3 値と state/projection の公開状態値のみを扱い、credential・token を読まない。
 
 ## 適用 NFR との対応
@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | NFR-1(fail-closed 実証) | **適用(FR-CLI-4 の面に限る — questions D1)** | S1 の落ちる実証(注入 → 赤 → 復元 → 残渣ゼロの 1 セット)を code-generation 成果物に記録 |
 | NFR-3(parser 実行コスト) | **適用** | C12 は既存 argv 一巡 ladder への 2 分岐追加のみ・FS I/O ゼロ。検証: parse 関数本体 grep で `readFileSync|existsSync` 0 件 |
-| NFR-4(TDD) | **適用** | t446/t447 を失敗テスト先行で追加。実 FS(state・projection)を使うケースは integration 層 |
+| NFR-4(TDD) | **適用** | t449/t450 を失敗テスト先行で追加。実 FS(state・projection)を使うケースは integration 層 |
 | NFR-5(ドリフトゼロ) | **適用** | 編集正本は `packages/framework/core/tools/amadeus-orchestrate.ts` のみ。`bun run build` 後の追跡ファイル不変 |
 | NFR-6(provenance 偽装不能) | **適用(`--autonomy` の面)** | S4。落ちる実証込み(requirements.md NFR-6 合否基準 (1)) |
 | NFR-7(ゲート集合) | **適用** | PR CI のブロッキング集合を全通過 |
@@ -42,7 +42,7 @@ NFR 全 7 件の分類の閉包: **適用 6 件(NFR-1/3/4/5/6/7 — うち 1 と
 
 ## セキュリティ観点の検証手段
 
-- S1〜S4 の各封鎖は t447 の分岐網羅+落ちる実証 3 点(FD 検証シーケンスの確定分)で固定する。
+- S1〜S4 の各封鎖は t450 の分岐網羅+落ちる実証 3 点(FD 検証シーケンスの確定分)で固定する。
 - 「第 2 の書込経路を作らない」は実装 PR レビューで C13 diff への grep(`writeAutonomyProjection|appendAudit` 等の直接書込 API)0 hit で機械確認する(委譲先 `applyProductionAutonomyMode` の 1 呼び出しのみが許される)。
 
 ## Review — Iteration 1

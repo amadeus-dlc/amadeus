@@ -23,11 +23,11 @@
 - 解決経路の出口は **2 つだけ**: `decided ∧ run-now` → resolved / **それ以外すべて**(mode=none・失効 grant・scope 不一致・`parked`/`conflict`/`aborted`・`defer-with-risk` 選択・翻訳不能)→ `await-advisory-choice`(人間経路)。分岐が 2 つしかないことが構造的保証(FD 処理シーケンスの逐語)。
 - **認可不成立時に第2経路へ落ちない**: 裁定は既存 `commitProductionQuestionDecision` へ委譲し、認可は semi-authorization-core の基体(第1関門 → 梯子)を経由する — 本 Unit は認可判定を複製しない。
 - schema 1 store は `{ok:false}` → 既存分岐で **fail-closed hold**(読替コードを書かない — ADR-9)。
-- 落ちる実証(NFR-1 の FR-ADV-2 面): 認可判定の無条件 true 化で t450 の (1)(2) が赤(注入 → 赤 → 復元 → 残渣ゼロの 1 セット)。
+- 落ちる実証(NFR-1 の FR-ADV-2 面): 認可判定の無条件 true 化で t458 の (1)(2) が赤(注入 → 赤 → 復元 → 残渣ゼロの 1 セット)。
 
 ## 強制実行の封鎖(FR-ADV-4)
 
-- `run_required: true` の advisory は `optionIds = ["run-now"]` — **`defer-with-risk` が選択肢空間に存在しない**(主機構)。effect registry の `defer-with-risk → quality-waiver` かつ `quality-waiver ∈ PROHIBITED_EFFECTS` が従機構(二重防衛 — 独立に落ちる実証を持つ: optionIds 分岐の無条件 2 値化で t449 赤 / PROHIBITED_EFFECTS からの除去で t451 赤)。
+- `run_required: true` の advisory は `optionIds = ["run-now"]` — **`defer-with-risk` が選択肢空間に存在しない**(主機構)。effect registry の `defer-with-risk → quality-waiver` かつ `quality-waiver ∈ PROHIBITED_EFFECTS` が従機構(二重防衛 — 独立に落ちる実証を持つ: optionIds 分岐の無条件 2 値化で t457 赤 / PROHIBITED_EFFECTS からの除去で t459 赤)。
 - 人間経路での `defer-with-risk` の可否は本 intent で変更しない(requirements.md FR-ADV-4)。
 
 ## 記述面の射程(FR-ADV-5)
@@ -44,9 +44,9 @@
 
 | NFR | 分類 | 本設計での充足 |
 | --- | --- | --- |
-| NFR-1(fail-closed 実証) | **適用(FR-ADV-2 の面 — questions D1)** | 上節の落ちる実証(t450)を code-generation 成果物に記録 |
+| NFR-1(fail-closed 実証) | **適用(FR-ADV-2 の面 — questions D1)** | 上節の落ちる実証(t458)を code-generation 成果物に記録 |
 | NFR-2(監査追跡性) | **適用(advisory 面)** | AUTO_DECIDED 記録は既存経路へ委譲(新経路を作らないことが追跡性の保存) |
-| NFR-4(TDD) | **適用** | t449/t451(unit)・t450(integration — 実 FS store/journal)を失敗テスト先行で追加 |
+| NFR-4(TDD) | **適用** | t457/t459(unit)・t458(integration — 実 FS store/journal)を失敗テスト先行で追加 |
 | NFR-5(ドリフトゼロ) | **適用** | 編集正本は `packages/framework/core/tools/` の advisory-choice / orchestrate(guard 呼び出し部)のみ。`bun run build` 後の追跡ファイル不変 |
 | NFR-6(provenance 偽装不能) | **適用(advisory 第2 receipt の面 — questions D1)** | 受理境界の等価強度(上表)+落ちる実証(捏造 provenance の拒否) |
 | NFR-7(ゲート集合) | **適用** | PR CI のブロッキング集合を全通過 |
@@ -56,8 +56,8 @@ NFR 全 7 件の分類の閉包: **適用 6 件(NFR-1/2/4/5/6/7 — うち 1 は
 
 ## セキュリティ観点の検証手段
 
-- 受理 3 点の等価強度は t451(auto-decision 側 3 点+provenance 跨ぎ二重 receipt 拒否)で固定。
-- 2 分岐構造・schema fail-closed は t450 で固定。強制実行は t449/t451 の独立 2 実証。
+- 受理 3 点の等価強度は t459(auto-decision 側 3 点+provenance 跨ぎ二重 receipt 拒否)で固定。
+- 2 分岐構造・schema fail-closed は t458 で固定。強制実行は t457/t459 の独立 2 実証。
 - 「並存実装なし」(FR-ADV-3)は実装 PR レビューで受理関数の複製・分岐コピー不在の diff 検分+旧関数名 `recordProtectedAdvisoryChoice` の残存 grep 0 hit(置換の機械確認)で行う。
 
 ## Review — Iteration 1

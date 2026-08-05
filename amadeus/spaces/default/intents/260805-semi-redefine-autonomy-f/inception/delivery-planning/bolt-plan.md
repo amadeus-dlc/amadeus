@@ -12,7 +12,7 @@
 
 - 本文書の実測値は **worktree HEAD `5ca9b33e5d313a040f8035709f2ccc22fdcc0cb9`**(`git rev-parse HEAD` の出力からの転記)による(`cid:reverse-engineering:measurement-ref-in-artifacts`)。
 - 上流 3 成果物の測定 ref は `d5ca7b4c1100ae4bf28eb7810c1f88fb20b8545a` である。両断面の同値性は `git diff --stat d5ca7b4c1 HEAD -- packages/framework/core/ tests/ docs/` が**空出力**(区間 4 commits、患部面無変更 — `git rev-list --count` → `4`)であることで確認した。したがって上流の file:line 引用と行数は本文書でもそのまま成立する(`cid:requirements-analysis:historical-section-cite-check-at-observed`)。
-- 既存テスト番号の最大値は **t439**(`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sed 's/t//' | sort -n | tail -1` → `439`)。`unit-of-work.md` §テスト番号の予約 の t440〜t452 は HEAD でも衝突しない。
+- 既存テスト番号の最大値は **t439**(`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sed 's/t//' | sort -n | tail -1` → `439`)。`unit-of-work.md` §テスト番号の予約 の t451〜t452 は HEAD でも衝突しない。
 - 行数はすべて `unit-of-work.md` §規模の配分 からの転記であり、本ステージで新たな見積りを起こしていない(`cid:requirements-analysis:ledger-count-mechanical-recalc`)。
 
 ---
@@ -29,12 +29,12 @@
 
 | # | Bolt(= Unit) | 実行形態 | ゲート | 規模(コード / 非コード) | 予約テスト番号 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `semi-authorization-core` | **単独**(他 Bolt を起動しない) | **walking-skeleton ゲート**(人間承認・必須) | 237 / テスト 7 行 | t440 / t441 / t442 |
-| 2 | `semi-policy-carrier` | 波 A(並行) | 通常の §12a レビュー + PR 承認 | 103 / — | t443 / t444 |
-| 3 | `stop-question-carveout` | 波 A(並行) | 同上 | 28 / テスト 13 行 | t445 |
-| 4 | `launch-autonomy-flag` | 波 A(並行) | 同上 | 99 / — | t446 / t447 |
+| 1 | `semi-authorization-core` | **単独**(他 Bolt を起動しない) | **walking-skeleton ゲート**(人間承認・必須) | 237 / テスト 7 行 | t451 / t452 / t453 |
+| 2 | `semi-policy-carrier` | 波 A(並行) | 通常の §12a レビュー + PR 承認 | 103 / — | t454 / t455 |
+| 3 | `stop-question-carveout` | 波 A(並行) | 同上 | 28 / テスト 13 行 | t456 |
+| 4 | `launch-autonomy-flag` | 波 A(並行) | 同上 | 99 / — | t449 / t450 |
 | 5 | `autonomy-statusline` | 波 A(並行) | 同上 | 20 / — | t448 |
-| 6 | `advisory-auto-resolution` | 波 B(並行) | 同上 | 175 / — | t449 / t450 / t451 |
+| 6 | `advisory-auto-resolution` | 波 B(並行) | 同上 | 175 / — | t457 / t458 / t459 |
 | 7 | `semi-docs-revision` | 波 B(並行) | 同上 | — / `stage-protocol.md` 9 行 + `docs/` 22 ファイル | t452 |
 
 コード面合計 237 + 103 + 28 + 99 + 20 + 175 = **662**(`unit-of-work.md` §規模の配分 の合計と一致)。非コード 7 + 13 + 9 = **29**。

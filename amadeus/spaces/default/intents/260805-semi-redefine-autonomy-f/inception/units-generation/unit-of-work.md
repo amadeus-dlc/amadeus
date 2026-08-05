@@ -12,7 +12,7 @@
 
 - 本文書の件数・行数はすべて **worktree HEAD `d5ca7b4c1100ae4bf28eb7810c1f88fb20b8545a`**(`git rev-parse HEAD` の出力からの転記)での実測または上流成果物からの転記である(`cid:reverse-engineering:measurement-ref-in-artifacts` / `cid:requirements-analysis:numbers-from-command-output-only`)。
 - FR 31 件 / NFR 7 件は `grep -oE '\*\*FR-[A-Z]+-[0-9]+\(' requirements.md | sort -u | wc -l` → `31` / 同形の NFR 版 → `7` の出力からの転記。ADR 13 件は `grep -cE '^## ADR-' decisions.md` → `13`。コンポーネント 18 件は `grep -oE '^\| C[0-9]+ \|' components.md | wc -l` → `18`。未確定事項 7 件は `grep -cE '^\| U-[0-9] \|' decisions.md` → `7`。
-- 既存テスト番号の最大値は **t439**(`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sed 's/t//' | sort -n | tail -1` → `439`)。本 intent の新規テストは **t440 以降**を使う。
+- 既存テスト番号の最大値は **t439**(`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sed 's/t//' | sort -n | tail -1` → `439`)。本 intent の新規テストは **t451 以降**を使う。
 - 各 Unit の推定行数は `components.md` §コンポーネント一覧の推定行数列(新規 295 行 + 改訂 367 行 = コード面 662 行)と C18 の非コード 29 行からの**機械配分**であり、新たな見積りを起こしていない(`cid:requirements-analysis:ledger-count-mechanical-recalc`)。配分の内訳と合計の一致は §規模の配分 に示す。
 
 ---
@@ -185,16 +185,16 @@
 
 ## テスト番号の予約
 
-`cid:code-generation:swarm-test-number-reservation`(並列ディスパッチ時の同時採番による重複回避)に従い、Unit ごとに新規テスト番号を事前予約する。現最大は **t439**(§測定 ref と数値の出所)であり、本 intent は **t440 以降**を使う。
+`cid:code-generation:swarm-test-number-reservation`(並列ディスパッチ時の同時採番による重複回避)に従い、Unit ごとに新規テスト番号を事前予約する。現最大は **t439**(§測定 ref と数値の出所)であり、本 intent は **t451 以降**を使う。
 
 | Unit | 予約する番号 |
 | --- | --- |
-| `semi-authorization-core` | t440 / t441 / t442 |
-| `semi-policy-carrier` | t443 / t444 |
-| `stop-question-carveout` | t445 |
-| `launch-autonomy-flag` | t446 / t447 |
+| `semi-authorization-core` | t451 / t452 / t453 |
+| `semi-policy-carrier` | t454 / t455 |
+| `stop-question-carveout` | t456 |
+| `launch-autonomy-flag` | t449 / t450 |
 | `autonomy-statusline` | t448 |
-| `advisory-auto-resolution` | t449 / t450 / t451 |
+| `advisory-auto-resolution` | t457 / t458 / t459 |
 | `semi-docs-revision` | t452 |
 
 既存ファイル(`t431` / `t121` / `t147`)は**その場で改訂**し、番号を振り直さない。実 FS を触るテストは integration 層へ置く(`cid:code-generation:fs-tests-integration-first`、NFR-4 合否基準)。予約番号は上限であって下限ではない — 使わなかった番号は次 intent へ解放する。着手直前に base 前進が新規 tNNN を持ち込んでいないかを固定 base SHA の `tests/` 実測で再確認する(`cid:code-generation:c1-tnnn-collision-on-regrounding`)。
@@ -246,7 +246,7 @@
 - **Iteration:** 1
 - **Scope decision:** none
 
-7 Unit は C1〜C18 を過不足なく分割し(C8 のみ読み/書きで意図的に分割、申告済み)、FR 31 / NFR 7 の割当に孤立も二重もなく、行数配分 662 は application-design の機械合計と一致する。yaml edge block は様式・kebab-case・宣言済み名参照・非循環(Kahn 机上トレースを独立に再確認)を満たし、テスト番号 t440〜t452 に重複はなく、未確定 11 件すべてに引き取り Unit がある。再現可能な失敗・契約違反・安全性欠陥は検出されなかった。
+7 Unit は C1〜C18 を過不足なく分割し(C8 のみ読み/書きで意図的に分割、申告済み)、FR 31 / NFR 7 の割当に孤立も二重もなく、行数配分 662 は application-design の機械合計と一致する。yaml edge block は様式・kebab-case・宣言済み名参照・非循環(Kahn 机上トレースを独立に再確認)を満たし、テスト番号 t451〜t452 に重複はなく、未確定 11 件すべてに引き取り Unit がある。再現可能な失敗・契約違反・安全性欠陥は検出されなかった。
 
 ### Findings
 

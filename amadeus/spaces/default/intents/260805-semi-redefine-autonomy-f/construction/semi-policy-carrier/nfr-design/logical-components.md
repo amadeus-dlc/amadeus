@@ -18,7 +18,7 @@
 
 - **障害ドメイン**: engine プロセス 1 つ(単発 CLI 実行)。
 - **blast radius**(機構別に層別): **LC-1 欠陥**の最大影響は不正組み合わせの通過だが、下流 `prepareNonFullCommand` は policies を受けても mode none では `after.semiPolicies` を設定しない(C8 表 — 第 2 の防衛)。**LC-2 欠陥**は digest 照合の偽陰性(すり替え通過)が最悪だが、方針が効くのは semi の梯子 0 段目のみで、節目の人間裁定(FR-LAD-5 — core Unit の判定表)は方針で迂回できない。**LC-3 欠陥**は表示数の誤りに閉じ、認可へ波及しない。
-- **隔離戦略**: digest・書き側規則は純関数部として t443(unit)で in-process 駆動。実 FS・CLI spawn を跨ぐ検証は t444(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
+- **隔離戦略**: digest・書き側規則は純関数部として t454(unit)で in-process 駆動。実 FS・CLI spawn を跨ぐ検証は t455(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
 
 ## 共有資源
 
@@ -33,9 +33,9 @@ circuit breaker / cache / pooling / scaling / failover は**すべて非適用**
 
 ## 適用 NFR との対応(検証手段付き)
 
-- **NFR-1**(FR-POL-3 の面): security-design.md P3 の落ちる実証(t444)。
-- **NFR-2**(replay 復元の面): t444 の replay 等値 assert(拡張 `set-mode` の復元)。
-- **NFR-4**: t443(unit)・t444(integration)を Red 先行で追加。
+- **NFR-1**(FR-POL-3 の面): security-design.md P3 の落ちる実証(t455)。
+- **NFR-2**(replay 復元の面): t455 の replay 等値 assert(拡張 `set-mode` の復元)。
+- **NFR-4**: t454(unit)・t455(integration)を Red 先行で追加。
 - **NFR-5**: 編集正本 4 ファイル(LC 台帳の所在列)のみ、`bun run build` 後の追跡ファイル不変。
 - **NFR-7**: PR CI ブロッキング集合の全通過。
 - **NFR-3 / NFR-6**: 非適用(security-design.md の分類表 — 所有 Unit・所有経路が異なる)。

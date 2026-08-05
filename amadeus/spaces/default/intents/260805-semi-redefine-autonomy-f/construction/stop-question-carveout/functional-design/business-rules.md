@@ -27,7 +27,7 @@
 
 | ケース群 | 対象 | 期待 |
 | --- | --- | --- |
-| S1(t445, unit) | 新述語判定表 6 行 | business-logic-model.md §検証 の 6 ケース |
+| S1(t456, unit) | 新述語判定表 6 行 | business-logic-model.md §検証 の 6 ケース |
 | S2(t121 拡張, integration) | semi + 質問 pending + `:422` | stop しない(carve-out — FR-STOP-1 (1)) |
 | S3(integration) | semi + `:457` / `:716` | stop する(carve-out なし — FR-STOP-1 (2)) |
 | S4(落ちる実証) | 述語の無条件共有化 | S3 が赤(注入 → 赤 → 復元 → 残渣ゼロ) |

@@ -33,12 +33,12 @@
 
 | Bolt | Unit | 複雑度 | 実行波 | builder の書込スコープ(正本) | 併走する Bolt |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `semi-authorization-core` | L | 単独 | `core/tools/amadeus-intent-autonomy.ts` / `-runtime.ts` / `-production.ts`、`tests/unit/t431-*`、`tests/.coverage-patch-allowlist.json`、新規 t440〜t442 | なし(walking skeleton) |
-| 2 | `semi-policy-carrier` | M | 波 A | `core/tools/amadeus-intent-autonomy.ts` / `-runtime.ts` / `-production.ts`、`core/tools/amadeus-bolt.ts`、`core/tools/amadeus-utility.ts`、新規 t443 / t444 | 3 / 4 / 5 |
-| 3 | `stop-question-carveout` | S | 波 A | `core/hooks/amadeus-stop.ts`、`tests/integration/t121-*`、`tests/unit/t147-*`(コメント)、allowlist、新規 t445 | 2 / 4 / 5 |
-| 4 | `launch-autonomy-flag` | M | 波 A | `core/tools/amadeus-orchestrate.ts`(`:1044-1074` + `handleNext`)、allowlist、新規 t446 / t447 | 2 / 3 / 5 |
+| 1 | `semi-authorization-core` | L | 単独 | `core/tools/amadeus-intent-autonomy.ts` / `-runtime.ts` / `-production.ts`、`tests/unit/t431-*`、`tests/.coverage-patch-allowlist.json`、新規 t451〜t453 | なし(walking skeleton) |
+| 2 | `semi-policy-carrier` | M | 波 A | `core/tools/amadeus-intent-autonomy.ts` / `-runtime.ts` / `-production.ts`、`core/tools/amadeus-bolt.ts`、`core/tools/amadeus-utility.ts`、新規 t454 / t455 | 3 / 4 / 5 |
+| 3 | `stop-question-carveout` | S | 波 A | `core/hooks/amadeus-stop.ts`、`tests/integration/t121-*`、`tests/unit/t147-*`(コメント)、allowlist、新規 t456 | 2 / 4 / 5 |
+| 4 | `launch-autonomy-flag` | M | 波 A | `core/tools/amadeus-orchestrate.ts`(`:1044-1074` + `handleNext`)、allowlist、新規 t449 / t450 | 2 / 3 / 5 |
 | 5 | `autonomy-statusline` | S | 波 A | `core/hooks/amadeus-statusline.ts`、新規 t448 | 2 / 3 / 4 |
-| 6 | `advisory-auto-resolution` | L | 波 B | `core/tools/amadeus-advisory-choice.ts`、`core/tools/amadeus-orchestrate.ts`(`:781-800`)、allowlist、新規 t449〜t451 | 7 |
+| 6 | `advisory-auto-resolution` | L | 波 B | `core/tools/amadeus-advisory-choice.ts`、`core/tools/amadeus-orchestrate.ts`(`:781-800`)、allowlist、新規 t457〜t459 | 7 |
 | 7 | `semi-docs-revision` | M | 波 B | `docs/`(22 ファイル)、`core/amadeus-common/protocols/stage-protocol.md`、新規 t452 | 6 |
 
 **書込スコープの非交差**: 波 A の 4 Bolt が触るファイル集合は互いに素である(`unit-of-work-dependency.md` §並行開発の機会 の「触るファイルは互いに素」)。唯一の例外は共有台帳 `tests/.coverage-patch-allowlist.json` であり、Bolt 3 / 4 が同一波で触る — 挿入位置を分散し、後にマージされる側が base 前進後に remap をやり直す。波 B の 2 Bolt(コード面 / docs 面)は完全に非交差である。

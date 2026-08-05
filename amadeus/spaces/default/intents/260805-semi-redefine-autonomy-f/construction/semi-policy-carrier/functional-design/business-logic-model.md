@@ -56,10 +56,10 @@ amadeus-utility --status → policyCount: grant?.policies.length ?? semiPolicies
 | 4 | `after.semiPolicies` | `planHumanAutonomyCommand`(C8 書き側) | projection → 読み手 `semiPoliciesOf`(core Unit)→ 梯子 0 段目 |
 | 5 | `policyCount` | C15 供給式 | `--status` の `Policies:` 行(FR-DISP-2) |
 
-## 検証シーケンス(t443 / t444)
+## 検証シーケンス(t454 / t455)
 
-- **t443(unit)**: C8 書き側の表 5 行(§C8)/ C9 digest の差異・安定(FR-POL-2 前半: 同一 mode・異 policy 集合で異なる digest、同一集合で安定)/ Q1 照合の 3 分岐(非空+一致 → ok、非空+不一致 → INVALID_COMMAND、空 → 照合なし ok)。落ちる実証: 照合を除去すると不一致ケースが赤。
-- **t444(integration)**: FR-POL-1(`--mode semi --policies-file` 適用後、projection から policy が読め、semi の question 裁定が confirmed-policy 段 `:706-707` で解決 — core Unit 着地後の統合ケース)/ FR-POL-2 後半(replay が拡張 `set-mode` を復元し projection が書込前後で一致 — **NFR-2(監査追跡性)の本 Unit 配分面の検収**、`unit-of-work-story-map.md` §NFR の割当)/ FR-POL-3(`--mode none --policies-file` の非 0 exit + stderr。落ちる実証: loud 化を外すと赤)/ FR-DISP-2(policies 設定済み semi の `--status` が実数表示)。実 FS・CLI spawn のため integration 層。
+- **t454(unit)**: C8 書き側の表 5 行(§C8)/ C9 digest の差異・安定(FR-POL-2 前半: 同一 mode・異 policy 集合で異なる digest、同一集合で安定)/ Q1 照合の 3 分岐(非空+一致 → ok、非空+不一致 → INVALID_COMMAND、空 → 照合なし ok)。落ちる実証: 照合を除去すると不一致ケースが赤。
+- **t455(integration)**: FR-POL-1(`--mode semi --policies-file` 適用後、projection から policy が読め、semi の question 裁定が confirmed-policy 段 `:706-707` で解決 — core Unit 着地後の統合ケース)/ FR-POL-2 後半(replay が拡張 `set-mode` を復元し projection が書込前後で一致 — **NFR-2(監査追跡性)の本 Unit 配分面の検収**、`unit-of-work-story-map.md` §NFR の割当)/ FR-POL-3(`--mode none --policies-file` の非 0 exit + stderr。落ちる実証: loud 化を外すと赤)/ FR-DISP-2(policies 設定済み semi の `--status` が実数表示)。実 FS・CLI spawn のため integration 層。
 - 落ちる実証はすべて「注入 → 赤の実測 → 復元 → 残渣ゼロ確認」の不可分 1 セット(NFR-1 — FR-POL-3 は story-map §NFR の割当で本 Unit の検収対象)。
 
 ## Review — Iteration 1

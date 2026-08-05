@@ -90,11 +90,11 @@ function readLaunchAutonomyContext(projectDir: string):
 
 **directive への非搬送**(C-3): C13 は `directive.intent_autonomy_mode` へ書き込まない。directive への射影は既存 `routeMainWorkflowDirective:2192` が独占する。`amadeus-directive.ts:97` / `:606` は本 Unit の diff に現れない。
 
-## 検証シーケンス(t446 / t447)
+## 検証シーケンス(t449 / t450)
 
-- **t446(C12)**: `parseNextFlags` を export 追加して in-process 駆動(D6 — `cid:code-generation:seam-export-handler-amend`)。3 値それぞれで値が `flags.intent` に混入しないこと(FR-CLI-1)、値なしで `autonomyMissingValue` が立つことを assert。落ちる実証: consume 分岐を外すと赤。
-- **t447(C13)**: `applyLaunchAutonomyDeclaration` / `readLaunchAutonomyContext` を export し in-process 駆動。判定 0〜8 の分岐網羅(FR-CLI-2 (1)(2)(3)(4) / FR-CLI-3 (0)(1)(2)(3) / FR-CLI-4 / FR-CLI-5)。落ちる実証 3 点: grant 判定を無条件 `"absent"` 化 → FR-CLI-2 (2) が赤 / `declared` を無条件 `true` 化 → FR-CLI-3 (0) が赤 / fail-closed 反転 → FR-CLI-4 が赤。
-- **t447 追加ケース H9(FR-CLI-5 後半)**: `READ_ONLY_FLAGS`(`amadeus-lib.ts:437` export 済み)を in-process import し `has("--autonomy") === false` を assert(business-rules.md R12 の検証手段)。
+- **t449(C12)**: `parseNextFlags` を export 追加して in-process 駆動(D6 — `cid:code-generation:seam-export-handler-amend`)。3 値それぞれで値が `flags.intent` に混入しないこと(FR-CLI-1)、値なしで `autonomyMissingValue` が立つことを assert。落ちる実証: consume 分岐を外すと赤。
+- **t450(C13)**: `applyLaunchAutonomyDeclaration` / `readLaunchAutonomyContext` を export し in-process 駆動。判定 0〜8 の分岐網羅(FR-CLI-2 (1)(2)(3)(4) / FR-CLI-3 (0)(1)(2)(3) / FR-CLI-4 / FR-CLI-5)。落ちる実証 3 点: grant 判定を無条件 `"absent"` 化 → FR-CLI-2 (2) が赤 / `declared` を無条件 `true` 化 → FR-CLI-3 (0) が赤 / fail-closed 反転 → FR-CLI-4 が赤。
+- **t450 追加ケース H9(FR-CLI-5 後半)**: `READ_ONLY_FLAGS`(`amadeus-lib.ts:437` export 済み)を in-process import し `has("--autonomy") === false` を assert(business-rules.md R12 の検証手段)。
 - `amadeus-orchestrate.ts` は in-process import 実績あり(実測: `tests/unit/t-batch3-orchestrate-seam.test.ts` ほか)のため spawn 盲点に入らない。実 FS(state ファイル・projection)を使うケースは integration 層へ置く(`cid:code-generation:fs-tests-integration-first`)。
 
 ## Review — Iteration 2

@@ -30,14 +30,14 @@
 
 | ケース群 | 対象 | 期待 |
 | --- | --- | --- |
-| P1(t444) | `--mode semi --policies-file` 適用 | projection から policy が読め、confirmed-policy 段で裁定解決(FR-POL-1) |
-| P2(t443) | digest の差異 | 同一 mode・異なる policy 集合で digest が異なる(FR-POL-2) |
-| P3(t443) | digest の安定 | 同一 policy 集合で digest 同値(FR-POL-2) |
-| P4(t444) | replay 復元 | 拡張 `set-mode` の replay 後 projection が書込前後で一致(FR-POL-2) |
-| P5(t444) | `--mode none --policies-file` | 非 0 exit + stderr 理由。落ちる実証: loud 化除去で赤(FR-POL-3) |
-| P6(t444) | `--status` 表示 | policies 設定済み semi で `Policies:` が実数(FR-DISP-2 — `Policies: 0` でない) |
-| P7(t443) | Q1 照合 3 分岐 | 非空+一致 ok / 非空+不一致 INVALID_COMMAND / 空 → 照合なし ok。落ちる実証: 照合除去で不一致ケースが赤 |
-| P8(t443) | 方針ゼロの同一視 | policies 空の `set-mode` semi で `after.semiPolicies` 未設定(ADR-4) |
+| P1(t455) | `--mode semi --policies-file` 適用 | projection から policy が読め、confirmed-policy 段で裁定解決(FR-POL-1) |
+| P2(t454) | digest の差異 | 同一 mode・異なる policy 集合で digest が異なる(FR-POL-2) |
+| P3(t454) | digest の安定 | 同一 policy 集合で digest 同値(FR-POL-2) |
+| P4(t455) | replay 復元 | 拡張 `set-mode` の replay 後 projection が書込前後で一致(FR-POL-2) |
+| P5(t455) | `--mode none --policies-file` | 非 0 exit + stderr 理由。落ちる実証: loud 化除去で赤(FR-POL-3) |
+| P6(t455) | `--status` 表示 | policies 設定済み semi で `Policies:` が実数(FR-DISP-2 — `Policies: 0` でない) |
+| P7(t454) | Q1 照合 3 分岐 | 非空+一致 ok / 非空+不一致 INVALID_COMMAND / 空 → 照合なし ok。落ちる実証: 照合除去で不一致ケースが赤 |
+| P8(t454) | 方針ゼロの同一視 | policies 空の `set-mode` semi で `after.semiPolicies` 未設定(ADR-4) |
 
 ## 本 Unit が守らない(守る必要がない)規則の明示
 

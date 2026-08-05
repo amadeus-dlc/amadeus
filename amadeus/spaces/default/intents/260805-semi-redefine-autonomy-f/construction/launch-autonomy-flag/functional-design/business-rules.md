@@ -21,7 +21,7 @@
 | R9 | **provenance の出所**: フラグ自体を provenance にしない。書込は既存の HUMAN_TURN 要求(`PROVENANCE_REQUIRED`)を通る | FR-CLI-5 |
 | R10 | **書込経路は 1 本**: mode 書込は既存 `applyProductionAutonomyMode` のみ(第 2 の書込経路を作らない)。engine が持つのは判定と委譲だけ | ADR-8 |
 | R11 | **directive 非搬送**: `directive.intent_autonomy_mode` へ書き込まない(`amadeus-directive.ts:97` / `:606` は diff に現れない) | C-3 |
-| R12 | **READ_ONLY_FLAGS へ追加しない**(autonomy は監査済みの状態変更)。検証手段: t447 に in-process アサーション `expect(READ_ONLY_FLAGS.has("--autonomy")).toBe(false)` を置く — `READ_ONLY_FLAGS` は export 済みの `ReadonlySet<string>`(実測: `amadeus-lib.ts:437` verbatim `export const READ_ONLY_FLAGS: ReadonlySet<string> = new Set([`)であり import で直接検査できる。落ちる実証: Set へ `"--autonomy"` を注入するとこのアサーションが赤になる(ケース H9) | C-6 / FR-CLI-5 受け入れ基準 |
+| R12 | **READ_ONLY_FLAGS へ追加しない**(autonomy は監査済みの状態変更)。検証手段: t450 に in-process アサーション `expect(READ_ONLY_FLAGS.has("--autonomy")).toBe(false)` を置く — `READ_ONLY_FLAGS` は export 済みの `ReadonlySet<string>`(実測: `amadeus-lib.ts:437` verbatim `export const READ_ONLY_FLAGS: ReadonlySet<string> = new Set([`)であり import で直接検査できる。落ちる実証: Set へ `"--autonomy"` を注入するとこのアサーションが赤になる(ケース H9) | C-6 / FR-CLI-5 受け入れ基準 |
 | R13 | **エラー描画は既存 `errorDirective`**(新 directive 種別・新表示語彙を作らない) | `component-methods.md` §C13 末尾 |
 
 ## エラー文言(C13 判定表からの逐語固定)
@@ -44,18 +44,18 @@
 
 | ケース群 | 対象 | 期待 |
 | --- | --- | --- |
-| P1〜P3(t446) | `--autonomy none/semi/full <自由文>` の parse | 値が `flags.intent` に混入しない(FR-CLI-1) |
-| P4(t446) | 値なし `--autonomy` | `autonomyMissingValue === true` |
-| H0(t447) | active intent 不在 + `--autonomy semi` | loud error(Q1 裁定) |
-| H1(t447) | birth 直後(system-default)+ `--autonomy semi` | 0 exit で mode=semi(FR-CLI-3 (0)) |
-| H2(t447) | human-command 由来 semi + `--autonomy semi` | 監査イベント増なしで continue(FR-CLI-3 (1)) |
-| H3(t447) | 同 + `--autonomy full` | loud + 案内、grant 無傷(FR-CLI-3 (2)(3)) |
-| H4(t447) | grant 不在 + `--autonomy none` | 0 exit で mode=none(FR-CLI-2 (1)) |
-| H5(t447) | grant 実在 + `--autonomy none` | loud + 案内、grant revoke されない(FR-CLI-2 (2)) |
-| H6(t447) | `--autonomy bogus` / 値なし | 非 0 exit + stderr 理由(FR-CLI-2 (3)) |
-| H7(t447) | grant 不在 + `--autonomy full` | 非 0 exit + preview(FR-CLI-4) |
-| H8(t447) | HUMAN_TURN 不在 + `--autonomy semi` | `PROVENANCE_REQUIRED` 停止(FR-CLI-5) |
-| H9(t447) | `READ_ONLY_FLAGS`(`amadeus-lib.ts:437`、export 済み)の in-process 検査 | `READ_ONLY_FLAGS.has("--autonomy") === false`(FR-CLI-5 後半 / R12。落ちる実証: Set へ `"--autonomy"` を注入すると赤) |
+| P1〜P3(t449) | `--autonomy none/semi/full <自由文>` の parse | 値が `flags.intent` に混入しない(FR-CLI-1) |
+| P4(t449) | 値なし `--autonomy` | `autonomyMissingValue === true` |
+| H0(t450) | active intent 不在 + `--autonomy semi` | loud error(Q1 裁定) |
+| H1(t450) | birth 直後(system-default)+ `--autonomy semi` | 0 exit で mode=semi(FR-CLI-3 (0)) |
+| H2(t450) | human-command 由来 semi + `--autonomy semi` | 監査イベント増なしで continue(FR-CLI-3 (1)) |
+| H3(t450) | 同 + `--autonomy full` | loud + 案内、grant 無傷(FR-CLI-3 (2)(3)) |
+| H4(t450) | grant 不在 + `--autonomy none` | 0 exit で mode=none(FR-CLI-2 (1)) |
+| H5(t450) | grant 実在 + `--autonomy none` | loud + 案内、grant revoke されない(FR-CLI-2 (2)) |
+| H6(t450) | `--autonomy bogus` / 値なし | 非 0 exit + stderr 理由(FR-CLI-2 (3)) |
+| H7(t450) | grant 不在 + `--autonomy full` | 非 0 exit + preview(FR-CLI-4) |
+| H8(t450) | HUMAN_TURN 不在 + `--autonomy semi` | `PROVENANCE_REQUIRED` 停止(FR-CLI-5) |
+| H9(t450) | `READ_ONLY_FLAGS`(`amadeus-lib.ts:437`、export 済み)の in-process 検査 | `READ_ONLY_FLAGS.has("--autonomy") === false`(FR-CLI-5 後半 / R12。落ちる実証: Set へ `"--autonomy"` を注入すると赤) |
 | 落ちる実証 | consume 分岐除去 / grant 判定無条件化 / declared 無条件化 / fail-closed 反転 | それぞれ P1〜P3 / H5 / H1 / H7 が赤(注入 → 赤 → 復元 → 残渣ゼロの 1 セット — NFR-1) |
 
 ## 本 Unit が守らない(守る必要がない)規則の明示

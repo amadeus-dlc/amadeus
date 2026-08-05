@@ -18,7 +18,7 @@
 
 - **障害ドメイン**: engine プロセス 1 つ(単発 CLI 実行)。
 - **blast radius**(方向別・機構別に層別 — 一枚岩の断定を避ける): **誤 hold 側**(解決すべきものを await へ落とす)は人間経路への縮退であり安全(現行挙動と同一)。**誤 resolve 側**(解決すべきでないものを通す)には独立 3 層の防衛 — (i) 認可は LC-3 委譲(本 Unit は認可を複製しない)(ii) 受理は 3 点検査(grounding が journal 実在を要求)(iii) 強制実行は選択肢空間除去+PROHIBITED_EFFECTS の二重機構。**store 破損側**は schema 検査の fail-closed hold(ADR-9)。
-- **隔離戦略**: C16 の写像・翻訳は純関数部として export し in-process 駆動(t449/t451)。実 FS(store・journal)を跨ぐのは t450(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
+- **隔離戦略**: C16 の写像・翻訳は純関数部として export し in-process 駆動(t457/t459)。実 FS(store・journal)を跨ぐのは t458(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
 
 ## 共有資源
 
@@ -34,10 +34,10 @@ circuit breaker / cache / pooling / scaling / failover は**すべて非適用**
 
 ## 適用 NFR との対応(検証手段付き)
 
-- **NFR-1**(FR-ADV-2 の面): security-design.md の落ちる実証(t450 — 認可無条件 true 化で赤)。
-- **NFR-2**(advisory 面): AUTO_DECIDED は既存経路委譲 — t450 で記録実在を assert。
-- **NFR-4**: t449/t451(unit)・t450(integration)を Red 先行で追加。
+- **NFR-1**(FR-ADV-2 の面): security-design.md の落ちる実証(t458 — 認可無条件 true 化で赤)。
+- **NFR-2**(advisory 面): AUTO_DECIDED は既存経路委譲 — t458 で記録実在を assert。
+- **NFR-4**: t457/t459(unit)・t458(integration)を Red 先行で追加。
 - **NFR-5**: 編集正本 2 ファイル(LC 台帳の所在列)のみ、`bun run build` 後の追跡ファイル不変。
-- **NFR-6**(第2 receipt の面): 受理 3 点の等価強度(t451)+捏造 provenance 拒否の落ちる実証。
+- **NFR-6**(第2 receipt の面): 受理 3 点の等価強度(t459)+捏造 provenance 拒否の落ちる実証。
 - **NFR-7**: PR CI ブロッキング集合の全通過。
 - **NFR-3**: 非適用(security-design.md の分類表 — parser は本 Unit 外)。

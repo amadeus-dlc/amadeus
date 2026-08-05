@@ -46,7 +46,7 @@
 
 - Bolt 1(walking skeleton)は人間ゲート必須。あわせて **U-2(ADR-6 の梯子3段縮退の許容性 — 仕様裁定・ユーザー専権)を Bolt 1 ゲートで先行提示**する(bolt-plan の再計画トリガ)。
 - Bolt 6 は base 前進後の実 diff 再評価 + coverage allowlist 機械 remap を実装前に置く。
-- テスト番号 t440〜t452 予約済み(現最大 t439)。
+- テスト番号 t451〜t452 予約済み(現最大 t439)。
 
 ## 6. 判定
 
