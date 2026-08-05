@@ -105,7 +105,7 @@ function mapText(models: readonly Record<string, unknown>[]): string {
 }
 
 /** A real audit shard line the provenance re-check can resolve (BR-U4-11). */
-function shardWithApproval(root: string): { path: string; approval: HumanApprovalRef } {
+function shardWithApproval(root: string): { approval: HumanApprovalRef } {
   const line = JSON.stringify({
     timestamp: APPROVED_AT,
     eventName: "amadeus.human.turn",
@@ -114,7 +114,6 @@ function shardWithApproval(root: string): { path: string; approval: HumanApprova
   const path = join(root, "shard.jsonl");
   writeFileSync(path, `${line}\n`);
   return {
-    path,
     approval: {
       shard: path,
       timestamp: APPROVED_AT,
@@ -350,24 +349,35 @@ describe("registration commit on the real filesystem (FR-010)", () => {
     expect(committed.error.kind).toBe("io-failure");
   });
 
-  test("reports an io-failure and keeps the old map when the publish fails", () => {
+  test("reports an io-failure and keeps the old map when the publish fails mid-write", () => {
     const { root, mapPath } = workspace();
     const before = readFileSync(mapPath, "utf8");
     const { approval } = shardWithApproval(root);
     const bundle = verifiedBundleIn(root);
-    const ports = createRegistrationPorts({ mapPath: join(root, "missing-dir", "model-map.json") });
+    const ports = createRegistrationPorts({ mapPath, now: () => APPROVED_AT });
+    const staging = `${mapPath}.staging`;
+    // Write the staged bytes and fail before the rename: the map this run
+    // would have replaced is the one asserted to be untouched.
+    const failingPublish = {
+      ...ports,
+      publish: (bytes: string): void => {
+        writeFileSync(staging, bytes);
+        throw new Error("rename refused");
+      },
+    };
 
     const committed = RegistrationCommitter.commit(
       entryFor("Election", { evidenceBundle: { digest: bundle.ref.digest } }),
       bundle,
       preconditionsFor(approval),
-      { ...ports, readMapBytes: () => before },
+      failingPublish,
     );
 
     expect(committed.ok).toBe(false);
     if (committed.ok) return;
     expect(committed.error.kind).toBe("io-failure");
     expect(readFileSync(mapPath, "utf8")).toEqual(before);
+    expect(readFileSync(staging, "utf8")).toContain("Election");
   });
 });
 
@@ -401,7 +411,7 @@ describe("registration hands the entry to the hold evaluator (FR-010 handoff)", 
 });
 
 describe("existing model compatibility (FR-013, AC-008)", () => {
-  test("registering a third model leaves the two shipped entries byte for byte", () => {
+  test("registering a third model leaves every shipped entry unchanged", () => {
     const { root } = workspace();
     const shipped = readFileSync(join(import.meta.dir, "..", "..", "specs", "tla", "model-map.json"), "utf8");
     const mapPath = join(root, "shipped-map.json");
@@ -419,12 +429,9 @@ describe("existing model compatibility (FR-013, AC-008)", () => {
     expect(committed.ok).toBe(true);
     const before = JSON.parse(shipped);
     const after = JSON.parse(readFileSync(mapPath, "utf8"));
-    expect(after.models.map((model: { name: string }) => model.name)).toEqual([
-      "FormalElection",
-      "MirrorLifecycle",
-      "Zeta",
-    ]);
-    expect(JSON.stringify(after.models.slice(0, 2), null, 2)).toEqual(JSON.stringify(before.models, null, 2));
+    const shippedNames = before.models.map((model: { name: string }) => model.name);
+    expect(after.models.map((model: { name: string }) => model.name)).toEqual([...shippedNames, "Zeta"].sort());
+    expect(after.models.slice(0, shippedNames.length)).toEqual(before.models);
   });
 });
 
