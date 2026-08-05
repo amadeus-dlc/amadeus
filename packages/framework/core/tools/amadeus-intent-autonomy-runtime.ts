@@ -17,6 +17,7 @@ import {
   resolveAutoDecision,
   revalidateGrantExerciseReservation,
   SemiAuthority,
+  semiPoliciesOf,
   validateResumeCondition,
   type AutoDecisionRecord,
   type AutonomyProjection,
@@ -791,6 +792,9 @@ export interface IntentAutonomyStatusEnvelope {
   readonly resumeCondition: ResumeCondition | null;
   readonly legacyStandingGrantCount: number;
   readonly unreviewedAutoDecisionCount: number;
+  // Grant-independent: semi carries its own policies, so the count cannot be
+  // read off the grant alone.
+  readonly policyCount: number;
   readonly terminalLiveCompletionCapable: true;
 }
 
@@ -810,6 +814,7 @@ export function projectIntentAutonomyStatus(projection: AutonomyProjection): Int
     resumeCondition: projection.parkEnvelope?.resumeCondition ?? null,
     legacyStandingGrantCount: projection.legacyStandingGrantIds.length,
     unreviewedAutoDecisionCount: projection.autoDecisions.filter((decision) => decision.reviewState === "unreviewed").length,
+    policyCount: grant?.policies.length ?? semiPoliciesOf(projection).length,
     terminalLiveCompletionCapable: true,
   };
 }
