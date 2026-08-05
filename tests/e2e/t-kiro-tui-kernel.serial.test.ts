@@ -53,7 +53,7 @@ describe("Kiro TUI live E2E kernel", () => {
           now: () => new Date(),
           ledgerPath: LIVE_E2E_LEDGER,
           durability: "file-and-directory",
-          credentialSource: new KiroHomeCredentialSource({ sourceHome: SOURCE_HOME }),
+          credentialSource: new KiroHomeCredentialSource({ sourceHome: SOURCE_HOME, env: process.env }),
           allocator: new KiroScratchAllocator({
             prefix: "amadeus-kiro-tui-live-",
             distributionDir: KIRO_DIST,

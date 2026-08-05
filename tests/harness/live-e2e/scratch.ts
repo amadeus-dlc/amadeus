@@ -22,18 +22,22 @@ export function initializeScratchGit(
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_SYSTEM: "/dev/null",
   };
-  for (const args of [
-    ["init", "-q"],
-    ["add", "-A"],
-    [
-      "-c", "user.email=live@example.invalid",
-      "-c", "user.name=Amadeus Live",
-      "-c", "commit.gpgsign=false",
-      "-c", "core.hooksPath=",
-      "commit", "-qm", "install",
-    ],
-  ]) {
-    const result = spawnSync("git", args, { cwd: projectDir, encoding: "utf8", env, timeout: 30_000 });
-    if (result.status !== 0) throw new Error(`git ${args[0]} failed: ${sanitizeText(result.stderr)}`);
+  const steps: readonly { verb: string; args: readonly string[] }[] = [
+    { verb: "init", args: ["init", "-q"] },
+    { verb: "add", args: ["add", "-A"] },
+    {
+      verb: "commit",
+      args: [
+        "-c", "user.email=live@example.invalid",
+        "-c", "user.name=Amadeus Live",
+        "-c", "commit.gpgsign=false",
+        "-c", "core.hooksPath=",
+        "commit", "-qm", "install",
+      ],
+    },
+  ];
+  for (const step of steps) {
+    const result = spawnSync("git", [...step.args], { cwd: projectDir, encoding: "utf8", env, timeout: 30_000 });
+    if (result.status !== 0) throw new Error(`git ${step.verb} failed: ${sanitizeText(result.stderr)}`);
   }
 }

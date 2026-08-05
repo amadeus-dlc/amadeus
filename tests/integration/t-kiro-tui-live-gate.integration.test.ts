@@ -78,6 +78,18 @@ describe("Kiro TUI live contract", () => {
       .toBe(layout.dataDir.slice("/source/home".length));
   });
 
+  test("a source home on Linux honours XDG_DATA_HOME; scratch and macOS layouts do not", () => {
+    expect(kiroHomeLayout("/source/home", "linux", { XDG_DATA_HOME: "/xdg/data" }).dataDir)
+      .toBe("/xdg/data/kiro-cli");
+    expect(kiroHomeLayout("/source/home", "linux", { XDG_DATA_HOME: "" }).dataDir)
+      .toBe(join("/source/home", ".local", "share", "kiro-cli"));
+    expect(kiroHomeLayout("/source/home", "darwin", { XDG_DATA_HOME: "/xdg/data" }).dataDir)
+      .toBe(join("/source/home", "Library", "Application Support", "kiro-cli"));
+    // No environment means the pure home offset — the scratch-side contract.
+    expect(kiroHomeLayout("/scratch/home", "linux").dataDir)
+      .toBe(join("/scratch/home", ".local", "share", "kiro-cli"));
+  });
+
   test("registry and journey expose the closed Kiro TUI contract", async () => {
     expect(capabilityById("kiro-tui")).toMatchObject({
       ok: true,
@@ -105,11 +117,16 @@ describe("Kiro TUI live contract", () => {
     } as const;
     const scratch = { root: "scratch", homeDir: "home", projectDir: "project", state: "ready" } as const;
     expect(await createKiroTuiJourney().assert(execution, scratch)).toMatchObject({ passed: true });
-    for (const structured of [
-      { ...execution.structured, anchorVerified: false },
-      { ...execution.structured, inputCount: 2 },
+    // One negation per term of the passed predicate, so dropping any term
+    // from the journey assert turns at least one of these green-to-red.
+    for (const failing of [
+      { ...execution, exitCode: 1 },
+      { ...execution, structured: { ...execution.structured, anchorVerified: false } },
+      { ...execution, structured: { ...execution.structured, inputCount: 2 } },
+      { ...execution, structured: { ...execution.structured, paneDigest: 7 } },
+      { ...execution, structured: { ...execution.structured, sessionDigest: undefined } },
     ]) {
-      expect(await createKiroTuiJourney().assert({ ...execution, structured }, scratch))
+      expect(await createKiroTuiJourney().assert(failing, scratch))
         .toMatchObject({ passed: false });
     }
   });

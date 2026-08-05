@@ -47,7 +47,7 @@ export function kiroTuiLiveRequirementsSkipReason({
   if (!existsSync(distributionDir)) return `distributable missing: ${distributionDir}`;
   // Kiro authentication is on disk under the source home, so it is probed by
   // presence only — the adapter never reads or copies the database itself.
-  const layout = kiroHomeLayout(sourceHome ?? defaultKiroSourceHome(env));
+  const layout = kiroHomeLayout(sourceHome ?? defaultKiroSourceHome(env), process.platform, env);
   if (!existsSync(layout.authFile)) return "Kiro CLI is not authenticated (run `kiro-cli login`)";
   if (!existsSync(layout.chatBinary)) return "Kiro CLI chat runtime is unavailable";
   return null;

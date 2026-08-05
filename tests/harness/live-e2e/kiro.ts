@@ -50,14 +50,23 @@ export interface KiroHomeLayout {
 }
 
 /**
- * Resolve the Kiro paths a home owns. Every path is a fixed offset from its
- * home, so the same function describes the source home and the scratch home
- * that mirrors it.
+ * Resolve the Kiro paths a home owns. Paths are fixed offsets from the home,
+ * except that a source home on Linux honours `XDG_DATA_HOME` — the registry
+ * declares that key as a source path, and kiro-cli stores its data there when
+ * it is set. Scratch homes never pass an environment, so their layout stays a
+ * pure offset of the scratch root.
  */
-export function kiroHomeLayout(home: string, platform: string = process.platform): KiroHomeLayout {
+export function kiroHomeLayout(
+  home: string,
+  platform: string = process.platform,
+  env: Readonly<Record<string, string | undefined>> = {},
+): KiroHomeLayout {
+  const xdgDataHome = platform === "darwin" ? undefined : env.XDG_DATA_HOME;
   const dataDir = platform === "darwin"
     ? join(home, "Library", "Application Support", "kiro-cli")
-    : join(home, ".local", "share", "kiro-cli");
+    : xdgDataHome !== undefined && xdgDataHome !== ""
+      ? join(xdgDataHome, "kiro-cli")
+      : join(home, ".local", "share", "kiro-cli");
   return {
     home,
     dataDir,
@@ -81,8 +90,9 @@ export function bindKiroScratchHome(
   scratchHome: string,
   sourceHome: string,
   platform: string = process.platform,
+  sourceEnv: Readonly<Record<string, string | undefined>> = {},
 ): readonly string[] {
-  const source = kiroHomeLayout(sourceHome, platform);
+  const source = kiroHomeLayout(sourceHome, platform, sourceEnv);
   const scratch = kiroHomeLayout(scratchHome, platform);
   const bound: string[] = [];
   mkdirSync(scratch.dataDir, { recursive: true });
@@ -104,6 +114,8 @@ export function bindKiroScratchHome(
 export interface KiroHomeCredentialSourceOptions {
   readonly sourceHome?: string;
   readonly platform?: string;
+  /** Source-side environment consulted for `XDG_DATA_HOME`; defaults to none. */
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 /**
@@ -114,15 +126,17 @@ export interface KiroHomeCredentialSourceOptions {
 export class KiroHomeCredentialSource implements CredentialSourcePort {
   readonly #sourceHome: string;
   readonly #platform: string;
+  readonly #env: Readonly<Record<string, string | undefined>>;
 
   constructor(options: KiroHomeCredentialSourceOptions = {}) {
     this.#sourceHome = options.sourceHome ?? defaultKiroSourceHome();
     this.#platform = options.platform ?? process.platform;
+    this.#env = options.env ?? {};
   }
 
   async canLease(declaration: CredentialDeclaration): Promise<boolean> {
     return declaration.childKey === KIRO_HOME_BINDING_KEY &&
-      existsSync(kiroHomeLayout(this.#sourceHome, this.#platform).authFile);
+      existsSync(kiroHomeLayout(this.#sourceHome, this.#platform, this.#env).authFile);
   }
 
   async lease(declaration: CredentialDeclaration): Promise<CredentialBinding> {

@@ -152,7 +152,7 @@ export class KiroTuiAdapter implements LiveAdapter {
         diagnostic: "Kiro CLI source authentication is unavailable",
       });
     }
-    if (!existsSync(kiroHomeLayout(this.#sourceHome).chatBinary)) {
+    if (!existsSync(kiroHomeLayout(this.#sourceHome, process.platform, this.#options.parentEnv).chatBinary)) {
       findings.push({
         code: "AMADEUS_LIVE_E2E:SKIP:CAPABILITY_UNSUPPORTED",
         diagnostic: "Kiro CLI chat runtime is unavailable",
@@ -247,7 +247,12 @@ export class KiroTuiAdapter implements LiveAdapter {
       this.#binding = await context.credentialSource.lease(CREDENTIAL_DECLARATION);
       // The source locator is consumed here and never travels further: the child
       // environment below is built from the allow-list alone.
-      bindKiroScratchHome(context.scratch.homeDir, this.#binding.expose());
+      bindKiroScratchHome(
+        context.scratch.homeDir,
+        this.#binding.expose(),
+        process.platform,
+        this.#options.parentEnv,
+      );
       context.registrar.markCreated(RESOURCE_BINDING);
       const base = buildChildEnvironment(this.#options.parentEnv, this.capability.environment);
       if (!base.ok) {
