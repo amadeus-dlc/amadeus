@@ -144,6 +144,31 @@ describe("targeted human approval", () => {
     expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8")).toBe(before);
   });
 
+  test("report with a valid carrier passes the advisory hold check before committing", () => {
+    const { root, owner } = setup();
+    useSoloEnv(root);
+    const ids = armAndMintTargetedApproval(root);
+
+    // The carrier path consults advisoryReportHoldReason (with the plugin
+    // activation host root) before handing over to the authorized commit; with
+    // no advisory store the hold is null and the report commits.
+    const directive = JSON.parse(captureStdout(() => handleReport([
+      "--stage",
+      STAGE,
+      "--result",
+      "approved",
+      "--user-input",
+      "1",
+      "--target-intent-id",
+      ids.targetIntentId,
+      "--presence-reservation-id",
+      ids.reservationId,
+    ], root))) as { kind: string };
+    expect(directive.kind).toBe("done");
+    expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8"))
+      .toContain(`- [x] ${STAGE}`);
+  });
+
   test("refuses a reservation that targets another stage", () => {
     const { root, owner } = setup();
     useSoloEnv(root);

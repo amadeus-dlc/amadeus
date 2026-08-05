@@ -23,7 +23,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,9 +66,19 @@ export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 import {
   compositionFromJson,
   compositionToJson,
+  parsePluginManifest,
   type ReadOnlyFs,
   nodeReadOnlyFs,
 } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+// C8 import-closure guard: the pure half (POSIX normalization, repo-root
+// boundary, recursive walk over an injected reader). This module supplies the
+// concrete filesystem reader that owns realpath resolution.
+import {
+  checkManifestClosure,
+  describeClosureFailure,
+  type ReadRepoFile,
+  resolveImportClosure,
+} from "./import-closure-guard.ts";
 import { parseAmadeusConfigLayers } from "../packages/framework/core/tools/amadeus-config.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "../packages/framework/core/tools/amadeus-plugin.ts";
 export { type ReadOnlyFs, nodeReadOnlyFs };
@@ -864,6 +874,72 @@ export function assertInstallOutDirsSafe(
       if (verdict.kind === "refused") problems.push(`UNSAFE outDir ${rel}: ${verdict.reason}`);
     }
   }
+  if (problems.length !== 0) throw new PluginValidationError(problems.sort());
+}
+
+// ---------------------------------------------------------------------------
+// C8 import-closure guard (U6, FR-011). Composition copies only the files a
+// manifest declares, so a module reachable by relative import from a declared
+// tool but absent from plugin.json becomes a missing import in the composed
+// host. This gate walks that closure and refuses the projection (write-0) with
+// every offending module enumerated.
+// ---------------------------------------------------------------------------
+
+// The filesystem half of the C8 responsibility split. The pure guard owns POSIX
+// normalization and the repo-root boundary on the path STRING; this adapter owns
+// the escape a string cannot show — a symlink whose real target leaves the repo.
+// Absent, unreadable, or escaping references all read as null, so they land in
+// the guard's `unreadable` enumeration rather than shrinking the closure.
+export function repoFileReader(repoRoot: string): ReadRepoFile {
+  const realRoot = realpathSync(repoRoot);
+  return (rel) => {
+    let real: string;
+    try {
+      real = realpathSync(join(repoRoot, ...rel.split("/")));
+    } catch {
+      return null;
+    }
+    if (real !== realRoot && !real.startsWith(realRoot + sep)) return null;
+    try {
+      return readFileSync(real, "utf-8");
+    } catch {
+      return null;
+    }
+  };
+}
+
+// The closure problems of one plugin: a malformed manifest, an unresolvable
+// import, or a closure member the manifest/owned sources fail to cover.
+function pluginClosureProblems(plugin: PluginSource, repoRoot: string): readonly string[] {
+  const name = plugin.directoryName;
+  const bundle = new Map(plugin.artifacts.map((a) => [a.relativePath, a.bytes]));
+  const parsed = parsePluginManifest(name, plugin.manifestBytes, (rel) => bundle.get(rel) ?? null);
+  if (parsed.manifest === null)
+    return parsed.errors.map((e) => `MALFORMED ${name}/${PLUGIN_MANIFEST}: ${e}`);
+  const prefix = pluginHostPrefix(name);
+  const owned = plugin.artifacts.map((a) => posix.join(prefix, a.relativePath));
+  const closure = resolveImportClosure(
+    parsed.manifest.tools.map((t) => t.path),
+    repoFileReader(repoRoot),
+  );
+  if (!closure.ok) return describeClosureFailure(name, closure.error);
+  const proof = checkManifestClosure(parsed.manifest, closure.value, owned);
+  return proof.ok ? [] : describeClosureFailure(name, proof.error);
+}
+
+// Public seam: assert every discovered plugin's import closure is fully declared
+// and fully owned. `root` is the plugins dir; repo-relative paths resolve
+// against its parent. Throws PluginValidationError listing every problem.
+// `io` scopes to plugin DISCOVERY only; the closure walk always reads the real
+// filesystem through repoFileReader, which owns the realpath boundary.
+export function assertPluginImportClosure(
+  root: string = join(REPO_ROOT, "plugins"),
+  io: ReadOnlyFs = nodeReadOnlyFs,
+): void {
+  const repoRoot = dirname(root);
+  const problems: string[] = [];
+  for (const plugin of validatePluginSources(discoverPluginSources(root, io)))
+    problems.push(...pluginClosureProblems(plugin, repoRoot));
   if (problems.length !== 0) throw new PluginValidationError(problems.sort());
 }
 
