@@ -587,6 +587,15 @@ export async function runDriver(argv: readonly string[]): Promise<string> {
   return JSON.stringify(await scenario(paths));
 }
 
+// Every failure leaves this process loudly: a bad scenario, a module the
+// composed manifest failed to declare, or any typed refusal the run did not
+// expect. stdout carries the JSON line and nothing else, so the test can treat
+// "exit 0 with parseable stdout" as the only success shape.
 if (import.meta.main) {
-  process.stdout.write(`${await runDriver(process.argv.slice(2))}\n`);
+  try {
+    process.stdout.write(`${await runDriver(process.argv.slice(2))}\n`);
+  } catch (cause) {
+    process.stderr.write(`${cause instanceof Error ? cause.stack ?? cause.message : String(cause)}\n`);
+    process.exit(1);
+  }
 }

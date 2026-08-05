@@ -203,7 +203,7 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
   let store = "";
   let mapPath = "";
 
-  function drive(scenario: string): Record<string, unknown> {
+  function spawnDriver(scenario: string): { status: number | null; stdout: string; stderr: string } {
     const spawned = spawnSync(
       process.execPath,
       [
@@ -219,9 +219,27 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
       // process.env into a child on its own (cid:code-generation:bun-spawn-env-snapshot).
       { encoding: "utf8", env: process.env },
     );
+    return { status: spawned.status, stdout: spawned.stdout, stderr: spawned.stderr };
+  }
+
+  function parsedJson(text: string): { ok: boolean; value: Record<string, unknown> } {
+    try {
+      return { ok: true, value: JSON.parse(text.trim()) as Record<string, unknown> };
+    } catch {
+      return { ok: false, value: {} };
+    }
+  }
+
+  // Success is exit 0 AND parseable JSON on stdout. Both are asserted, so a
+  // driver that dies, prints a stack trace, or prints anything but its one JSON
+  // line fails the test loudly instead of being read as an empty observation.
+  function drive(scenario: string): Record<string, unknown> {
+    const spawned = spawnDriver(scenario);
     expect(spawned.stderr).not.toContain("Cannot find module");
     expect(spawned.status, `${spawned.stdout}\n${spawned.stderr}`).toBe(0);
-    return JSON.parse(spawned.stdout.trim()) as Record<string, unknown>;
+    const parsed = parsedJson(spawned.stdout);
+    expect(parsed.ok, `driver stdout was not JSON: ${spawned.stdout}`).toBe(true);
+    return parsed.value;
   }
 
   beforeEach(() => {
@@ -292,6 +310,26 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     expect(commit.failure.kind).toBe("preconditions-failed");
     expect(commit.failure.failures).toContainEqual({ kind: "precondition-missing", precondition: "proof" });
     expect(readFileSync(mapPath, "utf8")).toEqual(before);
+  });
+
+  test("the driver fails loudly when it is asked for a scenario it does not have", () => {
+    const spawned = spawnDriver("no-such-scenario");
+
+    expect(spawned.status).not.toBe(0);
+    expect(spawned.stderr).toContain("no-such-scenario");
+    expect(parsedJson(spawned.stdout).ok).toBe(false);
+  });
+
+  test("a composed module the manifest fails to declare is a loud import failure, not a silent skip", () => {
+    // The claim "the composed runtime resolves every import" is only worth
+    // something if a missing module would actually be seen. Take one away and
+    // watch the run die (BR-U5-09).
+    rmSync(join(host, "plugins", PLUGIN, "tools", "tla-registration.ts"));
+    const spawned = spawnDriver("main");
+
+    expect(spawned.status).not.toBe(0);
+    expect(spawned.stderr).toContain("Cannot find module");
+    expect(parsedJson(spawned.stdout).ok).toBe(false);
   });
 
   test("a run with no human approval is refused at registration and leaves the map intact", () => {
