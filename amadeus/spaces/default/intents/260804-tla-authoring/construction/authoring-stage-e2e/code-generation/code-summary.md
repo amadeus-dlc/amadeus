@@ -19,6 +19,7 @@
 
 - conductor 裏取り(c5 引き取り — Stop hook 下で builder 報告がターン境界配送不能のため disk-evidence 早期切替): typecheck 0 / lint 0 / t450 = 11 pass 0 fail / siblings(t444+t448+t449+plugin 検査2)= 84 pass 0 fail / patch gate PASS(measured 0 — spec kind のためソース測定行なし)/ 統合 full CI は本 summary 確定前に実行(結果は PR 検証と CI を正とする)
 - builder 実測(引き取り前): full CI RESULT: PASS(是正前断面)、coverage:ci PASS
+- referee: `amadeus-swarm check authoring-stage-e2e` converged=true / tampered=false、settle-release outcome=succeeded(pool terminal/completed)。finalize の engine merge-back は AUDIT_FORKED 不在(worktree を手動 git worktree add で作成したため fork 監査マーカーが無い)で audit-merge-failed — 既習回収手順により conductor が --no-ff 明示マージで回収(parent 2 / ls-files -u 0 / 対象ファイル実在 / 監査シャード重複 0 を機械確認)
 
 ## 逸脱・裁定
 
