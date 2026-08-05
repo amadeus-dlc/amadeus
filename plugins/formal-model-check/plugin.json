@@ -33,6 +33,8 @@
     "tools/tla-model-loader.ts",
     "tools/tla-model-map.ts",
     "tools/tlc-spawn-planner.ts",
-    "tools/tlc-toolchain.ts"
+    "tools/tlc-toolchain.ts",
+    "tools/tla-evidence.ts",
+    "tools/tla-authoring.ts"
   ]
 }

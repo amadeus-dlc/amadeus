@@ -112,36 +112,45 @@ function compareIdentity(recorded: AggregateDigest, current: AggregateDigest): I
   return recorded === current ? { kind: "current" } : { kind: "stale", recorded, current };
 }
 
+interface HeadingStart {
+  readonly id: string;
+  readonly index: number;
+  readonly level: number;
+}
+
+function headingStarts(lines: readonly string[], pattern: RegExp): readonly HeadingStart[] {
+  const starts: HeadingStart[] = [];
+  for (const [index, line] of lines.entries()) {
+    const match = pattern.exec(line);
+    if (match !== null) starts.push({ id: match[1] as string, index, level: headingLevel(line) });
+  }
+  return starts;
+}
+
+/** A section runs to the next heading of the same or a higher level. */
+function sectionEnd(lines: readonly string[], start: HeadingStart): number {
+  for (let cursor = start.index + 1; cursor < lines.length; cursor++) {
+    if (headingLevel(lines[cursor] as string) <= start.level) return cursor;
+  }
+  return lines.length;
+}
+
 function extractStableSections(
   markdown: string,
   docKind: DocKind,
 ): Result<ReadonlyArray<StableSection>, IdentityFailure> {
-  const pattern = headingPattern(docKind);
   const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
-  const starts: Array<{ readonly id: string; readonly index: number; readonly level: number }> = [];
-  for (const [index, line] of lines.entries()) {
-    const match = pattern.exec(line as string);
-    if (match !== null) starts.push({ id: match[1] as string, index, level: headingLevel(line as string) });
-  }
+  const starts = headingStarts(lines, headingPattern(docKind));
 
   const repeated = duplicates(starts.map((start) => start.id));
   if (repeated.length > 0) return err<IdentityFailure>({ kind: "duplicate-id", ids: repeated });
 
   const sections: StableSection[] = [];
   const hollow: string[] = [];
-  for (const [position, start] of starts.entries()) {
-    let end = lines.length;
-    for (let cursor = start.index + 1; cursor < lines.length; cursor++) {
-      if (headingLevel(lines[cursor] as string) <= start.level) {
-        end = cursor;
-        break;
-      }
-    }
-    const next = starts[position + 1];
-    if (next !== undefined && next.index < end) end = next.index;
-    const canonicalBody = normalizeCanonicalBody(lines.slice(start.index + 1, end).join("\n"));
-    if (canonicalBody === "") hollow.push(start.id);
-    else sections.push({ id: start.id as StableId, canonicalBody });
+  for (const start of starts) {
+    const body = normalizeCanonicalBody(lines.slice(start.index + 1, sectionEnd(lines, start)).join("\n"));
+    if (body === "") hollow.push(start.id);
+    else sections.push({ id: start.id as StableId, canonicalBody: body });
   }
   if (hollow.length > 0) return err<IdentityFailure>({ kind: "invalid-grammar", tokens: hollow });
   return ok(sections);
@@ -241,7 +250,6 @@ export interface EvidenceIndex {
 
 const AUTHORING_RECEIPTS = ["applicability", "trace", "proof", "review", "approval"] as const;
 const TERMINAL_RECEIPTS = ["applicability", "approval"] as const;
-const ENVELOPE_FIELDS = ["subjectIdentity", "evidence", "predecessor", "generatedAt", "generatedBy"] as const;
 
 function parseBundleDigest(raw: string): Result<BundleDigest, BundleFailure> {
   return DIGEST_RE.test(raw)
@@ -274,14 +282,14 @@ function fileNameFor(ref: EvidenceBundleRef): string {
   return `${ref.digest.slice("sha256:".length)}.json`;
 }
 
-function parseEvidenceParts(value: unknown): Result<EvidenceParts, readonly string[]> {
-  if (!isPlainRecord(value)) return err(["evidence"]);
+function parseEvidenceParts(value: unknown, prefix = "evidence."): Result<EvidenceParts, readonly string[]> {
+  if (!isPlainRecord(value)) return err([prefix === "" ? "<parts>" : prefix.slice(0, -1)]);
   const kind = value.kind;
-  if (kind !== "authoring-bundle" && kind !== "terminal-route-receipt") return err(["evidence.kind"]);
+  if (kind !== "authoring-bundle" && kind !== "terminal-route-receipt") return err([`${prefix}kind`]);
   const parts = value.parts;
-  if (!isPlainRecord(parts)) return err(["evidence.parts"]);
+  if (!isPlainRecord(parts)) return err([`${prefix}parts`]);
   const required = kind === "authoring-bundle" ? AUTHORING_RECEIPTS : TERMINAL_RECEIPTS;
-  const missing = required.filter((name) => !isPlainRecord(parts[name])).map((name) => `evidence.parts.${name}`);
+  const missing = required.filter((name) => !isPlainRecord(parts[name])).map((name) => `${prefix}parts.${name}`);
   if (missing.length > 0) return err(missing);
   const picked = Object.fromEntries(required.map((name) => [name, parts[name] as ReceiptJson]));
   return ok(
@@ -368,8 +376,15 @@ function resolveHeads(
   return entries.filter((entry) => !referenced.has(entry.ref.digest)).map((entry) => entry.ref);
 }
 
+/** Parse a standalone parts document (the CLI's `--parts` file). */
+function parseEvidencePartsDocument(value: unknown): Result<EvidenceParts, BundleFailure> {
+  const parsed = parseEvidenceParts(value, "");
+  return parsed.ok ? parsed : err<BundleFailure>({ kind: "missing-part", parts: parsed.error });
+}
+
 export const EvidenceEnvelopeCodec = {
   canonicalBytes,
+  parseParts: parseEvidencePartsDocument,
   bundleDigest,
   fileNameFor,
   parse: parseEnvelope,
