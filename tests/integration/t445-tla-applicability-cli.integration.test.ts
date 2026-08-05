@@ -21,9 +21,9 @@ const HUMAN_TURN_BLOCK = JSON.stringify({
   attributes: { Event: "HUMAN_TURN" },
 });
 
-function run(argv: readonly string[]): { exitCode: number; body: Record<string, unknown> } {
+async function run(argv: readonly string[]): Promise<{ exitCode: number; body: Record<string, unknown> }> {
   const lines: string[] = [];
-  const exitCode = runTlaAuthoring(argv, (line) => lines.push(line));
+  const exitCode = await runTlaAuthoring(argv, (line) => lines.push(line));
   expect(lines).toHaveLength(1);
   return { exitCode, body: JSON.parse(lines[0] as string) as Record<string, unknown> };
 }
@@ -65,19 +65,19 @@ function writeModelMap(models: ReadonlyArray<{ name: string; digest?: string }>)
 const IDENTITY_A = `sha256:${"1".repeat(64)}`;
 const IDENTITY_B = `sha256:${"2".repeat(64)}`;
 
-function judged(argv: readonly string[]): Record<string, unknown> {
-  const { exitCode, body } = run(argv);
+async function judged(argv: readonly string[]): Promise<Record<string, unknown>> {
+  const { exitCode, body } = await run(argv);
   expect(exitCode).toBe(0);
   return body;
 }
 
-function receiptFor(
+async function receiptFor(
   kind: string,
   subjects: readonly string[],
   identity: string,
   approval: string,
-): Record<string, unknown> {
-  return judged([
+): Promise<Record<string, unknown>> {
+  const body = await judged([
     "applicability", "receipt",
     "--declaration", declaration(kind, subjects),
     "--identity", identity,
@@ -86,16 +86,17 @@ function receiptFor(
     "--store", storeRoot,
     "--audit-dir", workspace,
     "--generated-at", "2026-08-05T00:00:00Z",
-  ]).receipt as Record<string, unknown>;
+  ]);
+  return body.receipt as Record<string, unknown>;
 }
 
-function buildBundle(
+async function buildBundle(
   name: string,
   kind: "authoring-bundle" | "terminal-route-receipt",
   applicability: Record<string, unknown>,
   identity: string,
   predecessor: string,
-): string {
+): Promise<string> {
   const filler = { note: "fixture" };
   const parts = writeJson(`parts-${name}.json`, {
     kind,
@@ -103,7 +104,7 @@ function buildBundle(
       ? { applicability, trace: filler, proof: filler, review: filler, approval: filler }
       : { applicability, approval: filler },
   });
-  const built = judged([
+  const built = await judged([
     "bundle", "build",
     "--parts", parts,
     "--predecessor", predecessor,
@@ -118,25 +119,26 @@ function buildBundle(
  * The lifecycle prefix every hold demo starts from: FR-001 is authored as a new
  * subject, stored as an authoring bundle, and registered in the model map.
  */
-function registerFr001(identity = IDENTITY_A): string {
-  const receipt = receiptFor("new-subject", ["FR-001"], identity, "none");
-  const digest = buildBundle("registration", "authoring-bundle", receipt, identity, "root");
+async function registerFr001(identity = IDENTITY_A): Promise<string> {
+  const receipt = await receiptFor("new-subject", ["FR-001"], identity, "none");
+  const digest = await buildBundle("registration", "authoring-bundle", receipt, identity, "root");
   writeModelMap([{ name: "Fixture", digest }]);
   return digest;
 }
 
-function series(subjects: readonly string[]): string {
-  return judged(["applicability", "series", "--subjects", subjects.join(",")]).series as string;
+async function series(subjects: readonly string[]): Promise<string> {
+  const body = await judged(["applicability", "series", "--subjects", subjects.join(",")]);
+  return body.series as string;
 }
 
-function hold(identity: string, subjects: readonly string[] = ["FR-001"]): {
+async function hold(identity: string, subjects: readonly string[] = ["FR-001"]): Promise<{
   exitCode: number;
   body: Record<string, unknown>;
-} {
-  return run([
+}> {
+  return await run([
     "hold",
     "--identity", identity,
-    "--series", series(subjects),
+    "--series", await series(subjects),
     "--store", storeRoot,
     "--model-map", modelMapPath,
   ]);
@@ -156,23 +158,23 @@ afterEach(() => {
 });
 
 describe("usage errors exit 2", () => {
-  test.each([[["applicability"]], [["applicability", "surprise"]]])("rejects %p", (argv) => {
-    const { exitCode, body } = run(argv as readonly string[]);
+  test.each([[["applicability"]], [["applicability", "surprise"]]])("rejects %p", async (argv) => {
+    const { exitCode, body } = await run(argv as readonly string[]);
     expect(exitCode).toBe(2);
     expect(typeof body.usage).toBe("string");
   });
 
-  test("rejects hold without --series", () => {
-    const { exitCode, body } = run(["hold", "--identity", IDENTITY_A]);
+  test("rejects hold without --series", async () => {
+    const { exitCode, body } = await run(["hold", "--identity", IDENTITY_A]);
     expect(exitCode).toBe(2);
     expect(body.error).toContain("--series");
   });
 });
 
 describe("applicability judge", () => {
-  test("routes a declared semantic change over a registered model to revise-model", () => {
-    registerFr001();
-    const body = judged([
+  test("routes a declared semantic change over a registered model to revise-model", async () => {
+    await registerFr001();
+    const body = await judged([
       "applicability", "judge",
       "--declaration", declaration("semantic-change", ["FR-001"]),
       "--identity", IDENTITY_A,
@@ -182,9 +184,9 @@ describe("applicability judge", () => {
     expect(body.route).toBe("revise-model");
   });
 
-  test("fails closed on a contradicting declaration (exit 1, typed failure)", () => {
-    registerFr001();
-    const { exitCode, body } = run([
+  test("fails closed on a contradicting declaration (exit 1, typed failure)", async () => {
+    await registerFr001();
+    const { exitCode, body } = await run([
       "applicability", "judge",
       "--declaration", declaration("non-target", ["FR-001"]),
       "--identity", IDENTITY_A,
@@ -195,9 +197,9 @@ describe("applicability judge", () => {
     expect((body.failure as { kind: string }).kind).toBe("undecidable");
   });
 
-  test("an untraced subject with a new-subject declaration routes to author-new", () => {
-    registerFr001();
-    const body = judged([
+  test("an untraced subject with a new-subject declaration routes to author-new", async () => {
+    await registerFr001();
+    const body = await judged([
       "applicability", "judge",
       "--declaration", declaration("new-subject", ["FR-900"]),
       "--identity", IDENTITY_A,
@@ -207,8 +209,8 @@ describe("applicability judge", () => {
     expect(body.route).toBe("author-new");
   });
 
-  test("an unreadable model map is missing-evidence, never a route", () => {
-    const { exitCode, body } = run([
+  test("an unreadable model map is missing-evidence, never a route", async () => {
+    const { exitCode, body } = await run([
       "applicability", "judge",
       "--declaration", declaration("new-subject", ["FR-900"]),
       "--identity", IDENTITY_A,
@@ -219,9 +221,9 @@ describe("applicability judge", () => {
     expect((body.failure as { kind: string }).kind).toBe("missing-evidence");
   });
 
-  test("a model map naming an absent bundle is unreadable, not an empty map", () => {
+  test("a model map naming an absent bundle is unreadable, not an empty map", async () => {
     writeModelMap([{ name: "Fixture", digest: `sha256:${"9".repeat(64)}` }]);
-    const { exitCode, body } = run([
+    const { exitCode, body } = await run([
       "applicability", "judge",
       "--declaration", declaration("new-subject", ["FR-900"]),
       "--identity", IDENTITY_A,
@@ -234,9 +236,9 @@ describe("applicability judge", () => {
 });
 
 describe("applicability receipt (BR-U2-03/24)", () => {
-  test("refuses a terminal route without an approval", () => {
-    registerFr001();
-    const { exitCode, body } = run([
+  test("refuses a terminal route without an approval", async () => {
+    await registerFr001();
+    const { exitCode, body } = await run([
       "applicability", "receipt",
       "--declaration", declaration("impl-only", ["FR-001"]),
       "--identity", IDENTITY_A,
@@ -254,9 +256,9 @@ describe("applicability receipt (BR-U2-03/24)", () => {
     ["a forged timestamp", { timestamp: "2026-01-01T00:00:00Z" }],
     ["an absent shard", { shard: "other.jsonl" }],
   ];
-  test.each(forged)("refuses %s (the falling proof of the provenance check)", (_label, overrides) => {
-    registerFr001();
-    const { exitCode, body } = run([
+  test.each(forged)("refuses %s (the falling proof of the provenance check)", async (_label, overrides) => {
+    await registerFr001();
+    const { exitCode, body } = await run([
       "applicability", "receipt",
       "--declaration", declaration("impl-only", ["FR-001"]),
       "--identity", IDENTITY_A,
@@ -269,71 +271,71 @@ describe("applicability receipt (BR-U2-03/24)", () => {
     expect((body.failure as { kind: string }).kind).toBe("approval-missing");
   });
 
-  test("accepts an approval grounded in the audit shard", () => {
-    registerFr001();
-    const receipt = receiptFor("impl-only", ["FR-001"], IDENTITY_A, approvalFile());
+  test("accepts an approval grounded in the audit shard", async () => {
+    await registerFr001();
+    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_A, approvalFile());
     expect(receipt.route).toBe("impl-only");
     expect(receipt.subjectIdentity).toBe(IDENTITY_A);
     expect(String(receipt.reason)).toContain("J4");
-    expect(receipt.subjectSeries).toBe(series(["FR-001"]));
+    expect(receipt.subjectSeries).toBe(await series(["FR-001"]));
   });
 });
 
 describe("hold — the expected demo of Bolt 2", () => {
-  test("a subject series with no applicability receipt holds (AC-001)", () => {
-    registerFr001();
-    const { exitCode, body } = hold(IDENTITY_A, ["AC-004"]);
+  test("a subject series with no applicability receipt holds (AC-001)", async () => {
+    await registerFr001();
+    const { exitCode, body } = await hold(IDENTITY_A, ["AC-004"]);
     expect(exitCode).toBe(1);
     const verdict = body.verdict as { kind: string; reasons: { kind: string }[] };
     expect(verdict.kind).toBe("hold");
     expect(verdict.reasons.map((reason) => reason.kind)).toEqual(["no-applicability-receipt"]);
   });
 
-  test("an authored subject without a registered model holds (AC-002)", () => {
-    const receipt = receiptFor("new-subject", ["FR-001"], IDENTITY_A, "none");
-    buildBundle("unregistered", "authoring-bundle", receipt, IDENTITY_A, "root");
-    const { exitCode, body } = hold(IDENTITY_A);
+  test("an authored subject without a registered model holds (AC-002)", async () => {
+    const receipt = await receiptFor("new-subject", ["FR-001"], IDENTITY_A, "none");
+    await buildBundle("unregistered", "authoring-bundle", receipt, IDENTITY_A, "root");
+    const { exitCode, body } = await hold(IDENTITY_A);
     expect(exitCode).toBe(1);
     const verdict = body.verdict as { reasons: { kind: string }[] };
     expect(verdict.reasons.map((reason) => reason.kind)).toEqual(["authoring-incomplete"]);
   });
 
-  test("a current registered authoring bundle releases the hold", () => {
-    registerFr001();
-    const { exitCode, body } = hold(IDENTITY_A);
+  test("a current registered authoring bundle releases the hold", async () => {
+    await registerFr001();
+    const { exitCode, body } = await hold(IDENTITY_A);
     expect(exitCode).toBe(0);
     expect((body.verdict as { kind: string }).kind).toBe("no-hold");
   });
 
-  test("a current terminal receipt releases the hold", () => {
-    const registration = registerFr001();
-    const receipt = receiptFor("impl-only", ["FR-001"], IDENTITY_B, approvalFile());
-    buildBundle("terminal", "terminal-route-receipt", receipt, IDENTITY_B, registration);
-    const { exitCode, body } = hold(IDENTITY_B);
+  test("a current terminal receipt releases the hold", async () => {
+    const registration = await registerFr001();
+    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_B, approvalFile());
+    await buildBundle("terminal", "terminal-route-receipt", receipt, IDENTITY_B, registration);
+    const { exitCode, body } = await hold(IDENTITY_B);
     expect(exitCode).toBe(0);
     expect((body.verdict as { kind: string }).kind).toBe("no-hold");
   });
 
-  test("the same evidence against a changed identity is stale, not a release (AC-006)", () => {
-    registerFr001();
-    const { exitCode, body } = hold(IDENTITY_B);
+  test("the same evidence against a changed identity is stale, not a release (AC-006)", async () => {
+    await registerFr001();
+    const { exitCode, body } = await hold(IDENTITY_B);
     expect(exitCode).toBe(1);
     const verdict = body.verdict as { reasons: { kind: string }[] };
     expect(verdict.reasons.map((reason) => reason.kind)).toEqual(["stale-evidence"]);
   });
 
-  test("a corrupted store fails closed rather than releasing (BR-U2-16)", () => {
-    registerFr001();
+  test("a corrupted store fails closed rather than releasing (BR-U2-16)", async () => {
+    await registerFr001();
     writeFileSync(join(storeRoot, `${"0".repeat(64)}.json`), "not json", "utf8");
-    const { exitCode, body } = hold(IDENTITY_A);
+    const { exitCode, body } = await hold(IDENTITY_A);
     expect(exitCode).toBe(1);
     expect((body.failure as { kind: string }).kind).toBe("corrupted-evidence");
   });
 });
 
 describe("advisory hold — the declared evaluator wrapper", () => {
-  function advisoryHold(subjectsFile: string): { exitCode: number; body: Record<string, unknown> } {
-    return run([
+  async function advisoryHold(subjectsFile: string): Promise<{ exitCode: number; body: Record<string, unknown> }> {
+    return await run([
       "advisory", "hold",
       "--subjects-file", subjectsFile,
       "--store", storeRoot,
@@ -341,38 +343,38 @@ describe("advisory hold — the declared evaluator wrapper", () => {
     ]);
   }
 
-  test("a workspace governing no subjects is a real no-hold, evaluated not suppressed", () => {
-    const { exitCode, body } = advisoryHold(join(workspace, "absent.json"));
+  test("a workspace governing no subjects is a real no-hold, evaluated not suppressed", async () => {
+    const { exitCode, body } = await advisoryHold(join(workspace, "absent.json"));
     expect(exitCode).toBe(0);
     expect((body.verdict as { kind: string }).kind).toBe("no-hold");
     expect(String(body.reason)).toContain("no governed subjects");
   });
 
-  test("a governed subject with no evidence holds", () => {
+  test("a governed subject with no evidence holds", async () => {
     writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
     const subjects = writeJson("governed.json", {
       documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
       subjects: ["FR-001"],
     });
-    const { exitCode, body } = advisoryHold(subjects);
+    const { exitCode, body } = await advisoryHold(subjects);
     expect(exitCode).toBe(1);
     expect((body.verdict as { kind: string }).kind).toBe("hold");
   });
 
-  test("a governed id the documents do not define fails closed", () => {
+  test("a governed id the documents do not define fails closed", async () => {
     writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
     const subjects = writeJson("governed-missing.json", {
       documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
       subjects: ["FR-001", "FR-777"],
     });
-    const { exitCode, body } = advisoryHold(subjects);
+    const { exitCode, body } = await advisoryHold(subjects);
     expect(exitCode).toBe(1);
     expect((body.failure as { kind: string }).kind).toBe("unresolvable-id");
   });
 
-  test("a malformed governance declaration fails closed rather than releasing", () => {
+  test("a malformed governance declaration fails closed rather than releasing", async () => {
     const subjects = writeJson("governed-broken.json", { documents: [], subjects: [] });
-    const { exitCode, body } = advisoryHold(subjects);
+    const { exitCode, body } = await advisoryHold(subjects);
     expect(exitCode).toBe(1);
     expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
   });

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// tla-authoring.ts — the TLA+ authoring CLI. This unit (U1) owns the `identity`
-// and `bundle` subcommands; U2..U4 add theirs alongside.
+// tla-authoring.ts — the TLA+ authoring CLI. U1 owns the `identity` and
+// `bundle` subcommands, U3 owns `trace`; U2 and U4 add theirs alongside.
 //
 // Contract (component-methods.md § common rules): one JSON line on stdout,
 // exit 0 on success, 1 on a typed failure, 2 on a usage error. Dispatch only —
@@ -35,6 +35,16 @@ import {
   type PredecessorRef,
   type StableId,
 } from "./tla-evidence.ts";
+import {
+  InvariantNameCodec,
+  ProofObligations,
+  TraceCoverage,
+  type InvariantName,
+  type ModelArtifacts,
+  type TlcToolchain,
+  type TraceRow,
+} from "./tla-referees.ts";
+import { createRefereeToolchain } from "./tla-referee-toolchain.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -56,6 +66,8 @@ const USAGE = [
   "  applicability series --subjects <id,id,...>",
   "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
   "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
+  "  trace --subjects <path> --rows <path> --invariants <path>",
+  "  proof --model <tla> --cfg <cfg> --reduction <manifest> --invariants <path> --identity <digest>",
 ].join("\n");
 
 interface Emitted {
@@ -494,7 +506,135 @@ function advisoryHold(flags: Record<string, string>): Emitted {
   });
 }
 
+// --- U3: trace coverage ----------------------------------------------------
+
+function asStringArray(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+}
+
+function parseSubjects(value: unknown): { ok: true; value: StableId[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) return { ok: false, emitted: failed({ kind: "invalid-grammar", tokens: ["<subjects>"] }) };
+  const parsed: StableId[] = [];
+  for (const token of raw) {
+    const id = IdentityDigest.normalizeStableId(token);
+    if (!id.ok) return { ok: false, emitted: failed(id.error) };
+    parsed.push(id.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseInvariants(
+  value: unknown,
+): { ok: true; value: InvariantName[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) {
+    return { ok: false, emitted: failed({ kind: "invalid-invariant-name", tokens: ["<invariants>"] }) };
+  }
+  const parsed: InvariantName[] = [];
+  for (const token of raw) {
+    const name = InvariantNameCodec.parse(token);
+    if (!name.ok) return { ok: false, emitted: failed(name.error) };
+    parsed.push(name.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseTraceRows(value: unknown): { ok: true; value: TraceRow[] } | { ok: false; emitted: Emitted } {
+  if (!Array.isArray(value)) {
+    return { ok: false, emitted: failed({ kind: "invalid-trace-row", detail: "rows must be an array" }) };
+  }
+  const rows: TraceRow[] = [];
+  for (const entry of value) {
+    const record = entry as Record<string, unknown>;
+    const subject = typeof record?.subject === "string" ? IdentityDigest.normalizeStableId(record.subject) : null;
+    const invariant = typeof record?.invariant === "string" ? InvariantNameCodec.parse(record.invariant) : null;
+    if (subject === null || invariant === null || typeof record.rationale !== "string") {
+      return {
+        ok: false,
+        emitted: failed({ kind: "invalid-trace-row", detail: JSON.stringify(entry) }),
+      };
+    }
+    if (!subject.ok) return { ok: false, emitted: failed(subject.error) };
+    if (!invariant.ok) return { ok: false, emitted: failed(invariant.error) };
+    rows.push({ subject: subject.value, invariant: invariant.value, rationale: record.rationale });
+  }
+  return { ok: true, value: rows };
+}
+
+function traceEvaluate(flags: Record<string, string>): Emitted {
+  const subjectsPath = requiredFlag(flags, "subjects");
+  const rowsPath = requiredFlag(flags, "rows");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  if (subjectsPath === null || rowsPath === null || invariantsPath === null) {
+    return usageError("trace requires --subjects, --rows and --invariants");
+  }
+
+  const subjectsDoc = readJsonDocument(subjectsPath);
+  if (!subjectsDoc.ok) return subjectsDoc.emitted;
+  const rowsDoc = readJsonDocument(rowsPath);
+  if (!rowsDoc.ok) return rowsDoc.emitted;
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+
+  const subjects = parseSubjects(subjectsDoc.value);
+  if (!subjects.ok) return subjects.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+  const rows = parseTraceRows(rowsDoc.value);
+  if (!rows.ok) return rows.emitted;
+
+  const coverage = TraceCoverage.evaluate(subjects.value, rows.value, invariants.value);
+  return coverage.ok ? succeeded({ coverage: coverage.value }) : failed(coverage.error);
+}
+
+// --- U3: proof obligations -------------------------------------------------
+
+/** The referee toolchain is injected so tests can drive the decision table. */
+export interface AuthoringDependencies {
+  readonly toolchain: TlcToolchain;
+}
+
+async function proofEvaluate(
+  flags: Record<string, string>,
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
+  const modelPath = requiredFlag(flags, "model");
+  const cfgPath = requiredFlag(flags, "cfg");
+  const reductionPath = requiredFlag(flags, "reduction");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  const identityRaw = requiredFlag(flags, "identity");
+  if (
+    modelPath === null ||
+    cfgPath === null ||
+    reductionPath === null ||
+    invariantsPath === null ||
+    identityRaw === null
+  ) {
+    return usageError("proof requires --model, --cfg, --reduction, --invariants and --identity");
+  }
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+
+  const model: ModelArtifacts = {
+    modulePath: modelPath,
+    configPath: cfgPath,
+    reductionManifestPath: reductionPath,
+  };
+  const toolchain = dependencies?.toolchain ?? createRefereeToolchain();
+  const proof = await ProofObligations.evaluate(model, invariants.value, identity, toolchain);
+  return proof.ok ? succeeded({ proof: proof.value }) : failed(proof.error);
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
+type AsyncHandler = (flags: Record<string, string>, dependencies?: AuthoringDependencies) => Promise<Emitted>;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   identity: { extract: identityExtract, compare: identityCompare },
@@ -513,15 +653,28 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   advisory: { hold: advisoryHold },
 };
 
-// Commands that take flags directly, with no subcommand of their own.
-const FLAT_COMMANDS: Readonly<Record<string, Handler>> = { hold: holdEvaluate };
+// Commands whose whole contract is one verb, so they take flags directly.
+const FLAT_COMMANDS: Readonly<Record<string, Handler>> = {
+  hold: holdEvaluate,
+  trace: traceEvaluate,
+};
 
-function dispatch(argv: readonly string[]): Emitted {
+// The proof referee drives TLC through a child process, so its handler is async.
+const ASYNC_FLAT_COMMANDS: Readonly<Record<string, AsyncHandler>> = {
+  proof: proofEvaluate,
+};
+
+async function dispatch(
+  argv: readonly string[],
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
   const [group, verb, ...rest] = argv;
-  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
-    const flags = parseFlags(argv.slice(1));
-    if (flags === null) return usageError("flags must be given as --name value pairs");
-    return (FLAT_COMMANDS[group] as Handler)(flags);
+  if (group !== undefined && (Object.hasOwn(FLAT_COMMANDS, group) || Object.hasOwn(ASYNC_FLAT_COMMANDS, group))) {
+    const flatFlags = parseFlags(verb === undefined ? [] : [verb, ...rest]);
+    if (flatFlags === null) return usageError("flags must be given as --name value pairs");
+    return Object.hasOwn(ASYNC_FLAT_COMMANDS, group)
+      ? (ASYNC_FLAT_COMMANDS[group] as AsyncHandler)(flatFlags, dependencies)
+      : (FLAT_COMMANDS[group] as Handler)(flatFlags);
   }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving
@@ -536,12 +689,16 @@ function dispatch(argv: readonly string[]): Emitted {
 }
 
 /** In-process entry point: argv without the runtime prefix, one JSON line per run. */
-export function runTlaAuthoring(argv: readonly string[], emit: Emit): ExitCode {
-  const emitted = dispatch(argv);
+export async function runTlaAuthoring(
+  argv: readonly string[],
+  emit: Emit,
+  dependencies?: AuthoringDependencies,
+): Promise<ExitCode> {
+  const emitted = await dispatch(argv, dependencies);
   emit(JSON.stringify(emitted.body));
   return emitted.exitCode;
 }
 
 if (import.meta.main) {
-  process.exitCode = runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
+  process.exitCode = await runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
 }
