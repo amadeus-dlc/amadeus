@@ -1,0 +1,65 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "number": 1945,
+        "mergeable": "UNKNOWN",
+        "mergeStateStatus": "UNKNOWN",
+        "reviewThreads": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0wOC0wMVQyMDozNDoyMFrOlasuRQ=="
+          },
+          "nodes": [
+            {
+              "id": "PRRT_kwDOTECbRs6Vqy5C",
+              "isResolved": false,
+              "isOutdated": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "cursor"
+                    },
+                    "body": "### Ballot accepted before submission\n\n**Medium Severity**\n\n<!-- DESCRIPTION START -->\nFor `E-OMSB2A-DEV`, subagent-1’s ballot is recorded as submitted at `2026-08-01T13:05:00Z` while `receivedAt` is `2026-08-01T07:32:20Z`, and the tally closes at `07:32:58Z`. Acceptance cannot precede submission, so the synced election ledger contradicts its own timeline.\n<!-- DESCRIPTION END -->\n\n<!-- BUGBOT_BUG_ID: 2ebfe7d2-5eb4-4b7d-9f53-f91bbc1a7512 -->\n\n<!-- LOCATIONS START\namadeus/spaces/default/elections/260801-e-omsb2a-dev/timeline.json#L14-L17\namadeus/spaces/default/elections/260801-e-omsb2a-dev/ballots/subagent-1.json#L9-L10\namadeus/spaces/default/elections/260801-e-omsb2a-dev/record.md#L8-L9\nLOCATIONS END -->\n<details>\n<summary>Additional Locations (2)</summary>\n\n- [`amadeus/spaces/default/elections/260801-e-omsb2a-dev/ballots/subagent-1.json#L9-L10`](https://github.com/amadeus-dlc/amadeus/blob/a4d06e521d615141839e42dbd181f86489007628/amadeus/spaces/default/elections/260801-e-omsb2a-dev/ballots/subagent-1.json#L9-L10)\n- [`amadeus/spaces/default/elections/260801-e-omsb2a-dev/record.md#L8-L9`](https://github.com/amadeus-dlc/amadeus/blob/a4d06e521d615141839e42dbd181f86489007628/amadeus/spaces/default/elections/260801-e-omsb2a-dev/record.md#L8-L9)\n\n</details>\n\n<div><a href=\"https://cursor.com/open?link=eyJ2ZXJzaW9uIjoxLCJ0eXBlIjoiQlVHQk9UX0ZJWF9JTl9DVVJTT1IiLCJkYXRhIjp7InJlZGlzS2V5IjoiYnVnYm90OjBhZGYzZTBiLWY5YjYtNGQ2NS1hNWZjLWZiMGEzMWUwYjNmZCIsImVuY3J5cHRpb25LZXkiOiJlRWg4b0VrQW4xN2haaDhZdXdQb25lQzhsdWRKMFJDaW1oVHlWTlNmYm9vIiwiYnJhbmNoIjoicmVjb3JkLzI2MDgwMS1vdGVsLW1ldGEtc2NoZW1hIiwicmVwb093bmVyIjoiYW1hZGV1cy1kbGMiLCJyZXBvTmFtZSI6ImFtYWRldXMifX0\" target=\"_blank\" rel=\"noopener noreferrer\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://cursor.com/assets/images/fix-in-cursor-dark.png\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://cursor.com/assets/images/fix-in-cursor-light.png\"><img alt=\"Fix in Cursor\" width=\"115\" height=\"28\" src=\"https://cursor.com/assets/images/fix-in-cursor-dark.png\"></picture></a>&nbsp;<a href=\"https://cursor.com/agents?link=eyJ2ZXJzaW9uIjoxLCJ0eXBlIjoiQlVHQk9UX0ZJWF9JTl9XRUIiLCJkYXRhIjp7InJlZGlzS2V5IjoiYnVnYm90OjBhZGYzZTBiLWY5YjYtNGQ2NS1hNWZjLWZiMGEzMWUwYjNmZCIsImVuY3J5cHRpb25LZXkiOiJlRWg4b0VrQW4xN2haaDhZdXdQb25lQzhsdWRKMFJDaW1oVHlWTlNmYm9vIiwiYnJhbmNoIjoicmVjb3JkLzI2MDgwMS1vdGVsLW1ldGEtc2NoZW1hIiwicmVwb093bmVyIjoiYW1hZGV1cy1kbGMiLCJyZXBvTmFtZSI6ImFtYWRldXMiLCJwck51bWJlciI6MTk0NSwiY29tbWl0U2hhIjoiYTRkMDZlNTIxZDYxNTE0MTgzOWU0MmRiZDE4MWY4NjQ4OTAwNzYyOCIsInByb3ZpZGVyIjoiZ2l0aHViIn19\" target=\"_blank\" rel=\"noopener noreferrer\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://cursor.com/assets/images/fix-in-web-dark.png\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://cursor.com/assets/images/fix-in-web-light.png\"><img alt=\"Fix in Web\" width=\"99\" height=\"28\" src=\"https://cursor.com/assets/images/fix-in-web-dark.png\"></picture></a></div>\n\n\n<sup>Reviewed by [Cursor Bugbot](https://cursor.com/bugbot) for commit a4d06e521d615141839e42dbd181f86489007628. Configure [here](https://www.cursor.com/dashboard/bugbot).</sup>\n"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "実測確認しました。submittedAt は投票者(subagent)の自己申告値で CLI 検証がなく、受理刻印 receivedAt(こちらが authoritative)と矛盾しうる構造欠陥です。台帳は append-only 証跡のため書き換えず、ツール側の恒久対策(受理側刻印 or fail-closed 検証)を #1946 として起票しました。record.md は両値を併記しており receivedAt を正としてお読みください。"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOTECbRs6Vqy5F",
+              "isResolved": false,
+              "isOutdated": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "cursor"
+                    },
+                    "body": "### Placeholder ballot after acceptance\n\n**Low Severity**\n\n<!-- DESCRIPTION START -->\nFor `E-OMSCG-S13`, subagent-1’s ballot uses `submittedAt` `2026-08-02T00:00:00Z` while `receivedAt` is `2026-08-01T19:50:49Z` and the election tallies at `19:51:24Z` the same day. The midnight placeholder postdates acceptance and the established result.\n<!-- DESCRIPTION END -->\n\n<!-- BUGBOT_BUG_ID: b40390c6-f663-4340-927f-fc19354d9e84 -->\n\n<!-- LOCATIONS START\namadeus/spaces/default/elections/260801-e-omscg-s13/timeline.json#L14-L17\namadeus/spaces/default/elections/260801-e-omscg-s13/ballots/subagent-1.json#L9-L10\nLOCATIONS END -->\n<details>\n<summary>Additional Locations (1)</summary>\n\n- [`amadeus/spaces/default/elections/260801-e-omscg-s13/ballots/subagent-1.json#L9-L10`](https://github.com/amadeus-dlc/amadeus/blob/a4d06e521d615141839e42dbd181f86489007628/amadeus/spaces/default/elections/260801-e-omscg-s13/ballots/subagent-1.json#L9-L10)\n\n</details>\n\n<div><a href=\"https://cursor.com/open?link=eyJ2ZXJzaW9uIjoxLCJ0eXBlIjoiQlVHQk9UX0ZJWF9JTl9DVVJTT1IiLCJkYXRhIjp7InJlZGlzS2V5IjoiYnVnYm90OjQ3NTJiMTcxLTU0YTctNDI4My04NmM4LTc4YjJiN2VjMTgzNiIsImVuY3J5cHRpb25LZXkiOiJRMm9JWHl4cWFDbnFlTXBnVjhkaTVKYVlaV2htcVJLM0VfeDBkYVJETkdvIiwiYnJhbmNoIjoicmVjb3JkLzI2MDgwMS1vdGVsLW1ldGEtc2NoZW1hIiwicmVwb093bmVyIjoiYW1hZGV1cy1kbGMiLCJyZXBvTmFtZSI6ImFtYWRldXMifX0\" target=\"_blank\" rel=\"noopener noreferrer\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://cursor.com/assets/images/fix-in-cursor-dark.png\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://cursor.com/assets/images/fix-in-cursor-light.png\"><img alt=\"Fix in Cursor\" width=\"115\" height=\"28\" src=\"https://cursor.com/assets/images/fix-in-cursor-dark.png\"></picture></a>&nbsp;<a href=\"https://cursor.com/agents?link=eyJ2ZXJzaW9uIjoxLCJ0eXBlIjoiQlVHQk9UX0ZJWF9JTl9XRUIiLCJkYXRhIjp7InJlZGlzS2V5IjoiYnVnYm90OjQ3NTJiMTcxLTU0YTctNDI4My04NmM4LTc4YjJiN2VjMTgzNiIsImVuY3J5cHRpb25LZXkiOiJRMm9JWHl4cWFDbnFlTXBnVjhkaTVKYVlaV2htcVJLM0VfeDBkYVJETkdvIiwiYnJhbmNoIjoicmVjb3JkLzI2MDgwMS1vdGVsLW1ldGEtc2NoZW1hIiwicmVwb093bmVyIjoiYW1hZGV1cy1kbGMiLCJyZXBvTmFtZSI6ImFtYWRldXMiLCJwck51bWJlciI6MTk0NSwiY29tbWl0U2hhIjoiYTRkMDZlNTIxZDYxNTE0MTgzOWU0MmRiZDE4MWY4NjQ4OTAwNzYyOCIsInByb3ZpZGVyIjoiZ2l0aHViIn19\" target=\"_blank\" rel=\"noopener noreferrer\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://cursor.com/assets/images/fix-in-web-dark.png\"><source media=\"(prefers-color-scheme: light)\" srcset=\"https://cursor.com/assets/images/fix-in-web-light.png\"><img alt=\"Fix in Web\" width=\"99\" height=\"28\" src=\"https://cursor.com/assets/images/fix-in-web-dark.png\"></picture></a></div>\n\n\n<sup>Reviewed by [Cursor Bugbot](https://cursor.com/bugbot) for commit a4d06e521d615141839e42dbd181f86489007628. Configure [here](https://www.cursor.com/dashboard/bugbot).</sup>\n"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "同根です(submittedAt = LLM 投票者の自己申告・無検証。00:00:00Z は placeholder)。receivedAt 19:50:49Z が authoritative で、開票 19:51:24Z との順序は正常です。ツール側の恒久対策は #1946 で追跡します。"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
