@@ -22,6 +22,10 @@ export type {
 // imports loadScopeMapping/loadStageGraph from this file). Type-only
 // imports are erased at runtime so they don't create the cycle.
 import type { subgraphForScope as SubgraphForScope } from "./amadeus-graph.ts";
+// Type-only import: the canonical autonomy mode domain. Erased at runtime, so
+// the statusline segment below pins its vocabulary to that union without
+// pulling amadeus-intent-autonomy.ts into this module's runtime graph.
+import type { AutonomyMode } from "./amadeus-intent-autonomy.ts";
 
 // --- Types ---
 
@@ -4853,6 +4857,23 @@ export function getField(content: string, field: string): string | null {
   );
   const match = content.match(regex);
   return match ? match[1].trim() : null;
+}
+
+// --- Statusline autonomy segment ---
+//
+// FR-DISP-1: the statusline names the active Intent's autonomy mode with the
+// same vocabulary `--status` prints. The decision lives here — an already
+// measured module — because the statusline hook is spawn-only (it awaits
+// main() at module top level) and cannot host an importable seam. The domain
+// is pinned to the canonical AutonomyMode union, so widening it there fails
+// typecheck here instead of silently diverging. A value outside the domain, or
+// an absent field, degrades to no segment: a warning marker would invent the
+// second display vocabulary ADR-10 rejected. Callers render the segment.
+const AUTONOMY_SEGMENT_MODES: readonly AutonomyMode[] = ["none", "semi", "full"];
+
+export function autonomySegment(stateContent: string): string {
+  const mode = getField(stateContent, "Intent Autonomy Mode")?.trim() ?? "";
+  return AUTONOMY_SEGMENT_MODES.some((known) => known === mode) ? mode : "";
 }
 
 // --- Autonomy mode ---

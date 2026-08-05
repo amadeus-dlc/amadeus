@@ -13,11 +13,13 @@ import {
   grantIssuanceDisplayDigest,
   normalizeDecisionPolicies,
   resolveAutoDecision,
+  SEMI_ROUTINE_INTERACTIONS,
   type AutonomyProjection,
   type DecisionCapabilityPort,
   type DecisionOptionEffect,
   type GrantScopeDescriptor,
   type ResumeCondition,
+  type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
 import {
   createIntentAutonomyCoordinator,
@@ -65,6 +67,16 @@ function effect(optionId: string, classification: DecisionOptionEffect["classifi
     classification,
     requiredScopeFingerprint: SCOPE_FP,
     applicableNormFingerprint: NORM,
+  };
+}
+
+function semiScope(): SemiAuthorityScope {
+  return {
+    intentUuid: INTENT,
+    scopeId: "self-feature",
+    scopeFingerprint: SCOPE_FP,
+    normFingerprint: NORM,
+    allowedInteractionKinds: SEMI_ROUTINE_INTERACTIONS,
   };
 }
 
@@ -250,6 +262,13 @@ describe("Intent autonomy durable coordinator", () => {
         currentGrant: { ...grant, policies, policySetDigest: autonomyDigest(policies) },
       },
       occurrence: question(),
+      authority: {
+        kind: "grant",
+        grantId: grant.grantId,
+        scope: grant.scope,
+        policies,
+        authorityFingerprint: autonomyDigest({ ...grant, policies, policySetDigest: autonomyDigest(policies) }),
+      },
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -277,6 +296,7 @@ describe("Intent autonomy durable coordinator", () => {
     const decided = coordinator.decide(decisionInput({
       occurrence: gate(),
       registry: registry(effect("approve")),
+      semiScope: semiScope(),
       gateApprovalOptionId: "approve",
     }));
     expect(decided.kind).toBe("decided");
@@ -304,6 +324,7 @@ describe("Intent autonomy durable coordinator", () => {
     expect(semiCoordinator.decide(decisionInput({
       occurrence: gate("walking-skeleton"),
       registry: registry(effect("approve")),
+      semiScope: semiScope(),
       gateApprovalOptionId: "approve",
     })).kind).toBe("human-required");
 

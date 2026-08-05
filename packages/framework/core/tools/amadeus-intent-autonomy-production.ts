@@ -16,6 +16,7 @@ import {
   createInteractionOccurrence,
   grantIssuanceDisplayDigest,
   normalizeDecisionPolicies,
+  SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
   type AutonomyProjection,
   type DecisionPolicyInput,
@@ -23,6 +24,7 @@ import {
   type GrantScopeDescriptor,
   type HumanAutonomyCommand,
   type InteractionKind,
+  type SemiAuthorityScope,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
 import {
@@ -212,7 +214,7 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
       qualityRepair: "disabled",
     };
   }
-  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }));
+  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
   const qualityRepair = qualityState(projection);
   return {
     mode: projection.mode,
@@ -226,8 +228,9 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
 function authorizeProductionOccurrence(
   projection: AutonomyProjection,
   target: ReturnType<typeof occurrence>,
+  scopeId: string,
 ): { readonly authorized: boolean; readonly reason: string } {
-  const authorization = authorizeInteraction(projection, target);
+  const authorization = authorizeInteraction(projection, target, semiAuthorityScope(projection.intentUuid, scopeId));
   return authorization.kind === "human-required"
     ? { authorized: false, reason: authorization.reason }
     : { authorized: true, reason: authorization.kind };
@@ -278,13 +281,24 @@ function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
   };
 }
 
-function fallbackFingerprints(
+export function fallbackFingerprints(
   intentUuid: string,
   scopeId: string,
 ): { readonly scopeFingerprint: string; readonly normFingerprint: string } {
   return {
     scopeFingerprint: autonomyDigest({ intentUuid, scopeId }),
     normFingerprint: autonomyDigest({ scopeId, rules: "resolved-rules-in-context-v1" }),
+  };
+}
+
+// The semi authorization scope. Same fingerprint space as the grant fallback so
+// a decision basis stays comparable across modes once it is burned into audit.
+export function semiAuthorityScope(intentUuid: string, scopeId: string): SemiAuthorityScope {
+  return {
+    intentUuid,
+    scopeId,
+    ...fallbackFingerprints(intentUuid, scopeId),
+    allowedInteractionKinds: SEMI_ROUTINE_INTERACTIONS,
   };
 }
 
@@ -461,15 +475,13 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const projection = coordinator.readProjection();
   const target = occurrence({ ...input, projection });
-  const authorization = authorizeProductionOccurrence(projection, target);
+  const scopeId = getField(input.stateContent, "Scope") ?? "intent";
+  const authorization = authorizeProductionOccurrence(projection, target, scopeId);
   if (!authorization.authorized) return { kind: "not-authorized", reason: authorization.reason };
   if (projection.autoDecisions.some((decision) => decision.occurrenceId === target.occurrenceId)) {
     return { kind: "already-decided", grantId: projection.currentGrant?.grantId ?? null };
   }
-  const fallback = fallbackFingerprints(
-    projection.intentUuid,
-    getField(input.stateContent, "Scope") ?? "intent",
-  );
+  const fallback = fallbackFingerprints(projection.intentUuid, scopeId);
   const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ?? fallback.scopeFingerprint;
   const normFingerprint = projection.currentGrant?.scope.normFingerprint ?? fallback.normFingerprint;
   const payload = { action: "approve-stage", stage: input.stage };
@@ -500,6 +512,7 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
       recommend: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("stage-gate-default") }),
       unavailableReason: "stage-gate-is-deterministic",
     },
+    semiScope: semiAuthorityScope(projection.intentUuid, scopeId),
     gateApprovalOptionId: "approve",
   });
   if (result.kind !== "decided") return { kind: "not-authorized", reason: result.kind };
@@ -574,6 +587,7 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
       }),
       unavailableReason: input.election === undefined ? "native-solo-election-result-unavailable" : null,
     },
+    semiScope: semiAuthorityScope(projection.intentUuid, "intent"),
   });
 }
 
