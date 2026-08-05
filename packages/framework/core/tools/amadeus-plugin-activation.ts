@@ -244,7 +244,14 @@ export function activationAdvisoryLine(judgment: ActivationJudgment): string | n
 
 // The two FIRING judgment kinds, 1:1 with judgeActivation's non-silent values.
 // `current` has no code because it produces no Advisory at all.
-export type AdvisoryCode = "not-ready" | "changed" | "never-run";
+export type ActivationAdvisoryCode = "not-ready" | "changed" | "never-run";
+
+// A plugin-declared advisory carries its own code (ADR-6 revision), so the code
+// space is the three activation kinds plus any declared slug. The branded arm
+// keeps a declared code from being written where an activation kind is meant
+// without going through the declaration parser's validation.
+export type DeclaredAdvisoryCode = string & { readonly __brand: "DeclaredAdvisoryCode" };
+export type AdvisoryCode = ActivationAdvisoryCode | DeclaredAdvisoryCode;
 
 export type Advisory = {
   // The plugin the advisory is about (formal-model-check today; the type is
@@ -272,6 +279,13 @@ export function activationAdvisoriesForHost(
   stage: string,
   fs: ActivationFs = defaultActivationFs,
 ): Advisory[] {
+  return specHashAdvisories(hostRoot, stage, fs);
+}
+
+// The spec-hash advisory of ADR-1 option A. Declared plugin advisories are
+// supplied by amadeus-advisory-declaration.ts instead: this module starts no
+// process (BR-U6-2), so the evaluator side cannot live here.
+function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): Advisory[] {
   if (!formalModelCheckComposed(hostRoot, fs)) return [];
   const judgment = resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs);
   // Narrow on the judgment (not on the line being non-null) so `code` is the
@@ -359,6 +373,10 @@ export function unlatchedAdvisories(
 // The composition record's plugin entries: [name, record][]. We only need the
 // names, so the record half is opaque.
 type CompositionJson = { plugins?: [string, unknown][] };
+
+export function composedPluginNames(hostRoot: string, fs: ActivationFs = defaultActivationFs): string[] {
+  return readCompositionPlugins(hostRoot, fs).map(([name]) => name);
+}
 
 function readCompositionPlugins(hostRoot: string, fs: ActivationFs): [string, unknown][] {
   const path = join(hostRoot, ".amadeus-plugin-composition.json");

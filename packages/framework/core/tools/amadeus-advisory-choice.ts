@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   activeIntent,
   activeIntentUuid,
@@ -15,6 +15,14 @@ import {
   writeFileAtomic,
 } from "./amadeus-lib.ts";
 import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
+import {
+  advisoriesForHost,
+  declaredFormalCheckArgv,
+  isDeclaredAdvisoryCode,
+  isKnownAdvisoryCode,
+  resolveArgvTokens,
+  type RunEvaluator,
+} from "./amadeus-advisory-declaration.ts";
 import {
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
@@ -110,7 +118,8 @@ export type AdvisoryChoiceGuardResult =
 const STORE_FILE = ".amadeus-advisory-choice.json";
 const MODEL_CHECK_DIR = ".amadeus-advisory-check";
 const CHOICES = new Set<string>(ADVISORY_CHOICE_OPTIONS.map((option) => option.choice));
-const CODES = new Set<string>(["not-ready", "changed", "never-run"]);
+// The three activation kinds plus any plugin-declared slug (ADR-6 revision).
+// Validation lives in the declaration parser so both sides read one rule.
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value === value.trim();
@@ -327,7 +336,7 @@ function parseIdentity(value: unknown): ParseResult<AdvisoryIdentity> {
   for (const key of required) {
     if (!nonEmptyString(value[key])) return { ok: false, reason: `identity.${key} must be a non-empty string` };
   }
-  if (!nonEmptyString(value.code) || !CODES.has(value.code)) {
+  if (!nonEmptyString(value.code) || !isKnownAdvisoryCode(value.code)) {
     return { ok: false, reason: "identity.code is invalid" };
   }
   return { ok: true, value: value as unknown as AdvisoryIdentity };
@@ -700,6 +709,64 @@ function formalCheckRoute(
   };
 }
 
+// Generalization point 2 of ADR-6 (revised): a declared advisory's run-now
+// command comes from its own manifest, resolved through the reserved tokens.
+// A declaration with no executable side (formalCheck: null) contributes no
+// route — its release is the plugin's own evaluator saying no-hold on the next
+// `next`, never a verification this engine invents on its behalf.
+function declaredFormalCheckRoute(
+  projectDir: string,
+  activationHostRoot: string | undefined,
+  pending: PendingAdvisory,
+  attempt: number,
+): AdvisoryFormalCheckRoute | null {
+  if (activationHostRoot === undefined) return null;
+  const argv = declaredFormalCheckArgv(
+    dirname(activationHostRoot),
+    pending.identity.plugin,
+    pending.identity.code,
+  );
+  if (argv === null) return null;
+  const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
+  const resolved = resolveArgvTokens([...argv], {
+    out: output,
+    "advisory-instance": pending.identity.advisoryInstance,
+    target: pending.identity.target,
+    "spec-identity": pending.identity.specIdentity,
+  });
+  if (resolved === null) return null;
+  mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
+  return {
+    stage: "formal-model-check",
+    command: resolved.map((argument) => JSON.stringify(argument)).join(" "),
+    output_dir: output,
+    target: pending.identity.target,
+    spec_identity: pending.identity.specIdentity,
+    advisory_instance: pending.identity.advisoryInstance,
+  };
+}
+
+// A declared advisory with no executable side (formalCheck: null) has nothing
+// this engine can run and verify on the plugin's behalf, so a run-now choice
+// releases nothing: the hold stands until the plugin's own evaluator stops
+// raising it (BR-U2-05). The human's explicit defer-with-risk remains the
+// checkpoint's own escape hatch and is untouched by this rule.
+const DECLARED_RELEASE_RULE =
+  "declared advisory: release requires the plugin's own evaluator to return no-hold";
+
+// The report-side mirror of that judgment: ask the declaring plugins what they
+// raise right now. `null` means the host could not be resolved, in which case
+// the caller keeps the hold closed rather than guessing a release.
+function raisedDeclaredCodes(
+  activationHostRoot: string | undefined,
+  stage: string,
+  runEvaluator?: RunEvaluator,
+): Set<string> | null {
+  if (activationHostRoot === undefined) return null;
+  const raised = advisoriesForHost(activationHostRoot, stage, undefined, runEvaluator);
+  return new Set(raised.map((advisory) => `${advisory.plugin}/${String(advisory.code)}`));
+}
+
 function resolveRunRequiredHold(
   projectDir: string,
   stage: string,
@@ -712,6 +779,17 @@ function resolveRunRequiredHold(
   for (const pending of pendingItems) {
     const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
+    if (isDeclaredAdvisoryCode(pending.identity.code)) {
+      const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
+      const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
+      if (route === null) {
+        directiveItems.push({ ...directiveItem(pending), result: DECLARED_RELEASE_RULE });
+        continue;
+      }
+      directiveItems.push(directiveItem(pending));
+      formalChecks.push(route);
+      continue;
+    }
     if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
     const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
@@ -783,7 +861,12 @@ export function closeAdvisoryInstancesForStage(
   });
 }
 
-export function advisoryReportHoldReason(projectDir: string, stage: string): string | null {
+export function advisoryReportHoldReason(
+  projectDir: string,
+  stage: string,
+  activationHostRoot?: string,
+  runEvaluator?: RunEvaluator,
+): string | null {
   return withAuditLock(projectDir, () => {
     const path = storePath(projectDir);
     if (!existsSync(path)) return null;
@@ -803,11 +886,23 @@ export function advisoryReportHoldReason(projectDir: string, stage: string): str
       ).join(", ")}`;
     }
     if (verdict.kind === "resolved") return null;
+    let declaredRaised: Set<string> | null | undefined;
     const failures = verdict.pending.flatMap((item) => {
-      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
-      const latest = verdict.receipts
+      const latestChoice = verdict.receipts
         .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
+      const label = `${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}`;
+      if (isDeclaredAdvisoryCode(item.identity.code)) {
+        if (latestChoice?.choice !== "run-now") return [];
+        if (declaredRaised === undefined) {
+          declaredRaised = raisedDeclaredCodes(activationHostRoot, stage, runEvaluator);
+        }
+        const key = `${item.identity.plugin}/${item.identity.code}`;
+        if (declaredRaised !== null && !declaredRaised.has(key)) return [];
+        return [`${label}: ${DECLARED_RELEASE_RULE}`];
+      }
+      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
+      const latest = latestChoice;
       if (latest?.choice !== "run-now") return [];
       const attempt = storeResult.value.receipts.filter((receipt) =>
         activeReceiptMatches(receipt, item) && receipt.choice === "run-now"
