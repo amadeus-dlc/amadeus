@@ -882,7 +882,7 @@
     "slug": "intent-autonomy",
     "dirName": "260803-intent-autonomy",
     "scope": "self-feature",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019fc782-d6de-7a7c-b704-bfe10d0be118",
@@ -925,5 +925,12 @@
     "dirName": "260804-tla-authoring",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
+    "slug": "phase-boundary-approval",
+    "dirName": "260804-phase-boundary-approval",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

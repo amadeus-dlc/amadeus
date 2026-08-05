@@ -78,6 +78,19 @@ Treat the directive returned by `report` as the next loop step. Continue for
   verdict-only `report`. For a resume question, pass the resolved answer through
   `report --user-input "<resolved answer>"`. When another question names a
   continuation command, run that exact command once.
+- `await-advisory-choice`: if `directive.run_required === true`, execute every
+  `directive.formal_checks[].command` exactly as supplied and re-run `next`; do
+  not call `report`. Otherwise run
+  `bun .pi/tools/amadeus-log.ts advisory-decision --stage "<directive.stage>" --instances "<directive.advisories[].advisory_instance joined by comma in array order>"`
+  first, then render `directive.question` and its two `directive.options` as
+  numbered prose using `question-rendering.md`, and end the turn. On the answer
+  turn, confirm the choice deterministically: run
+  `bun .pi/tools/amadeus-advisory-choice.ts record --advisory-instance "<the advisory_instance the human answered for>" --choice "<run-now|defer-with-risk>"`
+  once per answered instance, then re-run `next`. `record` binds the receipt to
+  the latest real human turn and refuses with a reason on stderr rather than
+  dropping the choice; a repeat of the same choice is idempotent, so a retry
+  never re-asks the human. Never paraphrase the answer into a choice the human
+  did not pick, and never re-present an instance `record` has already accepted.
 - `select-intent`: render the supplied options and stop. Pass the opaque
   selection token and the exact answer as separately quoted argv values to the
   command named by the directive.

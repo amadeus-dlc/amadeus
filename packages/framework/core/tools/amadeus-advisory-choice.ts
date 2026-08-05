@@ -901,6 +901,185 @@ export function recordProtectedAdvisoryChoice(
   });
 }
 
+// The `record` route's presentation check (#2232). The prompt route requires
+// the DECISION_RECORDED presentation to sit BETWEEN the previous human turn and
+// this one (hasMatchingAdvisoryPresentation), because there the human's message
+// is the only evidence of what they were answering. `record` carries the
+// advisory instance explicitly, so adjacency proves nothing extra — and it is
+// precisely what a detour, a follow-up question, or a multi-turn AskUserQuestion
+// exchange destroys, silently dropping a legitimate choice. So this asks the
+// weaker, sufficient question: was this pending advisory ever actually presented
+// to the human? An unpresented instance is still refused.
+function hasRecordedAdvisoryPresentation(
+  projectDir: string,
+  pending: readonly PendingAdvisory[],
+): boolean {
+  if (pending.length === 0) return false;
+  let blocks: string[];
+  try {
+    blocks = splitAuditRecords(readFileSync(auditFilePath(projectDir), "utf-8"));
+  } catch {
+    return false;
+  }
+  const expected = {
+    Stage: pending[0]!.identity.checkpoint,
+    Options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label).join(","),
+    Rationale: advisoryPresentationRationale(pending),
+  };
+  return blocks.some((block) =>
+    auditBlockField(block, "Event") === "DECISION_RECORDED"
+    && (Object.keys(expected) as Array<keyof typeof expected>).every((field) =>
+      auditBlockField(block, field) === expected[field]
+    )
+  );
+}
+
+// The most recent real HUMAN_TURN in this clone's audit shard, in the same
+// provenance shape the prompt route binds. Null when the trail holds none —
+// which is a refusal, never a synthesized turn.
+function latestHumanTurn(projectDir: string): HumanTurnProvenance | null {
+  let event: { timestamp: string; block: string } | undefined;
+  try {
+    event = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN").at(-1);
+  } catch {
+    return null;
+  }
+  if (event === undefined) return null;
+  return {
+    timestamp: event.timestamp,
+    shard: auditShardName(projectDir),
+    eventIdentity: createHash("sha256").update(event.block).digest("hex"),
+  };
+}
+
+// The live receipt already covering one of these pending advisories, if any.
+// Revoked receipts do not count — a corrected misattribution leaves the
+// instance open to a fresh, properly grounded choice.
+function activeReceiptFor(
+  store: AdvisoryChoiceStore,
+  open: readonly PendingAdvisory[],
+): AdvisoryChoiceReceipt | undefined {
+  return store.receipts
+    .filter((receipt) =>
+      receipt.revokedAt === undefined
+      && open.some((pending) => identityKey(receipt.identity) === identityKey(pending.identity))
+    )
+    .at(-1);
+}
+
+// Every condition a FIRST record of an instance has to clear, in one place.
+// Returns the refusal reason, or null when the choice may be written. The
+// provenance checks (shard, grounding, single-spend) are the same ones the
+// prompt route applies in recordProtectedAdvisoryChoice; only the presentation
+// check is relaxed from adjacency to existence.
+function freshRecordRefusal(
+  projectDir: string,
+  store: AdvisoryChoiceStore,
+  open: readonly PendingAdvisory[],
+  humanTurn: HumanTurnProvenance,
+): string | null {
+  if (humanTurn.shard !== auditShardName(projectDir)) {
+    return "the latest human turn belongs to another audit shard";
+  }
+  if (!isGroundedHumanTurn(projectDir, humanTurn)) {
+    return "the latest human turn is not grounded in the audit trail";
+  }
+  const spent = store.receipts.some((receipt) =>
+    receipt.humanTurn.eventIdentity === humanTurn.eventIdentity
+    && receipt.humanTurn.shard === humanTurn.shard
+  );
+  if (spent) return "the latest human turn is already consumed by another advisory receipt";
+  if (!hasRecordedAdvisoryPresentation(projectDir, open)) {
+    const instance = open[0]?.identity.advisoryInstance ?? "this instance";
+    return `no advisory presentation is recorded for ${instance}; present it before recording the choice`;
+  }
+  if (!open.every((pending) => acceptsFreshChoice(projectDir, pending, store.receipts))) {
+    return "this advisory instance does not accept a fresh choice";
+  }
+  return null;
+}
+
+// Argument validation plus the store read, resolved together because none of
+// them can say anything useful without the others.
+function resolveRecordTarget(
+  projectDir: string,
+  advisoryInstance: string,
+  choice: string,
+): ParseResult<{ store: AdvisoryChoiceStore; open: PendingAdvisory[] }> {
+  if (!nonEmptyString(advisoryInstance)) {
+    return { ok: false, reason: "advisory instance is required" };
+  }
+  if (!CHOICES.has(choice)) {
+    return { ok: false, reason: `unknown choice: ${choice} (expected one of ${[...CHOICES].join(", ")})` };
+  }
+  const storeResult = readStore(projectDir);
+  if (!storeResult.ok) return storeResult;
+  const open = storeResult.value.pending.filter(
+    (pending) => pending.closedAt === undefined
+      && pending.identity.advisoryInstance === advisoryInstance,
+  );
+  if (open.length === 0) {
+    return { ok: false, reason: `open advisory instance not found: ${advisoryInstance}` };
+  }
+  return { ok: true, value: { store: storeResult.value, open } };
+}
+
+export type AdvisoryChoiceRecordResult =
+  | { ok: true; value: { recorded: true; idempotent: boolean; receipt: AdvisoryChoiceReceipt } }
+  | { ok: false; reason: string };
+
+// Deterministic acceptance for an advisory choice the conductor collected
+// through its own question UI (#2232). Every provenance guarantee the prompt
+// route makes is kept: the receipt binds a grounded HUMAN_TURN from this shard,
+// one turn is never spent twice, and an unpresented instance is refused. What
+// is dropped is the adjacency requirement — see hasRecordedAdvisoryPresentation.
+//
+// A repeat call with the SAME choice returns the stored receipt untouched
+// (idempotent), so a conductor retry after a tool error or a re-run of `next`
+// never asks the human again. A repeat with a DIFFERENT choice is a conflict
+// and is refused rather than silently resolved in favour of either one.
+export function recordAdvisoryChoiceDecision(
+  projectDir: string,
+  advisoryInstance: string,
+  choice: string,
+  now: string = new Date().toISOString(),
+): AdvisoryChoiceRecordResult {
+  return withAuditLock(projectDir, () => {
+    const target = resolveRecordTarget(projectDir, advisoryInstance, choice);
+    if (!target.ok) return { ok: false as const, reason: target.reason };
+    const { store, open } = target.value;
+
+    const existing = activeReceiptFor(store, open);
+    if (existing !== undefined) {
+      if (existing.choice !== choice) {
+        return {
+          ok: false as const,
+          reason: `advisory instance ${advisoryInstance} is already recorded with a different choice (${existing.choice})`,
+        };
+      }
+      return { ok: true as const, value: { recorded: true as const, idempotent: true, receipt: existing } };
+    }
+
+    const humanTurn = latestHumanTurn(projectDir);
+    if (humanTurn === null) {
+      return { ok: false as const, reason: "no real human turn is recorded in the audit trail" };
+    }
+    const refusal = freshRecordRefusal(projectDir, store, open, humanTurn);
+    if (refusal !== null) return { ok: false as const, reason: refusal };
+
+    const receipt: AdvisoryChoiceReceipt = {
+      schema: 1,
+      identity: open[0]!.identity,
+      choice: choice as AdvisoryChoice,
+      humanTurn,
+      recordedAt: now,
+    };
+    store.receipts.push(receipt);
+    writeStore(projectDir, store);
+    return { ok: true as const, value: { recorded: true as const, idempotent: false, receipt } };
+  });
+}
+
 export function revokeMisattributedAdvisoryChoice(
   projectDir: string,
   advisoryInstance: string,
@@ -945,15 +1124,48 @@ function cliFlag(args: string[], name: string): string | null {
   return index >= 0 && index + 1 < args.length ? args[index + 1]! : null;
 }
 
+const USAGE = [
+  "Usage:",
+  "  amadeus-advisory-choice.ts record --advisory-instance <id> --choice <run-now|defer-with-risk> [--project-dir <path>]",
+  "  amadeus-advisory-choice.ts correct-misattributed --advisory-instance <id> --human-turn <sha256> [--project-dir <path>]",
+].join("\n");
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  if (args[0] !== "correct-misattributed") {
-    console.error("Usage: amadeus-advisory-choice.ts correct-misattributed --advisory-instance <id> --human-turn <sha256> [--project-dir <path>]");
+  const subcommand = args[0];
+  if (subcommand !== "correct-misattributed" && subcommand !== "record") {
+    console.error(USAGE);
     process.exit(1);
   }
   const advisoryInstance = cliFlag(args, "--advisory-instance");
-  const humanTurn = cliFlag(args, "--human-turn");
   const projectDir = resolve(cliFlag(args, "--project-dir") ?? process.cwd());
+
+  if (subcommand === "record") {
+    const choice = cliFlag(args, "--choice");
+    if (advisoryInstance === null || choice === null) {
+      console.error(`Missing --advisory-instance or --choice\n${USAGE}`);
+      process.exit(1);
+    }
+    const recorded = recordAdvisoryChoiceDecision(projectDir, advisoryInstance, choice);
+    if (!recorded.ok) {
+      console.error(recorded.reason);
+      process.exit(1);
+    }
+    console.log(JSON.stringify({
+      recorded: true,
+      idempotent: recorded.value.idempotent,
+      advisory_instance: advisoryInstance,
+      choice: recorded.value.receipt.choice,
+      human_turn: {
+        shard: recorded.value.receipt.humanTurn.shard,
+        event_identity: recorded.value.receipt.humanTurn.eventIdentity,
+        timestamp: recorded.value.receipt.humanTurn.timestamp,
+      },
+    }));
+    process.exit(0);
+  }
+
+  const humanTurn = cliFlag(args, "--human-turn");
   if (advisoryInstance === null || humanTurn === null) {
     console.error("Missing --advisory-instance or --human-turn");
     process.exit(1);
