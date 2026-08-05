@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 14
-- **Completed**: 10
-- **In Progress**: functional-design
+- **Completed**: 11
+- **In Progress**: nfr-design
 
 ## Runtime State
 - **Revision Count**: 0
@@ -79,9 +79,9 @@
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [-] functional-design — EXECUTE
+- [x] functional-design — EXECUTE
 - [ ] nfr-requirements — SKIP
-- [ ] nfr-design — EXECUTE
+- [-] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [ ] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
@@ -99,17 +99,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: functional-design
-- **Next Stage**: nfr-design
+- **Current Stage**: nfr-design
+- **Next Stage**: code-generation
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-05T09:29:32Z
+- **Last Updated**: 2026-08-05T12:13:29Z
 
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-4c55238ea3ee5a3fe97623cbe6ea19a7
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: Execute Functional Design
+- **Last Completed Stage**: functional-design
+- **Next Action**: Execute Nfr Design
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
