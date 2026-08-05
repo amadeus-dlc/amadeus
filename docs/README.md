@@ -39,7 +39,8 @@ behaviours that differ live in [Running on other harnesses](guide/harnesses/READ
 Maintainers author in `packages/framework/core/` and `packages/framework/harness/`, then regenerate the `dist/<harness>/` trees with
 `bun run dist` (`bun scripts/package.ts`) — see the [Contributing Guide](reference/11-contributing.md)
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
-to add one.
+to add one. Before shipping a change to a harness distribution, run the opt-in
+local journeys in [Live Harness End-to-End Verification](harness-engineering/live-e2e.md).
 
 ## Upstream AI-DLC v2 differences
 
@@ -52,6 +53,12 @@ to add one.
 - [Supplying a formal model for a new protocol](reference/22-formal-model-supply.md)
 - [Telemetry Schema reference](reference/23-telemetry-schema.md)
 - [Intent autonomy, review, and completion](reference/24-intent-autonomy.md)
+
+## Generated file inventory
+
+[Complete AI-DLC v2 Generated File Inventory](amadeus-files.md) lists every file
+and directory an installed workspace contains — the harness engine trees, the
+`amadeus/` workspace, and the artifacts each stage writes.
 
 The repository layout decision is recorded in
 [Workspace Layout Decision](reference/18-workspace-layout.md): the framework
