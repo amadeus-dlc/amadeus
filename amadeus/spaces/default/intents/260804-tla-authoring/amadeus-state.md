@@ -6,7 +6,7 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-08-04T12:20:09Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Harness**: codex
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 14
-- **Completed**: 12
-- **In Progress**: code-generation
+- **Completed**: 13
+- **In Progress**: build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -80,8 +80,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
 
@@ -96,18 +96,18 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: build-and-test
+- **Next Stage**: none
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-05T05:19:42Z
+- **Last Updated**: 2026-08-05T22:19:22Z
 
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-8450fc2696a3021e447939279465525a
 - **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
-- **Last Completed Stage**: nfr-design
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: code-generation
+- **Next Action**: Execute Build And Test
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
