@@ -27,7 +27,7 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
-## phase boundary approval の依存関係（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary approval の依存関係（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

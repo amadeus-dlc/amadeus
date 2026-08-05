@@ -1,0 +1,31 @@
+{
+  "electionId": "E-PCP-RAS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の requirements-analysis ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/inception/requirements-analysis/memory.md)の候補4件について、memory 層へ persist する集合を選べ。実在根拠は diary と成果物(同ディレクトリの requirements.md / requirements-analysis-questions.md)で実測確認すること。候補 c1 = 「clarification 質問はソロ選挙の自動発動3類型外のため、autonomy full 下では選挙でなく grant の decide-question(auto-decision 記録・unreviewed・後日レビュー可能)を裁定経路とする」— full グラント question 機構の初の実運用形。候補 c2 = 「RE 裁定候補は一意導出分を執行として requirements へ直接固定し、機構選択は capability 要件化して設計へ委譲」。候補 c3 = 「Issue 本文の断定を RE 実測で訂正して受け入れ基準化(c7-upstream-universal-claim-unverified の適用)」。候補 c4 = 「質問予算の絞り込み(既存規則の適用)」。判定観点: 既存 memory 層ノルムの機械適用にすぎない候補は新規学習ではない。未被覆の運用知識だけを採用する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1〜c4 すべて既存ノルムまたは既存機構仕様の機械適用であり persist しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "他の組合せ",
+      "description": "上記以外の採用集合(留保に明記)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c1+c2 採用",
+      "description": "c1 と c2(執行固定+capability 委譲の分割則)を persist する。"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "c1 のみ採用",
+      "description": "「autonomy full 下の clarification 質問はソロ選挙の自動発動対象外であり、grant の decide-question(auto-decision 記録)を正規裁定経路とする — 選挙とグラント機構の適用境界」を project.md へ persist する(未被覆の適用境界として)。"
+    }
+  ]
+}

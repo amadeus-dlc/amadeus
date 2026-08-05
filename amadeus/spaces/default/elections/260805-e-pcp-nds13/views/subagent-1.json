@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PCP-NDS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の nfr-design ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/construction/nfr-design/memory.md)の候補2件について persist する集合を選べ。実在根拠は diary と per-unit ND 成果物・sensor detail(.amadeus-sensors/nfr-design/)で実測確認すること。候補 c1 = 「packaging kind unit の upstream-coverage は directive 解決 consumes が空でも stage frontmatter 宣言で判定される — sibling unit FD の設計出典としての実参照で充足(既存 c1-engine-produces-all-five ファミリの sensor 面観測)」。候補 c2 = 「ND 依存図は FD 関数合成との全辺一致(型 import と値注入の区別)を要求される(reviewer 指摘の是正実績 — 既存の整合レビュー観点の適用)」。判定観点: 既存ノルム・機構仕様の機械適用は新規学習でない。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1・c2 とも既存ノルムファミリの適用範囲内であり persist しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "他の組合せ",
+      "description": "上記以外(留保に明記)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c1 のみ採用",
+      "description": "packaging kind の upstream-coverage 充足形(sibling FD の設計出典参照)を既存 cid への追補として persist する。"
+    }
+  ]
+}

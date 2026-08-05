@@ -1,0 +1,45 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T09:11:31Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-NDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の機序自体は実測どおり(sensor detail upstream-coverage-10a8c921.md が plugin-packaging-e2e/nfr-design/security-design.md に対し pass:false / unreferenced: business-logic-model を記録し、成果物冒頭で sibling unit convergence-toolchain の business-logic-model を設計出典として実参照して解消)。ただし『upstream-coverage は stage frontmatter の宣言 consumes を要求し、directive 解決の有無で緩まない』は cid:nfr-requirements:upstream-coverage-conditional-consumes(team.md:299、conditional_on 面)と cid:nfr-design:c1-engine-produces-all-five + E-PCP-RES13 追補(project.md:18/317、produces_kinds が適用成果物を絞る面)の機械合成であり、新規知識の増分は『空 consumes 時の充足形 = sibling FD を設計出典として実参照』という運用形にとどまる。この充足形が別 unit kind で再発したら、独立 cid ではなく upstream-coverage-conditional-consumes への追補として再提案することを留保する。",
+      "rationale": "判定観点『既存ノルム・機構仕様の機械適用は新規学習でない』を両候補へ適用した結果、0件採用を支持する。c1: 上記のとおり既存2 cid の合成であり、diary 自身も『既存 cid の適用範囲内』と注記している。c2: ND 依存図と FD 関数合成の全辺一致要求は cid:functional-design:c3(概念の全成果物 grep)・cid:functional-design:cross-unit-type-verbatim-check・cid:functional-design:control-flow-diagram-completeness が既にカバーする整合レビュー観点の適用であり、型 import と値注入の区別という是正内容も既存観点の粒度内。いずれも新規の機序・反証可能な新事実を追加しない。",
+      "submittedAt": "2026-08-05T09:20:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-NDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist は既存 cid への追補として行い、独立 cid を新設しない。追補本文は intent 固有の固有名(U3 / plugin-packaging-e2e / convergence-toolchain / C8)を落とし、(a) upstream-coverage は stage frontmatter 宣言 consumes で判定され、produces_kinds による解決後の不在は免除にならない (b) 自 unit に実体が無い consumes は sibling unit の同名成果物を設計出典として実参照することで充足する、の2点の一般形に限定する。",
+      "rationale": "c1 のみ採用。c1 の実測: sensor detail .amadeus-sensors/nfr-design/upstream-coverage-10a8c921.md が Output path = construction/plugin-packaging-e2e/nfr-design/security-design.md、pass=false、consumes=[business-logic-model]、unreferenced=[business-logic-model] を記録している。packaging kind の U3 は produces_kinds により自 unit の business-logic-model を持たない(find 実測: 同 unit 配下の ND 成果物は security-design.md のみ、convergence-toolchain と seam-bridge は logical-components.md も産出)。是正後の security-design.md:3 が sibling unit convergence-toolchain の business-logic-model を設計出典として実参照し PASSED 化している。既存ファミリのいずれもこの面を被覆しない — project.md の c1-engine-produces-all-five は engine 完了判定、その RE 追補 c3-pcp-produceskinds-failopen は unitCovered / kindAwareArtifactsExist の artifact guard fail-open、nfr-requirements:upstream-coverage-conditional-consumes は conditional_on 面、nfr-design:c1-brief-skip-resolution は reviewer ブリーフへの負方向明示であり、いずれも produces_kinds 由来の consumes 不在時に sensor が何で判定し何で充足するかを定めていない。知識クラスの追補として実在価値がある。c2 は不採用: ND 依存図と FD 関数合成の全辺一致要求は既存の整合レビュー観点(functional-design:control-flow-diagram-completeness が制御フロー図への全要素包含を、cross-unit-type-verbatim-check / functional-design:c3 が cross-unit の逐語照合と全成果物 grep をすでに定める)の機械適用であり、reviewer BLOCKER→是正→READY は通常のレビュー往復の記録に留まる。判定観点『既存ノルム・機構仕様の機械適用は新規学習でない』に該当する。",
+      "submittedAt": "2026-08-05T09:10:58Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:2",
+      "resumedTo": "tallied",
+      "at": "2026-08-05T09:18:18Z"
+    }
+  ]
+}

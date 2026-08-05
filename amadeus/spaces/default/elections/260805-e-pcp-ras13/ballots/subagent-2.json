@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "persist 文には常任グラント(project.md:15 c2-grant-gates-only「内容裁定の代答には使えない」)と intent autonomy grant(allowedInteractionKinds に question を含む)の適用境界を明記すること — 両者を区別しないと将来の読み手が c2-grant-gates-only を autonomy grant へ誤適用し、stage-protocol.md:135 が定める正規経路を塞ぐ。",
+  "rationale": "実測: (a) c1 = memory 層に autonomy/decide-question の記述は 0 件(grep amadeus/spaces/default/memory/ で該当なし)。一方 project.md:15 は常任グラントについて「質問ファイルの [Answer] など内容裁定の代答には使えない。内容質問はグラント有効下でも必ず人間の回答を取ってから記入する」と定めており、本ステージが grant 経由で内容質問を確定した事実と表面上衝突する。両グラントは別機構(stage-protocol.md:135 が full 下の question を decide-question 経路として明示)であり、この適用境界は未被覆かつ誤適用のリスクが実在するため persist に値する。(b) c2 = 執行/選挙の切り分けは team.md always-elect、機構選択の design 委譲は project.md:185(constants-from-code「選択を design へ明示的に委ねる」)で既に被覆 — 機械適用。(c) c3 = diary 自身が (c7-upstream-universal-claim-unverified) と明記、project.md:313 に実在 — 既存 cid の適用。(d) c4 = diary が (intent-capture:c1 の絞り込み規則) と明記、project.md:187 / :262 に実在 — 機械適用。よって採用集合は c1 のみ。",
+  "submittedAt": "2026-08-05T06:35:26Z"
+}
