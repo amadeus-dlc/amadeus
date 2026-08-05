@@ -55,14 +55,16 @@ const meta = {
   generatedBy: "t438",
 } as const;
 
+let scratchRoot = "";
 let storeRoot = "";
 
 beforeEach(() => {
-  storeRoot = join(mkdtempSync(join(tmpdir(), "tla-evidence-")), "tla-evidence");
+  scratchRoot = mkdtempSync(join(tmpdir(), "tla-evidence-"));
+  storeRoot = join(scratchRoot, "tla-evidence");
 });
 
 afterEach(() => {
-  rmSync(storeRoot, { recursive: true, force: true });
+  rmSync(scratchRoot, { recursive: true, force: true });
 });
 
 describe("EvidenceBundle.build", () => {

@@ -120,18 +120,37 @@ interface HeadingStart {
   readonly level: number;
 }
 
-function headingStarts(lines: readonly string[], pattern: RegExp): readonly HeadingStart[] {
+/** Marks every line that opens, closes or sits inside a fenced code block. */
+function fencedLineMask(lines: readonly string[]): readonly boolean[] {
+  let inFence = false;
+  return lines.map((line) => {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      return true;
+    }
+    return inFence;
+  });
+}
+
+function headingStarts(
+  lines: readonly string[],
+  pattern: RegExp,
+  fenced: readonly boolean[],
+): readonly HeadingStart[] {
   const starts: HeadingStart[] = [];
   for (const [index, line] of lines.entries()) {
+    if (fenced[index] === true) continue;
     const match = pattern.exec(line);
     if (match !== null) starts.push({ id: match[1] as string, index, level: headingLevel(line) });
   }
   return starts;
 }
 
-/** A section runs to the next heading of the same or a higher level. */
-function sectionEnd(lines: readonly string[], start: HeadingStart): number {
+/** A section runs to the next unfenced heading of the same or a higher level. */
+function sectionEnd(lines: readonly string[], start: HeadingStart, fenced: readonly boolean[]): number {
   for (let cursor = start.index + 1; cursor < lines.length; cursor++) {
+    if (fenced[cursor] === true) continue;
     if (headingLevel(lines[cursor] as string) <= start.level) return cursor;
   }
   return lines.length;
@@ -142,7 +161,8 @@ function extractStableSections(
   docKind: DocKind,
 ): Result<ReadonlyArray<StableSection>, IdentityFailure> {
   const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
-  const starts = headingStarts(lines, headingPattern(docKind));
+  const fenced = fencedLineMask(lines);
+  const starts = headingStarts(lines, headingPattern(docKind), fenced);
 
   const repeated = duplicates(starts.map((start) => start.id));
   if (repeated.length > 0) return err<IdentityFailure>({ kind: "duplicate-id", ids: repeated });
@@ -150,7 +170,7 @@ function extractStableSections(
   const sections: StableSection[] = [];
   const hollow: string[] = [];
   for (const start of starts) {
-    const body = normalizeCanonicalBody(lines.slice(start.index + 1, sectionEnd(lines, start)).join("\n"));
+    const body = normalizeCanonicalBody(lines.slice(start.index + 1, sectionEnd(lines, start, fenced)).join("\n"));
     if (body === "") hollow.push(start.id);
     else sections.push({ id: start.id as StableId, canonicalBody: body });
   }
@@ -320,7 +340,9 @@ function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailur
   }
   if (!isPlainRecord(document)) return err<BundleFailure>({ kind: "missing-part", parts: ["<envelope>"] });
 
-  const identity = parseAggregateDigest(String(document.subjectIdentity));
+  // Only a genuine string may carry the digest — String() would let an array
+  // like ["sha256:<hex64>"] coerce into a passing value.
+  const identity = parseAggregateDigest(typeof document.subjectIdentity === "string" ? document.subjectIdentity : "");
   const evidence = parseEvidenceParts(document.evidence);
   const predecessor = parsePredecessor(document.predecessor);
   const generatedAt = typeof document.generatedAt === "string" ? document.generatedAt : "";
@@ -496,7 +518,11 @@ function build(
     writeFileSync(stagingPath, bytes);
     renameSync(stagingPath, finalPath);
   } catch (cause) {
-    rmSync(stagingPath, { force: true });
+    // Best-effort cleanup: a second failure here must not mask the original
+    // cause with a thrown exception out of a Result-returning function.
+    try {
+      rmSync(stagingPath, { force: true });
+    } catch {}
     return ioFailure(finalPath, cause);
   }
   return ok(ref);

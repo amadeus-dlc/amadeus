@@ -54,7 +54,9 @@ function succeeded(body: Record<string, unknown>): Emitted {
 }
 
 function parseFlags(argv: readonly string[]): Record<string, string> | null {
-  const flags: Record<string, string> = {};
+  // A null prototype keeps argv tokens like --__proto__ from touching the
+  // prototype chain instead of landing as ordinary own keys.
+  const flags: Record<string, string> = Object.create(null);
   for (let index = 0; index < argv.length; index += 2) {
     const name = argv[index] as string;
     const value = argv[index + 1];
@@ -96,7 +98,7 @@ function identityExtract(flags: Record<string, string>): Emitted {
   }
 
   const file = readTextFile(doc);
-  if (!file.ok) return { exitCode: 1, body: { ok: false, error: file.detail } };
+  if (!file.ok) return failed({ kind: "io-failure", path: doc, detail: file.detail });
 
   const sections = IdentityDigest.extractStableSections(file.text, docKind as DocKind);
   if (!sections.ok) return failed(sections.error);
@@ -122,9 +124,15 @@ function identityCompare(flags: Record<string, string>): Emitted {
   return succeeded({ comparison: IdentityDigest.compareIdentity(recorded, current) });
 }
 
-function storeRootOf(flags: Record<string, string>): string {
-  return flags.store ?? DEFAULT_STORE_ROOT;
+// An empty --store would resolve bundle paths relative to the working
+// directory, so it is rejected loudly instead of falling through.
+function storeRootOf(flags: Record<string, string>): string | null {
+  const raw = flags.store;
+  if (raw === "") return null;
+  return raw ?? DEFAULT_STORE_ROOT;
 }
+
+const EMPTY_STORE_USAGE = "--store must not be empty";
 
 function parsePredecessorFlag(raw: string): PredecessorRef | null {
   if (raw === "root") return { kind: "root" };
@@ -144,20 +152,27 @@ function bundleBuild(flags: Record<string, string>): Emitted {
   if (predecessor === null) return usageError("--predecessor must be root or sha256:<hex64>");
   if (identity === null) return usageError("--identity must be sha256:<hex64>");
 
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+
   const file = readTextFile(partsPath);
-  if (!file.ok) return { exitCode: 1, body: { ok: false, error: file.detail } };
+  if (!file.ok) return failed({ kind: "io-failure", path: partsPath, detail: file.detail });
 
   let document: unknown;
   try {
     document = JSON.parse(file.text) as unknown;
   } catch (cause) {
-    return { exitCode: 1, body: { ok: false, error: cause instanceof Error ? cause.message : String(cause) } };
+    return failed({
+      kind: "io-failure",
+      path: partsPath,
+      detail: cause instanceof Error ? cause.message : String(cause),
+    });
   }
 
   const parts = EvidenceEnvelopeCodec.parseParts(document);
   if (!parts.ok) return failed(parts.error);
 
-  const built = EvidenceBundle.build(storeRootOf(flags), parts.value as EvidenceParts, predecessor, {
+  const built = EvidenceBundle.build(store, parts.value as EvidenceParts, predecessor, {
     subjectIdentity: identity,
     generatedAt: flags["generated-at"] ?? new Date().toISOString(),
     generatedBy: flags["generated-by"] ?? "tla-authoring",
@@ -178,8 +193,10 @@ function bundleVerify(flags: Record<string, string>): Emitted {
   if (ref === null || identityRaw === null) return usageError("bundle verify requires --ref and --identity");
   const identity = asAggregateDigest(identityRaw);
   if (identity === null) return usageError("--identity must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
 
-  const verified = EvidenceBundle.verify(storeRootOf(flags), ref, identity);
+  const verified = EvidenceBundle.verify(store, ref, identity);
   return verified.ok
     ? succeeded({
         verified: true,
@@ -194,12 +211,15 @@ function bundleVerify(flags: Record<string, string>): Emitted {
 function bundleRead(flags: Record<string, string>): Emitted {
   const ref = refFlag(flags);
   if (ref === null) return usageError("bundle read requires --ref");
-  const parts = EvidenceBundle.read(storeRootOf(flags), ref);
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+  const parts = EvidenceBundle.read(store, ref);
   return parts.ok ? succeeded({ evidence: parts.value }) : failed(parts.error);
 }
 
 function bundleIndex(flags: Record<string, string>, mode: "list" | "head"): Emitted {
   const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
   const index = mode === "list" ? EvidenceBundle.list(store) : EvidenceBundle.head(store);
   return index.ok
     ? succeeded({ refs: index.value.refs.map((ref) => ref.digest), corrupted: index.value.corrupted })
@@ -222,9 +242,11 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
 function dispatch(argv: readonly string[]): Emitted {
   const [group, verb, ...rest] = argv;
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
-  const verbs = COMMANDS[group];
+  // Own-property checks keep argv tokens like "constructor" from resolving
+  // through the prototype chain of these object literals.
+  const verbs = Object.hasOwn(COMMANDS, group) ? COMMANDS[group] : undefined;
   if (verbs === undefined) return usageError(`unknown command: ${group}`);
-  const handler = verbs[verb];
+  const handler = Object.hasOwn(verbs, verb) ? verbs[verb] : undefined;
   if (handler === undefined) return usageError(`unknown ${group} subcommand: ${verb}`);
   const flags = parseFlags(rest);
   if (flags === null) return usageError("flags must be given as --name value pairs");

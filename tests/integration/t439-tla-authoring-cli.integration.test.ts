@@ -100,6 +100,32 @@ describe("identity extract", () => {
     ]);
     expect(exitCode).toBe(1);
     expect(body.ok).toBe(false);
+    expect((body.failure as { kind: string }).kind).toBe("io-failure");
+  });
+
+  test("rejects an odd flag list as a usage error", () => {
+    const { exitCode, body } = run(["identity", "extract", "--doc"]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toContain("pairs");
+  });
+
+  test("rejects prototype-chain argv tokens as unknown commands", () => {
+    for (const argv of [
+      ["__proto__", "extract"],
+      ["constructor", "extract"],
+      ["identity", "constructor"],
+      ["identity", "toString"],
+    ]) {
+      const { exitCode, body } = run(argv);
+      expect(exitCode).toBe(2);
+      expect(body.ok).toBe(false);
+    }
+  });
+
+  test("rejects an empty --store as a usage error", () => {
+    const { exitCode, body } = run(["bundle", "list", "--store", ""]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toContain("--store");
   });
 });
 
@@ -285,6 +311,7 @@ describe("bundle list / head", () => {
       "--store",
       storeRoot,
     ]);
+    expect(built.exitCode).toBe(0);
     const listed = run(["bundle", "list", "--store", storeRoot]);
     expect(listed.body.refs).toEqual([built.body.digest]);
     const head = run(["bundle", "head", "--store", storeRoot]);
