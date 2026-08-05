@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// tla-authoring.ts — the TLA+ authoring CLI. This unit (U1) owns the `identity`
-// and `bundle` subcommands; U2..U4 add theirs alongside.
+// tla-authoring.ts — the TLA+ authoring CLI. U1 owns the `identity` and
+// `bundle` subcommands, U3 owns `trace`; U2 and U4 add theirs alongside.
 //
 // Contract (component-methods.md § common rules): one JSON line on stdout,
 // exit 0 on success, 1 on a typed failure, 2 on a usage error. Dispatch only —
@@ -19,7 +19,14 @@ import {
   type EvidenceBundleRef,
   type EvidenceParts,
   type PredecessorRef,
+  type StableId,
 } from "./tla-evidence.ts";
+import {
+  InvariantNameCodec,
+  TraceCoverage,
+  type InvariantName,
+  type TraceRow,
+} from "./tla-referees.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -34,6 +41,7 @@ const USAGE = [
   "  bundle read --ref <digest> [--store <dir>]",
   "  bundle list [--store <dir>]",
   "  bundle head [--store <dir>]",
+  "  trace --subjects <path> --rows <path> --invariants <path>",
 ].join("\n");
 
 interface Emitted {
@@ -228,6 +236,90 @@ function bundleIndex(flags: Record<string, string>, mode: "list" | "head"): Emit
     : failed(index.error);
 }
 
+// --- U3: trace coverage ----------------------------------------------------
+
+function asStringArray(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+}
+
+function parseSubjects(value: unknown): { ok: true; value: StableId[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) return { ok: false, emitted: failed({ kind: "invalid-grammar", tokens: ["<subjects>"] }) };
+  const parsed: StableId[] = [];
+  for (const token of raw) {
+    const id = IdentityDigest.normalizeStableId(token);
+    if (!id.ok) return { ok: false, emitted: failed(id.error) };
+    parsed.push(id.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseInvariants(
+  value: unknown,
+): { ok: true; value: InvariantName[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) {
+    return { ok: false, emitted: failed({ kind: "invalid-invariant-name", tokens: ["<invariants>"] }) };
+  }
+  const parsed: InvariantName[] = [];
+  for (const token of raw) {
+    const name = InvariantNameCodec.parse(token);
+    if (!name.ok) return { ok: false, emitted: failed(name.error) };
+    parsed.push(name.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseTraceRows(value: unknown): { ok: true; value: TraceRow[] } | { ok: false; emitted: Emitted } {
+  if (!Array.isArray(value)) {
+    return { ok: false, emitted: failed({ kind: "invalid-trace-row", detail: "rows must be an array" }) };
+  }
+  const rows: TraceRow[] = [];
+  for (const entry of value) {
+    const record = entry as Record<string, unknown>;
+    const subject = typeof record?.subject === "string" ? IdentityDigest.normalizeStableId(record.subject) : null;
+    const invariant = typeof record?.invariant === "string" ? InvariantNameCodec.parse(record.invariant) : null;
+    if (subject === null || invariant === null || typeof record.rationale !== "string") {
+      return {
+        ok: false,
+        emitted: failed({ kind: "invalid-trace-row", detail: JSON.stringify(entry) }),
+      };
+    }
+    if (!subject.ok) return { ok: false, emitted: failed(subject.error) };
+    if (!invariant.ok) return { ok: false, emitted: failed(invariant.error) };
+    rows.push({ subject: subject.value, invariant: invariant.value, rationale: record.rationale });
+  }
+  return { ok: true, value: rows };
+}
+
+function traceEvaluate(flags: Record<string, string>): Emitted {
+  const subjectsPath = requiredFlag(flags, "subjects");
+  const rowsPath = requiredFlag(flags, "rows");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  if (subjectsPath === null || rowsPath === null || invariantsPath === null) {
+    return usageError("trace requires --subjects, --rows and --invariants");
+  }
+
+  const subjectsDoc = readJsonDocument(subjectsPath);
+  if (!subjectsDoc.ok) return subjectsDoc.emitted;
+  const rowsDoc = readJsonDocument(rowsPath);
+  if (!rowsDoc.ok) return rowsDoc.emitted;
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+
+  const subjects = parseSubjects(subjectsDoc.value);
+  if (!subjects.ok) return subjects.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+  const rows = parseTraceRows(rowsDoc.value);
+  if (!rows.ok) return rows.emitted;
+
+  const coverage = TraceCoverage.evaluate(subjects.value, rows.value, invariants.value);
+  return coverage.ok ? succeeded({ coverage: coverage.value }) : failed(coverage.error);
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
@@ -241,8 +333,18 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   },
 };
 
+// Commands whose whole contract is one verb, so they take flags directly.
+const FLAT_COMMANDS: Readonly<Record<string, Handler>> = {
+  trace: traceEvaluate,
+};
+
 function dispatch(argv: readonly string[]): Emitted {
   const [group, verb, ...rest] = argv;
+  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
+    const flatFlags = parseFlags(verb === undefined ? [] : [verb, ...rest]);
+    if (flatFlags === null) return usageError("flags must be given as --name value pairs");
+    return (FLAT_COMMANDS[group] as Handler)(flatFlags);
+  }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving
   // through the prototype chain of these object literals.
