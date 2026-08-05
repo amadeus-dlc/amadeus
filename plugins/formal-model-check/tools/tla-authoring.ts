@@ -23,10 +23,14 @@ import {
 } from "./tla-evidence.ts";
 import {
   InvariantNameCodec,
+  ProofObligations,
   TraceCoverage,
   type InvariantName,
+  type ModelArtifacts,
+  type TlcToolchain,
   type TraceRow,
 } from "./tla-referees.ts";
+import { createRefereeToolchain } from "./tla-referee-toolchain.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -42,6 +46,7 @@ const USAGE = [
   "  bundle list [--store <dir>]",
   "  bundle head [--store <dir>]",
   "  trace --subjects <path> --rows <path> --invariants <path>",
+  "  proof --model <tla> --cfg <cfg> --reduction <manifest> --invariants <path> --identity <digest>",
 ].join("\n");
 
 interface Emitted {
@@ -320,7 +325,51 @@ function traceEvaluate(flags: Record<string, string>): Emitted {
   return coverage.ok ? succeeded({ coverage: coverage.value }) : failed(coverage.error);
 }
 
+// --- U3: proof obligations -------------------------------------------------
+
+/** The referee toolchain is injected so tests can drive the decision table. */
+export interface AuthoringDependencies {
+  readonly toolchain: TlcToolchain;
+}
+
+async function proofEvaluate(
+  flags: Record<string, string>,
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
+  const modelPath = requiredFlag(flags, "model");
+  const cfgPath = requiredFlag(flags, "cfg");
+  const reductionPath = requiredFlag(flags, "reduction");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  const identityRaw = requiredFlag(flags, "identity");
+  if (
+    modelPath === null ||
+    cfgPath === null ||
+    reductionPath === null ||
+    invariantsPath === null ||
+    identityRaw === null
+  ) {
+    return usageError("proof requires --model, --cfg, --reduction, --invariants and --identity");
+  }
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+
+  const model: ModelArtifacts = {
+    modulePath: modelPath,
+    configPath: cfgPath,
+    reductionManifestPath: reductionPath,
+  };
+  const toolchain = dependencies?.toolchain ?? createRefereeToolchain();
+  const proof = await ProofObligations.evaluate(model, invariants.value, identity, toolchain);
+  return proof.ok ? succeeded({ proof: proof.value }) : failed(proof.error);
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
+type AsyncHandler = (flags: Record<string, string>, dependencies?: AuthoringDependencies) => Promise<Emitted>;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   identity: { extract: identityExtract, compare: identityCompare },
@@ -338,12 +387,22 @@ const FLAT_COMMANDS: Readonly<Record<string, Handler>> = {
   trace: traceEvaluate,
 };
 
-function dispatch(argv: readonly string[]): Emitted {
+// The proof referee drives TLC through a child process, so its handler is async.
+const ASYNC_FLAT_COMMANDS: Readonly<Record<string, AsyncHandler>> = {
+  proof: proofEvaluate,
+};
+
+async function dispatch(
+  argv: readonly string[],
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
   const [group, verb, ...rest] = argv;
-  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
+  if (group !== undefined && (Object.hasOwn(FLAT_COMMANDS, group) || Object.hasOwn(ASYNC_FLAT_COMMANDS, group))) {
     const flatFlags = parseFlags(verb === undefined ? [] : [verb, ...rest]);
     if (flatFlags === null) return usageError("flags must be given as --name value pairs");
-    return (FLAT_COMMANDS[group] as Handler)(flatFlags);
+    return Object.hasOwn(ASYNC_FLAT_COMMANDS, group)
+      ? (ASYNC_FLAT_COMMANDS[group] as AsyncHandler)(flatFlags, dependencies)
+      : (FLAT_COMMANDS[group] as Handler)(flatFlags);
   }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving
@@ -358,12 +417,16 @@ function dispatch(argv: readonly string[]): Emitted {
 }
 
 /** In-process entry point: argv without the runtime prefix, one JSON line per run. */
-export function runTlaAuthoring(argv: readonly string[], emit: Emit): ExitCode {
-  const emitted = dispatch(argv);
+export async function runTlaAuthoring(
+  argv: readonly string[],
+  emit: Emit,
+  dependencies?: AuthoringDependencies,
+): Promise<ExitCode> {
+  const emitted = await dispatch(argv, dependencies);
   emit(JSON.stringify(emitted.body));
   return emitted.exitCode;
 }
 
 if (import.meta.main) {
-  process.exitCode = runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
+  process.exitCode = await runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
 }

@@ -139,9 +139,12 @@ function recordingToolchain(): { toolchain: TlcToolchain; seen: Array<{ request:
   return { toolchain, seen };
 }
 
-function run(argv: readonly string[]): { exitCode: number; body: Record<string, unknown> } {
+async function runAsync(
+  argv: readonly string[],
+  dependencies?: { readonly toolchain: TlcToolchain },
+): Promise<{ exitCode: number; body: Record<string, unknown> }> {
   const lines: string[] = [];
-  const exitCode = runTlaAuthoring(argv, (line) => lines.push(line));
+  const exitCode = await runTlaAuthoring(argv, (line) => lines.push(line), dependencies);
   expect(lines).toHaveLength(1);
   return { exitCode, body: JSON.parse(lines[0] as string) as Record<string, unknown> };
 }
@@ -155,14 +158,14 @@ afterEach(() => {
 });
 
 describe("tla-authoring trace (AC-005 demo)", () => {
-  test("an uncovered stable ID is refused with every defect enumerated", () => {
+  test("an uncovered stable ID is refused with every defect enumerated", async () => {
     const subjects = writeJson("subjects.json", ["FR-006", "FR-008"]);
     const rows = writeJson("rows.json", [
       { subject: "FR-006", invariant: "TypeOK", rationale: "typing keeps FR-006 honest" },
     ]);
     const invariants = writeJson("invariants.json", ["TypeOK", "NoDuplicateCreate"]);
 
-    const { exitCode, body } = run([
+    const { exitCode, body } = await runAsync([
       "trace",
       "--subjects",
       subjects,
@@ -183,14 +186,14 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     });
   });
 
-  test("total coverage returns the proof digests on exit 0", () => {
+  test("total coverage returns the proof digests on exit 0", async () => {
     const subjects = writeJson("subjects.json", ["FR-006"]);
     const rows = writeJson("rows.json", [
       { subject: "FR-006", invariant: "TypeOK", rationale: "typing keeps FR-006 honest" },
     ]);
     const invariants = writeJson("invariants.json", ["TypeOK"]);
 
-    const { exitCode, body } = run([
+    const { exitCode, body } = await runAsync([
       "trace",
       "--subjects",
       subjects,
@@ -205,12 +208,12 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     expect(body.coverage).toMatchObject({ subjectsDigest: expect.stringMatching(/^sha256:/) });
   });
 
-  test("a malformed invariant name is a typed failure, not a crash", () => {
+  test("a malformed invariant name is a typed failure, not a crash", async () => {
     const subjects = writeJson("subjects.json", ["FR-006"]);
     const rows = writeJson("rows.json", [{ subject: "FR-006", invariant: "2Bad", rationale: "x" }]);
     const invariants = writeJson("invariants.json", ["2Bad"]);
 
-    const { exitCode, body } = run([
+    const { exitCode, body } = await runAsync([
       "trace",
       "--subjects",
       subjects,
@@ -224,10 +227,10 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     expect(body.failure).toMatchObject({ kind: "invalid-invariant-name" });
   });
 
-  test("a missing input file is reported as an io-failure", () => {
+  test("a missing input file is reported as an io-failure", async () => {
     const rows = writeJson("rows.json", []);
     const invariants = writeJson("invariants.json", []);
-    const { exitCode, body } = run([
+    const { exitCode, body } = await runAsync([
       "trace",
       "--subjects",
       join(workspace, "absent.json"),
@@ -240,8 +243,8 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     expect(body.failure).toMatchObject({ kind: "io-failure" });
   });
 
-  test("omitting a required flag is a usage error", () => {
-    const { exitCode, body } = run(["trace", "--subjects", join(workspace, "subjects.json")]);
+  test("omitting a required flag is a usage error", async () => {
+    const { exitCode, body } = await runAsync(["trace", "--subjects", join(workspace, "subjects.json")]);
     expect(exitCode).toBe(2);
     expect(body.ok).toBe(false);
   });
@@ -320,5 +323,111 @@ describe("the filesystem mutation workshop", () => {
     const manifest = unwrap(defaultProofDependencies().readManifest(model.reductionManifestPath));
     expect(manifest.declaredIdentity).toBe(IDENTITY);
     expect(Object.keys(manifest.injections)).toEqual(["TypeOK"]);
+  });
+});
+
+describe("tla-authoring proof", () => {
+  test("a satisfied set of obligations returns the evidence summary on exit 0", async () => {
+    const model = writeModel(IDENTITY);
+    const invariants = writeJson("proof-invariants.json", ["TypeOK"]);
+
+    const { exitCode, body } = await runAsync([
+      "proof",
+      "--model",
+      model.modulePath,
+      "--cfg",
+      model.configPath,
+      "--reduction",
+      model.reductionManifestPath,
+      "--invariants",
+      invariants,
+      "--identity",
+      IDENTITY,
+    ], { toolchain: recordingToolchain().toolchain });
+
+    expect(exitCode).toBe(0);
+    expect(body.ok).toBe(true);
+    expect(body.proof).toMatchObject({
+      boundIdentity: IDENTITY,
+      tlcExploration: { outcome: "not-detected" },
+    });
+  });
+
+  test("a stale manifest identity is refused with the missing obligation enumerated", async () => {
+    const stale = IdentityDigest.aggregateDigest([
+      [subject("FR-006"), IdentityDigest.contentDigest(subject("FR-006"), "old")],
+    ]);
+    const model = writeModel(stale);
+    const invariants = writeJson("proof-invariants.json", ["TypeOK"]);
+
+    const { exitCode, body } = await runAsync([
+      "proof",
+      "--model",
+      model.modulePath,
+      "--cfg",
+      model.configPath,
+      "--reduction",
+      model.reductionManifestPath,
+      "--invariants",
+      invariants,
+      "--identity",
+      IDENTITY,
+    ], { toolchain: recordingToolchain().toolchain });
+
+    expect(exitCode).toBe(1);
+    expect(body.failure).toMatchObject({ missing: ["identity-binding"] });
+  });
+
+  test("a malformed identity flag is a usage error", async () => {
+    const model = writeModel(IDENTITY);
+    const invariants = writeJson("proof-invariants.json", ["TypeOK"]);
+    const { exitCode } = await runAsync([
+      "proof",
+      "--model",
+      model.modulePath,
+      "--cfg",
+      model.configPath,
+      "--reduction",
+      model.reductionManifestPath,
+      "--invariants",
+      invariants,
+      "--identity",
+      "not-a-digest",
+    ], { toolchain: recordingToolchain().toolchain });
+    expect(exitCode).toBe(2);
+  });
+
+  test("omitting a required flag is a usage error", async () => {
+    const { exitCode } = await runAsync(["proof", "--model", join(workspace, "Sample.tla")], {
+      toolchain: recordingToolchain().toolchain,
+    });
+    expect(exitCode).toBe(2);
+  });
+
+  test("a toolchain that cannot run is a typed failure, not a rejected promise", async () => {
+    const model = writeModel(IDENTITY);
+    const invariants = writeJson("proof-invariants.json", ["TypeOK"]);
+    const exploding: TlcToolchain = {
+      versionLine: "unavailable",
+      run: () => Promise.reject(new Error("tla2tools.jar could not be acquired")),
+    };
+
+    const { exitCode, body } = await runAsync([
+      "proof",
+      "--model",
+      model.modulePath,
+      "--cfg",
+      model.configPath,
+      "--reduction",
+      model.reductionManifestPath,
+      "--invariants",
+      invariants,
+      "--identity",
+      IDENTITY,
+    ], { toolchain: exploding });
+
+    expect(exitCode).toBe(1);
+    expect(body.failure).toMatchObject({ missing: ["tlc-exploration", "falling-proof", "vacuity-proof"] });
+    expect(JSON.stringify(body.failure)).toContain("could not be acquired");
   });
 });
