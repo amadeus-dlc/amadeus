@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -38,8 +38,6 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"ideation":"completed","inception":"completed"}
 - **Skeleton Stance**: on
-- **Parked**: 2026-08-04T23:32:07Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -102,8 +100,11 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-04T23:32:07Z
+- **Last Updated**: 2026-08-05T00:17:28Z
 
+- **Intent Autonomy Mode**: semi
+- **Intent Grant**: none
+- **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
