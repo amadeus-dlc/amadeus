@@ -86,6 +86,7 @@ import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
+  type AwaitCompletionDirective,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -583,7 +584,7 @@ function emitMirrorBoundaryIfNeeded(
         completionInstance: boundary.completion.instance,
       });
     } catch (cause) {
-      emit(errorDirective(
+      emit(awaitCompletionDirective(
         `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`,
       ));
       return true;
@@ -961,6 +962,16 @@ function printDirective(message: string): PrintDirective {
 
 function errorDirective(message: string): ErrorDirective {
   return { kind: "error", message };
+}
+
+// await-completion - the terminal completion transaction has not settled yet
+// (issue #2251). The engine itself instructs this state ("run complete-workflow,
+// then re-run `next`"), so it is a legitimate wait, not a failed step: emitting
+// it instead of an error directive keeps the expected window out of
+// ERROR_LOGGED / amadeus.operation.failed without touching the error path's own
+// recording contract (#839).
+function awaitCompletionDirective(reason: string): AwaitCompletionDirective {
+  return { kind: "await-completion", reason };
 }
 
 // Workspace migration is outside the Intent lifecycle. Its public-routing
@@ -3005,7 +3016,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   );
   if (!next) {
     if (getField(stateContent, "Status")?.trim() !== "Completed") {
-      emit(errorDirective(
+      emit(awaitCompletionDirective(
         `No in-scope stage remains after ${currentSlug}, but the workflow completion transaction is not committed.`,
       ));
       return;
