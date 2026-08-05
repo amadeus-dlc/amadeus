@@ -37,6 +37,8 @@
     "tools/tla-model-map.ts",
     "tools/tla-model-receipt.ts",
     "tools/tla-module-deps.ts",
+    "tools/tla-referee-toolchain.ts",
+    "tools/tla-referees.ts",
     "tools/tlc-spawn-planner.ts",
     "tools/tlc-toolchain.ts"
   ],
