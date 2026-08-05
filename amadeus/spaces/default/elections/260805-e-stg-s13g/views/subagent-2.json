@@ -1,0 +1,19 @@
+{
+  "electionId": "E-STG-S13G",
+  "voter": "subagent-2",
+  "question": "intent 260805-subagent-type-guard / ステージ delivery-planning の §13 学習選定。diary 候補2件。候補要旨: c1=0問様式の質問票採用と walking-skeleton/ラダーの Construction 予約(既決の適用実例) / c2=autonomy full 発効中でも walking-skeleton ゲートは実人間承認で止まる設計を bolt-plan に明記した(project.md Forbidden の適用実例)。いずれも既存ノルムの適用に見えるが、採用すべき一般化可能な新規学習があるか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c2 を採用",
+      "description": "c2 を persist する。主張: Forbidden は「認可させない」という禁止のみを定め、「autonomy full の発効中に walking-skeleton ゲートへ到達したとき conductor が取るべき動作(auto-approve 経路を使わず実人間承認へ切り替える)」という運用手順は未規定 — full 発効下でこの境界を初めて通る intent として、bolt-plan への事前明記という予防形に価値がある。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件(採用なし)",
+      "description": "2件とも persist しない。主張: c1 は no-election-for-decided-norms と E-OC1 の適用実例、c2 は project.md Forbidden(walking-skeleton gate のグラント認可禁止)の適用実例で、いずれも既存 cid が完全に覆う。record(diary + bolt-plan の明記)への保存で十分。"
+    }
+  ]
+}

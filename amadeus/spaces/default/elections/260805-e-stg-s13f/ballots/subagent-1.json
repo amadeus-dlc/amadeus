@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13F",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c3 は独立 cid でなく既存のサブエージェント・ライフサイクル系 cid(cid:requirements-analysis:c4-agent-async-despite-sync-flag)への追補として persist し、ハーネス名(Claude Code)と実測日を本文へ焼き込んで次回週次蒸留で退役判定できる形にする。あわせて failureReason にリセット時刻が載るというフィールド内容は本投票者が独立実測できず(現時点で failed 状態の subagent が手元に無い)、根拠は intent record の diary 記載に限られる点を persist 文へ明記する。",
+  "rationale": "c2 は独立実測で両ギャップを確認した。(a) parseUnitsBlock(amadeus-lib.ts:8054-8110)は `- name:` 入れ子エントリを前提とし、name エントリ外の行は itemMatch へ流れるか `unrecognised line in units block` で throw → parseBoltDag が reason:\"malformed\" を返す。フラット形が正書式でないことは実装から確定する。(b) kind は parseUnitsBlock では optional(current.kind 未設定を許す)だが、.claude/tools/amadeus-sensor-required-sections.ts の validateBoltDagKinds(:124-141)が kind===undefined の unit 名を missing_unit_kinds として集計し、:262-266 で findingsCount>0 なら pass=false にする — すなわちセンサー面では必須。UNIT_KINDS は amadeus-lib.ts:65-72 の閉語彙 service|spec|ui|packaging|library で、normalizeUnitKind(:95)が語彙外を拒否する。既存 cid:units-generation:per-unit-loop-activation(project.md:158)は『units/depends_on の fenced yaml が必須』としか書かず、入れ子形の要求も kind の要求も含まない — kind 検査は cid:nfr-design:c1-engine-produces-all-five 以降の新契約で文面が世代遅れ、という c2 の主張どおり。本 intent の 2 段是正も record(inception/units-generation/memory.md の Interpretations 2026-08-05T17:02:00Z)と現行 unit-of-work-dependency.md:9-20(3 Unit すべてに kind: library|service)で確認した。c3 も採る: stall の停止原因の判別(レート上限か配送失敗か)は E-STG-S13E(配送2経路)と c4-agent-async(transcript 監視)のいずれも被覆せず、上限中の再ディスパッチは同じ失敗を繰り返すだけという実害面がある(record: i1b が session limit で failed、リセット後の i1c は約2分で READY)。0 件案は c2 のギャップが実装から確定している以上採れない — センサーの FAILED detail は是正を案内するが、起草前に正書式を知る手段にはならず、2 段のイテレーション消費を防げない。",
+  "submittedAt": "2026-08-05T21:42:00Z"
+}

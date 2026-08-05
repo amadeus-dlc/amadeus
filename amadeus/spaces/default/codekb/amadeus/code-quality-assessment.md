@@ -28,7 +28,77 @@
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
-## phase boundary approval の品質所見（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## subagent 型規律と model 可観測性の品質所見（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
+
+### D-1: 既存テストが誤前提を固定している（新規、S2 相当）
+
+`packages/framework/core/tools/amadeus-lib.ts:4102` の `SUBAGENT_DISPATCH_TOOL = "Task"` が Claude Code `2.1.222` の実 payload（`tool_name = "Agent"`、live 実測）と不一致であり、`:4129` の照合で `subagentStartFields` が常に `null` を返す。結果として **Claude Code では `SUBAGENT_STARTED` が永久に emit されない**。
+
+品質面での要点は欠陥そのものより**固定の構造**にある:
+
+| 固定面 | 座標 | 内容 |
+| --- | --- | --- |
+| テスト | `tests/unit/t-subagent-purpose.test.ts:89` | `expect(subagentStartFields({ tool_name: "Task", tool_input: { prompt: "x" } })).toEqual({` |
+| テスト | 同 `:96` / `:97` / `:101` | いずれも `tool_name: "Task"` 前提の assert |
+| ドキュメント | `core/knowledge/amadeus-shared/audit-format.md:154` | Emitter 欄に `(PreToolUse{Task} / SubagentStart)` |
+
+**3面が同じ誤前提を宣言しているため、テストは緑のまま欠陥が生存する。** `cid:reverse-engineering:c1-pinned-behavior-ruling` の適用対象そのものであり、「バグでない証明」ではなく「変更に裁定が要る証明」として扱う必要がある。同ファイル `:82` の tool_name 不在ケース（kimi 経路）は D-1 の影響を受けないため、テストの一部だけが誤前提を持つ混在状態になっている。
+
+なお matcher は本欠陥と無関係である（settings の matcher を `^Agent$` に変えても発火し `tool_name` は `"Agent"`。負対照 run 実測）。**matcher の実験だけでは payload の `tool_name` を推定できない**という手法上の含意があり、`cid:application-design:external-seam-vocab-measurement`（seam の語彙は実測で確定する）の実例である。
+
+### 観測ギャップ（S2 相当）
+
+audit 実測（Architect 再計測 2026-08-06、測定 ref = worktree `c66a2c987` の working tree、tracked 216 シャード / 132 intent）:
+
+| 指標 | 値 |
+| --- | --- |
+| `SUBAGENT_STARTED` | **60** |
+| `SUBAGENT_COMPLETED` | **974**（移動値 — 本セッション中も追記される。Developer scan 時点 973） |
+
+`SUBAGENT_STARTED` を含むシャードは**1 intent のみ**（`260801-tla-multi-model`）で、型は `coder` 33 / `explore` 27 の2種だけである。`log-subagent-start` の配線を持つのは kimi（`harness/kimi/hooks/amadeus-kimi-lib.ts:625-626`）と Claude Code の `settings.json.example` のみで、codex アダプタには配線がない（grep 0 件）。→ **Claude Code 由来の `SUBAGENT_STARTED` は全 132 intent で 0 件。**
+
+品質含意: START × COMPLETE のペアリングを行う `composeSubagentLifetimes`（`core/otel/subagent-lifetime.ts:112`）は、**入力の半分が構造的に欠けたまま**である。休眠（本番消費者 0）であるため実損は出ていないが、配線した瞬間に Claude Code 上で空集合を返す。
+
+### 型規律の不在（本 Issue の主題、S3 相当）
+
+`SUBAGENT_COMPLETED` 974 件の `Agent Type` の分布:
+
+| 分類 | distinct | イベント数 | 例 |
+| --- | --- | --- | --- |
+| `amadeus-*-agent` persona | 8 | 416 | 定義済み persona |
+| ハーネス組込型 | 8 | 297 | `default` 136 / `unknown` 69 / `coder` 37 / `explore` 29 / `worker` 14 / `general-purpose` 9 / `Explore` 2 / `Plan` 1 |
+| **許可集合外の `name:` 値** | **184** | **261** | `xrev-2279-reviewer-1` / `re-dev-scan` / `subagent-1` / `cpg-fd-u1` / `builder-oms-b4` … |
+
+内訳の和は `416 + 297 + 261 = 974` で総数と一致（機械照合済み）。
+
+**型（`subagent_type`）を記録すべきフィールドに、実運用では名前（`name:`）が入っている。** `normalizeAgentType`（`:4082-4084`）は `raw?.trim() ? raw : "unknown"` の空白判定のみで所属検査を持たず、非空値を verbatim 通す。compile 時には agent ロスタ照合が存在する（`core/tools/amadeus-graph.ts:2191` + `:2218`）が、これは stage frontmatter の `lead_agent` / `support_agents` を検査する別機構であり **dispatch の `subagent_type` は一切見ない**。すなわち検査が在る層と無い層の非対称が欠陥の所在である。
+
+ただし `name:` 値がどの seam から `Agent Type` へ入るかは**未確定（HYPOTHESIS）**である。`subagent_type: "Explore"`（`name:` 指定なし）の live probe では `PreToolUse` の `tool_input.subagent_type` と `SubagentStop` の `agent_type` が両方 `"Explore"` で一致していた。名前付き spawn の live probe が未実施のため、CAP-1 の照合対象を確定するには追試が要る。
+
+### 休眠面の三重（S3 相当）
+
+| 面 | 宣言 / 書き手 | 本番消費 / 読み手 |
+| --- | --- | --- |
+| `gen_ai.request.model` | `core/otel/resource-suppliers.ts:24`（`SUPPLIED_RESOURCE_KEYS`） | **0**（`supplyResourceAttribute(` の本番呼出は `amadeus-session-start.ts:148` の `"session.id"` 1 箇所のみ） |
+| `composeSubagentLifetimes` | `core/otel/subagent-lifetime.ts:112` | **0**（`tests/unit/t-subagent-lifetime.test.ts` のみ） |
+| `runtime-attrs.json` | `core/hooks/amadeus-statusline.ts:249-252` | **0**（`grep -rn 'runtime-attrs' packages/` は 2 hit で両方が書き手側。ディスク実体も 0 件、`observability` は `null`） |
+
+3件すべてが「宣言と本番結線の非対称」クラスであり、`cid:requirements-analysis:symmetric-pair-review` の観点に該当する。品質面では**負債と実装先の両義**を持つ — CAP-2 / CAP-3 はこの休眠面を結線する形で組めるため、新規機構ゼロで要件を満たしうる。
+
+### ケーシング衝突（S4 相当）
+
+`Explore`（Claude Code 組込、2 件）と `explore`（Codex / kimi native、29 件）が**別値として audit に共存している**。許可集合の照合設計で正規化方針（大小無視 / ハーネス別に別型として扱う）を決めないと、同一概念が二重計上される。組込型を列挙した repo 内の正本は存在せず（`docs/` 配下に見つからない）、正本はハーネス側にあり repo からは observable でないため、許可集合の組込部分は手書き台帳になる。`cid:code-generation:count-comment-sync-on-catalog-change` / count-free 系の設計配慮が要る。
+
+### 本区間で確認できる強み
+
+- **`Purpose` 導出の防御設計**: `subagentPurposeLine`（`:4109-4114`）は escape 正規化 → 初行 → control 除去 → trim → 200 字切詰の固定順で、`:4104-4118` のコメントが各段の必要性（未デコード JSON 文字列で改行が2文字のまま届く場合に 200 字窓が初行外を巻き込む）を明示している。機密が prompt 本文に混入するリスクへの意図的な lossy 設計であり、CON-1（CXR-33）と整合する。
+- **`TaskUpdate` 誤検知の防波堤が文書化されている**: `:4133-4137` が「settings matcher は unanchored regex なので `"Task"` は `TaskUpdate` / `TaskCreate` にもマッチする」ことを明示しており、D-1 の修正形が失ってはならない性質が読み取れる。
+- **t385 対応の literal 再構成**: `core/hooks/amadeus-log-subagent-start.ts:70-72` がフィールドを opaque な戻り値から転送せず literal で組み直しており、コメント `:64-69` が「emitter/registry admission guard が call site のキー集合を静的に読めるようにする / default-deny redaction では未 admit キーが無音で消える」と理由を述べている。default-deny の危険を構造で塞いだ実装であり、model 属性の追加時も同じ様式を踏む必要がある。
+- **患部の安定性**: 患部9パスは 34 commits の区間で無変更であり、上流のクロスレビュー引用が observed でそのまま有効である（免除条件は verdict の target-sha 一致で成立）。
+
+## phase boundary approval の品質所見（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files、`+84296 / −11280`）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

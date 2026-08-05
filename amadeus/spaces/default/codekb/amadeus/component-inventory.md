@@ -17,7 +17,72 @@
 
 候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
 
-## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## subagent 観測パイプラインの対象コンポーネント（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙は `re-scans/260805-subagent-type-guard.md` を正本とする。
+
+### core コンポーネント
+
+| コンポーネント | 所在 | 入出力 | 状態 |
+| --- | --- | --- | --- |
+| `normalizeAgentType` | `core/tools/amadeus-lib.ts:4082-4084` | `string \| null \| undefined` → `string` | 稼働。`raw?.trim() ? raw : "unknown"` の空白判定のみ。**所属検査なし** |
+| `subagentPurposeLine` | 同 `:4109-4114` | `unknown` → `string`（最大 200 字） | 稼働。escape 正規化 → 初行 → control 除去 → trim → 切詰の固定順 |
+| `subagentStartFields` | 同 `:4128-4139` | `ClaudeCodeHookInput` → `Record<string,string> \| null` | **Claude Code では常に `null`**（D-1、`:4129` の `"Task"` 照合）。kimi 経路（tool_name 不在）は正常 |
+| `SUBAGENT_DISPATCH_TOOL` | 同 `:4102` | 定数 `"Task"` | **実 payload（`"Agent"`）と不一致** |
+| `SUBAGENT_PURPOSE_MAX_LENGTH` | 同 `:4097` | 定数 `200` | 稼働 |
+| `CONTROL_CHARS` | 同 `:4107` | 正規表現（module 非 export） | 稼働 |
+| `ClaudeCodeHookInput` | 同 `:4687-4707` | 型宣言 | `model` 未宣言。`:4706` の `[key: string]: unknown` により追加は非破壊 |
+| `composeSubagentLifetimes` | `core/otel/subagent-lifetime.ts:112` | `readonly JournalRecord[]` → `SubagentLifetime[]` | **休眠**（本番消費者 0、テストのみ）。Agent ID 優先 → 型 fallback（LIFO）でペアリング |
+| `SUPPLIED_RESOURCE_KEYS` | `core/otel/resource-suppliers.ts:22-27` | 定数配列（4 キー） | `gen_ai.request.model`（`:24`）は**宣言済み・本番供給 0** |
+| `supplyResourceAttribute` | 同 `:49` | `(SuppliedResourceKey, string) → void` | 本番呼出は `core/hooks/amadeus-session-start.ts:148` の `"session.id"` **1 箇所のみ** |
+| `recordRuntimeAttrs` | `core/hooks/amadeus-statusline.ts:230-256` | `(projectDir, input) → void` | **休眠**（observability 無効・実体 0 件・読み手 0 件）。書込先 `<telemetryDir>/runtime-attrs.json` |
+
+### hook コンポーネント（emitter）
+
+| hook | 所在 | 発火 seam | 現状 |
+| --- | --- | --- | --- |
+| `amadeus-log-subagent-start.ts` | `core/hooks/` | Claude Code `PreToolUse{^Task$}` / kimi `SubagentStart` | Claude Code 経路は D-1 + D-2 の二重で**不発**。`:61-72` が emit するフィールドを literal 再構成（t385 対応） |
+| `amadeus-log-subagent.ts` | `core/hooks/` | `SubagentStop` 系（Claude Code / codex adapter / kimi） | 稼働。`:50-52` で型・ID・Message を導出、`:68-72` でフィールド組立 |
+| `amadeus-statusline.ts` | `core/hooks/` | statusline render | model 読取は稼働するが `runtime-attrs` 書込は休眠 |
+
+### harness コンポーネント（配線）
+
+| ハーネス | subagent 配線 | model 供給 | 座標 |
+| --- | --- | --- | --- |
+| Claude Code | complete のみ live（`settings.json` に `SubagentStop`）。start は `settings.json.example` のみ | **不在**（明示 `tool_input.model` を除く） | `.claude/settings.json` / `.example` |
+| codex | complete のみ（start 配線なし、grep 0 件） | **実在**（`model` を verbatim pipe） | `harness/codex/hooks/amadeus-codex-adapter.ts:349-352` |
+| kimi | start / complete 両方（`role-start` / `role-stop`） | 未実測 | `harness/kimi/hooks/amadeus-kimi-lib.ts:625-626` |
+| cursor / opencode / kiro / kiro-ide / pi | 未実測 | 未実測 | — |
+
+### registry / doc コンポーネント
+
+| 対象 | 所在 | 契約 |
+| --- | --- | --- |
+| `SUBAGENT_STARTED` | `core/otel/event-registry.ts:612-623` | required `["Agent Type"]`（`:620`）/ optional `["Agent ID","Purpose"]`（`:621`）/ canonical / category `subagent` / schemaVersion 1 |
+| `SUBAGENT_COMPLETED` | 同 `:624-632` | required `["Agent Type"]`（`:629`）/ optional `["Agent ID","Message"]`（`:630`）/ 同上 |
+| `audit-format.md` | `core/knowledge/amadeus-shared/audit-format.md:154` | Emitter 欄が `(PreToolUse{Task} / SubagentStart)` — D-1 の同期対象 |
+
+`Purpose`（START）と `Message`（COMPLETE）は**設計上意図された非対称**である。前者は dispatch prompt から導出したラベル、後者は `last_assistant_message` の先頭 200 字であり、registry も別 optional として登録済み。統合は要件化されていない。
+
+### 集計 host の候補比較
+
+| 候補 | audit を読むか | subagent を知るか | 判定 |
+| --- | --- | --- | --- |
+| `amadeus-runtime.ts summary` | いいえ（`runtime-graph.json` 対象） | いいえ（`Agent Type` / `SUBAGENT` の grep 0 件） | CAP-3 の host に不適 |
+| `composeSubagentLifetimes` | はい（`JournalRecord[]`） | はい | **第一候補**（休眠 seam の配線で足りる） |
+| `metrics-instruments.ts:102` | いいえ（metric 属性） | いいえ（model 別のみ） | 別軸 |
+| `amadeus-norm-metrics.ts` / `amadeus-loop-monitor-runtime.ts` | はい | いいえ | 実装様式の先例（reuse inventory） |
+
+### 観測量（audit 実測、Architect 再計測 2026-08-06）
+
+| 指標 | 値 |
+| --- | --- |
+| `SUBAGENT_STARTED` | 60（1 intent のみ、型は `coder` 33 / `explore` 27） |
+| `SUBAGENT_COMPLETED` | 974（移動値 — 本セッション中も追記される） |
+| `Agent Type` distinct | 200（persona 8 / 組込型 8 / 許可集合外 184） |
+| イベント内訳 | persona 416 / 組込型 297 / 許可集合外 261（和は 974 と一致） |
+
+## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。core tools は **103 → 116**。
 

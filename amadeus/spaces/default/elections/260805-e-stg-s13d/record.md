@@ -1,0 +1,10 @@
+# Election Record — E-STG-S13D
+
+- question: intent 260805-subagent-type-guard / ステージ requirements-analysis の §13 学習選定。候補5件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=Q1〜Q9 を執行クラスと AD 委譲に二分しグラント代答を回避した運用 / c2+c5=【対の実例】初稿 FR-3a がユーザー承認済みの解決順に『ハーネス供給値』という新層を最上位挿入し、questions がそれを『既決+一次証拠の機械的適用 = 執行クラス』と自己分類 → reviewer i1 が P3 違反(執行を装った設計判断の混入)を BLOCKER で捕捉 → 承認済み順序の逐語維持 + 新層の AD 委譲で是正、i2 READY / c3=AC の『誤検知』定義の精密化(intent 固有) / c4=advisory の defer 判断(intent 固有)。
+
+裁定: c2+c5 を1件に統合して採用(choice 1: 2票)
+内訳: choice1=2票 choice2=0票
+- 留保(subagent-1, GoA2): c2+c5 は独立した新規 cid ではなく cid:reverse-engineering:c1-xrev-mechanism-resolution 系の追補 cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority(project.md:311)への追補として、その鏡像面であることを明示した一般形で persist すること — 既存則は『レビュアーが未裁定と述べても一次証拠が canonical を逐語指名していれば執行事項である』(執行と誤って過小分類する側)を扱い、本候補は『一次証拠が新事実を与えても既決裁定の文面に無い層・順序・概念の追加は執行にならない』(執行と誤って過大分類する側)を扱う。同一境界の両側であり、独立 cid の新設はノルム層の分散を招く。あわせて FR-3a / Q4/Q5 / Open questions 4 という intent 固有の識別子と『ハーネス供給値』という題材語彙は落とし、negative-vocabulary check の逆方向適用(裁定の文面に現れない語彙が結論に現れていないかの 0-hit 確認)を検査法として本文に含めること。
+- 留保(subagent-2, GoA2): 独立 cid を新設せず、既決/執行の境界を扱う既存ファミリへの追補として persist すること(第一候補は cid:reverse-engineering:c1-xrev-verdict-not-ruling-authority の鏡像面としての追補、次候補は cid:requirements-analysis:always-elect の執行クラス判定面)。本件は同ファミリの既存 cid が扱う方向の逆面であり、並置すると対として読める。あわせて (a) 適用対象を『既決裁定の構造(順序・層・概念)へ新しい段を加える場合』に限定し、既決の語彙の言い換え・精密化・欠落明示のような文面内の運用へ一律適用しない — 過剰発火は執行クラス自体を空洞化させる (b) negative-vocabulary check は成立証明ではなく screening ヒューリスティックと明記し、0 hit を執行クラスの十分条件として書かない (c) 本文は intent 固有名(FR-3a、ハーネス供給値、model、Codex/Claude Code、C10、Open questions 4、Q3=D)と日時を落とした一般形で書き、実測は record 参照(inception/requirements-analysis/memory.md の Interpretations 16:21 / Deviations 16:50、requirements.md の Review — Iteration 2)で足す。
+票タイムライン: 配信 2026-08-05T16:31:13Z → 配信 2026-08-05T16:31:13Z → subagent-1 2026-08-05T16:34:02Z(受理 2026-08-05T16:34:16Z) → subagent-2 2026-08-05T16:33:39Z(受理 2026-08-05T16:34:27Z) → 開票 2026-08-05T16:34:44Z
+GoA[E-STG-S13D]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

@@ -15,7 +15,57 @@
 
 実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
 
-## phase boundary approval の患部配置（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## subagent 型規律と model 属性の患部配置（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
+
+### 患部の配置（層別）
+
+| 層 | パス | 座標 | 役割 |
+| --- | --- | --- | --- |
+| core 純関数 | `packages/framework/core/tools/amadeus-lib.ts` | `:4082-4084` | `normalizeAgentType` — 空白判定のみの fallback |
+| | 同 | `:4097` | `SUBAGENT_PURPOSE_MAX_LENGTH = 200` |
+| | 同 | `:4102` | `SUBAGENT_DISPATCH_TOOL = "Task"`（**D-1 の患部**） |
+| | 同 | `:4107` | `CONTROL_CHARS`（C0 制御文字の除去） |
+| | 同 | `:4109-4114` | `subagentPurposeLine` — escape 正規化 → 初行 → control 除去 → trim → 200 字 |
+| | 同 | `:4128-4139` | `subagentStartFields`（照合行 `:4129`、`TaskUpdate` 防波堤コメント `:4133-4137`） |
+| 型宣言 | 同 | `:4687-4707` | `ClaudeCodeHookInput`（`model` 宣言なし / `[key: string]: unknown` は `:4706`） |
+| start hook | `core/hooks/amadeus-log-subagent-start.ts` | `:61-72` | `:61` で `subagentStartFields` を呼び `:62` で null なら exit 0。`:70-72` は t385 静的可読性のための literal 再構成 |
+| complete hook | `core/hooks/amadeus-log-subagent.ts` | `:50-52`、`:68-72` | `normalizeAgentType` 適用と `Message`（`last_assistant_message` 先頭 200 字）の組立 |
+| audit registry | `core/otel/event-registry.ts` | `:612-623` | `SUBAGENT_STARTED`（`auditEvent` `:617` / required `:620` / optional `:621`） |
+| | 同 | `:624-632` | `SUBAGENT_COMPLETED`（`auditEvent` `:626` / required `:629` / optional `:630`） |
+| otel resource | `core/otel/resource-suppliers.ts` | `:22-27` | `SUPPLIED_RESOURCE_KEYS`（`gen_ai.request.model` は `:24`） |
+| otel metrics | `core/otel/metrics-instruments.ts` | `:102` | `"gen_ai.request.model": usage.model`（metric 属性、resource ではない） |
+| 集計 seam | `core/otel/subagent-lifetime.ts` | `:112` | `composeSubagentLifetimes(records: readonly JournalRecord[])` |
+| statusline | `core/hooks/amadeus-statusline.ts` | `:232`、`:230-256` | model 読取と `runtime-attrs.json` 書込（`:234` guard / `:237` path / `:249-252` write） |
+| codex adapter | `harness/codex/hooks/amadeus-codex-adapter.ts` | `:349-352` | `case "log-subagent":` → `runCore("amadeus-log-subagent.ts", rawInput)`（verbatim pipe） |
+| kimi lib | `harness/kimi/hooks/amadeus-kimi-lib.ts` | `:625-626` | `case "role-start":` → `amadeus-log-subagent-start.ts` |
+| compile ロスタ | `core/tools/amadeus-graph.ts` | `:2186-2191`、`:2218` | `knownAgents` と `validateStageFrontmatter`（dispatch は見ない別機構） |
+| doc（同期対象） | `core/knowledge/amadeus-shared/audit-format.md` | `:154` | Emitter 欄に `(PreToolUse{Task} / SubagentStart)` と旧語彙 |
+| 設定（配線） | `.claude/settings.json` | — | `.hooks` に `PreToolUse` **不在**（D-2） |
+| 設定（正本例） | `.claude/settings.json.example` | — | `PreToolUse` に `^Task$` → `amadeus-log-subagent-start.ts` の配線あり |
+| fixture | `tests/fixtures/codex-hook-payloads/payloads.json` | — | `subagentStop.model = "openai.gpt-5.5"`（provenance は `tests/unit/t149-codex-hook-adapter.test.ts:6-8`） |
+
+### テスト面の配置
+
+`grep -rln 'subagent\|SUBAGENT' tests/unit tests/integration` → **51 ファイル**。中核4ファイル:
+
+| パス | 役割 | D-1 との関係 |
+| --- | --- | --- |
+| `tests/unit/t-subagent-purpose.test.ts` | `subagentStartFields` / `subagentPurposeLine` の契約 | `:89` / `:96` / `:97` / `:101` が `tool_name: "Task"` を前提に assert（**誤前提のピン**）。`:82` は tool_name 不在（kimi）経路で無影響 |
+| `tests/unit/t-subagent-lifetime.test.ts` | `composeSubagentLifetimes` の唯一の消費者 | 本番消費者不在を示す証拠 |
+| `tests/unit/t211-log-subagent-complete-gate.test.ts` | complete hook のゲート条件 | — |
+| `tests/integration/t-log-subagent-start.integration.test.ts` | start hook の統合 | — |
+
+4ファイル同時実行の実測: **43 pass / 0 fail / 118 expect() calls / 970ms**（Architect 段で再実行）。
+
+### 区間デルタ — 患部は無変更
+
+患部9パス（`amadeus-lib.ts` / `amadeus-log-subagent.ts` / `amadeus-log-subagent-start.ts` / `resource-suppliers.ts` / `amadeus-statusline.ts` / `subagent-lifetime.ts` / `amadeus-codex-adapter.ts` / `payloads.json` / `amadeus-graph.ts`）への `git diff --stat b938898f3..7060956c5` は**空出力**。
+
+区間内で変わった隣接面は `core/otel/event-registry.ts` のみで、差分は `EXPECTED_CANONICAL_COUNT` 88→90 と新規2イベント（`INTENT_COMPLETION_TRANSACTION_COMMITTED` / `AUTO_DECISION_REVIEWED`）の追加。`SUBAGENT_*` の定義自体は無変更。
+
+## phase boundary approval の患部配置（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

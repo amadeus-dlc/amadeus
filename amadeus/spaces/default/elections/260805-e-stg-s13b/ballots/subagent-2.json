@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13B",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c3 は独立した新規 cid ではなく既存 worktree 規範(cid:code-generation:solo-bolt-worktree-required)への追補として persist し、内容を未被覆面 — 『source-only 境界下では新規 worktree は未追跡のセルフインストール面と per-user カーソルを欠くため、依存インストールと生成物再生成、カーソル再設定を済ませるまで amadeus CLI が動かない』 — に絞ること。移設前のチェックポイントコミットは既に cid:requirements-analysis:shard-commit-before-branch-switch が覆っているため重複記載しない。branch 名・コミット SHA・cloneId 値などの intent 固有値は落とした一般形で書く。",
+  "rationale": "独立実測(測定 ref = worktree .claude/worktrees/260805-subagent-type-guard、ブランチ tla-authoring)。【c3 の実測接地】(1) git ls-files .claude/tools = 0 件に対し ls .claude/tools は実ファイル多数 — セルフインストール面は未追跡の生成物であることを実測確認。(2) .gitignore:68 に amadeus/spaces/*/intents/active-intent があり per-user カーソルが版管理外であることを確認。(3) 決定的な点として、git log --diff-filter=D -- .claude/tools/amadeus-audit.ts が 9458bbda8『生成物をGit追跡から外し、source-only配布へ移行する (#2152)』(2026-08-04)を返す — つまり 2 日前まで .claude/ は追跡されており、新規 worktree はそのまま実行可能だった。『worktree を作ったら build が要る』は source-only 境界(#2152)が新たに生んだ帰結であり、過去の worktree 運用経験からは構造的に得られない。(4) packages/framework/core/tools/amadeus-swarm.ts を grep しても bun install / run build / active-intent のいずれも 0 hit — swarm が作る worktree でも自動再生成はされないため、この落とし穴は本 intent 固有ではなく今後の全 worktree に及ぶ。【既存 cid の被覆判定】project.md:10 と :108-109 は『dist/ とセルフインストールツリーは未追跡で bun run build で再生成する』を定めるが正本編集後の再生成義務の面であり、『新規 worktree は初期状態でその面を欠く』面は書かれていない。project.md:38 solo-bolt-worktree-required は worktree 分離の義務のみで実行可能化手順を持たない。team.md:233 shard-commit-before-branch-switch は切替前コミットと切替後の branch 実測を覆うため、c3 のうちこの部分は既存で足りる。残る (b) 生成物再生成と (c) カーソル再設定は未被覆で、欠くと移設直後に CLI が全滅する実害がある。【choice 1(0件)を採らない理由】『既存の source-only 文書と solo-bolt-worktree-required から導出可能』という主張は形式的には成り立つが、導出には『worktree は未追跡ファイルを持たない』と『セルフインストール面は未追跡』の合成が要り、その合成結果はどの規範にも書かれていない。境界変更が 2 日前であることから、この合成を未記録のまま放置すれば同じ事故が反復する。diary は intent 固有の記録面であり、後続 intent の worktree 作成時に参照されない。【c1/c2/c4 を採らない理由】diary:6 は no-election-for-decided-norms / intent-capture:c1 の適用、diary:7 は cid:scope-definition:c2 の先例整合、diary:12 は cid:issue-first-capture + pre-filing-dup-and-branch-check の適用と自ら明記しており、いずれも既存 cid の実例で新規規則ではない。【c5/c6 を採らない理由】diary:15-16 は Q1=risk-first / Q2=今すぐ起票の裁定理由で、それぞれ既存 cid:scope-definition:c3 と issue-first-capture の適用判断にあたり本 intent 固有。",
+  "submittedAt": "2026-08-06T00:00:00Z"
+}

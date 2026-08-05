@@ -1,0 +1,27 @@
+{
+  "electionId": "E-STG-S13E",
+  "kind": "learnings-selection",
+  "question": "intent 260805-subagent-type-guard / ステージ application-design の §13 学習選定。候補6件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=reviewer subagent の stall(transcript 3回実測不変・nudge 無効)→ TaskStop + 再ディスパッチで回収。再ディスパッチ時に E-MPRRAS13 の scratch 併書を指示したが、reviewer プロファイル(architecture-reviewer / product-lead)の tools は Read/Grep/Glob のみで Write を持たず、併書指示が構造的に不成立だった — 配送保証は teammate message + transcript 監視の2経路に置くしかない / c2=cross-stage 訂正の実例(要件数値の矛盾を AD reviewer が捕捉 — RE の集計バケツと許可集合の母集団差)/ c3=ADR 必須項目(Reversibility)の記載漏れ(ステージ契約の mandated fields を書く前に読む — 既存 c2-mandated-sections-precheck の ADR フィールド面)/ c4〜c6=本 intent 固有の設計トレードオフ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1 のみ採用",
+      "description": "c1 のみ persist する。主張: 既存 cid 群(E-MPRRAS13 追補 = Stop hook 下で最終テキスト回収が不能な場合は record 外 scratch への verdict 併書を許可 / c4-agent-async-despite-sync-flag = transcript の有界監視)は「scratch 併書」を配送手段として指示できる前提に立つが、**読取専用プロファイルの reviewer(Read/Grep/Glob のみ、Write なし)には併書指示が構造的に不成立**である事実は未被覆。本 intent で実測: ad-reviewer-i1b への併書指示が『私のツールセットに Write が含まれていないため実行できませんでした』と返り、配送は最終メッセージ(teammate message)経路のみで成立した。教訓の一般形: reviewer の配送設計はプロファイルの tools 集合を先に確認し、Write 非所持プロファイルでは (a) teammate message + (b) transcript の最終 assistant テキスト抽出、の2経路で担保する — scratch 併書は Write 所持プロファイル限定の手段。E-MPRRAS13 への追補として persist。"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1 + c3 採用",
+      "description": "c1 に加えて c3 も persist する。c3 の主張: ステージ契約が成果物の必須フィールド(ADR の Reversibility 等)を明示する場合、起草前に契約の Step を読んでフィールドの機械照合(grep)を通す — 既存 c2-mandated-sections-precheck は『必須節集合』(H2 レベル)を扱い、ADR 内の必須フィールド(行レベル)は未被覆。実測: 全7 ADR で Reversibility が欠落し reviewer iteration を1回消費した。"
+    },
+    {
+      "internalNo": 3,
+      "label": "0件(採用なし)",
+      "description": "6件いずれも persist しない。主張: c1 は E-MPRRAS13 と c4-agent-async の運用組合せで導出可能、c3 は c2-mandated-sections-precheck の趣旨(契約を先に読む)から導出可能で、いずれも新規則の独立性が薄い。c2 は既存の fix-diff / cross-stage 訂正ファミリの適用実例。record 保存で十分。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

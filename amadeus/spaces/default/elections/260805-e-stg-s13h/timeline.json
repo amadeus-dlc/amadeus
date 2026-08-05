@@ -1,0 +1,16 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-05T22:28:48Z",
+    "receivedAt": "2026-08-05T22:28:48Z",
+    "detail": "delivered via subagent: subagent-1 (reported-by-conductor)",
+    "voter": "subagent-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-05T22:28:48Z",
+    "receivedAt": "2026-08-05T22:28:48Z",
+    "detail": "delivered via subagent: subagent-2 (reported-by-conductor)",
+    "voter": "subagent-2"
+  }
+]

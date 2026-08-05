@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c3 のみ採用(live probe 手法)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c3 のみ採用(live probe 手法)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件(採用なし)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T15:58:08Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13C",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 は独立した新規 cid ではなく外部 seam 実測ファミリへの追補として persist し(第一候補は cid:reverse-engineering:saas-undocumented-source-read の姉妹面、あるいは cid:application-design:external-seam-vocab-measurement への追補)、未被覆面 —『ソース直読が不能な閉ソースハーネスの payload 語彙は、repo の settings を触らない隔離 scratch プロジェクト + headless 実行 + 秘匿制約準拠のキー限定 dump で live 実測する』— に絞ること。jq 式・CLI バージョン・フラグ名・intent 固有の観測値(model パスの有無等)は落とした一般形で書き、再現手順の逐語は re-scans/260805-subagent-type-guard.md:291-300 の参照で足す。c6(既定モデルのレート上限で --model 明示が要る)は §10 item 3 の同一メモ内にある同手法の細目であり、c3 の追補文中に1句として吸収して独立 cid にしない。適用範囲は『閉ソース外部ハーネスの hook payload 実測』に限定し、あらゆる seam への live probe 一律義務化へ拡張しない。",
+      "rationale": "独立実測(測定 ref = worktree .claude/worktrees/260805-subagent-type-guard、rescan record 300行、observed 7060956c5)。【c3 の実測接地】(1) rescan record §1 に live probe の一次結果が表で載る — Claude Code 2.1.222 / 隔離 scratch + claude -p --permission-mode acceptEdits --model sonnet / exit 0 で PreToolUse・SubagentStop 両 seam の model パスが皆無、Agent ツールへ model: を明示した対照 run のみ tool_input.model=\"haiku\" が出現。probe があって初めて『Claude Code は供給なし / Codex は供給あり・消費なし』の粒度差裁定(C10)が成立しており、手法が結論を生んだ因果が記録から辿れる。(2) §10 item 3/4/5 に手順が3点セットで残る — 隔離プロジェクト+acceptEdits、CXR-33 準拠の paths(scalars) キー限定 dump(本文非保存)、matcher と payload の tool 名が別語彙ゆえ matcher 実験では payload を推定できず dump 必須。(3) 再利用先が具体的に列挙されている(§1 の残余: Codex live=fixture は 0.137.0 由来で現行 0.146.0 未測、および :57 の Cursor / OpenCode / Kimi / Kiro / Kiro-IDE / Pi)。将来再利用は思弁ではなく既に名指しされた未測面である。【既存 cid の被覆判定】memory 層を grep した(cd memory && grep -rn 'live probe|headless|claude -p|payload|probe' *.md phases/*.md)。probe 系の既存 cid は3つあるがいずれも別面: feasibility:probe-preprocessing-parity は『プローブは本番経路の前処理を全数再現せよ』(陰性結果の誤読防止)、team.md:no-help-probe-on-mutating-verbs は mutating verb への --help 禁止、merge-tree-nondestructive-conflict-probe は git plumbing 面。外部 seam ファミリでは external-seam-vocab-measurement(team.md:228)が『語彙を実測せよ・未実測は ⚠ 降格』と命じ、saas-undocumented-source-read(team.md:229)が docs 不在時の手段として『公開ソースの一次直読』を与えるが、ソースが読めない閉ソース CLI に対する live 実測の手段は与えていない。すなわち『どう実測するか』の閉ソース経路が構造的な空白であり、本 scan がその初出。【先例整合】同クラスの手法知見 cid が直近で成立している — project.md:310 cid:reverse-engineering:c2-parallel-process-repro-harness は『低再現率の並行欠陥を隔離 scratch の N 並行ハーネスで決定的再現へ持ち込む』手法を、既存 cid 3件の未被覆面を明示した上で 2-0 で採用した(E-SIRE-S13)。c3 は同型(隔離 scratch に実験系を組んで外部条件を独立制御し、報告・推定より決定的な観測を得る)であり、先例が認めた粒度に収まる。【choice 2(0件)を採らない理由】『record §10 に恒久保存されており次の RE が読む』という主張は成立しない — re-scans 記録は intent 固有面で、後続 RE が読むのは差分 base の祖先性判定であって前 intent の手法メモではない。§10 自体が『次の検証者向け』= 同一対象の後続検証者を宛先としており(cid:requirements-analysis:review-method-memo と同じ射程)、別 intent・別ハーネスの payload 実測者は宛先に含まれない。加えて CXR-33 準拠の dump 限定は安全側の制約であり、次の実測者が独自に probe を組むときに規範層で拾われないと prompt/transcript を保存する probe が書かれうる。【c1/c2/c4/c5 を採らない理由】いずれも record が自ら既存 cid の適用実例と明記している — c1=rescan-base-ancestry(record メタの選定根拠として引用済み)、c2=c1-xrev-scan-mode/c1-xrev-single-issue(免除条件の誤読訂正は既存 norm E-OBB5-RES13 の条件文どおりの適用であり新規規則を生まない)、c4=issue-first-capture、c5=re-sensors-codekb-filter-mismatch。適用実例は cid の実効の傍証だが規則の追加を要さない。【c7 を採らない理由】2段直列の独立再実測が座標4件+判定3件を訂正した実効は cid:reverse-engineering:c3(Developer→Architect 直列)の設計意図がそのまま作動した記録で、規則側に足すものがない。",
+      "submittedAt": "2026-08-06T00:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13C",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用に賛成だが、persist 文には live 実測の対象ハーネスとバージョン(Claude Code 2.1.222、実測日 2026-08-05)を焼き込み、次回の週次蒸留ラウンドで現存を再判定する条件を明記すること — ハーネス挙動は世代交代しうる。先例として cid:requirements-analysis:c4-agent-async-despite-sync-flag が同じ形でバージョンと実測日を焼き込み、逐語『ハーネス挙動は世代交代しうるため、次回以降の週次蒸留で本追補の現存を再判定する』と再判定を予約している。あわせて intent 固有の Issue 番号・患部ファイル列を持ち込まず、手順の一般形(隔離 scratch プロジェクト + headless 実行 + キー限定 dump)に絞ること。",
+      "rationale": "採用: c3 のみ(internalNo 1)。ただし persist 形は上記留保のとおりバージョン明記と再判定予約を付す。\n\n【(ii) 重複なしの独立再測】memory 層全域(org/team/project + phases)に対して live probe 手法の語彙を grep したところ 0 hit だった: `claude -p` / headless / `jq keys` / payload dump / CXR-33 / 隔離 scratch / permission-mode。隣接する既存 cid を全数実読して面の違いを確認した — cid:application-design:external-seam-vocab-measurement(team.md:228 ほか)は『seam の存在の実測』と『seam が渡す語彙・値集合の実測』を区別せよという**要求**のみを定め、どう実測するかの手順を一切持たない。cid:feasibility:probe-preprocessing-parity(project.md:231)は『本番経路の前処理を全数再現したか』という**プローブの落とし穴**のみを縛る。cid:reverse-engineering:seam-writer-mode-precondition は『書き手の起動条件を実測せよ』という別面。いずれも再現可能な実測手順を供給しない。\n\n【先例の存在】手法クラスの学習を norm 層へ載せる先例は既にある: cid:reverse-engineering:c2-parallel-process-repro-harness(project.md:310)が『repo 外 scratch に base dir を固定した N 並行プロセスから対象モジュールを直接 import するハーネスを組む』という決定的再現手順そのものを persist している。c3 は同じクラス(低観測性の外部 seam を決定的に測る手順)であり、norm 層への適合性に前例がある。\n\n【(iii) 実測接地】rescan record §1 の live probe が両側の観測を持つ: Claude Code 2.1.222、隔離 scratch プロジェクト + `claude -p --permission-mode acceptEdits --model sonnet`、exit 0 で PreToolUse(dispatch)と SubagentStop(completion)の model パスがいずれも `[]`(皆無)、対照 run では Agent ツールへ model を明示指定した場合のみ `tool_input.model = \"haiku\"` が出現。不在側と出現側の両方を同一系で測っており、単なる陰性結果ではない。\n\n【(i) 一般化可能性】同 record が未実測残余として Codex live(現行 CLI 0.146.0、fixture は 0.137.0 由来)/ Cursor / OpenCode / Kimi / Kiro / Kiro-IDE / Pi を明示列挙している。再利用機会が具体的に複数予見でき、intent 固有ではない。さらに手法メモ §10-5『matcher と payload の tool 名は別語彙 — matcher の実験だけでは payload の tool_name を推定できない。dump 必須』は、実測手段の選択自体を誤らせる罠であり、手順を持たない既存 norm では防げない。\n\n【選択肢2(0件)への反対理由】0件案の根拠は『c3 の手法は rescan record §10 と scan ノートに恒久保存されており次の RE はそれを読む』だが、re-scans 記録は intent 単位の codekb であり、次の RE が読むのは主に差分 base の選定と共有成果物の現在断面である。他ハーネスの payload 実測に着手する将来の作業者が、当該 intent の re-scans 記録の §10 手法メモまで自発的に開く保証はない。memory 層の存在意義は、再導出コストが高く踏むまで気づけない手順を先回りで供給することにある。ただしノルム肥大の懸念自体は正当であり、それは persist を否定するのでなく上記留保(一般形に絞る・再判定を予約する)で処理するのが適切と判断した。\n\n【他6候補を採らない理由 — cid 実在を grep で全数確認】c1 = cid:reverse-engineering:rescan-base-ancestry(team.md:209、project.md:286)の適用実例。c2 = cid:reverse-engineering:c1-xrev-single-issue(project.md:298)の適用実例。c4 = cid:requirements-analysis:issue-first-capture(team.md:91)の適用実例。c5 = RE センサー系の既存 cid(project.md:157 が旧 re-sensors-codekb-filter-mismatch を明示的に上書き、:352 が現行則)の適用実例。c7 = cid:reverse-engineering:c3(project.md:133/156 の Developer scan → Architect 合成の2段直列)の設計どおりの実効確認であり、既存則が想定した効果が出たことは新規則を要しない。c6(既定モデルのレート上限で --model 明示が必要)は環境固有の運用知識で、rescan record §10-3 への保存が適切。\n\n【c2 の訂正点について】候補要旨が触れている『Architect が免除根拠の誤読を訂正した』件は、Developer scan が patient files の no-touch を免除根拠としていたのを、実際の根拠である xrev verdict の target-sha と observed の一致へ訂正したもの。これは既存 norm(E-OBB5-RES13 が逐語『区間 touch の有無のみを根拠とした一般免除へ拡大しない』と定める)の条件文への接地であり、record §10-8『免除条項の適用は norm の条件文に接地して書く。touch の有無は免除条件ではない』として手法メモに保存されている。既存則の正しい適用の回復であって新規則ではないため、新規 cid を要しない。",
+      "submittedAt": "2026-08-06T00:00:00Z"
+    }
+  ],
+  "resolutions": []
+}

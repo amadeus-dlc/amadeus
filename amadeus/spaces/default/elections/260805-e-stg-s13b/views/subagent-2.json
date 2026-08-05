@@ -1,0 +1,19 @@
+{
+  "electionId": "E-STG-S13B",
+  "voter": "subagent-2",
+  "question": "intent 260805-subagent-type-guard / ステージ scope-definition の §13 学習選定。observation diary から surface された候補は6件(c1〜c6)。memory 層へ persist する採用集合を選べ。判断基準: (i) 一般化可能か / intent 固有か (ii) 既存 cid との重複 (iii) 実測接地。候補の要旨: c1=既決事項を再質問せず実質2問に絞った(既存 cid の適用実例) / c2=Must のみに凝集し Should/Could を置かなかった(cid:scope-definition:c2 の先例に整合する適用実例) / c3=ステージ途中でセッションを本線ツリーから worktree へ移設した手順 — 移設前 record チェックポイントコミット → 本線ブランチ復帰 → worktree 作成 → bun install + bun run build(source-only 境界によりセルフインストール面は未追跡で再生成必須)→ active-intent カーソル再設定。audit cloneId は境界で変わる(per-clone 仕様) / c4=別 Issue 2件をステージ実行中に起票(既存 cid issue-first-capture の適用実例) / c5=risk-first 採用の裁定理由(intent 固有) / c6=今すぐ起票採用の裁定理由(intent 固有)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "0件(採用なし)",
+      "description": "6件いずれも persist しない。主張: c1/c2/c4 は既存 cid の適用実例、c5/c6 は intent 固有の裁定理由。c3 も『worktree を作ったら build する』という source-only 移行(260802-source-only-dist)の帰結を運用に写しただけで、既存の source-only 文書と solo-bolt-worktree-required から導出可能 — 新規 cid を立てるほどの独立性がない。記録は diary に残っており十分。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c3 のみ採用",
+      "description": "c3 のみ persist する。採用根拠の主張: 既存 cid の solo-bolt-worktree-required は『Construction の Bolt 実装は最初から worktree 分離で行う』を定めるが、(a) ideation/inception 段で本線ツリーにいるセッションを途中から worktree へ移す手順、(b) source-only 境界下では worktree の .claude/ セルフインストール面が未追跡で bun run build の再生成が必須であること、(c) per-clone の active-intent カーソルが worktree で未設定になり再設定が要ること、の3点は未被覆。特に (b)(c) は知らないと worktree 移設直後に amadeus CLI が Module not found / no active workflow で全滅する実測があった(本ステージで実際に踏んだ)。"
+    }
+  ]
+}

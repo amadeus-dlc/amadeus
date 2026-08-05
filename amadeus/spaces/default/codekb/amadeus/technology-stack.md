@@ -7,7 +7,21 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## phase boundary approval の技術断面（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## subagent 型規律の技術断面（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**技術スタックに変更はない**。TypeScript / ESM / Bun 直接実行、`tsc --noEmit` による strict 型検査、Biome lint（formatter 無効）、`tests/run-tests.sh` の4層ランナーは不変である。
+
+本 intent が新たに実測で固定した外部ランタイム版（設計前提として記録）:
+
+| 対象 | 実測版 | 出典 |
+| --- | --- | --- |
+| Claude Code | `2.1.222` | hook payload の live 実測（2026-08-05） |
+| codex-cli | `0.146.0`（fixture は `0.137.0` 由来） | fixture provenance は `tests/unit/t149-codex-hook-adapter.test.ts:6-8` |
+| bun（テスト実行） | `1.3.13` | 本 RE のテスト再実行出力 |
+
+**ハーネス CLI の hook payload は版依存の外部 seam である。** Claude Code の `PreToolUse` の `tool_name` が `"Agent"` である一方 core 定数が `"Task"` を期待している（D-1）ことは、外部 CLI の語彙が repo 側の想定と独立に前進しうることの実例であり、`cid:application-design:external-seam-vocab-measurement`（seam の語彙は実測で確定する）が本 intent の設計に直接効く。
+
+## phase boundary approval の技術断面（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

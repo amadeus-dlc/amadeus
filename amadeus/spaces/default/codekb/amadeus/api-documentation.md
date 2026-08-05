@@ -15,7 +15,85 @@
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
 
-## phase boundary approval が対象とする契約（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## subagent 型規律と model 属性が対象とする契約（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙は `re-scans/260805-subagent-type-guard.md` を正本とする。
+
+### core 純関数のシグネチャ契約（`packages/framework/core/tools/amadeus-lib.ts`）
+
+| 関数 / 定数 | 座標 | シグネチャ | 契約 |
+| --- | --- | --- | --- |
+| `normalizeAgentType` | `:4082-4084` | `(raw: string \| null \| undefined) => string` | 空・空白のみ → `"unknown"`、それ以外は **verbatim 返却**。所属検査は契約に含まれない |
+| `subagentPurposeLine` | `:4109-4114` | `(prompt: unknown) => string` | 非 string → `""`。escape 正規化 → 初行 → control 除去 → trim → `SUBAGENT_PURPOSE_MAX_LENGTH` 切詰の固定順 |
+| `subagentStartFields` | `:4128-4139` | `(payload: ClaudeCodeHookInput) => Record<string,string> \| null` | `null` = 「subagent dispatch ではない」。`tool_name` 不在は「subagent 専用 seam」を意味し通過する（`:4129` の `!== undefined` ガード） |
+| `SUBAGENT_DISPATCH_TOOL` | `:4102` | `"Task"` | dispatch tool 名の canonical 値。**Claude Code `2.1.222` の実 payload は `"Agent"`** |
+| `SUBAGENT_PURPOSE_MAX_LENGTH` | `:4097` | `200` | `Purpose` の上限 |
+
+`subagentStartFields` の返却キー集合は `"Agent Type"`（常在）/ `"Agent ID"`（`payload.agent_id` が非空文字列のときのみ）/ `Purpose`（導出結果が非空のときのみ）。
+
+### hook 入力型の契約
+
+`ClaudeCodeHookInput`（`:4687-4707`）の宣言済みフィールド: `hook_event_name` / `session_id` / `cwd` / `tool_name` / `tool_input`（内部に `file_path` / `command` / `status` / `activeForm` + `:4698` の index signature）/ `reason` / `source` / `prompt` / `agent_type` / `agent_id` / `last_assistant_message`、末尾 `:4706` に `[key: string]: unknown;`。
+
+**`model` は未宣言**だが index signature があるため、`model?: string` の追加は既存消費者に対して非破壊である。型ガードは `isClaudeCodeHookInput`（同ファイル、`ClaudeCodeHookInput` 直後）。
+
+### 実測された hook payload の wire 契約
+
+Claude Code `2.1.222`（live 実測、2026-08-05）:
+
+| seam | top-level キー | model |
+| --- | --- | --- |
+| `PreToolUse` | `cwd` / `effort` / `hook_event_name` / `permission_mode` / `prompt_id` / `session_id` / `tool_input` / `tool_name` / `tool_use_id` / `transcript_path` | **不在**（`tool_input.model` は Agent ツールへ `model:` を明示指定した場合のみ出現） |
+| `SubagentStop` | `agent_id` / `agent_transcript_path` / `agent_type` / `background_tasks` / `cwd` / `effort` / `hook_event_name` / `last_assistant_message` / `permission_mode` / `prompt_id` / `session_crons` / `session_id` / `stop_hook_active` / `transcript_path` | **不在** |
+
+`PreToolUse` の `tool_name` は **`"Agent"`**（`"Task"` ではない）。`tool_input` のキーは `description` / `prompt` / `run_in_background` / `subagent_type`（+ 明示時 `model`）。`effort` は両 seam に常在するが model ではない。
+
+Codex（fixture `tests/fixtures/codex-hook-payloads/payloads.json` の `subagentStop`、CLI 0.137.0 捕捉）:
+
+```json
+{"keys":["agent_id","agent_transcript_path","agent_type","cwd","hook_event_name",
+         "last_assistant_message","model","permission_mode","session_id",
+         "stop_hook_active","transcript_path","turn_id"],
+ "model":"openai.gpt-5.5","agent_type":"default","tool_name":"ABSENT"}
+```
+
+→ **`model` はハーネス別に供給有無が異なる。** `tool_name` が `ABSENT` である点も Claude Code と異なる wire 契約である。
+
+### audit イベントの属性契約（`core/otel/event-registry.ts`）
+
+| イベント | 座標 | name | required | optional | durability / category / schemaVersion |
+| --- | --- | --- | --- | --- | --- |
+| `SUBAGENT_STARTED` | `:612-623` | `amadeus.subagent.started` | `["Agent Type"]`（`:620`） | `["Agent ID","Purpose"]`（`:621`） | canonical / `subagent` / 1 |
+| `SUBAGENT_COMPLETED` | `:624-632` | `amadeus.subagent.completed` | `["Agent Type"]`（`:629`） | `["Agent ID","Message"]`（`:630`） | canonical / `subagent` / 1 |
+
+**model 属性はどちらにも宣言されていない。** CAP-2 で追加する場合は optional 集合への追記が候補（§ 未承認の契約論点）。
+
+### otel resource / metric キーの契約
+
+| キー | 宣言 | 本番供給 |
+| --- | --- | --- |
+| `amadeus.harness.version` | `resource-suppliers.ts:23` | — |
+| `gen_ai.request.model` | 同 `:24` | **0 件**（resource 面。`supplyResourceAttribute(` の本番呼出は `amadeus-session-start.ts:148` の `"session.id"` のみ） |
+| `session.id` | 同 `:25` | 1 件 |
+| `amadeus.agent.role` | 同 `:26` | — |
+
+別軸として `core/otel/metrics-instruments.ts:102` が `"gen_ai.request.model": usage.model` を metric 属性に載せる（resource ではない）。
+
+### 集計 API の契約
+
+`composeSubagentLifetimes`（`core/otel/subagent-lifetime.ts:112`）: `(records: readonly JournalRecord[]) => SubagentLifetime[]`。START / COMPLETE を **Agent ID 優先 → 型 fallback（LIFO）** でペアリングする。audit journal を入力に取る唯一の subagent 集計 API だが**本番消費者 0 件**。
+
+`amadeus-runtime.ts summary` は `runtime-graph.json` を対象とし `Agent Type` / `SUBAGENT` を一切扱わない（grep 0 件）ため、型別・model 別集計の host にはならない。
+
+### 未承認の契約論点（Requirements Analysis で決める）
+
+- **D-1 の修正形**が `SUBAGENT_DISPATCH_TOOL` の型（単一文字列 / 集合）を変えるか、照合そのものを `tool_input.subagent_type` の実在判定へ置換するか。後者は `:4133-4137` が明示する `TaskUpdate` / `TaskCreate` 誤検知の防波堤を失う。
+- **model 属性の記録先**が audit の optional 属性か `gen_ai.request.model` resource key か両方か。前者は registry の optional 集合改訂、後者は `supplyResourceAttribute` の本番結線を伴う。
+- **許可集合照合の advisory 面の wire**（警告をどこへ出すか — stderr / audit event / 集計 CLI の verdict）は未決。CAP-1 は advisory であり fail-closed 拒否をしないことだけが確定している。
+- **既存テスト契約の改訂範囲**: `tests/unit/t-subagent-purpose.test.ts:89` / `:96` / `:97` / `:101` が `tool_name: "Task"` をピンしている。`cid:reverse-engineering:c1-pinned-behavior-ruling` により改訂は要件段の裁定事項。
+- `Purpose` / `Message` の非対称は設計意図であり、統合は要件化されていない。
+
+## phase boundary approval が対象とする契約（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

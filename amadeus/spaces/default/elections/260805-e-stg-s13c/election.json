@@ -1,0 +1,22 @@
+{
+  "electionId": "E-STG-S13C",
+  "kind": "learnings-selection",
+  "question": "intent 260805-subagent-type-guard / ステージ reverse-engineering の §13 学習選定。diary から surface された候補は7件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=差分 base の距離最小選定(既存 cid rescan-base-ancestry の適用実例) / c2=xrev scan mode 併用と免除条件(既存 cid c1-xrev-single-issue の適用実例。ただし Architect が免除根拠の誤読を訂正した) / c3=live probe の隔離設計(CXR-33 準拠のキー限定 dump) / c4=scan 中の新規欠陥は即起票(既存 issue-first-capture の適用実例) / c5=RE センサー不適合の手動代替(既存 cid re-sensors-codekb-filter-mismatch の適用実例) / c6=既定モデルのレート上限で --model 明示が必要だった手法知見(scan ノート手法メモに保存済み) / c7=2段直列の独立再実測が座標4件+判定3件を訂正した実効(既存 cid re:c3 の設計どおり)。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c3 のみ採用(live probe 手法)",
+      "description": "c3 のみ persist する。逐語(diary): 「R-1 の Claude Code live probe は、repo の settings を触らず scratch の隔離プロジェクト(独自 .claude/settings.json + stdin dump フック)で claude -p headless 実行により行う設計とした。CXR-33 尊重のため dump はキー一覧と model 関連値のみに限定し、prompt/transcript 内容は保存しない」。採用根拠の主張: 外部 seam の hook payload を live 実測する決定的手法は memory 層に未収載。external-seam-vocab-measurement は「実測せよ」と命じるが「どう実測するか」の再現可能な手順(隔離プロジェクト + claude -p --permission-mode acceptEdits + jq keys 限定 dump + CXR-33 準拠)は本 scan が初出。scan ノート §8 の手法メモ(matcher と payload の tool 名は別語彙 / audit 照合は jq 等値比較)と併せ、今後の全ハーネス payload 実測(rescan record が残余として明示した Codex live / Cursor / OpenCode / Kimi / Kiro / Pi)で再利用される。"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件(採用なし)",
+      "description": "7件いずれも persist しない。主張: c1/c2/c4/c5/c7 は既存 cid の適用実例。c3 の手法は rescan record §10(手法メモ)と scan ノートに恒久保存されており、次の RE はそれを読む — memory 層に重ねる必要はない。c6 は環境固有の運用知識で record 保存が適切。ノルム層の肥大を避ける。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

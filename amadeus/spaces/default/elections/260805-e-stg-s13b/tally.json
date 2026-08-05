@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c3 のみ採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c3 のみ採用",
+        "count": 2
+      },
+      {
+        "internalNo": 3,
+        "label": "0件(採用なし)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T15:21:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13B",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "独立した新規 cid を立てず cid:code-generation:solo-bolt-worktree-required への追補として persist し、次の2点で射程を絞ること。(1) 主張 (c)(active-intent カーソル再設定)は本文から落とす — 前選挙 E-STG-S13 で persist された cid:intent-capture:c3-intent-birth-base-freshness(project.md:317)が逐語『移設後に再適用して parse と active-intent カーソルで整合を実測する』で既に覆っており、重複記載は同一事実の二重規定になる。(2) 追補の核心は主張 (b)、すなわち『source-only 境界下ではセルフインストール面が未追跡のため新規 worktree では build 前に framework CLI が一切起動しない』という単一事実に置き、intent 固有のブランチ名・SHA・コマンド列の逐語手順書へ肥大させない。移設タイミング(ideation/inception 段でも本線ツリーに居続けない)は既存則の適用面拡張として1行で足りる。",
+      "rationale": "採用: c3 のみ(internalNo 1)。ただし persist 形は上記留保のとおり既存 cid への追補・(b) 中心に絞る。\n\n【c3 主張 (b) の独立再測 — これが唯一の未被覆核心】ballot view の主張『source-only 境界によりセルフインストール面は未追跡で再生成必須』を自分で実測した。`git ls-files .claude/tools/` = 0 件(tracked ゼロ)、一方 `ls .claude/tools/ | wc -l` = 123 件がディスク上に実在。`git check-ignore -v .claude/tools/amadeus-election.ts` は `.gitignore:24:/.claude/**` を返す。つまり本選挙で私自身が使う election CLI を含む framework tool 群 123 ファイルは全て生成物であり、新規 worktree には1つも存在しない。package.json:10 の `\"build\": \"bun run dist && bun run promote:self\"` が生成経路。よって『worktree を切った直後は amadeus 系 CLI が Module not found で全滅し、bun install + bun run build を通すまで一切のステージ実行・選挙・state 操作ができない』は構造的事実であり、踏むまで気づけない全停止級の失敗モードである。\n\n【非被覆性の全数照合】memory 層(org/team/project + phases)を grep して確認した: (i) `worktree` を含む行から `build|install|source-only|カーソル` を同時に含む行は 0 件 (ii) worktree 系 cid を全数列挙(solo-bolt-worktree-required / c2 worktree ディスパッチ規律 / worktree-registration-not-directory / bounded-parallelism-for-git-ops / cross-worktree-delegate-delivery ほか)して実読したが、いずれも『worktree 内で何をしてはいけないか(git 状態変更禁止・本線パス非混入)』『worktree 作成の成否判定』『worktree 間の delegate 配送』を扱い、**worktree を使用可能状態にするまでの前提**を1件も扱っていない。project.md の source-only 系 Mandated/Forbidden は『正本を編集し bun run build で再生成する』『生成物を正本として編集しない』を定めるが、これは編集面の規律であって『新しい作業ツリーでは build まで CLI が存在しない』という運用帰結を運んでいない。\n\n【一般化可能性】発火点は『この repo で新しい worktree を作る全ての場面』であり、intent・スコープ・フェーズに依存しない。source-only 移行(260802-source-only-dist)が恒久的に作った構造であるため、失効予定もない。team.md P5 が逐語『指令ループ外の規範は、該当イベント時にタスク化しない限り実行されない』と定めるとおり、エンジン指令に現れない前処理は明文化しない限り実行されない類型そのものである。\n\n【選択肢2(0件)への反対理由】0件案の根拠は『source-only 文書と solo-bolt-worktree-required から導出可能』だが、導出可能性は非 persist の理由にならない — memory 層の存在意義は、再導出コストが高く踏むまで気づけない運用事実を先回りで供給することにある。しかも実際の導出経路は『.gitignore:24 の /.claude/** を読む』→『git ls-files で tracked 0 を確認する』→『package.json の build が promote:self を含むと知る』の3段で、いずれも worktree 移設の場面で自発的に開く対象ではない。加えて本 intent で実際に踏んだ(diary の Deviations 記録)ことが、導出可能でも実行されないことの実測証拠である。\n\n【c1/c2/c4 を採らない理由】いずれも候補要旨が自ら『既存 cid の適用実例』と自認している。c1 は起動前クロスレビュー規範(project.md:79 / team.md:122)の、c2 は cid:scope-definition:c2(Must 集約・Should/Could を置かない先例)の、c4 は cid:requirements-analysis:issue-first-capture の適用実例であり、いずれも新規則ではない。適用実例は intent record 側の記録で保存され、memory 層へ重ねると同一規範の二重表現になる。\n\n【c5/c6 を採らない理由】risk-first 採用理由と『今すぐ起票』採用理由は、この intent の Bolt 順序と Issue 起票タイミングという個別裁定の理由であり、他 intent へ持ち越せる述語を含まない。cid:scope-definition:c3(raw WSJF より dependency と risk-first を優先)が既に一般形を持っており、c5 はその実例に落ちる。",
+      "submittedAt": "2026-08-06T00:20:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13B",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 は独立した新規 cid ではなく既存 worktree 規範(cid:code-generation:solo-bolt-worktree-required)への追補として persist し、内容を未被覆面 — 『source-only 境界下では新規 worktree は未追跡のセルフインストール面と per-user カーソルを欠くため、依存インストールと生成物再生成、カーソル再設定を済ませるまで amadeus CLI が動かない』 — に絞ること。移設前のチェックポイントコミットは既に cid:requirements-analysis:shard-commit-before-branch-switch が覆っているため重複記載しない。branch 名・コミット SHA・cloneId 値などの intent 固有値は落とした一般形で書く。",
+      "rationale": "独立実測(測定 ref = worktree .claude/worktrees/260805-subagent-type-guard、ブランチ tla-authoring)。【c3 の実測接地】(1) git ls-files .claude/tools = 0 件に対し ls .claude/tools は実ファイル多数 — セルフインストール面は未追跡の生成物であることを実測確認。(2) .gitignore:68 に amadeus/spaces/*/intents/active-intent があり per-user カーソルが版管理外であることを確認。(3) 決定的な点として、git log --diff-filter=D -- .claude/tools/amadeus-audit.ts が 9458bbda8『生成物をGit追跡から外し、source-only配布へ移行する (#2152)』(2026-08-04)を返す — つまり 2 日前まで .claude/ は追跡されており、新規 worktree はそのまま実行可能だった。『worktree を作ったら build が要る』は source-only 境界(#2152)が新たに生んだ帰結であり、過去の worktree 運用経験からは構造的に得られない。(4) packages/framework/core/tools/amadeus-swarm.ts を grep しても bun install / run build / active-intent のいずれも 0 hit — swarm が作る worktree でも自動再生成はされないため、この落とし穴は本 intent 固有ではなく今後の全 worktree に及ぶ。【既存 cid の被覆判定】project.md:10 と :108-109 は『dist/ とセルフインストールツリーは未追跡で bun run build で再生成する』を定めるが正本編集後の再生成義務の面であり、『新規 worktree は初期状態でその面を欠く』面は書かれていない。project.md:38 solo-bolt-worktree-required は worktree 分離の義務のみで実行可能化手順を持たない。team.md:233 shard-commit-before-branch-switch は切替前コミットと切替後の branch 実測を覆うため、c3 のうちこの部分は既存で足りる。残る (b) 生成物再生成と (c) カーソル再設定は未被覆で、欠くと移設直後に CLI が全滅する実害がある。【choice 1(0件)を採らない理由】『既存の source-only 文書と solo-bolt-worktree-required から導出可能』という主張は形式的には成り立つが、導出には『worktree は未追跡ファイルを持たない』と『セルフインストール面は未追跡』の合成が要り、その合成結果はどの規範にも書かれていない。境界変更が 2 日前であることから、この合成を未記録のまま放置すれば同じ事故が反復する。diary は intent 固有の記録面であり、後続 intent の worktree 作成時に参照されない。【c1/c2/c4 を採らない理由】diary:6 は no-election-for-decided-norms / intent-capture:c1 の適用、diary:7 は cid:scope-definition:c2 の先例整合、diary:12 は cid:issue-first-capture + pre-filing-dup-and-branch-check の適用と自ら明記しており、いずれも既存 cid の実例で新規規則ではない。【c5/c6 を採らない理由】diary:15-16 は Q1=risk-first / Q2=今すぐ起票の裁定理由で、それぞれ既存 cid:scope-definition:c3 と issue-first-capture の適用判断にあたり本 intent 固有。",
+      "submittedAt": "2026-08-06T00:00:00Z"
+    }
+  ],
+  "resolutions": []
+}
