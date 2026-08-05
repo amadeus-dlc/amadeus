@@ -39,8 +39,10 @@ export type IdentityComparison =
 // The closed grammar of Q2 ruling A. Tokens outside it (cid: … and friends) are
 // never collected automatically.
 const STABLE_ID_RE = /^(?:(?:FR|NFR|AC)-\d{3}|ADR-\d+)$/;
-const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})(?=\s|$)/;
-const DECISIONS_HEADING_RE = /^##\s+(ADR-\d+)(?=\s|$)/;
+// The functional design fixes both heading grammars to a \b boundary after the
+// id, so real headings like "## ADR-1: title" stay extractable.
+const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;
+const DECISIONS_HEADING_RE = /^##\s+(ADR-\d+)\b/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
 function ok<T>(value: T): Result<T, never> {
@@ -118,18 +120,37 @@ interface HeadingStart {
   readonly level: number;
 }
 
-function headingStarts(lines: readonly string[], pattern: RegExp): readonly HeadingStart[] {
+/** Marks every line that opens, closes or sits inside a fenced code block. */
+function fencedLineMask(lines: readonly string[]): readonly boolean[] {
+  let inFence = false;
+  return lines.map((line) => {
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      return true;
+    }
+    return inFence;
+  });
+}
+
+function headingStarts(
+  lines: readonly string[],
+  pattern: RegExp,
+  fenced: readonly boolean[],
+): readonly HeadingStart[] {
   const starts: HeadingStart[] = [];
   for (const [index, line] of lines.entries()) {
+    if (fenced[index] === true) continue;
     const match = pattern.exec(line);
     if (match !== null) starts.push({ id: match[1] as string, index, level: headingLevel(line) });
   }
   return starts;
 }
 
-/** A section runs to the next heading of the same or a higher level. */
-function sectionEnd(lines: readonly string[], start: HeadingStart): number {
+/** A section runs to the next unfenced heading of the same or a higher level. */
+function sectionEnd(lines: readonly string[], start: HeadingStart, fenced: readonly boolean[]): number {
   for (let cursor = start.index + 1; cursor < lines.length; cursor++) {
+    if (fenced[cursor] === true) continue;
     if (headingLevel(lines[cursor] as string) <= start.level) return cursor;
   }
   return lines.length;
@@ -140,7 +161,8 @@ function extractStableSections(
   docKind: DocKind,
 ): Result<ReadonlyArray<StableSection>, IdentityFailure> {
   const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
-  const starts = headingStarts(lines, headingPattern(docKind));
+  const fenced = fencedLineMask(lines);
+  const starts = headingStarts(lines, headingPattern(docKind), fenced);
 
   const repeated = duplicates(starts.map((start) => start.id));
   if (repeated.length > 0) return err<IdentityFailure>({ kind: "duplicate-id", ids: repeated });
@@ -148,7 +170,7 @@ function extractStableSections(
   const sections: StableSection[] = [];
   const hollow: string[] = [];
   for (const start of starts) {
-    const body = normalizeCanonicalBody(lines.slice(start.index + 1, sectionEnd(lines, start)).join("\n"));
+    const body = normalizeCanonicalBody(lines.slice(start.index + 1, sectionEnd(lines, start, fenced)).join("\n"));
     if (body === "") hollow.push(start.id);
     else sections.push({ id: start.id as StableId, canonicalBody: body });
   }
@@ -308,6 +330,12 @@ function parsePredecessor(value: unknown): Result<PredecessorRef, readonly strin
   return ok({ kind: "bundle", digest: digest.value });
 }
 
+// Only a genuine string may carry the digest — String() would let an array
+// like ["sha256:<hex64>"] coerce into a passing value.
+function rawSubjectIdentity(document: Record<string, unknown>): string {
+  return typeof document.subjectIdentity === "string" ? document.subjectIdentity : "";
+}
+
 /** Parse an envelope out of raw bytes, enumerating every defect at once (BR-U1-20). */
 function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailure> {
   let document: unknown;
@@ -318,26 +346,32 @@ function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailur
   }
   if (!isPlainRecord(document)) return err<BundleFailure>({ kind: "missing-part", parts: ["<envelope>"] });
 
+  const identity = parseAggregateDigest(rawSubjectIdentity(document));
+  const evidence = parseEvidenceParts(document.evidence);
+  const predecessor = parsePredecessor(document.predecessor);
+  const generatedAt = typeof document.generatedAt === "string" ? document.generatedAt : "";
+  const generatedBy = typeof document.generatedBy === "string" ? document.generatedBy : "";
+
   const missing: string[] = [];
   if (document.schema !== 1) missing.push("schema");
-  if (typeof document.subjectIdentity !== "string" || !DIGEST_RE.test(document.subjectIdentity)) {
-    missing.push("subjectIdentity");
-  }
-  const evidence = parseEvidenceParts(document.evidence);
+  if (!identity.ok) missing.push("subjectIdentity");
   if (!evidence.ok) missing.push(...evidence.error);
-  const predecessor = parsePredecessor(document.predecessor);
   if (!predecessor.ok) missing.push(...predecessor.error);
-  if (typeof document.generatedAt !== "string" || document.generatedAt === "") missing.push("generatedAt");
-  if (typeof document.generatedBy !== "string" || document.generatedBy === "") missing.push("generatedBy");
-  if (missing.length > 0) return err<BundleFailure>({ kind: "missing-part", parts: missing });
+  if (generatedAt === "") missing.push("generatedAt");
+  if (generatedBy === "") missing.push("generatedBy");
+
+  // One guard both reports every defect and narrows the parsed parts.
+  if (!identity.ok || !evidence.ok || !predecessor.ok || missing.length > 0) {
+    return err<BundleFailure>({ kind: "missing-part", parts: missing });
+  }
 
   return ok({
     schema: 1,
-    subjectIdentity: document.subjectIdentity as AggregateDigest,
-    evidence: (evidence as { ok: true; value: EvidenceParts }).value,
-    predecessor: (predecessor as { ok: true; value: PredecessorRef }).value,
-    generatedAt: document.generatedAt as string,
-    generatedBy: document.generatedBy as string,
+    subjectIdentity: identity.value,
+    evidence: evidence.value,
+    predecessor: predecessor.value,
+    generatedAt,
+    generatedBy,
   });
 }
 
@@ -426,8 +460,27 @@ function readBytes(storeRoot: string, ref: EvidenceBundleRef): Result<Uint8Array
   }
 }
 
-function predecessorPresent(storeRoot: string, predecessor: PredecessorRef): boolean {
-  return predecessor.kind === "root" || existsSync(join(storeRoot, fileNameFor({ digest: predecessor.digest })));
+/**
+ * Read an envelope and prove it is the one the ref names: bytes, digest, schema
+ * (verify steps 1..3). Identity is deliberately out of scope — a predecessor
+ * records an earlier revision, so parent and child identities legitimately differ.
+ */
+function readVerifiedEnvelope(storeRoot: string, ref: EvidenceBundleRef): Result<EvidenceEnvelope, BundleFailure> {
+  const bytes = readBytes(storeRoot, ref);
+  if (!bytes.ok) return bytes;
+  const actual = bundleDigest(bytes.value);
+  if (actual !== ref.digest) {
+    return err<BundleFailure>({ kind: "digest-mismatch", expected: ref.digest, actual });
+  }
+  return parseEnvelope(bytes.value);
+}
+
+/** BR-U1-15: a predecessor counts only when it is present *and* verifiable. */
+function checkPredecessor(storeRoot: string, predecessor: PredecessorRef): Result<null, BundleFailure> {
+  if (predecessor.kind === "root") return ok(null);
+  return readVerifiedEnvelope(storeRoot, { digest: predecessor.digest }).ok
+    ? ok(null)
+    : err<BundleFailure>({ kind: "predecessor-broken", digest: predecessor.digest });
 }
 
 /** Stage the whole envelope in `.tmp/`, then rename — the final path never shows a partial file. */
@@ -437,12 +490,8 @@ function build(
   predecessor: PredecessorRef,
   meta: EvidenceMeta,
 ): Result<EvidenceBundleRef, BundleFailure> {
-  if (!predecessorPresent(storeRoot, predecessor)) {
-    return err<BundleFailure>({
-      kind: "predecessor-broken",
-      digest: (predecessor as { kind: "bundle"; digest: BundleDigest }).digest,
-    });
-  }
+  const parent = checkPredecessor(storeRoot, predecessor);
+  if (!parent.ok) return parent;
 
   const envelope: EvidenceEnvelope = {
     schema: 1,
@@ -473,7 +522,11 @@ function build(
     writeFileSync(stagingPath, bytes);
     renameSync(stagingPath, finalPath);
   } catch (cause) {
-    rmSync(stagingPath, { force: true });
+    // Best-effort cleanup: a second failure here must not mask the original
+    // cause with a thrown exception out of a Result-returning function.
+    try {
+      rmSync(stagingPath, { force: true });
+    } catch {}
     return ioFailure(finalPath, cause);
   }
   return ok(ref);
@@ -490,20 +543,13 @@ function verify(
   if (!verified.ok) return verified;
   // One generation deep: every generation checked its own predecessor at build
   // time, so the chain stays sound by induction (business-logic-model.md §5).
-  const predecessor = verified.value.envelope.predecessor;
-  if (!predecessorPresent(storeRoot, predecessor)) {
-    return err<BundleFailure>({
-      kind: "predecessor-broken",
-      digest: (predecessor as { kind: "bundle"; digest: BundleDigest }).digest,
-    });
-  }
-  return verified;
+  const parent = checkPredecessor(storeRoot, verified.value.envelope.predecessor);
+  return parent.ok ? verified : parent;
 }
 
+/** verify steps 1..3 without the identity check (business-logic-model.md §5). */
 function read(storeRoot: string, ref: EvidenceBundleRef): Result<EvidenceParts, BundleFailure> {
-  const bytes = readBytes(storeRoot, ref);
-  if (!bytes.ok) return bytes;
-  const envelope = parseEnvelope(bytes.value);
+  const envelope = readVerifiedEnvelope(storeRoot, ref);
   return envelope.ok ? ok(envelope.value.evidence) : envelope;
 }
 

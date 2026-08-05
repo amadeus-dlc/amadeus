@@ -776,7 +776,7 @@ export interface IntentAutonomyStatusEnvelope {
   readonly resumeCondition: ResumeCondition | null;
   readonly legacyStandingGrantCount: number;
   readonly unreviewedAutoDecisionCount: number;
-  readonly terminalLiveCompletionCapable: false;
+  readonly terminalLiveCompletionCapable: true;
 }
 
 export function projectIntentAutonomyStatus(projection: AutonomyProjection): IntentAutonomyStatusEnvelope {
@@ -795,6 +795,6 @@ export function projectIntentAutonomyStatus(projection: AutonomyProjection): Int
     resumeCondition: projection.parkEnvelope?.resumeCondition ?? null,
     legacyStandingGrantCount: projection.legacyStandingGrantIds.length,
     unreviewedAutoDecisionCount: projection.autoDecisions.filter((decision) => decision.reviewState === "unreviewed").length,
-    terminalLiveCompletionCapable: false,
+    terminalLiveCompletionCapable: true,
   };
 }

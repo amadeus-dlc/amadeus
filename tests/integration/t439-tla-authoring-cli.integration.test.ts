@@ -100,6 +100,32 @@ describe("identity extract", () => {
     ]);
     expect(exitCode).toBe(1);
     expect(body.ok).toBe(false);
+    expect((body.failure as { kind: string }).kind).toBe("io-failure");
+  });
+
+  test("rejects an odd flag list as a usage error", () => {
+    const { exitCode, body } = run(["identity", "extract", "--doc"]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toContain("pairs");
+  });
+
+  test("rejects prototype-chain argv tokens as unknown commands", () => {
+    for (const argv of [
+      ["__proto__", "extract"],
+      ["constructor", "extract"],
+      ["identity", "constructor"],
+      ["identity", "toString"],
+    ]) {
+      const { exitCode, body } = run(argv);
+      expect(exitCode).toBe(2);
+      expect(body.ok).toBe(false);
+    }
+  });
+
+  test("rejects an empty --store as a usage error", () => {
+    const { exitCode, body } = run(["bundle", "list", "--store", ""]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toContain("--store");
   });
 });
 
@@ -122,6 +148,12 @@ describe("identity compare", () => {
   test("rejects a malformed digest as a usage error", () => {
     const { exitCode } = run(["identity", "compare", "--recorded", "nope", "--current", current]);
     expect(exitCode).toBe(2);
+  });
+
+  test("rejects a compare invocation missing --current as a usage error", () => {
+    const { exitCode, body } = run(["identity", "compare", "--recorded", recorded]);
+    expect(exitCode).toBe(2);
+    expect(body.ok).toBe(false);
   });
 });
 
@@ -181,6 +213,33 @@ describe("bundle build / verify / read", () => {
     const { exitCode, body } = run(["bundle", "read", "--ref", digest, "--store", storeRoot]);
     expect(exitCode).toBe(0);
     expect(body.evidence).toEqual(authoringParts);
+  });
+
+  test("rejects a build invocation missing required flags as a usage error", () => {
+    const partsPath = join(workspace, "parts.json");
+    writeFileSync(partsPath, JSON.stringify(authoringParts), "utf8");
+    const { exitCode, body } = run(["bundle", "build", "--parts", partsPath]);
+    expect(exitCode).toBe(2);
+    expect(body.ok).toBe(false);
+  });
+
+  test("reports an unparseable parts file as exit 1", () => {
+    const partsPath = join(workspace, "broken-parts.json");
+    writeFileSync(partsPath, "{ not json", "utf8");
+    const { exitCode, body } = run([
+      "bundle",
+      "build",
+      "--parts",
+      partsPath,
+      "--predecessor",
+      "root",
+      "--identity",
+      identity,
+      "--store",
+      storeRoot,
+    ]);
+    expect(exitCode).toBe(1);
+    expect(body.ok).toBe(false);
   });
 
   test("build rejects a parts file that is missing receipts", () => {
@@ -252,6 +311,7 @@ describe("bundle list / head", () => {
       "--store",
       storeRoot,
     ]);
+    expect(built.exitCode).toBe(0);
     const listed = run(["bundle", "list", "--store", storeRoot]);
     expect(listed.body.refs).toEqual([built.body.digest]);
     const head = run(["bundle", "head", "--store", storeRoot]);

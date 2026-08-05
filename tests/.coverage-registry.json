@@ -20,19 +20,19 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 600,
+    "total": 605,
     "enumeratedByClass": {
       "function": 339,
-      "audit": 88,
+      "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 105,
+      "subcommand": 108,
       "render-surface": 7
     },
     "coveredByClass": {
       "function": 175,
-      "audit": 42,
+      "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -82,6 +82,18 @@
         {
           "file": "tests/integration/t355-audit-merge-info-seams.test.ts",
           "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "AUTO_DECISION_REVIEWED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t433-autonomy-review-observability.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -323,6 +335,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t434-intent-completion.test.ts",
           "mechanism": "none"
         }
       ],
@@ -5690,6 +5714,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt get-auto-decision",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt hold-merge",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5699,6 +5730,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt list-auto-decisions",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
@@ -5729,6 +5767,13 @@
     {
       "unitClass": "subcommand",
       "unitId": "amadeus-bolt resume-quality",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt review-auto-decision",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -6261,6 +6306,10 @@
       "unitId": "amadeus-state approve",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-autonomy-phase-boundary-artifact.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
           "mechanism": "none"

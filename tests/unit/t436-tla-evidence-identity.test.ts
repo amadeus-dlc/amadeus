@@ -42,8 +42,10 @@ describe("IdentityDigest digests", () => {
   });
 
   test("content digest separates id from body with a 0x00 boundary", () => {
-    const a = IdentityDigest.contentDigest(unwrap(IdentityDigest.normalizeStableId("AC-001")), "2body");
-    const b = IdentityDigest.contentDigest(unwrap(IdentityDigest.normalizeStableId("AC-002")), "body");
+    // "ADR-1" + "2body" and "ADR-12" + "body" concatenate to the same string,
+    // so only the separator keeps these digests apart.
+    const a = IdentityDigest.contentDigest(unwrap(IdentityDigest.normalizeStableId("ADR-1")), "2body");
+    const b = IdentityDigest.contentDigest(unwrap(IdentityDigest.normalizeStableId("ADR-12")), "body");
     expect(a).not.toBe(b);
   });
 
@@ -106,6 +108,34 @@ describe("IdentityDigest.extractStableSections", () => {
     const decisions = ["## ADR-1 タイトル", "決定", "", "## ADR-12", "別の決定"].join("\n");
     const sections = unwrap(IdentityDigest.extractStableSections(decisions, "decisions"));
     expect(sections.map((s) => String(s.id))).toEqual(["ADR-1", "ADR-12"]);
+  });
+
+  test("accepts the colon and em-dash title suffixes used by real records", () => {
+    const decisions = ["## ADR-1: タイトル", "決定", "", "## ADR-2 — 別タイトル", "別の決定"].join("\n");
+    const sections = unwrap(IdentityDigest.extractStableSections(decisions, "decisions"));
+    expect(sections.map((s) => String(s.id))).toEqual(["ADR-1", "ADR-2"]);
+
+    const requirements = ["### FR-006: 適用判定", "本文"].join("\n");
+    const reqSections = unwrap(IdentityDigest.extractStableSections(requirements, "requirements"));
+    expect(reqSections.map((s) => String(s.id))).toEqual(["FR-006"]);
+  });
+
+  test("ignores headings inside fenced code blocks", () => {
+    const doc = [
+      "```",
+      "### FR-006 フェンス内の例",
+      "```",
+      "### FR-007",
+      "本文",
+    ].join("\n");
+    const sections = unwrap(IdentityDigest.extractStableSections(doc, "requirements"));
+    expect(sections.map((s) => String(s.id))).toEqual(["FR-007"]);
+  });
+
+  test("does not match ids whose digit run continues past the grammar", () => {
+    const requirements = ["### FR-0061 過剰桁", "本文", "", "### FR-006x 接尾辞", "本文2"].join("\n");
+    const sections = unwrap(IdentityDigest.extractStableSections(requirements, "requirements"));
+    expect(sections).toEqual([]);
   });
 
   test("rejects duplicate ids, enumerating every duplicate", () => {

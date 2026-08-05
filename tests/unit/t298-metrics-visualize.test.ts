@@ -221,6 +221,60 @@ describe("renderHtml regression highlighting", () => {
   });
 });
 
+// --- cumulative-series delta rendering ---------------------------------------
+
+import { deltaPoints } from "../../scripts/metrics-visualize";
+
+describe("deltaPoints", () => {
+  test("first point has no predecessor and becomes null; negative deltas pass through", () => {
+    expect(deltaPoints([10, 15, 12])).toEqual([null, 5, -3]);
+  });
+  test("a null neighbour nullifies the delta on both sides (strict adjacency)", () => {
+    expect(deltaPoints([3, null, 8, 10])).toEqual([null, null, null, 2]);
+    expect(deltaPoints([null, 5, 9])).toEqual([null, null, 4]);
+  });
+  test("degenerate inputs: all-null, single point, empty", () => {
+    expect(deltaPoints([null, null])).toEqual([null, null]);
+    expect(deltaPoints([7])).toEqual([null]);
+    expect(deltaPoints([])).toEqual([]);
+  });
+});
+
+describe("renderHtml cumulative bug series", () => {
+  test("cumulative keys chart the per-snapshot delta under a Δ heading", () => {
+    const html = renderHtml(pair("bugs", { total: 278 }, { total: 300 }));
+    expect(html).toContain("<h3>Δ total");
+    expect(html).toContain("min 22 / max 22");
+    expect(html).toContain("Δtotal=22");
+  });
+  test("the first snapshot has no delta, so only one data point is drawn", () => {
+    const html = renderHtml(pair("bugs", { total: 278 }, { total: 300 }));
+    expect(html.match(/<circle/g)?.length).toBe(1);
+  });
+  test("open is a point-in-time balance and stays a raw series", () => {
+    const html = renderHtml(pair("bugs", { open: 15 }, { open: 16 }));
+    expect(html).toContain("<h3>open");
+    expect(html).not.toContain("<h3>Δ open");
+    expect(html.match(/<circle/g)?.length).toBe(2);
+  });
+  test("a single-snapshot cumulative key has no delta and falls back to the empty notice", () => {
+    const html = renderHtml([pair("bugs", { total: 278 }, { total: 300 })[0]]);
+    expect(html).toContain("<h3>Δ total");
+    expect(html).toContain("データなし");
+  });
+  test("the value table keeps the raw cumulative values", () => {
+    const html = renderHtml(pair("bugs", { total: 278 }, { total: 300 }));
+    expect(html).toContain(">278</td>");
+    expect(html).toContain(">300</td>");
+  });
+  test("the legend explains the delta charts and keeps the existing wording", () => {
+    const html = renderHtml(pair("bugs", { total: 278 }, { total: 300 }));
+    expect(html).toContain("直前スナップショットからの増分");
+    expect(html).toContain("直前スナップショットからの劣化");
+    expect(html).toContain("バグ open 増");
+  });
+});
+
 describe("MAX_HTML_BYTES", () => {
   test("derives from the retention constant times the snapshot cap times 2", () => {
     expect(MAX_HTML_BYTES).toBe(16_384 * METRICS_RETENTION_KEEP_LAST * 2);

@@ -32,6 +32,8 @@ Every stage (except the 3 stages in the Initialization phase: workspace-scaffold
 
 When a gate requires human adjudication (`none`, or a `semi` phase boundary), you MUST end your turn immediately after presenting it and wait for the user's explicit response. Do NOT call any tool until the user has typed their choice in a new message. A directive carrying `autonomy_auto_approve: true` is different: the audit-backed Intent authorization has already selected the gate effect, so after the full quality ritual the conductor reports approval without presenting a human question or synthesizing `HUMAN_TURN`.
 
+When that same directive also carries `phase_boundary`, auto-approval does not waive the phase-check artifact. Write `<record>/verification/phase-check-<phase>.md` **before** reporting the approval, exactly as on a human-adjudicated boundary. The state guard is fail-closed and knows nothing about autonomy: an auto-approve reported with that artifact absent is refused, not excused, and the refusal is a typed error on an authorization that was otherwise valid. The grant decides *who* approves; it never decides whether the boundary evidence exists.
+
 ### NO EMERGENT BEHAVIOR RULE
 Construction and Operation stages MUST use standardized 2-option completion messages. DO NOT create 3-option menus or other emergent navigation patterns. Only IDEATION and INCEPTION stages may conditionally include a 3rd option (to add a previously skipped stage). Any deviation from these patterns is a protocol violation.
 

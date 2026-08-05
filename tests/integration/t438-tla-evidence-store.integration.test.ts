@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -55,14 +55,16 @@ const meta = {
   generatedBy: "t438",
 } as const;
 
+let scratchRoot = "";
 let storeRoot = "";
 
 beforeEach(() => {
-  storeRoot = join(mkdtempSync(join(tmpdir(), "tla-evidence-")), "tla-evidence");
+  scratchRoot = mkdtempSync(join(tmpdir(), "tla-evidence-"));
+  storeRoot = join(scratchRoot, "tla-evidence");
 });
 
 afterEach(() => {
-  rmSync(storeRoot, { recursive: true, force: true });
+  rmSync(scratchRoot, { recursive: true, force: true });
 });
 
 describe("EvidenceBundle.build", () => {
@@ -112,6 +114,41 @@ describe("EvidenceBundle.build", () => {
     expect(failure(EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: absent }, meta))).toEqual({
       kind: "predecessor-broken",
       digest: absent,
+    });
+  });
+
+  // BR-U1-15 covers "absent OR unverifiable": a chain whose base is corrupt has
+  // no inductive foundation, so the child must not be accepted either.
+  test("refuses a predecessor whose bytes no longer parse", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    writeFileSync(join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(root)), "{ not json", "utf8");
+    expect(failure(EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, meta))).toEqual({
+      kind: "predecessor-broken",
+      digest: root.digest,
+    });
+  });
+
+  test("refuses a predecessor whose bytes no longer match its filename", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const path = join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(root));
+    writeFileSync(path, readFileSync(path, "utf8").replace('"t438"', '"tamper"'), "utf8");
+    expect(failure(EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, meta))).toEqual({
+      kind: "predecessor-broken",
+      digest: root.digest,
+    });
+  });
+
+  test("accepts a predecessor recording a different subject identity (a revision)", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const revised = unwrap(
+      EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, {
+        ...meta,
+        subjectIdentity: otherIdentity,
+      }),
+    );
+    expect(unwrap(EvidenceBundle.verify(storeRoot, revised, otherIdentity)).envelope.predecessor).toEqual({
+      kind: "bundle",
+      digest: root.digest,
     });
   });
 
@@ -176,6 +213,15 @@ describe("EvidenceBundle.read", () => {
   test("propagates an absent file as missing-part", () => {
     const absent = { digest: unwrap(EvidenceEnvelopeCodec.parseBundleDigest(`sha256:${"d".repeat(64)}`)) };
     expect(failure(EvidenceBundle.read(storeRoot, absent)).kind).toBe("missing-part");
+  });
+
+  // read is verify steps 1..3 (business-logic-model.md §5): the digest check is
+  // part of reading, so tampered bytes must never reach a caller.
+  test("detects tampering as digest-mismatch instead of returning the parts", () => {
+    const ref = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const path = join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(ref));
+    writeFileSync(path, readFileSync(path, "utf8").replace('"non-target"', '"author"'), "utf8");
+    expect(failure(EvidenceBundle.read(storeRoot, ref)).kind).toBe("digest-mismatch");
   });
 });
 
@@ -243,6 +289,40 @@ describe("interrupted build (BR-U1-02/08 fixture)", () => {
     expect(readdirSync(storeRoot).filter((name) => name.endsWith(".json"))).toEqual([]);
     expect(failure(EvidenceBundle.verify(storeRoot, ref, identity)).kind).toBe("missing-part");
     expect(unwrap(EvidenceBundle.head(storeRoot))).toEqual({ refs: [], corrupted: [] });
+  });
+});
+
+describe("io-failure branches", () => {
+  test("read reports an unreadable stored file as io-failure, not missing-part", () => {
+    const ref = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    chmodSync(join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(ref)), 0o000);
+    const result = failure(EvidenceBundle.read(storeRoot, ref));
+    expect(result.kind).toBe("io-failure");
+  });
+
+  test("build reports an unwritable staging area as io-failure", () => {
+    const stagingDir = join(storeRoot, ".tmp");
+    mkdirSync(stagingDir, { recursive: true });
+    chmodSync(stagingDir, 0o500);
+    try {
+      expect(failure(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta)).kind).toBe("io-failure");
+    } finally {
+      chmodSync(stagingDir, 0o700);
+    }
+  });
+
+  test("list reports a store root that is a plain file as io-failure", () => {
+    writeFileSync(storeRoot, "not a directory", "utf8");
+    expect(failure(EvidenceBundle.list(storeRoot)).kind).toBe("io-failure");
+  });
+
+  // A dangling symlink is listed by readdir but fails on read, which is the
+  // portable injection for the in-loop read failure (per the readdir-vs-ENOENT
+  // platform divergence: a missing path never appears in the listing).
+  test("list reports a dangling symlink entry as io-failure", () => {
+    mkdirSync(storeRoot, { recursive: true });
+    symlinkSync(join(storeRoot, "missing-target"), join(storeRoot, `${"c".repeat(64)}.json`));
+    expect(failure(EvidenceBundle.list(storeRoot)).kind).toBe("io-failure");
   });
 });
 

@@ -106,6 +106,19 @@ describe("EvidenceEnvelopeCodec.parse", () => {
     expect(unwrap(EvidenceEnvelopeCodec.parse(EvidenceEnvelopeCodec.canonicalBytes(source)))).toEqual(source);
   });
 
+  test("rejects a subjectIdentity that is not a plain string", () => {
+    // A single-element array String()-coerces into a passing digest, so the
+    // parser must require the genuine string type.
+    const source = envelope();
+    const bytes = new TextEncoder().encode(
+      JSON.stringify({ ...source, subjectIdentity: [source.subjectIdentity] }),
+    );
+    expect(failure(EvidenceEnvelopeCodec.parse(bytes))).toEqual({
+      kind: "missing-part",
+      parts: ["subjectIdentity"],
+    });
+  });
+
   test("enumerates every missing envelope field as missing-part", () => {
     const bytes = new TextEncoder().encode(JSON.stringify({ schema: 1, evidence: authoringParts }));
     expect(failure(EvidenceEnvelopeCodec.parse(bytes))).toEqual({
@@ -192,5 +205,14 @@ describe("EvidenceEnvelopeCodec.resolveHeads", () => {
 
   test("an empty store has no head", () => {
     expect(EvidenceEnvelopeCodec.resolveHeads([])).toEqual([]);
+  });
+});
+
+describe("EvidenceEnvelopeCodec.parseBundleDigest", () => {
+  test("rejects a malformed digest with a typed missing-part failure", () => {
+    expect(failure(EvidenceEnvelopeCodec.parseBundleDigest("sha256:nope"))).toEqual({
+      kind: "missing-part",
+      parts: ["digest(sha256:nope)"],
+    });
   });
 });

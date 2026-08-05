@@ -18,6 +18,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { guardPluginClosureForCli } from "../../scripts/package.ts";
 import { assertPluginImportClosure, PluginValidationError } from "../../scripts/plugin-projection.ts";
 
 const workspaces: string[] = [];
@@ -124,5 +125,37 @@ describe("t442 assertPluginImportClosure (projection gate)", () => {
 
   test("the repo's own plugins satisfy the guard (corpus sweep)", () => {
     expect(() => assertPluginImportClosure()).not.toThrow();
+  });
+});
+
+describe("t442 guardPluginClosureForCli (runCli exit-code contract)", () => {
+  test("converts a PluginValidationError into exit code 1 on stderr", () => {
+    const root = fixtureRoot("zz-t442-cli-red", {
+      "plugin.json": manifest("zz-t442-cli-red", ["tools/entry.ts"]),
+      "stages/s.md": STAGE,
+      "tools/entry.ts": 'import { dep } from "./undeclared.ts";\nexport const e = dep;\n',
+      "tools/undeclared.ts": "export const dep = 1;\n",
+    });
+    const original = console.error;
+    const lines: string[] = [];
+    console.error = (message?: unknown) => {
+      lines.push(String(message));
+    };
+    try {
+      expect(guardPluginClosureForCli(root)).toBe(1);
+    } finally {
+      console.error = original;
+    }
+    expect(lines.join("\n")).toContain("zz-t442-cli-red");
+  });
+
+  test("returns 0 when the closure is fully declared", () => {
+    const root = fixtureRoot("zz-t442-cli-green", {
+      "plugin.json": manifest("zz-t442-cli-green", ["tools/entry.ts", "tools/dep.ts"]),
+      "stages/s.md": STAGE,
+      "tools/entry.ts": 'import { dep } from "./dep.ts";\nexport const e = dep;\n',
+      "tools/dep.ts": "export const dep = 1;\n",
+    });
+    expect(guardPluginClosureForCli(root)).toBe(0);
   });
 });
