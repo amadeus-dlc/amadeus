@@ -590,7 +590,7 @@
       "anchorLines": 10,
       "targetLines": "1-10"
     },
-    "reason": "import.meta.main CLI wrapper — spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
+    "reason": "import.meta.main CLI wrapper \u2014 spawn-only lines 0-stamped by the in-process imports (t352/t356). Behaviour is exercised by the spawned CLI cases in t356 (error JSON on stderr + success JSON on stdout); handleConvert itself is covered in-process. Spawn-blindspot-two-step (ii).",
     "expiry": "remove if the wrapper gains an in-process seam or the module stops being imported in-process"
   },
   {
@@ -1327,7 +1327,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Defensive catch around the layered config read: readAmadeusConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS — unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
+    "reason": "Defensive catch around the layered config read: readAmadeusConfigLayers reports read failures as a typed outcome (covered by the broken-config t357 case), so this catch fires only if it THROWS \u2014 unreachable through its current contract, kept as a fail-closed belt so a future contract change disables telemetry instead of crashing the caller.",
     "expiry": "remove if readAmadeusConfigLayers gains a throwing path or the belt is dropped"
   },
   {
@@ -2174,7 +2174,7 @@
       "anchorLines": 3,
       "targetLines": "1-3"
     },
-    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
+    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -2284,7 +2284,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "The `- **Construction Autonomy Mode**: unset` row of the birth state template in handleIntentBirthStateBuild (#1846). Same blind spot as the 4607-4608 advisory rows directly below it: a full intent birth needs a completely seeded workspace and canonical in-process execution is impractical (no-canonical-direct-execution), so tests/integration/t393 drives birth through the SHIPPED CLI and asserts the emitted row plus set-autonomy succeeding on it — bun does not attribute spawned-CLI lines. Template-literal string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); there is no refactor that removes the row from the patch. Verified verbatim at pin time: the line is `- **Construction Autonomy Mode**: unset` inside the stateContent template.",
+    "reason": "The `- **Construction Autonomy Mode**: unset` row of the birth state template in handleIntentBirthStateBuild (#1846). Same blind spot as the 4607-4608 advisory rows directly below it: a full intent birth needs a completely seeded workspace and canonical in-process execution is impractical (no-canonical-direct-execution), so tests/integration/t393 drives birth through the SHIPPED CLI and asserts the emitted row plus set-autonomy succeeding on it \u2014 bun does not attribute spawned-CLI lines. Template-literal string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); there is no refactor that removes the row from the patch. Verified verbatim at pin time: the line is `- **Construction Autonomy Mode**: unset` inside the stateContent template.",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the state template"
   },
   {
@@ -2295,7 +2295,7 @@
       "anchorLines": 2,
       "targetLines": "1-2"
     },
-    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-08-02 after execution-observability insertions; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
+    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) \u2014 canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii). (Line pin re-resolved 2026-08-02 after execution-observability insertions; verified verbatim = the process.stdout.write multi-line call emitting 'Multiple nested project roots detected (not auto-selected)'.)",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
   {
@@ -2350,7 +2350,7 @@
       "anchorLines": 2,
       "targetLines": "1-2"
     },
-    "reason": "The derived-plan rebuild call inside handleRecompose's withAuditLock callback (#1849). The recompose verb is exercised through the shipped utility CLI by t194 and t394 (spawned CLI lines are unattributed), while the extracted rebuildDerivedPlanFields it delegates to IS driven in-process by t394 through the post-compose re-sync — only the two call/assignment rows inside the spawn-only handler remain. Already collapsed to the minimum (destructuring + one reassignment) per spawn-blindspot-two-step (i) before allowlisting. Verified verbatim at pin time: `const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);` and `content = rebuilt;`.",
+    "reason": "The derived-plan rebuild call inside handleRecompose's withAuditLock callback (#1849). The recompose verb is exercised through the shipped utility CLI by t194 and t394 (spawned CLI lines are unattributed), while the extracted rebuildDerivedPlanFields it delegates to IS driven in-process by t394 through the post-compose re-sync \u2014 only the two call/assignment rows inside the spawn-only handler remain. Already collapsed to the minimum (destructuring + one reassignment) per spawn-blindspot-two-step (i) before allowlisting. Verified verbatim at pin time: `const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);` and `content = rebuilt;`.",
     "expiry": "remove when handleRecompose gains an in-process argv seam"
   },
   {
@@ -2580,7 +2580,7 @@
       "anchorLines": 22,
       "targetLines": "1-22"
     },
-    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) — exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
+    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) \u2014 exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
   },
   {
     "file": "plugins/formal-model-check/tools/tla-arm.ts",
@@ -2612,7 +2612,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) — structurally unreachable once every named pipeline error code is handled above."
+    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) \u2014 structurally unreachable once every named pipeline error code is handled above."
   },
   {
     "file": "plugins/formal-model-check/tools/tla-arm.ts",
@@ -2633,7 +2633,7 @@
       "anchorLines": 52,
       "targetLines": "1-52"
     },
-    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
+    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin \u2014 requires a real JDK, exercised only by the real-toolchain probe outside CI."
   },
   {
     "file": "scripts/amadeus-election-migrate.ts",
@@ -3281,7 +3281,7 @@
       "anchorLines": 4,
       "targetLines": "1-4"
     },
-    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -3314,7 +3314,7 @@
       "anchorLines": 3,
       "targetLines": "1-3"
     },
-    "reason": "main() dispatch case for the mirror-initial-create verb (#1750). main() is the CLI entry — never imported, so the case, its handler call, and its break are only reached in a spawned child; the handler itself is driven in-process by tests/integration/t371-intent-initialized-boundary.test.ts.",
+    "reason": "main() dispatch case for the mirror-initial-create verb (#1750). main() is the CLI entry \u2014 never imported, so the case, its handler call, and its break are only reached in a spawned child; the handler itself is driven in-process by tests/integration/t371-intent-initialized-boundary.test.ts.",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
   },
   {
@@ -3325,7 +3325,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Unknown-subcommand usage message string in main()'s default case — mirror-initial-create was appended to the existing single-line list (#1750). A spawn-only message-string row per spawn-blindspot-two-step (ii).",
+    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 mirror-initial-create was appended to the existing single-line list (#1750). A spawn-only message-string row per spawn-blindspot-two-step (ii).",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
   },
   {
@@ -3533,7 +3533,7 @@
       "anchorLines": 4,
       "targetLines": "1-4"
     },
-    "reason": "Marker-write wiring inside handleFork (spawn-only, as above): the try, the seam call, and its failure branch. The write itself IS driven in-process — writeBoltContextMarker is exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts including the overwrite case — and the spawned fork in the same file asserts the marker the CLI produced. Spawn-blindspot-two-step (ii).",
+    "reason": "Marker-write wiring inside handleFork (spawn-only, as above): the try, the seam call, and its failure branch. The write itself IS driven in-process \u2014 writeBoltContextMarker is exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts including the overwrite case \u2014 and the spawned fork in the same file asserts the marker the CLI produced. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when handleFork gains an in-process driver"
   },
   {
@@ -4611,7 +4611,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
+    "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
   },
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
@@ -6106,7 +6106,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6117,7 +6117,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6128,7 +6128,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6139,7 +6139,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6150,7 +6150,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6161,7 +6161,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6172,7 +6172,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6183,7 +6183,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6194,7 +6194,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6205,7 +6205,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6216,7 +6216,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6227,7 +6227,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6238,7 +6238,7 @@
       "anchorLines": 3,
       "targetLines": "2"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6249,7 +6249,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6260,7 +6260,7 @@
       "anchorLines": 3,
       "targetLines": "2"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6271,7 +6271,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6282,7 +6282,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6293,7 +6293,7 @@
       "anchorLines": 2,
       "targetLines": "1-2"
     },
-    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
+    "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections \u2014 registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay \u2014 are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
@@ -6348,14 +6348,14 @@
       "anchorLines": 23,
       "targetLines": "1-23"
     },
-    "reason": "The record CLI dispatch arm is exercised by t-advisory-choice-record's spawned-CLI cases (success JSON shape, missing-flag usage, unknown-subcommand refusal); Bun does not attribute child-process execution to the parent LCOV report — the same boundary the two correct-misattributed entries above record.",
+    "reason": "The record CLI dispatch arm is exercised by t-advisory-choice-record's spawned-CLI cases (success JSON shape, missing-flag usage, unknown-subcommand refusal); Bun does not attribute child-process execution to the parent LCOV report \u2014 the same boundary the two correct-misattributed entries above record.",
     "expiry": "remove when the CLI dispatch is testable in-process"
   },
   {
     "file": "plugins/formal-model-check/tools/tla-authoring.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:6601b73c10f23f39b59a60dffb571969e36788102d08258e8217b64988e2091e",
+      "fingerprint": "sha256:68c52d65b6109f416bb181a5c8b18c602ecf7f770407b0aeb81d380e9133bf61",
       "anchorLines": 1,
       "targetLines": "1"
     },
