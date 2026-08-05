@@ -172,10 +172,20 @@ function reviewCarrier(
   return { directive, invocationId, result };
 }
 
+// Ruling Q1=A (2026-08-05, Issue #2147): `check-read` and `complete-review`
+// refuse an invocationId that `scope` never issued, so a fixture that wants to
+// exercise any LATER guard has to mint a real one first. Cases that assert the
+// refusal itself keep using a fabricated id.
+function issued(current: Fixture): string {
+  const scoped = run(current, "scope", current.directive);
+  expect(scoped.status).toBe(0);
+  return JSON.parse(scoped.stdout).invocationId as string;
+}
+
 function rejectRead(current: Fixture, request: unknown): void {
   const rejected = run(current, "check-read", {
     directive: current.directive,
-    invocationId: TEST_INVOCATION_ID,
+    invocationId: issued(current),
     iteration: 1,
     transcript: [],
     request,
@@ -206,6 +216,10 @@ function localRuntime(current: Fixture, input: unknown) {
       appendFile: (path: string, content: string, _encoding: "utf8") => {
         files.set(path, `${files.get(path) ?? ""}${content}`);
       },
+      writeFile: (path: string, content: string, _encoding: "utf8") => {
+        files.set(path, content);
+      },
+      mkdir: (_path: string) => {},
     },
     utc: {
       command: "date",
@@ -430,6 +444,9 @@ describe("t245 reviewer protocol production caller", () => {
     ): void => {
       const current = fixture();
       const local = localRuntime(current, current.directive);
+      // Ruling Q1=A: mint the deterministic invocation the carriers below name.
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode, expected).toBe(0);
       local.replaceInput(prepare(current, local));
       runtime.runReviewerCommand([mode], local.deps);
       expect(local.output().exitCode, expected).toBe(1);
@@ -538,6 +555,9 @@ describe("t245 reviewer protocol production caller", () => {
     ): void => {
       const current = fixture();
       const local = localRuntime(current, current.directive);
+      // Ruling Q1=A: mint the deterministic invocation the carriers below name.
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode, expected).toBe(0);
       local.replaceInput(prepare(current, local));
       runtime.runReviewerCommand(["complete-review"], local.deps);
       expect(local.output().exitCode, expected).toBe(1);
@@ -665,10 +685,11 @@ describe("t245 reviewer protocol production caller", () => {
       expected: string,
     ): void => {
       const current = fixture();
-      const local = localRuntime(current, reviewCarrier(
-        current.directive,
-        reviewResult(),
-      ));
+      const local = localRuntime(current, current.directive);
+      // Ruling Q1=A: mint the deterministic invocation the carriers below name.
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode).toBe(0);
+      local.replaceInput(reviewCarrier(current.directive, reviewResult()));
       runtime.runReviewerCommand(["complete-review"], local.deps);
       expect(local.output().exitCode).toBe(0);
       const path = join(current.root, current.primary);
@@ -736,10 +757,11 @@ describe("t245 reviewer protocol production caller", () => {
 
     for (const replayCase of cases) {
       const current = fixture();
-      const local = localRuntime(current, reviewCarrier(
-        current.directive,
-        replayCase.initial,
-      ));
+      const local = localRuntime(current, current.directive);
+      // Ruling Q1=A: mint the deterministic invocation the carriers below name.
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode, replayCase.name).toBe(0);
+      local.replaceInput(reviewCarrier(current.directive, replayCase.initial));
       runtime.runReviewerCommand(["complete-review"], local.deps);
       expect(local.output().exitCode, replayCase.name).toBe(0);
       expect(JSON.parse(local.output().stdout).appended, replayCase.name).toBe(true);
@@ -1001,7 +1023,12 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("projects a no-request decision once without growing a repeated projection", () => {
     const current = fixture();
-    const input = reviewCarrier(current.directive, reviewResult());
+    const invocation = issued(current);
+    const input = reviewCarrier(
+      current.directive,
+      reviewResult([], [], 1, invocation),
+      invocation,
+    );
     const first = run(current, "complete-review", input);
     const second = run(current, "complete-review", input);
 
@@ -1015,14 +1042,15 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("accepts NOT-READY only with a closed-severity BLOCKER", () => {
     const current = fixture();
+    const invocation = issued(current);
     const input = reviewCarrier(current.directive, {
-      ...reviewResult(),
+      ...reviewResult([], [], 1, invocation),
       verdict: "NOT-READY",
       findings: [
         "BLOCKER | FR-1 fails the declared boundary reproduction",
         "FOLLOW-UP | simplify the adapter in a later change",
       ],
-    });
+    }, invocation);
     const completed = run(current, "complete-review", input);
 
     expect(completed.status).toBe(0);
@@ -1036,7 +1064,12 @@ describe("t245 reviewer protocol production caller", () => {
     const requiredFields = ["Verdict", "Reviewer", "Date", "Iteration", "Scope decision"];
     for (const field of requiredFields) {
       const current = fixture();
-      const input = reviewCarrier(current.directive, reviewResult());
+      const invocation = issued(current);
+      const input = reviewCarrier(
+        current.directive,
+        reviewResult([], [], 1, invocation),
+        invocation,
+      );
       expect(run(current, "complete-review", input).status).toBe(0);
       const path = join(current.root, current.primary);
       const malformed = readFileSync(path, "utf8")
@@ -1053,7 +1086,12 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("rejects a duplicate or invalid Date in an existing Review block", () => {
     const duplicate = fixture();
-    const duplicateInput = reviewCarrier(duplicate.directive, reviewResult());
+    const duplicateInvocation = issued(duplicate);
+    const duplicateInput = reviewCarrier(
+      duplicate.directive,
+      reviewResult([], [], 1, duplicateInvocation),
+      duplicateInvocation,
+    );
     expect(run(duplicate, "complete-review", duplicateInput).status).toBe(0);
     const duplicatePath = join(duplicate.root, duplicate.primary);
     writeFileSync(
@@ -1066,7 +1104,12 @@ describe("t245 reviewer protocol production caller", () => {
     expect(run(duplicate, "complete-review", duplicateInput).status).toBe(1);
 
     const invalid = fixture();
-    const invalidInput = reviewCarrier(invalid.directive, reviewResult());
+    const invalidInvocation = issued(invalid);
+    const invalidInput = reviewCarrier(
+      invalid.directive,
+      reviewResult([], [], 1, invalidInvocation),
+      invalidInvocation,
+    );
     expect(run(invalid, "complete-review", invalidInput).status).toBe(0);
     const invalidPath = join(invalid.root, invalid.primary);
     writeFileSync(
@@ -1081,7 +1124,12 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("does not borrow required fields from a later Review iteration", () => {
     const current = fixture();
-    const input = reviewCarrier(current.directive, reviewResult());
+    const invocation = issued(current);
+    const input = reviewCarrier(
+      current.directive,
+      reviewResult([], [], 1, invocation),
+      invocation,
+    );
     expect(run(current, "complete-review", input).status).toBe(0);
     const path = join(current.root, current.primary);
     const iterationOne = readFileSync(path, "utf8")
@@ -1111,9 +1159,10 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("rejects replaying an iteration-one read decision in iteration two", () => {
     const current = fixture();
+    const invocation = issued(current);
     const admitted = run(current, "check-read", {
       directive: current.directive,
-      invocationId: TEST_INVOCATION_ID,
+      invocationId: invocation,
       iteration: 1,
       transcript: [],
       request: readRequest(current),
@@ -1126,7 +1175,8 @@ describe("t245 reviewer protocol production caller", () => {
       "complete-review",
       reviewCarrier(
         current.directive,
-        reviewResult(transcript, [current.requested], 2),
+        reviewResult(transcript, [current.requested], 2, invocation),
+        invocation,
       ),
     );
     expect(replayed.status).toBe(1);
@@ -1169,9 +1219,10 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("rejects outside, repeated, or malformed read requests at the sole admission seam", () => {
     const current = fixture();
+    const invocation = issued(current);
     const approved = run(current, "check-read", {
       directive: current.directive,
-      invocationId: TEST_INVOCATION_ID,
+      invocationId: invocation,
       iteration: 1,
       transcript: [],
       request: readRequest(current),
@@ -1271,17 +1322,20 @@ describe("t245 reviewer protocol production caller", () => {
   });
 
   test("emits no READY evidence for bypass, transcript tamper, rejection, or two requests", () => {
+    // Ruling Q1=A: each case carries an invocation `scope` really issued, so the
+    // refusal below is the transcript guard and not the unissued-id refusal.
     const cases = [
       {
         name: "bypass",
-        result: reviewResult([], ["packages/framework/core/tools/bypass.ts"]),
+        result: (invocation: string) =>
+          reviewResult([], ["packages/framework/core/tools/bypass.ts"], 1, invocation),
       },
       {
         name: "tamper",
-        result: reviewResult([
+        result: (invocation: string) => reviewResult([
           {
             decision: "approved",
-            invocationId: TEST_INVOCATION_ID,
+            invocationId: invocation,
             iteration: 1,
             integrationId: "INT-245",
             path: "packages/framework/core/tools/tampered.ts",
@@ -1290,14 +1344,14 @@ describe("t245 reviewer protocol production caller", () => {
             operation: "read-file",
             digest: "0".repeat(64),
           },
-        ], ["packages/framework/core/tools/tampered.ts"]),
+        ], ["packages/framework/core/tools/tampered.ts"], 1, invocation),
       },
       {
         name: "rejected",
-        result: reviewResult([
+        result: (invocation: string) => reviewResult([
           {
             decision: "rejected",
-            invocationId: TEST_INVOCATION_ID,
+            invocationId: invocation,
             iteration: 1,
             integrationId: "INT-245",
             path: "packages/framework/core/tools/rejected.ts",
@@ -1306,23 +1360,24 @@ describe("t245 reviewer protocol production caller", () => {
             operation: "read-file",
             digest: "0".repeat(64),
           },
-        ], ["packages/framework/core/tools/rejected.ts"]),
+        ], ["packages/framework/core/tools/rejected.ts"], 1, invocation),
       },
       {
         name: "two requests",
-        result: reviewResult([
-          { decision: "approved", invocationId: TEST_INVOCATION_ID, iteration: 1 },
-          { decision: "approved", invocationId: TEST_INVOCATION_ID, iteration: 1 },
-        ], ["one", "two"]),
+        result: (invocation: string) => reviewResult([
+          { decision: "approved", invocationId: invocation, iteration: 1 },
+          { decision: "approved", invocationId: invocation, iteration: 1 },
+        ], ["one", "two"], 1, invocation),
       },
     ];
 
     for (const item of cases) {
       const current = fixture();
+      const invocation = issued(current);
       const completed = run(
         current,
         "complete-review",
-        reviewCarrier(current.directive, item.result),
+        reviewCarrier(current.directive, item.result(invocation), invocation),
       );
       expect(completed.status, item.name).toBe(1);
       expect(readFileSync(join(current.root, current.primary), "utf8")).not.toContain(
@@ -1333,14 +1388,22 @@ describe("t245 reviewer protocol production caller", () => {
 
   test("emits no READY evidence when scope, persona, or runtime UTC is invalid", () => {
     const missingScope = fixture();
+    // Ruling Q1=A: issue before removing the artifact — `scope` reads the same
+    // required produce it is about to lose.
+    const missingScopeInvocation = issued(missingScope);
     rmSync(join(missingScope.root, missingScope.primary));
     expect(run(
       missingScope,
       "complete-review",
-      reviewCarrier(missingScope.directive, reviewResult()),
+      reviewCarrier(
+        missingScope.directive,
+        reviewResult([], [], 1, missingScopeInvocation),
+        missingScopeInvocation,
+      ),
     ).status).toBe(1);
 
     const wrongPersona = fixture();
+    const wrongPersonaInvocation = issued(wrongPersona);
     const wrongPersonaDirective = {
       ...wrongPersona.directive,
       reviewer: "amadeus-developer-agent",
@@ -1348,12 +1411,14 @@ describe("t245 reviewer protocol production caller", () => {
     expect(run(wrongPersona, "complete-review", reviewCarrier(
       wrongPersonaDirective,
       {
-        ...reviewResult(),
+        ...reviewResult([], [], 1, wrongPersonaInvocation),
         reviewer: "amadeus-developer-agent",
       },
+      wrongPersonaInvocation,
     )).status).toBe(1);
 
     const wrongDate = fixture();
+    const wrongDateInvocation = issued(wrongDate);
     const bin = join(wrongDate.root, "fake-bin");
     mkdirSync(bin);
     writeFileSync(join(bin, "date"), "#!/bin/sh\nprintf 'not-utc\\n'\n");
@@ -1361,11 +1426,125 @@ describe("t245 reviewer protocol production caller", () => {
     const completed = run(
       wrongDate,
       "complete-review",
-      reviewCarrier(wrongDate.directive, reviewResult()),
+      reviewCarrier(
+        wrongDate.directive,
+        reviewResult([], [], 1, wrongDateInvocation),
+        wrongDateInvocation,
+      ),
       { PATH: `${bin}:${process.env.PATH ?? ""}` },
     );
     expect(completed.status).toBe(1);
     expect(readFileSync(join(wrongDate.root, wrongDate.primary), "utf8")).not.toContain(
+      "## Review — Iteration",
+    );
+  });
+
+  // Ruling Q1=A (2026-08-05, Issue #2147): `scope` persists every issued
+  // invocation, and both consuming modes refuse an id it never issued. The
+  // refusal is fail-closed and runs on EVERY path, including the empty
+  // `scopeTranscript` one that used to return before the replay check.
+  test("refuses a fabricated invocation ID at check-read and complete-review", () => {
+    const current = fixture();
+    const fabricated = "3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
+    const admitted = run(current, "check-read", {
+      directive: current.directive,
+      invocationId: fabricated,
+      iteration: 1,
+      transcript: [],
+      request: readRequest(current),
+    });
+    expect(admitted.status).toBe(1);
+    expect(admitted.stdout).not.toContain('"decision"');
+
+    const completed = run(
+      current,
+      "complete-review",
+      reviewCarrier(
+        current.directive,
+        reviewResult([], [], 1, fabricated),
+        fabricated,
+      ),
+    );
+    expect(completed.status).toBe(1);
+    expect(completed.stdout).not.toContain('"ready":true');
+    expect(readFileSync(join(current.root, current.primary), "utf8")).not.toContain(
+      "## Review — Iteration",
+    );
+  });
+
+  test("refuses a reused invocation ID on the empty-transcript path", () => {
+    const current = fixture();
+    const scoped = run(current, "scope", current.directive);
+    expect(scoped.status).toBe(0);
+    const invocation = JSON.parse(scoped.stdout).invocationId;
+
+    const first = run(
+      current,
+      "complete-review",
+      reviewCarrier(
+        current.directive,
+        reviewResult([], [], 1, invocation),
+        invocation,
+      ),
+    );
+    expect(first.status).toBe(0);
+
+    const replayed = run(
+      current,
+      "complete-review",
+      reviewCarrier(
+        current.directive,
+        reviewResult([], [], 2, invocation),
+        invocation,
+      ),
+    );
+    expect(replayed.status).toBe(1);
+    expect(replayed.stdout).not.toContain('"ready":true');
+    expect(readFileSync(join(current.root, current.primary), "utf8")).not.toContain(
+      "## Review — Iteration 2",
+    );
+  });
+
+  test("binds an issued invocation to one iteration in-process", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const current = fixture();
+    const local = localRuntime(current, {
+      directive: current.directive,
+      invocationId: TEST_INVOCATION_ID,
+      iteration: 1,
+      transcript: [],
+      request: readRequest(current),
+    });
+
+    runtime.runReviewerCommand(["check-read"], local.deps);
+    expect(local.output().exitCode).toBe(1);
+    expect(local.output().stderr).toContain("was not issued by scope");
+
+    local.replaceInput(current.directive);
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+
+    local.replaceInput({
+      directive: current.directive,
+      invocationId: TEST_INVOCATION_ID,
+      iteration: 1,
+      transcript: [],
+      request: readRequest(current),
+    });
+    runtime.runReviewerCommand(["check-read"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+
+    local.replaceInput(reviewCarrier(
+      current.directive,
+      reviewResult([], [], 2),
+    ));
+    runtime.runReviewerCommand(["complete-review"], local.deps);
+    expect(local.output().exitCode).toBe(1);
+    expect(local.output().stderr).toContain("bound to a different iteration");
+    expect(local.files.get(join(current.root, current.primary))).not.toContain(
       "## Review — Iteration",
     );
   });
@@ -1380,12 +1559,13 @@ describe("t245 reviewer protocol production caller", () => {
       "findings",
     ] as const) {
       const current = fixture();
-      const result = reviewResult() as Record<string, unknown>;
+      const invocation = issued(current);
+      const result = reviewResult([], [], 1, invocation) as Record<string, unknown>;
       delete result[field];
       const completed = run(
         current,
         "complete-review",
-        reviewCarrier(current.directive, result),
+        reviewCarrier(current.directive, result, invocation),
       );
       expect(completed.status, field).toBe(1);
       expect(readFileSync(join(current.root, current.primary), "utf8")).not.toContain(

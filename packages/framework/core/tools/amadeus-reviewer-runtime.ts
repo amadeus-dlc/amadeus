@@ -2,8 +2,15 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type { RunStageDirective } from "./amadeus-directive.ts";
 import { validateDirective } from "./amadeus-directive.ts";
@@ -17,6 +24,8 @@ interface RuntimeFs {
   stat(path: string): { isFile(): boolean };
   readFile(path: string | 0, encoding: "utf8"): string;
   appendFile(path: string, content: string, encoding: "utf8"): void;
+  writeFile(path: string, content: string, encoding: "utf8"): void;
+  mkdir(path: string): void;
 }
 
 interface RuntimeUtc {
@@ -94,6 +103,10 @@ const realDeps: ReviewerRuntimeDeps = {
     stat: statSync,
     readFile: readFileSync,
     appendFile: appendFileSync,
+    writeFile: writeFileSync,
+    mkdir: (path: string) => {
+      mkdirSync(path, { recursive: true });
+    },
   },
   utc: {
     command: "date",
@@ -210,6 +223,118 @@ function invocationId(value: unknown): string {
     throw new Error("review invocation ID must be a UUID v4");
   }
   return checked;
+}
+
+// --- Invocation store (Issue #2147, ruling Q1=A) ---
+//
+// `scope` is the ONLY mint of a review invocation, so an id it never issued must
+// not buy a spot-check admission or a READY verdict. The issued ids live in a
+// machine-local ledger under the intent record root, where the shipped
+// `.gitignore` rule `amadeus/spaces/*/intents/*/.amadeus-*` already keeps
+// runtime state out of the committed tree.
+//
+// An entry is minted unbound and binds to the FIRST iteration that consumes it;
+// any later carrier naming a different iteration is a replay. That check lives
+// here and not in the transcript revalidation, so it runs on every path —
+// including the empty-`scopeTranscript` one that returns before the transcript
+// checks are reached.
+const INVOCATION_STORE_FILE = ".amadeus-reviewer-invocations.json";
+const RECORD_ROOT = /^(.*?\/intents\/[^/]+)\//;
+
+interface IssuedInvocation {
+  invocationId: string;
+  iteration: number | null;
+}
+
+function invocationStorePath(
+  directive: RunStageDirective,
+  deps: ReviewerRuntimeDeps,
+): string {
+  const record = RECORD_ROOT.exec(directive.memory_path);
+  if (!record) {
+    throw new Error("directive memory path does not name an intent record dir");
+  }
+  return absolutePath(join(record[1], INVOCATION_STORE_FILE), deps);
+}
+
+function readInvocationStore(
+  path: string,
+  deps: ReviewerRuntimeDeps,
+): IssuedInvocation[] {
+  if (!deps.fs.exists(path)) return [];
+  let raw: unknown;
+  try {
+    raw = JSON.parse(deps.fs.readFile(path, "utf8"));
+  } catch {
+    throw new Error("reviewer invocation store must be JSON");
+  }
+  const store = objectValue(raw, "reviewer invocation store");
+  if (!Array.isArray(store.invocations)) {
+    throw new Error("reviewer invocation store must list issued invocations");
+  }
+  return store.invocations.map((entry) => {
+    const issued = objectValue(entry, "issued review invocation");
+    return {
+      invocationId: invocationId(issued.invocationId),
+      iteration:
+        issued.iteration === null
+          ? null
+          : positiveInteger(issued.iteration, "issued review iteration"),
+    };
+  });
+}
+
+function writeInvocationStore(
+  path: string,
+  issued: IssuedInvocation[],
+  deps: ReviewerRuntimeDeps,
+): void {
+  deps.fs.mkdir(dirname(path));
+  deps.fs.writeFile(
+    path,
+    `${JSON.stringify({ invocations: issued }, null, 2)}\n`,
+    "utf8",
+  );
+}
+
+function issueInvocation(
+  directive: RunStageDirective,
+  invocation: string,
+  deps: ReviewerRuntimeDeps,
+): void {
+  const path = invocationStorePath(directive, deps);
+  const issued = readInvocationStore(path, deps);
+  const existing = issued.find((entry) => entry.invocationId === invocation);
+  if (existing) {
+    if (existing.iteration !== null) {
+      throw new Error("review invocation ID was already consumed");
+    }
+    return;
+  }
+  issued.push({ invocationId: invocation, iteration: null });
+  writeInvocationStore(path, issued, deps);
+}
+
+function bindInvocation(
+  directive: RunStageDirective,
+  invocation: string,
+  iteration: number,
+  deps: ReviewerRuntimeDeps,
+): void {
+  const path = invocationStorePath(directive, deps);
+  const issued = readInvocationStore(path, deps);
+  const existing = issued.find((entry) => entry.invocationId === invocation);
+  if (!existing) {
+    throw new Error("review invocation ID was not issued by scope");
+  }
+  if (existing.iteration === null) {
+    existing.iteration = iteration;
+    writeInvocationStore(path, issued, deps);
+    return;
+  }
+  if (existing.iteration !== iteration) {
+    throw new Error("review invocation ID is bound to a different iteration");
+  }
 }
 
 function readRunStageDirective(input: string): RunStageDirective {
@@ -387,6 +512,7 @@ function checkRead(input: string, deps: ReviewerRuntimeDeps): void {
     carrier.iteration,
     "review invocation iteration",
   );
+  bindInvocation(directive, invocation, iteration, deps);
   const decision = canonicalDecision(
     directive,
     parseRequest(carrier.request),
@@ -589,6 +715,7 @@ function completeReview(input: string, deps: ReviewerRuntimeDeps): void {
   ) {
     throw new Error("review iteration exceeds the directive limit");
   }
+  bindInvocation(directive, invocation, result.iteration, deps);
   const decision = revalidateTranscript(directive, result, deps);
   const artifact = primaryArtifact(directive);
   const artifactPath = absolutePath(artifact, deps);
@@ -626,12 +753,10 @@ function completeReview(input: string, deps: ReviewerRuntimeDeps): void {
 function runScope(input: string, deps: ReviewerRuntimeDeps): void {
   const directive = readRunStageDirective(input);
   const scope = scopeForDirective(directive, deps);
+  const invocation = invocationId(deps.invocationId());
+  issueInvocation(directive, invocation, deps);
   deps.stdout.write(
-    `${JSON.stringify({
-      scope,
-      invocationId: invocationId(deps.invocationId()),
-      transcript: [],
-    })}\n`,
+    `${JSON.stringify({ scope, invocationId: invocation, transcript: [] })}\n`,
   );
 }
 
