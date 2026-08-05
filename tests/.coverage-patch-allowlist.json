@@ -6382,5 +6382,16 @@
     },
     "reason": "The defensive catch around the mutant write/copy only fires when writeFileSync or cpSync throws inside a directory mkdtempSync just created; the portable injections (absent path, dangling symlink) are all absorbed earlier as typed failures, and a directory-shaped module diverges between macOS (EISDIR throw) and Linux (empty read), so a deterministic cross-platform red is not constructible (bun-readfilesync-dir-platform-divergence).",
     "expiry": "remove if the workshop gains an injectable filesystem port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "awaitCompletion",
+      "fingerprint": "sha256:e9557e985662b83577619eb578a9687d3b557c75306a5fafd25d743cc45770de",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "awaitCompletion ends in process.exit, so it cannot be driven in-process without killing the runner; it is the await-completion sibling of the error() helper immediately above it and is waived on the same grounds. The refusal it prints is asserted through the shipped CLI in tests/integration/t453-await-completion-directive.integration.test.ts (typed kind on stderr, non-zero exit, byte-identical state, no ERROR_LOGGED row), and the wait-vs-failure decision that selects it is covered in-process by tests/unit/t448-completion-refusal-directive.test.ts.",
+    "expiry": "remove when amadeus-state's process exit is injectable in-process or Bun attributes spawned CLI lines"
   }
 ]

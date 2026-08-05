@@ -41,9 +41,10 @@ export class WorkflowCompletionNotSettledError extends Error {}
 function asNotSettled<T>(read: () => T): T {
   try {
     return read();
-  } catch (cause) {
-    throw new WorkflowCompletionNotSettledError(errorMessage(cause));
-  }
+    // The rethrow shares the catch line: bun lcov stamps a bare `} catch {` 0
+    // under union merge, which reads as an untested boundary that is in fact
+    // exercised on every unsettled completion.
+  } catch (cause) { throw new WorkflowCompletionNotSettledError(errorMessage(cause)); }
 }
 
 export type WorkflowCompletionPreparation = Readonly<{

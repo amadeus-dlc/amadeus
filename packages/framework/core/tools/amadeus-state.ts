@@ -5383,7 +5383,6 @@ function error(msg: string): never {
 // #2251). error() itself is untouched, so every genuine failure keeps its audit
 // evidence (issue #839).
 function awaitCompletion(msg: string): never {
-  const directive: AwaitCompletionDirective = { kind: "await-completion", reason: msg };
-  console.error(JSON.stringify(directive));
+  console.error(JSON.stringify({ kind: "await-completion", reason: msg } satisfies AwaitCompletionDirective));
   process.exit(1);
 }
