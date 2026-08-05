@@ -28,10 +28,12 @@ import {
   parseAggregateDigest,
   type AggregateDigest,
   type BundleDigest,
+  type ContentDigest,
   type DocKind,
   type EvidenceBundleRef,
   type EvidenceParts,
   type PredecessorRef,
+  type StableId,
 } from "./tla-evidence.ts";
 
 export type ExitCode = 0 | 1 | 2;
@@ -447,7 +449,7 @@ function parseGovernedSubjects(value: unknown): GovernedSubjects | null {
 
 /** The aggregate identity of the governed subjects across the declared documents. */
 function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest {
-  const entries: Array<readonly [never, never]> = [];
+  const entries: Array<readonly [StableId, ContentDigest]> = [];
   const outstanding = new Set(governed.subjects);
   for (const document of governed.documents) {
     const file = readTextFile(document.path);
@@ -455,8 +457,8 @@ function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest
     const sections = IdentityDigest.extractStableSections(file.text, document.kind);
     if (!sections.ok) return failed(sections.error);
     for (const section of sections.value) {
-      if (!outstanding.delete(section.id as string)) continue;
-      entries.push([section.id, IdentityDigest.contentDigest(section.id, section.canonicalBody)] as never);
+      if (!outstanding.delete(section.id)) continue;
+      entries.push([section.id, IdentityDigest.contentDigest(section.id, section.canonicalBody)] as const);
     }
   }
   // A governed id the documents do not define makes the identity undefined, so
