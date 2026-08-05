@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件採用。両候補とも既存 memory 層ノルムの機械適用であり、新規学習ではない(独立実測)。c1(0問様式の採用): project.md:314 cid:application-design:c1-pi-harness『Issueと承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』、project.md:311 cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority(Issue 本文の逐語指名は一次証拠から一意に導かれる執行事項 — ユーザー逐語『issueでわかることは質問するな』)、project.md:187 cid:intent-capture:c1(既決裁定は前提知識として成果物へ直接反映し重複再演しない)、team.md:59 cid:requirements-analysis:no-election-for-decided-norms(既決規範は質問対象にせずそのまま適用)が既に被覆する。0問様式という様式自体も team.md:252 で『0問様式の既習形』として既知。scope-definition-questions.md の実測でも標準5問すべてが intent-statement からの導出根拠付きで、Issue 残置の3決定点は既存の Requirements 送付定型に載っており、新しい判断規則を含まない。c2(Must 5点のみ・Should/Could なし): diary 本文が『260722 election-core-promotion の scope-definition:c2 既習形』と自認しており、project.md:198 cid:scope-definition:c2『公開契約を完結させる proto-capability はすべて Must とし Should／Could を置かない。それ以外は Won't として厳格に除外』の逐語適用にとどまる。intent-backlog.md の Must 5点+Won't 厳格除外はこのノルムの機械適用。",
+      "submittedAt": "2026-08-05T05:45:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件採用を全面支持する。独立実測の結果、候補2件はいずれも既存 memory 層ノルムの機械適用であり新規学習を含まない。c2: project.md:198 の cid:scope-definition:c2 が『公開契約を完結させる proto-capability はすべて Must とし Should／Could を置かない。Must を削って軽量化する案より Won't として厳格に除外する案を選んだ』と既に定めており、候補文の判断述語(Must 全指名・Should/Could なし・非対象宣言による Won't 厳格化)と完全一致する。diary(ideation/scope-definition/memory.md:9)自身が『260722 election-core-promotion の scope-definition:c2 既習形』と明記しており、intent-backlog.md の Should/Could 非設置理由も同一述語の再適用にすぎない。あわせて backlog・scope-document のシーケンシング方針(risk-first + dependency-first)も project.md:199 cid:scope-definition:c3 の既決適用である。c1: 『Issue から一意導出できる質問は問わない』は project.md:314 cid:application-design:c1-pi-harness『Issue と承認済み成果物にある決定を再質問せず、矛盾または実装を阻む要件欠落だけを質問する』、project.md:311 cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority(Issue 本文の逐語指名は一次証拠から一意導出される執行事項、ユーザー逐語『issueでわかることは質問するな』)、project.md:187 cid:intent-capture:c1、project.md:262 cid:requirements-analysis:c5、team.md:59 cid:requirements-analysis:no-election-for-decided-norms が既に覆う。0問様式そのものも team.md:252 が『0問様式の既習形』として参照する確立形式であり新規性がない。c1 後半の『Issue 明示残置の3決定点を requirements 送付事項として固定』(scope-document.md の当該節に実在)も project.md:280 cid:requirements-analysis:c3-260729-open-bug-batch(Issue 本文の要求を現行 stage の正本として固定する)の適用範囲内で、ステージ間の通常の送付手順を超える新規規律を含まない。既存ノルムの再述を persist すると重複正本を生み、週次蒸留の負債になるため 0 件が正しい。",
+      "submittedAt": "2026-08-05T05:46:17Z"
+    }
+  ],
+  "late": []
+}

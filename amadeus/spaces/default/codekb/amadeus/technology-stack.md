@@ -7,7 +7,7 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## phase boundary approval の技術断面（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary approval の技術断面（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

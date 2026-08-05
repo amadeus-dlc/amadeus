@@ -1,0 +1,19 @@
+{
+  "electionId": "E-PCP-DPS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の delivery-planning ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/inception/delivery-planning/memory.md)の候補2件について persist する集合を選べ。実在根拠は diary と成果物(同ディレクトリの bolt-plan.md / risk-and-sequencing-rationale.md 等)で実測確認すること。候補 c1 = 「戦略質問4問を既決規範から執行導出し0問様式。U1∥U2 の並行可能性を walking-skeleton 単独ゲート既定に劣後(topology 逸脱なし)」。候補 c2 = 「Bolt 3 の C8→frontmatter 宣言順序を intra-bolt-order-as-risk-control として固定(既存 cid の機械適用)」。判定観点: 既存ノルムの機械適用は新規学習でない。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1・c2 とも既存ノルム(walking-skeleton ALWAYS / intra-bolt-order-as-risk-control / always-elect 執行類型)の機械適用であり persist しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "他の組合せ",
+      "description": "採用すべき候補がある場合(留保に明記)。"
+    }
+  ]
+}
