@@ -5,6 +5,7 @@ import { CLAUDE_SDK_PROMPT, type ClaudeSdkWorkerEvent } from "./claude-sdk.ts";
 import { CLAUDE_TUI_PROMPT } from "./claude-tui.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
+import { KIRO_TUI_PROMPT } from "./kiro-tui.ts";
 
 export interface CodexAnchorJourneyOptions {
   readonly prompt?: string;
@@ -122,6 +123,35 @@ export function createClaudeTuiJourney(): LiveJourney {
           : "Claude TUI anchor mismatch",
         evidence: [{
           kind: "claude-tui-anchor",
+          value: digest(
+            `${execution.exitCode}:${execution.structured?.anchorVerified}:${execution.structured?.inputCount}:${execution.structured?.paneDigest}`,
+          ),
+          source: "assertion",
+        }],
+      };
+    },
+  };
+}
+
+export function createKiroTuiJourney(): LiveJourney {
+  return {
+    id: "kiro-tui-anchor-v1",
+    prompt: KIRO_TUI_PROMPT,
+    timeoutMs: 180_000,
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution) => {
+      const passed = execution.exitCode === 0 &&
+        execution.structured?.anchorVerified === true &&
+        execution.structured.inputCount === 1 &&
+        typeof execution.structured.paneDigest === "string" &&
+        typeof execution.structured.sessionDigest === "string";
+      return {
+        passed,
+        diagnostic: passed
+          ? "private Kiro TUI session, current-run file anchor, and bounded pane evidence passed"
+          : "Kiro TUI anchor mismatch",
+        evidence: [{
+          kind: "kiro-tui-anchor",
           value: digest(
             `${execution.exitCode}:${execution.structured?.anchorVerified}:${execution.structured?.inputCount}:${execution.structured?.paneDigest}`,
           ),

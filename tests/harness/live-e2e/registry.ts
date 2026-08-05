@@ -1,7 +1,12 @@
 import type { EnvironmentDeclaration } from "./policy.ts";
 import type { Result } from "./contract.ts";
 
-export type LiveAdapterId = "codex-exec" | "claude-print" | "claude-sdk" | "claude-tui";
+export type LiveAdapterId =
+  | "codex-exec"
+  | "claude-print"
+  | "claude-sdk"
+  | "claude-tui"
+  | "kiro-tui";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
 export interface LiveCapability {
@@ -88,6 +93,23 @@ export const LIVE_CAPABILITIES = [
       sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
     },
     isolationSummary: "fresh project/home; project settings only; run-private tmux socket and session",
+  },
+  {
+    id: "kiro-tui",
+    harness: "kiro",
+    transport: "tui",
+    optInKey: "AMADEUS_KIRO_TUI_LIVE",
+    minimumVersion: "2.6.0",
+    measuredVersion: "2.13.0",
+    status: "supported",
+    anchorKinds: ["file", "state"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR", "TERM"],
+      sensitiveKeys: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"],
+      sourcePathKeys: ["HOME", "XDG_DATA_HOME", "KIRO_HOME"],
+    },
+    isolationSummary:
+      "fresh project/home; source auth bound by reference, never copied; run-private tmux socket and session",
   },
 ] as const satisfies readonly LiveCapability[];
 
