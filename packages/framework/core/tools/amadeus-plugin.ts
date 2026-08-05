@@ -18,10 +18,11 @@
 // (compose --if-stale on a current record) is asserted through an apply-counter
 // dep proving applyPluginPlan is never reached (performance-design).
 //
-// HOST MODEL. The engine's shared-file surface for stage seams is the
-// serializeStageSeams byte form (amadeus-plugin-compose.ts: "the real frontmatter
-// serializer is U11+"). buildHostSnapshot reads that native form from disk; a
-// full-frontmatter-stage host is out of the mechanism's current scope.
+// HOST MODEL. buildHostSnapshot reads two stage byte forms: the engine's native
+// serializeStageSeams form, and — through the frontmatter seam bridge (U1,
+// amadeus-plugin-compose.ts) — the REAL `---` frontmatter stage documents under
+// amadeus-common/stages/. A stage document the bridge cannot address stops
+// loudly rather than being skipped.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -68,6 +69,7 @@ import {
   type PluginManifest,
   type PluginDiagnostic,
   type PluginRecord,
+  parseStageFrontmatter,
   PLUGIN_MANIFEST,
   SEAM_NAMES,
   type SeamName,
@@ -269,6 +271,27 @@ export function parseHostStageSeams(hostRelPath: string, bytes: Buffer): HostSta
   return { slug: stageLine[1], path: hostRelPath, seams: seams as StageSeams };
 }
 
+// Where a HOST stage lives. Only files under this prefix are read as real
+// frontmatter stages: a plugin's own stages live under plugins/<name>/stages/
+// and stay out of the host stage set, so no seam contribution can ever rewrite
+// plugin bytes (the trust layers own those). Agent/skill/rule markdown carries
+// frontmatter too, and none of it is a stage — the prefix is what keeps their
+// slug-less frontmatter out of the loud path below.
+const HOST_STAGE_DIR = "amadeus-common/stages/";
+
+// A host stage file in its REAL markdown form (`---` frontmatter + body). Null
+// when the file is not a stage document at all (no frontmatter); a stage-placed
+// document the seam bridge cannot address throws — a stage the mechanism cannot
+// read back is a defect, never a silent skip (BR-U1-6).
+export function parseHostStageFrontmatter(hostRelPath: string, bytes: Buffer): HostStage | null {
+  if (!hostRelPath.startsWith(HOST_STAGE_DIR) || !hostRelPath.endsWith(".md")) return null;
+  const parsed = parseStageFrontmatter(bytes);
+  if (parsed.ok) return { slug: parsed.value.slug, path: hostRelPath, seams: parsed.value.seams };
+  if (parsed.error.kind === "no-frontmatter") return null;
+  const detail = parsed.error.kind === "seam-span-ambiguous" ? `${parsed.error.kind} (${parsed.error.seam})` : parsed.error.kind;
+  throw new Error(`host stage ${hostRelPath} cannot be read as a stage document: ${detail}`);
+}
+
 function isEngineDotfile(name: string): boolean {
   return name.startsWith(".amadeus-plugin-") || name === ".git";
 }
@@ -296,7 +319,7 @@ export function buildHostSnapshot(hostRoot: string, backend: WorkspaceBackend): 
       const bytes = readFileSync(abs);
       paths.add(rel);
       files.set(rel, bytes);
-      const stage = parseHostStageSeams(rel, bytes);
+      const stage = parseHostStageSeams(rel, bytes) ?? parseHostStageFrontmatter(rel, bytes);
       if (stage) stages.set(stage.slug, stage);
     }
   };

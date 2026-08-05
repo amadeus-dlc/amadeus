@@ -42,7 +42,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, sep } from "node:path";
-import { parseStageFrontmatter } from "./amadeus-lib.ts";
+// Aliased: this module exports its own byte-preserving parseStageFrontmatter
+// (the seam bridge below), while the lib function is the schema-facing field
+// reader used for the trusted plugin stage index.
+import { parseStageFrontmatter as parseStageFrontmatterFields } from "./amadeus-lib.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 
 // Read-only filesystem seam so discovery is drivable by a fake in tests. Method
@@ -469,7 +472,9 @@ export function inspectPlugin(plugin: PluginDescriptor, host: HostSnapshot): Plu
   collectFragmentErrors(m, host, errors);
   if (errors.length > 0) return { kind: "rejected", errors: sortErrors(errors) };
   const valid = plugin as ValidPlugin;
-  return { kind: "ready", plan: planPluginComposition(valid, host) };
+  const planned = planPluginCompositionChecked(valid, host);
+  if (!planned.ok) return { kind: "rejected", errors: planned.error };
+  return { kind: "ready", plan: planned.value };
 }
 
 function collectStageErrors(m: PluginManifest, host: HostSnapshot, errors: PluginError[]): void {
@@ -558,6 +563,228 @@ export function serializeStageSeams(slug: string, seams: StageSeams): Buffer {
   return Buffer.from(`${lines.join("\n")}\n`, "utf-8");
 }
 
+// ---------------------------------------------------------------------------
+// Stage frontmatter seam bridge (U1)
+// ---------------------------------------------------------------------------
+//
+// The byte-preserving bridge between the seam mechanism above and a REAL stage
+// markdown file (`---` YAML frontmatter + body). parseStageFrontmatter is the
+// smart constructor (parse-don't-validate): it carries the original bytes plus
+// each seam array's byte span, so the serializer can rewrite one seam and leave
+// every other byte — body, comments, other fields, whitespace, line endings —
+// exactly as it found them.
+//
+// The accepted rewrite set is deliberately MINIMAL: `produces` only. Any other
+// seam is refused (unsupported-target-seam), and the serialized bytes are
+// re-parsed before they are handed back — a document that would not read back
+// as the intended seams is refused (roundtrip-mismatch) rather than written.
+
+export type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
+
+// The two list shapes real stage frontmatter uses: a YAML block list (`- item`
+// lines under the key) and a single-line flow list (`key: [...]`, empty or
+// with inline entries).
+export type SeamListStyle = "block-list" | "flow";
+
+export type SeamSpan = { readonly start: number; readonly end: number; readonly style: SeamListStyle };
+
+// A parsed stage document: the seam read model plus everything needed to write
+// one seam back without disturbing the rest of the bytes.
+export type StageFrontmatterDocument = {
+  readonly slug: string;
+  readonly seams: StageSeams;
+  readonly raw: Buffer;
+  readonly seamSpans: Readonly<Record<SeamName, SeamSpan | null>>;
+};
+
+export type SeamParseError =
+  | { readonly kind: "no-frontmatter" }
+  | { readonly kind: "no-slug" }
+  | { readonly kind: "seam-span-ambiguous"; readonly seam: SeamName };
+
+export type SeamSerializeError =
+  | { readonly kind: "roundtrip-mismatch" }
+  | { readonly kind: "unsupported-target-seam"; readonly seam: SeamName };
+
+// The one seam a plugin contribution may write into a real stage file.
+const WRITABLE_SEAM: SeamName = "produces";
+
+type RawLine = { readonly start: number; readonly end: number; readonly text: string };
+
+// Split the buffer into byte-addressed lines. `end` excludes the newline, so a
+// line's bytes are raw.subarray(start, end) and the next line starts after it.
+function rawLines(raw: Buffer): readonly RawLine[] {
+  const out: RawLine[] = [];
+  let start = 0;
+  for (let i = 0; i <= raw.length; i += 1) {
+    if (i === raw.length || raw[i] === 0x0a) {
+      const end = i > start && raw[i - 1] === 0x0d ? i - 1 : i;
+      if (i > start || i < raw.length) out.push({ start, end, text: raw.subarray(start, end).toString("utf-8") });
+      start = i + 1;
+    }
+  }
+  return out;
+}
+
+// The frontmatter line window: [1, closingIndex). Null when the document does
+// not open with `---` or never closes it.
+function frontmatterRange(lines: readonly RawLine[]): { readonly from: number; readonly to: number } | null {
+  if (lines.length === 0 || lines[0].text.trim() !== "---") return null;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].text.trim() === "---") return { from: 1, to: i };
+  }
+  return null;
+}
+
+// A frontmatter item line: `<indent>- <value>`. Returns null for anything else.
+function itemValue(text: string): string | null {
+  const m = text.match(/^\s+-\s+(.*)$/);
+  if (m === null) return null;
+  return m[1].trim();
+}
+
+// A seam entry is the item's own value, except in the `- artifact: <name>`
+// object form (consumes), where the entry IS the artifact slug.
+function seamEntry(value: string): string {
+  const artifact = value.match(/^artifact:\s*(.+)$/);
+  const raw = artifact === null ? value : artifact[1];
+  return raw.trim().replace(/^["']|["']$/g, "");
+}
+
+type SeamRead = { readonly entries: readonly string[]; readonly span: SeamSpan };
+
+// Read one seam starting at its key line. Continuation lines (anything indented,
+// including a nested `required:` under `- artifact:`) stay inside the span so a
+// rewrite of a DIFFERENT seam never disturbs them.
+function readSeamAt(lines: readonly RawLine[], keyIndex: number, to: number, rest: string): SeamRead | null {
+  const key = lines[keyIndex];
+  if (rest.startsWith("[") && rest.endsWith("]")) {
+    const inner = rest.slice(1, -1).trim();
+    const entries = inner === "" ? [] : inner.split(",").map((e) => seamEntry(e.trim()));
+    return { entries, span: { start: key.start, end: key.end, style: "flow" } };
+  }
+  if (rest !== "") return null;
+  const entries: string[] = [];
+  let end = key.end;
+  for (let i = keyIndex + 1; i < to; i += 1) {
+    const line = lines[i];
+    if (!/^\s/.test(line.text) || line.text.trim() === "") break;
+    const value = itemValue(line.text);
+    if (value !== null) entries.push(seamEntry(value));
+    end = line.end;
+  }
+  if (entries.length === 0) return null;
+  return { entries, span: { start: key.start, end, style: "block-list" } };
+}
+
+// Parse a real stage markdown document into its seam read model plus the byte
+// spans a rewrite needs. Fail-closed: a stage-shaped document the bridge cannot
+// address is a typed error, never a silent skip.
+export function parseStageFrontmatter(bytes: Buffer): Result<StageFrontmatterDocument, SeamParseError> {
+  const lines = rawLines(bytes);
+  const range = frontmatterRange(lines);
+  if (range === null) return { ok: false, error: { kind: "no-frontmatter" } };
+  let slug: string | null = null;
+  const keyIndex = new Map<SeamName, { index: number; rest: string }>();
+  for (let i = range.from; i < range.to; i += 1) {
+    const m = lines[i].text.match(/^([a-z_][a-z0-9_]*):\s*(.*)$/);
+    if (m === null) continue;
+    if (m[1] === "slug" && slug === null && m[2].trim() !== "") slug = m[2].trim();
+    if (isSeamName(m[1]) && !keyIndex.has(m[1])) keyIndex.set(m[1], { index: i, rest: m[2].trim() });
+  }
+  if (slug === null) return { ok: false, error: { kind: "no-slug" } };
+  const seams: Record<SeamName, readonly string[]> = { produces: [], consumes: [], sensors: [], required_sections: [] };
+  const spans: Record<SeamName, SeamSpan | null> = { produces: null, consumes: null, sensors: null, required_sections: null };
+  for (const name of SEAM_NAMES) {
+    const at = keyIndex.get(name);
+    if (at === undefined) continue;
+    const read = readSeamAt(lines, at.index, range.to, at.rest);
+    if (read === null) return { ok: false, error: { kind: "seam-span-ambiguous", seam: name } };
+    seams[name] = read.entries;
+    spans[name] = read.span;
+  }
+  return { ok: true, value: { slug, seams: seams as StageSeams, raw: bytes, seamSpans: spans } };
+}
+
+function sameEntries(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((e, i) => e === b[i]);
+}
+
+// The `<indent>- ` prefix the document already uses for this seam's items, so an
+// appended entry matches the file's own style. Two spaces when the seam has no
+// item line to copy (the flow form).
+function itemPrefix(spanText: string): string {
+  for (const line of spanText.split("\n")) {
+    const m = line.match(/^(\s+-\s+)/);
+    if (m !== null) return m[1].replace(/\r$/, "");
+  }
+  return "  - ";
+}
+
+// The byte offset (relative to the span) just past the item line carrying entry
+// `count - 1`, i.e. how much of the original span text a prefix-preserving
+// rewrite keeps verbatim. Zero keeps only the key line.
+function spanPrefixLength(spanText: string, count: number): number {
+  if (count === 0) return spanText.indexOf("\n") === -1 ? spanText.length : spanText.indexOf("\n");
+  let seen = 0;
+  let offset = 0;
+  for (const line of spanText.split("\n")) {
+    if (itemValue(line) !== null) seen += 1;
+    offset += line.length;
+    if (seen === count) return offset;
+    offset += 1; // the newline this split consumed
+  }
+  return spanText.length;
+}
+
+// Render the seam's new span text, keeping as much of the original as the target
+// list allows: entries shared with the document keep their exact bytes and only
+// the diverging tail is re-rendered. An empty target collapses to the flow form.
+function renderSeamSpan(name: SeamName, span: SeamSpan, spanText: string, existing: readonly string[], target: readonly string[]): string {
+  if (target.length === 0) return `${name}: []`;
+  const newline = spanText.includes("\r\n") ? "\r\n" : "\n";
+  const prefix = itemPrefix(spanText);
+  let common = 0;
+  while (common < existing.length && common < target.length && existing[common] === target[common]) common += 1;
+  // The flow form carries its entries ON the key line, so growing it into a
+  // block list re-renders the key line itself — no entry byte of the flow form
+  // can be preserved, so every target entry becomes a fresh item line.
+  const kept = span.style === "flow" ? 0 : common;
+  const head = span.style === "flow" ? `${name}:` : spanText.slice(0, spanPrefixLength(spanText, kept));
+  const tail = target.slice(kept).map((entry) => `${prefix}${entry}`);
+  return [head, ...tail].join(newline);
+}
+
+// Write `seams` back into the document's bytes. Only `produces` may change; the
+// result is re-parsed and compared against the intent before it is returned, so
+// a rewrite that would not read back as asked never reaches a caller.
+export function serializeStageFrontmatterSeams(
+  doc: StageFrontmatterDocument,
+  seams: StageSeams,
+): Result<Buffer, SeamSerializeError> {
+  for (const name of SEAM_NAMES) {
+    if (name !== WRITABLE_SEAM && !sameEntries(doc.seams[name], seams[name])) {
+      return { ok: false, error: { kind: "unsupported-target-seam", seam: name } };
+    }
+  }
+  if (sameEntries(doc.seams[WRITABLE_SEAM], seams[WRITABLE_SEAM])) return { ok: true, value: doc.raw };
+  const span = doc.seamSpans[WRITABLE_SEAM];
+  if (span === null) return { ok: false, error: { kind: "roundtrip-mismatch" } };
+  const spanText = doc.raw.subarray(span.start, span.end).toString("utf-8");
+  const rendered = renderSeamSpan(WRITABLE_SEAM, span, spanText, doc.seams[WRITABLE_SEAM], seams[WRITABLE_SEAM]);
+  const out = Buffer.concat([
+    doc.raw.subarray(0, span.start),
+    Buffer.from(rendered, "utf-8"),
+    doc.raw.subarray(span.end),
+  ]);
+  const back = parseStageFrontmatter(out);
+  if (!back.ok || back.value.slug !== doc.slug) return { ok: false, error: { kind: "roundtrip-mismatch" } };
+  for (const name of SEAM_NAMES) {
+    if (!sameEntries(back.value.seams[name], seams[name])) return { ok: false, error: { kind: "roundtrip-mismatch" } };
+  }
+  return { ok: true, value: out };
+}
+
 // The end-of-splice marker written after a fragment's text so a re-splice is
 // detectable (clobber) and a drop can excise exactly the managed region.
 export function fragmentMarker(id: string): string {
@@ -565,7 +792,16 @@ export function fragmentMarker(id: string): string {
 }
 
 // Rebuild a stage-seams file from its base plus the given ordered contributions.
-function rebuildStageSeams(entry: Extract<LedgerEntry, { kind: "stage-seams" }>): Buffer {
+// `current` is the file's bytes on the host: when they are a real stage document
+// the rebuild goes through the frontmatter seam bridge (preserving every byte
+// outside the rewritten seam); otherwise it is the engine's native seam form.
+// A refused frontmatter rewrite (a non-produces contribution, or an on-disk
+// seam that drifted from the ledger) is a typed clobber error, never a throw —
+// compose planning and the drop drift check both consume it as a rejection.
+function rebuildStageSeams(
+  entry: Extract<LedgerEntry, { kind: "stage-seams" }>,
+  current: Buffer | undefined,
+): Result<Buffer, PluginError> {
   const merged: Record<SeamName, string[]> = {
     produces: [...entry.base.produces],
     consumes: [...entry.base.consumes],
@@ -575,7 +811,16 @@ function rebuildStageSeams(entry: Extract<LedgerEntry, { kind: "stage-seams" }>)
   for (const c of [...entry.seams].sort((a, b) => a.order - b.order)) {
     merged[c.seam] = [...mergeSeamEntries(merged[c.seam], c.entries)];
   }
-  return serializeStageSeams(entry.slug, merged);
+  const doc = current === undefined ? null : parseStageFrontmatter(current);
+  if (doc === null || !doc.ok) return { ok: true, value: serializeStageSeams(entry.slug, merged) };
+  const written = serializeStageFrontmatterSeams(doc.value, merged);
+  if (!written.ok) {
+    return {
+      ok: false,
+      error: { kind: "clobber", message: `stage ${entry.path} seam rewrite refused: ${written.error.kind}`, locus: entry.path },
+    };
+  }
+  return { ok: true, value: written.value };
 }
 
 // Rebuild a fragment file from its base plus the ordered fragment contributions.
@@ -590,8 +835,8 @@ function rebuildFragmentFile(entry: Extract<LedgerEntry, { kind: "fragment-file"
   return Buffer.from(text, "utf-8");
 }
 
-function rebuildLedgerEntry(entry: LedgerEntry): Buffer {
-  return entry.kind === "stage-seams" ? rebuildStageSeams(entry) : rebuildFragmentFile(entry);
+function rebuildLedgerEntry(entry: LedgerEntry, current: Buffer | undefined): Result<Buffer, PluginError> {
+  return entry.kind === "stage-seams" ? rebuildStageSeams(entry, current) : { ok: true, value: rebuildFragmentFile(entry) };
 }
 
 // ---------------------------------------------------------------------------
@@ -604,21 +849,44 @@ function rebuildLedgerEntry(entry: LedgerEntry): Buffer {
 // contribution), recomputes each file's post-state, and records the plugin's
 // owned new paths plus per-file expected post-states.
 export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): PluginCompositionPlan {
+  const planned = planPluginCompositionChecked(plugin, host);
+  if (!planned.ok) {
+    // Direct callers (tests, internal invariant paths) get the loud form; the
+    // inspection path consumes the checked form and rejects instead.
+    throw new Error(planned.error.map((e) => `${e.locus}: ${e.message}`).join("; "));
+  }
+  return planned.value;
+}
+
+// The rejection-capable planner: a refused shared-file rebuild (e.g. a real
+// frontmatter stage whose bridge rewrite is refused) is returned as typed
+// errors rather than thrown, so inspectPlugin can fold it into `rejected`.
+export function planPluginCompositionChecked(
+  plugin: ValidPlugin,
+  host: HostSnapshot,
+): Result<PluginCompositionPlan, readonly PluginError[]> {
   const m = plugin.manifest;
   const nextOrder = maxOrder(host.composition.ledger) + 1;
   const ledger = new Map<string, LedgerEntry>(host.composition.ledger);
   applySeamContributions(m, host, plugin.name, nextOrder, ledger);
   applyFragmentContributions(m, host, plugin.name, nextOrder, ledger);
 
+  const errors: PluginError[] = [];
   const sharedWrites: { path: string; bytes: Buffer }[] = [];
   const sharedFiles: { path: string; expectedPostState: Buffer }[] = [];
   for (const path of affectedPaths(m, host)) {
     const entry = ledger.get(path);
     if (entry === undefined) continue;
-    const bytes = rebuildLedgerEntry(entry);
+    const rebuilt = rebuildLedgerEntry(entry, host.files.get(path));
+    if (!rebuilt.ok) {
+      errors.push(rebuilt.error);
+      continue;
+    }
+    const bytes = rebuilt.value;
     sharedWrites.push({ path, bytes });
     sharedFiles.push({ path, expectedPostState: bytes });
   }
+  if (errors.length > 0) return { ok: false, error: sortErrors(errors) };
   const ownedPaths = [...m.stages.map((s) => s.path), ...m.tools.map((t) => t.path)].sort();
   const ownedContentDigests = ownedRecordDigests(plugin);
   const stageIndex = buildStageIndex(m.stages);
@@ -632,13 +900,16 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     sharedFiles,
   };
   return {
-    plugin: plugin.name,
-    contentDigest: pluginContentDigest(plugin),
-    stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
-    toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
-    sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
-    ledger,
-    record,
+    ok: true,
+    value: {
+      plugin: plugin.name,
+      contentDigest: pluginContentDigest(plugin),
+      stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
+      toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
+      sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
+      ledger,
+      record,
+    },
   };
 }
 
@@ -659,7 +930,7 @@ function buildStageIndex(stages: readonly StageCopy[]): readonly PluginStageInde
   return [...stages]
     .sort((a, b) => cmpStr(a.path, b.path))
     .map((stage) => {
-      const parsed = parseStageFrontmatter(stage.bytes.toString("utf-8"));
+      const parsed = parseStageFrontmatterFields(stage.bytes.toString("utf-8"));
       const validation = validateStageFrontmatter(parsed);
       if (!validation.valid || validation.data.slug !== stage.slug) {
         const reason = validation.valid ? "slug does not match manifest" : validation.errors.join("; ");
@@ -824,14 +1095,22 @@ function planOneSharedDrop(
   // Drift is measured against the CUMULATIVE ledger rebuild (base + every active
   // plugin's contribution), never a single plugin's point-in-time snapshot — a
   // later plugin composing onto the same file legitimately moved the post-state.
+  // A rebuild the bridge refuses (e.g. a hand-edited non-produces seam of a
+  // real frontmatter stage) IS drift: it folds into the same clobber rejection.
   const current = host.files.get(shared.path);
-  if (current === undefined || !current.equals(rebuildLedgerEntry(entry))) {
+  const rebuilt = current === undefined ? null : rebuildLedgerEntry(entry, current);
+  if (current === undefined || rebuilt === null || !rebuilt.ok || !current.equals(rebuilt.value)) {
     rejections.push({ kind: "clobber", message: `shared file "${shared.path}" drifted from the recorded composition`, locus: shared.path });
     return;
   }
   const remaining = withoutPlugin(entry, plugin);
+  const remainingBytes = rebuildLedgerEntry(remaining, current);
+  if (!remainingBytes.ok) {
+    rejections.push(remainingBytes.error);
+    return;
+  }
   ledger.set(shared.path, remaining);
-  sharedWrites.push({ path: shared.path, bytes: rebuildLedgerEntry(remaining) });
+  sharedWrites.push({ path: shared.path, bytes: remainingBytes.value });
 }
 
 function withoutPlugin(entry: LedgerEntry, plugin: string): LedgerEntry {
