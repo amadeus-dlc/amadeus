@@ -376,6 +376,18 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | learning gate が保持された学習を `amadeus/spaces/<space>/memory/{project,team}.md` へ日付付きプラクティスエントリとして永続化した |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | learning gate が project 層のセンサーマニフェストを scaffold し、起源ステージの `sensors:` フロントマターにバインドした |
 
+### Loop monitor and quality repair
+
+Loop Monitor は、配送の観測、サイクルのトリガー、Judge の予約と結果、closed-route の適用、latch の遷移を、1つの正典イベントセットとしてコミットします。Quality Repair ランタイムは、品質スナップショット、進捗、replan、stall、resume の各トランザクションを、その汎用 Loop Monitor 効果とともにコミットします。クローンごとの Replay Index は、これら監査の真実のソースからの修復可能な投影です。
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | 1つのアトミックな Loop Monitor の配送、Judge、または latch 遷移がコミットされた |
+| `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | 1つの品質スナップショット、進捗、replan、stall、または resume のトランザクションと、その汎用 Monitor 効果がアトミックにコミットされた |
+| `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | 1つの Intent スコープのモード、グラント、決定、workflow-effect、park、resume、または invocation-failure のトランザクションがアトミックにコミットされた |
+| `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review-production.ts` | 人間がレビューサーフェス上で1つの不変な auto decision を受理またはフラグした(append-only。決定済みの効果を決して再実行しない) |
+| `INTENT_COMPLETION_TRANSACTION_COMMITTED` | `tools/amadeus-intent-completion.ts` | Core の Intent 完了トランザクションがアトミックにコミットされ、Intent record をそのエビデンスダイジェストで封印した |
+
 ### Swarm
 
 6つの swarm イベントはすべて swarm referee `amadeus-swarm.ts` から発行されます — コンダクターが参照する決定論的な verdict サーフェスです。referee はステートレスです: `prepare` はユニットごとの worktree を fork し `SWARM_STARTED` を発行します(加えて、コンダクターが loud downgrade を報告したときは `SWARM_DEGRADED`)。`finalize` はコンダクターが収束を主張したセットを再検証し、Unit ごとのペア、失敗した Unit ごとの baton 行、バッチ集計を発行します。`check` サブコマンドはアドバイザリで何も発行しません。エンジンは読み取り専用でコンダクターは監査イベントを発行しないため、決定論的ツールが swarm 分類体系全体を所有します。これらの行は依存リンクされた Units のバッチのライフサイクルを追跡します: バッチ開始時のファンアウト、Unit ごとの収束または再検証失敗、コンダクターへの return-the-baton の受け渡し、バッチ完了。コンダクターは `invoke-swarm` をステージ `mode` enum と並ぶ直交的なディレクティブ種別として扱います — 予約された `agent-team` モードをアクティブにはしません(そのモードは予約されたままです)。t48 forward チェックは Emitter セルがまだ `Reserved` と読める行をスキップします。
