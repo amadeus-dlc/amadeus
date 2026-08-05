@@ -75,9 +75,7 @@ export function kiroHomeLayout(
   };
 }
 
-export function defaultKiroSourceHome(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): string {
+export function defaultKiroSourceHome(env: Readonly<Record<string, string | undefined>> = process.env): string {
   return env.AMADEUS_KIRO_SOURCE_HOME ?? homedir();
 }
 

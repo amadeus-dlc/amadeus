@@ -76,6 +76,12 @@ const IDLE_PROMPT_PATTERN = /ask a question or describe a task/i;
 /** The trust-all confirmation picker Kiro shows on launch; "Yes, I accept" is one Down away. */
 const TRUST_PROMPT_PATTERN = /Yes, I accept/i;
 
+/** One readiness observation: the pane is idle, the run failed, or it is still settling. */
+type ReadinessObservation =
+  | Readonly<{ kind: "ready" }>
+  | Readonly<{ kind: "failed"; execution: AdapterExecution }>
+  | Readonly<{ kind: "waiting"; trustCleared: boolean; pane: string }>;
+
 interface PrivateTmuxIdentity {
   readonly runId: string;
   readonly socketPath: string;
@@ -433,14 +439,8 @@ export class KiroTuiAdapter implements LiveAdapter {
     }
   }
 
-  /** One readiness observation: read the pane, and clear the trust picker the first time it appears. */
-  #readinessStep(
-    target: string,
-    trustCleared: boolean,
-  ):
-    | Readonly<{ kind: "ready" }>
-    | Readonly<{ kind: "failed"; execution: AdapterExecution }>
-    | Readonly<{ kind: "waiting"; trustCleared: boolean; pane: string }> {
+  /** Read the pane, and clear the trust picker the first time it appears. */
+  #readinessStep(target: string, trustCleared: boolean): ReadinessObservation {
     const captured = this.#capturePane();
     if (!captured.ok) return { kind: "failed", execution: captured.execution };
     if (IDLE_PROMPT_PATTERN.test(captured.pane)) return { kind: "ready" };
