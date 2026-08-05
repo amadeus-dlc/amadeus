@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   kiroTuiLiveRequirementsSkipReason,
   kiroTuiLiveSkipReason,
 } from "../harness/kiro-tui-live.ts";
 import { createKiroTuiJourney } from "../harness/live-e2e/journey.ts";
-import { KIRO_HOME_BINDING_KEY, kiroHomeLayout } from "../harness/live-e2e/kiro.ts";
+import {
+  defaultKiroSourceHome,
+  KIRO_HOME_BINDING_KEY,
+  kiroHomeLayout,
+} from "../harness/live-e2e/kiro.ts";
 import { capabilityById } from "../harness/live-e2e/registry.ts";
 
 function writeExecutable(path: string, body: string): void {
@@ -76,6 +80,11 @@ describe("Kiro TUI live contract", () => {
     expect(layout.chatBinary).toBe(join("/source/home", ".local", "bin", "kiro-cli-chat"));
     expect(kiroHomeLayout("/scratch/home").dataDir.slice("/scratch/home".length))
       .toBe(layout.dataDir.slice("/source/home".length));
+  });
+
+  test("the default source home prefers AMADEUS_KIRO_SOURCE_HOME over the process home", () => {
+    expect(defaultKiroSourceHome({ AMADEUS_KIRO_SOURCE_HOME: "/pinned/home" })).toBe("/pinned/home");
+    expect(defaultKiroSourceHome({})).toBe(homedir());
   });
 
   test("a source home on Linux honours XDG_DATA_HOME; scratch and macOS layouts do not", () => {
