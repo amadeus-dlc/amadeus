@@ -539,12 +539,19 @@ export function handleVote(root: string, electionId: string, filePath: string): 
   // Timestamp precision funnel (PR #1233 review minor 3): every timestamp the
   // CLI mints or accepts is normalized to seconds-precision ISO-8601 UTC, so
   // classifyLate's lexicographic compare never mixes precisions.
-  const ballot = { ...parsed.value, submittedAt: normalizeAt(parsed.value.submittedAt) };
   // Mint the receipt time now (Issue #1262): this is when the conductor actually
   // accepted the ballot, independent of the voter's self-reported submittedAt.
-  // The store stamps it on the timeline so verify checks monotonicity on the
-  // receipt axis (mint→pass, same shape as tally's talliedAt).
+  // Issue #1946 (ruling Q2=A) stamps it onto the ballot itself, making it the
+  // authoritative ordering axis for resolveBallots — a self-reported instant can
+  // no longer decide which of a voter's ballots counts. The stamp is minted
+  // here, never read off the voter's file: parseBallotShape builds an
+  // allowlisted object, so a `receivedAt` key in the submitted JSON is dropped.
   const receivedAt = normalizeAt(new Date().toISOString());
+  const ballot = {
+    ...parsed.value,
+    submittedAt: normalizeAt(parsed.value.submittedAt),
+    receivedAt,
+  };
   const appended = Store.appendBallot(root, electionId, ballot, receivedAt);
   if (!appended.ok) return storeFail("appendBallot", appended.error);
   out({ accepted: parsed.value.voter });

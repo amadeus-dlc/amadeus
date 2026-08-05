@@ -307,7 +307,12 @@ describe("t234 election-model", () => {
     const classified = classifyLate(tallyTime, "2026-07-19T02:00:00Z", earlyClaimLateReceipt);
     expect(classified?.late).toBe(true);
     expect(classified?.reexamRequired).toBe(false);
-    // Conversely, a FUTURE submittedAt received before the tally is on-time.
+    // Test-contract revision (ruling Q2=A, 2026-08-05 — Issue #1946): the pin
+    // used to read as "a future submittedAt received before the tally is
+    // on-time", which invited the reading that a self-reported instant carries
+    // weight. It does not: no self-reported value is an axis anywhere. Lateness
+    // reads the receipt time alone, so a ballot claiming 05:00 and a ballot
+    // claiming 00:00 are both on-time when their receipt precedes the tally.
     const futureClaimEarlyReceipt = mustParse({
       ...ballot("bob", 1),
       submittedAt: "2026-07-19T05:00:00Z",
@@ -399,7 +404,9 @@ describe("t234 election-model", () => {
   test("resolveBallots: latest per voter, same-timestamp tie favors later arrival, idempotent", () => {
     const early = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T00:00:00Z" });
     const late = mustParse({ ...ballot("alice", 7), submittedAt: "2026-07-19T02:00:00Z" });
-    // (1) latest submittedAt wins for a voter
+    // (1) the later ballot wins for a voter. Neither fixture carries a receipt
+    // stamp, so both sit at the legacy floor of the axis (#1946) and append
+    // order — the store's real arrival order — decides.
     const r1 = resolveBallots([early, late]);
     expect(r1.length).toBe(1);
     expect(r1[0]?.goa as number).toBe(7);
@@ -422,6 +429,46 @@ describe("t234 election-model", () => {
     expect([...new Set(r3.map((b) => b.voter))].sort()).toEqual(["alice", "bob"]);
     // (4) idempotent: resolving a resolved list yields the same set
     expect(resolveBallots(r3)).toEqual(r3);
+  });
+
+  // Issue #1946 (ruling Q2=A, 2026-08-05): submittedAt is voter-self-reported
+  // and unvalidated against any clock, so it cannot be the resolution axis — a
+  // future-dated original would structurally discard a genuine later amend. The
+  // CLI's receipt stamp decides instead.
+  test("resolveBallots: the receipt stamp decides, a future submittedAt cannot outrank a later receipt", () => {
+    const hijack = {
+      ...mustParse({ ...ballot("alice", 1), submittedAt: "2099-01-01T00:00:00Z" }),
+      receivedAt: "2026-07-19T00:01:00Z",
+    };
+    const amend = {
+      ...mustParse({
+        ...ballot("alice", 8),
+        kind: "amend",
+        ref: { electionId: "E-TEST-1", voter: "alice", submittedAt: "2099-01-01T00:00:00Z" },
+        submittedAt: "2026-07-19T00:02:00Z",
+      }),
+      receivedAt: "2026-07-19T00:02:00Z",
+    };
+    const resolved = resolveBallots([hijack, amend]);
+    expect(resolved.length).toBe(1);
+    expect(resolved[0]?.goa as number).toBe(8);
+    // The array order is not what carries the result: even when the hijacking
+    // original arrives last in the list, the earlier receipt loses.
+    const reordered = resolveBallots([amend, hijack]);
+    expect(reordered[0]?.goa as number).toBe(8);
+  });
+
+  // Pre-#1946 rows carry no receipt stamp (audit is append-only — they are not
+  // retro-fixed). Every stamped ballot was accepted after the fix landed, so an
+  // unstamped row is provably the earlier arrival; two unstamped rows fall back
+  // to append order, which is the store's real arrival order.
+  test("resolveBallots: an unstamped legacy ballot ranks below any stamped one", () => {
+    const legacy = mustParse({ ...ballot("alice", 1), submittedAt: "2099-01-01T00:00:00Z" });
+    const stamped = {
+      ...mustParse({ ...ballot("alice", 7), submittedAt: "2026-07-19T00:00:00Z" }),
+      receivedAt: "2026-07-19T00:05:00Z",
+    };
+    expect(resolveBallots([stamped, legacy])[0]?.goa as number).toBe(7);
   });
 
   test("classifyLate is per-ballot (non-resolving): a late amend stays its own late row", () => {
