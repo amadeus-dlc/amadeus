@@ -366,6 +366,85 @@ describe("the filesystem mutation workshop", () => {
     expect(after).toBe(before);
   });
 
+  test("a vacuity injection with an empty witness is a mutation failure", async () => {
+    const model = writeModel(IDENTITY);
+    const prepared = await MutationWorkshopFs.prepare(model, {
+      kind: "vacuity",
+      invariant: invariant("TypeOK"),
+      witness: "   ",
+    });
+    expect(failure(prepared)).toMatchObject({ kind: "mutation-failure" });
+    expect(String((failure(prepared) as { detail: string }).detail)).toContain("no witness declared");
+  });
+
+  test("a module without a ==== terminator refuses the vacuity probe", async () => {
+    const model = writeModel(IDENTITY);
+    writeFileSync(model.modulePath, "---- MODULE Sample ----\nTypeOK == receipts >= 0\n", "utf8");
+    const prepared = await MutationWorkshopFs.prepare(model, {
+      kind: "vacuity",
+      invariant: invariant("TypeOK"),
+      witness: "receipts > 0",
+    });
+    expect(String((failure(prepared) as { detail: string }).detail)).toContain("==== terminator");
+  });
+
+  test("a falling mutation with an empty anchor fails loudly", async () => {
+    const model = writeModel(IDENTITY);
+    const prepared = await MutationWorkshopFs.prepare(model, {
+      kind: "falling",
+      invariant: invariant("TypeOK"),
+      mutation: { find: "", replace: "x" },
+    });
+    expect(String((failure(prepared) as { detail: string }).detail)).toContain("empty anchor");
+  });
+
+  test("an unreadable source module folds into a typed mutation failure", async () => {
+    const model = writeModel(IDENTITY);
+    const prepared = await MutationWorkshopFs.prepare(
+      { ...model, modulePath: join(workspace, "Absent.tla") },
+      { kind: "falling", invariant: invariant("TypeOK"), mutation: { find: "x", replace: "y" } },
+    );
+    expect(failure(prepared)).toMatchObject({ kind: "mutation-failure" });
+  });
+
+  test("an auxiliary module that vanishes for the copy is a typed failure and leaves no run dir", async () => {
+    const model = writeModel(IDENTITY);
+    writeFileSync(
+      model.modulePath,
+      "---- MODULE Sample ----\nEXTENDS Vanishing\nTypeOK == receipts >= 0\n====\n",
+      "utf8",
+    );
+    const prepared = await MutationWorkshopFs.prepare(model, {
+      kind: "falling",
+      invariant: invariant("TypeOK"),
+      mutation: { find: "TypeOK == receipts", replace: "TypeOK == FALSE" },
+    });
+    expect(failure(prepared)).toMatchObject({ kind: "mutation-failure" });
+  });
+
+  test("a manifest with a malformed item or injection is a typed manifest failure", () => {
+    const badItem = writeJson("bad-item.reduction.json", { declaredIdentity: IDENTITY, items: [42] });
+    expect(failure(defaultProofDependencies().readManifest(badItem)))
+      .toMatchObject({ kind: "manifest-failure", detail: "a reduction item is malformed" });
+
+    const badInjection = writeJson("bad-injection.reduction.json", {
+      declaredIdentity: IDENTITY,
+      items: [],
+      injections: { TypeOK: 42 },
+    });
+    expect(String((failure(defaultProofDependencies().readManifest(badInjection)) as { detail: string }).detail))
+      .toContain("injection TypeOK is malformed");
+  });
+
+  test("an absent or unparseable manifest file is a typed manifest failure", () => {
+    expect(failure(defaultProofDependencies().readManifest(join(workspace, "absent.reduction.json"))))
+      .toMatchObject({ kind: "manifest-failure" });
+    const broken = join(workspace, "broken.reduction.json");
+    writeFileSync(broken, "{ not json", "utf8");
+    expect(failure(defaultProofDependencies().readManifest(broken)))
+      .toMatchObject({ kind: "manifest-failure" });
+  });
+
   test("the default dependencies read the manifest off disk", () => {
     const model = writeModel(IDENTITY);
     const manifest = unwrap(defaultProofDependencies().readManifest(model.reductionManifestPath));
