@@ -109,7 +109,7 @@ function semiRuntime(): {
   const initial = createAutonomyProjection({ intentUuid: INTENT });
   const repository = createMemoryIntentAutonomyRepository();
   const coordinator = createIntentAutonomyCoordinator({ initialProjection: initial, repository });
-  const applied = coordinator.applyHumanCommand({ kind: "set-mode", mode: "semi" }, {
+  const applied = coordinator.applyHumanCommand({ kind: "set-mode", mode: "semi", policies: [] }, {
     targetIntentUuid: INTENT,
     principalId: "principal-1",
     humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" },

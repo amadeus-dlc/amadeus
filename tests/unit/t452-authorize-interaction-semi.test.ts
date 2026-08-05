@@ -49,7 +49,7 @@ function context(projection: AutonomyProjection, confirmedDisplayDigest: string)
 
 function semiProjection(): AutonomyProjection {
   const initial = createAutonomyProjection({ intentUuid: INTENT });
-  const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi")));
+  const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi", policies: [] }, context(initial, autonomyDigest("semi")));
   if (!plan.ok) throw new Error(plan.code);
   return plan.after;
 }

@@ -208,7 +208,7 @@ describe("Intent autonomy mode and grant aggregate", () => {
 
   test("headless and harness facts are not accepted as a mode command", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
-    const invalid = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, {
+    const invalid = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi", policies: [] }, {
       ...context(initial, autonomyDigest("semi-display")),
       humanTurn: null as never,
     });
@@ -217,7 +217,7 @@ describe("Intent autonomy mode and grant aggregate", () => {
 
   test("none to semi is a human-only transition with no grant", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
-    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi-display")));
+    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi", policies: [] }, context(initial, autonomyDigest("semi-display")));
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
     expect(plan.after.mode).toBe("semi");
@@ -337,14 +337,14 @@ describe("gate and question decision contract", () => {
 
   test("semi keeps the walking skeleton with the human", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
-    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi")));
+    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi", policies: [] }, context(initial, autonomyDigest("semi")));
     if (!plan.ok) throw new Error(plan.code);
     expect(authorizeInteraction(plan.after, occurrence("walking-skeleton", ["approve"]), semiScope()).kind).toBe("human-required");
   });
 
   test("semi authorizes phase-internal stage gates and questions alike", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
-    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi")));
+    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi", policies: [] }, context(initial, autonomyDigest("semi")));
     if (!plan.ok) throw new Error(plan.code);
     expect(authorizeInteraction(plan.after, occurrence("stage-gate", ["approve"]), semiScope()).kind).toBe("semi-authority");
     expect(authorizeInteraction(plan.after, occurrence("question"), semiScope()).kind).toBe("semi-authority");
