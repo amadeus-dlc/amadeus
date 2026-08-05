@@ -1,5 +1,20 @@
 # Amadeus コンポーネント目録
 
+## TLA+ authoring関連コンポーネント（260804-tla-authoring、現在、observed `7172aea8d`）
+
+| コンポーネント | 状態 | 責務 / 欠落 |
+| --- | --- | --- |
+| Requirements / Design成果物 | 既存 | 現在要求と設計identityを保持するがformal適用判定へ未配線 |
+| plugin activation / advisory | 既存 | `specs/tla/**` hashを通知。要求意味の判定やauthoring起動はしない |
+| model-map v2 / completeness sensor | 既存 | 2モデルのsource/impl identity、aux、vocabulary、`--impl-only`を扱う |
+| formal model authoring owner | **欠落** | author / revise / non-target / trace / proof / review / registrationを所有する実行可能componentがない |
+| `formal-model-check` executor | 既存 | 登録済みモデルのTLC実行、verdict normalization、artifact/receipt検証 |
+| `tla-model-receipt.ts` | canonicalに存在、composedに欠落 | selected-model verified receipt。manifest未登録 |
+| `tla-module-deps.ts` | canonicalに存在、composedに欠落 | TLA補助module依存閉包。manifest未登録 |
+| plugin import-closure guard | **欠落** | manifestの全toolから静的/実行時import閉包が配布対象に含まれることを検査しない |
+
+missing 2 componentsの扱いは区別する。authoring ownerはIssue #2161が追加する新能力、import-closure guardは既存M7/M8基盤の欠陥候補である。後者を無断でscope追加せず、Requirements Analysisの裁定対象とする。
+
 ## 観測メタデータ
 
 - 観測日: 2026-08-04

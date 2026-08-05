@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLA-FDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測で3点確認: (1) diary Tradeoffs 2026-08-04T18:33:00Z に c8 の実測記録(ADR-6 前提の一部否定 — advisory code 語彙と formal_checks コマンドが engine 側ハードコード — と人間裁定 18:29:01Z による宣言駆動化)が実在。(2) decisions.md ADR-6(:61, :88, :93)に改訂注記(改訂 2026-08-04T18:29:01Z: 宣言駆動化)が実在し git 検証可能。(3) formal_checks が engine 側に実在(packages/framework/core/tools/amadeus-directive.ts:212/:428/:706-714、amadeus-orchestrate.ts:804)— 「機構供給面が engine 側固定」の主張と整合。c8 一般形は既存 cid:application-design:external-seam-vocab-measurement(語彙の実測)が被覆しない「機構供給面(宣言駆動か engine 側ハードコードか)の設計段実読確定」の隙間を埋め、追補統合の方針も norm 慣行に整合。他8候補は U1/U3/U4 の intent 固有契約確定(evidence store owner、見出し駆動文法、predecessor 帰納検証、vacuity witness 到達性、validator MODEL_KEY_SETS、併存既定等)で成果物・ADR に固定済み、U4 の iteration 予算裁定は既存 cid(delegated-review-analysis-with-owned-verdict 追補 E-LSSADS13)が既被覆のため一般化価値なしの不採用理由も妥当。",
+  "submittedAt": "2026-08-04T23:52:34Z"
+}

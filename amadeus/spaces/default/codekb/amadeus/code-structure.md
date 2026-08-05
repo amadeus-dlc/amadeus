@@ -1,5 +1,23 @@
 # Amadeus コード構造
 
+## TLA+ authoring 関連の配置（260804-tla-authoring、現在、observed `7172aea8d`）
+
+| 配置 | 実測した役割 | 所見 |
+| --- | --- | --- |
+| `packages/framework/core/` | 32 stage、14 persona、105 tool、13 hook、8 sensorの正本 | authoring ownerを持つstageは0件 |
+| `plugins/formal-model-check/` | opt-in stage 1件、tool 27ファイル、TLC実行系 | stageは登録済みモデルの実行専用 |
+| `specs/tla/` | 2モデル、CFG、補助module、falsification/vacuity variants、model-map v2 | 新規未知題材の登録は未自動化 |
+| `docs/reference/22-formal-model-supply.md` | 新規モデル供給の手順 | 文書でありstage graphのactor/trigger/完了条件ではない |
+| `scripts/package.ts` / `scripts/plugin-projection.ts` | canonical複製、8 package face、5 self-install face | manifestのimport closureを検査しない |
+| `tests/` | unit 354 / integration 443 / e2e 97 / smoke 16 / perf 10 TS files | canonical directとcomposed runtimeの差を覆うE2Eがない |
+
+`plugins/formal-model-check/plugin.json:11-36` のclosed tools一覧には、実行時importされる次の2件がない。
+
+- `tools/tla-model-receipt.ts`: `run-model-check-source.ts:13-16`、`fs-tlc-toolchain.ts`、`tlc-toolchain.ts`が依存。PR #2176で追加。
+- `tools/tla-module-deps.ts`: `tla-model-loader-internal.ts:14-18`が依存。canonical copyは`packages/framework/core/tools/`にあり、`scripts/package.ts:773-782`でplugin sourceへ生成されるがmanifest未登録。
+
+したがって「source treeに存在すること」と「composed harnessへ所有・配布されること」は別契約である。既存projection testはmanifest自体を正として18 passとなるため、未列挙のimport先を検出しない。
+
 ## 観測メタデータ
 
 - 観測日: 2026-08-04

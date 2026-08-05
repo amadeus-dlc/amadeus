@@ -1,5 +1,22 @@
 # Amadeus 技術スタック
 
+## TLA+ authoring調査時の技術断面（260804-tla-authoring、現在、observed `7172aea8d`）
+
+| 技術 | version / 用途 |
+| --- | --- |
+| Bun | 1.3.13。workspace、CLI、`bun:test`、build orchestration |
+| TypeScript | `^6.0.3`、ES modules、strict / noEmit |
+| Biome | 2.5.5。lint、cognitive complexity >15はwarning |
+| fast-check | `^4.9.0`。property-based tests |
+| TLC artifact | 1.7.4をSHA-256固定取得。出力parserはTLC2 2.19契約 |
+| OpenJDK | 26.0.1。local TLC runtime |
+| Docker fallback | digest-pinned `eclipse-temurin:26-jdk` |
+| GitHub | Issues / PR / Projects / Actions / release assets |
+
+HTTP service、database、long-running serverはなく、authoring機能も既存の短命CLI・Markdown stage・JSON receipt境界へ統合する前提で評価する。新規外部runtime依存はIssue #2161の成立条件ではない。
+
+rebase後区間では設定参照がstructured configへ移行したが、formal activation/advisory、plugin projection、TLC runtimeの技術選択と意味論は変わっていない。
+
 ## 観測メタデータ
 
 - 観測日: 2026-08-04

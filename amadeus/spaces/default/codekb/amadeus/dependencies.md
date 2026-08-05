@@ -1,5 +1,35 @@
 # Amadeus 依存関係
 
+## TLA+ authoringの依存断面（260804-tla-authoring、現在、observed `7172aea8d`）
+
+### 現行依存
+
+```text
+orchestrator
+  -> plugin activation / advisory choice
+  -> explicit formal-model-check handoff
+
+formal-model-check stage
+  -> model-map / source loader
+  -> module dependency resolver
+  -> verified receipt
+  -> TLC planner / toolchain
+  -> artifact publisher
+```
+
+### 未配線依存
+
+- requirements / functional design artifacts → applicability判定。
+- applicability → author / revise / `--impl-only` / non-targetの排他的分岐。
+- trace + proof + independent review + human approval → atomic model registration。
+- registration →既存executorの対象選択と現在要求に相関したverdict receipt。
+
+### 配布依存の欠落
+
+plugin sourceは `plugin.json` のclosed `tools` 宣言からbundle → composition `ownedPaths` → harness runtimeへ到達する。`run-model-check-source.ts`等が `tla-model-receipt.ts`を、loaderが`tla-module-deps.ts`をimportする一方、両ファイルはmanifest未登録である。このためcanonical dependency graphは閉じていても、composed graphは閉じない。package/projection testsはmanifest準拠を検査するだけでimport closureを検査しない。
+
+外部依存はTLC jar、OpenJDK/Docker、GitHub release取得に限定され、#2161でdatabaseやservice追加は不要である。
+
 ## 観測メタデータ
 
 - 観測日: 2026-08-04
