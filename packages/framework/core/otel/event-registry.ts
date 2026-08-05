@@ -251,6 +251,8 @@ export const REGISTERED_EVENTS = [
       "Remediation",
       "Note Digest",
       "Redaction Status",
+      "Event Identity",
+      "Projection Revision",
       "Trace Id",
       "Span Id",
     ],

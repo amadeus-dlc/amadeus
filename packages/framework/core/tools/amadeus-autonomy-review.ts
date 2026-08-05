@@ -237,18 +237,36 @@ export interface BoundHumanReviewCommand {
   readonly commandBindingDigest: string;
 }
 
-// The pre-turn confirmation digest (OBS-R09/OBS-R12): binds WHAT the human is
-// confirming — target, decision, choice, and the flag metadata with explicit
-// nulls — before any turn exists, so the commit can prove the turn followed a
-// display of exactly this content. Occurrence and turn ids are deliberately
-// excluded: they are minted at commit time and would make the digest
-// unobtainable at preview time.
+// The pre-turn confirmation digest (OBS-R09/OBS-R12): binds WHAT is being
+// confirmed — target, decision, choice, and the flag metadata with explicit
+// nulls — before any turn exists. The commit recomputes this digest and
+// refuses a mismatch; combined with the fresh-turn requirement this gives the
+// set-autonomy confirmed-display-digest trust geometry, not a cryptographic
+// attestation that a human saw a rendered display. Occurrence and turn ids
+// are deliberately excluded: they are minted at commit time and would make
+// the digest unobtainable at preview time.
 interface ReviewCommandContentDigestInput {
   readonly targetIntentUuid: string;
   readonly decisionId: string;
   readonly choice: ReviewChoice;
   readonly flagClassification: HumanReviewCommandBinding["flagClassification"];
   readonly safeNoteDigest: string | null;
+}
+
+// The ONE normalization of flag metadata (explicit nulls for accept, the
+// "unspecified" default for an unclassified flag, the note collapsed to its
+// digest). Preview, expected-value recomputation, and command binding all call
+// this, so the displayed digest and the verified digest cannot drift.
+export function normalizeReviewFlagMetadata(input: {
+  readonly choice: ReviewChoice;
+  readonly flagClassification?: HumanReviewCommandBinding["flagClassification"] | undefined;
+  readonly noteDigest?: string | null;
+}): { readonly flagClassification: HumanReviewCommandBinding["flagClassification"]; readonly safeNoteDigest: string | null } {
+  if (input.choice !== "flag") return { flagClassification: null, safeNoteDigest: null };
+  return {
+    flagClassification: input.flagClassification ?? "unspecified",
+    safeNoteDigest: input.noteDigest ?? null,
+  };
 }
 
 export function reviewCommandContentDigest(input: ReviewCommandContentDigestInput): string {
@@ -397,10 +415,26 @@ function validatePersistedReviewEvent(
     throw new Error("invalid-autonomy-review-persistence-payload");
   }
   const payloadDigest = canonicalContractValueDigest("auto-decision-reviewed-payload", payload);
-  if (!payloadDigest.ok || payloadDigest.value !== event.payloadDigest || !isRecord(payload) ||
-    payload.targetIntentUuid !== persisted.intentUuid || payload.decisionId !== event.decisionId ||
-    payload.choice !== event.choice || payload.auditTransactionId !== event.transactionId ||
-    payload.receiptProjectionRevision !== expectedProjectionRevision || event.projectionRevision !== expectedProjectionRevision) {
+  if (!payloadDigest.ok || payloadDigest.value !== event.payloadDigest || !isRecord(payload)) {
+    throw new Error("invalid-autonomy-review-persistence-payload");
+  }
+  const fieldsMatch = [
+    payload.targetIntentUuid === persisted.intentUuid,
+    payload.decisionId === event.decisionId,
+    payload.choice === event.choice,
+    payload.auditTransactionId === event.transactionId,
+    payload.receiptProjectionRevision === expectedProjectionRevision,
+    event.projectionRevision === expectedProjectionRevision,
+    payload.remediation === event.remediation,
+    payload.flagClassification === event.flagClassification,
+    payload.grantId === event.grantId,
+    payload.lifecycleAtReview === event.lifecycleAtReview,
+    payload.reviewPrincipalRef === event.principalId,
+    payload.reviewActorRef === event.actorId,
+    payload.safeNoteDigest === event.safeNoteDigest,
+    payload.commandBindingDigest === event.commandBindingDigest,
+  ].every(Boolean);
+  if (!fieldsMatch) {
     throw new Error("invalid-autonomy-review-persistence-payload");
   }
   const expectedIdentity = autonomyReviewStableId("review-event", canonicalTupleDigest("amadeus.decision-review-event.v1", [
@@ -487,19 +521,23 @@ function queryFingerprint(query: DecisionQuery): string {
 // bytes — dedupes identical (id, digest) pairs, and closes a same-id
 // different-digest pair as a CONFLICT rather than encoding both.
 function eventSetDigest(state: IntentState): ContractResult<string> {
-  const decisions = state.autonomy.autoDecisions.map((decision) => {
+  const decisions: Array<{ typeOrder: number; eventId: string; digest: string }> = [];
+  for (const decision of state.autonomy.autoDecisions) {
     const payloadDigest = canonicalContractValueDigest("auto-decision", decision);
-    return { typeOrder: 0, eventId: decision.decisionId, digest: canonicalTupleDigest("amadeus.decision-projection-event.v1", [
+    if (!payloadDigest.ok) {
+      return failure("MALFORMED", "projectionEventSet", `decision ${decision.decisionId} payload digest failed: ${payloadDigest.error.detail}`);
+    }
+    decisions.push({ typeOrder: 0, eventId: decision.decisionId, digest: canonicalTupleDigest("amadeus.decision-projection-event.v1", [
       { tag: "event-type", value: "AUTO_DECIDED" },
       { tag: "event-id", value: decision.decisionId },
-      { tag: "decision-payload-digest", value: payloadDigest.ok ? payloadDigest.value : null },
+      { tag: "decision-payload-digest", value: payloadDigest.value },
       { tag: "subject-payload-digest", value: canonicalTupleDigest("amadeus.decision-subject.v1", [
         { tag: "principal", value: decision.principalId },
         { tag: "actor", value: decision.actorId },
       ]) },
       { tag: "review-payload-digest", value: null },
-    ]) };
-  });
+    ]) });
+  }
   const reviews = state.reviews.map((review) => ({ typeOrder: 1, eventId: review.eventIdentity, digest: canonicalTupleDigest("amadeus.decision-projection-event.v1", [
     { tag: "event-type", value: AUTO_DECISION_REVIEWED_EVENT },
     { tag: "event-id", value: review.eventIdentity },
@@ -749,6 +787,13 @@ export function createMemoryAutonomyReviewService(options: MemoryAutonomyReviewS
       throw new Error("invalid-review-intent-seed");
     }
     const current = intents.get(seed.intentUuid);
+    // Retained reviews must still name decisions the REPLACEMENT projection
+    // carries — otherwise the runtime state would report a terminal review for
+    // a decision the snapshot validator (validatePersistedReviewState) rejects.
+    const decisionIds = new Set(seed.autonomy.autoDecisions.map((decision) => decision.decisionId));
+    for (const review of current?.reviews ?? []) {
+      if (!decisionIds.has(review.decisionId)) throw new Error("invalid-review-intent-seed");
+    }
     intents.set(seed.intentUuid, {
       ...seed,
       reviews: current?.reviews ?? [],
@@ -1177,8 +1222,8 @@ export function projectReviewTelemetry(input: ReviewTelemetryInput): Readonly<Re
     if (input.decisionActorRef !== null) attributes["amadeus.decision.actor_ref"] = input.decisionActorRef;
     if (input.safeBasisDigest !== null) attributes["amadeus.decision.basis_digest"] = input.safeBasisDigest;
     if (input.safeNoteDigest !== null) attributes["amadeus.review.note_digest"] = input.safeNoteDigest;
+    if (input.grantId !== null) attributes["amadeus.grant.id"] = input.grantId;
   }
-  if (input.grantId !== null) attributes["amadeus.grant.id"] = input.grantId;
   return attributes;
 }
 
@@ -1189,7 +1234,6 @@ export interface ReviewHarnessContractResult {
   readonly fixtureId: string;
   readonly contractRevision: string;
   readonly passed: boolean;
-  readonly caseResults: readonly unknown[];
 }
 export interface ReviewHarnessSuiteResult {
   readonly fixtureId: string;

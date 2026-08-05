@@ -71,7 +71,7 @@ import {
   getProductionAutoDecision,
   listProductionAutoDecisions,
 } from "./amadeus-autonomy-review-production.ts";
-import { reviewCommandContentDigest } from "./amadeus-autonomy-review.ts";
+import { normalizeReviewFlagMetadata, reviewCommandContentDigest } from "./amadeus-autonomy-review.ts";
 import { autonomyDigest, type DecisionPolicyInput } from "./amadeus-intent-autonomy.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
@@ -973,9 +973,10 @@ function handleListAutoDecisions(args: string[], explicitProjectDir?: string): v
   console.log(JSON.stringify(result.page));
 }
 
-// Recompute the confirmation digest for a (decision, choice, flag metadata)
-// tuple. One definition feeds both the preview surface and the commit path so
-// the displayed digest and the verified digest cannot drift.
+// Preview-side confirmation digest. The flag-metadata normalization lives in
+// ONE exported helper (normalizeReviewFlagMetadata) that the commit path's
+// expected-value recomputation also calls, so the displayed digest and the
+// verified digest cannot drift.
 function reviewConfirmationDigest(
   targetIntentUuid: string,
   decisionId: string,
@@ -983,12 +984,17 @@ function reviewConfirmationDigest(
   classification: "contract-defect" | "specification-change" | "unspecified" | undefined,
   note: string | undefined,
 ): string {
+  const metadata = normalizeReviewFlagMetadata({
+    choice,
+    flagClassification: classification ?? undefined,
+    noteDigest: note !== undefined ? autonomyDigest(note) : null,
+  });
   return reviewCommandContentDigest({
     targetIntentUuid,
     decisionId,
     choice,
-    flagClassification: choice === "flag" ? classification ?? "unspecified" : null,
-    safeNoteDigest: choice === "flag" && note !== undefined ? autonomyDigest(note) : null,
+    flagClassification: metadata.flagClassification,
+    safeNoteDigest: metadata.safeNoteDigest,
   });
 }
 
@@ -1001,6 +1007,9 @@ function handleGetAutoDecision(args: string[], explicitProjectDir?: string): voi
     decisionId: flags.decision,
   });
   if (!result.ok) error(`Auto-decision detail failed: ${result.error}`);
+  if (flags.choice !== undefined && flags.choice !== "accept" && flags.choice !== "flag") {
+    error(`Invalid --choice: ${flags.choice}. Must be 'accept' or 'flag'.`);
+  }
   if (flags.choice === "accept" || flags.choice === "flag") {
     const digest = reviewConfirmationDigest(
       result.detail.intentUuid,
@@ -1189,7 +1198,7 @@ export function handleBoltCommand(
       return;
     default:
       error(
-        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, preview-autonomy, set-autonomy, decide-question, observe-quality, resume-quality, approve-batch, dispatch-event, hold-merge, release-merge`,
+        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, preview-autonomy, set-autonomy, decide-question, observe-quality, resume-quality, list-auto-decisions, get-auto-decision, review-auto-decision, approve-batch, dispatch-event, hold-merge, release-merge`,
         explicitProjectDir,
       );
   }

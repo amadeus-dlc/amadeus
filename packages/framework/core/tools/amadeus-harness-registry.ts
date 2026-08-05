@@ -1,6 +1,20 @@
 // Canonical harness capability registry. This Core location is projected
 // byte-for-byte into every harness distribution.
 
+export interface HarnessDescriptor {
+  readonly id: string;
+  readonly displayName: string;
+  readonly packageFace: boolean;
+  readonly selfInstallFace: boolean;
+  readonly autonomyContract: boolean;
+  readonly autonomyLive: boolean;
+  readonly native: {
+    readonly liveAuthorization: "credential-attested" | "unavailable";
+    readonly judgeReplay: "invoke-once" | "unavailable";
+    readonly liveCommandEnv: string | null;
+  };
+}
+
 export const HARNESS_REGISTRY = [
   { id: "claude", displayName: "Claude Code", packageFace: true, selfInstallFace: true,
     autonomyContract: true, autonomyLive: true,
@@ -31,7 +45,7 @@ export const HARNESS_REGISTRY = [
   { id: "pi", displayName: "Pi Coding Agent", packageFace: true, selfInstallFace: false,
     autonomyContract: true, autonomyLive: false,
     native: { liveAuthorization: "unavailable", judgeReplay: "unavailable", liveCommandEnv: null } },
-] as const;
+] as const satisfies readonly HarnessDescriptor[];
 
 type RegistryRow = (typeof HARNESS_REGISTRY)[number];
 export type HarnessId = RegistryRow["id"];
@@ -42,29 +56,10 @@ export type SelfInstallHarnessId = RegistryRow extends infer Row
   ? Row extends { readonly selfInstallFace: true; readonly id: infer Id extends string } ? Id : never
   : never;
 
-export interface HarnessDescriptor {
-  readonly id: string;
-  readonly displayName: string;
-  readonly packageFace: boolean;
-  readonly selfInstallFace: boolean;
-  readonly autonomyContract: boolean;
-  readonly autonomyLive: boolean;
-  readonly native: {
-    readonly liveAuthorization: "credential-attested" | "unavailable";
-    readonly judgeReplay: "invoke-once" | "unavailable";
-    readonly liveCommandEnv: string | null;
-  };
-}
+export const PACKAGE_HARNESS_IDS: readonly PackageHarnessId[] = HARNESS_REGISTRY
+  .filter((descriptor): descriptor is RegistryRow & { readonly packageFace: true } => descriptor.packageFace)
+  .map((descriptor) => descriptor.id as PackageHarnessId);
 
-export const PACKAGE_HARNESS_IDS = HARNESS_REGISTRY
-  .filter((descriptor) => descriptor.packageFace)
-  .map((descriptor) => descriptor.id) as readonly PackageHarnessId[];
-
-export const SELF_INSTALL_HARNESS_IDS = HARNESS_REGISTRY
-  .filter((descriptor) => descriptor.selfInstallFace)
-  .map((descriptor) => descriptor.id) as readonly SelfInstallHarnessId[];
-
-export interface ValidatedHarnessRegistry {
-  readonly descriptors: readonly HarnessDescriptor[];
-  readonly registryDigest: string;
-}
+export const SELF_INSTALL_HARNESS_IDS: readonly SelfInstallHarnessId[] = HARNESS_REGISTRY
+  .filter((descriptor): descriptor is RegistryRow & { readonly selfInstallFace: true } => descriptor.selfInstallFace)
+  .map((descriptor) => descriptor.id as SelfInstallHarnessId);

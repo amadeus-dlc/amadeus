@@ -22,6 +22,7 @@ import {
   type IntentLifecycle,
   type ReviewChoice,
   type ReviewIntentSeed,
+  normalizeReviewFlagMetadata,
   reviewCommandContentDigest,
 } from "./amadeus-autonomy-review.ts";
 import { autonomyDigest, autonomyIsRecord } from "./amadeus-intent-autonomy.ts";
@@ -63,25 +64,23 @@ function resolveReviewTarget(projectDir: string, selector?: string): ReviewTarge
   };
 }
 
-function completionSeal(projectDir: string, target: ReviewTarget): string | null {
+function completionSeal(audit: string, target: ReviewTarget): string | null {
   if (target.lifecycle === "active") return null;
-  const rows = findAllEvents(
-    readAllAuditShards(projectDir, target.dirName, target.space),
-    "INTENT_COMPLETION_TRANSACTION_COMMITTED",
-  );
+  const rows = findAllEvents(audit, "INTENT_COMPLETION_TRANSACTION_COMMITTED");
   return rows.length === 0 ? null : auditBlockField(rows.at(-1)!.block, "Completion Seal Digest");
 }
 
 function currentSeed(projectDir: string, target: ReviewTarget): ReviewIntentSeed {
   const autonomy = readProductionAutonomyProjection(projectDir, target.dirName, target.space);
   if (autonomy === null) throw new Error("intent-autonomy-projection-not-found");
-  const seal = completionSeal(projectDir, target);
+  const audit = readAllAuditShards(projectDir, target.dirName, target.space);
+  const seal = completionSeal(audit, target);
   if (target.lifecycle === "completed" && seal === null) throw new Error("completed-intent-seal-not-found");
   return {
     intentUuid: target.intentUuid,
     lifecycle: target.lifecycle,
     autonomy,
-    auditRevision: splitAuditRecords(readAllAuditShards(projectDir, target.dirName, target.space)).length,
+    auditRevision: splitAuditRecords(audit).length,
     completionSealDigest: seal,
   };
 }
@@ -126,6 +125,9 @@ function parseReviewPayload(payloadV1: string, payloadDigest: string): ReviewAud
     payload.flagClassification === null || typeof payload.flagClassification === "string",
     payload.safeNoteDigest === null || typeof payload.safeNoteDigest === "string",
     payload.redactionStatus === "redacted" || payload.redactionStatus === "withheld",
+    ["deterministic-engine", "confirmed-policy", "norm-derivation", "human-ruling-history", "solo-election", "agent-recommendation"].includes(String(payload.decisionSource)),
+    payload.remediation === null || ["self-fix", "self-feature", "self-fix-with-feature-alternative"].includes(String(payload.remediation)),
+    payload.flagClassification === null || ["contract-defect", "specification-change", "unspecified"].includes(String(payload.flagClassification)),
   ].every(Boolean);
   if (!valid) throw new Error("invalid-review-audit-payload");
   return payload as ReviewAuditPayload;
@@ -153,23 +155,23 @@ function parsedReviewEvent(block: string): AutoDecisionReviewedEvent {
     targetIntentUuid: payload.targetIntentUuid,
     decisionId: payload.decisionId,
     choice: payload.choice,
-    principalId: String(payload.reviewPrincipalRef),
-    actorId: String(payload.reviewActorRef),
-    decisionPrincipalId: String(payload.decisionPrincipalRef),
-    decisionActorId: String(payload.decisionActorRef),
+    principalId: payload.reviewPrincipalRef as string,
+    actorId: payload.reviewActorRef as string,
+    decisionPrincipalId: payload.decisionPrincipalRef as string,
+    decisionActorId: payload.decisionActorRef as string,
     decisionSource: payload.decisionSource as AutoDecisionReviewedEvent["decisionSource"],
-    safeBasisDigest: String(payload.safeBasisDigest),
-    grantId: payload.grantId === null ? null : String(payload.grantId),
-    sourceIntentUuid: String(payload.sourceIntentUuid),
-    sourceHumanTurnId: String(payload.sourceHumanTurnId),
-    sourceHumanTurnEventId: String(payload.sourceHumanTurnEventId),
-    commandOccurrenceId: String(payload.commandOccurrenceId),
-    commandBindingDigest: String(payload.commandBindingDigest),
+    safeBasisDigest: payload.safeBasisDigest as string,
+    grantId: payload.grantId as string | null,
+    sourceIntentUuid: payload.sourceIntentUuid as string,
+    sourceHumanTurnId: payload.sourceHumanTurnId as string,
+    sourceHumanTurnEventId: payload.sourceHumanTurnEventId as string,
+    commandOccurrenceId: payload.commandOccurrenceId as string,
+    commandBindingDigest: payload.commandBindingDigest as string,
     lifecycleAtReview: payload.lifecycleAtReview,
     remediation,
     flagClassification: payload.flagClassification as AutoDecisionReviewedEvent["flagClassification"],
-    safeNoteDigest: payload.safeNoteDigest === null ? null : String(payload.safeNoteDigest),
-    redactionStatus: "redacted",
+    safeNoteDigest: payload.safeNoteDigest as string | null,
+    redactionStatus: payload.redactionStatus as "redacted" | "withheld",
     projectionRevision: revision,
     receipt: {
       reviewId: payload.reviewId,
@@ -188,13 +190,23 @@ function readStoredReviews(projectDir: string, target: ReviewTarget): readonly A
     readAllAuditShards(projectDir, target.dirName, target.space),
     "AUTO_DECISION_REVIEWED",
   );
-  const own = rows.map((row) => parsedReviewEvent(row.block));
+  // Identical event identities dedupe across ALL journals so a row replayed
+  // into a second shard stays one event and cannot inflate the extension chain.
+  const seen = new Set<string>();
+  const own: AutoDecisionReviewedEvent[] = [];
+  for (const row of rows) {
+    const event = parsedReviewEvent(row.block);
+    if (seen.has(event.eventIdentity)) continue;
+    seen.add(event.eventIdentity);
+    own.push(event);
+  }
   if (target.lifecycle === "active") return own;
   // A completed target's journal is sealed, so post-seal review rows live on
   // whichever ACTIVE intent recorded them (OBS-R08). Union every sibling
-  // intent's shards and re-attribute by the payload's target uuid; identical
-  // event identities dedupe so a pre-seal row read twice stays one event.
-  const seen = new Set(own.map((event) => event.eventIdentity));
+  // intent's shards and re-attribute by the payload's target uuid. A sibling
+  // row that fails to parse says nothing about THIS target unless it names the
+  // target's uuid — only that case stays fail-closed; other siblings' garbage
+  // must not take this target's review surface down.
   const extension: AutoDecisionReviewedEvent[] = [];
   for (const sibling of listIntents(projectDir, target.space)) {
     if (sibling.dirName === null || sibling.dirName === target.dirName) continue;
@@ -202,7 +214,13 @@ function readStoredReviews(projectDir: string, target: ReviewTarget): readonly A
       readAllAuditShards(projectDir, sibling.dirName, target.space),
       "AUTO_DECISION_REVIEWED",
     )) {
-      const event = parsedReviewEvent(row.block);
+      let event: AutoDecisionReviewedEvent;
+      try {
+        event = parsedReviewEvent(row.block);
+      } catch (cause) {
+        if (row.block.includes(target.intentUuid)) throw cause;
+        continue;
+      }
       if (event.targetIntentUuid !== target.intentUuid || seen.has(event.eventIdentity)) continue;
       seen.add(event.eventIdentity);
       extension.push(event);
@@ -261,10 +279,16 @@ function refreshedSnapshot(
   return { value: nextValue, digest: digest.value };
 }
 
+// The ONE production redactor: read projections and the commit path must
+// disclose identically, so both service constructions share this instance.
+const productionRedactor = {
+  redact: (_kind: string, value: string): { value: string; status: "redacted" } => ({ value: value.normalize("NFC"), status: "redacted" }),
+};
+
 function reviewService(projectDir: string, target: ReviewTarget) {
   return createMemoryAutonomyReviewService({
     snapshot: refreshedSnapshot(projectDir, target),
-    redactor: { redact: (_kind, value) => ({ value: value.normalize("NFC"), status: "redacted" }) },
+    redactor: productionRedactor,
   });
 }
 
@@ -328,27 +352,47 @@ function commitDecisionReviewLocked(
 ): ProductionDecisionReviewResult {
   const sourceAudit = readAllAuditShards(input.projectDir, source.dirName, source.space);
   const turns = findAllEvents(sourceAudit, "HUMAN_TURN");
+  // Timestamps are second-precision, so a turn's identity is its timestamp
+  // PLUS its ordinal among same-timestamp turns in the chronologically sorted
+  // journal — appends only ever add later (or same-second, higher-position)
+  // rows, so an already-recorded identity never re-points at a different turn.
+  const turnKeys: string[] = [];
+  const sameTimestampSeen = new Map<string, number>();
+  for (const turn of turns) {
+    const ordinal = sameTimestampSeen.get(turn.timestamp) ?? 0;
+    sameTimestampSeen.set(turn.timestamp, ordinal + 1);
+    turnKeys.push(`${turn.timestamp}#${ordinal}`);
+  }
   const latestPriorReview = readStoredReviews(input.projectDir, target)
     .filter((event) => event.sourceIntentUuid === source.intentUuid)
     .at(-1);
   const consumedTurnIndex = latestPriorReview === undefined
     ? -1
-    : turns.findLastIndex((turn) => turn.timestamp === latestPriorReview.sourceHumanTurnEventId);
+    : turnKeys.lastIndexOf(latestPriorReview.sourceHumanTurnEventId);
   if (latestPriorReview !== undefined && consumedTurnIndex < 0) {
     return { ok: false, error: "PROVENANCE_REQUIRED" };
   }
-  const latestTurn = turns.slice(consumedTurnIndex + 1).at(-1);
-  if (latestTurn === undefined) return { ok: false, error: "PROVENANCE_REQUIRED" };
-  // OBS-R09/OBS-R12: the human turn attests to displayed CONTENT, not to
-  // whatever the caller supplies afterwards. The commit recomputes the content
-  // digest the preview displayed and refuses a mismatch, so the flag payload
-  // cannot be swapped after the turn.
+  const latestTurnIndex = turns.length - 1;
+  if (latestTurnIndex <= consumedTurnIndex) return { ok: false, error: "PROVENANCE_REQUIRED" };
+  const latestTurnKey = turnKeys[latestTurnIndex];
+  // OBS-R09/OBS-R12: the commit recomputes the digest the preview displayed
+  // and refuses a mismatch, and the fresh human turn must postdate the last
+  // consumed one. This is the same trust geometry as set-autonomy's
+  // confirmed-display-digest: the turn precedes the commit and the presented
+  // digest matches the previewed content. It does NOT cryptographically bind
+  // the turn to a rendered display; that stronger attestation needs the turn
+  // itself to carry the displayed digest (a HUMAN_TURN vocabulary change).
+  const flagMetadata = normalizeReviewFlagMetadata({
+    choice: input.choice,
+    flagClassification: input.flagClassification,
+    noteDigest: input.note !== undefined ? autonomyDigest(input.note) : null,
+  });
   const expectedContentDigest = reviewCommandContentDigest({
     targetIntentUuid: target.intentUuid,
     decisionId: input.decisionId,
     choice: input.choice,
-    flagClassification: input.choice === "flag" ? input.flagClassification ?? "unspecified" : null,
-    safeNoteDigest: input.choice === "flag" && input.note !== undefined ? autonomyDigest(input.note) : null,
+    flagClassification: flagMetadata.flagClassification,
+    safeNoteDigest: flagMetadata.safeNoteDigest,
   });
   if (input.confirmedContentDigest !== expectedContentDigest) {
     return { ok: false, error: "PROVENANCE_REQUIRED:confirmed-content-digest-mismatch" };
@@ -358,21 +402,24 @@ function commitDecisionReviewLocked(
     targetIntentUuid: target.intentUuid,
     decisionId: input.decisionId,
     choice: input.choice,
-    commandOccurrenceId: `review-${input.choice}-${input.decisionId}-${latestTurn.timestamp}`,
-    flagClassification: input.choice === "flag" ? input.flagClassification ?? "unspecified" : null,
-    safeNoteDigest: input.choice === "flag" && input.note !== undefined ? autonomyDigest(input.note) : null,
-    sourceHumanTurnId: latestTurn.timestamp,
+    commandOccurrenceId: `review-${input.choice}-${input.decisionId}-${latestTurnKey}`,
+    flagClassification: flagMetadata.flagClassification,
+    safeNoteDigest: flagMetadata.safeNoteDigest,
+    sourceHumanTurnId: latestTurnKey,
   });
   const turn: HumanReviewTurnSeed = {
     sourceIntentUuid: source.intentUuid,
     lifecycle: "active",
     sourceAuditRevision: splitAuditRecords(sourceAudit).length,
-    sourceHumanTurnId: latestTurn.timestamp,
-    sourceHumanTurnEventId: latestTurn.timestamp,
+    sourceHumanTurnId: latestTurnKey,
+    sourceHumanTurnEventId: latestTurnKey,
     principalId: "local-human",
     binding,
   };
-  const service = createMemoryAutonomyReviewService({ snapshot: refreshedSnapshot(input.projectDir, target, source, turn) });
+  const service = createMemoryAutonomyReviewService({
+    snapshot: refreshedSnapshot(input.projectDir, target, source, turn),
+    redactor: productionRedactor,
+  });
   const targetState = service.readIntent(target.intentUuid);
   if (targetState === null) return { ok: false, error: "review-target-not-found" };
   const authorization = service.authorizeHumanReview({
@@ -409,17 +456,27 @@ function commitDecisionReviewLocked(
 export function commitProductionDecisionReview(
   input: ProductionDecisionReviewInput,
 ): ProductionDecisionReviewResult {
-  const target = resolveReviewTarget(input.projectDir, input.intent);
-  const source = resolveReviewTarget(input.projectDir);
-  if (target === null || source === null || source.lifecycle !== "active") {
-    return { ok: false, error: "active-source-and-review-target-required" };
-  }
   try {
+    const target = resolveReviewTarget(input.projectDir, input.intent);
+    const source = resolveReviewTarget(input.projectDir);
+    if (target === null || source === null || source.lifecycle !== "active") {
+      return { ok: false, error: "active-source-and-review-target-required" };
+    }
+    // The commit reads the SOURCE journal (turn consumption) and writes to the
+    // source (completed target) or the target (active target), so BOTH ledgers
+    // are locked. dirName order is the deterministic acquisition order — two
+    // concurrent commits over any pair of intents cannot deadlock, and two
+    // completed-target reviews serialise on the shared source lock.
+    const commit = (): ProductionDecisionReviewResult => commitDecisionReviewLocked(input, target, source);
+    if (target.dirName === source.dirName) {
+      return withAuditLock(input.projectDir, commit, target.dirName, target.space);
+    }
+    const [outer, inner] = [target, source].sort((left, right) => left.dirName.localeCompare(right.dirName));
     return withAuditLock(
       input.projectDir,
-      () => commitDecisionReviewLocked(input, target, source),
-      target.dirName,
-      target.space,
+      () => withAuditLock(input.projectDir, commit, inner.dirName, inner.space),
+      outer.dirName,
+      outer.space,
     );
   } catch (cause) {
     return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };

@@ -535,6 +535,7 @@ describe("real-human review append", () => {
     })).toMatchObject({ ok: false, error: { code: "PROVENANCE_REQUIRED", locus: "sourceIntentUuid" } });
     const first = service.appendDecisionReview(command);
     const again = service.appendDecisionReview(command);
+    expect(first).toMatchObject({ ok: true, value: { state: "accepted" } });
     expect(first).toEqual(again);
     const conflict = service.appendDecisionReview({ ...command, choice: "flag" });
     expect(conflict).toMatchObject({ ok: false, error: { code: "CONFLICT", locus: "reviewState" } });
@@ -776,7 +777,6 @@ describe("status, telemetry and harness projection", () => {
       fixtureId: "fixture-1",
       contractRevision: autonomyDigest("contract-v1"),
       passed: true,
-      caseResults: [],
     }));
     expect(evaluateReviewHarnessSuite("fixture-1", autonomyDigest("contract-v1"), receipts)).toMatchObject({
       ok: true,
@@ -833,8 +833,27 @@ describe("projection event-set digest contract", () => {
     const service = createMemoryAutonomyReviewService({
       intents: [seed(ACTIVE, "active", [decision(ACTIVE, "dup"), twin])],
     });
-    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 10 });
-    expect(page.ok).toBe(true);
+    const page = service.listAutoDecisions({ intentUuid: ACTIVE, lifecycle: "active", pageSize: 1 });
+    if (!page.ok) throw new Error(JSON.stringify(page.error));
+    if (page.value.nextCursor === null) throw new Error("expected a next cursor");
+    const record = decision(ACTIVE, "dup");
+    const payloadDigest = canonicalContractValueDigest("auto-decision", record);
+    const entry = canonicalTupleDigest("amadeus.decision-projection-event.v1", [
+      { tag: "event-type", value: "AUTO_DECIDED" },
+      { tag: "event-id", value: record.decisionId },
+      { tag: "decision-payload-digest", value: payloadDigest.ok ? payloadDigest.value : null },
+      { tag: "subject-payload-digest", value: canonicalTupleDigest("amadeus.decision-subject.v1", [
+        { tag: "principal", value: record.principalId },
+        { tag: "actor", value: record.actorId },
+      ]) },
+      { tag: "review-payload-digest", value: null },
+    ]);
+    const expected = canonicalTupleDigest("amadeus.decision-projection-event-set.v1", [
+      { tag: "target-intent", value: ACTIVE },
+      { tag: "event-count", value: "1" },
+      { tag: "event", value: entry },
+    ]);
+    expect(page.value.nextCursor.projectionEventSetDigest).toBe(expected);
   });
 
   test("closes a duplicated event id with diverging payloads as a projection-set CONFLICT", () => {
