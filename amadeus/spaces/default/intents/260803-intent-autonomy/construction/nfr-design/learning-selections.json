@@ -1,0 +1,13 @@
+{
+  "stage_slug": "nfr-design",
+  "selections": [
+    {
+      "candidate_id": "c6",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "根拠のない数値SLOや未要求のクラウド構成を追加せず、確定契約から導ける計算量・partition・atomicityでNFRを設計する。",
+      "source": "orchestrator"
+    }
+  ]
+}

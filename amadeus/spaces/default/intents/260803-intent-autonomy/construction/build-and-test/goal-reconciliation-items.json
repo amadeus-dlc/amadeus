@@ -1,0 +1,18 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260803-intent-autonomy/construction/build-and-test/build-test-results.md",
+        "digest": "055d08f349d636bb802001cfa73bcd523ae4d387bdd0ff9484ebb831d56f9ad8"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-05T02:48:57Z",
+        "digest": "af690289ad51bf5741ed41c6785b4688e3a49f27e35b758bfddbd196c71bb3a2"
+      }
+    ]
+  }
+]

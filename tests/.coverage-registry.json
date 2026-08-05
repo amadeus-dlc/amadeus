@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 604,
+    "total": 605,
     "enumeratedByClass": {
       "function": 339,
-      "audit": 89,
+      "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 175,
-      "audit": 43,
+      "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 14,
@@ -335,6 +335,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t434-intent-completion.test.ts",
           "mechanism": "none"
         }
       ],
@@ -6294,6 +6306,10 @@
       "unitId": "amadeus-state approve",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-autonomy-phase-boundary-artifact.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
           "mechanism": "none"

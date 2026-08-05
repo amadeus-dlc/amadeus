@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (89 events, 21 categories)
+## Event Registry (90 events, 21 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -247,7 +247,7 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 | `RULE_LEARNED` | The learning gate persisted a kept learning as a practice line under the routed heading in `{project,team}.md` | Stage, Candidate-ID, Destination, Heading, Source | — | `tools/amadeus-learnings.ts persist` |
 | `SENSOR_PROPOSED` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter | Stage, Candidate-ID, Sensor ID, Manifest path, Matches, Destinations, Source | — | `tools/amadeus-learnings.ts persist` |
 
-### Loop Monitor, Quality Repair, and Intent Autonomy (4 events)
+### Loop Monitor, Quality Repair, and Intent Autonomy (5 events)
 
 The event set is the atomic canonical stream for delivery observation, cycle trigger, Judge reservation/result, closed route application, and latch transitions. The per-clone Replay Index is a repairable secondary projection and never replaces this audit source of truth.
 
@@ -257,6 +257,7 @@ The event set is the atomic canonical stream for delivery observation, cycle tri
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | One Quality snapshot/progress/replan/stall/resume transaction and its generic Monitor effects commit atomically | Quality Scope Id, Transaction Id, Transaction | — | `tools/amadeus-quality-repair-replay.ts` |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | One Intent-scoped mode/grant/decision/effect/park transaction commits atomically | Intent Uuid, Transaction Id, Transaction Digest, Transaction | Principal, Decider, Actor, Basis | `tools/amadeus-intent-autonomy-replay.ts` |
 | `AUTO_DECISION_REVIEWED` | A real human accepts or flags one immutable automatic decision; completed Intent reviews extend the review chain without changing the completion seal | Intent Uuid, Decision Id, Review Id, Choice, Lifecycle, Review Principal, Review Actor, Source Human Turn, Audit Transaction Id, Payload Digest, Payload V1 | Decision Principal, Decision Actor, Decision Source, Basis Digest, Grant Id, Remediation, Note Digest, Redaction Status, Event Identity, Projection Revision, Trace Id, Span Id | `tools/amadeus-autonomy-review-production.ts` |
+| `INTENT_COMPLETION_TRANSACTION_COMMITTED` | The Core Intent completion transaction commits and seals the Intent record with its evidence digest | Intent Uuid, Transaction Id, Evidence Id, Evidence Digest, Completion Seal Digest, Transaction | — | `tools/amadeus-intent-completion.ts` |
 
 ### Swarm (7 events)
 

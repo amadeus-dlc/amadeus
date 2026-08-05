@@ -1,0 +1,10 @@
+{
+  "electionId": "E-S13-CODEGEN-1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 5,
+  "reservation": null,
+  "rationale": "ステージメモリの各区分に実記録がなく、学習候補も未解決事項も確認できないため、永続化対象は0件で妥当です。",
+  "submittedAt": "2026-08-04T01:16:32Z"
+}

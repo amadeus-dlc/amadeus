@@ -79,7 +79,7 @@
 
 ## Audit・replay規則
 
-- M07だけがcanonical eventをappendする。M01/M02/M06は`AuditEventPlan`を返す。
+- M07だけがcanonical eventをappendする。M01/M02/M06/M08は`AuditEventPlan`を返す。
 - event identityの重複をtransaction commit前に拒否する。
 - Judge start、dispatch/reconciliation、result observation、Judge completion、selected route、basis fingerprint、latch set/clearをreplay可能にする。
 - 全shardをcanonical orderingし、同一event identityをexactly once reduceする。
@@ -100,6 +100,18 @@
 - evidence snapshotはIntent / Monitor / stage / graph revision、provider schema version、redaction policy、summary digestへ束縛する。
 - 外部Plugin authoring形式をCore SPIに露出しない。初期first-party adapterと将来adapterは同じ内部schemaへ写像する。
 
+## Live authorization規則
+
+| ID | 規則 |
+|---|---|
+| LMR-L01 | credential-attested adapterだけが`LiveAuthorizationPort`を実装できる |
+| LMR-L02 | credential / token / secretそのものをauthorization、audit、receiptへ含めない |
+| LMR-L03 | authorizationはIntent、harness、implementation revision、package digest、environment、issuer、trace、attestationへ束縛する |
+| LMR-L04 | protected `LIVE_SMOKE_AUTHORIZED` eventのcommit receiptなしにlive invocationを開始しない |
+| LMR-L05 | raw receiptはcommitted authorizationと全bindingがexact matchしなければならない |
+| LMR-L06 | skip / failed / Judge未観測をpassやIntent completion evidenceへ変換しない |
+| LMR-L07 | U1〜U4のlive receiptは暫定であり、U5が最終revisionで再収集する |
+
 ## Distribution drift規則
 
 - canonical sourceは`packages/framework/core/`とsingle harness descriptor registryである。
@@ -112,9 +124,9 @@
 
 - 現行contract対象はClaude Code、Codex、Cursor、OpenCode、Kimi Codeである。
 - Monitor algorithm、cycle state、Judge reservation、latch reducerをharness directoryへ複製しない。
-- native adapterはcapability factsとJudge invocation / reconciliationだけを提供する。
-- 将来のharness追加はdescriptor row、adapter、共通contract fixtureの追加で閉じ、M02 algorithm変更を要求しない。
-- Kiro / Kiro IDEは既存package projectionを維持するが、今回の5 harness contract対象には含めない。
+- native adapterはcapability facts、Judge invocation / reconciliation、live authorizationだけを提供する。
+- 将来のharness追加はdescriptor row、adapter、共通contract fixture、opt-in live scenarioの追加で閉じ、M02 algorithm変更を要求しない。
+- Kiro / Kiro IDEは既存package projectionを維持するが、今回のlive success集合へ数えない。
 
 ## Failure classification
 
@@ -132,6 +144,7 @@
 | provider possible / unknown | uncertain external effect | parked / `AWAITING_HUMAN` | 人間または新evidence |
 | undeclared Judge route | contract error | projection不変 | provider / constraint修正 |
 | same latch fingerprint | expected stop | 同じparked result | evidence変化 / human retry |
+| live credentialなし | external capability absence | U1 deterministic work継続 | 認可環境でopt-in実行 |
 
 ## 要件・AC追跡
 
@@ -142,7 +155,7 @@
 | Judge / replay | FR-LMC-007〜009、2095-AC05〜06 |
 | latch / resume | FR-LMC-010、FR-STP-005〜006、2095-AC07〜08 |
 | Plugin seam boundary | FR-LMC-011〜012、2095-AC09〜10 |
-| harness / future adapter | FR-HAR-001〜007、2095-AC11〜14 |
+| harness / live / future adapter | FR-HAR-001〜007、2095-AC11〜14 |
 | determinism / reliability / performance | NFR-DET-001〜003、NFR-REL-001〜002、NFR-PERF-001〜003 |
 
 ## 非目標
