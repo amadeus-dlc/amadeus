@@ -94,6 +94,7 @@ export interface KiroTuiAdapterOptions {
   readonly createRunId?: () => string;
   readonly pollIntervalMs?: number;
   readonly readyTimeoutMs?: number;
+  readonly reapTimeoutMs?: number;
 }
 
 /**
@@ -341,6 +342,8 @@ export class KiroTuiAdapter implements LiveAdapter {
     if (identity !== undefined) {
       this.#killPrivateResource(["kill-session", "-t", identity.sessionName], RESOURCE_SESSION, failures);
       this.#killPrivateResource(["kill-server"], RESOURCE_SERVER, failures);
+      const unreaped = await this.#reapPrivateServer();
+      if (unreaped !== null) failures.push(unreaped);
       // The socket lives outside the scratch root, so removing the scratch tree
       // cannot reclaim it. tmux normally unlinks it on kill; force covers the
       // case where the server was never started.
@@ -360,13 +363,13 @@ export class KiroTuiAdapter implements LiveAdapter {
         this.#binding = undefined;
       }
     }
-    try {
-      // Removing the scratch root removes the scratch-side binding links. The
-      // source auth database and chat runtime they pointed at are untouched.
-      rmSync(target.scratch.root, { recursive: true, force: true });
+    // Removing the scratch root removes the scratch-side binding links. The
+    // source auth database and chat runtime they pointed at are untouched.
+    const scratchFailure = await this.#removeScratch(target.scratch.root);
+    if (scratchFailure === null) {
       this.#registrar?.markReleased("scratch-root");
-    } catch (error) {
-      failures.push(sanitizeText(String(error)));
+    } else {
+      failures.push(scratchFailure);
     }
     this.#identity = undefined;
     const receipt = cleanupReceiptFromRegistrar(this.#registrar, target, failures);
@@ -414,21 +417,76 @@ export class KiroTuiAdapter implements LiveAdapter {
           execution: { ...this.#failedExecution("journey aborted"), timedOut: true, aborted: true },
         };
       }
-      const captured = this.#capturePane();
-      if (!captured.ok) return captured;
-      if (IDLE_PROMPT_PATTERN.test(captured.pane)) return { ok: true };
-      if (!trustCleared && TRUST_PROMPT_PATTERN.test(captured.pane)) {
-        const moved = this.#privateCommand(["send-keys", "-t", identity.target, "Down"]);
-        if (commandFailed(moved)) return { ok: false, execution: this.#failedExecution(moved.stderr) };
-        const accepted = this.#privateCommand(["send-keys", "-t", identity.target, "Enter"]);
-        if (commandFailed(accepted)) return { ok: false, execution: this.#failedExecution(accepted.stderr) };
-        trustCleared = true;
-      }
+      const step = this.#readinessStep(identity.target, trustCleared);
+      if (step.kind === "ready") return { ok: true };
+      if (step.kind === "failed") return { ok: false, execution: step.execution };
+      trustCleared = step.trustCleared;
       if (Date.now() >= deadline) {
-        return { ok: false, execution: this.#failedExecution("Kiro TUI readiness timed out", captured.pane) };
+        return { ok: false, execution: this.#failedExecution("Kiro TUI readiness timed out", step.pane) };
       }
       await this.#sleep();
     }
+  }
+
+  /** One readiness observation: read the pane, and clear the trust picker the first time it appears. */
+  #readinessStep(
+    target: string,
+    trustCleared: boolean,
+  ):
+    | Readonly<{ kind: "ready" }>
+    | Readonly<{ kind: "failed"; execution: AdapterExecution }>
+    | Readonly<{ kind: "waiting"; trustCleared: boolean; pane: string }> {
+    const captured = this.#capturePane();
+    if (!captured.ok) return { kind: "failed", execution: captured.execution };
+    if (IDLE_PROMPT_PATTERN.test(captured.pane)) return { kind: "ready" };
+    if (trustCleared || !TRUST_PROMPT_PATTERN.test(captured.pane)) {
+      return { kind: "waiting", trustCleared, pane: captured.pane };
+    }
+    // Move the caret off the default "No, exit" and accept.
+    for (const key of ["Down", "Enter"]) {
+      const result = this.#privateCommand(["send-keys", "-t", target, key]);
+      if (commandFailed(result)) {
+        return { kind: "failed", execution: this.#failedExecution(result.stderr) };
+      }
+    }
+    return { kind: "waiting", trustCleared: true, pane: captured.pane };
+  }
+
+  /**
+   * Wait for the killed server to actually go away before the scratch tree is
+   * removed. tmux leaves the socket file behind, so liveness is asked of the
+   * server itself: once it reports absent it has already hung up its panes.
+   * Without this barrier a dying child can recreate files under its scratch
+   * HOME after removal, leaving a resource the leak check no longer sees.
+   * Returns a diagnostic when the server outlives the barrier, or null.
+   */
+  async #reapPrivateServer(): Promise<string | null> {
+    const deadline = Date.now() + (this.#options.reapTimeoutMs ?? 10_000);
+    for (;;) {
+      const listed = this.#privateCommand(["list-sessions"]);
+      if (commandFailed(listed) && absentPrivateServer(listed)) return null;
+      if (Date.now() >= deadline) return "private tmux server was not reaped";
+      await this.#sleep();
+    }
+  }
+
+  /**
+   * Remove the scratch tree and prove it stayed removed. A child still shutting
+   * down can recreate files under its scratch HOME immediately after the first
+   * removal, so the tree is re-checked and re-removed before the barrier
+   * accepts closure.
+   */
+  async #removeScratch(root: string): Promise<string | null> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        rmSync(root, { recursive: true, force: true });
+      } catch (error) {
+        return sanitizeText(String(error));
+      }
+      await this.#sleep();
+      if (!existsSync(root)) return null;
+    }
+    return "scratch root reappeared after removal";
   }
 
   #killPrivateResource(args: readonly string[], resourceId: string, failures: string[]): void {

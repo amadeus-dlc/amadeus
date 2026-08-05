@@ -39,6 +39,8 @@ interface FakeTmuxOptions {
   readonly failKillServer?: boolean;
   /** Never leave the trust picker, so readiness must hit its deadline. */
   readonly stuckOnTrustPrompt?: boolean;
+  /** Keep answering as a live server, so the cleanup reap barrier must fail. */
+  readonly serverNeverReaps?: boolean;
 }
 
 /**
@@ -65,18 +67,30 @@ class FakePrivateTmux implements TmuxCommandPort {
       const cwdIndex = args.indexOf("-c");
       this.#projectDir = cwdIndex < 0 ? undefined : args[cwdIndex + 1];
     }
-    if (command === "send-keys" && args.at(-1) === "Enter" && !this.#trustCleared) {
-      this.#trustCleared = this.#options.stuckOnTrustPrompt !== true;
-    } else if (command === "send-keys" && args.includes("-l")) {
-      this.#prompt = args.at(-1) ?? "";
-    } else if (command === "send-keys" && args.at(-1) === "Enter") {
-      this.#writeAnchor();
-    }
+    if (command === "send-keys") this.#handleSendKeys(args);
     if (command === "kill-server" && this.#options.failKillServer === true) {
       return { exitCode: 1, stdout: "", stderr: "injected server cleanup failure" };
     }
+    if (command === "list-sessions") {
+      return this.#options.serverNeverReaps === true
+        ? { exitCode: 0, stdout: "amadeus-kiro: 1 windows\n", stderr: "" }
+        : { exitCode: 1, stdout: "", stderr: "no server running on the private socket" };
+    }
     const pane = command === "capture-pane" ? (this.#trustCleared ? IDLE_PANE : TRUST_PANE) : "";
     return { exitCode: 0, stdout: pane, stderr: "" };
+  }
+
+  #handleSendKeys(args: readonly string[]): void {
+    if (args.includes("-l")) {
+      this.#prompt = args.at(-1) ?? "";
+      return;
+    }
+    if (args.at(-1) !== "Enter") return;
+    if (!this.#trustCleared) {
+      this.#trustCleared = this.#options.stuckOnTrustPrompt !== true;
+      return;
+    }
+    this.#writeAnchor();
   }
 
   #writeAnchor(): void {
@@ -228,6 +242,41 @@ describe("Kiro TUI live adapter", () => {
       expect(existsSync(scratch.root)).toBe(false);
       expect(readFileSync(layout.authFile, "utf8")).toBe(before);
       expect(existsSync(layout.chatBinary)).toBe(true);
+    } finally {
+      rmSync(item.root, { recursive: true, force: true });
+    }
+  });
+
+  test("a server that outlives the kill fails the cleanup barrier", async () => {
+    const item = fixture();
+    const allocator = new KiroScratchAllocator({
+      prefix: "kiro-tui-reap-",
+      distributionDir: item.distribution,
+    });
+    const adapter = new KiroTuiAdapter({
+      kiroBin: item.kiroBin,
+      distributionDir: item.distribution,
+      sourceHome: item.sourceHome,
+      parentEnv: { PATH: process.env.PATH },
+      tmux: new FakePrivateTmux({ serverNeverReaps: true }),
+      createRunId: () => RUN_ID,
+      pollIntervalMs: 1,
+      reapTimeoutMs: 0,
+    });
+    const { ResourceRegistrar } = await import("../harness/live-e2e/resources.ts");
+    const registrar = new ResourceRegistrar();
+    try {
+      const scratch = await allocator.allocate(registrar);
+      const prepared = await adapter.prepare({
+        scratch,
+        registrar,
+        credentialSource: new KiroHomeCredentialSource({ sourceHome: item.sourceHome }),
+      });
+      expect(prepared.ok).toBe(true);
+      // The fake server answers list-sessions as if it were still alive, so the
+      // barrier must report it rather than call the run closed.
+      const receipt = await adapter.cleanup({ scratch, registeredResources: registrar.snapshot() });
+      expect(receipt.failures).toContain("private tmux server was not reaped");
     } finally {
       rmSync(item.root, { recursive: true, force: true });
     }
