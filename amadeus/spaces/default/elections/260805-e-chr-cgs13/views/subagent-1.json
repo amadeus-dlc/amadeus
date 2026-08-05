@@ -1,0 +1,25 @@
+{
+  "electionId": "E-CHR-CGS13",
+  "voter": "subagent-1",
+  "question": "260805-cross-harness-resume code-generation ステージの §13 学習選定。diary 候補3件の採否を裁定する。候補: c1 = verb 配置を amadeus-utility.ts でなく amadeus-state.ts にした判断(RECOVERY_COMPLETED の単一 emitter 契約 docs/reference/12-state-machine.md:214 と t48 逆検査の維持のため)+builder 裁量2件の受理(Interpretations 2026-08-05T14:55:00Z)。c2 = §12a iteration 1 BLOCKER(「161 pass / 0 fail」と t10 既存赤2件の自己矛盾)の正体が『t10 が2ファイル存在すること』であり、集計に入っていたのは tests/unit/t10-hook-session-start.test.ts(green)、既存赤は tests/e2e/t10-halt-and-ask-discard.test.ts だった。是正として全 run をフルパス+`Ran ... across N files` の指定数照合付きで再実測して確定値へ差し替えた(Interpretations 2026-08-06T00:20:00Z)。c3 = conductor 裏取りで builder 指定のテストパス誤り(t448-caller-denial-diagnosis → 実名 t448-caller-denial-reason)により bun が1ファイルを無音除外(4指定→3実行)、ls 実測で正名確認し再実行(Interpretations 2026-08-05T14:55:00Z)。実在根拠: diary = amadeus/spaces/default/intents/260805-cross-harness-resume/construction/code-generation/memory.md、成果物 = construction/fix-2285-cross-harness-resume/code-generation/{code-generation-plan.md,code-summary.md}(Review — Iteration 1/2 ブロック含む)。判定観点: 各候補が (a) 既存 cid の適用実例で成果物記録に留めるべきか (b) 既存 cid への追補に値する新規知識か (c) intent 固有の設計判断で記録のみで十分か、を memory 層の grep 実測で確認して選ぶ。特に c2/c3 と cid:build-and-test:test-path-set-completeness / cid:requirements-analysis:mechanism-cite-verify-at-draft(フルパス引用の追補)との関係を実読してから判定すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c2 を追補採用(検証エビデンス面)",
+      "description": "c2 を cid:build-and-test:test-path-set-completeness へ追補: 『検証エビデンスに書くテスト集合は短形番号でなくフルパスで表記する — 同一番号の複数ファイル共存は実在する生態であり、短形表記は集計結果と既知赤の帰属を同一視させてレビューで自己矛盾として現れる』。c1/c3 は不採用。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "c1 は intent 固有の設計判断で code-summary への記録で十分。c2/c3 はいずれも既存 cid(test-path-set-completeness = 指定数と Ran across N files の照合 / mechanism-cite-verify-at-draft 追補 = tNNN 短形でなくフルパスで引く)の適用実例であり、追補・新設ともに不要。memory 層への persist は行わない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c2・c3 を追補採用",
+      "description": "c2 を choice 2 と同様に追補し、加えて c3 を同 cid へ追補: 『存在しないテストパスの指定は bun が無音除外するため、実行前に ls でパス実在を確認する』。c1 は不採用。"
+    }
+  ]
+}

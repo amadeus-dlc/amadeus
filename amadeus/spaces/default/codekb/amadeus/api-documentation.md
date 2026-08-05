@@ -1,5 +1,39 @@
 # API ドキュメント
 
+## cross-harness resume が対象とする契約（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 認可ゲートが掛かる CLI 面（利用者可視契約）
+
+| ツール | ゲートされる語彙 | 実装 |
+| --- | --- | --- |
+| `amadeus-orchestrate.ts` | `next` / `report` / `park` / `gate-reserve` / `gate-reject` | `:2400` `refuseUnauthorizedKimiCaller` を `:2446` / `:4543` / `:5099` / `:5326` / `:5387` で呼ぶ |
+| `amadeus-state.ts` | `get` / `count` / `lookup` **以外の全27語彙**（`case "park"` `:1024`、`case "unpark"` `:1027` を含む） | `:902` `enforceCallerAuthorization`、除外は `:908-912` |
+
+**契約上の欠落**: park 時の復旧文言は `unpark` を案内するが、その `unpark` が同じゲートの内側にある。**拒否状態からの復旧を約束する CLI 契約は存在しない**（`amadeus-utility.ts` の verb dispatch を全数確認、`session-repair` 系 grep 0 hit）。`doctor` は kimi hook の配線のみを検査し、carrier 状態を診断する契約を持たない（carrier ファイル名の grep 0 hit）。
+
+### エラー契約
+
+`callerAuthorizationError(role)`（`amadeus-caller-authorization.ts:117-122`）が返す文言は role を埋め込む1形のみ。`role` が取る値は:
+
+- `"unknown"` — deny ラッチ（`:85`）／ marker 不読・不正（`:94`）／ `.current-session` 不一致・読取例外（`:105` / `:108`）の**4原因すべて**
+- 実 role 名（`:111-115`、`roles` の sorted first）— subagent 在席
+
+**したがって現行のエラー契約は原因を判別可能に伝えない。** 復旧手順も含まれない。既存テストは substring assert（`tests/integration/t365-kimi-reviewer-boundary.integration.test.ts:504` ほか）のため、判別値や復旧ガイドを追加しても既存契約は破れない。
+
+### 環境変数契約
+
+`AMADEUS_HARNESS_TYPE`（`amadeus-harness.ts:114-116`）はハーネス種別の明示指定として最優先で読まれる。**kimi 以外の値を与えると `amadeus-caller-authorization.ts:75` の早期 return が発火し、Kimi の認可境界が完全に無効化される**（対照実験で実測）。この副作用は docs に記載がない — 認可に影響する env として文書化するか、認可判定では env を無視するかは要裁定。
+
+### 文書契約との不整合
+
+`docs/guide/11-session-management.md:7` は次を宣言する:
+
+> **Harness note.** Session resume works on every harness (the state lives in the intent's record dir, not the harness).
+
+この宣言は intent record（状態層）については正しいが、**per-clone な `.current-session` carrier と Kimi 認可判定は「どのハーネスでも resume 可」を保証しない**。`kiro-ide` / `opencode` / `pi` は carrier を書かないため、これらから Kimi への引き継ぎは構造的に拒否される。
+
 ## advisory のdirective／report契約（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行wire契約

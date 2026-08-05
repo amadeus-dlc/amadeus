@@ -1,6 +1,40 @@
 # コード品質評価
 
-## 成果物ガードの fail-open 経路と非対称（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+## cross-harness resume の品質所見（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 技術的負債シグナル
+
+| # | シグナル | 実測根拠 | クラス |
+| --- | --- | --- | --- |
+| ① | **復旧不能の閉路**: 認可拒否からの in-band 復旧経路が構造的に不在。park の復旧文言が案内する `unpark` 自体が同じゲートに掛かる | `amadeus-state.ts:902` `enforceCallerAuthorization` が `:908-912` の `get` / `count` / `lookup` 以外の全27語彙をゲートし、`case "park"` `:1024` / `case "unpark"` `:1027` を含む | 可用性・回復可能性。**「案内する手段が案内先で塞がれている」= 対操作の非対称**（`cid:requirements-analysis:symmetric-pair-review` の類型） |
+| ② | **原因の畳み込み**: 4つの独立した失敗原因が同一のエラー値・同一文言に潰れる | `amadeus-caller-authorization.ts:85` / `:94` / `:105` / `:108` がすべて `{ kind: "denied", role: "unknown" }`。決定的再現 C1 / C2 / C3 / C6 が同一出力（実測） | 診断可能性。`:117-122` `callerAuthorizationError` に復旧手順もない |
+| ③ | **carrier 書き手の非対称**: 8ハーネス中3面が `.current-session` を書かない | 書き手は `amadeus-session-start.ts:97` の唯一箇所。`kiro-ide` は session_id 転送なし、`opencode` / `pi` は core hook 不使用（いずれも grep 0 hit） | 契約の穴。ユーザー要件（8ハーネス任意組合せ）に対して**構造的に不足** |
+| ④ | **未文書の認可バイパス**: env 1本で認可境界が丸ごと素通りする | `amadeus-harness.ts:113-123` が `:114-116` で `AMADEUS_HARNESS_TYPE` を最優先 → `amadeus-caller-authorization.ts:75` の早期 return。対照実験で C1-C6 全ケース `authorized` を実測 | セキュリティ・文書整合。docs に認可への影響の記載なし |
+| ⑤ | **projectDir 解決の二重実装**: 同じ workspace を指す2経路が別規則 | core hook `amadeus-lib.ts:298` は marker 検証付き5段ラダー、Kimi adapter `amadeus-kimi-lib.ts:704` は `env.cwd ?? projectDir` の raw cwd | 「canonical 1定義から導出」原則の違反。carrier 分裂を生む（C6 で実測） |
+| ⑥ | **文書と実挙動の不整合**: `docs/guide/11-session-management.md:7` の "Session resume works on every harness" は状態層についてのみ正しく、carrier 層・認可層は保証しない | 同行の実読 | 文書契約。所見B と正面から衝突する |
+
+### 検証面の弱さ
+
+- **caller-authorization 専用の unit テストが存在しない。** 122行の認可判定に対し、pin しているのは integration の `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts` のみで、しかも **substring assert（`"is not the main conductor"`、`:504` / `:536` / `:573` / `:646` / `:669` / `:689`）**。4つの拒否枝を区別するテストはない — シグナル②が構造的に検出されなかった理由でもある。
+- 一方でこの弱さは**是正時には有利に働く**: 文言に原因判別と復旧ガイドを追加しても既存 assert は破れないため、明示改訂は不要（追加テストは要る）。
+- `tests/integration/t-kimi-adapter.test.ts:413` は raw-cwd 挙動を pin しており、シグナル⑤の是正は**この pin の明示改訂を伴う**。`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い、実装段で着手せず要件段で仕様裁定とテスト契約の改訂をセットで確定すること。
+
+### 台帳への波及（是正時に該当するノルム）
+
+`tests/.coverage-patch-allowlist.json` に `authorizeMainConductor` エントリ3件、no-silent-drop 台帳にも同ファイルのエントリがある。`amadeus-caller-authorization.ts` へ行を挿入する修正では次が該当する:
+
+- `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）
+- `cid:code-generation:cg-allowlist-straddle-swell`（既存 waiver レンジの span 膨張検査）
+- `cid:code-generation:c1-260803-state-integrity`（no-silent-drop の census 再バインド。母集団が変わる場合）
+- `cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only ガードの census は最終 base で採る）
+
+### 区間内の品質変化
+
+session lifecycle / caller-authorization / harness detection のコード面は区間内で無変更（該当コミットは `fc862e879` の docs 1件）。**上記6シグナルはいずれも区間の外側で導入済みの既存構造であり、区間内の退行ではない。**
+
+## 成果物ガードの fail-open 経路と非対称（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
 
 本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙・実測手順は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
 
@@ -85,7 +119,6 @@ fail-closed で塞がれているため誤動作はしないが、**未接続の
 - **3層 trust**: compose の `TrustGrant`（`amadeus-plugin-compose.ts:161-165`）、compile の `plugin_source` stamp（`amadeus-graph.ts:140-146`）、run の O_NOFOLLOW + 同一 inode 再読み（`:1889-1901` / `:1971`）と digest 形式検査（`:2061-2074`）。プラットフォーム非対応時も `throw` で fail-closed。
 - **drop の復元判定が台帳でなく FS 実測**: `pluginArtifactsAbsent`（`amadeus-plugin.ts:1190-1198`）に加え `hasEmptyAncestorDir`（`:1202-1211`）で空の親ディレクトリ残骸まで検査する。`cid:code-generation:observe-dont-ledger-under-parallelism` と同じ設計思想。
 - **import-closure guard の新設**（区間内 #2240、`scripts/plugin-projection.ts:880-946`）: 宣言と実依存の乖離を projection 時点で write-0 拒否する。
-
 ## advisory 人間選択の品質所見（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された強み
