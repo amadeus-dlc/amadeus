@@ -123,6 +123,12 @@ describe("identity compare", () => {
     const { exitCode } = run(["identity", "compare", "--recorded", "nope", "--current", current]);
     expect(exitCode).toBe(2);
   });
+
+  test("rejects a compare invocation missing --current as a usage error", () => {
+    const { exitCode, body } = run(["identity", "compare", "--recorded", recorded]);
+    expect(exitCode).toBe(2);
+    expect(body.ok).toBe(false);
+  });
 });
 
 describe("bundle build / verify / read", () => {
@@ -181,6 +187,33 @@ describe("bundle build / verify / read", () => {
     const { exitCode, body } = run(["bundle", "read", "--ref", digest, "--store", storeRoot]);
     expect(exitCode).toBe(0);
     expect(body.evidence).toEqual(authoringParts);
+  });
+
+  test("rejects a build invocation missing required flags as a usage error", () => {
+    const partsPath = join(workspace, "parts.json");
+    writeFileSync(partsPath, JSON.stringify(authoringParts), "utf8");
+    const { exitCode, body } = run(["bundle", "build", "--parts", partsPath]);
+    expect(exitCode).toBe(2);
+    expect(body.ok).toBe(false);
+  });
+
+  test("reports an unparseable parts file as exit 1", () => {
+    const partsPath = join(workspace, "broken-parts.json");
+    writeFileSync(partsPath, "{ not json", "utf8");
+    const { exitCode, body } = run([
+      "bundle",
+      "build",
+      "--parts",
+      partsPath,
+      "--predecessor",
+      "root",
+      "--identity",
+      identity,
+      "--store",
+      storeRoot,
+    ]);
+    expect(exitCode).toBe(1);
+    expect(body.ok).toBe(false);
   });
 
   test("build rejects a parts file that is missing receipts", () => {

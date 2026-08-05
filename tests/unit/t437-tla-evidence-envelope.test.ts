@@ -194,3 +194,12 @@ describe("EvidenceEnvelopeCodec.resolveHeads", () => {
     expect(EvidenceEnvelopeCodec.resolveHeads([])).toEqual([]);
   });
 });
+
+describe("EvidenceEnvelopeCodec.parseBundleDigest", () => {
+  test("rejects a malformed digest with a typed missing-part failure", () => {
+    expect(failure(EvidenceEnvelopeCodec.parseBundleDigest("sha256:nope"))).toEqual({
+      kind: "missing-part",
+      parts: ["digest(sha256:nope)"],
+    });
+  });
+});

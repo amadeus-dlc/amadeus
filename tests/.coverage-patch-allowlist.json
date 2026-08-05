@@ -6097,5 +6097,15 @@
     },
     "reason": "CLI flag-validation arm: error() exits the process, so the invalid --choice branch is spawn-only; the valid preview path is driven in-process by t435.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-authoring.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:6601b73c10f23f39b59a60dffb571969e36788102d08258e8217b64988e2091e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
   }
 ]
