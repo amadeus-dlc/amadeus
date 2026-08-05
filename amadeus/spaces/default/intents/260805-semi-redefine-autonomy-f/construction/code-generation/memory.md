@@ -25,5 +25,7 @@
 
 - 2026-08-06T00:30:00Z — [PR #2294 是正] Patch Coverage Gate の UNCOVERED 3 行(catch ブレース+複数行文字列継続行 ×2 — 既知 DA:0 クラス)を conductor 直是正: 単一行 collapse+corrupt intents.json+cursor で SyntaxError を決定的に踏むテスト追加(error-path-reach-lcov 準拠で catch 行 DA=11 を機械確認)。d96ae3d81 → bolt へ cherry-pick 9cf48ee10。なお conductor 統合 full CI の赤 2 件は (i) t-pi-child-driver = 負荷起因 flake(被検面が本 diff と非交差+aar builder の 861 files PASS に同テスト含む+solo green) (ii) t265 = CI 実行中に conductor が本是正の編集+build を行った自傷汚染(solo green で確認)— クリーン再実行を builder 完了後に実施
 
+- 2026-08-06T00:45:00Z — [§13/latch] E-SRA-CGS13(2-0、L1+L2 採用)後の persist で journal health probe が FR-EVT-4 duplicate record を検出し fatal latch — 原因は batch 4 シャード解消の欠陥(fork 直前の fork 記録イベント 5 件が ours/theirs 両側に byte 同一で存在、初回解消の byte 重複検査が seq 再採番の後だったため見逃し)。前進修正: eventId 単位の重複除去(seq 以外の全フィールド一致 assert)+seq 再構成 → monotonic 1855 → persist 再実行で RULE_LEARNED 2 件 emit 閉包(seq 1856/1857)。L2 persist 文の手順・数値を実測再確定値へ是正(fix-diff-independent-reverify 適用)。§12a は iteration 1 READY(architecture-reviewer、FOLLOW-UP 1 件 = BR-7 前提集合の FD 起草注意 — 次 intent への申し送り)。統合検証はクリーン full CI RESULT: PASS(3点対照閉包)
+
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-CGS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f / code-generation ステージ完了時の §13 学習選定。candidates 正本 = record の construction/code-generation/memory.md(Interpretations/Deviations/Tradeoffs)。候補は次の 2 件。L1: 『full CI(dist byte 比較・coverage 系検査を含むスイート)実行中の作業ツリーは凍結する — 並行編集+bun run build は t265 級の dist/正本断面差の構造的偽赤を作り、rerun を汚染する(実測: conductor が CI rerun 中に PR #2294 の coverage 是正を編集+build → t265 が 6 fail、solo green で自傷確定)。cid:code-generation:c1-coverage-single-owner(coverage 計測の単独所有)の full CI+dist 比較面への追補』。L2: 『共有 append-only 監査シャードの fork 真分岐(両側追記)は、3-stage blob で base が両側の prefix であること(純追記)を機械検証してから、時系列和集合+seq 連番再構成で解消し、byte 重複 0・seq monotonic を機械確認する(実測: batch 4 回収マージ d461e41c5 で ours +17 / theirs +5 を本手順で解消)。cid:requirements-analysis:append-only-shard-conflict-resolution の非 prefix ケースの具体手順+cid:code-generation:cg-shard-merge-dedupe の seq 面追補』。不採用とした候補: DA:0 是正 3 行(既存 cid の違反実例に過ぎず新規性なし)/ tNNN 改番・E-SRA-CG1 執行(ステージ内で既に diary 固定済み・既存 cid で被覆)。選択肢: 1 = L1+L2 とも採用 / 2 = 一部のみ採用(留保で特定)/ 3 = 0 件(いずれも既存 cid で被覆と判断)。投票前に memory.md 該当行と一次記録(CI ログ・マージコミット)の実在を read-only で確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部のみ採用",
+      "description": "採用する候補を留保欄で特定する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "0 件採用",
+      "description": "いずれも既存 cid の違反実例・被覆済みと判断する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "L1+L2 とも採用",
+      "description": "両候補を project.md の Corrections へ persist する。"
+    }
+  ]
+}

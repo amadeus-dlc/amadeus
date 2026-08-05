@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRA-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "L2 の persist 文には『seq 再構成が必要なのは両側の追記 seq レンジが衝突している場合に限る』という発動条件を明記すること — 本件は ours/theirs とも seq:1839 から再開する実衝突を実測したが、衝突がなければ時系列和集合のみで足り、無条件の再採番は監査番号を不要に書き換える。",
+      "rationale": "L1: memory.md:26 に t265 自傷汚染の記録が実在し、ci-conductor-batch2-rerun.log:7298-7472 で t265-engine-boundary.integration の 6 harness 全 fail を確認。失敗実文 (:7300-7320) の diff は dist 側が複数行文字列継続形・期待側 CORE_ENGINE が単一行 collapse 形であり、まさに PR #2294 の DA:0 是正(単一行 collapse)を CI 実行中に加えたことによる編集断面差と一致する。既存 cid:code-generation:c1-coverage-single-owner(project.md:41)は coverageRoot rmSync による相互破壊のみを扱い、full CI 中の正本/dist 断面差は未被覆。memory 層への『凍結』『CI 実行中』grep は 0 hit で新規性を確認。L2: merge-base be74be96a に対し ours ebc282ce1=1855 行(+17)/ theirs ad24560f4=1843 行(+5)/ merged d461e41c5=1860 行(=1838+17+5)を実測。head -n 1838 の cmp で base が両側の prefix(=双方純追記の真分岐)であることを機械確認。merged は sort|uniq -d が 0 行、seq は 1..1860 が厳密連番(awk 検査)で、ours/theirs とも seq:1839 から再開する衝突を再採番で解消したことを確認。既存 cid:requirements-analysis:append-only-shard-conflict-resolution(team.md:181)は非 prefix ケースを明示的に『本手続きの対象外』とし和集合の方針しか示さず、cid:code-generation:cg-shard-merge-dedupe(project.md:387)は重複行除去のみを扱い seq 面は未被覆。memory 層への『seq 連番』『seq 再構成』grep も監査シャード文脈では 0 hit。よって両候補とも既存 cid への正当な追補であり採用する。",
+      "submittedAt": "2026-08-05T23:21:33Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRA-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "L1 の persist 文では『cid:code-generation:c1-coverage-single-owner の追補』という帰属を機序の同一性主張と読ませないこと — 既存 cid の機序は runner 起動時の coverageRoot rmSync による計測出力の相互破壊であるのに対し、L1 の実測機序は dist コピーと正本の断面差(t265 の byte 比較)であり、適用範囲は coverage に限らず full CI 実行中の作業ツリー全般として書くべきである。",
+      "rationale": "両候補とも一次記録で独立に裏取りでき、いずれも既存 cid で被覆されないため choice 1(両採用)とした。L1: memory.md:26 に t265 自傷汚染の記録が実在し、ci-conductor-batch2-rerun.log:7298-7472 で 6 fail(claude/codex/cursor/kiro/kiro-ide/opencode)を確認。失敗実文 :7307-7320 の diff は Expected(CORE_ENGINE 正本=単一行 collapse 済み)と Received(dist コピー=複数行の旧形)の差であり、まさに :26 の DA:0 是正編集の断面差 — 編集が CI 実行中に入ったことによる構造的偽赤と確定した。既存 cid では c1-coverage-single-owner が coverageRoot rmSync の機序のみ、rerun-red-reattribution は事後の再帰属のみを扱い、full CI 中のツリー凍結という予防面は memory 層に 0 hit。L2: git merge-base ebc282ce1 ad24560f4 = be74be96a、シャード行数は base 1838 / ours 1855(+17)/ theirs 1843(+5)/ merged 1860 で候補の主張と一致。base 部分の md5 は 3 者とも 85d804a0d13c27273f8dbd2a5ae96b92 で一致し、双方が base を純粋な prefix とする真分岐(append-only-shard-conflict-resolution:181 が明示的に『本手続きの対象外』とするケース)であることを機械確認した。merged は sort|uniq -d が 0 行、seq は 1..1860 の連番。決定的なのは ours/theirs とも seq 1839 から追記が始まる(ours :1839-1843 と theirs 末尾 5 行が同一 seq 値)ため素朴な和集合では seq が 5 箇所衝突する点で、これらは eventId の異なる別行なので cg-shard-merge-dedupe の byte 重複検査(sort|uniq -d)では構造的に検出できない — cg-ledger-blob-reconstruction も 3-stage blob 再構成までで seq 再採番は未被覆であり、L2 の seq 連番再構成は既存則の実ギャップを埋める。",
+      "submittedAt": "2026-08-05T23:21:42Z"
+    }
+  ],
+  "late": []
+}

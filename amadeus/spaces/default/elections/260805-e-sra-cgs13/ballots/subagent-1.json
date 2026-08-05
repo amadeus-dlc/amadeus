@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "L2 の persist 文には『seq 再構成が必要なのは両側の追記 seq レンジが衝突している場合に限る』という発動条件を明記すること — 本件は ours/theirs とも seq:1839 から再開する実衝突を実測したが、衝突がなければ時系列和集合のみで足り、無条件の再採番は監査番号を不要に書き換える。",
+  "rationale": "L1: memory.md:26 に t265 自傷汚染の記録が実在し、ci-conductor-batch2-rerun.log:7298-7472 で t265-engine-boundary.integration の 6 harness 全 fail を確認。失敗実文 (:7300-7320) の diff は dist 側が複数行文字列継続形・期待側 CORE_ENGINE が単一行 collapse 形であり、まさに PR #2294 の DA:0 是正(単一行 collapse)を CI 実行中に加えたことによる編集断面差と一致する。既存 cid:code-generation:c1-coverage-single-owner(project.md:41)は coverageRoot rmSync による相互破壊のみを扱い、full CI 中の正本/dist 断面差は未被覆。memory 層への『凍結』『CI 実行中』grep は 0 hit で新規性を確認。L2: merge-base be74be96a に対し ours ebc282ce1=1855 行(+17)/ theirs ad24560f4=1843 行(+5)/ merged d461e41c5=1860 行(=1838+17+5)を実測。head -n 1838 の cmp で base が両側の prefix(=双方純追記の真分岐)であることを機械確認。merged は sort|uniq -d が 0 行、seq は 1..1860 が厳密連番(awk 検査)で、ours/theirs とも seq:1839 から再開する衝突を再採番で解消したことを確認。既存 cid:requirements-analysis:append-only-shard-conflict-resolution(team.md:181)は非 prefix ケースを明示的に『本手続きの対象外』とし和集合の方針しか示さず、cid:code-generation:cg-shard-merge-dedupe(project.md:387)は重複行除去のみを扱い seq 面は未被覆。memory 層への『seq 連番』『seq 再構成』grep も監査シャード文脈では 0 hit。よって両候補とも既存 cid への正当な追補であり採用する。",
+  "submittedAt": "2026-08-05T23:21:33Z"
+}

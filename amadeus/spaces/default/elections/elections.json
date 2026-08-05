@@ -1006,5 +1006,11 @@
     "dirName": "260805-e-pcp-bts13",
     "createdAt": "2026-08-05T12:39:17Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SRA-CGS13",
+    "dirName": "260805-e-sra-cgs13",
+    "createdAt": "2026-08-05T23:18:40Z",
+    "status": "recorded"
   }
 ]
