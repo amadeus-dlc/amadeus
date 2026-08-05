@@ -6360,5 +6360,16 @@
       "targetLines": "1"
     },
     "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
+    "selector": {
+      "function": "runOnce",
+      "fingerprint": "sha256:df61978ae7bb2d6017d96094f6b3d5fd7ccfecde71e72e8191e3ea726d11eb35",
+      "anchorLines": 22,
+      "targetLines": "1-22"
+    },
+    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the standalone real-TLC probe (tests/formal-verif/support/tla-referee-real-toolchain-probe.ts, exercised per ruling A). The pre-toolchain rows of runOnce are driven in-process by t447 via a broken mutant.",
+    "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
   }
 ]

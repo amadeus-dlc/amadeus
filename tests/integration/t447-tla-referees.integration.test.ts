@@ -220,6 +220,17 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     expect(String((body.failure as { detail: string }).detail)).toContain("FR-006");
   });
 
+  test("a non-array invariants document is a typed invariant-name failure", async () => {
+    const subjects = writeJson("subjects-one.json", ["FR-006"]);
+    const rows = writeJson("rows-empty2.json", []);
+    const invariants = writeJson("invariants-bad.json", { not: "an array" });
+    const { exitCode, body } = await runAsync([
+      "trace", "--subjects", subjects, "--rows", rows, "--invariants", invariants,
+    ]);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("invalid-invariant-name");
+  });
+
   test("total coverage returns the proof digests on exit 0", async () => {
     const subjects = writeJson("subjects.json", ["FR-006"]);
     const rows = writeJson("rows.json", [
@@ -526,6 +537,17 @@ describe("the production referee toolchain adapter (CI-safe surface)", () => {
     expect(described.ok).toBe(false);
     if (described.ok) return;
     expect(described.error.code).toBe("MODULE_DEP_UNRESOLVED");
+  });
+
+  test("run() folds a broken mutant into a loud referee-toolchain error before any TLC work", async () => {
+    const { modulePath, configPath } = writeModel(
+      "Orphan",
+      "---- MODULE Orphan ----\nEXTENDS Nowhere\nVARIABLE q\n====\n",
+      "INIT Init\n",
+    );
+    const toolchain = createRefereeToolchain({ cacheRoot: join(dir, "cache") });
+    expect(toolchain.run({ kind: "baseline", modulePath, configPath, invariant: null, mutationRef: null }))
+      .rejects.toThrow(/referee toolchain:/);
   });
 
   test("the adapter's version line names the pinned jar and the pinned JDK", () => {
