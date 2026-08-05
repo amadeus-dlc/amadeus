@@ -385,28 +385,6 @@
     "expiry": "remove when the Kimi boundary tests gain an in-process driver for the malformed-carrier matrix"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:5d6801083f63d00ef8c2630d67c8753fcea51f0e4bb404e39de977e0ad48ce71",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Deny-latch presence arm (subagent-transition deny, session-ended deny, or in-flight role-marker lock). t365 asserts each latch state denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the latch-denial matrix gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:3ca9fd791648e870c1e7cb257e77b95a90f4ae4ded247beb79ea038244b80303",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Current-session mismatch arm (empty or differing .current-session carrier). t365 asserts the mismatch denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the session-mismatch case gains an in-process driver"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-contained-file.ts",
     "selector": {
       "function": "openCandidate",
