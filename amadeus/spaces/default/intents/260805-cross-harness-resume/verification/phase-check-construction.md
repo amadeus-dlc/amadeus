@@ -10,7 +10,7 @@
 |---|---|---|
 | CG 成果物の実在 | PASS | `construction/fix-2285-cross-harness-resume/code-generation/{code-generation-plan.md,code-summary.md}` 実在、Review — Iteration 1(NOT-READY)/ 2(READY)ブロック実在 |
 | B&T 成果物の実在(7点) | PASS | build/unit/integration/performance/security instructions+summary+build-test-results の7点、センサー required-sections / upstream-coverage 全 PASSED(is正1件含む) |
-| 要件 → 実装のトレース | PASS | FR-1〜FR-5 の各 AC が実装(コミット `73bf309fd` 等4件)とテスト(t448/t449/t450 の test 名+行番号)へ対応付け済み(code-summary.md の FR 対応表) |
+| 要件 → 実装のトレース | PASS | FR-1〜FR-5 の各 AC が実装(コミット `73bf309fd` 等4件)とテスト(t451/t452/t453 の test 名+行番号)へ対応付け済み(code-summary.md の FR 対応表) |
 | テストによる AC 固定 | PASS | フルスイート **845 files / 11,209 assertions / 0 fail**(tests/logs/2026-08-05T22-25-01Z)。TDD Red→Green を Step ごとに記録 |
 | ブロッキングゲート | PASS | typecheck / lint / build / source-only:check / no-silent-drop 全 exit 0(build-test-results.md) |
 | 未解決 BLOCKER | PASS(0件) | §12a CG iteration 2 READY、B&T は verdict PASS(coverage は PR CI へ申し送り = AC 外) |

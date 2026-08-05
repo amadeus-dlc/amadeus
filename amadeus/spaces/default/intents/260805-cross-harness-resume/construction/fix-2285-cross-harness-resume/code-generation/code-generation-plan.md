@@ -56,7 +56,7 @@ requirements.md の FR-1〜FR-5 を TDD(Red → Green の vertical slice 反復)
 
 - BLOCKER | code-summary.md:47 は t10 を含む集計を『161 pass / 0 fail』と報告するが、:53 は tests/e2e/t10-halt-and-ask-discard.test.ts の既存赤2件を明記しており同一節内で直接矛盾。numbers-from-command-output-only / report-final-values-only の求める実測転記になっていない。是正: (a) t10 を除外した run の内訳明記、または (b) 正しい pass/fail 内訳への訂正と既知赤2件との整合。
 - FOLLOW-UP | NFR-1(AMADEUS_HARNESS_TYPE を復旧手段として案内しない)の実装・検証証跡(grep 確認・実文抜粋)が code-summary に欠落 — FR-1〜5・NFR-2〜4 は検証記述を伴うのに NFR-1 のみ不在。
-- FOLLOW-UP | FR-4 (a)〜(f) 契約のテスト対応付けが包括記述のみ — FR-1/FR-2 と同水準の file:line トレーサビリティ(t450 の個別テスト名対応)を付すべき。
+- FOLLOW-UP | FR-4 (a)〜(f) 契約のテスト対応付けが包括記述のみ — FR-1/FR-2 と同水準の file:line トレーサビリティ(t453 の個別テスト名対応)を付すべき。
 
 ## Review — Iteration 2
 
@@ -72,7 +72,7 @@ Iteration 1 の BLOCKER(t10 集計矛盾)は2ファイル存在の説明+フル�
 
 - FOLLOW-UP | BLOCKER 解消確認: 「t10 は2ファイル存在する」の明示により run A(tests/unit/t10-hook-session-start.test.ts 含む6ファイル・113 pass/0 fail)と既存赤(tests/e2e/t10-halt-and-ask-discard.test.ts 2 fail)が分離され、run A〜C に既存赤が含まれないと明記。フルパス+Ran across N files の指定数照合で実測転記の体裁になった。
 - FOLLOW-UP | NFR-1 証跡の閉包確認: grep -c 実測(エラーメッセージ側 0/0、手順書側 1/1)と手順書 :153-155 の実文抜粋が NFR-1「案内しない」と CON-4「文書化する」を同時に満たす。
-- FOLLOW-UP | FR-4 トレーサビリティの閉包確認: (a)〜(f) が t450 の個別 test 名+行番号へ対応付けられ FR-1/FR-2 と同水準。
+- FOLLOW-UP | FR-4 トレーサビリティの閉包確認: (a)〜(f) が t453 の個別 test 名+行番号へ対応付けられ FR-1/FR-2 と同水準。
 - NIT | FR-4(b) の対応付けに置かれた :338 は文言上 (c) の成功系に近い — (b)/(c) の境界表記に精密化の余地(verdict を左右しない)。conductor が (b)=:368/:298、(c)=拒否 :311/:324+成功 :338 へ是正済み。
 - FOLLOW-UP | 是正 diff 内の新規引用・数値(f31156e2a、census 213/213/213、TDD 件数)は自己矛盾なく、fix-diff-independent-reverify で追加の誤りなし。
 - FOLLOW-UP | consumes ヘッダ(requirements.md のみ)は self-fix が units-generation/application-design を skip する設計と整合し degrade scope として妥当。

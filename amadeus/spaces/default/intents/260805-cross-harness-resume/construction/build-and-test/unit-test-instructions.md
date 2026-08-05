@@ -10,7 +10,7 @@
 |---|---|
 | `tests/unit/t10-hook-session-start.test.ts` | `.current-session` 書込み契約(#1922 修正後の正本)— FR-3 の前提となる SessionStart 挙動 |
 | `tests/unit/t28-audit-event-sync.test.ts` | audit イベント台帳の同期 — `RECOVERY_COMPLETED.optionalAttributes` 拡張の整合 |
-| `tests/unit/gen-coverage-registry.test.ts` | coverage registry の鮮度(t448-t450 追加後の再生成を検査) |
+| `tests/unit/gen-coverage-registry.test.ts` | coverage registry の鮮度(t451-t453 追加後の再生成を検査) |
 
 ## 実行
 

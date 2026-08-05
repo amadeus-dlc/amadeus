@@ -1,7 +1,7 @@
 // covers: function:authorizeMainConductor, function:callerAuthorizationError
 // size: medium
 //
-// t448 — the Kimi caller-authorization denial REASON contract (FR-1) and the
+// t451 — the Kimi caller-authorization denial REASON contract (FR-1) and the
 // recovery guidance carried by the denial message (FR-2).
 //
 // Before this contract every denial collapsed into `role: "unknown"`, so a

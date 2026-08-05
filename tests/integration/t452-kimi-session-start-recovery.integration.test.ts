@@ -2,7 +2,7 @@
 //         file:packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
 // size: medium
 //
-// t449 — the AUTOMATIC recovery layer (FR-3). A Kimi SessionStart is the
+// t452 — the AUTOMATIC recovery layer (FR-3). A Kimi SessionStart is the
 // framework's promise that a new session re-establishes its own main-conductor
 // carrier; this test pins that promise as a closure over the denial reasons a
 // cross-harness handover actually produces: an absent marker (C1), a
