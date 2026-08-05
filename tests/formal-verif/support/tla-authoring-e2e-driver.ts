@@ -11,9 +11,9 @@
 // observed. Every judgement stays in the test: the driver reports values, the
 // test asserts them, and the test reads the model map itself before and after
 // so "the map is byte-identical" is never the driver's word for it.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { canonicalIdentity } from "../../../plugins/formal-model-check/tools/canonical.ts";
+import { entryFor, IMPL_PATH, PLUGIN, SUBJECTS } from "./tla-authoring-e2e-fixture.ts";
 import type {
   PlannedTlcOutcome,
   PreparedPlannedTlcRun,
@@ -26,40 +26,9 @@ import type {
 import type { EnvReceipt } from "../../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 import type { VerifiedTlcArtifact } from "../../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
-export const PLUGIN = "formal-model-check";
 export const APPROVED_AT = "2026-08-05T00:00:00Z";
 export const RUN_ID = "00000000-0000-4000-8000-000000000001";
-export const SUBJECTS = ["FR-001", "FR-002", "AC-001"] as const;
 export const INVARIANTS = ["ActiveWithinCapacity", "NoUnitLostOnSettle"] as const;
-export const IMPL_PATH = "packages/framework/core/tools/amadeus-unit-pool.ts";
-
-// The map records a domain-scoped canonical identity, not a bare file hash:
-// tla-model-loader-internal.ts:93-94 pins the two domains and :231 computes
-// `canonicalIdentity(source, domain).sha256` over the decoded text.
-const TLA_MODULE_DOMAIN = "amadeus.formal-verif.tla.module.v1";
-const TLA_CFG_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
-
-// The map a registration lands in is never empty — the validator refuses an
-// empty model list — so the fixture starts from one already-registered model,
-// with real bytes on disk, and the run must leave it untouched.
-const SEED_MODULE = [
-  "---- MODULE Seed ----",
-  "EXTENDS Naturals",
-  "VARIABLE seeded",
-  "SeedOK == seeded \\in Nat",
-  "Spec == seeded = 0 /\\ [][seeded' = seeded]_seeded",
-  "====",
-  "",
-].join("\n");
-
-const SEED_CONFIG = ["SPECIFICATION Spec", "INVARIANT SeedOK", ""].join("\n");
-
-// A registered model declares the invariants it checks and the state variables
-// its traces carry; the receipt refuses a model with no declared vocabulary
-// (tla-model-receipt.ts:97).
-export const SEED_VOCABULARY = {
-  vocabulary: { namedInvariants: ["SeedOK"], traceStateVariables: ["seeded"] },
-};
 
 const UNIT_POOL_VOCABULARY = {
   vocabulary: {
@@ -105,53 +74,6 @@ const COMPLETE = {
   completionMarker: "Model checking completed. No error has been found.",
   terminationReason: "EXHAUSTED",
 };
-
-function digestOf(path: string, domain: string): string {
-  return canonicalIdentity(readFileSync(path, "utf8"), domain).sha256;
-}
-
-/** A model-map entry whose declared identities are the bytes actually on disk. */
-export function entryFor(root: string, name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    name,
-    model: {
-      path: `specs/tla/${name}.tla`,
-      identity: digestOf(join(root, "specs", "tla", `${name}.tla`), TLA_MODULE_DOMAIN),
-    },
-    cfg: {
-      path: `specs/tla/${name}.cfg`,
-      identity: digestOf(join(root, "specs", "tla", `${name}.cfg`), TLA_CFG_DOMAIN),
-    },
-    entries: [
-      {
-        implPath: IMPL_PATH,
-        sha256: Bun.CryptoHasher.hash("sha256", readFileSync(join(root, IMPL_PATH)), "hex"),
-      },
-    ],
-    ...extra,
-  };
-}
-
-export function mapText(models: readonly Record<string, unknown>[]): string {
-  return `${JSON.stringify({ schemaVersion: 2, models }, null, 2)}\n`;
-}
-
-/**
- * Make the composed host look like the repository the model loader resolves:
- * it walks up from the tool's own module URL for .git + package.json +
- * specs/tla, so the registered map has to live where a real workspace keeps it.
- */
-export function repoLikeHost(host: string): void {
-  mkdirSync(join(host, ".git"), { recursive: true });
-  writeFileSync(join(host, "package.json"), '{"name":"e2e-host"}\n');
-  // Every model-map entry names an implementation the loader hashes, and the
-  // loader confines those paths to packages/framework/core/tools.
-  mkdirSync(join(host, "packages", "framework", "core", "tools"), { recursive: true });
-  writeFileSync(join(host, IMPL_PATH), "export const unitPool = 'fixture';\n");
-  mkdirSync(join(host, "specs", "tla"), { recursive: true });
-  writeFileSync(join(host, "specs", "tla", "Seed.tla"), SEED_MODULE);
-  writeFileSync(join(host, "specs", "tla", "Seed.cfg"), SEED_CONFIG);
-}
 
 // ---------------------------------------------------------------------------
 // Child-process side: everything below loads the COMPOSED tree

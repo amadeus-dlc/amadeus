@@ -37,13 +37,17 @@ import {
   type WorkspaceTransaction,
 } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+// Only the shared fixture is imported in-process: the driver itself is
+// spawn-only, and importing it here would load a module this process never
+// executes, so its whole body would enter the coverage report at zero hits
+// (cid:code-generation:seam-placement-measured-module).
 import {
   entryFor,
   mapText,
   repoLikeHost,
   SEED_VOCABULARY,
   SUBJECTS,
-} from "../formal-verif/support/tla-authoring-e2e-driver.ts";
+} from "../formal-verif/support/tla-authoring-e2e-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "dist", "plugins");
