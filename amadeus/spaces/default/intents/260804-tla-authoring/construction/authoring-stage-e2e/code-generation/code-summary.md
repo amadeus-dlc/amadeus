@@ -18,7 +18,8 @@
 ## 検証(実測 exit code)
 
 - conductor 裏取り(c5 引き取り — Stop hook 下で builder 報告がターン境界配送不能のため disk-evidence 早期切替): typecheck 0 / lint 0 / t450 = 11 pass 0 fail / siblings(t444+t448+t449+plugin 検査2)= 84 pass 0 fail / patch gate PASS(measured 0 — spec kind のためソース測定行なし)/ 統合 full CI は本 summary 確定前に実行(結果は PR 検証と CI を正とする)
-- builder 実測(引き取り前): full CI RESULT: PASS(是正前断面)、coverage:ci PASS
+- builder 実測: 是正後断面(HEAD 3006562fa)で full CI RESULT: PASS / coverage:ci PASS / patch gate PASS(measured 0 = tests のみ)/ typecheck 0 / lint 0(遅着報告 2026-08-05T16:19Z 受領で確定)。conductor 側でも同断面の full CI PASS を独立実測(exit 0)
+- 是正の TDD: Red(MODEL_MAP_INVALID: repository root 未解決で 1 fail)→ 実装契約3件(domain 付き canonical identity / implPath 実在+ハッシュ一致 / vocabulary 宣言必須)を実測追随 → Green 11 pass。CONTROL(repo 外 scratch・未コミット): commit 直後に map を登録前へ戻すと『model map does not register the requested model UnitPool』で fail — E2E の model-check assert が自身の登録に依存することを実証
 - referee: `amadeus-swarm check authoring-stage-e2e` converged=true / tampered=false、settle-release outcome=succeeded(pool terminal/completed)。finalize の engine merge-back は AUDIT_FORKED 不在(worktree を手動 git worktree add で作成したため fork 監査マーカーが無い)で audit-merge-failed — 既習回収手順により conductor が --no-ff 明示マージで回収(parent 2 / ls-files -u 0 / 対象ファイル実在 / 監査シャード重複 0 を機械確認)
 
 ## 逸脱・裁定
