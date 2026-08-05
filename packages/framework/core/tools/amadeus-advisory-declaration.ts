@@ -9,10 +9,19 @@
 // itself — where it fires, its directive contract, and the provenance-verified
 // release rule — is untouched.
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Advisory, AdvisoryCode } from "./amadeus-plugin-activation.ts";
+import {
+  activationAdvisoriesForHost,
+  composedPluginNames,
+  defaultActivationFs,
+  specRootForHost,
+  type ActivationFs,
+  type Advisory,
+  type AdvisoryCode,
+} from "./amadeus-plugin-activation.ts";
 
 export type AdvisoryDeclaration = {
   readonly code: string;
@@ -255,6 +264,51 @@ export function declaredAdvisoriesForPlugin(
     if (advisory !== null) raised.push(advisory);
   }
   return raised;
+}
+
+/**
+ * Launch an evaluator as an argv vector with no shell in between, so nothing a
+ * manifest holds can be word-split or expanded (BR-U2-19). `env` is passed
+ * explicitly because Bun does not fold a mutated process.env into a child.
+ *
+ * The spawn lives here rather than in amadeus-plugin-activation.ts: that module
+ * starts no process by construction (BR-U6-2, the ADR-1 option-A boundary), and
+ * a declared evaluator must not smuggle one in through it.
+ */
+export function spawnEvaluator(projectRoot: string): RunEvaluator {
+  return (argv) => {
+    const result = spawnSync(argv[0] as string, [...argv.slice(1)], {
+      cwd: projectRoot,
+      env: process.env,
+      encoding: "utf-8",
+    });
+    return { status: result.status ?? 1, stdout: result.stdout ?? "" };
+  };
+}
+
+/**
+ * Every advisory this host raises at `stage`: the engine's own spec-hash
+ * judgment plus the ones composed plugins declare. Generalization point 1 of
+ * ADR-6 (revised) — the declaration route is an addition to the hard-coded one,
+ * never a replacement (BR-U2-21).
+ */
+export function advisoriesForHost(
+  hostRoot: string,
+  stage: string,
+  fs: ActivationFs = defaultActivationFs,
+  runEvaluator: RunEvaluator = spawnEvaluator(specRootForHost(hostRoot)),
+): Advisory[] {
+  const projectRoot = specRootForHost(hostRoot);
+  const declarationFs: DeclarationFs = {
+    existsSync: (path) => fs.existsSync(path),
+    readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),
+  };
+  return [
+    ...activationAdvisoriesForHost(hostRoot, stage, fs),
+    ...composedPluginNames(hostRoot, fs).flatMap((plugin) =>
+      declaredAdvisoriesForPlugin(projectRoot, plugin, stage, runEvaluator, declarationFs)
+    ),
+  ];
 }
 
 /** The declared run-now argv for one (plugin, code), or null when there is none. */

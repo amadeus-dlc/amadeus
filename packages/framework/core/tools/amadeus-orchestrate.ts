@@ -238,12 +238,14 @@ import { inferScopeFromText } from "./amadeus-utility.ts";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
-  activationAdvisoriesForHost,
   type Advisory,
   isComposedPluginStage,
   recordActivationVerdict,
   unlatchedAdvisories,
 } from "./amadeus-plugin-activation.ts";
+// The advisory supply the engine consumes: the spec-hash judgment plus whatever
+// composed plugins declare (ADR-6 revision).
+import { advisoriesForHost } from "./amadeus-advisory-declaration.ts";
 
 function trustedHostSessionId(projectDir: string | undefined): string | undefined {
   const pd = resolveProjectDir(projectDir);
@@ -1401,8 +1403,8 @@ export function emitActivationAdvisory(
 ): Advisory[] {
   if (!ACTIVATION_ADVISORY_STAGES.has(slug)) return [];
   const raised = latchDir
-    ? unlatchedAdvisories(latchDir, activationAdvisoriesForHost(hostRoot, slug))
-    : activationAdvisoriesForHost(hostRoot, slug);
+    ? unlatchedAdvisories(latchDir, advisoriesForHost(hostRoot, slug))
+    : advisoriesForHost(hostRoot, slug);
   for (const advisory of raised) err(advisory.message);
   return raised;
 }
@@ -1432,7 +1434,7 @@ function takePendingAdvisories(): Advisory[] {
 function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
   const hostRoot = pluginActivationHostRoot();
   const advisories = ACTIVATION_ADVISORY_STAGES.has(slug)
-    ? activationAdvisoriesForHost(hostRoot, slug)
+    ? advisoriesForHost(hostRoot, slug)
     : [];
   emitActivationAdvisory(
     slug,

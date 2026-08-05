@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseAdvisoryDeclarations } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
-import { activationAdvisoriesForHost } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import {
+  advisoriesForHost,
+  parseAdvisoryDeclarations,
+} from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 
 // U2 generalization point 1 (ADR-6 revision): the engine supplies advisories a
 // composed plugin declares, evaluated by that plugin's own evaluator. The
@@ -41,7 +43,7 @@ const HOLD_DECLARATION = [
 
 function advisoriesFor(stage: string, stdout: string, status = 1) {
   const seen: string[][] = [];
-  const raised = activationAdvisoriesForHost(hostRoot, stage, undefined, (argv) => {
+  const raised = advisoriesForHost(hostRoot, stage, undefined, (argv) => {
     seen.push([...argv]);
     return { status, stdout };
   });
@@ -67,7 +69,7 @@ describe("declared advisory supply", () => {
       JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] } }),
     );
     expect(raised).toHaveLength(1);
-    expect(raised[0]?.code).toBe("authoring-hold");
+    expect(String(raised[0]?.code)).toBe("authoring-hold");
     expect(raised[0]?.message).toContain("no-applicability-receipt");
     // argv only: the declaration is executed as a vector, never a shell string.
     expect(seen).toEqual([["bun", "plugins/demo/tools/evaluate.ts", "hold"]]);

@@ -29,13 +29,7 @@ import {
   statSync as fsStatSync,
   writeFileSync as fsWriteFileSync,
 } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { dirname, join, posix, relative, sep } from "node:path";
-import {
-  declaredAdvisoriesForPlugin,
-  type DeclarationFs,
-  type RunEvaluator,
-} from "./amadeus-advisory-declaration.ts";
 import { evaluateTlaModelReadiness } from "./amadeus-formal-verif-model-map.ts";
 
 // The formal-model-check plugin is the sole activation target of this intent.
@@ -284,49 +278,13 @@ export function activationAdvisoriesForHost(
   hostRoot: string,
   stage: string,
   fs: ActivationFs = defaultActivationFs,
-  runEvaluator: RunEvaluator = spawnEvaluator(specRootForHost(hostRoot)),
 ): Advisory[] {
-  return [
-    ...specHashAdvisories(hostRoot, stage, fs),
-    ...declaredAdvisories(hostRoot, stage, fs, runEvaluator),
-  ];
+  return specHashAdvisories(hostRoot, stage, fs);
 }
 
-// Generalization point 1 of ADR-6 (revised): every composed plugin may declare
-// the advisories it evaluates itself, so a plugin needing a checkpoint hold
-// does not have to be carved into this module a second time. The spec-hash
-// advisory above keeps its own hard-coded path unchanged — the declaration
-// route is an addition, not a replacement (BR-U2-21).
-function declaredAdvisories(
-  hostRoot: string,
-  stage: string,
-  fs: ActivationFs,
-  runEvaluator: RunEvaluator,
-): Advisory[] {
-  const projectRoot = specRootForHost(hostRoot);
-  const declarationFs: DeclarationFs = {
-    existsSync: (path) => fs.existsSync(path),
-    readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),
-  };
-  return readCompositionPlugins(hostRoot, fs).flatMap(([plugin]) =>
-    declaredAdvisoriesForPlugin(projectRoot, plugin, stage, runEvaluator, declarationFs)
-  );
-}
-
-// Evaluators are launched as an argv array with no shell in between, so nothing
-// a manifest holds can be word-split or expanded (BR-U2-19). `env` is passed
-// explicitly because Bun does not fold a mutated process.env into a child.
-function spawnEvaluator(projectRoot: string): RunEvaluator {
-  return (argv) => {
-    const result = spawnSync(argv[0] as string, [...argv.slice(1)], {
-      cwd: projectRoot,
-      env: process.env,
-      encoding: "utf-8",
-    });
-    return { status: result.status ?? 1, stdout: result.stdout ?? "" };
-  };
-}
-
+// The spec-hash advisory of ADR-1 option A. Declared plugin advisories are
+// supplied by amadeus-advisory-declaration.ts instead: this module starts no
+// process (BR-U6-2), so the evaluator side cannot live here.
 function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): Advisory[] {
   if (!formalModelCheckComposed(hostRoot, fs)) return [];
   const judgment = resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs);
@@ -415,6 +373,10 @@ export function unlatchedAdvisories(
 // The composition record's plugin entries: [name, record][]. We only need the
 // names, so the record half is opaque.
 type CompositionJson = { plugins?: [string, unknown][] };
+
+export function composedPluginNames(hostRoot: string, fs: ActivationFs = defaultActivationFs): string[] {
+  return readCompositionPlugins(hostRoot, fs).map(([name]) => name);
+}
 
 function readCompositionPlugins(hostRoot: string, fs: ActivationFs): [string, unknown][] {
   const path = join(hostRoot, ".amadeus-plugin-composition.json");

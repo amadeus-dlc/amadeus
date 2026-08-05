@@ -81,7 +81,7 @@ describe("advisoryFromEvaluatorRun (BR-U2-20: stdout is the authority)", () => {
       status: 1,
       stdout: JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "stale-evidence" }] } }),
     });
-    expect(raised?.code).toBe("authoring-hold");
+    expect(String(raised?.code)).toBe("authoring-hold");
     expect(raised?.plugin).toBe("formal-model-check");
     expect(raised?.stage).toBe("requirements-analysis");
     expect(raised?.message).toContain("stale-evidence");
