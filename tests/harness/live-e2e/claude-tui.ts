@@ -20,6 +20,24 @@ import { digest, type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
 import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
+import {
+  absentPrivateServer,
+  commandFailed,
+  MAX_PANE_LINES,
+  paneLimitIssue,
+  shellQuote,
+  SpawnSyncTmuxCommandPort,
+  type TmuxCommandOptions,
+  type TmuxCommandPort,
+  type TmuxCommandResult,
+} from "./tmux.ts";
+
+export {
+  SpawnSyncTmuxCommandPort,
+  type TmuxCommandOptions,
+  type TmuxCommandPort,
+  type TmuxCommandResult,
+} from "./tmux.ts";
 
 export const CLAUDE_TUI_ANCHOR_FILE = ".amadeus-live-tui-anchor.json";
 export const CLAUDE_TUI_PROMPT =
@@ -33,47 +51,7 @@ const CAPABILITY = (() => {
   return resolved.value;
 })();
 const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "ANTHROPIC_API_KEY" };
-const MAX_PANE_BYTES = 1_048_576;
-const MAX_PANE_LINES = 16_384;
-const MAX_PANE_LINE_BYTES = 65_536;
 const READY_PROMPT_PATTERN = /^\s*❯\s*$/mu;
-
-export interface TmuxCommandResult {
-  readonly exitCode: number | null;
-  readonly stdout: string;
-  readonly stderr: string;
-}
-
-export interface TmuxCommandOptions {
-  readonly cwd?: string;
-  readonly env?: Readonly<Record<string, string>>;
-}
-
-export interface TmuxCommandPort {
-  run(args: readonly string[], options?: TmuxCommandOptions): TmuxCommandResult;
-}
-
-export class SpawnSyncTmuxCommandPort implements TmuxCommandPort {
-  readonly #tmuxBin: string;
-
-  constructor(tmuxBin: string) {
-    this.#tmuxBin = tmuxBin;
-  }
-
-  run(args: readonly string[], options: TmuxCommandOptions = {}): TmuxCommandResult {
-    const result = spawnSync(this.#tmuxBin, [...args], {
-      cwd: options.cwd,
-      env: options.env,
-      encoding: "utf8",
-      maxBuffer: MAX_PANE_BYTES + 1,
-    });
-    return {
-      exitCode: result.status,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? String(result.error ?? ""),
-    };
-  }
-}
 
 interface PrivateTmuxIdentity {
   readonly runId: string;
@@ -94,19 +72,6 @@ export interface ClaudeTuiAdapterOptions {
   readonly readyTimeoutMs?: number;
 }
 
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
-}
-
-function paneLimitIssue(pane: string): string | null {
-  if (Buffer.byteLength(pane) > MAX_PANE_BYTES) return "pane exceeded byte limit";
-  const lines = pane.split("\n");
-  if (lines.length > MAX_PANE_LINES) return "pane exceeded line limit";
-  return lines.some((line) => Buffer.byteLength(line) > MAX_PANE_LINE_BYTES)
-    ? "pane exceeded single-line limit"
-    : null;
-}
-
 function readCurrentAnchor(projectDir: string, runId: string): boolean {
   const path = join(projectDir, CLAUDE_TUI_ANCHOR_FILE);
   if (!existsSync(path)) return false;
@@ -116,15 +81,6 @@ function readCurrentAnchor(projectDir: string, runId: string): boolean {
   } catch {
     return false;
   }
-}
-
-function commandFailed(result: TmuxCommandResult): boolean {
-  return result.exitCode !== 0;
-}
-
-function absentPrivateServer(result: TmuxCommandResult): boolean {
-  const diagnostic = `${result.stdout}\n${result.stderr}`;
-  return /no server running|can't find session|no sessions/i.test(diagnostic);
 }
 
 export class ClaudeTuiAdapter implements LiveAdapter {
