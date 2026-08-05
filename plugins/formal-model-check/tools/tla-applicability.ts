@@ -9,7 +9,16 @@
 
 import { createHash } from "node:crypto";
 import type { Result } from "./contract.ts";
-import type { AggregateDigest, PredecessorRef, StableId } from "./tla-evidence.ts";
+import type {
+  AggregateDigest,
+  BundleDigest,
+  BundleFailure,
+  CorruptedEntry,
+  EvidenceBundleRef,
+  EvidenceParts,
+  PredecessorRef,
+  StableId,
+} from "./tla-evidence.ts";
 
 // ---------------------------------------------------------------------------
 // C1: applicability vocabulary
@@ -192,6 +201,154 @@ export const ApplicabilityJudge = {
   judge,
   buildReceipt,
   rowForRoute: (route: ApplicabilityRoute): string => ROUTE_ROWS[route],
+} as const;
+
+// ---------------------------------------------------------------------------
+// C9: the authoring hold evaluator
+// ---------------------------------------------------------------------------
+
+export type HoldReason =
+  | { readonly kind: "no-applicability-receipt"; readonly subject: AggregateDigest }
+  | { readonly kind: "authoring-incomplete"; readonly route: "author-new" | "revise-model" }
+  | { readonly kind: "stale-evidence"; readonly recorded: AggregateDigest; readonly current: AggregateDigest };
+
+export type HoldVerdict =
+  | { readonly kind: "no-hold"; readonly basis: EvidenceBundleRef }
+  | { readonly kind: "hold"; readonly reasons: readonly HoldReason[] };
+
+export type HoldFailure =
+  | { readonly kind: "evidence-unreadable"; readonly refs: readonly EvidenceBundleRef[] }
+  | { readonly kind: "model-map-unreadable"; readonly detail: string }
+  | { readonly kind: "corrupted-evidence"; readonly entries: readonly CorruptedEntry[] };
+
+export interface HoldInput {
+  readonly currentSeries: SubjectSeriesKey;
+  readonly currentIdentity: AggregateDigest;
+  readonly modelMap: ModelMapSnapshot | null;
+  readonly evidenceIndex: readonly EvidenceBundleRef[];
+}
+
+export type ReadEvidence = (ref: EvidenceBundleRef) => Result<EvidenceParts, BundleFailure>;
+
+// The applicability receipt as it is read back out of an evidence bundle. Only
+// the fields the hold table consumes are narrowed; the rest stays opaque.
+interface RecordedReceipt {
+  readonly route: ApplicabilityRoute;
+  readonly subjectIdentity: AggregateDigest;
+  readonly subjectSeries: SubjectSeriesKey;
+  readonly subjects: readonly StableId[];
+  readonly predecessor: PredecessorRef;
+}
+
+interface SeriesEntry {
+  readonly ref: EvidenceBundleRef;
+  readonly kind: EvidenceParts["kind"];
+  readonly receipt: RecordedReceipt;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Narrow a receipt out of a bundle's applicability part; `null` when it is not one. */
+function recordedReceipt(parts: EvidenceParts): RecordedReceipt | null {
+  const applicability = parts.parts.applicability as unknown;
+  if (!isRecord(applicability)) return null;
+  const { route, subjectIdentity, subjectSeries, predecessor } = applicability;
+  if (typeof route !== "string" || !Object.hasOwn(ROUTE_ROWS, route)) return null;
+  if (typeof subjectIdentity !== "string" || typeof subjectSeries !== "string") return null;
+  const subjects = Array.isArray(applicability.subjects)
+    ? applicability.subjects.filter((subject): subject is string => typeof subject === "string")
+    : [];
+  return {
+    route: route as ApplicabilityRoute,
+    subjectIdentity: subjectIdentity as AggregateDigest,
+    subjectSeries: subjectSeries as SubjectSeriesKey,
+    subjects: subjects as unknown as readonly StableId[],
+    predecessor: isRecord(predecessor) && predecessor.kind === "bundle" && typeof predecessor.digest === "string"
+      ? { kind: "bundle", digest: predecessor.digest as BundleDigest }
+      : { kind: "root" },
+  };
+}
+
+/** Chain tips: the entries no other entry of the same series supersedes. */
+function seriesTips(entries: readonly SeriesEntry[]): readonly SeriesEntry[] {
+  const superseded = new Set<string>(
+    entries
+      .map((entry) => entry.receipt.predecessor)
+      .filter((predecessor): predecessor is { kind: "bundle"; digest: BundleDigest } => predecessor.kind === "bundle")
+      .map((predecessor) => predecessor.digest as string),
+  );
+  return entries.filter((entry) => !superseded.has(entry.ref.digest as string));
+}
+
+const AUTHORING_ROUTES: ReadonlySet<string> = new Set(["author-new", "revise-model"]);
+
+/** Is the tip's subject set traced by a registered model (registration done)? */
+function registered(receipt: RecordedReceipt, modelMap: ModelMapSnapshot): boolean {
+  return intersectsRegisteredModel(receipt.subjects, modelMap.models);
+}
+
+/** Judge one chain tip. `null` means the tip releases the hold. */
+function tipReason(entry: SeriesEntry, input: HoldInput, modelMap: ModelMapSnapshot): HoldReason | null {
+  if (entry.receipt.subjectIdentity !== input.currentIdentity) {
+    return { kind: "stale-evidence", recorded: entry.receipt.subjectIdentity, current: input.currentIdentity };
+  }
+  if (AUTHORING_ROUTES.has(entry.receipt.route)) {
+    const complete = entry.kind === "authoring-bundle" && registered(entry.receipt, modelMap);
+    return complete ? null : { kind: "authoring-incomplete", route: entry.receipt.route as "author-new" | "revise-model" };
+  }
+  // A terminal route releases only from a terminal-route-receipt. Carried by an
+  // authoring bundle it is a contradictory shape, so no releasing receipt for
+  // this series exists.
+  return entry.kind === "terminal-route-receipt"
+    ? null
+    : { kind: "no-applicability-receipt", subject: input.currentIdentity };
+}
+
+/**
+ * The closed hold table of components.md §C9. Selection runs on the series key
+ * and freshness on the content digest, so evidence for the same subjects with
+ * changed content is *selected* and then rejected as stale rather than silently
+ * dropped at the selection step (AC-006).
+ */
+function evaluate(input: HoldInput, readEvidence: ReadEvidence): Result<HoldVerdict, HoldFailure> {
+  const modelMap = input.modelMap;
+  if (modelMap === null) {
+    return err<HoldFailure>({ kind: "model-map-unreadable", detail: "model map is unreadable" });
+  }
+
+  const entries: SeriesEntry[] = [];
+  const unreadable: EvidenceBundleRef[] = [];
+  for (const ref of input.evidenceIndex) {
+    const parts = readEvidence(ref);
+    if (!parts.ok) {
+      unreadable.push(ref);
+      continue;
+    }
+    const receipt = recordedReceipt(parts.value);
+    if (receipt === null || receipt.subjectSeries !== input.currentSeries) continue;
+    entries.push({ ref, kind: parts.value.kind, receipt });
+  }
+  // A store we cannot read in full is never a basis for releasing (BR-U2-16).
+  if (unreadable.length > 0) return err<HoldFailure>({ kind: "evidence-unreadable", refs: unreadable });
+
+  if (entries.length === 0) {
+    return ok({ kind: "hold", reasons: [{ kind: "no-applicability-receipt", subject: input.currentIdentity }] });
+  }
+
+  const tips = seriesTips(entries);
+  const reasons: HoldReason[] = [];
+  for (const tip of tips) {
+    const reason = tipReason(tip, input, modelMap);
+    if (reason === null) return ok({ kind: "no-hold", basis: tip.ref });
+    reasons.push(reason);
+  }
+  return ok({ kind: "hold", reasons });
+}
+
+export const AuthoringHoldEvaluator = {
+  evaluate,
 } as const;
 
 export type { AggregateDigest, StableId };

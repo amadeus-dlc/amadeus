@@ -39,12 +39,13 @@ describe("ApplicabilityJudge.judge — the closed J1..J6 table (BR-U2-01)", () =
   });
 
   // The 8 (ChangeKind x intersection) combinations of business-logic-model.md §1.
-  test.each([
+  const contradictions: Array<[string, string[], string]> = [
     ["new-subject", ["FR-001"], "J2a"],
     ["semantic-change", ["FR-900"], "J2b"],
     ["impl-only", ["FR-900"], "J2c"],
     ["non-target", ["FR-001"], "J2d"],
-  ])("J2: %s with the contradicting state is undecidable (%p)", (kind, subjects, form) => {
+  ];
+  test.each(contradictions)("J2: %s with the contradicting state is undecidable (%p)", (kind, subjects, form) => {
     const error = failure(ApplicabilityJudge.judge(input(kind, subjects))) as {
       kind: string;
       conflicts: readonly string[];
@@ -53,24 +54,24 @@ describe("ApplicabilityJudge.judge — the closed J1..J6 table (BR-U2-01)", () =
     expect(error.conflicts).toEqual([form]);
   });
 
-  test.each([
+  const consistent: Array<[string, string[], string]> = [
     ["non-target", ["FR-900"], "non-target"],
     ["impl-only", ["FR-001"], "impl-only"],
     ["semantic-change", ["FR-001"], "revise-model"],
     ["new-subject", ["FR-900"], "author-new"],
-  ])("%s with a consistent state routes to %p", (kind, subjects, route) => {
-    expect(unwrap(ApplicabilityJudge.judge(input(kind, subjects)))).toBe(route);
+  ];
+  test.each(consistent)("%s with a consistent state routes to %p", (kind, subjects, route) => {
+    expect(String(unwrap(ApplicabilityJudge.judge(input(kind, subjects))))).toBe(route);
   });
 
   test("an unrelated registered model's existence never decides the route (BR-U2-02)", () => {
     // FR-900 is untraced either way; adding a second registered model that
     // traces something else must not move the verdict.
     const withExtra = input("new-subject", ["FR-900"]);
+    const models = withExtra.registeredModels?.models ?? [];
     const extended = {
       ...withExtra,
-      registeredModels: {
-        models: [...withExtra.registeredModels.models, { name: "Other", traceSubjects: ["AC-004"] as never }],
-      },
+      registeredModels: { models: [...models, { name: "Other", traceSubjects: ["AC-004"] as never }] },
     };
     expect(unwrap(ApplicabilityJudge.judge(extended))).toBe("author-new");
   });
@@ -122,7 +123,7 @@ describe("ApplicabilityJudge.buildReceipt (BR-U2-03/11)", () => {
     );
     expect(receipt.route).toBe("impl-only");
     expect(receipt.subjectSeries).toBe(ApplicabilityJudge.subjectSeriesKey(["FR-001"]));
-    expect(receipt.subjects).toEqual(["FR-001"]);
+    expect(receipt.subjects as readonly string[]).toEqual(["FR-001"]);
     expect(receipt.reason).toContain("J4");
     expect(receipt.humanApproval).toEqual(APPROVAL);
   });
