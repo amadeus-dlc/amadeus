@@ -17,6 +17,11 @@
 - U1 との統合ツリー: typecheck 0 / lint 0 / full CI RESULT: PASS
 - 落ちる実証: 修復前状態の red fixture(2 module 欠落の全数列挙)→ 修復後 green、任意 module 除去 → 赤 → 復元(t442 が fixture で固定)
 
+## 申し送り
+
+- `MODULE_REFERENCE_RE` の ReDoS 線形性実測(cid:code-generation:regex-linearity-untrusted-input)は適用外と整理する: 入力は repo 内ソースファイル(信頼境界内)であり「信頼境界外・不定長入力」の発動条件を満たさない。構造的にも入れ子量化子なしの単一 alternation で線形(§12a 独立レビューが敵対入力挙動を実測済み — コメント/文字列内 import の過大近似は fail-closed 方向)。
+- レビュー NIT(unreadable path の visited.delete による再読・コメント内 import の偽赤ポテンシャル)は正しさに影響しないため未対応 — 将来顕在化した時点で Issue 化する。
+
 ## 逸脱
 
 なし(builder 報告および conductor の diff 検分で確認)。
