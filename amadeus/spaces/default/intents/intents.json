@@ -904,5 +904,12 @@
     "dirName": "260804-tla-authoring",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fd1af-cc2d-7429-90eb-2de64ffd1dfa",
+    "slug": "cross-harness-resume",
+    "dirName": "260805-cross-harness-resume",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
