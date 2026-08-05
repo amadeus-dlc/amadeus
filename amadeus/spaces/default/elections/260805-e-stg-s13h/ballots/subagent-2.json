@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13H",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist は独立 cid でなく cid:code-generation:c1-degrade-batch-directive-capture への追補として書き、機械的テンプレート置換は既定経路ではなく「成果物を先行作成してしまった後の回収経路」と位置づけること — 同 cid は「全 unit covered 後の engine emit は fail-closed のため build 時捕捉が唯一の in-band 経路」と明記しており、置換は out-of-band の回収であって (a) unit ごとの逐次捕捉が既定である旨を落とすと規範が逆転する。",
+  "rationale": "c5 のみ採用に賛成。実測接地の独立確認: (1) 機序は engine 側で確認済み — packages/framework/core/tools/amadeus-orchestrate.ts:3366-3373 の設計コメントが「FIRST uncovered unit の run-stage を emit し、最後の unit の成果物がディスクへ着地すると次の next は uncovered なしで再入してステージの実ゲートを提示する」と規定し、firstUncoveredBatch:3070-3084 / unitCovered:3454 / resolvePerUnit:3535-3548 が produces の existsSync を唯一の台帳としている。よって全 unit の成果物を先行作成すると後続 unit の per-unit directive は構造的に再取得不能であり、c5 の主張は engine の実装事実に一致する。(2) 既存 cid との重複なし — project.md:287 の c1-degrade-batch-directive-capture は degrade スコープ(units-generation SKIP)の Bolt 並行実装に限定され、救済も「unit dir を1つずつ遅延作成して uncovered-unique の directive を捕捉」であって、units あり(compiled Bolt DAG 経路)の per-unit ステージで先行作成済みの場合の回収は未被覆。追補 c1-parallel-degrade-batch(project.md:288)も degrade 面のまま。(3) 本 intent の実測 — construction/functional-design/memory.md:13 が U2/U3 の directive 再取得不能と U1 directive の機械置換、invocationId d152b5f6…/010195b7… を記録し、u2-model-attribution/functional-design/business-logic-model.md:57-72 に §12a Iteration 2 の READY verdict が実在する(3 unit とも §12a 成立)。一般形も明確(置換対象は unit 名と produces のみ、consumes/sensors/reviewer は不可触 = 判断を含まない執行)。c4 不採用に同意: E-LSSADS13 は「予算消費後の残余是正」の受理を2クラス(機械検証可能 / 自己検証構造不能 = 閉包確認限定イテレーション必須)に分岐させ、末尾に「迷えば選挙に倒す」を持つ。是正起因の新 BLOCKER はまさに予算消費後の残余是正であり、設計ギャップとして閉包確認限定イテレーションへ落ちる — 実際に U2 で行われた処理は既存則の忠実な適用そのもので、新規則性がない。残る増分は「予算超過を complete-review summary へ開示」だが、これは P2 と既存の record 固定要求に含まれ、実測でも business-logic-model.md:65 の summary に開示済み。週次蒸留の縮約対象を増やすだけなので record 保存で足りる。c1/c2/c6/c7 は P3 回復側・citation-semantics-check・既存設計原則の実践例、c3 は #2253 既決に紐づく intent 固有の運用裁定で、いずれも一般化余地が薄い。",
+  "submittedAt": "2026-08-05T22:31:30Z"
+}

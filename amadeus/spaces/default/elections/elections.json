@@ -909,6 +909,12 @@
     "electionId": "E-STG-S13H",
     "dirName": "260805-e-stg-s13h",
     "createdAt": "2026-08-05T22:28:34Z",
-    "status": "collecting"
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13I",
+    "dirName": "260805-e-stg-s13i",
+    "createdAt": "2026-08-05T22:52:37Z",
+    "status": "recorded"
   }
 ]

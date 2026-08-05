@@ -1,0 +1,25 @@
+{
+  "electionId": "E-STG-S13I",
+  "voter": "subagent-1",
+  "question": "intent 260805-subagent-type-guard / ステージ nfr-design の §13 学習選定。候補6件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=ND reviewer が発見した FD エラーモデルの欠落クラス(シャード読取失敗)を FD への cross-stage 訂正で解消 — fail-open/fail-loud/fail-closed の3方針を「回復可能性×誤診断リスク」の2軸で確定 / c2=U3 の制御文字除去は observability 所有の export ヘルパに確定(lib 定数の import は依存方向制約で循環になるため構造的に不可 — 意味論同水準の別定数を「意図ベースの重複排除」原則で正当化)/ c3=U3 も reviewer 予算2回消費後の是正起因新 BLOCKER を E-LSSADS13 の閉包確認限定イテレーションで処理(FD U2 と同型2例目)/ c4=questions ファイルのセレモニー省略(真に未決ゼロ+produces 宣言外)/ c5=fail-loud の採用(続行+非0 exit の第3方針)/ c6=kind 剪定でコスト所在が消える場合の明示引き継ぎ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c3 + c1 採用",
+      "description": "c3 に加えて c1 も persist する。c1 の主張: per-unit の後続ステージ(ND 等)の reviewer が上流 FD の状態空間・エラーモデルの欠落クラスを発見した場合、ND 側で局所定義せず FD のエラーモデル表へ cross-stage 訂正(訂正注記付き)で遡って確定し、計上先フィールドまで型に固定する — 「下流での局所追加」は正本の分裂を作る。既存 cid(cite-fix-sweeps-whole-record 等)は引用の是正伝播を縛るが、契約(エラーモデル)の欠落クラス追加の所有は未被覆。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "0件(採用なし)",
+      "description": "6件いずれも persist しない。主張: c3 は E-LSSADS13 の自然な適用で、2例あっても「同則の残余是正に含まれる」と読めば追補不要。c1 は fix-diff / cross-stage 訂正ファミリの適用実例。record 保存で十分。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "c3 のみ採用(E-LSSADS13 への追補)",
+      "description": "c3 のみ persist する。主張: E-LSSADS13(cid:code-generation:builder-prompt-sync-completion 追補周辺の受理2分岐)は「予算消費後の残余是正」を定めるが、**「iteration N の是正が iteration N+1 で新 BLOCKER と判定される」型への適用**は明文でなく、本 intent で FD U2(引き当て規則)と ND U3(依存矛盾)の**独立2例**が同一処理(設計ギャップ=閉包確認限定イテレーション+complete-review summary への予算超過開示)へ収斂した。E-STG-S13H の subagent-1 留保「同型が再発した場合は1行追補として再提案する余地を残す」の再発条件が2例目で成立。追補文: 是正起因の新指摘も E-LSSADS13 の2分岐(機械検証可能=conductor 検証で受理 / 設計ギャップ=閉包確認限定の追加イテレーション必須)で処理し、予算超過は complete-review の summary に開示する。c1/c5 は既存の cross-stage 訂正先例と error-classification 知識の適用実例、c2 は依存方向制約からの一意導出(執行)、c4/c6 は intent 固有 — いずれも record 保存が適切。"
+    }
+  ]
+}

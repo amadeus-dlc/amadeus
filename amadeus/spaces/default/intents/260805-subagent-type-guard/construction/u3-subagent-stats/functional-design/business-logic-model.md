@@ -53,8 +53,11 @@ amadeus-subagent-observability.ts(U1 新設)
 |---|---|---|
 | audit dir・シャード不在 | 正常系(空 corpus) | 0 件レポートを出力(エラーにしない — 走査対象ゼロは事実) |
 | 行の JSON parse 失敗 | 回復可能(データ) | skip + 件数を注記行に出す(BR-U3-2 — 隠さない fail-open) |
+| **シャード実在下の読取失敗**(EACCES・途中 I/O エラー等)| 観測の不完全(環境差)| **fail-loud**: 当該シャードを `unreadableShardCount` に計上して走査は続行(他シャードの診断価値を保つ)、path を stderr へ、注記行に件数(0 でも出す)。ただし **exit は非0** — 観測宇宙が欠けた集計を「完全な集計」と誤読させない(下記追記の分類根拠参照) |
 | 未知フラグ・不正引数 | 呼び手の誤用 | loud エラー + 非0 exit(BR-U3-1 — fail-closed) |
 | 許可集合の解決失敗 | 回復可能(環境差) | U1 の fail-open 契約に従い台帳のみで再分類を続行。warnings 本文は AD 正本どおり stderr へ流し、`allowedSetWarnings` としてレポートに保持・件数を注記行へ(BR-U3-5 — 役割分担であり AD からの逸脱ではない) |
+
+> **訂正注記(nfr-design §12a iteration 1 の cross-stage 是正、2026-08-06)**: 「シャード実在下の読取失敗」行を追加。当初の表は不在(正常系)と行破損(fail-open)のみを定義しており、実在するが読めないシャードのクラスが未定義だった — ND reviewer が「計上先未定義+fail-open/fail-closed 分類の反転」として BLOCKER 指摘。分類根拠: 行レベルの破損は「観測できた範囲の欠陥」なので fail-open(exit 0)、シャードレベルの読取失敗は「観測宇宙そのものの欠け」なので集計続行+非0 exit の fail-loud(誤った走査範囲でのもっともらしい集計を script 消費側に信用させない)、引数誤用は「観測開始前の契約違反」なので fail-closed。3クラスの分岐は回復可能性と誤診断リスクの2軸で単調。
 
 ## Review — Iteration 2
 

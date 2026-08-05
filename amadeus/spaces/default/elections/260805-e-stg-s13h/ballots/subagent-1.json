@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13H",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c4 は E-LSSADS13 の自然な適用と判断して不採用としたが、「是正が新 BLOCKER を生む」型が同則の『残余是正』に含まれることは明文でないため、同型が再発した場合は delegated-review-analysis-with-owned-verdict への1行追補として再提案する余地を残す。",
+  "rationale": "実測に基づく独立検証: (1) c5 の機序は engine 側の設計コメントで確定できる — packages/framework/core/tools/amadeus-orchestrate.ts:3362-3373 が per-unit ループのカバレッジ台帳を『the per-unit ARTIFACTS on disk』と規定し、:3370-3372 で『Once the LAST unit's artifacts land on disk, the next `next` re-enters with no uncovered units and presents the stage's real gate』と明記する。つまり全 unit の成果物を先行作成した時点で後続 unit の run-stage directive は構造的に re-emit されない。firstUncoveredBatch(:3070-3084)/ unitCovered(:3454)/ resolvePerUnit(:3535-3548 の uncovered.length === 0 → null)も同じ台帳を読む。(2) 既存 cid:code-generation:c1-degrade-batch-directive-capture(project.md:287)は文面上『degrade intent』『全 unit covered 後の engine emit は裁定 B どおり fail-closed』と degrade スコープ(units-generation SKIP、台帳はディレクトリ列挙 — 同 :3386-3389 のコメント)に限定されており、units DAG がある per-unit ステージ(本 intent の functional-design、台帳は produces 実在)の面は未被覆。追補 c1-parallel-degrade-batch(:288)も degrade 前提のまま。よって c5 は既存則の適用実例ではなく、台帳の種類が異なる隣接面への追補として persist 価値がある。(3) 実測接地は record の diary で確認 — construction/functional-design/memory.md:13 に『U2/U3 の per-unit directive は engine から re-emit されないため(全成果物先行作成済み)、U1 directive からの機械的テンプレート置換(unit 名+produces)で構成し reviewer-runtime scope へ投入』と invocationId(U2=d152b5f6…, U3=010195b7…)が固定されている。置換対象を unit 名と produces に限る点は判断を含まない執行であり、規則として一般化可能。(4) c4 は既存 team.md:184 の E-LSSADS13 追補が『予算消費後の残余是正』の2分岐を既に定めており、i2b(閉包確認限定イテレーション)はその設計ギャップ側分岐の逐語適用にあたる。予算超過の開示要求も project.md:380 の cid:code-generation:cg-20260730-3(iterations exhausted → gate、fresh review outcome をゲートで開示)と重複する。よって新規性が薄く record 保存で足る。(5) c1/c2/c3/c6/c7 は P3 の回復側、FR-1a と同一原理の適用、ユーザー裁定の intent 固有記録、既存設計原則(変更理由の分離・型の肥大回避)のトレードオフ記録であり、いずれも intent 固有で一般化余地がない。0件案(displayNo 2)は c5 を既存則からの導出とするが、上記 (2) の degrade/非 degrade の台帳差を踏まえると導出は成立しないため採らない。",
+  "submittedAt": "2026-08-05T22:30:46Z"
+}

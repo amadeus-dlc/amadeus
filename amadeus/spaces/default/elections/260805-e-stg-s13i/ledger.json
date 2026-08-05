@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13I",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 の persist は独立 cid を立てず cid:requirements-analysis:delegated-review-analysis-with-owned-verdict(team.md:184)への1行追補として書き、既存2分岐の文言(機械検証可能クラス=conductor 検証で受理 / 自己検証構造不能クラス=閉包確認限定の追加イテレーション必須)を弱めないこと — また c1 は今回1例のみのため不採用としたが、上流契約(エラーモデル・状態空間)の欠落クラスを下流ステージが発見した場合の所有規則として同型が再発したときは cid:code-generation:cross-unit-type-canonical-lift への1行追補として再提案する余地を残す。",
+      "rationale": "choice 1(c3 のみ採用)に賛成。独立実測: (1) 再提案条件の成立を一次記録で確認 — amadeus/spaces/default/elections/260805-e-stg-s13h/record.md の留保(subagent-1, GoA2)が逐語で『「是正が新 BLOCKER を生む」型が同則の『残余是正』に含まれることは明文でないため、同型が再発した場合は delegated-review-analysis-with-owned-verdict への1行追補として再提案する余地を残す』と記録しており、その再発条件が本ステージで満たされた。(2) 独立2例を record で実測 — FD U2: construction/u2-model-attribution/functional-design/business-logic-model.md:57-72 の Iteration 2 verdict が『i2 で是正起因の新 BLOCKER(persona ファイル引き当て規則の未規定)が出たため、E-LSSADS13 に従い閉包確認限定の追加イテレーション(i2b)を実施 …(予算超過の開示: 通常2回+閉包確認1回)』、ND U3: construction/u3-subagent-stats/nfr-design/performance-design.md:22-33 の Iteration 2 verdict が『i2 で是正起因の新 BLOCKER(制御文字除去の供給元が依存禁止と矛盾)が出たため E-LSSADS13 の閉包確認限定イテレーション(i2b)を実施 …(予算超過の開示: 通常2回+閉包確認1回)』。異なる unit・異なるステージ・異なる欠陥内容で同一処理へ収斂している。(3) 既存文言との差分を実読で確認 — team.md:184 の E-LSSADS13 追補は分岐を『機械検証可能クラス』と『列挙 omission クラス(自己検証構造不能 — enumeration 系 cid の教訓)』の2つに限定して名指しし、適用対象を『予算消費後の残余是正』と書く。本 intent の2例はいずれも列挙 omission ではなく設計ギャップ(引き当て規則の未規定・依存方向との矛盾)であり、かつ契機が『自分の是正が生んだ新指摘』である。すなわち同則の逐語適用ではなく、後段クラスの外延と契機の面での拡張にあたる — 1行追補が比例的で、既存則の趣旨(自己検証構造不能なら追加イテレーション)を素直に延長する。(4) c1 の不採用理由 — 事実面は確認できた(u3-subagent-stats/functional-design/business-logic-model.md:56 に fail-loud 行、:60 に『訂正注記(nfr-design §12a iteration 1 の cross-stage 是正、2026-08-06)』、domain-entities.md:26/32 に unreadableShardCount と同注記が実在)。しかし規則としての増分は『正本へ寄せて下流で局所定義しない』という所有規則であり、これは team.md:304 cid:code-generation:cross-unit-type-canonical-lift(不一致は正本ユニットの型へ canonical 化し参照側を申告付きで整合、妥協形の新設は集合分裂を広げる)と P3(逸脱は所有者へ戻す)の軸をステージ間へ延ばした適用であって、原理としては既存。3方針の分類根拠(回復可能性×誤診断リスク)も phases/construction.md の『エラー処理は回復可能性で選ぶ … error-classification』が既に与えている。実測は1例のみで、週次蒸留の縮約対象を増やす分の方が大きい — record 保存(上記の訂正注記が正本に固定済み)で足りる。(5) 0件案(displayNo 2)は採らない — c3 を『同則の残余是正に含まれる』と読む解釈は (3) の逐語差(『列挙 omission』の名指し・契機の非明文)を吸収できず、同一 intent 内で2例が独立に同じ判断を要した事実が明文化の必要性を示している。S13H で私が留保に置いた再提案条件が実際に成立した以上、ここで見送ると条件付き留保の運用そのものが空文化する。",
+      "submittedAt": "2026-08-05T22:55:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13I",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の前半(下流ステージが上流契約の欠落クラスを発見した場合の訂正所有)は既存 cid に真の空白があると認めるため、同型が2例目として再発した時点で cid:nfr-design:cite-fix-sweeps-whole-record または cid:code-generation:cg-invariant-conflict-explicit-revision への1行追補として再提案する余地を残す(本票での不採用は「単一実測+分類半分の重複」を理由とする)。",
+      "rationale": "独立実測(作業ツリー /Users/j5ik2o/.../worktrees/260805-subagent-type-guard、read-only)。(1) c3 の実測接地は2例で成立 — construction/u2-model-attribution/functional-design/business-logic-model.md:65 と construction/u3-subagent-stats/nfr-design/performance-design.md:22 以降の Review ブロックが、いずれも「i1 の BLOCKER 閉包 → i2 で是正起因の新 BLOCKER → E-LSSADS13 に従い閉包確認限定の追加イテレーション(i2b) → 予算超過の開示」という同一処理へ独立に収斂している。診断は construction/functional-design/memory.md:12 と construction/nfr-design/memory.md:6 にも記録済み。(2) 追補の delta が実在する — team.md:184 の E-LSSADS13 本文を逐語確認したところ、対象は「reviewer イテレーション予算消費後の残余是正の受理」であり、分岐クラスは「機械検証可能」対「列挙 omission」。すなわち (a)『iteration N の是正が N+1 で新 BLOCKER と判定される』型、(b) 設計ギャップという一般化されたクラス名、(c) complete-review summary での予算超過開示、のいずれも明文でない。よって自然な適用と読むことは可能だが、明文化の価値がある。(3) 再提案条件が満たされている — elections/260805-e-stg-s13h/record.md:7 の subagent-1 留保が「同型が再発した場合は delegated-review-analysis-with-owned-verdict への1行追補として再提案する余地を残す」と明記し、本 intent の ND U3 がその2例目に当たる。同一 intent 内の直前ラウンドの留保が定めた条件が実際に成立した以上、display 3(0件)は S13H の留保を空文化するため採らない。(4) c1 を同時採用しない理由 — 記録上の実在は確認できる(u3 functional-design/business-logic-model.md:56,60 と domain-entities.md:26,32 に fail-loud クラス・unreadableShardCount・cross-stage 訂正注記が実在)が、c1 は2つの主張を束ねており後半が既存規範と重複する: fail-open/fail-loud/fail-closed を回復可能性で選ぶ判断は phases/construction.md:38「エラー処理は回復可能性で選ぶ(まず異常状態を分類し、回復可能なら型付きエラー/Result、回復不能ならフェイルファスト)」の常時適用原則の適用実例である。前半(訂正所有)は空白だが実測1例のみで、S13H が c4 に対して用いた「1例では適用実例、2例目で追補」の基準を同一 intent 内で非対称に適用しないため、本票では見送り(留保に再提案条件を明記)。(5) 残り4件(c2/c4/c5/c6)は不採用が妥当 — c2 は依存方向制約からの一意導出(執行)、c5 は c1 後半と同じ construction.md:38 の適用、c4/c6 は intent 固有で record 保存が適切。",
+      "submittedAt": "2026-08-05T22:55:30Z"
+    }
+  ],
+  "late": []
+}

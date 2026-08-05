@@ -22,11 +22,14 @@ export interface SubagentAuditRecord {
 
 ```ts
 export interface ScannedAudit {
-  readonly shardCount: number;                        // 読んだシャード数
+  readonly shardCount: number;                        // 読めたシャード数
+  readonly unreadableShardCount: number;              // 実在するが読取失敗したシャード数(fail-loud — path は stderr へ)
   readonly parseSkippedCount: number;                 // JSON parse 不能で skip した行数(BR-U3-2)
   readonly records: readonly SubagentAuditRecord[];   // SUBAGENT_* 行のみ
 }
 ```
+
+> 訂正注記(nfr-design §12a iteration 1 の cross-stage 是正、2026-08-06): `unreadableShardCount` を追加 — business-logic-model のエラーモデル表に追加した「シャード実在下の読取失敗(fail-loud)」クラスの計上先。
 
 ### SubagentStatsReport(集計結果 — first-class collection)
 
@@ -34,7 +37,8 @@ export interface ScannedAudit {
 export interface SubagentStatsReport {
   readonly measuredAt: string;          // ISO 8601 — 測定時刻(FR-4b)
   readonly scanScope: string;           // 走査対象の可視化 — space 名 + 走査 glob(FR-4b の測定 ref 実質)
-  readonly shardCount: number;          // 読んだシャード数(測定 ref)
+  readonly shardCount: number;          // 読めたシャード数(測定 ref)
+  readonly unreadableShardCount: number;// 注記: 読取失敗シャード数(fail-loud — 正なら exit 非0)
   readonly parseSkippedCount: number;   // 注記: parse skip 件数(BR-U3-5 第5節 — 0 でも出す)
   readonly verdictMismatchCount: number;// 注記: 属性 verdict と再分類の食い違い件数(BR-U3-3)
   readonly allowedSetWarnings: readonly string[]; // 許可集合解決の warnings(件数を注記へ、本文は stderr — BR-U3-5)

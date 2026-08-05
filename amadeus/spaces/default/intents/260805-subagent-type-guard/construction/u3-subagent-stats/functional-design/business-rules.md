@@ -31,7 +31,7 @@
 2. verdict 別内訳(4値全て、0 も表示)
 3. 型別ランキング(distinct 値・verdict・件数の降順)
 4. model 別内訳 + Model Source 別内訳 + unresolved 件数
-5. 注記: parse skip 件数・verdict 食い違い件数・許可集合 warnings 件数(いずれも 0 のときも行を出す — 無音にしない)
+5. 注記: parse skip 件数・verdict 食い違い件数・許可集合 warnings 件数・読取失敗シャード件数(いずれも 0 のときも行を出す — 無音にしない。読取失敗シャードが正のときは exit 非0 — fail-loud、business-logic-model エラーモデル表の訂正注記参照)
 
 いずれも `SubagentStatsReport` のフィールドからのみレンダリングする(`renderStatsText` は純関数 — レポートに無い値を出力に発明しない)。許可集合解決の warnings **本文**は AD 正本(C-1「呼び手が stderr へ流す」)どおり stderr へ流し、レポート/text/JSON には `allowedSetWarnings` として保持・件数を注記行に出す(stderr は人間向け即時信号、レポートは機械可読の記録 — 役割分担であり AD からの逸脱ではない)。
 

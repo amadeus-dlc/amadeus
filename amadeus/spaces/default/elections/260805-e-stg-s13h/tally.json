@@ -1,4 +1,35 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c5 のみ採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c5 のみ採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "c5 + c4 採用",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "0件(採用なし)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T22:31:41Z",
   "ballots": [
     {
       "kind": "original",
@@ -23,5 +54,5 @@
       "submittedAt": "2026-08-05T22:31:30Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }
