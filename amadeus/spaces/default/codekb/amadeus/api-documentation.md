@@ -15,7 +15,77 @@
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
 
-## phase boundary approval が対象とする契約（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言が対象とする契約（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の file:line はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
+
+### `amadeus-bolt.ts` サブコマンド — 現行は17種、autonomy 系は8種
+
+有効サブコマンドの正本は `:1201` のエラー文字列。**17種**が列挙される: `start`, `complete`, `fail`, `abort`, `preview-autonomy`, `set-autonomy`, `decide-question`, `observe-quality`, `resume-quality`, `list-auto-decisions`, `get-auto-decision`, `review-auto-decision`, `approve-batch`, `dispatch-event`, `hold-merge`, `release-merge`（`:1199-1203` の default 分岐）。
+
+autonomy 支援コマンドは `handleAutonomySupportCommand` のテーブル（`:1212-1221`）が持つ **8種**。
+
+| サブコマンド | dispatch 登録 | ハンドラ実体 |
+| --- | --- | --- |
+| `set-autonomy` | `:1213` | `handleSetAutonomy` `:1051-1092` |
+| `preview-autonomy` | `:1214` | `handlePreviewAutonomy` `:897-907` |
+| `decide-question` | `:1215` | `handleDecideQuestion` `:909-925` |
+| `observe-quality` | `:1216` | — |
+| `resume-quality` | `:1217` | — |
+| `list-auto-decisions` | `:1218` | `handleListAutoDecisions` `:961-973` |
+| `get-auto-decision` | `:1219` | — |
+| `review-auto-decision` | `:1220` | — |
+
+`get-auto-decision` / `review-auto-decision` は区間内で追加された（`2e990c45a` / #2229）。
+
+> **履歴節との差分（陳腐化の是正）**: 本文書の 260804 履歴節は「サブコマンド5種追加」として `set-autonomy(:1117)` / `preview-autonomy(:1118)` / `decide-question(:1119)` / `observe-quality(:1120)` / `resume-quality(:1121)` を記す。これらは **observed `b938898f3` 時点では正しい**（`cid:requirements-analysis:historical-section-cite-check-at-observed` により履歴節は書き換えない）。区間内で `amadeus-bolt.ts` に `100/1` の変更（ハンク `@@ -954,0 +961,90 @@` ほか）が入り、**`:961` 以降が +96 行シフト**したため、observed `2f255bc69` では上表が正である。
+
+### `set-autonomy` の flag 契約と `--policies-file` の無音破棄
+
+`handleSetAutonomy`（`:1051-1092`）が受ける flag と検証:
+
+| flag | 位置 | 制約 |
+| --- | --- | --- |
+| `--mode` | `:1053-1055` | `none` / `semi` / `full` の3値。値域外は `error` |
+| `--policies-file` | `:1067` | `readDecisionPolicyInputs` で JSON 配列（`{sourceText, selector, optionId}`）として読む。不正形は `:884` / `:892` で `error` |
+| `--confirmed-display-digest` | `:1068` | `full` への遷移で `preview-autonomy` の digest 照合に使う |
+
+**契約の穴**: `:1067` は mode に依存せず policies を読むが、`amadeus-intent-autonomy-production.ts:417` の `if (input.mode === "full")` 分岐により、非 `full` は `prepareNonFullCommand`（`:382-395`）へ進む。この関数のシグネチャは `(before, mode)` のみで `policies` を**受け取らない**。したがって `set-autonomy --mode semi --policies-file <json>` は **exit 0 のまま policies を黙って捨てる**。observed 時点では `semi` が pre-decision policy を使わないため実害はないが、公開 flag が受理して無視する状態は契約として不整合である。
+
+### state 書込と互換投影
+
+`handleSetAutonomy` の state 書込（`:1071-1080`）:
+
+| フィールド | 値 |
+| --- | --- |
+| `Intent Autonomy Mode` | `flags.mode`（`none` / `semi` / `full` そのまま、`:1072`） |
+| `Intent Grant` | `applied.projection.currentGrant?.grantId ?? "none"`（`:1073-1078`） |
+| `Construction Autonomy Mode`（互換投影） | `flags.mode === "full" ? "autonomous" : "gated"`（`:1071`、`setFieldStrict` `:1079`） |
+
+互換投影は **`semi` と `none` をともに `gated` へ潰す**。この投影を消費する外部契約の再定義後の妥当性は要検討。
+
+### `--status` の Autonomy 出力（既存の公開表示契約）
+
+`amadeus-utility.ts` の `--status` は autonomy を8行で出す。
+
+- 供給元: `readStatusAutonomy` `:323-334`（fail-soft catch あり）、呼び出し `:381`
+- レンダラ: `renderAutonomyStatus` `:336-350`
+- 合流: テキスト面 `:493`、JSON 面 `:488`
+- 行構成: Autonomy / Grant / Grant Scope / Workflow State / Policies / Unreviewed / Stop Reason / Resume
+
+**statusline には autonomy 表示がない**（`grep -n -i "autonom" packages/framework/core/hooks/amadeus-statusline.ts` → 0 hit、observed 実測。ファイル全体 325 行、セグメント組み立ては `:203-206`）。`--status` は出すが statusline は出さない、という表示面の非対称が実在する。
+
+### `--autonomy` 起動フラグ — 現行契約に不在
+
+コード面の実装は **0 件**（`grep -rn -- "--autonomy" packages tests docs .claude scripts specs plugins contrib` → 0、observed 実測）。新設する場合の解釈点は `amadeus-orchestrate.ts:1044-1074` の flag parser。既存の値付きフラグはいずれも `i++` で値を consume しており、consume しないと `:1072-1073` の `!a.startsWith("--")` 分岐で値が intent 自由文へ漏れる（`:1068-1069` のコメントが根拠）。
+
+autonomy は状態変更であるため read-only フラグの絶対優先梯子（`:1014-1016`）へは置けない。契約形の候補は「print directive として `amadeus-bolt set-autonomy` を名指しする」（birth の `birthPrintDirective` `:2617-2646` が先例）だが、**未確定**。
+
+### directive スキーマ側の autonomy 契約（区間内変更なし）
+
+`amadeus-directive.ts:97` — `intent_autonomy_mode?: "semi" | "full";`（検証器 `:606`）。**`none` を値域に持たない**点は再定義後も変わらない見込みだが、`semi` の意味が変わればこのフィールドを消費する conductor 側の解釈が変わる。
+
+## phase boundary approval が対象とする契約（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

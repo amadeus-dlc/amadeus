@@ -55,7 +55,168 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## phase boundary verification と approval の結線構造（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の file:line・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、区間 19 commits / 464 files）。行番号は canonical 側 `packages/framework/core/` を記す（`.claude/` ミラーは同一内容）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
+
+### 承認・裁定経路の現行トポロジ
+
+autonomy は**2つの独立した関門**を通る。第1関門 `authorizeInteraction`（`amadeus-intent-autonomy.ts:501-531`）が「そもそも自動裁定してよい occurrence か」を mode 別に判定し、第2関門が「何を選ぶか」を決める。`semi` は第1関門で phase 内 stage-gate 以外をすべて弾くため、第2関門の無人裁定梯子には**構造的に到達しない**。
+
+`semi` の弾き位置（`:510-514`、verbatim）:
+
+```
+  if (projection.mode === "semi") {
+    const internalGate = occurrence.kind === "stage-gate" && occurrence.phase !== "phase-boundary";
+    if (!internalGate || projection.modeProvenance.kind !== "human-command") {
+      return { kind: "human-required", occurrence, reason: "MODE_REQUIRES_HUMAN" };
+    }
+```
+
+第2関門のルーティングは `amadeus-intent-autonomy-runtime.ts` の `selectDecision`（`:522-524`、verbatim）:
+
+```
+    if (authorization.kind === "semi-mode-gate") return createSelectedGateDecision(projection, input, "mode-semi");
+    if (input.occurrence.kind !== "question") return createSelectedGateDecision(projection, input, "grant-gate");
+    const resolved = resolveAutoDecision({
+```
+
+`semi-mode-gate` は `createSelectedGateDecision` で即座に決着し、`resolveAutoDecision` の梯子へは進まない。梯子へ進むのは `full` grant を持つ Intent の `question` occurrence だけである。
+
+### 無人裁定梯子は5段（4段ではない）
+
+`resolveAutoDecision`（`amadeus-intent-autonomy.ts:699-744`）は full ハードゲートの後、5段を順に試す。Issue #2253 が「4段」と述べているのは、先頭の confirmed-policy 段を数えていないためである。
+
+| 順 | 段 | 実測 file:line | 失敗・競合時 | reviewState |
+| --- | --- | --- | --- | --- |
+| — | full ハードゲート | `:702` | `{kind:"invalid", reason:"full-grant-required"}` | — |
+| 0 | confirmed-policy | `:706-707` | 競合は `confirmed-policy-conflict` | `reviewed` |
+| 1 | norm | `:708-717` | 競合は `:713` の `{kind:"park", reason:"NORM_CONFLICT"}` | `reviewed` |
+| 2 | history | `:718-725` | 競合は不採用（次段へ） | `reviewed` |
+| 3 | solo-election | `:726-735` | 検証失敗は `invalid-election-result` | **`unreviewed`** |
+| 4 | agent-recommendation（縮退） | `:736-744` | `unavailableReason` 未設定なら `invalid-recommendation-result`（fail-closed） | **`unreviewed`** |
+
+`reviewState` の分岐は `:605-607`（`basisKind` が `solo-election` または `agent-recommendation` のときのみ `unreviewed`）。
+
+> **注記（履歴節との差分）**: 直下の 260804 履歴節および本文書の旧節は observed `b938898f3` 時点の行番号で正しい。`amadeus-intent-autonomy.ts` は区間内で無変更のため行シフトは 0 だが、Developer scan が申告した梯子の行範囲（`:705-706` 等）は**1行ずつ低い**ため、本節の実測値を正とする。
+
+### semi を梯子へ載せるときの最小介入点
+
+再定義の実装面は3点に閉じる（いずれも observed 実測）。
+
+| # | 介入点 | file:line | 現行の振る舞い |
+| --- | --- | --- | --- |
+| 1 | `authorizeInteraction` の semi 分岐 | `amadeus-intent-autonomy.ts:510-514` | phase 内 stage-gate 以外を `MODE_REQUIRES_HUMAN` で弾く |
+| 2 | `selectDecision` のルーティング | `amadeus-intent-autonomy-runtime.ts:522-524` | `semi-mode-gate` を梯子へ渡さず即決 |
+| 3 | `createGateAutoDecision` の入口ガード | `amadeus-intent-autonomy.ts:667-673` | `question` occurrence を throw で拒否（`gate-decision-requires-gate-occurrence`） |
+
+介入点3の verbatim（`:667-673`）:
+
+```
+  if (input.occurrence.kind === "question") throw new Error("gate-decision-requires-gate-occurrence");
+  if (input.basisKind === "mode-semi" && input.projection.mode !== "semi") {
+    throw new Error("semi-gate-requires-semi-mode");
+  }
+  if (input.basisKind === "grant-gate" &&
+    (input.projection.mode !== "full" || input.projection.currentGrant === null)) {
+    throw new Error("grant-gate-requires-full-grant");
+  }
+```
+
+さらに `resolveAutoDecision` の full ハードゲート（`:702`）が `mode !== "full"` を一律拒否するため、**`semi` を梯子へ載せるにはこの1行の条件そのものを緩める必要がある**。ここは grant 有無と mode を同時に見ており、`semi` は grant を持たない（`full` grant は `issue-full` / `replace-full` 経由でしか発行されない、`:250-257`）ため、緩和は「grant なしで梯子を回す」ことを意味する。これは現行アーキテクチャの前提を変える最大の構造点である。
+
+semi 側の効果適用は `applySemiDecision`（`amadeus-intent-autonomy-runtime.ts:546-554`）が担い、効果が `workflow-reversible` でなければ `semi-gate-effect-not-authorized` を返す。**「不可逆な効果は semi では通さない」という判別軸は既に実在する**ため、「節目」の定義をこの分類へ寄せられるかが設計上の焦点になる。
+
+### Interaction Diagrams
+
+#### 現行: mode 別の裁定経路
+
+```mermaid
+flowchart TD
+  OCC["InteractionOccurrence: stage-gate / walking-skeleton / question"] --> AUTH["authorizeInteraction line 501"]
+  AUTH -->|"mode none"| HUM["human-required MODE_REQUIRES_HUMAN"]
+  AUTH -->|"mode semi and phase-internal stage-gate"| SEMI["semi-mode-gate"]
+  AUTH -->|"mode semi and anything else"| HUM
+  AUTH -->|"mode full with active grant"| FULL["grant authorization"]
+  SEMI --> CGD["createGateAutoDecision basisKind mode-semi"]
+  FULL -->|"occurrence is not question"| CGD2["createGateAutoDecision basisKind grant-gate"]
+  FULL -->|"occurrence is question"| LADDER["resolveAutoDecision ladder line 699"]
+  LADDER --> S0["0 confirmed-policy"]
+  S0 --> S1["1 norm"]
+  S1 --> S2["2 history"]
+  S2 --> S3["3 solo-election unreviewed"]
+  S3 --> S4["4 agent-recommendation unreviewed"]
+  CGD --> EFF["applySemiDecision requires workflow-reversible"]
+  EFF --> DONE["gate effect applied"]
+  CGD2 --> DONE
+  S4 --> DONE
+```
+
+<!-- Text fallback: occurrence は authorizeInteraction（:501）で mode 別に振り分けられる。none は常に human-required。semi は phase 内 stage-gate だけを semi-mode-gate として通し、それ以外は human-required。full かつ active grant のときだけ、question occurrence が resolveAutoDecision の5段梯子（confirmed-policy → norm → history → solo-election → agent-recommendation、後段2段は unreviewed）へ入る。semi の効果適用は applySemiDecision が workflow-reversible を要求する。 -->
+
+#### 再定義後に変わる辺（設計候補、未確定）
+
+```mermaid
+flowchart TD
+  OCC["occurrence"] --> AUTH["authorizeInteraction line 510 to 514"]
+  AUTH -->|"semi: milestone occurrence"| HUM["human-required"]
+  AUTH -->|"semi: routine occurrence"| LADDER["resolveAutoDecision ladder"]
+  LADDER --> GATE["full-grant hard gate line 702 must be relaxed"]
+  GATE --> S0["ladder stages 0 to 4"]
+  S0 --> EFF["applySemiDecision workflow-reversible check"]
+  EFF --> DONE["effect applied"]
+  MILE["milestone predicate does not exist yet"] -.-> AUTH
+```
+
+<!-- Text fallback: 再定義後は authorizeInteraction の semi 分岐が「節目 occurrence」と「日常 occurrence」を分け、日常側を resolveAutoDecision の梯子へ流す。その際 :702 の full-grant ハードゲートを緩和する必要がある。節目を判別する述語は observed 時点では存在せず、新設対象である。本図は設計候補であり承認された設計ではない。 -->
+
+### stop hook 側の非対称（既存の伏線）
+
+`amadeus-stop.ts` は既に `semi` を2つの軸で別々に扱っている。
+
+| 軸 | 関数 | file:line | `semi` の扱い |
+| --- | --- | --- | --- |
+| 継続 cap | `stopContinuationDefaultCap` | `:147-151` | `full` と同じ `AUTONOMOUS_BLOCK_CAP = 8`（`:153`） |
+| budget mode | `stopBudgetMode` | `:157-160` | `full`=`autonomous` / `semi`=`gated` / それ以外=`interactive` の3値 |
+| 質問 carve-out | `isFullyAutonomousIntent` | `:167-178` | **`full` 限定**。`semi` は carve-out を得ない |
+
+`isFullyAutonomousIntent` は mode に加えて production projection の grant が `active` であることも要求する（`:171-174`）。呼び出しは3箇所 — tier-2 質問 carve-out `:422`、tier-2b compose gate `:457`、tier-3 conversational `:716`。
+
+つまり **cap の軸では `semi` は既に自律側**、**質問の軸では `semi` は非自律側**という非対称が observed 時点で実在する。再定義はこの非対称を解消する方向の変更であり、`isFullyAutonomousIntent` の述語名・分岐・3呼び出し点が改訂面になる。名前が `Fully` を含むため、改名すると `tests/.coverage-patch-allowlist.json:5268` の `"function": "isFullyAutonomousIntent"` エントリも同期対象になる。
+
+### `--autonomy` 起動フラグの結線余地
+
+`--autonomy` はコード面に**存在しない**（`grep -rn -- "--autonomy" packages tests docs .claude scripts specs plugins contrib` → 0 hit、observed 実測。repo 全体の 22 hit は全件が本 intent 自身の record 成果物）。
+
+解釈点は `amadeus-orchestrate.ts:1044-1074` の flag parser if/else ladder。既存の値付きフラグは `--scope` `:1050` / `--stage` `:1053` / `--phase` `:1056` / `--depth` `:1059` / `--test-strategy` `:1062` / `--report` `:1067`。
+
+**構造的な落とし穴**（`:1072-1073`）: 未認識の値付きフラグは、その値が `!a.startsWith("--")` 分岐で intent 自由文へ流れ込む。`--report` がわざわざ値を consume している理由がコメント `:1068-1069` に verbatim で残っている:
+
+```
+      // CONSUME the value: an unrecognized valued flag would leak its value
+      // into the freeform intent text (the path would read as intent words).
+```
+
+したがって `--autonomy semi` を parser へ追加しないまま利用者が打つと、`semi` という語が intent 記述文へ混入する。
+
+配置上の制約: read-only フラグは絶対優先の梯子（`:1014-1016`、Branch 1 は `:2483-2489`）で処理されるが、autonomy は**監査済みの状態変更**であるため `READ_ONLY_FLAGS` には入れられない。既存流儀に整合する形は、birth 経路の `birthPrintDirective`（`:2617-2646`）が先例となる「`amadeus-bolt set-autonomy` を名指しする print directive」である。ただしこれは設計候補であり、本 intent では未確定。
+
+### mode の値域と永続化3面
+
+- 型: `amadeus-intent-autonomy.ts:11` — `export type AutonomyMode = "none" | "semi" | "full";`
+- 値域バリデータ4箇所: `amadeus-intent-autonomy.ts:952` / `amadeus-bolt.ts:1053` / `amadeus-stop.ts:162-165` / `amadeus-directive.ts:97`。**directive 面だけは `"semi" | "full"` の2値**で `none` を持たない（`none` の Intent には autonomy フィールドが載らないため）。
+- 人間コマンドの値域は狭い（`:250-257`）— `set-mode` は `"none" | "semi"` のみ、`revoke-full` の `targetMode` も同じ。`full` は `issue-full` / `replace-full` 経由でしか到達できない。**`semi` は grant を持たない mode である**という構造がここに現れる。
+- 永続化3面: (1) canonical = 監査 journal の replay（`amadeus-intent-autonomy-replay.ts:123` `replayIntentAutonomyAudit`、`:138` `createAuditIntentAutonomyRepository`、読み口は `amadeus-intent-autonomy-production.ts:133` `readProductionAutonomyProjection`）、(2) state の `Intent Autonomy Mode` / `Intent Grant`（書込 `amadeus-bolt.ts:1072-1078`）、(3) 互換投影 `Construction Autonomy Mode`（`amadeus-bolt.ts:1071` — `flags.mode === "full" ? "autonomous" : "gated"`）。
+
+(3) により **`semi` と `none` はともに `gated` へ潰れ、互換投影面では区別できない**。再定義後に `semi` の意味が `full` 寄りへ移ると、この投影の妥当性が問い直される。
+
+### `--policies-file` の無音破棄（隣接する既存の不整合）
+
+`handleSetAutonomy`（`amadeus-bolt.ts:1051-1092`）は mode に依存せず `readDecisionPolicyInputs(flags["policies-file"])` を読む（`:1067`）。しかし `amadeus-intent-autonomy-production.ts:417` の分岐で `mode !== "full"` は `prepareNonFullCommand`（`:382-395`）へ進み、この関数は `policies` 引数を**取らない**。結果、`--mode semi --policies-file <json>` は警告もエラーもなく policies を破棄する。
+
+再定義後に `semi` が裁定梯子（confirmed-policy 段を含む）を使うなら、この破棄はそのまま欠陥になる。observed 時点では `semi` が梯子を使わないため実害はないが、**再定義と同時に顕在化する**構造である。
+
+## phase boundary verification と approval の結線構造（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（祖先性 `git merge-base --is-ancestor` exit 0、距離 134 commits / 1041 files）。全数列挙・実測手順は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

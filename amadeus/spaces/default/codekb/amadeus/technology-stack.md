@@ -7,7 +7,41 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## phase boundary approval の技術断面（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の技術断面（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
+
+### スタックの変化 — なし（実測）
+
+`git diff --stat b938898f3 2f255bc69 -- package.json bun.lock packages/setup/package.json` は空。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の smoke / unit / integration / e2e 4層）はいずれも不変。
+
+### 本 intent が使う技術面
+
+| 面 | 技術 | 備考 |
+| --- | --- | --- |
+| autonomy ドメイン | TypeScript の判別ユニオン | `AutonomyMode = "none" \| "semi" \| "full"`（`amadeus-intent-autonomy.ts:11`）、`DecisionAuthorization` / `AutoDecisionResolution` が `kind` タグ付きユニオン |
+| 永続化 | 監査 journal の replay | イベントソーシング様式。projection は replay から導出（`amadeus-intent-autonomy-replay.ts:123`） |
+| CLI | Bun 直接実行の subcommand dispatcher | `amadeus-bolt.ts` は `Readonly<Record<string, handler>>` テーブル（`:1212-1221`）、`amadeus-orchestrate.ts` は if/else ladder（`:1044-1074`） |
+| hook | Bun 実行の stop hook | `amadeus-stop.ts`（1020行）。cap / budget mode / carve-out の3軸 |
+| 規約 | Markdown の正本知識ファイル | `amadeus-common/protocols/stage-protocol.md`。source-only 境界により canonical 1本のみ追跡 |
+| 配布 | manifest の `coreDirs` 投影 | `tools` / `hooks` / `amadeus-common` が全ハーネスへ投影される |
+
+### 技術的な留意点
+
+- **flag parser の様式差**: `amadeus-bolt.ts` はテーブル駆動、`amadeus-orchestrate.ts` は if/else ladder。`--autonomy` を後者へ追加する場合、値付きフラグは `i++` で値を consume しないと intent 自由文へ漏れる（`:1072-1073`）。この危険は既存コメント（`:1068-1069`）で明文化されている型の落とし穴である。
+- **値域宣言の4重化**: `AutonomyMode` の値域は型（`:11`）とは別に、`amadeus-intent-autonomy.ts:952` / `amadeus-bolt.ts:1053` / `amadeus-stop.ts:162-165` / `amadeus-directive.ts:97` の4箇所で実行時に検証される。**directive 面のみ `"semi" \| "full"` の2値**で `none` を持たない。値域を触る変更はこの4面の同期が必要。
+- **`parse, don't validate` からの逸脱**: `amadeus-stop.ts:162-165` の `intentAutonomyMode` は state 文字列から mode を読み、値域外は `null` を返す。`null` と `"none"` を呼び出し側が区別しない箇所があるため、再定義時に意味の取り違えが起きやすい。
+
+### 構成規模の推移
+
+| 指標 | base `b938898f3` 断面の記載 | observed `2f255bc69` 実測 |
+| --- | --- | --- |
+| core tools `.ts` | 116 | **119** |
+| `tests/**/*.test.ts` | 927 | **941** |
+
+区間内で追加された core tools は `amadeus-autonomy-review.ts`（1273行）/ `amadeus-autonomy-review-production.ts`（484行）/ `amadeus-harness-registry.ts` / `amadeus-intent-completion.ts` の4本、加えて `packages/framework/harness/registry.ts` が新設された（`git diff --diff-filter=A` 実測）。
+
+## phase boundary approval の技術断面（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

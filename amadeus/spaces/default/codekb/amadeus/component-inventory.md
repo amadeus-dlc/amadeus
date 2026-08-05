@@ -17,7 +17,58 @@
 
 候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
 
-## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の対象コンポーネント（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の行数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（`wc -l` / `grep -n`、canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
+
+### 焦点コンポーネント
+
+| コンポーネント（行数） | 位置 | 本 intent での役割 |
+| --- | --- | --- |
+| `amadeus-intent-autonomy.ts` (961) | core/tools | autonomy ドメイン。`authorizeInteraction` `:501`、`createGateAutoDecision` `:666`、`resolveAutoDecision` `:699`。**再定義の主患部** |
+| `amadeus-intent-autonomy-runtime.ts` (800) | core/tools | 裁定ルーティング。`selectDecision` の分岐 `:522-524`、`applySemiDecision` `:546-554` |
+| `amadeus-intent-autonomy-production.ts` (900) | core/tools | 本番結線。`readProductionAutonomyProjection` `:133`、mode 分岐 `:417`、`prepareNonFullCommand` `:382-395` |
+| `amadeus-intent-autonomy-replay.ts` (175) | core/tools | canonical 永続化。`replayIntentAutonomyAudit` `:123`、`createAuditIntentAutonomyRepository` `:138` |
+| `amadeus-stop.ts` (1020) | core/hooks | cap / budget / carve-out。`stopContinuationDefaultCap` `:147-151`、`stopBudgetMode` `:157-160`、`isFullyAutonomousIntent` `:167-178` |
+| `amadeus-bolt.ts` (1312) | core/tools | autonomy CLI 面。dispatch テーブル `:1212-1221`、`handleSetAutonomy` `:1051-1092` |
+| `amadeus-orchestrate.ts` (5544) | core/tools | 起動フラグ parser `:1044-1074`、read-only 梯子 `:1014-1016`、`birthPrintDirective` `:2617-2646` |
+| `amadeus-utility.ts` (6327) | core/tools | `--status` の autonomy 表示。`readStatusAutonomy` `:323-334`、`renderAutonomyStatus` `:336-350` |
+| `amadeus-statusline.ts` (325) | core/hooks | **autonomy 表示を持たない**（`grep -i autonom` → 0 hit）。セグメント組み立て `:203-206` |
+| `amadeus-directive.ts` | core/tools | `intent_autonomy_mode?: "semi" \| "full"` `:97`、検証器 `:606` |
+
+### 区間内で追加されたコンポーネント（本 intent の焦点に隣接）
+
+`git diff --name-only --diff-filter=A b938898f3 2f255bc69` による実測（`packages/framework/core/tools` / `packages/framework/harness` 限定）:
+
+| 新規ファイル（行数） | 隣接性 |
+| --- | --- |
+| `amadeus-autonomy-review.ts` (1273) | auto-decision の **unreviewed レビュー面**。梯子後段2段（solo-election / agent-recommendation）が生む `reviewState: "unreviewed"` の受け皿。`semi` を梯子へ載せると未レビュー件数が増えるため直接影響する |
+| `amadeus-autonomy-review-production.ts` (484) | 同上の本番結線 |
+| `amadeus-harness-registry.ts` | ハーネス登録の集約。docs/annex 横展開の対象面に関係 |
+| `amadeus-intent-completion.ts` | ワークフロー完了判定 |
+| `packages/framework/harness/registry.ts` | ハーネス registry 正本 |
+
+これら5ファイルは **base 時点では存在しなかった**。特に `amadeus-autonomy-review*.ts`（計 1757 行）は、本 intent が `semi` を梯子へ載せる場合の下流受け皿であり、requirements で明示的に扱うべき隣接面である。
+
+### `amadeus-bolt.ts` の autonomy サブコマンドは8種（5種ではない）
+
+dispatch テーブル `:1212-1221` の実測: `set-autonomy` `:1213` / `preview-autonomy` `:1214` / `decide-question` `:1215` / `observe-quality` `:1216` / `resume-quality` `:1217` / `list-auto-decisions` `:1218` / `get-auto-decision` `:1219` / `review-auto-decision` `:1220`。
+
+本文書の 260804 履歴節は「サブコマンド5種追加 — `set-autonomy`（`:1117`）…」と記すが、これは observed `b938898f3` 時点の正しい記述であり書き換えない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。区間内で `:961` 以降が **+96 行シフト**し、`get-auto-decision` / `review-auto-decision` の2種が追加されたため、observed `2f255bc69` では上記8種・上記行番号が正である。
+
+なお `amadeus-intent-autonomy.ts (961)` の行数記述は履歴節と observed で**一致**しており、鮮度上の問題はない。
+
+### 構成規模のデルタ
+
+| 指標 | 260804 断面（base `b938898f3`） | 本断面（observed `2f255bc69`） | 差 |
+| --- | --- | --- | --- |
+| core tools の `.ts` 本数 | 116 | **119** | +3 |
+| `tests/**/*.test.ts` 本数 | 927 | **941** | +14 |
+| 最大テスト番号 | — | **t439** | 後続 Bolt は t440 以降 |
+
+測定コマンド: `ls packages/framework/core/tools/*.ts | wc -l` / `find tests -name '*.test.ts' | wc -l` / `ls tests/{unit,integration,e2e} | grep -oE "^t([0-9]+)" | sed 's/t//' | sort -n | tail -3`（いずれも observed で実行）。
+
+## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。core tools は **103 → 116**。
 

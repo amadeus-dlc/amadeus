@@ -9,7 +9,24 @@
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
-## phase boundary 承認の業務境界（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（`git merge-base --is-ancestor` exit 0、区間 **19 commits / 464 files**、`+36989 / −199`）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
+
+- **対象**: [Issue #2253](https://github.com/amadeus-dlc/amadeus/issues/2253)。scope は `self-feature`、Depth: Standard、Test Strategy: Comprehensive。狙いは2つ — (1) `semi` を「`full` から**節目の自動裁定だけ**を差し引いたもの」へ再定義する、(2) ワークフロー起動時に `/amadeus --autonomy semi|full` で autonomy 水準を宣言できるようにする。
+- **現行の `semi` が利用者に与えている体験**: `semi` は「phase 内のステージゲートだけを自動承認し、それ以外はすべて人間に戻す」水準である（`stage-protocol.md:131` が正本の1行定義）。したがって **phase 境界のゲートも、ワークフロー中の質問も、`semi` では一切自動裁定されない**。無人裁定の梯子（norm → 履歴 → solo 選挙 → agent 推奨）は `full` grant を持つ Intent だけが使える。
+- **再定義が変える価値**: 現行の `semi` は「ほぼ `none`＋ステージゲート自動化」に近く、`full` との落差が大きい。再定義後の `semi` は「日常判断は `full` と同じ自動裁定に載せ、**節目（phase 境界と、それに準ずる不可逆・方向決定的な判断）だけ人間に戻す**」水準になる。利用者にとっては「全部止まる」か「全部任せる」の二択の間に、実用的な中間点が生まれる。
+- **リスクの所在**: 差し引く対象＝「節目」の定義がまだ言葉でしかない。現行コードで機械的に判別できるのは `occurrence.phase !== "phase-boundary"`（phase 境界か否か）と `occurrence.kind`（`stage-gate` / `walking-skeleton` / `question`）の2軸だけである。`question` occurrence には phase 概念がないため、「どの質問が節目か」を判別する既存の述語は**存在しない**。再定義の実質は、この判別基準を新設できるかにかかる。
+- **安全性の非対称**: `semi` を梯子へ載せると、`full` にしか適用されていなかった無人裁定が `semi` にも及ぶ。梯子の後段2段（solo 選挙 / agent 推奨）は `reviewState: "unreviewed"` で記録され、人間の事後レビューを前提にしている。`semi` を選んだ利用者が「人間が節目を見るから安全」と考える一方で、日常判断が未レビューのまま積み上がる構図になりうる。ここは requirements で明示的に扱うべき裁定事項である。
+- **起動宣言（`--autonomy`）の価値**: 現在、autonomy を選ぶ唯一の経路は `amadeus-bolt set-autonomy` であり、Intent が生まれた後にしか実行できない。起動時に宣言できれば、利用者は「このワークフローはこの水準で回す」を最初の一手で表明できる。ただし autonomy は**監査済みの状態変更**であり、読み取り専用フラグ（`--status` 等）とは性質が異なる。
+- **出荷単位の見通し**: (a) `semi` の判別述語と梯子接続、(b) stop hook の carve-out 語彙、(c) 起動フラグ、(d) 規約・docs の対訳同期。(d) は **docs 22 ファイル = 11 対訳ペア**＋正本知識 `stage-protocol.md` の9行に及ぶため、コード面より広い。
+- **次段の裁定**: (1)「節目」の機械判別基準（phase 境界のみか、質問にも節目クラスを設けるか）、(2) `semi` が使える梯子の段数（全5段か、未レビュー2段を除く3段か）、(3) `--autonomy` を状態変更として birth 経路へ結線するか、既存流儀どおり `set-autonomy` を名指しする print directive に留めるか、(4) 現行 `semi` を固定している既存テストのうち、どれを反転しどれを保存するか。
+
+### 現時点の未着手性（誤読防止）
+
+本 intent はまだ **reverse-engineering 段**であり、`semi` の意味論はコード・規約・docs のいずれにおいても**再定義前の現行仕様のまま**である。本文書の他節（履歴節を含む）が記述する `semi` の挙動は、observed 時点では引き続き正しい。
+
+## phase boundary 承認の業務境界（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（祖先性 exit 0、距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 
