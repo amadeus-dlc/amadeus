@@ -29,10 +29,13 @@ or network access is needed: charts are inline SVG with zero dependencies.
 ten Search API `total_count` queries: `total` (cumulative occurrence), `open`,
 `closed`, `fixed` (closed as completed — cumulative repair), `rejected`
 (closed with any other reason, via `is:closed -reason:completed`, i.e.
-wontfix/duplicate/not-planned), one count per severity label (`s1_fatal`,
+wontfix/duplicate/not-planned), one count per severity bucket (`s1_fatal`,
 `s2_critical`, `s3_major`, `s4_minor`), and `unlabeled` (bugs carrying none of
-the severity labels), so the severity breakdown plus `unlabeled` covers
-`total`. Snapshots store cumulative counts; the dashboard charts every
+the severity labels). The severity buckets are mutually exclusive by priority
+exclusion — an issue carrying several severity labels counts once, in its
+highest bucket (e.g. `s3_major` queries
+`label:S3-MAJOR -label:S1-FATAL -label:S2-CRITICAL`) — so the buckets plus
+`unlabeled` partition `total`. Snapshots store cumulative counts; the dashboard charts every
 cumulative key as its per-snapshot delta (headings carry a `Δ` prefix), while
 `open` — a point-in-time balance — stays a raw series and the value tables
 keep the raw cumulative numbers.

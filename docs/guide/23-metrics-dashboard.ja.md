@@ -28,10 +28,13 @@ inline SVG です。
 Search API の `total_count` 10クエリで数えます: `total`(発生件数の累積)・
 `open`・`closed`・`fixed`(completed でクローズ = 修正件数の累積)・
 `rejected`(`is:closed -reason:completed` で数える、completed 以外の理由で
-クローズした件数。wontfix/duplicate/not-planned)・重大度ラベル
+クローズした件数。wontfix/duplicate/not-planned)・重大度バケット
 ごとの件数(`s1_fatal` / `s2_critical` / `s3_major` / `s4_minor`)・
-`unlabeled`(重大度ラベルが1つも付いていない件数)。重大度内訳 + `unlabeled`
-で `total` 全体をカバーします。スナップショットに保存するのは累積値で、
+`unlabeled`(重大度ラベルが1つも付いていない件数)。重大度バケットは
+優先順位付き除外で相互排他です — 複数の重大度ラベルを持つ Issue は最上位の
+バケットに1回だけ数えます(例: `s3_major` は
+`label:S3-MAJOR -label:S1-FATAL -label:S2-CRITICAL` で照会)。これにより
+重大度バケット + `unlabeled` が `total` を分割します。スナップショットに保存するのは累積値で、
 ダッシュボードは累積系列をスナップショット間の増分としてチャート描画します
 (見出しに `Δ` プレフィクス)。`open` は時点の残高なので生値のまま描画し、
 値表も累積の生値を保持します。

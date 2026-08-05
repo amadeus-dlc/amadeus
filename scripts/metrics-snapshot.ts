@@ -148,13 +148,15 @@ export const collectors: Collector[] = [
       fixed: count("is:closed reason:completed"),
       rejected: count("is:closed -reason:completed"),
     };
-    // `unlabeled` closes the severity breakdown: severities plus unlabeled
-    // cover `total`, queried directly rather than derived (non-atomic calls).
+    // Mutually exclusive severity buckets: an issue carrying several severity
+    // labels counts once, in its highest bucket (priority exclusion), and
+    // `unlabeled` catches the rest — so the buckets partition `total`, queried
+    // directly rather than derived (non-atomic calls).
     const severity = {
       s1_fatal: count("label:S1-FATAL"),
-      s2_critical: count("label:S2-CRITICAL"),
-      s3_major: count("label:S3-MAJOR"),
-      s4_minor: count("label:S4-MINOR"),
+      s2_critical: count("label:S2-CRITICAL -label:S1-FATAL"),
+      s3_major: count("label:S3-MAJOR -label:S1-FATAL -label:S2-CRITICAL"),
+      s4_minor: count("label:S4-MINOR -label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR"),
       unlabeled: count("-label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR -label:S4-MINOR"),
     };
     return successful("bugs", "gh", env.exec(["gh", "--version"]).split("\n")[0].trim(), { ...totals, ...severity });
