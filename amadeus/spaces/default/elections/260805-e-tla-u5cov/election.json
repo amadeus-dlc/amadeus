@@ -1,0 +1,22 @@
+{
+  "electionId": "E-TLA-U5COV",
+  "kind": "blocker",
+  "question": "PR #2312(U5 authoring-stage-e2e)の CI Project Coverage Gate 赤(ABSOLUTE_MINIMUM_NOT_MET: current 75.66%、universe が 17,648→116,489 行へ膨張)の是正方式。機序は一次実測で確定済み: t450 E2E が composed host(os temp 配下へ compose したコピー)を in-process 動的 import するため、bun --coverage が temp コピー群を計測し lcov SF に混入(t450 単独プローブで 110 SF 中 100 が /var/folders 配下)。collectCoverageTotals(tests/run-tests.ts:459)は SF を無フィルタで合算するため universe が膨張し、project % が 92.19%→75.66% へ希釈された。どの方式で是正するか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: テスト側 spawn 化 + collector 修正は後続 Issue",
+      "description": "t450 の composed-runtime 駆動(動的 import で実行している E2E 本流と fail-closed 2系)を、spawn 子プロセス(composed host 上で driver script を bun 実行し JSON 結果を stdout 返却)へ変換する。spawn 子は bun --coverage の計測対象外(既知の spawn 盲点)のため temp コピーが lcov に入らない。BR-U5-09(composed runtime 実測)は実プロセス実行でむしろ忠実になる(import closure 検査は既に spawn 済み)。PR は tests-only を維持し、ゲート意味論に触れない。collector の恒久修正(repo 外 SF の除外)は enhancement Issue を起票して後続 intent で落ちる実証込みで扱う。トレードオフ: E2E の assert が process 境界越しの JSON 経由になり、テストの書き直しコストが発生。"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: collector 側で repo 外 SF を除外(本 PR)",
+      "description": "tests/run-tests.ts / coverage-normalize の合流点で、repo root 外(かつ既知の正規化写像に該当しない)SF レコードを merged lcov から除外する。計測完全性の恒久修正で、t450 は無変更。トレードオフ: 本 PR が tests-only から計測ゲートの挙動変更へスコープ拡大し、落ちる実証(除外が効く赤→緑の対照)+corpus sweep(既存 green が壊れない両側実測)+レビュー再実施が必要。ゲート変更を機能 PR に同乗させる形になる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

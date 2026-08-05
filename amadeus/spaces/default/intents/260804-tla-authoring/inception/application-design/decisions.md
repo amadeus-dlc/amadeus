@@ -62,6 +62,7 @@
 
 - **Context**: FR-003 / FR-007 / AC-001 / AC-002 / AC-006 は「authoring・改訂・再 proof が完了するまで hold を解除しない」ことを要求する。C6 の登録拒否だけでは、そもそも authoring が起動されないまま下流工程（functional-design、build-and-test）が通過することを防げない（レビュー iteration 1 BLOCKER-1）。engine には既に fail-closed の advisory checkpoint 機構（stage-protocol §11a）が requirements-analysis / functional-design / build-and-test の 3 点に存在する。
 - **Decision**: hold 強制の owner を C9 AuthoringHoldEvaluator とし、既存 advisory checkpoint 機構へ plugin readiness 評価経由で advisory + formal_checks を供給する。checkpoint の解除は C9 の `no-hold` verdict（完全・非部分・provenance 検証済み）のみが行い、人間の明示的な risk defer は checkpoint 契約の既存規則に従う。engine 側のコード・契約は変更しない。
+- **改訂（2026-08-04T18:29:01Z 人間裁定 — bolt-plan.md Bolt 2 改訂追記と同一裁定の転記）**: FD U2 冒頭の実読確認で「plugin.json 宣言だけで結線でき engine 変更不要」の前提が否定された（advisory code の語彙・evaluator コマンドの供給面が engine 側固定だった）ため、Decision 末尾の「engine 側のコード・契約は変更しない」を「checkpoint 機構（発火点・解除規則）は無変更のまま、advisory 供給面の宣言読取一般化に限る小さな engine 変更（宣言 parse と formal-check route の2一般化点）を行う」へ改訂する。実装は BR-U2-08 として固定済み。
 - **Consequences**: route=author-new の新規題材（`.tla` 未存在で既存 hash 監視が沈黙するケース）も、C9 の「applicability receipt 不在 = hold」判定で checkpoint に掛かる。hold の強制点が 3 checkpoint に限定されるため、checkpoint 間の作業（成果物の編集そのもの）は止まらない — 止まるのは工程の前進であり、これは既存 advisory 契約と同じ粒度。
 - **Alternatives Rejected**:
   - **B: C6 の登録拒否のみで強制** — 登録は経路の最終段であり、authoring 未起動のまま下流が進む問題を検出できない（BLOCKER-1 の指摘そのもの）。

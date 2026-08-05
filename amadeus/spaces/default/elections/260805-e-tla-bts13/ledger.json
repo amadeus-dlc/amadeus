@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TLA-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用に3条件を付す。(1) C1 の persist 文には、機序が bun の『spawn した子プロセスを計測しない』という契約なき実装差に依存すること、および恒久修正が Issue #2315(OPEN、実在確認済み)であることを本文へ明記する — 依存を隠したまま『spawn 化すれば安全』とだけ書くと、bun の世代交代で規則が無音失効する(E-TLA-U5COV で subagent-2 が付した同趣旨の留保の persist 面への引き継ぎ)。(2) C1 は独立 cid を新設せず、bun-coverage-spawn-blindspot(team.md:166)/ seam-placement-measured-module(project.md:167)への追補として書き、既存2則が patch 面(absent→missed 反転)を扱うのに対し本追補が project universe 面(母数膨張による無音希釈)を埋める、という被覆関係を1文で明示する。(3) C4 の不採用は『既存ファミリ被覆』で足りるが、base 前進が正本へ新 sensor を持ち込む経路は既存の base-advance-regrounding が『自 Bolt が正本を触った場合』を主語にしており厳密には同一でないため、C2 と同様に次回 PM ラウンドへ違反実例ではなく運用知識として回付し、そこで再判定する(黙って落とさない)。",
+      "rationale": "候補4件の実在根拠と既存被覆を独立に実測した。C1: 選挙 E-TLA-U5COV の record.md が機序と数値(t450 単独プローブで 110 SF 中 100 が /var/folders 配下、universe 17,648→116,489、project 92.19%→75.66%、collectCoverageTotals が tests/run-tests.ts:459 で SF 無フィルタ合算)を一次記録として保持しており、候補文の主張はすべてこの記録へ遡れる。恒久修正として引かれた #2315 は gh issue view で OPEN・タイトルが『lcov 合流点で repo 外 SF レコードを loud に除外し project universe の汚染を防ぐ』であることを確認した(先送りが記録付きであり no-silent-scope-narrowing に触れない)。被覆照合の結果、memory 層の既存2則はいずれも『計測されない/0-hit で載る』ことによる patch 行の欠損側を扱っており、『repo 外のコピーが丸ごと母数に載って project % を希釈する』という母数汚染側は未被覆であることを grep で確認した(team.md:166 / project.md:167 の本文実読)。よって C1 は新規面を埋める。C3: advisory-run-note.md が provider auto の Darwin 環境検査による ENVIRONMENT_UNAVAILABLE(exit 2、fail-closed 正常動作)と --provider docker 付加の申告付き逸脱を逐語で記録し、さらに相関3フラグ(--advisory-target / --advisory-spec-identity / --advisory-instance)付き run で初めて advisory が解消し build-and-test の run-stage が emit された経緯を記録している。相関なしの先行 run(run-model-check-ci.ts run、TLC は 5/5 NOT_DETECTED / exit 0 で成立)では解消しなかった対照が同一記録内にあり、『検査の成立』と『advisory の解消』が別事象であることが実測で分離されている — engine の外部 seam 運用知識として persist する価値がある。C2: project.md:167 の seam-placement-measured-module が『spawn-only の CLI モジュールを coverage seam 目的で in-process import しない — import はモジュール全行を lcov に 0-hit で載せ、当該ファイルの patch 行を absent→missed へ反転させる』と逐語で禁じており、候補文と同一形。新規則ではなく違反実例であり、不採用+PM 回付が正しい。C4: bun run build による dist/self-install 再生成は project.md:10 / :108 の Mandated と ALWAYS が既に定めており、対処自体は既存規範どおり。0件案(choice 2)を採らないのは、C1 が実測された未被覆面であり、放置すれば同じ E2E 様式で project gate の無音希釈が再発しうるため — 記録が選挙 record と Issue に散在している状態は、次に同型を書く実装者に届かない。",
+      "submittedAt": "2026-08-06T00:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TLA-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文の逐語精度を2点条件とする。(a) C3 の advisory 未解消側の run は「相関なし CI runner 実行」でなく、実測どおり「ローカルの run-model-check-ci.ts run（相関3フラグ非同梱）」と書く — advisory-run-note.md の実文は当該 run をローカル実行として記録しており、候補文の表現は一次記録と一致しない(verbatim-quote-with-cite)。(b) C1 は「project gate は CI 専用ステップのためローカル coverage:ci では検知不能」の根拠を .github/workflows/ci.yml:432 の file:line で焼き込む — 本追補の非自明性はこの検知不能性そのものにあるため、根拠が落ちると追補の存在理由が読めなくなる。",
+      "rationale": "各候補を独立実測して採否を照合した。【C1 採用】機序と数値は一次記録2件で裏取り済み(construction/authoring-stage-e2e/code-generation/code-summary.md の裁定5・6項、elections/260805-e-tla-u5cov/record.md の question 節: SF 110 中 100 が temp コピー、universe 17,648→116,489、92.19%→75.66%)。既存 memory との被覆照合では未被覆と確認した — team.md:166 bun-coverage-spawn-blindspot は「spawn は計測されないので in-process seam を使え」という分子側の規則、project.md:167 seam-placement-measured-module は「spawn-only CLI の in-process import は当該ファイルの patch 行を absent→missed へ反転させる」というファイル内 patch 面の規則で、いずれも『repo 外の temp コピーが lcov universe(分母)へ混入して project % を無音希釈する』面を持たない。加えて .github/workflows/ci.yml:432 と :579 が coverage-project-gate.ts の唯一の呼出し点であり(tests/run-tests.ts は :529 のコメント参照のみ)、project gate がローカル coverage:ci 経路に存在しないことを実測確認した — 検知不能性が実在するため、この追補は運用上の実効を持つ。【C2 不採用に同意】「spawn 専用 driver からの in-process import による全行 0-hit 搭載・patch 行の absent→missed 反転」は project.md:167 が逐語で禁じている形そのもので、新規則ではなく違反実例。PM ラウンドへの回付が正しい処理。【C3 採用】advisory-run-note.md の追記節で両事実を実測確認した — 無変更実行が provider auto の Darwin 環境検査で ENVIRONMENT_UNAVAILABLE(exit 2、fail-closed の正常動作)になり --provider docker を付加した申告付き逸脱、および相関3フラグ(--advisory-target / --advisory-spec-identity / --advisory-instance)同梱 run でのみ advisory が解消し next が build-and-test を emit した経過。memory 層の advisory 系 grep では stdout-directive-stderr-advisory(project.md:179)・stderr-addition-consumer-grep(:177)・guard-announcement-callsite-count(:228)がいずれも stderr advisory 出力の話であり本件と別物、functional-design:c8(:315)は formal_checks コマンドが engine 側ハードコードであることを設計段で file:line 確定せよという設計段規則で、その engine 供給コマンドを実行する側の運用知識(環境引数の許容範囲と相関フラグ必須性)は未被覆。知識クラスとしての persist は妥当。【C4 不採用に同意】project.md:155 stale-binary と :108-109 の bun run build 再生成 Mandated が既に覆っており、新規 cid を立てると同型規範の重複になる。以上より choice 1(C1+C3 採用、C2/C4 は理由付き不採用)を支持する。GoA 2 の留保は上記2点の逐語精度に限り、採否そのものへの異議はない。",
+      "submittedAt": "2026-08-05T23:05:05Z"
+    }
+  ],
+  "late": []
+}
