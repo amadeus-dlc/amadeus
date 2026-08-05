@@ -284,7 +284,7 @@ describe("Intent autonomy durable coordinator", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
     const repository = createMemoryIntentAutonomyRepository();
     const coordinator = createIntentAutonomyCoordinator({ initialProjection: initial, repository });
-    const result = coordinator.applyHumanCommand({ kind: "set-mode", mode: "semi" }, {
+    const result = coordinator.applyHumanCommand({ kind: "set-mode", mode: "semi", policies: [] }, {
       targetIntentUuid: INTENT,
       principalId: "principal-1",
       humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" },
@@ -312,7 +312,7 @@ describe("Intent autonomy durable coordinator", () => {
       initialProjection: initial,
       repository: createMemoryIntentAutonomyRepository(),
     });
-    const semiCommand = semiCoordinator.applyHumanCommand({ kind: "set-mode", mode: "semi" }, {
+    const semiCommand = semiCoordinator.applyHumanCommand({ kind: "set-mode", mode: "semi", policies: [] }, {
       targetIntentUuid: INTENT,
       principalId: "principal-1",
       humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" },
