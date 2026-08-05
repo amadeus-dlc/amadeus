@@ -5812,6 +5812,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t455-semi-policy-cli.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
