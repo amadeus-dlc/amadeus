@@ -1549,6 +1549,43 @@ describe("t245 reviewer protocol production caller", () => {
     );
   });
 
+  test("refuses a malformed invocation store and an unanchored record path", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const store =
+      "amadeus/spaces/default/intents/example/.amadeus-reviewer-invocations.json";
+    const cases = [
+      { name: "not JSON", content: "{", expected: "store must be JSON" },
+      {
+        name: "no invocation list",
+        content: '{"invocations":"all"}',
+        expected: "must list issued invocations",
+      },
+      {
+        name: "malformed entry",
+        content: '{"invocations":[{"invocationId":"not-a-uuid","iteration":null}]}',
+        expected: "review invocation ID must be a UUID v4",
+      },
+    ];
+
+    for (const item of cases) {
+      const current = fixture();
+      const local = localRuntime(current, current.directive);
+      local.files.set(join(current.root, store), item.content);
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode, item.name).toBe(1);
+      expect(local.output().stderr, item.name).toContain(item.expected);
+    }
+
+    const unanchored = fixture();
+    unanchored.directive.memory_path = "construction/unit/code-generation/memory.md";
+    const local = localRuntime(unanchored, unanchored.directive);
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(1);
+    expect(local.output().stderr).toContain("does not name an intent record dir");
+  });
+
   test("requires every reviewer result field before Review or READY", () => {
     for (const field of [
       "invocationId",
