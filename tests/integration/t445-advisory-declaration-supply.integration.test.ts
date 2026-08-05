@@ -1,11 +1,29 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   advisoriesForHost,
   parseAdvisoryDeclarations,
+  type RunEvaluator,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
+import {
+  advisoryChoicePresentationFields,
+  advisoryReportHoldReason,
+  guardAdvisoryChoices,
+  recordProtectedAdvisoryChoice,
+  type AdvisoryChoiceStore,
+} from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  auditFilePath,
+  auditShardName,
+  docsRoot,
+  findAllEvents,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
 // U2 generalization point 1 (ADR-6 revision): the engine supplies advisories a
 // composed plugin declares, evaluated by that plugin's own evaluator. The
@@ -129,5 +147,129 @@ describe("the shipped formal-model-check declaration", () => {
       "functional-design",
       "build-and-test",
     ]);
+  });
+});
+
+// BR-U2-05: a declared advisory with no runnable check (formalCheck: null) is
+// released only by its own evaluator returning no-hold. `next` and `report`
+// must agree on that — a run-now choice releases neither side.
+describe("declared advisory hold symmetry across next and report", () => {
+  const projects: string[] = [];
+
+  afterEach(() => {
+    for (const project of projects.splice(0)) cleanupTestProject(project);
+  });
+
+  const DECLARED_ADVISORY: Advisory = {
+    plugin: "demo",
+    code: "authoring-hold" as Advisory["code"],
+    message: "advisory: demo authoring-hold — no-applicability-receipt",
+    stage: "requirements-analysis",
+    target: "specs/tla",
+    specIdentity: "sha256:hold-1",
+  };
+
+  function holdRunner(): RunEvaluator {
+    return () => ({
+      status: 1,
+      stdout: JSON.stringify({
+        ok: false,
+        verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] },
+      }),
+    });
+  }
+
+  function noHoldRunner(): RunEvaluator {
+    return () => ({ status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) });
+  }
+
+  function seedDeclaredProject(): { projectDir: string; hostRoot: string } {
+    const projectDir = createTestProject();
+    projects.push(projectDir);
+    seedStateFile(projectDir, join(FIXTURES_DIR, "state-mid-inception.md"));
+    const host = join(projectDir, ".harness");
+    mkdirSync(host, { recursive: true });
+    writeFileSync(
+      join(host, ".amadeus-plugin-composition.json"),
+      JSON.stringify({ ledger: [], plugins: [["demo", { plugin: "demo", stageIndex: [] }]] }),
+      "utf8",
+    );
+    mkdirSync(join(projectDir, "plugins", "demo"), { recursive: true });
+    writeFileSync(
+      join(projectDir, "plugins", "demo", "plugin.json"),
+      JSON.stringify({ name: "demo", tools: [], advisories: HOLD_DECLARATION }),
+      "utf8",
+    );
+    return { projectDir, hostRoot: host };
+  }
+
+  function chooseAtCheckpoint(projectDir: string, prompt: string): void {
+    const store = JSON.parse(
+      readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
+    ) as AdvisoryChoiceStore;
+    const pending = store.pending[0];
+    if (pending === undefined) throw new Error("no pending advisory to choose for");
+    const fields = advisoryChoicePresentationFields(
+      projectDir,
+      pending.identity.checkpoint,
+      [pending.identity.advisoryInstance],
+    );
+    if (!fields.ok) throw new Error(fields.reason);
+    plantV1AuditRow("DECISION_RECORDED", fields.value, projectDir);
+    const planted = plantV1AuditRow("HUMAN_TURN", {}, projectDir);
+    const event = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN").at(-1);
+    if (event === undefined) throw new Error("no HUMAN_TURN was planted");
+    const recorded = recordProtectedAdvisoryChoice(projectDir, prompt, {
+      shard: auditShardName(projectDir),
+      timestamp: planted.timestamp,
+      eventIdentity: createHash("sha256").update(event.block).digest("hex"),
+    });
+    if (!recorded) throw new Error("the advisory choice was not recorded");
+  }
+
+  test("run-now holds on both sides while the evaluator keeps holding", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject();
+    const stage = DECLARED_ADVISORY.stage;
+    expect(guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot).kind).toBe("hold");
+    chooseAtCheckpoint(projectDir, "run-now");
+
+    const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    expect(guarded.kind).toBe("hold");
+    if (guarded.kind === "hold") {
+      expect(guarded.runRequired).toBe(false);
+      expect(guarded.formalChecks).toEqual([]);
+      expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
+    }
+
+    const reason = advisoryReportHoldReason(projectDir, stage, hostRoot, holdRunner());
+    expect(reason ?? "").toContain("authoring-hold");
+    expect(reason ?? "").not.toContain("formal model check artifacts");
+  });
+
+  test("report releases once the evaluator stops raising the advisory", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject();
+    const stage = DECLARED_ADVISORY.stage;
+    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    chooseAtCheckpoint(projectDir, "run-now");
+    expect(advisoryReportHoldReason(projectDir, stage, hostRoot, noHoldRunner())).toBeNull();
+  });
+
+  test("an unresolvable host holds the report side closed", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject();
+    const stage = DECLARED_ADVISORY.stage;
+    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    chooseAtCheckpoint(projectDir, "run-now");
+    const reason = advisoryReportHoldReason(projectDir, stage) ?? "";
+    expect(reason).toContain("authoring-hold");
+    expect(reason).toContain("evaluator to return no-hold");
+  });
+
+  test("the human's explicit deferral still releases both sides", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject();
+    const stage = DECLARED_ADVISORY.stage;
+    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    chooseAtCheckpoint(projectDir, "defer-with-risk");
+    expect(guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot).kind).toBe("allow");
+    expect(advisoryReportHoldReason(projectDir, stage, hostRoot, holdRunner())).toBeNull();
   });
 });

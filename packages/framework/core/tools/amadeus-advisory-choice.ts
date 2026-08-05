@@ -16,10 +16,12 @@ import {
 } from "./amadeus-lib.ts";
 import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
 import {
+  advisoriesForHost,
   declaredFormalCheckArgv,
   isDeclaredAdvisoryCode,
   isKnownAdvisoryCode,
   resolveArgvTokens,
+  type RunEvaluator,
 } from "./amadeus-advisory-declaration.ts";
 import {
   ACTIVATION_WATCH_GLOBS,
@@ -744,6 +746,27 @@ function declaredFormalCheckRoute(
   };
 }
 
+// A declared advisory with no executable side (formalCheck: null) has nothing
+// this engine can run and verify on the plugin's behalf, so a run-now choice
+// releases nothing: the hold stands until the plugin's own evaluator stops
+// raising it (BR-U2-05). The human's explicit defer-with-risk remains the
+// checkpoint's own escape hatch and is untouched by this rule.
+const DECLARED_RELEASE_RULE =
+  "declared advisory: release requires the plugin's own evaluator to return no-hold";
+
+// The report-side mirror of that judgment: ask the declaring plugins what they
+// raise right now. `null` means the host could not be resolved, in which case
+// the caller keeps the hold closed rather than guessing a release.
+function raisedDeclaredCodes(
+  activationHostRoot: string | undefined,
+  stage: string,
+  runEvaluator?: RunEvaluator,
+): Set<string> | null {
+  if (activationHostRoot === undefined) return null;
+  const raised = advisoriesForHost(activationHostRoot, stage, undefined, runEvaluator);
+  return new Set(raised.map((advisory) => `${advisory.plugin}/${String(advisory.code)}`));
+}
+
 function resolveRunRequiredHold(
   projectDir: string,
   stage: string,
@@ -759,7 +782,10 @@ function resolveRunRequiredHold(
     if (isDeclaredAdvisoryCode(pending.identity.code)) {
       const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
       const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
-      if (route === null) continue;
+      if (route === null) {
+        directiveItems.push({ ...directiveItem(pending), result: DECLARED_RELEASE_RULE });
+        continue;
+      }
       directiveItems.push(directiveItem(pending));
       formalChecks.push(route);
       continue;
@@ -835,7 +861,12 @@ export function closeAdvisoryInstancesForStage(
   });
 }
 
-export function advisoryReportHoldReason(projectDir: string, stage: string): string | null {
+export function advisoryReportHoldReason(
+  projectDir: string,
+  stage: string,
+  activationHostRoot?: string,
+  runEvaluator?: RunEvaluator,
+): string | null {
   return withAuditLock(projectDir, () => {
     const path = storePath(projectDir);
     if (!existsSync(path)) return null;
@@ -855,11 +886,23 @@ export function advisoryReportHoldReason(projectDir: string, stage: string): str
       ).join(", ")}`;
     }
     if (verdict.kind === "resolved") return null;
+    let declaredRaised: Set<string> | null | undefined;
     const failures = verdict.pending.flatMap((item) => {
-      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
-      const latest = verdict.receipts
+      const latestChoice = verdict.receipts
         .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
+      const label = `${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}`;
+      if (isDeclaredAdvisoryCode(item.identity.code)) {
+        if (latestChoice?.choice !== "run-now") return [];
+        if (declaredRaised === undefined) {
+          declaredRaised = raisedDeclaredCodes(activationHostRoot, stage, runEvaluator);
+        }
+        const key = `${item.identity.plugin}/${item.identity.code}`;
+        if (declaredRaised !== null && !declaredRaised.has(key)) return [];
+        return [`${label}: ${DECLARED_RELEASE_RULE}`];
+      }
+      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
+      const latest = latestChoice;
       if (latest?.choice !== "run-now") return [];
       const attempt = storeResult.value.receipts.filter((receipt) =>
         activeReceiptMatches(receipt, item) && receipt.choice === "run-now"

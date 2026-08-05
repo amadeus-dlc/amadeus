@@ -4285,7 +4285,7 @@ function handleSingleReport(
   }
 
   const pd = resolveProjectDir(projectDir);
-  const advisoryHold = advisoryReportHoldReason(pd, node.slug);
+  const advisoryHold = advisoryReportHoldReason(pd, node.slug, pluginActivationHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${node.slug}": ${advisoryHold}.`));
     return;
@@ -4722,7 +4722,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       ));
       return;
     }
-    const advisoryHold = advisoryReportHoldReason(pd, slug);
+    const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
     if (advisoryHold !== null) {
       emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
       return;
@@ -4755,7 +4755,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   }
   const explicitStage = flags.stage?.trim();
   const slug = explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
-  const advisoryHold = advisoryReportHoldReason(pd, slug);
+  const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
     return;
