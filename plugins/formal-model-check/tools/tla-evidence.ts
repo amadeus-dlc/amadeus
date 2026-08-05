@@ -169,3 +169,209 @@ export function parseAggregateDigest(raw: string): Result<AggregateDigest, Ident
     ? ok(raw as AggregateDigest)
     : err<IdentityFailure>({ kind: "invalid-grammar", tokens: [raw] });
 }
+
+// ---------------------------------------------------------------------------
+// C4: evidence envelope vocabulary
+// ---------------------------------------------------------------------------
+
+export type BundleDigest = string & { readonly __brand: "BundleDigest" };
+
+/** A receipt body. Its schema belongs to U2/U3; U1 only serializes and digests it. */
+export type ReceiptJson = Readonly<Record<string, unknown>>;
+
+export interface AuthoringBundleParts {
+  readonly applicability: ReceiptJson;
+  readonly trace: ReceiptJson;
+  readonly proof: ReceiptJson;
+  readonly review: ReceiptJson;
+  readonly approval: ReceiptJson;
+}
+
+export interface TerminalReceiptParts {
+  readonly applicability: ReceiptJson;
+  readonly approval: ReceiptJson;
+}
+
+export type EvidenceParts =
+  | { readonly kind: "authoring-bundle"; readonly parts: AuthoringBundleParts }
+  | { readonly kind: "terminal-route-receipt"; readonly parts: TerminalReceiptParts };
+
+export type PredecessorRef =
+  | { readonly kind: "root" }
+  | { readonly kind: "bundle"; readonly digest: BundleDigest };
+
+export interface EvidenceBundleRef {
+  readonly digest: BundleDigest;
+}
+
+export interface EvidenceEnvelope {
+  readonly schema: 1;
+  readonly subjectIdentity: AggregateDigest;
+  readonly evidence: EvidenceParts;
+  readonly predecessor: PredecessorRef;
+  readonly generatedAt: string;
+  readonly generatedBy: string;
+}
+
+/** Only `verify` mints this, so holding one is proof the bundle was checked. */
+export interface VerifiedBundle {
+  readonly __brand: "VerifiedBundle";
+  readonly ref: EvidenceBundleRef;
+  readonly envelope: EvidenceEnvelope;
+}
+
+export type BundleFailure =
+  | { readonly kind: "missing-part"; readonly parts: readonly string[] }
+  | { readonly kind: "digest-mismatch"; readonly expected: BundleDigest; readonly actual: BundleDigest }
+  | { readonly kind: "identity-mismatch"; readonly expected: AggregateDigest; readonly actual: AggregateDigest }
+  | { readonly kind: "predecessor-broken"; readonly digest: BundleDigest }
+  | { readonly kind: "io-failure"; readonly path: string; readonly detail: string };
+
+export interface CorruptedEntry {
+  readonly path: string;
+  readonly reason: "digest-filename-mismatch" | "unparseable" | "schema-invalid";
+}
+
+export interface EvidenceIndex {
+  readonly refs: readonly EvidenceBundleRef[];
+  readonly corrupted: readonly CorruptedEntry[];
+}
+
+const AUTHORING_RECEIPTS = ["applicability", "trace", "proof", "review", "approval"] as const;
+const TERMINAL_RECEIPTS = ["applicability", "approval"] as const;
+const ENVELOPE_FIELDS = ["subjectIdentity", "evidence", "predecessor", "generatedAt", "generatedBy"] as const;
+
+function parseBundleDigest(raw: string): Result<BundleDigest, BundleFailure> {
+  return DIGEST_RE.test(raw)
+    ? ok(raw as BundleDigest)
+    : err<BundleFailure>({ kind: "missing-part", parts: [`digest(${raw})`] });
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sortedJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortedJsonValue);
+  if (!isPlainRecord(value)) return value;
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(value).sort()) sorted[key] = sortedJsonValue(value[key]);
+  return sorted;
+}
+
+/** Deterministic serialization: keys sorted at every depth, UTF-8, no trailing newline. */
+function canonicalBytes(envelope: EvidenceEnvelope): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(sortedJsonValue(envelope)));
+}
+
+function bundleDigest(bytes: Uint8Array): BundleDigest {
+  return `sha256:${sha256Hex(bytes)}` as BundleDigest;
+}
+
+function fileNameFor(ref: EvidenceBundleRef): string {
+  return `${ref.digest.slice("sha256:".length)}.json`;
+}
+
+function parseEvidenceParts(value: unknown): Result<EvidenceParts, readonly string[]> {
+  if (!isPlainRecord(value)) return err(["evidence"]);
+  const kind = value.kind;
+  if (kind !== "authoring-bundle" && kind !== "terminal-route-receipt") return err(["evidence.kind"]);
+  const parts = value.parts;
+  if (!isPlainRecord(parts)) return err(["evidence.parts"]);
+  const required = kind === "authoring-bundle" ? AUTHORING_RECEIPTS : TERMINAL_RECEIPTS;
+  const missing = required.filter((name) => !isPlainRecord(parts[name])).map((name) => `evidence.parts.${name}`);
+  if (missing.length > 0) return err(missing);
+  const picked = Object.fromEntries(required.map((name) => [name, parts[name] as ReceiptJson]));
+  return ok(
+    kind === "authoring-bundle"
+      ? { kind, parts: picked as unknown as AuthoringBundleParts }
+      : { kind, parts: picked as unknown as TerminalReceiptParts },
+  );
+}
+
+function parsePredecessor(value: unknown): Result<PredecessorRef, readonly string[]> {
+  if (!isPlainRecord(value)) return err(["predecessor"]);
+  if (value.kind === "root") return ok({ kind: "root" });
+  if (value.kind !== "bundle") return err(["predecessor.kind"]);
+  const digest = typeof value.digest === "string" ? parseBundleDigest(value.digest) : null;
+  if (digest === null || !digest.ok) return err(["predecessor.digest"]);
+  return ok({ kind: "bundle", digest: digest.value });
+}
+
+/** Parse an envelope out of raw bytes, enumerating every defect at once (BR-U1-20). */
+function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailure> {
+  let document: unknown;
+  try {
+    document = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  } catch {
+    return err<BundleFailure>({ kind: "missing-part", parts: ["<envelope>"] });
+  }
+  if (!isPlainRecord(document)) return err<BundleFailure>({ kind: "missing-part", parts: ["<envelope>"] });
+
+  const missing: string[] = [];
+  if (document.schema !== 1) missing.push("schema");
+  if (typeof document.subjectIdentity !== "string" || !DIGEST_RE.test(document.subjectIdentity)) {
+    missing.push("subjectIdentity");
+  }
+  const evidence = parseEvidenceParts(document.evidence);
+  if (!evidence.ok) missing.push(...evidence.error);
+  const predecessor = parsePredecessor(document.predecessor);
+  if (!predecessor.ok) missing.push(...predecessor.error);
+  if (typeof document.generatedAt !== "string" || document.generatedAt === "") missing.push("generatedAt");
+  if (typeof document.generatedBy !== "string" || document.generatedBy === "") missing.push("generatedBy");
+  if (missing.length > 0) return err<BundleFailure>({ kind: "missing-part", parts: missing });
+
+  return ok({
+    schema: 1,
+    subjectIdentity: document.subjectIdentity as AggregateDigest,
+    evidence: (evidence as { ok: true; value: EvidenceParts }).value,
+    predecessor: (predecessor as { ok: true; value: PredecessorRef }).value,
+    generatedAt: document.generatedAt as string,
+    generatedBy: document.generatedBy as string,
+  });
+}
+
+/** Digest, schema and identity checks over bytes already read from the store. */
+function verifyBytes(
+  bytes: Uint8Array,
+  ref: EvidenceBundleRef,
+  expectedIdentity: AggregateDigest,
+): Result<VerifiedBundle, BundleFailure> {
+  const actual = bundleDigest(bytes);
+  if (actual !== ref.digest) {
+    return err<BundleFailure>({ kind: "digest-mismatch", expected: ref.digest, actual });
+  }
+  const envelope = parseEnvelope(bytes);
+  if (!envelope.ok) return envelope;
+  if (envelope.value.subjectIdentity !== expectedIdentity) {
+    return err<BundleFailure>({
+      kind: "identity-mismatch",
+      expected: expectedIdentity,
+      actual: envelope.value.subjectIdentity,
+    });
+  }
+  return ok({ __brand: "VerifiedBundle", ref, envelope: envelope.value } as VerifiedBundle);
+}
+
+/** Heads are the refs nothing else names as its predecessor (chain tips). */
+function resolveHeads(
+  entries: ReadonlyArray<{ readonly ref: EvidenceBundleRef; readonly predecessor: PredecessorRef }>,
+): readonly EvidenceBundleRef[] {
+  const referenced = new Set(
+    entries
+      .map((entry) => entry.predecessor)
+      .filter((predecessor): predecessor is { kind: "bundle"; digest: BundleDigest } => predecessor.kind === "bundle")
+      .map((predecessor) => predecessor.digest as string),
+  );
+  return entries.filter((entry) => !referenced.has(entry.ref.digest)).map((entry) => entry.ref);
+}
+
+export const EvidenceEnvelopeCodec = {
+  canonicalBytes,
+  bundleDigest,
+  fileNameFor,
+  parse: parseEnvelope,
+  parseBundleDigest,
+  verifyBytes,
+  resolveHeads,
+} as const;

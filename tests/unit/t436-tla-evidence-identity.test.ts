@@ -19,7 +19,7 @@ function failure<T, E>(result: { ok: true; value: T } | { ok: false; error: E })
 
 describe("IdentityDigest.normalizeStableId", () => {
   test.each(["FR-006", "NFR-002", "AC-003", "ADR-7", "ADR-12"])("accepts %s", (raw) => {
-    expect(unwrap(IdentityDigest.normalizeStableId(raw))).toBe(raw);
+    expect(String(unwrap(IdentityDigest.normalizeStableId(raw)))).toBe(raw);
   });
 
   test.each(["FR-6", "FR-0006", "cid:code-generation:c1", "ADR-", "FR006", "fr-006", ""])(
@@ -97,7 +97,7 @@ describe("IdentityDigest.extractStableSections", () => {
 
   test("extracts heading-driven sections with canonical bodies", () => {
     const sections = unwrap(IdentityDigest.extractStableSections(doc, "requirements"));
-    expect(sections.map((s) => s.id)).toEqual(["FR-006", "FR-007"]);
+    expect(sections.map((s) => String(s.id))).toEqual(["FR-006", "FR-007"]);
     expect(sections[0]?.canonicalBody).toBe("本文 A\n\n内部空行を保持する");
     expect(sections[1]?.canonicalBody).toBe("本文 B");
   });
@@ -105,7 +105,7 @@ describe("IdentityDigest.extractStableSections", () => {
   test("extracts ADR sections from the decisions grammar", () => {
     const decisions = ["## ADR-1 タイトル", "決定", "", "## ADR-12", "別の決定"].join("\n");
     const sections = unwrap(IdentityDigest.extractStableSections(decisions, "decisions"));
-    expect(sections.map((s) => s.id)).toEqual(["ADR-1", "ADR-12"]);
+    expect(sections.map((s) => String(s.id))).toEqual(["ADR-1", "ADR-12"]);
   });
 
   test("rejects duplicate ids, enumerating every duplicate", () => {
@@ -138,7 +138,7 @@ describe("IdentityDigest.resolveDeclaredIds", () => {
 
   test("passes when every declared id is present", () => {
     const sections = unwrap(IdentityDigest.extractStableSections(doc, "requirements"));
-    expect(unwrap(IdentityDigest.resolveDeclaredIds(sections, ["FR-006"])).map((s) => s.id)).toEqual(["FR-006"]);
+    expect(unwrap(IdentityDigest.resolveDeclaredIds(sections, ["FR-006"])).map((s) => String(s.id))).toEqual(["FR-006"]);
   });
 
   test("rejects declared ids that the document does not resolve, enumerating all", () => {
