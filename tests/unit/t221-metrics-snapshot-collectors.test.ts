@@ -25,6 +25,7 @@ const TOTALS: Record<string, number> = {
   "label:S2-CRITICAL": 29,
   "label:S3-MAJOR": 133,
   "label:S4-MINOR": 51,
+  "-label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR -label:S4-MINOR": 56,
 };
 const GH_VERSION = "gh version 2.60.1 (2026-01-15)\nhttps://github.com/cli/cli/releases/tag/v2.60.1";
 const SEARCH_QUERY = /^q=repo:(\S+) is:issue label:bug ?(.*)$/;
@@ -60,7 +61,9 @@ describe("t221 bugs collector", () => {
       name: "bugs",
       tool: "gh",
       tool_version: "gh version 2.60.1 (2026-01-15)",
-      values: { total: 278, open: 15, closed: 263, fixed: 250, rejected: 20, s1_fatal: 9, s2_critical: 29, s3_major: 133, s4_minor: 51 },
+      // 9 + 29 + 133 + 51 + 56 = 278: the severity breakdown plus unlabeled
+      // covers the whole cumulative total.
+      values: { total: 278, open: 15, closed: 263, fixed: 250, rejected: 20, s1_fatal: 9, s2_critical: 29, s3_major: 133, s4_minor: 51, unlabeled: 56 },
     });
     expect(commands[0]).toEqual([
       "gh", "api", "-X", "GET", "search/issues", "-f", "q=repo:o/r is:issue label:bug", "-f", "advanced_search=true", "--jq", ".total_count",
@@ -75,6 +78,7 @@ describe("t221 bugs collector", () => {
       "q=repo:o/r is:issue label:bug label:S2-CRITICAL",
       "q=repo:o/r is:issue label:bug label:S3-MAJOR",
       "q=repo:o/r is:issue label:bug label:S4-MINOR",
+      "q=repo:o/r is:issue label:bug -label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR -label:S4-MINOR",
     ]);
   });
   test("no token skips the collector without issuing a single command", () => {

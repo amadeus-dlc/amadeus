@@ -25,12 +25,16 @@ inline SVG です。
 ## `bugs` コレクタ
 
 `bugs` はプロジェクトのバグ台帳である `bug` ラベル付き GitHub issue を、
-Search API の `total_count` 9クエリで数えます: `total`(発生件数の累積)・
+Search API の `total_count` 10クエリで数えます: `total`(発生件数の累積)・
 `open`・`closed`・`fixed`(completed でクローズ = 修正件数の累積)・
 `rejected`(`is:closed -reason:completed` で数える、completed 以外の理由で
 クローズした件数。wontfix/duplicate/not-planned)・重大度ラベル
-ごとの件数(`s1_fatal` / `s2_critical` / `s3_major` / `s4_minor`)。保存するのは
-累積値のみで、期間あたりの発生率・修正率は時系列の差分から導出します。
+ごとの件数(`s1_fatal` / `s2_critical` / `s3_major` / `s4_minor`)・
+`unlabeled`(重大度ラベルが1つも付いていない件数)。重大度内訳 + `unlabeled`
+で `total` 全体をカバーします。スナップショットに保存するのは累積値で、
+ダッシュボードは累積系列をスナップショット間の増分としてチャート描画します
+(見出しに `Δ` プレフィクス)。`open` は時点の残高なので生値のまま描画し、
+値表も累積の生値を保持します。
 
 唯一のネットワーク依存コレクタのため、2つのモードがあります。
 
