@@ -55,15 +55,15 @@
 | C9 | 非 full コマンド準備と確認 digest | `core/tools/amadeus-intent-autonomy-production.ts:382-395` / `:417` | `prepareNonFullCommand` が policies を受け、digest を方針込みへ拡張 | モジュール内部(`applyProductionAutonomyMode` 経由で公開) | 改訂 | 40 | FR-POL-2 |
 | C10 | `handleSetAutonomy` の loud 化 | `core/tools/amadeus-bolt.ts:1051-1092` | `--mode none --policies-file` を loud エラーで停止 | CLI 契約 | 改訂 | 14 | FR-POL-3 |
 | C11 | stop hook 述語の分割 | `core/hooks/amadeus-stop.ts:167-178` | 質問 carve-out 述語(semi + full)と full 限定述語を分ける | モジュール内部(呼び出し3点) | 改訂 | 28 | FR-STOP-1 |
-| C12 | `--autonomy` フラグ parser | `core/tools/amadeus-orchestrate.ts:1044-1074` | 2値の受理・値の consume・値域外の loud 化 | `parseNextFlags` の `ParsedFlags` | 改訂 | 22 | FR-CLI-1 / FR-CLI-2 / NFR-3 |
-| C13 | `--autonomy` 適用ハンドラ | 同上(`handleNext` の Branch 群) | 再宣言の意味論、full の fail-closed、provenance 要求の踏襲 | engine directive 面(error / print) | 新規 | 60 | FR-CLI-3 / FR-CLI-4 / FR-CLI-5 |
+| C12 | `--autonomy` フラグ parser | `core/tools/amadeus-orchestrate.ts:1044-1074` | **3値**(`none`/`semi`/`full`)の受理・値の consume・値省略の捕捉 | `parseNextFlags` の `ParsedFlags` | 改訂 | 24 | FR-CLI-1 / FR-CLI-2 / NFR-3 |
+| C13 | `--autonomy` 適用ハンドラ | 同上(`handleNext` の Branch 群) | 値域検査、**`none` の active grant 実在チェック**、再宣言の意味論、full の fail-closed、provenance 要求の踏襲、**directive 値域との非同一視** | engine directive 面(error / print) | 新規 | 75 | FR-CLI-2 / FR-CLI-3 / FR-CLI-4 / FR-CLI-5 / C-3 |
 | C14 | statusline の Autonomy セグメント | `core/hooks/amadeus-statusline.ts:256-322` | mode 語彙の表示 | statusline 出力(1 行) | 改訂 | 20 | FR-DISP-1 / OQ-5 |
 | C15 | `--status` の Policies 行 | `core/tools/amadeus-intent-autonomy-runtime.ts:766-780`(status envelope)+ `:782-799`(`projectIntentAutonomyStatus`)/ `core/tools/amadeus-utility.ts:336-350` | policy 数を grant 非依存で供給・表示 | `IntentAutonomyStatusEnvelope` に `policyCount` を追加 | 改訂 | 14 | FR-DISP-2 |
 | C16 | advisory の無人裁定 resolver | `core/tools/amadeus-advisory-choice.ts`(新関数)+ `core/tools/amadeus-orchestrate.ts:781-800` | hold verdict を occurrence へ写像し、autonomy 梯子で選択を決める | `resolveAdvisoryChoiceAutonomously(...)` | 新規 | 95 | FR-ADV-1 / FR-ADV-2 / FR-ADV-4 |
 | C17 | advisory receipt の provenance ユニオン | `core/tools/amadeus-advisory-choice.ts:54-64`(`AdvisoryChoiceReceipt`)/ `:864-900`(`recordProtectedAdvisoryChoice`) | 受理の3点(grounding / 重複排除 / 提示照合)を provenance 抽象へ載せ替え。store schema を 2 へ | `AdvisoryChoiceProvenance` / `recordAdvisoryChoice(...)` | 改訂 | 80 | FR-ADV-3 |
 | C18 | 旧仕様ピンと文書 | `tests/unit/t431-intent-autonomy.test.ts:307-313` / `tests/integration/t121-stop-hook-enforce.test.ts:1138-1150` / `docs/`(22 ファイル)/ `core/amadeus-common/protocols/stage-protocol.md`(9 行) | 旧 semi 定義の明示改訂 | — | 改訂 | 非コード | FR-PIN-1〜3 / FR-DOC-1〜2 |
 
-**コード面の合計見積り: 新規 280 行 / 改訂 365 行 = 645 行**(C1〜C17 の推定行数の機械合計。C18 はテスト・docs でありコード行に数えない)。C-8(Bolt ごとに PR)と `cid:units-generation:c1` に照らし、この規模は units-generation で 6〜7 Unit へ分割できる粒度である(分割案は component-dependency.md §Unit 分割の示唆)。
+**コード面の合計見積り: 新規 295 行(C1 75 + C2 50 + C13 75 + C16 95)/ 改訂 367 行(C3 20 + C4 30 + C5 15 + C6 25 + C7 12 + C8 45 + C9 40 + C10 14 + C11 28 + C12 24 + C14 20 + C15 14 + C17 80)= 662 行**(表の推定行数からの機械合計。C18 はテスト・docs でありコード行に数えない)。C-8(Bolt ごとに PR)と `cid:units-generation:c1` に照らし、この規模は units-generation で 6〜7 Unit へ分割できる粒度である(分割案は component-dependency.md §Unit 分割の示唆)。
 
 ---
 
@@ -193,17 +193,34 @@ if (input.occurrence.kind === "question") throw new Error("gate-decision-require
 
 ### C12〜C13 `--autonomy` 起動宣言
 
-C12(parser)は `parseNextFlags` の if/else ladder に `--autonomy` 分岐を**1つ**足す。`--report`(`:1067-1070`)と同形で値を consume する。NFR-3 に従い parse 関数内に FS 呼び出しを持ち込まない(値域検査は文字列比較のみ)。
+**値域は3値**(`none` / `semi` / `full`)であり、`AutonomyMode`(`amadeus-intent-autonomy.ts:11`、verbatim `export type AutonomyMode = "none" | "semi" | "full";`)と一致させる(FR-CLI-1、ユーザー裁定 2026-08-05)。
+
+C12(parser)は `parseNextFlags` の if/else ladder に `--autonomy` 分岐を足す。`--report`(`:1067-1070`)と同形で値を consume し、値省略を捕捉する分岐を 1 つ添える。NFR-3 に従い parse 関数内に FS 呼び出しを持ち込まない(parser は値域検査すら行わず、文字列を運ぶだけ)。
 
 C13(適用ハンドラ)は `handleNext` 側に置き、次の順で判定する:
 
-1. 値域外 / 値省略 / `none` → `errorDirective` で loud 停止(FR-CLI-2)
-2. 既存 mode と同値 → no-op(監査イベントを増やさない、FR-CLI-3(1))
+1. 値省略 / 値域外(3値以外)→ `errorDirective` で loud 停止(FR-CLI-2(3))
+2. 既存 mode と同値 → no-op(監査イベントを増やさない、FR-CLI-2(1) の「既に `none` なら no-op」を含む、FR-CLI-3(1))
 3. 既存 mode と異値 → `errorDirective` + `amadeus-bolt set-autonomy` の案内(FR-CLI-3(2))。`revoke-full` 経路へは**到達しない**(FR-CLI-3(3))
-4. mode 未設定 + `semi` → `applyProductionAutonomyMode({ mode: "semi", ... })` を呼ぶ(既存経路の再利用、FR-CLI-5)
-5. mode 未設定 + `full` → grant 実在を確認し、不在なら preview 表示で fail-closed 停止(FR-CLI-4)
+4. 値 `none` かつ **active grant 実在** → `errorDirective` + `amadeus-bolt set-autonomy --mode none`(明示 revoke)の案内(FR-CLI-2(2))。grant は revoke されない
+5. 値 `full` かつ grant 不在 → preview 表示で fail-closed 停止(FR-CLI-4)
+6. 上記のいずれにも当たらない → `applyProductionAutonomyMode({ mode, ... })` を呼ぶ(既存経路の再利用、FR-CLI-5)
 
-`READ_ONLY_FLAGS` には**追加しない**(C-6)。
+判定 4 の**所有者が C13 である**ことは ADR-12 で裁定する。`READ_ONLY_FLAGS` には**追加しない**(C-6)。
+
+### CLI の3値と directive の2値を同一視しない(C-3)
+
+`intent_autonomy_mode` は directive 面では **2値のまま**である。本設計はこの語彙差を**意図的**に維持する。
+
+| 面 | 値域 | 実測(HEAD `974dbf9bc`) |
+| --- | --- | --- |
+| CLI `--autonomy` | 3値 | 本設計で新設 |
+| ドメイン `AutonomyMode` | 3値 | `amadeus-intent-autonomy.ts:11` |
+| directive `intent_autonomy_mode` | **2値** | `amadeus-directive.ts:97` verbatim `  intent_autonomy_mode?: "semi" \| "full";` / 検査 `:606` verbatim `  checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);` |
+
+**この非同一視は engine 側に既存の1行が既に強制している**(`cid:functional-design:c8` に従い供給面を実読で確定した): `routeMainWorkflowDirective:2192` verbatim `  if (autonomy.mode === "semi" || autonomy.mode === "full") {`。mode が `none` のとき `directive.intent_autonomy_mode` は**設定されない**(この if の外に代入が無いことを `:2192-2199` の直読で確認)。したがって `--autonomy none` を受理しても directive の値域は広がらない — **C13 は `directive.intent_autonomy_mode` へ一切書き込まない**(C13 の責務は projection と state の更新までであり、directive への射影は既存 `routeMainWorkflowDirective` が独占する)。
+
+`amadeus-directive.ts:97` / `:606` は本 intent の diff に現れてはならない(C-3 の受け入れ確認点)。
 
 ### C14〜C15 表示
 
