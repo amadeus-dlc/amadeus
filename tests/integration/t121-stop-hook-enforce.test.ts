@@ -367,6 +367,29 @@ function seedFullIntentGrant(proj: string): void {
 }
 
 /**
+ * Declare `semi` through the ONE human-command write path, so the projection
+ * carries `modeProvenance.kind === "human-command"`. The question carve-out
+ * (#2253, isQuestionCarveoutIntent) demands that provenance: an
+ * `Intent Autonomy Mode: semi` line in state is a claim, not an authorization,
+ * and only a real human command turns it into one. Unlike the `full` seed there
+ * is no grant to preview — `semi` is a mode declaration, not a grant issuance.
+ */
+function seedSemiIntentMode(proj: string): void {
+  resetOtelPerProject();
+  writeFileSync(
+    pinnedShardPath(proj),
+    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(2)}\n`,
+    "utf-8",
+  );
+  const applied = applyProductionAutonomyMode({
+    projectDir: proj,
+    stateContent: readFileSync(seededStateFile(proj), "utf-8"),
+    mode: "semi",
+  });
+  if (!applied.ok) throw new Error(applied.error);
+}
+
+/**
  * Write a harness transcript file under the project for the tier-3
  * conversational carve-out, and return its absolute path. The hook reads it off
  * the Stop payload's `transcript_path` and classifies the ending turn
@@ -1135,8 +1158,13 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(f) semi + blank question ALLOWS because questions remain human-owned", () => {
+  test("(f) semi declared by a human + blank question BLOCKS because semi may rule on it", () => {
     const proj = makeProject();
+    // Redefining `semi` (#2253) reverses this pin. `semi` used to mean "every
+    // question is still the human's", so a pending question released the stop.
+    // It now means the run may RULE on routine questions itself, so the stop
+    // hook must keep the loop alive and let the ladder answer — the question is
+    // no longer a reason to hand the turn back.
     seedInProgressWithQuestions(proj, {
       slug: "code-generation",
       phase: "construction",
@@ -1144,9 +1172,10 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       intentMode: "semi",
       questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
     });
+    seedSemiIntentMode(proj);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
-    expect(r.out).toBe("");
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {

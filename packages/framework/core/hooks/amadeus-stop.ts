@@ -177,6 +177,30 @@ function isFullyAutonomousIntent(
   }
 }
 
+// The QUESTION carve-out is the one carve-out `semi` opens (#2253, C11/ADR-7).
+// `full` answers exactly as isFullyAutonomousIntent does — redefining `semi`
+// never weakens `full` — while `semi` additionally demands that the mode was
+// declared by a HUMAN COMMAND: a mode that arrived as a system default carries
+// no authorization to keep running past a pending question. The other two
+// carve-out sites (compose :457, conversational :716) keep asking the full-only
+// predicate. Judgment is two-stage — state first, so a mode outside
+// {semi, full} answers without reading the projection at all — and any throw
+// answers false, which is the conservative side here (the hook merely stops).
+export function isQuestionCarveoutIntent(
+  stateContent: string,
+  resolvedProjectDir: string = projectDir,
+): boolean {
+  const mode = intentAutonomyMode(stateContent);
+  if (mode === "full") return isFullyAutonomousIntent(stateContent, resolvedProjectDir);
+  if (mode !== "semi") return false;
+  try {
+    const projection = readProductionAutonomyProjection(resolvedProjectDir);
+    return projection?.mode === "semi" && projection.modeProvenance.kind === "human-command";
+  } catch {
+    return false;
+  }
+}
+
 export function stopBudgetPolicy(stateContent: string): BudgetPolicyV1 | null {
   const configuredCap = stopContinuationBlockCap(stateContent);
   const policy = process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
@@ -416,10 +440,11 @@ function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: str
 }
 
 // The tier-2 carve-out decision: the current stage is [-] in-progress, a
-// question is pending, and Intent autonomy is not `full`.
+// question is pending, and the Intent has no question carve-out (#2253: `full`
+// with an active grant, or `semi` declared by a human command).
 export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
   try {
-    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
+    if (isQuestionCarveoutIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard — keep the loop alive
     }
     const slug = currentStageSlug(stateContent);
