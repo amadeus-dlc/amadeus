@@ -5,7 +5,7 @@
 ## 実装結果(実測)
 
 - ブランチ: `bolt-registration-committer`(base = tla-authoring-wt ad7cbae9f)
-- コミット(6件): 91afeb205(optional evidenceBundle 参照 = schema 正本拡張)→ 17c187dc1(前提ゲート + map 合成)→ 586bb84b2(atomic replace commit)→ be23a4c3b(拒否経路テスト)→ cf635a10b(出荷 validator copy の同 verdict ピン)→ e21d1cecd(**canonical-lift 是正: reader を evidenceBundle へ統一**)
+- コミット(6件): 91afeb205(optional evidenceBundle 参照 = schema 正本拡張)→ 17c187dc1(前提ゲート + map 合成)→ 586bb84b2(atomic replace commit)→ be23a4c3b(拒否経路テスト)→ cf635a10b(出荷 validator copy の同 verdict ピン)→ e21d1cecd(**canonical-lift 是正: reader を evidenceBundle へ統一**) → 9b5b45590(**Bugbot Medium 是正: commit CLI の前提全数集約** — approvalVerifier export + routelessRefusal、t449 追加テストの Red→Green 実測、patch gate PASS 242/242)
 - 新設: `plugins/formal-model-check/tools/tla-registration.ts`(checkPreconditions:165 / parseEntryDraft:194 / composeRegisteredMap:223 / createRegistrationPorts:258 / commit:303、348行)、テスト t448(unit 24)+ t449(integration 15)
 - 変更: `amadeus-formal-verif-model-map.ts`(ModelMapEvidenceBundle / optional evidenceBundle / MODEL_KEY_SETS / parseEvidenceBundle)、`amadeus-sensor-model-completeness.ts:739`(impl-only refresh の evidenceBundle 引き継ぎ1行 — 無音ドロップを赤実測してから追加)、`tla-authoring.ts`(commit verb)、`tla-applicability.ts:389-394`(reader 統一)、t444/t445(fixture 追随 + handoff ピン)
 
@@ -27,8 +27,11 @@
 1. **申告1(一時登録面)→ ユーザー裁定「後続 Issue へ送る」(2026-08-05)**: 変異系実 TLC の解消先は Issue #2286(変異モデルの一時登録面 + hermetic TLC fixture jar)。U4 は承認済み FD(正規 map の atomic replace のみ)のまま着地
 2. **申告3(evidence→evidenceBundle 不一致)→ canonical-lift 執行**(requirements.md FR-010 の handoff = 登録エントリを hold 評価器が解決できること、unit-of-work.md の U4 宣言境界内): U2 reader の `entry.evidence` は exactObject 検証下でどの実 map にも存在し得ない死に参照と conductor 実測で確定 — schema 正本 `evidenceBundle` へ統一(cid:code-generation:cross-unit-type-canonical-lift、単独コミット e21d1cecd、意味論不変)
 3. 申告2/4/5(軽微)は conductor 受理 — 逸脱なし
+4. **PR #2287 Bugbot High(同名 revise の append 拒否)→ ソロ選挙 E-TLA-U4REV 裁定 A(2-0、2026-08-05)**: FD 承認済みの append + validator fail-closed 意味論を維持して着地。replace-by-name は FD 改訂込みで後続 Issue #2289 へ(選挙記録 `amadeus/spaces/default/elections/260805-e-tla-u4rev/record.md`)
+5. **PR #2287 Bugbot Medium(CLI の全数集約短絡)→ 執行是正**: FD 手順1(BR-U4-15)準拠へ戻す 9b5b45590 を PR へ同梱
 
 ## 申し送り
 
 - Issue #2286: 変異モデルの一時登録面 + hermetic TLC fixture jar。着地時に `tests/.coverage-patch-allowlist.json` の runOnce 実 TLC 区間 waiver を除去
+- Issue #2289: revise-model の replace-by-name 登録(FD business-logic-model.md 手順3 の改訂込み)
 - U5 authoring-stage-e2e(バッチ 4)が最終 Bolt — commit verb を含む authoring 工程 E2E
