@@ -32,6 +32,8 @@
     "tools/tla-model-loader-internal.ts",
     "tools/tla-model-loader.ts",
     "tools/tla-model-map.ts",
+    "tools/tla-model-receipt.ts",
+    "tools/tla-module-deps.ts",
     "tools/tlc-spawn-planner.ts",
     "tools/tlc-toolchain.ts",
     "tools/tla-evidence.ts",
