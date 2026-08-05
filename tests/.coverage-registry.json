@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 605,
+    "total": 606,
     "enumeratedByClass": {
-      "function": 339,
+      "function": 340,
       "audit": 90,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 175,
+      "function": 176,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -335,6 +335,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t453-semi-ladder-runtime.integration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1326,6 +1330,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:autonomySegment",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t448-autonomy-statusline-segment.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
