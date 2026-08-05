@@ -81,9 +81,9 @@ export function classifyThread(thread: ClassifiableThread): ThreadClassification
 
 /**
  * The GitHub `mergeStateStatus` enum, deliberately re-declared inside the
- * plugin rather than shared with scripts/metrics-publication-domain.ts: the
- * shipped plugin may not reach repo-only `scripts/` (t258 boundary), and the
- * two consumers normalise to different output vocabularies. ADR-2 keeps them
+ * plugin rather than shared with the repository's metrics publication domain:
+ * a shipped plugin may not reach repo-only development sources, and the two
+ * consumers normalise to different output vocabularies. ADR-2 keeps them
  * parallel definitions whose common semantics ("UNKNOWN is not success",
  * "unknown value is fail-closed") are pinned independently on both sides.
  */

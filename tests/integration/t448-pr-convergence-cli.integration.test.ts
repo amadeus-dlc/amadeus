@@ -10,6 +10,8 @@ import {
   parsePrRef,
 } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
+  DEFAULT_LOG_TOOL_RELATIVE,
+  defaultLogToolPath,
   latestHumanTurn,
   renderReport,
   reportPathFor,
@@ -483,6 +485,52 @@ describe("CLI override verb — BR-U2-8, bound to a real human turn", () => {
     );
     expect(out.exitCode).toBe(2);
     expect(out.stderr).toContain("--reason");
+  });
+});
+
+describe("the audit tool path is harness-neutral", () => {
+  test("names no harness directory — the plugin ships into every harness tree", () => {
+    const resolved = defaultLogToolPath();
+    for (const harness of [".claude", ".codex", ".cursor", ".opencode", ".kimi-code", ".kiro", ".pi"]) {
+      // The resolved path may legitimately CONTAIN the current harness dir,
+      // but the source must not name one: the check is on the literal.
+      expect(DEFAULT_LOG_TOOL_RELATIVE).not.toContain(harness);
+    }
+    // It is derived by walking out of plugins/<name>/tools/ into the sibling
+    // tools/ directory of whichever harness tree the plugin was installed in.
+    expect(DEFAULT_LOG_TOOL_RELATIVE).toBe("../../../tools/amadeus-log.ts");
+    expect(resolved.endsWith(join("tools", "amadeus-log.ts"))).toBe(true);
+    expect(resolved).not.toContain(join("plugins", "pr-convergence"));
+  });
+
+  test("an explicit --log-tool wins over the derived default", async () => {
+    const record = makeRecord({ humanTurn: true });
+    const emitted: (readonly string[])[] = [];
+    const out = await runCli(
+      [
+        "override",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--pr",
+        "1945",
+        "--unit",
+        "convergence-toolchain",
+        "--record",
+        record,
+        "--reason",
+        "explicit tool path",
+        "--log-tool",
+        "/somewhere/amadeus-log.ts",
+      ],
+      seams(cliSpawn(CLEAN, ["measured-pr-1945"]).spawn, {
+        emitDecision: async (argv) => {
+          emitted.push(argv);
+          return { code: 0, stderr: "" };
+        },
+      }),
+    );
+    expect(out.exitCode).toBe(0);
+    expect(emitted[0]).toContain("/somewhere/amadeus-log.ts");
   });
 });
 

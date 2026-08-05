@@ -26,7 +26,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   createGhRunner,
   fetchRawPrState,
@@ -202,7 +202,18 @@ export interface CliSeams {
   readonly emitDecision: DecisionEmitter;
 }
 
-export const DEFAULT_LOG_TOOL = ".claude/tools/amadeus-log.ts";
+/**
+ * Where the host's amadeus-log tool sits relative to THIS file. A composed
+ * plugin lives at `<harnessDir>/plugins/<name>/tools/`, so walking out three
+ * levels lands on the harness directory and its sibling `tools/`. Deriving it
+ * this way keeps the plugin harness-neutral: it ships into every harness tree,
+ * and naming any one of them here would break the others.
+ */
+export const DEFAULT_LOG_TOOL_RELATIVE = "../../../tools/amadeus-log.ts";
+
+export function defaultLogToolPath(): string {
+  return resolve(import.meta.dir, DEFAULT_LOG_TOOL_RELATIVE);
+}
 
 export const nodeDecisionEmitter: DecisionEmitter = (argv) =>
   new Promise<DecisionResult>((resolve) => {
@@ -307,7 +318,7 @@ function parseOptions(argv: readonly string[]): OptionParse {
       verb,
       ...target.value,
       reason,
-      logTool: flags.get("log-tool") ?? DEFAULT_LOG_TOOL,
+      logTool: flags.get("log-tool") ?? defaultLogToolPath(),
     },
   };
 }
