@@ -336,6 +336,10 @@
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t453-semi-ladder-runtime.integration.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
