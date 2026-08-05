@@ -60,6 +60,7 @@ import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
 import {
   assertInstallOutDirsSafe,
+  assertPluginImportClosure,
   checkPluginProjections,
   discoverPluginSources,
   pluginBundleExpected,
@@ -901,6 +902,12 @@ export function runCli(argv: string[]): number {
   // Refresh generated plugin sources FIRST: the harness trees and the neutral
   // bundle both project plugins/, so they must observe the current copy.
   writeGeneratedPluginSources();
+  // C8 import-closure guard (U6, FR-011): refuse the build when a plugin's
+  // relative-import closure is not fully declared — an undeclared module
+  // composes into a missing import in the host. Placed after the generated-source
+  // refresh (so it reads the current copies) and before any harness or bundle
+  // write, so a failure leaves dist untouched.
+  assertPluginImportClosure(pluginsRoot());
   for (const n of present) writeHarness(n);
   writeNeutralBundle();
   return 0;
