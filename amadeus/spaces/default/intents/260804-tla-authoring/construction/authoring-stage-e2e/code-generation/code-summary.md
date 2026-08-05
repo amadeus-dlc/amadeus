@@ -26,6 +26,7 @@
 1. **iteration 1 CRITICAL の無申告乖離 → 是正で閉包**: 逸脱申告なしで E2E 後段2ステップが省かれていた点はレビューが捕捉し、是正 3006562fa で契約準拠へ回復(裁定不要 — 契約への機械的復帰の執行クラス)
 2. terminal route 拒否は FD 段で申告済みの追加(ADR-7)— stage 文書内に申告文言を保持
 3. TDD 適用外(1)の申告: stage 文書・fixture は文書成果物のため既存テスト前後 green + 文書契約テスト(t450 前半)で代替
+4. builder 遅着報告(是正前断面、2026-08-05T15:54Z 受領)の差分吸収: 新規矛盾なし。追加吸収 — (a) stage 文書の節構成は FD 逐語(Steps+Learn)を優先しつつ plugin 既習の「Not a stock-scope stage」節を併記(2既習形の併存につき新様式発明なし — reviewer iteration 1 の BR-U5-07 確認と整合) (b) 既存2テストの stage 集合完全一致ピンの 2-stage 更新は承認済み成果物追加への機械的追随 (c) composed runtime 非自明性の CONTROL 実測(composed の tla-registration.ts を削除すると Cannot find module で E2E 3 arm が fail — repo 外 scratch・未コミット) (d) テスト層は --ci が e2e 層を含まないため integration 配置(fs-tests-integration-first 整合)
 
 ## 申し送り
 
