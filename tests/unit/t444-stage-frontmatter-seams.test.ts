@@ -49,6 +49,9 @@ const REAL_STAGE = [
 // The empty flow form the initialization stages use.
 const FLOW_STAGE = ["---", "slug: state-init", "produces: []", "consumes: []", "sensors: []", "---", "", "# State Init", ""].join("\n");
 
+// The non-empty flow form: entries live ON the key line.
+const FLOW_FILLED = ["---", "slug: s", "produces: [alpha, beta]", "---", "", "# S", ""].join("\n");
+
 function parseOk(text: string): StageFrontmatterDocument {
   const parsed = parseStageFrontmatter(Buffer.from(text, "utf-8"));
   if (!parsed.ok) throw new Error(`expected a parseable stage document, got ${parsed.error.kind}`);
@@ -83,7 +86,7 @@ describe("t444 parseStageFrontmatter (pure)", () => {
   test("reads the single-line flow form", () => {
     const doc = parseOk(FLOW_STAGE);
     expect(doc.seams.produces).toEqual([]);
-    expect(doc.seamSpans.produces?.style).toBe("flow-empty");
+    expect(doc.seamSpans.produces?.style).toBe("flow");
   });
 
   test("rejects a document without frontmatter", () => {
@@ -166,6 +169,15 @@ describe("t444 serializeStageFrontmatterSeams (pure)", () => {
     expect(dropped.ok).toBe(true);
     if (!dropped.ok) return;
     expect(dropped.value.equals(doc.raw)).toBe(true);
+  });
+
+  test("appending to a non-empty flow list keeps the existing entries", () => {
+    const doc = parseOk(FLOW_FILLED);
+    expect(doc.seams.produces).toEqual(["alpha", "beta"]);
+    const out = serializeStageFrontmatterSeams(doc, { ...doc.seams, produces: ["alpha", "beta", "gamma"] });
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(parseOk(out.value.toString("utf-8")).seams.produces).toEqual(["alpha", "beta", "gamma"]);
   });
 
   test("rejects a rewrite of any seam other than produces (BR-U1-4)", () => {
