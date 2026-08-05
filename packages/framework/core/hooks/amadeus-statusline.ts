@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   activeIntent,
   activeSpace,
+  autonomySegment,
   detectHarnessType,
   displaySlugFromDirName,
   listIntents,
@@ -318,6 +319,8 @@ async function main(): Promise<void> {
   if (phaseProg) output += ` ${phaseProg}`;
   if (stageDisplay) output += ` > ${stageDisplay}`;
   if (agentDisplay) output += ` -- ${agentDisplay}`;
+  const autonomy = autonomySegment(state);
+  if (autonomy) output += ` @${autonomy}`;
 
   printLine(output, right);
 }
