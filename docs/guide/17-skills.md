@@ -22,6 +22,7 @@ Every command this implementation ships is a skill under `.claude/skills/`. They
 - **Stage-runners** — `/amadeus-application-design`, `/amadeus-code-generation`, and 27 more. Run one stage in isolation, never touching your main workflow.
 - **`/amadeus-init`** — birth the first intent (run the whole Initialization phase) in one step; opt-in packaging over the engine's auto-birth.
 - **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`, `/amadeus-mirror`, `/amadeus-plugin`. The first four are read-only views or interviews. `/amadeus-mirror` and `/amadeus-plugin` diagnose first (`status`), then can run one user-selected action.
+- **Utility skills** — `/amadeus-compose` (force the adaptive composer to propose a tailored EXECUTE/SKIP plan), `/amadeus-election` (drive a team election through the election CLI's typed directive loop), `/amadeus-upstream-sync` (plan synchronization with official upstream AI-DLC v2 tags).
 
 Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-fix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
 
@@ -101,7 +102,7 @@ You can pass a description and flags straight through, exactly as you would to `
 /amadeus-feature --status
 ```
 
-**Only four scopes ship a runner** — the high-traffic ones. The framework defines ten scopes total (see [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md)); every other one — `chore`, `enterprise`, `infra`, `poc`, `refactor`, `workshop` — is always reachable through the orchestrator:
+**Only four scopes ship a runner** — the high-traffic ones. The framework defines fifteen scopes total (see [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md)); every other one — `chore`, `enterprise`, `infra`, `installer-distribution`, `poc`, `refactor`, `self-document`, `self-feature`, `self-fix`, `self-refactor`, `workshop` — is always reachable through the orchestrator:
 
 ```
 /amadeus --scope enterprise
@@ -157,6 +158,7 @@ The three bootstrap **initialization** stages ship no stage-runner — birthing 
 | Init wrapper | `/amadeus-init` | Birth the first intent (run Initialization) | `/amadeus` on a fresh workspace |
 | Session views | `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack` | Read-only workflow reports | see [Session Management](11-session-management.md) |
 | Grilling interview | `/amadeus-grilling` | Read-only one-question-at-a-time interview about a plan or design | see [Interaction Modes](07-interaction-modes.md) |
+| Utility skills | `/amadeus-compose`, `/amadeus-election`, `/amadeus-upstream-sync` | Compose a tailored plan, drive a team election, plan an upstream sync | `/amadeus compose "<task>"` for the first |
 
 There's one stage-runner for every runnable stage in the lifecycle. To see the full set, list your skills directory:
 
@@ -200,7 +202,7 @@ For the mechanics of writing a stage file, see [Customization](13-customization.
 ```
 # Full workflow
 /amadeus                              detect scope, run everything
-/amadeus --scope enterprise           any of the 10 scopes
+/amadeus --scope enterprise           any named scope
 
 # Scope-runners (the 4 high-traffic doors)
 /amadeus-fix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch
