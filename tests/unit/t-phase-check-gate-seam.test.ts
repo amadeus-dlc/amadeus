@@ -89,6 +89,18 @@ function seedBuildProduces(proj: string): void {
   writeFileSync(join(sourceDir, "index.ts"), "export {};\n");
 }
 
+// Seed one declared produces file for an arbitrary stage, in both the
+// phase-level and the per-unit produces directory, so verifyStageArtifacts
+// passes and ONLY the phase-check gate can refuse (#2143 FR-3).
+function seedProduces(proj: string, phase: string, slug: string, artifact: string, unit?: string): void {
+  const dirs = [join(seededRecordDir(proj), phase, slug)];
+  if (unit !== undefined) dirs.push(join(seededRecordDir(proj), phase, unit, slug));
+  for (const dir of dirs) {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+  }
+}
+
 // Write verification/phase-check-<phase>.md under the seeded record.
 function seedPhaseCheck(proj: string, phase: string): void {
   const dir = join(seededRecordDir(proj), "verification");
@@ -353,5 +365,167 @@ describe("t-phase-check-gate-seam: jump forward gate (#886)", () => {
     expect(r.threw).toBe(false);
     expect(existsSync(seededStateFile(proj))).toBe(true);
     expect(readFileSync(seededStateFile(proj), "utf-8")).toContain("- **Ideation**: Verified");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2143 FR-3 — the production path a human actually walks at a phase boundary.
+//
+// The gate above is exercised per handler; what #2143 reported is the WHOLE
+// approve route on the three real boundaries: a conductor that reports approval
+// before writing verification/phase-check-<phase>.md turns a legitimate human
+// approval into a typed error. These describes drive `handleApprove` (the route
+// `amadeus-orchestrate.ts report --result approved` dispatches) with the
+// artifact absent and then present, on Ideation→Inception, Inception→
+// Construction, and Construction→Operation.
+//
+// Both arms matter equally. The negative arm proves fail-closed (NFR-1); the
+// positive arm proves the ordering is WALKABLE — with the artifact on disk, ONE
+// approve succeeds and the phase flips to Verified. No second approve, no
+// repair round-trip. That positive arm is the acceptance criterion #2143 was
+// really about.
+// ---------------------------------------------------------------------------
+
+describe("t-phase-check-gate-seam: approve at the ideation→inception boundary (#2143)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    // scope=feature, every ideation stage complete except approval-handoff,
+    // which sits at [?]. nextInScopeStage → reverse-engineering (inception).
+    seedStateFile(proj, "state-ideation-boundary.md");
+    saveEnv();
+    seedProduces(proj, "ideation", "approval-handoff", "initiative-brief");
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("refuses the approve when phase-check-ideation.md is absent, leaving state untouched", () => {
+    setEnv(true);
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleApprove(["approval-handoff"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("phase-check-ideation.md");
+    expect(readFileSync(seededStateFile(proj), "utf-8")).toBe(before);
+  });
+
+  test("a single approve succeeds once the artifact exists and verifies ideation", () => {
+    setEnv(true);
+    seedPhaseCheck(proj, "ideation");
+    const r = captureExit(() => handleApprove(["approval-handoff"]));
+    expect(r.threw).toBe(false);
+    const state = readFileSync(seededStateFile(proj), "utf-8");
+    expect(state).toContain("- **Ideation**: Verified");
+    expect(state).toContain("- [x] approval-handoff");
+  });
+});
+
+describe("t-phase-check-gate-seam: approve at the construction→operation boundary (#2143)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    // scope=feature, every construction stage complete except ci-pipeline at
+    // [?]. nextInScopeStage → deployment-pipeline (operation).
+    seedStateFile(proj, "state-construction-boundary.md");
+    saveEnv();
+    seedProduces(proj, "construction", "ci-pipeline", "ci-config", "todo-core");
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("refuses the approve when phase-check-construction.md is absent, leaving state untouched", () => {
+    setEnv(true);
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleApprove(["ci-pipeline"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("phase-check-construction.md");
+    expect(readFileSync(seededStateFile(proj), "utf-8")).toBe(before);
+  });
+
+  test("a single approve succeeds once the artifact exists and verifies construction", () => {
+    setEnv(true);
+    seedPhaseCheck(proj, "construction");
+    const r = captureExit(() => handleApprove(["ci-pipeline"]));
+    expect(r.threw).toBe(false);
+    const state = readFileSync(seededStateFile(proj), "utf-8");
+    expect(state).toContain("- **Construction**: Verified");
+    expect(state).toContain("- [x] ci-pipeline");
+  });
+});
+
+describe("t-phase-check-gate-seam: boundary detection follows the effective in-scope stage (#2143 FR-3c)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    // scope=fix. Inception's canonical final stage is delivery-planning, which
+    // this scope SKIPs; requirements-analysis is the effective final in-scope
+    // inception stage. The approve-local gate keys off nextInScopeStage, not
+    // the canonical terminal stage, so it must fire here.
+    seedStateFile(proj, "state-mid-inception.md");
+    const sf = seededStateFile(proj);
+    writeFileSync(
+      sf,
+      readFileSync(sf, "utf-8").replace("- [-] requirements-analysis", "- [?] requirements-analysis"),
+    );
+    saveEnv();
+    seedReqProduces(proj);
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("the canonical terminal stage is skipped in this scope", () => {
+    const state = readFileSync(seededStateFile(proj), "utf-8");
+    expect(state).toContain("- [S] delivery-planning — SKIP");
+    expect(state).toContain("- [?] requirements-analysis — EXECUTE");
+  });
+
+  test("the guard fires on the effective final in-scope inception stage", () => {
+    setEnv(true);
+    const r = captureExit(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("phase-check-inception.md");
+  });
+
+  test("and clears on that same stage once the artifact exists", () => {
+    setEnv(true);
+    seedPhaseCheck(proj, "inception");
+    const r = captureExit(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(false);
+    expect(readFileSync(seededStateFile(proj), "utf-8")).toContain("- **Inception**: Verified");
+  });
+});
+
+describe("t-phase-check-gate-seam: a non-boundary approve is not gated (#2143 negative control)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    // scope=feature at feasibility: the next in-scope stage (scope-definition)
+    // is in the SAME phase, so no phase-check artifact is required. Without
+    // this control, the boundary tests above could pass on a gate that fires
+    // unconditionally.
+    seedStateFile(proj, "state-mid-ideation.md");
+    const sf = seededStateFile(proj);
+    writeFileSync(sf, readFileSync(sf, "utf-8").replace("- [-] feasibility", "- [?] feasibility"));
+    saveEnv();
+    seedProduces(proj, "ideation", "feasibility", "feasibility-assessment");
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("approving a mid-phase stage succeeds with no phase-check artifact on disk", () => {
+    setEnv(true);
+    expect(
+      existsSync(join(seededRecordDir(proj), "verification", "phase-check-ideation.md")),
+    ).toBe(false);
+    const r = captureExit(() => handleApprove(["feasibility"]));
+    expect(r.threw).toBe(false);
+    expect(readFileSync(seededStateFile(proj), "utf-8")).toContain("- **Ideation**: Active");
   });
 });
