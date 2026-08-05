@@ -6365,9 +6365,9 @@
     "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
     "selector": {
       "function": "runOnce",
-      "fingerprint": "sha256:df61978ae7bb2d6017d96094f6b3d5fd7ccfecde71e72e8191e3ea726d11eb35",
-      "anchorLines": 22,
-      "targetLines": "1-22"
+      "fingerprint": "sha256:435fac7bf7258d13bf693a94633c6da13148e1886f1bf5cbc127c73f6fe38362",
+      "anchorLines": 32,
+      "targetLines": "1-32"
     },
     "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the standalone real-TLC probe (tests/formal-verif/support/tla-referee-real-toolchain-probe.ts, exercised per ruling A). The pre-toolchain rows of runOnce are driven in-process by t447 via a broken mutant.",
     "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
