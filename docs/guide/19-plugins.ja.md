@@ -295,6 +295,45 @@ bun test tests/integration/t254-reference-plugin-lifecycle.test.ts
 
 ---
 
+## import する全モジュールを宣言する
+
+compose されたプラグインは、`plugin.json` が宣言したファイルだけを運びます。したがって
+宣言済みツールが import しているのに `tools` へ載せ忘れたヘルパーモジュールは、単なる
+記載漏れではなく、compose 後の全ホストにおける import 欠落です。ファイルがディスク上に
+そのまま在る自分の作業ツリーではロードでき、実際にインストールされた先で失敗します。
+
+パッケージャはこれを **import-closure guard** で塞ぎます。manifest が宣言する各ツールを
+起点に *相対* import(`./x.ts`・`../y.ts`)の推移閉包を辿り、到達した全モジュールが
+`plugin.json` に宣言され、かつプラグイン自身のソースとして実在することを要求します。
+`node:crypto` のような bare specifier はランタイムがプラグインツリーの外から解決するため
+対象外で、絶対指定は境界違反として報告されます。
+
+guard は投影の一部として走るため、壊れた面を出荷する代わりにビルドが失敗します。
+allowlist も skip フラグもありません — モジュールは宣言され所有されることで通り、
+そうでなければ通りません。読めない参照は閉包から取り除かれるのではなく failure として
+列挙されます。これが、import パスの typo が検査対象集合を無言で縮めることを防ぎます。
+
+失敗は違反参照ごとに1行、プラグイン名を前置して出力されます。最初の1件で止まらず、
+修復すべき集合が一度に列挙されます。
+
+```
+MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
+MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
+UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+```
+
+3つの異なる修復として読みます。`MISSING from … plugin.json` は、ファイルはプラグイン内に
+実在するが manifest が運んでいない — `tools` へ追加します。`MISSING from … owned sources`
+は、manifest が名指すパスに対応するファイルがプラグイン内に無い状態です。
+`UNREADABLE import` は参照自体が解決できなかった場合で、ファイル不在・不正なパス・
+実体がリポジトリ外へ出る symlink のいずれかです。
+
+guard の実体は `scripts/import-closure-guard.ts` にあります。内部構造とテスト配置は
+[コントリビュート](../reference/11-contributing.ja.md#プラグイン-import-closure-guard)
+を参照してください。
+
+---
+
 ## 7 つのパッケージ面、5 つのセルフインストール面
 
 パッケージャは各プラグインを **7 つ** のハーネス面へ投影します: `claude`・`codex`・

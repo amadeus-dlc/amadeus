@@ -312,6 +312,51 @@ clean afterwards.
 
 ---
 
+## Declaring every module you import
+
+A composed plugin carries exactly the files its `plugin.json` declares. So a
+helper module that your declared tool imports, but that you forgot to list in
+`tools`, is not a stylistic omission — it is a missing import in every composed
+host. The plugin loads in your working tree, where the file is simply there on
+disk, and fails wherever it is actually installed.
+
+The packager closes this with the **import-closure guard**. Starting from each
+tool your manifest declares, it walks the transitive closure of *relative*
+imports (`./x.ts`, `../y.ts`) and requires every module it reaches to be both
+declared in `plugin.json` and present among your plugin's own source files. Bare
+specifiers like `node:crypto` are resolved by the runtime from outside the plugin
+tree and are out of scope; an absolute specifier is a boundary violation and is
+reported as such.
+
+The guard runs as part of the projection, so a build fails rather than shipping
+a broken face. It has no allowlist and no skip flag — a module passes by being
+declared and owned, or not at all. A reference it cannot read is enumerated as a
+failure instead of being dropped from the closure, which is what keeps a typo in
+an import path from quietly shrinking the set that gets checked.
+
+Failures print one line per offending reference, prefixed with your plugin's
+name, and the whole repair set is listed at once rather than stopping at the
+first offender:
+
+```
+MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
+MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
+UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+```
+
+Read them as three distinct repairs. `MISSING from … plugin.json` means the file
+exists in your plugin but the manifest does not carry it — add it to `tools`.
+`MISSING from … owned sources` means the manifest names a path with no file
+behind it inside the plugin. `UNREADABLE import` means the reference could not be
+resolved at all: an absent file, a bad path, or a symlink whose real target
+leaves the repository.
+
+The guard lives at `scripts/import-closure-guard.ts`; its internals and test
+layout are described in
+[Contributing](../reference/11-contributing.md#the-plugin-import-closure-guard).
+
+---
+
 ## Seven packaged faces, five self-install faces
 
 The packager projects every plugin into **seven** harness faces: `claude`,
