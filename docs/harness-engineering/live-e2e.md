@@ -1,5 +1,7 @@
 # Live Harness End-to-End Verification
 
+> Languages: **English** | [日本語](live-e2e.ja.md)
+
 This runbook describes the opt-in, local-only journey used to verify an Amadeus harness distribution against a real CLI and model. The typed registry is the static source of truth, the JSONL ledger records run facts, and the matrix below is a generated view of both.
 
 ## Safety boundary
