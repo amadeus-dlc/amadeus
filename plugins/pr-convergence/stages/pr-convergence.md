@@ -137,6 +137,22 @@ machine-derived; do not hand-write or hand-edit the file. The
 are missing or self-contradictory, and the review gate treats a hand-written
 report as a finding.
 
+Immediately after `report` writes the file, fire the declared sensor on it by
+hand. The manual fire IS the normal delivery path, not a fallback: the report
+is written by the CLI through Bash, so the harness's write-time hook (which
+watches Write/Edit turns of the active stage) never observes it.
+
+```
+bun .claude/tools/amadeus-sensor.ts fire pr-convergence-report-format \
+  --stage pr-convergence \
+  --output-path <record-root>/construction/<unit>/code-generation/pr-convergence-report.md
+```
+
+Read the verdict from the audit `SENSOR_PASSED` / `SENSOR_FAILED` rows — the
+fire command's own exit code is not the verdict. The sensor is advisory
+(FR-6a): a `SENSOR_FAILED` is a finding to resolve before announcing
+convergence, never an automatic gate.
+
 Announce convergence with the report's own counts. Do not paraphrase them and
 do not round them.
 
