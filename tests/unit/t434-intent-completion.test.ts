@@ -279,6 +279,11 @@ describe("receipt validation and terminal transaction", () => {
     let snapshot: CanonicalLiveRunSnapshot | null = null;
     let nativeStarts = 0;
     let dispatchCalls = 0;
+    let forgeDispatchKey = false;
+    let reconcileResult: Awaited<ReturnType<Parameters<typeof createIntentLiveRunCoordinator>[0]["nativePort"]["reconcile"]>> = { ok: true, value: {
+      kind: "attested-no-effect",
+      proofDigest: autonomyDigest("no-effect-proof"),
+    } };
     const coordinator = createIntentLiveRunCoordinator({
       runReader: {
         readRunSnapshot: ({ intentUuid, runId }) => snapshot !== null &&
@@ -290,17 +295,13 @@ describe("receipt validation and terminal transaction", () => {
         verify: ({ reconciliation }) => ({ ok: true, value: { proofDigest: reconciliation.proofDigest } }),
       },
       nativePort: {
-        reconcile: async () => ({ ok: true, value: {
-          kind: "attested-no-effect",
-          proofDigest: autonomyDigest("no-effect-proof"),
-        } }),
+        reconcile: async () => reconcileResult,
         dispatch: async (claimed) => {
           dispatchCalls += 1;
           if (dispatchCalls === 1) nativeStarts += 1;
-          const key = canonicalContractValueDigest("intent-live-native-dispatch", {
-            operationReference: claimed.operationReference,
-            attempt: claimed.attempt,
-          });
+          const key = canonicalContractValueDigest("intent-live-native-dispatch", forgeDispatchKey
+            ? { operationReference: "forged-operation", attempt: claimed.attempt }
+            : { operationReference: claimed.operationReference, attempt: claimed.attempt });
           if (!key.ok) return key;
           return { ok: true, value: {
             schemaVersion: "1",
@@ -366,6 +367,43 @@ describe("receipt validation and terminal transaction", () => {
     expect((await coordinator.dispatch(committedClaim.value))).toMatchObject({ ok: true, value: { outcome: "started" } });
     expect((await coordinator.dispatch(committedClaim.value))).toMatchObject({ ok: true, value: { outcome: "attached" } });
     expect(nativeStarts).toBe(1);
+
+    // A native receipt whose idempotency key does not derive from THIS claim is
+    // refused — the retry seam cannot attach a foreign operation.
+    forgeDispatchKey = true;
+    expect(await coordinator.dispatch(committedClaim.value)).toMatchObject({
+      ok: false,
+      error: { code: "CONFLICT", locus: "nativeDispatchReceipt" },
+    });
+    forgeDispatchKey = false;
+
+    // A native reconcile that reports the operation completed transitions the
+    // run to its terminal completed state and surfaces the receipt.
+    reconcileResult = { ok: true, value: {
+      kind: "completed",
+      receipt: {
+        schemaVersion: "1",
+        receiptId: "receipt-native-completed",
+        intentUuid: INTENT,
+        harnessId: "claude",
+        authorizationId: snapshot.authorization.authorizationId,
+        authorizationEventIdentity: snapshot.authorization.authorizationEventIdentity,
+        authorizationCommitTransactionId: snapshot.authorization.commitReceipt.transactionId,
+        revision: snapshot.run.revision,
+        environmentId: "environment-native-completed",
+        traceId: "trace-native-completed",
+        spanId: "span-native-completed",
+        attestationDigest: autonomyDigest("native-completed-attestation"),
+        outcome: "passed",
+        observation: null,
+      },
+      proofDigest: autonomyDigest("native-completed-proof"),
+    } };
+    const completed = await coordinator.planNext({ intentUuid: INTENT, runId: claimedRun.runId });
+    expect(completed.ok).toBe(true);
+    if (!completed.ok) throw new Error(completed.error.detail);
+    expect(completed.value.next.status).toBe("completed");
+    expect(completed.value.receipt?.receiptId).toBe("receipt-native-completed");
   });
 
   test("all five exact receipts atomically complete full grant and clear workflow", async () => {

@@ -14,7 +14,7 @@ const HARNESSES = [
   ["opencode", ".opencode"],
   ["kimi", ".kimi-code"],
 ] as const;
-const FILES = ["amadeus-harness-registry.ts", "amadeus-intent-completion.ts"] as const;
+const FILES = ["amadeus-audit.ts", "amadeus-harness-registry.ts", "amadeus-intent-completion.ts"] as const;
 
 describe("Intent completion current five-harness projection", () => {
   for (const [harness, directory] of HARNESSES) {

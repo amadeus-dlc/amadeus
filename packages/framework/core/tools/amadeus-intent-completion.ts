@@ -27,7 +27,6 @@ import type { ReviewIntentSeed } from "./amadeus-autonomy-review.ts";
 export type StableId = string;
 export type Sha256Digest = string;
 export type CompletionHarnessId = HarnessDescriptor["id"];
-export const INTENT_COMPLETION_TRANSACTION_COMMITTED_EVENT = "INTENT_COMPLETION_TRANSACTION_COMMITTED";
 // Live verification is optional evidence. The production workflow completion
 // path must never import this module or wait for a receipt cohort.
 export const CORE_INTENT_COMPLETION_REQUIRES_LIVE_RECEIPTS = false as const;
@@ -69,8 +68,9 @@ function validRevision(revision: LiveScenarioRevision): boolean {
 
 function exactlyKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const observed = Object.keys(value).sort(compareUtf8);
-  return observed.length === expected.length &&
-    observed.every((field, index) => field === [...expected].sort(compareUtf8)[index]);
+  const wanted = [...expected].sort(compareUtf8);
+  return observed.length === wanted.length &&
+    observed.every((field, index) => field === wanted[index]);
 }
 
 export interface AuditEventPlan {
@@ -538,8 +538,9 @@ function nextRunState(
     return success({ next: { ...run, status: "started", dispatchesAuthorized: 1 }, receipt: null,
       proofDigest: proof.value.proofDigest });
   }
-  if (run.dispatchesAuthorized === 1 && (run.status === "started" || run.status === "dispatch-claimed")) {
-    return success({ next: { ...run, status: "redispatch-authorized", dispatchesAuthorized: 2 }, receipt: null,
+  if (run.dispatchesAuthorized < run.maxDispatches && (run.status === "started" || run.status === "dispatch-claimed")) {
+    const nextAuthorized = (run.dispatchesAuthorized + 1) as IntentLiveRunReservation["dispatchesAuthorized"];
+    return success({ next: { ...run, status: "redispatch-authorized", dispatchesAuthorized: nextAuthorized }, receipt: null,
       proofDigest: proof.value.proofDigest });
   }
   return success({ next: { ...run, status: "incomplete" }, receipt: null, proofDigest: proof.value.proofDigest });
@@ -759,10 +760,13 @@ function canonicalObservationExists(
   receipt: RawIntentLiveReceipt & { readonly observation: LiveObservation },
 ): boolean {
   const observation = receipt.observation;
-  const decisionType = observation.electionOutcome === "elected" ? "AUTO_DECIDED" : "AUTO_DECISION_DEGRADED";
+  // A loud degradation is still recorded as AUTO_DECIDED — the canonical
+  // vocabulary carries no AUTO_DECISION_DEGRADED type; degradation lives in the
+  // decision's degradedCapability metadata, so both election outcomes bind to
+  // the same canonical decision row.
   return observedEvent(snapshot, "LOOP_JUDGE_STARTED", observation.judgeInvocationId, receipt.traceId) &&
     observedEvent(snapshot, "LOOP_JUDGE_RESULT_OBSERVED", observation.judgeInvocationId, receipt.traceId) &&
-    observedEvent(snapshot, decisionType, observation.electionDecisionId, receipt.traceId);
+    observedEvent(snapshot, "AUTO_DECIDED", observation.electionDecisionId, receipt.traceId);
 }
 
 export interface IntentLiveReceiptValidator {
@@ -966,6 +970,12 @@ export function createIntentCompletionEvaluator(deps: {
         validationEventIdentities: input.validationEventIdentities,
       });
       if (!snapshot.ok) return snapshot;
+      // The requested identity set BOUNDS the evidence: a reader that returns
+      // receipts outside it cannot widen what the completion seal binds.
+      const requested = new Set(input.validationEventIdentities);
+      if (snapshot.value.receipts.some((receipt) => !requested.has(receipt.validationEventIdentity))) {
+        return failure("CONFLICT", "validationSet", "reader returned a receipt outside the requested validation set");
+      }
       const classified = classifyReceiptSet(snapshot.value.receipts, input.intentUuid, input.cohort, input.revision);
       if (classified.missing.length > 0 || classified.rejected.length > 0) return success({
         check: {
@@ -980,9 +990,14 @@ export function createIntentCompletionEvaluator(deps: {
         sourceAuditRevision: snapshot.value.auditRevision,
         sourceStateProjectionRevision: snapshot.value.stateProjectionRevision,
       });
-      const ordered = input.cohort.harnessIds.map(
-        (harnessId) => classified.byHarness.get(harnessId)?.[0] as CommittedValidatedIntentLiveReceipt,
-      );
+      const ordered: CommittedValidatedIntentLiveReceipt[] = [];
+      for (const harnessId of input.cohort.harnessIds) {
+        const receipt = classified.byHarness.get(harnessId)?.[0];
+        if (receipt === undefined) {
+          return failure("ILLEGAL_STATE", "completionEvidence", `classified set lost harness ${harnessId}`);
+        }
+        ordered.push(receipt);
+      }
       const evidenceBase = {
         schemaVersion: "1" as const,
         intentUuid: input.intentUuid,
@@ -1234,7 +1249,7 @@ export function acceptTerminalCommit(input: {
 }
 
 export interface IntentCompletionLedgerSnapshot {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: "1";
   readonly auditRevision: number;
   readonly stateProjectionRevision: number;
   readonly committedTransactions: readonly {
@@ -1291,7 +1306,7 @@ export function createMemoryIntentCompletionLedger(
     },
     exportSnapshot() {
       const value = {
-        schemaVersion: 1 as const,
+        schemaVersion: "1" as const,
         auditRevision,
         stateProjectionRevision,
         committedTransactions: [...transactions].sort(([left], [right]) => compareUtf8(left, right)).map(

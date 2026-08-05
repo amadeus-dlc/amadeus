@@ -247,7 +247,7 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 | `RULE_LEARNED` | The learning gate persisted a kept learning as a practice line under the routed heading in `{project,team}.md` | Stage, Candidate-ID, Destination, Heading, Source | — | `tools/amadeus-learnings.ts persist` |
 | `SENSOR_PROPOSED` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter | Stage, Candidate-ID, Sensor ID, Manifest path, Matches, Destinations, Source | — | `tools/amadeus-learnings.ts persist` |
 
-### Loop Monitor, Quality Repair, and Intent Autonomy (4 events)
+### Loop Monitor, Quality Repair, and Intent Autonomy (5 events)
 
 The event set is the atomic canonical stream for delivery observation, cycle trigger, Judge reservation/result, closed route application, and latch transitions. The per-clone Replay Index is a repairable secondary projection and never replaces this audit source of truth.
 

@@ -600,7 +600,15 @@ describe("live smoke authorization seam", () => {
       authorize: () => ({ authorized: false as const, reason: "credential-missing" }),
     })).toEqual({ kind: "CONFLICT", reason: "credential-missing" });
     // Unknown partition never reaches the port.
-    expect(coordinator.authorizeLiveSmoke({ ...partition, monitorId: "unknown-monitor" }, "sha256:scope", port))
+    let unknownPartitionCalls = 0;
+    const countingPort = {
+      authorize: () => {
+        unknownPartitionCalls++;
+        return { authorized: true as const, authorizationId: "never", actorId: "never" };
+      },
+    };
+    expect(coordinator.authorizeLiveSmoke({ ...partition, monitorId: "unknown-monitor" }, "sha256:scope", countingPort))
       .toEqual({ kind: "CONFLICT", reason: "partition-not-in-compiled-graph" });
+    expect(unknownPartitionCalls).toBe(0);
   });
 });
