@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-RA1",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の requirements-analysis 明確化質問6問(Q1〜Q6)の一括裁定。正本は record の inception/requirements-analysis/requirements-analysis-questions.md(全文を実読すること)。conductor 提案は各問の agent recommendation をそのまま採用: Q1=B(semi 専用 authorization 型を新設し scope/effect/basisFingerprint の3責務だけ型で明示。grant の意味論は持ち込まない)/ Q2=A(set-mode に policies と方針込み確認 digest を載せ、--policies-file の非 full 無音破棄を loud 化)/ Q3=A(semi は全5段を使う。AUTONOMOUS_BLOCK_CAP と budget mode は不変、走行単位の主張は「質問で止まらない」に限定)/ Q4=A(guard hold の前に autonomy 認可 + engine provenance receipt の第2経路を置き、run_required: true の advisory は強制実行のまま維持)/ Q5=A(--autonomy は semi|full の2値、値を必ず consume、none と不正値は loud、再宣言は同値 no-op / 異値 loud。フラグ自体を provenance とみなさない)/ Q6=B(t431 の test を2分割し walking-skeleton ピンを独立 test として保存したうえで semi 質問封鎖ピンを反転)。各推奨の根拠と file:line は questions ファイル本文にある。既決事項(semi = full − 節目、後方互換なし、FR-GRT-004 維持、cap 不変、5段、advisory は plugin 非依存の一般形)は質問対象外であり、これらと矛盾する選択肢を選ばないこと。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部の問で別案が正しい",
+      "description": "1問以上で推奨が誤り、または既決境界(Out・org.md Forbidden)と矛盾する。留保にどの問でどの選択肢が正しいか、その file:line 根拠とともに具体的に記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "6問すべて推奨どおり採用",
+      "description": "Q1=B / Q2=A / Q3=A / Q4=A / Q5=A / Q6=B。各問の推奨根拠を questions ファイルと実コードで検証したうえで、いずれも既決境界と矛盾せず実装可能と判断する場合。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "質問自体に欠落・誤りがある",
+      "description": "選択肢の前提となる機構引用が実在しない、選択肢集合が網羅的でない、または既決事項を質問にしてしまっている。留保に具体を記すこと。"
+    }
+  ]
+}
