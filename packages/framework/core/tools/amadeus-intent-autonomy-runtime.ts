@@ -10,14 +10,18 @@ import {
   autonomyStableId,
   createGateAutoDecision,
   createGrantExerciseReservation,
+  decisionAuthorityOf,
   parseWorkflowResult,
   planHumanAutonomyCommand,
   projectGrantReference,
   resolveAutoDecision,
   revalidateGrantExerciseReservation,
+  SemiAuthority,
   validateResumeCondition,
   type AutoDecisionRecord,
   type AutonomyProjection,
+  type DecisionAuthority,
+  type DecisionAuthorization,
   type DecisionCapabilityPort,
   type DecisionFact,
   type DecisionOptionEffect,
@@ -30,6 +34,7 @@ import {
   type InvocationFailureRecord,
   type ParkEnvelope,
   type ResumeCondition,
+  type SemiAuthorityScope,
   type StopReason,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
@@ -234,6 +239,9 @@ export interface AutonomyDecisionInput {
   readonly applicableNormFacts: readonly DecisionFact[];
   readonly pastHumanRulings: readonly DecisionFact[];
   readonly capability: DecisionCapabilityPort;
+  // Supplied by the production layer: the pure layer never invents fingerprints,
+  // so a semi Intent without a scope cannot build an authority and stays human.
+  readonly semiScope?: SemiAuthorityScope;
   readonly gateApprovalOptionId?: string;
   readonly injectCrashAfterReservation?: boolean;
 }
@@ -496,7 +504,7 @@ export function createIntentAutonomyCoordinator(options: {
   function createSelectedGateDecision(
     projection: AutonomyProjection,
     input: AutonomyDecisionInput,
-    basisKind: "mode-semi" | "grant-gate",
+    authority: DecisionAuthority,
   ): { readonly kind: "selected"; readonly decision: AutoDecisionRecord } | AutonomyDecisionResult {
     try {
       return {
@@ -504,9 +512,10 @@ export function createIntentAutonomyCoordinator(options: {
         decision: createGateAutoDecision({
           projection,
           occurrence: input.occurrence,
+          authority,
           actorId: input.actorId,
           selectedOptionId: input.gateApprovalOptionId ?? "approve",
-          basisKind,
+          basisKind: authority.kind === "semi" ? "mode-semi" : "grant-gate",
         }),
       };
     } catch (cause) {
@@ -517,13 +526,14 @@ export function createIntentAutonomyCoordinator(options: {
   function selectDecision(
     projection: AutonomyProjection,
     input: AutonomyDecisionInput,
-    authorization: ReturnType<typeof authorizeInteraction>,
+    authorization: Exclude<DecisionAuthorization, { readonly kind: "human-required" }>,
   ): { readonly kind: "selected"; readonly decision: AutoDecisionRecord } | AutonomyDecisionResult {
-    if (authorization.kind === "semi-mode-gate") return createSelectedGateDecision(projection, input, "mode-semi");
-    if (input.occurrence.kind !== "question") return createSelectedGateDecision(projection, input, "grant-gate");
+    const authority = decisionAuthorityOf(authorization);
+    if (input.occurrence.kind !== "question") return createSelectedGateDecision(projection, input, authority);
     const resolved = resolveAutoDecision({
       projection,
       occurrence: input.occurrence,
+      authority,
       actorId: input.actorId,
       scopeLineageFingerprint: input.scopeLineageFingerprint,
       currentNormFingerprint: input.currentNormFingerprint,
@@ -546,13 +556,16 @@ export function createIntentAutonomyCoordinator(options: {
   function applySemiDecision(
     projection: AutonomyProjection,
     input: AutonomyDecisionInput,
+    authority: SemiAuthority,
     decision: AutoDecisionRecord,
   ): AutonomyDecisionResult {
-    const effect = input.registry.resolve(decision.selectedOptionId);
-    if (effect === null || effect.classification !== "workflow-reversible" ||
-      effect.applicableNormFingerprint !== input.currentNormFingerprint) {
-      return { kind: "human-required", reason: "semi-gate-effect-not-authorized", result: null };
-    }
+    const authorized = SemiAuthority.authorizeEffect(
+      authority,
+      input.registry.resolve(decision.selectedOptionId),
+      input.currentNormFingerprint,
+    );
+    if (!authorized.ok) return { kind: "human-required", reason: authorized.reason, result: null };
+    const effect = authorized.effect;
     const after: AutonomyProjection = {
       ...projection,
       autoDecisions: [...projection.autoDecisions, decision],
@@ -603,14 +616,16 @@ export function createIntentAutonomyCoordinator(options: {
   function decide(input: AutonomyDecisionInput): AutonomyDecisionResult {
     const projection = current();
     if (projection.workflowExecutionState === "suspended") return { kind: "parked", result: parkedResult(projection) };
-    const authorization = authorizeInteraction(projection, input.occurrence);
+    const authorization = authorizeInteraction(projection, input.occurrence, input.semiScope ?? null);
     if (authorization.kind === "human-required") {
       if (projection.mode !== "full") return { kind: "human-required", reason: authorization.reason, result: null };
       return parkForHuman(projection, input, authorization.reason);
     }
     const selected = selectDecision(projection, input, authorization);
     if (selected.kind !== "selected") return selected;
-    if (authorization.kind === "semi-mode-gate") return applySemiDecision(projection, input, selected.decision);
+    if (authorization.kind === "semi-authority") {
+      return applySemiDecision(projection, input, authorization.authority, selected.decision);
+    }
     return reserveFullDecision(projection, input, selected.decision);
   }
 

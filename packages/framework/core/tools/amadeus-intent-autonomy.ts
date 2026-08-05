@@ -176,6 +176,13 @@ export interface AutonomyProjection {
   readonly parkEnvelope: ParkEnvelope | null;
   readonly lastInvocationFailure: InvocationFailureRecord | null;
   readonly projectionRevision: number;
+  // Optional because "no policy" and "no field" are the same domain state in
+  // semi: the read side goes through semiPoliciesOf, never through the field.
+  readonly semiPolicies?: readonly DecisionPolicy[];
+}
+
+export function semiPoliciesOf(projection: AutonomyProjection): readonly DecisionPolicy[] {
+  return projection.semiPolicies ?? [];
 }
 
 function validateScope(scope: GrantScopeDescriptor, intentUuid: string): void {
@@ -204,6 +211,11 @@ export function assertLegalAutonomyProjection(projection: AutonomyProjection): v
     throw new Error("ILLEGAL_STATE:park-envelope");
   }
   if (projection.parkEnvelope !== null) validateResumeCondition(projection.parkEnvelope.reason, projection.parkEnvelope.resumeCondition);
+  // One-way invariant: policies may only be carried by semi. The converse is
+  // not required — a semi Intent with zero policies is a legal domain state.
+  if (projection.semiPolicies !== undefined && projection.mode !== "semi") {
+    throw new Error("ILLEGAL_STATE:semi-policies-mode-combination");
+  }
 }
 
 interface CreateAutonomyProjectionInput {
@@ -473,25 +485,146 @@ export function createInteractionOccurrence(input: Omit<InteractionOccurrence, "
   };
 }
 
+// The interaction kinds semi decides on its own. Milestones (walking skeleton,
+// phase gates) are absent by construction, which is what keeps them human.
+export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"];
+
+export interface SemiAuthorityScope {
+  readonly intentUuid: string;
+  readonly scopeId: string;
+  readonly scopeFingerprint: string;
+  readonly normFingerprint: string;
+  readonly allowedInteractionKinds: readonly InteractionKind[];
+}
+
+// The semi authorization basis. Three responsibilities only: scope
+// authorization, effect authorization, and basis fingerprint supply. It is not
+// a grant — no issuance ceremony, no TTL, no revocation state, no grant id.
+export type SemiAuthority = {
+  readonly kind: "semi-authority";
+  readonly intentUuid: string;
+  readonly scope: SemiAuthorityScope;
+  readonly policies: readonly DecisionPolicy[];
+  readonly authorityFingerprint: string;
+};
+
+interface SemiAuthorityFingerprintInput {
+  readonly modeProvenance: ModeProvenance;
+  readonly scopeFingerprint: string;
+  readonly policies: readonly DecisionPolicy[];
+}
+
+export type SemiEffectAuthorization =
+  | { readonly ok: true; readonly effect: DecisionOptionEffect }
+  | { readonly ok: false; readonly reason: "semi-gate-effect-not-authorized" };
+
+export const SemiAuthority = {
+  fingerprint(input: SemiAuthorityFingerprintInput): string {
+    return autonomyDigest({
+      modeProvenance: input.modeProvenance,
+      scopeFingerprint: input.scopeFingerprint,
+      policySetDigest: autonomyDigest(input.policies),
+    });
+  },
+  of(projection: AutonomyProjection, scope: SemiAuthorityScope): SemiAuthority | null {
+    if (projection.mode !== "semi" || projection.modeProvenance.kind !== "human-command" ||
+      !SHA256.test(scope.scopeFingerprint) || !SHA256.test(scope.normFingerprint)) return null;
+    const policies = semiPoliciesOf(projection);
+    return {
+      kind: "semi-authority",
+      intentUuid: projection.intentUuid,
+      scope,
+      policies,
+      authorityFingerprint: SemiAuthority.fingerprint({
+        modeProvenance: projection.modeProvenance,
+        scopeFingerprint: scope.scopeFingerprint,
+        policies,
+      }),
+    };
+  },
+  allowsOccurrence(authority: SemiAuthority, occurrence: InteractionOccurrence): boolean {
+    return authority.scope.intentUuid === occurrence.intentUuid &&
+      authority.scope.allowedInteractionKinds.includes(occurrence.kind) &&
+      occurrence.phase !== "phase-boundary";
+  },
+  // The authority is the receiver, not a predicate input: scope was already
+  // settled at the first gate (allowsOccurrence), so the effect arm only has to
+  // hold the reversibility and norm-currency line.
+  authorizeEffect(
+    _authority: SemiAuthority,
+    effect: DecisionOptionEffect | null,
+    currentNormFingerprint: string,
+  ): SemiEffectAuthorization {
+    if (effect === null || effect.classification !== "workflow-reversible" ||
+      effect.applicableNormFingerprint !== currentNormFingerprint) {
+      return { ok: false, reason: "semi-gate-effect-not-authorized" };
+    }
+    return { ok: true, effect };
+  },
+};
+
+// The ladder entry input. Both arms answer the single question the entry asks:
+// was an authorization basis resolved for this occurrence?
+export type DecisionAuthority =
+  | {
+      readonly kind: "grant";
+      readonly grantId: string;
+      readonly scope: GrantScopeDescriptor;
+      readonly policies: readonly DecisionPolicy[];
+      readonly authorityFingerprint: string;
+    }
+  | {
+      readonly kind: "semi";
+      readonly scope: SemiAuthorityScope;
+      readonly policies: readonly DecisionPolicy[];
+      readonly authorityFingerprint: string;
+    };
+
 export type DecisionAuthorization =
   | {
-      readonly kind: "semi-mode-gate";
+      readonly kind: "semi-authority";
       readonly occurrence: InteractionOccurrence;
-      readonly modeProvenance: Extract<ModeProvenance, { readonly kind: "human-command" }>;
+      readonly authority: SemiAuthority;
       readonly projectionRevision: number;
     }
   | {
       readonly kind: "full-grant";
       readonly occurrence: InteractionOccurrence;
       readonly grantId: string;
+      readonly scope: GrantScopeDescriptor;
+      readonly policies: readonly DecisionPolicy[];
       readonly scopeFingerprint: string;
+      readonly authorityFingerprint: string;
       readonly projectionRevision: number;
     }
   | {
       readonly kind: "human-required";
       readonly occurrence: InteractionOccurrence;
-      readonly reason: "MODE_REQUIRES_HUMAN" | "SCOPE_OUT" | "AUTHORITY_BOUNDARY";
+      readonly reason: "MODE_REQUIRES_HUMAN" | "SCOPE_OUT";
     };
+
+export function decisionAuthorityOf(
+  authorization: Exclude<DecisionAuthorization, { readonly kind: "human-required" }>,
+): DecisionAuthority;
+export function decisionAuthorityOf(authorization: DecisionAuthorization): DecisionAuthority | null;
+export function decisionAuthorityOf(authorization: DecisionAuthorization): DecisionAuthority | null {
+  if (authorization.kind === "human-required") return null;
+  if (authorization.kind === "semi-authority") {
+    return {
+      kind: "semi",
+      scope: authorization.authority.scope,
+      policies: authorization.authority.policies,
+      authorityFingerprint: authorization.authority.authorityFingerprint,
+    };
+  }
+  return {
+    kind: "grant",
+    grantId: authorization.grantId,
+    scope: authorization.scope,
+    policies: authorization.policies,
+    authorityFingerprint: authorization.authorityFingerprint,
+  };
+}
 
 function scopeAllows(grant: IntentGrant, occurrence: InteractionOccurrence): boolean {
   return grant.scope.intentUuid === occurrence.intentUuid &&
@@ -501,6 +634,7 @@ function scopeAllows(grant: IntentGrant, occurrence: InteractionOccurrence): boo
 export function authorizeInteraction(
   projection: AutonomyProjection,
   occurrence: InteractionOccurrence,
+  semiScope: SemiAuthorityScope | null = null,
 ): DecisionAuthorization {
   assertLegalAutonomyProjection(projection);
   if (projection.intentUuid !== occurrence.intentUuid || projection.workflowExecutionState !== "running") {
@@ -508,14 +642,17 @@ export function authorizeInteraction(
   }
   if (projection.mode === "none") return { kind: "human-required", occurrence, reason: "MODE_REQUIRES_HUMAN" };
   if (projection.mode === "semi") {
-    const internalGate = occurrence.kind === "stage-gate" && occurrence.phase !== "phase-boundary";
-    if (!internalGate || projection.modeProvenance.kind !== "human-command") {
-      return { kind: "human-required", occurrence, reason: "MODE_REQUIRES_HUMAN" };
+    // No scope supplied means no basis can be built: semi fails closed here
+    // rather than deciding on a fingerprint the pure layer invented itself.
+    const authority = semiScope === null ? null : SemiAuthority.of(projection, semiScope);
+    if (authority === null) return { kind: "human-required", occurrence, reason: "MODE_REQUIRES_HUMAN" };
+    if (!SemiAuthority.allowsOccurrence(authority, occurrence)) {
+      return { kind: "human-required", occurrence, reason: "SCOPE_OUT" };
     }
     return {
-      kind: "semi-mode-gate",
+      kind: "semi-authority",
       occurrence,
-      modeProvenance: projection.modeProvenance,
+      authority,
       projectionRevision: projection.projectionRevision,
     };
   }
@@ -527,7 +664,10 @@ export function authorizeInteraction(
     kind: "full-grant",
     occurrence,
     grantId: grant.grantId,
+    scope: grant.scope,
+    policies: grant.policies,
     scopeFingerprint: grant.scope.scopeFingerprint,
+    authorityFingerprint: autonomyDigest(grant),
     projectionRevision: projection.projectionRevision,
   };
 }
@@ -630,14 +770,14 @@ function decisionRecord(input: DecisionRecordInput): AutoDecisionRecord {
 interface ResolveConfirmedPolicyInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
-  readonly grant: IntentGrant;
+  readonly authority: DecisionAuthority;
   readonly actorId: string;
 }
 
 function resolveConfirmedPolicy(input: ResolveConfirmedPolicyInput): AutoDecisionResolution | null {
-  const policies = input.grant.policies.filter((policy) =>
+  const policies = input.authority.policies.filter((policy) =>
     policy.selector === input.occurrence.selector &&
-    policy.scopeFingerprint === input.grant.scope.scopeFingerprint &&
+    policy.scopeFingerprint === input.authority.scope.scopeFingerprint &&
     input.occurrence.optionIds.includes(policy.normalizedOptionRule.optionId)
   );
   const options = new Set(policies.map((policy) => policy.normalizedOptionRule.optionId));
@@ -658,6 +798,7 @@ function resolveConfirmedPolicy(input: ResolveConfirmedPolicyInput): AutoDecisio
 interface CreateGateAutoDecisionInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
+  readonly authority: DecisionAuthority;
   readonly actorId: string;
   readonly selectedOptionId: string;
   readonly basisKind: "mode-semi" | "grant-gate";
@@ -678,9 +819,7 @@ export function createGateAutoDecision(input: CreateGateAutoDecisionInput): Auto
     selectedOptionId: input.selectedOptionId,
     decider: "deterministic-engine",
     basisKind: input.basisKind,
-    basisFingerprint: autonomyDigest(input.basisKind === "mode-semi"
-      ? input.projection.modeProvenance
-      : input.projection.currentGrant),
+    basisFingerprint: input.authority.authorityFingerprint,
     actorId: input.actorId,
   });
 }
@@ -688,6 +827,7 @@ export function createGateAutoDecision(input: CreateGateAutoDecisionInput): Auto
 interface ResolveAutoDecisionInput {
   readonly projection: AutonomyProjection;
   readonly occurrence: InteractionOccurrence;
+  readonly authority: DecisionAuthority | null;
   readonly actorId: string;
   readonly scopeLineageFingerprint: string;
   readonly currentNormFingerprint: string;
@@ -697,13 +837,12 @@ interface ResolveAutoDecisionInput {
 }
 
 export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisionResolution {
-  const { projection, occurrence } = input;
-  const grant = projection.currentGrant;
-  if (projection.mode !== "full" || grant === null) return { kind: "invalid", reason: "full-grant-required" };
+  const { projection, occurrence, authority } = input;
+  if (authority === null) return { kind: "invalid", reason: "authorization-required" };
   if (!SHA256.test(input.scopeLineageFingerprint) || !SHA256.test(input.currentNormFingerprint)) {
     return { kind: "invalid", reason: "invalid-decision-context" };
   }
-  const policy = resolveConfirmedPolicy({ projection, occurrence, grant, actorId: input.actorId });
+  const policy = resolveConfirmedPolicy({ projection, occurrence, authority, actorId: input.actorId });
   if (policy !== null) return policy;
   const applicableNorms = input.applicableNormFacts.filter((fact) =>
     fact.selector === occurrence.selector && fact.normFingerprint === input.currentNormFingerprint &&
