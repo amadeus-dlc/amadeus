@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseTlaModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
+import { parseTlaModelMap } from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
 import {
   checkPreconditions,
   composeRegisteredMap,
@@ -220,6 +220,11 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.error.kind).toBe("validator-rejected");
+  });
+
+  test("refuses a draft that is not an object with a name", () => {
+    expect(parseEntryDraft("Sample").ok).toBe(false);
+    expect(parseEntryDraft({ evidenceBundle: { digest: BUNDLE_DIGEST } }).ok).toBe(false);
   });
 
   test("refuses a draft whose evidenceBundle digest is malformed", () => {

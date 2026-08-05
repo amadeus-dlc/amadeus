@@ -301,6 +301,47 @@ describe("registration commit on the real filesystem (FR-010)", () => {
     expect(readFileSync(mapPath, "utf8")).toEqual(intruderMap);
   });
 
+  test("refuses when the shard the approval names cannot be read", () => {
+    const { root, mapPath } = workspace();
+    const bundle = verifiedBundleIn(root);
+    const approval: HumanApprovalRef = {
+      shard: join(root, "no-such-shard.jsonl"),
+      timestamp: APPROVED_AT,
+      eventIdentity: "f".repeat(64),
+    };
+
+    const committed = RegistrationCommitter.commit(
+      entryFor("Election", { evidenceBundle: { digest: bundle.ref.digest } }),
+      bundle,
+      preconditionsFor(approval),
+      createRegistrationPorts({ mapPath, now: () => APPROVED_AT }),
+    );
+
+    expect(committed.ok).toBe(false);
+    if (committed.ok) return;
+    expect(committed.error).toEqual({
+      kind: "preconditions-failed",
+      failures: [{ kind: "approval-provenance-invalid" }],
+    });
+  });
+
+  test("reports an io-failure when the map itself cannot be read", () => {
+    const { root } = workspace();
+    const { approval } = shardWithApproval(root);
+    const bundle = verifiedBundleIn(root);
+
+    const committed = RegistrationCommitter.commit(
+      entryFor("Election", { evidenceBundle: { digest: bundle.ref.digest } }),
+      bundle,
+      preconditionsFor(approval),
+      createRegistrationPorts({ mapPath: join(root, "absent-map.json"), now: () => APPROVED_AT }),
+    );
+
+    expect(committed.ok).toBe(false);
+    if (committed.ok) return;
+    expect(committed.error.kind).toBe("io-failure");
+  });
+
   test("reports an io-failure and keeps the old map when the publish fails", () => {
     const { root, mapPath } = workspace();
     const before = readFileSync(mapPath, "utf8");
@@ -441,6 +482,52 @@ describe("tla-authoring commit subcommand", () => {
 
     expect(exitCode).toBe(1);
     expect(JSON.parse(lines[0] as string).ok).toBe(false);
+  });
+
+  test("exits 2 when the preconditions document is not an object", async () => {
+    const { root, mapPath, draftPath, preconditionsPath, bundle } = cliWorkspace();
+    writeFileSync(preconditionsPath, JSON.stringify(["not", "an", "object"]));
+    const lines: string[] = [];
+
+    const exitCode = await runTlaAuthoring(
+      [
+        "commit",
+        "--draft", draftPath,
+        "--bundle", bundle.ref.digest,
+        "--preconditions", preconditionsPath,
+        "--model-map", mapPath,
+        "--store", join(root, "evidence"),
+      ],
+      (line) => lines.push(line),
+    );
+
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(lines[0] as string).error).toContain("--preconditions");
+  });
+
+  test("exits 1 when the preconditions carry no applicability identity", async () => {
+    const { root, mapPath, draftPath, preconditionsPath, bundle } = cliWorkspace();
+    const preconditions = JSON.parse(readFileSync(preconditionsPath, "utf8"));
+    delete preconditions.applicability;
+    writeFileSync(preconditionsPath, JSON.stringify(preconditions));
+    const lines: string[] = [];
+
+    const exitCode = await runTlaAuthoring(
+      [
+        "commit",
+        "--draft", draftPath,
+        "--bundle", bundle.ref.digest,
+        "--preconditions", preconditionsPath,
+        "--model-map", mapPath,
+        "--store", join(root, "evidence"),
+      ],
+      (line) => lines.push(line),
+    );
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(lines[0] as string)).toMatchObject({
+      failure: { kind: "preconditions-failed" },
+    });
   });
 
   test("exits 2 when a required flag is missing", async () => {

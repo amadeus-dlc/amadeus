@@ -206,12 +206,9 @@ export function parseEntryDraft(value: unknown): Result<ModelMapEntryDraft, Regi
 export function parseModelMapSnapshot(bytes: string): Result<ModelMapSnapshot, RegistrationFailure> {
   const parsed = parseTlaModelMap(new TextEncoder().encode(bytes));
   if (!parsed.ok) return rejected(parsed.error.detail);
-  let document: unknown;
-  try {
-    document = JSON.parse(bytes) as unknown;
-  } catch (cause) {
-    return rejected(cause instanceof Error ? cause.message : String(cause));
-  }
+  // The validator decoded these very bytes as JSON already, so this parse is
+  // a re-read of a known-good document rather than a second validation.
+  const document: unknown = JSON.parse(bytes);
   if (!isRecord(document)) return rejected("model map must be a JSON object");
   return ok({ bytes, document });
 }
