@@ -8,6 +8,11 @@
 // allowlist. `as unknown` is NOT in the population: it asserts no proof and is
 // the shape parse-don't-validate wants (decisions.md ADR-2).
 //
+// #2112 fixed the unit of account. A claim is counted ONCE however many links
+// its chain has, and the `<T>expr` and `expr satisfies T` spellings count as
+// the same claim as `expr as T` — previously a chain counted per link (over)
+// while those two spellings counted zero (fail-open).
+//
 // Detection is AST-based rather than line-regex because the patched class is
 // routinely multi-line and holds nested parens; a single-line regex recalls
 // 27% of it (ADR-2 Context). The allowlist is keyed by (file, kind) COUNT and

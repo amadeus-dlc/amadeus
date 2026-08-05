@@ -20,6 +20,21 @@
 // wants, because the type still has to be earned downstream. Counting it as
 // debt would put pressure on the safe form (decisions.md ADR-2 Context).
 //
+// HOW FAR THAT EXEMPTION REACHES (#2112). BR-CG-2 exempts an assertion whose
+// OWN target type is `unknown` — the form the value ENDS at. It is not an
+// exemption for chains that merely pass through `unknown`: `JSON.parse(s) as A
+// as unknown as B` leaves the value typed `B` with nothing proven, so it is a
+// site, exactly like `as unknown as B` always was. Both are one site, because
+// only the outermost link of a chain is counted.
+//
+// WHICH SPELLINGS COUNT, AND HOW OFTEN. `expr as T`, `<T>expr` and
+// `expr satisfies T` are three spellings of one act: giving a value read off
+// disk a domain type it has not earned. All three are the same population and
+// share the single `kind` — they are syntax variants, not a second unchecked-
+// read shape. A chain of them is ONE claim: `JSON.parse(x) as A as B` types
+// the value `B` once, so counting each link would inflate the ledger and make
+// the residual total disagree with the number of unproven reads (#2112).
+//
 // WHY AN AST AND NOT A LINE REGEX. The patched class is routinely spread over
 // several lines and holds nested parens (`JSON.parse(readFileSync(p, "utf-8"))
 // as T`), which a single-line regex recalls at 27%. A guard that misses three
@@ -65,8 +80,10 @@ export const ALLOWLIST_PATH = join(REPO_ROOT, "tests", ".unchecked-cast-allowlis
 // additive over the scanned roots.
 // ---------------------------------------------------------------------------
 
-// One vocabulary for now. The allowlist shape is per-(file, kind) so a second
-// unchecked-read shape can join later without rewriting the ledger.
+// One vocabulary for now, covering every spelling of the same claim (`as`,
+// `<T>`, `satisfies`). The allowlist shape is per-(file, kind) so a second
+// unchecked-read SHAPE — a different read, not a different syntax — can join
+// later without rewriting the ledger.
 export type CastKind = "json-parse-as";
 
 export type UncheckedCastMatch = {
