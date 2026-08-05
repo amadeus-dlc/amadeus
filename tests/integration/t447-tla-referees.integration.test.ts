@@ -186,6 +186,40 @@ describe("tla-authoring trace (AC-005 demo)", () => {
     });
   });
 
+  test("a non-array subjects document is a typed invariant-name failure", async () => {
+    const subjects = writeJson("subjects-bad.json", { not: "an array" });
+    const rows = writeJson("rows-empty.json", []);
+    const invariants = writeJson("invariants-one.json", ["TypeOK"]);
+    const { exitCode, body } = await runAsync([
+      "trace", "--subjects", subjects, "--rows", rows, "--invariants", invariants,
+    ]);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("invalid-grammar");
+  });
+
+  test("a non-array rows document is a typed trace-row failure", async () => {
+    const subjects = writeJson("subjects-one.json", ["FR-006"]);
+    const rows = writeJson("rows-bad.json", { not: "an array" });
+    const invariants = writeJson("invariants-one.json", ["TypeOK"]);
+    const { exitCode, body } = await runAsync([
+      "trace", "--subjects", subjects, "--rows", rows, "--invariants", invariants,
+    ]);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("invalid-trace-row");
+  });
+
+  test("a row missing its rationale is a typed trace-row failure naming the row", async () => {
+    const subjects = writeJson("subjects-one.json", ["FR-006"]);
+    const rows = writeJson("rows-broken.json", [{ subject: "FR-006", invariant: "TypeOK" }]);
+    const invariants = writeJson("invariants-one.json", ["TypeOK"]);
+    const { exitCode, body } = await runAsync([
+      "trace", "--subjects", subjects, "--rows", rows, "--invariants", invariants,
+    ]);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("invalid-trace-row");
+    expect(String((body.failure as { detail: string }).detail)).toContain("FR-006");
+  });
+
   test("total coverage returns the proof digests on exit 0", async () => {
     const subjects = writeJson("subjects.json", ["FR-006"]);
     const rows = writeJson("rows.json", [
@@ -429,5 +463,81 @@ describe("tla-authoring proof", () => {
     expect(exitCode).toBe(1);
     expect(body.failure).toMatchObject({ missing: ["tlc-exploration", "falling-proof", "vacuity-proof"] });
     expect(JSON.stringify(body.failure)).toContain("could not be acquired");
+  });
+});
+
+import {
+  RefereeToolchainInternals,
+  createRefereeToolchain,
+  refereeToolchainVersionLine,
+} from "../../plugins/formal-model-check/tools/tla-referee-toolchain.ts";
+
+describe("the production referee toolchain adapter (CI-safe surface)", () => {
+  let dir = "";
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "tla-referee-adapter-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function writeModel(name: string, source: string, cfg: string): { modulePath: string; configPath: string } {
+    const modulePath = join(dir, `${name}.tla`);
+    const configPath = join(dir, `${name}.cfg`);
+    writeFileSync(modulePath, source, "utf8");
+    writeFileSync(configPath, cfg, "utf8");
+    return { modulePath, configPath };
+  }
+
+  test("describeMutant derives the receipt vocabulary from the bytes on disk", () => {
+    const { modulePath, configPath } = writeModel(
+      "Counter",
+      "---- MODULE Counter ----\nVARIABLES x, y\nInit == x = 0 /\\ y = 0\n====\n",
+      "INIT Init\nINVARIANT TypeOK\n",
+    );
+    const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
+    if (!described.ok) throw new Error(JSON.stringify(described.error));
+    expect(described.value.model.name).toBe("Counter");
+    expect(described.value.vocabulary.namedInvariants).toEqual(["TypeOK"]);
+    expect(described.value.vocabulary.traceStateVariables).toEqual(["x", "y"]);
+    expect(described.value.source.moduleIdentity).toMatch(/^[0-9a-f]{64}$/);
+    expect(described.value.model.auxiliaries).toEqual([]);
+  });
+
+  test("describeMutant resolves an auxiliary module and records its identity", () => {
+    writeFileSync(join(dir, "Helper.tla"), "---- MODULE Helper ----\n====\n", "utf8");
+    const { modulePath, configPath } = writeModel(
+      "Main",
+      "---- MODULE Main ----\nEXTENDS Helper\nVARIABLE z\n====\n",
+      "INIT Init\nINVARIANT Safe\n",
+    );
+    const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
+    if (!described.ok) throw new Error(JSON.stringify(described.error));
+    expect((described.value.model.auxiliaries ?? []).map((aux) => aux.path)).toEqual([join(dir, "Helper.tla")]);
+  });
+
+  test("an unresolved auxiliary module is a typed MODULE_DEPS failure, not a throw", () => {
+    const { modulePath, configPath } = writeModel(
+      "Broken",
+      "---- MODULE Broken ----\nEXTENDS Missing\nVARIABLE z\n====\n",
+      "INIT Init\n",
+    );
+    const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
+    expect(described.ok).toBe(false);
+    if (described.ok) return;
+    expect(described.error.code).toBe("MODULE_DEP_UNRESOLVED");
+  });
+
+  test("the adapter's version line names the pinned jar and the pinned JDK", () => {
+    const toolchain = createRefereeToolchain();
+    expect(toolchain.versionLine).toBe(refereeToolchainVersionLine());
+    expect(toolchain.versionLine).toContain("tla2tools");
+  });
+
+  test("multi-invariant and VARIABLES declarations parse into the vocabulary", () => {
+    expect(RefereeToolchainInternals.declaredInvariantsOf("INVARIANTS TypeOK, Safe\nINVARIANT Live\n"))
+      .toEqual(["TypeOK", "Safe", "Live"]);
+    expect(RefereeToolchainInternals.traceStateVariablesOf("VARIABLES a, b\n")).toEqual(["a", "b"]);
+    expect(RefereeToolchainInternals.traceStateVariablesOf("no declarations here")).toEqual([]);
   });
 });
