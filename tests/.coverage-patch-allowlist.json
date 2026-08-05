@@ -4672,7 +4672,7 @@
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:e677a5f85d9408cee15b79fe1efa3a03b4f68ca8ac2c7743f5ceafe479c067bd",
+      "fingerprint": "sha256:c34cc9c4949f7e15fd7e5460c58d1298aabf8c2fb19fb435c2e19b3784bc786d",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -4683,9 +4683,9 @@
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:390f9388f7aa62048d7563a07f51c1f6d537b31041c46eeedc7f9a69fdc2e98b",
-      "anchorLines": 6,
-      "targetLines": "1-6"
+      "fingerprint": "sha256:6bf4675fecd5a1408933e25a735a292382d2e32361313344271103fedacec680",
+      "anchorLines": 5,
+      "targetLines": "1-5"
     },
     "reason": "The command boundary is exercised by t435 and the focused autonomy/quality CLI integration suites, while the underlying production and domain seams are covered in-process; this residual range is spawn-only dispatch or defensive CLI parsing that Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual process-boundary or defensive arm gains a deterministic in-process driver, or Bun merges child-process coverage"
