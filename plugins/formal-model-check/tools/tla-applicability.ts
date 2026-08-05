@@ -365,7 +365,7 @@ export type ResolveTraceSubjects = (digest: string) => readonly StableId[] | nul
 
 /**
  * Read the model map as the decision table's snapshot. A registered model's
- * trace subjects come from the evidence bundle the entry names (U1 `read` on
+ * trace subjects come from the evidenceBundle the entry names (U1 `read` on
  * the applicability part), so an entry whose bundle is unresolvable makes the
  * whole snapshot unreadable rather than a silently smaller one — a partially
  * read map would move J-rows (BR-U2-16). Entries with no bundle link yet (the
@@ -386,12 +386,12 @@ export function readModelMapSnapshot(
   const models: RegisteredModel[] = [];
   for (const entry of document.models) {
     if (!isRecord(entry) || typeof entry.name !== "string") return null;
-    const evidence = entry.evidence;
-    if (!isRecord(evidence) || typeof evidence.digest !== "string") {
+    const evidenceBundle = entry.evidenceBundle;
+    if (!isRecord(evidenceBundle) || typeof evidenceBundle.digest !== "string") {
       models.push({ name: entry.name, traceSubjects: [] });
       continue;
     }
-    const traceSubjects = resolveTraceSubjects(evidence.digest);
+    const traceSubjects = resolveTraceSubjects(evidenceBundle.digest);
     if (traceSubjects === null) return null;
     models.push({ name: entry.name, traceSubjects });
   }

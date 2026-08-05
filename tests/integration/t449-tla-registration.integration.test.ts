@@ -5,12 +5,13 @@ import { join } from "node:path";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import { updateModelMap } from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
-import { EvidenceBundle } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
+import { EvidenceBundle, EvidenceEnvelopeCodec } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
+import { readModelMapSnapshot, traceSubjectsOf } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 import {
   RegistrationCommitter,
   createRegistrationPorts,
 } from "../../plugins/formal-model-check/tools/tla-registration.ts";
-import type { AggregateDigest, VerifiedBundle } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
+import type { AggregateDigest, StableId, VerifiedBundle } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 import type { HumanApprovalRef } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 
 // U4 handler pin (nfr-design/logical-components.md § 層構成): the committer and
@@ -125,12 +126,19 @@ function shardWithApproval(root: string): { path: string; approval: HumanApprova
 function verifiedBundleIn(root: string): VerifiedBundle {
   const store = join(root, "evidence");
   const receipt = { recorded: true } as const;
+  const applicability = {
+    route: "author-new",
+    subjectIdentity: SUBJECT_IDENTITY,
+    subjectSeries: `sha256:${"5".repeat(64)}`,
+    subjects: ["FR-010"],
+    predecessor: { kind: "root" },
+  } as const;
   const built = EvidenceBundle.build(
     store,
     {
       kind: "authoring-bundle",
       parts: {
-        applicability: receipt,
+        applicability,
         trace: receipt,
         proof: receipt,
         review: receipt,
@@ -360,6 +368,35 @@ describe("registration commit on the real filesystem (FR-010)", () => {
     if (committed.ok) return;
     expect(committed.error.kind).toBe("io-failure");
     expect(readFileSync(mapPath, "utf8")).toEqual(before);
+  });
+});
+
+describe("registration hands the entry to the hold evaluator (FR-010 handoff)", () => {
+  test("the evaluator resolves the trace subjects of a freshly registered model", () => {
+    const { root, mapPath } = workspace();
+    const { approval } = shardWithApproval(root);
+    const bundle = verifiedBundleIn(root);
+    const store = join(root, "evidence");
+
+    const committed = RegistrationCommitter.commit(
+      entryFor("Election", { evidenceBundle: { digest: bundle.ref.digest } }),
+      bundle,
+      preconditionsFor(approval),
+      createRegistrationPorts({ mapPath, now: () => APPROVED_AT }),
+    );
+    expect(committed.ok).toBe(true);
+
+    const snapshot = readModelMapSnapshot(readFileSync(mapPath, "utf8"), (digest) => {
+      const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
+      if (!parsed.ok) return null;
+      const parts = EvidenceBundle.read(store, { digest: parsed.value });
+      return parts.ok ? traceSubjectsOf(parts.value) : null;
+    });
+
+    expect(snapshot?.models).toEqual([
+      { name: "Election", traceSubjects: ["FR-010"] as unknown as readonly StableId[] },
+      { name: "Mirror", traceSubjects: [] },
+    ]);
   });
 });
 
