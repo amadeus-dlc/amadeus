@@ -237,3 +237,21 @@
 - **C-9**: scope は `self-feature` であり、最初の Construction Bolt に walking-skeleton ゲートを維持する。walking skeleton 候補 Unit は `semi-authorization-core`(§Unit 一覧、`unit-of-work-dependency.md` §walking skeleton 候補)。
 - **C-10 / NFR-7**: バージョン面に触れない。PR CI の既存ブロッキング検査集合をすべて満たす。
 - **NFR-1 / NFR-4**: 認可・受理ゲートの新設・改訂は TDD を既定とし、落ちる実証(注入 → 赤の実測 → 復元 → 残渣ゼロ確認)を不可分の1セットで行う(`cid:code-generation:falling-proof-injection-one-set`)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-05T08:59:31Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+7 Unit は C1〜C18 を過不足なく分割し(C8 のみ読み/書きで意図的に分割、申告済み)、FR 31 / NFR 7 の割当に孤立も二重もなく、行数配分 662 は application-design の機械合計と一致する。yaml edge block は様式・kebab-case・宣言済み名参照・非循環(Kahn 机上トレースを独立に再確認)を満たし、テスト番号 t440〜t452 に重複はなく、未確定 11 件すべてに引き取り Unit がある。再現可能な失敗・契約違反・安全性欠陥は検出されなかった。
+
+### Findings
+
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/units-generation/unit-of-work-story-map.md:68 — Unit 別 FR 件数の合計 33 が宣言方法(主担当のみ1回)と総数 31 の双方に反する。機械再計算では core 9 / carrier 4 / stop 4 / flag 5 / statusline 1 / advisory 5 / docs 2 = 30 + 横断 FR-PIN-3 = 31
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/units-generation/unit-of-work-dependency.md:78 — §依存しない辺 の表に launch-autonomy-flag → semi-policy-carrier が無い。上流 component-dependency.md:29 の C13 → C9 辺の消去は不在根拠表側にも1行置く
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/units-generation/unit-of-work-dependency.md:113 — ADR-3 が裁定した production 層の SemiAuthorityScope 組み立て結線が C1〜C18 のどれにも列挙されず、core の境界・行数・交差表に現れない宙吊り。所属を core と明記して交差表を改めるか、functional-design への引き取り項目にする
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/units-generation/unit-of-work-dependency.md:70 — stop→core と docs→3Unit の辺は意味論的依存であり、hard(型)/ soft(意味)の区別を注記すると 2.8 が制約の強さを誤読しない
+- NIT | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/units-generation/unit-of-work.md:232 — §Unit を跨がない制約 に C-1/C-2/C-4 が現れず、全 Unit 共通面か特定 Unit 面かの区別が1行ほしい

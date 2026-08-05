@@ -65,7 +65,7 @@
 | FR-DOC-1 | docs 22 ファイル(11 対訳ペア)の同時改訂 | **`semi-docs-revision`** |
 | FR-DOC-2 | 正本知識 `stage-protocol.md` の 9 行の改訂 | **`semi-docs-revision`** |
 
-**カバレッジ検証**: FR は AUTH 3 + LAD 6 + STOP 2 + POL 3 + CLI 5 + DISP 2 + ADV 5 + PIN 3 + DOC 2 = **31 件**であり、上表の行数と一致する(`requirements.md` の実測 31 件 — §測定 ref)。未割当の FR は 0 件。逆向きに、7 Unit のうち FR を1件も持たない Unit も 0 件である(`semi-authorization-core` 10 件 / `semi-policy-carrier` 5 件 / `stop-question-carveout` 4 件 / `launch-autonomy-flag` 5 件 / `autonomy-statusline` 1 件 / `advisory-auto-resolution` 5 件 / `semi-docs-revision` 3 件 — 主担当のみを数え、横断分担は主担当側で1回だけ数えた)。
+**カバレッジ検証**: FR は AUTH 3 + LAD 6 + STOP 2 + POL 3 + CLI 5 + DISP 2 + ADV 5 + PIN 3 + DOC 2 = **31 件**であり、上表の行数と一致する(`requirements.md` の実測 31 件 — §測定 ref)。未割当の FR は 0 件。逆向きに、7 Unit のうち FR を1件も持たない Unit も 0 件である(§FR の割当 表の太字=主担当からの機械再計算: `semi-authorization-core` 9 件 / `semi-policy-carrier` 4 件 / `stop-question-carveout` 4 件 / `launch-autonomy-flag` 5 件 / `autonomy-statusline` 1 件 / `advisory-auto-resolution` 5 件 / `semi-docs-revision` 2 件 = 30 件 + 横断 FR-PIN-3 の 1 件 = **31 件**。§12a iteration 1 の指摘により当初の誤計(合計 33)を列挙からの再導出で訂正 — `cid:requirements-analysis:ledger-count-mechanical-recalc`)。
 
 ---
 
