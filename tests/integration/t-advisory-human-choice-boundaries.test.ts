@@ -21,7 +21,7 @@ import {
   closeAdvisoryInstancesForStage,
   createPendingAdvisory,
   guardAdvisoryChoices,
-  recordProtectedAdvisoryChoice,
+  recordAdvisoryChoice,
   revokeMisattributedAdvisoryChoice,
   verifyAdvisoryModelCheckOutcome,
   type AdvisoryChoiceStore,
@@ -42,6 +42,25 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
+
+// #2253 replaced the prompt-classifying acceptance entry point with one that
+// takes an already-classified choice and a provenance union. These tests were
+// written against the prompt shape, and what they pin — which prompts count and
+// which provenance is refused — is unchanged, so they keep exercising the same
+// route through the same two steps the hook now performs.
+function recordAdvisoryChoiceViaPrompt(
+  projectDir: string,
+  prompt: string,
+  humanTurn: { timestamp: string; shard: string; eventIdentity: string },
+  now?: string,
+): boolean {
+  const choice = choiceFromExactPrompt(prompt);
+  if (choice === null) return false;
+  return now === undefined
+    ? recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn })
+    : recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn }, now);
+}
+
 
 const identity = {
   plugin: "formal-model-check",
@@ -407,13 +426,13 @@ describe("protected advisory choice persistence", () => {
 
   test("pendingだけでは別gateの1を消費せず、提示直後の1だけを相関する", () => {
     const { projectDir, pending } = project();
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
 
     plantAdvisoryPresentation(projectDir, pending);
     const humanTurn = plantHumanTurn(projectDir);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", humanTurn, "2026-08-03T12:00:00.001Z")).toBe(true);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", humanTurn)).toBe(false);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", humanTurn, "2026-08-03T12:00:00.001Z")).toBe(true);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", humanTurn)).toBe(false);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
     const rerun = guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]);
     expect(rerun).toMatchObject({ kind: "hold", runRequired: true });
     if (rerun.kind === "hold") {
@@ -426,8 +445,8 @@ describe("protected advisory choice persistence", () => {
   test("advisory提示は次の人間ターンだけに有効で、非choiceを挟むと失効する", () => {
     const { projectDir, pending } = project();
     plantAdvisoryPresentation(projectDir, pending);
-    expect(recordProtectedAdvisoryChoice(projectDir, "not a choice", plantHumanTurn(projectDir))).toBe(false);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "not a choice", plantHumanTurn(projectDir))).toBe(false);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 
@@ -437,10 +456,10 @@ describe("protected advisory choice persistence", () => {
       const humanTurn = plantHumanTurn(projectDir);
       const store = readStore(projectDir);
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: pending.identity,
         choice: "run-now",
-        humanTurn,
+        provenance: { kind: "human-turn", ...humanTurn },
         recordedAt: "2026-08-03T12:00:00.001Z",
       });
       writeJson(storePath(projectDir), store);
@@ -457,10 +476,10 @@ describe("protected advisory choice persistence", () => {
       const humanTurn = plantHumanTurn(projectDir);
       const store = readStore(projectDir);
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: pending.identity,
         choice: "run-now",
-        humanTurn,
+        provenance: { kind: "human-turn", ...humanTurn },
         recordedAt: "2026-08-03T12:00:00.001Z",
       });
       writeJson(storePath(projectDir), store);
@@ -477,15 +496,15 @@ describe("protected advisory choice persistence", () => {
     {
       const { projectDir } = project();
       const turn = plantHumanTurn(projectDir);
-      expect(recordProtectedAdvisoryChoice(projectDir, "approve", turn)).toBe(false);
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", { ...turn, shard: "other.jsonl" })).toBe(false);
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", { ...turn, eventIdentity: "not-grounded" })).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "approve", turn)).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", { ...turn, shard: "other.jsonl" })).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", { ...turn, eventIdentity: "not-grounded" })).toBe(false);
     }
     {
       const { projectDir } = project();
       const turn = plantHumanTurn(projectDir);
       writeFileSync(storePath(projectDir), "{");
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", turn)).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", turn)).toBe(false);
       expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("evidence is invalid");
       closeAdvisoryInstancesForStage(projectDir, identity.checkpoint);
     }
@@ -493,21 +512,21 @@ describe("protected advisory choice persistence", () => {
       const { projectDir } = project();
       const turn = plantHumanTurn(projectDir);
       unlinkSync(auditFilePath(projectDir));
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", turn)).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", turn)).toBe(false);
     }
     {
       const { projectDir } = project();
       closeAdvisoryInstancesForStage(projectDir, identity.checkpoint, "2026-08-03T12:00:00.000Z");
       closeAdvisoryInstancesForStage(projectDir, identity.checkpoint, "2026-08-03T12:00:01.000Z");
       expect(readStore(projectDir).pending[0]?.closedAt).toBe("2026-08-03T12:00:00.000Z");
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
       expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toBeNull();
     }
     {
       const { projectDir, pending } = project();
       plantAdvisoryPresentation(projectDir, pending);
-      expect(recordProtectedAdvisoryChoice(projectDir, "2", plantHumanTurn(projectDir))).toBe(true);
-      expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "2", plantHumanTurn(projectDir))).toBe(true);
+      expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
       expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toBeNull();
     }
   });
@@ -542,7 +561,7 @@ describe("protected advisory choice persistence", () => {
       (store: AdvisoryChoiceStore) => { store.pending[0]!.identity.code = "not a code" as "changed"; },
       (store: AdvisoryChoiceStore) => { store.pending[0]!.message = ""; },
       (store: AdvisoryChoiceStore) => { store.pending[0]!.closedAt = ""; },
-      (store: AdvisoryChoiceStore) => { (store as unknown as Record<string, unknown>).schema = 2; },
+      (store: AdvisoryChoiceStore) => { (store as unknown as Record<string, unknown>).schema = 3; },
     ]) {
       const { projectDir } = project();
       const store = readStore(projectDir);
@@ -554,10 +573,10 @@ describe("protected advisory choice persistence", () => {
       const { projectDir } = project();
       const store = readStore(projectDir);
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: store.pending[0]!.identity,
         choice: "run-now",
-        humanTurn: { timestamp: "", shard: "shard", eventIdentity: "event" },
+        provenance: { kind: "human-turn", timestamp: "", shard: "shard", eventIdentity: "event" },
         recordedAt: "2026-08-03T12:00:00.000Z",
       });
       writeJson(storePath(projectDir), store);
@@ -567,10 +586,10 @@ describe("protected advisory choice persistence", () => {
       const { projectDir } = project();
       const store = readStore(projectDir);
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: store.pending[0]!.identity,
         choice: "run-now",
-        humanTurn: { timestamp: "2026-08-03T12:00:00.000Z", shard: "shard", eventIdentity: "" },
+        provenance: { kind: "human-turn", timestamp: "2026-08-03T12:00:00.000Z", shard: "shard", eventIdentity: "" },
         recordedAt: "invalid",
       });
       writeJson(storePath(projectDir), store);
@@ -580,10 +599,11 @@ describe("protected advisory choice persistence", () => {
       const { projectDir } = project();
       const store = readStore(projectDir);
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: store.pending[0]!.identity,
         choice: "run-now",
-        humanTurn: {
+        provenance: {
+          kind: "human-turn",
           timestamp: "2026-08-03T12:00:00.000Z",
           shard: "shard",
           eventIdentity: "event",
@@ -598,7 +618,7 @@ describe("protected advisory choice persistence", () => {
   test("run-now hold reports detected, harness-error, invalid, and verified outcomes", () => {
     const { projectDir, pending } = project();
     plantAdvisoryPresentation(projectDir, pending);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
 
     writeEvidence(projectDir, pending, "DETECTED");
     expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("DETECTED counterexample-1");

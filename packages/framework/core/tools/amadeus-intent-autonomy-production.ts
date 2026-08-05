@@ -21,6 +21,7 @@ import {
   type AutonomyProjection,
   type DecisionPolicyInput,
   type DecisionFact,
+  type EffectClassification,
   type GrantScopeDescriptor,
   type HumanAutonomyCommand,
   type InteractionKind,
@@ -68,7 +69,10 @@ const ALL_INTERACTIONS: readonly InteractionKind[] = [
   "question",
 ];
 
-const PROHIBITED_EFFECTS = [
+// Exported so a caller that builds its own option effects can prove, in a test
+// it owns, that the classification it assigns to a refusable option is still
+// one this scope forbids (#2253 FR-ADV-4 secondary barrier).
+export const PROHIBITED_EFFECTS = [
   "new-permission",
   "irreversible",
   "scope-out",
@@ -532,6 +536,13 @@ export interface ProductionQuestionDecisionInput {
   readonly applicableNormFacts?: readonly DecisionFact[];
   readonly pastHumanRulings?: readonly DecisionFact[];
   readonly election?: { readonly optionId: string; readonly evidenceFingerprint: string };
+  // Per-option effect classification. A question whose options are all ordinary
+  // workflow moves needs none — the default is `workflow-reversible`, which is
+  // what every caller before #2253 relied on. A caller whose option space
+  // contains a move that WAIVES something (advisory `defer-with-risk`) names it
+  // here, and effect authorization then refuses that option on its own, without
+  // this adapter growing a policy branch.
+  readonly effectClassifications?: Readonly<Record<string, EffectClassification>>;
 }
 
 export function commitProductionQuestionDecision(input: ProductionQuestionDecisionInput): AutonomyDecisionResult {
@@ -561,7 +572,7 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
       optionId,
       payload,
       payloadFingerprint: autonomyDigest(payload),
-      classification: "workflow-reversible" as const,
+      classification: input.effectClassifications?.[optionId] ?? ("workflow-reversible" as const),
       requiredScopeFingerprint: scopeFingerprint,
       applicableNormFingerprint: normFingerprint,
     };
