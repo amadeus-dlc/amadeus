@@ -1272,6 +1272,12 @@ export function createMemoryIntentCompletionLedger(
   let stateProjectionRevision = input.stateProjectionRevision;
   const transactions = new Map<string, { events: readonly AuditEventPlan[]; receipt: AuditCommitReceipt }>();
   if (input.snapshot !== undefined) {
+    // A digest proves integrity, not compatibility: an untyped caller can hand
+    // over a well-digested snapshot of a FUTURE schema, and replaying it as
+    // "1" would silently re-emit it under the wrong version. Refuse first.
+    if (input.snapshot.schemaVersion !== "1") {
+      throw new Error("unsupported-intent-completion-ledger-snapshot-schema");
+    }
     const { digest: snapshotDigest, ...value } = input.snapshot;
     const observed = digest("intent-completion-ledger", value);
     if (!observed.ok || observed.value !== snapshotDigest) throw new Error("invalid-intent-completion-ledger-snapshot");

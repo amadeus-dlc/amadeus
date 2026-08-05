@@ -469,6 +469,18 @@ describe("receipt validation and terminal transaction", () => {
 
     const restored = createMemoryIntentCompletionLedger({ auditRevision: 0, stateProjectionRevision: 0, snapshot: ledger.exportSnapshot() });
     expect(restored.commit(plan.value)).toEqual(committed);
+
+    // A well-digested snapshot of an UNKNOWN schema version is refused before
+    // the digest check can bless it as "1".
+    const exported = ledger.exportSnapshot();
+    const { digest: _oldDigest, ...futureValue } = { ...exported, schemaVersion: "2" };
+    const futureDigest = canonicalContractValueDigest("intent-completion-ledger", futureValue);
+    if (!futureDigest.ok) throw new Error(futureDigest.error.detail);
+    expect(() => createMemoryIntentCompletionLedger({
+      auditRevision: 0,
+      stateProjectionRevision: 0,
+      snapshot: { ...futureValue, digest: futureDigest.value } as unknown as ReturnType<typeof ledger.exportSnapshot>,
+    })).toThrow("unsupported-intent-completion-ledger-snapshot-schema");
     expect(() => createMemoryAutonomyReviewService({
       intents: [completedReviewSeed(plan.value, 14)],
     })).not.toThrow();
