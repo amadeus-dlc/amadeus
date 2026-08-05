@@ -489,6 +489,15 @@ describe("mutation sources (pure transformations)", () => {
     expect(built).not.toContain("INVARIANT Other");
   });
 
+  test("a folded INVARIANT list falls entirely, continuation lines included", () => {
+    const folded = ["SPECIFICATION Spec", "INVARIANT TypeOK,", "          Other", "CONSTANT MaxReceipts = 3", ""].join("\n");
+    const built = MutationSource.singleInvariantConfig(folded, "Probe_TypeOK" as InvariantName);
+    expect(built).not.toContain("Other");
+    expect(built).toContain("SPECIFICATION Spec");
+    expect(built).toContain("CONSTANT MaxReceipts = 3");
+    expect(built).toContain("INVARIANT Probe_TypeOK");
+  });
+
   test("a falling mutation is applied textually and its anchor must be unique", () => {
     const applied = unwrap(
       MutationSource.fallingModule(module, { find: "TypeOK ==", replace: "TypeOK == FALSE /\\" }),

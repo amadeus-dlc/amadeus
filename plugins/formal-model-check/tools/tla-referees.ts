@@ -113,7 +113,8 @@ function evaluateCoverage(
     (row) => !subjectSet.has(row.subject) || !invariantSet.has(row.invariant) || row.rationale.trim() === "",
   );
 
-  const resolved = rows.filter((row) => !unresolvedRows.includes(row));
+  const unresolvedSet = new Set(unresolvedRows);
+  const resolved = rows.filter((row) => !unresolvedSet.has(row));
   const boundSubjects = new Set<string>(resolved.map((row) => row.subject));
   const boundInvariants = new Set<string>(resolved.map((row) => row.invariant));
 
@@ -390,12 +391,24 @@ function vacuityModule(
   return ok({ source: injected.join("\n"), probeInvariant });
 }
 
-/** Keeps the run's setup lines and narrows the checked invariants to one. */
+/**
+ * Keeps the run's setup lines and narrows the checked invariants to one. A
+ * folded declaration keeps its list on indented continuation lines, so those
+ * fall with the keyword line (the adapter's extraction reads them the same
+ * way) instead of surviving as orphan tokens TLC would trip over.
+ */
 function singleInvariantConfig(config: string, invariant: InvariantName): string {
-  const kept = config
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .filter((line) => !CONFIG_INVARIANT_RE.test(line));
+  const kept: string[] = [];
+  let dropping = false;
+  for (const line of config.replace(/\r\n?/g, "\n").split("\n")) {
+    if (CONFIG_INVARIANT_RE.test(line)) {
+      dropping = true;
+      continue;
+    }
+    if (dropping && /^[ \t]+\S/.test(line)) continue;
+    dropping = false;
+    kept.push(line);
+  }
   while (kept.length > 0 && kept[kept.length - 1] === "") kept.pop();
   return [...kept, `INVARIANT ${invariant}`, ""].join("\n");
 }
