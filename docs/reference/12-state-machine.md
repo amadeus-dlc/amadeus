@@ -367,7 +367,7 @@ rather than deleting it. All of these paths run under the audit lock.
 | Event | Emitter | Trigger |
 |---|---|---|
 | `ERROR_LOGGED` | `tools/amadeus-lib.ts` (via `emitError` from every tool's `error()`) | Any tool CLI that calls `error(msg)` to exit non-zero; best-effort — no-op if no workflow in cwd, guarded against recursion |
-| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue|review|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion |
+| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue|review|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion; also `session-takeover --confirm`, once the guard confirms a stale Kimi caller carrier was rebound (carries `Reason` = the repaired denial) |
 
 ### Worktree
 

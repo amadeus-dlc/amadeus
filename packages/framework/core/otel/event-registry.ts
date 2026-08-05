@@ -658,7 +658,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "error-recovery",
     requiredAttributes: ["Choice", "Current Stage"],
-    optionalAttributes: [],
+    // `Reason` carries the caller-authorization denial a session-takeover
+    // repaired; the compaction-acknowledgement recovery has no such cause and
+    // omits it.
+    optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
   // --- Construction Bolt Events (4) ---

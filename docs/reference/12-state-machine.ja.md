@@ -334,7 +334,7 @@ bun .claude/tools/amadeus-advisory-choice.ts record \
 | Event | Emitter | Trigger |
 |---|---|---|
 | `ERROR_LOGGED` | `tools/amadeus-lib.ts`(すべてのツールの `error()` からの `emitError` 経由) | 非ゼロ終了のため `error(msg)` を呼ぶ任意のツール CLI。ベストエフォート — cwd に workflow がなければ no-op、再帰に対してガード済み |
-| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | ユーザーが compaction-awareness の `AskUserQuestion` に回答した後、コンダクターが呼ぶ `acknowledge-compaction --choice <continue|review|restart>` |
+| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | ユーザーが compaction-awareness の `AskUserQuestion` に回答した後、コンダクターが呼ぶ `acknowledge-compaction --choice <continue|review|restart>`。加えて `session-takeover --confirm` が、陳腐化した Kimi 呼び出し元 carrier の再バインド成立をゲートが確認した時点で発行する(`Reason` = 修復した拒否原因を伴う) |
 
 ### Worktree
 
