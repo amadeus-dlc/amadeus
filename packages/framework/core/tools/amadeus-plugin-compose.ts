@@ -472,7 +472,9 @@ export function inspectPlugin(plugin: PluginDescriptor, host: HostSnapshot): Plu
   collectFragmentErrors(m, host, errors);
   if (errors.length > 0) return { kind: "rejected", errors: sortErrors(errors) };
   const valid = plugin as ValidPlugin;
-  return { kind: "ready", plan: planPluginComposition(valid, host) };
+  const planned = planPluginCompositionChecked(valid, host);
+  if (!planned.ok) return { kind: "rejected", errors: planned.error };
+  return { kind: "ready", plan: planned.value };
 }
 
 function collectStageErrors(m: PluginManifest, host: HostSnapshot, errors: PluginError[]): void {
@@ -580,9 +582,9 @@ export function serializeStageSeams(slug: string, seams: StageSeams): Buffer {
 export type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
 // The two list shapes real stage frontmatter uses: a YAML block list (`- item`
-// lines under the key) and a single-line flow list (`key: [...]`, in practice
-// the empty `key: []`).
-export type SeamListStyle = "block-list" | "flow-empty";
+// lines under the key) and a single-line flow list (`key: [...]`, empty or
+// with inline entries).
+export type SeamListStyle = "block-list" | "flow";
 
 export type SeamSpan = { readonly start: number; readonly end: number; readonly style: SeamListStyle };
 
@@ -659,7 +661,7 @@ function readSeamAt(lines: readonly RawLine[], keyIndex: number, to: number, res
   if (rest.startsWith("[") && rest.endsWith("]")) {
     const inner = rest.slice(1, -1).trim();
     const entries = inner === "" ? [] : inner.split(",").map((e) => seamEntry(e.trim()));
-    return { entries, span: { start: key.start, end: key.end, style: "flow-empty" } };
+    return { entries, span: { start: key.start, end: key.end, style: "flow" } };
   }
   if (rest !== "") return null;
   const entries: string[] = [];
@@ -745,9 +747,11 @@ function renderSeamSpan(name: SeamName, span: SeamSpan, spanText: string, existi
   let common = 0;
   while (common < existing.length && common < target.length && existing[common] === target[common]) common += 1;
   // The flow form carries its entries ON the key line, so growing it into a
-  // block list means the key line itself is re-rendered.
-  const head = span.style === "flow-empty" ? `${name}:` : spanText.slice(0, spanPrefixLength(spanText, common));
-  const tail = target.slice(common).map((entry) => `${prefix}${entry}`);
+  // block list re-renders the key line itself — no entry byte of the flow form
+  // can be preserved, so every target entry becomes a fresh item line.
+  const kept = span.style === "flow" ? 0 : common;
+  const head = span.style === "flow" ? `${name}:` : spanText.slice(0, spanPrefixLength(spanText, kept));
+  const tail = target.slice(kept).map((entry) => `${prefix}${entry}`);
   return [head, ...tail].join(newline);
 }
 
@@ -791,7 +795,13 @@ export function fragmentMarker(id: string): string {
 // `current` is the file's bytes on the host: when they are a real stage document
 // the rebuild goes through the frontmatter seam bridge (preserving every byte
 // outside the rewritten seam); otherwise it is the engine's native seam form.
-function rebuildStageSeams(entry: Extract<LedgerEntry, { kind: "stage-seams" }>, current: Buffer | undefined): Buffer {
+// A refused frontmatter rewrite (a non-produces contribution, or an on-disk
+// seam that drifted from the ledger) is a typed clobber error, never a throw —
+// compose planning and the drop drift check both consume it as a rejection.
+function rebuildStageSeams(
+  entry: Extract<LedgerEntry, { kind: "stage-seams" }>,
+  current: Buffer | undefined,
+): Result<Buffer, PluginError> {
   const merged: Record<SeamName, string[]> = {
     produces: [...entry.base.produces],
     consumes: [...entry.base.consumes],
@@ -802,12 +812,15 @@ function rebuildStageSeams(entry: Extract<LedgerEntry, { kind: "stage-seams" }>,
     merged[c.seam] = [...mergeSeamEntries(merged[c.seam], c.entries)];
   }
   const doc = current === undefined ? null : parseStageFrontmatter(current);
-  if (doc === null || !doc.ok) return serializeStageSeams(entry.slug, merged);
+  if (doc === null || !doc.ok) return { ok: true, value: serializeStageSeams(entry.slug, merged) };
   const written = serializeStageFrontmatterSeams(doc.value, merged);
   if (!written.ok) {
-    throw new Error(`stage ${entry.path} seam rewrite refused: ${written.error.kind}`);
+    return {
+      ok: false,
+      error: { kind: "clobber", message: `stage ${entry.path} seam rewrite refused: ${written.error.kind}`, locus: entry.path },
+    };
   }
-  return written.value;
+  return { ok: true, value: written.value };
 }
 
 // Rebuild a fragment file from its base plus the ordered fragment contributions.
@@ -822,8 +835,8 @@ function rebuildFragmentFile(entry: Extract<LedgerEntry, { kind: "fragment-file"
   return Buffer.from(text, "utf-8");
 }
 
-function rebuildLedgerEntry(entry: LedgerEntry, current: Buffer | undefined): Buffer {
-  return entry.kind === "stage-seams" ? rebuildStageSeams(entry, current) : rebuildFragmentFile(entry);
+function rebuildLedgerEntry(entry: LedgerEntry, current: Buffer | undefined): Result<Buffer, PluginError> {
+  return entry.kind === "stage-seams" ? rebuildStageSeams(entry, current) : { ok: true, value: rebuildFragmentFile(entry) };
 }
 
 // ---------------------------------------------------------------------------
@@ -836,21 +849,44 @@ function rebuildLedgerEntry(entry: LedgerEntry, current: Buffer | undefined): Bu
 // contribution), recomputes each file's post-state, and records the plugin's
 // owned new paths plus per-file expected post-states.
 export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): PluginCompositionPlan {
+  const planned = planPluginCompositionChecked(plugin, host);
+  if (!planned.ok) {
+    // Direct callers (tests, internal invariant paths) get the loud form; the
+    // inspection path consumes the checked form and rejects instead.
+    throw new Error(planned.error.map((e) => `${e.locus}: ${e.message}`).join("; "));
+  }
+  return planned.value;
+}
+
+// The rejection-capable planner: a refused shared-file rebuild (e.g. a real
+// frontmatter stage whose bridge rewrite is refused) is returned as typed
+// errors rather than thrown, so inspectPlugin can fold it into `rejected`.
+export function planPluginCompositionChecked(
+  plugin: ValidPlugin,
+  host: HostSnapshot,
+): Result<PluginCompositionPlan, readonly PluginError[]> {
   const m = plugin.manifest;
   const nextOrder = maxOrder(host.composition.ledger) + 1;
   const ledger = new Map<string, LedgerEntry>(host.composition.ledger);
   applySeamContributions(m, host, plugin.name, nextOrder, ledger);
   applyFragmentContributions(m, host, plugin.name, nextOrder, ledger);
 
+  const errors: PluginError[] = [];
   const sharedWrites: { path: string; bytes: Buffer }[] = [];
   const sharedFiles: { path: string; expectedPostState: Buffer }[] = [];
   for (const path of affectedPaths(m, host)) {
     const entry = ledger.get(path);
     if (entry === undefined) continue;
-    const bytes = rebuildLedgerEntry(entry, host.files.get(path));
+    const rebuilt = rebuildLedgerEntry(entry, host.files.get(path));
+    if (!rebuilt.ok) {
+      errors.push(rebuilt.error);
+      continue;
+    }
+    const bytes = rebuilt.value;
     sharedWrites.push({ path, bytes });
     sharedFiles.push({ path, expectedPostState: bytes });
   }
+  if (errors.length > 0) return { ok: false, error: sortErrors(errors) };
   const ownedPaths = [...m.stages.map((s) => s.path), ...m.tools.map((t) => t.path)].sort();
   const ownedContentDigests = ownedRecordDigests(plugin);
   const stageIndex = buildStageIndex(m.stages);
@@ -864,13 +900,16 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     sharedFiles,
   };
   return {
-    plugin: plugin.name,
-    contentDigest: pluginContentDigest(plugin),
-    stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
-    toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
-    sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
-    ledger,
-    record,
+    ok: true,
+    value: {
+      plugin: plugin.name,
+      contentDigest: pluginContentDigest(plugin),
+      stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
+      toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
+      sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
+      ledger,
+      record,
+    },
   };
 }
 
@@ -1056,14 +1095,22 @@ function planOneSharedDrop(
   // Drift is measured against the CUMULATIVE ledger rebuild (base + every active
   // plugin's contribution), never a single plugin's point-in-time snapshot — a
   // later plugin composing onto the same file legitimately moved the post-state.
+  // A rebuild the bridge refuses (e.g. a hand-edited non-produces seam of a
+  // real frontmatter stage) IS drift: it folds into the same clobber rejection.
   const current = host.files.get(shared.path);
-  if (current === undefined || !current.equals(rebuildLedgerEntry(entry, current))) {
+  const rebuilt = current === undefined ? null : rebuildLedgerEntry(entry, current);
+  if (current === undefined || rebuilt === null || !rebuilt.ok || !current.equals(rebuilt.value)) {
     rejections.push({ kind: "clobber", message: `shared file "${shared.path}" drifted from the recorded composition`, locus: shared.path });
     return;
   }
   const remaining = withoutPlugin(entry, plugin);
+  const remainingBytes = rebuildLedgerEntry(remaining, current);
+  if (!remainingBytes.ok) {
+    rejections.push(remainingBytes.error);
+    return;
+  }
   ledger.set(shared.path, remaining);
-  sharedWrites.push({ path: shared.path, bytes: rebuildLedgerEntry(remaining, current) });
+  sharedWrites.push({ path: shared.path, bytes: remainingBytes.value });
 }
 
 function withoutPlugin(entry: LedgerEntry, plugin: string): LedgerEntry {
