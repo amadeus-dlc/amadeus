@@ -17,6 +17,7 @@ import {
   projectReviewTelemetry,
   REQUIRED_REVIEW_HARNESSES,
   reviewAuditFields,
+  normalizeReviewFlagMetadata,
   reviewCommandContentDigest,
   type HumanReviewCommandBinding,
   type ReviewIntentSeed,
@@ -799,6 +800,17 @@ describe("status, telemetry and harness projection", () => {
       ok: false,
       error: { code: "CONFLICT", locus: "contractRevision" },
     });
+  });
+});
+
+describe("review flag metadata normalization", () => {
+  test("accept forces explicit nulls; flag defaults the classification and keeps the note digest", () => {
+    expect(normalizeReviewFlagMetadata({ choice: "accept", flagClassification: "contract-defect", noteDigest: autonomyDigest("n") }))
+      .toEqual({ flagClassification: null, safeNoteDigest: null });
+    expect(normalizeReviewFlagMetadata({ choice: "flag" }))
+      .toEqual({ flagClassification: "unspecified", safeNoteDigest: null });
+    expect(normalizeReviewFlagMetadata({ choice: "flag", flagClassification: "contract-defect", noteDigest: autonomyDigest("n") }))
+      .toEqual({ flagClassification: "contract-defect", safeNoteDigest: autonomyDigest("n") });
   });
 });
 
