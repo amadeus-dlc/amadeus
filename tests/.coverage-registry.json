@@ -6307,6 +6307,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-autonomy-phase-boundary-artifact.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
           "mechanism": "none"
         },

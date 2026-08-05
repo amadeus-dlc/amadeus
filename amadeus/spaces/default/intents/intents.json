@@ -925,5 +925,12 @@
     "dirName": "260804-tla-authoring",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
+    "slug": "phase-boundary-approval",
+    "dirName": "260804-phase-boundary-approval",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
