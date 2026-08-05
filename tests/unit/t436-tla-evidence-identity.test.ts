@@ -108,6 +108,22 @@ describe("IdentityDigest.extractStableSections", () => {
     expect(sections.map((s) => String(s.id))).toEqual(["ADR-1", "ADR-12"]);
   });
 
+  test("accepts the colon and em-dash title suffixes used by real records", () => {
+    const decisions = ["## ADR-1: タイトル", "決定", "", "## ADR-2 — 別タイトル", "別の決定"].join("\n");
+    const sections = unwrap(IdentityDigest.extractStableSections(decisions, "decisions"));
+    expect(sections.map((s) => String(s.id))).toEqual(["ADR-1", "ADR-2"]);
+
+    const requirements = ["### FR-006: 適用判定", "本文"].join("\n");
+    const reqSections = unwrap(IdentityDigest.extractStableSections(requirements, "requirements"));
+    expect(reqSections.map((s) => String(s.id))).toEqual(["FR-006"]);
+  });
+
+  test("does not match ids whose digit run continues past the grammar", () => {
+    const requirements = ["### FR-0061 過剰桁", "本文", "", "### FR-006x 接尾辞", "本文2"].join("\n");
+    const sections = unwrap(IdentityDigest.extractStableSections(requirements, "requirements"));
+    expect(sections).toEqual([]);
+  });
+
   test("rejects duplicate ids, enumerating every duplicate", () => {
     const duplicated = ["### FR-006", "a", "### FR-007", "b", "### FR-006", "c", "### FR-007", "d"].join("\n");
     expect(failure(IdentityDigest.extractStableSections(duplicated, "requirements"))).toEqual({

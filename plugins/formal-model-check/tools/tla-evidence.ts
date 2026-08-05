@@ -39,8 +39,10 @@ export type IdentityComparison =
 // The closed grammar of Q2 ruling A. Tokens outside it (cid: … and friends) are
 // never collected automatically.
 const STABLE_ID_RE = /^(?:(?:FR|NFR|AC)-\d{3}|ADR-\d+)$/;
-const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})(?=\s|$)/;
-const DECISIONS_HEADING_RE = /^##\s+(ADR-\d+)(?=\s|$)/;
+// The functional design fixes both heading grammars to a \b boundary after the
+// id, so real headings like "## ADR-1: title" stay extractable.
+const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;
+const DECISIONS_HEADING_RE = /^##\s+(ADR-\d+)\b/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
 function ok<T>(value: T): Result<T, never> {
