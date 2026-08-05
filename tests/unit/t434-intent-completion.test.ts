@@ -14,6 +14,7 @@ import {
   createMemoryIntentCompletionLedger,
   parseCompletionEvidencePayload,
   planTerminalCommit,
+  terminalTransactionAuditFields,
   resolveRequiredCompletionCohort,
   validateHarnessRegistry,
   type AuditCommitReceipt,
@@ -216,6 +217,23 @@ async function buildFiveHarnessEvidence() {
 }
 
 describe("five-harness completion cohort", () => {
+  test("rejects duplicate harness ids and an empty completion cohort", () => {
+    const registry = validateHarnessRegistry();
+    if (!registry.ok) throw new Error(registry.error.detail);
+    const first = registry.value.descriptors[0]!;
+    expect(validateHarnessRegistry([first, first])).toMatchObject({
+      ok: false,
+      error: { code: "MALFORMED", locus: "registry" },
+    });
+    const noLive = registry.value.descriptors.map((descriptor) => ({ ...descriptor, autonomyLive: false }));
+    const noLiveRegistry = validateHarnessRegistry(noLive);
+    if (!noLiveRegistry.ok) throw new Error(noLiveRegistry.error.detail);
+    expect(resolveRequiredCompletionCohort(noLiveRegistry.value)).toMatchObject({
+      ok: false,
+      error: { code: "MALFORMED", locus: "cohort" },
+    });
+  });
+
   test("registry resolves the exact current five while retaining Kiro rows", () => {
     const registry = validateHarnessRegistry();
     expect(registry.ok).toBe(true);
@@ -363,6 +381,10 @@ describe("receipt validation and terminal transaction", () => {
     if (!isCompleteEvaluation(evaluation.value)) throw new Error("expected complete five-harness evaluation");
     expect(evaluation.value.check.evidence.receiptIds).toEqual(fixture.cohort.harnessIds.map((id) => `receipt-${id}`));
     expect(parseCompletionEvidencePayload(evaluation.value.audit[0]).ok).toBe(true);
+    expect(parseCompletionEvidencePayload({
+      ...evaluation.value.audit[0],
+      payloadDigest: `sha256:${"f".repeat(64)}`,
+    })).toMatchObject({ ok: false, error: { code: "CONFLICT", locus: "completionEvidencePayload" } });
 
     const plan = planTerminalCommit({ current: fullProjection(), evaluation: evaluation.value });
     expect(plan.ok).toBe(true);
@@ -373,6 +395,13 @@ describe("receipt validation and terminal transaction", () => {
       "WORKFLOW_STATE_CLEARED",
       "WORKFLOW_COMPLETED",
     ]);
+    const auditFields = terminalTransactionAuditFields(plan.value);
+    expect(auditFields["Intent Uuid"]).toBe(INTENT);
+    expect(auditFields["Transaction Id"]).toBe(plan.value.transaction.transactionId);
+    expect(auditFields["Completion Seal Digest"]).toBe(plan.value.completionSealDigest);
+    expect(JSON.parse(auditFields.Transaction!)).toMatchObject({
+      eventType: "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+    });
     expect(plan.value.terminalProjection.workflowExecutionState).toBeNull();
     expect(plan.value.terminalProjection.currentGrant).toBeNull();
     expect(plan.value.terminalProjection.terminalGrantHistory.at(-1)?.state).toBe("completed");

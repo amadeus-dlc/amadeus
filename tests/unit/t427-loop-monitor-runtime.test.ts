@@ -572,3 +572,35 @@ describe("Loop Monitor latch", () => {
     expect(coordinator.readProjection(partition).latch).not.toBeNull();
   });
 });
+
+describe("live smoke authorization seam", () => {
+  test("records a credential-attested authorization as a partition event", () => {
+    const routeGraph = graph();
+    const repository = createMemoryLoopMonitorRepository();
+    const coordinator = createLoopMonitorCoordinator({ graph: routeGraph, repository });
+    const partition: LoopMonitorPartition = {
+      intentUuid: "intent-1",
+      monitorId: "quality-repair",
+      stageInstanceId: "stage-1",
+      graphRevision: routeGraph.graphRevision,
+    };
+    const port = {
+      authorize: (request: { readonly intentUuid: string; readonly monitorId: string; readonly scopeDigest: string }) => ({
+        authorized: true as const,
+        authorizationId: `live-auth-${request.monitorId}`,
+        actorId: "credential-attested-human",
+      }),
+    };
+    const authorized = coordinator.authorizeLiveSmoke(partition, "sha256:scope", port);
+    expect(authorized.kind).toBe("authorized");
+    if (authorized.kind !== "authorized") return;
+    expect(authorized.receipt.eventSetId.length).toBeGreaterThan(0);
+    // Denied port fails closed without an event.
+    expect(coordinator.authorizeLiveSmoke(partition, "sha256:scope", {
+      authorize: () => ({ authorized: false as const, reason: "credential-missing" }),
+    })).toEqual({ kind: "CONFLICT", reason: "credential-missing" });
+    // Unknown partition never reaches the port.
+    expect(coordinator.authorizeLiveSmoke({ ...partition, monitorId: "unknown-monitor" }, "sha256:scope", port))
+      .toEqual({ kind: "CONFLICT", reason: "partition-not-in-compiled-graph" });
+  });
+});
