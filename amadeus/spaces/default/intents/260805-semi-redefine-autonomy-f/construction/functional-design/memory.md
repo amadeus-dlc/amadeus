@@ -17,6 +17,8 @@
 
 - 2026-08-05T10:48:00Z — [semi-authorization-core] §12a iteration 1 BLOCKER: D3 の decide 内配線(semiScope 供給元)が未 specify で実装不能 — 実コード実測(decide :607 / AutonomyDecisionInput :228-239)に基づく 3 点 specify で閉包。教訓: 「〜経由で受領」の 1 文は配線の specify ではない — 型のフィールド・呼び出し行・組み立て点まで確定して初めて実装可能
 
+- 2026-08-05T11:00:00Z — [advisory-auto-resolution] U-2(梯子3段縮退の許容可否)は delivery-planning が Bolt 1 ゲートへ回付済みのため FD は観測限定(R11)を厳守。U-3 のロック直列性は withAuditLock 4区間の所属関数実測(:518 提示 / :599 guard / :766 close / :787 受理)で設計前提を固定し、実装時実測義務は保持
+
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
 
