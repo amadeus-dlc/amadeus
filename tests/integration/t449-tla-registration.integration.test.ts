@@ -567,6 +567,37 @@ describe("tla-authoring commit subcommand", () => {
     });
   });
 
+  test("aggregates every failing precondition when the identity is missing too (BR-U4-15)", async () => {
+    const { root, mapPath, draftPath, preconditionsPath, bundle } = cliWorkspace();
+    const preconditions = JSON.parse(readFileSync(preconditionsPath, "utf8"));
+    delete preconditions.applicability.subjectIdentity;
+    preconditions.coverage = undefined;
+    preconditions.proof = undefined;
+    writeFileSync(preconditionsPath, JSON.stringify(preconditions));
+    const lines: string[] = [];
+
+    const exitCode = await runTlaAuthoring(
+      [
+        "commit",
+        "--draft", draftPath,
+        "--bundle", bundle.ref.digest,
+        "--preconditions", preconditionsPath,
+        "--model-map", mapPath,
+        "--store", join(root, "evidence"),
+      ],
+      (line) => lines.push(line),
+    );
+
+    expect(exitCode).toBe(1);
+    const failure = JSON.parse(lines[0] as string).failure;
+    expect(failure.kind).toBe("preconditions-failed");
+    const missing = failure.failures
+      .filter((entry: { kind: string }) => entry.kind === "precondition-missing")
+      .map((entry: { precondition: string }) => entry.precondition)
+      .sort();
+    expect(missing).toEqual(["applicability-route", "coverage", "proof"]);
+  });
+
   test("exits 2 when a required flag is missing", async () => {
     const lines: string[] = [];
     const exitCode = await runTlaAuthoring(["commit", "--draft", "draft.json"], (line) => lines.push(line));
