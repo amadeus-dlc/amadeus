@@ -4,7 +4,7 @@
 
 本設計は`units-generation/unit-of-work.md`、`units-generation/unit-of-work-story-map.md`、`requirements-analysis/requirements.md`、`application-design/components.md`、`application-design/component-methods.md`、`application-design/services.md`を正本とする。対象はU1 `loop-monitor-runtime`と#2095のFR-LMC-001〜012、2095-AC01〜14である。
 
-実装範囲はM01のcompile、M02のpure Monitor reducer、M06のproduction orchestration、M07のaudit / replay / status、M09の5 harness contract verificationである。Quality obligation、autonomy grant、PR、外部runner / supervisor、常駐processは扱わない。
+実装範囲はM01のcompile、M02のpure Monitor reducer、M06のproduction orchestration、M07のaudit / replay / status、M08のgeneric live authorization、M09のcontract / opt-in live verificationである。Quality obligation、autonomy grant、PR、外部runner / supervisor、常駐processは扱わない。
 
 ## End-to-end処理モデル
 
@@ -33,9 +33,11 @@ sequenceDiagram
         W->>L: result適用またはuncertain park
         W->>A: completed / latch / parkをatomic append
     end
+    H->>A: committed live authorizationを確認
+    H->>J: opt-in live Judge
 ```
 
-テキスト代替: manifestを決定論的にcompileし、auditからMonitor projectionを再生する。workflow eventごとにpure reducerを進め、threshold到達時だけJudgeを予約する。予約を永続化してからstable IDで外部Adapterを呼び、結果または不確定effectをcanonical eventへ反映する。
+テキスト代替: manifestを決定論的にcompileし、auditからMonitor projectionを再生する。workflow eventごとにpure reducerを進め、threshold到達時だけJudgeを予約する。予約を永続化してからstable IDで外部Adapterを呼び、結果または不確定effectをcanonical eventへ反映する。live smokeは認可eventのcommit後にだけ実行する。
 
 ## 1. Manifest compile
 
@@ -215,9 +217,18 @@ plugin content digestとdescriptor全体をcanonical contribution digestへ含�
 
 各`MonitorManifest`は`evidenceProviderId`と`judgeInstructionId`を必須fieldとして持つ。M01はそれぞれを同じnormalized contributionの`EvidenceProviderDescriptor` / `JudgeInstructionDescriptor`へexact lookupし、解決済みdescriptorを`CompiledMonitor`へ埋め込む。1 Monitorにつきproviderはexactly oneであり、複数候補からM06が選ぶことはない。route ruleもmonitor / instruction / routeのtupleへ束縛し、別Monitorのproviderやinstructionを流用しない。
 
-## 8. 5 harness検証
+## 8. Generic live authorizationと5harness検証
 
-U1のhard gateは5 harness共通contractである。M09はsingle registryから対象cohortを導出し、同一fixtureに対するCore結果とpackage projectionのbyte parityを検証する。harness固有の分岐をLoop Monitor Coreへ追加しない。
+U1は後続U2〜U5が再利用する`LiveAuthorizationPort`をproduction配線まで閉じる。
+
+1. native descriptorが`liveAuthorization=credential-attested`であることをpreflightする。
+2. portはcredential自体でなく、issuer、environment、revision、trace、attestationのsafe metadataだけを返す。
+3. M08はmetadataとregistry / Intent / revisionを検証し、`LIVE_SMOKE_AUTHORIZED` planを生成する。
+4. M07 commit receiptがauthorization event identityを含む場合だけ`CommittedLiveExecutionAuthorization`へ昇格する。
+5. M09はcommitted authorizationなしにJudge liveを開始しない。
+6. raw receiptはauthorization / environment / trace / attestation / revisionへexact matchし、`passed + judgeObserved`の場合だけU1の暫定live successとする。
+
+U1のhard gateは5harness共通contractである。liveは利用可能な環境で暫定実測し、Intent terminal evidenceとしてはU5が最終revisionで再収集する。
 
 ## 9. Package / promote drift contract
 
@@ -260,6 +271,7 @@ source of truthは`packages/framework/core/`とsingle harness registryである�
 | evidence change / human retry | latch clearとunparkがatomic |
 | cross-session / clone | canonical projectionとJudge countが一致 |
 | 5harness contract | 同一fixture / expected resultが全対象で一致 |
+| opt-in live | committed authorizationありの場合だけJudge observed receipt |
 | Plugin contribution | dangling / duplicate provider・instruction・routeをcompile拒否 |
 | package / promote drift | revision-bound 3 checksとprojection digestが一致 |
 
