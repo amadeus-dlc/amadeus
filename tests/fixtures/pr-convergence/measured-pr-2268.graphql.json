@@ -16,6 +16,9 @@
               "isResolved": true,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -46,6 +49,9 @@
               "isResolved": true,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -76,6 +82,9 @@
               "isResolved": true,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -106,6 +115,9 @@
               "isResolved": true,
               "isOutdated": true,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -136,6 +148,9 @@
               "isResolved": true,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -166,6 +181,9 @@
               "isResolved": true,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {
@@ -196,6 +214,9 @@
               "isResolved": true,
               "isOutdated": true,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
                     "author": {

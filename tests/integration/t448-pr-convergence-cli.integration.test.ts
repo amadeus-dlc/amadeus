@@ -409,6 +409,29 @@ describe("CLI override verb — BR-U2-8, bound to a real human turn", () => {
     expect(latestHumanTurn(record)?.eventId).toBe("cccccccc-0000-0000-0000-000000000003");
   });
 
+  test("latestHumanTurn accepts legacy v1 shard rows (top-level event, no eventId)", () => {
+    // Real records carry schemaVersion:1 shards whose audit event lives on the
+    // top-level `event` field with no eventId — a real on-disk HUMAN_TURN must
+    // not be invisible to override.
+    const record = makeRecord({ humanTurn: false });
+    const v1 = JSON.stringify({
+      schemaVersion: 1,
+      seq: 22,
+      cloneId: "d4a945003a7f",
+      intentId: "intents",
+      timestamp: "2026-08-05T11:00:00Z",
+      heading: "Human Turn",
+      event: "HUMAN_TURN",
+      fields: {},
+    });
+    writeFileSync(join(record, "audit", "clone-v1.jsonl"), `${v1}\n`, "utf-8");
+    const turn = latestHumanTurn(record);
+    expect(turn).not.toBeNull();
+    expect(turn?.timestamp).toBe("2026-08-05T11:00:00Z");
+    // The reference id is derived deterministically from the row's own fields.
+    expect(turn?.eventId).toBe("v1:d4a945003a7f:22");
+  });
+
   test("refuses and writes nothing when no HUMAN_TURN exists", async () => {
     const record = makeRecord({ humanTurn: false });
     expect(latestHumanTurn(record)).toBeNull();

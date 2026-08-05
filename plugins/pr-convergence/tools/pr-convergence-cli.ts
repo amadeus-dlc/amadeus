@@ -157,11 +157,22 @@ function humanTurnFromLine(line: string): HumanTurn | null {
     return null; // A truncated tail must not hide the turns before it.
   }
   if (!isRecordObject(event)) return null;
+  // Two shard generations coexist on disk: schemaVersion 2 rows carry the
+  // audit event under attributes.Event with an eventId; legacy schemaVersion 1
+  // rows carry it on the top-level `event` field and have no eventId.
   const attributes = event.attributes;
-  if (!isRecordObject(attributes) || attributes.Event !== "HUMAN_TURN") return null;
+  const isV2 = isRecordObject(attributes) && attributes.Event === "HUMAN_TURN";
+  const isV1 = event.event === "HUMAN_TURN";
+  if (!isV2 && !isV1) return null;
   const { eventId, timestamp, seq } = event;
-  if (typeof eventId !== "string" || typeof timestamp !== "string") return null;
-  return { eventId, timestamp, seq: typeof seq === "number" ? seq : 0 };
+  if (typeof timestamp !== "string") return null;
+  const seqValue = typeof seq === "number" ? seq : 0;
+  if (typeof eventId === "string") return { eventId, timestamp, seq: seqValue };
+  if (!isV1) return null;
+  // A v1 row has no eventId; derive a stable reference from its own fields so
+  // the override report still names the exact turn it is bound to.
+  const cloneId = typeof event.cloneId === "string" ? event.cloneId : "unknown";
+  return { eventId: `v1:${cloneId}:${seqValue}`, timestamp, seq: seqValue };
 }
 
 export function latestHumanTurn(recordRoot: string): HumanTurn | null {

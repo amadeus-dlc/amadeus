@@ -45,6 +45,13 @@ query($owner:String!,$name:String!,$number:Int!){
 
 合成ページの内容は実測語彙の再構成であり、GitHub から採取した応答ではない。
 
+注記(2026-08-05、PR #2283 レビュー是正): 全 fixture の `comments` に
+`pageInfo: { hasNextPage: false }` を機械注入した。これは採取時の応答には
+含まれていなかったフィールドで、クエリが `comments(first:100)` の
+`pageInfo{ hasNextPage }` を要求するよう変更されたこと(comments 100 件超の
+無音切り捨てを fail-closed で拒否するため)への追随である。値 `false` は
+採取した全スレッドが 1 ページで完結していた実測事実と整合する。
+
 ## severity 語彙(実測)
 
 `Severity.parse` の写像表は**実測した表記のみ**を持つ。未実測の表記は

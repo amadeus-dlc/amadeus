@@ -171,6 +171,16 @@ export const ReviewThread = {
     const commentsNode = node.comments;
     const rawComments = isRecord(commentsNode) ? commentsNode.nodes : undefined;
     if (!Array.isArray(rawComments)) return malformed(`thread ${id}: comments.nodes is not an array`);
+    // comments(first:100) is a hard page: an overflow hides later human
+    // replies, which could flip replied-unresolved into ignored. Refuse the
+    // thread loudly instead of classifying from a truncated view.
+    const commentsPage = isRecord(commentsNode) ? commentsNode.pageInfo : undefined;
+    if (!isRecord(commentsPage) || typeof commentsPage.hasNextPage !== "boolean") {
+      return malformed(`thread ${id}: comments.pageInfo.hasNextPage is missing`);
+    }
+    if (commentsPage.hasNextPage) {
+      return malformed(`thread ${id}: comments overflow a single page (first:100)`);
+    }
 
     const comments: ThreadComment[] = [];
     for (const raw of rawComments) {
@@ -195,7 +205,7 @@ export const REVIEW_THREADS_QUERY = `query($owner:String!,$name:String!,$number:
         pageInfo{ hasNextPage endCursor }
         nodes{
           id isResolved isOutdated
-          comments(first:100){ nodes{ author{ __typename login } body } }
+          comments(first:100){ pageInfo{ hasNextPage } nodes{ author{ __typename login } body } }
         }
       }
     }
@@ -240,8 +250,13 @@ export async function fetchAllReviewThreads(
       if (!thread.ok) return thread;
       collected.push(thread.value);
     }
-    if (!page.value.hasNextPage || page.value.endCursor === null) {
+    if (!page.value.hasNextPage) {
       return { ok: true, value: collected };
+    }
+    if (page.value.endCursor === null) {
+      // More pages exist but no cursor to reach them: a partial ledger would
+      // under-count violations, so this is a loud abort (fail-closed).
+      return malformed("paging reported hasNextPage with a null endCursor");
     }
     after = page.value.endCursor;
   }

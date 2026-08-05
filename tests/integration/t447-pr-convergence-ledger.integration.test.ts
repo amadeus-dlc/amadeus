@@ -7,6 +7,7 @@ import {
   extractTerminalRefs,
   fetchAllReviewThreads,
   isBotAuthor,
+  REVIEW_THREADS_QUERY,
   ReviewThread,
   Severity,
   ThreadLedger,
@@ -213,6 +214,39 @@ describe("fetchAllReviewThreads — BR-U2-4 paging", () => {
     };
     const out = await fetchAllReviewThreads(gh, REF as NonNullable<typeof REF>);
     expect(out.ok).toBe(false);
+  });
+
+  test("hasNextPage with a null endCursor aborts instead of returning a partial ledger", async () => {
+    // A page that claims more data but supplies no cursor cannot be walked to
+    // the end; success here would under-count violations (fail-open).
+    const page = JSON.parse(fixture("synthetic-paged-page1")) as {
+      data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: boolean; endCursor: string | null } } } } };
+    };
+    page.data.repository.pullRequest.reviewThreads.pageInfo = { hasNextPage: true, endCursor: null };
+    const gh: GhRunner = async () => ({ ok: true, value: JSON.stringify(page) });
+    const out = await fetchAllReviewThreads(gh, REF as NonNullable<typeof REF>);
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error.kind).toBe("malformed");
+  });
+
+  test("a thread whose comments overflow one page is refused, not silently truncated", async () => {
+    // comments(first:100) with hasNextPage=true means later human replies are
+    // invisible; classifying such a thread could mislabel replied-unresolved
+    // as ignored, so the parse refuses it loudly.
+    const page = JSON.parse(fixture("measured-pr-2268")) as {
+      data: { repository: { pullRequest: { reviewThreads: { nodes: { comments: { pageInfo?: { hasNextPage: boolean } } }[] } } } };
+    };
+    const first = page.data.repository.pullRequest.reviewThreads.nodes[0];
+    if (first === undefined) throw new Error("fixture must have a thread");
+    first.comments.pageInfo = { hasNextPage: true };
+    const gh: GhRunner = async () => ({ ok: true, value: JSON.stringify(page) });
+    const out = await fetchAllReviewThreads(gh, REF as NonNullable<typeof REF>);
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error.kind).toBe("malformed");
+  });
+
+  test("the paged query asks for the comments pageInfo it fail-closes on", () => {
+    expect(REVIEW_THREADS_QUERY).toContain("comments(first:100){ pageInfo{ hasNextPage }");
   });
 });
 

@@ -16,13 +16,22 @@
               "isResolved": false,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "author": { "__typename": "User", "login": "j5ik2o" },
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
                     "body": "この行の意図を確認したいです。"
                   },
                   {
-                    "author": { "__typename": "User", "login": "reviewer-2" },
+                    "author": {
+                      "__typename": "User",
+                      "login": "reviewer-2"
+                    },
                     "body": "設計どおりです。"
                   }
                 ]
@@ -33,13 +42,22 @@
               "isResolved": false,
               "isOutdated": false,
               "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
                 "nodes": [
                   {
-                    "author": { "__typename": "Bot", "login": "coderabbitai" },
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
                     "body": "_🎯 Functional Correctness_ | _🟠 Major_ | _⚡ Quick win_\n\n**ページングを打ち切っています。**\n\nhasNextPage を読まずに1ページで止めています。"
                   },
                   {
-                    "author": { "__typename": "User", "login": "j5ik2o" },
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
                     "body": "確認中です。次のコミットで是正します。"
                   }
                 ]
