@@ -61,6 +61,7 @@ import { substituteToken, transform } from "./harness-transform.ts";
 import {
   assertInstallOutDirsSafe,
   assertPluginImportClosure,
+  PluginValidationError,
   checkPluginProjections,
   discoverPluginSources,
   pluginBundleExpected,
@@ -907,7 +908,15 @@ export function runCli(argv: string[]): number {
   // composes into a missing import in the host. Placed after the generated-source
   // refresh (so it reads the current copies) and before any harness or bundle
   // write, so a failure leaves dist untouched.
-  assertPluginImportClosure(pluginsRoot());
+  try {
+    assertPluginImportClosure(pluginsRoot());
+  } catch (cause) {
+    // Keep runCli's numeric exit-code contract: report the validation problems
+    // and fail the build instead of letting the exception escape the CLI.
+    if (!(cause instanceof PluginValidationError)) throw cause;
+    console.error(cause.message);
+    return 1;
+  }
   for (const n of present) writeHarness(n);
   writeNeutralBundle();
   return 0;

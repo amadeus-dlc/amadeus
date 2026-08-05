@@ -930,6 +930,8 @@ function pluginClosureProblems(plugin: PluginSource, repoRoot: string): readonly
 // Public seam: assert every discovered plugin's import closure is fully declared
 // and fully owned. `root` is the plugins dir; repo-relative paths resolve
 // against its parent. Throws PluginValidationError listing every problem.
+// `io` scopes to plugin DISCOVERY only; the closure walk always reads the real
+// filesystem through repoFileReader, which owns the realpath boundary.
 export function assertPluginImportClosure(
   root: string = join(REPO_ROOT, "plugins"),
   io: ReadOnlyFs = nodeReadOnlyFs,

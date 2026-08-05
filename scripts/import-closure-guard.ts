@@ -149,7 +149,6 @@ export function resolveImportClosure(
     const source = readFile(current);
     if (source === null) {
       unreadable.push(current);
-      visited.delete(current);
       continue;
     }
     for (const specifier of extractModuleSpecifiers(source)) {
