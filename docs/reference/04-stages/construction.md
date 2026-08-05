@@ -43,7 +43,7 @@ Bolts.
 ```
 Intent autonomy (selected before unattended decisions):
   none → humans decide every gate and question
-  semi → in-phase gates are pre-approved; phase boundaries and questions wait
+  semi → in-phase gates are pre-approved and questions auto-decided; milestones (phase boundaries, walking skeleton, Intent completion) wait
   full → confirmed Intent grant may decide authorised gates and questions
 
 Bolt 1 (walking skeleton) — follows the same mode table:
