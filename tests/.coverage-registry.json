@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 605,
+    "total": 606,
     "enumeratedByClass": {
       "function": 339,
       "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 108,
+      "subcommand": 109,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -6641,6 +6641,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state session-takeover",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
