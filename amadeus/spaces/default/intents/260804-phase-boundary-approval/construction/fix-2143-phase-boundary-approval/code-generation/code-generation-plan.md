@@ -145,3 +145,20 @@ HARD STOP RULE 節の `autonomy_auto_approve` の文の直後に:
 5. `feat(advisory): add a record subcommand that binds a choice to the latest human turn` — S4
 6. `docs(harness): route await-advisory-choice through the record subcommand` — S5
 7. `chore(dist): regenerate harness projections` — C-3 の投影同期
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-05T01:58:52Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-6は要件→計画→実装記録まで一貫トレース可能。C-1/C-3/C-4の遵守は内的に裏取り済み。4件のFOLLOW-UPは記録・トレーサビリティ上のギャップでありBLOCKER相当の契約違反ではない。
+
+### Findings
+
+- FOLLOW-UP | code-generation-plan.md S3配置 | FR-4テストが計画のF10追記でなく新規integrationファイルになった配置逸脱がsummaryの逸脱記録に無い
+- FOLLOW-UP | NFR-3適用の非対称 | FR-2はintegrationへ移設・FR-3はunit層に残る非対称の説明が成果物内に無い
+- FOLLOW-UP | 裁定D-2のpositiveアーム | 1回のapprove成功→Verified遷移のRed→Green実測が明示されていない
+- FOLLOW-UP | no-silent-drop-gate exit 2 | base側既存問題の切り分けは妥当だがチェックリスト項目8が未閉包でありconductorエスカレーションが必要

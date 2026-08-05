@@ -1,0 +1,38 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "tests/integration/t-harness-approval-order-contract.test.ts",
+    "digest": "990bb617cc4de236590f126d717f27b2776722f1ac34c3185195a8b32cf118c9"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "tests/unit/t-phase-check-gate-seam.test.ts",
+    "digest": "42578e7c81806e617b8f5e457598550b0b26af398ae28ee0b2148e72e11290d9"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "tests/integration/t-autonomy-phase-boundary-artifact.integration.test.ts",
+    "digest": "22975ff13efd08bd9bbf0ab19a29b390e477887354126b7f0b1af80e3e632f9c"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "tests/integration/t-advisory-choice-record.test.ts",
+    "digest": "154ce351127649242f5edeb625a2a0bcc0274f5869b74e9663c12e49b14d628a"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260804-phase-boundary-approval/construction/build-and-test/build-test-results.md",
+    "digest": "6354151bbf3655d188019e94485bccaa21bee4e4e0d4da0da071f10ad611d35f"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260804-phase-boundary-approval/construction/fix-2143-phase-boundary-approval/code-generation/code-summary.md",
+    "digest": "c14bf2945e5c542c10bdae5bfc6d6314acb91ef354581b4683c49b51ee10ad35"
+   }
+  ]
+ }
+]
