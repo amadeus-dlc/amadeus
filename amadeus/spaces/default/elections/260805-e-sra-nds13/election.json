@@ -1,0 +1,22 @@
+{
+  "electionId": "E-SRA-NDS13",
+  "kind": "s13-adoption",
+  "question": "intent 260805-semi-redefine-autonomy-f の nfr-design ステージ §13 学習選定。正本は record の construction/nfr-design/memory.md(全文実読、1 エントリ)。conductor 提案は 0 件。不採用理由: 唯一のエントリ(semi-docs-revision の §12a 予算消費後残余の機械検証可能クラス受理)は cid:requirements-analysis:delegated-review-analysis-with-owned-verdict 追補 E-LSSADS13 が既に定める受理規則の適用実例であり、新規の一般化価値なし(受理判断・grep 閉包実測・record 固定のすべてが既決規範の手順どおり)。実在根拠は memory.md と semi-docs-revision/nfr-design/security-design.md の Review 節 2 ブロック+本文 grep で実測確認すること。あわせて本ステージの §12a 実績(7 unit: READY 5 件 iteration 1、READY 1 件 iteration 2(autonomy-statusline)、NOT-READY at limit + E-LSSADS13 受理 1 件(semi-docs-revision))に照らし、ゲート前提(全 unit の設計品質確立)に異議があれば choice 2 で申し立てること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0 件(提案どおり)+ ゲート前提に異議なし",
+      "description": "すべて record 固定のみ。E-LSSADS13 受理も妥当。"
+    },
+    {
+      "internalNo": 2,
+      "label": "採用すべき候補がある / ゲート前提に異議",
+      "description": "一般化価値のある学びが実在する、または semi-docs-revision の残余受理が E-LSSADS13 の要件を満たさない。留保に根拠を file:line で記すこと。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
