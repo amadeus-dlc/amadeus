@@ -190,7 +190,12 @@ export function latestHumanTurn(recordRoot: string): HumanTurn | null {
 }
 
 function isNewer(candidate: HumanTurn, incumbent: HumanTurn): boolean {
-  if (candidate.timestamp !== incumbent.timestamp) return candidate.timestamp > incumbent.timestamp;
+  // Shards mix second-precision and millisecond timestamps; a plain string
+  // compare would rank "…:00.500Z" below "…:00Z", so normalise via Date.parse.
+  const a = Date.parse(candidate.timestamp);
+  const b = Date.parse(incumbent.timestamp);
+  // An unparseable timestamp must not win by accident: fall back to seq.
+  if (Number.isFinite(a) && Number.isFinite(b) && a !== b) return a > b;
   return candidate.seq > incumbent.seq;
 }
 

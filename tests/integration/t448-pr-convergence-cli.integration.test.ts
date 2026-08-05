@@ -8,6 +8,7 @@ import {
   type GhSpawn,
   type GhSpawnResult,
   parsePrRef,
+  type PrNumber,
 } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   DEFAULT_LOG_TOOL_RELATIVE,
@@ -34,6 +35,7 @@ function scriptedSpawn(script: readonly GhSpawnResult[]) {
 const ok = (stdout = ""): GhSpawnResult => ({ code: 0, stdout, stderr: "" });
 
 const REF = parsePrRef("amadeus-dlc/amadeus", "2268");
+if (REF === null) throw new Error("fixture ref must parse");
 
 describe("createGhRunner — BR-U2-6 (i) readiness is checked before any real call", () => {
   test("probes gh --version and gh auth status, in that order", async () => {
@@ -162,7 +164,9 @@ describe("GhRunner — BR-U2-6 (ii)/(iii)/(iv) execution contracts", () => {
 
 describe("parsePrRef / fetchRawPrState", () => {
   test("parses an owner/name repo and a numeric pull-request number", () => {
-    expect(REF).toEqual({ repo: "amadeus-dlc/amadeus", number: 2268 } as never);
+    // PrNumber is branded, so the expected literal needs the one-field cast;
+    // unlike `as never` it keeps the rest of the object type-checked.
+    expect(REF).toEqual({ repo: "amadeus-dlc/amadeus", number: 2268 as PrNumber });
   });
 
   test("rejects a malformed repository or number instead of guessing", () => {
@@ -183,7 +187,7 @@ describe("parsePrRef / fetchRawPrState", () => {
     const s = scriptedSpawn([ok("v"), ok("auth"), ok(payload)]);
     const runner = await createGhRunner(s.spawn);
     if (!runner.ok) throw new Error("unreachable");
-    const raw = await fetchRawPrState(runner.value, REF as never);
+    const raw = await fetchRawPrState(runner.value, REF);
     expect(raw.ok).toBe(true);
     if (raw.ok) expect(raw.value).toEqual({ mergeable: "UNKNOWN", mergeStateStatus: "BLOCKED" });
     // Owner, name and number travel as separate -F arguments, never interpolated.
@@ -200,7 +204,7 @@ describe("parsePrRef / fetchRawPrState", () => {
     const s = scriptedSpawn([ok("v"), ok("auth"), ok(payload)]);
     const runner = await createGhRunner(s.spawn);
     if (!runner.ok) throw new Error("unreachable");
-    const raw = await fetchRawPrState(runner.value, REF as never);
+    const raw = await fetchRawPrState(runner.value, REF);
     expect(raw.ok).toBe(false);
     if (!raw.ok) expect(raw.error.kind).toBe("command-failed");
   });
@@ -209,7 +213,7 @@ describe("parsePrRef / fetchRawPrState", () => {
     const s = scriptedSpawn([ok("v"), ok("auth"), ok("not json")]);
     const runner = await createGhRunner(s.spawn);
     if (!runner.ok) throw new Error("unreachable");
-    const raw = await fetchRawPrState(runner.value, REF as never);
+    const raw = await fetchRawPrState(runner.value, REF);
     expect(raw.ok).toBe(false);
     if (!raw.ok) expect(raw.error.kind).toBe("command-failed");
   });
@@ -536,6 +540,51 @@ describe("CLI override verb — BR-U2-8, bound to a real human turn", () => {
     expect(turn?.timestamp).toBe("2026-08-05T11:00:00Z");
     // The reference id is derived deterministically from the row's own fields.
     expect(turn?.eventId).toBe("v1:d4a945003a7f:22");
+  });
+
+  test("a millisecond timestamp in the same second is newer than a second-precision one", () => {
+    // amadeus-log writes shards with and without milliseconds. A plain string
+    // compare ranks "…:00.500Z" BELOW "…:00Z" ('.' 0x2E < 'Z' 0x5A), so the
+    // genuinely newer millisecond row would lose; the comparison must
+    // normalise via Date.parse.
+    const record = makeRecord({ humanTurn: false });
+    const rows = [
+      JSON.stringify({
+        eventId: "dddddddd-0000-0000-0000-000000000004",
+        seq: 1,
+        timestamp: "2026-08-05T10:05:00Z",
+        attributes: { Event: "HUMAN_TURN" },
+      }),
+      JSON.stringify({
+        eventId: "eeeeeeee-0000-0000-0000-000000000005",
+        seq: 2,
+        timestamp: "2026-08-05T10:05:00.500Z",
+        attributes: { Event: "HUMAN_TURN" },
+      }),
+    ];
+    writeFileSync(join(record, "audit", "clone-ms.jsonl"), `${rows.join("\n")}\n`, "utf-8");
+    expect(latestHumanTurn(record)?.eventId).toBe("eeeeeeee-0000-0000-0000-000000000005");
+  });
+
+  test("equal instants written with different precision fall back to seq", () => {
+    const record = makeRecord({ humanTurn: false });
+    const rows = [
+      JSON.stringify({
+        eventId: "ffffffff-0000-0000-0000-000000000006",
+        seq: 9,
+        timestamp: "2026-08-05T10:05:00.000Z",
+        attributes: { Event: "HUMAN_TURN" },
+      }),
+      JSON.stringify({
+        eventId: "99999999-0000-0000-0000-000000000007",
+        seq: 3,
+        timestamp: "2026-08-05T10:05:00Z",
+        attributes: { Event: "HUMAN_TURN" },
+      }),
+    ];
+    writeFileSync(join(record, "audit", "clone-eq.jsonl"), `${rows.join("\n")}\n`, "utf-8");
+    // Same instant: the higher seq wins regardless of spelling.
+    expect(latestHumanTurn(record)?.eventId).toBe("ffffffff-0000-0000-0000-000000000006");
   });
 
   test("refuses and writes nothing when no HUMAN_TURN exists", async () => {

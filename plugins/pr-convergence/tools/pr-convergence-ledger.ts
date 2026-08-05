@@ -224,6 +224,7 @@ export async function fetchAllReviewThreads(
 ): Promise<Result<readonly ReviewThread[], LedgerError>> {
   const collected: ReviewThread[] = [];
   let after: string | null = null;
+  const seenCursors = new Set<string>();
   for (;;) {
     const argv = [
       "gh",
@@ -258,6 +259,12 @@ export async function fetchAllReviewThreads(
       // under-count violations, so this is a loud abort (fail-closed).
       return malformed("paging reported hasNextPage with a null endCursor");
     }
+    if (seenCursors.has(page.value.endCursor)) {
+      // A repeated cursor means the walk cannot advance; looping forever would
+      // grow `collected` without bound, so abort loudly (fail-closed).
+      return malformed("paging repeated an endCursor without advancing");
+    }
+    seenCursors.add(page.value.endCursor);
     after = page.value.endCursor;
   }
 }

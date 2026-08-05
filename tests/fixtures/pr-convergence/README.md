@@ -14,7 +14,10 @@ query($owner:String!,$name:String!,$number:Int!){
       reviewThreads(first:100){
         pageInfo{hasNextPage endCursor}
         nodes{ id isResolved isOutdated
-          comments(first:50){ nodes{ author{ __typename login } body } } }
+          comments(first:100){
+            pageInfo{hasNextPage}
+            nodes{ author{ __typename login } body }
+          } }
       }
     }
   }
@@ -23,6 +26,12 @@ query($owner:String!,$name:String!,$number:Int!){
 
 採取日: 2026-08-05。採取対象は `amadeus-dlc/amadeus`。コメント本文は verbatim
 のまま保持している(severity 語彙・終端参照語彙の一次証拠であるため)。
+例外(2026-08-06、PR #2283 レビュー是正): `measured-pr-1945` の bot コメント
+末尾にあった Cursor 深リンク(`cursor.com/open?link=` / `cursor.com/agents?link=`
+— base64 ペイロードに `redisKey` / `encryptionKey` を含む)は、認証情報を
+fixture に残さないため資格情報を含まないプレースホルダー
+(`https://cursor.com/fix`)へ置換した。severity マーカー・説明文・location
+参照は verbatim のまま保持している。
 
 ## 実測 fixture
 

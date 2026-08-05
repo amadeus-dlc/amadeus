@@ -129,10 +129,12 @@ describe("extractTerminalRefs — BR-U2-9 / FR-4c", () => {
     const startedTwice = performance.now();
     extractTerminalRefs(doubled);
     const second = performance.now() - startedTwice;
-    // Linear scan: doubling the input must not blow up super-linearly, and the
-    // absolute time must stay far below any plausible timeout.
-    expect(first).toBeLessThan(250);
-    expect(second).toBeLessThan(500);
+    // Linear scan: doubling the input must roughly double the time. The ratio
+    // is what rules out super-linear backtracking; the absolute bound only
+    // guards against a pathological blow-up on a slow CI VM. The floor keeps
+    // the ratio meaningful when `first` is dominated by timer jitter.
+    expect(second).toBeLessThan(Math.max(first * 4, 50));
+    expect(second).toBeLessThan(1000);
   });
 
   test("Severity.parse stays linear on a 100 KB adversarial body", () => {
@@ -229,6 +231,23 @@ describe("fetchAllReviewThreads — BR-U2-4 paging", () => {
     if (!out.ok) expect(out.error.kind).toBe("malformed");
   });
 
+  test("a repeated endCursor aborts instead of looping forever", async () => {
+    // GitHub's response is untrusted input: a page that keeps reporting
+    // hasNextPage=true with the same endCursor would otherwise grow the
+    // collected list without bound, so the walk aborts loudly (fail-closed).
+    const page = JSON.parse(fixture("synthetic-paged-page1")) as {
+      data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: boolean; endCursor: string | null } } } } };
+    };
+    page.data.repository.pullRequest.reviewThreads.pageInfo = {
+      hasNextPage: true,
+      endCursor: "STUCK_CURSOR",
+    };
+    const gh: GhRunner = async () => ({ ok: true, value: JSON.stringify(page) });
+    const out = await fetchAllReviewThreads(gh, REF as NonNullable<typeof REF>);
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.error.kind).toBe("malformed");
+  });
+
   test("a thread whose comments overflow one page is refused, not silently truncated", async () => {
     // comments(first:100) with hasNextPage=true means later human replies are
     // invisible; classifying such a thread could mislabel replied-unresolved
@@ -296,6 +315,17 @@ describe("ThreadLedger — classification, human-only separation and terminalisa
     const ledger = buildFrom("measured-pr-2269");
     expect(ledger.count("ignored")).toBe(9);
     expect(ledger.violating()).toHaveLength(9);
+  });
+
+  test("a single unresolved bot-only thread is ignored — the measured Trivial-severity case", () => {
+    // measured-pr-2264 is the primary evidence for the CodeRabbit 🔵 Trivial
+    // severity marker (see the fixtures README); it also pins the smallest
+    // ignored ledger: one thread, one bot comment, no human reply.
+    const ledger = buildFrom("measured-pr-2264");
+    expect(ledger.count("ignored")).toBe(1);
+    expect(ledger.violating()).toHaveLength(1);
+    expect(ledger.humanOnly).toEqual([]);
+    expect(ledger.threads[0]?.comments[0]?.severity).toBe("info");
   });
 
   test("human-only threads are recorded separately, not counted as violations", () => {
