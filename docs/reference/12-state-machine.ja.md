@@ -138,6 +138,8 @@ stateDiagram-v2
 
 **Park (issue #365/#367).** 無人の`full`実行以外では、`amadeus-orchestrate park`がstageを進めずに`Parked` / `Parked At Stage` runtime markerを書きます。Intent autonomyは別途、`REPAIR_STALLED`や`NORM_CONFLICT`など明示的な安全停止理由へdurableなsuspended projectionを使います。Stop hookは発行済み`parked` directiveを全modeで許可し、activeな`full` grantはrevokeまたはcompleteまでworkflow実行状態とは独立してactiveを維持します。
 
+**完了待ち状態 (issue #2251).** 最終 in-scope ステージの承認から completion transaction のコミットまでの間、ワークフローは正規の窓に入ります: 最後のステージが `[x]` である一方 `Status` はまだ `Running` です。この窓での単純な `next` — および goal reconciliation authority や persisted mirror boundary が settle を拒否した completion — は終端の `await-completion` directive を発行します。その `reason` は条件と、それを settle させるコマンド(`complete-workflow`、またはそれが指す goal lineage の回復)を名指しします。`complete-workflow` 自身も同じ拒否に対し同じ typed shape を stderr へ返し、非ゼロ終了かつ state 無変更の fail-closed を維持します。これらは失敗したステップではなく想定内の待ち状態であるため、いずれも `ERROR_LOGGED` を記録しません — 従前はこの窓へ `next` するたびに新しい `amadeus.operation.failed` 行が追記されていました。真のエンジンエラーは `error` directive とその記録契約(issue #839)を変更なく維持します。
+
 ### Revision loop
 
 ```

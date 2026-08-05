@@ -162,6 +162,23 @@ describe("the completion-uncommitted window answers with await-completion, not e
     expect(errorLoggedRows(project, record)).toBe(before);
   });
 
+  test("the completion mirror boundary refusal is a wait, not an ERROR_LOGGED failure", () => {
+    const { project, record } = birth();
+    // Arming the persisted completion boundary routes the bare next through
+    // emitMirrorBoundaryIfNeeded, whose own authorizeWorkflowCompletion call is
+    // the second CONFIRMED-firing site (amadeus-orchestrate.ts:585).
+    setFinalStageState(project, record, "terminal:build-and-test");
+    const before = errorLoggedRows(project, record);
+
+    const result = runNext(project);
+
+    expect(result.status).toBe(0);
+    const directive = JSON.parse(result.stdout) as { kind: string; reason?: string };
+    expect(directive.kind).toBe("await-completion");
+    expect(directive.reason).toMatch(/Goal reconciliation refused completion mirror/i);
+    expect(errorLoggedRows(project, record)).toBe(before);
+  });
+
   test("a malformed state file is still a genuine error, audit row included", () => {
     const { project, record } = birth();
     setFinalStageState(project, record);
