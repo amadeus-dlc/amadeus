@@ -257,9 +257,12 @@ function recordedReceipt(parts: EvidenceParts): RecordedReceipt | null {
   const { route, subjectIdentity, subjectSeries, predecessor } = applicability;
   if (typeof route !== "string" || !Object.hasOwn(ROUTE_ROWS, route)) return null;
   if (typeof subjectIdentity !== "string" || typeof subjectSeries !== "string") return null;
-  const subjects = Array.isArray(applicability.subjects)
-    ? applicability.subjects.filter((subject): subject is string => typeof subject === "string")
-    : [];
+  // A corrupted subjects array rejects the whole receipt (BR-U2-16): silently
+  // dropping non-string members would let a partial subject set register and
+  // release a hold that a complete read would keep.
+  const rawSubjects = Array.isArray(applicability.subjects) ? applicability.subjects : [];
+  if (!rawSubjects.every((subject): subject is string => typeof subject === "string")) return null;
+  const subjects = rawSubjects;
   return {
     route: route as ApplicabilityRoute,
     subjectIdentity: subjectIdentity as AggregateDigest,

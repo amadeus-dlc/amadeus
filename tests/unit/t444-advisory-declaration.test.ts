@@ -24,7 +24,7 @@ describe("parseAdvisoryDeclarations", () => {
     const parsed = parseAdvisoryDeclarations(JSON.stringify(DECLARATION));
     expect(parsed.invalid).toEqual([]);
     expect(parsed.declarations).toHaveLength(1);
-    expect(parsed.declarations[0]?.code).toBe("authoring-hold");
+    expect(String(parsed.declarations[0]?.code)).toBe("authoring-hold");
     expect(parsed.declarations[0]?.formalCheckArgv).toBeNull();
   });
 
@@ -77,6 +77,10 @@ describe("resolveArgvTokens", () => {
 
   test("refuses an unresolved token instead of passing it through literally", () => {
     expect(resolveArgvTokens(["bun", "--out", "{unknown}"], { out: "docs/out" })).toBeNull();
+  });
+
+  test("a prototype-inherited name is unknown, not a resolved value", () => {
+    expect(resolveArgvTokens(["bun", "{constructor}"], { out: "docs/out" })).toBeNull();
   });
 });
 

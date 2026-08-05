@@ -6,6 +6,7 @@ import {
   readModelMapSnapshot,
   verifyHumanApproval,
 } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
+import type { EvidenceParts } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 
 // U2 C9 pin (business-rules.md BR-U2-13..17, business-logic-model.md §3).
 // Pure layer only: the evidence reader is injected, so no filesystem is touched
@@ -47,7 +48,9 @@ function receipt(overrides: Record<string, unknown>): Record<string, unknown> {
 
 const MODEL_MAP = { models: [{ name: "FormalElection", traceSubjects: ["FR-001"] as never }] };
 
-type Parts = { kind: string; parts: Record<string, unknown> };
+// Derived from the production union so a reshaped EvidenceParts breaks this
+// test at compile time instead of silently drifting past it.
+type Parts = EvidenceParts;
 
 function evaluate(
   store: ReadonlyMap<string, Parts | null>,
@@ -152,6 +155,14 @@ describe("AuthoringHoldEvaluator.evaluate — the closed hold table", () => {
   test("an unreadable model map fails closed (BR-U2-16)", () => {
     const store = new Map<string, Parts>([["a", terminal(receipt({}))]]);
     expect(failure(evaluate(store, null)).kind).toBe("model-map-unreadable");
+  });
+
+  test("a receipt with a corrupted subjects array is no receipt at all (BR-U2-16)", () => {
+    const store = new Map<string, Parts>([["a", terminal(receipt({ subjects: ["FR-001", 42] }))]]);
+    const verdict = unwrap(evaluate(store));
+    expect(verdict.kind === "hold" && verdict.reasons.map((reason) => reason.kind)).toEqual([
+      "no-applicability-receipt",
+    ]);
   });
 
   test("an empty store holds instead of releasing (AC-001)", () => {

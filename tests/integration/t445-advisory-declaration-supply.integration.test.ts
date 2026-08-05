@@ -142,10 +142,13 @@ describe("declared advisory supply", () => {
 
 describe("the shipped formal-model-check declaration", () => {
   test("parses with no invalid entries", () => {
-    const manifest = readFileSync("plugins/formal-model-check/plugin.json", "utf8");
+    const manifest = readFileSync(
+      join(import.meta.dir, "..", "..", "plugins", "formal-model-check", "plugin.json"),
+      "utf8",
+    );
     const parsed = parseAdvisoryDeclarations(manifest);
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations.map((declaration) => declaration.code)).toEqual(["authoring-hold"]);
+    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["authoring-hold"]);
     expect(parsed.declarations[0]?.checkpoints).toEqual([
       "requirements-analysis",
       "functional-design",

@@ -469,13 +469,22 @@ function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest
 
 function advisoryHold(flags: Record<string, string>): Emitted {
   const subjectsPath = flags["subjects-file"] ?? DEFAULT_SUBJECTS_PATH;
-  const file = readTextFile(subjectsPath);
-  if (!file.ok) {
-    return succeeded({ verdict: { kind: "no-hold" }, reason: "no governed subjects are declared" });
+  // Only true absence is "nothing is governed here" (the ruled no-hold case).
+  // A file that exists but cannot be read fails closed like every other
+  // failure on this path — an unreadable declaration must not release a hold.
+  let text: string;
+  try {
+    text = readFileSync(subjectsPath, "utf8");
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
+      return succeeded({ verdict: { kind: "no-hold" }, reason: "no governed subjects are declared" });
+    }
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail });
   }
   let document: unknown;
   try {
-    document = JSON.parse(file.text) as unknown;
+    document = JSON.parse(text) as unknown;
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
     return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail });
