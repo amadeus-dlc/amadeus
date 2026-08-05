@@ -102,6 +102,7 @@ const EXPECTED_IDS = [
   "event-registry-drift",
   "linter",
   "model-completeness",
+  "pr-convergence-report-format",
   "required-sections",
   "self-scope-consistency",
   "type-check",
@@ -113,10 +114,12 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 8 framework sensors", () => {
+  test("1: list emits exactly the sentinel set's cardinality", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(8);
+    // Count-free: EXPECTED_IDS is the single sentinel a catalogue change updates,
+    // so adding a sensor cannot leave a stale literal here (count-comment-sync).
+    expect(listRows(r.out)).toHaveLength(EXPECTED_IDS.length);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
@@ -134,7 +137,7 @@ describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, pl
     expect(ids).toEqual([...ids].sort());
   });
 
-  test("4: list returns exactly the 7 framework sensor ids", () => {
+  test("4: list returns exactly the framework sensor ids", () => {
     const r = sensor("list");
     const ids = listRows(r.out).map((cols) => cols[0]);
     // .sh sentinel set — flags drift if a sensor is renamed/added/removed.

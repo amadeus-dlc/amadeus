@@ -1,0 +1,45 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T07:14:58Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-ADS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 先は project.md とし、本文は (a) first-party quality-repair contribution の monitorId='quality-repair' / providerId='quality-evidence-v1' が固定であること (b) §12a 予算消費後の残余 BLOCKER を observe-quality repair 裁定 → 一意是正 → fresh 検証レビュー CLOSED → READY で閉包する形、の2点に限定する。intent 固有の C6 所在矛盾の詳細や FR-4b の個別事情は焼き込まない。",
+      "rationale": "独立実測: (1) c2 の機構事実 — packages/framework/core/tools/amadeus-quality-repair.ts:146-147 に const monitorId = \"quality-repair\" / const providerId = \"quality-evidence-v1\" がハードコードされ、:248 の if (!instructionIds.has(rule.instructionId) || rule.monitorId !== \"quality-repair\") return null; により呼び出し側が一致しない monitorId を渡すと契約が成立しない。一方 :565 の validId 検査は stageInstanceId を任意 ID 文字列として受理し、:405-408 obligationIdOf が stableId の材料に使うだけで既定値も列挙もない。(2) 未被覆性 — amadeus/spaces/default/memory/ 全域で quality-repair / observe-quality / quality_repair / quality-evidence の grep が 0 hit。stage-protocol.md:133 は observe-quality/resume-quality の呼び出し手順と repair/replanned/READY/parked の意味論を規定するが、carrier の monitorId/providerId/stageInstanceId の値契約には触れない(同ファイルで3語の grep 0 hit)。docs/reference/12-state-machine.md:389-396 も event 名と runtime 責務までで値契約は不記載。よって c2 は未被覆の運用知識に該当する。(3) 実運用の実在 — 本 intent の audit シャードに QUALITY_CHECK 1 / QUALITY_NON_PROGRESS 1 / QUALITY_STRICT_PROGRESS 1 / QUALITY_SNAPSHOT_OBSERVED 2 / QUALITY_REPAIR_TRANSACTION_COMMITTED 2 が実在し、diary(inception/application-design/memory.md, 2026-08-05T07:11:39Z)の閉包記述と整合する。(4) c1 は team.md の cid:requirements-analysis:implementation-deviation-election と cid:code-generation:deviation-stop-before-implement の機械適用であり、既決ノルムどおりに停止→選挙→申告改訂を実行した実演に留まる。(5) c3 は cid:requirements-analysis:fix-diff-independent-reverify の機械適用で、是正 diff の独立再検証という既決観点そのもの。判定観点『既存ノルムの機械適用は新規学習でない』により c1/c3 は不採用、c2 のみ採用が一意に導かれる。",
+      "submittedAt": "2026-08-05T07:30:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-ADS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件採用は「記録しない」ではない。c2 の実運用列(§12a iteration 2 NOT-READY で予算消費 → quality_repair=active の observe-quality → repair 裁定 → C6 独立ファイル化等の一意是正 → fresh 検証レビュー CLOSED → observe-quality READY → ゲートでの開示)は memory 層へ persist しないが、application-design/memory.md の 2026-08-05T07:11:39Z Deviations 記載としてそのまま保持し、ゲート報告でも開示すること。加えて、次に同経路を通る intent が SKILL.md:98 の手順だけで再現できなかった場合は、そのギャップ(手順のどの分岐が文書から導けなかったか)を実測で特定したうえで再提案する条件付き不採用とする。",
+      "rationale": "判定観点(既存ノルム・既存機構仕様の機械適用は新規学習でない / 未被覆の運用知識のみ採用)を3候補へ独立に適用した。 [c1] diary(application-design/memory.md の 2026-08-05T07:02:00Z Deviations)自身が「既存 implementation-deviation-election の機械適用」と記載し、選挙 record(amadeus/spaces/default/elections/260805-e-pcp-addev/record.md)も裁定=FR-4b の申告改訂(choice 1、2票、GoA 1x1 2x1)で閉じている。team.md の cid:requirements-analysis:implementation-deviation-election(実装前停止→選挙)と project.md の cid:code-generation:cg-invariant-conflict-explicit-revision(既決契約からの一意導出で明示改訂)がこの経路を既に規定しており、本件はその実演。新規知識なし。 [c3] team.md の cid:requirements-analysis:fix-diff-independent-reverify(是正 diff 内の新規引用・数値を書いた直後に独立再実測してからコミットする)が是正由来の二次欠陥をまさに対象としており、reviewer が C6 所在矛盾を捕捉したのは既存観点の作動。新規知識なし。 [c2] 二つの主張へ分解して実測した。(a) 固定値の主張: packages/framework/core/tools/amadeus-quality-repair.ts:146 が monitorId をリテラル quality-repair、:147 が providerId をリテラル quality-evidence-v1 として qualityContributionContent 内に持ち、:203 の pluginId amadeus.quality-repair.first-party とともに出荷ソースから直読できる。stageInstanceId も :342 / :359 / :377 で string 型として宣言され :405-408 の obligationIdOf の入力に使われる既定の契約であり、いずれも運用で初めて判明した知識ではなく grep 1回で確定する実装事実。ノルム化すると出荷ソースの二重記述になり、値が変われば無音で陳腐化する。(b) 閉包手順の主張: .claude/skills/amadeus/SKILL.md:98 が逐語で、quality_repair が active のまま検証またはレビューが NOT READY のときは closed observations と fresh replan context を machine-local carrier へ書いて amadeus-bolt.ts observe-quality --input を実行し、repair / replanned なら修復して同じ closed checks を再実行する、と規定している。今回の閉包形はこの手順どおり。§12a 予算消費後の位置づけも project.md の cid:code-generation:cg-20260730-3(予算消尽時は protocol どおり gate へ進み fresh review の結果をゲートで開示する)と team.md の cid:requirements-analysis:delegated-review-analysis-with-owned-verdict の E-LSSADS13 追補(予算消費後の残余是正の受理分岐)が既に被覆し、diary 自身も cg-20260730-3 の開示形と明示引用している。初回の実運用であること自体は新規学習の根拠にならない。 以上より c1 / c2 / c3 のいずれも既存ノルムまたは出荷ソースで確定する事項の機械適用であり、persist する集合は空。choice 2(c2 のみ採用)は上記 (a)(b) の実測により不採用、choice 3(他の組合せ)は c1 / c3 が明示的に既存 cid の実演である以上さらに弱い。",
+      "submittedAt": "2026-08-05T07:13:48Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:2",
+      "resumedTo": "tallied",
+      "at": "2026-08-05T07:32:36Z"
+    }
+  ]
+}

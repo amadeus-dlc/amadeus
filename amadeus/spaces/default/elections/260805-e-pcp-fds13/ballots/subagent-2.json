@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-FDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "persist 文は機構(complete-review の重複拒否は artifact 上の `## Review — Iteration N` ブロックの実在に対してのみ働き、verdict 未記録なら同一 invocationId/iteration での再ディスパッチは正規に append される)に限定し、intent 固有の経緯を焼き込まないこと。実測では両 unit の成果物に Iteration 1 の Review ブロックが 1 件も存在せず(record 全域 grep 0 hit)、diary の U1 側の記述は成果物から再構成できないため、persist の根拠は artifact の不在事実と reviewer-runtime のコードに置く。",
+  "rationale": "c1: diary 自身が既存 cid c1-engine-produces-all-five の設計どおりの正常系と明記しており(かつ RE の c3-pcp-produceskinds-failopen が produces_kinds 面を既に被覆)、新規学習ではない。c2: humanOnly 分離と AD シグネチャ精密化は intent 固有の設計内容で、他 intent へ移送する規則を持たない。c3: 未被覆の運用知識である。amadeus-reviewer-runtime.ts:531-545 の existingReviewBlock は artifact 本文の `## Review — Iteration N` マーカーを走査し、0 件なら undefined を返して :609 の appendFile 経路へ進む — すなわち replay 拒否は記録済み verdict にのみ働く。既存ノルムの被覆状況を grep で確認した結果、team.md:184 の追補はイテレーション予算消費後の残余是正、project.md:319 は予算消費後の quality_repair 閉包を扱うのみで、『reviewer がセッションリミット等で verdict 未確立のまま失敗した場合にイテレーションを消費せず再ディスパッチできる』面は未被覆。実測面では seam-bridge / convergence-toolchain の business-logic-model.md がいずれも Iteration 2 の READY ブロックのみを持ち、Iteration 1 ブロックは record 全域で 0 hit であることを確認した。",
+  "submittedAt": "2026-08-05T09:05:00Z"
+}

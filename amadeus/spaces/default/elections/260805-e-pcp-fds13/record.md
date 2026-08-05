@@ -1,0 +1,10 @@
+# Election Record — E-PCP-FDS13
+
+- question: intent 260805-pr-convergence-plugin の functional-design ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/construction/functional-design/memory.md)の候補3件について persist する集合を選べ。実在根拠は diary、per-unit FD 成果物(construction/{seam-bridge,convergence-toolchain}/functional-design/)、reviewer transcript の Review block で実測確認すること。候補 c1 = 「packaging kind の FD 適用外(produces_kinds — 既存 cid c1-engine-produces-all-five の設計どおりの正常系観測)」。候補 c2 = 「humanOnly 分離の設計確定+AD シグネチャの申告付き精密化(intent 固有の設計内容)」。候補 c3 = 「reviewer subagent がセッションリミットで verdict 未確立のまま失敗した場合、同一 invocationId/iteration での新 subagent 再ディスパッチで回収できる — complete-review の replay 拒否は記録済み verdict にのみ働くため、未記録なら再実行は正規(ハーネス運用知識)」。判定観点: 既存ノルム・機構仕様の機械適用や intent 固有の設計内容は新規学習でない。未被覆の運用知識のみ採用。
+
+裁定: c3 のみ採用(choice 2: 2票)
+内訳: choice1=0票 choice2=2票 choice3=0票
+- 留保(subagent-2, GoA2): persist 文は機構(complete-review の重複拒否は artifact 上の `## Review — Iteration N` ブロックの実在に対してのみ働き、verdict 未記録なら同一 invocationId/iteration での再ディスパッチは正規に append される)に限定し、intent 固有の経緯を焼き込まないこと。実測では両 unit の成果物に Iteration 1 の Review ブロックが 1 件も存在せず(record 全域 grep 0 hit)、diary の U1 側の記述は成果物から再構成できないため、persist の根拠は artifact の不在事実と reviewer-runtime のコードに置く。
+- 留保(subagent-1, GoA2): persist 文は機構事実を実際のゲートどおりに書く。complete-review の唯一の永続的な冪等ゲートは『当該 iteration の Review block が成果物に実在するか』(amadeus-reviewer-runtime.ts:594-607 existingReviewBlock — 実在なら appended:false で返し、不在なら append)であり、invocationId はディスクに記録されず横断照合もされない(:578-581 は carrier と result の突き合わせ、:449 は carrier 内 scopeTranscript との突き合わせで、いずれも同一呼び出し内の整合検査)。したがって diary 文言の『同一 invocationId』を要件として焼き込まず、『verdict 未記録(当該 iteration の Review block 不在)なら新 subagent の再実行は正規で、新しい invocationId で scope からやり直しても同じく成立する』と書くこと。invocationId 一致を必須条件として persist すると、実在しない制約を後続 conductor に課す。
+票タイムライン: 配信 2026-08-05T08:49:56Z → 配信 2026-08-05T08:49:56Z → subagent-2 2026-08-05T09:05:00Z(受理 2026-08-05T08:52:07Z) → subagent-1 2026-08-05T09:05:00Z(受理 2026-08-05T08:52:41Z) → 開票 2026-08-05T08:52:47Z
+GoA[E-PCP-FDS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0
