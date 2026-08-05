@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 は独立した新規 cid ではなく cid:code-generation:base-advance-regrounding への追補(intent 誕生時点の base 面)として、branch 名・commit SHA・73 という intent 固有の値を落とした一般形で persist すること — 同 cid には既に c5-ratchet-census-at-final-base という『既存 cid の未被覆面を追補で埋める』先例があり、独立 cid の新設はノルム層の分散を招く。",
+      "rationale": "独立実測(測定 ref = HEAD 7060956c5617125dd2f4e284957aa180cb306484 = origin/main、ブランチ 260805-subagent-type-guard)。【c3 の実測接地】git rev-list --count tla-authoring..origin/main = 73 で diary の『73 commits 遅れ』は逐語一致。7060956c は HEAD の祖先(git merge-base --is-ancestor 成立)かつ 7060956c..HEAD = 0 commits。git diff --stat 実測で amadeus/spaces/default/intents/intents.json が 7 insertions の純追加であることも一致。【既存 cid の被覆判定】memory 層を grep した結果、team.md:189 base-advance-regrounding は『実装完了後〜PR 発行前の origin/main 前進』、project.md:163 norm-pr-from-main-base は『ノルム PR / record-sync PR のブランチ起点』、project.md:38 solo-bolt-worktree-required は『Construction の Bolt 実装』、team.md:265 measurement-ref-in-artifacts は『測定 ref の記載義務』をそれぞれ扱い、いずれも『intent 誕生時点で active tree が別 intent の陳腐化ブランチにいる』面を覆っていない。この状態のまま RE / requirements へ進むと 73 commit 分ずれた base で file:line と件数を確定する実害があり、規則としての独立性・一般化可能性・実測接地の3条件を満たす。【c1 を採らない理由】team.md:122 bug-zero-goal が『Issue-first のクロスレビュー2名成立は種別を問わず着手前提とする』と既に定めており、『質問起草より先』はこの着手前提の素直な適用に当たる。choice 2 が挙げる実効(reviewer-2 の C10 と reviewer-1 の start seam 実測が Q3/Q4 の選択肢を形作ったこと)は intent-capture-questions.md:48-79 で実在を確認したが、これは既存規則を守った結果得られた便益であって新規規則の必要性ではない。project.md:285 c1-preexisting-pr-inventory が既に『Issue 起点 intent の開始時(RE/RA 前)』の事前棚卸しファミリを確立している点も重複を裏づける。c2 は既存 cid(intent-capture:c1 / requirements-analysis:c5)の適用実例そのもの、c4・c5 は Q1/Q2 の裁定理由で本 intent 固有のため、いずれも不採用が妥当。【choice 3 を採らない理由】c3 を『base-advance-regrounding の趣旨から導ける』とするが、同 cid の本文は適用時点を『実装完了後〜PR 発行前』と明示限定しており、趣旨からの類推に依存させると intent 開始時の base 鮮度は無ゲートのまま残る。",
+      "submittedAt": "2026-08-05T14:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の不採用理由は『価値がない』ではなく『既存ノルムに覆われており、かつ現文言のまま persist すると上位ノルムを弱める』である旨を裁定に明記すること — c1 が示した実効(reviewer 実測が Q3/Q4 の選択肢を規定した)は既存の起動前レビュー規範の裏付け実例として intent record 側に保存し、その保存を不採用の条件とする。",
+      "rationale": "採用: c3 のみ(internalNo 1)。\n\n【c3 の実測接地(独立再測)】diary Deviations 13:20:00Z の主張を自分で再実行して全数一致を確認した。`git rev-list --count tla-authoring..origin/main` = 73(逐語『73 commits 遅れ』と一致)、`git rev-parse origin/main` = 7060956c5617125dd2f4e284957aa180cb306484(逐語 `7060956c` と一致)、`git rev-parse --verify 260805-subagent-type-guard` = 同 SHA かつ `git merge-base HEAD origin/main` = 同 SHA(= origin/main 起点で切られており前進差ゼロ)、`git branch --show-current` = 260805-subagent-type-guard。intents.json は `git diff --numstat origin/main` が `7\\t0`(7行純追加・削除0)、`bun -e` の JSON.parse が成功し当該 entry present。数値・SHA・行数のすべてが逐語主張と一致する。\n\n【c3 の非重複性(既存 cid の全数照合)】memory 層を grep して近傍 cid の適用面を実読した: (1) cid:code-generation:base-advance-regrounding(team.md:189)は逐語『実装完了後〜PR 発行前に origin/main が前進した場合』で construction 末尾が射程 (2) cid:requirements-analysis:norm-pr-from-main-base(project.md:163)は『ノルム PR・record-sync PR』のブランチ起点 (3) cid:code-generation:solo-bolt-worktree-required(project.md:38)は Construction Bolt 実装 (4) cid:code-generation:c5-ratchet-census-at-final-base(project.md:383)は shrink-only ratchet の初期 census (5) cid:requirements-analysis:shard-commit-before-branch-switch(team.md:233)は切替時の未コミット退避と切替後検証 (6) cid:reverse-engineering:measurement-ref-in-artifacts(team.md:265)は『成果物に書く件数・実測値の ref 明記』= 書き手の記載義務であって base の選定義務ではない。いずれも『intent 誕生時点で active tree が別 intent の陳腐化ブランチにいる』という発火時点を持たない。加えて『誕生/birth/起点ブランチ』での grep でも該当規範は 0 件(ヒットは intent-capture:c2-select-intent-birth = --new-intent 経路、parked-intent-birth-workaround = cursor 回避、intent-start-issue-grooming = ラベル付与のみ)。\n\n【c3 の一般化可能性と危害】発火点は全ステージの手前であり、既存 cid のどのトリガでも到達しない。team.md P5 が逐語『指令ループ外の規範は、該当イベント時にタスク化しない限り実行されない』と定めるとおり、エンジン指令に現れない前処理は明文化しない限り実行されない類型そのもの。危害も本 intent 内で実在: reviewer 両名が target-sha 7060956c を検証 ref に固定して C4(集計値)を REFINED と判定しており、陳腐化 base のままなら file:line と件数が別断面で確定していた。よって選択肢2(0件)の『base-advance-regrounding の趣旨から導ける』は、当該 cid の射程が明示的に construction 末尾である以上成立しない。\n\n【c1 を採らない理由(選択肢3 への反対)】c1 の実効主張自体は実測で裏付いた — intent-capture-questions.md:50-61 の Q3 は reviewer-2 の C10(gh issue view で逐語確認: 『Codex は既に供給済み』/Claude Code は別経路)を前提に選択肢 A-D を構成し、:68-76 の Q4 は reviewer-1 の start seam 実測(PreToolUse 不在・型未指定199件が 100% completed 行)を前提に構成されている。順序が逆なら両問は起草し直しになった。だが選択肢3の採用根拠『§ Scope Overrides はクロスレビュー成立を着手前提とだけ定め、intent 開始後のどの時点で実施するかを規定していない』は、規範の実文と合わない。project.md:79 は逐語『Issue-first の Issue から intent を起動する場合は種別を問わずクロスレビュー2名成立を前提とし』かつ改定注記が『2026-08-03 に起動前レビューを全 Issue へ一般化』、team.md:122 も『Issue-first のクロスレビュー2名成立は種別を問わず着手前提とする』であり、既存規範は『起動前』= 質問起草より前を必然的に含む、より強い要求である。すなわち c1 は新規規範ではなく既存規範の適用実例(重複)にあたる。さらに c1 を『質問起草より先』という文言で persist すると、起動後に開始してよいと読める分だけ上位の『起動前』を弱め、org→team→project の strict-additive 連鎖における狭いルールの上位矛盾として §13 admission check の拒否対象になりうる。本 intent の実運用(birth 後に intent-capture 内でクロスレビュー)は既存規範に対する回復手順であって、規範化すべき新規則ではない。\n\n【c2/c4/c5】c2 は cid:intent-capture:c1 と cid:requirements-analysis:c5 の適用実例と自認しており重複。c4/c5 は Q1/Q2 の裁定理由で本 intent 固有、一般化不能。以上より採用集合は c3 単独。",
+      "submittedAt": "2026-08-05T13:52:00Z"
+    }
+  ],
+  "late": []
+}

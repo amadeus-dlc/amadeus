@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c3 は独立した新規 cid ではなく cid:code-generation:base-advance-regrounding への追補(intent 誕生時点の base 面)として、branch 名・commit SHA・73 という intent 固有の値を落とした一般形で persist すること — 同 cid には既に c5-ratchet-census-at-final-base という『既存 cid の未被覆面を追補で埋める』先例があり、独立 cid の新設はノルム層の分散を招く。",
+  "rationale": "独立実測(測定 ref = HEAD 7060956c5617125dd2f4e284957aa180cb306484 = origin/main、ブランチ 260805-subagent-type-guard)。【c3 の実測接地】git rev-list --count tla-authoring..origin/main = 73 で diary の『73 commits 遅れ』は逐語一致。7060956c は HEAD の祖先(git merge-base --is-ancestor 成立)かつ 7060956c..HEAD = 0 commits。git diff --stat 実測で amadeus/spaces/default/intents/intents.json が 7 insertions の純追加であることも一致。【既存 cid の被覆判定】memory 層を grep した結果、team.md:189 base-advance-regrounding は『実装完了後〜PR 発行前の origin/main 前進』、project.md:163 norm-pr-from-main-base は『ノルム PR / record-sync PR のブランチ起点』、project.md:38 solo-bolt-worktree-required は『Construction の Bolt 実装』、team.md:265 measurement-ref-in-artifacts は『測定 ref の記載義務』をそれぞれ扱い、いずれも『intent 誕生時点で active tree が別 intent の陳腐化ブランチにいる』面を覆っていない。この状態のまま RE / requirements へ進むと 73 commit 分ずれた base で file:line と件数を確定する実害があり、規則としての独立性・一般化可能性・実測接地の3条件を満たす。【c1 を採らない理由】team.md:122 bug-zero-goal が『Issue-first のクロスレビュー2名成立は種別を問わず着手前提とする』と既に定めており、『質問起草より先』はこの着手前提の素直な適用に当たる。choice 2 が挙げる実効(reviewer-2 の C10 と reviewer-1 の start seam 実測が Q3/Q4 の選択肢を形作ったこと)は intent-capture-questions.md:48-79 で実在を確認したが、これは既存規則を守った結果得られた便益であって新規規則の必要性ではない。project.md:285 c1-preexisting-pr-inventory が既に『Issue 起点 intent の開始時(RE/RA 前)』の事前棚卸しファミリを確立している点も重複を裏づける。c2 は既存 cid(intent-capture:c1 / requirements-analysis:c5)の適用実例そのもの、c4・c5 は Q1/Q2 の裁定理由で本 intent 固有のため、いずれも不採用が妥当。【choice 3 を採らない理由】c3 を『base-advance-regrounding の趣旨から導ける』とするが、同 cid の本文は適用時点を『実装完了後〜PR 発行前』と明示限定しており、趣旨からの類推に依存させると intent 開始時の base 鮮度は無ゲートのまま残る。",
+  "submittedAt": "2026-08-05T14:05:00Z"
+}

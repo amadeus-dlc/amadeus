@@ -862,5 +862,11 @@
     "dirName": "260804-e-tla-fds13",
     "createdAt": "2026-08-04T23:50:55Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13",
+    "dirName": "260805-e-stg-s13",
+    "createdAt": "2026-08-05T13:48:36Z",
+    "status": "recorded"
   }
 ]
