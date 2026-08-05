@@ -11,8 +11,11 @@
 // successful rename registers, and every failure leaves the previous map intact
 // (business-rules.md BR-U4-01/02).
 
+import { randomUUID } from "node:crypto";
+import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import type { Result } from "./contract.ts";
 import { parseTlaModelMap } from "./amadeus-formal-verif-model-map.ts";
+import { verifyHumanApproval } from "./tla-applicability.ts";
 import type { ApplicabilityReceipt, HumanApprovalRef } from "./tla-applicability.ts";
 import type { IdentityComparison, VerifiedBundle } from "./tla-evidence.ts";
 import type { CoverageProof, ProofEvidence } from "./tla-referees.ts";
@@ -235,3 +238,114 @@ export function composeRegisteredMap(
   const validated = parseTlaModelMap(new TextEncoder().encode(bytes));
   return validated.ok ? ok(bytes) : rejected(validated.error.detail);
 }
+
+// ---------------------------------------------------------------------------
+// Handler layer: the map's reads, the re-read and the atomic replace
+// ---------------------------------------------------------------------------
+
+export interface RegistrationPorts {
+  /** The map as it is right now. Called twice: for the snapshot and the re-read. */
+  readonly readMapBytes: () => string;
+  /** Write the whole map through a temp file and rename it into place. */
+  readonly publish: (bytes: string) => void;
+  /** The audit shard the approval names, for the second provenance check. */
+  readonly readShard: (shard: string) => string;
+  readonly now: () => string;
+}
+
+export interface RegistrationPortOptions {
+  readonly mapPath: string;
+  readonly now?: () => string;
+}
+
+export function createRegistrationPorts(options: RegistrationPortOptions): RegistrationPorts {
+  const { mapPath } = options;
+  return {
+    readMapBytes: () => readFileSync(mapPath, "utf8"),
+    publish: (bytes: string) => {
+      // The rename is the registration's only visible moment: a reader sees
+      // either the old map or the new one, never a half-written file.
+      const staging = `${mapPath}.${randomUUID()}.tmp`;
+      try {
+        writeFileSync(staging, bytes);
+        renameSync(staging, mapPath);
+      } catch (cause) {
+        rmSync(staging, { force: true });
+        throw cause;
+      }
+    },
+    readShard: (shard: string) => readFileSync(shard, "utf8"),
+    now: options.now ?? (() => new Date().toISOString()),
+  };
+}
+
+function ioFailure(cause: unknown): Result<never, RegistrationFailure> {
+  return err<RegistrationFailure>({
+    kind: "io-failure",
+    detail: cause instanceof Error ? cause.message : String(cause),
+  });
+}
+
+// A shard that cannot be read proves nothing, so it fails the check rather
+// than throwing out of the gate (fail-closed).
+function approvalVerifier(ports: RegistrationPorts): (approval: HumanApprovalRef) => boolean {
+  return (approval) => {
+    try {
+      return verifyHumanApproval(ports.readShard(approval.shard), approval);
+    } catch {
+      return false;
+    }
+  };
+}
+
+/**
+ * Register the draft: check the six preconditions, match the draft against the
+ * verified bundle, validate the whole map, refuse a map another writer changed
+ * since the snapshot, and only then replace it (business-logic-model.md §1).
+ */
+function commit(
+  draftValue: unknown,
+  bundle: VerifiedBundle,
+  candidate: RegistrationPreconditionsCandidate,
+  ports: RegistrationPorts,
+): Result<RegistrationReceipt, RegistrationFailure> {
+  const checked = checkPreconditions(candidate, approvalVerifier(ports));
+  if (!checked.ok) return err<RegistrationFailure>({ kind: "preconditions-failed", failures: checked.error });
+
+  const draft = parseEntryDraft(draftValue);
+  if (!draft.ok) return draft;
+  if (draft.value.evidenceBundle.digest !== bundle.ref.digest) {
+    return rejected(`draft evidenceBundle ${draft.value.evidenceBundle.digest} is not the verified bundle`);
+  }
+
+  let snapshotBytes: string;
+  try {
+    snapshotBytes = ports.readMapBytes();
+  } catch (cause) {
+    return ioFailure(cause);
+  }
+  const snapshot = parseModelMapSnapshot(snapshotBytes);
+  if (!snapshot.ok) return snapshot;
+
+  const composed = composeRegisteredMap(snapshot.value, draft.value);
+  if (!composed.ok) return composed;
+
+  try {
+    if (ports.readMapBytes() !== snapshot.value.bytes) {
+      return err<RegistrationFailure>({ kind: "concurrent-modification" });
+    }
+    ports.publish(composed.value);
+  } catch (cause) {
+    return ioFailure(cause);
+  }
+
+  return ok({
+    entryName: draft.value.name,
+    bundle: draft.value.evidenceBundle,
+    registeredAt: ports.now(),
+  });
+}
+
+export const RegistrationCommitter = {
+  commit,
+} as const;
