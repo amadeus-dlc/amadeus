@@ -42,7 +42,10 @@ The frontmatter fields divide into one required field and three optional knobs:
 Project-local scope names should describe their role without repeating the
 framework prefix. Amadeus self-development therefore uses `self-feature`,
 `self-fix`, `self-refactor`, and `self-document`, producing filenames such as
-`amadeus-self-fix.md`; do not use the doubled `amadeus-amadeus-*.md` form.
+`amadeus-self-fix.md`; do not use the doubled `amadeus-amadeus-*.md` form. For
+what each of those four scopes is for and when to select it, see
+[Self-development scopes](../guide/05-scopes-and-depth.md#self-development-scopes-self-)
+in the user guide.
 
 **2. The membership tag — each stage's `scopes:` frontmatter.** A stage names the scopes it runs under in its own frontmatter, in `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`:
 

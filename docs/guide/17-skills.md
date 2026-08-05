@@ -109,6 +109,8 @@ You can pass a description and flags straight through, exactly as you would to `
 /amadeus --scope poc
 ```
 
+The four `self-*` scopes are reached the same way — `/amadeus --scope self-fix` — and no runner is planned for them: they apply to work on the Amadeus framework itself, not to your project. See [Self-development scopes](05-scopes-and-depth.md#self-development-scopes-self-) for when each one applies.
+
 Once a workflow has started, its scope is fixed in `amadeus-state.md`, so re-running the same runner resumes the workflow rather than restarting it. To run under a different scope, use `/amadeus --scope <name>`.
 
 ---
