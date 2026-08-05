@@ -15,9 +15,11 @@
 | P5 | 表示の同一語彙 | Must | P4 | statusline への Autonomy 描画追加、`--status` Policies 行の grant 非依存化、directive `intent_autonomy_mode` 消費側棚卸し |
 | P6 | docs / canonical 改訂 | Must | P2〜P5 | docs 11 ファイル(日英同時)+ #2067 canonical 表の改訂記録。走行単位の主張限定 |
 
+| P7 | advisory choice の無人解決 | Must | P1(認可基体)/ P2(質問解決コア) | `await-advisory-choice` を full/semi の無人解決経路へ載せる。`applyPendingAdvisoryGuard`(`amadeus-orchestrate.ts:781-800`)の横取りと `amadeus-advisory-choice.ts` の `humanTurn` 必須契約の改訂。ユーザー裁定 2026-08-05T06:03Z による追加(scope-document 承認系譜を参照) |
+
 ## シーケンシング
 
-dependency-first(Q4 裁定): P1 → P2 → (P3, P4 並行可) → P5 → P6。walking skeleton 候補は P2 の最小スライス(semi 質問1件が4段で解決されるエンドツーエンド)。
+dependency-first(Q4 裁定): P1 → P2 → (P3, P4, **P7** 並行可) → P5 → P6。P7 は P1/P2 の認可基体と質問解決コアに依存する(advisory の受理を grant 非依存の認可基体へ載せ替えるため)。walking skeleton 候補は P2 の最小スライス(semi 質問1件が**5段**で解決されるエンドツーエンド — 段数は RE 実測により 4→5 訂正、confirmed-policy を含む)。
 
 ## 除外(Won't)
 

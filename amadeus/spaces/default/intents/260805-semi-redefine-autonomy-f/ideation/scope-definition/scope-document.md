@@ -14,6 +14,7 @@
 4. **表示の同一語彙** — `--status` に加え statusline への Autonomy 表示追加(#2067 旧本文の残余)
 5. **旧仕様ピンの明示改訂** — テスト(`t431:313`、`t121:1138`)+ docs 11 ファイル(日英対訳同時)。走行単位の主張は「質問で止まらない」に限定(stop 継続予算 cap 8 は不変)
 6. **落ちる実証** — grant 不在 `--autonomy full` の fail-closed 停止を回帰テストで固定
+7. **advisory choice の無人解決経路**(ユーザー裁定 2026-08-05T06:03Z による追加) — `await-advisory-choice` は autonomy を一切参照せず(`amadeus-orchestrate.ts:781-800` の `applyPendingAdvisoryGuard` が `run-stage` を無条件に横取り、`amadeus-advisory-choice.ts` の autonomy 参照は grep 0 件)、受理側が `humanTurn: HumanTurnProvenance` を必須とし監査シャードの実 `HUMAN_TURN` と timestamp 一致を照合する(`amadeus-advisory-choice.ts:60`、`:343-349`、`:564-565`)。このため full grant 下でも advisory が1件 pending になるだけで headless 走行が切れる。full/semi の無人解決経路へ載せる(節目の扱い・run_required=true 時の強制実行との関係は requirements 段の裁定事項)
 
 ### Out(明示的にやらない)
 
@@ -23,6 +24,12 @@
 - FR-GRT-004 の変更(semi は current grant = null を維持)
 - stop 継続予算(AUTONOMOUS_BLOCK_CAP)の変更
 - #1647(approve-batch の human-presence guard)・#1241(外部人間ゲート待ち)は別 Issue のまま
+
+## 承認系譜(スコープ境界の変更)
+
+- **当初裁定** 2026-08-05: ユーザー裁定「semi = full − 節目」+ Issue #2253 の完了条件 → In-1〜In-6
+- **追加裁定** 2026-08-05T06:03Z: requirements-analysis 直前で `formal-model-check` の advisory が発火し、conductor が「full 自律でも人間ターンを要求する」ギャップを実測報告。ユーザーが AskUserQuestion で「#2253 のスコープへ取り込む」を選択 → **In-7 を追加**。同時に目の前の advisory は「リスクを承知して延期」で受理(receipt: advisory_instance `86bed4aa-d738-4fba-9834-1e4eb3db7b6a`、human_turn `2026-08-05T06:03:16Z`)
+- 本節は `cid:requirements-analysis:approval-lineage-citation` に基づく申告。scope-definition ステージは 2026-08-05T05:16:04Z に承認済みであり、In-7 はその後の追加裁定による境界変更である
 
 ## バリューストリーム
 
