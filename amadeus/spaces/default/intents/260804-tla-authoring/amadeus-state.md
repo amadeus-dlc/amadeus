@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-applicability-hold
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [registration-committer]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration

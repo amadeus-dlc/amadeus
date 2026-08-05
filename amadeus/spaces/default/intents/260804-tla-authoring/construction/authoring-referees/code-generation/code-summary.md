@@ -28,8 +28,8 @@
 1. **逸脱1(proof CLI)→ 裁定 A で完遂**: 上記のとおり閉包
 2. **逸脱2(fallingMutation manifest 宣言)**: FD 未規定の falling 変異供給元を witness と対称な作者宣言の逐語置換({find, replace})で補完。アンカー不一致は mutation-failure で赤(無音 no-op なし)。機械的 `I /\ FALSE` は初期状態で必ず赤になり検証劇場化するため不採用 — conductor 受理、レビューも BR-U3-05 整合確認
 3. **逸脱3(TDD 規律)**: handler 層6テストは事後追加(slice 2 実装後、初回から green)。CLI 系は Red→Green 実測済み — 規律申告として記録
-4. **受理されたギャップ(裁定 C、2026-08-05)**: 変異系(falling/vacuity)モデルは model-map 未登録のため、実 TLC 実行の3経路すべてが登録済みモデルのバイト固定で拒否する(`run-model-check-source.ts:157` / `tla-arm.ts:636` frozen 経路 / `fs-tlc-toolchain.ts:1641` → `tla-model-receipt.ts:154-157`)。referee はこれを typed ProofFailure として loud に拒否(クラッシュ・無音 fail-open なし)。BR-U3-01(U3 は登録しない)× 登録済み検査 × ADR-5(toolchain 無改変)の3制約下で構造的に不能と実測確定 — **「登録済みモデルのみ実 TLC・未登録変異系は fail-closed で loud 拒否」を現行仕様として受理。解消先 = U4 registration-committer の設計で一時登録面を用意し、U3 referee はその API へ後続結線する**
+4. **受理されたギャップ(裁定 C、2026-08-05)**: 変異系(falling/vacuity)モデルは model-map 未登録のため、実 TLC 実行の3経路すべてが登録済みモデルのバイト固定で拒否する(`run-model-check-source.ts:157` / `tla-arm.ts:636` frozen 経路 / `fs-tlc-toolchain.ts:1641` → `tla-model-receipt.ts:154-157`)。referee はこれを typed ProofFailure として loud に拒否(クラッシュ・無音 fail-open なし)。BR-U3-01(U3 は登録しない)× 登録済み検査 × ADR-5(toolchain 無改変)の3制約下で構造的に不能と実測確定 — **「登録済みモデルのみ実 TLC・未登録変異系は fail-closed で loud 拒否」を現行仕様として受理。解消先 = 後続 Issue #2286(変異モデルの一時登録面 + hermetic TLC fixture jar)。当初の裁定は U4 での解消だったが、U4 registration-committer の設計(正規 map の atomic replace)は一時登録面を含まないため、ユーザー裁定(2026-08-05)で解消先を #2286 へ変更**
 
 ## 申し送り
 
-- U4 設計への引き継ぎ: 変異系の一時登録 API(裁定 C の解消先)。referee 側の結線点は `ProofObligations.evaluate` の toolchain port 注入(変更不要)と `tla-referee-toolchain.ts` の receipt 供給面
+- 後続 Issue #2286 への引き継ぎ(旧記載「U4 設計への引き継ぎ」をユーザー裁定 2026-08-05 で訂正): 変異系の一時登録 API(裁定 C の解消先)。referee 側の結線点は `ProofObligations.evaluate` の toolchain port 注入(変更不要)と `tla-referee-toolchain.ts` の receipt 供給面
