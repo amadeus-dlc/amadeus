@@ -351,4 +351,77 @@ export const AuthoringHoldEvaluator = {
   evaluate,
 } as const;
 
+// ---------------------------------------------------------------------------
+// Handler layer: model-map and audit shard reads (no judgement lives here)
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_MODEL_MAP_PATH = "specs/tla/model-map.json";
+
+/** The subjects a registered model traces, read out of the bundle it names. */
+export type ResolveTraceSubjects = (digest: string) => readonly StableId[] | null;
+
+/**
+ * Read the model map as the decision table's snapshot. A registered model's
+ * trace subjects come from the evidence bundle the entry names (U1 `read` on
+ * the applicability part), so an entry whose bundle is unresolvable makes the
+ * whole snapshot unreadable rather than a silently smaller one — a partially
+ * read map would move J-rows (BR-U2-16). Entries with no bundle link yet (the
+ * pre-registration state U4 fills in) contribute no trace subjects.
+ */
+export function readModelMapSnapshot(
+  modelMapText: string,
+  resolveTraceSubjects: ResolveTraceSubjects,
+): ModelMapSnapshot | null {
+  let document: unknown;
+  try {
+    document = JSON.parse(modelMapText) as unknown;
+  } catch {
+    return null;
+  }
+  if (!isRecord(document) || !Array.isArray(document.models)) return null;
+
+  const models: RegisteredModel[] = [];
+  for (const entry of document.models) {
+    if (!isRecord(entry) || typeof entry.name !== "string") return null;
+    const evidence = entry.evidence;
+    if (!isRecord(evidence) || typeof evidence.digest !== "string") {
+      models.push({ name: entry.name, traceSubjects: [] });
+      continue;
+    }
+    const traceSubjects = resolveTraceSubjects(evidence.digest);
+    if (traceSubjects === null) return null;
+    models.push({ name: entry.name, traceSubjects });
+  }
+  return { models };
+}
+
+/** The subjects recorded by a bundle's applicability part, or null if it has none. */
+export function traceSubjectsOf(parts: EvidenceParts): readonly StableId[] | null {
+  return recordedReceipt(parts)?.subjects ?? null;
+}
+
+/**
+ * Provenance check for a terminal-route approval: the named audit shard must
+ * hold a HUMAN_TURN record whose bytes digest to `eventIdentity` and whose
+ * timestamp is the approved one. Same three-part shape the engine's advisory
+ * release binds, so no new approval vocabulary is invented.
+ */
+export function verifyHumanApproval(shardText: string, approval: HumanApprovalRef): boolean {
+  for (const line of shardText.replace(/\r\n/g, "\n").split("\n")) {
+    if (!line.startsWith("{")) continue;
+    if (sha256Hex(new TextEncoder().encode(line)) !== approval.eventIdentity) continue;
+    let record: unknown;
+    try {
+      record = JSON.parse(line) as unknown;
+    } catch {
+      continue;
+    }
+    if (!isRecord(record) || record.timestamp !== approval.timestamp) continue;
+    const attributes = record.attributes;
+    const named = isRecord(attributes) && attributes.Event === "HUMAN_TURN";
+    if (named || record.eventName === "amadeus.human.turn") return true;
+  }
+  return false;
+}
+
 export type { AggregateDigest, StableId };

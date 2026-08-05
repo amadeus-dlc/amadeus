@@ -7,6 +7,19 @@
 // every judgement lives in tla-evidence.ts.
 
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  ApplicabilityJudge,
+  AuthoringHoldEvaluator,
+  DEFAULT_MODEL_MAP_PATH,
+  readModelMapSnapshot,
+  traceSubjectsOf,
+  verifyHumanApproval,
+  type ChangeDeclaration,
+  type HumanApprovalRef,
+  type ModelMapSnapshot,
+  type SubjectSeriesKey,
+} from "./tla-applicability.ts";
 import {
   DEFAULT_STORE_ROOT,
   EvidenceBundle,
@@ -34,6 +47,12 @@ const USAGE = [
   "  bundle read --ref <digest> [--store <dir>]",
   "  bundle list [--store <dir>]",
   "  bundle head [--store <dir>]",
+  "  applicability judge --declaration <path> --identity <digest> [--model-map <path>] [--store <dir>]",
+  "  applicability receipt --declaration <path> --identity <digest> --approval <path|none>",
+  "                        [--model-map <path>] [--store <dir>] [--audit-dir <dir>]",
+  "                        [--predecessor <root|digest>] [--generated-at <iso>] [--generated-by <name>]",
+  "  applicability series --subjects <id,id,...>",
+  "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
 ].join("\n");
 
 interface Emitted {
@@ -228,6 +247,172 @@ function bundleIndex(flags: Record<string, string>, mode: "list" | "head"): Emit
     : failed(index.error);
 }
 
+// --- U2: applicability judgement and the authoring hold ---
+
+const DEFAULT_AUDIT_DIR = ".";
+
+function modelMapPathOf(flags: Record<string, string>): string | null {
+  const raw = flags["model-map"];
+  if (raw === "") return null;
+  return raw ?? DEFAULT_MODEL_MAP_PATH;
+}
+
+// Resolve the map through the store: a registered model's trace subjects live
+// in the bundle its entry names (business-logic-model.md §1).
+function readModelMap(flags: Record<string, string>, store: string): ModelMapSnapshot | null {
+  const path = modelMapPathOf(flags);
+  if (path === null) return null;
+  const file = readTextFile(path);
+  if (!file.ok) return null;
+  return readModelMapSnapshot(file.text, (digest) => {
+    const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
+    if (!parsed.ok) return null;
+    const parts = EvidenceBundle.read(store, { digest: parsed.value });
+    return parts.ok ? traceSubjectsOf(parts.value) : null;
+  });
+}
+
+function parseDeclaration(value: unknown): ChangeDeclaration | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { subjects, kind, rationale } = value as Record<string, unknown>;
+  if (!Array.isArray(subjects) || subjects.some((subject) => typeof subject !== "string")) return null;
+  if (typeof kind !== "string" || !CHANGE_KINDS.has(kind)) return null;
+  if (typeof rationale !== "string") return null;
+  return { subjects: subjects as unknown as ChangeDeclaration["subjects"], kind: kind as never, rationale };
+}
+
+const CHANGE_KINDS: ReadonlySet<string> = new Set([
+  "new-subject",
+  "semantic-change",
+  "impl-only",
+  "non-target",
+]);
+
+type JudgeContext = {
+  readonly input: Parameters<typeof ApplicabilityJudge.judge>[0];
+  readonly declaration: ChangeDeclaration;
+  readonly store: string;
+};
+
+// The inputs both applicability verbs need, or the Emitted they both fail with.
+function judgeContext(flags: Record<string, string>): JudgeContext | Emitted {
+  const declarationPath = requiredFlag(flags, "declaration");
+  const identityRaw = requiredFlag(flags, "identity");
+  if (declarationPath === null || identityRaw === null) {
+    return usageError("applicability requires --declaration and --identity");
+  }
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+
+  const document = readJsonDocument(declarationPath);
+  if (!document.ok) return document.emitted;
+  const declaration = parseDeclaration(document.value);
+  if (declaration === null) return usageError("--declaration must hold { subjects, kind, rationale }");
+
+  return {
+    declaration,
+    store,
+    input: { subjectIdentity: identity, declaration, registeredModels: readModelMap(flags, store) },
+  };
+}
+
+function isEmitted(value: JudgeContext | Emitted): value is Emitted {
+  return "exitCode" in value;
+}
+
+function applicabilityJudge(flags: Record<string, string>): Emitted {
+  const context = judgeContext(flags);
+  if (isEmitted(context)) return context;
+  const judged = ApplicabilityJudge.judge(context.input);
+  return judged.ok ? succeeded({ route: judged.value }) : failed(judged.error);
+}
+
+function readApproval(flags: Record<string, string>): HumanApprovalRef | null | Emitted {
+  const raw = requiredFlag(flags, "approval");
+  if (raw === null) return usageError("applicability receipt requires --approval <path|none>");
+  if (raw === "none") return null;
+  const document = readJsonDocument(raw);
+  if (!document.ok) return document.emitted;
+  const value = document.value;
+  if (typeof value !== "object" || value === null) return usageError("--approval must hold an approval object");
+  const { shard, timestamp, eventIdentity } = value as Record<string, unknown>;
+  if (typeof shard !== "string" || typeof timestamp !== "string" || typeof eventIdentity !== "string") {
+    return usageError("--approval must hold shard, timestamp and eventIdentity");
+  }
+  return { shard, timestamp, eventIdentity };
+}
+
+function applicabilityReceipt(flags: Record<string, string>): Emitted {
+  const context = judgeContext(flags);
+  if (isEmitted(context)) return context;
+  const approval = readApproval(flags);
+  if (approval !== null && isEmitted(approval)) return approval;
+
+  const judged = ApplicabilityJudge.judge(context.input);
+  if (!judged.ok) return failed(judged.error);
+
+  const predecessorRaw = flags.predecessor ?? "root";
+  const predecessor = parsePredecessorFlag(predecessorRaw);
+  if (predecessor === null) return usageError("--predecessor must be root or sha256:<hex64>");
+
+  const auditDir = flags["audit-dir"] ?? DEFAULT_AUDIT_DIR;
+  const built = ApplicabilityJudge.buildReceipt(judged.value, context.input, approval, {
+    judgedBy: flags["generated-by"] ?? "tla-authoring",
+    generatedAt: flags["generated-at"] ?? new Date().toISOString(),
+    predecessor,
+    verifyApproval: (ref) => {
+      const shard = readTextFile(join(auditDir, ref.shard));
+      return shard.ok && verifyHumanApproval(shard.text, ref);
+    },
+  });
+  return built.ok ? succeeded({ receipt: built.value }) : failed(built.error);
+}
+
+function applicabilitySeries(flags: Record<string, string>): Emitted {
+  const raw = requiredFlag(flags, "subjects");
+  if (raw === null) return usageError("applicability series requires --subjects <id,id,...>");
+  const subjects = raw.split(",").map((subject) => subject.trim()).filter((subject) => subject !== "");
+  if (subjects.length === 0) return usageError("--subjects must name at least one stable id");
+  return succeeded({ series: ApplicabilityJudge.subjectSeriesKey(subjects) });
+}
+
+function holdEvaluate(flags: Record<string, string>): Emitted {
+  const identityRaw = requiredFlag(flags, "identity");
+  const seriesRaw = requiredFlag(flags, "series");
+  if (identityRaw === null || seriesRaw === null) return usageError("hold requires --identity and --series");
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+  if (!/^sha256:[0-9a-f]{64}$/.test(seriesRaw)) return usageError("--series must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+
+  const index = EvidenceBundle.list(store);
+  if (!index.ok) return failed(index.error);
+  // Step 0 of the hold evaluation: a store holding corrupted entries is not a
+  // basis for releasing, so it never reaches the table (business-logic-model.md §3).
+  if (index.value.corrupted.length > 0) {
+    return failed({ kind: "corrupted-evidence", entries: index.value.corrupted });
+  }
+
+  const verdict = AuthoringHoldEvaluator.evaluate(
+    {
+      currentSeries: seriesRaw as SubjectSeriesKey,
+      currentIdentity: identity,
+      modelMap: readModelMap(flags, store),
+      evidenceIndex: index.value.refs,
+    },
+    (ref) => EvidenceBundle.read(store, ref),
+  );
+  if (!verdict.ok) return failed(verdict.error);
+  // The typed verdict on stdout is the authority; the exit code only mirrors it
+  // (BR-U2-20 — no caller may read hold/no-hold from the code alone).
+  return verdict.value.kind === "no-hold"
+    ? succeeded({ verdict: verdict.value })
+    : { exitCode: 1, body: { ok: false, verdict: verdict.value } };
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
@@ -239,10 +424,23 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
     list: (flags) => bundleIndex(flags, "list"),
     head: (flags) => bundleIndex(flags, "head"),
   },
+  applicability: {
+    judge: applicabilityJudge,
+    receipt: applicabilityReceipt,
+    series: applicabilitySeries,
+  },
 };
+
+// Commands that take flags directly, with no subcommand of their own.
+const FLAT_COMMANDS: Readonly<Record<string, Handler>> = { hold: holdEvaluate };
 
 function dispatch(argv: readonly string[]): Emitted {
   const [group, verb, ...rest] = argv;
+  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
+    const flags = parseFlags(argv.slice(1));
+    if (flags === null) return usageError("flags must be given as --name value pairs");
+    return (FLAT_COMMANDS[group] as Handler)(flags);
+  }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving
   // through the prototype chain of these object literals.
