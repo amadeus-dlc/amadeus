@@ -186,9 +186,8 @@ export function authorizeWorkflowCompletion(input: {
   const receipt = asNotSettled(() =>
     readGoalReconciliationReceipt(input.recordDir, input.completionInstance)
   );
-  const intentId = registeredIntentUuid(input.projectDir, input.recordDir);
   const authorization = authorizeGoalCompletion({
-    intentId,
+    intentId: registeredIntentUuid(input.projectDir, input.recordDir),
     lineage,
     receipt,
     scope,
