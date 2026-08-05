@@ -161,4 +161,32 @@ describe("the completion-uncommitted window answers with await-completion, not e
     expect(readFileSync(statePath, "utf8")).toBe(stateBefore);
     expect(errorLoggedRows(project, record)).toBe(before);
   });
+
+  test("a malformed state file is still a genuine error, audit row included", () => {
+    const { project, record } = birth();
+    setFinalStageState(project, record);
+    // A completion refused because the state file itself is invalid is not a
+    // waiting state: nothing settles it but a repair, so it keeps the error
+    // path and its ERROR_LOGGED evidence (#839).
+    const statePath = join(project, "amadeus", "spaces", "default", "intents", record, "amadeus-state.md");
+    writeFileSync(statePath, readFileSync(statePath, "utf8").replace(/- \*\*Scope\*\*: [^\n]+\n/u, ""));
+    const before = errorLoggedRows(project, record);
+
+    const result = spawnSync(
+      process.execPath,
+      [STATE, "complete-workflow", "build-and-test", "--project-dir", project],
+      {
+        encoding: "utf8",
+        env: {
+          ...toolEnv,
+          AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+          AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        },
+      },
+    );
+
+    expect(result.status).not.toBe(0);
+    expect((JSON.parse(result.stderr) as { error?: string }).error).toMatch(/requires a Scope field/i);
+    expect(errorLoggedRows(project, record)).toBe(before + 1);
+  });
 });

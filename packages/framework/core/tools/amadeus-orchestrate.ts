@@ -222,6 +222,7 @@ import {
   authorizePersistedCompletedWorkflow,
   authorizeWorkflowCompletion,
   type WorkflowCompletionPreparation,
+  WorkflowCompletionNotSettledError,
   completionMirrorDisposition,
   workflowCompletionPreparation,
 } from "./amadeus-workflow-completion.ts";
@@ -584,9 +585,12 @@ function emitMirrorBoundaryIfNeeded(
         completionInstance: boundary.completion.instance,
       });
     } catch (cause) {
-      emit(awaitCompletionDirective(
-        `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`,
-      ));
+      const refusal = `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`;
+      emit(
+        cause instanceof WorkflowCompletionNotSettledError
+          ? awaitCompletionDirective(refusal)
+          : errorDirective(refusal),
+      );
       return true;
     }
   }

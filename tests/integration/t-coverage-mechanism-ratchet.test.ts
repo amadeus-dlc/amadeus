@@ -189,6 +189,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t411-compose-invalid-graph-visibility.test.ts",
     "integration/t414-bolt-partial-merge-recovery.test.ts",
     "integration/t427-goal-reconciliation-completion.integration.test.ts",
+    "integration/t453-await-completion-directive.integration.test.ts",
     "integration/t428-goal-revision-authority.integration.test.ts",
     "integration/t429-legacy-goal-migration.integration.test.ts",
     "integration/t433-autonomy-review-observability.test.ts",

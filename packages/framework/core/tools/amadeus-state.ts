@@ -146,6 +146,7 @@ import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {
   authorizeWorkflowCompletion,
+  WorkflowCompletionNotSettledError,
   prepareWorkflowCompletion,
   type WorkflowCompletionPreparation,
   workflowCompletionPreparation,
@@ -2508,7 +2509,9 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     `terminal:${completedSlug}`;
   const completionRecord = operationRecordDir(pd);
   if (completionRecord === null) {
-    awaitCompletion("Goal reconciliation refused completion: Intent record is unresolved");
+    // An unresolved Intent record is a broken workspace, not a completion
+    // waiting to settle: no Goal work clears it, so it keeps the error path.
+    error("Goal reconciliation refused completion: Intent record is unresolved");
   }
   let completionReceipt: GoalReconciliationReceipt;
   try {
@@ -2520,7 +2523,9 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       completionInstance,
     });
   } catch (cause) {
-    awaitCompletion(`Goal reconciliation refused completion: ${errorMessage(cause)}`);
+    const refusal = `Goal reconciliation refused completion: ${errorMessage(cause)}`;
+    if (cause instanceof WorkflowCompletionNotSettledError) awaitCompletion(refusal);
+    error(refusal);
   }
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";

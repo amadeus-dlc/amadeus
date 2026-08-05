@@ -1,6 +1,7 @@
 import {
   activeIntent,
   activeSpace,
+  errorMessage,
   getField,
   nextInScopeStage,
   readIntentRegistry,
@@ -18,6 +19,32 @@ import {
   readGoalLineage,
   readGoalReconciliationReceipt,
 } from "./amadeus-goal-reconciliation.ts";
+
+// The terminal completion has not settled yet: the Goal artifacts this
+// completion is authorized against are absent or unusable, or the Goal
+// authority declined the receipt it was given. The workflow leaves this state by
+// doing the Goal work and re-running completion, so callers answer it as a
+// waiting state (the engine's await-completion directive) with no ERROR_LOGGED
+// row — issue #2251 found the expected window recorded as
+// amadeus.operation.failed on every re-entry.
+//
+// Deliberately NOT thrown for this module's other refusals — a missing or
+// invalid Scope, a target that is not the final in-scope stage, a Goal lineage
+// that contradicts the state projection, an Intent absent from the registry.
+// Those are malformed state, i.e. genuine failures, and stay on the error path
+// with their audit evidence intact (issue #839).
+export class WorkflowCompletionNotSettledError extends Error {}
+
+// Read a Goal artifact under the not-settled boundary: an artifact that is
+// absent (the confirmed production case) or unreadable leaves the completion
+// unsettled rather than failing the workflow.
+function asNotSettled<T>(read: () => T): T {
+  try {
+    return read();
+  } catch (cause) {
+    throw new WorkflowCompletionNotSettledError(errorMessage(cause));
+  }
+}
 
 export type WorkflowCompletionPreparation = Readonly<{
   instance: string;
@@ -144,7 +171,7 @@ export function authorizeWorkflowCompletion(input: {
       `Workflow completion target ${input.completedSlug} is not the final in-scope stage`,
     );
   }
-  const lineage = readGoalLineage(input.recordDir);
+  const lineage = asNotSettled(() => readGoalLineage(input.recordDir));
   const current = lineage.revisions[lineage.currentRevision];
   const stateGoalId = getField(input.content, "Goal ID")?.trim();
   const stateRevision = getField(input.content, "Current Goal Revision")?.trim();
@@ -156,12 +183,12 @@ export function authorizeWorkflowCompletion(input: {
   ) {
     throw new Error("Goal lineage does not match the workflow state projection");
   }
-  const receipt = readGoalReconciliationReceipt(
-    input.recordDir,
-    input.completionInstance,
+  const receipt = asNotSettled(() =>
+    readGoalReconciliationReceipt(input.recordDir, input.completionInstance)
   );
+  const intentId = registeredIntentUuid(input.projectDir, input.recordDir);
   const authorization = authorizeGoalCompletion({
-    intentId: registeredIntentUuid(input.projectDir, input.recordDir),
+    intentId,
     lineage,
     receipt,
     scope,
@@ -173,7 +200,9 @@ export function authorizeWorkflowCompletion(input: {
     ),
   });
   if (authorization.kind === "rejected") {
-    throw new Error(`Goal reconciliation refused completion: ${authorization.reason}`);
+    throw new WorkflowCompletionNotSettledError(
+      `Goal reconciliation refused completion: ${authorization.reason}`,
+    );
   }
   return authorization.receipt;
 }
