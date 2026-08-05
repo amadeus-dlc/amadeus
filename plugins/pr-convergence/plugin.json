@@ -1,7 +1,18 @@
 {
   "name": "pr-convergence",
-  "stages": [],
-  "seams": [],
+  "stages": [
+    {
+      "slug": "pr-convergence",
+      "path": "stages/pr-convergence.md"
+    }
+  ],
+  "seams": [
+    {
+      "stage": "code-generation",
+      "seam": "produces",
+      "entries": ["pr-convergence-report"]
+    }
+  ],
   "fragments": [],
   "tools": [
     "tools/pr-convergence-cli.ts",
