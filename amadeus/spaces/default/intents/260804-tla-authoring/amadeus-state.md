@@ -21,7 +21,7 @@
 - **Test Strategy**: Comprehensive
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/.codex/worktrees/e059/amadeus
+- **Project Root**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/tla-authoring-wt
 - **Languages**: TypeScript
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
@@ -101,11 +101,11 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Construction Autonomy Mode**: gated
+- **Construction Autonomy Mode**: autonomous
 - **Last Updated**: 2026-08-05T02:03:15Z
 
-- **Intent Autonomy Mode**: semi
-- **Intent Grant**: none
+- **Intent Autonomy Mode**: full
+- **Intent Grant**: intent-grant-8450fc2696a3021e447939279465525a
 - **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
