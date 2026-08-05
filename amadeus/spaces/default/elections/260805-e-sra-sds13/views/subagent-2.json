@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-SDS13",
+  "voter": "subagent-2",
+  "question": "intent 260805-semi-redefine-autonomy-f の scope-definition ステージ §13 学習選定。surface が返した diary 候補は 2 件(c1: scope は birth 時ユーザー既決のため質問を Issue #2253 導出の5問に絞り全件 decide-question で裁定した / c2: feasibility SKIP により feasibility-assessment・constraint-register が consumes に現れず上流参照は intent-statement.md のみ)。conductor 提案は 0 件(いずれも memory 層へ persist しない)。不採用理由: c1 は project.md `cid:intent-capture:c1`(事前裁定済み intent では質問を未決判断のみに絞る)および同 `cid:requirements-analysis:c5`(既存実装の流儀に合わせ質問しない)が既にカバーする同型で、新規の一般化価値がない。c2 は project.md `cid:nfr-requirements:upstream-coverage-conditional-consumes`(conditional consumes の扱い)および `cid:nfr-design:c1-brief-skip-resolution`(SKIP 由来の consumes 除外の明示)が既にカバーする。各候補の実在根拠は record の ideation/scope-definition/memory.md(diary)で実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "c2 を採用、または採用集合の変更",
+      "description": "c2 の採用、両方採用、あるいは文面修正が必要な場合。留保に具体を記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0 件(提案どおり)",
+      "description": "c1・c2 とも memory 層へ persist せず record 固定のみに留める。既存 cid でカバー済みのため新規ノルムを増やさない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c1 を採用",
+      "description": "c1 が既存 cid の射程外だと判断する場合。留保に既存 cid との差分を実測で記すこと。"
+    }
+  ]
+}
