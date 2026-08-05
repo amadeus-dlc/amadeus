@@ -330,6 +330,8 @@ async function main(): Promise<void> {
   if (phaseProg) output += ` ${phaseProg}`;
   if (stageDisplay) output += ` > ${stageDisplay}`;
   if (agentDisplay) output += ` -- ${agentDisplay}`;
+  const autonomy = autonomySegment(state);
+  if (autonomy) output += ` @${autonomy}`;
 
   printLine(withAutonomySegment(output, state), right);
 }
