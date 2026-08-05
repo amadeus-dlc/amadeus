@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-RES13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の reverse-engineering ステージ §13 学習選定。diary(record の inception/reverse-engineering/memory.md)の候補は Interpretations 5件・Tradeoffs 2件・Open questions 4件。conductor 提案は 1 件のみ採用: 既存ノルム `cid:reverse-engineering:re-sensors-codekb-filter-mismatch`(「RE の宣言センサー3種は codekb 出力パスが sensor filter に構造不適合で常に matches-rejection になり、RE の成果物検証は実質 conductor 手動確認のみ」)を **退役**し、project.md 該当行を『実測により失効(9成果物×3センサー=27発火が全て SENSOR_PASSED、SENSOR_FAILED 0件、測定 ref = worktree HEAD bff776fd8)』として削除する。他の候補は本 intent 固有の実測・設計論点であり record 固定に留める(不採用理由: base/observed の選定は既存 cid:reverse-engineering:rescan-base-ancestry / c2-observed-mainline-commit の適用実例、explore 型委譲は既存 cid:reverse-engineering:c4 の適用実例、履歴節の行番号保存は既存 cid:requirements-analysis:historical-section-cite-check-at-observed の適用実例、残りは requirements 段へ渡す intent 固有の設計論点)。実在根拠は record の memory.md と audit シャードで実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0 件(退役も本 §13 では行わない)",
+      "description": "失効の実測は record に残すが、ノルム削除は週次蒸留ラウンド(cid:requirements-analysis:weekly-distillation-round)の退役裁定へ回付する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "採用集合の変更",
+      "description": "退役に加えて他候補も採用すべき、または退役の文面・根拠が不足(留保に具体を記す)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "失効ノルムの退役1件のみ採用(提案どおり)",
+      "description": "`cid:reverse-engineering:re-sensors-codekb-filter-mismatch` を project.md から削除する norm PR を起こす。他候補は record 固定のみ。"
+    }
+  ]
+}
