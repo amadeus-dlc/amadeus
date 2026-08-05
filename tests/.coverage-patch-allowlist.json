@@ -6031,5 +6031,71 @@
     },
     "reason": "The status projection read is driven in-process by t435; this residual line is the defensive catch arm for an unreadable audit projection, not reachable from a healthy record.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleListAutoDecisions",
+      "fingerprint": "sha256:64c19e102994ef34f709fdd374045dd92b7872452bc0f73cfabfb80d662f39c0",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The verb is driven in-process by t435 and the line executes on that path; bun's union-merged lcov stamps this flag-read line 0 in the parent report (loaded-only chunk artifact), the bun-inbody attribution class.",
+    "expiry": "remove when bun's union merge attributes the line, or the handler gains a dedicated in-process lcov driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleReviewAutoDecision",
+      "fingerprint": "sha256:af6e749d8b625ed51ffa6e5011ecd8ecc17c89e59360144c57325b4b103ba71e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The verb is driven in-process by t435 and the line executes on that path; bun's union-merged lcov stamps this flag-read line 0 in the parent report (loaded-only chunk artifact), the bun-inbody attribution class.",
+    "expiry": "remove when bun's union merge attributes the line, or the handler gains a dedicated in-process lcov driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review-production.ts",
+    "selector": {
+      "function": "commitProductionDecisionReview",
+      "fingerprint": "sha256:6596f0e61c1718154f1ecd81dee83126576ee17ec85fb0dd6c47c4bfadf2fc12",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Defensive catch converting an unexpected lock/journal throw into a typed error; the review commit's reachable failure arms are typed returns pinned by t433, so this arm only fires on infrastructure faults not reproducible in-process.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleReviewAutoDecision",
+      "fingerprint": "sha256:8cd42ca44cfc1e429ac54c895629dd38fa0a41a7d0d0c03a852d7f99d0bddfd4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "CLI flag-validation arm: error() exits the process, so the missing-digest branch is spawn-only; the confirmed path is driven in-process by t435.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review.ts",
+    "selector": {
+      "function": "put",
+      "fingerprint": "sha256:9f058a96ce21445c8a2dc2e68dcd6418400bf158dc4df47155c076b91c6e81b1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive arm: put() is only reachable from the constructor seeds today, where retained reviews are always empty; the guard exists so a future reseed API cannot orphan a terminal review.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleGetAutoDecision",
+      "fingerprint": "sha256:f91b9204be7a636743ec5e5e16bb0c4dc5cad748f4dd49a9ee8b9a7355eaab43",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "CLI flag-validation arm: error() exits the process, so the invalid --choice branch is spawn-only; the valid preview path is driven in-process by t435.",
+    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   }
 ]

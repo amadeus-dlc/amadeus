@@ -395,6 +395,7 @@ The Loop Monitor commits delivery observations, cycle triggers, Judge reservatio
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | One quality snapshot, progress, replan, stall, or resume transaction and its generic Monitor effects committed atomically |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | One Intent-scoped mode, grant, decision, workflow-effect, park, resume, or invocation-failure transaction committed atomically |
+| `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review-production.ts` | A human accepted or flagged one immutable auto decision on the review surface (append-only; never replays the decided effect) |
 
 ### Swarm
 
