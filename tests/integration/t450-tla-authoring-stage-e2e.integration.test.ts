@@ -7,8 +7,14 @@
 //       and lands in a composed host (BR-U5-07, BR-U5-13)
 //   (b) the FR-012 end-to-end path on an unknown subject (the swarm unit-pool
 //       lifecycle): requirements -> applicability -> authoring -> referees ->
-//       independent review -> human gate -> bundle -> registration -> hold
-//       release, plus the two fail-closed arms of BR-U5-14
+//       independent review -> human gate -> bundle -> registration -> the
+//       existing formal-model-check over the model just registered -> the
+//       correlated hold release, plus the two fail-closed arms of BR-U5-14
+//
+// The composed host is made repository-like (.git + package.json + specs/tla)
+// because the model loader resolves its workspace by walking up from its own
+// module URL: the map the authoring path registers into is therefore the same
+// map the checker reads.
 //
 // Every path runs against the COMPOSED runtime — the plugin is composed into a
 // throwaway host from the shipped neutral bundle and driven from there, so a
@@ -17,7 +23,7 @@
 // this is an integration test (cid:code-generation:fs-tests-integration-first).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import {
@@ -31,6 +37,18 @@ import {
   type WorkspaceTransaction,
 } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import type {
+  PlannedTlcOutcome,
+  PreparedPlannedTlcRun,
+} from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
+import type {
+  PlannedModelCheckToolchain,
+  RunModelCheckDependencies,
+  RunModelCheckResult,
+} from "../../plugins/formal-model-check/tools/run-model-check.ts";
+import type { EnvReceipt } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import type { VerifiedTlcArtifact } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "dist", "plugins");
@@ -171,6 +189,7 @@ describe("the authoring stage document (BR-U5-07, BR-U5-13)", () => {
 
 const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "tla-authoring-unit-pool", "requirements.md");
 const APPROVED_AT = "2026-08-05T00:00:00Z";
+const RUN_ID = "00000000-0000-4000-8000-000000000001";
 const SUBJECTS = ["FR-001", "FR-002", "AC-001"] as const;
 const INVARIANTS = ["ActiveWithinCapacity", "NoUnitLostOnSettle"] as const;
 
@@ -220,14 +239,87 @@ function fakeToolchain(): { versionLine: string; run: (request: { kind: string }
 }
 
 // The map a registration lands in is never empty — the validator refuses an
-// empty model list — so the fixture starts from one already-registered model
-// and the run must leave it untouched.
-const SEED_MODEL = {
-  name: "Seed",
-  model: { path: "specs/tla/Seed.tla", identity: "e".repeat(64) },
-  cfg: { path: "specs/tla/Seed.cfg", identity: "f".repeat(64) },
-  entries: [{ implPath: "packages/framework/core/tools/amadeus-swarm.ts", sha256: "0".repeat(64) }],
+// empty model list — so the fixture starts from one already-registered model,
+// with real bytes on disk, and the run must leave it untouched.
+const SEED_MODULE = [
+  "---- MODULE Seed ----",
+  "EXTENDS Naturals",
+  "VARIABLE seeded",
+  "SeedOK == seeded \\in Nat",
+  "Spec == seeded = 0 /\\ [][seeded' = seeded]_seeded",
+  "====",
+  "",
+].join("\n");
+
+const SEED_CONFIG = ["SPECIFICATION Spec", "INVARIANT SeedOK", ""].join("\n");
+
+const IMPL_PATH = "packages/framework/core/tools/amadeus-unit-pool.ts";
+
+// A registered model declares the invariants it checks and the state variables
+// its traces carry; the receipt refuses a model with no declared vocabulary
+// (tla-model-receipt.ts:97).
+const SEED_VOCABULARY = {
+  vocabulary: { namedInvariants: ["SeedOK"], traceStateVariables: ["seeded"] },
 };
+const UNIT_POOL_VOCABULARY = {
+  vocabulary: {
+    namedInvariants: ["ActiveWithinCapacity", "NoUnitLostOnSettle"],
+    traceStateVariables: ["queued", "active", "settled"],
+  },
+};
+
+// The map records a domain-scoped canonical identity, not a bare file hash:
+// tla-model-loader-internal.ts:93-94 pins the two domains and :231 computes
+// `canonicalIdentity(source, domain).sha256` over the decoded text.
+const TLA_MODULE_DOMAIN = "amadeus.formal-verif.tla.module.v1";
+const TLA_CFG_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
+
+function digestOf(path: string, domain: string): string {
+  return canonicalIdentity(readFileSync(path, "utf8"), domain).sha256;
+}
+
+/** A model-map entry whose declared identities are the bytes actually on disk. */
+function entryFor(root: string, name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    name,
+    model: {
+      path: `specs/tla/${name}.tla`,
+      identity: digestOf(join(root, "specs", "tla", `${name}.tla`), TLA_MODULE_DOMAIN),
+    },
+    cfg: {
+      path: `specs/tla/${name}.cfg`,
+      identity: digestOf(join(root, "specs", "tla", `${name}.cfg`), TLA_CFG_DOMAIN),
+    },
+    entries: [
+      {
+        implPath: IMPL_PATH,
+        sha256: Bun.CryptoHasher.hash("sha256", readFileSync(join(root, IMPL_PATH)), "hex"),
+      },
+    ],
+    ...extra,
+  };
+}
+
+function mapText(models: readonly Record<string, unknown>[]): string {
+  return `${JSON.stringify({ schemaVersion: 2, models }, null, 2)}\n`;
+}
+
+/**
+ * Make the composed host look like the repository the model loader resolves:
+ * it walks up from the tool's own module URL for .git + package.json +
+ * specs/tla, so the registered map has to live where a real workspace keeps it.
+ */
+function repoLikeHost(host: string): void {
+  mkdirSync(join(host, ".git"), { recursive: true });
+  writeFileSync(join(host, "package.json"), '{"name":"e2e-host"}\n');
+  // Every model-map entry names an implementation the loader hashes, and the
+  // loader confines those paths to packages/framework/core/tools.
+  mkdirSync(join(host, "packages", "framework", "core", "tools"), { recursive: true });
+  writeFileSync(join(host, IMPL_PATH), "export const unitPool = 'fixture';\n");
+  mkdirSync(join(host, "specs", "tla"), { recursive: true });
+  writeFileSync(join(host, "specs", "tla", "Seed.tla"), SEED_MODULE);
+  writeFileSync(join(host, "specs", "tla", "Seed.cfg"), SEED_CONFIG);
+}
 
 const MODULE = [
   "---- MODULE UnitPool ----",
@@ -295,6 +387,103 @@ function approvalIn(root: string): Record<string, unknown> {
   return { shard, timestamp: APPROVED_AT, eventIdentity: Bun.CryptoHasher.hash("sha256", line, "hex") };
 }
 
+/**
+ * The existing formal-model-check, run from the COMPOSED tree over the model the
+ * authoring path just registered. Only TLC itself is faked — the same seam the
+ * proof referee uses above — so the source loader, the map lookup, the byte pin
+ * and the artifact publishing are all the real thing (FR-012, AC-007).
+ */
+async function runComposedModelCheck(host: string, argv: readonly string[]): Promise<RunModelCheckResult> {
+  const tools = join(host, "plugins", PLUGIN, "tools");
+  const load = async (name: string): Promise<Record<string, unknown>> =>
+    (await import(join(tools, name))) as Record<string, unknown>;
+  const check = await load("run-model-check.ts");
+  const paths = await load("run-model-check-paths.ts");
+  const execution = await load("run-model-check-execution.ts");
+  const artifacts = await load("run-model-check-artifacts.ts");
+  const reporter = await load("run-model-check-reporter.ts");
+  const tlc = await load("tlc-toolchain.ts");
+
+  const artifact = {
+    kind: "VerifiedTlcArtifact",
+    descriptorIdentity: tlc.FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
+    actualSha256: (tlc.FIXED_TLC_ARTIFACT_DESCRIPTOR as { sha256: string }).sha256,
+    byteLength: 1,
+    cachePath: join(host, ".fixture-cache", "tla2tools.jar"),
+    receiptIdentity: "c".repeat(64),
+  } as unknown as VerifiedTlcArtifact;
+  const receipt: EnvReceipt = {
+    schema: "amadeus.env-receipt.v1",
+    runId: RUN_ID,
+    planner: "e2e-fixture",
+    inspections: [
+      { id: "image-digest", status: "passed", expected: "image", observed: "image", reason: "" },
+      { id: "jar-sha256", status: "passed", expected: "jar", observed: "jar", reason: "" },
+      { id: "network-deny", status: "passed", expected: "none", observed: "none", reason: "" },
+      { id: "jdk-snapshot", status: "not-applicable", expected: null, observed: null, reason: "fixture" },
+      { id: "sandbox-profile", status: "not-applicable", expected: null, observed: null, reason: "fixture" },
+    ],
+  };
+  const outcome: PlannedTlcOutcome = {
+    exploration: COMPLETE as PlannedTlcOutcome["exploration"],
+    environmentReceipt: receipt,
+    raw: {
+      exitCode: 0,
+      signal: null,
+      stdoutChunks: [new TextEncoder().encode("fixture-tlc")],
+      stderrChunks: [],
+      stdoutIdentity: "a".repeat(64),
+      stderrIdentity: "b".repeat(64),
+      startedAtMs: 0,
+      finishedAtMs: 1,
+      timedOut: false,
+      outputLimitExceeded: false,
+    },
+  };
+  const toolchain: PlannedModelCheckToolchain = {
+    acquire: () => Promise.resolve({ ok: true, value: artifact }),
+    preparePlanned: (input) =>
+      Promise.resolve({
+        ok: true,
+        value: {
+          ...input,
+          cwd: host,
+          standardModuleDirectory: join(input.scratchRoot, ".tlc-stdlib"),
+          manifestArgv: [],
+          environmentSnapshot: {
+            kind: "DOCKER",
+            plannerIdentity: "fixture",
+            imageRef: "image",
+            jarSha256: artifact.actualSha256,
+          },
+          environment: { LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", TZ: "UTC" },
+        } as PreparedPlannedTlcRun,
+      }),
+    runPlanned: () => Promise.resolve({ ok: true, value: outcome }),
+  };
+  let second = 0;
+  const dependencies = {
+    randomUuid: () => RUN_ID,
+    utcNow: () => `2026-08-05T00:00:0${second++}.000Z`,
+    platform: process.platform,
+    environment: {
+      inspectDarwin: () => Promise.reject(new Error("not used")),
+      inspectDocker: () => Promise.reject(new Error("not used")),
+    },
+    filesystem: paths.NODE_RUN_MODEL_CHECK_FILESYSTEM,
+    publisher: execution.DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER,
+    reserveArtifacts: artifacts.beginModelCheckArtifacts,
+    createToolchain: () => toolchain,
+    reporter: new (reporter.StderrModelCheckReporter as new (emit: (line: string) => void) => unknown)(() => {}),
+  } as unknown as RunModelCheckDependencies;
+
+  const run = check.runModelCheck as (
+    argv: readonly string[],
+    dependencies: RunModelCheckDependencies,
+  ) => Promise<RunModelCheckResult>;
+  return run(argv, dependencies);
+}
+
 describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/09)", () => {
   let host = "";
   let work = "";
@@ -351,9 +540,11 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
 
   beforeEach(async () => {
     host = composedHost();
+    repoLikeHost(host);
     work = freshDir("tla-authoring-work-");
     store = join(work, "evidence");
-    mapPath = write("model-map.json", `${JSON.stringify({ schemaVersion: 2, models: [SEED_MODEL] }, null, 2)}\n`);
+    mapPath = join(host, "specs", "tla", "model-map.json");
+    writeFileSync(mapPath, mapText([entryFor(host, "Seed", SEED_VOCABULARY)]), "utf8");
     // The composed copy is the module under test: an import the manifest failed
     // to declare fails here, where the canonical tree would still resolve it.
     authoring = (await import(join(host, "plugins", PLUGIN, "tools", "tla-authoring.ts"))) as AuthoringModule;
@@ -386,8 +577,11 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     expect(applicability.route).toBe("author-new");
 
     // 3. Authoring: the deliverables the stage document's step 2 names.
-    const modulePath = write("UnitPool.tla", MODULE);
-    const configPath = write("UnitPool.cfg", CONFIG);
+    const specs = join(host, "specs", "tla");
+    const modulePath = join(specs, "UnitPool.tla");
+    const configPath = join(specs, "UnitPool.cfg");
+    writeFileSync(modulePath, MODULE, "utf8");
+    writeFileSync(configPath, CONFIG, "utf8");
     const reductionPath = write("UnitPool.reduction.json", manifest(identity, {}));
     const invariantsPath = write("invariants.json", [...INVARIANTS]);
     const subjectsPath = write("subjects.json", [...SUBJECTS]);
@@ -450,18 +644,7 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     const digest = built.digest as string;
     await ok(["bundle", "verify", "--ref", digest, "--identity", identity, "--store", store]);
 
-    const draft = write("draft.json", {
-      name: "UnitPool",
-      model: { path: "specs/tla/UnitPool.tla", identity: "a".repeat(64) },
-      cfg: { path: "specs/tla/UnitPool.cfg", identity: "b".repeat(64) },
-      entries: [
-        {
-          implPath: "packages/framework/core/tools/amadeus-unit-pool.ts",
-          sha256: "c".repeat(64),
-        },
-      ],
-      evidenceBundle: { digest },
-    });
+    const draft = write("draft.json", entryFor(host, "UnitPool", { ...UNIT_POOL_VOCABULARY, evidenceBundle: { digest } }));
     const preconditions = write("preconditions.json", {
       applicability,
       coverage,
@@ -480,10 +663,21 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     ]);
     expect((committed.receipt as Record<string, unknown>).entryName).toBe("UnitPool");
 
-    // 7. The correlated verdict: the map the existing formal-model-check reads
-    //    now carries the model, and the hold evaluator releases the subject.
+    // 7. The registered model is checked by the existing formal-model-check,
+    //    and the correlated verdict follows: the hold evaluator releases the
+    //    subject the run started from.
     const registered = JSON.parse(readFileSync(mapPath, "utf8")) as { models: ReadonlyArray<{ name: string }> };
     expect(registered.models.map((model) => model.name)).toEqual(["Seed", "UnitPool"]);
+
+    // The existing formal-model-check runs the model that was just registered,
+    // reading it through the same map the commit wrote.
+    const checked = await runComposedModelCheck(host, [
+      "--model", modulePath,
+      "--cfg", configPath,
+      "--out", join(host, "model-check-out"),
+    ]);
+    expect(checked.outcome, JSON.stringify(checked.outcome)).toMatchObject({ kind: "NOT_DETECTED" });
+    expect(checked.exitCode).toBe(0);
 
     const series = await ok(["applicability", "series", "--subjects", SUBJECTS.join(",")]);
     const held = await ok([
@@ -508,8 +702,11 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
   });
 
   test("a manifest with no vacuity witness halts at the referee, before any registration", async () => {
-    const modulePath = write("UnitPool.tla", MODULE);
-    const configPath = write("UnitPool.cfg", CONFIG);
+    const specs = join(host, "specs", "tla");
+    const modulePath = join(specs, "UnitPool.tla");
+    const configPath = join(specs, "UnitPool.cfg");
+    writeFileSync(modulePath, MODULE, "utf8");
+    writeFileSync(configPath, CONFIG, "utf8");
     const identity = `sha256:${"1".repeat(64)}`;
     const reductionPath = write(
       "UnitPool.reduction.json",
@@ -534,6 +731,39 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     expect(refused.body.ok).toBe(false);
     // The halt names the missing witness, not just "something failed".
     expect(JSON.stringify(refused.body.failure)).toContain("no witness declared");
+
+    // Pushing past the halt is refused rather than ignored: with no proof
+    // evidence to carry, the registration gate itself rejects the run. This is
+    // the active check — "the map is unchanged" alone holds trivially for a
+    // path that never calls commit.
+    const digest = await verifiedBundle(identity, approvalIn(work));
+    const draft = write("draft.json", entryFor(host, "UnitPool", { ...UNIT_POOL_VOCABULARY, evidenceBundle: { digest } }));
+    const preconditions = write("halted-preconditions.json", {
+      applicability: { route: "author-new", subjectIdentity: identity },
+      coverage: { __brand: "CoverageProof", subjectsDigest: "s", rowsDigest: "r", invariantsDigest: "i" },
+      freshness: { kind: "current" },
+      review: {
+        reviewer: "amadeus-architecture-reviewer-agent",
+        modelAuthor: "builder-u5",
+        verdict: "READY",
+        reviewedAt: APPROVED_AT,
+        artifactDigests: [],
+      },
+      humanApproval: approvalIn(work),
+    });
+    const committed = await run([
+      "commit",
+      "--draft", draft,
+      "--bundle", digest,
+      "--preconditions", preconditions,
+      "--model-map", mapPath,
+      "--store", store,
+    ]);
+
+    expect(committed.exitCode).toBe(1);
+    const failure = committed.body.failure as { kind: string; failures: ReadonlyArray<Record<string, string>> };
+    expect(failure.kind).toBe("preconditions-failed");
+    expect(failure.failures).toContainEqual({ kind: "precondition-missing", precondition: "proof" });
     expect(readFileSync(mapPath, "utf8")).toEqual(before);
   });
 
@@ -541,13 +771,9 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     const before = readFileSync(mapPath, "utf8");
     const identity = `sha256:${"1".repeat(64)}`;
     const digest = await verifiedBundle(identity, null);
-    const draft = write("draft.json", {
-      name: "UnitPool",
-      model: { path: "specs/tla/UnitPool.tla", identity: "a".repeat(64) },
-      cfg: { path: "specs/tla/UnitPool.cfg", identity: "b".repeat(64) },
-      entries: [{ implPath: "packages/framework/core/tools/amadeus-unit-pool.ts", sha256: "c".repeat(64) }],
-      evidenceBundle: { digest },
-    });
+    writeFileSync(join(host, "specs", "tla", "UnitPool.tla"), MODULE, "utf8");
+    writeFileSync(join(host, "specs", "tla", "UnitPool.cfg"), CONFIG, "utf8");
+    const draft = write("draft.json", entryFor(host, "UnitPool", { ...UNIT_POOL_VOCABULARY, evidenceBundle: { digest } }));
     const preconditions = write("preconditions.json", {
       applicability: { route: "author-new", subjectIdentity: identity },
       coverage: { __brand: "CoverageProof", subjectsDigest: "s", rowsDigest: "r", invariantsDigest: "i" },
