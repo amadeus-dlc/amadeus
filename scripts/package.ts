@@ -863,6 +863,20 @@ export function checkNeutralBundle(): string[] {
 // lines. The import.meta.main guard at the bottom maps the return to
 // process.exit for a real `bun scripts/package.ts …` invocation and keeps the
 // dispatch from firing when the module is merely imported.
+// Keep runCli's numeric exit-code contract for the closure guard: report the
+// validation problems and fail the build instead of letting the exception
+// escape the CLI. Exported so a test can drive the failure branch in-process.
+export function guardPluginClosureForCli(root: string): number {
+  try {
+    assertPluginImportClosure(root);
+    return 0;
+  } catch (cause) {
+    if (!(cause instanceof PluginValidationError)) throw cause;
+    console.error(cause.message);
+    return 1;
+  }
+}
+
 // ---------------------------------------------------------------------------
 export function runCli(argv: string[]): number {
   // `package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]` —
@@ -908,15 +922,8 @@ export function runCli(argv: string[]): number {
   // composes into a missing import in the host. Placed after the generated-source
   // refresh (so it reads the current copies) and before any harness or bundle
   // write, so a failure leaves dist untouched.
-  try {
-    assertPluginImportClosure(pluginsRoot());
-  } catch (cause) {
-    // Keep runCli's numeric exit-code contract: report the validation problems
-    // and fail the build instead of letting the exception escape the CLI.
-    if (!(cause instanceof PluginValidationError)) throw cause;
-    console.error(cause.message);
-    return 1;
-  }
+  const closureExit = guardPluginClosureForCli(pluginsRoot());
+  if (closureExit !== 0) return closureExit;
   for (const n of present) writeHarness(n);
   writeNeutralBundle();
   return 0;
