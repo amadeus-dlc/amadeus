@@ -182,6 +182,14 @@ describe("t450 falling evidence — each missing required field goes red", () =>
     });
   }
 
+  test("an override recorded-at that does not parse as a timestamp is a finding", () => {
+    const body = overrideReport().replace(/^- recorded at: .*$/m, "- recorded at: not-a-timestamp");
+    const result = evaluateReportFormat(reportAt(body));
+    expect(result.pass).toBe(false);
+    const finding = result.findings.find((f) => f.field === "recorded at");
+    expect(finding?.reason).toContain("unparseable");
+  });
+
   test("an override reason that is present but blank is still a finding", () => {
     const body = overrideReport().replace(/^- reason: .*$/m, "- reason:");
     const result = evaluateReportFormat(reportAt(body));
