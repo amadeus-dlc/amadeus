@@ -6304,7 +6304,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "humanTurn.shard is derived from auditShardName(projectDir) inside latestHumanTurn one call earlier, so the mismatch arm is unreachable through the record flow; kept for contract parity with recordProtectedAdvisoryChoice, whose caller-supplied provenance CAN mismatch.",
+    "reason": "humanTurn.shard is derived from auditShardName(projectDir) inside latestHumanTurn one call earlier, so the mismatch arm is unreachable through the record flow; kept for contract parity with recordAdvisoryChoice, whose caller-supplied provenance CAN mismatch.",
     "expiry": "remove when freshRecordRefusal accepts caller-supplied provenance"
   },
   {
@@ -6333,7 +6333,7 @@
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:bda22f12c1bef0a92b2d9e1cc7584392cb9b5308725357f96695c373768afb13",
+      "fingerprint": "sha256:438bc9257a619c60699f99b7a7a1c2ce77c06bda3f0d1bd85d807d15251fd826",
       "anchorLines": 23,
       "targetLines": "1-23"
     },

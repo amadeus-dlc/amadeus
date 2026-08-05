@@ -29,18 +29,35 @@ import {
   type Advisory,
   type AdvisoryCode,
 } from "./amadeus-plugin-activation.ts";
-import { createInteractionOccurrence } from "./amadeus-intent-autonomy.ts";
 import type {
   AutoDecisionRecord,
   DecisionBasisKind,
   EffectClassification,
+  createInteractionOccurrence as CreateInteractionOccurrence,
 } from "./amadeus-intent-autonomy.ts";
 import type {
   AutonomyDecisionResult,
   IntentAutonomyTransaction,
 } from "./amadeus-intent-autonomy-runtime.ts";
-import { readIntentAutonomyTransactionsFromAudit } from "./amadeus-intent-autonomy-replay.ts";
-import { commitProductionQuestionDecision } from "./amadeus-intent-autonomy-production.ts";
+import type { readIntentAutonomyTransactionsFromAudit as ReadAutonomyTransactions } from "./amadeus-intent-autonomy-replay.ts";
+import type { commitProductionQuestionDecision as CommitQuestionDecision } from "./amadeus-intent-autonomy-production.ts";
+
+// The autonomy stack is reached only on the unattended paths (C16's ruling and
+// the auto arm of acceptance). The UserPromptSubmit mint hook imports THIS
+// module on every human prompt and has a sub-300ms budget, so those modules are
+// required at the call rather than at load: types above are erased, and the
+// three bindings below cost nothing until an advisory is actually resolved.
+function autonomyModule(): { createInteractionOccurrence: typeof CreateInteractionOccurrence } {
+  return require("./amadeus-intent-autonomy.ts");
+}
+
+function autonomyReplayModule(): { readIntentAutonomyTransactionsFromAudit: typeof ReadAutonomyTransactions } {
+  return require("./amadeus-intent-autonomy-replay.ts");
+}
+
+function autonomyProductionModule(): { commitProductionQuestionDecision: typeof CommitQuestionDecision } {
+  return require("./amadeus-intent-autonomy-production.ts");
+}
 
 export const ADVISORY_CHOICE_OPTIONS = [
   { choice: "run-now", label: "今すぐ実行する" },
@@ -508,7 +525,7 @@ export function advisoryOccurrenceMatchesDecision(input: {
   readonly graphRevision: string;
 }): boolean {
   try {
-    return createInteractionOccurrence({
+    return autonomyModule().createInteractionOccurrence({
       intentUuid: input.intentUuid,
       kind: "question",
       stage: input.identity.checkpoint,
@@ -1152,7 +1169,7 @@ function groundedAutoDecision(
   if (intentUuid === null) return false;
   let decisions: readonly AutoDecisionRecord[];
   try {
-    decisions = autoDecisionsFromTransactions(readIntentAutonomyTransactionsFromAudit(projectDir));
+    decisions = autoDecisionsFromTransactions(autonomyReplayModule().readIntentAutonomyTransactionsFromAudit(projectDir));
   } catch {
     return false;
   }
@@ -1285,7 +1302,7 @@ function activeReceiptFor(
 // Every condition a FIRST record of an instance has to clear, in one place.
 // Returns the refusal reason, or null when the choice may be written. The
 // provenance checks (shard, grounding, single-spend) are the same ones the
-// prompt route applies in recordProtectedAdvisoryChoice; only the presentation
+// prompt route applies in recordAdvisoryChoice; only the presentation
 // check is relaxed from adjacency to existence.
 function freshRecordRefusal(
   projectDir: string,
@@ -1469,7 +1486,7 @@ export function resolveAdvisoryChoiceAutonomously(input: {
     };
     let outcome: AutonomyDecisionResult;
     try {
-      outcome = commitProductionQuestionDecision({
+      outcome = autonomyProductionModule().commitProductionQuestionDecision({
         projectDir: input.projectDir,
         stage: item.checkpoint,
         phase: input.phase,
