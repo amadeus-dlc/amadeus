@@ -115,19 +115,21 @@ sequenceDiagram
 flowchart TD
   A["parseNextFlags picks up --autonomy value"] --> B{"value missing or outside the three values"}
   B -->|"yes"| E1["errorDirective loud stop"]
-  B -->|"no"| C{"state mode equals declared value"}
-  C -->|"yes"| OK1["no-op continue without audit event"]
-  C -->|"no"| D{"state mode already set"}
-  D -->|"yes"| E2["errorDirective naming amadeus-bolt set-autonomy"]
-  D -->|"no"| F{"declared value"}
-  F -->|"none with active grant or unreadable projection"| E3["errorDirective naming explicit revoke"]
+  B -->|"no"| R{"readLaunchAutonomyContext reads the projection once"}
+  R -->|"unreadable"| E0["errorDirective fail-closed"]
+  R -->|"readable"| C{"modeProvenance kind is human-command"}
+  C -->|"no: not yet declared"| F{"declared value"}
+  C -->|"yes: already declared"| D{"projection mode equals declared value"}
+  D -->|"yes"| OK1["no-op continue without audit event"]
+  D -->|"no"| E2["errorDirective naming amadeus-bolt set-autonomy"]
+  F -->|"none with active grant"| E3["errorDirective naming explicit revoke"]
   F -->|"full without active grant"| E4["errorDirective with issuance preview"]
   F -->|"otherwise"| G["applyProductionAutonomyMode requires HUMAN_TURN"]
   G -->|"PROVENANCE_REQUIRED"| E5["errorDirective relay"]
   G -->|"ok"| OK2["mode applied and state updated"]
 ```
 
-<!-- Text fallback: parseNextFlags が --autonomy の値を consume する。値省略または3値(none/semi/full)以外は loud エラー。state の mode と同値なら監査イベントを増やさず継続(none の再宣言も no-op)。mode が設定済みで異値なら amadeus-bolt set-autonomy を名指しする loud エラー。none かつ active grant 実在または projection 読取不能なら明示 revoke を案内する loud エラー。full かつ grant 不在なら発行 preview 付きの loud エラー。それ以外は applyProductionAutonomyMode を呼び、HUMAN_TURN 不在なら PROVENANCE_REQUIRED を relay する。 -->
+<!-- Text fallback: parseNextFlags が --autonomy の値を consume する。値省略または3値(none/semi/full)以外は loud エラー。次に readLaunchAutonomyContext が projection を1回だけ読む。読取不能なら fail-closed の loud エラー。modeProvenance の kind が human-command でなければ未宣言とみなし、初回宣言として受理して grant 判定へ進む(loud にしない)。human-command なら宣言済みとみなし、projection の mode と同値なら監査イベントを増やさず継続、異値なら amadeus-bolt set-autonomy を名指しする loud エラー。none かつ active grant 実在なら明示 revoke を案内する loud エラー。full かつ grant 不在なら発行 preview 付きの loud エラー。それ以外は applyProductionAutonomyMode を呼び、HUMAN_TURN 不在なら PROVENANCE_REQUIRED を relay する。判別子に state フィールドの有無・値を使わない理由は decisions.md ADR-13。 -->
 
 ---
 
@@ -165,7 +167,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | mode 適用 | 実 `HUMAN_TURN`(`latestHumanTurnId`、`amadeus-intent-autonomy-production.ts:409-411`) | 監査シャードの実イベント。`--autonomy` フラグ自体は provenance にならない | FR-CLI-5 / NFR-6(1) |
 | grant 発行 | `confirmedDisplayDigest` の照合(`issueGrant:307-309`) | digest 一致 | 本 intent 不変(FR-AUTH-3) |
-| grant 取消 | `amadeus-bolt set-autonomy --mode none` の**明示コマンド** | 起動フラグから `revoke-full` へ到達不能(C13 判定 4・5) | FR-CLI-2(2) / FR-CLI-3(3) |
+| grant 取消 | `amadeus-bolt set-autonomy --mode none` の**明示コマンド** | 起動フラグから `revoke-full` へ到達不能(C13 判定 5・6 の二重防壁) | FR-CLI-2(2) / FR-CLI-3(3) |
 | semi 裁定 | `modeProvenance.kind === "human-command"` + scope 内 occurrence | `SemiAuthority.of` のスマートコンストラクタ | FR-LAD-1 / FR-AUTH-1 |
 | semi 効果適用 | `classification === "workflow-reversible"` | `SemiAuthority.authorizeEffect` | FR-LAD-5 |
 | advisory receipt(人間) | 監査シャードの実 `HUMAN_TURN` + 提示照合 | `isGroundedHumanTurn:852-861` / `hasMatchingAdvisoryPresentation` | FR-ADV-3 / NFR-6(2) |
