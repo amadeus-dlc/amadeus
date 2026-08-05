@@ -17,6 +17,9 @@
 
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+- 2026-08-06T00:00:00Z — [batch 2] aar builder の base は origin/main 00da4bdda(+batch 1 bolt 3 本のマージ 2b0da2153)— conductor 回収マージ ba38c52cc で main 前進が conductor へ同乗した(再接地を兼ねる)。競合 13 ファイルの定型解消: codekb 9 件 = ours が theirs の上位集合であることを機械実測(verify-ours-superset、theirs 全行が ours に存在 = 0 missing)→ ours 採用 / elections.json・intents.json = 真の分岐(並行 intent 260805-pr-convergence-plugin の E-PCP 系)→ 和集合+parse 検証(dup 0)/ project.md = 両側 §13 追記の和集合 / t-coverage-mechanism-ratchet = t455+t458 両エントリ保持。マージ touch 全ファイルのマーカー grep 0
+
+- 2026-08-06T00:00:00Z — [batch 2] spc/sqc/aar の 3 unit を ff 採用(a627277fd / 24647a2df / 2c42d13e6)→ referee check 3/3 converged・tampered=false → settle-release succeeded ×3 → finalize --batch 3 converged 3 / failed 0 / merge_failures 0。builder 申告の引き継ぎ: spc = SEMI_POLICY_SCOPE_ID 導出・policies:[] 6 呼び出し面・t455 Red 非先行 / aar = effectClassifications 追加・provenance 2 フィールド増(いずれも FD 受け入れ行の執行可能化 — レビュー観点)・既存 6 テストの receipt 形状同期(FR-ADV-3 置き換え命令)・t07 回帰の自己検出修正(lazy require 化)
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
