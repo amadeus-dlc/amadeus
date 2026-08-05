@@ -157,10 +157,10 @@
       // into the freeform intent text (the path would read as intent words).
 ```
 
-- **FR-CLI-1(2値・値の consume)** — `--autonomy` は `semi` と `full` の2値のみを受け、値を必ず consume する。
-  - **受け入れ基準**: `/amadeus --autonomy semi <自由文>` を parse したとき、`semi` が intent 自由文に混入しない(`flags.intent` に `semi` が現れない)ことを assert するテストが green。「落ちる実証」— parser から `--autonomy` 分岐を外すと当該テストが赤になることを実測して記録する。
-- **FR-CLI-2(`none` と不正値は loud)** — `none` および値域外の値は loud エラーで停止する。値の省略も loud とする(対話プロンプトへフォールバックしない)。
-  - **受け入れ基準**: `--autonomy none` / `--autonomy bogus` / 値なし `--autonomy` の3ケースがいずれも非 0 exit かつ理由を stderr に出すテストが green。directive 面の値域(`tools/amadeus-directive.ts:97`、verbatim `  intent_autonomy_mode?: "semi" | "full";`、検査は `:606` verbatim `  checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);`)と語彙が一致していること。
+- **FR-CLI-1(3値・値の consume)** — `--autonomy` は `none` / `semi` / `full` の3値を受け、値を必ず consume する。値域は `AutonomyMode`(`tools/amadeus-intent-autonomy.ts:11`、verbatim `export type AutonomyMode = "none" | "semi" | "full";`)と一致させる。
+  - **受け入れ基準**: `/amadeus --autonomy semi <自由文>` を parse したとき、`semi` が intent 自由文に混入しない(`flags.intent` に `semi` が現れない)ことを assert するテストが green。3値それぞれで同じ assert を通す。「落ちる実証」— parser から `--autonomy` 分岐を外すと当該テストが赤になることを実測して記録する。
+- **FR-CLI-2(`none` の受理条件と不正値の loud)** — `--autonomy none` は **active grant が存在しない Intent に対してのみ受理**する(mode を `none` へ設定、または既に `none` なら no-op)。**active grant が存在する Intent への `--autonomy none` は loud エラーで停止**し、`amadeus-bolt set-autonomy --mode none`(明示 revoke)を案内する — 不可逆寄りの grant 取消を起動フラグの側面効果にしない。値域外の値と値の省略も loud とする(対話プロンプトへフォールバックしない)。
+  - **受け入れ基準**: (1) grant 不在の Intent への `--autonomy none` が 0 exit で mode=none を設定。(2) active grant のある Intent への `--autonomy none` が非 0 exit + `set-autonomy` の案内文、かつ **grant が revoke されていない**ことを実測 assert。(3) `--autonomy bogus` / 値なし `--autonomy` がいずれも非 0 exit かつ理由を stderr に出す。(4) **落ちる実証** — (2) の grant 実在判定を無条件 false に差し替えると (2) が赤になることを実測して記録する。
 - **FR-CLI-3(再宣言の意味論)** — 既に mode が設定された Intent への再宣言は、**同値なら no-op**、**異値なら loud エラー**で停止し `amadeus-bolt set-autonomy` を案内する。起動フラグが既存 mode を無言で書き換えない。
   - **受け入れ基準**: (1) mode=semi の Intent へ `--autonomy semi` → 監査イベントを増やさず正常継続。(2) mode=semi の Intent へ `--autonomy full` → 非 0 exit + `set-autonomy` の案内文。(3) (2) の状態で既存 grant が revoke されていないこと(`prepareNonFullCommand:386-390` の `revoke-full` 経路が起動フラグから到達不能であること)。
 - **FR-CLI-4(full の fail-closed)** — `--autonomy full` は grant 実在時のみ走行し、不在時は preview 表示で **fail-closed 停止**する。FR-GRT-006 は緩めない。
@@ -238,7 +238,7 @@
 
 - **C-1(semi は grant を持たない)** — `HumanAutonomyCommand` の `set-mode` の値域は `"none" | "semi"` のみ(`amadeus-intent-autonomy.ts:251`)、`full` は `issue-full` / `replace-full` 経由でしか到達できない。したがって「semi を梯子へ載せる」は構造的に「grant なしで梯子を回す」ことを意味する(`architecture.md` 現在節、`inception/reverse-engineering/memory.md:20`)。
 - **C-2(「節目」を判別する既存述語が無い)** — 現行で機械判別できるのは `occurrence.phase !== "phase-boundary"` と `occurrence.kind` の2軸のみであり、**`question` occurrence には phase 概念がない**(`business-overview.md` 現在節「リスクの所在」、`inception/reverse-engineering/memory.md:21`)。本 intent は Q3=A により「質問はすべて梯子へ載せる」ため新述語の新設を要さないが、将来「節目の質問」を設ける場合は述語の新設が前提になる。
-- **C-3(directive 面の値域は2値)** — `intent_autonomy_mode` は `"semi" | "full"` の2値で `none` を持たない(`tools/amadeus-directive.ts:97` / `:606`)。`--autonomy` の値域はこれと一致させる(FR-CLI-2)。
+- **C-3(directive 面の値域は2値、CLI の値域は3値)** — `intent_autonomy_mode` は `"semi" | "full"` の2値で `none` を持たない(`tools/amadeus-directive.ts:97`、verbatim `  intent_autonomy_mode?: "semi" | "full";`、検査は `:606` verbatim `  checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);`)。一方 `--autonomy` の値域は `AutonomyMode`(`tools/amadeus-intent-autonomy.ts:11`)と同じ3値である(**ユーザー裁定 2026-08-05 による改訂**)。この語彙差は意図的であり、`none` は「自律を宣言しない」状態であって directive が autonomy を搬送する場面が存在しないことに対応する。設計は両者を**同一視しない**こと — `--autonomy none` の受理が directive の値域を広げてはならない。
 - **C-4(互換投影の潰れ)** — `Construction Autonomy Mode` は `flags.mode === "full" ? "autonomous" : "gated"` により **`semi` と `none` がともに `gated` へ潰れる**(`tools/amadeus-bolt.ts:1071` verbatim `      const schedulingMode = flags.mode === "full" ? "autonomous" : "gated";`)。本 intent はこの投影を変更しない(Q3=A で budget mode 不変)。
 - **C-5(source-only 境界)** — `stage-protocol.md` は on-disk 14 本のミラーを持つが `git ls-files` 追跡は canonical 1 本のみ(件数は上記 `find ... | wc -l` の出力からの転記。`code-structure.md` 現在節は「`.claude/` 以下は同一内容ミラー」の質的記述のみで件数を持たない)。編集は canonical のみ、他は再生成物。
 - **C-6(READ_ONLY_FLAGS 不可)** — autonomy は監査済みの状態変更であるため、read-only フラグの絶対優先梯子(`tools/amadeus-orchestrate.ts:1014-1016`)へは入れられない。
@@ -314,7 +314,7 @@
 | FR-STOP-2 | `:24` / Out(stop 継続予算不変) | In-5 / Out |
 | FR-POL-1 / FR-POL-2 | `:20`(方針なしは縮退 = 方針ありの経路が要る) | In-3 |
 | FR-POL-3 | `:24`(`--policies-file` 無音破棄の loud 化) | In-3 |
-| FR-CLI-1 / FR-CLI-2 / FR-CLI-3 | `:22`(`/amadeus --autonomy semi\|full` が動作、semi は即時設定) | In-2 |
+| FR-CLI-1 / FR-CLI-2 / FR-CLI-3 | `:22`(`/amadeus --autonomy semi\|full` が動作、semi は即時設定)+ **ユーザー裁定 2026-08-05(3値化)** | In-2 |
 | FR-CLI-4 | `:22`(full は grant 実在時走行・不在時 fail-closed 停止、**落ちる実証**) | In-2 / In-6 |
 | FR-CLI-5 | `:22`(semi は即時設定 — provenance 要求は緩めない) | In-2 |
 | FR-DISP-1 / FR-DISP-2 | #2067 旧本文の残余(同一語彙の表示) | In-4 |

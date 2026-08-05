@@ -121,7 +121,7 @@
 
 推奨(agent recommendation): **A** — 値の漏れ(`:1072-1073`)を確実に塞ぎ、mode の書き換えという不可逆寄りの操作を「明示コマンド経由のみ」に保てるため。あわせて HUMAN_TURN provenance の出所(`applyProductionAutonomyMode:409-411` が `latestHumanTurnId` を要求し、null なら `PROVENANCE_REQUIRED`)は要件で固定し、フラグ自体を provenance とみなさないことを明記する。
 
-[Answer]: A — `--autonomy` は `semi|full` の2値。値を必ず consume する(`amadeus-orchestrate.ts:1072-1073` の intent 自由文流入を塞ぐ)。`none` と不正値は loud に拒否。再宣言は同値 no-op / 異値 loud。フラグ自体を provenance とみなさず、HUMAN_TURN provenance の出所(`applyProductionAutonomyMode:409-411` が `latestHumanTurnId` を要求し null なら `PROVENANCE_REQUIRED`)を要件で固定する。 decision: auto-decision-cb4ca48c9f16ed8c00d4fa0e70dbaf78(decider: solo-election、reviewState: unreviewed)
+[Answer]: A — **【ユーザー裁定 2026-08-05 により改訂】`--autonomy` は `none|semi|full` の3値**(当初の選挙裁定 A は `semi|full` の2値だったが、ユーザーが「mode の値域が `AutonomyMode = "none" | "semi" | "full"` なのにフラグだけ2値なのは非対称」として3値化を裁定。`--autonomy none` は **grant 不在時のみ受理**し、active grant があるときは loud に拒否して明示の revoke コマンドを要求する — 不可逆寄りの操作をフラグの側面効果にしない、という当初裁定の趣旨は保存する。エスカレーション正準リスト(4)仕様変更によりユーザー専権)。値を必ず consume する(`amadeus-orchestrate.ts:1072-1073` の intent 自由文流入を塞ぐ)。`none` と不正値は loud に拒否。再宣言は同値 no-op / 異値 loud。フラグ自体を provenance とみなさず、HUMAN_TURN provenance の出所(`applyProductionAutonomyMode:409-411` が `latestHumanTurnId` を要求し null なら `PROVENANCE_REQUIRED`)を要件で固定する。 decision: auto-decision-cb4ca48c9f16ed8c00d4fa0e70dbaf78(decider: solo-election、reviewState: unreviewed)
 
 ## Q6. 旧仕様ピンの改訂範囲(`t431` の同居ピンをどう扱うか)
 

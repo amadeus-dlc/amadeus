@@ -7,6 +7,8 @@
 
 ## Deviations
 
+- 2026-08-05T07:10:00Z — 選挙裁定 Q5=A(`--autonomy` は `semi|full` の2値)を**ユーザー裁定により 3値**(`none|semi|full`)へ改訂した。仕様変更はエスカレーション正準リスト(4)によりユーザー専権であり、選挙裁定を上書きする。趣旨(不可逆寄りの grant 取消をフラグの側面効果にしない)は `--autonomy none` の受理条件(active grant 不在時のみ受理、grant ありは loud 拒否)として保存。反映先: questions Q5 の `[Answer]`、requirements の FR-CLI-1 / FR-CLI-2 / C-3 / トレーサビリティ表、scope-document In-2 と承認系譜。
+
 ## Tradeoffs
 
 - 2026-08-05T06:30:00Z — 選挙 CLI は1選挙1質問の様式だが、6問を個別選挙にすると投票コストが6倍になるため、各問の agent recommendation を束ねた一括審議形(choice 1 = 全採用 / 2 = 一部別案 / 3 = 質問自体に欠落)とした。投票者には各問を独立に検証するよう指示し、実際に per-question の検証結果が両票から返っている。
