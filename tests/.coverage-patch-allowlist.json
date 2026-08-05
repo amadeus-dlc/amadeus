@@ -6350,5 +6350,15 @@
     },
     "reason": "The record CLI dispatch arm is exercised by t-advisory-choice-record's spawned-CLI cases (success JSON shape, missing-flag usage, unknown-subcommand refusal); Bun does not attribute child-process execution to the parent LCOV report — the same boundary the two correct-misattributed entries above record.",
     "expiry": "remove when the CLI dispatch is testable in-process"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-authoring.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:6601b73c10f23f39b59a60dffb571969e36788102d08258e8217b64988e2091e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
   }
 ]

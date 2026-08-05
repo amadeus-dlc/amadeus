@@ -29,6 +29,8 @@
     "tools/run-model-check.ts",
     "tools/run-skeleton-ci.ts",
     "tools/tla-arm.ts",
+    "tools/tla-authoring.ts",
+    "tools/tla-evidence.ts",
     "tools/tla-model-loader-internal.ts",
     "tools/tla-model-loader.ts",
     "tools/tla-model-map.ts",
