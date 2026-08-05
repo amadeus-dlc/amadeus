@@ -1016,7 +1016,9 @@ function main(): void {
       case "acknowledge-compaction":
         handleAcknowledgeCompaction(args.slice(1));
         break;
-      case SESSION_TAKEOVER_VERB:
+      // The literal (not SESSION_TAKEOVER_VERB) keeps this arm visible to the
+      // registry drift guard's case-literal extractor (t416).
+      case "session-takeover":
         handleSessionTakeover(args.slice(1));
         break;
       case "reuse-artifact":
