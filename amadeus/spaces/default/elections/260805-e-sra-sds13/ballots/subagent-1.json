@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-SDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測で4点確認: (1) 候補の実在 = amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/ideation/scope-definition/memory.md:5(Interpretations、c1: scope は birth 時ユーザー既決のため質問を Issue #2253 導出5問へ絞り全件 decide-question で裁定)と :11(Tradeoffs、c2: feasibility-assessment / constraint-register が EXECUTE 集合に feasibility 非含のため consumes に現れず上流参照は intent-statement.md のみ)を実読。diary :15 の Open questions も §13 候補 0 件と自己申告しており conductor 提案と整合。(2) c1 の既被覆 = project.md:187 cid:intent-capture:c1(事前裁定済み intent では質問を未決判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映 — 質問の重複再演をしない)が、ステージ違い(intent-capture vs scope-definition)を除き同型を既に一般形で定めている。加えて project.md:262 cid:requirements-analysis:c5(既存の流儀で決まる事項は問わず、質問は真に未決の判断のみ)が導出面を、project.md:274 cid:intent-capture:c1-option-direction が提示様式面を既に埋めており、c1 から新規の一般化価値は取れない。(3) c2 の既被覆 = team.md:299 cid:nfr-requirements:upstream-coverage-conditional-consumes(条件付き consumes の扱い)と project.md:301 cid:nfr-design:c1-brief-skip-resolution(SKIP 由来で除外された consumes とその根拠の明示)が条件解決面を既にカバー。(4) さらに c2 は発見ですらない — .claude/amadeus-common/stages/ideation/scope-definition.md:16-21 で feasibility-assessment / constraint-register は `required: false` と stage frontmatter が自ら宣言しており、engine が契約どおり解決した正常系の観測にすぎない。よって両候補とも memory 層へ persist せず record 固定に留める 0 件案に全面的に同意する。",
+  "submittedAt": "2026-08-05T06:00:00Z"
+}
