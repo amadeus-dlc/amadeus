@@ -150,7 +150,7 @@
       "anchorLines": 15,
       "targetLines": "1-15"
     },
-    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 and t453 integration; spawned execution is not attributed to parent Bun LCOV. The refusal's await-completion vs error decision is not waived here: it lives in the pure completionRefusalDirective seam covered in-process by t448.",
+    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 and t453 integration; spawned execution is not attributed to parent Bun LCOV. The refusal's await-completion vs error decision is not waived here: it lives in the pure completionRefusalDirective seam covered in-process by tests/unit/t451-completion-refusal-directive.test.ts.",
     "expiry": "remove when record resolution and directive emission are injectable in-process or Bun merges child-process coverage"
   },
   {
@@ -6391,7 +6391,7 @@
       "anchorLines": 2,
       "targetLines": "1-2"
     },
-    "reason": "awaitCompletion ends in process.exit, so it cannot be driven in-process without killing the runner; it is the await-completion sibling of the error() helper immediately above it and is waived on the same grounds. The refusal it prints is asserted through the shipped CLI in tests/integration/t453-await-completion-directive.integration.test.ts (typed kind on stderr, non-zero exit, byte-identical state, no ERROR_LOGGED row), and the wait-vs-failure decision that selects it is covered in-process by tests/unit/t448-completion-refusal-directive.test.ts.",
+    "reason": "awaitCompletion ends in process.exit, so it cannot be driven in-process without killing the runner; it is the await-completion sibling of the error() helper immediately above it and is waived on the same grounds. The refusal it prints is asserted through the shipped CLI in tests/integration/t453-await-completion-directive.integration.test.ts (typed kind on stderr, non-zero exit, byte-identical state, no ERROR_LOGGED row), and the wait-vs-failure decision that selects it is covered in-process by tests/unit/t451-completion-refusal-directive.test.ts.",
     "expiry": "remove when amadeus-state's process exit is injectable in-process or Bun attributes spawned CLI lines"
   },
   {
