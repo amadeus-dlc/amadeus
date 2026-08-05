@@ -534,7 +534,12 @@ describe("protected advisory choice persistence", () => {
 
   test("invalid pending and receipt store members fail closed", () => {
     for (const mutate of [
-      (store: AdvisoryChoiceStore) => { store.pending[0]!.identity.code = "unknown" as "changed"; },
+      // A malformed code still fails closed. The set of ACCEPTED codes is no
+      // longer the three activation kinds alone: a composed plugin declares its
+      // own advisory code (ADR-6 revision), so a well-formed slug like
+      // "unknown" is now a legitimate declared code and only a code that
+      // cannot be one — e.g. one carrying spaces — is invalid.
+      (store: AdvisoryChoiceStore) => { store.pending[0]!.identity.code = "not a code" as "changed"; },
       (store: AdvisoryChoiceStore) => { store.pending[0]!.message = ""; },
       (store: AdvisoryChoiceStore) => { store.pending[0]!.closedAt = ""; },
       (store: AdvisoryChoiceStore) => { (store as unknown as Record<string, unknown>).schema = 2; },
