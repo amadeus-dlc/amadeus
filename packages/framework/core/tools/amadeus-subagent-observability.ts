@@ -12,6 +12,9 @@
 // that consume it sit above it, and keeping the dependency one-way removes the
 // possibility of a cycle.
 
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 // The harness builtin types. Count-free by intent: entries carry their origin,
 // never a total, so adding a harness does not strand a stale number.
 //
@@ -63,6 +66,59 @@ export function sanitizeAdvisoryValue(value: string): string {
   return firstLine.replace(CONTROL_CHARS, "").trim();
 }
 
+// Frontmatter `name:` on the first lines of an agent definition. Anchored to the
+// line start so a `name:` nested inside a later block cannot claim the persona.
+const FRONTMATTER_NAME = /^name:[ \t]*(.+?)[ \t]*$/m;
+
+/** The persona name a definition file declares, or null when it declares none. */
+function personaNameOf(body: string): string | null {
+  const fenceEnd = body.indexOf("\n---", 3);
+  const frontmatter = body.startsWith("---") && fenceEnd > 0 ? body.slice(3, fenceEnd) : body;
+  const name = FRONTMATTER_NAME.exec(frontmatter)?.[1];
+  if (name === undefined) return null;
+  const unquoted = name.replace(/^["']|["']$/g, "").trim();
+  return unquoted === "" ? null : unquoted;
+}
+
+/**
+ * Resolve the allowed set from the harness `agents/` dir plus the builtin ledger.
+ *
+ * Never throws: a missing or unreadable dir degrades to the ledger alone with the
+ * reason in `warnings`, because this check is advisory and must not be able to
+ * take down the audit write that calls it.
+ */
+export function resolveAllowedAgentTypes(agentsDir: string): AllowedSetResolution {
+  const allowed = new Set<string>(BUILTIN_AGENT_TYPES);
+  const warnings: string[] = [];
+  let personaCount = 0;
+
+  let entries: string[];
+  try {
+    entries = readdirSync(agentsDir).filter((n) => n.endsWith(".md"));
+  } catch (e) {
+    warnings.push(`agents dir unreadable (${agentsDir}): ${e instanceof Error ? e.message : String(e)}`);
+    return { allowed, personaCount, warnings };
+  }
+
+  for (const entry of entries.sort()) {
+    let body: string;
+    try {
+      body = readFileSync(join(agentsDir, entry), "utf-8");
+    } catch (e) {
+      warnings.push(`agent definition unreadable (${entry}): ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    const name = personaNameOf(body);
+    if (name === null) {
+      warnings.push(`agent definition has no frontmatter name (${entry})`);
+      continue;
+    }
+    allowed.add(name);
+    personaCount += 1;
+  }
+
+  return { allowed, personaCount, warnings };
+}
 
 /**
  * Classify a normalized Agent Type. First match wins, and the order matters:
