@@ -14,4 +14,5 @@
 
 ## Open questions
 
+- 2026-08-05T09:40:00Z — §13 選定はソロ選挙 E-SRA-DPS13 で確定(2-0 established、choice 1「0件」、GoA 2x2)。留保転記: (subagent-1) conductor の不採用理由の cid 帰属は不正確 — intra-bolt-order cid は Bolt **内**順序を縛り波 B 後置(Bolt **間**)は射程外。実体は cid:code-generation:c6(交差時のみ直列化・実 diff 再評価)+ cid:requirements-analysis:parallel-bolts(上限4)が被覆するため 0 件の結論は不変 / (両者収斂) 後置一意化・U-2 ゲート同乗パターンは境界的候補 — 別 intent で同型の有効性(または欠如による遅延)が実測されたら次回 §13 で昇格を再検討
 - 2026-08-05T09:25:00Z — §13 学習候補: 0件(トポロジ逸脱の申告様式は cid:delivery-planning:intra-bolt-order-as-risk-control の適用実例、0問様式は eoc1 系 cid の適用実例。新規の一般化価値なし)。
