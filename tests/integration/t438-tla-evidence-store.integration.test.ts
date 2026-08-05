@@ -115,6 +115,41 @@ describe("EvidenceBundle.build", () => {
     });
   });
 
+  // BR-U1-15 covers "absent OR unverifiable": a chain whose base is corrupt has
+  // no inductive foundation, so the child must not be accepted either.
+  test("refuses a predecessor whose bytes no longer parse", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    writeFileSync(join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(root)), "{ not json", "utf8");
+    expect(failure(EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, meta))).toEqual({
+      kind: "predecessor-broken",
+      digest: root.digest,
+    });
+  });
+
+  test("refuses a predecessor whose bytes no longer match its filename", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const path = join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(root));
+    writeFileSync(path, readFileSync(path, "utf8").replace('"t438"', '"tamper"'), "utf8");
+    expect(failure(EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, meta))).toEqual({
+      kind: "predecessor-broken",
+      digest: root.digest,
+    });
+  });
+
+  test("accepts a predecessor recording a different subject identity (a revision)", () => {
+    const root = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const revised = unwrap(
+      EvidenceBundle.build(storeRoot, authoringParts, { kind: "bundle", digest: root.digest }, {
+        ...meta,
+        subjectIdentity: otherIdentity,
+      }),
+    );
+    expect(unwrap(EvidenceBundle.verify(storeRoot, revised, otherIdentity)).envelope.predecessor).toEqual({
+      kind: "bundle",
+      digest: root.digest,
+    });
+  });
+
   test("reports a corrupted collision as io-failure instead of overwriting", () => {
     const ref = unwrap(EvidenceBundle.build(storeRoot, authoringParts, { kind: "root" }, meta));
     writeFileSync(join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(ref)), "corrupted", "utf8");
@@ -176,6 +211,15 @@ describe("EvidenceBundle.read", () => {
   test("propagates an absent file as missing-part", () => {
     const absent = { digest: unwrap(EvidenceEnvelopeCodec.parseBundleDigest(`sha256:${"d".repeat(64)}`)) };
     expect(failure(EvidenceBundle.read(storeRoot, absent)).kind).toBe("missing-part");
+  });
+
+  // read is verify steps 1..3 (business-logic-model.md §5): the digest check is
+  // part of reading, so tampered bytes must never reach a caller.
+  test("detects tampering as digest-mismatch instead of returning the parts", () => {
+    const ref = unwrap(EvidenceBundle.build(storeRoot, terminalParts, { kind: "root" }, meta));
+    const path = join(storeRoot, EvidenceEnvelopeCodec.fileNameFor(ref));
+    writeFileSync(path, readFileSync(path, "utf8").replace('"non-target"', '"author"'), "utf8");
+    expect(failure(EvidenceBundle.read(storeRoot, ref)).kind).toBe("digest-mismatch");
   });
 });
 
