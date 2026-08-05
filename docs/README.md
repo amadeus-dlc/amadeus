@@ -51,6 +51,7 @@ to add one.
 - [Keeping a formal model in step with its implementation](reference/21-formal-model-following.md)
 - [Supplying a formal model for a new protocol](reference/22-formal-model-supply.md)
 - [Telemetry Schema reference](reference/23-telemetry-schema.md)
+- [Intent autonomy, review, and completion](reference/24-intent-autonomy.md)
 
 The repository layout decision is recorded in
 [Workspace Layout Decision](reference/18-workspace-layout.md): the framework
