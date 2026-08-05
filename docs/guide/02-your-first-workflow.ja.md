@@ -166,7 +166,7 @@ walking skeletonには実在するgateがあり、Intent自律レベルに従っ
 ```text
 Intent autonomy
   ▸ none — humans decide every gate and question
-  ▸ semi — pre-approve in-phase gates; ask at phase boundaries and questions
+  ▸ semi — pre-approve in-phase gates and auto-decide questions; ask at milestones (phase boundaries, walking skeleton, Intent completion)
   ▸ full — decide authorised gates and questions through Intent completion
 ```
 
