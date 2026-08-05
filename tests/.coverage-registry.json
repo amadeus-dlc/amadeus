@@ -27,7 +27,7 @@
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 108,
+      "subcommand": 109,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -6665,6 +6665,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state session-takeover",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
