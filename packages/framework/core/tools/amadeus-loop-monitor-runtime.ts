@@ -99,7 +99,13 @@ export type LoopMonitorEvent =
       readonly humanTurnId: string | null;
     }
   | { readonly type: "WORKFLOW_UNPARKED"; readonly monitorId: string; readonly reasonCode: string }
-  | { readonly type: "LOOP_JUDGE_AWAITING_HUMAN"; readonly invocationId: string; readonly reason: string };
+  | { readonly type: "LOOP_JUDGE_AWAITING_HUMAN"; readonly invocationId: string; readonly reason: string }
+  | {
+      readonly type: "LIVE_SMOKE_AUTHORIZED";
+      readonly authorizationId: string;
+      readonly actorId: string;
+      readonly scopeDigest: string;
+    };
 
 export interface LoopMonitorEventSet {
   readonly eventSetId: string;
@@ -288,6 +294,7 @@ const RUNTIME_EVENT_HANDLERS = {
   LOOP_LATCH_SET: (projection, _monitor, event) => ({ ...projection, latch: event.latch, pendingJudge: null }),
   LOOP_LATCH_CLEARED: (projection) => ({ ...projection, latch: null, awaitingHumanReason: null }),
   WORKFLOW_UNPARKED: (projection) => projection,
+  LIVE_SMOKE_AUTHORIZED: (projection) => projection,
   LOOP_JUDGE_AWAITING_HUMAN: (projection, _monitor, event) => ({
     ...projection,
     awaitingHumanReason: event.reason,
@@ -452,6 +459,34 @@ export function verifyHumanRetry(value: { readonly eventType: string; readonly a
     : null;
 }
 
+// The credential-attested authorization seam for opt-in live smoke runs
+// (#2067 Bolt 5). The port is supplied by the harness environment; the
+// coordinator only records the granted authorization as a partition event and
+// never invents one.
+export interface LiveAuthorizationPort {
+  authorize(request: {
+    readonly intentUuid: string;
+    readonly monitorId: string;
+    readonly scopeDigest: string;
+    readonly harnessId?: string;
+    readonly implementationRevision?: string;
+    readonly packageDigest?: string;
+    readonly registryDigest?: string;
+    readonly scenarioDigest?: string;
+  }):
+    | {
+        readonly authorized: true;
+        readonly authorizationId: string;
+        readonly actorId: string;
+        readonly environmentId?: string;
+        readonly issuerPrincipalId?: string;
+        readonly traceId?: string;
+        readonly spanId?: string;
+        readonly attestationDigest?: string;
+      }
+    | { readonly authorized: false; readonly reason: string };
+}
+
 export interface LoopMonitorCoordinator {
   observeDelivery(delivery: LoopDelivery): LoopMonitorCoordinatorResult;
   dispatchJudge(permit: CommittedJudgeDispatchPermit, port: JudgePort): LoopMonitorCoordinatorResult;
@@ -460,6 +495,11 @@ export interface LoopMonitorCoordinator {
     readonly partition: LoopMonitorPartition;
     readonly humanRetry?: VerifiedHumanTurn;
   }): LoopMonitorCoordinatorResult;
+  authorizeLiveSmoke(
+    partition: LoopMonitorPartition,
+    scopeDigest: string,
+    port: LiveAuthorizationPort,
+  ): { readonly kind: "authorized"; readonly receipt: LoopMonitorCommitReceipt } | { readonly kind: "CONFLICT"; readonly reason: string };
   readProjection(partition: LoopMonitorPartition): LoopMonitorRuntimeProjection;
 }
 
@@ -808,6 +848,25 @@ export function createLoopMonitorCoordinator(options: {
         append(set);
         const projection = foldLoopMonitorEventSets([...sets, set], request.partition, monitor);
         return { kind: "cleared", projection };
+      });
+    },
+
+    authorizeLiveSmoke(partition, scopeDigest, port) {
+      if (resolve(partition) === null) return { kind: "CONFLICT", reason: "partition-not-in-compiled-graph" };
+      const authorization = port.authorize({
+        intentUuid: partition.intentUuid,
+        monitorId: partition.monitorId,
+        scopeDigest,
+      });
+      if (!authorization.authorized) return { kind: "CONFLICT", reason: authorization.reason };
+      return repository.transaction(partition, (_sets, append) => {
+        const receipt = append(eventSet(partition, `live-smoke:${authorization.authorizationId}`, authorization, [{
+          type: "LIVE_SMOKE_AUTHORIZED",
+          authorizationId: authorization.authorizationId,
+          actorId: authorization.actorId,
+          scopeDigest,
+        }]));
+        return { kind: "authorized", receipt };
       });
     },
 
