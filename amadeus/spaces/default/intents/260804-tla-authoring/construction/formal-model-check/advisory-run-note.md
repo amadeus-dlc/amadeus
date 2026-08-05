@@ -10,3 +10,8 @@
 - センサー: model-completeness PASSED(2026-08-05T22:35:36Z)
 - engine 記録: synthetic workflow `single-stage:formal-model-check` で committed(本線 Current Stage 不変)
 - 実行残渣(FormalElection/ MirrorLifecycle/ の run dirs、未追跡)は verdict 転記後に削除
+
+## 追記(advisory 相関 run、2026-08-05T22:4xZ)
+
+- directive の `formal_checks[].command` を実行(相関3フラグ = --advisory-target / --advisory-spec-identity / --advisory-instance 同梱)。**verbatim からの逸脱1点(申告)**: 無変更実行は provider auto が Darwin 環境検査で ENVIRONMENT_UNAVAILABLE(exit 2、fail-closed 正常動作)となったため、`--provider docker` を付加して再実行 — TLC 探索の意味論には非関与の実行環境引数のみ
+- 結果: `{"outcome":"NOT_DETECTED","exitCode":0}`(runId 7e7e881f…)。engine の next が advisory 解消を確認し build-and-test の run-stage を emit(await-advisory-choice 消滅を実測)
