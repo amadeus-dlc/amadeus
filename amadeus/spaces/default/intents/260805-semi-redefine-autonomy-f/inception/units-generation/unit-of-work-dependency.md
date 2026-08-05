@@ -73,6 +73,11 @@ flowchart TD
 | `semi-docs-revision` → `stop-question-carveout` | `requirements.md` FR-LAD-6(走行単位の主張の限定 — 「質問で止まらない」)の docs 面。走行が質問で止まらない事実は hook の carve-out が着地して初めて成立する | `components.md` C18 の充足 FR に FR-LAD-6(docs へ「phase を完走する」と書かないこと)が挙がっている |
 | `semi-docs-revision` → `launch-autonomy-flag` | `requirements.md` FR-DOC-2 が `stage-protocol.md:125` を「起動フラグ追加に伴い同期する」と規定する | `--autonomy` の CLI 契約が docs の記述対象になる |
 
+### 辺の強度の注記(hard = 型・コンパイル結合 / soft = 意味論)
+
+- **hard**: `semi-policy-carrier` → `semi-authorization-core`(`semiPolicies?` フィールド宣言と `semiPoliciesOf` が core に無いと型が通らない)/ `advisory-auto-resolution` → `semi-authorization-core`(`commitProductionQuestionDecision` 経由で `DecisionAuthority` に間接依存)
+- **soft**: `stop-question-carveout` → `semi-authorization-core`(carve-out 述語は既存 `readProductionAutonomyProjection` と `modeProvenance` のみを読み core の新設型を参照しない — 意味が出るのは core 着地後、という意味論的依存)/ `semi-docs-revision` → 3 Unit(docs は実装着地後に書くという順序依存)。delivery-planning は soft 辺を並行機会として扱ってよい(§12a iteration 1 指摘)
+
 ### 依存しない辺(不在の根拠)
 
 | 想定されうる辺 | 不在の根拠 |
@@ -80,6 +85,7 @@ flowchart TD
 | `semi-authorization-core` → `semi-policy-carrier`(逆向き) | ADR-4 が `semiPolicies` を**任意フィールド**と定め、不在を「方針ゼロ」= 梯子 0 段目の縮退という**正当なドメイン状態**として扱う(ADR-4 §「これは互換シムではない」の根拠 3)。core は書き手の存在を前提にしない。したがって逆向きの辺は生じず、循環にもならない |
 | `launch-autonomy-flag` → `semi-authorization-core` | ADR-8 Decision「engine が持つのは判定と委譲のみで、書込は既存 `applyProductionAutonomyMode` が独占する」。C13 は既存経路へ委譲し、`SemiAuthority` / `DecisionAuthority` を参照しない。値域は既存 `AutonomyMode`(`amadeus-intent-autonomy.ts:11`、verbatim `export type AutonomyMode = "none" | "semi" | "full";`)であり新設型ではない |
 | `launch-autonomy-flag` → `autonomy-statusline`(および逆向き) | ADR-10 により statusline は state ファイルの `Intent Autonomy Mode` を読む。このフィールドは Intent の birth 時点で必ず書かれる(`amadeus-utility.ts:4635` verbatim `- **Intent Autonomy Mode**: none` — `components.md` §C14〜C15 の実測)ため、statusline は `--autonomy` の着地を待たない |
+| `launch-autonomy-flag` → `semi-policy-carrier` | 上流 `component-dependency.md:29` は C13 → C9 の辺を持つが、Unit 間の辺としては不要 — C13 の呼び出しは既存 `applyProductionAutonomyMode` に対するもので、`semi-policy-carrier` が `policies` 引数を足しても既定値(空配列)で成立する(`component-methods.md:323` の `prepareNonFullCommand(before, input.mode, normalized)` — `policies` の供給元は既存 `normalized` であり carrier の着地を待たない)。上流マトリクスの辺の消去にあたるため本行で申告する(§12a iteration 1 指摘) |
 | `autonomy-statusline` → 任意 | `component-dependency.md` の依存マトリクスで C14 の行・列がともに空。§ファイル単位の交差判定 も `amadeus-statusline.ts` (325) を「**独立**」と分類 |
 | `advisory-auto-resolution` → `semi-policy-carrier` | C16 は方針を読まない。梯子 0 段目の解決可否は advisory の裁定結果に影響するが、ADR-6 により advisory の `selector` は毎回異なる(`advisoryInstance` = `randomUUID()`)ため confirmed-policy 段は構造的に一致せず、方針の有無に依存しない(ADR-6 Consequences「advisory の裁定は実効的に3段」) |
 | `semi-docs-revision` → `semi-policy-carrier` / `autonomy-statusline` / `advisory-auto-resolution` | FR-DOC-1 / FR-DOC-2 が名指す改訂対象は semi の**意味論定義**と起動フラグである。方針の担体・statusline セグメント・advisory 経路は semi の定義文を変えない。ただし本 DAG は `semi-docs-revision` を最後に置くことも許容する(トポロジは順序を1つに固定しない)ため、delivery-planning が docs を一括で最後に流す判断を取ることを妨げない |
@@ -110,7 +116,7 @@ flowchart TD
 | --- | --- | --- |
 | `core/tools/amadeus-intent-autonomy.ts` (961) | `semi-authorization-core`(C1〜C5、C8読)/ `semi-policy-carrier`(C8書) | 依存辺があるため直列。並行しない |
 | `core/tools/amadeus-intent-autonomy-runtime.ts` (800) | `semi-authorization-core`(C6 / C7)/ `semi-policy-carrier`(C15 の envelope) | 同上 |
-| `core/tools/amadeus-intent-autonomy-production.ts` (900) | `semi-policy-carrier`(C9) | 単独 |
+| `core/tools/amadeus-intent-autonomy-production.ts` (900) | `semi-authorization-core`(ADR-3 が裁定した production 層の `SemiAuthorityScope` 組み立て結線 — `fallbackFingerprints` を export し `SemiAuthority.of(projection, scope)` へ渡す。C1〜C18 の列挙に現れない上流欠落を §12a iteration 1 指摘で core 所属と確定。行数は core の 237 行見積りの内数)/ `semi-policy-carrier`(C9) | **core + carrier(依存辺 carrier → core により直列)。並行しない** |
 | `core/tools/amadeus-bolt.ts` (1312) | `semi-policy-carrier`(C10) | 単独 |
 | `core/tools/amadeus-utility.ts` (6327) | `semi-policy-carrier`(C15 の1行) | 単独 |
 | `core/hooks/amadeus-stop.ts` (1020) | `stop-question-carveout`(C11) | 単独・独立 |
