@@ -246,12 +246,10 @@ function manifest(overrides: Partial<ReductionManifest> = {}): ReductionManifest
 /** A toolchain whose verdict per run kind is dictated by the test. */
 function fakeToolchain(
   verdicts: Partial<Record<TlcRunRequest["kind"], TlcExploration>> = {},
-): { toolchain: TlcToolchain; requests: TlcRunRequest[] } {
-  const requests: TlcRunRequest[] = [];
+): { toolchain: TlcToolchain } {
   const toolchain: TlcToolchain = {
     versionLine: "TLC2 Version 2.19",
     run: (request) => {
-      requests.push(request);
       const dictated = verdicts[request.kind];
       if (dictated !== undefined) return Promise.resolve(dictated);
       return Promise.resolve(
@@ -259,11 +257,11 @@ function fakeToolchain(
       );
     },
   };
-  return { toolchain, requests };
+  return { toolchain };
 }
 
 function fakeWorkshop(failFor: readonly string[] = []): MutationWorkshop {
-  const discarded: string[] = [];
+
   return {
     prepare: (_model, spec) =>
       Promise.resolve(
@@ -278,9 +276,7 @@ function fakeWorkshop(failFor: readonly string[] = []): MutationWorkshop {
               },
             },
       ),
-    discard: (plan) => {
-      discarded.push(plan.mutationRef);
-    },
+    discard: () => {},
   };
 }
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
@@ -355,12 +355,15 @@ describe("the filesystem mutation workshop", () => {
 
   test("a falling mutation whose anchor is absent leaves no temporary directory behind", async () => {
     const model = writeModel(IDENTITY);
+    const before = readdirSync(tmpdir()).filter((name) => name.startsWith("amadeus-tla-mutant-")).length;
     const prepared = await MutationWorkshopFs.prepare(model, {
       kind: "falling",
       invariant: invariant("TypeOK"),
       mutation: { find: "Absent ==", replace: "x" },
     });
     expect(failure(prepared)).toMatchObject({ kind: "mutation-failure" });
+    const after = readdirSync(tmpdir()).filter((name) => name.startsWith("amadeus-tla-mutant-")).length;
+    expect(after).toBe(before);
   });
 
   test("the default dependencies read the manifest off disk", () => {
@@ -546,7 +549,7 @@ describe("the production referee toolchain adapter (CI-safe surface)", () => {
       "INIT Init\n",
     );
     const toolchain = createRefereeToolchain({ cacheRoot: join(dir, "cache") });
-    expect(toolchain.run({ kind: "baseline", modulePath, configPath, invariant: null, mutationRef: null }))
+    await expect(toolchain.run({ kind: "baseline", modulePath, configPath, invariant: null, mutationRef: null }))
       .rejects.toThrow(/referee toolchain:/);
   });
 
@@ -561,5 +564,12 @@ describe("the production referee toolchain adapter (CI-safe surface)", () => {
       .toEqual(["TypeOK", "Safe", "Live"]);
     expect(RefereeToolchainInternals.traceStateVariablesOf("VARIABLES a, b\n")).toEqual(["a", "b"]);
     expect(RefereeToolchainInternals.traceStateVariablesOf("no declarations here")).toEqual([]);
+  });
+
+  test("folded declaration lists keep their continuation lines and stop at the next statement", () => {
+    expect(RefereeToolchainInternals.traceStateVariablesOf("VARIABLES receipts,\n          pending\nInit == TRUE\n"))
+      .toEqual(["receipts", "pending"]);
+    expect(RefereeToolchainInternals.declaredInvariantsOf("INVARIANT TypeOK,\n  Safe\nSPECIFICATION Spec\n"))
+      .toEqual(["TypeOK", "Safe"]);
   });
 });

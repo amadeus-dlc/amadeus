@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // tla-authoring.ts — the TLA+ authoring CLI. U1 owns the `identity` and
-// `bundle` subcommands, U3 owns `trace`; U2 and U4 add theirs alongside.
+// `bundle` subcommands, U3 owns `trace` and `proof`; U2 and U4 add theirs
+// alongside.
 //
 // Contract (component-methods.md § common rules): one JSON line on stdout,
 // exit 0 on success, 1 on a typed failure, 2 on a usage error. Dispatch only —
@@ -643,7 +644,12 @@ async function proofEvaluate(
 }
 
 type Handler = (flags: Record<string, string>) => Emitted;
-type AsyncHandler = (flags: Record<string, string>, dependencies?: AuthoringDependencies) => Promise<Emitted>;
+// A flat handler may be sync or async; dispatch already returns a Promise, so
+// a sync return is folded in for free.
+type FlatHandler = (
+  flags: Record<string, string>,
+  dependencies?: AuthoringDependencies,
+) => Emitted | Promise<Emitted>;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   identity: { extract: identityExtract, compare: identityCompare },
@@ -663,13 +669,10 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
 };
 
 // Commands whose whole contract is one verb, so they take flags directly.
-const FLAT_COMMANDS: Readonly<Record<string, Handler>> = {
+// The proof referee drives TLC through a child process, so its handler is async.
+const FLAT_COMMANDS: Readonly<Record<string, FlatHandler>> = {
   hold: holdEvaluate,
   trace: traceEvaluate,
-};
-
-// The proof referee drives TLC through a child process, so its handler is async.
-const ASYNC_FLAT_COMMANDS: Readonly<Record<string, AsyncHandler>> = {
   proof: proofEvaluate,
 };
 
@@ -678,12 +681,10 @@ async function dispatch(
   dependencies?: AuthoringDependencies,
 ): Promise<Emitted> {
   const [group, verb, ...rest] = argv;
-  if (group !== undefined && (Object.hasOwn(FLAT_COMMANDS, group) || Object.hasOwn(ASYNC_FLAT_COMMANDS, group))) {
+  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
     const flatFlags = parseFlags(verb === undefined ? [] : [verb, ...rest]);
     if (flatFlags === null) return usageError("flags must be given as --name value pairs");
-    return Object.hasOwn(ASYNC_FLAT_COMMANDS, group)
-      ? (ASYNC_FLAT_COMMANDS[group] as AsyncHandler)(flatFlags, dependencies)
-      : (FLAT_COMMANDS[group] as Handler)(flatFlags);
+    return (FLAT_COMMANDS[group] as FlatHandler)(flatFlags, dependencies);
   }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving

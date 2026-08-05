@@ -10,7 +10,7 @@
 // enter it (ADR-5, BR-U3-03).
 
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { canonicalIdentity } from "./canonical.ts";
@@ -29,9 +29,13 @@ const MODULE_IDENTITY_DOMAIN = "amadeus.formal-verif.tla.module.v1";
 const CFG_IDENTITY_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
 const DEFAULT_DEADLINE_MS = 180_000;
 
-/** `VARIABLE x` / `VARIABLES x, y` — the trace vocabulary the toolchain labels states with. */
-const VARIABLES_RE = /^\s*VARIABLES?\s+(.+?)\s*$/m;
-const CONFIG_INVARIANT_RE = /^\s*INVARIANTS?\s+(.+?)\s*$/gm;
+/**
+ * `VARIABLE x` / `VARIABLES x, y` — the trace vocabulary the toolchain labels
+ * states with. TLA+ folds long declaration lists onto indented continuation
+ * lines, so both patterns capture the trailing `(?:\n[ \t]+.+)*` block too.
+ */
+const VARIABLES_RE = /^[ \t]*VARIABLES?[ \t]+(.+(?:\n[ \t]+.+)*)/m;
+const CONFIG_INVARIANT_RE = /^[ \t]*INVARIANTS?[ \t]+(.+(?:\n[ \t]+.+)*)/gm;
 
 export interface RefereeToolchainOptions {
   /** Where the TLC jar and the sealed JDK snapshot are cached between runs. */
@@ -165,23 +169,31 @@ async function runOnce(
   );
   if (!planner.ok) fail(JSON.stringify(planner.error));
 
-  const prepared = await toolchain.preparePlanned({
-    artifact: acquired.value,
-    modelReceipt: receipt.value,
-    vocabulary: described.value.vocabulary,
-    modulePath,
-    cfgPath: configPath,
-    subjectAlias: `tla-referee-${request.kind}`,
-    deadlineMs: options.deadlineMs ?? DEFAULT_DEADLINE_MS,
-    runId: randomUUID(),
-    scratchRoot: mkdtempSync(join(tmpdir(), "amadeus-tla-referee-run-")),
-    planner: planner.value,
-  });
-  if (!prepared.ok) fail(JSON.stringify(prepared.error));
+  // Every run gets a fresh scratch root; remove it on every exit so three
+  // referee runs per CLI invocation do not pile up under tmpdir (the mutation
+  // workshop upholds the same discipline for its run directories).
+  const scratchRoot = mkdtempSync(join(tmpdir(), "amadeus-tla-referee-run-"));
+  try {
+    const prepared = await toolchain.preparePlanned({
+      artifact: acquired.value,
+      modelReceipt: receipt.value,
+      vocabulary: described.value.vocabulary,
+      modulePath,
+      cfgPath: configPath,
+      subjectAlias: `tla-referee-${request.kind}`,
+      deadlineMs: options.deadlineMs ?? DEFAULT_DEADLINE_MS,
+      runId: randomUUID(),
+      scratchRoot,
+      planner: planner.value,
+    });
+    if (!prepared.ok) fail(JSON.stringify(prepared.error));
 
-  const executed = await toolchain.runPlanned(prepared.value);
-  if (!executed.ok) fail(JSON.stringify(executed.error));
-  return executed.value.exploration;
+    const executed = await toolchain.runPlanned(prepared.value);
+    if (!executed.ok) fail(JSON.stringify(executed.error));
+    return executed.value.exploration;
+  } finally {
+    rmSync(scratchRoot, { recursive: true, force: true });
+  }
 }
 
 /** The version line every receipt records: the pinned jar plus the pinned JDK. */

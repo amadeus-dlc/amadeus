@@ -48,7 +48,7 @@ const MODULE = [
 
 const CONFIG = ["SPECIFICATION Spec", "INVARIANT TypeOK", ""].join("\n");
 
-const subject = unwrap(IdentityDigest.normalizeStableId("FR-008")) as StableId;
+const subject = unwrap(IdentityDigest.normalizeStableId("FR-008"));
 const identity = IdentityDigest.aggregateDigest([
   [subject, IdentityDigest.contentDigest(subject, "bounded counter")],
 ]);
@@ -81,7 +81,10 @@ writeFileSync(
 
 const model: ModelArtifacts = { modulePath, configPath, reductionManifestPath };
 const invariants: InvariantName[] = [unwrap(InvariantNameCodec.parse("TypeOK"))];
-const toolchain = createRefereeToolchain({ cacheRoot: join(root, "cache") });
+// The pinned jar cache lives outside the per-run root so repeated probes
+// reuse it instead of re-fetching on every invocation.
+const cacheRoot = process.env.AMADEUS_TLA_CACHE_ROOT ?? join(tmpdir(), "amadeus-tla-referee-cache");
+const toolchain = createRefereeToolchain({ cacheRoot });
 
 const startedAt = new Date().toISOString();
 const proof = await ProofObligations.evaluate(model, invariants, identity, toolchain);
