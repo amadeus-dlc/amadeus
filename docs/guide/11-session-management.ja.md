@@ -9,6 +9,11 @@
 > `SESSION_STARTED/RESUMED/ENDED` と `SESSION_COMPACTED` を発火し、Kiro は
 > `SESSION_STARTED` のみ、Codex は `SESSION_ENDED` を推論し、コンパクション後の
 > ミッション再注入を追加します。[他のハーネスでの実行](harnesses/README.ja.md) を参照してください。
+>
+> ワークフローを開始したハーネスとは*別のハーネス*で再開することも、同じ理由でサポートされます。
+> ただし Kimi はマシンローカルの呼び出し元 carrier を追加で保持しており、この carrier は
+> ハーネス跨ぎの引き継ぎで陳腐化しえます。Kimi セッションが「is not the main conductor」で
+> コマンドを拒否する場合は、後述の [ハーネス跨ぎの引き継ぎ](#ハーネス跨ぎの引き継ぎ) を参照してください。
 
 ---
 
@@ -73,6 +78,73 @@ Claude Code が会話コンテキストをコンパクトする前に、`validat
 - 状態ファイルの有効性ステータス
 
 次に `/amadeus` を呼び出すと、AI-DLC は `.amadeus-recovery.md` を `amadeus-state.md` と比較します。「Current stage」フィールドが異なる場合、コンテキストコンパクションによる状態破損の可能性を警告します。
+
+---
+
+## ハーネス跨ぎの引き継ぎ
+
+ワークフロー状態はハーネス非依存です。レコードディレクトリがワークフローのすべてであり、
+どのハーネスでも他のハーネスが中断した地点から引き継げます。ただし1つだけ引き継がれないものがあります —
+Kimi の**呼び出し元 carrier** です。これは `amadeus/.amadeus-sessions/` 配下の clone ごとのファイル群で、
+呼び出し元が周辺の subagent ではなく main conductor であることを証明します。
+
+| ファイル | 役割 |
+|------|------|
+| `kimi-active-subagents.json` | role marker。どのセッションが main で、どの subagent role がアクティブか |
+| `.current-session` | このディレクトリで最後に開始したセッションの、ホストが刻んだ ID |
+| `kimi-subagent-transition-deny` / `kimi-session-ended-deny` | subagent 遷移中およびセッション終了後に fail-closed を保つラッチ |
+
+これらは gitignore 対象で、clone ごと(かつ worktree ごと)です。ワークフローがハーネス・マシン・worktree を
+またいで移動しても carrier は移動しないため、Kimi セッションは carrier を陳腐化した状態で見つけ、
+`unpark` を含むすべての変更系 verb を拒否することがあります。
+
+### 拒否メッセージから原因を読む
+
+拒否メッセージは原因と、それを修復するコマンドを示します。原因は4種類です。
+
+| 原因 | 何が起きたか | 最初の一手 |
+|------|---------------|------------|
+| `marker-absent` | この project dir 配下に role marker がない — このセッションがここで SessionStart を実行していないか、marker が別のディレクトリ(サブディレクトリや別 worktree)に書かれた | Kimi セッションを再起動する |
+| `session-mismatch` | `.current-session` が marker と異なるセッションを指す — 別のハーネスまたは別のセッションが最後にこのワークスペースを取った | Kimi セッションを再起動する |
+| `deny-latch` | 遷移ラッチ、セッション終了の tombstone、または残存した marker のロックがまだ存在する | Kimi セッションを再起動する |
+| `active-role` | subagent role がまだアクティブとして記録されている | subagent の終了を待つ。待てない場合は role を明示して takeover する |
+
+### 第1層 — セッションを再起動する(推奨)
+
+Kimi を再起動すると `SessionStart` が再発火し、marker を新しいセッションへ再バインドし、
+`.current-session` を刻み直し、2種の deny ラッチと残存 marker ロックを retire します。
+これにより `marker-absent` / `session-mismatch` / `deny-latch` は手作業なしで解消します。
+セッション ID をホスト自身が供給する経路であるため、こちらを優先します。
+
+### 第2層 — 実行中のセッションから引き継ぐ
+
+再起動が常に可能とは限りません。hook が未配線(`SessionStart` がフレームワークへ届かないハーネス)の場合や、
+セッションを止められない場合があります。変更系 verb はすべて同じゲートの背後にあるため、
+このままでは復帰経路がありません。そこで1つの verb だけが意図的にゲートの外に置かれています。
+
+```
+bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm [--project-dir <path>]
+```
+
+これはバイパスではありません。ゲートが読む carrier を修復するものであり、次の条件を満たす場合に限り実行されます。
+
+- **`--confirm` が渡されていること** — このフラグが人間の承認であり、なければ何も書かずに拒否する
+- **人間のターンが裏付けていること** — この clone の台帳上、*最後の takeover より後*に実サッション由来の
+  `HUMAN_TURN` が存在する必要がある。したがって1回の承認が認可できる takeover はちょうど1回で、
+  連続実行はできない
+- **残存 role を明示していること** — subagent role がアクティブなままなら verb は拒否して role 名を表示し、
+  残存集合をちょうど名指しした `--confirm-roles "<role>"` を与えたときにのみ続行する
+
+`--project-dir` は修復対象のレコードツリーを指します — 別 worktree で走っていたワークフローを
+引き継ぐのはこの経路です。takeover が成功すると、修復した原因を載せた `RECOVERY_COMPLETED` 行が追記されます。
+この行はゲート自身が再バインドの成立を確認した後にのみ発行されます。呼び出し元がすでに認可済みの場合、
+verb は `taken_over: false` を報告し、何も書きません。
+
+takeover 後は `next` / `report` / `park` / `unpark` が再び通ります。
+
+> `AMADEUS_HARNESS_TYPE` を Kimi 以外の値に設定してもゲートは沈黙しますが、これは何かを修復するのではなく
+> 認可境界そのものを無効化する挙動です。既知のエスケープハッチであって復旧手段ではなく、
+> 陳腐化した carrier をそのまま残すため、次のセッションが同じ問題を踏みます。
 
 ---
 

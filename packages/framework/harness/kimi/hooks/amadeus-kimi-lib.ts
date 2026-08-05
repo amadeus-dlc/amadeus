@@ -241,6 +241,14 @@ function establishKimiMainBaseline(
   const normalizedSessionId = sessionId.trim();
   try {
     mkdirSync(dirname(markerPath), { recursive: true });
+    // SessionStart is a fresh-session boundary: no role-marker operation from
+    // the previous session can still be in flight, so a lock directory found
+    // here is residue from a killed process, not contention. Left in place it
+    // survives the stale-mtime window only long enough to make withRoleMarkerLock
+    // below give up, which drops the baseline and leaves the workspace denied
+    // with no in-band way out — the automatic recovery layer would then fail
+    // exactly on the case it exists for.
+    rmSync(`${markerPath}.lock`, { recursive: true, force: true });
     if (normalizedSessionId.length === 0) {
       unlinkSync(markerPath);
       return;

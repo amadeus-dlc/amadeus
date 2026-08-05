@@ -2402,7 +2402,7 @@ function refuseUnauthorizedKimiCaller(
 ): boolean {
   const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
   if (authorization.kind === "authorized") return false;
-  emitStateNeutralError(callerAuthorizationError(authorization.role));
+  emitStateNeutralError(callerAuthorizationError(authorization));
   return true;
 }
 
