@@ -88,6 +88,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -102,12 +103,17 @@ import {
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
-import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  COMPOSE_MARKER_RELATIVE_PATH,
+  MACHINE_INJECTED_TURN_MARKERS,
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEventGuarded } from "../../dist/claude/.claude/otel/audit-emit.ts";
 import {
   isConversationalStop,
   isHumanWaitStop,
+  isPendingComposeStop,
   isPendingQuestionStop,
+  isQuestionCarveoutIntent,
   runEngineNextKind,
   transcriptIsConversational,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
@@ -1277,6 +1283,55 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(f) semi does NOT reach the compose or conversational carve-outs (#2253 opens tier-2 only)", () => {
+    // The counterpart to the reversed tier-2 pin above. Redefining `semi`
+    // (#2253) opens exactly ONE of the three carve-out sites; the compose gate
+    // (isPendingComposeStop) and the tier-3 conversational carve-out
+    // (isConversationalStop) keep asking the full-only predicate, so a
+    // human-declared `semi` must leave both of them behaving as they do for any
+    // non-autonomous Intent.
+    const proj = makeProject();
+    // No questions file: tier-2 has nothing to release, so what this case
+    // observes is purely which predicate the OTHER two sites ask.
+    seedInProgressWithQuestions(proj, { intentMode: "semi" });
+    seedSemiIntentMode(proj);
+    const stateContent = readFileSync(seededStateFile(proj), "utf-8");
+
+    // Tier-2 IS open for this same Intent — the two answers must differ, which
+    // is precisely what sharing one predicate across all three would destroy.
+    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(true);
+
+    // :457 compose — the guard does NOT fire, so a fresh pending marker still
+    // releases (a `full` Intent would have been suppressed before this point).
+    const markerPath = join(proj, COMPOSE_MARKER_RELATIVE_PATH);
+    writeFileSync(markerPath, "", "utf-8");
+    expect(
+      isPendingComposeStop(stateContent, {
+        projectDir: proj,
+        nowMs: () => statSync(markerPath).mtimeMs,
+        stat: (p) => (existsSync(p) ? { mtimeMs: statSync(p).mtimeMs } : undefined),
+        unlink: () => {
+          throw new Error("a fresh marker must not be swept");
+        },
+        diagnostic: () => {
+          throw new Error("a fresh marker must not raise a janitor diagnostic");
+        },
+      }),
+    ).toBe(true);
+
+    // :716 conversational — the guard does NOT fire, so a chat transcript still
+    // releases the stop end-to-end through the real hook.
+    const tp = seedTranscript(proj, { format: "claude", engineCall: false });
+    expect(isConversationalStop(stateContent, tp, "claude", proj)).toBe(true);
+    const r = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+      "run-stage",
+    );
+    expect(r.rc).toBe(0);
+    expect(r.out).toBe("");
   }, 30000);
 
   test("(f) AUTONOMY cap is 8 - autonomous workflow does NOT release at the interactive cap (2)", () => {
