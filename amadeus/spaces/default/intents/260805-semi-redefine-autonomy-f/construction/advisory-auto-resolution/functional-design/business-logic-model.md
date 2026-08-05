@@ -63,12 +63,12 @@ store schema は `parseStore:450-467` の `!== 1` → `!== 2`。schema 1 store �
 | 4 | `AdvisoryChoiceReceipt`(schema 2、`auto-decision` provenance) | `recordAdvisoryChoice`(C17) | store(永続)+ 後続 guard の allow 判定 |
 | 5 | 元 directive(`run-stage`) | `applyPendingAdvisoryGuard` | conductor(走行継続 — FR-ADV-1) |
 
-## 検証シーケンス(t449〜t451)
+## 検証シーケンス(t457〜t459)
 
-- **t449(unit)**: C16 の写像・registry・翻訳 — optionIds の runRequired 分岐(FR-ADV-4 主機構: `runRequired: true` で `defer-with-risk` が選択肢空間に存在しない)、selector 様式、翻訳 4 分岐。落ちる実証: optionIds 分岐を無条件 2 値にすると赤。
-- **t450(integration)**: FR-ADV-1(full grant 下 pending 1 件で `next` が `run-stage` を返し `AUTO_DECIDED` 記録)/ FR-ADV-2(mode=none・失効 grant・scope 不一致で `await-advisory-choice`。落ちる実証: 認可判定を無条件 true 化で赤)/ schema 1 store の fail-closed hold(ADR-9)。実 FS(store・journal)のため integration 層。
-- **t451(unit)**: 引き取り C(`PROHIBITED_EFFECTS` に `quality-waiver` 収載 — 除去で赤)+ C17 受理 3 点(auto-decision 側の grounding / 重複排除 / 提示照合。provenance 跨ぎ二重 receipt の拒否 — FR-ADV-3)。
-- semi での貫通(semi mode + pending advisory)は `semi-authorization-core` 着地後の統合ケースとして t450 に含める(依存順は delivery-planning の波編成どおり)。
+- **t457(unit)**: C16 の写像・registry・翻訳 — optionIds の runRequired 分岐(FR-ADV-4 主機構: `runRequired: true` で `defer-with-risk` が選択肢空間に存在しない)、selector 様式、翻訳 4 分岐。落ちる実証: optionIds 分岐を無条件 2 値にすると赤。
+- **t458(integration)**: FR-ADV-1(full grant 下 pending 1 件で `next` が `run-stage` を返し `AUTO_DECIDED` 記録)/ FR-ADV-2(mode=none・失効 grant・scope 不一致で `await-advisory-choice`。落ちる実証: 認可判定を無条件 true 化で赤)/ schema 1 store の fail-closed hold(ADR-9)。実 FS(store・journal)のため integration 層。
+- **t459(unit)**: 引き取り C(`PROHIBITED_EFFECTS` に `quality-waiver` 収載 — 除去で赤)+ C17 受理 3 点(auto-decision 側の grounding / 重複排除 / 提示照合。provenance 跨ぎ二重 receipt の拒否 — FR-ADV-3)。
+- semi での貫通(semi mode + pending advisory)は `semi-authorization-core` 着地後の統合ケースとして t458 に含める(依存順は delivery-planning の波編成どおり)。
 
 ## Review — Iteration 1
 

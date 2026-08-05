@@ -10,10 +10,10 @@
 
 | # | 脅威 | 封鎖機構(FD の確定設計) | 検証 |
 | --- | --- | --- | --- |
-| P1 | 確認した方針と異なる方針の適用(すり替え・改変) | 確認 digest を方針込みへ拡張(`nonFullCommandDisplayDigest` — full 側 `grantIssuanceDisplayDigest` と同形の `policySetDigest` 合成)。**非空 policies は `planHumanAutonomyCommand` での digest 等値照合を必須**とし、不一致は `{ ok: false, code: "INVALID_COMMAND" }`(Q1 裁定 A) | t443: Q1 照合 3 分岐+落ちる実証(照合除去で不一致ケースが赤) |
-| P2 | digest の不安定性による偽陰性/偽陽性 | 同一 mode・同一 policy 集合で digest 安定、異なる集合で相違(FR-POL-2 前半)。正規化(`normalizeDecisionPolicies`、seed = `commandOccurrenceId`)の呼び出しは `planHumanAutonomyCommand` 内の**単一箇所** — digest 計算入力の二重正規化を作らない(FD FOLLOW-UP の転記) | t443: digest の差異・安定 assert |
-| P3 | 方針の無音破棄 | `--mode none --policies-file` は `readDecisionPolicyInputs` **より前**の loud ガードで非 0 exit + stderr(FR-POL-3 — 無警告破棄経路の根絶) | t444: 落ちる実証(loud 化を外すと赤 — NFR-1 の FR-POL-3 面) |
-| P4 | 表示と実態の乖離 | `--status` の `Policies:` 行は grant 非依存の供給式(`grant?.policies.length ?? semiPoliciesOf(projection).length` — 直読禁止、総関数経由)へ(FR-DISP-2) | t444: policies 設定済み semi の実数表示 assert |
+| P1 | 確認した方針と異なる方針の適用(すり替え・改変) | 確認 digest を方針込みへ拡張(`nonFullCommandDisplayDigest` — full 側 `grantIssuanceDisplayDigest` と同形の `policySetDigest` 合成)。**非空 policies は `planHumanAutonomyCommand` での digest 等値照合を必須**とし、不一致は `{ ok: false, code: "INVALID_COMMAND" }`(Q1 裁定 A) | t454: Q1 照合 3 分岐+落ちる実証(照合除去で不一致ケースが赤) |
+| P2 | digest の不安定性による偽陰性/偽陽性 | 同一 mode・同一 policy 集合で digest 安定、異なる集合で相違(FR-POL-2 前半)。正規化(`normalizeDecisionPolicies`、seed = `commandOccurrenceId`)の呼び出しは `planHumanAutonomyCommand` 内の**単一箇所** — digest 計算入力の二重正規化を作らない(FD FOLLOW-UP の転記) | t454: digest の差異・安定 assert |
+| P3 | 方針の無音破棄 | `--mode none --policies-file` は `readDecisionPolicyInputs` **より前**の loud ガードで非 0 exit + stderr(FR-POL-3 — 無警告破棄経路の根絶) | t455: 落ちる実証(loud 化を外すと赤 — NFR-1 の FR-POL-3 面) |
+| P4 | 表示と実態の乖離 | `--status` の `Policies:` 行は grant 非依存の供給式(`grant?.policies.length ?? semiPoliciesOf(projection).length` — 直読禁止、総関数経由)へ(FR-DISP-2) | t455: policies 設定済み semi の実数表示 assert |
 
 ## digest の意図的相違(引用の意味論適合)
 
@@ -21,7 +21,7 @@
 
 ## 監査・追跡性(NFR-2 — replay 復元の本 Unit 配分面)
 
-- 拡張後の `set-mode`(policies 付き)コマンドを replay(`amadeus-intent-autonomy-replay.ts`)が復元でき、`readProductionAutonomyProjection` の結果が書込前後で一致すること(FR-POL-2 後半 = story-map §NFR の割当による本 Unit の NFR-2 検収面)— t444 で固定。
+- 拡張後の `set-mode`(policies 付き)コマンドを replay(`amadeus-intent-autonomy-replay.ts`)が復元でき、`readProductionAutonomyProjection` の結果が書込前後で一致すること(FR-POL-2 後半 = story-map §NFR の割当による本 Unit の NFR-2 検収面)— t455 で固定。
 - mode 適用の HUMAN_TURN 要求(provenance)は既存 `applyProductionAutonomyMode` 経路が担い、本 Unit は緩めも強めもしない(NFR-6 非適用の根拠 — questions D1)。
 
 ## 秘密情報・入力検証
@@ -34,8 +34,8 @@
 | NFR | 分類 | 本設計での充足 |
 | --- | --- | --- |
 | NFR-1(fail-closed 実証) | **適用(FR-POL-3 の面 — questions D1)** | P3 の落ちる実証(注入 → 赤 → 復元 → 残渣ゼロの 1 セット)を code-generation 成果物に記録 |
-| NFR-2(監査追跡性) | **適用(replay 復元の面 — story-map 配分)** | 上節。t444 の replay 等値 assert |
-| NFR-4(TDD) | **適用** | t443(unit)・t444(integration — 実 FS・CLI spawn)を失敗テスト先行で追加 |
+| NFR-2(監査追跡性) | **適用(replay 復元の面 — story-map 配分)** | 上節。t455 の replay 等値 assert |
+| NFR-4(TDD) | **適用** | t454(unit)・t455(integration — 実 FS・CLI spawn)を失敗テスト先行で追加 |
 | NFR-5(ドリフトゼロ) | **適用** | 編集正本は `packages/framework/core/tools/` の intent-autonomy / -production / bolt(C10)/ utility(C15)。`bun run build` 後の追跡ファイル不変 |
 | NFR-7(ゲート集合) | **適用** | PR CI のブロッキング集合を全通過 |
 | NFR-3(parser 実行コスト) | **非適用**(1 行理由: `--policies-file` は既存フラグで新規 parse 分岐を持たない — `--autonomy` parser は `launch-autonomy-flag` 所有) | — |
@@ -45,7 +45,7 @@ NFR 全 7 件の分類の閉包: **適用 5 件(NFR-1/2/4/5/7 — うち 1 は F
 
 ## セキュリティ観点の検証手段
 
-- P1〜P4 は t443/t444 の分岐網羅+落ちる実証 2 点(Q1 照合除去 / loud 化除去)で固定する。
+- P1〜P4 は t454/t455 の分岐網羅+落ちる実証 2 点(Q1 照合除去 / loud 化除去)で固定する。
 - 「正規化の単一呼び出し」は実装 PR レビューで `normalizeDecisionPolicies` 呼び出し箇所の grep(期待 1 箇所)で機械確認する。
 
 ## Review — Iteration 1

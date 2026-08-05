@@ -32,16 +32,16 @@
 
 | ケース群 | 対象 | 期待 |
 | --- | --- | --- |
-| V1(t450) | full grant + pending 1 件 | `next` が `run-stage`、`AUTO_DECIDED` 記録(FR-ADV-1) |
-| V2(t450) | mode=none + pending | `await-advisory-choice`(FR-ADV-2 (1)) |
-| V3(t450) | 失効 grant / scope 不一致 | 同上(FR-ADV-2 (2)) |
-| V4(t450) | 落ちる実証 | 認可判定を無条件 true 化で V2/V3 が赤(FR-ADV-2 (3)) |
-| V5(t449) | `runRequired: true` | optionIds に `defer-with-risk` が存在しない(FR-ADV-4 主機構。落ちる実証: 分岐無条件化で赤) |
-| V6(t451) | `PROHIBITED_EFFECTS` 収載 | `quality-waiver` 収載の assert(引き取り C。除去で赤 — FR-ADV-4 従機構) |
-| V7(t451) | 受理 3 点(auto 側) | grounding(decisionId 実在)/ 重複排除(decisionId 一意)/ 提示照合(selector 一致)の各 fail(FR-ADV-3) |
-| V8(t451) | provenance 跨ぎ二重 receipt | human-turn 受理済み identity への auto-decision 受理が拒否(逆向きも)(FR-ADV-3) |
-| V9(t450) | schema 1 store | fail-closed hold(ADR-9。読替が起きないこと) |
-| V10(t449) | 翻訳の網羅 | `parked` / `conflict` / `aborted` / `defer-with-risk` 選択の全経路が `human-required`(FR-ADV-2 の fail-closed) |
+| V1(t458) | full grant + pending 1 件 | `next` が `run-stage`、`AUTO_DECIDED` 記録(FR-ADV-1) |
+| V2(t458) | mode=none + pending | `await-advisory-choice`(FR-ADV-2 (1)) |
+| V3(t458) | 失効 grant / scope 不一致 | 同上(FR-ADV-2 (2)) |
+| V4(t458) | 落ちる実証 | 認可判定を無条件 true 化で V2/V3 が赤(FR-ADV-2 (3)) |
+| V5(t457) | `runRequired: true` | optionIds に `defer-with-risk` が存在しない(FR-ADV-4 主機構。落ちる実証: 分岐無条件化で赤) |
+| V6(t459) | `PROHIBITED_EFFECTS` 収載 | `quality-waiver` 収載の assert(引き取り C。除去で赤 — FR-ADV-4 従機構) |
+| V7(t459) | 受理 3 点(auto 側) | grounding(decisionId 実在)/ 重複排除(decisionId 一意)/ 提示照合(selector 一致)の各 fail(FR-ADV-3) |
+| V8(t459) | provenance 跨ぎ二重 receipt | human-turn 受理済み identity への auto-decision 受理が拒否(逆向きも)(FR-ADV-3) |
+| V9(t458) | schema 1 store | fail-closed hold(ADR-9。読替が起きないこと) |
+| V10(t457) | 翻訳の網羅 | `parked` / `conflict` / `aborted` / `defer-with-risk` 選択の全経路が `human-required`(FR-ADV-2 の fail-closed) |
 | V11(機械 grep — PR 前チェック) | FR-ADV-5 射程注記 | 本 Unit 成果物+改訂対象 docs に対し `grep -rn "plugin 非依存" <対象面>` を実行し、hit 全行に「hold 判定の面に限る」の射程注記が併記されていることを確認(注記なしの hit = 違反)。docs 面の走査は `semi-docs-revision` の FR-DOC-1 grep と共同で実施 |
 
 落ちる実証は「注入 → 赤の実測 → 復元 → 残渣ゼロ確認」の不可分 1 セット(NFR-1)。

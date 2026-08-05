@@ -10,7 +10,7 @@ stop hook の carve-out は「エージェントが人間確認なしで走行�
 
 | # | 面 | 本 Unit の扱い | 検証 |
 | --- | --- | --- | --- |
-| Q1 | `:422` tier-2 質問 carve-out(`isPendingQuestionStop`) | **semi へ開く唯一の点** — `isQuestionCarveoutIntent` へ 1 行差し替え。semi 側は `projection.mode === "semi" ∧ modeProvenance.kind === "human-command"` を要求(mode 設定の人間由来性は緩めない) | t445 判定表全行+t121 拡張(semi + 質問 pending で stop しない) |
+| Q1 | `:422` tier-2 質問 carve-out(`isPendingQuestionStop`) | **semi へ開く唯一の点** — `isQuestionCarveoutIntent` へ 1 行差し替え。semi 側は `projection.mode === "semi" ∧ modeProvenance.kind === "human-command"` を要求(mode 設定の人間由来性は緩めない) | t456 判定表全行+t121 拡張(semi + 質問 pending で stop しない) |
 | Q2 | `:457` tier-2b compose gate(`isPendingComposeStop`) | **full 限定維持** — 呼び出しコードも述語も無改変(diff 非出現) | FR-STOP-1 (2) の落ちる実証: 述語を無条件共有へ戻すと赤 |
 | Q3 | `:716` tier-3 conversational stop | **full 限定維持** — 同上 | 同上 |
 
@@ -41,8 +41,8 @@ stop hook の carve-out は「エージェントが人間確認なしで走行�
 | NFR | 分類 | 本設計での充足 |
 | --- | --- | --- |
 | NFR-1(fail-closed 実証) | **適用(FR-STOP-1 維持側の面 — questions D1)** | Q2/Q3 の落ちる実証(無条件共有化 → 赤。注入 → 赤 → 復元 → 残渣ゼロの 1 セット)を code-generation 成果物に記録 |
-| NFR-4(TDD) | **適用** | t445(unit — export 述語の in-process 駆動)/ t121 拡張(integration — 実 FS projection)を失敗テスト先行で追加 |
-| NFR-5(ドリフトゼロ) | **適用** | 編集正本は `packages/framework/core/hooks/amadeus-stop.ts`(+t121/t445)。`bun run build` 後の追跡ファイル不変 |
+| NFR-4(TDD) | **適用** | t456(unit — export 述語の in-process 駆動)/ t121 拡張(integration — 実 FS projection)を失敗テスト先行で追加 |
+| NFR-5(ドリフトゼロ) | **適用** | 編集正本は `packages/framework/core/hooks/amadeus-stop.ts`(+t121/t456)。`bun run build` 後の追跡ファイル不変 |
 | NFR-7(ゲート集合) | **適用** | PR CI のブロッキング集合を全通過(allowlist 行 remap は U-6 — FD D2 の帰結) |
 | NFR-2(監査追跡性) | **非適用**(1 行理由: AUTO_DECIDED の生成・replay は core / advisory Unit の所有 — 本 Unit は読み取り述語のみ) | — |
 | NFR-3(parser 実行コスト) | **非適用**(1 行理由: flag parser は `launch-autonomy-flag` の所有) | — |
@@ -52,7 +52,7 @@ NFR 全 7 件の分類の閉包: **適用 4 件(NFR-1/4/5/7 — うち 1 は FR-
 
 ## セキュリティ観点の検証手段
 
-- Q1〜Q3 は t445 の判定表全行+t121 拡張+FR-STOP-1 (2) の落ちる実証で固定する。
+- Q1〜Q3 は t456 の判定表全行+t121 拡張+FR-STOP-1 (2) の落ちる実証で固定する。
 - 「開放点 1 つ」「cap / budget 不変」は実装 PR の diff 照合(`:457` / `:716` / `:153` / `:159` 相当行が hunk に現れない)で機械確認する。
 
 ## Review — Iteration 1
@@ -63,7 +63,7 @@ NFR 全 7 件の分類の閉包: **適用 4 件(NFR-1/4/5/7 — うち 1 は FR-
 - **Iteration:** 1
 - **Scope decision:** none
 
-両成果物は produces (security-design.md + logical-components.md のみ、kind=library の正しい適用集合) と FD (述語2本・呼び出し点 :422 のみ開放・t445/FR-PIN-2) に整合し、NFR7件の分類(適用4=1/4/5/7、非適用3=2/3/6)は両ファイル・questions D1 と一意で無矛盾、縮退方向(catch→false=保守側)の主張も FD 転記と一致、blast radius も方向別に層別されている。
+両成果物は produces (security-design.md + logical-components.md のみ、kind=library の正しい適用集合) と FD (述語2本・呼び出し点 :422 のみ開放・t456/FR-PIN-2) に整合し、NFR7件の分類(適用4=1/4/5/7、非適用3=2/3/6)は両ファイル・questions D1 と一意で無矛盾、縮退方向(catch→false=保守側)の主張も FD 転記と一致、blast radius も方向別に層別されている。
 
 ### Findings
 

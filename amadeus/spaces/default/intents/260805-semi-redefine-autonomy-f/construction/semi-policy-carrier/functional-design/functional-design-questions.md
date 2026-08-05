@@ -34,7 +34,7 @@
 | D2 | policies の正規化 | 既存 `normalizeDecisionPolicies:106-133` を再利用し、seed は `context.commandOccurrenceId`(SAFE_ID 検査済み)。正規化失敗は既存 `catch` → `INVALID_COMMAND`(新エラー経路を作らない) | `component-methods.md` §C8 |
 | D3 | 「方針ゼロ」と「フィールド不在」の同一視 | `set-mode` semi + policies 空 → `after.semiPolicies` 未設定(ADR-4 — 読み側 `semiPoliciesOf` が `[]` へ潰す) | ADR-4 / §C8 の表 |
 | D4 | C15 の読み口 | `policyCount: grant?.policies.length ?? semiPoliciesOf(projection).length`(直読禁止・三段フォールバック不要)。`amadeus-utility.ts:345` の表示行差し替え、grant 明細の `policyCount` は残す | §C15 逐語 / ADR-4 Consequences |
-| D5 | テスト層と seam | t443(unit — C8 書き側の表 5 行+C9 digest の差異/安定+Q1 照合の 3 分岐)/ t444(integration — FR-POL-1 の confirmed-policy 段解決・replay 復元・FR-DISP-2 の `--status` 実数表示・FR-POL-3 の CLI loud)。CLI 面(t444 の FR-POL-3)は spawn 駆動、純関数面は in-process | `unit-of-work.md` §テスト番号の予約 / `cid:code-generation:fs-tests-integration-first` |
+| D5 | テスト層と seam | t454(unit — C8 書き側の表 5 行+C9 digest の差異/安定+Q1 照合の 3 分岐)/ t455(integration — FR-POL-1 の confirmed-policy 段解決・replay 復元・FR-DISP-2 の `--status` 実数表示・FR-POL-3 の CLI loud)。CLI 面(t455 の FR-POL-3)は spawn 駆動、純関数面は in-process | `unit-of-work.md` §テスト番号の予約 / `cid:code-generation:fs-tests-integration-first` |
 
 ---
 

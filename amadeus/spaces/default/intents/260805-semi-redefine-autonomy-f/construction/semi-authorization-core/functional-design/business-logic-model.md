@@ -81,14 +81,14 @@ ADR-1(置換 — `semi-mode-gate` を削除し併存させない)に従い、次
 | 4 | `DecisionAuthority`(kind: semi、policies = `semiPoliciesOf(projection)`) | C2 射影 | 梯子入口(C4)+ C5/C7 の authorityFingerprint |
 | 5 | `AutoDecisionRecord`(梯子 5 段のいずれかで決定) | C4 | C7 → `AUTO_DECIDED` + `WORKFLOW_EFFECT_APPLIED` |
 
-## 検証シーケンス(t440〜t442 + FR-PIN-1)
+## 検証シーケンス(t451〜t453 + FR-PIN-1)
 
-- **t440(unit)**: C1/C2 純関数 — `SemiAuthority.of` の生成条件(mode / provenance / SHA256 形)、`allowsOccurrence` の 3 条件、`authorizeEffect` の 3 条件、`decisionAuthorityOf` の 3 射影、型に 4 つ目の責務が無いこと(FR-AUTH-1 (1))。
-- **t441(unit)**: 第1関門の判定表全行(上表 8 行)+ D3 fail-closed(scope 未供給)+ `assertLegalAutonomyProjection` の片方向不変条件(落ちる実証: 不変条件を除去すると赤 — FR-AUTH-1 (3))。
-- **t442(integration)**: FR-AUTH-1 (2)(semi 裁定 1 件が新設型由来 basisFingerprint で `AUTO_DECIDED` 記録)/ FR-LAD-2(梯子 basisKind 記録)/ FR-LAD-4(5 段降下と `Unreviewed:` 計上)/ FR-AUTH-3(`--mode semi` 後 `currentGrant === null`)。実 FS(journal)を使うため integration 層。
+- **t451(unit)**: C1/C2 純関数 — `SemiAuthority.of` の生成条件(mode / provenance / SHA256 形)、`allowsOccurrence` の 3 条件、`authorizeEffect` の 3 条件、`decisionAuthorityOf` の 3 射影、型に 4 つ目の責務が無いこと(FR-AUTH-1 (1))。
+- **t452(unit)**: 第1関門の判定表全行(上表 8 行)+ D3 fail-closed(scope 未供給)+ `assertLegalAutonomyProjection` の片方向不変条件(落ちる実証: 不変条件を除去すると赤 — FR-AUTH-1 (3))。
+- **t453(integration)**: FR-AUTH-1 (2)(semi 裁定 1 件が新設型由来 basisFingerprint で `AUTO_DECIDED` 記録)/ FR-LAD-2(梯子 basisKind 記録)/ FR-LAD-4(5 段降下と `Unreviewed:` 計上)/ FR-AUTH-3(`--mode semi` 後 `currentGrant === null`)。実 FS(journal)を使うため integration 層。
 - **FR-AUTH-2 の落ちる実証**: `resolveAutoDecision` の**直接呼び出し**で `authority: null` → `invalid: "authorization-required"` を assert し、入口ガードを除去すると赤(D7 — `decide` 経由では到達不能)。加えて改訂後の関数本体 grep で `mode !== "full"` 直接比較 0 hit(AC の grep 面 — 対象は当該関数本体のみ)。
 - **FR-PIN-1(t431 分割)**: D5 のとおり保存ピン(walking-skeleton)と反転ピン(stage-gate → `semi-authority`、question → 認可済み)へ分割。既存 t431 のその他のテストは無改変で green を維持(FR-PIN-3 の射程限定 — 保護対象はピン対象箇所のみ)。
-- **FR-LAD-5 / FR-STOP 境界**: walking-skeleton / phase-gate の `human-required` 維持と `semi-gate-effect-not-authorized`(反転で赤)は t441/t442 に含める。`AUTONOMOUS_BLOCK_CAP` / `stopBudgetMode` は本 Unit の diff に現れない(FR-STOP-2 — stop hook 面は `stop-question-carveout` の所有)。
+- **FR-LAD-5 / FR-STOP 境界**: walking-skeleton / phase-gate の `human-required` 維持と `semi-gate-effect-not-authorized`(反転で赤)は t452/t453 に含める。`AUTONOMOUS_BLOCK_CAP` / `stopBudgetMode` は本 Unit の diff に現れない(FR-STOP-2 — stop hook 面は `stop-question-carveout` の所有)。
 
 ## Review — Iteration 2
 

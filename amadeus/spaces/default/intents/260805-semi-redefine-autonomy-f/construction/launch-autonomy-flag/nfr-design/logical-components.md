@@ -18,7 +18,7 @@
 
 - **障害ドメイン**: engine プロセス(`services.md` P3 — FD 依拠箇所)1 つ。単発 CLI 実行であり常駐・並行実行の障害モードを持たない。
 - **blast radius**: LC-1/LC-2 の欠陥の最大影響は「起動フラグ経由の mode 宣言の誤受理・誤拒否」。誤拒否側は loud エラー(利用者は `set-autonomy` 正本経路で回復可能 — 案内文付き)。誤受理側は LC-3 の既存検査(provenance・grant 儀式)が第 2 の防衛線として残るため、単独欠陥では認可強度が落ちない(defense in depth — security-design.md S4)。
-- **隔離戦略**: 判定ロジック(LC-2)を export 関数として隔離し in-process テスト駆動(t447)。parser(LC-1)も `parseNextFlags` export 追加で in-process 駆動(t446 — `cid:code-generation:seam-export-handler-amend` の執行)。
+- **隔離戦略**: 判定ロジック(LC-2)を export 関数として隔離し in-process テスト駆動(t450)。parser(LC-1)も `parseNextFlags` export 追加で in-process 駆動(t449 — `cid:code-generation:seam-export-handler-amend` の執行)。
 
 ## 共有資源
 
@@ -36,7 +36,7 @@ circuit breaker / cache / pooling / scaling / failover は**すべて非適用**
 
 - **NFR-1**: security-design.md **S1**(FR-CLI-4 の面に限る)の落ちる実証。**NFR-6**: security-design.md **S4**(`--autonomy` の面)の provenance ケース。S2/S3 の落ちる実証は FR-CLI-2/3 の受け入れ基準に紐づく品質検証であり、NFR-1/6 の充足根拠には数えない(§12a iteration 1 MAJOR の精密化)。
 - **NFR-3**: parse 関数本体の FS 呼び出し grep 0 件+同一 ladder 内配置の diff 確認。
-- **NFR-4**: t446/t447 を Red 先行で追加。実 FS ケースは integration 層。
+- **NFR-4**: t449/t450 を Red 先行で追加。実 FS ケースは integration 層。
 - **NFR-5**: 編集正本 1 ファイル、`bun run build` 後の追跡ファイル不変。
 - **NFR-7**: PR CI ブロッキング集合の全通過。
 - **NFR-2**: 非適用(security-design.md の分類表 — 本 Unit は裁定を生成しない)。

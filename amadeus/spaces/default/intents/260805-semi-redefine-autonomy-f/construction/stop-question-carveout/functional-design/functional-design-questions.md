@@ -17,7 +17,7 @@
 | D3 | 例外時の扱い | 両述語とも `catch → false`(現行 `:175-177` と同じ)。この文脈の `false` は「carve-out を与えない = 保守側」であり fail-closed と整合(C13 の意図的相違とは逆向きで正しい — 引用の意味論適合) | §C11 の例外時列 / `cid:application-design:citation-semantics-check` |
 | D4 | FR-PIN-2 の t121 反転設計 | `tests/integration/t121-stop-hook-enforce.test.ts:1138-1150`(verbatim `test("(f) semi + blank question ALLOWS because questions remain human-owned", ...)`)を反転 — semi + pending 質問は carve-out により stop を **BLOCK**(走行継続)する期待へ書き換え、テスト名も新意味論(質問は無人解決へ)を述べる名へ改訂。反転は本 Unit の C11 変更と同一 PR(同一変更でしか green を保てない — `unit-of-work.md` §テスト・ピンの所属) | FR-PIN-2 / FR-STOP-1 (1) |
 | D5 | FR-STOP-2 の不変確認 | `AUTONOMOUS_BLOCK_CAP`(`:153`)と `stopBudgetMode`(`:157-160`)は diff に現れない(検証: 実装 PR の diff 照合 + 既存 cap / budget テスト無改変 green — `tests/unit/t147-kiro-hook-adapter.test.ts:721` の cap テスト verbatim `  test("13: FULL KEEPS CAP 8 - Kiro stop still blocks on call 3 under full Intent autonomy (the long ceiling, not the interactive 2)", () => {` を含む。worktree HEAD `5f6561eef6098209c4c29461ae0d7c6d070b5c01` 実測) | FR-STOP-2 |
-| D6 | テスト層と seam | t445(予約済み)。`isPendingQuestionStop` は export 済み(`:420` 実測 verbatim `export function isPendingQuestionStop(...)`)、新述語も export して in-process 駆動。projection 実 FS を使うケースは integration 層(t121 は既存 integration) | `unit-of-work.md` §テスト番号の予約 / `cid:code-generation:fs-tests-integration-first` |
+| D6 | テスト層と seam | t456(予約済み)。`isPendingQuestionStop` は export 済み(`:420` 実測 verbatim `export function isPendingQuestionStop(...)`)、新述語も export して in-process 駆動。projection 実 FS を使うケースは integration 層(t121 は既存 integration) | `unit-of-work.md` §テスト番号の予約 / `cid:code-generation:fs-tests-integration-first` |
 
 ---
 

@@ -19,7 +19,7 @@
 
 - **障害ドメイン**: engine プロセス 1 つ(単発 CLI 実行)。純関数層(LC-1/LC-2)は I/O を持たず、journal 書込は LC-4 の既存コミット経路のみ。
 - **blast radius**: 最悪ケースは「認可判定の誤り」だが、方向別に非対称な防衛がある — **誤拒否側**は human-required への縮退(人間が裁定すれば前進可能、安全)。**誤認可側**は 3 重の独立防衛(A2 節目除外の閉じた列挙 / A3 効果安全弁+throw ガード不変 / A4 不変条件+replay 拒否 — security-design.md)を同時に破らない限り不可逆効果へ到達しない(defense in depth)。
-- **隔離戦略**: 判定はすべて export 純関数で in-process テスト駆動(t440/t441)。実 FS(journal)を跨ぐのは t442(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
+- **隔離戦略**: 判定はすべて export 純関数で in-process テスト駆動(t451/t452)。実 FS(journal)を跨ぐのは t453(integration)のみ(`cid:code-generation:fs-tests-integration-first`)。
 
 ## 共有資源
 
@@ -35,9 +35,9 @@ circuit breaker / cache / pooling / scaling / failover は**すべて非適用**
 
 ## 適用 NFR との対応(検証手段付き)
 
-- **NFR-1**(FR-AUTH-1 の面): security-design.md A4 の落ちる実証(t441 — 不変条件除去で赤)。
-- **NFR-2**: t442 の replay 等値 assert+SHA256 形検査+イベント列無改変の diff 照合。
-- **NFR-4**: t440/t441(unit)・t442(integration)を Red 先行で追加。
+- **NFR-1**(FR-AUTH-1 の面): security-design.md A4 の落ちる実証(t452 — 不変条件除去で赤)。
+- **NFR-2**: t453 の replay 等値 assert+SHA256 形検査+イベント列無改変の diff 照合。
+- **NFR-4**: t451/t452(unit)・t453(integration)を Red 先行で追加。
 - **NFR-5**: 編集正本は autonomy 系 4 ファイル(LC 台帳の所在列)のみ、`bun run build` 後の追跡ファイル不変。
 - **NFR-7**: PR CI ブロッキング集合の全通過。
 - **NFR-3 / NFR-6**: 非適用(security-design.md の分類表 — 所有 Unit が異なる)。
