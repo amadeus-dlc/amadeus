@@ -21,5 +21,9 @@
 
 - 2026-08-06T00:00:00Z — [batch 2] spc/sqc/aar の 3 unit を ff 採用(a627277fd / 24647a2df / 2c42d13e6)→ referee check 3/3 converged・tampered=false → settle-release succeeded ×3 → finalize --batch 3 converged 3 / failed 0 / merge_failures 0。builder 申告の引き継ぎ: spc = SEMI_POLICY_SCOPE_ID 導出・policies:[] 6 呼び出し面・t455 Red 非先行 / aar = effectClassifications 追加・provenance 2 フィールド増(いずれも FD 受け入れ行の執行可能化 — レビュー観点)・既存 6 テストの receipt 形状同期(FR-ADV-3 置き換え命令)・t07 回帰の自己検出修正(lazy require 化)
 
+- 2026-08-06T00:30:00Z — [batch 4] semi-docs-revision(docs 専任)完遂: builder は main 起点 fork のため ff 不可 → bolt worktree で --no-ff マージ採用(parent 2・ls-files -u 0 機械確認)。referee check converged / finalize converged 1/0。conductor 回収マージ d461e41c5 では監査シャードが真の分岐(ours +17 / theirs +5)— 3-stage blob の純追記検証(base が両側の prefix)+時系列和集合+seq 連番再構成(重複 0・monotonic 実測)で解消。builder の BR-9 棚卸し差分 3 件(第2キー新検出 1・V1 新検出 1・V1 偽陽性是正 2)と V6 22→24 の理由確定は code-summary へ転記済み
+
+- 2026-08-06T00:30:00Z — [PR #2294 是正] Patch Coverage Gate の UNCOVERED 3 行(catch ブレース+複数行文字列継続行 ×2 — 既知 DA:0 クラス)を conductor 直是正: 単一行 collapse+corrupt intents.json+cursor で SyntaxError を決定的に踏むテスト追加(error-path-reach-lcov 準拠で catch 行 DA=11 を機械確認)。d96ae3d81 → bolt へ cherry-pick 9cf48ee10。なお conductor 統合 full CI の赤 2 件は (i) t-pi-child-driver = 負荷起因 flake(被検面が本 diff と非交差+aar builder の 861 files PASS に同テスト含む+solo green) (ii) t265 = CI 実行中に conductor が本是正の編集+build を行った自傷汚染(solo green で確認)— クリーン再実行を builder 完了後に実施
+
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
