@@ -6295,5 +6295,60 @@
     },
     "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "hasRecordedAdvisoryPresentation",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The catch arm cannot fire in the record flow: latestHumanTurn read the same audit shard successfully one call earlier under the same audit lock, so the file cannot vanish before this read. Kept as defensive I/O parity with the prompt route's fail-closed reads.",
+    "expiry": "remove if the presentation check ever runs outside the audit lock or before the human-turn read"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "freshRecordRefusal",
+      "fingerprint": "sha256:c28b5f0a8a123e528ef45822b7498c52a1336763c24a895f4e208201d35e62a3",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "humanTurn.shard is derived from auditShardName(projectDir) inside latestHumanTurn one call earlier, so the mismatch arm is unreachable through the record flow; kept for contract parity with recordProtectedAdvisoryChoice, whose caller-supplied provenance CAN mismatch.",
+    "expiry": "remove when freshRecordRefusal accepts caller-supplied provenance"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "freshRecordRefusal",
+      "fingerprint": "sha256:20c43b2614c579cd503ae4ce96e71d22067f9fb4e2000cdfb22abb5fe9a797de",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "humanTurn is minted from the latest audit event's own bytes one call earlier under the same lock, so the grounding re-check cannot fail in the record flow; kept for contract parity with the prompt route's independent-provenance contract.",
+    "expiry": "remove when freshRecordRefusal accepts caller-supplied provenance"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "freshRecordRefusal",
+      "fingerprint": "sha256:d634db368c8f0abfb22534d50457942984009584849c6c64919dad860b8e8c68",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "A receipt matching an open pending is short-circuited by activeReceiptFor before freshRecordRefusal runs (idempotent return or different-choice conflict), so the accepts-fresh-choice refusal arm is unreachable through the record flow; kept for parity with the prompt route where no such short-circuit exists.",
+    "expiry": "remove if activeReceiptFor's matcher and acceptsFreshChoice's matcher ever diverge"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:bda22f12c1bef0a92b2d9e1cc7584392cb9b5308725357f96695c373768afb13",
+      "anchorLines": 23,
+      "targetLines": "1-23"
+    },
+    "reason": "The record CLI dispatch arm is exercised by t-advisory-choice-record's spawned-CLI cases (success JSON shape, missing-flag usage, unknown-subcommand refusal); Bun does not attribute child-process execution to the parent LCOV report — the same boundary the two correct-misattributed entries above record.",
+    "expiry": "remove when the CLI dispatch is testable in-process"
   }
 ]

@@ -25,7 +25,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   advisoryChoicePresentationFields,
@@ -211,6 +211,30 @@ describe("advisory choice record: idempotence (#2143 plan D-1)", () => {
 });
 
 describe("advisory choice record: fail-closed refusals (#2232 FR-5d)", () => {
+  test("an empty advisory instance is refused before any store read", () => {
+    const { projectDir } = track(seedPendingProject());
+    const result = recordAdvisoryChoiceDecision(projectDir, "", "run-now");
+    expect(result).toMatchObject({ ok: false });
+    if (result.ok) return;
+    expect(result.reason).toContain("advisory instance is required");
+  });
+
+  test("a missing audit trail refuses with the no-human-turn reason", () => {
+    const { projectDir, pending } = track(seedPendingProject());
+    // No presentation, no human turn — and no audit file at all: the
+    // latest-human-turn read must fall to its catch arm and refuse, never
+    // synthesize a turn.
+    rmSync(auditFilePath(projectDir), { force: true });
+    const result = recordAdvisoryChoiceDecision(
+      projectDir,
+      pending.identity.advisoryInstance,
+      "run-now",
+    );
+    expect(result).toMatchObject({ ok: false });
+    if (result.ok) return;
+    expect(result.reason).toContain("no real human turn");
+  });
+
   test("an unknown choice is refused by name", () => {
     const { projectDir, pending } = track(seedPendingProject());
     plantPresentation(projectDir, pending);
