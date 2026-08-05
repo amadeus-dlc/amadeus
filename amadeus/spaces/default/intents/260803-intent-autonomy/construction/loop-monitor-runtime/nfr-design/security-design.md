@@ -4,7 +4,7 @@
 
 本設計は`functional-design/business-logic-model.md`を正本とする。`performance-requirements.md`、`security-requirements.md`、`scalability-requirements.md`、`reliability-requirements.md`、`tech-stack-decisions.md`はexpected absenceであり、外部認証基盤やクラウドサービスを追加しない。
 
-trust boundaryは、M01のmanifest / Plugin contribution取込、M06のEvidence / Judge adapter呼出し、M07のcanonical audit commitである。M02はpure reducerとしてfilesystem、credential、provider、LLMへ直接アクセスしない。
+trust boundaryは、M01のmanifest / Plugin contribution取込、M06のEvidence / Judge adapter呼出し、M07のcanonical audit commit、M08のlive authorization、M09のlive receipt検証である。M02はpure reducerとしてfilesystem、credential、provider、LLMへ直接アクセスしない。
 
 ## ManifestとPlugin contribution
 
@@ -16,6 +16,8 @@ plugin content、descriptor、route bindingはcanonical digestへ含める。表
 
 `EvidenceSnapshot`はprovider ID、Intent / Monitor / stage / graph revision、schema version、redaction policy ID、canonical summary digestだけを持つ。raw prompt、credential、secret、個人情報、provider response本文をprojection、status、diagnostic、auditへ格納しない。
 
+M08の`LiveAuthorizationPort`はissuer、environment、revision、trace、attestationのsafe metadataだけを返す。credential自体はCoreへ渡さない。M09は`LIVE_SMOKE_AUTHORIZED`を含むcommit receiptから昇格した`CommittedLiveExecutionAuthorization`なしにlive Judgeを起動しない。
+
 ## Least authorityとhuman provenance
 
 Judge requestはcompiled Monitorのroute subset、instruction digest、evidence fingerprintへ束縛する。providerが未宣言route、異なるinvocation、異なるtrace / spanを返した場合は適用せず`CONFLICT`とする。
@@ -24,4 +26,4 @@ Judge requestはcompiled Monitorのroute subset、instruction digest、evidence 
 
 ## Security verification
 
-red fixtureはunknown manifest field、duplicate / dangling descriptor、cross-Monitor provider流用、schema mismatch、raw evidence混入、trace mismatch、undeclared route、偽human retryを含む。すべてでJudge result適用とworkflow advanceを0件にし、秘密値を含まないtyped diagnosticだけを残す。
+red fixtureはunknown manifest field、duplicate / dangling descriptor、cross-Monitor provider流用、schema mismatch、credential metadata逸脱、raw evidence混入、authorization commit前live実行、trace mismatch、undeclared route、偽human retryを含む。すべてでJudge result適用とworkflow advanceを0件にし、秘密値を含まないtyped diagnosticだけを残す。

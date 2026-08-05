@@ -128,8 +128,9 @@ export const collectors: Collector[] = [
     { bytes: env.listFiles(join(env.repoRoot, "dist")).reduce((sum, path) => sum + lstatSync(path).size, 0) },
   )) },
   // Bug ledger = GitHub issues labeled `bug`; `total` is cumulative occurrence
-  // and `fixed` cumulative repair, so per-period rates are derived downstream by
-  // diffing the series. The only network-backed collector: without a token it
+  // and `fixed` cumulative repair — the dashboard (scripts/metrics-visualize.ts)
+  // renders the cumulative series as per-snapshot deltas, keeping `open` as the
+  // point-in-time balance. The only network-backed collector: without a token it
   // skips (the snapshot proceeds without it), with a token any failed call is
   // fatal rather than silently partial. Every value is its own total_count
   // query rather than derived from another — the calls are not atomic w.r.t.
@@ -147,7 +148,17 @@ export const collectors: Collector[] = [
       fixed: count("is:closed reason:completed"),
       rejected: count("is:closed -reason:completed"),
     };
-    const severity = { s1_fatal: count("label:S1-FATAL"), s2_critical: count("label:S2-CRITICAL"), s3_major: count("label:S3-MAJOR"), s4_minor: count("label:S4-MINOR") };
+    // Mutually exclusive severity buckets: an issue carrying several severity
+    // labels counts once, in its highest bucket (priority exclusion), and
+    // `unlabeled` catches the rest — so the buckets partition `total`, queried
+    // directly rather than derived (non-atomic calls).
+    const severity = {
+      s1_fatal: count("label:S1-FATAL"),
+      s2_critical: count("label:S2-CRITICAL -label:S1-FATAL"),
+      s3_major: count("label:S3-MAJOR -label:S1-FATAL -label:S2-CRITICAL"),
+      s4_minor: count("label:S4-MINOR -label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR"),
+      unlabeled: count("-label:S1-FATAL -label:S2-CRITICAL -label:S3-MAJOR -label:S4-MINOR"),
+    };
     return successful("bugs", "gh", env.exec(["gh", "--version"]).split("\n")[0].trim(), { ...totals, ...severity });
   }) },
 ];
