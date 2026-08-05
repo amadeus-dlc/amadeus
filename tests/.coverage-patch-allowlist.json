@@ -157,7 +157,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleNext",
-      "fingerprint": "sha256:4dfe5ea3efa5d46f1a1889dfae96c47eea3d05ecceea445e9ef58aa48f77de14",
+      "fingerprint": "sha256:c7c05315937fbfb9fed512719d6258596e41dc47879b165e96fa8261c116119a",
       "anchorLines": 20,
       "targetLines": "1-20"
     },
