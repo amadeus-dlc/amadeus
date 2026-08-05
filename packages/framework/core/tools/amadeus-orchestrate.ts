@@ -1027,9 +1027,46 @@ function normalizeHelpArgs(args: string[]): string[] {
 // read-only utility flag. Any leading non-flag token is the freeform intent
 // (mirrors `/amadeus <freeform description>`). Mirrors the prose orchestrator's
 // flag extraction — the value of a valued flag is the following argv token.
+// Lift every `--autonomy [value]` out of argv, recording the value (or its
+// absence) on flags and returning the remaining tokens.
+//
+// This runs BEFORE the flag ladder rather than as two more rungs inside it: the
+// ladder sits exactly on its complexity budget, and the budget only ratchets
+// down. Extracting the flag keeps the ladder's measured complexity unchanged
+// while giving --autonomy the same guarantee --report gets by consuming its
+// value inline — the mode name can never reach the freeform-intent branch.
+//
+// The scan mirrors the ladder's index arithmetic token for token, so the
+// semantics it would have had as rungs are preserved: a following token is
+// taken as the value even when it looks like a flag, a trailing --autonomy with
+// nothing to consume raises autonomyMissingValue, and a repeated flag lets the
+// LAST occurrence win.
+function takeAutonomyFlag(args: string[], flags: ParsedFlags): string[] {
+  if (!args.includes("--autonomy")) return args;
+  const remaining: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== "--autonomy") {
+      remaining.push(args[i]);
+      continue;
+    }
+    if (i + 1 < args.length) {
+      // No range check here: the parser only carries the string, exactly as
+      // --scope is carried and validated outside this function.
+      flags.autonomy = args[i + 1];
+      i++;
+    } else {
+      // Nothing left to consume. Mark it so C13 can fail loudly rather than let
+      // the flag vanish (FR-CLI-2(3)).
+      flags.autonomyMissingValue = true;
+    }
+  }
+  return remaining;
+}
+
 export function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
   args = normalizeHelpArgs(args);
+  args = takeAutonomyFlag(args, flags);
   const intentWords: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -1091,15 +1128,6 @@ export function parseNextFlags(args: string[]): ParsedFlags {
       // into the freeform intent text (the path would read as intent words).
       flags.report = args[i + 1];
       i++;
-    } else if (a === "--autonomy" && i + 1 < args.length) {
-      // CONSUME the value (same reason as --report: an unrecognized valued flag
-      // would leak its value into the freeform intent text).
-      flags.autonomy = args[i + 1];
-      i++;
-    } else if (a === "--autonomy") {
-      // No token left to consume. Mark it so C13 can fail loudly — falling
-      // through would drop the flag in silence (FR-CLI-2(3)).
-      flags.autonomyMissingValue = true;
     } else if (!a.startsWith("--")) {
       intentWords.push(a);
     }
