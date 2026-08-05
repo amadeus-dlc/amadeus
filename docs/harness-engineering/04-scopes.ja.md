@@ -39,7 +39,7 @@ Prose intent: why these stages, why skip those.
 | `keywords` | No | `/amadeus <freeform text>` の自動検出のための自然言語トリガー。空リストはオプトアウト。 |
 | `description` | No | `/amadeus --help` に表示される1行説明。(SKILL.md のコンパイル済みスコープテーブルは Scope / Depth / TestStrategy / EXECUTE / Total のみを表示し、description は含めない。) |
 
-プロジェクトローカルなスコープ名には、フレームワーク接頭辞を重ねず、その役割を表す名前を使います。Amadeus の自己開発では `self-feature`、`self-fix`、`self-refactor`、`self-document` を使用し、ファイル名は `amadeus-self-fix.md` のようにします。`amadeus-amadeus-*.md` という二重接頭辞は使用しません。
+プロジェクトローカルなスコープ名には、フレームワーク接頭辞を重ねず、その役割を表す名前を使います。Amadeus の自己開発では `self-feature`、`self-fix`、`self-refactor`、`self-document` を使用し、ファイル名は `amadeus-self-fix.md` のようにします。`amadeus-amadeus-*.md` という二重接頭辞は使用しません。これら4つのスコープがそれぞれ何のためのもので、どう使い分けるかは、ユーザーガイドの[自己開発スコープ](../guide/05-scopes-and-depth.ja.md#自己開発スコープself-) を参照してください。
 
 **2. メンバーシップタグ — 各ステージの `scopes:` フロントマター。** ステージは、`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` にある自身のフロントマターで、自分が実行されるスコープを列挙します。
 
