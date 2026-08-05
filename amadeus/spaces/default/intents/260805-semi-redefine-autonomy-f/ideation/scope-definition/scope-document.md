@@ -9,7 +9,7 @@
 ### In(本 intent で出荷する)
 
 1. **semi の再定義(canonical 改訂)** — 質問を full と同一の無人解決4段(方針なしは3段縮退)で処理。`resolveAutoDecision:702` の full ハードゲートと `createGateAutoDecision:667` の question-throw の両改訂、`amadeus-stop.ts` の質問 carve-out 述語の grant 非依存化
-2. **`--autonomy semi|full` 起動宣言** — semi は即時設定(HUMAN_TURN provenance 必須)、full は grant 実在時走行・不在時 preview 表示の fail-closed 停止(FR-GRT-006 不変)
+2. **`--autonomy none|semi|full` 起動宣言**(**ユーザー裁定 2026-08-05 により 2値 → 3値へ改訂**。`none` は active grant 不在時のみ受理し、grant があるときは loud 拒否して明示 revoke を要求する) — semi は即時設定(HUMAN_TURN provenance 必須)、full は grant 実在時走行・不在時 preview 表示の fail-closed 停止(FR-GRT-006 不変)
 3. **semi の事前裁定方針受付** — 任意入力。担体・確認 digest は requirements 段の裁定事項。`--policies-file` 非 full 無音破棄の loud 化
 4. **表示の同一語彙** — `--status` に加え statusline への Autonomy 表示追加(#2067 旧本文の残余)
 5. **旧仕様ピンの明示改訂** — テスト(`t431:313`、`t121:1138`)+ docs 11 ファイル(日英対訳同時)。走行単位の主張は「質問で止まらない」に限定(stop 継続予算 cap 8 は不変)
@@ -28,7 +28,8 @@
 ## 承認系譜(スコープ境界の変更)
 
 - **当初裁定** 2026-08-05: ユーザー裁定「semi = full − 節目」+ Issue #2253 の完了条件 → In-1〜In-6
-- **追加裁定** 2026-08-05T06:03Z: requirements-analysis 直前で `formal-model-check` の advisory が発火し、conductor が「full 自律でも人間ターンを要求する」ギャップを実測報告。ユーザーが AskUserQuestion で「#2253 のスコープへ取り込む」を選択 → **In-7 を追加**。同時に目の前の advisory は「リスクを承知して延期」で受理(receipt: advisory_instance `86bed4aa-d738-4fba-9834-1e4eb3db7b6a`、human_turn `2026-08-05T06:03:16Z`)
+- **追加裁定(2)** 2026-08-05: `--autonomy` の値域を requirements 段の裁定 Q5=A(`semi|full` の2値)からユーザー裁定により `none|semi|full` の3値へ改訂。根拠は「mode の値域が `AutonomyMode = "none" | "semi" | "full"` なのにフラグだけ2値なのは非対称」。`--autonomy none` の受理条件(active grant 不在時のみ、grant ありは loud 拒否)は「不可逆寄りの操作をフラグの側面効果にしない」という Q5=A の趣旨を保存する形で確定。エスカレーション正準リスト(4)仕様変更によりユーザー専権
+- **追加裁定(1)** 2026-08-05T06:03Z: requirements-analysis 直前で `formal-model-check` の advisory が発火し、conductor が「full 自律でも人間ターンを要求する」ギャップを実測報告。ユーザーが AskUserQuestion で「#2253 のスコープへ取り込む」を選択 → **In-7 を追加**。同時に目の前の advisory は「リスクを承知して延期」で受理(receipt: advisory_instance `86bed4aa-d738-4fba-9834-1e4eb3db7b6a`、human_turn `2026-08-05T06:03:16Z`)
 - 本節は `cid:requirements-analysis:approval-lineage-citation` に基づく申告。scope-definition ステージは 2026-08-05T05:16:04Z に承認済みであり、In-7 はその後の追加裁定による境界変更である
 
 ## バリューストリーム
