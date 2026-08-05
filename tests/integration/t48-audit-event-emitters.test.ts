@@ -132,17 +132,19 @@ const ALL_SOURCE_FILES = [...tsFiles(TOOLS_DIR), ...tsFiles(HOOKS_DIR)];
 
 /**
  * has_emission (.sh:40-60): is there a LIVE emission call site for `event` in
- * `text`? Three patterns, on the decommented view:
+ * `text`? Four patterns, on the decommented view:
  *   1. helper(...,"EVENT"...) on one line
  *   2. eventType = ... "EVENT"   (audit-logger ternary)
  *   3. an indented `"EVENT" ,`   line (multi-line helper, literal on own line)
+ *   4. `eventType: "EVENT"`       (typed repository event construction)
  */
 function hasEmission(event: string, text: string): boolean {
   const live = decommented(text);
   const p1 = new RegExp(`${EMITTERS}\\([^)]*"${event}"`);
   const p2 = new RegExp(`eventType = [^;]*"${event}"`);
   const p3 = new RegExp(`^[ \\t]+"${event}"[ \\t]*(/\\*[^*]*\\*/)?[ \\t]*,`, "m");
-  return p1.test(live) || p2.test(live) || p3.test(live);
+  const p4 = new RegExp(`eventType:\\s*"${event}"`);
+  return p1.test(live) || p2.test(live) || p3.test(live) || p4.test(live);
 }
 
 /** Read the emitter taxonomy registry rows from 12-state-machine.md.

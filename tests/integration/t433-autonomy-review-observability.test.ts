@@ -1034,30 +1034,16 @@ describe("production review projection", () => {
       });
 
       const completionSealDigest = `sha256:${"c".repeat(64)}`;
-      // Raw shard append: INTENT_COMPLETION_TRANSACTION_COMMITTED is Bolt 5
-      // vocabulary the registry does not carry yet; the review production path
-      // only READS the seal off the shards, so the fixture seeds the row
-      // directly instead of routing it through the registry-guarded emitter.
-      appendFileSync(
-        join(projectDir, "amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR, "audit", "review-completion-seed.jsonl"),
-        `${JSON.stringify({
-          schemaVersion: 1,
-          seq: 1,
-          cloneId: "review-completion-seed",
-          intentId: DEFAULT_RECORD_DIR,
-          timestamp: new Date().toISOString(),
-          heading: "Intent Completion Transaction Committed",
-          event: "INTENT_COMPLETION_TRANSACTION_COMMITTED",
-          fields: {
-            "Intent Uuid": DEFAULT_INTENT_UUID,
-            "Transaction Id": "review-completion-transaction",
-            "Evidence Id": "review-completion-evidence",
-            "Evidence Digest": completionSealDigest,
-            "Completion Seal Digest": completionSealDigest,
-            Transaction: "{}",
-          },
-        })}\n`,
-      );
+      // Bolt 5 registered INTENT_COMPLETION_TRANSACTION_COMMITTED as canonical
+      // vocabulary, so the fixture seeds the seal through the guarded emitter.
+      emitAuditEventGuarded("INTENT_COMPLETION_TRANSACTION_COMMITTED", {
+        "Intent Uuid": DEFAULT_INTENT_UUID,
+        "Transaction Id": "review-completion-transaction",
+        "Evidence Id": "review-completion-evidence",
+        "Evidence Digest": completionSealDigest,
+        "Completion Seal Digest": completionSealDigest,
+        Transaction: "{}",
+      }, projectDir, DEFAULT_RECORD_DIR, "default");
       expect(withLockedIntentRegistry(
         projectDir,
         (context) => transitionIntentStatusLocked(context, DEFAULT_RECORD_DIR, "complete"),

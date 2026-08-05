@@ -94,6 +94,7 @@ const VALID_EVENT_TYPES = new Set([
   "QUALITY_REPAIR_TRANSACTION_COMMITTED",
   "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
   "AUTO_DECISION_REVIEWED",
+  "INTENT_COMPLETION_TRANSACTION_COMMITTED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -239,6 +240,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   QUALITY_REPAIR_TRANSACTION_COMMITTED: "Quality Repair Transaction Committed",
   INTENT_AUTONOMY_TRANSACTION_COMMITTED: "Intent Autonomy Transaction Committed",
   AUTO_DECISION_REVIEWED: "Auto Decision Reviewed",
+  INTENT_COMPLETION_TRANSACTION_COMMITTED: "Intent Completion Transaction Committed",
   UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
