@@ -53,10 +53,13 @@
 //      conductor must write a `<slug>-questions.md` with blank [Answer]: tags
 //      before asking (stage-protocol.md §3); an unanswered tag is a positive
 //      signal that a question is pending, so we ALLOW the stop then too
-//      (isPendingQuestionStop below). Strictly gated: it never fires under
-//      Intent autonomy `full` (the loop must keep running there), and any miss
-//      — no file, all answered, full, or a read error — falls through to
-//      the cap-bounded block, so a genuine mid-stage quit is still nudged.
+//      (isPendingQuestionStop below). Strictly gated: it never fires for an
+//      Intent that holds the QUESTION CARVE-OUT — autonomy `full` with an
+//      active grant, or `semi` declared by a human command, both of which may
+//      rule on the question themselves and so must keep running (#2253) — and
+//      any miss — no file, all answered, carve-out held, or a read error —
+//      falls through to the cap-bounded block, so a genuine mid-stage quit is
+//      still nudged.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
 //      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
 //      nor amadeus-state since that prompt). Issue #365's broader reading: a human
@@ -172,6 +175,30 @@ function isFullyAutonomousIntent(
   try {
     const projection = readProductionAutonomyProjection(resolvedProjectDir);
     return projection?.mode === "full" && projection.currentGrant?.state === "active";
+  } catch {
+    return false;
+  }
+}
+
+// The QUESTION carve-out is the one carve-out `semi` opens (#2253, C11/ADR-7).
+// `full` answers exactly as isFullyAutonomousIntent does — redefining `semi`
+// never weakens `full` — while `semi` additionally demands that the mode was
+// declared by a HUMAN COMMAND: a mode that arrived as a system default carries
+// no authorization to keep running past a pending question. The other two
+// carve-out sites (compose :457, conversational :716) keep asking the full-only
+// predicate. Judgment is two-stage — state first, so a mode outside
+// {semi, full} answers without reading the projection at all — and any throw
+// answers false, which is the conservative side here (the hook merely stops).
+export function isQuestionCarveoutIntent(
+  stateContent: string,
+  resolvedProjectDir: string = projectDir,
+): boolean {
+  const mode = intentAutonomyMode(stateContent);
+  if (mode === "full") return isFullyAutonomousIntent(stateContent, resolvedProjectDir);
+  if (mode !== "semi") return false;
+  try {
+    const projection = readProductionAutonomyProjection(resolvedProjectDir);
+    return projection?.mode === "semi" && projection.modeProvenance.kind === "human-command";
   } catch {
     return false;
   }
@@ -416,10 +443,11 @@ function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: str
 }
 
 // The tier-2 carve-out decision: the current stage is [-] in-progress, a
-// question is pending, and Intent autonomy is not `full`.
+// question is pending, and the Intent has no question carve-out (#2253: `full`
+// with an active grant, or `semi` declared by a human command).
 export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
   try {
-    if (isFullyAutonomousIntent(stateContent, resolvedProjectDir)) {
+    if (isQuestionCarveoutIntent(stateContent, resolvedProjectDir)) {
       return false; // autonomy guard — keep the loop alive
     }
     const slug = currentStageSlug(stateContent);

@@ -88,6 +88,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -102,12 +103,17 @@ import {
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
-import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  COMPOSE_MARKER_RELATIVE_PATH,
+  MACHINE_INJECTED_TURN_MARKERS,
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitAuditEventGuarded } from "../../dist/claude/.claude/otel/audit-emit.ts";
 import {
   isConversationalStop,
   isHumanWaitStop,
+  isPendingComposeStop,
   isPendingQuestionStop,
+  isQuestionCarveoutIntent,
   runEngineNextKind,
   transcriptIsConversational,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
@@ -362,6 +368,29 @@ function seedFullIntentGrant(proj: string): void {
     stateContent,
     mode: "full",
     confirmedDisplayDigest: preview.preview.displayDigest,
+  });
+  if (!applied.ok) throw new Error(applied.error);
+}
+
+/**
+ * Declare `semi` through the ONE human-command write path, so the projection
+ * carries `modeProvenance.kind === "human-command"`. The question carve-out
+ * (#2253, isQuestionCarveoutIntent) demands that provenance: an
+ * `Intent Autonomy Mode: semi` line in state is a claim, not an authorization,
+ * and only a real human command turns it into one. Unlike the `full` seed there
+ * is no grant to preview — `semi` is a mode declaration, not a grant issuance.
+ */
+function seedSemiIntentMode(proj: string): void {
+  resetOtelPerProject();
+  writeFileSync(
+    pinnedShardPath(proj),
+    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(2)}\n`,
+    "utf-8",
+  );
+  const applied = applyProductionAutonomyMode({
+    projectDir: proj,
+    stateContent: readFileSync(seededStateFile(proj), "utf-8"),
+    mode: "semi",
   });
   if (!applied.ok) throw new Error(applied.error);
 }
@@ -1135,8 +1164,13 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(f) semi + blank question ALLOWS because questions remain human-owned", () => {
+  test("(f) semi declared by a human + blank question BLOCKS because semi may rule on it", () => {
     const proj = makeProject();
+    // Redefining `semi` (#2253) reverses this pin. `semi` used to mean "every
+    // question is still the human's", so a pending question released the stop.
+    // It now means the run may RULE on routine questions itself, so the stop
+    // hook must keep the loop alive and let the ladder answer — the question is
+    // no longer a reason to hand the turn back.
     seedInProgressWithQuestions(proj, {
       slug: "code-generation",
       phase: "construction",
@@ -1144,9 +1178,10 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       intentMode: "semi",
       questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
     });
+    seedSemiIntentMode(proj);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
-    expect(r.out).toBe("");
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {
@@ -1248,6 +1283,55 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(f) semi does NOT reach the compose or conversational carve-outs (#2253 opens tier-2 only)", () => {
+    // The counterpart to the reversed tier-2 pin above. Redefining `semi`
+    // (#2253) opens exactly ONE of the three carve-out sites; the compose gate
+    // (isPendingComposeStop) and the tier-3 conversational carve-out
+    // (isConversationalStop) keep asking the full-only predicate, so a
+    // human-declared `semi` must leave both of them behaving as they do for any
+    // non-autonomous Intent.
+    const proj = makeProject();
+    // No questions file: tier-2 has nothing to release, so what this case
+    // observes is purely which predicate the OTHER two sites ask.
+    seedInProgressWithQuestions(proj, { intentMode: "semi" });
+    seedSemiIntentMode(proj);
+    const stateContent = readFileSync(seededStateFile(proj), "utf-8");
+
+    // Tier-2 IS open for this same Intent — the two answers must differ, which
+    // is precisely what sharing one predicate across all three would destroy.
+    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(true);
+
+    // :457 compose — the guard does NOT fire, so a fresh pending marker still
+    // releases (a `full` Intent would have been suppressed before this point).
+    const markerPath = join(proj, COMPOSE_MARKER_RELATIVE_PATH);
+    writeFileSync(markerPath, "", "utf-8");
+    expect(
+      isPendingComposeStop(stateContent, {
+        projectDir: proj,
+        nowMs: () => statSync(markerPath).mtimeMs,
+        stat: (p) => (existsSync(p) ? { mtimeMs: statSync(p).mtimeMs } : undefined),
+        unlink: () => {
+          throw new Error("a fresh marker must not be swept");
+        },
+        diagnostic: () => {
+          throw new Error("a fresh marker must not raise a janitor diagnostic");
+        },
+      }),
+    ).toBe(true);
+
+    // :716 conversational — the guard does NOT fire, so a chat transcript still
+    // releases the stop end-to-end through the real hook.
+    const tp = seedTranscript(proj, { format: "claude", engineCall: false });
+    expect(isConversationalStop(stateContent, tp, "claude", proj)).toBe(true);
+    const r = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+      "run-stage",
+    );
+    expect(r.rc).toBe(0);
+    expect(r.out).toBe("");
   }, 30000);
 
   test("(f) AUTONOMY cap is 8 - autonomous workflow does NOT release at the interactive cap (2)", () => {
