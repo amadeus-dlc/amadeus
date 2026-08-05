@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-ICS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1・c2 とも既存ノルムの機械適用であり新規学習ではない。c1: intent-capture-questions.md:11 が根拠として issue-cross-review / c1-xrev-verdict-not-ruling-authority を自ら引用しており、質問を未決判断のみに絞る規律は project.md cid:intent-capture:c1 が既定済み。0問様式は既習形(260804-tla-authoring)の再適用であり新しい判断は生じていない。c2: 前半(preview -> confirmed-display-digest -> set-autonomy の full グラント発行手順)は packages/framework/core/amadeus-common/protocols/stage-protocol.md:125 に逐語で規定済みの正準プロトコルであり、その実行は執行である。後半(HUMAN_TURN 補償)は diary(memory.md:7)自身が cid:intent-capture:c5 に従ったと明記しており、既決ノルムの適用そのもの。いずれも persist すると既存ノルムの重複記載となり、norm-consistency-review が禁じる重複を増やす。",
+  "submittedAt": "2026-08-05T05:52:00Z"
+}

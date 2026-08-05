@@ -1,0 +1,27 @@
+{
+  "electionId": "E-PCP-FDS13",
+  "kind": "s13-adoption",
+  "question": "intent 260805-pr-convergence-plugin の functional-design ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/construction/functional-design/memory.md)の候補3件について persist する集合を選べ。実在根拠は diary、per-unit FD 成果物(construction/{seam-bridge,convergence-toolchain}/functional-design/)、reviewer transcript の Review block で実測確認すること。候補 c1 = 「packaging kind の FD 適用外(produces_kinds — 既存 cid c1-engine-produces-all-five の設計どおりの正常系観測)」。候補 c2 = 「humanOnly 分離の設計確定+AD シグネチャの申告付き精密化(intent 固有の設計内容)」。候補 c3 = 「reviewer subagent がセッションリミットで verdict 未確立のまま失敗した場合、同一 invocationId/iteration での新 subagent 再ディスパッチで回収できる — complete-review の replay 拒否は記録済み verdict にのみ働くため、未記録なら再実行は正規(ハーネス運用知識)」。判定観点: 既存ノルム・機構仕様の機械適用や intent 固有の設計内容は新規学習でない。未被覆の運用知識のみ採用。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1 は既存 cid の正常系観測、c2 は intent 固有、c3 は complete-review の replay 検査仕様(invocation/iteration 単位)から自明に導出できるため persist しない。"
+    },
+    {
+      "internalNo": 2,
+      "label": "c3 のみ採用",
+      "description": "reviewer 失敗時の再ディスパッチ規律(未記録 verdict なら同一 invocationId/iteration の再実行が正規)を project.md へ persist する。"
+    },
+    {
+      "internalNo": 3,
+      "label": "他の組合せ",
+      "description": "上記以外(留保に明記)。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

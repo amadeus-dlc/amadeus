@@ -103,6 +103,13 @@ export interface ModelVocabulary {
   readonly traceStateVariables: readonly string[];
 }
 
+// The evidence bundle an authoring run registered with the entry (ADR-3). It is
+// optional so the entries that predate the authoring workflow stay valid byte
+// for byte; the committer refuses to mint a new entry without one.
+export interface ModelMapEvidenceBundle {
+  readonly digest: string;
+}
+
 export interface ModelMapModel {
   readonly name: string;
   readonly model: ModelMapAssetIdentity;
@@ -110,6 +117,7 @@ export interface ModelMapModel {
   readonly auxiliaries?: readonly ModelMapAssetIdentity[];
   readonly entries: readonly ModelMapEntry[];
   readonly vocabulary?: ModelVocabulary;
+  readonly evidenceBundle?: ModelMapEvidenceBundle;
 }
 
 export interface ModelMap {
@@ -209,14 +217,32 @@ function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoa
   return { ok: true, value: entries };
 }
 
-// The optional auxiliaries / vocabulary keys widen the model shape to exactly
-// these four key sets; every other combination is rejected as before.
-const MODEL_KEY_SETS: readonly (readonly string[])[] = [
-  ["cfg", "entries", "model", "name"],
-  ["auxiliaries", "cfg", "entries", "model", "name"],
-  ["cfg", "entries", "model", "name", "vocabulary"],
-  ["auxiliaries", "cfg", "entries", "model", "name", "vocabulary"],
-];
+// The optional auxiliaries / vocabulary / evidenceBundle keys widen the model
+// shape to the key sets below; every other combination is rejected as before.
+const REQUIRED_MODEL_KEYS = ["cfg", "entries", "model", "name"] as const;
+const OPTIONAL_MODEL_KEYS = ["auxiliaries", "vocabulary", "evidenceBundle"] as const;
+
+// Every subset of the optional keys, added to the required ones. Deriving the
+// sets keeps a new optional key from needing a hand-written combination table.
+const MODEL_KEY_SETS: readonly (readonly string[])[] = Array.from(
+  { length: 1 << OPTIONAL_MODEL_KEYS.length },
+  (_unused, mask) => [
+    ...REQUIRED_MODEL_KEYS,
+    ...OPTIONAL_MODEL_KEYS.filter((_key, index) => (mask & (1 << index)) !== 0),
+  ],
+);
+
+const BUNDLE_DIGEST = /^sha256:[0-9a-f]{64}$/;
+
+function parseEvidenceBundle(value: unknown, index: number): Result<ModelMapEvidenceBundle, ModelLoadError> {
+  if (!exactObject(value, ["digest"])) {
+    return invalid(`models[${index}].evidenceBundle must have exactly digest`);
+  }
+  if (typeof value.digest !== "string" || !BUNDLE_DIGEST.test(value.digest)) {
+    return invalid(`models[${index}].evidenceBundle.digest must be sha256:<hex64>`);
+  }
+  return { ok: true, value: { digest: value.digest } };
+}
 
 function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is string {
   if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
@@ -298,7 +324,7 @@ function parseModelVocabulary(value: unknown): Result<ModelVocabulary, ModelLoad
 function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelLoadError> {
   if (!MODEL_KEY_SETS.some((keys) => exactObject(value, keys))) {
     return invalid(
-      `models[${index}] must have exactly name, model, cfg, and entries, optionally with auxiliaries and vocabulary`,
+      `models[${index}] must have exactly name, model, cfg, and entries, optionally with auxiliaries, vocabulary and evidenceBundle`,
     );
   }
   const record = value as Record<string, unknown>;
@@ -324,6 +350,12 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
     if (!parsed.ok) return parsed;
     vocabulary = parsed.value;
   }
+  let evidenceBundle: ModelMapEvidenceBundle | undefined;
+  if ("evidenceBundle" in record) {
+    const parsed = parseEvidenceBundle(record.evidenceBundle, index);
+    if (!parsed.ok) return parsed;
+    evidenceBundle = parsed.value;
+  }
   return {
     ok: true,
     value: {
@@ -333,6 +365,7 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
       entries: entries.value,
       ...(auxiliaries === undefined ? {} : { auxiliaries }),
       ...(vocabulary === undefined ? {} : { vocabulary }),
+      ...(evidenceBundle === undefined ? {} : { evidenceBundle }),
     },
   };
 }

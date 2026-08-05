@@ -1,5 +1,50 @@
 # アーキテクチャ
 
+## plugin seam 機構の半実装状態と3層 trust（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 `git merge-base --is-ancestor` exit 0、距離 27 commits / 474 files）。全数列挙・probe 手順・引用の再解決表は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### plugin が host へ寄与できる4面
+
+`parsePluginManifest`（`amadeus-plugin-compose.ts:339-345`）が構築する manifest は `{ name, stages, seams, fragments, tools }` の4種のみである。**`sensors` は schema に存在しない**。未知の top-level キーは拒否されず無視される（strict rejection なし）。参照実装 formal-model-check の sensor manifest も plugin バンドル内ではなく core 側 `packages/framework/core/sensors/amadeus-model-completeness.md` にあり、`plugins/formal-model-check/plugin.json` の `sensors` 出現数は 0。すなわち **plugin stage の frontmatter が `sensors: [...]` を宣言し、manifest 実体は core が所有する**のが現行アーキテクチャである。`tools/` は `TOOLS_DIR_PREFIX`（`:350`）配下限定で、stage path 空間との非交差を `:488-493` が強制する。
+
+### seam 機構は語彙・merge・台帳・drop まで実装され、host stage 認識面だけが未着地
+
+| 層 | 実装 | 状態 |
+| --- | --- | --- |
+| seam 語彙 | `amadeus-plugin-compose.ts:74` `SEAM_NAMES = ["produces", "consumes", "sensors", "required_sections"]` | 実装済み。直上コメント `:70-73` が「StageFrontmatter の list フィールドに対応する単一の membership source」と明示 |
+| merge | `mergeSeamEntries` `:424-435` | 実装済み |
+| 適用 | `applySeamContributions` `:699-719` | 実装済み |
+| drop 復元 | `rebuildStageSeams` `:567-580` | 実装済み |
+| **host stage 認識** | `parseHostStageSeams`（`amadeus-plugin.ts:258-270`）が 1 行目に `/^stage: (.+)$/` を要求 | **未着地**。実ステージ Markdown の 1 行目は `---` のため、リポジトリ内のどの実ステージも HostStage にならない |
+| serializer | `serializeStageSeams`（`:555`）は 4 行の合成バイト形のみを吐く | **未着地**。コメント `:552-554` が `the real frontmatter serializer is U11+` と自認 |
+
+この制約はリポジトリ自身が記述している（`tests/unit/t301-plugin-cli-seams.test.ts:7-10` が「buildHostSnapshot in t299 only ever feeds parseHostStageSeams full-markdown stage files (which fail the `stage:` first-line match)」と明記）。挙動は**無音スキップではなく loud reject** で、実ステージへ produces seam を宣言した manifest は `inspectPlugin` が `unknown-seam` で拒否する（`collectSeamErrors` `:498-511`、probe 実測）。
+
+**アーキテクチャ上の含意**: 既存ステージの produces を plugin から overlay する経路は、機構の後半（merge / 台帳 / drop）が完成している一方で前半（実 frontmatter の parse / serialize）が存在しない。ここを接続する場合、**frontmatter を保存したまま対象配列だけを追記する serializer** が必要になる（現行 serializer は 4 行の合成形しか吐かないため）。この点は実装が存在しないため机上の帰結であり観測ではない。
+
+### opt-in stage は stock workflow の per-unit ループへ参加しない
+
+`applyPluginScopeOptIns`（`amadeus-graph.ts:1484-1502`）は plugin stage を scope-grid transpose の**生産者にせず**、厳密に加算の overlay として後段適用する。設計コメント `:1466-1483` が理由を明記する（plugin が既存 composed scope を宣言すると当該 scope の plan を自分の stage だけに置換してしまった #1630 の是正）。したがって `scopes: []` の plugin stage は grid の行を1つも触らず、stock scope から自動選択されない（`plugins/formal-model-check/stages/formal-model-check.md:4` の `condition:` が同旨を逐語で述べる）。
+
+**帰結**: 「install した環境では既存ステージの全 Bolt に成果物を必須化する」形の寄与は、opt-in stage 形では構造的に実現できず、seam による既存ステージへの produces overlay 経路にのみ依存する。上記の未着地面がこの経路の唯一のボトルネックである。
+
+### 3層 trust（compose / compile / run）は実在
+
+- **compose**: `TrustGrant { plugin, contentDigest, grantTimestamp }`（`amadeus-plugin-compose.ts:161-165`）、`PluginStageIndexEntry.contentDigest`
+- **compile**: plugin stage 発見 = `plugins/<name>/stages/<slug>.md`（`amadeus-graph.ts:1784-1798`）、`plugin_source?: true` を stamp（`:140-146`）
+- **run**: O_NOFOLLOW + 同一 inode 再読み（`amadeus-graph.ts:1889-1901` verbatim `throw new Error("platform does not support O_NOFOLLOW (fail-closed)")`、`:1971` `// or ancestor, then O_NOFOLLOW-read the exact same inode.`）、grant / entry digest の形式検査 `/^sha256:[0-9a-f]{64}$/`（`:2061-2074`）
+
+区間内で **import-closure guard** が加わった（#2240、`scripts/plugin-projection.ts:880-946`、+77行/−1行）。plugin の `tools[]` から相対 import で到達可能な全モジュールが manifest 宣言かつ owned でなければ projection を write-0 で拒否する（`assertPluginImportClosure`）。symlink 脱出は `repoFileReader` の realpath 境界で封鎖される。**plugin が tools を出荷する際の import 閉包全数宣言が新たな設計制約となった。**
+
+### install / drop の可逆性は FS 実測で判定される
+
+`handleDrop`（`amadeus-plugin.ts:1137-1186`）は plan → apply → drops 記録の消去 → recompile → runner 再生成 → 選択設定の永続化を行い、失敗時は `createPluginInstallSnapshot` の `rollback()` へ落ちる。復元判定は台帳ではなく **FS 実測**で、所有パスの不在（`pluginArtifactsAbsent` `:1190-1198`）に加え「空の親ディレクトリ残骸ゼロ」（`hasEmptyAncestorDir` `:1202-1211`）まで検査する。runner は plugin stage も core stage と同条件で対象になり（`amadeus-runner-gen.ts:98-100` — 述語は provenance フィールドを読まない）、drop で対称に prune される（`:1176-1181`）。
+
+### 未接続の第2候補 seam
+
+`amadeus-quality-repair.ts` の `QualityRequiredOutputDescriptor { outputId, stageSelector, verifierId, verificationConditionId }`（`:125-130`）は「ステージへ必須成果物を宣言する」形そのものだが、`compileQualityContribution:242` が `if (contribution.requiredOutputs.length !== 0) return null;` で非空を拒否するため activation が失敗する。first-party contribution も `:211` で `requiredOutputs: []` を宣言し、消費者は repo 全域で 0 件である。**型は用意されているが engine 側で接続されていない。**
+
 ## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された境界
@@ -55,7 +100,7 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## phase boundary verification と approval の結線構造（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## phase boundary verification と approval の結線構造（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（祖先性 `git merge-base --is-ancestor` exit 0、距離 134 commits / 1041 files）。全数列挙・実測手順は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

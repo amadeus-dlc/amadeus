@@ -1,0 +1,19 @@
+{
+  "electionId": "E-PCP-BTS13",
+  "voter": "subagent-2",
+  "question": "intent 260805-pr-convergence-plugin の build-and-test ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/construction/build-and-test/memory.md)の候補2件について persist する集合を選べ。実在根拠は diary と成果物(construction/build-and-test/ の7成果物、特に build-test-results.md の実測値)で実測確認すること。候補 c1 = 「AC 外の未検証面3件を実文照合して無条件 READY とした(c2-unconditional-ready-boundary の機械適用)」。候補 c2 = 「フル CI を conductor 統合断面+builder 独立実測の両面で確保(既存 c3-mirror-review-fixes の実践)」。判定観点: 既存ノルムの機械適用は新規学習でない。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1・c2 とも既存ノルムの機械適用であり persist しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "他の組合せ",
+      "description": "採用すべき候補がある場合(留保に明記)。"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import {
   readModelMapSnapshot,
   verifyHumanApproval,
 } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
-import type { EvidenceParts } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
+import type { EvidenceParts, StableId } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 
 // U2 C9 pin (business-rules.md BR-U2-13..17, business-logic-model.md §3).
 // Pure layer only: the evidence reader is injected, so no filesystem is touched
@@ -181,7 +181,7 @@ describe("readModelMapSnapshot", () => {
 
   test("a model with no evidence link yet contributes no trace subjects", () => {
     const snapshot = readModelMapSnapshot(
-      JSON.stringify({ models: [{ name: "Election", evidence: null }] }),
+      JSON.stringify({ models: [{ name: "Election", evidenceBundle: null }] }),
       () => {
         throw new Error("an unlinked model must not be resolved against the store");
       },
@@ -190,8 +190,18 @@ describe("readModelMapSnapshot", () => {
   });
 
   test("a linked bundle that cannot be resolved makes the whole map unreadable", () => {
-    const text = JSON.stringify({ models: [{ name: "Election", evidence: { digest: "a" } }] });
+    const text = JSON.stringify({ models: [{ name: "Election", evidenceBundle: { digest: "a" } }] });
     expect(readModelMapSnapshot(text, noBundles)).toBeNull();
+  });
+
+  // The registered key is the one U4's committer writes, so the reader resolves
+  // exactly what a registration puts in the map.
+  test("a model linked through evidenceBundle resolves its trace subjects", () => {
+    const digest = `sha256:${"4".repeat(64)}`;
+    const text = JSON.stringify({ models: [{ name: "Election", evidenceBundle: { digest } }] });
+    const subjects = ["FR-010"] as unknown as readonly StableId[];
+    const snapshot = readModelMapSnapshot(text, (named) => (named === digest ? subjects : null));
+    expect(snapshot?.models).toEqual([{ name: "Election", traceSubjects: subjects }]);
   });
 });
 

@@ -1,0 +1,71 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "number": 9001,
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "BLOCKED",
+        "reviewThreads": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "SYNTHETIC_CURSOR_END"
+          },
+          "nodes": [
+            {
+              "id": "PRRT_synthetic_terminalized",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "coderabbitai"
+                    },
+                    "body": "_📐 Maintainability & Code Quality_ | _🟡 Minor_ | _⚡ Quick win_\n\n**定数がハードコードされています。**"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "734850b02 で是正しました。#1971 の一次入力互換も維持しています。"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_synthetic_resolvedWithoutRef",
+              "isResolved": true,
+              "isOutdated": false,
+              "comments": {
+                "pageInfo": {
+                  "hasNextPage": false
+                },
+                "nodes": [
+                  {
+                    "author": {
+                      "__typename": "Bot",
+                      "login": "cursor"
+                    },
+                    "body": "### Placeholder ballot after acceptance\n\n**Low Severity**\n\n表記ゆれの指摘です。"
+                  },
+                  {
+                    "author": {
+                      "__typename": "User",
+                      "login": "j5ik2o"
+                    },
+                    "body": "了解です。対応不要と判断しました。"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
