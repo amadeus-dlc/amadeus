@@ -69,7 +69,7 @@ const KIRO_TRANSPORT_AGENT = "kiro_default";
  * cleanup. The guard keeps an unusually long temp directory a clear prepare
  * failure rather than a confusing connect error at execute time.
  */
-const MAX_SOCKET_PATH_BYTES = 100;
+export const MAX_SOCKET_PATH_BYTES = 100;
 
 /** The idle input footer Kiro paints once a turn has finished. */
 const IDLE_PROMPT_PATTERN = /ask a question or describe a task/i;
@@ -464,7 +464,13 @@ export class KiroTuiAdapter implements LiveAdapter {
     const deadline = Date.now() + (this.#options.reapTimeoutMs ?? 10_000);
     for (;;) {
       const listed = this.#privateCommand(["list-sessions"]);
-      if (commandFailed(listed) && absentPrivateServer(listed)) return null;
+      if (commandFailed(listed)) {
+        if (absentPrivateServer(listed)) return null;
+        // Any other failure — socket permission, missing binary, timeout —
+        // says nothing about server liveness, so report it verbatim instead
+        // of polling the same failure until the deadline.
+        return sanitizeText(listed.stderr || listed.stdout || "private tmux server liveness is unknown");
+      }
       if (Date.now() >= deadline) return "private tmux server was not reaped";
       await this.#sleep();
     }

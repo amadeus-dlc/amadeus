@@ -19,7 +19,14 @@ export interface TmuxCommandResult {
 export interface TmuxCommandOptions {
   readonly cwd?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly timeoutMs?: number;
 }
+
+/**
+ * A stalled tmux client would block the synchronous caller past every journey
+ * deadline, so each command carries its own bound.
+ */
+export const DEFAULT_TMUX_COMMAND_TIMEOUT_MS = 15_000;
 
 export interface TmuxCommandPort {
   run(args: readonly string[], options?: TmuxCommandOptions): TmuxCommandResult;
@@ -38,6 +45,7 @@ export class SpawnSyncTmuxCommandPort implements TmuxCommandPort {
       env: options.env,
       encoding: "utf8",
       maxBuffer: MAX_PANE_BYTES + 1,
+      timeout: options.timeoutMs ?? DEFAULT_TMUX_COMMAND_TIMEOUT_MS,
     });
     return {
       exitCode: result.status,

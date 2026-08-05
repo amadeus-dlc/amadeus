@@ -17,7 +17,7 @@ import {
   kiroHomeLayout,
   KiroScratchAllocator,
 } from "../harness/live-e2e/kiro.ts";
-import { KiroTuiAdapter } from "../harness/live-e2e/kiro-tui.ts";
+import { KiroTuiAdapter, MAX_SOCKET_PATH_BYTES } from "../harness/live-e2e/kiro-tui.ts";
 import { runLiveJourney } from "../harness/live-e2e/lifecycle.ts";
 import type {
   TmuxCommandOptions,
@@ -41,6 +41,8 @@ interface FakeTmuxOptions {
   readonly stuckOnTrustPrompt?: boolean;
   /** Keep answering as a live server, so the cleanup reap barrier must fail. */
   readonly serverNeverReaps?: boolean;
+  /** Fail list-sessions for a reason other than an absent server. */
+  readonly denyListSessions?: boolean;
 }
 
 /**
@@ -72,6 +74,9 @@ class FakePrivateTmux implements TmuxCommandPort {
       return { exitCode: 1, stdout: "", stderr: "injected server cleanup failure" };
     }
     if (command === "list-sessions") {
+      if (this.#options.denyListSessions === true) {
+        return { exitCode: 1, stdout: "", stderr: "error connecting to socket: Permission denied" };
+      }
       return this.#options.serverNeverReaps === true
         ? { exitCode: 0, stdout: "amadeus-kiro: 1 windows\n", stderr: "" }
         : { exitCode: 1, stdout: "", stderr: "no server running on the private socket" };
@@ -185,7 +190,7 @@ describe("Kiro TUI live adapter", () => {
       expect(serverCalls.every((call) =>
         call.args[0] === "-S" &&
         call.args[1]?.includes(RUN_ID.slice(0, 16)) === true &&
-        Buffer.byteLength(call.args[1] ?? "") <= 100
+        Buffer.byteLength(call.args[1] ?? "") <= MAX_SOCKET_PATH_BYTES
       )).toBe(true);
       expect(serverCalls.some((call) => call.args[2] === "kill-session")).toBe(true);
       expect(serverCalls.some((call) => call.args[2] === "kill-server")).toBe(true);
@@ -282,6 +287,44 @@ describe("Kiro TUI live adapter", () => {
     }
   });
 
+  test("a liveness probe that fails for another reason reports it instead of polling to the deadline", async () => {
+    const item = fixture();
+    const allocator = new KiroScratchAllocator({
+      prefix: "kiro-tui-reap-denied-",
+      distributionDir: item.distribution,
+    });
+    const adapter = new KiroTuiAdapter({
+      kiroBin: item.kiroBin,
+      distributionDir: item.distribution,
+      sourceHome: item.sourceHome,
+      parentEnv: { PATH: process.env.PATH },
+      tmux: new FakePrivateTmux({ denyListSessions: true }),
+      createRunId: () => RUN_ID,
+      pollIntervalMs: 1,
+      // A generous deadline: the barrier must not spend it polling a failure
+      // that says nothing about server liveness.
+      reapTimeoutMs: 60_000,
+    });
+    const { ResourceRegistrar } = await import("../harness/live-e2e/resources.ts");
+    const registrar = new ResourceRegistrar();
+    try {
+      const scratch = await allocator.allocate(registrar);
+      const prepared = await adapter.prepare({
+        scratch,
+        registrar,
+        credentialSource: new KiroHomeCredentialSource({ sourceHome: item.sourceHome }),
+      });
+      expect(prepared.ok).toBe(true);
+      const started = Date.now();
+      const receipt = await adapter.cleanup({ scratch, registeredResources: registrar.snapshot() });
+      expect(receipt.failures).toContain("error connecting to socket: Permission denied");
+      expect(receipt.failures).not.toContain("private tmux server was not reaped");
+      expect(Date.now() - started).toBeLessThan(30_000);
+    } finally {
+      rmSync(item.root, { recursive: true, force: true });
+    }
+  });
+
   test("cleanup barrier failure never invokes the ledger", async () => {
     const item = fixture();
     try {
@@ -301,12 +344,17 @@ describe("Kiro TUI live adapter", () => {
 
   test("a trust picker that never clears reaches the readiness deadline", async () => {
     const item = fixture();
+    const tmux = new FakePrivateTmux({ stuckOnTrustPrompt: true });
     try {
-      const result = await runFixture(item, new FakePrivateTmux({ stuckOnTrustPrompt: true }), 0);
+      const result = await runFixture(item, tmux, 0);
       expect(result).toMatchObject({
         ok: true,
         value: { kind: "recorded", outcome: { code: "AMADEUS_LIVE_E2E:FAIL:EXECUTION_FAILED" } },
       });
+      // EXECUTION_FAILED alone does not prove the readiness path: pin that the
+      // trust picker was answered but the prompt itself was never delivered.
+      expect(tmux.calls.some((call) => call.args.at(-1) === "Down")).toBe(true);
+      expect(tmux.calls.some((call) => call.args.includes("-l"))).toBe(false);
     } finally {
       rmSync(item.root, { recursive: true, force: true });
     }
