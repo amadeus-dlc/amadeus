@@ -1056,9 +1056,7 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
   }
   // Reported before the file is read: a mode with no carrier for policies is a
   // mismatch worth naming ahead of anything wrong inside the file itself.
-  if (flags.mode === "none" && flags["policies-file"] !== undefined) {
-    error("--policies-file is not accepted with --mode none (policies have no carrier in mode none).");
-  }
+  if (flags.mode === "none" && flags["policies-file"] !== undefined) error("--policies-file is not accepted with --mode none (policies have no carrier in mode none).");
 
   const pd = resolveBoltProjectDir(explicitProjectDir);
 
