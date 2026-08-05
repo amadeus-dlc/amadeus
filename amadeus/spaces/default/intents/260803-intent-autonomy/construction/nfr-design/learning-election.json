@@ -1,0 +1,21 @@
+{
+  "electionId": "E-S13-NFRDESIGN-1",
+  "kind": "learning-selection",
+  "question": "NFR Designで記録した学習候補のうち、今後の実行規範として永続化する候補を選んでください。",
+  "choices": [
+    { "internalNo": 1, "label": "expected absenceのNFR Requirementsを捏造せずFunctional Designの確定契約をNFRオラクルにした", "description": "上流がexpected absenceの場合は既存の確定契約を使う。→ project.md ## Corrections" },
+    { "internalNo": 2, "label": "Quality Repairの総修復回数capを追加せずnon-progress区間をTで閉じた", "description": "Issueにない総capを追加せずnon-progress契約を使う。→ project.md ## Corrections" },
+    { "internalNo": 3, "label": "Intent grantを時間・回数で失効させずhuman revoke / downgradeだけでterminal化した", "description": "Intent-scoped grantの明示契約を維持する。→ project.md ## Corrections" },
+    { "internalNo": 4, "label": "completed reviewをoriginal seal外のreview-only extension chainへ限定した", "description": "完了済みIntentのidentityを変更しない。→ project.md ## Corrections" },
+    { "internalNo": 5, "label": "reviewer上限到達後、ユーザー選択AによりU4 Functional Designの公開cursor契約をsnapshot-bound設計へ同期し、レビュー反復を新しいサイクルとして再開した", "description": "消費元の公開契約まで整合させる。→ project.md ## Corrections" },
+    { "internalNo": 6, "label": "数値SLOやクラウド構成を追加せず計算量・partition・atomicityで設計した", "description": "Issueにない運用目標を捏造しない。→ project.md ## Corrections" },
+    { "internalNo": 7, "label": "no-effect後のredispatch上限をattempt 1のstarted event存在で耐久化した", "description": "mutable counterを増やさずcanonical eventで耐久化する。→ project.md ## Corrections" },
+    { "internalNo": 8, "label": "replan agent effectをreservation-firstとclosed reconciliationで隔離した", "description": "重複plan生成を防ぎgeneric monitorを保つ。→ project.md ## Corrections" },
+    { "internalNo": 9, "label": "replan redispatchをattempt 1 successor reservationの存在で最大1回へ固定した", "description": "permitとbudgetを同一commitへ閉じる。→ project.md ## Corrections" },
+    { "internalNo": 10, "label": "decision selectionとeffect authorizationを別componentに分離した", "description": "判断と権限を混同しない。→ project.md ## Corrections" },
+    { "internalNo": 11, "label": "park開始をreason / condition / optional latch / suspended projectionの単一transactionにした", "description": "不完全なsuspended状態を公開しない。→ project.md ## Corrections" },
+    { "internalNo": 12, "label": "completed targetのhuman turnとreview appendをcross-Intent分散transactionにしなかった", "description": "source evidenceとtarget effectを分離する。→ project.md ## Corrections" },
+    { "internalNo": 13, "label": "pagination cursorをaudit revision / extension head / event-set digestへ束縛した", "description": "page間mutationを明示conflictへ閉じる。→ project.md ## Corrections" }
+  ],
+  "voters": ["subagent-1", "subagent-2"]
+}

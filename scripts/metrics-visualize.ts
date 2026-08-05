@@ -63,6 +63,34 @@ const REGRESSION_RULES: Record<string, RegressionRule> = {
   "bugs.open": { worse: (prev, curr) => prev !== null && curr > prev },
 };
 
+// Cumulative bug-ledger series (ever-growing counters) chart as per-snapshot
+// deltas instead of monotone lines; `bugs.open` is a point-in-time balance and
+// stays raw. Regression rules above always compare raw snapshot values — the
+// two tables are independent, so a cumulative key never gains a rule here.
+const CUMULATIVE_KEYS = new Set([
+  "bugs.total",
+  "bugs.closed",
+  "bugs.fixed",
+  "bugs.rejected",
+  "bugs.s1_fatal",
+  "bugs.s2_critical",
+  "bugs.s3_major",
+  "bugs.s4_minor",
+  "bugs.unlabeled",
+]);
+
+// Per-snapshot increments over a cumulative series: delta[i] is defined only
+// when both neighbours are numeric (strict adjacency — a gap across a skipped
+// snapshot stays a gap rather than smearing the increment over the window),
+// and delta[0] is always null because the first point has no predecessor.
+export function deltaPoints(points: Array<number | null>): Array<number | null> {
+  return points.map((p, i) => {
+    if (i === 0 || p === null) return null;
+    const prev = points[i - 1];
+    return prev === null ? null : p - prev;
+  });
+}
+
 // "regressed" when the latest value worsened against the previous one (or is
 // non-zero for the prev-agnostic failure counters); "" otherwise. Comparison
 // happens only after numericValue — non-numbers never classify.
@@ -173,10 +201,13 @@ function renderChartAxes(series: Snapshot[], range: { min: number; max: number }
 }
 
 function renderKeyChart(series: Snapshot[], collector: string, key: string): string {
-  const points = series.map((s) => numericValue(s.collectors[collector]?.values[key]));
+  const cumulative = CUMULATIVE_KEYS.has(`${collector}.${key}`);
+  const rawPoints = series.map((s) => numericValue(s.collectors[collector]?.values[key]));
+  const points = cumulative ? deltaPoints(rawPoints) : rawPoints;
+  const label = cumulative ? `Δ ${key}` : key;
   const range = valueRange(points);
   if (range === null) {
-    return `<div class="chart"><h3>${escapeHtml(key)}</h3><p class="empty">データなし(数値がありません)</p></div>`;
+    return `<div class="chart"><h3>${escapeHtml(label)}</h3><p class="empty">データなし(数値がありません)</p></div>`;
   }
   const present = series.filter((s) => s.collectors[collector] !== undefined);
   const latestClass = regressionClass(
@@ -190,13 +221,13 @@ function renderKeyChart(series: Snapshot[], collector: string, key: string): str
     .map((p, i) => {
       if (p === null) return "";
       const s = series[i];
-      const title = `${s.captured_at} / ${s.commit.slice(0, 12)} — ${key}=${formatValue(p)}`;
+      const title = `${s.captured_at} / ${s.commit.slice(0, 12)} — ${cumulative ? `Δ${key}` : key}=${formatValue(p)}`;
       const cls = i === lastPointIndex && latestClass !== "" ? ` class="${latestClass}"` : "";
       return `<circle${cls} cx="${chartX(i, points.length, PLOT_WIDTH).toFixed(1)}" cy="${chartY(p, range.min, range.max, PLOT_HEIGHT).toFixed(1)}" r="2.5"><title>${escapeHtml(title)}</title></circle>`;
     })
     .join("");
   return [
-    `<div class="chart"><h3>${escapeHtml(key)} <span class="range">min ${formatValue(range.min)} / max ${formatValue(range.max)}</span></h3>`,
+    `<div class="chart"><h3>${escapeHtml(label)} <span class="range">min ${formatValue(range.min)} / max ${formatValue(range.max)}</span></h3>`,
     `<svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" width="${CHART_WIDTH}" height="${CHART_HEIGHT}" role="img">`,
     renderChartAxes(series, range),
     `<g transform="translate(${CHART_MARGIN.left} ${CHART_MARGIN.top})">`,
@@ -270,6 +301,7 @@ export function renderHtml(series: Snapshot[]): string {
     "<h1>メトリクス定点観測ダッシュボード</h1>",
     `<p class="meta">${escapeHtml(meta)}</p>`,
     '<p class="legend">赤 = 直前スナップショットからの劣化(coverage 低下・CCN 増・テスト失敗・dist 肥大・バグ open 増)</p>',
+    '<p class="meta">Δ 付きチャート = バグ累計系列の直前スナップショットからの増分(open は残高のためそのまま。値表は累計の生値)</p>',
     discoverCollectors(series).map((c) => renderCollectorSection(series, c)).join(""),
     "</body></html>",
   ].join("\n");

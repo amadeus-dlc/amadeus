@@ -226,7 +226,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // plus the four Goal Lifecycle events (+4) = 86,
     // plus QUALITY_REPAIR_TRANSACTION_COMMITTED (#2096, +1) = 87,
     // plus INTENT_AUTONOMY_TRANSACTION_COMMITTED (#2067, +1) = 88,
-    // plus AUTO_DECISION_REVIEWED (#2067 review surface, +1) = 89.
+    // plus AUTO_DECISION_REVIEWED (#2067 review surface, +1) = 89,
+    // plus INTENT_COMPLETION_TRANSACTION_COMMITTED (#2067 completion seal, +1) = 90.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -234,7 +235,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(89);
+    expect(count).toBe(90);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

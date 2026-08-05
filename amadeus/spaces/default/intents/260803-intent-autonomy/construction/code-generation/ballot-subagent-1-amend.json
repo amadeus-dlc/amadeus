@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-S13-CODEGEN-1",
+    "voter": "subagent-1",
+    "submittedAt": "2026-08-04T01:16:32Z"
+  },
+  "electionId": "E-S13-CODEGEN-1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "GOAは1が全面支持を表すため訂正します。ステージメモリに学習候補も未解決事項もないという判断と、選択肢1への支持は変更しません。",
+  "submittedAt": "2026-08-04T01:18:27Z"
+}

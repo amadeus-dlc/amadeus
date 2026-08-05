@@ -63,3 +63,12 @@ export const PACKAGE_HARNESS_IDS: readonly PackageHarnessId[] = HARNESS_REGISTRY
 export const SELF_INSTALL_HARNESS_IDS: readonly SelfInstallHarnessId[] = HARNESS_REGISTRY
   .filter((descriptor): descriptor is RegistryRow & { readonly selfInstallFace: true } => descriptor.selfInstallFace)
   .map((descriptor) => descriptor.id as SelfInstallHarnessId);
+
+// The registry paired with its content digest, as intent completion consumes
+// it (amadeus-intent-completion.ts): revision and cohort bindings pin the
+// registryDigest so a cohort minted against one registry cannot be replayed
+// against another.
+export interface ValidatedHarnessRegistry {
+  readonly descriptors: readonly HarnessDescriptor[];
+  readonly registryDigest: string;
+}
