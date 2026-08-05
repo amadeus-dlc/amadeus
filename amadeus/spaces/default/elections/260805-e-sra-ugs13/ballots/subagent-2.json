@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件でよいが、§12a 是正 (4) の「辺の hard/soft 強度注記」(unit-of-work-dependency.md:76-79)は境界的候補である — 今回はトポロジのみ記述・順序選択は 2.8 という既存正準委譲(cid:units-generation:c1 が正準への再定義禁止を定める)の範囲内の成果物様式と判定して不採用に同意するが、後続 intent で delivery-planning が強度未注記の DAG から soft 辺を hard と誤読して並行機会を潰す実測が出た場合は §13 候補への昇格を再検討すること。",
+  "rationale": "候補原文(memory.md)・成果物3点・引用された既存 cid をすべて独立に実読して判断した。【0件主張の各根拠の実測】(1) P1+P2 統合とテストピン移設: unit-of-work.md:127-153 の §分割の検証 が cid:units-generation:c1 を明示適用しており、同 cid は project.md:222 に実在 — (a) 項「片側だけでは利用者価値を出荷できない境界は単一 Unit へ統合する」が P1+P2 統合(memory.md:5)の直接根拠、テストピンの挙動変更 Unit への移設(unit-of-work.md:146-153、t431:311/:313 と t121:1138 の verbatim ピン実在を成果物内で確認)も「同一 PR でなければ CI green を保てない」という同 cid の統合条件の適用実例で、新規面はない。(2) FR 件数の機械再計算(33→31): unit-of-work-story-map.md:30 の「FR の割当(全 31 件)」が是正後の値で実在し、team.md の cid:requirements-analysis:ledger-count-mechanical-recalc(列挙からの機械再計算)の適用実例そのもの。(3) production 層結線の宙吊り検出: unit-of-work-dependency.md:119 が「C1〜C18 の列挙に現れない上流欠落を §12a iteration 1 指摘で core 所属と確定」と申告 — team.md:199 の cid:requirements-analysis:enumeration-completeness-review(列挙漏れはレビュー段の独立再列挙で検出)の適用実例。(4) bolt_dag 再 compile: memory.md:16 の実施記録は project.md:342 の cid:units-generation:recompile-before-construction-bolt-dag の定型手順実行であり執行にすぎない。【独立検分で見つけた境界候補2点の判定】(a) 上流マトリクス C13→C9 辺の消去申告(unit-of-work-dependency.md:88 が「上流マトリクスの辺の消去にあたるため本行で申告する」と明記): これは承認済み上流からの差分を無申告にしない既存規律(cid:requirements-analysis:implementation-deviation-election ファミリの「宣言なき逸脱の禁止」+ component-dependency.md:159 の「確定は units-generation の責務」という明示委譲)の適用であり、新規の一般化価値はない — 委譲された確定作業の中で消去根拠(component-methods.md:323 の既定値成立)を実測付きで残しており、既存ノルムの模範実践に留まる。(b) 辺の hard/soft 強度注記(同 :76-79): delivery-planning へ並行機会を渡す成果物様式として一般化の芽はあるが、対照実測(注記欠如が実害を生んだ実例)が無く、cid:units-generation:c1 が Unit/Bolt 様式の正準委譲・ノルム側再定義禁止を定める領域でもあるため、prose 増に見合う価値がないと判定 — 留保に昇格条件を記した。よって conductor 提案どおり 0 件が妥当。",
+  "submittedAt": "2026-08-05T09:05:00Z"
+}
