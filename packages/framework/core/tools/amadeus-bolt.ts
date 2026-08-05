@@ -66,6 +66,12 @@ import {
   resumeProductionQuality,
   type ProductionQuestionDecisionInput,
 } from "./amadeus-intent-autonomy-production.ts";
+import {
+  commitProductionDecisionReview,
+  getProductionAutoDecision,
+  listProductionAutoDecisions,
+} from "./amadeus-autonomy-review-production.ts";
+import { normalizeReviewFlagMetadata, reviewCommandContentDigest } from "./amadeus-autonomy-review.ts";
 import { autonomyDigest, type DecisionPolicyInput } from "./amadeus-intent-autonomy.ts";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
@@ -952,6 +958,96 @@ function handleResumeQuality(args: string[], explicitProjectDir?: string): void 
   console.log(JSON.stringify(result));
 }
 
+function handleListAutoDecisions(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  const state = flags.state;
+  if (state !== undefined && !["not-applicable", "unreviewed", "accepted", "flagged"].includes(state)) {
+    error(`Invalid --state: ${state}`);
+  }
+  const result = listProductionAutoDecisions({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    reviewState: state as "not-applicable" | "unreviewed" | "accepted" | "flagged" | undefined,
+  });
+  if (!result.ok) error(`Auto-decision list failed: ${result.error}`);
+  console.log(JSON.stringify(result.page));
+}
+
+// Preview-side confirmation digest. The flag-metadata normalization lives in
+// ONE exported helper (normalizeReviewFlagMetadata) that the commit path's
+// expected-value recomputation also calls, so the displayed digest and the
+// verified digest cannot drift.
+function reviewConfirmationDigest(
+  targetIntentUuid: string,
+  decisionId: string,
+  choice: "accept" | "flag",
+  classification: "contract-defect" | "specification-change" | "unspecified" | undefined,
+  note: string | undefined,
+): string {
+  const metadata = normalizeReviewFlagMetadata({
+    choice,
+    flagClassification: classification ?? undefined,
+    noteDigest: note !== undefined ? autonomyDigest(note) : null,
+  });
+  return reviewCommandContentDigest({
+    targetIntentUuid,
+    decisionId,
+    choice,
+    flagClassification: metadata.flagClassification,
+    safeNoteDigest: metadata.safeNoteDigest,
+  });
+}
+
+function handleGetAutoDecision(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.decision) error("Missing --decision <decision-id>");
+  const result = getProductionAutoDecision({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    decisionId: flags.decision,
+  });
+  if (!result.ok) error(`Auto-decision detail failed: ${result.error}`);
+  if (flags.choice !== undefined && flags.choice !== "accept" && flags.choice !== "flag") {
+    error(`Invalid --choice: ${flags.choice}. Must be 'accept' or 'flag'.`);
+  }
+  if (flags.choice === "accept" || flags.choice === "flag") {
+    const digest = reviewConfirmationDigest(
+      result.detail.intentUuid,
+      flags.decision,
+      flags.choice,
+      flags.classification as "contract-defect" | "specification-change" | "unspecified" | undefined,
+      flags.note,
+    );
+    console.log(JSON.stringify({ ...result.detail, confirmedReviewDigest: digest }));
+    return;
+  }
+  console.log(JSON.stringify(result.detail));
+}
+
+function handleReviewAutoDecision(args: string[], explicitProjectDir?: string): void {
+  const flags = parseFlags(args);
+  if (!flags.decision) error("Missing --decision <decision-id>");
+  if (flags.choice !== "accept" && flags.choice !== "flag") error("Missing --choice <accept|flag>");
+  const classification = flags.classification;
+  if (classification !== undefined && !["contract-defect", "specification-change", "unspecified"].includes(classification)) {
+    error(`Invalid --classification: ${classification}`);
+  }
+  if (!flags["confirmed-review-digest"]) {
+    error("Missing --confirmed-review-digest <sha256:...> (preview it with get-auto-decision --choice)");
+  }
+  const result = commitProductionDecisionReview({
+    projectDir: resolveBoltProjectDir(explicitProjectDir),
+    intent: flags.intent,
+    decisionId: flags.decision,
+    choice: flags.choice,
+    flagClassification: classification as "contract-defect" | "specification-change" | "unspecified" | undefined,
+    note: flags.note,
+    confirmedContentDigest: flags["confirmed-review-digest"],
+  });
+  if (!result.ok) error(`Auto-decision review failed: ${result.error}`);
+  console.log(JSON.stringify(result.receipt));
+}
+
 function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.mode) error("Missing --mode <none|semi|full>");
@@ -1102,7 +1198,7 @@ export function handleBoltCommand(
       return;
     default:
       error(
-        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, preview-autonomy, set-autonomy, decide-question, observe-quality, resume-quality, approve-batch, dispatch-event, hold-merge, release-merge`,
+        `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, preview-autonomy, set-autonomy, decide-question, observe-quality, resume-quality, list-auto-decisions, get-auto-decision, review-auto-decision, approve-batch, dispatch-event, hold-merge, release-merge`,
         explicitProjectDir,
       );
   }
@@ -1119,6 +1215,9 @@ function handleAutonomySupportCommand(
     "decide-question": handleDecideQuestion,
     "observe-quality": handleObserveQuality,
     "resume-quality": handleResumeQuality,
+    "list-auto-decisions": handleListAutoDecisions,
+    "get-auto-decision": handleGetAutoDecision,
+    "review-auto-decision": handleReviewAutoDecision,
   };
   const handler = subcommand === undefined ? undefined : handlers[subcommand];
   if (handler === undefined) return false;
