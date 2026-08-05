@@ -982,5 +982,11 @@
     "dirName": "260805-e-sra-ra1",
     "createdAt": "2026-08-05T06:14:50Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SRA-RAS13",
+    "dirName": "260805-e-sra-ras13",
+    "createdAt": "2026-08-05T06:45:17Z",
+    "status": "recorded"
   }
 ]

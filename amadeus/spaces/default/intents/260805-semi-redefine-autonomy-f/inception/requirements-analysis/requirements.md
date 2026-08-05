@@ -340,3 +340,25 @@
 | R5 | Q4 | subagent-2 | 「重複排除キー(`:875-878`)と提示照合(`:889`)も humanTurn 依存であり「2ファイルに閉じる」は過小評価。並存させると org.md Forbidden の二重実装に抵触するため**置換**とすること。」 | FR-ADV-3(測定注記付き) |
 | R6 | Q4 | subagent-2 | 「`run_required: true` の「強制実行のまま維持」は現行コードの追認ではない — `runRequired` は `:730` の `runRequired: formalChecks.length > 0` から導出され、`amadeus-directive.ts:684-688` は非空 `formal_checks` を要求するのみで defer-with-risk を禁じる強制は現行コードに無い。**新規要件化事項**として要件文へ明示すること。」 | FR-ADV-4「新規性の明示」 |
 | R7 | Q4 | subagent-2 | 「`formalCheckRoute:685` が `plugins/formal-model-check/tools/run-model-check.ts` をハードコードするため、`run_required` 経路は plugin 非依存でない。In-7 の plugin 非依存主張は **hold 判定の面に限る**と射程を明記すること。」 | FR-ADV-5 |
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-product-lead-agent
+- **Date:** 2026-08-05T06:44:28Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+必須7節はすべて実在し、Q1〜Q6 の裁定と留保7件(Q1×1 / Q3×2 / Q4×4)は per-voter で逐語一致、非採用案の固有トークン混入もない。「4段→5段」の訂正は §訂正申告 申告1 として明示申告されており、全 FR/NFR が scope-document の In-1〜In-7 と intent-statement の Success Metrics へ辿れる。BLOCKER はゼロで、残る指摘は引用範囲の off-by-one・出所不明の件数・機械照合面の未指定という FOLLOW-UP 級である。
+
+### Findings
+
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:80 — FR-LAD-1 の semi 分岐引用 :511-514 が同 FR 内の :512 ピンおよび codekb architecture.md:66 の :510-514 と自己矛盾。:510-513 または :510-514 へ揃える
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:120 — isFullyAutonomousIntent の範囲 :167-176 が codekb architecture.md:181 の実測 :167-178 と不一致。確定するか差分理由を1行添える
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:212 — FR-DOC-2 の「on-disk ミラー 14 本」の出所が code-structure.md 現在節に存在しない。集計コマンド出力からの転記へ差し替えるか件数語を削る
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:257 — A-1 の「HEAD と observed で同値」の根拠が7ファイル分しかなく、amadeus-bolt.ts ほか5ファイルの測定基礎が未記載。特に amadeus-bolt.ts は区間内 +96 シフト
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:188 — FR-ADV-1 に無人裁定で用いる occurrence 種別の指定がない。採用された Q4 選択肢 A 本文の「question 相当の occurrence を組み」が要件化で落ちている
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:52 — Intent analysis 4 の plugin 非依存の主張が無限定で、自文書の FR-ADV-5 AC(射程注記の併記)を満たしていない
+- FOLLOW-UP | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:114 — FR-LAD-6 と FR-ADV-5 の AC が「記述が無いこと」をレビュー観点に留め、機械判定面(対象面+検索語)が未指定
+- NIT | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:318 — トレーサビリティ表の列名が Success Metric だが FR-DISP 行の出所は Problem Statement
+- NIT | amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/requirements.md:128 — FR-STOP-1 の受け入れ基準で (2) が重複採番
