@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [applicability-hold, authoring-referees]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -38,8 +38,6 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"ideation":"completed","inception":"completed"}
 - **Skeleton Stance**: on
-- **Parked**: 2026-08-05T02:03:15Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -102,7 +100,7 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-05T02:03:15Z
+- **Last Updated**: 2026-08-05T05:19:42Z
 
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-8450fc2696a3021e447939279465525a
