@@ -73,6 +73,31 @@ describe("detectUncheckedCasts — what counts as an unchecked cast", () => {
     ]);
   });
 
+  test("a multi-stage `as` chain is ONE claim, not one per link (#2112)", () => {
+    // `JSON.parse(x) as A as B` asserts a single thing: that the parsed value is
+    // a `B`. Counting each link would let one site inflate the ledger and make
+    // the residual total disagree with the number of unproven reads.
+    const source = ["const doc = JSON.parse(text) as Draft as StateDoc;"].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("passing through `unknown` mid-chain does not split or excuse the claim", () => {
+    // BR-CG-2 exempts the form that ENDS at `unknown`: the type is still owed
+    // downstream. A chain that passes through `unknown` and lands on a domain
+    // type has claimed that type, so it is one site — not two, and not zero.
+    const source = [
+      "const a = JSON.parse(text) as Draft as unknown as StateDoc;",
+      "const b = JSON.parse(text) as Draft as unknown;",
+    ].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
   test("inserting lines moves `line` but never changes what is counted", () => {
     // The property the ledger rests on: it keys by (file, kind) COUNT, so an
     // unrelated edit above a site cannot make a later run disagree.

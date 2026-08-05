@@ -89,6 +89,19 @@ function isJsonParseCall(expression: ts.Expression): boolean {
   );
 }
 
+// The outermost link of a chain is the whole claim: in `p as A as B` the value
+// ends up typed `B`, and the intermediate `A` is a step of that one assertion,
+// not a second unproven read (#2112).
+function isOutermostAssertion(node: ts.AsExpression): boolean {
+  let parent: ts.Node | undefined = node.parent;
+  // `(p as A) as B` spells the same chain with parens in between, and `!` can
+  // sit between two links too — neither ends the chain.
+  while (parent !== undefined && (ts.isParenthesizedExpression(parent) || ts.isNonNullExpression(parent))) {
+    parent = parent.parent;
+  }
+  return parent === undefined || !ts.isAsExpression(parent);
+}
+
 export function detectUncheckedCasts(file: string, source: string): UncheckedCastMatch[] {
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const found: UncheckedCastMatch[] = [];
@@ -96,6 +109,8 @@ export function detectUncheckedCasts(file: string, source: string): UncheckedCas
     if (!ts.isAsExpression(node)) return;
     // `as unknown` asserts nothing and is the safe form — not debt.
     if (node.type.kind === ts.SyntaxKind.UnknownKeyword) return;
+    // One chain, one site: only its outermost link is counted.
+    if (!isOutermostAssertion(node)) return;
     // Peel `(…)`, `!`, chained `as` and `satisfies` off the asserted operand so
     // `(JSON.parse(t)) as T` and `JSON.parse(t) as unknown as T` both land.
     if (!isJsonParseCall(unwrapExpression(node.expression))) return;
