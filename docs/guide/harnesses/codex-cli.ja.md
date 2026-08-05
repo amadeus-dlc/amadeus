@@ -352,7 +352,7 @@ bridge が実際に起動し、再起動後も動くことまでは証明しま�
 オーケストレーターは `$amadeus`(または `/skills` → amadeus)にスコープや説明を
 続けて起動します — Claude ハーネスと同じコマンドです(`$amadeus --status`、
 `$amadeus --help`、…)。ステージランナーは明示指定のみです:
-`$amadeus-application-design`、`$amadeus-fix` など(ランナーの説明が
+`$amadeus-application-design`、`$amadeus-code-generation` など(ランナーの説明が
 インデックスを汚染しないよう、暗黙のスキルマッチングから除外されています)。
 
 ## Claude Code との相違点
