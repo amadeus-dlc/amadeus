@@ -5717,7 +5717,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "renderAutonomyStatus",
-      "fingerprint": "sha256:92a73d7aee92b2287fca5cfded8db53471325ce43e37ba7473fe46c23e071a8e",
+      "fingerprint": "sha256:afaafc3d3e26d2217d1cb82b26f13e1fb9adebf205ba10f421dda7017c3b94f8",
       "anchorLines": 13,
       "targetLines": "1-13"
     },

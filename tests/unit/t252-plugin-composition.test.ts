@@ -464,6 +464,60 @@ describe("drop", () => {
     expect(backend.auditCount()).toBe(1); // only the compose audit, no drop audit
   });
 
+  test("a non-produces seam contribution to a real frontmatter stage is rejected, not thrown (compose)", () => {
+    // The host file is a REAL stage document (frontmatter bridge path). The
+    // bridge only rewrites `produces`, so a sensors contribution must surface
+    // as a typed rejection from inspectPlugin — never an uncaught exception.
+    const realCg = Buffer.from(
+      "---\nslug: code-generation\nproduces:\n  - code-summary\nsensors:\n  - linter\n---\n\n# CG\n",
+      "utf-8",
+    );
+    const cg = stage("code-generation", "cg.md", { sensors: ["linter"], produces: ["code-summary"] });
+    const host = makeHost({ files: new Map([["cg.md", realCg], ["SKILL.md", Buffer.from("# SKILL\n<!-- ANCHOR -->\ntail\n", "utf-8")]]), stages: new Map([[cg.slug, cg]]) });
+    const result = inspectPlugin(cleanPlugin(), host);
+    expect(result.kind).toBe("rejected");
+    if (result.kind !== "rejected") return;
+    expect(result.errors.some((e) => e.kind === "clobber" && e.locus === "cg.md")).toBe(true);
+  });
+
+  test("drop of a drifted real frontmatter stage is a clobber rejection, not a throw", () => {
+    // Compose a produces contribution onto a real frontmatter stage, then hand
+    // -edit a DIFFERENT seam on disk. The drop drift check must report clobber.
+    const realCg = Buffer.from(
+      "---\nslug: code-generation\nproduces:\n  - code-summary\nsensors:\n  - linter\n---\n\n# CG\n",
+      "utf-8",
+    );
+    const producesOnly = (name: string): PluginDescriptor =>
+      descriptor(name, {
+        name,
+        stages: [{ slug: `${name}-stage`, path: `${name}.md`, bytes: pluginStageBytes(`${name}-stage`) }],
+        seams: [{ stage: "code-generation", seam: "produces", entries: [`${name}-report`] }],
+        fragments: [],
+        tools: [],
+      });
+    const backend = createInMemoryBackend();
+    backend.writeHost("cg.md", realCg);
+    const cg = stage("code-generation", "cg.md", { sensors: ["linter"], produces: ["code-summary"] });
+    const hostAt = (): HostSnapshot => ({
+      stages: new Map([[cg.slug, cg]]),
+      paths: new Set(["cg.md", "pro.md"].filter((p) => backend.readHost(p) !== undefined)),
+      files: new Map(
+        ["cg.md", "pro.md"]
+          .map((path) => [path, backend.readHost(path)] as const)
+          .filter((entry): entry is readonly [string, Buffer] => entry[1] !== undefined),
+      ),
+      composition: backend.readComposition(),
+    });
+    const composed = applyPluginPlan(planPluginComposition(asValid(producesOnly("pro")), hostAt()), makeTx(backend));
+    expect(composed.kind).toBe("committed");
+    // Hand-edit a non-produces seam of the on-disk real stage document.
+    const edited = backend.readHost("cg.md")!.toString("utf-8").replace("  - linter", "  - linter\n  - hand-added");
+    backend.writeHost("cg.md", Buffer.from(edited, "utf-8"));
+    const host = hostAt();
+    const plan = planPluginDrop(host.composition.plugins.get("pro")!, host);
+    expect(plan.rejections.some((e) => e.kind === "clobber" && e.locus === "cg.md")).toBe(true);
+  });
+
   test("two plugins: dropping one rebuilds the shared file from the survivor", () => {
     // Two distinct plugins, each merging its own sensor into cg.md (no
     // fragments, disjoint stage paths). Dropping pro must rebuild cg.md from

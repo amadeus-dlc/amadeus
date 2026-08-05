@@ -342,7 +342,7 @@ function renderAutonomyStatus(
     `Grant:          ${autonomy.grant === null ? "none" : `${autonomy.grant.id} (${autonomy.grant.state})`}`,
     `Grant Scope:    ${autonomy.grant?.scopeFingerprint ?? "none"}`,
     `Workflow State: ${autonomy.workflowExecutionState ?? "completed"}`,
-    `Policies:       ${autonomy.grant?.policyCount ?? 0}`,
+    `Policies:       ${autonomy.policyCount}`,
     `Unreviewed:     ${autonomy.unreviewedAutoDecisionCount}`,
     `Stop Reason:    ${autonomy.suspendedReason ?? "none"}`,
     `Resume:         ${autonomy.resumeCondition === null ? "none" : JSON.stringify(autonomy.resumeCondition)}`,
