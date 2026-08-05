@@ -28,8 +28,14 @@ provenance-matching `NOT_DETECTED` result for that exact advisory instance.
 formal-model-check/
   plugin.json
   stages/formal-model-check.md
+  stages/tla-authoring.md
   README.md
 ```
+
+The bundle supplies two stages: `formal-model-check` checks a registered model,
+and `tla-authoring` carries a subject from an applicability route to a
+registered one (authoring, referees, independent review, human gate,
+registration). Both are opt-in — neither joins a stock scope.
 
 `plugin.json`'s `stages[].path` is declared relative to the plugin root
 (`stages/formal-model-check.md`). The compose engine resolves the bytes from
