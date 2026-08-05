@@ -98,6 +98,32 @@ describe("detectUncheckedCasts — what counts as an unchecked cast", () => {
     ]);
   });
 
+  test("the angle-bracket spelling is the same claim, so it is the same debt (#2112)", () => {
+    // `<T>expr` and `expr as T` are one construct with two spellings. Counting
+    // only the `as` one leaves a way to add an unproven read that the ratchet
+    // never sees — a hole in the direction that matters (fail-open).
+    const source = ["const doc = <StateDoc>JSON.parse(text);"].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("a bare `satisfies` on a parse result is a claim too (#2112)", () => {
+    // `JSON.parse(s)` is `any`, so `satisfies T` checks nothing at all: it reads
+    // as a proof and provides none. Left undetected it is the quietest way to
+    // add debt, so it joins the population rather than escaping it.
+    const source = [
+      "const doc = JSON.parse(text) satisfies StateDoc;",
+      "const via = JSON.parse(text) satisfies Draft as StateDoc;",
+    ].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+      { file: "core/x.ts", line: 2, kind: "json-parse-as" },
+    ]);
+  });
+
   test("inserting lines moves `line` but never changes what is counted", () => {
     // The property the ledger rests on: it keys by (file, kind) COUNT, so an
     // unrelated edit above a site cannot make a later run disagree.

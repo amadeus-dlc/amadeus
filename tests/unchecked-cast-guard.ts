@@ -89,24 +89,35 @@ function isJsonParseCall(expression: ts.Expression): boolean {
   );
 }
 
+// `expr as T`, `<T>expr` and `expr satisfies T` are three spellings of one act:
+// giving a parsed value a domain type without earning it. `satisfies` verifies
+// nothing here because `JSON.parse` returns `any`, so it reads as a proof and
+// provides none. The guard has to read all three or the unread ones become the
+// way to add an unproven read the ratchet never sees (#2112).
+type AssertionExpression = ts.AsExpression | ts.TypeAssertion | ts.SatisfiesExpression;
+
+function isAssertionExpression(node: ts.Node): node is AssertionExpression {
+  return ts.isAsExpression(node) || ts.isTypeAssertionExpression(node) || ts.isSatisfiesExpression(node);
+}
+
 // The outermost link of a chain is the whole claim: in `p as A as B` the value
 // ends up typed `B`, and the intermediate `A` is a step of that one assertion,
 // not a second unproven read (#2112).
-function isOutermostAssertion(node: ts.AsExpression): boolean {
+function isOutermostAssertion(node: AssertionExpression): boolean {
   let parent: ts.Node | undefined = node.parent;
   // `(p as A) as B` spells the same chain with parens in between, and `!` can
   // sit between two links too — neither ends the chain.
   while (parent !== undefined && (ts.isParenthesizedExpression(parent) || ts.isNonNullExpression(parent))) {
     parent = parent.parent;
   }
-  return parent === undefined || !ts.isAsExpression(parent);
+  return parent === undefined || !isAssertionExpression(parent);
 }
 
 export function detectUncheckedCasts(file: string, source: string): UncheckedCastMatch[] {
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const found: UncheckedCastMatch[] = [];
   visitNodes(sourceFile, (node) => {
-    if (!ts.isAsExpression(node)) return;
+    if (!isAssertionExpression(node)) return;
     // `as unknown` asserts nothing and is the safe form — not debt.
     if (node.type.kind === ts.SyntaxKind.UnknownKeyword) return;
     // One chain, one site: only its outermost link is counted.
