@@ -248,6 +248,32 @@ describe("fetchAllReviewThreads — BR-U2-4 paging", () => {
   test("the paged query asks for the comments pageInfo it fail-closes on", () => {
     expect(REVIEW_THREADS_QUERY).toContain("comments(first:100){ pageInfo{ hasNextPage }");
   });
+
+  test("a thread without comments pageInfo is refused (old response shape)", () => {
+    const node = JSON.parse(JSON.stringify(threadsOf("measured-pr-2268")[0])) as {
+      comments: { pageInfo?: unknown };
+    };
+    delete node.comments.pageInfo;
+    const parsed = ReviewThread.parse(node);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error.reason).toContain("pageInfo");
+  });
+
+  test("a non-JSON response and a non-string endCursor are typed malformed errors", async () => {
+    const notJson: GhRunner = async () => ({ ok: true, value: "gateway timeout" });
+    const a = await fetchAllReviewThreads(notJson, REF as NonNullable<typeof REF>);
+    expect(a.ok).toBe(false);
+    if (!a.ok) expect(a.error.kind).toBe("malformed");
+
+    const page = JSON.parse(fixture("synthetic-paged-page1")) as {
+      data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: boolean; endCursor: unknown } } } } };
+    };
+    page.data.repository.pullRequest.reviewThreads.pageInfo = { hasNextPage: true, endCursor: 7 };
+    const badCursor: GhRunner = async () => ({ ok: true, value: JSON.stringify(page) });
+    const b = await fetchAllReviewThreads(badCursor, REF as NonNullable<typeof REF>);
+    expect(b.ok).toBe(false);
+    if (!b.ok) expect(b.error.kind).toBe("malformed");
+  });
 });
 
 describe("ThreadLedger — classification, human-only separation and terminalisation", () => {

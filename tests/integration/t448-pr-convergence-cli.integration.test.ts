@@ -69,6 +69,33 @@ describe("createGhRunner — BR-U2-6 (i) readiness is checked before any real ca
     if (!runner.ok) expect(runner.error.kind).toBe("not-authenticated");
     expect(s.argvs).toHaveLength(2);
   });
+
+  test("an auth probe that throws (not just fails) is not-authenticated", async () => {
+    let call = 0;
+    const spawn: GhSpawn = async () => {
+      call += 1;
+      if (call === 1) return ok("gh version 2.97.0");
+      throw new Error("auth probe crashed");
+    };
+    const runner = await createGhRunner(spawn);
+    expect(runner.ok).toBe(false);
+    if (!runner.ok) expect(runner.error.kind).toBe("not-authenticated");
+  });
+
+  test("an API invocation that throws after readiness is a typed not-runnable result", async () => {
+    let call = 0;
+    const spawn: GhSpawn = async () => {
+      call += 1;
+      if (call <= 2) return ok("ready");
+      throw new Error("gh vanished mid-run");
+    };
+    const runner = await createGhRunner(spawn);
+    expect(runner.ok).toBe(true);
+    if (!runner.ok) return;
+    const result = await runner.value(["gh", "api", "graphql"]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe("not-runnable");
+  });
 });
 
 describe("GhRunner — BR-U2-6 (ii)/(iii)/(iv) execution contracts", () => {
@@ -164,6 +191,18 @@ describe("parsePrRef / fetchRawPrState", () => {
     expect(argv).toContain("owner=amadeus-dlc");
     expect(argv).toContain("name=amadeus");
     expect(argv).toContain("number=2268");
+  });
+
+  test("non-string mergeable/mergeStateStatus fields are a typed failure", async () => {
+    const payload = JSON.stringify({
+      data: { repository: { pullRequest: { mergeable: 1, mergeStateStatus: null } } },
+    });
+    const s = scriptedSpawn([ok("v"), ok("auth"), ok(payload)]);
+    const runner = await createGhRunner(s.spawn);
+    if (!runner.ok) throw new Error("unreachable");
+    const raw = await fetchRawPrState(runner.value, REF as never);
+    expect(raw.ok).toBe(false);
+    if (!raw.ok) expect(raw.error.kind).toBe("command-failed");
   });
 
   test("an unparseable GraphQL envelope is a typed failure, not an empty state", async () => {
@@ -331,6 +370,65 @@ describe("CLI status verb — exit-code contract", () => {
     const out = await runCli(["merge"], seams(cliSpawn(CLEAN, []).spawn));
     expect(out.exitCode).toBe(2);
   });
+
+  test("missing --repo/--pr and a malformed --unit are rejected with their own messages", async () => {
+    const record = makeRecord({ humanTurn: true });
+    const noRepo = await runCli(["status", "--unit", "u2", "--record", record], seams(cliSpawn(CLEAN, []).spawn));
+    expect(noRepo.exitCode).toBe(2);
+    expect(noRepo.stderr).toContain("--repo and --pr are required");
+    const badUnit = await runCli(
+      ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "1", "--unit", "NOT A SLUG", "--record", record],
+      seams(cliSpawn(CLEAN, []).spawn),
+    );
+    expect(badUnit.exitCode).toBe(2);
+    expect(badUnit.stderr).toContain("--unit");
+  });
+
+  test("a gh fault while reading the merge state exits 2 with the typed detail", async () => {
+    const record = makeRecord({ humanTurn: true });
+    const spawn: GhSpawn = async (argv) => {
+      const joined = argv.join(" ");
+      if (joined.includes("--version")) return ok("v");
+      if (joined.includes("auth status")) return ok("in");
+      // The pull-request state query is the first API call; fail it.
+      return { code: 1, stdout: "", stderr: "boom" };
+    };
+    const out = await runCli(
+      ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "1", "--unit", "u2", "--record", record],
+      seams(spawn),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("merge state");
+  });
+
+  test("an unknown mergeStateStatus is a boundary fault (exit 2), never a verdict", async () => {
+    const record = makeRecord({ humanTurn: true });
+    const s = cliSpawn({ mergeable: "MERGEABLE", mergeStateStatus: "TOTALLY_NEW" }, ["measured-pr-2268"]);
+    const out = await runCli(
+      ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "2268", "--unit", "u2", "--record", record],
+      seams(s.spawn),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stdout).toBe("");
+    expect(out.stderr).toContain("unknown mergeStateStatus");
+  });
+
+  test("a gh fault while reading review threads exits 2 with the typed detail", async () => {
+    const record = makeRecord({ humanTurn: true });
+    const spawn: GhSpawn = async (argv) => {
+      const joined = argv.join(" ");
+      if (joined.includes("--version")) return ok("v");
+      if (joined.includes("auth status")) return ok("in");
+      if (joined.includes("reviewThreads")) return { code: 1, stdout: "", stderr: "boom" };
+      return ok(JSON.stringify({ data: { repository: { pullRequest: { ...CLEAN } } } }));
+    };
+    const out = await runCli(
+      ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "1", "--unit", "u2", "--record", record],
+      seams(spawn),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("review threads");
+  });
 });
 
 describe("CLI report verb — BR-U2-7, written only when converged", () => {
@@ -406,6 +504,14 @@ describe("CLI override verb — BR-U2-8, bound to a real human turn", () => {
 
   test("latestHumanTurn finds the newest HUMAN_TURN across shards", () => {
     const record = makeRecord({ humanTurn: true });
+    expect(latestHumanTurn(record)?.eventId).toBe("cccccccc-0000-0000-0000-000000000003");
+  });
+
+  test("a truncated (non-JSON) shard line hides nothing before it", () => {
+    const record = makeRecord({ humanTurn: true });
+    // A crash can truncate the tail of a shard mid-line; the earlier turns
+    // must still be found.
+    writeFileSync(join(record, "audit", "clone-torn.jsonl"), '{"eventId":"tor', "utf-8");
     expect(latestHumanTurn(record)?.eventId).toBe("cccccccc-0000-0000-0000-000000000003");
   });
 
