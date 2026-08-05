@@ -4,7 +4,9 @@
 
 本文書は上記3成果物を次のとおり実参照する。`requirements.md` の Open questions OQ-1(新設 authorization 型と `semi-mode-gate` の関係)/ OQ-2(digest 拡張の replay 互換)/ OQ-3(stop 述語の分割形)/ OQ-5(statusline 表示形式)/ OQ-6(`run_required` 強制の層)/ **OQ-ADV-K**(advisory の occurrence 写像と scope 認可・selector 一意化の整合)を**裁定対象の正本**とし、各 ADR の Context に対応 FR とその受け入れ基準を引く。`architecture.md` 現在節「semi を梯子へ載せるときの最小介入点」の「**`semi` を梯子へ載せるにはこの1行の条件そのものを緩める必要がある**」を ADR-2 の Context とし、同節「`--autonomy` 起動フラグの結線余地」の「既存流儀に整合する形は、birth 経路の `birthPrintDirective`(`:2617-2646`)が先例となる『`amadeus-bolt set-autonomy` を名指しする print directive』である。ただしこれは設計候補であり、本 intent では未確定」を ADR-8 / ADR-12 の代替案の出所とする。`component-inventory.md` 現在節「区間内で追加されたコンポーネント」表(`amadeus-autonomy-review*.ts` 計 1757 行)を ADR-1 の Consequences(下流の受け皿が無改訂で足りる)の根拠とする。
 
-測定 ref: worktree HEAD `974dbf9bcce117a510605b12c20c50e317883566`。コンポーネント記号は components.md に従う。
+測定 ref: worktree HEAD `974dbf9bcce117a510605b12c20c50e317883566`。§12a レビュー iteration 1 の是正で追加した引用・数値の測定 ref は `d405e34c5b8e42b4acd43fea7535d5199d6816fd`(現 HEAD)であり、両断面の同値性は `git diff --stat 974dbf9bc HEAD -- packages/framework/core/` が**空出力**であることで確認した。コンポーネント記号は components.md に従う。
+
+**ADR-13 の由来**(traceability — `phases/inception.md`「inception で新しい要件を導入する場合は必ずその由来を文書化する」): ADR-13 は上流の Open question ではなく、**§12a レビュー iteration 1 の FOLLOW-UP 指摘**(components.md 末尾 Findings の1件目 — 「C13 の判定3/4 が『新規 birth 直後の state に Intent Autonomy Mode が存在しない』ことを暗黙前提とするが未実測」)を conductor が実測して前提の不成立を確認したことに由来する。裁定対象は新しい要件ではなく、既決の FR-CLI-1 / FR-CLI-3 を成立させるための判別子の選択である(仕様変更ではないためユーザーエスカレーションの対象外)。
 
 ---
 
@@ -24,6 +26,7 @@
 | ADR-10 | statusline は state ファイルの `Intent Autonomy Mode` を読む(audit projection を読まない) | 高 | OQ-5 / FR-DISP-1 |
 | ADR-11 | `run_required: true` の強制は**選択肢空間**(主)と**効果分類**(従)の2面で行い、directive 検証側は不変とする | 高 | OQ-6 / FR-ADV-4 |
 | ADR-12 | `--autonomy none` の active grant 実在チェックは **C13(engine 側の適用ハンドラ)が所有**し、projection 読取不能も fail-closed で拒否する | 高 | FR-CLI-2(2) / C-3 |
+| ADR-13 | 「mode が宣言済みか」の判別子は **`modeProvenance.kind === "human-command"`** とし、state フィールドの有無・値を判別に使わない | 高 | FR-CLI-1 / FR-CLI-3 |
 
 **可逆性の低い決定は ADR-4 の1件のみ**であり、`phases/inception.md`(「後方互換レイヤ・移行シムは既定でスコープ外」)と C-7 の観点から最も注意を要する。ADR-4 は独立した根拠節を持つ。
 
@@ -141,6 +144,10 @@ if (input.authority === null) return { kind: "invalid", reason: "authorization-r
   - pros: 純関数層で閉じる。
   - cons: 同じ intentUuid・scopeId に対して**2種類の scopeFingerprint** が生まれ、既存の grant 不在経路(`:541-543`)と照合が合わなくなる。history 段の過去裁定が semi から見えなくなる。
   - reversibility: 中(fingerprint が journal に焼かれるため後戻りが難しい)。
+- **Option C — `SemiAuthority` に scope / norm fingerprint を持たせず `authorityFingerprint` 1本に畳む**(梯子へは authority fingerprint だけを渡す)。
+  - pros: 型のフィールドが減り、fallback の呼び出し自体が不要になる。ADR-1 の3責務制限にも形式上は適合する。
+  - cons: 梯子の **norm 段(`:708-717`)と history 段(`:718-725`)が照合キーを失う**。history 段は `fact.scopeLineageFingerprint === input.scopeLineageFingerprint`(`:718-720` verbatim `    fact.selector === occurrence.selector && fact.scopeLineageFingerprint === input.scopeLineageFingerprint &&`)を要求し、confirmed-policy 段は `policy.scopeFingerprint` を要求するため、scope fingerprint を持たない authority では**梯子5段のうち0段目・2段目が構造的に死ぬ**。FR-POL-1(方針が 0 段目で効く)と両立しない。
+  - reversibility: 高(型のフィールド追加は戻せる)。ただし FR との両立不能が先に効くため採れない。
 
 ### Decision
 
@@ -155,6 +162,7 @@ if (input.authority === null) return { kind: "invalid", reason: "authorization-r
 ### Alternatives Rejected
 
 - **Option B(専用 fingerprint)** — fingerprint 空間の分裂を招く。監査 journal に焼かれた値は後から統合できないため、可逆性が最も低い選択になる。
+- **Option C(`authorityFingerprint` 1本へ畳む)** — 梯子の confirmed-policy 段と history 段が照合キーを失い、semi では 0 段目・2 段目が構造的に死ぬ。FR-POL-1(方針が 0 段目で効く)を満たせない。
 
 ---
 
@@ -221,8 +229,9 @@ C-7 と org.md Forbidden が禁じるのは「**古い挙動を温存する分�
 ### Consequences
 
 - 既存 journal(全 mode)は無改変で replay できる。NFR-2 が満たされる。
-- `semiPolicies` を読む箇所は `semiPoliciesOf` の1本に閉じる。直接 `projection.semiPolicies` を読む箇所を作らないことを functional-design のレビュー観点に固定する。
+- `semiPolicies` を読む箇所は `semiPoliciesOf` の1本に閉じる。直接 `projection.semiPolicies` を読む箇所を作らないことを functional-design のレビュー観点に固定する。**この規則は件数取得(`.length`)にも例外を設けない** — 件数は `semiPoliciesOf(projection).length` で取る。総関数が不在を `[]` へ潰すため `?? 0` のフォールバックも不要になる。
 - `IntentAutonomyStatusEnvelope.policyCount` は `grant?.policies.length ?? semiPoliciesOf(projection).length` で解決する(C15)。
+- **§12a レビュー iteration 1 の是正**: 本 Consequences と C15 実装案の間にあった自己矛盾を解消した。直読(`projection.semiPolicies?.length`)が残っていたのは components.md §C14〜C15 と component-methods.md §C15 の**2箇所**であり、両方を `semiPoliciesOf` 経由へ揃えた。本節の記述(`grant?.policies.length ?? semiPoliciesOf(projection).length`)は当初から直読ではなく、規則側の緩和は行っていない。
 - **replay 側は無改訂**(`amadeus-intent-autonomy-replay.ts` は本 intent の diff に現れない)。OQ-2 の「既存の非 full `set-mode` 監査ブロックが拡張後の replay で復元できる」は、フィールドを任意にしたことで**構造的に**成立する。
 - FR-POL-2 の digest 拡張は `displayDigest`(**projection に入らない表示用の値**)に対する変更であり、journal に保存される projection の digest とは別物である — したがって digest 拡張自体は replay 互換に影響しない。この分離の確認が OQ-2 の答えである。
 
@@ -398,7 +407,7 @@ FR-STOP-1 は「`isFullyAutonomousIntent`(`:167-178`)を**無条件に書き換�
 
 - `--autonomy` は `READ_ONLY_FLAGS` に入らない(C-6)。
 - provenance は既存の HUMAN_TURN 要求(`amadeus-intent-autonomy-production.ts:409-411`)をそのまま通る。フラグ自体は provenance にならない(FR-CLI-5)。
-- 判定 4(mode 設定済みかつ異値 → loud)が判定 5〜7 より先に置かれることで、`prepareNonFullCommand:385-390` の `revoke-full` 経路が起動フラグから**構造的に到達不能**になる(FR-CLI-3(3))。
+- 判定 5(宣言済みかつ mode 異値 → loud)が判定 8(書込)より先に置かれることで、`prepareNonFullCommand:385-390` の `revoke-full` 経路が起動フラグから**構造的に到達不能**になる(FR-CLI-3(3))。判定順の全体は components.md §C13、判別子の裁定は ADR-13。
 - engine の `handleNext` に新しい早期 return 分岐が1つ増える。既存の Branch 群(Branch 3b の `--scope` 検証 `:2632-2638` など)と同じ様式に置く。
 
 ### Alternatives Rejected
@@ -466,6 +475,10 @@ FR-DISP-1 は statusline への Autonomy 表示を要求する。`amadeus-status
   - pros: canonical と一致する。grant の state まで表示できる。
   - cons: 毎プロンプトで**監査シャードの全読 + 全トランザクションの replay** が走る。statusline は non-blocking だが人間の体感遅延に直結する。`cid:nfr-design:c1`(CLI/library の NFR では常駐 service 向け機構を持ち込まない)と、NFR-3 の趣旨(表示のために I/O を増やさない)に反する。
   - reversibility: 高。
+- **Option C — state を読んで表示しつつ、projection と突き合わせて乖離時に警告記号を添える**(両方読む)。
+  - pros: 表示が canonical と一致し、かつ乖離そのものを可視化できる(state 手術の早期検知)。
+  - cons: **projection 読取のコストが Option B と同じ**(毎プロンプトの監査全読)であり、Option B の却下理由がそのまま当たる。加えて statusline に「警告状態」という第2の表示語彙が生まれ、FR-DISP-1 の受け入れ基準(`--status` と同一の mode 名を使い表示専用語彙を作らない)に抵触する。乖離の検出は canonical を読む `--status`(C15)が既に担う。
+  - reversibility: 高。
 
 ### Decision
 
@@ -480,6 +493,7 @@ FR-DISP-1 は statusline への Autonomy 表示を要求する。`amadeus-status
 ### Alternatives Rejected
 
 - **Option B(projection 読み)** — 毎プロンプトの監査全読は表示のためのコストとして過大。`cid:nfr-design:c1` と NFR-3 の趣旨に反する。
+- **Option C(両読み + 乖離警告)** — projection 読取のコストは Option B と同一であり同じ理由で却下される。加えて警告表示が FR-DISP-1 の「表示専用語彙を作らない」に抵触し、乖離検出は `--status`(C15)と役割が重複する。
 
 ---
 
@@ -510,7 +524,19 @@ FR-ADV-4 は「**新規性の明示**: これは現行コードの追認では�
 **Option A を採る。**
 
 - **主(選択肢空間)**: C16 が occurrence を組むとき `optionIds = hold.runRequired ? ["run-now"] : ["run-now", "defer-with-risk"]` とする。
-- **従(効果分類)**: effect registry で `defer-with-risk` を `classification: "quality-waiver"` とする。`quality-waiver` は `PROHIBITED_EFFECTS`(`amadeus-intent-autonomy-production.ts:69-75`、5値)に収載され、semi の `applySemiDecision` の `workflow-reversible` 要求と full の `authorizeDecisionEffect` の `prohibitedEffects` 照合の**両方**で弾かれる。
+- **従(効果分類)**: effect registry で `defer-with-risk` を `classification: "quality-waiver"` とする。`quality-waiver` が `PROHIBITED_EFFECTS`(`amadeus-intent-autonomy-production.ts:69-75`、5値)に**実在すること**は起草時に実読で確認した(測定 ref `d405e34c5`、verbatim):
+
+  ```
+  const PROHIBITED_EFFECTS = [
+    "new-permission",
+    "irreversible",
+    "scope-out",
+    "norm-waiver",
+    "quality-waiver",
+  ] as const;
+  ```
+
+  この定数は `:277`(verbatim `    prohibitedEffects: PROHIBITED_EFFECTS,`)で grant scope へ載る。したがって `defer-with-risk` は semi の `applySemiDecision` の `workflow-reversible` 要求と full の `authorizeDecisionEffect` の `prohibitedEffects` 照合の**両方**で弾かれる。**本 ADR の従機構はこの収載に全面依存する**ため、収載が崩れると FR-ADV-4 の fail-closed が空文化する — functional-design で `quality-waiver` の収載を assert するテストを置くこと(⚠ 申し送り)。
 - **directive 検証側(`amadeus-directive.ts:684-688`)は不変**(C-3 と整合)。
 
 ### Consequences
@@ -557,15 +583,18 @@ FR-ADV-4 は「**新規性の明示**: これは現行コードの追認では�
 function activeGrantState(projectDir: string): "present" | "absent" | "unreadable";
 ```
 
-- 判定 5(`--autonomy none`): `"present"` または `"unreadable"` → loud stop
-- 判定 6(`--autonomy full`): `"present"` のみ通す
+**ADR-13 による実装形の更新**: ADR-13 が同じ projection 読取から宣言状態(`modeProvenance.kind`)も取るため、この3値述語は `readLaunchAutonomyContext`(component-methods.md §C13)へ統合され、`unreadable` は読取そのものの失敗として、`present` / `absent` は `grant` フィールドとして表現される。**判定内容は不変**(読取不能は拒否側へ倒す)であり、変わるのは projection 読取が2回でなく1回になる点のみである。
 
-> **引用の意味論適合の照合**(`cid:application-design:citation-semantics-check`): 引用元 `isFullyAutonomousIntent:175-177` の `catch → false` は「carve-out を与えない = 保守側」を意味する。判定 5 で同じ `catch → false` を使うと「grant 不明なら `--autonomy none` を通す」= **緩和側**になり、引用元と意味が逆転する。したがって判定 5 は `catch` を吸収せず 3値述語で `unreadable` を明示し、拒否側へ倒す。これは**意図的相違**であり、引用元の様式をそのまま持ち込まない理由を明記する。
+- 判定 3(全値共通、読取不能): loud stop
+- 判定 6(`--autonomy none`): `grant === "present"` → loud stop
+- 判定 7(`--autonomy full`): `grant === "present"` のみ通す
+
+> **引用の意味論適合の照合**(`cid:application-design:citation-semantics-check`): 引用元 `isFullyAutonomousIntent:175-177` の `catch → false` は「carve-out を与えない = 保守側」を意味する。判定 3 で同じ `catch → false` を使うと「grant も宣言状態も不明なら `--autonomy none` を通す」= **緩和側**になり、引用元と意味が逆転する。したがって判定 3 は `catch` を吸収せず読取不能を明示し、拒否側へ倒す。これは**意図的相違**であり、引用元の様式をそのまま持ち込まない理由を明記する。
 
 ### Consequences
 
-- 起動フラグから `revoke-full` 経路へ到達できない(FR-CLI-2(2) / FR-CLI-3(3))。防壁は二重: 判定 4(mode 異値の loud)と判定 5(grant 実在の loud)。**判定 5 は state の mode 表示が projection と乖離した場合(state 手術・部分書込)にも grant を守る** — これが判定 5 を state 読取ではなく projection 読取で行う理由である。
-- 落ちる実証(FR-CLI-2(4)): `activeGrantState` を無条件 `"absent"` に差し替えると判定 5 のテストが赤になる。
+- 起動フラグから `revoke-full` 経路へ到達できない(FR-CLI-2(2) / FR-CLI-3(3))。防壁は二重: 判定 5(宣言済みかつ mode 異値の loud)と判定 6(grant 実在の loud)。**判定 6 は宣言状態の記録が grant の実在と乖離した場合(state 手術・部分書込)にも grant を守る** — これが判定 6 を state 読取ではなく projection 読取で行う理由である。
+- 落ちる実証(FR-CLI-2(4)): `readLaunchAutonomyContext` の `grant` を無条件 `"absent"` に差し替えると判定 6 のテストが赤になる。
 - engine は projection を読むが**書かない**。書込は `applyProductionAutonomyMode` が独占する(ADR-8)。
 - **directive 値域との非同一視**(C-3): C13 は `directive.intent_autonomy_mode` へ一切書き込まない。directive への射影は `routeMainWorkflowDirective:2192`(verbatim `  if (autonomy.mode === "semi" || autonomy.mode === "full") {`)が独占し、この 1 行が `none` の搬送を構造的に排除する。**この供給面は実読で確定した**(`cid:functional-design:c8`)— `:2192-2199` の直読で、この `if` の外に `directive.intent_autonomy_mode` への代入が無いことを確認している。`amadeus-directive.ts:97` / `:606` は本 intent の diff に現れない。
 
@@ -576,13 +605,82 @@ function activeGrantState(projectDir: string): "present" | "absent" | "unreadabl
 
 ---
 
+## ADR-13 — 「宣言済み」の判別子は `modeProvenance.kind` とする
+
+### Context
+
+C13 の判定順(components.md §C13)は「mode が既に宣言済みか」を判別し、宣言済みかつ異値なら loud 停止する(FR-CLI-3(2))。当初案はこの判別を **state ファイルの `Intent Autonomy Mode` フィールドの有無・値**で行っていた。
+
+**§12a レビュー iteration 1 の FOLLOW-UP がこの前提を未実測と指摘し、conductor が実測した結果、前提は成立しないと判明した**(測定 ref `d405e34c5`):
+
+`amadeus-utility.ts:4635` verbatim:
+
+```
+- **Intent Autonomy Mode**: none
+```
+
+state テンプレートは Intent の birth 時点でこのフィールドを **`none` として必ず書く**。したがって「フィールドが無ければ未宣言」は恒偽であり、「値が `none` なら未宣言」も採れない(`--autonomy none` を明示宣言した Intent と区別できなくなる)。当初案のままだと**新規 Intent への `--autonomy semi` が常に「設定済み(`none`)かつ異値」と判定されて loud 停止**し、FR-CLI-1 / FR-CLI-3 が想定する主用途(起動の一手で走行水準を宣言する)が構造的に成立しない。
+
+### Options
+
+- **Option A — `modeProvenance.kind === "human-command"` を判別子にする**。
+  - pros: 「人間が宣言したか」を**直接**表す事実を使う。既存機構の再利用であり新設ゼロ — `authorizeInteraction:512`(verbatim `    if (!internalGate \|\| projection.modeProvenance.kind !== "human-command") {`)が既に同じ述語を認可に使っている。判別が projection(canonical)側で完結し、state 投影の乖離に影響されない。
+  - cons: 判別に projection 読取が要る(ただし ADR-12 が同じ読取を既に要求しており、1回に統合できる)。
+  - reversibility: 高。
+- **Option B — state に「未宣言」を表す新しい語彙(`unset` 等)を導入する**。
+  - pros: state だけで判別でき projection 読取が不要。
+  - cons: `AutonomyMode`(`amadeus-intent-autonomy.ts:11`、verbatim `export type AutonomyMode = "none" | "semi" | "full";`)の値域に無い第4の語彙を state 面だけに作ることになり、`readAutonomyMode`(`amadeus-orchestrate.ts:1615-1623`)・`intentAutonomyMode`(`amadeus-stop.ts:162-165`)など既存の全読み手へ伝播する。state テンプレート(`:4635`)の既定値変更は既存 Intent との非互換も生む。C-7(後方互換なし)の下で既存 state の読替が必要になる。
+  - reversibility: 低(state 語彙は永続面)。
+- **Option C — 判別をやめ、再宣言は常に受理する**(異値でも上書き)。
+  - pros: 実装が最小。主用途は当然成立する。
+  - cons: **FR-CLI-3(2)(既存 mode と異値の再宣言は loud エラー)に正面から違反**する。さらに `full` → `none` の異値宣言が判定 6 の grant チェックのみに依存することになり、FR-CLI-2(2)が禁じる「側面効果としての grant 取消」への防壁が二重から一重へ落ちる。
+  - reversibility: 高。
+
+### Decision
+
+**Option A(`modeProvenance.kind` を判別子とする)を採る。**
+
+```
+declared = (projection.modeProvenance.kind === "human-command")
+```
+
+- `kind !== "human-command"`(= `system-default` / `legacy-fail-closed`)→ **未宣言**。`--autonomy <any>` を**初回宣言として受理**し、loud にしない(components.md §C13 判定 4)。
+- `kind === "human-command"` → **宣言済み**。同値は no-op、異値は loud(判定 5)。
+
+**判別子の値域と生成点の実読**(`cid:functional-design:c8` — 供給面を実読で確定する):
+
+| 事実 | file:line | verbatim |
+| --- | --- | --- |
+| `ModeProvenance` は3値の判別ユニオン | `amadeus-intent-autonomy.ts:50-72` | `export type ModeProvenance =` / `      readonly kind: "human-command";` / `      readonly kind: "system-default";` / `      readonly kind: "legacy-fail-closed";` |
+| 初期投影は `system-default`(legacy 無し) | 同 `:217-218` | `  const modeProvenance: ModeProvenance = legacy.length === 0` / `    ? { kind: "system-default", targetIntentUuid: input.intentUuid, sourceIdentity: "DEFAULT_MODE_V1", after: "none" }` |
+| legacy standing grant 保有時は `legacy-fail-closed`、mode は `none` | 同 `:219-224` / `:227` | `        kind: "legacy-fail-closed",` / `    mode: "none",` |
+| legacy 側も「人間による mode 選択が未了」と診断する | 同 `:234-238` | `      recommendedHumanAction: "select-intent-autonomy-mode",` |
+| 人間コマンド通過時のみ `human-command` へ遷移(`set-mode` / `issue-full` / `replace-full` / `revoke-full` 共通の1箇所) | 同 `:359-360` / `:376` | `    const provenance: ModeProvenance = {` / `      kind: "human-command",` / `      modeProvenance: provenance,` |
+
+`legacy-fail-closed` を**未宣言側**に含めるのは、`:234-238` の診断が明示的に mode 選択を推奨しており、mode が `none` に固定されたまま人間の宣言を待つ状態だからである。
+
+### Consequences
+
+- 新規 Intent への `--autonomy semi` / `--autonomy full` / `--autonomy none` が**初回宣言として受理される**。FR-CLI-1 / FR-CLI-3 の主用途が成立する。
+- 判別に projection 読取が要るが、ADR-12 の grant 実在チェックと**同じ読取**であり、`readLaunchAutonomyContext`(component-methods.md §C13)の1回に統合される。追加 I/O はゼロ。
+- 判別が canonical(projection)側で完結するため、state 投影が乖離しても判定は壊れない。ADR-10(statusline は state を読む)との役割分担は保たれる — 表示は state、**認可・判定は projection** である。
+- state の `Intent Autonomy Mode` フィールドは**判別に使わない**が、表示(C14)と既存の scheduling 読み(`readAutonomyMode`)では引き続き使われる。本 ADR はフィールドの意味を変えない。
+- 落ちる実証(FR-CLI-3): `declared` を無条件 `true` に差し替えると、新規 Intent への `--autonomy semi` が判定 5 の異値で loud 停止して赤になる。逆に無条件 `false` に差し替えると、宣言済み Intent への異値再宣言が黙って通り FR-CLI-3(2)のテストが赤になる。**両方向で赤にできる**ことがこの判別子が実効を持つ証拠である。
+
+### Alternatives Rejected
+
+- **Option B(state に `unset` 語彙を導入)** — `AutonomyMode` の値域に無い第4語彙を state 面だけに作り、既存の全読み手(`readAutonomyMode` / `intentAutonomyMode` / statusline)へ伝播する。state テンプレートの既定値変更は既存 Intent との非互換も生み、C-7 の下で読替が必要になる。可逆性が最も低い。
+- **Option C(判別をやめる)** — FR-CLI-3(2)に正面から違反する。加えて `full` → `none` の異値宣言に対する防壁が判定 6 のみになり、FR-CLI-2(2)が求める二重防壁が一重へ落ちる。
+
+---
+
 ## 可逆性の総括
 
 `phases/inception.md` は「不可逆な決定にはより厳しい検討を」と要求する。
 
 | 可逆性 | ADR | 理由 |
 | --- | --- | --- |
-| 高 | ADR-2 / ADR-3 / ADR-5 / ADR-7 / ADR-9 / ADR-10 / ADR-11 / ADR-12 | 関数シグネチャ・machine-local ファイル・表示など、変更しても既存データが壊れない |
+| 高 | ADR-2 / ADR-3 / ADR-5 / ADR-7 / ADR-9 / ADR-10 / ADR-11 / ADR-12 / ADR-13 | 関数シグネチャ・machine-local ファイル・表示など、変更しても既存データが壊れない(ADR-13 は判別子の選択のみで、永続面に触れない) |
 | 中 | ADR-1 / ADR-6 / ADR-8 | 型の union / journal に焼かれる `selector` / engine の書込経路。変更は可能だが既存 journal の解釈に影響しうる |
 | **低** | **ADR-4** | 監査 journal(version-controlled、digest 束縛)の schema に触れる。誤ると全 Intent の projection が復元不能になる |
 

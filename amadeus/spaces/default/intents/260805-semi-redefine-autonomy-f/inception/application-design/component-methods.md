@@ -4,7 +4,7 @@
 
 本文書は上記3成果物を次のとおり実参照する。`requirements.md` の各 FR の**受け入れ基準**を各メソッドの契約・エラー分岐へ写像し(各節の「充足 AC」)、NFR-1(fail-closed の実証可能性)・NFR-2(監査追跡性)・NFR-6(provenance の偽装不能性)を戻り型の設計制約とする。`architecture.md` 現在節「無人裁定梯子は5段(4段ではない)」の段表(basisKind 別 reviewState)を §梯子の段別戻り値表の根拠とし、同節「`--autonomy` 起動フラグの結線余地」の `--report` consume コメント(`:1068-1069`)を §C12 の様式引用元とする。`component-inventory.md` 現在節「焦点コンポーネント」表の所在(core/tools・core/hooks の別)を各メソッドの配置根拠とする。
 
-測定 ref: worktree HEAD `974dbf9bcce117a510605b12c20c50e317883566`。引用規律は components.md §測定 ref と引用規律 に従う。
+測定 ref: worktree HEAD `974dbf9bcce117a510605b12c20c50e317883566`。§12a レビュー iteration 1 の是正で追加した引用の測定 ref は `d405e34c5b8e42b4acd43fea7535d5199d6816fd`(両断面の `packages/framework/core/` は差分ゼロ)。引用規律は components.md §測定 ref と引用規律 に従う。
 
 ---
 
@@ -76,7 +76,9 @@ export type DecisionAuthority =
 
 | メソッド | シグネチャ | 目的 | エラー処理 |
 | --- | --- | --- | --- |
-| `decisionAuthorityOf` | `(authorization: DecisionAuthorization) => DecisionAuthority \| null` | 第1関門の結果を梯子入口の入力へ射影する純関数。`full-grant` → `kind: "grant"`、`semi-authority` → `kind: "semi"`、`human-required` → `null` | `null` を返すだけ(throw しない)。`null` は「認可基体が解決できなかった」の唯一の表現 |
+| `decisionAuthorityOf` | オーバーロード2本。(i) `(authorization: Exclude<DecisionAuthorization, { kind: "human-required" }>) => DecisionAuthority` / (ii) `(authorization: DecisionAuthorization) => DecisionAuthority \| null` | 第1関門の結果を梯子入口の入力へ射影する純関数。`full-grant` → `kind: "grant"`、`semi-authority` → `kind: "semi"`、`human-required` → `null` | `null` を返すだけ(throw しない)。`null` は「認可基体が解決できなかった」の唯一の表現 |
+
+**引数は `authorization` の1つのみ**(`projection` を取らない)。components.md §C2 と同一シグネチャであり、**本項が正本**である。オーバーロード (i) は内部呼び出し(`selectDecision`)用で、`decide` が `human-required` を先に弾く構造(§C6)により非 null が保証される面に対応する。
 
 `full-grant` 認可は現在 `grantId` と `scopeFingerprint` しか運ばない(`amadeus-intent-autonomy.ts:483-489`)。`decisionAuthorityOf` が policies と scope 全体を必要とするため、**`full-grant` 認可の payload に `scope: GrantScopeDescriptor` と `policies` を追加する**(認可 1 回あたり参照コピー 2 個の追加。projection を再度読み直す実装より参照透明)。
 
@@ -103,8 +105,10 @@ export type DecisionAuthorization =
       readonly scope: GrantScopeDescriptor; readonly policies: readonly DecisionPolicy[];
       readonly scopeFingerprint: string; readonly projectionRevision: number }
   | { readonly kind: "human-required"; readonly occurrence: InteractionOccurrence;
-      readonly reason: "MODE_REQUIRES_HUMAN" | "SCOPE_OUT" | "AUTHORITY_BOUNDARY" };
+      readonly reason: "MODE_REQUIRES_HUMAN" | "SCOPE_OUT" };
 ```
+
+**`reason` の値域は現行の2値のまま拡張しない**。当初案にあった `"AUTHORITY_BOUNDARY"` は**削除した** — 下表のとおり全拒否経路が `MODE_REQUIRES_HUMAN` か `SCOPE_OUT` のいずれかへ写像され、生成点も消費点も本設計のどの成果物にも存在しないためである(`phases/construction.md` の「どのコードも消費しないフィールドを持たせない」)。現行の値域は `amadeus-intent-autonomy.ts:507` / `:509` / `:513` / `:524` の4つの return がすべて 2値のいずれかを返す形であり(`:507` verbatim `    return { kind: "human-required", occurrence, reason: "SCOPE_OUT" };`)、本設計はこれを変えない。
 
 | 入力 | 戻り |
 | --- | --- |
@@ -205,17 +209,31 @@ interface CreateGateAutoDecisionInput {
 function selectDecision(
   projection: AutonomyProjection,
   input: AutonomyDecisionInput,
-  authorization: DecisionAuthorization,
+  authorization: Exclude<DecisionAuthorization, { readonly kind: "human-required" }>,  // ← 型を絞る
 ): { readonly kind: "selected"; readonly decision: AutoDecisionRecord } | AutonomyDecisionResult;
 ```
 
 改訂後の分岐(3行、現行と同じ行数):
 
 ```
-const authority = decisionAuthorityOf(authorization);
+const authority = decisionAuthorityOf(authorization);   // オーバーロード (i) → DecisionAuthority(非 null)
 if (input.occurrence.kind !== "question") return createSelectedGateDecision(projection, input, authority);
 const resolved = resolveAutoDecision({ ...input, projection, authority });
 ```
+
+**`authority` が非 null である根拠**(C5 の非 null 契約 `authority: DecisionAuthority`(§C5)との整合): `decide` は `selectDecision` を呼ぶ**前**に `human-required` を早期 return する。実測(測定 ref `d405e34c5`、`amadeus-intent-autonomy-runtime.ts`):
+
+| 行 | verbatim |
+| --- | --- |
+| `:603` | `  function decide(input: AutonomyDecisionInput): AutonomyDecisionResult {` |
+| `:607` | `    if (authorization.kind === "human-required") {` |
+| `:608` | `      if (projection.mode !== "full") return { kind: "human-required", reason: authorization.reason, result: null };` |
+| `:609` | `      return parkForHuman(projection, input, authorization.reason);` |
+| `:611` | `    const selected = selectDecision(projection, input, authorization);` |
+
+`:607-610` の分岐は**両分岐とも return する**ため、`:611` へ到達する `authorization` は構造的に `human-required` ではない。よって `selectDecision` の引数型を `Exclude<..., { kind: "human-required" }>` へ絞ることは実装に対して正しく、`decisionAuthorityOf` のオーバーロード (i) が非 null を返して C5 の契約と一致する。**この経路に null 分岐は定義しない**(到達不能な分岐は書かない — `phases/construction.md`)。
+
+`resolveAutoDecision` 側の `authority: DecisionAuthority | null` と入口ガード(§C4)は**残す**。これは export された公開境界の fail-closed であり、`decide` 経由では到達しないが直接呼び出し(テスト・将来の呼び出し元)では到達する。したがって FR-AUTH-2 の落ちる実証は **`resolveAutoDecision` の直接呼び出し**で行う(`decide` 経由のテストでは入口ガードを赤にできない — ⚠ functional-design のテスト設計へ申し送り)。
 
 `createSelectedGateDecision` は `basisKind` を `authority.kind === "semi" ? "mode-semi" : "grant-gate"` から導く(現行は呼び出し側が文字列リテラルで渡していた — `:522-523`)。
 
@@ -370,7 +388,7 @@ function <carve-out 述語>(stateContent: string, resolvedProjectDir?: string): 
 
 **値域は3値**(`none` / `semi` / `full`)であり `AutonomyMode`(`amadeus-intent-autonomy.ts:11`、verbatim `export type AutonomyMode = "none" | "semi" | "full";`)と一致させる(FR-CLI-1、ユーザー裁定 2026-08-05)。parser は値域を知らないため、3値化そのものは parser の実装を変えない — 変わるのは C13 の受理集合である。
 
-> **引用の意味論適合の照合**: `--report` は「値を consume する」点のみを引用する。`--report` は値域を持たないが `--autonomy` は 2 値の値域を持つため、値域検査の所在は `--scope` の様式(parser 外の Branch で `errorDirective`)に倣う。**2 つの様式から責務ごとに別々の引用元を選んでいる**ことを明示する。
+> **引用の意味論適合の照合**: `--report` は「値を consume する」点のみを引用する。`--report` は値域を持たないが `--autonomy` は **3 値**(`none` / `semi` / `full`)の値域を持つため、値域検査の所在は `--scope` の様式(parser 外の Branch で `errorDirective`)に倣う。**2 つの様式から責務ごとに別々の引用元を選んでいる**ことを明示する。
 
 **値省略時の挙動**: `--autonomy` が argv 末尾にある場合 `i + 1 < args.length` が false になり、この分岐は成立せず `!a.startsWith("--")` にも当たらないため**黙って落ちる**。FR-CLI-2 は値省略も loud を要求するため、**ladder の末尾に `--autonomy` の値なしを捕捉する専用分岐**を置く:
 
@@ -402,35 +420,47 @@ function applyLaunchAutonomyDeclaration(
 | --- | --- | --- | --- |
 | 1 | `flags.autonomyMissingValue` | `error`「`--autonomy` requires a value: none, semi, or full.」 | FR-CLI-2(3) |
 | 2 | 値が3値以外 | `error`「Invalid --autonomy "<v>". Valid values: none, semi, full.」 | FR-CLI-2(3) |
-| 3 | state の `Intent Autonomy Mode` が宣言値と同値 | `continue`(**監査イベントを増やさない**) | FR-CLI-2(1) の「既に `none` なら no-op」/ FR-CLI-3(1) |
-| 4 | state の mode が設定済みかつ異値 | `error`「Intent autonomy is already <cur>. Use `amadeus-bolt set-autonomy --mode <v>` to change it.」 | FR-CLI-3(2)(3) |
-| 5 | 値 `none` かつ grant 状態が `"present"` または `"unreadable"` | `error`「Intent has an active grant. Use `amadeus-bolt set-autonomy --mode none` to revoke it explicitly.」 | FR-CLI-2(2) |
-| 6 | 値 `full` かつ grant 状態が `"present"` 以外 | `error` + preview(発行に必要な内容)を stderr へ | FR-CLI-4 |
-| 7 | 上記以外 | `applyProductionAutonomyMode({ projectDir, stateContent, mode, ... })` を呼び、`ok: false` はその `error` 文字列を relay | FR-CLI-2(1)/ FR-CLI-5(HUMAN_TURN 不在は `PROVENANCE_REQUIRED` で停止) |
+| 3 | projection 読取が `unreadable` | `error`(**fail-closed** — 宣言状態も grant 状態も不明なまま書込へ進まない) | NFR-6(1) / ADR-12 |
+| 4 | `ctx.declared === false`(`modeProvenance.kind !== "human-command"` = **未宣言**) | 判定 6 へ進む(**loud にしない**) | **FR-CLI-1 / FR-CLI-3 の主用途**(ADR-13) |
+| 5 | `ctx.declared === true`。`ctx.mode` が宣言値と同値 → `continue`(**監査イベントを増やさない**)/ 異値 → `error`「Intent autonomy is already <cur>. Use `amadeus-bolt set-autonomy --mode <v>` to change it.」 | 上記 | FR-CLI-2(1) の「既に `none` なら no-op」/ FR-CLI-3(1)(2)(3) |
+| 6 | 値 `none` かつ `ctx.grant === "present"` | `error`「Intent has an active grant. Use `amadeus-bolt set-autonomy --mode none` to revoke it explicitly.」 | FR-CLI-2(2) |
+| 7 | 値 `full` かつ `ctx.grant !== "present"` | `error` + preview(発行に必要な内容)を stderr へ | FR-CLI-4 |
+| 8 | 上記以外 | `applyProductionAutonomyMode({ projectDir, stateContent, mode, ... })` を呼び、`ok: false` はその `error` 文字列を relay | FR-CLI-2(1)/ FR-CLI-5(HUMAN_TURN 不在は `PROVENANCE_REQUIRED` で停止) |
 
-**grant 実在チェックの述語**(判定 5・6 が共有する)— **真偽値ではなく3値**を返す(所有者と3値化の裁定は decisions.md ADR-12):
+**判定の基体**(判定 3〜7 が共有する。projection を**1回だけ**読む):
 
 ```
-function activeGrantState(projectDir: string): "present" | "absent" | "unreadable";
-//  present    : readProductionAutonomyProjection が currentGrant.state === "active" を返した
-//  absent     : projection は読めたが active grant が無い
-//  unreadable : projection の読取が throw した / null だった
+function readLaunchAutonomyContext(projectDir: string):
+  | { readonly kind: "readable"; readonly mode: AutonomyMode;
+      readonly declared: boolean;                       // modeProvenance.kind === "human-command"
+      readonly grant: "present" | "absent" }
+  | { readonly kind: "unreadable" };
+//  declared   : 人間コマンドを通って mode が設定されたか(ADR-13 の判別子)
+//  grant      : present = currentGrant.state === "active" / absent = それ以外
+//  unreadable : readProductionAutonomyProjection が null を返した / throw した
 ```
 
-- 判定 5(`--autonomy none`): `"present"` または `"unreadable"` → `error`(fail-closed)
-- 判定 6(`--autonomy full`): `"present"` のみ通す。`"absent"` / `"unreadable"` → `error` + preview(既に fail-closed)
+`readProductionAutonomyProjection`(`amadeus-intent-autonomy-production.ts:132-140`、本体は `:139` verbatim `  return resolved === null ? null : coordinatorFor(projectDir, resolved).readProjection();`)は**読み取り専用**であり、監査イベントを生まない。
+
+**`declared` を state フィールドの有無で代用しない**(ADR-13、決定的な実測): `amadeus-utility.ts:4635` verbatim `- **Intent Autonomy Mode**: none` が birth 時点でフィールドを書くため、「フィールド不在 = 未宣言」は成立しない。この判別を採ると新規 Intent への `--autonomy semi` が常に判定 5 の異値で loud 停止し、FR-CLI-1 / FR-CLI-3 の主用途が構造的に成立しない。判別子は `modeProvenance.kind`(値域3値: `human-command` / `system-default` / `legacy-fail-closed`、`amadeus-intent-autonomy.ts:50-72`)とし、初期投影が `system-default`(`:217-218` verbatim `    ? { kind: "system-default", targetIntentUuid: input.intentUuid, sourceIdentity: "DEFAULT_MODE_V1", after: "none" }`)、legacy 保有時が `legacy-fail-closed`(`:220`)、人間コマンド通過時のみ `human-command`(`:359-360` / `:376`)である事実に依拠する。既存 `authorizeInteraction:512`(verbatim `    if (!internalGate \|\| projection.modeProvenance.kind !== "human-command") {`)が同じ述語を認可に使っており、**新設ではなく既存機構の再利用**である。
+
+- 判定 3(全値共通): `"unreadable"` → `error`(fail-closed)
+- 判定 6(`--autonomy none`): `"present"` → `error`
+- 判定 7(`--autonomy full`): `"present"` のみ通す。`"absent"` → `error` + preview(既に fail-closed)
+
+**判定 4 は判定 6・7 を飛ばさない**。未宣言でも grant 判定は必ず通る(§components.md C13 の順序根拠)。通常経路では grant 実在 ⟹ `declared === true`(grant 発行は `issue-full` / `replace-full` = 人間コマンド経由でしか起きず `:376` が provenance を書き換える)であるため、この2判定は重ならない。それでも残すのは projection が想定外の状態にある場合に grant を守るためである(ADR-12 の二重防壁)。
 
 `readProductionAutonomyProjection`(`amadeus-intent-autonomy-production.ts:133`)は**読み取り専用**であり、監査イベントを生まない。
 
-> **引用の意味論適合の照合**(`cid:application-design:citation-semantics-check`): 近傍の既習様式は `isFullyAutonomousIntent:175-177`(verbatim `  } catch {` / `    return false;` / `  }`)の `catch → false` である。しかしその `false` は「carve-out を与えない = **保守側へ倒す**」意味であり、判定 5 で同じ形を使うと「grant 不明なら `--autonomy none` を通す」= **緩和側**へ反転する。読取に失敗したまま `applyProductionAutonomyMode` が走ると、grant 実在時に `prepareNonFullCommand:385-390` の `revoke-full` が起動しうるためである。**したがって本設計は引用元の `catch → false` 様式を意図的に採らず**、読取失敗を `"unreadable"` として明示し拒否側へ倒す。これは意図的相違である。
+> **引用の意味論適合の照合**(`cid:application-design:citation-semantics-check`): 近傍の既習様式は `isFullyAutonomousIntent:175-177`(verbatim `  } catch {` / `    return false;` / `  }`)の `catch → false` である。しかしその `false` は「carve-out を与えない = **保守側へ倒す**」意味であり、判定 3(読取不能)で同じ形を使うと「grant も宣言状態も不明なら `--autonomy none` を通す」= **緩和側**へ反転する。読取に失敗したまま `applyProductionAutonomyMode` が走ると、grant 実在時に `prepareNonFullCommand:385-390` の `revoke-full` が起動しうるためである。**したがって本設計は引用元の `catch → false` 様式を意図的に採らず**、読取失敗を `"unreadable"` として明示し拒否側へ倒す。これは意図的相違である。
 
-判定 4 が判定 5・6・7 より**先**であることが FR-CLI-3(3)(`revoke-full` 経路が起動フラグから到達不能)の構造的保証である — `prepareNonFullCommand:385-390` の `revoke-full` 分岐は `before.currentGrant !== null` のときに走るが、grant がある = mode `full` なので、`--autonomy semi` は判定 4 で、`--autonomy none` は判定 4 または 5 で**先に**停止する。判定 4 と判定 5 は二重の防壁であり、**判定 5 は state ファイルの mode 表示が projection と乖離した場合(state 手術・部分書込)にも grant を守る**。これが判定 5 を state 読取ではなく projection 読取で行う理由である。
+判定 5・6 が判定 8(書込)より**先**であることが FR-CLI-3(3)(`revoke-full` 経路が起動フラグから到達不能)の構造的保証である — `prepareNonFullCommand:385-390` の `revoke-full` 分岐は `before.currentGrant !== null` のときに走るが、grant がある = mode `full` かつ `declared === true` なので、`--autonomy semi` は判定 5 の異値で、`--autonomy none` は判定 5 の異値または判定 6 で**先に**停止する。判定 5 と判定 6 は二重の防壁であり、**判定 6 は宣言状態の記録が grant の実在と乖離した場合(state 手術・部分書込)にも grant を守る**。これが判定 6 を state 読取ではなく projection 読取で行う理由である。
 
 **directive 値域との非同一視**(C-3): C13 は `directive.intent_autonomy_mode` へ**一切書き込まない**。directive への射影は `routeMainWorkflowDirective:2192`(verbatim `  if (autonomy.mode === "semi" || autonomy.mode === "full") {`)が独占し、この 1 行が `none` の搬送を構造的に排除する。`amadeus-directive.ts:97` / `:606` は本 intent の diff に現れない。
 
 `READ_ONLY_FLAGS` へは追加しない(C-6)。`error` の描画は既存 `errorDirective` を使う(新しい directive 種別を作らない)。
 
-**充足 AC**: FR-CLI-2(1)(2)(4)(grant 実在判定を無条件 false に差し替えると判定 5 のテストが赤)/ FR-CLI-3 / FR-CLI-4(fail-closed を反転すると赤)/ FR-CLI-5 / C-3 / NFR-6(1)。
+**充足 AC**: FR-CLI-2(1)(2)(4)(`grant` を無条件 `"absent"` に差し替えると判定 6 のテストが赤)/ FR-CLI-1 / FR-CLI-3(**`declared` を無条件 `true` に差し替えると、新規 Intent への `--autonomy semi` が判定 5 の異値で loud 停止し赤になる** — ADR-13 の落ちる実証)/ FR-CLI-4(fail-closed を反転すると赤)/ FR-CLI-5 / C-3 / NFR-6(1)。
 
 ---
 
@@ -469,8 +499,10 @@ export interface IntentAutonomyStatusEnvelope {
 ```
 
 ```
-policyCount: grant?.policies.length ?? projection.semiPolicies?.length ?? 0,
+policyCount: grant?.policies.length ?? semiPoliciesOf(projection).length,
 ```
+
+**`projection.semiPolicies` を直読しない**。ADR-4 Consequences が「読み口は `semiPoliciesOf` の1本に閉じる」と固定しており、`semiPoliciesOf` は不在を `[]` へ潰す総関数(decisions.md ADR-4 Decision)であるため、`?? 0` の三段フォールバックは不要になる(結果は同値)。
 
 `amadeus-utility.ts:345` を `` `Policies:       ${autonomy.policyCount}`, `` へ差し替える。`grant.policyCount`(`:772` 相当)は grant 明細として**残す**(削除すると full の grant 表示が退行する)。
 
@@ -500,7 +532,19 @@ export function resolveAdvisoryChoiceAutonomously(input: {
    - `selector = advisory:<plugin>:<code>:<advisory_instance>`(FR-ADV-1 の逐語「`selector` に advisory instance を含めて一意化」に従う)
    - `optionIds` = `hold.runRequired ? ["run-now"] : ["run-now", "defer-with-risk"]`(**FR-ADV-4 の主機構**)
    - `phase` / `stage` は directive のものを使う
-2. **effect registry の構築**: `run-now` → `classification: "workflow-reversible"`、`defer-with-risk` → `classification: "quality-waiver"`(`PROHIBITED_EFFECTS` 収載、`amadeus-intent-autonomy-production.ts:69-75`)。**FR-ADV-4 の従機構**(効果空間側の封鎖)。
+2. **effect registry の構築**: `run-now` → `classification: "workflow-reversible"`、`defer-with-risk` → `classification: "quality-waiver"`。`quality-waiver` が `PROHIBITED_EFFECTS` に収載されていることは実測で確認した(`amadeus-intent-autonomy-production.ts:69-75`、測定 ref `d405e34c5`、verbatim):
+
+   ```
+   const PROHIBITED_EFFECTS = [
+     "new-permission",
+     "irreversible",
+     "scope-out",
+     "norm-waiver",
+     "quality-waiver",
+   ] as const;
+   ```
+
+   **FR-ADV-4 の従機構**(効果空間側の封鎖)。
 3. **裁定**: 既存 `commitProductionQuestionDecision`(`amadeus-intent-autonomy-production.ts:524`)へ渡す。新しい裁定経路を作らない(Reuse Inventory)。
 4. **結果の翻訳**: `decided` かつ `selectedOptionId === "run-now"` → `resolved`。それ以外(`human-required` / `parked` / `conflict` / `aborted` / `defer-with-risk` 選択)→ すべて `human-required`。
 

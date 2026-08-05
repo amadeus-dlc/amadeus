@@ -84,10 +84,11 @@ flowchart TD
 | 経路 | 種別 | 同期性 | 運ぶもの |
 | --- | --- | --- | --- |
 | C3 → C6 | 関数戻り値 | 同期 | `DecisionAuthorization`(`semi-authority` / `full-grant` / `human-required`) |
-| C6 → C4 | 関数引数 | 同期 | `DecisionAuthority \| null` + occurrence + 文脈 fingerprint |
+| C6 → C4 | 関数引数 | 同期 | `DecisionAuthority`(C6 内では非 null — `decide` が `human-required` を先に弾く。`resolveAutoDecision` の公開シグネチャは `DecisionAuthority \| null` を受ける)+ occurrence + 文脈 fingerprint |
 | C4 → C6 | 関数戻り値 | 同期 | `AutoDecisionResolution`(`decided` / `park` / `invalid`) |
 | C6 → C7 | 関数引数 | 同期 | `SemiAuthority` + `AutoDecisionRecord` |
 | C7 → S4 | repository port(`commit`) | 同期(`withAuditLock` 直列化) | `IntentAutonomyTransaction`(projection スナップショット同梱) |
+| C13 → S5 | `readProductionAutonomyProjection` 呼び出し(`readLaunchAutonomyContext`、**判定ごとに1回**) | 同期(読取のみ、監査イベントを生まない) | projection → `{ mode, declared(`modeProvenance.kind === "human-command"`、ADR-13), grant }` |
 | C13 → C9 | `applyProductionAutonomyMode` 呼び出し | 同期 | mode + policies + projectDir + stateContent |
 | C9 → C8 | `planHumanAutonomyCommand` 呼び出し | 同期 | `HumanAutonomyCommand`(`set-mode` / `revoke-full` に policies を同梱) |
 | C16 → S5 | `commitProductionQuestionDecision` 呼び出し | 同期 | question occurrence + effect registry + capability |
