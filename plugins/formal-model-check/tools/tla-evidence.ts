@@ -330,6 +330,12 @@ function parsePredecessor(value: unknown): Result<PredecessorRef, readonly strin
   return ok({ kind: "bundle", digest: digest.value });
 }
 
+// Only a genuine string may carry the digest — String() would let an array
+// like ["sha256:<hex64>"] coerce into a passing value.
+function rawSubjectIdentity(document: Record<string, unknown>): string {
+  return typeof document.subjectIdentity === "string" ? document.subjectIdentity : "";
+}
+
 /** Parse an envelope out of raw bytes, enumerating every defect at once (BR-U1-20). */
 function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailure> {
   let document: unknown;
@@ -340,9 +346,7 @@ function parseEnvelope(bytes: Uint8Array): Result<EvidenceEnvelope, BundleFailur
   }
   if (!isPlainRecord(document)) return err<BundleFailure>({ kind: "missing-part", parts: ["<envelope>"] });
 
-  // Only a genuine string may carry the digest — String() would let an array
-  // like ["sha256:<hex64>"] coerce into a passing value.
-  const identity = parseAggregateDigest(typeof document.subjectIdentity === "string" ? document.subjectIdentity : "");
+  const identity = parseAggregateDigest(rawSubjectIdentity(document));
   const evidence = parseEvidenceParts(document.evidence);
   const predecessor = parsePredecessor(document.predecessor);
   const generatedAt = typeof document.generatedAt === "string" ? document.generatedAt : "";

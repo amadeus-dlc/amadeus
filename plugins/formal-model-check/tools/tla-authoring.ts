@@ -79,6 +79,19 @@ function readTextFile(path: string): { ok: true; text: string } | { ok: false; d
   }
 }
 
+// Read-and-parse for JSON inputs, folding both failure modes into the typed
+// { ok: false, failure } exit-1 shape the CLI emits everywhere.
+function readJsonDocument(path: string): { ok: true; value: unknown } | { ok: false; emitted: Emitted } {
+  const file = readTextFile(path);
+  if (!file.ok) return { ok: false, emitted: failed({ kind: "io-failure", path, detail: file.detail }) };
+  try {
+    return { ok: true, value: JSON.parse(file.text) as unknown };
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, emitted: failed({ kind: "io-failure", path, detail }) };
+  }
+}
+
 function asAggregateDigest(raw: string): AggregateDigest | null {
   const parsed = parseAggregateDigest(raw);
   return parsed.ok ? parsed.value : null;
@@ -155,21 +168,10 @@ function bundleBuild(flags: Record<string, string>): Emitted {
   const store = storeRootOf(flags);
   if (store === null) return usageError(EMPTY_STORE_USAGE);
 
-  const file = readTextFile(partsPath);
-  if (!file.ok) return failed({ kind: "io-failure", path: partsPath, detail: file.detail });
+  const document = readJsonDocument(partsPath);
+  if (!document.ok) return document.emitted;
 
-  let document: unknown;
-  try {
-    document = JSON.parse(file.text) as unknown;
-  } catch (cause) {
-    return failed({
-      kind: "io-failure",
-      path: partsPath,
-      detail: cause instanceof Error ? cause.message : String(cause),
-    });
-  }
-
-  const parts = EvidenceEnvelopeCodec.parseParts(document);
+  const parts = EvidenceEnvelopeCodec.parseParts(document.value);
   if (!parts.ok) return failed(parts.error);
 
   const built = EvidenceBundle.build(store, parts.value as EvidenceParts, predecessor, {
