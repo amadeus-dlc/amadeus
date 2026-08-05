@@ -80,3 +80,46 @@ bun .claude/tools/amadeus-orchestrate.ts next --stage formal-model-check --singl
 ```
 
 ステージは `run-model-check` CLI 経由で TLC を実行します。Java と `tla2tools.jar` は `formal-model-check` plugin の opt-in 依存であり、Bun-only のフレームワーク baseline には含まれません。いずれも pin されており、同じモデル・設定・image digest が同じ verdict を返します。実行面ごとの provisioning は [plugin README](../../plugins/formal-model-check/README.md) を参照してください。
+
+## エビデンスを記録する: `tla-authoring` CLI
+
+上記ステップ6はレビュー可能なパッケージを生みます。`tla-authoring` は、そのパッケージを書き留め、アドレス付けし、後から再検査するための CLI です。あわせて、統治下の要件がモデルを伴わずに動いたことをチェックポイントへ知らせます。
+
+CLI は plugin に同梱され、`plugins/formal-model-check/tools/tla-authoring.ts` に置かれ、plugin の `tools` リストへ登録されています。役割はディスパッチのみで、判断はすべて下層の `tla-evidence.ts` と `tla-applicability.ts` にあります。契約は stdout へ JSON 1行、終了コードは成功 `0`・型付き失敗 `1`・usage エラー `2` です。引数なしで実行すると、エラー経路で完全な usage を表示します。
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts
+```
+
+**identity(同一性)。** モデルはファイルではなく、形式化した要件テキストへ結び付きます。`identity extract` は文書を読み、閉じた文法に合致する id の節を digest します — `###` 見出し下の `FR-`・`NFR-`・`AC-` +3桁、`##` 見出し下の `ADR-` +数字です。節本文は hash 前に正準化(LF 改行・行末空白なし・前後の空行なし)されるため、散文の折り返しでは digest は動かず、ガードの変更では動きます。`identity compare` は記録済み digest に対して `current` か `stale` を報告します。
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts identity extract \
+  --doc specs/tla/requirements.md --doc-kind requirements
+```
+
+**bundle(束)。** `bundle build` は content-addressed な envelope をエビデンスストアへ書き、`root` または先行 bundle digest である `--predecessor` へ連鎖させます。authoring bundle は applicability・trace・proof・review・approval の5レシートを、terminal-route レシートは applicability と approval だけを運びます。`bundle verify` は digest を再導出し記録済み subject identity を照合、`bundle read` はレシートを返し、`bundle list` / `bundle head` はストアと連鎖 head を列挙します。破損エントリは読み飛ばさず別枠で報告します。
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
+{"ok":true,"refs":[],"corrupted":[]}
+```
+
+**applicability(適用可否)。** `applicability judge` は変更申告(`{ subjects, kind, rationale }`、`kind` は `new-subject` / `semantic-change` / `impl-only` / `non-target` のいずれか)を受け取り、登録済みモデルマップに対して経路を決めます。`applicability receipt` は同じ判断を行ってレシートを構築し、参照された人間承認を、それが名指す audit シャードに対して検証します。`applicability series` は subject 集合の series key を導出します。
+
+**hold(保留)。** `hold` は authoring を止めるべきかを評価します。ストアを列挙し、破損エントリが1件でもあれば解放を拒み、現在の identity と series で hold テーブルを走らせます。権威は stdout の型付き verdict であり、終了コードはそれを写すだけです。hold / no-hold を終了コードだけから読んではなりません。
+
+`advisory hold` は、plugin が `requirements-analysis`・`functional-design`・`build-and-test` の各チェックポイントへ `authoring-hold` advisory として登録するラッパーです。チェックポイントは subject を知らないため、ラッパーが `specs/tla/authoring-subjects.json` から解決します。これはワークスペースが形式検証の統治下に置く文書と stable id の宣言です。何も宣言しないワークスペースは何も統治しておらず、これは抑制された no-hold ではなく真の no-hold です。一方、存在するが読めない宣言ファイルや、文書が定義しない id を名指す宣言は fail-closed します。
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
+{"ok":true,"verdict":{"kind":"no-hold"},"reason":"no governed subjects are declared"}
+```
+
+## エビデンスストア
+
+`plugins/formal-model-check/tools/tla-evidence.ts` は CLI ではなくライブラリです。自身のエントリポイントを持たず、`tla-authoring.ts` から利用されます。エビデンスストアへの唯一の書き手であり、ストアは `--store` フラグで移さない限り `specs/tla-evidence` に置かれます。
+
+ファイルは、判断側をファイルシステムなしでテストできるよう分割されています。純粋層が parse・正準化・digest・identity 比較・envelope 検証・head 解決を担い、ディスクにもクロックにもプロセスにも触れません。その下のハンドラ層がストア I/O を担い、純粋層へバイト列を渡します。書き込みは `.tmp` ディレクトリを経由して rename されるため、実行が落ちても、自分の digest だと称する名前で書きかけの bundle が残ることはありません。
+
+ストアの出力を読むときに知っておく価値のある性質が2つあります。verified bundle を mint するのは `verify` だけなので、それを持っていること自体が「単に読んだ」ではなく「検査済み」の証明になります。もう1つ、走査は読めないエントリを破棄せず `corrupted` として理由(`digest-filename-mismatch` / `unparseable` / `schema-invalid`)付きで報告します。これが、破損したストアに対して hold 評価が解放を拒める根拠です。
