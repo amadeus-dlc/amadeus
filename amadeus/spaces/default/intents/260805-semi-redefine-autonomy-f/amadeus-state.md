@@ -6,7 +6,7 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-08-05T04:50:58Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-delivery-agent
 - **Harness**: claude-code
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 14
-- **Completed**: 8
-- **In Progress**: units-generation
+- **Completed**: 9
+- **In Progress**: delivery-planning
 
 ## Runtime State
 - **Revision Count**: 0
@@ -73,8 +73,8 @@
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [x] application-design — EXECUTE
-- [-] units-generation — EXECUTE
-- [ ] delivery-planning — EXECUTE
+- [x] units-generation — EXECUTE
+- [-] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
@@ -98,17 +98,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: units-generation
-- **Next Stage**: delivery-planning
+- **Current Stage**: delivery-planning
+- **Next Stage**: functional-design
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-05T08:38:39Z
+- **Last Updated**: 2026-08-05T09:07:22Z
 
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-4c55238ea3ee5a3fe97623cbe6ea19a7
 ## Session Resume Point
-- **Last Completed Stage**: application-design
-- **Next Action**: Execute Units Generation
+- **Last Completed Stage**: units-generation
+- **Next Action**: Execute Delivery Planning
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
