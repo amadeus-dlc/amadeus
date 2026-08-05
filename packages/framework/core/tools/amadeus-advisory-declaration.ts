@@ -20,11 +20,11 @@ import {
   specRootForHost,
   type ActivationFs,
   type Advisory,
-  type AdvisoryCode,
+  type DeclaredAdvisoryCode,
 } from "./amadeus-plugin-activation.ts";
 
 export type AdvisoryDeclaration = {
-  readonly code: string;
+  readonly code: DeclaredAdvisoryCode;
   readonly checkpoints: readonly string[];
   readonly evaluatorArgv: readonly string[];
   /** The run-now command, or null for an advisory with no executable side. */
@@ -43,6 +43,12 @@ const ACTIVATION_CODES: ReadonlySet<string> = new Set(["not-ready", "changed", "
 
 export function isDeclaredAdvisoryCode(code: string): boolean {
   return !ACTIVATION_CODES.has(code) && DECLARED_CODE_RE.test(code);
+}
+
+// The one place a plain string becomes a DeclaredAdvisoryCode: after the
+// parser's own validation. Everything downstream carries the brand.
+function asDeclaredCode(code: string): DeclaredAdvisoryCode {
+  return code as DeclaredAdvisoryCode;
 }
 
 export function isKnownAdvisoryCode(code: string): boolean {
@@ -91,7 +97,7 @@ function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDec
     invalid.push(`advisories[${index}].formalCheck.argv must be a non-empty string array`);
     return null;
   }
-  return { code, checkpoints, evaluatorArgv, formalCheckArgv };
+  return { code: asDeclaredCode(code), checkpoints, evaluatorArgv, formalCheckArgv };
 }
 
 /**
@@ -137,7 +143,11 @@ export function resolveArgvTokens(
       resolved.push(argument);
       continue;
     }
-    const value = tokens[match[1] as string];
+    // Own-property lookup only: a token like {constructor} must read as
+    // unknown, not resolve through the object prototype into a function.
+    const name = match[1] as string;
+    if (!Object.hasOwn(tokens, name)) return null;
+    const value = tokens[name];
     if (value === undefined) return null;
     resolved.push(value);
   }
@@ -186,7 +196,7 @@ export function advisoryFromEvaluatorRun(
   if (summary === null) return null;
   return {
     plugin,
-    code: declaration.code as AdvisoryCode,
+    code: declaration.code,
     message: `advisory: ${plugin} ${declaration.code} — ${summary}`,
     stage,
     target: `${plugin}:${declaration.code}`,
@@ -275,12 +285,21 @@ export function declaredAdvisoriesForPlugin(
  * starts no process by construction (BR-U6-2, the ADR-1 option-A boundary), and
  * a declared evaluator must not smuggle one in through it.
  */
+// The evaluator runs synchronously on the checkpoint path (next/report), so a
+// hung plugin must not block the CLI forever, and a runaway stdout must not
+// grow unbounded. A timeout or truncation surfaces as an unreadable verdict,
+// which holds (fail-closed).
+const EVALUATOR_TIMEOUT_MS = 60_000;
+const EVALUATOR_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+
 export function spawnEvaluator(projectRoot: string): RunEvaluator {
   return (argv) => {
     const result = spawnSync(argv[0] as string, [...argv.slice(1)], {
       cwd: projectRoot,
       env: process.env,
       encoding: "utf-8",
+      timeout: EVALUATOR_TIMEOUT_MS,
+      maxBuffer: EVALUATOR_MAX_BUFFER_BYTES,
     });
     return { status: result.status ?? 1, stdout: result.stdout ?? "" };
   };

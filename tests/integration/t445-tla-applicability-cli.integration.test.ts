@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
@@ -342,6 +342,14 @@ describe("advisory hold — the declared evaluator wrapper", () => {
       "--model-map", modelMapPath,
     ]);
   }
+
+  test("a subjects file that exists but cannot be read fails closed, not no-hold", async () => {
+    const looped = join(workspace, "governed-loop.json");
+    symlinkSync(looped, looped);
+    const { exitCode, body } = await advisoryHold(looped);
+    expect(exitCode).toBe(1);
+    expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
+  });
 
   test("a workspace governing no subjects is a real no-hold, evaluated not suppressed", async () => {
     const { exitCode, body } = await advisoryHold(join(workspace, "absent.json"));

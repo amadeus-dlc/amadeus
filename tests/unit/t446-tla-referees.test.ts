@@ -246,12 +246,10 @@ function manifest(overrides: Partial<ReductionManifest> = {}): ReductionManifest
 /** A toolchain whose verdict per run kind is dictated by the test. */
 function fakeToolchain(
   verdicts: Partial<Record<TlcRunRequest["kind"], TlcExploration>> = {},
-): { toolchain: TlcToolchain; requests: TlcRunRequest[] } {
-  const requests: TlcRunRequest[] = [];
+): { toolchain: TlcToolchain } {
   const toolchain: TlcToolchain = {
     versionLine: "TLC2 Version 2.19",
     run: (request) => {
-      requests.push(request);
       const dictated = verdicts[request.kind];
       if (dictated !== undefined) return Promise.resolve(dictated);
       return Promise.resolve(
@@ -259,11 +257,11 @@ function fakeToolchain(
       );
     },
   };
-  return { toolchain, requests };
+  return { toolchain };
 }
 
 function fakeWorkshop(failFor: readonly string[] = []): MutationWorkshop {
-  const discarded: string[] = [];
+
   return {
     prepare: (_model, spec) =>
       Promise.resolve(
@@ -278,9 +276,7 @@ function fakeWorkshop(failFor: readonly string[] = []): MutationWorkshop {
               },
             },
       ),
-    discard: (plan) => {
-      discarded.push(plan.mutationRef);
-    },
+    discard: () => {},
   };
 }
 
@@ -491,6 +487,15 @@ describe("mutation sources (pure transformations)", () => {
     expect(built).toContain("MaxReceipts = 3");
     expect(built).toContain("INVARIANT Probe_TypeOK");
     expect(built).not.toContain("INVARIANT Other");
+  });
+
+  test("a folded INVARIANT list falls entirely, continuation lines included", () => {
+    const folded = ["SPECIFICATION Spec", "INVARIANT TypeOK,", "          Other", "CONSTANT MaxReceipts = 3", ""].join("\n");
+    const built = MutationSource.singleInvariantConfig(folded, "Probe_TypeOK" as InvariantName);
+    expect(built).not.toContain("Other");
+    expect(built).toContain("SPECIFICATION Spec");
+    expect(built).toContain("CONSTANT MaxReceipts = 3");
+    expect(built).toContain("INVARIANT Probe_TypeOK");
   });
 
   test("a falling mutation is applied textually and its anchor must be unique", () => {

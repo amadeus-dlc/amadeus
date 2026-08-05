@@ -5,7 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   advisoriesForHost,
+  declaredAdvisoriesForPlugin,
+  declaredFormalCheckArgv,
   parseAdvisoryDeclarations,
+  spawnEvaluator,
+  type DeclarationFs,
   type RunEvaluator,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 import {
@@ -138,10 +142,13 @@ describe("declared advisory supply", () => {
 
 describe("the shipped formal-model-check declaration", () => {
   test("parses with no invalid entries", () => {
-    const manifest = readFileSync("plugins/formal-model-check/plugin.json", "utf8");
+    const manifest = readFileSync(
+      join(import.meta.dir, "..", "..", "plugins", "formal-model-check", "plugin.json"),
+      "utf8",
+    );
     const parsed = parseAdvisoryDeclarations(manifest);
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations.map((declaration) => declaration.code)).toEqual(["authoring-hold"]);
+    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["authoring-hold"]);
     expect(parsed.declarations[0]?.checkpoints).toEqual([
       "requirements-analysis",
       "functional-design",
@@ -183,7 +190,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     return () => ({ status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) });
   }
 
-  function seedDeclaredProject(): { projectDir: string; hostRoot: string } {
+  function seedDeclaredProject(advisories: unknown = HOLD_DECLARATION): { projectDir: string; hostRoot: string } {
     const projectDir = createTestProject();
     projects.push(projectDir);
     seedStateFile(projectDir, join(FIXTURES_DIR, "state-mid-inception.md"));
@@ -197,7 +204,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     mkdirSync(join(projectDir, "plugins", "demo"), { recursive: true });
     writeFileSync(
       join(projectDir, "plugins", "demo", "plugin.json"),
-      JSON.stringify({ name: "demo", tools: [], advisories: HOLD_DECLARATION }),
+      JSON.stringify({ name: "demo", tools: [], advisories }),
       "utf8",
     );
     return { projectDir, hostRoot: host };
@@ -264,6 +271,51 @@ describe("declared advisory hold symmetry across next and report", () => {
     expect(reason).toContain("evaluator to return no-hold");
   });
 
+  // Generalization point 2: a declaration that DOES carry a runnable check keeps
+  // the run-now route, resolved from its own manifest through the reserved
+  // tokens rather than from anything the engine hard-codes.
+  const RUNNABLE_DECLARATION = [
+    {
+      code: "authoring-hold",
+      checkpoints: ["requirements-analysis"],
+      evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
+      formalCheck: { argv: ["bun", "plugins/demo/tools/check.ts", "--out", "{out}", "--id", "{advisory-instance}"] },
+    },
+  ];
+
+  test("a declared runnable check becomes the run-now route with its tokens resolved", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject(RUNNABLE_DECLARATION);
+    const stage = DECLARED_ADVISORY.stage;
+    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    chooseAtCheckpoint(projectDir, "run-now");
+
+    const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    expect(guarded.kind).toBe("hold");
+    if (guarded.kind !== "hold") return;
+    expect(guarded.runRequired).toBe(true);
+    const route = guarded.formalChecks[0];
+    expect(route?.command).toContain("plugins/demo/tools/check.ts");
+    expect(route?.command).not.toContain("{out}");
+    expect(route?.command).toContain(JSON.stringify(route?.output_dir));
+    expect(route?.command).toContain(JSON.stringify(route?.advisory_instance));
+    expect(guarded.advisories[0]?.result).toBeUndefined();
+  });
+
+  test("a declared check whose argv holds an unknown token contributes no route", () => {
+    const { projectDir, hostRoot } = seedDeclaredProject([
+      { ...RUNNABLE_DECLARATION[0], formalCheck: { argv: ["bun", "check.ts", "{nowhere}"] } },
+    ]);
+    const stage = DECLARED_ADVISORY.stage;
+    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    chooseAtCheckpoint(projectDir, "run-now");
+
+    const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
+    expect(guarded.kind).toBe("hold");
+    if (guarded.kind !== "hold") return;
+    expect(guarded.runRequired).toBe(false);
+    expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
+  });
+
   test("the human's explicit deferral still releases both sides", () => {
     const { projectDir, hostRoot } = seedDeclaredProject();
     const stage = DECLARED_ADVISORY.stage;
@@ -271,5 +323,54 @@ describe("declared advisory hold symmetry across next and report", () => {
     chooseAtCheckpoint(projectDir, "defer-with-risk");
     expect(guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot).kind).toBe("allow");
     expect(advisoryReportHoldReason(projectDir, stage, hostRoot, holdRunner())).toBeNull();
+  });
+});
+
+// BR-U2-19: the evaluator is launched as an argv vector with no shell between,
+// so nothing a manifest holds can be word-split or expanded.
+describe("spawnEvaluator", () => {
+  test("returns the launched command's stdout and exit status", () => {
+    const result = spawnEvaluator(projectRoot)([
+      "bun",
+      "-e",
+      "process.stdout.write('{\"ok\":true}'); process.exit(3)",
+    ]);
+    expect(result.status).toBe(3);
+    expect(result.stdout).toBe('{"ok":true}');
+  });
+
+  test("a command that cannot be launched reads as a failure, not as empty success", () => {
+    const result = spawnEvaluator(projectRoot)(["amadeus-no-such-evaluator-t445"]);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe("");
+  });
+});
+
+// A manifest that exists but cannot be read is a hold, never a silent release
+// (BR-U2-18). The filesystem port is injected, so this stays in the pure layer.
+describe("a manifest that exists but cannot be read", () => {
+  const unreadable: DeclarationFs = {
+    existsSync: () => true,
+    readFileSync: () => {
+      throw new Error("EACCES");
+    },
+  };
+
+  test("raises the hold-side advisory instead of reading as no advisory", () => {
+    const raised = declaredAdvisoriesForPlugin(
+      "/nowhere",
+      "demo",
+      "requirements-analysis",
+      () => {
+        throw new Error("the evaluator must not run for an unreadable manifest");
+      },
+      unreadable,
+    );
+    expect(raised).toHaveLength(1);
+    expect(raised[0]?.message).toContain("cannot be read");
+  });
+
+  test("yields no declared run-now argv", () => {
+    expect(declaredFormalCheckArgv("/nowhere", "demo", "authoring-hold", unreadable)).toBeNull();
   });
 });
