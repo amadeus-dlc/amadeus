@@ -7,6 +7,17 @@ export type PiDeliveryKey = string & { readonly [deliveryKeyBrand]: true };
 
 export type PiChildRole = "support" | "reviewer" | "swarm";
 
+// Persona charters pin a model tier alias; Pi needs a concrete model id. This
+// is the single alias-to-id table, shared by the child driver (which resolves a
+// persona's pin at dispatch) and the Pi harness projection (which rewrites the
+// pin when charters are packaged). It is closed on purpose: an unknown alias
+// fails the build and fails dispatch rather than silently taking a default, so
+// a persona always runs on the model its charter pins.
+export const PI_MODEL_PINS: Readonly<Record<string, string>> = {
+  opus: "claude-opus-5",
+  sonnet: "claude-sonnet-5",
+};
+
 export interface PiParentExecution {
   readonly operationId: string;
   readonly rootOperationId: string;
@@ -23,6 +34,10 @@ export interface PiChildRequest {
   readonly childOrdinal: number;
   readonly timeoutMs: number;
   readonly outputLimitBytes: number;
+  // Amadeus persona slug this child runs as. When present the driver resolves
+  // the persona charter's `model:` pin and launches the child on that model, so
+  // one driver serves every persona without a per-persona bridge.
+  readonly persona?: string;
 }
 
 export type PiRequestParseResult =
@@ -34,6 +49,7 @@ const REQUEST_KEYS = [
   "deliveryKey",
   "outputLimitBytes",
   "parentExecution",
+  "persona",
   "projectDir",
   "prompt",
   "role",
@@ -42,6 +58,9 @@ const REQUEST_KEYS = [
 ] as const;
 const PARENT_KEYS = ["operationId", "parentOperationId", "rootOperationId"] as const;
 const DELIVERY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
+// Closed persona slug shape. It is used to build a charter path, so no dot,
+// separator, or traversal segment may appear in it.
+const PERSONA_SLUG = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*-agent$/;
 const MAX_PROMPT_BYTES = 4 * 1024 * 1024;
 const MAX_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 const MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
@@ -72,6 +91,9 @@ export function parsePiChildRequest(value: unknown): PiRequestParseResult {
   }
   if (value.role !== "support" && value.role !== "reviewer" && value.role !== "swarm") {
     return { ok: false, reason: "role-invalid" };
+  }
+  if (value.persona !== undefined && (typeof value.persona !== "string" || !PERSONA_SLUG.test(value.persona))) {
+    return { ok: false, reason: "persona-invalid" };
   }
   if (!nonEmptyString(value.prompt, MAX_PROMPT_BYTES)) return { ok: false, reason: "prompt-invalid" };
   if (!nonEmptyString(value.projectDir, 4096)) return { ok: false, reason: "project-dir-invalid" };
@@ -108,6 +130,7 @@ export function parsePiChildRequest(value: unknown): PiRequestParseResult {
       childOrdinal: value.childOrdinal,
       timeoutMs: value.timeoutMs,
       outputLimitBytes: value.outputLimitBytes,
+      ...(value.persona === undefined ? {} : { persona: value.persona as string }),
     },
   };
 }

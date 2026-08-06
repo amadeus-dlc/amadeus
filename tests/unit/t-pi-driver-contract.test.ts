@@ -62,6 +62,33 @@ describe("Pi child request contract", () => {
       parentExecution: { operationId: "parent", rootOperationId: "root", parentOperationId: "" },
     })).toEqual({ ok: false, reason: "parent-execution-invalid" });
   });
+
+  test("carries an optional persona slug and keeps it inside the fingerprint", () => {
+    const parsed = parsePiChildRequest({ ...request, persona: "amadeus-architecture-reviewer-agent" });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.persona).toBe("amadeus-architecture-reviewer-agent");
+
+    const bare = parsePiChildRequest(request);
+    expect(bare.ok).toBe(true);
+    if (!bare.ok) return;
+    expect(bare.value.persona).toBeUndefined();
+    expect(fingerprintPiRequest(parsed.value)).not.toBe(fingerprintPiRequest(bare.value));
+  });
+
+  test("rejects a persona slug that could escape the charter directory", () => {
+    for (const persona of [
+      "../../etc/passwd",
+      "amadeus-../-agent",
+      "amadeus-Reviewer-agent",
+      "reviewer",
+      "amadeus-reviewer-agent.md",
+      "",
+      1,
+    ]) {
+      expect(parsePiChildRequest({ ...request, persona })).toEqual({ ok: false, reason: "persona-invalid" });
+    }
+  });
 });
 
 describe("Pi RPC collector", () => {

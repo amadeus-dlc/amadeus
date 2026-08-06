@@ -22,6 +22,7 @@ const MANIFEST_KEYS = new Set([
   "coreDirs",
   "harnessFiles",
   "frontmatterAdditions",
+  "modelPins",
   "onboarding",
   "rulesRename",
   "authoredExempt",
@@ -217,6 +218,22 @@ function validateManifestCollections(value: Record<string, unknown>, findings: s
   if (!(value.rulesRename === null || typeof value.rulesRename === "string"))
     findings.push("rulesRename must be a string or null");
   if (!(value.emit === null || typeof value.emit === "function")) findings.push("emit must be a function or null");
+  validateModelPins(value.modelPins, findings);
+}
+
+function validateModelPins(value: unknown, findings: string[]): void {
+  if (value === undefined) return;
+  if (!record(value)) {
+    findings.push("modelPins must be an object");
+    return;
+  }
+  const entries = Object.entries(value);
+  if (entries.length === 0) findings.push("modelPins must declare at least one tier");
+  for (const [alias, modelId] of entries) {
+    if (!/^[a-z][a-z0-9-]*$/u.test(alias)) findings.push(`modelPins alias "${alias}" must be a lowercase tier token`);
+    if (typeof modelId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/u.test(modelId))
+      findings.push(`modelPins["${alias}"] must be a harness-native model id`);
+  }
 }
 
 /** Validate the closed authored manifest schema without touching the filesystem. */

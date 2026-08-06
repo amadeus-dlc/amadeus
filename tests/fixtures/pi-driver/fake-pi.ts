@@ -32,6 +32,12 @@ lines.on("line", (line) => {
       process.argv[process.argv.indexOf("--provider") + 1] !== "openai-codex"
       || process.argv.includes("--model")
     );
+  // `expect-model:<id>` asserts the driver launched this child on exactly <id>.
+  const expectedModel = command.message.startsWith("expect-model:")
+    ? command.message.slice("expect-model:".length)
+    : null;
+  const modelMismatch = expectedModel !== null
+    && process.argv[process.argv.indexOf("--model") + 1] !== expectedModel;
   const routed = command.message === "routing-check";
   process.stdout.write(`${JSON.stringify({ type: "agent_start" })}\n`);
   process.stdout.write(`${JSON.stringify({
@@ -42,11 +48,11 @@ lines.on("line", (line) => {
       model: routed ? "gpt-5.6-sol" : "gpt-5.6-luna",
       content: [
         { type: "thinking", thinking: "must not leak" },
-        { type: "text", text: failed || providerMismatch || routingMismatch ? "partial" : "OK" },
+        { type: "text", text: failed || providerMismatch || routingMismatch || modelMismatch ? "partial" : "OK" },
         { type: "toolCall", name: "bash", arguments: { command: "must not leak" } },
       ],
-      stopReason: failed || providerMismatch || routingMismatch ? "error" : "stop",
-      ...(failed || providerMismatch || routingMismatch ? { errorMessage: "provider failed" } : {}),
+      stopReason: failed || providerMismatch || routingMismatch || modelMismatch ? "error" : "stop",
+      ...(failed || providerMismatch || routingMismatch || modelMismatch ? { errorMessage: "provider failed" } : {}),
     },
   })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_end", willRetry: false })}\n`);
