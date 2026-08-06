@@ -734,6 +734,9 @@ function canonicalRecord(
             sha256: currentEntry.get(entry.implPath) ?? entry.sha256,
           })),
           ...(model.vocabulary ? { vocabulary: model.vocabulary } : {}),
+          // An impl-only refresh rewrites the whole record, so the registered
+          // evidence reference has to be carried across or it is silently lost.
+          ...(model.evidenceBundle ? { evidenceBundle: model.evidenceBundle } : {}),
         };
       }),
     },

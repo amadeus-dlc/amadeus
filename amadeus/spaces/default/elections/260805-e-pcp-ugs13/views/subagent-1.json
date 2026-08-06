@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PCP-UGS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の units-generation ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/inception/units-generation/memory.md)の候補3件について persist する集合を選べ。実在根拠は diary と成果物(同ディレクトリの unit-of-work*.md)・ステージ契約(.claude/amadeus-common/stages/inception/units-generation.md の NOTE)で実測確認すること。候補 c1 = 「検出と配送を単一 Unit へ統合(cid:units-generation:c1 の機械適用)」。候補 c2 = 「unit kind は produces_kinds 不在時に completion 判定へ影響しない(RE 実測済み事実の適用)」。候補 c3 = 「2.7 は実装順序・critical path を語らない — walking-skeleton 言及・番号付き出荷順は 2.8 の所有であり reviewer が契約違反として捕捉(ステージ契約 NOTE の直読で導出可能な既存契約)」。判定観点: 既存ノルム・既存契約の機械適用は新規学習でない。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c3 のみ採用",
+      "description": "「units-generation 成果物に walking-skeleton・出荷順の順序含意を書かない(2.8 の所有)」を project.md へ persist する(起草時の再発防止として)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1〜c3 すべて既存ノルム・既存ステージ契約の機械適用であり persist しない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "他の組合せ",
+      "description": "上記以外の採用集合(留保に明記)。"
+    }
+  ]
+}

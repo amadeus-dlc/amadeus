@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件採用を支持。独立実測: (1) diary(construction/build-and-test/memory.md)の候補2件はいずれも自己申告で既存ノルムの適用と明記 — c1 は逐語『c2-unconditional-ready-boundary の適用』、c2 は逐語『c3-mirror-review-fixes の実践形』。(2) 引用先ノルムの実在を grep で確認 — amadeus/spaces/default/memory/project.md:258 が c2-unconditional-ready-boundary(AC 外の未検証面は requirements 実文照合のうえ無条件 READY、未検証面は申し送り節へ列挙)、同 :36 が c3-mirror-review-fixes(full CI 再実行に加えて対象ファイルを再検証し統合信頼性と FR 別診断可能性を両立)。(3) 成果物 build-test-results.md の実行内容が両ノルムの規定手順と一致 — Verdict 節は逐語『READY(申し送り付き — c2-unconditional-ready-boundary の実文照合)』で未検証面3件(実 gh ライブ疎通・実 spawn 疎通・nsd rebind)を申し送り節へ列挙し AC 外を requirements.md 照合済みと明記、フル CI は conductor 統合断面(847 files / 11247 assertions / 0 fail)と builder 独立実測(U2=843 / U3=847 x2)の両面。いずれも既決ノルムの機械適用であって、ノルム本文が未被覆の新知見を含まない。判定観点『既存ノルムの機械適用は新規学習でない』をそのまま適用して 0 件。",
+  "submittedAt": "2026-08-05T12:40:36Z"
+}

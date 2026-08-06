@@ -1,5 +1,41 @@
 # 依存関係
 
+## cross-harness resume の依存関係（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 外部依存
+
+**区間内で変化なし。** ランタイム・パッケージ依存の追加削除は本区間に該当しない。本 intent の患部は外部依存を一切持たず、`node:fs`（`existsSync` / `readFileSync`）と `node:path`（`join`）のみに依存する。
+
+### モジュール間依存（患部のグラフ）
+
+```
+amadeus-orchestrate.ts ─┐
+                        ├→ amadeus-caller-authorization.ts ─→ amadeus-harness.ts (detectHarnessType)
+amadeus-state.ts ───────┘                │
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-active-subagents.json
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-subagent-transition-deny
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-session-ended-deny
+                                         └→ [fs] amadeus/.amadeus-sessions/.current-session
+                                                        ↑ 書き手
+                        amadeus-session-start.ts:97 ────┘ (→ amadeus-lib.ts:2170 writeCurrentSessionId)
+                                ↑ 起動元
+        claude / codex / cursor / kimi / kiro   … 起動する
+        kiro-ide (session_id 転送なし) / opencode / pi (core hook 不使用) … 起動しない・値を渡さない
+
+kimi/hooks/amadeus-kimi-lib.ts:704 (raw cwd) ─→ 別 projectDir へ carrier を書きうる（分裂）
+        ↕ 非対称
+amadeus-lib.ts:298 resolveProjectDirFromHook（marker 検証付き5段ラダー）
+```
+
+### 依存構造上の観察
+
+1. **認可判定の依存はすべてファイルシステム（per-clone / gitignored）に向く。** version-controlled な intent record（状態層）への依存を持たないため、record を別ハーネス・別 worktree へ持ち運んでも判定は追随しない。
+2. **`.current-session` は「単一の書き手・複数の読み手」構造だが、書き手を起動するのは harness 表層であり、8面のうち3面が起動しない／値を渡さない。** 依存の向きは正しいが**供給が欠ける**。
+3. **`detectHarnessType` への依存が `AMADEUS_HARNESS_TYPE` を通じて外部から差し替え可能**であり、認可判定全体を無効化できる（`amadeus-caller-authorization.ts:75` の早期 return）。
+4. **carrier 操作関数（`amadeus-kimi-lib.ts:236` / `:281`）は非 export** のため、他モジュールから依存できない。復旧ツールを作るなら export 面の新設か、carrier 書式を別実装で再現するかの選択になる（後者は「canonical 1定義から導出」原則に反する）。
+
 ## advisory 人間選択の依存関係（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行依存方向
@@ -27,7 +63,60 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
-## phase boundary approval の依存関係（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
+
+### 外部依存の変化 — なし（実測）
+
+`git diff --stat b938898f3 2f255bc69 -- package.json bun.lock packages/setup/package.json` の出力は **空**。区間19コミットで外部依存の追加・削除・バージョン変更は **0 件**である。ランタイムは Bun のまま、利用者側の Bun-only 前提も不変。
+
+> これにより、Developer scan が「未検証」としていた依存関係の区間内変更は **変更なしと確定**した。
+
+### 内部依存 — autonomy 機構の結線
+
+```
+amadeus-orchestrate.ts
+  └─ productionStageAutonomy ──→ amadeus-intent-autonomy-production.ts
+                                    ├─ readProductionAutonomyProjection (:133)
+                                    ├─ mode 分岐 (:417)  full / 非full
+                                    │    └─ prepareNonFullCommand (:382-395)  ※policies を受けない
+                                    └─ replay ──→ amadeus-intent-autonomy-replay.ts
+                                                     ├─ replayIntentAutonomyAudit (:123)
+                                                     └─ createAuditIntentAutonomyRepository (:138)
+amadeus-intent-autonomy-runtime.ts
+  ├─ selectDecision (:522-524) ──→ amadeus-intent-autonomy.ts
+  │                                   ├─ authorizeInteraction (:501-531)
+  │                                   ├─ createGateAutoDecision (:666)
+  │                                   └─ resolveAutoDecision (:699-744)
+  └─ applySemiDecision (:546-554)
+amadeus-stop.ts
+  └─ isFullyAutonomousIntent (:167-178) ──→ readProductionAutonomyProjection
+amadeus-bolt.ts
+  └─ handleSetAutonomy (:1051-1092) ──→ production 層 ＋ state 書込
+amadeus-utility.ts
+  └─ readStatusAutonomy (:323-334) ──→ production 層（fail-soft catch）
+```
+
+**依存の要点**: `amadeus-stop.ts` と `amadeus-utility.ts` はいずれも `readProductionAutonomyProjection` に依存し、どちらも例外を握って fail-soft に落ちる（stop 側 `:175-177` の `catch { return false; }`、utility 側 `:323-334`）。projection が読めないとき、stop hook は「自律でない」側へ、`--status` は表示欠落側へ倒れる。いずれも安全側だが、**再定義後に `semi` が自律側の挙動を持つと、fail-soft の既定値が `semi` 利用者にとって保守的すぎる方向に働く**可能性がある。
+
+### 永続化への依存（3面）
+
+| 面 | 依存先 | 正本性 |
+| --- | --- | --- |
+| canonical | 監査 journal の replay（`amadeus-intent-autonomy-replay.ts`） | **正本** |
+| state ファイル | `Intent Autonomy Mode` / `Intent Grant`（`amadeus-bolt.ts:1072-1078`） | 投影 |
+| 互換投影 | `Construction Autonomy Mode`（`amadeus-bolt.ts:1071`） | 投影。`semi` と `none` がともに `gated` へ潰れる |
+
+state 側の既定は state テンプレート（`amadeus-utility.ts` 内）が供給し、初期 projection は `mode: "none"` / provenance `system-default`（`amadeus-intent-autonomy.ts:218-227`）。
+
+### 配布面の依存
+
+`stage-protocol.md` は `packages/framework/core/amadeus-common/protocols/` を canonical とし、各ハーネス manifest の `coreDirs`（例: `packages/framework/harness/claude/manifest.ts:55` 以降の `{ src: "amadeus-common", dst: "amadeus-common" }`）が投影する。`amadeus-statusline.ts` は同じく `coreDirs` の `{ src: "hooks", dst: "hooks" }` エントリで全ハーネスへ配布される（Developer scan が未特定としていた statusline の配布機構は、**この hooks 投影で確定**）。
+
+on-disk の `stage-protocol.md` は 14 本（canonical 1 + self-install 5 + `dist/` 8）だが、`git ls-files` で追跡されているのは canonical 1 本のみ（source-only 境界）。したがって規約改訂の編集依存は canonical 1 本に閉じ、他は `bun run build` の再生成で追随する。
+
+## phase boundary approval の依存関係（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の測定 ref はすべて observed `b938898f364160d4b5857e153579b40b5ab18372`。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

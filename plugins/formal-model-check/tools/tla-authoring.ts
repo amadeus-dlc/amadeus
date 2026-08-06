@@ -1,12 +1,26 @@
 #!/usr/bin/env bun
-// tla-authoring.ts — the TLA+ authoring CLI. This unit (U1) owns the `identity`
-// and `bundle` subcommands; U2..U4 add theirs alongside.
+// tla-authoring.ts — the TLA+ authoring CLI. U1 owns the `identity` and
+// `bundle` subcommands, U3 owns `trace` and `proof`; U2 and U4 add theirs
+// alongside.
 //
 // Contract (component-methods.md § common rules): one JSON line on stdout,
 // exit 0 on success, 1 on a typed failure, 2 on a usage error. Dispatch only —
 // every judgement lives in tla-evidence.ts.
 
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  ApplicabilityJudge,
+  AuthoringHoldEvaluator,
+  DEFAULT_MODEL_MAP_PATH,
+  readModelMapSnapshot,
+  traceSubjectsOf,
+  verifyHumanApproval,
+  type ChangeDeclaration,
+  type HumanApprovalRef,
+  type ModelMapSnapshot,
+  type SubjectSeriesKey,
+} from "./tla-applicability.ts";
 import {
   DEFAULT_STORE_ROOT,
   EvidenceBundle,
@@ -15,11 +29,30 @@ import {
   parseAggregateDigest,
   type AggregateDigest,
   type BundleDigest,
+  type ContentDigest,
   type DocKind,
   type EvidenceBundleRef,
   type EvidenceParts,
   type PredecessorRef,
+  type StableId,
 } from "./tla-evidence.ts";
+import {
+  InvariantNameCodec,
+  ProofObligations,
+  TraceCoverage,
+  type InvariantName,
+  type ModelArtifacts,
+  type TlcToolchain,
+  type TraceRow,
+} from "./tla-referees.ts";
+import { createRefereeToolchain } from "./tla-referee-toolchain.ts";
+import {
+  RegistrationCommitter,
+  approvalVerifier,
+  checkPreconditions,
+  createRegistrationPorts,
+} from "./tla-registration.ts";
+import type { PreconditionFailure, RegistrationPorts } from "./tla-registration.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -34,6 +67,17 @@ const USAGE = [
   "  bundle read --ref <digest> [--store <dir>]",
   "  bundle list [--store <dir>]",
   "  bundle head [--store <dir>]",
+  "  applicability judge --declaration <path> --identity <digest> [--model-map <path>] [--store <dir>]",
+  "  applicability receipt --declaration <path> --identity <digest> --approval <path|none>",
+  "                        [--model-map <path>] [--store <dir>] [--audit-dir <dir>]",
+  "                        [--predecessor <root|digest>] [--generated-at <iso>] [--generated-by <name>]",
+  "  applicability series --subjects <id,id,...>",
+  "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
+  "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
+  "  trace --subjects <path> --rows <path> --invariants <path>",
+  "  proof --model <tla> --cfg <cfg> --reduction <manifest> --invariants <path> --identity <digest>",
+  "  commit --draft <path> --bundle <digest> --preconditions <path>",
+  "         [--model-map <path>] [--store <dir>]",
 ].join("\n");
 
 interface Emitted {
@@ -228,7 +272,470 @@ function bundleIndex(flags: Record<string, string>, mode: "list" | "head"): Emit
     : failed(index.error);
 }
 
+// --- U2: applicability judgement and the authoring hold ---
+
+const DEFAULT_AUDIT_DIR = ".";
+
+function modelMapPathOf(flags: Record<string, string>): string | null {
+  const raw = flags["model-map"];
+  if (raw === "") return null;
+  return raw ?? DEFAULT_MODEL_MAP_PATH;
+}
+
+// Resolve the map through the store: a registered model's trace subjects live
+// in the bundle its entry names (business-logic-model.md §1).
+function readModelMap(flags: Record<string, string>, store: string): ModelMapSnapshot | null {
+  const path = modelMapPathOf(flags);
+  if (path === null) return null;
+  const file = readTextFile(path);
+  if (!file.ok) return null;
+  return readModelMapSnapshot(file.text, (digest) => {
+    const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
+    if (!parsed.ok) return null;
+    const parts = EvidenceBundle.read(store, { digest: parsed.value });
+    return parts.ok ? traceSubjectsOf(parts.value) : null;
+  });
+}
+
+function parseDeclaration(value: unknown): ChangeDeclaration | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { subjects, kind, rationale } = value as Record<string, unknown>;
+  if (!Array.isArray(subjects) || subjects.some((subject) => typeof subject !== "string")) return null;
+  if (typeof kind !== "string" || !CHANGE_KINDS.has(kind)) return null;
+  if (typeof rationale !== "string") return null;
+  return { subjects: subjects as unknown as ChangeDeclaration["subjects"], kind: kind as never, rationale };
+}
+
+const CHANGE_KINDS: ReadonlySet<string> = new Set([
+  "new-subject",
+  "semantic-change",
+  "impl-only",
+  "non-target",
+]);
+
+type JudgeContext = {
+  readonly input: Parameters<typeof ApplicabilityJudge.judge>[0];
+  readonly declaration: ChangeDeclaration;
+  readonly store: string;
+};
+
+// The inputs both applicability verbs need, or the Emitted they both fail with.
+function judgeContext(flags: Record<string, string>): JudgeContext | Emitted {
+  const declarationPath = requiredFlag(flags, "declaration");
+  const identityRaw = requiredFlag(flags, "identity");
+  if (declarationPath === null || identityRaw === null) {
+    return usageError("applicability requires --declaration and --identity");
+  }
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+
+  const document = readJsonDocument(declarationPath);
+  if (!document.ok) return document.emitted;
+  const declaration = parseDeclaration(document.value);
+  if (declaration === null) return usageError("--declaration must hold { subjects, kind, rationale }");
+
+  return {
+    declaration,
+    store,
+    input: { subjectIdentity: identity, declaration, registeredModels: readModelMap(flags, store) },
+  };
+}
+
+function isEmitted<T extends object>(value: T | Emitted): value is Emitted {
+  return "exitCode" in value;
+}
+
+function applicabilityJudge(flags: Record<string, string>): Emitted {
+  const context = judgeContext(flags);
+  if (isEmitted(context)) return context;
+  const judged = ApplicabilityJudge.judge(context.input);
+  return judged.ok ? succeeded({ route: judged.value }) : failed(judged.error);
+}
+
+function readApproval(flags: Record<string, string>): HumanApprovalRef | null | Emitted {
+  const raw = requiredFlag(flags, "approval");
+  if (raw === null) return usageError("applicability receipt requires --approval <path|none>");
+  if (raw === "none") return null;
+  const document = readJsonDocument(raw);
+  if (!document.ok) return document.emitted;
+  const value = document.value;
+  if (typeof value !== "object" || value === null) return usageError("--approval must hold an approval object");
+  const { shard, timestamp, eventIdentity } = value as Record<string, unknown>;
+  if (typeof shard !== "string" || typeof timestamp !== "string" || typeof eventIdentity !== "string") {
+    return usageError("--approval must hold shard, timestamp and eventIdentity");
+  }
+  return { shard, timestamp, eventIdentity };
+}
+
+function applicabilityReceipt(flags: Record<string, string>): Emitted {
+  const context = judgeContext(flags);
+  if (isEmitted(context)) return context;
+  const approval = readApproval(flags);
+  if (approval !== null && isEmitted(approval)) return approval;
+
+  const judged = ApplicabilityJudge.judge(context.input);
+  if (!judged.ok) return failed(judged.error);
+
+  const predecessorRaw = flags.predecessor ?? "root";
+  const predecessor = parsePredecessorFlag(predecessorRaw);
+  if (predecessor === null) return usageError("--predecessor must be root or sha256:<hex64>");
+
+  const auditDir = flags["audit-dir"] ?? DEFAULT_AUDIT_DIR;
+  const built = ApplicabilityJudge.buildReceipt(judged.value, context.input, approval, {
+    judgedBy: flags["generated-by"] ?? "tla-authoring",
+    generatedAt: flags["generated-at"] ?? new Date().toISOString(),
+    predecessor,
+    verifyApproval: (ref) => {
+      const shard = readTextFile(join(auditDir, ref.shard));
+      return shard.ok && verifyHumanApproval(shard.text, ref);
+    },
+  });
+  return built.ok ? succeeded({ receipt: built.value }) : failed(built.error);
+}
+
+function applicabilitySeries(flags: Record<string, string>): Emitted {
+  const raw = requiredFlag(flags, "subjects");
+  if (raw === null) return usageError("applicability series requires --subjects <id,id,...>");
+  const subjects = raw.split(",").map((subject) => subject.trim()).filter((subject) => subject !== "");
+  if (subjects.length === 0) return usageError("--subjects must name at least one stable id");
+  return succeeded({ series: ApplicabilityJudge.subjectSeriesKey(subjects) });
+}
+
+function holdEvaluate(flags: Record<string, string>): Emitted {
+  const identityRaw = requiredFlag(flags, "identity");
+  const seriesRaw = requiredFlag(flags, "series");
+  if (identityRaw === null || seriesRaw === null) return usageError("hold requires --identity and --series");
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+  if (!/^sha256:[0-9a-f]{64}$/.test(seriesRaw)) return usageError("--series must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+
+  const index = EvidenceBundle.list(store);
+  if (!index.ok) return failed(index.error);
+  // Step 0 of the hold evaluation: a store holding corrupted entries is not a
+  // basis for releasing, so it never reaches the table (business-logic-model.md §3).
+  if (index.value.corrupted.length > 0) {
+    return failed({ kind: "corrupted-evidence", entries: index.value.corrupted });
+  }
+
+  const verdict = AuthoringHoldEvaluator.evaluate(
+    {
+      currentSeries: seriesRaw as SubjectSeriesKey,
+      currentIdentity: identity,
+      modelMap: readModelMap(flags, store),
+      evidenceIndex: index.value.refs,
+    },
+    (ref) => EvidenceBundle.read(store, ref),
+  );
+  if (!verdict.ok) return failed(verdict.error);
+  // The typed verdict on stdout is the authority; the exit code only mirrors it
+  // (BR-U2-20 — no caller may read hold/no-hold from the code alone).
+  return verdict.value.kind === "no-hold"
+    ? succeeded({ verdict: verdict.value })
+    : { exitCode: 1, body: { ok: false, verdict: verdict.value } };
+}
+
+// --- The advisory evaluator wrapper (business-logic-model.md §4/§5) ---
+//
+// The checkpoint knows no subjects, so the wrapper resolves them: a workspace
+// declares the documents and stable ids under formal-verification governance,
+// and the wrapper turns those into the identity and series the hold table
+// consumes. A workspace that declares nothing governs nothing, which is a real
+// no-hold rather than a suppressed one.
+
+export const DEFAULT_SUBJECTS_PATH = "specs/tla/authoring-subjects.json";
+
+interface GovernedSubjects {
+  readonly documents: ReadonlyArray<{ readonly path: string; readonly kind: DocKind }>;
+  readonly subjects: readonly string[];
+}
+
+function parseGovernedSubjects(value: unknown): GovernedSubjects | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const { documents, subjects } = value as Record<string, unknown>;
+  if (!Array.isArray(documents) || documents.length === 0) return null;
+  if (!Array.isArray(subjects) || subjects.length === 0) return null;
+  if (subjects.some((subject) => typeof subject !== "string")) return null;
+  const parsed: Array<{ path: string; kind: DocKind }> = [];
+  for (const entry of documents) {
+    if (typeof entry !== "object" || entry === null) return null;
+    const { path, kind } = entry as Record<string, unknown>;
+    if (typeof path !== "string" || (kind !== "requirements" && kind !== "decisions")) return null;
+    parsed.push({ path, kind });
+  }
+  return { documents: parsed, subjects: subjects as string[] };
+}
+
+/** The aggregate identity of the governed subjects across the declared documents. */
+function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest {
+  const entries: Array<readonly [StableId, ContentDigest]> = [];
+  const outstanding = new Set(governed.subjects);
+  for (const document of governed.documents) {
+    const file = readTextFile(document.path);
+    if (!file.ok) return failed({ kind: "io-failure", path: document.path, detail: file.detail });
+    const sections = IdentityDigest.extractStableSections(file.text, document.kind);
+    if (!sections.ok) return failed(sections.error);
+    for (const section of sections.value) {
+      if (!outstanding.delete(section.id)) continue;
+      entries.push([section.id, IdentityDigest.contentDigest(section.id, section.canonicalBody)] as const);
+    }
+  }
+  // A governed id the documents do not define makes the identity undefined, so
+  // the evaluation fails closed instead of digesting a smaller set.
+  if (outstanding.size > 0) return failed({ kind: "unresolvable-id", ids: [...outstanding] });
+  return IdentityDigest.aggregateDigest(entries);
+}
+
+function advisoryHold(flags: Record<string, string>): Emitted {
+  const subjectsPath = flags["subjects-file"] ?? DEFAULT_SUBJECTS_PATH;
+  // Only true absence is "nothing is governed here" (the ruled no-hold case).
+  // A file that exists but cannot be read fails closed like every other
+  // failure on this path — an unreadable declaration must not release a hold.
+  let text: string;
+  try {
+    text = readFileSync(subjectsPath, "utf8");
+  } catch (cause) {
+    if ((cause as NodeJS.ErrnoException).code === "ENOENT") {
+      return succeeded({ verdict: { kind: "no-hold" }, reason: "no governed subjects are declared" });
+    }
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail });
+  }
+  let document: unknown;
+  try {
+    document = JSON.parse(text) as unknown;
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail });
+  }
+  const governed = parseGovernedSubjects(document);
+  if (governed === null) {
+    return failed({ kind: "governed-subjects-unreadable", path: subjectsPath, detail: "shape is invalid" });
+  }
+  const identity = governedIdentity(governed);
+  if (typeof identity !== "string") return identity;
+
+  return holdEvaluate({
+    ...flags,
+    identity,
+    series: ApplicabilityJudge.subjectSeriesKey(governed.subjects),
+  });
+}
+
+// --- U3: trace coverage ----------------------------------------------------
+
+function asStringArray(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+}
+
+function parseSubjects(value: unknown): { ok: true; value: StableId[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) return { ok: false, emitted: failed({ kind: "invalid-grammar", tokens: ["<subjects>"] }) };
+  const parsed: StableId[] = [];
+  for (const token of raw) {
+    const id = IdentityDigest.normalizeStableId(token);
+    if (!id.ok) return { ok: false, emitted: failed(id.error) };
+    parsed.push(id.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseInvariants(
+  value: unknown,
+): { ok: true; value: InvariantName[] } | { ok: false; emitted: Emitted } {
+  const raw = asStringArray(value);
+  if (raw === null) {
+    return { ok: false, emitted: failed({ kind: "invalid-invariant-name", tokens: ["<invariants>"] }) };
+  }
+  const parsed: InvariantName[] = [];
+  for (const token of raw) {
+    const name = InvariantNameCodec.parse(token);
+    if (!name.ok) return { ok: false, emitted: failed(name.error) };
+    parsed.push(name.value);
+  }
+  return { ok: true, value: parsed };
+}
+
+function parseTraceRows(value: unknown): { ok: true; value: TraceRow[] } | { ok: false; emitted: Emitted } {
+  if (!Array.isArray(value)) {
+    return { ok: false, emitted: failed({ kind: "invalid-trace-row", detail: "rows must be an array" }) };
+  }
+  const rows: TraceRow[] = [];
+  for (const entry of value) {
+    const record = entry as Record<string, unknown>;
+    const subject = typeof record?.subject === "string" ? IdentityDigest.normalizeStableId(record.subject) : null;
+    const invariant = typeof record?.invariant === "string" ? InvariantNameCodec.parse(record.invariant) : null;
+    if (subject === null || invariant === null || typeof record.rationale !== "string") {
+      return {
+        ok: false,
+        emitted: failed({ kind: "invalid-trace-row", detail: JSON.stringify(entry) }),
+      };
+    }
+    if (!subject.ok) return { ok: false, emitted: failed(subject.error) };
+    if (!invariant.ok) return { ok: false, emitted: failed(invariant.error) };
+    rows.push({ subject: subject.value, invariant: invariant.value, rationale: record.rationale });
+  }
+  return { ok: true, value: rows };
+}
+
+function traceEvaluate(flags: Record<string, string>): Emitted {
+  const subjectsPath = requiredFlag(flags, "subjects");
+  const rowsPath = requiredFlag(flags, "rows");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  if (subjectsPath === null || rowsPath === null || invariantsPath === null) {
+    return usageError("trace requires --subjects, --rows and --invariants");
+  }
+
+  const subjectsDoc = readJsonDocument(subjectsPath);
+  if (!subjectsDoc.ok) return subjectsDoc.emitted;
+  const rowsDoc = readJsonDocument(rowsPath);
+  if (!rowsDoc.ok) return rowsDoc.emitted;
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+
+  const subjects = parseSubjects(subjectsDoc.value);
+  if (!subjects.ok) return subjects.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+  const rows = parseTraceRows(rowsDoc.value);
+  if (!rows.ok) return rows.emitted;
+
+  const coverage = TraceCoverage.evaluate(subjects.value, rows.value, invariants.value);
+  return coverage.ok ? succeeded({ coverage: coverage.value }) : failed(coverage.error);
+}
+
+// --- U3: proof obligations -------------------------------------------------
+
+/** The referee toolchain is injected so tests can drive the decision table. */
+export interface AuthoringDependencies {
+  readonly toolchain: TlcToolchain;
+}
+
+async function proofEvaluate(
+  flags: Record<string, string>,
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
+  const modelPath = requiredFlag(flags, "model");
+  const cfgPath = requiredFlag(flags, "cfg");
+  const reductionPath = requiredFlag(flags, "reduction");
+  const invariantsPath = requiredFlag(flags, "invariants");
+  const identityRaw = requiredFlag(flags, "identity");
+  if (
+    modelPath === null ||
+    cfgPath === null ||
+    reductionPath === null ||
+    invariantsPath === null ||
+    identityRaw === null
+  ) {
+    return usageError("proof requires --model, --cfg, --reduction, --invariants and --identity");
+  }
+  const identity = asAggregateDigest(identityRaw);
+  if (identity === null) return usageError("--identity must be sha256:<hex64>");
+
+  const invariantsDoc = readJsonDocument(invariantsPath);
+  if (!invariantsDoc.ok) return invariantsDoc.emitted;
+  const invariants = parseInvariants(invariantsDoc.value);
+  if (!invariants.ok) return invariants.emitted;
+
+  const model: ModelArtifacts = {
+    modulePath: modelPath,
+    configPath: cfgPath,
+    reductionManifestPath: reductionPath,
+  };
+  const toolchain = dependencies?.toolchain ?? createRefereeToolchain();
+  const proof = await ProofObligations.evaluate(model, invariants.value, identity, toolchain);
+  return proof.ok ? succeeded({ proof: proof.value }) : failed(proof.error);
+}
+
+// --- U4: registration ------------------------------------------------------
+
+/**
+ * Register a draft entry. The bundle is verified here rather than trusted from
+ * argv, so the CLI has no path that reaches `commit` with an unchecked bundle
+ * (business-logic-model.md §3). The identity to verify against is the one the
+ * applicability receipt already binds, so no second identity flag is invented.
+ */
+function registrationCommit(flags: Record<string, string>): Emitted {
+  const draftPath = requiredFlag(flags, "draft");
+  const bundleRaw = requiredFlag(flags, "bundle");
+  const preconditionsPath = requiredFlag(flags, "preconditions");
+  if (draftPath === null || bundleRaw === null || preconditionsPath === null) {
+    return usageError("commit requires --draft, --bundle and --preconditions");
+  }
+  const digest = asBundleDigest(bundleRaw);
+  if (digest === null) return usageError("--bundle must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+  const mapPath = modelMapPathOf(flags);
+  if (mapPath === null) return usageError("--model-map must not be empty");
+
+  const draftDocument = readJsonDocument(draftPath);
+  if (!draftDocument.ok) return draftDocument.emitted;
+  const preconditionsDocument = readJsonDocument(preconditionsPath);
+  if (!preconditionsDocument.ok) return preconditionsDocument.emitted;
+  const candidate = preconditionsDocument.value;
+  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+    return usageError("--preconditions must name a JSON object");
+  }
+
+  const ports = createRegistrationPorts({ mapPath });
+  const identity = subjectIdentityOf(candidate as Record<string, unknown>);
+  if (identity === null) {
+    return failed(routelessRefusal(candidate as Record<string, unknown>, ports));
+  }
+  const verified = EvidenceBundle.verify(store, { digest }, identity);
+  if (!verified.ok) return failed(verified.error);
+
+  const committed = RegistrationCommitter.commit(
+    draftDocument.value,
+    verified.value,
+    candidate as Record<string, unknown>,
+    ports,
+  );
+  return committed.ok ? succeeded({ receipt: committed.value }) : failed(committed.error);
+}
+
+/**
+ * Without a bound identity the bundle cannot be verified, so the run stops
+ * here — but it stops with the whole gate's verdict, not just the one check
+ * that noticed. The route failure is added because the gate only inspects the
+ * route, so an applicability receipt missing its identity passes that check.
+ */
+function routelessRefusal(
+  candidate: Record<string, unknown>,
+  ports: RegistrationPorts,
+): { kind: "preconditions-failed"; failures: readonly PreconditionFailure[] } {
+  const checked = checkPreconditions(candidate, approvalVerifier(ports));
+  const collected: PreconditionFailure[] = checked.ok ? [] : [...checked.error];
+  const routeAlreadyFailed = collected.some(
+    (failure) => failure.kind === "precondition-missing" && failure.precondition === "applicability-route",
+  );
+  const failures = routeAlreadyFailed
+    ? collected
+    : [{ kind: "precondition-missing", precondition: "applicability-route" } as const, ...collected];
+  return { kind: "preconditions-failed", failures };
+}
+
+/** The subject identity the applicability receipt binds, if it carries one. */
+function subjectIdentityOf(candidate: Record<string, unknown>): AggregateDigest | null {
+  const applicability = candidate.applicability;
+  if (typeof applicability !== "object" || applicability === null) return null;
+  const raw = (applicability as Record<string, unknown>).subjectIdentity;
+  return typeof raw === "string" ? asAggregateDigest(raw) : null;
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
+// A flat handler may be sync or async; dispatch already returns a Promise, so
+// a sync return is folded in for free.
+type FlatHandler = (
+  flags: Record<string, string>,
+  dependencies?: AuthoringDependencies,
+) => Emitted | Promise<Emitted>;
 
 const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
   identity: { extract: identityExtract, compare: identityCompare },
@@ -239,10 +746,33 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
     list: (flags) => bundleIndex(flags, "list"),
     head: (flags) => bundleIndex(flags, "head"),
   },
+  applicability: {
+    judge: applicabilityJudge,
+    receipt: applicabilityReceipt,
+    series: applicabilitySeries,
+  },
+  advisory: { hold: advisoryHold },
 };
 
-function dispatch(argv: readonly string[]): Emitted {
+// Commands whose whole contract is one verb, so they take flags directly.
+// The proof referee drives TLC through a child process, so its handler is async.
+const FLAT_COMMANDS: Readonly<Record<string, FlatHandler>> = {
+  hold: holdEvaluate,
+  trace: traceEvaluate,
+  proof: proofEvaluate,
+  commit: registrationCommit,
+};
+
+async function dispatch(
+  argv: readonly string[],
+  dependencies?: AuthoringDependencies,
+): Promise<Emitted> {
   const [group, verb, ...rest] = argv;
+  if (group !== undefined && Object.hasOwn(FLAT_COMMANDS, group)) {
+    const flatFlags = parseFlags(verb === undefined ? [] : [verb, ...rest]);
+    if (flatFlags === null) return usageError("flags must be given as --name value pairs");
+    return (FLAT_COMMANDS[group] as FlatHandler)(flatFlags, dependencies);
+  }
   if (group === undefined || verb === undefined) return usageError("a command and a subcommand are required");
   // Own-property checks keep argv tokens like "constructor" from resolving
   // through the prototype chain of these object literals.
@@ -256,12 +786,16 @@ function dispatch(argv: readonly string[]): Emitted {
 }
 
 /** In-process entry point: argv without the runtime prefix, one JSON line per run. */
-export function runTlaAuthoring(argv: readonly string[], emit: Emit): ExitCode {
-  const emitted = dispatch(argv);
+export async function runTlaAuthoring(
+  argv: readonly string[],
+  emit: Emit,
+  dependencies?: AuthoringDependencies,
+): Promise<ExitCode> {
+  const emitted = await dispatch(argv, dependencies);
   emit(JSON.stringify(emitted.body));
   return emitted.exitCode;
 }
 
 if (import.meta.main) {
-  process.exitCode = runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
+  process.exitCode = await runTlaAuthoring(process.argv.slice(2), (line) => process.stdout.write(`${line}\n`));
 }

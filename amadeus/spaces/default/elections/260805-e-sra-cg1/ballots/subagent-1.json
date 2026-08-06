@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-CG1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "抽出ヘルパーは匿名 arrow でなく named 関数として既存匿名関数の ordinal を乱さない位置に置くこと(cid:code-generation:complexity-baseline-ordinal の偽 NEW_VIOLATION 回避)、および FD『配線 1 行』超過の申告を questions/diary に必ず残すこと。",
+  "rationale": "実測: builder worktree amadeus-statusline.ts:322-323 に C14 逐語配線が実在、tests/.complexity-baseline.json に main ccn:26(threshold 15 の grandfather)を確認。FD business-logic-model.md:23/36/39 の C14 契約(bare mode 返り値+呼び出し側 verbatim 連結)は B で保存される。A は shrink-only ratchet(cid:feasibility:c3)と complexity-baseline-ordinal『第一手は構造回避、baseline 更新は実複雑度変化時のみ』の趣旨に反して grandfather 負債を増加方向へ更新する。C は C14 シグネチャ逐語・決定表・t448 と矛盾する明確な FD 逸脱で遡及改訂が必要。B は ratchet 適合かつ C14 契約保存で、逸脱は申告付き精密化として最小。builder の実装前停止は deviation-stop-before-implement に整合し本選挙が裁定。自案(B)非採用時の受容度: A なら 7(shrink-only 明文への重大な不同意)、C なら 8(FD 契約破壊 — 反証根拠は business-logic-model.md:23/39 の逐語契約と t448 の返り値ドメイン assert)。",
+  "submittedAt": "2026-08-05T13:42:10Z"
+}

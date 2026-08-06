@@ -924,12 +924,33 @@
     "slug": "tla-authoring",
     "dirName": "260804-tla-authoring",
     "scope": "self-feature",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
     "slug": "phase-boundary-approval",
     "dirName": "260804-phase-boundary-approval",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fd067-5759-7053-bead-aff6ad5c1cac",
+    "slug": "pr-convergence-plugin",
+    "dirName": "260805-pr-convergence-plugin",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fd042-ac17-7e99-9eaa-3894237ab66b",
+    "slug": "semi-redefine-autonomy-f",
+    "dirName": "260805-semi-redefine-autonomy-f",
+    "scope": "self-feature",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019fd1fe-7463-7d60-b780-b4d239953509",
+    "slug": "cross-harness-resume",
+    "dirName": "260805-cross-harness-resume",
     "scope": "self-fix",
     "status": "complete"
   }

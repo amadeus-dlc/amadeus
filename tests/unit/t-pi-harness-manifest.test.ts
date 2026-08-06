@@ -67,6 +67,12 @@ describe("Pi harness manifest", () => {
         load: "native",
       },
       {
+        kind: "extension",
+        source: "extensions/subagent.ts",
+        destination: ".pi/extensions/subagent.ts",
+        load: "native",
+      },
+      {
         kind: "driver",
         source: "drivers/amadeus-pi-driver.ts",
         destination: ".pi/drivers/amadeus-pi-driver.ts",

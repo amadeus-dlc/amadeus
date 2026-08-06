@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PCP-ADS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-pr-convergence-plugin の application-design ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/inception/application-design/memory.md)の候補群について persist する集合を選べ。実在根拠は diary・decisions.md・選挙 record(260805-e-pcp-addev)・quality-repair audit で実測確認すること。候補 c1 = 「設計逸脱選挙 E-PCP-ADDEV の実演: FR-4b 字義(gateway import)が import-closure guard で構造不可と実測確定 → 契約準拠形へ申告改訂(既存 implementation-deviation-election の機械適用)」。候補 c2 = 「§12a イテレーション予算消費後の残余 BLOCKER を quality_repair=active の観測経路(observe-quality repair 裁定 → 一意是正 → fresh 検証レビュー CLOSED → observe-quality READY)で閉包した初の実運用 — first-party quality-repair contribution の monitorId は 'quality-repair'・providerId は 'quality-evidence-v1' 固定であり、stageInstanceId 任意文字列で quality scope が張られる」。候補 c3 = 「是正 diff 由来の二次欠陥(C6 所在矛盾)を reviewer が捕捉(fix-diff-independent-reverify の実演)」。判定観点: 既存ノルムの機械適用は新規学習でない。未被覆の運用知識(機構の実運用手順で文書化されていないもの)だけを採用する。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "他の組合せ",
+      "description": "上記以外の採用集合(留保に明記)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件採用",
+      "description": "c1〜c3 すべて既存ノルム・既存機構仕様の機械適用であり persist しない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c2 のみ採用",
+      "description": "quality-repair 経路の初実運用手順(monitorId/providerId の固定値・repair→fresh review→READY の閉包形・§12a 予算消費後の位置づけ)を project.md へ persist する。"
+    }
+  ]
+}

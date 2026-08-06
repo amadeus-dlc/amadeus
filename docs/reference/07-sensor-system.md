@@ -21,8 +21,8 @@ in the User Guide.
 > **Path convention.** `<record>/` below = the active intent's record dir,
 > `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (a compact UTC date prefix
 > plus a short kebab-case label, so record dirs sort chronologically; the
-> canonical id is the UUIDv7 stored in the `intents.json` registry row). Note the two document-shape
-> sensors' `matches` glob in the shipped manifests still carries the legacy
+> canonical id is the UUIDv7 stored in the `intents.json` registry row). Note the artifact-tree
+> `matches` glob in the shipped manifests still carries the legacy
 > artifact-tree path (quoted verbatim below where the schema is documented).
 
 For runtime behaviour see [Stage Protocol](04-stage-protocol.md). The
@@ -36,7 +36,7 @@ file-format parallel for stage definitions lives at
 Sensor manifests live at:
 
 ```
-dist/claude/.claude/sensors/amadeus-<id>.md
+packages/framework/core/sensors/amadeus-<id>.md
 ```
 
 Every framework-shipped manifest carries the `amadeus-` filename prefix
@@ -153,7 +153,7 @@ outputs: ...
 frontmatter `id:` field, which (per the filename↔id contract) equals the
 filename stem minus the `amadeus-` prefix. The compile resolver:
 
-1. Walks `dist/claude/.claude/sensors/`, parses every
+1. Walks the installed `.claude/sensors/` tree, parses every
    `amadeus-<id>.md` manifest.
 2. Indexes manifests by id for O(1) lookup at resolution time.
 3. For each stage, looks each declared import id up; throws on unknown
@@ -199,16 +199,22 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 |---|---|
 | `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
 | `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-answer-evidence.md` | `**/*-questions.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
+| `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
+| `amadeus-model-completeness.md` | `**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
+| `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
 
 `matches` **is** the fire filter — it is not optional in practice. The hook
 compares the path being written against the glob and fires only on a match;
 an entry **without** a `matches` glob never fires at all (`amadeus-sensor-fire.ts`:
 `if (!entry.matches) continue`). All shipped manifests therefore declare
-one — the two document-shape sensors scope to the artifact tree (the shipped
-manifests carry the `matches` value shown above), the two
-code-quality sensors to their language globs. The compile resolver copies
+one — the three document-shape sensors scope to the artifact tree or to the
+questions files inside it (the shipped manifests carry the `matches` values
+shown above), the code-quality sensors to their language globs, and the
+drift/consistency sensors to the specific source and data files they audit.
+The compile resolver copies
 `matches` verbatim into the per-stage `sensors_applicable[]` entry; the hook
 reads the snapshotted value off the graph node.
 
@@ -348,10 +354,12 @@ is the one sanctioned stage-frontmatter edit: it grows the import list
 / `## Learn` body.
 
 The shipped manifests illustrate the variation these defaults
-later evolve into: `amadeus-required-sections.md` and
-`amadeus-upstream-coverage.md` use `timeout_seconds: 5` with their
-artifact-tree `matches` glob (the value shown in the `matches` table above);
-`amadeus-linter.md` uses `30` with `matches: "**/*.{ts,js}"`;
+later evolve into: `amadeus-required-sections.md`,
+`amadeus-upstream-coverage.md`, `amadeus-answer-evidence.md` and
+`amadeus-self-scope-consistency.md` use `timeout_seconds: 5` with their
+document- and data-shaped `matches` globs (the values shown in the `matches`
+table above); `amadeus-model-completeness.md` uses `10`;
+`amadeus-linter.md` and `amadeus-event-registry-drift.md` use `30`;
 `amadeus-type-check.md` uses `60` with `matches: "**/*.{ts,tsx}"`.
 
 ---
@@ -400,4 +408,4 @@ is an author error that the parser rejects.
   [Plane Architecture](02-plane-architecture.md).
 
 The schema above plus the shipped manifests in
-`dist/claude/.claude/sensors/` are the working examples.
+`packages/framework/core/sensors/` are the working examples.

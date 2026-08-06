@@ -51,7 +51,7 @@ import {
 } from "../tools/amadeus-lib.ts";
 import {
   choiceFromExactPrompt,
-  recordProtectedAdvisoryChoice,
+  recordAdvisoryChoice,
 } from "../tools/amadeus-advisory-choice.ts";
 import { detectHarnessType } from "../tools/amadeus-harness.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
@@ -139,11 +139,13 @@ try {
       requireReservationRoute: detectHarnessType() === "kimi",
       ...(context.route === null ? {} : { route: context.route }),
     });
-    if (context.prompt !== null) {
+    const promptChoice = context.prompt === null ? null : choiceFromExactPrompt(context.prompt);
+    if (promptChoice !== null) {
       const turns = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN");
       const latest = turns[turns.length - 1];
       if (latest !== undefined) {
-        recordProtectedAdvisoryChoice(projectDir, context.prompt, {
+        recordAdvisoryChoice(projectDir, promptChoice, {
+          kind: "human-turn",
           timestamp: latest.timestamp,
           shard: auditShardName(projectDir),
           eventIdentity: createHash("sha256").update(latest.block).digest("hex"),

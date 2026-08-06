@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-FDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 文は機構(complete-review の重複拒否は artifact 上の `## Review — Iteration N` ブロックの実在に対してのみ働き、verdict 未記録なら同一 invocationId/iteration での再ディスパッチは正規に append される)に限定し、intent 固有の経緯を焼き込まないこと。実測では両 unit の成果物に Iteration 1 の Review ブロックが 1 件も存在せず(record 全域 grep 0 hit)、diary の U1 側の記述は成果物から再構成できないため、persist の根拠は artifact の不在事実と reviewer-runtime のコードに置く。",
+      "rationale": "c1: diary 自身が既存 cid c1-engine-produces-all-five の設計どおりの正常系と明記しており(かつ RE の c3-pcp-produceskinds-failopen が produces_kinds 面を既に被覆)、新規学習ではない。c2: humanOnly 分離と AD シグネチャ精密化は intent 固有の設計内容で、他 intent へ移送する規則を持たない。c3: 未被覆の運用知識である。amadeus-reviewer-runtime.ts:531-545 の existingReviewBlock は artifact 本文の `## Review — Iteration N` マーカーを走査し、0 件なら undefined を返して :609 の appendFile 経路へ進む — すなわち replay 拒否は記録済み verdict にのみ働く。既存ノルムの被覆状況を grep で確認した結果、team.md:184 の追補はイテレーション予算消費後の残余是正、project.md:319 は予算消費後の quality_repair 閉包を扱うのみで、『reviewer がセッションリミット等で verdict 未確立のまま失敗した場合にイテレーションを消費せず再ディスパッチできる』面は未被覆。実測面では seam-bridge / convergence-toolchain の business-logic-model.md がいずれも Iteration 2 の READY ブロックのみを持ち、Iteration 1 ブロックは record 全域で 0 hit であることを確認した。",
+      "submittedAt": "2026-08-05T09:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-FDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 文は機構事実を実際のゲートどおりに書く。complete-review の唯一の永続的な冪等ゲートは『当該 iteration の Review block が成果物に実在するか』(amadeus-reviewer-runtime.ts:594-607 existingReviewBlock — 実在なら appended:false で返し、不在なら append)であり、invocationId はディスクに記録されず横断照合もされない(:578-581 は carrier と result の突き合わせ、:449 は carrier 内 scopeTranscript との突き合わせで、いずれも同一呼び出し内の整合検査)。したがって diary 文言の『同一 invocationId』を要件として焼き込まず、『verdict 未記録(当該 iteration の Review block 不在)なら新 subagent の再実行は正規で、新しい invocationId で scope からやり直しても同じく成立する』と書くこと。invocationId 一致を必須条件として persist すると、実在しない制約を後続 conductor に課す。",
+      "rationale": "3候補へ判定観点(既存ノルム・機構仕様の機械適用および intent 固有の設計内容は新規学習でない / 未被覆の運用知識のみ採用)を独立適用した。[c1 不採用] diary(construction/functional-design/memory.md, 2026-08-05T08:49:16Z Interpretations)自身が『c1-engine-produces-all-five の設計どおりの正常系』と記載しており、project.md の cid:nfr-design:c1-engine-produces-all-five(produces_kinds が適用成果物を絞る)と、同 intent の RE で既に persist 済みの cid:reverse-engineering:c3-pcp-produceskinds-failopen(unitCovered の names.length===0 → covered を含む3経路)が当該挙動を既に被覆する。観測は既決仕様の作動であり新規知識なし。[c2 不採用] humanOnly 分離の設計確定と AD シグネチャの申告付き精密化は per-unit FD 成果物が正本として保持すべき intent 固有の設計内容であり、他 intent へ一般化できる規則を含まない。一般化可能な形へ抽象すると『設計逸脱は申告して改訂する』へ帰着し、team.md の cid:requirements-analysis:implementation-deviation-election と project.md の cid:code-generation:cg-invariant-conflict-explicit-revision の再述になる。[c3 採用] 未被覆性を実測で確認した — amadeus/spaces/default/memory 全域で『再ディスパッチ』『セッションリミット』『verdict 未確立』の grep が 0 hit。近傍の既存 cid はいずれも別事象を扱う: cid:code-generation:c5 と cid:code-generation:disk-evidence-early-takeover は subagent 無応答時の conductor 引き取り、cid:code-generation:cg-20260730-3 は iteration 予算枯渇で fresh READY が追記不能な場合の開示形、cid:requirements-analysis:c4-agent-async-despite-sync-flag は同期フラグ下の非同期起動の回収手段であり、いずれも『reviewer が verdict 未記録のまま失敗した場合に同一 iteration で再実行してよいか』を規定しない。機構は出荷ソースの実読で確定した: completeReview(:571-622)は既存 Review block を existingReviewBlock で探し、実在時のみ validateExistingReview を通して appended:false を返す。不在時は無条件に append する。iteration 上限検査(:586-591)は directive.reviewer_max_iterations との比較のみで、同一 iteration の再実行回数は数えない。よって『未記録なら再実行は正規』は仕様上正しい。ただしこれは『replay 拒否が invocationId 単位で働く』のではなく『そもそも invocationId に永続的な replay 検査が無い』ことによるため、留保欄のとおり persist 文言を機構どおりに正す条件を付す。この訂正を含めれば、素朴な読み(iteration を消費した/replay 禁止に触れる)による誤った予算消尽判定を防ぐ実効があり、未被覆の運用知識として採用に値する。[choice 3 不採用] c1/c2 を含む組合せは上記により弱く、c3 を除く組合せは唯一の未被覆項目を落とす。",
+      "submittedAt": "2026-08-05T09:05:00Z"
+    }
+  ],
+  "late": []
+}
