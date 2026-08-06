@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -103,7 +103,7 @@ Per unit: [TBD]
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-05T22:56:23Z
+- **Last Updated**: 2026-08-06T03:18:39Z
 
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-1d65f71b8d4710faa7f46e0b033b7dc8
