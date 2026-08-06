@@ -288,4 +288,46 @@ describe("t460 renderStatsText — the five sections (BR-U3-5)", () => {
     expect(empty).toContain("0 completed");
     expect(empty).toContain("unresolved");
   });
+
+  // security-design.md "属性値の出力サニタイズ": agentType / model / modelSource are
+  // arbitrary strings read out of the audit corpus. The text sink is a terminal,
+  // so the removal point is render (compose keeps the aggregation key intact,
+  // and --json keeps the raw value because JSON encoding protects the structure).
+  test("render strips the control bytes that would forge a row or drive the terminal", () => {
+    const forged = renderStatsText(
+      composeStatsReport(
+        scannedOf([
+          completed({
+            agentType: "evil\u001b[2Kagent\n     999  forged-row  [persona]",
+            model: "op\u0007us",
+            modelSource: "pi\u0000n",
+          }),
+        ]),
+        RESOLUTION,
+        MEASURED_AT,
+        SCAN_SCOPE,
+      ),
+    );
+
+    // No control byte survives into the drawn text.
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: asserting their absence is the point
+    expect(forged).not.toMatch(/[\u0000-\u0008\u000B-\u001F\u007F]/);
+    // The newline-forged row cannot become its own line.
+    expect(forged.split("\n").some((line) => line.trim().startsWith("999  forged-row"))).toBe(false);
+    // The value is still rendered - sanitisation strips, it does not drop.
+    expect(forged).toContain("evil");
+    expect(forged).toContain("opus");
+  });
+
+  test("compose keeps the raw value so the aggregation key is not changed by a display concern", () => {
+    const raw = "agent\u0007x";
+    const report = composeStatsReport(
+      scannedOf([completed({ agentType: raw, model: raw })]),
+      RESOLUTION,
+      MEASURED_AT,
+      SCAN_SCOPE,
+    );
+    expect(report.byType[0]?.agentType).toBe(raw);
+    expect(report.byModel.get(raw)).toBe(1);
+  });
 });

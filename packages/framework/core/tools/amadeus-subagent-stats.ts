@@ -30,6 +30,7 @@ import {
   type AllowedSetResolution,
   classifyAgentType,
   resolveAllowedAgentTypes,
+  sanitizeAdvisoryValue,
   type TypeVerdict,
 } from "./amadeus-subagent-observability.ts";
 
@@ -172,6 +173,17 @@ function sortedEntries(tally: ReadonlyMap<string, number>): [string, number][] {
   return [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+// security-design.md "属性値の出力サニタイズ": agentType / model / modelSource come
+// straight out of the audit corpus, which is outside the trust boundary. The
+// text sink is a terminal, so a raw value could forge a row or drive the
+// terminal - it is reduced to its first line and stripped of control bytes at
+// the RENDER point only. compose keeps the value verbatim (an aggregation key
+// must not change for a display concern) and --json keeps it too (JSON encoding
+// escapes the control bytes, and a machine consumer needs the raw value). The
+// helper is U1's export, so this stays on the one-way stats -> observability
+// dependency and never reaches for amadeus-lib.ts.
+const safe = sanitizeAdvisoryValue;
+
 /** Render the five output sections (BR-U3-5) from the report's fields alone —
  *  a value the report does not carry must not appear in the output. */
 export function renderStatsText(report: SubagentStatsReport): string {
@@ -188,16 +200,16 @@ export function renderStatsText(report: SubagentStatsReport): string {
     `agent types (distinct: ${report.byType.length})`,
     ...(report.byType.length === 0
       ? ["  (none)"]
-      : report.byType.map((r) => `  ${r.count.toString().padStart(6)}  ${r.agentType}  [${r.verdict}]`)),
+      : report.byType.map((r) => `  ${r.count.toString().padStart(6)}  ${safe(r.agentType)}  [${r.verdict}]`)),
     "",
     "models",
     `  ${report.unresolvedModelCount.toString().padStart(6)}  (unresolved)`,
-    ...sortedEntries(report.byModel).map(([model, n]) => `  ${n.toString().padStart(6)}  ${model}`),
+    ...sortedEntries(report.byModel).map(([model, n]) => `  ${n.toString().padStart(6)}  ${safe(model)}`),
     "",
     "model sources",
     ...(report.byModelSource.size === 0
       ? ["  (none)"]
-      : sortedEntries(report.byModelSource).map(([source, n]) => `  ${n.toString().padStart(6)}  ${source}`)),
+      : sortedEntries(report.byModelSource).map(([source, n]) => `  ${n.toString().padStart(6)}  ${safe(source)}`)),
     "",
     "notes",
     `  parse-skip:           ${report.parseSkippedCount}`,
