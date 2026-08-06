@@ -26,6 +26,7 @@ import {
 } from "../harness/fixtures.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
+  boltDagGenerationOf,
   GUARD_EXIT_MARKER,
   GUARD_OBSERVED_MARKER,
   GUARD_WEIGHT_MARKER,
@@ -100,6 +101,14 @@ ${grant}
 `;
 }
 
+/** The batches the fixture seeded, read back from the compiled DAG it wrote. */
+function seededBatches(proj: string): string[][] {
+  const graph = JSON.parse(
+    readFileSync(join(seededRecordDir(proj), "runtime-graph.json"), "utf-8"),
+  ) as { bolt_dag?: { batches?: string[][] } };
+  return graph.bolt_dag?.batches ?? [];
+}
+
 /** Write the compiled DAG plus its canonical artefact for `batches`. */
 function seedDag(proj: string, batches: string[][]): void {
   const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
@@ -138,7 +147,15 @@ function coverUnit(proj: string, unit: string): void {
 function seedSwarmRows(
   proj: string,
   rows: { event: string; batch: string; units?: string[]; unit?: string }[],
+  // #1953 / FR-5: rows only count as evidence for the plan whose generation they
+  // carry. Default = the generation the seeded DAG has now (what the emitter
+  // stamps); an explicit string seeds ANOTHER plan's rows; null seeds pre-#1953
+  // rows that carry no stamp at all.
+  options: { generation?: string | null } = {},
 ): void {
+  const generation = options.generation === undefined
+    ? boltDagGenerationOf(seededBatches(proj))
+    : options.generation;
   const shard = seededAuditShard(proj);
   mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
   const lines = rows.map((row, index) =>
@@ -154,6 +171,7 @@ function seedSwarmRows(
         "Batch number": row.batch,
         ...(row.units === undefined ? {} : { "Unit names": row.units.join(",") }),
         ...(row.unit === undefined ? {} : { "Unit name": row.unit }),
+        ...(generation === null ? {} : { "Plan generation": generation }),
       },
     }),
   );
@@ -359,6 +377,9 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
   // shared accessor that reads both.
   test("k: v2-schema SWARM rows are read alongside v1 rows", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
+    // REVISED for FR-5b (#1953): hand-built rows must carry the plan generation
+    // too — the axis this test pins is the v1/v2 SCHEMA read, not the binding.
+    const generation = boltDagGenerationOf(seededBatches(proj));
     const shard = seededAuditShard(proj);
     mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
     const v1 = JSON.stringify({
@@ -369,7 +390,7 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
       timestamp: "2026-08-01T10:00:00Z",
       heading: "Swarm",
       event: "SWARM_STARTED",
-      fields: { "Batch number": "1", "Unit names": "alpha,beta" },
+      fields: { "Batch number": "1", "Unit names": "alpha,beta", "Plan generation": generation },
     });
     const v2Row = (seq: number, name: string, attributes: Record<string, string>) =>
       JSON.stringify({
@@ -393,13 +414,19 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
         Event: "SWARM_UNIT_CONVERGED",
         "Batch number": "1",
         "Unit name": "alpha",
+        "Plan generation": generation,
       }),
       v2Row(3, "amadeus.swarm.unit.converged", {
         Event: "SWARM_UNIT_CONVERGED",
         "Batch number": "1",
         "Unit name": "beta",
+        "Plan generation": generation,
       }),
-      v2Row(4, "amadeus.swarm.completed", { Event: "SWARM_COMPLETED", "Batch number": "1" }),
+      v2Row(4, "amadeus.swarm.completed", {
+        Event: "SWARM_COMPLETED",
+        "Batch number": "1",
+        "Plan generation": generation,
+      }),
     ];
     writeFileSync(shard, `${[v1, ...v2].join("\n")}\n`);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
@@ -412,5 +439,32 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
     expect(String(directive.message)).not.toContain("batch 2 (");
+  });
+
+  // FR-5 (#1953): the audit trail is append-only, so unit names alone cannot
+  // separate a fan-out that ran under the CURRENT plan from one that ran under a
+  // plan this run replaced (a replan can re-declare the same unit names). Rows
+  // carry the plan generation; only rows of the current generation are evidence.
+  test("m: evidence from a previous plan generation is refused (FR-5a/FR-5d)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]), { generation: "0123456789ab" });
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
+    expect(String(directive.message)).toContain("re-run the fan-out");
+  });
+
+  test("n: generation-less legacy rows are not current evidence (FR-5b)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]), { generation: null });
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("re-run the fan-out");
+  });
+
+  test("o: evidence carrying the current plan generation passes (FR-5d)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]));
+    expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
 });
