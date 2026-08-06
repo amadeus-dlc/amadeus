@@ -123,7 +123,8 @@ Kimi を再起動すると `SessionStart` が再発火し、marker を新しい�
 このままでは復帰経路がありません。そこで1つの verb だけが意図的にゲートの外に置かれています。
 
 ```bash
-bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm [--project-dir <path>]
+bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm \
+  [--confirm-roles "<role>[,<role>]"] [--session-id <id>] [--project-dir <path>]
 ```
 
 これはバイパスではありません。ゲートが読む carrier を修復するものであり、次の条件を満たす場合に限り実行されます。
@@ -134,6 +135,9 @@ bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm [--project-d
   連続実行はできない
 - **残存 role を明示していること** — subagent role がアクティブなままなら verb は拒否して role 名を表示し、
   残存集合をちょうど名指しした `--confirm-roles "<role>"` を与えたときにのみ続行する
+- **束縛先セッションが判ること** — 既定ではホストが刻印した
+  `amadeus/.amadeus-sessions/.current-session` へ再バインドする。このファイルが不在または空の場合、
+  verb は「no --session-id was given」で拒否するので、`--session-id <id>` で束縛先を明示する
 
 `--project-dir` は修復対象のレコードツリーを指します — 別 worktree で走っていたワークフローを
 引き継ぐのはこの経路です。takeover が成功すると、修復した原因を載せた `RECOVERY_COMPLETED` 行が追記されます。

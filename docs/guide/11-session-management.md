@@ -128,7 +128,8 @@ Because every mutating verb sits behind the same guard, there is otherwise no
 way back — so one verb deliberately sits outside it:
 
 ```bash
-bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm [--project-dir <path>]
+bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm \
+  [--confirm-roles "<role>[,<role>]"] [--session-id <id>] [--project-dir <path>]
 ```
 
 It is not a bypass. It repairs the carrier the guard reads, and only when:
@@ -141,6 +142,10 @@ It is not a bypass. It repairs the carrier the guard reads, and only when:
 - **retained roles are named** — with a subagent role still active the verb
   refuses, prints the role, and only proceeds with
   `--confirm-roles "<role>"` naming exactly the retained set.
+- **the session to bind is known** — by default it rebinds to the host-stamped
+  `amadeus/.amadeus-sessions/.current-session`; when that file is absent or
+  blank the verb refuses with "no --session-id was given", and
+  `--session-id <id>` names the session explicitly.
 
 `--project-dir` points it at the record tree to repair — that is how you adopt a
 workflow that was running in another worktree. A successful takeover appends a

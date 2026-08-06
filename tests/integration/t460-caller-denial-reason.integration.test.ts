@@ -214,3 +214,27 @@ describe("caller-authorization denial message (FR-2)", () => {
     }
   });
 });
+
+describe("carrier faults and role guidance stay fail-closed (FR-1/FR-2)", () => {
+  // A carrier that exists but cannot be parsed proves nothing about who the
+  // main conductor is — the guard must treat it exactly like an absent one.
+  test.each([
+    ["unparseable JSON", "{"],
+    ["a non-object roles field", JSON.stringify({ version: 1, mainSessionId: "main-session", roles: [] })],
+  ])("a carrier with %s fails closed as marker-absent", (_label, body) => {
+    const root = carrierRoot();
+    writeAt(root, KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH, `${body}\n`);
+    writeCurrentSession(root);
+
+    expect(denialOf(root)).toEqual({ reason: "marker-absent", role: "unknown" });
+  });
+
+  test("the active-role message tells the operator to acknowledge the retained role", () => {
+    const message = callerAuthorizationError({
+      reason: "active-role",
+      role: "reviewer",
+    });
+
+    expect(message).toContain('--confirm-roles "reviewer"');
+  });
+});
