@@ -6452,7 +6452,7 @@
     "file": "tests/no-silent-drop/events.ts",
     "selector": {
       "function": "assertSharedEventBytesUnchanged",
-      "fingerprint": "sha256:708b67f29f3ccee727e131e1a808617ea23056244b17b167ae55a0d406475794",
+      "fingerprint": "sha256:708b67f29f3ccee727e131e1a692617ea23056244b17b167ae55a0d406475794",
       "anchorLines": 1,
       "targetLines": "1"
     },
