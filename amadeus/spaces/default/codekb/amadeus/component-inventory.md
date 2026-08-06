@@ -1,5 +1,89 @@
 # コンポーネント棚卸し
 
+## cross-harness resume の対象コンポーネント（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 認可判定
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-caller-authorization.ts`（122行） | `:72` `authorizeMainConductor` — Kimi 呼出元の main-conductor 判定 | `:75` で kimi 以外は無条件 authorized。拒否枝4種（`:85` / `:94` / `:105` / `:108`）が `:117-122` `callerAuthorizationError("unknown")` に畳まれ判別不能。復旧案内なし |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `:2400` `refuseUnauthorizedKimiCaller` | 消費点5（`:2446` next / `:4543` report / `:5099` park / `:5326` gate-reserve / `:5387` gate-reject） |
+| `packages/framework/core/tools/amadeus-state.ts` | `:902` `enforceCallerAuthorization` | `:908-912` で `get` / `count` / `lookup` のみ除外。**`case "park"` `:1024` / `case "unpark"` `:1027` を含む全27語彙をゲート** → in-band 復旧不能（所見A） |
+| `packages/framework/core/tools/amadeus-harness.ts` | `:113-123` `detectHarnessType` | `:114-116` の `AMADEUS_HARNESS_TYPE` 最優先が未文書の認可バイパスになる。`kiro-ide` は harness dir `.kiro` のため type `kiro` へ畳まれる |
+
+### セッション carrier
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/hooks/amadeus-session-start.ts` | `:97` `if (sessionId) writeCurrentSessionId(projectDir, sessionId);` | **`.current-session` の唯一の書き手**。`:88-96` のコメントが「session_id を見るのはこの hook だけ、CLI switch からは供給不能」と明記 |
+| `packages/framework/core/tools/amadeus-lib.ts` | `:2170` `writeCurrentSessionId` / `:298` `resolveProjectDirFromHook` | 後者は `:305` marker 検証付き payload cwd → `:308` env → `:317` marker 祖先 → `:322` script path → `:329` known harness dir の5段ラダー |
+| `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts` | `:236` `establishKimiMainBaseline` / `:281` `clearKimiRoleCarrier`（**いずれも非 export**）/ `:285-286` deny ラッチ書込 / `:704` adapter 入口 | 復旧に使える公開 seam がない。`:704` の `env.cwd ?? projectDir` は raw cwd を採り core hook ラダーと非対称（carrier 分裂） |
+
+### carrier を書かないハーネス面（所見B）
+
+| ハーネス | 実体 | `.current-session` |
+| --- | --- | --- |
+| `kiro-ide` | `hooks/amadeus-kiro-adapter.ts:261,266,388` が core `amadeus-session-start.ts` を起動するが `session_id` を転送しない | **書かない** |
+| `opencode` | `plugins/` 構成、`amadeus-session-start` の参照 0 hit | **書かない** |
+| `pi` | `extensions/amadeus-pi-extension.ts:779` `case "session-started"` でネイティブに処理、core hook 不使用 | **書かない** |
+
+### テスト面
+
+| コンポーネント | pin している契約 |
+| --- | --- |
+| `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts` | 拒否／許可の両面。`:504` / `:536` / `:573` / `:646` / `:669` / `:689` の **substring assert（`"is not the main conductor"`）のみ** — 文言の全文 verbatim ピンはない |
+| `tests/integration/t-kimi-adapter.test.ts` | `:413` テスト名 `"the payload cwd wins as the core hook's project dir"` が raw-cwd 挙動を pin。project-dir 解決を変えるなら明示改訂を伴う |
+| `tests/.coverage-patch-allowlist.json` / no-silent-drop 台帳 | `authorizeMainConductor` エントリ3件＋同ファイルエントリ。行挿入時は機械 remap＋span 検査＋census 再バインドが該当 |
+
+**復旧手段の不在**: session carrier を修復する verb は存在しない（`amadeus-utility.ts` verb dispatch 全数確認、`session-repair` 系 grep 0 hit）。`doctor` は kimi hook の配線のみを検査し carrier 状態を見ない（carrier 名 grep 0 hit）。
+
+## PR 収束プラグインの対象コンポーネント（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### plugin 機構を構成する5ファイル
+
+| ファイル | 行数 | 責務 | 本 intent との関係 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-plugin.ts` | 1534 | CLI（compose / compose-all / install / drop / doctor / status）、`buildHostSnapshot`、`parseHostStageSeams`（`:258-270`） | host stage 認識面の未着地箇所を所有 |
+| `packages/framework/core/tools/amadeus-plugin-compose.ts` | 1574 | manifest parse（`:325-345`）、`inspectPlugin`、`planPluginComposition`、seam / fragment 台帳、drop 再構築、`SEAM_NAMES`（`:74`）、`serializeStageSeams`（`:555`） | seam 機構の正本。拡張の主戦場 |
+| `packages/framework/core/tools/amadeus-plugin-activation.ts` | 469 | spec-hash advisory。`:35` verbatim `// The formal-model-check plugin is the sole activation target of this intent.` | **formal-model-check 専用**であり汎用ではない。新規 plugin は対象外 |
+| `packages/framework/core/tools/amadeus-plugin-selection.ts` | 157 | 汎用の opt-in 解決（`resolvePluginSelection` `:68-96` が `amadeus/config.json` の `plugin.activation.names` を読む） | 汎用面。新規 plugin もここで選択される |
+| `scripts/plugin-projection.ts` | 1105 | パッケージング / harness 投影 / import-closure guard（`:880-946`） | 区間内で唯一 touch された患部（+77行/−1行、#2240） |
+
+`amadeus-plugin-activation.ts` と `amadeus-plugin-selection.ts` の責務差は重要である。前者は参照実装1本に固定された advisory 機構、後者が汎用の opt-in 解決面であり、新規 plugin が乗るのは後者だけである。
+
+### ガード述語を所有するコンポーネント
+
+| コンポーネント | 所在 | 判定 |
+| --- | --- | --- |
+| per-unit ループ前進ガード | `amadeus-orchestrate.ts` `unitCovered` `:3452-3472` | produces **全件** `existsSync`。承認状態を参照しない（fail-closed） |
+| batch 選定 | 同 `firstUncoveredBatch` `:3068-3085` | `unitCovered` を `unitKinds.get(u)` 付きで呼ぶため fail-open を継承 |
+| 未被覆 unit 解決 | 同 `nextUncoveredUnit` `:3526-3547` | — |
+| 成果物パス解決 | 同 `resolveArtifactPath` `:1897-1919`（per-unit 分岐 `:1916`） | `<record>/construction/<unit>/<owner.slug>/<name>.md` |
+| kind 別必須成果物 | `amadeus-graph.ts` `requiredArtifactsForUnit` `:842-849` | `produces_kinds` による絞り込み |
+| approve 時ガード | `amadeus-state.ts` `producesArtifactsExist` `:1683-1696`（ANY ループ `:1691-1694`） | **1件でも存在すれば通す** |
+| approve 時 kind 別ガード | 同 `kindAwareArtifactsExist` `:1653-1678` | unit を走査し最初に揃った1 unit で true。`:1677` は適用成果物ゼロで true |
+| ガードバイパス | 同 `artifactGuardDisabled` `:1529` | `AMADEUS_SKIP_ARTIFACT_GUARD === "1"` |
+| ステージ成果物検証 | 同 `verifyStageArtifacts` `:1992-2002` | — |
+
+### センサー実行面
+
+`packages/framework/core/tools/amadeus-sensor.ts` — `:29-31` のコメントが「Sensor outcomes are advisory」と契約を明示し、`:573-574` は無条件 `process.exit(0)`。`severity` の分岐利用は `:271` の表示1箇所のみ。出荷センサーは `packages/framework/core/sensors/*.md` の **8件**（`amadeus-answer-evidence` / `amadeus-linter` / `amadeus-model-completeness` / `amadeus-event-registry-drift` / `amadeus-required-sections` / `amadeus-type-check` / `amadeus-upstream-coverage` / `amadeus-self-scope-consistency`）で、**全件 `default_severity: advisory`**。
+
+### PR 収束のための再利用候補コンポーネント（3件）
+
+| コンポーネント | 所在 | 再利用可能な面 | 制約 |
+| --- | --- | --- | --- |
+| `parseMergeability` | `scripts/metrics-publication-domain.ts:256-262` | `mergeStateStatus` を mergeable / pending / conflicting へ正規化。`UNKNOWN`→pending、未知値は throw | 現在は metrics 公開ドメイン内の private 関数。canonical 化するなら移設が要る |
+| GitHub gateway | `packages/framework/core/tools/amadeus-github-gateway.ts`（1034行） | `versionArgv()` `:112` / `authArgv()` `:116` の runnable / auth readiness、`parseHttpEnvelope` `:247`、`interpretGraphqlResult` `:647` | GraphQL は `amadeus-mirror-project-gateway.ts:79` が argv 配列で渡す既存形。plugin から使うと core への依存が生じ import-closure guard と交差する |
+| Quality Repair contribution | `packages/framework/core/tools/amadeus-quality-repair.ts` `QualityRequiredOutputDescriptor` `:125-130` | 「ステージへ必須成果物を宣言する」型そのもの | **未接続**。`compileQualityContribution:242` が非空 `requiredOutputs` を拒否し、消費者は repo 全域で 0 件 |
+
+### 接続点が存在しないことの確認
+
+ステージ本文 **32件**（`packages/framework/core/amadeus-common/stages/**/*.md`）に対する `grep -rniE 'converge|reviewThread|review thread|gh pr |pull request|レビュースレッド|収束'` は **0 hit**、`grep -rn '\bPR\b'` も **0 hit**。`reviewThreads` の実装コード hit も 0（record を除く）。収束スキル（`j5ik2o-gh-pr-converge-loop` / `j5ik2o-gh-pr-resolve-conflicts` / `j5ik2o-gh-pr-review-follow-up`）はハーネス側 `~/.agents/skills/` にのみ実在し、**リポジトリ内に正本を持たない**。
 ## advisory 人間選択に関わるコンポーネント（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | コンポーネント | 責務 | 依存 | 健全性 |
@@ -81,6 +165,56 @@
 | `SUBAGENT_COMPLETED` | 974（移動値 — 本セッション中も追記される） |
 | `Agent Type` distinct | 200（persona 8 / 組込型 8 / 許可集合外 184） |
 | イベント内訳 | persona 416 / 組込型 297 / 許可集合外 261（和は 974 と一致） |
+## semi 再定義と autonomy 起動宣言の対象コンポーネント（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の行数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（`wc -l` / `grep -n`、canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
+
+### 焦点コンポーネント
+
+| コンポーネント（行数） | 位置 | 本 intent での役割 |
+| --- | --- | --- |
+| `amadeus-intent-autonomy.ts` (961) | core/tools | autonomy ドメイン。`authorizeInteraction` `:501`、`createGateAutoDecision` `:666`、`resolveAutoDecision` `:699`。**再定義の主患部** |
+| `amadeus-intent-autonomy-runtime.ts` (800) | core/tools | 裁定ルーティング。`selectDecision` の分岐 `:522-524`、`applySemiDecision` `:546-554` |
+| `amadeus-intent-autonomy-production.ts` (900) | core/tools | 本番結線。`readProductionAutonomyProjection` `:133`、mode 分岐 `:417`、`prepareNonFullCommand` `:382-395` |
+| `amadeus-intent-autonomy-replay.ts` (175) | core/tools | canonical 永続化。`replayIntentAutonomyAudit` `:123`、`createAuditIntentAutonomyRepository` `:138` |
+| `amadeus-stop.ts` (1020) | core/hooks | cap / budget / carve-out。`stopContinuationDefaultCap` `:147-151`、`stopBudgetMode` `:157-160`、`isFullyAutonomousIntent` `:167-178` |
+| `amadeus-bolt.ts` (1312) | core/tools | autonomy CLI 面。dispatch テーブル `:1212-1221`、`handleSetAutonomy` `:1051-1092` |
+| `amadeus-orchestrate.ts` (5544) | core/tools | 起動フラグ parser `:1044-1074`、read-only 梯子 `:1014-1016`、`birthPrintDirective` `:2617-2646` |
+| `amadeus-utility.ts` (6327) | core/tools | `--status` の autonomy 表示。`readStatusAutonomy` `:323-334`、`renderAutonomyStatus` `:336-350` |
+| `amadeus-statusline.ts` (325) | core/hooks | **autonomy 表示を持たない**（`grep -i autonom` → 0 hit）。セグメント組み立て `:203-206` |
+| `amadeus-directive.ts` | core/tools | `intent_autonomy_mode?: "semi" \| "full"` `:97`、検証器 `:606` |
+
+### 区間内で追加されたコンポーネント（本 intent の焦点に隣接）
+
+`git diff --name-only --diff-filter=A b938898f3 2f255bc69` による実測（`packages/framework/core/tools` / `packages/framework/harness` 限定）:
+
+| 新規ファイル（行数） | 隣接性 |
+| --- | --- |
+| `amadeus-autonomy-review.ts` (1273) | auto-decision の **unreviewed レビュー面**。梯子後段2段（solo-election / agent-recommendation）が生む `reviewState: "unreviewed"` の受け皿。`semi` を梯子へ載せると未レビュー件数が増えるため直接影響する |
+| `amadeus-autonomy-review-production.ts` (484) | 同上の本番結線 |
+| `amadeus-harness-registry.ts` | ハーネス登録の集約。docs/annex 横展開の対象面に関係 |
+| `amadeus-intent-completion.ts` | ワークフロー完了判定 |
+| `packages/framework/harness/registry.ts` | ハーネス registry 正本 |
+
+これら5ファイルは **base 時点では存在しなかった**。特に `amadeus-autonomy-review*.ts`（計 1757 行）は、本 intent が `semi` を梯子へ載せる場合の下流受け皿であり、requirements で明示的に扱うべき隣接面である。
+
+### `amadeus-bolt.ts` の autonomy サブコマンドは8種（5種ではない）
+
+dispatch テーブル `:1212-1221` の実測: `set-autonomy` `:1213` / `preview-autonomy` `:1214` / `decide-question` `:1215` / `observe-quality` `:1216` / `resume-quality` `:1217` / `list-auto-decisions` `:1218` / `get-auto-decision` `:1219` / `review-auto-decision` `:1220`。
+
+本文書の 260804 履歴節は「サブコマンド5種追加 — `set-autonomy`（`:1117`）…」と記すが、これは observed `b938898f3` 時点の正しい記述であり書き換えない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。区間内で `:961` 以降が **+96 行シフト**し、`get-auto-decision` / `review-auto-decision` の2種が追加されたため、observed `2f255bc69` では上記8種・上記行番号が正である。
+
+なお `amadeus-intent-autonomy.ts (961)` の行数記述は履歴節と observed で**一致**しており、鮮度上の問題はない。
+
+### 構成規模のデルタ
+
+| 指標 | 260804 断面（base `b938898f3`） | 本断面（observed `2f255bc69`） | 差 |
+| --- | --- | --- | --- |
+| core tools の `.ts` 本数 | 116 | **119** | +3 |
+| `tests/**/*.test.ts` 本数 | 927 | **941** | +14 |
+| 最大テスト番号 | — | **t439** | 後続 Bolt は t440 以降 |
+
+測定コマンド: `ls packages/framework/core/tools/*.ts | wc -l` / `find tests -name '*.test.ts' | wc -l` / `ls tests/{unit,integration,e2e} | grep -oE "^t([0-9]+)" | sed 's/t//' | sort -n | tail -3`（いずれも observed で実行）。
 
 ## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 

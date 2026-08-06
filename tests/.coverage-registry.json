@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 605,
+    "total": 607,
     "enumeratedByClass": {
-      "function": 339,
+      "function": 340,
       "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 108,
+      "subcommand": 109,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 175,
+      "function": 176,
       "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 14,
-      "subcommand": 83,
+      "subcommand": 84,
       "render-surface": 7
     }
   },
@@ -336,6 +336,14 @@
         {
           "file": "tests/integration/t432-intent-autonomy-runtime.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t453-semi-ladder-runtime.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t458-advisory-auto-resolution.integration.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -1326,6 +1334,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:autonomySegment",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t448-autonomy-statusline-segment.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -5808,6 +5828,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t455-semi-policy-cli.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
@@ -6649,6 +6673,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t17.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state session-takeover",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t462-session-takeover.integration.test.ts",
           "mechanism": "cli"
         }
       ],

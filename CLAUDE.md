@@ -1,3 +1,5 @@
+To avoid collisions with other agents, always create a dedicated worktree and branch and switch to them before starting work.
+
 ## Project Instructions
 
 - Communicate with the user in Japanese.

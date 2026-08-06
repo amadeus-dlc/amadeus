@@ -176,7 +176,7 @@ Every guard message is assembled from the same parts by a single template, so th
 
 A decline reason added later without a branch here lands on `violation` rather than quietly serialising the batch.
 
-**Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail — `SWARM_STARTED` and `SWARM_DEGRADED` on the started side (a degraded batch still ran in parallel; it only fell back to the subagent floor), `SWARM_COMPLETED` on the completed side, across every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift. One known limitation: the trail is append-only and the rows are matched by batch number, so after a replan a superseded plan's SWARM rows can still satisfy the same batch number — correlating evidence to a compile generation is tracked as [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953).
+**Approve-time reconciliation.** At a gated code-generation approve the engine reads the declared batches back against the audit trail, keyed on UNIT NAMES: a declared batch is satisfied when one `SWARM_STARTED` row names all of its units together (the fan-out) AND all of those units converged under ONE batch that also carries a `SWARM_COMPLETED` row (the referee finishing them together). Both halves are group-wise on purpose: an abandoned wide prepare — a start row that never completed — plus N one-unit re-dispatches would otherwise satisfy "named together" and "each converged" while the run was in fact serial. Reading spans every shard, since a batch prepared in one worktree and finalised in another leaves its rows in two files. `SWARM_DEGRADED` needs no arm of its own — `prepare` emits it in addition to the batch-start row, never instead of it, so a degraded batch still supplies its unit names. A batch the plan declared parallel with no fan-out on record refuses the approve, naming every unsatisfied batch rather than the first; N one-unit fan-outs do not satisfy a wide batch, because no row names its units together. The walking-skeleton gate stage is exempt: the engine itself refuses to fan it out, so no SWARM rows there is compliance, not drift. Matching on units rather than batch numbers is what keeps a re-dispatch (which advances the conductor's `prepare --batch` counter and shifts every later row) from being read as a serial run — the false refusal [#2354](https://github.com/amadeus-dlc/amadeus/issues/2354) measured. One known limitation remains: the trail is append-only, so after a replan a superseded plan's SWARM rows can still satisfy the same units — correlating evidence to a compile generation is tracked as [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953).
 
 **The exits.** A `redirect` is answered by selecting the Intent autonomy mode with `amadeus-bolt set-autonomy --mode none|semi|full`, then re-running `next`; `full` additionally requires the displayed Intent-scoped grant to be confirmed by a real human turn. A `violation` or a refused approve is answered by correcting the plan, not the run: record the dependency that makes those Units serial, with its reason, in `unit-of-work-dependency.md`, re-run `amadeus-runtime.ts compile`, then re-run `next`. If the plan is right and the deviation is deliberate, take it to a ruling first.
 
@@ -274,6 +274,46 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `DECISION_RECORDED` | `tools/amadeus-log.ts` | Fires before `AskUserQuestion` so options are captured |
 | `QUESTION_ANSWERED` | `tools/amadeus-log.ts` | Fires after user response |
 
+#### Accepting an advisory choice
+
+A plugin advisory that holds at a checkpoint puts one question to the human with
+exactly two options — `run-now` ("run it now") and `defer-with-risk` ("defer,
+accepting the risk"). `tools/amadeus-advisory-choice.ts` owns the acceptance of
+that answer, and it is deliberately narrow: an advisory choice is only ever
+accepted when it can be tied to a real human turn.
+
+There are two acceptance routes. The **prompt route**
+(`recordProtectedAdvisoryChoice`) matches the user's turn text against the exact
+option vocabulary — `1`, `run-now`, or the Japanese label, and likewise for
+`defer-with-risk` — and accepts nothing else; a paraphrase is not a choice. The
+**`record` verb** is the explicit route:
+
+```
+bun .claude/tools/amadeus-advisory-choice.ts record \
+  --advisory-instance <id> --choice run-now
+```
+
+Both routes bind the receipt to a `HUMAN_TURN`. The prompt route requires the
+turn to live in this clone's own audit shard, re-derives the event identity by
+hashing the recorded `HUMAN_TURN` block, and refuses a turn identity that is
+already spent on another receipt — one human turn answers one advisory. Both
+routes further require a matching advisory presentation, so a choice cannot be
+harvested from a turn where nothing was shown.
+
+Acceptance is **idempotent by choice**: re-recording the same choice for the
+same advisory instance returns the existing receipt with `idempotent: true`,
+while recording a *different* choice against an instance that already has one is
+refused rather than overwriting it. A `defer-with-risk` receipt closes the
+question; a `run-now` receipt admits a fresh choice only when the model check it
+authorized did not actually produce a clean outcome (detected, harness error, or
+invalid).
+
+`correct-misattributed` is the one revocation path, and it is fenced on every
+side: it applies only to a `run-now` receipt, only when no matching presentation
+grounds it, and only when no model-check evidence exists for that attempt. It
+marks the receipt revoked with the reason `misattributed-unpresented-choice`
+rather than deleting it. All of these paths run under the audit lock.
+
 ### Scope and configuration
 
 | Event | Emitter | Notes |
@@ -327,7 +367,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | Event | Emitter | Trigger |
 |---|---|---|
 | `ERROR_LOGGED` | `tools/amadeus-lib.ts` (via `emitError` from every tool's `error()`) | Any tool CLI that calls `error(msg)` to exit non-zero; best-effort — no-op if no workflow in cwd, guarded against recursion |
-| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue|review|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion |
+| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue\|review\|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion; also `session-takeover --confirm`, once the guard confirms a stale Kimi caller carrier was rebound (carries `Reason` = the repaired denial) |
 
 ### Worktree
 

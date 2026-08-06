@@ -4,6 +4,10 @@
     {
       "slug": "formal-model-check",
       "path": "stages/formal-model-check.md"
+    },
+    {
+      "slug": "tla-authoring",
+      "path": "stages/tla-authoring.md"
     }
   ],
   "seams": [],
@@ -39,6 +43,7 @@
     "tools/tla-module-deps.ts",
     "tools/tla-referee-toolchain.ts",
     "tools/tla-referees.ts",
+    "tools/tla-registration.ts",
     "tools/tlc-spawn-planner.ts",
     "tools/tlc-toolchain.ts"
   ],

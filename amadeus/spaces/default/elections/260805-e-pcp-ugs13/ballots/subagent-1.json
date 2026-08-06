@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件採用。3候補すべて既存契約・既存ノルムの機械適用であることを実測確認した。c1: diary 07:34:13Z が自ら cid:units-generation:c1 の適用と明記し、当該ノルム(project.md:222)は (a) として『片側だけでは利用者価値を出荷できない境界は単一 Unit へ統合する』を既に定めている — 新規知見なし。c2: diary が『RE 実測済み』と明記する事実の適用であり、学習候補ではなく実測事実の参照。c3: .claude/amadeus-common/stages/inception/units-generation.md が同趣旨を3箇所で逐語規定している — :52『2.7 MUST NOT recommend an implementation order or identify a critical path』、:80『Do NOT ask about implementation order priorities (value-first, risk-first, walking-skeleton-first). Those are economic-sequencing decisions that belong to Stage 2.8 Delivery Planning.』(walking-skeleton を名指し)、:133『It does NOT pick a single \"recommended build order\" or identify a critical path』。reviewer は既存契約違反として捕捉しており、契約の直読で導出可能。さらに決定的な反対根拠として、cid:units-generation:c1 自身が『Unit・Bolt の定義と Bolt 粒度の選び方は正準(stage-protocol.md Glossary と delivery-planning.md の Strategic questions)に従い、ノルム側へ再定義・複製しない』と明示的に禁じている — c3 を project.md へ persist することは、この複製禁止規定に正面から抵触する。是正自体は成果物全域で閉包済み(unit-of-work.md:25/:58、story-map.md:31 に順序非含意の明示、grep で walking-skeleton の順序含意残渣ゼロ)。",
+  "submittedAt": "2026-08-05T07:46:03Z"
+}

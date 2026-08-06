@@ -1,0 +1,23 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260805-cross-harness-resume/construction/build-and-test/build-test-results.md",
+        "digest": "a2007890b4b98e11bcc2069254e07f14e879ce831cbc5bc04c20b4f4c88aee14"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260805-cross-harness-resume/construction/fix-2285-cross-harness-resume/code-generation/code-summary.md",
+        "digest": "f3ca3241e82b752ecd2b4cd808d6b6fc44a61e86b3392cac63c1d009560a306d"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260805-cross-harness-resume/inception/requirements-analysis/requirements.md",
+        "digest": "f3b0213d46011e2426268d0106871b1a424fec441fbca616a47de925ab3c9567"
+      }
+    ]
+  }
+]

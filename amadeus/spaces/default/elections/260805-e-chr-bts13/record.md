@@ -1,0 +1,10 @@
+# Election Record — E-CHR-BTS13
+
+- question: 260805-cross-harness-resume build-and-test ステージの §13 学習選定。diary 候補4件の採否を裁定する。候補: c1 = no-silent-drop の base は台帳が束縛する実 base を実測して確定(自己参照 base は BASELINE_INVALID)— 既存 cid:code-generation:c1-260803 / c4-260803 の実践と自己申告(Interpretations)。c2 = verb 追加時の同期3点セット(dispatch の case literal 化 / EXPECTED_NONE_TO_CLI 追記 / coverage registry 再生成)がフルスイート初回 FAIL 3件 → 是正 → 最終 PASS 845/11209/0 の経路で顕在化 — 既存 cid(integration-registry-regen 等)の適用実例と自己申告(Interpretations)。c3 = tests/e2e/t10-halt-and-ask-discard.test.ts の既存赤2件が最終フル run では pass — 負荷依存 flaky の帰属確定、Issue 起票候補維持(Interpretations)。c4 = performance-test-instructions を専用テストなしの N/A 根拠+常設ゲート代替被覆で充足し、required-sections H2 floor へ節構成を是正(Deviations — bt-proportional-selection の適用)。実在根拠: diary = amadeus/spaces/default/intents/260805-cross-harness-resume/construction/build-and-test/memory.md、成果物 = 同 dir の7成果物(build-test-results.md に全実測値)。判定観点: 各候補が (a) 既存 cid の適用実例か (b) 既存 cid への追補に値する新規知識か(特に c2 — verb 追加の同期面3点を1セットとして名指す既存 cid が存在するかを memory 層 grep で実測) (c) intent 固有事項か、を確認して選ぶ。
+
+裁定: c2 を追補採用(verb 追加同期セット)(choice 2: 2票)
+内訳: choice1=0票 choice2=2票 choice3=0票
+- 留保(subagent-1, GoA2): 追補本文で新規知識として主張してよいのは (i) dispatch case のリテラル化のみ。(ii) EXPECTED_NONE_TO_CLI 追記と (iii) coverage registry 再生成は team.md:179 の cid:code-generation:integration-registry-regen が既に必須ステップとして収載済みであり、3点を1セットとして名指す際も (ii)(iii) を新規主張として書かず、既存 cid の既収載事項を『verb 追加』という発火条件の下で束ねる形にすること。独立 cid を新設せず integration-registry-regen への追補として統合する点も維持する。
+- 留保(subagent-2, GoA2): 3点セットのうち新規知識は dispatch case の literal 化のみである。EXPECTED_NONE_TO_CLI 追記と coverage registry 再生成は team.md:179 cid:code-generation:integration-registry-regen が既に必須ステップとして名指しており、追補文が既存2点を再述して二重規定にならないよう、新規部分(構文的 extractor に対する可視性)を主文に置き、既存2点は同 cid への参照で書くこと。あわせて追補文は amadeus-state.ts / t416 固有の記述に閉じず、『ソースを構文的に走査するガードの照合対象は、定数経由の間接参照では不可視になる』という一般形で書き、対象を verb 追加に限定して肥大化させないこと。
+票タイムライン: 配信 2026-08-05T22:35:44Z → 配信 2026-08-05T22:35:44Z → subagent-1 2026-08-05T22:36:51Z(受理 2026-08-05T22:38:07Z) → subagent-2 2026-08-05T22:37:14Z(受理 2026-08-05T22:38:07Z) → 開票 2026-08-05T22:38:14Z
+GoA[E-CHR-BTS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

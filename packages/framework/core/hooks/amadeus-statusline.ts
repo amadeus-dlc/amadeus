@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   activeIntent,
   activeSpace,
+  autonomySegment,
   detectHarnessType,
   displaySlugFromDirName,
   listIntents,
@@ -255,6 +256,17 @@ function recordRuntimeAttrs(projectDir: string, input: Input): void {
   }
 }
 
+// FR-DISP-1: append the active Intent's autonomy mode to the active-workflow
+// line. A named helper (not an inline branch in main) because main's CCN is
+// ratcheted in tests/.complexity-baseline.json and only ever ratchets down;
+// naming it also keeps the anonymous-function ordinals of this file stable.
+function withAutonomySegment(line: string, state: string): string {
+  const autonomy = autonomySegment(state);
+  let output = line;
+  if (autonomy) output += ` @${autonomy}`;
+  return output;
+}
+
 async function main(): Promise<void> {
   // Skip stdin read when stdin is a TTY — Claude Code always pipes JSON,
   // never runs the statusline with a terminal attached. Without this guard
@@ -319,7 +331,7 @@ async function main(): Promise<void> {
   if (stageDisplay) output += ` > ${stageDisplay}`;
   if (agentDisplay) output += ` -- ${agentDisplay}`;
 
-  printLine(output, right);
+  printLine(withAutonomySegment(output, state), right);
 }
 
 await main();

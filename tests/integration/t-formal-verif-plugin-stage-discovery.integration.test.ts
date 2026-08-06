@@ -398,12 +398,17 @@ describe("formal-model-check shipping guard (FR-2.3 / reservation 2)", () => {
       stages: Array<{ slug: string; path: string }>;
     };
     const declaredPath = "stages/formal-model-check.md";
+    const authoringPath = "stages/tla-authoring.md";
     const hostPath = "plugins/formal-model-check/stages/formal-model-check.md";
 
     // The manifest path resolves inside the neutral bundle. Composition owns
     // the distinct host namespace and prefixes plugins/<name>/ before writing.
-    expect(manifest.stages).toEqual([{ slug: "formal-model-check", path: declaredPath }]);
+    expect(manifest.stages).toEqual([
+      { slug: "formal-model-check", path: declaredPath },
+      { slug: "tla-authoring", path: authoringPath },
+    ]);
     expect(existsSync(join(bundleRoot, declaredPath))).toBe(true);
+    expect(existsSync(join(bundleRoot, authoringPath))).toBe(true);
     expect(existsSync(join(bundleRoot, hostPath))).toBe(false);
     expect([
       ...new Bun.Glob("plugins/*/plugins/*/stages/*.md").scanSync({

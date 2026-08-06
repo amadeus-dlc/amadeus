@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 先は独立 cid の新設ではなく cid:nfr-design:c1-engine-produces-all-five(produces_kinds が適用成果物を絞る挙動を既に記述)への追補として統合し、測定 ref(observed 8409c2039)を明記したうえで行番号でなく機序(kind-aware 分岐が hasApplicableArtifact 偽のとき true を返す)を主語にする。",
+      "rationale": "c1/c2/c4 は既存 cid(c1-xrev-single-issue / re-sensors-codekb-filter-mismatch+c3-codekb-sensor / c3-relabel)の機械適用にすぎず新規学習ではない。c3 の『2段独立検証が実効した』というメタ観測も enumeration-reverify 系の実演にとどまる。しかし c3 が含む具体機序は memory 層に未被覆で、独立実測でも確認した: amadeus-state.ts:1653-1678 の kindAwareArtifactsExist は :1677 `return !hasApplicableArtifact;` によりどの unit にも適用成果物がないとき true を返し、:1675 `if (artifactsExistInDir(dir, applicable)) return true;` で ANY 判定も継承する。producesArtifactsExist(:1686-1694)はこの kind-aware 分岐を最初に呼び null でなければその値を返すため、approve 側 fail-open は ANY ループ単独ではない。memory 層 grep では produces_kinds の言及は project.md:18(cid:nfr-design:c1-engine-produces-all-five)の1件のみで、そこは完了判定の絞り込み挙動を述べるだけで『produces を足すと無音 fail-open へ落ちる』危険面を被覆しない。この危険は intent を跨いで再来する設計時知識であり、intent スコープの codekb re-scan 記録や当該 requirements 送付事項では次の intent に届かない — よって 0件案は採らず c3 のみを採用する。",
+      "submittedAt": "2026-08-05T06:17:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "persist 文の行番号を実測値へ訂正すること: kindAwareArtifactsExist の fail-open は :1677 でなく :1678(`return !hasApplicableArtifact;` を grep -n で実測)、同関数内の ANY 早期 return は :1676。unitCovered :3465 と approve ANY :1691 は実測一致。あわせて re-scan §1b の ②`producesArtifactsExist:1689` も実測 :1688 で off-by-one のため、persist 時に同時是正する(cid:requirements-analysis:mechanism-cite-verify-at-draft / cid:requirements-analysis:fix-diff-independent-reverify)。",
+      "rationale": "observed 8409c2039 で独立実測した。(1) c3 の実体は現存する: packages/framework/core/tools/amadeus-state.ts の kindAwareArtifactsExist(:1653-1678)が :1678 `return !hasApplicableArtifact;` で適用成果物ゼロ時に true を返し、:1676 `if (artifactsExistInDir(dir, applicable)) return true;` で ANY 判定を kind-aware 経路にも持つ。approve 側の :1688 empty-produces fail-open と :1691 の ANY ループ、および amadeus-orchestrate.ts:3465 `if (names.length === 0) return true;` と併せ、produces を足す設計が確認すべき経路は3本あることを実コードで確認した。(2) memory 層は未被覆: memory 層全域の grep で produces_kinds に触れる規則は project.md:18 の cid:nfr-design:c1-engine-produces-all-five 1件のみで、これは directive の成果物絞り込み意味論を述べるだけで、絞り込み結果が空集合になったときの fail-open にも kind-aware 分岐の存在にも触れていない。cid:code-generation:swarm-unit-artifact-backfill も unitCovered の existsSync 判定という事実面のみ。よって c3 は既存 cid の機械適用ではない新規の具体機序であり、知識クラス cid として persist する価値がある。(3) c1/c2/c4 は不採用が妥当: c1 は cid:reverse-engineering:c1-xrev-single-issue とその E-OBB5-RES13 追補(レビュー SHA と observed が不一致なら全引用再解決)の機械適用、c2 は cid:reverse-engineering:re-sensors-codekb-filter-mismatch と cid:reverse-engineering:c3-codekb-sensor の機械適用、c4 は cid:reverse-engineering:c3-relabel 準拠の申告受理であり、いずれも既存ノルムが定める手順の実施記録にとどまる。判定観点「既存ノルムの機械適用は新規学習ではない」に照らして persist しない。よって選択肢1(0件)は c3 を落としすぎ、選択肢2(c1+c3)は c1 を過剰に拾う。codekb は本 intent 断面の記録であり、将来の別 intent が produces を足すときに読む保証がないため、選択肢1の『成果物が担う』論拠は durable な設計規則としては不十分と判断する。",
+      "submittedAt": "2026-08-05T06:17:32Z"
+    }
+  ],
+  "late": []
+}

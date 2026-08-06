@@ -10,8 +10,8 @@
 
 この章は利用者向けリファレンスであり、オーサリングガイドです。プラグインシステムが
 現在サポートする面、そのコマンドライン面、セッション起動時にプラグインがホストへ自動
-compose される仕組み、利用者に見える安全契約、ローカルでの検証手順、そして 7 つの
-パッケージハーネス面と 5 つのセルフインストール面の違いを記述します。これはいかなる
+compose される仕組み、利用者に見える安全契約、ローカルでの検証手順、そして
+パッケージハーネス面とセルフインストール面の違いを記述します。これはいかなる
 上流 README のコピーでもありません — 以下のパス・コマンド・失敗契約はすべて Amadeus
 のものです。
 
@@ -65,7 +65,7 @@ plugins/example/
 1. **オーサリング** — `plugins/<name>/plugin.json` と参照ファイルを書きます。
 2. **投影** — パッケージャが `plugins/` を discover し、各ソースを構造的に検証
    (マニフェスト存在・identity 一意・プラグイン自身のサブツリーを逸脱するパスなし)
-   し、各プラグインを 7 つのパッケージハーネスツリーとハーネス中立バンドルへ投影
+   し、各プラグインを各パッケージハーネスツリーとハーネス中立バンドルへ投影
    します。プラグインが 0 件のとき、出力はプラグイン非対応ビルドと byte-identical
    です。
 3. **inspect** — 合成エンジンが discover 済みプラグインをホストスナップショットと
@@ -120,7 +120,7 @@ verb は次のとおりです。
 読み戻すルートと同一なので、install・compose・discovery が乖離することはありません。
 `--project-root <dir>` はこれを上書きして別のホストを対象にします — CLI が存在する場所
 以外のホストへ compose する手段で、パッケージされるがセルフインストールされない
-`kiro` / `kiro-ide` 面では常に必要です。
+`kiro` / `kiro-ide` / `pi` 面では常に必要です。
 
 引数処理は fail-closed で、いかなる変更よりも **前** に行われます: 未知 verb・未知
 フラグ・余剰引数は usage を stderr へ出して exit `2` で終わり、ホストには一切触れません。
@@ -137,8 +137,8 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 起動レイテンシを増やしません。フックの失敗は stderr 警告 1 行と exit 0 であり —
 プラグインの問題がセッションをブロックすることはありません。
 
-7 つのパッケージ面すべてがこのトリガーを配線します。Kiro CLI と Kiro IDE は同じ
-`.kiro` host tree を共有するため、7 面は 6 個の host directory を対象にします。
+8 つのパッケージ面すべてがこのトリガーを配線します。Kiro CLI と Kiro IDE は同じ
+`.kiro` host tree を共有するため、8 面は 7 個の host directory を対象にします。
 
 | 面 | session-start トリガー | 自動 compose |
 | --- | --- | --- |
@@ -149,6 +149,7 @@ compose を配線しています。`--if-stale` 高速路により、合成レ�
 | `kiro` | `agentSpawn` | 配線あり |
 | `kiro-ide` | `promptSubmit`(`--if-stale` で冪等) | 配線あり |
 | `opencode` | JavaScript plugin の `session.created` event | 配線あり |
+| `pi` | extension の `session_start` event | 配線あり |
 
 OpenCode は shell hook ではなく公式 JavaScript/TypeScript plugin event を使います。既存の
 `.opencode/plugins/amadeus-opencode-plugin.ts` が `session.created` を処理し、`.opencode`
@@ -186,7 +187,7 @@ OpenCode は shell hook ではなく公式 JavaScript/TypeScript plugin event �
 - **`native-manifest`**(`claude`)— ホストのプラグインマーケットプレイス経由で
   `.claude-plugin/plugin.json` を使ってインストール。自動 compose は `hooks/hooks.json`
   から走ります。
-- **`folder-drop-auto`**(`codex`・`cursor`・`kimi`・`kiro`・`kiro-ide`)— バンドルの
+- **`folder-drop-auto`**(`codex`・`cursor`・`kimi`・`kiro`・`kiro-ide`・`pi`)— バンドルの
   `plugins/<name>/` を、プロジェクトルート配下の
   `<ハーネスディレクトリ>/.amadeus-plugin-src/<name>/`(Codex なら
   `.codex/.amadeus-plugin-src/<name>/`)へコピー。ここが `compose` の走査先であり、
@@ -279,7 +280,7 @@ spec が drift したことを知らせ、*あなた* がチェック再実行�
 検証はローカルかつ一時的です — プラグインを試すためにコミット済みツリーを変更する
 ことはありません。リファレンスライフサイクルテストがモデルです。canonical ソースを
 使い捨ての一時ワークスペースへコピーし、パッケージャのソース/出力ルートをそこへ
-リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、7 面すべてへ投影し、
+リダイレクトし(`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`)、全面へ投影し、
 一時ホストへ compose し、doctor を実行し、drop します。宣言物だけが生成・検出・除去
 され、tracked tree に一時ファイルが 1 つも残らないことを assert します。
 
@@ -295,11 +296,50 @@ bun test tests/integration/t254-reference-plugin-lifecycle.test.ts
 
 ---
 
-## 7 つのパッケージ面、5 つのセルフインストール面
+## import する全モジュールを宣言する
 
-パッケージャは各プラグインを **7 つ** のハーネス面へ投影します: `claude`・`codex`・
-`cursor`・`kiro`・`kiro-ide`・`opencode`・`kimi`。セルフインストール(ハーネスを
+compose されたプラグインは、`plugin.json` が宣言したファイルだけを運びます。したがって
+宣言済みツールが import しているのに `tools` へ載せ忘れたヘルパーモジュールは、単なる
+記載漏れではなく、compose 後の全ホストにおける import 欠落です。ファイルがディスク上に
+そのまま在る自分の作業ツリーではロードでき、実際にインストールされた先で失敗します。
+
+パッケージャはこれを **import-closure guard** で塞ぎます。manifest が宣言する各ツールを
+起点に *相対* import(`./x.ts`・`../y.ts`)の推移閉包を辿り、到達した全モジュールが
+`plugin.json` に宣言され、かつプラグイン自身のソースとして実在することを要求します。
+`node:crypto` のような bare specifier はランタイムがプラグインツリーの外から解決するため
+対象外で、絶対指定は境界違反として報告されます。
+
+guard は投影の一部として走るため、壊れた面を出荷する代わりにビルドが失敗します。
+allowlist も skip フラグもありません — モジュールは宣言され所有されることで通り、
+そうでなければ通りません。読めない参照は閉包から取り除かれるのではなく failure として
+列挙されます。これが、import パスの typo が検査対象集合を無言で縮めることを防ぎます。
+
+失敗は違反参照ごとに1行、プラグイン名を前置して出力されます。最初の1件で止まらず、
+修復すべき集合が一度に列挙されます。
+
+```
+MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
+MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
+UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+```
+
+3つの異なる修復として読みます。`MISSING from … plugin.json` は、ファイルはプラグイン内に
+実在するが manifest が運んでいない — `tools` へ追加します。`MISSING from … owned sources`
+は、manifest が名指すパスに対応するファイルがプラグイン内に無い状態です。
+`UNREADABLE import` は参照自体が解決できなかった場合で、ファイル不在・不正なパス・
+実体がリポジトリ外へ出る symlink のいずれかです。
+
+guard の実体は `scripts/import-closure-guard.ts` にあります。内部構造とテスト配置は
+[コントリビュート](../reference/11-contributing.ja.md#プラグイン-import-closure-guard)
+を参照してください。
+
+---
+
+## 8 つのパッケージ面、5 つのセルフインストール面
+
+パッケージャは各プラグインを **8 つ** のハーネス面へ投影します: `claude`・`codex`・
+`cursor`・`kiro`・`kiro-ide`・`opencode`・`kimi`・`pi`。セルフインストール(ハーネスを
 プロジェクトルートへ反映すること)は **閉じた 5 面** のままです: `claude`・`codex`・
-`cursor`・`opencode`・`kimi`。`kiro` と `kiro-ide` はパッケージされますがプロジェクト
+`cursor`・`opencode`・`kimi`。`kiro`・`kiro-ide`・`pi` はパッケージされますがプロジェクト
 ルートへは決して昇格しません。2 つのマトリクスは別々の期待集合に対して検証され、一方が
-他方の代替に使われることも、5 面が 7 面へ広げられることもありません。
+他方の代替に使われることも、5 面がパッケージ面の集合へ広げられることもありません。

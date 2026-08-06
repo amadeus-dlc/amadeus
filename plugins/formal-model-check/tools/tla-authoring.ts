@@ -46,6 +46,13 @@ import {
   type TraceRow,
 } from "./tla-referees.ts";
 import { createRefereeToolchain } from "./tla-referee-toolchain.ts";
+import {
+  RegistrationCommitter,
+  approvalVerifier,
+  checkPreconditions,
+  createRegistrationPorts,
+} from "./tla-registration.ts";
+import type { PreconditionFailure, RegistrationPorts } from "./tla-registration.ts";
 
 export type ExitCode = 0 | 1 | 2;
 export type Emit = (line: string) => void;
@@ -69,6 +76,8 @@ const USAGE = [
   "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
   "  trace --subjects <path> --rows <path> --invariants <path>",
   "  proof --model <tla> --cfg <cfg> --reduction <manifest> --invariants <path> --identity <digest>",
+  "  commit --draft <path> --bundle <digest> --preconditions <path>",
+  "         [--model-map <path>] [--store <dir>]",
 ].join("\n");
 
 interface Emitted {
@@ -643,6 +652,83 @@ async function proofEvaluate(
   return proof.ok ? succeeded({ proof: proof.value }) : failed(proof.error);
 }
 
+// --- U4: registration ------------------------------------------------------
+
+/**
+ * Register a draft entry. The bundle is verified here rather than trusted from
+ * argv, so the CLI has no path that reaches `commit` with an unchecked bundle
+ * (business-logic-model.md §3). The identity to verify against is the one the
+ * applicability receipt already binds, so no second identity flag is invented.
+ */
+function registrationCommit(flags: Record<string, string>): Emitted {
+  const draftPath = requiredFlag(flags, "draft");
+  const bundleRaw = requiredFlag(flags, "bundle");
+  const preconditionsPath = requiredFlag(flags, "preconditions");
+  if (draftPath === null || bundleRaw === null || preconditionsPath === null) {
+    return usageError("commit requires --draft, --bundle and --preconditions");
+  }
+  const digest = asBundleDigest(bundleRaw);
+  if (digest === null) return usageError("--bundle must be sha256:<hex64>");
+  const store = storeRootOf(flags);
+  if (store === null) return usageError(EMPTY_STORE_USAGE);
+  const mapPath = modelMapPathOf(flags);
+  if (mapPath === null) return usageError("--model-map must not be empty");
+
+  const draftDocument = readJsonDocument(draftPath);
+  if (!draftDocument.ok) return draftDocument.emitted;
+  const preconditionsDocument = readJsonDocument(preconditionsPath);
+  if (!preconditionsDocument.ok) return preconditionsDocument.emitted;
+  const candidate = preconditionsDocument.value;
+  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+    return usageError("--preconditions must name a JSON object");
+  }
+
+  const ports = createRegistrationPorts({ mapPath });
+  const identity = subjectIdentityOf(candidate as Record<string, unknown>);
+  if (identity === null) {
+    return failed(routelessRefusal(candidate as Record<string, unknown>, ports));
+  }
+  const verified = EvidenceBundle.verify(store, { digest }, identity);
+  if (!verified.ok) return failed(verified.error);
+
+  const committed = RegistrationCommitter.commit(
+    draftDocument.value,
+    verified.value,
+    candidate as Record<string, unknown>,
+    ports,
+  );
+  return committed.ok ? succeeded({ receipt: committed.value }) : failed(committed.error);
+}
+
+/**
+ * Without a bound identity the bundle cannot be verified, so the run stops
+ * here — but it stops with the whole gate's verdict, not just the one check
+ * that noticed. The route failure is added because the gate only inspects the
+ * route, so an applicability receipt missing its identity passes that check.
+ */
+function routelessRefusal(
+  candidate: Record<string, unknown>,
+  ports: RegistrationPorts,
+): { kind: "preconditions-failed"; failures: readonly PreconditionFailure[] } {
+  const checked = checkPreconditions(candidate, approvalVerifier(ports));
+  const collected: PreconditionFailure[] = checked.ok ? [] : [...checked.error];
+  const routeAlreadyFailed = collected.some(
+    (failure) => failure.kind === "precondition-missing" && failure.precondition === "applicability-route",
+  );
+  const failures = routeAlreadyFailed
+    ? collected
+    : [{ kind: "precondition-missing", precondition: "applicability-route" } as const, ...collected];
+  return { kind: "preconditions-failed", failures };
+}
+
+/** The subject identity the applicability receipt binds, if it carries one. */
+function subjectIdentityOf(candidate: Record<string, unknown>): AggregateDigest | null {
+  const applicability = candidate.applicability;
+  if (typeof applicability !== "object" || applicability === null) return null;
+  const raw = (applicability as Record<string, unknown>).subjectIdentity;
+  return typeof raw === "string" ? asAggregateDigest(raw) : null;
+}
+
 type Handler = (flags: Record<string, string>) => Emitted;
 // A flat handler may be sync or async; dispatch already returns a Promise, so
 // a sync return is folded in for free.
@@ -674,6 +760,7 @@ const FLAT_COMMANDS: Readonly<Record<string, FlatHandler>> = {
   hold: holdEvaluate,
   trace: traceEvaluate,
   proof: proofEvaluate,
+  commit: registrationCommit,
 };
 
 async function dispatch(

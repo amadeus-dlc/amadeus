@@ -55,7 +55,7 @@ function writeModelMap(models: ReadonlyArray<{ name: string; digest?: string }>)
       schemaVersion: 2,
       models: models.map((model) => ({
         name: model.name,
-        ...(model.digest === undefined ? {} : { evidence: { digest: model.digest } }),
+        ...(model.digest === undefined ? {} : { evidenceBundle: { digest: model.digest } }),
       })),
     }),
     "utf8",

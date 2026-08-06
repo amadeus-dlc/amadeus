@@ -158,7 +158,9 @@ function validCatalogResourceFields(
 function closedResourceFamilies(resources: readonly CatalogResource[]): boolean {
   return resources.filter((resource) => resource.kind === "skill").length === 1 &&
     resources.filter((resource) => resource.kind === "question-annex").length === 1 &&
-    resources.filter((resource) => resource.kind === "extension").length === 1 &&
+    // Extensions are a growable family: the manifest's closed catalog already
+    // pins membership (per-resource hashes), so only non-emptiness is enforced.
+    resources.filter((resource) => resource.kind === "extension").length >= 1 &&
     resources.some((resource) => resource.kind === "driver");
 }
 

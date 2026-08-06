@@ -1,5 +1,124 @@
 # コード品質評価
 
+## cross-harness resume の品質所見（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 技術的負債シグナル
+
+| # | シグナル | 実測根拠 | クラス |
+| --- | --- | --- | --- |
+| ① | **復旧不能の閉路**: 認可拒否からの in-band 復旧経路が構造的に不在。park の復旧文言が案内する `unpark` 自体が同じゲートに掛かる | `amadeus-state.ts:902` `enforceCallerAuthorization` が `:908-912` の `get` / `count` / `lookup` 以外の全27語彙をゲートし、`case "park"` `:1024` / `case "unpark"` `:1027` を含む | 可用性・回復可能性。**「案内する手段が案内先で塞がれている」= 対操作の非対称**（`cid:requirements-analysis:symmetric-pair-review` の類型） |
+| ② | **原因の畳み込み**: 4つの独立した失敗原因が同一のエラー値・同一文言に潰れる | `amadeus-caller-authorization.ts:85` / `:94` / `:105` / `:108` がすべて `{ kind: "denied", role: "unknown" }`。決定的再現 C1 / C2 / C3 / C6 が同一出力（実測） | 診断可能性。`:117-122` `callerAuthorizationError` に復旧手順もない |
+| ③ | **carrier 書き手の非対称**: 8ハーネス中3面が `.current-session` を書かない | 書き手は `amadeus-session-start.ts:97` の唯一箇所。`kiro-ide` は session_id 転送なし、`opencode` / `pi` は core hook 不使用（いずれも grep 0 hit） | 契約の穴。ユーザー要件（8ハーネス任意組合せ）に対して**構造的に不足** |
+| ④ | **未文書の認可バイパス**: env 1本で認可境界が丸ごと素通りする | `amadeus-harness.ts:113-123` が `:114-116` で `AMADEUS_HARNESS_TYPE` を最優先 → `amadeus-caller-authorization.ts:75` の早期 return。対照実験で C1-C6 全ケース `authorized` を実測 | セキュリティ・文書整合。docs に認可への影響の記載なし |
+| ⑤ | **projectDir 解決の二重実装**: 同じ workspace を指す2経路が別規則 | core hook `amadeus-lib.ts:298` は marker 検証付き5段ラダー、Kimi adapter `amadeus-kimi-lib.ts:704` は `env.cwd ?? projectDir` の raw cwd | 「canonical 1定義から導出」原則の違反。carrier 分裂を生む（C6 で実測） |
+| ⑥ | **文書と実挙動の不整合**: `docs/guide/11-session-management.md:7` の "Session resume works on every harness" は状態層についてのみ正しく、carrier 層・認可層は保証しない | 同行の実読 | 文書契約。所見B と正面から衝突する |
+
+### 検証面の弱さ
+
+- **caller-authorization 専用の unit テストが存在しない。** 122行の認可判定に対し、pin しているのは integration の `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts` のみで、しかも **substring assert（`"is not the main conductor"`、`:504` / `:536` / `:573` / `:646` / `:669` / `:689`）**。4つの拒否枝を区別するテストはない — シグナル②が構造的に検出されなかった理由でもある。
+- 一方でこの弱さは**是正時には有利に働く**: 文言に原因判別と復旧ガイドを追加しても既存 assert は破れないため、明示改訂は不要（追加テストは要る）。
+- `tests/integration/t-kimi-adapter.test.ts:413` は raw-cwd 挙動を pin しており、シグナル⑤の是正は**この pin の明示改訂を伴う**。`cid:reverse-engineering:c1-pinned-behavior-ruling` に従い、実装段で着手せず要件段で仕様裁定とテスト契約の改訂をセットで確定すること。
+
+### 台帳への波及（是正時に該当するノルム）
+
+`tests/.coverage-patch-allowlist.json` に `authorizeMainConductor` エントリ3件、no-silent-drop 台帳にも同ファイルのエントリがある。`amadeus-caller-authorization.ts` へ行を挿入する修正では次が該当する:
+
+- `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）
+- `cid:code-generation:cg-allowlist-straddle-swell`（既存 waiver レンジの span 膨張検査）
+- `cid:code-generation:c1-260803-state-integrity`（no-silent-drop の census 再バインド。母集団が変わる場合）
+- `cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only ガードの census は最終 base で採る）
+
+### 区間内の品質変化
+
+session lifecycle / caller-authorization / harness detection のコード面は区間内で無変更（該当コミットは `fc862e879` の docs 1件）。**上記6シグナルはいずれも区間の外側で導入済みの既存構造であり、区間内の退行ではない。**
+
+## 成果物ガードの fail-open 経路と非対称（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙・実測手順は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### 品質所見1: 前進ガードと承認ガードが非対称である
+
+同じ「宣言 produces が存在するか」という問いに対し、engine は2つの異なる述語を持ち、厳しさが逆である。
+
+| 面 | 述語 | 判定 | 承認状態の参照 | バイパス |
+| --- | --- | --- | --- | --- |
+| per-unit ループ前進 | `amadeus-orchestrate.ts` `unitCovered` `:3452-3472` | **全件必須**（1件でも不在なら false） | なし（シグネチャに state 引数がない） | なし |
+| ステージ承認 | `amadeus-state.ts` `producesArtifactsExist` `:1683-1696` | **ANY**（`:1691-1694` が1件でも存在すれば true） | — | `AMADEUS_SKIP_ARTIFACT_GUARD=1`（`:1529`） |
+
+`unitCovered:3466-3470` verbatim:
+
+```ts
+  for (const name of names) {
+    const rel = resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx);
+    const abs = join(projectDir, ...rel.split("/"));
+    if (!existsSync(abs)) return false;
+  }
+```
+
+`producesArtifactsExist:1691-1694` verbatim:
+
+```ts
+  for (const dir of producesDirsForStage(pd, stage)) {
+    for (const name of produces) {
+      if (existsSync(join(dir, `${name}.md`))) return true;
+    }
+  }
+```
+
+**帰結**: ステージへ必須成果物を追加して実効的な fail-closed を得たい場合、その執行面は per-unit ループ前進（`unitCovered`）以外に存在しない。承認面は宣言 produces の1件でも書けば通過するため、必須性の担保にならない。
+
+### 品質所見2: fail-open 経路が3つある（うち1つはコメントと矛盾）
+
+| # | 所在 | 条件 | 結果 |
+| --- | --- | --- | --- |
+| ① | `amadeus-orchestrate.ts:3465` | `produces_kinds` により当該 unit kind への必須成果物が 0 件 | `return true`（covered 扱い） |
+| ② | `amadeus-state.ts:1689` | 宣言 produces が空 | `return true` |
+| ③ | `amadeus-state.ts:1677` | どの unit にも適用成果物がない | `return !hasApplicableArtifact` = `true` |
+
+③の `kindAwareArtifactsExist`（`:1653-1678`）は `producesArtifactsExist:1689-1690` が最初に呼ぶ kind-aware 分岐であり、①の approve 側の双子にあたる。さらに `:1675` は**最初に成果物が揃った1 unit で `true` を返す**ため、所見1の ANY 判定は kind-aware 経路にも及ぶ。
+
+**コメントと実装の食い違い（技術的負債シグナル）**: `unitCovered` 直上のコメント `:3448-3451` verbatim は
+
+```
+// stages declare required outputs, so the empty case is unreachable in
+// practice; an empty required set remains NOT covered so the engine never
+// silently skips a unit it cannot prove it ran.
+```
+
+と不変条件を宣言するが、この保証が成立するのは `declared.length === 0` の枝（`:3461` で `return false`）だけである。`produces_kinds` で絞られた `names.length === 0` の枝（`:3465`）は逆に `true` を返し、コメントが否定している「証明できない unit を無音で skip する」挙動そのものになる。`requiredArtifactsForUnit`（`amadeus-graph.ts:842-849`）が絞り込みの実体。
+
+**現時点の顕在化**: `code-generation.md` は `produces_kinds` を宣言していない（宣言は `functional-design` / `nfr-requirements` / `nfr-design` / `infrastructure-design` の4ステージのみ）ため今日は全 unit kind へ全 produces が適用され、この経路は踏まれない。ただし**新規 produces を追加する側が `produces_kinds` に触れると無音で fail-open へ落ちる**ため、ステージへ成果物を足す変更では受け入れ基準で封鎖する必要がある。`firstUncoveredBatch`（`:3079-3082`）は同一述語を `unitKinds.get(u)` 付きで呼ぶため同じ経路を継承する。
+
+### 品質所見3: plugin seam 機構が「半分だけ実装された非対称」である
+
+seam の語彙（`SEAM_NAMES` `amadeus-plugin-compose.ts:74`）、merge（`:424-435`）、適用（`:699-719`）、drop 復元（`:567-580`）は実装済みだが、**host stage の認識面（`parseHostStageSeams` `amadeus-plugin.ts:258-270`）と serializer（`serializeStageSeams` `:555`）が合成バイト形にしか対応していない**。実ステージ Markdown の 1 行目は `---` で、`/^stage: (.+)$/` に一致しないため、リポジトリ内のどの実ステージも HostStage にならない。
+
+これは `cid:requirements-analysis:symmetric-pair-review` が扱う「片側だけ実装された非対称」クラスタに属する。ただし**コードは自認しており、挙動は fail-closed** である点で無自覚な欠陥とは区別される:
+
+- `amadeus-plugin-compose.ts:552-554` のコメントが `the real frontmatter serializer is U11+` と未着地を明記
+- `tests/unit/t301-plugin-cli-seams.test.ts:7-10` が「t299 の buildHostSnapshot が供給する full-markdown stage files は `stage:` first-line match に失敗する」と記述
+- 実ステージへ seam を宣言した manifest は `inspectPlugin` が `unknown-seam` で **loud reject**（`collectSeamErrors` `:498-511`、probe 実測）
+
+**負債としての評価**: 無音の誤動作ではないため安全側だが、「seam 語彙に `produces` があるので既存ステージへ produces を足せる」という読み手の期待と実際の到達可能性が乖離している。plugin authoring の seam 契約は未文書化でもある（`docs/reference/*.md` に plugin seam の記述なし）。
+
+### 品質所見4: 型だけ存在して接続されていない面
+
+`amadeus-quality-repair.ts` の `QualityRequiredOutputDescriptor { outputId, stageSelector, verifierId, verificationConditionId }`（`:125-130`）は「ステージへ必須成果物を宣言する」形を型として持つが、`compileQualityContribution:242` verbatim `if (contribution.requiredOutputs.length !== 0) return null;` により非空を拒否し activation を失敗させる。first-party contribution 自身も `:211` で `requiredOutputs: []` を宣言し、消費者は repo 全域で 0 件（`grep -rn requiredOutputs packages scripts tests` のヒットは型定義・空宣言・ガード・`t428:95` の空 assert のみ）。
+
+fail-closed で塞がれているため誤動作はしないが、**未接続の型が接続済みに見える**リスクがあり、新規実装がここへ乗ろうとすると engine 改修が必要であることが型シグネチャからは読み取れない。
+
+### 品質所見5: 収束述語が二重定義になりうる
+
+`mergeStateStatus` の正規化は `scripts/metrics-publication-domain.ts:256-262` に既存し、`UNKNOWN` を pending へ落とす（= 成立させない）fail-closed 契約と、未知値の throw を持つ。PR 収束判定が同じ述語を新規に書くと、canonical 1定義の原則（construction phase guardrails）に反する二重定義になる。現状は metrics 公開ドメイン内の private 関数であり、共有するには移設が要る。
+
+### 良好な設計として維持されている面
+
+- **センサーの advisory 契約**: 出荷 8 センサーすべて `default_severity: advisory`、`amadeus-sensor.ts:573-574` は無条件 `process.exit(0)`、`severity` の分岐利用は `:271` の表示1箇所のみ。執行と観測が分離されている。
+- **3層 trust**: compose の `TrustGrant`（`amadeus-plugin-compose.ts:161-165`）、compile の `plugin_source` stamp（`amadeus-graph.ts:140-146`）、run の O_NOFOLLOW + 同一 inode 再読み（`:1889-1901` / `:1971`）と digest 形式検査（`:2061-2074`）。プラットフォーム非対応時も `throw` で fail-closed。
+- **drop の復元判定が台帳でなく FS 実測**: `pluginArtifactsAbsent`（`amadeus-plugin.ts:1190-1198`）に加え `hasEmptyAncestorDir`（`:1202-1211`）で空の親ディレクトリ残骸まで検査する。`cid:code-generation:observe-dont-ledger-under-parallelism` と同じ設計思想。
+- **import-closure guard の新設**（区間内 #2240、`scripts/plugin-projection.ts:880-946`）: 宣言と実依存の乖離を projection 時点で write-0 拒否する。
 ## advisory 人間選択の品質所見（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された強み
@@ -97,6 +216,56 @@ audit 実測（Architect 再計測 2026-08-06、測定 ref = worktree `c66a2c987
 - **`TaskUpdate` 誤検知の防波堤が文書化されている**: `:4133-4137` が「settings matcher は unanchored regex なので `"Task"` は `TaskUpdate` / `TaskCreate` にもマッチする」ことを明示しており、D-1 の修正形が失ってはならない性質が読み取れる。
 - **t385 対応の literal 再構成**: `core/hooks/amadeus-log-subagent-start.ts:70-72` がフィールドを opaque な戻り値から転送せず literal で組み直しており、コメント `:64-69` が「emitter/registry admission guard が call site のキー集合を静的に読めるようにする / default-deny redaction では未 admit キーが無音で消える」と理由を述べている。default-deny の危険を構造で塞いだ実装であり、model 属性の追加時も同じ様式を踏む必要がある。
 - **患部の安定性**: 患部9パスは 34 commits の区間で無変更であり、上流のクロスレビュー引用が observed でそのまま有効である（免除条件は verdict の target-sha 一致で成立）。
+## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の件数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。Test Strategy は Comprehensive。
+
+### テスト面の断面
+
+| 指標 | 実測値 | 測定コマンド（observed で実行） |
+| --- | --- | --- |
+| `tests/**/*.test.ts` 総数 | **941**（base 断面の記載 927 から +14） | `find tests -name '*.test.ts' \| wc -l` |
+| 最大テスト番号 | **t439** | `ls tests/{unit,integration,e2e} \| grep -oE "^t([0-9]+)" \| sed 's/t//' \| sort -n \| tail -3` → 437 / 438 / 439 |
+| `semi` を含むテスト系ファイル | 14（うち `t97` は `semicolon` の偽陽性 → 実質 **13**） | `grep -rln "semi" tests/ --include="*.ts"` |
+| core tools `.ts` 本数 | **119**（base 断面の記載 116 から +3） | `ls packages/framework/core/tools/*.ts \| wc -l` |
+
+**後続 Bolt は t440 以降を採ること**（`cid:code-generation:swarm-test-number-reservation` / `cid:code-generation:c1-tnnn-collision-on-regrounding`）。区間内で新規テスト21ファイルが追加され、番号付きは t433 / t434 / t436 / t437 / t438 / t439、残る8本は `t-` prefix の番号なし形式である。
+
+### 旧仕様を固定している既存テスト（反転が必要な面）
+
+再定義は **既存テストが明示的にピンしている振る舞いを変える**。無申告で変更すると `cid:reverse-engineering:c1-pinned-behavior-ruling` に抵触するため、要件段で仕様裁定とテスト契約の明示改訂をセットで確定する必要がある。
+
+**1. `tests/unit/t431-intent-autonomy.test.ts:307-314`** — `test("semi authorizes only phase-internal stage gates", ...)`
+
+```
+    expect(authorizeInteraction(plan.after, occurrence("stage-gate", ["approve"])).kind).toBe("semi-mode-gate");
+    expect(authorizeInteraction(plan.after, occurrence("walking-skeleton", ["approve"])).kind).toBe("human-required");
+    expect(authorizeInteraction(plan.after, occurrence("question")).kind).toBe("human-required");
+```
+
+`:313`（question → `human-required`）が **semi の質問封鎖を直接ピンする行**であり、再定義の射程に入る。`:312`（walking-skeleton → `human-required`）は walking skeleton のピンであり、`stage-protocol.md:105` / `:808` と対応する。**#2253 の射程では保存対象**だが、`semi` を `full` 相当へ寄せる度合いによっては裁定対象になりうる（要件段で明示すること）。
+
+他の semi ピン: `:184-196`（`none` → `semi` は grant なしの人間限定遷移）、`:257-265`（`semi-gate-requires-semi-mode` の throw）、`:339`（semi と grant gate の決定は queue 非適用）。
+
+**2. `tests/integration/t121-stop-hook-enforce.test.ts:1138-1150`** — `test("(f) semi + blank question ALLOWS because questions remain human-owned", ...)`
+
+`expect(r.out).toBe("")` により、`semi` + 未回答質問で stop hook が **block しない**ことがピンされている。テスト名自体が `because questions remain human-owned` と再定義前の前提を明記しており、再定義後は **block 期待への反転**が必要になる。
+
+他: `:827-833`（`isConversationalStop` の semi 挙動）、`:33` / `:1287`（コメント）。
+
+**3. `tests/.coverage-patch-allowlist.json:5268`** — `"function": "isFullyAutonomousIntent"`。述語を改名・分割する場合は同一変更で同期する（`cid:code-generation:allowlist-line-pin-stale` / `cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+### 構造的な品質リスク
+
+- **未レビュー裁定の増加**: 梯子後段2段（solo-election / agent-recommendation）は `reviewState: "unreviewed"` を記録する（`amadeus-intent-autonomy.ts:605-607`）。`semi` を梯子へ載せると未レビュー件数が増える。受け皿は区間内新規の `amadeus-autonomy-review.ts`（1273行）と `amadeus-autonomy-review-production.ts`（484行）であり、これらは base 時点で存在しなかったため既存の品質評価に未収載である。
+- **fail-open ではなく fail-closed**: 梯子の最終段は `unavailableReason` 未設定なら `invalid-recommendation-result` を返す（`:736-744`）。縮退が黙って通ることはない。この fail-closed 性は再定義後も保存すべき性質である。
+- **公開 flag の無音破棄**: `set-autonomy --mode semi --policies-file <json>` が exit 0 のまま policies を捨てる（`amadeus-bolt.ts:1067` が読む → `amadeus-intent-autonomy-production.ts:417` の分岐で `prepareNonFullCommand` `:382-395` が受け取らない）。observed 時点では `semi` が policy を使わないため実害はないが、**再定義と同時に実欠陥へ転化する**。検証劇場ではないが、受理して無視する契約は org.md Forbidden の趣旨に近い。
+- **未認識フラグの値漏れ**: `--autonomy semi` を parser（`amadeus-orchestrate.ts:1044-1074`）へ登録しないまま利用者が打つと、`semi` が intent 自由文へ混入する（`:1072-1073`、コメント `:1068-1069`）。新フラグ実装時は「値を consume する」ことと「consume しない場合の漏れ」の両方をテストで固定すべきである。
+- **表示面の非対称**: `--status` は autonomy を8行出す（`amadeus-utility.ts:336-350`）が statusline は 0 行（`amadeus-statusline.ts` に autonomy hit なし）。利用者が常時見るのは statusline である。
+
+### 検証の実施状況
+
+本 Architect synthesis ではテストを再実行していない。Developer scan の実測（`grep` / `wc` / `git diff` / ファイル直読）を一次入力とし、本 synthesis では焦点機構の file:line・件数・verbatim を独立に再実測して照合した。その結果、Developer scan が申告した `resolveAutoDecision` 梯子の行範囲（`:705-706` 等）と `handleSetAutonomy` `:1050` / `handleListAutoDecisions` `:960` は**いずれも1行低い**ことを検出し、本 codekb には再実測値（`:706-707` / `:1051` / `:961`）を採用した。
 
 ## phase boundary approval の品質所見（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 

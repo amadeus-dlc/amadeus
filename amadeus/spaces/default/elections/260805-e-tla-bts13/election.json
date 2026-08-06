@@ -1,0 +1,22 @@
+{
+  "electionId": "E-TLA-BTS13",
+  "kind": "s13-adoption",
+  "question": "intent 260804-tla-authoring の code-generation(batch 4)〜build-and-test 区間の §13 学習候補の採否。候補は以下の4件。C1/C3 を採用し C2/C4 を不採用(理由付き)とする案と、全件不採用(0件)の案から選ぶ。\n\n【C1(採用候補)】cid:requirements-analysis:bun-coverage-spawn-blindspot / cid:code-generation:seam-placement-measured-module ファミリへの追補: composed host(os temp へ compose したコピー)を in-process 動的 import するテストは、bun --coverage がコピー全モジュールを計測して lcov universe を汚染し、project coverage % を無音希釈する(実測: t450 単独で SF 110 中 100 が temp コピー、CI universe 17,648→116,489 行・92.19%→75.66%。project gate は CI 専用ステップのためローカル coverage:ci では検知不能だった)。composed-runtime を駆動する E2E は spawn 子プロセス(計測対象外)を既定とし、恒久修正(repo 外 SF の loud 除外)は #2315。選挙 E-TLA-U5COV 裁定 A の一般化。\n\n【C2(不採用候補 — 理由: 既存 cid の違反実例であり新規則ではない)】spawn 専用 driver から実行時値を in-process import すると全行 0-hit 搭載で patch 行が absent→missed 反転する — 既存 cid:code-generation:seam-placement-measured-module が既に禁じる形そのもの(違反実例として PM ラウンドへ回付)。\n\n【C3(採用候補)】知識クラス: engine の await-advisory-choice が供給する formal_checks[].command の verbatim 実行は、provider auto がローカル Darwin 環境検査で ENVIRONMENT_UNAVAILABLE(fail-closed)になりうる — ローカル実行では --provider docker の付加(TLC 探索意味論に非関与の実行環境引数)を許容し、逸脱として申告する。また advisory 解消には相関3フラグ付き run が必須で、相関なしの同等 run では解消されない(実測: 相関なし CI runner 実行→advisory 残存、相関付き再実行→解消)。\n\n【C4(不採用候補 — 理由: 既存 stale-binary / dist 再生成ファミリで被覆)】base 前進で並行 intent の新 sensor が正本に入ると、worktree の未追跡 self-install 面が stale になり全集合ピンのテスト(t93 等)が偽赤になる — bun run build での再生成が既存規範どおりの対処。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "C1+C3 を採用、C2/C4 は理由付き不採用",
+      "description": "C1 は project.md の coverage 系 cid ファミリへの追補、C3 は知識クラスとして project.md へ。C2 は既存 cid の違反実例として次回 PM ラウンドへ回付、C4 は既存ファミリ被覆で不採用。"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用(0件)",
+      "description": "4件とも既存規範・既存記録(選挙記録・Issue)で十分であり、memory 層への新規 persist は不要とする。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

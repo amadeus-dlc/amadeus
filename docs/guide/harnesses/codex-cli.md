@@ -359,8 +359,8 @@ or an unperformed check leaves the monitor-bridge change incomplete.
 Invoke the orchestrator with `$amadeus` (or `/skills` → amadeus) followed by a
 scope or description — same commands as the Claude harness (`$amadeus --status`,
 `$amadeus --help`, …). Stage runners are explicit-only:
-`$amadeus-application-design`, `$amadeus-fix`, etc. (they are excluded from
-implicit skill matching so 37 runner descriptions don't pollute the index).
+`$amadeus-application-design`, `$amadeus-code-generation`, etc. (they are excluded from
+implicit skill matching so the runner descriptions don't pollute the index).
 
 ## Harness differences vs Claude Code
 

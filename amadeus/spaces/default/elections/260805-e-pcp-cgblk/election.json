@@ -1,0 +1,27 @@
+{
+  "electionId": "E-PCP-CGBLK",
+  "kind": "blocker",
+  "question": "intent 260805-pr-convergence-plugin の code-generation batch 1 で環境ブロッカー: swarm prepare が作成した Bolt worktree(.amadeus/worktrees/bolt-{seam-bridge,convergence-toolchain})に対し、本セッション(Claude Code worktree 隔離 — .claude/worktrees/issue-1971-pr-convergence にピン留め)の builder subagent も conductor も git 操作・Write が構造的に拒否される(ハーネスのガード: 『worktree-isolated session's git operations must target its own worktree』。EnterWorktree(path) も .claude/worktrees/ 配下限定で拒否)。両 builder は実装前停止し報告済み(scratchpad/bolt-u1-report.md / bolt-u2-report.md)。実測済み事実: (a) bun ツール(amadeus-swarm.ts prepare)経由の git worktree add は成功している — ツール内部 spawn はガードを通る (b) conductor 自身の worktree 内での git 操作は許可される (c) Agent ツールの isolation:'worktree' はハーネス管理の隔離ツリー(.claude/worktrees/ 配下)を作り、そこでは git 操作が許可される見込み。解決方式を裁定せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "isolation worktree で builder 再起動+conductor が diff 取込",
+      "description": "各 builder を Agent(isolation:'worktree') で新規起動(ハーネス隔離ツリーで実装・テスト・コミットが可能)。完了後、conductor が builder ツリーの diff を patch として自 worktree(issue-1971-pr-convergence ブランチ)へ git apply --3way で取り込み、fidelity diff(builder head との対象ファイル diff 空)を機械確認してコミットする(mirror-bulk-diff-apply の既習形)。swarm check/finalize は .amadeus worktree を対象にできないため、swarm referee は使わず conductor が検証コマンド再実行+§12a reviewer で代替し、その旨をゲートで開示する。"
+    },
+    {
+      "internalNo": 2,
+      "label": "conductor 自 worktree で直列実装",
+      "description": "U1→U2 の順に conductor が自 worktree で直接実装する。並行性を失い、conductor コンテキストを大きく消費する。自 worktree は intent 専用(ユーザー作成指示)のため solo-bolt-worktree-required の『本線ツリー』には当たらないが、swarm 隔離既定からの逸脱。"
+    },
+    {
+      "internalNo": 3,
+      "label": "ユーザーへエスカレーション",
+      "description": "ハーネスのガード仕様(worktree 隔離セッションからの .amadeus/worktrees アクセス)に関わるため、回避せずユーザーの指示を仰ぐ。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

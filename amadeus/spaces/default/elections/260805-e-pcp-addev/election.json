@@ -1,0 +1,27 @@
+{
+  "electionId": "E-PCP-ADDEV",
+  "kind": "design-deviation",
+  "question": "intent 260805-pr-convergence-plugin の application-design で設計逸脱が検出された(§12a architecture-reviewer iteration 1 BLOCKER 2)。承認済み requirements.md FR-4b は「gh 実行は既存 amadeus-github-gateway.ts(runnable/auth readiness 検査・argv 配列・token 非保持)へ相乗りする」と定めるが、conductor 実測により plugin tools から core tools への import は import-closure guard(scripts/plugin-projection.ts:926 checkManifestClosure — closure 全 member が manifest 宣言かつ plugin 所有(bundle prefix 配下)であることを要求、core ファイルは owned になり得ない)で構造的に拒否されることが確定した。FR-4b の字義どおりの実装(実 import)は不可能。投票者は scripts/plugin-projection.ts:912-946 と requirements.md FR-4b / NFR-4、components.md の C6 記載、component-inventory.md の制約列を実測確認して裁定せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "FR-4b を契約準拠へ申告改訂",
+      "description": "FR-4b を「gateway と同一の readiness 検査(gh auth status --hostname)・argv 配列実行・token 非保持・loud fail 契約に準拠する plugin 内最小実装」へ申告付き改訂し、ADR-6 で実 import 案(構造不可の実測)/ core 配置案との比較を固定する。plugin の self-contained 性と opt-in 境界を維持。"
+    },
+    {
+      "internalNo": 2,
+      "label": "収束 CLI を core/tools へ配置",
+      "description": "FR-4b の字義(gateway import)を守るため C3/C4/C5 を packages/framework/core/tools/ へ置く。gateway を直接 import 可能になるが、core は全ハーネス dist へ投影されるため未 install 環境にもツール実体が存在し(cid:code-generation:harness-tools-placement の漏出面)、plugin の opt-in 自己完結が弱まる。"
+    },
+    {
+      "internalNo": 3,
+      "label": "import-closure guard を拡張",
+      "description": "guard に「core への参照許可リスト」を追加する engine 改修。FR-4b の字義を保てるが、ガードの意味(composed host での missing import 防止)を弱め、composed 環境で core tools の実在保証という新たな前提を持ち込む。スコープ拡大。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

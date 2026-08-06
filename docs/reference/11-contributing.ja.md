@@ -238,6 +238,29 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 - **エージェントを列挙するドキュメントテーブル**。`docs/reference/05-agent-system.md:119-131` の Phase Participation マトリクスと、`packages/framework/core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` のエージェント→examples テーブルは手で保守されます。エージェントを追加する同じ PR で更新してください(以下のドキュメントポリシーを参照)。
 - **`.claude/agents/<new-agent>.md` の本文コンテンツ**。パースされるのはフロントマターだけです。本文のプロース(Core Responsibilities、Knowledge Loading シーケンスなど)は、アクティブ化されたときにエージェント自身が読み取ります — 他のエージェントファイルの構造に合わせて書いてください。
 
+## プラグイン import-closure guard
+
+`scripts/import-closure-guard.ts` は、manifest 検査が構造的に見ることのできない欠陥クラスに対するパッケージャ側の答えです。manifest 検査が検証するのは `plugin.json` が**宣言した**ファイルであり、宣言済みツールから相対 import で到達可能なのに自身は未宣言、というモジュールについては何も言いません。そうしたモジュールは作業ツリーには存在し compose 後のホストには存在しないため、プラグインは書かれた場所では動き、インストールされた場所で壊れます。
+
+guard は宣言済みツールを起点に相対 import の推移閉包を辿り、各メンバーが二重に被覆されていることを要求します。すなわち、composition がコピーできるよう manifest に宣言されていること、そして宣言に対応する実体があるようプラグインの所有ソースに実在することです。両方の差分は最初の1件で打ち切らず全数列挙されるため、1回のビルド失敗が修復すべき集合全体を示します。
+
+**責務分割。** guard モジュールは純粋です。import specifier の POSIX 正規化とリポジトリルート境界の判断を担い、ファイルシステムへは注入された `readFile` シーム経由でのみ到達します。symlink を実体へ解決すること — 文字列正規化器には見えない escape — は具象アダプタ、すなわち `scripts/plugin-projection.ts` の `repoFileReader` の責務であり、realpath がリポジトリルートの外へ出る参照には `null` を返します。したがって不在・読取不能・escape の各参照はいずれも閉包を無言で縮めるのではなく、guard の `unreadable` 列挙へ落ちます。
+
+**fail-closed。** allowlist・skip リスト・例外ハッチはありません。閉包内のモジュールは宣言され所有されることによってのみ通り、解決不能な参照は failure であって無言の省略ではありません。この性質は維持してください — ここに例外ハッチを開けることは、guard が塞ぐために存在するまさにその盲点を再び開くことです。
+
+**結線。** 公開シームは `assertPluginImportClosure`(`scripts/plugin-projection.ts`)です。`scripts/package.ts` は `guardPluginClosureForCli` 経由でこれを呼び、`PluginValidationError` を診断出力と非0終了へ写して、例外が CLI から漏れる代わりにビルドが失敗するようにしています。
+
+**テスト。** 2つの半分と本番結線を4ファイルが覆います。
+
+```bash
+bun test tests/unit/t440-import-closure-resolve.test.ts \
+         tests/unit/t441-import-closure-manifest.test.ts \
+         tests/integration/t442-plugin-import-closure.integration.test.ts \
+         tests/integration/t443-import-closure-symlink-escape.integration.test.ts
+```
+
+`t440` は注入されたインメモリ FS に対して再帰走査(`resolveImportClosure`)を駆動し、`t441` は被覆検査と診断レンダリング(`checkManifestClosure`・`describeClosureFailure`)を駆動し、`t442` は `assertPluginImportClosure` を通した本番結線を assert し、`t443` は責務分割のファイルシステム側 — 純粋層には見えない symlink escape — を覆います。guard を拡張するときは対応する側を拡張してください。新しい判断は純粋モジュールへ unit テスト付きで、新しいファイルシステム escape はアダプタへ integration テスト付きで置きます。
+
 ## ドキュメントポリシー
 
 ファイル、ディレクトリ、コマンド、フラグを追加・削除・リネームする際:

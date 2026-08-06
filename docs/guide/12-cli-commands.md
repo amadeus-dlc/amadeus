@@ -24,6 +24,13 @@ All AI-DLC commands start with the orchestrator invocation. This chapter is a co
 | `/amadeus --status` | Display a read-only status summary |
 | `/amadeus --doctor` | Run a health check on your setup |
 | `/amadeus --migrate [path]` | Preview and, after explicit approval, migrate an upstream v2 workspace |
+| `/amadeus intent` | List intents in the active space (read-only; `--json` for structured output) |
+| `/amadeus intent <name>` | Switch the active intent |
+| `/amadeus space` | List spaces (read-only; `--json` for structured output) |
+| `/amadeus space <name>` | Switch the active space (team) |
+| `/amadeus space-create <name>` | Create a new space (team) seeded from the framework baseline |
+| `/amadeus codekb-path` | Print the deterministic per-repo codekb directory (read-only) |
+| `/amadeus plugin <verb>` | Delegate to the plugin CLI (`status`, `compose`, `drop`, `doctor`, `install`) |
 | `/amadeus --stage <slug\|#>` | Jump to a specific stage |
 | `/amadeus --stage <slug> --single` | Run one stage in isolation, without advancing your workflow |
 | `/amadeus --phase <name\|#>` | Jump to the start of a phase |

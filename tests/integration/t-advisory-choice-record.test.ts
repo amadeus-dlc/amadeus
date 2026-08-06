@@ -32,7 +32,8 @@ import {
   createPendingAdvisory,
   guardAdvisoryChoices,
   recordAdvisoryChoiceDecision,
-  recordProtectedAdvisoryChoice,
+  choiceFromExactPrompt,
+  recordAdvisoryChoice,
   type AdvisoryChoiceStore,
   type PendingAdvisory,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
@@ -51,6 +52,25 @@ import {
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
+
+// #2253 replaced the prompt-classifying acceptance entry point with one that
+// takes an already-classified choice and a provenance union. These tests were
+// written against the prompt shape, and what they pin — which prompts count and
+// which provenance is refused — is unchanged, so they keep exercising the same
+// route through the same two steps the hook now performs.
+function recordAdvisoryChoiceViaPrompt(
+  projectDir: string,
+  prompt: string,
+  humanTurn: { timestamp: string; shard: string; eventIdentity: string },
+  now?: string,
+): boolean {
+  const choice = choiceFromExactPrompt(prompt);
+  if (choice === null) return false;
+  return now === undefined
+    ? recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn })
+    : recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn }, now);
+}
+
 
 const identity = {
   plugin: "formal-model-check",
@@ -133,10 +153,10 @@ describe("advisory choice record: acceptance", () => {
     const receipts = readStore(projectDir).receipts;
     expect(receipts).toHaveLength(1);
     expect(receipts[0]).toMatchObject({
-      schema: 1,
+      schema: 2,
       identity: pending.identity,
       choice: "defer-with-risk",
-      humanTurn: turn,
+      provenance: { kind: "human-turn", ...turn },
       recordedAt: "2026-08-05T00:00:00.000Z",
     });
   });
@@ -160,13 +180,16 @@ describe("advisory choice record: acceptance", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(readStore(projectDir).receipts[0]).toMatchObject({ choice: "run-now", humanTurn: turn });
+    expect(readStore(projectDir).receipts[0]).toMatchObject({
+      choice: "run-now",
+      provenance: { kind: "human-turn", ...turn },
+    });
   });
 
   test("the prompt route still works and is not disturbed by the new one", () => {
     const { projectDir, pending } = track(seedPendingProject());
     plantPresentation(projectDir, pending);
-    expect(recordProtectedAdvisoryChoice(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
+    expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
     expect(readStore(projectDir).receipts[0]).toMatchObject({
       identity: pending.identity,
       choice: "run-now",

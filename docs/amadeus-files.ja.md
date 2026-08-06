@@ -2,10 +2,11 @@
 
 > 言語: [English](amadeus-files.md) | **日本語**
 
-出典(一次情報): `amadeus-dlc/amadeus` v2ブランチ(commit 9b77786, 2026-07時点)
+出典(一次情報): `amadeus-dlc/amadeus`(commit f4d99c2c9, 2026-08時点)
 - 公式リファレンス: `docs/guide/14-artifacts-reference.md`(ディレクトリツリー・git方針)
 - ワークスペース構造: `docs/guide/03-spaces-and-intents.md`
-- 正確なファイル名: `packages/framework/core/amadeus-common/stages/*/*.md` 全32ステージのfrontmatter `outputs:` から抽出
+- 生成ツリー: `bun run dist` の出力(`dist/claude/.claude`、`dist/codex/.codex`、`dist/codex/.agents`)を実測
+- 正確なファイル名: `packages/framework/core/amadeus-common/stages/*/*.md` 全32ステージのfrontmatter `produces:` から抽出
 
 ---
 
@@ -13,6 +14,8 @@
 
 ```
 .agents/                                                  # Codexが読むskill配布先(.codex/の兄弟)
+├── rules/                                                # Codex向けAI-DLCルールの入口
+│   └── amadeus.md
 └── skills/
     ├── amadeus/                                          # オーケストレーターskill
     └── amadeus-<stage-or-scope>/                         # stage runner / scope runner skill
@@ -29,8 +32,10 @@
 │       ├── inception/
 │       ├── construction/
 │       └── operation/
-├── hooks/                                                # Claude Code hook本体(フレームワークのフック)
+├── hooks/                                                # Claude Code hook本体(フレームワークのフック + Claude用ディスパッチャ)
 │   ├── amadeus-audit-logger.ts
+│   ├── amadeus-dispatch.ts
+│   ├── amadeus-log-subagent-start.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
 │   ├── amadeus-plugin-compose.ts
@@ -45,28 +50,35 @@
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
 │   ├── amadeus-shared/
 │   └── amadeus-<role>-agent/
+├── otel/                                                 # OpenTelemetryプロバイダ層(全ハーネスへ配布)
 ├── rules/                                                # Claude Code側のAI-DLCルール入口
 │   └── amadeus.md
 ├── scopes/                                               # scope定義(amadeus-mvp等)
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # 決定論センサー定義
 │   ├── amadeus-answer-evidence.md
+│   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
 │   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
+│   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
 ├── skills/                                               # Claude Code skill(オーケストレーター + stage runner)
 │   ├── amadeus/
 │   └── amadeus-<stage-or-scope>/
-├── tools/                                                # Bunで実行する決定論エンジン/CLI(26本 + data/)
+├── tools/                                                # Bunで実行する決定論エンジン/CLI(amadeus-*.ts + data/)
 │   ├── amadeus-*.ts
 │   └── data/
+│       ├── harness.json
 │       ├── stage-graph.json
+│       ├── stage-identities.json
 │       ├── scope-grid.json
+│       ├── self-install-allowlist.ts
 │       ├── memory-seed/
 │       ├── scaffold/
 │       └── templates/
+├── vendor/                                               # ベンダリングしたOpenTelemetry API(全ハーネスへ配布)
 ├── CLAUDE.md                                             # Claude Code向け導入指示
 ├── CLAUDE.md.example
 ├── settings.json                                         # hook/statusline/permission設定
@@ -83,7 +95,9 @@
 │   └── stages/
 ├── hooks/                                                # Codex hook本体(Claude共通のフレームワークフック + Codex adapter)
 │   ├── amadeus-codex-adapter.ts
+│   ├── amadeus-codex-hook-runtime.ts
 │   ├── amadeus-audit-logger.ts
+│   ├── amadeus-log-subagent-start.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
 │   ├── amadeus-plugin-compose.ts
@@ -98,25 +112,32 @@
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
 │   ├── amadeus-shared/
 │   └── amadeus-<role>-agent/
+├── otel/                                                 # OpenTelemetryプロバイダ層(全ハーネスへ配布)
 ├── rules/                                                # Codex permission rules。AI-DLC memory層とは別物
 │   └── default.rules
 ├── scopes/                                               # scope定義(amadeus-mvp等)
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # 決定論センサー定義
 │   ├── amadeus-answer-evidence.md
+│   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
 │   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
+│   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
-├── tools/                                                # Bunで実行する決定論エンジン/CLI(26本 + data/)
+├── tools/                                                # Bunで実行する決定論エンジン/CLI(amadeus-*.ts + data/)
 │   ├── amadeus-*.ts
 │   └── data/
+│       ├── harness.json
 │       ├── stage-graph.json
+│       ├── stage-identities.json
 │       ├── scope-grid.json
+│       ├── self-install-allowlist.ts
 │       ├── memory-seed/
 │       ├── scaffold/
 │       └── templates/
+├── vendor/                                               # ベンダリングしたOpenTelemetry API(全ハーネスへ配布)
 ├── config.toml                                           # Codexプロジェクト設定(必要時のみ)
 ├── config.toml.example
 ├── hooks.json                                            # Codex hookのactive file(per-clone、可変、gitignore)
@@ -247,7 +268,7 @@ amadeus/
 | 3.3 nfr-design | `performance-design.md`, `security-design.md`, `scalability-design.md`, `reliability-design.md`, `logical-components.md` | 計画次第・per unit |
 | 3.4 infrastructure-design | `deployment-architecture.md`, `infrastructure-services.md`, `monitoring-design.md`, `cicd-pipeline.md`, (条件付き) `shared-infrastructure.md` | 計画次第・per unit |
 | 3.5 code-generation | `code-generation-plan.md`(チェックボックス+story追跡), `code-summary.md`(コード本体はrecord dirではなくコードリポジトリへ) | 常時・per unit |
-| 3.6 build-and-test | `build-instructions.md`, `unit-test-instructions.md`, `integration-test-instructions.md`, `performance-test-instructions.md`, `security-test-instructions.md`, `build-and-test-summary.md`, `test-results.md` | 常時・全Unit後 |
+| 3.6 build-and-test | `build-instructions.md`, `unit-test-instructions.md`, `integration-test-instructions.md`, `performance-test-instructions.md`, `security-test-instructions.md`, `build-and-test-summary.md`, `build-test-results.md` | 常時・全Unit後 |
 | 3.7 ci-pipeline | `ci-config.md`, `quality-gates.md` | 条件付き・全Unit後 |
 
 ### 2.6 Operation(4.1–4.7、すべて条件付き)
@@ -259,7 +280,7 @@ amadeus/
 | 4.3 deployment-execution | `deployment-log.md`, `smoke-test-results.md`, `health-check-report.md` |
 | 4.4 observability-setup | `dashboards.md`, `alarms.md`, `slo-config.md`, `log-queries.md`, `tracing-config.md`, `anomaly-config.md` |
 | 4.5 incident-response | `runbooks.md`, `incident-plan.md`, `escalation-matrix.md` |
-| 4.6 performance-validation | `load-test-plan.md`, `test-results.md`, `nfr-validation-matrix.md` |
+| 4.6 performance-validation | `load-test-plan.md`, `load-test-results.md`, `nfr-validation-matrix.md` |
 | 4.7 feedback-optimization | `slo-report.md`, `cost-analysis.md`, `drift-report.md`, `feedback-loop.md` |
 
 ---

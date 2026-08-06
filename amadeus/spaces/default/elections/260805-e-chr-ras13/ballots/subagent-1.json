@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CHR-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c3 も一般形にはなりうるが、既決の team.md エスカレーション正準リスト(4)(ユーザー可視契約の変更はユーザーへエスカレーション)と cid:requirements-analysis:c5(既存実装の流儀に合わせる)から一意導出できる執行寄りであり、新規 cid の追加価値は薄いと判断した — 同型の再発を1回でも観測したら独立 cid へ昇格させることを条件に不採用とする。",
+  "rationale": "実測: (1) diary の3候補はいずれも実在(inception/requirements-analysis/memory.md の Interpretations に 13:36:00Z x2 / 13:50:00Z の3件)。(2) c1 は既決 cid(intent-capture:c1 質問の絞り込み / requirements-analysis:c5 既存の流儀)の適用実例にすぎず、記録は questions ファイルと diary で十分 — intent 固有。(3) c2 は §12a iteration 1 が BLOCKER として捕捉した実欠陥クラス(requirements.md:101/:105 の FR-1 AC 自己矛盾 → :27 で C1/C2/C3/C5 相互差異 + C6=C1 と同一の (b) へ再構成、:123 で FOLLOW-UP 閉包確認、iteration 2 READY)に対応し、根拠は観測点の性質(認可判定は単一 projectDir 配下しか読めず carrier 分裂と marker 不在は判定点で区別不能 — requirements.md:27 / CON-3 :69)という intent 非依存の構造である。memory 層への grep(分解能 / 判別値 / failure mode / 区別不能 / 判定点で区別)では instrumentation-syntax-check と approval-lineage-citation の2件しかヒットせず、いずれも『判別値の粒度は観測点の分解能を超えない』面を被覆していない — 未被覆かつ再発性のある一般知識。(4) c3 は docs/guide/11-session-management.md:7 の 'Session resume works on every harness' 約束を実読で確認でき主張自体は正しいが、要件化しない判断はユーザー要件と既決ノルムから導かれる。よって persist 価値が最も高い c2 を選ぶ。",
+  "submittedAt": "2026-08-05T13:48:42Z"
+}
