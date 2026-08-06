@@ -568,6 +568,11 @@ export const Store = {
   // checked first on every path, late lane included, before the state branch.
   // Amend ballots coexist with their original (ADR-5: the original is never
   // overwritten; both stay on the ledger, correction trail intact).
+  // Both timeline write points (the pre-tally ballot row and the late row) are
+  // stamped with `receivedAt` on `at` as well (Issue #1946): the self-reported
+  // submittedAt stays on the ballot body as informational provenance and is
+  // never an axis. The ballot itself already carries the same stamp, minted by
+  // the CLI at acceptance.
   appendBallot(
     root: string,
     electionId: string,
@@ -630,7 +635,7 @@ export const Store = {
       if (!w.ok) return w;
       return Store.appendTimeline(root, electionId, {
         kind: "late",
-        at: ballot.submittedAt,
+        at: receivedAt,
         receivedAt,
         detail: `late ballot recorded: ${ballot.voter}${late.reexamRequired ? " (reexam required)" : ""}`,
         voter: ballot.voter,
@@ -642,7 +647,7 @@ export const Store = {
     if (!w.ok) return w;
     return Store.appendTimeline(root, electionId, {
       kind: "ballot",
-      at: ballot.submittedAt,
+      at: receivedAt,
       receivedAt,
       detail: `ballot ${ballot.kind === "amend" ? "amendment" : "accepted"}: ${ballot.voter}`,
       voter: ballot.voter,
