@@ -2,10 +2,11 @@
 
 > Languages: **English** | [日本語](amadeus-files.ja.md)
 
-Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-07)
+Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 - Official reference: `docs/guide/14-artifacts-reference.md` (directory tree and git policy)
 - Workspace layout: `docs/guide/03-spaces-and-intents.md`
-- Exact file names: extracted from the `outputs:` frontmatter in all 32 stage files under `packages/framework/core/amadeus-common/stages/*/*.md`
+- Generated trees: measured from `bun run dist` output (`dist/claude/.claude`, `dist/codex/.codex`, `dist/codex/.agents`)
+- Exact file names: extracted from the `produces:` frontmatter in all 32 stage files under `packages/framework/core/amadeus-common/stages/*/*.md`
 
 ---
 
@@ -13,6 +14,8 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 
 ```
 .agents/                                                  # Skill distribution consumed by Codex (sibling of .codex/)
+├── rules/                                                # Codex entry point for AI-DLC rules
+│   └── amadeus.md
 └── skills/
     ├── amadeus/                                          # Orchestrator skill
     └── amadeus-<stage-or-scope>/                         # Stage runner / scope runner skill
@@ -29,8 +32,10 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │       ├── inception/
 │       ├── construction/
 │       └── operation/
-├── hooks/                                                # Claude Code hook implementations (framework hooks)
+├── hooks/                                                # Claude Code hook implementations (framework hooks + Claude dispatcher)
 │   ├── amadeus-audit-logger.ts
+│   ├── amadeus-dispatch.ts
+│   ├── amadeus-log-subagent-start.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
 │   ├── amadeus-plugin-compose.ts
@@ -45,28 +50,35 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 ├── knowledge/                                            # Framework methodology knowledge (shared + per-agent)
 │   ├── amadeus-shared/
 │   └── amadeus-<role>-agent/
+├── otel/                                                 # OpenTelemetry provider layer (ships to every harness)
 ├── rules/                                                # Claude Code entry point for AI-DLC rules
 │   └── amadeus.md
 ├── scopes/                                               # Scope definitions such as amadeus-mvp
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # Deterministic sensor definitions
 │   ├── amadeus-answer-evidence.md
+│   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
 │   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
+│   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
 ├── skills/                                               # Claude Code skills (orchestrator + stage runners)
 │   ├── amadeus/
 │   └── amadeus-<stage-or-scope>/
-├── tools/                                                # Deterministic Bun engine / CLI (26 files + data/)
+├── tools/                                                # Deterministic Bun engine / CLI (amadeus-*.ts + data/)
 │   ├── amadeus-*.ts
 │   └── data/
+│       ├── harness.json
 │       ├── stage-graph.json
+│       ├── stage-identities.json
 │       ├── scope-grid.json
+│       ├── self-install-allowlist.ts
 │       ├── memory-seed/
 │       ├── scaffold/
 │       └── templates/
+├── vendor/                                               # Vendored OpenTelemetry API (ships to every harness)
 ├── CLAUDE.md                                             # Claude Code onboarding instructions
 ├── CLAUDE.md.example
 ├── settings.json                                         # Hook, statusline, and permission settings
@@ -83,7 +95,9 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │   └── stages/
 ├── hooks/                                                # Codex hook implementations (shared framework hooks + Codex adapter)
 │   ├── amadeus-codex-adapter.ts
+│   ├── amadeus-codex-hook-runtime.ts
 │   ├── amadeus-audit-logger.ts
+│   ├── amadeus-log-subagent-start.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts
 │   ├── amadeus-plugin-compose.ts
@@ -98,25 +112,32 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 ├── knowledge/                                            # Framework methodology knowledge (shared + per-agent)
 │   ├── amadeus-shared/
 │   └── amadeus-<role>-agent/
+├── otel/                                                 # OpenTelemetry provider layer (ships to every harness)
 ├── rules/                                                # Codex permission rules; separate from the AI-DLC memory layer
 │   └── default.rules
 ├── scopes/                                               # Scope definitions such as amadeus-mvp
 │   └── amadeus-<scope>.md
 ├── sensors/                                              # Deterministic sensor definitions
 │   ├── amadeus-answer-evidence.md
+│   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
 │   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
+│   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
 │   └── amadeus-upstream-coverage.md
-├── tools/                                                # Deterministic Bun engine / CLI (26 files + data/)
+├── tools/                                                # Deterministic Bun engine / CLI (amadeus-*.ts + data/)
 │   ├── amadeus-*.ts
 │   └── data/
+│       ├── harness.json
 │       ├── stage-graph.json
+│       ├── stage-identities.json
 │       ├── scope-grid.json
+│       ├── self-install-allowlist.ts
 │       ├── memory-seed/
 │       ├── scaffold/
 │       └── templates/
+├── vendor/                                               # Vendored OpenTelemetry API (ships to every harness)
 ├── config.toml                                           # Codex project configuration (only when needed)
 ├── config.toml.example
 ├── hooks.json                                            # Local active Codex hooks (per-clone, mutable, gitignored)
@@ -247,7 +268,7 @@ Stages 3.1-3.5 repeat **per Unit of Work** and write to `construction/{unit-name
 | 3.3 nfr-design | `performance-design.md`, `security-design.md`, `scalability-design.md`, `reliability-design.md`, `logical-components.md` | Plan-dependent, per unit |
 | 3.4 infrastructure-design | `deployment-architecture.md`, `infrastructure-services.md`, `monitoring-design.md`, `cicd-pipeline.md`, and conditionally `shared-infrastructure.md` | Plan-dependent, per unit |
 | 3.5 code-generation | `code-generation-plan.md` (checkboxes + story tracking), `code-summary.md` (actual code goes to the code repository, not the record directory) | Always, per unit |
-| 3.6 build-and-test | `build-instructions.md`, `unit-test-instructions.md`, `integration-test-instructions.md`, `performance-test-instructions.md`, `security-test-instructions.md`, `build-and-test-summary.md`, `test-results.md` | Always, after all units |
+| 3.6 build-and-test | `build-instructions.md`, `unit-test-instructions.md`, `integration-test-instructions.md`, `performance-test-instructions.md`, `security-test-instructions.md`, `build-and-test-summary.md`, `build-test-results.md` | Always, after all units |
 | 3.7 ci-pipeline | `ci-config.md`, `quality-gates.md` | Conditional, after all units |
 
 ### 2.6 Operation (4.1-4.7, All Conditional)
@@ -259,7 +280,7 @@ Stages 3.1-3.5 repeat **per Unit of Work** and write to `construction/{unit-name
 | 4.3 deployment-execution | `deployment-log.md`, `smoke-test-results.md`, `health-check-report.md` |
 | 4.4 observability-setup | `dashboards.md`, `alarms.md`, `slo-config.md`, `log-queries.md`, `tracing-config.md`, `anomaly-config.md` |
 | 4.5 incident-response | `runbooks.md`, `incident-plan.md`, `escalation-matrix.md` |
-| 4.6 performance-validation | `load-test-plan.md`, `test-results.md`, `nfr-validation-matrix.md` |
+| 4.6 performance-validation | `load-test-plan.md`, `load-test-results.md`, `nfr-validation-matrix.md` |
 | 4.7 feedback-optimization | `slo-report.md`, `cost-analysis.md`, `drift-report.md`, `feedback-loop.md` |
 
 ---

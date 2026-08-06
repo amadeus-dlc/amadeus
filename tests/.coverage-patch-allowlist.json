@@ -385,28 +385,6 @@
     "expiry": "remove when the Kimi boundary tests gain an in-process driver for the malformed-carrier matrix"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:5d6801083f63d00ef8c2630d67c8753fcea51f0e4bb404e39de977e0ad48ce71",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Deny-latch presence arm (subagent-transition deny, session-ended deny, or in-flight role-marker lock). t365 asserts each latch state denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the latch-denial matrix gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:3ca9fd791648e870c1e7cb257e77b95a90f4ae4ded247beb79ea038244b80303",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Current-session mismatch arm (empty or differing .current-session carrier). t365 asserts the mismatch denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the session-mismatch case gains an in-process driver"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-contained-file.ts",
     "selector": {
       "function": "openCandidate",
@@ -2389,17 +2367,6 @@
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
     "selector": {
-      "function": "withRoleMarkerLock",
-      "fingerprint": "sha256:7a6a0c2c2996a1ea119affed452fe7917035f45d75ba30115b794cc76a23012e",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "Stale role-marker lock retire arm in withRoleMarkerLock: reaching it needs a lock directory older than ROLE_LOCK_STALE_MS left by a crashed holder. The lock-contention behavior is asserted through the spawned hook boundary in t365; deterministic stale-lock timing requires an injectable clock/lock port.",
-    "expiry": "remove when withRoleMarkerLock receives an injectable stale-lock fixture"
-  },
-  {
-    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "selector": {
       "function": "readRoleMarker",
       "fingerprint": "sha256:b95cab0307ad58876ac4bfffde654e9c4d73e9eb9aafcecb0c942e1a8cda2a0c",
       "anchorLines": 31,
@@ -3266,18 +3233,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:7922aad30b06514c11122cc5107dbdc7dca6f65a48f4d60e12ac26bc93bcd50c",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
-    "expiry": "remove when main() gains an in-process argv driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:1362e043a02de92033534f487cbb42a9d6ad60ee8b362031b49a48692ed14cf2",
+      "fingerprint": "sha256:316149cd7ed66e29c8f375064ea00352b9753fd37822b334975e967d171b7d5a",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -3843,6 +3799,28 @@
     },
     "reason": "Defensive startup-failure classification for git show. The integration suite drives the observable non-zero lookup failure; making spawnSync itself fail to start would require removing the running test process's git executable or injecting a process port. The distinct INTERNAL_ERROR branch is retained fail closed.",
     "expiry": "remove when baselineAtRevision receives an injected process port that can model startup failure"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "advisoryOccurrenceMatchesDecision",
+      "fingerprint": "sha256:799d1c5f4401c6ade45fffbe154d25ef353610a8f9fd6261328a51ecdd9fa451",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body — the true, false, and fail-closed catch outcomes — is covered directly by t459 unit tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "resolveAdvisoryChoiceAutonomously",
+      "fingerprint": "sha256:0a9e7bf8c6eaf43ece44a49989a8bb312185246b2baab4538c033935c5d94a9e",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body — the resolved, human-required, and decision-failure catch outcomes — is covered directly by t458 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   },
   {
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
@@ -5618,7 +5596,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:bd6239ffd577302bc6102cf6a75e746655316182e67b312b1c93a0a870ecd755",
+      "fingerprint": "sha256:b78a074689db51ac0d77f2cd579b569dd8c0eb8362aa83c36026156493c3d5b8",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -5717,7 +5695,7 @@
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
       "function": "renderAutonomyStatus",
-      "fingerprint": "sha256:92a73d7aee92b2287fca5cfded8db53471325ce43e37ba7473fe46c23e071a8e",
+      "fingerprint": "sha256:afaafc3d3e26d2217d1cb82b26f13e1fb9adebf205ba10f421dda7017c3b94f8",
       "anchorLines": 13,
       "targetLines": "1-13"
     },
@@ -5960,17 +5938,6 @@
     "selector": {
       "function": "createSelectedGateDecision",
       "fingerprint": "sha256:7472cd237d4d0b4768d0919ec033c2f2418c6addbd2a25f1aca0456dc5d535de",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
-    "selector": {
-      "function": "applySemiDecision",
-      "fingerprint": "sha256:eba83d614c2e7ee4703e73cfd780b315be47ba370c8b9ffb946f95cd4790f10b",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -6315,7 +6282,7 @@
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "humanTurn.shard is derived from auditShardName(projectDir) inside latestHumanTurn one call earlier, so the mismatch arm is unreachable through the record flow; kept for contract parity with recordProtectedAdvisoryChoice, whose caller-supplied provenance CAN mismatch.",
+    "reason": "humanTurn.shard is derived from auditShardName(projectDir) inside latestHumanTurn one call earlier, so the mismatch arm is unreachable through the record flow; kept for contract parity with recordAdvisoryChoice, whose caller-supplied provenance CAN mismatch.",
     "expiry": "remove when freshRecordRefusal accepts caller-supplied provenance"
   },
   {
@@ -6344,7 +6311,7 @@
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:bda22f12c1bef0a92b2d9e1cc7584392cb9b5308725357f96695c373768afb13",
+      "fingerprint": "sha256:438bc9257a619c60699f99b7a7a1c2ce77c06bda3f0d1bd85d807d15251fd826",
       "anchorLines": 23,
       "targetLines": "1-23"
     },
@@ -6355,10 +6322,98 @@
     "file": "plugins/formal-model-check/tools/tla-authoring.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:6601b73c10f23f39b59a60dffb571969e36788102d08258e8217b64988e2091e",
+      "fingerprint": "sha256:68c52d65b6109f416bb181a5c8b18c602ecf7f770407b0aeb81d380e9133bf61",
       "anchorLines": 1,
       "targetLines": "1"
     },
     "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
+    "selector": {
+      "function": "runOnce",
+      "fingerprint": "sha256:af98c90e918326c337f9d3ce6e9c2dbc797929e733a7ff75f78be39b9010360d",
+      "anchorLines": 41,
+      "targetLines": "1-41"
+    },
+    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the standalone real-TLC probe (tests/formal-verif/support/tla-referee-real-toolchain-probe.ts, exercised per ruling A). The pre-toolchain rows of runOnce are driven in-process by t447 via a broken mutant.",
+    "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referees.ts",
+    "selector": {
+      "function": "prepareMutation",
+      "fingerprint": "sha256:bda3a97be133821caccd913666f0a89f89ab8c03a60cc4473e3d59d92a58c6e4",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The defensive catch around the mutant write/copy only fires when writeFileSync or cpSync throws inside a directory mkdtempSync just created; the portable injections (absent path, dangling symlink) are all absorbed earlier as typed failures, and a directory-shaped module diverges between macOS (EISDIR throw) and Linux (empty read), so a deterministic cross-platform red is not constructible (bun-readfilesync-dir-platform-divergence).",
+    "expiry": "remove if the workshop gains an injectable filesystem port"
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "selector": {
+      "function": "nodeDecisionEmitter",
+      "fingerprint": "sha256:dadde3570381c97b13b9a900c4fa727371dfdd55f92d74b29e6f61402ab0c7ce",
+      "anchorLines": 13,
+      "targetLines": "1-13"
+    },
+    "reason": "The production DecisionEmitter spawns the host's real amadeus-log tool; every test drives the CLI through the injected emitDecision seam so no real audit is ever emitted from a test run (t448 covers the seam contract, not the child_process wiring).",
+    "expiry": "remove if a hermetic audit-tool fixture makes the real spawn drivable in CI"
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:9e100e2a9f31f0af2377daff5cb4d350d3ede750b0458fe2734550cc3e2a51e8",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "The import.meta.main entrypoint only runs when the module is the spawned process; the whole verb surface is driven in-process through runCli (t448), and bun's coverage does not observe a spawned child (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the patch gate can attribute spawned-process coverage"
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-gh-runner.ts",
+    "selector": {
+      "function": "nodeGhSpawn",
+      "fingerprint": "sha256:bfa7b04cbe5fa73cc7477cd32e129fe6caa91eeb6314187adfc1cf5c77f155b1",
+      "anchorLines": 17,
+      "targetLines": "1-17"
+    },
+    "reason": "The production GhSpawn wires child_process to the real gh binary; every test injects a scripted GhSpawn so CI never talks to GitHub (t448 pins the argv-array and no-shell contracts against the injected seam).",
+    "expiry": "remove if a hermetic gh stub binary makes the real spawn drivable in CI"
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-ledger.ts",
+    "selector": {
+      "function": "isBotAuthor",
+      "fingerprint": "sha256:1e243b10516f555fae1eaf42523214579b01d2f0d12ae7fa576eda43dc4ce6a8",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "These lines are the multiline TypeScript parameter type of isBotAuthor; the body is covered directly by t447 but Bun stamps the type-only signature lines 0 under the merged-suite union (bun-multiline-arg-da0).",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:50b83672a1ce2bc04c6e20e052de6cadcefb21d4ea662753c78c035be3d0202c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t464 and end-to-end by t462. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleSessionTakeover",
+      "fingerprint": "sha256:b1d52ebe1af2d96a8928cc143cfa98a8308407cfc12357f0ba1062876bc24324",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive echo inside handleSessionTakeover: reached only if applySessionTakeover succeeded yet authorizeMainConductor still denies, which no reachable filesystem state produces (apply writes exactly the faces the guard reads, and a write failure throws before this line). Message-string line where a refactor is unnatural — spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the takeover guard echo becomes reachable through an injectable seam"
   }
 ]

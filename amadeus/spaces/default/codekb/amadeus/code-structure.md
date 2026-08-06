@@ -1,5 +1,105 @@
 # コード構造
 
+## cross-harness resume の患部配置（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 患部の配置（core 中立層 / harness 表層の境界に跨る）
+
+```
+packages/framework/core/
+  tools/amadeus-caller-authorization.ts   :72 authorizeMainConductor（122行・判定の唯一の入口）
+  tools/amadeus-harness.ts                :113-123 detectHarnessType（env 最優先 → 認可バイパス面）
+  tools/amadeus-orchestrate.ts            :2400 refuseUnauthorizedKimiCaller（消費点5）
+  tools/amadeus-state.ts                  :902 enforceCallerAuthorization（全27語彙、park/unpark 含む）
+  tools/amadeus-lib.ts                    :298 resolveProjectDirFromHook（5段ラダー）/ :2170 writeCurrentSessionId
+  hooks/amadeus-session-start.ts          :97 .current-session の唯一の書き手
+packages/framework/harness/
+  kimi/hooks/amadeus-kimi-lib.ts          :236/:281 carrier 確立・解除（非 export）/ :285-286 deny ラッチ / :704 raw cwd
+  kiro-ide/hooks/amadeus-kiro-adapter.ts  :261,266,388 core session-start を起動（session_id 転送なし）
+  opencode/plugins/                       core hook 不使用（session-start 参照 0 hit）
+  pi/extensions/amadeus-pi-extension.ts   :779 case "session-started"（ネイティブ処理、core hook 不使用）
+tests/integration/
+  t365-kimi-reviewer-boundary.integration.test.ts  :504/:536/:573/:646/:669/:689 substring assert
+  t-kimi-adapter.test.ts                            :413 raw-cwd pin
+```
+
+### 配置上の観察
+
+1. **判定は core 中立層に1箇所（122行の小ファイル）に集約されているが、判定が読む carrier は harness 表層と core hook に分散している。** 認可の意味論を変えずに carrier の書き手だけを揃える是正（所見B 対応）は core hook / harness 表層側の変更になり、判定側の 122行には触れない選択肢がある。
+2. **復旧手段を置く場所が未定である。** ゲートを掛ける `amadeus-orchestrate.ts` / `amadeus-state.ts` の内側に置くと所見A のデッドロックを閉じられない。`amadeus-utility.ts`（verb dispatch、認可ゲート外）か doctor 経路が候補になる。
+3. **`.current-session` の書込は core hook 内の1行（`:97`）で、周囲の `:88-96` コメントが「この hook だけが session_id を見る」と設計意図を明記している。** carrier を CLI 側から補える設計にする案は、このコメントが宣言する前提の改訂を伴う（`cid:reverse-engineering:comment-premise-verify-not-just-quote` の対象）。
+4. **Kimi の carrier 操作関数は module-private**（`:236` / `:281` とも非 export）。復旧ツールから再利用するなら export 面の新設が要る。
+
+### 区間内の配置変化
+
+session lifecycle / caller-authorization / harness detection のパスは区間内で無変更（該当コミットは `fc862e879` の1件、kimi `SKILL.md` の docs のみ）。34 commits / 493 files の大半は TLA+ authoring、metrics、live E2E、phase-boundary docs に集中する。
+
+## PR 収束プラグインの患部配置と区間デルタ（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
+
+本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、**27 commits / 474 files**）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
+
+### 区間デルタ — 患部10ファイルのうち touch は1本のみ
+
+`git diff --stat base..HEAD -- <患部10ファイル>` の全出力:
+
+```
+ scripts/plugin-projection.ts | 78 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 77 insertions(+), 1 deletion(-)
+```
+
+内容は **import-closure guard の新設**（`assertPluginImportClosure`、`:880-946`、#2240 / PR `09a3ccfec`）。plugin の `tools[]` から相対 import で到達可能な全モジュールが manifest 宣言かつ owned でなければ projection を write-0 で拒否する。symlink 脱出は `repoFileReader` の realpath 境界で封鎖。
+
+`amadeus-orchestrate.ts` / `amadeus-plugin.ts` / `amadeus-plugin-compose.ts` / `amadeus-plugin-activation.ts` / `amadeus-sensor.ts` / `amadeus-graph.ts` / `amadeus-state.ts` / `code-generation.md` / `amadeus/config.json` は**区間内で無変更**である。Issue #1971 のクロスレビューが引く行番号と現行行番号のシフト（`unitCovered` で +139 等）は base より前に生じたものであり、区間内の変更に起因しない。
+
+区間の主な着地: TLA+ authoring Bolt（#2239 / #2240）、Kiro CLI TUI live E2E（#2233）、intent autonomy 系（#2229 / #2234 / #2242）、metrics snapshot 群。
+
+### 患部の配置
+
+| 領域 | パス | 本 intent での役割 |
+| --- | --- | --- |
+| ガード述語（前進） | `packages/framework/core/tools/amadeus-orchestrate.ts` `:3452-3472` / `:3068-3085` / `:3526-3547` | fail-closed の唯一の実現面 |
+| ガード述語（承認） | `packages/framework/core/tools/amadeus-state.ts` `:1653-1678` / `:1683-1696` / `:1529` | ANY 判定 + fail-open 2経路 + env バイパス |
+| kind 絞り込み | `packages/framework/core/tools/amadeus-graph.ts` `:842-849` | `produces_kinds` の適用 |
+| plugin seam | `packages/framework/core/tools/amadeus-plugin-compose.ts` `:74` / `:424-435` / `:498-511` / `:555` / `:567-580` / `:699-719` | 拡張の主戦場 |
+| host stage 認識 | `packages/framework/core/tools/amadeus-plugin.ts` `:258-270` | 未着地面 |
+| scope opt-in | `packages/framework/core/tools/amadeus-graph.ts` `:1484-1502`（設計コメント `:1466-1483`） | opt-in stage が grid に不参加である理由 |
+| plugin 投影 / import 閉包 | `scripts/plugin-projection.ts` `:880-946` | 区間内で新設された制約 |
+| センサー実行 | `packages/framework/core/tools/amadeus-sensor.ts` `:29-31` / `:271` / `:573-574` | advisory 契約 |
+| 収束述語（既存） | `scripts/metrics-publication-domain.ts` `:256-262` | canonical 化の候補 |
+| gh 実行面 | `packages/framework/core/tools/amadeus-github-gateway.ts` `:112` / `:116` / `:247` / `:647` | 相乗り候補 |
+| 未接続 seam | `packages/framework/core/tools/amadeus-quality-repair.ts` `:125-130` / `:211` / `:242` | 第2候補（engine 改修が要る） |
+| 参照実装 | `plugins/formal-model-check/`（`plugin.json` / `stages/formal-model-check.md`） | 既習形の正本。`sensors` 記載は 0 |
+| plugin sensor manifest | `packages/framework/core/sensors/amadeus-model-completeness.md` | **core 側にある**（plugin バンドル内ではない） |
+
+### 成果物の落地パス
+
+`resolveArtifactPath`（`amadeus-orchestrate.ts:1897-1919`）の per-unit 分岐 `:1916` verbatim:
+
+```ts
+    return `${prefix}/construction/${unit}/${owner.slug}/${name}.md`;
+```
+
+→ 収束レポートを code-generation の produces へ足す場合、実在検査パスは `<record>/construction/<unit>/code-generation/<name>.md` になる。
+
+### テスト配置と採番
+
+本 intent に関係する既存テスト:
+
+| テスト | 層 | 対象 |
+| --- | --- | --- |
+| `tests/unit/t301-plugin-cli-seams.test.ts` | unit | `parseHostStageSeams` を `serializeStageSeams` バイト形に対して検証（`:7-10` のコメントが実 Markdown では一致しないことを明記） |
+| `tests/unit/t252-plugin-composition.test.ts` | unit | manifest parse / composition |
+| `tests/integration/t254-reference-plugin-lifecycle.test.ts` | integration | 参照 plugin のライフサイクル |
+| `tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts` | integration | CLI walking skeleton（`buildHostSnapshot` へ実 Markdown を供給） |
+| `tests/integration/t340-plugin-drop-fs-restore.integration.test.ts` | integration | drop の FS 実測復元 |
+| `tests/unit/t222-metrics-publication.test.ts` | unit | `parseMergeability` |
+
+**tNNN 採番**: 区間で t436〜t443 が新規着地し、observed の最大予約番号は **443**（`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+' | sort -n | tail`）。本 intent は **t444 以降**を予約する（`cid:code-generation:swarm-test-number-reservation`）。実 FS を触る検証は integration 層へ置く（`cid:code-generation:fs-tests-integration-first`）。
+
+### ステージ本文の構造
+
+`packages/framework/core/amadeus-common/stages/**/*.md` は **32件**。PR 収束に関する語彙（`converge` / `reviewThread` / `gh pr ` / `pull request` / `収束` / `\bPR\b`）の出現は **全件 0 hit** で、ステージグラフ側に接続点は存在しない。
 ## advisory 人間選択の患部配置（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | 分類 | 正本／対象 | 今回の位置づけ |
@@ -15,7 +115,101 @@
 
 実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
 
-## phase boundary approval の患部配置（260804-phase-boundary-approval、現在、observed `b938898f3`）
+## semi 再定義と autonomy 起動宣言の患部配置（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の配置・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
+
+### 患部の層別配置
+
+```
+packages/framework/core/            ← canonical（編集正本）
+├─ tools/
+│  ├─ amadeus-intent-autonomy.ts            (961)  主患部：mode 判定・裁定梯子
+│  ├─ amadeus-intent-autonomy-runtime.ts    (800)  ルーティング・semi 効果適用
+│  ├─ amadeus-intent-autonomy-production.ts (900)  本番結線・policies 分岐
+│  ├─ amadeus-intent-autonomy-replay.ts     (175)  canonical 永続化（audit replay）
+│  ├─ amadeus-autonomy-review.ts           (1273)  区間内新規：unreviewed レビュー面
+│  ├─ amadeus-autonomy-review-production.ts (484)  区間内新規
+│  ├─ amadeus-bolt.ts                      (1312)  autonomy CLI 面
+│  ├─ amadeus-orchestrate.ts               (5544)  起動フラグ parser
+│  ├─ amadeus-utility.ts                   (6327)  --status の autonomy 表示
+│  └─ amadeus-directive.ts                        intent_autonomy_mode スキーマ
+├─ hooks/
+│  ├─ amadeus-stop.ts                      (1020)  cap / budget / carve-out
+│  └─ amadeus-statusline.ts                 (325)  autonomy 表示なし
+└─ amadeus-common/protocols/
+   └─ stage-protocol.md                            正本知識：semi の1行定義ほか9行
+```
+
+`.claude/` 以下は上記の同一内容ミラー（生成物であり編集対象ではない）。
+
+### `semi` を含む正本知識ファイルの所在（docs 外）
+
+`packages/framework/core/amadeus-common/protocols/stage-protocol.md` に **9行**（`grep -n "semi"` 実測）:
+
+| 行 | 内容の要旨 | 再定義での扱い |
+| --- | --- | --- |
+| `:33` | `semi` phase 境界は人間裁定を要する／auto-approve directive の conductor 手順 | **直接反転する最重要行** |
+| `:105` | walking skeleton の gate は `none` / `semi` が人間を要する | 再定義の射程次第（要裁定） |
+| `:118` | mode 選択肢ラベル `semi` | 表示文言 |
+| `:125` | `set-autonomy --mode <mode>` の記録手順 | 起動フラグ追加時に同期 |
+| `:131` | **`semi` の正本1行定義**（phase 内 auto-approve / phase 境界は人間） | **直接反転** |
+| `:133` | 品質不合格は承認でない（`semi` / `full` 共通） | 保存 |
+| `:442` | Bolt gate は `none/semi/full` に従う | 参照のみ |
+| `:796` | 用語集：legacy ladder prompt | 参照のみ |
+| `:808` | 用語集：walking skeleton は `none`/`semi` が人間待ち | `:105` と連動 |
+
+**ミラー全数**（未確定事項の解消）: `find . -name stage-protocol.md` の実測で on-disk **14 本**。内訳は canonical 1 + self-install 5（`.claude` / `.codex` / `.cursor` / `.kimi-code` / `.opencode`）+ `dist/` 8（claude / codex / cursor / kimi / kiro / kiro-ide / opencode / pi）。ただし `git ls-files` で追跡されているのは **canonical 1 本のみ**（source-only 境界）。編集対象は canonical のみ、他は `bun run build` の再生成物である。
+
+### docs 面の所在（22 ファイル = 11 対訳ペア）
+
+`grep -rln "semi" docs/ | wc -l` → **22**（observed 実測）。`.md` と `.ja.md` の対訳ペアで11組。Issue #2253 が述べる「11 ファイル」は片側のみを数えた値であり、同期対象は22ファイルである。
+
+| ペア | 主な該当行 | 性質 |
+| --- | --- | --- |
+| `reference/03-orchestrator` | `:437` | 質問裁定の正本記述 |
+| `reference/06-hooks-and-tools` | `:274` | stop hook carve-out の正本記述 |
+| `reference/12-state-machine` | `:189` | 状態機械 |
+| `reference/04-stage-protocol` | `:794`, `:809`, `:921`, `:928` | 規約投影 |
+| `reference/04-stages/construction` | `:46`, `:54`, `:81` | ステージ記述 |
+| `guide/glossary` | `:17` | 用語定義 |
+| `guide/02-your-first-workflow` | `:162`, `:167`, `:173` | UI 選択肢文言 |
+| `guide/04-phases-and-stages` | `:219`, `:231`, `:261`, `:295`, `:316` | フェーズ解説 |
+| `guide/16-worked-examples` | `:283` | 実例 |
+| `guide/workshop-mode` | `:331` | ワークショップ |
+| `harness-engineering/08-construction-and-swarm` | `:37`, `:57`, `:61-62`, `:68`, `:101` | ハーネス側手順 |
+
+### テスト面の所在
+
+`grep -rln "semi" tests/ --include="*.ts"` → **14 ファイル**。ただし `tests/unit/t97.test.ts` の hit は `semicolon`（`:168`, `:170`）の部分一致であり **autonomy とは無関係**（未確定事項の解消）。したがって実質的な `semi` 関与は **13 ファイル**（うち1本は `tests/harness/kiro-ide-driver.ts` のハーネス補助）。
+
+| ファイル | 層 | 焦点度 |
+| --- | --- | --- |
+| `tests/unit/t431-intent-autonomy.test.ts` | unit | **最高**。`:307-314` が semi の authorize 契約を直接ピン |
+| `tests/integration/t121-stop-hook-enforce.test.ts` | integration | **最高**。`:1138-1150` が semi + 質問の ALLOW をピン |
+| `tests/integration/t432-intent-autonomy-runtime.integration.test.ts` | integration | 高 |
+| `tests/integration/t435-intent-autonomy-production.integration.test.ts` | integration | 高 |
+| `tests/integration/t393-birth-autonomy-field.integration.test.ts` | integration | 中（起動フラグ面に隣接） |
+| `tests/unit/t403-plan-integrity-guard.test.ts` / `tests/integration/t403-issuance-guard.test.ts` | unit / integration | 中（**同番号の別ファイル**） |
+| `tests/unit/t428-quality-repair.test.ts` / `tests/integration/t429-quality-repair-runtime.integration.test.ts` | unit / integration | 中 |
+| `tests/unit/t211-swarm-batch-progress.test.ts` / `tests/integration/t135-invoke-swarm.test.ts` / `tests/integration/t414-swarm-retry-budget.test.ts` | unit / integration | 低（swarm 側の mode 参照） |
+| `tests/harness/kiro-ide-driver.ts` | harness | 低 |
+
+付随して `tests/unit/t147-kiro-hook-adapter.test.ts:723`（コメント）と `tests/.coverage-patch-allowlist.json:5268`（`"function": "isFullyAutonomousIntent"`）が、述語の改名・分割時の同期対象になる。
+
+### 区間内の行シフト（患部ファイル別）
+
+`git diff` 実測。**焦点ファイルの大半は区間内無変更**（行シフト 0）: `amadeus-intent-autonomy.ts` / `amadeus-stop.ts` / `amadeus-utility.ts` / `amadeus-orchestrate.ts` / `amadeus-statusline.ts` / `t431` / `t121`。
+
+例外は2本:
+
+| ファイル | 差分 | シフト |
+| --- | --- | --- |
+| `amadeus-intent-autonomy-runtime.ts` | `2/2` | 置換のみ、シフト 0 |
+| `amadeus-bolt.ts` | **`100/1`** | ハンク `@@ -68,0 +69,6 @@` / `@@ -954,0 +961,90 @@` / `@@ -1105 +1201 @@` / `@@ -1121,0 +1218,3 @@` → **`:961` 以降が +96** |
+| `amadeus-common/protocols/stage-protocol.md` | `2/0` | `:35` 以降が **+2**（履歴節が引く `:129` は observed で `:131`） |
+
+## phase boundary approval の患部配置（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。
 

@@ -274,6 +274,46 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `DECISION_RECORDED` | `tools/amadeus-log.ts` | Fires before `AskUserQuestion` so options are captured |
 | `QUESTION_ANSWERED` | `tools/amadeus-log.ts` | Fires after user response |
 
+#### Accepting an advisory choice
+
+A plugin advisory that holds at a checkpoint puts one question to the human with
+exactly two options — `run-now` ("run it now") and `defer-with-risk` ("defer,
+accepting the risk"). `tools/amadeus-advisory-choice.ts` owns the acceptance of
+that answer, and it is deliberately narrow: an advisory choice is only ever
+accepted when it can be tied to a real human turn.
+
+There are two acceptance routes. The **prompt route**
+(`recordProtectedAdvisoryChoice`) matches the user's turn text against the exact
+option vocabulary — `1`, `run-now`, or the Japanese label, and likewise for
+`defer-with-risk` — and accepts nothing else; a paraphrase is not a choice. The
+**`record` verb** is the explicit route:
+
+```
+bun .claude/tools/amadeus-advisory-choice.ts record \
+  --advisory-instance <id> --choice run-now
+```
+
+Both routes bind the receipt to a `HUMAN_TURN`. The prompt route requires the
+turn to live in this clone's own audit shard, re-derives the event identity by
+hashing the recorded `HUMAN_TURN` block, and refuses a turn identity that is
+already spent on another receipt — one human turn answers one advisory. Both
+routes further require a matching advisory presentation, so a choice cannot be
+harvested from a turn where nothing was shown.
+
+Acceptance is **idempotent by choice**: re-recording the same choice for the
+same advisory instance returns the existing receipt with `idempotent: true`,
+while recording a *different* choice against an instance that already has one is
+refused rather than overwriting it. A `defer-with-risk` receipt closes the
+question; a `run-now` receipt admits a fresh choice only when the model check it
+authorized did not actually produce a clean outcome (detected, harness error, or
+invalid).
+
+`correct-misattributed` is the one revocation path, and it is fenced on every
+side: it applies only to a `run-now` receipt, only when no matching presentation
+grounds it, and only when no model-check evidence exists for that attempt. It
+marks the receipt revoked with the reason `misattributed-unpresented-choice`
+rather than deleting it. All of these paths run under the audit lock.
+
 ### Scope and configuration
 
 | Event | Emitter | Notes |
@@ -327,7 +367,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | Event | Emitter | Trigger |
 |---|---|---|
 | `ERROR_LOGGED` | `tools/amadeus-lib.ts` (via `emitError` from every tool's `error()`) | Any tool CLI that calls `error(msg)` to exit non-zero; best-effort — no-op if no workflow in cwd, guarded against recursion |
-| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue|review|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion |
+| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | `acknowledge-compaction --choice <continue\|review\|restart>` called by the conductor after the user answers the compaction-awareness AskUserQuestion; also `session-takeover --confirm`, once the guard confirms a stale Kimi caller carrier was rebound (carries `Reason` = the repaired denial) |
 
 ### Worktree
 

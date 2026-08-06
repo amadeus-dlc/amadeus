@@ -12,7 +12,7 @@
 
 ## Traceability Matrix
 
-The verification system produces `amadeus-docs/verification/traceability.md` mapping:
+The verification system produces `<record>/verification/traceability.md` mapping:
 - Intent → Requirement → Story → Architecture Component → Code Module → Test Suite
 
 Status indicators:
@@ -22,7 +22,7 @@ Status indicators:
 
 ## Phase Check Output
 
-Each phase boundary check produces `amadeus-docs/verification/phase-check-[phase].md`:
+Each phase boundary check produces `<record>/verification/phase-check-<phase>.md`:
 - Coverage percentages (requirements with stories, stories with components, etc.)
 - Warnings (incomplete mappings)
 - Consistency checks (no contradictions between phases)

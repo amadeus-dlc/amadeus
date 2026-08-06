@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CHR-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "追補本文で新規知識として主張してよいのは (i) dispatch case のリテラル化のみ。(ii) EXPECTED_NONE_TO_CLI 追記と (iii) coverage registry 再生成は team.md:179 の cid:code-generation:integration-registry-regen が既に必須ステップとして収載済みであり、3点を1セットとして名指す際も (ii)(iii) を新規主張として書かず、既存 cid の既収載事項を『verb 追加』という発火条件の下で束ねる形にすること。独立 cid を新設せず integration-registry-regen への追補として統合する点も維持する。",
+  "rationale": "独立実測により c2 のみが既存 cid への追補に値する新規知識を含むと確認した。決め手は drift guard の抽出述語で、packages/framework/core/tools/amadeus-registry-drift.ts:95-103 の extractCliDispatchVerbs は switch body に対し case に続く二重引用符付き文字列リテラルのみを regex で抽出する(:100 の matchAll に渡す正規表現が case の直後にリテラル開始の二重引用符を要求する)。このため case SESSION_TAKEOVER_VERB: のような定数参照の dispatch arm は抽出集合から構造的に脱落し、guard は verb 欠落として無音で赤を出す。この機序を名指す規範は memory 層に存在しない — case リテラル / dispatch / drift guard / 抽出対象 を org.md・team.md・project.md 全域へ grep して該当 0 hit(ヒットしたのは無関係な functional-design:c11 のリテラル語と application-design:dual-key-consumer-inventory の検索キー面のみ)。一方 EXPECTED_NONE_TO_CLI と coverage registry 再生成は team.md:179 の integration-registry-regen が既にカバー済みで、c2 の3点中2点は適用実例にとどまる。よって追補は成立するが射程は (i) に限られ、これを reservation として転記する。不採用側の根拠: c1 は project.md の cid:code-generation:c1-260803-state-integrity(previousDigest が trusted base のバイト列を束縛する契約と再バインド手順)と cid:code-generation:c4-260803-state-integrity(比較対象と被検査対象が同一になる形の再現は自己参照のため帰属の証拠にならない)が既に述語を定めており、build-test-results.md のビルド面表自身が『cid:code-generation:c4-260803 の縮退条件どおり』と自己帰属しているため純粋な適用実例。c3 は tests/e2e/t10-halt-and-ask-discard.test.ts の負荷依存 flaky で、最終フル run が Failed files 0 / 845 files / 11,209 assertions で pass しており(build-test-results.md のフルスイート節)、規範ではなく Issue 起票で扱う運用事実 — diary 自身も起票候補として維持と記載する。c4 は cid:build-and-test:bt-proportional-selection(戦略名だけを根拠に検査を機械追加せず、生成しなかった検査は根拠付きで成果物に明記する)と required-sections の H2 floor 契約の適用実例であり、新規述語を含まない。",
+  "submittedAt": "2026-08-05T22:36:51Z"
+}

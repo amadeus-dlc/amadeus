@@ -6,9 +6,9 @@
 
 ---
 
-## 10 のスコープ
+## 11 の一般スコープ
 
-すべてのワークフローは、名前付きの 10 のスコープのいずれかの下で実行されます。各スコープはステージ集合とデフォルトの深度レベルを定義します。
+すべてのワークフローは、いずれか1つの名前付きスコープの下で実行されます。フレームワークには 15 のスコープが同梱されています — 以下の 11 の一般スコープと、Amadeus 自体の開発にのみ使う 4 つの[自己開発スコープ](#自己開発スコープself-)です。各スコープはステージ集合とデフォルトの深度レベルを定義します。
 
 ### enterprise
 
@@ -93,6 +93,52 @@
 
 複数開発者向けの手動レシピとクレームのセマンティクスについては、[ワークショップモード](workshop-mode.ja.md) を参照してください。
 
+### installer-distribution
+
+**使う場面:** 既存のフレームワークリポジトリに、エンドユーザー向けインストーラーとパッケージ配布経路を追加するとき。
+
+- **ステージ:** 32 のうち 25
+- **デフォルト深度:** Standard
+- **スキップ:** Team Formation(体制は既に確定済み)、両方の Mockup ステージ(インストーラーは CLI 体験であり、その内容は User Stories と Functional Design が受け持つ)、および稼働中のサービスを前提とする4つの運用ステージ — Observability Setup、Incident Response、Performance Validation、Feedback Optimization
+- **自動検出されない:** `keywords: []` のため、`/amadeus --scope installer-distribution` で明示的に選択します
+
+---
+
+## 自己開発スコープ(`self-*`)
+
+4 つのスコープは、あなたのプロジェクトではなく **Amadeus フレームワーク自体**の開発のために存在します。Amadeus を使って自分のソフトウェアを構築している場合、これらを選択することはありません。ここに記載しているのは、`/amadeus --help` やコンパイル済みスコープテーブルに一般スコープと並んで現れるためです。
+
+| スコープ | EXECUTE / 合計 | 深度 | テスト戦略 | 使う場面 |
+|-------|-----------------|-------|---------------|----------|
+| `self-feature` | 14 / 32 | Standard | Comprehensive | Amadeus の実質的な新しい挙動、または複数コンポーネントにまたがる変更 |
+| `self-fix` | 7 / 32 | Minimal | Comprehensive | 既存の契約との整合を回復する、範囲の限定された是正 |
+| `self-refactor` | 8 / 32 | Minimal | Comprehensive | 挙動を保ったまま Amadeus 内部の構造を変える変更 |
+| `self-document` | 9 / 32 | Standard | Minimal | `README*.md` と `docs/` 配下の執筆・更新 |
+
+一般スコープとの違いは2点です。
+
+**決して自動検出されません。** 4 つとも `keywords: []` を宣言しています。スコープ推論はアルファベット順で最初にキーワード一致したものを採るため、`docs` や `refactor` のような一般的な語を主張すると、以降のコールドスタートで別のスコープを恒久的に覆い隠してしまいます。選択は常に明示的です。
+
+```
+/amadeus --scope self-feature
+/amadeus --scope self-fix
+```
+
+**検証は深度に合わせて緩みません。** `self-fix` と `self-refactor` は Minimal 深度で実行されますが `testStrategy: Comprehensive` を維持します。成果物が軽量であることは、build-and-test 境界の軽量化を意味しません — 該当するテスト、生成されたハーネスの parity、`dist:check`、`promote:self:check` はいずれも実行されます。これは、深度から Minimal テストを継承する一般の `fix` / `refactor` スコープとの意図的な差異です。
+
+### self-* スコープの使い分け
+
+すでに存在するものを起点に判断します。
+
+- 意図した挙動や契約が**すでに存在**し、作業がそれとの整合を回復するもの — 不具合、ハーネス間の parity のずれ、生成物やドキュメントの drift、既存のプロジェクト方針の訂正 → `self-fix`。
+- 挙動は**保たれ**、内部構造だけが変わる → `self-refactor`。`self-fix` の経路に functional design を加え、保つべき挙動と目標とする構造を実装前に明示します。
+- **新しい**機能・仕様・アーキテクチャが関わる → `self-feature`。
+- 成果物が**文章**である → `self-document`。
+
+`self-document` が reverse-engineering を第一級のステージとして残しているのは意図的です。ドキュメントは無音で drift します — 3 リリース前に改名されたフラグをページが説明していても、何も失敗しません。そのため、あらゆる記述は「かつてそう言われていた内容」ではなく、実装または git 履歴で実測した事実に遡れる必要があります。build-and-test ステージでは、ドキュメントのゲート(レガシー参照、言語ルール、EN/JA の対応)が実行されます。
+
+`self-feature` は 2026 年 7 月に、完了した intent 群の実績に基づいて軽量化されました。`feasibility`、`approval-handoff`、`practices-discovery`、`nfr-requirements` が SKIP へ移りました — いずれも結果を変えた記録がなく、SKIP のたびに承認ゲートの待ち点が1つ減るためです。個別の intent で本当に必要な場合は、`/amadeus compose` でスキップされたステージを戻せます。
+
 ---
 
 ## スコープルーティングテーブル
@@ -111,6 +157,11 @@
 | `infra` | 13 / 32 | Standard | Standard | インフラ変更 |
 | `security-patch` | 10 / 32 | Minimal | Minimal | CVE 対応 |
 | `workshop` | 25 / 32 | Standard | **Minimal** | AI-DLC ワークショップまたはトレーニングセッション |
+| `installer-distribution` | 25 / 32 | Standard | Standard | エンドユーザー向けインストーラーと配布経路の追加 |
+| `self-feature` | 14 / 32 | Standard | **Comprehensive** | Amadeus 自己開発 — 新しい挙動 |
+| `self-fix` | 7 / 32 | Minimal | **Comprehensive** | Amadeus 自己開発 — 範囲限定の是正 |
+| `self-refactor` | 8 / 32 | Minimal | **Comprehensive** | Amadeus 自己開発 — 構造変更 |
+| `self-document` | 9 / 32 | Standard | **Minimal** | Amadeus 自己開発 — ドキュメント |
 | (自動検出) | 可変 | 可変 | 可変 | AI が自由記述の intent から判定 |
 
 > **プロジェクトごとのデフォルトスコープ:** チームは `.claude/settings.json` に `AMADEUS_DEFAULT_SCOPE` を設定することで、プロジェクトのデフォルトスコープを事前設定できます — 全参加者がフラグを覚えずに `workshop` から開始すべきワークショップに便利です。[カスタマイズ § プロジェクトごとのデフォルトスコープ](13-customization.ja.md#per-project-default-scope) を参照してください。
@@ -310,6 +361,10 @@ You can request different depth or test strategy at any approval gate.
 | スコープ | 深度 | テスト戦略 | なぜ異なるのか? |
 |-------|-------|---------------|----------------|
 | `workshop` | Standard | **Minimal** | 学習のための完全な成果物、ただしペースを保つための高速な Nyquist テスト |
+| `self-feature` | Standard | **Comprehensive** | フレームワークの変更は完全な検証境界を通す必要がある |
+| `self-fix` | Minimal | **Comprehensive** | 成果物は軽量でも、ハーネス parity と配布チェックは実行する |
+| `self-refactor` | Minimal | **Comprehensive** | 挙動が保たれることは仮定せず実証する必要がある |
+| `self-document` | Standard | **Minimal** | 成果物は文章であり、検証はドキュメントのゲートが担う |
 
 その他のすべてのスコープは、テスト戦略を深度から継承します。`--test-strategy` でいつでも上書きできます。
 
@@ -356,6 +411,8 @@ You can request different depth or test strategy at any approval gate.
 | CVE またはセキュリティ脆弱性への対応 | `security-patch` |
 | コンプライアンスを必要とする規制対象機能 | `enterprise` |
 | AI-DLC ワークショップまたはトレーニングラボ | `workshop` |
+| フレームワークリポジトリへのインストーラー追加 | `installer-distribution` |
+| Amadeus フレームワーク自体の開発 | [`self-*` スコープ](#自己開発スコープself-) |
 
 迷ったら `feature` から始めてください — 全 32 ステージを含み、各ステージの承認ゲートで個々のステージをスキップできます。
 

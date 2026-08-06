@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   activeIntent,
   activeIntentUuid,
@@ -16,11 +16,48 @@ import {
 } from "./amadeus-lib.ts";
 import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
 import {
+  advisoriesForHost,
+  declaredFormalCheckArgv,
+  isDeclaredAdvisoryCode,
+  isKnownAdvisoryCode,
+  resolveArgvTokens,
+  type RunEvaluator,
+} from "./amadeus-advisory-declaration.ts";
+import {
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
   type Advisory,
   type AdvisoryCode,
 } from "./amadeus-plugin-activation.ts";
+import type {
+  AutoDecisionRecord,
+  DecisionBasisKind,
+  EffectClassification,
+  createInteractionOccurrence as CreateInteractionOccurrence,
+} from "./amadeus-intent-autonomy.ts";
+import type {
+  AutonomyDecisionResult,
+  IntentAutonomyTransaction,
+} from "./amadeus-intent-autonomy-runtime.ts";
+import type { readIntentAutonomyTransactionsFromAudit as ReadAutonomyTransactions } from "./amadeus-intent-autonomy-replay.ts";
+import type { commitProductionQuestionDecision as CommitQuestionDecision } from "./amadeus-intent-autonomy-production.ts";
+
+// The autonomy stack is reached only on the unattended paths (C16's ruling and
+// the auto arm of acceptance). The UserPromptSubmit mint hook imports THIS
+// module on every human prompt and has a sub-300ms budget, so those modules are
+// required at the call rather than at load: types above are erased, and the
+// three bindings below cost nothing until an advisory is actually resolved.
+function autonomyModule(): { createInteractionOccurrence: typeof CreateInteractionOccurrence } {
+  return require("./amadeus-intent-autonomy.ts");
+}
+
+function autonomyReplayModule(): { readIntentAutonomyTransactionsFromAudit: typeof ReadAutonomyTransactions } {
+  return require("./amadeus-intent-autonomy-replay.ts");
+}
+
+function autonomyProductionModule(): { commitProductionQuestionDecision: typeof CommitQuestionDecision } {
+  return require("./amadeus-intent-autonomy-production.ts");
+}
 
 export const ADVISORY_CHOICE_OPTIONS = [
   { choice: "run-now", label: "今すぐ実行する" },
@@ -53,11 +90,39 @@ export type HumanTurnProvenance = {
   eventIdentity: string;
 };
 
+// How a receipt earned the right to exist. ONE acceptance function reads this
+// union (#2253 FR-ADV-3): there is no second implementation for the unattended
+// route, only a second arm. Each arm carries exactly what its own three
+// acceptance checks (grounding, single-spend, presentation) consume — nothing
+// decorative.
+//
+// `phase` and `graphRevision` on the auto arm are NOT trusted assertions: both
+// are digest inputs of the occurrence id, so a caller that misstates either one
+// produces an occurrence id that cannot match the AUTO_DECIDED record the
+// journal holds, and acceptance refuses. That is what binds a decision to THIS
+// advisory instance rather than to any decision the ladder ever made.
+export type AdvisoryChoiceProvenance =
+  | {
+      kind: "human-turn";
+      timestamp: string;
+      shard: string;
+      eventIdentity: string;
+    }
+  | {
+      kind: "auto-decision";
+      decisionId: string;
+      basisKind: DecisionBasisKind;
+      basisFingerprint: string;
+      projectionRevision: number;
+      phase: string;
+      graphRevision: string;
+    };
+
 export type AdvisoryChoiceReceipt = {
-  schema: 1;
+  schema: 2;
   identity: AdvisoryIdentity;
   choice: AdvisoryChoice;
-  humanTurn: HumanTurnProvenance;
+  provenance: AdvisoryChoiceProvenance;
   recordedAt: string;
   revokedAt?: string;
   revocationReason?: "misattributed-unpresented-choice";
@@ -71,7 +136,7 @@ export type AdvisoryHoldVerdict =
   | { kind: "hold"; unresolved: PendingAdvisory[] };
 
 export type AdvisoryChoiceStore = {
-  schema: 1;
+  schema: 2;
   pending: PendingAdvisory[];
   receipts: AdvisoryChoiceReceipt[];
 };
@@ -110,7 +175,8 @@ export type AdvisoryChoiceGuardResult =
 const STORE_FILE = ".amadeus-advisory-choice.json";
 const MODEL_CHECK_DIR = ".amadeus-advisory-check";
 const CHOICES = new Set<string>(ADVISORY_CHOICE_OPTIONS.map((option) => option.choice));
-const CODES = new Set<string>(["not-ready", "changed", "never-run"]);
+// The three activation kinds plus any plugin-declared slug (ADR-6 revision).
+// Validation lives in the declaration parser so both sides read one rule.
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value === value.trim();
@@ -327,27 +393,41 @@ function parseIdentity(value: unknown): ParseResult<AdvisoryIdentity> {
   for (const key of required) {
     if (!nonEmptyString(value[key])) return { ok: false, reason: `identity.${key} must be a non-empty string` };
   }
-  if (!nonEmptyString(value.code) || !CODES.has(value.code)) {
+  if (!nonEmptyString(value.code) || !isKnownAdvisoryCode(value.code)) {
     return { ok: false, reason: "identity.code is invalid" };
   }
   return { ok: true, value: value as unknown as AdvisoryIdentity };
 }
 
+function provenanceProblem(value: unknown): string | null {
+  if (!isPlainObject(value)) return "provenance must be an object";
+  if (value.kind === "human-turn") {
+    if (!nonEmptyString(value.timestamp) || Number.isNaN(Date.parse(value.timestamp))) {
+      return "provenance.timestamp is invalid";
+    }
+    if (!nonEmptyString(value.shard)) return "provenance.shard is invalid";
+    return nonEmptyString(value.eventIdentity) ? null : "provenance.eventIdentity is invalid";
+  }
+  if (value.kind !== "auto-decision") return "provenance kind is invalid";
+  if (!nonEmptyString(value.decisionId)) return "provenance.decisionId is invalid";
+  if (!nonEmptyString(value.basisKind)) return "provenance.basisKind is invalid";
+  if (!nonEmptyString(value.basisFingerprint)) return "provenance.basisFingerprint is invalid";
+  if (typeof value.projectionRevision !== "number" || !Number.isInteger(value.projectionRevision)) {
+    return "provenance.projectionRevision is invalid";
+  }
+  if (!nonEmptyString(value.phase)) return "provenance.phase is invalid";
+  return nonEmptyString(value.graphRevision) ? null : "provenance.graphRevision is invalid";
+}
+
 export function parseAdvisoryChoiceReceipt(value: unknown): ParseResult<AdvisoryChoiceReceipt> {
-  if (!isPlainObject(value) || value.schema !== 1) return { ok: false, reason: "receipt schema is invalid" };
+  if (!isPlainObject(value) || value.schema !== 2) return { ok: false, reason: "receipt schema is invalid" };
   const identity = parseIdentity(value.identity);
   if (!identity.ok) return identity;
   if (!nonEmptyString(value.choice) || !CHOICES.has(value.choice)) {
     return { ok: false, reason: "receipt choice is invalid" };
   }
-  if (!isPlainObject(value.humanTurn)) return { ok: false, reason: "humanTurn must be an object" };
-  if (!nonEmptyString(value.humanTurn.timestamp) || Number.isNaN(Date.parse(value.humanTurn.timestamp))) {
-    return { ok: false, reason: "humanTurn.timestamp is invalid" };
-  }
-  if (!nonEmptyString(value.humanTurn.shard)) return { ok: false, reason: "humanTurn.shard is invalid" };
-  if (!nonEmptyString(value.humanTurn.eventIdentity)) {
-    return { ok: false, reason: "humanTurn.eventIdentity is invalid" };
-  }
+  const provenance = provenanceProblem(value.provenance);
+  if (provenance !== null) return { ok: false, reason: provenance };
   if (!nonEmptyString(value.recordedAt) || Number.isNaN(Date.parse(value.recordedAt))) {
     return { ok: false, reason: "recordedAt is invalid" };
   }
@@ -380,6 +460,129 @@ export function createPendingAdvisory(
     identity: { ...identity, advisoryInstance: instanceFactory() },
     message,
     createdAt: now,
+  };
+}
+
+// --- C16: the unattended resolution of an advisory choice (#2253) ---
+//
+// An advisory choice is mapped onto the EXISTING `question` interaction kind
+// rather than a new one (ADR-6): the ladder, the audit codec, the review queue
+// and the scope vocabulary all keep working unchanged. What makes two raises of
+// the same advisory distinct is the advisory INSTANCE, carried in both the
+// interaction id and the selector.
+
+export function advisoryInteractionId(identity: AdvisoryIdentity): string {
+  return `advisory-${identity.advisoryInstance}`;
+}
+
+export function advisorySelector(identity: AdvisoryIdentity): string {
+  return `advisory:${identity.plugin}:${identity.code}:${identity.advisoryInstance}`;
+}
+
+// FR-ADV-4, PRIMARY mechanism: a run-required advisory offers ONE option, so
+// `defer-with-risk` is not something the unattended route declines to pick — it
+// is not in the space it picks from. The human route's two-option presentation
+// (ADVISORY_CHOICE_OPTIONS) is untouched.
+export function advisoryChoiceOptionIds(runRequired: boolean): readonly string[] {
+  return runRequired ? ["run-now"] : ["run-now", "defer-with-risk"];
+}
+
+// FR-ADV-4, SECONDARY mechanism: deferring past a raised advisory waives a
+// quality signal, and `quality-waiver` is a prohibited effect classification, so
+// even a ladder that somehow selected it would be refused at effect
+// authorization (amadeus-intent-autonomy.ts authorizeDecisionEffect /
+// SemiAuthority.authorizeEffect, both of which admit `workflow-reversible`
+// only). Two independent barriers, each with its own falsification.
+export const ADVISORY_CHOICE_EFFECT_CLASSIFICATIONS: Readonly<Record<AdvisoryChoice, EffectClassification>> = {
+  "run-now": "workflow-reversible",
+  "defer-with-risk": "quality-waiver",
+};
+
+// --- C17: the acceptance predicates the unattended provenance has to clear ---
+
+// Grounding, part one: what the journal actually decided. A receipt's own claim
+// about a decision id proves nothing; only an AUTO_DECIDED record committed to
+// the audit trail does.
+export function autoDecisionsFromTransactions(
+  transactions: readonly IntentAutonomyTransaction[],
+): readonly AutoDecisionRecord[] {
+  return transactions.flatMap((transaction) =>
+    transaction.events.flatMap((event) => (event.type === "AUTO_DECIDED" ? [event.decision] : []))
+  );
+}
+
+// Presentation, unattended side. The human route asks "was this advisory shown
+// to the human in this turn?"; the unattended route asks the same question of
+// the ladder: is the decision the journal holds the decision for THIS advisory
+// instance? The occurrence id is a digest over the interaction id — which
+// carries the instance — and over the phase and graph revision, so a decision
+// made about anything else cannot be pointed at this advisory by asserting it.
+export function advisoryOccurrenceMatchesDecision(input: {
+  readonly intentUuid: string;
+  readonly identity: AdvisoryIdentity;
+  readonly decision: AutoDecisionRecord;
+  readonly phase: string;
+  readonly graphRevision: string;
+}): boolean {
+  try {
+    return autonomyModule().createInteractionOccurrence({
+      intentUuid: input.intentUuid,
+      kind: "question",
+      stage: input.identity.checkpoint,
+      phase: input.phase,
+      bolt: null,
+      interactionId: advisoryInteractionId(input.identity),
+      selector: advisorySelector(input.identity),
+      question: input.decision.question,
+      optionIds: input.decision.optionIds,
+      graphRevision: input.graphRevision,
+    }).occurrenceId === input.decision.occurrenceId;
+  } catch {
+    return false;
+  }
+}
+
+// Single spend, both provenance kinds through one key. A human turn is spent by
+// its (shard, event) pair; a ladder decision by its decision id. The keys live
+// in disjoint namespaces, so one kind can never consume the other's budget.
+function provenanceSpendKey(provenance: AdvisoryChoiceProvenance): string {
+  return provenance.kind === "human-turn"
+    ? JSON.stringify(["human-turn", provenance.shard, provenance.eventIdentity])
+    : JSON.stringify(["auto-decision", provenance.decisionId]);
+}
+
+export function advisoryProvenanceAlreadySpent(
+  receipts: readonly AdvisoryChoiceReceipt[],
+  provenance: AdvisoryChoiceProvenance,
+): boolean {
+  const key = provenanceSpendKey(provenance);
+  return receipts.some((receipt) => provenanceSpendKey(receipt.provenance) === key);
+}
+
+export type AdvisoryAutoResolution =
+  | {
+      readonly kind: "resolved";
+      readonly choice: AdvisoryChoice;
+      readonly decision: AutoDecisionRecord;
+      readonly projectionRevision: number;
+    }
+  | { readonly kind: "human-required"; readonly reason: string };
+
+// FR-ADV-2, fail-closed: an allow-list of ONE shape. `decided` AND `run-now` is
+// the only way out; everything else — a decided `defer-with-risk`, a park, a
+// conflict, an abort, a reservation, an outcome kind that does not exist yet —
+// falls to the human route without being enumerated. A new ladder outcome added
+// tomorrow is human-required by construction, not by remembering to list it.
+export function translateAdvisoryDecision(result: AutonomyDecisionResult): AdvisoryAutoResolution {
+  if (result.kind !== "decided") return { kind: "human-required", reason: `ladder-outcome-${result.kind}` };
+  if (result.decision.selectedOptionId !== "run-now") {
+    return { kind: "human-required", reason: `unattended-choice-not-run-now:${result.decision.selectedOptionId}` };
+  }
+  return {
+    kind: "resolved",
+    choice: "run-now",
+    decision: result.decision,
+    projectionRevision: result.receipt.projectionRevision,
   };
 }
 
@@ -447,8 +650,13 @@ function parsePending(value: unknown): ParseResult<PendingAdvisory> {
   return { ok: true, value: value as unknown as PendingAdvisory };
 }
 
+// Schema 2 (#2253). A schema 1 store on disk is NOT translated: it fails to
+// parse, and the caller's existing `!storeResult.ok` arm turns that into a
+// fail-closed hold. Reading an old receipt shape would mean deciding what a
+// `humanTurn`-only receipt means under a provenance union, and the safe answer
+// to that question is to ask the human again — which the hold already does.
 function parseStore(value: unknown): ParseResult<AdvisoryChoiceStore> {
-  if (!isPlainObject(value) || value.schema !== 1 || !Array.isArray(value.pending) || !Array.isArray(value.receipts)) {
+  if (!isPlainObject(value) || value.schema !== 2 || !Array.isArray(value.pending) || !Array.isArray(value.receipts)) {
     return { ok: false, reason: "advisory choice store shape is invalid" };
   }
   const pending: PendingAdvisory[] = [];
@@ -463,7 +671,7 @@ function parseStore(value: unknown): ParseResult<AdvisoryChoiceStore> {
     if (!parsed.ok) return parsed;
     receipts.push(parsed.value);
   }
-  return { ok: true, value: { schema: 1, pending, receipts } };
+  return { ok: true, value: { schema: 2, pending, receipts } };
 }
 
 function storePath(projectDir: string): string {
@@ -472,7 +680,7 @@ function storePath(projectDir: string): string {
 
 function readStore(projectDir: string): ParseResult<AdvisoryChoiceStore> {
   const path = storePath(projectDir);
-  if (!existsSync(path)) return { ok: true, value: { schema: 1, pending: [], receipts: [] } };
+  if (!existsSync(path)) return { ok: true, value: { schema: 2, pending: [], receipts: [] } };
   try {
     return parseStore(JSON.parse(readFileSync(path, "utf-8")));
   } catch (error) {
@@ -700,6 +908,64 @@ function formalCheckRoute(
   };
 }
 
+// Generalization point 2 of ADR-6 (revised): a declared advisory's run-now
+// command comes from its own manifest, resolved through the reserved tokens.
+// A declaration with no executable side (formalCheck: null) contributes no
+// route — its release is the plugin's own evaluator saying no-hold on the next
+// `next`, never a verification this engine invents on its behalf.
+function declaredFormalCheckRoute(
+  projectDir: string,
+  activationHostRoot: string | undefined,
+  pending: PendingAdvisory,
+  attempt: number,
+): AdvisoryFormalCheckRoute | null {
+  if (activationHostRoot === undefined) return null;
+  const argv = declaredFormalCheckArgv(
+    dirname(activationHostRoot),
+    pending.identity.plugin,
+    pending.identity.code,
+  );
+  if (argv === null) return null;
+  const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
+  const resolved = resolveArgvTokens([...argv], {
+    out: output,
+    "advisory-instance": pending.identity.advisoryInstance,
+    target: pending.identity.target,
+    "spec-identity": pending.identity.specIdentity,
+  });
+  if (resolved === null) return null;
+  mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
+  return {
+    stage: "formal-model-check",
+    command: resolved.map((argument) => JSON.stringify(argument)).join(" "),
+    output_dir: output,
+    target: pending.identity.target,
+    spec_identity: pending.identity.specIdentity,
+    advisory_instance: pending.identity.advisoryInstance,
+  };
+}
+
+// A declared advisory with no executable side (formalCheck: null) has nothing
+// this engine can run and verify on the plugin's behalf, so a run-now choice
+// releases nothing: the hold stands until the plugin's own evaluator stops
+// raising it (BR-U2-05). The human's explicit defer-with-risk remains the
+// checkpoint's own escape hatch and is untouched by this rule.
+const DECLARED_RELEASE_RULE =
+  "declared advisory: release requires the plugin's own evaluator to return no-hold";
+
+// The report-side mirror of that judgment: ask the declaring plugins what they
+// raise right now. `null` means the host could not be resolved, in which case
+// the caller keeps the hold closed rather than guessing a release.
+function raisedDeclaredCodes(
+  activationHostRoot: string | undefined,
+  stage: string,
+  runEvaluator?: RunEvaluator,
+): Set<string> | null {
+  if (activationHostRoot === undefined) return null;
+  const raised = advisoriesForHost(activationHostRoot, stage, undefined, runEvaluator);
+  return new Set(raised.map((advisory) => `${advisory.plugin}/${String(advisory.code)}`));
+}
+
 function resolveRunRequiredHold(
   projectDir: string,
   stage: string,
@@ -712,6 +978,17 @@ function resolveRunRequiredHold(
   for (const pending of pendingItems) {
     const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
+    if (isDeclaredAdvisoryCode(pending.identity.code)) {
+      const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
+      const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
+      if (route === null) {
+        directiveItems.push({ ...directiveItem(pending), result: DECLARED_RELEASE_RULE });
+        continue;
+      }
+      directiveItems.push(directiveItem(pending));
+      formalChecks.push(route);
+      continue;
+    }
     if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
     const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
@@ -783,7 +1060,12 @@ export function closeAdvisoryInstancesForStage(
   });
 }
 
-export function advisoryReportHoldReason(projectDir: string, stage: string): string | null {
+export function advisoryReportHoldReason(
+  projectDir: string,
+  stage: string,
+  activationHostRoot?: string,
+  runEvaluator?: RunEvaluator,
+): string | null {
   return withAuditLock(projectDir, () => {
     const path = storePath(projectDir);
     if (!existsSync(path)) return null;
@@ -803,11 +1085,23 @@ export function advisoryReportHoldReason(projectDir: string, stage: string): str
       ).join(", ")}`;
     }
     if (verdict.kind === "resolved") return null;
+    let declaredRaised: Set<string> | null | undefined;
     const failures = verdict.pending.flatMap((item) => {
-      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
-      const latest = verdict.receipts
+      const latestChoice = verdict.receipts
         .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
+      const label = `${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}`;
+      if (isDeclaredAdvisoryCode(item.identity.code)) {
+        if (latestChoice?.choice !== "run-now") return [];
+        if (declaredRaised === undefined) {
+          declaredRaised = raisedDeclaredCodes(activationHostRoot, stage, runEvaluator);
+        }
+        const key = `${item.identity.plugin}/${item.identity.code}`;
+        if (declaredRaised !== null && !declaredRaised.has(key)) return [];
+        return [`${label}: ${DECLARED_RELEASE_RULE}`];
+      }
+      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
+      const latest = latestChoice;
       if (latest?.choice !== "run-now") return [];
       const attempt = storeResult.value.receipts.filter((receipt) =>
         activeReceiptMatches(receipt, item) && receipt.choice === "run-now"
@@ -861,38 +1155,76 @@ function isGroundedHumanTurn(projectDir: string, humanTurn: HumanTurnProvenance)
   }
 }
 
-export function recordProtectedAdvisoryChoice(
+// Grounding for the unattended arm: the decision id has to name an AUTO_DECIDED
+// record the journal holds, AND that record has to be the one this advisory
+// instance produces. Both halves are needed — the first stops an invented
+// decision id, the second stops a real decision about something else from being
+// re-pointed at an advisory.
+function groundedAutoDecision(
   projectDir: string,
-  prompt: string,
-  humanTurn: HumanTurnProvenance,
+  provenance: Extract<AdvisoryChoiceProvenance, { kind: "auto-decision" }>,
+  open: readonly PendingAdvisory[],
+): boolean {
+  const intentUuid = activeIntentUuid(projectDir);
+  if (intentUuid === null) return false;
+  let decisions: readonly AutoDecisionRecord[];
+  try {
+    decisions = autoDecisionsFromTransactions(autonomyReplayModule().readIntentAutonomyTransactionsFromAudit(projectDir));
+  } catch {
+    return false;
+  }
+  const decision = decisions.find((candidate) => candidate.decisionId === provenance.decisionId);
+  if (decision === undefined) return false;
+  return open.some((pending) =>
+    advisoryOccurrenceMatchesDecision({
+      intentUuid,
+      identity: pending.identity,
+      decision,
+      phase: provenance.phase,
+      graphRevision: provenance.graphRevision,
+    })
+  );
+}
+
+// The ONE acceptance function (#2253 FR-ADV-3). Both provenance kinds clear the
+// same three checks at the same depth; only what counts as evidence differs.
+// There is no second function for the unattended route, so there is no way for
+// one route's guarantees to drift away from the other's.
+export function recordAdvisoryChoice(
+  projectDir: string,
+  choice: AdvisoryChoice,
+  provenance: AdvisoryChoiceProvenance,
   now: string = new Date().toISOString(),
 ): boolean {
-  const choice = choiceFromExactPrompt(prompt);
-  if (choice === null) return false;
   return withAuditLock(projectDir, () => {
     const storeResult = readStore(projectDir);
     if (!storeResult.ok) return false;
     const store = storeResult.value;
-    if (humanTurn.shard !== auditShardName(projectDir)) return false;
-    if (!isGroundedHumanTurn(projectDir, humanTurn)) return false;
-    if (store.receipts.some((receipt) =>
-      receipt.humanTurn.eventIdentity === humanTurn.eventIdentity
-      && receipt.humanTurn.shard === humanTurn.shard
-    )) return false;
+    if (provenance.kind === "human-turn" && provenance.shard !== auditShardName(projectDir)) return false;
+    // Single spend, hoisted ahead of the kind-specific checks so it holds across
+    // provenance kinds (FR-ADV-3): one decision, or one turn, backs one receipt.
+    if (advisoryProvenanceAlreadySpent(store.receipts, provenance)) return false;
+    // The instance-level gate, also ahead of the kind-specific checks: an
+    // advisory already answered does not accept a second answer from EITHER
+    // route until its own evidence says the answer did not settle it.
     const open = store.pending.filter(
       (pending) =>
         pending.closedAt === undefined &&
-        Math.floor(Date.parse(humanTurn.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000) &&
+        (provenance.kind === "auto-decision" ||
+          Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000)) &&
         acceptsFreshChoice(projectDir, pending, store.receipts),
     );
     if (open.length === 0) return false;
-    if (!hasMatchingAdvisoryPresentation(projectDir, open, humanTurn)) return false;
+    if (provenance.kind === "human-turn") {
+      if (!isGroundedHumanTurn(projectDir, provenance)) return false;
+      if (!hasMatchingAdvisoryPresentation(projectDir, open, provenance)) return false;
+    } else if (!groundedAutoDecision(projectDir, provenance, open)) return false;
     for (const pending of open) {
       store.receipts.push({
-        schema: 1,
+        schema: 2,
         identity: pending.identity,
         choice,
-        humanTurn,
+        provenance,
         recordedAt: now,
       });
     }
@@ -970,7 +1302,7 @@ function activeReceiptFor(
 // Every condition a FIRST record of an instance has to clear, in one place.
 // Returns the refusal reason, or null when the choice may be written. The
 // provenance checks (shard, grounding, single-spend) are the same ones the
-// prompt route applies in recordProtectedAdvisoryChoice; only the presentation
+// prompt route applies in recordAdvisoryChoice; only the presentation
 // check is relaxed from adjacency to existence.
 function freshRecordRefusal(
   projectDir: string,
@@ -984,11 +1316,9 @@ function freshRecordRefusal(
   if (!isGroundedHumanTurn(projectDir, humanTurn)) {
     return "the latest human turn is not grounded in the audit trail";
   }
-  const spent = store.receipts.some((receipt) =>
-    receipt.humanTurn.eventIdentity === humanTurn.eventIdentity
-    && receipt.humanTurn.shard === humanTurn.shard
-  );
-  if (spent) return "the latest human turn is already consumed by another advisory receipt";
+  if (advisoryProvenanceAlreadySpent(store.receipts, { kind: "human-turn", ...humanTurn })) {
+    return "the latest human turn is already consumed by another advisory receipt";
+  }
   if (!hasRecordedAdvisoryPresentation(projectDir, open)) {
     const instance = open[0]?.identity.advisoryInstance ?? "this instance";
     return `no advisory presentation is recorded for ${instance}; present it before recording the choice`;
@@ -1068,10 +1398,10 @@ export function recordAdvisoryChoiceDecision(
     if (refusal !== null) return { ok: false as const, reason: refusal };
 
     const receipt: AdvisoryChoiceReceipt = {
-      schema: 1,
+      schema: 2,
       identity: open[0]!.identity,
       choice: choice as AdvisoryChoice,
-      humanTurn,
+      provenance: { kind: "human-turn", ...humanTurn },
       recordedAt: now,
     };
     store.receipts.push(receipt);
@@ -1093,9 +1423,12 @@ export function revokeMisattributedAdvisoryChoice(
       item.closedAt === undefined && item.identity.advisoryInstance === advisoryInstance
     );
     if (open.length === 0) return { ok: false, reason: "open advisory instance not found" };
+    // Correction covers the human route only: an unattended receipt has no
+    // human turn to have been misattributed to.
     const matching = storeResult.value.receipts.filter((receipt) =>
       receipt.revokedAt === undefined
-      && receipt.humanTurn.eventIdentity === humanTurnIdentity
+      && receipt.provenance.kind === "human-turn"
+      && receipt.provenance.eventIdentity === humanTurnIdentity
       && open.some((pending) => identityKey(receipt.identity) === identityKey(pending.identity))
     );
     const receipt = matching.at(-1);
@@ -1105,7 +1438,8 @@ export function revokeMisattributedAdvisoryChoice(
     const pending = open.find((item) => identityKey(item.identity) === identityKey(receipt.identity));
     if (pending === undefined) return { ok: false, reason: "open advisory identity not found" };
     if (receipt.choice !== "run-now") return { ok: false, reason: "only run-now receipts can be corrected" };
-    if (hasMatchingAdvisoryPresentation(projectDir, [pending], receipt.humanTurn)) {
+    if (receipt.provenance.kind !== "human-turn") return { ok: false, reason: "matching latest receipt not found" };
+    if (hasMatchingAdvisoryPresentation(projectDir, [pending], receipt.provenance)) {
       return { ok: false, reason: "receipt is grounded in a matching advisory presentation" };
     }
     const attempt = matching.filter((item) => item.choice === "run-now").length;
@@ -1117,6 +1451,61 @@ export function revokeMisattributedAdvisoryChoice(
     writeStore(projectDir, storeResult.value);
     return { ok: true };
   });
+}
+
+// C16 (#2253 FR-ADV-1). A hold reaches here only after guardAdvisoryChoices has
+// already released its lock, so the ladder and the acceptance below run in their
+// own sections rather than nested inside the guard's.
+//
+// Every advisory in the hold is put to the ladder separately, and ALL of them
+// must come back `run-now`: one advisory the ladder will not decide keeps the
+// whole checkpoint with the human, which is the same thing the human route does
+// (one answer covers the whole presented set, or none of it does).
+//
+// The ruling itself is NOT re-implemented here — commitProductionQuestionDecision
+// is the one path a question travels, so semi and full reach the ladder through
+// the same authorization they always did.
+export function resolveAdvisoryChoiceAutonomously(input: {
+  readonly projectDir: string;
+  readonly hold: Extract<AdvisoryChoiceGuardResult, { kind: "hold" }>;
+  readonly phase: string;
+  readonly graphRevision: string;
+}): AdvisoryAutoResolution {
+  if (input.hold.advisories.length === 0) return { kind: "human-required", reason: "empty-advisory-hold" };
+  const optionIds = advisoryChoiceOptionIds(input.hold.runRequired);
+  let first: Extract<AdvisoryAutoResolution, { kind: "resolved" }> | null = null;
+  for (const item of input.hold.advisories) {
+    const identity: AdvisoryIdentity = {
+      plugin: item.plugin,
+      code: item.code,
+      checkpoint: item.checkpoint,
+      target: item.target,
+      specIdentity: item.spec_identity,
+      intentRun: item.intent_run,
+      advisoryInstance: item.advisory_instance,
+    };
+    let outcome: AutonomyDecisionResult;
+    try {
+      outcome = autonomyProductionModule().commitProductionQuestionDecision({
+        projectDir: input.projectDir,
+        stage: item.checkpoint,
+        phase: input.phase,
+        graphRevision: input.graphRevision,
+        questionId: advisoryInteractionId(identity),
+        selector: advisorySelector(identity),
+        question: item.message,
+        optionIds,
+        recommendedOptionId: "run-now",
+        effectClassifications: ADVISORY_CHOICE_EFFECT_CLASSIFICATIONS,
+      });
+    } catch (error) {
+      return { kind: "human-required", reason: `advisory-decision-failed:${String(error)}` };
+    }
+    const translated = translateAdvisoryDecision(outcome);
+    if (translated.kind !== "resolved") return translated;
+    first ??= translated;
+  }
+  return first ?? { kind: "human-required", reason: "empty-advisory-hold" };
 }
 
 function cliFlag(args: string[], name: string): string | null {
@@ -1151,16 +1540,15 @@ if (import.meta.main) {
       console.error(recorded.reason);
       process.exit(1);
     }
+    const bound = recorded.value.receipt.provenance;
     console.log(JSON.stringify({
       recorded: true,
       idempotent: recorded.value.idempotent,
       advisory_instance: advisoryInstance,
       choice: recorded.value.receipt.choice,
-      human_turn: {
-        shard: recorded.value.receipt.humanTurn.shard,
-        event_identity: recorded.value.receipt.humanTurn.eventIdentity,
-        timestamp: recorded.value.receipt.humanTurn.timestamp,
-      },
+      human_turn: bound.kind === "human-turn"
+        ? { shard: bound.shard, event_identity: bound.eventIdentity, timestamp: bound.timestamp }
+        : null,
     }));
     process.exit(0);
   }

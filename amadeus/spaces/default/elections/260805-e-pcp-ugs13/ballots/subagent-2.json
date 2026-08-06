@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "3候補すべて既存ノルム・既存ステージ契約の機械適用であり新規学習でないと実測確認した。c1: cid:units-generation:c1 (a) が project.md:222 で「片側だけでは利用者価値を出荷できない境界は単一 Unit へ統合する」と既定済み。成果物 unit-of-work.md:48 は「検出と記録・判定と配送のように片側だけで価値を出荷できない境界は U2 内へ統合済み」と当該ノルム文言をほぼ逐語で反復しており、適用であって新知見ではない。c2: produces_kinds の completion 判定への影響は cid:nfr-design:c1-engine-produces-all-five(project.md:18)が既定し、さらに本 intent の RE §13 で採択済みの cid:reverse-engineering:c3-pcp-produceskinds-failopen(project.md:317、E-PCP-RES13 2026-08-05 採用 2-0)が fail-open 3経路まで機序を確定済み。diary 自身が「RE 実測済み」と明記しており、同一 intent 内で既に persist された事実の再掲にあたる。c3: ステージ契約 .claude/amadeus-common/stages/inception/units-generation.md が同趣旨を3箇所で明文化している — :52「2.7 MUST NOT recommend an implementation order or identify a critical path」、:80「Do NOT ask about implementation order priorities (value-first, risk-first, walking-skeleton-first)」(walking-skeleton を名指し)、:133「It does NOT pick a single 'recommended build order' or identify a critical path」。reviewer が iteration 1 BLOCKER で捕捉したのは契約が設計どおり機能した事例であり、契約の外側にある新知見ではない。加えて c3 を project.md へ persist することは cid:units-generation:c1 冒頭の「正準(stage-protocol.md / delivery-planning.md)に従い、ノルム側へ再定義・複製しない」に正面から抵触するため、採用は既決ノルムとの矛盾を生む。以上より 0 件採用が正しい。",
+  "submittedAt": "2026-08-05T07:46:37Z"
+}

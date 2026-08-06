@@ -21,7 +21,7 @@
 > `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`(コンパクトなUTC日付プレフィックス
 > に短いkebab-caseのラベルを付けたもので、record dir が時系列でソートされる。
 > 正典のidは `intents.json` レジストリ行に格納されたUUIDv7)。出荷されたマニフェストの
-> 2つのdocument-shapeセンサーの `matches` globは、依然としてレガシーの
+> artifact-tree 系の `matches` globは、依然としてレガシーの
 > artifact-treeパスを含む点に注意(スキーマが文書化される箇所で下記に逐語的に引用)。
 
 ランタイムの挙動については[ステージプロトコル](04-stage-protocol.ja.md)を参照してください。
@@ -35,7 +35,7 @@
 センサーマニフェストは以下に置かれます:
 
 ```
-dist/claude/.claude/sensors/amadeus-<id>.md
+packages/framework/core/sensors/amadeus-<id>.md
 ```
 
 フレームワークが出荷するすべてのマニフェストは `amadeus-` ファイル名プレフィックスを
@@ -152,7 +152,7 @@ outputs: ...
 フロントマター `id:` フィールドに一致し、それは(filename↔id 契約に従い)
 ファイル名の語幹から `amadeus-` プレフィックスを除いたものに等しくなります。コンパイルリゾルバは:
 
-1. `dist/claude/.claude/sensors/` を走査し、すべての
+1. インストール済みの `.claude/sensors/` ツリーを走査し、すべての
    `amadeus-<id>.md` マニフェストをパースする。
 2. 解決時のO(1)ルックアップのためにマニフェストをidでインデックスする。
 3. 各ステージについて、宣言された各インポートidを検索する。不明なら例外を投げる
@@ -198,16 +198,21 @@ outputs: ...
 |---|---|
 | `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
 | `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-answer-evidence.md` | `**/*-questions.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
+| `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
+| `amadeus-model-completeness.md` | `**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
+| `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
 
 `matches` **こそが**発火フィルタです — 実際にはオプションではありません。フックは
 書き込まれるパスをglobと比較し、一致した場合のみ発火します。
 `matches` globを**持たない**エントリは一切発火しません(`amadeus-sensor-fire.ts`:
 `if (!entry.matches) continue`)。したがって出荷されたマニフェストはすべて
-1つを宣言します — 2つのdocument-shapeセンサーはartifact treeにスコープし(出荷された
-マニフェストは上記に示した `matches` 値を持つ)、2つの
-code-qualityセンサーはそれぞれの言語globにスコープします。コンパイルリゾルバは
+1つを宣言します — 3つのdocument-shapeセンサーはartifact tree、またはその中の
+questionsファイルにスコープし(出荷されたマニフェストは上記に示した `matches` 値を持つ)、
+code-qualityセンサーはそれぞれの言語globに、drift/consistency 系センサーは
+監査対象のソース・データファイルにスコープします。コンパイルリゾルバは
 `matches` を per-stage の `sensors_applicable[]` エントリに逐語的にコピーし、フックは
 グラフノードからスナップショットされた値を読みます。
 
@@ -346,10 +351,12 @@ selections-file はリプレイの成果物です: クラッシュした persist
 / `## Learn` の本文は決して成長させません。
 
 出荷されたマニフェストは、これらのデフォルトが後に進化する
-バリエーションを示します: `amadeus-required-sections.md` と
-`amadeus-upstream-coverage.md` は、artifact-treeの `matches` glob(上記の `matches` テーブルに
-示した値)とともに `timeout_seconds: 5` を使います。
-`amadeus-linter.md` は `matches: "**/*.{ts,js}"` とともに `30` を使います。
+バリエーションを示します: `amadeus-required-sections.md`、
+`amadeus-upstream-coverage.md`、`amadeus-answer-evidence.md`、
+`amadeus-self-scope-consistency.md` は、document 形状・data 形状の `matches` glob
+(上記の `matches` テーブルに示した値)とともに `timeout_seconds: 5` を使います。
+`amadeus-model-completeness.md` は `10` を使います。
+`amadeus-linter.md` と `amadeus-event-registry-drift.md` は `30` を使います。
 `amadeus-type-check.md` は `matches: "**/*.{ts,tsx}"` とともに `60` を使います。
 
 ---
@@ -397,5 +404,5 @@ enum型のフィールド(`default_severity`)にも適用されます。
   解決され、発火時にグラフノードから読まれる仕組み。
   [プレーンアーキテクチャ](02-plane-architecture.ja.md)を参照。
 
-上記のスキーマに加え、`dist/claude/.claude/sensors/` の出荷された7つの
+上記のスキーマに加え、`packages/framework/core/sensors/` の出荷された8つの
 マニフェストが、動作する例です。

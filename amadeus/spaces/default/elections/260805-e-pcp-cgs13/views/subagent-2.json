@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PCP-CGS13",
+  "voter": "subagent-2",
+  "question": "intent 260805-pr-convergence-plugin の code-generation ステージ §13 学習選定: diary(amadeus/spaces/default/intents/260805-pr-convergence-plugin/construction/code-generation/memory.md)の候補群について persist する集合を選べ。実在根拠は diary・builder 報告(scratchpad/bolt-u{1,2,3}-report*.md)・選挙 record(260805-e-pcp-cgblk / cgdev)・unit 成果物で実測確認すること。候補 c1 = 「Claude Code の worktree 隔離セッション下では、swarm prepare が作る .amadeus/worktrees/ の Bolt worktree へ builder subagent も conductor も git 操作・Write が構造的に拒否される(ガード: git operations must target its own worktree。EnterWorktree(path) も .claude/worktrees/ 配下限定)— 実効経路は Agent の isolation:'worktree'(ハーネス管理ツリーで実装・コミット)+conductor の cherry-pick 取込+fidelity diff 空の機械確認+検証コマンド再実行であり、swarm referee(check/finalize)は使えない。E-PCP-CGBLK 裁定の初実運用」。候補 c2 = 「builder 申告の執行受理・engine batch 統合発出等(intent 固有)」。判定観点: 未被覆のハーネス運用知識のみ採用。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "他の組合せ",
+      "description": "上記以外(留保に明記)。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件採用",
+      "description": "c1 は E-PCP-CGBLK の選挙 record に既に記録されており、memory 層への persist は不要。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "c1 のみ採用",
+      "description": "worktree 隔離セッション×swarm の非互換と実効経路(isolation worktree+cherry-pick+fidelity 確認)を project.md へ persist する — 次に worktree 隔離セッションで Construction を回す intent が同じ2往復(builder 停止→選挙)を繰り返さないため。"
+    }
+  ]
+}

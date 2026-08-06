@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-FDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "L1 の persist 文には、既存 Mandated『新設ゲート・検証スクリプトの落ちる実証』(team.md)との境界 — L1 はゲート実装でなく成果物 AC への検証手段バインディング面を縛る — を1行明記して語彙衝突を防ぐこと。",
+  "rationale": "独立実測: (1) L1 — memory.md:18 の launch-autonomy-flag §12a iteration 1 BLOCKER 記録、business-rules.md:24(R12 に検証手段 H9 と落ちる実証を明記)・:58(テスト固定表 H9 行)、business-logic-model.md:100-107 の iteration 2 READY verdict(『R12の検証手段(H9)が…一貫して追加され』)を実読し接地を確認。team.md/project.md へ『検証手段』『静的な契約』を grep し 0 hit — 既存 cid(exemption-clause-must-not-substitute は免責項面、落ちる実証 Mandated はゲート実装面)と重複しない新規面。(2) L2 — memory.md:20 の semi-authorization-core BLOCKER、functional-design-questions.md:18 の D3 3 点 specify(decide :607 verbatim 引用+測定 ref SHA 明記 / AutonomyDecisionInput 任意フィールド / production 組み立て点 :541-543・:230)、business-logic-model.md:93-107 の iteration 2 READY を実読。project.md:276 の cid:code-generation:c3-mps は builder 実装前停止+conductor readonly 実測という CG 側事後対処のみを規定し FD 側予防(3 点 specify を FD 完成条件とする)は未被覆 — 追補として整合・無矛盾。(3) 不採用 6 件 — memory.md の 8 エントリ全読で c1(:6 seam-placement-measured-module の執行)、c2(:8 本 intent 固有の decide-question 初使用)、c3(:10 ADR 裁定文からの機械導出=既決執行)、c4(:12 dual-key-consumer-inventory の適用実例)、c5(:16 citation-semantics-check ファミリの実践)、c8(:22 R11 既決遵守)と照合し、いずれも既決 contract の執行または既存 cid の適用実例で新規学習に当たらず不採用は妥当。",
+  "submittedAt": "2026-08-05T11:55:00Z"
+}

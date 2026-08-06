@@ -31,7 +31,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 - グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独で実在するgateを持ち、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。
 - インクリメンタルなスコープ — `fix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
-- 人間は無人裁定の前にIntent自律レベルを`none` / `semi` / `full`から選びます。`semi`はphase内gateを事前承認し、phase境界と質問では人間を待ちます。`full`は表示されたIntent-scoped grantの確認を必須とし、認可範囲内でIntent完了までgateと質問を裁定できます。
+- 人間は無人裁定の前にIntent自律レベルを`none` / `semi` / `full`から選びます。`semi`はphase内gateを事前承認し、質問は`full`と同じ解決ラダーで無人裁定して、節目（phase境界・walking skeleton・intent終端）では人間を待ちます。`full`は表示されたIntent-scoped grantの確認を必須とし、認可範囲内でIntent完了までgateと質問を裁定できます。
 - autonomyが選ぶのは承認 **authority**であり、実行形状ではありません。全modeで依存のないUnitをfan-outします。`none`はhuman batch-end gateで待ち、`semi` / `full`は各mode表に従って続行できます。最終batchはstage自身のgateを使うため、gateは重複しません。
 
 あなたはこの姿勢を、他のどのルールも形づくるのと同じ方法で、[Rules and the Learning Loop](05-rules-and-the-loop.ja.md) の strict-additive レイヤーを通じて形づくります: チーム全体のスタンスには `team.md` を、1つのプロジェクトの恒久的な逸脱には `project.md` を編集します。`org.md` はそのままにします — それはフレームワーク同梱で継承されます。

@@ -333,7 +333,8 @@ Intent autonomy
   ▸ full
     Decide authorised gates and questions through Intent completion.
   ▸ semi
-    Pre-approve in-phase gates; ask at phase boundaries and questions.
+    Pre-approve in-phase gates and auto-decide questions; ask at milestones
+    (phase boundaries, walking skeleton, Intent completion).
   ▸ none
     Ask the human at every gate and question.
 ```

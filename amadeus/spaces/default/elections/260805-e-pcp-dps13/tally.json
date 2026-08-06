@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "他の組合せ",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T07:52:57Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件採用。独立実測: c1 の0問様式は delivery-planning-questions.md の『追加質問なしの根拠』4項がすべて既決規範への機械適用であることを自認している(1 = org.md の greenfield skeleton 先行 + project.md:118 の ALWAYS self-feature は最初の Construction Bolt に walking-skeleton gate 維持、2/3 = 上流 unit-of-work-dependency の topology と requirements A-2 からの一意導出、4 = ステージ契約 Step 5 の既定文言)。これは team.md の cid:requirements-analysis:always-elect が定める『権威ある一次証拠から既決 contract へ機械適用するだけなら執行』および cid:requirements-analysis:no-election-for-decided-norms の適用そのものであり、新規学習ではない。U1 と U2 の並行可能性を walking-skeleton 単独ゲートへ劣後させた判断も risk-and-sequencing-rationale.md:8,11 が明記するとおり topology 逸脱ゼロの batch 配置決定にとどまる。c2 は rationale:13 の見出しが既存 cid 名 intra-bolt-order-as-risk-control を逐語で掲げており、project.md:241 の既存則(Bolt 内順序をリスク制御として bolt-plan と rationale の両方へ根拠付きで書く)をそのまま実施した記録である。C8 センサー manifest の core 着地を frontmatter の sensors 宣言より先に置く根拠も、ADR-5 の compile 未知 id loud 拒否という既決設計からの機械的帰結で、順序規律に新規の一般化は含まれない。よって2件とも persist 不要。",
+      "submittedAt": "2026-08-05T08:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1・c2 とも既存ノルムの機械適用であり新規学習でない。実測: (1) project.md:118 の ALWAYS(self-feature は最初の Construction Bolt に walking-skeleton gate を維持)と team.md の always-elect 執行類型が既決。delivery-planning-questions.md の0問根拠4項はすべてこの既決規範と上流成果物(unit-of-work-dependency の topology、requirements A-2、cid:units-generation:c1)からの一意導出であり、判断ではなく執行。U1∥U2 の劣後も risk-and-sequencing-rationale.md が『topology 上の並行可能性は保存されており』と明記するとおり topology 逸脱なしで、既定の適用にすぎない。(2) c2 は diary 自身が『intra-bolt-order-as-risk-control として固定』と既存 cid 名で書いており、project.md:241 に当該 cid が実在する。さらに Bolt 3 の C8→frontmatter 順序は ADR-5(compile の未知 id loud 拒否)からの機械的帰結であり、既存 cid が対象とする『前 intent の成果を失う退行の窓の封じ込め』ですらない。いずれも persist すればノルム層に既存規則の再述が増えるだけで、cid:requirements-analysis:weekly-distillation-round が縮約対象とする冗長を自ら作る。",
+      "submittedAt": "2026-08-05T07:52:35Z"
+    }
+  ],
+  "resolutions": []
+}

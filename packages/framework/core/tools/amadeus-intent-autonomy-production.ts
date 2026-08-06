@@ -10,19 +10,24 @@ import { basename } from "node:path";
 
 import {
   autonomyDigest,
+  autonomyScopeFingerprint,
   authorizeInteraction,
   createAutonomyProjection,
   createDecisionOptionEffectRegistry,
   createInteractionOccurrence,
   grantIssuanceDisplayDigest,
+  nonFullCommandDisplayDigest,
   normalizeDecisionPolicies,
+  SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
   type AutonomyProjection,
   type DecisionPolicyInput,
   type DecisionFact,
+  type EffectClassification,
   type GrantScopeDescriptor,
   type HumanAutonomyCommand,
   type InteractionKind,
+  type SemiAuthorityScope,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
 import {
@@ -66,7 +71,10 @@ const ALL_INTERACTIONS: readonly InteractionKind[] = [
   "question",
 ];
 
-const PROHIBITED_EFFECTS = [
+// Exported so a caller that builds its own option effects can prove, in a test
+// it owns, that the classification it assigns to a refusable option is still
+// one this scope forbids (#2253 FR-ADV-4 secondary barrier).
+export const PROHIBITED_EFFECTS = [
   "new-permission",
   "irreversible",
   "scope-out",
@@ -212,7 +220,7 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
       qualityRepair: "disabled",
     };
   }
-  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }));
+  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
   const qualityRepair = qualityState(projection);
   return {
     mode: projection.mode,
@@ -226,8 +234,9 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
 function authorizeProductionOccurrence(
   projection: AutonomyProjection,
   target: ReturnType<typeof occurrence>,
+  scopeId: string,
 ): { readonly authorized: boolean; readonly reason: string } {
-  const authorization = authorizeInteraction(projection, target);
+  const authorization = authorizeInteraction(projection, target, semiAuthorityScope(projection.intentUuid, scopeId));
   return authorization.kind === "human-required"
     ? { authorized: false, reason: authorization.reason }
     : { authorized: true, reason: authorization.kind };
@@ -278,13 +287,24 @@ function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
   };
 }
 
-function fallbackFingerprints(
+export function fallbackFingerprints(
   intentUuid: string,
   scopeId: string,
 ): { readonly scopeFingerprint: string; readonly normFingerprint: string } {
   return {
-    scopeFingerprint: autonomyDigest({ intentUuid, scopeId }),
+    scopeFingerprint: autonomyScopeFingerprint(intentUuid, scopeId),
     normFingerprint: autonomyDigest({ scopeId, rules: "resolved-rules-in-context-v1" }),
+  };
+}
+
+// The semi authorization scope. Same fingerprint space as the grant fallback so
+// a decision basis stays comparable across modes once it is burned into audit.
+export function semiAuthorityScope(intentUuid: string, scopeId: string): SemiAuthorityScope {
+  return {
+    intentUuid,
+    scopeId,
+    ...fallbackFingerprints(intentUuid, scopeId),
+    allowedInteractionKinds: SEMI_ROUTINE_INTERACTIONS,
   };
 }
 
@@ -379,19 +399,26 @@ function prepareFullGrantCommand(input: PrepareFullGrantCommandInput): { readonl
   };
 }
 
+// The policies stay raw here: planHumanAutonomyCommand owns the one
+// normalization call, and the digest is computed over the same raw set on both
+// sides so the confirmation compares like with like.
 function prepareNonFullCommand(
   before: AutonomyProjection,
   mode: Exclude<AutonomyMode, "full">,
+  policies: readonly DecisionPolicyInput[],
 ): { readonly command: HumanAutonomyCommand; readonly displayDigest: string } {
-  if (before.currentGrant !== null) {
-    return {
-      command: { kind: "revoke-full", targetMode: mode },
-      displayDigest: autonomyDigest({ intentUuid: before.intentUuid, mode, revoke: before.currentGrant.grantId }),
-    };
-  }
+  const revokedGrantId = before.currentGrant?.grantId ?? null;
+  const displayDigest = nonFullCommandDisplayDigest({
+    intentUuid: before.intentUuid,
+    mode,
+    revokedGrantId,
+    policies,
+  });
   return {
-    command: { kind: "set-mode", mode },
-    displayDigest: autonomyDigest({ intentUuid: before.intentUuid, mode }),
+    command: revokedGrantId === null
+      ? { kind: "set-mode", mode, policies }
+      : { kind: "revoke-full", targetMode: mode, policies },
+    displayDigest,
   };
 }
 
@@ -427,7 +454,7 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
     command = prepared.command;
     confirmedDisplayDigest = prepared.issuanceDigest;
   } else {
-    const prepared = prepareNonFullCommand(before, input.mode);
+    const prepared = prepareNonFullCommand(before, input.mode, input.policies ?? []);
     command = prepared.command;
     confirmedDisplayDigest = prepared.displayDigest;
   }
@@ -461,15 +488,13 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const projection = coordinator.readProjection();
   const target = occurrence({ ...input, projection });
-  const authorization = authorizeProductionOccurrence(projection, target);
+  const scopeId = getField(input.stateContent, "Scope") ?? "intent";
+  const authorization = authorizeProductionOccurrence(projection, target, scopeId);
   if (!authorization.authorized) return { kind: "not-authorized", reason: authorization.reason };
   if (projection.autoDecisions.some((decision) => decision.occurrenceId === target.occurrenceId)) {
     return { kind: "already-decided", grantId: projection.currentGrant?.grantId ?? null };
   }
-  const fallback = fallbackFingerprints(
-    projection.intentUuid,
-    getField(input.stateContent, "Scope") ?? "intent",
-  );
+  const fallback = fallbackFingerprints(projection.intentUuid, scopeId);
   const scopeFingerprint = projection.currentGrant?.scope.scopeFingerprint ?? fallback.scopeFingerprint;
   const normFingerprint = projection.currentGrant?.scope.normFingerprint ?? fallback.normFingerprint;
   const payload = { action: "approve-stage", stage: input.stage };
@@ -500,6 +525,7 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
       recommend: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("stage-gate-default") }),
       unavailableReason: "stage-gate-is-deterministic",
     },
+    semiScope: semiAuthorityScope(projection.intentUuid, scopeId),
     gateApprovalOptionId: "approve",
   });
   if (result.kind !== "decided") return { kind: "not-authorized", reason: result.kind };
@@ -519,6 +545,13 @@ export interface ProductionQuestionDecisionInput {
   readonly applicableNormFacts?: readonly DecisionFact[];
   readonly pastHumanRulings?: readonly DecisionFact[];
   readonly election?: { readonly optionId: string; readonly evidenceFingerprint: string };
+  // Per-option effect classification. A question whose options are all ordinary
+  // workflow moves needs none — the default is `workflow-reversible`, which is
+  // what every caller before #2253 relied on. A caller whose option space
+  // contains a move that WAIVES something (advisory `defer-with-risk`) names it
+  // here, and effect authorization then refuses that option on its own, without
+  // this adapter growing a policy branch.
+  readonly effectClassifications?: Readonly<Record<string, EffectClassification>>;
 }
 
 export function commitProductionQuestionDecision(input: ProductionQuestionDecisionInput): AutonomyDecisionResult {
@@ -548,7 +581,7 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
       optionId,
       payload,
       payloadFingerprint: autonomyDigest(payload),
-      classification: "workflow-reversible" as const,
+      classification: input.effectClassifications?.[optionId] ?? ("workflow-reversible" as const),
       requiredScopeFingerprint: scopeFingerprint,
       applicableNormFingerprint: normFingerprint,
     };
@@ -574,6 +607,7 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
       }),
       unavailableReason: input.election === undefined ? "native-solo-election-result-unavailable" : null,
     },
+    semiScope: semiAuthorityScope(projection.intentUuid, "intent"),
   });
 }
 

@@ -174,18 +174,23 @@ function publishAdvisoryOutcome(
   if (!published.ok) throw new Error(published.error.detail);
 }
 
-function advisoryReceipts(proj: string): Array<{
+type StoredReceipt = {
   identity: { advisoryInstance: string };
   choice: string;
-  humanTurn: { eventIdentity: string };
-}> {
+  provenance: { kind: string; eventIdentity?: string };
+};
+
+// #2253 moved the receipt's binding under a provenance union; what these tests
+// pin is that two receipts for one instance came from two DIFFERENT human turns,
+// which is still the human-turn arm's event identity.
+function humanTurnIdentityOf(receipt: StoredReceipt | undefined): string | undefined {
+  return receipt?.provenance.kind === "human-turn" ? receipt.provenance.eventIdentity : undefined;
+}
+
+function advisoryReceipts(proj: string): StoredReceipt[] {
   const store = JSON.parse(
     readFileSync(join(seededRecordDir(proj), ".amadeus-advisory-choice.json"), "utf-8"),
-  ) as { receipts: Array<{
-    identity: { advisoryInstance: string };
-    choice: string;
-    humanTurn: { eventIdentity: string };
-  }> };
+  ) as { receipts: StoredReceipt[] };
   return store.receipts;
 }
 
@@ -366,7 +371,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const receipts = advisoryReceipts(proj);
     expect(receipts.map((receipt) => receipt.choice)).toEqual(["run-now", "run-now"]);
     expect(receipts.every((receipt) => receipt.identity.advisoryInstance === instance)).toBe(true);
-    expect(receipts[0]?.humanTurn.eventIdentity).not.toBe(receipts[1]?.humanTurn.eventIdentity);
+    expect(humanTurnIdentityOf(receipts[0])).not.toBe(humanTurnIdentityOf(receipts[1]));
     publishAdvisoryOutcome(proj, retry.formalChecks[0]!, "NOT_DETECTED");
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
   });
@@ -389,7 +394,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     const receipts = advisoryReceipts(proj);
     expect(receipts.map((receipt) => receipt.choice)).toEqual(["run-now", "defer-with-risk"]);
     expect(receipts.every((receipt) => receipt.identity.advisoryInstance === instance)).toBe(true);
-    expect(receipts[0]?.humanTurn.eventIdentity).not.toBe(receipts[1]?.humanTurn.eventIdentity);
+    expect(humanTurnIdentityOf(receipts[0])).not.toBe(humanTurnIdentityOf(receipts[1]));
     expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory])).toEqual({ kind: "allow" });
   });
 
