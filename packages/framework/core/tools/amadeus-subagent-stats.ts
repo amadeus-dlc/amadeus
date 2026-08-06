@@ -264,9 +264,20 @@ function stringAttr(fields: Record<string, unknown>, key: string): string | unde
  *  line is not a subagent event. Event matching is EQUALITY on the envelope
  *  field — a substring match would false-positive on WORKFLOW_STARTED Request
  *  bodies that mention the event name (RE method note). */
-function recordFromLine(raw: Record<string, unknown>): SubagentAuditRecord | null {
+/** A JSON object, narrowed from the parser's `unknown` before any field is read. */
+function objectOrNull(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+// An audit line is bytes off disk: it enters as `unknown` and earns its shape
+// here, so no domain type is asserted onto unproven input (#1980 FR-3a).
+function recordFromLine(parsed: unknown): SubagentAuditRecord | null {
+  const raw = objectOrNull(parsed);
+  if (raw === null) return null;
   const v2 = raw.schemaVersion === 2;
-  const fields = (v2 ? raw.attributes : raw.fields) as Record<string, unknown> | undefined;
+  const fields = objectOrNull(v2 ? raw.attributes : raw.fields) ?? undefined;
   const event = v2 ? fields?.Event : raw.event;
   if (event !== "SUBAGENT_COMPLETED" && event !== "SUBAGENT_STARTED") return null;
   const attrs = fields ?? {};
@@ -310,10 +321,13 @@ export function scanAuditCorpus(projectDir: string, space: string): ScannedAudit
         const trimmed = line.trim();
         if (!trimmed.startsWith("{")) continue;
         try {
-          const record = recordFromLine(JSON.parse(trimmed) as Record<string, unknown>);
+          const record = recordFromLine(JSON.parse(trimmed));
           if (record !== null) records.push(record);
         } catch {
+          // fail-open on a broken line, but the skip is counted, never hidden.
+          // `continue` is the explicit terminal the no-silent-drop rule requires.
           parseSkippedCount += 1;
+          continue;
         }
       }
     }
@@ -342,7 +356,9 @@ function activeSpaceLocal(projectDir: string): string {
     const raw = readFileSync(join(projectDir, "amadeus", "active-space"), "utf-8").trim();
     if (SAFE_NAME.test(raw)) return raw;
   } catch {
-    // no cursor -> default
+    // No cursor is the normal state, not a failure: return the default from the
+    // catch so the fall-through is an explicit terminal, not a silent continue.
+    return "default";
   }
   return "default";
 }

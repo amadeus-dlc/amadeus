@@ -4198,7 +4198,11 @@ function enrichSubagentAttribution(
       fields["Model Source"] = model.source;
     }
   } catch (e) {
+    // NFR-3: attribution never blocks the emit. The skip is announced on stderr
+    // (never silent) and `return` is the explicit terminal the no-silent-drop
+    // rule requires - the caller emits with whatever fields were set.
     process.stderr.write(`advisory: subagent attribution skipped: ${e instanceof Error ? e.message : String(e)}\n`);
+    return;
   }
 }
 
