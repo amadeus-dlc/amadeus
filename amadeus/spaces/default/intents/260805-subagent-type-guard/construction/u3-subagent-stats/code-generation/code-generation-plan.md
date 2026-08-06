@@ -32,3 +32,19 @@ Comprehensive(self-feature スコープ)。純関数(compose / render)は `tests
 - AC-3: corpus sweep 両側実証(許可集合内の実測型に警告ゼロ / 警告対象全数に警告 — 件数は実測時刻で再確定し独立オラクルと一致)。
 - AC-6: 実出力に測定 ref(測定時刻・走査対象・シャード数・イベント総数)+ unresolved 区分。
 - NFR-1: `bun run build` 全ハーネス再生成。NFR-3: 読取・分類の失敗は集計を止めない(件数を隠さない)。NFR-4: 既存 audit 行の遡及書換なし(読み取り専用)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-06T04:23:20Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U3 code-generation plan and summary trace cleanly to functional-design, nfr-design, unit-of-work, and requirements with matching seam signatures, dependency direction, error model, and AC-3/AC-6 test coverage; only documentation-completeness follow-ups found, no blockers.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md does not document whether the security-design.md control-character-sanitization control (the fix that closed a prior nfr-design §12a BLOCKER) actually landed in renderStatsText via the observability-exported helper.
+- FOLLOW-UP | AC-3 (0) independent-oracle check reads packages/framework/core/agents/*.md while requirements.md FR-1a names .claude/agents/*.md as the persona source; the path-equivalence assumption is never stated.
+- NIT | Implementation size (~370 lines incl. comments) is ~3x the unit-of-work.md ~120-line estimate; already explained in the deviations section, calibration note only.
