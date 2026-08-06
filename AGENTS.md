@@ -1,7 +1,7 @@
 @.agents/rules/amadeus.md
 @.agents/rules/amadeus-codex-suffix.md
 
-他のエージェントとの衝突を回避するために、常にworktreeと専用ブランチを作成して切り替えてから作業する。
+To avoid collisions with other agents, always create a dedicated worktree and branch and switch to them before starting work.
 
 # AGENTS.md
 

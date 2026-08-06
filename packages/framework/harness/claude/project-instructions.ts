@@ -1,7 +1,7 @@
 // Self-development project guidance is harness-owned but not a distribution
 // surface. Root CLAUDE.md is a tracked projection of this prefix followed by
 // .claude/CLAUDE.md; promote-self validates that projection without writing it.
-export const PROJECT_INSTRUCTIONS = `他のエージェントとの衝突を回避するために、常にworktreeと専用ブランチを作成して切り替えてから作業する。
+export const PROJECT_INSTRUCTIONS = `To avoid collisions with other agents, always create a dedicated worktree and branch and switch to them before starting work.
 
 ## Project Instructions
 
