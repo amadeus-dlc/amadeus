@@ -1,166 +1,166 @@
 {
   "schemaVersion": 1,
-  "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
+  "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
   "receipts": [
     {
       "schemaVersion": 1,
       "id": "shape-fixtures",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "b79ff3bd420097f3d276d354ae7027e50e264e37fdce0da4e134dbc2141e5124",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "8961676e7ae8746bef9311602c0419b9a7e83bed6eec362281d96315b8bbf58f",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "census-pre",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "d33e713b46ebdd512956b97614778718c6d60c09b5a0b3ea18e36600b1d0cfbb",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "f0ef6d62dfa34ec5793c6806e3d3955bc6d3284581687d47fe196726024b3084",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "census-post",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "cd9e380fadab61a8ca1eebcf487bdf6428827c03907def389209134c7d169f6a",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "66b7517d4038c7eaa92bff10e74d6a3e68cc8e65afbb185a0d8085f3a7530eda",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "classification-precision",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "9603ab7929487c54e71be2347d64d980fc833f7b60d2f7d018d7dcbdd9d90b9f",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "76f82a72a566c7b3e7010c44be901162e8fb7e38b817229f7860e08271d0a435",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "baseline-proof",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "936ddc84d3e2e5c118e8de51dc43f8f661148b04635a8105135894c8ac08b60e",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "ad05d647a35ced0b556c8b313aac5de99ea15e11dbedad8e0a75afd545806460",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "failure-matrix",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "857b12a42efffab2a204ae5a72dd2b6d78f6686351dd010fc8848f725253ec29",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "7b9cb6768eaa34961ea7931920d93e6bc5ef460d12d53d17d12cf4b7c56571f7",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "u2-u3-regressions",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "e4a7ca027660cf9dc8f54fdb991d6ec2cf56a31017164453b3a69b6701c28159",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "e28b43e956c4ec1b0f92e174aceb7577392a56f9b837118ec4ebe80f42f14edf",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "full-test",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "ec02df6caaa8873e3e888eb90254aa18a338298eb7aaec9f11f2e8ad74ff6a3a",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "71fd8a8e33479f9edd296252d5560573f5ff9a61f458d70ba8976b563e8b1353",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "lint",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "e2b36af85def098f078145fdf4c7ed5bbd0299a7790a1dd82bac79486563444a",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "0fd378fa61c8dcfdf0448aede1d9f9369e19d74c2f58a8bce3aebe19a770801b",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "typecheck",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "bd05b0c0f5d61cdc73b892b97c6182f327a27a25a00b82964e25c6d4df184676",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "db8cf25aa0c77785fcd7f5bae608e525801f29a116d6e16d478ca2cf4542be69",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "coverage",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "7d261bdbd6578eabdd0f71a9eb07373f0d35f4388ef7e75fd96bc8d90794f14b",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "79739e549d377baa6d6d4da1dc4ce48270f07dc7c49ffc5bfbed1e6e4e2f7729",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "cold-warm-5x2",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "9e4477658b358e4f5acaeee8fe05f9e534a1e908e2f2966c9a4c90b6605cd815",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "ff8c076adad65701e4a2280a0d74486e1cecf4c3be78eb8771edf84922861916",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "capacity-r0-r2-r4",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "d75d9bd5f804b3f109c4e29d8115892d3992b9dd2dfc62398398c32108b1912c",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "14a339ca77acd0628373dc0794585c0ab4be2c7eab489318aca7e6a7fabcceba",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "u1-complexity",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "b26bb6a176d65e8bdde80dae32220cc929546008b37528768ba4fb34e41298dd",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "87c453d2e39d4a705b05613687b40f604553b56b96e11f25c3db6b3a90c41adf",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "package-apply",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "3cdb44c87fe508728a8d3e471f272282792b20dfaf0c5380e48242a853a4bf15",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "56b1d159ac031b635e3e7165012f75a8133d89bef2e3c8c2636a8d9e4b1ba6ce",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "promotion-apply",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "370525632d671f6990a745825503f62452b0808b28fe91f1f7f8c3e0e9e34186",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "6a764b25bac476ff130e9a7e20a9cb4a981318ef813234daae29a2f1ac6f7072",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "package-check",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "a4ec6b86b38d58a71939799ee1161b6ff65ac12751c2e6da0846ccb6ad44e95e",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "7075803364a0705cdec31d1b9a9527c3c2472681f77b47f92e9edac1ebc9590b",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "promotion-check",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "386590a32aaa8ceb193ba0358d46d7adea74abee7594903e8bd2824fba3c901e",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "2af715f8a09af12a3bc174a2ac841c451b8f3416795a751504354db899436d20",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-pr-base",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "a404aacaf5a7c309ebeac0d351f3e6ea73fad892cee299b2b38235083fbd3bbe",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "d67c77ba309edcfc2a0b766dabc377d5c551380ed7e99d426b6d3fd0aaad6a96",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-fork-base",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "1faec8530a6b6ebb3cb3642877711441cfcdededbef2f90f1666b2142c83ad48",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "189c732822abf0f2238e769a265bbbe241ef2ababe490b1727569d701d1ad6e9",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "event-push-before",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "465c393d247c9b0eea9a7d08ba38d6e34e40900c46e0ffa950512a0e31511962",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "1d6a56905bbae8abdaeaf6fbd14d8851a8e23dbe6902915711bad71d0da232da",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "hang-deadline",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "2d40fb07dab8ba367bbd6fcd5ccab96ed4c9e0760e2b42fa878c756fca401867",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "6e9803bdcb4a1023a609a159352b9f076464e2182104236d7fd82a90630982bf",
       "pass": true
     },
     {
       "schemaVersion": 1,
       "id": "workflow-structure",
-      "currentRevision": "f980846b1fc078434b1748b7de05a162a86767c5",
-      "evidenceDigest": "92767a235474dc86625055b854d739d73cfe308238cc2db4cbebfccd79d282d6",
+      "currentRevision": "27a7d94018d32867086bae7fc9c123b585bd561d",
+      "evidenceDigest": "359147bb3e58bc1fd3f06534d81597517191192137d284bac400f5f79c6aa8ca",
       "pass": true
     }
   ]
