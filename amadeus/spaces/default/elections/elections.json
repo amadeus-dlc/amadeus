@@ -1024,5 +1024,29 @@
     "dirName": "260805-e-sra-cg1",
     "createdAt": "2026-08-05T13:40:06Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-CHR-RES13",
+    "dirName": "260805-e-chr-res13",
+    "createdAt": "2026-08-05T13:20:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CHR-RAS13",
+    "dirName": "260805-e-chr-ras13",
+    "createdAt": "2026-08-05T13:47:27Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CHR-CGS13",
+    "dirName": "260805-e-chr-cgs13",
+    "createdAt": "2026-08-05T21:41:27Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-CHR-BTS13",
+    "dirName": "260805-e-chr-bts13",
+    "createdAt": "2026-08-05T22:35:44Z",
+    "status": "recorded"
   }
 ]

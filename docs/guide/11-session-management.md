@@ -9,6 +9,12 @@ A workflow may span multiple harness sessions. AI-DLC persists all progress to d
 > emits `SESSION_STARTED/RESUMED/ENDED` and `SESSION_COMPACTED`; Kiro emits only
 > `SESSION_STARTED`; Codex infers `SESSION_ENDED` and adds a post-compaction
 > mission re-inject. See [Running on other harnesses](harnesses/README.md).
+>
+> Resuming *under a different harness than the one that started the workflow* is
+> supported for the same reason — but Kimi additionally keeps a machine-local
+> caller carrier that can go stale across such a handover. If a Kimi session
+> refuses your commands with "is not the main conductor", see
+> [Cross-Harness Handover](#cross-harness-handover) below.
 
 ---
 
@@ -73,6 +79,86 @@ Before Claude Code compacts conversation context, the `validate-state.ts` hook w
 - State file validity status
 
 On the next `/amadeus` invocation, AI-DLC compares `.amadeus-recovery.md` against `amadeus-state.md`. If the "Current stage" fields differ, it warns you about possible state corruption from context compaction.
+
+---
+
+## Cross-Harness Handover
+
+Workflow state is harness-neutral: the record dir is the whole workflow, so any
+harness can pick up where another left off. One thing is *not* carried across —
+Kimi's **caller carrier**, a per-clone set of files under
+`amadeus/.amadeus-sessions/` that proves the caller is the main conductor and
+not an ambient subagent:
+
+| File | Role |
+|------|------|
+| `kimi-active-subagents.json` | The role marker: which session is main, which subagent roles are active |
+| `.current-session` | The host-stamped id of the session that last started here |
+| `kimi-subagent-transition-deny` / `kimi-session-ended-deny` | Latches that fail closed across a subagent transition or after a session ends |
+
+These files are gitignored and per clone (and per worktree). When a workflow
+moves between harnesses, machines, or worktrees, the carrier does not move with
+it, so a Kimi session may find it stale and refuse every mutating verb —
+including `unpark`.
+
+### Read the cause off the refusal
+
+A refusal names its cause and the command that repairs it. The four causes:
+
+| Cause | What happened | First move |
+|-------|---------------|------------|
+| `marker-absent` | No role marker under this project dir — this session never ran SessionStart here, or the marker was written under a different dir (a subdirectory or another worktree) | Restart the Kimi session |
+| `session-mismatch` | `.current-session` names a different session than the marker — another harness or another session claimed this workspace last | Restart the Kimi session |
+| `deny-latch` | A transition latch, a session-ended tombstone, or a leftover marker lock is still present | Restart the Kimi session |
+| `active-role` | A subagent role is still recorded as active | Let the subagent finish; if it cannot, take over and acknowledge the role |
+
+### Layer 1 — restart the session (preferred)
+
+Restarting Kimi re-fires `SessionStart`, which rebinds the marker to the new
+session, re-stamps `.current-session`, and retires both deny latches and any
+residual marker lock. This closes `marker-absent`, `session-mismatch`, and
+`deny-latch` without any manual step, and it is the route to prefer because the
+host itself supplies the session identity.
+
+### Layer 2 — take over from the running session
+
+Restarting is not always possible: the hook may not be wired (a harness whose
+`SessionStart` never reaches the framework), or the session must keep running.
+Because every mutating verb sits behind the same guard, there is otherwise no
+way back — so one verb deliberately sits outside it:
+
+```bash
+bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm \
+  [--confirm-roles "<role>[,<role>]"] [--session-id <id>] [--project-dir <path>]
+```
+
+It is not a bypass. It repairs the carrier the guard reads, and only when:
+
+- **`--confirm` is passed** — the flag is the human's approval, and the verb
+  refuses without it, writing nothing;
+- **a human turn backs it** — a real `HUMAN_TURN` must appear on this clone's
+  ledger *after the last takeover*, so one approval can authorize exactly one
+  takeover and never a loop of them;
+- **retained roles are named** — with a subagent role still active the verb
+  refuses, prints the role, and only proceeds with
+  `--confirm-roles "<role>"` naming exactly the retained set.
+- **the session to bind is known** — by default it rebinds to the host-stamped
+  `amadeus/.amadeus-sessions/.current-session`; when that file is absent or
+  blank the verb refuses with "no --session-id was given", and
+  `--session-id <id>` names the session explicitly.
+
+`--project-dir` points it at the record tree to repair — that is how you adopt a
+workflow that was running in another worktree. A successful takeover appends a
+`RECOVERY_COMPLETED` row carrying the cause it repaired, and it is emitted only
+after the guard confirms the rebind actually took. If the caller was already
+authorized, the verb reports `taken_over: false` and writes nothing.
+
+After a takeover, `next`, `report`, `park`, and `unpark` all work again.
+
+> Setting `AMADEUS_HARNESS_TYPE` to a non-Kimi value also silences the guard,
+> but it does so by switching the authorization boundary off rather than
+> repairing anything — it is a known escape hatch, not a recovery route, and it
+> leaves the stale carrier in place for the next session to trip over.
 
 ---
 

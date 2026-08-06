@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CHR-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c2 を不採用とする点には同意するが、選択肢2の不採用理由「既存 cid の適用実例」は実測と異なるため裁定文へそのまま転記しないこと — c2 が根拠として引く cid:reverse-engineering:re-sensors-codekb-filter-mismatch は本日 2026-08-05 の E-SRA-RES13(persist コミット 1043b7e67、Aug 5 15:02:45 +0900 = 06:02:45Z、HEAD の祖先であることを git merge-base --is-ancestor で確認)により cid:reverse-engineering:re-sensors-codekb-passes へ退役済みであり、diary 記載時刻 2026-08-05T12:45:00Z の約6.7時間前に前提が消滅している。本 worktree の .claude/sensors/amadeus-required-sections.md:8 と amadeus-upstream-coverage.md:8 はいずれも matches: \"**/{amadeus-docs,intents,codekb}/**\" で codekb 出力を実際にカバーし(answer-evidence のみ **/*-questions.md で RE には非適用)、当 intent の audit シャード amadeus/spaces/default/intents/260805-cross-harness-resume/audit/j5ik2o-mac-studio-lan-beb8f221e5c4.jsonl は SENSOR 文字列 0 件で、手動発火が一度も行われていない。したがって c2 は適用実例ではなく退役ノルムに依拠したセンサー未発火の逸脱であり、これを cid:reverse-engineering:c3-codekb-sensor へ代替検証手順として追補する選択肢1は、現行ノルム re-sensors-codekb-passes の「conductor は RE のゲート報告前に宣言センサーを手動発火し verdict を audit で読むこと」と矛盾するため §13 admission check で拒否されるべきである。c2 は persist せず、conductor へ「RE 成果物9件+re-scan record へ宣言センサーを手動発火し verdict を audit で確認する」是正として差し戻し、diary の当該 Deviations 行は退役済み cid 参照を現行 cid へ訂正すること。",
+  "rationale": "c3 は既存 cid:reverse-engineering:c2-parallel-process-repro-harness(project.md:310)が対象とする「自然再現率が低い並行性欠陥を N 並行プロセスで決定的化する」面とは別で、(a) 本件の欠陥は caller-authorization の決定的欠陥であり並行性でも低再現率でもない、(b) 新規性は『Developer scan が演繹止まりとした機序を Architect synthesis へ渡す前に conductor が決定的再現で確定する』という RE パイプラインの順序契約にある。memory 層全域を grep しても「演繹」「deduction」は 0 hit で、既存 cid:reverse-engineering:c3(Developer→Architect 直列)は依存順序のみを定め確定義務を課さず、c1-xrev-mechanism-resolution は2レビュアーの verdict 不一致時の裁定先を定めるのみで演繹止まりの単独 scan は未被覆。実在根拠も確認済み: re-scans/260805-cross-harness-resume.md:86-103 に repo 外 scratch の直 import 実測(C1/C2/C3/C6 が同一 denied \"unknown\" へ畳まれ判別不能、C4 authorized、C5 denied \"reviewer\"、非 kimi 対照は全 authorized)と「演繹ではなく観測」の明記があり、diary Deviations 2026-08-05T12:45:00Z と一致する。よって c3 は既存 cid への追補に値する新規知識(判定観点 b)であり、採用0件の選択肢3はこれを取りこぼす。c1 は全ハーネス要件という intent 固有のスコープ材料であり requirements-analysis へ搬送するのが正しい(判定観点 c)— 選択肢1・2とも同じ扱いのため差にならない。以上より c3 のみ追補する選択肢2を支持する。",
+  "submittedAt": "2026-08-05T13:22:49Z"
+}

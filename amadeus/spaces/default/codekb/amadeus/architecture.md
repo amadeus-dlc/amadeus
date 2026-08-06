@@ -1,6 +1,67 @@
 # アーキテクチャ
 
-## plugin seam 機構の半実装状態と3層 trust（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 `git merge-base --is-ancestor` exit 0、距離 34 commits / 493 files、`+43826 / −217`）。全数列挙・実測手順は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 引き継ぎに関与する3層
+
+| 層 | 実体 | ハーネス跨ぎでの性質 |
+| --- | --- | --- |
+| ワークフロー状態 | intent record（`amadeus/spaces/<space>/intents/<slug>-<id8>/`）— state / audit shard / 成果物 | **version-controlled、ハーネス非依存**。`docs/guide/11-session-management.md:7` の "the state lives in the intent's record dir, not the harness" が指すのはこの層 |
+| セッション carrier | `amadeus/.amadeus-sessions/.current-session`、Kimi の `kimi-active-subagents.json` と2種の deny ラッチ | **gitignored = per-clone / per-worktree**。ハーネスも worktree も跨いで共有されない |
+| 認可判定 | `amadeus-caller-authorization.ts:72` `authorizeMainConductor` | carrier 層のみを読む。**状態層を一切見ない** |
+
+引き継ぎの破綻はこの層構造から出る。状態層はハーネス非依存で移動できるが、**認可判定は per-clone な carrier 層にしか接地しておらず、carrier はハーネスごとに書き手が異なる**。
+
+### 認可ゲートの結線
+
+`authorizeMainConductor`（`amadeus-caller-authorization.ts:72-115`）は単一の判定関数で、消費点は2つのみ:
+
+- `amadeus-orchestrate.ts:2400` `refuseUnauthorizedKimiCaller` → `handleNext :2446` / `handleReport :4543` / `handlePark :5099` / `handleGateReserve :5326` / `handleGateReject :5387`
+- `amadeus-state.ts:902` `enforceCallerAuthorization` → `:908-912` で `get` / `count` / `lookup` のみ除外し、残る全27語彙をゲート。**`case "park"` `:1024` / `case "unpark"` `:1027` を含む**
+
+判定の分岐は `:75` の早期 return（`detectHarnessType() !== "kimi"` なら無条件 `authorized`）と、Kimi 経路の4つの拒否枝（`:81-85` deny ラッチ3種 / `:94` marker 不読・不正 / `:105` `.current-session` 空・不一致 / `:108` 読取例外）＋ `:111-115` の role 枝で構成される。
+
+**構造的帰結（所見A）**: 復旧に使える verb がすべて同じゲートの内側にあるため、**拒否状態からの in-band 復旧経路が存在しない**。park の復旧文言は unpark を案内するが、その unpark 自体がゲートされる。復旧を成立させるには、復旧手段が**ゲートの外側**に置かれることが設計上の必要条件になる。
+
+**構造的帰結（所見A'）**: 4つの拒否枝がすべて `callerAuthorizationError("unknown")`（`:117-122`）に畳まれ、原因が判別できない。文言に復旧手順も含まれない。conductor の決定的再現 C1 / C2 / C3 / C6 が同一出力になることを実測で確定した。
+
+### carrier の書き手分布（8ハーネス対照）
+
+`.current-session` の書き手は core hook **`amadeus-session-start.ts:97` `if (sessionId) writeCurrentSessionId(projectDir, sessionId);` の唯一箇所**（実体 `amadeus-lib.ts:2170`）。同 hook の `:88-96` コメントは「session_id を見るのはこの hook だけであり、CLI switch からは供給できない」と明記する。
+
+- **書く**: `claude` / `kimi`（session_id あり）、`codex` / `cursor` / `kiro`（session_id が来たときのみ）
+- **書かない**: `kiro-ide`（`amadeus-kiro-adapter.ts:261,266,388` で core hook を起動するが session_id を転送しない）、`opencode`（`plugins/` 構成で core hook 呼出なし）、`pi`（`extensions/amadeus-pi-extension.ts:779` `case "session-started"` でネイティブに処理、core hook 不使用）
+
+**構造的帰結（所見B）**: carrier を書かない3面のセッションが直前に走ると、`.current-session` は別ハーネスの ID のまま／不在のまま残り、次に Kimi が起動したとき `:105` / `:108` に落ちる。**ユーザー要件の「8ハーネスの任意の組み合わせで引き継ぎ可能」は現行 carrier 設計では成立しない。**
+
+### projectDir 解決の非対称（carrier 分裂）
+
+同じ workspace を指すはずの2経路が別の解決規則を持つ:
+
+- **core hook**: `amadeus-lib.ts:298` `resolveProjectDirFromHook` — `:305` payload cwd は **workspace marker を持つときだけ**採用 → `:308` `CLAUDE_PROJECT_DIR` → `:317` marker 祖先探索 → `:322` script path 由来 → `:329` known harness dir の5段ラダー
+- **Kimi adapter**: `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:704` `const dir = env.cwd ?? projectDir;` — **raw cwd をそのまま採用、marker 検証なし**
+
+marker を持たない cwd（サブディレクトリ・別 worktree）から起動すると、adapter が書く carrier と core hook が読む carrier が別ディレクトリに分裂する（所見C）。決定的再現 C6 で確定。
+
+### 認可バイパス面
+
+`amadeus-harness.ts:113-123` の `detectHarnessType` は `:114-116` で `process.env.AMADEUS_HARNESS_TYPE` を最優先し、次に `:118` `CLAUDECODE === "1"`、最後に `resolveHarnessDir()` を見る。**env を kimi 以外にすれば `:75` の早期 return が発火し、Kimi の認可境界が丸ごと素通りする**（対照実験で C1-C6 全ケース `authorized` を実測）。この経路は docs で認可への影響として説明されていない。あわせて `kiro-ide` は harness dir が `.kiro` のため type `kiro` に畳まれ、`detectHarnessType` の戻り値には現れない。
+
+### resume 経路に一致検査がない
+
+- resume 時のハーネス一致検査は不在（state の `Harness` フィールドの読み手は migrate 系のみ）
+- 別 project dir（worktree）からの resume 専用経路は不在（`resolveProjectDir` のラダー上、明示 `--project-dir` のみ）
+- `Worktree Path` フィールドは装飾で読み手を持たない（`amadeus-state.ts:4878` / `:5006` のコメント）
+
+`docs/guide/11-session-management.md:7` の "Session resume works on every harness" は状態層については正しいが、carrier 層と認可層は保証していない — **文書上の契約と実挙動の不整合**。
+
+### 区間内の変化
+
+session lifecycle / caller-authorization / harness detection のコード面は区間内で無変更（当該パスの区間内コミットは `fc862e879` の1件のみで kimi `SKILL.md` の docs 変更）。**本節の構造は区間の外側で導入済みであり、区間内の退行ではない。**
+
+## plugin seam 機構の半実装状態と3層 trust（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
 
 本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 `git merge-base --is-ancestor` exit 0、距離 27 commits / 474 files）。全数列挙・probe 手順・引用の再解決表は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
 
@@ -44,7 +105,6 @@
 ### 未接続の第2候補 seam
 
 `amadeus-quality-repair.ts` の `QualityRequiredOutputDescriptor { outputId, stageSelector, verifierId, verificationConditionId }`（`:125-130`）は「ステージへ必須成果物を宣言する」形そのものだが、`compileQualityContribution:242` が `if (contribution.requiredOutputs.length !== 0) return null;` で非空を拒否するため activation が失敗する。first-party contribution も `:211` で `requiredOutputs: []` を宣言し、消費者は repo 全域で 0 件である。**型は用意されているが engine 側で接続されていない。**
-
 ## advisory 人間選択の現行アーキテクチャ（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 実測された境界

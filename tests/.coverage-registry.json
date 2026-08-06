@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 606,
+    "total": 607,
     "enumeratedByClass": {
       "function": 340,
       "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 108,
+      "subcommand": 109,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 15,
       "stage": 8,
       "hook": 14,
-      "subcommand": 83,
+      "subcommand": 84,
       "render-surface": 7
     }
   },
@@ -6661,6 +6661,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t17.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state session-takeover",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t462-session-takeover.integration.test.ts",
           "mechanism": "cli"
         }
       ],

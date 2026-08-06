@@ -385,28 +385,6 @@
     "expiry": "remove when the Kimi boundary tests gain an in-process driver for the malformed-carrier matrix"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:5d6801083f63d00ef8c2630d67c8753fcea51f0e4bb404e39de977e0ad48ce71",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Deny-latch presence arm (subagent-transition deny, session-ended deny, or in-flight role-marker lock). t365 asserts each latch state denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the latch-denial matrix gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
-    "selector": {
-      "function": "authorizeMainConductor",
-      "fingerprint": "sha256:3ca9fd791648e870c1e7cb257e77b95a90f4ae4ded247beb79ea038244b80303",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Current-session mismatch arm (empty or differing .current-session carrier). t365 asserts the mismatch denies mutations through the spawned CLI boundary; spawned execution is not attributed to the parent Bun LCOV report.",
-    "expiry": "remove when the session-mismatch case gains an in-process driver"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-contained-file.ts",
     "selector": {
       "function": "openCandidate",
@@ -2389,17 +2367,6 @@
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
     "selector": {
-      "function": "withRoleMarkerLock",
-      "fingerprint": "sha256:7a6a0c2c2996a1ea119affed452fe7917035f45d75ba30115b794cc76a23012e",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "Stale role-marker lock retire arm in withRoleMarkerLock: reaching it needs a lock directory older than ROLE_LOCK_STALE_MS left by a crashed holder. The lock-contention behavior is asserted through the spawned hook boundary in t365; deterministic stale-lock timing requires an injectable clock/lock port.",
-    "expiry": "remove when withRoleMarkerLock receives an injectable stale-lock fixture"
-  },
-  {
-    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "selector": {
       "function": "readRoleMarker",
       "fingerprint": "sha256:b95cab0307ad58876ac4bfffde654e9c4d73e9eb9aafcecb0c942e1a8cda2a0c",
       "anchorLines": 31,
@@ -3266,18 +3233,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:7922aad30b06514c11122cc5107dbdc7dca6f65a48f4d60e12ac26bc93bcd50c",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
-    "expiry": "remove when main() gains an in-process argv driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:1362e043a02de92033534f487cbb42a9d6ad60ee8b362031b49a48692ed14cf2",
+      "fingerprint": "sha256:316149cd7ed66e29c8f375064ea00352b9753fd37822b334975e967d171b7d5a",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -5640,7 +5596,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:bd6239ffd577302bc6102cf6a75e746655316182e67b312b1c93a0a870ecd755",
+      "fingerprint": "sha256:b78a074689db51ac0d77f2cd579b569dd8c0eb8362aa83c36026156493c3d5b8",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -6437,5 +6393,27 @@
     },
     "reason": "These lines are the multiline TypeScript parameter type of isBotAuthor; the body is covered directly by t447 but Bun stamps the type-only signature lines 0 under the merged-suite union (bun-multiline-arg-da0).",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:50b83672a1ce2bc04c6e20e052de6cadcefb21d4ea662753c78c035be3d0202c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t464 and end-to-end by t462. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleSessionTakeover",
+      "fingerprint": "sha256:b1d52ebe1af2d96a8928cc143cfa98a8308407cfc12357f0ba1062876bc24324",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive echo inside handleSessionTakeover: reached only if applySessionTakeover succeeded yet authorizeMainConductor still denies, which no reachable filesystem state produces (apply writes exactly the faces the guard reads, and a write failure throws before this line). Message-string line where a refactor is unnatural — spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the takeover guard echo becomes reachable through an injectable seam"
   }
 ]
