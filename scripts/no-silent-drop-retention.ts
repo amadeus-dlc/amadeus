@@ -9,7 +9,9 @@ import { fileURLToPath } from "node:url";
 import {
   encodeEvent,
   EVENTS_DIR,
+  type FoldedLedger,
   foldEvents,
+  type LoadedEvents,
   loadEventsFromDir,
   type SnapshotEvent,
   type SnapshotEffectiveEntry,
@@ -27,6 +29,79 @@ export function parseArgs(argv: string[]): ArgsOutcome {
   return { kind: "usage", reason: `unexpected arguments: ${argv.join(" ")}` };
 }
 
+function loadOrFail(eventsDir: string): LoadedEvents | null {
+  try {
+    return loadEventsFromDir(eventsDir);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error("refusing to prune: event ledger load failed");
+    return null;
+  }
+}
+
+function foldOrFail(loaded: LoadedEvents): FoldedLedger | null {
+  try {
+    return foldEvents(loaded.byUlid.values());
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error("refusing to prune: fold failed");
+    return null;
+  }
+}
+
+function compactableUlids(loaded: LoadedEvents): Ulid[] {
+  return [...loaded.byUlid.keys()]
+    .filter((ulid): ulid is Ulid => isUlid(ulid) && loaded.byUlid.get(ulid)?.op !== "snapshot")
+    .sort();
+}
+
+function materializeEffective(folded: FoldedLedger): SnapshotEffectiveEntry[] {
+  const grandfather = folded.grandfather.map((entry) => ({
+    fingerprint: entry.fingerprint,
+    kind: "grandfather" as const,
+    ruleId: entry.ruleId,
+    file: entry.file,
+    reason: entry.reason,
+    issues: entry.issues,
+  }));
+  const exemptions = folded.exemptions.map((entry) => ({
+    fingerprint: entry.fingerprint,
+    kind: "exemption" as const,
+    ruleId: "NSD002" as const,
+    file: "unknown",
+    reason: entry.reason,
+    issues: ["#1979"],
+  }));
+  return [...grandfather, ...exemptions].sort((a, b) =>
+    a.fingerprint < b.fingerprint ? -1 : a.fingerprint > b.fingerprint ? 1 : 0);
+}
+
+function applyDeletes(eventsDir: string, deleteUlids: readonly Ulid[]): boolean {
+  for (const ulid of deleteUlids) {
+    try {
+      unlinkSync(join(eventsDir, `${ulid}.json`));
+    } catch (error) {
+      console.error(`failed to delete ${ulid}.json: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+function verifyPostApply(eventsDir: string, expectedDigest: string): boolean {
+  try {
+    const after = foldEvents(loadEventsFromDir(eventsDir).byUlid.values());
+    if (after.effectiveDigest !== expectedDigest) {
+      console.error("post-apply effectiveDigest drift — retention aborted after partial write");
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return false;
+  }
+}
+
 export function main(argv: string[]): number {
   const parsed = parseArgs(argv);
   if (parsed.kind === "usage") {
@@ -34,53 +109,17 @@ export function main(argv: string[]): number {
     console.error(USAGE);
     return 2;
   }
-  const root = process.env.AMADEUS_NSD_ROOT ?? ROOT;
-  const eventsDir = join(root, EVENTS_DIR);
+  const eventsDir = join(process.env.AMADEUS_NSD_ROOT ?? ROOT, EVENTS_DIR);
+  const loaded = loadOrFail(eventsDir);
+  if (loaded === null) return 1;
+  const folded = foldOrFail(loaded);
+  if (folded === null) return 1;
 
-  let loaded: ReturnType<typeof loadEventsFromDir>;
-  try {
-    loaded = loadEventsFromDir(eventsDir);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    console.error("refusing to prune: event ledger load failed");
-    return 1;
-  }
-
-  let folded: ReturnType<typeof foldEvents>;
-  try {
-    folded = foldEvents(loaded.byUlid.values());
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    console.error("refusing to prune: fold failed");
-    return 1;
-  }
-
-  const deleteUlids: Ulid[] = [...loaded.byUlid.keys()]
-    .filter((ulid): ulid is Ulid => isUlid(ulid) && loaded.byUlid.get(ulid)?.op !== "snapshot")
-    .sort();
+  const deleteUlids = compactableUlids(loaded);
   if (deleteUlids.length === 0) {
     console.log("retention ok — no grant/revoke events to compact");
     return 0;
   }
-
-  const effective: SnapshotEffectiveEntry[] = [
-    ...folded.grandfather.map((entry) => ({
-      fingerprint: entry.fingerprint,
-      kind: "grandfather" as const,
-      ruleId: entry.ruleId,
-      file: entry.file,
-      reason: entry.reason,
-      issues: entry.issues,
-    })),
-    ...folded.exemptions.map((entry) => ({
-      fingerprint: entry.fingerprint,
-      kind: "exemption" as const,
-      ruleId: "NSD002" as const,
-      file: "unknown",
-      reason: entry.reason,
-      issues: ["#1979"],
-    })),
-  ].sort((a, b) => (a.fingerprint < b.fingerprint ? -1 : a.fingerprint > b.fingerprint ? 1 : 0));
 
   const snapshotUlid = mintUlid();
   const snapshot: SnapshotEvent = {
@@ -88,7 +127,7 @@ export function main(argv: string[]): number {
     ulid: snapshotUlid,
     op: "snapshot",
     effectiveDigest: folded.effectiveDigest,
-    effective,
+    effective: materializeEffective(folded),
     deleteUlids,
   };
 
@@ -101,27 +140,8 @@ export function main(argv: string[]): number {
 
   mkdirSync(eventsDir, { recursive: true });
   writeFileSync(join(eventsDir, `${snapshotUlid}.json`), encodeEvent(snapshot));
-  for (const ulid of deleteUlids) {
-    try {
-      unlinkSync(join(eventsDir, `${ulid}.json`));
-    } catch (error) {
-      console.error(`failed to delete ${ulid}.json: ${error instanceof Error ? error.message : String(error)}`);
-      return 1;
-    }
-  }
-
-  // Post-apply fold must succeed and preserve the effective digest.
-  try {
-    const after = foldEvents(loadEventsFromDir(eventsDir).byUlid.values());
-    if (after.effectiveDigest !== folded.effectiveDigest) {
-      console.error("post-apply effectiveDigest drift — retention aborted after partial write");
-      return 1;
-    }
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    return 1;
-  }
-
+  if (!applyDeletes(eventsDir, deleteUlids)) return 1;
+  if (!verifyPostApply(eventsDir, folded.effectiveDigest)) return 1;
   console.log(`wrote snapshot ${snapshotUlid}; deleted ${deleteUlids.length} event(s)`);
   return 0;
 }
