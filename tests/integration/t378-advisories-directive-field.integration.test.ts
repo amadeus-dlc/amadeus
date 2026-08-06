@@ -23,9 +23,13 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
-import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { _resetStageGraphForTests, docsRoot } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  applyProductionAutonomyMode,
+  previewProductionAutonomyGrant,
+} from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import {
   ACTIVATION_PLUGIN,
   ACTIVATION_WATCH_GLOBS,
@@ -39,8 +43,11 @@ import {
   FIXTURES_DIR,
   resetAidlcEnv,
   seedStateFile,
+  seededStateFile,
 } from "../harness/fixtures.ts";
 import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
+import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
@@ -117,6 +124,7 @@ afterEach(() => {
   __resetGraphCache();
   _resetStageGraphForTests();
   resetAidlcEnv();
+  resetOtelPerProject();
   if (host) rmSync(host, { recursive: true, force: true });
   cleanupTestProject(proj);
 });
@@ -360,5 +368,42 @@ describe("t378 next holds before stage body", () => {
     const raw = logs.join("\n").trim();
     expect(raw).toContain('"stage":"build-and-test"');
     expect(raw).not.toContain("advisories");
+  });
+
+  // #2253 FR-ADV-1: under a full grant the hold is ruled by the autonomy ladder
+  // first, and a `run-now` ruling lets the ORIGINAL directive through untouched
+  // — the run continues unattended instead of waiting on a human turn.
+  test("full grant -> the ladder rules run-now and run-stage passes through with a receipt", () => {
+    host = makeChangedHost();
+    setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+    __resetGraphCache();
+    _resetStageGraphForTests();
+    proj = createTestProject();
+    seedStateFile(proj, FIX_BUILD_STAGE);
+    plantV1AuditRow("HUMAN_TURN", {}, proj);
+    const stateContent = readFileSync(seededStateFile(proj), "utf8");
+    const preview = previewProductionAutonomyGrant({ projectDir: proj, stateContent });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(applyProductionAutonomyMode({
+      projectDir: proj,
+      stateContent,
+      mode: "full",
+      confirmedDisplayDigest: preview.preview.displayDigest,
+    })).toMatchObject({ ok: true, projection: { mode: "full" } });
+
+    handleNext([], proj);
+
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; stage?: string };
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.stage).toBe("build-and-test");
+    // The ruling was accepted as a receipt whose provenance is the decision.
+    const store = JSON.parse(
+      readFileSync(join(docsRoot(proj), ".amadeus-advisory-choice.json"), "utf-8"),
+    ) as { receipts: { choice: string; provenance: { kind: string } }[] };
+    expect(store.receipts).toHaveLength(1);
+    expect(store.receipts[0].choice).toBe("run-now");
+    expect(store.receipts[0].provenance.kind).toBe("auto-decision");
   });
 });

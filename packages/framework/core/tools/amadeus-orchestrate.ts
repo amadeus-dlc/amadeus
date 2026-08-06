@@ -102,6 +102,8 @@ import {
   advisoryReportHoldReason,
   closeAdvisoryInstancesForStage,
   guardAdvisoryChoices,
+  recordAdvisoryChoice,
+  resolveAdvisoryChoiceAutonomously,
 } from "./amadeus-advisory-choice.ts";
 import {
   buildIntentSelectionSnapshot,
@@ -795,13 +797,43 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
   const pending = takePendingAdvisories();
   if (pending.length === 0) return directive;
   if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return directive;
+  const advisoryProjectDir = resolveProjectDir(_handlerProjectDir);
   const guard = guardAdvisoryChoices(
-    resolveProjectDir(_handlerProjectDir),
+    advisoryProjectDir,
     directive.stage,
     pending,
     pluginActivationHostRoot(),
   );
   if (guard.kind === "allow") return directive;
+  // #2253 FR-ADV-1/2. A hold is offered to the autonomy ladder before it is
+  // turned into a question for the human. There are exactly TWO ways out: the
+  // ladder decided `run-now` and the receipt was accepted, in which case the
+  // ORIGINAL directive is returned untouched and the run continues unattended;
+  // or anything else at all — no grant, an expired one, a scope that does not
+  // cover this interaction, a park, a conflict, a deferral, a refused receipt —
+  // in which case the human is asked, exactly as before. Two branches is the
+  // whole fail-closed argument: there is no third place to land.
+  const graphRevision = autonomyDigest(loadGraph());
+  const auto = resolveAdvisoryChoiceAutonomously({
+    projectDir: advisoryProjectDir,
+    hold: guard,
+    phase: directive.phase,
+    graphRevision,
+  });
+  if (
+    auto.kind === "resolved"
+    && recordAdvisoryChoice(advisoryProjectDir, auto.choice, {
+      kind: "auto-decision",
+      decisionId: auto.decision.decisionId,
+      basisKind: auto.decision.basisKind,
+      basisFingerprint: auto.decision.basisFingerprint,
+      projectionRevision: auto.projectionRevision,
+      phase: directive.phase,
+      graphRevision,
+    })
+  ) {
+    return directive;
+  }
   const choiceDirective: AwaitAdvisoryChoiceDirective = {
     kind: "await-advisory-choice",
     stage: guard.stage,
