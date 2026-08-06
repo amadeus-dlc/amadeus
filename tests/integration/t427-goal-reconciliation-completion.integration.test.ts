@@ -279,10 +279,14 @@ describe("Goal receipt is a terminal completion precondition", () => {
       { encoding: "utf8", env: toolEnv },
     );
     expect(result.status).toBe(0);
-    const directive = JSON.parse(result.stdout) as { kind: string; message?: string };
-    expect(directive.kind).toBe("error");
-    expect(directive.message).toMatch(/Goal reconciliation refused completion mirror/i);
+    // The refusal is a completion that has not settled, not a failed workflow
+    // step, so it rides the await-completion kind and leaves no ERROR_LOGGED
+    // row (issue #2251).
+    const directive = JSON.parse(result.stdout) as { kind: string; reason?: string };
+    expect(directive.kind).toBe("await-completion");
+    expect(directive.reason).toMatch(/Goal reconciliation refused completion mirror/i);
     expect(result.stdout).not.toContain("amadeus-mirror-lifecycle");
+    expect(auditEvents(project, record)).not.toContain("ERROR_LOGGED");
   });
 
   test("terminal report funnels through the same receipt authority", () => {

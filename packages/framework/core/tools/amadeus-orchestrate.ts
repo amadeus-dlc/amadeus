@@ -86,6 +86,7 @@ import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
+  type AwaitCompletionDirective,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -235,6 +236,7 @@ import {
   authorizePersistedCompletedWorkflow,
   authorizeWorkflowCompletion,
   type WorkflowCompletionPreparation,
+  WorkflowCompletionNotSettledError,
   completionMirrorDisposition,
   workflowCompletionPreparation,
 } from "./amadeus-workflow-completion.ts";
@@ -597,9 +599,7 @@ function emitMirrorBoundaryIfNeeded(
         completionInstance: boundary.completion.instance,
       });
     } catch (cause) {
-      emit(errorDirective(
-        `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`,
-      ));
+      emit(completionRefusalDirective(cause, `Goal reconciliation refused completion mirror: ${errorMessage(cause)}`));
       return true;
     }
   }
@@ -1005,6 +1005,30 @@ function printDirective(message: string): PrintDirective {
 
 function errorDirective(message: string): ErrorDirective {
   return { kind: "error", message };
+}
+
+// await-completion - the terminal completion transaction has not settled yet
+// (issue #2251). The engine itself instructs this state ("run complete-workflow,
+// then re-run `next`"), so it is a legitimate wait, not a failed step: emitting
+// it instead of an error directive keeps the expected window out of
+// ERROR_LOGGED / amadeus.operation.failed without touching the error path's own
+// recording contract (#839).
+function awaitCompletionDirective(reason: string): AwaitCompletionDirective {
+  return { kind: "await-completion", reason };
+}
+
+// Which shape a refused completion takes. A completion the authority declines
+// to settle is a wait; every other cause — malformed state, a lineage that
+// contradicts the projection — is a genuine failure that keeps the error
+// directive and its ERROR_LOGGED evidence (#839). Exported as a pure seam
+// because both call sites sit inside spawn-only orchestration.
+export function completionRefusalDirective(
+  cause: unknown,
+  message: string,
+): AwaitCompletionDirective | ErrorDirective {
+  return cause instanceof WorkflowCompletionNotSettledError
+    ? awaitCompletionDirective(message)
+    : errorDirective(message);
 }
 
 // Workspace migration is outside the Intent lifecycle. Its public-routing
@@ -3273,7 +3297,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   );
   if (!next) {
     if (getField(stateContent, "Status")?.trim() !== "Completed") {
-      emit(errorDirective(
+      emit(awaitCompletionDirective(
         `No in-scope stage remains after ${currentSlug}, but the workflow completion transaction is not committed.`,
       ));
       return;

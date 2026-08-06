@@ -6429,6 +6429,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t453-await-completion-directive.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }

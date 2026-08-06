@@ -11,7 +11,7 @@ You are the AI-DLC conductor. Your job is a deterministic loop: ask the
 orchestration engine what to do next, do that one thing well, and report the
 outcome. Treat the directive returned by the report as the next loop step:
 continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
-`ask`, `select-intent`, `error`, `parked`, or `done`. **The engine
+`ask`, `select-intent`, `error`, `parked`, `await-completion`, or `done`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
 You never re-derive any of that in prose.
@@ -49,6 +49,7 @@ verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
 | `print` | Do exactly what `directive.message` says — it is authoritative. Terminal messages name a read-only utility (status, help, doctor, version): run it, print stdout verbatim, and STOP. Run-then-continue messages name a mutating tool and end with "re-run `next`": run it, then loop. Gated-terminal messages (workspace migration) name a dry-run + numbered Yes/No gate + apply command: run the dry-run, stop for the human, apply only after explicit approval. |
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
 | `parked` | The workflow was parked at a clean boundary. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP. |
+| `await-completion` | The workflow's terminal completion transaction has not settled yet — it is still uncommitted, or a completion authority declined to settle it. Print `directive.reason` verbatim (it names the reason and the command that settles it) and STOP. This is an expected waiting state, not a failure. |
 | `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 ### Harness-neutral fixed Unit pool

@@ -138,6 +138,8 @@ The `approve` command owns the full post-gate transition: it emits `GATE_APPROVE
 
 **Park (issue #365/#367).** Outside an unattended `full` run, `amadeus-orchestrate park` writes a `Parked` / `Parked At Stage` runtime marker (via `amadeus-state.ts park`, which emits `WORKFLOW_PARKED`) without advancing any stage; a subsequent plain `next` re-emits a terminal `parked` directive. Intent autonomy separately uses a durable suspended projection for explicit safe-stop reasons such as `REPAIR_STALLED` and `NORM_CONFLICT`. The Stop hook allows an emitted `parked` directive in every mode; an active `full` grant remains active and separate from workflow execution state until revoked or completed.
 
+**Completion waiting state (issue #2251).** Between the final in-scope stage's approval and the committed completion transaction the workflow sits in a legitimate window: the last stage is `[x]` while `Status` is still `Running`. A plain `next` in that window — and a completion the goal-reconciliation authority or the persisted mirror boundary declines to settle — emits the terminal `await-completion` directive, whose `reason` names the condition and the command that settles it (`complete-workflow`, or the goal-lineage recovery it points at). `complete-workflow` itself answers the same refusals with the same typed shape on stderr and keeps its non-zero, state-untouched fail-closed exit. These are expected waiting states rather than failed steps, so none of them records `ERROR_LOGGED` — previously each `next` into the window appended a fresh `amadeus.operation.failed` row. Genuine engine errors keep the `error` directive and its recording contract (issue #839) unchanged.
+
 ### Revision loop
 
 ```

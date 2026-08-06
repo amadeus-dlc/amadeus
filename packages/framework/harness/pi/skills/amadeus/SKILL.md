@@ -53,7 +53,7 @@ bun .pi/tools/amadeus-orchestrate.ts report --stage <stage> --result <outcome>
 
 Treat the directive returned by `report` as the next loop step. Continue for
 `run-stage`, `invoke-swarm`, and `print`. Stop for `ask`, `select-intent`,
-`error`, `parked`, and `done`. Never call state-transition tools directly.
+`error`, `parked`, `await-completion`, and `done`. Never call state-transition tools directly.
 
 ## Directive handling
 
@@ -97,6 +97,11 @@ Treat the directive returned by `report` as the next loop step. Continue for
 - `error`: print the engine message verbatim and stop.
 - `parked`: state that the workflow is parked and can resume with
   `/skill:amadeus --resume`.
+- `await-completion`: the workflow's terminal completion transaction has not
+  settled yet — it is still uncommitted, or a completion authority declined to
+  settle it. Print `directive.reason` verbatim (it names the reason and the
+  command that settles it) and stop. This is an expected waiting state, not a
+  failure.
 - `done`: present the completion summary and stop.
 
 Only Pi input events whose native source is `interactive` establish a human

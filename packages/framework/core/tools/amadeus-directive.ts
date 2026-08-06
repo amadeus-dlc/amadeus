@@ -51,6 +51,7 @@ export type DirectiveKind =
   | "error"
   | "done"
   | "parked"
+  | "await-completion"
   | "await-approval";
 
 // run-stage — load lead + support agents, load `consumes` artifacts, run the
@@ -330,6 +331,22 @@ export interface ParkedDirective {
   stage: string;
 }
 
+// await-completion — the terminal completion transaction has not settled yet.
+// Either the final in-scope stage is approved while `complete-workflow` is still
+// uncommitted, or a completion authority (goal reconciliation, the persisted
+// mirror boundary) refused to settle it. Distinct from `error`: the engine's own
+// guidance names this state and the command that leaves it, so it is a
+// legitimate wait rather than a failed workflow step — and, unlike an `error`
+// directive, it appends no ERROR_LOGGED row (issue #2251, which found the
+// expected window recorded as amadeus.operation.failed on every re-entry).
+// Distinct from `done`: nothing has completed yet. Terminal for the loop, like
+// its `await-` siblings: the conductor presents `reason` — which carries the
+// remediation the message names — and stops.
+export interface AwaitCompletionDirective {
+  kind: "await-completion";
+  reason: string;
+}
+
 export interface AwaitApprovalDirective {
   kind: "await-approval";
   stage: string;
@@ -351,6 +368,7 @@ export type Directive =
   | ErrorDirective
   | DoneDirective
   | ParkedDirective
+  | AwaitCompletionDirective
   | AwaitApprovalDirective;
 
 export type ValidationResult =
@@ -373,6 +391,7 @@ export const VALID_KINDS = [
   "error",
   "done",
   "parked",
+  "await-completion",
   "await-approval",
 ] as const;
 
@@ -438,6 +457,7 @@ const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
 const PARKED_FIELDS = ["kind", "reason", "stage"] as const;
+const AWAIT_COMPLETION_FIELDS = ["kind", "reason"] as const;
 const AWAIT_APPROVAL_FIELDS = [
   "kind",
   "stage",
@@ -458,6 +478,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   error: ERROR_FIELDS,
   done: DONE_FIELDS,
   parked: PARKED_FIELDS,
+  "await-completion": AWAIT_COMPLETION_FIELDS,
   "await-approval": AWAIT_APPROVAL_FIELDS,
 };
 
@@ -513,6 +534,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkString(o, "reason", "parked", errors);
     checkString(o, "stage", "parked", errors);
   },
+  "await-completion": (o, errors) => checkString(o, "reason", "await-completion", errors),
   "await-approval": (o, errors) => checkAwaitApproval(o, errors),
 };
 
@@ -1159,6 +1181,11 @@ export const directiveSelfCheckExamples: Directive[] = [
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
     { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
     { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /amadeus --resume.', stage: "feasibility" },
+    {
+      kind: "await-completion",
+      reason:
+        "No in-scope stage remains after build-and-test, but the workflow completion transaction is not committed.",
+    },
     {
       kind: "await-approval",
       stage: "code-generation",
