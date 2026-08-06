@@ -4,11 +4,30 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { encodeEvent, EVENTS_DIR, type GrantEvent } from "../tests/no-silent-drop/events.ts";
+import { encodeEvent, EVENTS_DIR, type GrantEvent, type RevokeEvent } from "../tests/no-silent-drop/events.ts";
 import { parseBaseline, parseExemptions } from "../tests/no-silent-drop/ledger.ts";
 import { ulidFromSeed } from "../tests/no-silent-drop/ulid.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Identities approved at bootstrap that later shrinks dropped without a
+ * bootstrap-provenance `removed` entry. The ledger has to state those removals
+ * explicitly, otherwise the folded set silently diverges from approved B_pre.
+ */
+function undeclaredRemovals(baselineFingerprints: ReadonlySet<string>): string[] {
+  const provenance = JSON.parse(
+    readFileSync(join(ROOT, "tests/no-silent-drop/bootstrap-provenance.json"), "utf8"),
+  ) as {
+    approvedPre: { entries: { fingerprint: string }[] };
+    removed: { fingerprint: string }[];
+  };
+  const declared = new Set(provenance.removed.map((entry) => entry.fingerprint));
+  return provenance.approvedPre.entries
+    .map((entry) => entry.fingerprint)
+    .filter((fingerprint) => !baselineFingerprints.has(fingerprint) && !declared.has(fingerprint))
+    .sort();
+}
 
 function main(): number {
   const baseline = parseBaseline(
@@ -50,6 +69,12 @@ function main(): number {
       reason: entry.reason,
       issues: ["#1979"],
     };
+    writeFileSync(join(eventsDir, `${ulid}.json`), encodeEvent(event));
+    written += 1;
+  }
+  for (const fingerprint of undeclaredRemovals(new Set(baseline.entries.map((entry) => entry.fingerprint)))) {
+    const ulid = ulidFromSeed(`revoke:${fingerprint}`);
+    const event: RevokeEvent = { schemaVersion: 1, ulid, op: "revoke", fingerprint };
     writeFileSync(join(eventsDir, `${ulid}.json`), encodeEvent(event));
     written += 1;
   }

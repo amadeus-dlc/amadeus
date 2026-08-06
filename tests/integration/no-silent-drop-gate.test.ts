@@ -1102,6 +1102,26 @@ describe("no-silent-drop boundaries", () => {
       .toBe("error");
   });
 
+  test("bootstrap removals must be declared in provenance or revoked in the ledger", async () => {
+    const fixture = bootstrapRepository();
+    let undeclared = "";
+    mutateBootstrapProvenance(fixture, (provenance) => {
+      const removed = provenance.removed as { fingerprint: string }[];
+      undeclared = removed.pop()?.fingerprint ?? "";
+    });
+    expect(await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).toMatchObject({
+      status: "error",
+      detail: expect.stringContaining("neither declared nor revoked"),
+    });
+
+    const ulid = ulidFromSeed(`revoke:${undeclared}`);
+    writeFileSync(
+      join(fixture.root, `tests/no-silent-drop/events/${ulid}.json`),
+      encodeEvent({ schemaVersion: 1, ulid, op: "revoke", fingerprint: undeclared }),
+    );
+    expect((await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).status).toBe("pass");
+  });
+
   test("trusted previous ledgers support event custody and reject incomplete or invalid bases", () => {
     const createLedgerRepo = () => {
       const root = mkdtempSync(join(tmpdir(), "nsd-ledger-git-"));
@@ -1119,15 +1139,30 @@ describe("no-silent-drop boundaries", () => {
         reason: "legacy finding",
         issues: ["#1979"],
       }));
+      const identity = ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com"];
       runGit(root, ["init", "-q"]);
       runGit(root, ["add", "."]);
-      runGit(root, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "base"]);
-      return { root, sha: runGit(root, ["rev-parse", "HEAD"]) };
+      runGit(root, [...identity, "commit", "-qm", "base"]);
+      const sha = runGit(root, ["rev-parse", "HEAD"]);
+      // The ledger path requires a strict ancestor, so HEAD must move past the base.
+      runGit(root, [...identity, "commit", "--allow-empty", "-qm", "head"]);
+      const unrelated = runGit(root, [
+        ...identity,
+        "commit-tree",
+        runGit(root, ["rev-parse", "HEAD^{tree}"]),
+        "-m",
+        "unrelated",
+      ]);
+      return { root, sha, head: runGit(root, ["rev-parse", "HEAD"]), unrelated };
     };
 
     const complete = createLedgerRepo();
     expect(loadTrustedPreviousLedgers(complete.root, complete.sha).source).toBe("events");
     expect(() => loadTrustedPreviousLedgers(complete.root, "invalid")).toThrow("not a resolvable full commit");
+    expect(() => loadTrustedPreviousLedgers(complete.root, complete.head))
+      .toThrow("not a strict ancestor of HEAD");
+    expect(() => loadTrustedPreviousLedgers(complete.root, complete.unrelated))
+      .toThrow("not a strict ancestor of HEAD");
 
     const missingEvents = mkdtempSync(join(tmpdir(), "nsd-ledger-missing-"));
     temporaryDirectories.push(missingEvents);

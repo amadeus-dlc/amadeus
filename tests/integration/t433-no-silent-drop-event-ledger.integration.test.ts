@@ -22,7 +22,7 @@ import {
   type SnapshotEvent,
 } from "../no-silent-drop/events.ts";
 import { digest } from "../no-silent-drop/model.ts";
-import { mintUlid, ulidFromSeed } from "../no-silent-drop/ulid.ts";
+import { isUlid, mintUlid, parseUlid, ulidFromSeed } from "../no-silent-drop/ulid.ts";
 import { noSilentDropTrustedBase } from "../lib/no-silent-drop-trusted-base.ts";
 
 const tempRoots: string[] = [];
@@ -539,6 +539,17 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
 
   test("mintUlid rejects an out-of-range timestamp", () => {
     expect(() => mintUlid(-1)).toThrow("timestamp out of range");
+  });
+
+  test("ULIDs use the standard bit layout: 2 leading pad bits and a 48-bit timestamp prefix", () => {
+    // 0x0000_0000_0001 ms → the 10-character timestamp prefix must end in "1".
+    expect(mintUlid(1).slice(0, 10)).toBe("0000000001");
+    expect(mintUlid(Date.now()).charCodeAt(0)).toBeLessThanOrEqual("7".charCodeAt(0));
+    // The trailing character carries entropy, so it is not confined to a 4-multiple.
+    const trailing = new Set(Array.from({ length: 64 }, () => mintUlid().slice(-1)));
+    expect(trailing.size).toBeGreaterThan(8);
+    expect(isUlid(`8${"0".repeat(25)}`)).toBe(false);
+    expect(() => parseUlid("Z".repeat(26), "ulid")).toThrow("is not a ULID");
   });
 
   test("load and custody cover remaining fail-closed arms", () => {

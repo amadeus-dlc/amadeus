@@ -3,17 +3,16 @@ import { createHash, randomBytes } from "node:crypto";
 /** Crockford Base32 alphabet (no I, L, O, U). */
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+// The leading character carries the 2 zero pad bits, so it never exceeds 7.
+const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 
 export type Ulid = string & { readonly __brand: "Ulid" };
 
-/** Encode 128 bits (16 bytes) as a 26-character Crockford ULID (130 bits with 2 zero pad bits). */
+/** Encode 128 bits (16 bytes) as a 26-character Crockford ULID (130 bits with 2 leading zero pad bits). */
 function encodeUlidBytes(bytes: Uint8Array): Ulid {
   if (bytes.length !== 16) throw new Error(`ULID requires 16 bytes, got ${bytes.length}`);
   let bits = 0n;
   for (const byte of bytes) bits = (bits << 8n) | BigInt(byte);
-  // 128 data bits → left-pad 2 zero bits to align on 26×5.
-  bits <<= 2n;
   let out = "";
   for (let i = 25; i >= 0; i -= 1) {
     out += CROCKFORD[Number((bits >> BigInt(i * 5)) & 0x1fn)];

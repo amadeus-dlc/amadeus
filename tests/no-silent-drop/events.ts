@@ -60,6 +60,7 @@ export type FoldedLedger = {
   readonly exemptions: readonly { readonly fingerprint: string; readonly reason: string }[];
   readonly effectiveDigest: string;
   readonly allowedMissingUlids: ReadonlySet<string>;
+  readonly revoked: ReadonlySet<string>;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -297,6 +298,7 @@ export function foldEvents(events: Iterable<LedgerEvent>): FoldedLedger {
     exemptions,
     effectiveDigest,
     allowedMissingUlids: allowedMissing,
+    revoked: revokes,
   };
 }
 

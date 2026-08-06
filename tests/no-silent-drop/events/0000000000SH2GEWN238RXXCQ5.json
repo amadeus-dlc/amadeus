@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000000SH2GEWN238RXXCQ5",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "080b579356a50770d78050c83a396fc3768029cd38a9aa629941d8de8e5b3538",
+  "ruleId": "NSD001",
+  "file": "packages/framework/core/tools/amadeus-utility.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

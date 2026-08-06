@@ -363,10 +363,19 @@ function validateBootstrapHistory(
   const removed = preIdentities.filter((identity) => !currentSet.has(identity)).sort();
   const added = currentIdentities.filter((identity) => !preSet.has(identity));
   const declaredRemoved = provenance.removed.map((entry) => entry.fingerprint).sort();
-  // Declared bootstrap removals must remain removed; later shrinks may remove more.
+  const declaredRemovedSet = new Set(declaredRemoved);
+  // Every removal against B_pre must be accounted for: either declared by the
+  // bootstrap provenance, or bound to a revoke event in the ledger.
   assertBootstrap(
     declaredRemoved.every((fingerprint) => removed.includes(fingerprint)),
     "bootstrap removed identities mismatch",
+  );
+  const unaccountedRemovals = removed.filter(
+    (fingerprint) => !declaredRemovedSet.has(fingerprint) && !folded.revoked.has(fingerprint),
+  );
+  assertBootstrap(
+    unaccountedRemovals.length === 0,
+    `bootstrap removals are neither declared nor revoked: ${unaccountedRemovals.join(", ")}`,
   );
   // Post-migration grants may grow with issue-tracked entries; bootstrap's historical
   // "no adds vs B_pre" applies only to identities that were part of the original B0.
@@ -404,6 +413,20 @@ export function isAncestor(repoRoot: string, ancestor: string, descendant: strin
 }
 
 /**
+ * Event-ledger custody compares event sets only, so an identical or unrelated
+ * trusted base would hide deletions. Require strict ancestry of HEAD: reachable
+ * from HEAD, and not reachable back (which rules out HEAD itself).
+ */
+function assertStrictAncestorOfHead(repoRoot: string, trustedSha: string): void {
+  if (!isAncestor(repoRoot, trustedSha, "HEAD") || isAncestor(repoRoot, "HEAD", trustedSha)) {
+    throw new InfraFailure(
+      "BASELINE_INVALID",
+      `trusted base is not a strict ancestor of HEAD: ${trustedSha}`,
+    );
+  }
+}
+
+/**
  * Load the head event ledger, fold it, and enforce event-file custody against the
  * trusted base. Replaces previousDigest byte-binding (#2338).
  */
@@ -420,7 +443,9 @@ export function loadTrustedPreviousLedgers(
 
   // Historical bootstrap evidence remains informative when the trusted base has
   // no event directory yet (first adoption / pre-migration parent).
-  if (!gitObjectExists(repoRoot, `${trustedSha}:${CANONICAL_PATHS.eventsRel}`)) {
+  if (gitObjectExists(repoRoot, `${trustedSha}:${CANONICAL_PATHS.eventsRel}`)) {
+    assertStrictAncestorOfHead(repoRoot, trustedSha);
+  } else {
     validateBootstrapHistory(repoRoot, trustedSha, folded);
   }
 
