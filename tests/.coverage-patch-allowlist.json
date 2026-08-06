@@ -2367,17 +2367,6 @@
   {
     "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
     "selector": {
-      "function": "withRoleMarkerLock",
-      "fingerprint": "sha256:7a6a0c2c2996a1ea119affed452fe7917035f45d75ba30115b794cc76a23012e",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "Stale role-marker lock retire arm in withRoleMarkerLock: reaching it needs a lock directory older than ROLE_LOCK_STALE_MS left by a crashed holder. The lock-contention behavior is asserted through the spawned hook boundary in t365; deterministic stale-lock timing requires an injectable clock/lock port.",
-    "expiry": "remove when withRoleMarkerLock receives an injectable stale-lock fixture"
-  },
-  {
-    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
-    "selector": {
       "function": "readRoleMarker",
       "fingerprint": "sha256:b95cab0307ad58876ac4bfffde654e9c4d73e9eb9aafcecb0c942e1a8cda2a0c",
       "anchorLines": 31,
@@ -3239,17 +3228,6 @@
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:7922aad30b06514c11122cc5107dbdc7dca6f65a48f4d60e12ac26bc93bcd50c",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
-    "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
