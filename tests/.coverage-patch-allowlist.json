@@ -3255,7 +3255,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:1362e043a02de92033534f487cbb42a9d6ad60ee8b362031b49a48692ed14cf2",
+      "fingerprint": "sha256:316149cd7ed66e29c8f375064ea00352b9753fd37822b334975e967d171b7d5a",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
@@ -5618,7 +5618,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:bd6239ffd577302bc6102cf6a75e746655316182e67b312b1c93a0a870ecd755",
+      "fingerprint": "sha256:b78a074689db51ac0d77f2cd579b569dd8c0eb8362aa83c36026156493c3d5b8",
       "anchorLines": 1,
       "targetLines": "1"
     },
