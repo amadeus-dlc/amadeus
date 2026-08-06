@@ -141,6 +141,11 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-journal.ts"),
     join(proj, ".claude", "tools", "amadeus-journal.ts"),
   );
+  // amadeus-lib.ts's subagentStartFields imports the attribution module (#2279 U1/U2).
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-subagent-observability.ts"),
+    join(proj, ".claude", "tools", "amadeus-subagent-observability.ts"),
+  );
   // The hook opens a telemetry process span (#1628 Phase 2); the seam and its
   // layered config reader are part of its module graph.
   copyFileSync(

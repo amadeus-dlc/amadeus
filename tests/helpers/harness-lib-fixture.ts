@@ -10,6 +10,9 @@ import { join } from "node:path";
 const HARNESS_TOOL_SIBLINGS = [
   "amadeus-lib.ts",
   "amadeus-journal.ts",
+  // amadeus-lib.ts's subagent attribution (U1/U2, #2279) lives in this module;
+  // subagentStartFields imports it statically.
+  "amadeus-subagent-observability.ts",
   "amadeus-harness.ts",
   "amadeus-graph.ts",
   "amadeus-stage-schema.ts",

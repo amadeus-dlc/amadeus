@@ -279,6 +279,8 @@ function makeProject(withState: boolean): string {
     "amadeus-merge-recovery.ts",
     // amadeus-lib.ts imports the JSONL journal codec (amadeus-lib.ts:2).
     "amadeus-journal.ts",
+    // and the subagent attribution module for subagentStartFields (#2279 U1/U2).
+    "amadeus-subagent-observability.ts",
     // Both hooks open a telemetry process span (#1628 Phase 2); the seam and
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
