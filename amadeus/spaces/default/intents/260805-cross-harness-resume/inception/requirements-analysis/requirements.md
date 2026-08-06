@@ -122,3 +122,25 @@ Iteration 1 の BLOCKER(FR-1 AC 自己矛盾)は (i)(ii) の2点固定で解消�
 - NIT | Intent 分析の architecture.md 節見出し引用「引き継ぎの3層構造」は実見出し「引き継ぎに関与する3層」(architecture.md:7)と逐語不一致(合成的言い換え、実害なし) — conductor が指摘どおり逐語形へ是正済み。
 - FOLLOW-UP | BLOCKER 解消確認: FR-1 AC は (i) C1/C2/C3/C5 が互いに異なる原因値 (ii) C6 が C1 と同一の(b)、の2点固定へ再構成され一意にテスト可能。architecture.md:28/:46 と整合。
 - FOLLOW-UP | NIT/FOLLOW-UP 解消確認: business-overview.md:7,11 / code-structure.md:7 の見出し逐語一致、FR-2 の t365 assert 全6件列挙(code-structure.md:23)を確認。Step 10 必須7節の実在と consumes 3成果物の実参照を確認。是正 diff への fix-diff-independent-reverify で追加の誤りなし。
+
+## 追補 — FR-3a: role marker ロック奪取の所有者検証(2026-08-06、PR レビュー起点の設計改訂)
+
+**承認系譜**: PR #2329 の CodeRabbit レビュー Major 指摘(`amadeus-kimi-lib.ts:244-251` — SessionStart の無条件 `rmSync` が他プロセスの生きたロックを削除しうる)→ ユーザー裁定 2026-08-06「設計がまずかったというコトだろ？状態破壊になるのはまずいだろ。2(所有者付きロックへ改修)」→ 同日ユーザー再確認「いいね。じゃあその方針でお願いします」。本追補はこの承認済み仕様改訂を record 正本へ固定するものであり、FR-3 本文の「ギャップが実測されたら同一 FR 内で是正する」条項の適用である。
+
+### 背景(是正対象の欠陥)
+
+FR-3 の `.lock` 残存ギャップ是正として実装された SessionStart の無条件 `rmSync(markerPath.lock)` は、「SessionStart は fresh-session 境界なので残存ロックは kill 残骸」という**未検証の前提**に依存していた。この前提は (i) 同一 project dir の再起動窓(SessionEnd の `clearKimiRoleCarrier` 進行中に次セッションの SessionStart が発火)、(ii) 終了間際の subagent stop フック進行中、で成立せず、進行中の read-modify-write と baseline 書き込みが同じ carrier を並行更新して状態破壊(torn update)に至る。単一エージェント運用の規律では (i)(ii) を塞げない。
+
+### 要件
+
+1. `withRoleMarkerLock` はロック取得時に所有者情報(PID+開始時刻)をロックディレクトリ内へ記録する。取得の原子性は従来どおり `mkdirSync` に依存する。
+2. ロックの奪取(削除)は所有者プロセスの不在を実測(`process.kill(pid, 0)`、`ESRCH`=不在 / `EPERM`=生存)で確認した場合にのみ行う。**生存する所有者のロックは SessionStart を含む誰も削除しない**。
+3. SessionStart の無条件 `rmSync` は上記の所有者検証付き奪取へ置き換える。
+4. 所有者不在が確認できたロックは `ROLE_LOCK_STALE_MS`(30秒)の mtime 窓を待たずに即時奪取できること — FR-3 が本来解決したかった「kill 残骸による自動回復の空振り」はこの経路で従来より速く解消される。
+5. 所有者情報が未書込みの窓・PID 再利用の疑義は「削除しない」側に倒す(fail-safe)。復旧遅延方向の失敗は許容し、状態破壊方向の失敗は許容しない。
+
+### 受け入れ基準
+
+- (両側実証) 生存所有者のロックが SessionStart で削除されないこと、および所有者不在のロックが mtime stale を待たずに奪取されること、の両方を integration テストで固定する。
+- 現行実装(無条件 rmSync)で赤になる回帰テストを先に実測(Red)してから実装する(TDD)。
+- 並行 role 更新と SessionStart の同時実行で carrier が破壊されないこと。
