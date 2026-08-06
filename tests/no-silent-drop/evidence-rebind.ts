@@ -29,10 +29,6 @@ export const EVIDENCE_BUNDLE_PATHS = [
   EVIDENCE_REGISTRY_PATH,
   EVIDENCE_RUNS_PATH,
 ] as const;
-// #2338: ledger custody is event-file subset checks; reconcile no longer
-// rewrites previousDigest on baseline/exemptions JSON files.
-export const RECONCILE_LEDGER_PATHS = [] as const;
-
 export type RebindCounts = {
   registryRevisions: number;
   manifestRevisions: number;

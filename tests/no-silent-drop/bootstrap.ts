@@ -11,7 +11,6 @@ import {
   type LoadedEvents,
 } from "./events.ts";
 import {
-  approvalDigest,
   CANONICAL_PATHS,
   parseApproval,
   parseBaseline,
@@ -78,7 +77,7 @@ export type BootstrapProvenance = {
 export type TrustedPreviousLedgers = {
   readonly baseline: BaselineDoc;
   readonly exemptions: ExemptionDoc;
-  readonly source: "git" | "bootstrap" | "events";
+  readonly source: "events";
   readonly folded: FoldedLedger;
   readonly events: LoadedEvents;
 };
@@ -384,7 +383,7 @@ function validateBootstrapHistory(
     "bootstrap initial exemption identity digest mismatch",
   );
   validateHumanReview(readArtifact(repoRoot, provenance.humanReview, "bootstrap.humanReview"), provenance);
-  void approvalDigest(parseApproval(post.approvalBytes));
+  parseApproval(post.approvalBytes);
 }
 
 function gitObjectExists(repoRoot: string, object: string): boolean {

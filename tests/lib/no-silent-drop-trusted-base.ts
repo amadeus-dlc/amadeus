@@ -16,13 +16,20 @@ export function noSilentDropTrustedBase(repoRoot: string): string | null {
     return null;
   }
 
+  const head = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  const headSha = head.status === 0 ? head.stdout.trim() : "";
+
   const mergeBase = spawnSync("git", ["merge-base", "HEAD", "origin/main"], {
     cwd: repoRoot,
     encoding: "utf8",
   });
   if (mergeBase.status === 0) {
     const sha = mergeBase.stdout.trim();
-    if (/^[0-9a-f]{40}$/.test(sha)) return sha;
+    // A merge-base equal to HEAD is not a prior trusted base — fall through.
+    if (/^[0-9a-f]{40}$/.test(sha) && sha !== headSha) return sha;
   }
 
   const parent = spawnSync("git", ["rev-parse", "HEAD^"], {

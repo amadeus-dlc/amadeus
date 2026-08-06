@@ -52,8 +52,10 @@ function foldOrFail(loaded: LoadedEvents): FoldedLedger | null {
 }
 
 function compactableUlids(loaded: LoadedEvents): Ulid[] {
-  // Compact prior snapshots together with grants/revokes; the new snapshot embeds
-  // the effective set, so older snapshots are safe to enumerate for deletion.
+  const grantOrRevoke = [...loaded.byUlid.values()].some((event) => event.op !== "snapshot");
+  // No grant/revoke files → nothing to compact (avoid rewriting a lone snapshot).
+  if (!grantOrRevoke) return [];
+  // When compacting, also delete prior snapshots; the new snapshot embeds the fold.
   return [...loaded.byUlid.keys()].filter((ulid): ulid is Ulid => isUlid(ulid)).sort();
 }
 

@@ -29,6 +29,7 @@ import {
 import {
   baselineDocFromFold,
   exemptionsDocFromFold,
+  type FoldedLedger,
   foldEvents,
   loadEvents,
 } from "./events.ts";
@@ -244,13 +245,16 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
   verifySnapshot(snapshot);
 
   const revision = currentRevision(repoRoot);
-  const trustedSha = mode === "check" ? trustedBaseSha(options.baseRevision) : null;
-  if (mode === "check" && trustedSha === null) {
-    throw new InfraFailure("BASELINE_INVALID", "check mode requires a non-zero trusted base revision");
+  let folded: FoldedLedger;
+  if (mode === "check") {
+    const trustedSha = trustedBaseSha(options.baseRevision);
+    if (trustedSha === null) {
+      throw new InfraFailure("BASELINE_INVALID", "check mode requires a non-zero trusted base revision");
+    }
+    folded = loadTrustedPreviousLedgers(repoRoot, trustedSha).folded;
+  } else {
+    folded = foldEvents(loadEvents(repoRoot).byUlid.values());
   }
-  const folded = mode === "check"
-    ? loadTrustedPreviousLedgers(repoRoot, trustedSha as string).folded
-    : foldEvents(loadEvents(repoRoot).byUlid.values());
   const exemptions = exemptionsDocFromFold(folded);
   const baseline = baselineDocFromFold(folded, revision, folded.effectiveDigest);
   const findings = filterExemptions(rawFindings, exemptions, semanticScan.exemptionEligible);

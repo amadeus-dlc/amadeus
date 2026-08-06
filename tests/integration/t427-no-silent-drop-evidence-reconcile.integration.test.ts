@@ -33,7 +33,6 @@ const MOCK_EVENT = "e".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 const MOCK_TREE = "b".repeat(40);
 // #2338: reconcile no longer ratchets previousDigest ledger files.
-const LEDGER_RATCHET_PATHS = [] as const;
 
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
@@ -508,7 +507,7 @@ describe("t427 squash identity proof and main convergence", () => {
   test("rolls back focused validation failures and supersedes a stale remote tip without pushing", () => {
     for (const mode of ["focused", "gate", "stale"] as const) {
       const fixture = squashFixture();
-      const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+      const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS];
       const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
       const result = runEvidenceCommand([
         "reconcile",
@@ -532,7 +531,7 @@ describe("t427 squash identity proof and main convergence", () => {
 
   test("keeps remote main unchanged when the fast-forward push fails", () => {
     const fixture = squashFixture();
-    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS];
     const original = reconcilePaths.map((path) => readFileSync(join(fixture.root, path)));
     const result = runEvidenceCommand([
       "reconcile",
@@ -550,7 +549,7 @@ describe("t427 squash identity proof and main convergence", () => {
 
   test("rolls back pre-push failures but preserves an unknown push outcome for recovery", () => {
     const beforePush = squashFixture();
-    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS];
     const beforePushOriginal = reconcilePaths.map((path) => readFileSync(join(beforePush.root, path)));
     const beforePushResult = runEvidenceCommand([
       "reconcile",
@@ -618,7 +617,7 @@ describe("t427 squash identity proof and main convergence", () => {
 
   test("reports supersession after commit and after a rejected push", () => {
     const afterCommit = squashFixture();
-    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS];
+    const reconcilePaths = [...EVIDENCE_BUNDLE_PATHS];
     const afterCommitOriginal = reconcilePaths.map((path) => readFileSync(join(afterCommit.root, path)));
     const afterCommitResult = runEvidenceCommand([
       "reconcile",
