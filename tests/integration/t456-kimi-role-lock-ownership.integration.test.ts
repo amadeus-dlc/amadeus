@@ -243,3 +243,37 @@ describe("withRoleMarkerLock reclaims a dead owner without waiting for mtime", (
     ).toBe(true);
   });
 });
+
+describe("a failed lock holder never leaks an unattributable lock", () => {
+  // The owner stamp shares operation()'s try/finally, so both failure shapes
+  // release the lock through the same wiring. The operation-throw arm is
+  // driven end-to-end here; the stamp's own failure contract (throw loudly,
+  // never hold an unstamped lock while pretending success) is pinned directly
+  // below against the exported writer.
+  test("an operation failure releases the lock and stays denied", () => {
+    const root = workspace();
+    const markerPath = markerPathOf(root);
+    // No baseline: operation() throws inside the lock. The caller must keep
+    // the deny latch (fail-closed) AND the finally must release the lock —
+    // a leftover lock here would be exactly the unattributable residue the
+    // ownership scheme exists to prevent.
+    rmSync(markerPath);
+
+    updateKimiSubagentRole(root, "amadeus-quality-agent", "start");
+
+    expect(existsSync(`${markerPath}.lock`)).toBe(false);
+    expect(
+      existsSync(
+        join(root, "amadeus", ".amadeus-sessions", "kimi-subagent-transition-deny"),
+      ),
+    ).toBe(true);
+    expect(existsSync(markerPath)).toBe(false);
+  });
+
+  test("a stamp that cannot be written throws instead of holding quietly", () => {
+    const root = workspace();
+    const missing = join(root, "no-such-dir", "marker.lock");
+
+    expect(() => writeRoleLockOwner(missing)).toThrow();
+  });
+});
