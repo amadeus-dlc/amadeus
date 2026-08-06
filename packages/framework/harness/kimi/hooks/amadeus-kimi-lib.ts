@@ -225,15 +225,25 @@ export function reclaimRoleMarkerLock(lockPath: string): boolean {
     // Absent, or another contender got there first: nothing to reclaim.
     return false;
   }
-  let reclaimable = false;
+  let reclaimable: boolean;
   try {
     const mtimeMs = statSync(displaced).mtimeMs;
     const owner = readRoleLockOwner(displaced);
     const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
     reclaimable =
       expired || (owner !== null && !roleLockOwnerIsAlive(owner.pid));
-  } catch {
-    reclaimable = false;
+  } catch (cause) {
+    // Judging our own private copy failed — that is not a "keep the lock"
+    // verdict but an inability to reach one. Put the lock back (surrendering
+    // the copy if the slot was refilled) and propagate: both callers treat a
+    // throw as "the carrier could not be made safe" and fail closed.
+    try {
+      renameSync(displaced, lockPath);
+    } catch {
+      rmSync(displaced, { recursive: true, force: true });
+      throw cause;
+    }
+    throw cause;
   }
   if (reclaimable) {
     // A removal failure propagates: both callers already treat a thrown error
@@ -250,6 +260,7 @@ export function reclaimRoleMarkerLock(lockPath: string): boolean {
     renameSync(displaced, lockPath);
   } catch {
     rmSync(displaced, { recursive: true, force: true });
+    return false;
   }
   return false;
 }
