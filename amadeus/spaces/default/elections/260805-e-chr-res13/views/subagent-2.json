@@ -1,0 +1,25 @@
+{
+  "electionId": "E-CHR-RES13",
+  "voter": "subagent-2",
+  "question": "260805-cross-harness-resume reverse-engineering ステージの §13 学習選定。diary 候補3件の採否を裁定する。候補: c1 = ユーザー指示「引き継ぎ復旧経路は Kimi 限定でなくどのハーネスでも成立すること」(Interpretations)。c2 = 宣言センサー3種は codekb 出力に構造不適合のため代替検証(実在+H2数+consumes空)を実施(Deviations — 既存 cid:reverse-engineering:re-sensors-codekb-filter-mismatch / c3-codekb-sensor の適用)。c3 = Developer scan が演繹止まりとした2機序を、Architect synthesis 前に repo 外 scratch の決定的再現ハーネス(authorizeMainConductor 直 import、C1-C6)で conductor が実測確定してから渡した(Deviations — 既存 cid:reverse-engineering:c2-parallel-process-repro-harness の適用)。実在根拠: diary = amadeus/spaces/default/intents/260805-cross-harness-resume/inception/reverse-engineering/memory.md、成果物 = codekb/amadeus/re-scans/260805-cross-harness-resume.md。判定観点: 各候補が (a) 既存ノルムの単なる適用実例か (b) 既存 cid への追補に値する新規知識か (c) intent 固有事項で requirements へ流すべきものか、を実測で確認して選ぶ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "c2・c3 を追補採用",
+      "description": "c3 を choice 2 と同様に追補し、加えて c2 を cid:reverse-engineering:c3-codekb-sensor へ追補(代替検証の具体手順 = 実在 wc -c + H2 数 grep + consumes 空判定 を定型化)。c1 は requirements へ搬送。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "c3 のみ追補採用",
+      "description": "cid:reverse-engineering:c2-parallel-process-repro-harness へ追補: 「scan が演繹止まりとした機序は Architect synthesis 前に conductor が決定的再現で確定してから合成へ渡す」を一般形で追加。c1 は requirements へ搬送、c2 は適用実例として不採用。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "c1 は intent 固有の要件材料であり requirements-analysis の成果物へ搬送する(ノルム化しない)。c2/c3 は既存 cid の適用実例でありノルム新設・追補は不要。memory 層への persist は行わない。"
+    }
+  ]
+}

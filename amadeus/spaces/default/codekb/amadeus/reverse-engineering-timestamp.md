@@ -1,6 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260805-pr-convergence-plugin）
+## 実行メタデータ（現在: 260805-cross-harness-resume）
+
+- Date: `2026-08-05`
+- Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち祖先性を満たす最新を採用。`git merge-base --is-ancestor b938898f3 7060956c5` exit 0 を実測）
+- Observed commit: `7060956c5617125dd2f4e284957aa180cb306484`（= 本 worktree HEAD。`git rev-parse HEAD` で一致を実測。`cid:reverse-engineering:c2-observed-mainline-commit` により origin/main 系譜のコミットを記録）
+- Ancestry: exit 0。距離は **34 commits / 493 files**（`+43826 / −217`）。
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: [Issue #2285](https://github.com/amadeus-dlc/amadeus/issues/2285) — **ハーネス跨ぎのワークフロー引き継ぎ（cross-harness resume）**。ユーザー要件は「`claude` / `codex` / `cursor` / `kimi` / `kiro` / `kiro-ide` / `opencode` / `pi` のどの組み合わせでも引き継ぎ可能であること」。患部は (a) `amadeus-caller-authorization.ts` の Kimi 認可判定、(b) `.current-session` carrier の書き手分布、(c) Kimi adapter の projectDir 解決、(d) resume 経路のハーネス一致検査の不在。
+- Scan mode: DIFFERENTIAL refresh。Developer scan の列挙を一次入力とし、Architect が患部 seam を observed 断面の verbatim 実読で再検証した。引用の訂正・精密化 5 件（内訳は `re-scans/260805-cross-harness-resume.md` § Developer scan との差分）。
+- Verification: conductor が repo 外 scratch で `authorizeMainConductor` を直 import した**決定的再現 C1-C6**（`cid:reverse-engineering:c2-parallel-process-repro-harness` の系譜）。`AMADEUS_HARNESS_TYPE=kimi` 下で C1 marker 不在 / C2 セッション不一致 / C3 ended-deny 残存 / C6 carrier 分裂の**4原因がすべて同一の `{"kind":"denied","role":"unknown"}` に畳まれる**ことを実測。C4 整合状態は `authorized`、C5 `roles={reviewer:1}` は `denied/reviewer`。対照の `AMADEUS_HARNESS_TYPE=claude-code` では全ケース `authorized`。テストスイートの再実行はしていない（`cid:code-generation:c1-coverage-single-owner` に従い coverage も未実行）。
+- Current decision: **患部は区間の外側で導入済みの既存構造であり、区間内の退行ではない。** session lifecycle / caller-authorization / harness detection のコード面は区間内で無変更（当該パスの区間内コミットは `fc862e879` の1件のみ、内容は kimi `SKILL.md` の docs 変更）。34 commits の大半は TLA+ authoring / metrics / live E2E / phase-boundary docs。
+- 主要所見: **①デッドロック** — `amadeus-state.ts:902` `enforceCallerAuthorization` は `get` / `count` / `lookup` 以外の全27語彙をゲートし、`case "park"` `:1024` と `case "unpark"` `:1027` を含む。したがって拒否状態の Kimi セッションは park 復旧文言が案内する当の unpark も打てず、**in-band 復旧経路が構造的に存在しない**。**②判別不能性** — `denied/unknown` を返す4経路（`:85` / `:94` / `:105` / `:108`）が同一文言に畳まれ、復旧手順も `callerAuthorizationError` `:117-122` に含まれない。**③carrier を書かない3面** — `.current-session` の書き手は `amadeus-session-start.ts:97` の唯一箇所だが、`kiro-ide`（session_id 転送なし）/ `opencode`（hooks 不使用、`plugins/` 構成）/ `pi`（`extensions/amadeus-pi-extension.ts:779` でネイティブ処理）の3面はこれを書かない — **8ハーネス対称の引き継ぎは現行 carrier 設計では成立しない**。**④未文書の認可バイパス** — `amadeus-harness.ts:113-123` の `detectHarnessType` は `AMADEUS_HARNESS_TYPE` を最優先するため、kimi 以外の値で `:75` の早期 return が発火し認可境界が丸ごと素通りする（対照実験で実測確定）。**⑤carrier 分裂** — Kimi adapter `:704` の `const dir = env.cwd ?? projectDir;` は raw cwd を採り、core hook の marker 検証ラダー `amadeus-lib.ts:298` と非対称。
+- 文書との不整合: `docs/guide/11-session-management.md:7` は "Session resume works on every harness" と宣言するが、Kimi の認可境界と carrier 分布は全ハーネス往復を保証しない。
+- Requirements Analysis へ送る裁定: **(1) 復旧経路の形** — 復旧 verb 新設 / doctor 拡張 / SessionStart 自動回復強化のどれを主にするか（復旧手段自体がゲート外にあることが必要条件）。**(2) エラーメッセージの原因判別化＋復旧ガイド**（既存 assert は substring のみのため明示改訂不要）。**(3) 全ハーネス要件の充足範囲** — carrier を書かない3面へ配線するか、判定を寛容化するか（認可弱化を伴う）、docs 側の全ハーネス宣言を限定するか。**(4) `AMADEUS_HARNESS_TYPE` バイパスの扱い**（文書化 / 認可判定での env 無視 / 現状維持。裁定(1)と競合しうる）。**(5) Kimi adapter raw-cwd の是正可否**（`tests/integration/t-kimi-adapter.test.ts:413` の pin 改訂を伴うため、仕様裁定とテスト契約改訂をセットで確定 — `cid:reverse-engineering:c1-pinned-behavior-ruling`）。
+- テスト現況: caller-authorization 専用 unit テストなし。`tests/integration/t365-kimi-reviewer-boundary.integration.test.ts` が substring（`"is not the main conductor"`）で拒否／許可を pin。coverage 台帳に `authorizeMainConductor` エントリ3件、no-silent-drop 台帳にも同ファイルエントリあり — 行挿入時は機械 remap＋span 検査＋census 再バインドが該当。
+- Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260804-phase-boundary-approval` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260805-cross-harness-resume.md` を新設。
+- Per-intent record: `re-scans/260805-cross-harness-resume.md`
+
+## 実行メタデータ（履歴: 260805-pr-convergence-plugin）
 
 - Date: `2026-08-05`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（直前の現在断面 `260804-phase-boundary-approval` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い祖先性を実測）
@@ -24,7 +42,6 @@
 - Requirements Analysis へ送る裁定候補（10件、全文は per-intent record § 8）: (1)【critical path】seam の実 frontmatter 接続の実装方式 — frontmatter 保存型 parse/serialize の新設 / `QualityRequiredOutputDescriptor` の接続 / 第3案。(2) plugin が sensor manifest を同梱できない事実を受けた Issue 役割分担表の訂正方針。(3) `scopes: []` opt-in 形では目的を達成できないことを受けた代替経路の確定。(4) `produces_kinds` fail-open の封鎖を受け入れ基準へ明文化。(5) 収束述語の canonical 所有（`parseMergeability` を canonical 化するか意図的に別定義とするか）。(6) `gh` 実行面の所有（core gateway 相乗り / 独自ラッパ）。(7) import-closure 宣言義務の受け入れ基準化。(8) approve ガード ANY 非対称と fail-open 3経路を明示受容するか塞ぐか。(9) tNNN = t444 以降の予約。(10) 収束スキル本文の正本所在（リポジトリ内正本 / 外部参照）。
 - Updated artifacts: 共有5成果物（本ファイル / `architecture.md` / `component-inventory.md` / `code-structure.md` / `code-quality-assessment.md`）に本 intent の現在断面を追加した。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は区間内に該当変更が無いため本文を追記していない（根拠は per-intent record § 9）。直前の現在断面 `260804-phase-boundary-approval` は全 9 成果物で本文保持のまま履歴へ降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。
 - Per-intent record: `re-scans/260805-pr-convergence-plugin.md`
-
 ## 実行メタデータ（履歴: 260803-advisory-human-choice）
 
 - Date: `2026-08-03T08:00:01Z`

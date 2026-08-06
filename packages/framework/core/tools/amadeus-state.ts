@@ -139,7 +139,14 @@ import {
 import {
   authorizeMainConductor,
   callerAuthorizationError,
+  SESSION_TAKEOVER_VERB,
 } from "./amadeus-caller-authorization.ts";
+import {
+  applySessionTakeover,
+  parseSessionTakeoverArgs,
+  planSessionTakeover,
+  readSessionTakeoverFacts,
+} from "./amadeus-session-takeover.ts";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
@@ -899,22 +906,29 @@ function trustedHostSessionId(): string | undefined {
     : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }
 
-function enforceCallerAuthorization(subcommand: string | undefined): void {
+export function enforceCallerAuthorization(subcommand: string | undefined): void {
   // Only read-only subcommands pass through. On denial, do not use error():
   // writing ERROR_LOGGED would change the state/audit bytes, violating the
   // invariant that a denial leaves both untouched, so write to stderr and exit.
+  // session-takeover is the ONE mutating verb outside this gate, and it has to
+  // be: every other route out of a denial — `unpark` included — is gated, so a
+  // workspace whose carrier went stale under a cross-harness handover would have
+  // no in-band recovery at all. It does not weaken the boundary it sits beside;
+  // it repairs the carrier the boundary reads, and only after a human turn on
+  // this clone's ledger says so (see amadeus-session-takeover.ts).
   if (
     subcommand === undefined ||
     subcommand === "get" ||
     subcommand === "count" ||
-    subcommand === "lookup"
+    subcommand === "lookup" ||
+    subcommand === SESSION_TAKEOVER_VERB
   ) {
     return;
   }
   const authorization = authorizeMainConductor(resolveProjectDir(projectDir));
   if (authorization.kind === "authorized") return;
   process.stderr.write(
-    `${JSON.stringify({ error: callerAuthorizationError(authorization.role) })}\n`,
+    `${JSON.stringify({ error: callerAuthorizationError(authorization) })}\n`,
   );
   process.exit(1);
 }
@@ -1003,6 +1017,11 @@ function main(): void {
       case "acknowledge-compaction":
         handleAcknowledgeCompaction(args.slice(1));
         break;
+      // The literal (not SESSION_TAKEOVER_VERB) keeps this arm visible to the
+      // registry drift guard's case-literal extractor (t416).
+      case "session-takeover":
+        handleSessionTakeover(args.slice(1));
+        break;
       case "reuse-artifact":
         handleReuseArtifact(args.slice(1));
         break;
@@ -1032,7 +1051,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, session-takeover, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -4256,6 +4275,87 @@ function handleAcknowledgeCompaction(args: string[]): void {
 
   console.log(
     JSON.stringify({ acknowledged: true, choice, current_stage: currentStage })
+  );
+}
+
+// A human prompt turn is "fresh" for a takeover when it was appended to THIS
+// clone's shard after the last takeover recorded there. Ordering in an
+// append-only shard is authoritative, so the comparison is positional rather
+// than by timestamp — two rows written inside the same clock tick still order
+// correctly. An unreadable shard grounds nothing (fail-closed).
+function humanTurnGroundsTakeover(projectDir: string): boolean {
+  let raw = "";
+  try {
+    raw = readFileSync(auditFilePath(projectDir), "utf-8");
+  } catch {
+    return false;
+  }
+  let humanTurnAt = -1;
+  let lastTakeoverAt = -1;
+  const blocks = splitAuditRecords(raw);
+  for (const [index, block] of blocks.entries()) {
+    const event = auditBlockField(block, "Event");
+    if (event === "HUMAN_TURN") humanTurnAt = index;
+    if (
+      event === "RECOVERY_COMPLETED" &&
+      auditBlockField(block, "Choice") === SESSION_TAKEOVER_VERB
+    ) {
+      lastTakeoverAt = index;
+    }
+  }
+  return humanTurnAt > lastTakeoverAt;
+}
+
+// session-takeover --confirm [--confirm-roles <a,b>] [--session-id <id>]
+//
+// The manual recovery layer for a stale Kimi role carrier (see
+// amadeus-session-takeover.ts for why it exists and why it is not a bypass).
+// Refusals happen before any write, and the audit row is emitted only after the
+// guard itself confirms the rebind took — the event records what was achieved,
+// never what was attempted.
+export function handleSessionTakeover(args: string[]): void {
+  const pd = resolveProjectDir(projectDir);
+  const parse = parseSessionTakeoverArgs(args);
+  if (parse.kind === "invalid") error(parse.message);
+
+  const decision = planSessionTakeover(
+    parse.request,
+    readSessionTakeoverFacts(pd, humanTurnGroundsTakeover(pd)),
+  );
+  if (decision.kind === "refused") error(decision.message);
+  if (decision.kind === "noop") {
+    console.log(
+      JSON.stringify({
+        taken_over: false,
+        reason: "already-authorized",
+      }),
+    );
+    return;
+  }
+
+  applySessionTakeover(pd, decision.sessionId);
+  const achieved = authorizeMainConductor(pd);
+  if (achieved.kind !== "authorized") {
+    // One line: bun's lcov leaves the continuation lines of a multi-line call
+    // at DA:0, which would read as an untested arm rather than a defensive one.
+    error(`${SESSION_TAKEOVER_VERB} rewrote the carrier but the guard still denies this caller (${achieved.reason}). No recovery was recorded.`);
+  }
+
+  const currentStage = getField(readStateFile(pd), "Current Stage") || "unknown";
+  emitAudit(pd, "RECOVERY_COMPLETED", {
+    Choice: SESSION_TAKEOVER_VERB,
+    "Current Stage": currentStage,
+    Reason: decision.reason,
+  });
+
+  console.log(
+    JSON.stringify({
+      taken_over: true,
+      reason: decision.reason,
+      session_id: decision.sessionId,
+      acknowledged_roles: decision.retainedRoles,
+      current_stage: currentStage,
+    }),
   );
 }
 

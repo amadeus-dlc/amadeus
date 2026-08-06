@@ -1,6 +1,41 @@
 # コード構造
 
-## PR 収束プラグインの患部配置と区間デルタ（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+## cross-harness resume の患部配置（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 患部の配置（core 中立層 / harness 表層の境界に跨る）
+
+```
+packages/framework/core/
+  tools/amadeus-caller-authorization.ts   :72 authorizeMainConductor（122行・判定の唯一の入口）
+  tools/amadeus-harness.ts                :113-123 detectHarnessType（env 最優先 → 認可バイパス面）
+  tools/amadeus-orchestrate.ts            :2400 refuseUnauthorizedKimiCaller（消費点5）
+  tools/amadeus-state.ts                  :902 enforceCallerAuthorization（全27語彙、park/unpark 含む）
+  tools/amadeus-lib.ts                    :298 resolveProjectDirFromHook（5段ラダー）/ :2170 writeCurrentSessionId
+  hooks/amadeus-session-start.ts          :97 .current-session の唯一の書き手
+packages/framework/harness/
+  kimi/hooks/amadeus-kimi-lib.ts          :236/:281 carrier 確立・解除（非 export）/ :285-286 deny ラッチ / :704 raw cwd
+  kiro-ide/hooks/amadeus-kiro-adapter.ts  :261,266,388 core session-start を起動（session_id 転送なし）
+  opencode/plugins/                       core hook 不使用（session-start 参照 0 hit）
+  pi/extensions/amadeus-pi-extension.ts   :779 case "session-started"（ネイティブ処理、core hook 不使用）
+tests/integration/
+  t365-kimi-reviewer-boundary.integration.test.ts  :504/:536/:573/:646/:669/:689 substring assert
+  t-kimi-adapter.test.ts                            :413 raw-cwd pin
+```
+
+### 配置上の観察
+
+1. **判定は core 中立層に1箇所（122行の小ファイル）に集約されているが、判定が読む carrier は harness 表層と core hook に分散している。** 認可の意味論を変えずに carrier の書き手だけを揃える是正（所見B 対応）は core hook / harness 表層側の変更になり、判定側の 122行には触れない選択肢がある。
+2. **復旧手段を置く場所が未定である。** ゲートを掛ける `amadeus-orchestrate.ts` / `amadeus-state.ts` の内側に置くと所見A のデッドロックを閉じられない。`amadeus-utility.ts`（verb dispatch、認可ゲート外）か doctor 経路が候補になる。
+3. **`.current-session` の書込は core hook 内の1行（`:97`）で、周囲の `:88-96` コメントが「この hook だけが session_id を見る」と設計意図を明記している。** carrier を CLI 側から補える設計にする案は、このコメントが宣言する前提の改訂を伴う（`cid:reverse-engineering:comment-premise-verify-not-just-quote` の対象）。
+4. **Kimi の carrier 操作関数は module-private**（`:236` / `:281` とも非 export）。復旧ツールから再利用するなら export 面の新設が要る。
+
+### 区間内の配置変化
+
+session lifecycle / caller-authorization / harness detection のパスは区間内で無変更（該当コミットは `fc862e879` の1件、kimi `SKILL.md` の docs のみ）。34 commits / 493 files の大半は TLA+ authoring、metrics、live E2E、phase-boundary docs に集中する。
+
+## PR 収束プラグインの患部配置と区間デルタ（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
 
 本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、**27 commits / 474 files**）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
 
@@ -65,7 +100,6 @@
 ### ステージ本文の構造
 
 `packages/framework/core/amadeus-common/stages/**/*.md` は **32件**。PR 収束に関する語彙（`converge` / `reviewThread` / `gh pr ` / `pull request` / `収束` / `\bPR\b`）の出現は **全件 0 hit** で、ステージグラフ側に接続点は存在しない。
-
 ## advisory 人間選択の患部配置（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | 分類 | 正本／対象 | 今回の位置づけ |

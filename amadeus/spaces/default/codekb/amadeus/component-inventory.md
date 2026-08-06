@@ -1,6 +1,45 @@
 # コンポーネント棚卸し
 
-## PR 収束プラグインの対象コンポーネント（260805-pr-convergence-plugin、現在、observed `8409c2039`）
+## cross-harness resume の対象コンポーネント（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 認可判定
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-caller-authorization.ts`（122行） | `:72` `authorizeMainConductor` — Kimi 呼出元の main-conductor 判定 | `:75` で kimi 以外は無条件 authorized。拒否枝4種（`:85` / `:94` / `:105` / `:108`）が `:117-122` `callerAuthorizationError("unknown")` に畳まれ判別不能。復旧案内なし |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `:2400` `refuseUnauthorizedKimiCaller` | 消費点5（`:2446` next / `:4543` report / `:5099` park / `:5326` gate-reserve / `:5387` gate-reject） |
+| `packages/framework/core/tools/amadeus-state.ts` | `:902` `enforceCallerAuthorization` | `:908-912` で `get` / `count` / `lookup` のみ除外。**`case "park"` `:1024` / `case "unpark"` `:1027` を含む全27語彙をゲート** → in-band 復旧不能（所見A） |
+| `packages/framework/core/tools/amadeus-harness.ts` | `:113-123` `detectHarnessType` | `:114-116` の `AMADEUS_HARNESS_TYPE` 最優先が未文書の認可バイパスになる。`kiro-ide` は harness dir `.kiro` のため type `kiro` へ畳まれる |
+
+### セッション carrier
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/hooks/amadeus-session-start.ts` | `:97` `if (sessionId) writeCurrentSessionId(projectDir, sessionId);` | **`.current-session` の唯一の書き手**。`:88-96` のコメントが「session_id を見るのはこの hook だけ、CLI switch からは供給不能」と明記 |
+| `packages/framework/core/tools/amadeus-lib.ts` | `:2170` `writeCurrentSessionId` / `:298` `resolveProjectDirFromHook` | 後者は `:305` marker 検証付き payload cwd → `:308` env → `:317` marker 祖先 → `:322` script path → `:329` known harness dir の5段ラダー |
+| `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts` | `:236` `establishKimiMainBaseline` / `:281` `clearKimiRoleCarrier`（**いずれも非 export**）/ `:285-286` deny ラッチ書込 / `:704` adapter 入口 | 復旧に使える公開 seam がない。`:704` の `env.cwd ?? projectDir` は raw cwd を採り core hook ラダーと非対称（carrier 分裂） |
+
+### carrier を書かないハーネス面（所見B）
+
+| ハーネス | 実体 | `.current-session` |
+| --- | --- | --- |
+| `kiro-ide` | `hooks/amadeus-kiro-adapter.ts:261,266,388` が core `amadeus-session-start.ts` を起動するが `session_id` を転送しない | **書かない** |
+| `opencode` | `plugins/` 構成、`amadeus-session-start` の参照 0 hit | **書かない** |
+| `pi` | `extensions/amadeus-pi-extension.ts:779` `case "session-started"` でネイティブに処理、core hook 不使用 | **書かない** |
+
+### テスト面
+
+| コンポーネント | pin している契約 |
+| --- | --- |
+| `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts` | 拒否／許可の両面。`:504` / `:536` / `:573` / `:646` / `:669` / `:689` の **substring assert（`"is not the main conductor"`）のみ** — 文言の全文 verbatim ピンはない |
+| `tests/integration/t-kimi-adapter.test.ts` | `:413` テスト名 `"the payload cwd wins as the core hook's project dir"` が raw-cwd 挙動を pin。project-dir 解決を変えるなら明示改訂を伴う |
+| `tests/.coverage-patch-allowlist.json` / no-silent-drop 台帳 | `authorizeMainConductor` エントリ3件＋同ファイルエントリ。行挿入時は機械 remap＋span 検査＋census 再バインドが該当 |
+
+**復旧手段の不在**: session carrier を修復する verb は存在しない（`amadeus-utility.ts` verb dispatch 全数確認、`session-repair` 系 grep 0 hit）。`doctor` は kimi hook の配線のみを検査し carrier 状態を見ない（carrier 名 grep 0 hit）。
+
+## PR 収束プラグインの対象コンポーネント（260805-pr-convergence-plugin、履歴、observed `8409c2039`）
 
 本節の file:line はすべて observed `8409c2039c5281e533db88a637649276d8bc4a73` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（27 commits / 474 files）。全数列挙は `re-scans/260805-pr-convergence-plugin.md` を正本とする。
 
@@ -45,7 +84,6 @@
 ### 接続点が存在しないことの確認
 
 ステージ本文 **32件**（`packages/framework/core/amadeus-common/stages/**/*.md`）に対する `grep -rniE 'converge|reviewThread|review thread|gh pr |pull request|レビュースレッド|収束'` は **0 hit**、`grep -rn '\bPR\b'` も **0 hit**。`reviewThreads` の実装コード hit も 0（record を除く）。収束スキル（`j5ik2o-gh-pr-converge-loop` / `j5ik2o-gh-pr-resolve-conflicts` / `j5ik2o-gh-pr-review-follow-up`）はハーネス側 `~/.agents/skills/` にのみ実在し、**リポジトリ内に正本を持たない**。
-
 ## advisory 人間選択に関わるコンポーネント（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 | コンポーネント | 責務 | 依存 | 健全性 |

@@ -1,5 +1,40 @@
 # 技術スタック
 
+## cross-harness resume の技術断面（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 区間内の技術スタック変化
+
+**外部依存・ランタイムに変化なし。** ランタイムは Bun / TypeScript(ESM) のまま、lint は Biome、型検査は `tsc --noEmit`、テストは `tests/run-tests.sh` の自作ランナーで不変。区間の 34 commits は TLA+ authoring、metrics、live E2E、phase-boundary docs に集中し、**session lifecycle / caller-authorization / harness detection のコード面は無変更**（該当コミットは `fc862e879` の kimi `SKILL.md` docs 1件のみ）。
+
+### ハーネス面の技術構成（8種、本 intent の焦点で対照）
+
+| ハーネス | セッション連携の実装形態 | `.current-session` |
+| --- | --- | --- |
+| `claude` | core hook 直結（session_id あり） | 書く |
+| `codex` | core hook（session_id 条件付き） | 条件付きで書く |
+| `cursor` | core hook（session_id 条件付き） | 条件付きで書く |
+| `kimi` | 専用 adapter（`hooks/amadeus-kimi-lib.ts`）経由 + 独自 carrier（`kimi-active-subagents.json` / deny ラッチ2種） | 書く |
+| `kiro` | core hook（session_id 条件付き） | 条件付きで書く |
+| `kiro-ide` | `.kiro.hook` JSON 定義 + `hooks/amadeus-kiro-adapter.ts`（`:261,266,388`）。session_id を転送しない | **書かない** |
+| `opencode` | `plugins/` 構成、core hook 不使用 | **書かない** |
+| `pi` | `extensions/amadeus-pi-extension.ts` によるネイティブ処理（`:779` `case "session-started"`）、core hook 不使用 | **書かない** |
+
+**技術断面上の含意**: セッション連携の実装形態が4系統（core hook 直結 / adapter 経由 / IDE hook JSON / ネイティブ extension）に分岐しており、`.current-session` という単一の carrier 契約に全系統が接地していない。ハーネス跨ぎ引き継ぎを技術的に成立させるには、**この4系統すべてが carrier 契約を満たすこと**、あるいは carrier に依存しない判定へ移すことが必要になる。
+
+### 認可判定が依存する環境要素
+
+- `AMADEUS_HARNESS_TYPE`（`amadeus-harness.ts:114-116`、最優先）
+- `CLAUDECODE`（`:118`）
+- harness dir の実在（`resolveHarnessDir()`、`kiro-ide` は `.kiro` のため type `kiro` へ畳まれる）
+- `amadeus/.amadeus-sessions/` 配下のファイル群（**すべて gitignored = per-clone / per-worktree**）
+
+### テスト・台帳面
+
+- caller-authorization 専用 unit テストなし。pin は integration の `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts`（substring assert）と `tests/integration/t-kimi-adapter.test.ts:413`（raw-cwd）。
+- `tests/.coverage-patch-allowlist.json` に `authorizeMainConductor` エントリ3件、no-silent-drop 台帳にも同ファイルエントリ。行挿入を伴う修正では機械 remap＋span 検査＋census 再バインドが該当。
+
 ## advisory 人間選択の技術断面（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **スタック変更なし**: Bun `1.3.13`、TypeScript / ESM、Biome、Bun test、Markdown stage protocol、JSONL audit journalという既存構成の問題であり、新しいruntime、service、database、外部libraryは観測されない。

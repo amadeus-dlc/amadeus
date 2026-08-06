@@ -1,5 +1,31 @@
 # ビジネス概要
 
+## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 利用者に約束されている価値
+
+Amadeus の中核価値の1つは「**ワークフローの進捗は intent record に永続化され、ハーネスに縛られない**」ことである。`docs/guide/11-session-management.md:7` はこれを "Session resume works on every harness (the state lives in the intent's record dir, not the harness)" として明文で約束している。利用者はこの約束に基づき、作業を中断して別のハーネスで続ける自由を期待する。
+
+### 実際に成立していない境界
+
+| 業務シナリオ | 現状 |
+| --- | --- |
+| Claude Code で作業 → Kimi で再開 | `.current-session` が Claude のセッション ID のまま残り、Kimi 側が拒否しうる |
+| Kimi → 他ハーネス → Kimi へ戻る | セッション不一致で恒久拒否（決定的再現 C2 で確定） |
+| `kiro-ide` / `opencode` / `pi` → Kimi | これら3面は carrier を書かないため、Kimi 起動時に整合しない（所見B） |
+| 拒否状態からの自力復旧 | **不可能**。案内される `unpark` も同じゲートに掛かる（所見A）。復旧 verb も doctor の診断も存在しない |
+| 別 worktree からの再開 | carrier は gitignored = per-worktree のため共有されない |
+
+**業務影響**: 利用者は「進捗は失われていないのに操作を受け付けない」状態に入り、その理由も復旧手順も提示されない（4原因が同一文言に畳まれる — 所見A'）。out-of-band の手作業（`amadeus/.amadeus-sessions/` 配下の削除）か、別ハーネスでの再起動しか残らない。これは**約束した価値と実挙動の乖離**であり、Issue [#2285](https://github.com/amadeus-dlc/amadeus/issues/2285) の起点である。
+
+### 保護すべき対抗価値
+
+拒否の仕組み自体は正当な業務要件を守っている — **Kimi の subagent が main conductor を騙ってワークフロー状態・監査ログを変更することを防ぐ**認可境界である（`org.md` P1 / P4、検証劇場の禁止と同族）。したがって引き継ぎを成立させる是正は、この境界を弱めずに行う必要がある。「carrier 不在なら通す」方向の寛容化は、認可境界の弱化に直結するため要裁定事項として requirements-analysis へ送った。
+
+同時に、`AMADEUS_HARNESS_TYPE` を kimi 以外にすれば境界が丸ごと素通りする経路が実測で確定しており（所見A''）、**現状の境界は業務的にも既に完全ではない**。この事実は寛容化案の評価に影響する。
+
 ## 形式検査 advisory の人間判断境界（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 - **利用者価値**: [Issue #2129](https://github.com/amadeus-dlc/amadeus/issues/2129) は、形式モデル検査を早期に実行するか、リスクを認識して後へ送るかを人間が選べる状態を守る。対象は `requirements-analysis`、per-unit の `functional-design`、`build-and-test` の3チェックポイントであり、後段の `formal-model-check` 実行可否とは別の上流判断である。

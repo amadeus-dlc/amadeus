@@ -1,5 +1,41 @@
 # 依存関係
 
+## cross-harness resume の依存関係（260805-cross-harness-resume、現在、observed `7060956c5`）
+
+本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
+
+### 外部依存
+
+**区間内で変化なし。** ランタイム・パッケージ依存の追加削除は本区間に該当しない。本 intent の患部は外部依存を一切持たず、`node:fs`（`existsSync` / `readFileSync`）と `node:path`（`join`）のみに依存する。
+
+### モジュール間依存（患部のグラフ）
+
+```
+amadeus-orchestrate.ts ─┐
+                        ├→ amadeus-caller-authorization.ts ─→ amadeus-harness.ts (detectHarnessType)
+amadeus-state.ts ───────┘                │
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-active-subagents.json
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-subagent-transition-deny
+                                         ├→ [fs] amadeus/.amadeus-sessions/kimi-session-ended-deny
+                                         └→ [fs] amadeus/.amadeus-sessions/.current-session
+                                                        ↑ 書き手
+                        amadeus-session-start.ts:97 ────┘ (→ amadeus-lib.ts:2170 writeCurrentSessionId)
+                                ↑ 起動元
+        claude / codex / cursor / kimi / kiro   … 起動する
+        kiro-ide (session_id 転送なし) / opencode / pi (core hook 不使用) … 起動しない・値を渡さない
+
+kimi/hooks/amadeus-kimi-lib.ts:704 (raw cwd) ─→ 別 projectDir へ carrier を書きうる（分裂）
+        ↕ 非対称
+amadeus-lib.ts:298 resolveProjectDirFromHook（marker 検証付き5段ラダー）
+```
+
+### 依存構造上の観察
+
+1. **認可判定の依存はすべてファイルシステム（per-clone / gitignored）に向く。** version-controlled な intent record（状態層）への依存を持たないため、record を別ハーネス・別 worktree へ持ち運んでも判定は追随しない。
+2. **`.current-session` は「単一の書き手・複数の読み手」構造だが、書き手を起動するのは harness 表層であり、8面のうち3面が起動しない／値を渡さない。** 依存の向きは正しいが**供給が欠ける**。
+3. **`detectHarnessType` への依存が `AMADEUS_HARNESS_TYPE` を通じて外部から差し替え可能**であり、認可判定全体を無効化できる（`amadeus-caller-authorization.ts:75` の早期 return）。
+4. **carrier 操作関数（`amadeus-kimi-lib.ts:236` / `:281`）は非 export** のため、他モジュールから依存できない。復旧ツールを作るなら export 面の新設か、carrier 書式を別実装で再現するかの選択になる（後者は「canonical 1定義から導出」原則に反する）。
+
 ## advisory 人間選択の依存関係（260803-advisory-human-choice、履歴、observed `498c3034a`）
 
 ### 現行依存方向
