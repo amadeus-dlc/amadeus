@@ -176,7 +176,18 @@ import {
   parseApprovalProcessResult,
 } from "./amadeus-approval-authorization.ts";
 import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
-import { productionStageAutonomy } from "./amadeus-intent-autonomy-production.ts";
+// Aliased: this module's own `AutonomyMode` is the Construction SCHEDULING mode
+// ("autonomous" | "gated"), a different axis from the Intent autonomy mode.
+import type {
+  AutonomyMode as IntentAutonomyMode,
+  AutonomyProjection,
+} from "./amadeus-intent-autonomy.ts";
+import {
+  applyProductionAutonomyMode,
+  previewProductionAutonomyGrant,
+  productionStageAutonomy,
+  readProductionAutonomyProjection,
+} from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { projectSensorInvocation } from "./amadeus-sensor-invocation.ts";
@@ -994,6 +1005,15 @@ interface ParsedFlags {
   compose?: boolean; // leading `compose` verb: force the composer (front or in-flight)
   newScope?: boolean; // --new-scope: force the composer to SYNTHESIZE a custom scope even when a stock scope matches
   report?: string; // --report <path>: compose from a scan report (the composer triages the file)
+  // --autonomy <none|semi|full>: declare the Intent's autonomy mode at launch
+  // (#2253). The parser only CARRIES the string — the range check and every
+  // acceptance rule live in applyLaunchAutonomyDeclaration, mirroring how
+  // --scope is validated in Branch 3b rather than in this ladder.
+  autonomy?: string;
+  // Set when `--autonomy` had no following token to consume. FR-CLI-2(3) wants a
+  // value-less flag to be LOUD, and the ladder would otherwise drop it in
+  // silence (it matches neither the valued branch nor the freeform branch).
+  autonomyMissingValue?: boolean;
   projectDir?: string;
 }
 
@@ -1007,9 +1027,46 @@ function normalizeHelpArgs(args: string[]): string[] {
 // read-only utility flag. Any leading non-flag token is the freeform intent
 // (mirrors `/amadeus <freeform description>`). Mirrors the prose orchestrator's
 // flag extraction — the value of a valued flag is the following argv token.
-function parseNextFlags(args: string[]): ParsedFlags {
+// Lift every `--autonomy [value]` out of argv, recording the value (or its
+// absence) on flags and returning the remaining tokens.
+//
+// This runs BEFORE the flag ladder rather than as two more rungs inside it: the
+// ladder sits exactly on its complexity budget, and the budget only ratchets
+// down. Extracting the flag keeps the ladder's measured complexity unchanged
+// while giving --autonomy the same guarantee --report gets by consuming its
+// value inline — the mode name can never reach the freeform-intent branch.
+//
+// The scan mirrors the ladder's index arithmetic token for token, so the
+// semantics it would have had as rungs are preserved: a following token is
+// taken as the value even when it looks like a flag, a trailing --autonomy with
+// nothing to consume raises autonomyMissingValue, and a repeated flag lets the
+// LAST occurrence win.
+function takeAutonomyFlag(args: string[], flags: ParsedFlags): string[] {
+  if (!args.includes("--autonomy")) return args;
+  const remaining: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] !== "--autonomy") {
+      remaining.push(args[i]);
+      continue;
+    }
+    if (i + 1 < args.length) {
+      // No range check here: the parser only carries the string, exactly as
+      // --scope is carried and validated outside this function.
+      flags.autonomy = args[i + 1];
+      i++;
+    } else {
+      // Nothing left to consume. Mark it so C13 can fail loudly rather than let
+      // the flag vanish (FR-CLI-2(3)).
+      flags.autonomyMissingValue = true;
+    }
+  }
+  return remaining;
+}
+
+export function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
   args = normalizeHelpArgs(args);
+  args = takeAutonomyFlag(args, flags);
   const intentWords: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -1077,6 +1134,167 @@ function parseNextFlags(args: string[]): ParsedFlags {
   }
   if (intentWords.length > 0) flags.intent = intentWords.join(" ");
   return flags;
+}
+
+// --- C13: the `--autonomy` launch declaration (#2253) ---
+//
+// `--autonomy` is a NEW ENTRANCE to the Intent autonomy authorization boundary,
+// so everything below exists to keep that boundary exactly as strong as it was
+// before the entrance existed. The engine decides and DELEGATES; the single
+// existing write path (applyProductionAutonomyMode) stays the only way a mode
+// reaches audit + projection + state, so no second write path can drift from
+// the provenance rules the first one enforces.
+
+// The decision basis, read from the autonomy projection ONCE so every judgment
+// shares one snapshot.
+//
+//   declared   — the mode arrived through a HUMAN COMMAND. Deliberately NOT
+//                "the state file has an Intent Autonomy Mode field": birth
+//                always writes that field, so field-presence would read every
+//                brand-new intent as already-declared and make the flag's main
+//                use case (declare at launch) structurally impossible. The
+//                authorization code already discriminates on this provenance.
+//   grant      — an ACTIVE full-autonomy grant exists.
+//   unreadable — the projection could not be read at all.
+export type LaunchAutonomyContext =
+  | {
+      readonly kind: "readable";
+      readonly mode: IntentAutonomyMode;
+      readonly declared: boolean;
+      readonly grant: "present" | "absent";
+    }
+  | { readonly kind: "unreadable" };
+
+export type LaunchAutonomyOutcome =
+  | { readonly kind: "continue" }
+  | { readonly kind: "error"; readonly message: string };
+
+// The I/O the declaration handler depends on, injected so the judgment ladder
+// can be exercised over every context without a real workspace on disk.
+export interface LaunchAutonomyPorts {
+  readonly readContext: (projectDir: string) => LaunchAutonomyContext;
+  readonly applyMode: (input: {
+    readonly projectDir: string;
+    readonly stateContent: string;
+    readonly mode: IntentAutonomyMode;
+  }) => { readonly ok: true } | { readonly ok: false; readonly error: string };
+  // The content a human needs in order to issue a full-autonomy grant. Null
+  // when it cannot be produced — the refusal stands either way.
+  readonly describeGrantPreview: (projectDir: string, stateContent: string) => string | null;
+}
+
+const LAUNCH_AUTONOMY_MODES: readonly IntentAutonomyMode[] = ["none", "semi", "full"];
+
+// Read-only: readProductionAutonomyProjection emits no audit event.
+//
+// A read failure becomes "unreadable" rather than the neighbouring
+// `catch → false` idiom. That idiom means "withhold the carve-out" — it leans
+// SAFE there. Here the same shape would lean PERMISSIVE (an unknown grant state
+// would let `--autonomy none` through to the write path, where an active grant
+// would be revoked as a side effect), so the failure is surfaced and refused.
+export function readLaunchAutonomyContext(projectDir: string): LaunchAutonomyContext {
+  let projection: AutonomyProjection | null;
+  try {
+    projection = readProductionAutonomyProjection(projectDir);
+  } catch {
+    return { kind: "unreadable" };
+  }
+  if (projection === null) return { kind: "unreadable" };
+  return {
+    kind: "readable",
+    mode: projection.mode,
+    declared: projection.modeProvenance.kind === "human-command",
+    grant: projection.currentGrant?.state === "active" ? "present" : "absent",
+  };
+}
+
+const PRODUCTION_LAUNCH_AUTONOMY_PORTS: LaunchAutonomyPorts = {
+  readContext: readLaunchAutonomyContext,
+  applyMode: (input) => applyProductionAutonomyMode(input),
+  describeGrantPreview: (projectDir, stateContent) => {
+    const preview = previewProductionAutonomyGrant({ projectDir, stateContent });
+    return preview.ok ? JSON.stringify(preview.preview) : null;
+  },
+};
+
+// Decide what `--autonomy <mode>` means for the active intent, and delegate the
+// write when it means one. Returns "continue" when the caller should fall
+// through to the ordinary routing (either nothing needed doing, or the mode was
+// applied), and "error" with the message to emit otherwise.
+export function applyLaunchAutonomyDeclaration(
+  projectDir: string,
+  stateContent: string | null,
+  flags: ParsedFlags,
+  ports: LaunchAutonomyPorts = PRODUCTION_LAUNCH_AUTONOMY_PORTS,
+): LaunchAutonomyOutcome {
+  // 0 — nothing to declare against. Birth first; the flag then has a target.
+  if (stateContent === null) {
+    return {
+      kind: "error",
+      message: "--autonomy needs an active intent. Start the workflow first, then declare the mode with `/amadeus --autonomy <none|semi|full>` or `amadeus-bolt set-autonomy --mode <none|semi|full>`.",
+    };
+  }
+  // 1 — the flag was passed with nothing to consume.
+  if (flags.autonomyMissingValue) {
+    return { kind: "error", message: "--autonomy requires a value: none, semi, or full." };
+  }
+  const requested = flags.autonomy;
+  if (requested === undefined) return { kind: "continue" };
+  // 2 — outside the mode vocabulary. Exact match only; no case folding, so a
+  // near-miss is reported rather than guessed at.
+  if (!LAUNCH_AUTONOMY_MODES.includes(requested as IntentAutonomyMode)) {
+    return {
+      kind: "error",
+      message: `Invalid --autonomy "${requested}". Valid values: none, semi, full.`,
+    };
+  }
+  const mode = requested as IntentAutonomyMode;
+  // Judgments 0-2 rejected everything malformed, so the projection read happens
+  // only for input that could legitimately be applied.
+  const ctx = ports.readContext(projectDir);
+  // 3 — fail closed: with neither the declaration state nor the grant state
+  // known, no write is safe.
+  if (ctx.kind === "unreadable") {
+    return {
+      kind: "error",
+      message:
+        "Cannot read the Intent autonomy projection. --autonomy is refused while the autonomy state is unknown.",
+    };
+  }
+  // 4/5 — a mode that a human already declared is never rewritten by a launch
+  // flag. Re-stating the same mode is a no-op, deliberately WITHOUT calling the
+  // write path, so repeating the flag does not accumulate audit events.
+  if (ctx.declared) {
+    if (ctx.mode === mode) return { kind: "continue" };
+    return {
+      kind: "error",
+      message:
+        `Intent autonomy is already ${ctx.mode}. Use \`amadeus-bolt set-autonomy --mode ${mode}\` to change it.`,
+    };
+  }
+  // 6 — revoking a grant is a deliberate act, never the side effect of a launch
+  // flag. Reaching the write path here would take the revoke-full command.
+  if (mode === "none" && ctx.grant === "present") {
+    return {
+      kind: "error",
+      message: "Intent has an active grant. Use `amadeus-bolt set-autonomy --mode none` to revoke it explicitly.",
+    };
+  }
+  // 7 — full autonomy still requires an issued grant. Show what issuing one
+  // takes, then stop.
+  if (mode === "full" && ctx.grant !== "present") {
+    const preview = ports.describeGrantPreview(projectDir, stateContent);
+    if (preview !== null) console.error(`amadeus-orchestrate: grant preview: ${preview}`);
+    return {
+      kind: "error",
+      message: "--autonomy full requires an issued grant. Run `amadeus-bolt preview-autonomy`, then `amadeus-bolt set-autonomy --mode full --confirmed-display-digest <digest>` to issue it.",
+    };
+  }
+  // 8 — delegate. The flag is not provenance: the write path's own HUMAN_TURN
+  // requirement decides, and its PROVENANCE_REQUIRED is relayed unchanged.
+  const applied = ports.applyMode({ projectDir, stateContent, mode });
+  if (!applied.ok) return { kind: "error", message: `Intent autonomy update failed: ${applied.error}` };
+  return { kind: "continue" };
 }
 
 // The workflow-birth print for a resolved scope on a fresh workspace (no intent
@@ -2661,6 +2879,23 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     const valid = [...validScopes()].join(", ");
     emit(errorDirective(`Unknown scope "${scope}". Valid scopes: ${valid}.`));
     return;
+  }
+
+  // Branch 4ab - the `--autonomy` launch declaration (#2253). Placed after the
+  // scope checks (so a malformed invocation is reported by the flag the user got
+  // wrong) and before birth, so a declaration never rides along with a routing
+  // move. Refusals are ordinary error directives; an accepted declaration falls
+  // through to the routing that would have happened without the flag.
+  //
+  // This branch does NOT touch directive.intent_autonomy_mode. Projecting the
+  // mode onto the directive stays the sole job of routeMainWorkflowDirective,
+  // which is what keeps `none` from ever being carried.
+  if (flags.autonomy !== undefined || flags.autonomyMissingValue) {
+    const declaration = applyLaunchAutonomyDeclaration(pd, stateContent, flags);
+    if (declaration.kind === "error") {
+      emit(errorDirective(declaration.message));
+      return;
+    }
   }
 
   // Branch 4c - the COMPOSE surfaces (adaptive workflows). A leading `compose`
