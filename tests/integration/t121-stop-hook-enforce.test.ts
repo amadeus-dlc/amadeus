@@ -120,6 +120,7 @@ import {
 import {
   applyProductionAutonomyMode,
   previewProductionAutonomyGrant,
+  readProductionAutonomyProjection,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 
 // Live-observed machine-injected turns, derived from the shared catalog so a
@@ -1182,6 +1183,52 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(f) a corrupt autonomy audit row CLOSES the semi carve-out (projection read failure answers false)", () => {
+    const proj = makeProject();
+    // The carve-out's second judgment stage reads the production autonomy
+    // projection; readIntentAutonomyTransactions throws on an
+    // INTENT_AUTONOMY_TRANSACTION_COMMITTED row missing its payload fields
+    // (invalid-intent-autonomy-audit-row:missing-field). The catch arm must
+    // answer false — an unreadable projection is no authorization, so the
+    // pending question releases the stop (the hook merely stops, which is the
+    // conservative side here).
+    seedInProgressWithQuestions(proj, {
+      slug: "code-generation",
+      phase: "construction",
+      autonomy: "autonomous",
+      intentMode: "semi",
+      questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
+    });
+    seedSemiIntentMode(proj);
+    const stateContent = readFileSync(seededStateFile(proj), "utf-8");
+    // Intact, this same Intent opens the carve-out — the tamper below is the
+    // only difference.
+    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(true);
+    writeFileSync(
+      pinnedShardPath(proj),
+      `${readFileSync(pinnedShardPath(proj), "utf-8")}${JSON.stringify({
+        schemaVersion: 1,
+        seq: 9,
+        cloneId: PINNED_CLONE_ID,
+        intentId: DEFAULT_RECORD_DIR,
+        timestamp: "2026-01-01T00:00:09.000Z",
+        heading: "Intent Autonomy Transaction Committed",
+        event: "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
+        fields: {},
+      })}\n`,
+      "utf-8",
+    );
+    // Pin the throw itself, so the false above provably comes from the catch
+    // arm and not from a silently-null projection.
+    expect(() => readProductionAutonomyProjection(proj)).toThrow(
+      "invalid-intent-autonomy-audit-row:missing-field",
+    );
+    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(false);
+    const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
+    expect(r.rc).toBe(0);
+    expect(r.out).toBe("");
   }, 30000);
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {
