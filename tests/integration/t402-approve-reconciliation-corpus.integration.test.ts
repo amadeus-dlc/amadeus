@@ -61,21 +61,30 @@ function declaredBatchesOf(record: string): string[][] {
   return parsed.batches;
 }
 
-/** The SWARM evidence a committed record's shards carry. */
+/** The SWARM evidence a committed record's shards carry (#2354: unit-keyed). */
 function evidenceOf(record: string): SwarmEvidence {
   const auditDir = join(INTENTS_ROOT, record, "audit");
   let audit = "";
   for (const file of readdirSync(auditDir)) {
     if (file.endsWith(".jsonl")) audit += `${readFileSync(join(auditDir, file), "utf-8")}\n`;
   }
-  const numbersFor = (event: string) =>
-    findAllEvents(audit, event)
+  const namesOf = (block: string, field: string) =>
+    (auditBlockField(block, field) ?? "").split(",").map((name) => name.trim()).filter(Boolean);
+  const completed = new Set(
+    findAllEvents(audit, "SWARM_COMPLETED")
       .map((found) => Number(auditBlockField(found.block, "Batch number")))
-      .filter((value) => Number.isFinite(value));
-  return {
-    startedBatches: new Set([...numbersFor("SWARM_STARTED"), ...numbersFor("SWARM_DEGRADED")]),
-    completedBatches: new Set(numbersFor("SWARM_COMPLETED")),
-  };
+      .filter((value) => Number.isFinite(value)),
+  );
+  const fannedOutUnitSets = findAllEvents(audit, "SWARM_STARTED")
+    .map((found) => new Set(namesOf(found.block, "Unit names")))
+    .filter((units) => units.size > 0);
+  const settledUnits = new Set<string>();
+  for (const found of findAllEvents(audit, "SWARM_UNIT_CONVERGED")) {
+    const number = Number(auditBlockField(found.block, "Batch number"));
+    if (!Number.isFinite(number) || !completed.has(number)) continue;
+    for (const unit of namesOf(found.block, "Unit name")) settledUnits.add(unit);
+  }
+  return { fannedOutUnitSets, settledUnits };
 }
 
 describe("t402 corpus sweep over committed records (FR-6)", () => {

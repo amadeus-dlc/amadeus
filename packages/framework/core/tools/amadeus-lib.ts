@@ -7973,16 +7973,26 @@ export function planGuardMessage(
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 
-// What the audit trail says actually ran, reduced to the only key the three
-// SWARM events share. SWARM_STARTED carries "Unit names", SWARM_DEGRADED carries
-// none, SWARM_COMPLETED carries neither — "Batch number" is the whole common
-// vocabulary, so matching on unit names would drop every degraded batch.
+// What the audit trail says actually ran, keyed on the identity the plan and the
+// audit actually share: UNIT NAMES. A "Batch number" is a value the conductor
+// hands `prepare --batch`, not a batch identity — a re-dispatch after a failed
+// attempt-set advances it, and from there every row lands under a number the plan
+// never declared, which #2354 measured as a permanently-blocked approve on a run
+// that had in fact fanned out.
 //
-// Sets, not lists: the same batch legitimately emits SWARM_STARTED more than
-// once, and neither order nor multiplicity carries meaning here.
+// Nothing is lost by leaving SWARM_DEGRADED out: `prepare` records a degrade in
+// ADDITION to the batch-start row, never instead of it (amadeus-swarm.ts, the
+// `emitDegradeIfRequested(...)` call immediately followed by
+// `emitSwarmStarted(projectDir, flags.batch, units, String(concurrency))`), so a
+// degraded batch still carries its own "Unit names" row.
+//
+// One SET PER SWARM_STARTED ROW, not one union of them all: a declared batch is
+// only proven parallel by a row that names its units TOGETHER. Unioning would let
+// N one-unit dispatches — the serial shape #1892 counted — masquerade as a wide
+// fan-out.
 export type SwarmEvidence = {
-  readonly startedBatches: ReadonlySet<number>; // SWARM_STARTED ∪ SWARM_DEGRADED
-  readonly completedBatches: ReadonlySet<number>; // SWARM_COMPLETED
+  readonly fannedOutUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_STARTED row
+  readonly settledUnits: ReadonlySet<string>; // SWARM_UNIT_CONVERGED under a completed batch
 };
 
 // Whether the run's execution shape matches the plan's. `missing` carries EVERY
@@ -8009,12 +8019,22 @@ function wideBatchesOf(batches: readonly (readonly string[])[]): DeclaredBatch[]
   return wide;
 }
 
+// Whether ONE fan-out row proves this batch's parallelism: it must name every
+// unit of the batch. Superset, not equality — a conductor may claim a wider unit
+// set than a single declared level, and the batch's units were still dispatched
+// together in that one fan-out.
+function fannedOutTogether(batch: DeclaredBatch, evidence: SwarmEvidence): boolean {
+  return evidence.fannedOutUnitSets.some((row) => batch.units.every((unit) => row.has(unit)));
+}
+
 export function swarmEvidenceVerdict(
   batches: readonly (readonly string[])[],
   evidence: SwarmEvidence,
 ): SwarmEvidenceVerdict {
   const missing = wideBatchesOf(batches).filter(
-    (batch) => !evidence.startedBatches.has(batch.number) || !evidence.completedBatches.has(batch.number),
+    (batch) =>
+      !fannedOutTogether(batch, evidence) ||
+      !batch.units.every((unit) => evidence.settledUnits.has(unit)),
   );
   if (missing.length === 0) return { kind: "satisfied" };
   return { kind: "missing", batches: missing };
