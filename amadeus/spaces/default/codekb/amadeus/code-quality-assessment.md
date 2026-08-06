@@ -114,6 +114,57 @@ fail-closed で塞がれているため誤動作はしないが、**未接続の
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
+## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+
+本節の件数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。Test Strategy は Comprehensive。
+
+### テスト面の断面
+
+| 指標 | 実測値 | 測定コマンド（observed で実行） |
+| --- | --- | --- |
+| `tests/**/*.test.ts` 総数 | **941**（base 断面の記載 927 から +14） | `find tests -name '*.test.ts' \| wc -l` |
+| 最大テスト番号 | **t439** | `ls tests/{unit,integration,e2e} \| grep -oE "^t([0-9]+)" \| sed 's/t//' \| sort -n \| tail -3` → 437 / 438 / 439 |
+| `semi` を含むテスト系ファイル | 14（うち `t97` は `semicolon` の偽陽性 → 実質 **13**） | `grep -rln "semi" tests/ --include="*.ts"` |
+| core tools `.ts` 本数 | **119**（base 断面の記載 116 から +3） | `ls packages/framework/core/tools/*.ts \| wc -l` |
+
+**後続 Bolt は t440 以降を採ること**（`cid:code-generation:swarm-test-number-reservation` / `cid:code-generation:c1-tnnn-collision-on-regrounding`）。区間内で新規テスト21ファイルが追加され、番号付きは t433 / t434 / t436 / t437 / t438 / t439、残る8本は `t-` prefix の番号なし形式である。
+
+### 旧仕様を固定している既存テスト（反転が必要な面）
+
+再定義は **既存テストが明示的にピンしている振る舞いを変える**。無申告で変更すると `cid:reverse-engineering:c1-pinned-behavior-ruling` に抵触するため、要件段で仕様裁定とテスト契約の明示改訂をセットで確定する必要がある。
+
+**1. `tests/unit/t431-intent-autonomy.test.ts:307-314`** — `test("semi authorizes only phase-internal stage gates", ...)`
+
+```
+    expect(authorizeInteraction(plan.after, occurrence("stage-gate", ["approve"])).kind).toBe("semi-mode-gate");
+    expect(authorizeInteraction(plan.after, occurrence("walking-skeleton", ["approve"])).kind).toBe("human-required");
+    expect(authorizeInteraction(plan.after, occurrence("question")).kind).toBe("human-required");
+```
+
+`:313`（question → `human-required`）が **semi の質問封鎖を直接ピンする行**であり、再定義の射程に入る。`:312`（walking-skeleton → `human-required`）は walking skeleton のピンであり、`stage-protocol.md:105` / `:808` と対応する。**#2253 の射程では保存対象**だが、`semi` を `full` 相当へ寄せる度合いによっては裁定対象になりうる（要件段で明示すること）。
+
+他の semi ピン: `:184-196`（`none` → `semi` は grant なしの人間限定遷移）、`:257-265`（`semi-gate-requires-semi-mode` の throw）、`:339`（semi と grant gate の決定は queue 非適用）。
+
+**2. `tests/integration/t121-stop-hook-enforce.test.ts:1138-1150`** — `test("(f) semi + blank question ALLOWS because questions remain human-owned", ...)`
+
+`expect(r.out).toBe("")` により、`semi` + 未回答質問で stop hook が **block しない**ことがピンされている。テスト名自体が `because questions remain human-owned` と再定義前の前提を明記しており、再定義後は **block 期待への反転**が必要になる。
+
+他: `:827-833`（`isConversationalStop` の semi 挙動）、`:33` / `:1287`（コメント）。
+
+**3. `tests/.coverage-patch-allowlist.json:5268`** — `"function": "isFullyAutonomousIntent"`。述語を改名・分割する場合は同一変更で同期する（`cid:code-generation:allowlist-line-pin-stale` / `cid:code-generation:c1-allowlist-mechanical-remap`）。
+
+### 構造的な品質リスク
+
+- **未レビュー裁定の増加**: 梯子後段2段（solo-election / agent-recommendation）は `reviewState: "unreviewed"` を記録する（`amadeus-intent-autonomy.ts:605-607`）。`semi` を梯子へ載せると未レビュー件数が増える。受け皿は区間内新規の `amadeus-autonomy-review.ts`（1273行）と `amadeus-autonomy-review-production.ts`（484行）であり、これらは base 時点で存在しなかったため既存の品質評価に未収載である。
+- **fail-open ではなく fail-closed**: 梯子の最終段は `unavailableReason` 未設定なら `invalid-recommendation-result` を返す（`:736-744`）。縮退が黙って通ることはない。この fail-closed 性は再定義後も保存すべき性質である。
+- **公開 flag の無音破棄**: `set-autonomy --mode semi --policies-file <json>` が exit 0 のまま policies を捨てる（`amadeus-bolt.ts:1067` が読む → `amadeus-intent-autonomy-production.ts:417` の分岐で `prepareNonFullCommand` `:382-395` が受け取らない）。observed 時点では `semi` が policy を使わないため実害はないが、**再定義と同時に実欠陥へ転化する**。検証劇場ではないが、受理して無視する契約は org.md Forbidden の趣旨に近い。
+- **未認識フラグの値漏れ**: `--autonomy semi` を parser（`amadeus-orchestrate.ts:1044-1074`）へ登録しないまま利用者が打つと、`semi` が intent 自由文へ混入する（`:1072-1073`、コメント `:1068-1069`）。新フラグ実装時は「値を consume する」ことと「consume しない場合の漏れ」の両方をテストで固定すべきである。
+- **表示面の非対称**: `--status` は autonomy を8行出す（`amadeus-utility.ts:336-350`）が statusline は 0 行（`amadeus-statusline.ts` に autonomy hit なし）。利用者が常時見るのは statusline である。
+
+### 検証の実施状況
+
+本 Architect synthesis ではテストを再実行していない。Developer scan の実測（`grep` / `wc` / `git diff` / ファイル直読）を一次入力とし、本 synthesis では焦点機構の file:line・件数・verbatim を独立に再実測して照合した。その結果、Developer scan が申告した `resolveAutoDecision` 梯子の行範囲（`:705-706` 等）と `handleSetAutonomy` `:1050` / `handleListAutoDecisions` `:960` は**いずれも1行低い**ことを検出し、本 codekb には再実測値（`:706-707` / `:1051` / `:961`）を採用した。
+
 ## phase boundary approval の品質所見（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files、`+84296 / −11280`）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。

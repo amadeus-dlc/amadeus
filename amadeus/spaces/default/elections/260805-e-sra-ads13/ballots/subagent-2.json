@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-ADS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用でよいが、persist 時に cid:code-generation:c1-reviewer-scope-alignment(reviewer 許可集合のディスパッチ時整合 = 予防面)との相互参照を1行明記すること — 同 cid は検証課題が名指しする既知パスの事前包含を縛るが、本候補が扱うのは事前列挙できない暗黙前提を conductor が verdict 受領後に実測して実害の深刻度を確定し、iteration を消費せず是正して要件へ還流する事後面であり、両者が予防/事後の対として非重複であることを本文で判別可能にする。",
+  "rationale": "候補原文・実測起点・reviewer 指摘・是正・既存 cid をすべて独立に実読して判断した。【候補の実在】record の inception/application-design/memory.md:14(Tradeoffs)と :20(Open questions)に候補の原型が実在し、F1 の実測(amadeus-utility.ts:4635)と是正方針(modeProvenance 判別子)が記録されている。【実測起点の真偽】packages/framework/core/tools/amadeus-utility.ts:4635 を実読し、state テンプレートが birth 時点で verbatim `- **Intent Autonomy Mode**: none` を必ず書くことを確認 — 「フィールド不在=未宣言」前提は恒偽であり、当初設計のままなら新規 Intent への --autonomy semi が「宣言済み(none)かつ異値」で常に loud 停止し FR-CLI-1/FR-CLI-3 の主用途が構造的に成立しない、という候補の主張は実装事実と一致する。【reviewer 指摘の実在】components.md 末尾の `## Review — Iteration 1`(READY / BLOCKER 0 / FOLLOW-UP 9 / NIT 2)の Findings 1件目が「C13 の判定3/4 が『新規 birth 直後の state に Intent Autonomy Mode が存在しない』ことを暗黙前提とするが未実測」と FOLLOW-UP で提起しており、reviewer(amadeus-architecture-reviewer-agent、tools: Read/Grep/Glob)は許可 scope 外の実装コードを実測できないため FOLLOW-UP 止まりにするしかなかった、という機序も成立する。【是正の実在】decisions.md:608 に ADR-13(判別子を modeProvenance.kind === \"human-command\" へ)が実在し、:9 が由来を §12a FOLLOW-UP 起点と明記、測定 ref d405e34c5 と ModeProvenance 3値の生成点実読(amadeus-intent-autonomy.ts:50-72 / :217-224 / :359-376)まで固定されている — conductor の実測が FOLLOW-UP を実質 BLOCKER 相当(主用途の構造的不成立)へ再格付けし、iteration を消費せず conductor 主導で是正した実例として完結している。【既存 cid との重複判定】(a) cid:code-generation:c1-reviewer-scope-alignment は検証課題が構造的に要求する既知ファイルの事前包含(ディスパッチ時の予防面)を縛るが、暗黙前提はレビュー中に初めて顕在化し事前列挙できないため射程外 — ただし隣接ファミリであり相互参照を留保で条件づけた。(b) team.md delegated-review-analysis-with-owned-verdict は文脈逼迫時の分析委任と verdict 所有の規律であり、reviewer の未検証前提の事後実測とは別面。(c) late-verdict-diff-absorption は遅着 verdict の差分吸収であり無関係。(d) verify-before-notify は成功通知前の実測であり、FOLLOW-UP の深刻度再格付け・iteration 非消費・要件還流という本候補の核は含まない。よって候補は既存 cid の射程外の新規面を持ち、一般化価値がある。conductor の他候補不採用理由(5成果物一括起草・OQ-ADV-K の ADR 化・質問ファイル非作成・F1〜F10 是正記録・未確定4件申し送りはいずれも intent 固有の運用記録または既存 cid の適用実例)も memory.md 実文と一致し妥当。",
+  "submittedAt": "2026-08-05T08:20:00Z"
+}

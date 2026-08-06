@@ -42,8 +42,8 @@ Construction は **Bolt ごと**に実行され、ステージ 2.8 の `bolt-pla
 
 ```
 Intent自律レベル（無人裁定の前に選択）:
-  none → すべてのgateと質問を人間が裁定
-  semi → phase内gateは事前承認済み、phase境界と質問は人間を待つ
+  none → すべてのgateも質問も人間が裁定
+  semi → phase内gateは事前承認済み、質問は無人裁定、節目（phase境界・walking skeleton・intent終端）は人間を待つ
   full → 確認済みIntent grantが認可範囲内のgateと質問を裁定可能
 
 Bolt 1 (walking skeleton) — 同じmode表に従う:

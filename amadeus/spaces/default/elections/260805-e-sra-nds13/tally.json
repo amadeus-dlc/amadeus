@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0 件(提案どおり)+ ゲート前提に異議なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0 件(提案どおり)+ ゲート前提に異議なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用すべき候補がある / ゲート前提に異議",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T13:04:51Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRA-NDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) memory.md 全文実読 — エントリは Interpretations の 1 件のみ(2026-08-05T13:05:00Z、E-LSSADS13 受理記録)、他節は空。(2) security-design.md 本文の裸番号参照 0 を grep 実測 — grep -n 'FD BR-\\|domain-entities E' の hit は L58/L68/L72 のみで、すべて Review 節(L46 開始)内の指摘引用 = 履歴保存。L33 は 'FD business-rules.md:115(BR-10)の V1〜V6' へ file:line 形式に是正済み。(3) Review 節 2 ブロック(Iteration 1: NOT-READY 2026-08-05T12:52:07Z / Iteration 2: NOT-READY 12:54:35Z)実在確認。(4) §12a 実績を全 7 unit の Verdict grep で照合 — READY it1 が 5 件(advisory-auto-resolution:65 / launch-autonomy-flag:50 / semi-policy-carrier:53 / semi-authorization-core:57 / stop-question-carveout:60)、autonomy-statusline は NOT-READY:49→READY:63(it2)、semi-docs-revision は NOT-READY×2 — 提案記述と完全一致、ゲート前提(全 unit 設計品質確立)に異議なし。(5) E-LSSADS13(team.md cid:requirements-analysis:delegated-review-analysis-with-owned-verdict 追補)照合 — 残余は reviewer 名指し済み 1 箇所への file:line 付与のみで grep 閉包可能な機械検証可能クラス、列挙 omission クラスに非該当、conductor の grep 閉包実測+record 固定は追補の受理手順どおりで妥当。唯一の memory エントリは既決規範の適用実例であり新規一般化価値なし — 0 件提案を支持。",
+      "submittedAt": "2026-08-05T12:57:53Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRA-NDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) construction/nfr-design/memory.md 全文実読 — Interpretations にエントリ 1 件のみ(semi-docs-revision の E-LSSADS13 機械検証可能クラス受理、2026-08-05T13:05:00Z)。既決 cid:requirements-analysis:delegated-review-analysis-with-owned-verdict 追補の適用実例であり新規一般化価値なし — 0 件提案は妥当。(2) semi-docs-revision/nfr-design/security-design.md — grep -n 'FD BR-|domain-entities E' の hit は :58/:68/:72 の 3 件のみで、いずれも Review 節(:46 以降)内の指摘引用 = 履歴保存。本文(L1-45)は 0 hit、:33 は 'FD business-rules.md:115(BR-10)の V1〜V6' へ file:line 是正済み。Review ブロックは 2 件(Iteration 1 NOT-READY :48 / Iteration 2 NOT-READY :62)で memory.md の記載と一致。(3) E-LSSADS13 受理要件の照合 — 残余は reviewer が :72 で名指しした単一箇所の書式是正(file:line 付与のみ)で、grep で閉包可能な機械検証可能クラス。新規探索を要する列挙 omission クラスではなく、conductor 検証+実測の record 固定による受理は追補の定める分岐どおり。(4) ゲート前提 — 全 7 unit の verdict を grep 実測: advisory-auto-resolution/launch-autonomy-flag/semi-authorization-core/semi-policy-carrier/stop-question-carveout = READY iter1、autonomy-statusline = NOT-READY→READY iter2、semi-docs-revision = NOT-READY×2 at limit + E-LSSADS13 受理。選挙前提の記載と完全一致し異議なし。",
+      "submittedAt": "2026-08-05T12:58:36Z"
+    }
+  ],
+  "resolutions": []
+}
