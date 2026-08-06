@@ -4222,9 +4222,9 @@
     "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
     "selector": {
       "function": "executePiChild",
-      "fingerprint": "sha256:22d359bc5498f000e2d28bbd96e2d9b3d608643e639c91bf530e015ad0d90c95",
-      "anchorLines": 54,
-      "targetLines": "1-54"
+      "fingerprint": "sha256:41ef3650f1688859cad21df2f2c7117bae735207a34392768664e2cc7c6f72d0",
+      "anchorLines": 97,
+      "targetLines": "1-97"
     },
     "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
     "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
