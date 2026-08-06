@@ -77,7 +77,7 @@ function typeVerdictFor(agentType: string): string | null {
     }
     return verdict;
   } catch (e) {
-    process.stderr.write(`advisory: subagent type check skipped: ${errorMessage(e)}\n`);
+    process.stderr.write(`advisory: subagent type check skipped: ${sanitizeAdvisoryValue(errorMessage(e))}\n`);
     return null;
   }
 }
@@ -106,7 +106,7 @@ function modelResolutionFor(agentType: string, typeVerdict: string | null): Mode
       personaPin,
     });
   } catch (e) {
-    process.stderr.write(`advisory: subagent model attribution skipped: ${errorMessage(e)}\n`);
+    process.stderr.write(`advisory: subagent model attribution skipped: ${sanitizeAdvisoryValue(errorMessage(e))}\n`);
     return null;
   }
 }

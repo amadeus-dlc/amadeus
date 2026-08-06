@@ -61,6 +61,15 @@ const CONTROL_CHARS = /[\u0000-\u0008\u000B-\u001F\u007F]/g;
 // control bytes that would otherwise forge a log row or drive the terminal —
 // the same two-part sanitisation subagentPurposeLine applies, minus its
 // truncation (that window belongs to the Purpose field, not to a type name).
+// Warnings embed values this module does not own - a directory path, a file
+// name off disk, an exception message. They are written to stderr by every
+// consumer, so a newline or an escape sequence in any of them could forge a log
+// row or drive the terminal (CWE-117). Sanitising where the warning is BUILT
+// keeps every consumer safe without each one remembering to.
+function advisory(message: string): string {
+  return sanitizeAdvisoryValue(message);
+}
+
 export function sanitizeAdvisoryValue(value: string): string {
   const firstLine = value.split(/[\r\n]/, 1)[0] ?? "";
   return firstLine.replace(CONTROL_CHARS, "").trim();
@@ -92,6 +101,39 @@ function personaNameOf(body: string): string | null {
   return frontmatterScalar(FRONTMATTER_NAME.exec(frontmatterOf(body))?.[1]);
 }
 
+/** Every `.md` agent definition under `agentsDir`, in name order, paired with
+ *  its body. The two resolvers below need exactly this and nothing else, so the
+ *  listing, the per-file read, and their two failure warnings live here once
+ *  rather than in each caller. A dir that cannot be listed yields no entries and
+ *  one warning; a file that cannot be read is skipped with one warning. Neither
+ *  throws — U1's fail-open contract holds for both callers by construction. */
+function readAgentDefinitions(
+  agentsDir: string,
+): { listed: boolean; entries: { entry: string; body: string }[]; warnings: string[] } {
+  const warnings: string[] = [];
+  let names: string[];
+  try {
+    names = readdirSync(agentsDir).filter((n) => n.endsWith(".md"));
+  } catch (e) {
+    warnings.push(advisory(`agents dir unreadable (${agentsDir}): ${e instanceof Error ? e.message : String(e)}`));
+    return { listed: false, entries: [], warnings };
+  }
+
+  const entries: { entry: string; body: string }[] = [];
+  for (const entry of names.sort()) {
+    try {
+      entries.push({ entry, body: readFileSync(join(agentsDir, entry), "utf-8") });
+    } catch (e) {
+      // Skip this definition, keep the rest: the warning is the record of the
+      // loss, and `continue` is the explicit terminal the no-silent-drop rule
+      // requires so the skip is a decision rather than a fall-through.
+      warnings.push(advisory(`agent definition unreadable (${entry}): ${e instanceof Error ? e.message : String(e)}`));
+      continue;
+    }
+  }
+  return { listed: true, entries, warnings };
+}
+
 /**
  * Resolve the allowed set from the harness `agents/` dir plus the builtin ledger.
  *
@@ -104,25 +146,13 @@ export function resolveAllowedAgentTypes(agentsDir: string): AllowedSetResolutio
   const warnings: string[] = [];
   let personaCount = 0;
 
-  let entries: string[];
-  try {
-    entries = readdirSync(agentsDir).filter((n) => n.endsWith(".md"));
-  } catch (e) {
-    warnings.push(`agents dir unreadable (${agentsDir}): ${e instanceof Error ? e.message : String(e)}`);
-    return { allowed, personaCount, warnings };
-  }
+  const read = readAgentDefinitions(agentsDir);
+  warnings.push(...read.warnings);
 
-  for (const entry of entries.sort()) {
-    let body: string;
-    try {
-      body = readFileSync(join(agentsDir, entry), "utf-8");
-    } catch (e) {
-      warnings.push(`agent definition unreadable (${entry}): ${e instanceof Error ? e.message : String(e)}`);
-      continue;
-    }
+  for (const { entry, body } of read.entries) {
     const name = personaNameOf(body);
     if (name === null) {
-      warnings.push(`agent definition has no frontmatter name (${entry})`);
+      warnings.push(advisory(`agent definition has no frontmatter name (${entry})`));
       continue;
     }
     allowed.add(name);
@@ -238,27 +268,18 @@ export function resolvePersonaPin(agentType: string, agentsDir: string): Persona
   const warnings: string[] = [];
   const shown = sanitizeAdvisoryValue(agentType);
 
-  let entries: string[];
-  try {
-    entries = readdirSync(agentsDir).filter((n) => n.endsWith(".md"));
-  } catch (e) {
-    warnings.push(`agents dir unreadable (${agentsDir}): ${e instanceof Error ? e.message : String(e)}`);
-    return { pin: undefined, warnings };
-  }
+  const read = readAgentDefinitions(agentsDir);
+  warnings.push(...read.warnings);
+  // An unlistable dir is already explained by its own warning; adding
+  // "found no definition" on top would double-report one cause.
+  if (!read.listed) return { pin: undefined, warnings };
 
   let pin: string | undefined;
   let matched: string | null = null;
-  for (const entry of entries.sort()) {
-    let body: string;
-    try {
-      body = readFileSync(join(agentsDir, entry), "utf-8");
-    } catch (e) {
-      warnings.push(`agent definition unreadable (${entry}): ${e instanceof Error ? e.message : String(e)}`);
-      continue;
-    }
+  for (const { entry, body } of read.entries) {
     if (personaNameOf(body) !== agentType) continue;
     if (matched !== null) {
-      warnings.push(`duplicate persona name "${shown}" (${matched} already matched, ${entry} ignored)`);
+      warnings.push(advisory(`duplicate persona name "${shown}" (${matched} already matched, ${entry} ignored)`));
       break;
     }
     matched = entry;
@@ -266,7 +287,7 @@ export function resolvePersonaPin(agentType: string, agentsDir: string): Persona
   }
 
   if (matched === null) {
-    warnings.push(`persona pin lookup found no definition named "${shown}" (${agentsDir})`);
+    warnings.push(advisory(`persona pin lookup found no definition named "${shown}" (${agentsDir})`));
   }
   return { pin, warnings };
 }

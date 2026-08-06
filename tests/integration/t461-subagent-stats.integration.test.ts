@@ -27,6 +27,7 @@ import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -261,7 +262,18 @@ describe("t461 subagent-stats CLI — fixture corpus (#2279)", () => {
 function snapshotCorpus(): { root: string; shardCount: number } {
   const root = mkdtempSync(join(tmpdir(), "t461-corpus-"));
   mkdirSync(join(root, ".claude"), { recursive: true });
-  spawnSync("cp", ["-R", SOURCE_AGENTS, join(root, ".claude", "agents")]);
+  // The personas ARE the allowed set for this sweep. A silent copy failure would
+  // leave both sides agreeing on the builtin ledger alone, and AC-3 would pass
+  // while proving nothing - so the copy is verified by name before we proceed.
+  const snapshotAgents = join(root, ".claude", "agents");
+  cpSync(SOURCE_AGENTS, snapshotAgents, { recursive: true });
+  const definitionNames = (dir: string): string[] =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .sort();
+  const sourceNames = definitionNames(SOURCE_AGENTS);
+  expect(sourceNames.length).toBeGreaterThan(0);
+  expect(definitionNames(snapshotAgents)).toEqual(sourceNames);
   const intentsRoot = join(REPO_ROOT, "amadeus", "spaces", "default", "intents");
   let shardCount = 0;
   for (const intent of readdirSync(intentsRoot).sort()) {
@@ -534,6 +546,27 @@ describe("t461 subagent-stats seams — in-process (#2279)", () => {
       expect(scanned.records[0]?.model).toBeUndefined();
     } finally {
       rmSync(solo, { recursive: true, force: true });
+    }
+  });
+  test("an unreadable intents tree is an empty corpus, not a crash (no TOCTOU window)", () => {
+    // The corpus is written while this runs, so a dir can vanish between a
+    // pre-check and the listing. Simulate the same observable state with a dir
+    // the process cannot list: the scan must degrade, not throw.
+    const locked = mkdtempSync(join(tmpdir(), "t461-locked-"));
+    const intentsRoot = join(locked, "amadeus", "spaces", "default", "intents");
+    mkdirSync(intentsRoot, { recursive: true });
+    mkdirSync(join(intentsRoot, "t461-e-deadbeef05", "audit"), { recursive: true });
+    chmodSync(intentsRoot, 0o000);
+    try {
+      const scanned = scanAuditCorpus(locked, "default");
+      expect(scanned.shardCount).toBe(0);
+      expect(scanned.records).toHaveLength(0);
+      // Nothing was read, so nothing is reported as an unreadable SHARD - the
+      // fail-loud counter is for shards that exist and cannot be read.
+      expect(scanned.unreadableShardCount).toBe(0);
+    } finally {
+      chmodSync(intentsRoot, 0o700);
+      rmSync(locked, { recursive: true, force: true });
     }
   });
 });

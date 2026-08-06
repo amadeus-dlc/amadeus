@@ -22,7 +22,7 @@
 // dependency direction stats -> observability only); the two small path
 // idioms it needs are mirrored locally.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { harnessDir } from "./amadeus-harness.ts";
@@ -129,7 +129,9 @@ export function composeStatsReport(
     byVerdict.set(verdict, (byVerdict.get(verdict) ?? 0) + 1);
 
     const agentType = normalizeType(record.agentType);
-    const key = `${agentType}${verdict}`;
+    // The separator keeps the key injective: without it a future verdict value
+    // that is a suffix of another would silently merge two rows into one.
+    const key = `${agentType}\u0000${verdict}`;
     const row = typeTallies.get(key);
     typeTallies.set(key, { agentType, verdict, count: (row?.count ?? 0) + 1 });
 
@@ -290,6 +292,53 @@ function recordFromLine(parsed: unknown): SubagentAuditRecord | null {
   };
 }
 
+/** Directory entries, or none when the directory is absent or unreadable. The
+ *  scan treats "not there" and "vanished mid-scan" alike: both are an empty
+ *  corpus, never a crash (the fail-loud case is a shard that EXISTS but cannot
+ *  be read, which is counted below). */
+function listOrEmpty(dir: string): string[] {
+  try {
+    return readdirSync(dir).sort();
+  } catch {
+    return [];
+  }
+}
+
+/** One shard's bytes, or null when it EXISTS but cannot be read. That case is
+ *  fail-loud: it is announced on stderr and counted by the caller, because a
+ *  report drawn from a corpus with a hole must not read as complete. */
+function readShardBytes(path: string): string | null {
+  try {
+    return readFileSync(path, "utf-8");
+  } catch (e) {
+    const detail = sanitizeAdvisoryValue(`${path}: ${e instanceof Error ? e.message : String(e)}`);
+    process.stderr.write(`subagent-stats: shard unreadable: ${detail}\n`);
+    return null;
+  }
+}
+
+/** The subagent records in one shard's bytes, plus the count of lines that were
+ *  not parseable. Fail-open per line: a broken line is skipped and counted, so a
+ *  single bad row can never cost the rest of the shard. */
+function readShardLines(body: string): { records: SubagentAuditRecord[]; parseSkipped: number } {
+  const records: SubagentAuditRecord[] = [];
+  let parseSkipped = 0;
+  for (const line of body.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) continue;
+    try {
+      const record = recordFromLine(JSON.parse(trimmed));
+      if (record !== null) records.push(record);
+    } catch {
+      // The skip is counted, never hidden, and `continue` is the explicit
+      // terminal the no-silent-drop rule requires.
+      parseSkipped += 1;
+      continue;
+    }
+  }
+  return { records, parseSkipped };
+}
+
 /** Read every audit shard under the space's intents tree. Missing dirs are a
  *  normal empty corpus; a shard that EXISTS but cannot be read is counted
  *  (fail-loud at the exit code) while the rest of the corpus still scans. */
@@ -299,37 +348,24 @@ export function scanAuditCorpus(projectDir: string, space: string): ScannedAudit
   let unreadableShardCount = 0;
   let parseSkippedCount = 0;
 
+  // Listing is attempted, not pre-checked: the corpus is written by hooks while
+  // this runs and intent dirs are archived, so an existsSync/readdirSync pair
+  // has a real window where the dir vanishes between the two calls. An absent
+  // dir and a dir that disappears are the same thing here - an empty corpus.
   const intentsRoot = join(projectDir, "amadeus", "spaces", space, "intents");
-  if (!existsSync(intentsRoot)) return { shardCount, unreadableShardCount, parseSkippedCount, records };
-
-  for (const intent of readdirSync(intentsRoot).sort()) {
+  for (const intent of listOrEmpty(intentsRoot)) {
     const auditDir = join(intentsRoot, intent, "audit");
-    if (!existsSync(auditDir)) continue;
-    for (const shard of readdirSync(auditDir).sort()) {
+    for (const shard of listOrEmpty(auditDir)) {
       if (!shard.endsWith(".jsonl")) continue;
-      const path = join(auditDir, shard);
-      let body: string;
-      try {
-        body = readFileSync(path, "utf-8");
-      } catch (e) {
+      const body = readShardBytes(join(auditDir, shard));
+      if (body === null) {
         unreadableShardCount += 1;
-        process.stderr.write(`subagent-stats: shard unreadable (${path}): ${e instanceof Error ? e.message : String(e)}\n`);
         continue;
       }
       shardCount += 1;
-      for (const line of body.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("{")) continue;
-        try {
-          const record = recordFromLine(JSON.parse(trimmed));
-          if (record !== null) records.push(record);
-        } catch {
-          // fail-open on a broken line, but the skip is counted, never hidden.
-          // `continue` is the explicit terminal the no-silent-drop rule requires.
-          parseSkippedCount += 1;
-          continue;
-        }
-      }
+      const read = readShardLines(body);
+      records.push(...read.records);
+      parseSkippedCount += read.parseSkipped;
     }
   }
   return { shardCount, unreadableShardCount, parseSkippedCount, records };

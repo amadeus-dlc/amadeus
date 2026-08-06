@@ -319,3 +319,40 @@ function readableWhenLocked(path: string): boolean {
     return false;
   }
 }
+
+// Warnings embed a path, a file name off disk, and an exception message, and
+// every consumer writes them to stderr. A newline or an escape sequence in any
+// of those would forge a log row or drive the terminal (CWE-117), so the
+// sanitisation lives where the warning is built.
+describe("t452 warning text cannot forge a log row (#2279)", () => {
+  test("a definition whose NAME carries control bytes yields a single clean line", () => {
+    const forged = mkdtempSync(join(tmpdir(), "t452-forged-"));
+    try {
+      writeFileSync(join(forged, "evil\u001b[2K\nadvisory: forged.md"), "no frontmatter\n", "utf-8");
+
+      const resolution = resolveAllowedAgentTypes(forged);
+      expect(resolution.warnings.length).toBeGreaterThan(0);
+      for (const warning of resolution.warnings) {
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: asserting their absence is the point
+        expect(warning).not.toMatch(/[\u0000-\u0008\u000B-\u001F\u007F]/);
+        expect(warning.includes("\n")).toBe(false);
+      }
+    } finally {
+      rmSync(forged, { recursive: true, force: true });
+    }
+  });
+
+  test("the persona-pin resolver sanitises its warnings the same way", () => {
+    const forged = mkdtempSync(join(tmpdir(), "t452-forged-pin-"));
+    try {
+      const pin = resolvePersonaPin("t452-absent\u0007persona", forged);
+      expect(pin.pin).toBeUndefined();
+      for (const warning of pin.warnings) {
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: asserting their absence is the point
+        expect(warning).not.toMatch(/[\u0000-\u0008\u000B-\u001F\u007F]/);
+      }
+    } finally {
+      rmSync(forged, { recursive: true, force: true });
+    }
+  });
+});
