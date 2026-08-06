@@ -12,9 +12,12 @@ import {
 } from "./amadeus-lib.ts";
 import { basename, dirname, resolve } from "node:path";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { existsSync } from "node:fs";
 import {
   authorizeGoalCompletion,
   goalCompletionContextDigest,
+  goalLineagePath,
+  goalReceiptPath,
   type GoalReconciliationReceipt,
   readGoalLineage,
   readGoalReconciliationReceipt,
@@ -35,16 +38,18 @@ import {
 // with their audit evidence intact (issue #839).
 export class WorkflowCompletionNotSettledError extends Error {}
 
-// Read a Goal artifact under the not-settled boundary: an artifact that is
-// absent (the confirmed production case) or unreadable leaves the completion
-// unsettled rather than failing the workflow.
-function asNotSettled<T>(read: () => T): T {
-  try {
-    return read();
-    // The rethrow shares the catch line: bun lcov stamps a bare `} catch {` 0
-    // under union merge, which reads as an untested boundary that is in fact
-    // exercised on every unsettled completion.
-  } catch (cause) { throw new WorkflowCompletionNotSettledError(errorMessage(cause)); }
+// Read a Goal artifact under the not-settled boundary. ABSENCE is the confirmed
+// production case: the artifact the completion is authorized against has not
+// been produced yet, and doing the Goal work produces it — a waiting state.
+//
+// A PRESENT but unparseable artifact is not that: no Goal work fixes malformed
+// bytes, and swallowing it as "not settled" would hide a corrupt record behind
+// a waiting state that never resolves. Those keep the error path with their
+// audit evidence (issue #839), so the existence check is the classifier and the
+// read itself is left to throw.
+function ifPresent<T>(path: string, read: () => T, absent: string): T {
+  if (!existsSync(path)) throw new WorkflowCompletionNotSettledError(absent);
+  return read();
 }
 
 export type WorkflowCompletionPreparation = Readonly<{
@@ -172,7 +177,11 @@ export function authorizeWorkflowCompletion(input: {
       `Workflow completion target ${input.completedSlug} is not the final in-scope stage`,
     );
   }
-  const lineage = asNotSettled(() => readGoalLineage(input.recordDir));
+  const lineage = ifPresent(
+    goalLineagePath(input.recordDir),
+    () => readGoalLineage(input.recordDir),
+    "Goal lineage is missing",
+  );
   const current = lineage.revisions[lineage.currentRevision];
   const stateGoalId = getField(input.content, "Goal ID")?.trim();
   const stateRevision = getField(input.content, "Current Goal Revision")?.trim();
@@ -184,8 +193,10 @@ export function authorizeWorkflowCompletion(input: {
   ) {
     throw new Error("Goal lineage does not match the workflow state projection");
   }
-  const receipt = asNotSettled(() =>
-    readGoalReconciliationReceipt(input.recordDir, input.completionInstance)
+  const receipt = ifPresent(
+    goalReceiptPath(input.recordDir, input.completionInstance),
+    () => readGoalReconciliationReceipt(input.recordDir, input.completionInstance),
+    "Goal reconciliation receipt is missing",
   );
   const authorization = authorizeGoalCompletion({
     intentId: registeredIntentUuid(input.projectDir, input.recordDir),
@@ -200,9 +211,13 @@ export function authorizeWorkflowCompletion(input: {
     ),
   });
   if (authorization.kind === "rejected") {
-    throw new WorkflowCompletionNotSettledError(
-      `Goal reconciliation refused completion: ${authorization.reason}`,
-    );
+    // Freshness refusals settle by doing the Goal work again; identity refusals
+    // (a receipt about another Intent/Goal/completion) never do, so they stay on
+    // the error path rather than becoming a waiting state that cannot end.
+    const message = `Goal reconciliation refused completion: ${authorization.reason}`;
+    throw authorization.settleable
+      ? new WorkflowCompletionNotSettledError(message)
+      : new Error(message);
   }
   return authorization.receipt;
 }

@@ -18,8 +18,8 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { countAuditEvent } from "../harness/audit-records.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
@@ -204,6 +204,36 @@ describe("the completion-uncommitted window answers with await-completion, not e
 
     expect(result.status).not.toBe(0);
     expect((JSON.parse(result.stderr) as { error?: string }).error).toMatch(/requires a Scope field/i);
+    expect(errorLoggedRows(project, record)).toBe(before + 1);
+  });
+
+  // #2251 review (Major): the waiting state is for an artifact that is ABSENT.
+  // A Goal artifact that EXISTS but cannot be parsed is malformed state — no
+  // Goal work repairs it, so classifying it as "not settled" would hide a
+  // corrupt record behind a wait that never ends.
+  test("a present but unparseable goal lineage is an error, not a wait", () => {
+    const { project, record } = birth();
+    setFinalStageState(project, record);
+    const recordDir = join(project, "amadeus", "spaces", "default", "intents", record);
+    const lineagePath = join(recordDir, "goal", "goal-lineage.json");
+    mkdirSync(dirname(lineagePath), { recursive: true });
+    writeFileSync(lineagePath, "{ not json");
+    const before = errorLoggedRows(project, record);
+
+    const result = spawnSync(
+      process.execPath,
+      [STATE, "complete-workflow", "build-and-test", "--project-dir", project],
+      {
+        encoding: "utf8",
+        env: {
+          ...toolEnv,
+          AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+          AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        },
+      },
+    );
+
+    expect(result.status).not.toBe(0);
     expect(errorLoggedRows(project, record)).toBe(before + 1);
   });
 });
