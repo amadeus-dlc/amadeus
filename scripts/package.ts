@@ -122,7 +122,7 @@ function applyDeclaredModelPin(
   return Buffer.from(applyModelPin(out.toString("utf-8"), pins, file), "utf-8");
 }
 
-function applyModelPin(
+export function applyModelPin(
   content: string,
   pins: Readonly<Record<string, string>>,
   file: string,

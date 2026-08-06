@@ -35,7 +35,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { writeHarness } from "../../scripts/package.ts";
+import { applyModelPin, writeHarness } from "../../scripts/package.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DIST_KIRO = join(REPO_ROOT, "dist", "kiro");
@@ -94,4 +94,32 @@ describe("t-package-write-sweep — #771: write mode sweeps stale project-root o
     writeHarness("kiro");
     expect(existsSync(join(DIST_KIRO, "AGENTS.md"))).toBe(true);
   }, WRITE_TIMEOUT_MS);
+});
+// applyModelPin is the projection that turns a charter's tier alias into a
+// harness-native model id. It is exercised here in-process for the same reason
+// the sweep above is: a spawned packager would leave it uninstrumented.
+describe("applyModelPin — charter model projection", () => {
+  const PINS = { opus: "claude-opus-5", sonnet: "claude-sonnet-5" } as const;
+  const charter = (model: string): string => `---\nname: amadeus-x-agent\nmodel: ${model}\n---\n\n# Body\n`;
+
+  test("rewrites a covered alias and leaves the rest of the charter untouched", () => {
+    const out = applyModelPin(charter("opus"), PINS, "agents/amadeus-x-agent.md");
+    expect(out).toContain("model: claude-opus-5");
+    expect(out).toContain("name: amadeus-x-agent");
+    expect(out).toContain("# Body");
+  });
+
+  test("a file without frontmatter or without a model pin passes through unchanged", () => {
+    const noFrontmatter = "# Just a document\n";
+    expect(applyModelPin(noFrontmatter, PINS, "agents/doc.md")).toBe(noFrontmatter);
+    const noPin = "---\nname: amadeus-x-agent\n---\n\n# Body\n";
+    expect(applyModelPin(noPin, PINS, "agents/amadeus-x-agent.md")).toBe(noPin);
+  });
+
+  test("an alias the map does not cover fails the build instead of shipping it", () => {
+    // Fail-closed: a charter this harness cannot resolve must never reach dist,
+    // because the persona would silently fall back to the harness default.
+    expect(() => applyModelPin(charter("haiku"), PINS, "agents/amadeus-x-agent.md"))
+      .toThrow(/does not cover/);
+  });
 });

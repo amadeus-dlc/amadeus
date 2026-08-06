@@ -490,4 +490,33 @@ describe("t461 subagent-stats seams — in-process (#2279)", () => {
       chmodSync(locked, 0o600);
     }
   });
+  test("without --project-dir the CLAUDE_PROJECT_DIR seam wins, then the module's own harness root", () => {
+    const previous = process.env.CLAUDE_PROJECT_DIR;
+    try {
+      process.env.CLAUDE_PROJECT_DIR = proj;
+      expect(statsMain([])).toBe(0);
+
+      // Unset: the resolver walks up from the module's own location. The module
+      // under test lives in dist/claude/.claude/tools, so the harness-root arm
+      // is the one that answers - it must resolve without throwing.
+      delete process.env.CLAUDE_PROJECT_DIR;
+      expect(statsMain([])).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = previous;
+    }
+  });
+
+  test("a JSON line that is neither object nor array yields no record and no parse skip", () => {
+    const solo = mkdtempSync(join(tmpdir(), "t461-scalar-"));
+    try {
+      seedShard(solo, "t461-d-deadbeef04", "host-ddd.jsonl", ["true", "3.14", '"str"']);
+      const scanned = scanAuditCorpus(solo, "default");
+      expect(scanned.records).toHaveLength(0);
+      expect(scanned.parseSkippedCount).toBe(0);
+      expect(scanned.shardCount).toBe(1);
+    } finally {
+      rmSync(solo, { recursive: true, force: true });
+    }
+  });
 });
