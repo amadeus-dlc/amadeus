@@ -1,0 +1,42 @@
+{
+  "schema": "amadeus.env-receipt.v1",
+  "runId": "fc627aa3-90d1-4ab0-a8e9-e9d6fa2083db",
+  "planner": "sandbox-exec-unavailable",
+  "inspections": [
+    {
+      "id": "image-digest",
+      "status": "not-applicable",
+      "expected": null,
+      "observed": null,
+      "reason": "Darwin sandbox-exec does not use a container image"
+    },
+    {
+      "id": "jar-sha256",
+      "status": "not-run",
+      "expected": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "observed": null,
+      "reason": "not run because ENVIRONMENT_UNAVAILABLE occurred before environment verification"
+    },
+    {
+      "id": "network-deny",
+      "status": "not-run",
+      "expected": "sandbox network-deny",
+      "observed": null,
+      "reason": "not run because ENVIRONMENT_UNAVAILABLE occurred before environment verification"
+    },
+    {
+      "id": "jdk-snapshot",
+      "status": "not-run",
+      "expected": "OpenJDK 26.0.1",
+      "observed": null,
+      "reason": "not run because ENVIRONMENT_UNAVAILABLE occurred before environment verification"
+    },
+    {
+      "id": "sandbox-profile",
+      "status": "not-run",
+      "expected": "network-deny",
+      "observed": null,
+      "reason": "not run because ENVIRONMENT_UNAVAILABLE occurred before environment verification"
+    }
+  ]
+}
