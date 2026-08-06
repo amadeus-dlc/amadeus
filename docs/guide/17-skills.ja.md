@@ -38,6 +38,10 @@
   `/amadeus-plugin`。最初の4つは読み取り専用のビューまたはインタビューです。
   `/amadeus-mirror` と `/amadeus-plugin` は最初に診断(`status`)し、その後
   ユーザーが選択した1操作だけを実行できます。
+- **ユーティリティスキル** — `/amadeus-compose`(適応的コンポーザーを強制し、
+  タスクに合わせた EXECUTE/SKIP プランを提案)、`/amadeus-election`(選挙 CLI の
+  typed directive ループでチーム選挙を駆動)、`/amadeus-upstream-sync`(本家
+  AI-DLC v2 タグとの同期を計画)。
 
 ランナーが行うことはすべてフラグ付きの `/amadeus` から到達可能です。ランナーは
 パッケージングです — `/amadeus-fix` とタイプして `/` メニューに現れるのは良い
@@ -116,14 +120,17 @@ basename だけを受け入れ、単一引数として渡します。basename �
 ```
 
 **ランナーを同梱するのは 4 つのスコープだけ** — トラフィックの多いものです。
-フレームワークは合計 10 個のスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照)。
-他のすべて — `chore`、`enterprise`、`infra`、`poc`、`refactor`、`workshop` — は常に
+フレームワークは合計 15 個のスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照)。
+他のすべて — `chore`、`enterprise`、`infra`、`installer-distribution`、`poc`、`refactor`、
+`self-document`、`self-feature`、`self-fix`、`self-refactor`、`workshop` — は常に
 オーケストレーター経由で到達可能です:
 
 ```
 /amadeus --scope enterprise
 /amadeus --scope poc
 ```
+
+4 つの `self-*` スコープも同じ方法 — `/amadeus --scope self-fix` — で到達します。これらにランナーを用意する予定はありません。あなたのプロジェクトではなく、Amadeus フレームワーク自体の開発に適用されるスコープだからです。それぞれの使い分けは[自己開発スコープ](05-scopes-and-depth.ja.md#自己開発スコープself-) を参照してください。
 
 ワークフローが一度開始すると、そのスコープは `amadeus-state.md` に固定されるため、
 同じランナーを再実行すると、再スタートではなくワークフローを resume します。別の
@@ -187,6 +194,7 @@ basename だけを受け入れ、単一引数として渡します。basename �
 | Init ラッパー | `/amadeus-init` | 最初の intent を誕生させる(Initialization を実行) | 新規ワークスペースでの `/amadeus` |
 | セッションビュー | `/amadeus-session-cost`、`/amadeus-replay`、`/amadeus-outcomes-pack` | 読み取り専用のワークフローレポート | [セッション管理](11-session-management.ja.md) を参照 |
 | Grilling インタビュー | `/amadeus-grilling` | プランや設計についての読み取り専用の一問一答インタビュー | [インタラクションモード](07-interaction-modes.ja.md) を参照 |
+| ユーティリティスキル | `/amadeus-compose`、`/amadeus-election`、`/amadeus-upstream-sync` | 合わせたプランの提案、チーム選挙の駆動、本家同期の計画 | 最初のものは `/amadeus compose "<task>"` |
 
 ライフサイクル内の実行可能なステージごとにステージランナーが 1 つあります。全体の
 セットを見るには、スキルディレクトリを一覧してください:
@@ -246,7 +254,7 @@ bun .claude/tools/amadeus-runner-gen.ts scopes --check   # スコープランナ
 ```
 # フルワークフロー
 /amadeus                              スコープを検出し、すべてを実行
-/amadeus --scope enterprise           10 スコープのいずれか
+/amadeus --scope enterprise           名前付きスコープのいずれか
 
 # スコープランナー(トラフィックの多い 4 つの入口)
 /amadeus-fix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch

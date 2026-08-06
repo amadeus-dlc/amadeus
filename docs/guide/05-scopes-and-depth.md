@@ -6,9 +6,9 @@ Scopes control **which stages execute**. Depth controls **how much detail** each
 
 ---
 
-## The 10 Scopes
+## The 11 General Scopes
 
-Every workflow runs under one of 10 named scopes. Each scope defines a stage set and a default depth level.
+Every workflow runs under one named scope. Fifteen ship with the framework: the 11 general scopes below, plus 4 [self-development scopes](#self-development-scopes-self-) used only for work on Amadeus itself. Each scope defines a stage set and a default depth level.
 
 ### enterprise
 
@@ -93,6 +93,52 @@ Every workflow runs under one of 10 named scopes. Each scope defines a stage set
 
 See [Workshop Mode](workshop-mode.md) for the multi-developer manual recipe and claim semantics.
 
+### installer-distribution
+
+**Use when:** Adding an end-user installer and a package-distribution path to an existing framework repository.
+
+- **Stages:** 25 of 32
+- **Default depth:** Standard
+- **Skips:** Team Formation (the roster is already fixed), both Mockup stages (an installer is a CLI experience, captured in User Stories and Functional Design instead), and the four operation stages that presuppose a running service — Observability Setup, Incident Response, Performance Validation, Feedback Optimization
+- **Not auto-detected:** ships `keywords: []`; reach it with `/amadeus --scope installer-distribution`
+
+---
+
+## Self-development scopes (`self-*`)
+
+Four scopes exist for work on **the Amadeus framework itself**, not on your project. If you are using Amadeus to build your own software you will never select one — they are documented here because they appear in `/amadeus --help` and in the compiled scope table alongside the general scopes.
+
+| Scope | EXECUTE / Total | Depth | Test Strategy | Use when |
+|-------|-----------------|-------|---------------|----------|
+| `self-feature` | 14 / 32 | Standard | Comprehensive | Substantial new Amadeus behavior, or a change spanning components |
+| `self-fix` | 7 / 32 | Minimal | Comprehensive | A bounded correction restoring alignment with an existing contract |
+| `self-refactor` | 8 / 32 | Minimal | Comprehensive | A behavior-preserving structural change to Amadeus internals |
+| `self-document` | 9 / 32 | Standard | Minimal | Writing or updating `README*.md` and everything under `docs/` |
+
+Two properties separate them from the general scopes.
+
+**They are never auto-detected.** All four declare `keywords: []`. Scope inference takes the first alphabetical keyword match, so claiming a generic term like `docs` or `refactor` would permanently shadow another scope on every future cold start. Selection is always explicit:
+
+```
+/amadeus --scope self-feature
+/amadeus --scope self-fix
+```
+
+**Verification does not scale down with depth.** `self-fix` and `self-refactor` run at Minimal depth but keep `testStrategy: Comprehensive`, so lean artifacts never buy a lean build-and-test boundary — applicable tests, generated harness parity, `dist:check`, and `promote:self:check` all still run. This is the deliberate difference from the general `fix` and `refactor` scopes, which inherit Minimal testing from their depth.
+
+### Choosing between the self-* scopes
+
+Start from what already exists:
+
+- The intended behavior or contract **already exists**, and the work restores alignment with it — defects, cross-harness parity gaps, generated or documentation drift, corrections to an existing project policy → `self-fix`.
+- Behavior is **preserved** and only the internal structure changes → `self-refactor`. It follows the `self-fix` route and adds functional design, so the preserved behavior and the target structure are explicit before implementation.
+- A **new** capability, specification, or architecture is involved → `self-feature`.
+- The deliverable is **prose** → `self-document`.
+
+`self-document` keeps reverse-engineering as a first-class stage on purpose. Documentation drifts silently — nothing fails when a page describes a flag that was renamed three releases ago — so every claim has to trace to a measured fact in the implementation or the git history rather than to what the code was once said to do. Its build-and-test stage still runs the documentation gates (legacy references, language rules, EN/JA pairing).
+
+`self-feature` was lightened in July 2026 from evidence across completed intents: `feasibility`, `approval-handoff`, `practices-discovery`, and `nfr-requirements` moved to SKIP because none had a recorded case of changing an outcome, and every SKIP removes an approval-gate wait point. Re-add a skipped stage for a single intent with `/amadeus compose` when it genuinely applies.
+
 ---
 
 ## Scope Routing Table
@@ -111,6 +157,11 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files (scope 
 | `infra` | 13 / 32 | Standard | Standard | Infrastructure change |
 | `security-patch` | 10 / 32 | Minimal | Minimal | CVE response |
 | `workshop` | 25 / 32 | Standard | **Minimal** | AI-DLC workshop or training session |
+| `installer-distribution` | 25 / 32 | Standard | Standard | Add an end-user installer and distribution path |
+| `self-feature` | 14 / 32 | Standard | **Comprehensive** | Amadeus self-development — new behavior |
+| `self-fix` | 7 / 32 | Minimal | **Comprehensive** | Amadeus self-development — bounded correction |
+| `self-refactor` | 8 / 32 | Minimal | **Comprehensive** | Amadeus self-development — structural change |
+| `self-document` | 9 / 32 | Standard | **Minimal** | Amadeus self-development — documentation |
 | (auto-detect) | Varies | Varies | Varies | AI determines from freeform intent |
 
 > **Per-project default scope:** teams can pre-set the default scope for a project by setting `AMADEUS_DEFAULT_SCOPE` in `.claude/settings.json` — useful for workshops where every participant should start at `workshop` without remembering the flag. See [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope).
@@ -310,6 +361,10 @@ Test strategy defaults to the **depth level** for most scopes — if your depth 
 | Scope | Depth | Test Strategy | Why different? |
 |-------|-------|---------------|----------------|
 | `workshop` | Standard | **Minimal** | Full artifacts for learning, but fast Nyquist testing to keep pace |
+| `self-feature` | Standard | **Comprehensive** | Framework changes must clear the full verification boundary |
+| `self-fix` | Minimal | **Comprehensive** | Lean artifacts, but harness parity and distribution checks still run |
+| `self-refactor` | Minimal | **Comprehensive** | Behavior preservation has to be demonstrated, not assumed |
+| `self-document` | Standard | **Minimal** | Prose deliverable — the documentation gates carry the verification |
 
 All other scopes inherit their test strategy from depth. You can always override with `--test-strategy`.
 
@@ -356,6 +411,8 @@ You can change the test strategy at three points:
 | CVE or security vulnerability response | `security-patch` |
 | Regulated feature requiring compliance | `enterprise` |
 | AI-DLC workshop or training lab | `workshop` |
+| Adding an end-user installer to a framework repo | `installer-distribution` |
+| Work on the Amadeus framework itself | a [`self-*` scope](#self-development-scopes-self-) |
 
 When in doubt, start with `feature` — it includes all 32 stages, and you can skip individual stages at their approval gates.
 
