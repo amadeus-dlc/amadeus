@@ -78,11 +78,13 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     for (const context of contexts) {
       const trustedRevision = trustedRevisionForEvent(context);
       expect(spawnSync("git", ["cat-file", "-e", `${trustedRevision}^{commit}`], { cwd: REPO_ROOT }).status).toBe(0);
-      expect(
-        spawnSync("git", ["ls-tree", "--name-only", trustedRevision, "--", "tests/no-silent-drop/events"], {
-          cwd: REPO_ROOT,
-        }).status,
-      ).toBe(0);
+      const eventsTree = spawnSync(
+        "git",
+        ["ls-tree", "-r", "--name-only", trustedRevision, "--", "tests/no-silent-drop/events"],
+        { cwd: REPO_ROOT, encoding: "utf8" },
+      );
+      expect(eventsTree.status).toBe(0);
+      expect(eventsTree.stdout.trim().length > 0).toBe(true);
     }
     expect(spawnSync("git", ["cat-file", "-e", `${"f".repeat(40)}^{commit}`], { cwd: REPO_ROOT }).status).not.toBe(
       0,

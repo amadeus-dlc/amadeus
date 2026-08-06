@@ -210,11 +210,13 @@ type GrantMeta = {
  * delete grant/revoke files without changing the folded set.
  */
 export function foldEvents(events: Iterable<LedgerEvent>): FoldedLedger {
+  // Materialize once — generators must not be consumed by the integrity re-scan.
+  const eventList = [...events];
   const grants = new Map<string, GrantMeta>();
   const revokes = new Set<string>();
   const allowedMissing = new Set<string>();
 
-  for (const event of events) {
+  for (const event of eventList) {
     if (event.op === "grant") {
       grants.set(event.fingerprint, {
         fingerprint: event.fingerprint,
@@ -236,8 +238,8 @@ export function foldEvents(events: Iterable<LedgerEvent>): FoldedLedger {
 
   // Re-scan for snapshot integrity: each snapshot's deleteUlids must be absent.
   const presentUlids = new Set<string>();
-  for (const event of events) presentUlids.add(event.ulid);
-  for (const event of events) {
+  for (const event of eventList) presentUlids.add(event.ulid);
+  for (const event of eventList) {
     if (event.op !== "snapshot") continue;
     for (const ulid of event.deleteUlids) {
       if (presentUlids.has(ulid)) {
@@ -319,7 +321,7 @@ export function exemptionsDocFromFold(folded: FoldedLedger): ExemptionDoc {
 export function listEventUlidsAtRevision(repoRoot: string, sha: string): Set<string> {
   const listed = spawnSync(
     "git",
-    ["ls-tree", "--name-only", sha, "--", EVENTS_DIR],
+    ["ls-tree", "-r", "--name-only", sha, "--", EVENTS_DIR],
     { cwd: repoRoot, encoding: "utf8" },
   );
   if (listed.error || listed.status === null) {
@@ -343,9 +345,93 @@ export function listEventUlidsAtRevision(repoRoot: string, sha: string): Set<str
   return ulids;
 }
 
+function showEventAtRevision(repoRoot: string, sha: string, ulid: string): string | null {
+  const shown = spawnSync("git", ["show", `${sha}:${EVENTS_DIR}/${ulid}.json`], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (shown.status !== 0 || typeof shown.stdout !== "string") return null;
+  return shown.stdout;
+}
+
+function assertSharedEventBytesUnchanged(
+  repoRoot: string,
+  trustedSha: string,
+  baseUlids: ReadonlySet<string>,
+  head: LoadedEvents,
+): void {
+  const mutated: string[] = [];
+  for (const ulid of baseUlids) {
+    if (!head.byUlid.has(ulid)) continue;
+    const baseBytes = showEventAtRevision(repoRoot, trustedSha, ulid);
+    if (baseBytes === null) {
+      throw new InfraFailure("BASELINE_INVALID", `trusted base event ${ulid} is unreadable`);
+    }
+    let headBytes: string;
+    try {
+      headBytes = readFileSync(join(repoRoot, EVENTS_DIR, `${ulid}.json`), "utf8");
+    } catch (error) {
+      throw new InfraFailure("BASELINE_INVALID", `head event ${ulid} is unreadable: ${String(error)}`);
+    }
+    if (baseBytes !== headBytes) mutated.push(ulid);
+  }
+  if (mutated.length > 0) {
+    throw new InfraFailure(
+      "BASELINE_INVALID",
+      `event files are append-only; in-place mutation forbidden: ${mutated.sort().join(", ")}`,
+    );
+  }
+}
+
+/**
+ * New snapshot events (not on the trusted base) may only compact an already-valid
+ * fold: deleteUlids ⊆ base, and effectiveDigest must equal the fold reconstructed
+ * from base bytes plus head-only grant/revoke adds, minus those deletes.
+ */
+function assertNewSnapshotLineage(
+  repoRoot: string,
+  trustedSha: string,
+  baseUlids: ReadonlySet<string>,
+  head: LoadedEvents,
+): void {
+  for (const event of head.byUlid.values()) {
+    if (event.op !== "snapshot" || baseUlids.has(event.ulid)) continue;
+    for (const ulid of event.deleteUlids) {
+      if (!baseUlids.has(ulid)) {
+        throw new InfraFailure(
+          "BASELINE_INVALID",
+          `snapshot ${event.ulid} deletes ${ulid} which was not present on the trusted base`,
+        );
+      }
+    }
+    const deleteSet = new Set<string>(event.deleteUlids);
+    const reconstructed = new Map<string, LedgerEvent>();
+    for (const ulid of baseUlids) {
+      if (deleteSet.has(ulid)) continue;
+      const bytes = showEventAtRevision(repoRoot, trustedSha, ulid);
+      if (bytes === null) {
+        throw new InfraFailure("BASELINE_INVALID", `trusted base event ${ulid} is unreadable`);
+      }
+      reconstructed.set(ulid, parseLedgerEvent(bytes, ulid));
+    }
+    for (const [ulid, headEvent] of head.byUlid) {
+      if (baseUlids.has(ulid) || headEvent.op === "snapshot") continue;
+      reconstructed.set(ulid, headEvent);
+    }
+    const expected = foldEvents(reconstructed.values());
+    if (event.effectiveDigest !== expected.effectiveDigest) {
+      throw new InfraFailure(
+        "BASELINE_INVALID",
+        `snapshot ${event.ulid} effectiveDigest does not match the pre-delete fold of base+head grants`,
+      );
+    }
+  }
+}
+
 /**
  * Chain-of-custody: base event files ⊆ head event files, except ULID files that a
- * head snapshot enumerates for deletion.
+ * head snapshot enumerates for deletion. Shared ULID files are byte-immutable.
+ * New snapshots must only compact a reconstructible pre-delete fold.
  */
 export function assertEventCustody(
   repoRoot: string,
@@ -376,6 +462,8 @@ export function assertEventCustody(
       `event custody subset check failed; deleted without snapshot enumeration: ${missing.sort().join(", ")}`,
     );
   }
+  assertSharedEventBytesUnchanged(repoRoot, trustedSha, baseUlids, head);
+  assertNewSnapshotLineage(repoRoot, trustedSha, baseUlids, head);
 }
 
 export function eventPath(ulid: string): string {

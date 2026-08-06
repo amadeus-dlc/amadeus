@@ -1133,7 +1133,16 @@ describe("no-silent-drop boundaries", () => {
     temporaryDirectories.push(missingEvents);
     mkdirSync(join(missingEvents, "tests/no-silent-drop"), { recursive: true });
     runGit(missingEvents, ["init", "-q"]);
-    runGit(missingEvents, ["commit", "--allow-empty", "-qm", "empty"]);
+    runGit(missingEvents, [
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.com",
+      "commit",
+      "--allow-empty",
+      "-qm",
+      "empty",
+    ]);
     const emptySha = runGit(missingEvents, ["rev-parse", "HEAD"]);
     expect(() => loadTrustedPreviousLedgers(missingEvents, emptySha)).toThrow("event ledger is missing");
 

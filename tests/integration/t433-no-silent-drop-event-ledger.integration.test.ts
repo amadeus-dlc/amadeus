@@ -121,6 +121,33 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
     expect(folded.grandfather.map((entry) => entry.fingerprint).sort()).toEqual(["fp-1", "fp-2"]);
   });
 
+  test("in-place mutation of a shared event file fails custody", () => {
+    const root = mkdtempSync(join(tmpdir(), "nsd-mutate-"));
+    tempRoots.push(root);
+    const git = (args: string[]) => {
+      const result = spawnSync("git", ["-c", "user.name=T", "-c", "user.email=t@example.com", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      if (result.status !== 0) throw new Error(result.stderr);
+      return result.stdout.trim();
+    };
+    mkdirSync(join(root, "tests/no-silent-drop/events"), { recursive: true });
+    spawnSync("git", ["init", "-q"], { cwd: root });
+    const first = grant("fp-1", mintUlid());
+    writeFileSync(join(root, `tests/no-silent-drop/events/${first.ulid}.json`), encodeEvent(first));
+    git(["add", "."]);
+    git(["commit", "-qm", "first"]);
+    const base = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    writeFileSync(
+      join(root, `tests/no-silent-drop/events/${first.ulid}.json`),
+      encodeEvent({ ...first, fingerprint: "fp-hijacked", reason: "mutated in place", issues: ["#2338"] }),
+    );
+    const loaded = loadEvents(root);
+    const folded = foldEvents(loaded.byUlid.values());
+    expect(() => assertEventCustody(root, base, loaded, folded)).toThrow("in-place mutation forbidden");
+  });
+
   test("grant contract rejects empty reason and missing issues", () => {
     const badReason: LedgerEvent = {
       ...grant("fp"),

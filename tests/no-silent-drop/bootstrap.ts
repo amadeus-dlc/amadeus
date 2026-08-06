@@ -364,7 +364,11 @@ function validateBootstrapHistory(
   const removed = preIdentities.filter((identity) => !currentSet.has(identity)).sort();
   const added = currentIdentities.filter((identity) => !preSet.has(identity));
   const declaredRemoved = provenance.removed.map((entry) => entry.fingerprint).sort();
-  assertBootstrap(sameSet(removed, declaredRemoved) || removed.length >= declaredRemoved.length, "bootstrap removed identities mismatch");
+  // Declared bootstrap removals must remain removed; later shrinks may remove more.
+  assertBootstrap(
+    declaredRemoved.every((fingerprint) => removed.includes(fingerprint)),
+    "bootstrap removed identities mismatch",
+  );
   // Post-migration grants may grow with issue-tracked entries; bootstrap's historical
   // "no adds vs B_pre" applies only to identities that were part of the original B0.
   // We still require the folded set's digest binding to post identities when the

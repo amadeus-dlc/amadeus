@@ -3,7 +3,7 @@
 // Writes a snapshot that embeds the effective set, then deletes only the ULIDs
 // listed in that snapshot. Feature PRs must never invoke --apply.
 
-import { mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -20,6 +20,8 @@ import { isUlid, mintUlid, type Ulid } from "../tests/no-silent-drop/ulid.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USAGE = "Usage: bun scripts/no-silent-drop-retention.ts [--apply]";
+/** Pending snapshot path is not a ULID filename, so loadEventsFromDir ignores it. */
+const PENDING_NAME = ".retention-pending.json";
 
 type ArgsOutcome = { kind: "ok"; apply: boolean } | { kind: "usage"; reason: string };
 
@@ -50,9 +52,9 @@ function foldOrFail(loaded: LoadedEvents): FoldedLedger | null {
 }
 
 function compactableUlids(loaded: LoadedEvents): Ulid[] {
-  return [...loaded.byUlid.keys()]
-    .filter((ulid): ulid is Ulid => isUlid(ulid) && loaded.byUlid.get(ulid)?.op !== "snapshot")
-    .sort();
+  // Compact prior snapshots together with grants/revokes; the new snapshot embeds
+  // the effective set, so older snapshots are safe to enumerate for deletion.
+  return [...loaded.byUlid.keys()].filter((ulid): ulid is Ulid => isUlid(ulid)).sort();
 }
 
 function materializeEffective(folded: FoldedLedger): SnapshotEffectiveEntry[] {
@@ -102,6 +104,15 @@ function verifyPostApply(eventsDir: string, expectedDigest: string): boolean {
   }
 }
 
+function removeIfPresent(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+}
+
 export function main(argv: string[]): number {
   const parsed = parseArgs(argv);
   if (parsed.kind === "usage") {
@@ -139,8 +150,21 @@ export function main(argv: string[]): number {
   }
 
   mkdirSync(eventsDir, { recursive: true });
-  writeFileSync(join(eventsDir, `${snapshotUlid}.json`), encodeEvent(snapshot));
-  if (!applyDeletes(eventsDir, deleteUlids)) return 1;
+  const pendingPath = join(eventsDir, PENDING_NAME);
+  const finalPath = join(eventsDir, `${snapshotUlid}.json`);
+  // Pending name is ignored by loadEventsFromDir (not a ULID). Write it first so a
+  // mid-delete crash never leaves a published snapshot that still lists live files.
+  writeFileSync(pendingPath, encodeEvent(snapshot));
+  if (!applyDeletes(eventsDir, deleteUlids)) {
+    removeIfPresent(pendingPath);
+    return 1;
+  }
+  try {
+    renameSync(pendingPath, finalPath);
+  } catch (error) {
+    console.error(`failed to publish snapshot: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
   if (!verifyPostApply(eventsDir, folded.effectiveDigest)) return 1;
   console.log(`wrote snapshot ${snapshotUlid}; deleted ${deleteUlids.length} event(s)`);
   return 0;
