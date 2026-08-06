@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0 件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0 件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用すべき候補がある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T09:29:31Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRA-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件でよいが cid 帰属を1点訂正する: トポロジ逸脱(advisory-auto-resolution の波 B 後置)は Bolt 間順序であり、cid:delivery-planning:intra-bolt-order-as-risk-control(project.md:241 — 逐語「Bolt 内部の実行順序」)の射程外である — ただし被覆ギャップは無く、実体は cid:code-generation:c6(team.md — 交差 Bolt の直列化・実 diff 再評価)+ cid:requirements-analysis:parallel-bolts(上限4)からの機械導出であり risk-rationale 自身も c6 を引いている。後置候補の一意化(depends_on に現れない Unit を後置してクリティカルパスを伸ばさない)は良い導出だが1実測のみで、別 intent の delivery-planning で同型の後置一意化が再び有効と実測されたら次回 §13 で候補昇格を再検討すること。",
+      "rationale": "指示3面を独立実測した。【(a) 候補原文】inception/delivery-planning/memory.md 全文実読 — Interpretations の 0問様式+5分岐裏取り(:5)、Deviations の波 B 後置申告(:9)、Tradeoffs の 1 Unit=1 Bolt=1 PR(:13)、Open questions の 0件宣言(:17)を確認。【(b) 引用 cid の実在と射程】3 cid とも実在を grep で確認: cid:delivery-planning:intra-bolt-order-as-risk-control = project.md:241 — 本文は「Bolt 内部の実行順序」を縛り、bolt-plan.md:153-163 の Bolt 1/3/6 内部順序表はその正確な適用実例(ピン反転の後置・落ちる実証の前置・remap の実装前置)。一方 conductor 不採用理由が同 cid を「波 B 後置(Bolt 間順序)の適用実例」とするのは射程超過 — 精査の結果、Bolt 間面は cid:code-generation:c6(交差する場合のみ直列化、交差判定は実 diff)と parallel-bolts(上限4)が既に被覆しており(risk-and-sequencing-rationale.md:7 が両 cid を明示採用、:53-55 の後置根拠 (1)(2) は両者からの導出)、新規の被覆ギャップは無い。cid:requirements-analysis:eoc1-evidence-in-questions-header = team.md:252 — 0問様式は既習形で、delivery-planning-questions.md:5-8 の E-OC1 判定+§裁定の記録はその執行。cid:units-generation:c1 = project.md:222 — (b) 項「Bolt ごとに PR・束ねる方向の禁止」が S3 の 1 Unit=1 Bolt=1 PR(7 Bolt)を直接被覆。【(c) 成果物5点の埋没学び検分】bolt-plan.md(DAG 適合照合表 :72-81、逸脱申告 :82・:183-186、amadeus-orchestrate.ts:781/:1044 の verbatim 再確認)、risk-and-sequencing-rationale.md(WSJF 不採用根拠 :23 = 落選候補ゼロ集合への除算スコアは検証劇場と同族 — 興味深いが既存 Forbidden の適用解釈で1実測)、delivery-planning-questions.md(5分岐の一意性裏取り表 :33-41)、external-dependency-map.md(N/A 反証根拠表 = cid:approval-handoff:c4 の適用)、team-allocation.md(mob 捏造回避 = cid:approval-handoff:c3、帽子責務 = role-model の適用)を実読。いずれも既存ノルムの模範実践であり、独立の一般化価値を持つ新規学びは埋もれていないと判断する。よって 0 件を支持する。",
+      "submittedAt": "2026-08-05T10:20:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRA-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件でよいが1点条件づける: 「不定リードタイムの人間裁定(U-2)を既存の人間ゲート(walking-skeleton)へ同乗させて先行提示し、後続 Bolt の着手クリティカルパスから裁定待ちを外す」パターン(bolt-plan.md:179 / external-dependency-map.md:56 H-2 / risk-rationale R-1)は境界的候補である — 今回は cid:requirements-analysis:merge-approval-latency (c)(team.md:81 の承認伺い一括提示)と cid:requirements-analysis:gate-report-s13-bundling(team.md:220 のゲート報告への同梱)が定める「人間接点への裁定バンドル」ファミリの自然な合成と判定して不採用に同意するが、別 intent で裁定先行提示の欠如が後続 Bolt の着手遅延として実測されたら次回 §13 で候補昇格を再検討すること。",
+      "rationale": "候補原文・成果物5点・引用 cid をすべて独立実読して判断した。【(a) 候補原文】memory.md 全文実読: Deviations :9 のトポロジ逸脱申告 1 件、Tradeoffs :13 の 1 Unit = 1 Bolt = 1 PR、Open questions :17 の 0 件宣言と不採用理由を確認。【(b) 引用 cid の実在と射程】3 cid とも実在し射程一致: cid:delivery-planning:intra-bolt-order-as-risk-control = project.md:241 —「Bolt 内部の実行順序をリスク制御として明示し bolt-plan と risk-and-sequencing-rationale の両方へ根拠付きで書く」が逐語で実在。bolt-plan.md:153-163 の 3 Bolt(ピン反転の後置・落ちる実証の反転前置・remap の実装前置)と risk-rationale :60-68 の両面記録はその適用実例。波 B 後置(Bolt 間順序)は同 cid の字義(Bolt 内部)の外だが、「順序が作業都合でなくリスクの窓を消すために選ばれていることを両成果物へ根拠付きで書く」という規律の同型適用であり、申告様式自体に新規面はない。cid:requirements-analysis:eoc1-evidence-in-questions-header = team.md:252 — questions :5-8 の 0 問様式+E-OC1 判定+裏取り表(:29-41 の 5 分岐一意性確認)は既習形の執行。cid:units-generation:c1 = project.md:222 — (b) 項「Bolt ごとに PR・束ねる方向の禁止」が S3(questions :20)の 1:1:1 の直接根拠。【(c) 成果物 5 点の埋没学び検分】external-dependency-map.md:17-25 の「外部依存 0 件の 7 類型反証テーブル」は一見新規だが、cid:approval-handoff:c4(project.md:201 — 存在しない依存を補完せず N/A に反証可能な根拠を書く)を成果物自身が :15 で明示適用しており、cid:environment-provisioning:c3(project.md:335 — N/A への反証可能根拠の併記)と同族の既決規律のステージ別実践。類型を 7 に切った点は本 intent ローカルの網羅化で、他 intent での有効性実測がなく様式ノルム昇格の根拠は 1 実測のみ。U-2 のゲート同乗(bolt-plan.md:179、risk-rationale :56、external-dependency-map :56)は最有力の境界候補だが、merge-approval-latency (c) の一括承認伺いと gate-report-s13-bundling のゲート報告同梱が既に「人間接点へ裁定・候補をバンドルして往復を減らす」規律を定めており、その合成として導出可能 — 留保に昇格条件を記した。後置候補の一意性導出(questions :38、risk-rationale :55)は既決制約(builder 上限 4 + ファイル交差実測 + DAG 辺)からの機械導出であり執行クラス。risk-rationale :23 の WSJF 不採用根拠(落選候補 0 件の集合に除算スコアは順序を決めず形式計算は検証劇場と同族)も記録として優れるが org.md Forbidden の適用解釈であり record 固定で足りる。よって conductor 提案どおり 0 件が妥当。",
+      "submittedAt": "2026-08-05T10:30:00Z"
+    }
+  ],
+  "resolutions": []
+}

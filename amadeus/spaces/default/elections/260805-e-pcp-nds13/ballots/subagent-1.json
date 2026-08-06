@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-NDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c1 の機序自体は実測どおり(sensor detail upstream-coverage-10a8c921.md が plugin-packaging-e2e/nfr-design/security-design.md に対し pass:false / unreferenced: business-logic-model を記録し、成果物冒頭で sibling unit convergence-toolchain の business-logic-model を設計出典として実参照して解消)。ただし『upstream-coverage は stage frontmatter の宣言 consumes を要求し、directive 解決の有無で緩まない』は cid:nfr-requirements:upstream-coverage-conditional-consumes(team.md:299、conditional_on 面)と cid:nfr-design:c1-engine-produces-all-five + E-PCP-RES13 追補(project.md:18/317、produces_kinds が適用成果物を絞る面)の機械合成であり、新規知識の増分は『空 consumes 時の充足形 = sibling FD を設計出典として実参照』という運用形にとどまる。この充足形が別 unit kind で再発したら、独立 cid ではなく upstream-coverage-conditional-consumes への追補として再提案することを留保する。",
+  "rationale": "判定観点『既存ノルム・機構仕様の機械適用は新規学習でない』を両候補へ適用した結果、0件採用を支持する。c1: 上記のとおり既存2 cid の合成であり、diary 自身も『既存 cid の適用範囲内』と注記している。c2: ND 依存図と FD 関数合成の全辺一致要求は cid:functional-design:c3(概念の全成果物 grep)・cid:functional-design:cross-unit-type-verbatim-check・cid:functional-design:control-flow-diagram-completeness が既にカバーする整合レビュー観点の適用であり、型 import と値注入の区別という是正内容も既存観点の粒度内。いずれも新規の機序・反証可能な新事実を追加しない。",
+  "submittedAt": "2026-08-05T09:20:00Z"
+}

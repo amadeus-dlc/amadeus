@@ -173,7 +173,7 @@ drop unmatched rows rather than inventing an interval.
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `ERROR_LOGGED` | Tool CLI exited non-zero via `error()` | Tool, Command, Error | — | `tools/amadeus-lib.ts emitError` (called by every tool's `error()` helper) |
-| `RECOVERY_COMPLETED` | User answered the compaction-awareness prompt | Choice, Current Stage | — | `tools/amadeus-state.ts acknowledge-compaction` |
+| `RECOVERY_COMPLETED` | User answered the compaction-awareness prompt, or a human-confirmed session takeover repaired a stale caller carrier | Choice, Current Stage | Reason | `tools/amadeus-state.ts acknowledge-compaction` / `session-takeover` |
 
 ### Construction Bolt Events (4 events)
 

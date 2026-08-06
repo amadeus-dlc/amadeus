@@ -59,8 +59,10 @@ demands. The shipped default lives in the org rule you author at
   `chore`, `refactor`, `security-patch`. There is nothing to bootstrap on an existing
   codebase, so the first Bolt runs like any other.
 - The human selects Intent autonomy as `none`, `semi`, or `full` before
-  unattended decisions. `semi` pre-approves in-phase gates but waits at phase
-  boundaries and questions. `full` requires confirmation of the displayed
+  unattended decisions. `semi` pre-approves in-phase gates and auto-decides
+  questions through the same resolution ladder as `full`, waiting only at
+  milestones (phase boundaries, the walking skeleton, Intent completion).
+  `full` requires confirmation of the displayed
   Intent-scoped grant and may decide authorised gates and questions through
   Intent completion.
 - Autonomy selects approval **authority**, not execution shape. Every mode fans

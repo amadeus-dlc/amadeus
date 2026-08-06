@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "isolation worktree で builder 再起動+conductor が diff 取込"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "isolation worktree で builder 再起動+conductor が diff 取込",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "conductor 自 worktree で直列実装",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "ユーザーへエスカレーション",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T09:32:58Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-CGBLK",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "choice の前提『Agent(isolation:worktree) のツリーでは git 操作が許可される見込み』は未実測(view 自身が『見込み』と記載)。本実装をディスパッチする前に、隔離ツリー内で git status 相当の安価なプローブを1回実行して git 操作の可否を実測確定し、拒否された場合は本裁定に固執せず内部番号2(conductor 自 worktree で直列実装)へ降格すること。また swarm referee(check/finalize)を使わない以上、conductor は swarm 由来の converged 表記を用いず、検証コマンド再実行と §12a の実測結果のみをゲートで開示すること(verify-before-notify / 検証劇場 Forbidden)。取込は mirror-bulk-diff-apply どおり merge-base 起点の一括 git apply --3way + fidelity diff(builder head との対象ファイル diff が空)の機械確認を必須とする。",
+      "rationale": "独立実測で環境ブロッカーの実在を確認した。(a) 本セッションから `git -C /Users/.../.amadeus/worktrees/bolt-seam-bridge status --short` を実行すると、ハーネスが逐語で『a worktree-isolated session's git operations must target its own worktree』として拒否する(自分の Bash で再現)。(b) 一方 `ls -d` で bolt-seam-bridge / bolt-convergence-toolchain の両ツリーは実在し、Bash の非 git コマンド(cp)による書込は成功する(probe ファイルを配置・削除して確認)。よって『到達可能だが git 操作だけが構造的に不能』という報告(bolt-u1-report.md:8-12、bolt-u2-report.md:81-92)は正確で、割当ツリーでの TDD 反復・コミットは本セッション系からは実行不能である。この前提下で3案を比較すると、内部番号1は (i) worktree 隔離規律(cid:code-generation:c2、solo-bolt-worktree-required)を実質的に保存し (ii) 並行性を維持し (iii) 取込手順が既習ノルム(cid:code-generation:mirror-bulk-diff-apply)に完全に載る、の三点で他案に優る。内部番号2は隔離を捨てて conductor ツリーへ実装を混ぜるため、未コミットの intent record(amadeus-state.md・audit シャード)と実装差分が同一ツリーで交差し、並行性も失う — 実現可能だが最後の手段。内部番号3(ユーザーエスカレーション)は team.md のエスカレーション正準リストのいずれにも該当せず(仕様変更でも不可逆な外部操作でも人間本質事項でもない)、かつ既決ノルム内で一意に近い解が存在するため、この段階では進行を無用に止める。",
+      "submittedAt": "2026-08-05T08:00:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-CGBLK",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用条件3点: (1) builder は resume でなく Agent(isolation:'worktree') で新規起動し、プロンプトに作業 worktree の明示パスと git 操作の worktree 限定を再掲する(cid:code-generation:c2 追補 — resume は隔離を保証しない)。加えて隔離ツリーは conductor tree のコミット済み状態から fork されるため、FD/ND 成果物と裁定は fork 前にコミットするか全文をプロンプトへ焼き込む(同 cid 追補2)。(2) 取込は mirror-bulk-diff-apply の既習形を逐語適用し、fidelity diff(builder head と自 worktree の対象ファイル diff が空)の機械確認を通すまでコミットしない。(3) swarm referee(check/finalize)を使わない事実と、その代替(conductor の検証コマンド再実行+§12a reviewer)をゲート報告で明示開示する — 開示なき代替は検証水準の無申告な引き下げになる。",
+      "rationale": "独立実測(すべて自セッションで実行): (a) ハーネスガードの実在 — 自分が .amadeus/worktrees 配下を触る複合コマンドを打った際、報告と逐語一致する拒否メッセージ『a worktree-isolated session's git operations must target its own worktree』を受領。builder 2名の報告(bolt-u1-report.md:9-12 / bolt-u2-report.md:87-90)は自己申告でなく再現可能な事実と確認した。(b) swarm prepare 経由の worktree 作成は成功している — git worktree list に .amadeus/worktrees/bolt-convergence-toolchain(行42)と bolt-seam-bridge(行91)が branch 付きで登録済み(いずれも 8c113f819)。よってツール内部 spawn はガードを通るという前提は成立。(c) 自 worktree 内の git 操作は許可される — 同じ git worktree list が自セッションから exit 0 で完走。(d) 隔離ツリーでの git 操作可能性は推測でなく実在の対照がある — 本セッション自身が .claude/worktrees/ 配下の隔離ツリーで、そこでの git 操作が現に通っている。よって choice(display 2)の前提は3点とも実測で接地している。\n\n選択理由: display 1(conductor 自 worktree で直列)は並行性を失うだけでなく、自 worktree に intent record の未コミット変更(amadeus-state.md・audit シャード)が乗っている状態へ実装を混ぜることになり、solo-bolt-worktree-required の趣旨(実装と工程記録の混線回避)に正面から反する。display 3(ユーザーエスカレーション)は、team.md のエスカレーション正準リスト4項目(可否同数 / PR マージ / 人間関与が本質 / 仕様変更)のいずれにも当たらない — 本件は要件・設計・ユーザー可視契約を一切変えず、ハーネス制約下での実行経路の選択であり、blocker-election が定める『複数の妥当解から選ぶ』選挙事項そのものである。display 2 はハーネスが公式に提供する隔離機構を使い、取込は既決ノルム(mirror-bulk-diff-apply)の既習形で、いかなるゲートも緩めない。GoA 2 とした理由は、swarm referee を経由しない点が既定からの逸脱であり、ゲートでの開示を条件に置く必要があるため。",
+      "submittedAt": "2026-08-05T00:00:00Z"
+    }
+  ],
+  "resolutions": []
+}

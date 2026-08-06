@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-CGBLK",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "choice の前提『Agent(isolation:worktree) のツリーでは git 操作が許可される見込み』は未実測(view 自身が『見込み』と記載)。本実装をディスパッチする前に、隔離ツリー内で git status 相当の安価なプローブを1回実行して git 操作の可否を実測確定し、拒否された場合は本裁定に固執せず内部番号2(conductor 自 worktree で直列実装)へ降格すること。また swarm referee(check/finalize)を使わない以上、conductor は swarm 由来の converged 表記を用いず、検証コマンド再実行と §12a の実測結果のみをゲートで開示すること(verify-before-notify / 検証劇場 Forbidden)。取込は mirror-bulk-diff-apply どおり merge-base 起点の一括 git apply --3way + fidelity diff(builder head との対象ファイル diff が空)の機械確認を必須とする。",
+  "rationale": "独立実測で環境ブロッカーの実在を確認した。(a) 本セッションから `git -C /Users/.../.amadeus/worktrees/bolt-seam-bridge status --short` を実行すると、ハーネスが逐語で『a worktree-isolated session's git operations must target its own worktree』として拒否する(自分の Bash で再現)。(b) 一方 `ls -d` で bolt-seam-bridge / bolt-convergence-toolchain の両ツリーは実在し、Bash の非 git コマンド(cp)による書込は成功する(probe ファイルを配置・削除して確認)。よって『到達可能だが git 操作だけが構造的に不能』という報告(bolt-u1-report.md:8-12、bolt-u2-report.md:81-92)は正確で、割当ツリーでの TDD 反復・コミットは本セッション系からは実行不能である。この前提下で3案を比較すると、内部番号1は (i) worktree 隔離規律(cid:code-generation:c2、solo-bolt-worktree-required)を実質的に保存し (ii) 並行性を維持し (iii) 取込手順が既習ノルム(cid:code-generation:mirror-bulk-diff-apply)に完全に載る、の三点で他案に優る。内部番号2は隔離を捨てて conductor ツリーへ実装を混ぜるため、未コミットの intent record(amadeus-state.md・audit シャード)と実装差分が同一ツリーで交差し、並行性も失う — 実現可能だが最後の手段。内部番号3(ユーザーエスカレーション)は team.md のエスカレーション正準リストのいずれにも該当せず(仕様変更でも不可逆な外部操作でも人間本質事項でもない)、かつ既決ノルム内で一意に近い解が存在するため、この段階では進行を無用に止める。",
+  "submittedAt": "2026-08-05T08:00:00Z"
+}

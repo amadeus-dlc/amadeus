@@ -1,0 +1,10 @@
+# Election Record — E-SRA-ADS13
+
+- question: intent 260805-semi-redefine-autonomy-f の application-design ステージ §13 学習選定。正本は record の inception/application-design/memory.md(全文を実読)。conductor 提案は 1 件採用: 「§12a reviewer は許可された read scope 外のコードを読めないため、設計成果物の**未検証の暗黙前提**を FOLLOW-UP 止まりにするしかない。conductor はこれを受け取ったら、その前提を自分で実測し、実害が確定したものは reviewer の深刻度に関わらず iteration を消費せず conductor 主導で是正する(実測が BLOCKER 相当かを分ける)。実測結果は是正方針とともに builder へ渡し、要件側にも同じ実測を反映する」を team.md または project.md へ persist。実測起点: 本ステージで reviewer が C13 の判定順について「新規 birth 直後の state に Intent Autonomy Mode が存在しない、という暗黙前提が実測で確定されていない」を FOLLOW-UP として提起 → conductor が `packages/framework/core/tools/amadeus-utility.ts:4635` の verbatim `- **Intent Autonomy Mode**: none` を実測し、state テンプレートが birth 時点で none を書くため設計どおりだと新規 Intent への `--autonomy semi` が常に loud 停止し FR-CLI-1/FR-CLI-3 の主用途が構造的に成立しないことを確定 → 判別子を modeProvenance へ変える ADR-13 の新設で解消。他候補は不採用: 5成果物の一括起草・OQ-ADV-K の ADR 化・質問ファイル非作成・F1〜F10 の是正記録・未確定4件の申し送りはいずれも本 intent 固有の運用記録または既存 cid の適用実例。
+
+裁定: reviewer 未検証前提の conductor 実測を採用(choice 1: 2票)
+内訳: choice1=2票 choice2=0票 choice3=0票
+- 留保(subagent-1, GoA2): 採用でよいが persist 形を2点で条件づける: (1) 独立 cid を新設せず cid:code-generation:c1-reviewer-scope-alignment(reviewer の read scope 制約ファミリ)への追補として書く — 既存則はディスパッチ時の予防側(検証課題が要求するファイルを許可集合へ含める)を縛り、本候補は前提が暗黙でディスパッチ時に特定不能な場合の事後側(FOLLOW-UP を conductor 実測で深刻度再判定)を埋める対の関係にあるため。(2) 「iteration を消費せず conductor 主導で是正」の適用境界を本文に明記する — 実測で BLOCKER 相当と確定した是正は record(diary の Tradeoffs 等)へ実測結果・是正方針を固定し、cid:requirements-analysis:fix-diff-independent-reverify の是正 diff 再実測を併用すること。無条件の conductor 直是正がレビュー閉包の迂回路にならないようにする。いずれも採用可否を変えない。
+- 留保(subagent-2, GoA2): 採用でよいが、persist 時に cid:code-generation:c1-reviewer-scope-alignment(reviewer 許可集合のディスパッチ時整合 = 予防面)との相互参照を1行明記すること — 同 cid は検証課題が名指しする既知パスの事前包含を縛るが、本候補が扱うのは事前列挙できない暗黙前提を conductor が verdict 受領後に実測して実害の深刻度を確定し、iteration を消費せず是正して要件へ還流する事後面であり、両者が予防/事後の対として非重複であることを本文で判別可能にする。
+票タイムライン: subagent-1 2026-08-05T09:55:00Z(受理 2026-08-05T08:30:06Z) → subagent-2 2026-08-05T08:20:00Z(受理 2026-08-05T08:30:40Z) → 配信 2026-08-05T08:38:08Z → 配信 2026-08-05T08:38:08Z → 開票 2026-08-05T08:38:08Z
+GoA[E-SRA-ADS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

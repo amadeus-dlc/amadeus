@@ -157,3 +157,98 @@ Bun-only framework baseline; both are pinned so that the same model, config, and
 image digest yield the same verdict. See the
 [plugin README](../../plugins/formal-model-check/README.md) for how each
 execution surface is provisioned.
+
+## Recording the evidence: the `tla-authoring` CLI
+
+Step 6 above produces a reviewable package. `tla-authoring` is how that package
+is written down, addressed, and later re-checked — and how a checkpoint learns
+that a governed requirement moved without its model following.
+
+The CLI ships with the plugin at
+`plugins/formal-model-check/tools/tla-authoring.ts` and is registered in the
+plugin's `tools` list. It dispatches only: every judgement lives in
+`tla-evidence.ts` and `tla-applicability.ts` below it. The contract is one JSON
+line on stdout, with `0` for success, `1` for a typed failure, and `2` for a
+usage error. Running it with no arguments prints the full usage on the error
+path:
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts
+```
+
+**Identity.** A model is tied to the requirement text it formalises, not to a
+file. `identity extract` reads a document and digests the sections whose ids
+match the closed grammar — `FR-`, `NFR-`, and `AC-` followed by three digits
+under a `###` heading, `ADR-` followed by digits under a `##` heading. Section
+bodies are canonicalised (LF newlines, no trailing whitespace, no leading or
+trailing blank lines) before hashing, so reflowing prose does not move the
+digest but changing a guard does. `identity compare` reports `current` or
+`stale` against a recorded digest.
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts identity extract \
+  --doc specs/tla/requirements.md --doc-kind requirements
+```
+
+**Bundles.** `bundle build` writes a content-addressed envelope into the
+evidence store, chaining it to a `--predecessor` that is either `root` or an
+earlier bundle digest. An authoring bundle carries five receipts —
+applicability, trace, proof, review, approval; a terminal-route receipt carries
+applicability and approval only. `bundle verify` re-derives the digest and
+checks the recorded subject identity, `bundle read` returns the receipts,
+and `bundle list` / `bundle head` enumerate the store and its chain heads,
+reporting any corrupted entries separately rather than skipping them:
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
+{"ok":true,"refs":[],"corrupted":[]}
+```
+
+**Applicability.** `applicability judge` takes a change declaration
+(`{ subjects, kind, rationale }`, where `kind` is one of `new-subject`,
+`semantic-change`, `impl-only`, `non-target`) and routes it against the
+registered model map. `applicability receipt` performs the same judgement and
+builds the receipt, verifying the referenced human approval against the audit
+shard it names. `applicability series` derives the series key for a subject set.
+
+**The hold.** `hold` evaluates whether authoring must stop: it lists the store,
+refuses to release on any corrupted entry, and runs the hold table over the
+current identity and series. The typed verdict on stdout is authoritative — the
+exit code only mirrors it, and no caller may read hold or no-hold from the code
+alone.
+
+`advisory hold` is the wrapper the plugin registers as the `authoring-hold`
+advisory at the `requirements-analysis`, `functional-design`, and
+`build-and-test` checkpoints. A checkpoint knows no subjects, so the wrapper
+resolves them from `specs/tla/authoring-subjects.json`: the documents and stable
+ids a workspace places under formal-verification governance. A workspace that
+declares nothing governs nothing, which is a real no-hold rather than a
+suppressed one — but a declaration file that exists and cannot be read, or names
+an id its documents do not define, fails closed:
+
+```
+bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
+{"ok":true,"verdict":{"kind":"no-hold"},"reason":"no governed subjects are declared"}
+```
+
+## The evidence store
+
+`plugins/formal-model-check/tools/tla-evidence.ts` is a library, not a CLI — it
+has no entry point of its own and is consumed by `tla-authoring.ts`. It is the
+only writer of the evidence store, which lives at `specs/tla-evidence` unless a
+`--store` flag moves it.
+
+The file is split so that the judgement half can be tested without a
+filesystem. The pure layer owns parsing, canonicalisation, digesting, identity
+comparison, envelope validation, and head resolution, and touches neither the
+disk, the clock, nor the process. The handler layer below it owns store I/O and
+hands the pure layer bytes. Writes stage through a `.tmp` directory and are
+renamed into place, so a crashed run leaves no half-written bundle at a name
+that claims to be its own digest.
+
+Two properties are worth knowing when reading store output. `verify` is the only
+function that mints a verified bundle, so holding one is itself proof the bundle
+was checked rather than merely read. And a scan reports unreadable entries as
+`corrupted` — with the reason `digest-filename-mismatch`, `unparseable`, or
+`schema-invalid` — instead of dropping them, which is what lets the hold
+evaluation refuse to release on a damaged store.

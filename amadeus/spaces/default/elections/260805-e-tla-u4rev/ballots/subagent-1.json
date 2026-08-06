@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLA-U4REV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "後続 Issue は PR #2287 のマージ前に起票し、FD business-logic-model.md 手順1a(revise-model 受理)と手順3(append + name 重複は validator-rejected)の緊張を Issue 本文へ file:line で明記すること — 起票を後回しにすると設計ギャップが無記録のまま消える。",
+  "rationale": "実測: plugins/formal-model-check/tools/tla-registration.ts:223-236 の composeRegisteredMap は [...models, draft] を無条件 append し name でソート後に parseTlaModelMap で全体検証する(replace 分岐なし)。同 :86 AUTHORING_ROUTES は author-new/revise-model の両方を受理し、business-logic-model.md 手順1a も同じ2経路を受理するため、既存同名エントリを持つ revise-model draft は構造的に validator-rejected になる — 緊張は実在する。しかし (1) 実装は承認済み FD 手順3(『追加後の map 全体を検証』+『エントリ間不変量(name 重複等)を書込前に閉じる』)の逐語どおりで、無申告逸脱はない。(2) replace-by-name はユーザー可視の登録意味論の追加であり team.md エスカレーション正準リスト(4) 仕様変更に当たる — 選択肢 B が求める『FD を申告付きで改訂して同一 PR で実装』は、実装者による仕様裁定の自己解決であり P3 / cid:code-generation:deviation-stop-before-implement に正面から反する。(3) 実害は fail-closed に限定される: 拒否経路は loud で map を壊さず(rename 前に validator で停止、:328-329)、部分更新を観測させない FR-010 の契約と整合。(4) requirements.md FR-012 は『新規authoringまたは改訂』と選言で書かれており(inception/requirements-analysis/requirements.md、FR-012 節)、U5 E2E は author-new 経路で充足可能 — B が挙げる『U5 での手戻り』は要件上の必然ではない。よって A(現状受理 + 後続 Issue で FD 改訂込みに扱う)を支持する。",
+  "submittedAt": "2026-08-05T13:20:50Z"
+}

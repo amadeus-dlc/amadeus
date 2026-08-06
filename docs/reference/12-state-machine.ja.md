@@ -265,6 +265,23 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `DECISION_RECORDED` | `tools/amadeus-log.ts` | オプションを捕捉するため `AskUserQuestion` の前に発火 |
 | `QUESTION_ANSWERED` | `tools/amadeus-log.ts` | ユーザー応答の後に発火 |
 
+#### advisory choice の受理
+
+チェックポイントで hold したプラグイン advisory は、ちょうど2つの選択肢 — `run-now`(今すぐ実行する)と `defer-with-risk`(リスクを承知して延期する)— を人間へ問います。その回答の受理は `tools/amadeus-advisory-choice.ts` が所有し、意図的に狭く作られています。advisory choice が受理されるのは、実在の human turn へ結び付けられる場合だけです。
+
+受理経路は2つあります。**prompt 経路**(`recordProtectedAdvisoryChoice`)はユーザーのターン本文を選択肢語彙と厳密照合します — `1`・`run-now`・日本語ラベル、`defer-with-risk` 側も同様 — それ以外は受理しません。言い換えは choice ではありません。**`record` verb** は明示経路です。
+
+```
+bun .claude/tools/amadeus-advisory-choice.ts record \
+  --advisory-instance <id> --choice run-now
+```
+
+両経路とも receipt を `HUMAN_TURN` へ束縛します。prompt 経路は、その turn が自クローン自身の audit シャードに在ることを要求し、記録済み `HUMAN_TURN` ブロックの hash から event identity を再導出し、既に別の receipt で使用済みの turn identity を拒否します — 1つの human turn が答えるのは1つの advisory です。さらに両経路とも、対応する advisory 提示の実在を要求します。何も表示されていないターンから choice を収穫することはできません。
+
+受理は **choice について冪等** です。同一 advisory instance へ同じ choice を再記録すると既存 receipt が `idempotent: true` とともに返り、既に receipt を持つ instance へ *異なる* choice を記録しようとすると、上書きではなく拒否になります。`defer-with-risk` の receipt は問いを閉じます。`run-now` の receipt が新たな choice を受け付けるのは、それが認可したモデル検査が実際にはクリーンな結果を出さなかった場合(detected・harness error・invalid)だけです。
+
+`correct-misattributed` は唯一の取消経路であり、あらゆる側から囲われています。対象は `run-now` receipt に限り、それを根拠づける対応提示が存在しないときに限り、かつその試行に対するモデル検査エビデンスが存在しないときに限ります。receipt は削除されず、理由 `misattributed-unpresented-choice` とともに revoked として印されます。これらの経路はすべて audit ロック下で走ります。
+
 ### Scope and configuration
 
 | Event | Emitter | Notes |
@@ -317,7 +334,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | Event | Emitter | Trigger |
 |---|---|---|
 | `ERROR_LOGGED` | `tools/amadeus-lib.ts`(すべてのツールの `error()` からの `emitError` 経由) | 非ゼロ終了のため `error(msg)` を呼ぶ任意のツール CLI。ベストエフォート — cwd に workflow がなければ no-op、再帰に対してガード済み |
-| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | ユーザーが compaction-awareness の `AskUserQuestion` に回答した後、コンダクターが呼ぶ `acknowledge-compaction --choice <continue|review|restart>` |
+| `RECOVERY_COMPLETED` | `tools/amadeus-state.ts` | ユーザーが compaction-awareness の `AskUserQuestion` に回答した後、コンダクターが呼ぶ `acknowledge-compaction --choice <continue\|review\|restart>`。加えて `session-takeover --confirm` が、陳腐化した Kimi 呼び出し元 carrier の再バインド成立をゲートが確認した時点で発行する(`Reason` = 修復した拒否原因を伴う) |
 
 ### Worktree
 
@@ -375,6 +392,18 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `MEMORY_EMPTY` | `tools/amadeus-runtime.ts` | ステージ承認の runtime-graph compile が memory.md の欠落、または §13 の4見出しの下に非空エントリが0であることを発見 |
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | learning gate が保持された学習を `amadeus/spaces/<space>/memory/{project,team}.md` へ日付付きプラクティスエントリとして永続化した |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | learning gate が project 層のセンサーマニフェストを scaffold し、起源ステージの `sensors:` フロントマターにバインドした |
+
+### Loop monitor and quality repair
+
+Loop Monitor は、配送の観測、サイクルのトリガー、Judge の予約と結果、closed-route の適用、latch の遷移を、1つの正典イベントセットとしてコミットします。Quality Repair ランタイムは、品質スナップショット、進捗、replan、stall、resume の各トランザクションを、その汎用 Loop Monitor 効果とともにコミットします。クローンごとの Replay Index は、これら監査の真実のソースからの修復可能な投影です。
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | 1つのアトミックな Loop Monitor の配送、Judge、または latch 遷移がコミットされた |
+| `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | 1つの品質スナップショット、進捗、replan、stall、または resume のトランザクションと、その汎用 Monitor 効果がアトミックにコミットされた |
+| `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | 1つの Intent スコープのモード、グラント、決定、workflow-effect、park、resume、または invocation-failure のトランザクションがアトミックにコミットされた |
+| `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review-production.ts` | 人間がレビューサーフェス上で1つの不変な auto decision を受理またはフラグした(append-only。決定済みの効果を決して再実行しない) |
+| `INTENT_COMPLETION_TRANSACTION_COMMITTED` | `tools/amadeus-intent-completion.ts` | Core の Intent 完了トランザクションがアトミックにコミットされ、Intent record をそのエビデンスダイジェストで封印した |
 
 ### Swarm
 

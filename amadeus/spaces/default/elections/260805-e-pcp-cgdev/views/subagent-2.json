@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PCP-CGDEV",
+  "voter": "subagent-2",
+  "question": "intent 260805-pr-convergence-plugin の U2(convergence-toolchain)builder が実装前停止で申告した設計ギャップ2件+解釈1件をまとめて裁定せよ(詳細: scratchpad/bolt-u2-report.md、投票者は FD/ND 成果物と引用 file:line を実測確認すること)。【ギャップ A】override の audit emit 経路が未規定 — plugin tools は core を import できず(E-PCP-ADDEV 裁定)、amadeus-log.ts の verb は decision/answer/advisory-decision の3つのみで汎用 emit なし。builder 推奨 = host の amadeus-log decision を外部プロセス spawn(gh と同じ境界)し、override 事実を DECISION_RECORDED の自由文フィールドへ記録。【ギャップ B】LEDGER が ThreadClass(C3 所有)を型参照する必要があるが、ND の宣言辺集合5本に LEDGER→PRED 辺が無い。builder 推奨 = 型のみ辺を1本追加する申告改訂(PRED→RUNNER 型のみ辺の既習形)。【解釈】PrState の所有 — C6 は raw 文字列取得まで、型付き PrState は C3 の MergeStateStatus.parse が生成(RUNNER 葉の維持)。choices は3点セットの採否。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "A のみ別方式(audit emit を断念し record 記録のみ)",
+      "description": "override 事実はレポート md(converged:false+OverrideRecord)への恒久記録のみとし、audit emit は行わない — FR-7b の『台帳と audit に残す』を『レポート(record 内成果物)に残す』へ申告改訂。B と解釈は choice 1 と同じ。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "builder 推奨3点を全て採用",
+      "description": "A = amadeus-log decision の外部プロセス spawn(イベント名は DECISION_RECORDED、override 事実は構造化された自由文フィールド。将来の専用 verb 化は別 Issue 起票)。B = logical-components.md へ LEDGER→PRED 型のみ辺を申告改訂で追加。解釈 = C6 は raw 取得・C3 が型付き生成。3点とも FD/ND への申告付き反映を条件とする。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "ユーザーへエスカレーション",
+      "description": "FR-7b の audit 要件は検証劇場 Forbidden に関わる仕様面のため、ユーザー裁定を仰ぐ。"
+    }
+  ]
+}

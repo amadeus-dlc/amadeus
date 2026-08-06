@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-SDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2 に対する不採用理由のうち cid の当てはめは近似である — cid:nfr-requirements:upstream-coverage-conditional-consumes(team.md:299)は brownfield 条件付き consumes を「外すと FAILED になるので実参照せよ」という要求側の則、cid:nfr-design:c1-brief-skip-resolution(project.md:301)は「条件付き consumes を持つ per-unit ステージの reviewer ブリーフ」に適用範囲を明示限定した則であり、いずれも c2 が述べる scope-definition ステージの conductor 自身の上流入力ヘッダ面と厳密には一致しない。ただし 0 件の結論はこの当てはめに依存せず、より強い独立根拠(c2 は .claude/scopes/amadeus-self-feature.md:17 が既に明文で定めた SKIP 構成の帰結を record に記した事実記載にすぎず、一般化しうる規範内容を持たない)で維持されるため、この留保は結論を変えない。",
+  "rationale": "独立実測3点。(1) 候補原文: record ideation/scope-definition/memory.md の Interpretations :5(scope は birth 時ユーザー既決のため質問を Issue #2253 導出5問へ絞り全件 decide-question で裁定)と Tradeoffs :11(feasibility-assessment / constraint-register は self-feature の EXECUTE 集合に feasibility が無いため consumes に現れず、上流参照は intent-statement.md のみ)を実読。Open questions :15 も conductor 自身が「§13 学習候補: 0件(intent-capture の selector 学習と同型のため新規なし)」と記録しており、提案と diary が整合している。(2) c1 の射程: project.md:187 cid:intent-capture:c1(事前裁定済み intent では質問を未決の判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映する)が c1 の内容そのもの。加えて project.md:262 cid:requirements-analysis:c5(既存の流儀で決まる事項は問わない)と project.md:274 cid:intent-capture:c1-option-direction が同ファミリを既に構成しており、c1 は既存則の適用実例であって新規の一般化価値を持たない。scope 自体が birth 時既決という前提も project.md § Scope Overrides(self-feature を明示選択して開始する)から既決事項。(3) c2 の射程: .claude/scopes/amadeus-self-feature.md:17 が feasibility を明示 SKIP と宣言済みであり、c2 はその宣言の機械的帰結の記録に留まる。よって留保に記した cid 当てはめの近似にかかわらず新規ノルム化の価値はない。以上より、両候補とも record 固定のみとし memory 層へ persist しない conductor 提案(0 件)を支持する。",
+  "submittedAt": "2026-08-05T05:30:00Z"
+}

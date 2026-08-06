@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SRA-FDS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の functional-design ステージ §13 学習選定。正本は record の construction/functional-design/memory.md(全文実読、8 エントリ)。conductor 提案は 採用 2 件: L1(c6 由来)= 静的な契約 AC(コード不変・非追加・フラグ非登録など、実行で踏めない性質の受け入れ基準)にも検証手段(テスト ID または機械検査)を必ず束ねる — launch-autonomy-flag §12a iteration 1 BLOCKER(FR-CLI-5 後半の READ_ONLY_FLAGS 非追加 AC に検証手段が不在 → H9 in-process アサーション追加で閉包)の一般化。L2(c7 由来)= cid:code-generation:c3-mps(FD/AD 契約ギャップの readonly 実測裁定)への FD 側予防面の追補 — 「〜経由で受領」の 1 文は配線の specify ではない。FD は型のフィールド・呼び出し行・組み立て点の 3 点まで確定して初めて実装可能とする(semi-authorization-core §12a iteration 1 BLOCKER: D3 の semiScope 供給元未 specify → decide :607 / AutonomyDecisionInput :228-239 実測 3 点 specify で閉包)。不採用 6 件: c1(cid:code-generation:seam-placement-measured-module の執行)、c2(本 intent 自身の full autonomy 機能の正規経路使用 — 一般化は本 intent の docs/正本知識改訂が担う)、c3(ADR 裁定文からの機械導出 = 既決 contract 執行)、c4(cid:application-design:dual-key-consumer-inventory の docs 意味論改訂面への自然適用実例 — 別 intent で再観測されたら追補昇格を再検討)、c5(cid:application-design:citation-semantics-check + cid:functional-design:cross-unit-type-verbatim-check ファミリの実践 — verbatim シグネチャコメント = 返り値ドメイン契約の読みは citation-semantics の適用)、c8(delivery-planning 回付済み裁定 R11 の遵守 = 既決執行)。実在根拠は memory.md と各 unit の §12a Review 節・questions ファイルで実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用集合を変更すべき",
+      "description": "L1/L2 の却下、または不採用 6 件からの昇格が必要。留保にどの候補か file:line 根拠とともに記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "提案どおり(L1 + L2 採用、他 6 件不採用)",
+      "description": "L1 を新規 cid、L2 を c3-mps への追補として persist する。"
+    }
+  ]
+}

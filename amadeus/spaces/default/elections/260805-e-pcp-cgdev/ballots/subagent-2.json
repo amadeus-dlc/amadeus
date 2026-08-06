@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PCP-CGDEV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A について: DECISION_RECORDED は override 専用イベントではないため、override 事実の機械抽出は自由文フィールドの様式に依存する。(i) 自由文へ入れる構造化キー(override 種別・PR 参照・humanTurnId・reason・recordedAt)を FD へ逐語で固定し、そのキー集合を機械 grep できる形でテストにピンすること(検証劇場を避けるため、emit したイベントを実際に読み戻して assert する)。(ii) 専用 verb / 専用イベント新設の別 Issue は本 Bolt の PR 発行時までに起票し、FD の申告改訂から参照すること(choice 文の『将来の専用 verb 化は別 Issue 起票』を努力目標でなく実施項目として扱う)。(iii) host tools パスへの spawn カップリングは、パス解決の失敗を loud fail(非0 exit)にし、無音スキップにしないこと。B と解釈については留保なし — ただし logical-components.md の辺集合は検査対象契約であるため、型のみ辺の追記は『申告改訂』として FD/ND 双方の本文と非循環の再確認(LEDGER→PRED→RUNNER)まで含めて反映すること。",
+  "rationale": "3点とも独立実測で裏を取り、builder 推奨が唯一 invariant を壊さない解と確認した。【A】packages/framework/core/tools/amadeus-log.ts の subcommand switch(:232-238)は decision / answer / advisory-decision の3件のみで、汎用 emit verb も override 専用イベントも実在しない。一方 FR-7b(requirements.md:55)は逐語で『台帳と audit に残す(無音バイパス禁止 — 検証劇場 Forbidden との区別は記録の実在)』と定め、BR-U2-8(business-rules.md:16)も『受理は audit emit と対』とする。displayNo 1(audit を断念しレポート記録のみ)は FR-7b の『audit に残す』を落とす仕様変更であり、しかも FR-7b が守ろうとしている当の不変量(記録の実在による検証劇場との区別)を弱める方向の改訂なので採れない。core への新 verb 追加は BR-U2-11 / ADR-6(decisions.md:65-71、components.md:42)が定める plugin の self-contained 境界を越え U2 スコープ外、シャード直 append はロック・冪等性を迂回して Forbidden 側に触れる。残る外部プロセス spawn は、ADR-6 が禁じるのは import であって プロセス境界ではなく、gh が既に同じ境界で使われている先例に載る。【B】実在するギャップと確認した。domain-entities.md:45-55 の ThreadLedger は `count(cls: ThreadClass)` を持ち C4 所有、ThreadClass / classifyThread は business-logic-model.md:40-49 で C3 所有。一方 logical-components.md:18 のテキストフォールバックが宣言する辺集合は CLI→PRED / CLI→LEDGER / CLI→RUNNER / LEDGER→RUNNER / PRED→RUNNER(型のみ)の5本で LEDGER→PRED が無く、LEDGER は ThreadClass を型参照せずに count を型付けできない。型のみ辺1本の追加は PRED→RUNNER の既習形に沿い、LEDGER→PRED→RUNNER で非循環も保存される — ジェネリック化案は BR-U2-2(未分類は型で表現不能)の担保を弱め、classifyThread の C4 移設は ADR-2 と衝突する。【解釈】domain-entities.md:73-77 が PrState を C6 所有かつ `mergeStateStatus: MergeStateStatus` と定義する一方、ADR-2 は MergeStateStatus.parse を C3 に1定義と定め、logical-components.md:18 は『RUNNER は他 plugin ファイルを import しない葉』と宣言する。C6 が型付き PrState を生成すると C6→C3 辺が必要になり葉性が壊れるため、C6 は raw 文字列取得まで・型付けは C3 の parse という builder の解釈が、この3契約を同時に成立させる唯一の読みである。",
+  "submittedAt": "2026-08-05T08:05:00Z"
+}

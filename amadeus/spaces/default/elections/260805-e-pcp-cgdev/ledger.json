@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PCP-CGDEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "A について: DECISION_RECORDED は override 専用イベントではないため、override 事実の機械抽出は自由文フィールドの様式に依存する。(i) 自由文へ入れる構造化キー(override 種別・PR 参照・humanTurnId・reason・recordedAt)を FD へ逐語で固定し、そのキー集合を機械 grep できる形でテストにピンすること(検証劇場を避けるため、emit したイベントを実際に読み戻して assert する)。(ii) 専用 verb / 専用イベント新設の別 Issue は本 Bolt の PR 発行時までに起票し、FD の申告改訂から参照すること(choice 文の『将来の専用 verb 化は別 Issue 起票』を努力目標でなく実施項目として扱う)。(iii) host tools パスへの spawn カップリングは、パス解決の失敗を loud fail(非0 exit)にし、無音スキップにしないこと。B と解釈については留保なし — ただし logical-components.md の辺集合は検査対象契約であるため、型のみ辺の追記は『申告改訂』として FD/ND 双方の本文と非循環の再確認(LEDGER→PRED→RUNNER)まで含めて反映すること。",
+      "rationale": "3点とも独立実測で裏を取り、builder 推奨が唯一 invariant を壊さない解と確認した。【A】packages/framework/core/tools/amadeus-log.ts の subcommand switch(:232-238)は decision / answer / advisory-decision の3件のみで、汎用 emit verb も override 専用イベントも実在しない。一方 FR-7b(requirements.md:55)は逐語で『台帳と audit に残す(無音バイパス禁止 — 検証劇場 Forbidden との区別は記録の実在)』と定め、BR-U2-8(business-rules.md:16)も『受理は audit emit と対』とする。displayNo 1(audit を断念しレポート記録のみ)は FR-7b の『audit に残す』を落とす仕様変更であり、しかも FR-7b が守ろうとしている当の不変量(記録の実在による検証劇場との区別)を弱める方向の改訂なので採れない。core への新 verb 追加は BR-U2-11 / ADR-6(decisions.md:65-71、components.md:42)が定める plugin の self-contained 境界を越え U2 スコープ外、シャード直 append はロック・冪等性を迂回して Forbidden 側に触れる。残る外部プロセス spawn は、ADR-6 が禁じるのは import であって プロセス境界ではなく、gh が既に同じ境界で使われている先例に載る。【B】実在するギャップと確認した。domain-entities.md:45-55 の ThreadLedger は `count(cls: ThreadClass)` を持ち C4 所有、ThreadClass / classifyThread は business-logic-model.md:40-49 で C3 所有。一方 logical-components.md:18 のテキストフォールバックが宣言する辺集合は CLI→PRED / CLI→LEDGER / CLI→RUNNER / LEDGER→RUNNER / PRED→RUNNER(型のみ)の5本で LEDGER→PRED が無く、LEDGER は ThreadClass を型参照せずに count を型付けできない。型のみ辺1本の追加は PRED→RUNNER の既習形に沿い、LEDGER→PRED→RUNNER で非循環も保存される — ジェネリック化案は BR-U2-2(未分類は型で表現不能)の担保を弱め、classifyThread の C4 移設は ADR-2 と衝突する。【解釈】domain-entities.md:73-77 が PrState を C6 所有かつ `mergeStateStatus: MergeStateStatus` と定義する一方、ADR-2 は MergeStateStatus.parse を C3 に1定義と定め、logical-components.md:18 は『RUNNER は他 plugin ファイルを import しない葉』と宣言する。C6 が型付き PrState を生成すると C6→C3 辺が必要になり葉性が壊れるため、C6 は raw 文字列取得まで・型付けは C3 の parse という builder の解釈が、この3契約を同時に成立させる唯一の読みである。",
+      "submittedAt": "2026-08-05T08:05:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PCP-CGDEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用条件3点: (1) ギャップ A — override 事実は DECISION_RECORDED の自由文フィールド内で構造化された機械可読形(固定キー付き)で記録し、散文のみにしない。散文だけの記録は『どのコードも消費しないフィールド』へ退化し、org.md Forbidden の検証劇場側へ寄る。あわせて『override が emit されること』を実測で固定するテスト(emit 経路を実際に踏む)を同一 Bolt に含め、将来の専用 verb 化 Issue はマージ前に起票して FD へ Refs を残す。(2) ギャップ B — LEDGER→PRED 型のみ辺の追加は logical-components.md:18 の辺集合本文とテキストフォールバック文の両方へ反映し、非循環(LEDGER→PRED→RUNNER)を明記する。片側だけの更新は同ファイル内で自己矛盾になる。(3) 解釈 — PrState の所有変更は domain-entities.md:73 の見出し『PrState / PrRef / GhRunner(C6 所有)』が現に C6 所有と書いているため、解釈の追記ではなく当該見出しと型定義(:77)の明示改訂として申告する(implementation-deviation-election の申告要件)。",
+      "rationale": "独立実測(自セッションで実行、すべて file:line 照合): 【ギャップ A の実在】packages/framework/core/tools/amadeus-log.ts の subcommand switch は :232 decision / :235 answer / :238 advisory-decision の3 case のみで、default は `Unknown subcommand: ... Valid: decision, advisory-decision, answer` を error する — 汎用 emit verb は実在しない(builder 報告 :232-238 と逐語一致)。plugins/formal-model-check/tools/ への emitAudit|amadeus-log|AUDIT の再帰 grep は 0 hit で、plugin の audit 先例が無いことも確認。一方 business-logic-model.md には『audit へ override 事実を emit(無音バイパス禁止 — FR-7b)』が現存し、要件側は emit を要求している。よって『要求はあるが手段が設計に無い』というギャップは実在する。【ギャップ B の実在】logical-components.md の mermaid とテキストフォールバックが宣言する辺は CLI→PRED / CLI→LEDGER / CLI→RUNNER / LEDGER→RUNNER / PRED→RUNNER(型のみ)の5本で、LEDGER→PRED は無い。一方 domain-entities.md:45-55 の ThreadLedger は `count(cls: ThreadClass): number` と `threads: readonly ClassifiedThread[]` を持ち、ThreadClass/classifyThread は business-logic-model.md の『classifyThread(C3 — 純関数の決定表)』が C3 所有と明示する。LEDGER が ThreadClass を型参照せずに count を型付けする方法は無く、型のみ辺の必要性は構造的に確定した。【解釈の実在】domain-entities.md:73 は PrState を C6 所有とし :77 で mergeStateStatus: MergeStateStatus を持たせるが、その MergeStateStatus.parse は ADR-2 により C3 に1定義(:71 で plugin 内 parse が既知値のみ受理・未知値 throw と確定)。C6 が型付き PrState を所有すると C6→C3 辺が必要になり、logical-components.md の『RUNNER は他 plugin ファイルを import しない葉』と衝突する。builder の解釈(C6 は raw 取得、C3 の parse が型付き生成)は、この3制約を同時に満たす一意解であり、component-methods.md:18 の `evaluateConvergence(ledger, pr: PrState)` が C3 側にあることとも整合する。\n\n選択理由: display 3(A のみ audit 断念・レポート記録のみ)は FR-7b の『台帳と audit に残す』を『レポートに残す』へ下げる要件改訂であり、エスカレーション正準リスト(4)の仕様変更に当たる — 選挙で決めてよい事項ではないうえ、無音バイパス禁止の担保を実際に弱める。display 2(ユーザーエスカレーション)は、A が『要件を変えずに満たす手段の選択』である限り不要 — 外部プロセス spawn は ADR-6 が gh について既に採用済みの境界そのもので、import 閉包を侵さない既決契約の機械的適用に近い。B と解釈はいずれも一次証拠(型定義と辺集合)から一意に導かれる。display 1 は3点とも invariant を保存したままスコープ内で閉じる唯一の組み合わせ。GoA 2 とした理由は、A のイベント名が override 専用でなく DECISION_RECORDED に相乗りする点が意味論的に弱く、記録形式の構造化と専用 verb 化の追跡を条件に置く必要があるため。",
+      "submittedAt": "2026-08-05T00:00:00Z"
+    }
+  ],
+  "late": []
+}

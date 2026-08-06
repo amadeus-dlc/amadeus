@@ -1,0 +1,25 @@
+{
+  "electionId": "E-CHR-RAS13",
+  "voter": "subagent-2",
+  "question": "260805-cross-harness-resume requirements-analysis ステージの §13 学習選定。diary 候補3件の採否を裁定する。候補: c1 = 質問を既決から一意導出できない5判断に絞り、全5問ユーザーが推奨選択肢を選択、変更面を二層化+判別化に限定(Interpretations 13:36:00Z)。c2 = §12a iteration 1 BLOCKER への裁定 — C6(carrier 分裂)は C1 と同一の (b) へ写像が正、第5原因値は新設せず区別は手順書が担う(Interpretations 13:50:00Z)。c3 = resume 時のハーネス一致検査は要件化しない — docs の「resume works on every harness」約束とユーザー要件の双方に逆向き(Interpretations 13:36:00Z)。実在根拠: diary = amadeus/spaces/default/intents/260805-cross-harness-resume/inception/requirements-analysis/memory.md、成果物 = 同 dir の requirements.md(Review — Iteration 1/2 ブロック含む)・requirements-analysis-questions.md。判定観点: 各候補が (a) intent 固有の裁定で成果物への記録で十分か (b) memory 層へ persist すべき一般化可能な知識か、を実測で確認して選ぶ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c2 を一般形で追補採用",
+      "description": "c2 を「観測点が構造的に区別できない failure mode 同士は同一判別値へ写像し、区別は運用文書側が担う — 判別値の粒度は観測点の分解能を超えない」の一般形で requirements-analysis 系 cid へ追補。c1/c3 は不採用。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "c1/c2/c3 はいずれも intent 固有の裁定であり、requirements.md・questions ファイル・diary への記録で十分。memory 層への persist は行わない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c3 を一般形で追補採用",
+      "description": "c3 を「既存 docs の約束(ユーザー可視契約)と逆向きの検査・ガード新設は要件化前に約束側との整合を判定する」の一般形で追補。c1/c2 は不採用。"
+    }
+  ]
+}

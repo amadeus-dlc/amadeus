@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRA-RAS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の requirements-analysis ステージ §13 学習選定。diary(record の inception/requirements-analysis/memory.md)の候補は Interpretations 2件・Tradeoffs 1件・Open questions 2件。conductor 提案は 1 件採用: c3 の一般形 —「amadeus-election CLI は1選挙1質問の様式であるため、1ステージで複数の明確化質問を裁定するときは、各問の agent recommendation を束ねた一括審議形(choice 1 = 全問推奨どおり / 2 = 一部の問で別案 / 3 = 質問自体に欠落・誤り)で1選挙にまとめ、投票者には各問を独立に検証して per-question の検証結果を返すよう指示する。問ごとに個別選挙を開くと投票コストが問数倍になる一方、束ね形でも留保は per-question で転記できる」を team.md または project.md へ persist する。他の候補は不採用: c1 は c3 の実施記録、c2 は既存 cid:requirements-analysis:approval-lineage-citation / implementation-deviation-election の適用実例、Open questions 2件は本 intent 固有の申し送り。実在根拠は record の memory.md と選挙ストア 260805-e-sra-ra1 で実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0 件",
+      "description": "c3 も含め persist しない。束ね形は本 intent 固有の運用判断に留め、一般化しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c3(束ね選挙の一般形)のみ採用",
+      "description": "多問ステージの選挙様式として persist する。他候補は record 固定のみ。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "採用集合の変更",
+      "description": "c3 の文面修正が必要、または他候補も採用すべき(留保に具体を記す)。"
+    }
+  ]
+}

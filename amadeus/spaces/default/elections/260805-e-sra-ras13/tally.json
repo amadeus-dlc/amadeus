@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c3(束ね選挙の一般形)のみ採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c3(束ね選挙の一般形)のみ採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0 件",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "採用集合の変更",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T06:55:57Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRA-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 の採用でよいが、persist 形を3点で条件づける: (1) 独立 cid を新設せず cid:requirements-analysis:election-cli-canonical への追補として書く — 同 cid は既に「CLI が未対応の選挙形態は従来運用を維持し、対応拡張は enhancement として起票する」(team.md:306)と定めており、束ね形はまさにその『CLI 未対応形態への運用対処』であるため、独立 cid にすると同一事象を二重規定する。あわせて多問対応の enhancement 起票が未了であることを追補内に明記する(Election 型は question: string 単数 + choices フラット配列で、amadeus-election-model.ts:53-57 / :105 の parse が構造的に1選挙1質問を強制する — 束ね形は恒久解ではなく CLI 形状への適応である)。(2) 適用境界を本文に書く — 束ね形は各問の推奨が相互に両立し、per-question の可否分岐を集計面で区別する必要がない場合に限る。choices は E-SRA-RA1 の実施形(views/subagent-1.json の choice 2「一部の問で別案」)が示すとおり『どの問で別案か』を集計に残さないため、ある問に真の割れが見込まれるなら束ねずその問を独立選挙にする。(3) 束ね形の成立条件として『投票者への per-question 独立検証の指示』と『per-question 留保の裁定への転記』を必須要素として書く — E-SRA-RA1 では両票がこれを実際に返し(record.md の subagent-2 留保が Q1/Q4 を、subagent-1 留保が Q3/Q4/In-1 を per-question で指摘し裁定へ転記された)、この2要素が欠けると束ね形は6問を1つの GoA 値へ潰す粗い一括承認へ退化する。以上は採用可否を変えない。",
+      "rationale": "候補原文・CLI スキーマ・実施結果・既存ノルムを独立に実測した。\n\n【候補の実在】amadeus/spaces/default/intents/260805-semi-redefine-autonomy-f/inception/requirements-analysis/memory.md の ## Tradeoffs 節に c3 が逐語で実在する(『選挙 CLI は1選挙1質問の様式だが、6問を個別選挙にすると投票コストが6倍になるため、各問の agent recommendation を束ねた一括審議形(choice 1 = 全採用 / 2 = 一部別案 / 3 = 質問自体に欠落)とした。投票者には各問を独立に検証するよう指示し、実際に per-question の検証結果が両票から返っている。』)。同 ## Open questions 末尾に §13 候補としての登録行も実在する。conductor の不採用理由も実測と一致する — Interpretations 1件目は c3 の実施記録そのもの、2件目は自ら cid:requirements-analysis:approval-lineage-citation を引く適用実例であり、Open questions 2件(FOLLOW-UP 7件の処理方針・本候補の登録)は本 intent 固有の申し送りで一般化価値を持たない。\n\n【前提『1選挙1質問』の実測】packages/framework/core/tools/amadeus-election-model.ts:53-57 の `export type Election = { ... question: string; choices: Choice[]; ... }` と :51 `export type Choice = { internalNo: number; label: string; description?: string }` により、質問は単数文字列・選択肢はフラット配列で、質問ごとの選択肢入れ子は型として表現不能。:105 `if (typeof r.kind !== \"string\" || typeof r.question !== \"string\") return err(\"parse-failure\");` が parse 段で単数を強制し、:277 の投票検証も `election.choices.some((c) => c.internalNo === shape.choiceInternalNo)` の単一集合照合。amadeus-election.ts:640 の record 生成も `- question: ${loaded.value.election.question}` の単数、:368 の validResolutions も単一 choices 集合から導出。よって c3 の前提は実装と一致し、候補の事実主張に誤りはない。\n\n【束ね形が実際に機能したかの実測】amadeus/spaces/default/elections/260805-e-sra-ra1/ の record.md は 6問一括の question 文と choice1=2票 / choice2=0 / choice3=0、`GoA[E-SRA-RA1]: 1x0 2x2` を記録し、両票の留保が per-question で裁定へ転記されている(subagent-2 留保が Q1 の modeProvenance 意味論訂正と Q4 の receipt schema 置換要求を、subagent-1 留保が Q3 の上流5段/4段乖離・Q4 の fail-closed 固定・In-1 の述語共有射程を、それぞれ file:line 付きで指摘)。ballots/subagent-1.json の rationale は (a)〜(i) の per-question 検証を列挙しており、『投票者に各問を独立に検証させる』指示が空文でなかったことが確認できる。すなわち候補が主張する『束ね形でも留保は per-question で転記できる』は実施結果に接地している。\n\n【既存 cid でのカバー確認】memory 層を grep したところ、election-distribution-verbatim-and-length(team.md:295)は配信の verbatim 性と長さのみ、learnings-election(team.md:77)は §13 の付議義務のみ、gradients-of-agreement-scale(team.md:58)は GoA の集計規則のみを縛り、いずれも『1ステージ内の複数質問をどう選挙単位へ割るか』を規定しない。束ね/分割を扱う既存記述は units-generation:c1 と reverse-engineering:free_text_1 の PR/Unit 粒度のみで領域が異なる。最も近接するのは election-cli-canonical(team.md:306)で、これが唯一 CLI 未対応形態の扱いを規定しているため、独立 cid でなく同 cid への追補が正しい置き場と判断した(留保 (1))。\n\n【GoA 2 の理由】一般化価値は認めるが、束ね形は per-question の可否を集計から落とすという構造的コストを持つ(views/subagent-1.json の choice 2 が『一部の問で別案』としか言えず、どの問かは集計に残らない)。この境界と置き場を明記しないまま persist すると、真に割れうる問まで束ねる誘因を生む。文言条件で解消可能な範囲のため 1 ではなく 2、異議ではないため 5/7/8 ではない。",
+      "submittedAt": "2026-08-05T09:10:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRA-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 の一般化には賛成だが、persist 文へ1点の追加を条件とする — 束ね形は choice 1(全問推奨どおり)以外の裁定を構造的に表現できない: tally.json の result は winner を1つしか持たず(260805-e-sra-ra1/tally.json の result.winner = {internalNo:1} と choiceCounts の3行のみ、resolutions:[])、per-question の裁定は record.md の留保 prose にしか残らない。したがって choice 2/3 が多数を占めた場合に『established』を per-question の裁定として消費すると、どの問がどの選択肢に決まったか未確定のまま先へ進む fail-open になる(org.md Forbidden の検証劇場・P2 と同族)。persist 文には『束ね形で確定裁定として消費してよいのは全問一括採用の choice のみ。それ以外の choice が多数となった場合は当該選挙をそのまま recorded まで完走させたうえで、争点の問について個別選挙を開き直すか正準リストに従って人間裁定へ回す』を明記すること。あわせて、束ねた question 文は cid:requirements-analysis:election-distribution-verbatim-and-length に従い要点+questions ファイル正本への全文誘導とする旨(E-SRA-RA1 の election.json:4 が実践している形)を1句添えること。",
+      "rationale": "候補原文・CLI 実装・既存ノルム・先行選挙の実データを独立に実読して判断した。【候補の実在】record の inception/requirements-analysis/memory.md:12(Tradeoffs)に c3 の原型が実在し、:5 が c1(実施記録)、:6 が c2(approval-lineage-citation の適用実例)、:16-17 が Open questions 2件(FOLLOW-UP 7件の申し送りと §13 候補の自己言及)。conductor の不採用理由(c1=実施記録、c2=既存 cid の適用実例、Open questions=intent 固有申し送り)は memory.md 実文と一致し、一般化価値を持つのは c3 のみという判定は妥当。【1選挙1質問の事実確認】packages/framework/core/tools/amadeus-election-model.ts:53-59 の Election 型は `question: string` の単数フィールドで choices は平坦な1集合、:105 の parse も `typeof r.question !== \"string\"` で単数を強制する。票側も :143-152 OriginalBallot が choiceInternalNo / goa / reservation をそれぞれ単数で持つ。よって『CLI は1選挙1質問の様式』という c3 の前提は実装と一致し、束ね形は様式内で多問を裁く唯一の手段である。stage-protocol.md:135 の decide-question も1問1carrier であり、束ね選挙の結果を6問へ写す運用は protocol と両立する(結果の再利用であって per-question 記録は保たれる)。【既存ノルムとの整合】team.md:295 の verbatim 原則は『要約・言い換え・切断は票を歪める』としつつ長文時は要点+ファイル参照での全文誘導を認めており、E-SRA-RA1 は election.json:4 で questions ファイルを正本と名指ししているため矛盾しない(ただし persist 文にこの条件を明示すべき — 留保参照)。team.md:58 の GoA は各『票』に8段階を付す規定であり問単位を要求していないため、束ね形は GoA 規定の文言には抵触しない。team.md:306 の election-cli-canonical(CLI の指令ループを正とする)にも反しない。【束ね形の実害評価】260805-e-sra-ra1 の両票はともに choice 1 / GoA 2 で、留保は per-question に分解された条件(subagent-1 は Q3/Q4/In-1 の3点、subagent-2 は Q1/Q4 の2点)を prose で運んでおり、record.md の留保転記でも per-question の内容が保存されている。すなわち『留保は per-question で転記できる』という c3 の主張は実データで裏付けられる。一方で GoA は票単位のスカラであるため、5問が GoA1 相当・1問が GoA2 相当でも票は最悪値へ丸められる(実データでも両票 GoA2 が6問全体へ一律適用され、GoA[E-SRA-RA1]: 2x2 として記録)。この粒度低下は許容範囲だが、choice 2/3 が勝った場合は tally が per-question の帰結を一切保持しないため裁定が未確定になる — これが唯一の実害であり、留保の追記で封じられる。以上より c3 は一般化価値があり、追記条件付きで採用に賛成する。",
+      "submittedAt": "2026-08-05T06:50:00Z"
+    }
+  ],
+  "resolutions": []
+}

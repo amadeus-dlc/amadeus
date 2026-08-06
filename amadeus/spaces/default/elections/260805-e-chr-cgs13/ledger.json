@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CHR-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用0件は「学びが無かった」ではなく「既存 cid が既に守っている」の意である。c2/c3 は既存2 cid の適用実例(c3 は diary 自身が cid:build-and-test:test-path-set-completeness の実践と明記)かつ違反実例でもあるため、code-summary への記録に加え、次回の週次蒸留ラウンド(cid:requirements-analysis:weekly-distillation-round)へ「短形 tNNN 表記に起因する誤帰属が RA(260723-fixture-shard-pollution)に続き CG でも再発」として違反実例カウントを回付すること。再発が続く場合は prose 追補でなく機械化(検証エビデンス中の tNNN 短形を検出する lint/sensor)を蒸留で裁定するのが筋であり、本票の0件採用はその機械化判断を妨げない。",
+      "rationale": "独立実測: (1) find tests -name 't10-*' で tests/unit/t10-hook-session-start.test.ts と tests/e2e/t10-halt-and-ask-discard.test.ts の2ファイル共存を確認 — view の c2 事実主張は真。(2) ls tests/*/t451-* で実名 tests/integration/t451-caller-denial-reason.integration.test.ts のみ実在、view の t451-caller-denial-diagnosis は不在 — c3 の無音除外機序は真。(3) memory 層 grep で既存 cid を実読: team.md:336 cid:build-and-test:test-path-set-completeness は『実行前に全 path の実在を機械確認し、実行後に期待ファイル数と Ran ... across M files を照合する — Bun は不存在 path を無音で除外したまま exit 0 になり得る』と逐語で規定しており、c3 の教訓(実在確認)と c2 の是正手段(指定数照合)を両方すでに完全被覆する。(4) team.md:193 cid:requirements-analysis:mechanism-cite-verify-at-draft の追補(E-FSPRAS13 2026-07-23、3-0 GoA 1x3)は『テスト引用は tNNN 短形でなくフルパスで書く — 同一テスト番号の複数ファイル共存は実在する生態(t211 = 5ファイル実測)で、短形引用は実在する別ファイルへ誤解決される』と規定し、機序(同番号複数ファイル)・害(誤解決によるレビュー偽指摘とイテレーション消費)ともに c2 と同一である。c2 が追加する新規知識面は『成果物引用』でなく『検証エビデンス』という発生場所の違いのみで、既存規則の本文は引用面を限定していない — 発生場所ごとに追補を増やすと同一規則が多重記載になり、norm-consistency-review が禁じる重複・矛盾の温床になる。よって c2 は追補でなく適用実例と判定。c1 は RECOVERY_COMPLETED 単一 emitter 契約(docs/reference/12-state-machine.md:214、t48 逆検査)という intent 固有の配置判断で、他 intent へ一般化する知識形を持たないため code-summary の記録で十分。自案非採用時の受容度: choice 2(c2 のみ追補)= 6(既存 cid との重複は生むが有害な誤りではなく受容可)、choice 3(c2+c3 追補)= 7(c3 は既存 cid 本文と逐語でほぼ同義の再記載になり、重複が明確に有害)。",
+      "submittedAt": "2026-08-06T00:40:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CHR-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2 の失敗形は既存追補と同型だが、既存追補の適用面は「選挙・裁定・要件の機構引用」であり c2 は「code-generation の検証エビデンス」面である。今回は同一の知識(同一番号の複数ファイル共存 → 短形は別ファイルへ誤解決)で説明が尽きるため 0 件採用に賛成するが、検証エビデンス面で同型の自己矛盾がもう一度再発した場合は、その時点で cid:build-and-test:test-path-set-completeness への追補へ昇格させる条件付きとする。",
+      "rationale": "memory 層の grep 実測で3候補すべて既存被覆と確認した。c2: team.md:193 cid:requirements-analysis:mechanism-cite-verify-at-draft の E-FSPRAS13 追補が逐語で『テスト引用は tNNN 短形でなく**フルパス**(+可能ならシンボル)で書く — 同一テスト番号の複数ファイル共存は実在する生態(t211 = 5ファイル実測)で、短形引用は実在する別ファイルへ誤解決される』と定め、その実測も『reviewer 誤照合→偽 Major 1件+イテレーション1回消費』であり c2(t10 が2ファイル → reviewer BLOCKER)と同型。新規知識ではない。c3: team.md:336 cid:build-and-test:test-path-set-completeness が逐語で『実行前に全 path の実在を機械確認し、実行後に期待ファイル数と runner の `Ran ... across M files` を照合する — Bun は不存在 path を無音で除外したまま exit 0 になり得る』と定めており、c3(t451 パス誤り → 4指定/3実行)はその適用実例そのもの。diary 自身も当該行を『(cid:build-and-test:test-path-set-completeness の実践)』と明記している(amadeus/spaces/default/intents/260805-cross-harness-resume/construction/code-generation/memory.md:8)。c1: RECOVERY_COMPLETED の単一 emitter 契約維持という intent 固有の設計判断であり、code-summary への記録で十分。cid:requirements-analysis:norm-consistency-review(重複・矛盾の温床を作らない)および no-election-for-decided-norms の趣旨により、追補・新設ともに不要と判断する。",
+      "submittedAt": "2026-08-05T21:42:39Z"
+    }
+  ],
+  "late": []
+}
