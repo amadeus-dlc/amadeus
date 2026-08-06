@@ -25,8 +25,11 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -35,6 +38,7 @@ import { join } from "node:path";
 import {
   ROLE_LOCK_OWNER_FILE,
   ROLE_LOCK_STALE_MS,
+  type RoleLockFsPort,
   reclaimRoleMarkerLock,
   runAdapter,
   updateKimiSubagentRole,
@@ -280,5 +284,82 @@ describe("a failed lock holder never leaks an unattributable lock", () => {
     const missing = join(root, "no-such-dir", "marker.lock");
 
     expect(() => writeRoleLockOwner(missing)).toThrow();
+  });
+});
+
+describe("reclaim failure arms leave exactly one story behind", () => {
+  // The interleavings these arms guard against (a contender refilling the
+  // slot between our rename and the restore, a stat failing on our own
+  // private copy) cannot be staged through the real filesystem, so the
+  // RoleLockFsPort seam substitutes throwing fakes for exactly one call.
+  const real: RoleLockFsPort = { statSync, renameSync, rmSync };
+
+  function lockDirsOf(root: string): string[] {
+    return readdirSync(join(root, "amadeus", ".amadeus-sessions")).filter(
+      (name) => name.includes(".lock"),
+    );
+  }
+
+  test("a failed verdict restores the lock and propagates", async () => {
+    const root = workspace();
+    const lockPath = heldLock(root, await reapedPid());
+    const boom = new Error("stat failed");
+
+    expect(() =>
+      reclaimRoleMarkerLock(lockPath, {
+        ...real,
+        statSync: (() => {
+          throw boom;
+        }) as unknown as typeof statSync,
+      }),
+    ).toThrow(boom);
+
+    // The contested slot is back in place, byte-identical, and no displaced
+    // copy is left behind.
+    expect(existsSync(join(lockPath, ROLE_LOCK_OWNER_FILE))).toBe(true);
+    expect(lockDirsOf(root)).toEqual(["kimi-active-subagents.json.lock"]);
+  });
+
+  test("a failed verdict whose restore also fails surrenders the copy and propagates", async () => {
+    const root = workspace();
+    const lockPath = heldLock(root, await reapedPid());
+    const boom = new Error("stat failed");
+    let renames = 0;
+
+    expect(() =>
+      reclaimRoleMarkerLock(lockPath, {
+        ...real,
+        statSync: (() => {
+          throw boom;
+        }) as unknown as typeof statSync,
+        renameSync: ((from: string, to: string) => {
+          renames += 1;
+          if (renames === 1) return renameSync(from, to);
+          throw new Error("slot was refilled");
+        }) as unknown as typeof renameSync,
+      }),
+    ).toThrow(boom);
+
+    // Two directories for one lock is strictly worse than one: the displaced
+    // copy is gone rather than orphaned beside a refilled slot.
+    expect(lockDirsOf(root)).toEqual([]);
+  });
+
+  test("a live owner whose restore fails costs us the copy, never the verdict", () => {
+    const root = workspace();
+    const lockPath = heldLock(root, process.pid);
+    let renames = 0;
+
+    const taken = reclaimRoleMarkerLock(lockPath, {
+      ...real,
+      renameSync: ((from: string, to: string) => {
+        renames += 1;
+        if (renames === 1) return renameSync(from, to);
+        throw new Error("slot was refilled");
+      }) as unknown as typeof renameSync,
+    });
+
+    expect(taken).toBe(false);
+    expect(lockDirsOf(root)).toEqual([]);
   });
 });
