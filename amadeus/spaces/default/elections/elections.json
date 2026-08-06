@@ -1048,5 +1048,17 @@
     "dirName": "260805-e-chr-bts13",
     "createdAt": "2026-08-05T22:35:44Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-XBB-RE-S13",
+    "dirName": "260805-e-xbb-re-s13",
+    "createdAt": "2026-08-05T06:52:59Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-XBB-RA-S13",
+    "dirName": "260805-e-xbb-ra-s13",
+    "createdAt": "2026-08-05T08:31:08Z",
+    "status": "recorded"
   }
 ]

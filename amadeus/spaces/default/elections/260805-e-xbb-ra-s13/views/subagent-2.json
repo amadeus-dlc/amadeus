@@ -1,0 +1,19 @@
+{
+  "electionId": "E-XBB-RA-S13",
+  "voter": "subagent-2",
+  "question": "intent 260805-xrev-bug-batch の requirements-analysis ステージについて、§13 学習選定を「0件」（memory 層へ persist する学習なし）で確定してよいか。確定出力: `bun .claude/tools/amadeus-learnings.ts surface --slug requirements-analysis` → {\"memory_entries_total\":0,\"candidates\":[],\"parked_open_questions\":[]}。実測: 成果物は宣言2パス（requirements.md / requirements-analysis-questions.md）。センサーは requirements-analysis スコープで SENSOR_PASSED 5 / SENSOR_FAILED 0（required-sections ×2、upstream-coverage ×2、answer-evidence ×1）。全7問の裁定はユーザー承認 2026-08-05T07:56:44Z として questions ファイルへ記録済み（answer-evidence PASSED が「承認」語彙+ISO タイムスタンプの実在を機械確認）。本ステージ中の運用ヒヤリハット2件 — (a) Intent autonomy を full 指示のまま none で走らせた抜けと engine 側ガード不在 (b) formal-model-check の JDK パッチ版ピンが mise のアクティブ JDK 26.0.2 と衝突しローカル実行を塞いだ件 — はいずれも requirements.md の「スコープ外（別 Issue 起票）」7〜9項として Issue 起票候補に確定済みであり、ノルム化は起票先の裁定に委ねるのが既定。投票前に各自で成果物・センサー集計・スコープ外節を独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件では不可",
+      "description": "persist すべき学習候補がある。留保欄にその内容と実在根拠（file:line または実測コマンド出力）を必ず明記すること。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "本ステージに memory 層へ persist すべき新規学習はない。運用ヒヤリハット2件は Issue 起票候補として requirements.md に固定済みで、ノルム化の要否は起票先で判定される。"
+    }
+  ]
+}

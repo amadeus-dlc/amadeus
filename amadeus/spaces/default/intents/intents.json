@@ -953,5 +953,12 @@
     "dirName": "260805-cross-harness-resume",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fd097-c7b1-7ba2-80bd-12e04bfd2051",
+    "slug": "xrev-bug-batch",
+    "dirName": "260805-xrev-bug-batch",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

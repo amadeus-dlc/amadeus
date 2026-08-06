@@ -1,0 +1,46 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "2d40fae8-3fb4-40e6-a3b6-637bd6169905",
+  "outcome": "HARNESS_ERROR",
+  "exitCode": 2,
+  "startedAt": "2026-08-06T06:55:53.284Z",
+  "finishedAt": "2026-08-06T06:55:53.318Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "e252813459ca5e7fc0966af98342df9d52449ff2ff9074cf8663376112ed60aa",
+      "bytes": 1311
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "81c00da00c009c3bbbb295cb2f39e7de76bfd506548ec4dbbd20973da2ae948f",
+      "bytes": 24
+    }
+  ],
+  "partial": true,
+  "errorCode": "ENVIRONMENT_UNAVAILABLE",
+  "errorDetail": "Darwin environment inspection failed",
+  "advisory": {
+    "target": "specs/tla",
+    "specIdentity": "sha256:dce41bec089140c1c453b8d257b5041611650ed49ebacf1aa6c6629aaba499c8",
+    "instance": "1a0f4ad1-01b8-4354-b7b2-4e5b1a918b20"
+  },
+  "sourceProvenance": {
+    "modelPath": "specs/tla/FormalElection.tla",
+    "cfgPath": "specs/tla/FormalElection.cfg",
+    "moduleIdentity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213",
+    "cfgIdentity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b",
+    "moduleSha256": "2c7d6dbfc776858ad7d8c2995a5bff48828e30efa62b30303ea128c4c6cc1f1e",
+    "cfgSha256": "e4d9babd6356c620e06905368eccb406f9548a1849bb9375dc58304a291d8abd"
+  }
+}
