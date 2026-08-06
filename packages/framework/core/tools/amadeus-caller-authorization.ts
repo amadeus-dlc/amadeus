@@ -17,6 +17,11 @@ export const KIMI_SESSION_ENDED_DENY_RELATIVE_PATH = join(
   ".amadeus-sessions",
   "kimi-session-ended-deny",
 );
+export const CURRENT_SESSION_RELATIVE_PATH = join(
+  "amadeus",
+  ".amadeus-sessions",
+  ".current-session",
+);
 
 interface KimiActiveSubagents {
   version: 1;
@@ -125,7 +130,7 @@ export function authorizeMainConductor(
 
   try {
     const currentSessionId = readFileSync(
-      join(projectDir, "amadeus", ".amadeus-sessions", ".current-session"),
+      join(projectDir, CURRENT_SESSION_RELATIVE_PATH),
       "utf-8",
     ).trim();
     if (

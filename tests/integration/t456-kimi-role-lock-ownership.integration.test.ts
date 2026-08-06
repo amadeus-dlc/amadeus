@@ -33,6 +33,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ROLE_LOCK_OWNER_FILE,
   ROLE_LOCK_STALE_MS,
   reclaimRoleMarkerLock,
   runAdapter,
@@ -167,7 +168,7 @@ describe("reclaimRoleMarkerLock refuses to take a lock from a live owner", () =>
     const root = workspace();
     const lockPath = `${markerPathOf(root)}.lock`;
     mkdirSync(lockPath, { recursive: true });
-    writeFileSync(join(lockPath, "owner.json"), `${body}\n`, "utf-8");
+    writeFileSync(join(lockPath, ROLE_LOCK_OWNER_FILE), `${body}\n`, "utf-8");
 
     expect(reclaimRoleMarkerLock(lockPath)).toBe(false);
     ageLockPastStaleWindow(lockPath);
@@ -189,14 +190,18 @@ describe("SessionStart does not seize an in-flight lock", () => {
   test("a lock held by a live owner survives the SessionStart baseline", () => {
     const root = workspace();
     const lockPath = heldLock(root, process.pid);
-    const ownerBefore = readFileSync(join(lockPath, "owner.json"), "utf-8");
+    const ownerBefore = readFileSync(join(lockPath, ROLE_LOCK_OWNER_FILE), "utf-8");
 
     sessionStart(root);
 
     expect(existsSync(lockPath)).toBe(true);
-    expect(readFileSync(join(lockPath, "owner.json"), "utf-8")).toBe(
+    expect(readFileSync(join(lockPath, ROLE_LOCK_OWNER_FILE), "utf-8")).toBe(
       ownerBefore,
     );
+    // The caller-visible outcome: unable to take the lock, SessionStart drops
+    // the baseline instead of writing around the holder — the workspace stays
+    // fail-closed (no marker) rather than half-written.
+    expect(existsSync(markerPathOf(root))).toBe(false);
   });
 
   test("a lock left by a dead owner is reclaimed and the baseline lands", async () => {

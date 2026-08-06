@@ -17,13 +17,13 @@ import { join } from "node:path";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   authorizeMainConductor,
+  CURRENT_SESSION_RELATIVE_PATH,
   KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH,
   KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
   KIMI_SUBAGENT_DENY_RELATIVE_PATH,
 } from "../../packages/framework/core/tools/amadeus-caller-authorization.ts";
 import {
   applySessionTakeover,
-  CURRENT_SESSION_RELATIVE_PATH,
   readSessionTakeoverFacts,
 } from "../../packages/framework/core/tools/amadeus-session-takeover.ts";
 import {

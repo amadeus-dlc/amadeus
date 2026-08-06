@@ -132,10 +132,14 @@ export type KimiRoleMarkerWriter = (
 export const ROLE_LOCK_STALE_MS = 30_000;
 const ROLE_LOCK_RETRIES = 100;
 const ROLE_LOCK_WAIT_MS = 5;
-const ROLE_LOCK_OWNER_FILE = "owner.json";
+export const ROLE_LOCK_OWNER_FILE = "owner.json";
 
 interface RoleLockOwner {
   pid: number;
+  // Diagnostic only: no reclaim branch reads it. Pid-reuse protection is
+  // deliberately left to the mtime backstop — matching startedAt against a
+  // process-table start time is not portable, so the stamp records when the
+  // lock was taken purely for a human inspecting a wedged workspace.
   startedAt: number;
 }
 
@@ -208,22 +212,46 @@ function roleLockOwnerIsAlive(pid: number): boolean {
  * written after mkdir — is fail-safe: the lock stays.
  */
 export function reclaimRoleMarkerLock(lockPath: string): boolean {
-  let mtimeMs: number;
+  // Judging the lock in place and then deleting it would be check-then-act:
+  // between the two, the contested directory can be freed and re-acquired by a
+  // live process, and the delete would then hit the wrong holder. So the
+  // contested path is first claimed by an atomic rename — only one contender
+  // can win it — and every judgement below runs on the private copy this
+  // process now exclusively owns.
+  const displaced = `${lockPath}.reclaim-${process.pid}-${Date.now().toString(36)}`;
   try {
-    mtimeMs = statSync(lockPath).mtimeMs;
+    renameSync(lockPath, displaced);
   } catch {
+    // Absent, or another contender got there first: nothing to reclaim.
     return false;
   }
-  const owner = readRoleLockOwner(lockPath);
-  const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
-  if (!expired && (owner === null || roleLockOwnerIsAlive(owner.pid))) {
-    return false;
+  let reclaimable = false;
+  try {
+    const mtimeMs = statSync(displaced).mtimeMs;
+    const owner = readRoleLockOwner(displaced);
+    const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
+    reclaimable =
+      expired || (owner !== null && !roleLockOwnerIsAlive(owner.pid));
+  } catch {
+    reclaimable = false;
   }
-  // A removal failure propagates: both callers already treat a thrown error as
-  // "the carrier could not be made safe" and fail closed, so swallowing it here
-  // would only hide the one case where the lock genuinely could not be taken.
-  rmSync(lockPath, { recursive: true, force: true });
-  return true;
+  if (reclaimable) {
+    // A removal failure propagates: both callers already treat a thrown error
+    // as "the carrier could not be made safe" and fail closed, so swallowing
+    // it here would only hide the one case where the lock genuinely could not
+    // be taken.
+    rmSync(displaced, { recursive: true, force: true });
+    return true;
+  }
+  // The displaced copy belongs to a live holder — put it back. If the slot was
+  // re-acquired in the interim the restore fails; delete our copy then, since
+  // two directories for one lock is strictly worse than one, and stay denied.
+  try {
+    renameSync(displaced, lockPath);
+  } catch {
+    rmSync(displaced, { recursive: true, force: true });
+  }
+  return false;
 }
 
 function roleMarkerPath(projectDir: string): string {

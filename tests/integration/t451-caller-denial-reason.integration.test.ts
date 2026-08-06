@@ -21,6 +21,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  CURRENT_SESSION_RELATIVE_PATH,
   authorizeMainConductor,
   callerAuthorizationError,
   type CallerDenialReason,
@@ -30,11 +31,6 @@ import {
 } from "../../packages/framework/core/tools/amadeus-caller-authorization.ts";
 
 const MAIN_SESSION = "main-session";
-const CURRENT_SESSION_RELATIVE_PATH = join(
-  "amadeus",
-  ".amadeus-sessions",
-  ".current-session",
-);
 
 const roots: string[] = [];
 let previousHarnessType: string | undefined;

@@ -26,6 +26,7 @@ import {
 import { join } from "node:path";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
+  CURRENT_SESSION_RELATIVE_PATH,
   authorizeMainConductor,
   KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH,
   KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
@@ -53,11 +54,6 @@ const SESSION_START = join(
 );
 const GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const RECOVERED_SESSION = "recovered-session";
-const CURRENT_SESSION_RELATIVE_PATH = join(
-  "amadeus",
-  ".amadeus-sessions",
-  ".current-session",
-);
 
 const roots: string[] = [];
 let previousHarnessType: string | undefined;

@@ -6393,5 +6393,27 @@
     },
     "reason": "These lines are the multiline TypeScript parameter type of isBotAuthor; the body is covered directly by t447 but Bun stamps the type-only signature lines 0 under the merged-suite union (bun-multiline-arg-da0).",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:50b83672a1ce2bc04c6e20e052de6cadcefb21d4ea662753c78c035be3d0202c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t455 and end-to-end by t453. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleSessionTakeover",
+      "fingerprint": "sha256:b1d52ebe1af2d96a8928cc143cfa98a8308407cfc12357f0ba1062876bc24324",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive echo inside handleSessionTakeover: reached only if applySessionTakeover succeeded yet authorizeMainConductor still denies, which no reachable filesystem state produces (apply writes exactly the faces the guard reads, and a write failure throws before this line). Message-string line where a refactor is unnatural — spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the takeover guard echo becomes reachable through an injectable seam"
   }
 ]

@@ -35,15 +35,10 @@ import {
   KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH,
   KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
   KIMI_SUBAGENT_DENY_RELATIVE_PATH,
+  CURRENT_SESSION_RELATIVE_PATH,
   parseActiveSubagents,
   SESSION_TAKEOVER_VERB,
 } from "./amadeus-caller-authorization.ts";
-
-export const CURRENT_SESSION_RELATIVE_PATH = join(
-  "amadeus",
-  ".amadeus-sessions",
-  ".current-session",
-);
 
 /** What the operator asked for, parsed but not yet judged. */
 export type SessionTakeoverRequest = {
