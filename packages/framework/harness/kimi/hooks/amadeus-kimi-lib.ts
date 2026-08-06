@@ -211,76 +211,91 @@ function roleLockOwnerIsAlive(pid: number): boolean {
  * Every other state — a live owner inside the window, an owner file not yet
  * written after mkdir — is fail-safe: the lock stays.
  *
- * `fs` is an injection seam for the failure arms below: the interleavings
- * they guard against (a contender refilling the slot between our rename and
- * the restore, a stat failing on our own private copy) cannot be produced
+ * The canonical lock directory is NEVER moved or vacated here: `mkdirSync` on
+ * that path IS the mutual exclusion, so displacing a live lock (even briefly,
+ * to judge a private copy) would let a competing acquirer succeed while the
+ * displaced owner is still inside its operation(). Instead, reclaim itself is
+ * serialised through a sibling guard directory: whoever holds the guard is the
+ * only process allowed to judge-and-delete, so the check and the removal can
+ * no longer interleave with another reclaimer. An acquirer racing the guarded
+ * removal only ever sees the canonical path absent (after rmSync) or present
+ * (before) — never a judged-then-swapped directory, because nothing but this
+ * guarded path deletes a lock it did not judge.
+ *
+ * The guard carries the same mtime backstop as the lock: a reclaimer that
+ * crashes while holding it must not wedge reclaim (and with it the workspace)
+ * forever.
+ *
+ * `fs` is an injection seam: the failure interleavings the arms below guard
+ * against (a contended guard, a stat failing mid-judgement) cannot be staged
  * deterministically through the real filesystem. Production callers use the
  * default; tests substitute throwing fakes (construction rule: seams are
  * ports, fakes live test-side).
  */
 export interface RoleLockFsPort {
+  mkdirSync: typeof mkdirSync;
   statSync: typeof statSync;
-  renameSync: typeof renameSync;
   rmSync: typeof rmSync;
 }
 
-const REAL_ROLE_LOCK_FS: RoleLockFsPort = { statSync, renameSync, rmSync };
+const REAL_ROLE_LOCK_FS: RoleLockFsPort = { mkdirSync, statSync, rmSync };
+
+export const ROLE_LOCK_RECLAIM_GUARD_SUFFIX = ".reclaim-guard";
+
+function reapExpiredReclaimGuard(guardPath: string, fs: RoleLockFsPort): void {
+  let mtimeMs: number;
+  try {
+    mtimeMs = fs.statSync(guardPath).mtimeMs;
+  } catch {
+    // Already gone — the holder released it between our mkdir failing and now.
+    return;
+  }
+  if (Date.now() - mtimeMs > ROLE_LOCK_STALE_MS) {
+    fs.rmSync(guardPath, { recursive: true, force: true });
+  }
+}
 
 export function reclaimRoleMarkerLock(
   lockPath: string,
   fs: RoleLockFsPort = REAL_ROLE_LOCK_FS,
 ): boolean {
-  // Judging the lock in place and then deleting it would be check-then-act:
-  // between the two, the contested directory can be freed and re-acquired by a
-  // live process, and the delete would then hit the wrong holder. So the
-  // contested path is first claimed by an atomic rename — only one contender
-  // can win it — and every judgement below runs on the private copy this
-  // process now exclusively owns.
-  const displaced = `${lockPath}.reclaim-${process.pid}-${Date.now().toString(36)}`;
+  const guardPath = `${lockPath}${ROLE_LOCK_RECLAIM_GUARD_SUFFIX}`;
   try {
-    fs.renameSync(lockPath, displaced);
+    fs.mkdirSync(guardPath);
   } catch {
-    // Absent, or another contender got there first: nothing to reclaim.
+    // Another reclaimer is judging right now (or a crashed one left its guard
+    // behind — reap it past the backstop so a later attempt can proceed).
+    // Either way THIS attempt stays fail-safe and reports the lock kept.
+    reapExpiredReclaimGuard(guardPath, fs);
     return false;
   }
-  let reclaimable: boolean;
   try {
-    const mtimeMs = fs.statSync(displaced).mtimeMs;
-    const owner = readRoleLockOwner(displaced);
-    const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
-    reclaimable =
-      expired || (owner !== null && !roleLockOwnerIsAlive(owner.pid));
-  } catch (cause) {
-    // Judging our own private copy failed — that is not a "keep the lock"
-    // verdict but an inability to reach one. Put the lock back (surrendering
-    // the copy if the slot was refilled) and propagate: both callers treat a
-    // throw as "the carrier could not be made safe" and fail closed.
+    let mtimeMs: number;
     try {
-      fs.renameSync(displaced, lockPath);
+      mtimeMs = fs.statSync(lockPath).mtimeMs;
     } catch {
-      fs.rmSync(displaced, { recursive: true, force: true });
-      throw cause;
+      // No lock to reclaim.
+      return false;
     }
-    throw cause;
-  }
-  if (reclaimable) {
-    // A removal failure propagates: both callers already treat a thrown error
-    // as "the carrier could not be made safe" and fail closed, so swallowing
-    // it here would only hide the one case where the lock genuinely could not
-    // be taken.
-    fs.rmSync(displaced, { recursive: true, force: true });
+    const owner = readRoleLockOwner(lockPath);
+    const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
+    if (!expired && (owner === null || roleLockOwnerIsAlive(owner.pid))) {
+      return false;
+    }
+    // Only the guard holder deletes, and only what it just judged. On the
+    // dead-owner ground nothing can vacate-and-refill the canonical path
+    // between the judgement and this removal (the owner has no process and
+    // other reclaimers are excluded by the guard). The mtime backstop retains
+    // the one inherent residual of any staleness override: an owner that IS
+    // alive past the window could release and be replaced in this gap — that
+    // is the price of not letting a recycled pid wedge the lock forever. A
+    // removal failure propagates — both callers treat a thrown error as "the
+    // carrier could not be made safe" and fail closed.
+    fs.rmSync(lockPath, { recursive: true, force: true });
     return true;
+  } finally {
+    fs.rmSync(guardPath, { recursive: true, force: true });
   }
-  // The displaced copy belongs to a live holder — put it back. If the slot was
-  // re-acquired in the interim the restore fails; delete our copy then, since
-  // two directories for one lock is strictly worse than one, and stay denied.
-  try {
-    fs.renameSync(displaced, lockPath);
-  } catch {
-    fs.rmSync(displaced, { recursive: true, force: true });
-    return false;
-  }
-  return false;
 }
 
 function roleMarkerPath(projectDir: string): string {
