@@ -129,9 +129,102 @@ export type KimiRoleMarkerWriter = (
   marker: KimiRoleMarker,
 ) => void;
 
-const ROLE_LOCK_STALE_MS = 30_000;
+export const ROLE_LOCK_STALE_MS = 30_000;
 const ROLE_LOCK_RETRIES = 100;
 const ROLE_LOCK_WAIT_MS = 5;
+const ROLE_LOCK_OWNER_FILE = "owner.json";
+
+interface RoleLockOwner {
+  pid: number;
+  startedAt: number;
+}
+
+/**
+ * Stamp the holder of a freshly created lock directory. The directory itself is
+ * still the mutual-exclusion primitive (mkdir is atomic); this file only names
+ * who holds it, so a would-be reclaimer can ask whether that holder still
+ * exists instead of assuming.
+ *
+ * Throws on failure rather than leaving the lock unattributed: an unstamped
+ * lock can only be reclaimed by the 30s mtime backstop, so holding one while
+ * pretending the stamp succeeded would trade a write error for a workspace
+ * that wedges. The caller releases the lock and stays fail-closed.
+ */
+export function writeRoleLockOwner(lockPath: string, pid = process.pid): void {
+  writeFileSync(
+    join(lockPath, ROLE_LOCK_OWNER_FILE),
+    `${JSON.stringify({ pid, startedAt: Date.now() } satisfies RoleLockOwner)}\n`,
+    "utf-8",
+  );
+}
+
+function readRoleLockOwner(lockPath: string): RoleLockOwner | null {
+  try {
+    const parsed: unknown = JSON.parse(
+      readFileSync(join(lockPath, ROLE_LOCK_OWNER_FILE), "utf-8"),
+    );
+    const pid = (parsed as { pid?: unknown }).pid;
+    const startedAt = (parsed as { startedAt?: unknown }).startedAt;
+    if (
+      typeof pid !== "number" ||
+      !Number.isSafeInteger(pid) ||
+      pid <= 0 ||
+      typeof startedAt !== "number"
+    ) {
+      return null;
+    }
+    return { pid, startedAt };
+  } catch {
+    return null;
+  }
+}
+
+// `kill(pid, 0)` performs the permission and existence checks without sending a
+// signal. ESRCH is the only answer that proves absence: EPERM means the process
+// exists under another user, and any other failure is treated as "still there"
+// so an unknown errno can never license a seizure.
+function roleLockOwnerIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (cause) {
+    return (cause as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+/**
+ * Reclaim a role-marker lock, and report whether it was actually taken.
+ *
+ * Two independent grounds, and nothing else:
+ *  - the recorded owner is observably gone. This is the reason ownership was
+ *    introduced: a lock left by a killed process is fresh by mtime, and the
+ *    retry budget (ROLE_LOCK_RETRIES x ROLE_LOCK_WAIT_MS) is two orders of
+ *    magnitude short of ROLE_LOCK_STALE_MS, so before this the workspace simply
+ *    latched denied until the window elapsed.
+ *  - the mtime backstop expired. Kept because a pid can be recycled: an owner
+ *    that merely *looks* alive must not be able to wedge the lock forever.
+ *
+ * Every other state — a live owner inside the window, an owner file not yet
+ * written after mkdir — is fail-safe: the lock stays.
+ */
+export function reclaimRoleMarkerLock(lockPath: string): boolean {
+  let mtimeMs: number;
+  try {
+    mtimeMs = statSync(lockPath).mtimeMs;
+  } catch {
+    return false;
+  }
+  const owner = readRoleLockOwner(lockPath);
+  const expired = Date.now() - mtimeMs > ROLE_LOCK_STALE_MS;
+  if (!expired && (owner === null || roleLockOwnerIsAlive(owner.pid))) {
+    return false;
+  }
+  // A removal failure propagates: both callers already treat a thrown error as
+  // "the carrier could not be made safe" and fail closed, so swallowing it here
+  // would only hide the one case where the lock genuinely could not be taken.
+  rmSync(lockPath, { recursive: true, force: true });
+  return true;
+}
 
 function roleMarkerPath(projectDir: string): string {
   return join(projectDir, KIMI_ROLE_MARKER_RELATIVE_PATH);
@@ -160,18 +253,18 @@ function withRoleMarkerLock(
     } catch (cause) {
       const code = (cause as NodeJS.ErrnoException).code;
       if (code !== "EEXIST") return false;
-      try {
-        if (Date.now() - statSync(lockPath).mtimeMs > ROLE_LOCK_STALE_MS) {
-          rmSync(lockPath, { recursive: true, force: true });
-          continue;
-        }
-      } catch {
-        continue;
-      }
+      // A reclaimed lock is retried at once — the whole point of tracking the
+      // owner is not to spend the (far too short) retry budget waiting out a
+      // lock nobody holds.
+      if (reclaimRoleMarkerLock(lockPath)) continue;
       Bun.sleepSync(ROLE_LOCK_WAIT_MS);
       continue;
     }
+    // The stamp shares operation()'s try/finally so a failed stamp releases the
+    // lock instead of leaking an unattributable one, and reaches the caller's
+    // fail-closed path exactly as an operation() error does.
     try {
+      writeRoleLockOwner(lockPath);
       operation();
       return true;
     } finally {
@@ -241,14 +334,16 @@ function establishKimiMainBaseline(
   const normalizedSessionId = sessionId.trim();
   try {
     mkdirSync(dirname(markerPath), { recursive: true });
-    // SessionStart is a fresh-session boundary: no role-marker operation from
-    // the previous session can still be in flight, so a lock directory found
-    // here is residue from a killed process, not contention. Left in place it
-    // survives the stale-mtime window only long enough to make withRoleMarkerLock
-    // below give up, which drops the baseline and leaves the workspace denied
-    // with no in-band way out — the automatic recovery layer would then fail
-    // exactly on the case it exists for.
-    rmSync(`${markerPath}.lock`, { recursive: true, force: true });
+    // A lock found here is USUALLY residue from a killed session, and clearing
+    // it is what lets the baseline below land instead of giving up and leaving
+    // the workspace denied with no in-band way out. But "usually" is not a
+    // licence: another Kimi process in this same project dir can be inside
+    // withRoleMarkerLock's operation() right now, and deleting its lock would
+    // let this baseline write interleave with that in-flight read-modify-write
+    // of the same carrier. So the residue case is not assumed, it is checked —
+    // reclaimRoleMarkerLock only takes the lock when its owner is observably
+    // gone (or the mtime backstop expired), and a live owner keeps it.
+    reclaimRoleMarkerLock(`${markerPath}.lock`);
     if (normalizedSessionId.length === 0) {
       unlinkSync(markerPath);
       return;

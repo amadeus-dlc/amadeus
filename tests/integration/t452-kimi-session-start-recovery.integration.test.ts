@@ -16,7 +16,13 @@
 // case proves the shipped recovery path and not a fixture.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
@@ -25,7 +31,11 @@ import {
   KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
   KIMI_SUBAGENT_DENY_RELATIVE_PATH,
 } from "../../packages/framework/core/tools/amadeus-caller-authorization.ts";
-import { runAdapter } from "../../packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts";
+import {
+  ROLE_LOCK_STALE_MS,
+  runAdapter,
+  writeRoleLockOwner,
+} from "../../packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts";
 import {
   AMADEUS_SRC,
   createTestProject,
@@ -173,25 +183,53 @@ describe("Kimi SessionStart recovers every carrier denial reason (FR-3)", () => 
     expect(authorizeMainConductor(root)).toEqual({ kind: "authorized" });
   });
 
-  test("a residual role-marker lock recovers to authorized", () => {
-    // A lock directory outlives the process that made it whenever a session is
-    // killed mid-write. SessionStart is a fresh-session boundary — no operation
-    // from the previous session can still be in flight — so the retained lock
-    // must not survive it, or the workspace stays denied with no in-band way
-    // out (requirements FR-3, the named gap).
+  // REVISED CONTRACT. This case used to assert that SessionStart clears ANY
+  // lock directory it finds, on the premise that a fresh-session boundary can
+  // have nothing in flight. That premise is false when a second Kimi process in
+  // the same project dir is inside a role-marker operation, so the lock is now
+  // owner-stamped and only reclaimed when the owner is observably gone (t456).
+  //
+  // FR-3's promise is unchanged and still pinned here — a lock left by a killed
+  // session must not leave the workspace denied — but it is now closed by the
+  // owner check rather than by an unconditional delete. The two shapes a
+  // residual lock can take are pinned separately below.
+  test("a residual lock left by a dead owner recovers to authorized", async () => {
     const root = freshProject();
     seedCoherentCarrier(root, "kimi-previous-session");
-    const lockPath = join(
-      root,
-      `${KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH}.lock`,
-    );
+    const lockPath = join(root, `${KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH}.lock`);
     mkdirSync(lockPath, { recursive: true });
+    const child = Bun.spawn([process.execPath, "-e", "process.exit(0)"], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    const deadPid = child.pid;
+    await child.exited;
+    writeRoleLockOwner(lockPath, deadPid);
     expect(authorizeMainConductor(root)).toEqual({
       kind: "denied",
       reason: "deny-latch",
       role: "unknown",
     });
 
+    fireSessionStart(root);
+    expect(existsSync(lockPath)).toBe(false);
+    expect(authorizeMainConductor(root)).toEqual({ kind: "authorized" });
+  });
+
+  // An unstamped lock is the narrow window between mkdir and the owner write,
+  // and any lock left by a pre-ownership build. It cannot be attributed, so it
+  // is held until the mtime backstop expires — fail-safe first, then recovered.
+  test("an unstamped residual lock recovers once the mtime backstop expires", () => {
+    const root = freshProject();
+    seedCoherentCarrier(root, "kimi-previous-session");
+    const lockPath = join(root, `${KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH}.lock`);
+    mkdirSync(lockPath, { recursive: true });
+
+    fireSessionStart(root);
+    expect(existsSync(lockPath)).toBe(true);
+
+    const past = (Date.now() - ROLE_LOCK_STALE_MS * 2) / 1000;
+    utimesSync(lockPath, past, past);
     fireSessionStart(root);
     expect(existsSync(lockPath)).toBe(false);
     expect(authorizeMainConductor(root)).toEqual({ kind: "authorized" });

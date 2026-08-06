@@ -49,13 +49,16 @@ export type MainConductorAuthorization =
   | { kind: "authorized" }
   | MainConductorDenial;
 
+/** The part of a denial the operator-facing message needs. */
+export type CallerDenialSummary = Pick<MainConductorDenial, "reason" | "role">;
+
 // Denials that cannot name a role still carry one, so the pre-existing
 // operator-facing sentence keeps its shape; the reason is the new signal.
 function denied(reason: CallerDenialReason, role = "unknown"): MainConductorDenial {
   return { kind: "denied", reason, role };
 }
 
-function parseActiveSubagents(raw: string): KimiActiveSubagents | null {
+export function parseActiveSubagents(raw: string): KimiActiveSubagents | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (
@@ -165,18 +168,15 @@ function takeoverCommand(): string {
 // harness type through the environment also lifts the guard, but it does so by
 // disabling the authorization boundary rather than repairing the carrier, so it
 // is never offered here as a recovery route.
-export function callerAuthorizationError(denial: {
-  reason: CallerDenialReason;
-  role: string;
-}): string {
+export function callerAuthorizationError(denial: CallerDenialSummary): string {
   const rolesHint = denial.reason === "active-role"
     ? ` Because a role is still active, the takeover additionally requires --confirm-roles "${denial.role}" so the retained role is acknowledged rather than silently seized.`
     : "";
-  return (
-    `Amadeus mutation denied: Kimi caller role "${denial.role}" is not the main conductor. ` +
-    "The workflow state and audit log were not changed.\n" +
-    `Cause (${denial.reason}): ${DENIAL_CAUSE[denial.reason]}.\n` +
-    "Recovery: restart this Kimi session so SessionStart re-establishes the main-conductor carrier. " +
-    `If restarting is not possible, ask the human to confirm and then run \`${takeoverCommand()}\`.${rolesHint}`
-  );
+  // Each segment is bound on its own line rather than concatenated across
+  // lines: bun's lcov leaves the continuation lines of a multi-line `+` chain
+  // at DA:0 under union merge, which reads as an untested message.
+  const denied = `Amadeus mutation denied: Kimi caller role "${denial.role}" is not the main conductor. The workflow state and audit log were not changed.`;
+  const cause = `Cause (${denial.reason}): ${DENIAL_CAUSE[denial.reason]}.`;
+  const recovery = `Recovery: restart this Kimi session so SessionStart re-establishes the main-conductor carrier. If restarting is not possible, ask the human to confirm and then run \`${takeoverCommand()}\`.`;
+  return `${denied}\n${cause}\n${recovery}${rolesHint}`;
 }

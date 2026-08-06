@@ -211,6 +211,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t45-revision-loop.test.ts",
     "integration/t452-kimi-session-start-recovery.integration.test.ts",
     "integration/t453-session-takeover.integration.test.ts",
+    "integration/t455-session-takeover-seam.integration.test.ts",
     "integration/t46-parallel-bolt.test.ts",
     "integration/t47-failure-injection.test.ts",
     "integration/t48-runtime-graph-end-to-end.test.ts",

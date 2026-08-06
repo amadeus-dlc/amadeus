@@ -36,7 +36,7 @@
       "scope": 15,
       "stage": 8,
       "hook": 14,
-      "subcommand": 83,
+      "subcommand": 84,
       "render-surface": 7
     }
   },
@@ -6670,8 +6670,13 @@
       "unitClass": "subcommand",
       "unitId": "amadeus-state session-takeover",
       "minMechanism": "cli",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t453-session-takeover.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "subcommand",

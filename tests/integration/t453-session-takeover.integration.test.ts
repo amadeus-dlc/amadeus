@@ -1,4 +1,4 @@
-// covers: tool:amadeus-state:session-takeover, function:handleSessionTakeover,
+// covers: subcommand:amadeus-state:session-takeover, function:handleSessionTakeover,
 //         function:planSessionTakeover, function:authorizeMainConductor
 // size: medium
 //
@@ -192,25 +192,36 @@ function writeCarrierFile(root: string, relative: string, body: string): void {
   writeFileSync(join(root, relative), body, "utf-8");
 }
 
+// Every break reason is handled explicitly and an unknown one throws: a
+// fall-through default would let a typo in a `test.each` table silently run the
+// deny-latch case while claiming to cover another reason.
 function breakCarrier(root: string, reason: string): void {
-  if (reason === "marker-absent") {
-    rmSync(join(root, KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH), { force: true });
-    return;
+  switch (reason) {
+    case "marker-absent":
+      rmSync(join(root, KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH), { force: true });
+      return;
+    case "session-mismatch":
+      writeCarrierFile(
+        root,
+        CURRENT_SESSION_RELATIVE_PATH,
+        "claude-code-session\n",
+      );
+      return;
+    case "deny-latch":
+      writeCarrierFile(
+        root,
+        KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
+        "session-ended\n",
+      );
+      writeCarrierFile(
+        root,
+        KIMI_SUBAGENT_DENY_RELATIVE_PATH,
+        "session-ended\n",
+      );
+      return;
+    default:
+      throw new Error(`breakCarrier: unknown denial reason "${reason}"`);
   }
-  if (reason === "session-mismatch") {
-    writeCarrierFile(
-      root,
-      CURRENT_SESSION_RELATIVE_PATH,
-      "claude-code-session\n",
-    );
-    return;
-  }
-  writeCarrierFile(
-    root,
-    KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
-    "session-ended\n",
-  );
-  writeCarrierFile(root, KIMI_SUBAGENT_DENY_RELATIVE_PATH, "session-ended\n");
 }
 
 function retainRole(root: string, role: string): void {
@@ -361,6 +372,45 @@ describe("session-takeover records what it achieved (FR-4d)", () => {
     expect(audit).toContain("RECOVERY_COMPLETED");
     expect(audit).toContain("session-takeover");
     expect(audit).toContain("session-mismatch");
+  });
+});
+
+describe("session-takeover binds the session the operator names (FR-4e)", () => {
+  test("--session-id is written to the carrier and authorizes this caller", () => {
+    const root = freshWorkflow();
+    mintHumanTurn(root);
+    breakCarrier(root, "marker-absent");
+
+    const result = takeover(root, [
+      "--confirm",
+      "--session-id",
+      "operator-chosen-session",
+    ]);
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout).session_id).toBe("operator-chosen-session");
+    expect(
+      JSON.parse(
+        readFileSync(join(root, KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH), "utf-8"),
+      ).mainSessionId,
+    ).toBe("operator-chosen-session");
+    expect(
+      readFileSync(join(root, CURRENT_SESSION_RELATIVE_PATH), "utf-8").trim(),
+    ).toBe("operator-chosen-session");
+    expect(authorizeMainConductor(root)).toEqual({ kind: "authorized" });
+  });
+
+  // A value-less flag used to be dropped on the floor, so the verb rebound the
+  // HOST-stamped session while reporting exit 0 — a different session than the
+  // operator named, reported as success.
+  test("a --session-id with no value is refused, not silently dropped", () => {
+    const root = freshWorkflow();
+    mintHumanTurn(root);
+    breakCarrier(root, "marker-absent");
+
+    const refused = takeover(root, ["--confirm", "--session-id"]);
+    expect(refused.code).not.toBe(0);
+    expect(refused.stdout || refused.stderr).toContain("--session-id");
+    expect(authorizeMainConductor(root).kind).toBe("denied");
   });
 });
 

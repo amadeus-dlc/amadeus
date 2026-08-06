@@ -143,6 +143,7 @@ import {
 } from "./amadeus-caller-authorization.ts";
 import {
   applySessionTakeover,
+  parseSessionTakeoverArgs,
   planSessionTakeover,
   readSessionTakeoverFacts,
 } from "./amadeus-session-takeover.ts";
@@ -905,7 +906,7 @@ function trustedHostSessionId(): string | undefined {
     : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }
 
-function enforceCallerAuthorization(subcommand: string | undefined): void {
+export function enforceCallerAuthorization(subcommand: string | undefined): void {
   // Only read-only subcommands pass through. On denial, do not use error():
   // writing ERROR_LOGGED would change the state/audit bytes, violating the
   // invariant that a denial leaves both untouched, so write to stderr and exit.
@@ -4312,23 +4313,13 @@ function humanTurnGroundsTakeover(projectDir: string): boolean {
 // Refusals happen before any write, and the audit row is emitted only after the
 // guard itself confirms the rebind took — the event records what was achieved,
 // never what was attempted.
-function handleSessionTakeover(args: string[]): void {
+export function handleSessionTakeover(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
-  let confirmed = false;
-  let confirmedRoles: string[] | null = null;
-  let sessionId: string | null = null;
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--confirm") confirmed = true;
-    else if (args[i] === "--confirm-roles" && i + 1 < args.length) {
-      confirmedRoles = (args[++i] ?? "").split(",").map((role) => role.trim())
-        .filter((role) => role.length > 0);
-    } else if (args[i] === "--session-id" && i + 1 < args.length) {
-      sessionId = args[++i] ?? null;
-    }
-  }
+  const parse = parseSessionTakeoverArgs(args);
+  if (parse.kind === "invalid") error(parse.message);
 
   const decision = planSessionTakeover(
-    { confirmed, confirmedRoles, sessionId },
+    parse.request,
     readSessionTakeoverFacts(pd, humanTurnGroundsTakeover(pd)),
   );
   if (decision.kind === "refused") error(decision.message);
@@ -4345,9 +4336,9 @@ function handleSessionTakeover(args: string[]): void {
   applySessionTakeover(pd, decision.sessionId);
   const achieved = authorizeMainConductor(pd);
   if (achieved.kind !== "authorized") {
-    error(
-      `${SESSION_TAKEOVER_VERB} rewrote the carrier but the guard still denies this caller (${achieved.reason}). No recovery was recorded.`,
-    );
+    // One line: bun's lcov leaves the continuation lines of a multi-line call
+    // at DA:0, which would read as an untested arm rather than a defensive one.
+    error(`${SESSION_TAKEOVER_VERB} rewrote the carrier but the guard still denies this caller (${achieved.reason}). No recovery was recorded.`);
   }
 
   const currentStage = getField(readStateFile(pd), "Current Stage") || "unknown";
