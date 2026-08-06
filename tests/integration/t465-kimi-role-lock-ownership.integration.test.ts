@@ -371,3 +371,30 @@ describe("reclaim is serialised by a guard and never vacates the canonical path"
     expect(existsSync(guardOf(lockPath))).toBe(false);
   });
 });
+
+describe("a guard that vanishes mid-reap is simply gone", () => {
+  test("a released guard between the failed claim and the reap stat stays fail-safe", async () => {
+    const root = workspace();
+    const lockPath = heldLock(root, await reapedPid());
+    const guardPath = `${lockPath}${ROLE_LOCK_RECLAIM_GUARD_SUFFIX}`;
+    mkdirSync(guardPath);
+
+    const taken = reclaimRoleMarkerLock(lockPath, {
+      mkdirSync,
+      rmSync,
+      // The holder released the guard between our mkdir failing and this stat:
+      // nothing to reap, nothing to reclaim on THIS attempt.
+      statSync: ((target: string) => {
+        if (target === guardPath) {
+          const gone = new Error("ENOENT") as NodeJS.ErrnoException;
+          gone.code = "ENOENT";
+          throw gone;
+        }
+        return statSync(target);
+      }) as unknown as typeof statSync,
+    });
+
+    expect(taken).toBe(false);
+    expect(existsSync(lockPath)).toBe(true);
+  });
+});
