@@ -29,11 +29,6 @@ export const EVIDENCE_BUNDLE_PATHS = [
   EVIDENCE_REGISTRY_PATH,
   EVIDENCE_RUNS_PATH,
 ] as const;
-export const RECONCILE_LEDGER_PATHS = [
-  "tests/no-silent-drop/baseline.json",
-  "tests/no-silent-drop/exemptions.json",
-] as const;
-
 export type RebindCounts = {
   registryRevisions: number;
   manifestRevisions: number;
@@ -408,32 +403,9 @@ export function buildReboundBundle(repositoryRoot: string, requestedTarget: stri
 }
 
 export function buildReconcileBundle(repositoryRoot: string, requestedTarget: string): ReboundBundle {
-  const evidenceBundle = buildReboundBundle(repositoryRoot, requestedTarget);
-  if (!evidenceBundle.changed) return evidenceBundle;
-  const ledgerBytes = readPathBytes(repositoryRoot, RECONCILE_LEDGER_PATHS);
-  const originalBytes = new Map([...evidenceBundle.originalBytes, ...ledgerBytes]);
-  const candidateBytes = new Map(evidenceBundle.candidateBytes);
-
-  const baselineBytes = ledgerBytes.get(RECONCILE_LEDGER_PATHS[0]) as Buffer;
-  const baseline = parseJson(baselineBytes, RECONCILE_LEDGER_PATHS[0]);
-  record(baseline.generatedFrom, `${RECONCILE_LEDGER_PATHS[0]}.generatedFrom`).previousDigest = sha256(baselineBytes);
-  candidateBytes.set(RECONCILE_LEDGER_PATHS[0], jsonBytes(baseline));
-
-  const exemptionsBytes = ledgerBytes.get(RECONCILE_LEDGER_PATHS[1]) as Buffer;
-  const exemptions = parseJson(exemptionsBytes, RECONCILE_LEDGER_PATHS[1]);
-  exemptions.previousDigest = sha256(exemptionsBytes);
-  candidateBytes.set(RECONCILE_LEDGER_PATHS[1], jsonBytes(exemptions));
-
-  const paths = [...EVIDENCE_BUNDLE_PATHS, ...RECONCILE_LEDGER_PATHS]
-    .filter((path) => !originalBytes.get(path)?.equals(candidateBytes.get(path) as Buffer))
-    .sort();
-  return {
-    ...evidenceBundle,
-    changed: paths.length > 0,
-    paths,
-    originalBytes,
-    candidateBytes,
-  };
+  // Evidence revision rebind only. Ledger custody is append-only event files (#2338);
+  // there is no previousDigest field left to ratchet.
+  return buildReboundBundle(repositoryRoot, requestedTarget);
 }
 
 function validateCandidateBundle(

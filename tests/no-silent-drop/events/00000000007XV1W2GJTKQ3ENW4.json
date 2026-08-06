@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "00000000007XV1W2GJTKQ3ENW4",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "722b53d4267915686110b751943f2863363612aef6f8d3d0a755a427c96521e4",
+  "ruleId": "NSD001",
+  "file": "packages/framework/core/otel/resource-suppliers.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

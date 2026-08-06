@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000000FH6G6YXNZZD5B3PJ",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "23b9fc09335b15dc6befdad64ac974be407545628e999da5d8817186a55677d4",
+  "ruleId": "NSD001",
+  "file": "scripts/mirror-docs-contract.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}
