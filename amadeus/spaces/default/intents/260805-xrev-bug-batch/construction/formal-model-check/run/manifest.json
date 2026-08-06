@@ -1,0 +1,52 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "66bffd4f-2614-48da-ad0b-4715c773fc7c",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-06T06:59:03.760Z",
+  "finishedAt": "2026-08-06T07:01:13.597Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "7d4e463259810c4406b19d2f34170b14f924ac5871f08d2112159813c969edc0",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "f596f7e132ee9cfb3899a95948f1f83fd617060436c1f3ecf2cd13aee1346e28",
+      "bytes": 4029
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "d1571c44c0ab84dfb5aa2a900696d6153400ac1331cbe69de5726664d701363c",
+      "bytes": 74
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": {
+    "target": "specs/tla",
+    "specIdentity": "sha256:dce41bec089140c1c453b8d257b5041611650ed49ebacf1aa6c6629aaba499c8",
+    "instance": "1a0f4ad1-01b8-4354-b7b2-4e5b1a918b20"
+  },
+  "sourceProvenance": {
+    "modelPath": "specs/tla/FormalElection.tla",
+    "cfgPath": "specs/tla/FormalElection.cfg",
+    "moduleIdentity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213",
+    "cfgIdentity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b",
+    "moduleSha256": "2c7d6dbfc776858ad7d8c2995a5bff48828e30efa62b30303ea128c4c6cc1f1e",
+    "cfgSha256": "e4d9babd6356c620e06905368eccb406f9548a1849bb9375dc58304a291d8abd"
+  }
+}

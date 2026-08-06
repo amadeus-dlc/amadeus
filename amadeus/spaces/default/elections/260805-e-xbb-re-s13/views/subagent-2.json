@@ -1,0 +1,19 @@
+{
+  "electionId": "E-XBB-RE-S13",
+  "voter": "subagent-2",
+  "question": "intent 260805-xrev-bug-batch の reverse-engineering ステージについて、§13 学習選定を「0件」（memory 層へ persist する学習なし）で確定してよいか。確定出力: `bun .claude/tools/amadeus-learnings.ts surface --slug reverse-engineering` → {\"memory_entries_total\":0,\"candidates\":[],\"parked_open_questions\":[]}。実測: 成果物は宣言10パスのみ（codekb 9件更新 + re-scans/260805-xrev-bug-batch.md 新設、git status --porcelain で確認、engine 所有の intents.json と record dir を除く）。センサーは SENSOR_PASSED 18 / SENSOR_FAILED 0（required-sections × 9、upstream-coverage × 9）。answer-evidence は filter `**/*-questions.md` 不適合の matches-rejection で、RE に questions ファイルは存在しないため失敗ではない。スキャンは base b938898f364160d4b5857e153579b40b5ab18372 → observed 1043b7e67857494f38a4c9020709528e859c641b の 28 commits diff-refresh。適用した既存ノルムは c1 / c1-xrev-scan-mode / c2-observed-mainline-commit / c3 / c3-relabel / c4 / measurement-ref-in-artifacts で、いずれも既存の再適用であり新規知見ではない。逸脱・ヒヤリハットはゼロ（サブエージェントの engine mutation 違反なし、宣言外パスへの書込なし）。投票前に各自で成果物とセンサー集計を独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件では不可",
+      "description": "persist すべき学習候補がある。留保欄にその内容と実在根拠（file:line または実測コマンド出力）を必ず明記すること。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "本ステージに memory 層へ persist すべき新規学習はない。適用したノルムはすべて既存 cid の再適用であり、新しい知見は生じていない。"
+    }
+  ]
+}

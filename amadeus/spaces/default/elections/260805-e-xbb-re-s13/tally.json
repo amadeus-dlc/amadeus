@@ -1,0 +1,45 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T07:06:29Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-XBB-RE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "engine の candidates=[] は stage diary が完全な素テンプレート(Interpretations/Deviations/Tradeoffs/Open questions すべて例示コメントのみ)であることの反映にすぎず、それ単独では学習不在の監査にならない — 私は成果物側を独立に読んで新規知見の不在を確認したうえで賛成する。",
+      "rationale": "独立実測: (1) git status --porcelain = codekb 9件 M + re-scans/260805-xrev-bug-batch.md 新設のみ、他は engine 所有の intents.json / elections.json / record dir・選挙 dir で、宣言外パスへの書込ゼロ。(2) SENSOR_PASSED 18 / SENSOR_FAILED 0(9成果物 × required-sections + upstream-coverage)。(3) learnings surface --slug reverse-engineering = memory_entries_total 0 / candidates [] / parked_open_questions []。(4) base b938898f3 は HEAD の祖先(merge-base --is-ancestor exit 0)、observed 1043b7e67 = git rev-parse HEAD 一致、区間 28 commits(git rev-list --count)。(5) 唯一の境界候補「レビュー target SHA 8409c2039 != observed のため免除を主張せず、患部9パスの区間 diff 空実測 + Architect の verbatim 実読で currency を確定」は、既存 cid:reverse-engineering:c1-xrev-single-issue(E-OBB5-RES13 の免除条件と touch 単独免除の禁止)・upstream-cite-reresolve-on-shift・cite-shift-vs-nonshift-separation が既に規定する再解決義務の正しい履行であり新規知見ではない。RE センサーの実発火と answer-evidence 非適用も本日 persist 済みの cid(E-SRA-RES13)で既に覆われている。よって memory 層へ persist すべき新規学習はなく 0件で可。",
+      "submittedAt": "2026-08-05T06:55:26Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-XBB-RE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "採用先は新規 cid ではなく cid:reverse-engineering:c1-xrev-scan-mode への1行追補で足りる（適用は xrev scan mode の行番号再解決判定に限定し、一般の RE 引用検証へ拡大しない）。議題の他の実測値（成果物10パス、SENSOR_PASSED 18 / FAILED 0、base→observed 28 commits、逸脱ゼロ）はすべて独立実測で一致しており争わない。",
+      "rationale": "persist 候補が1件実在する。実測: 既存ノルム cid:reverse-engineering:c1-xrev-single-issue（project.md:298、E-RRP-RES13）は「行番号再解決の免除条件は E-OBB5-RES13 既定のまま（レビュー対象 SHA ≠ observed のときは全引用を再解決）」と規定する。本 RE はレビュー target SHA 8409c2039 ≠ observed 1043b7e67 でありながら全引用の再解決を行っておらず、代わりに re-scans/260805-xrev-bug-batch.md:13-22 で『免除の適用ではなく、区間実測による currency の確定』と論証している。私の独立実測: git diff --name-only 8409c2039c5281e533db88a637649276d8bc4a73..HEAD → amadeus/spaces/default/memory/project.md の1ファイルのみ（患部9パスと交わらない）。つまり被引用ファイルはレビュー SHA と observed で無変更であり、再解決は no-op として構造的に不要である。新規知見は『判別条件は SHA 一致ではなく review..observed の実 diff と被引用パス集合の交わりが空であること — SHA 一致は十分条件であって必要条件ではない』。これは memory 層に不在で、成果物（codekb re-scan）にしか存在しない。放置すると次回 RE は (a) 文言どおり不要な全再解決を行うか (b) 今回と同様に無申告で逸脱するかのいずれかになる。あわせて E-OBB5-RES13 が明示的に禁じた『区間 touch の有無のみを根拠とした一般免除』との境界（base..observed の touch 判定ではなく review..observed の diff が根拠であること）を明文化する必要がある — 本 re-scan は両方の測定を併記しており、根拠として有効なのは後者のみである。surface が 0 candidates を返すのは stage diary が空テンプレートであること（inception/reverse-engineering/memory.md は例示コメントのみ、memory_entries_total=0）の帰結であって、知見が生じなかったことの証明ではない。cid:requirements-analysis:learnings-election は候補の実在根拠を diary と成果物の両方に置いており、本候補は成果物側に接地している。",
+      "submittedAt": "2026-08-05T06:55:42Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:2",
+      "resumedTo": "tallied",
+      "at": "2026-08-05T07:07:52Z"
+    }
+  ]
+}

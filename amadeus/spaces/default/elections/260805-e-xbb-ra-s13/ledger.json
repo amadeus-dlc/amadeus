@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-XBB-RA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "スコープ外9項（autonomy 指示と実値の不整合を engine が無警告で通す件）は engine ガード実装という構造面のほかに「conductor は autonomy 確立前に state の実値を実測する」という運用面も持つが、この面は起票先 Issue の裁定で扱われるべきであり、本ステージで prose ノルムを先取りしない前提で 0 件に同意する。",
+      "rationale": "独立実測: (1) `bun .claude/tools/amadeus-learnings.ts surface --slug requirements-analysis` → {\"memory_entries_total\":0,\"candidates\":[],\"parked_open_questions\":[]}。stage diary (inception/requirements-analysis/memory.md) は 15 行のテンプレート素のままで Interpretations/Deviations/Tradeoffs/Open questions が全て空コメントのみ = 候補ゼロと整合。(2) 監査シャード 260805-xrev-bug-batch/audit/*.jsonl の \"Stage slug\":\"requirements-analysis\" 行を集計: SENSOR_FIRED 5 / SENSOR_PASSED 5 / SENSOR_FAILED 0、内訳 required-sections x2・upstream-coverage x2・answer-evidence x1（議題の数値と一致）。同 stage の Event 集計は ARTIFACT_CREATED 2 / ARTIFACT_UPDATED 2 / DECISION_RECORDED 1 / STAGE_STARTED 1 で、REVIEW 系イベントは repo 内シャードに 0 件 = §12a の是正イテレーションが発生しておらず、レビュー由来の学習候補も構造的に存在しない。(3) requirements.md は宣言7節（意図分析/機能要件/非機能要件/制約/前提/スコープ外（別 Issue 起票）/未解決の質問）を完備し、cid:requirements-analysis:c2-mandated-sections-precheck が要求する必須節照合が満たされている。ヒヤリハット2件は「スコープ外（別 Issue 起票）」節の 7 項（formal-model-check の JDK パッチ版ピンがローカル実行を壊す件）と 9 項（Intent autonomy の full 指示 + Autonomy: none の不整合を無警告で通す件、本セッションで実測）として実在（:166, :168）。JDK の運用知識は同ファイル A-3（:154-155）にも前提として固定済み。(4) requirements-analysis-questions.md は「## 選挙不要判定・裁定の記録」を第1節に持ち、全7問（Q1-Q7 + 副問 Q3b/Q4b/Q5b/Q6b）の [Answer] 行末に「ユーザー承認: 2026-08-05T07:56:44Z」を含む（answer-evidence PASSED と整合）。(5) project.md の requirements-analysis 系 cid を通読したが、本ステージで新たに顕在化した知見はいずれも既存 cid（c1-xrev-verdict-not-ruling-authority / c2-mandated-sections-precheck / c4-answer-evidence-approval-vocab / election-answer-after-ruling / c3-260729-open-bug-batch）で覆われており、未被覆の一般化可能な知見は見つからなかった。以上より 0 件で可。",
+      "submittedAt": "2026-08-05T08:32:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-XBB-RA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "スコープ外9項の「Intent autonomy が full 指示 + Autonomy: none の不整合を無警告で通す」は engine ガード面（Issue 化が正しい）と conductor 側の規律面（指示された autonomy と state 実値の突き合わせ）の二面を持ち、後者は既存 cid では覆えていない — 起票先の裁定が engine ガードのみで閉じた場合、この規律面が失われないよう週次蒸留ラウンドで再浮上させることを条件に賛成する。",
+      "rationale": "独立実測: (1) learnings surface --slug requirements-analysis = {\"memory_entries_total\":0,\"candidates\":[],\"parked_open_questions\":[]}。(2) 監査シャード j5ik2o-mac-studio-lan-10f323003f6d.jsonl の \"Stage slug\":\"requirements-analysis\" 行で SENSOR_FIRED 5 / SENSOR_PASSED 5 / SENSOR_FAILED 0、内訳を JSON parse で分解して required-sections×2(requirements.md / questions)・upstream-coverage×2(同)・answer-evidence×1(questions) と確認 — 議題の記載と一致。(3) questions ファイルは H2「選挙不要判定・裁定の記録」+ Q1〜Q7(副問 Q3b/Q4b/Q5b/Q6b 含む)の全 [Answer] 行に「ユーザー承認: 2026-08-05T07:56:44Z」が実在。(4) requirements.md :157-168 のスコープ外9項に、ヒヤリハット2件が 7項(JDK パッチ版ピン)・9項(autonomy 不整合)として実在(8項 advisory receipt も併記)。(5) stage diary memory.md は素テンプレート(全4節が例示コメントのみ)で memory_entries_total 0 と整合。(6) 本ステージの作業内容は既存 cid で網羅: 必須節7つの充足 = c2-mandated-sections-precheck / 承認語彙+ISO TS = c4-answer-evidence-approval-vocab / 裁定受領後の [Answer] 記入 = election-answer-after-ruling / Issue 本文要求の質問票への正本固定 = c3-260729-open-bug-batch / FR-4d のスコープ限定 grep(単一ファイル 0 hit) = c1-ac-grep-surface-scope / 仕様裁定のユーザーエスカレーション = c1-xrev-verdict-not-ruling-authority の carve-out(既存契約・ピン留めテスト改訂は Issue 逐語指名で一意化されない類型)。(7) memory 層に autonomy 規律の既存 cid は grep 0 hit(org.md の Construction Autonomy Mode は Bolt 実行モードで別概念)— よって唯一の未被覆面が上記留保。以上より memory 層へ persist すべき新規学習はなく 0件で可。",
+      "submittedAt": "2026-08-05T08:14:00Z"
+    }
+  ],
+  "late": []
+}
