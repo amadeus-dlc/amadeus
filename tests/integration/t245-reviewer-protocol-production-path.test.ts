@@ -1610,4 +1610,53 @@ describe("t245 reviewer protocol production caller", () => {
       );
     }
   });
+
+  // The invocation store's re-issue arms (FR-1b). Both are reachable only when
+  // scope is called twice with the SAME id, which the deterministic in-process
+  // deps make possible: a spawned scope mints a fresh UUID every time and can
+  // never revisit an issued row.
+  test("re-issuing an UNCONSUMED invocation is idempotent, not a refusal", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const current = fixture();
+    const local = localRuntime(current, current.directive);
+
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+
+    local.replaceInput(current.directive);
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+    expect(JSON.parse(local.output().stdout).invocationId).toBe(TEST_INVOCATION_ID);
+  });
+
+  test("re-issuing a CONSUMED invocation is refused fail-closed", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const current = fixture();
+    const local = localRuntime(current, current.directive);
+
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+    const scopeOutput = JSON.parse(local.output().stdout);
+
+    // check-read binds the invocation to iteration 1 — that binding is what
+    // makes the next issue of the same id a replay rather than a re-issue.
+    local.replaceInput({
+      directive: current.directive,
+      invocationId: scopeOutput.invocationId,
+      iteration: 1,
+      transcript: scopeOutput.transcript,
+      request: readRequest(current),
+    });
+    runtime.runReviewerCommand(["check-read"], local.deps);
+    expect(local.output().exitCode).toBe(0);
+
+    local.replaceInput(current.directive);
+    runtime.runReviewerCommand(["scope"], local.deps);
+    expect(local.output().exitCode).toBe(1);
+    expect(local.output().stderr).toContain("already consumed");
+  });
 });
