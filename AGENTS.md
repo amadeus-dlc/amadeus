@@ -1,6 +1,8 @@
 @.agents/rules/amadeus.md
 @.agents/rules/amadeus-codex-suffix.md
 
+他のエージェントとの衝突を回避するために、常にworktreeと専用ブランチを作成して切り替えてから作業する。
+
 # AGENTS.md
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.

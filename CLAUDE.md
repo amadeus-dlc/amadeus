@@ -1,3 +1,5 @@
+他のエージェントとの衝突を回避するために、常にworktreeと専用ブランチを作成して切り替えてから作業する。
+
 ## Project Instructions
 
 - Communicate with the user in Japanese.
