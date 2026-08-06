@@ -201,10 +201,7 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
       "ulid is invalid",
     );
     expect(() =>
-      parseLedgerEvent(
-        JSON.stringify({ schemaVersion: 1, ulid, op: "grant", ...grant("fp"), ulid: ulidFromSeed("other") }),
-        ulid,
-      ),
+      parseLedgerEvent(JSON.stringify({ ...grant("fp"), ulid: ulidFromSeed("other") }), ulid),
     ).toThrow("does not match filename");
     expect(() =>
       parseLedgerEvent(
