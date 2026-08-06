@@ -85,6 +85,7 @@ inventory は次のとおりです。
 | Orchestrator skill | `skills/amadeus/SKILL.md` | `.pi/skills/amadeus/SKILL.md` | Pi `native` |
 | Question annex | `skills/amadeus/question-rendering.md` | `.pi/skills/amadeus/question-rendering.md` | Skill `annex` |
 | Lifecycle extension | `extensions/amadeus-pi-extension.ts` | `.pi/extensions/amadeus.ts` | Pi `native` |
+| Subagent extension | `extensions/subagent.ts` | `.pi/extensions/subagent.ts` | Pi `native` |
 | Child driver | `drivers/amadeus-pi-driver.ts` | `.pi/drivers/amadeus-pi-driver.ts` | Amadeus `internal` |
 | Driver request/RPC contract | `drivers/amadeus-pi-driver-contract.ts` | `.pi/drivers/amadeus-pi-driver-contract.ts` | Amadeus `internal` |
 | Process-group guardian | `drivers/amadeus-pi-guardian.ts` | `.pi/drivers/amadeus-pi-guardian.ts` | Amadeus `internal` |
@@ -109,7 +110,10 @@ Package activation だけでは project の core runtime を配置できず、�
 
 ```json
 {
-  "extensions": ["./dist/pi/.pi/extensions/amadeus.ts"],
+  "extensions": [
+    "./dist/pi/.pi/extensions/amadeus.ts",
+    "./dist/pi/.pi/extensions/subagent.ts"
+  ],
   "skills": ["./dist/pi/.pi/skills/amadeus"]
 }
 ```
@@ -136,6 +140,18 @@ adapter は Pi の public structural Extension API を使います。registratio
 prepare、core commit receipt、tool pairing、continuation observation は fail-closed です。
 raw prompt、tool argument、tool result、absolute path、credential を audit payload に含めては
 いけません。
+
+### Subagent extension
+
+`extensions/subagent.ts`（`.pi/extensions/subagent.ts` に投影）は
+`@earendil-works/pi-coding-agent` 0.83 の `examples/extensions/subagent` から vendor したもので、
+委譲 task を isolated な `pi` child process として spawn する `subagent` tool を 1 つ登録します
+（single / parallel / chain の 3 mode）。Amadeus 側の追加要素は session 全体の同時起動制限です。
+すべての child 起動が module scope の semaphore を 1 つ通過するため、1 つの Pi session で同時に
+走る subagent process は `PI_SUBAGENT_MAX_CONCURRENCY`（default 4）を超えず、超過分は FIFO queue
+で待機します。lifecycle adapter とは異なり、このファイルは Pi の同梱 package
+（`@earendil-works/*`、`typebox`）を Pi 公式 example と同じ形で import するため、repo の test や
+typecheck からは load されません。Pi runtime 専用 module として扱ってください。
 
 ### Child-driver inventory
 

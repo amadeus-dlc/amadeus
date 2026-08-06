@@ -32,7 +32,10 @@ describe("Pi package candidate graph", () => {
       const projected = readFileSync(join(ROOT, "dist", "pi", ...resource.destination.split("/")));
       expect(createHash("sha256").update(projected).digest("hex")).toBe(resource.sha256);
     }
-    expect(graph.package.extensions).toEqual(["./dist/pi/.pi/extensions/amadeus.ts"]);
+    expect(graph.package.extensions).toEqual([
+      "./dist/pi/.pi/extensions/amadeus.ts",
+      "./dist/pi/.pi/extensions/subagent.ts",
+    ]);
     expect(graph.package.skills).toEqual(["./dist/pi/.pi/skills/amadeus"]);
   });
 

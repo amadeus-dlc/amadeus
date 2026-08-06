@@ -33,7 +33,8 @@
   },
   "pi": {
     "extensions": [
-      "./dist/pi/.pi/extensions/amadeus.ts"
+      "./dist/pi/.pi/extensions/amadeus.ts",
+      "./dist/pi/.pi/extensions/subagent.ts"
     ],
     "skills": [
       "./dist/pi/.pi/skills/amadeus"
