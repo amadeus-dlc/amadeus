@@ -407,7 +407,7 @@ export function emitSwarmDegraded(pd: string, batch: string, requested: DriverNa
 export function emitUnitConverged(pd: string, batch: string, unit: string): void {
   emitSwarmAudit(
     "SWARM_UNIT_CONVERGED",
-    { "Batch number": batch, "Unit name": unit },
+    withPlanGeneration(pd, { "Batch number": batch, "Unit name": unit }),
     pd
   );
 }

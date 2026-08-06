@@ -120,6 +120,7 @@ import {
   PLAN_CORRECTION_EXIT,
   PLAN_DRIFT_WEIGHT,
   readAllAuditShards,
+  readBoltDagGeneration,
   type SwarmEvidence,
   swarmEvidenceVerdict,
   type BoltDagAbsence,
@@ -4659,10 +4660,24 @@ function unitNamesOf(block: string, field: string): string[] {
   return raw.split(",").map((name) => name.trim()).filter((name) => name.length > 0);
 }
 
-/** Every batch number that carries a SWARM_COMPLETED row. */
-function completedBatchNumbers(audit: string): Set<number> {
+/**
+ * Whether an audit row belongs to the plan running NOW. The trail is
+ * append-only, so a fan-out that ran under a plan this run replaced leaves rows
+ * that name the same units; only the generation stamp separates them. A row
+ * carrying no stamp (pre-#1953) is not current evidence either — fail-closed
+ * (FR-5a / FR-5b).
+ */
+function rowIsCurrentGeneration(block: string, generation: string | null): boolean {
+  if (generation === null) return false;
+  const stamped = auditBlockField(block, "Plan generation");
+  return stamped !== null && stamped.trim() === generation;
+}
+
+/** Every batch number that carries a SWARM_COMPLETED row of the current plan. */
+function completedBatchNumbers(audit: string, generation: string | null): Set<number> {
   const numbers = new Set<number>();
   for (const found of findAllEvents(audit, "SWARM_COMPLETED")) {
+    if (!rowIsCurrentGeneration(found.block, generation)) continue;
     const number = batchNumberOf(found.block);
     if (number !== null) numbers.add(number);
   }
@@ -4692,21 +4707,39 @@ function completedBatchNumbers(audit: string): Set<number> {
 // single-shard read would call that batch missing.
 function collectSwarmEvidence(projectDir: string): SwarmEvidence {
   const audit = readAllAuditShards(projectDir);
-  const completed = completedBatchNumbers(audit);
+  // #1953 / FR-5: bind every row to the compiled plan it ran under before it
+  // counts as evidence for THIS plan.
+  const generation = readBoltDagGeneration(projectDir);
+  const completed = completedBatchNumbers(audit, generation);
   const fannedOutUnitSets: ReadonlySet<string>[] = [];
+  let sawStaleGeneration = false;
   for (const found of findAllEvents(audit, "SWARM_STARTED")) {
     const units = unitNamesOf(found.block, "Unit names");
-    if (units.length > 0) fannedOutUnitSets.push(new Set(units));
+    if (units.length === 0) continue;
+    if (!rowIsCurrentGeneration(found.block, generation)) {
+      sawStaleGeneration = true;
+      continue;
+    }
+    fannedOutUnitSets.push(new Set(units));
   }
   const convergedByBatch = new Map<number, Set<string>>();
   for (const found of findAllEvents(audit, "SWARM_UNIT_CONVERGED")) {
     const number = batchNumberOf(found.block);
-    if (number === null || !completed.has(number)) continue;
+    if (number === null) continue;
+    if (!rowIsCurrentGeneration(found.block, generation)) {
+      sawStaleGeneration = true;
+      continue;
+    }
+    if (!completed.has(number)) continue;
     const units = convergedByBatch.get(number) ?? new Set<string>();
     for (const unit of unitNamesOf(found.block, "Unit name")) units.add(unit);
     convergedByBatch.set(number, units);
   }
-  return { fannedOutUnitSets, settledUnitSets: [...convergedByBatch.values()] };
+  return {
+    fannedOutUnitSets,
+    settledUnitSets: [...convergedByBatch.values()],
+    sawStaleGeneration,
+  };
 }
 
 /** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
@@ -4743,7 +4776,13 @@ function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: Swa
   const settled = listedGroups(evidence.settledUnitSets);
   const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
   const trail = `the audit trail records fan-out rows for ${fannedOut} and batch-completed convergence for ${settled}`;
-  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
+  // FR-5b: rows that exist but belong to a plan this run replaced (or predate the
+  // generation stamp) are called out with the one action that regenerates them —
+  // otherwise the refusal reads as "no rows" against a trail full of rows.
+  const staleNote = evidence.sawStaleGeneration === true
+    ? " Some SWARM rows carry a different plan generation (or none at all), so they are evidence for a plan this run replaced — re-run the fan-out under the current plan to regenerate them."
+    : "";
+  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.${staleNote}`;
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 

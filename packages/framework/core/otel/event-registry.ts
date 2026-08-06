@@ -939,7 +939,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name"],
-    optionalAttributes: [],
+    optionalAttributes: ["Plan generation"],
     schemaVersion: 1,
   },
   {
