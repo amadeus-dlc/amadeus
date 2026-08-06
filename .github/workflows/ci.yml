@@ -165,7 +165,7 @@ jobs:
 
       # FR-3a (#1980): reads that give a JSON value taken off disk a domain type
       # without proving it. The allowlist ratchets down only, so a NEW unchecked
-      # cast fails the job while the existing 33 stay visible in the log as the
+      # cast fails the job while the existing ones stay visible in the log as the
       # debt they are. Placed beside the call-site guard: both live in tests/ and
       # CI runs each as one lint step.
       - name: Unchecked-cast guard (JSON read paths, shrink-only ratchet)
