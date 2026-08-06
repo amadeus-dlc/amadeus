@@ -66,18 +66,30 @@ export function sanitizeAdvisoryValue(value: string): string {
   return firstLine.replace(CONTROL_CHARS, "").trim();
 }
 
-// Frontmatter `name:` on the first lines of an agent definition. Anchored to the
-// line start so a `name:` nested inside a later block cannot claim the persona.
+// Frontmatter `name:` on the first lines of an agent definition. Anchored to
+// the line start so a `name:` nested inside a later block cannot claim the persona.
 const FRONTMATTER_NAME = /^name:[ \t]*(.+?)[ \t]*$/m;
+
+// Frontmatter `model:` — the persona's model pin (FR-3). Same anchoring rule
+// as `name:` so a `model:` inside a markdown code fence cannot pose as the pin.
+const FRONTMATTER_MODEL = /^model:[ \t]*(.+?)[ \t]*$/m;
+
+/** The frontmatter block of an agent definition, or the whole body when unfenced. */
+function frontmatterOf(body: string): string {
+  const fenceEnd = body.indexOf("\n---", 3);
+  return body.startsWith("---") && fenceEnd > 0 ? body.slice(3, fenceEnd) : body;
+}
+
+/** Strip one layer of surrounding quotes and trim; null when nothing remains. */
+function frontmatterScalar(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const unquoted = raw.replace(/^["']|["']$/g, "").trim();
+  return unquoted === "" ? null : unquoted;
+}
 
 /** The persona name a definition file declares, or null when it declares none. */
 function personaNameOf(body: string): string | null {
-  const fenceEnd = body.indexOf("\n---", 3);
-  const frontmatter = body.startsWith("---") && fenceEnd > 0 ? body.slice(3, fenceEnd) : body;
-  const name = FRONTMATTER_NAME.exec(frontmatter)?.[1];
-  if (name === undefined) return null;
-  const unquoted = name.replace(/^["']|["']$/g, "").trim();
-  return unquoted === "" ? null : unquoted;
+  return frontmatterScalar(FRONTMATTER_NAME.exec(frontmatterOf(body))?.[1]);
 }
 
 /**
@@ -138,4 +150,123 @@ export function classifyAgentType(agentType: string, resolution: AllowedSetResol
   if (BUILTIN_AGENT_TYPES.includes(agentType)) return "builtin";
   if (resolution.allowed.has(agentType)) return "persona";
   return "outside-allowed-set";
+}
+
+
+// --- Effective-model attribution (U2, #2279 FR-3) ---------------------------
+//
+// Which model actually served a dispatch, and where that answer came from.
+// The resolution order is ADR-3: the harness's own report (an OBSERVATION of
+// what ran) beats an explicit request (what was ASKED — a harness may
+// substitute) beats the persona's declaration. The winning stage is always
+// carried alongside the value, so a future reorder never makes past audit
+// rows uninterpretable.
+
+/** Where the recorded model came from. Closed vocabulary by construction. */
+export type ModelSource = "harness" | "request" | "pin";
+
+/**
+ * The outcome of effective-model resolution (parse-don't-validate). A
+ * `resolved` always pairs the model with its source — a source-less model is
+ * unrepresentable. `unresolved` is the TYPE-level form of "write no
+ * attributes" (ADR-5): absence is recorded as absence, never as a fabricated
+ * placeholder like "unknown".
+ */
+export type ModelResolution =
+  | { readonly kind: "resolved"; readonly model: string; readonly source: ModelSource }
+  | { readonly kind: "unresolved" };
+
+/** The three candidate supplies, in priority order (ADR-3). */
+export interface ModelResolutionInput {
+  /** The payload's `model` — supplied only by harnesses that report it (Codex). */
+  readonly harnessModel: string | undefined;
+  /** An explicit `tool_input.model` — present only when the dispatch named one. */
+  readonly requestedModel: string | undefined;
+  /** The persona's frontmatter pin — supplied only for a persona verdict. */
+  readonly personaPin: string | undefined;
+}
+
+/**
+ * Resolve the effective model. First non-empty of harness > request > pin
+ * wins; whitespace-only counts as empty (the same convention as
+ * normalizeAgentType — trim decides PRESENCE, the recorded value stays
+ * verbatim). Pure: same inputs, same resolution, which is what lets the
+ * result be written into an audit row.
+ */
+export function resolveEffectiveModel(input: ModelResolutionInput): ModelResolution {
+  const candidates: readonly (readonly [string | undefined, ModelSource])[] = [
+    [input.harnessModel, "harness"],
+    [input.requestedModel, "request"],
+    [input.personaPin, "pin"],
+  ];
+  for (const [value, source] of candidates) {
+    if (value?.trim()) return { kind: "resolved", model: value, source };
+  }
+  return { kind: "unresolved" };
+}
+
+/**
+ * The result of a persona pin lookup. Never throws: every read failure comes
+ * back as `pin: undefined` plus one warning line, and the CALLER surfaces the
+ * warnings (stderr) while resolution continues — the same fail-open channel
+ * shape as AllowedSetResolution (NFR-3). A persona whose frontmatter simply
+ * has no `model:` is a legitimate state and earns NO warning.
+ */
+export interface PersonaPinResolution {
+  /** The frontmatter `model:` value, or undefined when unpinned / unfindable. */
+  readonly pin: string | undefined;
+  /** Read failures and anomalies. The caller surfaces these; nothing throws. */
+  readonly warnings: readonly string[];
+}
+
+/** The persona's model pin a definition file declares, or null when it declares none. */
+function personaModelOf(body: string): string | null {
+  return frontmatterScalar(FRONTMATTER_MODEL.exec(frontmatterOf(body))?.[1]);
+}
+
+/**
+ * Read one persona's model pin out of the harness `agents/` dir.
+ *
+ * The match is the frontmatter `name:` compared EXACTLY — never the file
+ * basename. Basename == name is not guaranteed, and a basename shortcut would
+ * silently strand the pin on `undefined` forever while looking green. This is
+ * the same derivation principle as the allowed set itself (FR-1a). When two
+ * files declare the same `name:`, scan order's first wins and the duplicate
+ * earns one warning.
+ */
+export function resolvePersonaPin(agentType: string, agentsDir: string): PersonaPinResolution {
+  const warnings: string[] = [];
+  const shown = sanitizeAdvisoryValue(agentType);
+
+  let entries: string[];
+  try {
+    entries = readdirSync(agentsDir).filter((n) => n.endsWith(".md"));
+  } catch (e) {
+    warnings.push(`agents dir unreadable (${agentsDir}): ${e instanceof Error ? e.message : String(e)}`);
+    return { pin: undefined, warnings };
+  }
+
+  let pin: string | undefined;
+  let matched: string | null = null;
+  for (const entry of entries.sort()) {
+    let body: string;
+    try {
+      body = readFileSync(join(agentsDir, entry), "utf-8");
+    } catch (e) {
+      warnings.push(`agent definition unreadable (${entry}): ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    if (personaNameOf(body) !== agentType) continue;
+    if (matched !== null) {
+      warnings.push(`duplicate persona name "${shown}" (${matched} already matched, ${entry} ignored)`);
+      break;
+    }
+    matched = entry;
+    pin = personaModelOf(body) ?? undefined;
+  }
+
+  if (matched === null) {
+    warnings.push(`persona pin lookup found no definition named "${shown}" (${agentsDir})`);
+  }
+  return { pin, warnings };
 }
