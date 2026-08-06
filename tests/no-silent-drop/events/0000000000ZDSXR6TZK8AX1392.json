@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000000ZDSXR6TZK8AX1392",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "b24bd83527e54d63b61a8aa6f62f492f7612ecc768ae80c30da1a057aaf09fc3",
+  "ruleId": "NSD001",
+  "file": "packages/framework/core/tools/amadeus-sensor.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

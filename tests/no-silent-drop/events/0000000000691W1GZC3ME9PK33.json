@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000000691W1GZC3ME9PK33",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "d3259d0ea343a538d1f78fe4787ddd9e691d5e51653064f38f41f4c51b67a5ac",
+  "ruleId": "NSD001",
+  "file": "packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

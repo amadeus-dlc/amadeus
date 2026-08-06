@@ -19,17 +19,20 @@ import { loadTrustedPreviousLedgers } from "./bootstrap.ts";
 import {
   addedFindings,
   approvalDigest,
-  assertExemptionsShrinkOnly,
-  assertShrinkOnly,
   buildCandidate,
   CANONICAL_PATHS,
   filterExemptions,
   parseApproval,
-  readBaseline,
-  readExemptions,
   trustedBaseSha,
   validateApproval,
 } from "./ledger.ts";
+import {
+  baselineDocFromFold,
+  exemptionsDocFromFold,
+  type FoldedLedger,
+  foldEvents,
+  loadEvents,
+} from "./events.ts";
 import {
   digest,
   errorResult,
@@ -241,10 +244,20 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
   const rawFindings = semanticScan.findings;
   verifySnapshot(snapshot);
 
-  const exemptions = readExemptions(CANONICAL_PATHS.exemptions(repoRoot));
-  const findings = filterExemptions(rawFindings, exemptions, semanticScan.exemptionEligible);
-  const baseline = readBaseline(CANONICAL_PATHS.baseline(repoRoot), mode === "check");
   const revision = currentRevision(repoRoot);
+  let folded: FoldedLedger;
+  if (mode === "check") {
+    const trustedSha = trustedBaseSha(options.baseRevision);
+    if (trustedSha === null) {
+      throw new InfraFailure("BASELINE_INVALID", "check mode requires a non-zero trusted base revision");
+    }
+    folded = loadTrustedPreviousLedgers(repoRoot, trustedSha).folded;
+  } else {
+    folded = foldEvents(loadEvents(repoRoot).byUlid.values());
+  }
+  const exemptions = exemptionsDocFromFold(folded);
+  const baseline = baselineDocFromFold(folded, revision, folded.effectiveDigest);
+  const findings = filterExemptions(rawFindings, exemptions, semanticScan.exemptionEligible);
   const censusDigest = censusDigestOf(findings.map((finding) => finding.fingerprint));
   const evidence: Evidence = {
     schemaVersion: 1,
@@ -254,7 +267,7 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
     counts: {
       C_pre: rawFindings.length,
       B_pre: findings.length,
-      B0: baseline?.entries.length ?? 0,
+      B0: baseline.entries.length,
     },
     findings,
   };
@@ -262,19 +275,9 @@ async function execute(mode: Mode, repoRoot: string, options: GateOptions): Prom
   if (mode === "census-evidence") return passResult({ evidence });
 
   if (mode === "check") {
-    if (baseline === null) throw new InfraFailure("BASELINE_MISSING", "baseline is required in check mode");
-    const trustedSha = trustedBaseSha(options.baseRevision);
-    if (trustedSha === null) {
-      throw new InfraFailure("BASELINE_INVALID", "check mode requires a non-zero trusted base revision");
-    }
-    const previous = loadTrustedPreviousLedgers(
-      repoRoot,
-      trustedSha,
-      baseline,
-      exemptions,
-    );
-    assertShrinkOnly(baseline, previous.baseline);
-    assertExemptionsShrinkOnly(exemptions, previous.exemptions);
+    // Custody (subset check) already enforced inside loadTrustedPreviousLedgers.
+    // Grant additions with issue tracking are allowed; only new findings outside
+    // the folded effective set are violations.
     const added = addedFindings(findings, baseline);
     return added.length > 0 ? violationResult(added) : passResult();
   }

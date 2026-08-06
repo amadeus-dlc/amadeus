@@ -6436,5 +6436,49 @@
       "targetLines": "1"
     },
     "reason": "The recursive-mkdir adapter in the DEFAULT dependency record. Every in-process test injects its own fs deps (t245 localRuntime), so this line only runs on the spawned path, which LCOV does not measure. Covering it would require a spawned test whose only assertion is that a directory was created — the invocation store's real behaviour is already pinned in-process. Expires when the reviewer runtime's default deps gain an in-process test seam."
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "selector": {
+      "function": "listEventUlidsAtRevision",
+      "fingerprint": "sha256:4fa072ade0c9496690801bfbc99274e016fc8158fdffbf262976de529be2aea6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive spawnSync startup-failure arm (listed.error / status === null). Observable missing-path and invalid-filename failures are covered by t433; making git fail to start requires replacing the process git binary or injecting a process port.",
+    "expiry": "remove when listEventUlidsAtRevision receives an injected process port that can model startup failure"
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "selector": {
+      "function": "assertSharedEventBytesUnchanged",
+      "fingerprint": "sha256:708b67f29f3ccee727e131e1a692617ea23056244b17b167ae55a0d406475794",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive git-show null after ls-tree listed the ULID. Constructing a tree entry whose blob is unreadable requires a corrupted git object store; in-place mutation and head-file unreadability are covered by t433.",
+    "expiry": "remove when showEventAtRevision is injectable for corrupted-object fixtures"
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "selector": {
+      "function": "assertNewSnapshotLineage",
+      "fingerprint": "sha256:e6b20538074617390bf5d20a62adc87388d039a6bf7554a2dc9a51c8300ca8da",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive git-show null while reconstructing a snapshot lineage from a ULID listed on the trusted base. Alien deletes and forged effectiveDigest mismatches are covered by t433; a listed-but-unreadable blob needs a corrupted object store or an injected show port.",
+    "expiry": "remove when showEventAtRevision is injectable for corrupted-object fixtures"
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "selector": {
+      "function": "listEventUlidsAtRevision",
+      "fingerprint": "sha256:1cacc71503dda7dec5633e87b0beab61731387cb1cb6db284edbd6de9189cec8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Legacy git ls-tree non-zero status arm for a missing events path. Modern git returns status 0 with empty stdout for an absent path (covered by t433); the status!==0 branch is retained fail-closed for older git contracts.",
+    "expiry": "remove when the gate drops compatibility with git versions that non-zero on missing path trees"
   }
 ]

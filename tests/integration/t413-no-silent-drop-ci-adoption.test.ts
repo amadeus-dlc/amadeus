@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { foldEvents, loadEvents } from "../no-silent-drop/events.ts";
 import {
   deadlineArgv,
   generatedLedgerFixture,
@@ -77,9 +78,13 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     for (const context of contexts) {
       const trustedRevision = trustedRevisionForEvent(context);
       expect(spawnSync("git", ["cat-file", "-e", `${trustedRevision}^{commit}`], { cwd: REPO_ROOT }).status).toBe(0);
-      expect(
-        spawnSync("git", ["show", `${trustedRevision}:tests/no-silent-drop/baseline.json`], { cwd: REPO_ROOT }).status,
-      ).toBe(0);
+      const eventsTree = spawnSync(
+        "git",
+        ["ls-tree", "-r", "--name-only", trustedRevision, "--", "tests/no-silent-drop/events"],
+        { cwd: REPO_ROOT, encoding: "utf8" },
+      );
+      expect(eventsTree.status).toBe(0);
+      expect(eventsTree.stdout.trim().length > 0).toBe(true);
     }
     expect(spawnSync("git", ["cat-file", "-e", `${"f".repeat(40)}^{commit}`], { cwd: REPO_ROOT }).status).not.toBe(
       0,
@@ -95,9 +100,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     expect(second.stdout).toBe(first.stdout);
 
     const result = JSON.parse(first.stdout);
-    const baseline = JSON.parse(
-      readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "baseline.json"), "utf8"),
-    );
+    const folded = foldEvents(loadEvents(REPO_ROOT).byUlid.values());
     const provenance = JSON.parse(
       readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
     );
@@ -116,9 +119,10 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // b775faf8 was already filed under #1979. 214 -> 213 is the standing-grant
     // removal, which deleted the NSD001 identity 56fefece in amadeus-state.ts
     // along with the authorization path that carried it (13 -> 14), and that
-    // identity was also filed under #1979.
+    // identity was also filed under #1979. After #2338 the grandfather set lives
+    // in events/<ulid>.json and B0 is the folded effective set size.
     expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
-    expect(baseline.entries).toHaveLength(213);
+    expect(folded.grandfather).toHaveLength(213);
     expect(removed).toHaveLength(14);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
