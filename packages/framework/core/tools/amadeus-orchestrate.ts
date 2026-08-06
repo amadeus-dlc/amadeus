@@ -4640,9 +4640,9 @@ function authorizedApprovalIntent(
 }
 
 // Read ONE batch number off an audit block. The only entry point for turning a
-// recorded row into a set member, so the fail-closed rule lives in one place:
-// a row whose "Batch number" is absent, empty, or not a finite number is not
-// evidence of anything and never joins the set. (`Number("")` is 0, so the
+// recorded row's number into a set member, so the fail-closed rule lives in one
+// place: a row whose "Batch number" is absent, empty, or not a finite number is
+// not evidence of anything and never joins the set. (`Number("")` is 0, so the
 // empty string has to be rejected before the numeric check, or a blank field
 // would silently vouch for a batch 0 no plan ever declares.)
 function batchNumberOf(block: string): number | null {
@@ -4652,34 +4652,61 @@ function batchNumberOf(block: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** Collect every batch number the audit trail says fanned out and finished. */
-function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
+/** The non-empty unit names on a comma-joined audit field, or none. */
+function unitNamesOf(block: string, field: string): string[] {
+  const raw = auditBlockField(block, field);
+  if (raw === null) return [];
+  return raw.split(",").map((name) => name.trim()).filter((name) => name.length > 0);
+}
+
+/** Every batch number that carries a SWARM_COMPLETED row. */
+function completedBatchNumbers(audit: string): Set<number> {
   const numbers = new Set<number>();
-  for (const event of events) {
-    for (const found of findAllEvents(audit, event)) {
-      const number = batchNumberOf(found.block);
-      if (number !== null) numbers.add(number);
-    }
+  for (const found of findAllEvents(audit, "SWARM_COMPLETED")) {
+    const number = batchNumberOf(found.block);
+    if (number !== null) numbers.add(number);
   }
   return numbers;
 }
 
 // What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
-// emitter of these three rows, so this is a read of first-hand evidence and not
-// a re-derivation of it — nothing here writes back, which is what stops the next
+// emitter of these rows, so this is a read of first-hand evidence and not a
+// re-derivation of it — nothing here writes back, which is what stops the next
 // reconciliation from reading a row this one produced.
 //
-// SWARM_DEGRADED joins the STARTED side because it records a DRIVER falling back
-// to the subagent floor, not the fan-out being abandoned: a degraded batch still
-// ran in parallel. Reading every shard (not this clone's) matters for the same
-// reason — a batch prepared in one worktree and finalised in another leaves its
-// two rows in two files, and a single-shard read would call that batch missing.
+// Keyed on unit names, never on batch numbers (#2354): a number is the value the
+// conductor handed `prepare --batch`, so a re-dispatch shifts it and the plan's
+// numbers stop lining up with the trail's while the RUN was parallel throughout.
+// SWARM_DEGRADED needs no row of its own here — `prepare` emits it in addition to
+// the batch-start row, never instead of it, so the degraded batch's unit names
+// still arrive via SWARM_STARTED.
+//
+// Units count as SETTLED per COMPLETED BATCH, not as one pooled set: convergence
+// alone is a per-unit claim, the completion row is what says the referee finished
+// that batch, and keeping the grouping is what stops an abandoned wide prepare
+// from vouching for units that were really re-dispatched one at a time (the
+// grouping argument lives on swarmEvidenceVerdict).
+//
+// Reading every shard (not just this clone's) matters because a batch prepared in
+// one worktree and finalised in another leaves its rows in two files, and a
+// single-shard read would call that batch missing.
 function collectSwarmEvidence(projectDir: string): SwarmEvidence {
   const audit = readAllAuditShards(projectDir);
-  return {
-    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
-    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
-  };
+  const completed = completedBatchNumbers(audit);
+  const fannedOutUnitSets: ReadonlySet<string>[] = [];
+  for (const found of findAllEvents(audit, "SWARM_STARTED")) {
+    const units = unitNamesOf(found.block, "Unit names");
+    if (units.length > 0) fannedOutUnitSets.push(new Set(units));
+  }
+  const convergedByBatch = new Map<number, Set<string>>();
+  for (const found of findAllEvents(audit, "SWARM_UNIT_CONVERGED")) {
+    const number = batchNumberOf(found.block);
+    if (number === null || !completed.has(number)) continue;
+    const units = convergedByBatch.get(number) ?? new Set<string>();
+    for (const unit of unitNamesOf(found.block, "Unit name")) units.add(unit);
+    convergedByBatch.set(number, units);
+  }
+  return { fannedOutUnitSets, settledUnitSets: [...convergedByBatch.values()] };
 }
 
 /** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
@@ -4688,25 +4715,34 @@ function namedMissingBatches(batches: readonly DeclaredBatch[]): string {
   return named.join("; ");
 }
 
-/** The batch numbers a set holds, ascending, or "none" when it holds nothing. */
-function listedBatchNumbers(numbers: ReadonlySet<number>): string {
-  const sorted = [...numbers].sort((left, right) => left - right);
+/** The names a set holds, sorted, or "none" when it holds nothing. */
+function listedUnitNames(names: Iterable<string>): string {
+  const sorted = [...names].sort();
   return sorted.length === 0 ? "none" : sorted.join(", ");
+}
+
+/** One bracketed group per recorded row: "[alpha, beta]; [gamma]". */
+function listedGroups(groups: readonly ReadonlySet<string>[]): string {
+  if (groups.length === 0) return "none";
+  return groups.map((group) => `[${listedUnitNames(group)}]`).join("; ");
 }
 
 // The VALUES the approve refusal carries — the prose template stays
 // guardMessage's, and the weight and exit are the same two constants the
 // issuance guard cites, so the three ports cannot drift into three dialects.
 //
-// Every number here is read off the verdict and the evidence that produced it;
+// Every name here is read off the verdict and the evidence that produced it;
 // nothing is re-counted at this call site
-// (cid:requirements-analysis:ledger-count-mechanical-recalc).
+// (cid:requirements-analysis:ledger-count-mechanical-recalc). Both sides are
+// printed one bracketed group per row rather than unioned, because which units
+// were dispatched TOGETHER — and settled together — is exactly the fact under
+// dispute.
 function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
   const owed = namedMissingBatches(batches);
-  const started = listedBatchNumbers(evidence.startedBatches);
-  const completed = listedBatchNumbers(evidence.completedBatches);
+  const fannedOut = listedGroups(evidence.fannedOutUnitSets);
+  const settled = listedGroups(evidence.settledUnitSets);
   const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
-  const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
+  const trail = `the audit trail records fan-out rows for ${fannedOut} and batch-completed convergence for ${settled}`;
   const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
