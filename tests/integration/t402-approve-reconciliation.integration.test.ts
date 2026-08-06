@@ -26,6 +26,7 @@ import {
 } from "../harness/fixtures.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
+  boltDagGenerationOf,
   GUARD_EXIT_MARKER,
   GUARD_OBSERVED_MARKER,
   GUARD_WEIGHT_MARKER,
@@ -137,7 +138,7 @@ function coverUnit(proj: string, unit: string): void {
  */
 function seedSwarmRows(
   proj: string,
-  rows: { event: string; batch: string }[],
+  rows: { event: string; batch: string; generation?: string }[],
 ): void {
   const shard = seededAuditShard(proj);
   mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
@@ -150,7 +151,10 @@ function seedSwarmRows(
       timestamp: `2026-08-01T10:0${index}:00Z`,
       heading: "Swarm",
       event: row.event,
-      fields: { "Batch number": row.batch },
+      fields: {
+        "Batch number": row.batch,
+        ...(row.generation === undefined ? {} : { "Plan generation": row.generation }),
+      },
     }),
   );
   writeFileSync(shard, `${lines.join("\n")}\n`);
@@ -190,11 +194,17 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(String(directive.message)).toContain("batch 1");
   });
 
+  // REVISED for FR-5b (#1953): evidence must be stamped with the plan generation
+  // the compiled DAG carries now. Rows without it are a plan this run replaced
+  // (or a pre-#1953 emission) and no longer vouch for the current plan, so the
+  // fixtures that pin the ACCEPT path stamp the generation the emitter stamps.
   test("b: SWARM_STARTED + SWARM_COMPLETED lets the approve through (AC-2b)", () => {
-    const proj = seedCoveredRun([["alpha", "beta"]]);
+    const batches = [["alpha", "beta"]];
+    const proj = seedCoveredRun(batches);
+    const generation = boltDagGenerationOf(batches);
     seedSwarmRows(proj, [
-      { event: "SWARM_STARTED", batch: "1" },
-      { event: "SWARM_COMPLETED", batch: "1" },
+      { event: "SWARM_STARTED", batch: "1", generation },
+      { event: "SWARM_COMPLETED", batch: "1", generation },
     ]);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
@@ -203,10 +213,12 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
   // unit names at all, so a reconciliation that matched on units instead of
   // batch numbers would refuse every degraded run.
   test("c: SWARM_DEGRADED counts as having started (AC-2b)", () => {
-    const proj = seedCoveredRun([["alpha", "beta"]]);
+    const batches = [["alpha", "beta"]];
+    const proj = seedCoveredRun(batches);
+    const generation = boltDagGenerationOf(batches);
     seedSwarmRows(proj, [
-      { event: "SWARM_DEGRADED", batch: "1" },
-      { event: "SWARM_COMPLETED", batch: "1" },
+      { event: "SWARM_DEGRADED", batch: "1", generation },
+      { event: "SWARM_COMPLETED", batch: "1", generation },
     ]);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
@@ -291,7 +303,9 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
   // by hand would drop the v2 rows silently, so the reader goes through the
   // shared accessor that reads both.
   test("k: v2-schema SWARM rows are read alongside v1 rows", () => {
-    const proj = seedCoveredRun([["alpha", "beta"]]);
+    const batches = [["alpha", "beta"]];
+    const proj = seedCoveredRun(batches);
+    const generation = boltDagGenerationOf(batches);
     const shard = seededAuditShard(proj);
     mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
     const v1 = JSON.stringify({
@@ -302,7 +316,7 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
       timestamp: "2026-08-01T10:00:00Z",
       heading: "Swarm",
       event: "SWARM_STARTED",
-      fields: { "Batch number": "1" },
+      fields: { "Batch number": "1", "Plan generation": generation },
     });
     const v2 = JSON.stringify({
       schemaVersion: 2,
@@ -310,7 +324,11 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
       seq: 2,
       timestamp: "2026-08-01T10:01:00Z",
       eventName: "amadeus.swarm.completed",
-      attributes: { Event: "SWARM_COMPLETED", "Batch number": "1" },
+      attributes: {
+        Event: "SWARM_COMPLETED",
+        "Batch number": "1",
+        "Plan generation": generation,
+      },
       intentId: "fixture-0f14ce29",
       space: "default",
       cloneId: "fixturecloneid01",
@@ -325,14 +343,53 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
   });
 
   test("l: evidence for one batch does not vouch for another (BR-U3-4)", () => {
-    const proj = seedCoveredRun([["alpha", "beta"], ["gamma", "delta"]]);
+    const batches = [["alpha", "beta"], ["gamma", "delta"]];
+    const proj = seedCoveredRun(batches);
+    const generation = boltDagGenerationOf(batches);
     seedSwarmRows(proj, [
-      { event: "SWARM_STARTED", batch: "2" },
-      { event: "SWARM_COMPLETED", batch: "2" },
+      { event: "SWARM_STARTED", batch: "2", generation },
+      { event: "SWARM_COMPLETED", batch: "2", generation },
     ]);
     const directive = runReport(proj, APPROVE);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
     expect(String(directive.message)).not.toContain("batch 2 (");
+  });
+
+  // FR-5 (#1953): the audit trail is append-only, so a batch number alone cannot
+  // separate a fan-out that ran under the CURRENT plan from one that ran under a
+  // previous plan. The rows carry the plan generation; the reconciliation only
+  // counts rows whose generation is the one the compiled DAG has right now.
+  test("m: stale evidence from a previous plan generation is refused (FR-5a/FR-5d)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, [
+      { event: "SWARM_STARTED", batch: "1", generation: "0123456789ab" },
+      { event: "SWARM_COMPLETED", batch: "1", generation: "0123456789ab" },
+    ]);
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
+  });
+
+  test("n: generation-less legacy rows are not current evidence (FR-5b)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, [
+      { event: "SWARM_STARTED", batch: "1" },
+      { event: "SWARM_COMPLETED", batch: "1" },
+    ]);
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("re-run the fan-out");
+  });
+
+  test("o: evidence carrying the current plan generation passes (FR-5d)", () => {
+    const batches = [["alpha", "beta"]];
+    const proj = seedCoveredRun(batches);
+    const generation = boltDagGenerationOf(batches);
+    seedSwarmRows(proj, [
+      { event: "SWARM_STARTED", batch: "1", generation },
+      { event: "SWARM_COMPLETED", batch: "1", generation },
+    ]);
+    expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
 });

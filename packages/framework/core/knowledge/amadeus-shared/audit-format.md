@@ -266,13 +266,13 @@ All six `SWARM_*` events emit from `amadeus-swarm.ts`. In addition, `UNIT_POOL_E
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `UNIT_POOL_EVENT_SET_COMMITTED` | One atomic fixed-pool queue/slot transition commits before native dispatch | Batch Id, Event Set Id, Event Set | — | `tools/amadeus-unit-pool-runtime.ts` |
-| `SWARM_STARTED` | Swarm referee `prepare` forked a batch of dependency-linked Units | Batch number, Unit names, Concurrency cap | — | `tools/amadeus-swarm.ts` |
+| `SWARM_STARTED` | Swarm referee `prepare` forked a batch of dependency-linked Units | Batch number, Unit names, Concurrency cap | Plan generation | `tools/amadeus-swarm.ts` |
 | `SWARM_UNIT_CONVERGED` | A swarm Unit re-verified green (and untampered) at the `finalize` gate | Batch number, Unit name | — | `tools/amadeus-swarm.ts` |
 | `SWARM_UNIT_FAILED` | A swarm Unit failed the `finalize` re-verify (not claimed, claimed-but-red, or tampered) | Batch number, Unit name, Reason | — | `tools/amadeus-swarm.ts` |
 <!-- Reason for a CLAIMED-but-red / tampered unit is always the tool's own verdict (`error`); for a DECLINED (unclaimed) unit it is the conductor's typed attribution via `finalize --reasons` (`unsatisfiable` / `budget-exhausted` / `cap-exhausted`, defaulting to `cap-exhausted`) — the tool records the conductor's knowledge call, it does not judge unsatisfiability itself (D-I). -->
 | `SWARM_BATON_RETURNED` | A swarm Unit returned the baton to the conductor for orchestrator-mediated coordination | Batch number, Unit name, Reason | — | `tools/amadeus-swarm.ts` |
-| `SWARM_COMPLETED` | All Units in the batch finished (converged or failed); batch closed | Batch number, Converged count, Failed count | — | `tools/amadeus-swarm.ts` |
-| `SWARM_DEGRADED` | An ultra value (`claude-ultra` or `codex-ultra`) was requested on a harness that is not its native one, so the conductor loud-degraded to the subagent floor (the legacy `1` is fail-closed, not degraded) | Batch number, Requested driver, Fallback driver | — | `tools/amadeus-swarm.ts` |
+| `SWARM_COMPLETED` | All Units in the batch finished (converged or failed); batch closed | Batch number, Converged count, Failed count | Plan generation | `tools/amadeus-swarm.ts` |
+| `SWARM_DEGRADED` | An ultra value (`claude-ultra` or `codex-ultra`) was requested on a harness that is not its native one, so the conductor loud-degraded to the subagent floor (the legacy `1` is fail-closed, not degraded) | Batch number, Requested driver, Fallback driver | Plan generation | `tools/amadeus-swarm.ts` |
 
 ## Hook-Generated Format
 

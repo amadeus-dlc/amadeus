@@ -19,9 +19,9 @@
 // t135, t251), which drive prepare/finalize end to end.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { birthIntent } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { birthIntent, boltDagGenerationOf } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   emitSwarmAudit,
   emitSwarmDegraded,
@@ -93,6 +93,34 @@ function shardRecords(): ShardRecord[] {
 }
 
 describe("each named emitter travels the canonical Event path", () => {
+  // #1953 / FR-5a: the generation stamp is only worth emitting if it SURVIVES the
+  // write. An attribute the event registry does not declare is dropped by the
+  // redaction policy while the append still reports success, so an emitter-only
+  // change would look green and store nothing. This drives the real emitter and
+  // reads the stored row back, which is the only place that gap is visible.
+  test("SWARM_STARTED stores the plan generation of the compiled Bolt DAG", () => {
+    const batches = [["u1", "u2"]];
+    mkdirSync(join(recordDir, "inception", "units-generation"), { recursive: true });
+    writeFileSync(
+      join(recordDir, "inception", "units-generation", "unit-of-work-dependency.md"),
+      "# Unit dependencies\n\n```yaml\nunits:\n  - name: u1\n    depends_on: []\n  - name: u2\n    depends_on: []\n```\n",
+    );
+    writeFileSync(
+      join(recordDir, "runtime-graph.json"),
+      JSON.stringify({
+        bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
+      }),
+    );
+
+    emitSwarmStarted(proj, "1", ["u1", "u2"], "4");
+
+    const emitted = shardRecords().filter(
+      (r) => r.schemaVersion === 2 && r.eventName === "amadeus.swarm.started",
+    );
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]?.attributes?.["Plan generation"]).toBe(boltDagGenerationOf(batches));
+  });
+
   // The referee's six emitters are thin wrappers whose whole content is the
   // event type and the field NAMES. Driving them (rather than calling
   // emitSwarmAudit with a hand-copied field set) is what makes this a test of

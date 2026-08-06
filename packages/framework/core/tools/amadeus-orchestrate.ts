@@ -120,6 +120,7 @@ import {
   PLAN_CORRECTION_EXIT,
   PLAN_DRIFT_WEIGHT,
   readAllAuditShards,
+  readBoltDagGeneration,
   type SwarmEvidence,
   swarmEvidenceVerdict,
   type BoltDagAbsence,
@@ -4652,16 +4653,31 @@ function batchNumberOf(block: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-/** Collect every batch number the audit trail says fanned out and finished. */
-function collectBatchNumbers(audit: string, events: readonly string[]): Set<number> {
-  const numbers = new Set<number>();
+/**
+ * Collect batch numbers, split by whether the row is bound to the plan running
+ * NOW. `current` holds rows stamped with `generation`; `stale` holds rows that
+ * name a batch but carry a different generation, or none at all (pre-#1953
+ * emissions). The audit trail is append-only, so without this split a fan-out
+ * that ran under a plan this run replaced would vouch for the current plan
+ * (#1953 / FR-5a, FR-5b).
+ */
+function collectBatchNumbers(
+  audit: string,
+  events: readonly string[],
+  generation: string | null,
+): { current: Set<number>; stale: Set<number> } {
+  const current = new Set<number>();
+  const stale = new Set<number>();
   for (const event of events) {
     for (const found of findAllEvents(audit, event)) {
       const number = batchNumberOf(found.block);
-      if (number !== null) numbers.add(number);
+      if (number === null) continue;
+      const stamped = auditBlockField(found.block, "Plan generation");
+      if (generation !== null && stamped !== null && stamped.trim() === generation) current.add(number);
+      else stale.add(number);
     }
   }
-  return numbers;
+  return { current, stale };
 }
 
 // What actually ran, read from the audit trail. amadeus-swarm.ts is the sole
@@ -4676,9 +4692,13 @@ function collectBatchNumbers(audit: string, events: readonly string[]): Set<numb
 // two rows in two files, and a single-shard read would call that batch missing.
 function collectSwarmEvidence(projectDir: string): SwarmEvidence {
   const audit = readAllAuditShards(projectDir);
+  const generation = readBoltDagGeneration(projectDir);
+  const started = collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"], generation);
+  const completed = collectBatchNumbers(audit, ["SWARM_COMPLETED"], generation);
   return {
-    startedBatches: collectBatchNumbers(audit, ["SWARM_STARTED", "SWARM_DEGRADED"]),
-    completedBatches: collectBatchNumbers(audit, ["SWARM_COMPLETED"]),
+    startedBatches: started.current,
+    completedBatches: completed.current,
+    staleGenerationBatches: new Set([...started.stale, ...completed.stale]),
   };
 }
 
@@ -4707,7 +4727,14 @@ function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: Swa
   const completed = listedBatchNumbers(evidence.completedBatches);
   const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
   const trail = `the audit trail has SWARM_STARTED/SWARM_DEGRADED for ${started} and SWARM_COMPLETED for ${completed}`;
-  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;
+  const stale = evidence.staleGenerationBatches ?? new Set<number>();
+  // FR-5b: rows that exist but belong to a plan this run replaced (or predate the
+  // generation stamp) are named separately, with the one action that regenerates
+  // them — otherwise the refusal reads as "no rows" against a trail full of rows.
+  const staleNote = stale.size === 0
+    ? ""
+    : ` Rows for batch(es) ${listedBatchNumbers(stale)} carry a different plan generation (or none at all), so they are evidence for a plan this run replaced — re-run the fan-out under the current plan to regenerate them.`;
+  const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.${staleNote}`;
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 
