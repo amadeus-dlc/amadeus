@@ -1,6 +1,8 @@
 @.agents/rules/amadeus.md
 @.agents/rules/amadeus-codex-suffix.md
 
+To avoid collisions with other agents, always create a dedicated worktree and branch and switch to them before starting work.
+
 # AGENTS.md
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
