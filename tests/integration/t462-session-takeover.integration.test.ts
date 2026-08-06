@@ -2,7 +2,7 @@
 //         function:planSessionTakeover, function:authorizeMainConductor
 // size: medium
 //
-// t453 — the MANUAL recovery layer (FR-4). When SessionStart cannot be re-fired
+// t462 — the MANUAL recovery layer (FR-4). When SessionStart cannot be re-fired
 // (an unwired hook, a session that must not be restarted, a workflow left
 // running in another worktree), the takeover verb is the only in-band way out
 // of a denial: every mutating verb — `unpark` included — sits behind the same

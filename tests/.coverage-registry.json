@@ -6672,7 +6672,7 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
-          "file": "tests/integration/t453-session-takeover.integration.test.ts",
+          "file": "tests/integration/t462-session-takeover.integration.test.ts",
           "mechanism": "cli"
         }
       ],

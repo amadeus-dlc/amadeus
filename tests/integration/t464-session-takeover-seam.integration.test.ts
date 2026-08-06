@@ -2,7 +2,7 @@
 //         function:handleSessionTakeover, function:parseActiveSubagents
 // size: medium
 //
-// t455 — the takeover verb driven IN-PROCESS. t453 pins the same contracts at
+// t464 — the takeover verb driven IN-PROCESS. t462 pins the same contracts at
 // the spawned argv boundary, which is where the operator meets them; this file
 // drives the three seams directly so the carrier read, the carrier write and
 // the handler's own refusal/no-op/rebind arms are exercised by the parent

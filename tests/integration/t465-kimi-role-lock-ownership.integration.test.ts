@@ -2,7 +2,7 @@
 //         function:updateKimiSubagentRole
 // size: medium
 //
-// t456 — the role-marker lock is OWNED. Before this, SessionStart deleted the
+// t465 — the role-marker lock is OWNED. Before this, SessionStart deleted the
 // lock directory unconditionally on the premise that "a fresh-session boundary
 // cannot have an in-flight operation". The premise does not hold when a second
 // Kimi process in the same project dir is inside withRoleMarkerLock's

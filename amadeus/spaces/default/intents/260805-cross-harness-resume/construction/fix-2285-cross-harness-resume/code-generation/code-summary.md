@@ -19,9 +19,9 @@
 | `packages/framework/core/otel/event-registry.ts` | `RECOVERY_COMPLETED.optionalAttributes: ["Reason"]` | FR-4(d) |
 | `audit-format.md` / `docs/reference/12-state-machine{,.ja}.md` | emitter/属性の doc 同期 | FR-4(d) |
 | `docs/guide/11-session-management{,.ja}.md` | 「Cross-Harness Handover」手順書(en+ja、原因別対応表含む) | FR-5 |
-| `tests/integration/t451-caller-denial-reason.integration.test.ts`(新設) | FR-1 AC: (i) C1/C2/C3/C5 が互いに異なる原因値 (ii) C6=C1 同一の (b)、C4=authorized。FR-2 AC: 各原因値のメッセージに復旧コマンド名 | FR-1 / FR-2 |
-| `tests/integration/t452-kimi-session-start-recovery.integration.test.ts`(新設) | FR-3 AC: C1/C2/C3 合成 → SessionStart 相当 → authorized の閉包 | FR-3 |
-| `tests/integration/t453-session-takeover.integration.test.ts`(新設) | FR-4 AC (a)〜(f) — (f) は拒否状態 → verb → unpark 成功の経路テスト | FR-4 |
+| `tests/integration/t460-caller-denial-reason.integration.test.ts`(新設) | FR-1 AC: (i) C1/C2/C3/C5 が互いに異なる原因値 (ii) C6=C1 同一の (b)、C4=authorized。FR-2 AC: 各原因値のメッセージに復旧コマンド名 | FR-1 / FR-2 |
+| `tests/integration/t461-kimi-session-start-recovery.integration.test.ts`(新設) | FR-3 AC: C1/C2/C3 合成 → SessionStart 相当 → authorized の閉包 | FR-3 |
+| `tests/integration/t462-session-takeover.integration.test.ts`(新設) | FR-4 AC (a)〜(f) — (f) は拒否状態 → verb → unpark 成功の経路テスト | FR-4 |
 
 ## verb の確定(requirements 未解決事項の解決)
 
@@ -49,7 +49,7 @@
 
 | run | 指定パス | 結果 |
 |---|---|---|
-| A | `tests/integration/t451-caller-denial-reason.integration.test.ts` / `t452-kimi-session-start-recovery.integration.test.ts` / `t453-session-takeover.integration.test.ts` / `t365-kimi-reviewer-boundary.integration.test.ts` / `t-kimi-adapter.test.ts` + `tests/unit/t10-hook-session-start.test.ts` | **113 pass / 0 fail / 494 expect、Ran across 6 files**(指定6=実行6) |
+| A | `tests/integration/t460-caller-denial-reason.integration.test.ts` / `t461-kimi-session-start-recovery.integration.test.ts` / `t462-session-takeover.integration.test.ts` / `t365-kimi-reviewer-boundary.integration.test.ts` / `t-kimi-adapter.test.ts` + `tests/unit/t10-hook-session-start.test.ts` | **113 pass / 0 fail / 494 expect、Ran across 6 files**(指定6=実行6) |
 | B | `tests/unit/t28-audit-event-sync.test.ts` | 7 pass / 0 fail / 8 expect、across 1 file |
 | C | `tests/integration/t48-audit-event-emitters.test.ts` / `t52-drift-meta-validation.test.ts` | 22 pass / 0 fail / 41 expect、across 2 files |
 | — | `bun run typecheck`(conductor 再実行) | exit 0 |
@@ -59,7 +59,7 @@
 
 - t365 の既存 substring assert 全6件(:504/:536/:573/:646/:669/:689)は無改訂で green 維持(FR-2 AC 逐語充足)
 - **NFR-1(env 非依存)の検証**: `grep -c AMADEUS_HARNESS_TYPE` の実測 = エラーメッセージ側 `amadeus-caller-authorization.ts` **0**、`amadeus-session-takeover.ts` **0**(復旧手段として案内していない)。手順書 `docs/guide/11-session-management{,.ja}.md` は各 **1** hit だが、その実文は `:153-155`「Setting `AMADEUS_HARNESS_TYPE` to a non-Kimi value also silences the guard, but it does so by switching the authorization boundary off rather than repairing anything — it is a known escape hatch, not a recovery route」であり、NFR-1 の「復旧手段として案内しない」+CON-4「既知の制約として文書化」を同時に満たす
-- **FR-4 (a)〜(f) のテスト対応付け**(`tests/integration/t453-session-takeover.integration.test.ts` の test 名で一意化):
+- **FR-4 (a)〜(f) のテスト対応付け**(`tests/integration/t462-session-takeover.integration.test.ts` の test 名で一意化):
   - (a) 人間確認必須 → `:237` "refuses without --confirm and leaves the carrier and audit untouched" / `:253` "refuses when no human turn grounds the request" / `:264` "one human turn cannot authorize a second takeover"
   - (b) (a)(b)(c) 状態からの再バインド → `:368` "repairs the carrier named by --project-dir from an unrelated cwd"(marker 不在状態からの再バインド成功系。`:298` "an already-authorized session is a no-op, not a rebind" が冪等側の境界を固定)
   - (c) role 残存時の明示+確認 → 拒否側 `:311` "refuses and names the retained role when it is not acknowledged" / `:324` "rejects a --confirm-roles list that does not match the retained roles"、確認後の成功側 `:338` "rebinds once the retained role is acknowledged verbatim"

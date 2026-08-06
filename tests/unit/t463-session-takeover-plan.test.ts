@@ -2,10 +2,10 @@
 //         function:callerAuthorizationError
 // size: small
 //
-// t454 — the PURE half of the manual takeover verb. Everything the verb decides
+// t463 — the PURE half of the manual takeover verb. Everything the verb decides
 // before it touches a byte lives in two functions: the argv parse and the
 // decision table. Driving them in-process is what makes the whole refusal
-// ladder observable — the spawned CLI tests (t453) prove the contract at the
+// ladder observable — the spawned CLI tests (t462) prove the contract at the
 // argv boundary but their execution is not attributed to the parent LCOV
 // report.
 //

@@ -9,7 +9,7 @@
 | 検査 | 手段(フルパス) | 契約 |
 |---|---|---|
 | 認可既定の不変 | `tests/integration/t365-kimi-reviewer-boundary.integration.test.ts`(拒否側4 assert+許可側2 assert 無改訂 green) | 復旧 verb 以外の拒否挙動は不変。subagent 詐称・reviewer 越境の既存封鎖を維持 |
-| 確認なし takeover の fail-closed | `tests/integration/t453-session-takeover.integration.test.ts:237/:253/:264` | `--confirm` 欠落 / HUMAN_TURN 非接地 / 1承認2回目 → すべて拒否、carrier・state 不変 |
+| 確認なし takeover の fail-closed | `tests/integration/t462-session-takeover.integration.test.ts:237/:253/:264` | `--confirm` 欠落 / HUMAN_TURN 非接地 / 1承認2回目 → すべて拒否、carrier・state 不変 |
 | role 残存時の奪取防止 | 同 `:311/:324` | 残存 role の明示なし・不一致 acknowledgement → 拒否 |
 | audit の実行結果由来性 | 同 `:354` + `tests/integration/t48-audit-event-emitters.test.ts`(単一 emitter 逆検査) | RECOVERY_COMPLETED は実行成功時のみ append(検証劇場 Forbidden) |
 | 認可バイパスの非案内 | grep 実測(code-summary 記載): エラーメッセージ 0 hit、手順書は escape hatch と明記 | NFR-1 / CON-4 |

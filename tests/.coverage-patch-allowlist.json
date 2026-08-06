@@ -6402,7 +6402,7 @@
       "anchorLines": 3,
       "targetLines": "1-3"
     },
-    "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t455 and end-to-end by t453. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t464 and end-to-end by t462. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {

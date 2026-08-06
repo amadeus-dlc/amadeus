@@ -2,7 +2,7 @@
 //         file:packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts
 // size: medium
 //
-// t452 — the AUTOMATIC recovery layer (FR-3). A Kimi SessionStart is the
+// t461 — the AUTOMATIC recovery layer (FR-3). A Kimi SessionStart is the
 // framework's promise that a new session re-establishes its own main-conductor
 // carrier; this test pins that promise as a closure over the denial reasons a
 // cross-harness handover actually produces: an absent marker (C1), a
@@ -183,7 +183,7 @@ describe("Kimi SessionStart recovers every carrier denial reason (FR-3)", () => 
   // lock directory it finds, on the premise that a fresh-session boundary can
   // have nothing in flight. That premise is false when a second Kimi process in
   // the same project dir is inside a role-marker operation, so the lock is now
-  // owner-stamped and only reclaimed when the owner is observably gone (t456).
+  // owner-stamped and only reclaimed when the owner is observably gone (t465).
   //
   // FR-3's promise is unchanged and still pinned here — a lock left by a killed
   // session must not leave the workspace denied — but it is now closed by the
