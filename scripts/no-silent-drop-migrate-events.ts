@@ -4,6 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readBootstrapProvenance } from "../tests/no-silent-drop/bootstrap.ts";
 import { encodeEvent, EVENTS_DIR, type GrantEvent, type RevokeEvent } from "../tests/no-silent-drop/events.ts";
 import { parseBaseline, parseExemptions } from "../tests/no-silent-drop/ledger.ts";
 import { ulidFromSeed } from "../tests/no-silent-drop/ulid.ts";
@@ -16,12 +17,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
  * explicitly, otherwise the folded set silently diverges from approved B_pre.
  */
 function undeclaredRemovals(baselineFingerprints: ReadonlySet<string>): string[] {
-  const provenance = JSON.parse(
-    readFileSync(join(ROOT, "tests/no-silent-drop/bootstrap-provenance.json"), "utf8"),
-  ) as {
-    approvedPre: { entries: { fingerprint: string }[] };
-    removed: { fingerprint: string }[];
-  };
+  const provenance = readBootstrapProvenance(ROOT);
   const declared = new Set(provenance.removed.map((entry) => entry.fingerprint));
   return provenance.approvedPre.entries
     .map((entry) => entry.fingerprint)

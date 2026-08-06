@@ -310,7 +310,7 @@ function assertBootstrap(condition: boolean, message: string): asserts condition
   if (!condition) throw new InfraFailure("BASELINE_INVALID", message);
 }
 
-function readBootstrapProvenance(repoRoot: string): BootstrapProvenance {
+export function readBootstrapProvenance(repoRoot: string): BootstrapProvenance {
   try {
     return parseProvenance(repoRoot, readFileSync(CANONICAL_PATHS.bootstrap(repoRoot), "utf8"));
   } catch (error) {
