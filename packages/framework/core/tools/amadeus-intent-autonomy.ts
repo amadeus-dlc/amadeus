@@ -259,14 +259,25 @@ export function createAutonomyProjection(input: CreateAutonomyProjectionInput): 
   return projection;
 }
 
+// The non-full arms carry raw policy inputs: their normalization seed is the
+// command occurrence, which only exists inside planHumanAutonomyCommand. The
+// full arms are normalized earlier because grant issuance seeds off the grant.
 export type HumanAutonomyCommand =
-  | { readonly kind: "set-mode"; readonly mode: "none" | "semi" }
+  | {
+      readonly kind: "set-mode";
+      readonly mode: "none" | "semi";
+      readonly policies: readonly DecisionPolicyInput[];
+    }
   | {
       readonly kind: "issue-full" | "replace-full";
       readonly scope: GrantScopeDescriptor;
       readonly policies: readonly DecisionPolicy[];
     }
-  | { readonly kind: "revoke-full"; readonly targetMode: "none" | "semi" };
+  | {
+      readonly kind: "revoke-full";
+      readonly targetMode: "none" | "semi";
+      readonly policies: readonly DecisionPolicyInput[];
+    };
 
 export interface HumanCommandContext {
   readonly targetIntentUuid: string;
@@ -349,6 +360,87 @@ export function grantIssuanceDisplayDigest(input: GrantIssuanceDisplayDigestInpu
   return autonomyDigest({ ...input, policySetDigest: autonomyDigest(input.policies) });
 }
 
+// The scope id semi policies are normalized against. semi holds no grant scope,
+// so the carrier borrows the intent-wide fingerprint that SemiAuthorityScope
+// also carries at decision time; were the two to diverge, the confirmed-policy
+// rung would filter every policy out without saying so.
+export const SEMI_POLICY_SCOPE_ID = "intent";
+
+export function autonomyScopeFingerprint(intentUuid: string, scopeId: string): string {
+  return autonomyDigest({ intentUuid, scopeId });
+}
+
+interface NonFullCommandDisplayDigestInput {
+  readonly intentUuid: string;
+  readonly mode: Exclude<AutonomyMode, "full">;
+  readonly revokedGrantId: string | null;
+  readonly policies: readonly DecisionPolicyInput[];
+}
+
+// One definition for both non-full previews (plain mode set, and grant revoke).
+// Same shape as grantIssuanceDisplayDigest, minus principalId and scope: semi
+// has no grant scope, and folding the policy set in is what makes a swapped
+// policy set visible to the confirmation check below.
+export function nonFullCommandDisplayDigest(input: NonFullCommandDisplayDigestInput): string {
+  return autonomyDigest({ ...input, policySetDigest: autonomyDigest(input.policies) });
+}
+
+type NonFullAutonomyCommand = Extract<HumanAutonomyCommand, { readonly kind: "set-mode" | "revoke-full" }>;
+
+function isNonFullCommand(command: HumanAutonomyCommand): command is NonFullAutonomyCommand {
+  return command.kind === "set-mode" || command.kind === "revoke-full";
+}
+
+function nonFullTargetMode(command: NonFullAutonomyCommand): Exclude<AutonomyMode, "full"> {
+  return command.kind === "set-mode" ? command.mode : command.targetMode;
+}
+
+// Zero policies keeps the historic single-step confirmation shape; a carried
+// policy set has to be the very set the human was shown.
+function nonFullConfirmationHolds(
+  projection: AutonomyProjection,
+  command: NonFullAutonomyCommand,
+  context: HumanCommandContext,
+): boolean {
+  if (command.policies.length === 0) return true;
+  return context.confirmedDisplayDigest === nonFullCommandDisplayDigest({
+    intentUuid: projection.intentUuid,
+    mode: nonFullTargetMode(command),
+    revokedGrantId: projection.currentGrant?.grantId ?? null,
+    policies: command.policies,
+  });
+}
+
+// The single normalization call site for semi policies. Normalizing anywhere
+// else would let the digest the human confirmed and the set that is stored
+// drift apart.
+function semiPoliciesAfter(
+  projection: AutonomyProjection,
+  command: HumanAutonomyCommand,
+  context: HumanCommandContext,
+): readonly DecisionPolicy[] | undefined {
+  if (!isNonFullCommand(command)) return undefined;
+  if (nonFullTargetMode(command) !== "semi" || command.policies.length === 0) return undefined;
+  return normalizeDecisionPolicies({
+    grantIdentitySeed: context.commandOccurrenceId,
+    scopeFingerprint: autonomyScopeFingerprint(projection.intentUuid, SEMI_POLICY_SCOPE_ID),
+    humanTurnId: context.humanTurn.turnId,
+    policies: command.policies,
+  });
+}
+
+// Absent, never present-and-undefined: an undefined-valued key changes the
+// canonical digest but is dropped by JSON round trips, which would break the
+// audit replay digest check.
+function withSemiPolicies(
+  projection: AutonomyProjection,
+  policies: readonly DecisionPolicy[] | undefined,
+): AutonomyProjection {
+  const rest: { semiPolicies?: readonly DecisionPolicy[] } & AutonomyProjection = { ...projection };
+  delete rest.semiPolicies;
+  return policies === undefined ? rest : { ...rest, semiPolicies: policies };
+}
+
 export function planHumanAutonomyCommand(
   projection: AutonomyProjection,
   command: HumanAutonomyCommand,
@@ -362,12 +454,11 @@ export function planHumanAutonomyCommand(
   if ((command.kind === "replace-full" || command.kind === "revoke-full") && current === null) {
     return { ok: false, code: "INVALID_COMMAND" };
   }
+  if (isNonFullCommand(command) && !nonFullConfirmationHolds(projection, command, context)) {
+    return { ok: false, code: "INVALID_COMMAND" };
+  }
   try {
-    const afterMode: AutonomyMode = command.kind === "set-mode"
-      ? command.mode
-      : command.kind === "revoke-full"
-      ? command.targetMode
-      : "full";
+    const afterMode: AutonomyMode = isNonFullCommand(command) ? nonFullTargetMode(command) : "full";
     const provenance: ModeProvenance = {
       kind: "human-command",
       principalId: context.principalId,
@@ -383,7 +474,7 @@ export function planHumanAutonomyCommand(
       ? issueGrant(projection, command, context)
       : null;
     const after: AutonomyProjection = {
-      ...projection,
+      ...withSemiPolicies(projection, semiPoliciesAfter(projection, command, context)),
       mode: afterMode,
       modeProvenance: provenance,
       currentGrant: issuedGrant,

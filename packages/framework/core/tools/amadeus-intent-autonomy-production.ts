@@ -10,11 +10,13 @@ import { basename } from "node:path";
 
 import {
   autonomyDigest,
+  autonomyScopeFingerprint,
   authorizeInteraction,
   createAutonomyProjection,
   createDecisionOptionEffectRegistry,
   createInteractionOccurrence,
   grantIssuanceDisplayDigest,
+  nonFullCommandDisplayDigest,
   normalizeDecisionPolicies,
   SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
@@ -286,7 +288,7 @@ export function fallbackFingerprints(
   scopeId: string,
 ): { readonly scopeFingerprint: string; readonly normFingerprint: string } {
   return {
-    scopeFingerprint: autonomyDigest({ intentUuid, scopeId }),
+    scopeFingerprint: autonomyScopeFingerprint(intentUuid, scopeId),
     normFingerprint: autonomyDigest({ scopeId, rules: "resolved-rules-in-context-v1" }),
   };
 }
@@ -393,19 +395,26 @@ function prepareFullGrantCommand(input: PrepareFullGrantCommandInput): { readonl
   };
 }
 
+// The policies stay raw here: planHumanAutonomyCommand owns the one
+// normalization call, and the digest is computed over the same raw set on both
+// sides so the confirmation compares like with like.
 function prepareNonFullCommand(
   before: AutonomyProjection,
   mode: Exclude<AutonomyMode, "full">,
+  policies: readonly DecisionPolicyInput[],
 ): { readonly command: HumanAutonomyCommand; readonly displayDigest: string } {
-  if (before.currentGrant !== null) {
-    return {
-      command: { kind: "revoke-full", targetMode: mode },
-      displayDigest: autonomyDigest({ intentUuid: before.intentUuid, mode, revoke: before.currentGrant.grantId }),
-    };
-  }
+  const revokedGrantId = before.currentGrant?.grantId ?? null;
+  const displayDigest = nonFullCommandDisplayDigest({
+    intentUuid: before.intentUuid,
+    mode,
+    revokedGrantId,
+    policies,
+  });
   return {
-    command: { kind: "set-mode", mode },
-    displayDigest: autonomyDigest({ intentUuid: before.intentUuid, mode }),
+    command: revokedGrantId === null
+      ? { kind: "set-mode", mode, policies }
+      : { kind: "revoke-full", targetMode: mode, policies },
+    displayDigest,
   };
 }
 
@@ -441,7 +450,7 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
     command = prepared.command;
     confirmedDisplayDigest = prepared.issuanceDigest;
   } else {
-    const prepared = prepareNonFullCommand(before, input.mode);
+    const prepared = prepareNonFullCommand(before, input.mode, input.policies ?? []);
     command = prepared.command;
     confirmedDisplayDigest = prepared.displayDigest;
   }
