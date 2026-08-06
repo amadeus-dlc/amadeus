@@ -135,8 +135,7 @@ export function applyModelPin(
   const mapped = pins[alias];
   if (mapped === undefined) {
     throw new Error(
-      `modelPins: ${file} pins "model: ${alias}", which the harness model map does not cover - ` +
-        `add the tier to the map instead of shipping a charter this harness cannot resolve.`,
+      `modelPins: ${file} pins "model: ${alias}", which the harness model map does not cover - add the tier to the map instead of shipping a charter this harness cannot resolve.`,
     );
   }
   return content.replace(block[0], block[0].replace(pin[0], `model: ${mapped}`));

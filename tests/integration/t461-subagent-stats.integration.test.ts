@@ -507,14 +507,31 @@ describe("t461 subagent-stats seams — in-process (#2279)", () => {
     }
   });
 
-  test("a JSON line that is neither object nor array yields no record and no parse skip", () => {
+  test("JSON of the wrong shape is narrowed away, not parsed as a failure", () => {
     const solo = mkdtempSync(join(tmpdir(), "t461-scalar-"));
     try {
-      seedShard(solo, "t461-d-deadbeef04", "host-ddd.jsonl", ["true", "3.14", '"str"']);
+      seedShard(solo, "t461-d-deadbeef04", "host-ddd.jsonl", [
+        // Not object-shaped at the envelope: the scan skips them before parsing.
+        "true",
+        "3.14",
+        '"str"',
+        // Object-shaped envelope whose attribute bag is NOT an object. This is
+        // the line that exercises the narrowing rejection: the envelope parses,
+        // but the bag cannot be read as fields and must yield no record.
+        '{"schemaVersion":2,"attributes":"not-an-object"}',
+        '{"schemaVersion":1,"fields":42,"event":"SUBAGENT_COMPLETED"}',
+      ]);
       const scanned = scanAuditCorpus(solo, "default");
-      expect(scanned.records).toHaveLength(0);
+      // Well-formed JSON of the wrong shape is not a parse failure.
       expect(scanned.parseSkippedCount).toBe(0);
       expect(scanned.shardCount).toBe(1);
+      // v2 carries its event inside the attribute bag, so an unreadable bag
+      // leaves no event and the line yields nothing. v1 carries the event on
+      // the envelope, so it still records - with no attributes to read.
+      expect(scanned.records).toHaveLength(1);
+      expect(scanned.records[0]?.event).toBe("SUBAGENT_COMPLETED");
+      expect(scanned.records[0]?.agentType).toBeUndefined();
+      expect(scanned.records[0]?.model).toBeUndefined();
     } finally {
       rmSync(solo, { recursive: true, force: true });
     }
