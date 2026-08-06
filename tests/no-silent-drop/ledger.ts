@@ -301,6 +301,8 @@ export function buildCandidate(
 export const CANONICAL_PATHS = {
   baseline: (root: string) => join(root, "tests", "no-silent-drop", "baseline.json"),
   exemptions: (root: string) => join(root, "tests", "no-silent-drop", "exemptions.json"),
+  events: (root: string) => join(root, "tests", "no-silent-drop", "events"),
   approval: (root: string) => join(root, "tests", "no-silent-drop", "approval.json"),
   bootstrap: (root: string) => join(root, "tests", "no-silent-drop", "bootstrap-provenance.json"),
+  eventsRel: "tests/no-silent-drop/events",
 } as const;

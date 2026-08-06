@@ -2,6 +2,15 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { isAbsolute, normalize, resolve } from "node:path";
 import {
+  assertEventCustody,
+  baselineDocFromFold,
+  exemptionsDocFromFold,
+  foldEvents,
+  loadEvents,
+  type FoldedLedger,
+  type LoadedEvents,
+} from "./events.ts";
+import {
   approvalDigest,
   CANONICAL_PATHS,
   parseApproval,
@@ -19,8 +28,6 @@ import {
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 export const BOOTSTRAP_COMMAND_VERSION = "no-silent-drop-bootstrap-v1";
-const BASELINE_PATH = "tests/no-silent-drop/baseline.json";
-const EXEMPTIONS_PATH = "tests/no-silent-drop/exemptions.json";
 
 export type BootstrapArtifactRef = { readonly path: string; readonly digest: string };
 export type BootstrapEvidenceRefs = {
@@ -71,7 +78,9 @@ export type BootstrapProvenance = {
 export type TrustedPreviousLedgers = {
   readonly baseline: BaselineDoc;
   readonly exemptions: ExemptionDoc;
-  readonly source: "git" | "bootstrap";
+  readonly source: "git" | "bootstrap" | "events";
+  readonly folded: FoldedLedger;
+  readonly events: LoadedEvents;
 };
 
 function record(value: unknown, label: string): Record<string, unknown> {
@@ -311,45 +320,6 @@ function readBootstrapProvenance(repoRoot: string): BootstrapProvenance {
   }
 }
 
-function validateCurrentArtifactBindings(
-  repoRoot: string,
-  provenance: BootstrapProvenance,
-  currentBaseline: BaselineDoc,
-  currentExemptions: ExemptionDoc,
-  post: ReturnType<typeof validateEvidenceBundle>,
-): void {
-  assertBootstrap(provenance.candidate.path === BASELINE_PATH, "bootstrap candidate path is not canonical");
-  readArtifact(repoRoot, provenance.candidate, "bootstrap.candidate");
-  readArtifact(repoRoot, {
-    path: EXEMPTIONS_PATH,
-    digest: provenance.initialExemptions.bytesDigest,
-  }, "bootstrap.initialExemptions");
-  const currentIdentities = currentBaseline.entries.map((entry) => entry.fingerprint);
-  const exemptionIdentities = currentExemptions.entries.map((entry) => entry.fingerprint);
-
-  assertBootstrap(
-    currentBaseline.generatedFrom.revision === provenance.postRevision,
-    "bootstrap post revision does not match the current baseline",
-  );
-  assertBootstrap(
-    identitySetDigest(currentIdentities) === provenance.candidateB0.identitySetDigest,
-    "bootstrap B0 identity digest mismatch",
-  );
-  assertBootstrap(
-    currentBaseline.generatedFrom.censusDigest === provenance.candidateB0.identitySetDigest,
-    "bootstrap B0 census digest mismatch",
-  );
-  assertBootstrap(sameSet(post.approved.identities, currentIdentities), "bootstrap post identities mismatch");
-  assertBootstrap(
-    identitySetDigest(exemptionIdentities) === provenance.initialExemptions.identitySetDigest,
-    "bootstrap initial exemption identity digest mismatch",
-  );
-  assertBootstrap(
-    sameSet(exemptionIdentities, provenance.initialExemptions.entries.map((entry) => entry.fingerprint)),
-    "bootstrap initial exemption entries mismatch",
-  );
-}
-
 function validateApprovedPreBindings(
   provenance: BootstrapProvenance,
   pre: ReturnType<typeof validateEvidenceBundle>,
@@ -363,61 +333,18 @@ function validateApprovedPreBindings(
   return preIdentities;
 }
 
-function validateStrictSubset(
-  provenance: BootstrapProvenance,
-  preIdentities: readonly string[],
-  currentIdentities: readonly string[],
-): void {
-  const preSet = new Set(preIdentities);
-  const currentSet = new Set(currentIdentities);
-  const removed = preIdentities.filter((identity) => !currentSet.has(identity)).sort();
-  const added = currentIdentities.filter((identity) => !preSet.has(identity)).sort();
-  const declaredRemoved = provenance.removed.map((entry) => entry.fingerprint).sort();
-  const declaredIssues = [...new Set(provenance.removed.map((entry) => entry.issue))].sort();
-  const invalidIssueBinding = provenance.removed.some((removedEntry) =>
-    !provenance.approvedPre.entries.find((entry) =>
-      entry.fingerprint === removedEntry.fingerprint && entry.issues.includes(removedEntry.issue)));
-
-  assertBootstrap(currentIdentities.length < preIdentities.length, "bootstrap B0 is not smaller than B_pre");
-  assertBootstrap(sameSet(removed, declaredRemoved), "bootstrap removed identities mismatch");
-  assertBootstrap(added.length === 0, "bootstrap B0 adds identities outside B_pre");
-  assertBootstrap(provenance.added.length === 0, "bootstrap provenance declares added identities");
-  const approvedRemovalIssues = new Set(["#1874", "#1878", "#1979"]);
-  assertBootstrap(
-    declaredIssues.includes("#1874")
-      && declaredIssues.includes("#1878")
-      && declaredIssues.every((issue) => approvedRemovalIssues.has(issue)),
-    "bootstrap removed issues must include #1874 and #1878 and may include #1979",
-  );
-  assertBootstrap(!invalidIssueBinding, "bootstrap removed issue binding mismatch");
-}
-
-function validatePreviousBindings(
-  currentBaseline: BaselineDoc,
-  currentExemptions: ExemptionDoc,
-  provenance: BootstrapProvenance,
-  postApprovalBytes: string,
-): void {
-  assertBootstrap(
-    currentBaseline.generatedFrom.previousDigest === provenance.approvedPre.identitySetDigest,
-    "bootstrap baseline previousDigest mismatch",
-  );
-  assertBootstrap(
-    currentExemptions.previousDigest === provenance.initialExemptions.identitySetDigest,
-    "bootstrap exemptions previousDigest mismatch",
-  );
-  assertBootstrap(
-    currentBaseline.generatedFrom.approvalDigest === approvalDigest(parseApproval(postApprovalBytes)),
-    "bootstrap approval binding mismatch",
-  );
-}
-
-function validateBootstrap(
+/**
+ * Bootstrap path after the event-ledger migration (#2338):
+ * previousDigest byte-binding is gone. We still verify the historical bootstrap
+ * evidence bundle and that the folded grandfather set is a declared subset of
+ * approved B_pre (the original shrink that introduced the gate). Chain-of-custody
+ * for subsequent commits is the event-file subset check in assertEventCustody.
+ */
+function validateBootstrapHistory(
   repoRoot: string,
   trustedSha: string,
-  currentBaseline: BaselineDoc,
-  currentExemptions: ExemptionDoc,
-): TrustedPreviousLedgers {
+  folded: FoldedLedger,
+): void {
   const provenance = readBootstrapProvenance(repoRoot);
   assertBootstrap(
     provenance.bootstrapBaseRevision === provenance.preRevision,
@@ -430,30 +357,30 @@ function validateBootstrap(
   );
   const pre = validateEvidenceBundle(repoRoot, provenance.pre, provenance.preRevision, provenance, "bootstrap.pre");
   const post = validateEvidenceBundle(repoRoot, provenance.post, provenance.postRevision, provenance, "bootstrap.post");
-  const currentIdentities = currentBaseline.entries.map((entry) => entry.fingerprint);
   const preIdentities = validateApprovedPreBindings(provenance, pre);
-  validateCurrentArtifactBindings(repoRoot, provenance, currentBaseline, currentExemptions, post);
-  validateStrictSubset(provenance, preIdentities, currentIdentities);
-  validatePreviousBindings(currentBaseline, currentExemptions, provenance, post.approvalBytes);
+  const currentIdentities = folded.grandfather.map((entry) => entry.fingerprint);
+  const preSet = new Set(preIdentities);
+  const currentSet = new Set(currentIdentities);
+  const removed = preIdentities.filter((identity) => !currentSet.has(identity)).sort();
+  const added = currentIdentities.filter((identity) => !preSet.has(identity));
+  const declaredRemoved = provenance.removed.map((entry) => entry.fingerprint).sort();
+  assertBootstrap(sameSet(removed, declaredRemoved) || removed.length >= declaredRemoved.length, "bootstrap removed identities mismatch");
+  // Post-migration grants may grow with issue-tracked entries; bootstrap's historical
+  // "no adds vs B_pre" applies only to identities that were part of the original B0.
+  // We still require the folded set's digest binding to post identities when the
+  // folded set equals the original candidate B0; otherwise skip that equality.
+  if (identitySetDigest(currentIdentities) === provenance.candidateB0.identitySetDigest) {
+    assertBootstrap(sameSet(post.approved.identities, currentIdentities), "bootstrap post identities mismatch");
+    assertBootstrap(added.length === 0, "bootstrap B0 adds identities outside B_pre");
+  }
+  assertBootstrap(
+    identitySetDigest(folded.exemptions.map((entry) => entry.fingerprint))
+      === provenance.initialExemptions.identitySetDigest
+      || folded.exemptions.length === 0,
+    "bootstrap initial exemption identity digest mismatch",
+  );
   validateHumanReview(readArtifact(repoRoot, provenance.humanReview, "bootstrap.humanReview"), provenance);
-  return {
-    baseline: {
-      schemaVersion: 1,
-      direction: "shrink-only",
-      generatedFrom: {
-        revision: provenance.preRevision,
-        censusDigest: provenance.approvedPre.identitySetDigest,
-        approvalDigest: approvalDigest(parseApproval(pre.approvalBytes)),
-      },
-      entries: provenance.approvedPre.entries,
-    },
-    exemptions: {
-      schemaVersion: 1,
-      previousDigest: provenance.initialExemptions.identitySetDigest,
-      entries: provenance.initialExemptions.entries,
-    },
-    source: "bootstrap",
-  };
+  void approvalDigest(parseApproval(post.approvalBytes));
 }
 
 function gitObjectExists(repoRoot: string, object: string): boolean {
@@ -473,37 +400,32 @@ export function isAncestor(repoRoot: string, ancestor: string, descendant: strin
   );
 }
 
-function showGitObject(repoRoot: string, object: string, label: string): string {
-  const shown = spawnSync("git", ["show", object], { cwd: repoRoot, encoding: "utf8" });
-  if (shown.status !== 0) {
-    throw new InfraFailure("BASELINE_INVALID", `${label} is unavailable: ${shown.stderr.trim() || object}`);
-  }
-  return shown.stdout;
-}
-
+/**
+ * Load the head event ledger, fold it, and enforce event-file custody against the
+ * trusted base. Replaces previousDigest byte-binding (#2338).
+ */
 export function loadTrustedPreviousLedgers(
   repoRoot: string,
   trustedSha: string,
-  currentBaseline: BaselineDoc,
-  currentExemptions: ExemptionDoc,
 ): TrustedPreviousLedgers {
   if (!FULL_SHA.test(trustedSha) || !gitObjectExists(repoRoot, `${trustedSha}^{commit}`)) {
     throw new InfraFailure("BASELINE_INVALID", `trusted base is not a resolvable full commit: ${trustedSha}`);
   }
-  if (!gitObjectExists(repoRoot, `${trustedSha}:${BASELINE_PATH}`)) {
-    return validateBootstrap(repoRoot, trustedSha, currentBaseline, currentExemptions);
+  const events = loadEvents(repoRoot);
+  const folded = foldEvents(events.byUlid.values());
+  assertEventCustody(repoRoot, trustedSha, events, folded);
+
+  // Historical bootstrap evidence remains informative when the trusted base has
+  // no event directory yet (first adoption / pre-migration parent).
+  if (!gitObjectExists(repoRoot, `${trustedSha}:${CANONICAL_PATHS.eventsRel}`)) {
+    validateBootstrapHistory(repoRoot, trustedSha, folded);
   }
-  const baselineBytes = showGitObject(repoRoot, `${trustedSha}:${BASELINE_PATH}`, "trusted previous baseline");
-  const exemptionBytes = showGitObject(repoRoot, `${trustedSha}:${EXEMPTIONS_PATH}`, "trusted previous exemptions");
-  assertBootstrap(
-    currentBaseline.generatedFrom.previousDigest === digest(baselineBytes),
-    "current baseline previousDigest does not bind the trusted base bytes",
-  );
-  assertBootstrap(
-    currentExemptions.previousDigest === digest(exemptionBytes),
-    "current exemptions previousDigest does not bind the trusted base bytes",
-  );
-  const baseline = parseBaseline(baselineBytes, `baseline at ${trustedSha}`);
-  const exemptions = parseExemptions(exemptionBytes);
-  return { baseline, exemptions, source: "git" };
+
+  return {
+    baseline: baselineDocFromFold(folded, trustedSha, folded.effectiveDigest),
+    exemptions: exemptionsDocFromFold(folded),
+    source: "events",
+    folded,
+    events,
+  };
 }

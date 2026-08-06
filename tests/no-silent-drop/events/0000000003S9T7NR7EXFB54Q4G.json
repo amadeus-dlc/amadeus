@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000003S9T7NR7EXFB54Q4G",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "3d92f216763c716e8c8dad4d9a9b5ef9d194aae24a031884d926693ec4c73118",
+  "ruleId": "NSD001",
+  "file": "scripts/metrics-publication-github.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

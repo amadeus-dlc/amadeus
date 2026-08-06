@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "00000000013NE2T6YYJS1E0C28",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "8ec32149865e59ac2201fe6dea8bf8f3c3900eeebaf1e2de2516b92398b2db21",
+  "ruleId": "NSD001",
+  "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}

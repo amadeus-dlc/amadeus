@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "0000000002SCTQKFYSRQ9M6TBW",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "ba01ea965b7abddd186cea006134dfbbf8eb4c89004e477dc6e626dbff3f04cb",
+  "ruleId": "NSD001",
+  "file": "packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts",
+  "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
+  "issues": [
+    "#1979"
+  ]
+}
