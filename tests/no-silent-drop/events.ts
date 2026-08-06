@@ -275,7 +275,7 @@ export function foldEvents(events: Iterable<LedgerEvent>): FoldedLedger {
   ].sort();
   const effectiveDigest = digest(effectiveFingerprints.join("\n"));
 
-  for (const event of events) {
+  for (const event of eventList) {
     if (event.op === "snapshot" && event.effectiveDigest !== effectiveDigest) {
       // Snapshot digests are checked against the fold of the tree they describe.
       // After further grants/revokes the live digest may diverge; only require that
