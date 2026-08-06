@@ -24,6 +24,13 @@
 | `/amadeus --status` | 読み取り専用のステータスサマリーを表示 |
 | `/amadeus --doctor` | セットアップのヘルスチェックを実行 |
 | `/amadeus --migrate [path]` | 本家 v2 ワークスペースをプレビューし、明示承認後に移行 |
+| `/amadeus intent` | アクティブなスペース内の intent を一覧(読み取り専用。`--json` で構造化出力) |
+| `/amadeus intent <name>` | アクティブな intent を切り替え |
+| `/amadeus space` | スペースを一覧(読み取り専用。`--json` で構造化出力) |
+| `/amadeus space <name>` | アクティブなスペース(チーム)を切り替え |
+| `/amadeus space-create <name>` | フレームワークのベースラインから新しいスペース(チーム)を作成 |
+| `/amadeus codekb-path` | リポジトリごとに決定的な codekb ディレクトリを出力(読み取り専用) |
+| `/amadeus plugin <verb>` | プラグイン CLI へ委譲(`status`、`compose`、`drop`、`doctor`、`install`) |
 | `/amadeus --stage <slug\|#>` | 特定のステージへジャンプ |
 | `/amadeus --stage <slug> --single` | ワークフローを進めずに 1 ステージを単独実行 |
 | `/amadeus --phase <name\|#>` | フェーズの先頭へジャンプ |

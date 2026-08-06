@@ -4,7 +4,7 @@
 
 **Amadeus-DLC はセルフホスト型の AI 開発ライフサイクルです。決定的なワークフローエンジンと、ゲート付き32ステージのメソドロジーを一度だけ記述し、8つのコーディングエージェントハーネスの上でネイティブに動かします。** あなたは「何を作るか」を記述するだけ — 11のドメイン専門家エージェントが ideation・inception・construction・operation を進め、プロンプトではなく**コードとして実装された状態機械**が、あなたが通すまですべての承認ゲートを保持します。
 
-![version](https://img.shields.io/badge/version-0.1.3-blue)
+![version](https://img.shields.io/badge/version-0.1.7-blue)
 ![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)
 ![Kiro IDE](https://img.shields.io/badge/harness-Kiro%20IDE-orange)
 ![Kiro CLI](https://img.shields.io/badge/harness-Kiro%20CLI-orange)
@@ -12,6 +12,8 @@
 ![Codex CLI](https://img.shields.io/badge/harness-Codex%20CLI-orange)
 ![OpenCode](https://img.shields.io/badge/harness-OpenCode-orange)
 ![Cursor](https://img.shields.io/badge/harness-Cursor-orange)
+![Kimi Code](https://img.shields.io/badge/harness-Kimi%20Code-orange)
+![Pi Coding Agent](https://img.shields.io/badge/harness-Pi%20Coding%20Agent-orange)
 
 > [!WARNING]
 > **プレビュー版(pre-1.0)— 活発に開発中です。** インターフェース、ステージ定義、エージェント構成、インストールモデルは進化の途上にあり、リリース間で破壊的変更が入ることがあります。依存するものには既知の安定バージョンをピン留めし、生成された出力はすべて確認してから利用してください。
@@ -81,7 +83,7 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 | **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [OpenCode で動かす](docs/guide/harnesses/opencode.ja.md) |
 | **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
 | **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
-| **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Kimi Code で動かす](docs/guide/harnesses/kimi-code.ja.md) |
+| **Kimi Code** | ≥ 0.29.0 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Kimi Code で動かす](docs/guide/harnesses/kimi-code.ja.md) |
 | **Pi Coding Agent** | ≥ 0.83.0 | `bunx @amadeus-dlc/setup install --harness pi` | `/skill:amadeus` | [Pi Coding Agent で動かす](docs/guide/harnesses/pi.ja.md) |
 
 > [!NOTE]
@@ -121,7 +123,7 @@ Windows では PowerShell と CMD の*どちらか一方*を使ってくださ�
 bunx @amadeus-dlc/setup install
 ```
 
-引数なしの `install` は対話ウィザードを起動します: ハーネス(`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`)とターゲットディレクトリを選ぶだけです。スクリプトや CI ではフラグで明示します:
+引数なしの `install` は対話ウィザードを起動します: ハーネス(`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi` / `pi`)とターゲットディレクトリを選ぶだけです。スクリプトや CI ではフラグで明示します:
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
@@ -296,7 +298,7 @@ amadeus/
 │   │   │   ├── skills/         #   セッションスキル
 │   │   │   └── templates/      #   オンボーディング雛形 → 各ハーネスの CLAUDE.md / AGENTS.md
 │   │   └── harness/            # ハーネスごとの薄い表層 — 小さく、意図的に分岐
-│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/
+│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/  pi/
 │   └── setup/                  # @amadeus-dlc/setup — インストーラパッケージ
 │
 ├── scripts/
@@ -307,7 +309,7 @@ amadeus/
 │  ─────────── 生成物(未追跡・使い捨てのローカル出力) ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # 各ハーネスのユーザーがコピーするもの
-│   ├── codex/     opencode/    cursor/    kimi/
+│   ├── codex/     opencode/    cursor/    kimi/    pi/
 │
 │  ─────────── 支援 ───────────
 ├── tests/                      # 全 TypeScript のテストスイート(t*.test.ts)
