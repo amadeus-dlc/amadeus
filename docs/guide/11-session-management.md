@@ -127,7 +127,7 @@ Restarting is not always possible: the hook may not be wired (a harness whose
 Because every mutating verb sits behind the same guard, there is otherwise no
 way back — so one verb deliberately sits outside it:
 
-```
+```bash
 bun <harness-dir>/tools/amadeus-state.ts session-takeover --confirm [--project-dir <path>]
 ```
 
