@@ -6469,5 +6469,16 @@
     },
     "reason": "Defensive git-show null while reconstructing a snapshot lineage from a ULID listed on the trusted base. Alien deletes and forged effectiveDigest mismatches are covered by t433; a listed-but-unreadable blob needs a corrupted object store or an injected show port.",
     "expiry": "remove when showEventAtRevision is injectable for corrupted-object fixtures"
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "selector": {
+      "function": "listEventUlidsAtRevision",
+      "fingerprint": "sha256:1cacc71503dda7dec5633e87b0beab61731387cb1cb6db284edbd6de9189cec8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Legacy git ls-tree non-zero status arm for a missing events path. Modern git returns status 0 with empty stdout for an absent path (covered by t433); the status!==0 branch is retained fail-closed for older git contracts.",
+    "expiry": "remove when the gate drops compatibility with git versions that non-zero on missing path trees"
   }
 ]

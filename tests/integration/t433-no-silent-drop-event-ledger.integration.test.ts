@@ -7,8 +7,10 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   assertEventCustody,
+  baselineDocFromFold,
   encodeEvent,
   eventPath,
+  exemptionsDocFromFold,
   foldEvents,
   listEventUlidsAtRevision,
   loadEvents,
@@ -499,7 +501,7 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
     expect(() => assertEventCustody(root, "deadbeef", okLoaded, okFolded)).toThrow("full commit");
   });
 
-  test("noSilentDropTrustedBase falls back to HEAD^ when merge-base is unavailable", () => {
+  test("noSilentDropTrustedBase prefers merge-base and falls back to HEAD^", () => {
     const root = mkdtempSync(join(tmpdir(), "nsd-trusted-base-"));
     tempRoots.push(root);
     const { runGit, git } = gitRunners(root);
@@ -513,7 +515,29 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
     git(["add", "."]);
     git(["commit", "-qm", "second"]);
     expect(noSilentDropTrustedBase(root)).toBe(parent);
+
+    const bare = mkdtempSync(join(tmpdir(), "nsd-trusted-bare-"));
+    tempRoots.push(bare);
+    const clone = spawnSync("git", ["clone", "--bare", root, bare], { encoding: "utf8" });
+    expect(clone.status).toBe(0);
+    runGit(["remote", "add", "origin", bare]);
+    runGit(["fetch", "origin"]);
+    runGit(["update-ref", "refs/remotes/origin/main", parent]);
+    expect(noSilentDropTrustedBase(root)).toBe(parent);
+
     expect(noSilentDropTrustedBase(join(tmpdir(), "nsd-no-events-"))).toBeNull();
+  });
+
+  test("fold helpers project baseline and exemption documents", () => {
+    const folded = foldEvents([grant("fp-g"), grant("fp-e", ulidFromSeed("ex-doc"), "exemption")]);
+    const baseline = baselineDocFromFold(folded, "rev", "census", "approval");
+    expect(baseline.entries.map((entry) => entry.fingerprint)).toEqual(["fp-g"]);
+    expect(baseline.generatedFrom).toEqual({
+      revision: "rev",
+      censusDigest: "census",
+      approvalDigest: "approval",
+    });
+    expect(exemptionsDocFromFold(folded).entries.map((entry) => entry.fingerprint)).toEqual(["fp-e"]);
   });
 
   test("mintUlid rejects an out-of-range timestamp", () => {
