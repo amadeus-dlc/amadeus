@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLA-U5COV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A を採るのは是正の恒久性を諦めるからではない。(1) collector 側の恒久修正は enhancement Issue として本 PR のマージ前に起票し、Issue 番号を PR 本文と U5 の record へ書き残すこと(黙ったままの先送りは no-silent-scope-narrowing に触れる)。(2) spawn 変換後の E2E は、driver script の非 0 exit・非 JSON stdout・stderr の module 解決失敗を必ず loud fail させ、BR-U5-09 が観測していた事実(composed host 上で実際に解決・実行されたこと)を JSON 経由でも逐語的に保持すること — process 境界を挟んだことで assert が弱まると検証劇場になる。(3) 変換後に実測で閉包を確認すること: merged lcov の SF に /var/folders 等の repo 外パスが 0 件であることを grep の出力で示し、project % が回復したことを CI の Coverage Gate 出力から転記する(見込みで完了としない)。",
+  "rationale": "機序は独立に実測確認した。tests/integration/t450-tla-authoring-stage-e2e.integration.test.ts は mkdtempSync(join(tmpdir(), ...)) で作った composed host を :399 と :550 で動的 import しており、tests/run-tests.ts:459 collectCoverageTotals は SF を無フィルタで rows へ積んで totalLines を合算する。tests/lib/coverage-normalize.ts:273 の normalizeCoverageReport も SF を除外せず、readSource は resolve(repoRoot, source) が絶対 temp パスへ落ちて読めず null になるため strip も効かない — temp コピーが未 strip のまま universe へ丸ごと入る経路が両ファイルで確認できる。A を選ぶ理由は3点。第一に repo 被覆の損失がない: temp コピーは repo ファイルではないため、in-process import をやめても repo 側 SF の分子・分母は変わらず、除去されるのは汚染分だけ。第二に surgical(P5)であること — B は t05・coverage-comment-strip・patch gate など複数の消費者を持つ共有正規化経路の意味論を変える変更で、Mandated が要求する落ちる実証と corpus sweep(正当な既存データで赤くならないこと)を伴う。これは U5 の tests-only PR に同乗させる性質のものではなく、独立した intent で扱うべき。第三に忠実性がむしろ上がる: BR-U5-09 の『composed runtime 実測』は実プロセス実行の方が主張に近く、import closure 検査は既に spawn 済み(:695 で spawnSync 経由の CLI 実行が既存)なので様式の前例も同ファイル内にある。B が誤りだと言っているのではなく、B は正しい修正だが本 PR の器ではない、という判断。",
+  "submittedAt": "2026-08-05T16:40:00Z"
+}

@@ -139,6 +139,13 @@ export type BallotRef = { electionId: string; voter: string; submittedAt: string
 // consumer's business (FR-7b).
 export type VoterKind = "member" | "subagent";
 
+// `submittedAt` is voter-self-reported and validated for SHAPE only — nothing
+// compares it against a clock, so it is informational and carries the ballot's
+// identity (ballotKey, an amend's ref). `receivedAt` is the receipt stamp the
+// CLI mints when it accepts the ballot; it is the authoritative ordering axis
+// (Issue #1946, ruling Q2=A 2026-08-05). Optional because pre-fix ledger rows
+// carry no stamp and are never retro-fixed (audit is append-only) — the same
+// migration-window shape TimelineEvent.receivedAt already uses.
 export type OriginalBallot = {
   kind: "original";
   electionId: string;
@@ -149,6 +156,7 @@ export type OriginalBallot = {
   reservation: string | null;
   rationale: string | null;
   submittedAt: string;
+  receivedAt?: string;
 };
 
 export type AmendBallot = {
@@ -162,6 +170,7 @@ export type AmendBallot = {
   reservation: string | null;
   rationale: string | null;
   submittedAt: string;
+  receivedAt?: string;
 };
 
 export type Ballot = OriginalBallot | AmendBallot;
@@ -297,10 +306,20 @@ export const Ballot = {
   },
 };
 
+// Ordering key for per-voter resolution (Issue #1946). An unstamped row yields
+// the empty string, which sorts below every mint-form timestamp: stamping began
+// with the fix, so a row without a stamp was necessarily accepted earlier than
+// any row with one. Two unstamped rows tie and fall through to append order,
+// which is the store's real arrival order — strictly better than comparing two
+// self-reported values.
+function receiptAxis(ballot: Ballot): string {
+  return ballot.receivedAt ?? "";
+}
+
 // Per-voter resolution (BR-4): for each voter keep the single ballot with the
-// greatest submittedAt; on an equal-timestamp tie, later arrival wins (>=).
+// greatest receipt time; on an equal-receipt tie, later arrival wins (>=).
 // Structural invariant — the store's unknown-ref check guarantees an amend is
-// always appended strictly after the ballot it references, so a same-timestamp
+// always appended strictly after the ballot it references, so a same-second
 // amend sits later in the array; "later arrival wins" therefore realizes
 // "amend beats its referenced ballot on a tie" without inspecting kind.
 // Idempotent (a resolved list resolves to itself) and pure.
@@ -308,7 +327,7 @@ export function resolveBallots(ballots: Ballot[]): Ballot[] {
   const byVoter = new Map<string, Ballot>();
   for (const b of ballots) {
     const cur = byVoter.get(b.voter);
-    if (cur === undefined || b.submittedAt >= cur.submittedAt) byVoter.set(b.voter, b);
+    if (cur === undefined || receiptAxis(b) >= receiptAxis(cur)) byVoter.set(b.voter, b);
   }
   return [...byVoter.values()];
 }
@@ -420,8 +439,9 @@ export function lateReexamRequired(ballot: Ballot): boolean {
 // its self-reported submittedAt. An agmsg-relayed ballot can carry an early
 // submittedAt yet arrive after tally (relay delay) — the receipt time is the
 // only monotonic, tamper-resistant ordering. `receivedAt` is supplied by the
-// caller (mint→pass, same shape as materialize's talliedAt); the per-voter
-// resolveBallots axis stays on submittedAt and is deliberately independent.
+// caller (mint→pass, same shape as materialize's talliedAt). Issue #1946 moved
+// the per-voter resolveBallots axis onto the same receipt axis, so lateness and
+// resolution now agree on which clock is authoritative.
 export function classifyLate(
   tallyTime: string,
   receivedAt: string,

@@ -1,0 +1,11 @@
+# Election Record — E-SRA-RES13
+
+- question: intent 260805-semi-redefine-autonomy-f の reverse-engineering ステージ §13 学習選定。diary(record の inception/reverse-engineering/memory.md)の候補は Interpretations 5件・Tradeoffs 2件・Open questions 4件。conductor 提案は 1 件のみ採用: 既存ノルム `cid:reverse-engineering:re-sensors-codekb-filter-mismatch`(「RE の宣言センサー3種は codekb 出力パスが sensor filter に構造不適合で常に matches-rejection になり、RE の成果物検証は実質 conductor 手動確認のみ」)を **退役**し、project.md 該当行を『実測により失効(9成果物×3センサー=27発火が全て SENSOR_PASSED、SENSOR_FAILED 0件、測定 ref = worktree HEAD bff776fd8)』として削除する。他の候補は本 intent 固有の実測・設計論点であり record 固定に留める(不採用理由: base/observed の選定は既存 cid:reverse-engineering:rescan-base-ancestry / c2-observed-mainline-commit の適用実例、explore 型委譲は既存 cid:reverse-engineering:c4 の適用実例、履歴節の行番号保存は既存 cid:requirements-analysis:historical-section-cite-check-at-observed の適用実例、残りは requirements 段へ渡す intent 固有の設計論点)。実在根拠は record の memory.md と audit シャードで実測確認すること。
+
+裁定: 失効ノルムの退役1件のみ採用(提案どおり)(choice 1 — tie 裁定)
+- 留保(subagent-1, GoA2): 退役の結論は支持するが、候補文の実測記述に数値・集合の誤りがあり、norm PR の persist 文へそのまま転記してはならない — audit 実測は『9成果物 × 3センサー = 27発火』ではなく、SENSOR_FIRED 36 / SENSOR_PASSED 36 / SENSOR_FAILED 0(codekb 9成果物 × 2センサー × 2ラウンド、Sensor ID 内訳 required-sections 18 / upstream-coverage 18)であり、answer-evidence は 0 発火(matches: `**/*-questions.md` — .claude/sensors/amadeus-answer-evidence.md:8 — のため codekb には今も不適合。ただし RE は questions 成果物を produce しないため『不適合』ではなく『非適用』であり、退役の成否は左右しない)。したがって persist 文は『3センサーとも適合するようになった』ではなく『宣言3センサーのうち codekb を検証する2センサー(required-sections / upstream-coverage)が filter 拡張により適合し実際に PASSED、answer-evidence は RE に非適用』と機械再計算した値で書くべき(cid:requirements-analysis:numbers-from-command-output-only / cid:requirements-analysis:ledger-count-mechanical-recalc)。この訂正は退役の可否を変えない。
+- 留保(subagent-2, GoA2): 変更集合は退役の根拠文の是正に限定すべきであり、他の候補(Interpretations の off-by-one / 5段 / 22ファイル、Tradeoffs 2件、Open questions 4件)を採用集合へ追加する意図ではない — それらは conductor の不採用理由どおり既存 cid の適用実例か requirements 段へ渡す intent 固有の設計論点であり、この点では提案に同意する。
+票タイムライン: subagent-1 2026-08-05T05:46:00Z(受理 2026-08-05T05:46:08Z) → subagent-2 2026-08-05T07:05:00Z(受理 2026-08-05T05:46:46Z) → 配信 2026-08-05T05:54:46Z → 配信 2026-08-05T05:54:46Z → 開票 2026-08-05T05:54:46Z
+GoA[E-SRA-RES13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0
+
+- hold 裁定履歴: tie → choice:1(2026-08-05T05:58:51Z、復帰先 tallied)

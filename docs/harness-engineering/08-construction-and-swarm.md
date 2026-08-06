@@ -59,8 +59,10 @@ demands. The shipped default lives in the org rule you author at
   `chore`, `refactor`, `security-patch`. There is nothing to bootstrap on an existing
   codebase, so the first Bolt runs like any other.
 - The human selects Intent autonomy as `none`, `semi`, or `full` before
-  unattended decisions. `semi` pre-approves in-phase gates but waits at phase
-  boundaries and questions. `full` requires confirmation of the displayed
+  unattended decisions. `semi` pre-approves in-phase gates and auto-decides
+  questions through the same resolution ladder as `full`, waiting only at
+  milestones (phase boundaries, the walking skeleton, Intent completion).
+  `full` requires confirmation of the displayed
   Intent-scoped grant and may decide authorised gates and questions through
   Intent completion.
 - Autonomy selects approval **authority**, not execution shape. Every mode fans
@@ -170,11 +172,17 @@ decline to fan out is judged against the declared width: an unanswered autonomy
 ladder comes back as an `ask` pointing at `amadeus-bolt set-autonomy`, and any
 other decline stops the run with an `error`. At the code-generation approve the
 engine reconciles the declared batches against the `SWARM_STARTED` /
-`SWARM_DEGRADED` / `SWARM_COMPLETED` rows in the audit trail and refuses an
-approve for a batch with no fan-out on record (rows are matched by batch
-number across the append-only trail, so evidence from a superseded plan can
-still satisfy a renumbered batch — see
-[#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
+`SWARM_UNIT_CONVERGED` / `SWARM_COMPLETED` rows in the audit trail and refuses an
+approve for a batch with no fan-out on record. Rows are matched by UNIT NAME, not
+by batch number: a batch number is the value the conductor hands
+`prepare --batch`, so a re-dispatch advances it and the plan's numbering stops
+lining up with the trail's while the run was parallel throughout
+([#2354](https://github.com/amadeus-dlc/amadeus/issues/2354)). A declared batch is
+satisfied when one fan-out row names all of its units together and those units all
+converged under one completed batch — both halves group-wise, so an abandoned wide
+prepare plus per-unit re-dispatches stays refused (evidence is still read across
+the whole append-only trail, so a superseded plan's rows can still satisfy the same
+units — see [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
 observed, why it matters, and the one approved exit — for a violation that exit
 is to correct the plan (record the dependency that makes those Units serial in
 `unit-of-work-dependency.md`, re-compile, re-run `next`), never to hand-wave the

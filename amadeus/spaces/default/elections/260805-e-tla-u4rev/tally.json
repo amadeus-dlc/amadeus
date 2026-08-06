@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A: 現状受理 + 後続 Issue"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A: 現状受理 + 後続 Issue",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "B: 本 PR で replace 実装",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T13:21:57Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TLA-U4REV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "後続 Issue は PR #2287 のマージ前に起票し、FD business-logic-model.md 手順1a(revise-model 受理)と手順3(append + name 重複は validator-rejected)の緊張を Issue 本文へ file:line で明記すること — 起票を後回しにすると設計ギャップが無記録のまま消える。",
+      "rationale": "実測: plugins/formal-model-check/tools/tla-registration.ts:223-236 の composeRegisteredMap は [...models, draft] を無条件 append し name でソート後に parseTlaModelMap で全体検証する(replace 分岐なし)。同 :86 AUTHORING_ROUTES は author-new/revise-model の両方を受理し、business-logic-model.md 手順1a も同じ2経路を受理するため、既存同名エントリを持つ revise-model draft は構造的に validator-rejected になる — 緊張は実在する。しかし (1) 実装は承認済み FD 手順3(『追加後の map 全体を検証』+『エントリ間不変量(name 重複等)を書込前に閉じる』)の逐語どおりで、無申告逸脱はない。(2) replace-by-name はユーザー可視の登録意味論の追加であり team.md エスカレーション正準リスト(4) 仕様変更に当たる — 選択肢 B が求める『FD を申告付きで改訂して同一 PR で実装』は、実装者による仕様裁定の自己解決であり P3 / cid:code-generation:deviation-stop-before-implement に正面から反する。(3) 実害は fail-closed に限定される: 拒否経路は loud で map を壊さず(rename 前に validator で停止、:328-329)、部分更新を観測させない FR-010 の契約と整合。(4) requirements.md FR-012 は『新規authoringまたは改訂』と選言で書かれており(inception/requirements-analysis/requirements.md、FR-012 節)、U5 E2E は author-new 経路で充足可能 — B が挙げる『U5 での手戻り』は要件上の必然ではない。よって A(現状受理 + 後続 Issue で FD 改訂込みに扱う)を支持する。",
+      "submittedAt": "2026-08-05T13:20:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TLA-U4REV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "後続 Issue は「Bugbot スレッドを閉じるための形式的起票」にせず、replace-by-name 意味論の仕様裁定(FR-010 が replace を規定するか否か)をユーザー裁定事項として本文に明記した enhancement とすること。Bugbot 返信には loud 拒否・map 破壊なしの機序と Issue 番号の双方を書き、機能ギャップの実在自体は否認しない。自案非採用時の受容度: 案B=6。",
+      "rationale": "独立実測 4 点。(1) 実装は FD 準拠: plugins/formal-model-check/tools/tla-registration.ts:229 `const composed = [...models, draft].sort(...)` と :235-236 で map 全体を parseTlaModelMap へ通し validated.ok でなければ rejected — FD business-logic-model.md 手順 3「snapshot.parsed に draft を加えた全体を拡張 validator で検証。失敗 → validator-rejected」と逐語一致。無申告逸脱なし。(2) 同名は確かに構造的拒否: amadeus-formal-verif-model-map.ts の parseTlaModelMap で `if (model.value.name <= previousName) return invalid(\"models must be unique and sorted by name\")` — sort 後に同名が隣接すると `<=` で必ず invalid。よって既存同名エントリを持つ revise-model draft は常に validator-rejected。緊張の実在は確認。ただし拒否は Result の rejected で loud、publish(atomic rename)は composed.ok の後段(:327-334)にしか無いため map 破壊は構造的に起こらず、実害は機能ギャップに限定される。(3) B の主根拠が実測で崩れる: U5 の E2E 題材は unit-of-work.md:55 で『未知題材 E2E（FR-012）。E2E 題材は swarm unit-pool ライフサイクル（acquire → confirm-dispatch → settle-release → reconciliation）を fixture とする（Q3 人間裁定）』と人間裁定で固定済み — 未知題材ゆえ author-new 経路であり、改訂経路を踏まない。『U5 E2E が改訂経路を踏む場合の手戻り』は現行の確定 fixture では発生しない。(4) FR-012(requirements.md:105)は『新規authoringまたは改訂』の選言、FR-010(:97)は current 条件下の登録成立のみを規定し replace 意味論に言及しない — B は要件に根拠のない意味論の新規追加であり、FD 手順 3 の承認済み意味論を PR 収束中に改訂することは P3(承認済み意図からの逸脱は所有者へ戻す)および正準リスト(4)仕様変更のユーザー専権に抵触しうる。以上より A(現状受理+後続 Issue)を採る。",
+      "submittedAt": "2026-08-05T00:00:00Z"
+    }
+  ],
+  "resolutions": []
+}

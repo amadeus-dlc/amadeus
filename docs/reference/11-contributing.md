@@ -241,6 +241,59 @@ Agent metadata (display name, example knowledge files) is read from each agent's
 - **Doc tables listing agents**. The Phase Participation matrix at `docs/reference/05-agent-system.md:119-131` and the agent→examples table at `packages/framework/core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` are maintained by hand. Update them in the same PR that adds the agent (see Documentation Policy below).
 - **`.claude/agents/<new-agent>.md` body content**. Only the frontmatter is parsed. The body prose (Core Responsibilities, Knowledge Loading sequence, etc.) is read by the agent itself when activated — write it to match the other agent files' structure.
 
+## The Plugin Import-Closure Guard
+
+`scripts/import-closure-guard.ts` is the packager's answer to a class of defect
+the manifest checks structurally cannot see. Those checks validate the files a
+`plugin.json` **declares**; they say nothing about a module that is reachable by
+a relative import from a declared tool but is itself undeclared. Such a module is
+present in the working tree and absent from the composed host, so the plugin
+works where it was written and breaks where it is installed.
+
+The guard walks the transitive relative-import closure from the declared tool
+entrypoints and requires each member to be covered twice: declared in the
+manifest, so composition copies it, and present in the plugin's owned source
+paths, so the declaration has a file behind it. Both differences are enumerated
+in full rather than truncated to the first offender, so one build failure lists
+the entire repair set.
+
+**Responsibility split.** The guard module is pure. It owns POSIX normalization
+of import specifiers and the repo-root boundary judgement, and it reaches the
+filesystem only through an injected `readFile` seam. Resolving symlinks to their
+real target — the escape a string normalizer cannot see — belongs to the concrete
+adapter, `repoFileReader` in `scripts/plugin-projection.ts`, which returns `null`
+for any reference whose realpath leaves the repo root. Absent, unreadable, and
+escaping references therefore all land in the guard's `unreadable` enumeration
+instead of quietly shrinking the closure.
+
+**Fail-closed.** There is no allowlist, skip list, or exception hatch. A module
+in the closure passes only by being declared and owned; an unresolvable reference
+is a failure, never a silent omission. Keep it that way — an exception hatch here
+reopens exactly the blind spot the guard exists to close.
+
+**Wiring.** `assertPluginImportClosure` (`scripts/plugin-projection.ts`) is the
+public seam; `scripts/package.ts` calls it through `guardPluginClosureForCli`,
+which maps a `PluginValidationError` to a printed diagnostic and a non-zero exit
+so the build fails instead of letting the exception escape the CLI.
+
+**Tests.** Four files cover the two halves and the production wiring:
+
+```bash
+bun test tests/unit/t440-import-closure-resolve.test.ts \
+         tests/unit/t441-import-closure-manifest.test.ts \
+         tests/integration/t442-plugin-import-closure.integration.test.ts \
+         tests/integration/t443-import-closure-symlink-escape.integration.test.ts
+```
+
+`t440` drives the recursive walk (`resolveImportClosure`) against an injected
+in-memory filesystem, `t441` drives the coverage check and diagnostic rendering
+(`checkManifestClosure`, `describeClosureFailure`), `t442` asserts the production
+wiring through `assertPluginImportClosure`, and `t443` covers the filesystem half
+of the responsibility split — the symlink escape that the pure layer cannot see.
+When you extend the guard, extend the matching half: a new judgement belongs in
+the pure module with a unit test, a new filesystem escape belongs in the adapter
+with an integration test.
+
 ## Documentation Policy
 
 When adding, removing, or renaming files, directories, commands, or flags:

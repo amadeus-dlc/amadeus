@@ -658,7 +658,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "error-recovery",
     requiredAttributes: ["Choice", "Current Stage"],
-    optionalAttributes: [],
+    // `Reason` carries the caller-authorization denial a session-takeover
+    // repaired; the compaction-acknowledgement recovery has no such cause and
+    // omits it.
+    optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
   // --- Construction Bolt Events (4) ---
@@ -923,7 +926,11 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit names", "Concurrency cap"],
-    optionalAttributes: [],
+    // "Plan generation" binds the row to the compiled Bolt DAG it ran under, so
+    // approve-time reconciliation cannot count a previous plan's fan-out as this
+    // plan's (#1953 / FR-5a). Optional: a workflow with no compiled DAG has no
+    // generation to stamp, and the verifier fails closed on the absence.
+    optionalAttributes: ["Plan generation"],
     schemaVersion: 1,
   },
   {
@@ -932,7 +939,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name"],
-    optionalAttributes: [],
+    optionalAttributes: ["Plan generation"],
     schemaVersion: 1,
   },
   {
@@ -959,7 +966,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Converged count", "Failed count"],
-    optionalAttributes: [],
+    optionalAttributes: ["Plan generation"],
     schemaVersion: 1,
   },
   {
@@ -968,7 +975,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Requested driver", "Fallback driver"],
-    optionalAttributes: [],
+    optionalAttributes: ["Plan generation"],
     schemaVersion: 1,
   },
   // --- Telemetry (never the audit journal, FR-EXP-4) ---

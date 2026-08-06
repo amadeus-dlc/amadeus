@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRA-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "0件でよいが1点条件づける: diary Tradeoffs の FOLLOW-UP 4件のうち conductor の不採用理由が cid 対応づけを示したのは (1) FR件数再計算=ledger-count-mechanical-recalc と (3) production 結線宙吊り=enumeration-completeness-review の2件のみで、(2) 上流辺消去の不在根拠表申告と (4) hard/soft 辺強度注記は明示根拠なしに0件へ含められている — 今回は (2) を enumeration-completeness-review の負方向面(消した辺の申告)の適用実例、(4) を本 intent の成果物様式のローカル改善(一般化には再発実測不足)と私が独立判定して0件を支持するが、hard/soft 注記が別 intent の delivery-planning で再び有効と実測されたら次回 §13 で候補へ昇格させること。",
+  "rationale": "指示された3面を独立実測した。【(a) 候補原文】inception/units-generation/memory.md を全文実読。Interpretations 2件(P1+P2 統合 :5、テストピン移設 :6)、Tradeoffs の §12a iteration 1 READY と FOLLOW-UP 4件是正 :12、Open questions の recompile 確認 :16 と 0件宣言 :17 を確認。【(b) 引用 cid の実在と射程】4 cid とも memory 層に実在: cid:units-generation:c1 = project.md:222 — (a) 節に「片側だけでは利用者価値を出荷できない境界は単一 Unit へ統合」が逐語で実在し、P1+P2(認可基体と質問解決コア)統合およびテストピン反転の挙動変更 Unit への同居はその適用実例。cid:requirements-analysis:ledger-count-mechanical-recalc = team.md:217 —「列挙の実ファイル名から機械的に再計算」がFR件数 33→31 是正(unit-of-work-story-map.md:68 への FOLLOW-UP)を正確に被覆。cid:requirements-analysis:enumeration-completeness-review = team.md:199 — 列挙の完全性のレビュー段独立再列挙が production 層結線の宙吊り検出(unit-of-work-dependency.md:113 FOLLOW-UP)を被覆。cid:units-generation:recompile-before-construction-bolt-dag = project.md:342 — bolt_dag 非 null 確認(7 units)はその定型手順の執行。【(c) 成果物3点の埋没学び検分】unit-of-work.md(§分割の検証 :127、§テスト番号の予約 :186 = swarm-test-number-reservation の適用、Review ブロック :241 READY/BLOCKER 0/FOLLOW-UP 4/NIT 1 実在)、unit-of-work-dependency.md(辺根拠表 :65、hard/soft 強度注記、並行機会 :135)、unit-of-work-story-map.md(FR 31/NFR 7 割当)を実読。新規に見える面は (i) hard/soft 辺強度注記と (ii) 不在根拠表への消去辺申告の2つだが、(i) は reviewer の1指摘に基づく成果物ローカルの表現改善で他 intent での有効性実測がなく、cid:functional-design:c4-yaml-block-over-inline-comment 級の様式ノルムへ昇格させる根拠が現時点では1実測のみ。(ii) は enumeration-completeness-review(列挙の完全性)の負方向適用と読める。週次蒸留がノルム肥大を抑制する方針とも整合し、0件を支持する。",
+  "submittedAt": "2026-08-05T09:58:00Z"
+}

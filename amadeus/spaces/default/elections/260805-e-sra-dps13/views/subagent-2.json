@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SRA-DPS13",
+  "voter": "subagent-2",
+  "question": "intent 260805-semi-redefine-autonomy-f の delivery-planning ステージ §13 学習選定。正本は record の inception/delivery-planning/memory.md(全文実読)。conductor 提案は 0 件。不採用理由: トポロジ順からの逸脱申告(advisory-auto-resolution の波 B 後置)は cid:delivery-planning:intra-bolt-order-as-risk-control(Bolt 内順序をリスク制御として明示)の Bolt 間順序への自然な適用実例、questions 0問様式は cid:requirements-analysis:eoc1-evidence-in-questions-header / e-tcrras13b の既習形、1 Unit = 1 Bolt = 1 PR は cid:units-generation:c1 (b) の既定。いずれも既存ノルムの実践で新規の一般化価値なし。実在根拠は memory.md と成果物5点で実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化価値のある学びが実在する。留保にどの候補か file:line 根拠とともに記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0 件(提案どおり)",
+      "description": "すべて record 固定のみ。"
+    }
+  ]
+}

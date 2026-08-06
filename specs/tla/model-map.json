@@ -5,7 +5,7 @@
       "name": "FormalElection",
       "model": {
         "path": "specs/tla/FormalElection.tla",
-        "identity": "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32"
+        "identity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213"
       },
       "cfg": {
         "path": "specs/tla/FormalElection.cfg",
@@ -14,7 +14,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
-          "sha256": "a405bf8def41e6abaf6943aeff620823de1dfe56c83b09272f6d54a7f7ea14ad"
+          "sha256": "1c7db437b6d2cfaa835506266704b50960bc4c01515d55547a62236da6a2b4c7"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
@@ -22,7 +22,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "4385a7f88fcc1c6ecb3cdc0a75b53773d18353c1062fa83f8a18c83f61822b7e"
+          "sha256": "f3419faf5518fbe98692387e16cfecdc50e256976999ccf220ec9d9cca470ad4"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
@@ -30,7 +30,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "ac88e5707dc5f618d202360a13930b334dc2f7d52fedbc0b3d365ca93d92bfa3"
+          "sha256": "4ec2a232aed4f771fa22c2991ca72c0b1099fd6c15193a40fc256354f4760d29"
         }
       ],
       "vocabulary": {

@@ -6,7 +6,8 @@
 development (defined by AWS). **This repository is its native, multi-harness
 implementation:** the methodology rendered as skills, agents, hooks, and tools
 from one harness-neutral `packages/framework/core/`, so it runs natively in the CLI harness you use
-— today Claude Code, Kiro CLI, Kiro IDE, or Codex CLI, and any capable CLI you port it to.
+— today Claude Code, Codex CLI, Cursor, OpenCode, Kiro CLI, Kiro IDE, Kimi Code, or
+Pi Coding Agent, and any capable CLI you port it to.
 The methodology is the *what*; each harness distribution is the *how* for one
 runtime, and every distribution is generated from the same source.
 
@@ -39,6 +40,7 @@ Maintainers author in `packages/framework/core/` and `packages/framework/harness
 `bun run dist` (`bun scripts/package.ts`) — see the [Contributing Guide](reference/11-contributing.md)
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
 to add one.
+Before shipping a change to a harness distribution, run the opt-in local journeys in [Live Harness End-to-End Verification](harness-engineering/live-e2e.md).
 
 ## Upstream AI-DLC v2 differences
 
@@ -50,6 +52,8 @@ to add one.
 - [Keeping a formal model in step with its implementation](reference/21-formal-model-following.md)
 - [Supplying a formal model for a new protocol](reference/22-formal-model-supply.md)
 - [Telemetry Schema reference](reference/23-telemetry-schema.md)
+- [Intent autonomy, review, and completion](reference/24-intent-autonomy.md)
+- [Complete AI-DLC v2 Generated File Inventory](amadeus-files.md)
 
 The repository layout decision is recorded in
 [Workspace Layout Decision](reference/18-workspace-layout.md): the framework

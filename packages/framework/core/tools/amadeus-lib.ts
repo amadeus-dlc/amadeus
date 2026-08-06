@@ -22,6 +22,10 @@ export type {
 // imports loadScopeMapping/loadStageGraph from this file). Type-only
 // imports are erased at runtime so they don't create the cycle.
 import type { subgraphForScope as SubgraphForScope } from "./amadeus-graph.ts";
+// Type-only import: the canonical autonomy mode domain. Erased at runtime, so
+// the statusline segment below pins its vocabulary to that union without
+// pulling amadeus-intent-autonomy.ts into this module's runtime graph.
+import type { AutonomyMode } from "./amadeus-intent-autonomy.ts";
 
 // --- Types ---
 
@@ -4855,6 +4859,23 @@ export function getField(content: string, field: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+// --- Statusline autonomy segment ---
+//
+// FR-DISP-1: the statusline names the active Intent's autonomy mode with the
+// same vocabulary `--status` prints. The decision lives here — an already
+// measured module — because the statusline hook is spawn-only (it awaits
+// main() at module top level) and cannot host an importable seam. The domain
+// is pinned to the canonical AutonomyMode union, so widening it there fails
+// typecheck here instead of silently diverging. A value outside the domain, or
+// an absent field, degrades to no segment: a warning marker would invent the
+// second display vocabulary ADR-10 rejected. Callers render the segment.
+const AUTONOMY_SEGMENT_MODES: readonly AutonomyMode[] = ["none", "semi", "full"];
+
+export function autonomySegment(stateContent: string): string {
+  const mode = getField(stateContent, "Intent Autonomy Mode")?.trim() ?? "";
+  return AUTONOMY_SEGMENT_MODES.some((known) => known === mode) ? mode : "";
+}
+
 // --- Autonomy mode ---
 //
 // The state-file field that distinguishes autonomous Construction (swarm/Bolt)
@@ -7952,16 +7973,34 @@ export function planGuardMessage(
   return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
 }
 
-// What the audit trail says actually ran, reduced to the only key the three
-// SWARM events share. SWARM_STARTED carries "Unit names", SWARM_DEGRADED carries
-// none, SWARM_COMPLETED carries neither — "Batch number" is the whole common
-// vocabulary, so matching on unit names would drop every degraded batch.
+// What the audit trail says actually ran, keyed on the identity the plan and the
+// audit actually share: UNIT NAMES. A "Batch number" is a value the conductor
+// hands `prepare --batch`, not a batch identity — a re-dispatch after a failed
+// attempt-set advances it, and from there every row lands under a number the plan
+// never declared, which #2354 measured as a permanently-blocked approve on a run
+// that had in fact fanned out.
 //
-// Sets, not lists: the same batch legitimately emits SWARM_STARTED more than
-// once, and neither order nor multiplicity carries meaning here.
+// Nothing is lost by leaving SWARM_DEGRADED out: `prepare` records a degrade in
+// ADDITION to the batch-start row, never instead of it (amadeus-swarm.ts, the
+// `emitDegradeIfRequested(...)` call immediately followed by
+// `emitSwarmStarted(projectDir, flags.batch, units, String(concurrency))`), so a
+// degraded batch still carries its own "Unit names" row.
+//
+// GROUPED ON BOTH SIDES, never unioned: one set per SWARM_STARTED row, and one
+// set per COMPLETED batch holding the units that converged under it. A declared
+// batch is only proven parallel by a row that names its units TOGETHER and by
+// their settling together under ONE completed batch. Unioning either side lets N
+// one-unit dispatches — the serial shape #1892 counted — masquerade as a wide
+// fan-out: unioning the started side directly, and unioning the settled side by
+// letting an ABANDONED wide prepare (a start row with no completion) vouch for
+// units that were really settled one at a time afterwards.
 export type SwarmEvidence = {
-  readonly startedBatches: ReadonlySet<number>; // SWARM_STARTED ∪ SWARM_DEGRADED
-  readonly completedBatches: ReadonlySet<number>; // SWARM_COMPLETED
+  readonly fannedOutUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_STARTED row, current plan only
+  readonly settledUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_COMPLETED batch, current plan only
+  // Rows existed for this workflow but named another plan generation (or none at
+  // all): evidence for a plan this run replaced. Message-only — the verdict
+  // already treats them as absent (#1953 / FR-5a, FR-5b, fail-closed).
+  readonly sawStaleGeneration?: boolean;
 };
 
 // Whether the run's execution shape matches the plan's. `missing` carries EVERY
@@ -7988,12 +8027,26 @@ function wideBatchesOf(batches: readonly (readonly string[])[]): DeclaredBatch[]
   return wide;
 }
 
+// Whether ONE recorded group covers every unit of the batch. Superset, not
+// equality — a conductor may claim a wider unit set than a single declared level,
+// and the batch's units were still handled together within that one group.
+function coveredByOneGroup(batch: DeclaredBatch, groups: readonly ReadonlySet<string>[]): boolean {
+  return groups.some((group) => batch.units.every((unit) => group.has(unit)));
+}
+
+// Both halves are group-wise, and that is the whole fail-closed argument: an
+// abandoned wide prepare (a start row that never completed) plus N one-unit
+// re-dispatches satisfies "these units appeared on one start row" and "these units
+// all converged", yet the run was serial. Requiring them to settle together under
+// ONE completed batch is what refuses it.
 export function swarmEvidenceVerdict(
   batches: readonly (readonly string[])[],
   evidence: SwarmEvidence,
 ): SwarmEvidenceVerdict {
   const missing = wideBatchesOf(batches).filter(
-    (batch) => !evidence.startedBatches.has(batch.number) || !evidence.completedBatches.has(batch.number),
+    (batch) =>
+      !coveredByOneGroup(batch, evidence.fannedOutUnitSets) ||
+      !coveredByOneGroup(batch, evidence.settledUnitSets),
   );
   if (missing.length === 0) return { kind: "satisfied" };
   return { kind: "missing", batches: missing };
@@ -8255,6 +8308,64 @@ function cachedBoltDagBatches(cache: unknown): string[][] | null {
     valid.push(names);
   }
   return valid;
+}
+
+/**
+ * The plan generation that SWARM evidence is bound to: a digest of the compiled
+ * Bolt DAG's batch structure. A replan (units added, removed, reordered, or the
+ * dependency cut redrawn) yields a different digest, which is what lets
+ * approve-time reconciliation tell a fan-out that ran under THIS plan from one
+ * that ran under a previous plan whose rows are still in the append-only audit
+ * trail (#1953 / FR-5a). Pure so the emitter and the verifier can compute the
+ * same value from the same recovered DAG without sharing state.
+ *
+ * Batch ORDER is part of the identity (batch 1 running before batch 2 is the
+ * plan); the order of names WITHIN a batch is not — that is a serialization
+ * detail of whichever source the DAG was recovered from, and treating it as a
+ * replan would refuse evidence for a plan that never changed.
+ */
+export function boltDagGenerationOf(batches: readonly (readonly string[])[]): string {
+  return createHash("sha256")
+    .update(JSON.stringify(batches.map((batch) => [...batch].sort())))
+    .digest("hex")
+    .slice(0, 12);
+}
+
+/** The cached `bolt_dag` node, or undefined when the runtime graph is absent or unreadable. */
+function readCachedBoltDag(path: string): unknown {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    return graph !== null && typeof graph === "object" && "bolt_dag" in graph
+      ? (graph as { bolt_dag?: unknown }).bolt_dag
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The canonical dependency artifact the DAG is healed from, as a recovery source. */
+function readBoltDagSource(path: string): BoltDagCanonicalSource {
+  try {
+    return { kind: "content", path, body: readFileSync(path, "utf-8") };
+  } catch {
+    return { kind: "absent", path };
+  }
+}
+
+/**
+ * The current plan generation, recovered from the same two sources the Bolt DAG
+ * itself is recovered from. Null when this workflow has no compiled DAG at all —
+ * the caller then has no plan to bind evidence to.
+ */
+export function readBoltDagGeneration(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): string | null {
+  const cached = readCachedBoltDag(runtimeGraphPath(projectDir, intent, space));
+  const source = readBoltDagSource(unitDependencyPath(projectDir, intent, space));
+  const recovery = recoverBoltDag(cached, source);
+  return recovery.kind === "ok" ? boltDagGenerationOf(recovery.batches) : null;
 }
 
 /** Reconcile the disposable runtime DAG cache with its canonical dependency artifact. */

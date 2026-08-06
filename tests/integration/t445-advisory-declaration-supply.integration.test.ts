@@ -16,7 +16,8 @@ import {
   advisoryChoicePresentationFields,
   advisoryReportHoldReason,
   guardAdvisoryChoices,
-  recordProtectedAdvisoryChoice,
+  choiceFromExactPrompt,
+  recordAdvisoryChoice,
   type AdvisoryChoiceStore,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 import {
@@ -28,6 +29,25 @@ import {
 import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
+
+// #2253 replaced the prompt-classifying acceptance entry point with one that
+// takes an already-classified choice and a provenance union. These tests were
+// written against the prompt shape, and what they pin — which prompts count and
+// which provenance is refused — is unchanged, so they keep exercising the same
+// route through the same two steps the hook now performs.
+function recordAdvisoryChoiceViaPrompt(
+  projectDir: string,
+  prompt: string,
+  humanTurn: { timestamp: string; shard: string; eventIdentity: string },
+  now?: string,
+): boolean {
+  const choice = choiceFromExactPrompt(prompt);
+  if (choice === null) return false;
+  return now === undefined
+    ? recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn })
+    : recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn }, now);
+}
+
 
 // U2 generalization point 1 (ADR-6 revision): the engine supplies advisories a
 // composed plugin declares, evaluated by that plugin's own evaluator. The
@@ -226,7 +246,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     const planted = plantV1AuditRow("HUMAN_TURN", {}, projectDir);
     const event = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN").at(-1);
     if (event === undefined) throw new Error("no HUMAN_TURN was planted");
-    const recorded = recordProtectedAdvisoryChoice(projectDir, prompt, {
+    const recorded = recordAdvisoryChoiceViaPrompt(projectDir, prompt, {
       shard: auditShardName(projectDir),
       timestamp: planted.timestamp,
       eventIdentity: createHash("sha256").update(event.block).digest("hex"),

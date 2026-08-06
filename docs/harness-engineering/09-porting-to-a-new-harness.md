@@ -170,6 +170,7 @@ current resource inventory is:
 | Orchestrator skill | `skills/amadeus/SKILL.md` | `.pi/skills/amadeus/SKILL.md` | Pi `native` |
 | Question annex | `skills/amadeus/question-rendering.md` | `.pi/skills/amadeus/question-rendering.md` | Skill `annex` |
 | Lifecycle extension | `extensions/amadeus-pi-extension.ts` | `.pi/extensions/amadeus.ts` | Pi `native` |
+| Subagent extension | `extensions/subagent.ts` | `.pi/extensions/subagent.ts` | Pi `native` |
 | Child driver | `drivers/amadeus-pi-driver.ts` | `.pi/drivers/amadeus-pi-driver.ts` | Amadeus `internal` |
 | Driver request/RPC contract | `drivers/amadeus-pi-driver-contract.ts` | `.pi/drivers/amadeus-pi-driver-contract.ts` | Amadeus `internal` |
 | Process-group guardian | `drivers/amadeus-pi-guardian.ts` | `.pi/drivers/amadeus-pi-guardian.ts` | Amadeus `internal` |
@@ -196,7 +197,10 @@ The generated package entry is:
 
 ```json
 {
-  "extensions": ["./dist/pi/.pi/extensions/amadeus.ts"],
+  "extensions": [
+    "./dist/pi/.pi/extensions/amadeus.ts",
+    "./dist/pi/.pi/extensions/subagent.ts"
+  ],
   "skills": ["./dist/pi/.pi/skills/amadeus"]
 }
 ```
@@ -223,6 +227,20 @@ The adapter uses Pi's public structural Extension API. Registration, parsing,
 journal preparation, core commit receipt, tool pairing, and continuation
 observation are fail-closed. Raw prompts, tool arguments, tool results, absolute
 paths, and credentials must not become audit payloads.
+
+### Subagent extension
+
+`extensions/subagent.ts` (projected to `.pi/extensions/subagent.ts`) is vendored
+from the `@earendil-works/pi-coding-agent` 0.83 `examples/extensions/subagent`
+sources and registers one `subagent` tool that spawns each delegated task as an
+isolated `pi` child process (single, parallel, and chain modes). The Amadeus
+addition is a session-wide concurrency valve: every child launch funnels through
+one module-scope semaphore, so a single Pi session never runs more than
+`PI_SUBAGENT_MAX_CONCURRENCY` (default 4) subagent processes at once and excess
+launches wait in a FIFO queue. Unlike the lifecycle adapter, this file imports
+Pi's bundled packages (`@earendil-works/*`, `typebox`) the way Pi's own example
+does, so the repo's tests and typecheck never load it; treat it as a
+Pi-runtime-only module.
 
 ### Child-driver inventory
 

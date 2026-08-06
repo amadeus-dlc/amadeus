@@ -31,7 +31,7 @@ Construction は AI-DLC が対象物を構築する場所です — Unit ごと�
 
 - グリーンフィールドのスコープ — `mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra` — では **walking-skeleton Bolt が最初に実行されます**。Bolt 1 は単独で実在するgateを持ち、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。
 - インクリメンタルなスコープ — `fix`、`chore`、`refactor`、`security-patch` — では **スケルトンのセレモニーはスキップされます**。既存コードベースにブートストラップすべきものはないため、最初の Bolt は他と同様に実行されます。
-- 人間は無人裁定の前にIntent自律レベルを`none` / `semi` / `full`から選びます。`semi`はphase内gateを事前承認し、phase境界と質問では人間を待ちます。`full`は表示されたIntent-scoped grantの確認を必須とし、認可範囲内でIntent完了までgateと質問を裁定できます。
+- 人間は無人裁定の前にIntent自律レベルを`none` / `semi` / `full`から選びます。`semi`はphase内gateを事前承認し、質問は`full`と同じ解決ラダーで無人裁定して、節目（phase境界・walking skeleton・intent終端）では人間を待ちます。`full`は表示されたIntent-scoped grantの確認を必須とし、認可範囲内でIntent完了までgateと質問を裁定できます。
 - autonomyが選ぶのは承認 **authority**であり、実行形状ではありません。全modeで依存のないUnitをfan-outします。`none`はhuman batch-end gateで待ち、`semi` / `full`は各mode表に従って続行できます。最終batchはstage自身のgateを使うため、gateは重複しません。
 
 あなたはこの姿勢を、他のどのルールも形づくるのと同じ方法で、[Rules and the Learning Loop](05-rules-and-the-loop.ja.md) の strict-additive レイヤーを通じて形づくります: チーム全体のスタンスには `team.md` を、1つのプロジェクトの恒久的な逸脱には `project.md` を編集します。`org.md` はそのままにします — それはフレームワーク同梱で継承されます。
@@ -81,7 +81,7 @@ checks have proven reliable.
 
 エッジブロックを `bolt_dag` に変えるコンパイルとパースはコードであり、あなたが執筆するものではありません。そのパーサを形づくるのはコード変更です → [Developer Reference](../reference/13-runtime-graph.ja.md) を参照してください。
 
-**計画は拘束力を持つようになりました。** DAG があるバッチを並列と宣言した以上、実行がそれらの Unit を黙って 1 つずつ構築することはもう許されません。バッチの発行前に、ファンアウトの見送りは宣言幅に照らして判定されます。未回答の自律ラダーは `amadeus-bolt set-autonomy` を指す `ask` として戻り、それ以外の見送りは `error` で実行を止めます。code-generation の approve では、エンジンが宣言バッチを監査証跡の `SWARM_STARTED` / `SWARM_DEGRADED` / `SWARM_COMPLETED` 行と突き合わせ、ファンアウトの記録がないバッチについては approve を拒否します(行は append-only の証跡全体からバッチ番号で照合されるため、旧計画の実績が replan 後の同番号バッチを充足しうる点は [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953) で追跡)。どちらのメッセージも、何を観測したか・なぜ重要か・唯一の承認された出口を名指しします。violation におけるその出口は計画の訂正(それらの Unit を直列にする依存関係を `unit-of-work-dependency.md` に記録し、再コンパイルして `next` を再実行する)であり、ガードを言い抜けて実行を先へ進めることでは決してありません。挙動の全体は [State Machine](../reference/12-state-machine.ja.md) § 「計画整合ガード」を参照してください。
+**計画は拘束力を持つようになりました。** DAG があるバッチを並列と宣言した以上、実行がそれらの Unit を黙って 1 つずつ構築することはもう許されません。バッチの発行前に、ファンアウトの見送りは宣言幅に照らして判定されます。未回答の自律ラダーは `amadeus-bolt set-autonomy` を指す `ask` として戻り、それ以外の見送りは `error` で実行を止めます。code-generation の approve では、エンジンが宣言バッチを監査証跡の `SWARM_STARTED` / `SWARM_UNIT_CONVERGED` / `SWARM_COMPLETED` 行と突き合わせ、ファンアウトの記録がないバッチについては approve を拒否します。照合キーはバッチ番号ではなく **Unit 名**です: バッチ番号は conductor が `prepare --batch` へ渡す値であり、再ディスパッチで進むため、実行が並列であっても計画側の番号と証跡側の番号が一致しなくなります([#2354](https://github.com/amadeus-dlc/amadeus/issues/2354))。宣言バッチが充足されるのは、ある 1 つのファンアウト行がそのバッチの Unit を**まとめて**名指しし、かつそれらの Unit が**1 つの**完了済みバッチの下でまとめて converged している場合です — 両側をグループ単位で見るため、放棄された幅広 prepare と 1 Unit ずつの再ディスパッチの組み合わせは拒否されたままになります(証跡は依然として append-only 全体から読むため、旧計画の行が同じ Unit を充足しうる点は [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953) で追跡)。どちらのメッセージも、何を観測したか・なぜ重要か・唯一の承認された出口を名指しします。violation におけるその出口は計画の訂正(それらの Unit を直列にする依存関係を `unit-of-work-dependency.md` に記録し、再コンパイルして `next` を再実行する)であり、ガードを言い抜けて実行を先へ進めることでは決してありません。挙動の全体は [State Machine](../reference/12-state-machine.ja.md) § 「計画整合ガード」を参照してください。
 
 ---
 

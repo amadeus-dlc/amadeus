@@ -214,10 +214,14 @@ describe("run-model-check source adapter", () => {
       ...source,
       moduleSource: source.moduleSource.replace("ChoiceWinner ==", "ChoiceWinner\t=="),
     };
+    // The line follows the module: the resolution axis revision (ruling Q2=A,
+    // 2026-08-05 — Issue #1946, FR-2f) shifted the invariant block by one. What
+    // this case pins is the shared locate rule across space and tab, not the
+    // number itself.
     expect(generateFrozenTlaModel(
       { publicContractIdentity: "a".repeat(64) },
       spacedSource,
-    ).invariantSourceMap.ChoiceWinner).toEqual({ line: 269, column: 1 });
+    ).invariantSourceMap.ChoiceWinner).toEqual({ line: 270, column: 1 });
   });
 
   test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {

@@ -43,7 +43,7 @@
 | `amadeus-validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
 | `amadeus-log-subagent-start.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | サブエージェントのディスパッチを記録する(`SUBAGENT_STARTED`)。Claude Code にはサブエージェント開始イベントがないため、シームはディスパッチツールの PreToolUse となる。マッチャーはアンカー付きで、かつフックがツール名を再チェックする — アンカーなしの `Task` は `TaskUpdate` にもマッチするため |
 | `amadeus-log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
-| `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 後の2つは自律的Constructionでは抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
+| `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 質問タグのケースはIntent autonomy `full`と人間コマンド由来の`semi`で、会話的ケースは`full`だけで抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
 | `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
 | `amadeus-plugin-compose.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | オプトインされたプラグインをホストへ自動合成する(`amadeus-plugin.ts compose --if-stale`)。非ブロッキングで、合成レコードが最新の場合は無操作 |
 | `amadeus-session-end.ts` | SessionEnd | プロジェクト全体 (settings.json) | (空) | 正常終了時に `SESSION_ENDED` 監査イベントを発行する |
@@ -254,7 +254,7 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 3. **エンジンをコンポーズ:** `bun .claude/tools/amadeus-orchestrate.ts next --project-dir <dir>` を実行し、ディレクティブの `kind` をパースする。状態を再導出はしない — エンジンをコンポーズする。
 4. **`done` → 許可:** ディレクティブが `done` ならワークフローは完了。フックは何も発行せず exit 0 し(先例の非ブロッキングパターン)、再帰カウンターをクリアする。
 5. **`parked` -> 許可:** ディレクティブが`parked`なら明示的な安全停止に到達しているため、全Intent modeでstopを許可しcounterをclearする。`full`では`REPAIR_STALLED` / `NORM_CONFLICT`など異常停止を安全に終える経路であり、汎用manual park commandは無人実行を安易に中断しないようguardを維持する。`full` grantは明示的にrevokeまたはcompleteしない限り別projectionとしてactiveを維持する。
-6. **Human-wait -> 許可:** ディレクティブが保留中でも、コンダクターが正しく人間の上でパークしている(または単にチャットしている)場合、フックはストップを許可し、ナッジをスパムするのではなくドロップを記録する。4つのケースが該当する: 現在のステージのチェックボックスが確定的に `[?]` 承認待ち、`[R]` リビジョン中、`<slug>-questions.md` に未回答の `[Answer]:` タグを**伴う** `[-]` 進行中、または終了するターンが会話的だった — 後の2つを抑制するのはIntent autonomy `full`だけである。`semi`の質問は人間所有なので即座にstopを許可する。
+6. **Human-wait -> 許可:** ディレクティブが保留中でも、コンダクターが正しく人間の上でパークしている(または単にチャットしている)場合、フックはストップを許可し、ナッジをスパムするのではなくドロップを記録する。4つのケースが該当する: 現在のステージのチェックボックスが確定的に `[?]` 承認待ち、`[R]` リビジョン中、`<slug>-questions.md` に未回答の `[Answer]:` タグを**伴う** `[-]` 進行中、または終了するターンが会話的だった — 質問タグのケースを抑制するのはIntent autonomy `full`と人間コマンド由来の`semi`(いずれの下でも認可済みの質問は解決ラダーで無人裁定される)であり、会話的ケースを抑制するのは`full`だけである。
 7. **保留中 -> ブロックして注入:** その他の(保留中の)ディレクティブ - `run-stage`、`dispatch-subagent`、`invoke-swarm`、`present-gate`、`ask`、`print`、`error` - に対しては `{"decision":"block","reason":<オンタスクの継続>}` を出力し、同じセッションが次の手を注入された状態で再開する。注入される `reason` はクリーンな一時停止の代替として `amadeus-orchestrate park` も名指しするため、長いワークフローを止めたいコンダクターは前進する代わりにパークする。
 8. **フェイルオープン:** 予期しない障害(読めない状態、非ゼロ終了するエンジンやパース可能なディレクティブを返さないエンジン、不正なstdin)ではストップを許可しドロップを記録する。フェイルオープンは、そうでなければターンをトラップしうるフックにとって唯一の安全な障害モードである。
 
@@ -269,7 +269,7 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 
 - **Esc は無料。** Stopフックはユーザー割り込み(Esc)では発火しないため、手動割り込みが決してトラップされない — そのケースにコードは不要。
 - **承認ゲートは無料ではない。** Stopフックは、コンダクターが `AskUserQuestion` の回答を待つためにターンを終えるとき*発火する*。承認ゲート(現在のステージが `[?]` 承認待ち)や Request-Changes ループ(`[R]` リビジョン中)では、エンジンは進行中のステージに対して保留中の `run-stage` を再発行し続けるため、カーブアウトがなければフックはキャップが尽きるまでブロックして転送ループのナッジを再注入する — インタラクティブなゲートでは紛らわしい。そこで現在のステージのチェックボックスが確定的に `[?]`/`[R]` のとき、フックはストップを許可する。これは**ポジティブ確認のみかつフェイルオープン**である。より容易に解放するだけで、より多くブロックすることは決してない。チェックボックス行の欠落や任意のパースエラーはキャップ境界のブロックに落ちるため、本物のステージ途中の終了は依然としてナッジされる。
-- **ステージ途中の明確化質問も無料ではない。** 質問はstageを`[-]`にするため、未回答`[Answer]:`をpositive signalとしてstopを許可する。このcarve-outを抑制するのはIntent autonomy `full`だけで、`semi`の質問は人間へ戻す。
+- **ステージ途中の明確化質問も無料ではない。** 質問はstageを`[-]`にするため、未回答`[Answer]:`をpositive signalとしてstopを許可する。このcarve-outを抑制するのはIntent autonomy `full`と人間コマンド由来の`semi`で、いずれの下でも認可済みの質問は解決ラダーで無人裁定される。
 - **会話的なターンも無料ではない。** workflow engine呼出しなしで人間の直近promptへ回答した場合、transcriptから確認してstopを許可する。read-only queryはengagementに数えない。transcriptを持たないharnessはmode-aware capに依存する。このcarve-outを抑制するのもIntent autonomy `full`だけである。
 
 > **sensor-fire フックのアドバイザリー契約との対比。** `amadeus-sensor-fire.ts` は明示的な*never-block*契約を持つ(`{decision: block}` を決して返さない。`t95` Case 7 でアサート)。それは*そのフックの*アドバイザリー契約であり、ブロッキングのフレームワーク全体での禁止ではない。`Stop` フックがループ強制のために `block` を使うのは、別の承認済み契約である。

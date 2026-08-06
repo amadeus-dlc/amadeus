@@ -26,6 +26,7 @@ import {
 } from "../harness/fixtures.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
+  boltDagGenerationOf,
   GUARD_EXIT_MARKER,
   GUARD_OBSERVED_MARKER,
   GUARD_WEIGHT_MARKER,
@@ -100,6 +101,14 @@ ${grant}
 `;
 }
 
+/** The batches the fixture seeded, read back from the compiled DAG it wrote. */
+function seededBatches(proj: string): string[][] {
+  const graph = JSON.parse(
+    readFileSync(join(seededRecordDir(proj), "runtime-graph.json"), "utf-8"),
+  ) as { bolt_dag?: { batches?: string[][] } };
+  return graph.bolt_dag?.batches ?? [];
+}
+
 /** Write the compiled DAG plus its canonical artefact for `batches`. */
 function seedDag(proj: string, batches: string[][]): void {
   const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
@@ -137,8 +146,16 @@ function coverUnit(proj: string, unit: string): void {
  */
 function seedSwarmRows(
   proj: string,
-  rows: { event: string; batch: string }[],
+  rows: { event: string; batch: string; units?: string[]; unit?: string }[],
+  // #1953 / FR-5: rows only count as evidence for the plan whose generation they
+  // carry. Default = the generation the seeded DAG has now (what the emitter
+  // stamps); an explicit string seeds ANOTHER plan's rows; null seeds pre-#1953
+  // rows that carry no stamp at all.
+  options: { generation?: string | null } = {},
 ): void {
+  const generation = options.generation === undefined
+    ? boltDagGenerationOf(seededBatches(proj))
+    : options.generation;
   const shard = seededAuditShard(proj);
   mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
   const lines = rows.map((row, index) =>
@@ -150,10 +167,29 @@ function seedSwarmRows(
       timestamp: `2026-08-01T10:0${index}:00Z`,
       heading: "Swarm",
       event: row.event,
-      fields: { "Batch number": row.batch },
+      fields: {
+        "Batch number": row.batch,
+        ...(row.units === undefined ? {} : { "Unit names": row.units.join(",") }),
+        ...(row.unit === undefined ? {} : { "Unit name": row.unit }),
+        ...(generation === null ? {} : { "Plan generation": generation }),
+      },
     }),
   );
   writeFileSync(shard, `${lines.join("\n")}\n`);
+}
+
+/**
+ * The row set a real `prepare`/`finalize` pair leaves for one fanned-out batch:
+ * unit names on the start row, one convergence row per unit, then the batch
+ * completion (amadeus-swarm.ts emitSwarmStarted / emitUnitConverged /
+ * emitSwarmCompleted).
+ */
+function swarmRunRows(batch: string, units: string[]): { event: string; batch: string; units?: string[]; unit?: string }[] {
+  return [
+    { event: "SWARM_STARTED", batch, units },
+    ...units.map((unit) => ({ event: "SWARM_UNIT_CONVERGED", batch, unit })),
+    { event: "SWARM_COMPLETED", batch },
+  ];
 }
 
 /** Seed a fully covered code-generation run over `batches`. */
@@ -190,25 +226,69 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(String(directive.message)).toContain("batch 1");
   });
 
-  test("b: SWARM_STARTED + SWARM_COMPLETED lets the approve through (AC-2b)", () => {
+  test("b: a fanned-out, converged, completed batch lets the approve through (AC-2b)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]));
+    expect(runReport(proj, APPROVE).kind).not.toBe("error");
+  });
+
+  // A degraded driver still fanned the batch out. SWARM_DEGRADED carries no unit
+  // names, and it does not have to: `prepare` emits it IN ADDITION to the
+  // batch-start row, never instead of it (amadeus-swarm.ts —
+  // emitDegradeIfRequested is immediately followed by emitSwarmStarted), so the
+  // unit names still arrive and a unit-keyed reconciliation passes.
+  test("c: a degraded batch still reconciles on its start row's units (AC-2b)", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
     seedSwarmRows(proj, [
-      { event: "SWARM_STARTED", batch: "1" },
-      { event: "SWARM_COMPLETED", batch: "1" },
+      { event: "SWARM_DEGRADED", batch: "1" },
+      ...swarmRunRows("1", ["alpha", "beta"]),
     ]);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
 
-  // A degraded driver still fanned the batch out — SWARM_DEGRADED carries no
-  // unit names at all, so a reconciliation that matched on units instead of
-  // batch numbers would refuse every degraded run.
-  test("c: SWARM_DEGRADED counts as having started (AC-2b)", () => {
+  // #2354. The measured shape: the batch fanned out under one number and, after a
+  // re-dispatch advanced the conductor's counter, finalised under the next. The
+  // units are the same units; only the bookkeeping moved.
+  test("c2: evidence recorded under shifted batch numbers still passes (#2354)", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
     seedSwarmRows(proj, [
-      { event: "SWARM_DEGRADED", batch: "1" },
-      { event: "SWARM_COMPLETED", batch: "1" },
+      { event: "SWARM_STARTED", batch: "1", units: ["alpha", "beta"] },
+      { event: "SWARM_UNIT_CONVERGED", batch: "2", unit: "alpha" },
+      { event: "SWARM_UNIT_CONVERGED", batch: "2", unit: "beta" },
+      { event: "SWARM_COMPLETED", batch: "2" },
     ]);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
+  });
+
+  // The drift #1892 counted, in the shape it actually leaves: each unit dispatched
+  // as its own one-unit fan-out. Every row is well-formed and every unit
+  // converged — what is missing is any row naming the declared batch's units
+  // together, which is the only evidence of the parallelism the plan declared.
+  test("c3: one unit per fan-out row is still refused (#1892)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, [
+      ...swarmRunRows("1", ["alpha"]),
+      ...swarmRunRows("2", ["beta"]),
+    ]);
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
+  });
+
+  // An abandoned wide prepare (start row, no completion) followed by a serial
+  // rebuild: the units appear together on a start row and each converged, but
+  // under two different completed batches. Reading the settled side ungrouped
+  // would call this parallel (Bugbot on PR #2355, Medium).
+  test("c4: a stale wide fan-out does not vouch for a serial rebuild", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, [
+      { event: "SWARM_STARTED", batch: "1", units: ["alpha", "beta"] },
+      ...swarmRunRows("2", ["alpha"]),
+      ...swarmRunRows("3", ["beta"]),
+    ]);
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
   });
 
   test("d: an all-serial plan is never reconciled (AC-2c)", () => {
@@ -278,10 +358,15 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(message).not.toContain("batch 2 (");
   });
 
+  // A convergence row whose batch number cannot be read cannot be tied to a
+  // completion row, so the units it names never count as settled — the fan-out
+  // row alone is an intent to fan out, not proof the referee finished.
   test("j: a non-numeric Batch number is not evidence (BR-U3-5)", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
     seedSwarmRows(proj, [
-      { event: "SWARM_STARTED", batch: "one" },
+      { event: "SWARM_STARTED", batch: "one", units: ["alpha", "beta"] },
+      { event: "SWARM_UNIT_CONVERGED", batch: "one", unit: "alpha" },
+      { event: "SWARM_UNIT_CONVERGED", batch: "one", unit: "beta" },
       { event: "SWARM_COMPLETED", batch: "" },
     ]);
     expect(runReport(proj, APPROVE).kind).toBe("error");
@@ -292,6 +377,9 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
   // shared accessor that reads both.
   test("k: v2-schema SWARM rows are read alongside v1 rows", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
+    // REVISED for FR-5b (#1953): hand-built rows must carry the plan generation
+    // too — the axis this test pins is the v1/v2 SCHEMA read, not the binding.
+    const generation = boltDagGenerationOf(seededBatches(proj));
     const shard = seededAuditShard(proj);
     mkdirSync(join(seededRecordDir(proj), "audit"), { recursive: true });
     const v1 = JSON.stringify({
@@ -302,37 +390,81 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
       timestamp: "2026-08-01T10:00:00Z",
       heading: "Swarm",
       event: "SWARM_STARTED",
-      fields: { "Batch number": "1" },
+      fields: { "Batch number": "1", "Unit names": "alpha,beta", "Plan generation": generation },
     });
-    const v2 = JSON.stringify({
-      schemaVersion: 2,
-      eventId: "00000000-0000-4000-8000-000000000001",
-      seq: 2,
-      timestamp: "2026-08-01T10:01:00Z",
-      eventName: "amadeus.swarm.completed",
-      attributes: { Event: "SWARM_COMPLETED", "Batch number": "1" },
-      intentId: "fixture-0f14ce29",
-      space: "default",
-      cloneId: "fixturecloneid01",
-      traceId: null,
-      spanId: null,
-      traceFlags: 0,
-      idempotencyKey: "00000000-0000-4000-8000-000000000002",
-      canonical: true,
-    });
-    writeFileSync(shard, `${v1}\n${v2}\n`);
+    const v2Row = (seq: number, name: string, attributes: Record<string, string>) =>
+      JSON.stringify({
+        schemaVersion: 2,
+        eventId: `00000000-0000-4000-8000-00000000000${seq}`,
+        seq,
+        timestamp: `2026-08-01T10:0${seq}:00Z`,
+        eventName: name,
+        attributes,
+        intentId: "fixture-0f14ce29",
+        space: "default",
+        cloneId: "fixturecloneid01",
+        traceId: null,
+        spanId: null,
+        traceFlags: 0,
+        idempotencyKey: `00000000-0000-4000-8000-10000000000${seq}`,
+        canonical: true,
+      });
+    const v2 = [
+      v2Row(2, "amadeus.swarm.unit.converged", {
+        Event: "SWARM_UNIT_CONVERGED",
+        "Batch number": "1",
+        "Unit name": "alpha",
+        "Plan generation": generation,
+      }),
+      v2Row(3, "amadeus.swarm.unit.converged", {
+        Event: "SWARM_UNIT_CONVERGED",
+        "Batch number": "1",
+        "Unit name": "beta",
+        "Plan generation": generation,
+      }),
+      v2Row(4, "amadeus.swarm.completed", {
+        Event: "SWARM_COMPLETED",
+        "Batch number": "1",
+        "Plan generation": generation,
+      }),
+    ];
+    writeFileSync(shard, `${[v1, ...v2].join("\n")}\n`);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
 
   test("l: evidence for one batch does not vouch for another (BR-U3-4)", () => {
     const proj = seedCoveredRun([["alpha", "beta"], ["gamma", "delta"]]);
-    seedSwarmRows(proj, [
-      { event: "SWARM_STARTED", batch: "2" },
-      { event: "SWARM_COMPLETED", batch: "2" },
-    ]);
+    seedSwarmRows(proj, swarmRunRows("2", ["gamma", "delta"]));
     const directive = runReport(proj, APPROVE);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
     expect(String(directive.message)).not.toContain("batch 2 (");
+  });
+
+  // FR-5 (#1953): the audit trail is append-only, so unit names alone cannot
+  // separate a fan-out that ran under the CURRENT plan from one that ran under a
+  // plan this run replaced (a replan can re-declare the same unit names). Rows
+  // carry the plan generation; only rows of the current generation are evidence.
+  test("m: evidence from a previous plan generation is refused (FR-5a/FR-5d)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]), { generation: "0123456789ab" });
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
+    expect(String(directive.message)).toContain("re-run the fan-out");
+  });
+
+  test("n: generation-less legacy rows are not current evidence (FR-5b)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]), { generation: null });
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("re-run the fan-out");
+  });
+
+  test("o: evidence carrying the current plan generation passes (FR-5d)", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, swarmRunRows("1", ["alpha", "beta"]));
+    expect(runReport(proj, APPROVE).kind).not.toBe("error");
   });
 });

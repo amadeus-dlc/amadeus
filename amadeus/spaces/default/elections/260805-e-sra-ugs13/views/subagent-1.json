@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SRA-UGS13",
+  "voter": "subagent-1",
+  "question": "intent 260805-semi-redefine-autonomy-f の units-generation ステージ §13 学習選定。正本は record の inception/units-generation/memory.md(全文実読)。conductor 提案は 0 件(diary の Open questions が自己申告するとおり)。不採用理由: P1+P2 の単一 Unit 統合は既存 cid:units-generation:c1 (a) の適用実例、テストピンの挙動変更 Unit への移設も同 cid の統合条件の適用実例、FR 件数の機械再計算は cid:requirements-analysis:ledger-count-mechanical-recalc の適用実例、production 層結線の宙吊り検出は cid:requirements-analysis:enumeration-completeness-review の適用実例、bolt_dag 再 compile は cid:units-generation:recompile-before-construction-bolt-dag の適用実例。いずれも既存ノルムの実践であり新規の一般化価値を持たない。実在根拠は memory.md と成果物3点・§12a Review ブロックで実測確認すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "diary または成果物に一般化価値のある学びが実在する。留保にどの候補か file:line 根拠とともに記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0 件(提案どおり)",
+      "description": "すべて record 固定のみ。既存 cid の適用実例であり新規ノルムを増やさない。"
+    }
+  ]
+}

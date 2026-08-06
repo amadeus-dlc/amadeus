@@ -12,8 +12,8 @@ anything the workspace already owns.
 This chapter is the user-facing reference and the authoring guide. It describes
 what the plugin system supports today, its command-line surface, how a plugin is
 composed into a host automatically at session start, what the safety contract
-guarantees, how to verify a plugin locally, and how the seven packaged harness
-faces differ from the five self-install faces. It is not a copy of any upstream
+guarantees, how to verify a plugin locally, and how the packaged harness
+faces differ from the self-install faces. It is not a copy of any upstream
 README — every path, command, and failure contract below is the Amadeus one.
 
 The worked example is the reference plugin `test-pro`, kept as authoring source
@@ -67,8 +67,8 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
 1. **Author** — write `plugins/<name>/plugin.json` and its referenced files.
 2. **Project** — the packager discovers `plugins/`, validates each source
    structurally (a manifest is present, identities are unique, no path escapes
-   the plugin's own subtree), and projects every plugin into the seven packaged
-   harness trees plus a harness-neutral bundle. With no plugins present, the
+   the plugin's own subtree), and projects every plugin into each packaged
+   harness tree plus a harness-neutral bundle. With no plugins present, the
    output is byte-identical to a plugin-free build.
 3. **Inspect** — the composition engine checks a discovered plugin against a host
    snapshot and collects *every* problem (same-name stage, malformed manifest,
@@ -126,8 +126,8 @@ is installed in** — `bun .codex/tools/amadeus-plugin.ts compose` composes into
 `.codex/` from anywhere. That is the same root the engine reads composed plugin
 stages back from, so install, compose, and discovery cannot drift apart.
 `--project-root <dir>` overrides it to target another host — it is how you compose
-into a host that is not where the CLI lives (the `kiro` and `kiro-ide` faces,
-which are packaged but never self-installed, always need it).
+into a host that is not where the CLI lives (the `kiro`, `kiro-ide`, and `pi`
+faces, which are packaged but never self-installed, always need it).
 
 Argument handling is fail-closed and happens **before** any mutation: an unknown
 verb, an unknown flag, or a surplus argument prints usage on stderr and exits `2`
@@ -146,8 +146,8 @@ pays only a few `existsSync` probes and returns without recomposing, so the hook
 adds no startup latency in the common case. Any hook failure is a single stderr
 warning and a zero exit — a plugin problem never blocks the session.
 
-All seven packaged faces wire this trigger. Kiro CLI and Kiro IDE share one
-`.kiro` host tree, so the seven faces cover six host directories:
+All eight packaged faces wire this trigger. Kiro CLI and Kiro IDE share one
+`.kiro` host tree, so the eight faces cover seven host directories:
 
 | Face | Session-start trigger | Auto-compose |
 | --- | --- | --- |
@@ -158,6 +158,7 @@ All seven packaged faces wire this trigger. Kiro CLI and Kiro IDE share one
 | `kiro` | `agentSpawn` | wired |
 | `kiro-ide` | `promptSubmit` (idempotent via `--if-stale`) | wired |
 | `opencode` | JavaScript plugin `session.created` event | wired |
+| `pi` | extension `session_start` event | wired |
 
 OpenCode uses its official JavaScript/TypeScript plugin event rather than a
 shell hook. The existing `.opencode/plugins/amadeus-opencode-plugin.ts` handles
@@ -191,13 +192,13 @@ or silently dropped — it renders as an `unknown` row that fails the check.
 
 ## Installing a plugin into a host
 
-The packager emits a per-face **install bundle** for every one of the seven faces,
+The packager emits a per-face **install bundle** for every one of the eight faces,
 alongside a top-level `INSTALL.md` whose steps are dispatched on the face's host
 class:
 
 - **`native-manifest`** (`claude`) — install through the host plugin marketplace
   using `.claude-plugin/plugin.json`; auto-compose runs from `hooks/hooks.json`.
-- **`folder-drop-auto`** (`codex`, `cursor`, `kimi`, `kiro`, `kiro-ide`) — copy the
+- **`folder-drop-auto`** (`codex`, `cursor`, `kimi`, `kiro`, `kiro-ide`, `pi`) — copy the
   bundle's `plugins/<name>/` into `<harness-dir>/.amadeus-plugin-src/<name>/` under
   your project root (`.codex/.amadeus-plugin-src/<name>/` for Codex, and so on) —
   the harness-rooted directory `compose` scans, which is also the root the engine
@@ -295,8 +296,8 @@ the hash matches, the advisory is silent.
 Verification is local and temporary — you never mutate the committed tree to try
 a plugin out. The reference lifecycle test is the model: it copies the canonical
 source into a throwaway temp workspace, redirects the packager's source and output
-roots there (`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`), projects into all seven
-faces, composes into a temp host, runs the doctor, and drops — asserting that only
+roots there (`AMADEUS_PLUGINS_ROOT` / `AMADEUS_DIST_ROOT`), projects into every
+face, composes into a temp host, runs the doctor, and drops — asserting that only
 the declared artifacts are created, detected, and removed and that no temporary
 file survives in the tracked tree.
 
@@ -312,12 +313,57 @@ clean afterwards.
 
 ---
 
-## Seven packaged faces, five self-install faces
+## Declaring every module you import
 
-The packager projects every plugin into **seven** harness faces: `claude`,
-`codex`, `cursor`, `kiro`, `kiro-ide`, `opencode`, and `kimi`. Self-install — the
-reflection of a harness into the project root — stays the **closed five**:
-`claude`, `codex`, `cursor`, `opencode`, and `kimi`. `kiro` and `kiro-ide` are
-packaged but never promoted to the project root. The two matrices are verified
-against separate expected sets; one is never used as a stand-in for the other, and
-the five is never widened to seven.
+A composed plugin carries exactly the files its `plugin.json` declares. So a
+helper module that your declared tool imports, but that you forgot to list in
+`tools`, is not a stylistic omission — it is a missing import in every composed
+host. The plugin loads in your working tree, where the file is simply there on
+disk, and fails wherever it is actually installed.
+
+The packager closes this with the **import-closure guard**. Starting from each
+tool your manifest declares, it walks the transitive closure of *relative*
+imports (`./x.ts`, `../y.ts`) and requires every module it reaches to be both
+declared in `plugin.json` and present among your plugin's own source files. Bare
+specifiers like `node:crypto` are resolved by the runtime from outside the plugin
+tree and are out of scope; an absolute specifier is a boundary violation and is
+reported as such.
+
+The guard runs as part of the projection, so a build fails rather than shipping
+a broken face. It has no allowlist and no skip flag — a module passes by being
+declared and owned, or not at all. A reference it cannot read is enumerated as a
+failure instead of being dropped from the closure, which is what keeps a typo in
+an import path from quietly shrinking the set that gets checked.
+
+Failures print one line per offending reference, prefixed with your plugin's
+name, and the whole repair set is listed at once rather than stopping at the
+first offender:
+
+```
+MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
+MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
+UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+```
+
+Read them as three distinct repairs. `MISSING from … plugin.json` means the file
+exists in your plugin but the manifest does not carry it — add it to `tools`.
+`MISSING from … owned sources` means the manifest names a path with no file
+behind it inside the plugin. `UNREADABLE import` means the reference could not be
+resolved at all: an absent file, a bad path, or a symlink whose real target
+leaves the repository.
+
+The guard lives at `scripts/import-closure-guard.ts`; its internals and test
+layout are described in
+[Contributing](../reference/11-contributing.md#the-plugin-import-closure-guard).
+
+---
+
+## Eight packaged faces, five self-install faces
+
+The packager projects every plugin into **eight** harness faces: `claude`,
+`codex`, `cursor`, `kiro`, `kiro-ide`, `opencode`, `kimi`, and `pi`.
+Self-install — the reflection of a harness into the project root — stays the
+**closed five**: `claude`, `codex`, `cursor`, `opencode`, and `kimi`. `kiro`,
+`kiro-ide`, and `pi` are packaged but never promoted to the project root. The two
+matrices are verified against separate expected sets; one is never used as a
+stand-in for the other, and the five is never widened to the packaged set.

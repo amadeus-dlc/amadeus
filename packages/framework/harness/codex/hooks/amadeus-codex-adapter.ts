@@ -63,7 +63,7 @@ import {
   isMachineInjectedTurnText,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
-import { recordProtectedAdvisoryChoice } from "../tools/amadeus-advisory-choice.ts";
+import { choiceFromExactPrompt, recordAdvisoryChoice } from "../tools/amadeus-advisory-choice.ts";
 import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
 import { spawnHookWithRuntime } from "./amadeus-codex-hook-runtime.ts";
 
@@ -387,11 +387,13 @@ switch (target) {
           projectDir,
           capability: hostSessionCapability(codex.session_id),
         });
-        if (typeof codex.prompt === "string") {
+        const promptChoice = typeof codex.prompt === "string" ? choiceFromExactPrompt(codex.prompt) : null;
+        if (promptChoice !== null) {
           const turns = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN");
           const latest = turns[turns.length - 1];
           if (latest !== undefined) {
-            recordProtectedAdvisoryChoice(projectDir, codex.prompt, {
+            recordAdvisoryChoice(projectDir, promptChoice, {
+              kind: "human-turn",
               timestamp: latest.timestamp,
               shard: auditShardName(projectDir),
               eventIdentity: createHash("sha256").update(latest.block).digest("hex"),

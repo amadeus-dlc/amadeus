@@ -1,7 +1,9 @@
 // Self-development project guidance is harness-owned but not a distribution
 // surface. Root CLAUDE.md is a tracked projection of this prefix followed by
 // .claude/CLAUDE.md; promote-self validates that projection without writing it.
-export const PROJECT_INSTRUCTIONS = `## Project Instructions
+export const PROJECT_INSTRUCTIONS = `To avoid collisions with other agents, always create a dedicated worktree and branch and switch to them before starting work.
+
+## Project Instructions
 
 - Communicate with the user in Japanese.
 - Write documentation in English by default.

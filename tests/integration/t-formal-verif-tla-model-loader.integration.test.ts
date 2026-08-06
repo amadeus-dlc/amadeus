@@ -36,7 +36,9 @@ import type {
 } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const EXPECTED_MODULE_IDENTITY = "742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32";
+// Moved with the resolution axis revision published through updateModelMap
+// (ruling Q2=A, 2026-08-05 — Issue #1946, FR-2f). The cfg bytes were untouched.
+const EXPECTED_MODULE_IDENTITY = "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213";
 const EXPECTED_CFG_IDENTITY = "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b";
 const temporaryRoots: string[] = [];
 
