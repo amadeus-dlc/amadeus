@@ -30,6 +30,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolvePersonaPin } from "../../dist/claude/.claude/tools/amadeus-subagent-observability.ts";
+import { subagentStartFields } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -344,5 +345,86 @@ describe("t454 log-subagent-start model attribution (#2279)", () => {
     expect(rows.length).toBe(1);
     expect(rows[0]?.["Type Verdict"]).toBe("builtin");
     expect("Model" in (rows[0] ?? {})).toBe(false);
+  });
+});
+
+// The hook suites above drive attribution across the process boundary, which is
+// where its contract lives. These call subagentStartFields IN-PROCESS against
+// the same fixture shapes: Bun does not merge a spawned child's coverage, so the
+// enrichment would otherwise be measured as unexercised. Same contract, same
+// fixtures - only the call side differs.
+describe("t454 started-face attribution — in-process (#2279)", () => {
+  let proj: string;
+  beforeEach(() => {
+    proj = mkdtempSync(join(tmpdir(), "t454-inproc-"));
+    seedPinnedPersona(proj);
+  });
+  afterEach(() => {
+    rmSync(proj, { recursive: true, force: true });
+  });
+
+  const agentsDir = (): string => join(proj, ".claude", "agents");
+
+  test("without an agents dir the base record is unchanged - attribution is opt-in", () => {
+    const fields = subagentStartFields({ tool_name: "Task", tool_input: { subagent_type: PINNED_PERSONA } });
+    expect(fields?.["Agent Type"]).toBe(PINNED_PERSONA);
+    expect(fields && "Type Verdict" in fields).toBe(false);
+    expect(fields && "Model" in fields).toBe(false);
+  });
+
+  test("the persona pin supplies the model when nothing else does (ADR-3 last resort)", () => {
+    const fields = subagentStartFields(
+      { tool_name: "Task", tool_input: { subagent_type: PINNED_PERSONA } },
+      agentsDir(),
+    );
+    expect(fields?.["Type Verdict"]).toBe("persona");
+    expect(fields?.Model).toBe(PINNED_MODEL);
+    expect(fields?.["Model Source"]).toBe("pin");
+  });
+
+  test("an explicit request outranks the pin, and the harness supply outranks both", () => {
+    const requested = subagentStartFields(
+      { tool_name: "Task", tool_input: { subagent_type: PINNED_PERSONA, model: "t454-requested" } },
+      agentsDir(),
+    );
+    expect(requested?.Model).toBe("t454-requested");
+    expect(requested?.["Model Source"]).toBe("request");
+
+    const harness = subagentStartFields(
+      {
+        tool_name: "Task",
+        model: "t454-harness",
+        tool_input: { subagent_type: PINNED_PERSONA, model: "t454-requested" },
+      },
+      agentsDir(),
+    );
+    expect(harness?.Model).toBe("t454-harness");
+    expect(harness?.["Model Source"]).toBe("harness");
+  });
+
+  test("an out-of-set type is classified and carries no model when none is supplied (ADR-5)", () => {
+    const fields = subagentStartFields(
+      { tool_name: "Task", tool_input: { subagent_type: "t454-adhoc-name" } },
+      agentsDir(),
+    );
+    expect(fields?.["Type Verdict"]).toBe("outside-allowed-set");
+    // Absence is the record of absence: no placeholder value is invented.
+    expect(fields && "Model" in fields).toBe(false);
+    expect(fields && "Model Source" in fields).toBe(false);
+  });
+
+  test("a missing agents dir degrades to the builtin ledger instead of throwing (NFR-3)", () => {
+    const fields = subagentStartFields(
+      { tool_name: "Task", tool_input: { subagent_type: "coder" } },
+      join(proj, "no", "such", "dir"),
+    );
+    expect(fields?.["Agent Type"]).toBe("coder");
+    expect(fields?.["Type Verdict"]).toBe("builtin");
+  });
+
+  test("a type-less payload still records, classified as unknown", () => {
+    const fields = subagentStartFields({ tool_name: "Task", tool_input: {} }, agentsDir());
+    expect(fields?.["Agent Type"]).toBe("unknown");
+    expect(fields?.["Type Verdict"]).toBe("unknown-type");
   });
 });

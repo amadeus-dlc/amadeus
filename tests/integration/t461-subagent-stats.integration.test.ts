@@ -42,6 +42,12 @@ import {
   classifyAgentType,
   resolveAllowedAgentTypes,
 } from "../../dist/claude/.claude/tools/amadeus-subagent-observability.ts";
+import {
+  composeStatsReport,
+  main as statsMain,
+  scanAuditCorpus,
+  serializeStatsReport,
+} from "../../dist/claude/.claude/tools/amadeus-subagent-stats.ts";
 import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -355,5 +361,133 @@ describe("t461 AC-3 corpus sweep — both sides (#2279)", () => {
     expect(res.stdout).toContain('space "default"');
     expect(res.stdout).toContain("completed");
     expect(res.stdout).toContain("unresolved");
+  });
+});
+
+// The spawn suites above own the process contract (argv, stdout, exit code).
+// These call the same seams IN-PROCESS against the same fixture corpus, because
+// Bun does not merge a spawned child's coverage: without this the scan, the
+// wire shape, and the argv handling would be measured as unexercised even
+// though the CLI suite drives them. Same corpus, same assertions in kind - the
+// difference is only which side of the process boundary the call happens on.
+describe("t461 subagent-stats seams — in-process (#2279)", () => {
+  let proj: string;
+  beforeEach(() => {
+    proj = mkdtempSync(join(tmpdir(), "t461-inproc-"));
+    seedPersonas(proj, [PERSONA]);
+    seedFixtureCorpus(proj);
+  });
+  afterEach(() => {
+    rmSync(proj, { recursive: true, force: true });
+  });
+
+  test("scanAuditCorpus folds both schemas, counts the broken line, and ignores non-subagent rows", () => {
+    const scanned = scanAuditCorpus(proj, "default");
+
+    expect(scanned.shardCount).toBe(2);
+    expect(scanned.unreadableShardCount).toBe(0);
+    expect(scanned.parseSkippedCount).toBe(1);
+    expect(scanned.records.filter((r) => r.event === "SUBAGENT_COMPLETED")).toHaveLength(5);
+    expect(scanned.records.filter((r) => r.event === "SUBAGENT_STARTED")).toHaveLength(1);
+    // The v2 row carries its attributes; the attribute-less row carries none.
+    expect(scanned.records.some((r) => r.model === "opus" && r.modelSource === "agent-pin")).toBe(true);
+    expect(scanned.records.some((r) => r.agentType === undefined)).toBe(true);
+  });
+
+  test("a non-object and a non-record JSON line are skipped, not folded in", () => {
+    const solo = mkdtempSync(join(tmpdir(), "t461-shapes-"));
+    try {
+      seedShard(solo, "t461-c-deadbeef03", "host-ccc.jsonl", [
+        "[]",
+        '"a string"',
+        "42",
+        "null",
+        v1Row("SUBAGENT_COMPLETED", { "Agent Type": "coder" }),
+      ]);
+      const scanned = scanAuditCorpus(solo, "default");
+      // Well-formed JSON of the wrong shape parses, so it is not a parse skip -
+      // it simply yields no record.
+      expect(scanned.parseSkippedCount).toBe(0);
+      expect(scanned.records).toHaveLength(1);
+    } finally {
+      rmSync(solo, { recursive: true, force: true });
+    }
+  });
+
+  test("a missing corpus is an empty scan, not a failure", () => {
+    const empty = mkdtempSync(join(tmpdir(), "t461-empty-"));
+    try {
+      expect(scanAuditCorpus(empty, "default")).toEqual({
+        shardCount: 0,
+        unreadableShardCount: 0,
+        parseSkippedCount: 0,
+        records: [],
+      });
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  test("serializeStatsReport turns the Maps into the JSON wire shape without losing a tally", () => {
+    const scanned = scanAuditCorpus(proj, "default");
+    const report = composeStatsReport(
+      scanned,
+      resolveAllowedAgentTypes(join(proj, ".claude", "agents")),
+      "2026-08-06T00:00:00.000Z",
+      "probe",
+    );
+    const wire = serializeStatsReport(report) as Record<string, unknown>;
+
+    expect(wire.measuredAt).toBe("2026-08-06T00:00:00.000Z");
+    expect(wire.completedTotal).toBe(report.completedTotal);
+    expect(wire.startedTotal).toBe(report.startedTotal);
+    // Maps become plain objects; every tally survives the conversion.
+    const byVerdict = wire.byVerdict as Record<string, number>;
+    expect(Object.values(byVerdict).reduce((a, b) => a + b, 0)).toBe(report.completedTotal);
+    const byModel = wire.byModel as Record<string, number>;
+    expect(Object.values(byModel).reduce((a, b) => a + b, 0) + (wire.unresolvedModelCount as number)).toBe(
+      report.completedTotal,
+    );
+    expect(JSON.parse(JSON.stringify(wire))).toEqual(wire);
+  });
+
+  test("main resolves the project dir and space from argv and reports exit 0", () => {
+    expect(statsMain(["--project-dir", proj])).toBe(0);
+    expect(statsMain(["--project-dir", proj, "--space", "default"])).toBe(0);
+    expect(statsMain(["--project-dir", proj, "--json"])).toBe(0);
+  });
+
+  test("main fails closed on an unknown flag, a value-less option, and an unsafe space", () => {
+    expect(statsMain(["--nope"])).toBe(2);
+    expect(statsMain(["--project-dir"])).toBe(2);
+    expect(statsMain(["--space"])).toBe(2);
+    expect(statsMain(["--project-dir", proj, "--space", "../escape"])).toBe(2);
+  });
+
+  test("main reads the active-space cursor, and falls back to default when it is absent or unsafe", () => {
+    // No cursor: the default space still resolves and the corpus is found.
+    expect(statsMain(["--project-dir", proj])).toBe(0);
+
+    mkdirSync(join(proj, "amadeus"), { recursive: true });
+    writeFileSync(join(proj, "amadeus", "active-space"), "default\n", "utf-8");
+    expect(statsMain(["--project-dir", proj])).toBe(0);
+
+    // An unsafe cursor value is ignored rather than obeyed.
+    writeFileSync(join(proj, "amadeus", "active-space"), "../escape\n", "utf-8");
+    expect(statsMain(["--project-dir", proj])).toBe(0);
+  });
+
+  test("an unreadable shard is fail-loud: counted, announced, and a non-zero exit", () => {
+    const dir = join(proj, "amadeus", "spaces", "default", "intents", "t461-a-deadbeef01", "audit");
+    const locked = join(dir, "locked.jsonl");
+    writeFileSync(locked, `${v1Row("SUBAGENT_COMPLETED", { "Agent Type": "coder" })}\n`, "utf-8");
+    chmodSync(locked, 0o000);
+    try {
+      const scanned = scanAuditCorpus(proj, "default");
+      expect(scanned.unreadableShardCount).toBe(1);
+      expect(statsMain(["--project-dir", proj])).not.toBe(0);
+    } finally {
+      chmodSync(locked, 0o600);
+    }
   });
 });

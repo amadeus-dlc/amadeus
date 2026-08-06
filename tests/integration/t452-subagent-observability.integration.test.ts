@@ -18,12 +18,13 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   BUILTIN_AGENT_TYPES,
   resolveAllowedAgentTypes,
+  resolvePersonaPin,
 } from "../../dist/claude/.claude/tools/amadeus-subagent-observability.ts";
 import {
   AMADEUS_SRC,
@@ -260,3 +261,61 @@ describe("t452 log-subagent type verdict (#2279)", () => {
     expect(rows[0]?.["Type Verdict"]).toBe("builtin");
   });
 });
+
+// The allowed-set and pin resolvers must survive a definition they cannot read:
+// U1's fail-open contract says an unreadable agent file degrades to a warning
+// and the builtin ledger, never a throw that would take the emit down with it.
+describe("t452 unreadable agent definitions degrade to warnings (#2279)", () => {
+  let dir: string;
+  let locked: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "t452-unreadable-"));
+    writeFileSync(join(dir, "readable.md"), "---\nname: t452-readable-persona\n---\n", "utf-8");
+    locked = join(dir, "locked.md");
+    writeFileSync(locked, "---\nname: t452-locked-persona\nmodel: t452-pin\n---\n", "utf-8");
+    // biome-ignore lint/suspicious/noEmptyBlockStatements: chmod support is the probe
+    try {
+      chmodSync(locked, 0o000);
+    } catch {
+      // A platform without permission enforcement simply keeps the file readable;
+      // the assertions below tolerate that by checking the readable half only.
+    }
+  });
+  afterEach(() => {
+    try {
+      chmodSync(locked, 0o600);
+    } catch {
+      // Already restored or never locked.
+    }
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("resolveAllowedAgentTypes keeps the readable persona and reports the unreadable one", () => {
+    const resolution = resolveAllowedAgentTypes(dir);
+
+    // The readable half still lands, and the builtin ledger is never lost.
+    expect(resolution.allowed.has("t452-readable-persona")).toBe(true);
+    for (const builtin of BUILTIN_AGENT_TYPES) expect(resolution.allowed.has(builtin)).toBe(true);
+
+    if (readableWhenLocked(locked)) return; // permissions not enforced here
+    expect(resolution.allowed.has("t452-locked-persona")).toBe(false);
+    expect(resolution.warnings.some((w) => w.includes("locked.md"))).toBe(true);
+  });
+
+  test("resolvePersonaPin reports the unreadable definition instead of throwing", () => {
+    if (readableWhenLocked(locked)) return;
+    const pin = resolvePersonaPin("t452-locked-persona", dir);
+    expect(pin.pin).toBeUndefined();
+    expect(pin.warnings.some((w) => w.includes("locked.md"))).toBe(true);
+  });
+});
+
+/** True when the platform ignored the chmod, so the locked-file arms do not apply. */
+function readableWhenLocked(path: string): boolean {
+  try {
+    readFileSync(path, "utf-8");
+    return true;
+  } catch {
+    return false;
+  }
+}
