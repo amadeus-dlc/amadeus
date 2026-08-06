@@ -61,6 +61,10 @@ const BASELINE_SHA = readFileSync(
 //     coverage before the patch coverage gate runs.
 //   - PR #2205 (bugs collector): grant the metrics App token issues:read so
 //     the snapshot job's `bugs` collector can query the Search API.
+//   - Issue #2112 (cast-guard chain rule): the guard's comment named the
+//     remaining-debt count literally ("the existing 33"). Fixing the
+//     over-count changes that number, so the comment now names the debt
+//     without a literal count.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
