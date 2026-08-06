@@ -114,8 +114,6 @@ export type TlaElectionAction =
   | { kind: "RecordHold"; reason: TlaHoldReason }
   | { kind: "TerminalStutter" };
 
-const SUBMITTED_ORDER: Record<TlaSubmittedAt, number> = { T0: 0, T1: 1, T2: 2 };
-
 function budgets(value: 0 | 1): Record<TlaVoter, 0 | 1> {
   return { V1: value, V2: value, V3: value };
 }
@@ -231,16 +229,16 @@ function appendBallot(state: TlaElectionState, ballot: Omit<TlaBallot, "arrivalS
   return next;
 }
 
+// Mirrors the module's Later/Resolve pair: a voter's ballots are ranked by
+// arrival, the model's abstraction of the receipt instant the implementation
+// stamps on acceptance. The claimed instant never ranks anything (ruling Q2=A,
+// 2026-08-05 — Issue #1946, executed under FR-2f).
 export function resolveTlaBallots(state: TlaElectionState, cutoffSeq = state.tallyReceipt?.cutoffSeq ?? state.arrivalSeq): Partial<Record<TlaVoter, TlaBallot>> {
   const resolved: Partial<Record<TlaVoter, TlaBallot>> = {};
   for (const ballot of state.accepted) {
     if (ballot.arrivalSeq > cutoffSeq) continue;
     const prior = resolved[ballot.voter];
-    if (
-      prior === undefined ||
-      SUBMITTED_ORDER[ballot.submittedAt] > SUBMITTED_ORDER[prior.submittedAt] ||
-      (ballot.submittedAt === prior.submittedAt && ballot.arrivalSeq > prior.arrivalSeq)
-    ) {
+    if (prior === undefined || ballot.arrivalSeq > prior.arrivalSeq) {
       resolved[ballot.voter] = ballot;
     }
   }

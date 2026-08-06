@@ -8,6 +8,11 @@
 // allowlist. `as unknown` is NOT in the population: it asserts no proof and is
 // the shape parse-don't-validate wants (decisions.md ADR-2).
 //
+// #2112 fixed the unit of account. A claim is counted ONCE however many links
+// its chain has, and the `<T>expr` and `expr satisfies T` spellings count as
+// the same claim as `expr as T` — previously a chain counted per link (over)
+// while those two spellings counted zero (fail-open).
+//
 // Detection is AST-based rather than line-regex because the patched class is
 // routinely multi-line and holds nested parens; a single-line regex recalls
 // 27% of it (ADR-2 Context). The allowlist is keyed by (file, kind) COUNT and
@@ -70,6 +75,57 @@ describe("detectUncheckedCasts — what counts as an unchecked cast", () => {
       { file: "core/x.ts", line: 1, kind: "json-parse-as" },
       { file: "core/x.ts", line: 4, kind: "json-parse-as" },
       { file: "core/x.ts", line: 5, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("a multi-stage `as` chain is ONE claim, not one per link (#2112)", () => {
+    // `JSON.parse(x) as A as B` asserts a single thing: that the parsed value is
+    // a `B`. Counting each link would let one site inflate the ledger and make
+    // the residual total disagree with the number of unproven reads.
+    const source = ["const doc = JSON.parse(text) as Draft as StateDoc;"].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("passing through `unknown` mid-chain does not split or excuse the claim", () => {
+    // BR-CG-2 exempts the form that ENDS at `unknown`: the type is still owed
+    // downstream. A chain that passes through `unknown` and lands on a domain
+    // type has claimed that type, so it is one site — not two, and not zero.
+    const source = [
+      "const a = JSON.parse(text) as Draft as unknown as StateDoc;",
+      "const b = JSON.parse(text) as Draft as unknown;",
+    ].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("the angle-bracket spelling is the same claim, so it is the same debt (#2112)", () => {
+    // `<T>expr` and `expr as T` are one construct with two spellings. Counting
+    // only the `as` one leaves a way to add an unproven read that the ratchet
+    // never sees — a hole in the direction that matters (fail-open).
+    const source = ["const doc = <StateDoc>JSON.parse(text);"].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+    ]);
+  });
+
+  test("a bare `satisfies` on a parse result is a claim too (#2112)", () => {
+    // `JSON.parse(s)` is `any`, so `satisfies T` checks nothing at all: it reads
+    // as a proof and provides none. Left undetected it is the quietest way to
+    // add debt, so it joins the population rather than escaping it.
+    const source = [
+      "const doc = JSON.parse(text) satisfies StateDoc;",
+      "const via = JSON.parse(text) satisfies Draft as StateDoc;",
+    ].join("\n");
+
+    expect(detectUncheckedCasts("core/x.ts", source)).toEqual([
+      { file: "core/x.ts", line: 1, kind: "json-parse-as" },
+      { file: "core/x.ts", line: 2, kind: "json-parse-as" },
     ]);
   });
 

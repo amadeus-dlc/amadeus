@@ -814,7 +814,44 @@ describe("completion authorization", () => {
       completionContextDigest,
     });
 
-    expect(rejected).toEqual({ kind: "rejected", reason: expected });
+    // REVISED (#2251 review): a verdict refusal settles by redoing the Goal work.
+    expect(rejected).toEqual({ kind: "rejected", reason: expected, settleable: true });
+  });
+
+  // #2251 review: the refusal class decides whether the caller may treat it as a
+  // waiting state. A receipt that is ABOUT this completion but not current is
+  // settleable; a receipt about another subject never becomes valid, so it must
+  // keep the error path with its audit evidence (issue #839).
+  test("classifies freshness refusals settleable and identity refusals not", () => {
+    const { lineage, receipt, completionContextDigest } = achievedReceipt();
+    const base = {
+      intentId: INTENT_ID,
+      lineage,
+      receipt,
+      scope: "self-fix",
+      finalStage: "build-and-test",
+      completionInstance: "terminal:build-and-test",
+      completionContextDigest,
+    };
+    const settleableOf = (overrides: Record<string, unknown>) => {
+      const verdict = authorizeGoalCompletion({ ...base, ...overrides });
+      expect(verdict.kind).toBe("rejected");
+      return verdict.kind === "rejected" ? verdict.settleable : null;
+    };
+
+    // Freshness: re-running reconciliation produces an authorizing receipt.
+    expect(settleableOf({ receipt: { ...receipt, overallVerdict: "DEVIATED" } })).toBe(true);
+    expect(settleableOf({ receipt: { ...receipt, goalRevision: 1 } })).toBe(true);
+    expect(settleableOf({ receipt: { ...receipt, goalDigest: "0".repeat(64) } })).toBe(true);
+    expect(settleableOf({ completionContextDigest: "1".repeat(64) })).toBe(true);
+
+    // Identity: the receipt answers a different subject entirely.
+    expect(
+      settleableOf({ receipt: { ...receipt, intentId: "0198a988-7bc3-7000-8000-000000000002" } }),
+    ).toBe(false);
+    expect(settleableOf({ receipt: { ...receipt, goalId: "goal-other" } })).toBe(false);
+    expect(settleableOf({ scope: "feature" })).toBe(false);
+    expect(settleableOf({ completionInstance: "terminal:other-stage" })).toBe(false);
   });
 
   test("rejects stale revision, another Intent, and changed completion context", () => {

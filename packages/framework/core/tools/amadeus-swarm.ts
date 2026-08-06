@@ -83,6 +83,7 @@ import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   getField,
   parseArgs,
+  readBoltDagGeneration,
   recordDir,
   resolveConstructionRepo,
   resolveProjectDir,
@@ -358,6 +359,19 @@ export function emitSwarmAudit(
   appendAuditEntryViaEvents(eventType, fields, pd);
 }
 
+// Stamp the plan generation the fan-out is running under (#1953 / FR-5a). The
+// audit trail is append-only, so a batch number alone cannot tell approve-time
+// reconciliation whether a row belongs to the CURRENT plan or to a plan that was
+// replaced by a replan. A workflow with no compiled DAG has no generation to
+// bind to; the row then carries none and the verifier fails closed on it.
+function withPlanGeneration(
+  pd: string,
+  fields: Record<string, string>,
+): Record<string, string> {
+  const generation = readBoltDagGeneration(pd);
+  return generation === null ? fields : { ...fields, "Plan generation": generation };
+}
+
 export function emitSwarmStarted(
   pd: string,
   batch: string,
@@ -366,11 +380,11 @@ export function emitSwarmStarted(
 ): void {
   emitSwarmAudit(
     "SWARM_STARTED",
-    {
+    withPlanGeneration(pd, {
       "Batch number": batch,
       "Unit names": units.join(","),
       "Concurrency cap": concurrency,
-    },
+    }),
     pd
   );
 }
@@ -381,11 +395,11 @@ export function emitSwarmStarted(
 export function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
   emitSwarmAudit(
     "SWARM_DEGRADED",
-    {
+    withPlanGeneration(pd, {
       "Batch number": batch,
       "Requested driver": requested,
       "Fallback driver": "subagent",
-    },
+    }),
     pd
   );
 }
@@ -393,7 +407,7 @@ export function emitSwarmDegraded(pd: string, batch: string, requested: DriverNa
 export function emitUnitConverged(pd: string, batch: string, unit: string): void {
   emitSwarmAudit(
     "SWARM_UNIT_CONVERGED",
-    { "Batch number": batch, "Unit name": unit },
+    withPlanGeneration(pd, { "Batch number": batch, "Unit name": unit }),
     pd
   );
 }
@@ -432,11 +446,11 @@ function emitSwarmCompleted(
 ): void {
   emitSwarmAudit(
     "SWARM_COMPLETED",
-    {
+    withPlanGeneration(pd, {
       "Batch number": batch,
       "Converged count": String(convergedCount),
       "Failed count": String(failedCount),
-    },
+    }),
     pd
   );
 }

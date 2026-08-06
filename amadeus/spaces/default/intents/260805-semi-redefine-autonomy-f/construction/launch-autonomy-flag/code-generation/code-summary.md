@@ -20,6 +20,10 @@ conductor(マージ後統合): typecheck 0 / lint OK / registry fresh / complexi
 
 裁定 A(pre-pass 構造変更 — E-SRA-CG1 の機械的執行、last-wins 意味論は t449 で機械固定)/ `readonly` 不採用(既存 `ParsedFlags` 様式への準拠 — FD 逐語コード自身が代入形)/ 型名衝突回避の別名 import / ports 注入シーム(team.md construction のテストシーム規範準拠)。
 
+## 追補(PR #2294 Patch Coverage Gate 是正 — conductor 直是正、2026-08-06)
+
+CI の Patch Coverage Gate が UNCOVERED 3 行(amadeus-orchestrate.ts :1199 catch ブレース / :1236・:1294 複数行文字列の継続行)で赤 — いずれも既知 DA:0 クラス(`bun-multiline-arg-da0` / lcov-wiring-line-checklist の catch 面)。是正 = 2 メッセージの単一行 collapse+`readLaunchAutonomyContext` の catch を決定的に踏むテスト追加(corrupt intents.json+cursor で SyntaxError を実測確定 — null 経路との判別は lcov DA で機械確認: catch 行 DA=11、メッセージ行 DA=197/187)。conductor コミット `d96ae3d81` → bolt ブランチへ cherry-pick `9cf48ee10`(承認済み例外運用)。typecheck 0 / lint 0 / t449+t450 33 pass。
+
 ## 未決の申し送り(実装保留 — 不正入力限定の意味差)
 
 pre-pass は `--autonomy` が**他の valued flag の値スロット**に置かれた不正入力(例: `--scope --autonomy semi`)で FD 逐語 ladder と挙動が分岐する(ladder = `Unknown scope` loud / pre-pass = `--scope` 無音落ち)。正常入力は完全一致。封鎖には valued-flag 集合の二重定義が必要なため builder は実装せず、endorse する assert も置いていない — **build-and-test ステージまでに裁定**(候補: 現挙動を許容し docs 注記 / valued-flag 集合を canonical 1 定義へ抽出して pre-pass が参照)。あわせて reviewer FOLLOW-UP の FR-GRT-006 引用実在確認も未閉包(実装は FR-CLI-4 へ trace 済みで実害なし)。

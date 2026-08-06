@@ -151,8 +151,13 @@ describe("finite TLA election model", () => {
     expect(duplicateHold.holdBudget).toBe(0);
   });
 
-  test("resolves T0/T1/T2 amendments by timestamp then arrival while preserving amend provenance", () => {
-    for (const [submittedAt, expectedArrivalSeq] of [["T0", 1], ["T1", 2], ["T2", 2]] as const) {
+  // Test-contract revision (ruling Q2=A, 2026-08-05 — Issue #1946, executed
+  // under FR-2f): resolution follows the arrival axis, which is the model's
+  // abstraction of the receipt stamp the CLI mints on acceptance. The claimed
+  // instant is carried but never ranks a voter's ballots, so an amendment wins
+  // for every claimed value — including one below its own original's.
+  test("resolves T0/T1/T2 amendments by arrival while preserving amend provenance", () => {
+    for (const [submittedAt, expectedArrivalSeq] of [["T0", 2], ["T1", 2], ["T2", 2]] as const) {
       const originalState = applyTlaElectionAction(
         createInitialTlaElectionState(),
         original("V1", "C1", "T1", "T1", 1),
@@ -407,8 +412,13 @@ describe("frozen TLA model generator", () => {
     const expectedResolution = source.slice(expectedStart, badResolutionStart);
 
     expect(expectedStart).toBeGreaterThan(-1);
-    expect(expectedResolution).toContain('ballot.submittedAt = "T0"');
+    // Test-contract revision (ruling Q2=A, 2026-08-05 — Issue #1946, executed
+    // under FR-2f): the obligation used to pin the claimed-instant rank that
+    // headed the old comparison. That rank is gone from the spec; what remains
+    // pinned is that the obligation re-derives the arrival comparison inline,
+    // independently of the operators the action itself uses.
     expect(expectedResolution).toContain("ballot.arrivalSeq > prior.arrivalSeq");
+    expect(expectedResolution).not.toContain("submittedAt");
     for (const selfReference of ["Later(", "Resolve(", "SubmittedRank("]) {
       expect(expectedResolution).not.toContain(selfReference);
     }

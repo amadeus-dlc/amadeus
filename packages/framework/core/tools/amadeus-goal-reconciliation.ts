@@ -451,7 +451,25 @@ export function goalCompletionContextDigest(input: {
 
 export type GoalCompletionAuthorization =
   | { readonly kind: "authorized"; readonly receipt: GoalReconciliationReceipt }
-  | { readonly kind: "rejected"; readonly reason: string };
+  | {
+      readonly kind: "rejected";
+      readonly reason: string;
+      /**
+       * Whether doing the Goal work again settles this refusal.
+       *
+       * TRUE for freshness refusals — the receipt is ABOUT this completion but
+       * is not current (verdict not yet ACHIEVED, a stale revision, a digest or
+       * context that moved). Re-running reconciliation produces an authorizing
+       * receipt, so the caller may treat it as a waiting state.
+       *
+       * FALSE for identity refusals — the receipt answers a DIFFERENT subject
+       * (another Intent, another Goal, another scope/final stage, another
+       * completion instance). No amount of Goal work makes that receipt apply:
+       * it is malformed state and keeps the error path with its audit evidence
+       * (issue #839).
+       */
+      readonly settleable: boolean;
+    };
 
 export function authorizeGoalCompletion(input: {
   readonly intentId: string;
@@ -467,28 +485,37 @@ export function authorizeGoalCompletion(input: {
     return {
       kind: "rejected",
       reason: `receipt verdict is ${input.receipt.overallVerdict}`,
+      settleable: true,
     };
   }
   if (input.lineage.intentId !== input.intentId || input.receipt.intentId !== input.intentId) {
-    return { kind: "rejected", reason: "receipt belongs to another Intent" };
+    return { kind: "rejected", reason: "receipt belongs to another Intent", settleable: false };
   }
   if (input.receipt.goalId !== input.lineage.goalId) {
-    return { kind: "rejected", reason: "receipt Goal identity does not match" };
+    return { kind: "rejected", reason: "receipt Goal identity does not match", settleable: false };
   }
   if (input.receipt.goalRevision !== input.lineage.currentRevision) {
-    return { kind: "rejected", reason: "receipt Goal revision is stale" };
+    return { kind: "rejected", reason: "receipt Goal revision is stale", settleable: true };
   }
   if (input.receipt.goalDigest !== current.digest) {
-    return { kind: "rejected", reason: "receipt Goal digest does not match" };
+    return { kind: "rejected", reason: "receipt Goal digest does not match", settleable: true };
   }
   if (input.receipt.scope !== input.scope || input.receipt.finalStage !== input.finalStage) {
-    return { kind: "rejected", reason: "receipt scope or final stage does not match" };
+    return {
+      kind: "rejected",
+      reason: "receipt scope or final stage does not match",
+      settleable: false,
+    };
   }
   if (input.receipt.completionInstance !== input.completionInstance) {
-    return { kind: "rejected", reason: "receipt completion instance does not match" };
+    return {
+      kind: "rejected",
+      reason: "receipt completion instance does not match",
+      settleable: false,
+    };
   }
   if (input.receipt.completionContextDigest !== input.completionContextDigest) {
-    return { kind: "rejected", reason: "receipt completion context has changed" };
+    return { kind: "rejected", reason: "receipt completion context has changed", settleable: true };
   }
   return { kind: "authorized", receipt: input.receipt };
 }

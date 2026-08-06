@@ -1,6 +1,7 @@
 import {
   activeIntent,
   activeSpace,
+  errorMessage,
   getField,
   nextInScopeStage,
   readIntentRegistry,
@@ -11,13 +12,45 @@ import {
 } from "./amadeus-lib.ts";
 import { basename, dirname, resolve } from "node:path";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { existsSync } from "node:fs";
 import {
   authorizeGoalCompletion,
   goalCompletionContextDigest,
+  goalLineagePath,
+  goalReceiptPath,
   type GoalReconciliationReceipt,
   readGoalLineage,
   readGoalReconciliationReceipt,
 } from "./amadeus-goal-reconciliation.ts";
+
+// The terminal completion has not settled yet: the Goal artifacts this
+// completion is authorized against are absent or unusable, or the Goal
+// authority declined the receipt it was given. The workflow leaves this state by
+// doing the Goal work and re-running completion, so callers answer it as a
+// waiting state (the engine's await-completion directive) with no ERROR_LOGGED
+// row — issue #2251 found the expected window recorded as
+// amadeus.operation.failed on every re-entry.
+//
+// Deliberately NOT thrown for this module's other refusals — a missing or
+// invalid Scope, a target that is not the final in-scope stage, a Goal lineage
+// that contradicts the state projection, an Intent absent from the registry.
+// Those are malformed state, i.e. genuine failures, and stay on the error path
+// with their audit evidence intact (issue #839).
+export class WorkflowCompletionNotSettledError extends Error {}
+
+// Read a Goal artifact under the not-settled boundary. ABSENCE is the confirmed
+// production case: the artifact the completion is authorized against has not
+// been produced yet, and doing the Goal work produces it — a waiting state.
+//
+// A PRESENT but unparseable artifact is not that: no Goal work fixes malformed
+// bytes, and swallowing it as "not settled" would hide a corrupt record behind
+// a waiting state that never resolves. Those keep the error path with their
+// audit evidence (issue #839), so the existence check is the classifier and the
+// read itself is left to throw.
+function ifPresent<T>(path: string, read: () => T, absent: string): T {
+  if (!existsSync(path)) throw new WorkflowCompletionNotSettledError(absent);
+  return read();
+}
 
 export type WorkflowCompletionPreparation = Readonly<{
   instance: string;
@@ -144,7 +177,11 @@ export function authorizeWorkflowCompletion(input: {
       `Workflow completion target ${input.completedSlug} is not the final in-scope stage`,
     );
   }
-  const lineage = readGoalLineage(input.recordDir);
+  const lineage = ifPresent(
+    goalLineagePath(input.recordDir),
+    () => readGoalLineage(input.recordDir),
+    "Goal lineage is missing",
+  );
   const current = lineage.revisions[lineage.currentRevision];
   const stateGoalId = getField(input.content, "Goal ID")?.trim();
   const stateRevision = getField(input.content, "Current Goal Revision")?.trim();
@@ -156,9 +193,10 @@ export function authorizeWorkflowCompletion(input: {
   ) {
     throw new Error("Goal lineage does not match the workflow state projection");
   }
-  const receipt = readGoalReconciliationReceipt(
-    input.recordDir,
-    input.completionInstance,
+  const receipt = ifPresent(
+    goalReceiptPath(input.recordDir, input.completionInstance),
+    () => readGoalReconciliationReceipt(input.recordDir, input.completionInstance),
+    "Goal reconciliation receipt is missing",
   );
   const authorization = authorizeGoalCompletion({
     intentId: registeredIntentUuid(input.projectDir, input.recordDir),
@@ -173,7 +211,13 @@ export function authorizeWorkflowCompletion(input: {
     ),
   });
   if (authorization.kind === "rejected") {
-    throw new Error(`Goal reconciliation refused completion: ${authorization.reason}`);
+    // Freshness refusals settle by doing the Goal work again; identity refusals
+    // (a receipt about another Intent/Goal/completion) never do, so they stay on
+    // the error path rather than becoming a waiting state that cannot end.
+    const message = `Goal reconciliation refused completion: ${authorization.reason}`;
+    throw authorization.settleable
+      ? new WorkflowCompletionNotSettledError(message)
+      : new Error(message);
   }
   return authorization.receipt;
 }

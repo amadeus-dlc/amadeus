@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
+import type { AwaitCompletionDirective } from "./amadeus-directive.ts";
 import {
   JOURNAL_SCHEMA_VERSION,
   serializeJournalEntry,
@@ -152,6 +153,7 @@ import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {
   authorizeWorkflowCompletion,
+  WorkflowCompletionNotSettledError,
   prepareWorkflowCompletion,
   type WorkflowCompletionPreparation,
   workflowCompletionPreparation,
@@ -2526,6 +2528,8 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     `terminal:${completedSlug}`;
   const completionRecord = operationRecordDir(pd);
   if (completionRecord === null) {
+    // An unresolved Intent record is a broken workspace, not a completion
+    // waiting to settle: no Goal work clears it, so it keeps the error path.
     error("Goal reconciliation refused completion: Intent record is unresolved");
   }
   let completionReceipt: GoalReconciliationReceipt;
@@ -2538,7 +2542,9 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       completionInstance,
     });
   } catch (cause) {
-    error(`Goal reconciliation refused completion: ${errorMessage(cause)}`);
+    const refusal = `Goal reconciliation refused completion: ${errorMessage(cause)}`;
+    if (cause instanceof WorkflowCompletionNotSettledError) awaitCompletion(refusal);
+    error(refusal);
   }
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";
@@ -5467,4 +5473,16 @@ function error(msg: string): never {
   // Unset (undefined) for every sentinel-locked handler -> emitError keys the
   // sentinel, matching their lock.
   emitError(pd, "amadeus-state", command, msg, lockIntent, lockSpace);
+}
+
+// The terminal completion transaction did not settle. Fail-closed exactly like
+// error() — non-zero exit, refusal on stderr, no completion surface touched —
+// but typed as the engine's await-completion directive and WITHOUT the
+// ERROR_LOGGED row: a completion the goal authority declines to settle is an
+// expected waiting state the workflow recovers from, not a failed step (issue
+// #2251). error() itself is untouched, so every genuine failure keeps its audit
+// evidence (issue #839).
+function awaitCompletion(msg: string): never {
+  console.error(JSON.stringify({ kind: "await-completion", reason: msg } satisfies AwaitCompletionDirective));
+  process.exit(1);
 }

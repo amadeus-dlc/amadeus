@@ -146,18 +146,18 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "emitMirrorBoundaryIfNeeded",
-      "fingerprint": "sha256:ed0187a3e7f2f1e730ee83efec2fc69ab615027cde212b0d5734ad23be804649",
-      "anchorLines": 17,
-      "targetLines": "1-17"
+      "fingerprint": "sha256:a6a8fbdb828368cdf6c1ac180d9d784d93487c311fbe7007f96c8833d333378c",
+      "anchorLines": 15,
+      "targetLines": "1-15"
     },
-    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 integration; spawned execution is not attributed to parent Bun LCOV.",
+    "reason": "The unresolved record fail-closed directive is a generated-orchestrator boundary. Goal completion mirror refusal and no-external-command behavior are exercised through the shipped CLI in t427 and t453 integration; spawned execution is not attributed to parent Bun LCOV. The refusal's await-completion vs error decision is not waived here: it lives in the pure completionRefusalDirective seam covered in-process by tests/unit/t451-completion-refusal-directive.test.ts.",
     "expiry": "remove when record resolution and directive emission are injectable in-process or Bun merges child-process coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleNext",
-      "fingerprint": "sha256:4dfe5ea3efa5d46f1a1889dfae96c47eea3d05ecceea445e9ef58aa48f77de14",
+      "fingerprint": "sha256:c7c05315937fbfb9fed512719d6258596e41dc47879b165e96fa8261c116119a",
       "anchorLines": 20,
       "targetLines": "1-20"
     },
@@ -6351,6 +6351,17 @@
     "expiry": "remove if the workshop gains an injectable filesystem port"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "awaitCompletion",
+      "fingerprint": "sha256:e9557e985662b83577619eb578a9687d3b557c75306a5fafd25d743cc45770de",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "awaitCompletion ends in process.exit, so it cannot be driven in-process without killing the runner; it is the await-completion sibling of the error() helper immediately above it and is waived on the same grounds. The refusal it prints is asserted through the shipped CLI in tests/integration/t453-await-completion-directive.integration.test.ts (typed kind on stderr, non-zero exit, byte-identical state, no ERROR_LOGGED row), and the wait-vs-failure decision that selects it is covered in-process by tests/unit/t451-completion-refusal-directive.test.ts.",
+    "expiry": "remove when amadeus-state's process exit is injectable in-process or Bun attributes spawned CLI lines"
+  },
+  {
     "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "nodeDecisionEmitter",
@@ -6415,5 +6426,15 @@
     },
     "reason": "Defensive echo inside handleSessionTakeover: reached only if applySessionTakeover succeeded yet authorizeMainConductor still denies, which no reachable filesystem state produces (apply writes exactly the faces the guard reads, and a write failure throws before this line). Message-string line where a refactor is unnatural — spawn-blindspot-two-step (ii).",
     "expiry": "remove when the takeover guard echo becomes reachable through an injectable seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-reviewer-runtime.ts",
+    "selector": {
+      "function": "mkdir",
+      "fingerprint": "sha256:b9e120461b5d8ea504d4c942e6976c015b3399125d50a7bbd662297bd091b943",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The recursive-mkdir adapter in the DEFAULT dependency record. Every in-process test injects its own fs deps (t245 localRuntime), so this line only runs on the spawned path, which LCOV does not measure. Covering it would require a spawned test whose only assertion is that a directory was created — the invocation store's real behaviour is already pinned in-process. Expires when the reviewer runtime's default deps gain an in-process test seam."
   }
 ]

@@ -68,8 +68,11 @@ describe("t404: per-model vocabulary supply", () => {
     const model = formalElectionModel();
     expect(model.vocabulary?.namedInvariants).toEqual([...FORMAL_ELECTION_NAMED_INVARIANTS]);
     expect(model.vocabulary?.traceStateVariables).toEqual([...FORMAL_ELECTION_TRACE_STATE_VARIABLES]);
-    // The declaration did not disturb the drift-pinned identity values.
-    expect(model.model.identity).toBe("742b7785144e90234baf3cfe69de404b80457f979b5240789ee154ae74807d32");
+    // The declaration did not disturb the drift-pinned identity values. The
+    // module identity moved once, with the resolution axis revision published
+    // through updateModelMap (ruling Q2=A, 2026-08-05 — Issue #1946, FR-2f);
+    // the cfg was untouched, which is why only the module value changed here.
+    expect(model.model.identity).toBe("e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213");
     expect(model.cfg.identity).toBe("92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b");
     expect(model.entries.length).toBe(5);
   });

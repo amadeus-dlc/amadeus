@@ -31,11 +31,13 @@ GoAClass(g) ==
     [] g = 7 -> "AGAINST"
     [] OTHER -> "BLOCK"
 
-SubmittedRank(s) == CASE s = "T0" -> 0 [] s = "T1" -> 1 [] OTHER -> 2
-Later(a, b) ==
-  \/ SubmittedRank(a.submittedAt) > SubmittedRank(b.submittedAt)
-  \/ /\ a.submittedAt = b.submittedAt
-     /\ a.arrivalSeq > b.arrivalSeq
+\* Per-voter resolution ranks ballots by arrival, the model's abstraction of the
+\* receipt instant the implementation stamps when it accepts a ballot. The
+\* claimed instant (submittedAt) is carried on the record and validated for its
+\* shape, but it is voter-supplied and ranks nothing: a claimed instant far in
+\* the future must not outrank a later ballot from the same voter.
+\* Ruling Q2=A (2026-08-05), FR-2f.
+Later(a, b) == a.arrivalSeq > b.arrivalSeq
 Resolve(prior, ballot) == IF prior = NoBallot \/ Later(ballot, prior) THEN ballot ELSE prior
 ResolvedVoters(r) == {v \in Voters : r[v] /= NoBallot}
 ResolvedSet(r) == {r[v] : v \in ResolvedVoters(r)}
@@ -241,12 +243,11 @@ BadAmendStep ==
          /\ (IF tally.kind = "NONE"
              THEN UNCHANGED reexamRequired
              ELSE reexamRequired' = (reexamRequired \/ (g = 8))))
+\* Re-derived inline, without the operators the action uses, so the obligation
+\* below is an independent statement of the arrival axis rather than a restating
+\* of the action's own definition. Ruling Q2=A (2026-08-05), FR-2f.
 ExpectedResolution(prior, ballot) ==
-  IF prior = NoBallot
-     \/ (CASE ballot.submittedAt = "T0" -> 0 [] ballot.submittedAt = "T1" -> 1 [] OTHER -> 2)
-        > (CASE prior.submittedAt = "T0" -> 0 [] prior.submittedAt = "T1" -> 1 [] OTHER -> 2)
-     \/ /\ ballot.submittedAt = prior.submittedAt
-        /\ ballot.arrivalSeq > prior.arrivalSeq
+  IF prior = NoBallot \/ ballot.arrivalSeq > prior.arrivalSeq
   THEN ballot ELSE prior
 BadResolutionStep ==
   \E v \in Voters:

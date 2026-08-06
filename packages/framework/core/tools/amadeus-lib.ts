@@ -8062,8 +8062,12 @@ export function planGuardMessage(
 // letting an ABANDONED wide prepare (a start row with no completion) vouch for
 // units that were really settled one at a time afterwards.
 export type SwarmEvidence = {
-  readonly fannedOutUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_STARTED row
-  readonly settledUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_COMPLETED batch
+  readonly fannedOutUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_STARTED row, current plan only
+  readonly settledUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_COMPLETED batch, current plan only
+  // Rows existed for this workflow but named another plan generation (or none at
+  // all): evidence for a plan this run replaced. Message-only — the verdict
+  // already treats them as absent (#1953 / FR-5a, FR-5b, fail-closed).
+  readonly sawStaleGeneration?: boolean;
 };
 
 // Whether the run's execution shape matches the plan's. `missing` carries EVERY
@@ -8371,6 +8375,64 @@ function cachedBoltDagBatches(cache: unknown): string[][] | null {
     valid.push(names);
   }
   return valid;
+}
+
+/**
+ * The plan generation that SWARM evidence is bound to: a digest of the compiled
+ * Bolt DAG's batch structure. A replan (units added, removed, reordered, or the
+ * dependency cut redrawn) yields a different digest, which is what lets
+ * approve-time reconciliation tell a fan-out that ran under THIS plan from one
+ * that ran under a previous plan whose rows are still in the append-only audit
+ * trail (#1953 / FR-5a). Pure so the emitter and the verifier can compute the
+ * same value from the same recovered DAG without sharing state.
+ *
+ * Batch ORDER is part of the identity (batch 1 running before batch 2 is the
+ * plan); the order of names WITHIN a batch is not — that is a serialization
+ * detail of whichever source the DAG was recovered from, and treating it as a
+ * replan would refuse evidence for a plan that never changed.
+ */
+export function boltDagGenerationOf(batches: readonly (readonly string[])[]): string {
+  return createHash("sha256")
+    .update(JSON.stringify(batches.map((batch) => [...batch].sort())))
+    .digest("hex")
+    .slice(0, 12);
+}
+
+/** The cached `bolt_dag` node, or undefined when the runtime graph is absent or unreadable. */
+function readCachedBoltDag(path: string): unknown {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    return graph !== null && typeof graph === "object" && "bolt_dag" in graph
+      ? (graph as { bolt_dag?: unknown }).bolt_dag
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The canonical dependency artifact the DAG is healed from, as a recovery source. */
+function readBoltDagSource(path: string): BoltDagCanonicalSource {
+  try {
+    return { kind: "content", path, body: readFileSync(path, "utf-8") };
+  } catch {
+    return { kind: "absent", path };
+  }
+}
+
+/**
+ * The current plan generation, recovered from the same two sources the Bolt DAG
+ * itself is recovered from. Null when this workflow has no compiled DAG at all —
+ * the caller then has no plan to bind evidence to.
+ */
+export function readBoltDagGeneration(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): string | null {
+  const cached = readCachedBoltDag(runtimeGraphPath(projectDir, intent, space));
+  const source = readBoltDagSource(unitDependencyPath(projectDir, intent, space));
+  const recovery = recoverBoltDag(cached, source);
+  return recovery.kind === "ok" ? boltDagGenerationOf(recovery.batches) : null;
 }
 
 /** Reconcile the disposable runtime DAG cache with its canonical dependency artifact. */
