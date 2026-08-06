@@ -257,6 +257,22 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
   });
 
+  // An abandoned wide prepare (start row, no completion) followed by a serial
+  // rebuild: the units appear together on a start row and each converged, but
+  // under two different completed batches. Reading the settled side ungrouped
+  // would call this parallel (Bugbot on PR #2355, Medium).
+  test("c4: a stale wide fan-out does not vouch for a serial rebuild", () => {
+    const proj = seedCoveredRun([["alpha", "beta"]]);
+    seedSwarmRows(proj, [
+      { event: "SWARM_STARTED", batch: "1", units: ["alpha", "beta"] },
+      ...swarmRunRows("2", ["alpha"]),
+      ...swarmRunRows("3", ["beta"]),
+    ]);
+    const directive = runReport(proj, APPROVE);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1 (2 units: alpha, beta)");
+  });
+
   test("d: an all-serial plan is never reconciled (AC-2c)", () => {
     const proj = seedCoveredRun([["alpha"], ["beta"]]);
     expect(runReport(proj, APPROVE).kind).not.toBe("error");

@@ -4681,9 +4681,11 @@ function completedBatchNumbers(audit: string): Set<number> {
 // the batch-start row, never instead of it, so the degraded batch's unit names
 // still arrive via SWARM_STARTED.
 //
-// A unit only counts as SETTLED when its SWARM_UNIT_CONVERGED row belongs to a
-// batch that also has a SWARM_COMPLETED row: convergence alone is a per-unit
-// claim, and the completion row is what says the referee finished the batch.
+// Units count as SETTLED per COMPLETED BATCH, not as one pooled set: convergence
+// alone is a per-unit claim, the completion row is what says the referee finished
+// that batch, and keeping the grouping is what stops an abandoned wide prepare
+// from vouching for units that were really re-dispatched one at a time (the
+// grouping argument lives on swarmEvidenceVerdict).
 //
 // Reading every shard (not just this clone's) matters because a batch prepared in
 // one worktree and finalised in another leaves its rows in two files, and a
@@ -4696,13 +4698,15 @@ function collectSwarmEvidence(projectDir: string): SwarmEvidence {
     const units = unitNamesOf(found.block, "Unit names");
     if (units.length > 0) fannedOutUnitSets.push(new Set(units));
   }
-  const settledUnits = new Set<string>();
+  const convergedByBatch = new Map<number, Set<string>>();
   for (const found of findAllEvents(audit, "SWARM_UNIT_CONVERGED")) {
     const number = batchNumberOf(found.block);
     if (number === null || !completed.has(number)) continue;
-    for (const unit of unitNamesOf(found.block, "Unit name")) settledUnits.add(unit);
+    const units = convergedByBatch.get(number) ?? new Set<string>();
+    for (const unit of unitNamesOf(found.block, "Unit name")) units.add(unit);
+    convergedByBatch.set(number, units);
   }
-  return { fannedOutUnitSets, settledUnits };
+  return { fannedOutUnitSets, settledUnitSets: [...convergedByBatch.values()] };
 }
 
 /** "batch 1 (2 units: alpha, beta)" for each batch the run owes evidence for. */
@@ -4717,10 +4721,10 @@ function listedUnitNames(names: Iterable<string>): string {
   return sorted.length === 0 ? "none" : sorted.join(", ");
 }
 
-/** "alpha, beta" for each fan-out row, joined as "[alpha, beta]; [gamma]". */
-function listedFanOutRows(rows: readonly ReadonlySet<string>[]): string {
-  if (rows.length === 0) return "none";
-  return rows.map((row) => `[${listedUnitNames(row)}]`).join("; ");
+/** One bracketed group per recorded row: "[alpha, beta]; [gamma]". */
+function listedGroups(groups: readonly ReadonlySet<string>[]): string {
+  if (groups.length === 0) return "none";
+  return groups.map((group) => `[${listedUnitNames(group)}]`).join("; ");
 }
 
 // The VALUES the approve refusal carries — the prose template stays
@@ -4729,13 +4733,14 @@ function listedFanOutRows(rows: readonly ReadonlySet<string>[]): string {
 //
 // Every name here is read off the verdict and the evidence that produced it;
 // nothing is re-counted at this call site
-// (cid:requirements-analysis:ledger-count-mechanical-recalc). The fan-out rows are
-// printed one bracketed group per SWARM_STARTED row rather than unioned, because
-// which units were dispatched TOGETHER is exactly the fact under dispute.
+// (cid:requirements-analysis:ledger-count-mechanical-recalc). Both sides are
+// printed one bracketed group per row rather than unioned, because which units
+// were dispatched TOGETHER — and settled together — is exactly the fact under
+// dispute.
 function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: SwarmEvidence): string {
   const owed = namedMissingBatches(batches);
-  const fannedOut = listedFanOutRows(evidence.fannedOutUnitSets);
-  const settled = listedUnitNames(evidence.settledUnits);
+  const fannedOut = listedGroups(evidence.fannedOutUnitSets);
+  const settled = listedGroups(evidence.settledUnitSets);
   const declared = `the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — ${owed}`;
   const trail = `the audit trail records fan-out rows for ${fannedOut} and batch-completed convergence for ${settled}`;
   const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.`;

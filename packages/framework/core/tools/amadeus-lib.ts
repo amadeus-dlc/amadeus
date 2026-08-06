@@ -7986,13 +7986,17 @@ export function planGuardMessage(
 // `emitSwarmStarted(projectDir, flags.batch, units, String(concurrency))`), so a
 // degraded batch still carries its own "Unit names" row.
 //
-// One SET PER SWARM_STARTED ROW, not one union of them all: a declared batch is
-// only proven parallel by a row that names its units TOGETHER. Unioning would let
-// N one-unit dispatches — the serial shape #1892 counted — masquerade as a wide
-// fan-out.
+// GROUPED ON BOTH SIDES, never unioned: one set per SWARM_STARTED row, and one
+// set per COMPLETED batch holding the units that converged under it. A declared
+// batch is only proven parallel by a row that names its units TOGETHER and by
+// their settling together under ONE completed batch. Unioning either side lets N
+// one-unit dispatches — the serial shape #1892 counted — masquerade as a wide
+// fan-out: unioning the started side directly, and unioning the settled side by
+// letting an ABANDONED wide prepare (a start row with no completion) vouch for
+// units that were really settled one at a time afterwards.
 export type SwarmEvidence = {
   readonly fannedOutUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_STARTED row
-  readonly settledUnits: ReadonlySet<string>; // SWARM_UNIT_CONVERGED under a completed batch
+  readonly settledUnitSets: readonly ReadonlySet<string>[]; // one per SWARM_COMPLETED batch
 };
 
 // Whether the run's execution shape matches the plan's. `missing` carries EVERY
@@ -8019,22 +8023,26 @@ function wideBatchesOf(batches: readonly (readonly string[])[]): DeclaredBatch[]
   return wide;
 }
 
-// Whether ONE fan-out row proves this batch's parallelism: it must name every
-// unit of the batch. Superset, not equality — a conductor may claim a wider unit
-// set than a single declared level, and the batch's units were still dispatched
-// together in that one fan-out.
-function fannedOutTogether(batch: DeclaredBatch, evidence: SwarmEvidence): boolean {
-  return evidence.fannedOutUnitSets.some((row) => batch.units.every((unit) => row.has(unit)));
+// Whether ONE recorded group covers every unit of the batch. Superset, not
+// equality — a conductor may claim a wider unit set than a single declared level,
+// and the batch's units were still handled together within that one group.
+function coveredByOneGroup(batch: DeclaredBatch, groups: readonly ReadonlySet<string>[]): boolean {
+  return groups.some((group) => batch.units.every((unit) => group.has(unit)));
 }
 
+// Both halves are group-wise, and that is the whole fail-closed argument: an
+// abandoned wide prepare (a start row that never completed) plus N one-unit
+// re-dispatches satisfies "these units appeared on one start row" and "these units
+// all converged", yet the run was serial. Requiring them to settle together under
+// ONE completed batch is what refuses it.
 export function swarmEvidenceVerdict(
   batches: readonly (readonly string[])[],
   evidence: SwarmEvidence,
 ): SwarmEvidenceVerdict {
   const missing = wideBatchesOf(batches).filter(
     (batch) =>
-      !fannedOutTogether(batch, evidence) ||
-      !batch.units.every((unit) => evidence.settledUnits.has(unit)),
+      !coveredByOneGroup(batch, evidence.fannedOutUnitSets) ||
+      !coveredByOneGroup(batch, evidence.settledUnitSets),
   );
   if (missing.length === 0) return { kind: "satisfied" };
   return { kind: "missing", batches: missing };

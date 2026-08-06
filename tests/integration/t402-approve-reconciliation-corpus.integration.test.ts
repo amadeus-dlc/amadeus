@@ -78,13 +78,15 @@ function evidenceOf(record: string): SwarmEvidence {
   const fannedOutUnitSets = findAllEvents(audit, "SWARM_STARTED")
     .map((found) => new Set(namesOf(found.block, "Unit names")))
     .filter((units) => units.size > 0);
-  const settledUnits = new Set<string>();
+  const convergedByBatch = new Map<number, Set<string>>();
   for (const found of findAllEvents(audit, "SWARM_UNIT_CONVERGED")) {
     const number = Number(auditBlockField(found.block, "Batch number"));
     if (!Number.isFinite(number) || !completed.has(number)) continue;
-    for (const unit of namesOf(found.block, "Unit name")) settledUnits.add(unit);
+    const units = convergedByBatch.get(number) ?? new Set<string>();
+    for (const unit of namesOf(found.block, "Unit name")) units.add(unit);
+    convergedByBatch.set(number, units);
   }
-  return { fannedOutUnitSets, settledUnits };
+  return { fannedOutUnitSets, settledUnitSets: [...convergedByBatch.values()] };
 }
 
 describe("t402 corpus sweep over committed records (FR-6)", () => {

@@ -178,10 +178,11 @@ by batch number: a batch number is the value the conductor hands
 `prepare --batch`, so a re-dispatch advances it and the plan's numbering stops
 lining up with the trail's while the run was parallel throughout
 ([#2354](https://github.com/amadeus-dlc/amadeus/issues/2354)). A declared batch is
-satisfied when one fan-out row names all of its units together and each of those
-units converged under a completed batch (evidence is still read across the whole
-append-only trail, so a superseded plan's rows can still satisfy the same units —
-see [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
+satisfied when one fan-out row names all of its units together and those units all
+converged under one completed batch — both halves group-wise, so an abandoned wide
+prepare plus per-unit re-dispatches stays refused (evidence is still read across
+the whole append-only trail, so a superseded plan's rows can still satisfy the same
+units — see [#1953](https://github.com/amadeus-dlc/amadeus/issues/1953)). Both messages name what was
 observed, why it matters, and the one approved exit — for a violation that exit
 is to correct the plan (record the dependency that makes those Units serial in
 `unit-of-work-dependency.md`, re-compile, re-run `next`), never to hand-wave the

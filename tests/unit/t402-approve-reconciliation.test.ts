@@ -18,16 +18,16 @@ import {
   swarmEvidenceVerdict,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
-/** Evidence that each given unit group fanned out together and then settled. */
+/** Evidence that each given unit group fanned out together and then settled together. */
 function ranAsSwarm(...groups: string[][]): SwarmEvidence {
   return {
     fannedOutUnitSets: groups.map((group) => new Set(group)),
-    settledUnits: new Set(groups.flat()),
+    settledUnitSets: groups.map((group) => new Set(group)),
   };
 }
 
 /** No SWARM row of any kind — the shape a serially-run parallel plan leaves. */
-const NO_EVIDENCE: SwarmEvidence = { fannedOutUnitSets: [], settledUnits: new Set() };
+const NO_EVIDENCE: SwarmEvidence = { fannedOutUnitSets: [], settledUnitSets: [] };
 
 describe("t402 swarmEvidenceVerdict (FR-2)", () => {
   test("a: an all-serial plan needs no evidence (AC-2c)", () => {
@@ -51,7 +51,7 @@ describe("t402 swarmEvidenceVerdict (FR-2)", () => {
   test("d: fanned out without settling is still missing", () => {
     const verdict = swarmEvidenceVerdict([["alpha", "beta"]], {
       fannedOutUnitSets: [new Set(["alpha", "beta"])],
-      settledUnits: new Set(),
+      settledUnitSets: [],
     });
     expect(verdict.kind).toBe("missing");
   });
@@ -59,9 +59,21 @@ describe("t402 swarmEvidenceVerdict (FR-2)", () => {
   test("e: settled without a fan-out row is still missing", () => {
     const verdict = swarmEvidenceVerdict([["alpha", "beta"]], {
       fannedOutUnitSets: [],
-      settledUnits: new Set(["alpha", "beta"]),
+      settledUnitSets: [new Set(["alpha", "beta"])],
     });
     expect(verdict.kind).toBe("missing");
+  });
+
+  // An ABANDONED wide prepare must not vouch for a later serial rebuild: the
+  // start row names both units, but they settled under two different completed
+  // batches, one unit each. Ungrouping the settled side would read this as a
+  // parallel run (Bugbot on PR #2355, Medium).
+  test("e2: a stale wide fan-out plus per-unit settles is missing", () => {
+    const verdict = swarmEvidenceVerdict([["alpha", "beta"]], {
+      fannedOutUnitSets: [new Set(["alpha", "beta"])],
+      settledUnitSets: [new Set(["alpha"]), new Set(["beta"])],
+    });
+    expect(verdict).toEqual({ kind: "missing", batches: [{ number: 1, units: ["alpha", "beta"] }] });
   });
 
   // #2354. The measured shape: intent 260805-semi-redefine-autonomy-f fanned out
