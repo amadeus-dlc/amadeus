@@ -73,6 +73,27 @@ describe("advisory human choice domain", () => {
     expect(parseAdvisoryChoiceReceipt({ ...receipt(), choice: "approve" }).ok).toBe(false);
   });
 
+  test("auto-decision provenanceのprojectionRevisionは整数でなければ拒否する", () => {
+    const autoProvenance = {
+      kind: "auto-decision" as const,
+      decisionId: "decision-1",
+      basisKind: "norm",
+      basisFingerprint: `sha256:${"a".repeat(64)}`,
+      projectionRevision: 3,
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+    };
+    expect(parseAdvisoryChoiceReceipt({ ...receipt(), provenance: autoProvenance }).ok).toBe(true);
+    expect(parseAdvisoryChoiceReceipt({
+      ...receipt(),
+      provenance: { ...autoProvenance, projectionRevision: 3.5 },
+    })).toEqual({ ok: false, reason: "provenance.projectionRevision is invalid" });
+    expect(parseAdvisoryChoiceReceipt({
+      ...receipt(),
+      provenance: { ...autoProvenance, projectionRevision: "3" },
+    })).toEqual({ ok: false, reason: "provenance.projectionRevision is invalid" });
+  });
+
   test("receiptなし・別instance・別specはfail-closed hold", () => {
     const pending = createPendingAdvisory(base, () => "019fc698-ba1f-7000-8000-000000000001");
     expect(evaluateAdvisoryHold([pending], [])).toEqual({ kind: "hold", unresolved: [pending] });

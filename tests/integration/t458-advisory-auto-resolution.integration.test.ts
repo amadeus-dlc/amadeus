@@ -327,3 +327,41 @@ describe("advisory auto-resolution: schema 1 store (ADR-9)", () => {
     })).toBe(false);
   });
 });
+
+describe("advisory auto-resolution: unreadable autonomy journal (fail-closed)", () => {
+  test("ジャーナルが読めない場合、受理はfail-closedで拒否される", () => {
+    projectDir = bornProject();
+    hold(projectDir);
+    // A malformed INTENT_AUTONOMY_TRANSACTION_COMMITTED row makes the journal
+    // unreadable; acceptance must fail closed rather than trust the claim.
+    plantV1AuditRow("INTENT_AUTONOMY_TRANSACTION_COMMITTED", {}, projectDir);
+
+    expect(recordAdvisoryChoice(projectDir, "run-now", {
+      kind: "auto-decision",
+      decisionId: "any-decision",
+      basisKind: "norm",
+      basisFingerprint: autonomyDigest("any"),
+      projectionRevision: 1,
+      phase: PHASE,
+      graphRevision: GRAPH,
+    })).toBe(false);
+    expect(readStore(projectDir).receipts).toHaveLength(0);
+  });
+
+  test("ジャーナルが読めない場合、裁定そのものもhuman-requiredに落ちる", () => {
+    projectDir = bornProject();
+    const guard = hold(projectDir);
+    plantV1AuditRow("INTENT_AUTONOMY_TRANSACTION_COMMITTED", {}, projectDir);
+
+    const resolution = resolveAdvisoryChoiceAutonomously({
+      projectDir,
+      hold: guard,
+      phase: PHASE,
+      graphRevision: GRAPH,
+    });
+    expect(resolution.kind).toBe("human-required");
+    if (resolution.kind !== "human-required") return;
+    expect(resolution.reason).toStartWith("advisory-decision-failed:");
+    expect(readStore(projectDir).receipts).toHaveLength(0);
+  });
+});

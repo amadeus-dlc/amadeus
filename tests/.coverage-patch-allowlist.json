@@ -3847,6 +3847,28 @@
   {
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
+      "function": "advisoryOccurrenceMatchesDecision",
+      "fingerprint": "sha256:799d1c5f4401c6ade45fffbe154d25ef353610a8f9fd6261328a51ecdd9fa451",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body — the true, false, and fail-closed catch outcomes — is covered directly by t459 unit tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "resolveAdvisoryChoiceAutonomously",
+      "fingerprint": "sha256:0a9e7bf8c6eaf43ece44a49989a8bb312185246b2baab4538c033935c5d94a9e",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type. The function body — the resolved, human-required, and decision-failure catch outcomes — is covered directly by t458 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
       "function": "modelCheckResultText",
       "fingerprint": "sha256:502fcb66e608970eed3214feb5eda72f64551558f832a607eb648a6b7cc80a66",
       "anchorLines": 1,
