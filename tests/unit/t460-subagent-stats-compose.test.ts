@@ -283,6 +283,28 @@ describe("t460 renderStatsText — the five sections (BR-U3-5)", () => {
     expect(skewed).toContain("asymmetr");
   });
 
+  // byType rows are keyed by type AND verdict (BR-U3-3 keeps the write-time and
+  // reclassified views apart), so one agent type can occupy several rows. The
+  // header counts distinct TYPES, which is what its label promises - not rows.
+  test("the distinct-type header counts types, not the type-and-verdict rows", () => {
+    const split = composeStatsReport(
+      scannedOf([
+        // "coder" is a builtin, so the attribute-less row reclassifies to builtin
+        // while the recorded outside-allowed-set row is adopted as written.
+        completed({ agentType: "coder", typeVerdict: "outside-allowed-set" }),
+        completed({ agentType: "coder" }),
+      ]),
+      RESOLUTION,
+      MEASURED_AT,
+      SCAN_SCOPE,
+    );
+
+    // Two rows, one type.
+    expect(split.byType.length).toBe(2);
+    expect(new Set(split.byType.map((r) => r.agentType)).size).toBe(1);
+    expect(renderStatsText(split)).toContain("agent types (distinct: 1)");
+  });
+
   test("an empty corpus renders a zero report without inventing values", () => {
     const empty = renderStatsText(composeStatsReport(scannedOf([]), RESOLUTION, MEASURED_AT, SCAN_SCOPE));
     expect(empty).toContain("0 completed");

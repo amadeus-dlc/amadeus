@@ -197,7 +197,10 @@ export function renderStatsText(report: SubagentStatsReport): string {
     "verdicts",
     ...TYPE_VERDICTS.map((v) => `  ${v.padEnd(22)}${report.byVerdict.get(v) ?? 0}`),
     "",
-    `agent types (distinct: ${report.byType.length})`,
+    // Count TYPES, not rows: a row is keyed by type AND verdict (BR-U3-3 keeps
+    // the adopted and reclassified views apart), so one type can occupy several
+    // rows and byType.length would over-report what this header promises.
+    `agent types (distinct: ${new Set(report.byType.map((r) => r.agentType)).size})`,
     ...(report.byType.length === 0
       ? ["  (none)"]
       : report.byType.map((r) => `  ${r.count.toString().padStart(6)}  ${safe(r.agentType)}  [${r.verdict}]`)),
