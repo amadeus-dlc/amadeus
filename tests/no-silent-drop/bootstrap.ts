@@ -360,7 +360,9 @@ function validateBootstrapHistory(
   const currentIdentities = folded.grandfather.map((entry) => entry.fingerprint);
   const preSet = new Set(preIdentities);
   const currentSet = new Set(currentIdentities);
-  const removed = preIdentities.filter((identity) => !currentSet.has(identity)).sort();
+  // An identity that became an exemption is still granted, so it is not a removal.
+  const grantedSet = new Set([...currentIdentities, ...folded.exemptions.map((entry) => entry.fingerprint)]);
+  const removed = preIdentities.filter((identity) => !grantedSet.has(identity)).sort();
   const added = currentIdentities.filter((identity) => !preSet.has(identity));
   const declaredRemoved = provenance.removed.map((entry) => entry.fingerprint).sort();
   const declaredRemovedSet = new Set(declaredRemoved);

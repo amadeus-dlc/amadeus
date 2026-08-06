@@ -1122,6 +1122,37 @@ describe("no-silent-drop boundaries", () => {
     expect((await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).status).toBe("pass");
   });
 
+  test("an approved B_pre identity that became an exemption is not a removal", async () => {
+    const fixture = bootstrapRepository();
+    let exempted = "";
+    mutateBootstrapProvenance(fixture, (provenance) => {
+      const removed = provenance.removed as { fingerprint: string }[];
+      exempted = removed.pop()?.fingerprint ?? "";
+      (provenance.initialExemptions as Record<string, unknown>).identitySetDigest = digest(exempted);
+    });
+    const ulid = ulidFromSeed(`grant:exemption:${exempted}`);
+    writeFileSync(
+      join(fixture.root, `tests/no-silent-drop/events/${ulid}.json`),
+      encodeEvent({
+        schemaVersion: 1,
+        ulid,
+        op: "grant",
+        kind: "exemption",
+        fingerprint: exempted,
+        ruleId: "NSD002",
+        file: "packages/framework/core/legacy.ts",
+        reason: "Intentional drop retained as an exemption.",
+        issues: ["#1979"],
+      }),
+    );
+    // Bootstrap accounting runs before exemption filtering, so reaching the stale
+    // exemption arm proves the identity was not counted as an unaccounted removal.
+    expect(await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).toMatchObject({
+      status: "error",
+      detail: expect.stringContaining("exemption is stale"),
+    });
+  });
+
   test("trusted previous ledgers support event custody and reject incomplete or invalid bases", () => {
     const createLedgerRepo = () => {
       const root = mkdtempSync(join(tmpdir(), "nsd-ledger-git-"));

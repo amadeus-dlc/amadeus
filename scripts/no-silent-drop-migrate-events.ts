@@ -16,12 +16,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
  * bootstrap-provenance `removed` entry. The ledger has to state those removals
  * explicitly, otherwise the folded set silently diverges from approved B_pre.
  */
-function undeclaredRemovals(baselineFingerprints: ReadonlySet<string>): string[] {
+function undeclaredRemovals(grantedFingerprints: ReadonlySet<string>): string[] {
   const provenance = readBootstrapProvenance(ROOT);
   const declared = new Set(provenance.removed.map((entry) => entry.fingerprint));
   return provenance.approvedPre.entries
     .map((entry) => entry.fingerprint)
-    .filter((fingerprint) => !baselineFingerprints.has(fingerprint) && !declared.has(fingerprint))
+    .filter((fingerprint) => !grantedFingerprints.has(fingerprint) && !declared.has(fingerprint))
     .sort();
 }
 
@@ -68,7 +68,13 @@ function main(): number {
     writeFileSync(join(eventsDir, `${ulid}.json`), encodeEvent(event));
     written += 1;
   }
-  for (const fingerprint of undeclaredRemovals(new Set(baseline.entries.map((entry) => entry.fingerprint)))) {
+  // A revoke would beat the grant emitted above, so anything migrated as either a
+  // grandfather or an exemption grant is still granted and must not be revoked.
+  const granted = new Set([
+    ...baseline.entries.map((entry) => entry.fingerprint),
+    ...exemptions.entries.map((entry) => entry.fingerprint),
+  ]);
+  for (const fingerprint of undeclaredRemovals(granted)) {
     const ulid = ulidFromSeed(`revoke:${fingerprint}`);
     const event: RevokeEvent = { schemaVersion: 1, ulid, op: "revoke", fingerprint };
     writeFileSync(join(eventsDir, `${ulid}.json`), encodeEvent(event));
