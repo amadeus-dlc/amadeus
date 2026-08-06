@@ -20,14 +20,17 @@ import {
   projectGrantReference,
   revalidateGrantExerciseReservation,
   resolveAutoDecision,
+  SEMI_ROUTINE_INTERACTIONS,
   validateResumeCondition,
   type AutonomyProjection,
+  type DecisionAuthority,
   type DecisionCapabilityPort,
   type DecisionFact,
   type DecisionOptionEffect,
   type GrantScopeDescriptor,
   type HumanCommandContext,
   type InteractionOccurrence,
+  type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
 
 const INTENT = "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead";
@@ -64,6 +67,30 @@ function context(projection: AutonomyProjection, confirmedDisplayDigest: string)
     commandOccurrenceId: "command-1",
     expectedProjectionRevision: projection.projectionRevision,
     confirmedDisplayDigest,
+  };
+}
+
+// The ladder entry now takes the authorization basis as an explicit input, so
+// every direct caller has to name the one it decides under.
+function grantAuthority(projection: AutonomyProjection): DecisionAuthority {
+  const grant = projection.currentGrant;
+  if (grant === null) throw new Error("grant expected");
+  return {
+    kind: "grant",
+    grantId: grant.grantId,
+    scope: grant.scope,
+    policies: grant.policies,
+    authorityFingerprint: autonomyDigest(grant),
+  };
+}
+
+function semiScope(): SemiAuthorityScope {
+  return {
+    intentUuid: INTENT,
+    scopeId: "self-feature",
+    scopeFingerprint: SCOPE_FP,
+    normFingerprint: NORM,
+    allowedInteractionKinds: SEMI_ROUTINE_INTERACTIONS,
   };
 }
 
@@ -252,6 +279,7 @@ describe("gate and question decision contract", () => {
     expect(() => createGateAutoDecision({
       projection: initial,
       occurrence: occurrence("question"),
+      authority: grantAuthority(fullProjection()),
       actorId: "codex",
       selectedOptionId: "accept",
       basisKind: "mode-semi",
@@ -259,6 +287,7 @@ describe("gate and question decision contract", () => {
     expect(() => createGateAutoDecision({
       projection: initial,
       occurrence: occurrence("stage-gate", ["approve"]),
+      authority: grantAuthority(fullProjection()),
       actorId: "codex",
       selectedOptionId: "approve",
       basisKind: "mode-semi",
@@ -266,6 +295,7 @@ describe("gate and question decision contract", () => {
     expect(() => createGateAutoDecision({
       projection: initial,
       occurrence: occurrence("stage-gate", ["approve"]),
+      authority: grantAuthority(fullProjection()),
       actorId: "codex",
       selectedOptionId: "approve",
       basisKind: "grant-gate",
@@ -276,6 +306,7 @@ describe("gate and question decision contract", () => {
     const decisionInput = {
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -304,13 +335,19 @@ describe("gate and question decision contract", () => {
     expect(authorizeInteraction(createAutonomyProjection({ intentUuid: INTENT }), occurrence("stage-gate", ["approve"])).kind).toBe("human-required");
   });
 
-  test("semi authorizes only phase-internal stage gates", () => {
+  test("semi keeps the walking skeleton with the human", () => {
     const initial = createAutonomyProjection({ intentUuid: INTENT });
     const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi")));
     if (!plan.ok) throw new Error(plan.code);
-    expect(authorizeInteraction(plan.after, occurrence("stage-gate", ["approve"])).kind).toBe("semi-mode-gate");
-    expect(authorizeInteraction(plan.after, occurrence("walking-skeleton", ["approve"])).kind).toBe("human-required");
-    expect(authorizeInteraction(plan.after, occurrence("question")).kind).toBe("human-required");
+    expect(authorizeInteraction(plan.after, occurrence("walking-skeleton", ["approve"]), semiScope()).kind).toBe("human-required");
+  });
+
+  test("semi authorizes phase-internal stage gates and questions alike", () => {
+    const initial = createAutonomyProjection({ intentUuid: INTENT });
+    const plan = planHumanAutonomyCommand(initial, { kind: "set-mode", mode: "semi" }, context(initial, autonomyDigest("semi")));
+    if (!plan.ok) throw new Error(plan.code);
+    expect(authorizeInteraction(plan.after, occurrence("stage-gate", ["approve"]), semiScope()).kind).toBe("semi-authority");
+    expect(authorizeInteraction(plan.after, occurrence("question"), semiScope()).kind).toBe("semi-authority");
   });
 
   test("full covers walking skeleton using the same grant rule", () => {
@@ -341,6 +378,7 @@ describe("gate and question decision contract", () => {
     const decision = createGateAutoDecision({
       projection: full,
       occurrence: occurrence("stage-gate", ["approve"]),
+      authority: grantAuthority(full),
       actorId: "codex",
       selectedOptionId: "approve",
       basisKind: "grant-gate",
@@ -353,6 +391,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: fullProjection(),
       occurrence: occurrence(),
+      authority: grantAuthority(fullProjection()),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -374,6 +413,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -390,6 +430,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -406,6 +447,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -422,6 +464,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "kimi",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -442,6 +485,7 @@ describe("gate and question decision contract", () => {
     const result = resolveAutoDecision({
       projection: withoutPolicies,
       occurrence: occurrence(),
+      authority: grantAuthority(withoutPolicies),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -510,6 +554,7 @@ describe("effect authorization and workflow result", () => {
     const decision = resolveAutoDecision({
       projection,
       occurrence: occurrence(),
+      authority: grantAuthority(projection),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
@@ -536,6 +581,7 @@ describe("effect authorization and workflow result", () => {
     const resolved = resolveAutoDecision({
       projection: base,
       occurrence: target,
+      authority: grantAuthority(base),
       actorId: "codex",
       scopeLineageFingerprint: SCOPE_FP,
       currentNormFingerprint: NORM,
