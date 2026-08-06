@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import {
   assertEventCustody,
   encodeEvent,
+  eventPath,
   foldEvents,
   listEventUlidsAtRevision,
   loadEvents,
@@ -517,5 +518,89 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
 
   test("mintUlid rejects an out-of-range timestamp", () => {
     expect(() => mintUlid(-1)).toThrow("timestamp out of range");
+  });
+
+  test("load and custody cover remaining fail-closed arms", () => {
+    const revokeUlid = ulidFromSeed("parse:revoke-ok");
+    expect(parseLedgerEvent(JSON.stringify(revoke("fp-ok", revokeUlid)), revokeUlid).op).toBe("revoke");
+    expect(eventPath(revokeUlid)).toBe(`tests/no-silent-drop/events/${revokeUlid}.json`);
+
+    const fileAsDir = mkdtempSync(join(tmpdir(), "nsd-file-as-dir-"));
+    tempRoots.push(fileAsDir);
+    const blocked = join(fileAsDir, "events-as-file");
+    writeFileSync(blocked, "not a directory\n");
+    expect(() => loadEventsFromDir(blocked)).toThrow("event ledger is unreadable");
+
+    const unreadableFileRoot = mkdtempSync(join(tmpdir(), "nsd-unreadable-event-"));
+    tempRoots.push(unreadableFileRoot);
+    const eventsDir = join(unreadableFileRoot, "tests/no-silent-drop/events");
+    mkdirSync(eventsDir, { recursive: true });
+    const blockedUlid = mintUlid();
+    mkdirSync(join(eventsDir, `${blockedUlid}.json`));
+    expect(() => loadEvents(unreadableFileRoot)).toThrow("is unreadable");
+
+    const root = mkdtempSync(join(tmpdir(), "nsd-custody-edges-"));
+    tempRoots.push(root);
+    const { runGit, git } = gitRunners(root);
+    runGit(["init", "-q"]);
+    mkdirSync(join(root, "tests/no-silent-drop"), { recursive: true });
+    writeFileSync(join(root, "README"), "base\n");
+    git(["add", "."]);
+    git(["commit", "-qm", "no-events"]);
+    const emptyEventsSha = runGit(["rev-parse", "HEAD"]);
+    expect(listEventUlidsAtRevision(root, emptyEventsSha).size).toBe(0);
+
+    mkdirSync(join(root, "tests/no-silent-drop/events"), { recursive: true });
+    const first = grant("fp-1", mintUlid());
+    writeFileSync(join(root, `tests/no-silent-drop/events/${first.ulid}.json`), encodeEvent(first));
+    writeFileSync(join(root, "tests/no-silent-drop/events/NOTAVALIDULIDFILENAME.json"), "{}\n");
+    git(["add", "."]);
+    git(["commit", "-qm", "bad-name"]);
+    const badNameSha = runGit(["rev-parse", "HEAD"]);
+    expect(() => listEventUlidsAtRevision(root, badNameSha)).toThrow("trusted base event filename is not a ULID");
+    rmSync(join(root, "tests/no-silent-drop/events/NOTAVALIDULIDFILENAME.json"));
+    git(["add", "-A"]);
+    git(["commit", "-qm", "clean-name"]);
+    const base = runGit(["rev-parse", "HEAD"]);
+
+    const second = grant("fp-2", mintUlid());
+    writeFileSync(join(root, `tests/no-silent-drop/events/${second.ulid}.json`), encodeEvent(second));
+    const snapUlid = mintUlid();
+    const snap: SnapshotEvent = {
+      schemaVersion: 1,
+      ulid: snapUlid,
+      op: "snapshot",
+      effectiveDigest: digest(["fp-1", "fp-2"].sort().join("\n")),
+      effective: [
+        {
+          fingerprint: "fp-1",
+          kind: "grandfather",
+          ruleId: "NSD001",
+          file: "a.ts",
+          reason: "kept",
+          issues: ["#2338"],
+        },
+        {
+          fingerprint: "fp-2",
+          kind: "grandfather",
+          ruleId: "NSD001",
+          file: "a.ts",
+          reason: "added",
+          issues: ["#2338"],
+        },
+      ],
+      deleteUlids: [],
+    };
+    writeFileSync(join(root, `tests/no-silent-drop/events/${snapUlid}.json`), encodeEvent(snap));
+    const withGrant = loadEvents(root);
+    const withGrantFolded = foldEvents(withGrant.byUlid.values());
+    expect(() => assertEventCustody(root, base, withGrant, withGrantFolded)).not.toThrow();
+
+    rmSync(join(root, `tests/no-silent-drop/events/${first.ulid}.json`));
+    expect(() => assertEventCustody(root, base, withGrant, withGrantFolded)).toThrow("head event");
+
+    expect(() =>
+      assertEventCustody(root, "a".repeat(40), withGrant, withGrantFolded),
+    ).toThrow("not a resolvable full commit");
   });
 });
