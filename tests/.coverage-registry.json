@@ -4649,6 +4649,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t454-subagent-model-attribution.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t09.test.ts",
           "mechanism": "cli"
         },
@@ -4674,6 +4678,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t-log-subagent-start.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t454-subagent-model-attribution.integration.test.ts",
           "mechanism": "cli"
         }
       ],

@@ -25,7 +25,10 @@ import { harnessDir } from "../tools/amadeus-harness.ts";
 import {
   classifyAgentType,
   isWarnableVerdict,
+  type ModelResolution,
   resolveAllowedAgentTypes,
+  resolveEffectiveModel,
+  resolvePersonaPin,
   sanitizeAdvisoryValue,
 } from "../tools/amadeus-subagent-observability.ts";
 
@@ -83,6 +86,33 @@ const typeVerdict = typeVerdictFor(agentType);
 const agentId: string = parsed.agent_id ?? "";
 const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
 
+// #2279 FR-3 (U2): the model that actually served the dispatch, with its
+// resolution source (ADR-3). The completed payload carries no tool_input, so
+// requestedModel is undefined BY CONTRACT — not an omitted lookup (BR-U2-5).
+// The pin is read only for a persona verdict, and the same fail-open rule as
+// the type check applies: any failure returns null, skips the attributes, and
+// leaves the emit below untouched.
+function modelResolutionFor(agentType: string, typeVerdict: string | null): ModelResolution | null {
+  try {
+    let personaPin: string | undefined;
+    if (typeVerdict === "persona") {
+      const pinResolution = resolvePersonaPin(agentType, join(projectDir, harnessDir(), "agents"));
+      for (const warning of pinResolution.warnings) process.stderr.write(`advisory: ${warning}\n`);
+      personaPin = pinResolution.pin;
+    }
+    return resolveEffectiveModel({
+      harnessModel: typeof parsed.model === "string" ? parsed.model : undefined,
+      requestedModel: undefined,
+      personaPin,
+    });
+  } catch (e) {
+    process.stderr.write(`advisory: subagent model attribution skipped: ${errorMessage(e)}\n`);
+    return null;
+  }
+}
+
+const modelResolution = modelResolutionFor(agentType, typeVerdict);
+
 // Gate on ANY per-clone shard of the active intent (glob-merge), NOT this clone's
 // own shard — a fresh clone / new worktree mints a new clone-id, so a bare
 // self-shard existsSync would drop the event until the engine's first append.
@@ -103,6 +133,12 @@ const fields: Record<string, string> = {
 if (agentId) fields["Agent ID"] = agentId;
 if (agentMessage) fields.Message = agentMessage;
 if (typeVerdict) fields["Type Verdict"] = typeVerdict;
+// ADR-5: unresolved writes neither attribute — the pair is all-or-nothing so
+// no half-recorded row can exist for the aggregation CLI to misread.
+if (modelResolution?.kind === "resolved") {
+  fields.Model = modelResolution.model;
+  fields["Model Source"] = modelResolution.source;
+}
 
 try {
   // Stand up the canonical emit path before the first emit (emitEvent throws
