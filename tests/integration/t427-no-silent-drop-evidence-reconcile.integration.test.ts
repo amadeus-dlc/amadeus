@@ -1,7 +1,6 @@
 // covers: cli:no-silent-drop-evidence, workflow:no-silent-drop-evidence-reconcile, contract:no-silent-drop:identity-only-rebind
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   chmodSync,
   cpSync,
@@ -33,14 +32,8 @@ const tempRoots: string[] = [];
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 const MOCK_TREE = "b".repeat(40);
-const LEDGER_RATCHET_PATHS = [
-  "tests/no-silent-drop/baseline.json",
-  "tests/no-silent-drop/exemptions.json",
-] as const;
-
-function sha256(bytes: Buffer): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
+// #2338: reconcile no longer ratchets previousDigest ledger files.
+const LEDGER_RATCHET_PATHS = [] as const;
 
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
@@ -422,16 +415,8 @@ describe("t427 squash identity proof and main convergence", () => {
     expect(rebindCommit).not.toBe(fixture.landing);
     expect(must(fixture.root, ["git", "ls-remote", "--heads", "origin", "refs/heads/main"]).split(/\s+/)[0]).toBe(rebindCommit);
     expect(must(fixture.root, ["git", "diff", "--name-only", `${fixture.landing}..${rebindCommit}`]).split("\n").sort()).toEqual(
-      [...EVIDENCE_BUNDLE_PATHS, ...LEDGER_RATCHET_PATHS].sort(),
+      [...EVIDENCE_BUNDLE_PATHS].sort(),
     );
-    const baseline = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[0]), "utf8"));
-    const exemptions = JSON.parse(readFileSync(join(fixture.root, LEDGER_RATCHET_PATHS[1]), "utf8"));
-    expect(baseline.generatedFrom.previousDigest).toBe(sha256(Buffer.from(
-      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[0]}`]).stdout,
-    )));
-    expect(exemptions.previousDigest).toBe(sha256(Buffer.from(
-      command(fixture.root, ["git", "show", `${fixture.landing}:${LEDGER_RATCHET_PATHS[1]}`]).stdout,
-    )));
 
     const second = runEvidenceCommand([
       "reconcile",

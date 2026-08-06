@@ -31,6 +31,7 @@ import {
   runGate,
   verifySnapshot,
 } from "../no-silent-drop/engine.ts";
+import { encodeEvent } from "../no-silent-drop/events.ts";
 import {
   addedFindings,
   approvalDigest,
@@ -47,6 +48,7 @@ import {
   trustedBaseSha,
   validateApproval,
 } from "../no-silent-drop/ledger.ts";
+import { ulidFromSeed } from "../no-silent-drop/ulid.ts";
 import {
   type ApprovalDoc,
   type BaselineDoc,
@@ -166,7 +168,13 @@ function artifact(root: string, path: string, value: unknown): { path: string; d
 function bootstrapRepository(): { root: string; baseRevision: string; artifactPaths: string[] } {
   const root = mkdtempSync(join(tmpdir(), "nsd-bootstrap-"));
   temporaryDirectories.push(root);
-  for (const path of ["packages/framework/core", "packages/framework/harness", "scripts", "tests/no-silent-drop/bootstrap"]) {
+  for (const path of [
+    "packages/framework/core",
+    "packages/framework/harness",
+    "scripts",
+    "tests/no-silent-drop/bootstrap",
+    "tests/no-silent-drop/events",
+  ]) {
     mkdirSync(join(root, path), { recursive: true });
   }
   symlinkSync(join(REPO_ROOT, "node_modules"), join(root, "node_modules"));
@@ -941,14 +949,12 @@ describe("no-silent-drop boundaries", () => {
 
   test("gate reports revision and AST-shape infrastructure failures without throwing", async () => {
     const noGit = snapshotRepository();
-    mkdirSync(join(noGit, "tests", "no-silent-drop"), { recursive: true });
+    mkdirSync(join(noGit, "tests", "no-silent-drop", "events"), { recursive: true });
     writeFileSync(
       join(noGit, "tests", "no-silent-drop", "ast-shape-fixture.ts.txt"),
       readFileSync(join(REPO_ROOT, "tests/no-silent-drop/ast-shape-fixture.ts.txt"), "utf8"),
     );
     symlinkSync(join(REPO_ROOT, "node_modules"), join(noGit, "node_modules"));
-    writeFileSync(join(noGit, "tests", "no-silent-drop", "baseline.json"), `${JSON.stringify(baseline([]))}\n`);
-    writeFileSync(join(noGit, "tests", "no-silent-drop", "exemptions.json"), '{"schemaVersion":1,"entries":[]}\n');
     expect((await runGate("check", noGit)).status).toBe("error");
 
     const missingFixture = snapshotRepository();
@@ -1096,38 +1102,40 @@ describe("no-silent-drop boundaries", () => {
       .toBe("error");
   });
 
-  test("trusted previous ledgers support git history and reject incomplete or invalid bases", () => {
-    const createLedgerRepo = (includeExemptions: boolean) => {
+  test("trusted previous ledgers support event custody and reject incomplete or invalid bases", () => {
+    const createLedgerRepo = () => {
       const root = mkdtempSync(join(tmpdir(), "nsd-ledger-git-"));
       temporaryDirectories.push(root);
-      mkdirSync(join(root, "tests/no-silent-drop"), { recursive: true });
-      const baselineBytes = `${JSON.stringify(baseline(["legacy"]))}\n`;
-      const exemptionBytes = '{"schemaVersion":1,"entries":[]}\n';
-      writeFileSync(join(root, "tests/no-silent-drop/baseline.json"), baselineBytes);
-      if (includeExemptions) writeFileSync(join(root, "tests/no-silent-drop/exemptions.json"), exemptionBytes);
+      mkdirSync(join(root, "tests/no-silent-drop/events"), { recursive: true });
+      const ulid = ulidFromSeed("grant:grandfather:legacy");
+      writeFileSync(join(root, `tests/no-silent-drop/events/${ulid}.json`), encodeEvent({
+        schemaVersion: 1,
+        ulid,
+        op: "grant",
+        kind: "grandfather",
+        fingerprint: "legacy",
+        ruleId: "NSD001",
+        file: "a.ts",
+        reason: "legacy finding",
+        issues: ["#1979"],
+      }));
       runGit(root, ["init", "-q"]);
       runGit(root, ["add", "."]);
       runGit(root, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "base"]);
-      return { root, sha: runGit(root, ["rev-parse", "HEAD"]), baselineBytes, exemptionBytes };
+      return { root, sha: runGit(root, ["rev-parse", "HEAD"]) };
     };
 
-    const complete = createLedgerRepo(true);
-    const currentBaseline = {
-      ...baseline([]),
-      generatedFrom: { ...baseline([]).generatedFrom, previousDigest: digest(complete.baselineBytes) },
-    };
-    const currentExemptions = {
-      schemaVersion: 1 as const,
-      previousDigest: digest(complete.exemptionBytes),
-      entries: [],
-    };
-    expect(loadTrustedPreviousLedgers(complete.root, complete.sha, currentBaseline, currentExemptions).source).toBe("git");
-    expect(() => loadTrustedPreviousLedgers(complete.root, "invalid", currentBaseline, currentExemptions))
-      .toThrow("not a resolvable full commit");
+    const complete = createLedgerRepo();
+    expect(loadTrustedPreviousLedgers(complete.root, complete.sha).source).toBe("events");
+    expect(() => loadTrustedPreviousLedgers(complete.root, "invalid")).toThrow("not a resolvable full commit");
 
-    const incomplete = createLedgerRepo(false);
-    expect(() => loadTrustedPreviousLedgers(incomplete.root, incomplete.sha, currentBaseline, currentExemptions))
-      .toThrow("trusted previous exemptions is unavailable");
+    const missingEvents = mkdtempSync(join(tmpdir(), "nsd-ledger-missing-"));
+    temporaryDirectories.push(missingEvents);
+    mkdirSync(join(missingEvents, "tests/no-silent-drop"), { recursive: true });
+    runGit(missingEvents, ["init", "-q"]);
+    runGit(missingEvents, ["commit", "--allow-empty", "-qm", "empty"]);
+    const emptySha = runGit(missingEvents, ["rev-parse", "HEAD"]);
+    expect(() => loadTrustedPreviousLedgers(missingEvents, emptySha)).toThrow("event ledger is missing");
 
     const nonRepository = mkdtempSync(join(tmpdir(), "nsd-lineage-error-"));
     temporaryDirectories.push(nonRepository);
