@@ -2596,9 +2596,9 @@
     "file": "plugins/formal-model-check/tools/tlc-spawn-planner.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:c04ed29a7553161d06b76c14c6d1686f4cddbc0ee1c0d85aae14d2a9370f9527",
-      "anchorLines": 52,
-      "targetLines": "1-52"
+      "fingerprint": "sha256:05d28d0a8b61d6c33dd0cd1386fdf459b759a9c7917d31e8615c7023a2b75c70",
+      "anchorLines": 58,
+      "targetLines": "1-58"
     },
     "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
   },
