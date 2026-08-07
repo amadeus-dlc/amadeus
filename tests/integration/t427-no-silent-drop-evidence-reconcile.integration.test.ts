@@ -31,7 +31,6 @@ const SOURCE_ROOT = join(import.meta.dir, "../..");
 const tempRoots: string[] = [];
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
-const MOCK_TREE = "b".repeat(40);
 // #2338: reconcile no longer ratchets previousDigest ledger files.
 
 function command(cwd: string, args: readonly string[]): CommandResult {
@@ -83,6 +82,14 @@ type SquashFixture = {
 };
 
 type PullRequestDrift = "add" | "byte" | "rename" | "mode" | "object";
+// "outside": landing differs from the pull-request head on a path the proof does not own — base
+// advance, which reconcile must tolerate. "freshness": landing differs on the gate's own
+// implementation (EVIDENCE_FRESHNESS_PATHSPECS), which the proof must still reject.
+type LandingDrift = "outside" | "freshness";
+const LANDING_DRIFT_PATHS: Record<LandingDrift, string> = {
+  outside: "landing-drift.ts",
+  freshness: "tests/no-silent-drop/landing-drift.ts",
+};
 
 type ReconcileRunnerOptions = {
   pages?: unknown;
@@ -96,7 +103,7 @@ type ReconcileRunnerOptions = {
   failGitHub?: boolean;
 };
 
-function squashFixture(options: { pullRequestDrift?: PullRequestDrift; landingDrift?: boolean } = {}): SquashFixture {
+function squashFixture(options: { pullRequestDrift?: PullRequestDrift; landingDrift?: LandingDrift } = {}): SquashFixture {
   const root = initRepository();
   const base = must(root, ["git", "rev-parse", "HEAD"]);
   writeFileSync(join(root, "implementation.ts"), "export const implemented = true;\n");
@@ -122,9 +129,10 @@ function squashFixture(options: { pullRequestDrift?: PullRequestDrift; landingDr
   must(root, ["git", "remote", "add", "origin", remote]);
   must(root, ["git", "push", "-q", "origin", `${pullRequestHead}:refs/pull/7/head`]);
   let tree = must(root, ["git", "rev-parse", `${pullRequestHead}^{tree}`]);
-  if (options.landingDrift) {
-    writeFileSync(join(root, "landing-drift.ts"), "export const drift = true;\n");
-    must(root, ["git", "add", "landing-drift.ts"]);
+  if (options.landingDrift !== undefined) {
+    const driftPath = LANDING_DRIFT_PATHS[options.landingDrift];
+    writeFileSync(join(root, driftPath), "export const drift = true;\n");
+    must(root, ["git", "add", "--", driftPath]);
     tree = must(root, ["git", "write-tree"]);
     must(root, ["git", "reset", "--hard", "-q", pullRequestHead]);
   }
@@ -342,7 +350,6 @@ function syntheticReconcileRunner(
       return commandResult(catFileCalls === 1 || options.bindingExists ? 0 : 1);
     },
     "git rev-parse": (args) => {
-      if (args[2]?.endsWith("^{tree}")) return commandResult(0, `${MOCK_TREE}\n`);
       if (args[2]?.startsWith("refs/no-silent-drop/")) return commandResult(0, `${MOCK_PULL_REQUEST_HEAD}\n`);
       return commandResult(0, `${MOCK_EVENT}\n`);
     },
@@ -460,9 +467,9 @@ describe("t427 squash identity proof and main convergence", () => {
     }
   });
 
-  test("rejects add, byte, rename, mode, and object-type binding-to-PR drift plus landing root-tree drift", () => {
+  test("rejects add, byte, rename, mode, and object-type binding-to-PR drift plus proven-path landing drift", () => {
     const cases: Array<{
-      options: { pullRequestDrift?: PullRequestDrift; landingDrift?: boolean };
+      options: { pullRequestDrift?: PullRequestDrift; landingDrift?: LandingDrift };
       expected: string;
     }> = [
       { options: { pullRequestDrift: "add" }, expected: "differ outside the three derived evidence files" },
@@ -470,7 +477,7 @@ describe("t427 squash identity proof and main convergence", () => {
       { options: { pullRequestDrift: "rename" }, expected: "differ outside the three derived evidence files" },
       { options: { pullRequestDrift: "mode" }, expected: "differ outside the three derived evidence files" },
       { options: { pullRequestDrift: "object" }, expected: "differ outside the three derived evidence files" },
-      { options: { landingDrift: true }, expected: "root trees differ" },
+      { options: { landingDrift: "freshness" }, expected: "differ on proven evidence paths" },
     ];
     for (const { options, expected } of cases) {
       const fixture = squashFixture(options);
@@ -480,6 +487,20 @@ describe("t427 squash identity proof and main convergence", () => {
       ).toThrow(expected);
       expect(must(fixture.root, ["git", "rev-parse", "HEAD"])).toBe(fixture.landing);
     }
+  });
+
+  test("names the drifted proven path and tolerates landing drift the proof does not own", () => {
+    const drifted = squashFixture({ landingDrift: "freshness" });
+    const driftedAdapter = new NoSilentDropEvidenceAdapter(drifted.root, hybridRunner(drifted));
+    expect(() => driftedAdapter.proveIdentityOnlyRebind(drifted.landing, drifted.binding, "amadeus-dlc/amadeus"))
+      .toThrow("tests/no-silent-drop/landing-drift.ts");
+
+    const advanced = squashFixture({ landingDrift: "outside" });
+    const advancedAdapter = new NoSilentDropEvidenceAdapter(advanced.root, hybridRunner(advanced));
+    expect(advancedAdapter.proveIdentityOnlyRebind(advanced.landing, advanced.binding, "amadeus-dlc/amadeus"))
+      .toMatchObject({ pullRequestNumber: 7, pullRequestHead: advanced.pullRequestHead });
+    expect(must(advanced.root, ["git", "rev-parse", `${advanced.landing}^{tree}`]))
+      .not.toBe(must(advanced.root, ["git", "rev-parse", `${advanced.pullRequestHead}^{tree}`]));
   });
 
   test("rejects a non-ancestor binding and an unavailable pull-request head ref", () => {

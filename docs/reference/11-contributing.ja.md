@@ -261,6 +261,29 @@ bun test tests/unit/t440-import-closure-resolve.test.ts \
 
 `t440` は注入されたインメモリ FS に対して再帰走査(`resolveImportClosure`)を駆動し、`t441` は被覆検査と診断レンダリング(`checkManifestClosure`・`describeClosureFailure`)を駆動し、`t442` は `assertPluginImportClosure` を通した本番結線を assert し、`t443` は責務分割のファイルシステム側 — 純粋層には見えない symlink escape — を覆います。guard を拡張するときは対応する側を拡張してください。新しい判断は純粋モジュールへ unit テスト付きで、新しいファイルシステム escape はアダプタへ integration テスト付きで置きます。
 
+## no-silent-drop 採用エビデンスの再束縛
+
+no-silent-drop の採用エビデンスバンドルは、「特定の1リビジョンで gate を実行した」という事実を証明します。したがって `t413-no-silent-drop-ci-adoption.test.ts` は、その束縛以降に gate **自身の実装**が動いていると赤になります:
+
+- `tests/no-silent-drop/**/*.ts`
+- `tests/no-silent-drop-gate.ts`
+
+この集合は `tests/no-silent-drop/evidence-rebind.ts` の `EVIDENCE_FRESHNESS_PATHSPECS` として1箇所だけで定義されます。reconcile アダプタも同じ定数を import するため、CI の assertion と main ブランチ上の自動 reconcile が乖離することはありません。gate が**走査する**コーパス(`packages/framework/core/tools`)は意図的に除外しています — 通常の機能開発で変化する対象であり、その都度バンドルを再採用する要求はバンドル側が満たせないためです。
+
+**PR がこれらのパスに触れる場合は、ブランチ内で再束縛してください** — main ブランチの reconcile ワークフローは identity 再束縛しか行わないため、実装変更を代わりに吸収することはできません。最後の実装コミットの後に次を実行します:
+
+```bash
+bun scripts/no-silent-drop-evidence.ts rebind --target-revision "$(git rev-parse HEAD)"
+```
+
+このコマンドはローカルブランチに接続されたクリーンな worktree を要求し、次の3ファイルだけを書き換えます:
+
+- `tests/no-silent-drop/adoption-evidence.json`
+- `tests/no-silent-drop/adoption-evidence-manifest.json`
+- `tests/no-silent-drop/evidence/adoption-runs.json`
+
+この3ファイルをコミットし、`bun test tests/integration/t413-no-silent-drop-ci-adoption.test.ts` を再実行してください。その後さらに実装コミットを積んだ場合は、新しい head に対して再度再束縛します — 束縛はレビュアーにマージを依頼する対象の祖先であり、かつ最新でなければなりません。
+
 ## ドキュメントポリシー
 
 ファイル、ディレクトリ、コマンド、フラグを追加・削除・リネームする際:

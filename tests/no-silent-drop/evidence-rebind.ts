@@ -29,6 +29,17 @@ export const EVIDENCE_BUNDLE_PATHS = [
   EVIDENCE_REGISTRY_PATH,
   EVIDENCE_RUNS_PATH,
 ] as const;
+// The single definition of "which paths must not have moved under the evidence binding": the
+// gate's own implementation, expressed as git pathspecs. packages/framework/core/tools is the
+// corpus the gate scans, not the gate — it changes with ordinary feature and fix work, so
+// including it would demand a full re-adoption of the evidence bundle on every commit that
+// touches a scanned file, and that bundle has no generator (#2153 owns that gap). Every consumer
+// — the t413 freshness assertion and the reconcile adapter — imports this set rather than
+// restating it, so the set has exactly one place to grow.
+export const EVIDENCE_FRESHNESS_PATHSPECS = [
+  ":(glob)tests/no-silent-drop/**/*.ts",
+  "tests/no-silent-drop-gate.ts",
+] as const;
 export type RebindCounts = {
   registryRevisions: number;
   manifestRevisions: number;

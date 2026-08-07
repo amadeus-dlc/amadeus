@@ -294,6 +294,43 @@ When you extend the guard, extend the matching half: a new judgement belongs in
 the pure module with a unit test, a new filesystem escape belongs in the adapter
 with an integration test.
 
+## Rebinding no-silent-drop Adoption Evidence
+
+The no-silent-drop adoption evidence bundle attests that the gate was exercised
+at one specific revision. `t413-no-silent-drop-ci-adoption.test.ts` therefore
+fails whenever the gate's *own implementation* has moved since that binding:
+
+- `tests/no-silent-drop/**/*.ts`
+- `tests/no-silent-drop-gate.ts`
+
+That set is defined once as `EVIDENCE_FRESHNESS_PATHSPECS` in
+`tests/no-silent-drop/evidence-rebind.ts`; the reconcile adapter imports the same
+constant, so the CI assertion and the automated main-branch reconciliation cannot
+drift apart. The corpus the gate *scans* (`packages/framework/core/tools`) is
+deliberately excluded — it changes with ordinary feature work, and re-adopting the
+bundle on every such commit is not a demand the bundle can satisfy.
+
+**If your PR touches either of those paths, rebind inside your branch** — the
+main-branch reconcile workflow only performs identity rebinds, so it cannot
+absorb an implementation change for you. After your last implementation commit:
+
+```bash
+bun scripts/no-silent-drop-evidence.ts rebind --target-revision "$(git rev-parse HEAD)"
+```
+
+The command requires a clean worktree on an attached local branch and rewrites
+exactly three files:
+
+- `tests/no-silent-drop/adoption-evidence.json`
+- `tests/no-silent-drop/adoption-evidence-manifest.json`
+- `tests/no-silent-drop/evidence/adoption-runs.json`
+
+Commit those three, then re-run `bun test
+tests/integration/t413-no-silent-drop-ci-adoption.test.ts`. If you push further
+implementation commits afterwards, rebind again against the new head — the
+binding must be an ancestor of, and current with, whatever you ask reviewers to
+merge.
+
 ## Documentation Policy
 
 When adding, removing, or renaming files, directories, commands, or flags:
