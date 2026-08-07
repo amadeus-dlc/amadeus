@@ -16,19 +16,28 @@
 //      (scope fix -> Minimal), so --single and no-state paths still deliver.
 //   4. A hand-edited lowercase state value is normalized to the canonical
 //      Capitalized form before emit.
+//   5. The ISOLATED single-stage emitter still delivers the state's depth. It
+//      passes stateContent: null to buildRunStageDirective on purpose (no
+//      routing read), so without an explicit thread the scope default would
+//      silently replace a `--depth` override. Both routes into that emitter are
+//      covered: `--single`, and a composed plugin stage reached by `--stage`.
 //
 // Driven IN-PROCESS (handleNext imported from source) so the added lines
 // register in lcov — bun --coverage does not instrument spawned children
 // (bun-coverage-spawn-blindspot).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  emitComposedPluginStageIfInstalled,
+  handleNext,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -195,5 +204,78 @@ describe("t486 next delivers depth", () => {
     seedProject();
     rewriteState((c) => c.replace("- **Depth**: Minimal", "- **Depth**: comprehensive"));
     expect(emittedDirective().depth).toBe("Comprehensive");
+  });
+
+  // The isolated single-stage emitter passes stateContent: null to
+  // buildRunStageDirective on purpose (no routing read: no skeleton round-trip,
+  // no main-pointer persona signal). Depth is workflow CONFIGURATION rather than
+  // routing, so it must still come from the live state — otherwise the scope
+  // default silently replaces a `--depth` override. Both routes into that
+  // emitter are covered: an explicit `--single` run, and a composed plugin stage
+  // reached by `--stage` with NO `--single`.
+  //
+  // scope `fix` defaults to Minimal, so overriding the state to Comprehensive
+  // makes a state read distinguishable from a scope-default fallback.
+
+  test("a --single run in a live workflow delivers the state depth, not the scope default", () => {
+    seedProject();
+    rewriteState((c) => c.replace("- **Depth**: Minimal", "- **Depth**: Comprehensive"));
+    handleNext(["--stage", "requirements-analysis", "--single"], proj);
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.depth).toBe("Comprehensive");
+  });
+
+  // A trusted composed stage: the real trust record the emitter verifies (index
+  // digest, grant, contained `plugins/<p>/stages/` path, content digest). Built
+  // directly rather than through the plugin compiler, and over a slug the stock
+  // graph already carries — a genuine plugin slug is absent from that graph and
+  // would stop at the unknown-stage guard, never reaching the depth thread this
+  // test is about.
+  function composeTrustedStage(slug: string): void {
+    const plugin = "t486-depth-plugin";
+    const rel = `plugins/${plugin}/stages/${slug}.md`;
+    const abs = join(host, rel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, `---\nslug: ${slug}\n---\n`);
+    const contentDigest = `sha256:${createHash("sha256").update(readFileSync(abs)).digest("hex")}`;
+    const stageIndex = [{ slug, path: rel, contentDigest }];
+    const stageIndexDigest = `sha256:${createHash("sha256").update(JSON.stringify(stageIndex)).digest("hex")}`;
+    writeFileSync(
+      join(host, ".amadeus-plugin-composition.json"),
+      JSON.stringify({
+        ledger: [],
+        plugins: [[plugin, { stageIndex, stageIndexDigest, trustGrant: { plugin } }]],
+      }),
+    );
+  }
+
+  test("a composed plugin stage reached by --stage (no --single) delivers the state depth", () => {
+    seedProject();
+    rewriteState((c) => c.replace("- **Depth**: Minimal", "- **Depth**: Comprehensive"));
+    composeTrustedStage("requirements-analysis");
+    const emitted = emitComposedPluginStageIfInstalled(
+      { stage: "requirements-analysis" },
+      "fix",
+      null,
+      null,
+      undefined,
+      host,
+      readFileSync(seededStateFile(proj), "utf-8"),
+    );
+    expect(emitted).toBe(true);
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.depth).toBe("Comprehensive");
+  });
+
+  test("with no state to read, the composed plugin route falls back to the scope default", () => {
+    seedProject();
+    composeTrustedStage("requirements-analysis");
+    expect(
+      emitComposedPluginStageIfInstalled({ stage: "requirements-analysis" }, "fix", null, null, undefined, host, null),
+    ).toBe(true);
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
+    expect(directive.depth).toBe("Minimal");
   });
 });
