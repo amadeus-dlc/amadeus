@@ -72,10 +72,21 @@ export type GhError =
 
 export type GhRunner = (argv: readonly string[]) => Promise<Result<string, GhError>>;
 
-/** The raw, unparsed merge state. The typed `PrState` is C3's to construct. */
+/**
+ * The raw, unparsed merge state. The typed `PrState` is C3's to construct.
+ *
+ * The lifecycle fields (#2401) are optional at the type level by ruling
+ * E-MPC-CGBLK: they are included only when the GraphQL response carries them,
+ * so a pre-extension response (as older scripted doubles replay) yields a
+ * value without them rather than one padded with fabricated defaults.
+ */
 export interface RawPrState {
   readonly mergeable: string;
   readonly mergeStateStatus: string;
+  readonly state?: string;
+  readonly mergedAt?: string | null;
+  readonly mergeCommitOid?: string | null;
+  readonly checkRollupState?: string | null;
 }
 
 // ---------------------------------------------------------------------------
