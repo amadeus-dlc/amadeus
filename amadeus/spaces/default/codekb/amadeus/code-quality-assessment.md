@@ -1,6 +1,40 @@
 # コード品質評価
 
-## cross-harness resume の品質所見（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層移設の品質所見（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+### テストベースライン（observed、Developer scan 実測。Architect はコード無変更のため再実行なし）
+
+| ファイル | pass | fail | expect | exit |
+| --- | --- | --- | --- | --- |
+| `tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts` | 7 | 0 | 20 | 0 |
+| `tests/unit/t-formal-verif-model-map-v2.test.ts` | 27 | 0 | 102 | 0 |
+| `tests/integration/t402-tla-module-deps.test.ts` | 19 | 0 | 40 | 0 |
+| `tests/integration/t403-tla-loader-generalization.test.ts` | 12 | 0 | 36 | 0 |
+| **計** | **65** | **0** | **198** | **0** |
+
+`specs/tla` を参照するテスト・fixture は **51ファイル / 272 行**（unit 16 / integration 30 / e2e 2 / support 2 / harness 1）あり、移設の明示改訂面は広い。**最大 tNNN は t480** — 次回採番は t481 から。
+
+### 品質ゲートの現状
+
+- Lint: Biome（cognitive-complexity warnings は既知ベースライン）。
+- CI: `formal-model-check` ジョブ（`ci.yml:663`）は `workflow_dispatch` 限定（`:665`）で常時ゲートではない。YAML に `specs/tla` リテラルは 0 件で、パス結合は runner コード側（`ci-model-check-domain.ts:189` / `run-model-check-diagnostic.ts:217`）。
+- 鏡像 guard: core → plugin の byte-identical は `t-package-generated-plugin-sources` が機械検査。
+
+### 技術的負債シグナル
+
+1. **`specs/tla` ハードコードの6系統分散** — 単一の設定点に集約されておらず、定数・frontmatter glob・文言・Docker mount が別々に書かれている（内訳は architecture.md 本 intent 節）。
+2. **スキーマレベルの正準パス固定** — validator 定数の定義変更を要し、機械置換で閉じない。
+3. **active-space 相互作用が未定義** — space 配下移設で watch/実行対象の解決規則が新たに必要になるが、現行コードに機構なし（`activeSpace()` は formal-verif 系から未参照、grep exit 1 実測）。
+4. **`specs/tla-evidence` は別 root**（`tla-evidence.ts:434`）— 機械置換に追従しない。observed で実体未生成。watch glob 外に置く判断は 260804-tla-authoring の ADR に記録済み。
+5. **advisory 文言は audit 実記録を持つユーザー可視契約**（`260804-tla-authoring` audit jsonl:525）— 文言変更は移設告知の設計とセットで扱う。
+
+### 件数の読み方（品質上の注意）
+
+全域 826 occurrences / 264 ファイルのうち **actionable は 80 ファイル / 358 行**にすぎない。残り 184 ファイル / 369 行は歴史記録（intents 141 / elections 30）・派生キャッシュ（codekb 12）・ノルムの learned エントリ（memory 1）で**書換禁止** — 全域件数をそのまま変更工数と読んではいけない。
+
+## cross-harness resume の品質所見（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -147,7 +181,7 @@ fail-closed で塞がれているため誤動作はしないが、**未接続の
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
-## subagent 型規律と model 可観測性の品質所見（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 可観測性の品質所見（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -216,7 +250,7 @@ audit 実測（Architect 再計測 2026-08-06、測定 ref = worktree `c66a2c987
 - **`TaskUpdate` 誤検知の防波堤が文書化されている**: `:4133-4137` が「settings matcher は unanchored regex なので `"Task"` は `TaskUpdate` / `TaskCreate` にもマッチする」ことを明示しており、D-1 の修正形が失ってはならない性質が読み取れる。
 - **t385 対応の literal 再構成**: `core/hooks/amadeus-log-subagent-start.ts:70-72` がフィールドを opaque な戻り値から転送せず literal で組み直しており、コメント `:64-69` が「emitter/registry admission guard が call site のキー集合を静的に読めるようにする / default-deny redaction では未 admit キーが無音で消える」と理由を述べている。default-deny の危険を構造で塞いだ実装であり、model 属性の追加時も同じ様式を踏む必要がある。
 - **患部の安定性**: 患部9パスは 34 commits の区間で無変更であり、上流のクロスレビュー引用が observed でそのまま有効である（免除条件は verdict の target-sha 一致で成立）。
-## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の件数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。Test Strategy は Comprehensive。
 

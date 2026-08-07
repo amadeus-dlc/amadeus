@@ -1114,5 +1114,11 @@
     "dirName": "260805-e-stg-s13i",
     "createdAt": "2026-08-05T22:52:37Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-TSR-RA1",
+    "dirName": "260807-e-tsr-ra1",
+    "createdAt": "2026-08-07T10:13:48Z",
+    "status": "recorded"
   }
 ]

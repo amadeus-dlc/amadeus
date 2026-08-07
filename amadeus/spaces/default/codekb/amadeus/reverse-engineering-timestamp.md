@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260805-cross-harness-resume）
+## 実行メタデータ（現在: 260807-tla-specs-relocation）
+
+- Date: `2026-08-07`
+- Base commit: `7060956c5617125dd2f4e284957aa180cb306484`（本 intent の prior record はなし。`re-scans/` 中で最新の observed を共有する `260805-cross-harness-resume` / `260805-subagent-type-guard` の `7060956c5` を採用。`cid:reverse-engineering:rescan-base-ancestry` に従い祖先性を実測 — `git merge-base --is-ancestor 7060956c5 d98dd9039` exit 0）
+- Observed commit: `d98dd9039db3949eeb140941deeb4468f717e57a`（= 本 worktree HEAD。`git rev-parse HEAD` で一致を実測、exit 0）
+- Ancestry: exit 0。距離は **85 commits / 1232 files**（`git rev-list --count` / `git diff --name-only | wc -l` で実測）。
+- Scope: `self-refactor`、Brownfield、単一 repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: [Issue #2398](https://github.com/amadeus-dlc/amadeus/issues/2398) — TLA+ 仕様を `specs/tla/` → `amadeus/spaces/<space>/specs/tla/` へ移設し、仕様層の正準配置を `amadeus/spaces/<space>/specs/{rfc,tla}` に統一する（兄弟 Issue #2396 が rfc 側）。患部は (a) model-map.json の登録状態と digest 機構、(b) model-map v2 validator の正準パス固定、(c) activation watch + advisory 文言、(d) model-completeness センサー、(e) loader / CI runner のパス結合、(f) `specs/tla` リテラルの全域分布。
+- Scan mode: **xrev scan mode**（`cid:reverse-engineering:c1-xrev-single-issue`）+ DIFFERENTIAL refresh（`cid:reverse-engineering:c1`）。クロスレビュー2件（ともに CONFIRMED_WITH_REFINEMENTS）を Developer scan の一次入力とし、Architect が load-bearing seam を observed 断面の verbatim 実読・実コマンドで独立に再検証した。**引用訂正1件 + 精密化3件**（内訳は `re-scans/260807-tla-specs-relocation.md` § Developer scan との差分）。
+- Verification: Developer scan が observed SHA で実測したベースラインを採用（Architect はコード無変更のため再実行なし）— **65 pass / 0 fail / 198 expect / 全 exit 0**（mirror-model-registration 7 / model-map-v2 27 / t402 19 / t403 12）。coverage は `cid:code-generation:c1-coverage-single-owner` に従い未実行。
+- Current decision: **患部は「パス参照の付け替え + validator 定数の再定義 + digest 再ピン」で閉じるクラスで、意味論変更を含まない。** ただし正準パスはスキーマレベル固定（model/cfg は `parseAssetIdentity :171` が `:335,:337` で生成値へピン、auxiliaries は `:250` の dirname 固定）のため機械置換では閉じない。移設は watch ハッシュの drift として必ず検出される（`computeSpecHash` は相対パスを fold — 設計どおり）。現行の spec 層は space 非依存のルート固定で `activeSpace()` は formal-verif 系から未参照（grep exit 1 実測）。
+- 主要所見: ①`specs/tla` 結合は **6系統に散在**（model-map `path` 値 / センサー glob+実装 / activation watch+文言 / 形式検証定数 / loader 境界 / CI runner）で単一設定点なし。②2つのハッシュ機構の非対称 — model-map identity はパス不変、watch hash はパスを fold。③core → plugin は byte-identical 鏡像（`scripts/package.ts:808-809`）で編集は一方向。④全域 826 occurrences / 264 ファイルのうち actionable は **80 ファイル / 358 行**のみ、残り 184 ファイルは歴史記録・派生キャッシュ・ノルム層で書換禁止。⑤`specs/tla-evidence`（`tla-evidence.ts:434`）は接頭辞共通の別 root で機械置換に追従しない。⑥区間内に影響面への着地10ファイルあり（影響面は生きている）、外部依存の変化なし（`package.json` diff は pi extension 登録1行のみ）。
+- Requirements Analysis へ送る裁定: **(1) active-space 解決規則**（どの space の specs を watch・実行対象にするか — 現行コードに機構なし）。**(2) `specs/tla-evidence` の扱い**（移設対象に含めるか、watch 外 ADR との整合）。**(3) watch 基底の再宣言**（`specRootForHost` 維持 + glob のみ変更か、所有ルートを space 配下へ再宣言するか — cg-watch-root-separation の解釈）。**(4) 複数 space 時の model-map 解決**。**(5) `docs/amadeus-files.{md,ja.md}` への `specs/` layout 追記**（現状 0 件、実測）。**(6) 移設告知の設計**（advisory 文言は audit 実記録を持つユーザー可視契約 — 新旧併記期間・移行ガイドの形）。
+- Updated artifacts: 共有9成果物の現在断面を更新し、旧「現在」マーカー3件（`260805-cross-harness-resume` / `260805-subagent-type-guard` / `260805-semi-redefine-autonomy-f`）を全 9 成果物で本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`。`grep -n "、現在、\|（現在:" amadeus/spaces/default/codekb/amadeus/*.md` の残存ヒットが本 intent の節のみであることを機械確認）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260807-tla-specs-relocation.md` を新設。
+- Per-intent record: `re-scans/260807-tla-specs-relocation.md`
+
+## 実行メタデータ（履歴: 260805-cross-harness-resume）
 
 - Date: `2026-08-05`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち祖先性を満たす最新を採用。`git merge-base --is-ancestor b938898f3 7060956c5` exit 0 を実測）
@@ -55,7 +71,7 @@
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260802-registry-drift-guard` 節を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-advisory-human-choice.md` を新設。
 - Per-intent record: `re-scans/260803-advisory-human-choice.md`
 
-## 実行メタデータ（現在: 260805-subagent-type-guard）
+## 実行メタデータ（履歴: 260805-subagent-type-guard）
 
 - Date: `2026-08-06`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち祖先性を満たし距離最小のものを採用 = 直前記録 `260804-phase-boundary-approval` の observed。`git merge-base --is-ancestor b938898f3 7060956c5` exit 0 を実測）
@@ -77,7 +93,7 @@
 - 技術的負債シグナル5件: ①D-1 の dispatch tool 名 drift（テスト4箇所と doc が誤前提を固定）、②観測の非対称（STARTED 60 / COMPLETED 974、lifetime 集計面の入力が構造的に欠落）、③型規律の不在（distinct 200 中 184 が許可集合外）、④休眠面の三重（宣言と本番結線の非対称クラス）、⑤ケーシング衝突（`Explore` / `explore` の二重計上リスク）。
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260804-phase-boundary-approval` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260805-subagent-type-guard.md` を新設。
 - Per-intent record: `re-scans/260805-subagent-type-guard.md`
-## 実行メタデータ（現在: 260805-semi-redefine-autonomy-f）
+## 実行メタデータ（履歴: 260805-semi-redefine-autonomy-f）
 
 - Date: `2026-08-05`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち HEAD 祖先で距離最小のものを採用。`git merge-base --is-ancestor b938898f3 2f255bc69` exit 0 を実測）

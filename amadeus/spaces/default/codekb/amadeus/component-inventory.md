@@ -1,6 +1,26 @@
 # コンポーネント棚卸し
 
-## cross-harness resume の対象コンポーネント（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層の対象コンポーネント（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+| コンポーネント | 責務 | 依存・結合 |
+| --- | --- | --- |
+| `specs/tla/`（9ファイル） | TLA+ 仕様資産本体。model-map.json（schemaVersion 2、登録2モデル）が digest ピンを保持 | 全コンシューマが `path` 値経由で参照 |
+| core `amadeus-formal-verif-model-map.ts` | model-map v2 正準 API（定数・canonical ハッシュ・validator・parser/diff） | plugin 側へ byte-identical 投影（`scripts/package.ts:808-809`） |
+| core `amadeus-plugin-activation.ts` | spec-hash watch と activation advisory の生成 | `computeSpecHash` / `evaluateTlaModelReadiness` へ依存 |
+| core `amadeus-sensor-model-completeness.ts` + `sensors/amadeus-model-completeness.md` | 登録モデルと正準実装の drift 検出センサー | `MODEL_MAP_RELATIVE_PATH` + frontmatter glob |
+| core `amadeus-advisory-choice.ts`（`:894-895`） / `tla-module-deps.ts`（`:4,:38,:59`） | advisory 選択の既定モデル指定 / module 依存解決 | `specs/tla` パス生成 |
+| plugin `tools/tla-model-loader-internal.ts` | map 境界検査・identity 照合（SOURCE_DRIFT 棄却）・loader | core の map API に依存 |
+| plugin `tools/ci-model-check-domain.ts` / `run-model-check-diagnostic.ts` | CI runner（Docker bind mount 検査 / 診断） | workspace 相対パス結合 |
+| plugin `tools/tla-applicability.ts` / `tla-authoring.ts` / `tla-evidence.ts` / `tla-registration.ts` / `tla-model-map.ts` / `tla-arm.ts` / `tlc-toolchain.ts` | applicability 判定 / authoring CLI / evidence store / registration・map CLI / arm / toolchain | map 定数経由（tla-evidence のみ別 root `specs/tla-evidence`） |
+| plugin `stages/formal-model-check.md`（`:12,:14-15`） / `README.md` | ステージ定義（inputs が map を名指し、sensors 宣言） / プラグイン説明 | センサー実体は core 側 |
+| テスト fixture 供給3件（`tests/harness/formal-model-fixture.ts:11-12`、`tests/formal-verif/support/tla-toolchain-harness.ts:54`、`tla-authoring-e2e-fixture.ts:55,59,79`） | 実レイアウト fixture の供給 | 実リポジトリの map を直接読む |
+| docs 4文書対訳 + `docs/amadeus-files.{md,ja.md}` | 利用者向け規約の記述 | amadeus-files 側は `specs/` エントリ新設が必要 |
+
+**所有境界の観察**: spec 層の「所有者」は現行ではリポジトリルート（space 非依存）であり、space カーソル機構（`amadeus-lib.ts:429,:1122`）は formal-verif 系コンポーネントから未接続（grep exit 1 実測）。移設は所有境界そのものの移動であり、単なるファイル移動ではない。
+
+## cross-harness resume の対象コンポーネント（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -101,7 +121,7 @@
 
 候補となるreceipt store、validator、protected writerはまだコンポーネントとして存在しない。後続設計で追加する場合も、activationの重複抑止と人間権限の検証を別責務として保ち、汎用gate承認をadvisory選択へ読み替えない。
 
-## subagent 観測パイプラインの対象コンポーネント（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 観測パイプラインの対象コンポーネント（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -165,7 +185,7 @@
 | `SUBAGENT_COMPLETED` | 974（移動値 — 本セッション中も追記される） |
 | `Agent Type` distinct | 200（persona 8 / 組込型 8 / 許可集合外 184） |
 | イベント内訳 | persona 416 / 組込型 297 / 許可集合外 261（和は 974 と一致） |
-## semi 再定義と autonomy 起動宣言の対象コンポーネント（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の対象コンポーネント（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の行数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（`wc -l` / `grep -n`、canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 

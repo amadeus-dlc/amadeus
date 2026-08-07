@@ -1,6 +1,36 @@
 # アーキテクチャ
 
-## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層の配置結線構造（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+### 結合点は6系統に散在（単一設定点なし）
+
+`specs/tla` パスへの結合は1箇所に集約されておらず、少なくとも6系統に分散する:
+
+| 系統 | 所在 | 性質 |
+| --- | --- | --- |
+| (a) model-map の `path` 値 | `specs/tla/model-map.json:7,:11,:60,:64,:69` | データ（digest ピンとセット） |
+| (b) センサー glob + 実装定数 | `packages/framework/core/sensors/amadeus-model-completeness.md:8`、`amadeus-sensor-model-completeness.ts:37`（+ `:507,:535,:760` の直接生成） | frontmatter glob とコード |
+| (c) activation watch + advisory 文言 | `amadeus-plugin-activation.ts:42`（`ACTIVATION_WATCH_GLOBS = ["specs/tla/**"]`）、`:229,:231,:233,:304-305` | コードとユーザー可視文言 |
+| (d) 形式検証の正準 API | `amadeus-formal-verif-model-map.ts:52-56`（定数）、`:58,:62`（`tlaModelPath` / `tlaCfgPath`） | core → plugin byte-identical 鏡像（`scripts/package.ts:808-809`） |
+| (e) TLA loader の境界 | `plugins/formal-model-check/tools/tla-model-loader-internal.ts:186,:344,:364,:367,:371` | 境界チェック文言・パス生成 |
+| (f) CI runner のパス結合 | `plugins/formal-model-check/tools/ci-model-check-domain.ts:189`（Docker bind mount）、`run-model-check-diagnostic.ts:217` | workflow YAML 自体にリテラルは 0 件（`ci.yml:663,:665` のジョブは runner を駆動するのみ） |
+
+### 2つのハッシュ機構の非対称が移設の意味論を決める
+
+- **model-map の identity**（`canonicalIdentity()`、`amadeus-formal-verif-model-map.ts:33-43`）は domain 分離された canonical ハッシュであり、パスを畳み込まない。**パス移動で identity は不変** — 変わるのは map 内の `path` 値だけである（実測: `specs/tla/FormalElection.tla` の生 SHA-256 `2c7d6dbf…` ≠ identity `e8cc39a9…`、設計どおり）。
+- **activation watch の spec hash**（`computeSpecHash(specRootForHost(hostRoot), …)`、`:296,:447,:481`）は相対パスをハッシュへ fold するため、**移設は必ず drift として検出される**。`specRootForHost(hostRoot) = dirname(hostRoot)`（`:100-102`）はノルム `cid:code-generation:cg-watch-root-separation`（`amadeus/spaces/default/memory/project.md:408`）の具体化であり、watch glob の基底は「監視対象を所有するルート」で明示宣言する建て付けになっている。
+
+### スキーマレベルの正準パス固定（本移設の構造上の核心）
+
+model-map v2 の validator は正準パスをスキーマレベルで固定している: model/cfg は `parseAssetIdentity`（`:171`、`value.path !== expectedPath` を fail）が `:335` / `:337` で `tlaModelPath(name)` / `tlaCfgPath(name)` の生成値への完全一致を要求し、auxiliaries は `isCanonicalAuxiliaryPath`（`:247`）内の `posix.dirname(value) !== "specs/tla"`（`:250`、エラーメッセージ `:272`）で固定する。**機械的文字列置換では閉じず、validator 定数の定義変更が要る**（core 編集後に plugin 鏡像を byte-identical 再生成 — guard は `tests/integration/t-package-generated-plugin-sources.integration.test.ts:21-22`）。
+
+### space 解決機構との未接続
+
+space カーソルの既存機構（`amadeus-lib.ts:429` `ACTIVE_SPACE_POINTER`、`:1122` `activeSpace()` = explicit arg > active-space pointer > `"default"`）は存在するが、**formal-verif 系ツール（activation / model-map / sensor / loader）からの参照は 0 件**（grep exit 1 を実測）。現行の spec 層は space 非依存のルート固定であり、space 配下への移設は「監視対象を所有するルート」の再宣言を意味する — watch 基底ノルムの解釈と active-space 解決規則の新設が要件段へ送る裁定事項である。
+
+## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 `git merge-base --is-ancestor` exit 0、距離 34 commits / 493 files、`+43826 / −217`）。全数列挙・実測手順は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -160,7 +190,7 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## subagent 観測パイプラインの結線構造（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 観測パイプラインの結線構造（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。実測手順・全数列挙・引用スポット再実測は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -226,7 +256,7 @@ Codex 側の到達経路は `packages/framework/harness/codex/hooks/amadeus-code
 ### 型規律の検査が存在する層と存在しない層
 
 compile 時には agent ロスタ照合が存在する — `core/tools/amadeus-graph.ts:2191` `const knownAgents = loadAgents().map((a) => a.slug);` を `:2218` `validateStageFrontmatter(parsed, { agents: knownAgents })` へ渡し、stage frontmatter の `lead_agent` / `support_agents` が実在しない場合に compile を loud に落とす（コメント `:2186-2190`）。**しかしこの機構は dispatch の `subagent_type` を一切見ない。** すなわち「stage 宣言の agent 参照」は検査されるが「実行時 spawn の型」は無検査であり、Issue #2279 が指す空白はこの2層の非対称そのものである。
-## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の file:line・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、区間 19 commits / 464 files）。行番号は canonical 側 `packages/framework/core/` を記す（`.claude/` ミラーは同一内容）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

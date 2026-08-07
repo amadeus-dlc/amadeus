@@ -1,6 +1,14 @@
 # 技術スタック
 
-## cross-harness resume の技術断面（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層移設の技術断面（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+- **区間内のスタック変化なし**: ランタイム Bun 1.3.13 / TypeScript（ESM、`tsc --noEmit`）/ Biome / `bun test`（正準ランナー `tests/run-tests.ts`）は不変。外部依存の追加削除はなく、`package.json` の区間 diff は `pi.extensions` への `subagent.ts` 登録1行のみ（`bun.lock` 無変更、実測）。
+- **焦点技術**: TLA+（`.tla` / `.cfg`、9ファイル）と TLC — Docker 経由の形式検証ランタイムで、CI runner が bind mount で `specs/tla` を供給する（`plugins/formal-model-check/tools/ci-model-check-domain.ts:189`）。model-map は JSON（schemaVersion 2）+ SHA-256 base の domain 分離 canonical ハッシュ（`canonicalIdentity()`）。
+- **含意**: 本 intent は配置規約の変更であり、言語・ツールチェーン・外部依存の変更を伴わない。変わるのはパス定数とそれを固定する validator の定義である。
+
+## cross-harness resume の技術断面（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -42,7 +50,7 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## subagent 型規律の技術断面（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律の技術断面（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**技術スタックに変更はない**。TypeScript / ESM / Bun 直接実行、`tsc --noEmit` による strict 型検査、Biome lint（formatter 無効）、`tests/run-tests.sh` の4層ランナーは不変である。
 
@@ -55,7 +63,7 @@
 | bun（テスト実行） | `1.3.13` | 本 RE のテスト再実行出力 |
 
 **ハーネス CLI の hook payload は版依存の外部 seam である。** Claude Code の `PreToolUse` の `tool_name` が `"Agent"` である一方 core 定数が `"Task"` を期待している（D-1）ことは、外部 CLI の語彙が repo 側の想定と独立に前進しうることの実例であり、`cid:application-design:external-seam-vocab-measurement`（seam の語彙は実測で確定する）が本 intent の設計に直接効く。
-## semi 再定義と autonomy 起動宣言の技術断面（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の技術断面（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 

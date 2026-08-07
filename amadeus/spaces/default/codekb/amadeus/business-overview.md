@@ -1,6 +1,15 @@
 # ビジネス概要
 
-## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層の正準配置の業務境界（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+- **約束されている価値**: [Issue #2398](https://github.com/amadeus-dlc/amadeus/issues/2398) は、TLA+ 仕様をリポジトリルート直下の `specs/tla/` から `amadeus/spaces/<space>/specs/tla/` へ移設し、仕様層の正準配置を `amadeus/spaces/<space>/specs/{rfc,tla}` に統一する（rfc 側は兄弟 Issue #2396 が担う）。利用者にとっての価値は「Amadeus が管理する仕様資産の置き場が space 配下の1規約に揃い、workspace のどこを見れば仕様があるかが一意に決まる」ことである。
+- **現状の成立範囲**: `specs/tla/` は9ファイルでルート直下に実在し、model-map.json（schemaVersion 2）には FormalElection / MirrorLifecycle の2モデルが digest ピン付きで登録されている。この配置は当初設計（#1456、intent 260722-tla-plugin）に由来し、ツール層が plugin へ移設された際（#1925）に仕様層だけがルートに残った経緯を持つ — drift ではなく設計上の配置である。
+- **保護すべき対抗価値**: 形式検査の drift ゲートである。model-map の identity はコンテンツ base の canonical ハッシュでパス移動では変わらないが、activation watch の spec hash は相対パスを畳み込むため、移設は必ず「spec hash CHANGED」の advisory として表面化する。これは故障ではなく設計どおりの検出であり、利用者へ新パスを告知する接点でもある。
+- **業務判断へ効く未解決事項**: spec 層を space 配下へ移すと「どの space の仕様を watch・実行対象にするか」の解決規則が必要になるが、Issue 本文・現行コードのどちらにも存在しない（現行は space 非依存のルート固定で、`activeSpace()` は formal-verif 系から未参照 — grep exit 1 実測）。space 切替時に形式検査の対象がどう切り替わるかは利用者から見える挙動であり、要件段での裁定が必要である。
+
+## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -35,7 +44,7 @@ Amadeus の中核価値の1つは「**ワークフローの進捗は intent reco
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
-## subagent 型規律と model 可観測性の業務境界（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 可観測性の業務境界（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 測定 ref: base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）。
 
@@ -46,7 +55,7 @@ Amadeus の中核価値の1つは「**ワークフローの進捗は intent reco
 境界の外に置いた事項は行き先が確定している: 汎用 builder persona の新設は [#2298](https://github.com/amadeus-dlc/amadeus/issues/2298)（本 intent 完了後の型内訳を設計入力にする）、live `.claude/settings.json` の `PreToolUse` 配線欠落は [#2297](https://github.com/amadeus-dlc/amadeus/issues/2297)、`CXR-33`（transcript / prompt 本文の読取禁止）は制約として受容する。
 
 本 RE が業務判断へ返す新しい事実は2点ある。第一に、**model の供給有無はハーネスによって異なる** — Codex は hook payload に model を載せており core hook の入口まで届いているが、Claude Code は明示指定時を除いて載せない。したがって「全ハーネスで同じ粒度の model 記録」は約束できず、供給できないハーネスでは欠落の明示で運用を継続する（CON-3）。第二に、**start 側イベントは Claude Code で構造的に記録されていない**（全 132 intent で 0 件）。原因は2層あり、#2297 が扱う配線欠落だけでなく、dispatch tool 名の語彙不一致（core が `"Task"` を期待、実 payload は `"Agent"`）が独立に存在する。**#2297 の修正だけでは start 側の記録は回復しない** — この含意は #2297 の受入基準に書かれておらず、型別集計を START × COMPLETE のペアで組むか COMPLETED 単独で組むかという設計判断に直接効く。
-## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（`git merge-base --is-ancestor` exit 0、区間 **19 commits / 464 files**、`+36989 / −199`）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

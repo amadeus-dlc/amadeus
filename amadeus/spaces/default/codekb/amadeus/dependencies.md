@@ -1,6 +1,15 @@
 # 依存関係
 
-## cross-harness resume の依存関係（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層移設の依存関係（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+- **外部依存: 区間内で変化なし**（`package.json` diff は pi extension 登録1行、`bun.lock` 無変更 — 実測）。患部コードは `node:fs` / `node:path` / `node:crypto` と Docker（TLC 実行時）のみに依存する。
+- **核心の内部エッジ — core → plugin の鏡像依存**: `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` が正本で、`plugins/formal-model-check/tools/` 側は byte-identical の生成物（`scripts/package.ts:808-809`、guard は `t-package-generated-plugin-sources:21-22`）。編集方向は一方向（core → 再生成）であり、双方向編集は guard が reject する。
+- **model-map.json の読み手グラフ（8系統）**: sensor（`MODEL_MAP_RELATIVE_PATH`）/ activation（`evaluateTlaModelReadiness`）/ loader（`TLA_MODEL_MAP_PATH` + `verifyAssetPath`）/ applicability / authoring CLI / registration・map CLI / arm・toolchain / テスト基盤。全エッジが `specs/tla/model-map.json` 定数に収斂するため、移設は定数の変更で大半が追従する構造だが、validator・文言・Docker mount の個所は個別書換が要る。
+- **生成物依存**: `dist/` 全8ハーネスに glob・定数が焼き込み（477 occurrences / 138 ファイル、実測）。直接編集不可、`bun run build` で追従。
+
+## cross-harness resume の依存関係（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -63,7 +72,7 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
-## subagent 型規律の依存関係（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律の依存関係（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**外部依存に変更はない**。`git diff --stat b938898f3..7060956c5 -- package.json bun.lock packages/setup/package.json` は**空出力**（Architect 実測）。追加・更新・削除はゼロであり、利用者側の Bun-only 前提は不変である。
 
@@ -79,7 +88,7 @@ stage report
 | `SUBAGENT_STARTED` | `core/hooks/amadeus-log-subagent-start.ts:61-72` | `composeSubagentLifetimes` の入力半分 | Claude Code 経路が D-1 / D-2 で不発のため実質的に供給欠落 |
 
 いずれも「宣言と本番結線の非対称」クラスであり、`cid:requirements-analysis:symmetric-pair-review`（write⇔check / emit⇔terminal の対称性を設計・レビュー観点にする）の対象である。CAP-2 / CAP-3 はこの非対称のうち3件（`gen_ai.request.model` / `composeSubagentLifetimes` / codex の `model`）を結線する形になる。
-## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 

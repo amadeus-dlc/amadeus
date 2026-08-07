@@ -1,6 +1,37 @@
 # API ドキュメント
 
-## cross-harness resume が対象とする契約（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層が公開する内部契約（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。外部 HTTP API は存在せず、すべて repo 内部のモジュール契約である。
+
+### model-map v2 の正準 API（`packages/framework/core/tools/amadeus-formal-verif-model-map.ts`）
+
+plugin 側 `plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` は byte-identical 鏡像（投影: `scripts/package.ts:808-809`、guard: `t-package-generated-plugin-sources:21-22`）。
+
+- 定数 `:52-56` — `TLA_EXECUTION_MODEL_NAME` / `TLA_MODEL_PATH` / `TLA_CFG_PATH` / `TLA_MODEL_MAP_PATH = "specs/tla/model-map.json"` / `TLA_MODEL_MAP_SCHEMA_VERSION = 2`
+- パス生成 `:58` `tlaModelPath(name)` / `:62` `tlaCfgPath(name)` — `specs/tla/<Name>.{tla,cfg}` を生成
+- `:33-43` `canonicalIdentity()` — domain 分離 canonical ハッシュ。digest ピンの実体で、パスを畳み込まない
+- バリデータ `:171` `parseAssetIdentity`（model/cfg の `path` を生成値へピン、呼出 `:335,:337`）、`:247-255` `isCanonicalAuxiliaryPath`（`:250` で dirname を `"specs/tla"` に固定）
+- `:373` `parseTlaModelMap()` / `:441` `findModelMapModel()` / `:445` `diffModelMap()`
+
+### activation watch / advisory の契約（`packages/framework/core/tools/amadeus-plugin-activation.ts`）
+
+- `:42` `ACTIVATION_WATCH_GLOBS = ["specs/tla/**"]`、`:100-102` `specRootForHost(hostRoot) = dirname(hostRoot)`、`:296,:447,:481` `computeSpecHash(specRootForHost(hostRoot), …)`
+- advisory 文言（ユーザー可視契約）: `:229` `spec hash CHANGED (specs/tla)`、`:231` `has no recorded verdict (specs/tla)`、`:233` `add a valid specs/tla/model-map.json target`、`:304-305` `target: "specs/tla"`。文言は audit に実記録あり（`260804-tla-authoring/audit/j5ik2o-mac-studio-lan-2a22dd80e265.jsonl:525`、1件）
+- model-map 判定は `evaluateTlaModelReadiness`（import `:33`、呼出 `:427`）経由
+
+### センサー / loader / CI runner の契約
+
+- model-completeness センサー: glob は frontmatter `packages/framework/core/sensors/amadeus-model-completeness.md:8`（`**/{specs/tla/**,amadeus-election*.ts,amadeus-mirror-*.ts}` — 実装側エントリを含む非対称 glob）、実装は `amadeus-sensor-model-completeness.ts:37` `MODEL_MAP_RELATIVE_PATH` + `:329` の `parseTlaModelMap` 注入
+- TLA loader（`tla-model-loader-internal.ts`）: `:27` `TLA_MODEL_MAP_PATH` import、`:155` `verifyAssetPath` / `:197` map の境界検査、`:186` 境界文言 `asset resolves outside specs/tla`、`:344,:364` パス生成、`:367,:371` MODULE_DEP_UNRESOLVED、`:69-70,:118,:231` SOURCE_DRIFT（identity 再計算による棄却）
+- CI runner: `ci-model-check-domain.ts:189`（Docker bind mount `type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly` の検査）、`run-model-check-diagnostic.ts:217`（`join(workspaceRoot, "specs/tla")`）。`.github/workflows/ci.yml:663` の `formal-model-check:` ジョブは `:665` `workflow_dispatch` 限定で、YAML 自体に `specs/tla` リテラルは 0 件（grep exit 1 実測）
+- その他のパス定数: `tla-applicability.ts:361`（`DEFAULT_MODEL_MAP_PATH`）、`tla-authoring.ts:449`（`DEFAULT_SUBJECTS_PATH`）、`tla-evidence.ts:434`（`DEFAULT_STORE_ROOT = "specs/tla-evidence"` — **接頭辞が共通なだけの別 root**）、`amadeus-advisory-choice.ts:894-895`、`tla-module-deps.ts:4,:38,:59`（core / plugin 両コピー）
+
+### model-map.json の読み手（消費者契約）
+
+sensor / activation / loader / applicability / authoring CLI / registration・map CLI / arm・toolchain / テスト基盤（`tests/formal-verif/support/tla-toolchain-harness.ts:54`、テストローカル `repositoryModelMap()`）の8系統が、すべて `specs/tla/model-map.json` 定数経由で結合している。移設はこの全エッジの同時書換を要求する。
+
+## cross-harness resume が対象とする契約（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -49,7 +80,7 @@
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
 
-## subagent 型規律と model 属性が対象とする契約（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 属性が対象とする契約（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -126,7 +157,7 @@ Codex（fixture `tests/fixtures/codex-hook-payloads/payloads.json` の `subagent
 - **許可集合照合の advisory 面の wire**（警告をどこへ出すか — stderr / audit event / 集計 CLI の verdict）は未決。CAP-1 は advisory であり fail-closed 拒否をしないことだけが確定している。
 - **既存テスト契約の改訂範囲**: `tests/unit/t-subagent-purpose.test.ts:89` / `:96` / `:97` / `:101` が `tool_name: "Task"` をピンしている。`cid:reverse-engineering:c1-pinned-behavior-ruling` により改訂は要件段の裁定事項。
 - `Purpose` / `Message` の非対称は設計意図であり、統合は要件化されていない。
-## semi 再定義と autonomy 起動宣言が対象とする契約（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言が対象とする契約（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の file:line はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

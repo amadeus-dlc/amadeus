@@ -1,6 +1,39 @@
 # コード構造
 
-## cross-harness resume の患部配置（260805-cross-harness-resume、現在、observed `7060956c5`）
+## TLA+ 仕様層の患部配置（260807-tla-specs-relocation、現在、observed `d98dd903`）
+
+本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+
+### 移設対象の配置
+
+`specs/tla/` 配下 **9ファイル**（`git ls-tree -r HEAD -- specs/` 実測）: `FormalElection.{tla,cfg}`、`MirrorLifecycle.{tla,cfg}`、`MirrorLifecycleAsImplemented.{tla,cfg}`、`MirrorLifecycleCore.tla`（auxiliary）、`MirrorLifecycleVacuity.cfg`、`model-map.json`。model-map.json（schemaVersion 2）の登録モデルは **2件**（FormalElection `:5` / MirrorLifecycle `:58`）で、MirrorLifecycleAsImplemented は意図的に未登録 — `tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts:106` が `toBeUndefined()` で pin している。`specs/tla/` 内コメントの自己参照は5行。
+
+### `specs/tla` リテラルの全域分布（実測 264 ファイル / 727 行 / 826 occurrences）
+
+| 領域 | ファイル / 行 | 分類 |
+| --- | --- | --- |
+| `packages/framework/core/` | 6 / 27 | actionable（path-rewrite） |
+| `plugins/formal-model-check/` | 10 / 28 | actionable（path-rewrite） |
+| `specs/tla/`（自己参照） | 5 / 10 | actionable（move + map の `path` 値） |
+| `docs/` | 8 / 21 | actionable（docs） |
+| `tests/`（unit 16 / integration 30 / e2e 2 / formal-verif support 2 / harness 1） | 51 / 272 | actionable（fixture・期待値） |
+| `amadeus/spaces/default/intents/`（audit jsonl 14 を含む） | 141 / 302 | 歴史記録 — **書換禁止** |
+| `amadeus/spaces/default/elections/` | 30 / 36 | 歴史記録 — **書換禁止** |
+| `amadeus/spaces/default/codekb/` | 12 / 30 | 派生キャッシュ — 次回 RE で再導出 |
+| `amadeus/spaces/default/memory/`（`project.md:408`） | 1 / 1 | learned エントリ — **書換禁止** |
+
+**actionable は計 80 ファイル / 358 行**。生成物 `dist/` 配下には **477 occurrences / 138 ファイル** の焼き込みがあるが gitignore 済みで `bun run build` が追従する（`specs/` 自体は dist に投影されない — `find dist -name "specs" -o -name "*.tla"` 0 件）。`scripts/`・`.github/` のヒットは 0 件（runner パスは `plugins/formal-model-check/tools/` 側）。
+
+### 変更クラス（詳細の file:line 列挙は developer-scan §「移設で変更が必要なファイル」を正本とする）
+
+- **A. move**: `specs/tla/` 9ファイルを `git mv`（自己参照5行は内容変更を伴う）。未登録2資産（AsImplemented、Vacuity）も watch glob 対象であり同梱が自然。
+- **B. path-rewrite**: core 5ファイル + センサー md、plugin 8ファイル + ステージ/README。validator 定数を含む（architecture.md 本 intent 節参照）。
+- **C. digest re-pin**: `model-map.json` の `path` 値5箇所（`:7,:11,:60,:64,:69`）。identity は不変。
+- **D. docs**: `docs/reference/21,22,07`、`docs/guide/19` の対訳8ファイル + `docs/amadeus-files.{md,ja.md}` への `specs/` エントリ新規追記（現状 `specs` 参照 0 件、grep exit 1 実測）。
+- **E. test fixture**: 51ファイル。供給元は `tests/harness/formal-model-fixture.ts:11-12`、`tests/formal-verif/support/tla-toolchain-harness.ts:54`、`tla-authoring-e2e-fixture.ts:55,59,79`。
+- **F. no-change-needed**: ci.yml / `scripts/` 全面 / `.gitignore`（`specs` エントリ 0 件）/ `dist/` / 歴史記録・ノルム層。
+
+## cross-harness resume の患部配置（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -115,7 +148,7 @@ session lifecycle / caller-authorization / harness detection のパスは区間�
 
 実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
 
-## subagent 型規律と model 属性の患部配置（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 属性の患部配置（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -164,7 +197,7 @@ session lifecycle / caller-authorization / harness detection のパスは区間�
 患部9パス（`amadeus-lib.ts` / `amadeus-log-subagent.ts` / `amadeus-log-subagent-start.ts` / `resource-suppliers.ts` / `amadeus-statusline.ts` / `subagent-lifetime.ts` / `amadeus-codex-adapter.ts` / `payloads.json` / `amadeus-graph.ts`）への `git diff --stat b938898f3..7060956c5` は**空出力**。
 
 区間内で変わった隣接面は `core/otel/event-registry.ts` のみで、差分は `EXPECTED_CANONICAL_COUNT` 88→90 と新規2イベント（`INTENT_COMPLETION_TRANSACTION_COMMITTED` / `AUTO_DECISION_REVIEWED`）の追加。`SUBAGENT_*` の定義自体は無変更。
-## semi 再定義と autonomy 起動宣言の患部配置（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の患部配置（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の配置・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 
