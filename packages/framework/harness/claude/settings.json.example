@@ -63,6 +63,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-subagent-model-guard.ts\""
+          },
+          {
+            "type": "command",
             "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-log-subagent-start.ts\""
           }
         ]

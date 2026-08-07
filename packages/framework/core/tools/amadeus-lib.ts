@@ -15,6 +15,8 @@ import {
 } from "./amadeus-harness.ts";
 import {
   classifyAgentType,
+  decideDispatchModel,
+  type DispatchModelDecision,
   isWarnableVerdict,
   resolveAllowedAgentTypes,
   resolveEffectiveModel,
@@ -4228,6 +4230,29 @@ function enrichSubagentAttribution(
     process.stderr.write(`advisory: subagent attribution skipped: ${sanitizeAdvisoryValue(e instanceof Error ? e.message : String(e))}\n`);
     return;
   }
+}
+
+// #2438 — the enforcement face of the dispatch seam (#2279 is the advisory
+// face). Resolves a PreToolUse payload against the harness agents dir and
+// returns the model-compliance decision, or null when the payload is not a
+// subagent dispatch at all. Unlike subagentStartFields, an ABSENT tool_name
+// declines: this guard exists for the PreToolUse seam only, and a dedicated
+// start event (kimi's SubagentStart) must never be judged by it.
+export function evaluateDispatchGuard(payload: ClaudeCodeHookInput, agentsDir: string): DispatchModelDecision | null {
+  if (payload.tool_name === undefined) return null;
+  if (!(SUBAGENT_DISPATCH_TOOLS as readonly string[]).includes(payload.tool_name)) return null;
+  const toolInput = payload.tool_input ?? {};
+  const rawType = payload.agent_type ?? toolInput.subagent_type;
+  const agentType = normalizeAgentType(typeof rawType === "string" ? rawType : undefined);
+  const verdict = classifyAgentType(agentType, resolveAllowedAgentTypes(agentsDir));
+  // A pin is only attributable when the type IS a declared persona — a builtin
+  // or ad-hoc spawn must not inherit some persona's declaration.
+  const personaPin = verdict === "persona" ? resolvePersonaPin(agentType, agentsDir).pin : undefined;
+  return decideDispatchModel({
+    typeVerdict: verdict,
+    personaPin,
+    requestedModel: typeof toolInput.model === "string" ? toolInput.model : undefined,
+  });
 }
 
 // --- Worktree anchor resolution (shared by read and write paths) ----------------

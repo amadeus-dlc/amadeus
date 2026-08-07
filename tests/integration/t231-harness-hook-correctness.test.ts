@@ -650,7 +650,7 @@ describe("FR-4.14 Kiro IDE USER_PROMPT forwarding", () => {
 });
 
 describe("FR-4.15 Claude hook command quoting", () => {
-  test("all and only the 13 authored hook commands match the production renderer", () => {
+  test("all and only the 14 authored hook commands match the production renderer", () => {
     const settings = JSON.parse(
       readFileSync(
         join(
@@ -671,7 +671,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
     const commands = Object.values(settings.hooks).flatMap((groups) =>
       groups.flatMap((group) => group.hooks.map((hook) => hook.command)),
     );
-    expect(commands).toHaveLength(13);
+    expect(commands).toHaveLength(14);
     for (const command of commands) {
       const hookPath = command.match(/\$\{CLAUDE_PROJECT_DIR:-\.\}\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
       expect(hookPath).toBeDefined();
@@ -699,7 +699,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
     expect(manifestSource).not.toContain("export interface HookSpec");
   });
 
-  test("all 13 shipped hook commands resolve and start from a project path with spaces", () => {
+  test("all 14 shipped hook commands resolve and start from a project path with spaces", () => {
     const root = createTestProject();
     temporaryProjects.push(root);
     const project = join(root, "project with spaces");
@@ -716,7 +716,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
     );
     const trace = join(project, "claude-hook-trace.txt");
     const expectedBasenames: string[] = [];
-    expect(commands).toHaveLength(13);
+    expect(commands).toHaveLength(14);
     for (const command of commands) {
       const relativeHook = command.match(/\$\{CLAUDE_PROJECT_DIR:-\.\}\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
       expect(relativeHook).toBeDefined();

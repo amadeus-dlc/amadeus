@@ -20,22 +20,22 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 617,
+    "total": 619,
     "enumeratedByClass": {
-      "function": 349,
+      "function": 350,
       "audit": 90,
       "scope": 15,
       "stage": 32,
-      "hook": 14,
+      "hook": 15,
       "subcommand": 110,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 180,
+      "function": 181,
       "audit": 44,
       "scope": 15,
       "stage": 8,
-      "hook": 14,
+      "hook": 15,
       "subcommand": 85,
       "render-surface": 7
     }
@@ -1931,6 +1931,18 @@
         {
           "file": "tests/unit/t109.test.ts",
           "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:evaluateDispatchGuard",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -4993,6 +5005,18 @@
         },
         {
           "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-subagent-model-guard",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
           "mechanism": "cli"
         }
       ],

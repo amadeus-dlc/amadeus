@@ -45,6 +45,7 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # Framework methodology knowledge (shared + per-agent)
@@ -107,6 +108,7 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # Framework methodology knowledge (shared + per-agent)

@@ -12,7 +12,7 @@
 
 この実装は `.claude/hooks/` にあるフレームワークのフックスクリプトを使用します。そのすべてがTypeScript(`bun` 経由で実行)です。そのすべてが**プロジェクト全体**です — `settings.json` に登録され(ステータスラインはトップレベルの `statusLine` キー経由、残りは `hooks` ブロック経由)、どのスキルがアクティブかにかかわらず発火します。すべてのエントリポイント — オーケストレーター、パッケージ化された各スコープ/ステージランナー、任意の手書きのカスタマーランナー — が per-runner の `hooks:` ブロックなしに決定論的なスパインを継承します。これが安全なのは、すべてのフックが**セルフゲート**するからです。アクティブなワークフローがない場合(`amadeus-state.md` / アクティブintentの `audit/` シャードが存在しない場合)に早期終了するため、常時オンでもAI-DLCの外では無操作です。
 
-1つを除くすべてが**非ブロッキング**です — 観測してexit 0し、制御フローを決して変更しません。1つ、`Stop` フック(`amadeus-stop.ts`)は**フロー変更**です。インタラクティブな転送ループを継続させるために `{"decision":"block"}` を返すことがあります。これはループ強制のための承認済みかつ意図的な契約であり、他のすべてのフックが守るアドバイザリーな `never-block` 契約とは区別されます(後述の「フロー変更する `Stop` フック」を参照)。
+2つを除くすべてが**非ブロッキング**です — 観測してexit 0し、制御フローを決して変更しません。`Stop` フック(`amadeus-stop.ts`)は**フロー変更**です。インタラクティブな転送ループを継続させるために `{"decision":"block"}` を返すことがあります。サブエージェントモデルガード(`amadeus-subagent-model-guard.ts`、#2438)がもう1つで、アクティブなワークフロー中はモデル準拠を確立できないディスパッチを deny することがあります。いずれも承認済みかつ意図的な契約であり、他のすべてのフックが守るアドバイザリーな `never-block` 契約とは区別されます(後述の「フロー変更する `Stop` フック」を参照)。
 
 ```
 .claude/hooks/
@@ -23,6 +23,7 @@
 +-- amadeus-runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
 +-- amadeus-validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
 +-- amadeus-log-subagent-start.ts # PreToolUse Task (project-wide, settings.json, TypeScript)
++-- amadeus-subagent-model-guard.ts # PreToolUse Task (project-wide, settings.json, TypeScript, flow-altering)
 +-- amadeus-log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
 +-- amadeus-stop.ts              # Stop (project-wide, settings.json, TypeScript, flow-altering)
 +-- amadeus-session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
@@ -42,6 +43,7 @@
 | `amadeus-runtime-compile.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Bash` | 遷移クラスの監査発行時に `runtime-graph.json` を再コンパイルする |
 | `amadeus-validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
 | `amadeus-log-subagent-start.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | サブエージェントのディスパッチを記録する(`SUBAGENT_STARTED`)。Claude Code にはサブエージェント開始イベントがないため、シームはディスパッチツールの PreToolUse となる。マッチャーはアンカー付きで、かつフックがツール名を再チェックする(ペイロードが実際に運ぶ内部名 `Agent` と `Task` の両方を受理する、#2303) — アンカーなしの `Task` は `TaskUpdate` にもマッチするため |
+| `amadeus-subagent-model-guard.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | **フロー変更**(#2438)。アクティブなワークフロー中、宣言済み persona(`model:` ピンが強制集合 `opus`/`sonnet` 内)経由でも、強制集合内のモデル明示指定でもないサブエージェントディスパッチを deny する — これがないと ad-hoc 名・組込型・型未指定の spawn は親セッションのモデルを無音で継承する。内部エラー時は stderr advisory 付きで fail-open。アクティブな amadeus ワークフローの外では厳密に無操作 |
 | `amadeus-log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
 | `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 質問タグのケースはIntent autonomy `full`と人間コマンド由来の`semi`で、会話的ケースは`full`だけで抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
 | `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
