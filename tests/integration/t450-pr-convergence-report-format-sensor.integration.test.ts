@@ -86,6 +86,17 @@ function overrideReport(): string {
   });
 }
 
+function landedReport(): string {
+  return renderReport({
+    kind: "landed",
+    prRef: { repo: "amadeus-dlc/amadeus", number: 2401 },
+    mergedAt: "2026-08-07T01:00:00Z",
+    mergeCommitOid: "0123456789abcdef0123456789abcdef01234567",
+    checkRollupState: "SUCCESS",
+    generatedAt: "2026-08-07T02:00:00Z",
+  });
+}
+
 let dir = "";
 function reportAt(body: string, name = "pr-convergence-report.md"): string {
   const path = join(dir, name);
@@ -136,6 +147,13 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.findings).toEqual([]);
     expect(result.pass).toBe(true);
     expect(result.reason).toBe("override");
+  });
+
+  test("a landed report passes with zero findings (#2401)", () => {
+    const result = evaluateReportFormat(reportAt(landedReport()));
+    expect(result.findings).toEqual([]);
+    expect(result.pass).toBe(true);
+    expect(result.reason).toBe("landed");
   });
 
   test("a non-report path is skipped, not judged", () => {
@@ -216,6 +234,27 @@ describe("t450 falling evidence — each missing required field goes red", () =>
     const result = evaluateReportFormat(reportAt(body));
     expect(result.pass).toBe(false);
     expect(result.findings.map((f) => f.field)).toContain("generated at");
+  });
+
+  test("a landed report claiming converged:true is an internal contradiction (#2401)", () => {
+    const body = landedReport().replace("- converged: false", "- converged: true");
+    const result = evaluateReportFormat(reportAt(body));
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((f) => f.field)).toContain("converged");
+  });
+
+  test("a landed report without merged at is a finding (#2401)", () => {
+    const body = landedReport().replace(/^- merged at: .*\n/m, "");
+    const result = evaluateReportFormat(reportAt(body));
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((f) => f.field)).toContain("merged at");
+  });
+
+  test("a landed report without a merge commit is a finding (#2401)", () => {
+    const body = landedReport().replace(/^- merge commit: .*\n/m, "");
+    const result = evaluateReportFormat(reportAt(body));
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((f) => f.field)).toContain("merge commit");
   });
 
   test("an unknown kind is a finding, never a silent pass", () => {
