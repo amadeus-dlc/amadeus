@@ -815,7 +815,7 @@ function recordsFromShard(intent: string, body: string): { records: AttributedRe
     lines += 1;
     try {
       for (const record of readJournalRecords(line)) records.push({ intent, record });
-    } catch { broken += 1; }
+    } catch { broken += 1; continue; }
   }
   return { records, lines, broken };
 }
