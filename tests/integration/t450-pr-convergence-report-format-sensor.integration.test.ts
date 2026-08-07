@@ -250,6 +250,13 @@ describe("t450 falling evidence — each missing required field goes red", () =>
     expect(result.findings.map((f) => f.field)).toContain("merged at");
   });
 
+  test("a landed report with an unparseable merged at is a finding (#2401)", () => {
+    const body = landedReport().replace(/^- merged at: .*$/m, "- merged at: not-a-timestamp");
+    const result = evaluateReportFormat(reportAt(body));
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((f) => f.field)).toContain("merged at");
+  });
+
   test("a landed report without a merge commit is a finding (#2401)", () => {
     const body = landedReport().replace(/^- merge commit: .*\n/m, "");
     const result = evaluateReportFormat(reportAt(body));

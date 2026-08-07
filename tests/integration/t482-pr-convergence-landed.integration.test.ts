@@ -65,7 +65,7 @@ const stateEnvelope = (pullRequest: unknown): string =>
 
 describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
   test("the state query asks for state, mergedAt and the merge commit rollup", () => {
-    expect(PR_STATE_QUERY).toContain("state");
+    expect(PR_STATE_QUERY).toContain("state mergedAt");
     expect(PR_STATE_QUERY).toContain("mergedAt");
     expect(PR_STATE_QUERY).toContain("mergeCommit");
     expect(PR_STATE_QUERY).toContain("statusCheckRollup");

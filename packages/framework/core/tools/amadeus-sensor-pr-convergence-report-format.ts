@@ -124,6 +124,8 @@ function checkLanded(body: string, converged: string | null, findings: ReportFor
     const value = field(body, label);
     if (value === null || value === "") {
       findings.push({ field: label, reason: `missing — a landed report records the ${label}` });
+    } else if (label === "merged at" && Number.isNaN(Date.parse(value))) {
+      findings.push({ field: label, reason: `unparseable timestamp "${value}"` });
     }
   }
 }

@@ -428,12 +428,8 @@ type LifecycleResult =
  * gh failure passes through; an unknown state value throws (AC-1b), exactly
  * like an unknown mergeStateStatus.
  */
-async function resolvePrLifecycle(
-  gh: GhRunner,
-  ref: PrRef,
-  fetch: typeof fetchRawPrState,
-): Promise<LifecycleResult> {
-  const raw = await fetch(gh, ref);
+async function resolvePrLifecycle(gh: GhRunner, ref: PrRef): Promise<LifecycleResult> {
+  const raw = await fetchRawPrState(gh, ref);
   if (!raw.ok) return { ok: false, message: `gh failed reading merge state: ${raw.error.kind}` };
   const first = raw.value;
   // Ruling E-MPC-CGBLK: a response without `state` predates the lifecycle
@@ -468,7 +464,7 @@ async function evaluate(options: CliOptions, seams: CliSeams): Promise<Evaluatio
   if (!runner.ok) return { ok: false, message: `gh unavailable: ${runner.error.kind}` };
   const gh = runner.value;
 
-  const lifecycle = await resolvePrLifecycle(gh, options.ref, fetchRawPrState);
+  const lifecycle = await resolvePrLifecycle(gh, options.ref);
   if (!lifecycle.ok) return lifecycle;
   if (lifecycle.value.kind === "merged") {
     const facts = lifecycle.value.facts;

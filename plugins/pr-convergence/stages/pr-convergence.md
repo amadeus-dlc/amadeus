@@ -160,7 +160,7 @@ do not round them.
 its mergeability stays `UNKNOWN` forever — so the CLI records the merge
 instead of chasing it. `status` reports the `landed` verdict with exit 0, and
 `report` writes a `landed` report carrying the merge instant, the merge
-commit, and the check rollup, every field machine-derived from GitHub. A
+commit, and (when GitHub reports one) the check rollup, every field machine-derived from GitHub. A
 landed report says `converged: false`: it is the record of a merge that
 already happened, **not** an approval and not a convergence claim — the
 Guardrail "Convergence is not merge" reads in both directions, and a merge

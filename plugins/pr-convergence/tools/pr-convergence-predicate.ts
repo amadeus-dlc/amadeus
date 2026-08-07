@@ -273,6 +273,10 @@ export function labeledVerdict(verdict: ConvergenceVerdict): EvaluatedVerdict {
  * The factual record of a merged pull request. `converged: false` on purpose:
  * landing is a merge that already happened, never a convergence claim, so no
  * consumer of `converged` gains a new way to advance.
+ *
+ * The parameter is deliberately unread: it pins the type-level precondition
+ * that a landed verdict can only be constructed after `LandedFacts.parse`
+ * succeeded (the FD signature), without duplicating any of the facts here.
  */
 export function landedVerdict(_facts: LandedFacts): EvaluatedVerdict {
   return {
