@@ -130,3 +130,123 @@ describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
     expect("mergedAt" in raw.value).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The CLI on a merged pull request
+// ---------------------------------------------------------------------------
+
+const FIXTURES = join(import.meta.dir, "..", "fixtures", "pr-convergence");
+const fixture = (name: string) => readFileSync(join(FIXTURES, `${name}.graphql.json`), "utf-8");
+
+const roots: string[] = [];
+
+afterEach(() => {
+  while (roots.length > 0) rmSync(roots.pop() as string, { recursive: true, force: true });
+});
+
+/** A record root with NO audit shard at all: the landed path must not need one. */
+function makeBareRecord(): string {
+  const root = mkdtempSync(join(tmpdir(), "pr-convergence-landed-"));
+  roots.push(root);
+  return root;
+}
+
+/** Drives the CLI: readiness, then the state query, then review-thread pages. */
+function cliSpawn(pullRequest: unknown, pages: readonly string[]) {
+  const argvs: (readonly string[])[] = [];
+  let pageCalls = 0;
+  const spawn: GhSpawn = async (argv) => {
+    argvs.push(argv);
+    const joined = argv.join(" ");
+    if (joined.includes("--version")) return ok("gh version 2.97.0");
+    if (joined.includes("auth status")) return ok("Logged in");
+    if (joined.includes("reviewThreads")) {
+      const page = pages[Math.min(pageCalls++, pages.length - 1)] as string;
+      return ok(fixture(page));
+    }
+    return ok(stateEnvelope(pullRequest));
+  };
+  return { argvs, spawn };
+}
+
+function countingSleep() {
+  const calls: number[] = [];
+  const sleep = async (ms: number) => {
+    calls.push(ms);
+  };
+  return { calls, sleep };
+}
+
+function seams(spawn: GhSpawn, sleep: (ms: number) => Promise<void>) {
+  return {
+    ghSpawn: spawn,
+    sleep,
+    now: () => "2026-08-07T02:00:00Z",
+    emitDecision: async () => ({ code: 0, stderr: "" }),
+  };
+}
+
+const statusArgs = (record: string) => [
+  "status",
+  "--repo",
+  "amadeus-dlc/amadeus",
+  "--pr",
+  "2401",
+  "--unit",
+  "landed-report",
+  "--record",
+  record,
+];
+
+describe("CLI status verb on a merged pull request (AC-2a/2b)", () => {
+  test("exits 0 with a landed verdict, without retrying or reading threads", async () => {
+    const record = makeBareRecord();
+    const s = cliSpawn(MERGED_PR, []);
+    const timer = countingSleep();
+    const out = await runCli(statusArgs(record), seams(s.spawn, timer.sleep));
+    expect(out.exitCode).toBe(0);
+    const payload = JSON.parse(out.stdout);
+    expect(payload.verdict).toBe("landed");
+    expect(payload.converged).toBe(false);
+    expect(payload.mergeState).toBe("MERGED");
+    // The mergeable UNKNOWN retry never runs: no sleep, and exactly one state
+    // query after the two readiness probes.
+    expect(timer.calls).toEqual([]);
+    expect(s.argvs).toHaveLength(3);
+    expect(s.argvs.some((argv) => argv.join(" ").includes("reviewThreads"))).toBe(false);
+  });
+
+  test("an unmerged pull request never takes the landed path (AC-2c)", async () => {
+    const record = makeBareRecord();
+    const open = {
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      state: "OPEN",
+      mergedAt: null,
+      mergeCommit: null,
+    };
+    const s = cliSpawn(open, ["measured-pr-2268"]);
+    const timer = countingSleep();
+    const out = await runCli(statusArgs(record), seams(s.spawn, timer.sleep));
+    expect(out.exitCode).toBe(0);
+    const payload = JSON.parse(out.stdout);
+    expect(payload.verdict).toBe("converged");
+    expect(payload.converged).toBe(true);
+    // The active path still reads threads, and still issues exactly one state
+    // query (the lifecycle read primes the mergeable loop's first attempt).
+    expect(s.argvs.some((argv) => argv.join(" ").includes("reviewThreads"))).toBe(true);
+    expect(
+      s.argvs.filter((argv) => argv.join(" ").includes("mergeStateStatus")).length,
+    ).toBe(1);
+  });
+
+  test("an unknown lifecycle state is a boundary fault (exit 2), never a verdict (AC-1b)", async () => {
+    const record = makeBareRecord();
+    const weird = { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "REOPENED" };
+    const s = cliSpawn(weird, ["measured-pr-2268"]);
+    const out = await runCli(statusArgs(record), seams(s.spawn, countingSleep().sleep));
+    expect(out.exitCode).toBe(2);
+    expect(out.stdout).toBe("");
+    expect(out.stderr).toContain("unknown pull-request state");
+  });
+});
