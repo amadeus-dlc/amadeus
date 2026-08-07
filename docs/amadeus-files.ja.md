@@ -45,6 +45,7 @@
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
@@ -107,6 +108,7 @@
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
