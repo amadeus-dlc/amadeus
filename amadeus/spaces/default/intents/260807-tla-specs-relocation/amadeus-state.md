@@ -6,7 +6,7 @@
 - **Scope**: self-refactor
 - **Start Date**: 2026-08-07T09:07:14Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Harness**: kimi
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 8
-- **Completed**: 6
-- **In Progress**: code-generation
+- **Completed**: 8
+- **In Progress**: none
 
 ## Runtime State
 - **Revision Count**: 0
@@ -41,13 +41,16 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: off
+- **Workflow Completion Instance**: terminal:build-and-test
+- **Workflow Completion Stage**: build-and-test
+- **Workflow Completion Status**: completed
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
 - **Initialization**: Verified
 - **Ideation**: Skipped
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -83,8 +86,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] formal-model-check — SKIP
 - [ ] tla-authoring — SKIP
@@ -101,19 +104,19 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
-- **Status**: Running
+- **Current Stage**: build-and-test
+- **Next Stage**: none
+- **Status**: Completed
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-648b88290755876fdc10272210387e4a
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-07T11:22:32Z
+- **Last Updated**: 2026-08-07T15:52:45Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Workflow complete
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
-{"schema":1,"revision":8,"issueNumber":2402,"provenance":{"schema":1,"createIdentity":{"schema":1,"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","intentDir":"260807-tla-specs-relocation","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","preparedAt":"2026-08-07T09:09:04.392Z"},"issueNumber":2402,"createdAt":"2026-08-07T09:09:04.392Z"},"receipts":{"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsImludGVudC1pbml0aWFsaXplZCIsImludGVudC1pbml0aWFsaXplZCIsImNyZWF0ZSJd":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsImludGVudC1pbml0aWFsaXplZCIsImludGVudC1pbml0aWFsaXplZCIsImNyZWF0ZSJd","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"intent-initialized","instance":"intent-initialized"},"operation":"create"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","createdRevision":1,"projectSyncRevision":3,"status":"succeeded","preparedAt":"2026-08-07T09:09:04.392Z","attemptedAt":"2026-08-07T09:09:04.392Z","completedAt":"2026-08-07T09:09:04.392Z","projectSyncVerified":true,"createIdentity":{"schema":1,"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","intentDir":"260807-tla-specs-relocation","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","preparedAt":"2026-08-07T09:09:04.392Z"},"authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"intent-initialized","instance":"intent-initialized"},"operation":"create"},"operation":"create","boundaryInstance":"intent-initialized","receiptRevision":1,"resolvedMode":"auto"}},"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsInBoYXNlLXZlcmlmaWVkIiwiMjAyNi0wOC0wN1QxMDo0OTo1MFoiLCJzeW5jIl0":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsInBoYXNlLXZlcmlmaWVkIiwiMjAyNi0wOC0wN1QxMDo0OTo1MFoiLCJzeW5jIl0","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"phase-verified","phase":"inception","instance":"2026-08-07T10:49:50Z"},"operation":"sync"},"operationId":"a78b038c-1dd6-4fb6-9ca1-f4de171f01cd","createdRevision":5,"projectSyncRevision":7,"status":"succeeded","preparedAt":"2026-08-07T10:50:13.045Z","attemptedAt":"2026-08-07T10:50:13.045Z","completedAt":"2026-08-07T10:50:13.045Z","projectSyncVerified":true,"authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"phase-verified","phase":"inception","instance":"2026-08-07T10:49:50Z"},"operation":"sync"},"operation":"sync","boundaryInstance":"2026-08-07T10:49:50Z","receiptRevision":5,"resolvedMode":"auto"}}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":{"projects":[{"project":"amadeus-dlc/5","projectId":"PVT_kwDOEcw2nM4BeiIO","itemId":"PVTI_lADOEcw2nM4BeiIOzg1plaU","phaseField":"Intent Phase","lastAppliedStatus":"Construction","state":"synced","updatedAt":"2026-08-07T10:50:13.045Z"}]}}
+{"schema":1,"revision":15,"issueNumber":2402,"provenance":{"schema":1,"createIdentity":{"schema":1,"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","intentDir":"260807-tla-specs-relocation","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","preparedAt":"2026-08-07T09:09:04.392Z"},"issueNumber":2402,"createdAt":"2026-08-07T09:09:04.392Z"},"receipts":{"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsImludGVudC1pbml0aWFsaXplZCIsImludGVudC1pbml0aWFsaXplZCIsImNyZWF0ZSJd":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsImludGVudC1pbml0aWFsaXplZCIsImludGVudC1pbml0aWFsaXplZCIsImNyZWF0ZSJd","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"intent-initialized","instance":"intent-initialized"},"operation":"create"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","createdRevision":1,"projectSyncRevision":3,"status":"succeeded","preparedAt":"2026-08-07T09:09:04.392Z","attemptedAt":"2026-08-07T09:09:04.392Z","completedAt":"2026-08-07T09:09:04.392Z","projectSyncVerified":true,"createIdentity":{"schema":1,"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","intentDir":"260807-tla-specs-relocation","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"8cf44709-61b7-49a9-936e-d0345710c30e","preparedAt":"2026-08-07T09:09:04.392Z"},"authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"intent-initialized","instance":"intent-initialized"},"operation":"create"},"operation":"create","boundaryInstance":"intent-initialized","receiptRevision":1,"resolvedMode":"auto"}},"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsInBoYXNlLXZlcmlmaWVkIiwiMjAyNi0wOC0wN1QxMDo0OTo1MFoiLCJzeW5jIl0":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsInBoYXNlLXZlcmlmaWVkIiwiMjAyNi0wOC0wN1QxMDo0OTo1MFoiLCJzeW5jIl0","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"phase-verified","phase":"inception","instance":"2026-08-07T10:49:50Z"},"operation":"sync"},"operationId":"a78b038c-1dd6-4fb6-9ca1-f4de171f01cd","createdRevision":5,"projectSyncRevision":7,"status":"succeeded","preparedAt":"2026-08-07T10:50:13.045Z","attemptedAt":"2026-08-07T10:50:13.045Z","completedAt":"2026-08-07T10:50:13.045Z","projectSyncVerified":true,"authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"phase-verified","phase":"inception","instance":"2026-08-07T10:49:50Z"},"operation":"sync"},"operation":"sync","boundaryInstance":"2026-08-07T10:49:50Z","receiptRevision":5,"resolvedMode":"auto"}},"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsIndvcmtmbG93LWNvbXBsZXRlZCIsInRlcm1pbmFsOmJ1aWxkLWFuZC10ZXN0Iiwic3luYyJd":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsIndvcmtmbG93LWNvbXBsZXRlZCIsInRlcm1pbmFsOmJ1aWxkLWFuZC10ZXN0Iiwic3luYyJd","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"workflow-completed","instance":"terminal:build-and-test"},"operation":"sync"},"operationId":"086a7aa7-1c74-4a57-8da2-97483f50e6df","createdRevision":9,"projectSyncRevision":11,"status":"succeeded","preparedAt":"2026-08-07T15:52:33.415Z","attemptedAt":"2026-08-07T15:52:33.415Z","completedAt":"2026-08-07T15:52:33.415Z","projectSyncVerified":true,"authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"workflow-completed","instance":"terminal:build-and-test"},"operation":"sync"},"operation":"sync","boundaryInstance":"terminal:build-and-test","receiptRevision":9,"landing":{"registryStatus":"in-flight","workflowStatus":"Running","completionInstance":"terminal:build-and-test"},"resolvedMode":"auto"}},"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsIndvcmtmbG93LWNvbXBsZXRlZCIsInRlcm1pbmFsOmJ1aWxkLWFuZC10ZXN0IiwiY2xvc2UiXQ":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsIndvcmtmbG93LWNvbXBsZXRlZCIsInRlcm1pbmFsOmJ1aWxkLWFuZC10ZXN0IiwiY2xvc2UiXQ","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"workflow-completed","instance":"terminal:build-and-test"},"operation":"close"},"operationId":"bf9c7b32-fc3b-47d1-97e4-3d3c982cfb14","createdRevision":13,"status":"succeeded","preparedAt":"2026-08-07T15:52:37.326Z","attemptedAt":"2026-08-07T15:52:37.326Z","completedAt":"2026-08-07T15:52:37.326Z","authorization":{"kind":"auto","event":{"intentUuid":"019fdb7a-041e-7afe-aaa3-d74c8871365f","boundary":{"kind":"workflow-completed","instance":"terminal:build-and-test"},"operation":"close"},"operation":"close","boundaryInstance":"terminal:build-and-test","receiptRevision":13,"landing":{"registryStatus":"in-flight","workflowStatus":"Running","completionInstance":"terminal:build-and-test"},"finalSyncReceiptKey":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWZkYjdhLTA0MWUtN2FmZS1hYWEzLWQ3NGM4ODcxMzY1ZiIsIndvcmtmbG93LWNvbXBsZXRlZCIsInRlcm1pbmFsOmJ1aWxkLWFuZC10ZXN0Iiwic3luYyJd","resolvedMode":"auto"}}},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null,"projectSync":{"projects":[{"project":"amadeus-dlc/5","projectId":"PVT_kwDOEcw2nM4BeiIO","itemId":"PVTI_lADOEcw2nM4BeiIOzg1plaU","phaseField":"Intent Phase","lastAppliedStatus":"Done","state":"synced","updatedAt":"2026-08-07T15:52:33.415Z"}]}}
 <!-- amadeus:mirror-state:v1:end -->

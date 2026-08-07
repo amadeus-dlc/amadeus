@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-TSR-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用3件はいずれも新規 cid を立てず既存 cid への追補として persist すべき。c6 は cid:code-generation:cg-watch-root-separation(project.md:409)への追補 — 同 cid の修正が specRootForHost=dirname(hostRoot) の2ルート分離だったのに、その helper 名が project root の意味で再流用され分離が畳み戻った実例であり、追補面は『単一 helper が2意味で流用されている場合、返り値変更前に呼び出し元の意味論を実測して名前ごと分離する』の1点に限る。c4 は消費者棚卸しファミリ(cid:application-design:dual-key-consumer-inventory / cid:code-generation:c2-env-isolation-seam-inventory)への追補 — 新規性は『path リテラルのセグメント結合形は literal grep の構造的盲点』の検索キー面のみ。c2 は produces にプラグイン CLI 生成物を含むステージの段序面として persist し、intent 固有の Step 番号(plan Step 13)や成果物名を焼き込まない一般形にする。",
+  "rationale": "候補7件は diary(construction/code-generation/memory.md)の Interpretations 2件・Deviations 4件・Tradeoffs 1件と逐語一致し、surface 出力と突き合わせて欠落・追加なしを確認した(未収載の学習は見当たらない)。採用3件の実在根拠を独立実測: c4 = 変更前 `git show 7315e0895^:plugins/formal-model-check/tools/node-ci-model-check-port.ts` の :316 が逐語 `const modelRoot = join(this.workspaceRoot, \"specs\", \"tla\");` で、現行 :318 の resolveSpecRoots(this.workspaceRoot).tlaDir へ置換済み。この値は :329 の `--mount type=bind,src=${modelRoot},dst=${modelRoot},readonly` に入る実 mount 生成箇所であり、セグメント結合のため \"specs/tla\" のリテラル grep には掛からない — 推奨理由の『リテラル grep をすり抜ける』は成立。c6 = 変更前 amadeus-advisory-declaration.ts:318/:320 が `spawnEvaluator(specRootForHost(hostRoot))` と `const projectRoot = specRootForHost(hostRoot);` で、spec root 用 helper の戻り値を evaluator の cwd と pluginManifestPath の project root に流用していた。現行は projectRootForHost を新設(amadeus-plugin-activation.ts:110)し specRootForHost :119 がそれを内包する形へ分離済みで、二重意味の実在は確定。c2 = plugins/pr-convergence/stages/pr-convergence.md:14 が逐語『written only by the plugin CLI』と宣言し、書き手は plugins/pr-convergence/tools/pr-convergence-cli.ts:78 の REPORT_BASENAME のみ、sensor(amadeus-pr-convergence-report-format.md:8 matches `**/construction/*/code-generation/pr-convergence-report.md`)が code-generation 側へ overlay される構造で、ゲート前に PR 作成→収束を要する段序依存は実在。不採用4件も妥当: c1 は autonomy full 下のゲート承認・代替の既決規範(cid:approval-handoff:c2-grant-gates-only、cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary)の機械適用で新規性なし。c3 は model-map identity の再ピン結果という本 intent 固有の実測値。c5 は pure parser が space を知り得ないという本 intent の validator 設計判断で、可搬な述語を形成しない。c7 は 51 テストファイルの API 依存という作業順で一般化価値が乏しい。",
+  "submittedAt": "2026-08-07T15:20:30Z",
+  "receivedAt": "2026-08-07T15:20:32Z"
+}
