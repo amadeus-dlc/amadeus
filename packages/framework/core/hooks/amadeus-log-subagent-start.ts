@@ -34,6 +34,7 @@ import {
   resolveProjectDirFromHook,
   subagentStartFields,
 } from "../tools/amadeus-lib.ts";
+import { harnessDir } from "../tools/amadeus-harness.ts";
 
 // Drain stdin first: the payload's `cwd` is the top rung of project-dir
 // resolution (#1482), and the stream can only be read once.
@@ -58,7 +59,9 @@ try {
   process.exit(0);
 }
 
-const started = subagentStartFields(parsed);
+// The agents dir is where the #2279 attribution (Type Verdict, Model /
+// Model Source — U1/U2) resolves its allowed set and persona pins from.
+const started = subagentStartFields(parsed, join(projectDir, harnessDir(), "agents"));
 if (started === null) process.exit(0);
 
 // Assembled as a literal here, rather than forwarded straight from
@@ -70,6 +73,9 @@ if (started === null) process.exit(0);
 const fields: Record<string, string> = { "Agent Type": started["Agent Type"] };
 if (started["Agent ID"]) fields["Agent ID"] = started["Agent ID"];
 if (started.Purpose) fields.Purpose = started.Purpose;
+if (started["Type Verdict"]) fields["Type Verdict"] = started["Type Verdict"];
+if (started.Model) fields.Model = started.Model;
+if (started["Model Source"]) fields["Model Source"] = started["Model Source"];
 
 // Gate on ANY per-clone shard of the active intent (glob-merge), NOT this
 // clone's own shard — a fresh clone / new worktree mints a new clone-id, so a

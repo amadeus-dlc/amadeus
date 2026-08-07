@@ -2,7 +2,7 @@
 
 import { createHash, generateKeyPairSync, randomUUID, sign, verify, type KeyObject } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { lstatSync, realpathSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -13,6 +13,7 @@ import {
   createPiRpcCollector,
   fingerprintPiRequest,
   parsePiChildRequest,
+  PI_MODEL_PINS,
   type PiChildRequest,
 } from "./amadeus-pi-driver-contract.ts";
 import {
@@ -27,6 +28,8 @@ const MINIMUM_PI_VERSION = [0, 83, 0] as const;
 const STDERR_LIMIT_BYTES = 256 * 1024;
 const ENVELOPE_LINE_LIMIT_BYTES = 1024 * 1024 + 32 * 1024;
 const CLEANUP_WAIT_MS = 2_000;
+// Harness surfaces that may hold persona charters, most specific first.
+const PERSONA_CHARTER_DIRS = [".pi/agents", ".codex/agents", ".claude/agents", ".agents/agents"] as const;
 
 type ConvergenceModule = typeof import("../../../core/tools/amadeus-convergence-policy.ts");
 type LifecycleModule = typeof import("../../../core/tools/amadeus-execution-lifecycle.ts");
@@ -110,6 +113,27 @@ export interface PiDriverOptions {
   readonly clock?: Clock;
   readonly abortSignal?: AbortSignal;
   readonly now?: () => string;
+}
+
+function resolvePersonaModelId(projectDir: string, persona: string): string | null {
+  for (const dir of PERSONA_CHARTER_DIRS) {
+    let charter: string;
+    try {
+      charter = readFileSync(resolve(projectDir, dir, `${persona}.md`), "utf8");
+    } catch {
+      continue;
+    }
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(charter);
+    if (frontmatter === null) return null;
+    const pin = /^model:[ \t]*(\S+)[ \t]*$/m.exec(frontmatter[1] ?? "");
+    if (pin === null) return null;
+    const pinned = pin[1] ?? "";
+    // A projected charter already carries the concrete id; an authored one
+    // carries the tier alias. Both resolve, nothing else does.
+    if (Object.values(PI_MODEL_PINS).includes(pinned)) return pinned;
+    return PI_MODEL_PINS[pinned] ?? null;
+  }
+  return null;
 }
 
 function digest(value: unknown): string {
@@ -569,6 +593,18 @@ export async function executePiChild(rawRequest: unknown, options: PiDriverOptio
   if (reserved.kind === "terminal-replay") return mapReplay(reserved.record, reserved.output);
   if (reserved.kind !== "reserved") return { kind: reserved.kind, reason: `delivery-${reserved.kind}`, replayed: true };
 
+  // A persona pin outranks the driver-level model default: the charter is the
+  // single source of truth for which model a persona runs on.
+  let personaModelId: string | undefined;
+  if (request.persona !== undefined) {
+    const resolved = resolvePersonaModelId(request.projectDir, request.persona);
+    if (resolved === null) {
+      store.closeNoLaunch(request.deliveryKey, fingerprint, "persona-model-unresolved");
+      return { kind: "dispatch-not-started", reason: "persona-model-unresolved", output: "", replayed: false };
+    }
+    personaModelId = resolved;
+  }
+
   const snapshot = captureExecutableSnapshot(options.piExecutable);
   if (snapshot === null) {
     store.closeNoLaunch(request.deliveryKey, fingerprint, "pi-preflight-failed");
@@ -590,7 +626,15 @@ export async function executePiChild(rawRequest: unknown, options: PiDriverOptio
     return { kind: "dispatch-not-started", reason: "lifecycle-reservation-failed", output: "", replayed: false };
   }
 
-  const run = await runGuardian(request, snapshot, store, lifecycle, lifecycleStart, fingerprint, options);
+  const run = await runGuardian(
+    request,
+    snapshot,
+    store,
+    lifecycle,
+    lifecycleStart,
+    fingerprint,
+    personaModelId === undefined ? options : { ...options, modelId: personaModelId },
+  );
   let reason = run.reason;
   const kind = terminalKind(run);
   const attemptFinished = run.attemptStart === null ? null : lifecycle.finishAttempt({

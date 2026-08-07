@@ -1,0 +1,25 @@
+{
+  "electionId": "E-STG-S13H",
+  "voter": "subagent-2",
+  "question": "intent 260805-subagent-type-guard / ステージ functional-design の §13 学習選定。候補7件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=U1 §12a i1 BLOCKER(AD 正本に無い personaNames の無申告追加)を canonical シグネチャ保存の代替設計(builtin 先勝ち判定順)で是正 — 承認済み設計への回復であり逸脱裁定不要(P3 の回復側)/ c2=resolvePersonaPin の引き当て規則を FR-1a と同一原理(frontmatter name: 完全一致、basename 決め打ち禁止)で固定 / c3=walking-skeleton × full grant のユーザー裁定(Bolt 1 は実人間承認で運用 — canonical #2067+#2253 は full の自動承認を許すが intent 固有の運用選択。bolt-plan の事実誤認を訂正、Issue 起票は #2253 既決のため見送り)/ c4=reviewer 予算2回消費後の是正起因新 BLOCKER に E-LSSADS13 の閉包確認限定イテレーション(i2b)を適用 / c5=per-unit ステージで全 unit の成果物を先行作成すると engine は後続 unit の directive を re-emit しないため、捕捉済み directive からの機械的テンプレート置換(unit 名+produces)で後続 unit の directive を構成し reviewer-runtime scope へ投入した(c1-degrade-batch-directive-capture の非 degrade・per-unit 面への拡張)/ c6=pin 読取は C-1 拡張でなく独立ヘルパ(変更理由の分離を読取回数より優先)/ c7=対欠落は導出値+注記行で処理(型の肥大回避)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c5 + c4 採用",
+      "description": "c5 に加えて c4 も persist する。c4 の主張: E-LSSADS13(cid:code-generation:builder-prompt-sync-completion 追補2周辺 / delegated-review-analysis-with-owned-verdict 追補)は「予算消費後の残余是正」の受理2分岐を定めるが、**是正が新設した BLOCKER(iteration N の fix が iteration N+1 で新ギャップと判定されるケース)**への適用は明文でない。実測: U2 FD で i1 是正(PersonaPinResolution 新設)が引き当て規則の未規定という新 BLOCKER を生み、閉包確認限定の i2b で 2-0 判定・READY。教訓: 是正起因の新指摘も同じ2分岐(機械検証可能=conductor 検証 / 設計ギャップ=閉包確認限定イテレーション)で処理し、予算超過は complete-review の summary に開示する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c5 のみ採用",
+      "description": "c5 のみ persist する。主張: 既存 cid:code-generation:c1-degrade-batch-directive-capture は degrade スコープ(units-generation SKIP)の Bolt 並行実装に限定された規定で、**units ありの per-unit ステージ(functional-design 等)で全 unit の成果物を先行作成した場合に engine が後続 unit の directive を re-emit しない**面は未被覆。実測: 本 intent の FD で U1 の directive のみ engine から受領、U2/U3 は uncovered が消えて再取得不能 → U1 directive の unit 名+produces を機械置換した directive で reviewer-runtime scope が正常に invocationId を発行し、§12a が3 unit とも成立。教訓の一般形: per-unit ステージで複数 unit を1ターンで先行起草する場合、(a) unit ごとに directive を捕捉してから成果物を書くか、(b) 捕捉済み directive の機械的テンプレート置換(unit 名と produces パスのみ差し替え)で構成する — 置換は判断を含まない執行であり、consumes/sensors/reviewer 等の他フィールドは触らない。c1-degrade-batch-directive-capture への追補として persist。c1/c2/c4/c6/c7 は既存ノルム(P3、implementation-deviation-election、E-LSSADS13、既存設計原則)の実践例で record 保存が適切、c3 はユーザー裁定の記録が bolt-plan/diary に固定済みで一般化余地なし。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "0件(採用なし)",
+      "description": "7件いずれも persist しない。主張: c5 は c1-degrade-batch-directive-capture の趣旨(engine が re-emit しない状況での directive 捕捉・再利用)から導出可能な適用実例で、独立の新規則性が薄い。c4 も E-LSSADS13 の自然な適用。他は intent 固有。record 保存で十分。"
+    }
+  ]
+}

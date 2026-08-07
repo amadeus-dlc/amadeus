@@ -35,6 +35,17 @@ Amadeus の中核価値の1つは「**ワークフローの進捗は intent reco
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
+## subagent 型規律と model 可観測性の業務境界（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+測定 ref: base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）。
+
+本 intent（[Issue #2279](https://github.com/amadeus-dlc/amadeus/issues/2279) / mirror [#2288](https://github.com/amadeus-dlc/amadeus/issues/2288)、scope `self-feature`）の目的は、subagent の spawn 記録に**型の規律**と**実効 model の可観測性**を持ち込むことである。現在 audit に残る `Agent Type` は所属検査を一切受けておらず、本来は型（`subagent_type`）を記録すべきフィールドに実運用では個体名（`name:`）が入っている（実測: distinct 200 のうち 184、261 イベントが定義済み persona でもハーネス組込型でもない）。同時に、どのモデルで動いた subagent なのかが記録されないため、コスト・品質・失敗傾向をモデル別に振り返る手立てがない。本 intent は (1) 型を許可集合と照合して集合外を loud に警告する **advisory** ガード（fail-closed 拒否はしない）、(2) `明示指定 > agent 定義の model ピン > セッション継承` の解決順で実効 model を記録し解決不能時は欠落を明示する、(3) 型別・モデル別の spawn 内訳を1コマンドで導出できる集計、の3能力を出荷する。
+
+業務上の受益は「振り返りの材料が揃うこと」である。型が規律されれば役割ごとの spawn 内訳が意味を持ち、model が記録されれば同じ役割を別モデルで回した際の差を後から比較できる。advisory に留める判断（Issue #2279 が代替案2の fail-closed を明示非採用）は、運用を止めずに規律を浸透させるためであり、実績を見てからの将来判断として残されている。
+
+境界の外に置いた事項は行き先が確定している: 汎用 builder persona の新設は [#2298](https://github.com/amadeus-dlc/amadeus/issues/2298)（本 intent 完了後の型内訳を設計入力にする）、live `.claude/settings.json` の `PreToolUse` 配線欠落は [#2297](https://github.com/amadeus-dlc/amadeus/issues/2297)、`CXR-33`（transcript / prompt 本文の読取禁止）は制約として受容する。
+
+本 RE が業務判断へ返す新しい事実は2点ある。第一に、**model の供給有無はハーネスによって異なる** — Codex は hook payload に model を載せており core hook の入口まで届いているが、Claude Code は明示指定時を除いて載せない。したがって「全ハーネスで同じ粒度の model 記録」は約束できず、供給できないハーネスでは欠落の明示で運用を継続する（CON-3）。第二に、**start 側イベントは Claude Code で構造的に記録されていない**（全 132 intent で 0 件）。原因は2層あり、#2297 が扱う配線欠落だけでなく、dispatch tool 名の語彙不一致（core が `"Task"` を期待、実 payload は `"Agent"`）が独立に存在する。**#2297 の修正だけでは start 側の記録は回復しない** — この含意は #2297 の受入基準に書かれておらず、型別集計を START × COMPLETE のペアで組むか COMPLETED 単独で組むかという設計判断に直接効く。
 ## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（`git merge-base --is-ancestor` exit 0、区間 **19 commits / 464 files**、`+36989 / −199`）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。

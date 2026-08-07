@@ -960,5 +960,12 @@
     "dirName": "260805-xrev-bug-batch",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fd213-1e30-7528-a6f4-a47d2520a2a0",
+    "slug": "subagent-type-guard",
+    "dirName": "260805-subagent-type-guard",
+    "scope": "self-feature",
+    "status": "complete"
   }
 ]

@@ -13,6 +13,14 @@ import {
   KNOWN_HARNESS_DIRS,
   rulesSubdir as rulesSubdirFromHarness,
 } from "./amadeus-harness.ts";
+import {
+  classifyAgentType,
+  isWarnableVerdict,
+  resolveAllowedAgentTypes,
+  resolveEffectiveModel,
+  resolvePersonaPin,
+  sanitizeAdvisoryValue,
+} from "./amadeus-subagent-observability.ts";
 export type {
   HarnessType,
   SupportedHarnessDir,
@@ -4129,7 +4137,13 @@ export function subagentPurposeLine(prompt: unknown): string {
 // (kimi's SubagentStart, which carries them at the top level and has no
 // tool_name at all). Absence of tool_name therefore means "a seam that only
 // fires for subagents", not "unknown tool".
-export function subagentStartFields(payload: ClaudeCodeHookInput): Record<string, string> | null {
+//
+// When the caller supplies `agentsDir` (the harness agents dir under the
+// resolved project dir), the field set also gains the #2279 attribution: the
+// `Type Verdict` classification (U1) and the `Model` / `Model Source` pair
+// (U2, ADR-3). The whole enrichment is advisory — any failure inside it drops
+// the extra fields and leaves the base three untouched (NFR-3).
+export function subagentStartFields(payload: ClaudeCodeHookInput, agentsDir?: string): Record<string, string> | null {
   if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
   const toolInput = payload.tool_input ?? {};
   const rawType = payload.agent_type ?? toolInput.subagent_type;
@@ -4139,7 +4153,57 @@ export function subagentStartFields(payload: ClaudeCodeHookInput): Record<string
   if (typeof payload.agent_id === "string" && payload.agent_id) fields["Agent ID"] = payload.agent_id;
   const purpose = subagentPurposeLine(payload.prompt ?? toolInput.prompt);
   if (purpose) fields.Purpose = purpose;
+  if (agentsDir !== undefined) enrichSubagentAttribution(fields, payload, toolInput, agentsDir);
   return fields;
+}
+
+// The #2279 attribution for the started face: classify the Agent Type against
+// the allowed set (advisory on stderr when warnable), then resolve the
+// effective model (ADR-3) from the harness supply, the explicit request, and
+// — persona verdicts only — the persona's model pin. Fail-open by contract:
+// a throw anywhere in here costs the extra fields, never the base record.
+function enrichSubagentAttribution(
+  fields: Record<string, string>,
+  payload: ClaudeCodeHookInput,
+  toolInput: NonNullable<ClaudeCodeHookInput["tool_input"]>,
+  agentsDir: string,
+): void {
+  try {
+    const agentType = fields["Agent Type"];
+    const resolution = resolveAllowedAgentTypes(agentsDir);
+    for (const warning of resolution.warnings) process.stderr.write(`advisory: ${warning}\n`);
+    const verdict = classifyAgentType(agentType, resolution);
+    if (isWarnableVerdict(verdict)) {
+      process.stderr.write(
+        `advisory: subagent type "${sanitizeAdvisoryValue(agentType)}" is ${verdict} (allowed set: personas + builtin ledger) — see #2279\n`,
+      );
+    }
+    fields["Type Verdict"] = verdict;
+    // A pin is only attributable when the type IS a declared persona — a
+    // builtin or ad-hoc spawn must not inherit some persona's declaration.
+    let personaPin: string | undefined;
+    if (verdict === "persona") {
+      const pinResolution = resolvePersonaPin(agentType, agentsDir);
+      for (const warning of pinResolution.warnings) process.stderr.write(`advisory: ${warning}\n`);
+      personaPin = pinResolution.pin;
+    }
+    const model = resolveEffectiveModel({
+      harnessModel: typeof payload.model === "string" ? payload.model : undefined,
+      requestedModel: typeof toolInput.model === "string" ? toolInput.model : undefined,
+      personaPin,
+    });
+    // ADR-5: unresolved writes NOTHING — absence is the record of absence.
+    if (model.kind === "resolved") {
+      fields.Model = model.model;
+      fields["Model Source"] = model.source;
+    }
+  } catch (e) {
+    // NFR-3: attribution never blocks the emit. The skip is announced on stderr
+    // (never silent) and `return` is the explicit terminal the no-silent-drop
+    // rule requires - the caller emits with whatever fields were set.
+    process.stderr.write(`advisory: subagent attribution skipped: ${sanitizeAdvisoryValue(e instanceof Error ? e.message : String(e))}\n`);
+    return;
+  }
 }
 
 // --- Worktree anchor resolution (shared by read and write paths) ----------------
@@ -4707,6 +4771,9 @@ export interface ClaudeCodeHookInput {
   agent_type?: string;
   agent_id?: string;
   last_assistant_message?: string;
+  /** The harness's report of the model that served the turn — supplied only by
+   *  harnesses that publish it (Codex; FR-3c). Absent on Claude Code today. */
+  model?: string;
   [key: string]: unknown;
 }
 

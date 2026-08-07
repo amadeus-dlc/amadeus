@@ -1,0 +1,58 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c1 のみ採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1 のみ採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "c1 + c3 採用",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "0件(採用なし)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-05T16:59:23Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13E",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 の実質(ステージ契約が宣言する成果物内の必須フィールドを起草前に読み機械照合する)は妥当だが、既存 cid:requirements-analysis:c2-mandated-sections-precheck の趣旨『契約 Step の mandated sections を先に読み、機械照合を通してから本文を書く』からの粒度拡張(H2 節名→行レベルのフィールド名)であり、独立 cid を新設するだけの独立性は薄いと判断する。よって c1 のみ採用に賛成するが、条件として (a) 本 intent の diary(inception/application-design/memory.md:11)が既に記録している ADR Reversibility 欠落の実測へ c2-mandated-sections-precheck への参照を1行付し、(b) 同型欠落が再発1回で c2-mandated-sections-precheck への追補(検査対象を『必須節集合』から『契約が宣言する必須フィールド』へ拡張)として昇格させることを予約する。この条件付き不採用は 260717 E-SMF-RA13 c3 の先例(再発1回で昇格を予約した条件付き不採用)に倣う。",
+      "rationale": "独立実測に基づき c1 のみの採用を支持する。\n\n【c1 = 採用】中核主張は独立実測で裏付けられた。(1) tools 集合: .claude/agents/amadeus-architecture-reviewer-agent.md:8 および amadeus-product-lead-agent.md:8 はいずれも逐語 `tools: [Read, Grep, Glob]` であり Write を持たない — 両 reviewer プロファイルは構造的に scratch 併書が不能。(2) 既存 cid の被覆状況: amadeus/spaces/default/memory/team.md:207 の E-MPRRAS13 追補2 は『verdict を record 外 scratch ファイルへ併書させる配送形を許可する』と定めるが、その配送形が指示可能であること(= 対象 subagent が Write を所持すること)を前提しており、前提が成立しない reviewer プロファイル群への適用不能性は本文のどこにも書かれていない。project.md:312 の c4-agent-async-despite-sync-flag は transcript の有界監視(回収手段)を定めるが、これも tools 集合の事前確認を要求しない。すなわち『既存ノルムが名指しする配送手段が、まさにその対象エージェント類(reviewer subagent)では構造的に利用不能』という事実は未被覆であり、放置すると本 intent と同型の無駄な指示往復を再生産する。(3) 実測接地: 本 intent の diary inception/application-design/memory.md:9 が stall(transcript 227KB・3回実測不変・nudge 無効)→ TaskStop → i1b 再ディスパッチ → 併書指示が Write 非所持で不成立 → 最終メッセージ経路で verdict 配送(NOT-READY、BLOCKER 2件)の全経路を記録している。一般形(配送設計は tools 集合を先に確認し、Write 非所持プロファイルでは teammate message + transcript 最終 assistant テキスト抽出の2経路で担保する)は intent 固有事情を含まず、E-MPRRAS13 への追補として自然に収まる。\n\n【0件 = 不支持】c1 を『E-MPRRAS13 と c4-agent-async の運用組合せで導出可能』とする主張は成立しない。両 cid は Write 所持を暗黙前提としており、前提が偽になる条件を明示しない限り、conductor は本 intent と同様に不成立の指示を出す。実際に出して失敗した実測がある以上、導出可能性は反証済みである。\n\n【c3 = 不採用(条件付き)】ステージ契約 packages/framework/core/amadeus-common/stages/inception/application-design.md:116 の逐語 `- Reversibility assessment (easy to change vs. locked in)` の実在と、decisions.md の ADR 見出し7件・Reversibility 記載7件(是正後)は実測確認した。したがって欠落の事実と契約の実在は真である。しかし規則としての独立性が弱い: c2-mandated-sections-precheck が既に『契約 Step を先に読み機械照合する』を定めており、c3 は照合対象の粒度を1段細かくするだけで、失敗モード(契約を読まずに記憶で起草する)は同一である。加えて本件で消費された reviewer iteration は BLOCKER 1(cross-stage の数値矛盾)と同一 iteration であり、c3 単独で iteration を消費した実測はない。ノルム肥大(週次蒸留の対象)を避けるため、独立 cid ではなく再発時の追補昇格として予約する。\n\n【c2 = 不採用】diary:10 の cross-stage 訂正(AC-3 の 16種→15種、警告側 330=69+261)は訂正注記付き・センサー再発火済みで模範的な処理だが、規則としては既存の fix-diff-independent-reverify / ledger-count-mechanical-recalc ファミリの適用実例であり、新規則を要しない。record 保存で十分。",
+      "submittedAt": "2026-08-05T16:57:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13E",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 を不採用としたのは『事実として誤り』だからではなく『独立 cid として persist する形が誤り』だからであり、事実そのものを失わせないこと — c3 の実測(ステージ契約が宣言する必須項目の記載漏れを起草前照合で防ぐ)は cid:requirements-analysis:c2-mandated-sections-precheck(project.md:290)と同一機序であり、差は『必須節集合(H2 レベル)』か『成果物内の必須フィールド(行レベル)』かという粒度のみである。当該 cid を次に触るとき、または次回の週次蒸留ラウンドにおいて、同 cid へ『契約が宣言する必須項目は節見出しに限らず成果物内の必須フィールドも含む — 照合は節名 grep に限らずフィールド名 grep まで及ぶ』旨の1行追補として統合すること。独立 cid の新設はノルム層の分散を招くため行わない。",
+      "rationale": "採用: c1 のみ(internalNo 1)。\n\n【c1 の実測接地 — 独立再測】候補の主張を一次資料で全数照合し、逐語一致を確認した。(1) reviewer プロファイルの tools 集合 — .claude/agents/amadeus-architecture-reviewer-agent.md および amadeus-product-lead-agent.md の frontmatter がいずれも逐語で `tools: [Read, Grep, Glob]` であり、Write を含まない。したがって『scratch ファイルへ verdict を併書させる』という配送指示は、この2プロファイルに対しては構造的に実行不能である(実行者の善意・プロンプトの明示度に依存しない不能性)。(2) 逸脱の実発生 — record の inception/application-design/memory.md Deviations 2026-08-05T17:05:00Z が逐語で『i1b は Write 非所持(architecture-reviewer の tools は Read/Grep/Glob)のため併書は不成立だったが、最終メッセージ経路で verdict を配送(NOT-READY、BLOCKER 2件)』と記し、指示が不成立に終わった事実と、配送が最終メッセージ経路のみで成立した事実の両方が一次記録に存在する。\n\n【既存被覆の反証確認 — 不在主張の裏取り】memory 3層(org/team/project)へ `Read/Grep/Glob` `tools 集合` `Write を持た` `Write 非所持` `プロファイルの tools` の5キーで grep した結果、ヒットは project.md:380 の cid:code-generation:cg-20260730-4 の1件のみで、これは gate-reject のガード設計における『reviewer role が marker file を読める(Read/Grep/Glob)』という別文脈の言及であり、配送手段の成立性には触れない。すなわち c1 の内容は未被覆である。\n\n【本候補の価値 — 既存則の前提の反証】team.md:207 の cid:code-generation:builder-prompt-sync-completion 追補2(E-MPRRAS13、2026-07-23 採用 3-0)は『Stop hook 強制下で reviewer subagent の最終テキスト回収が構造的に不能な場合、verdict を record 外 scratch ファイルへ併書させる配送形を許可する』と定めるが、その手段は標準 reviewer プロファイル2種に対して構造的に利用不能である。つまりノルム層は、規定した回復手段が主要な適用対象では発動しないという状態を 2026-07-23 以降保持していた。cg-20260730-4 が同じ tools 集合を別文脈で既に記録していたにもかかわらず両者を結ぶ cid が無かったことは、この不整合が自然には検出されなかったことの傍証である。c1 はこの前提を反証し、配送保証を『teammate message + transcript の最終 assistant テキスト抽出』の2経路へ移す(後者は project.md:312 の cid:requirements-analysis:c4-agent-async-despite-sync-flag が既に定める監視手段と接続する)。既存則の前提を実測で覆す学習は、新規手法の追加より優先度が高い。\n\n【c3 を採らない理由】c3 の事実自体は実測されている — packages/framework/core/amadeus-common/stages/inception/application-design.md の decisions.md 契約が逐語で `Reversibility assessment (easy to change vs. locked in)` を必須項目に挙げ、record の decisions.md は現在 ADR 見出し7件・Reversibility 出現7件(いずれも grep -c による機械計数)で、是正後に全数充足したことが確認できる。memory.md Deviations 2026-08-05T17:12:00Z も『ステージ契約 Step 5:116 の必須項目の記載漏れ』と機序を明記する。しかし要求される行動 — 起草前に契約 Step を読み、必須項目を機械照合してから本文を書く — は c2-mandated-sections-precheck が既に命じるものと同一であり、H2 か行レベルかは同一機序の粒度差にすぎない。同一行動を粒度別に2つの cid で持つことは、週次蒸留ラウンドが縮約対象とする重複そのものである。よって留保に記した追補統合の形で回収する。\n\n【0件を採らない理由】c1 は既存則の前提を反証する内容であり、既存 cid の運用組合せからは導出できない — E-MPRRAS13 と c4-agent-async をどう組み合わせても『併書指示が構造的に不成立なプロファイルが存在する』事実は出てこない。0件は本 intent で最も再利用価値の高い実測を record 内に閉じ込める。",
+      "submittedAt": "2026-08-05T16:57:58Z"
+    }
+  ],
+  "resolutions": []
+}

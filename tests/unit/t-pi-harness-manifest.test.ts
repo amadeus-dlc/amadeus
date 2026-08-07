@@ -215,4 +215,20 @@ describe("Pi harness manifest", () => {
       resources: [{ kind: "driver", source: "drivers/driver.ts", destination: 42, load: "internal" }],
     })).toContain("resources[0].destination is unsafe");
   });
+  test("rejects every model-pin shape that could ship an unresolvable charter", () => {
+    // The map is what turns a charter's tier alias into a model id, so a
+    // malformed map would silently strand a persona on the harness default.
+    expect(validateHarnessManifest({ ...piManifest, modelPins: [] }))
+      .toContain("modelPins must be an object");
+    expect(validateHarnessManifest({ ...piManifest, modelPins: {} }))
+      .toContain("modelPins must declare at least one tier");
+    expect(validateHarnessManifest({ ...piManifest, modelPins: { Opus: "claude-opus-5" } }))
+      .toContain('modelPins alias "Opus" must be a lowercase tier token');
+    expect(validateHarnessManifest({ ...piManifest, modelPins: { opus: "" } }))
+      .toContain('modelPins["opus"] must be a harness-native model id');
+    expect(validateHarnessManifest({ ...piManifest, modelPins: { opus: 5 } }))
+      .toContain('modelPins["opus"] must be a harness-native model id');
+    // The shipped map is well formed.
+    expect(validateHarnessManifest(piManifest)).toEqual([]);
+  });
 });

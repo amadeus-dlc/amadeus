@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-STG-S13I",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c1 の前半(下流ステージが上流契約の欠落クラスを発見した場合の訂正所有)は既存 cid に真の空白があると認めるため、同型が2例目として再発した時点で cid:nfr-design:cite-fix-sweeps-whole-record または cid:code-generation:cg-invariant-conflict-explicit-revision への1行追補として再提案する余地を残す(本票での不採用は「単一実測+分類半分の重複」を理由とする)。",
+  "rationale": "独立実測(作業ツリー /Users/j5ik2o/.../worktrees/260805-subagent-type-guard、read-only)。(1) c3 の実測接地は2例で成立 — construction/u2-model-attribution/functional-design/business-logic-model.md:65 と construction/u3-subagent-stats/nfr-design/performance-design.md:22 以降の Review ブロックが、いずれも「i1 の BLOCKER 閉包 → i2 で是正起因の新 BLOCKER → E-LSSADS13 に従い閉包確認限定の追加イテレーション(i2b) → 予算超過の開示」という同一処理へ独立に収斂している。診断は construction/functional-design/memory.md:12 と construction/nfr-design/memory.md:6 にも記録済み。(2) 追補の delta が実在する — team.md:184 の E-LSSADS13 本文を逐語確認したところ、対象は「reviewer イテレーション予算消費後の残余是正の受理」であり、分岐クラスは「機械検証可能」対「列挙 omission」。すなわち (a)『iteration N の是正が N+1 で新 BLOCKER と判定される』型、(b) 設計ギャップという一般化されたクラス名、(c) complete-review summary での予算超過開示、のいずれも明文でない。よって自然な適用と読むことは可能だが、明文化の価値がある。(3) 再提案条件が満たされている — elections/260805-e-stg-s13h/record.md:7 の subagent-1 留保が「同型が再発した場合は delegated-review-analysis-with-owned-verdict への1行追補として再提案する余地を残す」と明記し、本 intent の ND U3 がその2例目に当たる。同一 intent 内の直前ラウンドの留保が定めた条件が実際に成立した以上、display 3(0件)は S13H の留保を空文化するため採らない。(4) c1 を同時採用しない理由 — 記録上の実在は確認できる(u3 functional-design/business-logic-model.md:56,60 と domain-entities.md:26,32 に fail-loud クラス・unreadableShardCount・cross-stage 訂正注記が実在)が、c1 は2つの主張を束ねており後半が既存規範と重複する: fail-open/fail-loud/fail-closed を回復可能性で選ぶ判断は phases/construction.md:38「エラー処理は回復可能性で選ぶ(まず異常状態を分類し、回復可能なら型付きエラー/Result、回復不能ならフェイルファスト)」の常時適用原則の適用実例である。前半(訂正所有)は空白だが実測1例のみで、S13H が c4 に対して用いた「1例では適用実例、2例目で追補」の基準を同一 intent 内で非対称に適用しないため、本票では見送り(留保に再提案条件を明記)。(5) 残り4件(c2/c4/c5/c6)は不採用が妥当 — c2 は依存方向制約からの一意導出(執行)、c5 は c1 後半と同じ construction.md:38 の適用、c4/c6 は intent 固有で record 保存が適切。",
+  "submittedAt": "2026-08-05T22:55:30Z"
+}

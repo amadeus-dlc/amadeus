@@ -111,6 +111,36 @@ export function discoverHarnessNames(): string[] {
 // Hard errors, never silent: the file must open with a frontmatter block, and
 // no added line's key may already exist in it - if core later grows the same
 // key, the build fails loudly instead of shipping a double.
+/** No-op unless this harness declares a model map and the file is an agent charter. */
+function applyDeclaredModelPin(
+  out: Buffer,
+  pins: Readonly<Record<string, string>> | undefined,
+  finalDst: string,
+  file: string,
+): Buffer {
+  if (!pins || finalDst !== "agents") return out;
+  return Buffer.from(applyModelPin(out.toString("utf-8"), pins, file), "utf-8");
+}
+
+export function applyModelPin(
+  content: string,
+  pins: Readonly<Record<string, string>>,
+  file: string,
+): string {
+  const block = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+  if (!block) return content;
+  const pin = /^model:[ \t]*(\S+)[ \t]*$/m.exec(block[1] ?? "");
+  if (!pin) return content;
+  const alias = pin[1] ?? "";
+  const mapped = pins[alias];
+  if (mapped === undefined) {
+    throw new Error(
+      `modelPins: ${file} pins "model: ${alias}", which the harness model map does not cover - add the tier to the map instead of shipping a charter this harness cannot resolve.`,
+    );
+  }
+  return content.replace(block[0], block[0].replace(pin[0], `model: ${mapped}`));
+}
+
 function applyFrontmatterAdditions(
   content: string,
   lines: string[],
@@ -417,6 +447,7 @@ function buildTree(m: HarnessManifest, outRoot: string): BuildResult {
       // Manifest keys are POSIX; normalize the platform separator so the
       // lookup works on Windows too.
       const harnessRel = join(finalDst, rel).split(sep).join("/");
+      out = applyDeclaredModelPin(out, m.modelPins, finalDst, harnessRel);
       const fmLines = fmAdditions.get(harnessRel);
       if (fmLines) {
         out = Buffer.from(

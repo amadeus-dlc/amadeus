@@ -6,6 +6,7 @@
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import { mirrorCoreSkillDirectory } from "../projections.ts";
+import { PI_MODEL_PINS } from "./drivers/amadeus-pi-driver-contract.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {
@@ -94,6 +95,17 @@ const manifest: HarnessManifest = {
     // workspace ignore contract beside .pi/ so a healthy session stays clean.
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
   ],
+  // Pi grants a delegated agent every tool unless its frontmatter narrows the
+  // set, and it does not read the charter's `disallowedTools`. The reviewer
+  // must run read-only (stage-protocol.md §12a), so its allowlist is projected
+  // explicitly; without this line a Pi-resolved reviewer could write and shell.
+  frontmatterAdditions: [
+    { file: "agents/amadeus-architecture-reviewer-agent.md", lines: ["tools: read, grep, find, ls"] },
+  ],
+  // Pi resolves concrete model ids, not Claude's tier aliases. Projecting the
+  // pin keeps a persona on its charter's model under Pi's native agent
+  // resolution, exactly as the child driver does at dispatch.
+  modelPins: PI_MODEL_PINS,
   onboarding: { dst: "AGENTS.md", projectRoot: true, fills: onboardingFills },
   rulesRename: null,
   authoredExempt: [],

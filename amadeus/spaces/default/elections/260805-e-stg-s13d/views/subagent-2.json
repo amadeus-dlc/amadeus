@@ -1,0 +1,19 @@
+{
+  "electionId": "E-STG-S13D",
+  "voter": "subagent-2",
+  "question": "intent 260805-subagent-type-guard / ステージ requirements-analysis の §13 学習選定。候補5件。採用集合を選べ。判断基準: (i) 一般化可能か (ii) 既存 cid との重複 (iii) 実測接地。候補要旨: c1=Q1〜Q9 を執行クラスと AD 委譲に二分しグラント代答を回避した運用 / c2+c5=【対の実例】初稿 FR-3a がユーザー承認済みの解決順に『ハーネス供給値』という新層を最上位挿入し、questions がそれを『既決+一次証拠の機械的適用 = 執行クラス』と自己分類 → reviewer i1 が P3 違反(執行を装った設計判断の混入)を BLOCKER で捕捉 → 承認済み順序の逐語維持 + 新層の AD 委譲で是正、i2 READY / c3=AC の『誤検知』定義の精密化(intent 固有) / c4=advisory の defer 判断(intent 固有)。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件(採用なし)",
+      "description": "5件いずれも persist しない。主張: c2+c5 の教訓は §12a reviewer が実際に捕捉した = 既存の防衛線(reviewer のレビュー観点『無申告の逸脱』)が機能した実例であり、新規則を足さなくても検出網は既に働いている。c1 は c2-grant-gates-only の適用実例、c3/c4 は intent 固有。record(diary + questions の是正記録)への保存で十分。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c2+c5 を1件に統合して採用",
+      "description": "c2(逸脱の発生)と c5(検出と是正)を1件の学習として persist する。主張: 既存 cid ファミリ(implementation-deviation-election = 実装段の逸脱停止 / c1-xrev-verdict-not-ruling-authority = レビュアーのメタ判断は一次証拠を上書きしない / ruling-dependent-placeholder = 裁定前の先取り記入禁止)はいずれも『既決裁定の文面に無い新概念・新層を、一次証拠から導けると称して既決の内側に挿入する』誤りを直接は覆っていない。本実例の機序は一般形: 一次証拠(RE の実測)が新しい事実を与えるとき、その事実を『既決裁定の執行』として順序・構造へ織り込むのは、事実の適用ではなく設計判断である — 既決の文面に存在しない層・順序・概念の追加は、どれほど実測に接地していても執行クラスにならない。検査法も一般化可能: 執行クラスの自己分類は『裁定の文面に現れない語彙が結論に現れていないか』の negative-vocabulary check で機械的に検証できる(E-SRCFDS13 の逆方向適用)。autonomy full 下では人間の目が減るため、この検査の価値が上がる。"
+    }
+  ]
+}

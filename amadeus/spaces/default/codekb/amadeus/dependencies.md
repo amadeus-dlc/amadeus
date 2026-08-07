@@ -63,6 +63,22 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
+## subagent 型規律の依存関係（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**外部依存に変更はない**。`git diff --stat b938898f3..7060956c5 -- package.json bun.lock packages/setup/package.json` は**空出力**（Architect 実測）。追加・更新・削除はゼロであり、利用者側の Bun-only 前提は不変である。
+
+本 intent が扱う依存は repo 内部の結線のみであり、その現在地は次のとおり（詳細は `re-scans/260805-subagent-type-guard.md`）:
+
+| 依存 | 供給側 | 消費側 | 状態 |
+| --- | --- | --- | --- |
+| hook payload の `model` | codex CLI（fixture `0.137.0`） → `harness/codex/hooks/amadeus-codex-adapter.ts:349-352`（verbatim pipe） | `core/hooks/amadeus-log-subagent.ts` | **供給あり・消費なし**（core hook が読んでいない） |
+| hook payload の `model` | Claude Code `2.1.222` | 同上 | **供給なし**（明示 `tool_input.model` を除く） |
+| `gen_ai.request.model` | `core/otel/resource-suppliers.ts:24`（宣言） | `supplyResourceAttribute` の本番呼出 | **宣言あり・本番供給 0**（本番呼出は `amadeus-session-start.ts:148` の `"session.id"` のみ） |
+| `runtime-attrs.json` | `core/hooks/amadeus-statusline.ts:249-252`（書込、observability 有効時のみ） | なし | **書き手のみ・読み手 0 件**。実体もディスク上 0 件 |
+| `composeSubagentLifetimes` | `core/otel/subagent-lifetime.ts:112` | `tests/unit/t-subagent-lifetime.test.ts` のみ | **本番消費者 0**（休眠 seam） |
+| `SUBAGENT_STARTED` | `core/hooks/amadeus-log-subagent-start.ts:61-72` | `composeSubagentLifetimes` の入力半分 | Claude Code 経路が D-1 / D-2 で不発のため実質的に供給欠落 |
+
+いずれも「宣言と本番結線の非対称」クラスであり、`cid:requirements-analysis:symmetric-pair-review`（write⇔check / emit⇔terminal の対称性を設計・レビュー観点にする）の対象である。CAP-2 / CAP-3 はこの非対称のうち3件（`gen_ai.request.model` / `composeSubagentLifetimes` / codex の `model`）を結線する形になる。
 ## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。

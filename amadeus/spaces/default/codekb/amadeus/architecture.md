@@ -160,6 +160,72 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
+## subagent 観測パイプラインの結線構造（260805-subagent-type-guard、現在、observed `7060956c5`）
+
+本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。実測手順・全数列挙・引用スポット再実測は `re-scans/260805-subagent-type-guard.md` を正本とする。
+
+### 4層のデータフロー
+
+```
+[harness hook seam]                    [core 純関数]              [audit registry]        [集計 seam]
+ Claude Code PreToolUse{tool_name}  ─┐
+ kimi SubagentStart                 ─┼→ subagentStartFields  ──→ SUBAGENT_STARTED   ─┐
+ （codex は start 配線なし）          ─┘   (:4128-4139)                                │
+                                                                                     ├→ composeSubagentLifetimes
+ Claude Code SubagentStop           ─┐                                               │   (:112、本番消費者 0)
+ codex subagentStop（adapter 経由）  ─┼→ normalizeAgentType  ──→ SUBAGENT_COMPLETED ─┘
+ kimi role-stop                     ─┘   (:4082-4084)
+```
+
+テキスト代替: start 側は3ハーネス系（Claude Code の `PreToolUse` / kimi の `SubagentStart` / codex は配線なし）が `subagentStartFields` に集約され `SUBAGENT_STARTED` を emit する。complete 側は `SubagentStop` 系が `normalizeAgentType` を経て `SUBAGENT_COMPLETED` を emit する。両イベントを唯一集約するのが `composeSubagentLifetimes` だが本番消費者はゼロである。
+
+### 層ごとの現在の責務と欠陥
+
+| 層 | 現在の責務 | 確認された欠陥 |
+| --- | --- | --- |
+| hook seam | ハーネス固有 payload を core hook の stdin へ渡す | Claude Code の `tool_name` は `"Agent"`（live 実測 `2.1.222`）だが core は `"Task"` を期待（D-1）。live `.claude/settings.json` に `PreToolUse` 自体が不在（D-2 = [#2297](https://github.com/amadeus-dlc/amadeus/issues/2297)）。codex は `model` を stdin まで運ぶが core が読まない |
+| core 純関数 | `Agent Type` / `Agent ID` / `Purpose` / `Message` の導出 | **所属検査が 1 行も無い**。`normalizeAgentType`（`:4082-4084`）は `raw?.trim() ? raw : "unknown"` の空白判定のみで非空値を verbatim 返す |
+| audit registry | イベント名・required / optional 属性の宣言 | `SUBAGENT_STARTED`（`core/otel/event-registry.ts:612-623`）/ `SUBAGENT_COMPLETED`（`:624-632`）とも required は `["Agent Type"]` のみ。model 属性の宣言なし |
+| 集計 seam | START × COMPLETE のペアリング | `composeSubagentLifetimes`（`core/otel/subagent-lifetime.ts:112`）は本番消費者 0。入力の START が Claude Code で 0 件のため配線しても構造的に空になる |
+
+### dispatch tool 名の照合（D-1 の機序）
+
+`packages/framework/core/tools/amadeus-lib.ts`（verbatim）:
+
+```
+4102  export const SUBAGENT_DISPATCH_TOOL = "Task";
+4129    if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+```
+
+live payload の `tool_name` は `"Agent"` であるため `:4129` が常に `null` を返し、**Claude Code では `SUBAGENT_STARTED` が永久に emit されない**。`:4133-4137` のコメントは照合の目的が `TaskUpdate` / `TaskCreate` の誤検知防止（settings の matcher が unanchored regex であること）だと明示しており、この防波堤が修正形の選択を制約する。
+
+`tool_name` 不在の経路（kimi の `SubagentStart`）は `:4129` の `!== undefined` ガードにより通過するため、D-1 の影響を受けない。設計コメント（`:4120-4127`）が「Absence of tool_name therefore means 'a seam that only fires for subagents', not 'unknown tool'」と述べる二形状収束が、そのまま harness 別の分岐点になっている。
+
+### model 供給のハーネス別非対称（C10 裁定）
+
+| ハーネス | start seam の model | completion seam の model | 実測種別 |
+| --- | --- | --- | --- |
+| Claude Code | 明示指定時の `tool_input.model` のみ | **不在** | live（`2.1.222`） |
+| Codex | start 配線なし | **`model` 実在**（`"openai.gpt-5.5"`） | fixture（CLI 0.137.0 捕捉） |
+| Cursor / OpenCode / Kimi / Kiro / Kiro-IDE / Pi | 未実測 | 未実測 | — |
+
+Codex 側の到達経路は `packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts:349-352`（`case "log-subagent":` → `runCore("amadeus-log-subagent.ts", rawInput)`）が rawInput を verbatim pipe するため、**model は core hook の stdin まで到達しており core hook が読んでいないだけ**である（供給あり・消費なし）。アダプタ内の `model` grep ヒットは 0 件。
+
+型面は非破壊: `ClaudeCodeHookInput`（`amadeus-lib.ts:4687-4707`）に `model?: string` の宣言は無いが `:4706` に `[key: string]: unknown;` があるため追加は既存消費者を壊さない。
+
+### 実効 model の解決順と ③ の破断
+
+```
+① 明示指定（PreToolUse tool_input.model）      → 可（明示時のみ）
+② persona ピン（.claude/agents/*.md の model:）→ 可（静的読取。14 ファイル全数にピン）
+③ セッション継承（statusline → runtime-attrs） → 機構は在るが休眠かつ別プロセス
+```
+
+③ の経路は `core/hooks/amadeus-statusline.ts:232` `const modelId = input.model?.id ?? "";` → `:230-256` の `recordRuntimeAttrs` が `<telemetryDir>/runtime-attrs.json` へ書く（`:237` path、`:249-252` write）。破断点は3つ: `:234` の `if (!observabilityEnabled(projectDir)) return;`（本 repo の `amadeus/config.json` の `observability` は `null`）/ ディスク上の実体 0 件 / `runtime-attrs` の読み手 0 件（write-only）。加えて statusline はメインセッションのプロセスで動き、subagent hook とは別プロセス・別 payload であるため subagent 側へ直接届く経路が存在しない。
+
+### 型規律の検査が存在する層と存在しない層
+
+compile 時には agent ロスタ照合が存在する — `core/tools/amadeus-graph.ts:2191` `const knownAgents = loadAgents().map((a) => a.slug);` を `:2218` `validateStageFrontmatter(parsed, { agents: knownAgents })` へ渡し、stage frontmatter の `lead_agent` / `support_agents` が実在しない場合に compile を loud に落とす（コメント `:2186-2190`）。**しかしこの機構は dispatch の `subagent_type` を一切見ない。** すなわち「stage 宣言の agent 参照」は検査されるが「実行時 spawn の型」は無検査であり、Issue #2279 が指す空白はこの2層の非対称そのものである。
 ## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
 
 本節の file:line・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、区間 19 commits / 464 files）。行番号は canonical 側 `packages/framework/core/` を記す（`.claude/` ミラーは同一内容）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。

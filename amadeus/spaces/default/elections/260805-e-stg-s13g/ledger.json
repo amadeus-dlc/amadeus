@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13G",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0件は「c2 の発見を捨てる」ことを意味しない。c2 が依拠する主張はノルムと実装の乖離であり、cid:requirements-analysis:issue-first-capture により Issue-first で起票し、bolt-plan.md:15 の断定は引用の接地または訂正を要する。",
+      "rationale": "実測に基づき choice 1(0件)を支持する。(1) c1 は既存 cid の適用実例にすぎない。0問様式は team.md の E-TCRRAS13B 追補が「0問様式の既習形」として既に前提化しており、質問の絞り込みは cid:requirements-analysis:no-election-for-decided-norms と cid:intent-capture:c1、証跡様式は cid:requirements-analysis:eoc1-evidence-in-questions-header が覆う。walking-skeleton/ラダーの Construction 予約も org.md § Walking Skeleton の逐語適用。新規性なし。(2) c2 は persist してはならない。c2 の実質的主張(bolt-plan.md:15「この1点は autonomy full の対象外」/ memory.md:6「full 発効中でもこの1点は実人間承認で止まる設計」)は実装と矛盾する。実測: packages/framework/core/tools/amadeus-orchestrate.ts:1777-1779 のコメント逐語『Intent autonomy decides who resolves that gate: `full` may auto-decide it within the confirmed grant, while `none` and `semi` require a human.』、同 :3250-3251 逐語『Never swarm the walking-skeleton gate stage. Its gate may be human-resolved or full-grant-resolved』。docs/reference/12-state-machine.md § Legacy standing delegation grants (#1125) は standing delegation grant を認可機構として退役させ、`full` は別機構(new Intent-scoped grant bound to one Intent UUID)と規定する。すなわち project.md:94 の Forbidden が名指す「standing grant」は退役済み機構であり、`full` グラントへの適用は自明ではない。さらに packages/framework/core/tools/amadeus-lib.ts:3833 のコメントは『the grant-side skeleton exclusion below』と述べるが、SKELETON_ON_SCOPES の repo 全域 grep は定義(amadeus-lib.ts:3835)と orchestrate 側 gate 解決(:163 import, :1590 コメント, :1802 分岐)のみで、grant 側の除外実装は存在しない。よって c2 を memory へ persist すると、実装が反証する設計断定をノルム化し、後続 intent が存在しない機械ガードに依拠する fail-open を招く — org.md Forbidden の検証劇場、および cid:requirements-analysis:c7-upstream-universal-claim-unverified に抵触する。乖離自体は真の発見だが、行き先は memory ではなく Issue である。",
+      "submittedAt": "2026-08-05T21:51:33Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-STG-S13G",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2 の前提が実装と矛盾する点を conductor へ escalate すること。実測: packages/framework/core/tools/amadeus-orchestrate.ts:1774-1777 のコメント逐語『Intent autonomy decides who resolves that gate: `full` may auto-decide it within the confirmed grant, while `none` and `semi` require a human.』、同 :3139-3140『the gate still exists and the Intent autonomy coordinator determines whether `full` may auto-decide it』、amadeus-intent-autonomy-production.ts:62-67 の ALL_INTERACTIONS が \"walking-skeleton\" を含み :275 で grant scope の allowedInteractionKinds へそのまま渡る、amadeus-intent-autonomy.ts:498 が `grant.scope.allowedInteractionKinds.includes(occurrence.kind)` で full-grant 適用を判定。よって walking-skeleton gate は既定スコープの full grant 下で auto-approve 対象であり、bolt-plan.md:15 の『この1点は autonomy full の対象外』は engine の設計と一致しない。project.md Forbidden が禁じるのは retired な standing grant(docs/reference/12-state-machine.md § Legacy standing delegation grants (#1125): 『Standing delegation grants are retired as an authorisation mechanism』『never converted into a `full` grant』)であり、intent-scoped full grant とは別機構。bolt-plan の記述が誤りか engine 側が Forbidden の趣旨に反するかは仕様判断であり、正準リスト(4)によりユーザー裁定事項。",
+      "rationale": "0件(採用なし)を選ぶ。理由は2点。(1) c1 は既存 cid の適用実例に尽きる — no-election-for-decided-norms(既決規範は選挙対象にせず適用)と eoc1-evidence-in-questions-header / answer-evidence-predicate-scope が0問様式の運用を既に覆い、diary memory.md:5 の記述も『主要判断は全て既決または機械導出』という既決適用の申告そのもの。一般化可能な新規知識はない。(2) c2 は persist すべきでない — 単に既存 Forbidden の適用実例だからではなく、その主張自体が実装と矛盾するため。上記 reservation の実測どおり engine は full grant による walking-skeleton gate の auto-decide を許容しており、『full 発効中でもこの1点は実人間承認で止まる設計』を一般化ノルムとして memory 層へ焼くと、実測事実に反する規範を固定して偽の信頼を生む(P2: 記録と検証は実測事実のみを根拠にする)。c2 の趣旨を残すべきなら、それは §13 学習ではなく (a) bolt-plan の記述訂正 (b) Forbidden と full grant 機構の関係についてのユーザー裁定 (c) 必要なら Issue-first 起票、のいずれかで扱うのが正しい経路。record 側(diary + bolt-plan)への保存で当該 intent の文脈は十分に残る。",
+      "submittedAt": "2026-08-05T21:52:02Z"
+    }
+  ],
+  "late": []
+}

@@ -140,6 +140,15 @@ export type HarnessManifest = {
    */
   frontmatterAdditions?: Array<{ file: string; lines: string[] }>;
   /**
+   * Rewrites the persona `model:` tier alias (opus, sonnet) to a harness-native
+   * model id while projecting agent charters. Harnesses that understand the
+   * aliases natively (Claude Code) omit this and ship the charter verbatim; a
+   * harness that needs concrete ids (Pi) declares the map. The packager errors
+   * on an alias the map does not cover, so a new tier can never silently fall
+   * back to the harness default and break a persona's pin.
+   */
+  modelPins?: Readonly<Record<string, string>>;
+  /**
    * How to render this harness's onboarding doc from core/templates/onboarding.md.
    * null when the harness generates it elsewhere (codex, via emit) or ships none.
    */

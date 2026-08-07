@@ -1060,5 +1060,59 @@
     "dirName": "260805-e-xbb-ra-s13",
     "createdAt": "2026-08-05T08:31:08Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13",
+    "dirName": "260805-e-stg-s13",
+    "createdAt": "2026-08-05T13:48:36Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13B",
+    "dirName": "260805-e-stg-s13b",
+    "createdAt": "2026-08-05T15:17:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13C",
+    "dirName": "260805-e-stg-s13c",
+    "createdAt": "2026-08-05T15:54:47Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13D",
+    "dirName": "260805-e-stg-s13d",
+    "createdAt": "2026-08-05T16:31:13Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13E",
+    "dirName": "260805-e-stg-s13e",
+    "createdAt": "2026-08-05T16:55:36Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13F",
+    "dirName": "260805-e-stg-s13f",
+    "createdAt": "2026-08-05T21:40:19Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13G",
+    "dirName": "260805-e-stg-s13g",
+    "createdAt": "2026-08-05T21:49:49Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13H",
+    "dirName": "260805-e-stg-s13h",
+    "createdAt": "2026-08-05T22:28:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-STG-S13I",
+    "dirName": "260805-e-stg-s13i",
+    "createdAt": "2026-08-05T22:52:37Z",
+    "status": "recorded"
   }
 ]

@@ -618,7 +618,11 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "subagent",
     requiredAttributes: ["Agent Type"],
-    optionalAttributes: ["Agent ID", "Purpose"],
+    // `Type Verdict` / `Model` / `Model Source` are the #2279 attribution
+    // (U1/U2) — optional because the checks are advisory and skip themselves
+    // rather than block the write, and an unresolved model records NOTHING
+    // (ADR-5: absence is the record of absence).
+    optionalAttributes: ["Agent ID", "Purpose", "Type Verdict", "Model", "Model Source"],
     schemaVersion: 1,
   },
   {
@@ -627,7 +631,11 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "subagent",
     requiredAttributes: ["Agent Type"],
-    optionalAttributes: ["Agent ID", "Message"],
+    // `Type Verdict` is where the Agent Type sits relative to the allowed set
+    // (#2279) — optional because the check is advisory and skips itself rather
+    // than block the write. `Model` / `Model Source` are the effective-model
+    // attribution (ADR-3) — written as a pair or not at all (ADR-5).
+    optionalAttributes: ["Agent ID", "Message", "Type Verdict", "Model", "Model Source"],
     schemaVersion: 1,
   },
   // --- Utility Events (1) ---

@@ -1,0 +1,27 @@
+{
+  "electionId": "E-STG-S13F",
+  "kind": "learnings-selection",
+  "question": "intent 260805-subagent-type-guard / ステージ units-generation の §13 学習選定。diary 候補4件。採用集合を選べ。候補要旨: c1=Unit 分割の判断(intent 固有) / c2=edge block の正書式は入れ子形(- name / kind / depends_on)で、kind は UNIT_KINDS 閉語彙(service|spec|ui|packaging|library)の必須フィールド — フラット形は malformed、kind 欠落は missing_unit_kinds で required-sections センサーが FAILED になる(2段の是正を実測) / c3=reviewer stall の真因はセッションレート上限で、リセット後は同一タスクが2分で完走(idleReason: failed の failureReason にリセット時刻が載る) / c4=FOLLOW-UP の conductor 軽微是正(iteration 非消費)。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c2 のみ採用(edge block 正書式の追補)",
+      "description": "c2 を cid:units-generation:per-unit-loop-activation への追補として persist する。主張: 既存 cid は『unit-of-work-dependency.md には parseBoltDag 用の YAML edge block(units/depends_on の fenced yaml)が必須』とだけ定め、(a) 入れ子形(- name: X / depends_on: [...])が正書式でフラット形(units 名リスト + depends_on マップ)は malformed になること、(b) kind: が UNIT_KINDS 閉語彙(service|spec|ui|packaging|library)の必須フィールドで、欠落は required-sections センサーの missing_unit_kinds で FAILED になること、の2点を欠く。kind 検査は nfr-kind-pruning intent(cid:nfr-design:c1-engine-produces-all-five)以降の新しい契約で、既存 cid の文面が世代遅れ。本 intent で2段の是正(malformed → kind 欠落 → PASSED)を実測。"
+    },
+    {
+      "internalNo": 2,
+      "label": "c2 + c3 採用",
+      "description": "c2 に加え c3(レート上限 stall の診断)も persist する。c3 の主張: subagent の stall(transcript 複数回不変・nudge 無効)を見たら、TaskStop/再起動の前に idleReason: failed の failureReason(セッション上限とリセット時刻が載る)を確認する — 上限中の再ディスパッチは同じ失敗を繰り返すだけで、リセット後は同一タスクが数分で完走する。E-STG-S13E(配送2経路)と c4-agent-async(transcript 監視)の隙間 = 停止原因の判別面。"
+    },
+    {
+      "internalNo": 3,
+      "label": "0件(採用なし)",
+      "description": "いずれも persist しない。c2 はセンサーの FAILED detail が是正を自己案内するため規則不要、c3 は failureReason の可視化で自明、c1/c4 は intent 固有。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

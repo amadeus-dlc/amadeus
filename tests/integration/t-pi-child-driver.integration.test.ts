@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -111,6 +111,47 @@ describe("Pi child driver process boundary", () => {
     );
 
     expect(result).toMatchObject({ kind: "succeeded", output: "OK", replayed: false });
+  });
+
+  test("launches a persona on the model its charter pins, outranking the driver default", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    mkdirSync(join(root, ".pi", "agents"), { recursive: true });
+    writeFileSync(
+      join(root, ".pi", "agents", "amadeus-architecture-reviewer-agent.md"),
+      "---\nname: amadeus-architecture-reviewer-agent\nmodel: sonnet\n---\n\nreviewer charter\n",
+    );
+
+    expect(await executePiChild(
+      {
+        ...base,
+        deliveryKey: "persona-1",
+        persona: "amadeus-architecture-reviewer-agent",
+        prompt: "expect-model:claude-sonnet-5",
+      },
+      { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle, modelId: "gpt-5.6-luna" },
+    )).toMatchObject({ kind: "succeeded", output: "OK", replayed: false });
+  });
+
+  test("fails dispatch closed rather than defaulting the model when a persona pin is unresolvable", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    mkdirSync(join(root, ".pi", "agents"), { recursive: true });
+    writeFileSync(
+      join(root, ".pi", "agents", "amadeus-unknown-tier-agent.md"),
+      "---\nname: amadeus-unknown-tier-agent\nmodel: haiku\n---\n",
+    );
+    const options = { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle };
+
+    // No charter on any harness surface.
+    expect(await executePiChild(
+      { ...base, deliveryKey: "persona-missing", persona: "amadeus-absent-agent", prompt: "success:" },
+      options,
+    )).toMatchObject({ kind: "dispatch-not-started", reason: "persona-model-unresolved" });
+
+    // Charter exists but pins a tier outside the closed alias table.
+    expect(await executePiChild(
+      { ...base, deliveryKey: "persona-unknown-tier", persona: "amadeus-unknown-tier-agent", prompt: "success:" },
+      options,
+    )).toMatchObject({ kind: "dispatch-not-started", reason: "persona-model-unresolved" });
   });
 
   test("lets Pi route the provider family to an account-specific model and records the actual selection", async () => {

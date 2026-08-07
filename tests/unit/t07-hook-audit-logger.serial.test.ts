@@ -322,6 +322,11 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-journal.ts"),
       join(proj, ".claude", "tools", "amadeus-journal.ts"),
     );
+    // amadeus-lib.ts's subagentStartFields imports the attribution module (#2279 U1/U2).
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-subagent-observability.ts"),
+      join(proj, ".claude", "tools", "amadeus-subagent-observability.ts"),
+    );
     // The hook's telemetry seam and its own config reader are part of that same
     // module graph (#1628 Phase 2) — an unresolved import fails the whole hook.
     copyFileSync(
