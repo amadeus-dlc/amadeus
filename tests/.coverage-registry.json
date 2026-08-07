@@ -31,12 +31,12 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 179,
+      "function": 180,
       "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 14,
-      "subcommand": 84,
+      "subcommand": 85,
       "render-surface": 7
     }
   },
@@ -3058,8 +3058,13 @@
       "unitClass": "function",
       "unitId": "function:parseDeclaredUnitsArg",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -6547,8 +6552,13 @@
       "unitClass": "subcommand",
       "unitId": "amadeus-state declare-units-done",
       "minMechanism": "cli",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t480-declare-units-done.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "subcommand",

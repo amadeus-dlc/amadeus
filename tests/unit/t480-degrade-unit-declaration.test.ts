@@ -1,4 +1,4 @@
-// covers: function:parseDegradeUnitDeclaration, function:decideDegradeUnitCompletion, function:writeDegradeUnitDeclaration
+// covers: function:parseDegradeUnitDeclaration, function:decideDegradeUnitCompletion, function:writeDegradeUnitDeclaration, function:parseDeclaredUnitsArg
 // size: small
 //
 // t480 — the degrade-path "unit list is complete" declaration (#2358, ruling

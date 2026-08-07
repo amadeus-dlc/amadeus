@@ -1,4 +1,4 @@
-// covers: function:handleDeclareUnitsDone subcommand:amadeus-orchestrate:next
+// covers: function:handleDeclareUnitsDone subcommand:amadeus-state:declare-units-done subcommand:amadeus-orchestrate:next
 // size: medium
 //
 // t480 — the write half of the degrade-path unit-list declaration (#2358,
