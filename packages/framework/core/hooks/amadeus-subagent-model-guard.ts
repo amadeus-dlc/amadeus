@@ -73,7 +73,9 @@ try {
 } catch (e) {
   // Fail open, loudly: a guard that cannot evaluate must not become a
   // workspace-wide dispatch outage. The advisory face (#2279) still records
-  // whatever this dispatch turns out to be.
+  // whatever this dispatch turns out to be. The exit is the approved failure
+  // terminal (no-silent-drop NSD001): fail-open here still ENDS the hook.
   process.stderr.write(`advisory: subagent model guard skipped: ${sanitizeAdvisoryValue(errorMessage(e))}\n`);
+  process.exit(0);
 }
 process.exit(0);
