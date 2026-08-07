@@ -352,13 +352,18 @@ describe("attributeModels — absence is recorded as absence", () => {
       v1("i1", "SUBAGENT_COMPLETED", "2026-01-01T00:00:02Z", {}),
       v1("i1", "SUBAGENT_STARTED", "2026-01-01T00:00:03Z", { Model: "opus" }),
     ]);
-    expect(attribution.totalCount).toBe(4);
-    expect(attribution.attributableCount).toBe(3);
+    expect(attribution.totalCount).toBe(3);
+    expect(attribution.attributableCount).toBe(2);
     expect(attribution.unresolvedCount).toBe(1);
     expect(attribution.attributableCount + attribution.unresolvedCount).toBe(attribution.totalCount);
-    expect(attribution.byModel.get("opus")).toBe(2);
+    expect(attribution.byModel.get("opus")).toBe(1);
     expect(attribution.byModel.get("sonnet")).toBe(1);
     expect(attribution.byModelSource.get("pin")).toBe(1);
+  });
+  test("a start row never joins the population — one dispatch is one completion", () => {
+    const attribution = attributeModels([v1("i1", "SUBAGENT_STARTED", "2026-01-01T00:00:00Z", { Model: "opus" })]);
+    expect(attribution.totalCount).toBe(0);
+    expect(attribution.byModel.size).toBe(0);
   });
   test("a blank Model is unresolved, not a model named empty string", () => {
     const attribution = attributeModels([v1("i1", "SUBAGENT_COMPLETED", "2026-01-01T00:00:00Z", { Model: "  " })]);

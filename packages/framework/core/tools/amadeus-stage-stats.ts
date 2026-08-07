@@ -395,8 +395,11 @@ export interface ModelAttribution {
   readonly totalCount: number;
 }
 
-/** Attribute subagent rows to models. A row without a usable `Model` is the
- *  UNKNOWN bucket: the absence of the attribute is itself the record, so it is
+/** Attribute subagent rows to models. Only SUBAGENT_COMPLETED rows join the
+ *  population — a start and its completion describe one dispatch, and the
+ *  sibling stats tool attributes on completion, so counting both would double
+ *  every per-model total. A row without a usable `Model` is the UNKNOWN
+ *  bucket: the absence of the attribute is itself the record, so it is
  *  reported rather than dropped from the denominator. */
 export function attributeModels(records: readonly AttributedRecord[]): ModelAttribution {
   const byModel = new Map<string, number>();
@@ -407,7 +410,7 @@ export function attributeModels(records: readonly AttributedRecord[]): ModelAttr
 
   for (const { record } of records) {
     const event = eventOf(record);
-    if (event !== "SUBAGENT_COMPLETED" && event !== "SUBAGENT_STARTED") continue;
+    if (event !== "SUBAGENT_COMPLETED") continue;
     totalCount += 1;
     const model = attrOf(record, "Model");
     if (model === null || model.trim() === "") {
