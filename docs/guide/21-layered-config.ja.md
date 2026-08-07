@@ -46,6 +46,7 @@ Space での上書き:
 | `finding.github.issue.creation.mode` | `off \| prompt \| auto` | `prompt` |
 | `swarm.unit.concurrency.limit` | 整数 `1..4` | `4` |
 | `plugin.activation.names` | plugin 名配列。Project のみ | `[]` |
+| `subagent.dispatch.enforced-models` | モデル名配列(別名は完全 ID にも一致) | `["opus","sonnet"]` |
 
 設定は fail-closed です。未知のパス、旧フラットキー、`null`、不正な JSON、読み取れない
 ファイル、不正な値が1件でもあれば解決結果全体を拒否します。旧キーの診断には新しい

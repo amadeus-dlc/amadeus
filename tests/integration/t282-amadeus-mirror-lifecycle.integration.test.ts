@@ -340,6 +340,7 @@ function boundaryInput(
           },
           swarm: { unit: { concurrency: { limit: 4 } } },
           plugin: { activation: { names: [] } },
+          subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
         },
         sources: [],
       }),

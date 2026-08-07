@@ -54,9 +54,50 @@ describe("t431 structured config", () => {
         },
         swarm: { unit: { concurrency: { limit: 4 } } },
         plugin: { activation: { names: [] } },
+        subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
       },
       sources: [],
     });
+  });
+
+  test("subagent.dispatch.enforced-models replaces the default at any layer and rejects malformed sets", () => {
+    const configured = parseAmadeusConfigLayers([
+      present("project", {
+        subagent: { dispatch: { "enforced-models": ["opus", "sonnet", "haiku"] } },
+      }),
+      absent("space"),
+      absent("intent"),
+    ]);
+    expect(configured.kind).toBe("resolved");
+    if (configured.kind === "resolved") {
+      expect(configured.config.subagent.dispatch.enforcedModels).toEqual(["opus", "sonnet", "haiku"]);
+    }
+
+    // An intent layer replaces (not merges) the project value.
+    const overridden = parseAmadeusConfigLayers([
+      present("project", {
+        subagent: { dispatch: { "enforced-models": ["opus", "sonnet"] } },
+      }),
+      absent("space"),
+      present("intent", {
+        subagent: { dispatch: { "enforced-models": ["haiku"] } },
+      }),
+    ]);
+    expect(overridden.kind).toBe("resolved");
+    if (overridden.kind === "resolved") {
+      expect(overridden.config.subagent.dispatch.enforcedModels).toEqual(["haiku"]);
+    }
+
+    // Malformed sets are rejected, never silently defaulted: an empty array
+    // would deny every dispatch, and a non-string entry is a typo, not a model.
+    for (const bad of [[], ["opus", "opus"], ["opus", 5], "opus", [" "]]) {
+      const outcome = parseAmadeusConfigLayers([
+        present("project", { subagent: { dispatch: { "enforced-models": bad } } }),
+        absent("space"),
+        absent("intent"),
+      ]);
+      expect(outcome.kind).toBe("invalid");
+    }
   });
 
   test("merges leaves by project, space, then intent and replaces arrays", () => {
@@ -106,6 +147,7 @@ describe("t431 structured config", () => {
       finding: { github: { issue: { creation: { mode: "off" } } } },
       swarm: { unit: { concurrency: { limit: 1 } } },
       plugin: { activation: { names: ["alpha", "zeta"] } },
+      subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
     });
     expect(outcome.sources).toEqual([
       "amadeus/project.json",

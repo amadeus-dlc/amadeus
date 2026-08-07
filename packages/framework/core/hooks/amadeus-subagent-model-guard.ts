@@ -31,6 +31,7 @@ import {
   readHookStdin,
   resolveProjectDirFromHook,
 } from "../tools/amadeus-lib.ts";
+import { resolveAmadeusConfig } from "../tools/amadeus-config.ts";
 import { sanitizeAdvisoryValue } from "../tools/amadeus-subagent-observability.ts";
 import { harnessDir } from "../tools/amadeus-harness.ts";
 
@@ -57,8 +58,29 @@ try {
 if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 if (activeWorkflowIsComplete(projectDir)) process.exit(0);
 
+// The active enforced set is the layered `subagent.dispatch.enforced-models`
+// key (project -> space -> intent, replace semantics). An invalid resolution
+// falls back to the shipped default WITH a stderr advisory: defaulting keeps
+// the enforcement posture, while an invalid config silently deciding either
+// way (allow-all or deny-all) would be worse than the misconfiguration itself.
+function resolveEnforcedModels(): readonly string[] | undefined {
+  try {
+    const outcome = resolveAmadeusConfig(projectDir);
+    if (outcome.kind === "resolved") return outcome.config.subagent.dispatch.enforcedModels;
+    process.stderr.write(
+      `advisory: subagent model guard config invalid (${outcome.issues.length} issue(s)) — using the default enforced set\n`,
+    );
+    return undefined;
+  } catch (e) {
+    process.stderr.write(
+      `advisory: subagent model guard config unreadable (${sanitizeAdvisoryValue(errorMessage(e))}) — using the default enforced set\n`,
+    );
+    return undefined;
+  }
+}
+
 try {
-  const decision = evaluateDispatchGuard(parsed, join(projectDir, harnessDir(), "agents"));
+  const decision = evaluateDispatchGuard(parsed, join(projectDir, harnessDir(), "agents"), resolveEnforcedModels());
   if (decision?.kind === "deny") {
     process.stdout.write(
       `${JSON.stringify({
