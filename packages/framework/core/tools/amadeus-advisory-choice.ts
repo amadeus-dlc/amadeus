@@ -1471,17 +1471,29 @@ function droppedRunNowCount(receipts: readonly unknown[]): number {
 }
 
 // The second thing a discarded legacy receipt is read for, and it is likewise
-// not a meaning: WHOSE it is. A receipts-only store has no pending row to carry
-// the owner, which is exactly where the pending check goes vacuous and the whole
-// content of the store is about to be thrown away. A receipt too malformed to
-// show an intent run yields nothing here — this read only ever adds a refusal,
-// never a permission, so an unreadable receipt cannot widen what is allowed.
+// not a meaning: WHOSE it is. `undefined` means the receipt does not say — which
+// is NOT the same as saying it belongs here.
+function receiptIntentRun(receipt: unknown): string | undefined {
+  const identity = isPlainObject(receipt) ? receipt.identity : undefined;
+  const owner = isPlainObject(identity) ? identity.intentRun : undefined;
+  return nonEmptyString(owner) ? owner : undefined;
+}
+
 function foreignReceiptIntentRuns(receipts: readonly unknown[], intentRun: string): string[] {
   return receipts.flatMap((receipt) => {
-    const identity = isPlainObject(receipt) ? receipt.identity : undefined;
-    const owner = isPlainObject(identity) ? identity.intentRun : undefined;
-    return nonEmptyString(owner) && owner !== intentRun ? [owner] : [];
+    const owner = receiptIntentRun(receipt);
+    return owner !== undefined && owner !== intentRun ? [owner] : [];
   });
+}
+
+// A receipts-only store has no pending row to name the owner, which is exactly
+// where the pending check goes vacuous and the entire content of the store is
+// about to be deleted. Skipping a receipt whose identity cannot be read looks
+// conservative and is the opposite: it deletes that receipt without ever
+// establishing whose it was. Silence is not evidence of belonging, so an
+// unreadable owner refuses the recovery rather than being passed over.
+function ownershipIsUnverifiable(receipts: readonly unknown[], pendingCount: number): boolean {
+  return pendingCount === 0 && receipts.some((receipt) => receiptIntentRun(receipt) === undefined);
 }
 
 // #2330. ADR-9's refusal to read a schema 1 store is kept exactly as it is —
@@ -1524,6 +1536,9 @@ export function recoverSchema1AdvisoryStore(projectDir: string): ParseResult<Adv
         ok: false as const,
         reason: `advisory choice store does not belong to the active intent (store: ${foreignOwner}, active: ${intentRun})`,
       };
+    }
+    if (ownershipIsUnverifiable(raw.receipts, pending.length)) {
+      return { ok: false as const, reason: "advisory choice store ownership cannot be verified: a receipt carries no readable intent run" };
     }
     writeStore(projectDir, { schema: 2, pending, receipts: [] });
     return {

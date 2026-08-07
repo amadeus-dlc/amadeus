@@ -333,7 +333,7 @@ answer `advisory choice evidence is invalid: …` with no answer able to clear i
 
 `recover-schema-1` is the migration path out of that state:
 
-```
+```sh
 bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
   [--project-dir <path>]
 ```
@@ -352,8 +352,10 @@ run off the salvaged pending, and off the receipts when there is no pending row
 to carry it: a receipts-only store is exactly the case where the pending check
 would be vacuous and the whole content is about to be discarded. Reading an
 intent run off a receipt is a safety read, not a translation — nothing about
-what the receipt meant is interpreted, and a receipt too malformed to show one
-only ever withholds a refusal, never grants a permission. The outcome
+what the receipt meant is interpreted. A receipt whose intent run cannot be read
+refuses the recovery too: on the receipts-only path there is no pending row to
+name the owner, so passing that receipt over would delete it without ever
+establishing whose it was, and silence is not evidence of belonging. The outcome
 names what changed: `receipts_dropped`, `re_presentation_required` (false when
 no open advisory was salvaged — the store is simply normalised for whatever
 comes next), and `formal_check_attempts_reset`, since the attempt a formal-check

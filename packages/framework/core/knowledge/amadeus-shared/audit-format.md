@@ -114,7 +114,11 @@ unanswered again, which is the "ask the human again" the fail-closed hold
 already stood for. It refuses loudly and writes nothing when the ledger names an
 intent run other than the active one — read off the salvaged pending rows, or
 off the receipts when there is no pending row to carry it, so a receipts-only
-ledger is not left undefended at the moment its whole content is discarded — and its outcome
+ledger is not left undefended at the moment its whole content is discarded. On
+that receipts-only path a receipt whose intent run cannot be read refuses the
+recovery as well: with no pending row to name the owner, passing such a receipt
+over would delete it without ever establishing whose it was, and silence is not
+evidence of belonging. The outcome
 reports the receipts dropped, whether re-presentation is required, and the
 formal-check attempt counts that reset with the discarded run-now receipts.
 

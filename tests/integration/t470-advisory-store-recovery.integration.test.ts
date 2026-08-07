@@ -204,6 +204,27 @@ describe("advisory store recovery: misdirection defence (FR-2.3 / AC-2b)", () =>
     expect(result.reason).toContain("does not belong to the active intent");
     expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
   });
+
+  // Ignoring a receipt whose identity cannot be read looks conservative and is
+  // the opposite: with no pending row to name the owner, an unreadable receipt
+  // is a receipt about to be deleted with its owner never established. Silence
+  // is not evidence of belonging, so the unverifiable case refuses too.
+  test("pendingが0件でreceiptの所有者を読めない場合は所有者未確認として拒否される", () => {
+    const { projectDir } = track(seedSchema1Project(["run-now"]));
+    const store = readRawStore(projectDir);
+    const receipts = store.receipts as Record<string, unknown>[];
+    delete (receipts[0]!.identity as Record<string, unknown>).intentRun;
+    store.pending = [];
+    writeRawStore(projectDir, store);
+    const before = readFileSync(storePath(projectDir), "utf-8");
+
+    const result = recoverSchema1AdvisoryStore(projectDir);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toContain("ownership cannot be verified");
+    expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
+  });
 });
 
 describe("advisory store recovery: receipts-only store (AC-2a)", () => {
