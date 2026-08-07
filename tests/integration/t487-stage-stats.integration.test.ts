@@ -404,3 +404,51 @@ describe("read-only — the shipped source cannot write", () => {
     for (const [path, body] of snapshot) expect(readFileSync(path, "utf-8")).toBe(body);
   });
 });
+
+describe("resolution seams — driven in-process so bun --coverage measures them", () => {
+  test("a usage error returns 2 without touching the filesystem", () => {
+    const { code } = capturedMain(["--definitely-unknown-flag"]);
+    expect(code).toBe(2);
+  });
+
+  test("CLAUDE_PROJECT_DIR resolves the project dir when the flag is absent", () => {
+    const projectDir = scratch();
+    buildCorpus(projectDir);
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = projectDir;
+    try {
+      const { code, stdout } = capturedMain(["--space", "default"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("shards:");
+    } finally {
+      if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = saved;
+    }
+  });
+
+  test("without env or flag the cwd rung resolves, and active-space names the space", () => {
+    const projectDir = scratch();
+    buildCorpus(projectDir);
+    writeFileSync(join(projectDir, "amadeus", "active-space"), "default\n");
+    const savedEnv = process.env.CLAUDE_PROJECT_DIR;
+    const savedCwd = process.cwd();
+    delete process.env.CLAUDE_PROJECT_DIR;
+    process.chdir(projectDir);
+    try {
+      const { code, stdout } = capturedMain([]);
+      expect(code).toBe(0);
+      expect(stdout).toContain('space "default"');
+    } finally {
+      process.chdir(savedCwd);
+      if (savedEnv !== undefined) process.env.CLAUDE_PROJECT_DIR = savedEnv;
+    }
+  });
+
+  test("a missing active-space file falls back to the default space", () => {
+    const projectDir = scratch();
+    buildCorpus(projectDir);
+    const { code, stdout } = capturedMain(["--project-dir", projectDir]);
+    expect(code).toBe(0);
+    expect(stdout).toContain('space "default"');
+  });
+});
