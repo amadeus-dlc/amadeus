@@ -71,6 +71,22 @@ const ALL_INTERACTIONS: readonly InteractionKind[] = [
   "question",
 ];
 
+// What a mode auto-decides. Derived from the two existing constants rather than
+// restated, so the pair a semi Intent leaves to the human moves whenever
+// SEMI_ROUTINE_INTERACTIONS moves (FR-2b, BR-U1-7).
+function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
+  if (mode === "full") return ALL_INTERACTIONS;
+  if (mode === "semi") return SEMI_ROUTINE_INTERACTIONS;
+  return [];
+}
+
+// The complement: the kinds this mode still stops on. Reading it off the preview
+// is how a human sees, before granting, which gates stay theirs.
+export function nonAutoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
+  const decided = autoDecidedKinds(mode);
+  return ALL_INTERACTIONS.filter((kind) => !decided.includes(kind));
+}
+
 // Exported so a caller that builds its own option effects can prove, in a test
 // it owns, that the classification it assigns to a refusable option is still
 // one this scope forbids (#2253 FR-ADV-4 secondary barrier).
@@ -341,6 +357,7 @@ export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyG
   readonly scope: GrantScopeDescriptor;
   readonly policies: readonly DecisionPolicyInput[];
   readonly displayDigest: string;
+  readonly nonAutoDecidedKinds: readonly InteractionKind[];
 } } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
@@ -356,6 +373,7 @@ export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyG
       scope,
       policies,
       displayDigest: grantDisplayDigest({ intentUuid: projection.intentUuid, principalId, scope, policies }),
+      nonAutoDecidedKinds: nonAutoDecidedKinds(projection.mode),
     },
   };
 }
