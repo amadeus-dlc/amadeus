@@ -1,6 +1,64 @@
 # コード構造
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決の呼び出し分布（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### `resolveProjectDir` の呼び出し棚卸し
+
+`packages/framework/core/tools/` 内の `resolveProjectDir(` 出現 = **97**（`grep -roh | wc -l`、per-file 合計と一致、exit=0）。うち**2件は呼び出しではない**:
+
+- `amadeus-lib.ts:226` — 定義行 `export function resolveProjectDir(...)`
+- `amadeus-lib.ts:6673` — コメント `// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.` ← **stale comment**。実装が読むのは `CLAUDE_PROJECT_DIR`（`:231`）であり `AMADEUS_PROJECT_DIR` ではない
+
+したがって `core/tools` 内の実 call site = **95 / 15 ファイル**（`amadeus-lib.ts` 自身を除く）。`core/tools` 外に1件（`packages/framework/core/otel/relay.ts:777`）。**合計 96**。
+
+| ファイル | call site |
+|---|---|
+| `amadeus-state.ts` | 33 |
+| `amadeus-orchestrate.ts` | 19 |
+| `amadeus-swarm.ts` | 12 |
+| `amadeus-worktree.ts` | 9 |
+| `amadeus-jump.ts` | 4 |
+| `amadeus-graph.ts` / `amadeus-bolt.ts` | 各 3 |
+| `amadeus-utility.ts` / `-sensor` / `-runtime` / `-log` | 各 2 |
+| `amadeus-learnings` / `-goal` / `-election` / `-audit` | 各 1 |
+| `core/otel/relay.ts` | 1 |
+
+**名前シャドウの注意**: `packages/framework/core/hooks/amadeus-statusline.ts:31` に同名のローカル関数 `async function resolveProjectDir(input: Input)` が存在する（内部で `resolveProjectDirFromHook` を呼ぶ、`:42`）。lib 関数の caller ではないため、grep ベースの棚卸しで誤カウントしやすい。
+
+### `--project-dir` の受け口分布
+
+`"--project-dir"` を parse するツールは **18ファイル**（`advisory-choice` / `audit` / `bolt` / `finding` / `goal` / `jump` / `lib` / `log` / `migrate` / `mirror-lifecycle` / `mirror-presentation` / `orchestrate` / `sensor-model-completeness` / `state` / `subagent-stats` / `swarm` / `utility` / `worktree`）。共有ヘルパーは `stripProjectDir`（`amadeus-lib.ts:212-224`）で、runtime / sensor / learnings が使用する。
+
+`stage-protocol.md:1211` の `--project-dir <workspace-root>` は `amadeus-finding.ts create-github-issue` の呼び出し例（`:1209-1216`）である。
+
+### 起動形の分布 — 相対形と絶対形
+
+| 面 | 相対形 `bun .claude/tools/` | 絶対形 `bun $CLAUDE_PROJECT_DIR/.claude/tools/` |
+|---|---|---|
+| 正本 `packages/` 全域 | **31** | **1** |
+| セルフインストール面 `.claude/skills/` | **113** | **0** |
+
+**正本側の絶対形 1件は allowlist エントリ自身**（`packages/framework/harness/claude/settings.json.example:10`）であり、実際の起動行ではない。すなわち **allowlist が許可している形を、正本のスキルは1つも発行していない**。
+
+> 測定面の精密化: Developer scan が報告した「113」はセルフインストール面 `.claude/skills/`（未追跡の投影物）での計数であり、正本 `packages/framework/harness/claude/skills/` の計数は **31** である。両者は別の面であり、修正の対象面を決めるときに混同しない。
+
+### 同期面 — allowlist は2ファイル
+
+```
+packages/framework/harness/claude/settings.json.example:10
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+.claude/settings.json:39
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+```
+
+`.claude/settings.json` は **tracked**（`git ls-files --error-unmatch .claude/settings.json` exit=0）。`.claude/**` は gitignore 対象だが tracked ファイルは ignore を上書きする。したがって allowlist の変更は**正本とセルフインストール面の2ファイル同時変更**を要する。`dist/` 配下は未追跡生成物のため同期対象外（`bun run build` で再生成）。
+
+同一ファイル内の非対称（#1492 の指摘）も現存: hook 起動行 14本はすべて `${CLAUDE_PROJECT_DIR:-.}` のフォールバック付きクォート形だが、`:10` の allowlist だけが素の `$CLAUDE_PROJECT_DIR`。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

@@ -1,6 +1,43 @@
 # 依存関係
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決への依存関係（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 外部依存の追加なし
+
+本 intent の患部は `node:fs` / `node:path` / `node:url` の標準 API のみに依存する（`statSync` / `existsSync` / `join` / `dirname` / `fileURLToPath`）。新規パッケージ依存は不要であり、`package.json` に変更を要さない。
+
+### 内部依存 — `resolveProjectDir` の被依存分布
+
+`resolveProjectDir` は core/tools 全域の **96 call site**（`core/tools` 内 95 / 15 ファイル、`core/otel/relay.ts:777` に 1）から呼ばれる。上位の依存元は `amadeus-state.ts`（33）、`amadeus-orchestrate.ts`（19）、`amadeus-swarm.ts`（12）、`amadeus-worktree.ts`（9）。
+
+**依存の性質**: いずれも「書き先の決定」に使われる。したがって解決の誤りは1箇所の欠陥ではなく、**state / audit / swarm / worktree の全書込面へ一様に伝播する**。梯子の修正は 96 箇所すべての挙動を同時に変える — 段順を触る変更は影響が広い。
+
+### 内部依存 — `--project-dir` の受け口
+
+18 ツールが `"--project-dir"` を parse し、共有ヘルパー `stripProjectDir`（`amadeus-lib.ts:212-224`）に依存する（runtime / sensor / learnings が使用）。段1 を正規形に据える設計は、**この既存の依存グラフをそのまま使う** — 新規機構を要さない。
+
+### 面間の同期依存
+
+| 依存 | 正本 | 従属面 | 同期手段 |
+|---|---|---|---|
+| allowlist | `packages/framework/harness/claude/settings.json.example:10` | `.claude/settings.json:39`（**tracked**） | 手動同時変更（両方 tracked） |
+| 起動形 | `packages/framework/harness/claude/skills/`（相対形 31） | `.claude/skills/`（相対形 113、未追跡） | `bun run build` |
+| tools 本体 | `packages/framework/core/tools/` | `dist/` / `.claude/tools/`（未追跡） | `bun run build` |
+
+**注意**: `.claude/settings.json` は `.claude/**` の gitignore 対象だが tracked ファイルは ignore を上書きするため、**allowlist だけは build ではなく手動同期の対象**である。他のセルフインストール面（`.claude/tools/` / `.claude/skills/`）とは同期経路が異なる。
+
+### テスト依存
+
+`tests/integration/t144-harness-seam.cli.test.ts` は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38`）。source-only 移行後 `dist/` は未追跡生成物のため、**t144 は `bun run build` 済みに依存する**。ケース B の回帰テストを t144 側へ足す場合、この build 依存を引き継ぐ。build 非依存にしたい場合は `tests/unit/t202-…`（正本を直 import する形）側の系譜を採る。
+
+### 交差する進行中変更
+
+`gh pr list --state open` → **0件**（exit=0）。base→observed の 12 commits も resolver 領域を触っていない（`amadeus-lib.ts` は `+143/-0` で全行 `:4983` 着地、患部区間 210-360 は review SHA `75a1c198d` と `cmp` IDENTICAL / exit=0）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

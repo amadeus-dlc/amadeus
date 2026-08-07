@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-PWF-CGDEV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "AC-1a の改訂は括弧書き（現行挙動の記述）へ検証面の限定を加えるだけに留め、AC-1a の実質基準（cwd=worktree × main 絶対 lib × env UNSET で worktree root を返す）自体は一切弱めないこと。また逐語形の回帰 pin は案 A/C いずれでも FR-2b の t144 更新が担う（t144 test 4 は現状 cwd=tmp が marker 非保有のため逐語形を pin していない — FR-2b の更新で pin される必要がある）ことを code-summary に明記すること。",
+  "rationale": "独立実測: (1) amadeus-harness.ts:71-73 の isHarnessDirName は /^\\.[a-z0-9][a-z0-9._-]*$/i で先頭ドット必須。正本 lib の親セグメントは 'core' で不適合（bun 実測 false）。(2) amadeus-lib.ts:226-248 の梯子 rung 3 は stripHarnessLeaf(scriptDir,'tools') で、basename(dirname)='core' が isHarnessDirName に落ちて null → in-process 直 import では rung 3 が構造的に到達不能。rung 4 の cwd probe が worktree を返す。(3) t481 を実装前に実行（bun test）した実測は 5 pass / 2 fail — test 1（AC-1a 逐語形）は修正前から green、test 2（祖先形）と test 3（AC-1b C+env）が Red。builder の主張どおり。(4) requirements.md:26 の AC-1a 括弧書き『現行は main を返す欠陥』は、FR-2a:35 が定める in-process 直 import 検証面では事実に反する（実測では現行も worktree を返す）。よって案 C を選ぶ: 案 B は FR-2a の in-process 条件の外の形を同居させ、spawn 面が lcov 非計測となり NFR-3（spawn 盲点を作らない）と摩擦し、かつ FR-2b:36 が既に義務づける t144 更新（実 shipped layout で rung 3 が発火する面）と重複する。案 A は追加コスト 0 で正しいが、承認済み成果物に実測と矛盾する断定を残し、後続の引用検証（mechanism-cite-verify-at-draft / c7-upstream-universal-claim-unverified）で同じ摩擦を再生産する。案 C は案 A の構成を保ったまま、その 1 点の文書矛盾を閉じる。なお本改訂は AC の実質基準を変えず現行挙動記述の精密化に留まるため、仕様変更としてのユーザーエスカレーション事項には当たらない（c2c5-structural-addition-not-execution の構造追加にも当たらない）。",
+  "submittedAt": "2026-08-07T00:00:00Z",
+  "receivedAt": "2026-08-07T11:13:25Z"
+}

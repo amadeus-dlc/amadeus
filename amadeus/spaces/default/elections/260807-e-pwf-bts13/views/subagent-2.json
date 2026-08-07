@@ -1,0 +1,19 @@
+{
+  "electionId": "E-PWF-BTS13",
+  "voter": "subagent-2",
+  "question": "260807-projectdir-worktree-fix build-and-test ステージの §13 学習選定。diary 候補2件はいずれも既存 cid の適用実例（c4/bt-proportional-selection の適用外宣言運用、local-lcov-pre-push/c1-coverage-single-owner/c2-unconditional-ready-boundary の PR CI 正判定と無条件 READY 境界）であり、conductor 提案は「採用0件」。0件でよいかを裁定する。実在根拠は construction/build-and-test/ の7成果物と memory.md を実測確認のこと。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "両候補とも既存 cid の適用実例にすぎず、新規知識・追補に値する一般化可能な差分を含まない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "record 実測で新規面を発見した場合はこの choice を選び、留保に候補と根拠を明記する。"
+    }
+  ]
+}

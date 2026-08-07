@@ -1,6 +1,75 @@
 # コード品質評価
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決の品質債務（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 債務1 — 同一責務の2実装が非対称に進化している（構造債務）
+
+`resolveProjectDir`（`amadeus-lib.ts:226-250`）と `resolveProjectDirFromHook`（同 `:310-347`）は同じ問い（このプロセスが書くべき workspace はどこか）に答えるが、段構成が異なる。marker 段2つ（`:317` / `:329-330`）は hook 側にのみ導入された（`392a2d781` = #641、`e12259ba7` = #1482）。
+
+`cid:requirements-analysis:symmetric-pair-review`（対操作の対称性を明示観点にする）が扱う「片側だけ実装された非対称」クラスタの典型である。**bootstrap 由来バグ14件の過半が同クラスタだった**という既存の実測と同型。
+
+### 債務2 — 無音の fail-open（検証劇場の隣接形）
+
+`resolveProjectDir` に警告・例外は**1つも無い**（`sed -n '226,250p' | grep "console\|warn\|throw"` → exit=1、出力ゼロ）。返り値は常に `string` で、「確信度の低い fallback に落ちた」ことを表現しない。ケース B は**正常な返り値として本線パスを返す**。
+
+`org.md` Forbidden の検証劇場禁止は「偽の緑」を禁じるが、本件はその隣接形 — **偽の隔離**。ガードが無いのではなく、誤りが誤りとして観測されない。
+
+### 債務3 — テストの非対称（テスト債務）
+
+| テスト | 対象梯子 | ケース B |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts`（`covers:` は `:4`） | CLI 側 | **被覆なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（`:5`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts`（`:1`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | hook 側（#1048） | 被覆（hook のみ） |
+
+**ケース B を固定するテストは repo 全域で不在。** 実装の非対称がテストの非対称としてそのまま写っている — 欠陥が「テストが緑のまま」生存できる構造。
+
+**t144 test 5 の紛らわしさ**: タイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir 存在）であって workspace marker ではない**。`resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "marker" 語が実体と対応していない — 読み手を誤らせる命名債務。
+
+### 債務4 — stale comment
+
+`amadeus-lib.ts:6673` の `// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.` は実装と食い違う。`resolveProjectDir` が読むのは `CLAUDE_PROJECT_DIR`（`:231`）であり `AMADEUS_PROJECT_DIR` ではない。
+
+（Developer scan の注記: reviewer-1 が `:6530` と報告した射程外指摘は、observed では `+143` 行の下流にあたるため `:6673` に着地する。）
+
+### 債務5 — 文書と実装の逆向き指示
+
+`stage-protocol.md:511` は絶対形（`$CLAUDE_PROJECT_DIR/.claude/tools/`）を推奨するが、その形がケース B を生む。ただし同じ文中にサブシェル代替が既に明記されており、**正しい代替は正本にすでに書かれている**。文書全体の書き換えではなく、推奨の順序の是正で足りる可能性が高い。
+
+### 債務6 — allowlist と実起動形の不一致
+
+allowlist（`settings.json.example:10` / `.claude/settings.json:39`）は絶対形のみを許可するが、正本スキルの起動行は**全 31 件が相対形**であり、正本における絶対形の唯一の出現は allowlist エントリ自身である。**allowlist が許可している形を、誰も発行していない。**
+
+同一ファイル内の非対称（#1492 の既指摘）も現存: hook 起動行 14本はすべて `${CLAUDE_PROJECT_DIR:-.}` のフォールバック付きクォート形だが、`:10` の allowlist だけが素の `$CLAUDE_PROJECT_DIR`。
+
+### 債務7 — 点修正の反復（プロセス債務）
+
+| Issue | state | 修正の形 |
+|---|---|---|
+| #796 | CLOSED | `7e6a7c33e` — `fire` に `--project-dir` を配線（段1 での点回避、梯子は無変更） |
+| #1450 | CLOSED | `04efcd42c` — election の既定 pd を `resolveProjectDir` 経由へ（呼び出し側の点修正） |
+| #1287 | OPEN | enhancement、解決順の再設計（ADR 前提） |
+| #2352 | OPEN | 本 intent |
+
+**2件の先例はいずれも呼び出し側の点修正で、梯子そのものには触れていない。** 同じ根から4件目が出ていることは、点修正が根本に届いていないことの実測である。`cid:code-generation:same-root-inventory`（同根パターンの全数棚卸し）の観点で見れば、本件は「4回目に初めて棚卸しが要る」状態。
+
+### 是正の制約（品質面から）
+
+- marker 段の追加だけでは**ケース C+env が閉じない**（env 段2 が上位に残る）。
+- marker 述語には構造的盲点がある（`git ls-files .claude/tools` → **0件**、build 前 worktree で偽）。marker ベースの drift ガードは build 前 worktree を検出できない。
+- 段順の再設計は #1287 と射程が重なるため、スコープ境界の裁定が要る。
+
+### 未測定として残る点（仮説・断定不可）
+
+- #641 の時点で CLI 側が「検討されなかった」のか「検討して見送られた」のか — コミット記録は前者を示唆するが、これは**証拠の不在**であって不在の証拠ではない。
+- 実運用でケース B が発生した監査証跡は未探索（頻度未測定）。
+- clone 内 worktree の marker 成立/不成立の全数再census は、本セッションの worktree 隔離ガードにより実行不能（構造的根拠のみ上記で確定）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

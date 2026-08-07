@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-PWF-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "record を実測した結果、c1・c2 とも既存 cid の忠実な適用実例にとどまり、一般化可能な新規差分を含まない。実測: (1) memory.md:6 の c1 記載は decide-question 経路の使用申告であり、questions ファイルの Q1-Q4 全4問に auto-decision ID・basis: agent-recommendation・reviewState: unreviewed が揃い、grant intent-grant-cd4640053e8a2e0f8b0b8d9e97d10b29 の HUMAN_TURN 2026-08-07T10:46:46Z も記録されている — しかし project.md:319 の既存 c1-pcp-autonomy-grant-question-boundary は経路・記録様式・後日レビュー可能性・選挙非対象であることまで既に明文化しており、2例目が加える機構事実はない(既存本文自体が『260805-pr-convergence-plugin RA で Q1〜Q4 を decide-question で確定した初の実運用』と実例の位置づけを済ませている)。(2) memory.md:7 の c2 記載と requirements.md:65 の Out of scope 1件目は、クロスレビューの完了条件1・2 反証を成立条件(FR-1 marker 段採用で誤誘導の実害が消える)へ分解して転写したもので、project.md:314 の既存 c7-upstream-universal-claim-unverified が命じる『断定の成立条件を分解し、未実測の部分を特定したうえで受け入れ基準を検証可能な形へ置き換える』の逐語実施にあたる。転写先が受け入れ基準でなく Out of scope 節である点は適用面の違いにすぎず、規範内容の増分ではない。判定規準『既存 cid の単なる適用実例は新規ノルムに値しない』に照らし、両候補とも record(memory.md・questions・requirements.md)に残れば足りる。",
+  "submittedAt": "2026-08-07T11:01:10Z",
+  "receivedAt": "2026-08-07T11:01:10Z"
+}

@@ -1,6 +1,45 @@
 # コンポーネント棚卸し
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 患部コンポーネント
+
+| コンポーネント | 所在 | 役割 | #2352 での位置づけ |
+|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | CLI ツールの workspace root 解決（4段） | **患部本体**。marker 段が無く、env が段2で無条件に勝つ |
+| `resolveProjectDirFromHook` | 同 `:310-347` | hook の workspace root 解決（5段） | **対照実装**。marker 段2つを持つ。緩和対象ではない |
+| `hasWorkspaceMarker` | 同 `:283-286` | `amadeus/` + `<harness>/tools/` の両ディレクトリ存在判定 | marker 段の述語。build 前 worktree では偽 |
+| `findWorkspaceMarkerAncestor` | 同 `:290` 付近 | cwd から祖先方向へ marker 探索 | hook 段3 の実体 |
+| `isDir` | 同 `:266-272` | ディレクトリ限定の存在判定 | #641 レビュー是正で導入（ファイル名だけの偽 marker を排除） |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | 段1 の受け口。runtime / sensor / learnings が使用 |
+| `resolveProjectDir`（ローカル） | `packages/framework/core/hooks/amadeus-statusline.ts:31` | 名前シャドウ。内部で `resolveProjectDirFromHook` を呼ぶ（`:42`） | **lib 関数の caller ではない**。grep 棚卸しの誤カウント源 |
+
+### 設定・文書面のコンポーネント
+
+| 面 | 所在 | 内容 |
+|---|---|---|
+| allowlist（正本） | `packages/framework/harness/claude/settings.json.example:10` | `"Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)"` |
+| allowlist（セルフインストール、tracked） | `.claude/settings.json:39` | 同上 |
+| プロトコル指示 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md:511` | CWD drift warning — 絶対形を推奨、サブシェル代替も明記 |
+| `--project-dir` 使用例 | 同 `:1209-1216` | `amadeus-finding.ts create-github-issue --project-dir <workspace-root>` |
+
+### テスト面 — 非対称がテストにも写っている
+
+| テスト | `covers:` 宣言 | ケース B 被覆 |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts` | `function:harnessDir, function:resolveProjectDir, function:rulesSubdir, file:tools/amadeus-lib.ts`（`:4`） | **なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts` | `function:resolveProjectDirFromHook, file:tools/amadeus-lib.ts`（`:5`） | hook 側のみ |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts` | `hook:amadeus-mint-presence, function:resolveProjectDirFromHook, …, file:settings.json.example`（`:1`） | hook 側のみ |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | opencode / cursor の marker 段（#1048） | hook 側のみ |
+
+**t144 の落とし穴**: test 5 のタイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir の存在）であって workspace marker ではない** — `resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "CWD-marker rung" は段4を指す。t144 が pin するのは段1/2/3/4 のみであり、**ケース B（cwd=worktree marker 保有 × 本線絶対パス lib）を固定するテストは repo 全域で不在**。
+
+**t144 の前提条件**: t144 は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38` `const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools")`）。source-only 移行後 `dist/` は未追跡生成物のため、**このテストは `bun run build` 済みを前提とする**。ケース B の回帰テストを t144 に足す場合、この前提が引き継がれる。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

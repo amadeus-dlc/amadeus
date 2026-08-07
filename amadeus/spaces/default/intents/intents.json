@@ -974,5 +974,15 @@
     "dirName": "260807-failclosed-recovery-path",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
+    "slug": "projectdir-worktree-fix",
+    "dirName": "260807-projectdir-worktree-fix",
+    "scope": "self-fix",
+    "status": "complete",
+    "docsOnly": {
+      "evidence": "GATE_APPROVED requirements-analysis"
+    }
   }
 ]

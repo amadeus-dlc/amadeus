@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-PWF-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "persist は新規独立 cid でなく xrev 系 cid（c1-xrev-scan-mode / c1-xrev-single-issue）への1行追補とし、intent 固有の数値・固有名を落とした一般形（re-artifacts.md の Developer Code Scan Template は greenfield 全域スキャン向け節構成であり、xrev differential では依頼項目を主構造としテンプレの証拠規律のみ適用する）で書くこと。",
+  "rationale": "判定規準（既存 cid の単なる適用実例は persist しない）を5候補へ独立適用した。c1 は cid:reverse-engineering:c1-xrev-single-issue の適用そのもの、c3 は rescan-base-ancestry / c2-observed-mainline-commit の適用そのもので新規知識ゼロ。c2 は E-XBB-RE-S13-c2 が既に定める review..observed 区間実測の実施記録であり、memory.md:7 自身が『免除の適用ではなく区間実測による currency 確定』と書くとおり既存則への準拠である。c5 は worktree 隔離ガードの構造自体が cid:code-generation:c1-pcp-isolated-session-swarm-incompat で既出、かつ本件の適切な帰結（未実施を仮説として記録し構造的根拠で代替）は既存の事実/仮説分離規律と検証劇場 Forbidden がすでに強制しており、re-scans:206 の記録で足りる。c4 のみ実質がある: packages/framework/core/knowledge/amadeus-developer-agent/re-artifacts.md の Developer Code Scan Template を実読したところ節構成は Packages Found / Build System / APIs Discovered / Frameworks & Libraries / Test Coverage / Code Quality Indicators / Technical Debt Signals であり greenfield 全域スキャン専用で、単一 Issue の xrev differential とは構造的に不適合。xrev scan mode は c1-xrev-single-issue で単発 Issue へ一般化済みのため、この不適合は今後の xrev RE で毎回再発する。境界を明文化しないと (a) 空の greenfield 節を形だけ埋める検証劇場か (b) 同じ逸脱申告の反復のどちらかを構造的に招く。",
+  "submittedAt": "2026-08-07T11:20:00Z",
+  "receivedAt": "2026-08-07T10:17:18Z"
+}

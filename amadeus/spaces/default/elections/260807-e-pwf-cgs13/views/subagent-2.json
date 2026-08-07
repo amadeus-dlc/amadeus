@@ -1,0 +1,31 @@
+{
+  "electionId": "E-PWF-CGS13",
+  "voter": "subagent-2",
+  "question": "260807-projectdir-worktree-fix code-generation ステージの §13 学習候補3件の採否を裁定する。c1: 2度の実装前停止→ソロ選挙裁定（E-PWF-CGDEV: in-process では正本配置により rung 3 到達不能で逐語 Red 不能 / E-PWF-CGDEV2: marker-above-env が既存テストの env 隔離 seam を破り実 record 汚染 → env の下へ再裁定 = hook パリティ。当初前提「hook は marker が env に勝つ」は誤読で env より上は payload cwd のみ）。c2: 汚染インシデントの前進修復手順（team.md HEAD 復元・project.md 汚染行のみ除去・state フィールド復旧・audit 無改変・台帳/codekb 無傷確認）。c3: 閉包実証手法（汚染クラステスト1本を再実行し audit 行数・memory 層 md5 の不変を実測 = 汚染ベクタ消滅の決定的確認）。実在根拠は record（construction/code-generation/memory.md、elections/260807-e-pwf-cgdev*/record.md、code-summary.md）を実測確認のこと。判定規準: 一般化可能な新規知識（既存 cid の未被覆面）だけを persist する。候補の一般形: c1 = 「resolver/path 解決系の変更では、env 変数が『テスト隔離の seam』として機能している既存契約を変更前に grep 棚卸しする」+「hook/CLI の段順パリティ主張は両梯子の実装 verbatim で確定してから裁定に使う」。c2/c3 = テスト汚染インシデントの修復・閉包の定型。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "c1〜c3 すべて採用",
+      "description": "3件それぞれを既存 cid への追補として persist する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "c1 と c3 を採用",
+      "description": "c1 に加え、c3 の閉包実証手法（汚染クラステスト再実行 + 不変量実測）を fix-review-replays-origin-repro 系への追補として persist。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "採用0件",
+      "description": "3候補とも intent 固有の経緯記録であり、既存 cid（ruling-premise-closure-verification / fix-diff-independent-reverify 等）の適用実例にすぎない。"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "c1 のみ採用（2教訓を1追補で）",
+      "description": "c1 の2教訓（env=テスト隔離 seam の事前棚卸し / 段順パリティ主張の verbatim 確定）を、既存 cid（mechanism-cite-verify-at-draft 系 or symmetric-pair-review 系）への追補として persist。c2/c3 はインシデント固有の手順記録で record に残れば足りる。"
+    }
+  ]
+}
