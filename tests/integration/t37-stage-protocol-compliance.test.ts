@@ -165,8 +165,8 @@ describe("every agent has a knowledge directory", () => {
     .map((f) => basename(f, ".md"))
     .sort();
 
-  test("there are 14 agent files [structure guard]", () => {
-    expect(agents.length).toBe(14);
+  test("there are 15 agent files [structure guard]", () => {
+    expect(agents.length).toBe(15);
   });
 
   for (const agent of agents) {

@@ -20,7 +20,7 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
     ├── amadeus/                                          # Orchestrator skill
     └── amadeus-<stage-or-scope>/                         # Stage runner / scope runner skill
 .claude/                                                  # Claude Code harness engine (generated, overwritten on upgrade)
-├── agents/                                               # 14 agent persona definitions (.md)
+├── agents/                                               # 15 agent persona definitions (.md)
 │   └── amadeus-<role>-agent.md
 ├── amadeus-common/                                       # Harness-neutral shared prompts, protocols, and stage definitions
 │   ├── conductor.md
@@ -87,7 +87,7 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 ├── settings.local.json.example
 └── VERSION
 .codex/                                                   # Codex CLI engine (generated; local active hooks are preserved on upgrade)
-├── agents/                                               # Codex subagent definitions (14 roles, .md + .toml)
+├── agents/                                               # Codex subagent definitions (15 roles, .md + .toml)
 │   ├── amadeus-<role>-agent.md
 │   └── amadeus-<role>-agent.toml
 ├── amadeus-common/                                       # Same shared prompts and stage definitions as .claude/amadeus-common

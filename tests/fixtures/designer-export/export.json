@@ -3916,6 +3916,11 @@
       ]
     },
     {
+      "slug": "amadeus-builder-agent",
+      "display_name": "Builder Agent",
+      "examples": []
+    },
+    {
       "slug": "amadeus-compliance-agent",
       "display_name": "Compliance Agent",
       "examples": [
