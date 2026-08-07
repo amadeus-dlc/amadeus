@@ -4122,10 +4122,15 @@ export function normalizeAgentType(raw: string | null | undefined): string {
 // whatever followed the first line into the audit row.
 export const SUBAGENT_PURPOSE_MAX_LENGTH = 200;
 
-// The tool whose invocation opens a subagent on the harnesses that have no
-// dedicated start event (Claude Code): the start seam there is PreToolUse, and
-// PreToolUse fires for EVERY tool.
-export const SUBAGENT_DISPATCH_TOOL = "Task";
+// The tool names whose invocation opens a subagent on the harnesses that have
+// no dedicated start event (Claude Code): the start seam there is PreToolUse,
+// and PreToolUse fires for EVERY tool.
+//
+// Two spellings, one dispatch: the settings matcher is written against "Task",
+// but the payload Claude Code hands the hook carries the INTERNAL name "Agent"
+// (#2303). Both must resolve or the dispatch is dropped on whichever spelling
+// the running harness happens to send.
+export const SUBAGENT_DISPATCH_TOOLS = ["Task", "Agent"] as const;
 
 // C0 control characters, tab excepted: the audit record is line-oriented, and a
 // stray control byte is invisible in review while corrupting the record frame.
@@ -4142,15 +4147,20 @@ export function subagentPurposeLine(prompt: unknown): string {
 // The SUBAGENT_STARTED field set, derived from whichever start seam fired.
 // Returns null when the payload is not a subagent dispatch at all, which is the
 // common case on Claude Code: its start seam is PreToolUse, so this runs on
-// every tool call and must decline all but the dispatch tool. The settings
+// every tool call and must decline all but the dispatch tools. The settings
 // matcher is an UNANCHORED regex, so "Task" also matches TaskUpdate/TaskCreate
 // — without this check every todo-list write would append a phantom subagent.
 //
-// Two payload shapes converge here: the tool envelope (PreToolUse{Task}, which
-// carries subagent_type/prompt inside tool_input) and a dedicated start event
-// (kimi's SubagentStart, which carries them at the top level and has no
-// tool_name at all). Absence of tool_name therefore means "a seam that only
-// fires for subagents", not "unknown tool".
+// The matcher spelling and the payload spelling differ, which reads as a
+// contradiction until you know it: the shipped matcher `^Task$` is what fires
+// this hook, yet the payload it delivers names the tool `Agent` (#2303) — so
+// the guard admits both names rather than the matcher's one.
+//
+// Two payload shapes converge here: the tool envelope (PreToolUse on a dispatch
+// tool, which carries subagent_type/prompt inside tool_input) and a dedicated
+// start event (kimi's SubagentStart, which carries them at the top level and
+// has no tool_name at all). Absence of tool_name therefore means "a seam that
+// only fires for subagents", not "unknown tool".
 //
 // When the caller supplies `agentsDir` (the harness agents dir under the
 // resolved project dir), the field set also gains the #2279 attribution: the
@@ -4158,7 +4168,7 @@ export function subagentPurposeLine(prompt: unknown): string {
 // (U2, ADR-3). The whole enrichment is advisory — any failure inside it drops
 // the extra fields and leaves the base three untouched (NFR-3).
 export function subagentStartFields(payload: ClaudeCodeHookInput, agentsDir?: string): Record<string, string> | null {
-  if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+  if (payload.tool_name !== undefined && !(SUBAGENT_DISPATCH_TOOLS as readonly string[]).includes(payload.tool_name)) return null;
   const toolInput = payload.tool_input ?? {};
   const rawType = payload.agent_type ?? toolInput.subagent_type;
   const fields: Record<string, string> = {

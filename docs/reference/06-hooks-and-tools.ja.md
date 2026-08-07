@@ -41,7 +41,7 @@
 | `amadeus-sync-statusline.ts` | PostToolUse | プロジェクト全体 (settings.json) | `TaskUpdate` | ステージタスクのアクティブ化時に状態ファイルを自動同期する |
 | `amadeus-runtime-compile.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Bash` | 遷移クラスの監査発行時に `runtime-graph.json` を再コンパイルする |
 | `amadeus-validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
-| `amadeus-log-subagent-start.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | サブエージェントのディスパッチを記録する(`SUBAGENT_STARTED`)。Claude Code にはサブエージェント開始イベントがないため、シームはディスパッチツールの PreToolUse となる。マッチャーはアンカー付きで、かつフックがツール名を再チェックする — アンカーなしの `Task` は `TaskUpdate` にもマッチするため |
+| `amadeus-log-subagent-start.ts` | PreToolUse | プロジェクト全体 (settings.json) | `^Task$` | サブエージェントのディスパッチを記録する(`SUBAGENT_STARTED`)。Claude Code にはサブエージェント開始イベントがないため、シームはディスパッチツールの PreToolUse となる。マッチャーはアンカー付きで、かつフックがツール名を再チェックする(ペイロードが実際に運ぶ内部名 `Agent` と `Task` の両方を受理する、#2303) — アンカーなしの `Task` は `TaskUpdate` にもマッチするため |
 | `amadeus-log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
 | `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 質問タグのケースはIntent autonomy `full`と人間コマンド由来の`semi`で、会話的ケースは`full`だけで抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
 | `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
@@ -210,7 +210,7 @@ sequenceDiagram
 
 1. **プロジェクトディレクトリ解決:** amadeus-log-subagent.ts と同じマルチフォールバックパターン。
 2. **ヘルスハートビート:** `.amadeus-hooks-health/log-subagent-start.last` に書き込む。
-3. **ディスパッチツールガード:** ペイロードがサブエージェントのディスパッチでない限り静かに終了する。PreToolUse は*すべての*ツールで発火するため、フックはマッチャーを信頼せずツール名を再チェックする。出荷されるマッチャーがアンカー付き(`^Task$`)なのは、アンカーなしの `Task` が `TaskUpdate` にもマッチするからであり、フック内のガードはその二段目の防御 — ワークスペースがマッチャーを編集した場合に効くのはこちらである。
+3. **ディスパッチツールガード:** ペイロードがサブエージェントのディスパッチでない限り静かに終了する。PreToolUse は*すべての*ツールで発火するため、フックはマッチャーを信頼せずツール名を再チェックする。出荷されるマッチャーがアンカー付き(`^Task$`)なのは、アンカーなしの `Task` が `TaskUpdate` にもマッチするからであり、フック内のガードはその二段目の防御 — ワークスペースがマッチャーを編集した場合に効くのはこちらである。ガードは `Task` と `Agent` の**両方**を受理する: マッチャーは `Task` に対して書かれているが、Claude Code が渡すペイロードは内部名 `Agent` でツールを名指しする(#2303)ため、マッチャー側の綴りだけを信頼するガードは実際のディスパッチをすべて取りこぼす。
 4. **フィールド組み立て:** `Agent Type`(空の場合は `"unknown"` に正規化)、任意の `Agent ID`、任意の `Purpose` — ディスパッチプロンプトの最初の行で、エスケープを正規化し200文字に切り詰める。これにより無制限のプロンプトがその残りを監査行へ持ち込めない。
 5. **完了側と同じ3つのゲート:** TTY、アクティブな監査シャード、そして既に終端していないワークフロー — 完了が破棄される場所に開始が記録されてはならない。
 

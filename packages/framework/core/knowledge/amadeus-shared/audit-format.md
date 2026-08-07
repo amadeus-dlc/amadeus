@@ -173,7 +173,7 @@ These event shapes are retained only so replay and migration projection code can
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `SUBAGENT_STARTED` | Subagent is dispatched | Agent Type | Agent ID, Purpose | `hooks/amadeus-log-subagent-start.ts` (PreToolUse{Task} / SubagentStart) |
+| `SUBAGENT_STARTED` | Subagent is dispatched | Agent Type | Agent ID, Purpose | `hooks/amadeus-log-subagent-start.ts` (PreToolUse on a dispatch tool / SubagentStart) |
 | `SUBAGENT_COMPLETED` | Subagent task finishes | Agent Type | Agent ID, Message | `hooks/amadeus-log-subagent.ts` (SubagentStop) |
 
 Harnesses do not agree on when a subagent BEGINS, so `SUBAGENT_STARTED` is
