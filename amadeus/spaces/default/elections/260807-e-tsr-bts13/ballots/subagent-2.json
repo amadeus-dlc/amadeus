@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-TSR-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c4 は独立 cid を立てず、既存の帰属則ファミリ(cid:build-and-test:bt-20260730-2 および cid:build-and-test:c4-260805-subagent-type-guard)への追補として persist する。文言は新規面2点に限定する — (i) ベース比較の『同一条件』には per-user の gitignored ambient 状態(active-intent cursor、runtime-graph.json 等)も含め、ベース側へ注入して再現すること (ii) 注入を欠くとベースが green になり、既存則が想定する『環境起因への誤分類』とは逆向きに『自変更由来への誤帰属』が起きること。『同一条件の成立が比較の前提』という一般則自体は c4-260805 が既述のため再述しない。",
+  "rationale": "候補全文(surface 出力)と diary を実読し、5件が diary の全エントリと1:1で対応することを確認した。c4 の実測は build-test-results.md:41-55 で裏取り — 分離 worktree(merge-base 5f2ad9195)で 184 pass/0 fail、本ツリー 181 pass/3 fail、ベースへ active-intent cursor(260807-failclosed-recovery-path)注入で 182 pass/2 fail と t17/t66 の同型再現。残る t-runtime-dispatch-seam は tests/unit/t-runtime-dispatch-seam.test.ts:109-110 のコメント verbatim『summary resolves its handler by own-property, then exits 1 when no runtime-graph.json is present』が gitignored ファイルの実在依存を明示しており、原文どおり実在を確認した。既存2 cid の本文(project.md:400 の bt-20260730-2、project.md:381 の c4-260805-subagent-type-guard)を実読したところ、後者は node_modules/dist/bun版/command/options/環境変数までを同一条件として列挙するが、per-user の gitignored ambient 状態(cursor・runtime-graph.json)は列挙になく、記録された実例も『base/HEAD 同一失敗集合』方向のみで、ベースが green になる方向の誤帰属は未被覆と確認した。不採用4件も既存 cid の再述または実適用記録であることを本文照合で確認 — c1=project.md:169(fix/self-refactor スコープで build-and-test が construction 最終である点まで既述)、c2=team.md:169(coverage は CI が正)、c3=project.md:19(同一 intent の RA で既 persist 済み・Issue #2410)、c5=project.md:355(逐語一致)。よって推奨どおり c4 のみ採用に賛成する。",
+  "submittedAt": "2026-08-07T15:50:08Z",
+  "receivedAt": "2026-08-07T15:50:22Z"
+}

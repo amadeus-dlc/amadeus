@@ -1282,5 +1282,23 @@
     "dirName": "260807-e-ssp-bts13",
     "createdAt": "2026-08-07T15:36:59Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-TSR-RA1",
+    "dirName": "260807-e-tsr-ra1",
+    "createdAt": "2026-08-07T10:13:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-TSR-CGS13",
+    "dirName": "260807-e-tsr-cgs13",
+    "createdAt": "2026-08-07T15:18:25Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-TSR-BTS13",
+    "dirName": "260807-e-tsr-bts13",
+    "createdAt": "2026-08-07T15:48:43Z",
+    "status": "recorded"
   }
 ]

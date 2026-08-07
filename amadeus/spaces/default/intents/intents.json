@@ -998,5 +998,12 @@
     "dirName": "260807-subagent-start-pair",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fdb7a-041e-7afe-aaa3-d74c8871365f",
+    "slug": "tla-specs-relocation",
+    "dirName": "260807-tla-specs-relocation",
+    "scope": "self-refactor",
+    "status": "complete"
   }
 ]

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TSR-CGS13",
+  "voter": "subagent-1",
+  "question": "260807-tla-specs-relocation / code-generation(unit tla-specs-relocation)の §13 学習選定。surface 候補7件(c1〜c7)に対する conductor 推奨は『c2/c4/c6 を採用、c1/c3/c5/c7 を不採用』。候補全文は `bun .claude/tools/amadeus-learnings.ts surface --slug code-generation` の出力、および diary `amadeus/spaces/default/intents/260807-tla-specs-relocation/construction/code-generation/memory.md` を正本として実読すること。採用推奨の理由: c2=ステージ produces に外部 CLI が書く機械生成物が含まれる場合、ゲート前にその生成条件(PR 作成→収束)を満たす段序依存が生じる、という一般化可能な段序知識。c4=`join(root,\"specs\",\"tla\")` のセグメント結合形はリテラル grep をすり抜けるため、path-rewrite の消費者棚卸し(既存 consumer-inventory ファミリ)に構造的な盲点を残す。c6=単一 helper が2つの異なる意味(spec root / project root)で流用されている場合、返り値変更前に呼び出し元の意味論を実測して分離する。不採用推奨の理由: c1=既決の autonomy/常任グラント系ノルムの再述で新規性なし。c3=identity 再ピンは本 intent 固有の実測結果。c5=validator pin の形は本 intent 固有の設計判断。c7=2 wave 分割は一般化価値の乏しい作業順。各自、候補の実在根拠(diary・成果物・実コード file:line)を独立に実測し、GoA(1-8)と留保を付けて投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "推奨どおり — c2/c4/c6 を採用、c1/c3/c5/c7 を不採用",
+      "description": "conductor 推奨の採用集合をそのまま確定する。persist 先レイヤ・追補統合先(既存 cid への追補か新規 cid か)は留保として記す。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "候補列挙または推奨理由に誤り・欠落がある",
+      "description": "候補の実在根拠が確認できない、推奨理由が実コード・成果物と矛盾する、または diary に未収載の学習が存在する場合。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "採用集合を修正 — 一部候補の採否を入れ替える",
+      "description": "採用/不採用のいずれかを変更すべきと判断する場合。どの候補をどちらへ動かすか、その実測根拠を rationale に明記する。"
+    }
+  ]
+}

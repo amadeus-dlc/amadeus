@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TSR-BTS13",
+  "voter": "subagent-2",
+  "question": "260807-tla-specs-relocation / build-and-test の §13 学習選定。surface 候補5件(c1〜c5)に対する conductor 推奨は『c4 のみ採用、c1/c2/c3/c5 を不採用』。候補全文は `bun .claude/tools/amadeus-learnings.ts surface --slug build-and-test` の出力、および diary `amadeus/spaces/default/intents/260807-tla-specs-relocation/construction/build-and-test/memory.md` を正本として実読すること。採用推奨(c4)の理由: 既存の帰属則(cid:build-and-test:bt-20260730-2 = 未改変ベースでの同一失敗集合の再現後にのみ環境起因と分類する / cid:build-and-test:c4-260805-subagent-type-guard = 分離 worktree で失敗テスト名集合を diff する)は『ベースで同じ検査を走らせる』までを定めるが、失敗要因が ambient 状態(進行中の active intent の実在)にある場合、ベースツリーには per-user の gitignored 状態が無いため素の比較ではベースが green になり、逆に自変更由来と誤帰属する。本 intent で実測: ベース(cursor なし)3ファイル 184 pass / 0 fail、本ツリー 181 pass / 3 fail、ベースに active-intent cursor を注入すると 182 pass / 2 fail で同型再現、残る1件はテスト本文コメントが runtime-graph.json の実在依存を明示。よって『ベース比較では ambient 条件も再現する』という追補面が未被覆である。不採用推奨の理由: c1=cid:approval-handoff:phase-check-before-final-approve の再述、c2=cid:code-generation:local-lcov-pre-push の再述、c3=cid:requirements-analysis:java-home-mise-shim-override の実適用記録、c5=cid:build-and-test:c4 の実適用記録。各自、候補の実在根拠(diary・build-test-results.md・既存 cid の本文)を独立に実測し、GoA(1-8)と留保を付けて投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "候補列挙または推奨理由に誤り・欠落がある",
+      "description": "候補の実在根拠が確認できない、推奨理由が既存 cid 本文や成果物と矛盾する、または diary に未収載の学習が存在する場合。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "推奨どおり — c4 のみ採用、c1/c2/c3/c5 を不採用",
+      "description": "c4 を既存の帰属則ファミリへの追補として persist する。追補先(bt-20260730-2 か c4-260805-subagent-type-guard か両方参照か)と文言の限定は留保として記す。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "採用集合を修正 — 採否を入れ替える",
+      "description": "c4 も不採用(0件)とすべき、または c1/c2/c3/c5 のいずれかを採用すべきと判断する場合。どの候補をどちらへ動かすか、既存 cid の本文と突き合わせた実測根拠を rationale に明記する。"
+    }
+  ]
+}
