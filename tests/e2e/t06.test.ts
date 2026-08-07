@@ -40,6 +40,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -174,9 +175,8 @@ function boltSlugRows(dir: string): string[] {
   }
   const out: string[] = [];
   for (const n of names) {
-    for (const line of readFileSync(join(auditDir, n), "utf-8").split("\n")) {
-      if (line.trim().length === 0) continue;
-      const slug = (JSON.parse(line) as { fields?: Record<string, string> }).fields?.["Bolt slug"];
+    for (const record of auditRowsFrom(readFileSync(join(auditDir, n), "utf-8"))) {
+      const slug = record.fields?.["Bolt slug"];
       if (slug !== undefined) out.push(slug);
     }
   }

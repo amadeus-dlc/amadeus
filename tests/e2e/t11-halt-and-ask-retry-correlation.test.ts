@@ -58,6 +58,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -107,11 +108,7 @@ const auditText = (p: string): string => {
 
 /** Count ledger records emitting `event`. */
 function eventCount(p: string, event: string): number {
-  return auditText(p)
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === event).length;
+  return countAuditEvent(auditText(p), event);
 }
 
 /** Parse the `path` field out of `amadeus-worktree info`'s JSON stdout. */
@@ -202,11 +199,9 @@ describe("t11 halt-and-ask retry correlation (migrated from t11-halt-and-ask-ret
     // doctor/AUQ correlation. STRONGER — match the exact field line, not a
     // loose `.*r$` regex that could also match a `Worktree path` ending in
     // `bolt-r`.
-    const slugLines = auditText(fixture)
-      .split("\n")
-      .filter((l) => l.trim().length > 0)
-      .map((l) => JSON.parse(l) as { fields?: Record<string, string> })
-      .filter((r) => r.fields?.["Bolt slug"] === SLUG).length;
+    const slugLines = auditRowsFrom(auditText(fixture)).filter(
+      (r) => r.fields?.["Bolt slug"] === SLUG,
+    ).length;
     expect(slugLines).toBe(3);
   });
 });

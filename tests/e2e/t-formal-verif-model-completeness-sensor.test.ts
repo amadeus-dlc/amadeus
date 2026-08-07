@@ -11,6 +11,7 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -207,30 +208,9 @@ function audit(root: string): string {
     .join("\n");
 }
 
-interface AuditRecord {
-  event: string | null;
-  heading: string;
-  fields?: Record<string, string>;
-}
-
-interface CanonicalAuditRecord {
-  readonly event?: string;
-  readonly heading?: string;
-  readonly fields?: Record<string, string>;
-  readonly attributes?: Record<string, string>;
-}
-
 /** Parse the merged JSONL shards into records (blank lines skipped). */
-function auditRecords(root: string): AuditRecord[] {
-  return audit(root)
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as CanonicalAuditRecord)
-    .map((record) => ({
-      event: record.event ?? record.attributes?.Event ?? null,
-      heading: record.heading ?? "",
-      fields: record.fields ?? record.attributes,
-    }));
+function auditRecords(root: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(audit(root));
 }
 
 afterEach(() => {

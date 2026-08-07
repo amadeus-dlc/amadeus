@@ -21,6 +21,11 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import {
+  type NormalizedAuditRecord,
+  auditRowsFrom,
+  countAuditEvent,
+} from "../harness/audit-records.ts";
 import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -66,17 +71,13 @@ function readAudit(proj: string): string {
 }
 
 /** The JSONL audit records across the merged trail (blank lines skipped). */
-function auditRecords(proj: string): Array<Record<string, unknown>> {
-  return readAudit(proj)
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+function auditRecords(proj: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(readAudit(proj));
 }
 
 /** audit_event_count: count records whose `event` is <type> across the trail. */
 function auditEventCount(proj: string, ev: string): number {
-  return auditRecords(proj).filter((r) => r.event === ev).length;
+  return countAuditEvent(readAudit(proj), ev);
 }
 
 /** audit_field: value of <key> from the FIRST audit record whose event matches <ev>. */
