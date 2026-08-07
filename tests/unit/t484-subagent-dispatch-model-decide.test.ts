@@ -109,6 +109,49 @@ describe("t484 decideDispatchModel (#2438)", () => {
     },
   );
 
+  // ---- configurable enforced set (subagent.dispatch.enforced-models) --------
+
+  test("a configured set replaces the default: haiku allowed, sonnet denied", () => {
+    const enforcedModels = ["haiku"];
+    expect(
+      decideDispatchModel({
+        typeVerdict: "builtin",
+        personaPin: undefined,
+        requestedModel: "haiku",
+        enforcedModels,
+      }).kind,
+    ).toBe("allow");
+    const denied = decideDispatchModel({
+      typeVerdict: "builtin",
+      personaPin: undefined,
+      requestedModel: "sonnet",
+      enforcedModels,
+    });
+    expect(denied.kind).toBe("deny");
+    if (denied.kind === "deny") expect(denied.reason).toContain("haiku");
+  });
+
+  test("full model ids follow the configured aliases", () => {
+    expect(
+      decideDispatchModel({
+        typeVerdict: "builtin",
+        personaPin: undefined,
+        requestedModel: "claude-haiku-4-5-20251001",
+        enforcedModels: ["haiku"],
+      }).kind,
+    ).toBe("allow");
+  });
+
+  test("a persona pin is judged against the configured set too", () => {
+    const decision = decideDispatchModel({
+      typeVerdict: "persona",
+      personaPin: "sonnet",
+      requestedModel: undefined,
+      enforcedModels: ["opus"],
+    });
+    expect(decision.kind).toBe("deny");
+  });
+
   test("a builtin's stray persona pin does not grant an allow", () => {
     // A pin is only attributable to a persona verdict; passing one alongside a
     // builtin verdict must not open the gate.

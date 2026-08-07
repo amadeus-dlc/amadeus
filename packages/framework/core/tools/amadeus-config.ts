@@ -61,7 +61,8 @@ export type AmadeusConfigKey =
   | "solo-election.trigger.mode"
   | "finding.github.issue.creation.mode"
   | "swarm.unit.concurrency.limit"
-  | "plugin.activation.names";
+  | "plugin.activation.names"
+  | "subagent.dispatch.enforced-models";
 
 export type SoloElectionTriggerMode = "manual" | "auto";
 
@@ -85,6 +86,9 @@ export type AmadeusConfig = Readonly<{
   }>;
   plugin: Readonly<{
     activation: Readonly<{ names: readonly string[] }>;
+  }>;
+  subagent: Readonly<{
+    dispatch: Readonly<{ enforcedModels: readonly string[] }>;
   }>;
 }>;
 
@@ -421,7 +425,8 @@ export type AmadeusConfigRegistryEntry = Readonly<{
   merge: "replace";
   defaultValue: ConfigLeafValue;
   parse: (value: unknown) => LeafParseOutcome;
-  legacy: Readonly<{
+  // Absent for keys born structured: they never had a flat legacy spelling.
+  legacy?: Readonly<{
     key: string;
     valueConversion: string;
   }>;
@@ -465,6 +470,24 @@ function parsePluginNames(value: unknown): LeafParseOutcome {
         expected: "unique array of valid plugin names",
       }
     : { ok: true, value: parsed };
+}
+
+// #2438: the models a subagent dispatch may run on. Malformed sets are
+// rejected rather than defaulted — an empty set would deny every dispatch and
+// a duplicate or blank entry is a typo, not a model.
+function parseEnforcedModels(value: unknown): LeafParseOutcome {
+  const expected = "non-empty array of unique, non-blank model names";
+  if (!Array.isArray(value) || value.length === 0) {
+    return { ok: false, actualType: valueKind(value), expected };
+  }
+  const models: string[] = [];
+  for (const candidate of value) {
+    if (typeof candidate !== "string") return { ok: false, actualType: valueKind(candidate), expected };
+    const model = candidate.trim();
+    if (model === "" || models.includes(model)) return { ok: false, actualType: "string", expected };
+    models.push(model);
+  }
+  return { ok: true, value: models };
 }
 
 const ALL_LAYERS: readonly ConfigLayer[] = ["project", "space", "intent"];
@@ -527,13 +550,22 @@ export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
     parse: parsePluginNames,
     legacy: { key: "plugins", valueConversion: "unchanged" },
   },
+  {
+    path: "subagent.dispatch.enforced-models",
+    domain: "subagent",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: ["opus", "sonnet"],
+    parse: parseEnforcedModels,
+  },
 ];
 
 const LEGACY_KEY_REPLACEMENTS = new Map(
-  AMADEUS_CONFIG_REGISTRY.map((entry) => [
-    entry.legacy.key,
-    { path: entry.path, valueConversion: entry.legacy.valueConversion },
-  ]),
+  AMADEUS_CONFIG_REGISTRY.flatMap((entry) =>
+    entry.legacy === undefined
+      ? []
+      : [[entry.legacy.key, { path: entry.path, valueConversion: entry.legacy.valueConversion }] as const],
+  ),
 );
 
 type LayerIssue = Readonly<{
@@ -704,6 +736,11 @@ function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>):
     plugin: {
       activation: {
         names: value("plugin.activation.names") as readonly string[],
+      },
+    },
+    subagent: {
+      dispatch: {
+        enforcedModels: value("subagent.dispatch.enforced-models") as readonly string[],
       },
     },
   };

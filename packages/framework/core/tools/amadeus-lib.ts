@@ -4238,7 +4238,11 @@ function enrichSubagentAttribution(
 // subagent dispatch at all. Unlike subagentStartFields, an ABSENT tool_name
 // declines: this guard exists for the PreToolUse seam only, and a dedicated
 // start event (kimi's SubagentStart) must never be judged by it.
-export function evaluateDispatchGuard(payload: ClaudeCodeHookInput, agentsDir: string): DispatchModelDecision | null {
+export function evaluateDispatchGuard(
+  payload: ClaudeCodeHookInput,
+  agentsDir: string,
+  enforcedModels?: readonly string[],
+): DispatchModelDecision | null {
   if (payload.tool_name === undefined) return null;
   if (!(SUBAGENT_DISPATCH_TOOLS as readonly string[]).includes(payload.tool_name)) return null;
   const toolInput = payload.tool_input ?? {};
@@ -4252,6 +4256,7 @@ export function evaluateDispatchGuard(payload: ClaudeCodeHookInput, agentsDir: s
     typeVerdict: verdict,
     personaPin,
     requestedModel: typeof toolInput.model === "string" ? toolInput.model : undefined,
+    enforcedModels,
   });
 }
 
