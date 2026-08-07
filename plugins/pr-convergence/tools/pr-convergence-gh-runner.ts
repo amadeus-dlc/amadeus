@@ -247,31 +247,33 @@ export async function fetchRawPrState(
   if (typeof mergeable !== "string" || typeof mergeStateStatus !== "string") {
     return { ok: false, error: malformedResponse(out.value) };
   }
-  // Lifecycle fields (#2401), raw and unparsed like the two above. By ruling
-  // E-MPC-CGBLK each is included only when the response mentions it: a null in
-  // the response stays null (a fact — no merge instant), while a field the
-  // response never carried stays absent (no fabricated default).
-  const value: {
-    mergeable: string;
-    mergeStateStatus: string;
-    state?: string;
-    mergedAt?: string | null;
-    mergeCommitOid?: string | null;
-    checkRollupState?: string | null;
-  } = { mergeable, mergeStateStatus };
-  if (typeof pullRequest.state === "string") value.state = pullRequest.state;
+  return { ok: true, value: { mergeable, mergeStateStatus, ...lifecycleFields(pullRequest) } };
+}
+
+// Lifecycle fields (#2401), raw and unparsed like mergeable/mergeStateStatus.
+// By ruling E-MPC-CGBLK each is included only when the response mentions it: a
+// null in the response stays null (a fact — no merge instant), while a field
+// the response never carried stays absent (no fabricated default).
+function lifecycleFields(pullRequest: Record<string, unknown>): {
+  state?: string;
+  mergedAt?: string | null;
+  mergeCommitOid?: string | null;
+  checkRollupState?: string | null;
+} {
+  const fields: ReturnType<typeof lifecycleFields> = {};
+  if (typeof pullRequest.state === "string") fields.state = pullRequest.state;
   if ("mergedAt" in pullRequest) {
-    value.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;
+    fields.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;
   }
   if ("mergeCommit" in pullRequest) {
     const mergeCommit = pullRequest.mergeCommit;
-    value.mergeCommitOid =
+    fields.mergeCommitOid =
       isRecord(mergeCommit) && typeof mergeCommit.oid === "string" ? mergeCommit.oid : null;
     const rollup = isRecord(mergeCommit) ? mergeCommit.statusCheckRollup : null;
-    value.checkRollupState =
+    fields.checkRollupState =
       isRecord(rollup) && typeof rollup.state === "string" ? rollup.state : null;
   }
-  return { ok: true, value };
+  return fields;
 }
 
 /**

@@ -509,6 +509,44 @@ async function evaluate(options: CliOptions, seams: CliSeams): Promise<Evaluatio
   };
 }
 
+// The report verb's whole outcome, split out of runCli so the dispatcher stays
+// under the complexity ceiling. A merged pull request gets its factual record
+// (#2401): no human turn is read and no decision is emitted — landing is a
+// merge that already happened, not an approval.
+function reportOutcome(options: CliOptions, seams: CliSeams, evaluation: Evaluation): CliOutcome {
+  if (evaluation.kind === "landed") {
+    const facts = evaluation.facts;
+    const path = writeReport(options, {
+      kind: "landed",
+      prRef: refValue(options.ref),
+      mergedAt: facts.mergedAt,
+      mergeCommitOid: facts.mergeCommitOid,
+      checkRollupState: facts.checkRollupState,
+      generatedAt: seams.now(),
+    });
+    return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+  }
+  const { verdict, summary } = evaluation;
+  if (!verdict.converged) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr:
+        `not converged — no report written. replied-unresolved=${verdict.violating.repliedUnresolved} ` +
+        `ignored=${verdict.violating.ignored} mergeState=${verdict.mergeState} ` +
+        `mergeable=${verdict.mergeableResolution}\n`,
+    };
+  }
+  const path = writeReport(options, {
+    kind: "converged",
+    generatedAt: seams.now(),
+    prRef: refValue(options.ref),
+    verdict: evaluation.core,
+    ledgerSummary: summary,
+  });
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+}
+
 function writeReport(options: CliOptions, report: ConvergenceReport): string {
   const path = reportPathFor(options.record, options.unit);
   mkdirSync(join(options.record, "construction", options.unit, "code-generation"), {
@@ -567,41 +605,7 @@ export async function runCli(argv: readonly string[], seams: CliSeams): Promise<
     return { exitCode: settled ? 0 : 1, stdout: payload, stderr: "" };
   }
 
-  if (options.verb === "report") {
-    // A merged pull request gets its factual record (#2401): no human turn is
-    // read and no decision is emitted — landing is a merge that already
-    // happened, not an approval.
-    if (evaluation.value.kind === "landed") {
-      const facts = evaluation.value.facts;
-      const path = writeReport(options, {
-        kind: "landed",
-        prRef: refValue(options.ref),
-        mergedAt: facts.mergedAt,
-        mergeCommitOid: facts.mergeCommitOid,
-        checkRollupState: facts.checkRollupState,
-        generatedAt: seams.now(),
-      });
-      return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
-    }
-    if (!verdict.converged) {
-      return {
-        exitCode: 1,
-        stdout: "",
-        stderr:
-          `not converged — no report written. replied-unresolved=${verdict.violating.repliedUnresolved} ` +
-          `ignored=${verdict.violating.ignored} mergeState=${verdict.mergeState} ` +
-          `mergeable=${verdict.mergeableResolution}\n`,
-      };
-    }
-    const path = writeReport(options, {
-      kind: "converged",
-      generatedAt: seams.now(),
-      prRef: refValue(options.ref),
-      verdict: evaluation.value.core,
-      ledgerSummary: summary,
-    });
-    return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
-  }
+  if (options.verb === "report") return reportOutcome(options, seams, evaluation.value);
 
   // override
   const humanTurn = latestHumanTurn(options.record);
