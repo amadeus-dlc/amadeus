@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) c1 — unit-of-work-dependency.md の YAML edge block は入れ子形(- name: landed-report / kind: service / depends_on: [])で c2-edgeblock-nested-kind-required の正書式どおり、runtime-graph.json の bolt_dag は非 null({units:[landed-report(kind:service)], batches:[[landed-report]]})で recompile-before-construction の履行を確認。単一 Unit 編成は 1 Issue = 1 Unit(cid:units-generation:c1)の適用。(2) c2 — audit シャード seq 199 で story-map の required-sections SENSOR_FAILED(Findings 1)→ seq 203 で同ファイル PASSED(H2 追加是正、現状 grep -c '^## ' = 2)、unit-of-work.md の Review — Iteration 1 は READY・NIT 1(見積り内訳表記)のみで既存レビュー/センサー運用ノルムの適用実例。いずれも新規則を含まず persist 0件が妥当。",
+  "submittedAt": "2026-08-07T11:08:17Z",
+  "receivedAt": "2026-08-07T11:08:27Z"
+}

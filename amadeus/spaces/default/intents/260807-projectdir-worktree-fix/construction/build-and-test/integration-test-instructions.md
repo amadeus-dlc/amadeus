@@ -37,4 +37,4 @@ wc -l <record>/audit/*.jsonl && md5 ...(同上)
 
 ## フルスイート統合証跡
 
-PR #2413 の CI が正（cid:requirements-analysis:local-lcov-pre-push 系）: Tests / Typecheck / Lint and complexity / Reproducible build / Source-only and graph invariants / Plugin conformance E2E / Coverage Report (head・base) / CI Success — **全 green を実測**（2026-08-07、`gh pr checks` 転記）。ローカル `coverage:ci` は cid:code-generation:c1-coverage-single-owner（単独所有直列化）により重複実行せず、PR CI を統合証跡とする。
+PR #2413 の CI が正（cid:code-generation:local-lcov-pre-push 系）: Tests / Typecheck / Lint and complexity / Reproducible build / Source-only and graph invariants / Plugin conformance E2E / Coverage Report (head・base) / CI Success — **全 green を実測**（2026-08-07、`gh pr checks` 転記）。ローカル `coverage:ci` は cid:code-generation:c1-coverage-single-owner（単独所有直列化）により重複実行せず、PR CI を統合証跡とする。

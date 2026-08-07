@@ -69,6 +69,19 @@ describe("subagentStartFields (U4, FR-SUB)", () => {
     ).toEqual({ "Agent Type": "developer", Purpose: "Do the thing" });
   });
 
+  test("PreToolUse{Agent}: the internal dispatch name resolves the same way", () => {
+    // Claude Code's settings matcher reads "Task", but the payload it hands the
+    // hook carries the INTERNAL tool name "Agent" (#2303). Accepting only the
+    // matcher's spelling drops every dispatch on that harness.
+    expect(
+      subagentStartFields({
+        hook_event_name: "PreToolUse",
+        tool_name: "Agent",
+        tool_input: { subagent_type: "developer", prompt: "Do the thing\nrest" },
+      }),
+    ).toEqual({ "Agent Type": "developer", Purpose: "Do the thing" });
+  });
+
   test("a NON-dispatch tool yields null so the hook stays silent", () => {
     // PreToolUse fires for every tool. The shipped matcher is anchored
     // (^Task$) but the hook must not depend on that: an unanchored "Task"

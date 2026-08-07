@@ -126,6 +126,24 @@ describe("amadeus-log-subagent-start over the PreToolUse{Task} seam (U4)", () =>
     expect(rows[0].Purpose).toBe("Build the start half");
   });
 
+  test("the same dispatch under its INTERNAL tool name records one row (#2303)", () => {
+    // The matcher that fires this hook is written `^Task$`, but the payload
+    // Claude Code delivers names the tool `Agent`. Accepting only the matcher's
+    // spelling drops every real dispatch on that harness — silently, since a
+    // dropped start is indistinguishable from "no subagent ran".
+    seed(proj, "Running");
+    const r = runHook(proj, {
+      hook_event_name: "PreToolUse",
+      tool_name: "Agent",
+      tool_input: { subagent_type: "developer", prompt: "Build the start half\nand more" },
+    });
+    expect(r.status).toBe(0);
+    const rows = fieldsFor(proj, "SUBAGENT_STARTED");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]["Agent Type"]).toBe("developer");
+    expect(rows[0].Purpose).toBe("Build the start half");
+  });
+
   test("the prompt is never recorded past its first line", () => {
     seed(proj, "Running");
     runHook(proj, taskDispatch({ subagent_type: "developer", prompt: "Summary line\nAWS_SECRET=hunter2" }));

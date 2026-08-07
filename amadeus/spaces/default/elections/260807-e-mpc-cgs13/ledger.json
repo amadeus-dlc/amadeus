@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Bun toEqual の追加プロパティ fail 意味論(E-MPC-CGBLK で scratch 実測立証)は既存 bun 実装差ファミリ cid 群(bun-spawn-env-snapshot / bun-readfilesync-dir-platform-divergence 等)と同族の一般化可能な知識であり、別 intent で2例目が実測されたら同ファミリへの追補として persist を再提案すること。",
+      "rationale": "独立実測: (1) memory.md(construction/code-generation)に Deviations 1 + Interpretations 2 の全4候補クラスタが実在 (2) E-MPC-CGBLK record.md — 2-0 案A採用・両票 GoA2 留保が Issue #2412(OPEN、fail-open 残余の仕様裁定)へ転記済みを gh issue view で確認 = 既存 deviation-stop-before-implement / implementation-deviation-election の適用実例 (3) E-MPC-CGRV record.md — tie → ユーザー裁定 choice:2(hold 裁定履歴に記録)・両票留保が Issue #2417(OPEN)本文へ転記済み = エスカレーション正準リスト(1)+issue-first capture の適用実例 (4) c3 の complexity ヘルパー抽出・多行型注釈 DA:0 是正は complexity-baseline-ordinal / multiline-type-cast-da0 / lcov-wiring-line-checklist の既存 cid 適用実例、t427 帰属は #2397 正本化済み (5) c4 は project.md の cid:code-generation:c1-pcp-isolated-session-swarm-incompat (iv) の文言どおりの適用(代替検証水準の開示)で新規性なし。4件とも既存ノルムの適用実例・Issue 正本化済み・intent 固有実測であり、persist 0件の提案は正当。",
+      "submittedAt": "2026-08-07T13:13:49Z",
+      "receivedAt": "2026-08-07T13:13:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の Bun toEqual 追加プロパティ意味論(定義値でも null でも fail)は既存 bun 実装差ファミリ(bun-spawn-env-snapshot 等)未収載の知識クラスであり、別 intent で同型が再発した場合は同ファミリへの追補として昇格させること。",
+      "rationale": "独立実測: (1) c1 — 選挙記録 260807-e-mpc-cgblk/record.md 実在(2-0 案A、GoA 2x2、留保履行 Issue #2412 OPEN を gh で確認)。deviation-stop-before-implement / implementation-deviation-election の適用実例であり新規則不要。Bun toEqual 意味論は初回観測で再発性未確認。 (2) c2 — 選挙記録 260807-e-mpc-cgrv/record.md に tie → ユーザー裁定 B の hold 裁定履歴実在、Issue #2417 OPEN・両票留保の転記条件も record に記載。エスカレーション正準リスト(1)+issue-first capture の適用実例。 (3) c3 — Issue #2397 OPEN(回転フレーク t224/t427/t99)、code-summary.md に complexity ヘルパー抽出(baseline 追加なし=complexity-baseline-ordinal 準拠)と多行型注釈 DA:0 是正(multiline-type-cast-da0 既知ファミリ)を確認。既存 cid 適用実例で Issue 正本化済み。 (4) c4 — project.md の cid:code-generation:c1-pcp-isolated-session-swarm-incompat (iv) が代替検証水準のゲート開示を既に規定、memory.md の開示記録(conductor 独立再実行+CI green+bot 6 threads terminalise)はその2例目の適用実例。4件とも既存ノルムの適用・Issue 正本化・intent 固有のいずれかに該当し、persist 0件の提案は妥当。",
+      "submittedAt": "2026-08-07T16:20:00Z",
+      "receivedAt": "2026-08-07T13:14:03Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-ADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測3点: (1) memory.md Interpretations 2エントリ(11:50:00Z)で c1/c2 の実在確認 (2) decisions.md ADR-3(:23)に RA→FD 委譲の引き取り申告文が実在し cid:requirements-analysis:implementation-deviation-election の宣言側履行に該当 (3) components.md Review — Iteration 1(READY, 11:01:32Z)に NIT/FOLLOW-UP の記録実在。c1 は c1-reviewer-scope-alignment / citation-reservation-preservation ファミリの適用実例、c2 は宣言済み逸脱申告規範の intent 固有適用で、いずれも新規の一般化可能な規則を含まない。persist 0件が妥当。",
+  "submittedAt": "2026-08-07T12:10:00Z",
+  "receivedAt": "2026-08-07T11:02:58Z"
+}

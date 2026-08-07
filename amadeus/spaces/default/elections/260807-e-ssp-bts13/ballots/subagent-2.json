@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用0件に賛成するが留保1点: 本機構は既に project.md:288 の cid:code-generation:c1-2358-declare-units-done として persist 済み(learned 2026-08-07、直前 intent 260807-failclosed-recovery-path、#2385 Q4-B 裁定)であり、C1 は自己文書化の重複というより既存ノルムの重複である。ただし当該 cid は c1-degrade-batch-directive-capture への追補として file されており、C1 が提案する c1-parallel-degrade-batch(並行 degrade batch の record 側手順列)からは辿りにくい。将来の複数 unit degrade batch で既存 cid の発見に失敗した実測が出た場合は、新規追補ではなく c1-parallel-degrade-batch から c1-2358-declare-units-done への相互参照1行を加えるのが正しい是正であり、次回週次蒸留ラウンドで再判定する。",
+  "rationale": "独立検証4点: (1) error 分岐は amadeus-orchestrate.ts:3729 の done 文字列と :3734 の errorDirective で実在。(2) 案内する move は amadeus-lib.ts:5136-5147 の DECLARE_MOVE 由来で、:5146 が verb を逐語で名指しする(`Re-declare the current list with \\`amadeus-state.ts declare-units-done --units <comma-separated unit names>\\``)ため error message は自己文書化されている。(3) declare-units-done の実装は amadeus-state.ts:1056 の dispatch と :5403 handleDeclareUnitsDone で、withAuditLock 下で state へ記録するのみ(:5411-5417)。冪等性は「RECORD のみ・engine が live listing と再照合」という設計(:5393-5395 のコメント)で担保され、stale 宣言は gate を withhold する。(4) 本 intent の amadeus-state.md:121-124 に Degrade Unit Declaration 節が実在し、fix-2297-wiring, fix-2303-dispatch-tool を 2026-08-07T15:25:27Z に宣言済み。対照: 直前 intent 260807-projectdir-worktree-fix の construction/ は unit dir が fix-2352-projectdir-marker の1件のみで、単一 unit degrade のため本 error は構造的に発生しない(t367 test 14 の非対称)。決定的所見: 機構知識は既に project.md:288 に persist 済みのため C1 は新規の学びではない。",
+  "submittedAt": "2026-08-07T15:39:00Z",
+  "receivedAt": "2026-08-07T15:39:17Z"
+}

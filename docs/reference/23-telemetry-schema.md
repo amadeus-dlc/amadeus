@@ -191,18 +191,18 @@ follows directly from that asymmetry
 
 | Harness | Start seam | Consequence |
 |---|---|---|
-| Claude Code | `PreToolUse` on the dispatch tool | the hook fires for *every* tool, so the field derivation declines anything but the dispatch tool `Task` (`tools/amadeus-lib.ts:4430`, `:4456-4457`) |
+| Claude Code | `PreToolUse` on the dispatch tool | the hook fires for *every* tool, so the field derivation declines anything but a dispatch tool — `Task` or the internal name `Agent` the payload actually carries, #2303 (`tools/amadeus-lib.ts:4133`, `:4171`) |
 | Kimi | a dedicated `SubagentStart` event carrying the prompt | supplies the prompt that `Purpose` is derived from |
 | Codex, Cursor, OpenCode, Kiro, Kiro IDE | none | the completed half is emitted alone |
 
-Both payload shapes converge on one derivation (`amadeus-lib.ts:4456-4467`): the
+Both payload shapes converge on one derivation (`amadeus-lib.ts:4170-4182`): the
 tool envelope carries `subagent_type`/`prompt` inside `tool_input`, while a
 dedicated start event carries them at the top level and has no tool name at all.
 
 `Purpose` is a **label derived from the dispatch prompt, never a transcript of
-it** (`amadeus-lib.ts:4437-4442`): escaped line breaks are normalised first, then
+it** (`amadeus-lib.ts:4140-4145`): escaped line breaks are normalised first, then
 the first line is taken, trimmed, stripped of control characters, and bounded by
-`SUBAGENT_PURPOSE_MAX_LENGTH` (`amadeus-lib.ts:4425`). Normalising escapes first
+`SUBAGENT_PURPOSE_MAX_LENGTH` (`amadeus-lib.ts:4123`). Normalising escapes first
 is load-bearing — a prompt delivered with literal `\n` characters would otherwise
 be a single "line" and carry its body into the audit row.
 

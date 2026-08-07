@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPC-SDS13",
+  "voter": "subagent-1",
+  "question": "intent 260807-merged-pr-convergence の scope-definition §13 学習選定: 候補2件(全文は record の ideation/scope-definition/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(契約質問5種の執行判定 = 0問様式): 既存 cid:requirements-analysis:no-election-judgment-gate / eoc1-evidence-in-questions-header / always-elect 執行クラスの適用実例 / c2(MoSCoW のみ使用・nice-to-have 0件): intent 固有の編成判断で一般化可能な新規則を含まない。実在根拠は memory.md と scope-definition-questions.md で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "2候補とも既存ノルムの適用実例または intent 固有判断のため persist しない。"
+    }
+  ]
+}

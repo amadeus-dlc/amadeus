@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2 の AC 外認定は requirements.md の実文照合で成立を独立確認した(landed 系 AC-2b/3a/3b/3c/4a/4b はすべて scripted GhSpawn fixture 要求で実機要求ゼロ、grep 実測)。マージ後の実機1回実測の申し送りは summary に列挙済みだが、実施結果の記録先(Issue か record)を明示しておくとよい。",
+  "rationale": "独立実測: (1) memory.md Interpretations 2件が候補 c1/c2 と一致することを実読確認。(2) c1 — build-test-results.md の Comprehensive 執行形(focused 6ファイル 148 pass + PR #2414 full CI 13 pass)は cid:build-and-test:bt-20260730-1 の適用そのもの。perf/security の適用外根拠明記は cid:build-and-test:c4 / c3 の適用。required-sections FAILED→節分割是正は manual-sensor-fire 系既存則の運用で新規則なし。(3) c2 — requirements.md を grep し landed 系 AC(AC-2b/AC-3a/AC-3b/AC-3c/AC-4a/AC-4b)が全て scripted fixture 要求で実機実行要求が存在しないことを確認。「実機」「実装時実測」規定は requirements に 0 hit — no-silent-scope-narrowing が縛る規定項目に該当せず、cid:build-and-test:c2-unconditional-ready-boundary の AC 外申し送り+無条件 READY の正しい適用実例。summary の申し送り節列挙も同 cid の様式どおり。よって両候補とも既存ノルムの適用実例であり persist 0件が正しい。",
+  "submittedAt": "2026-08-07T17:20:00Z",
+  "receivedAt": "2026-08-07T13:18:05Z"
+}

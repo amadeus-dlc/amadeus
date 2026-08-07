@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (a) memory.md Interpretations 2行(2026-08-07T11:20:00Z)に c1/c2 の実在を確認。(b) requirements-analysis-questions.md:27-28 に Q1=A/Q2=A の auto-decision ID 2件(837ea2da…/bf2a78bd…)と grant intent-grant-bdacfd16…、承認行 2026-08-07T11:05:00Z を確認 — 既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary(project.md 実在確認済み)が decide-question 経路を既に正規化しており新規則なし。(c) requirements.md:63 の Review — Iteration 1 READY(NIT 3・FOLLOW-UP 2)を実読 — NIT 是正と FOLLOW-UP 引用5点の conductor 全件実測は cid:code-generation:c1-reviewer-scope-alignment 事後側追補(E-SRA-ADS13)と cid:requirements-analysis:fix-diff-independent-reverify の適用実例であり、いずれも既存ノルムの履行。2候補とも新しい一般化可能な知識を含まないため persist 0件(提案どおり)を支持する。",
+      "submittedAt": "2026-08-07T11:35:00Z",
+      "receivedAt": "2026-08-07T10:55:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (c1) requirements-analysis-questions.md の「裁定の記録」節に auto-decision-837ea2dab0d2d78018161606bb9eaa0f / auto-decision-bf2a78bdb06325497348d82d2ffb853e の decide-question 記録が実在し、既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary(project.md persist 済み)が autonomy full 下の質問裁定経路を既に正規化 — 新規則性なし。(c2) requirements.md の Review — Iteration 1(READY / NIT 3 / FOLLOW-UP 2)と memory.md 2026-08-07T11:20:00Z 行の conductor 全件実測+センサー再発火 PASSED を確認 — 既存 cid:code-generation:c1-reviewer-scope-alignment 事後側追補(E-SRA-ADS13)と cid:requirements-analysis:fix-diff-independent-reverify の適用実例。両候補とも既存ノルムの適用であり persist 0件が妥当。",
+      "submittedAt": "2026-08-07T10:55:06Z",
+      "receivedAt": "2026-08-07T10:55:14Z"
+    }
+  ],
+  "late": []
+}

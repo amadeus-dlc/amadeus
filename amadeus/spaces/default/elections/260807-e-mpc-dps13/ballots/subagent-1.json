@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-DPS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "diary は「upstream-coverage FAILED 1件」と記すが audit seq 229 の Findings count は 2 — 発火1回(検出2件)の意であり実測と矛盾しないが、件数語は findings と firing を区別して書くのが望ましい。",
+  "rationale": "独立実測: (1) memory.md Interpretations 2026-08-07T12:55:00Z の実在確認 (2) delivery-planning-questions.md の質問0件 E-OC1 様式・執行クラス判定根拠(cid:requirements-analysis:always-elect)・グラント ID 記載を確認 (3) audit シャードで SENSOR_FAILED seq 229(external-dependency-map / upstream-coverage / 11:10:25Z)→ SENSOR_PASSED seq 237(11:10:49Z)の是正列を実測。候補 c1 は既存 cid(always-elect 執行クラス / consumes-first-drafting / no-election-judgment-gate、姉妹参照の充足形は c1-pcp-upstream-coverage-frontmatter-authority が既定)の適用実例であり新機序を含まない。persist 0件(提案どおり)を支持。",
+  "submittedAt": "2026-08-07T13:20:00Z",
+  "receivedAt": "2026-08-07T11:12:35Z"
+}

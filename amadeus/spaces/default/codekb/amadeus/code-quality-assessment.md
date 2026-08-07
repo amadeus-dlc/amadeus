@@ -1,6 +1,75 @@
 # コード品質評価
 
-## project-dir 解決の品質債務（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+## subagent-start 配線・語彙の品質債務（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### 債務1 — live 設定を検査する面の構造的不在
+
+settings を読む既存ガードは6面あるが、**そのすべてが example 側を読み、このリポジトリ自身が実際に読む `.claude/settings.json` を一切検査していない**（`AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude`、`tests/harness/fixtures.ts:57`）。`t416`/`t418` 系だけが live に触れるが、パス membership としてのみで hook 集合は見ない。
+
+**この不在が生む観測特性**: live から hook 配線が2件落ちても、CI は全面グリーンのまま通過する。#2297 は**症状（`SUBAGENT_STARTED` が 0 件）から逆算して初めて発見された**類型であり、ガードが先に鳴った事例ではない。
+
+**ガード設計に効く構造制約（事実）**:
+
+1. ground truth は正本（tracked）側でなければならない — 投影面 `.claude/settings.json.example` は untracked（`git ls-files --error-unmatch` exit=1）で、fresh clone の `bun run build` 前には不在。投影面基準のガードは build 依存の偽赤/未検出を作る。
+2. テキスト等価比較は成立しない — 正本は直接パス形、live は dispatcher 形で、11/13 件すべてが差分に見える。正規化キー候補は `(event, matcher, hook script 名)` の三つ組（dispatcher 形は `HOOK_PATHS[slug]` の basename、直接形は command 中の `amadeus-*.ts`）。
+3. 新設ガードは `cid:code-generation:corpus-sweep-for-new-guards` の両側実測を要する — 「欠落を注入して赤になる」ことと「正当な現状（修正後）で赤くならない」ことの両方。
+
+### 債務2 — 欠落は #2297 本文より1件広い
+
+live 欠落は `PreToolUse{^Task$}` だけでなく `SessionStart` の `plugin-compose` を含む**2件**で、両者は「dispatcher スロット不在」という**同一の構造原因**から出ている。
+
+品質上の帰結: 再発防止ガードを包含述語1本で入れると、**着地した瞬間に plugin-compose 側でも赤くなる**。⇒ ガードを本 intent で入れるなら plugin-compose の同梱が構造的に要求される。一方で #2297 本文・完了条件は PreToolUse のみを名指しており、同梱はスコープ拡大にあたる（`cid:requirements-analysis:implementation-deviation-election` の裁定事項）。**この緊張は要件段で明示的に裁定されるべきで、実装段で暗黙に解決してはならない。**
+
+影響（**仮説、未実測**）: live に plugin-compose が無いことで、このリポジトリ自身の plugin 自動 compose が発火していない可能性がある。`t327` の XOR closure は正本 example を見るため（債務1）この欠落を検出していない。
+
+### 債務3 — 修正候補ごとの品質リスク（材料のみ・裁定なし）
+
+| 候補 | テスト15箇所への影響 | 偽 green リスク | 追加の品質リスク |
+|---|---|---|---|
+| **C1: 定数を単一の新語彙へ置換** | 15箇所すべて改訂必須。`TaskUpdate`/`Write` の null 期待（`t-subagent-purpose.test.ts:77-78`）は不一致のまま**有効** | 低（既存ピンが全件赤くなるため修正漏れが顕在化） | matcher `^Task$` が別語彙 payload に発火する非直観を doc で説明する必要（`:4145-4147` のコメントは要書き換え）。旧版ハーネスが旧語彙を送る場合の後方非互換は**未実測** |
+| **C2: 両語彙受理** | 既存15箇所は**すべて緑のまま** | **高** — 新語彙を受理する新テストが無ければ、欠陥が閉包していなくても全面グリーンで通過する。両側実測が必須 | 単数定数では表現不能 → 集合型への型変更と `tests/.coverage-registry.json:4250` の `unitId` 同期が要る。`t189:81` の既存前例とは整合 |
+| **C3: 拒否リスト化** | `:77-78` の `TaskUpdate` null 期待は維持できるが `Write` の null 期待（`:78`）が**破れる** → 改訂必須 | 中 | PreToolUse が全ツールで発火するため通過側が全ツールへ広がる。`subagent_type` 不在時 `normalizeAgentType`（`:4108-4110`）が `"unknown"` を返し、**大量の phantom `SUBAGENT_STARTED`** を生む。誤 emit リスクが最大 |
+
+**C2 の偽 green リスクは本 intent 最大の品質論点**: 既存ピンが赤くならない設計は、`cid:code-generation:corpus-sweep-for-new-guards`（新設ガードの両側実測）と `cid:code-generation:inject-runtime-consumed-lines`（実行時に消費される行への注入）を満たす形でしか閉包を実証できない。
+
+### 債務4 — 例外5件の機序が未解明（引き継ぎ必須）
+
+両 Issue の reviewer が**独立に**検出し、いずれも「確定できず」とした事象: intent `260805-subagent-type-guard` の監査に、2026-08-06T02:31:14Z〜03:40:38Z の範囲で `SUBAGENT_STARTED` が **5件だけ**存在する（`Agent Type` は Claude Code ペルソナ名 — `amadeus-developer-agent` ×4 / `amadeus-architecture-reviewer-agent` ×1）。
+
+本スキャンでも新たな説明材料は得られていない（当該 worktree 不在、`git log --all` に該当する修正コミットなし、observed でも `:4128` は旧語彙のまま、live に `PreToolUse` なし）。
+
+**品質上の含意**: 「配線も語彙も壊れているのに 5 件だけ通った」という事実は、**現在のガード理解が不完全である可能性**を示す。reviewer-1（#2303）の提言「修正時にこの5件がなぜ通ったのかを確認する」は**未消化のまま要件段へ引き継ぐ**べき事項であり、修正形の妥当性判断に直接効く（例えば当時 payload が別形状だったなら、C2 の両語彙受理が正解に近づく）。
+
+### 債務5 — doc cite の stale（新規発見）
+
+`docs/reference/23-telemetry-schema.md:194` と `.ja.md:189` が引く `tools/amadeus-lib.ts:4430` / `:4456-4457` は、observed では無関係なコードを指す:
+
+```
+4430: // The recorded repo set for an intent (its intents.json row's `repos`), or [] when
+4456: }
+4457: （空行）
+```
+
+正しくは `:4128`（定数）/ `:4160-4161`（ガード）。両 reviewer 未検出。`cid:requirements-analysis:mechanism-cite-verify-at-draft` の違反実例であり、#2303 の doc 同期の射程に入れるべき。
+
+また旧語彙の doc 面は**レビューの4面より広く**、`docs/reference/06-hooks-and-tools.md`（:26/:205/:219）と `.ja.md`（:25/:203/:217）、`audit-format.md:181`（正本・投影の両方）が追加で存在する。ただし同 doc の `:46/:215`（ja `:44/:213`）は **matcher 記述であり修正対象外** — 語彙の切り分けを誤ると正しい記述を壊す。
+
+### 良質な既存構造（保全すべき面）
+
+| 面 | 評価 |
+|---|---|
+| emit 経路の単一性 | 判定1箇所・emit 1箇所・消費者1箇所。迂回路がなく、修正の影響範囲が機械的に確定できる |
+| 2 payload 収斂の設計コメント | `:4149-4153` が `undefined` 短絡の意図を逐語で残しており、修正時に意図を壊さずに済む |
+| dispatcher の fail-closed | 未知 slug throw / 部分欠 throw / パス脱出ガード。**部分欠 throw** はスロット追加の副作用面を1点に集約する良い性質でもある |
+| 両語彙受理の既存前例 | `t189:78-81` が SDK ビルド差を両語彙で吸収する前例を残す（両 reviewer 未言及） |
+
+### 隣接リスク — tNNN 採番衝突
+
+observed に `tests/unit/t481-resolve-project-dir-worktree-marker.test.ts`（#2413 で着地）が実在し、open PR #2414 が `tests/integration/t481-pr-convergence-lifecycle.test.ts` を追加する。**同一番号 t481 が本線と open PR で重複**（`cid:code-generation:c1-tnnn-collision-on-regrounding` 該当）。本 intent の患部ではないが、**新規テストを起こす際は t481 / t482 を避け、再接地時に固定 base SHA の `tests/` で採番を再確認**すること。
+
+## project-dir 解決の品質債務（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

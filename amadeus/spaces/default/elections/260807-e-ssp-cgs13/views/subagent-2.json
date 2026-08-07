@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SSP-CGS13",
+  "voter": "subagent-2",
+  "question": "260807-subagent-start-pair code-generation ステージ（2 unit: fix-2297-wiring / fix-2303-dispatch-tool）の §13 学習選定。候補は2件。C1: pr-convergence plugin 導入後の CG record 側順序 — reviewer-runtime の scope は produces 全数（pr-convergence-report.md 含む）の実在を要求するため、§12a レビューは『PR 発行 → 収束 → report 生成』の後にしか記録できない。従来の『レビュー READY → Bolt PR 発行』の順序は plugin 導入環境では構造的に成立せず、record 側定型は builder 完了 → code-summary → PR 発行 → converge → report → §12a → approve となる（wave 1 fix-2352 と wave 2 の2 intent で実測。レビュー READY が merge 伺いの前提である点は不変）。cid:code-generation:c1-parallel-degrade-batch への追補として persist する案。C2: record 成果物を worktree ブランチにコミットした状態で bolt ブランチへ checkout すると record ツリーが main 断面へ巻き戻り、その状態で record 書込 CLI（pr-convergence-cli report 等）を実行すると出力が誤ブランチ上の untracked ファイルとして着地する（wave 2 で実測 — untracked だったため branch 復帰後も生存したが、tracked 化後は消失クラス）。record 書込 CLI の実行前に git branch --show-current で worktree ブランチ在位を実測する1手を、cid:requirements-analysis:shard-commit-before-branch-switch ファミリへ追補する案。選択肢: 1 = C1+C2 両方採用、2 = C1 のみ採用、3 = 採用 0 件。各候補の実在根拠（record・実測タイムライン）を独立検証して投票せよ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "C1+C2 両方採用",
+      "description": "両候補とも実測に接地し既存 cid への追補として persist する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "採用 0 件",
+      "description": "C1 は wave 1 で既に実践済みの運用でありノルム化不要、C2 は既存 cid の射程内。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "C1 のみ採用",
+      "description": "C2 は untracked 生存により実害未発生の near-miss であり、既存 shard-commit-before-branch-switch の射程内と見なして不採用。"
+    }
+  ]
+}

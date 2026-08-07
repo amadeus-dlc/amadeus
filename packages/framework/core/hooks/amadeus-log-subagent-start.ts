@@ -9,7 +9,9 @@
 // mostly optional). Harnesses do not agree on when a subagent begins:
 //   - Claude Code has no subagent-start event at all, so the seam is
 //     PreToolUse on the dispatch tool. That fires for EVERY tool, which is why
-//     subagentStartFields declines anything but the dispatch tool.
+//     subagentStartFields declines anything but a dispatch tool — and it admits
+//     both spellings, since the matcher says "Task" while the payload names the
+//     tool "Agent" (#2303).
 //   - Kimi has a real SubagentStart event carrying the prompt.
 //   - Codex, Cursor, OpenCode and Kiro have no start seam, so they emit the
 //     completed half only. Lifetime composition treats such a completion as an

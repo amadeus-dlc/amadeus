@@ -4247,7 +4247,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:SUBAGENT_DISPATCH_TOOL",
+      "unitId": "function:SUBAGENT_DISPATCH_TOOLS",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
