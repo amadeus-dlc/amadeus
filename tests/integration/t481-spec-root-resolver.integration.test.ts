@@ -25,6 +25,10 @@ import {
   resolveSpecRoots as pluginResolveSpecRoots,
 } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 import { loadVerifiedTlaSourcesInternal } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
+import { activationAdvisoryForHost } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { defaultModelMapPath } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
+import { defaultSubjectsPath } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
+import { defaultStoreRoot } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 
 const roots: string[] = [];
 
@@ -147,5 +151,36 @@ describe("t481 spec root resolver — legacy layout fails closed (BR-4/BR-13a)",
     if (loaded.ok) return;
     expect(loaded.error.detail).toContain("legacy TLA spec layout detected at specs/tla/");
     expect(loaded.error.detail).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
+  });
+});
+
+describe("t481 activation + wrapper consumers on a legacy layout (BR-4/BR-13a)", () => {
+  test("activation advisory surfaces the legacy stop instead of reading old specs", () => {
+    const root = workspace();
+    const host = join(root, ".claude");
+    mkdirSync(host, { recursive: true });
+    // A minimal composition record naming formal-model-check (t320 fixture shape).
+    writeFileSync(
+      join(host, ".amadeus-plugin-composition.json"),
+      JSON.stringify({ ledger: [], plugins: [["formal-model-check", { stageIndex: [{ slug: "formal-model-check" }] }]] }),
+    );
+    plantLegacySpec(root);
+    const advisory = activationAdvisoryForHost(host);
+    expect(advisory).toContain("legacy TLA spec layout detected at specs/tla/");
+    expect(advisory).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
+  });
+
+  test("default* wrappers resolve through the shared resolver (BR-1)", () => {
+    const root = workspace();
+    writeCursor(root, "feature-x");
+    expect(defaultModelMapPath(root)).toBe(
+      join(root, "amadeus", "spaces", "feature-x", "specs", "tla", "model-map.json"),
+    );
+    expect(defaultSubjectsPath(root)).toBe(
+      join(root, "amadeus", "spaces", "feature-x", "specs", "tla", "authoring-subjects.json"),
+    );
+    expect(defaultStoreRoot(root)).toBe(
+      join(root, "amadeus", "spaces", "feature-x", "specs", "tla-evidence"),
+    );
   });
 });

@@ -88,14 +88,9 @@ function activeSpaceFromCursor(workspaceRoot: string): string {
 // whether or not the new location also holds specs (no dual-read, BR-5).
 export class LegacySpecError extends Error {
   constructor(space: string) {
-    super(
-      "legacy TLA spec layout detected at specs/tla/: the canonical spec root is now"
-        + ` amadeus/spaces/${space}/specs/tla/. Migrate with`
-        + ` \`git mv specs/tla amadeus/spaces/${space}/specs/tla\``
-        + " and update every reference (model-map.json path values, sensor/watch"
-        + " configuration, tooling) to the new location. Silent dual-read and"
-        + " backward-compatibility shims are not supported (fail-closed).",
-    );
+    // One logical line: patch-coverage counts every added physical line, and
+    // string-concat continuation lines carry no DA records (false UNCOVERED).
+    super(`legacy TLA spec layout detected at specs/tla/: the canonical spec root is now amadeus/spaces/${space}/specs/tla/. Migrate with \`git mv specs/tla amadeus/spaces/${space}/specs/tla\` and update every reference (model-map.json path values, sensor/watch configuration, tooling) to the new location. Silent dual-read and backward-compatibility shims are not supported (fail-closed).`);
     this.name = "LegacySpecError";
   }
 }
