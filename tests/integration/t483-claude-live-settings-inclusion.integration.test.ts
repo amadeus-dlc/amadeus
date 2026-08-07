@@ -158,4 +158,19 @@ describe("t483 claude live settings include every shipped example hook (#2297)",
     const stale = WAIVERS.filter((w) => liveScripts.has(`${w.event}|${w.script}`));
     expect(stale.map((w) => w.script), "stale waivers to delete").toEqual([]);
   });
+
+  // A waiver must name a gap that actually exists in the example: a waiver for
+  // an (event, script) the example never declares is dead weight today and,
+  // worse, silently pre-authorises the absence of any future hook that later
+  // ships under that name.
+  test("every waiver targets a hook the example actually declares", () => {
+    const exampleScripts = new Set(
+      hookRefs(EXAMPLE_SETTINGS).map((r) => `${r.event}|${r.script}`),
+    );
+    const unanchored = WAIVERS.filter((w) => !exampleScripts.has(`${w.event}|${w.script}`));
+    expect(
+      unanchored.map((w) => `${w.event}|${w.script}`),
+      "waivers that reference no example hook",
+    ).toEqual([]);
+  });
 });
