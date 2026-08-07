@@ -323,6 +323,24 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
   });
 
+  test("rejects a map declaring every asset in a space other than its own location", () => {
+    const fixture = createFixture();
+    // The map sits in the default space but re-points every declared asset to
+    // another space: the loader reads it from the default location, so the
+    // location match fails closed before any asset is trusted.
+    const relocated = readFileSync(fixture.mapPath, "utf8").split("amadeus/spaces/default/specs/tla/").join("amadeus/spaces/other/specs/tla/");
+    writeFileSync(fixture.mapPath, relocated);
+    const loaded = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
+    expect(loaded).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (loaded.ok) return;
+    expect(loaded.error.detail).toContain(
+      "declares its assets in a different space than its own location amadeus/spaces/default/specs/tla",
+    );
+  });
+
   test("fails closed when model bytes differ from the recorded identity", () => {
     const fixture = createFixture();
     writeFileSync(fixture.modelPath, `${readFileSync(fixture.modelPath, "utf8")}\\* drift\n`);

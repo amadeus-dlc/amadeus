@@ -132,4 +132,48 @@ describe.each(modules)("t482 legacy model-map path rejection (BR-13c), copy: %s"
       "must share the same amadeus/spaces/<space>/specs/tla directory",
     );
   });
+
+  test("rejects a single-space map whose space differs from the supplied map location", () => {
+    const model = electionModel();
+    model.model = { path: "amadeus/spaces/other/specs/tla/FormalElection.tla", identity: SHA_A };
+    model.cfg = { path: "amadeus/spaces/other/specs/tla/FormalElection.cfg", identity: SHA_B };
+    const result = module.parseTlaModelMap(
+      bytes({ schemaVersion: 2, models: [model] }),
+      "amadeus/spaces/default/specs/tla/model-map.json",
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (result.ok) return;
+    expect(result.error.detail).toContain(
+      "declares its assets in a different space than its own location amadeus/spaces/default/specs/tla",
+    );
+  });
+
+  test("rejects a map location outside the canonical spec directory shape", () => {
+    const result = module.parseTlaModelMap(
+      bytes({ schemaVersion: 2, models: [electionModel()] }),
+      "specs/tla/model-map.json",
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (result.ok) return;
+    expect(result.error.detail).toContain(
+      "must end in a canonical amadeus/spaces/<space>/specs/tla directory",
+    );
+  });
+
+  test("accepts a non-default space map when the (absolute) location is that same space", () => {
+    const model = electionModel();
+    model.model = { path: "amadeus/spaces/feature-x/specs/tla/FormalElection.tla", identity: SHA_A };
+    model.cfg = { path: "amadeus/spaces/feature-x/specs/tla/FormalElection.cfg", identity: SHA_B };
+    const result = module.parseTlaModelMap(
+      bytes({ schemaVersion: 2, models: [model] }),
+      "/work/repo/amadeus/spaces/feature-x/specs/tla/model-map.json",
+    );
+    expect(result).toMatchObject({ ok: true });
+  });
 });

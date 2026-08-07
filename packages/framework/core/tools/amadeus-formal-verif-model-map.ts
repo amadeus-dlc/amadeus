@@ -260,6 +260,16 @@ function isCanonicalSpecAssetPath(value: unknown, expectedFileName: string): val
   return isCanonicalSpecDir(posix.dirname(value)) && posix.basename(value) === expectedFileName;
 }
 
+// The space a map's own location belongs to, from the path the map was read
+// from. Consumers resolve that path through resolveSpecRoots, so its tail is
+// the canonical spec dir; absolute and repo-relative forms both reduce to the
+// trailing amadeus/spaces/<space>/specs/tla segments (the file name is the
+// caller's business, so only the directory tail is checked).
+function spaceOfMapLocation(mapLocation: string): string | undefined {
+  const dirSegments = mapLocation.replaceAll("\\", "/").split("/").slice(0, -1).slice(-5);
+  return isCanonicalSpecDir(dirSegments.join("/")) ? dirSegments[2] : undefined;
+}
+
 function invalid(detail: string): Result<never, ModelLoadError> {
   return {
     ok: false,
@@ -490,7 +500,28 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
   };
 }
 
-export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadError> {
+// Same-space containment: readiness and the spec-hash watch observe only the
+// active space's tla/**, so a map whose model/cfg/auxiliary paths span spaces
+// would verify assets the watch never sees. Every asset in one map shares a
+// single <space> (any safe space name remains valid on its own), and when the
+// caller supplies the path the map was read from (mapLocation), that one
+// space must be the map's own — otherwise the watch on the map's space would
+// never observe the declared assets.
+function checkAssetSpaceContainment(
+  models: readonly ModelMapModel[],
+  mapLocation: string | undefined,
+): Result<void, ModelLoadError> {
+  const assetPaths = models.flatMap((model) => [model.model.path, model.cfg.path, ...(model.auxiliaries ?? []).map((aux) => aux.path)]);
+  const spaces = new Set(assetPaths.map((path) => path.split("/")[2]));
+  if (spaces.size > 1) return invalid("every model, cfg, and auxiliary path in a model map must share the same amadeus/spaces/<space>/specs/tla directory");
+  if (mapLocation === undefined) return { ok: true, value: undefined };
+  const locationSpace = spaceOfMapLocation(mapLocation);
+  if (locationSpace === undefined) return invalid("model map location must end in a canonical amadeus/spaces/<space>/specs/tla directory");
+  if (!spaces.has(locationSpace)) return invalid(`model map declares its assets in a different space than its own location amadeus/spaces/${locationSpace}/specs/tla`);
+  return { ok: true, value: undefined };
+}
+
+export function parseTlaModelMap(bytes: Uint8Array, mapLocation?: string): Result<ModelMap, ModelLoadError> {
   let value: unknown;
   try {
     const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -516,13 +547,8 @@ export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadE
     previousName = model.value.name;
     models.push(model.value);
   }
-  // Same-space containment: readiness and the spec-hash watch observe only the
-  // active space's tla/**, so a map whose model/cfg/auxiliary paths span spaces
-  // would verify assets the watch never sees. Every asset in one map shares a
-  // single <space> (any safe space name remains valid on its own).
-  const assetPaths = models.flatMap((model) => [model.model.path, model.cfg.path, ...(model.auxiliaries ?? []).map((aux) => aux.path)]);
-  const spaces = new Set(assetPaths.map((path) => path.split("/")[2]));
-  if (spaces.size > 1) return invalid("every model, cfg, and auxiliary path in a model map must share the same amadeus/spaces/<space>/specs/tla directory");
+  const containment = checkAssetSpaceContainment(models, mapLocation);
+  if (!containment.ok) return containment;
   return { ok: true, value: { schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION, models } };
 }
 
@@ -551,8 +577,9 @@ function missingAsset(
 export function evaluateTlaModelReadiness(
   modelMapBytes: Uint8Array,
   assetExists: (relativePath: string) => boolean,
+  mapLocation?: string,
 ): TlaModelReadiness {
-  const parsed = parseTlaModelMap(modelMapBytes);
+  const parsed = parseTlaModelMap(modelMapBytes, mapLocation);
   if (!parsed.ok) return parsed;
   for (const model of parsed.value.models) {
     if (!assetExists(model.model.path)) {

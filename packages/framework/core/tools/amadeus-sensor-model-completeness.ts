@@ -386,7 +386,9 @@ async function loadMap(
   }
   try {
     const canonical = await deps.loadCanonical(projectRoot);
-    const parsed = canonical.parseTlaModelMap(outcome.content);
+    // mapRelativePath is the location actually read, so a map declaring
+    // assets outside its own space fails closed as map-malformed here.
+    const parsed = canonical.parseTlaModelMap(outcome.content, mapRelativePath);
     if (!parsed.ok) {
       return {
         ok: false,

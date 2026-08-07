@@ -100,6 +100,11 @@ const TLA_CFG_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
 interface VerifiedAssetPaths {
   readonly repositoryRoot: string;
   readonly mapPath: string;
+  // The map's repo-relative canonical location, handed to the readiness parse
+  // so a map declaring assets outside its own space is rejected (the parse
+  // must see the non-realpath'd form: a symlinked intermediate component is a
+  // legitimate layout and realpath would rewrite the space-carrying tail).
+  readonly mapRel: string;
   // The canonical spec directory (repo-relative and absolute forms) from the
   // shared spec root resolver — the boundary every TLA asset verifies against.
   readonly specDirRel: string;
@@ -241,6 +246,7 @@ function locateAssets(moduleUrl: string, fs: TlaFileSystem): Result<VerifiedAsse
     value: {
       repositoryRoot: root.value,
       mapPath: mapPath.value,
+      mapRel,
       specDirRel,
       specDirAbs,
     },
@@ -465,6 +471,7 @@ export function loadVerifiedTlaSourcesInternal(
   const modelMap = evaluateTlaModelReadiness(
     mapBytes.value,
     (relativePath) => fs.exists(resolve(paths.value.repositoryRoot, relativePath)),
+    paths.value.mapRel,
   );
   if (!modelMap.ok) return modelMap;
 

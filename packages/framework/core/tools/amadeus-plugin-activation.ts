@@ -476,6 +476,9 @@ function activationReadiness(
     const readiness = evaluateTlaModelReadiness(
       fs.readFileSync(roots.modelMapPath),
       (relativePath) => fs.existsSync(join(projectRoot, relativePath)),
+      // The path actually read, so a map declaring assets outside its own
+      // space (which this watch never observes) is rejected as not-ready.
+      roots.modelMapPath,
     );
     return readiness.ok ? { kind: "ready" } : { kind: "not-ready", reason: readiness.error.detail };
   } catch {
