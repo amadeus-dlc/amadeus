@@ -260,6 +260,24 @@ describe("model-completeness sensor integration", () => {
     expect(result).toEqual({ pass: true, findings_count: 0, findings: [] });
   });
 
+  test("legacy配置をcheckはfail verdictにupdateModelMapは移設案内付きの失敗結果に閉じる", async () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-u5-legacy-"));
+    roots.push(root);
+    mkdirSync(join(root, "specs", "tla"), { recursive: true });
+    writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "---- MODULE FormalElection ----\n====\n");
+    expect(await checkModelCompleteness({ projectRoot: root })).toEqual({
+      pass: false,
+      reason: "map-malformed",
+      findings_count: 1,
+      findings: [{ path: "amadeus/spaces/default/specs/tla/model-map.json", reason: "unreadable" }],
+    });
+    const updated = await updateModelMap({ projectRoot: root });
+    expect(updated).toMatchObject({ ok: false, code: "MAP_MALFORMED" });
+    if (updated.ok) return;
+    expect(updated.detail).toContain("legacy TLA spec layout detected at specs/tla/");
+    expect(updated.detail).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
+  });
+
   test("100 entry・10MiBをwarm-up 2回後10回すべて10秒未満で処理する", async () => {
     const root = makeProject(100, Math.floor((10 * 1024 * 1024) / 100));
     await checkModelCompleteness({ projectRoot: root });

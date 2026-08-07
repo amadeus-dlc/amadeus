@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -288,6 +289,37 @@ describe("TLA model loader real-filesystem boundary", () => {
     expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_UNREADABLE" },
+    });
+  });
+
+  test("contains assets reached through a symlinked intermediate spec component", () => {
+    const fixture = createFixture();
+    // The canonical spec dir is realpath'd before containment, so a symlinked
+    // `amadeus/` intermediate no longer misjudges legitimate assets.
+    const movedAmadeus = join(fixture.root, "real-amadeus");
+    renameSync(join(fixture.root, "amadeus"), movedAmadeus);
+    symlinkSync(movedAmadeus, join(fixture.root, "amadeus"));
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({ ok: true });
+  });
+
+  test("still rejects an asset symlink escaping the realpath'd spec directory", () => {
+    const fixture = createFixture();
+    const escaped = join(fixture.root, "escaped.cfg");
+    copyFileSync(fixture.cfgPath, escaped);
+    rmSync(fixture.cfgPath);
+    symlinkSync(escaped, fixture.cfgPath);
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "CFG_UNREADABLE" },
+    });
+  });
+
+  test("falls back to the literal spec dir path when the spec dir does not exist", () => {
+    const fixture = createFixture();
+    rmSync(join(fixture.root, "amadeus"), { recursive: true, force: true });
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_MISSING" },
     });
   });
 

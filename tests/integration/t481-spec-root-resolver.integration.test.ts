@@ -25,7 +25,10 @@ import {
   resolveSpecRoots as pluginResolveSpecRoots,
 } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 import { loadVerifiedTlaSourcesInternal } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
-import { activationAdvisoryForHost } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import {
+  activationAdvisoriesForHost,
+  activationAdvisoryForHost,
+} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
 import { defaultModelMapPath } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 import { defaultSubjectsPath } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { defaultStoreRoot } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
@@ -111,6 +114,9 @@ describe("t481 spec root resolver — legacy layout fails closed (BR-4/BR-13a)",
       caught = err;
     }
     expect(caught).toBeInstanceOf(LegacySpecError);
+    // The resolved space rides on the error so fail-soft consumers (advisory
+    // label, sensor fallback, loader label) name the active space's paths.
+    expect((caught as LegacySpecError).space).toBe("default");
     const message = (caught as Error).message;
     expect(message).toContain("legacy TLA spec layout detected at specs/tla/");
     expect(message).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
@@ -152,6 +158,25 @@ describe("t481 spec root resolver — legacy layout fails closed (BR-4/BR-13a)",
     expect(loaded.error.detail).toContain("legacy TLA spec layout detected at specs/tla/");
     expect(loaded.error.detail).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
   });
+
+  test("the loader's legacy error label names the active space's map path", () => {
+    const root = workspace();
+    writeFileSync(join(root, ".git"), "gitdir: fixture\n");
+    writeFileSync(join(root, "package.json"), "{}\n");
+    writeCursor(root, "feature-x");
+    plantLegacySpec(root);
+    const loaded = loadVerifiedTlaSourcesInternal(pathToFileURL(join(root, "probe.ts")).href);
+    expect(loaded).toMatchObject({
+      ok: false,
+      error: {
+        kind: "MODEL_LOAD",
+        code: "MODEL_MAP_INVALID",
+        relativePath: "amadeus/spaces/feature-x/specs/tla/model-map.json",
+      },
+    });
+    if (loaded.ok) return;
+    expect(loaded.error.detail).toContain("git mv specs/tla amadeus/spaces/feature-x/specs/tla");
+  });
 });
 
 describe("t481 activation + wrapper consumers on a legacy layout (BR-4/BR-13a)", () => {
@@ -168,6 +193,28 @@ describe("t481 activation + wrapper consumers on a legacy layout (BR-4/BR-13a)",
     const advisory = activationAdvisoryForHost(host);
     expect(advisory).toContain("legacy TLA spec layout detected at specs/tla/");
     expect(advisory).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
+  });
+
+  test("a non-default cursor names that space's spec dir in the legacy advisory", () => {
+    const root = workspace();
+    const host = join(root, ".claude");
+    mkdirSync(host, { recursive: true });
+    writeFileSync(
+      join(host, ".amadeus-plugin-composition.json"),
+      JSON.stringify({ ledger: [], plugins: [["formal-model-check", { stageIndex: [{ slug: "formal-model-check" }] }]] }),
+    );
+    writeCursor(root, "feature-x");
+    plantLegacySpec(root);
+    const advisories = activationAdvisoriesForHost(host, "construction");
+    expect(advisories).toHaveLength(1);
+    expect(advisories[0]).toMatchObject({
+      code: "not-ready",
+      target: "amadeus/spaces/feature-x/specs/tla",
+    });
+    expect(advisories[0]?.message).toContain(
+      "add a valid amadeus/spaces/feature-x/specs/tla/model-map.json",
+    );
+    expect(advisories[0]?.message).toContain("git mv specs/tla amadeus/spaces/feature-x/specs/tla");
   });
 
   test("default* wrappers resolve through the shared resolver (BR-1)", () => {

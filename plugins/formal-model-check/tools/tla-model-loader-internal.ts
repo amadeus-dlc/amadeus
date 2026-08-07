@@ -199,6 +199,20 @@ function verifyAssetPath(
   return { ok: true, value: realPath };
 }
 
+// The containment boundary must be canonical like the asset paths it is
+// compared against: an intermediate symlinked component (a symlinked
+// `amadeus/` dir, or a macOS /var→/private/var fixture root) otherwise makes
+// isContained misjudge a legitimate asset as an escape. A spec directory that
+// does not exist yet keeps the resolved literal path — the map read below
+// then fails closed with its own missing/unreadable classification.
+function realpathIfExists(path: string, fs: TlaFileSystem): string {
+  try {
+    return fs.realpath(path);
+  } catch {
+    return path;
+  }
+}
+
 // The multi-model pipeline needs only the repository root and the map path up
 // front: every model/cfg/aux path is declared per model in the map and is
 // verified inside the per-model loop. The map location and the asset boundary
@@ -215,11 +229,11 @@ function locateAssets(moduleUrl: string, fs: TlaFileSystem): Result<VerifiedAsse
     mapRel = tlaModelMapPath(roots.space);
   } catch (cause) {
     if (cause instanceof LegacySpecError) {
-      return loadError("MODEL_MAP_INVALID", TLA_MODEL_MAP_PATH, cause.message);
+      return loadError("MODEL_MAP_INVALID", tlaModelMapPath(cause.space), cause.message);
     }
     throw cause;
   }
-  const specDirAbs = resolve(root.value, specDirRel);
+  const specDirAbs = realpathIfExists(resolve(root.value, specDirRel), fs);
   const mapPath = verifyAssetPath(root.value, mapRel, "MODEL_MAP", fs, specDirAbs);
   if (!mapPath.ok) return mapPath;
   return {

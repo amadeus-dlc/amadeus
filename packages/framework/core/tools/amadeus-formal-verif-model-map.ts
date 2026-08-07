@@ -87,7 +87,10 @@ function activeSpaceFromCursor(workspaceRoot: string): string {
 // `<workspaceRoot>/specs/tla/` that still holds specs is never read silently,
 // whether or not the new location also holds specs (no dual-read, BR-5).
 export class LegacySpecError extends Error {
-  constructor(space: string) {
+  // The space the resolver selected when it stopped, so fail-soft consumers
+  // (the activation advisory label, the sensor fallback, the loader's error
+  // label) name the active space's canonical path instead of the default's.
+  constructor(readonly space: string) {
     // One logical line: patch-coverage counts every added physical line, and
     // string-concat continuation lines carry no DA records (false UNCOVERED).
     super(`legacy TLA spec layout detected at specs/tla/: the canonical spec root is now amadeus/spaces/${space}/specs/tla/. Migrate with \`git mv specs/tla amadeus/spaces/${space}/specs/tla\` and update every reference (model-map.json path values, sensor/watch configuration, tooling) to the new location. Silent dual-read and backward-compatibility shims are not supported (fail-closed).`);
@@ -513,6 +516,13 @@ export function parseTlaModelMap(bytes: Uint8Array): Result<ModelMap, ModelLoadE
     previousName = model.value.name;
     models.push(model.value);
   }
+  // Same-space containment: readiness and the spec-hash watch observe only the
+  // active space's tla/**, so a map whose model/cfg/auxiliary paths span spaces
+  // would verify assets the watch never sees. Every asset in one map shares a
+  // single <space> (any safe space name remains valid on its own).
+  const assetPaths = models.flatMap((model) => [model.model.path, model.cfg.path, ...(model.auxiliaries ?? []).map((aux) => aux.path)]);
+  const spaces = new Set(assetPaths.map((path) => path.split("/")[2]));
+  if (spaces.size > 1) return invalid("every model, cfg, and auxiliary path in a model map must share the same amadeus/spaces/<space>/specs/tla directory");
   return { ok: true, value: { schemaVersion: TLA_MODEL_MAP_SCHEMA_VERSION, models } };
 }
 

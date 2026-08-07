@@ -19,6 +19,7 @@ import {
   canonicalIdentity,
   diffModelMap,
   IMPL_ONLY_UPDATE_HINT,
+  LegacySpecError,
   parseTlaModelMap,
   resolveSpecRoots,
   TLA_MODEL_MAP_SCHEMA_VERSION,
@@ -711,10 +712,20 @@ async function checkModelCompletenessInternal(
 export async function checkModelCompleteness(
   options: CheckModelCompletenessOptions = {},
 ): Promise<CompletenessVerdict> {
-  return checkModelCompletenessInternal({
-    ...options,
-    mapRelativePath: modelMapRelativePath(resolve(options.projectRoot ?? process.cwd())),
-  });
+  let mapRelativePath: string;
+  try {
+    mapRelativePath = modelMapRelativePath(resolve(options.projectRoot ?? process.cwd()));
+  } catch (err) {
+    // The legacy layout fails closed as a verdict, never a rejection: the
+    // check shape has no detail slot, so the finding names the errored
+    // space's canonical map path — the migration target the LegacySpecError
+    // message spells out for the update path below.
+    if (err instanceof LegacySpecError) {
+      return mapFailure("map-malformed", "unreadable", tlaModelMapPath(err.space));
+    }
+    throw err;
+  }
+  return checkModelCompletenessInternal({ ...options, mapRelativePath });
 }
 
 function canonicalRecord(
@@ -1108,10 +1119,18 @@ async function updateModelMapInternal(options: InternalOptions): Promise<UpdateM
 export async function updateModelMap(
   options: UpdateModelMapOptions = {},
 ): Promise<UpdateModelMapResult> {
-  return updateModelMapInternal({
-    ...options,
-    mapRelativePath: modelMapRelativePath(resolve(options.projectRoot ?? process.cwd())),
-  });
+  let mapRelativePath: string;
+  try {
+    mapRelativePath = modelMapRelativePath(resolve(options.projectRoot ?? process.cwd()));
+  } catch (err) {
+    // Fail closed as a typed failure (never a rejected promise); the detail
+    // carries the resolver's migration instructions verbatim.
+    if (err instanceof LegacySpecError) {
+      return { ok: false, code: "MAP_MALFORMED", detail: err.message };
+    }
+    throw err;
+  }
+  return updateModelMapInternal({ ...options, mapRelativePath });
 }
 
 function flagValue(argv: readonly string[], name: string): string | undefined {

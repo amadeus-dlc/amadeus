@@ -83,4 +83,53 @@ describe.each(modules)("t482 legacy model-map path rejection (BR-13c), copy: %s"
       ok: true,
     });
   });
+
+  test("rejects a map whose cfg names a different space than the model", () => {
+    const mixed = electionModel();
+    mixed.cfg = { path: "amadeus/spaces/feature-x/specs/tla/FormalElection.cfg", identity: SHA_B };
+    const result = module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [mixed] }));
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (result.ok) return;
+    expect(result.error.detail).toContain(
+      "must share the same amadeus/spaces/<space>/specs/tla directory",
+    );
+  });
+
+  test("rejects a map whose auxiliary names a different space", () => {
+    const mixed = {
+      ...electionModel(),
+      auxiliaries: [
+        { path: "amadeus/spaces/feature-x/specs/tla/FormalElectionCore.tla", identity: SHA_C },
+      ],
+    };
+    const result = module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [mixed] }));
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (result.ok) return;
+    expect(result.error.detail).toContain(
+      "must share the same amadeus/spaces/<space>/specs/tla directory",
+    );
+  });
+
+  test("rejects two models registered in different spaces within one map", () => {
+    const first = electionModel();
+    const second = electionModel();
+    second.name = "Zebra";
+    second.model = { path: "amadeus/spaces/feature-x/specs/tla/Zebra.tla", identity: SHA_A };
+    second.cfg = { path: "amadeus/spaces/feature-x/specs/tla/Zebra.cfg", identity: SHA_B };
+    const result = module.parseTlaModelMap(bytes({ schemaVersion: 2, models: [first, second] }));
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
+    });
+    if (result.ok) return;
+    expect(result.error.detail).toContain(
+      "must share the same amadeus/spaces/<space>/specs/tla directory",
+    );
+  });
 });

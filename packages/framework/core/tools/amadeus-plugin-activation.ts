@@ -317,7 +317,7 @@ function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): 
   // The concrete watched target and spec identity come from the resolver. A
   // legacy layout (LegacySpecError) already surfaced as a not-ready judgment
   // carrying the migration instructions; the advisory then falls back to the
-  // default-space label rather than re-throwing.
+  // errored space's label rather than re-throwing.
   const emitAdvisory = (specTarget: string, specIdentity: string) => {
     const message = activationAdvisoryLine(judgment, specTarget);
     if (message === null) return [];
@@ -341,9 +341,9 @@ function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): 
   } catch (err) {
     if (!(err instanceof LegacySpecError)) throw err;
     // Legacy layout: the judgment already carries the migration instructions;
-    // emit with the default-space label fallback as the catch's explicit
-    // terminal rather than a silent continue.
-    return emitAdvisory(tlaSpecDirPath(), "unreadable-spec");
+    // emit with the errored space's label as the catch's explicit terminal
+    // rather than a silent continue.
+    return emitAdvisory(tlaSpecDirPath(err.space), "unreadable-spec");
   }
 }
 
