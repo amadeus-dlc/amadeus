@@ -89,6 +89,10 @@ export interface RawPrState {
   readonly checkRollupState?: string | null;
 }
 
+// The mutable projection of RawPrState's lifecycle slice, built up field by
+// field so an absent response field stays absent (ruling E-MPC-CGBLK).
+type RawLifecycleFields = { state?: string; mergedAt?: string | null; mergeCommitOid?: string | null; checkRollupState?: string | null };
+
 // ---------------------------------------------------------------------------
 // The process seam
 // ---------------------------------------------------------------------------
@@ -254,13 +258,8 @@ export async function fetchRawPrState(
 // By ruling E-MPC-CGBLK each is included only when the response mentions it: a
 // null in the response stays null (a fact — no merge instant), while a field
 // the response never carried stays absent (no fabricated default).
-function lifecycleFields(pullRequest: Record<string, unknown>): {
-  state?: string;
-  mergedAt?: string | null;
-  mergeCommitOid?: string | null;
-  checkRollupState?: string | null;
-} {
-  const fields: ReturnType<typeof lifecycleFields> = {};
+function lifecycleFields(pullRequest: Record<string, unknown>): RawLifecycleFields {
+  const fields: RawLifecycleFields = {};
   if (typeof pullRequest.state === "string") fields.state = pullRequest.state;
   if ("mergedAt" in pullRequest) {
     fields.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;

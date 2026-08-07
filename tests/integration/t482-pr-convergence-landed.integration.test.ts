@@ -240,6 +240,44 @@ describe("CLI status verb on a merged pull request (AC-2a/2b)", () => {
     ).toBe(1);
   });
 
+  test("an active mergeable=UNKNOWN start re-fetches through the primed dependency", async () => {
+    const record = makeBareRecord();
+    const first = {
+      mergeable: "UNKNOWN",
+      mergeStateStatus: "UNKNOWN",
+      state: "OPEN",
+      mergedAt: null,
+      mergeCommit: null,
+    };
+    const second = {
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      state: "OPEN",
+      mergedAt: null,
+      mergeCommit: null,
+    };
+    const states = [first, second];
+    const argvs: (readonly string[])[] = [];
+    let stateCalls = 0;
+    const spawn: GhSpawn = async (argv) => {
+      argvs.push(argv);
+      const joined = argv.join(" ");
+      if (joined.includes("--version")) return ok("gh version 2.97.0");
+      if (joined.includes("auth status")) return ok("Logged in");
+      if (joined.includes("reviewThreads")) return ok(fixture("measured-pr-2268"));
+      return ok(stateEnvelope(states[Math.min(stateCalls++, states.length - 1)]));
+    };
+    const timer = countingSleep();
+    const out = await runCli(statusArgs(record), seams(spawn, timer.sleep));
+    expect(out.exitCode).toBe(0);
+    const payload = JSON.parse(out.stdout);
+    expect(payload.verdict).toBe("converged");
+    // primed hands the pre-observed UNKNOWN to the loop's first attempt, so the
+    // retry issues a SECOND real state query (two in total) after one sleep.
+    expect(argvs.filter((a) => a.join(" ").includes("mergeStateStatus")).length).toBe(2);
+    expect(timer.calls.length).toBe(1);
+  });
+
   test("an unknown lifecycle state is a boundary fault (exit 2), never a verdict (AC-1b)", async () => {
     const record = makeBareRecord();
     const weird = { mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "REOPENED" };
