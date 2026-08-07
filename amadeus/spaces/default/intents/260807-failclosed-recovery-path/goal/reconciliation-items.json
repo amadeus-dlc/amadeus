@@ -1,0 +1,43 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2313-reconcile-freshness/code-generation/code-summary.md",
+    "digest": "f36fd898bec3c9de5ea37a4930aeb08abb85ebc3a9440e76c67e2d72fde4bef5"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2313-reconcile-freshness/code-generation/pr-convergence-report.md",
+    "digest": "2a385352533872088c14e3585eec5471e307ede1fcb4d94c0a141487eb1c73cb"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2330-advisory-store-recovery/code-generation/code-summary.md",
+    "digest": "0a6ed3dac25a15072ce0b596886c4f79a8ffbb0afe47158862dbf9c832263ff6"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2330-advisory-store-recovery/code-generation/pr-convergence-report.md",
+    "digest": "0db051b4d85795f8b6ac7c4946b3eb1999253d344a0f10fc81baa2eddc731019"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2358-unit-done-declaration/code-generation/code-summary.md",
+    "digest": "8b381eb26f1c6b883975f889414bd90cee63bddc4a956acce01a6181b3eae1ec"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/fix-2358-unit-done-declaration/code-generation/pr-convergence-report.md",
+    "digest": "a6b9e066bdd81f9e04c964e79db2cbd7a716a16a45c38596887864ee9ede64bf"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-failclosed-recovery-path/construction/build-and-test/build-test-results.md",
+    "digest": "19f669e405f33f440f50fdcd1953cb496774ab79e14d2ceb2b36e8766c3dcfed"
+   }
+  ]
+ }
+]

@@ -1,6 +1,74 @@
 # コード品質評価
 
-## cross-harness resume の品質所見（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 技術的負債シグナル
+
+| # | シグナル | 実測根拠 | クラス |
+| --- | --- | --- | --- |
+| ① | **detect⇔recover の非対称（3件共通）**: 異常検知は結線済みで、検知後の回復が結線されていない | #2313 `adapter:226-240` の throw に対し回復分岐は `evidence.ts:162-171` の false 側のみ / #2330 `readStore:681-691` の回復は「不在時のみ」/ #2358 `orchestrate:3727-3731` の案内は実行不能な行為を指す | 可用性・回復可能性。`cid:requirements-analysis:symmetric-pair-review` の detect⇔recover 面 |
+| ② | **同一意味論の2実装（#2313）**: freshness 述語が広域 set と narrow set の2箇所に別実装で存在する | `adapter:226-240` は `packages/framework/core/tools` を含む／`t413:181-195` は含まない。同区間の実測で前者 drift あり・後者 drift なし | 「canonical 1定義から導出」原則（construction phase）の違反 |
+| ③ | **依存の向きの誤り（#2313）**: 「ゲートが走査するコーパス」を「ゲート実装の鮮度」として読んでいる | `t413:181-195` の選定理由コメント逐語「packages/framework/core/tools is the corpus the gate scans, not the gate: … it needs an evidence-regeneration path, not a pin here」 | 設計判断の誤り。**正しい判断は既にテスト側に文書化されている** |
+| ④ | **回復 verb の欠如（#2313 / #2330）**: 検知した状態を解消する CLI 面が存在しない | `scripts/no-silent-drop-evidence.ts` の verb は `rebind` / `reconcile` の2つのみ（usage `:32-33`）／`amadeus-advisory-choice.ts` の verb は `record` / `correct-misattributed` の2つのみ（USAGE `:1516-1520`、dispatch `:1522-1532`） | 契約の穴 |
+| ⑤ | **回復手段がゲートの内側にある（#2330）**: 「訊き直す」設計が、訊き直しの起動条件に依存して不発になる | `amadeus-orchestrate.ts:797-799` `if (pending.length === 0) return directive;`。evaluator がもう advisory を raise しない intent では guard 経路自体が走らない | ①の特殊形。回復入口の配置制約として要件段へ持ち込む |
+| ⑥ | **schema 遷移の片側実装（#2330）**: store は schema 2 のみ受理、pending は schema 1 のみ受理という非対称が同居し、遷移層がない | `parseStore:659-661` / `parsePending:640-651` / 設計コメント `:653-657` | 意図的な設計判断だが、**遷移の完了手段を欠く点で不完全**。pending が schema 1 のまま残るのは salvage の余地 |
+| ⑦ | **述語の共有による修正干渉（#2358 / #2359）**: `unitCovered` が produces の実在のみで判定し §12a Review の記録有無を見ない | `orchestrate:3746-3760`。#2359 は **OPEN・未修正**（`gh issue list --state open --label bug` → open bug 16 件） | 修正範囲の制約。宣言受理点は述語の外側に置く必要がある |
+| ⑧ | **evidence binding の陳腐化**: reconcile が恒久赤の間、registry の `currentRevision` が前進しない | `adoption-evidence.json` の `currentRevision = fe8c701ba15c0677a4ec18cc3715ff1086318dde`（= #2338 の着地点）。直近5 run のうち 3 run が failure | 遅効性の劣化。**PR ゲート自体は緑**（下記の影響範囲訂正を参照） |
+
+### 影響範囲についての訂正（#2385 との食い違い）
+
+#2385 は #2313 を「全 PR の trusted base ゲートが偽赤になり、あらゆる修正 PR が着地できない」とするが、observed 断面では成立しない:
+
+- main の最新 CI run **31135183415 は success**（ratchet ステップを含む `Lint and complexity` job も success）
+- ローカル実測 `bun tests/no-silent-drop-gate.ts check --base-revision <HEAD^ の完全 SHA>` → exit 0 / `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`
+
+**恒久赤は main 限定の `No Silent Drop Evidence Reconcile` ワークフローのみ**。修正の必要性は変わらないが、**S1-FATAL / P1 の根拠文は requirements 段で再判定が要る**。
+
+### 検証面の弱さと強さ
+
+- **強い面**: #2358 は両側が pin されている（`t367-degrade-unitname-resolution.test.ts:411-420` = multi-unit 全被覆 → refuse、`:428-437` = 単一 unit は covered でもゲートを運ぶ）。`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記するため、**`cid:reverse-engineering:c1-pinned-behavior-ruling` が適用され、実装段で着手せず要件段で仕様裁定とテスト契約の明示改訂をセットで確定する必要がある**。
+- **強い面（#2313）**: `t413:181-195` が正しい narrow set を pin しており、是正の目標形がテスト側に既に存在する。
+- **弱い面（#2330）**: schema 1 store の回復に関する pin は存在しない。回復 verb を新設する場合、`org.md` Mandated の「落ちる実証」（失敗ケースを注入して実際に赤くなることを実証）を新規に組む必要がある。
+- **弱い面（#2313）**: 恒久赤は CI ワークフローの実行時にのみ現れ、リポジトリ内のテストで再現されていない。回復経路の受け入れ基準は、`REBIND_NON_IDENTITY_DRIFT` に至る条件を fixture 化できるかに依存する。
+
+### 台帳への波及（是正時に該当するノルム）
+
+`tests/.coverage-patch-allowlist.json` は区間で **+234**、`tests/.coverage-registry.json` は **+76**、`tests/.coverage-ratchet.json` は **+4/−4**。`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` へ行を挿入する修正では次が該当する:
+
+- `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）
+- `cid:code-generation:cg-allowlist-straddle-swell`（既存 waiver レンジの span 膨張検査）
+- `cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only ガードの census は最終 base で採る）
+- `cid:code-generation:c1-260803-state-integrity`（no-silent-drop 台帳は events 追記のみ。削除・snapshot は maintenance CI 専用）
+
+### coverage / 静的ゲートの現況（observed）
+
+| ゲート | 現在値 |
+| --- | --- |
+| `tests/.coverage-ratchet.json` | function 176 / audit 44 / scope 15 / stage 8 / hook 14 / subcommand 84 / render-surface 7 |
+| `tests/.coverage-project-policy.json`（区間で無変更） | `minimumProjectLineCoverageBasisPoints: 9000`、`maximumRelativeDropBasisPoints: 2` |
+| `tests/.coverage-project-baseline.json`（区間で無変更） | `hits 7225 / lines 17648` |
+| `tests/.complexity-baseline.json` | `threshold: 15`、最大値は `amadeus-statusline.ts main` CCN 26 |
+| mechanism ratchet | `tests/gen-coverage-registry.ts:126-138`。テストファイル名のドットセグメントが mechanism を宣言し、ユニットの `minMechanism` 未満なら UNDER-MECHANISM = 未カバー扱い |
+
+静的ゲート（CI job "Lint and complexity"）の順序: `bun run lint`（biome）→ no-silent-drop（`ci.yml:121`）→ `tests/callsite-guard.ts --check`（`:164`）→ `tests/unchecked-cast-guard.ts --check`（`:172`）→ build → `tests/deletion-gate.ts --check`（`:184`）→ `tests/complexity-gate.ts --check`（`:199`）。
+
+### テスト採番（tNNN）
+
+- 使用済み **最大 = t465**（`tests/integration/t465-kimi-role-lock-ownership.integration.test.ts`）、ユニークな採番値は **436 個**
+- 未使用の空き番号（1..465）: 1 2 3 4 5 6 7 8 9 24 50 58 73 74 101 139 159 217 263 316 317 318 323 324 329 330 331 332 333 334 343 348 358 392 421 422 423 424
+- **新規テストは t466 以降**を使う（`cid:code-generation:swarm-test-number-reservation`）
+- 区間で追加された新規テスト: integration **23 本**（t433, t445, t447〜t465）、unit **16 本**（t444, t446, t448〜t463）。ほかに `tests/formal-verif/support/tla-authoring-e2e-{driver,fixture}.ts`
+
+なお同一 tNNN が複数ファイルで共存する事象は**このリポジトリの既存の生態**であり（`cid:requirements-analysis:mechanism-cite-verify-at-draft` の追補が「同一テスト番号の複数ファイル共存は実在する生態」と既に明文化）、区間固有の債務ではない。**債務としては記録しない。**
+
+### 区間内の品質変化
+
+患部3面のコードはいずれも本区間で新規に壊れたものではないが、**#2313 の drift は区間内で発生した**: freshness 広域 set が読む `packages/framework/core/tools` に区間内で3ファイルの変更があり（`amadeus-lib.ts` / `amadeus-subagent-observability.ts` / `amadeus-subagent-stats.ts`）、これが `REBIND_NON_IDENTITY_DRIFT` の直接の入力である。すなわち**述語の設計は区間外、発火は区間内**である。
+
+
+## cross-harness resume の品質所見（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -147,7 +215,7 @@ fail-closed で塞がれているため誤動作はしないが、**未接続の
 
 具体的なreceipt形式を先にtestへ固定すると未承認設計を既成事実化する。次段ではまず意味・鮮度・権限・hold時点を受け入れ基準にし、その後に最小wireを選ぶ。
 
-## subagent 型規律と model 可観測性の品質所見（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 可観測性の品質所見（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -216,7 +284,7 @@ audit 実測（Architect 再計測 2026-08-06、測定 ref = worktree `c66a2c987
 - **`TaskUpdate` 誤検知の防波堤が文書化されている**: `:4133-4137` が「settings matcher は unanchored regex なので `"Task"` は `TaskUpdate` / `TaskCreate` にもマッチする」ことを明示しており、D-1 の修正形が失ってはならない性質が読み取れる。
 - **t385 対応の literal 再構成**: `core/hooks/amadeus-log-subagent-start.ts:70-72` がフィールドを opaque な戻り値から転送せず literal で組み直しており、コメント `:64-69` が「emitter/registry admission guard が call site のキー集合を静的に読めるようにする / default-deny redaction では未 admit キーが無音で消える」と理由を述べている。default-deny の危険を構造で塞いだ実装であり、model 属性の追加時も同じ様式を踏む必要がある。
 - **患部の安定性**: 患部9パスは 34 commits の区間で無変更であり、上流のクロスレビュー引用が observed でそのまま有効である（免除条件は verdict の target-sha 一致で成立）。
-## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の品質所見（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の件数・行番号はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。Test Strategy は Comprehensive。
 

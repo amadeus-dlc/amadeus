@@ -1,6 +1,81 @@
 # コード構造
 
-## cross-harness resume の患部配置（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 患部の配置
+
+```
+scripts/                                        ← #2313 の実行面（repo-only、dist へ出ない）
+  no-silent-drop-evidence.ts          (270行)  :32-33 usage（verb は rebind / reconcile のみ）
+                                               :59 / :63 分岐、:162-171 回復分岐、:253 runPureRebind / runReconcile
+  no-silent-drop-evidence-adapter.ts  (463行)  :226-240 freshness 述語（throw 点）
+                                               :305-315 第1段 tree 比較（EVIDENCE_BUNDLE_PATHS 除外）
+                                               :316-324 第2段 tree 証明（REBIND_PR_LANDING_TREE_MISMATCH）
+  no-silent-drop-retention.ts         (175行)  :28 parseArgs（引数なし = dry-run / --apply のみ）
+  no-silent-drop-migrate-events.ts     (87行)  旧 baseline/exemptions → events の一回性移行
+
+tests/no-silent-drop/                           ← 台帳と判定の正本
+  events/                                      1 ULID 1 ファイル、observed で 217 ファイル
+  events.ts                                    :15 EVENTS_DIR、:19 GrantEvent、:31 RevokeEvent、:47 SnapshotEvent
+                                               :58 FoldedLedger、:213 foldEvents、:305 baselineDocFromFold
+                                               :319 exemptionsDocFromFold、:323 listEventUlidsAtRevision、:438 assertEventCustody
+  ulid.ts                              (61行)  新規
+  ledger.ts                           (308行)  :191 assertShrinkOnly、:202 assertExemptionsShrinkOnly
+                                               :213-223 trustedBaseSha（解決順）、:226 baselineAtRevision
+                                               :242 approvalDigest、:250 validateApproval、:271 buildCandidate、:301 CANONICAL_PATHS
+  engine.ts                           (315行)  :52 Mode、:250-252 trustedBaseSha null 拒否、:256 foldEvents、:295 runGate、:304 isMode
+  evidence-rebind.ts                  (623行)  :24-30 EVIDENCE_BUNDLE_PATHS、:24 EVIDENCE_REGISTRY_PATH
+                                               :25 EVIDENCE_MANIFEST_PATH、:26 EVIDENCE_RUNS_PATH、:40 status 型
+                                               :341 buildReboundBundle、:405 buildReconcileBundle
+                                               :462 applyReboundBundle、:550 rollbackAppliedBundle
+  repository-adoption-evidence.ts     (468行)  :5 ADOPTION_RECEIPT_IDS（23種）、:293 readEvidenceArtifact
+                                               :353 evidenceDigestForEntry、:445 validateEvidenceBundle、:459 validateEvidenceRegistryFile
+  repository-adoption.ts              (227行)  :13 AdoptionReceipt、:22 EvidenceRegistry（上を re-export する薄い層）
+  adoption-evidence.json                       currentRevision = fe8c701ba15c0677a4ec18cc3715ff1086318dde、receipts 23件
+tests/no-silent-drop-gate.ts           (36行)  CLI 薄皮。usage は check|census-evidence|approve-evidence|baseline-candidate [--base-revision <full-sha>]
+tests/integration/
+  t413-no-silent-drop-ci-adoption.test.ts      :181-195 正準 narrow set と選定理由コメント
+
+packages/framework/core/tools/                  ← #2330 / #2358 の患部（core 中立層）
+  amadeus-advisory-choice.ts         (1567行)  :640-651 parsePending（schema 1 を受理）
+                                               :653-657 設計コメント、:659-661 parseStore（schema !== 2 を拒否）
+                                               :681-691 readStore（不在時のみ空 schema 2）
+                                               :1516-1520 USAGE / :1522-1532 dispatch（record / correct-misattributed の2 verb）
+  amadeus-orchestrate.ts                       :797-799 applyPendingAdvisoryGuard（pending 0 で早期 return）
+                                               :3707-3733 degradeUnitResolutionError（:3727-3731 全被覆アーム）
+                                               :3746-3760 unitCovered（produces 実在のみ）
+                                               :3807 単一 unit は covered でも解決
+tests/integration/
+  t367-degrade-unitname-resolution.test.ts     :411-420 test 13（multi-unit 全被覆 → refuse）
+                                               :422-426 E-OBB2-CG1 の INTENTIONAL コメント
+                                               :428-437 test 14（単一 unit は covered でもゲートを運ぶ）
+
+.github/workflows/
+  ci.yml                                       :121-157 "No silent drop (trusted base ratchet)"
+  no-silent-drop-evidence-reconcile.yml        push:[main]。恒久赤の所在
+  no-silent-drop-retention.yml                 新規（#2338）。週次 + workflow_dispatch
+```
+
+### 配置上の観察
+
+1. **#2313 の患部は `scripts/` にあり、`packages/framework/core/` にはない。** すなわち repo-only の実行面であり、dist / self-install 投影の同期対象ではない。一方 #2330 / #2358 は core 中立層であり、`project.md` Mandated の「正本を編集して `bun run build` で再生成」規律が該当する。**同一 intent で2つの配布境界にまたがる。**
+2. **判定の意味論が2箇所に分かれて実装されている（#2313）**: freshness 述語は `no-silent-drop-evidence-adapter.ts:226-240`（広域 set）と `t413:181-195`（narrow set）に別実装で存在する。「canonical 1定義から導出」原則（construction phase）に照らすと、是正は片方を正本に寄せる方向になる。
+3. **回復入口の置き場所が未定である（3件とも）**: #2313 は `scripts/no-silent-drop-evidence.ts` の verb 追加が自然だが、adapter の I/O ポート境界（純粋な rebind 計算と副作用の分離）を跨ぐ。#2330 は `amadeus-advisory-choice.ts` の CLI 面に verb を足す形が自然。#2358 は `amadeus-orchestrate.ts` の degrade 分岐に宣言受理点を置く形になるが、**宣言の入口を engine 側（`report` 等）に置くか、record 側の宣言ファイルに置くかで配置が変わる**。
+4. **#2330 の store は per-clone ランタイム（gitignored）**。observed の clone 内で 6 件が実在し、うち **schema 1 が 5 件・schema 2 が 1 件**（分布は re-scan 記録 § を正本とする）。**1 clone 内で複数 worktree にまたがって滞留する**ため、回復 verb の対象範囲（単一 store か探索か）が配置設計に直結する。
+
+### 区間内の配置変化
+
+- **削除**: `tests/no-silent-drop/baseline.json` / `exemptions.json`（#2338 で events 台帳へ置換）。
+- **新規**: `tests/no-silent-drop/events/`（217 ファイル）、`tests/no-silent-drop/ulid.ts`、`scripts/no-silent-drop-retention.ts`、`scripts/no-silent-drop-migrate-events.ts`、`.github/workflows/no-silent-drop-retention.yml`。
+- **core tools の新規5本**: `amadeus-sensor-pr-convergence-report-format.ts`（+165）、`amadeus-session-takeover.ts`（+275）、`amadeus-subagent-observability.ts`（+293）、`amadeus-subagent-stats.ts`（+468）、および sensor 定義 `core/sensors/amadeus-pr-convergence-report-format.md`（+64）。後2者は #2313 の freshness 広域 set に**含まれる**ため、drift の直接の原因ファイルである。
+- **plugins**: `plugins/pr-convergence/` が6ファイル全新規（`plugin.json` / `stages/pr-convergence.md` / `tools/` 4本）、`plugins/formal-model-check/` に `stages/tla-authoring.md`（+160）と `tools/tla-registration.ts`（+349）が追加。
+- **harness 層**: `harness/pi/extensions/subagent.ts` が新規 +1172。
+- **docs**: `docs/reference` の章番号空間の最大は **24**（新章 `24-intent-autonomy.md` / `.ja.md`）。次の新章は **25** から（`cid:code-generation:shared-ledger-insert-collision` の追補に従い、発行直前とマージ直前の origin/main 実測で再確認する）。
+
+
+## cross-harness resume の患部配置（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -115,7 +190,7 @@ session lifecycle / caller-authorization / harness detection のパスは区間�
 
 実装がcanonical eventやdirective/report schemaを変更する場合、正本はcoreに置き、`amadeus-audit`、event registry drift、`t28`、生成harness／`dist`へ同期する必要がある。ただし、この波及表は配置の観測であり、event追加を決定するものではない。receiptをstate内に置く案、audit journalに置く案、両者を相関する案の選択は後続要件・設計に残す。
 
-## subagent 型規律と model 属性の患部配置（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 属性の患部配置（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙とスポット再実測の結果は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -164,7 +239,7 @@ session lifecycle / caller-authorization / harness detection のパスは区間�
 患部9パス（`amadeus-lib.ts` / `amadeus-log-subagent.ts` / `amadeus-log-subagent-start.ts` / `resource-suppliers.ts` / `amadeus-statusline.ts` / `subagent-lifetime.ts` / `amadeus-codex-adapter.ts` / `payloads.json` / `amadeus-graph.ts`）への `git diff --stat b938898f3..7060956c5` は**空出力**。
 
 区間内で変わった隣接面は `core/otel/event-registry.ts` のみで、差分は `EXPECTED_CANONICAL_COUNT` 88→90 と新規2イベント（`INTENT_COMPLETION_TRANSACTION_COMMITTED` / `AUTO_DECISION_REVIEWED`）の追加。`SUBAGENT_*` の定義自体は無変更。
-## semi 再定義と autonomy 起動宣言の患部配置（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の患部配置（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の配置・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 

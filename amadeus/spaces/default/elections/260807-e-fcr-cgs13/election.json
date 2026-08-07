@@ -1,0 +1,27 @@
+{
+  "electionId": "E-FCR-CGS13",
+  "kind": "s13-adoption",
+  "question": "intent 260807-failclosed-recovery-path の code-generation §13 学習選定: 候補7件(c1〜c7、全文は record の construction/code-generation/memory.md を実読)に対し、conductor 提案は「memory 層への persist 0件」。不採用理由 — c1: #2330 クローズの intent 固有実測(diary 記録で十分) / c2: 回転フレークは Issue #2397 へ起票済み(知識の正本は Issue) / c3: 既存 cid:requirements-analysis:always-elect の執行クラス適用実例(新規則なし) / c4: 既存 cid:code-generation:c1-degrade-batch-directive-capture ほかの適用実例 / c5: stance 分類の定型実施 / c6: 既存 deviation-stop 系ノルムの適用実例 / c7: 潜在欠陥(runFocusedValidation の --base-revision 自己参照)は同一 intent 内で修正済みかつ既存 cid:build-and-test:c4-260803-state-integrity(自己比較の縮退)ファミリと同型。加えて #2358 の宣言機構ノルム追補(cid:code-generation:c1-2358-declare-units-done)は Bolt 3 の PR #2393 で team.md へ着地済み。各候補の実在根拠は memory.md と各 unit の code-summary.md で独立実測すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "全7候補を memory 層へ persist しない。既存ノルムの実例・intent 固有事実・Issue/PR で既着地のいずれかに該当するため。"
+    },
+    {
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補 id と理由を留保に明記する。"
+    },
+    {
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "欠落・誤りの内容を留保に明記する。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

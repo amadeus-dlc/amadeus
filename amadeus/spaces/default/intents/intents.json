@@ -967,5 +967,12 @@
     "dirName": "260805-subagent-type-guard",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019fda37-8c17-79ec-96b3-0db6823f0622",
+    "slug": "failclosed-recovery-path",
+    "dirName": "260807-failclosed-recovery-path",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

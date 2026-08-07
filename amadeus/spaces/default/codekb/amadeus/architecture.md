@@ -1,6 +1,91 @@
 # アーキテクチャ
 
-## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 3患部に共通する結線形
+
+```
+            検出                              回復
+#2313  freshness 述語 → throw            currentBindingIsValidForEvent が
+       (adapter:226-240)                 false を返したときだけ
+                                         proveIdentityOnlyRebind へ（evidence.ts:162-171）
+                                         → throw はどの回復分岐にも到達しない
+
+#2330  parseStore が schema !== 2 で      readStore は「store 不在」のときだけ
+       reject (advisory-choice:659-661)  空の schema 2 を返す（:681-691）
+                                         → 既存 schema 1 ファイルは常に parse 失敗
+                                         → 呼び出し側 !ok → fail-closed hold
+                                         → hold を解く CLI verb が存在しない（:1516-1532）
+
+#2358  uncovered.length === 0 →          「unit ディレクトリを作れ」の案内のみ
+       errorDirective                    （orchestrate:3727-3731）
+       (orchestrate:3707-3733)           → 作るべき仕事が残っていない状況では実行不能
+```
+
+**共通形**: いずれも「異常を検知して止める」側は結線済みで、「止まった状態を解消する」側が結線されていない。#2313 は throw と回復分岐が**排他**（throw すると回復条件の評価に到達しない）、#2330 は回復条件が**不在時のみ**に限定、#2358 は回復案内が**到達不能な行為**を指す。これは `cid:requirements-analysis:symmetric-pair-review` が言う対操作の非対称（write⇔check / emit⇔terminal）の、**detect⇔recover 面**である。
+
+### #2313 — evidence reconcile の分岐構造
+
+```
+scripts/no-silent-drop-evidence.ts  reconcile
+  └→ adapter.currentBindingIsValidForEvent(registry, eventRevision)
+       ├ binding が event の祖先でない → false → 回復（proveIdentityOnlyRebind）へ
+       └ binding が event の祖先       → freshness 述語（:226-240）
+            ├ git diff --quiet が status 0（変更なし） → true（no-op で終了）
+            └ status 1（変更あり） → throw REBIND_NON_IDENTITY_DRIFT   ← 現在ここで恒久停止
+```
+
+祖先性の実測（observed）: `git merge-base --is-ancestor fe8c701ba b8e3e664f` → **exit 0**。すなわち主分岐（freshness）へ入る。freshness 述語が読むパス集合は `packages/framework/core/tools` と `:(glob)tests/no-silent-drop/**/*.ts` の2要素で、前者は **gate が走査するコーパス**であってゲート実装ではない。区間 `fe8c701ba..b8e3e664f` で前者に3ファイルの変更があるため（`amadeus-lib.ts` / `amadeus-subagent-observability.ts` / `amadeus-subagent-stats.ts`）、drift が立って throw する。
+
+**正準側は別集合を持つ**: `tests/integration/t413-no-silent-drop-ci-adoption.test.ts:181-195` の述語は `":(glob)tests/no-silent-drop/**/*.ts"` と `"tests/no-silent-drop-gate.ts"` の2要素で、`packages/framework/core/tools` を**意図的に除外**する。選定理由コメント逐語: "Freshness is asserted over the gate's own implementation only. packages/framework/core/tools is the corpus the gate scans, not the gate: … it needs an evidence-regeneration path, not a pin here." 同集合での実測は exit 0（drift なし）。**すなわち adapter の広域 set と t413 の narrow set は同じ意味論の2実装であり、片方だけが広い。**
+
+第2段の tree 証明（`adapter:316-324`）は `pullRequestHead` と `eventRevision` の root tree 一致を要求する。第1段（`:305-315`）は既に `EVIDENCE_BUNDLE_PATHS` の3ファイル（`adoption-evidence-manifest.json` / `adoption-evidence.json` / `evidence/adoption-runs.json`、実体は `tests/no-silent-drop/evidence-rebind.ts:24-30`）を除外した tree 比較の形を持つ。**回復経路を設計するとき、この2段構えのどちらに乗せるかが結線上の分岐点になる。**
+
+### #2330 — advisory choice store の schema 遷移
+
+```
+readStore(path)
+  ├ ファイル不在        → 空の schema 2 store を返す（:681-691）
+  └ ファイル実在        → parseStore
+                            ├ schema === 2 → ok
+                            └ schema !== 2 → reject（:659-661）→ 呼び出し側 !ok → hold
+parsePending
+  └ value.schema !== 1 を拒否（:640-651）= pending エントリ自体は schema 1 のまま
+```
+
+**設計コメントの明文**（`:653-657` 逐語）: "Schema 2 (#2253). A schema 1 store on disk is NOT translated: it fails to parse, and the caller's existing `!storeResult.ok` arm turns that into a fail-closed hold. …the safe answer to that question is to ask the human again — which the hold already does."
+
+この設計は「hold が人間へ訊き直す」ことを前提に成立するが、**hold を人間の操作で解く入口が CLI に無い**。加えて `amadeus-orchestrate.ts:797-799` の `applyPendingAdvisoryGuard` は `if (pending.length === 0) return directive;` で早期 return するため、evaluator がもう advisory を raise しない intent では guard 経路自体が走らず、「訊き直し」も起きない。
+
+結線上の要点: `parsePending` が schema 1 を**受理する**（`:640-651`）ため、**pending エントリは salvage 可能な形で残っている**。回復は「schema 1 の pending を読んで schema 2 の store を書き直す」形が結線的に成立しうる。
+
+### #2358 — degrade 経路の unit 解決
+
+```
+degradeUnitResolutionError（orchestrate:3707-3733）
+  ├ uncovered.length >= 1 → 通常の解決へ
+  └ uncovered.length === 0 → errorDirective（:3727-3731）
+        "Every one of them already holds this stage's required artifacts, so no unit is left to run."
+        "Create the unit directory for this piece of work …, then re-run `next`."
+
+unitCovered（:3746-3760）: produces の実在のみで判定。§12a Review の記録有無を見ない（= #2359 と共有する述語）
+単一 unit の解決（:3807）: if (candidates.length === 1) return { unit: candidates[0], uncovered };  ← covered でも解決する
+```
+
+**非対称は意図的**: `t367-degrade-unitname-resolution.test.ts:411-420` が test 13（複数 unit 全被覆 → refuse）を pin し、直後の test 14（`:428-437`）が「a lone finished unit still resolves, carrying the stage gate」を pin する。`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記する。**詰みは multi-unit 限定**であり、単一 unit では既にゲートが運ばれる。
+
+したがって回復の結線は「multi-unit・全被覆の状態に対して、単一 unit と同じくゲートを運ぶ明示的な宣言入口を与える」形になる。`unitCovered` の述語自体（Review 記録を見ない点）は #2359 の射程であり、本 intent の宣言受理点はその hook を塞いではならない。
+
+### 区間内の構造変化（患部に隣接するもの）
+
+- **no-silent-drop の世代交代（#2338 / PR #2353 = `fe8c701ba`）**: `baseline.json` / `exemptions.json` を削除し、append-only ULID イベント台帳（`tests/no-silent-drop/events/`、observed で 217 ファイル）へ置換。畳み込みは `foldEvents`（`events.ts:213`）→ `FoldedLedger`（`:58`）で、旧 doc 形へは `baselineDocFromFold`（`:305`）/ `exemptionsDocFromFold`（`:319`）が射影する。custody 検証は `listEventUlidsAtRevision`（`:323`）と `assertEventCustody`（`:438`）。`previousDigest` によるバイト束縛は廃止され、残骸は `model.ts:69,76` の optional field と `evidence-rebind.ts:407` / `bootstrap.ts:337,433` のコメントのみ。
+- **この世代交代が #2313 の仮説的な起点**（未確定）: ratchet の入力が `baseline.json` から events 台帳の custody 照合へ移ったことが、reconcile 側の freshness 前提とずれた可能性がある。observed では因果は確定していない。
+- CI の3ワークフロー結線: `ci.yml:121-157`（trusted base ratchet、PR / push / dispatch で base 解決を分岐）、`no-silent-drop-evidence-reconcile.yml`（`push: [main]`、GitHub App token）、`no-silent-drop-retention.yml`（新規、週次 + dispatch、snapshot 書込は専用ブランチの auto-squash PR で feature PR には混ぜない）。
+
+
+## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 `git merge-base --is-ancestor` exit 0、距離 34 commits / 493 files、`+43826 / −217`）。全数列挙・実測手順は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -160,7 +245,7 @@ sequenceDiagram
 ```
 <!-- Text fallback: functional-design の最初の gate:false directive で advisory は利用可能だが、機械検証可能な選択receiptはないまま消費・latchされる。残りのunit処理後に出る gate:true directiveでは同じadvisoryが再提示されない。 -->
 
-## subagent 観測パイプラインの結線構造（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 観測パイプラインの結線構造（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。実測手順・全数列挙・引用スポット再実測は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -226,7 +311,7 @@ Codex 側の到達経路は `packages/framework/harness/codex/hooks/amadeus-code
 ### 型規律の検査が存在する層と存在しない層
 
 compile 時には agent ロスタ照合が存在する — `core/tools/amadeus-graph.ts:2191` `const knownAgents = loadAgents().map((a) => a.slug);` を `:2218` `validateStageFrontmatter(parsed, { agents: knownAgents })` へ渡し、stage frontmatter の `lead_agent` / `support_agents` が実在しない場合に compile を loud に落とす（コメント `:2186-2190`）。**しかしこの機構は dispatch の `subagent_type` を一切見ない。** すなわち「stage 宣言の agent 参照」は検査されるが「実行時 spawn の型」は無検査であり、Issue #2279 が指す空白はこの2層の非対称そのものである。
-## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の結線構造（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の file:line・件数はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、区間 19 commits / 464 files）。行番号は canonical 側 `packages/framework/core/` を記す（`.claude/` ミラーは同一内容）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

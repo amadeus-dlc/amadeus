@@ -1,6 +1,48 @@
 # 技術スタック
 
-## cross-harness resume の技術断面（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 区間内の技術スタック変化
+
+**`package.json` の実質 diff は 1 箇所のみ**: `pi.extensions` に `./dist/pi/.pi/extensions/subagent.ts` を追加（`devDependencies` は無変更）。ランタイム・型検査・lint・テストランナーの構成は不変。
+
+### observed 断面の固定値
+
+| 要素 | 値 | 測定面 |
+| --- | --- | --- |
+| ランタイム | bun **1.3.13** | `.github/workflows/` の全 workflow で `bun-version: 1.3.13` の単一値、区間で変更なし。`bun-types: ^1.3.13` |
+| 言語 | TypeScript `^6.0.3`（ESM、`tsc --noEmit`） | `package.json` |
+| リンター | Biome `2.5.5`（フォーマッタ無効） | 同上 |
+| 主要依存 | `@anthropic-ai/claude-agent-sdk` 0.3.158、`@ast-grep/napi` 0.45.0、`@opentelemetry/api` 1.9.1 / `api-logs` 0.221.0 / `context-async-hooks` 2.10.0、`fast-check` ^4.9.0、`release-it` ^20.2.1 | 同上 |
+| 複雑度計測 | lizard は CI で `pip install lizard==1.23.0` | `ci.yml:196` / `:279` / `:426` |
+| lint 対象 | `tests/ packages/setup/ packages/framework/core/ scripts/ plugins/` | `package.json` |
+
+### 本 intent の患部が依拠する技術要素
+
+| 要素 | 技術的性質 | 本 intent での含意 |
+| --- | --- | --- |
+| ULID イベント台帳（`tests/no-silent-drop/events/`、`ulid.ts` 61行） | 1 ULID 1 ファイルの JSON、append-only。畳み込みで実効集合を得る | #2338 の世代交代で `baseline.json` / `exemptions.json` を置換。**バイト束縛（`previousDigest`）から custody 照合へ**の方式転換であり、#2313 の drift 仮説の起点候補 |
+| `git diff --quiet <range> -- <pathspec>` の exit code | 0 = 差分なし / 1 = 差分あり | freshness 述語の判定手段（`adapter:226-240`）。**pathspec の選び方だけが挙動を決める**ため、広域 set と narrow set の差が恒久赤か green かを分ける |
+| `git merge-base --is-ancestor` | 祖先性判定 | reconcile の分岐選択（observed で exit 0 = 主分岐）と、`--base-revision` の厳密祖先性要求（`ledger.ts:213-223`）の両方に使われる |
+| root tree 比較（`rootTree`） | commit の内容同一性の証明 | 第1段（`:305-315`、`EVIDENCE_BUNDLE_PATHS` 除外）と第2段（`:316-324`、除外なし）の2段構え |
+| JSON schema versioning（`schema: 1` / `2`） | ディスク上の形式世代 | advisory store は schema 2 のみ受理、pending は schema 1 のみ受理という**非対称の同居**。翻訳層を置かない設計判断（`:653-657`） |
+| gitignored な per-clone ランタイム | git から census 不能 | advisory store は6件が clone 内に実在（schema 1 が5件・schema 2 が1件）。**git では列挙できないため、回復 verb の探索範囲が技術的論点になる** |
+| GitHub App token + `gh` | reconcile ワークフローの認証面 | `no-silent-drop-evidence-reconcile.yml`。preflight 失敗は専用コードで step summary へ |
+
+### 配布境界の観点
+
+- #2313 の患部は `scripts/` にあり **repo-only**。`dist/` / self-install 投影の同期対象ではない。
+- #2330 / #2358 の患部は `packages/framework/core/tools/` にあり、`project.md` Mandated の「正本を編集して `bun run build` で再生成、追跡ファイルは不変」規律が該当する。source-only 境界（#2152 以降）により生成物は未追跡であり、検証は隔離2回ビルドの再現性検査・`bun run source-only:check`・グラフ不変量検査で行う。
+- **したがって本 intent は2つの配布境界にまたがる**。Bolt を分ける場合、検証コマンド集合が Bolt ごとに異なる。
+
+### 技術面の未変化点
+
+セッション・監査・ステージグラフ・センサーの基盤構成に変更はない。区間の 76 commits の大半は `chore(metrics): record/maintain snapshots` の自動 PR（#2290〜#2384）であり、残りは no-silent-drop 世代交代、autonomy / semi 再定義（#2253 Bolt 群）、subagent 可観測性 / PI、pr-convergence plugin 新規、TLA+ authoring、engine の判定修復、docs に分布する。
+
+
+## cross-harness resume の技術断面（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files、`+43826 / −217`）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -42,7 +84,7 @@
 - **状態と監査**: state CLIとper-clone JSONL auditは既存の永続化基盤だが、canonical 81 eventにadvisory固有receiptはない。event追加を選ぶ場合のregistry／docs／tests／生成面の同期は既存ツールチェーンで可能だが、採用自体は未決定である。
 - **検証**: Bun integration testの対象2ファイルは28 pass、0 fail、107 expect。現行発火とlatchを固定するが、人間選択の権限・鮮度・再入を検証するtest stackはまだない。
 
-## subagent 型規律の技術断面（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律の技術断面（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**技術スタックに変更はない**。TypeScript / ESM / Bun 直接実行、`tsc --noEmit` による strict 型検査、Biome lint（formatter 無効）、`tests/run-tests.sh` の4層ランナーは不変である。
 
@@ -55,7 +97,7 @@
 | bun（テスト実行） | `1.3.13` | 本 RE のテスト再実行出力 |
 
 **ハーネス CLI の hook payload は版依存の外部 seam である。** Claude Code の `PreToolUse` の `tool_name` が `"Agent"` である一方 core 定数が `"Task"` を期待している（D-1）ことは、外部 CLI の語彙が repo 側の想定と独立に前進しうることの実例であり、`cid:application-design:external-seam-vocab-measurement`（seam の語彙は実測で確定する）が本 intent の設計に直接効く。
-## semi 再定義と autonomy 起動宣言の技術断面（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の技術断面（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 
