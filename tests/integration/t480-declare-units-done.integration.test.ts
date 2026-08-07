@@ -34,6 +34,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { handleDeclareUnitsDone } from "../../packages/framework/core/tools/amadeus-state.ts";
 import {
@@ -75,6 +76,12 @@ beforeEach(() => {
 afterEach(() => {
   if (previousProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
   else process.env.CLAUDE_PROJECT_DIR = previousProjectDir;
+  // Driving the handlers in-process bootstraps OTel against this case's temp
+  // project, and the bootstrap seam pins ONE workspace per process. Leaving it
+  // pinned makes the next fixture project — in this file or the next file the
+  // runner loads — fail its first audit emit with the one-workspace invariant.
+  // Dropping it here keeps the leak inside the case that created it.
+  resetOtelPerProject();
   while (tempDirs.length) cleanupTestProject(tempDirs.pop());
 });
 
