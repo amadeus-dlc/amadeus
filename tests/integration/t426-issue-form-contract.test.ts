@@ -221,8 +221,12 @@ describe("t426 Issue Form contract", () => {
     expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
     expect(workflow.permissions).toEqual({});
     expect(job.permissions).toEqual({ contents: "read", issues: "write" });
-    expect(job.if).toContain("### 優先度（いつ対応するか）");
-    expect(job.if).toContain("### 優先度（いつ直すか）");
+    // The gate must key on the heading stem only. Pinning either paren width
+    // here would re-introduce #2408: the job silently skipped — and with it the
+    // whole fail-closed classification check — for every half-width body.
+    expect(job.if).toContain("### 優先度");
+    expect(job.if).not.toContain("（いつ対応するか）");
+    expect(job.if).not.toContain("（いつ直すか）");
     expect(job.steps[0]?.uses).toBe(
       "actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3",
     );
@@ -280,6 +284,57 @@ describe("t426 Issue Form contract", () => {
     expect(legacyBug.removed.sort()).toEqual(["P2", "S3-MAJOR"]);
   });
 
+  // #2408: paren width is a rendering detail. Both the job gate and the script
+  // must read a half-width body exactly like the full-width one the Form emits,
+  // or CLI-filed Issues slip past the classification check in silence.
+  test("classification is independent of heading paren width (#2408)", async () => {
+    const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
+      jobs: { sync: { if: string; steps: Array<{ with?: { script?: string } }> } };
+    };
+    const job = workflow.jobs.sync;
+    const script = job.steps[0]?.with?.script ?? "";
+
+    // The gate is a disjunction of contains(body, '<literal>') terms; evaluate
+    // the real expression rather than restating which literals it should hold.
+    const literals = [...job.if.matchAll(/contains\(github\.event\.issue\.body,\s*'([^']*)'\)/g)]
+      .map((match) => match[1]);
+    expect(literals.length).toBeGreaterThan(0);
+    const gateFires = (body: string): boolean => literals.some((literal) => body.includes(literal));
+
+    const halfWidthBug = issueBody(
+      "bug",
+      "P2 — 通常",
+      [
+        ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+        ["原因の所在", "未特定"],
+      ],
+      "half",
+    );
+    const fullWidthBug = issueBody("bug", "P2 — 通常", [
+      ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+      ["原因の所在", "未特定"],
+    ]);
+
+    // The body really is half-width — otherwise this test would pass for the
+    // wrong reason.
+    expect(halfWidthBug).toContain("### 優先度(いつ対応するか)");
+    expect(halfWidthBug).not.toContain("（");
+
+    expect(gateFires(halfWidthBug), "the job gate fires for a half-width body").toBe(true);
+    expect(gateFires(fullWidthBug), "the job gate still fires for a full-width body").toBe(true);
+    // A body with no priority heading at all (an Intent Mirror Issue, say) is
+    // still skipped: widening the gate must not turn it into a catch-all.
+    expect(gateFires("# Intent Mirror\n\nstatus: running")).toBe(false);
+
+    const half = await executeWorkflow(script, halfWidthBug, []);
+    expect(half.failures).toEqual([]);
+    expect(half.added).toEqual([["bug", "P2", "S3-MAJOR"]]);
+
+    const full = await executeWorkflow(script, fullWidthBug, []);
+    expect(full.added).toEqual(half.added);
+    expect(full.failures).toEqual(half.failures);
+  });
+
   test("the workflow rejects untouched placeholder classifications", async () => {
     const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
       jobs: { sync: { steps: Array<{ with?: { script?: string } }> } };
@@ -316,14 +371,20 @@ function issueBody(
   type: FormType,
   priority: string,
   fields: ReadonlyArray<readonly [string, string]> = [],
+  parens: "full" | "half" = "full",
 ): string {
+  // The Issue Form renders full-width （）; bodies assembled by hand or by
+  // `gh issue create --body-file` routinely carry half-width (). Same heading,
+  // different rendering — the classification must not depend on which.
+  const widen = (heading: string): string =>
+    parens === "full" ? heading : heading.replace(/（/g, "(").replace(/）/g, ")");
   return [
     `<!-- amadeus-issue-form:v1 type=${type} -->`,
     "",
-    "### 優先度（いつ対応するか）",
+    widen("### 優先度（いつ対応するか）"),
     "",
     priority,
-    ...fields.flatMap(([label, value]) => ["", `### ${label}`, "", value]),
+    ...fields.flatMap(([label, value]) => ["", widen(`### ${label}`), "", value]),
   ].join("\n");
 }
 

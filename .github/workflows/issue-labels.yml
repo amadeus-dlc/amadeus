@@ -13,7 +13,14 @@ concurrency:
 jobs:
   sync:
     name: Sync Issue Form classification labels
-    if: contains(github.event.issue.body, '### 優先度（いつ対応するか）') || contains(github.event.issue.body, '### 優先度（いつ直すか）')
+    # Paren width is a rendering detail, not a classification signal: the Issue
+    # Form emits full-width （）, while bodies built by hand or by `gh issue
+    # create --body-file` routinely use half-width (). Gating on the full-width
+    # spelling skipped this job — and with it the whole fail-closed
+    # classification check — for every CLI-filed Issue. Gate on the heading stem
+    # alone and let the script below decide, so an unrecognizable body fails
+    # loudly instead of never being looked at.
+    if: contains(github.event.issue.body, '### 優先度')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -27,15 +34,23 @@ jobs:
             const issue = context.payload.issue;
             const body = issue.body ?? "";
 
-            function field(label) {
+            // Match a heading regardless of paren width. Only the PATTERN is
+            // widened — the body and the captured value stay untouched, so a
+            // dropdown value that happens to contain parens is unaffected.
+            function headingPattern(label) {
               const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-              const match = body.match(new RegExp(`^### ${escaped}\\s*\\n+([^\\n]+)`, "m"));
+              return escaped.replace(/\\\(|（/g, "[(（]").replace(/\\\)|）/g, "[)）]");
+            }
+
+            function field(label) {
+              const match = body.match(
+                new RegExp(`^### ${headingPattern(label)}\\s*\\n+([^\\n]+)`, "m"),
+              );
               return match?.[1]?.trim() ?? "";
             }
 
             function hasField(label) {
-              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-              return new RegExp(`^### ${escaped}\\s*$`, "m").test(body);
+              return new RegExp(`^### ${headingPattern(label)}\\s*$`, "m").test(body);
             }
 
             const typeSignals = [
