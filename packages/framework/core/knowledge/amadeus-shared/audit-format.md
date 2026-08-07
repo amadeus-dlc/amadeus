@@ -111,8 +111,10 @@ one named ledger it salvages the pending rows (still `schema: 1` by design,
 inside a schema 2 ledger), discards the schema 1 receipts rather than
 translating them, and writes schema 2. Discarding is what makes the advisories
 unanswered again, which is the "ask the human again" the fail-closed hold
-already stood for. It refuses loudly and writes nothing when the salvaged
-pending rows name an intent run other than the active one, and its outcome
+already stood for. It refuses loudly and writes nothing when the ledger names an
+intent run other than the active one — read off the salvaged pending rows, or
+off the receipts when there is no pending row to carry it, so a receipts-only
+ledger is not left undefended at the moment its whole content is discarded — and its outcome
 reports the receipts dropped, whether re-presentation is required, and the
 formal-check attempt counts that reset with the discarded run-now receipts.
 

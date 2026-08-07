@@ -1470,6 +1470,20 @@ function droppedRunNowCount(receipts: readonly unknown[]): number {
   return receipts.filter((receipt) => isPlainObject(receipt) && receipt.choice === "run-now").length;
 }
 
+// The second thing a discarded legacy receipt is read for, and it is likewise
+// not a meaning: WHOSE it is. A receipts-only store has no pending row to carry
+// the owner, which is exactly where the pending check goes vacuous and the whole
+// content of the store is about to be thrown away. A receipt too malformed to
+// show an intent run yields nothing here — this read only ever adds a refusal,
+// never a permission, so an unreadable receipt cannot widen what is allowed.
+function foreignReceiptIntentRuns(receipts: readonly unknown[], intentRun: string): string[] {
+  return receipts.flatMap((receipt) => {
+    const identity = isPlainObject(receipt) ? receipt.identity : undefined;
+    const owner = isPlainObject(identity) ? identity.intentRun : undefined;
+    return nonEmptyString(owner) && owner !== intentRun ? [owner] : [];
+  });
+}
+
 // #2330. ADR-9's refusal to read a schema 1 store is kept exactly as it is —
 // parseStore is untouched and every reader still fails closed on the old shape.
 // What was missing is the way OUT of that state, and this is it: the pending
@@ -1504,10 +1518,11 @@ export function recoverSchema1AdvisoryStore(projectDir: string): ParseResult<Adv
     const intentRun = intentRunIdentity(projectDir);
     if (intentRun === null) return { ok: false as const, reason: "active intent is unresolved" };
     const foreign = pending.find((item) => item.identity.intentRun !== intentRun);
-    if (foreign !== undefined) {
+    const foreignOwner = foreign?.identity.intentRun ?? foreignReceiptIntentRuns(raw.receipts, intentRun)[0];
+    if (foreignOwner !== undefined) {
       return {
         ok: false as const,
-        reason: `advisory choice store does not belong to the active intent (store: ${foreign.identity.intentRun}, active: ${intentRun})`,
+        reason: `advisory choice store does not belong to the active intent (store: ${foreignOwner}, active: ${intentRun})`,
       };
     }
     writeStore(projectDir, { schema: 2, pending, receipts: [] });

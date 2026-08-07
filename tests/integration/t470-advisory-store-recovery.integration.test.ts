@@ -181,6 +181,29 @@ describe("advisory store recovery: misdirection defence (FR-2.3 / AC-2b)", () =>
     expect(result.reason).toContain("does not belong to the active intent");
     expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
   });
+
+  // A receipts-only store has no pending row to carry the owner's identity, so
+  // the pending check above is vacuous exactly where the whole content of the
+  // store is about to be thrown away. The receipts carry an identity too, and
+  // reading the intent run off one is a safety read, not a translation: nothing
+  // about what the receipt MEANT is interpreted, and the receipt is discarded
+  // either way.
+  test("pendingが0件でもreceiptsが別intentのものならloudに拒否される", () => {
+    const { projectDir } = track(seedSchema1Project(["run-now"]));
+    const store = readRawStore(projectDir);
+    const receipts = store.receipts as { identity: { intentRun: string } }[];
+    receipts[0]!.identity = { ...receipts[0]!.identity, intentRun: "019ffffff-dead-7000-b000-000000000000" };
+    store.pending = [];
+    writeRawStore(projectDir, store);
+    const before = readFileSync(storePath(projectDir), "utf-8");
+
+    const result = recoverSchema1AdvisoryStore(projectDir);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toContain("does not belong to the active intent");
+    expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
+  });
 });
 
 describe("advisory store recovery: receipts-only store (AC-2a)", () => {

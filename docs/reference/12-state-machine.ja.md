@@ -299,7 +299,7 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 
 対象は **単一** の store — アクティブ intent のもの、または `--project-dir` が指すもの — に限られます。pending advisory を schema 2 store と同じパーサで salvage し、schema 1 の receipt は翻訳せず **破棄** し、schema 2 の store を書きます。破棄は代償ではなく目的です。receipt を持たない advisory はチェックポイントが再び問うものであり、それは fail-closed hold が意図していた「人間にもう一度聞く」と同じ状態だからです。
 
-書き込みの前に、salvage した pending がアクティブ intent のものであることを検査し、そうでなければ何も変えずに loud に拒否します — 古い intent カーソル越しに辿り着いた store を事故で空にすることはありません。結果は変化した内容を明示します: `receipts_dropped`、`re_presentation_required`(open な advisory を salvage しなかった場合は false — store は次に備えて正常化されるだけです)、そして `formal_check_attempts_reset`(形式検査ルートの試行番号は、いま破棄された `run-now` receipt から導出されるため)。
+書き込みの前に、store がアクティブ intent のものであることを検査し、そうでなければ何も変えずに loud に拒否します — 古い intent カーソル越しに辿り着いた store を事故で空にすることはありません。検査は salvage した pending から intent run を読み、pending が1件も無い場合は receipt から読みます。receipt しか無い store は、まさに pending の検査が空振りしつつ中身の全部が破棄されようとしている場合だからです。receipt から intent run を読むのは安全のための読み取りであって翻訳ではありません — その receipt が何を意味したかは一切解釈せず、intent run を示せないほど壊れた receipt は拒否を差し控えるだけで、許可を与えることはありません。結果は変化した内容を明示します: `receipts_dropped`、`re_presentation_required`(open な advisory を salvage しなかった場合は false — store は次に備えて正常化されるだけです)、そして `formal_check_attempts_reset`(形式検査ルートの試行番号は、いま破棄された `run-now` receipt から導出されるため)。
 
 ### Scope and configuration
 

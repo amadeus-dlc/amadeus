@@ -345,9 +345,15 @@ translating them, and writes a schema 2 store. Discarding is the point rather
 than a cost: an advisory with no receipt is one the checkpoint asks again, which
 is the same "ask the human again" the fail-closed hold intended.
 
-Before writing anything it checks that the salvaged pending belongs to the
-active intent and refuses loudly, changing nothing, when it does not — a store
-reached through a stale intent cursor is never emptied by accident. The outcome
+Before writing anything it checks that the store belongs to the active intent
+and refuses loudly, changing nothing, when it does not — a store reached through
+a stale intent cursor is never emptied by accident. The check reads the intent
+run off the salvaged pending, and off the receipts when there is no pending row
+to carry it: a receipts-only store is exactly the case where the pending check
+would be vacuous and the whole content is about to be discarded. Reading an
+intent run off a receipt is a safety read, not a translation — nothing about
+what the receipt meant is interpreted, and a receipt too malformed to show one
+only ever withholds a refusal, never grants a permission. The outcome
 names what changed: `receipts_dropped`, `re_presentation_required` (false when
 no open advisory was salvaged — the store is simply normalised for whatever
 comes next), and `formal_check_attempts_reset`, since the attempt a formal-check
