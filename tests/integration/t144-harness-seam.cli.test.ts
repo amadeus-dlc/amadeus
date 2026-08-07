@@ -9,9 +9,10 @@
 //   harnessDir():        AMADEUS_HARNESS_DIR env → script-path derivation
 //                        (<project>/<harness>/tools) → CWD probe (.claude
 //                        first) → ".claude" fallback.
-//   resolveProjectDir(): explicit arg → CLAUDE_PROJECT_DIR → script-path
-//                        suffix strip (per harness dir) → CWD-with-marker →
-//                        cwd.
+//   resolveProjectDir(): explicit arg → CLAUDE_PROJECT_DIR →
+//                        CWD-with-workspace-marker (issue #2352) → script-path
+//                        suffix strip (per harness dir) → CWD-with-harness-dir
+//                        → cwd.
 // The codex tree does not exist yet (it lands in MR-3); these cases prove the
 // seam is a pure superset by exercising lib copies placed in synthetic
 // .codex trees — exactly how the packaged dist/codex/.codex/tools will sit.
@@ -131,10 +132,14 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     }
   });
 
-  test("5: resolveProjectDir CWD-marker rung accepts a .codex marker", () => {
+  // The LAST rung: cwd carries a bare harness DIRECTORY (.codex here) but no
+  // "amadeus/" tree, so it is NOT a workspace marker (that needs both halves —
+  // see test 5b) and the #2352 rung must not fire. Retitled from "CWD-marker"
+  // once the workspace-marker rung landed above, so the two are not conflated.
+  test("5: resolveProjectDir CWD harness-dir probe rung accepts a bare .codex dir", () => {
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
-      // Lib outside any harness tree → suffix strip misses → CWD marker rung.
+      // Lib outside any harness tree → suffix strip misses → CWD probe rung.
       const libCopy = materializeLib(tmp, { copyData: true });
       const project = join(tmp, "proj");
       mkdirSync(join(project, ".codex"), { recursive: true });
@@ -144,8 +149,47 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     }
   });
 
+  // Issue #2352, the verbatim case-B shape that only a real shipped layout can
+  // express: the lib is loaded by ABSOLUTE PATH out of the MAIN checkout's
+  // <harness>/tools tree — so script-path derivation resolves to <main> —
+  // while the session's cwd is a worktree carrying its own amadeus/ +
+  // <harness>/tools marker. Before the workspace-marker rung, the script-path
+  // rung won and the worktree's work was written into the main record.
+  //
+  // The marker rung sits BELOW env (ruling E-PWF-CGDEV2), so this test also
+  // pins the deliberate boundary: with CLAUDE_PROJECT_DIR set, env still wins.
+  test("5b: a worktree cwd outranks the main checkout's script path, but not env", () => {
+    const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
+    try {
+      const mainDir = join(tmp, "main");
+      const lib = libInHarnessTree(mainDir, ".claude");
+      mkdirSync(join(mainDir, "amadeus"), { recursive: true });
+
+      const worktree = join(mainDir, ".claude", "worktrees", "agent-fixture");
+      mkdirSync(join(worktree, "amadeus"), { recursive: true });
+      mkdirSync(join(worktree, ".claude", "tools"), { recursive: true });
+
+      // Case B: env UNSET — script-path derivation would say <main>.
+      expect(evalLib(lib, "resolveProjectDir()", { cwd: worktree })).toBe(worktree);
+      // Case C+env: CLAUDE_PROJECT_DIR is above the marker rung and still wins.
+      expect(
+        evalLib(lib, "resolveProjectDir()", { cwd: worktree, env: { CLAUDE_PROJECT_DIR: mainDir } }),
+      ).toBe(mainDir);
+      // The main checkout itself is unaffected (case A).
+      expect(evalLib(lib, "resolveProjectDir()", { cwd: mainDir })).toBe(mainDir);
+      // The explicit argument still outranks every rung below it.
+      expect(evalLib(lib, 'resolveProjectDir("/explicit/dir")', { cwd: worktree })).toBe(
+        "/explicit/dir",
+      );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   test("6: explicit arg and CLAUDE_PROJECT_DIR outrank the harness rungs", () => {
     expect(evalLib(CLAUDE_LIB, 'resolveProjectDir("/explicit/dir")')).toBe("/explicit/dir");
+    // cwd here is the repo root, which carries a workspace marker — env is
+    // above the marker rung (#2352), so it wins regardless.
     expect(
       evalLib(CLAUDE_LIB, "resolveProjectDir()", { env: { CLAUDE_PROJECT_DIR: "/from/env" } }),
     ).toBe("/from/env");
@@ -190,7 +234,9 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
       // rulesSubdir read from the emitted harness.json — no hardcoded entry exists.
       expect(evalLib(lib, "rulesSubdir()")).toBe("gemini-rules");
       // resolveProjectDir strips "<harness>/tools" for the unknown dir too.
-      expect(evalLib(lib, "resolveProjectDir()")).toBe(join(tmp, "gemini"));
+      // cwd is the marker-less tmp root so the #2352 workspace-marker rung
+      // (which the repo root would satisfy) cannot mask the script-path rung.
+      expect(evalLib(lib, "resolveProjectDir()", { cwd: tmp })).toBe(join(tmp, "gemini"));
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
