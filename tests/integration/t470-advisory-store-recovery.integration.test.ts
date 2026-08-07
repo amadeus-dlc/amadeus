@@ -257,6 +257,39 @@ describe("advisory store recovery: refusals", () => {
     expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
   });
 
+  // The two arms below guard the read itself rather than the store's content,
+  // so they are reached before any advisory is understood. Both are driven
+  // through the exported seam in-process: the spawned CLI would exercise the
+  // same code, but bun --coverage does not attribute a child process to the
+  // parent report, and an arm nothing measures is an arm nothing protects. The
+  // reason string is asserted exactly, because it is the only thing that
+  // distinguishes which of the refusals actually ran.
+  test("JSONとして読めないstoreはunreadableとして拒否され破棄されない", () => {
+    const { projectDir } = track(seedSchema1Project(["run-now"]));
+    writeFileSync(storePath(projectDir), "{broken");
+    const before = readFileSync(storePath(projectDir), "utf-8");
+
+    const result = recoverSchema1AdvisoryStore(projectDir);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toStartWith("advisory choice store is unreadable:");
+    expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
+  });
+
+  test("pending/receiptsが配列でないstoreはshape不正として拒否され破棄されない", () => {
+    const { projectDir } = track(seedSchema1Project(["run-now"]));
+    writeRawStore(projectDir, { schema: 1, pending: "not-array", receipts: [] });
+    const before = readFileSync(storePath(projectDir), "utf-8");
+
+    const result = recoverSchema1AdvisoryStore(projectDir);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("advisory choice store shape is invalid");
+    expect(readFileSync(storePath(projectDir), "utf-8")).toBe(before);
+  });
+
   test("pendingが壊れているstoreはfail-closedで拒否され破棄されない", () => {
     const { projectDir } = track(seedSchema1Project(["run-now"]));
     const store = readRawStore(projectDir);
