@@ -88,9 +88,11 @@ is.
 Formal-model-check checkpoint choices use an authoritative side ledger at
 `<record>/.amadeus-advisory-choice.json`, written atomically under the audit
 lock. Each pending row binds plugin/code, checkpoint, target, spec identity,
-intent run, and advisory instance. Each receipt adds the canonical choice and
-the exact physical `HUMAN_TURN` coordinates: shard, timestamp, and SHA-256 of
-the event record. The choice is accepted only when the immediately preceding
+intent run, and advisory instance. Each receipt adds the canonical choice and a
+**provenance union** naming how the choice earned the right to exist: a
+`human-turn` arm carrying the exact physical `HUMAN_TURN` coordinates (shard,
+timestamp, and SHA-256 of the event record), or an `auto-decision` arm carrying
+the autonomy ladder's decision id and basis. The choice is accepted only when the immediately preceding
 interaction decision is the tool-validated advisory presentation for those
 exact instances. A correction may mark a legacy, unpresented run-now receipt as
 revoked only while the advisory remains open and no model-check evidence exists;
@@ -99,6 +101,20 @@ unresolved. The ordinary audit shard still supplies the human turn and stage
 lifecycle; the side ledger supplies the advisory-specific correlation that a
 general approval event cannot express. Local run-now evidence is retained in
 the instance-specific `.amadeus-advisory-check/` directory.
+
+The ledger is at schema 2, which is where the provenance union lives; schema 1
+receipts predate it and carried a bare human turn. A schema 1 ledger is never
+translated — it fails to parse and every reader falls closed to a hold rather
+than guessing what a bare human turn means under the union. The migration path
+out is the `recover-schema-1` verb of `tools/amadeus-advisory-choice.ts`: for
+one named ledger it salvages the pending rows (still `schema: 1` by design,
+inside a schema 2 ledger), discards the schema 1 receipts rather than
+translating them, and writes schema 2. Discarding is what makes the advisories
+unanswered again, which is the "ask the human again" the fail-closed hold
+already stood for. It refuses loudly and writes nothing when the salvaged
+pending rows name an intent run other than the active one, and its outcome
+reports the receipts dropped, whether re-presentation is required, and the
+formal-check attempt counts that reset with the discarded run-now receipts.
 
 ### Initialization Events (3 events — fire IN ADDITION TO `STAGE_COMPLETED`)
 

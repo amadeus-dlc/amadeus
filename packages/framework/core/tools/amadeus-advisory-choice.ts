@@ -1453,6 +1453,96 @@ export function revokeMisattributedAdvisoryChoice(
   });
 }
 
+export type AdvisoryStoreRecovery = {
+  readonly pendingSalvaged: number;
+  readonly receiptsDropped: number;
+  readonly rePresentationRequired: boolean;
+  readonly formalCheckAttemptsReset: number;
+};
+
+// The ONE thing a discarded legacy receipt is read for, and it is a count, not a
+// meaning: the formal-check attempt a route is numbered by is
+// `receipts.filter(choice === "run-now").length` everywhere it is computed, so
+// this is how far those counters wind back. A receipt too malformed to show a
+// choice simply does not count — it is being thrown away either way, and
+// guessing at it is the exact thing ADR-9 refuses.
+function droppedRunNowCount(receipts: readonly unknown[]): number {
+  return receipts.filter((receipt) => isPlainObject(receipt) && receipt.choice === "run-now").length;
+}
+
+// #2330. ADR-9's refusal to read a schema 1 store is kept exactly as it is —
+// parseStore is untouched and every reader still fails closed on the old shape.
+// What was missing is the way OUT of that state, and this is it: the pending
+// advisories are salvaged through the same parsePending every schema 2 store
+// goes through (pending has been schema 1 since the beginning and did not
+// migrate), and the receipts are DISCARDED rather than translated. Discarding
+// them is not data loss to be minimised — it is ADR-9's "ask the human again"
+// finally being reachable, because an advisory with no receipt is an advisory
+// the checkpoint will put to the human once more.
+export function recoverSchema1AdvisoryStore(projectDir: string): ParseResult<AdvisoryStoreRecovery> {
+  return withAuditLock(projectDir, () => {
+    const path = storePath(projectDir);
+    if (!existsSync(path)) return { ok: false as const, reason: "advisory choice store does not exist" };
+    let raw: unknown;
+    try {
+      raw = JSON.parse(readFileSync(path, "utf-8"));
+    } catch (error) {
+      return { ok: false as const, reason: `advisory choice store is unreadable: ${String(error)}` };
+    }
+    if (!isPlainObject(raw) || !Array.isArray(raw.pending) || !Array.isArray(raw.receipts)) {
+      return { ok: false as const, reason: "advisory choice store shape is invalid" };
+    }
+    if (raw.schema !== 1) {
+      return { ok: false as const, reason: `advisory choice store is not schema 1 (schema: ${JSON.stringify(raw.schema)})` };
+    }
+    const pending: PendingAdvisory[] = [];
+    for (const item of raw.pending) {
+      const parsed = parsePending(item);
+      if (!parsed.ok) return parsed;
+      pending.push(parsed.value);
+    }
+    const intentRun = intentRunIdentity(projectDir);
+    if (intentRun === null) return { ok: false as const, reason: "active intent is unresolved" };
+    const foreign = pending.find((item) => item.identity.intentRun !== intentRun);
+    if (foreign !== undefined) {
+      return {
+        ok: false as const,
+        reason: `advisory choice store does not belong to the active intent (store: ${foreign.identity.intentRun}, active: ${intentRun})`,
+      };
+    }
+    writeStore(projectDir, { schema: 2, pending, receipts: [] });
+    return {
+      ok: true as const,
+      value: {
+        pendingSalvaged: pending.length,
+        receiptsDropped: raw.receipts.length,
+        rePresentationRequired: pending.some((item) => item.closedAt === undefined),
+        formalCheckAttemptsReset: droppedRunNowCount(raw.receipts),
+      },
+    };
+  });
+}
+
+// The whole command, seam-first: the module-level dispatch arm is one call and
+// a process.exit, so everything a spawned run does — the outcome, the JSON, the
+// stream each line goes to, the exit code — is driven in-process by t470 rather
+// than only through a subprocess the coverage run cannot see.
+export function recoverSchema1AdvisoryStoreCli(projectDir: string): number {
+  const result = recoverSchema1AdvisoryStore(projectDir);
+  if (!result.ok) {
+    console.error(result.reason);
+    return 1;
+  }
+  console.log(JSON.stringify({
+    recovered: true,
+    pending_salvaged: result.value.pendingSalvaged,
+    receipts_dropped: result.value.receiptsDropped,
+    re_presentation_required: result.value.rePresentationRequired,
+    formal_check_attempts_reset: result.value.formalCheckAttemptsReset,
+  }));
+  return 0;
+}
+
 // C16 (#2253 FR-ADV-1). A hold reaches here only after guardAdvisoryChoices has
 // already released its lock, so the ladder and the acceptance below run in their
 // own sections rather than nested inside the guard's.
@@ -1517,9 +1607,11 @@ const USAGE = [
   "Usage:",
   "  amadeus-advisory-choice.ts record --advisory-instance <id> --choice <run-now|defer-with-risk> [--project-dir <path>]",
   "  amadeus-advisory-choice.ts correct-misattributed --advisory-instance <id> --human-turn <sha256> [--project-dir <path>]",
+  "  amadeus-advisory-choice.ts recover-schema-1 [--project-dir <path>]",
 ].join("\n");
 
 if (import.meta.main) {
+  if (process.argv[2] === "recover-schema-1") process.exit(recoverSchema1AdvisoryStoreCli(resolve(cliFlag(process.argv.slice(2), "--project-dir") ?? process.cwd())));
   const args = process.argv.slice(2);
   const subcommand = args[0];
   if (subcommand !== "correct-misattributed" && subcommand !== "record") {

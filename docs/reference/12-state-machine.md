@@ -316,6 +316,43 @@ grounds it, and only when no model-check evidence exists for that attempt. It
 marks the receipt revoked with the reason `misattributed-unpresented-choice`
 rather than deleting it. All of these paths run under the audit lock.
 
+#### Store schemas and the migration path
+
+The choice store (`<record>/.amadeus-advisory-choice.json`) is at **schema 2**.
+Schema 1 held a receipt whose provenance was a bare `humanTurn`; schema 2 holds
+a **provenance union** — either `{ kind: "human-turn", … }` or
+`{ kind: "auto-decision", … }` — so one acceptance function covers both the
+human route and the autonomy ladder's unattended route. Pending advisories did
+not migrate and are still `schema: 1` inside a schema 2 store.
+
+A schema 1 store on disk is **not** translated. It fails to parse, and each
+reader turns that into a fail-closed hold rather than guessing what a
+`humanTurn`-only receipt means under the union. That refusal is correct but, on
+its own, terminal: an intent whose store predates the migration sees `report`
+answer `advisory choice evidence is invalid: …` with no answer able to clear it.
+
+`recover-schema-1` is the migration path out of that state:
+
+```
+bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
+  [--project-dir <path>]
+```
+
+It operates on **one** store — the active intent's, or the one the
+`--project-dir` names. It salvages the pending advisories through the same
+parser a schema 2 store uses, **discards** the schema 1 receipts instead of
+translating them, and writes a schema 2 store. Discarding is the point rather
+than a cost: an advisory with no receipt is one the checkpoint asks again, which
+is the same "ask the human again" the fail-closed hold intended.
+
+Before writing anything it checks that the salvaged pending belongs to the
+active intent and refuses loudly, changing nothing, when it does not — a store
+reached through a stale intent cursor is never emptied by accident. The outcome
+names what changed: `receipts_dropped`, `re_presentation_required` (false when
+no open advisory was salvaged — the store is simply normalised for whatever
+comes next), and `formal_check_attempts_reset`, since the attempt a formal-check
+route is numbered by is derived from the `run-now` receipts now gone.
+
 ### Scope and configuration
 
 | Event | Emitter | Notes |

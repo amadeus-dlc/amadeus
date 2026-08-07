@@ -284,6 +284,23 @@ bun .claude/tools/amadeus-advisory-choice.ts record \
 
 `correct-misattributed` は唯一の取消経路であり、あらゆる側から囲われています。対象は `run-now` receipt に限り、それを根拠づける対応提示が存在しないときに限り、かつその試行に対するモデル検査エビデンスが存在しないときに限ります。receipt は削除されず、理由 `misattributed-unpresented-choice` とともに revoked として印されます。これらの経路はすべて audit ロック下で走ります。
 
+#### store の schema と移行経路
+
+choice store(`<record>/.amadeus-advisory-choice.json`)は **schema 2** です。schema 1 の receipt は provenance が裸の `humanTurn` でしたが、schema 2 は **provenance union** — `{ kind: "human-turn", … }` または `{ kind: "auto-decision", … }` — を持ちます。これにより、人間経路と autonomy ladder の無人経路を1つの受理関数が覆います。pending advisory は移行しておらず、schema 2 の store の中でも `schema: 1` のままです。
+
+ディスク上の schema 1 store は **読み替えません**。parse に失敗し、各リーダーはそれを fail-closed な hold に変えます — union のもとで `humanTurn` だけの receipt が何を意味するかを推測しないためです。この拒否は正しいのですが、それ単体では行き止まりでもあります。移行前の store を持つ intent では `report` が `advisory choice evidence is invalid: …` を返し続け、どの回答もそれを解消できません。
+
+`recover-schema-1` はその状態からの移行経路です:
+
+```
+bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
+  [--project-dir <path>]
+```
+
+対象は **単一** の store — アクティブ intent のもの、または `--project-dir` が指すもの — に限られます。pending advisory を schema 2 store と同じパーサで salvage し、schema 1 の receipt は翻訳せず **破棄** し、schema 2 の store を書きます。破棄は代償ではなく目的です。receipt を持たない advisory はチェックポイントが再び問うものであり、それは fail-closed hold が意図していた「人間にもう一度聞く」と同じ状態だからです。
+
+書き込みの前に、salvage した pending がアクティブ intent のものであることを検査し、そうでなければ何も変えずに loud に拒否します — 古い intent カーソル越しに辿り着いた store を事故で空にすることはありません。結果は変化した内容を明示します: `receipts_dropped`、`re_presentation_required`(open な advisory を salvage しなかった場合は false — store は次に備えて正常化されるだけです)、そして `formal_check_attempts_reset`(形式検査ルートの試行番号は、いま破棄された `run-now` receipt から導出されるため)。
+
 ### Scope and configuration
 
 | Event | Emitter | Notes |

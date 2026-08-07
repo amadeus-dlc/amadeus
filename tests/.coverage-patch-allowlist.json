@@ -6480,5 +6480,16 @@
     },
     "reason": "Legacy git ls-tree non-zero status arm for a missing events path. Modern git returns status 0 with empty stdout for an absent path (covered by t433); the status!==0 branch is retained fail-closed for older git contracts.",
     "expiry": "remove when the gate drops compatibility with git versions that non-zero on missing path trees"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:7dabf7a349909bbd5729e309e392b8d400828e0522cdab3ea16429753273a1a4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The recover-schema-1 dispatch arm is a single call plus process.exit inside import.meta.main, so it is only ever executed by a spawned CLI run that bun --coverage does not measure. Everything it decides — the outcome, the JSON payload, the stream each line goes to and the exit code — lives in recoverSchema1AdvisoryStoreCli, which t470 drives in-process; t470 also spawns the real CLI so the arm itself is proven wired.",
+    "expiry": "remove when the patch gate measures import.meta.main dispatch arms or the arm moves out of the main block"
   }
 ]
