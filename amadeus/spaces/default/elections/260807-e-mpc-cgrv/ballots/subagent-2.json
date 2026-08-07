@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-CGRV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "反証コメントには cli.ts の override 型コメント(#2401 参照の意図的許容)・predicate.ts landedVerdict の converged:false 設計根拠・FD verb 表の自己捕捉記録を file:line で cite し、将来 override(converged:false) を landed の上位証拠として消費する consumer が現れた場合は新事実として Issue 起票する条件を1行残すこと。",
+  "rationale": "独立実測: (1) cli.ts override 経路は HUMAN_TURN 必須→verdict.converged のみ refuse で、landedVerdict は converged:false のため通過する — 指摘の機序は実在。(2) しかし cli.ts の override 型コメントが『The override verdict admits the labelled shape so a human may still rule forward a pull request whose evaluation landed (#2401)』と明記し、これは見落としでなく設計として文書化済み。predicate.ts:273-275 も converged:false を意図的('no consumer of converged gains a new way to advance')と固定。(3) override は HUMAN_TURN + emitDecision audit + humanTurnId/reason/recordedAt の provenance 付きで無音 fail-open ではなく、landed report は report verb 再実行で常に再導出可能 — データ完全性の不可逆破壊ではない。(4) requirements.md:56 Out of scope と FD verb 表(refuse 追加案の自己捕捉除去)の二重裁定済み。よって『実在する correctness finding』(triage 規則 i)に該当せず、意図的・監査付き・人間ゲート付き設計への異議として反証 resolve が正当。非採用案の受容度: A=7(mid-PR の requirements 改訂は二重裁定と文書化済み設計意図に反し、仕様変更としてユーザー専権領域に踏み込む)、B=6(不本意だが支持 — 無害だが、裁定済みの意図的設計を負債として記録する点で過剰)。",
+  "submittedAt": "2026-08-07T12:00:00Z",
+  "receivedAt": "2026-08-07T12:43:46Z"
+}

@@ -1198,5 +1198,23 @@
     "dirName": "260807-e-mpc-cgblk",
     "createdAt": "2026-08-07T11:38:34Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGRV",
+    "dirName": "260807-e-mpc-cgrv",
+    "createdAt": "2026-08-07T12:40:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGS13",
+    "dirName": "260807-e-mpc-cgs13",
+    "createdAt": "2026-08-07T13:12:37Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-BTS13",
+    "dirName": "260807-e-mpc-bts13",
+    "createdAt": "2026-08-07T13:16:39Z",
+    "status": "recorded"
   }
 ]
