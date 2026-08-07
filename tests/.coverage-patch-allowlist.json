@@ -5596,7 +5596,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:b78a074689db51ac0d77f2cd579b569dd8c0eb8362aa83c36026156493c3d5b8",
+      "fingerprint": "sha256:acb663282982152af7b16532e4cb95ab8cd3b2f6e8a34935ea116fa5986c2742",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -6414,6 +6414,17 @@
       "targetLines": "1-3"
     },
     "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t464 and end-to-end by t462. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:03cbfc34b017bfcdea58a24f7004065c48efffee8b48769784f47c54200a1000",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "main() dispatch case for the declare-units-done verb (issue #2358). main() is unexported and runs only under import.meta.main, so bun --coverage cannot measure its switch arms; the handler it dispatches (handleDeclareUnitsDone) is driven in-process by tests/integration/t480-declare-units-done and end-to-end by the same suite's spawned CLI arms. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {

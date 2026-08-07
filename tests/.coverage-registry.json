@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 609,
+    "total": 617,
     "enumeratedByClass": {
-      "function": 342,
+      "function": 349,
       "audit": 90,
       "scope": 15,
       "stage": 32,
       "hook": 14,
-      "subcommand": 109,
+      "subcommand": 110,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 176,
+      "function": 180,
       "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 14,
-      "subcommand": 84,
+      "subcommand": 85,
       "render-surface": 7
     }
   },
@@ -1674,6 +1674,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:decideDegradeUnitCompletion",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:DEFAULT_LOCK_STALE_MS",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1682,6 +1694,27 @@
     {
       "unitClass": "function",
       "unitId": "function:DEFAULT_SPACE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:DEGRADE_UNIT_DECLARATION_HEADING",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:DEGRADE_UNITS_DECLARED_AT_FIELD",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:DEGRADE_UNITS_DECLARED_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3016,6 +3049,30 @@
       "coveredBy": [
         {
           "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseDeclaredUnitsArg",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseDegradeUnitDeclaration",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
           "mechanism": "none"
         }
       ],
@@ -4585,6 +4642,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:writeDegradeUnitDeclaration",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -6474,6 +6543,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t215-docs-only-exemption.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state declare-units-done",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t480-declare-units-done.integration.test.ts",
           "mechanism": "cli"
         }
       ],

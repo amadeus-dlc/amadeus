@@ -4980,6 +4980,149 @@ export function parseApprovedSwarmBatches(stateContent: string | null): number[]
   return [...new Set(parsed)].sort((a, b) => a - b);
 }
 
+// --- Degrade-path unit-list declaration (issue #2358, ruling #2385 Q4-B) ---
+//
+// A per-unit Construction stage with NO compiled unit DAG resolves its Unit of
+// Work from the directory listing under <record>/construction/. When several of
+// those directories exist and every one already holds the stage's required
+// artifacts, the engine has nothing left to produce, yet it cannot tell whether
+// the conductor is finished adding units — so it refuses (issue #1769). The
+// conductor ends that stand-off by DECLARING the unit list complete; the engine
+// then presents the stage gate on the last covered unit, exactly as the
+// compiled-DAG path does on its all-covered re-entry.
+//
+// The declaration lives in its own `## Degrade Unit Declaration` H2 section of
+// `amadeus-state.md` as two ordinary `- **Field**:` bullets. That shape is
+// deliberately additive: it introduces no checkbox-shaped row (parseCheckboxes
+// scans the whole document), no new section-range parse, and nothing inside the
+// Mirror state block's sentinels. The writer is `amadeus-state declare-units-done`;
+// the engine only ever READS. One definition serves both, so they cannot drift.
+export const DEGRADE_UNIT_DECLARATION_HEADING = "## Degrade Unit Declaration";
+export const DEGRADE_UNITS_DECLARED_FIELD = "Degrade Units Declared Done";
+export const DEGRADE_UNITS_DECLARED_AT_FIELD = "Degrade Units Declared At";
+
+const DEGRADE_UNIT_DECLARATION_NOTE =
+  "<!-- Written by `amadeus-state declare-units-done`; read by the engine's degrade per-unit arm (issue #2358). -->";
+
+export interface DegradeUnitDeclaration {
+  /** The declared unit names, deduped and sorted so set comparison is order-free. */
+  readonly units: readonly string[];
+  readonly declaredAt: string;
+}
+
+// Split a declared unit list on commas. Blank tokens are dropped rather than
+// carried as "" entries, so a trailing comma cannot manufacture a phantom unit
+// that would then fail the set comparison for the wrong reason.
+function parseDeclaredUnits(raw: string): string[] {
+  const tokens = raw.split(",").map((token) => token.trim()).filter((token) => token.length > 0);
+  return [...new Set(tokens)].sort();
+}
+
+// Render (or update) the declaration. An absent section is APPENDED at end of
+// file; an existing one is updated through setFieldStrict, which rewrites the
+// two bullet LINES only. Line-scoped updates matter here: a section-range
+// rewrite would swallow the Mirror state block whenever that block happens to
+// sit after this section, since the block is HTML comments rather than a `## `
+// heading.
+export function writeDegradeUnitDeclaration(
+  content: string,
+  units: readonly string[],
+  declaredAt: string,
+): string {
+  const rendered = units.join(", ");
+  if (fieldExists(content, DEGRADE_UNITS_DECLARED_FIELD)) {
+    const withUnits = setFieldStrict(content, DEGRADE_UNITS_DECLARED_FIELD, rendered);
+    return setFieldStrict(withUnits, DEGRADE_UNITS_DECLARED_AT_FIELD, declaredAt);
+  }
+  const base = content.endsWith("\n") ? content : `${content}\n`;
+  const heading = `\n${DEGRADE_UNIT_DECLARATION_HEADING}\n${DEGRADE_UNIT_DECLARATION_NOTE}\n`;
+  const bullets = `- **${DEGRADE_UNITS_DECLARED_FIELD}**: ${rendered}\n- **${DEGRADE_UNITS_DECLARED_AT_FIELD}**: ${declaredAt}\n`;
+  return `${base}${heading}${bullets}`;
+}
+
+// Read the declaration, fail-closed. A half-written declaration (units with no
+// timestamp, or a timestamp with no units) is NOT a declaration: the engine
+// treats it as absent and keeps refusing, so a partial write can only ever
+// withhold the gate, never manufacture one.
+export function parseDegradeUnitDeclaration(
+  stateContent: string | null,
+): DegradeUnitDeclaration | null {
+  if (!stateContent) return null;
+  const raw = getField(stateContent, DEGRADE_UNITS_DECLARED_FIELD);
+  if (raw === null) return null;
+  const units = parseDeclaredUnits(raw);
+  if (units.length === 0) return null;
+  const declaredAt = getField(stateContent, DEGRADE_UNITS_DECLARED_AT_FIELD)?.trim() ?? "";
+  if (declaredAt.length === 0) return null;
+  return { units, declaredAt };
+}
+
+// A unit directory name as a declaration may name it. Deliberately narrower
+// than "any directory name": path separators, dots and whitespace are rejected,
+// so a declaration can neither reach outside the record's construction/ listing
+// nor carry a newline that would forge a second state-file line.
+const DECLARED_UNIT_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+export type DeclaredUnitsParse =
+  | { readonly ok: true; readonly units: string[] }
+  | { readonly ok: false; readonly error: string };
+
+// The refusal for an absent, empty, or all-whitespace `--units`. It carries the
+// usage line so the CLI needs no separate emptiness guard of its own: one
+// rejection path means the writer has a single error site, and this message
+// stays pinned by an in-process test rather than only by a spawned run.
+const DECLARE_UNITS_USAGE = "Refusing to declare-units-done: --units must name at least one unit directory. Usage: amadeus-state.ts declare-units-done --units <comma-separated unit names>";
+
+// Parse and validate a `--units` argument. Pure (mirrors parseConstructionIteration)
+// so the writer can fail closed BEFORE taking any lock, reading, or writing.
+export function parseDeclaredUnitsArg(raw: string): DeclaredUnitsParse {
+  const units = raw.split(",").map((token) => token.trim()).filter((token) => token.length > 0);
+  if (units.length === 0) {
+    return { ok: false, error: DECLARE_UNITS_USAGE };
+  }
+  const invalid = units.filter((unit) => !DECLARED_UNIT_RE.test(unit));
+  if (invalid.length > 0) {
+    return { ok: false, error: `Refusing to declare-units-done: not a unit directory name: ${invalid.join(", ")}.` };
+  }
+  return { ok: true, units: [...new Set(units)] };
+}
+
+export type DegradeUnitCompletion =
+  | { readonly kind: "gate"; readonly unit: string }
+  | { readonly kind: "refuse"; readonly reason: string };
+
+const DECLARE_MOVE =
+  "Either create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), or, when no further unit is coming, declare the unit list complete with `amadeus-state.ts declare-units-done --units <comma-separated unit names>` so this stage's gate is presented on the last unit. Then re-run `next`.";
+
+// THE boundary between an accepted declaration and an emitted directive. It is
+// a single pure function taking the COVERED unit set as an argument on purpose:
+// the follow-up unreviewed-unit check (#2359) needs exactly one place to sit,
+// and the engine's caller must hand over the units it actually read off disk.
+//
+// A declaration is honoured only when it names the covered set EXACTLY. A unit
+// directory that appeared after the declaration was written (or one the
+// declaration invented) makes the declaration stale, and a stale declaration is
+// refused with the difference named — the conductor re-declares rather than
+// discovering later that a unit was silently left out of the gate.
+export function decideDegradeUnitCompletion(
+  declaration: DegradeUnitDeclaration | null,
+  coveredUnits: readonly string[],
+): DegradeUnitCompletion {
+  const covered = [...new Set(coveredUnits)].sort();
+  if (covered.length === 0) return { kind: "refuse", reason: DECLARE_MOVE };
+  if (declaration === null) return { kind: "refuse", reason: DECLARE_MOVE };
+  const undeclared = covered.filter((unit) => !declaration.units.includes(unit));
+  const absent = declaration.units.filter((unit) => !covered.includes(unit));
+  if (undeclared.length === 0 && absent.length === 0) {
+    return { kind: "gate", unit: covered[covered.length - 1] };
+  }
+  const declared = `The recorded unit-list declaration (${declaration.units.join(", ")}, declared ${declaration.declaredAt}) no longer matches the units on disk.`;
+  const extra = undeclared.length > 0 ? ` Not declared: ${undeclared.join(", ")}.` : "";
+  const gone = absent.length > 0 ? ` Declared but absent: ${absent.join(", ")}.` : "";
+  const move = " Re-declare the current list with `amadeus-state.ts declare-units-done --units <comma-separated unit names>`, then re-run `next`.";
+  return { kind: "refuse", reason: `${declared}${extra}${gone}${move}` };
+}
+
 // Deterministic off-switch for the human-presence gate (mirrors
 // artifactGuardDisabled in amadeus-state.ts). The suite sets this globally (the
 // dedicated guard test clears it), and it is the documented bypass for

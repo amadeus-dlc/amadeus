@@ -220,6 +220,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t47-failure-injection.test.ts",
     "integration/t470-advisory-store-recovery.integration.test.ts",
     "integration/t48-runtime-graph-end-to-end.test.ts",
+    "integration/t480-declare-units-done.integration.test.ts",
     "integration/t49-bolt-sensor-failures.test.ts",
     "integration/t99-learnings-gate-flow.test.ts",
     "smoke/t05-run-tests-parallel.test.ts",

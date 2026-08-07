@@ -128,6 +128,8 @@ import {
   type CheckboxLine,
   type DeclaredBatch,
   codekbRepoName,
+  decideDegradeUnitCompletion,
+  parseDegradeUnitDeclaration,
   KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
   classifyMigrationRequest,
@@ -3709,6 +3711,7 @@ function degradeUnitResolutionError(
   recordPrefix: string | null,
   candidates: string[],
   uncovered: string[],
+  completionRefusal: string | null,
 ): ErrorDirective {
   // Each message part is bound to its own const rather than written as a
   // multi-line `+` concatenation: Bun's LCOV stamps continuation lines of a
@@ -3724,7 +3727,10 @@ function degradeUnitResolutionError(
   const found = `${candidates.length} unit directories exist under ${where}: ${candidates.join(", ")}.`;
   if (uncovered.length === 0) {
     const done = "Every one of them already holds this stage's required artifacts, so no unit is left to run.";
-    const move = "Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`.";
+    // `completionRefusal` comes from decideDegradeUnitCompletion — the one place
+    // that knows WHY the recorded unit-list declaration (issue #2358) did not
+    // settle this listing, so the refusal names the move that would.
+    const move = completionRefusal ?? "Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`.";
     return errorDirective(`${preamble} and ${found} ${done} ${move}`);
   }
   const pending = `${uncovered.length} of them are still missing this stage's required artifacts: ${uncovered.join(", ")}.`;
@@ -3809,6 +3815,28 @@ function resolveDegradeUnit(
   return { unit: null, uncovered };
 }
 
+// Emit the stage gate for a degrade listing whose unit set the conductor has
+// declared complete (issue #2358). This is the move the compiled-DAG path makes
+// on its own all-covered re-entry (pickUnit === null in emitPerUnitRunStage):
+// the stage's REAL computed gate, carried on the last covered unit, so the
+// human approves once after every unit's artifacts already exist on disk.
+function emitDegradeCompletionGate(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unit: string,
+  unitKind: UnitKind | undefined,
+): void {
+  const directive = buildRunStageDirective(
+    node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx, unitKind,
+  );
+  directive.unit = unit;
+  emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
+}
+
 // Walk the ordered unit list and find the units whose artifacts are not all
 // present on disk. Returns {unit, uncovered} where `unit` is the FIRST uncovered
 // unit (the one the engine emits next) and `uncovered` is the full ordered list
@@ -3885,7 +3913,25 @@ function emitPerUnitRunStage(
       projectDir, node, degradeUnits, recordPrefix, codekbCtx, unitKinds,
     );
     if (picked.unit === null) {
-      emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered));
+      // Multi-unit arm only: every candidate is already covered, so the listing
+      // holds no work — the ONLY thing missing is the conductor's word that no
+      // further unit is coming (issue #2358, ruling #2385 Q4-B). The covered set
+      // handed to the decision is `degradeUnits` itself, which in this arm IS
+      // the set `unitCovered` just proved covered (uncovered is empty); the
+      // decision compares it against the recorded declaration and, when they
+      // match, names the unit the stage gate belongs to.
+      const completion = degradeUnits.length > 0 && picked.uncovered.length === 0
+        ? decideDegradeUnitCompletion(parseDegradeUnitDeclaration(stateContent), degradeUnits)
+        : null;
+      if (completion !== null && completion.kind === "gate") {
+        emitDegradeCompletionGate(
+          node, projectType, scope, stateContent, recordPrefix, codekbCtx,
+          completion.unit, unitKinds.get(completion.unit),
+        );
+        return;
+      }
+      const refusal = completion !== null && completion.kind === "refuse" ? completion.reason : null;
+      emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered, refusal));
       return;
     }
     emitRunStageForSlug(
