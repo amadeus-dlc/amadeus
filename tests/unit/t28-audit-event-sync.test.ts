@@ -79,7 +79,7 @@ const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.
 // +INTENT_AUTONOMY_TRANSACTION_COMMITTED (#2067) takes it to 88.
 // +AUTO_DECISION_REVIEWED (#2067 review surface) takes it to 89;
 // +INTENT_COMPLETION_TRANSACTION_COMMITTED (#2067 completion seal) takes it to 90.
-const CANONICAL_COUNT = 90;
+const CANONICAL_COUNT = 91;
 
 /** Slice the lines of `text` BETWEEN the first line matching `start` and the
  *  next line matching `end` (inclusive of both), reproducing `sed -n

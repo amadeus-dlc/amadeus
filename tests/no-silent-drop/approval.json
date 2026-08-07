@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "censusDigest": "b6bf74ffc7810e2a619424bf3992eeeab321b511f9fe8cce9876808b5ea34c2c",
+  "censusDigest": "18c5207eda3f1e01ede67e413670e47b3a48bf71a8b71b997b29956fae27c2b1",
   "entries": [
     {
       "fingerprint": "03c9e430ecf3c1b1dabee31906cf795d605efa4db2d7330390274a5c29675a45",
@@ -1704,6 +1704,14 @@
       "reason": "Existing silent-drop finding approved for the initial shrink-only baseline.",
       "issues": [
         "#1979"
+      ]
+    },
+    {
+      "fingerprint": "2afa633b3c13330542ede1e13d22982b6fb842b3b27081b812716f80c7b0ccf7",
+      "classification": "TP",
+      "reason": "FR-2a refusal visibility emit is fail-open by design (BR-U1-6); stderr warning only, authorization result untouched.",
+      "issues": [
+        "#2378"
       ]
     }
   ]

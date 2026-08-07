@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "01KZF9NRBGK501B11V339CZY2F",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "2afa633b3c13330542ede1e13d22982b6fb842b3b27081b812716f80c7b0ccf7",
+  "ruleId": "NSD001",
+  "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+  "reason": "FR-2a refusal visibility is fail-open by design (BR-U1-6): a shard that cannot be written must not turn an already-safe refusal into an error, so the emit catch warns on stderr and continues while the authorization result stays untouched (pinned by t482).",
+  "issues": [
+    "#2378"
+  ]
+}
