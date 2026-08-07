@@ -20,22 +20,22 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 619,
+    "total": 617,
     "enumeratedByClass": {
-      "function": 350,
+      "function": 349,
       "audit": 90,
       "scope": 15,
       "stage": 32,
-      "hook": 15,
+      "hook": 14,
       "subcommand": 110,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 181,
+      "function": 180,
       "audit": 44,
       "scope": 15,
       "stage": 8,
-      "hook": 15,
+      "hook": 14,
       "subcommand": 85,
       "render-surface": 7
     }
@@ -1937,18 +1937,6 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:evaluateDispatchGuard",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "function",
       "unitId": "function:EXECUTION_PROJECTION_DIGEST_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2763,7 +2751,7 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t485-stage-stats.integration.test.ts",
+          "file": "tests/integration/t487-stage-stats.integration.test.ts",
           "mechanism": "cli"
         },
         {
@@ -4263,7 +4251,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:SUBAGENT_DISPATCH_TOOLS",
+      "unitId": "function:SUBAGENT_DISPATCH_TOOL",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -5009,18 +4997,6 @@
         },
         {
           "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "hook",
-      "unitId": "amadeus-subagent-model-guard",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
           "mechanism": "cli"
         }
       ],

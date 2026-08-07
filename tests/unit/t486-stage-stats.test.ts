@@ -1,9 +1,9 @@
 // covers: function:nearestRankP95, function:composeStageStats
 //
-// t484 — Issue #2405 (U1 stage-stats). Unit half of the twin: every pure
+// t486 — Issue #2405 (U1 stage-stats). Unit half of the twin: every pure
 // function of amadeus-stage-stats.ts, driven in-process so bun --coverage
 // measures the whole aggregation contract (the FS scan and the CLI spawn live
-// in t485's integration layer — cid:code-generation:fs-tests-integration-first).
+// in t487's integration layer — cid:code-generation:fs-tests-integration-first).
 import { describe, expect, test } from "bun:test";
 import {
   type AttributedRecord,

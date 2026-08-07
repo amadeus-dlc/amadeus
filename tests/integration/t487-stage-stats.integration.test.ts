@@ -1,10 +1,10 @@
 // covers: function:scanCorpus, function:collectReviewBlocks, function:main
 // size: medium
 //
-// t485 — Issue #2405 (U1 stage-stats). Integration half of the twin: the real
+// t487 — Issue #2405 (U1 stage-stats). Integration half of the twin: the real
 // filesystem scan, the CLI shell driven in-process (so bun --coverage measures
 // it), and the exit ladder measured by an actual spawn. The pure aggregation
-// core is t484's job.
+// core is t486's job.
 //
 // Every expectation is checked against an INDEPENDENT ORACLE — a walker
 // written here in the test that counts shards, lines and events on its own —
