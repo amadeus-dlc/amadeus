@@ -242,6 +242,14 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
   }
   const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
   const qualityRepair = qualityState(projection);
+  if (!authorization.authorized) {
+    emitAuthorizationRefusal(input.projectDir, {
+      kind: interactionKind(input),
+      stage: input.stage,
+      reason: authorization.reason,
+      mode: projection.mode,
+    });
+  }
   return {
     mode: projection.mode,
     autoApprove: authorization.authorized && qualityRepair !== "error",
@@ -249,6 +257,51 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
     authorizationReason: authorization.reason,
     qualityRepair,
   };
+}
+
+// The two reasons authorizeInteraction can refuse with. Anything else reaching
+// the emitter is a reason nobody declared, and inventing a row for it would put
+// a value in the ledger that no reader has a meaning for.
+const REFUSAL_REASONS = ["SCOPE_OUT", "MODE_REQUIRES_HUMAN"] as const;
+
+// Why the run stopped, written where the rest of the Intent's history lives.
+//
+// Fail-open, and ONLY here: an audit shard that cannot be written must not turn
+// a refusal into an error, because the refusal itself is the safe answer and the
+// caller is already on its way to the human gate. Every other failure mode in
+// this file stays fail-closed.
+function emitAuthorizationRefusal(
+  projectDir: string,
+  refusal: {
+    readonly kind: InteractionKind;
+    readonly stage: string;
+    readonly reason: string;
+    readonly mode: AutonomyMode;
+  },
+): void {
+  if (!REFUSAL_REASONS.some((known) => known === refusal.reason)) return;
+  try {
+    const otel = require("../otel/audit-emit.ts") as {
+      emitAuditEvent: (
+        eventType: string,
+        fields: Record<string, string>,
+        projectDir: string,
+      ) => { readonly appended: boolean };
+    };
+    const result = otel.emitAuditEvent("INTENT_AUTONOMY_HUMAN_REQUIRED", {
+      "Interaction Kind": refusal.kind,
+      "Stage slug": refusal.stage,
+      Reason: refusal.reason,
+      Mode: refusal.mode,
+    }, projectDir);
+    if (!result.appended) {
+      console.error(`amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected`);
+    }
+  } catch (cause) {
+    console.error(
+      `amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
 }
 
 function authorizeProductionOccurrence(
