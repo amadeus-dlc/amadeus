@@ -82,6 +82,17 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "^Task$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts\" log-subagent-start"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",

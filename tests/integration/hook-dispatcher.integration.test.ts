@@ -15,6 +15,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { HOOK_PATHS } from "../../packages/framework/harness/claude/hooks/amadeus-dispatch.ts";
+
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const DISPATCHER_SOURCE = join(
   REPO_ROOT,
@@ -31,18 +33,23 @@ const SETTINGS_FILES = [
   join(REPO_ROOT, ".claude", "settings.local.json.example"),
 ] as const;
 
-const KNOWN_SLUGS = [
-  "mint-presence",
-  "session-start",
-  "session-end",
-  "audit-logger",
-  "sensor-fire",
-  "sync-statusline",
-  "runtime-compile",
-  "validate-state",
-  "log-subagent",
-  "stop",
-] as const;
+// Derived from the dispatcher's own table rather than restated here: a new slot
+// used to require editing this list, the reference count below, and the fixture
+// writer in lockstep, and #2297 showed what happens when that lockstep slips.
+const KNOWN_SLUGS = Object.keys(HOOK_PATHS) as (keyof typeof HOOK_PATHS)[];
+
+// Settings reference the table more often than the table has slugs, because one
+// slug is deliberately wired at two events: mint-presence fires on
+// UserPromptSubmit AND on PostToolUse{AskUserQuestion}. That surplus is NOT
+// derivable from HOOK_PATHS — it is a property of the settings wiring — so it is
+// pinned here as a named constant and cross-checked against the mint-presence
+// assertion below.
+//
+// MAINTENANCE: if a SECOND slug ever gains a second wiring point, this constant
+// must be raised by hand. The slug table follows the dispatcher automatically;
+// the duplicate count does not.
+const DUPLICATE_SLUG_REFERENCES = 1;
+const EXPECTED_HOOK_REFERENCES = KNOWN_SLUGS.length + DUPLICATE_SLUG_REFERENCES;
 
 const temporaryRoots: string[] = [];
 
@@ -65,8 +72,14 @@ function writeHook(root: string, slug: string, source = "process.exit(0);\n"): v
   writeFileSync(hookPath(root, slug), source);
 }
 
+// Materialize EVERY path the dispatcher's completeness check looks for, taken
+// from HOOK_PATHS itself — a slot added to the dispatcher is present in the
+// fixture by construction, so ensureCompleteHookTree cannot fail here for a
+// reason the test never meant to exercise.
 function writeCompleteHookTree(root: string): void {
-  for (const slug of KNOWN_SLUGS) writeHook(root, slug);
+  for (const relativePath of Object.values(HOOK_PATHS)) {
+    writeFileSync(join(root, relativePath), "process.exit(0);\n");
+  }
 }
 
 function runDispatcher(
@@ -104,14 +117,19 @@ function collectCommands(value: unknown): string[] {
 }
 
 describe("Claude hook dispatcher", () => {
-  test("settings route exactly 11 hook references through the fixed 10-slug table", () => {
+  test("settings route every hook reference through the dispatcher's slug table", () => {
     const commands = SETTINGS_FILES.flatMap((path) =>
       collectCommands(JSON.parse(readFileSync(path, "utf8"))),
     ).filter((command) => command.includes("/.claude/hooks/"));
 
-    expect(commands).toHaveLength(11);
+    expect(commands).toHaveLength(EXPECTED_HOOK_REFERENCES);
     expect(commands.every((command) => command.includes("amadeus-dispatch.ts"))).toBe(true);
-    expect(commands.filter((command) => command.endsWith(" mint-presence"))).toHaveLength(2);
+    // The one slug wired twice — this pins WHERE the surplus in
+    // EXPECTED_HOOK_REFERENCES comes from, so the count and its cause cannot
+    // drift apart silently.
+    expect(commands.filter((command) => command.endsWith(" mint-presence"))).toHaveLength(
+      1 + DUPLICATE_SLUG_REFERENCES,
+    );
     expect(
       [...new Set(commands.map((command) => command.match(/amadeus-dispatch\.ts"? ([a-z-]+)$/)?.[1]))]
         .filter((slug): slug is string => slug !== undefined)
