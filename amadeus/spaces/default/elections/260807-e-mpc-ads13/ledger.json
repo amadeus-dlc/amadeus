@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-ADS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測3点: (1) memory.md Interpretations 2エントリ(11:50:00Z)で c1/c2 の実在確認 (2) decisions.md ADR-3(:23)に RA→FD 委譲の引き取り申告文が実在し cid:requirements-analysis:implementation-deviation-election の宣言側履行に該当 (3) components.md Review — Iteration 1(READY, 11:01:32Z)に NIT/FOLLOW-UP の記録実在。c1 は c1-reviewer-scope-alignment / citation-reservation-preservation ファミリの適用実例、c2 は宣言済み逸脱申告規範の intent 固有適用で、いずれも新規の一般化可能な規則を含まない。persist 0件が妥当。",
+      "submittedAt": "2026-08-07T12:10:00Z",
+      "receivedAt": "2026-08-07T11:02:58Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-ADS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) memory.md Interpretations 2行(2026-08-07T11:50:00Z)に c1/c2 の実在を確認 — NIT 2件是正・FOLLOW-UP 3点の FD 搬送、および ADR-3 の委譲引き取り申告。(2) decisions.md ADR-3 Context に申告文『本 ADR が委譲を引き取って確定する(FD で変更する場合は逸脱として申告)』を逐語確認。(3) components.md『## Review — Iteration 1』(READY, 2026-08-07T11:01:32Z)に NIT 2件(AC-1a t482 張り替え / ADR-3 申告注記)と FOLLOW-UP 3件を確認。c1 は cid:code-generation:c1-reviewer-scope-alignment および citation-reservation-preservation ファミリの適用実例、c2 は cid:requirements-analysis:implementation-deviation-election の宣言側履行の適用実例であり、いずれも既存ノルムに無い新規則を含まない。intent 固有の工程判断であり persist 0件が妥当。",
+      "submittedAt": "2026-08-07T12:10:00Z",
+      "receivedAt": "2026-08-07T11:03:12Z"
+    }
+  ],
+  "late": []
+}

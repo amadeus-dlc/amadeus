@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPC-BTS13",
+  "voter": "subagent-1",
+  "question": "intent 260807-merged-pr-convergence の build-and-test §13 学習選定: 候補2件(全文は record の construction/build-and-test/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(Comprehensive 執行形 + 適用外根拠明記 + H2 即時是正): 既存 cid:build-and-test:bt-20260730-1 / c4 / c3 の適用実例 / c2(landed 実機のマージ後初出を AC 外申し送りに列挙して無条件 READY): 既存 cid:build-and-test:c2-unconditional-ready-boundary の適用実例(AC 実文照合済み — landed の AC は scripted fixture 要求であり実機要求はない)。いずれも新規則なし。実在根拠は memory.md・build-and-test-summary.md・build-test-results.md・requirements.md の AC 実文で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "2候補とも既存ノルムの適用実例のため persist しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) memory.md Interpretations 2件が候補実体と一致(単一Unit編成+入れ子edge block+recompile前倒し / §12a NIT是正+required-sections即時是正)。(2) unit-of-work-dependency.md の YAML edge block は入れ子形で kind: service 明記 — cid:units-generation:c2-edgeblock-nested-kind-required の適用実例。(3) runtime-graph.json の bolt_dag は非null(units=[landed-report], batches=[[landed-report]]) — recompile-before-construction-bolt-dag の適用実例。(4) unit-of-work.md に Review — Iteration 1 実在。両候補とも既存 cid(units-generation:c1 / c2-edgeblock-nested-kind-required / recompile-before-construction-bolt-dag / sensor-before-reviewer 系)の適用実例であり新規知識を含まない。persist 0件が妥当。",
+  "submittedAt": "2026-08-07T12:45:00Z",
+  "receivedAt": "2026-08-07T11:08:14Z"
+}

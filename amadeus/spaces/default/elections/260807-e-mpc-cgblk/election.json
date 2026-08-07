@@ -1,0 +1,27 @@
+{
+  "electionId": "E-MPC-CGBLK",
+  "kind": "blocker",
+  "question": "Bolt 1(landed-report)実装前停止の設計逸脱裁定: FD 仕様の3項(RawPrState への state 追加 / resolvePrLifecycle の無条件 parse(未知値 throw) / 既存 t448 無改変 green)が同時充足不能と builder が実測立証した。機序: t448:181-198 は旧形 payload {mergeable, mergeStateStatus} に対し toEqual を assert(Bun の toEqual は追加プロパティが定義値でも null でも fail — scratch 実測 1 pass 2 fail)。t448 の CLI 系テスト(cliSpawn :275-292)は state を含まない旧形 payload を replay するため、無条件 PrLifecycleState.parse(undefined) は throw → exit 2 で全滅する。『state 欠落応答』の扱いは仕様未規定で、本番でも到達可能(スキーマ欠落応答の fail-open/fail-closed 判断)。各投票者は builder の実測(t448:181-198 の toEqual・cliSpawn の payload 形・Mergeable.parse :132-138 の同形性)を bolt/landed-report ブランチ相当の現行 main ソースで独立検証し、fail-open 残余のリスクと AC/テスト契約の保存を比較衡量して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "案A: absent-undefined 許容 + resolvePrLifecycle に undefined ガード",
+      "description": "fetchRawPrState は新フィールドを応答に存在する場合のみ含める(absent は undefined)。resolvePrLifecycle は state === undefined のときのみ parse を経ず active 扱い(コメントで根拠明記)。値が存在して未知なら従来どおり throw(AC-1b 維持)。全 AC・t446/t448 無改変 green 成立。トレードオフ: state を欠く本番応答(スキーマ異常)が無音で active 経路に落ちる fail-open が1点残る。"
+    },
+    {
+      "internalNo": 2,
+      "label": "案B: state 欠落を malformed として fail-closed",
+      "description": "fetchRawPrState が state 欠落を typed failure に。fail-open ゼロだが t448:181-198 と CLI 系テストが赤になり AC-2c(既存テスト無改変 green)違反 — t448 改変の要件改訂が必要。"
+    },
+    {
+      "internalNo": 3,
+      "label": "案C: t448 fixture へ新フィールド追記",
+      "description": "既存テストの fixture を更新して新形 payload に揃える。『t446/t448 無改変』の明示指示に違反 — 要件改訂が必要で、旧形応答の本番到達時の挙動は依然未規定。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

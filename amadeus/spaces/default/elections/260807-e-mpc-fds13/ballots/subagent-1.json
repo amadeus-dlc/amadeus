@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-FDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: construction/functional-design/memory.md:6-7 に c1(i1 NOT-READY→EvaluatedVerdict 交差型ラッパで是正→i2 READY、起草時自己捕捉 = deviation-stop の起草段適用)と c2(resolveMergeable :249-269 / cli.ts:414-415 / sensor :66-88 の FOLLOW-UP 裏取り転記)の実在を確認。business-logic-model.md:53-72 の Review block で i1 NOT-READY(BLOCKER: evaluateConvergence 不変性の3成果物間矛盾・resolvePrLifecycle 無申告 inline 化)と i2 READY(単一主張への収斂)を verbatim 確認。c1 は cid:code-generation:deviation-stop-before-implement / citation-semantics-check / fix-diff-independent-reverify の適用実例、c2 は cid:requirements-analysis:mechanism-cite-verify-at-draft / cid:code-generation:c1-reviewer-scope-alignment(事後側追補)の適用実例であり、EvaluatedVerdict ラッパ採用は intent 固有の設計判断。一般化可能な新規則は無く persist 0件が妥当。",
+  "submittedAt": "2026-08-07T14:05:00Z",
+  "receivedAt": "2026-08-07T11:23:52Z"
+}

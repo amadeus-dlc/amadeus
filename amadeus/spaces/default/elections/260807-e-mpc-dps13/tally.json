@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T11:13:19Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "diary は「upstream-coverage FAILED 1件」と記すが audit seq 229 の Findings count は 2 — 発火1回(検出2件)の意であり実測と矛盾しないが、件数語は findings と firing を区別して書くのが望ましい。",
+      "rationale": "独立実測: (1) memory.md Interpretations 2026-08-07T12:55:00Z の実在確認 (2) delivery-planning-questions.md の質問0件 E-OC1 様式・執行クラス判定根拠(cid:requirements-analysis:always-elect)・グラント ID 記載を確認 (3) audit シャードで SENSOR_FAILED seq 229(external-dependency-map / upstream-coverage / 11:10:25Z)→ SENSOR_PASSED seq 237(11:10:49Z)の是正列を実測。候補 c1 は既存 cid(always-elect 執行クラス / consumes-first-drafting / no-election-judgment-gate、姉妹参照の充足形は c1-pcp-upstream-coverage-frontmatter-authority が既定)の適用実例であり新機序を含まない。persist 0件(提案どおり)を支持。",
+      "submittedAt": "2026-08-07T13:20:00Z",
+      "receivedAt": "2026-08-07T11:12:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測3点: (1) audit シャードで external-dependency-map.md の upstream-coverage が SENSOR_FAILED(seq 229, Findings 2, 2026-08-07T11:10:25Z)→是正後 SENSOR_PASSED(seq 237)の列を確認 — diary の自己捕捉是正記述と一致し、cid:requirements-analysis:consumes-first-drafting の既存違反実例の再演(姉妹参照による宣言 consumes 置換)で新機序なし。(2) delivery-planning-questions.md は質問0件の E-OC1 様式で判定根拠種別(always-elect 執行クラス)と承認行(2026-08-07T10:12:00Z, grant ID)を具備 — cid:requirements-analysis:no-election-judgment-gate / eoc1-evidence-in-questions-header の適用実例。(3) unit-of-work-dependency.md の units ブロックは単一 unit・depends_on: [] であり、bolt-plan.md の単一 Bolt は既決 contract からの機械的導出(執行クラス)と確認。他の delivery-planning 成果物5点は全て SENSOR_PASSED。候補は既存 cid の適用・再演にとどまり、新しい機序・未被覆面を含まないため persist 0件が妥当。",
+      "submittedAt": "2026-08-07T11:12:51Z",
+      "receivedAt": "2026-08-07T11:13:02Z"
+    }
+  ],
+  "resolutions": []
+}

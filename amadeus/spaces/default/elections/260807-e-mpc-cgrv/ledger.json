@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-CGRV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "反証コメントには cli.ts の override 型コメント(#2401 参照の意図的許容)・predicate.ts landedVerdict の converged:false 設計根拠・FD verb 表の自己捕捉記録を file:line で cite し、将来 override(converged:false) を landed の上位証拠として消費する consumer が現れた場合は新事実として Issue 起票する条件を1行残すこと。",
+      "rationale": "独立実測: (1) cli.ts override 経路は HUMAN_TURN 必須→verdict.converged のみ refuse で、landedVerdict は converged:false のため通過する — 指摘の機序は実在。(2) しかし cli.ts の override 型コメントが『The override verdict admits the labelled shape so a human may still rule forward a pull request whose evaluation landed (#2401)』と明記し、これは見落としでなく設計として文書化済み。predicate.ts:273-275 も converged:false を意図的('no consumer of converged gains a new way to advance')と固定。(3) override は HUMAN_TURN + emitDecision audit + humanTurnId/reason/recordedAt の provenance 付きで無音 fail-open ではなく、landed report は report verb 再実行で常に再導出可能 — データ完全性の不可逆破壊ではない。(4) requirements.md:56 Out of scope と FD verb 表(refuse 追加案の自己捕捉除去)の二重裁定済み。よって『実在する correctness finding』(triage 規則 i)に該当せず、意図的・監査付き・人間ゲート付き設計への異議として反証 resolve が正当。非採用案の受容度: A=7(mid-PR の requirements 改訂は二重裁定と文書化済み設計意図に反し、仕様変更としてユーザー専権領域に踏み込む)、B=6(不本意だが支持 — 無害だが、裁定済みの意図的設計を負債として記録する点で過剰)。",
+      "submittedAt": "2026-08-07T12:00:00Z",
+      "receivedAt": "2026-08-07T12:43:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-CGRV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "起票する Issue には、独立実測で確定した機序の全体 — override 置換は HUMAN_TURN+reason+audit decision を要する人間裁定行為であり、report verb の再実行(writeReport は unit 固定パスへ landed report を機械再生成)で可逆であること — を明記し、finding の『恒久』表現を訂正したうえで重大度をトリアージすること。",
+      "rationale": "独立実測: (1) 機序は実在 — landedVerdict は converged:false を返し(pr-convergence-predicate.ts:281-289 実読)、runCli の override 分岐は verdict.converged===true のみ refuse するため landed 評価は通過し emitDecision→writeReport に到達する(git show bolt/landed-report:...cli.ts の override 節実読)。(2) スコープ裁定は二重に確定 — requirements.md Out of scope『override 経路…の変更』+ FR-3.3『override の already-converged refuse は無変更』、FD business-logic-model.md verb 表が already-landed refuse 追加を Out of scope として明示的に非採用(git show 933b161ff で実読)。(3) 追加実測: 置換は『恒久』ではない — writeReport は unit 固定パス(reportPathFor)で、merged PR への report verb 再実行が landed report を機械再生成して override report を上書きする。よってリスクは人間ゲート(HUMAN_TURN 必須)+audit 記録+可逆の三重に有界で、二重に確定済みのスコープ裁定を破る A の逸脱コストに見合わない。一方、landed 検出を override が尊重しない fail-open は実在し、下流 guard が override report(converged:false)を読む窓は残るため、C の全面 reject で無記録にするのも不適 — issue-first capture 規範と stage deferral 規則 (iii) に従い B が正。非採用案の受容度: A=6(refuse 自体は already-converged と同形で小さく symmetric だが、二度確定したスコープ裁定を低重大度リスクで破るのは不本意)、C=6(反証素材〔人間ゲート・可逆性〕は実在するが、残存 fail-open を無追跡にする点で不本意)。",
+      "submittedAt": "2026-08-07T12:40:00Z",
+      "receivedAt": "2026-08-07T12:44:01Z"
+    }
+  ],
+  "late": []
+}

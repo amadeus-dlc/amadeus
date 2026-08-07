@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部候補を persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T10:07:45Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-ICS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) intent-capture-questions.md:5 に cid:intent-capture:c1 の明示適用(既決事項の除外・未決3問のみ)、:38 に承認 2026-08-07T10:04:51Z 実在。(2) memory.md:6-7 に c1 適用と base 鮮度(origin/main 4a3da7d62 起点 worktree)+self-install bootstrap の記録実在。引用先 cid:intent-capture:c3-intent-birth-base-freshness / cid:scope-definition:c3-worktree-selfinstall-bootstrap は project.md に既存(E-STG-S13/E-STG-S13B)。両候補とも既存ノルムの適用実例で新規則を含まず、persist 0件が妥当。",
+      "submittedAt": "2026-08-07T10:30:00Z",
+      "receivedAt": "2026-08-07T10:07:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-ICS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "軽微な留保: 候補の実在根拠は独立実測で一致したが、memory.md の2エントリは同一タイムスタンプ(10:10:00Z)で承認時刻(10:04:51Z)より後の記帳であり、記帳時刻としては整合。新規則性の判定のみを対象とし、diary 様式には踏み込まない。",
+      "rationale": "独立実測: (1) record の ideation/intent-capture/memory.md Interpretations に候補2件が実在 — c1 は『既決事項は質問せず未決3判断のみ質問』、c2 は『origin/main 4a3da7d62 起点 worktree birth + bun run build bootstrap』。(2) intent-capture-questions.md 冒頭に cid:intent-capture:c1 の明示適用(既決事項は質問しない)と Q1-Q3 の [Answer] 記入、承認行『ユーザー承認: 2026-08-07T10:04:51Z』を確認。(3) project.md の grep で cid:intent-capture:c1(:187)・cid:intent-capture:c3-intent-birth-base-freshness(:329)・cid:scope-definition:c3-worktree-selfinstall-bootstrap(:330)の3既存 cid の実在を確認。両候補とも既存ノルムの適用実例であり、新規の規則・機序・未被覆面を含まない。適用実例の persist は memory 層の肥大とチャーンを生むため、persist 0件の提案は妥当。",
+      "submittedAt": "2026-08-07T10:07:15Z",
+      "receivedAt": "2026-08-07T10:07:32Z"
+    }
+  ],
+  "resolutions": []
+}

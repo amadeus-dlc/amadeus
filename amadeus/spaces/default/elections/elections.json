@@ -1140,6 +1140,84 @@
     "status": "recorded"
   },
   {
+    "electionId": "E-MPC-ICS13",
+    "dirName": "260807-e-mpc-ics13",
+    "createdAt": "2026-08-07T10:06:21Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-SDS13",
+    "dirName": "260807-e-mpc-sds13",
+    "createdAt": "2026-08-07T10:25:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-RES13",
+    "dirName": "260807-e-mpc-res13",
+    "createdAt": "2026-08-07T10:38:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-RAS13",
+    "dirName": "260807-e-mpc-ras13",
+    "createdAt": "2026-08-07T10:53:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-ADS13",
+    "dirName": "260807-e-mpc-ads13",
+    "createdAt": "2026-08-07T11:02:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-UGS13",
+    "dirName": "260807-e-mpc-ugs13",
+    "createdAt": "2026-08-07T11:07:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-DPS13",
+    "dirName": "260807-e-mpc-dps13",
+    "createdAt": "2026-08-07T11:11:29Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-FDS13",
+    "dirName": "260807-e-mpc-fds13",
+    "createdAt": "2026-08-07T11:22:41Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-NDS13",
+    "dirName": "260807-e-mpc-nds13",
+    "createdAt": "2026-08-07T11:28:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGBLK",
+    "dirName": "260807-e-mpc-cgblk",
+    "createdAt": "2026-08-07T11:38:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGRV",
+    "dirName": "260807-e-mpc-cgrv",
+    "createdAt": "2026-08-07T12:40:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGS13",
+    "dirName": "260807-e-mpc-cgs13",
+    "createdAt": "2026-08-07T13:12:37Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-BTS13",
+    "dirName": "260807-e-mpc-bts13",
+    "createdAt": "2026-08-07T13:16:39Z",
+    "status": "recorded"
+  },
+  {
     "electionId": "E-PWF-RES13",
     "dirName": "260807-e-pwf-res13",
     "createdAt": "2026-08-07T10:15:03Z",
