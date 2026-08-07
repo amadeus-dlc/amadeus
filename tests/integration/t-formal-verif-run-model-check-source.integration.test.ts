@@ -36,8 +36,8 @@ describe("run-model-check source adapter", () => {
     roots.push(root);
     const model = join(root, "FormalElection.tla");
     const cfg = join(root, "FormalElection.cfg");
-    cpSync("specs/tla/FormalElection.tla", model);
-    cpSync("specs/tla/FormalElection.cfg", cfg);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
     return { root, model, cfg };
   }
 
@@ -85,7 +85,7 @@ describe("run-model-check source adapter", () => {
     // byte-pin binds by requested model name, never by position.
     const paths = copyCanonicalSource();
     const unknown = join(paths.root, "NoSuch.tla");
-    cpSync("specs/tla/FormalElection.tla", unknown);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", unknown);
     expect(loadRunModelCheckSource(unknown, paths.cfg)).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },
@@ -100,7 +100,7 @@ describe("run-model-check source adapter", () => {
         error: {
           kind: "MODULE_DEPS",
           code: "MODULE_DEP_UNRESOLVED",
-          relativePath: "specs/tla/Missing.tla",
+          relativePath: "amadeus/spaces/default/specs/tla/Missing.tla",
           detail: "injected dependency failure",
         },
       }),
@@ -110,7 +110,7 @@ describe("run-model-check source adapter", () => {
       error: {
         kind: "SOURCE_DRIFT",
         code: "SOURCE_DRIFT",
-        relativePath: "specs/tla/Missing.tla",
+        relativePath: "amadeus/spaces/default/specs/tla/Missing.tla",
         detail: expect.stringContaining("MODULE_DEP_UNRESOLVED"),
       },
     });
@@ -118,7 +118,7 @@ describe("run-model-check source adapter", () => {
     const modelFailure = {
       kind: "MODEL_LOAD" as const,
       code: "MODEL_MAP_INVALID" as const,
-      relativePath: "specs/tla/model-map.json",
+      relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
       detail: "injected model-map failure",
     };
     expect(loadRunModelCheckSource("unused.tla", "unused.cfg", {
@@ -157,8 +157,8 @@ describe("run-model-check source adapter", () => {
     roots.push(root);
     const model = join(root, "MirrorLifecycle.tla");
     const cfg = join(root, "MirrorLifecycle.cfg");
-    cpSync("specs/tla/MirrorLifecycle.tla", model);
-    cpSync("specs/tla/MirrorLifecycle.cfg", cfg);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", model);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg", cfg);
     const loaded = loadVerifiedTlaSources();
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
@@ -229,8 +229,8 @@ describe("run-model-check source adapter", () => {
     roots.push(mirror);
     const mirrorModel = join(mirror, "MirrorLifecycle.tla");
     const mirrorCfg = join(mirror, "MirrorLifecycle.cfg");
-    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModel);
-    cpSync("specs/tla/MirrorLifecycle.cfg", mirrorCfg);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", mirrorModel);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg", mirrorCfg);
     const result = loadRunModelCheckSource(mirrorModel, mirrorCfg);
 
     expect(result.ok).toBe(true);

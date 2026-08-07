@@ -17,7 +17,7 @@ import {
   activationAdvisoriesForHost,
   composedPluginNames,
   defaultActivationFs,
-  specRootForHost,
+  projectRootForHost,
   type ActivationFs,
   type Advisory,
   type DeclaredAdvisoryCode,
@@ -315,9 +315,9 @@ export function advisoriesForHost(
   hostRoot: string,
   stage: string,
   fs: ActivationFs = defaultActivationFs,
-  runEvaluator: RunEvaluator = spawnEvaluator(specRootForHost(hostRoot)),
+  runEvaluator: RunEvaluator = spawnEvaluator(projectRootForHost(hostRoot)),
 ): Advisory[] {
-  const projectRoot = specRootForHost(hostRoot);
+  const projectRoot = projectRootForHost(hostRoot);
   const declarationFs: DeclarationFs = {
     existsSync: (path) => fs.existsSync(path),
     readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),

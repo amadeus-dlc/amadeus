@@ -63,7 +63,7 @@ function project(): {
 } {
   const root = createTestProject();
   roots.push(root);
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
@@ -74,11 +74,11 @@ function project(): {
     "packages/framework/core/tools/amadeus-election.ts";
   const implPath = join(root, implRelative);
   const impl = "export const election = true;\n";
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), cfg);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), model);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), cfg);
   writeFileSync(implPath, impl);
   writeFileSync(
-    join(root, "specs", "tla", "model-map.json"),
+    join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
         schemaVersion: 2,
@@ -86,14 +86,14 @@ function project(): {
           {
             name: "FormalElection",
             model: {
-              path: "specs/tla/FormalElection.tla",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.tla",
               identity: canonicalIdentity(
                 model,
                 "amadeus.formal-verif.tla.module.v1",
               ).sha256,
             },
             cfg: {
-              path: "specs/tla/FormalElection.cfg",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
               identity: canonicalIdentity(
                 cfg,
                 "amadeus.formal-verif.tla.cfg.v1",
@@ -146,7 +146,7 @@ function project(): {
             path: ".claude/sensors/amadeus-model-completeness.md",
             kind: "deterministic",
             matches:
-              "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}",
+              "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}",
             default_severity: "advisory",
           },
         ],
@@ -283,7 +283,7 @@ describe("model-completeness sensor E2E", () => {
       expect(readFileSync(file, "utf-8")).toContain(canonicalGlob);
     }
     const map = JSON.parse(
-      readFileSync(join(REPO_ROOT, "specs/tla/model-map.json"), "utf-8"),
+      readFileSync(join(REPO_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"), "utf-8"),
     );
     const formalElection = map.models.find(
       (model: { name: string }) => model.name === "FormalElection",
@@ -341,7 +341,7 @@ describe("model-completeness sensor E2E", () => {
 
   test("map不在をscript-error passにせずSENSOR_FAILEDにする", () => {
     const p = project();
-    rmSync(join(p.root, "specs", "tla", "model-map.json"));
+    rmSync(join(p.root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"));
     const result = fire(p.root, p.graphPath, p.implPath);
     expect(result.status).toBe(0);
     expect(auditRecords(p.root).some((r) => r.event === "SENSOR_FAILED")).toBe(true);

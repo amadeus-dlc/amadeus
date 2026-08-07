@@ -42,7 +42,7 @@ const identity: AdvisoryIdentity = {
   plugin: "formal-model-check",
   code: "changed",
   checkpoint: "functional-design",
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
   intentRun: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
   advisoryInstance: "019fc698-ba1f-7000-8000-000000000001",

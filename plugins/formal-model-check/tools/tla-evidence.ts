@@ -11,6 +11,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Result } from "./contract.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 
 // ---------------------------------------------------------------------------
 // C2: stable identity vocabulary
@@ -431,7 +432,15 @@ export const EvidenceEnvelopeCodec = {
 // C4 handler layer: the evidence store (the only writer — BR-U1-01)
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_STORE_ROOT = "specs/tla-evidence";
+// The canonical evidence store root: `amadeus/spaces/<space>/specs/tla-evidence`
+// for the workspace's active space, via the shared spec root resolver (BR-1).
+// The store sits OUTSIDE the spec-hash watch glob (`tla/**` under the specs
+// root), so the 260804-tla-authoring ADR watch exclusion holds on the new root
+// (BR-10). A legacy specs/tla layout throws the resolver's LegacySpecError
+// (fail-closed, BR-4).
+export function defaultStoreRoot(workspaceRoot: string = process.cwd()): string {
+  return resolveSpecRoots(workspaceRoot).evidenceRoot;
+}
 const STAGING_DIR = ".tmp";
 
 export interface EvidenceMeta {

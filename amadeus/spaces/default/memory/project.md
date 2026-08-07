@@ -16,6 +16,7 @@
 - AskUserQuestion が dismiss された場合は沈黙を承認とみなさず、推奨値も選択扱いにしない。適用可能な最も具体的な既存規則(例: project.md の限定則)で判定し、questions ファイルに dismiss 事実と適用根拠を明記する (learned 2026-08-01、260801-tla-multi-model practices-discovery) (learned 2026-08-01) <!-- cid:practices-discovery:c2-dismiss-not-approval -->
 - amadeus-reviewer-runtime complete-review の記録後は、各 artifact の `## Review — Iteration N` block が正しい unit・iteration・summary で追記されたか実読検証する。シェル側の値渡し事故(連想配列の未対応等)で別 unit の review block が全 artifact に誤記録された実測あり (learned 2026-08-01、260801-tla-multi-model functional-design) (learned 2026-08-01) <!-- cid:functional-design:c2-verify-review-block -->
 - per-unit ステージ(nfr-design 等)の engine 完了判定は、既知の Unit kind では stage frontmatter の `produces_kinds` が適用成果物を絞り、directive に列挙された成果物の実在だけを見る。legacy のkindless Unitは過少生成を避けるため全5成果物へfallbackする。適用外成果物のN/A placeholderは生成しない (learned 2026-08-01、260801-tla-multi-model nfr-designの実測をIssue #2019で条件付きに訂正) (learned 2026-08-01) <!-- cid:nfr-design:c1-engine-produces-all-five -->
+- formal-model-check のローカル実行(TLC)では、グローバル mise が JAVA_HOME を temurin-26.0.2 へ上書きするため素の `export JAVA_HOME=...` / `JAVA_HOME=... bun ...` は効かない。`mise x java@temurin-26.0.1+8 -- bun ...` で固定する(失敗時は ENVIRONMENT_UNAVAILABLE で cause が出ない)。恒久対応は Issue #2410 を参照 (learned 2026-08-07、260807-tla-specs-relocation requirements-analysis) <!-- cid:requirements-analysis:java-home-mise-shim-override -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。

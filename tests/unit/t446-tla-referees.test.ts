@@ -192,9 +192,9 @@ const OTHER_IDENTITY = IdentityDigest.aggregateDigest([
 ]);
 
 const MODEL: ModelArtifacts = {
-  modulePath: "specs/tla/Sample.tla",
-  configPath: "specs/tla/Sample.cfg",
-  reductionManifestPath: "specs/tla/Sample.reduction.json",
+  modulePath: "amadeus/spaces/default/specs/tla/Sample.tla",
+  configPath: "amadeus/spaces/default/specs/tla/Sample.cfg",
+  reductionManifestPath: "amadeus/spaces/default/specs/tla/Sample.reduction.json",
 };
 
 const COMPLETE: TlcExploration = {

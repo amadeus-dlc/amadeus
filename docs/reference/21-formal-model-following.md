@@ -7,8 +7,8 @@ Session-start reconciliation installs the plugin but never runs TLC.
 
 > Languages: **English** | [日本語](21-formal-model-following.ja.md)
 
-A TLA+ model in `specs/tla/` is only worth its runtime if it still describes the
-code it claims to describe. `specs/tla/model-map.json` pins each model to the
+A TLA+ model in `amadeus/spaces/<space>/specs/tla/` is only worth its runtime if it still describes the
+code it claims to describe. `amadeus/spaces/<space>/specs/tla/model-map.json` pins each model to the
 implementation files it was derived from, and the `model-completeness` sensor
 recomputes those pins on every touch of a watched path. When a pin no longer
 matches, the sensor reports drift.
@@ -25,7 +25,7 @@ For writing a model for a protocol that does not have one yet, see
 
 ## The drift signal
 
-`model-completeness` reads `specs/tla/model-map.json`, recalculates SHA-256 for
+`model-completeness` reads `amadeus/spaces/<space>/specs/tla/model-map.json`, recalculates SHA-256 for
 every pinned implementation entry, and reports mismatches without modifying
 anything. It never rewrites the map, the model, the configuration, or the
 implementation — a detector that repaired its own signal would be unable to tell
@@ -50,7 +50,7 @@ Ask one question about the implementation change: **can it alter the set of
 behaviours the model's invariants range over?**
 
 Answer it by reading the diff against the model's own reduction manifest — every
-model in `specs/tla/` declares, in a comment block at the top, which parts of the
+model in `amadeus/spaces/<space>/specs/tla/` declares, in a comment block at the top, which parts of the
 implementation it abstracts away and why. A change confined to something the
 manifest already discards cannot change what the model proves. A change to a
 guard, a status value, a dispatch arm, or a state field the manifest names as

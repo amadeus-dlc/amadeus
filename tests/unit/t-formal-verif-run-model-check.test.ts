@@ -31,14 +31,14 @@ describe("run-model-check public contract", () => {
       "--model", "/workspace/Model.tla",
       "--cfg", "/workspace/Model.cfg",
       "--out", "/evidence/run-1",
-      "--advisory-target", "specs/tla",
+      "--advisory-target", "amadeus/spaces/default/specs/tla",
       "--advisory-spec-identity", `sha256:${"a".repeat(64)}`,
       "--advisory-instance", "019fc698-ba1f-7000-8000-000000000001",
     ])).toMatchObject({
       ok: true,
       value: {
         advisory: {
-          target: "specs/tla",
+          target: "amadeus/spaces/default/specs/tla",
           specIdentity: `sha256:${"a".repeat(64)}`,
           instance: "019fc698-ba1f-7000-8000-000000000001",
         },

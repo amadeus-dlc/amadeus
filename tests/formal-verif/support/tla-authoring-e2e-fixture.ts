@@ -52,12 +52,12 @@ export function entryFor(root: string, name: string, extra: Record<string, unkno
   return {
     name,
     model: {
-      path: `specs/tla/${name}.tla`,
-      identity: digestOf(join(root, "specs", "tla", `${name}.tla`), TLA_MODULE_DOMAIN),
+      path: `amadeus/spaces/default/specs/tla/${name}.tla`,
+      identity: digestOf(join(root, "amadeus", "spaces", "default", "specs", "tla", `${name}.tla`), TLA_MODULE_DOMAIN),
     },
     cfg: {
-      path: `specs/tla/${name}.cfg`,
-      identity: digestOf(join(root, "specs", "tla", `${name}.cfg`), TLA_CFG_DOMAIN),
+      path: `amadeus/spaces/default/specs/tla/${name}.cfg`,
+      identity: digestOf(join(root, "amadeus", "spaces", "default", "specs", "tla", `${name}.cfg`), TLA_CFG_DOMAIN),
     },
     entries: [
       {
@@ -75,8 +75,9 @@ export function mapText(models: readonly Record<string, unknown>[]): string {
 
 /**
  * Make the composed host look like the repository the model loader resolves:
- * it walks up from the tool's own module URL for .git + package.json +
- * specs/tla, so the registered map has to live where a real workspace keeps it.
+ * it walks up from the tool's own module URL for .git + package.json, then
+ * resolves specs through the shared resolver, so the registered map has to
+ * live at the canonical `amadeus/spaces/default/specs/tla/`.
  */
 export function repoLikeHost(host: string): void {
   mkdirSync(join(host, ".git"), { recursive: true });
@@ -85,7 +86,7 @@ export function repoLikeHost(host: string): void {
   // loader confines those paths to packages/framework/core/tools.
   mkdirSync(join(host, "packages", "framework", "core", "tools"), { recursive: true });
   writeFileSync(join(host, IMPL_PATH), "export const unitPool = 'fixture';\n");
-  mkdirSync(join(host, "specs", "tla"), { recursive: true });
-  writeFileSync(join(host, "specs", "tla", "Seed.tla"), SEED_MODULE);
-  writeFileSync(join(host, "specs", "tla", "Seed.cfg"), SEED_CONFIG);
+  mkdirSync(join(host, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
+  writeFileSync(join(host, "amadeus", "spaces", "default", "specs", "tla", "Seed.tla"), SEED_MODULE);
+  writeFileSync(join(host, "amadeus", "spaces", "default", "specs", "tla", "Seed.cfg"), SEED_CONFIG);
 }

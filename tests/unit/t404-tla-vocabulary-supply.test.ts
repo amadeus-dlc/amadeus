@@ -44,8 +44,8 @@ const FORMAL_ELECTION_TRACE_STATE_VARIABLES = [
 // state tuple — tuple order provisional pending the u5 AsIntended run).
 const MIRROR_LIFE_CYCLE_FIXTURE: ModelMapModel = {
   name: "MirrorLifecycle",
-  model: { path: "specs/tla/MirrorLifecycle.tla", identity: "0".repeat(64) },
-  cfg: { path: "specs/tla/MirrorLifecycle.cfg", identity: "1".repeat(64) },
+  model: { path: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", identity: "0".repeat(64) },
+  cfg: { path: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg", identity: "1".repeat(64) },
   entries: [{ implPath: "packages/framework/core/tools/amadeus-mirror-types.ts", sha256: "2".repeat(64) }],
   vocabulary: {
     namedInvariants: ["TypeOK", "NoCloseWithoutLandedSync", "NoDuplicateCreate"],

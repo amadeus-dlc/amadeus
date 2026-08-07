@@ -76,7 +76,7 @@ const identity = {
   plugin: "formal-model-check",
   code: "changed" as const,
   checkpoint: "requirements-analysis",
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
   intentRun: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
   message: "advisory: formal-model-check spec hash CHANGED",

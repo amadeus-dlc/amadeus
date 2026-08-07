@@ -44,14 +44,14 @@ const MODEL_NAMES = ["FormalElection", "MirrorLifecycle"] as const;
 const MODEL_TARGETS: Readonly<Record<(typeof MODEL_NAMES)[number], CiModelTarget>> = {
   FormalElection: {
     name: "FormalElection",
-    modelPath: "specs/tla/FormalElection.tla",
-    cfgPath: "specs/tla/FormalElection.cfg",
+    modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     layer: "frozen",
   },
   MirrorLifecycle: {
     name: "MirrorLifecycle",
-    modelPath: "specs/tla/MirrorLifecycle.tla",
-    cfgPath: "specs/tla/MirrorLifecycle.cfg",
+    modelPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
     layer: "verified-source",
   },
 };
@@ -109,7 +109,7 @@ function semanticPortDependencies(
     const runId = nextRunId();
     const dockerArgs = [
       "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-      "--mount", `type=bind,src=${join(workspace, "specs/tla")},dst=${join(workspace, "specs/tla")},readonly`,
+      "--mount", `type=bind,src=${join(workspace, "amadeus/spaces/default/specs/tla")},dst=${join(workspace, "amadeus/spaces/default/specs/tla")},readonly`,
       "--mount", "type=bind,src=/cache/tla2tools.jar,dst=/cache/tla2tools.jar,readonly",
       "--mount", "type=bind,src=/scratch/.scratch,dst=/scratch/.scratch",
       FIXED_DOCKER_IMAGE,
@@ -203,8 +203,8 @@ function runtime() {
 async function assertSemanticMutationRoundTrip(model: (typeof MODEL_NAMES)[number]): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), `t406-${model}-mutation-`));
   const workspace = join(root, "workspace");
-  mkdirSync(join(workspace, "specs"), { recursive: true });
-  cpSync("specs/tla", join(workspace, "specs/tla"), { recursive: true });
+  mkdirSync(join(workspace, "amadeus/spaces/default/specs"), { recursive: true });
+  cpSync("amadeus/spaces/default/specs/tla", join(workspace, "amadeus/spaces/default/specs/tla"), { recursive: true });
   const modelPath = join(workspace, MODEL_TARGETS[model].modelPath);
   const original = readFileSync(modelPath, "utf8");
   try {
@@ -263,7 +263,7 @@ function acceptanceEvidence(): CiAcceptanceEvidence {
         imageRef: FIXED_DOCKER_IMAGE,
         argv: [
           "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-          "--mount", "type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly",
+          "--mount", "type=bind,src=$WORKSPACE/amadeus/spaces/default/specs/tla,dst=$WORKSPACE/amadeus/spaces/default/specs/tla,readonly",
           "--mount", "type=bind,src=$JAR,dst=$JAR,readonly",
           "--mount", "type=bind,src=$SCRATCH,dst=$SCRATCH",
           FIXED_DOCKER_IMAGE,
@@ -309,14 +309,14 @@ describe("t406 CI all-model acceptance", () => {
     expect(loaded.value.models.map((source) => ciModelTargetFor(source))).toEqual([
       {
         name: "FormalElection",
-        modelPath: "specs/tla/FormalElection.tla",
-        cfgPath: "specs/tla/FormalElection.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
         layer: "frozen",
       },
       {
         name: "MirrorLifecycle",
-        modelPath: "specs/tla/MirrorLifecycle.tla",
-        cfgPath: "specs/tla/MirrorLifecycle.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
         layer: "verified-source",
       },
     ]);
@@ -428,7 +428,7 @@ describe("t406 CI all-model acceptance", () => {
           error: {
             kind: "MODEL_LOAD",
             code: "MODEL_MAP_INVALID",
-            relativePath: "specs/tla/model-map.json",
+            relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
             detail: "injected load failure",
           },
         }),

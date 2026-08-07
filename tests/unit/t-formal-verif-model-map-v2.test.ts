@@ -24,15 +24,15 @@ const electionEntry = (
 
 const electionModel = () => ({
   name: "FormalElection",
-  model: { path: "specs/tla/FormalElection.tla", identity: SHA_A },
-  cfg: { path: "specs/tla/FormalElection.cfg", identity: SHA_B },
+  model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", identity: SHA_A },
+  cfg: { path: "amadeus/spaces/default/specs/tla/FormalElection.cfg", identity: SHA_B },
   entries: [electionEntry()],
 });
 
 const mirrorModel = () => ({
   name: "MirrorLifecycle",
-  model: { path: "specs/tla/MirrorLifecycle.tla", identity: SHA_C },
-  cfg: { path: "specs/tla/MirrorLifecycle.cfg", identity: SHA_D },
+  model: { path: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", identity: SHA_C },
+  cfg: { path: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg", identity: SHA_D },
   entries: [electionEntry("packages/framework/core/tools/amadeus-mirror-types.ts", SHA_C)],
 });
 
@@ -43,7 +43,7 @@ const canonicalMap = () => ({
 
 const SHA_E = "e".repeat(64);
 
-const auxEntry = (path = "specs/tla/MirrorLifecycleCore.tla", identity = SHA_E) => ({
+const auxEntry = (path = "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla", identity = SHA_E) => ({
   path,
   identity,
 });
@@ -73,13 +73,13 @@ describe("model map v2 schema", () => {
   test("rejects the retired v1 single-model shape outright", () => {
     const v1 = {
       schemaVersion: 1,
-      model: { path: "specs/tla/FormalElection.tla", identity: SHA_A },
-      cfg: { path: "specs/tla/FormalElection.cfg", identity: SHA_B },
+      model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", identity: SHA_A },
+      cfg: { path: "amadeus/spaces/default/specs/tla/FormalElection.cfg", identity: SHA_B },
       entries: [electionEntry()],
     };
     expect(parseTlaModelMap(bytes(v1))).toMatchObject({
       ok: false,
-      error: { code: "MODEL_MAP_INVALID", relativePath: "specs/tla/model-map.json" },
+      error: { code: "MODEL_MAP_INVALID", relativePath: "amadeus/spaces/default/specs/tla/model-map.json" },
     });
     // A v1 body carrying schemaVersion 2 is still rejected: no field-shape fallback.
     expect(parseTlaModelMap(bytes({ ...v1, schemaVersion: 2 }))).toMatchObject({
@@ -92,7 +92,7 @@ describe("model map v2 schema", () => {
     for (const source of [Uint8Array.of(0xc3, 0x28), encoder.encode("{")]) {
       expect(parseTlaModelMap(source)).toMatchObject({
         ok: false,
-        error: { code: "MODEL_MAP_INVALID", relativePath: "specs/tla/model-map.json" },
+        error: { code: "MODEL_MAP_INVALID", relativePath: "amadeus/spaces/default/specs/tla/model-map.json" },
       });
     }
   });
@@ -100,7 +100,7 @@ describe("model map v2 schema", () => {
   test("requires model and cfg identities to have exactly path and identity", () => {
     const missingIdentity = {
       ...electionModel(),
-      model: { path: "specs/tla/FormalElection.tla" },
+      model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla" },
     };
     const extraField = {
       ...electionModel(),
@@ -116,8 +116,8 @@ describe("model map v2 schema", () => {
 
   test("requires lowercase SHA-256 identities", () => {
     const candidates = [
-      { ...electionModel(), model: { path: "specs/tla/FormalElection.tla", identity: "A".repeat(64) } },
-      { ...electionModel(), cfg: { path: "specs/tla/FormalElection.cfg", identity: "a".repeat(63) } },
+      { ...electionModel(), model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", identity: "A".repeat(64) } },
+      { ...electionModel(), cfg: { path: "amadeus/spaces/default/specs/tla/FormalElection.cfg", identity: "a".repeat(63) } },
       { ...electionModel(), entries: [electionEntry(undefined, "g".repeat(64))] },
     ];
     for (const model of candidates) {
@@ -195,7 +195,7 @@ describe("model map v2 schema", () => {
   test("binds model and cfg paths to the declared model name", () => {
     const wrongModelPath = {
       ...electionModel(),
-      model: { path: "specs/tla/Other.tla", identity: SHA_A },
+      model: { path: "amadeus/spaces/default/specs/tla/Other.tla", identity: SHA_A },
     };
     const wrongCfgPath = {
       ...electionModel(),
@@ -214,8 +214,8 @@ describe("model map v2 schema", () => {
       const model = {
         ...electionModel(),
         name,
-        model: { path: `specs/tla/${name}.tla`, identity: SHA_A },
-        cfg: { path: `specs/tla/${name}.cfg`, identity: SHA_B },
+        model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: SHA_A },
+        cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: SHA_B },
       };
       expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
         ok: false,
@@ -294,15 +294,16 @@ describe("model map v2 schema", () => {
     }
   });
 
-  test("rejects auxiliary paths outside the canonical specs/tla boundary", () => {
+  test("rejects auxiliary paths outside the canonical spec directory boundary", () => {
     const invalidPaths = [
-      "specs/tla/../x.tla",
-      "/specs/tla/X.tla",
+      "amadeus/spaces/default/specs/tla/../x.tla",
+      "/amadeus/spaces/default/specs/tla/X.tla",
       "plugins/x.tla",
-      "specs/tla/nested/X.tla",
-      "specs/tla/MirrorLifecycle.cfg",
-      "specs/tla/1Bad.tla",
-      "specs/tla/MirrorLifecycle.tla", // self-auxiliary
+      "specs/tla/MirrorLifecycleCore.tla", // pre-relocation legacy layout
+      "amadeus/spaces/default/specs/tla/nested/X.tla",
+      "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
+      "amadeus/spaces/default/specs/tla/1Bad.tla",
+      "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", // self-auxiliary
     ];
     for (const path of invalidPaths) {
       const model = { ...mirrorModel(), auxiliaries: [auxEntry(path)] };
@@ -320,8 +321,8 @@ describe("model map v2 schema", () => {
       [{ ...auxEntry(), identity: 1 }],
     ];
     const unsorted = [
-      auxEntry("specs/tla/MirrorLifecycleCore.tla"),
-      auxEntry("specs/tla/FormalElection.tla", SHA_A),
+      auxEntry("amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla"),
+      auxEntry("amadeus/spaces/default/specs/tla/FormalElection.tla", SHA_A),
     ];
     const duplicated = [auxEntry(), auxEntry()];
     for (const auxiliaries of [...badIdentities, unsorted, duplicated]) {

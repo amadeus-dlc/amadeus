@@ -20,9 +20,9 @@ import {
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MODULE_DOMAIN = "amadeus.formal-verif.tla.module.v1";
 const CFG_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
-const MODEL_PATH = "specs/tla/MirrorLifecycle.tla";
-const CORE_PATH = "specs/tla/MirrorLifecycleCore.tla";
-const CFG_PATH = "specs/tla/MirrorLifecycle.cfg";
+const MODEL_PATH = "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla";
+const CORE_PATH = "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla";
+const CFG_PATH = "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg";
 const ENTRY_PATH = "packages/framework/core/tools/amadeus-mirror-fixture.ts";
 const temporaryRoots: string[] = [];
 
@@ -67,7 +67,7 @@ function readMap(fixture: Fixture): FixtureMap {
 function createFixture(declareCore = true): Fixture {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t405-mirror-drift-"));
   temporaryRoots.push(root);
-  mkdirSync(join(root, "specs/tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus/spaces/default/specs/tla"), { recursive: true });
   mkdirSync(join(root, "packages/framework/core/tools"), { recursive: true });
   writeFileSync(join(root, ".git"), "gitdir: fixture\n");
   writeFileSync(join(root, "package.json"), "{}\n");
@@ -83,7 +83,7 @@ function createFixture(declareCore = true): Fixture {
   const fixture: Fixture = {
     root,
     moduleUrl: pathToFileURL(join(root, "probe.ts")).href,
-    mapPath: join(root, "specs/tla/model-map.json"),
+    mapPath: join(root, "amadeus/spaces/default/specs/tla/model-map.json"),
     coreSource,
   };
   writeMap(fixture, {
@@ -150,7 +150,7 @@ describe("MirrorLifecycle auxiliary declaration drift", () => {
     });
 
     const extra = createFixture();
-    const unusedPath = "specs/tla/MirrorUnused.tla";
+    const unusedPath = "amadeus/spaces/default/specs/tla/MirrorUnused.tla";
     const unusedSource = "---- MODULE MirrorUnused ----\nEXTENDS Naturals\n====\n";
     writeFileSync(join(extra.root, unusedPath), unusedSource);
     const map = readMap(extra);

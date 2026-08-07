@@ -29,6 +29,12 @@ import {
   type Advisory,
   type AdvisoryCode,
 } from "./amadeus-plugin-activation.ts";
+import {
+  resolveSpecRoots,
+  TLA_EXECUTION_MODEL_NAME,
+  tlaCfgPath,
+  tlaModelPath,
+} from "./amadeus-formal-verif-model-map.ts";
 import type {
   AutoDecisionRecord,
   DecisionBasisKind,
@@ -889,10 +895,13 @@ function formalCheckRoute(
 ): AdvisoryFormalCheckRoute {
   const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
   mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
+  // The execution model's canonical paths follow the active space (BR-1/BR-2);
+  // a legacy spec layout stops here with the resolver's migration instructions.
+  const specSpace = resolveSpecRoots(projectDir).space;
   const args = [
     "bun", "plugins/formal-model-check/tools/run-model-check.ts",
-    "--model", "specs/tla/FormalElection.tla",
-    "--cfg", "specs/tla/FormalElection.cfg",
+    "--model", tlaModelPath(TLA_EXECUTION_MODEL_NAME, specSpace),
+    "--cfg", tlaCfgPath(TLA_EXECUTION_MODEL_NAME, specSpace),
     "--out", output,
     "--advisory-target", pending.identity.target,
     "--advisory-spec-identity", pending.identity.specIdentity,

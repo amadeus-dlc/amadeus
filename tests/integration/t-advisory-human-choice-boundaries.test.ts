@@ -66,7 +66,7 @@ const identity = {
   plugin: "formal-model-check",
   code: "changed" as const,
   checkpoint: "requirements-analysis",
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
   intentRun: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
   message: "advisory: formal-model-check spec hash CHANGED",
@@ -100,9 +100,9 @@ function writeEvidence(
   pending: PendingAdvisory,
   outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR" = "NOT_DETECTED",
 ): EvidenceFixture {
-  const modelPath = join(projectDir, "specs/tla/FormalElection.tla");
-  const cfgPath = join(projectDir, "specs/tla/FormalElection.cfg");
-  mkdirSync(join(projectDir, "specs/tla"), { recursive: true });
+  const modelPath = join(projectDir, "amadeus/spaces/default/specs/tla/FormalElection.tla");
+  const cfgPath = join(projectDir, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
+  mkdirSync(join(projectDir, "amadeus/spaces/default/specs/tla"), { recursive: true });
   writeFileSync(modelPath, "---- MODULE FormalElection ----\n====\n");
   writeFileSync(cfgPath, "SPECIFICATION Spec\n");
 
@@ -141,8 +141,8 @@ function writeEvidence(
       instance: pending.identity.advisoryInstance,
     },
     sourceProvenance: {
-      modelPath: "specs/tla/FormalElection.tla",
-      cfgPath: "specs/tla/FormalElection.cfg",
+      modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
       moduleIdentity: "registered-module",
       cfgIdentity: "registered-cfg",
       moduleSha256: sha256(modelPath),
@@ -268,8 +268,8 @@ describe("advisory model-check evidence boundaries", () => {
     evidence.writeManifest(evidence.manifest);
     expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
 
-    provenance.modelPath = "specs/tla/FormalElection.tla";
-    provenance.moduleSha256 = sha256(join(root, "specs/tla/FormalElection.tla"));
+    provenance.modelPath = "amadeus/spaces/default/specs/tla/FormalElection.tla";
+    provenance.moduleSha256 = sha256(join(root, "amadeus/spaces/default/specs/tla/FormalElection.tla"));
     provenance.cfgPath = "other/FormalElection.cfg";
     provenance.cfgSha256 = sha256(join(root, "other/FormalElection.cfg"));
     evidence.writeManifest(evidence.manifest);
@@ -670,7 +670,7 @@ describe("core advisory directive validation boundaries", () => {
         stage: "other",
         command: "",
         output_dir: "/evidence",
-        target: "specs/tla",
+        target: "amadeus/spaces/default/specs/tla",
         spec_identity: "sha256:abc",
         advisory_instance: "instance-1",
       }],
@@ -682,7 +682,7 @@ describe("core advisory directive validation boundaries", () => {
         stage: "other",
         command: "run",
         output_dir: "/evidence",
-        target: "specs/tla",
+        target: "amadeus/spaces/default/specs/tla",
         spec_identity: "sha256:abc",
         advisory_instance: "instance-1",
       }],

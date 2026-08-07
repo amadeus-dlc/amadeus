@@ -5,7 +5,7 @@
 (* amadeus-mirror-coordinator.ts:243 is applied to every non-manual,       *)
 (* non-completion boundary, including intent-capture-approved.             *)
 (*                                                                         *)
-(* This is the variant registered in specs/tla/model-map.json and the only *)
+(* This is the variant registered in amadeus/spaces/default/specs/tla/model-map.json and the only *)
 (* variant CI is required to keep green (BR-U7-5). Both invariants must    *)
 (* hold under exhaustive exploration.                                      *)
 (*                                                                         *)

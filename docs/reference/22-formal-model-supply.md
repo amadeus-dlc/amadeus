@@ -1,6 +1,6 @@
 # Supplying a Formal Model for a New Protocol
 
-Until `specs/tla/model-map.json` declares a model whose `.tla` and `.cfg` assets
+Until `amadeus/spaces/<space>/specs/tla/model-map.json` declares a model whose `.tla` and `.cfg` assets
 exist, activation reports `not-ready` and an explicit check fails with the
 missing-target reason. Plugin installation itself remains valid with zero
 models, and no automatic lifecycle path launches TLC.
@@ -92,7 +92,7 @@ sensor.
 ## 4. Register the model
 
 Add the model, its `.cfg`, and its canonical implementation files to
-`specs/tla/model-map.json`. The `entries` list should hold every file the model
+`amadeus/spaces/<space>/specs/tla/model-map.json`. The `entries` list should hold every file the model
 translates a predicate from, not just the obvious one. A predicate whose file is
 missing from `entries` can change without the sensor noticing.
 
@@ -187,7 +187,7 @@ digest but changing a guard does. `identity compare` reports `current` or
 
 ```
 bun plugins/formal-model-check/tools/tla-authoring.ts identity extract \
-  --doc specs/tla/requirements.md --doc-kind requirements
+  --doc amadeus/spaces/default/specs/tla/requirements.md --doc-kind requirements
 ```
 
 **Bundles.** `bundle build` writes a content-addressed envelope into the
@@ -220,7 +220,7 @@ alone.
 `advisory hold` is the wrapper the plugin registers as the `authoring-hold`
 advisory at the `requirements-analysis`, `functional-design`, and
 `build-and-test` checkpoints. A checkpoint knows no subjects, so the wrapper
-resolves them from `specs/tla/authoring-subjects.json`: the documents and stable
+resolves them from `amadeus/spaces/<space>/specs/tla/authoring-subjects.json`: the documents and stable
 ids a workspace places under formal-verification governance. A workspace that
 declares nothing governs nothing, which is a real no-hold rather than a
 suppressed one — but a declaration file that exists and cannot be read, or names
@@ -235,7 +235,7 @@ bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
 
 `plugins/formal-model-check/tools/tla-evidence.ts` is a library, not a CLI — it
 has no entry point of its own and is consumed by `tla-authoring.ts`. It is the
-only writer of the evidence store, which lives at `specs/tla-evidence` unless a
+only writer of the evidence store, which lives at `amadeus/spaces/<space>/specs/tla-evidence` unless a
 `--store` flag moves it.
 
 The file is split so that the judgement half can be tested without a

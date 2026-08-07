@@ -32,7 +32,7 @@ function run(kind: "warm-up" | "measured", index: number) {
         "--name",
         `amadeus-tlc-${runId}`,
         "--mount",
-        "type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly",
+        "type=bind,src=$WORKSPACE/amadeus/spaces/default/specs/tla,dst=$WORKSPACE/amadeus/spaces/default/specs/tla,readonly",
         "--mount",
         "type=bind,src=$JAR,dst=$JAR,readonly",
         "--mount",
@@ -141,7 +141,7 @@ describe("CI model-check acceptance domain", () => {
       },
       (value: CiAcceptanceEvidence) => {
         value.runs[0]!.docker.argv = value.runs[0]!.docker.argv.map(
-          (argument) => argument === "type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly"
+          (argument) => argument === "type=bind,src=$WORKSPACE/amadeus/spaces/default/specs/tla,dst=$WORKSPACE/amadeus/spaces/default/specs/tla,readonly"
             ? "type=bind,src=$WORKSPACE,dst=$WORKSPACE,readonly"
             : argument,
         );

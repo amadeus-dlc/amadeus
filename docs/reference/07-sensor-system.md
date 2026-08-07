@@ -203,7 +203,7 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
-| `amadeus-model-completeness.md` | `**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
+| `amadeus-model-completeness.md` | `**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
 | `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
 
 `matches` **is** the fire filter — it is not optional in practice. The hook

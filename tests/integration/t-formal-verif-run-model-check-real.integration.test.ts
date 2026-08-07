@@ -77,10 +77,10 @@ describe("run-model-check real Darwin acceptance", () => {
         mkdirSync(evidence);
         const model = join(workspace, `${target.name}.tla`);
         const cfg = join(workspace, `${target.name}.cfg`);
-        cpSync(`specs/tla/${target.name}.tla`, model);
-        cpSync(`specs/tla/${target.name}.cfg`, cfg);
+        cpSync(`amadeus/spaces/default/specs/tla/${target.name}.tla`, model);
+        cpSync(`amadeus/spaces/default/specs/tla/${target.name}.cfg`, cfg);
         for (const auxiliary of target.auxiliaryModules) {
-          cpSync(`specs/tla/${auxiliary}.tla`, join(workspace, `${auxiliary}.tla`));
+          cpSync(`amadeus/spaces/default/specs/tla/${auxiliary}.tla`, join(workspace, `${auxiliary}.tla`));
         }
 
         const result = await runModelCheck([
@@ -131,8 +131,8 @@ describe("run-model-check real Darwin acceptance", () => {
       mkdirSync(evidence);
       const model = join(workspace, "FormalElection.tla");
       const cfg = join(workspace, "FormalElection.cfg");
-      cpSync("specs/tla/FormalElection.tla", model);
-      cpSync("specs/tla/FormalElection.cfg", cfg);
+      cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+      cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
       const before = {
         files: readdirSync(workspace).sort(),
         model: readFileSync(model),

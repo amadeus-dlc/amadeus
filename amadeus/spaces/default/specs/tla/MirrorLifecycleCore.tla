@@ -8,7 +8,7 @@
 (*                                    boundary->operation map applied to   *)
 (*                                    every non-manual boundary. This is   *)
 (*                                    the variant registered in            *)
-(*                                    specs/tla/model-map.json and the     *)
+(*                                    amadeus/spaces/default/specs/tla/model-map.json and the     *)
 (*                                    only variant CI keeps green.         *)
 (*                                                                         *)
 (*   MirrorLifecycleAsImplemented.tla AsImplemented - the faithful map of  *)
@@ -536,7 +536,7 @@ NonCloseOps == {"create", "sync"}
 
 (***************************************************************************)
 (* Terminal stuttering, following the sibling FormalElection spec's idiom  *)
-(* (specs/tla/FormalElection.tla, Terminal / TerminalStutter).             *)
+(* (amadeus/spaces/default/specs/tla/FormalElection.tla, Terminal / TerminalStutter).             *)
 (*                                                                         *)
 (* The workflow genuinely ends: at the last boundary, once every receipt   *)
 (* there has reached a terminal status and the completion policy yields no *)
