@@ -10,7 +10,7 @@
 // the raw-state fetcher as injected values, which keeps the RUNNER edge
 // type-only and the dependency graph acyclic.
 
-import type { GhRunner, PrRef } from "./pr-convergence-gh-runner.ts";
+import type { GhRunner, PrRef, RawPrState } from "./pr-convergence-gh-runner.ts";
 
 // ---------------------------------------------------------------------------
 // Thread classification (FR-3a / BR-U2-2)
@@ -137,6 +137,61 @@ export const Mergeable = {
   },
 } as const;
 
+/**
+ * The GitHub pull-request lifecycle (`PullRequestState`). MERGED is the only
+ * value that ends the convergence loop with a `landed` verdict; everything
+ * else stays on the active evaluation path.
+ */
+export type PrLifecycleState = "OPEN" | "CLOSED" | "MERGED";
+
+export const KNOWN_PR_LIFECYCLE_STATES: readonly PrLifecycleState[] = [
+  "OPEN",
+  "CLOSED",
+  "MERGED",
+];
+
+export const PrLifecycleState = {
+  /** Fail-closed, same shape as `Mergeable.parse`: an unrecognised value means
+   *  the GitHub schema moved, and it must be loud rather than "active". */
+  parse(raw: string): PrLifecycleState {
+    const known = KNOWN_PR_LIFECYCLE_STATES.find((value) => value === raw);
+    if (known === undefined) throw new Error(`unknown pull-request state: ${JSON.stringify(raw)}`);
+    return known;
+  },
+} as const;
+
+/**
+ * What a landed report records about a merged pull request (#2401). Existence
+ * of a LandedFacts value is the proof the pull request is MERGED with a merge
+ * instant and a merge commit — parse-don't-validate.
+ */
+export interface LandedFacts {
+  readonly mergedAt: string;
+  readonly mergeCommitOid: string;
+  readonly checkRollupState: string | null;
+}
+
+export const LandedFacts = {
+  /** Precondition `state === "MERGED"` is enforced, not assumed: a LandedFacts
+   *  for an unmerged pull request must be unrepresentable. */
+  parse(raw: RawPrState): LandedFacts {
+    if (raw.state !== "MERGED") {
+      throw new Error(`LandedFacts requires state MERGED, got ${JSON.stringify(raw.state)}`);
+    }
+    if (typeof raw.mergedAt !== "string") {
+      throw new Error("merged pull request carries no mergedAt");
+    }
+    if (typeof raw.mergeCommitOid !== "string") {
+      throw new Error("merged pull request carries no mergeCommit oid");
+    }
+    return {
+      mergedAt: raw.mergedAt,
+      mergeCommitOid: raw.mergeCommitOid,
+      checkRollupState: typeof raw.checkRollupState === "string" ? raw.checkRollupState : null,
+    };
+  },
+} as const;
+
 /** The typed pull-request state. C6 fetches the raw strings; this is the parse. */
 export interface PrState {
   readonly mergeable: Mergeable;
@@ -188,6 +243,48 @@ export function evaluateConvergence(input: ConvergenceInput): ConvergenceVerdict
     violating: { repliedUnresolved: input.repliedUnresolved, ignored: input.ignored },
     mergeState: input.state.mergeStateStatus,
     mergeableResolution: input.resolution,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The evaluated (labelled) verdict (#2401)
+// ---------------------------------------------------------------------------
+
+/**
+ * A ConvergenceVerdict carrying its own name. `landed` is the one label that
+ * does not come out of `evaluateConvergence`: a merged pull request is a fact
+ * to record, not a state to converge. The two display slots are widened for
+ * that case only — `MERGED` is a lifecycle fact, not a `mergeStateStatus`
+ * value, and the UNKNOWN retry never ran, so neither closed vocabulary can
+ * honestly describe a landed pull request.
+ */
+export type EvaluatedVerdict = Omit<ConvergenceVerdict, "mergeState" | "mergeableResolution"> & {
+  readonly verdict: "converged" | "not-converged" | "landed";
+  readonly mergeState: MergeStateStatus | "MERGED";
+  readonly mergeableResolution: MergeableResolution | "not-applicable";
+};
+
+/** The label is derived from `converged` — it can never disagree with it. */
+export function labeledVerdict(verdict: ConvergenceVerdict): EvaluatedVerdict {
+  return { ...verdict, verdict: verdict.converged ? "converged" : "not-converged" };
+}
+
+/**
+ * The factual record of a merged pull request. `converged: false` on purpose:
+ * landing is a merge that already happened, never a convergence claim, so no
+ * consumer of `converged` gains a new way to advance.
+ *
+ * The parameter is deliberately unread: it pins the type-level precondition
+ * that a landed verdict can only be constructed after `LandedFacts.parse`
+ * succeeded (the FD signature), without duplicating any of the facts here.
+ */
+export function landedVerdict(_facts: LandedFacts): EvaluatedVerdict {
+  return {
+    converged: false,
+    verdict: "landed",
+    violating: { repliedUnresolved: 0, ignored: 0 },
+    mergeState: "MERGED",
+    mergeableResolution: "not-applicable",
   };
 }
 

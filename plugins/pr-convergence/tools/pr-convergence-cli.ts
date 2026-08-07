@@ -30,10 +30,12 @@ import { join, resolve } from "node:path";
 import {
   createGhRunner,
   fetchRawPrState,
+  type GhRunner,
   type GhSpawn,
   nodeGhSpawn,
   parsePrRef,
   type PrRef,
+  type RawPrState,
 } from "./pr-convergence-gh-runner.ts";
 import {
   fetchAllReviewThreads,
@@ -44,6 +46,12 @@ import {
   classifyThread,
   type ConvergenceVerdict,
   evaluateConvergence,
+  type EvaluatedVerdict,
+  labeledVerdict,
+  LandedFacts,
+  landedVerdict,
+  PrLifecycleState,
+  type RawPrStateFetch,
   resolveMergeable,
   type Sleep,
 } from "./pr-convergence-predicate.ts";
@@ -67,12 +75,25 @@ export type ConvergenceReport =
       readonly ledgerSummary: LedgerSummary;
     }
   | {
+      // The override verdict admits the labelled shape so a human may still
+      // rule forward a pull request whose evaluation landed (#2401).
       readonly kind: "override";
       readonly generatedAt: string;
       readonly prRef: { readonly repo: string; readonly number: number };
-      readonly verdict: ConvergenceVerdict;
+      readonly verdict: ConvergenceVerdict | EvaluatedVerdict;
       readonly ledgerSummary: LedgerSummary;
       readonly override: OverrideRecord;
+    }
+  | {
+      // The factual record of a merged pull request (#2401). No verdict and no
+      // ledger: the convergence predicate never ran, so there is nothing to
+      // report but the merge itself.
+      readonly kind: "landed";
+      readonly prRef: { readonly repo: string; readonly number: number };
+      readonly mergedAt: string;
+      readonly mergeCommitOid: string;
+      readonly checkRollupState: string | null;
+      readonly generatedAt: string;
     };
 
 export const REPORT_BASENAME = "pr-convergence-report.md";
@@ -87,6 +108,22 @@ export function reportPathFor(recordRoot: string, unit: string): string {
  * is detectable precisely because every field here is derived.
  */
 export function renderReport(report: ConvergenceReport): string {
+  if (report.kind === "landed") {
+    return [
+      "# PR Convergence Report",
+      "",
+      "- kind: landed",
+      `- pull request: ${report.prRef.repo}#${report.prRef.number}`,
+      "- converged: false",
+      `- merged at: ${report.mergedAt}`,
+      `- merge commit: ${report.mergeCommitOid}`,
+      // Informational only: a merged PR may have carried no checks at all, and
+      // an absent rollup is not a field worth rendering as "null".
+      ...(report.checkRollupState === null ? [] : [`- check rollup: ${report.checkRollupState}`]),
+      `- generated at: ${report.generatedAt}`,
+      "",
+    ].join("\n");
+  }
   const { verdict, ledgerSummary: s, prRef } = report;
   const lines = [
     "# PR Convergence Report",
@@ -343,22 +380,107 @@ function parseOptions(argv: readonly string[]): OptionParse {
 // Evaluation (shared by all three verbs)
 // ---------------------------------------------------------------------------
 
-interface Evaluation {
-  readonly verdict: ConvergenceVerdict;
-  readonly summary: LedgerSummary;
-}
+/**
+ * What one evaluation pass produced. The `active` arm keeps the un-labelled
+ * ConvergenceVerdict (`core`) alongside its label because the converged report
+ * shape is pinned to ConvergenceVerdict; the `landed` arm never ran the
+ * convergence predicate at all, so it carries the merge facts instead.
+ */
+type Evaluation =
+  | {
+      readonly kind: "landed";
+      readonly facts: LandedFacts;
+      readonly verdict: EvaluatedVerdict;
+      readonly summary: LedgerSummary;
+    }
+  | {
+      readonly kind: "active";
+      readonly core: ConvergenceVerdict;
+      readonly verdict: EvaluatedVerdict;
+      readonly summary: LedgerSummary;
+    };
 
 type EvaluationResult =
   | { readonly ok: true; readonly value: Evaluation }
   | { readonly ok: false; readonly message: string };
+
+/** A ledger summary for a pull request whose threads were never read: a landed
+ *  verdict records a merge, so every thread count is zero by construction. */
+const EMPTY_LEDGER_SUMMARY: LedgerSummary = {
+  resolved: 0,
+  outdated: 0,
+  repliedUnresolved: 0,
+  ignored: 0,
+  humanOnly: 0,
+  terminalized: 0,
+};
+
+type PrLifecycleResolution =
+  | { readonly kind: "merged"; readonly facts: LandedFacts }
+  | { readonly kind: "active"; readonly first: RawPrState };
+
+type LifecycleResult =
+  | { readonly ok: true; readonly value: PrLifecycleResolution }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * One state read decides the lifecycle before any convergence work starts. A
+ * gh failure passes through; an unknown state value throws (AC-1b), exactly
+ * like an unknown mergeStateStatus.
+ */
+async function resolvePrLifecycle(gh: GhRunner, ref: PrRef): Promise<LifecycleResult> {
+  const raw = await fetchRawPrState(gh, ref);
+  if (!raw.ok) return { ok: false, message: `gh failed reading merge state: ${raw.error.kind}` };
+  const first = raw.value;
+  // Ruling E-MPC-CGBLK: a response without `state` predates the lifecycle
+  // extension (older scripted doubles replay such payloads). It carries no
+  // evidence of a merge, so it takes the active path; a state that is PRESENT
+  // but unknown still throws (AC-1b stays fail-closed).
+  if (first.state === undefined) return { ok: true, value: { kind: "active", first } };
+  if (PrLifecycleState.parse(first.state) === "MERGED") {
+    return { ok: true, value: { kind: "merged", facts: LandedFacts.parse(first) } };
+  }
+  return { ok: true, value: { kind: "active", first } };
+}
+
+/**
+ * A fetch that answers the first call from the lifecycle read and every later
+ * call from the live boundary — the lifecycle check adds no gh traffic to the
+ * mergeable UNKNOWN loop.
+ */
+function primed(first: RawPrState, fetch: typeof fetchRawPrState): RawPrStateFetch {
+  let used = false;
+  return async (gh, ref) => {
+    if (!used) {
+      used = true;
+      return { ok: true, value: first };
+    }
+    return fetch(gh, ref);
+  };
+}
 
 async function evaluate(options: CliOptions, seams: CliSeams): Promise<EvaluationResult> {
   const runner = await createGhRunner(seams.ghSpawn);
   if (!runner.ok) return { ok: false, message: `gh unavailable: ${runner.error.kind}` };
   const gh = runner.value;
 
+  const lifecycle = await resolvePrLifecycle(gh, options.ref);
+  if (!lifecycle.ok) return lifecycle;
+  if (lifecycle.value.kind === "merged") {
+    const facts = lifecycle.value.facts;
+    return {
+      ok: true,
+      value: {
+        kind: "landed",
+        facts,
+        verdict: landedVerdict(facts),
+        summary: EMPTY_LEDGER_SUMMARY,
+      },
+    };
+  }
+
   const mergeable = await resolveMergeable(gh, options.ref, {
-    fetchRawPrState,
+    fetchRawPrState: primed(lifecycle.value.first, fetchRawPrState),
     sleep: seams.sleep,
   });
   if (mergeable.kind === "gh-failure") {
@@ -371,13 +493,54 @@ async function evaluate(options: CliOptions, seams: CliSeams): Promise<Evaluatio
   }
 
   const ledger = ThreadLedger.build(options.ref, threads.value, classifyThread);
-  const verdict = evaluateConvergence({
+  const core = evaluateConvergence({
     repliedUnresolved: ledger.count("replied-unresolved"),
     ignored: ledger.count("ignored"),
     state: mergeable.state,
     resolution: mergeable.kind === "resolved" ? "resolved" : "unknown-exhausted",
   });
-  return { ok: true, value: { verdict, summary: ledger.summary() } };
+  return {
+    ok: true,
+    value: { kind: "active", core, verdict: labeledVerdict(core), summary: ledger.summary() },
+  };
+}
+
+// The report verb's whole outcome, split out of runCli so the dispatcher stays
+// under the complexity ceiling. A merged pull request gets its factual record
+// (#2401): no human turn is read and no decision is emitted — landing is a
+// merge that already happened, not an approval.
+function reportOutcome(options: CliOptions, seams: CliSeams, evaluation: Evaluation): CliOutcome {
+  if (evaluation.kind === "landed") {
+    const facts = evaluation.facts;
+    const path = writeReport(options, {
+      kind: "landed",
+      prRef: refValue(options.ref),
+      mergedAt: facts.mergedAt,
+      mergeCommitOid: facts.mergeCommitOid,
+      checkRollupState: facts.checkRollupState,
+      generatedAt: seams.now(),
+    });
+    return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+  }
+  const { verdict, summary } = evaluation;
+  if (!verdict.converged) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr:
+        `not converged — no report written. replied-unresolved=${verdict.violating.repliedUnresolved} ` +
+        `ignored=${verdict.violating.ignored} mergeState=${verdict.mergeState} ` +
+        `mergeable=${verdict.mergeableResolution}\n`,
+    };
+  }
+  const path = writeReport(options, {
+    kind: "converged",
+    generatedAt: seams.now(),
+    prRef: refValue(options.ref),
+    verdict: evaluation.core,
+    ledgerSummary: summary,
+  });
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
 }
 
 function writeReport(options: CliOptions, report: ConvergenceReport): string {
@@ -423,6 +586,7 @@ export async function runCli(argv: readonly string[], seams: CliSeams): Promise<
     const payload = JSON.stringify(
       {
         converged: verdict.converged,
+        verdict: verdict.verdict,
         violating: verdict.violating,
         mergeState: verdict.mergeState,
         mergeableResolution: verdict.mergeableResolution,
@@ -432,29 +596,12 @@ export async function runCli(argv: readonly string[], seams: CliSeams): Promise<
       null,
       2,
     );
-    return { exitCode: verdict.converged ? 0 : 1, stdout: payload, stderr: "" };
+    // A landed pull request is a settled fact: exit 0, like convergence.
+    const settled = verdict.converged || evaluation.value.kind === "landed";
+    return { exitCode: settled ? 0 : 1, stdout: payload, stderr: "" };
   }
 
-  if (options.verb === "report") {
-    if (!verdict.converged) {
-      return {
-        exitCode: 1,
-        stdout: "",
-        stderr:
-          `not converged — no report written. replied-unresolved=${verdict.violating.repliedUnresolved} ` +
-          `ignored=${verdict.violating.ignored} mergeState=${verdict.mergeState} ` +
-          `mergeable=${verdict.mergeableResolution}\n`,
-      };
-    }
-    const path = writeReport(options, {
-      kind: "converged",
-      generatedAt: seams.now(),
-      prRef: refValue(options.ref),
-      verdict,
-      ledgerSummary: summary,
-    });
-    return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
-  }
+  if (options.verb === "report") return reportOutcome(options, seams, evaluation.value);
 
   // override
   const humanTurn = latestHumanTurn(options.record);

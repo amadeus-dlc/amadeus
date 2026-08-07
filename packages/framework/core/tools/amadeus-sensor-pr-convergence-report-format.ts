@@ -65,9 +65,15 @@ function checkCommon(body: string, findings: ReportFormatFinding[]): {
 } {
   const kind = field(body, "kind");
   if (kind === null || kind === "") {
-    findings.push({ field: "kind", reason: "missing — every report declares converged or override" });
-  } else if (kind !== "converged" && kind !== "override") {
-    findings.push({ field: "kind", reason: `unknown kind "${kind}" — expected converged or override` });
+    findings.push({
+      field: "kind",
+      reason: "missing — every report declares converged, override or landed",
+    });
+  } else if (kind !== "converged" && kind !== "override" && kind !== "landed") {
+    findings.push({
+      field: "kind",
+      reason: `unknown kind "${kind}" — expected converged, override or landed`,
+    });
   }
 
   const pr = field(body, "pull request");
@@ -106,6 +112,24 @@ function checkOverride(body: string, findings: ReportFormatFinding[]): void {
   }
 }
 
+/** The landed record (#2401): the merge instant and the merge commit are what
+ *  make it a factual record rather than a bare claim, and a landed report that
+ *  says converged: true would smuggle a convergence claim through a merge
+ *  fact. The check rollup is informational and deliberately not checked. */
+function checkLanded(body: string, converged: string | null, findings: ReportFormatFinding[]): void {
+  if (converged === "true") {
+    findings.push({ field: "converged", reason: "a landed report is converged: false by construction" });
+  }
+  for (const label of ["merged at", "merge commit"]) {
+    const value = field(body, label);
+    if (value === null || value === "") {
+      findings.push({ field: label, reason: `missing — a landed report records the ${label}` });
+    } else if (label === "merged at" && Number.isNaN(Date.parse(value))) {
+      findings.push({ field: label, reason: `unparseable timestamp "${value}"` });
+    }
+  }
+}
+
 /** Pure evaluation core (in-process test seam). Reads the file itself so the
  *  CLI entry stays a thin argv shim. */
 export function evaluateReportFormat(outputPath: string): ReportFormatResult {
@@ -125,10 +149,13 @@ export function evaluateReportFormat(outputPath: string): ReportFormatResult {
     if (converged === "true") {
       findings.push({ field: "converged", reason: "an override report is converged: false by construction" });
     }
+  } else if (kind === "landed") {
+    checkLanded(body, converged, findings);
   } else if (kind === "converged" && converged === "false") {
     findings.push({ field: "converged", reason: "a converged report is converged: true by construction" });
   }
-  return verdict(kind === "override" ? "override" : "converged", findings);
+  const reason = kind === "override" || kind === "landed" ? kind : "converged";
+  return verdict(reason, findings);
 }
 
 interface Flags {
