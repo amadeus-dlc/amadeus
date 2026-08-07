@@ -12,6 +12,7 @@ import { assertMutationAllowed } from "../otel/fatal-latch.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { advisoryChoicePresentationFields } from "./amadeus-advisory-choice.ts";
 import {
+  auditBlockField,
   emitError,
   errorMessage,
   hasOpenGate,
@@ -19,8 +20,11 @@ import {
   humanPresenceGuardDisabled,
   isAutonomousMode,
   resolveProjectDir,
+  splitAuditRecords,
   stateFilePath,
 } from "./amadeus-lib.js";
+import type { AutonomyMode } from "./amadeus-intent-autonomy.ts";
+import { decodeIntentAutonomyTransaction } from "./amadeus-intent-autonomy-replay.ts";
 
 // Resolve the project dir AND assert that an active workflow exists before any
 // audit emit. WHY: amadeus-log is orchestrator-called per-question and threads no
@@ -145,6 +149,87 @@ function handleAdvisoryDecision(args: string[]): void {
   console.log(JSON.stringify({ emitted: "DECISION_RECORDED", stage: flags.stage, advisory_instances: instances }));
 }
 
+// --- Question resolution route (u3-question-route-observability, FR-3) ---
+//
+// The route is DERIVED, never an input: a caller that passes --decision-id
+// answered through the decide-question ladder (route "ladder"); every other
+// caller is a direct human answer (route "human"). Existing call sites stay
+// unchanged and record "human" (zero migration).
+
+export type QuestionResolutionRoute =
+  | { readonly route: "human" }
+  | { readonly route: "ladder"; readonly decisionId: string };
+
+// Shape of a decide-question decision id: the "auto-decision-" namespace
+// prefix minted by autonomyStableId (amadeus-intent-autonomy.ts), followed by
+// a non-empty run of safe-id characters. Omitting the flag is always valid;
+// this is the ONLY new check the route feature introduces (FR-3c: observe,
+// never refuse an answer for any other reason).
+const AUTO_DECISION_ID_RE = /^auto-decision-[A-Za-z0-9._:-]+$/;
+
+export function resolveQuestionRoute(
+  decisionId: string | undefined
+): QuestionResolutionRoute {
+  if (decisionId === undefined) return { route: "human" };
+  if (!AUTO_DECISION_ID_RE.test(decisionId)) {
+    throw new Error(
+      `Invalid --decision-id "${decisionId}": expected a decide-question decision id of the form "auto-decision-<id>".`
+    );
+  }
+  return { route: "ladder", decisionId };
+}
+
+// One QUESTION_ANSWERED row as the after-the-fact sweep sees it. `route`
+// "unknown" marks a pre-u3 row (no Resolution Route attribute) — read, never
+// rejected (BR-U3-4). `autonomyMode` is the Intent autonomy mode in force at
+// the row's position, derived from the INTENT_AUTONOMY_TRANSACTION_COMMITTED
+// rows preceding it in the same audit buffer (BR-U3-5).
+export interface QuestionRouteRow {
+  readonly stage: string | null;
+  readonly route: "ladder" | "human" | "unknown";
+  readonly decisionId: string | null;
+  readonly autonomyMode: AutonomyMode;
+}
+
+export function questionAnswerRouteRows(audit: string): QuestionRouteRow[] {
+  const rows: QuestionRouteRow[] = [];
+  let mode: AutonomyMode = "none";
+  for (const block of splitAuditRecords(audit)) {
+    const event = auditBlockField(block, "Event");
+    if (event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED") {
+      const encoded = auditBlockField(block, "Transaction");
+      if (encoded !== null) {
+        try {
+          mode = decodeIntentAutonomyTransaction(encoded).projection.mode;
+        } catch {
+          // Observation-only sweep (FR-3c): an undecodable transaction row
+          // keeps the last known mode instead of failing the whole read.
+        }
+      }
+      continue;
+    }
+    if (event !== "QUESTION_ANSWERED") continue;
+    const routeField = auditBlockField(block, "Resolution Route");
+    rows.push({
+      stage: auditBlockField(block, "Stage"),
+      route: routeField === "ladder" || routeField === "human" ? routeField : "unknown",
+      decisionId: auditBlockField(block, "Decision Id"),
+      autonomyMode: mode,
+    });
+  }
+  return rows;
+}
+
+// FR-3b bypass predicate: a QUESTION_ANSWERED row answered directly by a
+// human while the Intent autonomy mode in force was semi or full — i.e. an
+// answer that skipped the decide-question ladder. Rows with route "unknown"
+// (pre-u3) are NOT counted: their route is genuinely unobserved.
+export function findBypassedQuestionAnswers(audit: string): QuestionRouteRow[] {
+  return questionAnswerRouteRows(audit).filter(
+    (row) => row.route === "human" && (row.autonomyMode === "semi" || row.autonomyMode === "full")
+  );
+}
+
 // --- Subcommand: answer ---
 // Usage: amadeus-log answer --stage <slug> --details <text>
 //
@@ -160,6 +245,20 @@ function handleAnswer(args: string[]): void {
     Stage: flags.stage,
     Details: flags.details,
   };
+  // FR-3a: record the derived resolution route so ladder and direct-human
+  // answers stay machine-discriminable in the shard. The route is never an
+  // input — it is derived from the presence of --decision-id. The shape check
+  // inside resolveQuestionRoute is the ONLY new refusal (FR-3c: observe,
+  // never reject an answer for any other reason); omitting the flag is
+  // always valid, so every existing caller keeps working unchanged.
+  let resolvedRoute: QuestionResolutionRoute;
+  try {
+    resolvedRoute = resolveQuestionRoute(flags["decision-id"]);
+  } catch (e) {
+    error(errorMessage(e));
+  }
+  fields["Resolution Route"] = resolvedRoute.route;
+  if (resolvedRoute.route === "ladder") fields["Decision Id"] = resolvedRoute.decisionId;
 
   // Human-presence gate (ledger-event design): the interview answer is
   // a human-judgement event, so require a HUMAN_TURN appended AFTER the last
@@ -202,8 +301,12 @@ function handleAnswer(args: string[]): void {
 
 let projectDir: string | undefined;
 
-function main(): void {
-  const rawArgs = process.argv.slice(2);
+// Exported for in-process test driving (the amadeus-bolt `export main` idiom):
+// spawn-only entry points leave their wiring lines unmeasured by lcov, so the
+// success paths are exercised through this seam while error paths (which
+// process.exit) stay on the spawn boundary.
+export function main(rawArgs: string[] = process.argv.slice(2)): void {
+  projectDir = undefined;
 
   // Extract --project-dir
   const filteredArgs: string[] = [];

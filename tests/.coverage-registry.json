@@ -6212,6 +6212,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t486-question-route-observability.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t31.test.ts",
           "mechanism": "cli"
         }

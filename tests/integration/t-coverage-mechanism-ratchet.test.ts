@@ -95,6 +95,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
   // a new spawning test still cannot land without a human edit here.
   const EXPECTED_NONE_TO_CLI = [
     "integration/t485-subagent-model-guard.integration.test.ts",
+    "integration/t486-question-route-observability.integration.test.ts",
     "e2e/t-formal-verif-model-completeness-sensor.test.ts",
     "e2e/t237-election-walking-skeleton.test.ts",
     "e2e/t265-engine-boundary.test.ts",

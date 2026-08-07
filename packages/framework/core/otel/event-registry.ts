@@ -531,7 +531,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage", "Details"],
-    optionalAttributes: [],
+    // u3-question-route-observability (FR-3): the resolution-route attributes
+    // are OPTIONAL so pre-u3 rows (and any legacy emitter) stay valid; readers
+    // treat their absence as "route unknown (pre-u3)".
+    optionalAttributes: ["Resolution Route", "Decision Id"],
     schemaVersion: 1,
   },
   {

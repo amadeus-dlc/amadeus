@@ -147,7 +147,7 @@ formal-check attempt counts that reset with the discarded run-now receipts.
 | `DECISION_RECORDED` | Before presenting a structured question, to record the options shown | Stage, Decision | Options, Rationale | `tools/amadeus-log.ts decision` |
 | `GATE_APPROVED` | Human approved at gate | Stage | User Input, Grant Id, Swarm batch, Transaction Id | `tools/amadeus-state.ts approve` |
 | `GATE_REJECTED` | Human requested changes | Stage | Feedback, Recovered, Transaction Id | `tools/amadeus-state.ts reject` |
-| `QUESTION_ANSWERED` | Question answered by user | Stage, Details | — | `tools/amadeus-log.ts answer` |
+| `QUESTION_ANSWERED` | Question answered by user | Stage, Details | Resolution Route, Decision Id | `tools/amadeus-log.ts answer` |
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input, Grant Id | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
