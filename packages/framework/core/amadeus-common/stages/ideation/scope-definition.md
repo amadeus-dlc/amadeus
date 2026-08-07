@@ -53,12 +53,18 @@ Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and kn
 
 ### Step 3: Generate Clarifying Questions
 
-Create `<record>/ideation/scope-definition/scope-definition-questions.md` with questions:
-- What is the minimum viable scope that delivers value?
-- What capabilities are must-have vs. nice-to-have?
+FIRST, check whether the scope boundary is already settled upstream. Read the intent statement and any linked Issue, prior ruling, or approved artifact it cites. A capability is SETTLED when an upstream source names it as in-scope; it is OPEN when no upstream source decides it either way.
+
+Ask ONLY about OPEN capabilities. Do NOT re-litigate a SETTLED capability — record it as in-scope and carry it into Step 5. In particular, when every capability is settled upstream, do NOT raise the minimum-viable-scope or must-have-vs-nice-to-have questions at all: a reduction option offered against a settled boundary reads as a recommendation and silently drops work the upstream source already scrutinized. Reducing a settled boundary is a specification change and belongs to the human, not to a clarifying question.
+
+Create `<record>/ideation/scope-definition/scope-definition-questions.md` with the applicable questions:
+- (OPEN capabilities only) What is the minimum viable scope that delivers value?
+- (OPEN capabilities only) What capabilities are must-have vs. nice-to-have?
 - What are the dependencies between capabilities?
 - What is the sequencing preference (risk-first, value-first, dependency-first)?
 - Are there hard deadlines tied to specific capabilities?
+
+State the settled boundary and its upstream source at the top of the questions file, so the reader can see what was NOT asked and why. When an option would narrow, keep, or widen the upstream boundary, say which of the three it does in the option text itself.
 
 Follow stage-protocol.md question flow.
 
