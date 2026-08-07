@@ -81,7 +81,9 @@ import {
   setField,
   setFieldStrict,
   setIntentDocsOnly,
+  parseDeclaredUnitsArg,
   setOrInsertField,
+  writeDegradeUnitDeclaration,
   type ScopedCheckboxLine,
   type StageEntry,
   stageLineKey,
@@ -1051,9 +1053,12 @@ function main(): void {
       case "declare-docs-only":
         handleDeclareDocsOnly(args.slice(1));
         break;
+      case "declare-units-done":
+        handleDeclareUnitsDone(args.slice(1));
+        break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, session-takeover, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, mirror-initial-create, set-construction-iteration, checkbox, count, advance, finalize, complete-workflow, archive, unarchive, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, session-takeover, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only, declare-units-done`
         );
     }
   } catch (e) {
@@ -5377,6 +5382,36 @@ export function handleSetConstructionIteration(args: string[]): void {
     );
     writeStateFile(pd, updated);
     console.log(JSON.stringify({ updated: true, construction_iteration: value }));
+  });
+}
+
+// declare-units-done (issue #2358, ruling #2385 Q4-B): the sole write path for
+// the degrade-path unit-list declaration. A per-unit stage with no compiled unit
+// DAG refuses a listing whose unit directories are ALL already covered, because
+// it cannot tell a finished workflow from one that is still adding units. This
+// verb is the conductor saying "no further unit is coming"; the engine then
+// presents the stage gate on the last unit. It only ever RECORDS — the engine
+// re-checks the declaration against the live listing, so a stale declaration
+// withholds the gate rather than forcing one.
+export function handleDeclareUnitsDone(args: string[]): void {
+  const flags = parseFlags(args);
+  const raw = typeof flags.units === "string" ? flags.units : "";
+  if (raw.trim().length === 0) {
+    error("Usage: amadeus-state.ts declare-units-done --units <comma-separated unit names>");
+  }
+  const parsed = parseDeclaredUnitsArg(raw);
+  // Mutation-before-reject: error() is `never`, so a malformed list fails closed
+  // here, before any lock/read/write (mirrors set-construction-iteration).
+  if (!parsed.ok) error(parsed.error);
+  const units = parsed.units;
+  const pd = resolveProjectDir(projectDir);
+  // C2b lost-update safety: read→write under one lock (mirrors set-skeleton-stance).
+  withAuditLock(pd, () => {
+    const declaredAt = isoTimestamp();
+    const content = readStateFile(pd);
+    const updated = writeDegradeUnitDeclaration(content, units, declaredAt);
+    writeStateFile(pd, updated);
+    console.log(JSON.stringify({ declared: true, units, declared_at: declaredAt }));
   });
 }
 

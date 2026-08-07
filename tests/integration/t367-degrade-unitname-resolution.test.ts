@@ -32,7 +32,7 @@
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -45,6 +45,7 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { writeDegradeUnitDeclaration } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 // The core source has no co-located compiled graph — point the in-process
 // engine at the packaged dist copy (regenerated from the same core here).
@@ -187,6 +188,19 @@ function seedCoveredUnitDir(proj: string, unit: string): void {
     "code-generation-plan.md",
     "code-summary.md",
   ]);
+}
+
+/**
+ * Record the conductor's "no further units are coming" declaration (#2358)
+ * through the SAME writer the `declare-units-done` verb uses, so the fixture
+ * cannot drift from the shape the engine reads.
+ */
+function declareUnitsDone(proj: string, units: string[]): void {
+  const path = seededStateFile(proj);
+  writeFileSync(
+    path,
+    writeDegradeUnitDeclaration(readFileSync(path, "utf8"), units, "2026-08-07T00:00:00Z"),
+  );
 }
 
 /**
@@ -408,15 +422,33 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.message).not.toContain("{unit-name}");
   }, 30000);
 
-  test("13: several units with nothing outstanding are refused, asking for a new one", () => {
+  // 13 was a single pin: several finished units ALWAYS refused, and the only
+  // move offered was "create another unit directory" — which left a conductor
+  // who had finished adding units with no way forward at all (issue #2358).
+  // EXPLICIT REVISION under ruling #2385 Q4-B and this intent's requirements
+  // FR-3.4: the refusal survives as the UNDECLARED arm, and a recorded
+  // unit-list declaration now turns the same listing into the stage gate.
+  test("13a: several finished units with no declaration are still refused", () => {
     const proj = seedFixProject();
     seedCoveredUnitDir(proj, "unit-alpha");
     seedCoveredUnitDir(proj, "unit-beta");
     const d = runNextInProcess(proj);
     expect(d.kind).toBe("error");
     expect(d.message).toContain("Every one of them already holds this stage's required artifacts");
-    expect(d.message).toContain("Create the unit directory for this piece of work");
+    expect(d.message).toContain("declare-units-done");
     expect(d.message).not.toContain("{unit-name}");
+  }, 30000);
+
+  test("13b: a declaration matching the finished units presents the stage gate", () => {
+    const proj = seedFixProject();
+    seedCoveredUnitDir(proj, "unit-alpha");
+    seedCoveredUnitDir(proj, "unit-beta");
+    declareUnitsDone(proj, ["unit-alpha", "unit-beta"]);
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-beta");
+    expect(d.gate).toBeDefined();
+    expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
   }, 30000);
 
   // 14 pins the asymmetry E-OBB2-CG1 ruled INTENTIONAL: a LONE unit resolves
