@@ -186,6 +186,7 @@ const EXPECTED_SLUGS = [
   "amadeus-architect-agent",
   "amadeus-architecture-reviewer-agent",
   "amadeus-aws-platform-agent",
+  "amadeus-builder-agent",
   "amadeus-compliance-agent",
   "amadeus-composer-agent",
   "amadeus-delivery-agent",
@@ -223,8 +224,8 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
   // Test 2 — loadAgents() runtime contract (KEY: function:loadAgents).
   // The .sh combined three observables into one `if`; split for clarity.
   // ============================================================
-  test("2a: loadAgents() returns the 14 shipped agents", () => {
-    expect(loadAgents().length).toBe(14);
+  test("2a: loadAgents() returns the 15 shipped agents", () => {
+    expect(loadAgents().length).toBe(15);
   });
 
   test("2b: loadAgents() returns slugs in alphabetical order", () => {
