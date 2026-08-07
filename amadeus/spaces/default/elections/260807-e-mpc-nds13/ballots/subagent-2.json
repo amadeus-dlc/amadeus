@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-NDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "軽微な留保: performance-design.md:8 の定数名引用は略記(INTERVAL_MS)であり実定数名は MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS(plugins/pr-convergence/tools/pr-convergence-predicate.ts:205)。値・行番号は一致し実害なし。",
+  "rationale": "独立実測: (1) nfr-design 5成果物(landed-report/nfr-design/*.md)全件の冒頭行3に nfr-requirements SKIP による条件付き consumes 不在の負方向明記を grep で確認(5/5) — cid:nfr-design:c1-brief-skip-resolution の適用実例。 (2) FOLLOW-UP 2件の閉包を実測: performance-design.md:8 に predicate.ts:204-205 引用が追記済みで、plugins/pr-convergence/tools/pr-convergence-predicate.ts:204-205 に MERGEABLE_UNKNOWN_RETRY_MAX=5 / MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS=10_000 の実在を確認。ADR-4 は inception/application-design/decisions.md:29 に実在。 (3) memory.md Interpretations に候補1件の実在を確認。既存 cid:nfr-design:c1-brief-skip-resolution(予防)と cid:code-generation:c1-reviewer-scope-alignment 追補(FOLLOW-UP の conductor 事後実測)が既に経路を正規化しており、新規一般化可能な知識は含まれない。persist 0件が妥当。",
+  "submittedAt": "2026-08-07T15:05:00Z",
+  "receivedAt": "2026-08-07T11:31:03Z"
+}

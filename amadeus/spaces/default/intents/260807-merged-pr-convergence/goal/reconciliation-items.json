@@ -1,0 +1,28 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-merged-pr-convergence/construction/landed-report/code-generation/code-summary.md",
+    "digest": "e29ac7cace142957841521525a1f88a62ea39f84c1a11d2d3485cb8f6a4ce0c7"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-merged-pr-convergence/construction/landed-report/code-generation/pr-convergence-report.md",
+    "digest": "6890c432bf9d070678c4bcb67f098fcf8a1264c060e32cac640b891963ab48dc"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-merged-pr-convergence/construction/build-and-test/build-test-results.md",
+    "digest": "9e099ee417f7957140cf64903bcf575c9840c9d572c2d7f3ce3e7c9d5ec538cf"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-merged-pr-convergence/verification/phase-check-construction.md",
+    "digest": "d9e7790a69bb61652cf1692be812a7d085e2daddd34c91e2211e6a2fc6a1c69c"
+   }
+  ]
+ }
+]

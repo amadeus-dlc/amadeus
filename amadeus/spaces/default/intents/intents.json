@@ -976,6 +976,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fdba8-b44c-7dcd-8fa4-60b494ff9457",
+    "slug": "merged-pr-convergence",
+    "dirName": "260807-merged-pr-convergence",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
     "slug": "projectdir-worktree-fix",
     "dirName": "260807-projectdir-worktree-fix",

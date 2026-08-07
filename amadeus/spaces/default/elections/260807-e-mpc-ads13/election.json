@@ -1,0 +1,27 @@
+{
+  "electionId": "E-MPC-ADS13",
+  "kind": "s13-adoption",
+  "question": "intent 260807-merged-pr-convergence の application-design §13 学習選定: 候補2件(全文は record の inception/application-design/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(§12a NIT 是正 + FOLLOW-UP の FD 搬送): 既存 cid:code-generation:c1-reviewer-scope-alignment / citation-reservation-preservation ファミリの適用実例 / c2(RA→FD 委譲の AD 引き取り + 申告): 既存の宣言済み逸脱規範(deviation 申告)の適用実例で、intent 固有の工程判断。いずれも新規則を含まない。実在根拠は memory.md・decisions.md ADR-3 の申告文・components.md の Review block で独立実測すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "2候補とも既存ノルムの適用実例のため persist しない。"
+    },
+    {
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

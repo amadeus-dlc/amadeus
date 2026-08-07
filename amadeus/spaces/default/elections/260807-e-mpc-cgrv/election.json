@@ -1,0 +1,27 @@
+{
+  "electionId": "E-MPC-CGRV",
+  "kind": "blocker",
+  "question": "PR #2414 のレビュースレッド(CodeRabbit、Major・Data Integrity)の disposition 裁定: 「landed な PR への override を拒否せよ — cli.ts:608 で report 以外の verb は override 処理へ進み、landed は verdict.converged=false のため既存の already-converged 拒否を通過する。HUMAN_TURN があればマージ済み PR に audit decision を発行し、landed report を override report(converged:false 恒久)で置換できる」。衝突: requirements の Out of scope は『override 経路…の変更』を明示的に除外し、FD も conductor 起草時に同種の refuse 追加案を Out of scope 違反として自己捕捉・除去した(business-logic-model の verb 表に記録)。一方 pr-convergence stage の triage 境界規則 (i) は『本 PR が触る surface の実在する correctness finding は軸の示唆に関わらず本 PR で修正』と定める。補足実測: override は evaluate 成功(gh 到達)を前提とするため、gh 到達不能時の override 経路は本件 refuse の影響を受けない(到達不能なら evaluate が先に exit 2)— landed 検出可能な状況では landed report が常に代替になる。各投票者は cli.ts の override 経路(:608 付近と already-converged refuse)と requirements Out of scope / FD verb 表を独立実読して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: 本 PR で修正(申告付き逸脱)",
+      "description": "override 経路に already-landed refuse を追加(already-converged refuse と同形)。requirements Out of scope からの逸脱として PR 本文・record に申告し、requirements の Out of scope 文言に『landed 拒否の追加は除く』の改訂を同時記録。t482 に refuse の負方向テストを追加。"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: Issue 起票で deferral(スレッドは Issue 番号 cite で terminalise)",
+      "description": "スコープ外を維持し、landed report の override 置換リスクを別 Issue として起票。スレッドには Issue 番号を引用して resolve(stage の deferral 規則 (iii) 準拠)。fail-open は次 intent まで残存。"
+    },
+    {
+      "internalNo": 3,
+      "label": "C: 反証で reject",
+      "description": "override は人間裁定の明示経路であり、landed report の置換も HUMAN_TURN + reason + audit 付きの意図的行為として許容される、という反証をスレッドへ返して resolve。データ完全性リスクを許容する判断。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

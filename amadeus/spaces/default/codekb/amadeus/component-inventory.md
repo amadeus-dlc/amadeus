@@ -1,6 +1,17 @@
 # コンポーネント棚卸し
 
-## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+## pr-convergence landed 対応の対象コンポーネント（260807-merged-pr-convergence、現在、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits / 108 files、`plugins/pr-convergence/` の区間内変更 0 件）。全数列挙は `re-scans/260807-merged-pr-convergence.md` を正本とする。
+
+- `plugins/pr-convergence/tools/pr-convergence-predicate.ts` — 収束述語（`evaluateConvergence :180-192`、`MergeStateStatus :90-98` に MERGED なし・未知値 throw `:117-121`、`resolveMergeable :249-269` retry 5×10s）
+- `plugins/pr-convergence/tools/pr-convergence-gh-runner.ts` — GraphQL 取得面（`PR_STATE_QUERY :191-195` は `mergeable mergeStateStatus` のみ、`RawPrState :76-79`）— landed 判定は fail-closed parse を弱めないフィールド追加が要る
+- `plugins/pr-convergence/tools/pr-convergence-cli.ts` — verb 閉集合 `:320`（status|report|override）、`ConvergenceReport` kind union `:61-76`、`renderReport :89-129`、refuse 2分岐 `:438-447` / `:468-474`、audit-before-report 順序（ヘッダ `:20-25`）
+- `packages/framework/core/tools/amadeus-sensor-pr-convergence-report-format.ts` — kind 閉集合 `:69`・整合分岐 `:122-130`・core→plugin import 禁止（`:16-20`）
+- `plugins/pr-convergence/stages/pr-convergence.md` — 「Convergence is not merge」宣言（`:34-37` / `:200-202`）— landed 語彙の文書整理対象
+- テスト: t444〜t450（全て in-process）。coverage 行ピンは `tests/.coverage-patch-allowlist.json:6365-6398` の4エントリ。tNNN 使用済み最大 t480、新規 t481 以降
+
+## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、履歴、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
@@ -39,7 +50,7 @@
 **t144 の前提条件**: t144 は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38` `const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools")`）。source-only 移行後 `dist/` は未追跡生成物のため、**このテストは `bun run build` 済みを前提とする**。ケース B の回帰テストを t144 に足す場合、この前提が引き継がれる。
 
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

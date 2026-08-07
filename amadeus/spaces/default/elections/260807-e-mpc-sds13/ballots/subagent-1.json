@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-SDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) c1 = scope-definition-questions.md の 0問様式は cid:requirements-analysis:no-election-judgment-gate / eoc1-evidence-in-questions-header / always-elect 執行クラスの適用実例と確認(質問ファイル冒頭に判定根拠種別と承認TS 2026-08-07T10:12:00Z が実在、intent-statement の Q1〜Q3 裁定(承認 2026-08-07T10:04:51Z)から一意導出可能)。既存 cid の team.md/project.md 実在を grep で確認(team 4 hit / project 3 hit)。(2) c2 = intent-backlog.md:3,14 で MoSCoW のみ使用・nice-to-have 0件(WSJF/RICE は単一機能 intent で序列化母数なし)を確認 — intent 固有の編成判断で一般化可能な新規則を含まない。よって persist 0件の提案を全面支持。",
+  "submittedAt": "2026-08-07T10:27:51Z",
+  "receivedAt": "2026-08-07T10:27:56Z"
+}
