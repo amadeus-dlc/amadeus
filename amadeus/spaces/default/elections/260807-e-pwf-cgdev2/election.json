@@ -1,0 +1,27 @@
+{
+  "electionId": "E-PWF-CGDEV2",
+  "kind": "deviation",
+  "question": "Q1 裁定（E-PWF-CGDEV 系、marker 段を env より上）の前提不成立による再裁定。実測インシデント: builder が marker 段を env 段の上に実装して検証を実行したところ、既存テスト群（state 系）の隔離 seam が破れた — それらのテストは CLAUDE_PROJECT_DIR=<temp fixture> を設定し cwd=repo（worktree root、marker 保有）で state ツールを spawn するため、新段が env を上書きして書込が実 record へ流れた。実害: 実 worktree の amadeus-state.md（Current Stage が market-research へ改変・偽の stage 前進）、memory/team.md（管理ブロックが UPDATED_MANAGED_TEXT 等の fixture 文字列で置換）、memory/project.md（NEVER skip CI ×12 等の fixture 規則 25行注入）、audit へ rogue イベント多数（PRACTICES_AFFIRMED 12件・別 grant mint 含む）。conductor が前進修復済み（team.md 復元・project.md 汚染行除去・state フィールド復旧・audit は append-only のまま保持）。判明した事実: 「env を明示設定して cwd と別 tree を指す」は仮定 A-1 が言う例外ユースケースではなく、**既存テスト資産が広く依存する現行契約**である。裁定: marker 段の位置を再決定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "marker 段を env の下へ（explicit → env → marker → script-path → cwd-harness）",
+      "description": "ケース B（env UNSET の worktree セッション = Issue の実測欠陥）は閉じる。C+env は開いたままとなり、要件 AC-1b は裁定改訂（C+env の受け皿は --project-dir 明示 = A-1、および将来の #1287 再設計へ委譲）。env に依存する既存テスト・利用契約は無傷。hook との非対称は「hook 段1は payload cwd(セッション実位置の一次情報)、CLI に同等の一次情報はなく cwd 推定のみ」という情報量差で正当化して文書化。"
+    },
+    {
+      "internalNo": 2,
+      "label": "marker above env を維持し、影響テスト群を --project-dir 明示へ改修",
+      "description": "C+env も閉じるが、env 隔離に依存する既存テストの全数改修が必要（州系テストの棚卸しと書換え — self-fix の surgical 原則と grant の scope-out 禁止に抵触する規模拡大。ユーザーエスカレーションが必要になる可能性が高い）。"
+    },
+    {
+      "internalNo": 3,
+      "label": "marker above env + 条件分岐（env の指す先が marker を持つ場合のみ env 優先等）",
+      "description": "両立を狙う条件付き意味論。新たな無音分岐を解決梯子に足すことになり、#2352 が問題にした「無音の誤解決」クラスを別形で再導入するリスク。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

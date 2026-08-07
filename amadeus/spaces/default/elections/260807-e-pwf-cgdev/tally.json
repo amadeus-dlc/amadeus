@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 3,
+      "label": "案C: AC-1a の括弧書きを明示改訂してから案A"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "案A: t481 現構成のまま + t144 が逐語形を担う",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "案B: t481 に subprocess ケース1本追加",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "案C: AC-1a の括弧書きを明示改訂してから案A",
+        "count": 2
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T11:13:30Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PWF-CGDEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "AC-1a の改訂は括弧書き（検証面の記述）に限定し、AC-1a の実質要件『cwd=worktree（marker 保有）× env UNSET で worktree root を返す』の文言・射程は逐語のまま維持すること。実質要件に触れる改訂は仕様変更としてユーザーエスカレーション（正準リスト(4)）に当たる。あわせて code-summary に FR-2b/t144 が逐語形の回帰 pin を担う旨を明記し、閉包の所在が文書上追跡可能であること。",
+      "rationale": "独立実測（read-only）で builder の診断を全数追認した。(1) amadeus-harness.ts:71-73 isHarnessDirName は /^\\.[a-z0-9][a-z0-9._-]*$/i で先頭ドット必須。正本 lib は packages/framework/core/tools/ にあり、amadeus-lib.ts:234-238 の rung 3（stripHarnessLeaf(scriptDir,\"tools\")）は親セグメント basename が \"core\" のため isHarnessDirName 不成立 → in-process 直 import では rung 3 が構造的に到達不能。よって rung 4（cwd に .claude 実在 → cwd を返す）が発火し、AC-1a 逐語形の期待値 worktreeDir と修正前でも一致する。(2) 実行実測: `bun test tests/integration/t481-resolve-project-dir-worktree-marker.test.ts` = 5 pass / 2 fail（7 tests）。green の test 1 が逐語 AC-1a、red は test 2（祖先形、received=…/packages/nested）と test 3（AC-1b C+env、received=…/main）。builder 報告と完全一致。(3) t144:34-38 は dist/claude/.claude/tools を materialize して実 shipped layout を作るため rung 3 が実際に発火する面であり、FR-2b の更新対象として逐語形の回帰 pin を担いうる — 案A/C の前提は成立している。判断: 案B は FR-2a の『in-process 直 import』条件と NFR-3『spawn 盲点を作らない』の双方に真正面から反し、かつ FR-2b/t144 が既に担う面を重複させる — 逸脱を解消するために別の逸脱を導入する形になり不可。案A は技術構成として正しいが、requirements.md:26 の AC-1a 括弧書き『（現行は main を返す欠陥）』が in-process 検証面については事実に反したまま残存し、後続の読み手・レビュアーが同じ誤前提を再生産する（mechanism-cite-verify-at-draft / ruling-premise-closure-verification が守ろうとする面）。案C は案A の構成（追加コスト 0・in-process 条件維持・patch coverage 維持）を保ったまま要件と検証面の対応を文書上も閉じるため案A を厳密に支配する。cid:code-generation:cg-invariant-conflict-explicit-revision の『既存フィールドの意味流用でなく明示改訂』の趣旨とも整合する。",
+      "submittedAt": "2026-08-07T00:00:00Z",
+      "receivedAt": "2026-08-07T11:13:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PWF-CGDEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "AC-1a の改訂は括弧書き（現行挙動の記述）へ検証面の限定を加えるだけに留め、AC-1a の実質基準（cwd=worktree × main 絶対 lib × env UNSET で worktree root を返す）自体は一切弱めないこと。また逐語形の回帰 pin は案 A/C いずれでも FR-2b の t144 更新が担う（t144 test 4 は現状 cwd=tmp が marker 非保有のため逐語形を pin していない — FR-2b の更新で pin される必要がある）ことを code-summary に明記すること。",
+      "rationale": "独立実測: (1) amadeus-harness.ts:71-73 の isHarnessDirName は /^\\.[a-z0-9][a-z0-9._-]*$/i で先頭ドット必須。正本 lib の親セグメントは 'core' で不適合（bun 実測 false）。(2) amadeus-lib.ts:226-248 の梯子 rung 3 は stripHarnessLeaf(scriptDir,'tools') で、basename(dirname)='core' が isHarnessDirName に落ちて null → in-process 直 import では rung 3 が構造的に到達不能。rung 4 の cwd probe が worktree を返す。(3) t481 を実装前に実行（bun test）した実測は 5 pass / 2 fail — test 1（AC-1a 逐語形）は修正前から green、test 2（祖先形）と test 3（AC-1b C+env）が Red。builder の主張どおり。(4) requirements.md:26 の AC-1a 括弧書き『現行は main を返す欠陥』は、FR-2a:35 が定める in-process 直 import 検証面では事実に反する（実測では現行も worktree を返す）。よって案 C を選ぶ: 案 B は FR-2a の in-process 条件の外の形を同居させ、spawn 面が lcov 非計測となり NFR-3（spawn 盲点を作らない）と摩擦し、かつ FR-2b:36 が既に義務づける t144 更新（実 shipped layout で rung 3 が発火する面）と重複する。案 A は追加コスト 0 で正しいが、承認済み成果物に実測と矛盾する断定を残し、後続の引用検証（mechanism-cite-verify-at-draft / c7-upstream-universal-claim-unverified）で同じ摩擦を再生産する。案 C は案 A の構成を保ったまま、その 1 点の文書矛盾を閉じる。なお本改訂は AC の実質基準を変えず現行挙動記述の精密化に留まるため、仕様変更としてのユーザーエスカレーション事項には当たらない（c2c5-structural-addition-not-execution の構造追加にも当たらない）。",
+      "submittedAt": "2026-08-07T00:00:00Z",
+      "receivedAt": "2026-08-07T11:13:25Z"
+    }
+  ],
+  "resolutions": []
+}

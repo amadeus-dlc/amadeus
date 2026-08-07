@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-PWF-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "c5 は既存 cid:code-generation:c1-pcp-isolated-session-swarm-incompat が既に「conductor も subagent も直接の git 操作・Write・EnterWorktree(path) が構造的に拒否される」と明記しており、read-only 全数計数の拒否はその射程内と読める。加えて record 側の証拠が弱く（memory.md:13 / re-scans:206 とも拒否の verbatim ガード文言・exit code を残していない）、norm 化の実測接地が不足する。read-only census も拒否されるという facet が verbatim ガード証拠付きで再発した場合は、同 cid への追補として再提案してよい。",
+  "rationale": "判定規準（既存 cid の単なる適用実例は persist に値しない）を5候補へ独立適用した。c1/c2/c3 は不採用 — c1 は cid:reverse-engineering:c1-xrev-single-issue の、c2 は E-XBB-RE-S13-c2 の、c3 は rescan-base-ancestry の適用実例であり、いずれも record（re-scans/260807-projectdir-worktree-fix.md:7-8, :10, :17-28 / memory.md:6-8）が既存 cid を明示引用して適用したと自認している。新規知識・追補・退役のいずれの実質もない。c4 は採用 — 前提を独立実測で確認した: packages/framework/core/knowledge/amadeus-developer-agent/re-artifacts.md の Developer Code Scan Template（:19 以降）の節構成は Packages Found / Build System / APIs Discovered / Frameworks & Libraries / Test Coverage / Code Quality Indicators / Technical Debt Signals であり、全域インベントリ（greenfield）専用で単一 Issue の differential scan には構造的に適用できない。xrev scan mode は既に単発 Issue へ一般化済み（cid:reverse-engineering:c1-xrev-single-issue）なので、このテンプレ不適合は本 intent 固有でなく以後の xrev RE すべてが遭遇する再発事象であり、既存 xrev 系 cid への1行の適用境界追補（依頼項目を主構造とし、テンプレからは証拠規律 = file:line + verbatim + exit code、事実/仮説分離のみ継承する）に実質がある。追補がなければ後続 conductor は毎回 Deviations 申告を反復するか、空節・N/A 節を量産する。c5 は不採用（留保参照）。よって c4 のみ採用の choice 3 を選ぶ。",
+  "submittedAt": "2026-08-07T11:05:00Z",
+  "receivedAt": "2026-08-07T10:17:08Z"
+}

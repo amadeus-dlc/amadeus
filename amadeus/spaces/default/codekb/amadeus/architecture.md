@@ -1,6 +1,64 @@
 # アーキテクチャ
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決の2梯子非対称（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 構造 — 同一の責務に2つの梯子
+
+`packages/framework/core/tools/amadeus-lib.ts` は project root の解決を**2つの独立した関数**で実装している。両者は同じ問い（このプロセスが書くべき workspace はどこか）に答えるが、段構成が異なる。
+
+| 段 | CLI 側 `resolveProjectDir` `:226-250` | hook 側 `resolveProjectDirFromHook` `:310-347` |
+|---|---|---|
+| 1 | `if (explicitDir) return explicitDir;` `:228` | `if (payloadCwd && hasWorkspaceMarker(payloadCwd)) return payloadCwd;` `:317` |
+| 2 | `if (process.env.CLAUDE_PROJECT_DIR) return ...` `:231` | `if (process.env.CLAUDE_PROJECT_DIR) return ...` `:320` |
+| 3 | script path 由来（`stripHarnessLeaf(scriptDir, "tools")`）`:236-238` | `findWorkspaceMarkerAncestor(process.cwd())` `:329-330` |
+| 4 | cwd に既知 harness dir があるか `:242-246` | script path 由来（`stripHarnessLeaf(scriptDir, "hooks")`）`:333-335` |
+| 5 | （なし） | cwd に既知 harness dir があるか `:338-343` |
+
+**非対称は2面ある**:
+
+1. **marker 段の欠落** — hook 側の段1（marker 付き payload cwd）と段3（cwd 祖先の marker 探索）に対応する段が CLI 側に存在しない。
+2. **段2 の相対順位** — hook 側は marker 付き payload cwd が env を**上回る**が、CLI 側は env が段2で無条件に勝つ。
+
+hook 側の doc-comment `:306-309` はこの設計の理由を逐語で記す: `It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree`。**同じ理由は CLI 側にもそのまま当てはまるが、CLI 側には適用されていない。**
+
+### 導入経緯（`git log -L` 実測）
+
+- `hasWorkspaceMarker` / `findWorkspaceMarkerAncestor` / hook 段3 → **`392a2d781`**（2026-07-09、#641/#682）
+- hook 段1（payload cwd）→ **`e12259ba7`**（2026-07-26、#1482/#1493）
+
+`392a2d781` は `resolveProjectDir` を**一切変更していない**（`git show 392a2d781 -- amadeus-lib.ts | grep -E "^[+-].*resolveProjectDir\b"` → 出力ゼロ、exit=0）。コミットメッセージも `resolveProjectDirFromHook` のみを名指しする。
+
+**事実と仮説の分離**: 「CLI 側が検討されなかった」ことは断定できない（証拠の不在は不在の証拠ではない）。コミット記録が示すのは、**CLI 側への変更も検討の痕跡も残っていない**ことのみ — スコープ限定の帰結と読むのが自然だが、これは仮説である。
+
+### workspace marker の定義と適用限界
+
+`amadeus-lib.ts:283-286` verbatim:
+
+```ts
+function hasWorkspaceMarker(dir: string): boolean {
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
+}
+```
+
+`amadeus/` と `<harness>/tools/` の**両方がディレクトリであること**を要求する（`isDir` `:266-272`。両半がディレクトリでなければならない旨は `:280-282` のコメントが #641 レビュー是正として明記）。
+
+**構造的限界**: `.claude/**` は `.gitignore:24` で ignore され、`.claude/` 配下の tracked ファイルは3件のみ（`CLAUDE.md` / `hooks/amadeus-dispatch.ts` / `settings.json`）。`git ls-files .claude/tools` → **0件**。`.claude/tools/` は完全な未追跡生成物であり、`bun run build` 前の worktree は marker の後半を満たさない。**したがって marker ベースの drift ガードは build 前 worktree を構造的に検出できない** — `resolveProjectDir` に hook と同じ marker 段を足す設計は、この盲点を継承する。
+
+### 設計上の帰結
+
+- marker 段の追加だけでは**ケース C+env は閉じない**（env 段2 が上位に残る限り、worktree 内の正しい lib を読んでいても本線へ倒れる）。段順そのものの再設計が要る。
+- 段順の再設計は [#1287](https://github.com/amadeus-dlc/amadeus/issues/1287)（OPEN、enhancement）と射程が重なる。
+- 段1（明示 `--project-dir`）を正規形に据える案は新機構を要さない — core/tools の 18 ツールが既に `"--project-dir"` を parse し、共有ヘルパー `stripProjectDir`（`amadeus-lib.ts:212-224`）を runtime / sensor / learnings が使用する。
+
+### 交差判定
+
+`gh pr list --state open` → **0件**（exit=0）。resolver 周辺に交差する進行中変更なし。base→observed の 12 commits も resolver 領域を触っていない（`amadeus-lib.ts` の差分は `+143/-0` で全行が `:4983` 着地、患部区間 210-360 は review SHA `75a1c198d` と `cmp` IDENTICAL / exit=0）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

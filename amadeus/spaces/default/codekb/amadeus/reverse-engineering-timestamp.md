@@ -1,6 +1,30 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260807-failclosed-recovery-path）
+## 実行メタデータ（現在: 260807-projectdir-worktree-fix）
+
+- Date: `2026-08-07`
+- Base commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補 109 件超から HEAD 祖先かつ距離最小のものを選定。距離 12 commits）
+- Observed commit: `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:c2-observed-mainline-commit` により mainline 系譜のコミットを記録）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #2352](https://github.com/amadeus-dlc/amadeus/issues/2352) — **`resolveProjectDir` の worktree marker 段欠落による本線 record の無音汚染**。worktree セッションが CLI ツールを本線の絶対パスで起動すると、record の書き先が本線へ倒れ、警告も例外も出ない
+- Scan mode: **xrev scan mode**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— #2352 は起票者以外2名の独立エビデンス付き verdict（reviewer-1 / reviewer-2、検証 SHA `75a1c198d` 明記）でクロスレビュー成立済み。conductor / Architect の observed 断面 verbatim 実読で二重化した
+- 行番号引用の currency: review SHA `75a1c198d` → observed で `amadeus-lib.ts` は **`+143/-0`**（hunk header `@@ -4982,0 +4983,143 @@`、全行が `:4983` 着地）。患部区間 210-360 は `cmp` **IDENTICAL / exit=0**。したがって**患部引用のシフト量はゼロ**であり、`resolveProjectDir` = `:226-250` / `resolveProjectDirFromHook` = `:310-347` は observed でそのまま有効。**これは免除の適用ではなく、区間実測による currency の確定**である（唯一シフトしたのは射程外の stale comment 指摘 `:6530` → observed `:6673`）
+- Verification: coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。検証は observed 断面の verbatim 実読（`sed` / `grep` / `git show` / `git log -L` / `git ls-files` / `gh pr list`、いずれも exit code 記録）と、repo 外 scratch での **5ケース決定的再現**（fixture の lib は正本と `cmp` byte 一致、env は `env -u CLAUDE_PROJECT_DIR` で明示除去、全 exit=0）による
+- Current decision: **患部は「同一責務の2実装が非対称に進化した」構造債務であり、区間内の退行ではない。** `resolveProjectDir`（CLI 側、4段）には hook 側の marker 段2つ（`:317` payload cwd / `:329-330` cwd 祖先探索）が無く、さらに段2 の相対順位も異なる（hook 側は marker 付き payload cwd が env に勝つが、CLI 側は env が無条件に勝つ）。marker 段は hook 側にのみ導入された（`392a2d781` = #641 / `e12259ba7` = #1482）
+- 主要所見: **①loud path ゼロ** — `resolveProjectDir` に警告・例外は1つも無い（`grep "console\|warn\|throw"` → exit=1）。誤った書き先が誤りとして観測されない「偽の隔離」。**②marker 述語の構造的盲点** — `.claude/tools/` は完全に未追跡（`git ls-files .claude/tools` → **0件**、`.gitignore:24`）。したがって `bun run build` 前の fresh worktree は `hasWorkspaceMarker`（`:283-286`、`amadeus/` と `<harness>/tools/` の両方がディレクトリ）を構造的に満たさず、**marker ベースのガードは build 前 worktree を検出できない**。**③テストの非対称** — CLI 側を pin する `t144` は `covers:` に `function:resolveProjectDir` を含む（`:4`）がケース B の被覆が無く、hook 側は `t202` / `t296` / `t230` の3本が pin する。**ケース B を固定するテストは repo 全域で不在**。**④allowlist が許可する形を誰も発行していない** — 正本 `packages/` の起動行は相対形 **31** / 絶対形 **1**（唯一の絶対形は allowlist エントリ自身）。**⑤文書の逆向き指示** — `stage-protocol.md:511` は絶対形を推奨するが、その形がケース B を生む（同文中にサブシェル代替が既に明記）
+- 5ケース再現（repo 外 scratch、全 exit=0）: A（cwd=main / lib=main / env UNSET）→ 両者 main。**B（cwd=worktree / lib=本線絶対 / env UNSET）→ CLI=main ← 欠陥 / hook=worktree**。C（cwd=worktree / lib=worktree / env UNSET）→ 両者 worktree。**C+env（cwd=worktree / lib=worktree / env=main）→ 両者 main**。B+payloadCwd → CLI=main / hook=worktree。**欠陥は observed HEAD で現存**し、両レビュアーの表と完全一致
+- 棚卸し（observed 再計数）: `core/tools` の `resolveProjectDir(` 出現 = **97**、うち非 caller 2件（`:226` 定義行 / `:6673` stale comment）→ 実 call site **95 / 15 ファイル**。`core/otel/relay.ts:777` に1件を加えて**合計 96**。`"--project-dir"` を parse するツール = **18ファイル**。名前シャドウ `packages/framework/core/hooks/amadeus-statusline.ts:31` は lib 関数の caller ではない（grep 棚卸しの誤カウント源）
+- 測定面の精密化（Developer scan からの refinement）: 相対形 `bun .claude/tools/` の「113」はセルフインストール面 `.claude/skills/`（未追跡の投影物）での計数であり、正本 `packages/framework/harness/claude/skills/` は **31**。修正の対象面を決めるときに両者を混同しない
+- 同期面: allowlist は**2ファイル同時変更**を要する — 正本 `packages/framework/harness/claude/settings.json.example:10` とセルフインストール面 `.claude/settings.json:39`（後者は **tracked**、`git ls-files --error-unmatch` exit=0。`.claude/**` は gitignore 対象だが tracked ファイルは ignore を上書きする）。`dist/` 配下は未追跡生成物のため同期対象外
+- 遡及性: 同根の先例は **#796**（CLOSED、`7e6a7c33e` = `fire` への `--project-dir` 配線 = 段1 での点回避）/ **#1450**（CLOSED、`04efcd42c` = 呼び出し側の点修正）/ **#1287**（OPEN、解決順の再設計 = ADR 前提）。**2件の先例はいずれも呼び出し側の点修正で梯子に触れておらず、#2352 は同じ根の4件目**である
+- 交差: `gh pr list --state open` → **0件**（exit=0）。base→observed の 12 commits も resolver 領域を触っていない（§行番号 currency の `cmp` で証明済み）
+- 事実と仮説の分離: **事実（実測）** = 梯子の非対称と loud path 不在 / 実 call site 96 / marker 段の導入コミット2件と `392a2d781` が CLI を触っていないこと / `.claude/tools` 未追跡 / テスト非対称 / `stage-protocol.md:511` の逆向き指示 / 同期面2ファイル / 先例2件が点修正 / 交差ゼロ / 5ケース再現。**仮説（断定不可）** = (a) #641 時に CLI 側が「検討されず」か「検討して見送られた」か（コミット記録は前者を示唆するが証拠の不在）/ (b) 実運用でケース B が発生した監査証跡は未探索（頻度未測定）/ (c) clone 内 worktree の marker 成立/不成立の全数再census は worktree 隔離ガードにより実行不能（構造的根拠のみ確定）
+- Requirements Analysis へ送る裁定候補: **(1)** 是正の主軸をどこに置くか — `resolveProjectDir` への marker 段追加 / 段順の再設計（env の降格）/ 段1（明示 `--project-dir`）の正規形化。**marker 段の追加だけではケース C+env が閉じない**ことが実測で確定している。**(2)** 段順再設計を採る場合の #1287 との射程境界（#1287 は ADR 前提の enhancement として OPEN）。**(3)** loud path の形 — 警告か例外か、返り値型の変更（確信度の表現）か。96 call site すべてへ伝播する点の扱い。**(4)** ケース B の回帰テストの置き所 — `t144`（`dist/` を読むため `bun run build` 依存、`:37-38`）か `t202` 系譜（正本を直 import）か。**(5)** allowlist と `stage-protocol.md:511` の是正範囲（完了条件1/2）を本 intent に含めるか、主軸（完了条件3）の裁定後に決めるか。**(6)** `t144` test 5 のタイトル（`"CWD-marker rung"` が実体の段4を指す）と `:6673` の stale comment の是正を同 intent に含めるか
+- Updated artifacts: 共有8成果物の現在断面を更新し、直前の現在断面（`260807-failclosed-recovery-path`）を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260807-projectdir-worktree-fix.md` を新設
+- Per-intent record: `re-scans/260807-projectdir-worktree-fix.md`
+
+
+## 実行メタデータ（履歴: 260807-failclosed-recovery-path）
 
 - Date: `2026-08-07`
 - Base commit: `7060956c5617125dd2f4e284957aa180cb306484`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補 109 件から HEAD 祖先かつ距離最小のものを選定。距離 76 commits）

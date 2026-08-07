@@ -1,6 +1,53 @@
 # API ドキュメント
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## project-dir 解決 API と CLI 契約（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 公開関数の契約
+
+| 関数 | 所在 | シグネチャ | 段数 | loud path |
+|---|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | `(explicitDir?: string) => string` | 4 + fallback | **ゼロ**（`sed -n '226,250p' \| grep "console\|warn\|throw"` → exit=1、出力なし） |
+| `resolveProjectDirFromHook` | 同 `:310-347` | `(importMetaUrl: string, payloadCwd?: string \| null) => string` | 5 + fallback | ゼロ |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | — | — |
+| `hasWorkspaceMarker` | 同 `:283-286`（非 export） | `(dir: string) => boolean` | — | — |
+| `findWorkspaceMarkerAncestor` | 同 `:290 付近`（非 export） | cwd から祖先方向へ marker 探索 | — | — |
+
+**契約上の欠落**: どちらの解決関数も、解決結果が呼び出し元の期待と食い違ったことを**呼び出し元へ伝える手段を持たない**。返り値は常に `string` であり、「確信度の低い fallback に落ちた」ことを表現しない。ケース B（cwd=worktree × lib=本線絶対パス）は、この契約のもとでは**正常な返り値**として本線パスを返す。
+
+### CLI 引数契約 — `--project-dir`
+
+段1（明示指定）の受け口は広く実装済みで、`"--project-dir"` を parse するツールは **18ファイル**。
+
+```
+advisory-choice / audit / bolt / finding / goal / jump / lib / log / migrate /
+mirror-lifecycle / mirror-presentation / orchestrate / sensor-model-completeness /
+state / subagent-stats / swarm / utility / worktree
+```
+
+正本の使用例は `packages/framework/core/amadeus-common/protocols/stage-protocol.md:1209-1216`（`amadeus-finding.ts create-github-issue --project-dir <workspace-root>`）。
+
+### プロトコル文書の指示 — 相対形と絶対形の衝突
+
+`stage-protocol.md:511` verbatim:
+
+> **CWD drift warning**: If a stage runs `cd` in Bash (e.g., `cd todo-app/server && npm install`), subsequent `bun {{HARNESS_DIR}}/tools/...` calls using relative paths will fail with "Module not found". Always use absolute paths to the tools directory for tool calls (on Claude Code, `$CLAUDE_PROJECT_DIR/.claude/tools/`), or run `cd` commands in subshells: `(cd subdir && npm install)`.
+
+この1行は**絶対形（`$CLAUDE_PROJECT_DIR` 展開）を推奨する**が、その形こそがケース B を生む。ただし同じ文中に既に代替（サブシェル `(cd subdir && ...)`）が明記されており、相対形を保ったまま CWD drift を避ける手段は正本にすでに書かれている。
+
+### settings allowlist の契約
+
+```
+packages/framework/harness/claude/settings.json.example:10   ← 正本
+.claude/settings.json:39                                      ← セルフインストール面（tracked）
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+```
+
+allowlist が許可するのは絶対形のみ。一方で正本スキルの起動行は**全 31 件が相対形**であり、絶対形の起動行は正本に存在しない（唯一の絶対形出現は上記 allowlist 自身）。allowlist と実際の呼び出し形が対応していない。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

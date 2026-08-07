@@ -1,6 +1,48 @@
 # 技術スタック
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## worktree・生成物・環境変数の前提（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### git worktree と harness ツリーの関係
+
+worktree セッションは**自前の `amadeus/` record ツリー**を持つが、**harness スクリプトは起点 checkout と共有する**（`amadeus-lib.ts:274-282` のコメントが逐語で説明）。この非対称が project-dir 解決の全問題の土台である。
+
+### source-only 境界の帰結
+
+| 対象 | 追跡状態 | 実測 |
+|---|---|---|
+| `.claude/**` | `.gitignore:24` で ignore | — |
+| `.claude/` 配下の tracked ファイル | 3件のみ | `CLAUDE.md` / `hooks/amadeus-dispatch.ts` / `settings.json` |
+| `.claude/tools/` | **完全に未追跡** | `git ls-files .claude/tools` → **0件** |
+| `dist/` | 未追跡生成物 | `bun run build` で再生成 |
+
+**技術的帰結**: fresh worktree は `bun run build` を通すまで `.claude/tools/` を持たない。したがって `hasWorkspaceMarker`（`amadeus/` かつ `<harness>/tools/` の両方がディレクトリ）は **build 前 worktree で構造的に偽**である。marker ベースの解決・ガードはこの窓を検出できない。
+
+この構造は `cid:scope-definition:c3-worktree-selfinstall-bootstrap`（新規 worktree はセルフインストール面を欠くため build まで framework CLI が起動しない）と同根であり、本件はその**解決ロジック側での顕在化**である。
+
+### 環境変数 `CLAUDE_PROJECT_DIR`
+
+- **性質**: 起動ディレクトリ（起点 checkout）に固定され、**セッションが worktree へ入っても追従しない**。根拠は `amadeus-lib.ts:306-309` の doc-comment 逐語 `that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree`（#1482）。
+- **CLI 側での扱い**: 段2 で**無条件に勝つ**（`:231`）。したがって env が設定されている限り、worktree 内の正しい lib を読んでいても解決は本線へ倒れる（ケース C+env）。
+- **hook 側での扱い**: marker 付き payload cwd（段1）に**負ける**（`:317` → `:320`）。
+
+### 起動形の技術的トレードオフ
+
+| 形 | 例 | 長所 | 短所 |
+|---|---|---|---|
+| 相対形 | `bun .claude/tools/amadeus-state.ts …` | cwd 追従 = worktree で worktree の lib を読む | `cd` 後に "Module not found"（`stage-protocol.md:511`） |
+| 絶対形 | `bun $CLAUDE_PROJECT_DIR/.claude/tools/…` | cwd 非依存 | **本線の lib を読み、ケース B を生む** |
+| サブシェル | `(cd subdir && …)` | 相対形の長所を保ったまま CWD drift を回避 | — |
+
+実分布（observed）: 正本 `packages/` は相対形 **31** / 絶対形 **1**（唯一の絶対形は allowlist エントリ自身）。セルフインストール面 `.claude/skills/` は相対形 **113** / 絶対形 **0**。
+
+### 診断ツールの前提
+
+`resolveProjectDir` は解決失敗を表現できない（返り値は常に `string`、警告・例外ゼロ）。したがって書き先の不一致は**実行時に一切のシグナルを出さない**。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 
