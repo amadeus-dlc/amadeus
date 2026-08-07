@@ -1,6 +1,115 @@
 # アーキテクチャ
 
-## pr-convergence の landed 未対応と閉集合構造（260807-merged-pr-convergence、現在、observed `4a3da7d62`）
+## SUBAGENT_STARTED の emit 経路と hook 配線の3面構造（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+本節の測定 ref はすべて observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`（= 本 worktree HEAD）。差分 base は `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（distance 2 commits = #2413 修正 + record sync #2416）。全数列挙と行番号 currency の確定は `re-scans/260807-subagent-start-pair.md` を正本とする。
+
+対象は [#2297](https://github.com/amadeus-dlc/amadeus/issues/2297)（live `.claude/settings.json` に PreToolUse 配線が無い）と [#2303](https://github.com/amadeus-dlc/amadeus/issues/2303)（dispatch tool 語彙が実 payload と不一致）の**ペア**。どちらか一方だけを直しても `SUBAGENT_STARTED` は 0 件のままであり、両者は同一の観測結果に対する**直列な2つの必要条件**として結ばれている。
+
+### emit 経路 — seam から audit 行までの単一鎖
+
+`SUBAGENT_STARTED` を書く経路は分岐を持たない。ハーネス側の start seam → core フック → フィールド導出 → 監査 append の一本鎖で、各段に代替経路が存在しない。
+
+```
+[Claude Code]  PreToolUse{matcher ^Task$}  ─┐
+                                            ├→ core/hooks/amadeus-log-subagent-start.ts
+[kimi]         SubagentStart（専用イベント）─┘        :64  subagentStartFields(parsed, <agentsDir>)
+                                                     :65  if (started === null) process.exit(0);   ← 唯一の中断点
+                                                     :98  appendAuditEntryViaEvents("SUBAGENT_STARTED", fields, projectDir)
+```
+
+verbatim（`packages/framework/core/hooks/amadeus-log-subagent-start.ts:64-65`）:
+
+```ts
+const started = subagentStartFields(parsed, join(projectDir, harnessDir(), "agents"));
+if (started === null) process.exit(0);
+```
+
+同 `:98`:
+
+```ts
+  appendAuditEntryViaEvents("SUBAGENT_STARTED", fields, projectDir);
+```
+
+**構造上の帰結（事実）**: emit は `:98` の1箇所のみ、判定は `:64-65` の1箇所のみ、判定関数 `subagentStartFields` の消費者も repo 全域で `:65` の1箇所のみ（`re-scans` §定数消費者を参照）。⇒ **迂回路は存在しない**。したがって (a) seam が配線されていない、(b) 判定が実 payload を拒否する、のいずれか一方でも成立すれば emit は構造的にゼロになる。#2297 が (a)、#2303 が (b) にあたる。
+
+### 2つの payload 形状の収斂点
+
+同じ関数が2種類の payload を受ける。この収斂は `packages/framework/core/tools/amadeus-lib.ts:4149-4153` に設計意図として逐語で記されている:
+
+```
+// Two payload shapes converge here: the tool envelope (PreToolUse{Task}, which
+// carries subagent_type/prompt inside tool_input) and a dedicated start event
+// (kimi's SubagentStart, which carries them at the top level and has no
+// tool_name at all). Absence of tool_name therefore means "a seam that only
+// fires for subagents", not "unknown tool".
+```
+
+| 形状 | 供給元 | `tool_name` | 型情報・prompt の所在 |
+|---|---|---|---|
+| tool envelope | Claude Code の `PreToolUse` | 実在（dispatch tool 名） | `tool_input.subagent_type` / `tool_input.prompt` |
+| dedicated start event | kimi の `SubagentStart` | **不在** | トップレベル `agent_type` / `prompt` |
+
+kimi 側の payload 構築は `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:732-741` で、`hook_event_name` / `agent_type` / `prompt` の3キーのみを持ち **`tool_name` キーを含まない**（verbatim 実読、observed 断面）。⇒ ガードの `payload.tool_name !== undefined &&` 短絡は kimi 経路の**存在条件**であり、#2303 の語彙修正はこの短絡を必ず通過側に残さねばならない。
+
+### hook 配線の3面と包含の破れ
+
+Claude Code の hook 配線は3つの面を持ち、それぞれ tracked 状態と形式が異なる。
+
+| 面 | パス | tracked | hook 件数 | 形式 |
+|---|---|---|---|---|
+| **正本** | `packages/framework/harness/claude/settings.json.example` | tracked（`git ls-files --error-unmatch` exit=0） | 13 | 直接パス形 `… /.claude/hooks/amadeus-<name>.ts` |
+| **投影** | `.claude/settings.json.example` | **untracked**（exit=1、source-only 境界の生成物） | 13（正本と byte 一致） | 同上 |
+| **live** | `.claude/settings.json` | tracked（exit=0）かつ非 gitignore | **11** | **100% dispatcher 形** `… amadeus-dispatch.ts <slug>` |
+
+live の 11 件はすべて `bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts" <slug>` 形（`grep -c 'amadeus-dispatch.ts' .claude/settings.json` → 11）。`grep -c 'PreToolUse' .claude/settings.json` → **0 / exit=1**。
+
+**包含の破れは2件**（例の distinct hook script 12 − dispatcher スロット 10 = 2、差集合が live 欠落と完全一致）:
+
+1. `PreToolUse{^Task$}` → `amadeus-log-subagent-start.ts`（= #2297 本文が名指す欠落）
+2. `SessionStart` の2本目 → `amadeus-plugin-compose.ts`（**#2297 本文の射程外**。正本 `settings.json.example:44` に実在、live は SessionStart 1本のみ）
+
+⇒ **live 欠落は #2297 本文より1件広い**。両者は「dispatcher スロット不在」という単一の構造原因から出ており、`example の hook script 集合 ⊆ 配線済み集合` という**1本の包含述語**で同時に閉じる。この構造は要件段のスコープ裁定（plugin-compose を同梱するか）に直結する — 詳細と賛否材料は `re-scans/260807-subagent-start-pair.md` §同梱可否。
+
+### dispatcher の fail-closed 契約が課す設計制約
+
+`packages/framework/harness/claude/hooks/amadeus-dispatch.ts` は10スロットの静的テーブル `HOOK_PATHS`（`:4-15`）を持ち、次の2つの fail-closed 契約を課す:
+
+- `parseHookSlug`（`:24-27`）は未知 slug を throw → `main` の catch（`:107-110`）が exit 1。
+- `ensureCompleteHookTree`（`:50-57`）は**全スロットのファイル実在**を要求する。verbatim:
+
+```ts
+  const missing = KNOWN_SLUGS.filter((slug) => !existsSync(join(projectRoot, HOOK_PATHS[slug])));
+  if (missing.length === KNOWN_SLUGS.length) return "not-built";
+  if (missing.length > 0) {
+    throw new Error(`hook tree is incomplete — missing: ${missing.join(", ")}; run \`bun run build\``);
+  }
+```
+
+**設計上の重要制約（事実）**: 全欠なら `not-built` として exit 0（fresh clone 保護）だが、**部分欠は throw → exit 1**。この throw は slug を問わず**全フックを巻き込む**。⇒ スロット追加は、対応する `.claude/hooks/amadeus-<name>.ts` が build で必ず生成されることとセットでなければ、既存 11 フック全体を落とす。追加候補2件（`amadeus-log-subagent-start.ts` / `amadeus-plugin-compose.ts`）は `packages/framework/core/hooks/` と自己インストール面 `.claude/hooks/` の**両方に実在済み**であり、この実在要件は現状で満たせる。
+
+`forwardToHook`（`:68-92`）は `[process.execPath, hookPath, ...args]` を spawn し、`env: process.env`・stdin/stdout/stderr すべて `inherit`、SIGINT/SIGHUP/SIGTERM を転送する。⇒ **stdin は素通し**であり、フック側の `readHookStdin()` は dispatcher 経由でも直接パス形でも同一に動く。配線方式の選択（dispatcher 形 / 直接パス形）は**フック実装の挙動に差を生まない** — 差は形式の一貫性と再発防止ガードの述語形にのみ現れる。
+
+### 再発防止ガードの ground truth 選択
+
+live 設定の hook 集合を検査する面は observed にも**存在しない**（既存6ガードはすべて `AMADEUS_SRC`（= `dist/claude/.claude`）の example か正本 example を読む。`re-scans` §検査面の不在を参照）。新設 drift ガードの設計には2つの構造的制約がある:
+
+1. **ground truth は正本（tracked）側でなければならない** — 投影面 `.claude/settings.json.example` は untracked で、fresh clone の `bun run build` 前には存在しない。投影面を基準にすると build 依存の偽赤/未検出になる。
+2. **テキスト等価では比較できない** — 正本は直接パス形、live は dispatcher 形。11/13 件すべてが差分に見える。正規化キーの候補は `(event, matcher, hook script 名)` の三つ組で、hook script 名は dispatcher 形なら `HOOK_PATHS[slug]` の basename、直接形なら command 中の `amadeus-*.ts` から抽出する。
+
+**方式選択がガード述語に与える影響**: dispatcher スロットを追加して live を dispatcher 形で配線すると、検査は「example 集合 ⊆ スロット集合」の**単一述語**で閉じる。live に直接パス形を混在させると「⊆ スロット ∪ 直接配線」の**2項述語**が要る。この対比は要件段の材料であり、本節では裁定しない。
+
+### #2297 と #2303 の直交性と閉包の非対称
+
+| | Unit A（配線 / #2297） | Unit B（語彙 / #2303） |
+|---|---|---|
+| 変更面 | `.claude/settings.json`、`amadeus-dispatch.ts`（方式次第）、新規 drift ガード | `amadeus-lib.ts`、テスト15箇所、`amadeus-log-subagent-start.ts`、doc 群 |
+| ファイル交差 | **なし**（2件の交差候補は `re-scans` §Unit 依存に記録） | 同左 |
+| 閉包の実証 | **テスト内で構造的に不能** — 既存の閉包テストは `CLAUDE_PROJECT_DIR` を fixture へ向けフックを直接 spawn するため `.claude/settings.json` を読まない | 既存 `t-log-subagent-start.integration.test.ts` の形（フック spawn + 監査行読み）で決定的に実証可能 |
+
+⇒ **worktree 隔離の並行実装は可能だが、真の end-to-end 閉包（live dispatch で監査行が1行出ること）は両方の着地後にしか観測できず、かつテスト内では担保できない**。Unit A の閉包は drift ガード（正本 ⊆ live の正規化包含）が代替的に担う設計になる。この未検証面は `cid:build-and-test:verdict-names-unverified-facets` の適用対象として build-and-test の verdict に明示されるべき事項。
+
+## pr-convergence の landed 未対応と閉集合構造（260807-merged-pr-convergence、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙・verbatim 断片・実装上の注意 7 点は `re-scans/260807-merged-pr-convergence.md` を正本とする。
 
@@ -8,7 +117,7 @@
 - **kind 閉集合の3面同期** — `ConvergenceReport` kind union（`cli.ts:61-76`）/ `renderReport`（`:89-129`）/ sensor の kind 閉集合＋整合分岐（`amadeus-sensor-pr-convergence-report-format.ts:69` / `:122-130`）。sensor は core→plugin import 禁止（ヘッダ `:16-20`）で drift 防止は t450 の renderReport 由来 fixture。
 - **投影経路** — canonical は repo root `plugins/`（`scripts/package.ts:86-87` の pluginsRoot 解決）。opt-in は `amadeus/config.json:41` に `"pr-convergence"`（区間内 #2388 で着地）。`.claude/plugins` は未追跡生成物。**患部 `plugins/pr-convergence/` の区間内変更は 0 件**（observed から不変）。
 
-## project-dir 解決の2梯子非対称（260807-projectdir-worktree-fix、履歴、observed `4a3da7d62`）
+## project-dir 解決の2梯子非対称（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

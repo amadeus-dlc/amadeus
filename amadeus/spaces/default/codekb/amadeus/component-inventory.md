@@ -1,6 +1,97 @@
 # コンポーネント棚卸し
 
-## pr-convergence landed 対応の対象コンポーネント（260807-merged-pr-convergence、現在、observed `4a3da7d62`）
+## #2297/#2303 subagent-start 患部コンポーネント（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### Unit A — hook 配線（#2297）
+
+| コンポーネント | パス | observed 状態 | 役割 |
+|---|---|---|---|
+| live 設定 | `.claude/settings.json` | tracked、hook 11件、`PreToolUse` **不在**（`grep -c` → 0 / exit=1）、`plugin-compose` **不在** | このリポジトリ自身が実際に読む配線面 |
+| 正本 example | `packages/framework/harness/claude/settings.json.example` | tracked、hook 13件、`PreToolUse{^Task$}` を `:60-68` に、`plugin-compose` を `:44` に保持 | 配布・ガードの ground truth 候補 |
+| 投影 example | `.claude/settings.json.example` | **untracked**（source-only 生成物）、正本と byte 一致 | build 生成物。ガード基準にすると build 依存になる |
+| dispatcher | `packages/framework/harness/claude/hooks/amadeus-dispatch.ts` | `HOOK_PATHS` 10スロット（`:4-15`）、fail-closed 4契約 | slug → hook path の解決と forward |
+| 未配線フック（実在） | `packages/framework/core/hooks/amadeus-log-subagent-start.ts`<br>`packages/framework/core/hooks/amadeus-plugin-compose.ts` | 正本・自己インストール面 `.claude/hooks/` の**両方に実在** | スロット追加時の実在要件は充足済み |
+| **不在コンポーネント** | — | live 設定の hook 集合を検査するガードが**存在しない** | 再発防止の新設対象 |
+
+既存の settings 系ガード6面はいずれも live を見ない:
+
+| テスト | 対象 | live を見るか |
+|---|---|---|
+| `tests/smoke/t03-settings-json.test.ts` | `AMADEUS_SRC/settings.json.example`（= dist の example） | ✗ |
+| `tests/integration/t40-settings-hook-config.test.ts` | 同上 | ✗ |
+| `tests/integration/t131-hooks-settings-fire.test.ts` | 同上 | ✗ |
+| `tests/unit/t132-hooks-doc-count-sync.test.ts` | `AMADEUS_SRC/settings.json.example` + `AMADEUS_SRC/hooks/*.ts` + doc | ✗ |
+| `tests/integration/t327-hook-wiring-xor-closure.integration.test.ts` | `WIRING_SITE.claude = "packages/framework/harness/claude/settings.json.example"`（`:38`） | ✗（正本 example） |
+| `tests/unit/t416` / `t418`（+ integration 版） | `.claude/settings.json` を**パス membership としてのみ**参照 | 部分（hook 集合は不検査） |
+
+### Unit B — dispatch tool 語彙（#2303）
+
+| コンポーネント | パス:行 | 役割 | 修正影響 |
+|---|---|---|---|
+| dispatch tool 定数 | `packages/framework/core/tools/amadeus-lib.ts:4128` | `SUBAGENT_DISPATCH_TOOL = "Task"` | 患部の中核。消費者は `:4161` の1箇所のみ |
+| 判定ガード | 同 `:4160-4161` | `subagentStartFields` の入口。`tool_name !== undefined &&` 短絡が kimi 経路を通す | 語彙変更の適用点。短絡は保全必須 |
+| 型宣言 | 同 `:4774` | `tool_name?: string;`（`ClaudeCodeHookInput`） | optional のまま維持 |
+| emit フック | `packages/framework/core/hooks/amadeus-log-subagent-start.ts:64-65, :98` | 判定呼出しと唯一の `SUBAGENT_STARTED` append | 迂回路なし |
+| 旧語彙コメント | 同 `:10-12` | ヘッダ doc-comment | doc 同期対象 |
+| coverage registry | `tests/.coverage-registry.json:4250` | `unitId: "function:SUBAGENT_DISPATCH_TOOL"` | 定数名を変える案では同期対象 |
+
+**テストピン（15箇所 / 3ファイル）**:
+
+| ファイル | 行 | 件数 |
+|---|---|---|
+| `tests/unit/t-subagent-purpose.test.ts` | 66, 89, 96, 97, 101, 113 | 6 |
+| `tests/integration/t454-subagent-model-attribution.integration.test.ts` | 291, 369, 377, 387, 395, 407, 418, 426 | 8 |
+| `tests/integration/t-log-subagent-start.integration.test.ts` | 106 | 1 |
+
+**doc 面（旧語彙 `PreToolUse{Task}` / dispatch tool 記述）— レビューの4面より広い**:
+
+| 面 | observed 行 | レビュー言及 |
+|---|---|---|
+| `.claude/knowledge/amadeus-shared/audit-format.md` | :176、:181 | :176 のみ ✓ |
+| `packages/framework/core/knowledge/amadeus-shared/audit-format.md`（正本） | :176、:181 | :176 のみ ✓ |
+| `docs/reference/12-state-machine.md` | :400 | ✓ |
+| `packages/framework/core/tools/amadeus-lib.ts` コメント | :4149 | ✓ |
+| `packages/framework/core/hooks/amadeus-log-subagent-start.ts` | :10-12 | ✓ |
+| `docs/reference/06-hooks-and-tools.md` | :26, :46, :205, :215, :219 | **未列挙** |
+| `docs/reference/06-hooks-and-tools.ja.md` | :25, :44, :203, :213, :217 | **未列挙** |
+| `docs/reference/23-telemetry-schema.md` | :194 | **未列挙 + stale cite** |
+| `docs/reference/23-telemetry-schema.ja.md` | :189 | **未列挙 + stale cite** |
+
+うち `:46 / :215`（および ja の `:44 / :213`）は **matcher `^Task$` の記述であり修正対象外**（表示名の名前空間、語彙とは別軸）。
+
+**stale cite（両 reviewer 未検出、本スキャンの新規発見）**: `docs/reference/23-telemetry-schema.md:194` と `.ja.md:189` は `tools/amadeus-lib.ts:4430` / `:4456-4457` を引くが、observed の該当行は無関係:
+
+```
+4430: // The recorded repo set for an intent (its intents.json row's `repos`), or [] when
+4456: }
+4457: （空行）
+```
+
+正しい引用先は **`:4128`（定数）と `:4160-4161`（ガード）**。#2303 の doc 同期はこの2面の cite 訂正も射程に入る。
+
+### kimi 経路の保全コンポーネント
+
+| コンポーネント | パス:行 | 内容 |
+|---|---|---|
+| payload 構築 | `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:732-741` | `hook_event_name` / `agent_type` / `prompt` の3キーのみ。**`tool_name` を含まない** |
+| 配線 | `packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml:59-60` | `event = "SubagentStart"` → `amadeus-kimi-adapter.ts role-start` |
+| 回帰ピン | `tests/unit/t-subagent-purpose.test.ts:82-86` | `{hook_event_name:"SubagentStart", agent_type:"explore", prompt:"Look around"}` → フィールド返却を既にピン |
+
+### 設計材料としての既存前例
+
+`tests/integration/t189-compose-dispatch.sdk.test.ts:78-81` に**両語彙を受理する既存前例**が実在する（両 reviewer 未言及）:
+
+```ts
+        // subagent tool as "Task" or "Agent" depending on the SDK build -
+        // accept either; an inline-improvised grid would show neither.
+        const taskCalls = r.toolResults.filter(
+          (t) => t.toolName === "Task" || t.toolName === "Agent",
+        );
+```
+
+## pr-convergence landed 対応の対象コンポーネント（260807-merged-pr-convergence、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits / 108 files、`plugins/pr-convergence/` の区間内変更 0 件）。全数列挙は `re-scans/260807-merged-pr-convergence.md` を正本とする。
 
@@ -11,7 +102,7 @@
 - `plugins/pr-convergence/stages/pr-convergence.md` — 「Convergence is not merge」宣言（`:34-37` / `:200-202`）— landed 語彙の文書整理対象
 - テスト: t444〜t450（全て in-process）。coverage 行ピンは `tests/.coverage-patch-allowlist.json:6365-6398` の4エントリ。tNNN 使用済み最大 t480、新規 t481 以降
 
-## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、履歴、observed `4a3da7d62`）
+## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

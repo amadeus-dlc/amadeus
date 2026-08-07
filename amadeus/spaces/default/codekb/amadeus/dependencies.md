@@ -1,6 +1,51 @@
 # 依存関係
 
-## project-dir 解決への依存関係（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+## subagent-start 経路の依存関係（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。外部依存の増減はなく、本節は患部の**内部依存**のみを記録する。
+
+### 依存鎖（emit まで）
+
+```
+.claude/settings.json（live 配線）
+  └─ amadeus-dispatch.ts（slug → HOOK_PATHS → spawn）※現状 subagent-start は未配線
+       └─ core/hooks/amadeus-log-subagent-start.ts
+            ├─ core/tools/amadeus-lib.ts :4160 subagentStartFields
+            │    └─ :4128 SUBAGENT_DISPATCH_TOOL（消費者は :4161 の1箇所のみ）
+            │    └─ :4108-4110 normalizeAgentType
+            │    └─ enrichSubagentAttribution（agentsDir 供給時、advisory）
+            ├─ ensureOtelBootstrap（:97）
+            └─ appendAuditEntryViaEvents("SUBAGENT_STARTED", …)（:98、唯一の emit）
+```
+
+kimi 経路は settings/dispatcher を経ず、`amadeus-hooks.snippet.toml:59-60` → `amadeus-kimi-adapter.ts role-start` → `amadeus-kimi-lib.ts:732-741`（payload 構築）→ 同じ core フックへ合流する。
+
+### 依存の方向性と修正影響
+
+| 依存 | 向き | 修正時の含意 |
+|---|---|---|
+| `SUBAGENT_DISPATCH_TOOL` → ガード `:4161` | 1対1（他に消費者なし） | 語彙変更の波及は機械的に確定。ただし型を単数から集合へ変える案では**定数名の変更**が派生し、`tests/.coverage-registry.json:4250` の `unitId: "function:SUBAGENT_DISPATCH_TOOL"` が同期対象になる |
+| `subagentStartFields` → 消費者 | 1対1（`amadeus-log-subagent-start.ts:64`） | シグネチャ変更の影響範囲は1箇所 |
+| dispatcher `HOOK_PATHS` → `.claude/hooks/amadeus-<name>.ts` | 全スロットが**実在必須** | スロット追加は build 生成物との**双方向依存**を作る。部分欠は全フック exit 1（`:50-57`） |
+| live 設定 → dispatcher | 現状 11 件すべて | 直接パス形を混ぜると依存形が2種になり、ガード述語も2項化する |
+| doc → 実装行 | cite による片方向 | `23-telemetry-schema.md:194` / `.ja.md:189` の cite が **stale**（`:4430`/`:4456-4457` は無関係行。正しくは `:4128` / `:4160-4161`） |
+
+### 追加候補フックの依存充足状況
+
+スロット追加候補2件は正本・自己インストール面の**両方に実在**しており、`ensureCompleteHookTree` の実在要件を現状で満たせる:
+
+| フック | `packages/framework/core/hooks/` | `.claude/hooks/` |
+|---|---|---|
+| `amadeus-log-subagent-start.ts` | 実在 | 実在 |
+| `amadeus-plugin-compose.ts` | 実在 | 実在 |
+
+### 交差する進行中変更
+
+open PR は **#2414 `bolt/landed-report`（pr-convergence plugin、8ファイル）の1件のみ**。変更面は `plugins/pr-convergence/**`、`amadeus-sensor-pr-convergence-report-format.ts`、`t450`/`t481-pr-convergence-lifecycle`/`t482` で、**本 intent の患部と非交差**。ただし t481 の採番が本線（`t481-resolve-project-dir-worktree-marker.test.ts`、#2413 で着地）と重複しており、新規テストの採番では t481/t482 を避ける必要がある。
+
+base→observed の2 commits は `amadeus-lib.ts` の hunk `@@ -227,17 +227,31 @@`（`resolveProjectDir`、+14行）と `@@ -6670,7 +6684,7 @@` のみで、SUBAGENT 領域（`:4128` / `:4160-4172`）とは**非交差**。
+
+## project-dir 解決への依存関係（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

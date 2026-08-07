@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補文には、既存 cid が本文で断定する『invocationId はディスクに記録されず横断照合されない』が PR #2274(5edf5c5a3、origin/main の祖先)の invocation store 導入により失効した旨を併記すること — 併記なしで手順面だけを足すと、同一 cid 内に『記録されない』という失効した機序断定と『iteration をまたぐと拒否される』という新事実が並立し、読み手に矛盾を渡す。",
+  "rationale": "独立実測: (1) 機序 — packages/framework/core/tools/amadeus-reviewer-runtime.ts の bindInvocation が既 bind の invocationId に別 iteration を提示されたとき :335-336 `if (existing.iteration !== iteration) { throw new Error(\"review invocation ID is bound to a different iteration\"); }` で fail-closed 拒否。invocation は :241 INVOCATION_STORE_FILE = \".amadeus-reviewer-invocations.json\" として record root 直下の machine-local ledger へ永続化され(:288-296 writeInvocationStore)、:236-237 の設計コメント逐語『An entry is minted unbound and binds to the FIRST iteration that consumes it; any later carrier naming a different iteration is a replay.』が iteration 束縛を明示。導入は git log -S\"INVOCATION_STORE_FILE\" 実測で 5edf5c5a3 fix(reviewer): persist issued invocations and verify them fail-closed on every path (#2274)、git merge-base --is-ancestor で origin/main の祖先と確認。(2) 被覆判定 — cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict(project.md:321)は逐語で『invocationId はディスクに記録されず横断照合されない』と述べ、結論を『同一 invocationId でも新規 scope 発行の新 invocationId でも成立する』とする。だがその実測は同 iteration(iteration 1)の再ディスパッチであり、iteration をまたぐ流用は射程外。さらに #2274 着地により前段の機序断定自体が失効しているため、既存 cid の字面を読んだ実装者は iteration 2 で旧 ID 流用が通ると誤読しうる — 未被覆であるだけでなく能動的に誤導する面であり、追補の実益がある。(3) record 実在 — memory.md:7 に当該事象の逐語記録、requirements.md:82/98 に Review — Iteration 1(NOT-READY)/ Iteration 2(READY)の両ブロックが実在し整合。(4) c1/c3 は配布ビュー記載どおり既存 cid(c1-pcp-autonomy-grant-question-boundary / c1-reviewer-scope-alignment)の適用実例であり、判定規準『既存 cid 未被覆面のみ採用』により不採用が正しい。",
+  "submittedAt": "2026-08-07T14:40:00Z",
+  "receivedAt": "2026-08-07T14:04:54Z"
+}

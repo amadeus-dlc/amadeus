@@ -1,6 +1,53 @@
 # 技術スタック
 
-## worktree・生成物・環境変数の前提（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+## ハーネス hook seam と settings 面の技術前提（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。前 intent からの技術スタック変更はなく、本節は #2297/#2303 の患部に関わる**既存前提の切り出し**のみを記録する。
+
+### hook 実行基盤
+
+| 要素 | 前提 |
+|---|---|
+| 実行系 | `bun` 直接実行。live 設定の全 hook が `bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts" <slug>` 形 |
+| 起動形式 | dispatcher が `[process.execPath, hookPath, ...args]` で spawn（`amadeus-dispatch.ts:68-92`）。`env: process.env`、stdin/stdout/stderr すべて `inherit` |
+| シグナル | SIGINT / SIGHUP / SIGTERM を子へ転送 |
+| stdin 契約 | 素通し。フック側 `readHookStdin()` は dispatcher 経由と直接パス形で挙動が同一 |
+
+⇒ 配線方式（dispatcher 形 / 直接パス形）の選択は**ランタイム挙動に差を生まない**。差は形式の一貫性とガード述語の形にのみ現れる。
+
+### settings の3面と source-only 境界
+
+| 面 | tracked | 生成タイミング |
+|---|---|---|
+| `packages/framework/harness/claude/settings.json.example`（正本） | tracked | 手書き正本 |
+| `.claude/settings.json.example`（投影） | **untracked** | `bun run build` の生成物（source-only 境界） |
+| `.claude/settings.json`（live） | tracked、非 gitignore | 手書き |
+
+`.claude/**` は `.gitignore` で ignore されるが、live 設定は明示的に tracked である（`git ls-files --error-unmatch .claude/settings.json` exit=0）。⇒ **fresh clone では正本と live は存在するが投影は存在しない**。この非対称は drift ガードの ground truth 選択に直接効く（`architecture.md` §ground truth 選択）。
+
+### ハーネス別 subagent-start seam の技術的可用性
+
+| ハーネス | seam | payload 形状 |
+|---|---|---|
+| Claude Code | `PreToolUse`（全ツールで発火、matcher で絞る） | tool envelope。`tool_name` 実在、型・prompt は `tool_input` 内 |
+| kimi | 専用 `SubagentStart` イベント | トップレベル `agent_type` / `prompt`、**`tool_name` キー無し** |
+| Codex / Cursor / OpenCode / Kiro / Kiro IDE | なし | — |
+
+kimi の配線は TOML スニペット `packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml:59-60`（`event = "SubagentStart"` → `amadeus-kimi-adapter.ts role-start`）。payload は `amadeus-kimi-lib.ts:732-741` が `JSON.stringify` で構築する3キー固定形。
+
+### テスト実行面の技術前提（語彙変更の波及先）
+
+`AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude`（`tests/harness/fixtures.ts:57`）。patient のテスト3ファイルは import 元が異なる:
+
+| 駆動形 | import 元 | 再生成の要否 |
+|---|---|---|
+| in-process 直 import | `packages/framework/core/tools/amadeus-lib.ts`（正本） | 不要 |
+| 生成物 import | `dist/claude/.claude/tools/amadeus-lib.ts` | **`bun run build` 必須** |
+| フック spawn | `join(AMADEUS_SRC, "hooks", "amadeus-log-subagent-start.ts")` | **`bun run build` 必須** |
+
+⇒ 語彙修正の検証は正本編集だけでは閉じず、生成物再生成とセットで走らせる必要がある。
+
+## worktree・生成物・環境変数の前提（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

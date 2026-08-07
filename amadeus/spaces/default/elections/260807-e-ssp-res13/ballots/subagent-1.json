@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2 の resume 追補が明文で縛るのは『resume 時』の cwd/branch 実測であり、fresh な隔離 subagent が自発的に本線側で read-only 検証を走らせる経路は逐語では名指されていない。したがって c3 は既存 cid の逐語射程にわずかに外れる余地がある。それでも不採用としたのは、(a) 危害クラス『どの tree で数えたかが違うと実測値が変わる』は cid:reverse-engineering:measurement-ref-in-artifacts と cid:requirements-analysis:enumeration-check-at-observed が既に一般形で覆っており、(b) record 自身が本件を historical-section-cite-check-at-observed の実践形と分類し、(c) 新機序でなく成果物汚染もなく自己捕捉・全件取り直しで閉包しているため。同型が別 intent で再発し、かつ既存 cid の適用では防げなかったと実測できた時点で、c2 への追補（1行）として再提案するのが妥当。",
+  "rationale": "独立実測に基づく判定。c1: 配布ビューの記述どおり cid:reverse-engineering:E-XBB-RE-S13-c2（review..observed の実 diff と被引用パス集合の交わりが空なら再解決不要）の適用実例であり、record の Interpretations も E-XBB-RE-S13-c2 を明示引用している。新規面なし → 不採用。c2: base 選定は cid:reverse-engineering:rescan-base-ancestry（HEAD 祖先かつ距離最小）と cid:reverse-engineering:c2-observed-mainline-commit（observed は origin/main 系譜）の適用実例。record も『HEAD 祖先・距離最小2』『origin/main 系譜』と既存則の語彙をそのまま使っている。新規面なし → 不採用。c3: memory 層を grep して既存 worktree 隔離系 cid を実読した。team.md:165 cid:code-generation:c2 本体（本線絶対パス非混入・割当 worktree 外の git 操作禁止）と、その追補 E-TCRCGS13（隔離 subagent の resume は隔離を保証しない — 作業 worktree の明示パス再掲＋再開直後に cwd/branch を実測検証、実測 #1269 は SendMessage resume が cwd 継承で conductor 本線ツリー実行）が、まさに『subagent が本線ツリーで実行してしまう』機序と対策（明示パス＋cwd 実測）を規定している。証拠の正しさ側は team.md:265 cid:reverse-engineering:measurement-ref-in-artifacts（件数・実測値には測定 ref を明記 — feasibility 46件 vs worktree HEAD 35件の乖離が起点）と team.md:248 cid:requirements-analysis:enumeration-check-at-observed（自 tree での件数照合は base 差で偽の不一致を生む）が覆う。c3 の候補文『実行ディレクトリを本線と取り違えうる／絶対パス指定・cwd 確認を検証手順に含める』は、この2群の合併に収まり新規機序を含まない。加えて record（inception/reverse-engineering/memory.md）自身が本件を『historical-section-cite-check-at-observed の実践形』と自己分類し、worktree 断面での全件取り直しにより成果物への汚染ゼロで閉包している。よって判定規準『既存 cid の適用実例は不採用』に従い c3 も不採用 → choice 1（採用0件）。",
+  "submittedAt": "2026-08-07T14:05:00Z",
+  "receivedAt": "2026-08-07T13:20:10Z"
+}

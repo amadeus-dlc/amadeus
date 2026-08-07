@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SSP-BTS13",
+  "voter": "subagent-1",
+  "question": "260807-subagent-start-pair build-and-test ステージの §13 学習選定。候補は1件。C1: units-generation を SKIP する degrade スコープの複数 unit 構成では、全 unit の成果物が揃った後の engine next が『Every one of them already holds this stage's required artifacts, so no unit is left to run』の error directive を返し、`amadeus-state.ts declare-units-done --units <names>` の明示宣言を経て初めてステージ完了へ進む — per-unit ループの完了は成果物の充足だけでは閉じず、unit リストの完了宣言が別途必要（単一 unit の degrade 構成〔直前 intent〕では観測されず、複数 unit で初観測）。error message 自体が verb を案内するため自己文書化されているが、cid:code-generation:c1-parallel-degrade-batch の record 側手順列に最終ステップとして1行追補する価値があるか。選択肢: 1 = C1 採用（1行追補）、2 = 採用 0 件（error message の自己文書化で十分 — ノルム肥大回避）。engine の実挙動（amadeus-orchestrate.ts の該当分岐と amadeus-state.ts の declare-units-done verb）と本 intent の audit/タイムラインを独立検証して投票せよ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "C1 採用（1行追補）",
+      "description": "c1-parallel-degrade-batch の手順列末尾へ declare-units-done を追補し、次回の複数 unit degrade で error directive を経由せず直行できるようにする。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用 0 件",
+      "description": "error directive の message が verb を正確に案内しており、追補は自己文書化済み機構の重複記述になる。"
+    }
+  ]
+}

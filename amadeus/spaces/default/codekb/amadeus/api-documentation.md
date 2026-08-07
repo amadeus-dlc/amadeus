@@ -1,6 +1,87 @@
 # API ドキュメント
 
-## project-dir 解決 API と CLI 契約（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
+## subagentStartFields の契約と2 payload 形状（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### シグネチャと入口ガード
+
+`packages/framework/core/tools/amadeus-lib.ts:4160-4161` verbatim:
+
+```ts
+export function subagentStartFields(payload: ClaudeCodeHookInput, agentsDir?: string): Record<string, string> | null {
+  if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+```
+
+| 要素 | 契約 |
+|---|---|
+| `payload` | `ClaudeCodeHookInput`。`tool_name?: string`（`:4774`、**optional**） |
+| `agentsDir`（任意） | 与えられると #2279 の帰属拡張（`Type Verdict` / `Model` / `Model Source`）が加わる。拡張は advisory で、内部失敗時は追加フィールドを落とし基本3フィールドを保つ（NFR-3、`:4155-4159` のコメント） |
+| 戻り値 `null` | 「この payload は subagent dispatch ではない」— 呼び出し側は emit せず exit 0 |
+| 戻り値 `Record<string,string>` | 監査フィールド集合。`Agent Type`（必須、未知は `normalizeAgentType` が `"unknown"` へ）、`Agent ID`（任意）、`Purpose`（任意） |
+
+### 入口ガードの真理値表 — `undefined` 短絡が語彙とは別軸である
+
+ガードは2項の AND であり、`tool_name` の**不在**と**不一致**を区別する:
+
+| `payload.tool_name` | 判定 | 意味 |
+|---|---|---|
+| `undefined` | **通過**（第1項が false で短絡） | 「subagent でしか発火しない seam」= kimi の `SubagentStart` |
+| `SUBAGENT_DISPATCH_TOOL` と一致 | 通過 | tool envelope 経由の dispatch |
+| それ以外の文字列 | `null` | `TaskUpdate` / `Write` 等の誤爆を拒否 |
+
+設計意図は `:4149-4153` に逐語で記載（`Absence of tool_name therefore means "a seam that only fires for subagents", not "unknown tool".`）。
+
+**契約上の帰結**: #2303 の語彙修正が触るのは**第2項の比較対象**のみ。第1項の `undefined` 短絡は kimi 経路の存在条件であり、いかなる修正形でも通過側に残さねばならない。回帰ピンは `tests/unit/t-subagent-purpose.test.ts:82-86` に既存。
+
+### 定数 API
+
+`packages/framework/core/tools/amadeus-lib.ts:4125-4128` verbatim:
+
+```ts
+// The tool whose invocation opens a subagent on the harnesses that have no
+// dedicated start event (Claude Code): the start seam there is PreToolUse, and
+// PreToolUse fires for EVERY tool.
+export const SUBAGENT_DISPATCH_TOOL = "Task";
+```
+
+| 属性 | observed |
+|---|---|
+| 型 | `string`（単数） |
+| 消費者 | **1箇所のみ** — `:4161` のガード。repo 全域 grep（dist/self-install 除く）で他の消費者なし |
+| 派生的な同期面 | `tests/.coverage-registry.json:4250` の `unitId: "function:SUBAGENT_DISPATCH_TOOL"` |
+
+**API 形状の制約**: 単数型のため、複数語彙を受理する設計（例 `["Task","Agent"].includes(...)`）は**集合型への型変更**を要し、定数名（したがって coverage registry の `unitId`）の同期も伴う。単一語彙の置換であれば型・名前とも不変。
+
+### matcher と payload — 2つの独立した名前空間
+
+| 面 | 供給元 | 照合対象 | 語彙修正の対象か |
+|---|---|---|---|
+| settings matcher `^Task$` | `settings.json.example:62` | ハーネスが持つ**ツール表示名** | **対象外** |
+| payload `tool_name` | Claude Code の PreToolUse payload | フック側の実データ | **対象** |
+
+`amadeus-lib.ts:4145-4147` はこの二重防御を逐語で説明する（`The settings matcher is an UNANCHORED regex, so "Task" also matches TaskUpdate/TaskCreate — without this check every todo-list write would append a phantom subagent.`）。matcher はアンカー付き（`^Task$`）で第1防御、in-hook ガードが第2防御。**両者は独立して評価される**ため、matcher を変えずに payload 語彙だけを直す修正が成立する。
+
+### emit 側の契約
+
+`packages/framework/core/hooks/amadeus-log-subagent-start.ts`:
+
+| 行 | 契約 |
+|---|---|
+| `:64` | `subagentStartFields(parsed, join(projectDir, harnessDir(), "agents"))` — `agentsDir` を常に供給 |
+| `:65` | `if (started === null) process.exit(0);` — 唯一の中断点、silent |
+| `:98` | `appendAuditEntryViaEvents("SUBAGENT_STARTED", fields, projectDir)` — 唯一の emit |
+| `:99-101` | catch → `recordHookDrop(projectDir, "log-subagent-start", errorMessage(e))` — **fail-open**（append 失敗と同じ drop 経路） |
+
+`ensureOtelBootstrap(projectDir)` が emit 直前（`:97`）に走る。
+
+### 閉包検証に使える既存 API 形
+
+`tests/integration/t-log-subagent-start.integration.test.ts` の `taskDispatch` ヘルパ（`:104-108`）は `{hook_event_name:"PreToolUse", tool_name:"Task", tool_input}` を組みフックを spawn する。`runHook`（フック spawn + `CLAUDE_PROJECT_DIR` 指定 + `seededAuditDir`/`seededStateFile` で3ゲート充足）と `fieldsFor(proj,"SUBAGENT_STARTED")` の組み合わせが、**Unit B の閉包を決定的に実証できる既存 API 形**。`tool_name` を live 語彙へ切り替えるだけで転用可能。
+
+**ただし Unit A（live 配線）の閉包はこの API 形では実証できない** — テストは `CLAUDE_PROJECT_DIR` を fixture プロジェクトへ向けフックを直接 spawn するため、`.claude/settings.json` を一切読まない。
+
+## project-dir 解決 API と CLI 契約（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 

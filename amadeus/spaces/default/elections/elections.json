@@ -1252,5 +1252,35 @@
     "dirName": "260807-e-pwf-bts13",
     "createdAt": "2026-08-07T12:27:27Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-RES13",
+    "dirName": "260807-e-ssp-res13",
+    "createdAt": "2026-08-07T13:18:18Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-RAS13",
+    "dirName": "260807-e-ssp-ras13",
+    "createdAt": "2026-08-07T14:03:11Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-CGDEV",
+    "dirName": "260807-e-ssp-cgdev",
+    "createdAt": "2026-08-07T14:21:10Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-CGS13",
+    "dirName": "260807-e-ssp-cgs13",
+    "createdAt": "2026-08-07T15:26:26Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-BTS13",
+    "dirName": "260807-e-ssp-bts13",
+    "createdAt": "2026-08-07T15:36:59Z",
+    "status": "recorded"
   }
 ]
