@@ -37,7 +37,8 @@
   "plugin": {
     "activation": {
       "names": [
-        "formal-model-check"
+        "formal-model-check",
+        "pr-convergence"
       ]
     }
   }
