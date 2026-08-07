@@ -1,13 +1,99 @@
 # ビジネス概要
 
-## TLA+ 仕様層の正準配置の業務境界（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## worktree セッションの record 汚染（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-- **約束されている価値**: [Issue #2398](https://github.com/amadeus-dlc/amadeus/issues/2398) は、TLA+ 仕様をリポジトリルート直下の `specs/tla/` から `amadeus/spaces/<space>/specs/tla/` へ移設し、仕様層の正準配置を `amadeus/spaces/<space>/specs/{rfc,tla}` に統一する（rfc 側は兄弟 Issue #2396 が担う）。利用者にとっての価値は「Amadeus が管理する仕様資産の置き場が space 配下の1規約に揃い、workspace のどこを見れば仕様があるかが一意に決まる」ことである。
-- **現状の成立範囲**: `specs/tla/` は9ファイルでルート直下に実在し、model-map.json（schemaVersion 2）には FormalElection / MirrorLifecycle の2モデルが digest ピン付きで登録されている。この配置は当初設計（#1456、intent 260722-tla-plugin）に由来し、ツール層が plugin へ移設された際（#1925）に仕様層だけがルートに残った経緯を持つ — drift ではなく設計上の配置である。
-- **保護すべき対抗価値**: 形式検査の drift ゲートである。model-map の identity はコンテンツ base の canonical ハッシュでパス移動では変わらないが、activation watch の spec hash は相対パスを畳み込むため、移設は必ず「spec hash CHANGED」の advisory として表面化する。これは故障ではなく設計どおりの検出であり、利用者へ新パスを告知する接点でもある。
-- **業務判断へ効く未解決事項**: spec 層を space 配下へ移すと「どの space の仕様を watch・実行対象にするか」の解決規則が必要になるが、Issue 本文・現行コードのどちらにも存在しない（現行は space 非依存のルート固定で、`activeSpace()` は formal-verif 系から未参照 — grep exit 1 実測）。space 切替時に形式検査の対象がどう切り替わるかは利用者から見える挙動であり、要件段での裁定が必要である。
+### 利用者に約束されている価値
+
+worktree は並行作業の隔離単位である。`org.md` の Construction worktree 規範と `cid:code-generation:solo-bolt-worktree-required` は「本線ツリーを共有資源として汚さない」ことを前提に置く。したがって利用者への約束は、**worktree で走らせたワークフローの record は、その worktree の `amadeus/` の下にだけ書かれる**ことである。
+
+### 実際に成立していない境界（[Issue #2352](https://github.com/amadeus-dlc/amadeus/issues/2352)）
+
+| 業務シナリオ | 現状（observed 実測） |
+| --- | --- |
+| worktree でステージを進め、その worktree の record に書く | CLI ツールを**本線の絶対パス**で起動すると、record の書き先が**本線**になる（ケース B） |
+| 同じセッションの hook が書く先と CLI が書く先が一致する | 一致しない。hook 側は worktree、CLI 側は本線へ書く |
+| 誤った書き先を検知して停止する | **検知しない**。`resolveProjectDir`（`packages/framework/core/tools/amadeus-lib.ts:226-250`）に警告・例外は1つも無い（`grep "console\|warn\|throw"` → exit=1、出力ゼロ） |
+| `CLAUDE_PROJECT_DIR` を設定していれば安全 | 逆。env が段2で無条件に勝つため、worktree 内の正しい lib を読んでいても本線へ倒れる（ケース C+env） |
+
+**業務影響の形**: 隔離が破れることそのものより、**破れたことが誰にも見えない**ことが本質である。監査シャード・state・intents.json が本線側へ静かに混ざり、並行する別セッションの記録と交差する。`org.md` Forbidden の検証劇場禁止（P2）が禁じるのは「偽の緑」だが、本件はその隣接形 — **偽の隔離**である。
+
+### 5ケース再現（repo 外 scratch、observed lib と `cmp` byte 一致、全 exit=0）
+
+| ケース | cwd | 読込 lib | env | `resolveProjectDir()` | `resolveProjectDirFromHook()` |
+|---|---|---|---|---|---|
+| A | main | main | UNSET | main | main |
+| **B** | **worktree** | **main 絶対** | UNSET | **main** ← 欠陥 | worktree |
+| C | worktree | worktree | UNSET | worktree | worktree |
+| C+env | worktree | worktree | main | **main** | main |
+| B+payloadCwd | worktree | main 絶対 | UNSET | **main** | worktree |
+
+### 保護すべき対抗価値
+
+- **hook 側の解決順は既決**: `:306-309` の doc-comment が逐語で `It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree` と記す。これは #1482/#1493 の裁定の実装であり、緩和対象ではない。
+- **`--project-dir` の明示指定（段1）は既に広く受け口がある**: core/tools の 18 ツールが `"--project-dir"` を parse する。是正の方向として新機構を要さない。
+- **marker ベースのガードには構造的な穴がある**: `.claude/tools/` は完全に未追跡（`git ls-files .claude/tools` → **0件**、`.gitignore:24` が `.claude/**` を ignore）。したがって `bun run build` 前の fresh worktree は workspace marker（`amadeus/` + `<harness>/tools/` の両方がディレクトリ、`amadeus-lib.ts:283-286`）を構造的に満たさない。marker を足すだけでは build 前 worktree を検出できない。
+
+### 利用者から見た期待成果
+
+1. worktree セッションの record が本線へ混ざらない。
+2. 書き先が意図と食い違う状況が**無音でなくなる**（loud path の新設、または明示指定の強制）。
+3. 上記が `docs`／`skills`／allowlist の推奨形と整合し、片面だけの修正で終わらない。
+
+### 遡及性（点修正の反復）
+
+| Issue | state | 修正の形 |
+|---|---|---|
+| [#796](https://github.com/amadeus-dlc/amadeus/issues/796) | CLOSED | `7e6a7c33e` — `fire` に `--project-dir` を配線（段1 での点回避、梯子は無変更） |
+| [#1450](https://github.com/amadeus-dlc/amadeus/issues/1450) | CLOSED | `04efcd42c` — election の既定 pd を `resolveProjectDir` 経由へ（呼び出し側の点修正） |
+| [#1287](https://github.com/amadeus-dlc/amadeus/issues/1287) | OPEN | enhancement、解決順の再設計（ADR 前提） |
+
+2件の先例はいずれも**呼び出し側の点修正**で、梯子そのものには触れていない。#2352 は同じ根の4件目であり、点修正の反復が効いていないことを示す。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 利用者に約束されている価値
+
+Amadeus のゲート群は「証拠のない前進を止める」ことを約束する（`org.md` Forbidden の検証劇場禁止、P2）。fail-closed であること自体は約束の中核であり、本 intent はそれを弱めることを目的としない。
+
+しかし fail-closed の約束には対の約束がある — **止まった状態から利用者が正規手順で復帰できること**。本 intent が扱う3件（[#2313](https://github.com/amadeus-dlc/amadeus/issues/2313) / [#2330](https://github.com/amadeus-dlc/amadeus/issues/2330) / [#2358](https://github.com/amadeus-dlc/amadeus/issues/2358)、実装引き継ぎの正本は [#2385](https://github.com/amadeus-dlc/amadeus/issues/2385)）は、いずれも**検出は実装されているが回復が実装されていない**という同一形の欠落である。
+
+### 実際に成立していない境界
+
+| 業務シナリオ | 現状（observed 実測） |
+| --- | --- |
+| main への着地ごとに evidence binding を最新化する | `No Silent Drop Evidence Reconcile` が **恒久赤**。直近5 run のうち 3 run が failure、失敗コードは全件 `REBIND_NON_IDENTITY_DRIFT` |
+| drift を検知したあとに evidence を再生成して binding を進める | **手段が存在しない**。`scripts/no-silent-drop-evidence.ts` の verb は `rebind` / `reconcile` の2つのみで、再生成 verb はない。検出は `throw` であり、どの回復分岐にも到達しない |
+| schema 1 の advisory store を持つ intent でワークフローを継続する | store が parse 失敗 → 呼び出し側の `!storeResult.ok` が fail-closed hold。**hold を解く verb がない**（CLI は `record` / `correct-misattributed` の2 verb のみ） |
+| advisory を再度 raise させて hold を自然解消させる | evaluator がもう advisory を raise しない intent では `applyPendingAdvisoryGuard` が `pending.length === 0` で早期 return し、**guard 経路自体が走らない** |
+| degrade 経路で全 unit が被覆済みになった後にステージゲートへ進む | 複数 unit の場合は error directive で拒否され続ける。案内される「unit ディレクトリを作れ」は、作るべき仕事が残っていない状況では実行できない |
+
+**業務影響の共通形**: 利用者は「ガードが正しく止めた」状態に入るが、**そこから正規の手順で前へ出る道が製品内にない**。残るのは out-of-band の手作業（ファイル直接編集・台帳手修正）か、ワークフローの放棄である。これは `org.md` P2 が禁じる「偽の信頼」の裏面 — ガードは本物だが、ガードの出口が偽である。
+
+### 影響範囲についての訂正（#2385「影響・価値」節との食い違い）
+
+#2385 は #2313 を「全 PR の trusted base ゲートが内容と無関係に `BASELINE_INVALID` になり、あらゆる修正 PR が着地できない」と記すが、**observed 断面ではこれは成立しない**:
+
+- main の最新 CI run **31135183415 は success**（ratchet ステップを含む `Lint and complexity` job も success）
+- ローカル実測: `bun tests/no-silent-drop-gate.ts check --base-revision <HEAD^ の完全 SHA>` → exit 0 / `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`
+
+**恒久赤は main 限定の `No Silent Drop Evidence Reconcile` ワークフローのみ**である。したがって業務影響は「全 PR が塞がれる」ではなく「**evidence binding が陳腐化し続け、gate 実装を触る PR の運用が不明瞭なまま残る**」という遅効性の劣化である。修正の必要性は変わらないが、S1-FATAL / P1 の根拠文は requirements 段で再判定が要る。
+
+### 保護すべき対抗価値
+
+- **fail-closed そのもの**: 3件いずれも「止めるのをやめる」方向の緩和は取れない。#2313 の freshness 検査は evidence の陳腐化を検知する正当な機構であり、#2330 の schema gate は「翻訳して黙って進むより人間に訊き直す方が安全」という設計コメントの明文（`amadeus-advisory-choice.ts:653-657`）に支えられている。#2358 の全被覆拒否は選挙 E-OBB2-CG1 が **INTENTIONAL と裁定した非対称**であり（`t367-degrade-unitname-resolution.test.ts:422-426` のコメントが明記）、`project.md` の `cid:code-generation:c1-degrade-batch-directive-capture` が逐語で「全 unit covered 後の engine emit は裁定 B どおり fail-closed」と記す。
+- **既決裁定の保存**: よって求められるのは「拒否をやめる」ことではなく、**拒否された状態に対する明示的な回復入口を新設すること**である。この方向は既決ノルムと矛盾しない。
+
+### 利用者から見た期待成果
+
+1. reconcile が緑に戻り、evidence binding が着地ごとに前進する。
+2. schema 1 の store を持つ intent が、人間の明示操作でワークフローへ復帰できる。
+3. degrade 経路の全被覆状態から、宣言的な明示操作でステージゲートへ進める。ただし #2359（OPEN・未修正）が扱う `unitCovered` の述語問題（§12a Review の記録有無を見ない）を塞がないこと。
+
 
 ## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

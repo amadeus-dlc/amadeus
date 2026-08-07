@@ -1,35 +1,125 @@
 # API ドキュメント
 
-## TLA+ 仕様層が公開する内部契約（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## project-dir 解決 API と CLI 契約（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。外部 HTTP API は存在せず、すべて repo 内部のモジュール契約である。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-### model-map v2 の正準 API（`packages/framework/core/tools/amadeus-formal-verif-model-map.ts`）
+### 公開関数の契約
 
-plugin 側 `plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` は byte-identical 鏡像（投影: `scripts/package.ts:808-809`、guard: `t-package-generated-plugin-sources:21-22`）。
+| 関数 | 所在 | シグネチャ | 段数 | loud path |
+|---|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | `(explicitDir?: string) => string` | 4 + fallback | **ゼロ**（`sed -n '226,250p' \| grep "console\|warn\|throw"` → exit=1、出力なし） |
+| `resolveProjectDirFromHook` | 同 `:310-347` | `(importMetaUrl: string, payloadCwd?: string \| null) => string` | 5 + fallback | ゼロ |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | — | — |
+| `hasWorkspaceMarker` | 同 `:283-286`（非 export） | `(dir: string) => boolean` | — | — |
+| `findWorkspaceMarkerAncestor` | 同 `:290 付近`（非 export） | cwd から祖先方向へ marker 探索 | — | — |
 
-- 定数 `:52-56` — `TLA_EXECUTION_MODEL_NAME` / `TLA_MODEL_PATH` / `TLA_CFG_PATH` / `TLA_MODEL_MAP_PATH = "specs/tla/model-map.json"` / `TLA_MODEL_MAP_SCHEMA_VERSION = 2`
-- パス生成 `:58` `tlaModelPath(name)` / `:62` `tlaCfgPath(name)` — `specs/tla/<Name>.{tla,cfg}` を生成
-- `:33-43` `canonicalIdentity()` — domain 分離 canonical ハッシュ。digest ピンの実体で、パスを畳み込まない
-- バリデータ `:171` `parseAssetIdentity`（model/cfg の `path` を生成値へピン、呼出 `:335,:337`）、`:247-255` `isCanonicalAuxiliaryPath`（`:250` で dirname を `"specs/tla"` に固定）
-- `:373` `parseTlaModelMap()` / `:441` `findModelMapModel()` / `:445` `diffModelMap()`
+**契約上の欠落**: どちらの解決関数も、解決結果が呼び出し元の期待と食い違ったことを**呼び出し元へ伝える手段を持たない**。返り値は常に `string` であり、「確信度の低い fallback に落ちた」ことを表現しない。ケース B（cwd=worktree × lib=本線絶対パス）は、この契約のもとでは**正常な返り値**として本線パスを返す。
 
-### activation watch / advisory の契約（`packages/framework/core/tools/amadeus-plugin-activation.ts`）
+### CLI 引数契約 — `--project-dir`
 
-- `:42` `ACTIVATION_WATCH_GLOBS = ["specs/tla/**"]`、`:100-102` `specRootForHost(hostRoot) = dirname(hostRoot)`、`:296,:447,:481` `computeSpecHash(specRootForHost(hostRoot), …)`
-- advisory 文言（ユーザー可視契約）: `:229` `spec hash CHANGED (specs/tla)`、`:231` `has no recorded verdict (specs/tla)`、`:233` `add a valid specs/tla/model-map.json target`、`:304-305` `target: "specs/tla"`。文言は audit に実記録あり（`260804-tla-authoring/audit/j5ik2o-mac-studio-lan-2a22dd80e265.jsonl:525`、1件）
-- model-map 判定は `evaluateTlaModelReadiness`（import `:33`、呼出 `:427`）経由
+段1（明示指定）の受け口は広く実装済みで、`"--project-dir"` を parse するツールは **18ファイル**。
 
-### センサー / loader / CI runner の契約
+```
+advisory-choice / audit / bolt / finding / goal / jump / lib / log / migrate /
+mirror-lifecycle / mirror-presentation / orchestrate / sensor-model-completeness /
+state / subagent-stats / swarm / utility / worktree
+```
 
-- model-completeness センサー: glob は frontmatter `packages/framework/core/sensors/amadeus-model-completeness.md:8`（`**/{specs/tla/**,amadeus-election*.ts,amadeus-mirror-*.ts}` — 実装側エントリを含む非対称 glob）、実装は `amadeus-sensor-model-completeness.ts:37` `MODEL_MAP_RELATIVE_PATH` + `:329` の `parseTlaModelMap` 注入
-- TLA loader（`tla-model-loader-internal.ts`）: `:27` `TLA_MODEL_MAP_PATH` import、`:155` `verifyAssetPath` / `:197` map の境界検査、`:186` 境界文言 `asset resolves outside specs/tla`、`:344,:364` パス生成、`:367,:371` MODULE_DEP_UNRESOLVED、`:69-70,:118,:231` SOURCE_DRIFT（identity 再計算による棄却）
-- CI runner: `ci-model-check-domain.ts:189`（Docker bind mount `type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly` の検査）、`run-model-check-diagnostic.ts:217`（`join(workspaceRoot, "specs/tla")`）。`.github/workflows/ci.yml:663` の `formal-model-check:` ジョブは `:665` `workflow_dispatch` 限定で、YAML 自体に `specs/tla` リテラルは 0 件（grep exit 1 実測）
-- その他のパス定数: `tla-applicability.ts:361`（`DEFAULT_MODEL_MAP_PATH`）、`tla-authoring.ts:449`（`DEFAULT_SUBJECTS_PATH`）、`tla-evidence.ts:434`（`DEFAULT_STORE_ROOT = "specs/tla-evidence"` — **接頭辞が共通なだけの別 root**）、`amadeus-advisory-choice.ts:894-895`、`tla-module-deps.ts:4,:38,:59`（core / plugin 両コピー）
+正本の使用例は `packages/framework/core/amadeus-common/protocols/stage-protocol.md:1209-1216`（`amadeus-finding.ts create-github-issue --project-dir <workspace-root>`）。
 
-### model-map.json の読み手（消費者契約）
+### プロトコル文書の指示 — 相対形と絶対形の衝突
 
-sensor / activation / loader / applicability / authoring CLI / registration・map CLI / arm・toolchain / テスト基盤（`tests/formal-verif/support/tla-toolchain-harness.ts:54`、テストローカル `repositoryModelMap()`）の8系統が、すべて `specs/tla/model-map.json` 定数経由で結合している。移設はこの全エッジの同時書換を要求する。
+`stage-protocol.md:511` verbatim:
+
+> **CWD drift warning**: If a stage runs `cd` in Bash (e.g., `cd todo-app/server && npm install`), subsequent `bun {{HARNESS_DIR}}/tools/...` calls using relative paths will fail with "Module not found". Always use absolute paths to the tools directory for tool calls (on Claude Code, `$CLAUDE_PROJECT_DIR/.claude/tools/`), or run `cd` commands in subshells: `(cd subdir && npm install)`.
+
+この1行は**絶対形（`$CLAUDE_PROJECT_DIR` 展開）を推奨する**が、その形こそがケース B を生む。ただし同じ文中に既に代替（サブシェル `(cd subdir && ...)`）が明記されており、相対形を保ったまま CWD drift を避ける手段は正本にすでに書かれている。
+
+### settings allowlist の契約
+
+```
+packages/framework/harness/claude/settings.json.example:10   ← 正本
+.claude/settings.json:39                                      ← セルフインストール面（tracked）
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+```
+
+allowlist が許可するのは絶対形のみ。一方で正本スキルの起動行は**全 31 件が相対形**であり、絶対形の起動行は正本に存在しない（唯一の絶対形出現は上記 allowlist 自身）。allowlist と実際の呼び出し形が対応していない。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### CLI 契約（回復 verb の不在が観測される面）
+
+| ツール | 現行 verb / フラグ | 回復面 |
+| --- | --- | --- |
+| `tests/no-silent-drop-gate.ts`（36行） | `check` / `census-evidence` / `approve-evidence` / `baseline-candidate` ＋ `[--base-revision <full-sha>]`（usage 逐語） | 判定のみ。`package.json` の `"no-silent-drop": "bun tests/no-silent-drop-gate.ts check"` |
+| `scripts/no-silent-drop-evidence.ts`（270行） | **`rebind` / `reconcile` の2つのみ**（usage `:32-33`、分岐 `:59` / `:63`、実行 `:253`）。`rebind --target-revision <full-sha>` / `reconcile --event-revision <full-sha> --repository <owner/name>` | **evidence 再生成 verb は存在しない** |
+| `scripts/no-silent-drop-retention.ts`（175行、新規） | 引数なし = dry-run、`--apply` のみ（`parseArgs` `:28`） | snapshot 書込と列挙済み ULID の削除。維持系であり drift 回復ではない |
+| `packages/framework/core/tools/amadeus-advisory-choice.ts` | **`record` / `correct-misattributed` の2 verb のみ**（USAGE `:1516-1520`、dispatch `:1522-1532`） | **schema 1 store からの回復 verb は存在しない** |
+
+### `no-silent-drop-gate.ts check` の呼び出し規約（ローカル実行の前提）
+
+`--base-revision` を省略すると必ず次を返す:
+
+```json
+{"code":"BASELINE_INVALID","detail":"check mode requires a non-zero trusted base revision"}
+```
+
+exit 2。**これは欠陥ではなく規約である**:
+
+- `tests/no-silent-drop/engine.ts:250-252` が `trustedBaseSha` の null を拒否する。
+- `tests/no-silent-drop/ledger.ts:213-223` の解決順は explicit → `AMADEUS_NSD_TRUSTED_BASE_SHA` → `GITHUB_BASE_SHA` → `GITHUB_EVENT_BEFORE`。
+- base は **HEAD の厳密祖先**でなければならない。HEAD 自身を渡すと `"trusted base is not a strict ancestor of HEAD: b8e3e664f…"` / exit 2。
+
+CI 側の base 解決（`.github/workflows/ci.yml:121-157`）は PR = base SHA、push = before SHA、`workflow_dispatch` = `HEAD^`。いずれも 40 桁小文字 SHA・非全零・`git cat-file -e` を検証したうえで `timeout 30s bun run no-silent-drop -- --base-revision "${BASE_REVISION}"` を実行する。
+
+### エラーコード契約（#2313）
+
+| コード | 発生点 | 意味 | 回復 |
+| --- | --- | --- | --- |
+| `REBIND_NON_IDENTITY_DRIFT` | `scripts/no-silent-drop-evidence-adapter.ts:226-240` | "current binding is reachable but evidence freshness paths changed"（逐語） | **なし**（throw であり、`scripts/no-silent-drop-evidence.ts:162-171` の回復分岐は `currentBindingIsValidForEvent` が false のときだけ走る） |
+| `REBIND_PR_LANDING_TREE_MISMATCH` | 同 `:316-324` | "final pull request head and landing commit root trees differ"（逐語） | 第1段（`:305-315`）は `EVIDENCE_BUNDLE_PATHS` の3ファイルを除外した tree 比較の形を既に持つ |
+| `REBIND_PREFLIGHT_FAILED` / `REBIND_CREDENTIAL_FAILED` / `REBIND_CHECKOUT_FAILED` | `.github/workflows/no-silent-drop-evidence-reconcile.yml` | preflight 失敗を step summary へ出す | ワークフロー面 |
+| `BASELINE_INVALID` | `tests/no-silent-drop/engine.ts:250-252` | trusted base 未指定・非祖先 | 呼び出し側で `--base-revision` を与える（上記規約） |
+
+失敗時の envelope 実文（run 31135902843 のジョブログからの転記）:
+
+```json
+{"schemaVersion":1,"operation":"no-silent-drop-evidence-rebind","status":"error","code":"REBIND_NON_IDENTITY_DRIFT","eventRevision":"b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d","bindingRevision":"fe8c701ba15c0677a4ec18cc3715ff1086318dde","targetRevision":"b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d","changed":false,"counts":{"registryRevisions":0,"manifestRevisions":0,"runRevisions":0,"artifactDigests":0,"receiptDigests":0},"paths":[],"validation":{"ok":false,"problems":[]},"error":{"code":"REBIND_NON_IDENTITY_DRIFT","message":"current binding is reachable but evidence freshness paths changed"}}
+```
+
+成功側の envelope は `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`（gate check、ローカル実測 exit 0）。`evidence-rebind.ts:40` の status 語彙は `"changed" | "no-op" | "superseded" | "error"`。
+
+### advisory choice store のオンディスク契約（#2330）
+
+| 要素 | 契約 | 実装 |
+| --- | --- | --- |
+| store 本体 | `schema: 2` のみ受理 | `parseStore` `:659-661` が `value.schema !== 2` で reject |
+| store 不在 | 空の schema 2 を返す | `readStore` `:681-691`（**不在時のみ**。既存 schema 1 ファイルは parse 失敗） |
+| pending エントリ | `schema: 1` を要求 | `parsePending` `:640-651` が `value.schema !== 1` を拒否 |
+| 失敗時の呼び出し側挙動 | `!storeResult.ok` → fail-closed hold | 設計コメント `:653-657` が明文で意図として記す |
+| guard の起動条件 | pending が非空のときのみ | `amadeus-orchestrate.ts:797-799` `if (pending.length === 0) return directive;` |
+
+**契約上の欠落**: schema 1 → 2 の遷移は「翻訳しない」と明示的に決めているが、**遷移を人間の操作で完了させる契約が無い**。pending が schema 1 のまま受理される点は、回復契約を設計するうえで利用可能な既存面である。
+
+### engine の degrade 経路契約（#2358）
+
+全被覆時の error directive 文言（`amadeus-orchestrate.ts:3727-3731` 逐語）:
+
+- `"Every one of them already holds this stage's required artifacts, so no unit is left to run."`
+- `"Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`."`
+
+被覆述語 `unitCovered`（`:3746-3760`）は **produces の実在のみ**で判定し §12a Review の記録有無を見ない（#2359 と共有する述語）。単一 unit（`:3807`）は covered でも解決してステージゲートを運ぶ。
+
+**契約上の非対称は意図的**: `tests/integration/t367-degrade-unitname-resolution.test.ts:411-420`（test 13、multi-unit 全被覆 → refuse）と `:428-437`（test 14、"a lone finished unit still resolves, carrying the stage gate"）が両側を pin し、`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記する。`amadeus/spaces/default/memory/project.md:287` の `cid:code-generation:c1-degrade-batch-directive-capture` も逐語で「全 unit covered 後の engine emit は裁定 B（E-OBB2-CG1）どおり fail-closed のため、build 時捕捉が唯一の in-band 経路」と記す。したがって**契約文は既に正しく、欠けているのは宣言的な回復入口**である。
+
+### 引用の currency
+
+#2385 の測定 ref は `b8e3e664f` であり本 intent の observed と**完全一致**する。したがって全 file:line 引用は observed 断面で同一に解決する（区間実測による currency の確定であり、免除の主張ではない）。実読で確認した軽微な差は re-scan 記録の § 行番号引用の currency を参照（いずれも ±2 行の範囲指定差で、指す構文要素は同一）。
+
 
 ## cross-harness resume が対象とする契約（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

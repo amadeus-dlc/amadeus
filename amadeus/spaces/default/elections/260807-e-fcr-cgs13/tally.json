@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部候補を persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T09:00:52Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FCR-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "提案文に引用の誤帰属2件があり record 転記時に訂正すること(結論 persist 0件は不変): (1) #2358 の宣言機構ノルム追補 cid:code-generation:c1-2358-declare-units-done の着地先は team.md でなく project.md:288 — grep 実測: 本 worktree/origin/main とも team.md 0 hit、origin/main project.md 1 hit、PR #2393 files に project.md を含む(コミット 88b10a375)。(2) c7 で引く既存 cid の正名は cid:build-and-test: でなく cid:code-generation:c4-260803-state-integrity(project.md:348 のコメント実測)。",
+      "rationale": "独立実測: memory.md に候補7件の実在根拠を確認(Interpretations 4件・Deviations 2件+#2358 追補)。#2397 = OPEN bug/P2/S3-MAJOR、#2330 = CLOSED、PR #2393 = MERGED 2026-08-07T08:37Z を gh で実測。c1/c5 は intent 固有事実、c3/c4/c6 は既存 cid(always-elect 執行クラス・c1-degrade-batch-directive-capture・deviation-stop 系)の適用実例で新規則なし、c2 の正本は Issue #2397、c7 は同一 intent 内修正済みかつ自己参照縮退ファミリ(c4-260803-state-integrity)の既存被覆+汎用面は c1-2358-declare-units-done として project.md へ persist 済み(origin/main 着地確認)。よって memory 層への新規 persist 0件が妥当。",
+      "submittedAt": "2026-08-07T09:30:00Z",
+      "receivedAt": "2026-08-07T09:00:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FCR-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "提案文に軽微な引用誤り2点があるが persist 0件の結論は不変: (a) c7 の同型 cid の正しい名前空間は cid:code-generation:c4-260803-state-integrity(project.md:348、提案文の build-and-test: は誤り) (b) #2358 追補 cid:code-generation:c1-2358-declare-units-done の着地先は project.md:288 であり team.md ではない。次回参照時に正名で引くこと。",
+      "rationale": "全7候補を独立実測で検証した。c1: #2330 は gh 実測で CLOSED、diary Interpretations(memory.md:6)に実 store 適用の実測記録あり — intent 固有事実で persist 不要。c2: #2397 は gh 実測で OPEN(bug/P2/S3-MAJOR)、回転フレークの知識は Issue が正本。c3: memory.md:9 に always-elect 執行クラス判定の一次証拠(merge-base --is-ancestor exit 1 等)が記録済み — 既存 cid の適用実例。c4/c5: memory.md:11-12 に c1-degrade-batch-directive-capture と E-OBB4-CGS13 分離運用・stance 分類の適用記録 — 新規則なし。c6: memory.md:17 に FR-2.3 の実装前停止→ユーザー裁定の記録 — deviation-stop 系の適用実例。c7: runFocusedValidation の --base-revision 自己参照は scripts/no-silent-drop-evidence-adapter.ts:392-393 で landingParentRevision(第1親)使用へ修正済み(コミット 8b8e1dea9/#2389、同一 intent 内)を直読確認、自己参照縮退の一般則は cid:code-generation:c4-260803-state-integrity が既に被覆。#2358 の宣言機構ノルムは project.md:288 に cid:code-generation:c1-2358-declare-units-done として着地済みを grep 確認、PR #2393 は MERGED(2026-08-07T08:37:21Z)を gh 実測。よって memory 層へ新規 persist すべき残余知識はない。",
+      "submittedAt": "2026-08-07T09:30:00Z",
+      "receivedAt": "2026-08-07T09:00:29Z"
+    }
+  ],
+  "resolutions": []
+}

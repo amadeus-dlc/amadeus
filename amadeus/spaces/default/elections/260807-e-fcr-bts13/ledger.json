@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FCR-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (a) memory.md(construction/build-and-test/memory.md:7-8,16)の候補3件を実読し実在確認。(b) 候補(i)の引用 cid:build-and-test:bt-20260730-1 / c4 / c3 は project.md に現存 — Comprehensive 執行形はその適用実例で新規知識なし。(c) 候補(ii)(iii)の引用 cid:build-and-test:c3-260805-subagent-type-guard(切り分けによる Step 10 履行)/ c4-260805(未改変ベースとの失敗集合 diff)も project.md に現存し、同根の適用実例。(d) Issue #2403 を gh issue view で実測 — bug/P2/S3-MAJOR、最小2ファイル決定的再現(t480→t458)と機序の部分特定(env 単独では説明不能 = t367+t458 green の対照)が本文へ固定済みで、欠陥知識の正本として成立。(e) build-test-results.md:23-27,36 が帰属・起票・latent 判定を裏付け。機序未確定のまま env ??= 漏洩パターン禁止則を persist するのは時期尚早という判断も #2403 本文の対照実測と整合する。よって persist 0件(提案どおり)を採用。",
+      "submittedAt": "2026-08-07T09:16:32Z",
+      "receivedAt": "2026-08-07T09:16:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FCR-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Tradeoffs 候補が引く cid:build-and-test:c3-260805-subagent-type-guard の原実測は『既存事象(自変更に非起因)と立証できた場合』の切り分け履行だが、本件の欠陥は本 intent 自身の Bolt 3(PR #2393、MERGED 実測)由来である。source が origin/main と byte 同一(git diff --stat 0行を実測)で bt-20260730-2 の『未改変ベースで再現』を字義上満たし、ゲート開示+Issue #2403 起票で義務は保存されるため今回は適用実例として受理するが、『自 intent 由来の latent 欠陥を別 PR へ送る』同型が再発した場合は独立 persist の再提案対象とすること。",
+      "rationale": "独立実測: (1) memory.md に候補3件(Interpretations 2 + Tradeoffs 1)実在 (2) 引用 cid 6件(bt-20260730-1/c4/c3/c3-260805/c4-260805/c2-unconditional-ready-boundary)は project.md に全件実在 (3) Issue #2403 は bug/P2/S3-MAJOR で OPEN、本文に最小2ファイル再現・機序部分特定を固定済み (4) 最小再現を自分の Bash で再実行し t480→t458 順で当該テスト 1 fail、t458 単独 8/8 pass を決定的に再確認 (5) t480:48-50 の module スコープ env ??= 未復元も実読確認 (6) PR #2387/#2389/#2392/#2393 全件 MERGED。env ??= 漏洩パターンの一般化は Issue 本文自身が『env 値単独では説明できない』と機序未確定を明記しており、修正 PR での同根棚卸し後に確定すべきという不採用理由は妥当。persist 0件に同意。",
+      "submittedAt": "2026-08-07T10:30:00Z",
+      "receivedAt": "2026-08-07T09:16:53Z"
+    }
+  ],
+  "late": []
+}

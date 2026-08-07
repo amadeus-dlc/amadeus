@@ -1,13 +1,114 @@
 # 依存関係
 
-## TLA+ 仕様層移設の依存関係（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## project-dir 解決への依存関係（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-- **外部依存: 区間内で変化なし**（`package.json` diff は pi extension 登録1行、`bun.lock` 無変更 — 実測）。患部コードは `node:fs` / `node:path` / `node:crypto` と Docker（TLC 実行時）のみに依存する。
-- **核心の内部エッジ — core → plugin の鏡像依存**: `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` が正本で、`plugins/formal-model-check/tools/` 側は byte-identical の生成物（`scripts/package.ts:808-809`、guard は `t-package-generated-plugin-sources:21-22`）。編集方向は一方向（core → 再生成）であり、双方向編集は guard が reject する。
-- **model-map.json の読み手グラフ（8系統）**: sensor（`MODEL_MAP_RELATIVE_PATH`）/ activation（`evaluateTlaModelReadiness`）/ loader（`TLA_MODEL_MAP_PATH` + `verifyAssetPath`）/ applicability / authoring CLI / registration・map CLI / arm・toolchain / テスト基盤。全エッジが `specs/tla/model-map.json` 定数に収斂するため、移設は定数の変更で大半が追従する構造だが、validator・文言・Docker mount の個所は個別書換が要る。
-- **生成物依存**: `dist/` 全8ハーネスに glob・定数が焼き込み（477 occurrences / 138 ファイル、実測）。直接編集不可、`bun run build` で追従。
+### 外部依存の追加なし
+
+本 intent の患部は `node:fs` / `node:path` / `node:url` の標準 API のみに依存する（`statSync` / `existsSync` / `join` / `dirname` / `fileURLToPath`）。新規パッケージ依存は不要であり、`package.json` に変更を要さない。
+
+### 内部依存 — `resolveProjectDir` の被依存分布
+
+`resolveProjectDir` は core/tools 全域の **96 call site**（`core/tools` 内 95 / 15 ファイル、`core/otel/relay.ts:777` に 1）から呼ばれる。上位の依存元は `amadeus-state.ts`（33）、`amadeus-orchestrate.ts`（19）、`amadeus-swarm.ts`（12）、`amadeus-worktree.ts`（9）。
+
+**依存の性質**: いずれも「書き先の決定」に使われる。したがって解決の誤りは1箇所の欠陥ではなく、**state / audit / swarm / worktree の全書込面へ一様に伝播する**。梯子の修正は 96 箇所すべての挙動を同時に変える — 段順を触る変更は影響が広い。
+
+### 内部依存 — `--project-dir` の受け口
+
+18 ツールが `"--project-dir"` を parse し、共有ヘルパー `stripProjectDir`（`amadeus-lib.ts:212-224`）に依存する（runtime / sensor / learnings が使用）。段1 を正規形に据える設計は、**この既存の依存グラフをそのまま使う** — 新規機構を要さない。
+
+### 面間の同期依存
+
+| 依存 | 正本 | 従属面 | 同期手段 |
+|---|---|---|---|
+| allowlist | `packages/framework/harness/claude/settings.json.example:10` | `.claude/settings.json:39`（**tracked**） | 手動同時変更（両方 tracked） |
+| 起動形 | `packages/framework/harness/claude/skills/`（相対形 31） | `.claude/skills/`（相対形 113、未追跡） | `bun run build` |
+| tools 本体 | `packages/framework/core/tools/` | `dist/` / `.claude/tools/`（未追跡） | `bun run build` |
+
+**注意**: `.claude/settings.json` は `.claude/**` の gitignore 対象だが tracked ファイルは ignore を上書きするため、**allowlist だけは build ではなく手動同期の対象**である。他のセルフインストール面（`.claude/tools/` / `.claude/skills/`）とは同期経路が異なる。
+
+### テスト依存
+
+`tests/integration/t144-harness-seam.cli.test.ts` は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38`）。source-only 移行後 `dist/` は未追跡生成物のため、**t144 は `bun run build` 済みに依存する**。ケース B の回帰テストを t144 側へ足す場合、この build 依存を引き継ぐ。build 非依存にしたい場合は `tests/unit/t202-…`（正本を直 import する形）側の系譜を採る。
+
+### 交差する進行中変更
+
+`gh pr list --state open` → **0件**（exit=0）。base→observed の 12 commits も resolver 領域を触っていない（`amadeus-lib.ts` は `+143/-0` で全行 `:4983` 着地、患部区間 210-360 は review SHA `75a1c198d` と `cmp` IDENTICAL / exit=0）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 外部依存
+
+**区間内の実質的な追加・削除はない。** `package.json` の実質 diff は `pi.extensions` への `./dist/pi/.pi/extensions/subagent.ts` 追加 1 箇所のみで、`devDependencies` は無変更。本 intent の患部が持つ外部依存は次のみ:
+
+- `git`（`diff --quiet` / `merge-base --is-ancestor` / `cat-file -e` / root tree 取得）— #2313 の判定はすべてこれに依存する
+- `gh` + GitHub App token — reconcile ワークフローの認証・PR 参照面
+- `node:fs` / `node:path` — advisory store・events 台帳の読み書き
+
+### モジュール間依存（#2313）
+
+```
+.github/workflows/ci.yml:121-157
+   └→ package.json "no-silent-drop"
+        └→ tests/no-silent-drop-gate.ts (CLI 薄皮)
+             └→ tests/no-silent-drop/engine.ts (runGate :295)
+                  ├→ ledger.ts (trustedBaseSha :213-223 / assertShrinkOnly :191 / CANONICAL_PATHS :301)
+                  └→ events.ts (:256 foldEvents ← loadEvents(EVENTS_DIR :15))
+                       └→ [fs] tests/no-silent-drop/events/*.json  … observed で 217 ファイル
+
+.github/workflows/no-silent-drop-evidence-reconcile.yml (push: main)
+   └→ scripts/no-silent-drop-evidence.ts   (:59/:63 分岐、:162-171 回復分岐、:253 実行)
+        └→ scripts/no-silent-drop-evidence-adapter.ts   ← I/O ポート注入（git / gh / fs）
+             ├→ :226-240 freshness 述語  ──[git diff --quiet]──→ throw REBIND_NON_IDENTITY_DRIFT
+             └→ :305-315 / :316-324 tree 証明 2段
+        └→ tests/no-silent-drop/evidence-rebind.ts (buildRebound :341 / buildReconcile :405 /
+                                                    applyRebound :462 / rollbackApplied :550)
+             ├→ repository-adoption-evidence.ts (ADOPTION_RECEIPT_IDS :5 = 23種)
+             └→ [fs] adoption-evidence.json (currentRevision = fe8c701ba…) /
+                     adoption-evidence-manifest.json / evidence/adoption-runs.json   ← EVIDENCE_BUNDLE_PATHS :24-30
+
+.github/workflows/no-silent-drop-retention.yml (週次 + dispatch)
+   └→ scripts/no-silent-drop-retention.ts (dry-run / --apply)  → snapshot 書込 + 列挙 ULID 削除
+```
+
+### 依存構造上の観察（#2313）
+
+1. **freshness 述語は「ゲート実装」ではなく「ゲートが走査するコーパス」に依存している。** `packages/framework/core/tools` は gate の入力側であり実装ではない。この依存の向きの誤りが恒久赤の直接原因であり、`t413:181-195` の選定理由コメントが同じ判断を逐語で記している（"it needs an evidence-regeneration path, not a pin here"）。
+2. **判定と回復が排他分岐にある。** `scripts/no-silent-drop-evidence.ts:162-171` は `currentBindingIsValidForEvent` が **false のときだけ** `proveIdentityOnlyRebind` を呼ぶ。true / throw の2値しか返らない述語に対し、回復は false 側にしか結線されていない。
+3. **adapter は I/O ポートとして分離されているため、純粋計算側に触れずに述語だけを差し替えられる。** これは是正の自由度として有利に働く。
+4. **registry の3ファイルは既に第1段 tree 比較の除外集合として名指しされている**（`evidence-rebind.ts:24-30`）。再生成経路を設計するとき、この既存の除外語彙を再利用できる。
+
+### モジュール間依存（#2330 / #2358）
+
+```
+amadeus-orchestrate.ts
+   ├→ :797-799 applyPendingAdvisoryGuard ──(pending.length === 0)──→ 早期 return（guard 不走行）
+   │      └→ amadeus-advisory-choice.ts
+   │            ├→ readStore :681-691 ──(不在時のみ空 schema 2)
+   │            ├→ parseStore :659-661 ──(schema !== 2 を reject)──→ !ok → fail-closed hold
+   │            └→ parsePending :640-651 ──(schema 1 を受理)  ← salvage に再利用可能な唯一の面
+   │      └→ [fs] .amadeus-advisory-choice.json（per-clone、gitignored、observed で 6 件）
+   │
+   └→ :3707-3733 degradeUnitResolutionError
+          ├→ :3746-3760 unitCovered（produces の実在のみ）  ← #2359 と共有する述語
+          └→ :3807 単一 unit は covered でも解決 → ステージゲートを運ぶ
+```
+
+### 依存構造上の観察（#2330 / #2358）
+
+1. **advisory store の回復は `parsePending` に依存できる。** store 全体は schema 2 を要求するが pending エントリは schema 1 のままであり、遷移に必要な情報は失われていない。回復経路は「既存 pending を読んで新 store を書く」形で既存依存の範囲に収まる。
+2. **guard の起動が pending 非空に依存する**ため、回復入口を guard 経路の内側に置くと届かない。**CLI 側（`amadeus-advisory-choice.ts` の verb dispatch）に置く必要がある** — #2313 と同型の「回復手段がゲートの内側にある」罠を避ける配置判断。
+3. **`unitCovered` は #2358 と #2359 の共有依存点である。** #2358 の回復入口が `unitCovered` の述語自体を変更する形になると、#2359 の修正余地を先取りして塞ぐ。宣言受理点は述語の外側に置く必要がある。
+4. **選挙記録とノルムへの依存**: 是正方針は `amadeus/spaces/default/elections/260730-e-obb2-cg1/` の裁定と `project.md:287` の `cid:code-generation:c1-degrade-batch-directive-capture` に拘束される。fail-closed を維持したまま宣言入口を足す方向のみが既決と両立する。
+
+### 台帳への依存（是正時に該当）
+
+`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` へ行を挿入する修正では、`tests/.coverage-patch-allowlist.json`（区間で +234）と no-silent-drop の events 台帳の双方が波及先になる。該当ノルムは `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）、`cid:code-generation:cg-allowlist-straddle-swell`（span 膨張検査）、`cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only の census は最終 base で採る）。
+
 
 ## cross-harness resume の依存関係（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

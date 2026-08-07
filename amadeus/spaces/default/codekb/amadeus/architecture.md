@@ -1,34 +1,147 @@
 # アーキテクチャ
 
-## TLA+ 仕様層の配置結線構造（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## project-dir 解決の2梯子非対称（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-### 結合点は6系統に散在（単一設定点なし）
+### 構造 — 同一の責務に2つの梯子
 
-`specs/tla` パスへの結合は1箇所に集約されておらず、少なくとも6系統に分散する:
+`packages/framework/core/tools/amadeus-lib.ts` は project root の解決を**2つの独立した関数**で実装している。両者は同じ問い（このプロセスが書くべき workspace はどこか）に答えるが、段構成が異なる。
 
-| 系統 | 所在 | 性質 |
-| --- | --- | --- |
-| (a) model-map の `path` 値 | `specs/tla/model-map.json:7,:11,:60,:64,:69` | データ（digest ピンとセット） |
-| (b) センサー glob + 実装定数 | `packages/framework/core/sensors/amadeus-model-completeness.md:8`、`amadeus-sensor-model-completeness.ts:37`（+ `:507,:535,:760` の直接生成） | frontmatter glob とコード |
-| (c) activation watch + advisory 文言 | `amadeus-plugin-activation.ts:42`（`ACTIVATION_WATCH_GLOBS = ["specs/tla/**"]`）、`:229,:231,:233,:304-305` | コードとユーザー可視文言 |
-| (d) 形式検証の正準 API | `amadeus-formal-verif-model-map.ts:52-56`（定数）、`:58,:62`（`tlaModelPath` / `tlaCfgPath`） | core → plugin byte-identical 鏡像（`scripts/package.ts:808-809`） |
-| (e) TLA loader の境界 | `plugins/formal-model-check/tools/tla-model-loader-internal.ts:186,:344,:364,:367,:371` | 境界チェック文言・パス生成 |
-| (f) CI runner のパス結合 | `plugins/formal-model-check/tools/ci-model-check-domain.ts:189`（Docker bind mount）、`run-model-check-diagnostic.ts:217` | workflow YAML 自体にリテラルは 0 件（`ci.yml:663,:665` のジョブは runner を駆動するのみ） |
+| 段 | CLI 側 `resolveProjectDir` `:226-250` | hook 側 `resolveProjectDirFromHook` `:310-347` |
+|---|---|---|
+| 1 | `if (explicitDir) return explicitDir;` `:228` | `if (payloadCwd && hasWorkspaceMarker(payloadCwd)) return payloadCwd;` `:317` |
+| 2 | `if (process.env.CLAUDE_PROJECT_DIR) return ...` `:231` | `if (process.env.CLAUDE_PROJECT_DIR) return ...` `:320` |
+| 3 | script path 由来（`stripHarnessLeaf(scriptDir, "tools")`）`:236-238` | `findWorkspaceMarkerAncestor(process.cwd())` `:329-330` |
+| 4 | cwd に既知 harness dir があるか `:242-246` | script path 由来（`stripHarnessLeaf(scriptDir, "hooks")`）`:333-335` |
+| 5 | （なし） | cwd に既知 harness dir があるか `:338-343` |
 
-### 2つのハッシュ機構の非対称が移設の意味論を決める
+**非対称は2面ある**:
 
-- **model-map の identity**（`canonicalIdentity()`、`amadeus-formal-verif-model-map.ts:33-43`）は domain 分離された canonical ハッシュであり、パスを畳み込まない。**パス移動で identity は不変** — 変わるのは map 内の `path` 値だけである（実測: `specs/tla/FormalElection.tla` の生 SHA-256 `2c7d6dbf…` ≠ identity `e8cc39a9…`、設計どおり）。
-- **activation watch の spec hash**（`computeSpecHash(specRootForHost(hostRoot), …)`、`:296,:447,:481`）は相対パスをハッシュへ fold するため、**移設は必ず drift として検出される**。`specRootForHost(hostRoot) = dirname(hostRoot)`（`:100-102`）はノルム `cid:code-generation:cg-watch-root-separation`（`amadeus/spaces/default/memory/project.md:408`）の具体化であり、watch glob の基底は「監視対象を所有するルート」で明示宣言する建て付けになっている。
+1. **marker 段の欠落** — hook 側の段1（marker 付き payload cwd）と段3（cwd 祖先の marker 探索）に対応する段が CLI 側に存在しない。
+2. **段2 の相対順位** — hook 側は marker 付き payload cwd が env を**上回る**が、CLI 側は env が段2で無条件に勝つ。
 
-### スキーマレベルの正準パス固定（本移設の構造上の核心）
+hook 側の doc-comment `:306-309` はこの設計の理由を逐語で記す: `It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree`。**同じ理由は CLI 側にもそのまま当てはまるが、CLI 側には適用されていない。**
 
-model-map v2 の validator は正準パスをスキーマレベルで固定している: model/cfg は `parseAssetIdentity`（`:171`、`value.path !== expectedPath` を fail）が `:335` / `:337` で `tlaModelPath(name)` / `tlaCfgPath(name)` の生成値への完全一致を要求し、auxiliaries は `isCanonicalAuxiliaryPath`（`:247`）内の `posix.dirname(value) !== "specs/tla"`（`:250`、エラーメッセージ `:272`）で固定する。**機械的文字列置換では閉じず、validator 定数の定義変更が要る**（core 編集後に plugin 鏡像を byte-identical 再生成 — guard は `tests/integration/t-package-generated-plugin-sources.integration.test.ts:21-22`）。
+### 導入経緯（`git log -L` 実測）
 
-### space 解決機構との未接続
+- `hasWorkspaceMarker` / `findWorkspaceMarkerAncestor` / hook 段3 → **`392a2d781`**（2026-07-09、#641/#682）
+- hook 段1（payload cwd）→ **`e12259ba7`**（2026-07-26、#1482/#1493）
 
-space カーソルの既存機構（`amadeus-lib.ts:429` `ACTIVE_SPACE_POINTER`、`:1122` `activeSpace()` = explicit arg > active-space pointer > `"default"`）は存在するが、**formal-verif 系ツール（activation / model-map / sensor / loader）からの参照は 0 件**（grep exit 1 を実測）。現行の spec 層は space 非依存のルート固定であり、space 配下への移設は「監視対象を所有するルート」の再宣言を意味する — watch 基底ノルムの解釈と active-space 解決規則の新設が要件段へ送る裁定事項である。
+`392a2d781` は `resolveProjectDir` を**一切変更していない**（`git show 392a2d781 -- amadeus-lib.ts | grep -E "^[+-].*resolveProjectDir\b"` → 出力ゼロ、exit=0）。コミットメッセージも `resolveProjectDirFromHook` のみを名指しする。
+
+**事実と仮説の分離**: 「CLI 側が検討されなかった」ことは断定できない（証拠の不在は不在の証拠ではない）。コミット記録が示すのは、**CLI 側への変更も検討の痕跡も残っていない**ことのみ — スコープ限定の帰結と読むのが自然だが、これは仮説である。
+
+### workspace marker の定義と適用限界
+
+`amadeus-lib.ts:283-286` verbatim:
+
+```ts
+function hasWorkspaceMarker(dir: string): boolean {
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
+}
+```
+
+`amadeus/` と `<harness>/tools/` の**両方がディレクトリであること**を要求する（`isDir` `:266-272`。両半がディレクトリでなければならない旨は `:280-282` のコメントが #641 レビュー是正として明記）。
+
+**構造的限界**: `.claude/**` は `.gitignore:24` で ignore され、`.claude/` 配下の tracked ファイルは3件のみ（`CLAUDE.md` / `hooks/amadeus-dispatch.ts` / `settings.json`）。`git ls-files .claude/tools` → **0件**。`.claude/tools/` は完全な未追跡生成物であり、`bun run build` 前の worktree は marker の後半を満たさない。**したがって marker ベースの drift ガードは build 前 worktree を構造的に検出できない** — `resolveProjectDir` に hook と同じ marker 段を足す設計は、この盲点を継承する。
+
+### 設計上の帰結
+
+- marker 段の追加だけでは**ケース C+env は閉じない**（env 段2 が上位に残る限り、worktree 内の正しい lib を読んでいても本線へ倒れる）。段順そのものの再設計が要る。
+- 段順の再設計は [#1287](https://github.com/amadeus-dlc/amadeus/issues/1287)（OPEN、enhancement）と射程が重なる。
+- 段1（明示 `--project-dir`）を正規形に据える案は新機構を要さない — core/tools の 18 ツールが既に `"--project-dir"` を parse し、共有ヘルパー `stripProjectDir`（`amadeus-lib.ts:212-224`）を runtime / sensor / learnings が使用する。
+
+### 交差判定
+
+`gh pr list --state open` → **0件**（exit=0）。resolver 周辺に交差する進行中変更なし。base→observed の 12 commits も resolver 領域を触っていない（`amadeus-lib.ts` の差分は `+143/-0` で全行が `:4983` 着地、患部区間 210-360 は review SHA `75a1c198d` と `cmp` IDENTICAL / exit=0）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 3患部に共通する結線形
+
+```
+            検出                              回復
+#2313  freshness 述語 → throw            currentBindingIsValidForEvent が
+       (adapter:226-240)                 false を返したときだけ
+                                         proveIdentityOnlyRebind へ（evidence.ts:162-171）
+                                         → throw はどの回復分岐にも到達しない
+
+#2330  parseStore が schema !== 2 で      readStore は「store 不在」のときだけ
+       reject (advisory-choice:659-661)  空の schema 2 を返す（:681-691）
+                                         → 既存 schema 1 ファイルは常に parse 失敗
+                                         → 呼び出し側 !ok → fail-closed hold
+                                         → hold を解く CLI verb が存在しない（:1516-1532）
+
+#2358  uncovered.length === 0 →          「unit ディレクトリを作れ」の案内のみ
+       errorDirective                    （orchestrate:3727-3731）
+       (orchestrate:3707-3733)           → 作るべき仕事が残っていない状況では実行不能
+```
+
+**共通形**: いずれも「異常を検知して止める」側は結線済みで、「止まった状態を解消する」側が結線されていない。#2313 は throw と回復分岐が**排他**（throw すると回復条件の評価に到達しない）、#2330 は回復条件が**不在時のみ**に限定、#2358 は回復案内が**到達不能な行為**を指す。これは `cid:requirements-analysis:symmetric-pair-review` が言う対操作の非対称（write⇔check / emit⇔terminal）の、**detect⇔recover 面**である。
+
+### #2313 — evidence reconcile の分岐構造
+
+```
+scripts/no-silent-drop-evidence.ts  reconcile
+  └→ adapter.currentBindingIsValidForEvent(registry, eventRevision)
+       ├ binding が event の祖先でない → false → 回復（proveIdentityOnlyRebind）へ
+       └ binding が event の祖先       → freshness 述語（:226-240）
+            ├ git diff --quiet が status 0（変更なし） → true（no-op で終了）
+            └ status 1（変更あり） → throw REBIND_NON_IDENTITY_DRIFT   ← 現在ここで恒久停止
+```
+
+祖先性の実測（observed）: `git merge-base --is-ancestor fe8c701ba b8e3e664f` → **exit 0**。すなわち主分岐（freshness）へ入る。freshness 述語が読むパス集合は `packages/framework/core/tools` と `:(glob)tests/no-silent-drop/**/*.ts` の2要素で、前者は **gate が走査するコーパス**であってゲート実装ではない。区間 `fe8c701ba..b8e3e664f` で前者に3ファイルの変更があるため（`amadeus-lib.ts` / `amadeus-subagent-observability.ts` / `amadeus-subagent-stats.ts`）、drift が立って throw する。
+
+**正準側は別集合を持つ**: `tests/integration/t413-no-silent-drop-ci-adoption.test.ts:181-195` の述語は `":(glob)tests/no-silent-drop/**/*.ts"` と `"tests/no-silent-drop-gate.ts"` の2要素で、`packages/framework/core/tools` を**意図的に除外**する。選定理由コメント逐語: "Freshness is asserted over the gate's own implementation only. packages/framework/core/tools is the corpus the gate scans, not the gate: … it needs an evidence-regeneration path, not a pin here." 同集合での実測は exit 0（drift なし）。**すなわち adapter の広域 set と t413 の narrow set は同じ意味論の2実装であり、片方だけが広い。**
+
+第2段の tree 証明（`adapter:316-324`）は `pullRequestHead` と `eventRevision` の root tree 一致を要求する。第1段（`:305-315`）は既に `EVIDENCE_BUNDLE_PATHS` の3ファイル（`adoption-evidence-manifest.json` / `adoption-evidence.json` / `evidence/adoption-runs.json`、実体は `tests/no-silent-drop/evidence-rebind.ts:24-30`）を除外した tree 比較の形を持つ。**回復経路を設計するとき、この2段構えのどちらに乗せるかが結線上の分岐点になる。**
+
+### #2330 — advisory choice store の schema 遷移
+
+```
+readStore(path)
+  ├ ファイル不在        → 空の schema 2 store を返す（:681-691）
+  └ ファイル実在        → parseStore
+                            ├ schema === 2 → ok
+                            └ schema !== 2 → reject（:659-661）→ 呼び出し側 !ok → hold
+parsePending
+  └ value.schema !== 1 を拒否（:640-651）= pending エントリ自体は schema 1 のまま
+```
+
+**設計コメントの明文**（`:653-657` 逐語）: "Schema 2 (#2253). A schema 1 store on disk is NOT translated: it fails to parse, and the caller's existing `!storeResult.ok` arm turns that into a fail-closed hold. …the safe answer to that question is to ask the human again — which the hold already does."
+
+この設計は「hold が人間へ訊き直す」ことを前提に成立するが、**hold を人間の操作で解く入口が CLI に無い**。加えて `amadeus-orchestrate.ts:797-799` の `applyPendingAdvisoryGuard` は `if (pending.length === 0) return directive;` で早期 return するため、evaluator がもう advisory を raise しない intent では guard 経路自体が走らず、「訊き直し」も起きない。
+
+結線上の要点: `parsePending` が schema 1 を**受理する**（`:640-651`）ため、**pending エントリは salvage 可能な形で残っている**。回復は「schema 1 の pending を読んで schema 2 の store を書き直す」形が結線的に成立しうる。
+
+### #2358 — degrade 経路の unit 解決
+
+```
+degradeUnitResolutionError（orchestrate:3707-3733）
+  ├ uncovered.length >= 1 → 通常の解決へ
+  └ uncovered.length === 0 → errorDirective（:3727-3731）
+        "Every one of them already holds this stage's required artifacts, so no unit is left to run."
+        "Create the unit directory for this piece of work …, then re-run `next`."
+
+unitCovered（:3746-3760）: produces の実在のみで判定。§12a Review の記録有無を見ない（= #2359 と共有する述語）
+単一 unit の解決（:3807）: if (candidates.length === 1) return { unit: candidates[0], uncovered };  ← covered でも解決する
+```
+
+**非対称は意図的**: `t367-degrade-unitname-resolution.test.ts:411-420` が test 13（複数 unit 全被覆 → refuse）を pin し、直後の test 14（`:428-437`）が「a lone finished unit still resolves, carrying the stage gate」を pin する。`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記する。**詰みは multi-unit 限定**であり、単一 unit では既にゲートが運ばれる。
+
+したがって回復の結線は「multi-unit・全被覆の状態に対して、単一 unit と同じくゲートを運ぶ明示的な宣言入口を与える」形になる。`unitCovered` の述語自体（Review 記録を見ない点）は #2359 の射程であり、本 intent の宣言受理点はその hook を塞いではならない。
+
+### 区間内の構造変化（患部に隣接するもの）
+
+- **no-silent-drop の世代交代（#2338 / PR #2353 = `fe8c701ba`）**: `baseline.json` / `exemptions.json` を削除し、append-only ULID イベント台帳（`tests/no-silent-drop/events/`、observed で 217 ファイル）へ置換。畳み込みは `foldEvents`（`events.ts:213`）→ `FoldedLedger`（`:58`）で、旧 doc 形へは `baselineDocFromFold`（`:305`）/ `exemptionsDocFromFold`（`:319`）が射影する。custody 検証は `listEventUlidsAtRevision`（`:323`）と `assertEventCustody`（`:438`）。`previousDigest` によるバイト束縛は廃止され、残骸は `model.ts:69,76` の optional field と `evidence-rebind.ts:407` / `bootstrap.ts:337,433` のコメントのみ。
+- **この世代交代が #2313 の仮説的な起点**（未確定）: ratchet の入力が `baseline.json` から events 台帳の custody 照合へ移ったことが、reconcile 側の freshness 前提とずれた可能性がある。observed では因果は確定していない。
+- CI の3ワークフロー結線: `ci.yml:121-157`（trusted base ratchet、PR / push / dispatch で base 解決を分岐）、`no-silent-drop-evidence-reconcile.yml`（`push: [main]`、GitHub App token）、`no-silent-drop-retention.yml`（新規、週次 + dispatch、snapshot 書込は専用ブランチの auto-squash PR で feature PR には混ぜない）。
+
 
 ## ハーネス跨ぎ引き継ぎ（cross-harness resume）の結線構造（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-FCR-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (a) memory.md(construction/build-and-test/memory.md:7-8,16)の候補3件を実読し実在確認。(b) 候補(i)の引用 cid:build-and-test:bt-20260730-1 / c4 / c3 は project.md に現存 — Comprehensive 執行形はその適用実例で新規知識なし。(c) 候補(ii)(iii)の引用 cid:build-and-test:c3-260805-subagent-type-guard(切り分けによる Step 10 履行)/ c4-260805(未改変ベースとの失敗集合 diff)も project.md に現存し、同根の適用実例。(d) Issue #2403 を gh issue view で実測 — bug/P2/S3-MAJOR、最小2ファイル決定的再現(t480→t458)と機序の部分特定(env 単独では説明不能 = t367+t458 green の対照)が本文へ固定済みで、欠陥知識の正本として成立。(e) build-test-results.md:23-27,36 が帰属・起票・latent 判定を裏付け。機序未確定のまま env ??= 漏洩パターン禁止則を persist するのは時期尚早という判断も #2403 本文の対照実測と整合する。よって persist 0件(提案どおり)を採用。",
+  "submittedAt": "2026-08-07T09:16:32Z",
+  "receivedAt": "2026-08-07T09:16:47Z"
+}

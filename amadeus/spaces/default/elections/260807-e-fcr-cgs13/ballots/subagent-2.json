@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-FCR-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "提案文に軽微な引用誤り2点があるが persist 0件の結論は不変: (a) c7 の同型 cid の正しい名前空間は cid:code-generation:c4-260803-state-integrity(project.md:348、提案文の build-and-test: は誤り) (b) #2358 追補 cid:code-generation:c1-2358-declare-units-done の着地先は project.md:288 であり team.md ではない。次回参照時に正名で引くこと。",
+  "rationale": "全7候補を独立実測で検証した。c1: #2330 は gh 実測で CLOSED、diary Interpretations(memory.md:6)に実 store 適用の実測記録あり — intent 固有事実で persist 不要。c2: #2397 は gh 実測で OPEN(bug/P2/S3-MAJOR)、回転フレークの知識は Issue が正本。c3: memory.md:9 に always-elect 執行クラス判定の一次証拠(merge-base --is-ancestor exit 1 等)が記録済み — 既存 cid の適用実例。c4/c5: memory.md:11-12 に c1-degrade-batch-directive-capture と E-OBB4-CGS13 分離運用・stance 分類の適用記録 — 新規則なし。c6: memory.md:17 に FR-2.3 の実装前停止→ユーザー裁定の記録 — deviation-stop 系の適用実例。c7: runFocusedValidation の --base-revision 自己参照は scripts/no-silent-drop-evidence-adapter.ts:392-393 で landingParentRevision(第1親)使用へ修正済み(コミット 8b8e1dea9/#2389、同一 intent 内)を直読確認、自己参照縮退の一般則は cid:code-generation:c4-260803-state-integrity が既に被覆。#2358 の宣言機構ノルムは project.md:288 に cid:code-generation:c1-2358-declare-units-done として着地済みを grep 確認、PR #2393 は MERGED(2026-08-07T08:37:21Z)を gh 実測。よって memory 層へ新規 persist すべき残余知識はない。",
+  "submittedAt": "2026-08-07T09:30:00Z",
+  "receivedAt": "2026-08-07T09:00:29Z"
+}

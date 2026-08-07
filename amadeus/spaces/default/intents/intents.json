@@ -969,6 +969,23 @@
     "status": "complete"
   },
   {
+    "uuid": "019fda37-8c17-79ec-96b3-0db6823f0622",
+    "slug": "failclosed-recovery-path",
+    "dirName": "260807-failclosed-recovery-path",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
+    "slug": "projectdir-worktree-fix",
+    "dirName": "260807-projectdir-worktree-fix",
+    "scope": "self-fix",
+    "status": "complete",
+    "docsOnly": {
+      "evidence": "GATE_APPROVED requirements-analysis"
+    }
+  },
+  {
     "uuid": "019fdb7a-041e-7afe-aaa3-d74c8871365f",
     "slug": "tla-specs-relocation",
     "dirName": "260807-tla-specs-relocation",

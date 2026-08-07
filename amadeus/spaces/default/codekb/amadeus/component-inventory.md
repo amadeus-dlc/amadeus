@@ -1,24 +1,98 @@
 # コンポーネント棚卸し
 
-## TLA+ 仕様層の対象コンポーネント（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-| コンポーネント | 責務 | 依存・結合 |
+### 患部コンポーネント
+
+| コンポーネント | 所在 | 役割 | #2352 での位置づけ |
+|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | CLI ツールの workspace root 解決（4段） | **患部本体**。marker 段が無く、env が段2で無条件に勝つ |
+| `resolveProjectDirFromHook` | 同 `:310-347` | hook の workspace root 解決（5段） | **対照実装**。marker 段2つを持つ。緩和対象ではない |
+| `hasWorkspaceMarker` | 同 `:283-286` | `amadeus/` + `<harness>/tools/` の両ディレクトリ存在判定 | marker 段の述語。build 前 worktree では偽 |
+| `findWorkspaceMarkerAncestor` | 同 `:290` 付近 | cwd から祖先方向へ marker 探索 | hook 段3 の実体 |
+| `isDir` | 同 `:266-272` | ディレクトリ限定の存在判定 | #641 レビュー是正で導入（ファイル名だけの偽 marker を排除） |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | 段1 の受け口。runtime / sensor / learnings が使用 |
+| `resolveProjectDir`（ローカル） | `packages/framework/core/hooks/amadeus-statusline.ts:31` | 名前シャドウ。内部で `resolveProjectDirFromHook` を呼ぶ（`:42`） | **lib 関数の caller ではない**。grep 棚卸しの誤カウント源 |
+
+### 設定・文書面のコンポーネント
+
+| 面 | 所在 | 内容 |
+|---|---|---|
+| allowlist（正本） | `packages/framework/harness/claude/settings.json.example:10` | `"Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)"` |
+| allowlist（セルフインストール、tracked） | `.claude/settings.json:39` | 同上 |
+| プロトコル指示 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md:511` | CWD drift warning — 絶対形を推奨、サブシェル代替も明記 |
+| `--project-dir` 使用例 | 同 `:1209-1216` | `amadeus-finding.ts create-github-issue --project-dir <workspace-root>` |
+
+### テスト面 — 非対称がテストにも写っている
+
+| テスト | `covers:` 宣言 | ケース B 被覆 |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts` | `function:harnessDir, function:resolveProjectDir, function:rulesSubdir, file:tools/amadeus-lib.ts`（`:4`） | **なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts` | `function:resolveProjectDirFromHook, file:tools/amadeus-lib.ts`（`:5`） | hook 側のみ |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts` | `hook:amadeus-mint-presence, function:resolveProjectDirFromHook, …, file:settings.json.example`（`:1`） | hook 側のみ |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | opencode / cursor の marker 段（#1048） | hook 側のみ |
+
+**t144 の落とし穴**: test 5 のタイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir の存在）であって workspace marker ではない** — `resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "CWD-marker rung" は段4を指す。t144 が pin するのは段1/2/3/4 のみであり、**ケース B（cwd=worktree marker 保有 × 本線絶対パス lib）を固定するテストは repo 全域で不在**。
+
+**t144 の前提条件**: t144 は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38` `const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools")`）。source-only 移行後 `dist/` は未追跡生成物のため、**このテストは `bun run build` 済みを前提とする**。ケース B の回帰テストを t144 に足す場合、この前提が引き継がれる。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### no-silent-drop（#2313 の患部と隣接コンポーネント）
+
+| コンポーネント | 責務 | 本 intent での所見 |
 | --- | --- | --- |
-| `specs/tla/`（9ファイル） | TLA+ 仕様資産本体。model-map.json（schemaVersion 2、登録2モデル）が digest ピンを保持 | 全コンシューマが `path` 値経由で参照 |
-| core `amadeus-formal-verif-model-map.ts` | model-map v2 正準 API（定数・canonical ハッシュ・validator・parser/diff） | plugin 側へ byte-identical 投影（`scripts/package.ts:808-809`） |
-| core `amadeus-plugin-activation.ts` | spec-hash watch と activation advisory の生成 | `computeSpecHash` / `evaluateTlaModelReadiness` へ依存 |
-| core `amadeus-sensor-model-completeness.ts` + `sensors/amadeus-model-completeness.md` | 登録モデルと正準実装の drift 検出センサー | `MODEL_MAP_RELATIVE_PATH` + frontmatter glob |
-| core `amadeus-advisory-choice.ts`（`:894-895`） / `tla-module-deps.ts`（`:4,:38,:59`） | advisory 選択の既定モデル指定 / module 依存解決 | `specs/tla` パス生成 |
-| plugin `tools/tla-model-loader-internal.ts` | map 境界検査・identity 照合（SOURCE_DRIFT 棄却）・loader | core の map API に依存 |
-| plugin `tools/ci-model-check-domain.ts` / `run-model-check-diagnostic.ts` | CI runner（Docker bind mount 検査 / 診断） | workspace 相対パス結合 |
-| plugin `tools/tla-applicability.ts` / `tla-authoring.ts` / `tla-evidence.ts` / `tla-registration.ts` / `tla-model-map.ts` / `tla-arm.ts` / `tlc-toolchain.ts` | applicability 判定 / authoring CLI / evidence store / registration・map CLI / arm / toolchain | map 定数経由（tla-evidence のみ別 root `specs/tla-evidence`） |
-| plugin `stages/formal-model-check.md`（`:12,:14-15`） / `README.md` | ステージ定義（inputs が map を名指し、sensors 宣言） / プラグイン説明 | センサー実体は core 側 |
-| テスト fixture 供給3件（`tests/harness/formal-model-fixture.ts:11-12`、`tests/formal-verif/support/tla-toolchain-harness.ts:54`、`tla-authoring-e2e-fixture.ts:55,59,79`） | 実レイアウト fixture の供給 | 実リポジトリの map を直接読む |
-| docs 4文書対訳 + `docs/amadeus-files.{md,ja.md}` | 利用者向け規約の記述 | amadeus-files 側は `specs/` エントリ新設が必要 |
+| `tests/no-silent-drop/events.ts` | append-only ULID イベント台帳。`GrantEvent`（`:19`）/ `RevokeEvent`（`:31`）/ `SnapshotEvent`（`:47`）の3型、`foldEvents`（`:213`）→ `FoldedLedger`（`:58`）、旧 doc 形への射影 `baselineDocFromFold`（`:305`）/ `exemptionsDocFromFold`（`:319`）、custody 検証 `listEventUlidsAtRevision`（`:323`）/ `assertEventCustody`（`:438`） | #2338 で新設。`EVENTS_DIR`（`:15`）配下は observed で **217 ファイル**（区間ですべて新規追加）。`previousDigest` によるバイト束縛は廃止済みで、残骸は `model.ts:69,76` の optional field と `evidence-rebind.ts:407` / `bootstrap.ts:337,433` のコメントのみ |
+| `tests/no-silent-drop/ledger.ts`（308行） | baseline / exemption / approval のパースと shrink-only ラチェット。`assertShrinkOnly`（`:191`）/ `assertExemptionsShrinkOnly`（`:202`）/ `trustedBaseSha`（`:213`）/ `baselineAtRevision`（`:226`）/ `approvalDigest`（`:242`）/ `validateApproval`（`:250`）/ `buildCandidate`（`:271`）/ `CANONICAL_PATHS`（`:301`） | `:213-223` の base 解決順が `--base-revision` 規約の実装。厳密祖先性を要求する |
+| `tests/no-silent-drop/engine.ts`（315行） | `Mode`（`:52`）= `check` / `census-evidence` / `approve-evidence` / `baseline-candidate`、`runGate`（`:295`）、`isMode`（`:304`）、`:256` で `foldEvents(loadEvents(repoRoot).byUlid.values())` | `:250-252` が trusted base null を fail-closed で拒否 |
+| `tests/no-silent-drop-gate.ts`（36行） | CLI 薄皮 | `package.json` の `"no-silent-drop"` スクリプト実体 |
+| `tests/no-silent-drop/repository-adoption-evidence.ts`（468行） | 採用エビデンスの値オブジェクト層。`ADOPTION_RECEIPT_IDS`（`:5`）は **23 種**、`readEvidenceArtifact`（`:293`）/ `evidenceDigestForEntry`（`:353`）/ `validateEvidenceBundle`（`:445`）/ `validateEvidenceRegistryFile`（`:459`） | `repository-adoption.ts`（227行）は registry 型（`AdoptionReceipt` `:13` / `EvidenceRegistry` `:22`）を被せる薄い層で上を re-export |
+| `tests/no-silent-drop/evidence-rebind.ts`（623行） | registry を別 revision へ rebind / reconcile する遷移層。`buildReboundBundle`（`:341`）/ `buildReconcileBundle`（`:405`）/ `applyReboundBundle`（`:462`）/ `rollbackAppliedBundle`（`:550`）、status 語彙（`:40`） | `:24-30` の `EVIDENCE_BUNDLE_PATHS` 3定数が第1段 tree 比較の除外集合。対象パスは `EVIDENCE_REGISTRY_PATH`（`:24`）/ `EVIDENCE_MANIFEST_PATH`（`:25`）/ `EVIDENCE_RUNS_PATH`（`:26`） |
+| `scripts/no-silent-drop-evidence.ts`（270行） | rebind / reconcile の CLI | **verb は2つのみ**。`:162-171` の回復分岐は `currentBindingIsValidForEvent` が false のときだけ走る |
+| `scripts/no-silent-drop-evidence-adapter.ts`（463行） | 上記 CLI に注入される I/O ポート（git / gh / fs）。純粋な rebind 計算と副作用を分離 | **`:226-240` が throw 点**。freshness の対象パスが `packages/framework/core/tools` を含む広域 set |
+| `scripts/no-silent-drop-retention.ts`（175行、新規） | snapshot 書込と列挙済み ULID の削除 | `parseArgs`（`:28`）は dry-run / `--apply` のみ。維持系であり drift 回復ではない |
+| `scripts/no-silent-drop-migrate-events.ts`（87行、新規） | 旧 baseline/exemptions → events の一回性移行 | #2338 の移行面 |
+| `tests/no-silent-drop/adoption-evidence.json` | registry 着地点 | `currentRevision = fe8c701ba15c0677a4ec18cc3715ff1086318dde`、receipts **23件** |
+| `tests/integration/t413-no-silent-drop-ci-adoption.test.ts` | CI 採用の正準 pin | `:181-195` が freshness の **narrow set**（`":(glob)tests/no-silent-drop/**/*.ts"` と `"tests/no-silent-drop-gate.ts"`）と選定理由コメントを持つ。adapter の広域 set と同一意味論の別実装 |
 
-**所有境界の観察**: spec 層の「所有者」は現行ではリポジトリルート（space 非依存）であり、space カーソル機構（`amadeus-lib.ts:429,:1122`）は formal-verif 系コンポーネントから未接続（grep exit 1 実測）。移設は所有境界そのものの移動であり、単なるファイル移動ではない。
+### CI ワークフロー
+
+| ワークフロー | トリガ | 本 intent での所見 |
+| --- | --- | --- |
+| `.github/workflows/ci.yml:121-157` "No silent drop (trusted base ratchet)" | PR / push / workflow_dispatch | base 解決を3経路で分岐し、40桁小文字 SHA・非全零・`git cat-file -e` を検証。**observed で success**（main 最新 run 31135183415 は全 job success） |
+| `.github/workflows/no-silent-drop-evidence-reconcile.yml` | `push: [main]` | **恒久赤の所在**。直近5 run のうち 3 run が failure、全件 `REBIND_NON_IDENTITY_DRIFT`。preflight 失敗は `REBIND_PREFLIGHT_FAILED` / `REBIND_CREDENTIAL_FAILED` / `REBIND_CHECKOUT_FAILED` を step summary へ |
+| `.github/workflows/no-silent-drop-retention.yml`（新規、#2338） | 毎週月 03:00 UTC + workflow_dispatch | dry-run で `would write snapshot` を検出したときだけ `nsd-retention-<ts>` ブランチを切って `--apply` → auto-squash-merge PR。**feature PR には混ぜない設計** |
+
+### advisory choice（#2330）
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-advisory-choice.ts`（1567行） | advisory の人間選択 receipt。`parsePending`（`:640-651`）/ `parseStore`（`:659-661`）/ `readStore`（`:681-691`）/ CLI（USAGE `:1516-1520`、dispatch `:1522-1532`） | **CLI verb は `record` / `correct-misattributed` の2つのみ**。schema 1 store からの回復 verb は不在。`:653-657` の設計コメントが「翻訳せず fail-closed hold にする」意図を明文で記す |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `applyPendingAdvisoryGuard`（`:797-799`） | `if (pending.length === 0) return directive;` の早期 return により、evaluator がもう advisory を raise しない intent では guard 経路自体が走らない |
+| `.amadeus-advisory-choice.json`（per-clone ランタイム、gitignored） | pending / receipts の保存面 | observed の clone 内に **6 件**実在。**schema 1 が 5 件・schema 2 が 1 件**（分布表は re-scan 記録を正本とする）。1 clone 内で複数 worktree にまたがって schema 1 が滞留することを実測で確定 |
+
+### degrade 経路の unit 解決（#2358）
+
+| コンポーネント | 責務 | 本 intent での所見 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `degradeUnitResolutionError`（`:3707-3733`）/ `unitCovered`（`:3746-3760`）/ 単一 unit 解決（`:3807`） | 全被覆アーム（`:3727-3731`）は「unit ディレクトリを作れ」と案内するが、残る仕事が無い状況では実行不能。`unitCovered` は produces の実在のみで判定し §12a Review の記録有無を見ない（#2359 と共有） |
+| `tests/integration/t367-degrade-unitname-resolution.test.ts` | 非対称の両側 pin | `:411-420` test 13（multi-unit 全被覆 → refuse）、`:428-437` test 14（単一 unit は covered でもゲートを運ぶ）、`:422-426` コメントが E-OBB2-CG1 を INTENTIONAL と明記。**詰みは multi-unit 限定** |
+| 選挙記録 `amadeus/spaces/default/elections/260730-e-obb2-cg1/` ほか（`-cgs13` / `-ras13` / `-res13`） | 裁定の一次記録 | ディレクトリ実在を確認 |
+| `amadeus/spaces/default/memory/project.md:287` | `cid:code-generation:c1-degrade-batch-directive-capture` | 逐語で「全 unit covered 後の engine emit は裁定 B（E-OBB2-CG1）どおり fail-closed のため、build 時捕捉が唯一の in-band 経路」 |
+
+### 干渉先
+
+`gh issue list --state open --label bug` → open bug **16 件**（対象3件を含む）。**#2359 は OPEN・未修正**であり、#2385 Q4-B（明示宣言）が課す「宣言受理点を #2359 の hook として空けておく」制約は observed でも有効。
+
+### 区間内で新設されたコンポーネント（患部隣接）
+
+`amadeus-sensor-pr-convergence-report-format.ts`（+165）、`amadeus-session-takeover.ts`（+275）、`amadeus-subagent-observability.ts`（+293）、`amadeus-subagent-stats.ts`（+468）、`core/sensors/amadeus-pr-convergence-report-format.md`（+64）。後2者の `.ts` は #2313 の freshness 広域 set に含まれ、drift の直接原因ファイルである。plugin では `plugins/pr-convergence/` の6ファイルが全新規、`plugins/formal-model-check/` に `stages/tla-authoring.md`（+160）と `tools/tla-registration.ts`（+349）が追加。
+
 
 ## cross-harness resume の対象コンポーネント（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

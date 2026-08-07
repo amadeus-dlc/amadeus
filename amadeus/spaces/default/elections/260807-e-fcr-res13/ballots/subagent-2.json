@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-FCR-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "C3 は team.md:100 cid:requirements-analysis:issue-cross-review が既に定める『起票者以外の2名/独立エビデンスのないコメントは2名に数えず』の運用面再述に近く、独立 cid ではなく xrev 系 cid への軽量な追補(著者実測1手と不成立時の代替接地の明記)に留めること。",
+  "rationale": "3候補すべてを observed b8e3e664f で独立実測した。C1: #2385 の影響・価値(逐語『全 PR の trusted base ゲートが内容と無関係に BASELINE_INVALID になるため、他2件を含むあらゆる修正 PR が着地できない』P1/S1-FATAL)は observed で失効している — #2313 は 2026-08-05T16:24:27Z 起票だが PR #2379/#2380/#2381/#2383/#2384 は 2026-08-07 に全て merged、main run 31135183415 は全 job success(ratchet を含む Lint and complexity も success)。一方で患部 scripts/no-silent-drop-evidence-adapter.ts:226-240 の広域 freshness set(packages/framework/core/tools + :(glob)tests/no-silent-drop/**/*.ts)は現存を実読確認。患部の現存と被害範囲の currency が別事実であることが実測で分離しており、既存 cid(c1-preexisting-pr-inventory=先行 PR の有無 / E-XBB-RE-S13-c2・c1-xrev-single-issue=引用行の currency)はこの面を覆っていない(memory 層 grep で被害範囲/緊急度の再実測を課す規範は 0 hit)。追補先 c1-preexisting-pr-inventory は同じ『着手時の鮮度確認』面であり妥当。C2: 実行実測で  引数なし=exit 2 BASELINE_INVALID、=strict ancestor 拒否、=exit 0 NO_SILENT_DROP_OK を再現。engine.ts:250-252 の null 拒否と ledger.ts:213-223 の解決順(explicit → AMADEUS_NSD_TRUSTED_BASE_SHA → GITHUB_BASE_SHA → GITHUB_EVENT_BEFORE)も実読一致。追補先 c3-260805-subagent-type-guard は同一 CLI の同一エラー文を『根本原因=ベース revision 解決依存』として記録済みであり、本候補はその帰属を『呼び出し規約未充足』へ精密化する真の追補で再述ではない。C3: gh issue view 実測で #2313(4件)/#2330(1件)/#2358(1件)のコメント著者は全て起票者 j5ik2o、xrev 前提は不成立と確認。追補先の xrev 系 cid は xrev 成立を所与とし検証手続を持たないため追補は妥当だが、留保のとおり範囲は限定すべき。C4 不採用に同意 — 独立実測で tests 配下の tNNN はユニーク 436 中 173 が複数ファイル共有であり(候補文の 176 とは計数法差の微差)、区間固有の債務ではなく cid:requirements-analysis:mechanism-cite-verify-at-draft の追補(E-FSPRAS13)が『同一テスト番号の複数ファイル共存は実在する生態』と既に明文化しているため再述にとどまる。なお C1 の患部引用は候補文でパス接頭辞 scripts/ が省略されており、persist 時はフルパスで書くこと(E-FSPRAS13)。",
+  "submittedAt": "2026-08-07T03:54:57Z",
+  "receivedAt": "2026-08-07T03:54:57Z"
+}

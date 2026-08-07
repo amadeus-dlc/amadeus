@@ -1,38 +1,141 @@
 # コード品質評価
 
-## TLA+ 仕様層移設の品質所見（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## project-dir 解決の品質債務（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-### テストベースライン（observed、Developer scan 実測。Architect はコード無変更のため再実行なし）
+### 債務1 — 同一責務の2実装が非対称に進化している（構造債務）
 
-| ファイル | pass | fail | expect | exit |
-| --- | --- | --- | --- | --- |
-| `tests/integration/t-formal-verif-mirror-model-registration.integration.test.ts` | 7 | 0 | 20 | 0 |
-| `tests/unit/t-formal-verif-model-map-v2.test.ts` | 27 | 0 | 102 | 0 |
-| `tests/integration/t402-tla-module-deps.test.ts` | 19 | 0 | 40 | 0 |
-| `tests/integration/t403-tla-loader-generalization.test.ts` | 12 | 0 | 36 | 0 |
-| **計** | **65** | **0** | **198** | **0** |
+`resolveProjectDir`（`amadeus-lib.ts:226-250`）と `resolveProjectDirFromHook`（同 `:310-347`）は同じ問い（このプロセスが書くべき workspace はどこか）に答えるが、段構成が異なる。marker 段2つ（`:317` / `:329-330`）は hook 側にのみ導入された（`392a2d781` = #641、`e12259ba7` = #1482）。
 
-`specs/tla` を参照するテスト・fixture は **51ファイル / 272 行**（unit 16 / integration 30 / e2e 2 / support 2 / harness 1）あり、移設の明示改訂面は広い。**最大 tNNN は t480** — 次回採番は t481 から。
+`cid:requirements-analysis:symmetric-pair-review`（対操作の対称性を明示観点にする）が扱う「片側だけ実装された非対称」クラスタの典型である。**bootstrap 由来バグ14件の過半が同クラスタだった**という既存の実測と同型。
 
-### 品質ゲートの現状
+### 債務2 — 無音の fail-open（検証劇場の隣接形）
 
-- Lint: Biome（cognitive-complexity warnings は既知ベースライン）。
-- CI: `formal-model-check` ジョブ（`ci.yml:663`）は `workflow_dispatch` 限定（`:665`）で常時ゲートではない。YAML に `specs/tla` リテラルは 0 件で、パス結合は runner コード側（`ci-model-check-domain.ts:189` / `run-model-check-diagnostic.ts:217`）。
-- 鏡像 guard: core → plugin の byte-identical は `t-package-generated-plugin-sources` が機械検査。
+`resolveProjectDir` に警告・例外は**1つも無い**（`sed -n '226,250p' | grep "console\|warn\|throw"` → exit=1、出力ゼロ）。返り値は常に `string` で、「確信度の低い fallback に落ちた」ことを表現しない。ケース B は**正常な返り値として本線パスを返す**。
+
+`org.md` Forbidden の検証劇場禁止は「偽の緑」を禁じるが、本件はその隣接形 — **偽の隔離**。ガードが無いのではなく、誤りが誤りとして観測されない。
+
+### 債務3 — テストの非対称（テスト債務）
+
+| テスト | 対象梯子 | ケース B |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts`（`covers:` は `:4`） | CLI 側 | **被覆なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（`:5`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts`（`:1`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | hook 側（#1048） | 被覆（hook のみ） |
+
+**ケース B を固定するテストは repo 全域で不在。** 実装の非対称がテストの非対称としてそのまま写っている — 欠陥が「テストが緑のまま」生存できる構造。
+
+**t144 test 5 の紛らわしさ**: タイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir 存在）であって workspace marker ではない**。`resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "marker" 語が実体と対応していない — 読み手を誤らせる命名債務。
+
+### 債務4 — stale comment
+
+`amadeus-lib.ts:6673` の `// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.` は実装と食い違う。`resolveProjectDir` が読むのは `CLAUDE_PROJECT_DIR`（`:231`）であり `AMADEUS_PROJECT_DIR` ではない。
+
+（Developer scan の注記: reviewer-1 が `:6530` と報告した射程外指摘は、observed では `+143` 行の下流にあたるため `:6673` に着地する。）
+
+### 債務5 — 文書と実装の逆向き指示
+
+`stage-protocol.md:511` は絶対形（`$CLAUDE_PROJECT_DIR/.claude/tools/`）を推奨するが、その形がケース B を生む。ただし同じ文中にサブシェル代替が既に明記されており、**正しい代替は正本にすでに書かれている**。文書全体の書き換えではなく、推奨の順序の是正で足りる可能性が高い。
+
+### 債務6 — allowlist と実起動形の不一致
+
+allowlist（`settings.json.example:10` / `.claude/settings.json:39`）は絶対形のみを許可するが、正本スキルの起動行は**全 31 件が相対形**であり、正本における絶対形の唯一の出現は allowlist エントリ自身である。**allowlist が許可している形を、誰も発行していない。**
+
+同一ファイル内の非対称（#1492 の既指摘）も現存: hook 起動行 14本はすべて `${CLAUDE_PROJECT_DIR:-.}` のフォールバック付きクォート形だが、`:10` の allowlist だけが素の `$CLAUDE_PROJECT_DIR`。
+
+### 債務7 — 点修正の反復（プロセス債務）
+
+| Issue | state | 修正の形 |
+|---|---|---|
+| #796 | CLOSED | `7e6a7c33e` — `fire` に `--project-dir` を配線（段1 での点回避、梯子は無変更） |
+| #1450 | CLOSED | `04efcd42c` — election の既定 pd を `resolveProjectDir` 経由へ（呼び出し側の点修正） |
+| #1287 | OPEN | enhancement、解決順の再設計（ADR 前提） |
+| #2352 | OPEN | 本 intent |
+
+**2件の先例はいずれも呼び出し側の点修正で、梯子そのものには触れていない。** 同じ根から4件目が出ていることは、点修正が根本に届いていないことの実測である。`cid:code-generation:same-root-inventory`（同根パターンの全数棚卸し）の観点で見れば、本件は「4回目に初めて棚卸しが要る」状態。
+
+### 是正の制約（品質面から）
+
+- marker 段の追加だけでは**ケース C+env が閉じない**（env 段2 が上位に残る）。
+- marker 述語には構造的盲点がある（`git ls-files .claude/tools` → **0件**、build 前 worktree で偽）。marker ベースの drift ガードは build 前 worktree を検出できない。
+- 段順の再設計は #1287 と射程が重なるため、スコープ境界の裁定が要る。
+
+### 未測定として残る点（仮説・断定不可）
+
+- #641 の時点で CLI 側が「検討されなかった」のか「検討して見送られた」のか — コミット記録は前者を示唆するが、これは**証拠の不在**であって不在の証拠ではない。
+- 実運用でケース B が発生した監査証跡は未探索（頻度未測定）。
+- clone 内 worktree の marker 成立/不成立の全数再census は、本セッションの worktree 隔離ガードにより実行不能（構造的根拠のみ上記で確定）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 
 ### 技術的負債シグナル
 
-1. **`specs/tla` ハードコードの6系統分散** — 単一の設定点に集約されておらず、定数・frontmatter glob・文言・Docker mount が別々に書かれている（内訳は architecture.md 本 intent 節）。
-2. **スキーマレベルの正準パス固定** — validator 定数の定義変更を要し、機械置換で閉じない。
-3. **active-space 相互作用が未定義** — space 配下移設で watch/実行対象の解決規則が新たに必要になるが、現行コードに機構なし（`activeSpace()` は formal-verif 系から未参照、grep exit 1 実測）。
-4. **`specs/tla-evidence` は別 root**（`tla-evidence.ts:434`）— 機械置換に追従しない。observed で実体未生成。watch glob 外に置く判断は 260804-tla-authoring の ADR に記録済み。
-5. **advisory 文言は audit 実記録を持つユーザー可視契約**（`260804-tla-authoring` audit jsonl:525）— 文言変更は移設告知の設計とセットで扱う。
+| # | シグナル | 実測根拠 | クラス |
+| --- | --- | --- | --- |
+| ① | **detect⇔recover の非対称（3件共通）**: 異常検知は結線済みで、検知後の回復が結線されていない | #2313 `adapter:226-240` の throw に対し回復分岐は `evidence.ts:162-171` の false 側のみ / #2330 `readStore:681-691` の回復は「不在時のみ」/ #2358 `orchestrate:3727-3731` の案内は実行不能な行為を指す | 可用性・回復可能性。`cid:requirements-analysis:symmetric-pair-review` の detect⇔recover 面 |
+| ② | **同一意味論の2実装（#2313）**: freshness 述語が広域 set と narrow set の2箇所に別実装で存在する | `adapter:226-240` は `packages/framework/core/tools` を含む／`t413:181-195` は含まない。同区間の実測で前者 drift あり・後者 drift なし | 「canonical 1定義から導出」原則（construction phase）の違反 |
+| ③ | **依存の向きの誤り（#2313）**: 「ゲートが走査するコーパス」を「ゲート実装の鮮度」として読んでいる | `t413:181-195` の選定理由コメント逐語「packages/framework/core/tools is the corpus the gate scans, not the gate: … it needs an evidence-regeneration path, not a pin here」 | 設計判断の誤り。**正しい判断は既にテスト側に文書化されている** |
+| ④ | **回復 verb の欠如（#2313 / #2330）**: 検知した状態を解消する CLI 面が存在しない | `scripts/no-silent-drop-evidence.ts` の verb は `rebind` / `reconcile` の2つのみ（usage `:32-33`）／`amadeus-advisory-choice.ts` の verb は `record` / `correct-misattributed` の2つのみ（USAGE `:1516-1520`、dispatch `:1522-1532`） | 契約の穴 |
+| ⑤ | **回復手段がゲートの内側にある（#2330）**: 「訊き直す」設計が、訊き直しの起動条件に依存して不発になる | `amadeus-orchestrate.ts:797-799` `if (pending.length === 0) return directive;`。evaluator がもう advisory を raise しない intent では guard 経路自体が走らない | ①の特殊形。回復入口の配置制約として要件段へ持ち込む |
+| ⑥ | **schema 遷移の片側実装（#2330）**: store は schema 2 のみ受理、pending は schema 1 のみ受理という非対称が同居し、遷移層がない | `parseStore:659-661` / `parsePending:640-651` / 設計コメント `:653-657` | 意図的な設計判断だが、**遷移の完了手段を欠く点で不完全**。pending が schema 1 のまま残るのは salvage の余地 |
+| ⑦ | **述語の共有による修正干渉（#2358 / #2359）**: `unitCovered` が produces の実在のみで判定し §12a Review の記録有無を見ない | `orchestrate:3746-3760`。#2359 は **OPEN・未修正**（`gh issue list --state open --label bug` → open bug 16 件） | 修正範囲の制約。宣言受理点は述語の外側に置く必要がある |
+| ⑧ | **evidence binding の陳腐化**: reconcile が恒久赤の間、registry の `currentRevision` が前進しない | `adoption-evidence.json` の `currentRevision = fe8c701ba15c0677a4ec18cc3715ff1086318dde`（= #2338 の着地点）。直近5 run のうち 3 run が failure | 遅効性の劣化。**PR ゲート自体は緑**（下記の影響範囲訂正を参照） |
 
-### 件数の読み方（品質上の注意）
+### 影響範囲についての訂正（#2385 との食い違い）
 
-全域 826 occurrences / 264 ファイルのうち **actionable は 80 ファイル / 358 行**にすぎない。残り 184 ファイル / 369 行は歴史記録（intents 141 / elections 30）・派生キャッシュ（codekb 12）・ノルムの learned エントリ（memory 1）で**書換禁止** — 全域件数をそのまま変更工数と読んではいけない。
+#2385 は #2313 を「全 PR の trusted base ゲートが偽赤になり、あらゆる修正 PR が着地できない」とするが、observed 断面では成立しない:
+
+- main の最新 CI run **31135183415 は success**（ratchet ステップを含む `Lint and complexity` job も success）
+- ローカル実測 `bun tests/no-silent-drop-gate.ts check --base-revision <HEAD^ の完全 SHA>` → exit 0 / `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`
+
+**恒久赤は main 限定の `No Silent Drop Evidence Reconcile` ワークフローのみ**。修正の必要性は変わらないが、**S1-FATAL / P1 の根拠文は requirements 段で再判定が要る**。
+
+### 検証面の弱さと強さ
+
+- **強い面**: #2358 は両側が pin されている（`t367-degrade-unitname-resolution.test.ts:411-420` = multi-unit 全被覆 → refuse、`:428-437` = 単一 unit は covered でもゲートを運ぶ）。`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記するため、**`cid:reverse-engineering:c1-pinned-behavior-ruling` が適用され、実装段で着手せず要件段で仕様裁定とテスト契約の明示改訂をセットで確定する必要がある**。
+- **強い面（#2313）**: `t413:181-195` が正しい narrow set を pin しており、是正の目標形がテスト側に既に存在する。
+- **弱い面（#2330）**: schema 1 store の回復に関する pin は存在しない。回復 verb を新設する場合、`org.md` Mandated の「落ちる実証」（失敗ケースを注入して実際に赤くなることを実証）を新規に組む必要がある。
+- **弱い面（#2313）**: 恒久赤は CI ワークフローの実行時にのみ現れ、リポジトリ内のテストで再現されていない。回復経路の受け入れ基準は、`REBIND_NON_IDENTITY_DRIFT` に至る条件を fixture 化できるかに依存する。
+
+### 台帳への波及（是正時に該当するノルム）
+
+`tests/.coverage-patch-allowlist.json` は区間で **+234**、`tests/.coverage-registry.json` は **+76**、`tests/.coverage-ratchet.json` は **+4/−4**。`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` へ行を挿入する修正では次が該当する:
+
+- `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）
+- `cid:code-generation:cg-allowlist-straddle-swell`（既存 waiver レンジの span 膨張検査）
+- `cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only ガードの census は最終 base で採る）
+- `cid:code-generation:c1-260803-state-integrity`（no-silent-drop 台帳は events 追記のみ。削除・snapshot は maintenance CI 専用）
+
+### coverage / 静的ゲートの現況（observed）
+
+| ゲート | 現在値 |
+| --- | --- |
+| `tests/.coverage-ratchet.json` | function 176 / audit 44 / scope 15 / stage 8 / hook 14 / subcommand 84 / render-surface 7 |
+| `tests/.coverage-project-policy.json`（区間で無変更） | `minimumProjectLineCoverageBasisPoints: 9000`、`maximumRelativeDropBasisPoints: 2` |
+| `tests/.coverage-project-baseline.json`（区間で無変更） | `hits 7225 / lines 17648` |
+| `tests/.complexity-baseline.json` | `threshold: 15`、最大値は `amadeus-statusline.ts main` CCN 26 |
+| mechanism ratchet | `tests/gen-coverage-registry.ts:126-138`。テストファイル名のドットセグメントが mechanism を宣言し、ユニットの `minMechanism` 未満なら UNDER-MECHANISM = 未カバー扱い |
+
+静的ゲート（CI job "Lint and complexity"）の順序: `bun run lint`（biome）→ no-silent-drop（`ci.yml:121`）→ `tests/callsite-guard.ts --check`（`:164`）→ `tests/unchecked-cast-guard.ts --check`（`:172`）→ build → `tests/deletion-gate.ts --check`（`:184`）→ `tests/complexity-gate.ts --check`（`:199`）。
+
+### テスト採番（tNNN）
+
+- 使用済み **最大 = t465**（`tests/integration/t465-kimi-role-lock-ownership.integration.test.ts`）、ユニークな採番値は **436 個**
+- 未使用の空き番号（1..465）: 1 2 3 4 5 6 7 8 9 24 50 58 73 74 101 139 159 217 263 316 317 318 323 324 329 330 331 332 333 334 343 348 358 392 421 422 423 424
+- **新規テストは t466 以降**を使う（`cid:code-generation:swarm-test-number-reservation`）
+- 区間で追加された新規テスト: integration **23 本**（t433, t445, t447〜t465）、unit **16 本**（t444, t446, t448〜t463）。ほかに `tests/formal-verif/support/tla-authoring-e2e-{driver,fixture}.ts`
+
+なお同一 tNNN が複数ファイルで共存する事象は**このリポジトリの既存の生態**であり（`cid:requirements-analysis:mechanism-cite-verify-at-draft` の追補が「同一テスト番号の複数ファイル共存は実在する生態」と既に明文化）、区間固有の債務ではない。**債務としては記録しない。**
+
+### 区間内の品質変化
+
+患部3面のコードはいずれも本区間で新規に壊れたものではないが、**#2313 の drift は区間内で発生した**: freshness 広域 set が読む `packages/framework/core/tools` に区間内で3ファイルの変更があり（`amadeus-lib.ts` / `amadeus-subagent-observability.ts` / `amadeus-subagent-stats.ts`）、これが `REBIND_NON_IDENTITY_DRIFT` の直接の入力である。すなわち**述語の設計は区間外、発火は区間内**である。
+
 
 ## cross-harness resume の品質所見（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

@@ -1,12 +1,88 @@
 # 技術スタック
 
-## TLA+ 仕様層移設の技術断面（260807-tla-specs-relocation、現在、observed `d98dd903`）
+## worktree・生成物・環境変数の前提（260807-projectdir-worktree-fix、現在、observed `4a3da7d62`）
 
-本節の測定 ref はすべて observed `d98dd9039db3949eeb140941deeb4468f717e57a`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 `git merge-base --is-ancestor` exit 0、距離 **85 commits / 1232 files**）。全数列挙と検証台帳は `re-scans/260807-tla-specs-relocation.md` を正本とする。
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
 
-- **区間内のスタック変化なし**: ランタイム Bun 1.3.13 / TypeScript（ESM、`tsc --noEmit`）/ Biome / `bun test`（正準ランナー `tests/run-tests.ts`）は不変。外部依存の追加削除はなく、`package.json` の区間 diff は `pi.extensions` への `subagent.ts` 登録1行のみ（`bun.lock` 無変更、実測）。
-- **焦点技術**: TLA+（`.tla` / `.cfg`、9ファイル）と TLC — Docker 経由の形式検証ランタイムで、CI runner が bind mount で `specs/tla` を供給する（`plugins/formal-model-check/tools/ci-model-check-domain.ts:189`）。model-map は JSON（schemaVersion 2）+ SHA-256 base の domain 分離 canonical ハッシュ（`canonicalIdentity()`）。
-- **含意**: 本 intent は配置規約の変更であり、言語・ツールチェーン・外部依存の変更を伴わない。変わるのはパス定数とそれを固定する validator の定義である。
+### git worktree と harness ツリーの関係
+
+worktree セッションは**自前の `amadeus/` record ツリー**を持つが、**harness スクリプトは起点 checkout と共有する**（`amadeus-lib.ts:274-282` のコメントが逐語で説明）。この非対称が project-dir 解決の全問題の土台である。
+
+### source-only 境界の帰結
+
+| 対象 | 追跡状態 | 実測 |
+|---|---|---|
+| `.claude/**` | `.gitignore:24` で ignore | — |
+| `.claude/` 配下の tracked ファイル | 3件のみ | `CLAUDE.md` / `hooks/amadeus-dispatch.ts` / `settings.json` |
+| `.claude/tools/` | **完全に未追跡** | `git ls-files .claude/tools` → **0件** |
+| `dist/` | 未追跡生成物 | `bun run build` で再生成 |
+
+**技術的帰結**: fresh worktree は `bun run build` を通すまで `.claude/tools/` を持たない。したがって `hasWorkspaceMarker`（`amadeus/` かつ `<harness>/tools/` の両方がディレクトリ）は **build 前 worktree で構造的に偽**である。marker ベースの解決・ガードはこの窓を検出できない。
+
+この構造は `cid:scope-definition:c3-worktree-selfinstall-bootstrap`（新規 worktree はセルフインストール面を欠くため build まで framework CLI が起動しない）と同根であり、本件はその**解決ロジック側での顕在化**である。
+
+### 環境変数 `CLAUDE_PROJECT_DIR`
+
+- **性質**: 起動ディレクトリ（起点 checkout）に固定され、**セッションが worktree へ入っても追従しない**。根拠は `amadeus-lib.ts:306-309` の doc-comment 逐語 `that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree`（#1482）。
+- **CLI 側での扱い**: 段2 で**無条件に勝つ**（`:231`）。したがって env が設定されている限り、worktree 内の正しい lib を読んでいても解決は本線へ倒れる（ケース C+env）。
+- **hook 側での扱い**: marker 付き payload cwd（段1）に**負ける**（`:317` → `:320`）。
+
+### 起動形の技術的トレードオフ
+
+| 形 | 例 | 長所 | 短所 |
+|---|---|---|---|
+| 相対形 | `bun .claude/tools/amadeus-state.ts …` | cwd 追従 = worktree で worktree の lib を読む | `cd` 後に "Module not found"（`stage-protocol.md:511`） |
+| 絶対形 | `bun $CLAUDE_PROJECT_DIR/.claude/tools/…` | cwd 非依存 | **本線の lib を読み、ケース B を生む** |
+| サブシェル | `(cd subdir && …)` | 相対形の長所を保ったまま CWD drift を回避 | — |
+
+実分布（observed）: 正本 `packages/` は相対形 **31** / 絶対形 **1**（唯一の絶対形は allowlist エントリ自身）。セルフインストール面 `.claude/skills/` は相対形 **113** / 絶対形 **0**。
+
+### 診断ツールの前提
+
+`resolveProjectDir` は解決失敗を表現できない（返り値は常に `string`、警告・例外ゼロ）。したがって書き先の不一致は**実行時に一切のシグナルを出さない**。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 区間内の技術スタック変化
+
+**`package.json` の実質 diff は 1 箇所のみ**: `pi.extensions` に `./dist/pi/.pi/extensions/subagent.ts` を追加（`devDependencies` は無変更）。ランタイム・型検査・lint・テストランナーの構成は不変。
+
+### observed 断面の固定値
+
+| 要素 | 値 | 測定面 |
+| --- | --- | --- |
+| ランタイム | bun **1.3.13** | `.github/workflows/` の全 workflow で `bun-version: 1.3.13` の単一値、区間で変更なし。`bun-types: ^1.3.13` |
+| 言語 | TypeScript `^6.0.3`（ESM、`tsc --noEmit`） | `package.json` |
+| リンター | Biome `2.5.5`（フォーマッタ無効） | 同上 |
+| 主要依存 | `@anthropic-ai/claude-agent-sdk` 0.3.158、`@ast-grep/napi` 0.45.0、`@opentelemetry/api` 1.9.1 / `api-logs` 0.221.0 / `context-async-hooks` 2.10.0、`fast-check` ^4.9.0、`release-it` ^20.2.1 | 同上 |
+| 複雑度計測 | lizard は CI で `pip install lizard==1.23.0` | `ci.yml:196` / `:279` / `:426` |
+| lint 対象 | `tests/ packages/setup/ packages/framework/core/ scripts/ plugins/` | `package.json` |
+
+### 本 intent の患部が依拠する技術要素
+
+| 要素 | 技術的性質 | 本 intent での含意 |
+| --- | --- | --- |
+| ULID イベント台帳（`tests/no-silent-drop/events/`、`ulid.ts` 61行） | 1 ULID 1 ファイルの JSON、append-only。畳み込みで実効集合を得る | #2338 の世代交代で `baseline.json` / `exemptions.json` を置換。**バイト束縛（`previousDigest`）から custody 照合へ**の方式転換であり、#2313 の drift 仮説の起点候補 |
+| `git diff --quiet <range> -- <pathspec>` の exit code | 0 = 差分なし / 1 = 差分あり | freshness 述語の判定手段（`adapter:226-240`）。**pathspec の選び方だけが挙動を決める**ため、広域 set と narrow set の差が恒久赤か green かを分ける |
+| `git merge-base --is-ancestor` | 祖先性判定 | reconcile の分岐選択（observed で exit 0 = 主分岐）と、`--base-revision` の厳密祖先性要求（`ledger.ts:213-223`）の両方に使われる |
+| root tree 比較（`rootTree`） | commit の内容同一性の証明 | 第1段（`:305-315`、`EVIDENCE_BUNDLE_PATHS` 除外）と第2段（`:316-324`、除外なし）の2段構え |
+| JSON schema versioning（`schema: 1` / `2`） | ディスク上の形式世代 | advisory store は schema 2 のみ受理、pending は schema 1 のみ受理という**非対称の同居**。翻訳層を置かない設計判断（`:653-657`） |
+| gitignored な per-clone ランタイム | git から census 不能 | advisory store は6件が clone 内に実在（schema 1 が5件・schema 2 が1件）。**git では列挙できないため、回復 verb の探索範囲が技術的論点になる** |
+| GitHub App token + `gh` | reconcile ワークフローの認証面 | `no-silent-drop-evidence-reconcile.yml`。preflight 失敗は専用コードで step summary へ |
+
+### 配布境界の観点
+
+- #2313 の患部は `scripts/` にあり **repo-only**。`dist/` / self-install 投影の同期対象ではない。
+- #2330 / #2358 の患部は `packages/framework/core/tools/` にあり、`project.md` Mandated の「正本を編集して `bun run build` で再生成、追跡ファイルは不変」規律が該当する。source-only 境界（#2152 以降）により生成物は未追跡であり、検証は隔離2回ビルドの再現性検査・`bun run source-only:check`・グラフ不変量検査で行う。
+- **したがって本 intent は2つの配布境界にまたがる**。Bolt を分ける場合、検証コマンド集合が Bolt ごとに異なる。
+
+### 技術面の未変化点
+
+セッション・監査・ステージグラフ・センサーの基盤構成に変更はない。区間の 76 commits の大半は `chore(metrics): record/maintain snapshots` の自動 PR（#2290〜#2384）であり、残りは no-silent-drop 世代交代、autonomy / semi 再定義（#2253 Bolt 群）、subagent 可観測性 / PI、pr-convergence plugin 新規、TLA+ authoring、engine の判定修復、docs に分布する。
+
 
 ## cross-harness resume の技術断面（260805-cross-harness-resume、履歴、observed `7060956c5`）
 

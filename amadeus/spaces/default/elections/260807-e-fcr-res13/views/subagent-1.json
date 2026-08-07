@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FCR-RES13",
+  "voter": "subagent-1",
+  "question": "intent 260807-failclosed-recovery-path の reverse-engineering ステージ §13 学習選定。候補の全文は /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus--claude-worktrees-260807-failclosed-recovery/e63d3334-51f7-4225-bf1f-a519603b9855/scratch/s13-candidates-re.md にある(必ず全文を読むこと)。裏付けの実測は amadeus/spaces/default/codekb/amadeus/re-scans/260807-failclosed-recovery-path.md と amadeus/spaces/default/intents/260807-failclosed-recovery-path/inception/reverse-engineering/memory.md にある。作業ディレクトリは /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/260807-failclosed-recovery。各候補について (i) 主張の実測裏付けが実在するか (ii) 既存 cid の再述でないか (iii) 追補先の cid が妥当か を独立に検証したうえで投票すること。合意度スケール(GoA 1-8)を明記し、GoA 2/3/6 の票は留保を1文添えること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "0件(今回は何も persist しない)",
+      "description": "3候補いずれも既存ノルムで既に覆われている、または一般化に足る実測が不足していると判断する場合。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "提案どおり採用(C1/C2/C3 を persist、C4 は不採用)",
+      "description": "C1『引き継ぎ Issue の影響範囲の断定は着手時に再実測する』を cid:reverse-engineering:c1-preexisting-pr-inventory への追補として、C2『ゲート CLI のローカル赤は呼び出し規約の充足を先に確認する』を cid:build-and-test:c3-260805-subagent-type-guard への追補として、C3『xrev scan mode の前提は Issue コメントの著者まで確認する』を cid:reverse-engineering:c1-xrev-scan-mode / c1-xrev-single-issue への追補として persist する。C4(tNNN 重複採番を債務とする案)は既存 cid の再述にとどまるため不採用とする。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "一部の候補を落とす、または追補先の cid を変える",
+      "description": "C1/C2/C3 のいずれかが (i) 実測裏付けを欠く (ii) 既存 cid の再述である (iii) 追補先の cid が不適切、のいずれかに該当すると判断する場合。どの候補をどう変えるかを rationale に具体的に書くこと。"
+    }
+  ]
+}

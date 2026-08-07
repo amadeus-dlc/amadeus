@@ -1,0 +1,25 @@
+{
+  "electionId": "E-PWF-CGDEV",
+  "voter": "subagent-2",
+  "question": "260807-projectdir-worktree-fix code-generation の逸脱裁定。builder が実装前停止: FR-2a は「in-process 直 import でケース B と C+env の Red を実測」と定めるが、実測で AC-1a（ケース B 逐語形: cwd=worktree × main 絶対 lib → main を返す欠陥）は in-process では Red にならない — 正本 amadeus-lib.ts は packages/framework/core/tools/ にあり親セグメント core が isHarnessDirName(先頭ドット必須, amadeus-harness.ts:71-73)を満たさず rung 3(script-path)が構造的に到達不能、rung 4 が cwd を返すため修正前でも期待値一致（t481 test 1 が green の実測）。一方 AC-1b(C+env)の Red は逐語で実測済み(exit 1)、AC-1a は祖先形(marker-less 子 dir → worktree root)で Red 実測済み。builder 報告の一次記録は record 外 scratch の builder-report-2352.md。t481 は7ケース作成済み・実装は未着手。裁定選択肢: 逐語 Red の取り方。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "案C: AC-1a の括弧書きを明示改訂してから案A",
+      "description": "requirements.md AC-1a の「現行は main を返す欠陥」括弧書きへ「in-process 検証面では祖先形で読む（rung 3 は正本配置で到達不能のため）」の明示改訂を加えたうえで案 A の構成で進める。要件と検証面の対応が文書上も閉じる。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "案B: t481 に subprocess ケース1本追加",
+      "description": "lib を fixture の main/.claude/tools/ へ複製し cwd=worktree で bun 実行する subprocess ケースを t481 に追加（t202/t144 既習形）。AC-1a を逐語で Red 実測できるが、FR-2a の in-process 条件の外の形が同居する。spawn 面は lcov 非計測（他ケースの in-process 計測は維持）。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "案A: t481 現構成のまま + t144 が逐語形を担う",
+      "description": "AC-1a の閉包は「祖先形 Red(t481 test 2) + 逐語形の post-fix green(t481 test 1)」で取り、逐語形（main 絶対パス lib × worktree cwd）の回帰 pin は FR-2b の t144 更新（dist 読み subprocess、実 shipped layout — rung 3 が実際に発火する面）が担うと code-summary に明記。追加コスト 0、in-process 条件維持。"
+    }
+  ]
+}

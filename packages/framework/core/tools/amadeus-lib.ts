@@ -227,17 +227,31 @@ export function resolveProjectDir(explicitDir?: string): string {
   // 1. Explicit --project-dir argument
   if (explicitDir) return explicitDir;
 
-  // 2. CLAUDE_PROJECT_DIR env var
+  // 2. CLAUDE_PROJECT_DIR env var. It stays ABOVE the marker rung below:
+  //    callers that set it to a workspace OTHER than the one their cwd sits in
+  //    (test fixtures, tools driving a scratch project) depend on it winning,
+  //    and it is the documented way to point a tool at another workspace
+  //    besides the --project-dir argument.
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
 
-  // 3. Script path derivation (open-set): this module ships at
+  // 3. CWD (or an ancestor) carries its own amadeus workspace marker
+  //    (issue #2352). With env unset, rung 4 below derives the project from
+  //    THIS module's own path, which for a worktree session is the main
+  //    checkout's harness tree — so the worktree's work would be written into
+  //    the main record. A worktree ships its own amadeus/ record tree, so
+  //    prefer it, using the same canonical predicate the hook ladder applies
+  //    at the same position (issue #641; resolveProjectDirFromHook rung 3).
+  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
+  if (markerDir) return markerDir;
+
+  // 4. Script path derivation (open-set): this module ships at
   //    <project>/<harness>/tools/, so strip "<harness>/tools" for ANY harness
   //    dir name — the project root is the dir two levels up.
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const fromScript = stripHarnessLeaf(scriptDir, "tools");
   if (fromScript) return fromScript;
 
-  // 4. CWD has a known harness directory (dev repo).
+  // 5. CWD has a known harness directory (dev repo).
   const cwd = process.cwd();
   for (const h of KNOWN_HARNESS_DIRS) {
     if (existsSync(join(cwd, h))) {
@@ -6670,7 +6684,7 @@ let _scopeMapping: Record<string, ScopeDefinition> | null = null;
 // Override paths for fixture injection in tests. Read at call time (not
 // module load) so tests can mutate env vars between bun invocations
 // while still sharing a process in rare cases. AMADEUS_STAGE_GRAPH pattern
-// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.
+// matches CLAUDE_PROJECT_DIR in resolveProjectDir() above.
 function stageGraphPath(): string {
   return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
 }
