@@ -54,6 +54,13 @@ export type DirectiveKind =
   | "await-completion"
   | "await-approval";
 
+// The three canonical depth levels, in ascending order of artifact detail.
+// Same value set as amadeus-utility.ts VALID_DEPTHS (the lowercase->canonical
+// normalization map); declared here too so the directive contract module stays
+// dependency-free. The wire carries only these Capitalized forms.
+export const VALID_DEPTH_VALUES = ["Minimal", "Standard", "Comprehensive"] as const;
+export type DepthLevel = (typeof VALID_DEPTH_VALUES)[number];
+
 // run-stage — load lead + support agents, load `consumes` artifacts, run the
 // stage body, write required `produces` plus condition-matched optional outputs,
 // keep memory.md. Routing fields (lead_agent,
@@ -86,6 +93,14 @@ export interface RunStageDirective {
   rules_in_context: string[];
   sensors_applicable: string[];
   stage_file: string;
+  // depth — the workflow's resolved depth level (amadeus-state.md → **Depth**,
+  // falling back to the scope's declared default when the state carries no
+  // Depth field or there is no state to read, e.g. --single / no-state jump).
+  // The SINGLE authority stage agents read for depth-scaled artifact volume;
+  // they never re-derive depth from complexity (#2425). Optional only for a
+  // legacy/fixture state with no Depth field AND an unknown scope — the engine
+  // emits it on every normal path.
+  depth?: DepthLevel;
   // reviewer — the agent to invoke as a separate sub-agent for quality review
   // after the stage body completes. Absent (undefined) when no review step is
   // configured for this stage. See stage-protocol.md §12a.
@@ -419,6 +434,7 @@ const RUN_STAGE_FIELDS = [
   "rules_in_context",
   "sensors_applicable",
   "stage_file",
+  "depth",
   "reviewer",
   "reviewer_max_iterations",
   "intent_autonomy_mode",
@@ -621,6 +637,9 @@ function checkRunStageShared(
   checkStringArray(o, "rules_in_context", kind, errors);
   checkStringArray(o, "sensors_applicable", kind, errors);
   checkString(o, "stage_file", kind, errors);
+  // depth: optional (absent only for a legacy state with no Depth field and an
+  // unknown scope). A present value must be one of the canonical three.
+  checkOptionalEnum(o, "depth", VALID_DEPTH_VALUES, kind, errors);
   checkOptionalString(o, "conductor_persona", kind, errors);
   // reviewer fields — optional on a run-stage directive (present only when the
   // stage declares a reviewer). Mirror the stage-schema validator: reviewer is

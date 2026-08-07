@@ -87,6 +87,7 @@ import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
   type AwaitCompletionDirective,
+  type DepthLevel,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -96,6 +97,7 @@ import {
   renderAdvisoryChoiceQuestion,
   type RunStageDirective,
   type SelectIntentDirective,
+  VALID_DEPTH_VALUES,
   validateDirective,
 } from "./amadeus-directive.ts";
 import {
@@ -140,6 +142,7 @@ import {
   getField,
   intentRepos,
   listIntents,
+  loadScopeMapping,
   nextInScopeStage,
   normalizeUnitKind,
   parseCheckboxes,
@@ -2478,6 +2481,23 @@ function routeMainWorkflowDirective(
   return directive;
 }
 
+// resolveDepth — the single depth authority for directive emission (#2425):
+// amadeus-state.md → **Depth** wins; a state with no Depth field (or no state
+// at all — the --single and no-state jump paths pass stateContent: null) falls
+// back to the scope's declared default. Values are normalized against
+// VALID_DEPTH_VALUES so a hand-edited lowercase state still emits the
+// canonical Capitalized form; an unrecognizable value resolves to undefined
+// (the directive simply omits the optional field).
+function resolveDepth(stateContent: string | null, scope: string): DepthLevel | undefined {
+  const canon = (raw: string | undefined): DepthLevel | undefined => {
+    if (!raw) return undefined;
+    const needle = raw.trim().toLowerCase();
+    return VALID_DEPTH_VALUES.find((v) => v.toLowerCase() === needle);
+  };
+  const fromState = stateContent ? canon(getField(stateContent, "Depth") ?? undefined) : undefined;
+  return fromState ?? canon(loadScopeMapping()[scope]?.depth);
+}
+
 function buildRunStageDirective(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -2529,6 +2549,8 @@ function buildRunStageDirective(
   if (codekbCtx) {
     ensureStageDiaryForDirective(codekbCtx.projectDir, directive.memory_path, codekbCtx.space);
   }
+  const depth = resolveDepth(stateContent, scope);
+  if (depth !== undefined) directive.depth = depth;
   if (absent.length > 0) directive.consumes_absent = absent;
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;

@@ -76,12 +76,11 @@ Assess the user's request for:
 - **Scope**: Single component, multi-component, system-wide
 - **Complexity**: Simple, standard, complex
 
-### Step 4: Determine Depth
+### Step 4: Confirm Depth
 
-Based on complexity assessment:
-- **Minimal**: Clear request, narrow scope, well-understood domain
-- **Standard**: Moderate scope, some unknowns, multiple stakeholders
-- **Comprehensive**: Large scope, significant unknowns, complex domain
+Read the resolved depth from the run-stage directive's `depth` field (fallback: `amadeus-state.md` → `**Depth**`). Do NOT re-derive depth from the Step 3 complexity assessment — depth authority is the engine (stage-protocol.md §8).
+
+If the complexity assessment strongly disagrees with the resolved depth (e.g. a Minimal depth against a system-wide request with significant unknowns), surface a one-line advisory in the stage output and at the approval gate suggesting a `--depth` override; never change depth yourself.
 
 ### Step 5: Assess Current Requirements
 
@@ -138,6 +137,13 @@ Create `<record>/inception/requirements-analysis/requirements.md` containing:
 - **Assumptions** — Documented assumptions with rationale
 - **Out of scope** — Explicitly excluded items
 - **Open questions** — Any remaining uncertainties for later stages
+
+Number every functional requirement with a stable `FR-n` identifier (`### FR-1: <title>` or a bold `**FR-1**` list entry) — downstream stages and sensors address requirements by these ids.
+
+**Depth-scaled volume** (read `directive.depth`; guidance, not a hard limit — the depth-budget sensor flags overruns as advisory):
+- **Minimal**: 5-10 FRs, 3-6 lines each. State the behavior and one acceptance check; skip narrative rationale.
+- **Standard**: 15-30 FRs with acceptance criteria.
+- **Comprehensive**: 30+ FRs, detailed acceptance criteria and NFR cross-references.
 
 ### Step 11: Update State
 
