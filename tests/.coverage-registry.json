@@ -3787,6 +3787,10 @@
         {
           "file": "tests/integration/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t481-resolve-project-dir-worktree-marker.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
