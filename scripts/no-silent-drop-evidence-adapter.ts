@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   EVIDENCE_BUNDLE_PATHS,
+  EVIDENCE_FRESHNESS_PATHSPECS,
   EVIDENCE_REGISTRY_PATH,
   EvidenceRebindError,
 } from "../tests/no-silent-drop/evidence-rebind.ts";
@@ -229,8 +230,7 @@ export class NoSilentDropEvidenceAdapter {
       "--quiet",
       `${registry.currentRevision}..${eventRevision}`,
       "--",
-      "packages/framework/core/tools",
-      ":(glob)tests/no-silent-drop/**/*.ts",
+      ...EVIDENCE_FRESHNESS_PATHSPECS,
     ]);
     if (freshness.status === 0) return true;
     if (freshness.status === 1) {
@@ -313,27 +313,45 @@ export class NoSilentDropEvidenceAdapter {
         "binding revision and final pull request head differ outside the three derived evidence files",
       );
     }
-    const pullRequestTree = this.rootTree(pullRequestHead);
-    const landingTree = this.rootTree(eventRevision);
-    if (pullRequestTree !== landingTree) {
+    this.assertProvenPathsIdentical(pullRequestHead, eventRevision);
+    return { pullRequestNumber: candidate.number, pullRequestHead };
+  }
+
+  // The squash landing carries whatever main advanced by, so demanding equal root trees would
+  // wedge every reconcile that races a merge. What the identity proof actually needs is that the
+  // landing did not alter what the evidence attests: the gate's own implementation and the three
+  // derived evidence files. Everything else is base advance and is allowed to differ.
+  private assertProvenPathsIdentical(pullRequestHead: string, eventRevision: string): void {
+    const diff = this.run([
+      "git",
+      "diff",
+      "--name-only",
+      "-z",
+      pullRequestHead,
+      eventRevision,
+      "--",
+      ...EVIDENCE_FRESHNESS_PATHSPECS,
+      ...EVIDENCE_BUNDLE_PATHS,
+    ]);
+    if (diff.status !== 0) {
       throw new EvidenceRebindError(
-        "REBIND_PR_LANDING_TREE_MISMATCH",
-        "final pull request head and landing commit root trees differ",
+        "REBIND_GIT_TREE_INVALID",
+        `cannot compare proven evidence paths: ${commandDetail(diff)}`,
       );
     }
-    return { pullRequestNumber: candidate.number, pullRequestHead };
+    const changed = diff.stdout.split("\0").filter(Boolean).sort();
+    if (changed.length > 0) {
+      throw new EvidenceRebindError(
+        "REBIND_PR_LANDING_TREE_MISMATCH",
+        `final pull request head and landing commit differ on proven evidence paths: ${changed.join(", ")}`,
+      );
+    }
   }
 
   private recursiveTree(revision: string): string[] {
     const result = this.run(["git", "ls-tree", "-r", "-z", "--full-tree", revision]);
     if (result.status !== 0) throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `cannot read ${revision} tree: ${commandDetail(result)}`);
     return parseTree(result.stdout, revision);
-  }
-
-  private rootTree(revision: string): string {
-    const tree = this.mustRun(["git", "rev-parse", `${revision}^{tree}`], "REBIND_GIT_TREE_INVALID");
-    if (!fullSha(tree)) throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `${revision} root tree is invalid`);
-    return tree;
   }
 
   assertOnlyExpectedChanges(expectedPaths: readonly string[]): void {
