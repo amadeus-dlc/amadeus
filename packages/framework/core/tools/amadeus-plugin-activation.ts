@@ -318,28 +318,33 @@ function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): 
   // legacy layout (LegacySpecError) already surfaced as a not-ready judgment
   // carrying the migration instructions; the advisory then falls back to the
   // default-space label rather than re-throwing.
-  let specTarget = tlaSpecDirPath();
-  let specIdentity = "unreadable-spec";
+  const emitAdvisory = (specTarget: string, specIdentity: string) => {
+    const message = activationAdvisoryLine(judgment, specTarget);
+    if (message === null) return [];
+    return [{
+      plugin: ACTIVATION_PLUGIN,
+      code: judgment.kind,
+      message,
+      stage,
+      ...(judgment.kind === "not-ready"
+        ? { target: specTarget, specIdentity, reason: judgment.reason }
+        : { target: specTarget, specIdentity: judgment.currentHash }),
+    }];
+  };
   try {
     const projectRoot = projectRootForHost(hostRoot);
     const roots = resolveSpecRoots(projectRoot);
-    specTarget = toPosixRel(projectRoot, roots.tlaDir);
+    const specTarget = toPosixRel(projectRoot, roots.tlaDir);
     const computed = computeSpecHash(roots.specsRoot, ACTIVATION_WATCH_GLOBS, fs);
-    specIdentity = computed.ok ? computed.hash : "unreadable-spec";
+    const specIdentity = computed.ok ? computed.hash : "unreadable-spec";
+    return emitAdvisory(specTarget, specIdentity);
   } catch (err) {
     if (!(err instanceof LegacySpecError)) throw err;
+    // Legacy layout: the judgment already carries the migration instructions;
+    // emit with the default-space label fallback as the catch's explicit
+    // terminal rather than a silent continue.
+    return emitAdvisory(tlaSpecDirPath(), "unreadable-spec");
   }
-  const message = activationAdvisoryLine(judgment, specTarget);
-  if (message === null) return [];
-  return [{
-    plugin: ACTIVATION_PLUGIN,
-    code: judgment.kind,
-    message,
-    stage,
-    ...(judgment.kind === "not-ready"
-      ? { target: specTarget, specIdentity, reason: judgment.reason }
-      : { target: specTarget, specIdentity: judgment.currentHash }),
-  }];
 }
 
 // --- The run latch (business-logic-model L4 / domain-entities.md E3) ---

@@ -75,7 +75,10 @@ function activeSpaceFromCursor(workspaceRoot: string): string {
     const raw = readFileSync(join(workspaceRoot, "amadeus", "active-space"), "utf-8").trim();
     if (SAFE_SPACE_NAME.test(raw)) return raw;
   } catch {
-    // No cursor is the normal state outside an Amadeus workspace.
+    // No cursor is the normal state outside an Amadeus workspace: return the
+    // default from the catch so the fall-through is an explicit terminal, not
+    // a silent continue.
+    return DEFAULT_SPACE;
   }
   return DEFAULT_SPACE;
 }
