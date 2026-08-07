@@ -372,7 +372,25 @@ export class NoSilentDropEvidenceAdapter {
     }
   }
 
+  // The gate requires its trusted base to be a STRICT ancestor of HEAD (assertStrictAncestorOfHead
+  // in tests/no-silent-drop/bootstrap.ts) so that an identical base cannot hide event deletions.
+  // Reconcile runs with HEAD at the landing commit, so the base has to be the commit before it —
+  // the first parent, which for a squash landing on main is the push event's before-SHA. Take the
+  // SHA from git's own output rather than handing the gate a `^` suffix to interpret.
+  private landingParentRevision(eventRevision: string): string {
+    const result = this.run(["git", "rev-parse", `${eventRevision}^`]);
+    const parent = result.stdout.trim();
+    if (result.status !== 0 || !fullSha(parent)) {
+      throw new EvidenceRebindError(
+        "REBIND_FOCUSED_VALIDATION_FAILED",
+        `cannot resolve the first parent of ${eventRevision}: ${result.status === 0 ? parent : commandDetail(result)}`,
+      );
+    }
+    return parent;
+  }
+
   runFocusedValidation(eventRevision: string): void {
+    const baseRevision = this.landingParentRevision(eventRevision);
     const result = this.run([
       "bun",
       "test",
@@ -387,7 +405,7 @@ export class NoSilentDropEvidenceAdapter {
       "tests/no-silent-drop-gate.ts",
       "check",
       "--base-revision",
-      eventRevision,
+      baseRevision,
     ]);
     if (gate.status !== 0) {
       throw new EvidenceRebindError("REBIND_FOCUSED_VALIDATION_FAILED", `no-silent-drop failed: ${commandDetail(gate)}`);

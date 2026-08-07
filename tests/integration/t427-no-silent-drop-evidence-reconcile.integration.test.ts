@@ -30,6 +30,7 @@ import {
 const SOURCE_ROOT = join(import.meta.dir, "../..");
 const tempRoots: string[] = [];
 const MOCK_EVENT = "e".repeat(40);
+const MOCK_EVENT_PARENT = "a".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 // #2338: reconcile no longer ratchets previousDigest ledger files.
 
@@ -376,6 +377,71 @@ function syntheticReconcileRunner(
     },
   };
 }
+
+type FocusedRunnerOptions = { parentStdout?: string; parentStatus?: number };
+
+/** Records every argv the adapter issues so focused validation's gate base can be asserted exactly. */
+function recordingFocusedRunner(options: FocusedRunnerOptions = {}): {
+  runner: CommandRunner;
+  commands: string[][];
+} {
+  const commands: string[][] = [];
+  const handlers: Record<string, () => CommandResult> = {
+    "git rev-parse": () => commandResult(options.parentStatus ?? 0, options.parentStdout ?? `${MOCK_EVENT_PARENT}\n`),
+    "bun test": () => commandResult(0, "10 pass\n0 fail\n"),
+    "bun tests/no-silent-drop-gate.ts": () => commandResult(0, '{"status":"pass","code":"NO_SILENT_DROP_OK"}\n'),
+  };
+  return {
+    commands,
+    runner: {
+      run(args) {
+        commands.push([...args]);
+        return handlers[commandKey(args)]?.() ?? commandResult();
+      },
+    },
+  };
+}
+
+function gateInvocation(commands: readonly string[][]): string[] | undefined {
+  return commands.find((argv) => argv[1] === "tests/no-silent-drop-gate.ts");
+}
+
+describe("t427 focused validation base revision", () => {
+  // The reconcile checkout puts HEAD at the event revision, and the gate requires its trusted base
+  // to be a STRICT ancestor of HEAD (tests/no-silent-drop/bootstrap.ts assertStrictAncestorOfHead),
+  // so passing the event revision itself is always BASELINE_INVALID.
+  test("checks the gate against the landing commit's resolved first parent", () => {
+    const { runner, commands } = recordingFocusedRunner();
+    new NoSilentDropEvidenceAdapter(SOURCE_ROOT, runner).runFocusedValidation(MOCK_EVENT);
+
+    expect(commands).toContainEqual(["git", "rev-parse", `${MOCK_EVENT}^`]);
+    expect(gateInvocation(commands)).toEqual([
+      "bun",
+      "tests/no-silent-drop-gate.ts",
+      "check",
+      "--base-revision",
+      MOCK_EVENT_PARENT,
+    ]);
+    expect(gateInvocation(commands)).not.toContain(MOCK_EVENT);
+  });
+
+  test("fails closed without running the gate when the first parent is unresolvable or malformed", () => {
+    const cases: FocusedRunnerOptions[] = [
+      { parentStatus: 128, parentStdout: "" },
+      { parentStdout: `${MOCK_EVENT}^\n` },
+      { parentStdout: "aaaaaaa\n" },
+      { parentStdout: `${"0".repeat(40)}\n` },
+    ];
+    for (const [index, options] of cases.entries()) {
+      const { runner, commands } = recordingFocusedRunner(options);
+      expect(
+        () => new NoSilentDropEvidenceAdapter(SOURCE_ROOT, runner).runFocusedValidation(MOCK_EVENT),
+        `case ${index}`,
+      ).toThrow("first parent");
+      expect(gateInvocation(commands), `case ${index}`).toBeUndefined();
+    }
+  });
+});
 
 describe("t427 squash identity proof and main convergence", () => {
   test("fails closed if the binding changes during reconciliation and no-ops an already-bound bundle", () => {
