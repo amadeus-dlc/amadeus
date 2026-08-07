@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-CGDEV",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "件数 assert :112 の 11 は HOOK_PATHS のキー数から一意には導出できない（11 = 10 slug + mint-presence の重複参照 1）。導出形へ改訂する際は重複分を式として明示し（例: KNOWN_SLUGS.length + 重複数、既存 :114 の mint-presence 2 件 assert を重複の所在ピンとして併用）、将来 2 つ目の重複 slug が現れた場合は手動更新が残る旨を成果物に明記すること — 全自動追随と主張しない。あわせて HOOK_PATHS の export 化は packages/framework/harness/claude/ 配下＝全 dist へ投影される面のため、挙動不変の実証として既存 dispatcher テストの再実行に加え bun run build による再生成と source-only 境界検査まで確認する。",
+  "rationale": "3重ピンを独立実測で確認: tests/integration/hook-dispatcher.integration.test.ts:34-45 の KNOWN_SLUGS 10要素ハードコード、:112 expect(commands).toHaveLength(11)、:68-70 writeCompleteHookTree が同ローカル KNOWN_SLUGS を反復。dispatcher 側 packages/framework/harness/claude/hooks/amadeus-dispatch.ts:4 は `const HOOK_PATHS = {` で非 export、:20 で `const KNOWN_SLUGS = Object.keys(HOOK_PATHS)` と自ら導出済み — つまり canonical な単一定義は既に dispatcher 内に存在し、テスト側 :34-45 はその手書き複製である。construction フェーズガードレール『複数箇所で消費されるリスト・コマンド列・定数を手書きで複製しない — canonical な1定義から導出する』は本件に直接適用され、choice 3（許可集合追加＋HOOK_PATHS 導出形）が唯一この複製を解消する。choice 2（数値の点更新）は複製構造を温存し、cid:code-generation:count-comment-sync-on-catalog-change が指す件数語の陳腐化クラスを次回スロット追加へ先送りするだけ。choice 1（Q1 裁定の反転）は既決裁定の蒸し返しに当たり、live 設定に形式混在を持ち込む副作用が加わるため最も弱い。export の追加は plain const object への修飾子付与でモジュールの実行経路を変えず、挙動不変の要件を満たす。",
+  "submittedAt": "2026-08-07T00:00:00Z",
+  "receivedAt": "2026-08-07T14:22:37Z"
+}

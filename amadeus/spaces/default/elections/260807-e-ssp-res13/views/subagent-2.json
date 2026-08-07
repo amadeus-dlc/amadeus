@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SSP-RES13",
+  "voter": "subagent-2",
+  "question": "260807-subagent-start-pair reverse-engineering ステージの §13 学習候補3件の採否。c1: xrev mode + 区間実測 currency（既存 cid の適用実例）。c2: base 選定（既存 cid の適用実例）。c3: Architect subagent が worktree 隔離セッション内で一部検証を誤って本線 checkout 側で実行し、異なる実測値を得てから worktree で全件取り直した自己申告 — 「worktree 隔離セッションの subagent は検証コマンドの実行ディレクトリを本線と取り違えうる（絶対パス指定・cwd 確認を検証手順に含める）」という一般化候補。実在根拠は record（inception/reverse-engineering/memory.md）と synthesis 報告。判定規準: 既存 cid の適用実例は不採用、新規未被覆面のみ採用。c3 は既存 cid（c2 の worktree ディスパッチ規律 = 本線パス混入禁止・E-TCRCGS13 の resume 時 cwd 実測）で覆えているかを grep で判定のこと。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "c1/c2 は適用実例。c3 も既存の worktree 隔離規律（cid:code-generation:c2 系 — 本線絶対パス非混入・cwd/branch 実測検証）の射程内で、新規面を含まない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "c3 のみ採用",
+      "description": "c3 を既存 worktree 隔離系 cid への追補として persist（read-only 検証コマンドの実行ツリー取り違えは書込混入とは別 facet で未被覆、という判定の場合）。"
+    }
+  ]
+}

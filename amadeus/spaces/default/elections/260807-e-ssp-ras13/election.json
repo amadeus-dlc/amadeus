@@ -1,0 +1,22 @@
+{
+  "electionId": "E-SSP-RAS13",
+  "kind": "s13-adoption",
+  "question": "260807-subagent-start-pair requirements-analysis の §13 学習候補3件の採否。c1: decide-question 4裁定（既存 cid の適用実例）。c2: reviewer iteration 2 の invocationId は complete-review 前の scope 再実行で採番が必要 — iteration 1 の ID 流用は「bound to a different iteration」で拒否される（c3-pcp-reviewer-retry-on-lost-verdict は「再ディスパッチの正当性」を定めるが「iteration ごとに scope 再実行で新 invocationId を採番する」という手順面は明文でない — 追補候補）。c3: レビュー許可外引用の conductor 直接 grep 裏取り（c1-reviewer-scope-alignment 追補の適用実例）。実在根拠は record（memory.md / requirements.md の Review ブロック2つ）。判定規準: 既存 cid 未被覆面のみ採用。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c2 のみ採用（scope 再実行の手順面を追補）",
+      "description": "cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict へ「iteration N+1 の complete-review には scope 再実行で採番した新 invocationId が必要（旧 ID は前 iteration に束縛され fail-closed 拒否される）」の1行追補を persist。c1/c3 は適用実例で不採用。"
+    },
+    {
+      "internalNo": 2,
+      "label": "採用0件",
+      "description": "c2 も既存 cid（invocationId/iteration の完全保存要件 + PCP-FDS13 の再ディスパッチ規定）から導出可能な運用細部であり、fail-closed エラーメッセージ自体が十分な案内。record に残れば足りる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

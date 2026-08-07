@@ -1,0 +1,33 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-subagent-start-pair/construction/fix-2297-wiring/code-generation/code-summary.md",
+    "digest": "f32d1257f6f40c2ef52c7e4e87df2f5d0c5bee69854f84de29466eb7c1fd51da"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-subagent-start-pair/construction/fix-2303-dispatch-tool/code-generation/code-summary.md",
+    "digest": "a6f2bcda59ac2d1da618195eeaf6f9804f6eb796cb6f3754534629eaeb07dbb7"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-subagent-start-pair/construction/fix-2297-wiring/code-generation/pr-convergence-report.md",
+    "digest": "1ef98709bd28416a4c6e4dba3cdd92a881877e8d6eae1657d1fe460f945d1c9d"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-subagent-start-pair/construction/fix-2303-dispatch-tool/code-generation/pr-convergence-report.md",
+    "digest": "b4e1ae4180b496b8f1828886dea1005cafeee9e3a7e8af2d1ca82b4fcf12311d"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-subagent-start-pair/construction/build-and-test/build-test-results.md",
+    "digest": "4b9e6d3f8f14aebc3cc089647af3b7659847d17b2a2f4483d4c1cc1e2bfc4ece"
+   }
+  ]
+ }
+]

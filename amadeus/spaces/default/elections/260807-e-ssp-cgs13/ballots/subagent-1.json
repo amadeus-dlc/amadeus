@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "C2 は独立 cid を新設せず cid:requirements-analysis:shard-commit-before-branch-switch ファミリへの1行追補として persist し、既存本文（切替前コミット・切替後の branch 実測）の文言を弱めないこと。追補の核心は『record 書込 CLI（人手編集でなくツール）の実行前にも branch 在位を実測する』の1点に限定し、intent 固有の PR 番号・unit 名は焼き込まない。あわせて実測根拠として reflog の時刻対照（fix-2303 report generated at 2026-08-07T15:07:57Z、HEAD は 14:55:46Z〜15:08:06Z の間 bolt-2297-wiring に在位）を記載し、near-miss ではなく実際に誤ブランチ上へ着地した事象であることを明示する。",
+  "rationale": "C1: 機構を独立実測 — packages/framework/core/tools/amadeus-reviewer.ts:71-75 reviewerReadScope が produces の非 optional 成果物 unpresent で `required review artifact is missing` を throw（.claude/tools 側も同一）、.claude/plugins/pr-convergence/stages/pr-convergence.md:29-32 が `pr-convergence-report` を code-generation の produces へ overlay し『guard はレポート実在まで unit を advance しない』と明記。実測タイムライン: wave2 fix-2303 report 15:07:57Z < §12a Review Date 15:14:46Z、fix-2297 report 15:20:24Z < Review 15:25:07Z、wave1 fix-2352 report 12:00:43Z 実在。既存 cid:code-generation:bolt-pr-taskization が定める『レビュー READY → PR 発行』の順序と構造的に逆転するため追補の価値あり。C2: git reflog 実測で誤ブランチ着地を確定 — checkpoint 959a72551 (14:41:34Z) 後、14:55:46Z に bolt-2297-wiring へ checkout し 15:08:06Z に worktree ブランチへ復帰、その窓内の 15:07:57Z に fix-2303 の report が生成されている。両 report は現在も untracked (git status ??) で、tracked 化後なら checkout で消失するクラス。よって理論上の near-miss ではなく実発生事象と判断し両候補採用に投票する。",
+  "submittedAt": "2026-08-07T15:29:00Z",
+  "receivedAt": "2026-08-07T15:29:05Z"
+}
