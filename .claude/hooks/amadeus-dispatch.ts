@@ -15,6 +15,7 @@ export const HOOK_PATHS = {
   "validate-state": ".claude/hooks/amadeus-validate-state.ts",
   "log-subagent": ".claude/hooks/amadeus-log-subagent.ts",
   "log-subagent-start": ".claude/hooks/amadeus-log-subagent-start.ts",
+  "plugin-compose": ".claude/hooks/amadeus-plugin-compose.ts",
   "subagent-model-guard": ".claude/hooks/amadeus-subagent-model-guard.ts",
   stop: ".claude/hooks/amadeus-stop.ts",
 } as const;

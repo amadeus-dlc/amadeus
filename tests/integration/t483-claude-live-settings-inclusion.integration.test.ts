@@ -46,15 +46,23 @@ type HookRef = { event: string; matcher: string; script: string };
  */
 type Waiver = { event: string; script: string; issue: string; reason: string };
 
-const WAIVERS: Waiver[] = [
-  {
-    event: "SessionStart",
-    script: "amadeus-plugin-compose.ts",
-    issue: "#2426",
-    reason:
-      "auto-compose is not wired into this repository's live SessionStart; filed separately per FR-A4 (scope-out of #2297)",
-  },
-];
+// Empty is the healthy end state: every shipped example hook is wired live.
+// #2426 emptied it by wiring SessionStart -> amadeus-plugin-compose.ts.
+const WAIVERS: Waiver[] = [];
+
+/**
+ * A literal waiver used only to prove the admission predicate says no.
+ *
+ * The negative case must not read WAIVERS[0] — once the list is legitimately
+ * empty the proof would evaporate exactly when it is the only thing left
+ * guarding the predicate.
+ */
+const PREDICATE_FIXTURE: Waiver = {
+  event: "SessionStart",
+  script: "amadeus-example-hook.ts",
+  issue: "#0000",
+  reason: "fixture for the admission predicate's negative case",
+};
 
 function waiverIsGrounded(w: Waiver): boolean {
   return w.issue.trim().length > 0 && w.reason.trim().length > 0;
@@ -131,8 +139,9 @@ describe("t483 claude live settings include every shipped example hook (#2297)",
   });
 
   // FR-A4 / AC-A4: the waiver list is a tracked decision, not a hiding place.
+  // An empty list is allowed (it is the goal), so this does not floor the count
+  // — the negative case below carries the proof that the predicate can say no.
   test("every waiver carries a non-empty issue reference and reason (AC-A4)", () => {
-    expect(WAIVERS.length).toBeGreaterThan(0);
     for (const w of WAIVERS) {
       expect(w.issue.trim(), `waiver ${w.script} has an issue reference`).not.toBe("");
       expect(w.reason.trim(), `waiver ${w.script} has a reason`).not.toBe("");
@@ -143,7 +152,7 @@ describe("t483 claude live settings include every shipped example hook (#2297)",
   // rejects an empty field. Without this, the check above could be satisfied by
   // a predicate that never says no.
   test("a waiver with an empty issue or reason is rejected (AC-A4 negative)", () => {
-    const base = WAIVERS[0];
+    const base = PREDICATE_FIXTURE;
     expect(waiverIsGrounded(base)).toBe(true);
     expect(waiverIsGrounded({ ...base, issue: "" })).toBe(false);
     expect(waiverIsGrounded({ ...base, issue: "   " })).toBe(false);
