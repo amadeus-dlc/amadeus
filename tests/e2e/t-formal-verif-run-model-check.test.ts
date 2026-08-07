@@ -54,8 +54,8 @@ describe("run-model-check CLI", () => {
       const model = join(workspace, `${modelName}.tla`);
       const cfg = join(workspace, `${modelName}.cfg`);
       const out = join(root, "out");
-      cpSync(`specs/tla/${modelName}.tla`, model);
-      cpSync(`specs/tla/${modelName}.cfg`, cfg);
+      cpSync(`amadeus/spaces/default/specs/tla/${modelName}.tla`, model);
+      cpSync(`amadeus/spaces/default/specs/tla/${modelName}.cfg`, cfg);
       const result = Bun.spawnSync([
         "bun",
         "tests/formal-verif/support/run-model-check-cli-fixture.ts",
@@ -85,8 +85,8 @@ describe("run-model-check CLI", () => {
         outcome: expected.outcome,
         exitCode: expected.exitCode,
         sourceProvenance: {
-          modelPath: `specs/tla/${modelName}.tla`,
-          cfgPath: `specs/tla/${modelName}.cfg`,
+          modelPath: `amadeus/spaces/default/specs/tla/${modelName}.tla`,
+          cfgPath: `amadeus/spaces/default/specs/tla/${modelName}.cfg`,
         },
       });
       for (const artifact of manifest.artifacts) {
@@ -109,8 +109,8 @@ describe("run-model-check CLI", () => {
       const model = join(workspace, "FormalElection.tla");
       const cfg = join(workspace, "FormalElection.cfg");
       const out = join(root, "out");
-      cpSync("specs/tla/FormalElection.tla", model);
-      cpSync("specs/tla/FormalElection.cfg", cfg);
+      cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+      cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
       const result = Bun.spawnSync([
         "bun",
         "tests/formal-verif/support/run-model-check-cli-fixture.ts",

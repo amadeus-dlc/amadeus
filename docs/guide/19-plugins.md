@@ -281,7 +281,7 @@ more. Treat any of the above as a future capability, not a current one.
 ## Activation policy: formal-model-check
 
 The bundled `formal-model-check` plugin is *advisory only*. Amadeus computes a
-deterministic hash of its spec files (`specs/tla/**`) and compares it against the
+deterministic hash of its spec files (`tla/**` under `amadeus/spaces/<space>/specs/`) and compares it against the
 last recorded verdict. When the hash has changed — or has never been recorded —
 the engine renders a stderr-only advisory before build-and-test, and the doctor
 adds a `formal-model-check: spec-hash CHANGED` activation line. Nothing runs the

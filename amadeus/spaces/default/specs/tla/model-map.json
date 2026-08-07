@@ -4,11 +4,11 @@
     {
       "name": "FormalElection",
       "model": {
-        "path": "specs/tla/FormalElection.tla",
+        "path": "amadeus/spaces/default/specs/tla/FormalElection.tla",
         "identity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213"
       },
       "cfg": {
-        "path": "specs/tla/FormalElection.cfg",
+        "path": "amadeus/spaces/default/specs/tla/FormalElection.cfg",
         "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
       },
       "entries": [
@@ -57,17 +57,17 @@
     {
       "name": "MirrorLifecycle",
       "model": {
-        "path": "specs/tla/MirrorLifecycle.tla",
-        "identity": "5e1d5dc61a6ecfbb6d08fe23573e9765890cd7899765c1cf5cfa7a7ca9e08ec4"
+        "path": "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+        "identity": "57ed76c6896a44a92f7a6db8048804fd17e5c5adbafd78eab6a7812faa0399d3"
       },
       "cfg": {
-        "path": "specs/tla/MirrorLifecycle.cfg",
-        "identity": "631176d00f0664480597b6babc0dd4c17e219c56028a4978ec2cbd70b8cf467b"
+        "path": "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
+        "identity": "e1f6f75f3b4761b9b056ae4830c9e7bc3999349e46ea4d998da79a68cbc3cb42"
       },
       "auxiliaries": [
         {
-          "path": "specs/tla/MirrorLifecycleCore.tla",
-          "identity": "e067f32d0a4975a5d66439de22e0d38b1542226dbdf2fd7c47d54f7524162fb8"
+          "path": "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla",
+          "identity": "f40f216f415c00fcb5dce366859f80009844f3bf1bceac91871cdbd55fb73cec"
         }
       ],
       "entries": [

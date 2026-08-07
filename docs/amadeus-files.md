@@ -170,6 +170,9 @@ amadeus/
     │   ├── dependencies.md
     │   ├── code-quality-assessment.md
     │   └── reverse-engineering-timestamp.md              # Freshness marker; rerun when stale
+    ├── specs/                                            # Product specification layer (committed)
+    │   ├── tla/                                          # Canonical TLA+ spec root: models, configs, model-map.json
+    │   └── tla-evidence/                                 # TLC run evidence store (outside the spec-hash watch glob)
     └── intents/
         ├── active-intent                                 # Active intent cursor (gitignored, per-user)
         ├── intents.json                                  # Registry: {uuid, slug, dirName, scope, repos, status}

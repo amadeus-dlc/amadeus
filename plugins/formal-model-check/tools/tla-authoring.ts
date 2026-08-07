@@ -12,7 +12,7 @@ import { join } from "node:path";
 import {
   ApplicabilityJudge,
   AuthoringHoldEvaluator,
-  DEFAULT_MODEL_MAP_PATH,
+  defaultModelMapPath,
   readModelMapSnapshot,
   traceSubjectsOf,
   verifyHumanApproval,
@@ -22,7 +22,7 @@ import {
   type SubjectSeriesKey,
 } from "./tla-applicability.ts";
 import {
-  DEFAULT_STORE_ROOT,
+  defaultStoreRoot,
   EvidenceBundle,
   EvidenceEnvelopeCodec,
   IdentityDigest,
@@ -36,6 +36,7 @@ import {
   type PredecessorRef,
   type StableId,
 } from "./tla-evidence.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 import {
   InvariantNameCodec,
   ProofObligations,
@@ -186,7 +187,7 @@ function identityCompare(flags: Record<string, string>): Emitted {
 function storeRootOf(flags: Record<string, string>): string | null {
   const raw = flags.store;
   if (raw === "") return null;
-  return raw ?? DEFAULT_STORE_ROOT;
+  return raw ?? defaultStoreRoot();
 }
 
 const EMPTY_STORE_USAGE = "--store must not be empty";
@@ -279,7 +280,7 @@ const DEFAULT_AUDIT_DIR = ".";
 function modelMapPathOf(flags: Record<string, string>): string | null {
   const raw = flags["model-map"];
   if (raw === "") return null;
-  return raw ?? DEFAULT_MODEL_MAP_PATH;
+  return raw ?? defaultModelMapPath();
 }
 
 // Resolve the map through the store: a registered model's trace subjects live
@@ -446,7 +447,12 @@ function holdEvaluate(flags: Record<string, string>): Emitted {
 // consumes. A workspace that declares nothing governs nothing, which is a real
 // no-hold rather than a suppressed one.
 
-export const DEFAULT_SUBJECTS_PATH = "specs/tla/authoring-subjects.json";
+// The governed-subjects declaration lives in the active space's canonical spec
+// directory, resolved through the shared spec root resolver (BR-1). Throws
+// LegacySpecError on a legacy layout (fail-closed, BR-4).
+export function defaultSubjectsPath(workspaceRoot: string = process.cwd()): string {
+  return join(resolveSpecRoots(workspaceRoot).tlaDir, "authoring-subjects.json");
+}
 
 interface GovernedSubjects {
   readonly documents: ReadonlyArray<{ readonly path: string; readonly kind: DocKind }>;
@@ -490,7 +496,7 @@ function governedIdentity(governed: GovernedSubjects): Emitted | AggregateDigest
 }
 
 function advisoryHold(flags: Record<string, string>): Emitted {
-  const subjectsPath = flags["subjects-file"] ?? DEFAULT_SUBJECTS_PATH;
+  const subjectsPath = flags["subjects-file"] ?? defaultSubjectsPath();
   // Only true absence is "nothing is governed here" (the ruled no-hold case).
   // A file that exists but cannot be read fails closed like every other
   // failure on this path — an unreadable declaration must not release a hold.

@@ -170,6 +170,9 @@ amadeus/
     │   ├── dependencies.md
     │   ├── code-quality-assessment.md
     │   └── reverse-engineering-timestamp.md              # 鮮度マーカー(staleなら再実行)
+    ├── specs/                                            # プロダクト規範層(コミット)
+    │   ├── tla/                                          # TLA+ 仕様の正準ルート: model・cfg・model-map.json
+    │   └── tla-evidence/                                 # TLC 実行証跡ストア(spec-hash watch glob の対象外)
     └── intents/
         ├── active-intent                                 # アクティブintentのカーソル(gitignore, per-user)
         ├── intents.json                                  # レジストリ {uuid, slug, dirName, scope, repos, status}

@@ -5,12 +5,13 @@
 // deployment layout, not a synthetic host that happens to contain both halves.
 //
 // Every sibling activation fixture (t320/t321/t322/t378/t381) writes the
-// composition record AND specs/tla/ under one temp root, so the watch glob and
-// the record resolve against the same directory. Real installations do not look
-// like that: the composition record lives in the HARNESS directory (`.claude/`,
-// the plugin host root, `dirname(TOOLS_DIR)`) while the TLA+ specs are a PROJECT
-// asset one level up — the formal-model-check stage body itself names them
-// project-relative (`--model specs/tla/FormalElection.tla`).
+// composition record AND the spec tree under one temp root, so the watch glob
+// and the record resolve against the same directory. Real installations do not
+// look like that: the composition record lives in the HARNESS directory
+// (`.claude/`, the plugin host root, `dirname(TOOLS_DIR)`) while the TLA+
+// specs are a PROJECT asset under `amadeus/spaces/<space>/specs/` — the
+// formal-model-check stage body itself names them project-relative
+// (`--model amadeus/spaces/default/specs/tla/FormalElection.tla`).
 //
 // With the two roots conflated, the watch set expands to nothing on a real host:
 // the recorded verdict hash becomes the SHA-256 of empty input, the judgment
@@ -44,8 +45,8 @@ const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
 // verdict carrying this value means the watcher hashed nothing at all.
 const EMPTY_SET_HASH = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-// The real layout: <projectRoot>/.claude is the plugin host, <projectRoot>/specs
-// holds the TLA+ assets.
+// The real layout: <projectRoot>/.claude is the plugin host,
+// <projectRoot>/amadeus/spaces/<space>/specs holds the TLA+ assets.
 let projectRoot = "";
 let host = "";
 
@@ -66,9 +67,9 @@ beforeEach(() => {
   projectRoot = mkdtempSync(join(tmpdir(), "amadeus-t382-"));
   host = join(projectRoot, ".claude");
   mkdirSync(host, { recursive: true });
-  // Specs are a PROJECT asset — one level above the harness directory.
-  writeFile(join(projectRoot, "specs/tla/FormalElection.tla"), "MODULE FormalElection\n");
-  writeFile(join(projectRoot, "specs/tla/FormalElection.cfg"), "INIT Init\n");
+  // Specs are a PROJECT asset — under the active space's canonical spec root.
+  writeFile(join(projectRoot, "amadeus/spaces/default/specs/tla/FormalElection.tla"), "MODULE FormalElection\n");
+  writeFile(join(projectRoot, "amadeus/spaces/default/specs/tla/FormalElection.cfg"), "INIT Init\n");
   writeActivationModelMap(projectRoot);
   composeFormalModelCheck();
 });
@@ -78,8 +79,8 @@ afterEach(() => {
 });
 
 describe("activation spec root on the real deployment layout", () => {
-  test("specRootForHost points one level above the plugin host root", () => {
-    expect(specRootForHost(host)).toBe(projectRoot);
+  test("specRootForHost resolves the owning spec root under the project root", () => {
+    expect(specRootForHost(host)).toBe(join(projectRoot, "amadeus", "spaces", "default", "specs"));
   });
 
   test("the watched set on a real host is non-empty (not the empty-input hash)", () => {
@@ -89,8 +90,10 @@ describe("activation spec root on the real deployment layout", () => {
     // must not hash to the empty set.
     const currentHash = judgment.kind === "never-run" ? judgment.currentHash : "";
     expect(currentHash).not.toBe(EMPTY_SET_HASH);
-    expect(currentHash).toBe(computeSpecHash(projectRoot, ["specs/tla/**"]).ok
-      ? (computeSpecHash(projectRoot, ["specs/tla/**"]) as { ok: true; hash: string }).hash
+    const independent = () =>
+      computeSpecHash(join(projectRoot, "amadeus", "spaces", "default", "specs"), ["tla/**"]);
+    expect(currentHash).toBe(independent().ok
+      ? (independent() as { ok: true; hash: string }).hash
       : "");
   });
 
@@ -105,7 +108,7 @@ describe("activation spec root on the real deployment layout", () => {
 
     // Edit the PROJECT's spec — the edit a user actually makes.
     writeFile(
-      join(projectRoot, "specs/tla/FormalElection.tla"),
+      join(projectRoot, "amadeus/spaces/default/specs/tla/FormalElection.tla"),
       "MODULE FormalElection\n\\* a meaningful change\n",
     );
 
@@ -132,10 +135,10 @@ describe("activation spec root on the real deployment layout", () => {
 
   test("a declared target with a missing cfg is not-ready and cannot record a verdict", () => {
     writeFile(
-      join(projectRoot, "specs/tla/model-map.json"),
+      join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"),
       activationModelMap(),
     );
-    rmSync(join(projectRoot, "specs/tla/FormalElection.cfg"));
+    rmSync(join(projectRoot, "amadeus/spaces/default/specs/tla/FormalElection.cfg"));
     const judgment = resolveActivationJudgment(host);
     expect(judgment).toEqual({
       kind: "not-ready",
@@ -153,7 +156,7 @@ describe("activation spec root on the real deployment layout", () => {
 
   test("a declared target with model and cfg starts at never-run with a structured target", () => {
     writeFile(
-      join(projectRoot, "specs/tla/model-map.json"),
+      join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"),
       activationModelMap(),
     );
     expect(resolveActivationJudgment(host).kind).toBe("never-run");
@@ -161,7 +164,7 @@ describe("activation spec root on the real deployment layout", () => {
       plugin: ACTIVATION_PLUGIN,
       stage: "requirements-analysis",
       code: "never-run",
-      target: "specs/tla",
+      target: "amadeus/spaces/default/specs/tla",
     });
   });
 
@@ -170,14 +173,14 @@ describe("activation spec root on the real deployment layout", () => {
     const statePath = join(host, ACTIVATION_STATE_FILE);
     const past = await Bun.file(statePath).text();
     writeFile(
-      join(projectRoot, "specs/tla/model-map.json"),
+      join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"),
       JSON.stringify({ schemaVersion: 2, models: [] }),
     );
     expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
     expect(recordActivationVerdict(host)).toBe(false);
     await expect(Bun.file(statePath).text()).resolves.toBe(past);
 
-    writeFile(join(projectRoot, "specs/tla/model-map.json"), "{not-json");
+    writeFile(join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"), "{not-json");
     expect(resolveActivationJudgment(host)).toMatchObject({ kind: "not-ready" });
     expect(recordActivationVerdict(host)).toBe(false);
     await expect(Bun.file(statePath).text()).resolves.toBe(past);
@@ -193,17 +196,17 @@ describe("activation spec root on the real deployment layout", () => {
       },
     };
     expect(recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-08-02T00:00:00Z", countingFs)).toBe(true);
-    expect(reads.get(join(projectRoot, "specs/tla/model-map.json"))).toBe(2);
+    expect(reads.get(join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"))).toBe(2);
     for (const relative of [
-      "specs/tla/FormalElection.tla",
-      "specs/tla/FormalElection.cfg",
+      "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     ]) {
       expect(reads.get(join(projectRoot, relative))).toBe(1);
     }
   });
 
   test("add, delete, and restore a target preserve the meaning of a past successful verdict", async () => {
-    rmSync(join(projectRoot, "specs/tla/model-map.json"));
+    rmSync(join(projectRoot, "amadeus/spaces/default/specs/tla/model-map.json"));
     expect(resolveActivationJudgment(host)).toEqual({ kind: "not-ready", reason: "model map is missing" });
     expect(recordActivationVerdict(host)).toBe(false);
 
@@ -212,7 +215,7 @@ describe("activation spec root on the real deployment layout", () => {
     expect(recordActivationVerdict(host)).toBe(true);
     expect(resolveActivationJudgment(host).kind).toBe("current");
 
-    const cfgPath = join(projectRoot, "specs/tla/FormalElection.cfg");
+    const cfgPath = join(projectRoot, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
     const cfg = await Bun.file(cfgPath).text();
     rmSync(cfgPath);
     expect(resolveActivationJudgment(host)).toEqual({

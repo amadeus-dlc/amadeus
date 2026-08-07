@@ -30,7 +30,13 @@ import {
   writeFileSync as fsWriteFileSync,
 } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
-import { evaluateTlaModelReadiness } from "./amadeus-formal-verif-model-map.ts";
+import {
+  evaluateTlaModelReadiness,
+  LegacySpecError,
+  resolveSpecRoots,
+  type SpecRoots,
+  tlaSpecDirPath,
+} from "./amadeus-formal-verif-model-map.ts";
 
 // The formal-model-check plugin is the sole activation target of this intent.
 export const ACTIVATION_PLUGIN = "formal-model-check";
@@ -38,8 +44,11 @@ export const ACTIVATION_PLUGIN = "formal-model-check";
 // The watched spec globs. This is the Amadeus-independent watch declaration for
 // the formal-model-check plugin (BR-U6-9): a fixed default, NOT read from the
 // upstream `when:`/scope manifest surface. Only the `<dir>/**` recursive form is
-// used (and supported); the spec files live under specs/tla/.
-export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["specs/tla/**"];
+// used (and supported). The glob base is the OWNING spec root
+// (`amadeus/spaces/<space>/specs/`, from the shared resolver — BR-3
+// cg-watch-root-separation), so the watch is declared as `tla/**`; the evidence
+// store (`<specsRoot>/tla-evidence`) sits outside the glob by construction.
+export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];
 
 // The persisted state file — composition-record-adjacent, machine-local. The
 // `.amadeus-plugin-` prefix keeps it out of the host snapshot (isEngineDotfile)
@@ -89,16 +98,25 @@ export const defaultActivationFs: ActivationFs = {
   renameSync: (a, b) => fsRenameSync(a, b),
 };
 
-// specRootForHost — the root the watch globs resolve against, derived from the
-// plugin host root. The two are DIFFERENT directories and conflating them is the
-// defect this helper names: the host root is the harness directory (`.claude/`,
-// `dirname(TOOLS_DIR)`) and owns host state (the composition record, the verdict
-// file), while the watched TLA+ specs are a PROJECT asset one level up — the
-// formal-model-check stage body names them project-relative
-// (`--model specs/tla/FormalElection.tla`). A harness directory always sits
-// directly under the project root, so the parent is the project root.
-export function specRootForHost(hostRoot: string): string {
+// projectRootForHost — the project root derived from the plugin host root.
+// The two are DIFFERENT directories and conflating them is the defect these
+// helpers name: the host root is the harness directory (`.claude/`,
+// `dirname(TOOLS_DIR)`) and owns host state (the composition record, the
+// verdict file), while the watched TLA+ specs are a PROJECT asset under
+// `amadeus/spaces/<space>/specs/` — the formal-model-check stage body names
+// them project-relative (`--model amadeus/spaces/default/specs/tla/FormalElection.tla`).
+// A harness directory always sits directly under the project root, so the
+// parent is the project root.
+export function projectRootForHost(hostRoot: string): string {
   return dirname(hostRoot);
+}
+
+// specRootForHost — the root the watch globs resolve against: the owning spec
+// root `amadeus/spaces/<activeSpace>/specs/` from the shared resolver (BR-1/BR-3).
+// Throws LegacySpecError when the pre-relocation `specs/tla/` layout still
+// holds specs (fail-closed, BR-4).
+export function specRootForHost(hostRoot: string): string {
+  return resolveSpecRoots(projectRootForHost(hostRoot)).specsRoot;
 }
 
 function toPosixRel(root: string, abs: string): string {
@@ -140,10 +158,10 @@ function expandGlobs(hostRoot: string, globs: readonly string[], fs: ActivationF
 // `{ ok: false }` (reliability-design — never hash a partial set to a false
 // match). Deterministic: sorted paths, content bytes, no time/env/mtime input.
 //
-// The root is the SPEC root (the project root), not the plugin host root — a
-// caller holding a host root passes it through specRootForHost first. Naming the
-// parameter for what it actually resolves against is what keeps the two roots
-// from silently collapsing back into one.
+// The root is the OWNING SPEC root (`amadeus/spaces/<space>/specs/`), not the
+// plugin host root — a caller holding a host root passes it through
+// specRootForHost first. Naming the parameter for what it actually resolves
+// against is what keeps the two roots from silently collapsing back into one.
 export function computeSpecHash(
   specRoot: string,
   globs: readonly string[],
@@ -220,17 +238,22 @@ export function judgeActivation(currentHash: string | null, lastHash: string | n
 
 // The 1-line stderr advisory for a judgment (domain-entities.md AdvisoryLine).
 // `current` is silent (null). Two variants — changed / never-run — each a single
-// fixed line naming the explicit reach command (never an auto-run).
-export function activationAdvisoryLine(judgment: ActivationJudgment): string | null {
+// fixed line naming the explicit reach command (never an auto-run). The
+// `specTarget` names the watched spec directory (the canonical
+// `amadeus/spaces/<space>/specs/tla`); the verdict vocabulary is invariant.
+export function activationAdvisoryLine(
+  judgment: ActivationJudgment,
+  specTarget: string = tlaSpecDirPath(),
+): string | null {
   switch (judgment.kind) {
     case "current":
       return null;
     case "changed":
-      return `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
+      return `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (${specTarget}) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
     case "never-run":
-      return `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
+      return `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (${specTarget}) — run /amadeus --stage ${ACTIVATION_PLUGIN}`;
     case "not-ready":
-      return `advisory: ${ACTIVATION_PLUGIN} is not ready (${judgment.reason}) — add a valid specs/tla/model-map.json target before running it`;
+      return `advisory: ${ACTIVATION_PLUGIN} is not ready (${judgment.reason}) — add a valid ${specTarget}/model-map.json target before running it`;
   }
 }
 
@@ -291,19 +314,37 @@ function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): 
   // Narrow on the judgment (not on the line being non-null) so `code` is the
   // judgment's own kind — the two stay 1:1 by construction, not by convention.
   if (judgment.kind === "current") return [];
-  const message = activationAdvisoryLine(judgment);
-  if (message === null) return [];
-  const computed = computeSpecHash(specRootForHost(hostRoot), ACTIVATION_WATCH_GLOBS, fs);
-  const specIdentity = computed.ok ? computed.hash : "unreadable-spec";
-  return [{
-    plugin: ACTIVATION_PLUGIN,
-    code: judgment.kind,
-    message,
-    stage,
-    ...(judgment.kind === "not-ready"
-      ? { target: "specs/tla", specIdentity, reason: judgment.reason }
-      : { target: "specs/tla", specIdentity: judgment.currentHash }),
-  }];
+  // The concrete watched target and spec identity come from the resolver. A
+  // legacy layout (LegacySpecError) already surfaced as a not-ready judgment
+  // carrying the migration instructions; the advisory then falls back to the
+  // errored space's label rather than re-throwing.
+  const emitAdvisory = (specTarget: string, specIdentity: string) => {
+    const message = activationAdvisoryLine(judgment, specTarget);
+    if (message === null) return [];
+    return [{
+      plugin: ACTIVATION_PLUGIN,
+      code: judgment.kind,
+      message,
+      stage,
+      ...(judgment.kind === "not-ready"
+        ? { target: specTarget, specIdentity, reason: judgment.reason }
+        : { target: specTarget, specIdentity: judgment.currentHash }),
+    }];
+  };
+  try {
+    const projectRoot = projectRootForHost(hostRoot);
+    const roots = resolveSpecRoots(projectRoot);
+    const specTarget = toPosixRel(projectRoot, roots.tlaDir);
+    const computed = computeSpecHash(roots.specsRoot, ACTIVATION_WATCH_GLOBS, fs);
+    const specIdentity = computed.ok ? computed.hash : "unreadable-spec";
+    return emitAdvisory(specTarget, specIdentity);
+  } catch (err) {
+    if (!(err instanceof LegacySpecError)) throw err;
+    // Legacy layout: the judgment already carries the migration instructions;
+    // emit with the errored space's label as the catch's explicit terminal
+    // rather than a silent continue.
+    return emitAdvisory(tlaSpecDirPath(err.space), "unreadable-spec");
+  }
 }
 
 // --- The run latch (business-logic-model L4 / domain-entities.md E3) ---
@@ -418,15 +459,26 @@ type ActivationReadiness =
   | { kind: "not-ready"; reason: string };
 
 function activationReadiness(
-  specRoot: string,
+  projectRoot: string,
   fs: ActivationFs,
 ): ActivationReadiness {
-  const mapPath = join(specRoot, "specs", "tla", "model-map.json");
-  if (!fs.existsSync(mapPath)) return { kind: "not-ready", reason: "model map is missing" };
+  let roots: SpecRoots;
+  try {
+    roots = resolveSpecRoots(projectRoot);
+  } catch (err) {
+    // The legacy layout is a not-ready verdict carrying the migration
+    // instructions — fail-closed toward the advisory side (BR-4).
+    if (err instanceof LegacySpecError) return { kind: "not-ready", reason: err.message };
+    throw err;
+  }
+  if (!fs.existsSync(roots.modelMapPath)) return { kind: "not-ready", reason: "model map is missing" };
   try {
     const readiness = evaluateTlaModelReadiness(
-      fs.readFileSync(mapPath),
-      (relativePath) => fs.existsSync(join(specRoot, relativePath)),
+      fs.readFileSync(roots.modelMapPath),
+      (relativePath) => fs.existsSync(join(projectRoot, relativePath)),
+      // The path actually read, so a map declaring assets outside its own
+      // space (which this watch never observes) is rejected as not-ready.
+      roots.modelMapPath,
     );
     return readiness.ok ? { kind: "ready" } : { kind: "not-ready", reason: readiness.error.detail };
   } catch {
@@ -443,11 +495,10 @@ export function resolveActivationJudgment(
   fs: ActivationFs = defaultActivationFs,
 ): ActivationJudgment {
   // The two roots are deliberately different: the specs are hashed from the
-  // PROJECT root (specRootForHost) while the recorded verdict is host state.
-  const specRoot = specRootForHost(hostRoot);
-  const readiness = activationReadiness(specRoot, fs);
+  // OWNING spec root (specRootForHost) while the recorded verdict is host state.
+  const readiness = activationReadiness(projectRootForHost(hostRoot), fs);
   if (readiness.kind === "not-ready") return readiness;
-  const current = computeSpecHash(specRoot, globs, fs);
+  const current = computeSpecHash(specRootForHost(hostRoot), globs, fs);
   const state = readActivationState(hostRoot, fs);
   return judgeActivation(current.ok ? current.hash : null, state === null ? null : state.lastVerdictHash);
 }
@@ -478,8 +529,9 @@ export function recordActivationVerdict(
   now: string = new Date().toISOString(),
   fs: ActivationFs = defaultActivationFs,
 ): boolean {
+  const projectRoot = projectRootForHost(hostRoot);
+  if (activationReadiness(projectRoot, fs).kind === "not-ready") return false;
   const specRoot = specRootForHost(hostRoot);
-  if (activationReadiness(specRoot, fs).kind === "not-ready") return false;
   const current = computeSpecHash(specRoot, globs, fs);
   if (!current.ok) return false;
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);

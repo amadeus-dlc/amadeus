@@ -98,8 +98,8 @@ describe("run-model-check orchestration", () => {
     mkdirSync(workspace);
     const model = join(workspace, "FormalElection.tla");
     const cfg = join(workspace, "FormalElection.cfg");
-    cpSync("specs/tla/FormalElection.tla", model);
-    cpSync("specs/tla/FormalElection.cfg", cfg);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
     const stderr: string[] = [];
     const artifact: VerifiedTlcArtifact = Object.freeze({
       kind: "VerifiedTlcArtifact",
@@ -336,8 +336,8 @@ describe("run-model-check orchestration", () => {
     mkdirSync(workspace);
     const model = join(workspace, "FormalElection.tla");
     const cfg = join(workspace, "FormalElection.cfg");
-    cpSync("specs/tla/FormalElection.tla", model);
-    cpSync("specs/tla/FormalElection.cfg", cfg);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
     const stderr: string[] = [];
     const dependencies: RunModelCheckDependencies = {
       randomUuid: () => RUN_ID,
@@ -409,8 +409,8 @@ describe("run-model-check orchestration", () => {
     mkdirSync(workspace);
     const model = join(workspace, "FormalElection.tla");
     const cfg = join(workspace, "FormalElection.cfg");
-    cpSync("specs/tla/FormalElection.tla", model);
-    cpSync("specs/tla/FormalElection.cfg", cfg);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", model);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfg);
     const base: RunModelCheckDependencies = {
       randomUuid: () => { throw new Error("injected UUID failure"); },
       utcNow: () => "2026-07-24T00:00:00.000Z",

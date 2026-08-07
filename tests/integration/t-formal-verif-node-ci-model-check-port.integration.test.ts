@@ -26,8 +26,8 @@ import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/
 
 const FORMAL_ELECTION = {
   name: "FormalElection",
-  modelPath: "specs/tla/FormalElection.tla",
-  cfgPath: "specs/tla/FormalElection.cfg",
+  modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+  cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
   layer: "frozen" as const,
 };
 
@@ -63,7 +63,7 @@ function dependencies(
         const runId = "00000000-0000-4000-8000-000000000001";
         const dockerArgs = [
           "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-          "--mount", `type=bind,src=${join(workspace, "specs/tla")},dst=${join(workspace, "specs/tla")},readonly`,
+          "--mount", `type=bind,src=${join(workspace, "amadeus/spaces/default/specs/tla")},dst=${join(workspace, "amadeus/spaces/default/specs/tla")},readonly`,
           "--mount", "type=bind,src=/cache/tla2tools.jar,dst=/cache/tla2tools.jar,readonly",
           "--mount", "type=bind,src=/scratch/.scratch,dst=/scratch/.scratch",
           FIXED_DOCKER_IMAGE,
@@ -138,6 +138,31 @@ describe("Node CI model-check port", () => {
     });
   });
 
+  test("surfaces a legacy spec layout as a structured failure instead of throwing", async () => {
+    const workspace = mkdtempSync(join(tmpdir(), "node-ci-port-legacy-"));
+    const evidenceRoot = mkdtempSync(join(tmpdir(), "node-ci-port-legacy-evidence-"));
+    roots.push(workspace, evidenceRoot);
+    mkdirSync(join(workspace, "specs", "tla"), { recursive: true });
+    writeFileSync(
+      join(workspace, "specs", "tla", "FormalElection.tla"),
+      "---- MODULE FormalElection ----\n====\n",
+    );
+    const port = new NodeCiModelCheckPort(workspace, dependencies(workspace));
+    expect(await port.bootstrap(evidenceRoot)).toEqual({ ok: true, value: undefined });
+    const result = await port.run({
+      evidenceRoot,
+      outDir: join(evidenceRoot, "FormalElection/runs/measured-1"),
+      model: { ...FORMAL_ELECTION, layer: "verified-source" as const },
+      kind: "measured",
+      index: 1,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("HARNESS_ERROR");
+    expect(result.error.detail).toContain("legacy TLA spec layout detected at specs/tla/");
+    expect(result.error.detail).toContain("git mv specs/tla amadeus/spaces/default/specs/tla");
+  });
+
   test("runs a verified-source model directly and records exact TLC statistics", async () => {
     const workspace = mkdtempSync(join(tmpdir(), "node-ci-port-verified-workspace-"));
     const evidenceRoot = mkdtempSync(join(tmpdir(), "node-ci-port-verified-evidence-"));
@@ -175,8 +200,8 @@ describe("Node CI model-check port", () => {
       outDir: join(evidenceRoot, "MirrorLifecycle/runs/measured-1"),
       model: {
         name: "MirrorLifecycle",
-        modelPath: "specs/tla/MirrorLifecycle.tla",
-        cfgPath: "specs/tla/MirrorLifecycle.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
         layer: "verified-source",
       },
       kind: "measured",

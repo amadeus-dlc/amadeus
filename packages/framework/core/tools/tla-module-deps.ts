@@ -1,11 +1,15 @@
 // Transitive TLA module dependency resolution (FR-2 foundation).
 //
 // Pure module: no fs access, no `node:` imports. The caller injects
-// `readModule`, which is responsible for reading `specs/tla/<Name>.tla`
-// inside the canonical boundary. Extraction is line-based after comment
-// stripping, so EXTENDS/INSTANCE-shaped text inside comments or deeper in a
-// line is never adopted as a dependency. Every failure is an explicit typed
-// error — no silent fallback, no silent skip.
+// `readModule`, which is responsible for reading `<Name>.tla` inside the
+// canonical spec directory (`amadeus/spaces/<space>/specs/tla/`). Error labels
+// reuse the canonical path vocabulary from amadeus-formal-verif-model-map.ts —
+// the only import — so this module never assembles spec paths on its own.
+// Extraction is line-based after comment stripping, so EXTENDS/INSTANCE-shaped
+// text inside comments or deeper in a line is never adopted as a dependency.
+// Every failure is an explicit typed error — no silent fallback, no silent skip.
+
+import { tlaModelPath } from "./amadeus-formal-verif-model-map.ts";
 
 export type ModuleDepsErrorCode =
   | "MODULE_DEP_UNRESOLVED"
@@ -35,7 +39,7 @@ type Result<T, E> =
 const MODEL_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 
 // TLA2Tools standard modules. References to these are language built-ins, not
-// specs/tla assets, so they are neither tracked nor resolved.
+// canonical spec directory assets, so they are neither tracked nor resolved.
 export const TLA_STANDARD_MODULES: readonly string[] = [
   "Bags",
   "FiniteSets",
@@ -56,7 +60,7 @@ function failure(
     error: {
       kind: "MODULE_DEPS",
       code,
-      relativePath: `specs/tla/${moduleName}.tla`,
+      relativePath: tlaModelPath(moduleName),
       detail,
     },
   };

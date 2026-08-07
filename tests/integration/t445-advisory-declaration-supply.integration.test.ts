@@ -192,7 +192,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     code: "authoring-hold" as Advisory["code"],
     message: "advisory: demo authoring-hold — no-applicability-receipt",
     stage: "requirements-analysis",
-    target: "specs/tla",
+    target: "amadeus/spaces/default/specs/tla",
     specIdentity: "sha256:hold-1",
   };
 
