@@ -62,6 +62,10 @@ import {
   humanActedSinceGate,
   listIntents,
   readAllAuditShards,
+  readStateFile,
+  setFieldStrict,
+  setOrInsertField,
+  writeStateFile,
 } from "./amadeus-lib.ts";
 
 const ALL_INTERACTIONS: readonly InteractionKind[] = [
@@ -449,6 +453,48 @@ interface ApplyProductionAutonomyModeInput {
   readonly confirmedDisplayDigest?: string;
 }
 
+// The state projection of a committed mode. Written HERE and nowhere else: an
+// entrance that commits the transaction but leaves the fields to its own caller
+// (as the set-autonomy verb used to) gives every other entrance — the
+// `--autonomy` launch flag — a mode the six state-file readers cannot see.
+//
+// Audit first, state second. The order matters on failure: a committed
+// transaction with unwritten fields converges on re-run, whereas written fields
+// with no transaction behind them would be a projection with no ledger.
+//
+// The base is re-read here rather than taken from the caller's `stateContent`:
+// that argument describes the scope the caller previewed, and writing the whole
+// file back from it would let a stale or partial copy overwrite whatever else
+// the record has gained since the caller read it.
+function writeAutonomyStateProjection(
+  projectDir: string,
+  mode: AutonomyMode,
+  projection: AutonomyProjection,
+): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
+  try {
+    let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
+    updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
+    updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+    writeStateFile(projectDir, updated);
+  } catch (cause) {
+    return {
+      ok: false,
+      error: `state projection write failed after the autonomy transaction committed (re-run the same declaration to converge): ${cause instanceof Error ? cause.message : String(cause)}`,
+    };
+  }
+  return { ok: true, projection };
+}
+
+// Whether THIS declaration already committed. The transaction id is derived from
+// (intentUuid, commandOccurrenceId), so a matching occurrence id means a second
+// applyHumanCommand would re-issue a transaction that already exists — the
+// re-run is a state repair, not a new declaration.
+function alreadyDeclared(before: AutonomyProjection, mode: AutonomyMode, commandOccurrenceId: string): boolean {
+  return before.mode === mode &&
+    before.modeProvenance.kind === "human-command" &&
+    before.modeProvenance.commandOccurrenceId === commandOccurrenceId;
+}
+
 export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeInput): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
@@ -456,6 +502,10 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
   if (humanTurnId === null) return { ok: false, error: "PROVENANCE_REQUIRED" };
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const before = coordinator.readProjection();
+  const commandOccurrenceId = `autonomy-mode-${input.mode}-${humanTurnId}`;
+  if (alreadyDeclared(before, input.mode, commandOccurrenceId)) {
+    return writeAutonomyStateProjection(input.projectDir, input.mode, before);
+  }
   const principalId = input.principalId ?? "local-human";
   let command: HumanAutonomyCommand;
   let confirmedDisplayDigest: string;
@@ -480,12 +530,12 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
     targetIntentUuid: before.intentUuid,
     principalId,
     humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: humanTurnId },
-    commandOccurrenceId: `autonomy-mode-${input.mode}-${humanTurnId}`,
+    commandOccurrenceId,
     expectedProjectionRevision: before.projectionRevision,
     confirmedDisplayDigest,
   });
   if ("error" in result) return { ok: false, error: result.error };
-  return { ok: true, projection: coordinator.readProjection() };
+  return writeAutonomyStateProjection(input.projectDir, input.mode, coordinator.readProjection());
 }
 
 interface CommitProductionStageGateDecisionInput {

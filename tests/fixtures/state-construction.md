@@ -94,6 +94,7 @@ Per unit: widget-checkout
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
+- **Construction Autonomy Mode**: unset
 - **Last Updated**: 2025-06-18T14:20:00Z
 
 ## Session Resume Point
