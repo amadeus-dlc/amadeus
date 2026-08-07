@@ -250,3 +250,49 @@ describe("CLI status verb on a merged pull request (AC-2a/2b)", () => {
     expect(out.stderr).toContain("unknown pull-request state");
   });
 });
+
+describe("CLI report verb on a merged pull request (AC-3a/3b)", () => {
+  const reportArgs = (record: string) => ["report", ...statusArgs(record).slice(1)];
+
+  test("writes a landed report whose fields are all machine-derived", async () => {
+    // The record carries NO audit shard: the landed path must neither read a
+    // HUMAN_TURN nor emit a decision (AC-3b) — landing records a merge that
+    // already happened, it approves nothing.
+    const record = makeBareRecord();
+    const emitted: (readonly string[])[] = [];
+    const out = await runCli(reportArgs(record), {
+      ...seams(cliSpawn(MERGED_PR, []).spawn, countingSleep().sleep),
+      emitDecision: async (argv) => {
+        emitted.push(argv);
+        return { code: 0, stderr: "" };
+      },
+    });
+    expect(out.exitCode).toBe(0);
+    expect(emitted).toEqual([]);
+    const body = readFileSync(reportPathFor(record, "landed-report"), "utf-8");
+    expect(body).toContain("- kind: landed");
+    expect(body).toContain("- pull request: amadeus-dlc/amadeus#2401");
+    expect(body).toContain("- converged: false");
+    expect(body).toContain("- merged at: 2026-08-07T01:00:00Z");
+    expect(body).toContain("- merge commit: 0123456789abcdef0123456789abcdef01234567");
+    expect(body).toContain("- check rollup: SUCCESS");
+    expect(body).toContain("- generated at: 2026-08-07T02:00:00Z");
+  });
+
+  test("a null check rollup omits the line rather than rendering null", async () => {
+    const record = makeBareRecord();
+    const noRollup = {
+      ...MERGED_PR,
+      mergeCommit: { oid: MERGED_PR.mergeCommit.oid, statusCheckRollup: null },
+    };
+    const out = await runCli(
+      reportArgs(record),
+      seams(cliSpawn(noRollup, []).spawn, countingSleep().sleep),
+    );
+    expect(out.exitCode).toBe(0);
+    const body = readFileSync(reportPathFor(record, "landed-report"), "utf-8");
+    expect(body).toContain("- kind: landed");
+    expect(body).not.toContain("check rollup");
+    expect(body).not.toContain("null");
+  });
+});
