@@ -201,7 +201,7 @@ export async function createGhRunner(
 
 export const PR_STATE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
-    pullRequest(number:$number){ mergeable mergeStateStatus }
+    pullRequest(number:$number){ mergeable mergeStateStatus state mergedAt mergeCommit { oid statusCheckRollup { state } } }
   }
 }`;
 
@@ -247,7 +247,31 @@ export async function fetchRawPrState(
   if (typeof mergeable !== "string" || typeof mergeStateStatus !== "string") {
     return { ok: false, error: malformedResponse(out.value) };
   }
-  return { ok: true, value: { mergeable, mergeStateStatus } };
+  // Lifecycle fields (#2401), raw and unparsed like the two above. By ruling
+  // E-MPC-CGBLK each is included only when the response mentions it: a null in
+  // the response stays null (a fact — no merge instant), while a field the
+  // response never carried stays absent (no fabricated default).
+  const value: {
+    mergeable: string;
+    mergeStateStatus: string;
+    state?: string;
+    mergedAt?: string | null;
+    mergeCommitOid?: string | null;
+    checkRollupState?: string | null;
+  } = { mergeable, mergeStateStatus };
+  if (typeof pullRequest.state === "string") value.state = pullRequest.state;
+  if ("mergedAt" in pullRequest) {
+    value.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;
+  }
+  if ("mergeCommit" in pullRequest) {
+    const mergeCommit = pullRequest.mergeCommit;
+    value.mergeCommitOid =
+      isRecord(mergeCommit) && typeof mergeCommit.oid === "string" ? mergeCommit.oid : null;
+    const rollup = isRecord(mergeCommit) ? mergeCommit.statusCheckRollup : null;
+    value.checkRollupState =
+      isRecord(rollup) && typeof rollup.state === "string" ? rollup.state : null;
+  }
+  return { ok: true, value };
 }
 
 /**
