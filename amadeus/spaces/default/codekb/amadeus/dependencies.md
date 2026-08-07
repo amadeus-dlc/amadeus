@@ -1,6 +1,79 @@
 # 依存関係
 
-## cross-harness resume の依存関係（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 外部依存
+
+**区間内の実質的な追加・削除はない。** `package.json` の実質 diff は `pi.extensions` への `./dist/pi/.pi/extensions/subagent.ts` 追加 1 箇所のみで、`devDependencies` は無変更。本 intent の患部が持つ外部依存は次のみ:
+
+- `git`（`diff --quiet` / `merge-base --is-ancestor` / `cat-file -e` / root tree 取得）— #2313 の判定はすべてこれに依存する
+- `gh` + GitHub App token — reconcile ワークフローの認証・PR 参照面
+- `node:fs` / `node:path` — advisory store・events 台帳の読み書き
+
+### モジュール間依存（#2313）
+
+```
+.github/workflows/ci.yml:121-157
+   └→ package.json "no-silent-drop"
+        └→ tests/no-silent-drop-gate.ts (CLI 薄皮)
+             └→ tests/no-silent-drop/engine.ts (runGate :295)
+                  ├→ ledger.ts (trustedBaseSha :213-223 / assertShrinkOnly :191 / CANONICAL_PATHS :301)
+                  └→ events.ts (:256 foldEvents ← loadEvents(EVENTS_DIR :15))
+                       └→ [fs] tests/no-silent-drop/events/*.json  … observed で 217 ファイル
+
+.github/workflows/no-silent-drop-evidence-reconcile.yml (push: main)
+   └→ scripts/no-silent-drop-evidence.ts   (:59/:63 分岐、:162-171 回復分岐、:253 実行)
+        └→ scripts/no-silent-drop-evidence-adapter.ts   ← I/O ポート注入（git / gh / fs）
+             ├→ :226-240 freshness 述語  ──[git diff --quiet]──→ throw REBIND_NON_IDENTITY_DRIFT
+             └→ :305-315 / :316-324 tree 証明 2段
+        └→ tests/no-silent-drop/evidence-rebind.ts (buildRebound :341 / buildReconcile :405 /
+                                                    applyRebound :462 / rollbackApplied :550)
+             ├→ repository-adoption-evidence.ts (ADOPTION_RECEIPT_IDS :5 = 23種)
+             └→ [fs] adoption-evidence.json (currentRevision = fe8c701ba…) /
+                     adoption-evidence-manifest.json / evidence/adoption-runs.json   ← EVIDENCE_BUNDLE_PATHS :24-30
+
+.github/workflows/no-silent-drop-retention.yml (週次 + dispatch)
+   └→ scripts/no-silent-drop-retention.ts (dry-run / --apply)  → snapshot 書込 + 列挙 ULID 削除
+```
+
+### 依存構造上の観察（#2313）
+
+1. **freshness 述語は「ゲート実装」ではなく「ゲートが走査するコーパス」に依存している。** `packages/framework/core/tools` は gate の入力側であり実装ではない。この依存の向きの誤りが恒久赤の直接原因であり、`t413:181-195` の選定理由コメントが同じ判断を逐語で記している（"it needs an evidence-regeneration path, not a pin here"）。
+2. **判定と回復が排他分岐にある。** `scripts/no-silent-drop-evidence.ts:162-171` は `currentBindingIsValidForEvent` が **false のときだけ** `proveIdentityOnlyRebind` を呼ぶ。true / throw の2値しか返らない述語に対し、回復は false 側にしか結線されていない。
+3. **adapter は I/O ポートとして分離されているため、純粋計算側に触れずに述語だけを差し替えられる。** これは是正の自由度として有利に働く。
+4. **registry の3ファイルは既に第1段 tree 比較の除外集合として名指しされている**（`evidence-rebind.ts:24-30`）。再生成経路を設計するとき、この既存の除外語彙を再利用できる。
+
+### モジュール間依存（#2330 / #2358）
+
+```
+amadeus-orchestrate.ts
+   ├→ :797-799 applyPendingAdvisoryGuard ──(pending.length === 0)──→ 早期 return（guard 不走行）
+   │      └→ amadeus-advisory-choice.ts
+   │            ├→ readStore :681-691 ──(不在時のみ空 schema 2)
+   │            ├→ parseStore :659-661 ──(schema !== 2 を reject)──→ !ok → fail-closed hold
+   │            └→ parsePending :640-651 ──(schema 1 を受理)  ← salvage に再利用可能な唯一の面
+   │      └→ [fs] .amadeus-advisory-choice.json（per-clone、gitignored、observed で 6 件）
+   │
+   └→ :3707-3733 degradeUnitResolutionError
+          ├→ :3746-3760 unitCovered（produces の実在のみ）  ← #2359 と共有する述語
+          └→ :3807 単一 unit は covered でも解決 → ステージゲートを運ぶ
+```
+
+### 依存構造上の観察（#2330 / #2358）
+
+1. **advisory store の回復は `parsePending` に依存できる。** store 全体は schema 2 を要求するが pending エントリは schema 1 のままであり、遷移に必要な情報は失われていない。回復経路は「既存 pending を読んで新 store を書く」形で既存依存の範囲に収まる。
+2. **guard の起動が pending 非空に依存する**ため、回復入口を guard 経路の内側に置くと届かない。**CLI 側（`amadeus-advisory-choice.ts` の verb dispatch）に置く必要がある** — #2313 と同型の「回復手段がゲートの内側にある」罠を避ける配置判断。
+3. **`unitCovered` は #2358 と #2359 の共有依存点である。** #2358 の回復入口が `unitCovered` の述語自体を変更する形になると、#2359 の修正余地を先取りして塞ぐ。宣言受理点は述語の外側に置く必要がある。
+4. **選挙記録とノルムへの依存**: 是正方針は `amadeus/spaces/default/elections/260730-e-obb2-cg1/` の裁定と `project.md:287` の `cid:code-generation:c1-degrade-batch-directive-capture` に拘束される。fail-closed を維持したまま宣言入口を足す方向のみが既決と両立する。
+
+### 台帳への依存（是正時に該当）
+
+`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` へ行を挿入する修正では、`tests/.coverage-patch-allowlist.json`（区間で +234）と no-silent-drop の events 台帳の双方が波及先になる。該当ノルムは `cid:code-generation:c1-allowlist-mechanical-remap`（全エントリの機械 remap ＋ reason と現行行内容の直読照合）、`cid:code-generation:cg-allowlist-straddle-swell`（span 膨張検査）、`cid:code-generation:c5-ratchet-census-at-final-base`（shrink-only の census は最終 base で採る）。
+
+
+## cross-harness resume の依存関係（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -63,7 +136,7 @@ stage report
 - `formal-model-check` pluginの実行器・model-map・TLC toolchainは後段依存であり、上流checkpointの人間選択を生成しない。後で形式検査を実行した事実は、先に延期を選んだreceiptの代用にならない。
 - canonical audit eventを追加する案では、`otel/event-registry.ts`、`amadeus-audit`、`audit-format.md`、event-registry drift、`t28`、生成harness／`dist`へ波及する。現在81 eventであり、この依存波及は観測済みだが追加案は未承認である。
 
-## subagent 型規律の依存関係（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律の依存関係（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 差分 base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）の区間で、**外部依存に変更はない**。`git diff --stat b938898f3..7060956c5 -- package.json bun.lock packages/setup/package.json` は**空出力**（Architect 実測）。追加・更新・削除はゼロであり、利用者側の Bun-only 前提は不変である。
 
@@ -79,7 +152,7 @@ stage report
 | `SUBAGENT_STARTED` | `core/hooks/amadeus-log-subagent-start.ts:61-72` | `composeSubagentLifetimes` の入力半分 | Claude Code 経路が D-1 / D-2 で不発のため実質的に供給欠落 |
 
 いずれも「宣言と本番結線の非対称」クラスであり、`cid:requirements-analysis:symmetric-pair-review`（write⇔check / emit⇔terminal の対称性を設計・レビュー観点にする）の対象である。CAP-2 / CAP-3 はこの非対称のうち3件（`gen_ai.request.model` / `composeSubagentLifetimes` / codex の `model`）を結線する形になる。
-## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の依存関係（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。
 

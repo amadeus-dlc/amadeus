@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-FCR-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "エントリ2(RAID種1敵対検証→再裁定)の一般形は Issue #2385 側チェックリストと既存 deviation-stop 系 cid が既に担うため 0件で可だが、同型が別 intent で再発したら persist を再検討する。",
+  "rationale": "独立実測: (1) diary 4エントリを直読 — Interpretations 2件は cid:requirements-analysis:c3-260729-open-bug-batch / cid:intent-capture:c1 / E-OC1 3段順序の適用、Deviations は なし、Tradeoffs は E-SRA-ADS13(cid:code-generation:c1-reviewer-scope-alignment 追補の事後側)+ fix-diff-independent-reverify の適用。(2) 機構引用を再実測 — amadeus-orchestrate.ts:3804-3806 で uncovered が unitCovered filter で算出される実装を verbatim 確認、requirements.md への :3804 伝播 1 hit。(3) questions ファイルに判定申告→ユーザー承認 2026-08-07T04:29:50Z→[Answer] 記入の3段順序の証跡を確認。(4) requirements.md に Review — Iteration 1/2 の実在を確認。いずれも既存ノルムの適用実績であり新規の一般化可能な増分は認められない。",
+  "submittedAt": "2026-08-07T05:30:00Z",
+  "receivedAt": "2026-08-07T05:01:16Z"
+}

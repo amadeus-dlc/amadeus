@@ -1,6 +1,80 @@
 # API ドキュメント
 
-## cross-harness resume が対象とする契約（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### CLI 契約（回復 verb の不在が観測される面）
+
+| ツール | 現行 verb / フラグ | 回復面 |
+| --- | --- | --- |
+| `tests/no-silent-drop-gate.ts`（36行） | `check` / `census-evidence` / `approve-evidence` / `baseline-candidate` ＋ `[--base-revision <full-sha>]`（usage 逐語） | 判定のみ。`package.json` の `"no-silent-drop": "bun tests/no-silent-drop-gate.ts check"` |
+| `scripts/no-silent-drop-evidence.ts`（270行） | **`rebind` / `reconcile` の2つのみ**（usage `:32-33`、分岐 `:59` / `:63`、実行 `:253`）。`rebind --target-revision <full-sha>` / `reconcile --event-revision <full-sha> --repository <owner/name>` | **evidence 再生成 verb は存在しない** |
+| `scripts/no-silent-drop-retention.ts`（175行、新規） | 引数なし = dry-run、`--apply` のみ（`parseArgs` `:28`） | snapshot 書込と列挙済み ULID の削除。維持系であり drift 回復ではない |
+| `packages/framework/core/tools/amadeus-advisory-choice.ts` | **`record` / `correct-misattributed` の2 verb のみ**（USAGE `:1516-1520`、dispatch `:1522-1532`） | **schema 1 store からの回復 verb は存在しない** |
+
+### `no-silent-drop-gate.ts check` の呼び出し規約（ローカル実行の前提）
+
+`--base-revision` を省略すると必ず次を返す:
+
+```json
+{"code":"BASELINE_INVALID","detail":"check mode requires a non-zero trusted base revision"}
+```
+
+exit 2。**これは欠陥ではなく規約である**:
+
+- `tests/no-silent-drop/engine.ts:250-252` が `trustedBaseSha` の null を拒否する。
+- `tests/no-silent-drop/ledger.ts:213-223` の解決順は explicit → `AMADEUS_NSD_TRUSTED_BASE_SHA` → `GITHUB_BASE_SHA` → `GITHUB_EVENT_BEFORE`。
+- base は **HEAD の厳密祖先**でなければならない。HEAD 自身を渡すと `"trusted base is not a strict ancestor of HEAD: b8e3e664f…"` / exit 2。
+
+CI 側の base 解決（`.github/workflows/ci.yml:121-157`）は PR = base SHA、push = before SHA、`workflow_dispatch` = `HEAD^`。いずれも 40 桁小文字 SHA・非全零・`git cat-file -e` を検証したうえで `timeout 30s bun run no-silent-drop -- --base-revision "${BASE_REVISION}"` を実行する。
+
+### エラーコード契約（#2313）
+
+| コード | 発生点 | 意味 | 回復 |
+| --- | --- | --- | --- |
+| `REBIND_NON_IDENTITY_DRIFT` | `scripts/no-silent-drop-evidence-adapter.ts:226-240` | "current binding is reachable but evidence freshness paths changed"（逐語） | **なし**（throw であり、`scripts/no-silent-drop-evidence.ts:162-171` の回復分岐は `currentBindingIsValidForEvent` が false のときだけ走る） |
+| `REBIND_PR_LANDING_TREE_MISMATCH` | 同 `:316-324` | "final pull request head and landing commit root trees differ"（逐語） | 第1段（`:305-315`）は `EVIDENCE_BUNDLE_PATHS` の3ファイルを除外した tree 比較の形を既に持つ |
+| `REBIND_PREFLIGHT_FAILED` / `REBIND_CREDENTIAL_FAILED` / `REBIND_CHECKOUT_FAILED` | `.github/workflows/no-silent-drop-evidence-reconcile.yml` | preflight 失敗を step summary へ出す | ワークフロー面 |
+| `BASELINE_INVALID` | `tests/no-silent-drop/engine.ts:250-252` | trusted base 未指定・非祖先 | 呼び出し側で `--base-revision` を与える（上記規約） |
+
+失敗時の envelope 実文（run 31135902843 のジョブログからの転記）:
+
+```json
+{"schemaVersion":1,"operation":"no-silent-drop-evidence-rebind","status":"error","code":"REBIND_NON_IDENTITY_DRIFT","eventRevision":"b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d","bindingRevision":"fe8c701ba15c0677a4ec18cc3715ff1086318dde","targetRevision":"b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d","changed":false,"counts":{"registryRevisions":0,"manifestRevisions":0,"runRevisions":0,"artifactDigests":0,"receiptDigests":0},"paths":[],"validation":{"ok":false,"problems":[]},"error":{"code":"REBIND_NON_IDENTITY_DRIFT","message":"current binding is reachable but evidence freshness paths changed"}}
+```
+
+成功側の envelope は `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`（gate check、ローカル実測 exit 0）。`evidence-rebind.ts:40` の status 語彙は `"changed" | "no-op" | "superseded" | "error"`。
+
+### advisory choice store のオンディスク契約（#2330）
+
+| 要素 | 契約 | 実装 |
+| --- | --- | --- |
+| store 本体 | `schema: 2` のみ受理 | `parseStore` `:659-661` が `value.schema !== 2` で reject |
+| store 不在 | 空の schema 2 を返す | `readStore` `:681-691`（**不在時のみ**。既存 schema 1 ファイルは parse 失敗） |
+| pending エントリ | `schema: 1` を要求 | `parsePending` `:640-651` が `value.schema !== 1` を拒否 |
+| 失敗時の呼び出し側挙動 | `!storeResult.ok` → fail-closed hold | 設計コメント `:653-657` が明文で意図として記す |
+| guard の起動条件 | pending が非空のときのみ | `amadeus-orchestrate.ts:797-799` `if (pending.length === 0) return directive;` |
+
+**契約上の欠落**: schema 1 → 2 の遷移は「翻訳しない」と明示的に決めているが、**遷移を人間の操作で完了させる契約が無い**。pending が schema 1 のまま受理される点は、回復契約を設計するうえで利用可能な既存面である。
+
+### engine の degrade 経路契約（#2358）
+
+全被覆時の error directive 文言（`amadeus-orchestrate.ts:3727-3731` 逐語）:
+
+- `"Every one of them already holds this stage's required artifacts, so no unit is left to run."`
+- `"Create the unit directory for this piece of work (its name becomes the unit segment of every artifact path), then re-run `next`."`
+
+被覆述語 `unitCovered`（`:3746-3760`）は **produces の実在のみ**で判定し §12a Review の記録有無を見ない（#2359 と共有する述語）。単一 unit（`:3807`）は covered でも解決してステージゲートを運ぶ。
+
+**契約上の非対称は意図的**: `tests/integration/t367-degrade-unitname-resolution.test.ts:411-420`（test 13、multi-unit 全被覆 → refuse）と `:428-437`（test 14、"a lone finished unit still resolves, carrying the stage gate"）が両側を pin し、`:422-426` のコメントが E-OBB2-CG1 を「INTENTIONAL と裁定した非対称」と明記する。`amadeus/spaces/default/memory/project.md:287` の `cid:code-generation:c1-degrade-batch-directive-capture` も逐語で「全 unit covered 後の engine emit は裁定 B（E-OBB2-CG1）どおり fail-closed のため、build 時捕捉が唯一の in-band 経路」と記す。したがって**契約文は既に正しく、欠けているのは宣言的な回復入口**である。
+
+### 引用の currency
+
+#2385 の測定 ref は `b8e3e664f` であり本 intent の observed と**完全一致**する。したがって全 file:line 引用は observed 断面で同一に解決する（区間実測による currency の確定であり、免除の主張ではない）。実読で確認した軽微な差は re-scan 記録の § 行番号引用の currency を参照（いずれも ±2 行の範囲指定差で、指す構文要素は同一）。
+
+
+## cross-harness resume が対象とする契約（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -49,7 +123,7 @@
 - main / `--single` / per-unitを同じ意味契約にし、receiptなし、stale、spec変更、新run、replay、再入を区別できる必要がある。ただし具体的なJSON shape、CLI flag、state field、event名は未決定である。
 - protected writerを採用する場合、一般audit CLIからの自己mintを拒否することが境界条件になる。これはセキュリティ要件候補であり、現行APIではない。
 
-## subagent 型規律と model 属性が対象とする契約（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 属性が対象とする契約（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 本節の file:line はすべて observed `7060956c5617125dd2f4e284957aa180cb306484` 時点。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（34 commits / 493 files）。全数列挙は `re-scans/260805-subagent-type-guard.md` を正本とする。
 
@@ -126,7 +200,7 @@ Codex（fixture `tests/fixtures/codex-hook-payloads/payloads.json` の `subagent
 - **許可集合照合の advisory 面の wire**（警告をどこへ出すか — stderr / audit event / 集計 CLI の verdict）は未決。CAP-1 は advisory であり fail-closed 拒否をしないことだけが確定している。
 - **既存テスト契約の改訂範囲**: `tests/unit/t-subagent-purpose.test.ts:89` / `:96` / `:97` / `:101` が `tool_name: "Task"` をピンしている。`cid:reverse-engineering:c1-pinned-behavior-ruling` により改訂は要件段の裁定事項。
 - `Purpose` / `Message` の非対称は設計意図であり、統合は要件化されていない。
-## semi 再定義と autonomy 起動宣言が対象とする契約（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言が対象とする契約（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の file:line はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e` 時点の実測（canonical 側 `packages/framework/core/`）。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（区間 19 commits / 464 files）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

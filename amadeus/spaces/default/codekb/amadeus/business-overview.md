@@ -1,6 +1,49 @@
 # ビジネス概要
 
-## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、現在、observed `7060956c5`）
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+
+本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
+
+### 利用者に約束されている価値
+
+Amadeus のゲート群は「証拠のない前進を止める」ことを約束する（`org.md` Forbidden の検証劇場禁止、P2）。fail-closed であること自体は約束の中核であり、本 intent はそれを弱めることを目的としない。
+
+しかし fail-closed の約束には対の約束がある — **止まった状態から利用者が正規手順で復帰できること**。本 intent が扱う3件（[#2313](https://github.com/amadeus-dlc/amadeus/issues/2313) / [#2330](https://github.com/amadeus-dlc/amadeus/issues/2330) / [#2358](https://github.com/amadeus-dlc/amadeus/issues/2358)、実装引き継ぎの正本は [#2385](https://github.com/amadeus-dlc/amadeus/issues/2385)）は、いずれも**検出は実装されているが回復が実装されていない**という同一形の欠落である。
+
+### 実際に成立していない境界
+
+| 業務シナリオ | 現状（observed 実測） |
+| --- | --- |
+| main への着地ごとに evidence binding を最新化する | `No Silent Drop Evidence Reconcile` が **恒久赤**。直近5 run のうち 3 run が failure、失敗コードは全件 `REBIND_NON_IDENTITY_DRIFT` |
+| drift を検知したあとに evidence を再生成して binding を進める | **手段が存在しない**。`scripts/no-silent-drop-evidence.ts` の verb は `rebind` / `reconcile` の2つのみで、再生成 verb はない。検出は `throw` であり、どの回復分岐にも到達しない |
+| schema 1 の advisory store を持つ intent でワークフローを継続する | store が parse 失敗 → 呼び出し側の `!storeResult.ok` が fail-closed hold。**hold を解く verb がない**（CLI は `record` / `correct-misattributed` の2 verb のみ） |
+| advisory を再度 raise させて hold を自然解消させる | evaluator がもう advisory を raise しない intent では `applyPendingAdvisoryGuard` が `pending.length === 0` で早期 return し、**guard 経路自体が走らない** |
+| degrade 経路で全 unit が被覆済みになった後にステージゲートへ進む | 複数 unit の場合は error directive で拒否され続ける。案内される「unit ディレクトリを作れ」は、作るべき仕事が残っていない状況では実行できない |
+
+**業務影響の共通形**: 利用者は「ガードが正しく止めた」状態に入るが、**そこから正規の手順で前へ出る道が製品内にない**。残るのは out-of-band の手作業（ファイル直接編集・台帳手修正）か、ワークフローの放棄である。これは `org.md` P2 が禁じる「偽の信頼」の裏面 — ガードは本物だが、ガードの出口が偽である。
+
+### 影響範囲についての訂正（#2385「影響・価値」節との食い違い）
+
+#2385 は #2313 を「全 PR の trusted base ゲートが内容と無関係に `BASELINE_INVALID` になり、あらゆる修正 PR が着地できない」と記すが、**observed 断面ではこれは成立しない**:
+
+- main の最新 CI run **31135183415 は success**（ratchet ステップを含む `Lint and complexity` job も success）
+- ローカル実測: `bun tests/no-silent-drop-gate.ts check --base-revision <HEAD^ の完全 SHA>` → exit 0 / `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`
+
+**恒久赤は main 限定の `No Silent Drop Evidence Reconcile` ワークフローのみ**である。したがって業務影響は「全 PR が塞がれる」ではなく「**evidence binding が陳腐化し続け、gate 実装を触る PR の運用が不明瞭なまま残る**」という遅効性の劣化である。修正の必要性は変わらないが、S1-FATAL / P1 の根拠文は requirements 段で再判定が要る。
+
+### 保護すべき対抗価値
+
+- **fail-closed そのもの**: 3件いずれも「止めるのをやめる」方向の緩和は取れない。#2313 の freshness 検査は evidence の陳腐化を検知する正当な機構であり、#2330 の schema gate は「翻訳して黙って進むより人間に訊き直す方が安全」という設計コメントの明文（`amadeus-advisory-choice.ts:653-657`）に支えられている。#2358 の全被覆拒否は選挙 E-OBB2-CG1 が **INTENTIONAL と裁定した非対称**であり（`t367-degrade-unitname-resolution.test.ts:422-426` のコメントが明記）、`project.md` の `cid:code-generation:c1-degrade-batch-directive-capture` が逐語で「全 unit covered 後の engine emit は裁定 B どおり fail-closed」と記す。
+- **既決裁定の保存**: よって求められるのは「拒否をやめる」ことではなく、**拒否された状態に対する明示的な回復入口を新設すること**である。この方向は既決ノルムと矛盾しない。
+
+### 利用者から見た期待成果
+
+1. reconcile が緑に戻り、evidence binding が着地ごとに前進する。
+2. schema 1 の store を持つ intent が、人間の明示操作でワークフローへ復帰できる。
+3. degrade 経路の全被覆状態から、宣言的な明示操作でステージゲートへ進める。ただし #2359（OPEN・未修正）が扱う `unitCovered` の述語問題（§12a Review の記録有無を見ない）を塞がないこと。
+
+
+## ハーネス跨ぎ引き継ぎの業務境界（260805-cross-harness-resume、履歴、observed `7060956c5`）
 
 本節の測定 ref はすべて observed `7060956c5617125dd2f4e284957aa180cb306484`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（祖先性 exit 0、距離 34 commits / 493 files）。全数列挙は `re-scans/260805-cross-harness-resume.md` を正本とする。
 
@@ -35,7 +78,7 @@ Amadeus の中核価値の1つは「**ワークフローの進捗は intent reco
 - **証拠上の限界**: 凍結証拠から、実際のAI発話内容と実損量は確定できず **INCONCLUSIVE** である。構造的な欠落はCONFIRMEDだが、過去runで必ず黙殺された、または損失が発生したとは断定しない。
 - **次段の判断**: Requirements Analysis で、人間選択の意味、鮮度、再利用可否、hold境界、保護された記録主体を要件化する。receiptの媒体・フィールド・canonical event名は未承認であり、Reverse Engineeringでは確定しない。
 
-## subagent 型規律と model 可観測性の業務境界（260805-subagent-type-guard、現在、observed `7060956c5`）
+## subagent 型規律と model 可観測性の業務境界（260805-subagent-type-guard、履歴、observed `7060956c5`）
 
 測定 ref: base `b938898f364160d4b5857e153579b40b5ab18372` → observed `7060956c5617125dd2f4e284957aa180cb306484`（34 commits / 493 files）。
 
@@ -46,7 +89,7 @@ Amadeus の中核価値の1つは「**ワークフローの進捗は intent reco
 境界の外に置いた事項は行き先が確定している: 汎用 builder persona の新設は [#2298](https://github.com/amadeus-dlc/amadeus/issues/2298)（本 intent 完了後の型内訳を設計入力にする）、live `.claude/settings.json` の `PreToolUse` 配線欠落は [#2297](https://github.com/amadeus-dlc/amadeus/issues/2297)、`CXR-33`（transcript / prompt 本文の読取禁止）は制約として受容する。
 
 本 RE が業務判断へ返す新しい事実は2点ある。第一に、**model の供給有無はハーネスによって異なる** — Codex は hook payload に model を載せており core hook の入口まで届いているが、Claude Code は明示指定時を除いて載せない。したがって「全ハーネスで同じ粒度の model 記録」は約束できず、供給できないハーネスでは欠落の明示で運用を継続する（CON-3）。第二に、**start 側イベントは Claude Code で構造的に記録されていない**（全 132 intent で 0 件）。原因は2層あり、#2297 が扱う配線欠落だけでなく、dispatch tool 名の語彙不一致（core が `"Task"` を期待、実 payload は `"Agent"`）が独立に存在する。**#2297 の修正だけでは start 側の記録は回復しない** — この含意は #2297 の受入基準に書かれておらず、型別集計を START × COMPLETE のペアで組むか COMPLETED 単独で組むかという設計判断に直接効く。
-## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、現在、observed `2f255bc69`）
+## semi 再定義と autonomy 起動宣言の業務境界（260805-semi-redefine-autonomy-f、履歴、observed `2f255bc69`）
 
 本節の測定 ref はすべて observed `2f255bc6993316f1a271bcd932fabf773096494e`。差分 base は `b938898f364160d4b5857e153579b40b5ab18372`（`git merge-base --is-ancestor` exit 0、区間 **19 commits / 464 files**、`+36989 / −199`）。全数列挙は `re-scans/260805-semi-redefine-autonomy-f.md` を正本とする。
 

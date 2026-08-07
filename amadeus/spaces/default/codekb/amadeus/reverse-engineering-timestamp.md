@@ -1,6 +1,30 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260805-cross-harness-resume）
+## 実行メタデータ（現在: 260807-failclosed-recovery-path）
+
+- Date: `2026-08-07`
+- Base commit: `7060956c5617125dd2f4e284957aa180cb306484`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補 109 件から HEAD 祖先かつ距離最小のものを選定。距離 76 commits）
+- Observed commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（= 本 worktree HEAD = `origin/main`。`git rev-list --left-right --count origin/main...HEAD` = `0 0`。`cid:reverse-engineering:c2-observed-mainline-commit` により mainline 系譜のコミットを記録）
+- 区間規模: **76 commits / 1223 files**（`+63856 / −3121`）。`amadeus/` record を除く実質変更は **483 files**
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal、Test Strategy: Comprehensive
+- Focus: **fail-closed ガードの回復経路不在3件** — [#2313](https://github.com/amadeus-dlc/amadeus/issues/2313)（no-silent-drop evidence reconcile の `REBIND_NON_IDENTITY_DRIFT` 恒久赤）/ [#2330](https://github.com/amadeus-dlc/amadeus/issues/2330)（advisory choice store の schema 1→2 回復経路）/ [#2358](https://github.com/amadeus-dlc/amadeus/issues/2358)（degrade 経路で全 unit 被覆後にゲートが発行されない）。実装引き継ぎの正本は [#2385](https://github.com/amadeus-dlc/amadeus/issues/2385)
+- Scan mode: DIFFERENTIAL refresh。**xrev mode は主張しない** — `cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue` が要求する「起票者以外2名の独立エビデンス付き verdict」が対象3件の GitHub コメント上で成立していない（全コメントの著者は起票者本人 j5ik2o）。代替の接地は (a) #2385（別ハーネス Kimi Code による独立再調査で突合検証済みと本文が記載）を一次入力とし、(b) conductor 自身の observed 断面での verbatim 実読で二重化、(c) 実 CI run ログを一次証拠として取得、の3点
+- 行番号引用の currency: #2385 の測定 ref は `b8e3e664f` であり observed と**完全一致**する。したがって全 file:line 引用は observed 断面で同一に解決する。**これは免除の適用ではなく、区間実測による currency の確定**である（実読で見つかった ±2 行の範囲指定差は per-intent record を正本とする）
+- Verification: 本 RE では新規テストを実行していない（Depth Minimal）。coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。検証は observed 断面での `git merge-base --is-ancestor` / `git diff --name-only` / `gh run list` / `gh run view --log-failed` / `gh issue list` / `find` / `jq` の実測と、患部の verbatim 直読による
+- Current decision: **3件はいずれも「検出は結線済み・回復が未結線」という同一形の欠落である。** #2313 は freshness 述語（`scripts/no-silent-drop-evidence-adapter.ts:226-240`）が throw し、回復分岐（`scripts/no-silent-drop-evidence.ts:162-171`）は述語が false のときだけ走るため到達不能。#2330 は `readStore`（`amadeus-advisory-choice.ts:681-691`）の回復が「store 不在時のみ」で、既存 schema 1 ファイルは常に parse 失敗 → fail-closed hold となり、hold を解く CLI verb がない（verb は `record` / `correct-misattributed` の2つのみ）。#2358 は全被覆アーム（`amadeus-orchestrate.ts:3727-3731`）が「unit ディレクトリを作れ」と案内するが、残る仕事が無い状況では実行不能。**fail-closed そのものは3件とも既決の正当な機構であり、是正の方向は「拒否をやめる」ではなく「明示的な回復入口を新設する」に限られる**
+- **影響範囲の訂正（#2385「影響・価値」節と食い違う）**: #2385 は「全 PR の trusted base ゲートが偽赤になり、あらゆる修正 PR が着地できない」とするが observed では成立しない — main の最新 CI run **31135183415 は success**（ratchet ステップを含む `Lint and complexity` job も success）、ローカル実測 `bun tests/no-silent-drop-gate.ts check --base-revision <HEAD^ の完全 SHA>` → exit 0 / `{"schemaVersion":1,"status":"pass","code":"NO_SILENT_DROP_OK","findings":[]}`。**恒久赤は main 限定の `No Silent Drop Evidence Reconcile` ワークフローのみ。** 修正の必要性は変わらないが S1-FATAL / P1 の根拠文は requirements 段で再判定が要る
+- **advisory store 分布の再census（#2385 §7(b) より広い）**: clone 内に `.amadeus-advisory-choice.json` が **6 件**実在し、**schema 1 が 5 件・schema 2 が 1 件**。#2385 は「本調査 clone では 1 件」とのみ記す。store は gitignored の per-clone ランタイムであり git から census 不能という前提は変わらないが、**1 clone 内で複数 worktree にまたがって schema 1 が滞留する**ことは実測で確定した。回復 verb の対象範囲（単一 store か探索して複数か）は requirements で確定を要する
+- 主要所見: **①同一意味論の2実装** — freshness 述語が広域 set（adapter、`packages/framework/core/tools` を含む）と narrow set（`tests/integration/t413-no-silent-drop-ci-adoption.test.ts:181-195`、含まない）の2箇所に存在し、observed の同区間で前者のみ drift する。t413 の選定理由コメントは逐語で "it needs an evidence-regeneration path, not a pin here" と述べており、**正しい判断は既にテスト側に文書化されている**。**②回復手段がゲートの内側にある** — #2330 の guard（`amadeus-orchestrate.ts:797-799`）は pending 非空でしか走らないため、回復入口は CLI 側に置く必要がある。**③述語の共有による修正干渉** — #2358 の `unitCovered`（`:3746-3760`）は §12a Review の記録有無を見ず #2359（**OPEN・未修正**）と共有されるため、宣言受理点は述語の外側に置く
+- 既決裁定との整合: #2358 の非対称は選挙 E-OBB2-CG1 が **INTENTIONAL と裁定**したものであり（選挙記録 `amadeus/spaces/default/elections/260730-e-obb2-cg1/` ほか `-cgs13` / `-ras13` / `-res13` の実在を確認）、`amadeus/spaces/default/memory/project.md:287` の `cid:code-generation:c1-degrade-batch-directive-capture` が逐語で「全 unit covered 後の engine emit は裁定 B（E-OBB2-CG1）どおり fail-closed のため、build 時捕捉が唯一の in-band 経路」と記す。テスト pin は `t367-degrade-unitname-resolution.test.ts:411-420`（test 13 = multi-unit 全被覆 → refuse）と `:428-437`（test 14 = 単一 unit は covered でもゲートを運ぶ）、`:422-426` が INTENTIONAL を明記。**詰みは multi-unit 限定**
+- ローカル実行の規約（build-and-test 向け）: `bun tests/no-silent-drop-gate.ts check` を `--base-revision` 無しで実行すると必ず `{"code":"BASELINE_INVALID","detail":"check mode requires a non-zero trusted base revision"}` / exit 2。これは欠陥ではなく規約（`tests/no-silent-drop/engine.ts:250-252` が null を拒否、`tests/no-silent-drop/ledger.ts:213-223` の解決順は explicit → `AMADEUS_NSD_TRUSTED_BASE_SHA` → `GITHUB_BASE_SHA` → `GITHUB_EVENT_BEFORE`）。base は **HEAD の厳密祖先**でなければならない（HEAD 自身は `"trusted base is not a strict ancestor of HEAD: b8e3e664f…"` / exit 2）
+- tNNN 予約: 使用済み最大は **t465**、ユニーク採番は **436 個**。**新規は t466 以降**。空き番号は per-intent record を参照。同一 tNNN の複数ファイル共存は既存の生態であり債務として記録しない
+- docs 章番号空間: `docs/reference` の最大は **24**（新章 `24-intent-autonomy.md` / `.ja.md`）。次の新章は **25** から。`docs/guide` の最大は 23（新章追加なし）、`docs/harness-engineering` は 09
+- Requirements Analysis へ送る裁定候補: **(1)** #2313 の freshness 述語をどちらの set へ canonical 化するか（t413 の narrow set へ寄せるか、広域 set を保ったまま再生成経路を足すか）。**(2)** #2313 の回復 verb の形（`scripts/no-silent-drop-evidence.ts` への verb 追加か、既存 rebind 分岐の条件変更か）と、第1段／第2段 tree 証明のどちらに乗せるか。**(3)** #2330 の回復 verb の対象範囲（単一 store か、探索して複数 store か — 実測で 5 件の schema 1 が複数 worktree に滞留）。**(4)** #2330 の回復形（schema 1 pending の salvage か、破棄して人間へ訊き直すか）。**(5)** #2358 の宣言受理点の所在と形（#2359 の hook を塞がないこと、および `t367` test 13 の明示改訂の要否 — `cid:reverse-engineering:c1-pinned-behavior-ruling`）。**(6)** #2313 の S1-FATAL / P1 の再判定（影響範囲の訂正を受けて）
+- Updated artifacts: 共有9成果物の現在断面を更新し、直前の現在断面3件（`260805-cross-harness-resume` / `260805-subagent-type-guard` / `260805-semi-redefine-autonomy-f`）を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260807-failclosed-recovery-path.md` を新設
+- Per-intent record: `re-scans/260807-failclosed-recovery-path.md`
+
+
+## 実行メタデータ（履歴: 260805-cross-harness-resume）
 
 - Date: `2026-08-05`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち祖先性を満たす最新を採用。`git merge-base --is-ancestor b938898f3 7060956c5` exit 0 を実測）
@@ -55,7 +79,7 @@
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260802-registry-drift-guard` 節を本文保持のまま履歴へ降格。per-intent record `re-scans/260803-advisory-human-choice.md` を新設。
 - Per-intent record: `re-scans/260803-advisory-human-choice.md`
 
-## 実行メタデータ（現在: 260805-subagent-type-guard）
+## 実行メタデータ（履歴: 260805-subagent-type-guard）
 
 - Date: `2026-08-06`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち祖先性を満たし距離最小のものを採用 = 直前記録 `260804-phase-boundary-approval` の observed。`git merge-base --is-ancestor b938898f3 7060956c5` exit 0 を実測）
@@ -77,7 +101,7 @@
 - 技術的負債シグナル5件: ①D-1 の dispatch tool 名 drift（テスト4箇所と doc が誤前提を固定）、②観測の非対称（STARTED 60 / COMPLETED 974、lifetime 集計面の入力が構造的に欠落）、③型規律の不在（distinct 200 中 184 が許可集合外）、④休眠面の三重（宣言と本番結線の非対称クラス）、⑤ケーシング衝突（`Explore` / `explore` の二重計上リスク）。
 - Updated artifacts: 共有9成果物の現在断面を更新し、直前の `260804-phase-boundary-approval` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。per-intent record `re-scans/260805-subagent-type-guard.md` を新設。
 - Per-intent record: `re-scans/260805-subagent-type-guard.md`
-## 実行メタデータ（現在: 260805-semi-redefine-autonomy-f）
+## 実行メタデータ（履歴: 260805-semi-redefine-autonomy-f）
 
 - Date: `2026-08-05`
 - Base commit: `b938898f364160d4b5857e153579b40b5ab18372`（`cid:reverse-engineering:rescan-base-ancestry` に従い、記録済み observed のうち HEAD 祖先で距離最小のものを採用。`git merge-base --is-ancestor b938898f3 2f255bc69` exit 0 を実測）

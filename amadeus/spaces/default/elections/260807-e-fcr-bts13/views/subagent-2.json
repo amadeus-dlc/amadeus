@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FCR-BTS13",
+  "voter": "subagent-2",
+  "question": "intent 260807-failclosed-recovery-path の build-and-test §13 学習選定: 候補3件(全文は record の construction/build-and-test/memory.md を実読 — Interpretations 2件 + Tradeoffs 1件)。conductor 提案は「persist 0件」。不採用理由 — (i) Comprehensive 執行形は既存 cid:build-and-test:bt-20260730-1 / c4 / c3 の適用実例 (ii) t458 順序依存 fail の帰属・切り分けは既存 cid:build-and-test:c3-260805-subagent-type-guard / c4-260805 の適用実例で、欠陥知識の正本は Issue #2403(bug/P2/S3、最小2ファイル決定的再現を本文へ固定済み) (iii) 「修復の代わりに帰属立証で Step 10 を履行」も (ii) と同根。潜在的な一般化候補「integration テストの module スコープ env ??= 漏洩パターンの禁止/復元義務」は #2403 の修正 PR で同根棚卸しと共に確定すべき事項であり、現時点の persist は時期尚早と判断。各候補の実在根拠は memory.md・build-test-results.md・Issue #2403 で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "3候補とも memory 層へ persist しない。既存ノルムの適用実例または Issue #2403 が正本のため。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "欠落・誤りの内容を留保に明記する。"
+    }
+  ]
+}
