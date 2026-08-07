@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) re-scans/260807-merged-pr-convergence.md と worktree HEAD で observed 4a3da7d62 一致・base b8e3e664f 祖先・患部 plugins/pr-convergence/ 区間内変更 0 件(git diff --name-only = 0)を確認 — c1 は cid:reverse-engineering:c1(差分リフレッシュ)と c1-xrev-single-issue(起票者本人著者のため xrev 不主張 — 前回 RE と同一判定)の適用実例。(2) tests/ 実測で最大番号 t480・t481 不在を確認 — c2 は swarm-test-number-reservation の事前予約の適用実例。(3) memory.md Interpretations に explore read-only / Architect codekb 限定 write / 直列実行の記載を確認 — c3 は cid:reverse-engineering:c3/c4 の適用実例。3候補とも新規則を含まず persist 0件が妥当。",
+  "submittedAt": "2026-08-07T11:20:00Z",
+  "receivedAt": "2026-08-07T10:39:40Z"
+}

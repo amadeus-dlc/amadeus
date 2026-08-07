@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-CGBLK",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "fail-open 残余(state 欠落応答が無音で active 経路)は放置しない — 欠落時に stderr へ1行の loud 警告を出すか、『state 欠落応答の fail-open/fail-closed』を仕様裁定の follow-up(Issue 起票)として record に固定することを条件とする。",
+  "rationale": "独立実測3点で builder の立証を全て追認: (1) t448:181-198 の toEqual を scratch で再現 — 追加プロパティは undefined のみ pass、定義値/null は fail(1 pass 2 fail、Bun 実測)。よって案Aの absent-undefined 形のみが :192 の toEqual を無改変で通す。 (2) cliSpawn(t448:275-292)の state 引数は {mergeable, mergeStateStatus} のみで pullRequest へ spread — state フィールド不在のため無条件 PrLifecycleState.parse(undefined) は throw し CLI 系テスト全滅、builder の機序どおり。 (3) Mergeable.parse(pr-convergence-predicate.ts:132-138)は KNOWN_MERGEABLE_VALUES.find → 未知値 throw の fail-closed 同形で、案Aの『値が存在して未知なら throw』は既存様式(AC-1b)と整合。比較衡量: 案Aは全AC・t446/t448 無改変 green を成立させ、fail-open は『state キー自体が欠落したスキーマ異常応答』の1点に限定される — undefined ガードはコメントで根拠明記され、値が存在する経路の fail-closed は全て保存される。非採用案の受容度: 案B=6(fail-open ゼロは望ましいが AC-2c 違反で要件改訂を要し、明示指示『t448 無改変』に反する — 裁定されれば従う)/ 案C=7(無改変指示への直接違反かつ旧形応答の本番挙動が依然未規定で、欠陥の根本を解決しない)。",
+  "submittedAt": "2026-08-07T00:00:00Z",
+  "receivedAt": "2026-08-07T11:40:08Z"
+}

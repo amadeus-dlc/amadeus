@@ -1,6 +1,14 @@
 # アーキテクチャ
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## pr-convergence の landed 未対応と閉集合構造（260807-merged-pr-convergence、現在、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙・verbatim 断片・実装上の注意 7 点は `re-scans/260807-merged-pr-convergence.md` を正本とする。
+
+- **landed 未対応の機序**（Issue #2401）: `evaluateConvergence`（`plugins/pr-convergence/tools/pr-convergence-predicate.ts:180-192`）の CLEAN 必要条件は MERGED PR で恒久不成立。`MergeStateStatus` union（`:90-98`）に MERGED は無く未知値は throw（`:117-121`）。report の非収束 refuse（`pr-convergence-cli.ts:438-447`）と override の already-converged refuse（`:468-474`）のどちらにも乗らない**第3状態としての新分岐追加**が是正方向（既存2状態の pin と両立する非破壊追加）。
+- **kind 閉集合の3面同期** — `ConvergenceReport` kind union（`cli.ts:61-76`）/ `renderReport`（`:89-129`）/ sensor の kind 閉集合＋整合分岐（`amadeus-sensor-pr-convergence-report-format.ts:69` / `:122-130`）。sensor は core→plugin import 禁止（ヘッダ `:16-20`）で drift 防止は t450 の renderReport 由来 fixture。
+- **投影経路** — canonical は repo root `plugins/`（`scripts/package.ts:86-87` の pluginsRoot 解決）。opt-in は `amadeus/config.json:41` に `"pr-convergence"`（区間内 #2388 で着地）。`.claude/plugins` は未追跡生成物。**患部 `plugins/pr-convergence/` の区間内変更は 0 件**（observed から不変）。
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

@@ -974,5 +974,12 @@
     "dirName": "260807-failclosed-recovery-path",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fdba8-b44c-7dcd-8fa4-60b494ff9457",
+    "slug": "merged-pr-convergence",
+    "dirName": "260807-merged-pr-convergence",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

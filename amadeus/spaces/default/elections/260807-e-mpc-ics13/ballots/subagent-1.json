@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-ICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) intent-capture-questions.md:5 に cid:intent-capture:c1 の明示適用(既決事項の除外・未決3問のみ)、:38 に承認 2026-08-07T10:04:51Z 実在。(2) memory.md:6-7 に c1 適用と base 鮮度(origin/main 4a3da7d62 起点 worktree)+self-install bootstrap の記録実在。引用先 cid:intent-capture:c3-intent-birth-base-freshness / cid:scope-definition:c3-worktree-selfinstall-bootstrap は project.md に既存(E-STG-S13/E-STG-S13B)。両候補とも既存ノルムの適用実例で新規則を含まず、persist 0件が妥当。",
+  "submittedAt": "2026-08-07T10:30:00Z",
+  "receivedAt": "2026-08-07T10:07:15Z"
+}

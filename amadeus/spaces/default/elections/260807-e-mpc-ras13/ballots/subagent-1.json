@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (a) memory.md Interpretations 2行(2026-08-07T11:20:00Z)に c1/c2 の実在を確認。(b) requirements-analysis-questions.md:27-28 に Q1=A/Q2=A の auto-decision ID 2件(837ea2da…/bf2a78bd…)と grant intent-grant-bdacfd16…、承認行 2026-08-07T11:05:00Z を確認 — 既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary(project.md 実在確認済み)が decide-question 経路を既に正規化しており新規則なし。(c) requirements.md:63 の Review — Iteration 1 READY(NIT 3・FOLLOW-UP 2)を実読 — NIT 是正と FOLLOW-UP 引用5点の conductor 全件実測は cid:code-generation:c1-reviewer-scope-alignment 事後側追補(E-SRA-ADS13)と cid:requirements-analysis:fix-diff-independent-reverify の適用実例であり、いずれも既存ノルムの履行。2候補とも新しい一般化可能な知識を含まないため persist 0件(提案どおり)を支持する。",
+  "submittedAt": "2026-08-07T11:35:00Z",
+  "receivedAt": "2026-08-07T10:55:00Z"
+}

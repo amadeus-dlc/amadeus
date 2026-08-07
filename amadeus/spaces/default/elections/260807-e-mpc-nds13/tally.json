@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T11:31:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-NDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) construction/nfr-design/memory.md の Interpretations に候補1件のみ実在(2026-08-07T14:20:00Z 行)。(2) nfr-design 5成果物(logical-components/performance/security/scalability/reliability-design.md)全てに『nfr-requirements 系 5 consumes は … SKIP のため設計どおり不在』の負方向明記行を grep 確認。(3) performance-design.md:8 に predicate.ts:204-205 の引用追記実在、FOLLOW-UP 行(:27)と整合。plugins/pr-convergence/tools/pr-convergence-predicate.ts:204-205 で MERGEABLE_UNKNOWN_RETRY_MAX=5 / MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS=10_000 を実読確認。(4) 既存 cid:nfr-design:c1-brief-skip-resolution / cid:code-generation:c1-reviewer-scope-alignment(E-SRA-ADS13 事後側追補)は project.md に実在し、候補の全要素(SKIP consumes の負方向明記+FOLLOW-UP の conductor 即時実測)を既に正規化済み。新規則性なし — 適用実例であり persist 0件が妥当。",
+      "submittedAt": "2026-08-07T15:05:00Z",
+      "receivedAt": "2026-08-07T11:30:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-NDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "軽微な留保: performance-design.md:8 の定数名引用は略記(INTERVAL_MS)であり実定数名は MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS(plugins/pr-convergence/tools/pr-convergence-predicate.ts:205)。値・行番号は一致し実害なし。",
+      "rationale": "独立実測: (1) nfr-design 5成果物(landed-report/nfr-design/*.md)全件の冒頭行3に nfr-requirements SKIP による条件付き consumes 不在の負方向明記を grep で確認(5/5) — cid:nfr-design:c1-brief-skip-resolution の適用実例。 (2) FOLLOW-UP 2件の閉包を実測: performance-design.md:8 に predicate.ts:204-205 引用が追記済みで、plugins/pr-convergence/tools/pr-convergence-predicate.ts:204-205 に MERGEABLE_UNKNOWN_RETRY_MAX=5 / MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS=10_000 の実在を確認。ADR-4 は inception/application-design/decisions.md:29 に実在。 (3) memory.md Interpretations に候補1件の実在を確認。既存 cid:nfr-design:c1-brief-skip-resolution(予防)と cid:code-generation:c1-reviewer-scope-alignment 追補(FOLLOW-UP の conductor 事後実測)が既に経路を正規化しており、新規一般化可能な知識は含まれない。persist 0件が妥当。",
+      "submittedAt": "2026-08-07T15:05:00Z",
+      "receivedAt": "2026-08-07T11:31:03Z"
+    }
+  ],
+  "resolutions": []
+}

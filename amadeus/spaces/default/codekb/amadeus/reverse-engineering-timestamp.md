@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260807-failclosed-recovery-path）
+## 実行メタデータ（現在: 260807-merged-pr-convergence）
+
+- Date: `2026-08-07`
+- Base commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（= 直前の現在断面 `260807-failclosed-recovery-path` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor b8e3e664f HEAD` exit 0 を実測 — HEAD 祖先かつ距離最小）
+- Observed commit: `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（= 本 worktree HEAD。`git rev-parse HEAD` で一致を実測。base が origin/main 系譜であり HEAD はそこから 12 commits の mainline 直系 — `cid:reverse-engineering:c2-observed-mainline-commit`）
+- 区間規模: **12 commits / 108 files changed（+5711 / −200）**。`amadeus/spaces` record を除く実質変更は **30 files**（`git diff --name-only b8e3e664f..HEAD | grep -v '^amadeus/spaces'` = 30。Developer scan 申告の 29 とは集計フィルタ差 — ファイル列挙を正とする）。内訳: engine fix #2393（declare-units-done）、advisory fix #2392、no-silent-drop fix #2387/#2389、plugin opt-in #2388（`amadeus/config.json:41` に `"pr-convergence"` 追加）、docs/metrics/coverage 台帳
+- Scope: `self-feature` 系（Issue #2401 — merged PR に対する収束レポートの扱い）、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #2401](https://github.com/amadeus-dlc/amadeus/issues/2401) — **マージ済み PR（MERGED）に対して pr-convergence CLI が landed を表現できない**。**患部 `plugins/pr-convergence/` 配下の区間内変更は 0 件**（`git diff --name-only b8e3e664f..HEAD -- plugins/pr-convergence/` = 0 — 患部は observed から不変）
+- Scan mode: DIFFERENTIAL refresh。**xrev mode は主張しない** — #2401 のクロスレビューコメント2件は独立実測 verdict の体裁を持つが、GitHub 上の著者は起票者本人アカウント（j5ik2o）であり `cid:reverse-engineering:c1-xrev-single-issue` の「起票者以外2名」が成立しない（直前 intent 260807-failclosed-recovery-path と同一の判定）。代替の接地: verdict を一次入力とし、conductor / Developer の HEAD 断面 verbatim 直読で二重化した（本節の全 file:line は Architect が `4a3da7d62` 断面で独立再確認済み）
+- Current decision: **landed（マージ着地）は converged / override のどちらの refuse 分岐にも乗らない第3状態として新設する方針**。根拠: (a) `evaluateConvergence`（`pr-convergence-predicate.ts:180-192`）の CLEAN 必要条件は MERGED PR で恒久不成立、(b) `MergeStateStatus` union（`:90-98`）に MERGED は無く未知値は throw（`:117-121`）、(c) report verb の非収束 refuse（`pr-convergence-cli.ts:438-447`）と override の already-converged refuse（`:468-474`）はいずれも landed を表現できない。語彙追加は **3面同時**（`ConvergenceReport` kind union `cli.ts:61-76` + `renderReport` `:89-129` + sensor `amadeus-sensor-pr-convergence-report-format.ts` の kind 閉集合 `:69`・整合分岐 `:122-130`）が必須
+- 主要所見: ① GraphQL `PR_STATE_QUERY`（`pr-convergence-gh-runner.ts:191-195`）は `mergeable mergeStateStatus` のみで state/merged/mergeCommit 未取得 — landed 判定には fail-closed parse（`RawPrState :76-79`）を弱めないフィールド追加が要る。② CLI verb は `status|report|override` の閉集合（`cli.ts:320`）。③ sensor は core→plugin import 禁止（ヘッダ `:16-20`）で drift 防止は t450 の renderReport 由来 fixture。④ stage 文書の「Convergence is not merge」（`plugins/pr-convergence/stages/pr-convergence.md:34-37` / `:200-202`）との表面矛盾回避が文書面の制約。⑤ canonical は repo root `plugins/`（`scripts/package.ts:86-87`、`.claude/plugins` は未追跡生成物）。⑥ core 側に `"pr-convergence-report"` ハードコード 0 件。⑦ coverage allowlist の pr-convergence 行ピンは `tests/.coverage-patch-allowlist.json:6365-6398` — 行挿入時は機械 remap 規律（`cid:code-generation:c1-allowlist-mechanical-remap`）該当
+- テスト現況: t444〜t450 の pr-convergence 系はすべて in-process（`t444-stage-frontmatter-seams` / `t445-stage-frontmatter-compose` / `t446-pr-convergence-predicate` / `t447-pr-convergence-ledger` / `t448-pr-convergence-cli` / `t449-pr-convergence-packaging-e2e` / `t450-pr-convergence-report-format-sensor`）。landed 新分岐は既存 refuse テストと両立する（既存 assert は converged/override の2状態を pin しており第3状態の追加は非破壊）
+- tNNN 予約: 区間内で t466 / t470 / t480 が着地し、使用済み最大は **t480**。**新規は t481 以降**（`ls tests/unit tests/integration tests/smoke tests/e2e | grep -oE '^t[0-9]+'` の最大値実測）
+- Updated artifacts: 本ファイルの現在断面を更新し、直前の現在断面 `260807-failclosed-recovery-path` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。`architecture.md` / `component-inventory.md` には本 intent の観点を最小追記（既存の pr-convergence 記述が実在するため）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
+- Per-intent record: `re-scans/260807-merged-pr-convergence.md`
+
+## 実行メタデータ（履歴: 260807-failclosed-recovery-path）
 
 - Date: `2026-08-07`
 - Base commit: `7060956c5617125dd2f4e284957aa180cb306484`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補 109 件から HEAD 祖先かつ距離最小のものを選定。距離 76 commits）
