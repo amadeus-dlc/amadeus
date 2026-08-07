@@ -24,14 +24,14 @@ const HEAD = "a".repeat(40);
 const MODELS: readonly CiModelTarget[] = [
   {
     name: "FormalElection",
-    modelPath: "specs/tla/FormalElection.tla",
-    cfgPath: "specs/tla/FormalElection.cfg",
+    modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     layer: "frozen",
   },
   {
     name: "MirrorLifecycle",
-    modelPath: "specs/tla/MirrorLifecycle.tla",
-    cfgPath: "specs/tla/MirrorLifecycle.cfg",
+    modelPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
     layer: "verified-source",
   },
 ];
@@ -90,7 +90,7 @@ function successfulPort(failAt?: number): CiAcceptancePort {
             imageRef: FIXED_DOCKER_IMAGE,
             argv: [
               "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-              "--mount", "type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly",
+              "--mount", "type=bind,src=$WORKSPACE/amadeus/spaces/default/specs/tla,dst=$WORKSPACE/amadeus/spaces/default/specs/tla,readonly",
               "--mount", "type=bind,src=$JAR,dst=$JAR,readonly",
               "--mount", "type=bind,src=$SCRATCH,dst=$SCRATCH",
               FIXED_DOCKER_IMAGE,

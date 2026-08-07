@@ -265,7 +265,7 @@ compose は、出力ディレクトリが空か、同一プラグイン・同一
 ## activation ポリシー: formal-model-check
 
 同梱の `formal-model-check` プラグインは *advisory のみ* です。Amadeus はその spec
-ファイル(`specs/tla/**`)の決定的ハッシュを計算し、最後に記録された verdict と比較
+ファイル(`amadeus/spaces/<space>/specs/` 配下の `tla/**`)の決定的ハッシュを計算し、最後に記録された verdict と比較
 します。ハッシュが変化した場合 — または一度も記録されていない場合 — エンジンは
 build-and-test の前に stderr のみの advisory をレンダリングし、doctor は
 `formal-model-check: spec-hash CHANGED` の activation 行を追加します。モデルチェッカ

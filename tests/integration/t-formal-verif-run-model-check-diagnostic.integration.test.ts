@@ -27,8 +27,8 @@ const roots: string[] = [];
 const RUN_ID = "00000000-0000-4000-8000-000000000001";
 const FORMAL_ELECTION: CiModelTarget = {
   name: "FormalElection",
-  modelPath: "specs/tla/FormalElection.tla",
-  cfgPath: "specs/tla/FormalElection.cfg",
+  modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+  cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
   layer: "frozen",
 };
 
@@ -118,9 +118,9 @@ describe("non-acceptance model-check diagnostic", () => {
     const jarPath = join(diagnosticRoot, "supply", "tla2tools.jar");
     const scratchPath = join(diagnosticRoot, "scratch");
     const statesPath = join(scratchPath, "states");
-    const modelRoot = join(paths.workspaceRoot, "specs/tla");
-    const modelPath = join(paths.workspaceRoot, "specs/tla/FormalElection.tla");
-    const cfgPath = join(paths.workspaceRoot, "specs/tla/FormalElection.cfg");
+    const modelRoot = join(paths.workspaceRoot, "amadeus/spaces/default/specs/tla");
+    const modelPath = join(paths.workspaceRoot, "amadeus/spaces/default/specs/tla/FormalElection.tla");
+    const cfgPath = join(paths.workspaceRoot, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
     const dockerRun = calls.find(({ argv }) => argv[0] === "run")!;
 
     expect(dockerRun).toEqual({
@@ -318,7 +318,7 @@ describe("non-acceptance model-check diagnostic", () => {
         error: {
           kind: "MODULE_DEPS",
           code: "MODULE_DEP_UNRESOLVED",
-          relativePath: "specs/tla/Missing.tla",
+          relativePath: "amadeus/spaces/default/specs/tla/Missing.tla",
           detail: "injected dependency failure",
         },
       }),

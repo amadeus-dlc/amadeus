@@ -22,8 +22,8 @@ const entry = (
 
 const model = () => ({
   name: "FormalElection",
-  model: { path: "specs/tla/FormalElection.tla", identity: SHA_A },
-  cfg: { path: "specs/tla/FormalElection.cfg", identity: SHA_B },
+  model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", identity: SHA_A },
+  cfg: { path: "amadeus/spaces/default/specs/tla/FormalElection.cfg", identity: SHA_B },
   entries: [entry()],
 });
 
@@ -69,14 +69,14 @@ describe("canonical identity (core copy)", () => {
 
 describe("core model-map parser rejection branches", () => {
   test("rejects a model or cfg identity that is not exactly path and identity", () => {
-    expect(parseTlaModelMap(bytes(wrap({ model: { path: "specs/tla/FormalElection.tla" } }))))
+    expect(parseTlaModelMap(bytes(wrap({ model: { path: "amadeus/spaces/default/specs/tla/FormalElection.tla" } }))))
       .toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
   });
 
   test("rejects an identity that is not a lowercase SHA-256 value", () => {
     expect(
       parseTlaModelMap(bytes(wrap({
-        cfg: { path: "specs/tla/FormalElection.cfg", identity: "A".repeat(64) },
+        cfg: { path: "amadeus/spaces/default/specs/tla/FormalElection.cfg", identity: "A".repeat(64) },
       }))),
     ).toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
   });
@@ -118,7 +118,7 @@ describe("core model-map parser rejection branches", () => {
     for (const source of [Uint8Array.of(0xc3, 0x28), encoder.encode("{")]) {
       expect(parseTlaModelMap(source)).toMatchObject({
         ok: false,
-        error: { code: "MODEL_MAP_INVALID", relativePath: "specs/tla/model-map.json" },
+        error: { code: "MODEL_MAP_INVALID", relativePath: "amadeus/spaces/default/specs/tla/model-map.json" },
       });
     }
   });

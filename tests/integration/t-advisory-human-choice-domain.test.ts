@@ -18,7 +18,7 @@ const base = {
   plugin: "formal-model-check",
   code: "changed" as const,
   checkpoint: "functional-design",
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
   intentRun: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
   message: "advisory: formal-model-check spec hash CHANGED",
@@ -135,9 +135,9 @@ describe("advisory human choice domain", () => {
     const pending = createPendingAdvisory(base, () => "019fc698-ba1f-7000-8000-000000000001");
     const out = advisoryModelCheckOutputDir(root, pending.identity.advisoryInstance);
     mkdirSync(out, { recursive: true });
-    const modelPath = join(root, "specs/tla/FormalElection.tla");
-    const cfgPath = join(root, "specs/tla/FormalElection.cfg");
-    mkdirSync(join(root, "specs/tla"), { recursive: true });
+    const modelPath = join(root, "amadeus/spaces/default/specs/tla/FormalElection.tla");
+    const cfgPath = join(root, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
+    mkdirSync(join(root, "amadeus/spaces/default/specs/tla"), { recursive: true });
     writeFileSync(modelPath, "---- MODULE FormalElection ----\n====\n");
     writeFileSync(cfgPath, "SPECIFICATION Spec\n");
     const runId = "00000000-0000-4000-8000-000000000001";
@@ -170,8 +170,8 @@ describe("advisory human choice domain", () => {
         instance: pending.identity.advisoryInstance,
       },
       sourceProvenance: {
-        modelPath: "specs/tla/FormalElection.tla",
-        cfgPath: "specs/tla/FormalElection.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
         moduleIdentity: "registered-module",
         cfgIdentity: "registered-cfg",
         moduleSha256: createHash("sha256").update(readFileSync(modelPath)).digest("hex"),

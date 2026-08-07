@@ -9,7 +9,7 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-inputs: all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
+inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
 outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors:
   - model-completeness
@@ -31,7 +31,7 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
 ## Stage body
 
 1. Resolve the model + config to check. CI acceptance checks every pair declared
-   in `specs/tla/model-map.json`, sequentially and in declaration order. The
+   in `amadeus/spaces/<space>/specs/tla/model-map.json`, sequentially and in declaration order. The
    optional `--model <registered-name>` selector narrows CI or diagnostics to
    one pair and rejects unknown names without falling back. `FormalElection`
    retains frozen-receipt normalization; other registered models use the
@@ -42,8 +42,8 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
 
    ```
    bun plugins/formal-model-check/tools/run-model-check.ts \
-     --model specs/tla/FormalElection.tla \
-     --cfg   specs/tla/FormalElection.cfg \
+     --model amadeus/spaces/default/specs/tla/FormalElection.tla \
+     --cfg   amadeus/spaces/default/specs/tla/FormalElection.cfg \
      --out   <out-dir>
    ```
 

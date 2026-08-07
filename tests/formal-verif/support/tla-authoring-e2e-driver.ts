@@ -314,7 +314,7 @@ class Session {
 
   /** The model deliverables the stage document's step 2 names. */
   authorModel(): { modulePath: string; configPath: string } {
-    const specs = join(this.paths.host, "specs", "tla");
+    const specs = join(this.paths.host, "amadeus", "spaces", "default", "specs", "tla");
     const modulePath = join(specs, "UnitPool.tla");
     const configPath = join(specs, "UnitPool.cfg");
     writeFileSync(modulePath, MODULE, "utf8");

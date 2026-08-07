@@ -99,8 +99,8 @@ describe("planned TLC filesystem runtime", () => {
     mkdirSync(scratch);
     const modelPath = join(workspace, "FormalElection.tla");
     const cfgPath = join(workspace, "FormalElection.cfg");
-    cpSync("specs/tla/FormalElection.tla", modelPath);
-    cpSync("specs/tla/FormalElection.cfg", cfgPath);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", modelPath);
+    cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfgPath);
     const source = loadRunModelCheckSource(modelPath, cfgPath);
     if (!source.ok) throw new Error(JSON.stringify(source.error));
 
@@ -338,9 +338,9 @@ describe("planned TLC filesystem runtime", () => {
     const mirrorModelPath = join(workspace, "MirrorLifecycle.tla");
     const mirrorCfgPath = join(workspace, "MirrorLifecycle.cfg");
     const mirrorCorePath = join(workspace, "MirrorLifecycleCore.tla");
-    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModelPath);
-    cpSync("specs/tla/MirrorLifecycle.cfg", mirrorCfgPath);
-    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", mirrorModelPath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg", mirrorCfgPath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
     const mirrorSource = loadRunModelCheckSource(mirrorModelPath, mirrorCfgPath);
     if (!mirrorSource.ok) throw new Error(JSON.stringify(mirrorSource.error));
     const mirrorReceipt = mirrorSource.value.modelReceipt;
@@ -385,15 +385,15 @@ describe("planned TLC filesystem runtime", () => {
       error: { code: "SOURCE_IDENTITY" },
     });
 
-    cpSync("specs/tla/MirrorLifecycle.tla", mirrorModelPath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycle.tla", mirrorModelPath);
     const spawnsBeforeAuxiliaryFailures = spawns;
     rmSync(mirrorCorePath);
     expect((await prepareMirror(mirrorSource.value.modelReceipt)).ok).toBe(false);
-    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
     writeFileSync(mirrorCorePath, "---- MODULE MirrorLifecycleCore ----\n====\n");
     expect((await prepareMirror(mirrorSource.value.modelReceipt)).ok).toBe(false);
     expect(spawns).toBe(spawnsBeforeAuxiliaryFailures);
-    cpSync("specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
+    cpSync("amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla", mirrorCorePath);
 
     activeModelPath = mirrorModelPath;
     activeScratch = mirrorScratch;

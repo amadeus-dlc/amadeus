@@ -24,8 +24,8 @@ const BUNDLE_DIGEST = `sha256:${"d".repeat(64)}`;
 function modelEntry(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     name,
-    model: { path: `specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
-    cfg: { path: `specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
+    model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
+    cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
     entries: [{ implPath: "packages/framework/core/tools/amadeus-election.ts", sha256: IMPL_SHA }],
     ...extra,
   };

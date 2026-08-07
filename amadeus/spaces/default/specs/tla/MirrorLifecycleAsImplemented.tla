@@ -14,7 +14,7 @@
 (* THIS VARIANT IS EXPECTED TO FAIL. Running it must produce a             *)
 (* NoDuplicateCreate counterexample trace; that is the falling proof       *)
 (* required by FR-C3 AC (ii). It is deliberately NOT registered in         *)
-(* specs/tla/model-map.json and is NOT part of any recurring CI job, so    *)
+(* amadeus/spaces/default/specs/tla/model-map.json and is NOT part of any recurring CI job, so    *)
 (* no scheduled job is permanently red                                     *)
 (* (cid:code-generation:falling-proof-injection-one-set).                  *)
 (*                                                                         *)

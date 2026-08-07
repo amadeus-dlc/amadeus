@@ -71,7 +71,7 @@ const advisory: Advisory = {
   code: "changed",
   message: "advisory: formal-model-check spec hash CHANGED",
   stage: STAGE,
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
 };
 

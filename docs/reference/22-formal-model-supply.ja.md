@@ -1,6 +1,6 @@
 # 新規プロトコルへ形式モデルを供給する
 
-`specs/tla/model-map.json` が、実在する `.tla` と `.cfg` を持つ model を宣言するまで、
+`amadeus/spaces/<space>/specs/tla/model-map.json` が、実在する `.tla` と `.cfg` を持つ model を宣言するまで、
 有効化判定は `not-ready` となり、明示検査は不足理由付きで失敗します。model が0件でも
 plugin の導入自体は有効であり、自動 lifecycle 経路が TLC を起動することはありません。
 
@@ -47,7 +47,7 @@ module 冒頭に縮約申告を置きます。縮約ごとに、何を落とし�
 
 ## 4. モデルを登録する
 
-モデル・その `.cfg`・正準実装ファイルを `specs/tla/model-map.json` へ追加します。`entries` には、モデルが述語を翻訳した**全**ファイルを載せます。明白な1ファイルだけでは足りません。`entries` から漏れたファイルの述語は、sensor に気づかれずに変わりえます。
+モデル・その `.cfg`・正準実装ファイルを `amadeus/spaces/<space>/specs/tla/model-map.json` へ追加します。`entries` には、モデルが述語を翻訳した**全**ファイルを載せます。明白な1ファイルだけでは足りません。`entries` から漏れたファイルの述語は、sensor に気づかれずに変わりえます。
 
 同一変更で `model-completeness` sensor の `matches` glob を新しい実装パスへ拡張します。map と glob は1つの監視面の両半分であり、半分だけの面は fail-open します。
 
@@ -95,7 +95,7 @@ bun plugins/formal-model-check/tools/tla-authoring.ts
 
 ```
 bun plugins/formal-model-check/tools/tla-authoring.ts identity extract \
-  --doc specs/tla/requirements.md --doc-kind requirements
+  --doc amadeus/spaces/default/specs/tla/requirements.md --doc-kind requirements
 ```
 
 **bundle(束)。** `bundle build` は content-addressed な envelope をエビデンスストアへ書き、`root` または先行 bundle digest である `--predecessor` へ連鎖させます。authoring bundle は applicability・trace・proof・review・approval の5レシートを、terminal-route レシートは applicability と approval だけを運びます。`bundle verify` は digest を再導出し記録済み subject identity を照合、`bundle read` はレシートを返し、`bundle list` / `bundle head` はストアと連鎖 head を列挙します。破損エントリは読み飛ばさず別枠で報告します。
@@ -109,7 +109,7 @@ bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
 
 **hold(保留)。** `hold` は authoring を止めるべきかを評価します。ストアを列挙し、破損エントリが1件でもあれば解放を拒み、現在の identity と series で hold テーブルを走らせます。権威は stdout の型付き verdict であり、終了コードはそれを写すだけです。hold / no-hold を終了コードだけから読んではなりません。
 
-`advisory hold` は、plugin が `requirements-analysis`・`functional-design`・`build-and-test` の各チェックポイントへ `authoring-hold` advisory として登録するラッパーです。チェックポイントは subject を知らないため、ラッパーが `specs/tla/authoring-subjects.json` から解決します。これはワークスペースが形式検証の統治下に置く文書と stable id の宣言です。何も宣言しないワークスペースは何も統治しておらず、これは抑制された no-hold ではなく真の no-hold です。一方、存在するが読めない宣言ファイルや、文書が定義しない id を名指す宣言は fail-closed します。
+`advisory hold` は、plugin が `requirements-analysis`・`functional-design`・`build-and-test` の各チェックポイントへ `authoring-hold` advisory として登録するラッパーです。チェックポイントは subject を知らないため、ラッパーが `amadeus/spaces/<space>/specs/tla/authoring-subjects.json` から解決します。これはワークスペースが形式検証の統治下に置く文書と stable id の宣言です。何も宣言しないワークスペースは何も統治しておらず、これは抑制された no-hold ではなく真の no-hold です。一方、存在するが読めない宣言ファイルや、文書が定義しない id を名指す宣言は fail-closed します。
 
 ```
 bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
@@ -118,7 +118,7 @@ bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
 
 ## エビデンスストア
 
-`plugins/formal-model-check/tools/tla-evidence.ts` は CLI ではなくライブラリです。自身のエントリポイントを持たず、`tla-authoring.ts` から利用されます。エビデンスストアへの唯一の書き手であり、ストアは `--store` フラグで移さない限り `specs/tla-evidence` に置かれます。
+`plugins/formal-model-check/tools/tla-evidence.ts` は CLI ではなくライブラリです。自身のエントリポイントを持たず、`tla-authoring.ts` から利用されます。エビデンスストアへの唯一の書き手であり、ストアは `--store` フラグで移さない限り `amadeus/spaces/<space>/specs/tla-evidence` に置かれます。
 
 ファイルは、判断側をファイルシステムなしでテストできるよう分割されています。純粋層が parse・正準化・digest・identity 比較・envelope 検証・head 解決を担い、ディスクにもクロックにもプロセスにも触れません。その下のハンドラ層がストア I/O を担い、純粋層へバイト列を渡します。書き込みは `.tmp` ディレクトリを経由して rename されるため、実行が落ちても、自分の digest だと称する名前で書きかけの bundle が残ることはありません。
 

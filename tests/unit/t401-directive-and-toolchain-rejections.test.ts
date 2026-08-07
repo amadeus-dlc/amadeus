@@ -79,7 +79,7 @@ describe("t401 model pipeline error mapping", () => {
     const error = {
       kind: "MODEL_LOAD",
       code: "MODEL_MAP_INVALID",
-      relativePath: "specs/tla/model-map.json",
+      relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
       detail: "invalid",
     } as TlaModelPipelineError;
     expect(toTlaModelHarnessError(error).message.length).toBeGreaterThan(0);
@@ -89,7 +89,7 @@ describe("t401 model pipeline error mapping", () => {
     const undeclared = {
       kind: "MODEL_LOAD",
       code: "NOT_A_DECLARED_CODE",
-      relativePath: "specs/tla/model-map.json",
+      relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
       detail: "undeclared",
     } as unknown as TlaModelPipelineError;
     expect(() => toTlaModelHarnessError(undeclared)).toThrow(

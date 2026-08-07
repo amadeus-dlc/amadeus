@@ -75,9 +75,9 @@ function withMirrorAuxDeclaration(modelMap: ModelMap): ModelMap {
   const mutable = JSON.parse(JSON.stringify(modelMap)) as { schemaVersion: number; models: MutableModel[] };
   const mirror = mutable.models.find((model) => model.name === "MirrorLifecycle");
   if (!mirror) throw new Error("MirrorLifecycle must be registered");
-  const coreSource = readFileSync(join(REPOSITORY_ROOT, "specs/tla/MirrorLifecycleCore.tla"), "utf8");
+  const coreSource = readFileSync(join(REPOSITORY_ROOT, "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla"), "utf8");
   const auxiliaries: ModelMapAssetIdentity[] = [{
-    path: "specs/tla/MirrorLifecycleCore.tla",
+    path: "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla",
     identity: canonicalIdentity(coreSource, "amadeus.formal-verif.tla.module.v1").sha256,
   }];
   mirror.auxiliaries = auxiliaries;
@@ -87,16 +87,16 @@ function withMirrorAuxDeclaration(modelMap: ModelMap): ModelMap {
 function createFixture(): Fixture {
   const root = mkdtempSync(join(tmpdir(), "amadeus-tla-loader-"));
   temporaryRoots.push(root);
-  const modelPath = join(root, "specs/tla/FormalElection.tla");
-  const cfgPath = join(root, "specs/tla/FormalElection.cfg");
-  const mapPath = join(root, "specs/tla/model-map.json");
+  const modelPath = join(root, "amadeus/spaces/default/specs/tla/FormalElection.tla");
+  const cfgPath = join(root, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
+  const mapPath = join(root, "amadeus/spaces/default/specs/tla/model-map.json");
   mkdirSync(join(root, "scripts/formal-verif"), { recursive: true });
-  mkdirSync(join(root, "specs/tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus/spaces/default/specs/tla"), { recursive: true });
   mkdirSync(join(root, "packages/framework/core/tools"), { recursive: true });
   writeFileSync(join(root, ".git"), "gitdir: fixture\n");
   writeFileSync(join(root, "package.json"), "{}\n");
   const realMap = JSON.parse(
-    readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), "utf8"),
+    readFileSync(join(REPOSITORY_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"), "utf8"),
   ) as ModelMap;
   const modelMap = withMirrorAuxDeclaration(realMap);
   writeFileSync(mapPath, `${JSON.stringify(modelMap, null, 2)}\n`);
@@ -278,7 +278,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
   });
 
-  test("rejects symlinks even when their target remains inside specs/tla", () => {
+  test("rejects symlinks even when their target remains inside amadeus/spaces/default/specs/tla", () => {
     const fixture = createFixture();
     const target = join(dirname(fixture.modelPath), "model-target.tla");
     copyFileSync(fixture.modelPath, target);
@@ -299,7 +299,7 @@ describe("TLA model loader real-filesystem boundary", () => {
       error: {
         kind: "SOURCE_DRIFT",
         code: "SOURCE_DRIFT",
-        relativePath: "specs/tla/FormalElection.tla",
+        relativePath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
       },
     });
   });
@@ -309,14 +309,14 @@ describe("TLA model loader real-filesystem boundary", () => {
     writeFileSync(utf8Fixture.modelPath, Uint8Array.of(0xc3, 0x28));
     expect(loadVerifiedTlaSourcesInternal(utf8Fixture.moduleUrl)).toMatchObject({
       ok: false,
-      error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/FormalElection.tla" },
+      error: { kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/FormalElection.tla" },
     });
 
     const cfgFixture = createFixture();
     writeFileSync(cfgFixture.cfgPath, `${readFileSync(cfgFixture.cfgPath, "utf8")}\\* drift\n`);
     expect(loadVerifiedTlaSourcesInternal(cfgFixture.moduleUrl)).toMatchObject({
       ok: false,
-      error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/FormalElection.cfg" },
+      error: { kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/FormalElection.cfg" },
     });
   });
 
@@ -415,7 +415,7 @@ describe("TLA model loader real-filesystem boundary", () => {
 
   test("keeps model-map implementation hashes bound to every real file", () => {
     const modelMap = JSON.parse(
-      readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"), "utf8"),
+      readFileSync(join(REPOSITORY_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"), "utf8"),
     ) as ModelMap;
     for (const model of modelMap.models) {
       expect(model.entries.map((entry) => entry.implPath)).toEqual(

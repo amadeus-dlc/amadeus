@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { posix } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, posix } from "node:path";
 
 export interface CanonicalIdentity {
   bytes: Uint8Array;
@@ -50,18 +51,112 @@ export function canonicalIdentity(
 // is watched for source drift; only this one is executed, so the run/verify
 // toolchain keeps a single module binding.
 export const TLA_EXECUTION_MODEL_NAME = "FormalElection";
-export const TLA_MODEL_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.tla`;
-export const TLA_CFG_PATH = `specs/tla/${TLA_EXECUTION_MODEL_NAME}.cfg`;
-export const TLA_MODEL_MAP_PATH = "specs/tla/model-map.json";
+
+// --- Canonical spec paths (E-2) and the spec root resolver (E-1) ---
+//
+// The canonical spec layer lives at `amadeus/spaces/<space>/specs/tla/`. Every
+// consumer (activation watch, completeness sensor, TLA loader, evidence store)
+// resolves its spec roots through resolveSpecRoots below instead of assembling
+// paths on its own (BR-1). The path vocabulary here is the repo-relative form
+// that appears in model-map.json path values.
+
+// The active-space grammar, replicated from isSafeWorkspaceEntryName
+// (amadeus-lib.ts): this module is byte-mirrored into the formal-model-check
+// plugin, whose tools must not import outside the plugin, so the cursor is
+// read directly with node:fs instead of importing ./amadeus-lib.ts (E-1 seam).
+const SAFE_SPACE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const DEFAULT_SPACE = "default";
+
+// Reads the `amadeus/active-space` cursor; an absent, unreadable, or unsafe
+// value falls back to "default" without throwing (precedent: activeSpaceLocal
+// in amadeus-subagent-stats.ts, the same cursor contract activeSpace() reads).
+function activeSpaceFromCursor(workspaceRoot: string): string {
+  try {
+    const raw = readFileSync(join(workspaceRoot, "amadeus", "active-space"), "utf-8").trim();
+    if (SAFE_SPACE_NAME.test(raw)) return raw;
+  } catch {
+    // No cursor is the normal state outside an Amadeus workspace.
+  }
+  return DEFAULT_SPACE;
+}
+
+// Fail-closed stop for the pre-relocation layout (E-4 / BR-4): a legacy
+// `<workspaceRoot>/specs/tla/` that still holds specs is never read silently,
+// whether or not the new location also holds specs (no dual-read, BR-5).
+export class LegacySpecError extends Error {
+  constructor(space: string) {
+    super(
+      "legacy TLA spec layout detected at specs/tla/: the canonical spec root is now"
+        + ` amadeus/spaces/${space}/specs/tla/. Migrate with`
+        + ` \`git mv specs/tla amadeus/spaces/${space}/specs/tla\``
+        + " and update every reference (model-map.json path values, sensor/watch"
+        + " configuration, tooling) to the new location. Silent dual-read and"
+        + " backward-compatibility shims are not supported (fail-closed).",
+    );
+    this.name = "LegacySpecError";
+  }
+}
+
+// A directory "holds specs" when it contains a TLA module or the model map.
+// An absent or unreadable directory is not a legacy layout.
+function holdsSpecFiles(dir: string): boolean {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return false;
+  }
+  return entries.some((entry) => entry.endsWith(".tla") || entry === "model-map.json");
+}
+
+export interface SpecRoots {
+  readonly space: string;
+  readonly specsRoot: string;
+  readonly tlaDir: string;
+  readonly modelMapPath: string;
+  readonly evidenceRoot: string;
+}
+
+// The single spec-root resolution path (L-1). Legacy detection is fail-closed:
+// a legacy-only layout AND a both-present layout both raise LegacySpecError, so
+// an ambiguous workspace can never be read through the old path. When neither
+// location holds specs the new paths are returned and the caller keeps its
+// current not-found handling.
+export function resolveSpecRoots(workspaceRoot: string): SpecRoots {
+  const space = activeSpaceFromCursor(workspaceRoot);
+  if (holdsSpecFiles(join(workspaceRoot, "specs", "tla"))) {
+    throw new LegacySpecError(space);
+  }
+  const specsRoot = join(workspaceRoot, "amadeus", "spaces", space, "specs");
+  return {
+    space,
+    specsRoot,
+    tlaDir: join(specsRoot, "tla"),
+    modelMapPath: join(specsRoot, "tla", "model-map.json"),
+    evidenceRoot: join(specsRoot, "tla-evidence"),
+  };
+}
+
+export function tlaSpecDirPath(space: string = DEFAULT_SPACE): string {
+  return `amadeus/spaces/${space}/specs/tla`;
+}
+
+export function tlaModelPath(name: string, space: string = DEFAULT_SPACE): string {
+  return `${tlaSpecDirPath(space)}/${name}.tla`;
+}
+
+export function tlaCfgPath(name: string, space: string = DEFAULT_SPACE): string {
+  return `${tlaSpecDirPath(space)}/${name}.cfg`;
+}
+
+export function tlaModelMapPath(space: string = DEFAULT_SPACE): string {
+  return `${tlaSpecDirPath(space)}/model-map.json`;
+}
+
+export const TLA_MODEL_PATH = tlaModelPath(TLA_EXECUTION_MODEL_NAME);
+export const TLA_CFG_PATH = tlaCfgPath(TLA_EXECUTION_MODEL_NAME);
+export const TLA_MODEL_MAP_PATH = tlaModelMapPath();
 export const TLA_MODEL_MAP_SCHEMA_VERSION = 2 as const;
-
-export function tlaModelPath(name: string): string {
-  return `specs/tla/${name}.tla`;
-}
-
-export function tlaCfgPath(name: string): string {
-  return `specs/tla/${name}.cfg`;
-}
 
 // Quoted by both the completeness sensor and the source loader so the recovery
 // step a reader is given cannot fork between them.
@@ -140,8 +235,29 @@ export type TlaModelReadiness = Result<ModelMap, ModelLoadError>;
 const SHA256 = /^[0-9a-f]{64}$/;
 const IMPLEMENTATION_PREFIX = "packages/framework/core/tools/";
 const IMPLEMENTATION_FILE = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
-// TLA module identifiers, which also fix the specs/tla file names a model owns.
+// TLA module identifiers, which also fix the file names a model owns inside
+// the canonical spec directory.
 const MODEL_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
+
+// The canonical spec asset directory: amadeus/spaces/<space>/specs/tla, with
+// <space> a safe workspace entry name. The pre-relocation specs/tla layout
+// fails this check, so a map carrying old path values is rejected fail-closed
+// (BR-13c).
+function isCanonicalSpecDir(dir: string): boolean {
+  const segments = dir.split("/");
+  return segments.length === 5
+    && segments[0] === "amadeus"
+    && segments[1] === "spaces"
+    && SAFE_SPACE_NAME.test(segments[2] ?? "")
+    && segments[3] === "specs"
+    && segments[4] === "tla";
+}
+
+function isCanonicalSpecAssetPath(value: unknown, expectedFileName: string): value is string {
+  if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
+  if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
+  return isCanonicalSpecDir(posix.dirname(value)) && posix.basename(value) === expectedFileName;
+}
 
 function invalid(detail: string): Result<never, ModelLoadError> {
   return {
@@ -170,13 +286,17 @@ function exactObject(value: unknown, keys: readonly string[]): value is Record<s
 
 function parseAssetIdentity(
   value: unknown,
-  expectedPath: string,
+  expectedFileName: string,
   label: string,
 ): Result<ModelMapAssetIdentity, ModelLoadError> {
   if (!exactObject(value, ["identity", "path"])) {
     return invalid(`${label} must have exactly identity and path`);
   }
-  if (value.path !== expectedPath) return invalid(`${label}.path must be ${expectedPath}`);
+  if (!isCanonicalSpecAssetPath(value.path, expectedFileName)) {
+    return invalid(
+      `${label}.path must be the canonical amadeus/spaces/<space>/specs/tla/${expectedFileName}`,
+    );
+  }
   if (typeof value.identity !== "string" || !SHA256.test(value.identity)) {
     return invalid(`${label}.identity must be a lowercase SHA-256 value`);
   }
@@ -247,11 +367,10 @@ function parseEvidenceBundle(value: unknown, index: number): Result<ModelMapEvid
 function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is string {
   if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
   if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
-  if (posix.dirname(value) !== "specs/tla") return false;
+  if (!isCanonicalSpecDir(posix.dirname(value))) return false;
   const base = posix.basename(value);
   if (!base.endsWith(".tla") || !MODEL_NAME.test(base.slice(0, -".tla".length))) return false;
-  const moduleName = base.slice(0, -".tla".length);
-  return value === tlaModelPath(moduleName) && value !== selfPath;
+  return value !== selfPath;
 }
 
 function parseAuxiliaryIdentities(
@@ -269,7 +388,7 @@ function parseAuxiliaryIdentities(
     }
     if (!isCanonicalAuxiliaryPath(candidate.path, selfPath)) {
       return invalid(
-        `auxiliaries[${index}].path must be a canonical specs/tla/<Name>.tla path other than the model's own`,
+        `auxiliaries[${index}].path must be a canonical amadeus/spaces/<space>/specs/tla/<Name>.tla path other than the model's own`,
       );
     }
     if (typeof candidate.identity !== "string" || !SHA256.test(candidate.identity)) {
@@ -332,9 +451,9 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
     return invalid(`models[${index}].name must be a TLA module identifier`);
   }
   const name = record.name;
-  const model = parseAssetIdentity(record.model, tlaModelPath(name), `models[${index}].model`);
+  const model = parseAssetIdentity(record.model, `${name}.tla`, `models[${index}].model`);
   if (!model.ok) return model;
-  const cfg = parseAssetIdentity(record.cfg, tlaCfgPath(name), `models[${index}].cfg`);
+  const cfg = parseAssetIdentity(record.cfg, `${name}.cfg`, `models[${index}].cfg`);
   if (!cfg.ok) return cfg;
   const entries = parseEntries(record.entries);
   if (!entries.ok) return entries;

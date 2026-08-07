@@ -26,8 +26,8 @@ import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/
 
 const FORMAL_ELECTION = {
   name: "FormalElection",
-  modelPath: "specs/tla/FormalElection.tla",
-  cfgPath: "specs/tla/FormalElection.cfg",
+  modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+  cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
   layer: "frozen" as const,
 };
 
@@ -63,7 +63,7 @@ function dependencies(
         const runId = "00000000-0000-4000-8000-000000000001";
         const dockerArgs = [
           "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-          "--mount", `type=bind,src=${join(workspace, "specs/tla")},dst=${join(workspace, "specs/tla")},readonly`,
+          "--mount", `type=bind,src=${join(workspace, "amadeus/spaces/default/specs/tla")},dst=${join(workspace, "amadeus/spaces/default/specs/tla")},readonly`,
           "--mount", "type=bind,src=/cache/tla2tools.jar,dst=/cache/tla2tools.jar,readonly",
           "--mount", "type=bind,src=/scratch/.scratch,dst=/scratch/.scratch",
           FIXED_DOCKER_IMAGE,
@@ -175,8 +175,8 @@ describe("Node CI model-check port", () => {
       outDir: join(evidenceRoot, "MirrorLifecycle/runs/measured-1"),
       model: {
         name: "MirrorLifecycle",
-        modelPath: "specs/tla/MirrorLifecycle.tla",
-        cfgPath: "specs/tla/MirrorLifecycle.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
         layer: "verified-source",
       },
       kind: "measured",

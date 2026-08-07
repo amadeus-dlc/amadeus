@@ -18,6 +18,7 @@ import {
 } from "./tla-module-deps.ts";
 import {
   IMPL_ONLY_UPDATE_HINT,
+  LegacySpecError,
   type ModelLoadError,
   type ModelLoadErrorCode,
   type ModelMap,
@@ -26,6 +27,9 @@ import {
   TLA_EXECUTION_MODEL_NAME,
   TLA_MODEL_MAP_PATH,
   evaluateTlaModelReadiness,
+  resolveSpecRoots,
+  tlaModelMapPath,
+  tlaSpecDirPath,
 } from "./tla-model-map.ts";
 
 export type { ModelLoadError, ModelLoadErrorCode, ModelMap, ModelMapModel } from "./tla-model-map.ts";
@@ -96,6 +100,10 @@ const TLA_CFG_DOMAIN = "amadeus.formal-verif.tla.cfg.v1";
 interface VerifiedAssetPaths {
   readonly repositoryRoot: string;
   readonly mapPath: string;
+  // The canonical spec directory (repo-relative and absolute forms) from the
+  // shared spec root resolver — the boundary every TLA asset verifies against.
+  readonly specDirRel: string;
+  readonly specDirAbs: string;
 }
 
 type AssetKind = "MODEL" | "CFG" | "MODEL_MAP";
@@ -131,13 +139,16 @@ function isContained(parent: string, child: string): boolean {
     && !isAbsolute(childRelative));
 }
 
+// The root condition is the workspace shape alone (`.git` + `package.json`);
+// the spec directory is NOT part of it — spec resolution is delegated to the
+// shared resolver once the root is found (L-4), so user workspaces without an
+// `amadeus/` tree still resolve the root and keep their not-found behaviour.
 function findRepositoryRoot(moduleUrl: string, fs: TlaFileSystem): Result<string, ModelLoadError> {
   let current = dirname(fileURLToPath(moduleUrl));
   while (true) {
     if (
       fs.exists(join(current, ".git"))
       && fs.exists(join(current, "package.json"))
-      && fs.exists(join(current, "specs", "tla"))
     ) {
       try {
         return { ok: true, value: fs.realpath(current) };
@@ -157,6 +168,7 @@ function verifyAssetPath(
   relativePath: string,
   kind: AssetKind,
   fs: TlaFileSystem,
+  specDirAbs: string,
 ): Result<string, ModelLoadError> {
   const absolutePath = resolve(repositoryRoot, relativePath);
   let linkStat: Stats;
@@ -181,26 +193,42 @@ function verifyAssetPath(
   } catch (cause) {
     return loadError(codeFor(kind, "UNREADABLE"), relativePath, "asset path could not be verified", cause);
   }
-  const assetRoot = resolve(repositoryRoot, "specs", "tla");
-  if (!isContained(assetRoot, realPath)) {
-    return loadError(codeFor(kind, "UNREADABLE"), relativePath, "asset resolves outside specs/tla");
+  if (!isContained(specDirAbs, realPath)) {
+    return loadError(codeFor(kind, "UNREADABLE"), relativePath, "asset resolves outside the canonical spec directory");
   }
   return { ok: true, value: realPath };
 }
 
 // The multi-model pipeline needs only the repository root and the map path up
 // front: every model/cfg/aux path is declared per model in the map and is
-// verified inside the per-model loop.
+// verified inside the per-model loop. The map location and the asset boundary
+// come from the shared spec root resolver (BR-1); a legacy specs/tla layout
+// stops fail-closed with the resolver's migration instructions (BR-4).
 function locateAssets(moduleUrl: string, fs: TlaFileSystem): Result<VerifiedAssetPaths, ModelLoadError> {
   const root = findRepositoryRoot(moduleUrl, fs);
   if (!root.ok) return root;
-  const mapPath = verifyAssetPath(root.value, TLA_MODEL_MAP_PATH, "MODEL_MAP", fs);
+  let specDirRel: string;
+  let mapRel: string;
+  try {
+    const roots = resolveSpecRoots(root.value);
+    specDirRel = tlaSpecDirPath(roots.space);
+    mapRel = tlaModelMapPath(roots.space);
+  } catch (cause) {
+    if (cause instanceof LegacySpecError) {
+      return loadError("MODEL_MAP_INVALID", TLA_MODEL_MAP_PATH, cause.message);
+    }
+    throw cause;
+  }
+  const specDirAbs = resolve(root.value, specDirRel);
+  const mapPath = verifyAssetPath(root.value, mapRel, "MODEL_MAP", fs, specDirAbs);
   if (!mapPath.ok) return mapPath;
   return {
     ok: true,
     value: {
       repositoryRoot: root.value,
       mapPath: mapPath.value,
+      specDirRel,
+      specDirAbs,
     },
   };
 }
@@ -284,6 +312,7 @@ function verifyModelAssets(
   repositoryRoot: string,
   model: ModelMapModel,
   fs: TlaFileSystem,
+  specDirAbs: string,
 ): Result<VerifiedModelAssets, TlaModelPipelineError> {
   const assets = [
     { recorded: model.model, kind: "MODEL" as const, domain: TLA_MODULE_DOMAIN },
@@ -297,7 +326,7 @@ function verifyModelAssets(
   const bytesByPath = new Map<string, Uint8Array>();
   const sourceByPath = new Map<string, string>();
   for (const asset of assets) {
-    const path = verifyAssetPath(repositoryRoot, asset.recorded.path, asset.kind, fs);
+    const path = verifyAssetPath(repositoryRoot, asset.recorded.path, asset.kind, fs, specDirAbs);
     if (!path.ok) return path;
     const assetBytes = readAsset(path.value, asset.recorded.path, asset.kind, fs);
     if (!assetBytes.ok) return assetBytes;
@@ -333,6 +362,7 @@ function verifyModelAssets(
 
 function moduleDepsFailure(
   code: ModuleDepsError["code"],
+  specDirRel: string,
   moduleName: string,
   detail: string,
 ): Result<never, ModuleDepsError> {
@@ -341,7 +371,7 @@ function moduleDepsFailure(
     error: {
       kind: "MODULE_DEPS",
       code,
-      relativePath: `specs/tla/${moduleName}.tla`,
+      relativePath: `${specDirRel}/${moduleName}.tla`,
       detail,
     },
   };
@@ -357,23 +387,25 @@ function verifyDeclaredAuxiliaries(
   model: ModelMapModel,
   assets: VerifiedModelAssets,
   fs: TlaFileSystem,
+  specDirRel: string,
+  specDirAbs: string,
 ): Result<void, TlaModelPipelineError | ModuleDepsError> {
   const readModule = (name: string): Result<string, ModuleDepsError> => {
     const alreadyVerified = assets.moduleSources.get(name);
     if (alreadyVerified !== undefined) return { ok: true, value: alreadyVerified };
-    const relativePath = `specs/tla/${name}.tla`;
-    const path = verifyAssetPath(repositoryRoot, relativePath, "MODEL", fs);
+    const relativePath = `${specDirRel}/${name}.tla`;
+    const path = verifyAssetPath(repositoryRoot, relativePath, "MODEL", fs, specDirAbs);
     if (!path.ok) {
-      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", name, `module ${name} is not readable inside specs/tla`);
+      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", specDirRel, name, `module ${name} is not readable inside ${specDirRel}`);
     }
     const bytes = readAsset(path.value, relativePath, "MODEL", fs);
     if (!bytes.ok) {
-      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", name, `module ${name} is not readable inside specs/tla`);
+      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", specDirRel, name, `module ${name} is not readable inside ${specDirRel}`);
     }
     try {
       return { ok: true, value: new TextDecoder("utf-8", { fatal: true }).decode(bytes.value) };
     } catch {
-      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", name, `module ${name} is not valid UTF-8`);
+      return moduleDepsFailure("MODULE_DEP_UNRESOLVED", specDirRel, name, `module ${name} is not valid UTF-8`);
     }
   };
   const resolved = resolveAuxiliaryModules(model.name, readModule);
@@ -426,7 +458,7 @@ export function loadVerifiedTlaSourcesInternal(
   // (3) all-model declaration-vs-resolution checks, (4) implementation entries.
   const verifiedAssets: VerifiedModelAssets[] = [];
   for (const model of modelMap.value.models) {
-    const assets = verifyModelAssets(paths.value.repositoryRoot, model, fs);
+    const assets = verifyModelAssets(paths.value.repositoryRoot, model, fs, paths.value.specDirAbs);
     if (!assets.ok) return assets;
     verifiedAssets.push(assets.value);
   }
@@ -436,6 +468,8 @@ export function loadVerifiedTlaSourcesInternal(
       model,
       verifiedAssets[index]!,
       fs,
+      paths.value.specDirRel,
+      paths.value.specDirAbs,
     );
     if (!declarations.ok) return declarations;
   }

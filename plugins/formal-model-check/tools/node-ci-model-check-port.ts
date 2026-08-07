@@ -30,6 +30,7 @@ import {
   parseDockerTrace,
 } from "./ci-docker-trace.ts";
 import { FIXED_DOCKER_IMAGE } from "./tlc-spawn-planner.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 import {
   FIXED_JDK_RUN_PROFILE,
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
@@ -313,7 +314,7 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
     const scratchRoot = artifacts.value.scratchRoot;
     const statesRoot = join(scratchRoot, "states");
     mkdirSync(statesRoot, { mode: 0o700 });
-    const modelRoot = join(this.workspaceRoot, "specs", "tla");
+    const modelRoot = resolveSpecRoots(this.workspaceRoot).tlaDir;
     const containerName = `amadeus-tlc-${runId}`;
     const argv = [
       "run", "--rm", "--network=none", "--name", containerName,

@@ -5,7 +5,7 @@ command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-model-completeness.ts
 default_severity: advisory
 description: Detects drift between each registered TLA model and its canonical implementation files
 category: formal-verification
-matches: "**/{specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}"
+matches: "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}"
 input_schema:
   output_path: string
   stage_slug: string
@@ -21,7 +21,8 @@ timeout_seconds: 10
 
 # model-completeness sensor
 
-Reads `specs/tla/model-map.json`, recalculates SHA-256 for every canonical
+Reads `amadeus/spaces/<space>/specs/tla/model-map.json` (the active space's
+canonical spec root), recalculates SHA-256 for every canonical
 implementation entry, and reports drift without modifying the map, model,
 configuration, or implementation. Missing or malformed maps and unreadable
 entries fail closed.

@@ -36,14 +36,14 @@ function fixture(entryCount = 1): {
 } {
   const root = mkdtempSync(join(tmpdir(), "amadeus-u5-unit-"));
   roots.push(root);
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), cfg);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), model);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), cfg);
   const entries = Array.from({ length: entryCount }, (_, index) => {
     const suffix = entryCount === 1 ? "" : `-${String(index).padStart(4, "0")}`;
     const implPath = `packages/framework/core/tools/amadeus-election${suffix}.ts`;
@@ -60,18 +60,18 @@ function fixture(entryCount = 1): {
       {
         name: "FormalElection",
         model: {
-          path: "specs/tla/FormalElection.tla",
+          path: "amadeus/spaces/default/specs/tla/FormalElection.tla",
           identity: identity(model, "amadeus.formal-verif.tla.module.v1"),
         },
         cfg: {
-          path: "specs/tla/FormalElection.cfg",
+          path: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
           identity: identity(cfg, "amadeus.formal-verif.tla.cfg.v1"),
         },
         entries,
       },
     ],
   };
-  const mapPath = join(root, "specs", "tla", "model-map.json");
+  const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
   writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
   return { root, entries, mapPath };
 }
@@ -121,7 +121,7 @@ describe("model-completeness sensor component integration", () => {
 
   test("model identity driftも検出する", async () => {
     const f = fixture();
-    writeFileSync(join(f.root, "specs", "tla", "FormalElection.tla"), "changed\n");
+    writeFileSync(join(f.root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), "changed\n");
     const result = await checkModelCompleteness({
       projectRoot: f.root,
       dependencies: { loadCanonical: canonical },
@@ -129,14 +129,14 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toMatchObject({
       pass: false,
       findings: [
-        { path: "specs/tla/FormalElection.tla", reason: "changed" },
+        { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", reason: "changed" },
       ],
     });
   });
 
   test("model asset読取不能をredacted findingへ閉じる", async () => {
     const f = fixture();
-    rmSync(join(f.root, "specs", "tla", "FormalElection.tla"));
+    rmSync(join(f.root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"));
     const result = await checkModelCompleteness({
       projectRoot: f.root,
       dependencies: { loadCanonical: canonical },
@@ -144,7 +144,7 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toMatchObject({
       pass: false,
       findings: [
-        { path: "specs/tla/FormalElection.tla", reason: "missing" },
+        { path: "amadeus/spaces/default/specs/tla/FormalElection.tla", reason: "missing" },
       ],
     });
   });
@@ -214,7 +214,7 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toMatchObject({
       pass: false,
       reason: "timeout",
-      findings: [{ path: "specs/tla/model-map.json", reason: "timeout" }],
+      findings: [{ path: "amadeus/spaces/default/specs/tla/model-map.json", reason: "timeout" }],
     });
   });
 
@@ -271,7 +271,7 @@ describe("model-completeness sensor component integration", () => {
     const f = fixture();
     const before = readFileSync(f.mapPath);
     writeFileSync(
-      join(f.root, "specs", "tla", "FormalElection.tla"),
+      join(f.root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"),
       "---- MODULE FormalElection ----\nVARIABLE x\n====\n",
     );
     const result = await updateModelMap({
@@ -287,16 +287,16 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toEqual({
       ok: false,
       code: "UPDATE_FAILED",
-      detail: "specs/tla/model-map.json: publish-failed",
+      detail: "amadeus/spaces/default/specs/tla/model-map.json: publish-failed",
     });
     expect(readFileSync(f.mapPath)).toEqual(before);
   });
 
   test("map/model/cfgのTOCTOUを共通SafeFileReader reasonへ閉じる", async () => {
     for (const targetPath of [
-      "specs/tla/model-map.json",
-      "specs/tla/FormalElection.tla",
-      "specs/tla/FormalElection.cfg",
+      "amadeus/spaces/default/specs/tla/model-map.json",
+      "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     ]) {
       const f = fixture();
       const rootReal = realpathSync(f.root);
@@ -349,7 +349,7 @@ describe("model-completeness sensor component integration", () => {
   test("update失敗detailは例外message・absolute path・hash・内容を漏らさない", async () => {
     const f = fixture();
     writeFileSync(
-      join(f.root, "specs", "tla", "FormalElection.tla"),
+      join(f.root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"),
       "changed secret-model-content\n",
     );
     const secretHash = "f".repeat(64);
@@ -366,7 +366,7 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toEqual({
       ok: false,
       code: "UPDATE_FAILED",
-      detail: "specs/tla/model-map.json: publish-failed",
+      detail: "amadeus/spaces/default/specs/tla/model-map.json: publish-failed",
     });
     expect(serialized).not.toContain(f.root);
     expect(serialized).not.toContain(secretHash);
@@ -407,7 +407,7 @@ describe("model-completeness sensor component integration", () => {
     expect(result).toEqual({
       ok: false,
       code: "UPDATE_FAILED",
-      detail: "specs/tla/model-map.json: invalid-path",
+      detail: "amadeus/spaces/default/specs/tla/model-map.json: invalid-path",
     });
     expect(readFileSync(outside)).toEqual(before);
     rmSync(outside);
@@ -434,7 +434,7 @@ describe("model-completeness sensor component integration", () => {
 
     const unreadable = fixture();
     writeFileSync(
-      join(unreadable.root, "specs", "tla", "FormalElection.tla"),
+      join(unreadable.root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"),
       "changed model\n",
     );
     rmSync(join(unreadable.root, unreadable.entries[0].implPath));
@@ -498,7 +498,7 @@ describe("model-completeness sensor component integration", () => {
               return {
                 ok: true,
                 entries: 0,
-                map: "specs/tla/model-map.json",
+                map: "amadeus/spaces/default/specs/tla/model-map.json",
               };
             },
           },

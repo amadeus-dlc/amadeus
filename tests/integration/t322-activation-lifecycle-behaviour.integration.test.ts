@@ -57,7 +57,8 @@ let proj = "";
 let graphFile = "";
 
 // Create a temp project in the REAL installation layout and return its plugin
-// host root: `<projectRoot>/.claude` with the specs at `<projectRoot>/specs/tla`.
+// host root: `<projectRoot>/.claude` with the specs at
+// `<projectRoot>/amadeus/spaces/default/specs/tla`.
 // Setting both module-level vars is what keeps afterEach's cleanup total.
 function makeHostRoot(prefix: string): string {
   hostProjectRoot = mkdtempSync(join(tmpdir(), prefix));
@@ -67,10 +68,10 @@ function makeHostRoot(prefix: string): string {
   return h;
 }
 
-// Overwrite the project's spec — the edit a user actually makes, one level above
-// the host root.
+// Overwrite the project's spec — the edit a user actually makes, under the
+// owning spec root.
 function writeProjectSpec(content: string): void {
-  writeFileSync(join(hostProjectRoot, "specs", "tla", "FormalElection.tla"), content);
+  writeFileSync(join(hostProjectRoot, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), content);
 }
 const savedEnv: Record<string, string | undefined> = {};
 function setEnv(k: string, v: string | undefined): void {

@@ -13,7 +13,7 @@ Activation has four read-only outcomes: `not-ready` when no valid declared
 model/config target exists, `never-run` when targets exist without a successful
 verdict, `changed` when targets differ from that verdict, and `current` when
 they match. Installation succeeds in `not-ready`; only an explicit model-check
-run requires a valid `specs/tla/model-map.json` target. Startup never launches
+run requires a valid `amadeus/spaces/<space>/specs/tla/model-map.json` target. Startup never launches
 TLC.
 
 An advisory-correlated local run receives the three all-or-none CLI options
@@ -67,7 +67,7 @@ a zero-plugin build.
 
 ## Working with models
 
-All execution surfaces resolve targets from `specs/tla/model-map.json`. The
+All execution surfaces resolve targets from `amadeus/spaces/<space>/specs/tla/model-map.json`. The
 local runner selects one registered pair from the explicit `--model` / `--cfg`
 paths and binds source bytes, vocabulary, and receipt to that same model. CI
 and diagnostic runners check every registered pair when `--model` is omitted,
@@ -88,7 +88,7 @@ Two reference chapters cover the model lifecycle around this stage:
   revision.
 - [Supplying a Formal Model for a New Protocol](../../docs/reference/22-formal-model-supply.md)
   — choosing a subject, declaring the reduction manifest, registering the model
-  in `specs/tla/model-map.json`, and the falling proof plus vacuity guard a new
+  in `amadeus/spaces/<space>/specs/tla/model-map.json`, and the falling proof plus vacuity guard a new
   model must pass before it counts as evidence.
 
 ## Compose / doctor / drop

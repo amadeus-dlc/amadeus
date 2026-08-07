@@ -9,6 +9,7 @@
 
 import { createHash } from "node:crypto";
 import type { Result } from "./contract.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 import type {
   AggregateDigest,
   BundleDigest,
@@ -358,7 +359,12 @@ export const AuthoringHoldEvaluator = {
 // Handler layer: model-map and audit shard reads (no judgement lives here)
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_MODEL_MAP_PATH = "specs/tla/model-map.json";
+// The canonical model-map location for the workspace's active space, via the
+// shared spec root resolver (BR-1). Throws LegacySpecError on a legacy layout
+// (fail-closed, BR-4).
+export function defaultModelMapPath(workspaceRoot: string = process.cwd()): string {
+  return resolveSpecRoots(workspaceRoot).modelMapPath;
+}
 
 /** The subjects a registered model traces, read out of the bundle it names. */
 export type ResolveTraceSubjects = (digest: string) => readonly StableId[] | null;

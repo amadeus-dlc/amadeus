@@ -21,14 +21,14 @@ const roots: string[] = [];
 function makeProject(entryCount = 1, bytesPerEntry = 32): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-u5-integration-"));
   roots.push(root);
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), cfg);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), model);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), cfg);
   const entries = Array.from({ length: entryCount }, (_, index) => {
     const suffix = entryCount === 1 ? "" : `-${String(index).padStart(4, "0")}`;
     const implPath = `packages/framework/core/tools/amadeus-election${suffix}.ts`;
@@ -40,7 +40,7 @@ function makeProject(entryCount = 1, bytesPerEntry = 32): string {
     };
   });
   writeFileSync(
-    join(root, "specs", "tla", "model-map.json"),
+    join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
         schemaVersion: 2,
@@ -48,14 +48,14 @@ function makeProject(entryCount = 1, bytesPerEntry = 32): string {
           {
             name: "FormalElection",
             model: {
-              path: "specs/tla/FormalElection.tla",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.tla",
               identity: canonicalIdentity(
                 model,
                 "amadeus.formal-verif.tla.module.v1",
               ).sha256,
             },
             cfg: {
-              path: "specs/tla/FormalElection.cfg",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
               identity: canonicalIdentity(
                 cfg,
                 "amadeus.formal-verif.tla.cfg.v1",
@@ -79,7 +79,7 @@ afterEach(() => {
 describe("model-completeness sensor integration", () => {
   test("model変更後の明示updateをatomic publishし再checkがpassする", async () => {
     const root = makeProject(3);
-    const modelPath = join(root, "specs", "tla", "FormalElection.tla");
+    const modelPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla");
     writeFileSync(modelPath, "---- MODULE FormalElection ----\nVARIABLE x\n====\n");
     expect(await checkModelCompleteness({ projectRoot: root })).toMatchObject({
       pass: false,
@@ -88,7 +88,7 @@ describe("model-completeness sensor integration", () => {
     expect(await updateModelMap({ projectRoot: root })).toEqual({
       ok: true,
       entries: 3,
-      map: "specs/tla/model-map.json",
+      map: "amadeus/spaces/default/specs/tla/model-map.json",
     });
     expect(await checkModelCompleteness({ projectRoot: root })).toEqual({
       pass: true,
@@ -96,14 +96,14 @@ describe("model-completeness sensor integration", () => {
       findings: [],
     });
     expect(
-      JSON.parse(readFileSync(join(root, "specs", "tla", "model-map.json"), "utf-8"))
+      JSON.parse(readFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"), "utf-8"))
         .models.flatMap((model: { entries: unknown[] }) => model.entries),
     ).toHaveLength(3);
   });
 
   test("model/cfg不変の自己認証更新を拒否しmapを保持する", async () => {
     const root = makeProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
     writeFileSync(
       join(root, "packages", "framework", "core", "tools", "amadeus-election.ts"),
@@ -118,7 +118,7 @@ describe("model-completeness sensor integration", () => {
 
   test("lock競合を拒否する", async () => {
     const root = makeProject();
-    mkdirSync(join(root, "specs", "tla", "model-map.json.lock"));
+    mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json.lock"));
     expect(await updateModelMap({ projectRoot: root })).toMatchObject({
       ok: false,
       code: "LOCKED",
@@ -127,7 +127,7 @@ describe("model-completeness sensor integration", () => {
 
   test("2 updaterをread前lockで直列化しstale mapを再公開しない", async () => {
     const root = makeProject();
-    const modelPath = join(root, "specs", "tla", "FormalElection.tla");
+    const modelPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla");
     writeFileSync(modelPath, "---- MODULE FormalElection ----\nVARIABLE x\n====\n");
     let enteredResolve: (() => void) | undefined;
     let releaseResolve: (() => void) | undefined;
@@ -153,14 +153,14 @@ describe("model-completeness sensor integration", () => {
     releaseResolve?.();
     expect(await first).toMatchObject({ ok: true });
     const afterFirst = readFileSync(
-      join(root, "specs", "tla", "model-map.json"),
+      join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
     );
     expect(await updateModelMap({ projectRoot: root })).toMatchObject({
       ok: false,
       code: "MODEL_UNCHANGED",
     });
     expect(
-      readFileSync(join(root, "specs", "tla", "model-map.json")),
+      readFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json")),
     ).toEqual(afterFirst);
   });
 
@@ -188,9 +188,9 @@ describe("model-completeness sensor integration", () => {
 
   test("map/model/cfg symlinkを共通SafeFileReaderで拒否する", async () => {
     for (const relativePath of [
-      "specs/tla/model-map.json",
-      "specs/tla/FormalElection.tla",
-      "specs/tla/FormalElection.cfg",
+      "amadeus/spaces/default/specs/tla/model-map.json",
+      "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     ]) {
       const root = makeProject();
       const target = join(root, relativePath);
@@ -214,9 +214,9 @@ describe("model-completeness sensor integration", () => {
 
   test("map/model/cfgの16MiB上限を共通SafeFileReaderで拒否する", async () => {
     for (const relativePath of [
-      "specs/tla/model-map.json",
-      "specs/tla/FormalElection.tla",
-      "specs/tla/FormalElection.cfg",
+      "amadeus/spaces/default/specs/tla/model-map.json",
+      "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     ]) {
       const root = makeProject();
       writeFileSync(

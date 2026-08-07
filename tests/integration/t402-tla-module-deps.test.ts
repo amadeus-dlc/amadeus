@@ -27,13 +27,13 @@ const unresolved =
     error: {
       kind: "MODULE_DEPS",
       code: "MODULE_DEP_UNRESOLVED",
-      relativePath: `specs/tla/${name}.tla`,
-      detail: `module ${name} is not readable inside specs/tla`,
+      relativePath: `amadeus/spaces/default/specs/tla/${name}.tla`,
+      detail: `module ${name} is not readable inside amadeus/spaces/default/specs/tla`,
     },
   });
 
-// An in-memory specs/tla: names present in the map resolve, anything else is
-// UNRESOLVED (mirrors the loader/sensor boundary).
+// An in-memory canonical spec directory: names present in the map resolve,
+// anything else is UNRESOLVED (mirrors the loader/sensor boundary).
 const readerFor =
   (modules: Readonly<Record<string, string>>) =>
   (name: string): Result<string, ModuleDepsError> =>
@@ -41,7 +41,7 @@ const readerFor =
 
 const realReader = (name: string): Result<string, ModuleDepsError> => {
   try {
-    return ok(readFileSync(`${import.meta.dir}/../../specs/tla/${name}.tla`, "utf-8"))();
+    return ok(readFileSync(`${import.meta.dir}/../../amadeus/spaces/default/specs/tla/${name}.tla`, "utf-8"))();
   } catch {
     return unresolved(name)();
   }
@@ -73,7 +73,7 @@ describe.each(dependencyModules)("t402 tla-module-deps copy: %s", (_name, module
       error: {
         kind: "MODULE_DEPS",
         code: "MODULE_DEP_OUT_OF_BOUNDS",
-        relativePath: "specs/tla/A.tla",
+        relativePath: "amadeus/spaces/default/specs/tla/A.tla",
         detail: "injected non-unresolved failure",
       },
     }))).toMatchObject({
@@ -205,7 +205,7 @@ describe("t402 tla-module-deps transitive resolution", () => {
     const boom: ModuleDepsError = {
       kind: "MODULE_DEPS",
       code: "MODULE_DEP_UNRESOLVED",
-      relativePath: "specs/tla/A.tla",
+      relativePath: "amadeus/spaces/default/specs/tla/A.tla",
       detail: "injected failure",
     };
     const result = resolveAuxiliaryModules("A", () => ({ ok: false, error: boom }));

@@ -11,7 +11,8 @@
 //       existing formal-model-check over the model just registered -> the
 //       correlated hold release, plus the two fail-closed arms of BR-U5-14
 //
-// The composed host is made repository-like (.git + package.json + specs/tla)
+// The composed host is made repository-like (.git + package.json + the
+// canonical amadeus/spaces/default/specs/tla tree)
 // because the model loader resolves its workspace by walking up from its own
 // module URL: the map the authoring path registers into is therefore the same
 // map the checker reads.
@@ -247,7 +248,7 @@ describe("the authoring path end to end on an unknown subject (FR-012, BR-U5-08/
     repoLikeHost(host);
     work = freshDir("tla-authoring-work-");
     store = join(work, "evidence");
-    mapPath = join(host, "specs", "tla", "model-map.json");
+    mapPath = join(host, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     writeFileSync(mapPath, mapText([entryFor(host, "Seed", SEED_VOCABULARY)]), "utf8");
   });
 
