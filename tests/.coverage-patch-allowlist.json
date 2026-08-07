@@ -6419,6 +6419,17 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
+      "function": "main",
+      "fingerprint": "sha256:03cbfc34b017bfcdea58a24f7004065c48efffee8b48769784f47c54200a1000",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "main() dispatch case for the declare-units-done verb (issue #2358). main() is unexported and runs only under import.meta.main, so bun --coverage cannot measure its switch arms; the handler it dispatches (handleDeclareUnitsDone) is driven in-process by tests/integration/t480-declare-units-done and end-to-end by the same suite's spawned CLI arms. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
       "function": "handleSessionTakeover",
       "fingerprint": "sha256:b1d52ebe1af2d96a8928cc143cfa98a8308407cfc12357f0ba1062876bc24324",
       "anchorLines": 1,

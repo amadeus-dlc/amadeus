@@ -100,8 +100,17 @@ describe("t480 degrade unit declaration — --units validation", () => {
     expect(parsed.ok ? parsed.units : []).toEqual(["unit-alpha", "unit_beta"]);
   });
 
-  test("refuses an empty list", () => {
-    expect(parseDeclaredUnitsArg("  , ,").ok).toBe(false);
+  // The empty-list refusal carries the usage line: it is the CLI's ONLY
+  // emptiness guard (the handler has no separate one), so the wording is pinned
+  // here in-process rather than only by a spawned run.
+  test("refuses an absent, empty, or all-whitespace list with the usage line", () => {
+    for (const raw of ["", "   ", "  , ,"]) {
+      const parsed = parseDeclaredUnitsArg(raw);
+      expect(parsed.ok).toBe(false);
+      expect(parsed.ok ? "" : parsed.error).toContain(
+        "Usage: amadeus-state.ts declare-units-done --units <comma-separated unit names>",
+      );
+    }
   });
 
   test("refuses tokens that are not plain directory names", () => {

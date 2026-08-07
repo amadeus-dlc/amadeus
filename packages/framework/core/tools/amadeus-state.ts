@@ -5393,15 +5393,17 @@ export function handleSetConstructionIteration(args: string[]): void {
 // presents the stage gate on the last unit. It only ever RECORDS — the engine
 // re-checks the declaration against the live listing, so a stale declaration
 // withholds the gate rather than forcing one.
+//
+// ONE rejection site: parseDeclaredUnitsArg already refuses an absent, empty or
+// all-whitespace list (its message carries the usage line), so a separate
+// emptiness guard here would be a second error path saying the same thing —
+// and, sitting in this spawn-only handler, an unmeasurable one.
+// Mutation-before-reject: error() is `never`, so a malformed list fails closed
+// before any lock/read/write (mirrors set-construction-iteration).
 export function handleDeclareUnitsDone(args: string[]): void {
   const flags = parseFlags(args);
   const raw = typeof flags.units === "string" ? flags.units : "";
-  if (raw.trim().length === 0) {
-    error("Usage: amadeus-state.ts declare-units-done --units <comma-separated unit names>");
-  }
   const parsed = parseDeclaredUnitsArg(raw);
-  // Mutation-before-reject: error() is `never`, so a malformed list fails closed
-  // here, before any lock/read/write (mirrors set-construction-iteration).
   if (!parsed.ok) error(parsed.error);
   const units = parsed.units;
   const pd = resolveProjectDir(projectDir);

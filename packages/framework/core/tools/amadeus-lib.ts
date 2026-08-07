@@ -5067,12 +5067,18 @@ export type DeclaredUnitsParse =
   | { readonly ok: true; readonly units: string[] }
   | { readonly ok: false; readonly error: string };
 
+// The refusal for an absent, empty, or all-whitespace `--units`. It carries the
+// usage line so the CLI needs no separate emptiness guard of its own: one
+// rejection path means the writer has a single error site, and this message
+// stays pinned by an in-process test rather than only by a spawned run.
+const DECLARE_UNITS_USAGE = "Refusing to declare-units-done: --units must name at least one unit directory. Usage: amadeus-state.ts declare-units-done --units <comma-separated unit names>";
+
 // Parse and validate a `--units` argument. Pure (mirrors parseConstructionIteration)
 // so the writer can fail closed BEFORE taking any lock, reading, or writing.
 export function parseDeclaredUnitsArg(raw: string): DeclaredUnitsParse {
   const units = raw.split(",").map((token) => token.trim()).filter((token) => token.length > 0);
   if (units.length === 0) {
-    return { ok: false, error: "Refusing to declare-units-done: --units must name at least one unit directory." };
+    return { ok: false, error: DECLARE_UNITS_USAGE };
   }
   const invalid = units.filter((unit) => !DECLARED_UNIT_RE.test(unit));
   if (invalid.length > 0) {
