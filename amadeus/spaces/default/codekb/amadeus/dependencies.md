@@ -1,6 +1,12 @@
 # 依存関係
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。外部依存の変更 0 件**（`git diff --stat b8e3e664f..HEAD -- package.json bun.lock packages/setup/package.json` が空出力）。ビルドは bun 不変。
+
+内部の依存方向について記録すべき論点が1件ある: `packages/framework/core/tools/amadeus-journal.ts` の正規化層（`journalRecordField:130` / `readJournalRecords:534` ほか）を新レポータが共有するか否かは、`packages/framework/core/tools/amadeus-subagent-stats.ts:21-23` が逐語で記録する裁定 — *"This module deliberately does NOT import amadeus-lib.ts (the FD fixes the dependency direction stats -> observability only)"* — との整合を要する**設計判断**であり、import 可能性だけでは決まらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

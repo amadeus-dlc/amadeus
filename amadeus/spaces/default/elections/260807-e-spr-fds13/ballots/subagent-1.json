@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-FDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist は独立 cid でなく既存の数値検証ファミリ(ledger-count-mechanical-recalc / state-machine-cardinality-check)への追補とし、intent 固有のフィールド名(ExclusionCounts 等)を落とした一般形で書くこと。",
+  "rationale": "独立検証: (a) diary memory.md:6 に iteration 1 BLOCKER → 3 母集団層別 → iteration 2 READY の実測エントリを確認。(b) domain-entities.md:17-37 の ExclusionCounts 3 グループ層別と「母集団恒等」節(恒等 W/M 分離、:34-37)、business-rules.md:20 の BR-14、business-logic-model.md 末尾の Review — Iteration 1(NOT-READY、BLOCKER = 平坦 7 フィールドで恒等式が数学的に不成立)/ Iteration 2(READY、層別で成立)を実読し候補の事実基盤を確認。(c) 既存規範照合: ledger-count-mechanical-recalc(team.md:217)は過去実測件数の機械再計算・二重計上防止を縛り、state-machine-cardinality-check(team.md:297)は状態×指令×結果の個数 1:1 照合を縛るが、いずれも「恒等式に参加するカウンタの母集団同一性を設計段で層別検証する」面は扱わない。検証劇場 Forbidden は自己参照比較の禁止であり本件は真正な数学的不成立の設計欠陥、nfr-design:c7 は断定的インベントリの後出し導出で対象が異なる。よって c1 は未被覆の一般化可能な増分と判断し採用。",
+  "submittedAt": "2026-08-07T22:14:27Z",
+  "receivedAt": "2026-08-07T22:14:36Z"
+}

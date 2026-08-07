@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用すべき候補がある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T15:30:42Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SPR-ADS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立検証: diary(memory.md:9)の唯一のエントリは、§12a iteration 1 の verdict が complete-review 未実行のまま前セッション終了で喪失し、新 scope(新 invocationId)で iteration 1 を再ディスパッチしたという事実で、cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict(project.md:321 — verdict 未記録(Review block 不在)なら新 invocationId での再実行が正規)の適用実績そのもの。components.md の Review — Iteration 1(:46, NOT-READY, BLOCKER 2件)と Iteration 2(:65, READY)は通常のレビュー閉包で、Review block 冪等ゲートの挙動も既存 cid の記載どおり。audit truncate による findings 喪失という細部はあるが、既存 cid の『verdict 未記録なら再ディスパッチ』で完全に覆われ、一般化可能な新規増分はない。0 件で可。",
+      "submittedAt": "2026-08-07T15:29:36Z",
+      "receivedAt": "2026-08-07T15:29:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SPR-ADS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "diary の事案は既存 cid の名指し例(セッションリミット・クラッシュ)と微妙に異なる変種 — reviewer は NOT-READY verdict を返したが complete-review 未実行+findings が audit truncate で喪失した — であり、機構ゲート(Review block 不在=再ディスパッチ正規)には逐語で覆われるため今回は persist 不要だが、audit truncate による findings 喪失が再発した場合は「回収前の findings の record 外退避」を候補化する。",
+      "rationale": "独立に読んだもの: diary(inception/application-design/memory.md:9 — Deviations 1 エントリのみ、他節は空)、components.md:46-63(Review — Iteration 1: NOT-READY 2026-08-07T15:22:59Z、BLOCKER 2件+FOLLOW-UP 4件)と :65-77(Review — Iteration 2: READY 2026-08-07T15:27:32Z、Findings: None)。cid の実在は project.md の直接 grep で確認 — project.md:321 = cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict。同 cid は『complete-review の唯一の永続的な冪等ゲートは当該 iteration の Review block が成果物に実在するか』『verdict 未記録(Review block 不在)なら、新 subagent での再実行は同一 invocationId でも新規 scope 発行の新 invocationId でも成立する』と規定しており、diary の事案(12:28:17Z に verdict は返ったが complete-review 未実行で Review block 不在 → resume 後に新 scope invocationId 19c3eb7e で iteration 1 再ディスパッチ)はこの機構ゲートの適用実績そのもの。再ディスパッチ後の iteration 1 は正常に Review block を append し(components.md:46)、iteration 2 で READY 閉包 — 冪等ゲートが設計どおり機能した対照実測であり、cid の反例や隙間は観測されていない。diary 唯一のエントリ以外に摩擦(センサー赤・逸脱・是正ループ)の記録もなく、レビュー指摘(Reversibility 欠落・代替案不足)は inception.md/application-design.md の既存契約の執行であって新規学習ではない。よって新規 cid・既存 cid への追補のいずれも不要、0 件で可(choice: 0件で可)。GoA 2 — 留保は reservation フィールドのとおり(名指し例にない audit truncate 変種である点の申し送り)。",
+      "submittedAt": "2026-08-07T15:30:20Z",
+      "receivedAt": "2026-08-07T15:30:20Z"
+    }
+  ],
+  "resolutions": []
+}

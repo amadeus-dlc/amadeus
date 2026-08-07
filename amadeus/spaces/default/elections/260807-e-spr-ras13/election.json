@@ -1,0 +1,22 @@
+{
+  "electionId": "E-SPR-RAS13",
+  "kind": "learnings",
+  "question": "intent 260807-stage-perf-report の requirements-analysis ステージ §13 学習選定。conductor の提案は 0 件(persist なし)。diary は amadeus/spaces/default/intents/260807-stage-perf-report/inception/requirements-analysis/memory.md(候補 2 件: c1 = §12a iteration 1 REVISE の内訳と --json の OQ 委譲、c2 = 仮説明記の FR 契約化)。conductor の 0 件根拠: c1 の「無申告の出力面拡大を差し戻す」は cid:requirements-analysis:implementation-deviation-election / independent-review-on-pr の既存観点の適用実績、c2 の「免責・仮説は実質要件を代替せず出力契約に昇格」は cid:requirements-analysis:exemption-clause-must-not-substitute の適用実績であり、いずれも新規の一般化可能な学びではない。各自 diary と requirements.md(§12a Review ブロック含む)を独立に読み、0 件でよいか GoA 付きで投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "2 エントリは既存 cid の適用実績であり、新規 persist は不要。"
+    },
+    {
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化可能な増分がある。どのエントリをどの層へどう persist すべきか rationale に具体的に書くこと。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

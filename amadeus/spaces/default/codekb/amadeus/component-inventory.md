@@ -1,6 +1,38 @@
 # コンポーネント棚卸し
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## 監査・record の読み手生態（260807-stage-perf-report、現在、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+監査シャードと record を入力に取る既存コンポーネントの棚卸し。**ステージ性能軸で集計する読み手は observed 時点で不在**である。
+
+| コンポーネント | 行数 | 種別 | 入力 | 出力 | 本用途への適合 |
+| --- | --- | --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-journal.ts` | — | ライブラリ（正規化層） | 監査シャード（v1/v2 混成） | `JournalRecord` 正規化ビュー | **適合。ただし消費者が subagent-stats に不在** — `journalRecordField:130` / `readJournalRecords:534` / `parseJournalLine:481` / `splitJournalLines:501` / `mergeShards:612` / `isJournalEntryV2:103` / `journalRecordKey:109` がすべて export 済み |
+| `packages/framework/core/tools/amadeus-subagent-stats.ts` | 468 | read-only CLI | 監査シャード全域 | subagent 軸のモデル別統計（text / `--json`） | **形は雛形、コードは再利用不可** — `recordFromLine:278` が非 export、`scanAuditCorpus:345` は subagent 型固定 |
+| `packages/framework/core/tools/amadeus-runtime.ts` (`summary`) | — | read-only 集計 | `runtime-graph.json`（**gitignored**） | `RuntimeSummary`（`:1019-1044`） | **不適合** — `:982-984` が "never re-walks audit"、過去 intent のグラフは存在しない（`git ls-files` 0 件）。per-stage 所要時間・モデル・レビューイテレーションを持たない |
+| `.claude/skills/amadeus-session-cost/SKILL.md` | — | read-only スキル | 上記 `summary` の出力のみ | 端末表示 | **不適合** — 薄いラッパ、単一ワークフロー限定、"does no counting of its own" |
+| `packages/framework/core/tools/amadeus-observability.ts` | 384 | telemetry **書き手** seam | 呼び出し元のイベント | `<record>/.amadeus-otel/buffer-<clone>.jsonl` | **不適合かつ名前空間使用不可** — サブコマンド 0、opt-in、**fail-open**（`:1-19`）。読み手は fail-closed で契約が正反対 |
+| `packages/framework/core/tools/amadeus-reviewer-runtime.ts` | — | §12a レビュー記録の**書き手** | reviewer verdict | record 成果物への `## Review — Iteration N` ブロック | **読み手の parse 契約の出所** — `REVIEW_MARKER:96-97`、`reviewBlock:618-644`、`reviewField:672-677`、二段マッチ `:660` |
+| `scripts/metrics-timeseries.ts` | — | read-only ビューア（repo 側） | `metrics/` スナップショット | 時系列表示 | **重複しないが先例として有用** — grep 検査可能な no-write 契約（`:1-8`） |
+| `scripts/metrics-snapshot.ts` ほか `metrics-*` | — | 書き手・可視化・保持 | リポジトリ健全性（CCN / coverage / LOC / テスト数） | `metrics/*.json`（288 件） | **軸が異なる** — ワークフロー・ステージ・モデルの軸を持たない |
+
+### 出力面の資産
+
+| 面 | 所在 | 制約 |
+| --- | --- | --- |
+| `nearestRankP95` | `tests/lib/percentile.ts:12` | **`tests/` 配下のため core から import 不可**。意味論を写す（nearest-rank、空入力で `NaN`） |
+| `sortedEntries`（`--json` 安定順序） | `amadeus-subagent-stats.ts:174-176, 237-254` | 件数降順・キー昇順。file-private だが規約として写せる |
+| バージョン付きレポートのエンベロープ | `metrics/*.json` | `{schema_version, captured_at, commit, collectors{tool, tool_version, values}}` — repo の確立形 |
+
+### テスト面の双子
+
+| 層 | ファイル | 役割 |
+| --- | --- | --- |
+| unit | `tests/unit/t460-subagent-stats-compose.test.ts` | 純粋な compose |
+| integration | `tests/integration/t461-subagent-stats.integration.test.ts` | fs + CLI spawn、`MECHANISM: cli`、独立オラクル（`:5-23`） |
+
+## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

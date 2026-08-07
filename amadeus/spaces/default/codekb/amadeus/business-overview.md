@@ -1,6 +1,10 @@
 # ビジネス概要
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）にビジネス面の変更はない。#2405 が扱うのは既に永続化されている監査・record の**読み手**の追加であり、プロダクトの提供価値・対象利用者・課金面はいずれも変わらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

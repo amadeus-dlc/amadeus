@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-ICS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "起点 Issue 本文を『record への複製転記でなく参照』で正本とする形は、GitHub Issue 本文が可変で『v2』が git 検証可能なピンでない点に将来の脆弱性がありうる。本 intent では questions ファイル :17-23 が確定事項の実質を record 側へ列挙しており実害の観測がないため persist ではなく、可変外部正本の版ズレが実際に欠陥を生んだ時点で候補化する。",
+  "rationale": "独立に読んだもの: diary memory.md(Interpretations :5 / Tradeoffs :12 の 2 エントリ、Deviations・Open questions は空)、intent-statement.md(:3 上流入力・:7 問題定義・:16-19 成功指標・:29 スコープ signal)、stakeholder-map.md(:9-14 の 5 ステークホルダー・:17 意思決定者の限定)、intent-capture-questions.md(:11-23 質問しない事項の列挙・:25-29 裁定の記録)。既存 cid の実在も独立に grep で確認した: project.md:187 = cid:intent-capture:c1(事前裁定済み事項は質問せず前提知識として成果物へ反映)、project.md:312 = cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority(Issue 本文が canonical を逐語指名していれば執行事項)、project.md:280 = cid:requirements-analysis:c3-260729-open-bug-batch(Issue 本文の要求を現行 stage の質問票へ正本として固定)。判定: diary エントリ 1(質問 0 件判定)は c1 と c1-xrev の合成適用そのもので、questions :13-15 が両 cid を逐語で引いており増分がない。エントリ 2(Issue 本文 v2 を要求正本と宣言)は c3-260729-open-bug-batch が定める『Issue 本文の要求を現行 stage の質問票へ正本として固定する』の実施そのもので、questions :17-23 がその固定を実行している。さらに c1-xrev(project.md:312)は関連として c3 を明示参照しており、両 cid の接続も既存。よって新規 cid も既存 cid への追補も不要。あわせて §13 の発火源になりうる摩擦の不在も確認した — diary の Deviations は空、questions :27 の判定根拠は一次証拠に接地、conductor 報告どおりセンサー 6/6 PASSED でレビューイテレーション消費もない。学習は観測された摩擦から採るものであり、摩擦ゼロのステージで persist を作ると既存 cid の再述になる。以上より choice 1(0 件で可)。GoA 2 — 上記 reservation のとおり、可変外部正本を参照で固定する形自体には将来の脆弱性を見るが、本 intent では実害が観測されておらず persist の根拠にならないため、留保付き合意とする。",
+  "submittedAt": "2026-08-07T10:18:17Z",
+  "receivedAt": "2026-08-07T10:18:48Z"
+}

@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用すべき候補がある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T15:50:16Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SPR-DPS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "「順序ヒューリスティック適用外(順序空間が自明)」の判定様式は単一 Unit・単一 Bolt の縮退構成で今後も反復しうるが、毎回の判定が上流 DAG(エッジなし)からの一意導出で数秒の論理で済み摩擦を生んでいないため persist 対象とせず、将来この縮退判定がレビュー指摘や手戻りを実際に生んだ時点で候補化する。",
+      "rationale": "独立に読んだもの: diary memory.md(Interpretations :6 の 1 エントリのみ、Deviations :8-9 / Tradeoffs :11-12 / Open questions :14-15 は空)、bolt-plan.md(:5-19 単一 Bolt 編成・:10 walking-skeleton マーカー = project.md Mandated の執行と Q1=A 裁定 2026-08-07T15:44:04Z の引用・:11-17 DoD)、risk-and-sequencing-rationale.md(:7 順序ヒューリスティック適用外の根拠 = Unit 1 つ・Bolt 1 つで WSJF/risk-first/value-first/walking-skeleton-first の経済比較が対象を持たない、:8 Q1=A 裁定、:13-18 リスク登記 4 件はすべて Bolt 内順序で対処)、delivery-planning-questions.md(:7-15 質問しない事項の既決導出列挙、:17-25 Q1 と [Answer]、:27-30 裁定の記録 = ユーザー承認 2026-08-07T15:44:04Z)。cid の実在も独立 grep で確認: project.md:222 = cid:units-generation:c1(「Bolt 粒度は 2.8 の設問として intent ごとに選び、固定しない」— questions :19 が逐語で引いて Q1 を立てており、唯一の実質問化はこの cid の適用そのもの)、cid:intent-capture:c1(事前裁定済み・既決事項は質問しない — questions :9 が引用)。判定: (1) 順序ヒューリスティック適用外は、エッジなし DAG・単一 Bolt という上流事実から「経済比較の対象が存在しない」ことが論理的に一意に従う縮退ケースであり、一般化して persist しても既存の「既決・一意導出は質問しない」(cid:intent-capture:c1)と 2.8 正準(Strategic questions を intent ごとに解く)の再述になる。(2) 質問絞り込み(6 種中 1 件)は c1 と units-generation:c1 の合成適用の実績で増分なし。(3) walking-skeleton の Bolt 1 ゲート兼用は project.md Mandated「self-feature なら最初の Construction Bolt に walking-skeleton gate を維持」の機械的執行で、単一 Bolt なら「最初の Bolt」= 唯一の Bolt であることは定義から自明 — 裁定不要の執行という diary の自己分類も正しい。あわせて §13 の発火源になる摩擦の不在も確認: Deviations 空・リスク登記はすべて既存 RE/ADR/NFR 実測の引用で新規実測なし・questions の裁定は実 human turn 付きで手続き完備。学習は観測された摩擦・実害・対照実測から採るものであり、摩擦ゼロのステージで persist を作れば既存 cid の重複(cid:requirements-analysis:norm-consistency-review が排除対象とする)を増やすだけ。以上より choice 1(0 件で可)。GoA 2 — 留保は reservation フィールドのとおり。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-07T15:49:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SPR-DPS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "「単一 Unit・単一 Bolt では順序ヒューリスティックが対象を持たない」は縮退構成で再現しうる一般形だが、既存の比例選定・N/A 根拠併記ファミリ(cid:build-and-test:bt-proportional-selection / cid:environment-provisioning:c3 等)の適用で足りるため今回は persist しない — 同型の縮退判定が別 intent で迷い・手戻りを実際に生んだ時点で候補化することを申し送る。",
+      "rationale": "独立に読んだもの: diary(inception/delivery-planning/memory.md 全16行 — Interpretations :6 の 1 エントリのみ、Deviations :8 / Tradeoffs :11 / Open questions :14 は空)、bolt-plan.md(:7-19 Bolt 1 定義・:10 walking-skeleton マーカー・:23 実行形態)、risk-and-sequencing-rationale.md(:7 順序ヒューリスティック適用外・:8 Q1=A 裁定・:9 walking-skeleton 執行・:13-19 リスク登記 R-1〜R-4)、delivery-planning-questions.md(:9-15 質問しない事項の既決導出・:17-25 Q1 と [Answer] A・:27-30 裁定の記録とユーザー承認 2026-08-07T15:44:04Z)。cid 実在は project.md の直接 grep で確認 — project.md:222 = cid:units-generation:c1(Bolt 粒度は 2.8 の設問として intent ごとに選び固定しない — Q1 起草はこの規定の適用そのもの)、project.md:187 = cid:intent-capture:c1(既決事項は質問せず前提として反映 — questions :9 が逐語で引用)。判定: diary エントリの3要素はいずれも既存規範の適用実績か論理的自明である。(1) 質問絞り込み(6 種中 Bolt 粒度 1 件のみ実質問)は c1 と units-generation:c1 の合成適用で、questions :9 / :19 が両 cid を明示引用しており増分がない。(2) 順序ヒューリスティック適用外は、順序空間が要素 1 の集合で経済比較が対象を持たないという論理的自明であり、「適用外・N/A は根拠併記のうえ機械追加しない」という既存の比例選定ファミリ(bt-proportional-selection、environment-provisioning:c3、observability-setup:c3、build-and-test:c4)が既に一般形を覆う — rationale :7 の不適用根拠記録はその実践形。(3) walking-skeleton の Bolt 1 ゲート兼用は project.md Mandated「self-feature なら最初の Construction Bolt に walking-skeleton gate を維持」の執行で、単一 Bolt なら「最初の Bolt」= 唯一の Bolt は機械的帰結(bolt-plan :10 も執行と明記)。本ステージは逸脱ゼロ(Deviations 空)・Q1 は実 human turn で承認済み・レビュー是正の摩擦も diary に記録なしで、§13 が要求する実測由来(実害・自己捕捉・対照実測)の学びが存在しない。新規 persist は既存 cid の再述となり cid:requirements-analysis:norm-consistency-review が排除する重複を増やす。よって choice 1(0 件で可)。GoA 2(留保は reservation フィールドに記載)。",
+      "submittedAt": "2026-08-07T15:49:52Z",
+      "receivedAt": "2026-08-07T15:49:56Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,6 +1,44 @@
 # コード品質評価
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## 監査コーパスのデータ品質債務（260807-stage-perf-report、現在、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+監査シャード（222 シャード）と record を集計対象として読むと、**構造的に除外せざるを得ないデータが実在する**。これは新規レポータの欠陥ではなく既存コーパスの性質であり、読み手はこれらを**無音で捨てず計数して報告する**必要がある（#2405 の無音スキップ禁止条件）。将来の読み手のために既知のデータ品質債務として記録する。
+
+| バケット | 件数 | 機序 |
+| --- | --- | --- |
+| 未対応 `STAGE_STARTED` | 35 | `STAGE_STARTED`=1,567 に対し `STAGE_COMPLETED`=1,537、ペア成立は 1,532 |
+| 孤児 `STAGE_COMPLETED` | 5 | 同上 |
+| 未クローズ `STAGE_AWAITING_APPROVAL` | 7 | `STAGE_AWAITING_APPROVAL`（1,195）に対し `GATE_APPROVED`+`GATE_REJECTED`（合計 1,214、intent ごとに偏る）。7 件のオープナーが自 intent 内でクローズしない |
+| 秒粒度で 0 に潰れた窓 | 394 | `amadeus-lib.ts:7740-7742` の `isoTimestamp` がミリ秒を書き込み時点で捨てるため、秒未満のステージは**どの集計方式でも解像不能** |
+| サフィックス付きレビュー見出し | 3 | `## Review — Iteration 2（rebase後・裁定A反映）`。1,010 ブロック中の様式ドリフト全数 |
+| `{unit-name}` リテラルパス | 2 ファイル / 2 intent | 未解決テンプレートがディスク上のディレクトリ名として実在 |
+
+### `{unit-name}` リテラルディレクトリ — 是正されない痕跡
+
+`#1711` / `#2358` の degrade 欠陥が残した未解決テンプレートが、ディスク上に実在するディレクトリ名として残っている:
+
+```
+amadeus/spaces/default/intents/260725-mirror-review-fixes/construction/{unit-name}
+amadeus/spaces/default/intents/260802-registry-drift-guard/construction/{unit-name}
+```
+
+区間の `d98dd9039`（#2393）と、区間内で `project.md` へ persist された `cid:code-generation:c1-2358-declare-units-done` が degrade の per-unit ゲートを宣言検証つき fail-closed へ変えたが、**これはエンジンの挙動であってディスク上のディレクトリ名を遡って直すものではない**。パス由来の unit 帰属を行う読み手は `{unit-name}` バケットを吐く — 明示的に扱わない限り恒久的に残る。
+
+### 未クローズ `STAGE_AWAITING_APPROVAL` の扱いは設計判断
+
+7 件のオープナーは「窓の終端まで idle」とみなすことも「parse 不能として報告」とすることもできる。**どちらを選ぶかは指標の意味を変える**ため、既定値を黙って当てず要件段で確定する必要がある。
+
+### `intentId` degradation は帰属を壊さない
+
+`intentId==="intents"` の v1 行が **86,744 / 96,269（90.1%）** と過半を占めるが、それらは **95 の実 intent ディレクトリ**へ散っている。**パス基準の帰属は必須だが機能する** — これは債務ではなく制約として記録する。
+
+### 移動値であるカウンタ
+
+`SUBAGENT_COMPLETED` の総数は**測定のたびに変わる移動値**である（Developer scan 時点 7,273 / Architect 再計測時点 7,274 — 本 RE セッション自身が監査へ追記するため）。監査コーパスの件数を成果物へ書くときは測定時刻とともに記録し、転記でなく再計測すること（`cid:requirements-analysis:numbers-from-command-output-only` / `cid:reverse-engineering:measurement-ref-in-artifacts`）。
+
+## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

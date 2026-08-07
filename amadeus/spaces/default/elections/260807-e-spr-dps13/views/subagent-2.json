@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SPR-DPS13",
+  "voter": "subagent-2",
+  "question": "intent 260807-stage-perf-report の delivery-planning ステージ §13 学習選定。diary は amadeus/spaces/default/intents/260807-stage-perf-report/inception/delivery-planning/memory.md(Interpretations 1 エントリ)。候補 c1: 単一 Unit・単一 Bolt 構成では順序ヒューリスティック(WSJF 等)を「適用外(順序空間が自明)」と判定し rationale に不適用根拠のみ記録、戦略質問 6 種のうち Bolt 粒度 1 件のみ実質問とした。conductor の提案は「0 件(persist なし)」— 根拠: (1) 質問絞り込みは cid:intent-capture:c1(既決事項は質問しない)と cid:units-generation:c1(Bolt 粒度は intent ごとに 2.8 で選ぶ)の適用実績 (2) 順序空間が自明なら経済比較が対象を持たないのは論理的自明で一般化増分なし (3) walking-skeleton の Bolt 1 ゲート兼用は project.md Mandated の執行。各自 diary・delivery-planning 成果物(bolt-plan.md / risk-and-sequencing-rationale.md / delivery-planning-questions.md)・関連 cid を独立に読み、GoA 付きで投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "diary 1 エントリは既存 cid の適用実績と論理的自明の組合せであり、新規 persist は不要。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化可能な増分がある。どのエントリをどの cid へどう persist すべきか rationale に具体的に書くこと。"
+    }
+  ]
+}

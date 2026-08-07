@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-FDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "独立 cid を新設せず、既存の数値検証ファミリ(ledger-count-mechanical-recalc / state-machine-cardinality-check)への追補として、intent 固有の固有名(ExclusionCounts・BR-14 等)を落とした一般形で persist すること。",
+  "rationale": "独立検証: (a) diary(construction/functional-design/memory.md:6)に §12a iteration 1 BLOCKER → 3 母集団層別 → iteration 2 READY の実測記録を確認。(b) domain-entities.md:17-37 の ExclusionCounts 3 グループ層別と「母集団恒等」節(恒等 W/M 分離・corpus/review は恒等式非参加)、business-rules.md:20 の BR-14、business-logic-model.md 末尾の Review — Iteration 1(NOT-READY・BLOCKER: 互いに素な母集団の平坦混在で恒等式が数学的に不成立)/ Iteration 2(READY・zeroSecond/unclosedIdle 相互排他は FOLLOW-UP)を実読し候補記述と一致することを確認。(c) team.md 実読: ledger-count-mechanical-recalc(:217)は列挙からの件数の機械再計算(過去実測値の転記正確性)を縛り、state-machine-cardinality-check(:297)は状態×指令×結果の個数照合を縛るが、いずれも「恒等式に参加するカウンタが同一母集団に属することを設計段で層別検証する」面は規定していない。検証劇場 Forbidden は自己参照比較・実行結果非由来 status の禁止であり、恒等式の母集団混同(実行結果由来だが数学的に不成立な検証式)は別クラス。よって c1 は既存規範の適用実績ではなく未被覆の一般化可能な増分と判断し採用。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T22:14:32Z"
+}

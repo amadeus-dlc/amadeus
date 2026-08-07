@@ -974,5 +974,12 @@
     "dirName": "260807-failclosed-recovery-path",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
+    "slug": "stage-perf-report",
+    "dirName": "260807-stage-perf-report",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

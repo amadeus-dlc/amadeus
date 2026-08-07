@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SPR-ADS13",
+  "voter": "subagent-2",
+  "question": "intent 260807-stage-perf-report の application-design ステージ §13 学習選定。conductor の提案は 0 件(persist なし)。diary は amadeus/spaces/default/intents/260807-stage-perf-report/inception/application-design/memory.md(1 エントリ: Deviations — §12a iteration 1 の verdict が complete-review 未実行のまま前セッション終了で喪失し、cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict に従い新 scope で iteration 1 を再ディスパッチした)。conductor の 0 件根拠: 本エントリは既存 cid(c3-pcp-reviewer-retry-on-lost-verdict — verdict 未確立時の再ディスパッチは正規)の適用実績そのものであり、新規の一般化可能な増分がない。各自 diary と components.md 末尾の Review — Iteration 1/2 ブロックを独立に読み、0 件でよいか検証して GoA 付きで投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化可能な増分がある。どのエントリをどの cid へどう persist すべきか rationale に具体的に書くこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "diary 1 エントリは既存 cid の適用実績であり、新規 persist は不要。"
+    }
+  ]
+}

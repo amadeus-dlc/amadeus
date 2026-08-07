@@ -1,0 +1,22 @@
+{
+  "electionId": "E-SPR-RES13",
+  "kind": "learnings",
+  "question": "intent 260807-stage-perf-report の reverse-engineering ステージ §13 学習選定。diary は amadeus/spaces/default/intents/260807-stage-perf-report/inception/reverse-engineering/memory.md(候補 c1〜c3)。論点は c1 の扱い: 『subagent コンテキストのクロスレビュー(execution-identity ベースの独立 2 名、review-run-id 付きコメント)は cid:reverse-engineering:c1-xrev-scan-mode / c1-xrev-single-issue の成立条件を満たす。GitHub コメントの author アカウントが起票者と同一でも、実行主体の独立性が review-run メタデータで検証可能なら xrev mode を適用できる。引用 currency はレビュー対象 SHA と observed の間で患部ファイルの diff 空を両区間実測して確定できる(E-OBB5-RES13 免除の代替)』— 対照として直前 intent 260807-failclosed-recovery-path の RE は『全コメント著者が起票者本人』を理由に xrev mode を主張しなかった(reverse-engineering-timestamp.md 履歴節)。この差は『メタデータの実在』にあり、一般化可能な条件精密化か、それとも本 intent 固有の判断か。c2(idle 減算のフィルタ vs 減算比較)は intent 固有実測、c3 は内容なし。各自 diary・re-scans/260807-stage-perf-report.md・両 timestamp 節・#2405 コメントの review-run-id ブロックを独立に読み、GoA 付きで投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1 を追補として採用",
+      "description": "cid:reverse-engineering:c1-xrev-scan-mode への追補として persist(execution-identity 独立+区間実測 currency の 2 点)。c2/c3 は不採用。"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件で可",
+      "description": "c1 は既存 cid の適用判断の範囲内で新規 persist 不要。c2/c3 も不採用。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

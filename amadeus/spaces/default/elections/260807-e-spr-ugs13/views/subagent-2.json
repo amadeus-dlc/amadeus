@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SPR-UGS13",
+  "voter": "subagent-2",
+  "question": "intent 260807-stage-perf-report の units-generation ステージ §13 学習選定。diary は amadeus/spaces/default/intents/260807-stage-perf-report/inception/units-generation/memory.md(Interpretations 2 エントリ)。候補 c1: 単発実行 CLI ツールへ UNIT_KINDS の service(deployed executable)を適用した kind 写像判断 — conductor の提案は「c1 を cid:units-generation:c2-edgeblock-nested-kind-required への1行追補として project.md へ persist」(UNIT_KINDS 閉語彙の実在は既存 cid が定めるが、単発 CLI をどの kind へ写像するかの判断例は未被覆)。候補 c2: stories.md 不在時に requirements の FR 群を価値スライス正本として写像 — conductor の提案は「不採用」(cid:approval-handoff:c4 の『存在しない上流成果物を補完しない』の適用実績にすぎず新規増分なし)。各自 diary・unit-of-work.md・project.md の当該 cid を独立に読み、GoA 付きで投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件で可",
+      "description": "c1 も UNIT_KINDS 語彙定義(service = a deployed executable)からの自明な導出であり persist 不要。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "両方採用",
+      "description": "c2 にも一般化可能な増分がある。rationale にどう persist すべきか具体的に書くこと。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "c1 のみ採用(c2 不採用)",
+      "description": "kind 写像判断(単発 CLI → service)を c2-edgeblock cid への追補として persist。c2 は既存 cid の適用実績のため不採用。"
+    }
+  ]
+}

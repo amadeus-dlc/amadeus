@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-NDS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "成果物冒頭での負方向明記+代替正本宣言は cid:nfr-design:c1-brief-skip-resolution(reviewer ブリーフ面)と cid:code-generation:artifact-upstream-inputs-header の適用実績と判断して 0 件に同意するが、『全 SKIP 由来不在の代替正本宣言(成果物本文面)』が今後 friction(センサー FAILED や reviewer 誤前提)を伴って再発した場合は同 cid への追補として再提案すること。",
+  "rationale": "独立検証: (a) diary memory.md:6 は 1 エントリのみで、自ら『cid:nfr-design:c1-brief-skip-resolution の成果物本文への適用』『cid:nfr-design:c1 に従い不適用』と既存 cid を引いている。(b) performance-design.md 冒頭ヘッダは consumes 5 件不在を負方向で明記し requirements.md NFR-1〜5 を代替正本と宣言、末尾 Review — Iteration 1 は READY(BLOCKER なし・FOLLOW-UP/NIT のみ)でイテレーション消費ゼロ。(c) project.md:302 の c1-brief-skip-resolution は reviewer ブリーフへの負方向明示、:381 の c1 はセレモニー不適用 — 本件はいずれの適用実績であり、摩擦(欠陥・偽赤・iteration 消費)を伴う新規機序の実測が無いため一般化可能な増分に足りない。0 件で可。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T22:24:28Z"
+}

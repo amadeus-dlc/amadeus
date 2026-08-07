@@ -1,6 +1,10 @@
 # 技術スタック
 
-## fail-closed ガードの回復経路（260807-failclosed-recovery-path、現在、observed `b8e3e664f`）
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）に技術スタックの変更はない。#2405 が追加するのは Bun / TypeScript / ESM の既存規約に載る core tool 1本であり、新しいランタイム・言語・外部ライブラリを持ち込まない。パーセンタイル計算は既存の `tests/lib/percentile.ts:12` `nearestRankP95` の**意味論を写す**方針であり（`tests/` 配下のため core から import 不可）、依存の追加を伴わない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 
