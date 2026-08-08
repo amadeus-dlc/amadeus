@@ -265,7 +265,7 @@ describe("main — the whole pipeline over a real corpus", () => {
     const { code, stdout } = capturedMain(["--project-dir", projectDir, "--space", "default"]);
     expect(code).toBe(0);
     const head = stdout.split("\n").slice(0, 16).join("\n");
-    for (const key of ["shards:", "lines:", "broken-line:", "unreadable-shard:", "unmatched-start:", "orphan-complete:", "unclosed-idle:", "zero-second:", "unparseable-review-heading:"]) {
+    for (const key of ["shards:", "lines:", "broken-line:", "unreadable-shard:", "unmatched-start:", "orphan-complete:", "unclosed-idle:", "zero-second:", "invalid-timestamp:", "unparseable-review-heading:"]) {
       expect(head).toContain(key);
     }
     expect(stdout).toContain("unverified hypothesis");
@@ -337,10 +337,12 @@ describe("main — the whole pipeline over a real corpus", () => {
 // --- FR-7: exit ladder and the read-only invariant --------------------------
 
 describe("exit ladder — measured by spawning the CLI", () => {
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+
   test("a healthy corpus exits 0", () => {
     const projectDir = scratch();
     buildCorpus(projectDir);
-    const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--json"], { encoding: "utf-8", env: process.env });
+    const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--json"], RUN_OPTIONS);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("hypothesisNotice");
   });
@@ -349,13 +351,13 @@ describe("exit ladder — measured by spawning the CLI", () => {
     const projectDir = scratch();
     const spaceRoot = buildCorpus(projectDir);
     symlinkSync(join(spaceRoot, "intents", "alpha", "audit", "nowhere.jsonl"), join(spaceRoot, "intents", "alpha", "audit", "dangling.jsonl"));
-    const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--json"], { encoding: "utf-8", env: process.env });
+    const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--json"], RUN_OPTIONS);
     expect(run.status).toBe(1);
     expect(run.stdout).toContain('"unreadableShard": 1');
   });
 
   test("an unknown flag exits 2 and prints usage", () => {
-    const run = spawnSync("bun", [TOOL, "--nope"], { encoding: "utf-8", env: process.env });
+    const run = spawnSync("bun", [TOOL, "--nope"], RUN_OPTIONS);
     expect(run.status).toBe(2);
     expect(run.stderr).toContain("Unknown argument");
   });
@@ -383,7 +385,8 @@ describe("read-only — the shipped source cannot write", () => {
     const imports = [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']node:fs["']/g)].flatMap((m) =>
       (m[1] ?? "").split(",").map((s) => s.trim()).filter((s) => s !== ""),
     );
-    expect(imports.sort()).toEqual(["readFileSync", "readdirSync"]);
+    const valueImports = imports.filter((s) => !s.startsWith("type "));
+    expect(valueImports.sort()).toEqual(["readFileSync", "readdirSync"]);
     for (const api of WRITE_APIS) expect(source.includes(api)).toBe(false);
     expect(source.includes("node:fs/promises")).toBe(false);
   });

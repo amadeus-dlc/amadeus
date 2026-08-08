@@ -10,6 +10,7 @@ import {
   buildWindows,
   composeStageStats,
   emptyExclusions,
+  indexIdle,
   type MeasuredWindow,
   nearestRankP95,
   parseReviewHeadings,
@@ -145,8 +146,31 @@ describe("buildWindows — pairing START with COMPLETED per intent x stage", () 
   test("emptyExclusions starts every bucket at zero", () => {
     const zero = emptyExclusions();
     expect(zero.corpus).toEqual({ brokenLine: 0, unreadableShard: 0 });
-    expect(zero.windowing).toEqual({ unmatchedStart: 0, orphanComplete: 0, unclosedIdle: 0, zeroSecond: 0 });
+    expect(zero.windowing).toEqual({ unmatchedStart: 0, orphanComplete: 0, unclosedIdle: 0, zeroSecond: 0, invalidTimestamp: 0 });
     expect(zero.review).toEqual({ unparseableReviewHeading: 0 });
+  });
+
+  test("an unparseable timestamp leaves the window population and is counted, not NaN-poisoned", () => {
+    const { windows, buckets } = buildWindows([
+      v1("i1", "STAGE_STARTED", "not-a-timestamp", { Stage: "design" }),
+      v1("i1", "STAGE_COMPLETED", "2026-01-01T00:00:30Z", { Stage: "design" }),
+      v1("i1", "STAGE_STARTED", "2026-01-01T00:01:00Z", { Stage: "build" }),
+      v1("i1", "STAGE_COMPLETED", "also-garbage", { Stage: "build" }),
+    ]);
+    expect(windows).toHaveLength(0);
+    expect(buckets.windowing.invalidTimestamp).toBe(2);
+    expect(buckets.windowing.orphanComplete).toBe(1);
+    expect(buckets.windowing.unmatchedStart).toBe(1);
+  });
+
+  test("an idle event with an unparseable timestamp is counted instead of poisoning the intervals", () => {
+    const index = indexIdle([
+      v1("i1", "STAGE_AWAITING_APPROVAL", "garbage-time"),
+      v1("i1", "STAGE_AWAITING_APPROVAL", "2026-01-01T00:00:05Z"),
+      v1("i1", "GATE_APPROVED", "2026-01-01T00:00:10Z"),
+    ]);
+    expect(index.invalidTimestampCount).toBe(1);
+    expect(index.intervals.get("i1")).toHaveLength(1);
   });
 });
 
@@ -463,8 +487,25 @@ describe("renderers — deterministic, header-first, hypothesis stated", () => {
     expect(head).toContain("orphan-complete: 0");
     expect(head).toContain("unclosed-idle: 0");
     expect(head).toContain("zero-second: 1");
+    expect(head).toContain("invalid-timestamp: 0");
     expect(head).toContain("unparseable-review-heading: 1");
     expect(text).toContain(HYPOTHESIS_NOTICE);
+  });
+
+  test("a stage name with control bytes and a newline is reduced at the render point", () => {
+    const report = sampleReport();
+    const hostile = { ...report, stages: [{ stage: "de\u0007sign\ninjected", n: 1, rawMedian: 1, netMean: 1, netMedian: 1, netP95: 1 }] };
+    const markdown = renderMarkdown(hostile);
+    expect(markdown).toContain("| design |");
+    expect(markdown).not.toContain("injected");
+    expect(markdown).not.toContain("\u0007");
+  });
+
+  test("a csv cell with a comma and a quote cannot forge an extra column", () => {
+    const report = sampleReport();
+    const hostile = { ...report, stages: [{ stage: 'a,"b', n: 1, rawMedian: 1, netMean: 1, netMedian: 1, netP95: 1 }] };
+    const row = renderCsv(hostile).split("\n").find((line) => line.includes('a,""b'));
+    expect(row).toBe('"a,""b",1,1,1,1,1');
   });
 
   test("csv also carries the measurement ref and the hypothesis before the rows", () => {
