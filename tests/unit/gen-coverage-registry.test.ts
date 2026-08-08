@@ -214,6 +214,16 @@ describe("guarantee-principle gate (mechanism >= minMechanism)", () => {
 //    This is the PROVE-THE-RATCHET assignment requirement, done in-test
 //    against a TEMP COPY of the source — the real source is untouched.
 // ---------------------------------------------------------------------------
+// Each test in here copies three shipped subtrees and then spawns the generator
+// twice over them, so it costs tens of seconds of real work — on CI, where the
+// runner is several times slower than a laptop, the two heaviest have measured
+// 26.1s and 30.5s against the suite's 30s default. That is a budget with no
+// headroom, and it went red on two unrelated PRs (#2618 at 30514ms, #2646 at
+// 30006ms — six milliseconds over) before anyone read the diff. The work is not
+// pathological, the ceiling was simply set below it; these get one sized to what
+// they actually do. Issue #2397.
+const FRESHNESS_DIFF_TIMEOUT_MS = 120_000;
+
 describe("--check freshness diff (the ratchet mechanism)", () => {
   // Build a self-contained temp tree: copy the shipped source subtree we
   // enumerate from, plus a copy of the current tests dir for claim discovery,
@@ -299,7 +309,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  });
+  }, FRESHNESS_DIFF_TIMEOUT_MS);
 
   test("inject a NEW audit event into the temp source: --check exits 1 naming the gap", () => {
     const t = buildTempTree();
@@ -328,7 +338,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  });
+  }, FRESHNESS_DIFF_TIMEOUT_MS);
 
   test("inject a NEW subcommand into the temp source: --check exits 1 naming the gap", () => {
     const t = buildTempTree();
@@ -352,7 +362,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  });
+  }, FRESHNESS_DIFF_TIMEOUT_MS);
 
   test("missing committed registry: --check exits 1", () => {
     const t = buildTempTree();
