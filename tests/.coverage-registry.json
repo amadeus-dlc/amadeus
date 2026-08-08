@@ -6866,6 +6866,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t495-autonomy-projection-integrity.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }

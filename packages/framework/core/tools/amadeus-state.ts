@@ -761,6 +761,22 @@ function resolveSelectedIntent(
   return activeIntent(pd, space, intent) ?? undefined;
 }
 
+// The state rows owned by the autonomy transaction's projection — the exact set
+// writeAutonomyStateProjection (amadeus-intent-autonomy-production.ts) writes as
+// one unit. A generic `set` of any of them bypasses that writer, so each such
+// write leaves an AUTONOMY_MODE_SET row (#2483). Kept as literal strings rather
+// than an import: this tool must not pull the autonomy production module (and
+// its coordinator/repository graph) onto the `set` path just to name three rows.
+//
+// Declared ABOVE the `import.meta.main` dispatch below, not next to handleSet:
+// a `const` after that block sits in its temporal dead zone for the whole CLI
+// run, so a spawned `set` would throw a ReferenceError before writing anything.
+const PROJECTION_OWNED_FIELDS = new Set([
+  "Intent Autonomy Mode",
+  "Intent Grant",
+  "Construction Autonomy Mode",
+]);
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
@@ -1098,12 +1114,9 @@ export function handleSet(args: string[]): void {
   // sentinel lock bucket (byte-identical AND lock-bucket-identical to before);
   // a given selector pins state+lock to that record (mirrors handleFork).
   const resolvedIntent = resolveSelectedIntent(pd, intent, space);
-  // Publish the lock context so a mid-transaction error() routes ERROR_LOGGED to
-  // the SAME per-intent shard we lock (lock==write; sentinel when unselected).
-  // Cleared in the finally below so an in-process re-entry can't inherit it.
-  lockIntent = resolvedIntent;
-  lockSpace = space;
-  try {
+  // The locked transaction, named rather than inlined so the selector branch
+  // below can run it under a bound audit target without duplicating the body.
+  function runLockedSet(): void {
   // C2b lost-update safety: hold the audit lock across read→decide→write so
   // two concurrent `set`s of different fields can't clobber each other (A reads
   // V1, B reads V1, A writes V2, B writes V1.5 → A's field lost). The +1/-1
@@ -1121,6 +1134,10 @@ export function handleSet(args: string[]): void {
   // functions by ordinal, so adding closures here would shift every later
   // anonymous entry off its baseline row.
   const pairs: { field: string; value: string }[] = [];
+  // Populated by the write loop below with the RESOLVED value of every
+  // projection-owned field this call touched; drained into audit rows once the
+  // state write has landed (#2483).
+  const projectionWrites: { field: string; value: string }[] = [];
   for (const pair of rest) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
@@ -1158,17 +1175,63 @@ export function handleSet(args: string[]): void {
     }
 
     content = setField(content, field, value);
+    // The RESOLVED value, not the raw argument: NOW/+1/-1 would otherwise put a
+    // literal into the ledger that the record never held.
+    if (PROJECTION_OWNED_FIELDS.has(field)) projectionWrites.push({ field, value });
   }
 
   // Reached only when every field existed: the write is real, so the success
   // report is now execution-derived (FR-2), not unconditional.
   writeStateFile(pd, content, resolvedIntent, space);
+  // Audit AFTER the write, one row per projection-owned field (#2483). The
+  // three fields below are written canonically by writeAutonomyStateProjection
+  // (amadeus-intent-autonomy-production.ts) as the projection of a committed
+  // autonomy transaction, so a generic `set` of one of them is an out-of-band
+  // write of that projection. It is NOT refused here — the park-under-full path
+  // that motivates the bypass has no ruling yet — but it stops being invisible:
+  // the forensic gap in the incident was exactly a write with no ledger row.
+  //
+  // Write-then-audit (not audit-first) on purpose: `set` has no transaction to
+  // converge on, so a row emitted before a failing write would claim a change
+  // the record never took.
+  for (const { field, value } of projectionWrites) {
+    emitAudit(pd, "AUTONOMY_MODE_SET", { Mode: value, Field: field });
+  }
   console.log(JSON.stringify({ updated: true, fields: rest.length }));
   }, resolvedIntent, space);
-  } finally {
-    lockIntent = undefined;
-    lockSpace = undefined;
   }
+
+  // Unselected: the pre-existing shape exactly — the sentinel lock bucket, the
+  // active cursor's state file, and an unbound audit target that resolves to the
+  // active intent's shard. Publish the lock context so a mid-transaction error()
+  // routes ERROR_LOGGED to the SAME bucket we lock (lock==write). Cleared in the
+  // finally so an in-process re-entry can't inherit it.
+  if (resolvedIntent === undefined) {
+    lockIntent = resolvedIntent;
+    lockSpace = space;
+    try {
+      runLockedSet();
+    } finally {
+      lockIntent = undefined;
+      lockSpace = undefined;
+    }
+    return;
+  }
+  // Selected: bind the audit target to the record being written (#2483).
+  // emitAudit resolves its shard from stateOperationTarget, which handleSet —
+  // unlike every handler routed through runSelectedIntentOperation — never
+  // published. A `set --intent <other>` therefore wrote the other record's state
+  // file while its AUTONOMY_MODE_SET row landed on the ACTIVE intent's shard:
+  // the row accused a record that never changed, and the record that DID change
+  // stayed as unaudited as before. withStateOperationTarget also carries the
+  // lock context (and restores the previous one), so the manual pair above is
+  // not repeated here. The space is normalised the way auditLockIdentity
+  // normalises it, so the emit re-enters the lock this call already holds
+  // instead of taking a second acquire against a different bucket.
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    runLockedSet,
+  );
 }
 
 export function handleMirrorBoundary(args: string[]): void {
