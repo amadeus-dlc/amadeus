@@ -103,6 +103,7 @@ import { join } from "node:path";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
+  copyTreeWithRetry,
   createTestProject,
   FIXTURES_DIR,
   seededAuditShard,
@@ -252,7 +253,7 @@ function bareProj(): string {
  */
 function installedProj(mutate?: (claudeDir: string) => void): string {
   const p = bareProj();
-  cpSync(AMADEUS_SRC, join(p, ".claude"), { recursive: true });
+  copyTreeWithRetry(AMADEUS_SRC, join(p, ".claude"));
   const claudeMdExample = join(p, ".claude", "CLAUDE.md.example");
   const claudeMd = join(p, ".claude", "CLAUDE.md");
   if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);

@@ -29,9 +29,11 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -595,6 +597,130 @@ function sleepSync(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+const RETRYABLE_COPY_CODES = new Set(["ENOENT", "EAGAIN", "EMFILE", "ENOMEM"]);
+
+// cpSync(AMADEUS_SRC, ..., { recursive: true }) has failed with a bare
+// `ENOENT: no such file or directory, open` under full-suite parallel load
+// (#2397, t99) — bun's recursive-copy internals throw without attaching a
+// `path` to the error, so the raw stderr carries zero positional
+// information and the next occurrence is exactly as undiagnosable as the
+// first. copyTreeWithRetry is the symmetric counterpart to
+// removeTreeWithRetry (#1565): ops are injectable so both the retry branch
+// and the diagnostics branch are unit-testable in-process; a transient
+// ENOENT/EAGAIN/EMFILE/ENOMEM is retried with linear backoff, but every
+// attempt (including ones that will be retried) emits a diagnostic block to
+// stderr FIRST — silently retrying into a green result would erase the one
+// forensic trace bun's error withholds. Success is verified by a
+// post-condition (dest's recursive file count == src's), never by cpSync
+// returning without throwing: a partial copy that happens not to throw
+// would otherwise pass silently.
+export interface CopyTreeOps {
+  copy(src: string, dest: string): void;
+  exists(path: string): boolean;
+  sleep(ms: number): void;
+  /** Recursive file count under `path` (directories excluded), or -1 if `path` does not exist. */
+  count(path: string): number;
+}
+const realCopyTreeOps: CopyTreeOps = {
+  copy: (src, dest) => cpSync(src, dest, { recursive: true }),
+  exists: existsSync,
+  sleep: sleepSync,
+  count: countFilesRecursive,
+};
+const COPY_TREE_RETRY_LIMIT = 3;
+const COPY_TREE_RETRY_BACKOFF_MS = 50;
+
+export function copyTreeWithRetry(
+  src: string,
+  dest: string,
+  ops: CopyTreeOps = realCopyTreeOps,
+): void {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= COPY_TREE_RETRY_LIMIT; attempt++) {
+    try {
+      ops.copy(src, dest);
+      const srcCount = ops.count(src);
+      const destCount = ops.count(dest);
+      if (srcCount === destCount) return;
+      lastErr = new Error(
+        [
+          "copyTreeWithRetry: cpSync returned but the file count does not match",
+          `  src:  ${src} (${srcCount} file(s))`,
+          `  dest: ${dest} (${destCount} file(s))`,
+        ].join("\n"),
+      );
+      reportCopyTreeFailure(src, dest, lastErr, attempt);
+    } catch (err) {
+      lastErr = err;
+      reportCopyTreeFailure(src, dest, err, attempt);
+      if (!isRetryableCopyError(err)) break;
+    }
+    if (attempt < COPY_TREE_RETRY_LIMIT) ops.sleep(COPY_TREE_RETRY_BACKOFF_MS * attempt);
+  }
+  throw lastErr;
+}
+
+function isRetryableCopyError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  return typeof code === "string" && RETRYABLE_COPY_CODES.has(code);
+}
+
+/**
+ * cpSync's recursive-copy failures (bun 1.3.13, #2397 t99) have been observed
+ * as a bare `ENOENT: no such file or directory, open` with NO path attached
+ * — err.path/err.syscall are undefined even though the underlying open(2)
+ * had one. A src re-scan taken immediately after the failure is therefore
+ * the only positional evidence available: it can catch a sibling test
+ * having deleted/replaced an entry mid-walk, without claiming that as the
+ * mechanism.
+ */
+function reportCopyTreeFailure(src: string, dest: string, err: unknown, attempt: number): void {
+  const e = err as NodeJS.ErrnoException | undefined;
+  const srcExists = existsSync(src);
+  const srcTopEntries = srcExists ? safeReaddir(src).length : -1;
+  const srcFileCount = countFilesRecursive(src);
+  const destParent = dirname(dest);
+  const destParentExists = existsSync(destParent);
+  process.stderr.write(
+    [
+      `[copyTreeWithRetry diagnostics] attempt ${attempt}/${COPY_TREE_RETRY_LIMIT}: copy ${src} -> ${dest} failed`,
+      `  error.code: ${e?.code ?? "(undefined)"}`,
+      `  error.syscall: ${e?.syscall ?? "(undefined)"}`,
+      `  error.path: ${e?.path ?? "(undefined)"}`,
+      `  error.message: ${e instanceof Error ? e.message : String(err)}`,
+      `  src exists: ${srcExists}`,
+      `  src top-level entries: ${srcTopEntries}`,
+      `  src recursive file count (post-failure re-scan): ${srcFileCount}`,
+      `  dest parent exists: ${destParentExists} (${destParent})`,
+      `  TMPDIR: ${process.env.TMPDIR ?? "(unset)"}`,
+      "",
+    ].join("\n"),
+  );
+}
+
+function safeReaddir(path: string): string[] {
+  try {
+    return readdirSync(path);
+  } catch {
+    return [];
+  }
+}
+
+function countFilesRecursive(path: string): number {
+  if (!existsSync(path)) return -1;
+  let count = 0;
+  for (const entry of readdirSync(path, { recursive: true }) as string[]) {
+    try {
+      if (statSync(join(path, entry)).isFile()) count++;
+    } catch {
+      // Entry vanished between listing and stat (parallel-load race) — do
+      // not count it; countFilesRecursive is a post-condition check, and an
+      // undercount here correctly fails that check rather than masking it.
+    }
+  }
+  return count;
+}
+
 /** Options for setupIntegrationProject — the flags from setup_integration_project. */
 export interface IntegrationProjectOptions {
   /** Seed amadeus-state.md from this fixture (path or FIXTURES_DIR-relative name). */
@@ -640,7 +766,7 @@ export function setupIntegrationProject(
   opts: IntegrationProjectOptions = {},
 ): string {
   const proj = createTestProject();
-  cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+  copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
   const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
   const claudeMd = join(proj, ".claude", "CLAUDE.md");
   if (!existsSync(claudeMd) && existsSync(claudeMdExample)) {
