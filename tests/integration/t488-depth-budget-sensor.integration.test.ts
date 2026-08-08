@@ -31,7 +31,7 @@
 // integration tier (fs-tests-integration-first).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -310,18 +310,38 @@ describe("t488 readRecordDepth", () => {
     expect(depthBudgetArgs("depth-budget", seedRecord(null), tmp)).toEqual([]);
   });
 
-  test("an unreadable state file yields undefined rather than throwing", () => {
-    // A record whose state cannot be read must not take the sensor down: the
-    // walk swallows the read error and the sensor then passes fail-open. A
-    // directory at the state path produces the error portably (EISDIR on macOS,
-    // an empty read on Linux — either way, no usable Depth).
-    const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-unreadable-ab12cd34");
+  test("a state path that is not a file yields undefined rather than throwing", () => {
+    const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-notafile");
     const stageDir = join(record, "inception", "requirements-analysis");
     mkdirSync(join(record, "amadeus-state.md"), { recursive: true });
     mkdirSync(stageDir, { recursive: true });
     const out = join(stageDir, "requirements.md");
     writeFileSync(out, requirements(1, 100));
     expect(readRecordDepth(out, tmp)).toBeUndefined();
+  });
+
+  test("a state file that cannot be READ yields undefined rather than throwing", () => {
+    // Distinct from the case above: here the path IS a regular file, so the
+    // walk gets past the isFile guard and the read itself fails. Without the
+    // catch, an unreadable state would take the whole sensor down instead of
+    // leaving it fail-open. chmod 000 produces EACCES portably for a non-root
+    // process; the precondition is asserted so a root environment reports that
+    // rather than silently leaving the branch undriven.
+    const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-unreadable");
+    const stageDir = join(record, "inception", "requirements-analysis");
+    mkdirSync(stageDir, { recursive: true });
+    const state = join(record, "amadeus-state.md");
+    writeFileSync(state, "- **Depth**: Standard\n");
+    chmodSync(state, 0o000);
+    try {
+      expect(() => readFileSync(state, "utf-8")).toThrow();
+      const out = join(stageDir, "requirements.md");
+      writeFileSync(out, requirements(1, 100));
+      expect(readRecordDepth(out, tmp)).toBeUndefined();
+    } finally {
+      // Restore so the afterEach cleanup can remove the tree.
+      chmodSync(state, 0o600);
+    }
   });
 });
 
