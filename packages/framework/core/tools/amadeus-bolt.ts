@@ -42,6 +42,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  activeIntent,
   emitError,
   errorMessage,
   getField,
@@ -753,21 +754,39 @@ function isMergeHeld(pd: string, slug: string, intent?: string, space?: string):
   return value === "true";
 }
 
+// The read->edit->write of the forked state file runs under withAuditLock, the
+// same wrap handleSetAutonomy and every amadeus-state.ts RMW handler use — an
+// unserialised section lets a concurrent writer's edit be clobbered (#2624).
+//
+// THE BUCKET is the resolved main record + space, NOT the workspace sentinel:
+// the only other writer of this file is the fork transaction in amadeus-state,
+// whose wrap is `withAuditLock(pd, ..., resolvedIntent, space)` on exactly that
+// pair. Resolving through activeIntent (rather than passing the raw selector)
+// makes LOCK == WRITE when --intent is omitted, since forkedStateFilePath
+// resolves the record the same way; the sentinel would serialise against
+// nothing that writes this file and would block unrelated intents.
+//
+// No inversion risk: the only callers are the two top-level CLI handlers, and
+// neither they nor swarm's finalize (which spawns release-merge) hold an audit
+// lock when they call in, so this is always the outermost lock.
 function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, space?: string): void {
-  const path = forkedStateFilePath(pd, slug, intent, space);
-  if (!path) {
-    error(
-      `No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`
+  const resolvedIntent = activeIntent(pd, space, intent) ?? undefined;
+  withAuditLock(pd, () => {
+    const path = forkedStateFilePath(pd, slug, intent, space);
+    if (!path) {
+      error(
+        `No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`
+      );
+    }
+    const content = readFileSync(path, "utf-8");
+    const updated = setOrInsertField(
+      content,
+      "## Project Information",
+      "Merge-Held",
+      held ? "true" : "false",
     );
-  }
-  const content = readFileSync(path, "utf-8");
-  const updated = setOrInsertField(
-    content,
-    "## Project Information",
-    "Merge-Held",
-    held ? "true" : "false",
-  );
-  writeFileSync(path, updated, "utf-8");
+    writeFileSync(path, updated, "utf-8");
+  }, resolvedIntent, space);
 }
 
 // --- Subcommand: dispatch-event ---

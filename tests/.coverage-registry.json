@@ -5890,6 +5890,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t506-merge-held-lock-bucket.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t82-hold-merge-invariant.test.ts",
           "mechanism": "cli"
         }
@@ -5927,6 +5931,10 @@
       "unitId": "amadeus-bolt release-merge",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t506-merge-held-lock-bucket.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t82-hold-merge-invariant.test.ts",
           "mechanism": "cli"
