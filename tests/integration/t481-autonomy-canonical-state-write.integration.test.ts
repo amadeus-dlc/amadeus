@@ -11,10 +11,11 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
 import {
   applyProductionAutonomyMode,
   previewProductionAutonomyGrant,
@@ -218,6 +219,70 @@ describe("failure modes around the audit-first ordering (FR-2c)", () => {
     // Converged, and the revision did not move — no duplicate transaction.
     expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "gated" });
     expect(readProductionAutonomyProjection(projectDir)?.projectionRevision).toBe(revisionAfterFailure);
+  });
+
+  test("an audit commit failure is fail-closed: no state write, and a re-run issues a fresh commit", () => {
+    projectDir = bornProject();
+    appendHumanTurn(projectDir);
+    const stateContent = state(projectDir);
+    const before = state(projectDir);
+    const auditDir = join(recordDir(projectDir), "audit");
+    const shardFiles = readdirSync(auditDir).filter((name) => name.endsWith(".jsonl"));
+    expect(shardFiles.length).toBeGreaterThan(0);
+
+    // Block the commit itself: every existing shard goes read-only and the
+    // directory refuses new files, so applyHumanCommand cannot land its rows.
+    // The commit failure surfaces as a thrown EACCES — loud, fail-closed.
+    for (const name of shardFiles) chmodSync(join(auditDir, name), 0o444);
+    chmodSync(auditDir, 0o555);
+    try {
+      expect(() => applyProductionAutonomyMode({ projectDir, stateContent, mode: "semi" })).toThrow();
+    } finally {
+      chmodSync(auditDir, 0o755);
+      for (const name of shardFiles) chmodSync(join(auditDir, name), 0o644);
+    }
+
+    // Fail-closed: neither half moved — the state bytes and the projection.
+    // The failed write also latched this process (FR-EVT-4), which a real run
+    // clears by exiting; the test stands in for that fresh process explicitly.
+    expect(state(projectDir)).toBe(before);
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
+    resetFatalLatchForTests();
+
+    // With the barrier lifted the same declaration lands as a fresh commit.
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "semi",
+    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
+    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "gated" });
+  });
+});
+
+describe("the canonical write point is unique (BR-U1-1)", () => {
+  test("only applyProductionAutonomyMode's projection writer touches the three autonomy fields", () => {
+    // BR-U1-1: grep-pin the writer. A dedicated write is a field-setter call
+    // naming one of the three fields on the same line; the birth template's
+    // literal and generic CLI field verbs are not dedicated writers.
+    const coreRoot = join(import.meta.dir, "..", "..", "packages", "framework", "core");
+    const offenders: string[] = [];
+    for (const entry of readdirSync(coreRoot, { recursive: true }) as string[]) {
+      if (!entry.endsWith(".ts")) continue;
+      const source = readFileSync(join(coreRoot, entry), "utf8");
+      for (const field of ["Intent Autonomy Mode", "Intent Grant", "Construction Autonomy Mode"]) {
+        for (const line of source.split("\n")) {
+          if (!line.includes(`"${field}"`)) continue;
+          if (!/setOrInsertField|setFieldStrict/.test(line)) continue;
+          if (/^\s*(\/\/|\*)/.test(line)) continue;
+          offenders.push(`${entry} :: ${field}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([
+      "tools/amadeus-intent-autonomy-production.ts :: Intent Autonomy Mode",
+      "tools/amadeus-intent-autonomy-production.ts :: Intent Grant",
+      "tools/amadeus-intent-autonomy-production.ts :: Construction Autonomy Mode",
+    ]);
   });
 });
 
