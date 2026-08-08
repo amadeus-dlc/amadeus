@@ -3831,15 +3831,35 @@ function humanActOutstanding(
 // delegation sits after the last GATE resolution (its GATE slot: a
 // QUESTION_ANSWERED does NOT consume it — the #736 fix).
 //
+// Record scope (#2588): `intent`/`space` pin the predicate to a NAMED record's
+// ledger instead of the active cursor. The `--intent` reject path routes the
+// state/audit I/O through `stateOperationTarget` (the named record), so the
+// presence check must read that SAME record's ledger — otherwise presence is
+// judged on the active intent while the reject mutates a different one (one turn
+// on A licensing unlimited rejects of B; a turn on B falsely refused). Threaded
+// through to scanPresenceLedger, whose auditShards already accept the selector.
+// Omitting the selector (the delegate-issuance + approve callers) keeps the
+// active/legacy scope byte-for-byte.
+//
+// Empty-ledger disposition depends on scope: fail OPEN for the active/legacy
+// scope (intent === undefined — a harness whose shard has no events yet must not
+// brick before the first event), but fail CLOSED for an EXPLICITLY NAMED record.
+// A named record with no ledger honestly proves no human acted there, so a
+// missing ledger must not license a cross-record reject of an untouched record
+// (the fresh-clone / empty-target fail-open reviewer-2 flagged, scoped to the
+// only caller that names a record).
+//
 // (These branch notes live up here rather than inside the body: bun's lcov
 // stamps in-body comment/blank lines as never-hit DA records, which the codecov
 // patch gate counts as misses.)
 export function humanActedSinceGate(
   projectDir: string,
-  verb?: "approve" | "reject"
+  verb?: "approve" | "reject",
+  intent?: string,
+  space?: string
 ): boolean {
-  const events = scanPresenceLedger(projectDir);
-  if (events === null) return true; // fail open
+  const events = scanPresenceLedger(projectDir, intent, space);
+  if (events === null) return intent === undefined; // fail open (active/legacy) / fail closed (named record)
   if (verb === undefined) {
     return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
   }

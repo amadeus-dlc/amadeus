@@ -3130,7 +3130,9 @@ function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
   slug: string,
-  verb: "approve" | "reject"
+  verb: "approve" | "reject",
+  intent?: string,
+  space?: string
 ): string | null {
   if (verb === "approve") {
     const graph = loadStageGraph();
@@ -3164,7 +3166,7 @@ function assertHumanPresentForGateResolution(
     // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
     return null;
   }
-  if (humanActedSinceGate(pd, verb)) {
+  if (humanActedSinceGate(pd, verb, intent, space)) {
     // Ledger-event presence check: a HUMAN_TURN event was appended AFTER the last
     // gate resolution (GATE_APPROVED / GATE_REJECTED / QUESTION_ANSWERED) in
     // ledger order — the boundary is the prior resolution, NOT this gate's open
@@ -4253,8 +4255,19 @@ function rejectForTarget(args: string[], pd: string): void {
     }
   } else {
     // Human-presence guard (#675): shared with handleApprove. Runs BEFORE any
-    // mutation so a refusal leaves state and audit untouched.
-    assertHumanPresentForGateResolution(pd, content, slug, "reject");
+    // mutation so a refusal leaves state and audit untouched. Scope the presence
+    // check to the record this reject actually mutates (#2588): the state/audit
+    // I/O routes through stateOperationTarget for a `--intent` reject, so the
+    // ledger read must target the SAME record. An omitted selector keeps the
+    // active/legacy scope (stateOperationTarget is null → undefined).
+    assertHumanPresentForGateResolution(
+      pd,
+      content,
+      slug,
+      "reject",
+      stateOperationTarget?.intent,
+      stateOperationTarget?.space,
+    );
   }
 
   // Increment Revision Count. Guard against non-numeric values (missing field,
