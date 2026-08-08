@@ -1,4 +1,4 @@
-// covers: function:setField, function:getField, function:fieldExists
+// covers: function:setField, function:getField, function:fieldExists, function:setFieldStrict, function:setOrInsertField
 // size: small
 //
 // t419 — properties for the state file's text field layer (#1980, Bolt 2, unit
