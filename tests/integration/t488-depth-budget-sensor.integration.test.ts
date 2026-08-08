@@ -43,9 +43,13 @@ import {
 import {
   DEPTH_BUDGETS,
   evaluateDepthBudget,
+  main as sensorMain,
   readRecordDepth,
 } from "../../packages/framework/core/tools/amadeus-sensor-depth-budget.ts";
-import { matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
+import {
+  depthBudgetArgs,
+  matchesGlob,
+} from "../../packages/framework/core/tools/amadeus-sensor.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-depth-budget.md");
@@ -253,8 +257,13 @@ describe("t488 depth-budget fail-open", () => {
 // ===========================================================================
 
 describe("t488 readRecordDepth", () => {
+  // A distinct record per call: reusing one directory would leave an earlier
+  // case's amadeus-state.md in place, so a "no state" case could read the
+  // previous case's Depth and pass for the wrong reason.
+  let recordSeq = 0;
   function seedRecord(depthLine: string | null): string {
-    const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-x-ab12cd34");
+    recordSeq += 1;
+    const record = join(tmp, "amadeus", "spaces", "default", "intents", `260808-x-${recordSeq}`);
     const stageDir = join(record, "inception", "requirements-analysis");
     mkdirSync(stageDir, { recursive: true });
     if (depthLine !== null) {
@@ -286,5 +295,102 @@ describe("t488 readRecordDepth", () => {
     writeFileSync(join(tmp, "..", `t488-escape-${process.pid}.md`), "- **Depth**: Comprehensive\n");
     expect(readRecordDepth(out, tmp)).toBeUndefined();
     rmSync(join(tmp, "..", `t488-escape-${process.pid}.md`), { force: true });
+  });
+
+  test("the dispatcher arm turns a resolved depth into the --depth flag", () => {
+    const out = seedRecord("- **Depth**: Standard");
+    expect(depthBudgetArgs("depth-budget", out, tmp)).toEqual(["--depth", "Standard"]);
+  });
+
+  test("the dispatcher arm is silent for other sensors and for an unresolved depth", () => {
+    const withDepth = seedRecord("- **Depth**: Standard");
+    // Another sensor's fire must not pick up the flag...
+    expect(depthBudgetArgs("required-sections", withDepth, tmp)).toEqual([]);
+    // ...and an unresolvable depth omits it, leaving the sensor fail-open.
+    expect(depthBudgetArgs("depth-budget", seedRecord(null), tmp)).toEqual([]);
+  });
+
+  test("an unreadable state file yields undefined rather than throwing", () => {
+    // A record whose state cannot be read must not take the sensor down: the
+    // walk swallows the read error and the sensor then passes fail-open. A
+    // directory at the state path produces the error portably (EISDIR on macOS,
+    // an empty read on Linux — either way, no usable Depth).
+    const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-unreadable-ab12cd34");
+    const stageDir = join(record, "inception", "requirements-analysis");
+    mkdirSync(join(record, "amadeus-state.md"), { recursive: true });
+    mkdirSync(stageDir, { recursive: true });
+    const out = join(stageDir, "requirements.md");
+    writeFileSync(out, requirements(1, 100));
+    expect(readRecordDepth(out, tmp)).toBeUndefined();
+  });
+});
+
+// ===========================================================================
+// 4. The CLI contract — advisory means exit 0 on BOTH verdicts
+// ===========================================================================
+
+describe("t488 CLI contract", () => {
+  function run(argv: string[]): { code: number; stdout: string; stderr: string } {
+    let stdout = "";
+    let stderr = "";
+    let code = -1;
+    const outWrite = process.stdout.write.bind(process.stdout);
+    const errWrite = process.stderr.write.bind(process.stderr);
+    const exit = process.exit.bind(process);
+    // biome-ignore lint/suspicious/noExplicitAny: process.exit's never-return type
+    (process as any).exit = (c: number) => {
+      code = c;
+      throw new Error("__exit__");
+    };
+    process.stdout.write = ((chunk: string) => {
+      stdout += chunk;
+      return true;
+    }) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: string) => {
+      stderr += chunk;
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      sensorMain(argv);
+    } catch (err) {
+      if (!(err instanceof Error) || err.message !== "__exit__") throw err;
+    } finally {
+      process.stdout.write = outWrite;
+      process.stderr.write = errWrite;
+      // biome-ignore lint/suspicious/noExplicitAny: restore the real exit
+      (process as any).exit = exit;
+    }
+    return { code, stdout, stderr };
+  }
+
+  test("a within-budget artifact exits 0 with a JSON verdict", () => {
+    const p = writeRequirements(requirements(6, 400));
+    const { code, stdout } = run(["--stage", "requirements-analysis", "--output-path", p, "--depth", "Minimal"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: true, findings_count: 0 });
+  });
+
+  test("an over-budget artifact ALSO exits 0 — the verdict is data, not enforcement", () => {
+    const p = writeRequirements(requirements(1, 3000));
+    const { code, stdout } = run(["--stage", "requirements-analysis", "--output-path", p, "--depth", "Minimal"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: false, findings_count: 1 });
+  });
+
+  test("--depth is optional; without it the sensor passes fail-open", () => {
+    const p = writeRequirements(requirements(1, 9000));
+    const { code, stdout } = run(["--stage", "requirements-analysis", "--output-path", p]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: true, reason: "no-depth" });
+  });
+
+  test("a missing flag is the only exit-1 path, and it names the flag", () => {
+    const missingOutput = run(["--stage", "requirements-analysis"]);
+    expect(missingOutput.code).toBe(1);
+    expect(missingOutput.stderr).toContain("--output-path is required");
+
+    const missingStage = run(["--output-path", writeRequirements(requirements(1, 100))]);
+    expect(missingStage.code).toBe(1);
+    expect(missingStage.stderr).toContain("--stage is required");
   });
 });

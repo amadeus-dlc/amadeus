@@ -876,7 +876,7 @@ function emitTerminal(
  *  state, a missing Depth field, or an unrecognizable value yields no flag, and
  *  the sensor then passes fail-open (advisory). Kept out of handleFire so the
  *  dispatcher's per-sensor arm list does not grow that function's complexity. */
-function depthBudgetArgs(id: string, outputPath: string, projectDir: string): string[] {
+export function depthBudgetArgs(id: string, outputPath: string, projectDir: string): string[] {
 	if (id !== "depth-budget") return [];
 	const depth = readRecordDepth(outputPath, projectDir);
 	return depth === undefined ? [] : ["--depth", depth];
