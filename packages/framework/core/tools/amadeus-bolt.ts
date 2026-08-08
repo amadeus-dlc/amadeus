@@ -1106,9 +1106,13 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
 // The whole read->decide->emit->write section runs under withAuditLock, the same
 // wrap handleSetAutonomy and every amadeus-state.ts RMW handler use: the audit
 // lock emitAudit takes internally is released before writeStateFile, so only an
-// outer lock serialises the state transaction (issue #2589). The inner emit does
-// not self-deadlock — emitAudit branches on holdsAuditLock to the unlocked
-// append when a lock is already held.
+// outer lock serialises the state transaction (issue #2589).
+//
+// The inner emit does not self-deadlock: withAuditLock's per-identity depth
+// counter re-enters (amadeus-lib.ts, "ONE PATH, LOCK HELD OR NOT"). Re-entry
+// needs the identities to MATCH, and they do — this wrap passes no intent/space
+// and neither does the emit, so both key the workspace sentinel, the same bucket
+// handleSetAutonomy and the untargeted amadeus-state.ts handlers take.
 function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
