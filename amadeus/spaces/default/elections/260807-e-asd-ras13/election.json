@@ -1,0 +1,22 @@
+{
+  "electionId": "E-ASD-RAS13",
+  "kind": "s13-adoption",
+  "question": "260807-intent-2328-tests-e2e-au requirements-analysis ステージの §13 学習選定。conductor の候補提案は 0 件 — 本 RA は既存 cid の適用で完走した: decide-question 経路（c1-pcp-autonomy-grant-question-boundary の3例目・新規摩擦なし）、必須節の契約照合（c2-mandated-sections-precheck の適用）、§12a iteration 1 READY（FOLLOW-UP 2件は conductor 直是正 — c1-reviewer-scope-alignment 追補の機械検証可能クラス処理）。reviewer の FOLLOW-UP 1（除外4ファイルの integration/e2e ドメイン誤帰属）は列挙ドメインの取り違えクラスだが、既存 enumeration-completeness-review（独立再列挙）が設計どおり検出しており新規機序ではないと判断した。0 件でよいか、record（requirements.md の Review block・questions ファイル・re-scans）を独立検証して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0 件で可",
+      "description": "本 RA の事象はすべて既存 cid の適用実例であり persist に値する新規面はない。"
+    },
+    {
+      "internalNo": 2,
+      "label": "候補あり（reservation で具体提案）",
+      "description": "未被覆の新規面が実在する — reservation に候補文と実測根拠を書くこと。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

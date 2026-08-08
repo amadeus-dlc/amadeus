@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260807-subagent-start-pair）
+## 実行メタデータ（現在: 260807-intent-2328-tests-e2e-au）
+
+- Date: `2026-08-08`
+- Base commit: `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`（直前 intent 260807-subagent-start-pair の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 5f2ad9195 HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count 5f2ad9195..HEAD` = **13 commits**。祖先であるため merge-base fallback は不要）
+- Observed commit: `a5621236c6c69f1c54f3d496bdf91792d4ef12fc`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #2328](https://github.com/amadeus-dlc/amadeus/issues/2328)（監査 journal の schema drift — テストが v1 形を決め打ちで読み、v2 行を読めない）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー2名成立済みの単発 Issue。レビュー verdict（検証 SHA `75a1c198d`）を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency: `git diff --name-only 75a1c198d HEAD -- tests/e2e/` = **空**（Architect 独立実測）。`review..observed` の実 diff と被引用パス集合の交わりが空のため行番号の再解決は構造的に no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`。測定区間は `review..observed` に固定、`..HEAD` ではない）
+- Verification: テスト実行・coverage 実行・git 状態変更・engine 操作は**すべてゼロ**。検証は observed 断面の verbatim 実読（`sed` / `grep` / `git merge-base` / `git rev-list` / `git diff`、exit code を記録）
+- 患部の要旨: 監査 journal は **v1/v2 が現役共存**（`amadeus-journal.ts:30` / `:34`、v1 writer 3箇所が現役）。患部はリーダー側の1スキーマ pin であり、書き手に欠陥はない。e2e **17ファイル**が自前パーサ（`cid:requirements-analysis:ledger-count-mechanical-recalc` に従い列挙から機械再計算、Developer scan 報告値と一致）
+- 未確定として引き継ぐ2点: (a) 非 e2e 側の患部件数 — Developer scan 報告 **14** vs Architect 述語出力 **29** で**不一致**、述語差が原因で本 RE では未確定 (b) e2e 17 の赤/緑内訳 — scan brief が「17 全て fail」と「`t-formal-verif` のみ green」を併記して内部矛盾。Architect は実読から「16 fail + 1 green」と再構成したが**再実測ではない**。いずれも修正着手前に実測で確定すること
+- tNNN 予約: 使用済み最大 `t483`、次は **`t484`** から
+- 詳細記録: `re-scans/260807-intent-2328-tests-e2e-au.md`（全数列挙・verbatim・実装上の注意6点・裁定候補5件の正本）
+
+## 実行メタデータ（履歴、2026-08-08: 260807-subagent-start-pair）
 
 - Date: `2026-08-07`
 - Base commit: `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補から HEAD 祖先かつ距離最小のものを選定。距離 **2 commits** = 波1 #2352 修正 #2413 + record sync #2416）

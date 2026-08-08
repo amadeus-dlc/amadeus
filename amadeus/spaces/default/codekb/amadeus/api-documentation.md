@@ -1,6 +1,31 @@
 # API ドキュメント
 
-## subagentStartFields の契約と2 payload 形状（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### wire 形の2版
+
+| 版 | 定数 | キー |
+|---|---|---|
+| v1 | `JOURNAL_SCHEMA_VERSION = 1`（`amadeus-journal.ts:30`） | `event` / `heading` / `fields` |
+| v2 | `JOURNAL_SCHEMA_VERSION_V2 = 2`（`:34`） | `eventName` / `attributes`（`attributes.Event` が旧 `event`） |
+
+v2 serializer は `serializeJournalEntryV2`（`:329-345`）で、キー順を固定して1エントリ1行を出力する（`schemaVersion` / `eventId` / `seq` / `timestamp` / `eventName` / `attributes` / `intentId` / `space` / `cloneId` / `traceId` / `spanId` / `traceFlags` / `idempotencyKey` / `canonical`）。
+
+リーダー契約は `JOURNAL_SCHEMA_VERSION_MAX` 以下の全版を受理し、それより新しい版を拒否する（BR-10）。
+
+### 読み取り側の正準 API（`tests/harness/audit-records.ts`）
+
+| 関数 | 所在 | シグネチャ相当 | 挙動 |
+|---|---|---|---|
+| `normalizeAuditRecord` | `:26` | `(raw: unknown) => NormalizedAuditRecord` | `schemaVersion !== 2` は素通し。v2 は `attributes.Event` → `event`、`EVENT_HEADINGS` 経由で `heading` 復元、`attributes` → `fields` |
+| `auditRowsFrom` | `:49` | `(body: string) => NormalizedAuditRecord[]` | 行分割 → 空行 skip → 全行 parse（不正行は loud fail） |
+| `countAuditEvent` | `:57` | `(body: string, event: string) => number` | 両スキーマ横断の計数 |
+
+`NormalizedAuditRecord` は `{ event: string \| null; fields: Record<string, string>; [key: string]: unknown }`。
+
+**依存**: `:18` で `EVENT_HEADINGS` を `../../dist/claude/.claude/tools/amadeus-audit.ts` から import（sandbox 配布形での解決性が理由、コメントに明記）。
+
+## subagentStartFields の契約と2 payload 形状（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。
 

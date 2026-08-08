@@ -1,6 +1,70 @@
 # コンポーネント棚卸し
 
-## #2297/#2303 subagent-start 患部コンポーネント（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+判別子は「共有ハーネス `tests/harness/audit-records.ts` を使うか、自前で `JSON.parse` するか」。自前パーサは **e2e 17ファイル + 非 e2e 14ファイル**に実在する。
+
+### 患部（e2e 17ファイル — 全て単独実行で fail を scan が実測）
+
+`tests/e2e/` は review SHA `75a1c198d` → observed `a5621236c` で無変更（`git diff --name-only 75a1c198d HEAD -- tests/e2e/` が空を返すことを Architect が独立実測）。したがって行番号の再解決は不要（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。
+
+v1 形決め打ちパーサの逐語例:
+
+| ファイル | 型定義 | 消費点 |
+|---|---|---|
+| `t10-halt-and-ask-discard.test.ts` | `:126-130` `interface AuditRecord { event: string \| null; heading: string; fields?: Record<string, string>; }` | `:144` |
+| `t05.test.ts` | `:147`（同型 `interface AuditRecord`） | `:260-262` |
+| `t07-audit-fork-merge.test.ts` | — | `:249` 定義、消費 `:268` `:298` `:330` `:343` `:366` |
+
+残る14ファイルを含む全数列挙は `re-scans/260807-intent-2328-tests-e2e-au.md` を正本とする。
+
+**唯一 green な例外**: `t-formal-verif-model-completeness-sensor` は in-file で両対応正規化を内蔵する（`:227-233` の `event: record.event ?? record.attributes?.Event ?? null`）。これは「in-file 正規化」方式が実際に機能することの実在証拠であり、修正方式の選択肢の一方を裏づける。
+
+### canonical 修正様式のコンポーネント
+
+| コンポーネント | 所在 | 責務 |
+|---|---|---|
+| `normalizeAuditRecord` | `tests/harness/audit-records.ts:26` | 単一 record の v1/v2 正規化 |
+| `auditRowsFrom` | `:49` | shard 本文 → 正規化済み record 配列 |
+| `countAuditEvent` | `:57` | 両スキーマ横断のイベント計数 |
+| `EVENT_HEADINGS` import | `:18` | `../../dist/claude/.claude/tools/amadeus-audit.ts` 由来 — **dist ビルド前提**を持ち込む |
+
+消費実例 59ファイル（`t118.test.ts:219` / `t45-revision-loop.test.ts:161` 等）。
+
+### 書き手コンポーネント（v1/v2 共存 — 置換禁止）
+
+| 版 | コンポーネント | 所在 |
+|---|---|---|
+| v1 | lifecycle writer | `amadeus-audit.ts:534` |
+| v1 | raw body 経路（`event: null`） | `amadeus-audit.ts:597` |
+| v1 | state writer | `amadeus-state.ts:3193` |
+| v2 | `emitAudit` → `emitAuditEvent` → `appendAuditEntryViaEvents` | `amadeus-worktree.ts:635` → `:95` → `otel/audit-emit.ts:48` |
+
+### vacuity 3件（壊れたリーダーでも通る偽 green）
+
+| 所在 | assertion | 危険 |
+|---|---|---|
+| `t09-halt-and-ask-preservation.test.ts:211` | `eventCount(p, "WORKTREE_DISCARDED")).toBe(0)` | v2 行が実在しても v1 リーダーは 0 を返す |
+| `t07-audit-fork-merge.test.ts:371` | `countEvent(wtAuditPath(p, "demo"), "AUDIT_MERGED")).toBe(0)` | 同上 |
+| `t07-audit-fork-merge.test.ts:530` | `countEvent(auditPath(p), "AUDIT_FORKED")).toBe(0)` | 同上 |
+
+いずれも「行が存在しないこと」を主張する negative invariant であるため、リーダーが壊れていても通過する。修正時は**落ちる実証が必須**（Mandated: 新設・変更したガードは実際に赤くなることを実証する）。
+
+### 除外（患部でない）
+
+`t378` / `t380` / `t382` / `t388` — v1 不在 assert が設計意図であり、本件の患部に当たらない。
+
+### 検証面コンポーネント
+
+| コンポーネント | 所在 | 事実 |
+|---|---|---|
+| `--ci` プロファイル | `tests/lib/run-tests-args.ts:95-100` | `runSmoke` + `runUnit` + `runIntegration` のみ（e2e 非含） |
+| CI 認識 | `.github/workflows/ci.yml:224-227` | 死角を逐語で明記 |
+| CI 上の唯一の e2e | `ci.yml:252` | `t341-plugin-conformance-journey.serial.test.ts` 1本のみ |
+
+**tNNN 予約**: 使用済み最大 `t483`、次は **`t484`**。
+
+## #2297/#2303 subagent-start 患部コンポーネント（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
 

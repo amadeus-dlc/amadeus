@@ -1,0 +1,27 @@
+{
+  "electionId": "E-ASD-CGDEV",
+  "kind": "deviation",
+  "question": "260807-intent-2328-tests-e2e-au CG の逸脱裁定2問の一括審議（per-question 検証必須 — 各問を独立検証し、票の rationale に per-question の可否を明記せよ）。【問A】t113 は FR-1 の欠陥クラスでない — inline パーサは元から両スキーマ対応で、赤の実因は emit 順序契約の破れ（INTENT_AUTONOMY_TRANSACTION_COMMITTED が WORKFLOW_COMPLETED の後に出る — builder が FR-1 変換適用前後で失敗署名 byte 同一を実測）。推奨 = (a) FR-1 変換は維持（リーダー統一・無害）し、順序契約の破れを別 Issue 起票、AC-1a を「t113 を除く16件 green + t113 は別 Issue」へ申告付き再定義。対案 = (b) t113 の変換を revert し患部から除外。【問B】患部集合は 17 でなく 19 — t02.test.ts:116 / t06.test.ts:179 が v1 の fields キーを .event 無しで pin しており、RE 述語の \\.event\\b 連言から構造的に漏れた（builder が広げた述語で再測し追加候補はちょうど2件のみと確定、症状も同一の空読み）。推奨 = (a) 本 unit へ取り込み19件とする — same-root-inventory（同根は同一変更で修正）に整合、2件とも t60〜t67 と同型の1関数置換。対案 = (b) 別 Issue 化（完了後も e2e に同クラス赤2件が残る旨の明記必須）。付帯（執行事項・裁定不要）: FR-4 の非 e2e 件数14も同じ述語欠落の可能性 — Issue 起票時に広げた述語で再計測する。選択肢: 1 = 両問とも推奨どおり（A=(a) + B=(a)）、2 = 一部の問で別案（rationale にどの問か明記）、3 = 質問自体に欠落・誤りがある。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "両問とも推奨どおり（A=a, B=a）",
+      "description": "t113 = 変換維持+順序バグ別 Issue+AC 再定義 / t02・t06 = 本 unit へ取り込み19件。"
+    },
+    {
+      "internalNo": 2,
+      "label": "一部の問で別案",
+      "description": "rationale にどの問をどの案にするか明記。"
+    },
+    {
+      "internalNo": 3,
+      "label": "質問に欠落・誤り",
+      "description": "前提の誤りや第3の選択肢を rationale で指摘。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

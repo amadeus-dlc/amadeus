@@ -1,6 +1,16 @@
 # 依存関係
 
-## subagent-start 経路の依存関係（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## 監査リーダー面の依存関係（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+外部依存の追加・変更はない。内部依存の要点は2本。
+
+**共有ハーネス → dist**: `tests/harness/audit-records.ts:18` → `../../dist/claude/.claude/tools/amadeus-audit.ts`（`EVENT_HEADINGS`）。sandbox 配布形での解決性が理由でコメントに明記されている。この1本が、ハーネス採用テストに `bun run build` 前提を課す唯一の経路である。
+
+**患部 → 依存なし**: e2e 17ファイルの自前パーサはローカル `interface AuditRecord` + `JSON.parse` のみで、外部・内部いずれの依存も持たない。方式 B（in-file 正規化）を採ればこの状態が保たれ、方式 A（共有ハーネス寄せ）を採ると 17ファイルが dist 依存を新規に獲得する。
+
+**書き手側**: `amadeus-worktree.ts:635` → `:95` `emitAuditEvent` → `otel/audit-emit.ts:48` → `appendAuditEntryViaEvents`(v2)。v1 側は `amadeus-audit.ts:534` / `:597` / `amadeus-state.ts:3193` が `serializeJournalEntry` を直接呼ぶ。
+
+## subagent-start 経路の依存関係（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。外部依存の増減はなく、本節は患部の**内部依存**のみを記録する。
 

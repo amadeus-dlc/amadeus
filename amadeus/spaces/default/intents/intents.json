@@ -1005,5 +1005,12 @@
     "dirName": "260807-tla-specs-relocation",
     "scope": "self-refactor",
     "status": "complete"
+  },
+  {
+    "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
+    "slug": "intent-2328-tests-e2e-au",
+    "dirName": "260807-intent-2328-tests-e2e-au",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
