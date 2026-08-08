@@ -1,4 +1,5 @@
 // covers: function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:presenceLedgerShards
+// size: medium
 //
 // t509 - human-presence grounding on a legacy (pre-JSONL) Markdown-only record
 // (Issue #2582).
