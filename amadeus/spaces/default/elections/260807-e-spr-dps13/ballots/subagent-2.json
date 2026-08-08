@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-DPS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "「単一 Unit・単一 Bolt では順序ヒューリスティックが対象を持たない」は縮退構成で再現しうる一般形だが、既存の比例選定・N/A 根拠併記ファミリ(cid:build-and-test:bt-proportional-selection / cid:environment-provisioning:c3 等)の適用で足りるため今回は persist しない — 同型の縮退判定が別 intent で迷い・手戻りを実際に生んだ時点で候補化することを申し送る。",
+  "rationale": "独立に読んだもの: diary(inception/delivery-planning/memory.md 全16行 — Interpretations :6 の 1 エントリのみ、Deviations :8 / Tradeoffs :11 / Open questions :14 は空)、bolt-plan.md(:7-19 Bolt 1 定義・:10 walking-skeleton マーカー・:23 実行形態)、risk-and-sequencing-rationale.md(:7 順序ヒューリスティック適用外・:8 Q1=A 裁定・:9 walking-skeleton 執行・:13-19 リスク登記 R-1〜R-4)、delivery-planning-questions.md(:9-15 質問しない事項の既決導出・:17-25 Q1 と [Answer] A・:27-30 裁定の記録とユーザー承認 2026-08-07T15:44:04Z)。cid 実在は project.md の直接 grep で確認 — project.md:222 = cid:units-generation:c1(Bolt 粒度は 2.8 の設問として intent ごとに選び固定しない — Q1 起草はこの規定の適用そのもの)、project.md:187 = cid:intent-capture:c1(既決事項は質問せず前提として反映 — questions :9 が逐語で引用)。判定: diary エントリの3要素はいずれも既存規範の適用実績か論理的自明である。(1) 質問絞り込み(6 種中 Bolt 粒度 1 件のみ実質問)は c1 と units-generation:c1 の合成適用で、questions :9 / :19 が両 cid を明示引用しており増分がない。(2) 順序ヒューリスティック適用外は、順序空間が要素 1 の集合で経済比較が対象を持たないという論理的自明であり、「適用外・N/A は根拠併記のうえ機械追加しない」という既存の比例選定ファミリ(bt-proportional-selection、environment-provisioning:c3、observability-setup:c3、build-and-test:c4)が既に一般形を覆う — rationale :7 の不適用根拠記録はその実践形。(3) walking-skeleton の Bolt 1 ゲート兼用は project.md Mandated「self-feature なら最初の Construction Bolt に walking-skeleton gate を維持」の執行で、単一 Bolt なら「最初の Bolt」= 唯一の Bolt は機械的帰結(bolt-plan :10 も執行と明記)。本ステージは逸脱ゼロ(Deviations 空)・Q1 は実 human turn で承認済み・レビュー是正の摩擦も diary に記録なしで、§13 が要求する実測由来(実害・自己捕捉・対照実測)の学びが存在しない。新規 persist は既存 cid の再述となり cid:requirements-analysis:norm-consistency-review が排除する重複を増やす。よって choice 1(0 件で可)。GoA 2(留保は reservation フィールドに記載)。",
+  "submittedAt": "2026-08-07T15:49:52Z",
+  "receivedAt": "2026-08-07T15:49:56Z"
+}

@@ -1,0 +1,10 @@
+# Election Record — E-SPR-CGS13
+
+- question: intent 260807-stage-perf-report の code-generation ステージ §13 学習選定。diary は amadeus/spaces/default/intents/260807-stage-perf-report/construction/code-generation/memory.md(Interpretations 2 + Deviations 1)。候補 c1: PR レビュー由来の是正が設計契約を変える場合、実装だけ直さず上流 FD の不変条件を明示改訂+申告付き逸脱として記録する(§12a iteration 1 が未改訂を BLOCKER 捕捉した実測)。候補 c2: conductor ツリーが実装 PR ブランチと別ブランチにある構成では、reviewer ディスパッチ時に「実装は scope 外・作業ツリーの版は古い・検証水準は成果物の実測開示で代替」を明示する。候補 c3: worktree 隔離ガード下で swarm referee 使用不能のため isolation 経路で代替し converged 表記を用いず検証水準を開示した。conductor の提案は「c1 のみ採用(c2/c3 不採用)」— 根拠: (1) c1 は既存 cid:code-generation:cg-invariant-conflict-explicit-revision(FD の明示的不変条件と衝突したら実装前停止→明示改訂)が『実装段で衝突に気づく』経路を縛るのに対し、『PR レビューという record 外の入口から契約変更が入る』経路は未被覆の増分 (2) c2 は cid:code-generation:c1-reviewer-scope-alignment(検証課題が構造的に必要とするパスをディスパッチ時に許可集合へ含める)の適用実績+ブランチ構成固有の運用知識で一般化の価値が薄い (3) c3 は cid:code-generation:c1-pcp-isolated-session-swarm-incompat の適用実績そのもの。各自 diary・code-summary.md(申告付き逸脱 5)・domain-entities.md(明示改訂 R-1)・code-generation-plan.md 末尾の Review — Iteration 1/2・project.md の当該 cid 群を独立に読み、GoA 付きで投票すること。
+
+裁定: c1 のみ採用(c2/c3 不採用)(choice 1: 2票)
+内訳: choice1=2票 choice2=0票 choice3=0票
+- 留保(subagent-1, GoA2): persist 形は独立 cid でなく cid:code-generation:cg-invariant-conflict-explicit-revision への「入口面」追補とし、intent 固有名(invalid-timestamp / ExclusionCounts / PR #2448)を落とした一般形で書くこと。あわせて c2 の不採用は恒久却下でなく条件付き — record 外ブランチに実装が乗り conductor ツリーが古い構成で reviewer が stale 実装を読んだ誤判定が同型2例目として再発したら、cid:code-generation:c1-reviewer-scope-alignment へ「負方向(scope 内に見えるが検証対象でない/古い面)の明示」の追補として昇格させる。
+- 留保(subagent-2, GoA2): persist は独立 cid でなく cid:code-generation:cg-invariant-conflict-explicit-revision への追補とし、増分を「契約変更が record 外の入口(PR レビュー等)から入る場合も同じ明示改訂+申告付き逸脱を要し、上流 FD 正本と伝播先まで戻す」の1点に限定して intent 固有名(invalid-timestamp / R-1 / #2448)を焼き込まないこと。
+票タイムライン: 配信 2026-08-08T03:31:30Z → 配信 2026-08-08T03:31:30Z → subagent-1 2026-08-08T03:33:16Z → subagent-2 2026-08-08T03:33:33Z → 開票 2026-08-08T03:34:04Z
+GoA[E-SPR-CGS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

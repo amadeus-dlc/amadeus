@@ -34,6 +34,7 @@ sensors:
   - required-sections
   - upstream-coverage
   - answer-evidence
+  - depth-budget
 scopes:
   - enterprise
   - feature
@@ -181,6 +182,7 @@ The imported sensors check those outputs:
 
 - **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `intent-statement`, `scope-document`, `team-practices`).
+- **`depth-budget`** measures `requirements.md` only: bytes per numbered `FR-n` against the ceiling for the resolved depth (Minimal 1,200 B/FR, Standard 2,400 B/FR; Comprehensive declares none). Failure mode: an overrun, or a written document carrying no `FR-n` ids, emits `SENSOR_FAILED` with the measurement and the ceiling. Advisory guidance, not a contract — it never blocks the gate, and it passes when the file is absent or empty, when no depth resolves, and at Comprehensive.
 
 ## Learn
 

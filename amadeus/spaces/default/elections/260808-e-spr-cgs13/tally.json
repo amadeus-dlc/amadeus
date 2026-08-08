@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c1 のみ採用(c2/c3 不採用)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1 のみ採用(c2/c3 不採用)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件で可",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "c1 に加えて c2 または c3 も採用",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-08T03:34:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SPR-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 形は独立 cid でなく cid:code-generation:cg-invariant-conflict-explicit-revision への「入口面」追補とし、intent 固有名(invalid-timestamp / ExclusionCounts / PR #2448)を落とした一般形で書くこと。あわせて c2 の不採用は恒久却下でなく条件付き — record 外ブランチに実装が乗り conductor ツリーが古い構成で reviewer が stale 実装を読んだ誤判定が同型2例目として再発したら、cid:code-generation:c1-reviewer-scope-alignment へ「負方向(scope 内に見えるが検証対象でない/古い面)の明示」の追補として昇格させる。",
+      "rationale": "独立実測。(a) diary memory.md:6-7(Interpretations 2)・:11(Deviations 1)で候補3件の実在を確認。(b) c1 の実害は code-generation-plan.md:24-35 の Review — Iteration 1 が verdict NOT-READY・BLOCKER として実測記録(business-rules.md:10 / domain-entities.md:17-32 / code-summary.md:62,65 の record 内自己矛盾)、iteration 2(:38-50)で解消 = イテレーション1回の実消費。是正の着地は domain-entities.md:27,35 の「明示改訂 R-1」節と code-summary.md の申告付き逸脱 5(『当初 FD は「7 フィールドの閉集合」を明示していたため、これは設計契約の変更にあたる』)。(c) 既存 cid の被覆判定: project.md:275 の cg-invariant-conflict-explicit-revision は『FD の新規制約が先行 Unit 実装の明示的不変条件と衝突したら builder は実装前に停止』であり、方向は FD→実装・入口は stage 内・契機は builder の事前検知。本件は方向が逆(実装側の外部レビュー是正→FD 契約)、入口が record 外(PR bot レビュー)、時点が実装後で、ワークフロー内に停止契機が構造的に存在しない — よって未被覆の増分と判断し採用。(d) c3 は project.md:323 の c1-pcp-isolated-session-swarm-incompat が実効経路 (i)-(iv) を逐語で規定済み(『swarm referee(check/finalize)は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』)。diary Deviations と code-summary『検証水準の開示』節はその適用実績そのもので増分ゼロ。(e) c2 は project.md:268 の c1-reviewer-scope-alignment(予防=不足パスの追加/事後=scope 外前提の conductor 実測)の隣接面(scope 内の stale 面の明示)だが、負方向ブリーフ明示の一般則は既に cid:nfr-design:c1-brief-skip-resolution・cid:functional-design:c2-brief-consumes-verbatim が同族で持ち、単発実測かつブランチ構成固有のため独立 persist は norm 肥大と判断して不採用(上記留保の条件付き昇格を付す)。",
+      "submittedAt": "2026-08-08T04:05:00Z",
+      "receivedAt": "2026-08-08T03:33:16Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SPR-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist は独立 cid でなく cid:code-generation:cg-invariant-conflict-explicit-revision への追補とし、増分を「契約変更が record 外の入口(PR レビュー等)から入る場合も同じ明示改訂+申告付き逸脱を要し、上流 FD 正本と伝播先まで戻す」の1点に限定して intent 固有名(invalid-timestamp / R-1 / #2448)を焼き込まないこと。",
+      "rationale": "独立実測。c1 は採用可の増分と判断する: 既存 cid:code-generation:cg-invariant-conflict-explicit-revision(project.md:275)の本文は『FD の新規制約が先行 Unit 実装の明示的不変条件と衝突したら builder は実装前に停止』であり、トリガは FD→実装方向・タイミングは実装前・アクターは builder に限定される。本 intent の実測はこれと向きもタイミングも異なる — 外部レビュー(PR #2448 の bot 指摘、code-summary.md の CodeRabbit Major (1))が実装側の契約を先に変え、FD の 7 バケット閉集合(domain-entities.md:17 / business-rules BR-4)との自己矛盾が record 内に残った。この入口には『実装前に停止する瞬間』が構造的に存在せず、乖離は §12a iteration 1 の BLOCKER(code-generation-plan.md 末尾 Review — Iteration 1、business-rules.md:10; domain-entities.md:17-32; code-summary.md:62,65 を名指し)で初めて可視化された。近傍の cid:reverse-engineering:c1-pinned-behavior-ruling(project.md:281)は RE 段の検知面、cid:code-generation:c1-reviewer-scope-alignment(project.md:268)は許可パス集合面で、いずれも『record 外の入口からの契約変更』を覆わない。ただし遵守経路そのもの(明示改訂+申告)は既存 cid と同一のため、独立 cid を立てず追補にすべきというのが留保。c2 は不採用に同意する: 『scope 内に古い実装が見える』は c1-reviewer-scope-alignment の不在パス面の未被覆に見えるが、正しい解はディスパッチ文言の注記ではなく conductor ツリーの同期であり(cid:code-generation:c1-pcp-isolated-session-swarm-incompat の経路 (ii)『conductor が取込んで fidelity diff 空を機械確認』が既に要求)、注記の一般化は既存規範からの逸脱の常態化を招く — 同型再発が観測された時点で再提案が妥当。c3 は不採用に同意する: cid:code-generation:c1-pcp-isolated-session-swarm-incompat(project.md:323)が経路 (iv) として『swarm referee は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』と逐語規定しており、diary Deviations(memory.md:11)も code-summary『検証水準の開示』節も当該 cid を明示引用した適用実績そのもので、新規増分はゼロ。検証で読んだ file:line = memory.md:6-7,11 / code-summary.md:38-48,65,末尾『検証水準の開示』節 / code-generation-plan.md 末尾 Review — Iteration 1(BLOCKER 1件)と Iteration 2(READY, Findings None) / domain-entities.md:17,27,35 / project.md:268,275,281,323。",
+      "submittedAt": "2026-08-08T04:05:00Z",
+      "receivedAt": "2026-08-08T03:33:33Z"
+    }
+  ],
+  "resolutions": []
+}

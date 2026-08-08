@@ -99,10 +99,22 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
+import {
+  firedSensorIdsFrom,
+  frameworkGraphPath,
+  sensorsFiringFor as sensorsFiringForStage,
+} from "../helpers/stage-sensor-fire-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
-const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = frameworkGraphPath(AMADEUS_SRC);
+
+/** Sensors the hook should fire for a requirements-analysis write. */
+function sensorsFiringFor(filePath: string): string[] {
+  return sensorsFiringForStage(FRAMEWORK_GRAPH, "requirements-analysis", filePath);
+}
+
+
 
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
 // emits the trailing Z; we anchor on the date+T to match the .sh's
@@ -294,9 +306,8 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
 
   test("valid payload + applicable sensors fires the dispatcher [.sh case 3]", () => {
     const proj = makeProjectActive();
-    // requirements-analysis carries two md-glob sensors (required-sections,
-    // upstream-coverage) in the framework graph; an amadeus-docs/**/*.md write
-    // matches **/amadeus-docs/** for both.
+    // requirements-analysis carries several markdown sensors in the framework
+    // graph; an amadeus-docs/**/*.md write matches more than one of them.
     const filePath = join(
       proj,
       "amadeus-docs",
@@ -314,7 +325,12 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    expect(lines.length).toBe(2); // both applicable md sensors fire
+    // Compared as an ID SET: a bare count would still agree if a sensor dropped
+    // out of the stage, because expectation and reality would fall together.
+    const fired = firedSensorIdsFrom(lines.map((l) => JSON.parse(l) as string[]));
+    expect(fired).toEqual(sensorsFiringFor(filePath));
+    // Named explicitly for the same reason: both sides are graph-derived.
+    expect(fired).toContain("depth-budget");
     const firstArgv = JSON.parse(lines[0]) as string[];
     expect(firstArgv.slice(2)).toEqual([
       "fire",

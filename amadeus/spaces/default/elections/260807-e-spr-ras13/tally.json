@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "採用すべき候補がある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T12:16:12Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SPR-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2(A-1 の仮説明記を FR-6c として出力契約へ昇格)には、既存 cid の逐語には無い向きが含まれうる — exemption-clause-must-not-substitute は『免責節が受け入れ基準を代替しない』(基準を弱めさせない向き)を縛り、ideation.md § Evidence Standards は『不確かな主張に仮説とラベルを付ける』(成果物内の表示)を縛るが、『中核指標の妥当性検証をスコープ外に置く場合、その未検証性を成果物内の注記に留めず読み手が受け取る製品出力の契約(FR)へ昇格する』という向きはどちらにも書かれていない。ただし本 intent では実例 1 件で、しかも既存の §12a レビュー姿勢が実際にこれを捕捉して是正に至っている(iteration 1 M-2 → FR-6c)。すなわち現行ノルムの運用で欠陥が閉じており、いま cid を足すと 2 既存則の再述に近い。同型(スコープ外の前提が中核指標の妥当性に関わる)が別 intent で再発し、かつレビューで捕捉できずに出荷まで抜けた実例が観測された時点で昇格候補として扱うべきと考える(条件付き不採用)。",
+      "rationale": "独立に読んだもの: RA diary memory.md(Interpretations :5 と Tradeoffs :12 の 2 エントリのみ、Deviations・Open questions は空)、requirements.md 全 103 行(FR-6a :47 の --json 除外と OQ-3 委譲、FR-6c :49 の仮説明記契約、A-1 :75、OQ-3 :89、## Review — Iteration 2 :91-103 で Verdict READY / Findings None / iteration 1 の 9 指摘全数是正の確認)。既存 cid は自分で grep して実在と本文を確認した: team.md:60 = cid:requirements-analysis:implementation-deviation-election(承認済み要件・設計からの逸脱は実装せず停止し裁定を仰ぐ／レビュアーは無申告の逸脱を必ず観点に含め差し戻す)、team.md:82 = cid:requirements-analysis:independent-review-on-pr(レビュー観点既定に『要件・設計からの無申告の逸脱がないこと』を含む)、project.md:237 = cid:requirements-analysis:exemption-clause-must-not-substitute。判定: c1(--json の無申告スコープ拡大を FR から外し OQ-3 へ申告委譲)は、scope-document の In-Scope 逐語列挙という承認済み上流契約からの逸脱を『その場で実装せず申告のうえ後続段の裁定へ回した』事例であり、implementation-deviation-election の適用そのもの — 縮小面は project.md:256 の bt-no-silent-scope-narrowing が既に押さえており、拡大面も同 cid の射程内で、増分は認められない。c2 は reservation のとおり向きの新規性を見るが、単一実例かつ既存レビュー姿勢で閉じているため persist の根拠に足りない。あわせて §13 の発火源になる摩擦の残存も確認した — iteration 2 で Findings None・新規指摘なしに到達しており、未解決の是正や逸脱記録は残っていない。よって choice 1(0 件で可)。GoA 2 は上記留保付きの合意。",
+      "submittedAt": "2026-08-07T12:20:00Z",
+      "receivedAt": "2026-08-07T12:06:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SPR-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "留保1(§13 の採否そのものではなく将来の蒸留への予約): c2 の『中核指標の妥当性検証をスコープ外に置く場合、仮説である旨を出力契約へ昇格させる』という向きは、既存 cid:requirements-analysis:exemption-clause-must-not-substitute(免責は実質基準を代替しない)の対偶側であり、より近いのは cid:build-and-test:verdict-names-unverified-facets(未検証面を verdict 自体に書き分ける)の RA/製品出力面である。今回は単発適用のため persist 不要と判断するが、同型(未検証の中核仮説をスコープ外に置いたまま成果物へ出す)が再発した場合は新規 cid ではなく verdict-names-unverified-facets への追補として提案すべきである。留保2(§13 とは別軸の申し送り): 本ステージの requirements.md には '## Review — Iteration 2' しか実在せず(grep -n 実測、:91 の1件のみ)、diary :5 が記録する iteration 1 NOT-READY のブロックが成果物に不在である。他 intent の同ステージ成果物は Iteration 2 を持つ場合 Iteration 1 も1件保持している(260726-mirror-state-split / 260804-phase-boundary-approval / 260804-tla-authoring / 260803-harness-live-e2e / 260730-metrics-pr-conflicts / 260730-open-bug-batch-2 / 260729-open-bug-batch の requirements.md で各 1 件を実測)。cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict が complete-review の唯一の永続ゲートを『当該 iteration の Review ブロックの実在』と定める以上、この不在は記録面の異常でありうるが、機序を実測確定していないため P2 に従い断定しない。ゲート報告前に conductor が iteration 1 の記録経路を実測確認することを求める。",
+      "rationale": "独立に読んだもの: RA diary(inception/requirements-analysis/memory.md 全17行 — Interpretations :5 と Tradeoffs :12 の2エントリのみ、Deviations と Open questions は空)、requirements.md 全104行(FR-1〜7・NFR-1〜5・C-1〜4・A-1〜3・OQ-1〜3 と :91-103 の Review — Iteration 2 ブロック = READY / product-lead / 新規指摘なし)、および memory 層の cid 実文を直接 grep(team.md:60 の cid:requirements-analysis:implementation-deviation-election、team.md:82 の cid:requirements-analysis:independent-review-on-pr、project.md:237 の cid:requirements-analysis:exemption-clause-must-not-substitute)。判断: c1(iteration 1 の --json 無申告スコープ拡大 → FR から除外し OQ-3 へ申告委譲)は、team.md:60 が『実装が承認済みの要件・設計から逸脱する必要に気づいたら実装せず止めて裁定』、team.md:82 が『要件・設計からの無申告の逸脱がないことをレビュー観点に含め、宣言なき逸脱は差し戻す』と既に定めており、承認済み上流(scope-document の出力列挙 Markdown/CSV)を下流成果物が黙って拡大した事案はその適用範囲そのものである。実際 requirements.md:47 と :89 は逸脱を実装せず OQ-3 として設計段へ申告委譲する既定の解法を採っており、新しい機構も新しい検出手段も生じていない。c2(A-1 の仮説を FR-6c として出力契約化)は、project.md:237 が『免責項は実質基準を代替しない』と定める原理の適用であり、加えて phases/ideation.md の Evidence Standards『推測を事実として提示しない。不確かな主張には仮説・前提とラベルを付ける』が同じ内容を既に規範化している。すなわち両候補とも既決規範の適用実績であり、persist すれば cid:requirements-analysis:norm-consistency-review が排除対象とする近接重複を増やす。加えて diary の Deviations 節は空で無申告逸脱ゼロ、Review — Iteration 2 は Findings: None、機構の意外な挙動・計測の落とし穴・対照実測による新事実のいずれも記録されていない。よって 0 件で可(choice 1)。GoA 2 — 留保は reservation フィールドに記載のとおり、採否ではなく将来の蒸留予約と記録面の申し送りである。",
+      "submittedAt": "2026-08-07T13:05:00Z",
+      "receivedAt": "2026-08-07T12:07:34Z"
+    }
+  ],
+  "resolutions": []
+}

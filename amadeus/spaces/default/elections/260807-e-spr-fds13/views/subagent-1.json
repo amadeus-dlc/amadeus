@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SPR-FDS13",
+  "voter": "subagent-1",
+  "question": "intent 260807-stage-perf-report の functional-design ステージ §13 学習選定。diary は amadeus/spaces/default/intents/260807-stage-perf-report/construction/functional-design/memory.md(Interpretations 1 エントリ)。候補 c1: 恒等式(母集団検証)を設計するとき、複数ソース由来のカウンタを単一構造体へ平坦に束ねて恒等式の合算に使うと、互いに素な母集団の混在で恒等式が数学的に不成立になる — 恒等式に参加する部分集合を母集団別に層別し、「全数」「除外」の定義を設計段で確定してからテスト可能な契約にする(実測: FD iteration 1 BLOCKER — ExclusionCounts 平坦 7 フィールドの BR-14 恒等式不成立 → corpus/windowing/review の 3 グループ層別+恒等 W/M 分離で iteration 2 READY 閉包)。conductor の提案は「c1 を project.md へ persist(独立 cid または既存の数値検証ファミリ — ledger-count-mechanical-recalc / state-machine-cardinality-check — への追補)」— 根拠: 既存 cid は件数の機械再計算(過去実測値の転記)と状態機械の個数照合を縛るが、「恒等式の参加母集団の同一性を設計段で検証する」面は未被覆。反対考慮: 検証劇場 Forbidden(自己参照比較の禁止)や nfr-design:c7(断定的インベントリの後出し導出)の適用実績とみなせるか — 各自 diary・FD 成果物 3 点(domain-entities.md の母集団恒等節・business-rules.md BR-14)・project.md の関連 cid を独立に読み、GoA 付きで投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件で可",
+      "description": "既存規範(検証劇場 Forbidden・数値検証ファミリ)の適用実績にすぎず新規増分なし。根拠を rationale に書くこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "c1 を採用(persist)",
+      "description": "恒等式の参加母集団の層別検証は既存 cid が未被覆の一般化可能な増分。persist 形(独立 cid か追補か)は rationale に書くこと。"
+    }
+  ]
+}

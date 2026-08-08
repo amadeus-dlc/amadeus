@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "0件は「学びが無かった」ではなく「既に persist 済み」の意味であり、もし team が生成物 byte-copy 面(TSR 追補の除外条項との関係)を明文化したいと判断するなら、新規 cid ではなく cid:build-and-test:c1-tsr-ambient-repro-on-base への1行追補に限定すべき。",
+  "rationale": "候補 c1 が主張する『ambient 入力をベースへ植えて同一再現を作ってから帰属を確定する』段は、既に project.md:347 の cid:build-and-test:c1-tsr-ambient-repro-on-base(E-TSR-BTS13、learned 2026-08-07、bt-20260730-2 / c4-260805-subagent-type-guard への追補)として persist 済み。逐語で『ベース比較の《同一条件》には per-user の gitignored な外部入力(active-intent cursor、env 等)も含め、ベース側へ同一値で再現してから失敗集合を比較する — 再現を欠くとベースが green になり、既存則が想定する《環境起因への誤分類》とは逆向きに《自変更由来への誤帰属》が起きる』とあり、conductor 提案の根拠(1)『いずれも《ベースで再現しない場合に ambient 入力を再現条件へ加える》段を持たない』は事実として refuted。加えて同追補の実測記録は本 intent と同型・同数値(分離 worktree のベース = 対象3ファイル 184 pass / 0 fail、cursor 注入で同型再現)であり、本 intent の build-test-results.md:30-38 の実測(素のベース 184 pass / 0 fail、ambient 植え込みで 3/3 同一再現)は既存則の再実演であって未被覆の増分ではない。唯一の差分候補は、TSR 追補が『生成物(runtime-graph.json 等)は再現(byte-copy)の対象にしない … その依存を個別に実証すること』と定める点に対し、本 intent が runtime-graph.json ごと植えたこと。しかしこれは同追補が命じる《個別に実証》の一形態として読め、矛盾でも新規面でもない。ここで c1 を独立 persist すると team.md:norm-consistency-review が禁ずる重複ノルムを作るため 0 件が正しい。c2(依存未インストールによる TOOL_MISSING 35 assertion)も不採用に同意 — build-instructions のトラブルシューティングへ記録済みの環境セットアップ運用知識であり、既存 cid:build-and-test:c3-260805-subagent-type-guard(切り分けで履行し根本原因を成果物へ記録する)の射程内で、memory 層への一般化価値は薄い。検証で読んだ file:line: amadeus/spaces/default/intents/260807-stage-perf-report/construction/build-and-test/memory.md:5-7(Interpretations 2 エントリ)、同 build-test-results.md:20-38(帰属節・立証手順・実測値)、amadeus/spaces/default/memory/project.md:347(c1-tsr-ambient-repro-on-base)、:357(c4-260803-state-integrity)、:386-387(c4/c3-260805-subagent-type-guard)、:405(bt-20260730-2 原文)。",
+  "submittedAt": "2026-08-08T05:12:00Z",
+  "receivedAt": "2026-08-08T05:10:56Z"
+}

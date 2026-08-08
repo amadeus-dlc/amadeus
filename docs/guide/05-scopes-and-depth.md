@@ -249,6 +249,8 @@ At each stage, the agent adjusts its output based on the active depth:
 
 Stages that write bulky artifacts state their own per-depth volume: Requirements Analysis scales the number and length of functional requirements, Code Generation scales plan and summary prose, and Build and Test scales its build instructions and summary. Depth governs prose volume only — test scope and volume stay with the test strategy (below).
 
+The `depth-budget` sensor measures the result for `requirements.md`: bytes per numbered `FR-n` against a ceiling of 1,200 for Minimal and 2,400 for Standard (Comprehensive declares none). Like every sensor it is advisory — an overrun is reported at the approval gate as something to look at, never as a block.
+
 ### Overriding depth
 
 You can change the depth at three points:

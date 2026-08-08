@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1 のみ採用(c2 不採用)",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 3,
+        "label": "両方採用",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T15:40:40Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SPR-UGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "将来の UG で CLI の kind 誤分類(service/library/packaging の迷い)が実際に1件でも観測されたら、c1 を c2-edgeblock cid への1行追補として再提案する再発条件付きの 0件判定とする。",
+      "rationale": "c1: 正典 stage 定義(units-generation.md:105 `service` — a deployed executable / :109 `library` — reusable code without a standalone runtime)から単発 CLI → service は一意導出 — CLI は standalone runtime を持つデプロイ実行可能物であり library の定義文が明示的に排除する。定義文自体が『常駐か否か』の口語的曖昧さを解決済みで、既決語彙の機械的執行に当たり persist は norm 肥大。c2: approval-handoff:c4(project.md:201)の story-map 面への適用実績にすぎず新規増分なし — この点は conductor 提案と一致。検証: diary Interpretations 2 エントリ(memory.md:6-7)、unit-of-work.md:9 の kind 宣言と :24 の c1(a) 検証節、project.md:334 の c2-edgeblock cid(UNIT_KINDS 閉語彙まで — 写像判断は未記載だが stage 正本が既に一意化)を実読。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-07T15:40:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SPR-UGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "単発 CLI→service の写像は正準 units-generation.md:104-109 の定義(service = a deployed executable / library = without a standalone runtime)から一意に導出でき、cid:units-generation:c1 が正準定義のノルム側複製を禁じるため persist 不要とするが、将来2定義が真に競合する曖昧な kind 写像が実測されたら独立 cid として再提案する。",
+      "rationale": "独立検証: (a) diary memory.md:6-7 の Interpretations 2 エントリを実読 — c1 は「常駐しないが deployed executable の定義に合致」と自ら正準定義からの導出を明記。(b) unit-of-work.md:9 の kind=service 宣言と :22-24 の単一 Unit 検証を実読。(c) project.md:334 の cid:units-generation:c2-edgeblock-nested-kind-required は UNIT_KINDS 閉語彙の実在と kind 必須のセンサー面を定めるが写像判断は定めない — しかし写像自体は正準ステージファイル units-generation.md:104-109 の5定義から一意に決まり(CLI は standalone runtime を持つため library に非該当、deployed executable に該当)、判断の余地がない自明導出。加えて project.md:305 の cid:units-generation:c1 は「Unit の定義は正準に従いノルム側へ再定義・複製しない」と定めており、kind 分類例の project.md への焼き込みはこの規範と緊張する。c2 は project.md:201 の cid:approval-handoff:c4(存在しない上流成果物を補完しない)の story-map 面への適用実績であり conductor の不採用提案に同意。よって両候補とも persist 不要 = 0件で可。",
+      "submittedAt": "2026-08-07T15:39:57Z",
+      "receivedAt": "2026-08-07T15:40:17Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "留保: c1 の2要素はいずれも既存の正本で覆われているが、その出典が re-scans/260807-stage-perf-report.md の Scan mode 節に明示されていない。ゲート前に (a) execution-identity 独立の根拠として contrib/skills/j5ik2o-gh-issue-cross-review/SKILL.md:165-172 の逐語、(b) currency 確定の根拠として cid:reverse-engineering:E-XBB-RE-S13-c2(project.md:338)を成果物へ追記すべき。これは persist 候補ではなく既存 cid の履行事項として本票に付す。あわせて、E-XBB-RE-S13-c2 が『区間は review..observed に固定する — ..HEAD は観測後に積んだコミットまで含み実測区間が動く』と明記しているのに対し本 RE は {75a1c198d..HEAD} 表記を用いている。本 intent では HEAD == observed 4a3da7d62 のため実害はないが、表記は observed 固定形へ是正するのが望ましい。",
+  "rationale": "独立に読んだもの: diary(inception/reverse-engineering/memory.md — Interpretations 2件・Deviations『なし』)、re-scans/260807-stage-perf-report.md:1-45(実行メタデータと §『行番号引用の currency』)、reverse-engineering-timestamp.md の現在節(260807-stage-perf-report)と履歴節(260807-failclosed-recovery-path、:28-)、project.md:290 / :299 / :310 / :338 の xrev ファミリ、#2405 の2コメントのメタデータブロック逐語。c1 の2要素はそれぞれ既存正本が覆う。(1) execution-identity 独立: contrib/skills/j5ik2o-gh-issue-cross-review/SKILL.md:165-172 が逐語で『The GitHub account that filed the Issue may be a shared automation account. Reviewer independence is based on execution identity, not only .author.login』と定め、review_run_id / reviewer-id の identity tuple と INDEPENDENCE_UNAVAILABLE の fail-closed まで規定している。#2405 の両コメントはその出力形(review-run-id: xrev-2405-20260807T095031Z、reviewer-id: reviewer-1/2、target-sha 一致、reviewer-2 は『1人目のレビュー内容は参照していません』と明記)であり、RE の適用は既存契約の適用であって新知見ではない。(2) 区間実測による currency: cid:reverse-engineering:E-XBB-RE-S13-c2(project.md:338、2026-08-05 ユーザー裁定 choice:2)が既に『レビュー対象 SHA と observed の一致ではなく review..observed の実 diff と被引用パス集合の交わりが空であること』を条件と定め、『免除を主張せず、この実測を成果物へ明記する』まで規定する。本 RE の患部6ファイル両区間 diff 空の実測はまさにこの手順の実行である。前 intent との差については、#2313 / #2330 のコメントを実測したところ review-run-id ブロックは 0 件であり、そもそもクロスレビュー run 自体が存在しなかった。したがって2 intent 間の差は規範解釈の精密化ではなく前提事実(クロスレビューの実在)の差であり、質問文自身が『この差は「メタデータの実在」にある』と認めている。既存 cid が覆う内容の再述は cid:requirements-analysis:norm-consistency-review が排除対象とする重複ノルムを増やすため、0 件で可と判断する。c2(idle 減算のフィルタ vs 減算比較)は本 intent 固有の実測値で一般化可能な規範を含まず、c3 は内容なし。GoA 2(留保は reservation フィールド記載のとおり、採否ではなくゲート前の出典明記と区間表記の是正)。",
+  "submittedAt": "2026-08-07T11:35:00Z",
+  "receivedAt": "2026-08-07T11:22:58Z"
+}

@@ -1,0 +1,22 @@
+{
+  "electionId": "E-SPR-ICS13",
+  "kind": "learnings",
+  "question": "intent 260807-stage-perf-report の intent-capture ステージ §13 学習選定。conductor の提案は 0 件(persist なし)。diary は amadeus/spaces/default/intents/260807-stage-perf-report/ideation/intent-capture/memory.md(2 エントリ)。conductor の 0 件根拠: (1) 質問 0 件判定は cid:intent-capture:c1 / cid:requirements-analysis:c1-xrev-verdict-not-ruling-authority の適用実績であり新規の一般化可能な学びではない (2) Issue 本文 v2 を要求正本と宣言する運用は cid:requirements-analysis:c3-260729-open-bug-batch(Issue 本文の要求を正本として固定)の適用実績 (3) 逸脱なし・センサー 6/6 PASSED。各自 diary と成果物 3 点(intent-statement / stakeholder-map / questions)を独立に読み、0 件でよいか検証して GoA 付きで投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "diary 2 エントリはいずれも既存 cid の適用実績であり、新規 persist は不要。"
+    },
+    {
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化可能な増分がある。どのエントリをどの cid へどう persist すべきか rationale に具体的に書くこと。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

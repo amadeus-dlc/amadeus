@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-NDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "cid:nfr-design:c1-brief-skip-resolution の適用限定文言は『reviewer ブリーフ』であり、本 intent の負方向明記は成果物冒頭ヘッダへの適用 — 厳密には同 cid の逐語スコープの外側にある拡張形だが、単一実例かつ摩擦ゼロ(reviewer iteration 1 READY・誤前提 Major の再発なし)のため現時点の persist は再述になる。成果物本文面で同型の誤前提指摘が別 intent で再発した時点で、同 cid への追補(適用面の拡張)として候補化すべきという留保付き合意。",
+  "rationale": "独立に読んだもの: diary(construction/nfr-design/memory.md:6 — Interpretations 1 エントリのみ、Deviations/Tradeoffs/Open questions は空)、performance-design.md(冒頭ヘッダ :3 と Review — Iteration 1 ブロック: Verdict READY、Findings は FOLLOW-UP 1 + NIT 1 のみで BLOCKER なし)、project.md:381 = cid:nfr-design:c1(CLI/library の NFR 設計に常駐 service 向け cache/horizontal scaling/circuit breaker を機械適用しない)、project.md:302 = cid:nfr-design:c1-brief-skip-resolution(条件解決で除外された consumes とその根拠を負方向で明示 — 適用は reviewer ブリーフに限定)。判定: (1) cache 層を設けない判断は performance-design.md 本文が cid:nfr-design:c1 を逐語で引いており適用そのもの。(2) 冒頭ヘッダの負方向明記+requirements.md NFR-1〜5 の代替正本宣言は、c1-brief-skip-resolution が定めた負方向明示の趣旨と、cid:code-generation:artifact-upstream-inputs-header(project.md:170 — 冒頭行は実消費の列挙・装飾トークン禁止)/cid:nfr-design:c1-pcp-upstream-coverage-frontmatter-authority(project.md:322 — 宣言 consumes の不在時の正当な充足形)の既存様式群の組み合わせで説明でき、規範上の新規増分がない。(3) §13 の発火源となる摩擦が不在 — reviewer は iteration 1 READY でイテレーション消費ゼロ、Deviations 空、是正往復なし。学習は観測された摩擦・実害から採るのが本プロジェクトの §13 要件であり、摩擦ゼロの適用実績を persist すると cid:requirements-analysis:norm-consistency-review が排除対象とする重複ノルムを増やす。よって choice 1(0件で可)。GoA 2 の留保は reservation のとおり適用面スコープの逐語ギャップに関するもの。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T22:24:45Z"
+}

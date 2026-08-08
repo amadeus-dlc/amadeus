@@ -1,0 +1,19 @@
+{
+  "electionId": "E-SPR-SDS13",
+  "voter": "subagent-1",
+  "question": "intent 260807-stage-perf-report の scope-definition ステージ §13 学習選定。conductor の提案は 0 件(persist なし)。diary は amadeus/spaces/default/intents/260807-stage-perf-report/ideation/scope-definition/memory.md(2 エントリ: c1 = 全 capability Must 判定、c2 = 記録側拡張の Won't 化)。conductor の 0 件根拠: c1 は cid:scope-definition:c2(公開契約を完結させる capability は全て Must)の適用実績、c2 は intent 固有のスコープ裁定(scope-document / intent-backlog に成果物固定済み)であり、いずれも新規の一般化可能な学びではない。各自 diary と成果物 3 点(scope-document / intent-backlog / questions)を独立に読み、0 件でよいか検証して GoA 付きで投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "2 エントリは既存 cid の適用実績と intent 固有裁定であり、新規 persist は不要。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "採用すべき候補がある",
+      "description": "一般化可能な増分がある。どのエントリをどの層へどう persist すべきか rationale に具体的に書くこと。"
+    }
+  ]
+}

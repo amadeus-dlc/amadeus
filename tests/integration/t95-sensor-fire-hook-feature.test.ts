@@ -89,6 +89,11 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
+import {
+  firedSensorIdsFrom,
+  frameworkGraphPath,
+  sensorsFiringFor as sensorsFiringForStage,
+} from "../helpers/stage-sensor-fire-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -109,7 +114,14 @@ function pinnedShardName(): string {
       .slice(0, 48) || "host";
   return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
-const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = frameworkGraphPath(AMADEUS_SRC);
+
+/** Sensors the hook should fire for a requirements-analysis write. */
+function sensorsFiringFor(filePath: string): string[] {
+  return sensorsFiringForStage(FRAMEWORK_GRAPH, "requirements-analysis", filePath);
+}
+
+
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -277,17 +289,29 @@ function dropsPath(proj: string): string {
   return join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.drops");
 }
 
+/** The sensor ids the hook actually dispatched, read off the recorded argv
+ *  (`[bun, script, "fire", <id>, ...]`). Compared against sensorsFiringFor's
+ *  set so a sensor dropping out of the stage — or its glob ceasing to match —
+ *  is visible as a membership difference rather than two numbers agreeing on
+ *  the wrong value. */
+function firedSensorIds(proj: string): string[] {
+  return firedSensorIdsFrom(spawnArgvs(proj));
+}
+
 describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — spawnSync)", () => {
-  test("C1a: Inception markdown write fires the 2 markdown sensors [.sh test 1]", () => {
+  test("C1a: Inception markdown write fires every applicable markdown sensor [.sh test 1]", () => {
     const proj = makeProjectActive("requirements-analysis");
-    const r = runHook(
-      proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
-    );
+    const written = join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md");
+    const r = runHook(proj, written);
     expect(r.status).toBe(0);
-    // requirements-analysis ships required-sections + upstream-coverage, both
-    // with matches: **/{amadeus-docs,intents}/** — two should fire.
-    expect(spawnArgvs(proj).length).toBe(2);
+    // required-sections + upstream-coverage carry matches: **/{amadeus-docs,intents}/**,
+    // and depth-budget carries the requirements.md path glob. The expectation is
+    // derived from the shipped graph rather than pinned, so adding a sensor to
+    // the stage does not fail this fire-path test.
+    expect(firedSensorIds(proj)).toEqual(sensorsFiringFor(written));
+    // Named explicitly: a derived-vs-derived comparison would still agree if
+    // depth-budget fell out of the stage or stopped matching this path.
+    expect(firedSensorIds(proj)).toContain("depth-budget");
   }, 30000);
 
   test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
@@ -298,12 +322,11 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // (e.g. reverting to **/amadeus-docs/**) leaves C1a green while the sensors go
     // silent on every real workflow — the exact dead-glob bug P9 fixed.
     const proj = makeProjectActive("requirements-analysis");
-    const r = runHook(
-      proj,
-      join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md"),
-    );
+    const written = join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md");
+    const r = runHook(proj, written);
     expect(r.status).toBe(0);
-    expect(spawnArgvs(proj).length).toBe(2);
+    expect(firedSensorIds(proj)).toEqual(sensorsFiringFor(written));
+    expect(firedSensorIds(proj)).toContain("depth-budget");
   }, 30000);
 
   test("C1b: spawned argv carries the fire subcommand [.sh test 2]", () => {

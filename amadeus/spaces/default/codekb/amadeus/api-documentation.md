@@ -25,6 +25,81 @@ v2 serializer は `serializeJournalEntryV2`（`:329-345`）で、キー順を固
 
 **依存**: `:18` で `EVENT_HEADINGS` を `../../dist/claude/.claude/tools/amadeus-audit.ts` から import（sandbox 配布形での解決性が理由、コメントに明記）。
 
+## 決定的レポート CLI の契約生態（260807-stage-perf-report、履歴、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+### `amadeus-subagent-stats.ts` — read-only 決定的レポータの既習契約
+
+新規レポート CLI がもっとも近縁とする core tool。**契約は逐語で継承できるが、コードの大半は file-private である。**
+
+| 契約要素 | file:line | 内容 |
+| --- | --- | --- |
+| Usage 行（第一級の doc） | `packages/framework/core/tools/amadeus-subagent-stats.ts:3` | `//   Usage: bun amadeus-subagent-stats.ts [--project-dir <path>] [--space <name>] [--json]` |
+| 引数 parse | `:412-431` | parse-don't-validate。未知フラグ / 値のないオプションは `{error}` を返す |
+| 測定 ref 先頭出力 | `:192-197` | 出力の第一節が measured at / scan scope / shards / events |
+| `--json` の安定順序 | `:174-176, 237-254` | `Record<string, unknown>`。Map は `sortedEntries`（件数降順・キー昇順）で平坦化 |
+| exit 階梯 | `:463-465` | `0` 正常 / `1` コーパスの穴（`unreadableShardCount > 0`）/ `2` 使用法エラー |
+| in-process seam | `:433` / `:468` | `export function main(argv: readonly string[]): number` + `if (import.meta.main) process.exit(main(process.argv.slice(2)));` — lcov 計測可能性の要（`cid:requirements-analysis:bun-coverage-spawn-blindspot`） |
+| UNKNOWN / ADR-5 | `:141-148` | 非空の `Model` のみ計数、それ以外は `unresolvedModelCount` を増やす。"absence is the record of absence" |
+| no-silent-drop | `:323-340` | 行ごとに `parseSkipped` を計数し隠さない。`continue` が "the explicit terminal the no-silent-drop rule requires" |
+| レンダー時点サニタイズ | `:178-187` | 監査値は信頼境界の外。`sanitizeAdvisoryValue` はレンダー時のみ。compose と `--json` は verbatim |
+
+**export 面の再利用可能性:**
+
+| 面 | 行 | export | 汎用性 |
+| --- | --- | --- | --- |
+| `recordFromLine` | `:278` | **なし** | 2 スキーマ正規化そのものが import 不能 |
+| `scanAuditCorpus` | `:345` | あり | `ScannedAudit.records: readonly SubagentAuditRecord[]` に hard-wire。イベント型に汎用でない |
+| `composeStatsReport` / `renderStatsText` / `serializeStatsReport` | `:105` / `:191` / `:237` | あり | subagent 固有の純関数 |
+
+すなわち**「拡張 vs 新設」は import 可能性だけでは決着しない** — 移送可能な資産は契約であってコードではない。
+
+### `amadeus-journal.ts` — 使われていないスキーマ非依存 API
+
+core に export 済みの正規化層が実在し、`amadeus-subagent-stats.ts` はこれを**迂回している**。
+
+| 関数 | 行 |
+| --- | --- |
+| `isJournalEntryV2` | `packages/framework/core/tools/amadeus-journal.ts:103` |
+| `journalRecordKey` | `:109` |
+| `journalRecordField` | `:130` |
+| `parseJournalLine` | `:481` |
+| `splitJournalLines` | `:501` |
+| `readJournalRecords` | `:534` |
+| `mergeShards` | `:612` |
+
+`journalRecordField` の doc（`:113-129`）は逐語で *"the NormalizedJournalRecord view (domain-entities.md) the tool readers consume **so they never branch on the schema version**"* と述べる。`.claude/tools/amadeus-journal.ts` が self-install ツリーに実在するためハーネスへも出荷される。
+
+**反対圧力（設計判断であることの根拠）:** `amadeus-subagent-stats.ts:21-23` が逐語で *"This module deliberately does NOT import amadeus-lib.ts (the FD fixes the dependency direction stats -> observability only); the two small path idioms it needs are mirrored locally."* と依存方向の裁定を記録している。`resolveProjectDirLocal`（`:377`）/ `activeSpaceLocal`（`:390`）はローカル再実装。
+
+### `amadeus-observability.ts` — 書き手 seam、CLI なし（名前空間使用不可）
+
+384 行。**`import.meta.main` なし・argv 処理なし・サブコマンドなし**（`process.argv|subcommand|import.meta.main` の grep で 0 hit）。export は全てライブラリ関数（`appendTelemetryEvent:244` / `observe:309` / `observeSubprocess:362` ほか）。ヘッダ `:1-19` の契約は `observability.enabled` による opt-in、machine-local な `<record>/.amadeus-otel/buffer-<clone>.jsonl` への追記、そして **fail-open**（*"a buffer write failure never throws into the caller"*）。
+
+**提案されている読み手は fail-closed であり契約が正反対。** 名前空間は使用不可（クロスレビュー reviewer-1 の指摘は observed で成立）。
+
+### `amadeus-runtime.ts summary` — 遡及不能な契約
+
+`summarize()`（`:1067-1070`）は `runtimeGraphPath(projectDir)` の `existsSync` を見て JSON を読むだけで、ヘッダ `:982-984` が逐語で *"Reads the materialised snapshot only — **never re-walks audit**"* と宣言する。`RuntimeSummary`（`:1019-1044`）は `workflow_id` / `scope` / `started_at` / `duration_minutes` / `stages{}` / `by_phase` / `memory{}` / `sensors{}` / `learnings{}` を持つが、**per-stage 所要時間・モデル・レビューイテレーションを持たない**。
+
+遡及は構造的に不可能である: `.gitignore:71` = `amadeus/spaces/*/intents/*/runtime-graph.json`、`git ls-files | grep -c runtime-graph.json` → **0**。`.claude/skills/amadeus-session-cost/SKILL.md`（`classification: read-only`、*"This skill does no counting of its own"*）はこの薄いラッパであり、単一ワークフロー限定。
+
+### レビューブロックの parse 契約
+
+書き手は `packages/framework/core/tools/amadeus-reviewer-runtime.ts:96-97`:
+
+```ts
+const REVIEW_MARKER = (iteration: number): string =>
+  `## Review — Iteration ${iteration}`;
+```
+
+（em-dash U+2014、両側に半角スペース。`:629` で書き込み、`:659` で冪等性検査。）
+
+ブロック本体は `reviewBlock`（`:618-644`）が emit し、`ReviewResult`（`:80-89`）が `verdict: "READY" | "NOT-READY"` / `iteration: number` / `reviewer: string` を型で固定する。フィールドパーサ `reviewField`（`:672-677`）は `^- \*\*<Label>:\*\* (.+)$` の**ちょうど1件**の一致を要求する（`if (matches.length !== 1)`）。**これが読み手が写すべき parse 契約である。**
+
+**実コーパス（observed 再計測）: 1,010 ブロック / 691 ファイル。** うちサフィックス付き見出し `## Review — Iteration 2（rebase後・裁定A反映）` が **3 件**で、これが様式ドリフトの全数。書き手自身のマッチャ `existingReviewBlock`（`:660`）は `/^## Review(?:[ \t].*)?$/gm` で走査してから trim 完全一致でフィルタするため、サフィックス付き見出しは**見出しとしては発見されるが iteration N としては一致しない**。読み手は同じ二段構えを採り、残差を**捨てるのではなく parse 不能として計数**すべきである。
+
 ## subagentStartFields の契約と2 payload 形状（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。

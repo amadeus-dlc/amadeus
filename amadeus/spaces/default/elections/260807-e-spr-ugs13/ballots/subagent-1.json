@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-UGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "将来の UG で CLI の kind 誤分類(service/library/packaging の迷い)が実際に1件でも観測されたら、c1 を c2-edgeblock cid への1行追補として再提案する再発条件付きの 0件判定とする。",
+  "rationale": "c1: 正典 stage 定義(units-generation.md:105 `service` — a deployed executable / :109 `library` — reusable code without a standalone runtime)から単発 CLI → service は一意導出 — CLI は standalone runtime を持つデプロイ実行可能物であり library の定義文が明示的に排除する。定義文自体が『常駐か否か』の口語的曖昧さを解決済みで、既決語彙の機械的執行に当たり persist は norm 肥大。c2: approval-handoff:c4(project.md:201)の story-map 面への適用実績にすぎず新規増分なし — この点は conductor 提案と一致。検証: diary Interpretations 2 エントリ(memory.md:6-7)、unit-of-work.md:9 の kind 宣言と :24 の c1(a) 検証節、project.md:334 の c2-edgeblock cid(UNIT_KINDS 閉語彙まで — 写像判断は未記載だが stage 正本が既に一意化)を実読。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T15:40:08Z"
+}
