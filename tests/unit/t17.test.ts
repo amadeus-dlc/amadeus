@@ -36,7 +36,7 @@
 // uses a [ ] pending slug (reject accepts [?] AND [-]).
 
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
@@ -101,9 +101,26 @@ function runState(proj: string, args: string[]): RunResult {
   return { rc: res.status ?? -1, stdout, stderr, combined: `${stdout}${stderr}` };
 }
 
+// The clean fixture workspace the bare (no --project-dir) invocations are pinned
+// to. createTestProject() seeds the workspace shell WITHOUT a state file, so a
+// state-threaded lookup falls back to the static scope grid — the stateless
+// answer Tests 14-18 assert. Built once for the file and torn down in afterAll.
+let bareProj = "";
+
 // `bun amadeus-state.ts lookup ...` with NO --project-dir (Tests 14-18 don't pass one).
+//
+// The ARGV stays bare — that is the contract these tests pin. The ENV does not:
+// CLAUDE_PROJECT_DIR is set to a clean fixture workspace so resolveProjectDir
+// stops at its env rung instead of falling through to the cwd-workspace-marker
+// rung (#2413), which would resolve THIS repo's own amadeus/ workspace and make
+// `lookup next-stage` read whatever gitignored ambient state sits on the
+// machine (#2464). Adding --project-dir here would destroy the contract; the
+// env pin preserves it while making the fixture hermetic.
 function runStateBare(args: string[]): RunResult {
-  const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8", env: { ...process.env } });
+  const res = spawnSync(BUN, [TOOL, ...args], {
+    encoding: "utf-8",
+    env: { ...process.env, CLAUDE_PROJECT_DIR: bareProj },
+  });
   const stdout = res.stdout ?? "";
   const stderr = res.stderr ?? "";
   return { rc: res.status ?? -1, stdout, stderr, combined: `${stdout}${stderr}` };
@@ -200,6 +217,14 @@ function countEvent(text: string, event: string): number {
 function hasEvent(text: string, event: string): boolean {
   return countEvent(text, event) > 0;
 }
+
+beforeAll(() => {
+  bareProj = createTestProject();
+});
+afterAll(() => {
+  cleanupTestProject(bareProj);
+  bareProj = "";
+});
 
 // Per-case temp project, torn down after each test.
 let proj = "";

@@ -51,7 +51,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -529,6 +537,12 @@ describe("t66 AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity (spawnSync env-gate
 
 describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 10 scopes)", () => {
   test("nextInScopeStage walk parity byte-exact for 10 scopes", () => {
+    // A stateless scratch workspace: no amadeus-state.md, so the CLI's
+    // state-threaded walk falls back to the static grid the parity fixtures
+    // encode. Torn down by the `scratch` afterEach.
+    const cleanProj = mkdtempSync(join(tmpdir(), "t66-clean-workspace-"));
+    scratch.push(cleanProj);
+    mkdirSync(join(cleanProj, "amadeus", "spaces", "default", "intents"), { recursive: true });
     const fails: string[] = [];
     for (const scope of SCOPES) {
       const scopeRows = JSON.parse(
@@ -541,6 +555,12 @@ describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 10 scopes)",
       while (true) {
         const res = spawnSync(BUN, [STATE_TS, "lookup", "next-stage", current, scope], {
           encoding: "utf8",
+          // ARGV stays bare (the parity fixtures are the STATIC grid's walk);
+          // the env pins the workspace so resolveProjectDir stops at its env
+          // rung rather than the cwd-workspace-marker rung (#2413), which would
+          // resolve this repo's own amadeus/ workspace and thread whatever
+          // gitignored ambient state sits on the machine into the walk (#2464).
+          env: { ...process.env, CLAUDE_PROJECT_DIR: cleanProj },
         });
         const next = (res.stdout + res.stderr).trim();
         if (next === "none") break;
