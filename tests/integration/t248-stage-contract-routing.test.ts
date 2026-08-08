@@ -742,6 +742,36 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.produces).toHaveLength(4);
   }, 30_000);
 
+  // An absent primary artifact reads the same as an unreviewed one, and it
+  // reaches the check through a different door: artifactCarriesReview cannot
+  // open the file at all. `scope` requires the stage's required produces to
+  // exist, so a unit missing its primary could not have been reviewed (#2359).
+  test("completion guard refuses when the primary artifact is absent entirely", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    // Secondary artifacts only, each carrying a review the reviewer never wrote
+    // there — the primary (business-logic-model, applicable because the kindless
+    // fallback widens the set) is the one that is missing.
+    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+
+    const originalExit = process.exit;
+    const originalError = console.error;
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(String).join(" ");
+    };
+    try {
+      expect(() => advanceInProcess(project, sourceGraph())).toThrow(/exit 1/);
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+    }
+    expect(stderr).toContain("no reviewer verdict recorded");
+  }, 30_000);
+
   test("completion guard falls back to on-disk artifacts when runtime-graph is missing", () => {
     // Missing runtime-graph.json drives the kind-aware reader's missing-file
     // catch (readRuntimeUnitKinds -> null), so the guard falls back to the
