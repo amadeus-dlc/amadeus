@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -23,6 +23,7 @@ import { buildChildEnvironment } from "./policy.ts";
 import { requireCapability } from "./registry.ts";
 import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
 import { collectBounded } from "./stream.ts";
+import { removeTreeVerified } from "./testing/remove-tree-verified.ts";
 import { parseVersion, versionAtLeast } from "./version.ts";
 
 const CREDENTIAL_DECLARATION: CredentialDeclaration = { childKey: "OPENAI_API_KEY" };
@@ -97,7 +98,14 @@ export class CodexScratchAllocator implements ScratchAllocator {
       initializeGit(projectDir);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
-      rmSync(root, { recursive: true, force: true });
+      try {
+        removeTreeVerified(root);
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "rollback cleanup failed after setup failure",
+        );
+      }
       throw error;
     }
   }
@@ -284,7 +292,7 @@ export class CodexExecAdapter implements LiveAdapter {
       }
     }
     try {
-      rmSync(target.scratch.root, { recursive: true, force: true });
+      removeTreeVerified(target.scratch.root);
       this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));

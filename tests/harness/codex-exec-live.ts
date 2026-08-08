@@ -5,13 +5,13 @@ import {
   mkdirSync,
   mkdtempSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { buildChildEnvironment } from "./live-e2e/policy.ts";
 import { requireCapability } from "./live-e2e/registry.ts";
+import { removeTreeVerified, withRollback } from "./live-e2e/testing/remove-tree-verified.ts";
 
 const CAPABILITY = requireCapability("codex-exec");
 
@@ -90,14 +90,11 @@ export interface CodexExecHome {
 export function setupCodexExecHome(prefix: string): CodexExecHome {
   const root = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   const home = join(root, "codex-home");
-  const cleanup = (): void => rmSync(root, { recursive: true, force: true });
-  try {
+  const cleanup = (): void => removeTreeVerified(root);
+  return withRollback(cleanup, () => {
     mkdirSync(home, { recursive: true });
     return { root, home, cleanup };
-  } catch (error) {
-    cleanup();
-    throw error;
-  }
+  });
 }
 
 interface CodexExecHomeConfig {
@@ -215,7 +212,7 @@ export function setupCodexExecProject({
 }: SetupCodexExecProjectOptions): CodexExecProject {
   const scratch = setupCodexExecHome(prefix);
   const proj = join(scratch.root, "proj");
-  try {
+  return withRollback(scratch.cleanup, () => {
     cpSync(join(distributionDir, ".codex"), join(proj, ".codex"), { recursive: true });
     cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
     cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
@@ -230,8 +227,5 @@ export function setupCodexExecProject({
       rulesDir,
     });
     return { ...scratch, proj };
-  } catch (error) {
-    scratch.cleanup();
-    throw error;
-  }
+  });
 }
