@@ -2957,8 +2957,9 @@ function selectLifecycleHumanTurn(
   // #779 fail-closed rule: that one decides resolution ⇔ human (the human side
   // loses an unresolvable same-second tie, and it is decided in the presence
   // predicates, not by a sort), whereas this picks between two live turns.
-  candidates.sort((left, right) =>
-    left.timestamp.localeCompare(right.timestamp) || left.shard.localeCompare(right.shard));
+  // One line on purpose: bun's lcov stamps the call line of a MULTI-line arrow
+  // argument 0 even when the arrow body runs, so a wrapped sort() reads as dead.
+  candidates.sort((left, right) => left.timestamp.localeCompare(right.timestamp) || left.shard.localeCompare(right.shard));
   const selected = candidates.at(-1);
   if (!selected) throw new Error("archive/unarchive requires an unconsumed HUMAN_TURN");
   return { shard: selected.shard, timestamp: selected.timestamp };
