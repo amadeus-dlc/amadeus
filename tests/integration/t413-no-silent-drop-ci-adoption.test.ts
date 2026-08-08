@@ -122,8 +122,10 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // along with the authorization path that carried it (13 -> 14), and that
     // identity was also filed under #1979. After #2338 the grandfather set lives
     // in events/<ulid>.json and B0 is the folded effective set size.
-    expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
-    expect(folded.grandfather).toHaveLength(213);
+    // 213 -> 214 is #2378 (u3): the question-route sweep's observation-only
+    // catch entered as a granted NSD001 identity.
+    expect(result.evidence.counts).toEqual({ C_pre: 214, B_pre: 214, B0: 214 });
+    expect(folded.grandfather).toHaveLength(214);
     expect(removed).toHaveLength(14);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
