@@ -13,7 +13,17 @@ import {
 
 const EXACT_AST_GREP_VERSION = "0.45.0";
 const INTENTIONAL_DROP = /^\s*\/\/ intentional-drop:\s*(\S(?:.*\S)?)\s*$/;
-const NSD003_FUNCTIONS = new Set(["persistBlocked", "setCheckbox", "setStageSuffix", "resyncOneIntent"]);
+// Each catalog contract is bound to the file that must declare it, so a rename of the
+// implementation is a loud RULE_INVALID instead of a silently emptied rule. The binding is
+// only enforced when that file is inside the scanned set: fixture and synthetic-repository
+// scans legitimately contain none of these implementations.
+export const NSD003_CATALOG = [
+  { name: "persistBlocked", file: "packages/framework/core/tools/amadeus-mirror-executor.ts" },
+  { name: "setCheckbox", file: "packages/framework/core/tools/amadeus-lib.ts" },
+  { name: "setStageSuffix", file: "packages/framework/core/tools/amadeus-lib.ts" },
+  { name: "resyncOneIntent", file: "packages/framework/core/tools/amadeus-lib.ts" },
+] as const;
+const NSD003_FUNCTIONS = new Set(NSD003_CATALOG.map((entry) => entry.name as string));
 
 type AstGrepModule = typeof import("@ast-grep/napi");
 type Candidate = {
@@ -880,6 +890,15 @@ export function scanParsedSources(parsedSources: readonly ParsedSource[]): Seman
   }
   if ([...contractNames.values()].some((count) => count > 1)) {
     throw new InfraFailure("RULE_INVALID", "multiple implementations resolve to one NSD003 catalog contract");
+  }
+  for (const entry of NSD003_CATALOG) {
+    if (!parsedSources.some((parsed) => parsed.file === entry.file)) continue;
+    if ((contractNames.get(entry.name) ?? 0) !== 1) {
+      throw new InfraFailure(
+        "RULE_INVALID",
+        `NSD003 catalog entry resolves to no implementation: ${entry.name} (${entry.file})`,
+      );
+    }
   }
   const ordinals = new Map<string, number>();
   const exemptionEligible = new Set<string>();

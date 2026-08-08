@@ -18,6 +18,7 @@ import { createRequire } from "node:module";
 import {
   assertSafeRelativePath,
   loadVerifiedAstGrep,
+  NSD003_CATALOG,
   parseSource,
   scanParsedSources,
   scanSourceForTest,
@@ -618,6 +619,21 @@ describe("no-silent-drop AST rules", () => {
       .toThrow("expected one program");
     expect(() => parseSource(nodesParser([node("program"), node("ERROR", "catch (")]) as never, "fixture.ts", "catch ("))
       .toThrow("unparseable candidate AST region");
+  });
+
+  test("semantic scan fails closed when a scanned catalog host resolves no implementation", () => {
+    const ast = loadVerifiedAstGrep(REPO_ROOT);
+    const renamed = `
+      type ValidatedStageState = { readonly validated: true };
+      export function setCheckboxV2(state: ValidatedStageState, slug: string, desired: string) {
+        return { kind: "changed", content: desired };
+      }
+    `;
+    const host = NSD003_CATALOG.find((entry) => entry.name === "setCheckbox");
+    if (!host) throw new Error("setCheckbox is missing from the NSD003 catalog");
+    expect(() => scanParsedSources([parseSource(ast, host.file, renamed)]))
+      .toThrow("NSD003 catalog entry resolves to no implementation: setCheckbox");
+    expect(() => scanParsedSources([parseSource(ast, "fixture.ts", renamed)])).not.toThrow();
   });
 
   test("semantic scan rejects structural omissions and escaping evidence paths", () => {
