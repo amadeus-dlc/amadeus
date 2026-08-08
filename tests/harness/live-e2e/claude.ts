@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -155,7 +155,14 @@ export class ClaudeScratchAllocator implements ScratchAllocator {
       initializeScratchGit(projectDir, homeDir, process.env, CAPABILITY.environment);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
-      rmSync(root, { recursive: true, force: true });
+      try {
+        removeTreeVerified(root);
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "rollback cleanup failed after setup failure",
+        );
+      }
       throw error;
     }
   }

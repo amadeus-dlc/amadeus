@@ -190,7 +190,14 @@ export class KiroScratchAllocator implements ScratchAllocator {
       initializeScratchGit(projectDir, homeDir, process.env, requireCapability("kiro-tui").environment);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
-      removeTreeVerified(root);
+      try {
+        removeTreeVerified(root);
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "rollback cleanup failed after setup failure",
+        );
+      }
       throw error;
     }
   }

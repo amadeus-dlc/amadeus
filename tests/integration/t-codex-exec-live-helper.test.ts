@@ -139,6 +139,50 @@ describe("codex exec live E2E helper", () => {
     }
   });
 
+  test("surfaces both the setup failure and the rollback failure when cleanup cannot remove the tree", () => {
+    if (process.getuid?.() === 0) return;
+
+    const fixture = createCodexHarnessFixture();
+    let pinnedDir: string | undefined;
+    let leakedScratchRoot: string | undefined;
+    try {
+      let thrown: unknown;
+      try {
+        setupCodexExecProject({
+          prefix: "codex-exec-rollback-failure-",
+          distributionDir: fixture.distributionDir,
+          repositoryRoot: join(fixture.root, "missing-framework"),
+          model: "fixture-model",
+          prepareProject: (projectDir) => {
+            leakedScratchRoot = dirname(projectDir);
+            // Pin a subtree so the rollback's removal fails with EACCES.
+            pinnedDir = join(projectDir, "pinned");
+            mkdirSync(pinnedDir, { recursive: true });
+            writeFileSync(join(pinnedDir, "held.txt"), "held\n", "utf-8");
+            chmodSync(pinnedDir, 0o555);
+            throw new Error("prepare project exploded");
+          },
+        });
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(AggregateError);
+      const aggregate = thrown as AggregateError;
+      expect(aggregate.message).toBe("rollback cleanup failed after setup failure");
+      expect(aggregate.errors).toHaveLength(2);
+      // The original setup failure is preserved, not masked by the rollback failure.
+      expect(String(aggregate.errors[0])).toContain("prepare project exploded");
+      expect(String(aggregate.errors[1])).toContain("EACCES");
+    } finally {
+      if (pinnedDir !== undefined && existsSync(pinnedDir)) chmodSync(pinnedDir, 0o755);
+      if (leakedScratchRoot !== undefined) {
+        rmSync(leakedScratchRoot, { recursive: true, force: true });
+      }
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+
   test("external CODEX_HOME stays untracked and is deleted even when the workspace is kept", () => {
     const fixture = createCodexHarnessFixture();
     const workspace = mkdtempSync(join(tmpdir(), "codex-journey-workspace-"));

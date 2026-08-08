@@ -95,7 +95,14 @@ export function setupCodexExecHome(prefix: string): CodexExecHome {
     mkdirSync(home, { recursive: true });
     return { root, home, cleanup };
   } catch (error) {
-    cleanup();
+    try {
+      cleanup();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "rollback cleanup failed after setup failure",
+      );
+    }
     throw error;
   }
 }
@@ -231,7 +238,14 @@ export function setupCodexExecProject({
     });
     return { ...scratch, proj };
   } catch (error) {
-    scratch.cleanup();
+    try {
+      scratch.cleanup();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "rollback cleanup failed after setup failure",
+      );
+    }
     throw error;
   }
 }
