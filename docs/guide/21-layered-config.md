@@ -24,7 +24,8 @@ Project defaults:
 {
   "solo-election": { "trigger": { "mode": "manual" } },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
-  "plugin": { "activation": { "names": ["formal-model-check"] } }
+  "plugin": { "activation": { "names": ["formal-model-check"] } },
+  "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
 }
 ```
 
