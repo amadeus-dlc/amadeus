@@ -28,6 +28,7 @@ import { join } from "node:path";
 
 import {
   advisoryChoicePresentationFields,
+  advisoryOccurrenceMatchesDecision,
   guardAdvisoryChoices,
   recordAdvisoryChoice,
   resolveAdvisoryChoiceAutonomously,
@@ -46,6 +47,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import { readIntentAutonomyTransactionsFromAudit } from "../../packages/framework/core/tools/amadeus-intent-autonomy-replay.ts";
 import {
+  activeIntentUuid,
   auditFilePath,
   auditShardName,
   docsRoot,
@@ -204,6 +206,52 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
     if (after.kind !== "hold") return;
     expect(after.runRequired).toBe(true);
     expect(after.formalChecks).toHaveLength(1);
+  });
+
+  // #2479: a ladder decision names ONE advisory occurrence. The grounding check
+  // agrees — `advisoryOccurrenceMatchesDecision` rebuilds the occurrence id from
+  // each pending's own identity and compares it to the decision's. But it was
+  // asked with `some`, and a single match then let receipts be written for EVERY
+  // open advisory. The second advisory here was never decided; a receipt naming
+  // the first one's decision would make it look settled, which is the whole
+  // guarantee per-instance binding exists to give.
+  test("裁定が名指ししていないadvisoryへreceiptを書かない", () => {
+    projectDir = bornProject();
+    grantFullAutonomy(projectDir);
+    const undecided: Advisory = { ...advisory, specIdentity: "sha256:def", message: "advisory: a second, undecided raise" };
+
+    const guard = guardAdvisoryChoices(projectDir, STAGE, [advisory, undecided]);
+    if (guard.kind !== "hold") throw new Error(`expected a hold, got ${guard.kind}`);
+    expect(readStore(projectDir).pending).toHaveLength(2);
+
+    const resolution = resolveAdvisoryChoiceAutonomously({ projectDir, hold: guard, phase: PHASE, graphRevision: GRAPH });
+    expect(resolution.kind).toBe("resolved");
+    if (resolution.kind !== "resolved") return;
+
+    expect(recordAdvisoryChoice(projectDir, resolution.choice, {
+      kind: "auto-decision",
+      decisionId: resolution.decision.decisionId,
+      basisKind: resolution.decision.basisKind,
+      basisFingerprint: resolution.decision.basisFingerprint,
+      projectionRevision: resolution.projectionRevision,
+      phase: PHASE,
+      graphRevision: GRAPH,
+    })).toBe(true);
+
+    // One decision, one receipt — and it names the advisory the decision was about.
+    const receipts = readStore(projectDir).receipts;
+    expect(receipts).toHaveLength(1);
+    const decided = readStore(projectDir).pending.find((pending) =>
+      advisoryOccurrenceMatchesDecision({
+        intentUuid: activeIntentUuid(projectDir)!,
+        identity: pending.identity,
+        decision: resolution.decision,
+        phase: PHASE,
+        graphRevision: GRAPH,
+      })
+    );
+    expect(decided).toBeDefined();
+    expect(receipts[0]?.identity.advisoryInstance).toBe(decided!.identity.advisoryInstance);
   });
 });
 
