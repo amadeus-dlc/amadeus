@@ -33,6 +33,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { seedCustomHarness } from "./custom-harness.ts";
 import {
+  copyTreeWithRetry,
   DEFAULT_INTENT_UUID,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -177,7 +178,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     cpSync(join(KIRO_IDE_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
     if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   } else {
-    cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+    copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
     const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
     const claudeMd = join(proj, ".claude", "CLAUDE.md");
     if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);

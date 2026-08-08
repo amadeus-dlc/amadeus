@@ -84,6 +84,7 @@ import {
 import { dirname, join } from "node:path";
 import {
   AMADEUS_SRC,
+  copyTreeWithRetry,
   createTestProject,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -123,7 +124,7 @@ afterAll(() => {
 function mkproj(): string {
   const pd = createTestProject();
   projects.push(pd);
-  cpSync(AMADEUS_SRC, join(pd, ".claude"), { recursive: true });
+  copyTreeWithRetry(AMADEUS_SRC, join(pd, ".claude"));
   const claudeMdExample = join(pd, ".claude", "CLAUDE.md.example");
   const claudeMd = join(pd, ".claude", "CLAUDE.md");
   if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);

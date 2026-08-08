@@ -6502,5 +6502,16 @@
     },
     "reason": "The audit-failure catch arm of approve-batch. Its only statement is error(), which is amadeus-bolt.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict — measured directly, an in-process driver never survives to assert. It also latches emitError's module-level _errorEmitInProgress flag, which is never reset, so a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. The lines this arm guards are covered: the happy path (emit then write) and the idempotent early return are both driven in-process by t507, and t145 spawns the real CLI across the lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way.",
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
+  },
+  {
+    "file": "tests/harness/fixtures.ts",
+    "selector": {
+      "function": "safeReaddir",
+      "fingerprint": "sha256:344567af092d785dc64ffa5db33fe5d72a63d400001c7a692c245bc06d2b886f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "The catch arm of safeReaddir, a diagnostics-only helper on the copyTreeWithRetry failure path. Its caller reportCopyTreeFailure only calls it when existsSync(src) already returned true, so reaching the arm needs src to disappear or turn unreadable BETWEEN that check and the readdir — the very race the arm exists to survive, and one that cannot be scheduled deterministically. The arm is also downstream of an injected copy failure, so a driver would have to force cpSync to throw first. Everything the helper decides on the reachable path (the entry count that lands in the diagnostic line) is exercised whenever the retry path runs.",
+    "expiry": "remove when reportCopyTreeFailure takes an injectable readdir port"
   }
 ]
