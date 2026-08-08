@@ -6,18 +6,25 @@
 // phase's closure events land IN THIS EXACT ORDER:
 //
 //     STAGE_COMPLETED -> PHASE_COMPLETED -> PHASE_VERIFIED -> WORKFLOW_COMPLETED
+//       -> INTENT_AUTONOMY_TRANSACTION_COMMITTED
 //
-// and that WORKFLOW_COMPLETED is dead-last and fires EXACTLY ONCE. Every
-// downstream consumer (the statusline, resume, CI gates, doctor) reads the
-// audit tail to decide "is this workflow done?"; if a refactor reordered the
-// emits in handleCompleteWorkflow (amadeus-state.ts:573-596) — e.g. moved the
-// WORKFLOW_COMPLETED emit before PHASE_VERIFIED, or dropped the
-// alreadyMarkedCompleted guard so the final STAGE_COMPLETED doubled — the
-// counts could still look plausible while the SEQUENCE lied about what
-// happened. No test today asserts this terminal ORDER, nor the re-run
-// idempotency of the final approve. t51 asserts counts + "first/last event"
-// + a single gate<stage ordering pair, but not the four-event terminal tail
-// nor what a past-the-end approve does. This pins both.
+// WORKFLOW_COMPLETED closes the lifecycle stream and fires EXACTLY ONCE; the
+// Intent-autonomy terminalization commits immediately after it (#2211,
+// amadeus-state.ts emitWorkflowCompletionAuditRows -> the very next statement
+// calls commitProductionIntentCompletion, whose audit-backed repository emits
+// INTENT_AUTONOMY_TRANSACTION_COMMITTED). That autonomy row is the ONLY event
+// allowed after WORKFLOW_COMPLETED — the intent registry row flips to
+// "complete" right after it, and the post-complete audit seal (#1248) refuses
+// every later append. t51:295-299 pins the same followed-only-by contract at
+// the integration layer; this file pins the full five-event terminal tail plus
+// re-run idempotency of the final approve. If a refactor reordered the emits
+// in handleCompleteWorkflow — e.g. moved the WORKFLOW_COMPLETED emit before
+// PHASE_VERIFIED, or dropped the alreadyMarkedCompleted guard so the final
+// STAGE_COMPLETED doubled — the counts could still look plausible while the
+// SEQUENCE lied about what happened. (History: before #2211 this file pinned
+// WORKFLOW_COMPLETED as dead-last; #2211 moved that contract in t51 but this
+// file's pins were left behind — #2456 records the ruling that the new order
+// is canonical and the pins here follow it.)
 //
 // SOURCE (amadeus-state.ts):
 //   - handleApprove (:675) validates the slug is `awaiting-approval` (:685),
@@ -43,7 +50,8 @@
 //     through error() -> emitError, but the post-complete audit stop (#1248,
 //     amadeus-audit.ts intentStatusForAudit gate) refuses the ERROR_LOGGED
 //     append once the intent is complete, so the sealed trail does NOT grow
-//     and WORKFLOW_COMPLETED stays dead-last. The test asserts that real
+//     and the autonomy terminalization stays the last row, with
+//     WORKFLOW_COMPLETED immediately before it. The test asserts that real
 //     shape, plus the suppression note on stderr.
 //   - SOURCE SURPRISE (not the asserted path, noted for the record): re-running
 //     `complete-workflow build-and-test` DIRECTLY is NOT idempotent — it has no
@@ -224,25 +232,27 @@ describe("complete-workflow terminal-event ordering (fix, no claude)", () => {
     seq = eventSequence(proj);
   }, DRIVE_TIMEOUT_MS);
 
-  test("the FINAL four events are STAGE_COMPLETED -> PHASE_COMPLETED -> PHASE_VERIFIED -> WORKFLOW_COMPLETED, in that order", () => {
+  test("the FINAL five events are STAGE_COMPLETED -> PHASE_COMPLETED -> PHASE_VERIFIED -> WORKFLOW_COMPLETED -> INTENT_AUTONOMY_TRANSACTION_COMMITTED, in that order", () => {
     // Sanity: a non-trivial trail was produced.
     expect(seq.length).toBeGreaterThan(10);
 
-    // The terminal tail — the canonical workflow-closure sequence. The last
-    // FOUR events as an ordered slice catch any REORDER of the emits in
-    // handleCompleteWorkflow or a dropped phase-closure event.
-    expect(seq.slice(-4)).toEqual([
+    // The terminal tail — the canonical workflow-closure sequence, including
+    // the #2211 autonomy terminalization row. The last FIVE events as an
+    // ordered slice catch any REORDER of the emits in handleCompleteWorkflow,
+    // a dropped phase-closure event, or an event slipping in between
+    // WORKFLOW_COMPLETED and the autonomy commit.
+    expect(seq.slice(-5)).toEqual([
       "STAGE_COMPLETED",
       "PHASE_COMPLETED",
       "PHASE_VERIFIED",
       "WORKFLOW_COMPLETED",
+      "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
     ]);
 
     // NO ADJACENT-DUPLICATE STAGE_COMPLETED in the terminal closure. The
-    // slice(-4) check above does NOT catch a doubled final STAGE_COMPLETED:
-    // the duplicate lands at index -5 (...STAGE_COMPLETED, STAGE_COMPLETED,
-    // PHASE_COMPLETED, PHASE_VERIFIED, WORKFLOW_COMPLETED), leaving the last
-    // four bytes unchanged. Dropping the alreadyMarkedCompleted guard
+    // slice(-5) check above does NOT catch a doubled final STAGE_COMPLETED:
+    // the duplicate lands just before the pinned window, leaving the last
+    // five bytes unchanged. Dropping the alreadyMarkedCompleted guard
     // (amadeus-state.ts:574) produces exactly that doubling. Assert that no two
     // STAGE_COMPLETED events are adjacent ANYWHERE in the trail — the final
     // approve's STAGE_COMPLETED must not be re-emitted by handleCompleteWorkflow.
@@ -252,9 +262,13 @@ describe("complete-workflow terminal-event ordering (fix, no claude)", () => {
     expect(adjacentDup).toBe(false);
   });
 
-  test("WORKFLOW_COMPLETED is dead-last and fires exactly once", () => {
-    expect(seq[seq.length - 1]).toBe("WORKFLOW_COMPLETED");
+  test("WORKFLOW_COMPLETED fires exactly once and is followed only by the Intent-autonomy terminalization", () => {
+    // Mirror of t51:295-299 at the e2e layer: the autonomy commit is the ONLY
+    // event allowed after WORKFLOW_COMPLETED (#2211), and both fire once.
+    expect(seq[seq.length - 2]).toBe("WORKFLOW_COMPLETED");
+    expect(seq[seq.length - 1]).toBe("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
     expect(countEvent(seq, "WORKFLOW_COMPLETED")).toBe(1);
+    expect(countEvent(seq, "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toBe(1);
   });
 
   test("the FINAL phase's closure ordering holds: the last PHASE_VERIFIED is immediately followed by WORKFLOW_COMPLETED, with PHASE_COMPLETED before it", () => {
@@ -286,11 +300,12 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
   }, DRIVE_TIMEOUT_MS);
 
   test("approve PAST THE END fails (slug already [x]) and appends NOTHING — the completed intent's audit ledger is sealed (#1248)", () => {
-    // Precondition: the clean walk landed exactly one WORKFLOW_COMPLETED, with
-    // it dead-last in the trail.
+    // Precondition: the clean walk landed exactly one WORKFLOW_COMPLETED,
+    // followed only by the autonomy terminalization row (#2211).
     const before = eventSequence(proj);
     expect(countEvent(before, "WORKFLOW_COMPLETED")).toBe(1);
-    expect(before[before.length - 1]).toBe("WORKFLOW_COMPLETED");
+    expect(before[before.length - 2]).toBe("WORKFLOW_COMPLETED");
+    expect(before[before.length - 1]).toBe("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
     const stageCompletedBefore = countEvent(before, "STAGE_COMPLETED");
 
     // Re-run approve on the (now [x]) final stage. handleApprove's
@@ -311,10 +326,12 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     expect(replay.stderr).toContain("suppressed amadeus.operation.failed v2 append");
 
     // The IDEMPOTENCY contract on the audit FILE: still exactly one
-    // WORKFLOW_COMPLETED (no duplicate terminal event) and no extra
-    // STAGE_COMPLETED for the final stage.
+    // WORKFLOW_COMPLETED and one autonomy terminalization (the replay must
+    // not re-commit an autonomy transaction), and no extra STAGE_COMPLETED
+    // for the final stage.
     const after = eventSequence(proj);
     expect(countEvent(after, "WORKFLOW_COMPLETED")).toBe(1);
+    expect(countEvent(after, "INTENT_AUTONOMY_TRANSACTION_COMMITTED")).toBe(1);
     expect(countEvent(after, "STAGE_COMPLETED")).toBe(stageCompletedBefore);
 
     // REAL behaviour of the failed replay (asserted, not assumed): the error
@@ -322,11 +339,12 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     // audit stop (#1248, amadeus-audit.ts intentStatusForAudit gate) refuses
     // every append once the intent's registry row is "complete" — including
     // the replay's ERROR_LOGGED row. So the sealed trail does NOT grow and
-    // WORKFLOW_COMPLETED stays dead-last. Pinning this guards two regressions
+    // the terminal tail keeps its shape. Pinning this guards two regressions
     // at once: a failed past-the-end approve falling through to the terminal
     // emits, and the ledger seal reopening after completion. The suppression
     // mechanism itself is covered by t243-post-complete-audit-stop.
     expect(after.length).toBe(before.length);
-    expect(after[after.length - 1]).toBe("WORKFLOW_COMPLETED");
+    expect(after[after.length - 2]).toBe("WORKFLOW_COMPLETED");
+    expect(after[after.length - 1]).toBe("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
   });
 });
