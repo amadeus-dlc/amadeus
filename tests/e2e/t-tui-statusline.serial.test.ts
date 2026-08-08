@@ -28,6 +28,7 @@ import {
   waitForTui,
   tmuxUnavailableReason,
 } from "../harness/tui-client.ts";
+import { copyTreeWithRetry } from "../harness/fixtures.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -63,7 +64,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // README: `cp -r dist/claude/.claude/ your-project/.claude/`. The
         // dest .claude must NOT pre-exist or cp nests it — we copy SRC -> <sandbox>/.claude.
         const destClaude = join(sandbox, ".claude");
-        cpSync(AMADEUS_SRC, destClaude, { recursive: true });
+        copyTreeWithRetry(AMADEUS_SRC, destClaude);
         const claudeMdExample = join(destClaude, "CLAUDE.md.example");
         const claudeMd = join(destClaude, "CLAUDE.md");
         if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);

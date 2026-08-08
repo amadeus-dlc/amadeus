@@ -3834,15 +3834,35 @@ function humanActOutstanding(
 // delegation sits after the last GATE resolution (its GATE slot: a
 // QUESTION_ANSWERED does NOT consume it — the #736 fix).
 //
+// Record scope (#2588): `intent`/`space` pin the predicate to a NAMED record's
+// ledger instead of the active cursor. The `--intent` reject path routes the
+// state/audit I/O through `stateOperationTarget` (the named record), so the
+// presence check must read that SAME record's ledger — otherwise presence is
+// judged on the active intent while the reject mutates a different one (one turn
+// on A licensing unlimited rejects of B; a turn on B falsely refused). Threaded
+// through to scanPresenceLedger, whose auditShards already accept the selector.
+// Omitting the selector (the delegate-issuance + approve callers) keeps the
+// active/legacy scope byte-for-byte.
+//
+// Empty-ledger disposition depends on scope: fail OPEN for the active/legacy
+// scope (intent === undefined — a harness whose shard has no events yet must not
+// brick before the first event), but fail CLOSED for an EXPLICITLY NAMED record.
+// A named record with no ledger honestly proves no human acted there, so a
+// missing ledger must not license a cross-record reject of an untouched record
+// (the fresh-clone / empty-target fail-open reviewer-2 flagged, scoped to the
+// only caller that names a record).
+//
 // (These branch notes live up here rather than inside the body: bun's lcov
 // stamps in-body comment/blank lines as never-hit DA records, which the codecov
 // patch gate counts as misses.)
 export function humanActedSinceGate(
   projectDir: string,
-  verb?: "approve" | "reject"
+  verb?: "approve" | "reject",
+  intent?: string,
+  space?: string
 ): boolean {
-  const events = scanPresenceLedger(projectDir);
-  if (events === null) return true; // fail open
+  const events = scanPresenceLedger(projectDir, intent, space);
+  if (events === null) return intent === undefined; // fail open (active/legacy) / fail closed (named record)
   if (verb === undefined) {
     return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
   }
@@ -5332,7 +5352,11 @@ export function setField(content: string, field: string, value: string): string 
     "m"
   );
   if (regex.test(content)) {
-    return content.replace(regex, `$1 ${value}`);
+    // Replacer function, not a template replacement string: `value` is
+    // caller-controlled free text that can contain `$`-special sequences
+    // ($1, $&, $`, $', $$) which String.replace's template form interprets
+    // as replacement patterns, silently corrupting the file (Issue #2580).
+    return content.replace(regex, (_m, head: string) => `${head} ${value}`);
   }
   return content;
 }
@@ -5364,7 +5388,9 @@ export function setFieldStrict(content: string, field: string, value: string): s
       `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`
     );
   }
-  return content.replace(regex, `$1 ${value}`);
+  // Replacer function — see setField's comment on why `value` must never
+  // flow through String.replace's `$`-pattern template form (Issue #2580).
+  return content.replace(regex, (_m, head: string) => `${head} ${value}`);
 }
 
 // setOrInsertField: update field if present; otherwise insert a new
@@ -5383,7 +5409,9 @@ export function setOrInsertField(
     "m"
   );
   if (regex.test(content)) {
-    return content.replace(regex, `$1 ${value}`);
+    // Replacer function — see setField's comment on why `value` must never
+    // flow through String.replace's `$`-pattern template form (Issue #2580).
+    return content.replace(regex, (_m, head: string) => `${head} ${value}`);
   }
   return appendUnderHeading(content, heading, `- **${field}**: ${value}\n`);
 }
@@ -5807,9 +5835,13 @@ const STAGE_PROGRESS_SECTION_RE =
   /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
 
 export function replaceStageProgressSection(content: string, body: string): string {
+  // Replacer function, not a template replacement string: `body` is built
+  // from stage slugs and (for per-unit lines) caller-controlled text, so it
+  // can contain `$`-special sequences that String.replace's template form
+  // would interpret as replacement patterns (Issue #2580).
   return content.replace(
     STAGE_PROGRESS_SECTION_RE,
-    `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
+    () => `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
   );
 }
 

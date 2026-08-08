@@ -122,4 +122,21 @@ describe("applyModelPin — charter model projection", () => {
     expect(() => applyModelPin(charter("haiku"), PINS, "agents/amadeus-x-agent.md"))
       .toThrow(/does not cover/);
   });
+
+  // Issue #2580 regression pin. applyModelPin used to rewrite the pin line via
+  // two nested String.prototype.replace calls with TEMPLATE replacement
+  // strings (`block[0].replace(pin[0], \`model: ${mapped}\`)`, then
+  // `content.replace(block[0], <that result>)`). Both search values are
+  // literal strings, not RegExps, but the `$`-pattern interpretation of a
+  // replace's REPLACEMENT argument applies regardless — so a harness model-map
+  // value containing `$1`/`$&`/`` $` ``/`$'`/`$$` would have been silently
+  // mangled instead of shipped verbatim. Fixed by switching both calls to
+  // replacer functions.
+  test("a model-map value containing $-special sequences is inserted verbatim", () => {
+    const dollarPins = { opus: "vendor/model-$1-$&-$$-tier" } as const;
+    const out = applyModelPin(charter("opus"), dollarPins, "agents/amadeus-x-agent.md");
+    expect(out).toContain("model: vendor/model-$1-$&-$$-tier");
+    expect(out).toContain("name: amadeus-x-agent");
+    expect(out).toContain("# Body");
+  });
 });

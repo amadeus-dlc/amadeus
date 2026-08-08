@@ -71,4 +71,38 @@ describe("t337 fragment splice order (upstream t188 #9 analog)", () => {
     const skill2 = again.sharedWrites.find((w) => w.path === "SKILL.md")!;
     expect(skill2.bytes.equals(skill!.bytes)).toBe(true);
   });
+
+  // Issue #2580 regression pin. rebuildFragmentFile spliced a fragment's body
+  // via `text.replace(f.anchor, block)` — a TEMPLATE replacement string. The
+  // search value (f.anchor) is a literal string, not a RegExp, but the
+  // `$`-pattern interpretation of replace's REPLACEMENT argument still
+  // applies, so a fragment author's body text containing `$1`/`$&`/`` $` ``/
+  // `$'`/`$$` would have been silently mangled instead of spliced verbatim.
+  // Fixed by switching the splice to a replacer function.
+  test("fragment body containing $-special sequences splices verbatim (Issue #2580)", () => {
+    const dollarBody = "price is $1, echo $&, prefix-$'-suffix, total $$5, trailing $";
+    const manifest: PluginManifest = {
+      name: "frag-dollar",
+      stages: [],
+      seams: [],
+      fragments: [{ file: "SKILL.md", anchor: "<!-- ANCHOR-ONE -->", id: "dollar", text: dollarBody }],
+      tools: [],
+    };
+    const descriptor: PluginDescriptor = {
+      name: "frag-dollar",
+      manifestBytes: Buffer.from(JSON.stringify(manifest)),
+      manifest,
+      parseErrors: [],
+    };
+    const plan = planPluginComposition(descriptor as ValidPlugin, hostWithTwoAnchors());
+    const skill = plan.sharedWrites.find((w) => w.path === "SKILL.md");
+    expect(skill).toBeDefined();
+    const body = skill!.bytes.toString("utf-8");
+
+    expect(body).toContain(`${dollarBody}\n<!-- amadeus:plugin-fragment:dollar -->`);
+    // The host's untouched second anchor and its tail must survive unmangled —
+    // a `$&`/`$'` corruption would have bled the whole-match or post-match
+    // text into the splice and disturbed the rest of the file.
+    expect(body).toContain("<!-- ANCHOR-TWO -->\ntail");
+  });
 });

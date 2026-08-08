@@ -138,7 +138,13 @@ export function applyModelPin(
       `modelPins: ${file} pins "model: ${alias}", which the harness model map does not cover - add the tier to the map instead of shipping a charter this harness cannot resolve.`,
     );
   }
-  return content.replace(block[0], block[0].replace(pin[0], `model: ${mapped}`));
+  // Replacer functions, not template replacement strings: `block[0]` embeds
+  // `mapped` (a harness model-map value), which can contain `$`-special
+  // sequences that String.replace's template form would interpret as
+  // replacement patterns even though both search values here are literal
+  // strings, not RegExps (Issue #2580).
+  const rewrittenBlock = block[0].replace(pin[0], () => `model: ${mapped}`);
+  return content.replace(block[0], () => rewrittenBlock);
 }
 
 function applyFrontmatterAdditions(

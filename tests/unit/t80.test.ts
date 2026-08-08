@@ -46,6 +46,7 @@
 // (trims to "") — covering both shapes the .sh allowed.
 
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
+import { copyTreeWithRetry } from "../harness/fixtures.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -159,7 +160,7 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     const record = join(proj, "amadeus", "spaces", "default", "intents", "t80-fixture-deadbeef");
     mkdirSyncRecursive(record);
     writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
-    cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+    copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
     const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
     const claudeMd = join(proj, ".claude", "CLAUDE.md");
     if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
