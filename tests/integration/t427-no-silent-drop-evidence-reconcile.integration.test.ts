@@ -18,6 +18,7 @@ import {
   type CommandResult,
   type CommandRunner,
   NoSilentDropEvidenceAdapter,
+  normalizeSpawnOutcome,
   systemCommandRunner,
 } from "../../scripts/no-silent-drop-evidence-adapter.ts";
 import {
@@ -37,13 +38,12 @@ const MOCK_EVENT_PARENT = "a".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
 // #2338: reconcile no longer ratchets previousDigest ledger files.
 
+// Same fail-closed discipline as `systemCommandRunner` (#2397): a spawn that sets `error` did not
+// deliver what was asked for even when it reports exit 0, and the error detail always reaches
+// stderr so a failure here is diagnosable rather than a silently truncated stdout.
 function command(cwd: string, args: readonly string[]): CommandResult {
   const result = spawnSync(args[0], args.slice(1), { cwd, encoding: "utf8", env: process.env });
-  return {
-    status: result.status ?? 1,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? (result.error === undefined ? "" : String(result.error)),
-  };
+  return normalizeSpawnOutcome(result, 0);
 }
 
 function commandResult(status = 0, stdout = "", stderr = ""): CommandResult {
