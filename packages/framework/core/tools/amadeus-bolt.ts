@@ -773,11 +773,9 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
   const resolvedIntent = activeIntent(pd, space, intent) ?? undefined;
   withAuditLock(pd, () => {
     const path = forkedStateFilePath(pd, slug, intent, space);
-    if (!path) {
-      error(
-        `No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`
-      );
-    }
+    // One line: bun's lcov leaves the continuation lines of a multi-line call
+    // at DA:0, so a wrapped call reads as two dead rows rather than one.
+    if (!path) error(`No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`);
     const content = readFileSync(path, "utf-8");
     const updated = setOrInsertField(
       content,

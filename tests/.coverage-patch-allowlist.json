@@ -6480,5 +6480,16 @@
     },
     "reason": "The recover-schema-1 dispatch arm is a single call plus process.exit inside import.meta.main, so it is only ever executed by a spawned CLI run that bun --coverage does not measure. Everything it decides — the outcome, the JSON payload, the stream each line goes to and the exit code — lives in recoverSchema1AdvisoryStoreCli, which t470 drives in-process; t470 also spawns the real CLI so the arm itself is proven wired.",
     "expiry": "remove when the patch gate measures import.meta.main dispatch arms or the arm moves out of the main block"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "setMergeHeld",
+      "fingerprint": "sha256:a6385cca771a5c5dd6e502c4f567662e1c6d29f4da1f5c046db8e0de0fab7417",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The missing-forked-state arm of setMergeHeld. Its only statement is error(), amadeus-bolt.ts's emitError wrapper, and emitError ends in process.exit(1) unconditionally — an in-process driver is killed before it can assert, and stubbing process.exit would latch emitError's _errorEmitInProgress flag and suppress the audit row of every later error in the same bun process. The line was already collapsed onto one row (spawn-blindspot-two-step (i)) so this waives one line rather than the wrapped call's three. The lock this arm sits inside is covered: t506 drives both hold-merge and release-merge through handleBoltCommand in-process, including the foreign-holder blocking case and the bucket-inversion pin.",
+    "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
   }
 ]
