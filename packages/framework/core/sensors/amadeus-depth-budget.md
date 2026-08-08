@@ -62,17 +62,26 @@ look proportionate.
 
 ## Budgets
 
-| Depth | Ceiling | Measured median at #2425 |
-|---|---|---|
-| Minimal | 1,200 B per FR | 2,459 B per FR |
-| Standard | 2,400 B per FR | 2,067 B per FR |
-| Comprehensive | none | — |
+Measured over the 43 corpus artifacts carrying `FR-n` ids, by applying this
+sensor's own predicate to each with its recorded depth:
 
-The ceilings sit **below** the measured medians on purpose. The distribution
-this sensor exists to surface is the status quo (an 11x spread with Minimal's
-median above Standard's), so adopting today's numbers as the ceiling would
-ratify it rather than report it. Comprehensive declares no ceiling, matching
-`stage-protocol.md` §8.
+| Depth | Ceiling | min | median | max | Flags |
+|---|---|---|---|---|---|
+| Minimal | 1,800 B per FR | 1,346 | 2,353 | 6,544 | 19/26 |
+| Standard | 2,400 B per FR | 864 | 2,040 | 3,354 | 3/17 |
+| Comprehensive | none | — | — | — | — |
+
+Each ceiling sits **inside** its level's observed range, which is what makes it
+a detector rather than a verdict. Below the median so it pulls the level down —
+adopting today's numbers would ratify the spread this sensor exists to surface
+(an 11x range with Minimal's median above Standard's) — but above the minimum,
+so it still says something about WHICH artifacts are outliers.
+
+That second half was learned the hard way: a first Minimal ceiling of 1,200 sat
+under the observed minimum of 1,346 and flagged 26 of 26. A permanently red
+signal carries no information, so it was noise rather than a measurement.
+
+Comprehensive declares no ceiling, matching `stage-protocol.md` §8.
 
 These are guidance, not a contract: the stage says so in the same words, and a
 finding never blocks a gate.

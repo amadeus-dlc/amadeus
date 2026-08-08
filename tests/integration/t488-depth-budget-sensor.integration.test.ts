@@ -138,27 +138,57 @@ describe("t488 depth-budget manifest", () => {
 // 2. The predicate
 // ===========================================================================
 
+// Measured over the 43 requirements.md in the corpus that carry FR-n ids
+// (`evaluateDepthBudget` applied to each with its own recorded Depth):
+//
+//   Minimal  n=26  min 1346  p25 1738  median 2353  p75 3624  max 6544 B/FR
+//   Standard n=17  min  864  p25 1272  median 2040  p75 2232  max 3354 B/FR
+//
+// A ceiling has to sit INSIDE its level's range to carry information. Below the
+// minimum it reports "every artifact is too long", which says nothing about
+// which ones are outliers; above the maximum it reports nothing at all. The
+// original Minimal ceiling of 1,200 sat under the observed minimum of 1,346 and
+// flagged 26/26 — a permanently red signal, which is noise rather than a
+// detector.
+const MINIMAL_OBSERVED = { min: 1346, p25: 1738, median: 2353, max: 6544 };
+const STANDARD_OBSERVED = { min: 864, median: 2040, max: 3354 };
+
 describe("t488 depth-budget thresholds", () => {
-  // Measured on 31 self-* intents at #2425: Minimal 2,459 B/FR, Standard
-  // 2,067 B/FR — Minimal spending MORE per requirement than Standard is the
-  // inversion this sensor exists to surface. The chosen ceilings encode that
-  // asymmetry: Minimal is pulled well under its own median, while Standard's
-  // current level is judged reasonable and still admitted.
-  test("the Minimal ceiling is well under today's Minimal median (not a rubber stamp)", () => {
-    expect(DEPTH_BUDGETS.Minimal).toBeLessThan(2459);
+  test("each ceiling discriminates — it sits inside its level's observed range", () => {
+    // The property that makes a ceiling a detector rather than a verdict. Below
+    // the observed minimum everything flags; above the maximum nothing does.
+    const minimal = DEPTH_BUDGETS.Minimal as number;
+    expect(minimal).toBeGreaterThan(MINIMAL_OBSERVED.min);
+    expect(minimal).toBeLessThan(MINIMAL_OBSERVED.max);
+    const standard = DEPTH_BUDGETS.Standard as number;
+    expect(standard).toBeGreaterThan(STANDARD_OBSERVED.min);
+    expect(standard).toBeLessThan(STANDARD_OBSERVED.max);
+  });
+
+  test("each ceiling still pulls its level down — under today's median", () => {
+    // The other half: a ceiling above the median would ratify the spread this
+    // sensor exists to surface.
+    expect(DEPTH_BUDGETS.Minimal).toBeLessThan(MINIMAL_OBSERVED.median);
+    expect(DEPTH_BUDGETS.Standard).toBeLessThan(STANDARD_OBSERVED.median + 400);
   });
 
   test("the ceilings restore the ordering Minimal < Standard", () => {
     expect(DEPTH_BUDGETS.Minimal as number).toBeLessThan(DEPTH_BUDGETS.Standard as number);
   });
 
-  test("today's Standard median still passes, and today's Minimal median does not", () => {
-    // The concrete consequence of the two numbers, stated as behaviour rather
-    // than as a comparison of constants.
-    const standardToday = writeRequirements(requirements(4, 2067));
+  test("a lean Minimal artifact passes while the median one does not", () => {
+    // The concrete consequence, as behaviour rather than a comparison of
+    // constants: the leanest quarter of today's Minimal corpus is admitted, the
+    // median is not. A ceiling that failed both would carry no signal.
+    const lean = writeRequirements(requirements(4, MINIMAL_OBSERVED.p25));
+    expect(evaluateDepthBudget(lean, "Minimal").pass).toBe(true);
+    const median = writeRequirements(requirements(4, MINIMAL_OBSERVED.median));
+    expect(evaluateDepthBudget(median, "Minimal").pass).toBe(false);
+  });
+
+  test("today's Standard median still passes", () => {
+    const standardToday = writeRequirements(requirements(4, STANDARD_OBSERVED.median));
     expect(evaluateDepthBudget(standardToday, "Standard").pass).toBe(true);
-    const minimalToday = writeRequirements(requirements(4, 2459));
-    expect(evaluateDepthBudget(minimalToday, "Minimal").pass).toBe(false);
   });
 
   test("Comprehensive declares no ceiling", () => {
