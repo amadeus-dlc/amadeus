@@ -123,13 +123,29 @@ describe("t450 --autonomy branch in handleNext", () => {
     expect(stderr).not.toContain("grant preview");
   });
 
+  // A workspace with registry rows but no cursor takes the picker, which has no
+  // command line to carry a declaration (BR-U2-1). Both birth branches can land
+  // there, so both are pinned.
   test("a birth branch that diverts to the intent picker refuses instead of swallowing it", () => {
-    // A workspace with registry rows but no cursor takes the picker, which has
-    // no command line to carry a declaration (BR-U2-1).
     proj = createTestProject();
     const { directive } = runNextInProcess(proj, ["--autonomy", "semi", "--scope", "fix"]);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("--autonomy semi");
+  });
+
+  test("the bare known-scope positional diverts the same way", () => {
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "none", "fix"]);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("--autonomy none");
+  });
+
+  test("without a declaration the picker's own answer goes out unchanged", () => {
+    // The divert refusal must not displace whatever the picker would have said
+    // on an ordinary run — it only speaks when a declaration would be lost.
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["fix"]);
+    expect(String(directive.message)).not.toContain("--autonomy");
   });
 
   test("an invocation that falls into the scope-confirm ask is refused, not turned into an ask", () => {

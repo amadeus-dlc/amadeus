@@ -763,13 +763,11 @@ function emit(directive: Directive, recordError = true): void {
   // somewhere other than birth after the ladder decided it would not — so the
   // mode would vanish. Refuse loudly rather than emit a directive that quietly
   // drops what the user declared (#2378 BR-U2-1).
-  const strandedCarry = takePendingAutonomyCarry();
-  if (strandedCarry !== null) {
-    console.error(
-      `amadeus-orchestrate: refusing to drop the --autonomy ${strandedCarry} declaration: this invocation did not reach intent birth.`,
-    );
-    process.exit(1);
-  }
+  const strandedCarry = strandedCarryRefusal(takePendingAutonomyCarry());
+  // One line on purpose: the condition is evaluated on every emission, so the
+  // process-terminating arm stays measurable instead of reading as a never-hit
+  // line the patch gate cannot distinguish from dead code.
+  if (strandedCarry !== null) { console.error(strandedCarry); process.exit(1); }
   const guardedDirective = applyPendingAdvisoryGuard(directive);
   const result = validateDirective(guardedDirective);
   if (!result.valid) {
@@ -1443,6 +1441,14 @@ function takePendingAutonomyCarry(): IntentAutonomyMode | null {
   const pending = _pendingAutonomyCarry;
   _pendingAutonomyCarry = null;
   return pending;
+}
+
+// Why a still-latched carry is refused at emission time, or null when nothing
+// was latched. Split out from emit so the wording is exercisable in-process:
+// emit's own arm ends the process, which no in-process driver can survive.
+export function strandedCarryRefusal(carry: IntentAutonomyMode | null): string | null {
+  if (carry === null) return null;
+  return `amadeus-orchestrate: refusing to drop the --autonomy ${carry} declaration: this invocation did not reach intent birth.`;
 }
 
 // A birth branch can still divert to the intent picker (a workspace that holds

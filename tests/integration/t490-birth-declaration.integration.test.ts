@@ -25,14 +25,15 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { handleIntentBirth } from "../../packages/framework/core/tools/amadeus-utility.ts";
 import {
   applyProductionAutonomyMode,
   readProductionAutonomyProjection,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import { getField } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 const BUN = process.execPath;
@@ -137,6 +138,39 @@ function directiveOf(stdout: string): Record<string, unknown> {
   const line = stdout.split("\n").find((l) => l.trim().startsWith("{"));
   expect(line).toBeDefined();
   return JSON.parse(line as string) as Record<string, unknown>;
+}
+
+// The birth handler driven IN-PROCESS. The spawned `birth()` above is the real
+// user-facing chain, but bun's coverage cannot see inside a child, so the wiring
+// between the flag and the declaration is exercised here as well
+// (bun-coverage-spawn-blindspot). stdout is captured because the declaration
+// reports through it.
+function birthInProcess(projectDir: string, flags: Record<string, string>): string {
+  const original = process.stdout.write.bind(process.stdout);
+  // The canonical tree ships no data/ dir (the packager writes it), so the
+  // graph/grid/scopes are pinned at the built copy the spawned half already uses.
+  const pins = {
+    AMADEUS_STAGE_GRAPH: join(AMADEUS_SRC, "tools", "data", "stage-graph.json"),
+    AMADEUS_SCOPE_GRID: join(AMADEUS_SRC, "tools", "data", "scope-grid.json"),
+    AMADEUS_SCOPES_DIR: join(AMADEUS_SRC, "scopes"),
+  };
+  const saved = new Map(Object.keys(pins).map((k) => [k, process.env[k]]));
+  Object.assign(process.env, pins);
+  let out = "";
+  process.stdout.write = ((chunk: unknown) => {
+    out += String(chunk);
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    handleIntentBirth(projectDir, { ...flags, "project-dir": projectDir });
+  } finally {
+    process.stdout.write = original;
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+  return out;
 }
 
 let proj: string | undefined;
@@ -270,6 +304,87 @@ describe("t490 intent-birth --autonomy (FR-1a/FR-1b, BR-U2-3, BR-U2-4)", () => {
     appendHumanTurn(activeRecordDir(projectDir), new Date().toISOString());
     expect(
       applyProductionAutonomyMode({ projectDir, stateContent: stateOf(projectDir), mode: "semi" }),
+    ).toMatchObject({ ok: true, projection: { mode: "semi" } });
+  });
+});
+
+describe("t490 the birth handler's own declaration wiring (in-process)", () => {
+  test("a semi declaration reaches the canonical write path and is reported", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
+    appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
+
+    const out = birthInProcess(projectDir, { scope: "feature", label: "new work", autonomy: "semi" });
+    expect(out).toContain("Intent autonomy: semi");
+    expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("semi");
+  });
+
+  test("full is reported without being applied", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
+    appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
+
+    const out = birthInProcess(projectDir, { scope: "feature", label: "new work", autonomy: "full" });
+    expect(out).toContain("preview-autonomy");
+    expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("none");
+  });
+
+  test("a birth with no declaration reports nothing about autonomy", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    const out = birthInProcess(projectDir, { scope: "feature", label: "plain work" });
+    expect(out).toContain("Intent born:");
+    expect(out).not.toContain("Intent autonomy:");
+  });
+
+  // The MINOR from the independent review: a flat-layout migration returns
+  // before the birth pipeline, so the declaration cannot land. It used to vanish
+  // without a word — the exact shape this unit exists to close.
+  test("a declaration alongside a flat-layout migration is reported, never dropped in silence", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    // Seed the pre-workspace flat layout migrateFlatLayout looks for.
+    const flat = join(projectDir, "amadeus-docs");
+    mkdirSync(flat, { recursive: true });
+    writeFileSync(
+      join(flat, "amadeus-state.md"),
+      "# AI-DLC State Tracking\n## Project Information\n- **Scope**: feature\n- **Project**: Legacy App\n",
+      "utf-8",
+    );
+
+    const out = birthInProcess(projectDir, { scope: "feature", autonomy: "semi" });
+    expect(out).toContain("Migrated flat workspace into intent:");
+    // Loud about the drop, and about how to finish the job.
+    expect(out).toContain("Intent autonomy: semi NOT applied");
+    expect(out).toContain("migrated an existing flat workspace");
+    expect(out).toContain("remedy:");
+    expect(out).toContain("/amadeus --autonomy semi");
+    // The skeleton is unchanged: migration still does NOT apply the mode, and
+    // the first declaration stays unspent (BR-U2-4).
+    const projection = readProductionAutonomyProjection(projectDir);
+    expect(projection?.mode).toBe("none");
+    expect(projection?.modeProvenance.kind).not.toBe("human-command");
+  });
+});
+
+describe("t490 launch-chain provenance reads a damaged shard without blowing up", () => {
+  test("a shard that cannot be read is skipped, not fatal", () => {
+    const w = workspaceWithPriorTurn();
+    proj = w.projectDir;
+    // A dangling symlink is the portable way to make readFileSync throw: a
+    // directory returns "" on Linux and throws only on macOS
+    // (bun-readfilesync-dir-platform-divergence).
+    symlinkSync(join(w.born, "audit", "does-not-exist"), join(w.born, "audit", "zz-dangling.jsonl"));
+    // The readable shards still bound the birth, so the sibling turn is found.
+    expect(
+      applyProductionAutonomyMode({
+        projectDir: proj,
+        stateContent: stateOf(proj),
+        mode: "semi",
+        provenanceScope: "launch-chain",
+      }),
     ).toMatchObject({ ok: true, projection: { mode: "semi" } });
   });
 });
