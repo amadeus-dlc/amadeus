@@ -1102,6 +1102,13 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
 // NO second GATE_APPROVED, so a replayed command cannot inflate the audit trail.
 // Validation is numeric (parse, don't validate) and runs BEFORE any emission, so
 // a rejected batch number leaves neither an orphan audit row nor a state edit.
+//
+// The whole read->decide->emit->write section runs under withAuditLock, the same
+// wrap handleSetAutonomy and every amadeus-state.ts RMW handler use: the audit
+// lock emitAudit takes internally is released before writeStateFile, so only an
+// outer lock serialises the state transaction (issue #2589). The inner emit does
+// not self-deadlock — emitAudit branches on holdsAuditLock to the unlocked
+// append when a lock is already held.
 function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
@@ -1111,43 +1118,45 @@ function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
   }
 
   const pd = resolveBoltProjectDir(explicitProjectDir);
-  const content = readStateFile(pd);
-  const approved = parseApprovedSwarmBatches(content);
-  if (approved.includes(batch)) {
-    console.log(JSON.stringify({ batch, already_approved: true, state_updated: false }));
-    return;
-  }
+  withAuditLock(pd, () => {
+    const content = readStateFile(pd);
+    const approved = parseApprovedSwarmBatches(content);
+    if (approved.includes(batch)) {
+      console.log(JSON.stringify({ batch, already_approved: true, state_updated: false }));
+      return;
+    }
 
-  const next = [...approved, batch].sort((a, b) => a - b);
-  const updated = setOrInsertField(
-    content,
-    "## Current Status",
-    SWARM_BATCH_APPROVALS_FIELD,
-    next.join(", "),
-  );
+    const next = [...approved, batch].sort((a, b) => a - b);
+    const updated = setOrInsertField(
+      content,
+      "## Current Status",
+      SWARM_BATCH_APPROVALS_FIELD,
+      next.join(", "),
+    );
 
-  // Audit-first (the handleSetAutonomy precedent): the state edit is already
-  // computed, so an audit failure aborts before the ledger diverges from it.
-  try {
-    emitAudit(pd, "GATE_APPROVED", {
-      Stage: getField(content, "Current Stage") ?? "code-generation",
-      "Swarm batch": String(batch),
-      "User Input": `approve-batch --batch ${batch}`,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+    // Audit-first (the handleSetAutonomy precedent): the state edit is already
+    // computed, so an audit failure aborts before the ledger diverges from it.
+    try {
+      emitAudit(pd, "GATE_APPROVED", {
+        Stage: getField(content, "Current Stage") ?? "code-generation",
+        "Swarm batch": String(batch),
+        "User Input": `approve-batch --batch ${batch}`,
+      });
+    } catch (e) {
+      error(`Audit emission failed: ${errorMessage(e)}`);
+    }
 
-  writeStateFile(pd, updated);
+    writeStateFile(pd, updated);
 
-  console.log(
-    JSON.stringify({
-      emitted: "GATE_APPROVED",
-      batch,
-      approved_batches: next,
-      state_updated: true,
-    })
-  );
+    console.log(
+      JSON.stringify({
+        emitted: "GATE_APPROVED",
+        batch,
+        approved_batches: next,
+        state_updated: true,
+      })
+    );
+  });
 }
 
 // --- CLI entry point ---
