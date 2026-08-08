@@ -146,6 +146,12 @@ describe("extractPostForkDelta / countDeltaRecords", () => {
   // byte-identical anchor rows is the case where a first-occurrence cut over-
   // merges — it drags the duplicate anchor and the records between the two
   // forks into the delta appended to the main ledger.
+  //
+  // The duplicate is synthesised here rather than produced by a second fork:
+  // re-forking always varies Fork Boundary, Source Audit Hash, Reentrant, the
+  // timestamp and the seq, so it cannot make two identical rows. Shard union
+  // merges can (cid:code-generation:cg-shard-merge-dedupe). What this pins is
+  // the agreement between the two functions, not one production path.
   test("cuts at the same (last) anchor occurrence findForkAnchor names", () => {
     const dupA = line(4, "BOLT_STARTED", "2026-07-28T11:01:00Z", { "Bolt slug": "u1-demo" });
     const dupB = line(5, "STEP", "2026-07-28T11:02:00Z", { "Bolt slug": "u1-demo" });

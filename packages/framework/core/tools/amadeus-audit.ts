@@ -733,10 +733,18 @@ export function findForkAnchor(wtContent: string, slug: string): ForkAnchor | nu
 // masquerades as the anchor.
 //
 // Last, not first: this is the SAME occurrence findForkAnchor names when it
-// scans from the tail. A shard may carry byte-identical AUDIT_FORKED rows (a
-// re-fork over an existing shard writes the same anchor fields), and a
-// first-occurrence cut would hand the merge every record written before the
-// current fork — records the main ledger already holds.
+// scans from the tail. A first-occurrence cut on a shard that carries a
+// byte-identical earlier copy of the anchor would hand the merge every record
+// written before the current fork — records the main ledger already holds.
+//
+// Re-forking is NOT how a duplicate arises: handleAuditFork stamps a fresh
+// `Fork Boundary` and `Source Audit Hash` (main has grown by the previous
+// AUDIT_FORKED row), tags a re-entry with `Reentrant`, and the canonical emit
+// adds a new timestamp and per-shard seq — every field that could collide moves.
+// The reachable source is shard union merges, where a concurrent fork's rows are
+// re-appended verbatim (team.md, cid:code-generation:cg-shard-merge-dedupe,
+// measured at 20 duplicated lines). Symmetry with findForkAnchor is the point:
+// the two must not disagree about which anchor they mean, whatever produced it.
 function lastRecordLineStart(buffer: string, lineText: string): number {
   let at = buffer.lastIndexOf(lineText);
   while (at >= 0) {
