@@ -2122,14 +2122,16 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   // about its missing review.
   const unreviewed = unitsMissingReview(pd, stage);
   if (unreviewed.length > 0) {
-    error(
-      `Refusing to complete "${stage.slug}": ${unreviewed.length} unit(s) produced ` +
-        `artifacts with no reviewer verdict recorded on them — ${unreviewed.join(", ")}. ` +
-        `The stage protocol requires the reviewer to run before the gate (§12a), and a ` +
-        `unit whose artifacts already exist will not be re-emitted for one. Run §12a for ` +
-        `each unit named above, or halt for human direction if its review cannot be ` +
-        `established. Do not hand-write the Review block.`
-    );
+    // Built one statement per line rather than as a multi-line argument: a
+    // continuation line of a single call carries no DA record of its own under
+    // bun's union merge, so the patch gate reads it as never executed.
+    let message = `Refusing to complete "${stage.slug}": ${unreviewed.length} unit(s) produced `;
+    message += `artifacts with no reviewer verdict recorded on them — ${unreviewed.join(", ")}. `;
+    message += "The stage protocol requires the reviewer to run before the gate (§12a), and a ";
+    message += "unit whose artifacts already exist will not be re-emitted for one. Run §12a for ";
+    message += "each unit named above, or halt for human direction if its review cannot be ";
+    message += "established. Do not hand-write the Review block.";
+    error(message);
   }
 }
 
