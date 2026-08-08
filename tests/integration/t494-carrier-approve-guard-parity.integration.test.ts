@@ -237,7 +237,7 @@ function seedProject(stage: string, checkboxes = COMPLETED_UPSTREAM): string {
   return proj;
 }
 
-describe("t493 carrier approve guard parity (#2375)", () => {
+describe("t494 carrier approve guard parity (#2375)", () => {
   // RED 1 (swarm reconciliation). A plan that declares alpha/beta parallel with
   // zero fan-out on record is refused on the normal path; before the fix the
   // carrier reached spawnState with the same fixture.
