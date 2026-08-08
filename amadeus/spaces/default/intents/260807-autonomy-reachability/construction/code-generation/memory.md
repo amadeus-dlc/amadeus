@@ -17,6 +17,10 @@
 - **u5**: コード変更ゼロのため CI 対象面が無く、§12a reviewer による**数値の独立再導出**が検証面である。reviewer は audit シャードと述語定義の read 許可のもとでコーパス全体4値・per-record 16セル・依存着地4面・時系列3点を再計算して全一致を確認し、さらに conductor が見落としていた過大計上1件(records 146 → 実数 145)を検出した。
 - 両 unit とも §12a 独立レビューは **READY**(u4 invocation `b2a756da…` / u5 invocation `a60c7858…`、いずれも iteration 1)。
 
+2026-08-08T12:30Z — **上記「依存エッジ追加は採らない」の訂正(record-sync レビュー m1 指摘)**: E-CGDRIFT 裁定(申告して進む)は、プラン乖離ガードに裁定を消費する経路が存在しない(amadeus-orchestrate.ts:5490-5495 の実測)ことが判明して**実行不能**となり、ユーザー裁定により方針を反転 — unit-of-work-dependency.md へ依存エッジを**追加した**。ただし「実在しない技術的依存を焼き込まない」という当初の懸念は、エッジを「技術的依存」と「実行環境制約」に区別する表で保存している(同ファイル :16-30、phase-check-construction.md:18 にも開示済み)。
+
+2026-08-08T12:30Z — **transcript 完了述語の実測 provenance(record-sync レビュー m2 指摘)**: §13 学習 `cid:code-generation:c1-transcript-predicate-excludes-prompt` が引く poll 数値の一次出力 — u4 §12a レビュアー待機スクリプト(scratchpad/wait-u4rev.sh)の逐語出力: 誤発火時 `DONE size=149736 poll=1`(ファイル全体 grep の述語が自プロンプト内の `VERDICT: ` トークンへマッチ — 抽出した最終テキストは中間ナレーション「Now I'll write the re-scan record.」相当の走行中出力)、述語を最終 assistant テキスト限定へ是正後 `DONE size=464302 poll=15`(真の verdict を捕捉)。
+
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
 

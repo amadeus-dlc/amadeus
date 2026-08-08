@@ -101,8 +101,6 @@
 - Per-intent record: `re-scans/260807-projectdir-worktree-fix.md`
 
 
-## 実行メタデータ（履歴: 260807-failclosed-recovery-path）
-
 ## 実行メタデータ（履歴: 260807-autonomy-reachability）
 
 - Date: `2026-08-07`
