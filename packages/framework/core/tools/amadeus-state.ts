@@ -50,6 +50,7 @@ import {
   normalizeWorktreeSlug,
   ownPhase,
   PHASE_NUMBERS,
+  parseBoltDag,
   parseCheckboxes,
   parseScopedCheckboxes,
   parseRefsList,
@@ -1643,6 +1644,50 @@ function parseRuntimeStateUnitRow(row: unknown): RuntimeStateUnitRow | null {
   return { name, kind: normalized.data };
 }
 
+// Unit kinds as the COMMITTED canonical source states them: the fenced yaml
+// edge block in unit-of-work-dependency.md, read through the same parser the
+// runtime graph is compiled with (`parseBoltDag`). Anything unparseable yields
+// an empty map, so a caller falls back exactly as it did before.
+function canonicalUnitKinds(pd: string): ReadonlyMap<string, UnitKind> {
+  const kinds = new Map<string, UnitKind>();
+  let body: string;
+  try {
+    body = readFileSync(unitDependencyPath(pd), "utf-8");
+  } catch {
+    return kinds;
+  }
+  const parsed = parseBoltDag(body);
+  if (!parsed.ok) return kinds;
+  for (const unit of parsed.units) {
+    if (unit.kind !== undefined) kinds.set(unit.name, unit.kind);
+  }
+  return kinds;
+}
+
+// One unit's kind, runtime graph first and the committed doc second (#2567).
+//
+// runtime-graph.json is gitignored, so a fresh clone, a per-Bolt worktree or a
+// stale compile can leave it absent, without the unit's row, or with the row but
+// no `kind`. The reviewer, meanwhile, wrote its verdict to the primary of the
+// KIND-PRUNED produces it was handed at emit time. A gate that cannot name the
+// kind reads the unpruned primary instead — a different file — and refuses a unit
+// that was reviewed. unit-of-work-dependency.md is the source the runtime graph
+// is compiled from and it IS committed, so consulting it removes the asymmetry
+// rather than widening the gate. When neither source names the kind the emit side
+// was unpruned too, both ends agree again, and the legacy behaviour is correct.
+//
+// The canonical read is lazy: a resolved runtime graph never touches the disk.
+function unitKindResolver(pd: string): (unit: string) => UnitKind | undefined {
+  const runtime = readRuntimeUnitKinds(pd)?.kinds;
+  let canonical: ReadonlyMap<string, UnitKind> | null = null;
+  return (unit) => {
+    const live = runtime?.get(unit);
+    if (live !== undefined) return live;
+    canonical ??= canonicalUnitKinds(pd);
+    return canonical.get(unit);
+  };
+}
+
 // Invalid or absent runtime data returns null. Callers then retain the legacy
 // full artifact matrix, which is the fail-safe direction for completion.
 function readRuntimeUnitKinds(pd: string): RuntimeUnitKinds | null {
@@ -1726,20 +1771,22 @@ function kindAwareArtifactsExist(
 // because the graph is the thing most likely to be stale or absent exactly when
 // this gap appears — a session that parked mid-Unit. Disk is what the artifact
 // layers already fall back to, and a Unit directory that exists is a Unit that
-// ran. `produces_kinds` still narrows which artifacts count when the runtime
-// snapshot can name the Unit's kind; without it every declared artifact is a
-// candidate, which is the fail-safe direction.
+// ran. `produces_kinds` still narrows which artifacts count when the Unit's kind
+// can be named — by the runtime snapshot, or failing that by the committed
+// unit-of-work-dependency.md the snapshot is compiled from (`unitKindResolver`,
+// #2567). With neither, every declared artifact is a candidate, which matches
+// what the emit side handed the reviewer under the same ignorance.
 function unitsMissingReview(pd: string, stage: ProducedStage): string[] {
   // §12a binds the reviewer to stages that declare one. A stage with no
   // `reviewer` has no verdict to be missing, so there is nothing here to check.
   if (stage.reviewer === undefined || stage.reviewer.trim() === "") return [];
   if (stage.for_each !== "unit-of-work") return [];
   if ((stage.produces ?? []).length === 0) return [];
-  const kinds = readRuntimeUnitKinds(pd)?.kinds;
+  const kindOf = unitKindResolver(pd);
   const missing: string[] = [];
   for (const dir of producesDirsForStage(pd, stage)) {
     const unit = basename(join(dir, ".."));
-    if (unitReviewIsMissing(dir, stage, kinds?.get(unit))) missing.push(unit);
+    if (unitReviewIsMissing(dir, stage, kindOf(unit))) missing.push(unit);
   }
   return missing;
 }
