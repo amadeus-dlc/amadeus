@@ -10,6 +10,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main, resolveOwnHandler } from "../../dist/claude/.claude/tools/amadeus-runtime.ts";
 
@@ -106,9 +108,41 @@ describe("t-runtime-dispatch-seam (#788)", () => {
   // In-process main() drive: registers the resolveOwnHandler call site inside
   // main (line uncovered by the spawn arm — the spawn blindspot) in lcov.
   test("main dispatches a real subcommand in-process (own-property hit)", () => {
-    // `summary` resolves its handler by own-property, then exits 1 when no
-    // runtime-graph.json is present (read-only) — either way the call site runs.
-    expect(driveMain(["summary"])).toBe(1);
+    // `read` (no slug) resolves its handler by own-property and exits 1 on the
+    // missing-slug guard BEFORE touching the filesystem, so the exit code says
+    // nothing about the ambient workspace. `summary` used to stand here, but it
+    // exits 1 only when no runtime-graph.json is found — and with neither
+    // --project-dir nor CLAUDE_PROJECT_DIR set, resolveProjectDir falls through
+    // to its cwd-workspace-marker rung (#2413) and resolves this repo's own
+    // workspace, so an ambient (gitignored) runtime-graph.json flipped the exit
+    // code to 0 (#2469). The own-property dispatch invariant is unchanged:
+    // `read` is a SUBCOMMANDS own-property member exactly as `summary` is.
+    expect(driveMain(["read"])).toBe(1);
+  });
+
+  // Ambient immunity for the case above: even with a runtime-graph.json present
+  // in the resolved workspace — the exact condition that flipped the `summary`
+  // form to 0 — the `read` form stays exit 1.
+  test("main `read` stays exit 1 with an ambient runtime-graph.json present", () => {
+    const proj = mkdtempSync(join(tmpdir(), "t-dispatch-seam-ambient-"));
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    try {
+      // runtimeGraphPath -> docsRoot -> spaceRecordRoot when no intent cursor
+      // is present: <proj>/amadeus/spaces/default/intents/runtime-graph.json.
+      const docs = join(proj, "amadeus", "spaces", "default", "intents");
+      mkdirSync(docs, { recursive: true });
+      writeFileSync(
+        join(docs, "runtime-graph.json"),
+        `${JSON.stringify({ stages: [] }, null, 2)}\n`,
+        "utf-8",
+      );
+      process.env.CLAUDE_PROJECT_DIR = proj;
+      expect(driveMain(["read"])).toBe(1);
+    } finally {
+      if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = saved;
+      rmSync(proj, { recursive: true, force: true });
+    }
   });
 
   test("main routes a prototype-chain name to exit 1 in-process", () => {
