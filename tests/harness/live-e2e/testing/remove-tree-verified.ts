@@ -67,3 +67,26 @@ export function rollbackOrAggregate(error: unknown, cleanup: () => void): never 
   }
   throw error;
 }
+
+/**
+ * Run `work`, rolling the scratch tree back through `cleanup` if it throws.
+ *
+ * It exists to collapse the `catch` clause into this one place: a per-callsite
+ * rollback `catch` that no fixture can reach (a setup whose only fallible step
+ * runs against a directory the line above just created) would otherwise linger
+ * as an uncovered patch line, and the coverage patch gate is zero-tolerance —
+ * see the seam-refactor-first ordering in `tests/coverage-patch-gate.ts`
+ * (Issue #2154). Here the clause is exercised by the setup rollback tests.
+ *
+ * The value and exception semantics are those of a plain try/catch around the
+ * same statements: `work`'s value is returned unchanged, and failures surface
+ * through `rollbackOrAggregate` — the original error when cleanup succeeds, an
+ * `AggregateError` only when cleanup fails too.
+ */
+export function withRollback<T>(cleanup: () => void, work: () => T): T {
+  try {
+    return work();
+  } catch (error) {
+    rollbackOrAggregate(error, cleanup);
+  }
+}
