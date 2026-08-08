@@ -1,7 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-orchestrate.ts(readAutonomyMode), file:packages/framework/core/tools/amadeus-state.ts(handleSet), subcommand:amadeus-state:set
 // size: medium
 //
-// t493 — Issue #2483. Two integrity holes around the autonomy state projection,
+// t495 — Issue #2483. Two integrity holes around the autonomy state projection,
 // found by the cross-review's audit forensics on
 // `260805-semi-redefine-autonomy-f` (Intent Autonomy Mode: full alongside
 // Construction Autonomy Mode: gated):
@@ -86,7 +86,7 @@ function stateWith(intentMode: string, scheduling: string): string {
   ].join("\n");
 }
 
-describe("t493 readAutonomyMode announces the full x non-autonomous degrade (#2483)", () => {
+describe("t495 readAutonomyMode announces the full x non-autonomous degrade (#2483)", () => {
   test("full x gated still returns null AND warns on stderr", () => {
     const r = captureStreams(() => readAutonomyMode(stateWith("full", "gated")));
     expect(r.value).toBeNull();
@@ -165,7 +165,7 @@ function autonomyRows(proj: string): ReturnType<typeof parseAuditRecords> {
   return auditRows(proj).filter((r) => r.event === "AUTONOMY_MODE_SET");
 }
 
-describe("t493 a generic `set` of a projection-owned field is auditable (#2483)", () => {
+describe("t495 a generic `set` of a projection-owned field is auditable (#2483)", () => {
   test("setting Construction Autonomy Mode leaves an audit row naming the field and value", () => {
     projectDir = bornProject();
     const before = autonomyRows(projectDir).length;
