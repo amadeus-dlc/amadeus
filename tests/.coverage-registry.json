@@ -2770,6 +2770,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t487-stage-stats.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }
@@ -6228,7 +6232,7 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
-          "file": "tests/integration/t486-question-route-observability.integration.test.ts",
+          "file": "tests/integration/t488-question-route-observability.integration.test.ts",
           "mechanism": "cli"
         },
         {

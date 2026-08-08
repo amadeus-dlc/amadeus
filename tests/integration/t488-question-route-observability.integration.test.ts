@@ -93,7 +93,7 @@ function answeredField(p: string, key: string, index = 0): string {
   return hit === undefined ? "" : (auditBlockField(hit.block, key) ?? "");
 }
 
-describe("t486 FR-3a: two answer routes are machine-discriminable in the shard", () => {
+describe("t488 FR-3a: two answer routes are machine-discriminable in the shard", () => {
   test("a direct human answer (no --decision-id) records Resolution Route=human and no Decision Id", () => {
     const p = proj();
     answerInProcess(p);
@@ -126,7 +126,7 @@ function spawnAnswer(p: string, extra: string[]): { status: number; out: string 
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
-describe("t486 FR-3 malformed --decision-id is the only new refusal", () => {
+describe("t488 FR-3 malformed --decision-id is the only new refusal", () => {
   test("a malformed decision id exits 1 loudly and emits no QUESTION_ANSWERED", () => {
     const p = proj();
     const r = spawnAnswer(p, ["--decision-id", "not-a-ladder-id"]);
@@ -140,7 +140,7 @@ describe("t486 FR-3 malformed --decision-id is the only new refusal", () => {
 // UNCHANGED by the new flag — an open approval gate refuses the answer with
 // the same message whether or not --decision-id is passed, and nothing is
 // emitted on either path.
-describe("t486 BR-U3-3: existing checkpoint guards are route-agnostic", () => {
+describe("t488 BR-U3-3: existing checkpoint guards are route-agnostic", () => {
   function projWithOpenGate(): string {
     const p = proj();
     const statePath = seededStateFile(p);
@@ -166,7 +166,7 @@ describe("t486 BR-U3-3: existing checkpoint guards are route-agnostic", () => {
   });
 });
 
-describe("t486 FR-3b: bypass detection over real shards, with falling proof", () => {
+describe("t488 FR-3b: bypass detection over real shards, with falling proof", () => {
   test("a human answer under semi mode is detected; rewriting its route to ladder detects nothing", () => {
     const p = proj();
     // Answer once BEFORE any autonomy transaction: mode none, never a violation.
@@ -198,8 +198,8 @@ describe("t486 FR-3b: bypass detection over real shards, with falling proof", ()
       `${JSON.stringify({
         schemaVersion: 1,
         seq: 90,
-        cloneId: "t486-clone",
-        intentId: "t486-intent",
+        cloneId: "t488-clone",
+        intentId: "t488-intent",
         timestamp: new Date().toISOString(),
         heading: "Intent Autonomy Transaction Committed",
         event: "INTENT_AUTONOMY_TRANSACTION_COMMITTED",

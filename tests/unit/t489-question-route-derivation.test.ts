@@ -4,7 +4,7 @@
 // QUESTION_ANSWERED resolution-route derivation and the after-the-fact bypass
 // predicate exported by amadeus-log.ts. In-process imports of the CANONICAL
 // module (not dist) so the new lines are lcov-measured (spawn-blindspot
-// mitigation); the CLI wiring itself is exercised by the t486 integration
+// mitigation); the CLI wiring itself is exercised by the t488 integration
 // twin.
 
 import { describe, expect, test } from "bun:test";
@@ -101,8 +101,8 @@ function row(event: string, fields: Record<string, string>): string {
   return JSON.stringify({
     schemaVersion: 1,
     seq,
-    cloneId: "t487-clone",
-    intentId: "t487-intent",
+    cloneId: "t489-clone",
+    intentId: "t489-intent",
     timestamp: `2026-08-08T00:0${seq % 10}:00Z`,
     heading: event,
     event,
@@ -118,7 +118,7 @@ function autonomyRow(encoded: string): string {
   return row("INTENT_AUTONOMY_TRANSACTION_COMMITTED", { Transaction: encoded });
 }
 
-describe("t487 resolveQuestionRoute (FR-3a derivation)", () => {
+describe("t489 resolveQuestionRoute (FR-3a derivation)", () => {
   test("no --decision-id derives the human route (existing callers unchanged)", () => {
     expect(resolveQuestionRoute(undefined)).toEqual({ route: "human" });
   });
@@ -146,7 +146,7 @@ describe("t487 resolveQuestionRoute (FR-3a derivation)", () => {
   });
 });
 
-describe("t487 questionAnswerRouteRows (BR-U3-5 mode derivation)", () => {
+describe("t489 questionAnswerRouteRows (BR-U3-5 mode derivation)", () => {
   test("derives route and after-the-fact autonomy mode per answer row", () => {
     const encoded = semiTransactionEncoded();
     const audit = [
@@ -184,7 +184,7 @@ describe("t487 questionAnswerRouteRows (BR-U3-5 mode derivation)", () => {
   });
 });
 
-describe("t487 findBypassedQuestionAnswers (FR-3b detection predicate)", () => {
+describe("t489 findBypassedQuestionAnswers (FR-3b detection predicate)", () => {
   test("flags human answers under semi mode; ladder and pre-semi rows pass", () => {
     const encoded = semiTransactionEncoded();
     const audit = [
