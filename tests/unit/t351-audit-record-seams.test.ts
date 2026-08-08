@@ -140,6 +140,45 @@ describe("extractPostForkDelta / countDeltaRecords", () => {
   test("counts zero records in a whitespace-only delta", () => {
     expect(countDeltaRecords("\n\n")).toBe(0);
   });
+
+  // Issue #2584: findForkAnchor scans from the tail (LAST AUDIT_FORKED for the
+  // slug); the delta cut must name the SAME occurrence. A shard carrying two
+  // byte-identical anchor rows is the case where a first-occurrence cut over-
+  // merges — it drags the duplicate anchor and the records between the two
+  // forks into the delta appended to the main ledger.
+  //
+  // The duplicate is synthesised here rather than produced by a second fork:
+  // re-forking always varies Fork Boundary, Source Audit Hash, Reentrant, the
+  // timestamp and the seq, so it cannot make two identical rows. Shard union
+  // merges can (cid:code-generation:cg-shard-merge-dedupe). What this pins is
+  // the agreement between the two functions, not one production path.
+  test("cuts at the same (last) anchor occurrence findForkAnchor names", () => {
+    const dupA = line(4, "BOLT_STARTED", "2026-07-28T11:01:00Z", { "Bolt slug": "u1-demo" });
+    const dupB = line(5, "STEP", "2026-07-28T11:02:00Z", { "Bolt slug": "u1-demo" });
+    const duplicated = prefix + anchorLine + dupA + dupB + anchorLine + deltaA + deltaB;
+
+    const anchor = findForkAnchor(duplicated, "u1-demo")!;
+    expect(anchor.forkBlock).toBe(anchorLine.slice(0, -1));
+
+    const delta = extractPostForkDelta(duplicated, anchor.forkBlock);
+    expect(delta).toBe(deltaA + deltaB);
+    expect(countDeltaRecords(delta!)).toBe(2);
+    expect(delta).not.toContain("AUDIT_FORKED");
+  });
+
+  // "Last occurrence" is not "last textual match": a later line can carry the
+  // anchor's bytes without being that record — a diagnostic quoting it, say.
+  // Cutting at the quote would drop every record between the real anchor and
+  // it. The whole-line test rejects the embedded copy, and the scan walks back
+  // to the record itself, which is the branch that walking back exists for.
+  test("walks past an embedded copy of the anchor text to the record itself", () => {
+    const anchorBlock = anchorLine.slice(0, -1);
+    const quoting = `{"quoted":"${anchorBlock}"}\n`;
+    const shard = prefix + anchorLine + deltaA + quoting;
+
+    expect(shard.lastIndexOf(anchorBlock)).toBeGreaterThan(shard.indexOf(anchorBlock));
+    expect(extractPostForkDelta(shard, anchorBlock)).toBe(deltaA + quoting);
+  });
 });
 
 describe("auditPrefixMismatch — prefix integrity classification (record lines)", () => {

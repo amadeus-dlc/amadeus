@@ -13,7 +13,17 @@ import {
 
 const EXACT_AST_GREP_VERSION = "0.45.0";
 const INTENTIONAL_DROP = /^\s*\/\/ intentional-drop:\s*(\S(?:.*\S)?)\s*$/;
-const NSD003_FUNCTIONS = new Set(["persistBlocked", "setCheckbox", "setStageSuffix", "resyncOneIntent"]);
+// Each catalog contract is bound to the file that must declare it, so a rename of the
+// implementation is a loud RULE_INVALID instead of a silently emptied rule. The binding is
+// only enforced when that file is inside the scanned set: fixture and synthetic-repository
+// scans legitimately contain none of these implementations.
+export const NSD003_CATALOG = [
+  { name: "persistBlocked", file: "packages/framework/core/tools/amadeus-mirror-executor.ts" },
+  { name: "setCheckbox", file: "packages/framework/core/tools/amadeus-lib.ts" },
+  { name: "setStageSuffix", file: "packages/framework/core/tools/amadeus-lib.ts" },
+  { name: "resyncOneIntent", file: "packages/framework/core/tools/amadeus-lib.ts" },
+] as const;
+const NSD003_FUNCTIONS = new Set(NSD003_CATALOG.map((entry) => entry.name as string));
 
 type AstGrepModule = typeof import("@ast-grep/napi");
 type Candidate = {
@@ -869,17 +879,41 @@ export function scanParsedSources(parsedSources: readonly ParsedSource[]): Seman
   const checker = program.getTypeChecker();
   const candidates: SourceFindingCandidate[] = [];
   const contractNames = new Map<string, number>();
+  const contractNamesByFile = new Map<string, Map<string, number>>();
   for (const parsed of parsedSources) {
     const sourceFile = program.getSourceFile(parsed.file);
     if (!sourceFile) throw new InfraFailure("RULE_INVALID", `${parsed.file}: TypeScript Program omitted the snapshot`);
     assertStructuralCoverage(parsed, sourceFile);
+    // Scanned paths reach here from path.relative (engine.ts, snapshot capture),
+    // which separates with backslashes on Windows while the catalog is written
+    // with forward slashes. Keying raw would put every host outside the scan
+    // there, skipping the census in silence -- the exact lapse the census exists
+    // to catch. Normalise the separator so the key is about the path.
+    const scannedFile = parsed.file.replaceAll("\\", "/");
+    const perFile = contractNamesByFile.get(scannedFile) ?? new Map<string, number>();
+    contractNamesByFile.set(scannedFile, perFile);
     for (const name of catalogImplementationNames(sourceFile)) {
       contractNames.set(name, (contractNames.get(name) ?? 0) + 1);
+      perFile.set(name, (perFile.get(name) ?? 0) + 1);
     }
     candidates.push(...semanticCandidates(parsed, sourceFile, checker));
   }
   if ([...contractNames.values()].some((count) => count > 1)) {
     throw new InfraFailure("RULE_INVALID", "multiple implementations resolve to one NSD003 catalog contract");
+  }
+  // Counted PER HOST, not repo-wide: a repo-wide count answers "does this name
+  // exist somewhere", which any same-named helper elsewhere satisfies — so
+  // renaming the catalogued implementation would still read as one match and
+  // pass. The contract is that THIS file declares it, so ask this file.
+  for (const entry of NSD003_CATALOG) {
+    const perFile = contractNamesByFile.get(entry.file);
+    if (perFile === undefined) continue; // host outside this scan's inputs
+    if ((perFile.get(entry.name) ?? 0) !== 1) {
+      throw new InfraFailure(
+        "RULE_INVALID",
+        `NSD003 catalog entry resolves to no implementation: ${entry.name} (${entry.file})`,
+      );
+    }
   }
   const ordinals = new Map<string, number>();
   const exemptionEligible = new Set<string>();

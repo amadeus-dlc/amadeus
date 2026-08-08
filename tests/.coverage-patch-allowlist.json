@@ -6491,5 +6491,16 @@
     },
     "reason": "The missing-forked-state arm of setMergeHeld. Its only statement is error(), amadeus-bolt.ts's emitError wrapper, and emitError ends in process.exit(1) unconditionally — an in-process driver is killed before it can assert, and stubbing process.exit would latch emitError's _errorEmitInProgress flag and suppress the audit row of every later error in the same bun process. The line was already collapsed onto one row (spawn-blindspot-two-step (i)) so this waives one line rather than the wrapped call's three. The lock this arm sits inside is covered: t506 drives both hold-merge and release-merge through handleBoltCommand in-process, including the foreign-holder blocking case and the bucket-inversion pin.",
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
+      "function": "handleApproveBatch",
+      "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The audit-failure catch arm of approve-batch. Its only statement is error(), which is amadeus-bolt.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict — measured directly, an in-process driver never survives to assert. It also latches emitError's module-level _errorEmitInProgress flag, which is never reset, so a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. The lines this arm guards are covered: the happy path (emit then write) and the idempotent early return are both driven in-process by t507, and t145 spawns the real CLI across the lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way.",
+    "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
   }
 ]
