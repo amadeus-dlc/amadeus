@@ -2770,6 +2770,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t487-stage-stats.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }

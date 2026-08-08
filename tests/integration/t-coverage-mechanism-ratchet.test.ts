@@ -98,6 +98,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t481-autonomy-canonical-state-write.integration.test.ts",
     "integration/t482-autonomy-refusal-event.integration.test.ts",
     "integration/t483-preview-non-auto-kinds.integration.test.ts",
+    "integration/t487-stage-stats.integration.test.ts",
     "e2e/t-formal-verif-model-completeness-sensor.test.ts",
     "e2e/t237-election-walking-skeleton.test.ts",
     "e2e/t265-engine-boundary.test.ts",
