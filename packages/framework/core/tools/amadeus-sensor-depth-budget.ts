@@ -25,18 +25,25 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-/** Bytes per numbered FR each depth may spend.
- *
- *  Each ceiling sits INSIDE its level's observed range — below the median so it
- *  pulls the level down, above the minimum so it still discriminates. Measured
- *  over the 43 corpus artifacts carrying FR-n ids:
+/** Bytes per numbered FR each depth may spend. Measured over the 43 corpus
+ *  artifacts carrying FR-n ids:
  *
  *    Minimal  n=26  min 1346  p25 1738  median 2353  max 6544 B/FR
  *    Standard n=17  min  864  median 2040  max 3354 B/FR
  *
- *  Minimal at 1,800 flags 19/26; Standard at 2,400 flags 3/17. An earlier
- *  Minimal of 1,200 sat under the observed MINIMUM and flagged 26/26 — a
- *  permanently red signal carries no information about which artifacts are
+ *  Both ceilings sit INSIDE their level's observed range, which is what makes
+ *  each a detector rather than a verdict. Where they sit within that range
+ *  differs on purpose:
+ *
+ *  - Minimal 1,800 is BELOW its median (2,353), flagging 19/26. Minimal is the
+ *    level the inversion is about — it spends more per requirement than
+ *    Standard while declaring less detail — so its ceiling pulls the level down.
+ *  - Standard 2,400 is ABOVE its median (2,040), flagging 3/17. Standard's
+ *    current volume was judged reasonable, so its ceiling catches the tail
+ *    rather than the middle.
+ *
+ *  An earlier Minimal of 1,200 sat under the observed MINIMUM and flagged
+ *  26/26 — a permanently red signal says nothing about which artifacts are
  *  outliers, so it was noise rather than a detector.
  *
  *  Comprehensive is deliberately absent — it declares no ceiling

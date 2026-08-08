@@ -165,11 +165,22 @@ describe("t488 depth-budget thresholds", () => {
     expect(standard).toBeLessThan(STANDARD_OBSERVED.max);
   });
 
-  test("each ceiling still pulls its level down — under today's median", () => {
-    // The other half: a ceiling above the median would ratify the spread this
-    // sensor exists to surface.
+  test("the MINIMAL ceiling pulls its level down — under today's median", () => {
+    // Minimal is the level the inversion is about: its median (2,353) sits
+    // ABOVE Standard's (2,040) despite declaring less detail. A Minimal ceiling
+    // at or above its own median would ratify exactly that.
     expect(DEPTH_BUDGETS.Minimal).toBeLessThan(MINIMAL_OBSERVED.median);
-    expect(DEPTH_BUDGETS.Standard).toBeLessThan(STANDARD_OBSERVED.median + 400);
+  });
+
+  test("the STANDARD ceiling deliberately sits above its median, admitting the level as it is", () => {
+    // Not an oversight and not held to Minimal's rule: Standard's current
+    // volume was judged reasonable, so its ceiling catches the tail (3/17)
+    // rather than the middle. Pinned as an intentional asymmetry so the two
+    // levels cannot be silently collapsed into one rule.
+    expect(DEPTH_BUDGETS.Standard as number).toBeGreaterThan(STANDARD_OBSERVED.median);
+    // Still bounded: above the median but well inside the range, or it would
+    // stop discriminating altogether.
+    expect(DEPTH_BUDGETS.Standard as number).toBeLessThan(STANDARD_OBSERVED.max);
   });
 
   test("the ceilings restore the ordering Minimal < Standard", () => {

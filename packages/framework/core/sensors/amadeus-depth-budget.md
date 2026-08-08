@@ -71,13 +71,21 @@ sensor's own predicate to each with its recorded depth:
 | Standard | 2,400 B per FR | 864 | 2,040 | 3,354 | 3/17 |
 | Comprehensive | none | — | — | — | — |
 
-Each ceiling sits **inside** its level's observed range, which is what makes it
-a detector rather than a verdict. Below the median so it pulls the level down —
-adopting today's numbers would ratify the spread this sensor exists to surface
-(an 11x range with Minimal's median above Standard's) — but above the minimum,
-so it still says something about WHICH artifacts are outliers.
+Both ceilings sit **inside** their level's observed range, which is what makes
+each a detector rather than a verdict: above the minimum so it says something
+about WHICH artifacts are outliers, below the maximum so it says anything at
+all.
 
-That second half was learned the hard way: a first Minimal ceiling of 1,200 sat
+Where each sits within that range differs on purpose:
+
+- **Minimal 1,800 is below its median (2,353).** Minimal is the level the
+  inversion is about — it spends more per requirement than Standard while
+  declaring less detail — so its ceiling pulls the level down rather than
+  ratifying it.
+- **Standard 2,400 is above its median (2,040).** Standard's current volume was
+  judged reasonable, so its ceiling catches the tail rather than the middle.
+
+The lower bound was learned the hard way: a first Minimal ceiling of 1,200 sat
 under the observed minimum of 1,346 and flagged 26 of 26. A permanently red
 signal carries no information, so it was noise rather than a measurement.
 
