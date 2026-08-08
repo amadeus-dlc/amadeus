@@ -27,24 +27,48 @@ function readSessionMaxConcurrency(env: Record<string, string | undefined> = pro
 	return Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_MAX_CONCURRENCY;
 }
 
+// UNGUARDED BY CI. The file boundary above (one self-contained file, no repo
+// imports) also means no repo test can import this class: `tsconfig.json`
+// includes `harness/*/*.ts`, one level shallower than this file, and the Pi
+// runtime packages it imports are not installed here. The invariant below was
+// verified against a copy of the class in a scratch harness, not by a suite, so
+// a regression would land silently. Making it testable needs a second shipped
+// file and a manifest entry — a packaging change, tracked in #2516.
 class Semaphore {
 	private running = 0;
 	private readonly waiters: Array<() => void> = [];
 
 	constructor(private readonly max: number) {}
 
-	/** Acquire a slot. Resolves to an idempotent release function. */
+	/**
+	 * Acquire a slot. Resolves to an idempotent release function.
+	 *
+	 * A release HANDS ITS SLOT to the first waiter rather than freeing it and
+	 * signalling: `running` never dips while a waiter is owed a turn. That closes
+	 * the window a decrement-then-signal release opens — the woken continuation
+	 * only runs on a later microtask, so a caller arriving in between would see
+	 * room, take the slot synchronously, and then both would count themselves in
+	 * (#2480). Only the slot's fate differs by whether anyone is queued; the count
+	 * stays put on handoff and drops when nothing is waiting.
+	 *
+	 * Handing off rather than re-checking in a loop also keeps the queue FIFO: a
+	 * `while (running >= max)` retry would let whoever wakes first win, and the
+	 * measured pre-fix order was first,third,second.
+	 */
 	async acquire(): Promise<() => void> {
 		if (this.running >= this.max) {
+			// The slot is transferred to us, already counted by the releaser.
 			await new Promise<void>((resolve) => this.waiters.push(resolve));
+		} else {
+			this.running++;
 		}
-		this.running++;
 		let released = false;
 		return () => {
 			if (released) return;
 			released = true;
-			this.running--;
-			this.waiters.shift()?.();
+			const next = this.waiters.shift();
+			if (next === undefined) this.running--;
+			else next();
 		};
 	}
 }
