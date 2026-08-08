@@ -140,6 +140,25 @@ describe("extractPostForkDelta / countDeltaRecords", () => {
   test("counts zero records in a whitespace-only delta", () => {
     expect(countDeltaRecords("\n\n")).toBe(0);
   });
+
+  // Issue #2584: findForkAnchor scans from the tail (LAST AUDIT_FORKED for the
+  // slug); the delta cut must name the SAME occurrence. A shard carrying two
+  // byte-identical anchor rows is the case where a first-occurrence cut over-
+  // merges — it drags the duplicate anchor and the records between the two
+  // forks into the delta appended to the main ledger.
+  test("cuts at the same (last) anchor occurrence findForkAnchor names", () => {
+    const dupA = line(4, "BOLT_STARTED", "2026-07-28T11:01:00Z", { "Bolt slug": "u1-demo" });
+    const dupB = line(5, "STEP", "2026-07-28T11:02:00Z", { "Bolt slug": "u1-demo" });
+    const duplicated = prefix + anchorLine + dupA + dupB + anchorLine + deltaA + deltaB;
+
+    const anchor = findForkAnchor(duplicated, "u1-demo")!;
+    expect(anchor.forkBlock).toBe(anchorLine.slice(0, -1));
+
+    const delta = extractPostForkDelta(duplicated, anchor.forkBlock);
+    expect(delta).toBe(deltaA + deltaB);
+    expect(countDeltaRecords(delta!)).toBe(2);
+    expect(delta).not.toContain("AUDIT_FORKED");
+  });
 });
 
 describe("auditPrefixMismatch — prefix integrity classification (record lines)", () => {

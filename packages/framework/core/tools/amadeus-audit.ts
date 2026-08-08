@@ -727,15 +727,40 @@ export function findForkAnchor(wtContent: string, slug: string): ForkAnchor | nu
   return null;
 }
 
+// Start offset of the LAST whole record line byte-identical to `lineText`, or
+// -1. Whole-line match: the candidate must begin at a line boundary and end at
+// a newline or the buffer end, so a record that merely embeds the text never
+// masquerades as the anchor.
+//
+// Last, not first: this is the SAME occurrence findForkAnchor names when it
+// scans from the tail. A shard may carry byte-identical AUDIT_FORKED rows (a
+// re-fork over an existing shard writes the same anchor fields), and a
+// first-occurrence cut would hand the merge every record written before the
+// current fork — records the main ledger already holds.
+function lastRecordLineStart(buffer: string, lineText: string): number {
+  let at = buffer.lastIndexOf(lineText);
+  while (at >= 0) {
+    const end = at + lineText.length;
+    const startsLine = at === 0 || buffer[at - 1] === "\n";
+    const endsLine = end === buffer.length || buffer[end] === "\n";
+    if (startsLine && endsLine) return at;
+    if (at === 0) break;
+    at = buffer.lastIndexOf(lineText, at - 1);
+  }
+  return -1;
+}
+
 // Everything after the AUDIT_FORKED anchor record — the post-fork delta, as
 // verbatim storage text ready for appendFileSync. Returns null when the
 // shard is malformed (anchor line not found or not newline-terminated).
 export function extractPostForkDelta(wtContent: string, forkBlock: string): string | null {
-  const anchorStart = wtContent.indexOf(forkBlock);
+  const anchorStart = lastRecordLineStart(wtContent, forkBlock);
   if (anchorStart < 0) return null;
-  const nl = wtContent.indexOf("\n", anchorStart + forkBlock.length - 1);
-  if (nl < 0) return null;
-  return wtContent.slice(nl + 1);
+  const anchorEnd = anchorStart + forkBlock.length;
+  // Whole-line match guarantees the next byte is a newline unless the anchor
+  // record ends the buffer unterminated — that shard is malformed.
+  if (anchorEnd >= wtContent.length) return null;
+  return wtContent.slice(anchorEnd + 1);
 }
 
 // Count the records inside a verbatim delta produced by extractPostForkDelta.
