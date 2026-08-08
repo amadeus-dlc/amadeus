@@ -752,6 +752,38 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
   }, 30_000);
 
+  // The refusal itself, driven in-process. The spawned arms above cross a
+  // process boundary bun's coverage cannot see, so the branch that names the
+  // unreviewed units would otherwise never register as executed (#2359).
+  // `error()` ends the CLI through process.exit, so that is stubbed into a
+  // throw for the duration of the call.
+  test("completion guard refuses a unit whose artifacts carry no review in-process", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    const dir = join(seededRecordDir(project), "construction", "schema", "functional-design");
+    mkdirSync(dir, { recursive: true });
+    for (const artifact of ["business-rules", "domain-entities"]) {
+      writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`, "utf-8");
+    }
+
+    const originalExit = process.exit;
+    const originalError = console.error;
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(String).join(" ");
+    };
+    try {
+      expect(() => advanceInProcess(project, sourceGraph())).toThrow(/exit 1/);
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+    }
+    expect(stderr).toContain("no reviewer verdict recorded");
+    expect(stderr).toContain("schema");
+  }, 30_000);
+
   test("completion guard scans past a spec unit with no artifacts to one that has them", () => {
     // Two spec units: the first has NO artifacts on disk (artifactsExistInDir
     // returns false and the scan continues), the second has them (returns true),
