@@ -2927,7 +2927,20 @@ function handleIntentLifecycle(args: string[], verb: IntentLifecycleVerb): void 
   if (!intentDir || inputIndex === -1 || inputIndex + 1 >= args.length) {
     error(`Usage: amadeus-state.ts ${verb} <intent-dir> --user-input <text>`);
   }
-  const userInput = args[inputIndex + 1];
+  // Canonical entrance normalization (Issue #2583). The audit block format
+  // cannot round-trip surrounding whitespace: the ledger read side trims every
+  // string field, while the write side and the post-append expectation keep the
+  // value verbatim (only CRLF is escaped). An untrimmed value is therefore
+  // structurally guaranteed to mismatch, and because the mismatch is diagnosed
+  // *after* the append, the transaction journal survives — every later attempt
+  // replays the same throw and the space's archive/unarchive wedges for good.
+  // Normalizing here makes the recorded value a fixed point of the read side,
+  // so the unrepresentable state is never constructed (parse, don't validate).
+  // This is the only normalization point: nothing downstream trims again.
+  // A whitespace-only value collapses to "", which is exactly the already
+  // supported `--user-input ""` (it round-trips), so no input that used to be
+  // accepted is rejected here.
+  const userInput = args[inputIndex + 1].trim();
   const pd = resolveProjectDir(projectDir);
   const space = activeSpace(pd);
   try {

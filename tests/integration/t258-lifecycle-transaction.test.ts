@@ -174,6 +174,38 @@ describe("intent lifecycle transaction CLI", () => {
     expect(readFileSync(cursor, "utf-8")).toBe("260723-other\n");
   });
 
+  // Issue #2583: the ledger read side trims string fields, so an untrimmed
+  // --user-input could never round-trip and wedged the space permanently
+  // (journalFailure, journal left behind, every retry replaying the same
+  // throw). The CLI normalizes at the entrance, so the value it records is
+  // already a fixed point of the read-side normalization.
+  test.each([
+    ["trailing space", "archive it ", "archive it"],
+    ["leading space", " archive it", "archive it"],
+    ["trailing tab", "archive it\t", "archive it"],
+    ["surrounding whitespace", " \t archive it \t ", "archive it"],
+    ["whitespace only", "   ", ""],
+  ])("archives with %s in --user-input and records the trimmed value", (_label, input, recorded) => {
+    const fixture = scaffold("in-flight");
+    const result = run(fixture.root, "archive", fixture.intent, input);
+    expect(result.status, result.stderr).toBe(0);
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter(
+      (r) => r.event === "INTENT_ARCHIVED",
+    );
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["User Input"]).toBe(recorded);
+    // No wedge: the transaction journal is cleared on success.
+    expect(() => readFileSync(join(
+      fixture.root,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      ".amadeus-intent-status-transaction.json",
+    ))).toThrow();
+  });
+
   test("unarchives to in-flight without selecting the intent", () => {
     const fixture = scaffold("archived", false);
     const result = run(fixture.root, "unarchive", fixture.intent);
