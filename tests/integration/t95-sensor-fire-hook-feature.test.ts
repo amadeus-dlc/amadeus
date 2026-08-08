@@ -111,6 +111,27 @@ function pinnedShardName(): string {
 }
 const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
+/** How many of requirements-analysis's sensors the hook should fire for a given
+ *  write, computed the way the hook itself decides: match each sensor's
+ *  `matches` glob against the (normalized) path. Derived from the shipped graph
+ *  rather than pinned, so adding a sensor to the stage does not turn these
+ *  fire-path tests red for an unrelated reason. The floor keeps the derivation
+ *  from vacuously passing at zero. */
+function sensorsFiringFor(filePath: string): number {
+  const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
+    slug: string;
+    sensors_applicable?: { matches?: string }[];
+  }[];
+  const stage = graph.find((s) => s.slug === "requirements-analysis");
+  if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
+  const norm = filePath.replace(/\\/g, "/");
+  const count = (stage.sensors_applicable ?? []).filter(
+    (s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm),
+  ).length;
+  if (count < 2) throw new Error(`expected at least 2 firing sensors for ${filePath}, found ${count}`);
+  return count;
+}
+
 const tempDirs: string[] = [];
 afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
@@ -278,16 +299,16 @@ function dropsPath(proj: string): string {
 }
 
 describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — spawnSync)", () => {
-  test("C1a: Inception markdown write fires the 2 markdown sensors [.sh test 1]", () => {
+  test("C1a: Inception markdown write fires every applicable markdown sensor [.sh test 1]", () => {
     const proj = makeProjectActive("requirements-analysis");
-    const r = runHook(
-      proj,
-      join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md"),
-    );
+    const written = join(proj, "amadeus-docs", "inception", "requirements-analysis", "requirements.md");
+    const r = runHook(proj, written);
     expect(r.status).toBe(0);
-    // requirements-analysis ships required-sections + upstream-coverage, both
-    // with matches: **/{amadeus-docs,intents}/** — two should fire.
-    expect(spawnArgvs(proj).length).toBe(2);
+    // required-sections + upstream-coverage carry matches: **/{amadeus-docs,intents}/**,
+    // and depth-budget carries the requirements.md path glob. The expected count
+    // is derived from the shipped graph rather than pinned, so adding a sensor to
+    // the stage does not fail this fire-path test.
+    expect(spawnArgvs(proj).length).toBe(sensorsFiringFor(written));
   }, 30000);
 
   test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
@@ -298,12 +319,10 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // (e.g. reverting to **/amadeus-docs/**) leaves C1a green while the sensors go
     // silent on every real workflow — the exact dead-glob bug P9 fixed.
     const proj = makeProjectActive("requirements-analysis");
-    const r = runHook(
-      proj,
-      join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md"),
-    );
+    const written = join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md");
+    const r = runHook(proj, written);
     expect(r.status).toBe(0);
-    expect(spawnArgvs(proj).length).toBe(2);
+    expect(spawnArgvs(proj).length).toBe(sensorsFiringFor(written));
   }, 30000);
 
   test("C1b: spawned argv carries the fire subcommand [.sh test 2]", () => {

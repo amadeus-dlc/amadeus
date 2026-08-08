@@ -200,6 +200,7 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 | `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
 | `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
 | `amadeus-answer-evidence.md` | `**/*-questions.md` |
+| `amadeus-depth-budget.md` | `**/inception/requirements-analysis/requirements.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |

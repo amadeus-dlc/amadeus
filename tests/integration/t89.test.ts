@@ -361,6 +361,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
     const byId = loadSensors();
     expect([...byId.keys()].sort()).toEqual([
       "answer-evidence",
+      "depth-budget",
       "event-registry-drift",
       "linter",
       "required-sections",

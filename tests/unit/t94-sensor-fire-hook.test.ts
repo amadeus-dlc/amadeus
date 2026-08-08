@@ -104,6 +104,27 @@ const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
 const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
+/** How many of requirements-analysis's sensors the hook should fire for a given
+ *  write, computed the way the hook itself decides: match each sensor's
+ *  `matches` glob against the (normalized) path. Derived from the shipped graph
+ *  rather than pinned, so adding a sensor to the stage does not turn this
+ *  fire-path test red for an unrelated reason. The floor keeps the derivation
+ *  from vacuously passing at zero. */
+function sensorsFiringFor(filePath: string): number {
+  const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
+    slug: string;
+    sensors_applicable?: { matches?: string }[];
+  }[];
+  const stage = graph.find((s) => s.slug === "requirements-analysis");
+  if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
+  const norm = filePath.replace(/\\/g, "/");
+  const count = (stage.sensors_applicable ?? []).filter(
+    (s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm),
+  ).length;
+  if (count < 2) throw new Error(`expected at least 2 firing sensors for ${filePath}, found ${count}`);
+  return count;
+}
+
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
 // emits the trailing Z; we anchor on the date+T to match the .sh's
 // `^[0-9]{4}-[0-9]{2}-[0-9]{2}T`).
@@ -294,9 +315,8 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
 
   test("valid payload + applicable sensors fires the dispatcher [.sh case 3]", () => {
     const proj = makeProjectActive();
-    // requirements-analysis carries two md-glob sensors (required-sections,
-    // upstream-coverage) in the framework graph; an amadeus-docs/**/*.md write
-    // matches **/amadeus-docs/** for both.
+    // requirements-analysis carries several markdown sensors in the framework
+    // graph; an amadeus-docs/**/*.md write matches more than one of them.
     const filePath = join(
       proj,
       "amadeus-docs",
@@ -314,7 +334,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    expect(lines.length).toBe(2); // both applicable md sensors fire
+    expect(lines.length).toBe(sensorsFiringFor(filePath)); // every matching sensor fires
     const firstArgv = JSON.parse(lines[0]) as string[];
     expect(firstArgv.slice(2)).toEqual([
       "fire",

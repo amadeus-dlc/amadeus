@@ -99,6 +99,7 @@ function listRows(out: string): string[][] {
 
 const EXPECTED_IDS = [
   "answer-evidence",
+  "depth-budget",
   "event-registry-drift",
   "linter",
   "model-completeness",

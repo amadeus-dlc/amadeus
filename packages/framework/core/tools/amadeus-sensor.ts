@@ -57,6 +57,7 @@ import {
 	withAuditLock,
 } from "./amadeus-lib.ts";
 import { attachProcessTraceContext, initProcessObservability } from "./amadeus-observability.ts";
+import { readRecordDepth } from "./amadeus-sensor-depth-budget.ts";
 
 // --- Constants ---
 
@@ -493,6 +494,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 		// Ships zero files at GA → the branch gracefully falls through to the floor.
 		scriptArgs.push("--framework-templates-dir", frameworkTemplatesDir());
 	}
+	scriptArgs.push(...depthBudgetArgs(id, outputPath, projectDir));
 	const detailDir = join(sensorsDir(projectDir), stageSlug);
 	const detailPath = join(detailDir, `${id}-${fireId}.md`);
 
@@ -868,7 +870,19 @@ function emitTerminal(
 // the PostToolUse Write/Edit hook applies the same filter at fire time. This is a tiny
 // bespoke matcher — not a full minimatch — because the patterns we ship
 // are constrained to suffix + brace-expansion shapes.
-function matchesGlob(pattern: string, path: string): boolean {
+/** depth-budget's extra flag: the record's resolved depth, read by walking UP
+ *  from the output path to amadeus-state.md. The per-sensor script gets only
+ *  --stage/--output-path and must not guess the record root itself. A missing
+ *  state, a missing Depth field, or an unrecognizable value yields no flag, and
+ *  the sensor then passes fail-open (advisory). Kept out of handleFire so the
+ *  dispatcher's per-sensor arm list does not grow that function's complexity. */
+function depthBudgetArgs(id: string, outputPath: string, projectDir: string): string[] {
+	if (id !== "depth-budget") return [];
+	const depth = readRecordDepth(outputPath, projectDir);
+	return depth === undefined ? [] : ["--depth", depth];
+}
+
+export function matchesGlob(pattern: string, path: string): boolean {
 	const normalizedPath = normalizePathForComparison(path);
 	// Split brace expansions: **/*.{ts,js} → [**/*.ts, **/*.js]
 	const variants: string[] = [];
