@@ -18,6 +18,7 @@
 - BR-I04: source auth/config pathをcopy、symlink、argv/env注入しない。
 - BR-I05: credential leaseはC5が取得・注入し、C4 registrar経由で必ず破棄する。
 - BR-I06: base env allow-listは`PATH`,`HOME`,`TMPDIR`,`LANG`,`LC_ALL`,`NO_COLOR`。auth bindingはnative keychainまたは`ANTHROPIC_API_KEY`だけで、source `HOME`/`CLAUDE_CONFIG_DIR`を渡さない。
+  - **訂正（2026-08-08、Issue #2235）**: 本 BR の「native keychain または」は自己矛盾である。Claude Code は `claude.ai` ログインをソースの `HOME` 経由で解決するため、同じ BR が禁じる source `HOME` の非転送と両立しない。allow-list 相当の環境で `claude -p` は `Not logged in · Please run /login` を返す（2026-08-08 実測、Claude Code 2.1.222）。正しい契約は `ANTHROPIC_API_KEY` のみ。実装は当初からこの正しい契約に従っており、逸脱していたのは本 BR と docs の側だった。
 - BR-I07: project settings pathは`.claude/settings.json`、内容はempty hooks objectだけである。
 
 ## Journey and Lifecycle
