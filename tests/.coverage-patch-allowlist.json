@@ -1620,11 +1620,11 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleNext",
-      "fingerprint": "sha256:0b245462615fcc65f8298463344c87b5e7d8c02086443f3820518c15e85aea64",
+      "fingerprint": "sha256:3dae8ed7906693cc1ba02c057f72d8dad229352ea134f7442cdb7099f04fff71",
       "anchorLines": 5,
       "targetLines": "3"
     },
-    "reason": "The handleNext early return after a mirror directive is covered by strict single-JSON generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
+    "reason": "The handleNext early return from the `--single requires --stage` guard is covered by generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
     "expiry": "remove when handleNext can be driven with an injected in-process emitter"
   },
   {

@@ -1762,10 +1762,7 @@ export function emitComposedPluginStageIfInstalled(
 ): boolean {
   if (!flags.stage || flags.phase) return false;
   if (!isComposedPluginStage(hostRoot, flags.stage)) return false;
-  emitSingleRunStage(
-    flags.stage, scope, projectType, recordPrefix, codekbCtx,
-    resolveDepth(stateContent, scope),
-  );
+  emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
   return true;
 }
 
@@ -3067,10 +3064,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       ));
       return;
     }
-    emitSingleRunStage(
-      flags.stage, scope, projectType, recordPrefix, codekbCtx,
-      resolveDepth(stateContent, scope),
-    );
+    emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
     return;
   }
 
