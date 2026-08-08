@@ -94,31 +94,59 @@ export function parseLcovLineHits(lcov: string): Map<string, Map<number, number>
 // ---------------------------------------------------------------------------
 // Unified diff parsing. Collects added (right-side) line numbers per file from
 // `git diff --unified=0` output. Renames use the +++ path (b/ side).
+//
+// HEADER vs CONTENT (#2574). "+++ " is ambiguous by shape alone: an added line
+// whose CONTENT starts with "++ " renders as "+" + "++ …" = "+++ …". Treating
+// that as a file header retargets currentFile at a bogus path and silently
+// drops the real file's added lines from the gate population (false PASS).
+// The disambiguator is structural, not lexical: file headers only ever appear
+// OUTSIDE a hunk. So this is a two-state machine — outside a hunk, "+++ " is a
+// header; inside one, every line is content. Hunk extent comes from the hunk
+// header's own counts (omitted count means 1, per the unified diff format):
+// removals consume the old budget, additions the new budget, context both. The
+// hunk ends when both budgets reach zero, which returns us to header state.
 // ---------------------------------------------------------------------------
 export function parseDiffAddedLines(diff: string): Map<string, Set<number>> {
   const byFile = new Map<string, Set<number>>();
   let currentFile: string | null = null;
   let rightLine = 0;
+  // Remaining declared lines of the hunk being consumed; both zero = outside.
+  let oldBudget = 0;
+  let newBudget = 0;
   for (const raw of diff.split("\n")) {
-    if (raw.startsWith("+++ ")) {
-      const p = raw.slice(4).trim();
-      currentFile = p === "/dev/null" ? null : p.replace(/^b\//, "");
+    const inHunk = oldBudget > 0 || newBudget > 0;
+    if (!inHunk) {
+      if (raw.startsWith("+++ ")) {
+        const p = raw.slice(4).trim();
+        currentFile = p === "/dev/null" ? null : p.replace(/^b\//, "");
+        continue;
+      }
+      const hunk = raw.match(/^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+      if (hunk) {
+        rightLine = Number.parseInt(hunk[2], 10);
+        oldBudget = hunk[1] === undefined ? 1 : Number.parseInt(hunk[1], 10);
+        newBudget = hunk[3] === undefined ? 1 : Number.parseInt(hunk[3], 10);
+        continue;
+      }
       continue;
     }
-    const hunk = raw.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
-    if (hunk) {
-      rightLine = Number.parseInt(hunk[1], 10);
-      continue;
-    }
-    if (!currentFile) continue;
-    if (raw.startsWith("+") && !raw.startsWith("+++")) {
-      const set = byFile.get(currentFile) ?? new Set();
-      set.add(rightLine);
-      byFile.set(currentFile, set);
+    if (raw.startsWith("\\")) continue; // "\ No newline at end of file" — no budget
+    if (raw.startsWith("+")) {
+      // Budgets are spent even for /dev/null targets, so the hunk still ends.
+      if (currentFile) {
+        const set = byFile.get(currentFile) ?? new Set();
+        set.add(rightLine);
+        byFile.set(currentFile, set);
+      }
       rightLine += 1;
-    } else if (!raw.startsWith("-") && !raw.startsWith("\\")) {
+      newBudget -= 1;
+    } else if (raw.startsWith("-")) {
+      oldBudget -= 1;
+    } else {
       // context line (only appears when unified>0); advances the right side
       rightLine += 1;
+      oldBudget -= 1;
+      newBudget -= 1;
     }
   }
   return byFile;
