@@ -165,6 +165,20 @@ describe("extractPostForkDelta / countDeltaRecords", () => {
     expect(countDeltaRecords(delta!)).toBe(2);
     expect(delta).not.toContain("AUDIT_FORKED");
   });
+
+  // "Last occurrence" is not "last textual match": a later line can carry the
+  // anchor's bytes without being that record — a diagnostic quoting it, say.
+  // Cutting at the quote would drop every record between the real anchor and
+  // it. The whole-line test rejects the embedded copy, and the scan walks back
+  // to the record itself, which is the branch that walking back exists for.
+  test("walks past an embedded copy of the anchor text to the record itself", () => {
+    const anchorBlock = anchorLine.slice(0, -1);
+    const quoting = `{"quoted":"${anchorBlock}"}\n`;
+    const shard = prefix + anchorLine + deltaA + quoting;
+
+    expect(shard.lastIndexOf(anchorBlock)).toBeGreaterThan(shard.indexOf(anchorBlock));
+    expect(extractPostForkDelta(shard, anchorBlock)).toBe(deltaA + quoting);
+  });
 });
 
 describe("auditPrefixMismatch — prefix integrity classification (record lines)", () => {
