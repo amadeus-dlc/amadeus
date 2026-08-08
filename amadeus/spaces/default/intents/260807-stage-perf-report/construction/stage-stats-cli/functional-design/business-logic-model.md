@@ -33,13 +33,14 @@ exit: unreadableShardCount > 0 ? 1 : 0   … FR-1c / FR-7b
 ## A2: 窓構成(C2、FR-2a)
 
 intent×stage ごとに時系列で走査し、`STAGE_STARTED` を待ち行列に置き、次の同 intent×stage の `STAGE_COMPLETED` と対応付ける:
+- **タイムスタンプが parse 不能(`Date.parse` が NaN)のイベント → `invalidTimestamp` バケット(待ち行列へ入れる前に除外 — 明示改訂 R-1、BR-4b)**
 - 対応の付かない START → `unmatchedStart` バケット
 - 起点なし COMPLETED → `orphanComplete` バケット
 - `rawSeconds = completedAt − startedAt`(秒粒度)。0 秒 → 窓は保持しつつ `zeroSecond` バケットへ計数(FR-2d — 母集団からの除外は統計段で適用)
 
 ## A3: idle 減算(C3、FR-2b/2c)
 
-1. idle 区間構成(intent 単位): `STAGE_AWAITING_APPROVAL→(GATE_APPROVED|GATE_REJECTED)` / `WORKFLOW_PARKED→WORKFLOW_UNPARKED` / `SESSION_ENDED→(SESSION_STARTED|SESSION_RESUMED)`
+1. idle 区間構成(intent 単位): `STAGE_AWAITING_APPROVAL→(GATE_APPROVED|GATE_REJECTED)` / `WORKFLOW_PARKED→WORKFLOW_UNPARKED` / `SESSION_ENDED→(SESSION_STARTED|SESSION_RESUMED)`。**parse 不能タイムスタンプの idle イベントは区間へ入れず `invalidTimestamp` へ計数**(明示改訂 R-1、BR-4b — NaN が区間演算へ入らない)
 2. 各窓へクリップ(窓外部分は切除)
 3. クリップ後の区間集合を**開始時刻順にソートし重複マージ**(interval union — 二重減算防止、FR-2 AC ii)
 4. `idleSeconds = マージ後区間長の総和`、`netSeconds = max は取らない — クリップにより構造的に raw ≧ idle が成立`(AC iv: `GATE_APPROVED`/`STAGE_COMPLETED` 同 try-block 発行で idle が窓末尾に接しても、クリップが窓境界で切るため負値は発生しない。コンストラクタの `netSeconds >= 0` 不変条件は防御ではなく仕様の表明)
@@ -63,11 +64,11 @@ subagent イベントの `Model` / `Model Source` 属性で Map 集計。属性�
 ## A7: 統計(C7、FR-6a)
 
 - mean / median / p95(nearest-rank: `values.sort` 後 `ceil(0.95 * n) − 1` 番目、空入力は NaN 伝播 — tests/lib/percentile.ts の意味論を鏡映実装)
-- 統計母集団と恒等式は**層別**(domain-entities「母集団恒等」の正本に従う): 恒等 W `構成済み窓数 = net 統計母集団数 + unclosedIdle + zeroSecond` を出力上で検証可能にする(FR-2 AC vi の「全窓」= 構成済み StageWindow[] の総数、「除外件数」= windowing グループのうち窓由来 2 バケット)。unmatchedStart / orphanComplete は窓未満のイベント計数、corpus / review グループは独立カウンタであり恒等式に参加しない(全 7 バケットの件数報告義務は不変 — FR-2c)
+- 統計母集団と恒等式は**層別**(domain-entities「母集団恒等」の正本に従う): 恒等 W `構成済み窓数 = net 統計母集団数 + unclosedIdle + zeroSecond` を出力上で検証可能にする(FR-2 AC vi の「全窓」= 構成済み StageWindow[] の総数、「除外件数」= windowing グループのうち窓由来 2 バケット)。unmatchedStart / orphanComplete / invalidTimestamp は窓未満のイベント計数、corpus / review グループは独立カウンタであり恒等式に参加しない(全 8 バケットの件数報告義務は不変 — FR-2c、明示改訂 R-1)
 
 ## A8: レンダリング(C8、FR-6)
 
-- 先頭に measurement ref(シャード数・行数・除外バケット全 7 件数)→ 仮説明記文言(FR-6c 固定文字列)→ 本文
+- 先頭に measurement ref(シャード数・行数・除外バケット全 8 件数 — 明示改訂 R-1)→ 仮説明記文言(FR-6c 固定文字列)→ 本文
 - 順序決定性: ステージ表は count-desc → key-asc、Map 系は key-asc(`--json` は Maps を固定順序の配列へ)。同一入力 2 回実行 byte 一致(FR-6 AC i)
 
 ## A9: exit ladder(C9、FR-7b)

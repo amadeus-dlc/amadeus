@@ -1,6 +1,6 @@
 # Code Generation Plan — stage-stats-cli(Bolt 1、walking-skeleton ゲート付き)
 
-上流入力(consumes 全数): requirements(FR-1〜FR-7 / NFR-1〜5 の AC を完了条件として消費)、business-logic-model(A1〜A9 を実装仕様として消費)、business-rules(BR-1〜BR-14 を不変条件として消費)、domain-entities(型定義・母集団恒等を実装契約として消費)、nfr-design 5 点(層構成・検証機構を配置指針として消費)、decisions(ADR-1〜6 を実装裁定として消費)
+上流入力(consumes 全数): requirements(FR-1〜FR-7 / NFR-1〜5 の AC を完了条件として消費)、business-logic-model(A1〜A9 を実装仕様として消費)、business-rules(BR-1〜BR-14 を不変条件として消費)、domain-entities(型定義・母集団恒等を実装契約として消費)、performance-design(単一パス走査・cache 不採用・60 秒回帰上限を実装方針として消費)、security-design(read-only 構造保証・信頼境界外入力のバケット集約・集計値限定出力を実装制約として消費)、unit-of-work(U1 stage-stats-cli の境界・実装ノート・複雑度 M を Bolt スコープとして消費)、decisions(ADR-1〜6 を実装裁定として消費)
 
 ## 実装ステップ(受け入れ基準の述語は requirements.md から逐語で写す — 縮小しない)
 
@@ -20,3 +20,31 @@
 ## 検証水準の開示(swarm referee 非使用)
 
 本セッションはハーネスの worktree 隔離ガード下にあり、cid:code-generation:c1-pcp-isolated-session-swarm-incompat の実効経路に従う: builder は Agent の worktree isolation で実装し、conductor が fidelity diff 空の機械確認付きで取込み、検証コマンドを conductor ツリーで再実行する。swarm referee(check/finalize)の converged 表記は用いない。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-08T03:16:11Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+plan/FD/ND の相互整合・AC 述語の忠実な転記・NFR-5 落ちる実証・swarm referee 非使用の開示は問題なし。ただしレビュー対応で追加した invalid-timestamp バケットが BR-4 の 7 フィールド閉集合契約と衝突したまま、上流 FD/ND への改訂も申告付き逸脱への追記もされていない点が未解決の BLOCKER。
+
+### Findings
+
+- BLOCKER | business-rules.md:10; domain-entities.md:17-32; code-summary.md:62,65 — invalid-timestamp バケット追加により windowing が 5 バケット(計 8 フィールド)になったが、BR-4 は 7 フィールド閉集合、domain-entities の型定義と全 7 バケット報告義務も 7 のままで record 内自己矛盾。cid:code-generation:cg-invariant-conflict-explicit-revision が要求する明示的改訂を経ておらず、申告付き逸脱にも未記載 — FD/ND 該当節の改訂または追加裁定の記録が必要。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-08T03:30:32Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 の BLOCKER(invalidTimestamp 追加が BR-4 の 7 フィールド閉集合と衝突したまま無申告)は解消。3 成果物が正本を domain-entities へ一意化して一致し、code-summary の申告付き逸脱 5 が明示改訂の要求を満たす。恒等 W の参加集合は不変で requirements FR-2c / FR-2 AC vi とも齟齬なし。
+
+### Findings
+
+- None

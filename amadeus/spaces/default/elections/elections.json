@@ -1192,5 +1192,11 @@
     "dirName": "260807-e-spr-nds13",
     "createdAt": "2026-08-07T22:22:57Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-CGS13",
+    "dirName": "260808-e-spr-cgs13",
+    "createdAt": "2026-08-08T03:31:30Z",
+    "status": "recorded"
   }
 ]

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 形は独立 cid でなく cid:code-generation:cg-invariant-conflict-explicit-revision への「入口面」追補とし、intent 固有名(invalid-timestamp / ExclusionCounts / PR #2448)を落とした一般形で書くこと。あわせて c2 の不採用は恒久却下でなく条件付き — record 外ブランチに実装が乗り conductor ツリーが古い構成で reviewer が stale 実装を読んだ誤判定が同型2例目として再発したら、cid:code-generation:c1-reviewer-scope-alignment へ「負方向(scope 内に見えるが検証対象でない/古い面)の明示」の追補として昇格させる。",
+  "rationale": "独立実測。(a) diary memory.md:6-7(Interpretations 2)・:11(Deviations 1)で候補3件の実在を確認。(b) c1 の実害は code-generation-plan.md:24-35 の Review — Iteration 1 が verdict NOT-READY・BLOCKER として実測記録(business-rules.md:10 / domain-entities.md:17-32 / code-summary.md:62,65 の record 内自己矛盾)、iteration 2(:38-50)で解消 = イテレーション1回の実消費。是正の着地は domain-entities.md:27,35 の「明示改訂 R-1」節と code-summary.md の申告付き逸脱 5(『当初 FD は「7 フィールドの閉集合」を明示していたため、これは設計契約の変更にあたる』)。(c) 既存 cid の被覆判定: project.md:275 の cg-invariant-conflict-explicit-revision は『FD の新規制約が先行 Unit 実装の明示的不変条件と衝突したら builder は実装前に停止』であり、方向は FD→実装・入口は stage 内・契機は builder の事前検知。本件は方向が逆(実装側の外部レビュー是正→FD 契約)、入口が record 外(PR bot レビュー)、時点が実装後で、ワークフロー内に停止契機が構造的に存在しない — よって未被覆の増分と判断し採用。(d) c3 は project.md:323 の c1-pcp-isolated-session-swarm-incompat が実効経路 (i)-(iv) を逐語で規定済み(『swarm referee(check/finalize)は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』)。diary Deviations と code-summary『検証水準の開示』節はその適用実績そのもので増分ゼロ。(e) c2 は project.md:268 の c1-reviewer-scope-alignment(予防=不足パスの追加/事後=scope 外前提の conductor 実測)の隣接面(scope 内の stale 面の明示)だが、負方向ブリーフ明示の一般則は既に cid:nfr-design:c1-brief-skip-resolution・cid:functional-design:c2-brief-consumes-verbatim が同族で持ち、単発実測かつブランチ構成固有のため独立 persist は norm 肥大と判断して不採用(上記留保の条件付き昇格を付す)。",
+  "submittedAt": "2026-08-08T04:05:00Z",
+  "receivedAt": "2026-08-08T03:33:16Z"
+}
