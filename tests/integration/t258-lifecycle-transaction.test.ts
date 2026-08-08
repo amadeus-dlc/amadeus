@@ -203,11 +203,10 @@ describe("intent lifecycle transaction CLI", () => {
   });
 
   // #2585. Second-granular audit timestamps make two HUMAN_TURN blocks in one
-  // second a normal input, so the scan resolves the tie by real append order
-  // inside the shard instead of refusing. The intent the previous pin protected
-  // — never pick silently from an ambiguous group — is preserved: the pick is
-  // deterministic (the last-appended turn of the second) rather than arbitrary.
-  test("resolves duplicate HUMAN_TURN timestamps by append order", () => {
+  // second a normal input, so the scan treats the pair as the single consumable
+  // slot the ledger already identifies by shard + timestamp, instead of
+  // refusing the operation outright.
+  test("resolves duplicate HUMAN_TURN timestamps without wedging", () => {
     const fixture = scaffold("in-flight");
     writeFileSync(
       fixture.audit,

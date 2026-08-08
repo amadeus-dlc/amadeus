@@ -2586,9 +2586,6 @@ type LifecycleAuditMatch = {
   readonly shard: string;
   readonly timestamp: string;
   readonly block: string;
-  // Append order WITHIN the origin shard (authoritative there only), so the
-  // second-granular timestamp is not the last word on ordering.
-  readonly pos: number;
 };
 
 function lifecycleAuditMatches(
@@ -2606,11 +2603,11 @@ function lifecycleAuditMatches(
       throw new Error(`Cannot read lifecycle audit shard ${basename(path)}: ${errorMessage(error)}`);
     }
     const blocks = splitAuditRecords(content);
-    for (const [pos, block] of blocks.entries()) {
+    for (const block of blocks) {
       const event = auditBlockField(block, "Event");
       const timestamp = auditBlockField(block, "Timestamp");
       if (!event || !timestamp || (eventType && event !== eventType)) continue;
-      matches.push({ shard: basename(path), timestamp, block, pos });
+      matches.push({ shard: basename(path), timestamp, block });
     }
   }
   return matches;
@@ -2926,23 +2923,20 @@ function collectLifecycleTurnScan(all: LifecycleAuditMatch[]): LifecycleTurnScan
 // resolution filters apply to the whole group and run FIRST: a same-second pair
 // that is already spent is simply skipped, instead of refusing every later
 // archive/unarchive for the record (#2585 — an append-only ledger never heals,
-// so that refusal was permanent). What survives is a group of live turns that
-// differ only in append position, and the last-appended one represents it: the
-// ledger records a consumed turn by shard + timestamp, which IS this group's
-// identity, so the group is one consumable slot and the pick must be
-// deterministic rather than ambiguity-driven.
+// so that refusal was permanent). The ledger records a consumed turn by
+// shard + timestamp, which IS this group's identity, so the group is one
+// consumable slot, not an ambiguity.
 function availableLifecycleTurns(scan: LifecycleTurnScan): LifecycleAuditMatch[] {
   const candidates: LifecycleAuditMatch[] = [];
   for (const [key, same] of scan.turns) {
+    // Any element represents the group: every member shares the shard and the
+    // timestamp, and those two fields are all the caller reads back out, so
+    // which one is picked is not observable.
     const item = same[0];
     if (scan.consumed.has(key)) continue;
     const resolution = scan.latestResolution.get(item.shard);
     if (resolution && item.timestamp <= resolution) continue;
-    candidates.push(same.reduce((latest, next) => (auditBlockIsAfter(
-      { ts: next.timestamp, shard: next.shard, pos: next.pos },
-      { ts: latest.timestamp, shard: latest.shard, pos: latest.pos },
-      false,
-    ) ? next : latest)));
+    candidates.push(item);
   }
   return candidates;
 }
@@ -2957,10 +2951,12 @@ function selectLifecycleHumanTurn(
   );
   // Latest turn wins. availableLifecycleTurns yields at most one candidate per
   // (shard, second), so the only tie left is a same-second pair living in
-  // DIFFERENT shards, where pos says nothing — pos is authoritative inside one
-  // shard only. The shard leaf breaks it, the same shard key the #779
-  // cross-shard tie-break sorts on, so the pick stays deterministic; both sides
-  // are live unconsumed turns, so either is a legitimate reference.
+  // DIFFERENT shards, where no on-disk append order exists. The shard basename
+  // breaks it for determinism ONLY; both sides are live unconsumed turns, so
+  // either is a legitimate reference. This is a different question from the
+  // #779 fail-closed rule: that one decides resolution ⇔ human (the human side
+  // loses an unresolvable same-second tie, and it is decided in the presence
+  // predicates, not by a sort), whereas this picks between two live turns.
   candidates.sort((left, right) =>
     left.timestamp.localeCompare(right.timestamp) || left.shard.localeCompare(right.shard));
   const selected = candidates.at(-1);
