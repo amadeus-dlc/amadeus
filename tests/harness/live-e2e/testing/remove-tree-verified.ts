@@ -18,12 +18,29 @@ import { existsSync, rmSync } from "node:fs";
 const REMOVE_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 10;
 
-export function removeTreeVerified(root: string): void {
+/**
+ * Filesystem seam. The retry and exhaustion branches are only reachable when a
+ * concurrent remover wins the race, so tests drive them through a fake rather
+ * than trying to lose a real race on demand.
+ */
+export interface RemoveTreeIo {
+  rm(root: string): void;
+  exists(root: string): boolean;
+  sleep(ms: number): void;
+}
+
+const realIo: RemoveTreeIo = {
+  rm: (root) => rmSync(root, { recursive: true, force: true }),
+  exists: existsSync,
+  sleep: (ms) => Bun.sleepSync(ms),
+};
+
+export function removeTreeVerified(root: string, io: RemoveTreeIo = realIo): void {
   for (let attempt = 0; attempt < REMOVE_ATTEMPTS; attempt += 1) {
     // Errors other than the swallowed ENOENT (EACCES, EPERM, …) propagate.
-    rmSync(root, { recursive: true, force: true });
-    if (!existsSync(root)) return;
-    if (attempt < REMOVE_ATTEMPTS - 1) Bun.sleepSync(RETRY_DELAY_MS);
+    io.rm(root);
+    if (!io.exists(root)) return;
+    if (attempt < REMOVE_ATTEMPTS - 1) io.sleep(RETRY_DELAY_MS);
   }
   throw new Error(
     `removeTreeVerified: tree still present after ${REMOVE_ATTEMPTS} removal attempts: ${root}`,
