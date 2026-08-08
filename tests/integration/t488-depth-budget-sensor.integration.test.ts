@@ -138,20 +138,26 @@ describe("t488 depth-budget manifest", () => {
 // 2. The predicate
 // ===========================================================================
 
-// Measured over the 43 requirements.md in the corpus that carry FR-n ids
-// (`evaluateDepthBudget` applied to each with its own recorded Depth):
+// Measured over the 50 requirements.md in the corpus that carry FR ids
+// (`evaluateDepthBudget` applied to each with its own recorded Depth), AFTER
+// the domain-prefix counting fix:
 //
-//   Minimal  n=26  min 1346  p25 1738  median 2353  p75 3624  max 6544 B/FR
-//   Standard n=17  min  864  p25 1272  median 2040  p75 2232  max 3354 B/FR
+//   Minimal  n=28  min  556  p25 1389  median 1831  max 6544 B/FR
+//   Standard n=22  min  330  p25 1205  median 1894  max 2953 B/FR
+//
+// These replace an earlier set taken while prefixed ids went uncounted, which
+// inflated every figure (Minimal read median 2353 / min 1346). The ceilings are
+// re-checked against the corrected numbers below rather than being re-derived
+// from them — a threshold moved in the same change that fixed its denominator
+// could not be told apart from one tuned to the new numbers.
 //
 // A ceiling has to sit INSIDE its level's range to carry information. Below the
 // minimum it reports "every artifact is too long", which says nothing about
 // which ones are outliers; above the maximum it reports nothing at all. The
-// original Minimal ceiling of 1,200 sat under the observed minimum of 1,346 and
-// flagged 26/26 — a permanently red signal, which is noise rather than a
-// detector.
-const MINIMAL_OBSERVED = { min: 1346, p25: 1738, median: 2353, max: 6544 };
-const STANDARD_OBSERVED = { min: 864, median: 2040, max: 3354 };
+// original Minimal ceiling of 1,200 flagged 26/26 under the old counts — a
+// permanently red signal, which is noise rather than a detector.
+const MINIMAL_OBSERVED = { min: 556, p25: 1389, median: 1831, max: 6544 };
+const STANDARD_OBSERVED = { min: 330, median: 1894, max: 2953 };
 
 describe("t488 depth-budget thresholds", () => {
   test("each ceiling discriminates — it sits inside its level's observed range", () => {
@@ -276,6 +282,43 @@ describe("t488 depth-budget FR counting", () => {
       "y".repeat(50),
     ].join("\n");
     expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(3);
+  });
+
+  // REGRESSION (#2425): the shipped pattern required a digit straight after
+  // `FR-`, so every domain-prefixed id the corpus actually uses went uncounted.
+  // 13 of 52 artifacts were undercounted and 4 were reported as carrying no
+  // requirements at all. Because the count is the DENOMINATOR of bytes-per-FR,
+  // undercounting inflates the measurement and skews the ceilings derived from
+  // it — the failure was not cosmetic.
+  //
+  // The bodies below are the real shapes, quoted from the corpus.
+  test("counts domain-prefixed ids — the form the corpus actually uses", () => {
+    const body = [
+      "- **FR-AUTH-1(semi 専用 authorization 型の新設)** — ...",
+      "y".repeat(50),
+      "- **FR-LAD-2(第2関門ルーティング)** — ...",
+      "y".repeat(50),
+      "- **FR-GRT-004** — ...",
+      "y".repeat(50),
+    ].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(3);
+  });
+
+  test("a domain-prefixed heading id counts too", () => {
+    const body = ["### FR-ADV-5: heading with a domain prefix", "y".repeat(50)].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(1);
+  });
+
+  test("plain and prefixed ids coexist without collapsing into one", () => {
+    // Distinct ids across both shapes must stay distinct: collapsing them would
+    // shrink the denominator and inflate bytes-per-FR just as undercounting did.
+    const body = [
+      "### FR-1: plain",
+      "y".repeat(50),
+      "- **FR-AUTH-1**: prefixed, a DIFFERENT requirement",
+      "y".repeat(50),
+    ].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(2);
   });
 
   test("a repeated id counts once (a cross-reference is not a new requirement)", () => {

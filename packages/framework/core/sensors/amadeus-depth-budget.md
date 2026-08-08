@@ -56,6 +56,13 @@ allows:
 - `- **FR-1**: <title>` (bold list entry)
 - `**FR-1**: <title>` (bold line)
 
+The id may carry a domain prefix — `FR-AUTH-1`, `FR-QRP-3`, `FR-GRT-004` — which
+is how the corpus overwhelmingly writes them, and nothing is required to follow
+the id: a colon, an em dash, or a parenthesised title inside the same bold run
+all read the same. An earlier pattern demanded a digit straight after `FR-` and
+a closing `**` right after the id; it undercounted 13 of 50 artifacts and read 7
+as carrying no requirements at all.
+
 Distinct ids are counted, so restating `FR-1` in a later cross-reference does
 not inflate the denominator — which would otherwise make an over-long document
 look proportionate.

@@ -95,13 +95,28 @@ const NONE = { fr_count: 0, bytes: 0, bytes_per_fr: 0 };
 
 /** The three ways the stage contract lets a requirement carry its id:
  *  `### FR-1: …` (heading), `- **FR-1**: …` (bold list entry), and a bare
- *  `**FR-1**: …` line. Distinct ids are counted, so restating FR-1 in a later
- *  cross-reference does not inflate the denominator (which would make an
- *  over-long document look proportionate). */
+ *  `**FR-1**: …` line.
+ *
+ *  The id itself may carry a DOMAIN PREFIX — `FR-AUTH-1`, `FR-QRP-3`,
+ *  `FR-GRT-004` — which is how the corpus overwhelmingly writes them. An
+ *  earlier pattern demanded a digit straight after `FR-` and silently skipped
+ *  every prefixed id, undercounting 13 of 52 artifacts and reporting 4 as
+ *  carrying no requirements at all. Since this count is the DENOMINATOR of
+ *  bytes-per-FR, missing ids inflate the measurement.
+ *
+ *  Distinct ids are counted, so restating one in a later cross-reference does
+ *  not inflate the denominator (which would make an over-long document look
+ *  proportionate). */
+const FR_ID = "([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)";
+// The id ends where its own character class does; what follows it — `:`, ` — `,
+// a parenthesised title, or the closing `**` — is not constrained. The corpus
+// writes `- **FR-AUTH-1(semi 専用 authorization 型の新設)** — …`, keeping the
+// title INSIDE the bold run, so a pattern demanding `**` right after the id
+// matches almost nothing.
 const FR_PATTERNS = [
-  /^#{2,4}\s+FR-(\d+)\b/,
-  /^[-*]\s+\*\*FR-(\d+)\*\*/,
-  /^\*\*FR-(\d+)\*\*/,
+  new RegExp(`^#{2,4}\\s+FR-${FR_ID}`),
+  new RegExp(`^[-*]\\s+\\*\\*FR-${FR_ID}`),
+  new RegExp(`^\\*\\*FR-${FR_ID}`),
 ];
 
 export function countFunctionalRequirements(body: string): number {

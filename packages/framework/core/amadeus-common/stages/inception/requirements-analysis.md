@@ -139,7 +139,7 @@ Create `<record>/inception/requirements-analysis/requirements.md` containing:
 - **Out of scope** — Explicitly excluded items
 - **Open questions** — Any remaining uncertainties for later stages
 
-Number every functional requirement with a stable `FR-n` identifier (`### FR-1: <title>` or a bold `**FR-1**` list entry) — downstream stages and sensors address requirements by these ids.
+Number every functional requirement with a stable `FR-` identifier — a heading (`### FR-1: <title>`) or a bold list entry (`- **FR-1**: <title>`). The id may carry a domain prefix (`FR-AUTH-1`, `FR-QRP-3`), which is how most requirements here are written; group requirements by area when that reads better than one flat run. Downstream stages and sensors address requirements by these ids.
 
 **Depth-scaled volume** (read `directive.depth`; guidance, not a hard limit — the depth-budget sensor flags overruns as advisory):
 - **Minimal**: 5-10 FRs, 3-6 lines each. State the behavior and one acceptance check; skip narrative rationale.
