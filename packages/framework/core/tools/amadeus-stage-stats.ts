@@ -899,13 +899,11 @@ function resolveProjectDirLocal(explicitDir: string | undefined): string {
 }
 
 function activeSpaceLocal(projectDir: string): string {
+  let raw = "";
   try {
-    const raw = readFileSync(join(projectDir, "amadeus", "active-space"), "utf-8").trim();
-    if (SAFE_NAME.test(raw)) return raw;
-  } catch {
-    return "default";
-  }
-  return "default";
+    raw = readFileSync(join(projectDir, "amadeus", "active-space"), "utf-8").trim();
+  } catch { return "default"; }
+  return SAFE_NAME.test(raw) ? raw : "default";
 }
 
 const RENDERERS: Record<CliOptions["format"], (report: StageStatsReport) => string> = {
