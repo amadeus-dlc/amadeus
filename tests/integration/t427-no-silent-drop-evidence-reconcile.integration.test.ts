@@ -29,6 +29,9 @@ import {
 
 const SOURCE_ROOT = join(import.meta.dir, "../..");
 const tempRoots: string[] = [];
+const NUL = String.fromCharCode(0);
+// What `git status --porcelain=v1 -z --branch` prints for a clean worktree: the header, nothing else.
+const CLEAN_STATUS = `## main${NUL}`;
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_EVENT_PARENT = "a".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
@@ -276,6 +279,43 @@ describe("t427 pure rebind trust boundary", () => {
     }
   });
 
+  // #2397: `git status -z` can exit 0 with truncated stdout under load — t427 caught the
+  // `git ls-tree -z` face of it. Truncation to EMPTY is the shape no NUL-termination check can
+  // see, because "" is byte-identical to a clean worktree. `--branch` removes the ambiguity at
+  // the source: git always emits the `## <branch>` header, so an answer with no header is
+  // truncation and can never be mistaken for cleanliness.
+  test("asks git for the branch header so an empty answer cannot pass as clean", () => {
+    const root = initRepository();
+    let asked: readonly string[] = [];
+    const runner: CommandRunner = {
+      run(args, options = {}) {
+        if (commandKey(args) === "git status") {
+          asked = args;
+          return commandResult(0, "");
+        }
+        return command(options.cwd ?? root, args);
+      },
+    };
+
+    expect(() => new NoSilentDropEvidenceAdapter(root, runner).assertClean())
+      .toThrow("git status output is truncated: the branch header is missing");
+    expect(asked).toContain("--branch");
+  });
+
+  test("separates a clean worktree from a dirty one by what follows the branch header", () => {
+    const root = initRepository();
+    const statusRunner = (stdout: string): CommandRunner => ({
+      run(args, options = {}) {
+        return commandKey(args) === "git status" ? commandResult(0, stdout) : command(options.cwd ?? root, args);
+      },
+    });
+
+    expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(`## main${NUL}`)).assertClean()).not.toThrow();
+    expect(() =>
+      new NoSilentDropEvidenceAdapter(root, statusRunner(`## main${NUL} M implementation.ts${NUL}`)).assertClean()
+    ).toThrow("index and working tree must be clean before rebind");
+  });
+
   test("rejects a clean detached HEAD before changing evidence", () => {
     const root = initRepository();
     const target = must(root, ["git", "rev-parse", "HEAD"]);
@@ -306,6 +346,7 @@ describe("t427 pure rebind trust boundary", () => {
         if (args[0] === "git" && args[1] === "symbolic-ref") {
           return { status: 0, stdout: "refs/heads/evidence-test\n", stderr: "" };
         }
+        if (args[0] === "git" && args[1] === "status") return { status: 0, stdout: CLEAN_STATUS, stderr: "" };
         return { status: 0, stdout: "", stderr: "" };
       },
     };
@@ -324,7 +365,8 @@ describe("t427 pure rebind trust boundary", () => {
       "git status": () => {
         statusCalls += 1;
         if (statusCalls === 2) rmSync(join(root, "tests", "no-silent-drop"), { recursive: true });
-        return commandResult();
+        // A clean worktree still carries the `## <branch>` header assertClean requires.
+        return commandResult(0, CLEAN_STATUS);
       },
       "git restore": () => commandResult(1, "", "index recovery rejected"),
     };
@@ -354,7 +396,7 @@ function syntheticReconcileRunner(
       if (args[2]?.startsWith("refs/no-silent-drop/")) return commandResult(0, `${MOCK_PULL_REQUEST_HEAD}\n`);
       return commandResult(0, `${MOCK_EVENT}\n`);
     },
-    "git status": () => commandResult(),
+    "git status": () => commandResult(0, CLEAN_STATUS),
     "git ls-tree": () => commandResult(),
     "gh api": () => {
       if (options.mutateEvidenceTo !== undefined) {
