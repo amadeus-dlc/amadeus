@@ -5780,6 +5780,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t507-approve-batch-idempotent.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }
