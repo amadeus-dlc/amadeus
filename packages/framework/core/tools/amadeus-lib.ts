@@ -5319,7 +5319,11 @@ export function setField(content: string, field: string, value: string): string 
     "m"
   );
   if (regex.test(content)) {
-    return content.replace(regex, `$1 ${value}`);
+    // Replacer function, not a template replacement string: `value` is
+    // caller-controlled free text that can contain `$`-special sequences
+    // ($1, $&, $`, $', $$) which String.replace's template form interprets
+    // as replacement patterns, silently corrupting the file (Issue #2580).
+    return content.replace(regex, (_m, head: string) => `${head} ${value}`);
   }
   return content;
 }
@@ -5351,7 +5355,9 @@ export function setFieldStrict(content: string, field: string, value: string): s
       `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`
     );
   }
-  return content.replace(regex, `$1 ${value}`);
+  // Replacer function — see setField's comment on why `value` must never
+  // flow through String.replace's `$`-pattern template form (Issue #2580).
+  return content.replace(regex, (_m, head: string) => `${head} ${value}`);
 }
 
 // setOrInsertField: update field if present; otherwise insert a new
@@ -5370,7 +5376,9 @@ export function setOrInsertField(
     "m"
   );
   if (regex.test(content)) {
-    return content.replace(regex, `$1 ${value}`);
+    // Replacer function — see setField's comment on why `value` must never
+    // flow through String.replace's `$`-pattern template form (Issue #2580).
+    return content.replace(regex, (_m, head: string) => `${head} ${value}`);
   }
   return appendUnderHeading(content, heading, `- **${field}**: ${value}\n`);
 }
@@ -5794,9 +5802,13 @@ const STAGE_PROGRESS_SECTION_RE =
   /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
 
 export function replaceStageProgressSection(content: string, body: string): string {
+  // Replacer function, not a template replacement string: `body` is built
+  // from stage slugs and (for per-unit lines) caller-controlled text, so it
+  // can contain `$`-special sequences that String.replace's template form
+  // would interpret as replacement patterns (Issue #2580).
   return content.replace(
     STAGE_PROGRESS_SECTION_RE,
-    `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
+    () => `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n${body}`,
   );
 }
 

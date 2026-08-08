@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 181,
+      "function": 184,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -3695,8 +3695,13 @@
       "unitClass": "function",
       "unitId": "function:replaceStageProgressSection",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t508-stage-progress-dollar-escape.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4058,8 +4063,13 @@
       "unitClass": "function",
       "unitId": "function:setFieldStrict",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4081,8 +4091,13 @@
       "unitClass": "function",
       "unitId": "function:setOrInsertField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

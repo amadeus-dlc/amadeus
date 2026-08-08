@@ -830,7 +830,12 @@ function rebuildFragmentFile(entry: Extract<LedgerEntry, { kind: "fragment-file"
   let text = entry.base.toString("utf-8");
   for (const f of [...entry.fragments].sort((a, b) => a.order - b.order)) {
     const block = `${f.anchor}\n${f.text}\n${fragmentMarker(f.id)}`;
-    text = text.replace(f.anchor, block);
+    // Replacer function, not a template replacement string: `block` embeds
+    // `f.text` (fragment-author-controlled body text), which can contain
+    // `$`-special sequences that String.replace's template form would
+    // interpret as replacement patterns even though the search value is a
+    // literal string, not a RegExp (Issue #2580).
+    text = text.replace(f.anchor, () => block);
   }
   return Buffer.from(text, "utf-8");
 }
