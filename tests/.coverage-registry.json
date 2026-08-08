@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 182,
+      "function": 185,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -3715,8 +3715,13 @@
       "unitClass": "function",
       "unitId": "function:replaceStageProgressSection",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t508-stage-progress-dollar-escape.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4078,8 +4083,13 @@
       "unitClass": "function",
       "unitId": "function:setFieldStrict",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4101,8 +4111,13 @@
       "unitClass": "function",
       "unitId": "function:setOrInsertField",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t419-state-field-codec.pbt.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -5918,6 +5933,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t506-merge-held-lock-bucket.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t82-hold-merge-invariant.test.ts",
           "mechanism": "cli"
         }
@@ -5955,6 +5974,10 @@
       "unitId": "amadeus-bolt release-merge",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t506-merge-held-lock-bucket.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t82-hold-merge-invariant.test.ts",
           "mechanism": "cli"
