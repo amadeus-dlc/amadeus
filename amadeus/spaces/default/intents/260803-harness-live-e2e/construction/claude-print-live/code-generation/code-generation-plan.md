@@ -15,7 +15,7 @@ Test Strategy: Comprehensive
 
 - [x] Step 1: `claude-print` capability、strict opt-in、GHA hard deny、minimum/measured version、help flag、env/settings isolationをregistryとpreflightへ追加する（FR-1〜FR-4、BR-G01〜G05、BR-I01〜I07）。
 - [x] Step 2: Claude family seamとしてproject-only settings builder、allow-list child env、version parser、bounded JSON normalizerを実装する（FR-3/FR-4、NFR-2/NFR-4、LC-CP-01〜05）。
-- [x] Step 3: fresh project/home/tmp allocator、native keychain/API-key credential binding、closed print argv、abort/reap/credential/scratch cleanupを実装する（FR-3〜FR-6、NFR-1〜NFR-5、BR-I/J）。
+- [x] Step 3: fresh project/home/tmp allocator、native keychain/API-key credential binding、closed print argv、abort/reap/credential/scratch cleanupを実装する（FR-3〜FR-6、NFR-1〜NFR-5、BR-I/J）。**訂正 2026-08-08 / Issue #2235**: このうち native keychain binding は実装されておらず、かつ `HOME` 隔離と両立しないため実装不能。実際に着地したのは API-key binding のみ（根拠は code-summary.md 冒頭の訂正注記）。
 - [x] Step 4: literal prompt、closed JSON schema、90秒deadline、exit/error/turn/structured-output anchorsを持つClaude print journeyを実装する（FR-7/FR-10、BR-J01〜J07、LC-CP-06）。
 - [x] Step 5: U02 contract kitへ `claude-print-contract` baselineとCI/opt-in/env/settings mutantをstable assertion IDで接続する（FR-10、BR-F05）。
 - [x] Step 6: pure unit testsとfake executable integration testsを追加し、policy、preflight、argv/env/cwd/settings、structured assertion、cleanup、ledgerを固定する（Comprehensive strategy）。
