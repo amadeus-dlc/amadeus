@@ -772,7 +772,12 @@ function isMergeHeld(pd: string, slug: string, intent?: string, space?: string):
 function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, space?: string): void {
   const resolvedIntent = activeIntent(pd, space, intent) ?? undefined;
   withAuditLock(pd, () => {
-    const path = forkedStateFilePath(pd, slug, intent, space);
+    // resolvedIntent, not the raw selector: forkedStateFilePath resolves through
+    // the same activeIntent, so both name one record today — but they do it in
+    // two separate calls, and the cursor they read is a file. Passing the value
+    // the lock was taken on makes LOCK == WRITE hold by construction instead of
+    // by the two resolutions happening to agree.
+    const path = forkedStateFilePath(pd, slug, resolvedIntent, space);
     // One line: bun's lcov leaves the continuation lines of a multi-line call
     // at DA:0, so a wrapped call reads as two dead rows rather than one.
     if (!path) error(`No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`);
