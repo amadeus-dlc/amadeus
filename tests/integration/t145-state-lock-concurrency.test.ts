@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-state:set, subcommand:amadeus-state:reject, subcommand:amadeus-state:approve, subcommand:amadeus-state:skip, subcommand:amadeus-state:set-skeleton-stance, function:withAuditLock, function:holdsAuditLock
+// covers: subcommand:amadeus-state:set, subcommand:amadeus-state:reject, subcommand:amadeus-state:approve, subcommand:amadeus-state:skip, subcommand:amadeus-state:set-skeleton-stance, subcommand:amadeus-bolt:approve-batch, function:withAuditLock, function:holdsAuditLock
 //
 // t145 — C2b lost-update safety: the 11 state read-modify-write handlers in
 // amadeus-state.ts now hold the audit lock across their whole read→decide→
@@ -42,7 +42,7 @@
 
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, rmdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   cleanupTestProject,
@@ -51,6 +51,8 @@ import {
 import {
   auditLockDir,
   getField,
+  setField,
+  SWARM_BATCH_APPROVALS_FIELD,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // Standalone hermeticity (issue #698): the suite runner injects these guard
@@ -65,6 +67,7 @@ process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
+const BOLT_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-bolt.ts");
 const UTIL_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 
 let proj: string;
@@ -380,6 +383,141 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
       ["set", "Revision Count=+1"],
       ["set-skeleton-stance", "on"],
     ]);
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  }, 60000);
+});
+
+// -----------------------------------------------------------------------------
+// #2589 — amadeus-bolt approve-batch was the ONE state read-modify-write that
+// ran OUTSIDE withAuditLock, unlike its sibling set-autonomy and every handler
+// in amadeus-state.ts. readStateFile -> parseApprovedSwarmBatches ->
+// setOrInsertField -> emitAudit -> writeStateFile was unserialised, so a
+// concurrent writer's field could be clobbered (lost update). The audit lock
+// emitAudit takes internally is released BEFORE writeStateFile, so it never
+// covered the state transaction.
+//
+// The load-bearing test is DETERMINISTIC, not a race: a lock the handler is
+// obliged to respect is held by THIS (live) process before the spawn, so the
+// unlocked handler writes straight through it while the locked one exhausts its
+// acquire budget and refuses. The lost-update twin corroborates with the real
+// two-process race.
+// -----------------------------------------------------------------------------
+
+/** Run the bolt tool synchronously against a project. */
+function boltSync(args: string[], p: string): { status: number; stdout: string; stderr: string } {
+  const r = Bun.spawnSync({
+    cmd: [BUN, BOLT_TOOL, ...args, "--project-dir", p],
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env },
+  });
+  return {
+    status: r.exitCode,
+    stdout: r.stdout.toString(),
+    stderr: r.stderr.toString(),
+  };
+}
+
+describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    const init = Bun.spawnSync({
+      cmd: [BUN, UTIL_TOOL, "init", "--scope", "fix", "--project-dir", proj],
+      stdout: "ignore",
+      stderr: "ignore",
+      env: { ...process.env },
+    });
+    if (init.exitCode !== 0) throw new Error("t145 #2589 fixture init failed");
+  });
+
+  afterEach(() => {
+    // recursive: the held-lock test leaves a STAMPED dir, which rmdirSync can't
+    // remove.
+    rmSync(auditLockDir(proj), { recursive: true, force: true });
+    cleanupTestProject(proj);
+  });
+
+  // ---------------------------------------------------------------------------
+  // The deterministic one — it separates the handler's READ from its WRITE and
+  // writes into the gap, so no interleaving luck is involved.
+  //
+  // We take the workspace-sentinel audit lock (the identity withAuditLock(pd)
+  // keys on) stamped with THIS process's live pid, so the acquire path can
+  // never reap it (a live owner is never robbed at any age), and spawn
+  // approve-batch against it. Where each version blocks is the whole point:
+  //   pre-fix  — nothing guards the read, so it snapshots the state file
+  //              immediately and only then blocks, inside emitAudit's own
+  //              acquire. Its snapshot is now stale by construction.
+  //   post-fix — it blocks on the outer withAuditLock BEFORE reading anything.
+  // We then mutate an unrelated field under the lock we hold and release. The
+  // pre-fix handler resumes and rewrites the whole file from its stale
+  // snapshot, so our field reverts (the lost update). The post-fix handler
+  // acquires, reads fresh, and both edits survive.
+  //
+  // Holding is capped well under emitAudit's own 50 x 100ms retry budget, so
+  // the pre-fix handler is still retrying (not yet errored) when we let go.
+  // ---------------------------------------------------------------------------
+  test("a write into approve-batch's read-to-write gap is not clobbered", async () => {
+    const lockDir = auditLockDir(proj);
+    mkdirSync(lockDir);
+    writeFileSync(
+      join(lockDir, "owner.json"),
+      JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) }),
+      "utf-8",
+    );
+
+    const proc = Bun.spawn({
+      cmd: [BUN, BOLT_TOOL, "approve-batch", "--batch", "1", "--project-dir", proj],
+      stdout: "ignore",
+      stderr: "ignore",
+      env: { ...process.env },
+    });
+
+    // Long enough for the spawned tool to boot and reach its first blocking
+    // acquire (pre-fix: emitAudit's, with the state already read).
+    await Bun.sleep(1500);
+
+    // Our own protected write, under the lock we hold.
+    writeFileSync(statePath(proj), setField(readState(proj), "Languages", "under-the-lock"), "utf-8");
+    rmSync(lockDir, { recursive: true, force: true });
+
+    expect(await proc.exited).toBe(0);
+
+    const finalState = readState(proj);
+    // The approval landed...
+    expect(getField(finalState, SWARM_BATCH_APPROVALS_FIELD)).toBe("1");
+    // ...without clobbering the write that happened while it waited.
+    expect(getField(finalState, "Languages")).toBe("under-the-lock");
+  }, 60000);
+
+  // ---------------------------------------------------------------------------
+  // The lost-update twin: two processes approve DIFFERENT batches at once. Each
+  // reads the approvals list, appends its own number and rewrites the field, so
+  // an unserialised pair loses one of the two. Both must survive.
+  // ---------------------------------------------------------------------------
+  test("two concurrent approve-batch of different batches both land [lost update]", async () => {
+    const procs = [["approve-batch", "--batch", "1"], ["approve-batch", "--batch", "2"]].map((args) =>
+      Bun.spawn({
+        cmd: [BUN, BOLT_TOOL, ...args, "--project-dir", proj],
+        stdout: "ignore",
+        stderr: "ignore",
+        env: { ...process.env },
+      }),
+    );
+    await Promise.all(procs.map((c) => c.exited));
+    const codes = await Promise.all(procs.map((c) => c.exited));
+    expect(codes.every((c) => c === 0)).toBe(true);
+
+    // Both approvals on the ledger — a lost update leaves only one.
+    expect(getField(readState(proj), SWARM_BATCH_APPROVALS_FIELD)).toBe("1, 2");
+  }, 60000);
+
+  // ---------------------------------------------------------------------------
+  // The lock must be RELEASED on the happy path (the withAuditLock finally), or
+  // it poisons the next operation for the full retry budget.
+  // ---------------------------------------------------------------------------
+  test("approve-batch releases the audit lock on success", () => {
+    expect(boltSync(["approve-batch", "--batch", "1"], proj).status).toBe(0);
     expect(existsSync(auditLockDir(proj))).toBe(false);
   }, 60000);
 });

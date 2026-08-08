@@ -5772,8 +5772,16 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t145-state-lock-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t507-approve-batch-idempotent.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t33.test.ts",
