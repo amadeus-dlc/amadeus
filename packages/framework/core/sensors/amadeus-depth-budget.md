@@ -73,8 +73,9 @@ look proportionate.
 
 Measured by applying this sensor's own predicate (post-fix counting) to every
 `amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md`
-— 132 files, of which 125 carry `FR-n` ids — each paired with the `**Depth**`
-recorded in its intent's `amadeus-state.md`:
+— 132 files, of which 125 carry `FR-n` ids; one of those has no recognizable
+`Depth` and is excluded from the per-level rows below. The other 124 are
+paired with the `**Depth**` recorded in their intent's `amadeus-state.md`:
 
 | Depth | Ceiling | min | median | max | Flags |
 |---|---|---|---|---|---|
