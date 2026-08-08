@@ -61,6 +61,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -136,12 +137,8 @@ function bolt(args: string[]): { status: number; stdout: string; out: string } {
 }
 
 /** Parse the merged JSONL audit shards into records (blank lines skipped). */
-function auditRecords(): Array<Record<string, unknown>> {
-  return readAllAuditShards(proj)
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+function auditRecords(): NormalizedAuditRecord[] {
+  return auditRowsFrom(readAllAuditShards(proj));
 }
 
 /**

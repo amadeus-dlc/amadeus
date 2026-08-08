@@ -48,6 +48,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -111,9 +112,8 @@ function readAudit(p: string): string {
 /** Every `Bolt slug` field value across the audit shards, in ledger order. */
 function boltSlugRows(p: string): string[] {
   const out: string[] = [];
-  for (const line of readAudit(p).split("\n")) {
-    if (line.trim().length === 0) continue;
-    const slug = (JSON.parse(line) as { fields?: Record<string, string> }).fields?.["Bolt slug"];
+  for (const record of auditRowsFrom(readAudit(p))) {
+    const slug = record.fields?.["Bolt slug"];
     if (slug !== undefined) out.push(slug);
   }
   return out;

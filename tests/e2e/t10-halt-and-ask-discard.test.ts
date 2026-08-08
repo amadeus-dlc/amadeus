@@ -74,6 +74,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -123,29 +124,20 @@ const auditText = (p: string): string => {
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
 
-interface AuditRecord {
-  event: string | null;
-  heading: string;
-  fields?: Record<string, string>;
-}
-
 /** Every ledger record in the merged shards (one JSON object per line). */
-function auditRecords(p: string): AuditRecord[] {
-  return auditText(p)
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+function auditRecords(p: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(auditText(p));
 }
 
 /** WORKTREE_DISCARDED records for slug `s` — record-scoped by construction
  *  (the .sh's `Event.*WORKTREE_DISCARDED` + `Bolt slug.*s` on the same block). */
-function discardRecords(p: string, slug: string): AuditRecord[] {
+function discardRecords(p: string, slug: string): NormalizedAuditRecord[] {
   return auditRecords(p).filter(
     (r) => r.event === "WORKTREE_DISCARDED" && r.fields?.["Bolt slug"] === slug,
   );
 }
 
-function discardBlock(p: string, slug: string): AuditRecord | undefined {
+function discardBlock(p: string, slug: string): NormalizedAuditRecord | undefined {
   return discardRecords(p, slug)[0];
 }
 

@@ -68,6 +68,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -131,11 +132,7 @@ function auditBody(p: string): string {
 
 /** Count ledger records carrying a given event type. */
 function eventCount(p: string, event: string): number {
-  return auditBody(p)
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null })
-    .filter((r) => r.event === event).length;
+  return countAuditEvent(auditBody(p), event);
 }
 
 /** Is `path` a registered worktree of the git repo at `repo`? (assert_worktree_at). */
@@ -192,11 +189,9 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     // A4 (STRONGER): the Bolt slug rides on the BOLT_FAILED record itself, not
     // merely somewhere in the trail.
     expect(
-      auditBody(p)
-        .split("\n")
-        .filter((l) => l.trim().length > 0)
-        .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
-        .some((r) => r.event === "BOLT_FAILED" && r.fields?.["Bolt slug"] === "x"),
+      auditRowsFrom(auditBody(p)).some(
+        (r) => r.event === "BOLT_FAILED" && r.fields?.["Bolt slug"] === "x",
+      ),
     ).toBe(true);
   }, 30000);
 

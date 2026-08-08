@@ -65,6 +65,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -185,12 +186,9 @@ describe("t65 Construction-worktrees per-scope contract — fix (migrated from t
     // "Bolt slug.*<slug>" line, independently. STRONGER here: assert both land
     // in the SAME audit record (the dispatch-event entry), record-scoping the
     // slug to the event the .sh only matched globally.
-    const record = readAllAuditShards(proj)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .map((l) => JSON.parse(l) as Record<string, unknown>)
-      .find((rec) => rec.event === "MERGE_DISPATCH_INVOKED");
+    const record = auditRowsFrom(readAllAuditShards(proj)).find(
+      (rec) => rec.event === "MERGE_DISPATCH_INVOKED",
+    );
     expect(record).toBeDefined();
     const fields = (record?.fields ?? {}) as Record<string, string>;
     expect(fields["Bolt slug"]).toBe(slug);

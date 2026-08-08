@@ -67,6 +67,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -164,21 +165,12 @@ function reconcileGoal(proj: string): void {
 // their emit order under this sort.
 function eventSequence(proj: string): string[] {
   const parsed: { ts: string; event: string; pos: number }[] = [];
-  readAllAuditShards(proj)
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .forEach((line, pos) => {
-      const rec = JSON.parse(line) as {
-        attributes?: { Event?: string };
-        event?: string | null;
-        timestamp: string;
-      };
-      // append-raw records carry event: null — they are not part of the typed
-      // terminal-ordering contract this file pins.
-      const event = rec.attributes?.Event ?? rec.event;
-      if (!event) return;
-      parsed.push({ ts: rec.timestamp, event, pos });
-    });
+  auditRowsFrom(readAllAuditShards(proj)).forEach((rec, pos) => {
+    // append-raw records carry event: null — they are not part of the typed
+    // terminal-ordering contract this file pins.
+    if (!rec.event) return;
+    parsed.push({ ts: String(rec.timestamp), event: rec.event, pos });
+  });
   parsed.sort((a, b) => (a.ts === b.ts ? a.pos - b.pos : a.ts < b.ts ? -1 : 1));
   return parsed.map((p) => p.event);
 }
