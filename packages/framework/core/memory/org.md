@@ -38,8 +38,12 @@ Bolt runs like any other — there's nothing to bootstrap.
 
 After Bolt 1 ships (when it runs), the orchestrator fires the **ladder
 prompt**: "How should the remaining Bolts run?" Options: continue
-autonomously, gate every Bolt. The team picks per project. The choice
-persists as `Construction Autonomy Mode` in `amadeus-state.md`.
+autonomously, gate every Bolt. The team picks per project. The answer is
+recorded as the Intent's autonomy mode — `Intent Autonomy Mode` in
+`amadeus-state.md`, backed by the Intent audit, which is the only
+authorisation source. `Construction Autonomy Mode` is a derived scheduling
+projection of that mode (`autonomous` under `full`, `gated` otherwise),
+written by the autonomy transaction and never set independently.
 
 ## Testing Posture
 

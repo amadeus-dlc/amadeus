@@ -760,6 +760,22 @@ function resolveSelectedIntent(
   return activeIntent(pd, space, intent) ?? undefined;
 }
 
+// The state rows owned by the autonomy transaction's projection — the exact set
+// writeAutonomyStateProjection (amadeus-intent-autonomy-production.ts) writes as
+// one unit. A generic `set` of any of them bypasses that writer, so each such
+// write leaves an AUTONOMY_MODE_SET row (#2483). Kept as literal strings rather
+// than an import: this tool must not pull the autonomy production module (and
+// its coordinator/repository graph) onto the `set` path just to name three rows.
+//
+// Declared ABOVE the `import.meta.main` dispatch below, not next to handleSet:
+// a `const` after that block sits in its temporal dead zone for the whole CLI
+// run, so a spawned `set` would throw a ReferenceError before writing anything.
+const PROJECTION_OWNED_FIELDS = new Set([
+  "Intent Autonomy Mode",
+  "Intent Grant",
+  "Construction Autonomy Mode",
+]);
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
@@ -1120,6 +1136,10 @@ export function handleSet(args: string[]): void {
   // functions by ordinal, so adding closures here would shift every later
   // anonymous entry off its baseline row.
   const pairs: { field: string; value: string }[] = [];
+  // Populated by the write loop below with the RESOLVED value of every
+  // projection-owned field this call touched; drained into audit rows once the
+  // state write has landed (#2483).
+  const projectionWrites: { field: string; value: string }[] = [];
   for (const pair of rest) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
@@ -1157,11 +1177,28 @@ export function handleSet(args: string[]): void {
     }
 
     content = setField(content, field, value);
+    // The RESOLVED value, not the raw argument: NOW/+1/-1 would otherwise put a
+    // literal into the ledger that the record never held.
+    if (PROJECTION_OWNED_FIELDS.has(field)) projectionWrites.push({ field, value });
   }
 
   // Reached only when every field existed: the write is real, so the success
   // report is now execution-derived (FR-2), not unconditional.
   writeStateFile(pd, content, resolvedIntent, space);
+  // Audit AFTER the write, one row per projection-owned field (#2483). The
+  // three fields below are written canonically by writeAutonomyStateProjection
+  // (amadeus-intent-autonomy-production.ts) as the projection of a committed
+  // autonomy transaction, so a generic `set` of one of them is an out-of-band
+  // write of that projection. It is NOT refused here — the park-under-full path
+  // that motivates the bypass has no ruling yet — but it stops being invisible:
+  // the forensic gap in the incident was exactly a write with no ledger row.
+  //
+  // Write-then-audit (not audit-first) on purpose: `set` has no transaction to
+  // converge on, so a row emitted before a failing write would claim a change
+  // the record never took.
+  for (const { field, value } of projectionWrites) {
+    emitAudit(pd, "AUTONOMY_MODE_SET", { Mode: value, Field: field });
+  }
   console.log(JSON.stringify({ updated: true, fields: rest.length }));
   }, resolvedIntent, space);
   } finally {

@@ -97,6 +97,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t-bare-state-env-isolation.integration.test.ts",
     "integration/t485-subagent-model-guard.integration.test.ts",
     "integration/t481-autonomy-canonical-state-write.integration.test.ts",
+    "integration/t493-autonomy-projection-integrity.integration.test.ts",
     "integration/t482-autonomy-refusal-event.integration.test.ts",
     "integration/t483-preview-non-auto-kinds.integration.test.ts",
     "integration/t488-question-route-observability.integration.test.ts",
