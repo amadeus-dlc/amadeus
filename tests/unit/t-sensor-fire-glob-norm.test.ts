@@ -51,9 +51,21 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
+import {
+  firedSensorIdsFrom,
+  frameworkGraphPath,
+  sensorsFiringFor as sensorsFiringForStage,
+} from "../helpers/stage-sensor-fire-fixture.ts";
 
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
-const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = frameworkGraphPath(AMADEUS_SRC);
+
+/** Sensors the hook should fire for a requirements-analysis write. */
+function sensorsFiringFor(filePath: string): string[] {
+  return sensorsFiringForStage(FRAMEWORK_GRAPH, "requirements-analysis", filePath);
+}
+
+
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -89,7 +101,7 @@ process.exit(0);
 `;
 
 /** Active-workflow fixture: stub dispatcher + pinned clone-id + state on a
- *  stage carrying the two md-glob sensors in the framework graph + the
+ *  stage carrying the md-glob sensors in the framework graph + the
  *  resolved audit shard. Mirrors t94's makeProjectActive. */
 function makeProjectActive(): string {
   const proj = createTestProject();
@@ -230,8 +242,14 @@ describe("sensor-fire glob normalization (#757) — in-process hook drive", () =
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    // requirements-analysis carries both md-glob sensors in the framework graph.
-    expect(lines.length).toBe(2);
+    // Every sensor whose glob matches the NORMALIZED path fires. Compared as an
+    // ID SET (from the shipped graph) so a new sensor does not fail this test,
+    // while a sensor silently dropping out is still visible.
+    const fired = firedSensorIdsFrom(lines.map((l) => JSON.parse(l) as string[]));
+    expect(fired).toEqual(sensorsFiringFor(winPath));
+    // Named explicitly: comparing two graph-derived values would still agree if
+    // depth-budget dropped out of the stage or stopped matching this path.
+    expect(fired).toContain("depth-budget");
     const firstArgv = JSON.parse(lines[0]) as string[];
     // The dispatcher still receives the RAW path (dispatcher normalizes
     // internally via normalizePathForComparison) — only the hook-side
@@ -261,7 +279,9 @@ describe("sensor-fire glob normalization (#757) — in-process hook drive", () =
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    expect(lines.length).toBe(2);
+    const fired = firedSensorIdsFrom(lines.map((l) => JSON.parse(l) as string[]));
+    expect(fired).toEqual(sensorsFiringFor(filePath));
+    expect(fired).toContain("depth-budget");
   });
 
   test("non-matching backslash path stays silent (normalization must not over-match)", async () => {

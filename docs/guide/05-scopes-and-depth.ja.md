@@ -249,6 +249,8 @@ name a different scope, or say "compose" for a tailored plan.
 
 分量の大きい成果物を書くステージは、それぞれ深度別の分量を規定しています: Requirements Analysis は機能要件の件数と記述量を、Code Generation は計画とサマリーの散文量を、Build and Test はビルド手順とサマリーをスケールします。深度が制御するのは散文の分量のみであり、テストの範囲と量はテスト戦略(後述)が管轄します。
 
+`requirements.md` については `depth-budget` センサーが結果を測定します。番号付き `FR-n` 1件あたりのバイト数を、Minimal は 1,200、Standard は 2,400 の上限と照合します(Comprehensive は上限なし)。他のセンサーと同様に advisory であり、超過は承認ゲートで確認事項として提示されるだけで、ブロックはしません。
+
 ### 深度の上書き
 
 深度は 3 つのポイントで変更できます:

@@ -1010,7 +1010,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "depth-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1068,6 +1069,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "depth-budget",
+          "path": ".claude/sensors/amadeus-depth-budget.md",
+          "matches": "**/inception/requirements-analysis/requirements.md",
+          "category": "document-shape"
         }
       ]
     },
