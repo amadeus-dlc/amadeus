@@ -104,6 +104,15 @@ function stageCodeGenDocsOnly(proj: string): void {
   guarded(proj, ["checkbox", "code-generation=in-progress"]);
   writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-generation-plan.md`);
   writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-summary.md`);
+  // A unit that reached the gate carries its reviewer verdict (#2359). The
+  // subject here is the docs-only exemption, so the review is seeded rather than
+  // left as a second reason to refuse.
+  writeFileSync(
+    join(seededRecordDir(proj), `construction/${UNIT}/code-generation/code-generation-plan.md`),
+    "# stub\n\n## A\n\n## B\n\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-08T00:00:00Z\n" +
+      "- **Iteration:** 1\n- **Scope decision:** none\n",
+  );
 }
 
 function approveCodeGen(proj: string): { rc: number; out: string } {

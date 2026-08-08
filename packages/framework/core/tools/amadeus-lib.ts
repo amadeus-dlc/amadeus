@@ -60,6 +60,10 @@ export interface StageEntry {
   // means the artifact applies to every kind.
   produces_kinds?: Record<string, UnitKind[]>;
   consumes?: Array<{ artifact: string; required: boolean; conditional_on?: string }>;
+  // The reviewer agent invoked as a quality gate after the stage body (§12a).
+  // Absent when the stage configures no review step, which is what tells the
+  // completion guard whether a missing Review block is a gap or a non-event.
+  reviewer?: string;
   requires_stage?: string[];
   scopes?: string[];
   inputs?: string;

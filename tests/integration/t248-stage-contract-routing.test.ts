@@ -197,8 +197,14 @@ function writeFunctionalArtifacts(
     "functional-design",
   );
   mkdirSync(dir, { recursive: true });
+  // A unit whose artifacts reached the gate carries its reviewer verdict
+  // (#2359). These cases are about kind-aware applicability, so the review is
+  // seeded rather than left as a second reason for the guard to refuse.
+  const review = "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+    "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-08T00:00:00Z\n" +
+    "- **Iteration:** 1\n- **Scope decision:** none\n";
   for (const artifact of artifacts) {
-    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`, "utf-8");
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n${review}`, "utf-8");
   }
 }
 

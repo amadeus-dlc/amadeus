@@ -89,10 +89,16 @@ function seedApprovalEvent(proj: string, eventType: string, stage: string): void
 }
 
 function writeCodeGenDocs(proj: string): void {
+  // The plan carries the reviewer verdict a gated unit is required to have
+  // (#2359); the subject here is the workspace_requires branch, so the review is
+  // seeded rather than left as a second reason to refuse.
+  const review = "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+    "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-08T00:00:00Z\n" +
+    "- **Iteration:** 1\n- **Scope decision:** none\n";
   for (const name of ["code-generation-plan.md", "code-summary.md"]) {
     const full = join(seededRecordDir(proj), "construction", "seam-unit", "code-generation", name);
     mkdirSync(dirname(full), { recursive: true });
-    writeFileSync(full, "# stub\n\n## A\n\n## B\n");
+    writeFileSync(full, `# stub\n\n## A\n\n## B\n${name === "code-generation-plan.md" ? review : ""}`);
   }
 }
 

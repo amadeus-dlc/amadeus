@@ -105,6 +105,19 @@ function writeWorkspaceFile(proj: string, rel: string): void {
   writeFileSync(full, "export const x = 1;\n");
 }
 
+// Append what `complete-review` appends: the projection the reviewer's verdict
+// leaves on the primary artifact. Only its presence is asserted here — the
+// runtime owns the block's field contract.
+function writeReviewBlock(proj: string, unit: string): void {
+  const full = join(seededRecordDir(proj), `construction/${unit}/code-generation/code-generation-plan.md`);
+  writeFileSync(
+    full,
+    "# stub\n\n## A\n\n## B\n\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-08T00:00:00Z\n" +
+      "- **Iteration:** 1\n- **Scope decision:** none\n",
+  );
+}
+
 let proj: string;
 
 describe("t185: stage-completion artifact guard (#366)", () => {
@@ -220,6 +233,45 @@ describe("t185: stage-completion artifact guard (#366)", () => {
     test("PASSES code-generation once real source exists outside amadeus/", () => {
       stageCodeGenDocsOnly();
       writeWorkspaceFile(proj, "src/auth/login.ts"); // outside amadeus/ + harness
+      writeReviewBlock(proj, UNIT);
+      guarded(proj, ["gate-start", "code-generation"]);
+      const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
+      expect(r.rc).toBe(0);
+    });
+  });
+
+  // --- Layer 3: §12a review evidence (issue #2359) ---------------------------
+  //
+  // The artifact layers ask whether a Unit produced output, never whether the
+  // reviewer the stage protocol requires ("the orchestrator MUST invoke the
+  // reviewer", stage-protocol §12a) actually ran. A Unit whose artifacts landed
+  // before its review — a session parked between the two — reads identically to
+  // a reviewed one, and the engine will not re-emit that Unit's run-stage once
+  // its produces exist (#2358 shares this root), so nothing later notices. The
+  // gate is the last place the gap is still visible.
+  describe("review evidence (#2359)", () => {
+    const UNIT = "user-auth";
+
+    function stageCodeGenComplete(): void {
+      guarded(proj, ["set", "Current Stage=code-generation"]);
+      guarded(proj, ["checkbox", "code-generation=in-progress"]);
+      writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-generation-plan.md`);
+      writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-summary.md`);
+      writeWorkspaceFile(proj, "src/auth/login.ts");
+    }
+
+    test("REFUSES a unit whose artifacts exist but carry no Review block", () => {
+      stageCodeGenComplete();
+      guarded(proj, ["gate-start", "code-generation"]);
+      const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain(UNIT);
+      expect(r.out).toContain("Review");
+    });
+
+    test("PASSES once the reviewer's Review block is on the primary artifact", () => {
+      stageCodeGenComplete();
+      writeReviewBlock(proj, UNIT);
       guarded(proj, ["gate-start", "code-generation"]);
       const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
       expect(r.rc).toBe(0);
@@ -289,6 +341,10 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       guarded(proj, ["checkbox", "code-generation=in-progress"]);
       writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-generation-plan.md`);
       writeRecordDoc(proj, `construction/${UNIT}/code-generation/code-summary.md`);
+      // A unit that reached the gate carries its reviewer verdict (#2359). The
+      // subject here is the workspace layer, so the review is seeded rather than
+      // left as a second reason to refuse.
+      writeReviewBlock(proj, UNIT);
     }
     function approveCodeGen(): { rc: number; out: string } {
       guarded(proj, ["gate-start", "code-generation"]);
