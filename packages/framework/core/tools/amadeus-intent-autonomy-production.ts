@@ -50,6 +50,7 @@ import {
   type QualityReplanPort,
 } from "./amadeus-quality-repair-runtime.ts";
 import { createAuditQualityRepairRepository } from "./amadeus-quality-repair-replay.ts";
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
 import type { JudgePort } from "./amadeus-loop-monitor-runtime.ts";
 import {
   activeIntent,
@@ -62,6 +63,10 @@ import {
   humanActedSinceGate,
   listIntents,
   readAllAuditShards,
+  readStateFile,
+  setFieldStrict,
+  setOrInsertField,
+  writeStateFile,
 } from "./amadeus-lib.ts";
 
 const ALL_INTERACTIONS: readonly InteractionKind[] = [
@@ -70,6 +75,22 @@ const ALL_INTERACTIONS: readonly InteractionKind[] = [
   "walking-skeleton",
   "question",
 ];
+
+// What a mode auto-decides. Derived from the two existing constants rather than
+// restated, so the pair a semi Intent leaves to the human moves whenever
+// SEMI_ROUTINE_INTERACTIONS moves (FR-2b, BR-U1-7).
+function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
+  if (mode === "full") return ALL_INTERACTIONS;
+  if (mode === "semi") return SEMI_ROUTINE_INTERACTIONS;
+  return [];
+}
+
+// The complement: the kinds this mode still stops on. Reading it off the preview
+// is how a human sees, before granting, which gates stay theirs.
+export function nonAutoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
+  const decided = autoDecidedKinds(mode);
+  return ALL_INTERACTIONS.filter((kind) => !decided.includes(kind));
+}
 
 // Exported so a caller that builds its own option effects can prove, in a test
 // it owns, that the classification it assigns to a refusable option is still
@@ -222,6 +243,14 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
   }
   const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
   const qualityRepair = qualityState(projection);
+  if (!authorization.authorized) {
+    emitAuthorizationRefusal(input.projectDir, {
+      kind: interactionKind(input),
+      stage: input.stage,
+      reason: authorization.reason,
+      mode: projection.mode,
+    });
+  }
   return {
     mode: projection.mode,
     autoApprove: authorization.authorized && qualityRepair !== "error",
@@ -229,6 +258,48 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
     authorizationReason: authorization.reason,
     qualityRepair,
   };
+}
+
+// The two reasons authorizeInteraction can refuse with. Anything else reaching
+// the emitter is a reason nobody declared, and inventing a row for it would put
+// a value in the ledger that no reader has a meaning for.
+const REFUSAL_REASONS = ["SCOPE_OUT", "MODE_REQUIRES_HUMAN"] as const;
+
+/** What stopped a run short of a decision. Declared at module scope so the
+ *  type-only lines carry no in-body coverage records. */
+type AuthorizationRefusal = {
+  readonly kind: InteractionKind;
+  readonly stage: string;
+  readonly reason: string;
+  readonly mode: AutonomyMode;
+};
+
+// Why the run stopped, written where the rest of the Intent's history lives.
+//
+// Fail-open, and ONLY here: an audit shard that cannot be written must not turn
+// a refusal into an error, because the refusal itself is the safe answer and the
+// caller is already on its way to the human gate. Every other failure mode in
+// this file stays fail-closed.
+//
+// The emitter is required lazily — a module-scope import would pull the OTel
+// graph into every authorization — and bound through the type-only import above
+// so the cast stays on one line.
+function emitAuthorizationRefusal(projectDir: string, refusal: AuthorizationRefusal): void {
+  if (!REFUSAL_REASONS.some((known) => known === refusal.reason)) return;
+  try {
+    const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+    const result = otel.emitAuditEvent("INTENT_AUTONOMY_HUMAN_REQUIRED", {
+      "Interaction Kind": refusal.kind,
+      "Stage slug": refusal.stage,
+      Reason: refusal.reason,
+      Mode: refusal.mode,
+    }, projectDir);
+    if (!result.appended) console.error(`amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected`);
+  } catch (cause) {
+    console.error(
+      `amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
 }
 
 function authorizeProductionOccurrence(
@@ -335,13 +406,18 @@ interface PreviewProductionAutonomyGrantInput {
   readonly policies?: readonly DecisionPolicyInput[];
 }
 
-export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyGrantInput): { readonly ok: true; readonly preview: {
+/** What a preview shows a human before they declare a mode. Declared at module
+ *  scope so the type-only lines carry no in-body coverage records. */
+type AutonomyGrantPreview = {
   readonly intentUuid: string;
   readonly principalId: string;
   readonly scope: GrantScopeDescriptor;
   readonly policies: readonly DecisionPolicyInput[];
   readonly displayDigest: string;
-} } | { readonly ok: false; readonly error: string } {
+  readonly nonAutoDecidedKinds: readonly InteractionKind[];
+};
+
+export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyGrantInput): { readonly ok: true; readonly preview: AutonomyGrantPreview } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
   const projection = coordinatorFor(input.projectDir, resolved).readProjection();
@@ -356,6 +432,7 @@ export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyG
       scope,
       policies,
       displayDigest: grantDisplayDigest({ intentUuid: projection.intentUuid, principalId, scope, policies }),
+      nonAutoDecidedKinds: nonAutoDecidedKinds(projection.mode),
     },
   };
 }
@@ -431,6 +508,48 @@ interface ApplyProductionAutonomyModeInput {
   readonly confirmedDisplayDigest?: string;
 }
 
+// The state projection of a committed mode. Written HERE and nowhere else: an
+// entrance that commits the transaction but leaves the fields to its own caller
+// (as the set-autonomy verb used to) gives every other entrance — the
+// `--autonomy` launch flag — a mode the six state-file readers cannot see.
+//
+// Audit first, state second. The order matters on failure: a committed
+// transaction with unwritten fields converges on re-run, whereas written fields
+// with no transaction behind them would be a projection with no ledger.
+//
+// The base is re-read here rather than taken from the caller's `stateContent`:
+// that argument describes the scope the caller previewed, and writing the whole
+// file back from it would let a stale or partial copy overwrite whatever else
+// the record has gained since the caller read it.
+function writeAutonomyStateProjection(
+  projectDir: string,
+  mode: AutonomyMode,
+  projection: AutonomyProjection,
+): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
+  try {
+    let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
+    updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
+    updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+    writeStateFile(projectDir, updated);
+  } catch (cause) {
+    return {
+      ok: false,
+      error: `state projection write failed after the autonomy transaction committed (re-run the same declaration to converge): ${cause instanceof Error ? cause.message : String(cause)}`,
+    };
+  }
+  return { ok: true, projection };
+}
+
+// Whether THIS declaration already committed. The transaction id is derived from
+// (intentUuid, commandOccurrenceId), so a matching occurrence id means a second
+// applyHumanCommand would re-issue a transaction that already exists — the
+// re-run is a state repair, not a new declaration.
+function alreadyDeclared(before: AutonomyProjection, mode: AutonomyMode, commandOccurrenceId: string): boolean {
+  return before.mode === mode &&
+    before.modeProvenance.kind === "human-command" &&
+    before.modeProvenance.commandOccurrenceId === commandOccurrenceId;
+}
+
 export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeInput): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
@@ -438,6 +557,10 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
   if (humanTurnId === null) return { ok: false, error: "PROVENANCE_REQUIRED" };
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const before = coordinator.readProjection();
+  const commandOccurrenceId = `autonomy-mode-${input.mode}-${humanTurnId}`;
+  if (alreadyDeclared(before, input.mode, commandOccurrenceId)) {
+    return writeAutonomyStateProjection(input.projectDir, input.mode, before);
+  }
   const principalId = input.principalId ?? "local-human";
   let command: HumanAutonomyCommand;
   let confirmedDisplayDigest: string;
@@ -462,12 +585,12 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
     targetIntentUuid: before.intentUuid,
     principalId,
     humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: humanTurnId },
-    commandOccurrenceId: `autonomy-mode-${input.mode}-${humanTurnId}`,
+    commandOccurrenceId,
     expectedProjectionRevision: before.projectionRevision,
     confirmedDisplayDigest,
   });
   if ("error" in result) return { ok: false, error: result.error };
-  return { ok: true, projection: coordinator.readProjection() };
+  return writeAutonomyStateProjection(input.projectDir, input.mode, coordinator.readProjection());
 }
 
 interface CommitProductionStageGateDecisionInput {

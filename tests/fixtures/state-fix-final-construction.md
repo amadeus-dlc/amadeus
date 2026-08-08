@@ -91,6 +91,7 @@ Per unit: bug-fix
 - **Current Stage**: build-and-test
 - **Next Stage**: none
 - **Status**: Running
+- **Construction Autonomy Mode**: unset
 - **Last Updated**: 2025-07-15T12:00:00Z
 
 ## Session Resume Point

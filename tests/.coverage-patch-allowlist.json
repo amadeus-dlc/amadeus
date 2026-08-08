@@ -5716,17 +5716,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
     "selector": {
-      "function": "previewProductionAutonomyGrant",
-      "fingerprint": "sha256:11ce000d2ae7b37eeee53cf73c3e022a31469c918bf36eeb32029adf782d6f97",
-      "anchorLines": 5,
-      "targetLines": "1-5"
-    },
-    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
-    "selector": {
       "function": "commitProductionStageGateDecision",
       "fingerprint": "sha256:b6d8fd2fba7482e8cb2bfe948a8ed24e0d18b277caf721a2c71bf3a0af055b99",
       "anchorLines": 1,

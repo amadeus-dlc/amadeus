@@ -1071,16 +1071,6 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
         confirmedDisplayDigest: flags["confirmed-display-digest"],
       });
       if (!applied.ok) error(`Intent autonomy update failed: ${applied.error}`);
-      const schedulingMode = flags.mode === "full" ? "autonomous" : "gated";
-      let updated = setOrInsertField(content, "## Current Status", "Intent Autonomy Mode", flags.mode);
-      updated = setOrInsertField(
-        updated,
-        "## Current Status",
-        "Intent Grant",
-        applied.projection.currentGrant?.grantId ?? "none",
-      );
-      updated = setFieldStrict(updated, "Construction Autonomy Mode", schedulingMode);
-      writeStateFile(pd, updated);
       console.log(JSON.stringify({
         emitted: "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
         mode: flags.mode,

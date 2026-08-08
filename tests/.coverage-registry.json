@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 619,
+    "total": 620,
     "enumeratedByClass": {
       "function": 350,
-      "audit": 90,
+      "audit": 91,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -36,7 +36,7 @@
       "scope": 15,
       "stage": 8,
       "hook": 15,
-      "subcommand": 85,
+      "subcommand": 86,
       "render-surface": 7
     }
   },
@@ -324,6 +324,13 @@
     {
       "unitClass": "audit",
       "unitId": "INTENT_ARCHIVED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_AUTONOMY_HUMAN_REQUIRED",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -5892,8 +5899,13 @@
       "unitClass": "subcommand",
       "unitId": "amadeus-bolt preview-autonomy",
       "minMechanism": "cli",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t483-preview-non-auto-kinds.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "subcommand",
@@ -5940,6 +5952,10 @@
         },
         {
           "file": "tests/integration/t455-semi-policy-cli.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t481-autonomy-canonical-state-write.integration.test.ts",
           "mechanism": "cli"
         },
         {

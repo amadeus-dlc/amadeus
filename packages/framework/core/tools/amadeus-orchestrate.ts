@@ -1897,7 +1897,7 @@ type AutonomyMode = "autonomous" | "gated";
 // readSkeletonStance's read-and-narrow shape. An unrecognised value (a typo, a
 // hand-edited state file) narrows to null rather than to a grant — the swarm
 // never activates on a value the engine could not recognise.
-function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
+export function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
   const intentMode = stateContent ? getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim() : null;
   // none and semi both fan out and stop at batch-end human gates; semi caps any
   // recorded scheduling at "gated" so it can never skip the in-phase batch wait.
