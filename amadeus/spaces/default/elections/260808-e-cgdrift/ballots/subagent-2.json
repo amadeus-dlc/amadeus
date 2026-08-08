@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-CGDRIFT",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用の条件として、code-summary / diary の開示は cid:code-generation:c1-pcp-isolated-session-swarm-incompat (iv) の逐語要求を満たすこと — すなわち『converged』表記を用いず、swarm referee の代替として実際に採った検証水準(builder head との fidelity diff 空の機械確認、conductor ツリーでの全検証コマンド再実行と exit code)を実測値で書く。逸脱の申告が『環境制約により直列化した』という一文だけで終わり、代替検証の実測が伴わない場合は、逸脱の可視化にはなっても検証水準の担保にはならない(org.md Forbidden の検証劇場に接近する)。",
+  "rationale": "独立実測に基づく判定。(1) 直列依存の不在: inception/units-generation/unit-of-work-dependency.md の YAML edge block を実読し、depends_on は u2→[u1] / u4→[u2] / u5→[u1,u2,u3] のみで、engine が名指しする batch 1 の {u1,u3,u6} 相互間および batch 3 の {u4,u5} 相互間にエッジが無いことを確認した(u3/u6 は depends_on: [] )。同ファイルの『ファイル交差の目録』も u3『全 Unit と非交差』/ u6『非交差』/ u4『コード Unit と非交差』/ u5『record 内レポートのみ』と記載しており、技術的直列依存は実在しない。よって選択肢 (a) を採ると存在しない依存を graph へ固定することになり、org.md Forbidden の検証劇場(実行結果から導出しない構造の構築)と team.md First Principles P2(記録は実測事実のみ)に正面から抵触する。(2) 環境制約の実在: 本投票セッション自身で、複数コマンドを含む Bash 実行がハーネスにより『This session is isolated in the worktree /…/.claude/worktrees/intent-2378-autonomy-reachability … a worktree-isolated session's git operations must target its own worktree』として拒否された(一次実測)。worktree 隔離ガードの現存が自セッションで確認できる。(3) 既決ノルムの被覆: project.md:325 の cid:code-generation:c1-pcp-isolated-session-swarm-incompat を実読し、『engine ツールが作った repo 内 worktree に対し conductor も subagent も直接の git 操作・Write・EnterWorktree(path) が構造的に拒否される』『(iv) swarm referee(check/finalize)は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』を verbatim で確認した。本件はこの cid が定義する経路そのものの適用実例であり、graph 意味論の新規仕様判断ではない。したがって選択肢 internalNo 3(ユーザーエスカレーション)は不要 — team.md のエスカレーション正準リスト(1)可否同数 (2)PR マージ (3)人間関与が本質 (4)仕様変更 のいずれにも該当せず、既決 cid から一意に導かれる。(4) 監査証跡の整合: 本 intent の audit シャードを実測したところ WORKTREE_CREATED 3 / STATE_FORKED 3 / AUDIT_FORKED 3 で、SWARM_* および batch-completed 系イベントは 0 件。engine のエラー文が述べる『fan-out rows for 3 units, batch-completed convergence for none』と一致し、直列実装は監査上も事実。(5) engine 自身が (b) を approved exit として名指ししており、本選挙がその『先に取る裁定』に当たる。以上より internalNo 1(逸脱として裁定・申告して進む)が唯一整合する経路。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-08T11:02:01Z"
+}

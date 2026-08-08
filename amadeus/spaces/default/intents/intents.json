@@ -374,24 +374,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019f7947-d5c8-7490-a9f8-49258c1cbe56",
-    "slug": "mirror-productization",
-    "dirName": "260719-mirror-productization",
+    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
+    "slug": "ballot-failclosed-amend",
+    "dirName": "260719-ballot-failclosed-amend",
     "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
-    "slug": "upstream-sync-230",
-    "dirName": "260720-upstream-sync-230",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
-    "slug": "goa-multiseg-ecode",
-    "dirName": "260719-goa-multiseg-ecode",
-    "scope": "bugfix",
     "status": "complete"
   },
   {
@@ -402,17 +388,24 @@
     "status": "complete"
   },
   {
-    "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
-    "slug": "tally-choice-ruling",
-    "dirName": "260719-tally-choice-ruling",
+    "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
+    "slug": "goa-multiseg-ecode",
+    "dirName": "260719-goa-multiseg-ecode",
     "scope": "bugfix",
     "status": "complete"
   },
   {
-    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
-    "slug": "ballot-failclosed-amend",
-    "dirName": "260719-ballot-failclosed-amend",
+    "uuid": "019f7947-d5c8-7490-a9f8-49258c1cbe56",
+    "slug": "mirror-productization",
+    "dirName": "260719-mirror-productization",
     "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
+    "slug": "tally-choice-ruling",
+    "dirName": "260719-tally-choice-ruling",
+    "scope": "bugfix",
     "status": "complete"
   },
   {
@@ -444,59 +437,17 @@
     "status": "complete"
   },
   {
-    "uuid": "019f8263-3d92-79d5-be23-96e8990d0f97",
-    "slug": "teamup-safety-wait",
-    "dirName": "260721-teamup-safety-wait",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f88dc-baad-7920-b357-68bbfdc41e13",
-    "slug": "state-intent-selector",
-    "dirName": "260722-state-intent-selector",
-    "scope": "chore",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
-    "slug": "space-record-catalog",
-    "dirName": "260722-space-record-catalog",
+    "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
+    "slug": "upstream-sync-230",
+    "dirName": "260720-upstream-sync-230",
     "scope": "amadeus",
     "status": "complete"
   },
   {
-    "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
-    "slug": "teamup-prompt-race",
-    "dirName": "260722-teamup-prompt-race",
+    "uuid": "019f8263-3d92-79d5-be23-96e8990d0f97",
+    "slug": "teamup-safety-wait",
+    "dirName": "260721-teamup-safety-wait",
     "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
-    "slug": "t241-ci-residency",
-    "dirName": "260723-t241-ci-residency",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c95-8dd9-751a-9aca-8b01f6dc2ecc",
-    "slug": "marker-heading-exemption",
-    "dirName": "260723-marker-heading-exemption",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
-    "slug": "fixture-shard-pollution",
-    "dirName": "260723-fixture-shard-pollution",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8cdc-25b5-7145-a0f8-a692ddc5c172",
-    "slug": "doctor-inprocess-seam",
-    "dirName": "260723-doctor-inprocess-seam",
-    "scope": "refactor",
     "status": "complete"
   },
   {
@@ -507,16 +458,23 @@
     "status": "complete"
   },
   {
-    "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
-    "slug": "archived-status-guard",
-    "dirName": "260723-archived-status-guard",
+    "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
+    "slug": "space-record-catalog",
+    "dirName": "260722-space-record-catalog",
     "scope": "amadeus",
     "status": "complete"
   },
   {
-    "uuid": "019f9380-63f6-7d69-8831-9c8855482117",
-    "slug": "watcher-timeout-fix",
-    "dirName": "260724-watcher-timeout-fix",
+    "uuid": "019f88dc-baad-7920-b357-68bbfdc41e13",
+    "slug": "state-intent-selector",
+    "dirName": "260722-state-intent-selector",
+    "scope": "chore",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
+    "slug": "teamup-prompt-race",
+    "dirName": "260722-teamup-prompt-race",
     "scope": "bugfix",
     "status": "complete"
   },
@@ -528,10 +486,38 @@
     "status": "complete"
   },
   {
-    "uuid": "019f96b6-5ddc-719b-86d7-c638183999da",
-    "slug": "solo-standing-grants",
-    "dirName": "260725-solo-standing-grants",
-    "scope": "amadeus-feature",
+    "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
+    "slug": "archived-status-guard",
+    "dirName": "260723-archived-status-guard",
+    "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8cdc-25b5-7145-a0f8-a692ddc5c172",
+    "slug": "doctor-inprocess-seam",
+    "dirName": "260723-doctor-inprocess-seam",
+    "scope": "refactor",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
+    "slug": "fixture-shard-pollution",
+    "dirName": "260723-fixture-shard-pollution",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c95-8dd9-751a-9aca-8b01f6dc2ecc",
+    "slug": "marker-heading-exemption",
+    "dirName": "260723-marker-heading-exemption",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
+    "slug": "t241-ci-residency",
+    "dirName": "260723-t241-ci-residency",
+    "scope": "bugfix",
     "status": "complete"
   },
   {
@@ -549,10 +535,31 @@
     "status": "complete"
   },
   {
+    "uuid": "019f9380-63f6-7d69-8831-9c8855482117",
+    "slug": "watcher-timeout-fix",
+    "dirName": "260724-watcher-timeout-fix",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
+    "slug": "kimi-harness",
+    "dirName": "260725-kimi-harness",
+    "scope": "amadeus-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019f96e1-9991-7459-9ff8-5986a8da2a11",
     "slug": "mirror-review-fixes",
     "dirName": "260725-mirror-review-fixes",
     "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f96b6-5ddc-719b-86d7-c638183999da",
+    "slug": "solo-standing-grants",
+    "dirName": "260725-solo-standing-grants",
+    "scope": "amadeus-feature",
     "status": "complete"
   },
   {
@@ -577,6 +584,20 @@
     "status": "complete"
   },
   {
+    "uuid": "019fa0d8-df5f-7446-b1fa-87f93d26e906",
+    "slug": "answer-manual-binding",
+    "dirName": "260726-answer-manual-binding",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
+    "slug": "crossreviewed-bug-batch",
+    "dirName": "260726-crossreviewed-bug-batch",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
     "uuid": "019f9cdc-fb89-7a6d-85e5-ff3ed639378e",
     "slug": "grant-scope-gate",
     "dirName": "260726-grant-scope-gate",
@@ -591,23 +612,16 @@
     "status": "complete"
   },
   {
-    "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
-    "slug": "kimi-harness",
-    "dirName": "260725-kimi-harness",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
-    "slug": "crossreviewed-bug-batch",
-    "dirName": "260726-crossreviewed-bug-batch",
+    "uuid": "019f9e2d-3e2d-7ffe-bef2-d8c4e39c5082",
+    "slug": "mirror-envelope-lf",
+    "dirName": "260726-mirror-envelope-lf",
     "scope": "amadeus-bugfix",
     "status": "complete"
   },
   {
-    "uuid": "019f9e2d-3e2d-7ffe-bef2-d8c4e39c5082",
-    "slug": "mirror-envelope-lf",
-    "dirName": "260726-mirror-envelope-lf",
+    "uuid": "019f9ec8-7a7c-75cf-bfbb-85cdf16d3430",
+    "slug": "mirror-state-split",
+    "dirName": "260726-mirror-state-split",
     "scope": "amadeus-bugfix",
     "status": "complete"
   },
@@ -626,23 +640,9 @@
     "status": "complete"
   },
   {
-    "uuid": "019f9ec8-7a7c-75cf-bfbb-85cdf16d3430",
-    "slug": "mirror-state-split",
-    "dirName": "260726-mirror-state-split",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
     "uuid": "019f9f6a-654e-7ffc-b87c-073df7cce477",
     "slug": "t258-p95-flake",
     "dirName": "260726-t258-p95-flake",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa0d8-df5f-7446-b1fa-87f93d26e906",
-    "slug": "answer-manual-binding",
-    "dirName": "260726-answer-manual-binding",
     "scope": "amadeus-bugfix",
     "status": "complete"
   },
@@ -654,13 +654,6 @@
     "status": "complete"
   },
   {
-    "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
-    "slug": "install-doc-mismatch",
-    "dirName": "260727-install-doc-mismatch",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
     "uuid": "019fa33d-4b05-7359-8e5a-c0bb3ab600fd",
     "slug": "e2e-plugin-conformance",
     "dirName": "260727-e2e-plugin-conformance",
@@ -668,10 +661,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fa398-b858-70d8-9fd9-ebc678ddb8c4",
-    "slug": "solo-election",
-    "dirName": "260727-solo-election",
-    "scope": "amadeus-feature",
+    "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
+    "slug": "install-doc-mismatch",
+    "dirName": "260727-install-doc-mismatch",
+    "scope": "amadeus-bugfix",
     "status": "complete"
   },
   {
@@ -685,6 +678,13 @@
     "uuid": "019fa40f-b7f3-7ebf-89fe-dc6ec70c2b89",
     "slug": "plugin-verb-skills",
     "dirName": "260727-plugin-verb-skills",
+    "scope": "amadeus-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fa398-b858-70d8-9fd9-ebc678ddb8c4",
+    "slug": "solo-election",
+    "dirName": "260727-solo-election",
     "scope": "amadeus-feature",
     "status": "complete"
   },
@@ -703,10 +703,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
-    "slug": "skill-reviewer-fixes",
-    "dirName": "260730-skill-reviewer-fixes",
-    "scope": "self-fix",
+    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
+    "slug": "otel-upstream",
+    "dirName": "260729-otel-upstream",
+    "scope": "self-feature",
     "status": "complete"
   },
   {
@@ -724,37 +724,9 @@
     "status": "complete"
   },
   {
-    "uuid": "019fb69c-0dca-7eae-86b4-68be91ed9242",
-    "slug": "open-bug-batch-4",
-    "dirName": "260731-open-bug-batch-4",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
-    "slug": "otel-upstream",
-    "dirName": "260729-otel-upstream",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbabd-a1a8-70d3-8839-4e97c36a480f",
-    "slug": "otel-meta-schema",
-    "dirName": "260801-otel-meta-schema",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
-    "slug": "perf-ci-separation",
-    "dirName": "260731-perf-ci-separation",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbae3-a898-7dcd-b1df-420bf3945066",
-    "slug": "open-bug-batch-5",
-    "dirName": "260801-open-bug-batch-5",
+    "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
+    "slug": "skill-reviewer-fixes",
+    "dirName": "260730-skill-reviewer-fixes",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -766,10 +738,17 @@
     "status": "complete"
   },
   {
-    "uuid": "019fbd30-86e1-72a5-8c98-2db7743bb7da",
-    "slug": "kimi-bootstrap-deadlock",
-    "dirName": "260801-kimi-bootstrap-deadlock",
+    "uuid": "019fb69c-0dca-7eae-86b4-68be91ed9242",
+    "slug": "open-bug-batch-4",
+    "dirName": "260731-open-bug-batch-4",
     "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
+    "slug": "perf-ci-separation",
+    "dirName": "260731-perf-ci-separation",
+    "scope": "self-feature",
     "status": "complete"
   },
   {
@@ -780,9 +759,23 @@
     "status": "complete"
   },
   {
-    "uuid": "019fbdd0-90e0-7592-8ea5-ae67b35716a2",
-    "slug": "tla-multi-model",
-    "dirName": "260801-tla-multi-model",
+    "uuid": "019fbd30-86e1-72a5-8c98-2db7743bb7da",
+    "slug": "kimi-bootstrap-deadlock",
+    "dirName": "260801-kimi-bootstrap-deadlock",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fbae3-a898-7dcd-b1df-420bf3945066",
+    "slug": "open-bug-batch-5",
+    "dirName": "260801-open-bug-batch-5",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fbabd-a1a8-70d3-8839-4e97c36a480f",
+    "slug": "otel-meta-schema",
+    "dirName": "260801-otel-meta-schema",
     "scope": "self-feature",
     "status": "complete"
   },
@@ -794,24 +787,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
-    "slug": "scope-grid-face-sync",
-    "dirName": "260802-scope-grid-face-sync",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc1b1-e84e-7a5a-a4cb-2b75b28d4c8a",
-    "slug": "vocab-canonical-consolid",
-    "dirName": "260802-vocab-canonical-consolid",
-    "scope": "self-document",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc11b-7db5-7be6-a79d-9bfae4ca9385",
-    "slug": "plugin-optin-parity",
-    "dirName": "260802-plugin-optin-parity",
-    "scope": "self-fix",
+    "uuid": "019fbdd0-90e0-7592-8ea5-ae67b35716a2",
+    "slug": "tla-multi-model",
+    "dirName": "260801-tla-multi-model",
+    "scope": "self-feature",
     "status": "complete"
   },
   {
@@ -822,16 +801,16 @@
     "status": "complete"
   },
   {
-    "uuid": "019fc39a-516f-7b89-9fc6-97a1052a7855",
-    "slug": "registry-drift-guard",
-    "dirName": "260802-registry-drift-guard",
+    "uuid": "019fc3b0-a3d5-784d-912a-77a82a01b21d",
+    "slug": "nfr-kind-pruning",
+    "dirName": "260802-nfr-kind-pruning",
     "scope": "self-fix",
     "status": "complete"
   },
   {
-    "uuid": "019fc3b0-a3d5-784d-912a-77a82a01b21d",
-    "slug": "nfr-kind-pruning",
-    "dirName": "260802-nfr-kind-pruning",
+    "uuid": "019fc11b-7db5-7be6-a79d-9bfae4ca9385",
+    "slug": "plugin-optin-parity",
+    "dirName": "260802-plugin-optin-parity",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -850,10 +829,31 @@
     "status": "complete"
   },
   {
-    "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
-    "slug": "election-state-guard",
-    "dirName": "260803-election-state-guard",
+    "uuid": "019fc39a-516f-7b89-9fc6-97a1052a7855",
+    "slug": "registry-drift-guard",
+    "dirName": "260802-registry-drift-guard",
     "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
+    "slug": "scope-grid-face-sync",
+    "dirName": "260802-scope-grid-face-sync",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc36b-87d2-716a-8457-76dc3372a2c0",
+    "slug": "source-only-dist",
+    "dirName": "260802-source-only-dist",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc1b1-e84e-7a5a-a4cb-2b75b28d4c8a",
+    "slug": "vocab-canonical-consolid",
+    "dirName": "260802-vocab-canonical-consolid",
+    "scope": "self-document",
     "status": "complete"
   },
   {
@@ -864,10 +864,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fc36b-87d2-716a-8457-76dc3372a2c0",
-    "slug": "source-only-dist",
-    "dirName": "260802-source-only-dist",
-    "scope": "self-feature",
+    "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
+    "slug": "election-state-guard",
+    "dirName": "260803-election-state-guard",
+    "scope": "self-fix",
     "status": "complete"
   },
   {
@@ -881,6 +881,13 @@
     "uuid": "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead",
     "slug": "intent-autonomy",
     "dirName": "260803-intent-autonomy",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
+    "slug": "pi-harness",
+    "dirName": "260803-pi-harness",
     "scope": "self-feature",
     "status": "complete"
   },
@@ -899,13 +906,6 @@
     "status": "complete"
   },
   {
-    "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
-    "slug": "pi-harness",
-    "dirName": "260803-pi-harness",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
     "uuid": "019fcacc-48af-7c69-b0b1-b9da1583cd62",
     "slug": "goal-reconciliation-guar",
     "dirName": "260804-goal-reconciliation-guar",
@@ -920,6 +920,13 @@
     "status": "in-flight"
   },
   {
+    "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
+    "slug": "phase-boundary-approval",
+    "dirName": "260804-phase-boundary-approval",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fccb7-8e76-7054-b227-8a42de94bba5",
     "slug": "tla-authoring",
     "dirName": "260804-tla-authoring",
@@ -927,9 +934,9 @@
     "status": "complete"
   },
   {
-    "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
-    "slug": "phase-boundary-approval",
-    "dirName": "260804-phase-boundary-approval",
+    "uuid": "019fd1fe-7463-7d60-b780-b4d239953509",
+    "slug": "cross-harness-resume",
+    "dirName": "260805-cross-harness-resume",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -948,10 +955,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fd1fe-7463-7d60-b780-b4d239953509",
-    "slug": "cross-harness-resume",
-    "dirName": "260805-cross-harness-resume",
-    "scope": "self-fix",
+    "uuid": "019fd213-1e30-7528-a6f4-a47d2520a2a0",
+    "slug": "subagent-type-guard",
+    "dirName": "260805-subagent-type-guard",
+    "scope": "self-feature",
     "status": "complete"
   },
   {
@@ -962,9 +969,9 @@
     "status": "complete"
   },
   {
-    "uuid": "019fd213-1e30-7528-a6f4-a47d2520a2a0",
-    "slug": "subagent-type-guard",
-    "dirName": "260805-subagent-type-guard",
+    "uuid": "019fdbf9-9869-7d66-83e6-3b94c7f79cf0",
+    "slug": "autonomy-reachability",
+    "dirName": "260807-autonomy-reachability",
     "scope": "self-feature",
     "status": "complete"
   },
@@ -972,6 +979,13 @@
     "uuid": "019fda37-8c17-79ec-96b3-0db6823f0622",
     "slug": "failclosed-recovery-path",
     "dirName": "260807-failclosed-recovery-path",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
+    "slug": "intent-2328-tests-e2e-au",
+    "dirName": "260807-intent-2328-tests-e2e-au",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -993,6 +1007,13 @@
     }
   },
   {
+    "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
+    "slug": "stage-perf-report",
+    "dirName": "260807-stage-perf-report",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fdc46-ecdb-74a6-b70a-d1a8f39c5e3e",
     "slug": "subagent-start-pair",
     "dirName": "260807-subagent-start-pair",
@@ -1004,20 +1025,6 @@
     "slug": "tla-specs-relocation",
     "dirName": "260807-tla-specs-relocation",
     "scope": "self-refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
-    "slug": "intent-2328-tests-e2e-au",
-    "dirName": "260807-intent-2328-tests-e2e-au",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
-    "slug": "stage-perf-report",
-    "dirName": "260807-stage-perf-report",
-    "scope": "self-feature",
     "status": "complete"
   }
 ]

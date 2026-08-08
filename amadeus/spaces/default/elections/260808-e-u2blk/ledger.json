@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-U2BLK",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "choice 2 の『presence は既存 mint 経路(state 実在後)に自然に乗るため Blocker 1 は構造的に消える』という前提は実測では成立しない — amadeus-mint-presence.ts:32-33 逐語『appendAuditEntry resolves the active intent from the on-disk cursor using only the project dir』により HUMAN_TURN は打鍵時点のカーソル先(birth 前の旧 intent)のシャードへ落ち、新 intent のシャードには現れないため、同一コマンド連鎖内では2回目の next の Branch 4ab でも同じ PROVENANCE_REQUIRED に当たる。よって choice 1 を採るが、choice 1 の実装では記録する HUMAN_TURN が実打鍵に接地していることを machine-injected 判定と同水準でテスト固定し phantom mint(amadeus-lib.ts:368-372)を作らないことを完成条件とすべき。",
+      "rationale": "独立実測: (1) amadeus-intent-autonomy-production.ts:316-338 の latestHumanTurnId は auditShards(projectDir, resolved.intentDir, resolved.space) を走査し、amadeus-lib.ts:3998-4010 で shardDir が intent スコープに解決されるため当該 intent のシャードのみ対象。:556-557 で null なら即 PROVENANCE_REQUIRED。(2) packages/framework/core/tools/amadeus-utility.ts の HUMAN_TURN 出現数は 0 — birth は mint しない。(3) amadeus-orchestrate.ts:2846 で stateContent は Branch 4ab より前に一度だけ読まれるスナップショットで、:2975-2977 のコメントは『This branch does NOT touch directive.intent_autonomy_mode. Projecting the mode onto the directive stays the sole job of routeMainWorkflowDirective, which is what keeps none from ever being carried.』と明記。(4) FD construction/u2-birth-declaration/functional-design/business-logic-model.md:13-17 は intent-birth が semi/none を canonical 適用し provenance を latestHumanTurnId とすると定め、inception/requirements-analysis/requirements.md:15 の FR-1a は『birth 直後の同一 next 連鎖内で mode を適用』『provenance は実 HUMAN_TURN(フラグ自体は provenance にならない)』、:18 の FR-1d は 1コマンドでの e2e 搬送を受け入れ基準とする。以上より質問の前提(Blocker 1 の実在)は正しく choice 3 は当たらない。choice 1 は根本(新 intent のシャードに実打鍵の HUMAN_TURN が存在しないこと)を直接埋め、承認済み FD/要件を変更せず FR-1a/1d を literal に満たす。",
+      "submittedAt": "2026-08-08T05:26:20Z",
+      "receivedAt": "2026-08-08T05:26:24Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-U2BLK",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "選択肢1(内部2)の根拠『presence は既存 mint 経路(state 実在後)に自然に乗るため Blocker 1 は構造的に消える』は実測で否定される — birth と同一コマンド連鎖で走る2回目の next の時点でも新 intent シャードに HUMAN_TURN は存在せず(本 intent の実シャード: seq 1-16 が birth 連鎖の 2026-08-07T11:26:35Z、最初の HUMAN_TURN は次のユーザープロンプト由来の seq 17 / 11:29:58Z)、Branch 4ab も applyLaunchAutonomyDeclaration → applyProductionAutonomyMode(:556-558)を通るため同じ PROVENANCE_REQUIRED で落ちる。選択肢3は根本原因を突くが『実打鍵の HUMAN_TURN を birth が記録する』実体が CLI 起動からの新規 mint になり phantom mint(amadeus-lib.ts:371 の警告クラス)と区別不能で、かつ真新規ワークスペースでは mint-presence hook が state 不在で mint 自体をスキップする(amadeus-mint-presence.ts:133 の existsSync(stateFilePath) ガード)ため実 HUMAN_TURN がどこにも存在しない — 選択肢集合には『latestHumanTurnId の走査を intent 自身のシャード(amadeus-intent-autonomy-production.ts:320 の auditShards(projectDir, resolved.intentDir, resolved.space))から、実在する直前 HUMAN_TURN を含むワークスペース側の presence 台帳へ広げて grounding する』案と、真新規ワークスペースで presence がゼロの場合の扱いが欠落している。",
+      "rationale": "独立実測: (1) latestHumanTurnId(amadeus-intent-autonomy-production.ts:316-338)は auditShards(projectDir, resolved.intentDir, resolved.space) で当該 intent 自身の audit ディレクトリのみを走査する(auditShards 実体 amadeus-lib.ts:3998-4013)。(2) amadeus-utility.ts の HUMAN_TURN 出現数は grep -c で 0 — handleIntentBirth(:4187-)は WORKSPACE_INITIALISED 等しか append せず HUMAN_TURN を mint しない。よって質問の前提(birth 直後は PROVENANCE_REQUIRED)は正しい。(3) amadeus-orchestrate.ts:2846 で const stateContent = loadStateFileIfPresent(pd) を Branch 4ab(:2975-2985)より前に読み、直上コメント :2975-2977 は『This branch does NOT touch directive.intent_autonomy_mode. Projecting the mode onto the directive stays the sole job of routeMainWorkflowDirective』と明記 — 選択肢1が要求する state 再読と設計コメント改訂は確かに必要。(4) FD business-logic-model.md:13-17 は intent-birth が semi/none を canonical 適用すると定める一方、requirements.md:15 FR-1a は『birth 直後の同一 next 連鎖内で適用』、:18 FR-1d は seam を Branch 4ab 配置と名指しており、FD と要件の粒度に差がある。以上より、質問の前提自体は正しいが、提示された2案はいずれも実測上そのままでは成立せず、provenance の産地(実在する直前 HUMAN_TURN の所在)を扱う選択肢が欠落している。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-08T05:27:00Z"
+    }
+  ],
+  "late": []
+}

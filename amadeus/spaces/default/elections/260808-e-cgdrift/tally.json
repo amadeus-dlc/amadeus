@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "(b) 環境強制の意図的逸脱として裁定し、record へ申告して進む"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "(b) 環境強制の意図的逸脱として裁定し、record へ申告して進む",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "(a) unit-of-work-dependency.md へ直列依存を記録して recompile する",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "ユーザーへエスカレーションする",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-08T11:02:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CGDRIFT",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用の条件として、code-summary / diary の開示は cid:code-generation:c1-pcp-isolated-session-swarm-incompat (iv) の逐語要求を満たすこと — すなわち『converged』表記を用いず、swarm referee の代替として実際に採った検証水準(builder head との fidelity diff 空の機械確認、conductor ツリーでの全検証コマンド再実行と exit code)を実測値で書く。逸脱の申告が『環境制約により直列化した』という一文だけで終わり、代替検証の実測が伴わない場合は、逸脱の可視化にはなっても検証水準の担保にはならない(org.md Forbidden の検証劇場に接近する)。",
+      "rationale": "独立実測に基づく判定。(1) 直列依存の不在: inception/units-generation/unit-of-work-dependency.md の YAML edge block を実読し、depends_on は u2→[u1] / u4→[u2] / u5→[u1,u2,u3] のみで、engine が名指しする batch 1 の {u1,u3,u6} 相互間および batch 3 の {u4,u5} 相互間にエッジが無いことを確認した(u3/u6 は depends_on: [] )。同ファイルの『ファイル交差の目録』も u3『全 Unit と非交差』/ u6『非交差』/ u4『コード Unit と非交差』/ u5『record 内レポートのみ』と記載しており、技術的直列依存は実在しない。よって選択肢 (a) を採ると存在しない依存を graph へ固定することになり、org.md Forbidden の検証劇場(実行結果から導出しない構造の構築)と team.md First Principles P2(記録は実測事実のみ)に正面から抵触する。(2) 環境制約の実在: 本投票セッション自身で、複数コマンドを含む Bash 実行がハーネスにより『This session is isolated in the worktree /…/.claude/worktrees/intent-2378-autonomy-reachability … a worktree-isolated session's git operations must target its own worktree』として拒否された(一次実測)。worktree 隔離ガードの現存が自セッションで確認できる。(3) 既決ノルムの被覆: project.md:325 の cid:code-generation:c1-pcp-isolated-session-swarm-incompat を実読し、『engine ツールが作った repo 内 worktree に対し conductor も subagent も直接の git 操作・Write・EnterWorktree(path) が構造的に拒否される』『(iv) swarm referee(check/finalize)は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』を verbatim で確認した。本件はこの cid が定義する経路そのものの適用実例であり、graph 意味論の新規仕様判断ではない。したがって選択肢 internalNo 3(ユーザーエスカレーション)は不要 — team.md のエスカレーション正準リスト(1)可否同数 (2)PR マージ (3)人間関与が本質 (4)仕様変更 のいずれにも該当せず、既決 cid から一意に導かれる。(4) 監査証跡の整合: 本 intent の audit シャードを実測したところ WORKTREE_CREATED 3 / STATE_FORKED 3 / AUDIT_FORKED 3 で、SWARM_* および batch-completed 系イベントは 0 件。engine のエラー文が述べる『fan-out rows for 3 units, batch-completed convergence for none』と一致し、直列実装は監査上も事実。(5) engine 自身が (b) を approved exit として名指ししており、本選挙がその『先に取る裁定』に当たる。以上より internalNo 1(逸脱として裁定・申告して進む)が唯一整合する経路。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-08T11:02:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CGDRIFT",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用の条件として2点の是正を求める。第一に、本 choice の description が『swarm referee(prepare/check/finalize)を使えず』としている点は実測と食い違う — audit の seq 546-559 は prepare が実際に走り3つの worktree を作成し SWARM_STARTED(cap 3)まで到達したことを示す。構造的に不能だったのは engine が作った repo 内 worktree に対する agent 自身の書込・git 操作であり、その帰結として check/finalize の convergence が記録されなかった、というのが実測に接地した機序である。record と diary へはこの精密な機序で書き、batch 3(u4/u5)は fan-out 自体が存在しない別事実として分けて記載すること(cid:requirements-analysis:mechanism-cite-verify-at-draft / P2)。第二に、本 intent の construction/code-generation/memory.md は現時点で初期テンプレートのままで Deviations 節が空であり、本 choice が前提とする申告が未実施である。ゲート提示前に diary の Deviations と code-summary へ、原因(実行環境制約)・実際に採った経路・converged 表記を用いない代替検証水準を実測値付きで記載し、既存 cid の適用実例であることを明記してから進むこと。",
+      "rationale": "独立実測に基づき (b) を採る。(1) 依存の実在: unit-of-work-dependency.md の yaml edge block は u1-autonomy-core / u3-question-route-observability / u6-plugin-docs-drift がいずれも depends_on []、u4-conduit-parity → [u2-birth-declaration]、u5-measurement-report → [u1,u2,u3] であり、batch 1 の3者間および u4-u5 間に技術的依存は無い。同ファイルは末尾で自らを『本表はトポロジーの記述』と規定しており、依存エッジは技術的依存の表現である。したがって (a) を採ると実在しない依存を graph へ焼き込むことになり、org.md Forbidden の検証劇場(実行結果・事実から導出されない記録)および P2(記録は実測事実のみ)に抵触する。(2) 既決ノルムの存在: project.md に cid:code-generation:c1-pcp-isolated-session-swarm-incompat が persist 済みで、worktree 隔離ガード下の実効経路として『Agent の worktree isolation で builder を起動 → conductor が merge-base 一括 apply / cherry-pick で取込み fidelity diff 空を機械確認 → 検証コマンドを conductor ツリーで再実行 → swarm referee(check/finalize)は使えないため converged 表記を用いず、代替の検証水準をゲートで明示開示する』を定めている。本件はその適用実例であり既決ノルムの機械的執行に当たるため、choice『ユーザーへエスカレーション』は不要 — team.md の no-election-for-decided-norms と always-elect の執行クラス判定に従う。(3) 監査実測: audit シャードは WORKTREE_CREATED / STATE_FORKED / AUDIT_FORKED を u1-autonomy-core・u3-question-route-observability・u6-plugin-docs-drift の3ユニットのみ記録(seq 546-557)、SWARM_STARTED は batch 1・concurrency cap 3(seq 559)、SWARM_COMPLETED は 0 件、u4/u5 に WORKTREE_CREATED は存在しない。engine のエラー文が述べる『fan-out rows for [u1,u3,u6] / convergence for none / batch 3 は fan-out 無し』は実測と一致する。以上より直列化の原因は unit 間の依存ではなく実行環境制約であることが確定しており、逸脱として申告し record へ記録して進む経路が正しい。",
+      "submittedAt": "2026-08-08T11:02:20Z",
+      "receivedAt": "2026-08-08T11:02:46Z"
+    }
+  ],
+  "resolutions": []
+}
