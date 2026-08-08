@@ -1006,4 +1006,104 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("not yet complete");
   }, 30_000);
+
+  // Issue #2586. The approve-time coverage guard used to run ONLY when a
+  // compiled Bolt DAG existed, so every scope that SKIPs units-generation
+  // (fix / refactor / security-patch / infra / poc) could complete a per-unit
+  // stage with a unit directory still empty. These cases drive the same disk
+  // listing the degrade path of `next` already iterates, so the two agree on
+  // what "every unit is done" means.
+  function reportApproved(
+    project: string,
+    graphPath: string,
+  ): Record<string, unknown> {
+    const originalLog = console.log;
+    let stdout = "";
+    console.log = (...values: unknown[]) => {
+      stdout += `${values.map(String).join(" ")}\n`;
+    };
+    try {
+      withStageEnv(
+        graphPath,
+        { CLAUDE_PROJECT_DIR: project, AMADEUS_SKIP_ARTIFACT_GUARD: "1" },
+        () => {
+          // --stage is explicit so the seeded in-progress checkbox is a
+          // recoverable gate rather than the "report the acted directive
+          // explicitly" refusal: without it every case below would stop on that
+          // earlier error and prove nothing about the coverage guard.
+          handleReport(
+            ["--result", "approved", "--stage", "functional-design"],
+            project,
+          );
+        },
+      );
+    } finally {
+      console.log = originalLog;
+    }
+    return JSON.parse(stdout.trim().split("\n")[0]) as Record<string, unknown>;
+  }
+
+  // A record with NO compiled unit DAG: neither the runtime snapshot's bolt_dag
+  // nor the canonical unit-of-work-dependency.md is present, so orderedUnits()
+  // returns [] and the construction/ listing is the only unit ledger there is.
+  function seedDegradeProject(): string {
+    const project = seedProject([], { dependencyDoc: false });
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+    return project;
+  }
+
+  const DEGRADE_REQUIRED = [
+    "business-logic-model",
+    "business-rules",
+    "domain-entities",
+  ];
+
+  test("report refuses a degrade per-unit stage while a unit directory is uncovered", () => {
+    const project = seedDegradeProject();
+    writeFunctionalArtifacts(project, "unit-a", DEGRADE_REQUIRED);
+    mkdirSync(
+      join(seededRecordDir(project), "construction", "unit-b", "functional-design"),
+      { recursive: true },
+    );
+    const directive = reportApproved(project, sourceGraph());
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("not yet complete");
+    expect(String(directive.message)).toContain("unit-b");
+  }, 30_000);
+
+  test("report accepts a degrade per-unit stage once every unit directory is covered", () => {
+    const project = seedDegradeProject();
+    writeFunctionalArtifacts(project, "unit-a", DEGRADE_REQUIRED);
+    writeFunctionalArtifacts(project, "unit-b", DEGRADE_REQUIRED);
+    const directive = reportApproved(project, sourceGraph());
+    // Passing the guard is proven positively: the report reached the state
+    // commit (whose own fixture-level validation is not what these cases are
+    // about) instead of stopping at the coverage refusal.
+    expect(String(directive.message ?? "")).not.toContain("not yet complete");
+    expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
+  }, 30_000);
+
+  test("report accepts a single covered degrade unit (the common fix-scope shape)", () => {
+    const project = seedDegradeProject();
+    writeFunctionalArtifacts(project, "only-unit", DEGRADE_REQUIRED);
+    const directive = reportApproved(project, sourceGraph());
+    // Passing the guard is proven positively: the report reached the state
+    // commit (whose own fixture-level validation is not what these cases are
+    // about) instead of stopping at the coverage refusal.
+    expect(String(directive.message ?? "")).not.toContain("not yet complete");
+    expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
+  }, 30_000);
+
+  test("report leaves a degrade record with no unit directory unguarded", () => {
+    // Nothing on disk to judge: the listing is the ledger, and an empty ledger
+    // proves nothing, so this stays exactly as unguarded as it was before #2586
+    // rather than becoming an unopenable refusal.
+    const project = seedDegradeProject();
+    const directive = reportApproved(project, sourceGraph());
+    // Passing the guard is proven positively: the report reached the state
+    // commit (whose own fixture-level validation is not what these cases are
+    // about) instead of stopping at the coverage refusal.
+    expect(String(directive.message ?? "")).not.toContain("not yet complete");
+    expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
+  }, 30_000);
 });

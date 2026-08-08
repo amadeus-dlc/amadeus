@@ -5078,9 +5078,21 @@ function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: Swa
 // approve early and complete the stage for only some of N units. So before
 // committing a gated per-unit stage's transition, require that EVERY unit is
 // covered. If any unit is still uncovered, refuse with a message naming the
-// remaining units; the conductor must run `next` to finish them first. Only
-// enforced when a unit DAG exists (units.length>0); no DAG = single-iteration =
-// no guard (matches the degrade path in emitPerUnitRunStage).
+// remaining units; the conductor must run `next` to finish them first.
+//
+// The unit set comes from whichever ledger this run has (issue #2586). With a
+// compiled Bolt DAG that is orderedUnits; without one it is the SAME directory
+// listing emitPerUnitRunStage's degrade path iterates (unitDirsUnderConstruction),
+// because a scope that SKIPs units-generation still spreads its work across
+// several unit directories — the earlier reading of "no DAG = single iteration"
+// was already false when `declare-units-done` (issue #2358) shipped a command
+// whose whole purpose is to settle a MULTI-unit degrade listing. An empty
+// listing is left unguarded: the listing is the only ledger there, and an empty
+// one proves nothing to refuse on.
+//
+// This is strictly upstream of that declaration, never in conflict with it:
+// declare-units-done only ever settles a listing whose units are ALL covered,
+// which is exactly the case this guard passes through.
 //
 // Scoped to the INLINE per-unit loop, NOT the code-generation swarm.
 // The swarm advances ONE Bolt BATCH at a time (tryEmitSwarm emits the first
@@ -5111,13 +5123,17 @@ function perUnitCoverageRefusal(
   const isSwarmDriven =
     node.mode === SWARM_MODE && readAutonomyMode(stateContent) !== null;
   if (!isPerUnit(node) || isSwarmDriven) return null;
-  const units = orderedUnits(pd, intent);
+  const recordPrefix = relativeRecordDir(pd, intent);
+  const dagUnits = orderedUnits(pd, intent);
+  const units = dagUnits.length > 0
+    ? dagUnits
+    : unitDirsUnderConstruction(pd, recordPrefix);
   if (units.length === 0) return null;
   const pick = nextUncoveredUnit(
     pd,
     node,
     units,
-    relativeRecordDir(pd, intent),
+    recordPrefix,
     codekbCtxFor(pd),
     readUnitKinds(pd, intent),
   );
