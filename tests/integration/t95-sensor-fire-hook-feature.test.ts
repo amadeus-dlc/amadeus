@@ -111,25 +111,28 @@ function pinnedShardName(): string {
 }
 const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
-/** How many of requirements-analysis's sensors the hook should fire for a given
+/** Which of requirements-analysis's sensors the hook should fire for a given
  *  write, computed the way the hook itself decides: match each sensor's
  *  `matches` glob against the (normalized) path. Derived from the shipped graph
  *  rather than pinned, so adding a sensor to the stage does not turn these
- *  fire-path tests red for an unrelated reason. The floor keeps the derivation
- *  from vacuously passing at zero. */
-function sensorsFiringFor(filePath: string): number {
+ *  fire-path tests red for an unrelated reason.
+ *
+ *  Returns the ID SET, not a bare count: a count alone would still agree with
+ *  the observed spawns if a sensor silently dropped out of the stage or its
+ *  glob stopped matching, because expectation and reality would fall together.
+ *  The callers assert membership as well as size. */
+function sensorsFiringFor(filePath: string): string[] {
   const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
     slug: string;
-    sensors_applicable?: { matches?: string }[];
+    sensors_applicable?: { id: string; matches?: string }[];
   }[];
   const stage = graph.find((s) => s.slug === "requirements-analysis");
   if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
   const norm = filePath.replace(/\\/g, "/");
-  const count = (stage.sensors_applicable ?? []).filter(
-    (s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm),
-  ).length;
-  if (count < 2) throw new Error(`expected at least 2 firing sensors for ${filePath}, found ${count}`);
-  return count;
+  return (stage.sensors_applicable ?? [])
+    .filter((s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm))
+    .map((s) => s.id)
+    .sort();
 }
 
 const tempDirs: string[] = [];
@@ -298,6 +301,17 @@ function dropsPath(proj: string): string {
   return join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.drops");
 }
 
+/** The sensor ids the hook actually dispatched, read off the recorded argv
+ *  (`[bun, script, "fire", <id>, ...]`). Compared against sensorsFiringFor's
+ *  set so a sensor dropping out of the stage — or its glob ceasing to match —
+ *  is visible as a membership difference rather than two numbers agreeing on
+ *  the wrong value. */
+function firedSensorIds(proj: string): string[] {
+  return spawnArgvs(proj)
+    .map((argv) => argv[argv.indexOf("fire") + 1])
+    .sort();
+}
+
 describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — spawnSync)", () => {
   test("C1a: Inception markdown write fires every applicable markdown sensor [.sh test 1]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -305,10 +319,13 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const r = runHook(proj, written);
     expect(r.status).toBe(0);
     // required-sections + upstream-coverage carry matches: **/{amadeus-docs,intents}/**,
-    // and depth-budget carries the requirements.md path glob. The expected count
-    // is derived from the shipped graph rather than pinned, so adding a sensor to
+    // and depth-budget carries the requirements.md path glob. The expectation is
+    // derived from the shipped graph rather than pinned, so adding a sensor to
     // the stage does not fail this fire-path test.
-    expect(spawnArgvs(proj).length).toBe(sensorsFiringFor(written));
+    expect(firedSensorIds(proj)).toEqual(sensorsFiringFor(written));
+    // Named explicitly: a derived-vs-derived comparison would still agree if
+    // depth-budget fell out of the stage or stopped matching this path.
+    expect(firedSensorIds(proj)).toContain("depth-budget");
   }, 30000);
 
   test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
@@ -322,7 +339,8 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const written = join(seededRecordDir(proj), "inception", "requirements-analysis", "requirements.md");
     const r = runHook(proj, written);
     expect(r.status).toBe(0);
-    expect(spawnArgvs(proj).length).toBe(sensorsFiringFor(written));
+    expect(firedSensorIds(proj)).toEqual(sensorsFiringFor(written));
+    expect(firedSensorIds(proj)).toContain("depth-budget");
   }, 30000);
 
   test("C1b: spawned argv carries the fire subcommand [.sh test 2]", () => {

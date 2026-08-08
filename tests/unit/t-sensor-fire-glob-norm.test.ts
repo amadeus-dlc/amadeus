@@ -61,7 +61,7 @@ const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
  *  added). Derived from the shipped graph rather than pinned, so adding a sensor
  *  to the stage does not turn this glob-normalization test red for an unrelated
  *  reason. The floor keeps the derivation from vacuously passing at zero. */
-function sensorsFiringFor(filePath: string): number {
+function sensorsFiringFor(filePath: string): string[] {
   const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
     slug: string;
     sensors_applicable?: { id: string; matches?: string }[];
@@ -69,11 +69,10 @@ function sensorsFiringFor(filePath: string): number {
   const stage = graph.find((s) => s.slug === "requirements-analysis");
   if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
   const norm = filePath.replace(/\\/g, "/");
-  const count = (stage.sensors_applicable ?? []).filter(
-    (s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm),
-  ).length;
-  if (count < 2) throw new Error(`expected at least 2 firing sensors for ${filePath}, found ${count}`);
-  return count;
+  return (stage.sensors_applicable ?? [])
+    .filter((s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm))
+    .map((s) => s.id)
+    .sort();
 }
 
 const tempDirs: string[] = [];
@@ -251,9 +250,10 @@ describe("sensor-fire glob normalization (#757) — in-process hook drive", () =
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    // Every sensor whose glob matches the NORMALIZED path fires; the count comes
-    // from the shipped graph so a new sensor does not fail this test.
-    expect(lines.length).toBe(sensorsFiringFor(winPath));
+    // Every sensor whose glob matches the NORMALIZED path fires. Compared as an
+    // ID SET (from the shipped graph) so a new sensor does not fail this test,
+    // while a sensor silently dropping out is still visible.
+    expect(lines.map((l) => (JSON.parse(l) as string[])[3]).sort()).toEqual(sensorsFiringFor(winPath));
     const firstArgv = JSON.parse(lines[0]) as string[];
     // The dispatcher still receives the RAW path (dispatcher normalizes
     // internally via normalizePathForComparison) — only the hook-side
@@ -283,7 +283,7 @@ describe("sensor-fire glob normalization (#757) — in-process hook drive", () =
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    expect(lines.length).toBe(sensorsFiringFor(filePath));
+    expect(lines.map((l) => (JSON.parse(l) as string[])[3]).sort()).toEqual(sensorsFiringFor(filePath));
   });
 
   test("non-matching backslash path stays silent (normalization must not over-match)", async () => {

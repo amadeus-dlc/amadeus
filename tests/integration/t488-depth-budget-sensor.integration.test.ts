@@ -185,6 +185,25 @@ describe("t488 depth-budget thresholds", () => {
     expect(evaluateDepthBudget(p, "Standard").pass).toBe(true);
   });
 
+  test("a sub-integer overrun is caught — the comparison is exact, not rounded", () => {
+    // 10 FRs at 1,200 B each plus one byte: 1200.1 B/FR. Rounding the per-FR
+    // figure before comparing would report 1200 and slip under a 1200 ceiling,
+    // so the check is made on the exact total.
+    const ceiling = DEPTH_BUDGETS.Minimal as number;
+    const body = `${requirements(10, ceiling)}x`;
+    const r = evaluateDepthBudget(writeRequirements(body), "Minimal");
+    expect(r.fr_count).toBe(10);
+    expect(r.bytes).toBe(ceiling * 10 + 1);
+    expect(r.pass).toBe(false);
+  });
+
+  test("exactly at the ceiling passes — the overrun must be real", () => {
+    const ceiling = DEPTH_BUDGETS.Minimal as number;
+    const r = evaluateDepthBudget(writeRequirements(requirements(10, ceiling)), "Minimal");
+    expect(r.bytes).toBe(ceiling * 10);
+    expect(r.pass).toBe(true);
+  });
+
   test("the Standard ceiling is exclusive of overrun and inclusive at the boundary", () => {
     const at = writeRequirements(requirements(1, DEPTH_BUDGETS.Standard as number));
     expect(evaluateDepthBudget(at, "Standard").pass).toBe(true);
@@ -245,6 +264,18 @@ describe("t488 depth-budget fail-open", () => {
     expect(r.reason).toBe("no-numbered-frs");
   });
 
+  test.each([undefined, "banana", "Comprehensive"])(
+    "no numbered FRs is a finding even at depth %s — the numbering contract is depth-independent",
+    (depth) => {
+      // Checked BEFORE the depth guard: if it came after, the numbering contract
+      // would go unenforced on exactly the runs where depth cannot be resolved.
+      const p = writeRequirements("## Requirements\n\nProse with no numbered requirements at all.\n");
+      const r = evaluateDepthBudget(p, depth);
+      expect(r.pass).toBe(false);
+      expect(r.reason).toBe("no-numbered-frs");
+    },
+  );
+
   test("an empty file is not reported as missing FRs (nothing was written yet)", () => {
     const r = evaluateDepthBudget(writeRequirements(""), "Minimal");
     expect(r.pass).toBe(true);
@@ -286,6 +317,41 @@ describe("t488 readRecordDepth", () => {
     expect(readRecordDepth(seedRecord(null), tmp)).toBeUndefined();
     expect(readRecordDepth(seedRecord("- **Scope**: fix"), tmp)).toBeUndefined();
     expect(readRecordDepth(seedRecord("- **Depth**: banana"), tmp)).toBeUndefined();
+  });
+
+  test("the NEAREST state file is the authority — no climbing past it", () => {
+    // An ancestor with a valid Depth above a record whose own state carries
+    // none. Continuing the walk would measure this artifact against a ceiling
+    // from a different workflow, so the nearest state's silence must win.
+    const outer = join(tmp, "outer");
+    mkdirSync(outer, { recursive: true });
+    writeFileSync(join(outer, "amadeus-state.md"), "- **Depth**: Comprehensive\n");
+    const record = join(outer, "intents", "260808-nodepth");
+    const stageDir = join(record, "inception", "requirements-analysis");
+    mkdirSync(stageDir, { recursive: true });
+    writeFileSync(join(record, "amadeus-state.md"), "# State\n\n- **Scope**: fix\n");
+    const out = join(stageDir, "requirements.md");
+    writeFileSync(out, requirements(1, 100));
+    expect(readRecordDepth(out, tmp)).toBeUndefined();
+  });
+
+  test("an output path OUTSIDE the project resolves nothing", () => {
+    // The bound is not just a stopping point for an inside walk: a path from
+    // elsewhere must not be measured against whatever state sits above IT.
+    const foreign = mkdtempSync(join(tmpdir(), "amadeus-t488-foreign-"));
+    try {
+      const stageDir = join(foreign, "inception", "requirements-analysis");
+      mkdirSync(stageDir, { recursive: true });
+      writeFileSync(join(foreign, "amadeus-state.md"), "- **Depth**: Comprehensive\n");
+      const out = join(stageDir, "requirements.md");
+      writeFileSync(out, requirements(1, 100));
+      // Read against ITS own root it resolves, proving the fixture is sound...
+      expect(readRecordDepth(out, foreign)).toBe("Comprehensive");
+      // ...but read against an unrelated projectDir it must resolve nothing.
+      expect(readRecordDepth(out, tmp)).toBeUndefined();
+    } finally {
+      rmSync(foreign, { recursive: true, force: true });
+    }
   });
 
   test("stops at the project root rather than escaping to an ancestor state", () => {

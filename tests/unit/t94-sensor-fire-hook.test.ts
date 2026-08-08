@@ -110,19 +110,18 @@ const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
  *  rather than pinned, so adding a sensor to the stage does not turn this
  *  fire-path test red for an unrelated reason. The floor keeps the derivation
  *  from vacuously passing at zero. */
-function sensorsFiringFor(filePath: string): number {
+function sensorsFiringFor(filePath: string): string[] {
   const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
     slug: string;
-    sensors_applicable?: { matches?: string }[];
+    sensors_applicable?: { id: string; matches?: string }[];
   }[];
   const stage = graph.find((s) => s.slug === "requirements-analysis");
   if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
   const norm = filePath.replace(/\\/g, "/");
-  const count = (stage.sensors_applicable ?? []).filter(
-    (s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm),
-  ).length;
-  if (count < 2) throw new Error(`expected at least 2 firing sensors for ${filePath}, found ${count}`);
-  return count;
+  return (stage.sensors_applicable ?? [])
+    .filter((s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm))
+    .map((s) => s.id)
+    .sort();
 }
 
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
@@ -334,7 +333,9 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const lines = readFileSync(spawnLogPath(proj), "utf-8")
       .split("\n")
       .filter(Boolean);
-    expect(lines.length).toBe(sensorsFiringFor(filePath)); // every matching sensor fires
+    // Compared as an ID SET: a bare count would still agree if a sensor dropped
+    // out of the stage, because expectation and reality would fall together.
+    expect(lines.map((l) => (JSON.parse(l) as string[])[3]).sort()).toEqual(sensorsFiringFor(filePath));
     const firstArgv = JSON.parse(lines[0]) as string[];
     expect(firstArgv.slice(2)).toEqual([
       "fire",

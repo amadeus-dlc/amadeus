@@ -23,7 +23,7 @@
 // Self-contained (no amadeus-lib import): a per-sensor script is spawned by the
 // dispatcher and must not drag the library's module graph into that process.
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 /** Bytes per numbered FR each depth may spend. Comprehensive is deliberately
  *  absent — it declares no ceiling (stage-protocol.md §8), and an entry of
@@ -124,9 +124,11 @@ export function evaluateDepthBudget(outputPath: string, depth: string | undefine
   // violation — reporting it would fire on every artifact's first keystroke.
   if (body.trim() === "") return verdict("empty", [], { ...NONE, bytes });
 
-  const level = canonicalDepth(depth);
-  if (level === undefined) return verdict("no-depth", [], { ...NONE, bytes });
-
+  // The FR-n numbering requirement is stated unconditionally by the stage, so
+  // it is checked BEFORE depth: a written document with no numbered
+  // requirements is a contract miss whether or not a depth could be resolved.
+  // Checking it after the depth guard would silence it on exactly the runs
+  // where depth is unavailable.
   const frCount = countFunctionalRequirements(body);
   if (frCount === 0) {
     return verdict(
@@ -139,6 +141,12 @@ export function evaluateDepthBudget(outputPath: string, depth: string | undefine
     );
   }
 
+  const level = canonicalDepth(depth);
+  if (level === undefined) return verdict("no-depth", [], { ...NONE, bytes, fr_count: frCount });
+
+  // Reported per-FR figure is rounded for readability, but the COMPARISON uses
+  // the exact quantity: rounding first would let 12,001 B over 10 FRs (1200.1)
+  // report as 1200 and slip under a 1200 ceiling.
   const bytesPerFr = Math.round(bytes / frCount);
   const ceiling = DEPTH_BUDGETS[level];
   if (ceiling === undefined) {
@@ -146,10 +154,10 @@ export function evaluateDepthBudget(outputPath: string, depth: string | undefine
   }
 
   const findings: DepthBudgetFinding[] = [];
-  if (bytesPerFr > ceiling) {
+  if (bytes > ceiling * frCount) {
     findings.push({
       field: "bytes-per-fr",
-      reason: `${bytesPerFr} B per FR over ${frCount} requirements exceeds the ${level} guidance of ${ceiling} B per FR`,
+      reason: `${bytes} B over ${frCount} requirements exceeds the ${level} guidance of ${ceiling} B per FR`,
     });
   }
   return verdict(level.toLowerCase(), findings, { fr_count: frCount, bytes, bytes_per_fr: bytesPerFr });
@@ -167,28 +175,44 @@ export function evaluateDepthBudget(outputPath: string, depth: string | undefine
 export function readRecordDepth(outputPath: string, projectDir: string): string | undefined {
   const root = resolve(projectDir);
   let dir = dirname(resolve(outputPath));
+  // An output path outside projectDir has no record of ours to find, and
+  // walking from it would climb past the bound into whatever state happens to
+  // sit above — measure nothing rather than measure against a stranger's depth.
+  const rel = relative(root, dir);
+  if (rel.startsWith("..") || isAbsolute(rel)) return undefined;
   for (;;) {
-    const level = depthFromStateIn(dir);
-    if (level !== undefined) return level;
+    // The NEAREST state file is the authority. Stop at the first one found even
+    // when it yields no usable Depth: continuing would let an ancestor record
+    // answer for this one, measuring the artifact against a ceiling from a
+    // different workflow. No Depth here means fail-open, not "ask upstairs".
+    const state = stateFileIn(dir);
+    if (state !== null) return depthFrom(state);
     if (dir === root) return undefined;
     const parent = dirname(dir);
-    // Stop at the filesystem root too, so an output path outside projectDir
-    // terminates instead of looping.
+    // Stop at the filesystem root too, so a pathological input terminates
+    // instead of looping.
     if (parent === dir) return undefined;
     dir = parent;
   }
 }
 
-/** The single directory's worth of work the walk repeats: read this dir's
- *  amadeus-state.md, if any, and pull a canonical Depth out of it. Every
- *  failure — absent, not a file, unreadable, no Depth field, unrecognizable
- *  value — is undefined, which the caller reads as "keep walking". */
-function depthFromStateIn(dir: string): string | undefined {
+/** This directory's amadeus-state.md, or null when there is no readable regular
+ *  file there — the signal the walk uses to keep climbing. */
+function stateFileIn(dir: string): string | null {
   const candidate = join(dir, "amadeus-state.md");
-  if (!existsSync(candidate)) return undefined;
+  if (!existsSync(candidate)) return null;
   try {
-    if (!statSync(candidate).isFile()) return undefined;
-    const match = readFileSync(candidate, "utf-8").match(/^-\s+\*\*Depth\*\*:\s*(.*)$/m);
+    return statSync(candidate).isFile() ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The canonical Depth recorded in a state file, or undefined when the field is
+ *  absent, unrecognizable, or the file cannot be read. */
+function depthFrom(statePath: string): string | undefined {
+  try {
+    const match = readFileSync(statePath, "utf-8").match(/^-\s+\*\*Depth\*\*:\s*(.*)$/m);
     return canonicalDepth(match?.[1]);
   } catch {
     return undefined;
