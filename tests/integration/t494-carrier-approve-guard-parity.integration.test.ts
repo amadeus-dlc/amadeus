@@ -63,15 +63,28 @@ interface Directive {
   [k: string]: unknown;
 }
 
+// The refusal amadeus-state.ts returns when the carrier reaches the approve it
+// was carrying: the fixture never mints a trusted session, so the state tool
+// declines. Asserting THIS is what proves a passing case travelled the whole
+// guard section and reached spawnState — "no guard message" alone would also be
+// satisfied by an early return on some unrelated error.
+const STATE_DELEGATION_REFUSAL = "Transition rejected by amadeus-state.ts approve";
+const SWARM_REFUSAL_FRAGMENT = "batch 1 (2 units";
+const COVERAGE_REFUSAL_FRAGMENT = "units are not yet complete";
+
 /** Construction-phase state parked at `stage`, with autonomy granted. */
-function constructionState(stage: string, checkboxes: Record<string, string>): string {
+function constructionState(
+  stage: string,
+  checkboxes: Record<string, string>,
+  scope = "feature",
+): string {
   const line = (slug: string) => `- [${checkboxes[slug] ?? " "}] ${slug} — EXECUTE`;
   return `# AI-DLC State Tracking
 
 ## Project Information
 - **Project**: carrier approve guard parity
 - **Project Type**: Greenfield
-- **Scope**: feature
+- **Scope**: ${scope}
 - **State Version**: 7
 - **Skeleton Stance**: on
 - **Construction Autonomy Mode**: autonomous
@@ -230,11 +243,25 @@ function runCarrierReport(proj: string, stage: string): Directive {
   ]);
 }
 
-function seedProject(stage: string, checkboxes = COMPLETED_UPSTREAM): string {
+function seedProject(stage: string, checkboxes = COMPLETED_UPSTREAM, scope = "feature"): string {
   const proj = createTestProject();
   tempDirs.push(proj);
-  writeFileSync(seededStateFile(proj), constructionState(stage, checkboxes));
+  writeFileSync(seededStateFile(proj), constructionState(stage, checkboxes, scope));
   return proj;
+}
+
+/**
+ * The positive reach assertion the exemption cases share: the report travelled
+ * PAST both guards and delegated to amadeus-state.ts, and neither guard message
+ * appears. Without the first half a case would also "pass" by failing early for
+ * an unrelated reason (a reservation mismatch, an advisory hold), which is a
+ * false negative dressed as an exemption.
+ */
+function expectReachedStateDelegation(directive: Directive): void {
+  const message = String(directive.message ?? "");
+  expect(message).toContain(STATE_DELEGATION_REFUSAL);
+  expect(message).not.toContain(SWARM_REFUSAL_FRAGMENT);
+  expect(message).not.toContain(COVERAGE_REFUSAL_FRAGMENT);
 }
 
 describe("t494 carrier approve guard parity (#2375)", () => {
@@ -293,50 +320,47 @@ describe("t494 carrier approve guard parity (#2375)", () => {
   });
 
   // Non-regression: recorded fan-out still lets the carrier through to the
-  // approve it was carrying (the refusal is the guard, not the carrier).
+  // approve it was carrying (the refusal is the guard, not the carrier). The
+  // positive half — reaching amadeus-state.ts — is what makes this a passage
+  // proof rather than an absence-of-one-string proof.
   test("d: recorded fan-out lets the carrier past the reconciliation", () => {
     const proj = seedProject("code-generation");
     seedDag(proj, [["alpha", "beta"]]);
     for (const unit of ["alpha", "beta"]) coverUnit(proj, unit);
     seedSwarmRun(proj, "1", ["alpha", "beta"]);
 
-    const directive = runCarrierReport(proj, "code-generation");
-
-    expect(String(directive.message ?? "")).not.toContain("batch 1 (2 units");
+    expectReachedStateDelegation(runCarrierReport(proj, "code-generation"));
   });
 
   // Exemption 1: the walking-skeleton gate stage is the one place the engine
   // itself declines to fan out, so zero SWARM rows there is compliance.
-  // functional-design is the first construction EXECUTE stage of `feature`.
+  // The exemption only bites on a stage the reconciliation would otherwise
+  // govern (for_each: unit-of-work + mode: subagent), so the subject must be
+  // code-generation under a scope whose FIRST construction EXECUTE stage it is:
+  // `poc` (scope-grid: functional-design … infrastructure-design all SKIP).
+  // Under `feature` the skeleton gate is functional-design, which the swarm
+  // reconciliation never reaches — testing it there would prove nothing.
   test("e: the skeleton-gate stage keeps its exemption on the carrier", () => {
-    const proj = seedProject("functional-design", {
-      "functional-design": "-",
-    });
+    const proj = seedProject(
+      "code-generation",
+      { "code-generation": "-" },
+      "poc",
+    );
     seedDag(proj, [["alpha", "beta"]]);
-    for (const unit of ["alpha", "beta"]) {
-      coverUnit(proj, unit, [
-        "domain-entities",
-        "business-logic-model",
-        "component-methods",
-        "unit-test-strategy",
-      ], "functional-design");
-    }
+    for (const unit of ["alpha", "beta"]) coverUnit(proj, unit);
 
-    const directive = runCarrierReport(proj, "functional-design");
-
-    expect(String(directive.message ?? "")).not.toContain("batch 1 (2 units");
+    expectReachedStateDelegation(runCarrierReport(proj, "code-generation"));
   });
 
   // Exemption 2: an already-[x] stage is an idempotent recovery replay, which
-  // neither guard may turn into an error.
+  // neither guard may turn into an error — note the fixture records no fan-out
+  // at all, so the reconciliation would refuse this approve if the replay
+  // exemption were dropped.
   test("f: an idempotent replay of a completed stage is not guarded", () => {
     const proj = seedProject("code-generation", { ...COMPLETED_UPSTREAM, "code-generation": "x" });
     seedDag(proj, [["alpha", "beta"]]);
 
-    const directive = runCarrierReport(proj, "code-generation");
-
-    expect(String(directive.message ?? "")).not.toContain("batch 1 (2 units");
-    expect(String(directive.message ?? "")).not.toContain("units are not yet complete");
+    expectReachedStateDelegation(runCarrierReport(proj, "code-generation"));
   });
 
   // A refusal commits nothing.
