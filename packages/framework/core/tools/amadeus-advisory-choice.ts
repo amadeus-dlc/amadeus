@@ -1164,27 +1164,34 @@ function isGroundedHumanTurn(projectDir: string, humanTurn: HumanTurnProvenance)
   }
 }
 
-// Grounding for the unattended arm: the decision id has to name an AUTO_DECIDED
-// record the journal holds, AND that record has to be the one this advisory
-// instance produces. Both halves are needed — the first stops an invented
-// decision id, the second stops a real decision about something else from being
-// re-pointed at an advisory.
-function groundedAutoDecision(
+// Grounding for the unattended arm, returned as the open advisories this decision
+// settles — empty when it is ungrounded, which is the caller's refusal signal.
+// Two halves have to hold: the decision id names an AUTO_DECIDED record the
+// journal holds, and that record is the one a given advisory instance produces.
+// The first stops an invented decision id, the second stops a real decision about
+// something else from being re-pointed at an advisory.
+//
+// It answers WHICH rather than WHETHER on purpose (#2479). Asked as a yes/no, the
+// second half collapsed: one match let the caller write receipts across the whole
+// open set, so an advisory nobody ruled on carried another advisory's decision id
+// and read as settled. The occurrence id is what makes these distinct, so it is
+// also what selects them.
+function autoDecidedPendings(
   projectDir: string,
   provenance: Extract<AdvisoryChoiceProvenance, { kind: "auto-decision" }>,
   open: readonly PendingAdvisory[],
-): boolean {
+): readonly PendingAdvisory[] {
   const intentUuid = activeIntentUuid(projectDir);
-  if (intentUuid === null) return false;
+  if (intentUuid === null) return [];
   let decisions: readonly AutoDecisionRecord[];
   try {
     decisions = autoDecisionsFromTransactions(autonomyReplayModule().readIntentAutonomyTransactionsFromAudit(projectDir));
   } catch {
-    return false;
+    return [];
   }
   const decision = decisions.find((candidate) => candidate.decisionId === provenance.decisionId);
-  if (decision === undefined) return false;
-  return open.some((pending) =>
+  if (decision === undefined) return [];
+  return open.filter((pending) =>
     advisoryOccurrenceMatchesDecision({
       intentUuid,
       identity: pending.identity,
@@ -1211,7 +1218,9 @@ export function recordAdvisoryChoice(
     const store = storeResult.value;
     if (provenance.kind === "human-turn" && provenance.shard !== auditShardName(projectDir)) return false;
     // Single spend, hoisted ahead of the kind-specific checks so it holds across
-    // provenance kinds (FR-ADV-3): one decision, or one turn, backs one receipt.
+    // provenance kinds (FR-ADV-3): one decision, or one turn, is spent once. What
+    // that spend settles is decided below and differs by kind — a turn covers the
+    // batch it was shown, a decision covers the occurrence it names.
     if (advisoryProvenanceAlreadySpent(store.receipts, provenance)) return false;
     // The instance-level gate, also ahead of the kind-specific checks: an
     // advisory already answered does not accept a second answer from EITHER
@@ -1224,11 +1233,19 @@ export function recordAdvisoryChoice(
         acceptsFreshChoice(projectDir, pending, store.receipts),
     );
     if (open.length === 0) return false;
+    // What the evidence settles, not merely that it is valid. A human turn
+    // answers the advisories it was shown together, so its settled set stays the
+    // adjacent batch; a ladder decision names one occurrence, so its settled set
+    // is that occurrence alone (#2479).
+    let settled: readonly PendingAdvisory[] = open;
     if (provenance.kind === "human-turn") {
       if (!isGroundedHumanTurn(projectDir, provenance)) return false;
       if (!hasMatchingAdvisoryPresentation(projectDir, open, provenance)) return false;
-    } else if (!groundedAutoDecision(projectDir, provenance, open)) return false;
-    for (const pending of open) {
+    } else {
+      settled = autoDecidedPendings(projectDir, provenance, open);
+      if (settled.length === 0) return false;
+    }
+    for (const pending of settled) {
       store.receipts.push({
         schema: 2,
         identity: pending.identity,
