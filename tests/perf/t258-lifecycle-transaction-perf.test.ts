@@ -12,6 +12,8 @@ import { cpus } from "node:os";
 import { join } from "node:path";
 import { currentGitSha } from "../harness/git-sha.ts";
 import {
+  ARCHIVE_LATENCY_BUDGET_MS,
+  RECOVERY_LATENCY_BUDGET_MS,
   exceedsMedianLatencyBudget,
   median,
 } from "../lib/latency-median-budget-gate.ts";
@@ -35,11 +37,11 @@ function benchmarkChild(mode: LifecycleBenchmarkSample["mode"]): LifecycleBenchm
   return JSON.parse(result.stdout) as LifecycleBenchmarkSample;
 }
 
-// Absolute latency budgets (#1424). Unchanged in value; the verdict now gates
-// the median rather than the nearest-rank p95 so shared-runner load spikes are
-// absorbed while a genuine regression still reports (#1511, median ruling).
-const ARCHIVE_LATENCY_BUDGET_MS = 500;
-const RECOVERY_LATENCY_BUDGET_MS = 750;
+// Absolute latency budgets: canonical definition (and the #1830 path B
+// re-derivation record) lives in tests/lib/latency-median-budget-gate.ts,
+// imported above. The verdict gates the median rather than the nearest-rank
+// p95 so shared-runner load spikes are absorbed while a genuine regression
+// still reports (#1511, median ruling).
 
 describe("intent lifecycle transaction performance contract", () => {
   // Budget derivation (#1830 path A / #1835 cross-review, 22 CI sections):

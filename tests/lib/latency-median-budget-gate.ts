@@ -6,9 +6,10 @@
 // exactly the property that made the old absolute p95 ceiling flaky (#1511).
 //
 // SHAPE. The verdict is `median(samples) > budget`, not `p95(samples) > budget`.
-// The budgets are unchanged (t258: archive 500 ms / recovery 750 ms; t257:
-// strictRead 100 ms / migration 250 ms), but they now gate the median instead
-// of the 95th percentile.
+// The t258 budgets are exported below as the canonical definition (archive
+// re-derived by #1830 path B / recovery unchanged at #1424's 750 ms); the t257
+// budgets (strictRead 100 ms / migration 250 ms) live in its perf file. They
+// gate the median instead of the 95th percentile.
 //
 // WHY MEDIAN, NOT THE NOOP-RELATIVE FORM. The #1511 false red is shared-runner
 // load contention that inflates individual samples inside the ~40 ms archive
@@ -37,6 +38,27 @@ export function median(values: readonly number[]): number {
   if (sorted.length % 2 === 1) return sorted[middle];
   return (sorted[middle - 1] + sorted[middle]) / 2;
 }
+
+// t258 absolute latency budgets — the single canonical definition, consumed by
+// the perf assertion (t258-lifecycle-transaction-perf) and pinned in-process by
+// the gate unit test.
+//
+// ARCHIVE re-derivation (#1830 path B): #1424's 500 ms encoded the machine it
+// was measured on; a slower CI runner cross-section (XEON PLATINUM 8573C)
+// measured archiveMedianMs 562 on an unchanged workload — a false red from
+// machine variance, not a regression. Re-derived from the fleet maximum with a
+// 2x safety factor: budget = 2 x fleet-max-observed(562) = 1124 ms. A
+// correlated-calibration relative budget (target/scaled-workload ratio stable
+// to 9% across a 0..16-process load sweep) was measured viable on a single
+// machine, but adopting it needs cross-machine ratio data first — tracked on
+// #1830.
+//
+// RECOVERY stays at #1424's 750 ms: it has never produced a false red, and
+// projecting the slowest observed fleet cross-section (8.8x the experiment
+// baseline machine) onto its measured median (46.77 ms) lands at ~412 ms,
+// still inside the budget.
+export const ARCHIVE_LATENCY_BUDGET_MS = 1124;
+export const RECOVERY_LATENCY_BUDGET_MS = 750;
 
 // True when the median latency breaches the absolute budget. Fails closed on a
 // measurement it cannot interpret — an empty sample set or any non-finite
