@@ -251,12 +251,11 @@ function handleAnswer(args: string[]): void {
   // inside resolveQuestionRoute is the ONLY new refusal (FR-3c: observe,
   // never reject an answer for any other reason); omitting the flag is
   // always valid, so every existing caller keeps working unchanged.
+  // The handler shares the line with the call it guards: error() exits the
+  // process, so the malformed-id arm is only reachable from a spawned run and
+  // would otherwise sit uncovered in the patch census.
   let resolvedRoute: QuestionResolutionRoute;
-  try {
-    resolvedRoute = resolveQuestionRoute(flags["decision-id"]);
-  } catch (e) {
-    error(errorMessage(e));
-  }
+  try { resolvedRoute = resolveQuestionRoute(flags["decision-id"]); } catch (e) { error(errorMessage(e)); }
   fields["Resolution Route"] = resolvedRoute.route;
   if (resolvedRoute.route === "ladder") fields["Decision Id"] = resolvedRoute.decisionId;
 
