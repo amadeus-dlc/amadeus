@@ -6484,6 +6484,17 @@
   {
     "file": "packages/framework/core/tools/amadeus-bolt.ts",
     "selector": {
+      "function": "setMergeHeld",
+      "fingerprint": "sha256:a6385cca771a5c5dd6e502c4f567662e1c6d29f4da1f5c046db8e0de0fab7417",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The missing-forked-state arm of setMergeHeld. Its only statement is error(), amadeus-bolt.ts's emitError wrapper, and emitError ends in process.exit(1) unconditionally — an in-process driver is killed before it can assert, and stubbing process.exit would latch emitError's _errorEmitInProgress flag and suppress the audit row of every later error in the same bun process. The line was already collapsed onto one row (spawn-blindspot-two-step (i)) so this waives one line rather than the wrapped call's three. The lock this arm sits inside is covered: t506 drives both hold-merge and release-merge through handleBoltCommand in-process, including the foreign-holder blocking case and the bucket-inversion pin.",
+    "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "selector": {
       "function": "handleApproveBatch",
       "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
       "anchorLines": 1,
