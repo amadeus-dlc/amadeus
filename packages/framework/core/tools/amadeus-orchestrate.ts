@@ -2485,12 +2485,14 @@ function routeMainWorkflowDirective(
 }
 
 // resolveDepth — the single depth authority for directive emission (#2425):
-// amadeus-state.md → **Depth** wins; a state with no Depth field (or no state
-// at all — the --single and no-state jump paths pass stateContent: null) falls
-// back to the scope's declared default. Values are normalized against
-// VALID_DEPTH_VALUES so a hand-edited lowercase state still emits the
-// canonical Capitalized form; an unrecognizable value resolves to undefined
-// (the directive simply omits the optional field).
+// amadeus-state.md → **Depth** wins. Values are normalized against
+// VALID_DEPTH_VALUES so a hand-edited lowercase state still emits the canonical
+// Capitalized form. Anything the state cannot supply a usable level for — no
+// Depth field, an unrecognizable value, or no state at all (the --single and
+// no-state jump paths pass stateContent: null) — falls back to the scope's
+// declared default, so a corrupted state degrades to the scope level rather
+// than leaving the stage with no depth signal. Only an unknown scope on top of
+// that yields undefined, and the directive then omits the optional field.
 function resolveDepth(stateContent: string | null, scope: string): DepthLevel | undefined {
   const canon = (raw: string | undefined): DepthLevel | undefined => {
     if (!raw) return undefined;

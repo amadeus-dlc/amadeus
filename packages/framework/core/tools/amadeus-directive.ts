@@ -94,12 +94,12 @@ export interface RunStageDirective {
   sensors_applicable: string[];
   stage_file: string;
   // depth — the workflow's resolved depth level (amadeus-state.md → **Depth**,
-  // falling back to the scope's declared default when the state carries no
-  // Depth field or there is no state to read, e.g. --single / no-state jump).
-  // The SINGLE authority stage agents read for depth-scaled artifact volume;
-  // they never re-derive depth from complexity (#2425). Optional only for a
-  // legacy/fixture state with no Depth field AND an unknown scope — the engine
-  // emits it on every normal path.
+  // falling back to the scope's declared default whenever the state cannot
+  // supply a usable level: no Depth field, an unrecognizable value, or no state
+  // to read at all, e.g. --single / no-state jump). The SINGLE authority stage
+  // agents read for depth-scaled artifact volume; they never re-derive depth
+  // from complexity (#2425). Optional only when that fallback also comes up
+  // empty — an unknown scope — so the engine emits it on every normal path.
   depth?: DepthLevel;
   // reviewer — the agent to invoke as a separate sub-agent for quality review
   // after the stage body completes. Absent (undefined) when no review step is

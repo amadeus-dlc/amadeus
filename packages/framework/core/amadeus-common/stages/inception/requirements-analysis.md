@@ -2,7 +2,7 @@
 slug: requirements-analysis
 phase: inception
 execution: ALWAYS
-condition: Always executes — depth scales with project complexity
+condition: Always executes — the engine-resolved depth scales its artifact volume
 lead_agent: amadeus-product-agent
 support_agents: []
 mode: inline

@@ -34,10 +34,7 @@ import { dirname, join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import {
-  emitComposedPluginStageIfInstalled,
-  handleNext,
-} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -103,7 +100,9 @@ afterEach(() => {
   _resetStageGraphForTests();
   resetAidlcEnv();
   resetOtelPerProject();
-  if (host) rmSync(host, { recursive: true, force: true });
+  // host is `<tmp root>/.claude`; remove the whole temp root so the sibling
+  // `amadeus/` tree the fixture writes goes with it.
+  if (host) rmSync(dirname(host), { recursive: true, force: true });
   cleanupTestProject(proj);
 });
 
@@ -206,6 +205,16 @@ describe("t486 next delivers depth", () => {
     expect(emittedDirective().depth).toBe("Comprehensive");
   });
 
+  // An unrecognizable state value is treated like an absent one: the scope
+  // default still delivers a usable depth rather than omitting the field, so a
+  // corrupted state degrades to the scope's declared level instead of leaving
+  // the stage with no depth signal at all.
+  test("an unrecognizable state value falls back to the scope default", () => {
+    seedProject();
+    rewriteState((c) => c.replace("- **Depth**: Minimal", "- **Depth**: banana"));
+    expect(emittedDirective().depth).toBe("Minimal");
+  });
+
   // The isolated single-stage emitter passes stateContent: null to
   // buildRunStageDirective on purpose (no routing read: no skeleton round-trip,
   // no main-pointer persona signal). Depth is workflow CONFIGURATION rather than
@@ -250,32 +259,29 @@ describe("t486 next delivers depth", () => {
     );
   }
 
+  // Driven through handleNext so the state read AND its hand-off to the
+  // composed-plugin route are both exercised — calling the seam directly would
+  // supply the state the call site is supposed to be forwarding.
   test("a composed plugin stage reached by --stage (no --single) delivers the state depth", () => {
     seedProject();
     rewriteState((c) => c.replace("- **Depth**: Minimal", "- **Depth**: Comprehensive"));
     composeTrustedStage("requirements-analysis");
-    const emitted = emitComposedPluginStageIfInstalled(
-      { stage: "requirements-analysis" },
-      "fix",
-      null,
-      null,
-      undefined,
-      host,
-      readFileSync(seededStateFile(proj), "utf-8"),
-    );
-    expect(emitted).toBe(true);
-    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
+    handleNext(["--stage", "requirements-analysis"], proj);
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; stage?: string; depth?: string };
     expect(directive.kind).toBe("run-stage");
+    expect(directive.stage).toBe("requirements-analysis");
     expect(directive.depth).toBe("Comprehensive");
   });
 
-  test("with no state to read, the composed plugin route falls back to the scope default", () => {
+  // The same route with a state whose Depth is absent: the scope default is the
+  // only remaining source, so the seam's fallback stays reachable end-to-end.
+  test("the composed plugin route falls back to the scope default with no state Depth", () => {
     seedProject();
+    rewriteState((c) => c.replace(/- \*\*Depth\*\*: Minimal\n/, ""));
     composeTrustedStage("requirements-analysis");
-    expect(
-      emitComposedPluginStageIfInstalled({ stage: "requirements-analysis" }, "fix", null, null, undefined, host, null),
-    ).toBe(true);
+    handleNext(["--stage", "requirements-analysis"], proj);
     const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
+    expect(directive.kind).toBe("run-stage");
     expect(directive.depth).toBe("Minimal");
   });
 });
