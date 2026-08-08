@@ -167,9 +167,27 @@ export class NoSilentDropEvidenceAdapter {
     if (result.status !== 0) throw new EvidenceRebindError("REBIND_REVISION_UNRESOLVED", `revision is not a local commit: ${revision}`);
   }
 
+  // This is the last gate before the evidence bundle is rewritten, so cleanliness has to survive
+  // a cut at ANY offset: under load git exits 0 with its stdout cut short (#2397 caught that on
+  // `git ls-tree -z`). Two guards divide the offsets between them and neither covers the other's
+  // share. NUL termination catches a record that stops mid-write — including a cut inside the
+  // header, which would otherwise leave a lone `## …` entry and read as clean. `--branch` catches
+  // the cut all the way to "", which is byte-identical to a clean worktree and which no
+  // termination check can see. Only past both is cleanliness the absence of entries after a
+  // header we actually saw.
   assertClean(): void {
-    const status = this.mustRun(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"], "REBIND_GIT_FAILED");
-    if (status.length > 0) {
+    const status = this.mustRun(
+      ["git", "status", "--porcelain=v1", "-z", "--branch", "--untracked-files=all"],
+      "REBIND_GIT_FAILED",
+    );
+    if (!status.endsWith("\0")) {
+      throw new EvidenceRebindError("REBIND_GIT_FAILED", "git status output is truncated: the final record has no NUL");
+    }
+    const [header, ...entries] = status.split("\0").filter((entry) => entry.length > 0);
+    if (header === undefined || !header.startsWith("##")) {
+      throw new EvidenceRebindError("REBIND_GIT_FAILED", "git status output is missing the branch header");
+    }
+    if (entries.length > 0) {
       throw new EvidenceRebindError("REBIND_WORKTREE_DIRTY", "index and working tree must be clean before rebind");
     }
   }

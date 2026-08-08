@@ -1620,11 +1620,11 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleNext",
-      "fingerprint": "sha256:0b245462615fcc65f8298463344c87b5e7d8c02086443f3820518c15e85aea64",
+      "fingerprint": "sha256:3dae8ed7906693cc1ba02c057f72d8dad229352ea134f7442cdb7099f04fff71",
       "anchorLines": 5,
       "targetLines": "3"
     },
-    "reason": "The handleNext early return after a mirror directive is covered by strict single-JSON generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
+    "reason": "The handleNext early return from the `--single requires --stage` guard is covered by generated-CLI assertions in t265 integration; spawned main-path lines are not attributed by Bun.",
     "expiry": "remove when handleNext can be driven with an injected in-process emitter"
   },
   {
@@ -5709,17 +5709,6 @@
       "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
       "anchorLines": 1,
       "targetLines": "1"
-    },
-    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
-    "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
-    "selector": {
-      "function": "previewProductionAutonomyGrant",
-      "fingerprint": "sha256:11ce000d2ae7b37eeee53cf73c3e022a31469c918bf36eeb32029adf782d6f97",
-      "anchorLines": 5,
-      "targetLines": "1-5"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"

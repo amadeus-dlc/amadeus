@@ -93,8 +93,8 @@ function humanTurnRow(seq: number): string {
 function stateFor(mode: string | null): string {
   const modeLine = mode === null ? "" : `- **Intent Autonomy Mode**: ${mode}\n`;
   return (
-    "- **Workflow**: feature\n- **Scope**: feature\n- **Lifecycle Phase**: CONSTRUCTION\n" +
-    `- **Current Stage**: code-generation\n${modeLine}` +
+    "## Current Status\n- **Workflow**: feature\n- **Scope**: feature\n- **Lifecycle Phase**: CONSTRUCTION\n" +
+    `- **Current Stage**: code-generation\n- **Construction Autonomy Mode**: unset\n${modeLine}` +
     "\n## Stage Progress\n- [-] code-generation — EXECUTE\n"
   );
 }

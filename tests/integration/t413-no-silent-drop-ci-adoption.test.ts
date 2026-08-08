@@ -121,11 +121,12 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // removal, which deleted the NSD001 identity 56fefece in amadeus-state.ts
     // along with the authorization path that carried it (13 -> 14), and that
     // identity was also filed under #1979. After #2338 the grandfather set lives
-    // in events/<ulid>.json and B0 is the folded effective set size.
-    // 213 -> 214 is #2378 (u3): the question-route sweep's observation-only
-    // catch entered as a granted NSD001 identity.
-    expect(result.evidence.counts).toEqual({ C_pre: 214, B_pre: 214, B0: 214 });
-    expect(folded.grandfather).toHaveLength(214);
+    // in events/<ulid>.json and B0 is the folded effective set size. 213 -> 215
+    // is #2378: two design-approved fail-open catches — the autonomy refusal
+    // emit (u1) and the question-route sweep (u3) — each entered as a granted
+    // NSD001 identity.
+    expect(result.evidence.counts).toEqual({ C_pre: 215, B_pre: 215, B0: 215 });
+    expect(folded.grandfather).toHaveLength(215);
     expect(removed).toHaveLength(14);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();

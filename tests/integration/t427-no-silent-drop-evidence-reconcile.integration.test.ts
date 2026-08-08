@@ -29,6 +29,9 @@ import {
 
 const SOURCE_ROOT = join(import.meta.dir, "../..");
 const tempRoots: string[] = [];
+const NUL = String.fromCharCode(0);
+// What `git status --porcelain=v1 -z --branch` prints for a clean worktree: the header, nothing else.
+const CLEAN_STATUS = `## main${NUL}`;
 const MOCK_EVENT = "e".repeat(40);
 const MOCK_EVENT_PARENT = "a".repeat(40);
 const MOCK_PULL_REQUEST_HEAD = "c".repeat(40);
@@ -276,6 +279,63 @@ describe("t427 pure rebind trust boundary", () => {
     }
   });
 
+  // #2397: `git status -z` can exit 0 with truncated stdout under load — t427 caught the
+  // `git ls-tree -z` face of it. Cleanliness has to survive a cut at ANY offset, and the two
+  // guards divide that job: NUL termination catches a record that stops mid-write (including a
+  // cut inside the header itself), while `--branch` catches the cut to "", which is
+  // byte-identical to a clean worktree and which no termination check can see. Each case below
+  // pins one cut offset; drop either guard and one of them reads as clean.
+  test("asks git for the branch header so an empty answer cannot pass as clean", () => {
+    const root = initRepository();
+    let asked: readonly string[] = [];
+    const runner: CommandRunner = {
+      run(args, options = {}) {
+        if (commandKey(args) === "git status") {
+          asked = args;
+          return commandResult(0, "");
+        }
+        return command(options.cwd ?? root, args);
+      },
+    };
+
+    expect(() => new NoSilentDropEvidenceAdapter(root, runner).assertClean())
+      .toThrow("git status output is truncated");
+    expect(asked).toContain("--branch");
+  });
+
+  test("rejects every truncated status shape instead of reading it as clean", () => {
+    const root = initRepository();
+    const statusRunner = (stdout: string): CommandRunner => ({
+      run(args, options = {}) {
+        return commandKey(args) === "git status" ? commandResult(0, stdout) : command(options.cwd ?? root, args);
+      },
+    });
+
+    // Cut after the header's bytes but before its NUL, and cut inside the header. Both leave a
+    // string whose only entry starts with "##", so the header check alone would call them clean.
+    for (const truncated of ["## main", "## ma", `## main${NUL} M implementation`.slice(0, -3)]) {
+      expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(truncated)).assertClean(), truncated)
+        .toThrow("git status output is truncated");
+    }
+    // Terminated, but git never omits the header — an answer without one is not a clean worktree.
+    expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(` M implementation.ts${NUL}`)).assertClean())
+      .toThrow("git status output is missing the branch header");
+  });
+
+  test("separates a clean worktree from a dirty one by what follows the branch header", () => {
+    const root = initRepository();
+    const statusRunner = (stdout: string): CommandRunner => ({
+      run(args, options = {}) {
+        return commandKey(args) === "git status" ? commandResult(0, stdout) : command(options.cwd ?? root, args);
+      },
+    });
+
+    expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(`## main${NUL}`)).assertClean()).not.toThrow();
+    expect(() =>
+      new NoSilentDropEvidenceAdapter(root, statusRunner(`## main${NUL} M implementation.ts${NUL}`)).assertClean()
+    ).toThrow("index and working tree must be clean before rebind");
+  });
+
   test("rejects a clean detached HEAD before changing evidence", () => {
     const root = initRepository();
     const target = must(root, ["git", "rev-parse", "HEAD"]);
@@ -306,6 +366,7 @@ describe("t427 pure rebind trust boundary", () => {
         if (args[0] === "git" && args[1] === "symbolic-ref") {
           return { status: 0, stdout: "refs/heads/evidence-test\n", stderr: "" };
         }
+        if (args[0] === "git" && args[1] === "status") return { status: 0, stdout: CLEAN_STATUS, stderr: "" };
         return { status: 0, stdout: "", stderr: "" };
       },
     };
@@ -324,7 +385,8 @@ describe("t427 pure rebind trust boundary", () => {
       "git status": () => {
         statusCalls += 1;
         if (statusCalls === 2) rmSync(join(root, "tests", "no-silent-drop"), { recursive: true });
-        return commandResult();
+        // A clean worktree still carries the `## <branch>` header assertClean requires.
+        return commandResult(0, CLEAN_STATUS);
       },
       "git restore": () => commandResult(1, "", "index recovery rejected"),
     };
@@ -354,7 +416,7 @@ function syntheticReconcileRunner(
       if (args[2]?.startsWith("refs/no-silent-drop/")) return commandResult(0, `${MOCK_PULL_REQUEST_HEAD}\n`);
       return commandResult(0, `${MOCK_EVENT}\n`);
     },
-    "git status": () => commandResult(),
+    "git status": () => commandResult(0, CLEAN_STATUS),
     "git ls-tree": () => commandResult(),
     "gh api": () => {
       if (options.mutateEvidenceTo !== undefined) {
