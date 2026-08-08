@@ -56,19 +56,31 @@ allows:
 - `- **FR-1**: <title>` (bold list entry)
 - `**FR-1**: <title>` (bold line)
 
+The id may carry a domain prefix — `FR-AUTH-1`, `FR-QRP-3`, `FR-GRT-004` — which
+is how the corpus overwhelmingly writes them, but it must END on a numeric
+segment: `FR-AUTH` alone and `FR-AUTH-1x` are not numbered requirements. Nothing
+is required to follow a valid id: a colon, an em dash, or a parenthesised title
+inside the same bold run all read the same. An earlier pattern demanded a digit
+straight after `FR-` and a closing `**` right after the id; over the corpus
+population below it undercounted 17 of 132 artifacts and read 14 as carrying no
+requirements at all.
+
 Distinct ids are counted, so restating `FR-1` in a later cross-reference does
 not inflate the denominator — which would otherwise make an over-long document
 look proportionate.
 
 ## Budgets
 
-Measured over the 43 corpus artifacts carrying `FR-n` ids, by applying this
-sensor's own predicate to each with its recorded depth:
+Measured by applying this sensor's own predicate (post-fix counting) to every
+`amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md`
+— 132 files, of which 125 carry `FR-n` ids; one of those has no recognizable
+`Depth` and is excluded from the per-level rows below. The other 124 are
+paired with the `**Depth**` recorded in their intent's `amadeus-state.md`:
 
 | Depth | Ceiling | min | median | max | Flags |
 |---|---|---|---|---|---|
-| Minimal | 1,800 B per FR | 1,346 | 2,353 | 6,544 | 19/26 |
-| Standard | 2,400 B per FR | 864 | 2,040 | 3,354 | 3/17 |
+| Minimal (n=72) | 1,800 B per FR | 861 | 1,930 | 6,544 | 42/72 |
+| Standard (n=52) | 2,400 B per FR | 429 | 1,654 | 12,844 | 7/52 |
 | Comprehensive | none | — | — | — | — |
 
 Both ceilings sit **inside** their level's observed range, which is what makes
@@ -78,16 +90,17 @@ all.
 
 Where each sits within that range differs on purpose:
 
-- **Minimal 1,800 is below its median (2,353).** Minimal is the level the
+- **Minimal 1,800 is below its median (1,930).** Minimal is the level the
   inversion is about — it spends more per requirement than Standard while
   declaring less detail — so its ceiling pulls the level down rather than
   ratifying it.
-- **Standard 2,400 is above its median (2,040).** Standard's current volume was
+- **Standard 2,400 is above its median (1,654).** Standard's current volume was
   judged reasonable, so its ceiling catches the tail rather than the middle.
 
 The lower bound was learned the hard way: a first Minimal ceiling of 1,200 sat
-under the observed minimum of 1,346 and flagged 26 of 26. A permanently red
-signal carries no information, so it was noise rather than a measurement.
+under the minimum of the narrower corpus then measured and flagged every
+artifact. A permanently red signal carries no information, so it was noise
+rather than a measurement.
 
 Comprehensive declares no ceiling, matching `stage-protocol.md` §8.
 

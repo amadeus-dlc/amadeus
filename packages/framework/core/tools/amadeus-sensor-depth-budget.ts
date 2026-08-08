@@ -25,26 +25,29 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-/** Bytes per numbered FR each depth may spend. Measured over the 43 corpus
- *  artifacts carrying FR-n ids:
+/** Bytes per numbered FR each depth may spend. Measured with this sensor's own
+ *  predicate (post-fix counting) over every
+ *  `amadeus/spaces/default/intents/<record>/inception/requirements-analysis/requirements.md`
+ *  — 132 files, 125 carrying FR ids, each paired with its record's Depth:
  *
- *    Minimal  n=26  min 1346  p25 1738  median 2353  max 6544 B/FR
- *    Standard n=17  min  864  median 2040  max 3354 B/FR
+ *    Minimal  n=72  min  861  p25 1587  median 1930  max  6544 B/FR
+ *    Standard n=52  min  429  p25 1256  median 1654  max 12844 B/FR
  *
  *  Both ceilings sit INSIDE their level's observed range, which is what makes
  *  each a detector rather than a verdict. Where they sit within that range
  *  differs on purpose:
  *
- *  - Minimal 1,800 is BELOW its median (2,353), flagging 19/26. Minimal is the
+ *  - Minimal 1,800 is BELOW its median (1,930), flagging 42/72. Minimal is the
  *    level the inversion is about — it spends more per requirement than
  *    Standard while declaring less detail — so its ceiling pulls the level down.
- *  - Standard 2,400 is ABOVE its median (2,040), flagging 3/17. Standard's
+ *  - Standard 2,400 is ABOVE its median (1,654), flagging 7/52. Standard's
  *    current volume was judged reasonable, so its ceiling catches the tail
  *    rather than the middle.
  *
- *  An earlier Minimal of 1,200 sat under the observed MINIMUM and flagged
- *  26/26 — a permanently red signal says nothing about which artifacts are
- *  outliers, so it was noise rather than a detector.
+ *  An earlier Minimal of 1,200 sat under the minimum of the narrower corpus
+ *  then measured and flagged every artifact — a permanently red signal says
+ *  nothing about which artifacts are outliers, so it was noise rather than a
+ *  detector.
  *
  *  Comprehensive is deliberately absent — it declares no ceiling
  *  (stage-protocol.md §8), and an entry of Infinity would read as a threshold
@@ -95,13 +98,32 @@ const NONE = { fr_count: 0, bytes: 0, bytes_per_fr: 0 };
 
 /** The three ways the stage contract lets a requirement carry its id:
  *  `### FR-1: …` (heading), `- **FR-1**: …` (bold list entry), and a bare
- *  `**FR-1**: …` line. Distinct ids are counted, so restating FR-1 in a later
- *  cross-reference does not inflate the denominator (which would make an
- *  over-long document look proportionate). */
+ *  `**FR-1**: …` line.
+ *
+ *  The id itself may carry a DOMAIN PREFIX — `FR-AUTH-1`, `FR-QRP-3`,
+ *  `FR-GRT-004` — which is how the corpus overwhelmingly writes them. An
+ *  earlier pattern demanded a digit straight after `FR-` and silently skipped
+ *  every prefixed id, undercounting 17 of the 132 corpus artifacts and
+ *  reporting 14 as carrying no requirements at all (population: every
+ *  intent record's requirements.md, per the budget comment above). Since
+ *  this count is the DENOMINATOR of
+ *  bytes-per-FR, missing ids inflate the measurement.
+ *
+ *  Distinct ids are counted, so restating one in a later cross-reference does
+ *  not inflate the denominator (which would make an over-long document look
+ *  proportionate). */
+const FR_ID = "((?:[A-Za-z0-9]+-)*[0-9]+)(?![A-Za-z0-9-])";
+// The final segment must be NUMERIC — `FR-AUTH` alone is not a numbered
+// requirement, and `FR-AUTH-1x` does not end on its number — while what
+// follows a valid id — `:`, ` — `,
+// a parenthesised title, or the closing `**` — is not constrained. The corpus
+// writes `- **FR-AUTH-1(semi 専用 authorization 型の新設)** — …`, keeping the
+// title INSIDE the bold run, so a pattern demanding `**` right after the id
+// matches almost nothing.
 const FR_PATTERNS = [
-  /^#{2,4}\s+FR-(\d+)\b/,
-  /^[-*]\s+\*\*FR-(\d+)\*\*/,
-  /^\*\*FR-(\d+)\*\*/,
+  new RegExp(`^#{2,4}\\s+FR-${FR_ID}`),
+  new RegExp(`^[-*]\\s+\\*\\*FR-${FR_ID}`),
+  new RegExp(`^\\*\\*FR-${FR_ID}`),
 ];
 
 export function countFunctionalRequirements(body: string): number {
