@@ -747,7 +747,14 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // catch (readRuntimeUnitKinds -> null), so the guard falls back to the
     // per-unit construction directories, where the artifacts exist.
     const project = seedProject([{ name: "schema", kind: "spec" }]);
-    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    // All three: without the runtime graph the unit's kind is unknown, so every
+    // declared artifact is applicable — including the primary one the reviewer
+    // writes its verdict to (#2359).
+    writeFunctionalArtifacts(project, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
     rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
   }, 30_000);

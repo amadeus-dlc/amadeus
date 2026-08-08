@@ -1666,6 +1666,7 @@ interface ProducedStage {
   phase: string;
   for_each?: string;
   produces?: string[];
+  optional_produces?: string[];
   produces_kinds?: Record<string, UnitKind[]>;
   reviewer?: string;
 }
@@ -1748,9 +1749,14 @@ function unitsMissingReview(pd: string, stage: ProducedStage): string[] {
     // Only Units that actually produced something are in scope: one that never
     // ran is the artifact layers' business, not this one's.
     if (!artifactsExistInDir(dir, applicable)) continue;
-    if (!applicable.some((name) => artifactCarriesReview(join(dir, `${name}.md`)))) {
-      missing.push(unit);
-    }
+    // The PRIMARY artifact only. `complete-review` appends its projection to the
+    // first non-optional produces entry and nowhere else, so a block on any
+    // other file was not written by the reviewer — accepting one would let a
+    // hand-placed heading stand in for the verdict this asks for.
+    const optional = new Set(stage.optional_produces ?? []);
+    const primary = applicable.find((name) => !optional.has(name));
+    if (primary === undefined) continue;
+    if (!artifactCarriesReview(join(dir, `${primary}.md`))) missing.push(unit);
   }
   return missing;
 }
@@ -2071,6 +2077,7 @@ type VerifiableStage = {
   phase: string;
   for_each?: string;
   produces?: string[];
+  optional_produces?: string[];
   produces_kinds?: Record<string, UnitKind[]>;
   reviewer?: string;
   workspace_requires?: boolean;

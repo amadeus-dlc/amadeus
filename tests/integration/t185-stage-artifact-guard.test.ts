@@ -276,6 +276,22 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
       expect(r.rc).toBe(0);
     });
+
+    // complete-review appends only to the primary artifact (the first
+    // non-optional produces entry), so a block anywhere else was not written by
+    // the reviewer. Accepting one would let a hand-placed heading on a secondary
+    // artifact stand in for the verdict this gate exists to require.
+    test("REFUSES a Review block that sits on a secondary artifact instead", () => {
+      stageCodeGenComplete();
+      writeFileSync(
+        join(seededRecordDir(proj), `construction/${UNIT}/code-generation/code-summary.md`),
+        "# stub\n\n## A\n\n## B\n\n## Review — Iteration 1\n\n- **Verdict:** READY\n",
+      );
+      guarded(proj, ["gate-start", "code-generation"]);
+      const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain(UNIT);
+    });
   });
 
   // --- Layer 1 (codekb placement): reverse-engineering -----------------------
