@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
   AdapterExecution,
@@ -20,6 +20,7 @@ import { digest, type Result, sanitizeText } from "./contract.ts";
 import { buildChildEnvironment } from "./policy.ts";
 import { capabilityById } from "./registry.ts";
 import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
+import { removeTreeVerified } from "./testing/remove-tree-verified.ts";
 import {
   absentPrivateServer,
   commandFailed,
@@ -312,7 +313,7 @@ export class ClaudeTuiAdapter implements LiveAdapter {
       }
     }
     try {
-      rmSync(target.scratch.root, { recursive: true, force: true });
+      removeTreeVerified(target.scratch.root);
       this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));

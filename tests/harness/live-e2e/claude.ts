@@ -24,6 +24,7 @@ import { capabilityById } from "./registry.ts";
 import { cleanupReceiptFromRegistrar, type ResourceRegistrar } from "./resources.ts";
 import { initializeScratchGit } from "./scratch.ts";
 import { collectBounded } from "./stream.ts";
+import { removeTreeVerified } from "./testing/remove-tree-verified.ts";
 import { parseVersion, type Version, versionAtLeast } from "./version.ts";
 
 export const CLAUDE_PRINT_PROMPT =
@@ -362,7 +363,7 @@ export class ClaudePrintAdapter implements LiveAdapter {
       }
     }
     try {
-      rmSync(target.scratch.root, { recursive: true, force: true });
+      removeTreeVerified(target.scratch.root);
       this.#registrar?.markReleased("scratch-root");
     } catch (error) {
       failures.push(sanitizeText(String(error)));

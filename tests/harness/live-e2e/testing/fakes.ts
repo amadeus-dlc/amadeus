@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type {
   AdapterExecution,
@@ -15,6 +15,7 @@ import { digest, type Result } from "../contract.ts";
 import { LIVE_CAPABILITIES } from "../registry.ts";
 import type { ResourceRegistrar } from "../resources.ts";
 import type { FaultPoint } from "./contract-case.ts";
+import { removeTreeVerified } from "./remove-tree-verified.ts";
 
 export interface ScriptedAdapterOptions {
   readonly runId: string;
@@ -108,7 +109,7 @@ export class ScriptedLiveAdapter implements LiveAdapter {
       }
     }
     if (this.#options.fault === "cleanup") failures.push("injected cleanup fault");
-    rmSync(target.scratch.root, { recursive: true, force: true });
+    removeTreeVerified(target.scratch.root);
     const attempted = target.registeredResources.map((resource) => resource.id);
     return {
       attemptedResourceIds: attempted,

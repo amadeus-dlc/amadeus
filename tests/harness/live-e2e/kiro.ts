@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, symlinkSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -11,6 +11,7 @@ import type {
 import { requireCapability } from "./registry.ts";
 import type { ResourceRegistrar } from "./resources.ts";
 import { initializeScratchGit } from "./scratch.ts";
+import { removeTreeVerified } from "./testing/remove-tree-verified.ts";
 
 /**
  * Kiro CLI keeps its authentication in an on-disk database under the user's
@@ -189,7 +190,7 @@ export class KiroScratchAllocator implements ScratchAllocator {
       initializeScratchGit(projectDir, homeDir, process.env, requireCapability("kiro-tui").environment);
       return { root, projectDir, homeDir, state: "ready" };
     } catch (error) {
-      rmSync(root, { recursive: true, force: true });
+      removeTreeVerified(root);
       throw error;
     }
   }

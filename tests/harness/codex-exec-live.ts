@@ -5,13 +5,13 @@ import {
   mkdirSync,
   mkdtempSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { buildChildEnvironment } from "./live-e2e/policy.ts";
 import { requireCapability } from "./live-e2e/registry.ts";
+import { removeTreeVerified } from "./live-e2e/testing/remove-tree-verified.ts";
 
 const CAPABILITY = requireCapability("codex-exec");
 
@@ -90,7 +90,7 @@ export interface CodexExecHome {
 export function setupCodexExecHome(prefix: string): CodexExecHome {
   const root = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
   const home = join(root, "codex-home");
-  const cleanup = (): void => rmSync(root, { recursive: true, force: true });
+  const cleanup = (): void => removeTreeVerified(root);
   try {
     mkdirSync(home, { recursive: true });
     return { root, home, cleanup };
