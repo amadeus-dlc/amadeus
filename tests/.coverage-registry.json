@@ -20,22 +20,22 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 618,
+    "total": 620,
     "enumeratedByClass": {
-      "function": 349,
+      "function": 350,
       "audit": 91,
       "scope": 15,
       "stage": 32,
-      "hook": 14,
+      "hook": 15,
       "subcommand": 110,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 180,
+      "function": 181,
       "audit": 44,
       "scope": 15,
       "stage": 8,
-      "hook": 14,
+      "hook": 15,
       "subcommand": 86,
       "render-surface": 7
     }
@@ -1944,6 +1944,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:evaluateDispatchGuard",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:EXECUTION_PROJECTION_DIGEST_FIELD",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3794,6 +3806,10 @@
         {
           "file": "tests/integration/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t481-resolve-project-dir-worktree-marker.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4250,7 +4266,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:SUBAGENT_DISPATCH_TOOL",
+      "unitId": "function:SUBAGENT_DISPATCH_TOOLS",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -4996,6 +5012,18 @@
         },
         {
           "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-subagent-model-guard",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t485-subagent-model-guard.integration.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -6199,10 +6227,6 @@
       "unitId": "amadeus-log answer",
       "minMechanism": "cli",
       "coveredBy": [
-        {
-          "file": "tests/integration/t486-question-route-observability.integration.test.ts",
-          "mechanism": "cli"
-        },
         {
           "file": "tests/unit/t31.test.ts",
           "mechanism": "cli"
