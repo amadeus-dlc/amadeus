@@ -891,8 +891,14 @@ export function scanParsedSources(parsedSources: readonly ParsedSource[]): Seman
   if ([...contractNames.values()].some((count) => count > 1)) {
     throw new InfraFailure("RULE_INVALID", "multiple implementations resolve to one NSD003 catalog contract");
   }
+  // Scanned paths reach here from path.relative (engine.ts, snapshot capture),
+  // which separates with backslashes on Windows while the catalog is written
+  // with forward slashes. Comparing raw would put every host outside the scan
+  // there, skipping the census in silence -- the exact lapse the census exists
+  // to catch. Normalise the separator so the comparison is about the path.
+  const scannedFiles = new Set(parsedSources.map((parsed) => parsed.file.replaceAll("\\", "/")));
   for (const entry of NSD003_CATALOG) {
-    if (!parsedSources.some((parsed) => parsed.file === entry.file)) continue;
+    if (!scannedFiles.has(entry.file)) continue;
     if ((contractNames.get(entry.name) ?? 0) !== 1) {
       throw new InfraFailure(
         "RULE_INVALID",
