@@ -545,7 +545,7 @@ Atomically: marks completed `[x]`, increments Completed count, updates completio
 ```bash
 bun {{HARNESS_DIR}}/tools/amadeus-state.ts finalize "completed-slug"
 ```
-Like `advance` but does NOT mark next stage `[-]` or set `In Progress`. Marks completed `[x]`, syncs Completed counter, updates Current Stage to next, sets Last Completed Stage, Last Updated, Active Agent, Next Action. If there is no next stage, sets Status=Completed, Current Stage=none, In Progress=none.
+Like `advance` but does NOT mark next stage `[-]` or set `In Progress`. Marks completed `[x]`, syncs Completed counter, updates Current Stage to next, sets Last Completed Stage, Last Updated, Active Agent, Next Action. If there is no next stage, it delegates to `complete-workflow` — Status=Completed, In Progress=none, Next Stage=none, while Current Stage stays on the final stage slug so the record keeps where the workflow ended.
 
 **Workflow complete** (final stage done — no next stage exists):
 ```bash

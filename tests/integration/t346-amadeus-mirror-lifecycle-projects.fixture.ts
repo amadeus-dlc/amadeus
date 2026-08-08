@@ -238,13 +238,15 @@ export function createProjectFixture(options: FixtureOptions = {}) {
       "",
       "- **Project**: Project status sync",
       `- **Lifecycle Phase**: ${options.lifecyclePhase ?? "IDEATION"}`,
+      // A completed record keeps Current Stage on the stage the workflow ended
+      // on; completion is carried by In Progress and Next Stage going none.
       `- **Current Stage**: ${
-        registryStatus === "complete"
-          ? "none"
-          : options.completionInstance
-            ? "build-and-test"
-            : "intent-capture"
+        registryStatus === "complete" || options.completionInstance
+          ? "build-and-test"
+          : "intent-capture"
       }`,
+      `- **In Progress**: ${registryStatus === "complete" ? "none" : "intent-capture"}`,
+      "- **Next Stage**: none",
       `- **Status**: ${registryStatus === "complete" ? "Completed" : "Running"}`,
       `- **Last Updated**: ${NOW}`,
       ...(options.completionInstance
