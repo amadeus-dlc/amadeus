@@ -50,6 +50,7 @@ import {
   type QualityReplanPort,
 } from "./amadeus-quality-repair-runtime.ts";
 import { createAuditQualityRepairRepository } from "./amadeus-quality-repair-replay.ts";
+import type { emitAuditEvent as EmitAuditEvent } from "../otel/audit-emit.ts";
 import type { JudgePort } from "./amadeus-loop-monitor-runtime.ts";
 import {
   activeIntent,
@@ -264,39 +265,36 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
 // a value in the ledger that no reader has a meaning for.
 const REFUSAL_REASONS = ["SCOPE_OUT", "MODE_REQUIRES_HUMAN"] as const;
 
+/** What stopped a run short of a decision. Declared at module scope so the
+ *  type-only lines carry no in-body coverage records. */
+type AuthorizationRefusal = {
+  readonly kind: InteractionKind;
+  readonly stage: string;
+  readonly reason: string;
+  readonly mode: AutonomyMode;
+};
+
 // Why the run stopped, written where the rest of the Intent's history lives.
 //
 // Fail-open, and ONLY here: an audit shard that cannot be written must not turn
 // a refusal into an error, because the refusal itself is the safe answer and the
 // caller is already on its way to the human gate. Every other failure mode in
 // this file stays fail-closed.
-function emitAuthorizationRefusal(
-  projectDir: string,
-  refusal: {
-    readonly kind: InteractionKind;
-    readonly stage: string;
-    readonly reason: string;
-    readonly mode: AutonomyMode;
-  },
-): void {
+//
+// The emitter is required lazily — a module-scope import would pull the OTel
+// graph into every authorization — and bound through the type-only import above
+// so the cast stays on one line.
+function emitAuthorizationRefusal(projectDir: string, refusal: AuthorizationRefusal): void {
   if (!REFUSAL_REASONS.some((known) => known === refusal.reason)) return;
   try {
-    const otel = require("../otel/audit-emit.ts") as {
-      emitAuditEvent: (
-        eventType: string,
-        fields: Record<string, string>,
-        projectDir: string,
-      ) => { readonly appended: boolean };
-    };
+    const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
     const result = otel.emitAuditEvent("INTENT_AUTONOMY_HUMAN_REQUIRED", {
       "Interaction Kind": refusal.kind,
       "Stage slug": refusal.stage,
       Reason: refusal.reason,
       Mode: refusal.mode,
     }, projectDir);
-    if (!result.appended) {
-      console.error(`amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected`);
-    }
+    if (!result.appended) console.error(`amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected`);
   } catch (cause) {
     console.error(
       `amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
@@ -408,14 +406,18 @@ interface PreviewProductionAutonomyGrantInput {
   readonly policies?: readonly DecisionPolicyInput[];
 }
 
-export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyGrantInput): { readonly ok: true; readonly preview: {
+/** What a preview shows a human before they declare a mode. Declared at module
+ *  scope so the type-only lines carry no in-body coverage records. */
+type AutonomyGrantPreview = {
   readonly intentUuid: string;
   readonly principalId: string;
   readonly scope: GrantScopeDescriptor;
   readonly policies: readonly DecisionPolicyInput[];
   readonly displayDigest: string;
   readonly nonAutoDecidedKinds: readonly InteractionKind[];
-} } | { readonly ok: false; readonly error: string } {
+};
+
+export function previewProductionAutonomyGrant(input: PreviewProductionAutonomyGrantInput): { readonly ok: true; readonly preview: AutonomyGrantPreview } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
   const projection = coordinatorFor(input.projectDir, resolved).readProjection();
