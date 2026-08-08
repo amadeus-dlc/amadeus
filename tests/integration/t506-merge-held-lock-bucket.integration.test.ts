@@ -138,7 +138,10 @@ function setupForkedProject(slug: string): string {
     [BOLT_TOOL, "start", "--name", `Bolt${slug}`, "--batch", "1", "--worktree", "--slug", slug, "--project-dir", proj],
     { encoding: "utf-8" },
   );
-  expect(r.status).toBe(0);
+  // Carry the child's stderr into the failure: a bare status assertion reports
+  // "expected 0, received 1" and drops the one thing that says why the fork
+  // chain gave up, which is what a CI reader needs.
+  if (r.status !== 0) throw new Error(`bolt start --worktree failed (${r.status}): ${r.stderr}`);
   expect(existsSync(forkedState(proj, slug))).toBe(true);
   // The fork chain takes locks of its own; start each test from a clean slate.
   cleanLocks();
