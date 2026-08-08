@@ -635,4 +635,49 @@ describe("t433 no-silent-drop event ledger (#2338)", () => {
       assertEventCustody(root, "a".repeat(40), withGrant, withGrantFolded),
     ).toThrow("not a resolvable full commit");
   });
+
+  // A git failure must never be folded into "the events path is absent". `git ls-tree`
+  // reports an absent path as exit 0 with empty stdout, so a non-zero exit is always a
+  // real git fault — folding it to an empty base set makes every custody check vacuous.
+  test("a git ls-tree fault fails closed instead of emptying the trusted base set (#2576)", () => {
+    const root = mkdtempSync(join(tmpdir(), "nsd-lstree-fault-"));
+    tempRoots.push(root);
+    const { runGit, git } = gitRunners(root);
+    runGit(["init", "-q"]);
+    mkdirSync(join(root, "tests/no-silent-drop/events"), { recursive: true });
+    const kept = grant("fp-kept", mintUlid());
+    const doomed = grant("fp-doomed", mintUlid());
+    writeFileSync(join(root, `tests/no-silent-drop/events/${kept.ulid}.json`), encodeEvent(kept));
+    writeFileSync(join(root, `tests/no-silent-drop/events/${doomed.ulid}.json`), encodeEvent(doomed));
+    git(["add", "."]);
+    git(["commit", "-qm", "base"]);
+    const base = runGit(["rev-parse", "HEAD"]);
+
+    // An unresolvable-but-well-formed revision is a git fault, not an absent path.
+    expect(() => listEventUlidsAtRevision(root, "b".repeat(40))).toThrow(
+      "trusted event ledger could not be listed",
+    );
+
+    // End-to-end vacuity: drop a base event without enumerating it in a snapshot, then
+    // break only the tree lookup. `git cat-file -e <sha>^{commit}` still resolves, so
+    // assertEventCustody reaches ls-tree — which must fail closed rather than pass.
+    rmSync(join(root, `tests/no-silent-drop/events/${doomed.ulid}.json`));
+    const violating = loadEvents(root);
+    const violatingFolded = foldEvents(violating.byUlid.values());
+    expect(() => assertEventCustody(root, base, violating, violatingFolded)).toThrow(
+      "deleted without snapshot enumeration",
+    );
+
+    const treeSha = runGit(["rev-parse", `${base}^{tree}`]);
+    rmSync(join(root, ".git/objects", treeSha.slice(0, 2), treeSha.slice(2)));
+    const probe = spawnSync("git", ["cat-file", "-e", `${base}^{commit}`], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    expect(probe.status).toBe(0);
+
+    expect(() => assertEventCustody(root, base, violating, violatingFolded)).toThrow(
+      "trusted event ledger could not be listed",
+    );
+  });
 });

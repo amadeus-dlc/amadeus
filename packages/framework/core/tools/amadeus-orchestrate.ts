@@ -2032,8 +2032,35 @@ export function readAutonomyMode(stateContent: string | null): AutonomyMode | nu
   // recorded scheduling at "gated" so it can never skip the in-phase batch wait.
   if (intentMode === "none" || intentMode === "semi") return "gated";
   const scheduling = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() : null;
-  if (intentMode === "full") return scheduling === "autonomous" ? "autonomous" : null;
+  if (intentMode === "full") {
+    if (scheduling === "autonomous") return "autonomous";
+    announceAutonomyProjectionSkew(scheduling ?? null);
+    return null;
+  }
   return null;
+}
+
+// One advisory per observed scheduling value per process — the same
+// report-once shape reportedBoltDagRecoveries uses below, so a `next` that
+// reads the mode twice (the swarm predicate and the directive emit) does not
+// print the same line twice.
+const reportedAutonomyProjectionSkews = new Set<string>();
+
+// The full x non-autonomous return above is fail-closed but SILENT: swarm
+// scheduling simply never activates, and the operator sees a record declaring
+// full autonomy next to a swarm that never starts (#2483). Construction
+// Autonomy Mode is a derived projection of Intent Autonomy Mode — under full it
+// is expected to read "autonomous" — so any other value means the projection was
+// written out of band and the record disagrees with itself.
+//
+// stderr only: stdout carries the directive JSON (stdout-directive-stderr-advisory).
+function announceAutonomyProjectionSkew(scheduling: string | null): void {
+  const observed = scheduling === null || scheduling === "" ? "(absent)" : scheduling;
+  if (reportedAutonomyProjectionSkews.has(observed)) return;
+  reportedAutonomyProjectionSkews.add(observed);
+  console.error(
+    `AUTONOMY_PROJECTION_SKEW Intent Autonomy Mode: full but Construction Autonomy Mode: ${observed} — swarm scheduling disabled; the projection is expected to be autonomous under full (#2483)`,
+  );
 }
 
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the

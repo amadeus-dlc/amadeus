@@ -22,7 +22,7 @@ Bolt ブランチは `main` へ**スカッシュマージ**する。各 Bolt は
 
 スコープが既存コードベースへのインクリメンタルな作業(`bugfix`、`refactor`、`security-patch`)の場合は**スケルトンのセレモニーをスキップ**する。最初の Bolt も他の Bolt と同様に実行する — ブートストラップすべきものが存在しないため。
 
-Bolt 1 の出荷後(実行された場合)、オーケストレーターが**ラダープロンプト**を発火する:「残りの Bolt はどう実行しますか?」選択肢: 自律的に続行、またはすべての Bolt をゲート。チームがプロジェクトごとに選択し、その選択は `amadeus-state.md` の `Construction Autonomy Mode` として永続化される。
+Bolt 1 の出荷後(実行された場合)、オーケストレーターが**ラダープロンプト**を発火する:「残りの Bolt はどう実行しますか?」選択肢: 自律的に続行、またはすべての Bolt をゲート。チームがプロジェクトごとに選択し、その選択は intent の autonomy mode — `amadeus-state.md` の `Intent Autonomy Mode`、その正本は Intent 監査 — として記録される。認可の唯一の源は Intent 監査であり、`Construction Autonomy Mode` はその派生スケジューリング投影(`full` のとき `autonomous`、それ以外は `gated`)にすぎない。autonomy トランザクションが書くものであって、独立に設定するフィールドではない。
 
 ## Testing Posture
 

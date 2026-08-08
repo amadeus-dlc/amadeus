@@ -94,8 +94,14 @@ const SPAWN_FAILURE_RESULT: CliResult = {
 
 // Resource-exhaustion spawn failures are transient under parallel test load;
 // every other outcome (signal, non-zero exit, other spawn errors) is a real
-// verdict and must never be retried.
-const RETRYABLE_SPAWN_ERROR = /\b(?:EAGAIN|EMFILE|ENOMEM)\b/;
+// verdict and must never be retried. Bun does not always surface fd
+// exhaustion as EMFILE: under sustained fd pressure its final failure mode
+// has been observed as "Executable not found in $PATH: <bin>" instead (the
+// resolver fails to open a new fd to probe PATH entries). That message is
+// retried as an fd-exhaustion alias; it is NOT a general "binary missing"
+// retry — a genuinely missing executable would fail identically every
+// attempt and simply exhaust the retry budget without masking anything.
+const RETRYABLE_SPAWN_ERROR = /\b(?:EAGAIN|EMFILE|ENOMEM)\b|Executable not found in \$PATH/;
 const SPAWN_RETRY_LIMIT = 2;
 const SPAWN_RETRY_BACKOFF_MS = 50;
 
@@ -453,6 +459,10 @@ describe("t224 upstream-v2 migration public CLI", () => {
     ["EAGAIN", "spawn EAGAIN"],
     ["EMFILE", "spawn EMFILE"],
     ["ENOMEM", "spawn ENOMEM"],
+    // Bun's fd-exhaustion terminal failure mode is not always EMFILE: it has
+    // been observed to surface as a PATH-resolution failure once no fd is
+    // left to probe PATH entries. This alias must be retried the same way.
+    ["fd-exhaustion-path-alias", 'Executable not found in $PATH: "git"'],
   ] as const)("a %s spawn error is retried until the subprocess starts", (_code, error) => {
     let attempts = 0;
     const retries: Array<{ attempt: number; error: string }> = [];
@@ -472,7 +482,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     expect(retries.map((retry) => retry.attempt)).toEqual([1, 2]);
     expect(retries.every((retry) => retry.error === error)).toBe(true);
     expect(sleeps).toEqual([SPAWN_RETRY_BACKOFF_MS, SPAWN_RETRY_BACKOFF_MS * 2]);
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(result.error).toBeNull();
   });
 
@@ -517,7 +527,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const beforeStatus = project.git(["status", "--porcelain=v1", "-z"]);
 
     const result = migrate(project);
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(result.stderr).toBe("");
     const report = parseReport(result);
 
@@ -557,7 +567,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
 
     const result = migrate(project);
 
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(parseReport(result).status).toBe("ready");
     const indexAfter = readFileSync(indexPath);
     expect(indexAfter).toEqual(indexBefore);
@@ -576,7 +586,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       const beforeStatus = project.git(["status", "--porcelain=v1", "-z"]);
 
       const dryRun = migrate(project);
-      expect(dryRun.status).toBe(0);
+      expectSuccessfulMigration(dryRun);
       const dryRunReport = parseReport(dryRun);
       expect(dryRunReport.status).toBe("ready");
       expect(dryRunReport.evidence.stateFiles).toBe(0);
@@ -584,7 +594,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       expect(project.git(["status", "--porcelain=v1", "-z"])).toBe(beforeStatus);
 
       const applied = migrate(project, "--apply");
-      expect(applied.status).toBe(0);
+      expectSuccessfulMigration(applied);
       const appliedReport = parseReport(applied);
       expect(appliedReport.status).toBe("applied");
       expect(appliedReport.evidence.stateFiles).toBe(0);
@@ -620,7 +630,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const before = projectSnapshot(project.projectDir);
 
     const result = migrate(project);
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     const report = parseReport(result);
     expect(report.status).toBe("ready");
     expect(report.warnings.map(String)).toContain(
@@ -629,7 +639,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     expect(projectSnapshot(project.projectDir)).toBe(before);
 
     const applied = migrate(project, "--apply");
-    expect(applied.status).toBe(0);
+    expectSuccessfulMigration(applied);
     expect(readFileSync(legacyHook, "utf-8")).toBe("export {};\n");
   });
 
@@ -641,7 +651,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const recordRelative = join("spaces", "default", "intents", project.recordDir);
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(result.stderr).toBe("");
     const report = parseReport(result);
     expect(report.schemaVersion).toBe(1);
@@ -787,7 +797,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     const sourceMemoryBefore = readFileSync(project.sourceMemoryPath, "utf-8");
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(result.stderr).toBe("");
     const report = parseReport(result);
     expect(report.status).toBe("applied");
@@ -856,7 +866,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
 
       const result = migrate(project, "--apply");
 
-      expect(result.status).toBe(0);
+      expectSuccessfulMigration(result);
       expect(parseReport(result).status).toBe("applied");
       const migrated = join(project.destinationRoot, ".installer");
       expect(lstatSync(migrated).isSymbolicLink()).toBe(true);
@@ -877,7 +887,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
 
     const result = migrate(project, "--apply");
 
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     const report = parseReport(result);
     expect(report.status).toBe("applied");
     expect(report.evidence.doctor?.status).toBe("passed");
@@ -979,7 +989,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     project.commitAll("test: add migration token boundaries");
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(readFileSync(project.installerSeedMemoryPath, "utf-8")).toBe(
       source
         .replace(`${UPSTREAM_WORKSPACE_NAME}/spaces/default`, "amadeus/spaces/default")
@@ -1005,7 +1015,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     project.commitAll("test: add upstream operational token inventory");
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(parseReport(result).status).toBe("applied");
     expect(readFileSync(project.installerSeedMemoryPath, "utf-8")).toBe(
       inventory.replace(/^aidlc/gm, "amadeus"),
@@ -1025,7 +1035,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     project.commitAll("test: use crlf gitignore");
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(readFileSync(join(project.projectDir, ".gitignore"), "utf-8")).toBe(
       before.replace(`/${UPSTREAM_WORKSPACE_NAME}/active-space`, "/amadeus/active-space"),
     );
@@ -1047,7 +1057,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     project.commitAll("test: relocate upstream workspace");
 
     const result = migrateFrom(project, customSource, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(parseReport(result).status).toBe("applied");
     const migratedIgnore = readFileSync(gitignorePath, "utf-8");
     expect(migratedIgnore).toContain("amadeus/active-space");
@@ -1066,7 +1076,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     symlinkSync("missing-clone-id", upstreamCloneId);
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     expect(parseReport(result).status).toBe("applied");
     const migratedCloneId = join(project.destinationRoot, ".amadeus-clone-id");
     expect(lstatSync(migratedCloneId).isSymbolicLink()).toBe(true);
@@ -1096,7 +1106,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
 
       const result = migrate(project, "--apply");
 
-      expect(result.status).toBe(0);
+      expectSuccessfulMigration(result);
       expect(parseReport(result).status).toBe("applied");
       const migrated = join(
         project.destinationRoot,
@@ -1141,7 +1151,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
 
       const result = migrate(project, "--apply");
 
-      expect(result.status).toBe(0);
+      expectSuccessfulMigration(result);
       const report = parseReport(result);
       expect(report.status).toBe("applied");
       expect(report.evidence.doctor?.status).toBe("passed");
@@ -1173,7 +1183,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       writeFileSync(heartbeat, secret, "utf-8");
       const heartbeatBefore = readFileSync(heartbeat);
       const migrated = migrate(project, "--apply");
-      expect(migrated.status).toBe(0);
+      expectSuccessfulMigration(migrated);
       expect(existsSync(healthDir)).toBe(false);
 
       symlinkSync(
@@ -1244,7 +1254,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "--apply",
       );
 
-      expect(result.status).toBe(0);
+      expectSuccessfulMigration(result);
       const report = parseReport(result);
       expect(report.status).toBe("applied");
       expect(report.evidence.doctor?.status).toBe("passed");
@@ -1290,7 +1300,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     );
 
     const result = migrate(project, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     const report = parseReport(result);
     expect(report.status).toBe("applied");
     expect(report.evidence).toMatchObject({ stateFiles: 3 });
@@ -1335,7 +1345,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
     });
 
     const result = migrateWithTool(project, installedMigrator, "--apply");
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     const report = parseReport(result);
     expect(report.status).toBe("applied");
     expect(report.evidence.doctor?.status).toBe("passed");
@@ -1374,7 +1384,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       "--apply",
     );
 
-    expect(result.status).toBe(0);
+    expectSuccessfulMigration(result);
     const report = parseReport(result);
     expect(report.status).toBe("applied");
     expect(report.evidence.doctor?.status).toBe("passed");

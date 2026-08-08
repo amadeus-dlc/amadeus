@@ -2425,6 +2425,16 @@ export type LifecycleTransactionHooks = {
   beforeJournalDelete?: () => void;
 };
 
+// Raised when the journal and the ledger disagree. The journal is deliberately
+// NOT removed here: the transition is half-applied and only a human can decide
+// what the ledger should say. Recovering a wedged workspace therefore means
+// repairing the journal in place so it agrees with what the append-only ledger
+// already recorded, then re-running the same verb — recovery replays forward,
+// reuses the existing event (matched by Operation Id), commits the registry and
+// cursor, and deletes the journal. Deleting the journal instead is wrong: the
+// HUMAN_TURN was already consumed by the appended event, so the next attempt
+// fails with "requires an unconsumed HUMAN_TURN" and the intent is left with an
+// audit event but an unmigrated registry row.
 export class IntentLifecycleJournalError extends Error {
   constructor(message: string) {
     super(`Intent lifecycle journal is corrupt: ${message}; manual investigation required`);
@@ -2841,6 +2851,29 @@ export function withIntentLifecyclePreflight<T>(
   );
 }
 
+// The one append-order rule for the second-granular audit ledger, shared by the
+// presence predicates and the intent-lifecycle turn scan so both derive from a
+// single definition. isoTimestamp truncates milliseconds, so two blocks stamped
+// with the same second are ordinary input: inside ONE shard the real append
+// position settles them, while across shards no on-disk order exists at all —
+// `crossShardSameSecond` is the caller's decision about which side loses that
+// unresolvable tie.
+type AuditAppendOrder = {
+  readonly ts: string;
+  readonly shard: string | number;
+  readonly pos: number;
+};
+
+function auditBlockIsAfter(
+  later: AuditAppendOrder,
+  earlier: AuditAppendOrder,
+  crossShardSameSecond: boolean,
+): boolean {
+  if (later.ts !== earlier.ts) return later.ts > earlier.ts;
+  if (later.shard !== earlier.shard) return crossShardSameSecond;
+  return later.pos > earlier.pos;
+}
+
 type LifecycleTurnScan = {
   consumed: Set<string>;
   latestResolution: Map<string, string>;
@@ -2896,17 +2929,24 @@ function collectLifecycleTurnScan(all: LifecycleAuditMatch[]): LifecycleTurnScan
   return scan;
 }
 
+// Every block of one turn group shares a shard AND a second, so the consumed and
+// resolution filters apply to the whole group and run FIRST: a same-second pair
+// that is already spent is simply skipped, instead of refusing every later
+// archive/unarchive for the record (#2585 — an append-only ledger never heals,
+// so that refusal was permanent). The ledger records a consumed turn by
+// shard + timestamp, which IS this group's identity, so the group is one
+// consumable slot, not an ambiguity.
 function availableLifecycleTurns(scan: LifecycleTurnScan): LifecycleAuditMatch[] {
   const candidates: LifecycleAuditMatch[] = [];
   for (const [key, same] of scan.turns) {
-    if (same.length > 1) {
-      throw new Error(`Ambiguous HUMAN_TURN timestamp ${same[0].timestamp} in shard ${same[0].shard}`);
-    }
+    // Any element represents the group: every member shares the shard and the
+    // timestamp, and those two fields are all the caller reads back out, so
+    // which one is picked is not observable.
     const item = same[0];
+    if (scan.consumed.has(key)) continue;
     const resolution = scan.latestResolution.get(item.shard);
-    if (!scan.consumed.has(key) && (!resolution || item.timestamp > resolution)) {
-      candidates.push(item);
-    }
+    if (resolution && item.timestamp <= resolution) continue;
+    candidates.push(item);
   }
   return candidates;
 }
@@ -2919,7 +2959,17 @@ function selectLifecycleHumanTurn(
   const candidates = availableLifecycleTurns(
     collectLifecycleTurnScan(lifecycleAuditMatches(projectDir, intentDir, space)),
   );
-  candidates.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  // Latest turn wins. availableLifecycleTurns yields at most one candidate per
+  // (shard, second), so the only tie left is a same-second pair living in
+  // DIFFERENT shards, where no on-disk append order exists. The shard basename
+  // breaks it for determinism ONLY; both sides are live unconsumed turns, so
+  // either is a legitimate reference. This is a different question from the
+  // #779 fail-closed rule: that one decides resolution ⇔ human (the human side
+  // loses an unresolvable same-second tie, and it is decided in the presence
+  // predicates, not by a sort), whereas this picks between two live turns.
+  // One line on purpose: bun's lcov stamps the call line of a MULTI-line arrow
+  // argument 0 even when the arrow body runs, so a wrapped sort() reads as dead.
+  candidates.sort((left, right) => left.timestamp.localeCompare(right.timestamp) || left.shard.localeCompare(right.shard));
   const selected = candidates.at(-1);
   if (!selected) throw new Error("archive/unarchive requires an unconsumed HUMAN_TURN");
   return { shard: selected.shard, timestamp: selected.timestamp };
@@ -3745,9 +3795,7 @@ function scanPresenceLedger(
 // has an ambiguous order, so it is treated as consuming (fail closed — the human
 // side loses the tie).
 function resolutionConsumesHuman(r: PresenceEvent, h: PresenceEvent): boolean {
-  if (r.ts !== h.ts) return r.ts > h.ts;
-  if (r.shard !== h.shard) return true; // same second, cross shard → fail closed
-  return r.pos > h.pos; // same shard → real append order
+  return auditBlockIsAfter(r, h, true);
 }
 
 // True iff some human act (matching `isHuman`) is not consumed by ANY resolution
@@ -6640,13 +6688,17 @@ export function exitAuditLock(projectDir: string, intent?: string, space?: strin
 // acquireAuditLock paired with the exit-handler install). The lock-acquire path
 // registers a per-identity exit handler and the release path removes it (see
 // AUDIT_LOCK_EXIT_HANDLERS), so the handler's presence is the in-lock signal.
-// emitError (below) already branches on this to pick appendAuditEntryUnlocked
-// vs appendAuditEntry; the state tool's emitAudit helper uses it for the same
-// reason — an audit emit issued from inside a held lock MUST use the unlocked
-// variant or it self-deadlocks against the lock it is already holding
-// (appendAuditEntry calls acquireAuditLock, which is NOT reentrant — only
-// withAuditLock's depth counter is — so it would burn the full 50×100ms retry
-// budget and then throw).
+// It no longer guards the append path. That site once chose between
+// appendAuditEntryUnlocked and appendAuditEntry on this probe; the canonical
+// emit now goes through withAuditLock, whose depth counter re-enters, so the
+// branch has nothing left to do (see emitErrorRow's "ONE PATH, LOCK HELD OR
+// NOT"). Callers reading this for the emit rule get the wrong mechanism.
+//
+// What still asks: the active-intent registry contexts below, which admit a
+// mutation only while its transaction's lock is held. Those probes pass the
+// same identity the caller locked on — a bare holdsAuditLock(pd) keys the
+// workspace sentinel and answers about the wrong bucket mid per-intent
+// transaction.
 export function holdsAuditLock(projectDir: string, intent?: string, space?: string): boolean {
   return AUDIT_LOCK_EXIT_HANDLERS.has(auditLockIdentity(projectDir, intent, space));
 }

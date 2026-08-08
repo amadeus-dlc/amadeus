@@ -727,15 +727,48 @@ export function findForkAnchor(wtContent: string, slug: string): ForkAnchor | nu
   return null;
 }
 
+// Start offset of the LAST whole record line byte-identical to `lineText`, or
+// -1. Whole-line match: the candidate must begin at a line boundary and end at
+// a newline or the buffer end, so a record that merely embeds the text never
+// masquerades as the anchor.
+//
+// Last, not first: this is the SAME occurrence findForkAnchor names when it
+// scans from the tail. A first-occurrence cut on a shard that carries a
+// byte-identical earlier copy of the anchor would hand the merge every record
+// written before the current fork — records the main ledger already holds.
+//
+// Re-forking is NOT how a duplicate arises: handleAuditFork stamps a fresh
+// `Fork Boundary` and `Source Audit Hash` (main has grown by the previous
+// AUDIT_FORKED row), tags a re-entry with `Reentrant`, and the canonical emit
+// adds a new timestamp and per-shard seq — every field that could collide moves.
+// The reachable source is shard union merges, where a concurrent fork's rows are
+// re-appended verbatim (team.md, cid:code-generation:cg-shard-merge-dedupe,
+// measured at 20 duplicated lines). Symmetry with findForkAnchor is the point:
+// the two must not disagree about which anchor they mean, whatever produced it.
+function lastRecordLineStart(buffer: string, lineText: string): number {
+  let at = buffer.lastIndexOf(lineText);
+  while (at >= 0) {
+    const end = at + lineText.length;
+    const startsLine = at === 0 || buffer[at - 1] === "\n";
+    const endsLine = end === buffer.length || buffer[end] === "\n";
+    if (startsLine && endsLine) return at;
+    if (at === 0) break;
+    at = buffer.lastIndexOf(lineText, at - 1);
+  }
+  return -1;
+}
+
 // Everything after the AUDIT_FORKED anchor record — the post-fork delta, as
 // verbatim storage text ready for appendFileSync. Returns null when the
 // shard is malformed (anchor line not found or not newline-terminated).
 export function extractPostForkDelta(wtContent: string, forkBlock: string): string | null {
-  const anchorStart = wtContent.indexOf(forkBlock);
+  const anchorStart = lastRecordLineStart(wtContent, forkBlock);
   if (anchorStart < 0) return null;
-  const nl = wtContent.indexOf("\n", anchorStart + forkBlock.length - 1);
-  if (nl < 0) return null;
-  return wtContent.slice(nl + 1);
+  const anchorEnd = anchorStart + forkBlock.length;
+  // Whole-line match guarantees the next byte is a newline unless the anchor
+  // record ends the buffer unterminated — that shard is malformed.
+  if (anchorEnd >= wtContent.length) return null;
+  return wtContent.slice(anchorEnd + 1);
 }
 
 // Count the records inside a verbatim delta produced by extractPostForkDelta.

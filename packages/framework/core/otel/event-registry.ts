@@ -719,8 +719,14 @@ export const REGISTERED_EVENTS = [
     auditEvent: "AUTONOMY_MODE_SET",
     durability: "canonical",
     category: "bolt",
+    // `Field` names WHICH projection row carried the value — the generic
+    // `amadeus-state set` can write any of the three fields the autonomy
+    // transaction owns, and without the name a row reading only `Mode: gated`
+    // cannot say whether the scheduling projection or the intent mode moved
+    // (#2483). Optional: the legacy set-autonomy rows this event was minted for
+    // carried `Mode` alone.
     requiredAttributes: ["Mode"],
-    optionalAttributes: [],
+    optionalAttributes: ["Field"],
     schemaVersion: 1,
   },
   // --- Worktree (7) ---
