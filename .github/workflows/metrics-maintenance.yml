@@ -35,6 +35,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
+          # Explicit, like every other checkout in this repo. This job commits and
+          # pushes with the app token, so the credential must persist into
+          # .git/config; siblings that only read declare `false`.
+          persist-credentials: true
 
       - name: Set up bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
