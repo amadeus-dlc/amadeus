@@ -36,7 +36,20 @@ fresh state. **Report once per directive; never call the state tools
 (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report`
 dispatches them. Pass the user's invocation text through to the first `next`
 verbatim; the engine parses the flags (`--status`, `--stage`, `--scope`,
-`--depth`, freeform text, …) and resolves the scope, so do not pre-parse them.
+`--depth`, `--autonomy`, freeform text, …) and resolves the scope, so do not
+pre-parse them.
+
+`--autonomy <none|semi|full>` declares the Intent's autonomy mode as part of the
+invocation, including the invocation that births the intent. Pass it straight
+through to `next`; the engine owns the decision. `none` / `semi` are recorded
+through the canonical write path and take effect at once. `full` is never
+granted by the flag — the run prints the grant ceremony
+(`bun .opencode/tools/amadeus-bolt.ts preview-autonomy`, then
+`bun .opencode/tools/amadeus-bolt.ts set-autonomy --mode full --confirmed-display-digest <digest>`)
+and stops there. Never supply the flag on the user's behalf, and never infer
+autonomy from a previous answer: an autonomous ruling is only ever the engine
+executing a recorded human declaration. See
+`docs/reference/24-intent-autonomy.md`.
 
 ## Acting on a directive
 

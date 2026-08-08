@@ -22,7 +22,7 @@ harness registry です。監査イベントの表と各イベントの emitter 
 | モード | 人間なしで裁定できる範囲 |
 | --- | --- |
 | `none` | なし。すべてのゲートと質問が `human-required` です。 |
-| `semi` | 内部ステージゲートのみ。phase boundary でないステージゲートに限り、かつモード自体が人間コマンドで設定されている場合だけです。 |
+| `semi` | 内部ステージゲートとステージ質問。phase boundary でないステージゲートと、phase boundary で提起されたものでない `question` に限り、かつモード自体が人間コマンドで設定されている場合だけです。 |
 | `full` | 現在のグラントの scope が許す範囲。 |
 
 `none` が既定であり、legacy または読解不能な projection の着地先でもあります。
@@ -38,6 +38,32 @@ bun .claude/tools/amadeus-bolt.ts preview-autonomy
 bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
   --confirmed-display-digest sha256:...
 ```
+
+### 起動時にモードを宣言する
+
+`set-autonomy` は正準の記録経路ですが、Intent が既に存在していることを前提とします。
+`--autonomy <none|semi|full>` は同じ宣言を起動の一部として記録します。Intent を
+誕生させる起動でも有効です。
+
+```sh
+/amadeus --autonomy semi 公開 API にレート制限を追加する
+/amadeus --autonomy none
+```
+
+このフラグは記録の**手段**を追加するものであり、権限の出所ではありません。受理
+されるのは**最初の**宣言のときだけ — モードの provenance がまだ `system-default`
+である間に限られる — ため、人間が既に設定したモードを上書きすることはできません。
+同じモードを再指定した場合は no-op、異なるモードを指定した場合は拒否され
+`set-autonomy` を案内します。`none` と `semi` は唯一の正準書込経路を通ります。
+誕生直後の Intent には引用できる自身の監査履歴がないため、宣言は起動時のキー
+ストロークの human turn へ束縛されます。実 human turn を伴わない起動は明示的に
+拒否され、Intent はモード未設定のまま成立し、最初の宣言は依然として可能なままです。
+
+`--autonomy full` は受理されますが適用されることはありません。`full` の付与は上記の
+儀式そのものであり、起動フラグがそれを代替することはできません。実行はグラントを
+発行する2つのコマンドを表示してそこで停止します。アクティブなグラントがある状態で
+`none` を求める起動も同様に拒否されます。グラントの取消はフラグの副作用ではなく
+意図的な行為だからです。
 
 グラントはグローバルなスイッチではありません。Intent uuid、発行時点の scope /
 norm fingerprint、対象となる対話種別(`stage-gate`・`phase-gate`・
