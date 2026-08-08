@@ -6630,13 +6630,17 @@ export function exitAuditLock(projectDir: string, intent?: string, space?: strin
 // acquireAuditLock paired with the exit-handler install). The lock-acquire path
 // registers a per-identity exit handler and the release path removes it (see
 // AUDIT_LOCK_EXIT_HANDLERS), so the handler's presence is the in-lock signal.
-// emitError (below) already branches on this to pick appendAuditEntryUnlocked
-// vs appendAuditEntry; the state tool's emitAudit helper uses it for the same
-// reason — an audit emit issued from inside a held lock MUST use the unlocked
-// variant or it self-deadlocks against the lock it is already holding
-// (appendAuditEntry calls acquireAuditLock, which is NOT reentrant — only
-// withAuditLock's depth counter is — so it would burn the full 50×100ms retry
-// budget and then throw).
+// It no longer guards the append path. That site once chose between
+// appendAuditEntryUnlocked and appendAuditEntry on this probe; the canonical
+// emit now goes through withAuditLock, whose depth counter re-enters, so the
+// branch has nothing left to do (see emitErrorRow's "ONE PATH, LOCK HELD OR
+// NOT"). Callers reading this for the emit rule get the wrong mechanism.
+//
+// What still asks: the active-intent registry contexts below, which admit a
+// mutation only while its transaction's lock is held. Those probes pass the
+// same identity the caller locked on — a bare holdsAuditLock(pd) keys the
+// workspace sentinel and answers about the wrong bucket mid per-intent
+// transaction.
 export function holdsAuditLock(projectDir: string, intent?: string, space?: string): boolean {
   return AUDIT_LOCK_EXIT_HANDLERS.has(auditLockIdentity(projectDir, intent, space));
 }

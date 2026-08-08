@@ -330,8 +330,15 @@ export function listEventUlidsAtRevision(repoRoot: string, sha: string): Set<str
     throw new InfraFailure("INTERNAL_ERROR", "trusted event ledger lookup could not start");
   }
   if (listed.status !== 0) {
-    // Missing path → empty set (pre-migration base or bootstrap).
-    return new Set();
+    // `git ls-tree` reports an absent path as exit 0 with empty stdout, so the legitimate
+    // pre-migration/bootstrap base still lands on the empty-set path below. A non-zero exit
+    // is a real git fault (unresolvable revision, corrupt object store); folding it into an
+    // empty base set would make every custody, byte-immutability, and lineage check vacuous.
+    const detail = typeof listed.stderr === "string" ? listed.stderr.trim() : "";
+    throw new InfraFailure(
+      "BASELINE_INVALID",
+      `trusted event ledger could not be listed at ${sha}: ${detail || `git ls-tree exited ${listed.status}`}`,
+    );
   }
   const ulids = new Set<string>();
   for (const line of listed.stdout.split(/\r?\n/)) {
