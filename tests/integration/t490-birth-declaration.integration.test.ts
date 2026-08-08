@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { handleIntentBirth } from "../../packages/framework/core/tools/amadeus-utility.ts";
 import {
   applyProductionAutonomyMode,
+  observeLaunchTurnToken,
   readProductionAutonomyProjection,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import { getField } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -104,15 +105,26 @@ function appendGateApproved(recordDir: string, at: string): void {
 // The realistic launch shape: a workspace that already holds an intent (whose
 // shard therefore carries the keystroke's HUMAN_TURN), then a SECOND birth that
 // makes a brand-new intent active. Returns both record dirs.
-function workspaceWithPriorTurn(): { projectDir: string; prior: string; born: string } {
+// `token` is observed BEFORE the second birth, which is the only moment it can
+// be: the engine reads it while the intent that received the keystroke is still
+// active. Capturing it afterwards would read the newly-born record, which has no
+// presence of its own — the very confusion this identity exists to prevent.
+function workspaceWithPriorTurn(): {
+  projectDir: string;
+  prior: string;
+  born: string;
+  token: string;
+} {
   const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
   expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
   const prior = activeRecordDir(projectDir);
   appendHumanTurn(prior, "2000-01-01T00:00:00.000Z");
+  const token = observeLaunchTurnToken(projectDir);
+  expect(token).not.toBeNull();
   expect(birth(projectDir, ["--label", "new work"]).status).toBe(0);
   const born = activeRecordDir(projectDir);
   expect(born).not.toBe(prior);
-  return { projectDir, prior, born };
+  return { projectDir, prior, born, token: token as string };
 }
 
 // `next` as the conductor runs it: spawned, so the whole chain below is the real
@@ -197,7 +209,7 @@ describe("t490 launch-chain provenance (ruling condition 1: opt-in, fail-closed 
         projectDir: proj,
         stateContent: stateOf(proj),
         mode: "semi",
-        provenanceScope: "launch-chain",
+        provenanceScope: { kind: "launch-chain", launchTurnId: w.token },
       }),
     ).toMatchObject({ ok: true, projection: { mode: "semi" } });
     expect(getField(stateOf(proj), "Intent Autonomy Mode")?.trim()).toBe("semi");
@@ -211,10 +223,34 @@ describe("t490 launch-chain provenance (ruling condition 1: opt-in, fail-closed 
         projectDir: proj,
         stateContent: stateOf(proj),
         mode: "full",
-        provenanceScope: "launch-chain",
+        provenanceScope: { kind: "launch-chain", launchTurnId: w.token },
       }),
     ).toEqual({ ok: false, error: "PROVENANCE_SCOPE_FORBIDDEN" });
     expect(readProductionAutonomyProjection(proj)?.mode).toBe("none");
+  });
+});
+
+describe("t490 launch-chain provenance is bound to THIS launch (ruling conditions 2 and 3)", () => {
+  test("an unrelated intent's stale turn is NOT borrowed when this launch minted none", () => {
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    // A stale intent that still holds an unconsumed turn from some earlier day.
+    expect(birth(projectDir, ["--label", "stale work"]).status).toBe(0);
+    appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
+    // The intent actually active when the next launch happens carries no turn of
+    // its own — so this launch has no presence to observe.
+    expect(birth(projectDir, ["--label", "current work"]).status).toBe(0);
+    expect(observeLaunchTurnToken(projectDir)).toBeNull();
+
+    // Condition 3: with no real turn for THIS launch the declaration fails loud.
+    // Condition 2: the stale turn belongs to a different chain, and a timestamp
+    // comparison alone cannot tell them apart — only an identity can.
+    const run = birth(projectDir, ["--label", "declared work", "--autonomy", "semi"]);
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain("--autonomy semi");
+    const projection = readProductionAutonomyProjection(projectDir);
+    expect(projection?.mode).toBe("none");
+    expect(projection?.modeProvenance.kind).not.toBe("human-command");
   });
 });
 
@@ -228,7 +264,7 @@ describe("t490 launch-chain provenance (ruling condition 2: bounded, real turns 
         projectDir: proj,
         stateContent: stateOf(proj),
         mode: "semi",
-        provenanceScope: "launch-chain",
+        provenanceScope: { kind: "launch-chain", launchTurnId: w.token },
       }),
     ).toEqual({ ok: false, error: "PROVENANCE_REQUIRED" });
   });
@@ -237,16 +273,33 @@ describe("t490 launch-chain provenance (ruling condition 2: bounded, real turns 
     const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
     proj = projectDir;
     expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
-    const prior = activeRecordDir(projectDir);
     expect(birth(projectDir, ["--label", "new work"]).status).toBe(0);
-    // Minted only after the new intent exists — a later, unrelated keystroke.
-    appendHumanTurn(prior, "2999-01-01T00:00:00.000Z");
+    // Minted only after the new intent exists — a later keystroke, which cannot
+    // have authorized a birth that already happened.
+    appendHumanTurn(activeRecordDir(projectDir), "2999-01-01T00:00:00.000Z");
+    const late = observeLaunchTurnToken(projectDir);
+    expect(late).not.toBeNull();
+    // Even named explicitly, the upper bound refuses it: identity says WHICH
+    // turn, the birth time still says whether it could have caused this record.
     expect(
       applyProductionAutonomyMode({
         projectDir,
         stateContent: stateOf(projectDir),
         mode: "semi",
-        provenanceScope: "launch-chain",
+        provenanceScope: { kind: "launch-chain", launchTurnId: late as string },
+      }),
+    ).toEqual({ ok: false, error: "PROVENANCE_REQUIRED" });
+  });
+
+  test("a token that names no turn on disk is refused", () => {
+    const w = workspaceWithPriorTurn();
+    proj = w.projectDir;
+    expect(
+      applyProductionAutonomyMode({
+        projectDir: proj,
+        stateContent: stateOf(proj),
+        mode: "semi",
+        provenanceScope: { kind: "launch-chain", launchTurnId: "not-a-real-turn-fingerprint" },
       }),
     ).toEqual({ ok: false, error: "PROVENANCE_REQUIRED" });
   });
@@ -258,11 +311,29 @@ describe("t490 intent-birth --autonomy (FR-1a/FR-1b, BR-U2-3, BR-U2-4)", () => {
     proj = projectDir;
     expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
     appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
+    // The engine observes the turn at launch and threads it onto the birth
+    // command; this stands in for that step exactly.
+    const token = observeLaunchTurnToken(projectDir) as string;
 
-    const run = birth(projectDir, ["--label", "new work", "--autonomy", "semi"]);
+    const run = birth(projectDir, ["--label", "new work", "--autonomy", "semi", "--autonomy-turn", token]);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("Intent autonomy: semi");
     expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("semi");
+  });
+
+  test("a declaration with no carried turn is refused, even with presence elsewhere in the space", () => {
+    // Ruling conditions 2 and 3 at the CLI boundary: the prior intent's turn is
+    // real and unconsumed, but it is not a turn this launch observed, so it is
+    // not authorization for this birth.
+    const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+    proj = projectDir;
+    expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
+    appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
+
+    const run = birth(projectDir, ["--label", "new work", "--autonomy", "semi"]);
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain("carried no human turn");
+    expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("none");
   });
 
   test("`full` births the intent but never applies — it prints the ceremony and stops", () => {
@@ -271,6 +342,7 @@ describe("t490 intent-birth --autonomy (FR-1a/FR-1b, BR-U2-3, BR-U2-4)", () => {
     expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
     appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
 
+    // full never reaches the write path, so it needs no carried turn.
     const run = birth(projectDir, ["--label", "new work", "--autonomy", "full"]);
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("Intent born:");
@@ -315,7 +387,13 @@ describe("t490 the birth handler's own declaration wiring (in-process)", () => {
     expect(birth(projectDir, ["--label", "prior work"]).status).toBe(0);
     appendHumanTurn(activeRecordDir(projectDir), "2000-01-01T00:00:00.000Z");
 
-    const out = birthInProcess(projectDir, { scope: "feature", label: "new work", autonomy: "semi" });
+    const token = observeLaunchTurnToken(projectDir) as string;
+    const out = birthInProcess(projectDir, {
+      scope: "feature",
+      label: "new work",
+      autonomy: "semi",
+      "autonomy-turn": token,
+    });
     expect(out).toContain("Intent autonomy: semi");
     expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("semi");
   });
@@ -383,7 +461,7 @@ describe("t490 launch-chain provenance reads a damaged shard without blowing up"
         projectDir: proj,
         stateContent: stateOf(proj),
         mode: "semi",
-        provenanceScope: "launch-chain",
+        provenanceScope: { kind: "launch-chain", launchTurnId: w.token },
       }),
     ).toMatchObject({ ok: true, projection: { mode: "semi" } });
   });
@@ -404,10 +482,22 @@ describe("t490 one command declares and runs (FR-1d, BR-U2-7)", () => {
     const birthDirective = directiveOf(named.stdout);
     expect(birthDirective.kind).toBe("print");
     expect(String(birthDirective.message)).toContain("--autonomy semi");
+    // The identity of the turn that authorized THIS launch rides along with the
+    // mode — observed while the prior intent was still active. The command is
+    // rendered inside backticks, so stop before the closing one.
+    const carried = /--autonomy-turn ([^\s`]+)/.exec(String(birthDirective.message));
+    expect(carried).not.toBeNull();
+    const carriedToken = (carried as RegExpExecArray)[1];
+    expect(carriedToken).toBe(observeLaunchTurnToken(projectDir) as string);
 
-    // 2. The conductor runs it. The mode is applied inside birth, through the
-    //    canonical write path, against the intent birth just created.
-    const born = birth(projectDir, ["--label", "widget shop", "--arguments", "widget shop", "--autonomy", "semi"]);
+    // 2. The conductor runs what the directive named. The mode is applied inside
+    //    birth, through the canonical write path, against the intent just created.
+    const born = birth(projectDir, [
+      "--label", "widget shop",
+      "--arguments", "widget shop",
+      "--autonomy", "semi",
+      "--autonomy-turn", carriedToken,
+    ]);
     expect(born.status).toBe(0);
     expect(getField(stateOf(projectDir), "Intent Autonomy Mode")?.trim()).toBe("semi");
 

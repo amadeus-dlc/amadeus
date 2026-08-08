@@ -351,7 +351,59 @@ function latestHumanTurnId(projectDir: string, resolved: ResolvedIntent): string
 //                  authorized this LAUNCH may live in a sibling record, because a
 //                  just-born intent has no shards of its own yet. It is still a
 //                  real, already-minted turn — nothing is minted here.
-export type AutonomyProvenanceScope = "intent" | "launch-chain";
+// The launch-chain arm CARRIES the identity of the turn it cites. Making the
+// token part of the variant is the point: "launch-chain without a named turn" is
+// not representable, so the widened scope can never degrade into "any unconsumed
+// turn lying around in the space" (ruling condition 2), and a launch that minted
+// no turn has nothing to pass and fails loud (condition 3).
+export type AutonomyProvenanceScope =
+  | { readonly kind: "intent" }
+  | { readonly kind: "launch-chain"; readonly launchTurnId: string };
+
+// A turn's identity, independent of whichever intent ends up citing it.
+//
+// The fields are the ones latestHumanTurnId already uses to name a specific
+// turn — the shard it lives in and a digest of the block itself — minus the
+// target intent's own coordinates, which do not exist yet at launch time. Being
+// derived from the block's bytes is what makes the token honest: it can only
+// match a turn that is physically on disk.
+function launchTurnFingerprint(
+  space: string,
+  sourceIntentDir: string,
+  shardPath: string,
+  block: string,
+): string {
+  return autonomyDigest({
+    kind: "launch-chain-turn-v1",
+    space,
+    sourceIntentDir,
+    shard: basename(shardPath),
+    blockDigest: autonomyDigest(block),
+  });
+}
+
+// The turn that authorized the CURRENT launch, observed while the intent that
+// received the keystroke is still the active one. Null when there is nothing to
+// cite — no active intent, or an active intent whose presence is already
+// consumed. Null is the honest answer, and the caller must let it fail loud
+// rather than search for a substitute.
+//
+// Deliberately scoped to the ACTIVE record only. Reading the space-wide set is
+// exactly the defect this closes: it let an unrelated intent's stale turn stand
+// in for one this launch never had.
+export function observeLaunchTurnToken(projectDir: string): string | null {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return null;
+  let latest: { readonly timestamp: string; readonly token: string } | null = null;
+  for (const turn of outstandingHumanTurns(projectDir, resolved.intentDir, resolved.space)) {
+    const token = launchTurnFingerprint(resolved.space, resolved.intentDir, turn.shardPath, turn.block);
+    if (latest === null || turn.timestamp > latest.timestamp ||
+      (turn.timestamp === latest.timestamp && token > latest.token)) {
+      latest = { timestamp: turn.timestamp, token };
+    }
+  }
+  return latest?.token ?? null;
+}
 
 // The earliest timestamp anywhere in this intent's audit — in practice its
 // WORKFLOW_STARTED, i.e. when the record came into existence. It is the upper
@@ -376,28 +428,38 @@ function earliestAuditTimestamp(projectDir: string, resolved: ResolvedIntent): s
   return earliest;
 }
 
-// The launch-chain turn id, or null when no turn in the space qualifies.
+// The launch-chain turn id for the turn the launch NAMED, or null when that turn
+// cannot be found.
 //
-// Qualifying is deliberately narrow, so this stays a widened REFERENCE and not a
-// widened permission. A candidate must be (1) a real HUMAN_TURN block on disk,
-// (2) still unconsumed in ITS OWN record's presence ledger — the same
-// resolution-consumes-human ordering the strict path relies on — and (3) at or
-// before the moment this intent's record came into existence, which is what ties
-// it to the same launch rather than to any older presence lying around. The
-// bound is `<=` because two audit writes can share a second.
+// This resolves an identity; it does not search for a plausible candidate. A
+// turn qualifies only when it is (1) a real HUMAN_TURN block on disk, (2) still
+// unconsumed in ITS OWN record's presence ledger — the same
+// resolution-consumes-human ordering the strict path relies on, (3) at or before
+// the moment this intent's record came into existence (a turn recorded after the
+// record was created did not cause it; `<=` because two audit writes can share a
+// second), and (4) the exact turn the launch observed, matched by fingerprint.
 //
-// Among the survivors the LATEST wins, with the turn id breaking a timestamp tie
-// exactly as latestHumanTurnId does. The id digests the SOURCE record's
-// coordinates alongside the target intent's, so a launch-chain reference can
-// never collide with an intent-scoped one over the same block.
-function launchChainHumanTurnId(projectDir: string, resolved: ResolvedIntent): string | null {
+// (4) is what makes the scope a widened REFERENCE rather than a widened
+// permission. Without it the clock is the only bound, and any unconsumed turn
+// anywhere in the space — a parked intent's presence from days ago — reads as
+// authorization for this launch, which is how a launch that minted no turn at
+// all would succeed in silence instead of failing loud.
+//
+// The returned id digests the SOURCE record's coordinates alongside the target
+// intent's, so a launch-chain reference can never collide with an intent-scoped
+// one over the same block.
+function launchChainHumanTurnId(
+  projectDir: string,
+  resolved: ResolvedIntent,
+  launchTurnId: string,
+): string | null {
   const bornAt = earliestAuditTimestamp(projectDir, resolved);
   if (bornAt === null) return null;
-  let latest: { readonly timestamp: string; readonly turnId: string } | null = null;
   for (const sourceDir of listIntentDirs(projectDir, resolved.space)) {
     for (const turn of outstandingHumanTurns(projectDir, sourceDir, resolved.space)) {
       if (turn.timestamp > bornAt) continue;
-      const turnId = autonomyDigest({
+      if (launchTurnFingerprint(resolved.space, sourceDir, turn.shardPath, turn.block) !== launchTurnId) continue;
+      return autonomyDigest({
         provenanceScope: "launch-chain",
         intentUuid: resolved.intentUuid,
         intentDir: resolved.intentDir,
@@ -406,13 +468,9 @@ function launchChainHumanTurnId(projectDir: string, resolved: ResolvedIntent): s
         shard: basename(turn.shardPath),
         blockDigest: autonomyDigest(turn.block),
       });
-      if (latest === null || turn.timestamp > latest.timestamp ||
-        (turn.timestamp === latest.timestamp && turnId > latest.turnId)) {
-        latest = { timestamp: turn.timestamp, turnId };
-      }
     }
   }
-  return latest?.turnId ?? null;
+  return null;
 }
 
 // The turn a declaration will cite, or why it may not cite one. Declared at
@@ -431,9 +489,9 @@ function resolveDeclarationProvenance(
   mode: AutonomyMode,
   scope: AutonomyProvenanceScope,
 ): DeclarationProvenance {
-  if (scope === "launch-chain") {
+  if (scope.kind === "launch-chain") {
     if (mode === "full") return { ok: false, error: "PROVENANCE_SCOPE_FORBIDDEN" };
-    const chained = launchChainHumanTurnId(projectDir, resolved);
+    const chained = launchChainHumanTurnId(projectDir, resolved, scope.launchTurnId);
     return chained === null ? { ok: false, error: "PROVENANCE_REQUIRED" } : { ok: true, humanTurnId: chained };
   }
   const latest = latestHumanTurnId(projectDir, resolved);
@@ -659,7 +717,7 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
     input.projectDir,
     resolved,
     input.mode,
-    input.provenanceScope ?? "intent",
+    input.provenanceScope ?? { kind: "intent" },
   );
   if (!provenance.ok) return { ok: false, error: provenance.error };
   const humanTurnId = provenance.humanTurnId;

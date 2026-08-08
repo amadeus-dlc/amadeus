@@ -193,6 +193,7 @@ import type {
 } from "./amadeus-intent-autonomy.ts";
 import {
   applyProductionAutonomyMode,
+  observeLaunchTurnToken,
   previewProductionAutonomyGrant,
   productionStageAutonomy,
   readProductionAutonomyProjection,
@@ -763,7 +764,7 @@ function emit(directive: Directive, recordError = true): void {
   // somewhere other than birth after the ladder decided it would not — so the
   // mode would vanish. Refuse loudly rather than emit a directive that quietly
   // drops what the user declared (#2378 BR-U2-1).
-  const strandedCarry = strandedCarryRefusal(takePendingAutonomyCarry());
+  const strandedCarry = strandedCarryRefusal(takePendingAutonomyCarry()?.mode ?? null);
   // One line on purpose: the condition is evaluated on every emission, so the
   // process-terminating arm stays measurable instead of reading as a never-hit
   // line the patch gate cannot distinguish from dead code.
@@ -1435,9 +1436,20 @@ export function launchAutonomyReach(
 // ladder returns `carry`, consumed by birthPrintDirective, and checked at every
 // emission: a latch still set when a directive goes out means the declaration
 // found no birth to attach to, which is the one outcome BR-U2-1 forbids.
-let _pendingAutonomyCarry: IntentAutonomyMode | null = null;
+// The mode, plus the identity of the human turn observed AT LAUNCH while the
+// intent that received the keystroke is still active. The token travels with the
+// mode because the intent about to be born has no presence of its own to point
+// at, and a bare "find something recent" would let an unrelated intent's stale
+// turn stand in (#2378 ruling condition 2). A null token means this launch had
+// no turn to cite, which birth then refuses loudly (condition 3).
+type PendingAutonomyCarry = {
+  readonly mode: IntentAutonomyMode;
+  readonly turnToken: string | null;
+};
 
-function takePendingAutonomyCarry(): IntentAutonomyMode | null {
+let _pendingAutonomyCarry: PendingAutonomyCarry | null = null;
+
+function takePendingAutonomyCarry(): PendingAutonomyCarry | null {
   const pending = _pendingAutonomyCarry;
   _pendingAutonomyCarry = null;
   return pending;
@@ -1446,9 +1458,9 @@ function takePendingAutonomyCarry(): IntentAutonomyMode | null {
 // Why a still-latched carry is refused at emission time, or null when nothing
 // was latched. Split out from emit so the wording is exercisable in-process:
 // emit's own arm ends the process, which no in-process driver can survive.
-export function strandedCarryRefusal(carry: IntentAutonomyMode | null): string | null {
-  if (carry === null) return null;
-  return `amadeus-orchestrate: refusing to drop the --autonomy ${carry} declaration: this invocation did not reach intent birth.`;
+export function strandedCarryRefusal(mode: IntentAutonomyMode | null): string | null {
+  if (mode === null) return null;
+  return `amadeus-orchestrate: refusing to drop the --autonomy ${mode} declaration: this invocation did not reach intent birth.`;
 }
 
 // A birth branch can still divert to the intent picker (a workspace that holds
@@ -1461,7 +1473,7 @@ function autonomyCarryDivertError(): ErrorDirective | null {
   const carry = takePendingAutonomyCarry();
   if (carry === null) return null;
   return errorDirective(
-    `--autonomy ${carry} was not applied: this workspace has intents but none is active, so \`next\` needs one selected before there is anything to declare against. Choose an intent, then declare the mode with \`/amadeus --autonomy ${carry}\`.`,
+    `--autonomy ${carry.mode} was not applied: this workspace has intents but none is active, so \`next\` needs one selected before there is anything to declare against. Choose an intent, then declare the mode with \`/amadeus --autonomy ${carry.mode}\`.`,
   );
 }
 
@@ -1503,7 +1515,12 @@ function birthPrintDirective(scope: string, flags: ParsedFlags, description?: st
   // FR-1a). intent-birth applies `none`/`semi` through the canonical write path
   // and stops on `full` with the grant ceremony (BR-U2-3).
   const carry = takePendingAutonomyCarry();
-  if (carry !== null) cmd.push(`--autonomy ${carry}`);
+  if (carry !== null) {
+    cmd.push(`--autonomy ${carry.mode}`);
+    // The turn observed at launch. Omitted when there was none, so birth refuses
+    // for the honest reason instead of hunting for a substitute.
+    if (carry.turnToken !== null) cmd.push(`--autonomy-turn ${carry.turnToken}`);
+  }
   return printDirective(
     `Run \`bun ${harnessDir()}/tools/amadeus-utility.ts ${cmd.join(" ")}\` to start the workflow, then re-run \`next\` to continue.${labelHint}`,
   );
@@ -3106,7 +3123,12 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       emit(errorDirective(declaration.message));
       return;
     }
-    if (declaration.kind === "carry") _pendingAutonomyCarry = declaration.mode;
+    // Observed HERE, not at birth: this is the last moment the intent that
+    // received the launching keystroke is still active, so it is the only moment
+    // this launch's own turn can be identified rather than guessed at.
+    if (declaration.kind === "carry") {
+      _pendingAutonomyCarry = { mode: declaration.mode, turnToken: observeLaunchTurnToken(pd) };
+    }
   }
 
   // Branch 4c - the COMPOSE surfaces (adaptive workflows). A leading `compose`

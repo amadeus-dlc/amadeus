@@ -4226,7 +4226,7 @@ export interface BirthAutonomyPorts {
     readonly projectDir: string;
     readonly stateContent: string;
     readonly mode: BirthAutonomyMode;
-    readonly provenanceScope: "launch-chain";
+    readonly provenanceScope: { readonly kind: "launch-chain"; readonly launchTurnId: string };
   }) => { readonly ok: true } | { readonly ok: false; readonly error: string };
 }
 
@@ -4270,6 +4270,7 @@ export function migratedDeclarationAdvisory(mode: BirthAutonomyMode): BirthAuton
 export function resolveBirthAutonomyDeclaration(
   projectDir: string,
   mode: BirthAutonomyMode,
+  launchTurnId: string | null,
   ports: BirthAutonomyPorts = PRODUCTION_BIRTH_AUTONOMY_PORTS,
 ): BirthAutonomyOutcome {
   const boltPath = `${harnessDir()}/tools/amadeus-bolt.ts`;
@@ -4282,11 +4283,24 @@ export function resolveBirthAutonomyDeclaration(
         `  2. bun ${boltPath} set-autonomy --mode full --confirmed-display-digest <digest>\n`,
     };
   }
+  // No turn was observed at launch, so there is nothing this declaration could
+  // cite. Refuse here rather than let the write path look for a substitute: an
+  // unrelated intent's unconsumed turn is not authorization for THIS launch
+  // (ruling conditions 2 and 3).
+  if (launchTurnId === null) {
+    return {
+      kind: "refused",
+      message:
+        `--autonomy ${mode} was not applied: this launch carried no human turn to cite as provenance. ` +
+        `The intent was born and its mode is unchanged; declare it again with \`/amadeus --autonomy ${mode}\` ` +
+        `(or \`bun ${boltPath} set-autonomy --mode ${mode}\`).`,
+    };
+  }
   const applied = ports.applyMode({
     projectDir,
     stateContent: ports.readState(projectDir),
     mode,
-    provenanceScope: "launch-chain",
+    provenanceScope: { kind: "launch-chain", launchTurnId },
   });
   if (!applied.ok) {
     return {
@@ -4311,12 +4325,13 @@ function birthAutonomyOrDie(flags: Record<string, string>): BirthAutonomyMode | 
 function reportBirthAutonomyDeclaration(
   projectDir: string,
   autonomy: BirthAutonomyMode | null,
+  launchTurnId: string | null,
   migrated: boolean,
 ): void {
   if (autonomy === null) return;
   const outcome = migrated
     ? migratedDeclarationAdvisory(autonomy)
-    : resolveBirthAutonomyDeclaration(projectDir, autonomy);
+    : resolveBirthAutonomyDeclaration(projectDir, autonomy, launchTurnId);
   if (outcome.kind === "refused") die(outcome.message);
   process.stdout.write(outcome.message);
 }
@@ -4532,7 +4547,12 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
   // newly-born intent to land on. It is reported rather than applied — and
   // rather than dropped in silence, which is the failure this unit exists to
   // close.
-  reportBirthAutonomyDeclaration(projectDir, autonomy, migratedInPlace);
+  reportBirthAutonomyDeclaration(
+    projectDir,
+    autonomy,
+    flags["autonomy-turn"]?.trim() || null,
+    migratedInPlace,
+  );
 }
 
 // Init-time Phase Progress status for one phase. Init PRE-CROSSES the

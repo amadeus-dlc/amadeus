@@ -22,6 +22,7 @@ import {
 import { strandedCarryRefusal } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 const PD = "/tmp/t491-project";
+const TOKEN = "t491-launch-turn-token";
 const STATE = "# State\n\n## Current Status\n- **Intent Autonomy Mode**: none\n";
 
 type ApplyResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
@@ -29,14 +30,14 @@ type ApplyResult = { readonly ok: true } | { readonly ok: false; readonly error:
 // A recorder for the two ports, so "did the canonical write path get called, and
 // with what?" is observable without a workspace on disk.
 function recorder(applyResult: ApplyResult = { ok: true }) {
-  const applied: { mode: string; stateContent: string; provenanceScope: string }[] = [];
+  const applied: { mode: string; stateContent: string; launchTurnId: string }[] = [];
   const ports: BirthAutonomyPorts = {
     readState: () => STATE,
     applyMode: (input) => {
       applied.push({
         mode: input.mode,
         stateContent: input.stateContent,
-        provenanceScope: input.provenanceScope,
+        launchTurnId: input.provenanceScope.launchTurnId,
       });
       return applyResult;
     },
@@ -78,33 +79,52 @@ describe("t491 classifyBirthAutonomyFlag", () => {
 describe("t491 resolveBirthAutonomyDeclaration", () => {
   test("semi goes through the canonical write path under the launch-chain scope", () => {
     const rec = recorder();
-    const outcome = resolveBirthAutonomyDeclaration(PD, "semi", rec.ports);
+    const outcome = resolveBirthAutonomyDeclaration(PD, "semi", TOKEN, rec.ports);
     expect(outcome).toEqual({ kind: "reported", message: "Intent autonomy: semi\n" });
     // BR-U2-6: one write path, and the widened reference is what a just-born
     // intent needs (its own shards carry no HUMAN_TURN yet).
     expect(rec.applied).toEqual([
-      { mode: "semi", stateContent: STATE, provenanceScope: "launch-chain" },
+      { mode: "semi", stateContent: STATE, launchTurnId: TOKEN },
     ]);
   });
 
   test("none is applied the same way", () => {
     const rec = recorder();
-    expect(resolveBirthAutonomyDeclaration(PD, "none", rec.ports).kind).toBe("reported");
+    expect(resolveBirthAutonomyDeclaration(PD, "none", TOKEN, rec.ports).kind).toBe("reported");
     expect(rec.applied).toHaveLength(1);
   });
 
   test("full is never applied — it reports the ceremony and leaves the mode alone (BR-U2-3)", () => {
     const rec = recorder();
-    const outcome = resolveBirthAutonomyDeclaration(PD, "full", rec.ports);
+    const outcome = resolveBirthAutonomyDeclaration(PD, "full", TOKEN, rec.ports);
     expect(outcome.kind).toBe("reported");
     expect(outcome.message).toContain("preview-autonomy");
     expect(outcome.message).toContain("set-autonomy --mode full");
     expect(rec.applied).toHaveLength(0);
   });
 
+  // Ruling conditions 2 and 3. A launch that observed no turn has nothing to
+  // cite, and the declaration must stop there rather than let the write path go
+  // looking for some other unconsumed turn in the space.
+  test("no observed launch turn is refused before the write path is even reached", () => {
+    const rec = recorder();
+    const outcome = resolveBirthAutonomyDeclaration(PD, "semi", null, rec.ports);
+    expect(outcome.kind).toBe("refused");
+    expect(outcome.message).toContain("carried no human turn");
+    expect(outcome.message).toContain("/amadeus --autonomy semi");
+    expect(rec.applied).toHaveLength(0);
+  });
+
+  test("full is still reported, not refused, when no turn was observed", () => {
+    // full never reaches the write path at all, so the missing turn is moot.
+    const rec = recorder();
+    expect(resolveBirthAutonomyDeclaration(PD, "full", null, rec.ports).kind).toBe("reported");
+    expect(rec.applied).toHaveLength(0);
+  });
+
   test("a refused write is relayed loudly and names how to re-declare (BR-U2-4)", () => {
     const rec = recorder({ ok: false, error: "PROVENANCE_REQUIRED" });
-    const outcome = resolveBirthAutonomyDeclaration(PD, "semi", rec.ports);
+    const outcome = resolveBirthAutonomyDeclaration(PD, "semi", TOKEN, rec.ports);
     expect(outcome.kind).toBe("refused");
     expect(outcome.message).toContain("PROVENANCE_REQUIRED");
     // The intent stands; the declaration is still available against it.
