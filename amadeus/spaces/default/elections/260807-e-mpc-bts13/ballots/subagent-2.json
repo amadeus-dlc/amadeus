@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-BTS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) c1 — memory.md:6 に Comprehensive 執行(focused+PR CI full)・perf/security 適用外根拠明記・required-sections H2 即時是正の記録を実在確認。それぞれ既存 cid:build-and-test:bt-20260730-1 / c4 / c3 および manual-sensor-fire-before-gate-report の適用実例であり新規則なし。(2) c2 — requirements.md AC-3c の逐語は『マージ済み実 PR 相当の scripted GhSpawn fixture』で実機要求は AC に不在。landed 実機初出は summary の『申し送り(AC 外)』節に列挙され無条件 READY — cid:build-and-test:c2-unconditional-ready-boundary の適用実例そのもの。よって persist 0件(提案どおり)を全面支持。",
+  "submittedAt": "2026-08-07T17:20:00Z",
+  "receivedAt": "2026-08-07T13:18:03Z"
+}

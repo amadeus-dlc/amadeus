@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPC-UGS13",
+  "voter": "subagent-1",
+  "question": "intent 260807-merged-pr-convergence の units-generation §13 学習選定: 候補2件(全文は record の inception/units-generation/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(単一 Unit 編成 + 入れ子 edge block + 事前 recompile): 既存 cid:units-generation:c1 / c2-edgeblock-nested-kind-required / recompile-before-construction-bolt-dag の適用実例 / c2(§12a NIT 是正 + required-sections 即時是正): 既存レビュー/センサー運用ノルムの適用実例。いずれも新規則なし。実在根拠は memory.md・unit-of-work-dependency.md の YAML block・runtime-graph.json の bolt_dag で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "2候補とも既存ノルムの適用実例のため persist しない。"
+    }
+  ]
+}

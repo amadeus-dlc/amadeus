@@ -1,4 +1,4 @@
-// covers: file:knowledge/amadeus-architect-agent, file:knowledge/amadeus-aws-platform-agent, file:knowledge/amadeus-compliance-agent, file:knowledge/amadeus-delivery-agent, file:knowledge/amadeus-design-agent, file:knowledge/amadeus-developer-agent, file:knowledge/amadeus-devsecops-agent, file:knowledge/amadeus-operations-agent, file:knowledge/amadeus-pipeline-deploy-agent, file:knowledge/amadeus-product-agent, file:knowledge/amadeus-quality-agent, file:knowledge/amadeus-shared/ai-dlc-principles.md, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/brownfield.md, file:knowledge/amadeus-shared/knowledge-readme-template.md, file:knowledge/amadeus-shared/rules-reading.md, file:knowledge/amadeus-shared/state-template.md, file:knowledge/amadeus-shared/verification.md
+// covers: file:knowledge/amadeus-architect-agent, file:knowledge/amadeus-aws-platform-agent, file:knowledge/amadeus-builder-agent, file:knowledge/amadeus-compliance-agent, file:knowledge/amadeus-delivery-agent, file:knowledge/amadeus-design-agent, file:knowledge/amadeus-developer-agent, file:knowledge/amadeus-devsecops-agent, file:knowledge/amadeus-operations-agent, file:knowledge/amadeus-pipeline-deploy-agent, file:knowledge/amadeus-product-agent, file:knowledge/amadeus-quality-agent, file:knowledge/amadeus-shared/ai-dlc-principles.md, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/brownfield.md, file:knowledge/amadeus-shared/knowledge-readme-template.md, file:knowledge/amadeus-shared/rules-reading.md, file:knowledge/amadeus-shared/state-template.md, file:knowledge/amadeus-shared/verification.md
 //
 // t15 — knowledge-file inventory + non-emptiness invariant. Migrated from
 // tests/unit/t15-knowledge-file-inventory.sh (the .sh declared no `# covers:`
@@ -59,6 +59,7 @@ const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge");
 const AGENT_COUNTS: ReadonlyArray<readonly [string, number]> = [
   ["amadeus-architect-agent", 6],
   ["amadeus-architecture-reviewer-agent", 2],
+  ["amadeus-builder-agent", 1],
   ["amadeus-aws-platform-agent", 4],
   ["amadeus-compliance-agent", 1],
   ["amadeus-composer-agent", 1],
@@ -121,7 +122,7 @@ describe("t15 — knowledge-file inventory + non-emptiness (mechanism: none)", (
 
   // STRENGTHENING: knowledge/ holds EXACTLY the 11 expected agent dirs plus
   // amadeus-shared/ — no extra agent dir. The .sh's fixed loop never pinned this.
-  test("knowledge/ holds EXACTLY the 14 agent dirs + amadeus-shared/ [.sh L10 — membership strengthening]", () => {
+  test("knowledge/ holds EXACTLY the 15 agent dirs + amadeus-shared/ [.sh L10 — membership strengthening]", () => {
     const dirs = readdirSync(KNOWLEDGE_DIR, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
@@ -151,13 +152,13 @@ describe("t15 — knowledge-file inventory + non-emptiness (mechanism: none)", (
     }
   });
 
-  // .sh L11-14: dynamic TAP plan = 14 + 14 + 7 + TOTAL_FILES. Re-derive that
+  // .sh L11-14: dynamic TAP plan = 15 + 15 + 7 + TOTAL_FILES. Re-derive that
   // arithmetic from the live tree so the migrated suite cannot silently shrink
-  // the surface: pin the total .md count at 61 and the summed plan at 96.
-  test("TAP-plan parity: 14 + 14 + 7 + TOTAL == 96 with TOTAL == 61 [.sh L11-14]", () => {
+  // the surface: pin the total .md count at 62 and the summed plan at 99.
+  test("TAP-plan parity: 15 + 15 + 7 + TOTAL == 99 with TOTAL == 62 [.sh L11-14]", () => {
     const total = findMd(KNOWLEDGE_DIR).length;
-    expect(total).toBe(61);
-    const plan = 14 + 14 + 7 + total;
-    expect(plan).toBe(96);
+    expect(total).toBe(62);
+    const plan = 15 + 15 + 7 + total;
+    expect(plan).toBe(99);
   });
 });

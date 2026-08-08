@@ -24,6 +24,7 @@ import {
   loadVerifiedTlaSources,
   selectVerifiedModel,
 } from "./tla-model-loader.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 
 export const DIAGNOSTIC_TIMEOUT_MS = 300_000;
 const MAX_DIAGNOSTIC_OUTPUT_BYTES = 16 * 1024 * 1024;
@@ -214,7 +215,7 @@ export async function runModelCheckDiagnostic(
   const runId = dependencies.randomUuid();
   const containerName = `amadeus-tlc-${runId}`;
   const jarPath = join(supplyRoot, "tla2tools.jar");
-  const modelRoot = join(workspaceRoot, "specs/tla");
+  const modelRoot = resolveSpecRoots(workspaceRoot).tlaDir;
   const modelPath = join(workspaceRoot, input.model.modelPath);
   const cfgPath = join(workspaceRoot, input.model.cfgPath);
   const argv = [

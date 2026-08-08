@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部候補を persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T11:08:50Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-UGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) memory.md Interpretations 2件が候補実体と一致(単一Unit編成+入れ子edge block+recompile前倒し / §12a NIT是正+required-sections即時是正)。(2) unit-of-work-dependency.md の YAML edge block は入れ子形で kind: service 明記 — cid:units-generation:c2-edgeblock-nested-kind-required の適用実例。(3) runtime-graph.json の bolt_dag は非null(units=[landed-report], batches=[[landed-report]]) — recompile-before-construction-bolt-dag の適用実例。(4) unit-of-work.md に Review — Iteration 1 実在。両候補とも既存 cid(units-generation:c1 / c2-edgeblock-nested-kind-required / recompile-before-construction-bolt-dag / sensor-before-reviewer 系)の適用実例であり新規知識を含まない。persist 0件が妥当。",
+      "submittedAt": "2026-08-07T12:45:00Z",
+      "receivedAt": "2026-08-07T11:08:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-UGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) c1 — unit-of-work-dependency.md の YAML edge block は入れ子形(- name: landed-report / kind: service / depends_on: [])で c2-edgeblock-nested-kind-required の正書式どおり、runtime-graph.json の bolt_dag は非 null({units:[landed-report(kind:service)], batches:[[landed-report]]})で recompile-before-construction の履行を確認。単一 Unit 編成は 1 Issue = 1 Unit(cid:units-generation:c1)の適用。(2) c2 — audit シャード seq 199 で story-map の required-sections SENSOR_FAILED(Findings 1)→ seq 203 で同ファイル PASSED(H2 追加是正、現状 grep -c '^## ' = 2)、unit-of-work.md の Review — Iteration 1 は READY・NIT 1(見積り内訳表記)のみで既存レビュー/センサー運用ノルムの適用実例。いずれも新規則を含まず persist 0件が妥当。",
+      "submittedAt": "2026-08-07T11:08:17Z",
+      "receivedAt": "2026-08-07T11:08:27Z"
+    }
+  ],
+  "resolutions": []
+}

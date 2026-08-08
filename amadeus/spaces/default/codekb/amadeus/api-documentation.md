@@ -1,6 +1,31 @@
 # API ドキュメント
 
-## 決定的レポート CLI の契約生態（260807-stage-perf-report、現在、observed `4a3da7d62`）
+## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### wire 形の2版
+
+| 版 | 定数 | キー |
+|---|---|---|
+| v1 | `JOURNAL_SCHEMA_VERSION = 1`（`amadeus-journal.ts:30`） | `event` / `heading` / `fields` |
+| v2 | `JOURNAL_SCHEMA_VERSION_V2 = 2`（`:34`） | `eventName` / `attributes`（`attributes.Event` が旧 `event`） |
+
+v2 serializer は `serializeJournalEntryV2`（`:329-345`）で、キー順を固定して1エントリ1行を出力する（`schemaVersion` / `eventId` / `seq` / `timestamp` / `eventName` / `attributes` / `intentId` / `space` / `cloneId` / `traceId` / `spanId` / `traceFlags` / `idempotencyKey` / `canonical`）。
+
+リーダー契約は `JOURNAL_SCHEMA_VERSION_MAX` 以下の全版を受理し、それより新しい版を拒否する（BR-10）。
+
+### 読み取り側の正準 API（`tests/harness/audit-records.ts`）
+
+| 関数 | 所在 | シグネチャ相当 | 挙動 |
+|---|---|---|---|
+| `normalizeAuditRecord` | `:26` | `(raw: unknown) => NormalizedAuditRecord` | `schemaVersion !== 2` は素通し。v2 は `attributes.Event` → `event`、`EVENT_HEADINGS` 経由で `heading` 復元、`attributes` → `fields` |
+| `auditRowsFrom` | `:49` | `(body: string) => NormalizedAuditRecord[]` | 行分割 → 空行 skip → 全行 parse（不正行は loud fail） |
+| `countAuditEvent` | `:57` | `(body: string, event: string) => number` | 両スキーマ横断の計数 |
+
+`NormalizedAuditRecord` は `{ event: string \| null; fields: Record<string, string>; [key: string]: unknown }`。
+
+**依存**: `:18` で `EVENT_HEADINGS` を `../../dist/claude/.claude/tools/amadeus-audit.ts` から import（sandbox 配布形での解決性が理由、コメントに明記）。
+
+## 決定的レポート CLI の契約生態（260807-stage-perf-report、履歴、observed `4a3da7d62`）
 
 本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
@@ -75,7 +100,135 @@ const REVIEW_MARKER = (iteration: number): string =>
 
 **実コーパス（observed 再計測）: 1,010 ブロック / 691 ファイル。** うちサフィックス付き見出し `## Review — Iteration 2（rebase後・裁定A反映）` が **3 件**で、これが様式ドリフトの全数。書き手自身のマッチャ `existingReviewBlock`（`:660`）は `/^## Review(?:[ \t].*)?$/gm` で走査してから trim 完全一致でフィルタするため、サフィックス付き見出しは**見出しとしては発見されるが iteration N としては一致しない**。読み手は同じ二段構えを採り、残差を**捨てるのではなく parse 不能として計数**すべきである。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## subagentStartFields の契約と2 payload 形状（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### シグネチャと入口ガード
+
+`packages/framework/core/tools/amadeus-lib.ts:4160-4161` verbatim:
+
+```ts
+export function subagentStartFields(payload: ClaudeCodeHookInput, agentsDir?: string): Record<string, string> | null {
+  if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+```
+
+| 要素 | 契約 |
+|---|---|
+| `payload` | `ClaudeCodeHookInput`。`tool_name?: string`（`:4774`、**optional**） |
+| `agentsDir`（任意） | 与えられると #2279 の帰属拡張（`Type Verdict` / `Model` / `Model Source`）が加わる。拡張は advisory で、内部失敗時は追加フィールドを落とし基本3フィールドを保つ（NFR-3、`:4155-4159` のコメント） |
+| 戻り値 `null` | 「この payload は subagent dispatch ではない」— 呼び出し側は emit せず exit 0 |
+| 戻り値 `Record<string,string>` | 監査フィールド集合。`Agent Type`（必須、未知は `normalizeAgentType` が `"unknown"` へ）、`Agent ID`（任意）、`Purpose`（任意） |
+
+### 入口ガードの真理値表 — `undefined` 短絡が語彙とは別軸である
+
+ガードは2項の AND であり、`tool_name` の**不在**と**不一致**を区別する:
+
+| `payload.tool_name` | 判定 | 意味 |
+|---|---|---|
+| `undefined` | **通過**（第1項が false で短絡） | 「subagent でしか発火しない seam」= kimi の `SubagentStart` |
+| `SUBAGENT_DISPATCH_TOOL` と一致 | 通過 | tool envelope 経由の dispatch |
+| それ以外の文字列 | `null` | `TaskUpdate` / `Write` 等の誤爆を拒否 |
+
+設計意図は `:4149-4153` に逐語で記載（`Absence of tool_name therefore means "a seam that only fires for subagents", not "unknown tool".`）。
+
+**契約上の帰結**: #2303 の語彙修正が触るのは**第2項の比較対象**のみ。第1項の `undefined` 短絡は kimi 経路の存在条件であり、いかなる修正形でも通過側に残さねばならない。回帰ピンは `tests/unit/t-subagent-purpose.test.ts:82-86` に既存。
+
+### 定数 API
+
+`packages/framework/core/tools/amadeus-lib.ts:4125-4128` verbatim:
+
+```ts
+// The tool whose invocation opens a subagent on the harnesses that have no
+// dedicated start event (Claude Code): the start seam there is PreToolUse, and
+// PreToolUse fires for EVERY tool.
+export const SUBAGENT_DISPATCH_TOOL = "Task";
+```
+
+| 属性 | observed |
+|---|---|
+| 型 | `string`（単数） |
+| 消費者 | **1箇所のみ** — `:4161` のガード。repo 全域 grep（dist/self-install 除く）で他の消費者なし |
+| 派生的な同期面 | `tests/.coverage-registry.json:4250` の `unitId: "function:SUBAGENT_DISPATCH_TOOL"` |
+
+**API 形状の制約**: 単数型のため、複数語彙を受理する設計（例 `["Task","Agent"].includes(...)`）は**集合型への型変更**を要し、定数名（したがって coverage registry の `unitId`）の同期も伴う。単一語彙の置換であれば型・名前とも不変。
+
+### matcher と payload — 2つの独立した名前空間
+
+| 面 | 供給元 | 照合対象 | 語彙修正の対象か |
+|---|---|---|---|
+| settings matcher `^Task$` | `settings.json.example:62` | ハーネスが持つ**ツール表示名** | **対象外** |
+| payload `tool_name` | Claude Code の PreToolUse payload | フック側の実データ | **対象** |
+
+`amadeus-lib.ts:4145-4147` はこの二重防御を逐語で説明する（`The settings matcher is an UNANCHORED regex, so "Task" also matches TaskUpdate/TaskCreate — without this check every todo-list write would append a phantom subagent.`）。matcher はアンカー付き（`^Task$`）で第1防御、in-hook ガードが第2防御。**両者は独立して評価される**ため、matcher を変えずに payload 語彙だけを直す修正が成立する。
+
+### emit 側の契約
+
+`packages/framework/core/hooks/amadeus-log-subagent-start.ts`:
+
+| 行 | 契約 |
+|---|---|
+| `:64` | `subagentStartFields(parsed, join(projectDir, harnessDir(), "agents"))` — `agentsDir` を常に供給 |
+| `:65` | `if (started === null) process.exit(0);` — 唯一の中断点、silent |
+| `:98` | `appendAuditEntryViaEvents("SUBAGENT_STARTED", fields, projectDir)` — 唯一の emit |
+| `:99-101` | catch → `recordHookDrop(projectDir, "log-subagent-start", errorMessage(e))` — **fail-open**（append 失敗と同じ drop 経路） |
+
+`ensureOtelBootstrap(projectDir)` が emit 直前（`:97`）に走る。
+
+### 閉包検証に使える既存 API 形
+
+`tests/integration/t-log-subagent-start.integration.test.ts` の `taskDispatch` ヘルパ（`:104-108`）は `{hook_event_name:"PreToolUse", tool_name:"Task", tool_input}` を組みフックを spawn する。`runHook`（フック spawn + `CLAUDE_PROJECT_DIR` 指定 + `seededAuditDir`/`seededStateFile` で3ゲート充足）と `fieldsFor(proj,"SUBAGENT_STARTED")` の組み合わせが、**Unit B の閉包を決定的に実証できる既存 API 形**。`tool_name` を live 語彙へ切り替えるだけで転用可能。
+
+**ただし Unit A（live 配線）の閉包はこの API 形では実証できない** — テストは `CLAUDE_PROJECT_DIR` を fixture プロジェクトへ向けフックを直接 spawn するため、`.claude/settings.json` を一切読まない。
+
+## project-dir 解決 API と CLI 契約（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 公開関数の契約
+
+| 関数 | 所在 | シグネチャ | 段数 | loud path |
+|---|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | `(explicitDir?: string) => string` | 4 + fallback | **ゼロ**（`sed -n '226,250p' \| grep "console\|warn\|throw"` → exit=1、出力なし） |
+| `resolveProjectDirFromHook` | 同 `:310-347` | `(importMetaUrl: string, payloadCwd?: string \| null) => string` | 5 + fallback | ゼロ |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | — | — |
+| `hasWorkspaceMarker` | 同 `:283-286`（非 export） | `(dir: string) => boolean` | — | — |
+| `findWorkspaceMarkerAncestor` | 同 `:290 付近`（非 export） | cwd から祖先方向へ marker 探索 | — | — |
+
+**契約上の欠落**: どちらの解決関数も、解決結果が呼び出し元の期待と食い違ったことを**呼び出し元へ伝える手段を持たない**。返り値は常に `string` であり、「確信度の低い fallback に落ちた」ことを表現しない。ケース B（cwd=worktree × lib=本線絶対パス）は、この契約のもとでは**正常な返り値**として本線パスを返す。
+
+### CLI 引数契約 — `--project-dir`
+
+段1（明示指定）の受け口は広く実装済みで、`"--project-dir"` を parse するツールは **18ファイル**。
+
+```
+advisory-choice / audit / bolt / finding / goal / jump / lib / log / migrate /
+mirror-lifecycle / mirror-presentation / orchestrate / sensor-model-completeness /
+state / subagent-stats / swarm / utility / worktree
+```
+
+正本の使用例は `packages/framework/core/amadeus-common/protocols/stage-protocol.md:1209-1216`（`amadeus-finding.ts create-github-issue --project-dir <workspace-root>`）。
+
+### プロトコル文書の指示 — 相対形と絶対形の衝突
+
+`stage-protocol.md:511` verbatim:
+
+> **CWD drift warning**: If a stage runs `cd` in Bash (e.g., `cd todo-app/server && npm install`), subsequent `bun {{HARNESS_DIR}}/tools/...` calls using relative paths will fail with "Module not found". Always use absolute paths to the tools directory for tool calls (on Claude Code, `$CLAUDE_PROJECT_DIR/.claude/tools/`), or run `cd` commands in subshells: `(cd subdir && npm install)`.
+
+この1行は**絶対形（`$CLAUDE_PROJECT_DIR` 展開）を推奨する**が、その形こそがケース B を生む。ただし同じ文中に既に代替（サブシェル `(cd subdir && ...)`）が明記されており、相対形を保ったまま CWD drift を避ける手段は正本にすでに書かれている。
+
+### settings allowlist の契約
+
+```
+packages/framework/harness/claude/settings.json.example:10   ← 正本
+.claude/settings.json:39                                      ← セルフインストール面（tracked）
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+```
+
+allowlist が許可するのは絶対形のみ。一方で正本スキルの起動行は**全 31 件が相対形**であり、絶対形の起動行は正本に存在しない（唯一の絶対形出現は上記 allowlist 自身）。allowlist と実際の呼び出し形が対応していない。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

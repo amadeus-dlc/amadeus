@@ -51,7 +51,7 @@ const JDK_ROOT = "/synthetic/jdk";
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const VOCABULARY: TraceVocabulary = (() => {
   const parsed = parseTlaModelMap(
-    new Uint8Array(readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"))),
+    new Uint8Array(readFileSync(join(REPOSITORY_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"))),
   );
   if (!parsed.ok) throw new Error(parsed.error.detail);
   const model = findModelMapModel(parsed.value, MODULE_NAME);

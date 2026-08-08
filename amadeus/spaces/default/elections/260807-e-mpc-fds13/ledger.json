@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-FDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: construction/functional-design/memory.md:6-7 に c1(i1 NOT-READY→EvaluatedVerdict 交差型ラッパで是正→i2 READY、起草時自己捕捉 = deviation-stop の起草段適用)と c2(resolveMergeable :249-269 / cli.ts:414-415 / sensor :66-88 の FOLLOW-UP 裏取り転記)の実在を確認。business-logic-model.md:53-72 の Review block で i1 NOT-READY(BLOCKER: evaluateConvergence 不変性の3成果物間矛盾・resolvePrLifecycle 無申告 inline 化)と i2 READY(単一主張への収斂)を verbatim 確認。c1 は cid:code-generation:deviation-stop-before-implement / citation-semantics-check / fix-diff-independent-reverify の適用実例、c2 は cid:requirements-analysis:mechanism-cite-verify-at-draft / cid:code-generation:c1-reviewer-scope-alignment(事後側追補)の適用実例であり、EvaluatedVerdict ラッパ採用は intent 固有の設計判断。一般化可能な新規則は無く persist 0件が妥当。",
+      "submittedAt": "2026-08-07T14:05:00Z",
+      "receivedAt": "2026-08-07T11:23:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-FDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) construction/functional-design/memory.md の Interpretations 2エントリを実読 — §12a i1 NOT-READY→是正(EvaluatedVerdict 交差型ラッパで本体バイト不変・組み立て点 specify・resolvePrLifecycle 名前付き関数復元)→i2 READY、起草時自己捕捉1件(override への already-landed refuse 追加案を Out of scope 違反として実装前除去)、FOLLOW-UP 実測(resolveMergeable predicate.ts:249-269 の primed 整合・新規引用全件裏取り)が候補記述と一致。(2) landed-report/functional-design/business-logic-model.md の Review block を実読 — i1 NOT-READY 2026-08-07T11:19:40Z(BLOCKER: evaluateConvergence 不変性の3成果物間矛盾・resolvePrLifecycle 無申告 inline 化)/ i2 READY 2026-08-07T11:22:13Z(単一主張へ収斂)を確認。(3) 不採用理由に引用された既存 cid(code-generation:deviation-stop-before-implement / application-design:citation-semantics-check / requirements-analysis:fix-diff-independent-reverify / requirements-analysis:mechanism-cite-verify-at-draft / code-generation:c1-reviewer-scope-alignment 事後側追補)は memory 層に全件実在し、c1/c2 とも既存規範の適用実例であって新しい一般化可能な規則を含まない。EvaluatedVerdict ラッパ採用は本 intent の設計判断で intent 固有。よって persist 0件(提案どおり)を全面支持する。",
+      "submittedAt": "2026-08-07T13:55:00Z",
+      "receivedAt": "2026-08-07T11:23:59Z"
+    }
+  ],
+  "late": []
+}

@@ -53,12 +53,22 @@ Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and kn
 
 ### Step 3: Generate Clarifying Questions
 
-Create `<record>/ideation/scope-definition/scope-definition-questions.md` with questions:
-- What is the minimum viable scope that delivers value?
-- What capabilities are must-have vs. nice-to-have?
-- What are the dependencies between capabilities?
-- What is the sequencing preference (risk-first, value-first, dependency-first)?
-- Are there hard deadlines tied to specific capabilities?
+FIRST, enumerate the capabilities this intent covers. Read the intent statement and any linked Issue, prior ruling, or approved artifact it cites, and list every capability they name. This inventory is REQUIRED and must be non-empty before you classify anything — if you cannot enumerate a single capability, the scope is undecided, so treat the whole inventory as OPEN and ask the full question set.
+
+THEN classify each enumerated capability. A capability is SETTLED when an upstream source names it as in-scope; it is OPEN when no upstream source decides it either way.
+
+This classification gates the SCOPE-BOUNDARY questions ONLY — the first two bullets below. Ask them only about OPEN capabilities, and when the inventory is non-empty and every entry is SETTLED, omit both bullets entirely: a reduction option offered against a settled boundary reads as a recommendation and silently drops work the upstream source already scrutinized. Reducing a settled boundary is a specification change and belongs to the human, not to a clarifying question. Do NOT re-litigate a SETTLED capability — record it as in-scope and carry it into Step 5.
+
+The OPERATIONAL questions — the last three bullets — are NOT gated by this classification. Ask them every run, about the whole inventory including SETTLED capabilities: settling what is in scope does not settle how it sequences.
+
+Create `<record>/ideation/scope-definition/scope-definition-questions.md` with the applicable questions:
+- (scope-boundary; OPEN capabilities only) What is the minimum viable scope that delivers value?
+- (scope-boundary; OPEN capabilities only) What capabilities are must-have vs. nice-to-have?
+- (operational; always asked) What are the dependencies between capabilities?
+- (operational; always asked) What is the sequencing preference (risk-first, value-first, dependency-first)?
+- (operational; always asked) Are there hard deadlines tied to specific capabilities?
+
+State the settled boundary and its upstream source at the top of the questions file, so the reader can see what was NOT asked and why. When an option would narrow, keep, or widen the upstream boundary, say which of the three it does in the option text itself.
 
 Follow stage-protocol.md question flow.
 

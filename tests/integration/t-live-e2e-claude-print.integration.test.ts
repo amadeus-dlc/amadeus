@@ -252,6 +252,14 @@ describe("Claude print live adapter", () => {
     }
   });
 
+  // Skipping here is the CORRECT outcome, not a gap (#2235). A `claude.ai` login resolves
+  // through the source HOME, and this journey replaces HOME with a fresh directory, so the
+  // login is invisible to the child: under the allow-list environment `claude -p` answers
+  // "Not logged in · Please run /login" (measured 2026-08-08, Claude Code 2.1.222). Reaching
+  // it would mean forwarding the source HOME or CLAUDE_CONFIG_DIR, which is the very thing
+  // the isolation forbids — so an ambient source with no key must skip before it allocates
+  // anything. The approved design's "native keychain or ANTHROPIC_API_KEY" was self-defeating;
+  // see the correction on BR-I06 in the 260803-harness-live-e2e record.
   test("native credentials are rejected before scratch allocation", async () => {
     const fixture = createFixture();
     const allocator = new ClaudeScratchAllocator({

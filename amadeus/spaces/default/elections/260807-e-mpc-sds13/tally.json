@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部候補を persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T10:28:13Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) memory.md Interpretations 2件を実読 — c1(契約質問5種の執行判定・質問0件)と c2(MoSCoW のみ・nice-to-have 0件)の実在を確認。(2) scope-definition-questions.md :5-19 を実読 — c1 は E-OC1 様式の 0件判定+判定根拠種別(cid:requirements-analysis:always-elect 執行クラス)+承認行(2026-08-07T10:12:00Z、grant コミット言及)を完備しており、既存 cid:requirements-analysis:no-election-judgment-gate / eoc1-evidence-in-questions-header の適用実例であって新規則を含まない。(3) c2 は「WSJF/RICE は序列化母数がない単一機能 intent では不使用」という intent 固有の編成判断で、一般化可能な新規知識に達しない。よって persist 0件(提案どおり)を全面支持。",
+      "submittedAt": "2026-08-07T10:26:46Z",
+      "receivedAt": "2026-08-07T10:26:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) c1 = scope-definition-questions.md の 0問様式は cid:requirements-analysis:no-election-judgment-gate / eoc1-evidence-in-questions-header / always-elect 執行クラスの適用実例と確認(質問ファイル冒頭に判定根拠種別と承認TS 2026-08-07T10:12:00Z が実在、intent-statement の Q1〜Q3 裁定(承認 2026-08-07T10:04:51Z)から一意導出可能)。既存 cid の team.md/project.md 実在を grep で確認(team 4 hit / project 3 hit)。(2) c2 = intent-backlog.md:3,14 で MoSCoW のみ使用・nice-to-have 0件(WSJF/RICE は単一機能 intent で序列化母数なし)を確認 — intent 固有の編成判断で一般化可能な新規則を含まない。よって persist 0件の提案を全面支持。",
+      "submittedAt": "2026-08-07T10:27:51Z",
+      "receivedAt": "2026-08-07T10:27:56Z"
+    }
+  ],
+  "resolutions": []
+}

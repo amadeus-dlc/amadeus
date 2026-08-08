@@ -1,0 +1,31 @@
+{
+  "electionId": "E-PWF-RAS13",
+  "voter": "subagent-1",
+  "question": "260807-projectdir-worktree-fix requirements-analysis ステージの §13 学習候補2件の採否を裁定する。c1: full グラント下の明確化質問4問を decide-question 経路で確定（既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary の適用実例 — 260805-pr-convergence-plugin RA に続く2例目）。c2: クロスレビューの完了条件反証を Out of scope へ条件付き根拠として転写（既存 cid:requirements-analysis:c7-upstream-universal-claim-unverified の適用実例）。実在根拠は record（inception/requirements-analysis/memory.md と questions ファイル・requirements.md）を実測確認のこと。判定規準: 既存 cid の単なる適用実例は新規ノルムに値しない（persist は追補・新規・退役に実質があるときだけ）。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "c1 のみ採用",
+      "description": "decide-question 経路の2例目実運用として、c1-pcp-autonomy-grant-question-boundary への追補（例: 適用実例の蓄積・手順の安定化）を persist する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "c1 と c2 を採用",
+      "description": "両方をそれぞれ既存 cid への追補として persist する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "c2 のみ採用",
+      "description": "上流反証の Out of scope 転写様式として、c7-upstream-universal-claim-unverified への追補を persist する。"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "両候補とも既存 cid の適用実例にすぎず、新規知識・追補に値する一般化可能な差分を含まない。record に残れば足りる。"
+    }
+  ]
+}

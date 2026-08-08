@@ -39,7 +39,7 @@ afterEach(() => {
 function createWorkspace(models: readonly FixtureModel[]): { root: string; moduleUrl: string } {
   const root = mkdtempSync(join(tmpdir(), "t403-tla-loader-"));
   temporaryRoots.push(root);
-  mkdirSync(join(root, "specs/tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus/spaces/default/specs/tla"), { recursive: true });
   mkdirSync(join(root, "packages/framework/core/tools"), { recursive: true });
   writeFileSync(join(root, ".git"), "gitdir: fixture\n");
   writeFileSync(join(root, "package.json"), "{}\n");
@@ -51,25 +51,25 @@ function createWorkspace(models: readonly FixtureModel[]): { root: string; modul
   });
 
   const mapModels = models.map((model, index) => {
-    writeFileSync(join(root, `specs/tla/${model.name}.tla`), model.moduleSource);
-    writeFileSync(join(root, `specs/tla/${model.name}.cfg`), model.cfgSource);
+    writeFileSync(join(root, `amadeus/spaces/default/specs/tla/${model.name}.tla`), model.moduleSource);
+    writeFileSync(join(root, `amadeus/spaces/default/specs/tla/${model.name}.cfg`), model.cfgSource);
     const auxiliaries = model.auxiliaries?.map((aux) => {
-      writeFileSync(join(root, `specs/tla/${aux.name}.tla`), aux.source);
+      writeFileSync(join(root, `amadeus/spaces/default/specs/tla/${aux.name}.tla`), aux.source);
       return {
-        path: `specs/tla/${aux.name}.tla`,
+        path: `amadeus/spaces/default/specs/tla/${aux.name}.tla`,
         identity: aux.identity ?? moduleIdentity(aux.source),
       };
     });
     return {
       name: model.name,
-      model: { path: `specs/tla/${model.name}.tla`, identity: moduleIdentity(model.moduleSource) },
-      cfg: { path: `specs/tla/${model.name}.cfg`, identity: cfgIdentity(model.cfgSource) },
+      model: { path: `amadeus/spaces/default/specs/tla/${model.name}.tla`, identity: moduleIdentity(model.moduleSource) },
+      cfg: { path: `amadeus/spaces/default/specs/tla/${model.name}.cfg`, identity: cfgIdentity(model.cfgSource) },
       entries: [entries[index]!],
       ...(auxiliaries && auxiliaries.length > 0 ? { auxiliaries } : {}),
     };
   });
   writeFileSync(
-    join(root, "specs/tla/model-map.json"),
+    join(root, "amadeus/spaces/default/specs/tla/model-map.json"),
     `${JSON.stringify({ schemaVersion: 2, models: mapModels }, null, 2)}\n`,
   );
   return { root, moduleUrl: pathToFileURL(join(root, "probe.ts")).href };
@@ -104,7 +104,7 @@ describe("t403 loader generalization", () => {
     expect(alpha!.auxIdentities).toEqual([]);
     expect(beta!.moduleIdentity).toBe(moduleIdentity(betaWithInstance.moduleSource));
     expect(beta!.auxIdentities).toEqual([
-      { path: "specs/tla/BetaCore.tla", identity: moduleIdentity("---- MODULE BetaCore ----\nEXTENDS Naturals\n====\n") },
+      { path: "amadeus/spaces/default/specs/tla/BetaCore.tla", identity: moduleIdentity("---- MODULE BetaCore ----\nEXTENDS Naturals\n====\n") },
     ]);
   });
 
@@ -117,13 +117,13 @@ describe("t403 loader generalization", () => {
         cfgSource: "SPECIFICATION Spec\n",
       },
     ]);
-    // BetaCore.tla exists inside specs/tla so the resolver can read it on the
+    // BetaCore.tla exists inside amadeus/spaces/default/specs/tla so the resolver can read it on the
     // fly; only the declaration is absent.
-    writeFileSync(join(root, "specs/tla/BetaCore.tla"), "---- MODULE BetaCore ----\nEXTENDS Naturals\n====\n");
+    writeFileSync(join(root, "amadeus/spaces/default/specs/tla/BetaCore.tla"), "---- MODULE BetaCore ----\nEXTENDS Naturals\n====\n");
     const loaded = loadVerifiedTlaSourcesInternal(moduleUrl);
     expect(loaded.ok).toBe(false);
     if (loaded.ok) return;
-    expect(loaded.error).toMatchObject({ kind: "SOURCE_DRIFT", relativePath: "specs/tla/Beta.tla" });
+    expect(loaded.error).toMatchObject({ kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/Beta.tla" });
     expect((loaded.error as { detail: string }).detail).toContain("missing=[BetaCore]");
   });
 
@@ -140,7 +140,7 @@ describe("t403 loader generalization", () => {
     const loaded = loadVerifiedTlaSourcesInternal(moduleUrl);
     expect(loaded.ok).toBe(false);
     if (loaded.ok) return;
-    expect(loaded.error).toMatchObject({ kind: "SOURCE_DRIFT", relativePath: "specs/tla/Beta.tla" });
+    expect(loaded.error).toMatchObject({ kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/Beta.tla" });
     const detail = (loaded.error as { detail: string }).detail;
     expect(detail).toContain("extra=[BetaCore]");
     expect(detail).toContain("missing=[]");
@@ -156,7 +156,7 @@ describe("t403 loader generalization", () => {
     ]);
     expect(loadVerifiedTlaSourcesInternal(moduleUrl)).toMatchObject({
       ok: false,
-      error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/BetaCore.tla" },
+      error: { kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/BetaCore.tla" },
     });
   });
 
@@ -198,10 +198,10 @@ describe("t403 loader generalization", () => {
     // skip used to exempt from verifyRegisteredAssets) is caught by the same
     // registered-asset path as any other model.
     const { root, moduleUrl } = createWorkspace([ALPHA, betaWithInstance]);
-    writeFileSync(join(root, "specs/tla/Alpha.cfg"), "SPECIFICATION Drifted\n");
+    writeFileSync(join(root, "amadeus/spaces/default/specs/tla/Alpha.cfg"), "SPECIFICATION Drifted\n");
     expect(loadVerifiedTlaSourcesInternal(moduleUrl)).toMatchObject({
       ok: false,
-      error: { kind: "SOURCE_DRIFT", relativePath: "specs/tla/Alpha.cfg" },
+      error: { kind: "SOURCE_DRIFT", relativePath: "amadeus/spaces/default/specs/tla/Alpha.cfg" },
     });
   });
 
@@ -229,7 +229,7 @@ describe("t403 loader generalization", () => {
         cfgSource: "SPECIFICATION Spec\n",
       },
     ]);
-    writeFileSync(join(emptyFixture.root, "specs/tla/BetaCore.tla"), new Uint8Array());
+    writeFileSync(join(emptyFixture.root, "amadeus/spaces/default/specs/tla/BetaCore.tla"), new Uint8Array());
     expect(loadVerifiedTlaSourcesInternal(emptyFixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "MODULE_DEPS", code: "MODULE_DEP_UNRESOLVED" },
@@ -243,7 +243,7 @@ describe("t403 loader generalization", () => {
         cfgSource: "SPECIFICATION Spec\n",
       },
     ]);
-    writeFileSync(join(utf8Fixture.root, "specs/tla/BetaCore.tla"), Uint8Array.of(0xc3, 0x28));
+    writeFileSync(join(utf8Fixture.root, "amadeus/spaces/default/specs/tla/BetaCore.tla"), Uint8Array.of(0xc3, 0x28));
     expect(loadVerifiedTlaSourcesInternal(utf8Fixture.moduleUrl)).toMatchObject({
       ok: false,
       error: { kind: "MODULE_DEPS", code: "MODULE_DEP_UNRESOLVED" },

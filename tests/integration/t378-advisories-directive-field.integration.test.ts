@@ -71,9 +71,9 @@ function makeHost(composed: boolean): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t378-host-"));
   const h = join(root, ".claude");
   mkdirSync(h, { recursive: true });
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
   writeActivationModelMap(root);
   if (composed) {
     writeFileSync(
@@ -89,7 +89,7 @@ function makeChangedHost(): string {
   const h = makeHost(true);
   recordActivationVerdict(h, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
   writeFileSync(
-    join(specRootForHost(h), "specs", "tla", "FormalElection.tla"),
+    join(specRootForHost(h), "tla", "FormalElection.tla"),
     "MODULE FormalElection\nVARIABLES x\n",
   );
   return h;
@@ -143,7 +143,7 @@ describe("t378 activationAdvisoriesForHost (L2 structuring)", () => {
     expect(advisories[0].stage).toBe("build-and-test");
     // BR-U5-2: the message is the EXISTING stderr line, byte-identical.
     expect(advisories[0].message).toBe(
-      `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
+      `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (amadeus/spaces/default/specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
     );
   });
 
@@ -154,7 +154,7 @@ describe("t378 activationAdvisoriesForHost (L2 structuring)", () => {
     expect(advisories[0].code).toBe("never-run");
     expect(advisories[0].stage).toBe("requirements-analysis");
     expect(advisories[0].message).toBe(
-      `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
+      `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (amadeus/spaces/default/specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
     );
   });
 
@@ -203,7 +203,7 @@ describe("t378 directive contract: advisories field", () => {
             code: "changed",
             message: "advisory: x",
             stage: "build-and-test",
-            target: "specs/tla",
+            target: "amadeus/spaces/default/specs/tla",
             reason: "model changed",
           },
         ],

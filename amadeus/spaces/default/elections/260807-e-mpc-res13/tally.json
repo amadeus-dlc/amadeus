@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "persist 0件(提案どおり)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部候補を persist すべき",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "候補提示・不採用理由に欠落や誤りがある",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T10:40:05Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPC-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) re-scans/260807-merged-pr-convergence.md と worktree HEAD で observed 4a3da7d62 一致・base b8e3e664f 祖先・患部 plugins/pr-convergence/ 区間内変更 0 件(git diff --name-only = 0)を確認 — c1 は cid:reverse-engineering:c1(差分リフレッシュ)と c1-xrev-single-issue(起票者本人著者のため xrev 不主張 — 前回 RE と同一判定)の適用実例。(2) tests/ 実測で最大番号 t480・t481 不在を確認 — c2 は swarm-test-number-reservation の事前予約の適用実例。(3) memory.md Interpretations に explore read-only / Architect codekb 限定 write / 直列実行の記載を確認 — c3 は cid:reverse-engineering:c3/c4 の適用実例。3候補とも新規則を含まず persist 0件が妥当。",
+      "submittedAt": "2026-08-07T11:20:00Z",
+      "receivedAt": "2026-08-07T10:39:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPC-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測3点で全候補が既存ノルムの適用実例であることを確認。(1) c1: re-scans/260807-merged-pr-convergence.md が DIFFERENTIAL refresh(base b8e3e664f = merge-base --is-ancestor exit 0 実測記載)と xrev 不主張(#2401 コメント著者=起票者 j5ik2o 本人、前 intent と同一判定)を明記 — cid:reverse-engineering:c1 / c1-xrev-single-issue の再演で新規則なし。(2) c2: tests/{unit,integration,smoke,e2e} の数値 sort 実測で最大 t480、区間内着地 t466/t470/t480 を git diff --name-only b8e3e664f..HEAD -- tests/ で確認 — cid:code-generation:swarm-test-number-reservation の適用実例。(3) c3: memory.md 記載の explore(Developer)/codekb 限定 write(Architect)/直列は cid:reverse-engineering:c3 / c4(project.md:133/:261 実在確認)の適用実例。persist 0件の提案は妥当。",
+      "submittedAt": "2026-08-07T10:39:48Z",
+      "receivedAt": "2026-08-07T10:39:48Z"
+    }
+  ],
+  "resolutions": []
+}

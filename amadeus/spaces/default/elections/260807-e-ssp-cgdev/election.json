@@ -1,0 +1,27 @@
+{
+  "electionId": "E-SSP-CGDEV",
+  "kind": "deviation",
+  "question": "260807-subagent-start-pair Unit A（fix-2297-wiring）の逸脱裁定。builder が実装前停止: FR-A1（HOOK_PATHS へ log-subagent-start 追加）+ FR-A2（live へ PreToolUse 追加）は、許可ファイル集合外の tests/integration/hook-dispatcher.integration.test.ts が3重ピンする不変条件（KNOWN_SLUGS 10要素ハードコード・:112 の toHaveLength(11)・writeCompleteHookTree ヘルパーの10 slug 固定）と構造的に両立しない（注入実測: ベース 9 pass → 注入後 3 pass/6 fail、機序3種。波及は同1ファイルに限局 — 他の settings/hook 系 47+48 tests は注入状態でも green を実測）。builder は注入→赤→復元→残渣ゼロを1セット実施済みで作業ツリーは clean。requirements は「現10スロット」「既存11件」を事実引用するのみで同テストの改訂を未承認（c1-pinned-behavior-ruling 該当）。追加論点: テスト側で dispatcher 形 slug を basename 解決するには HOOK_PATHS の export（挙動不変）が要る。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "許可集合へ追加し HOOK_PATHS 導出形へ改訂",
+      "description": "builder の許可集合に hook-dispatcher.integration.test.ts を追加し、KNOWN_SLUGS・件数 assert・writeCompleteHookTree を dispatcher の HOOK_PATHS（export 化 — 挙動不変）から導出する形へ改訂 — 件数ハードコードのクラスを解消し、以後のスロット追加でこのテストが自動追随する（construction ガードレール「複数箇所で消費されるリスト・定数は canonical 1定義から導出」に整合）。"
+    },
+    {
+      "internalNo": 2,
+      "label": "数値の点更新（10→11 / 11→12）",
+      "description": "ハードコードを維持したまま数値だけ更新。最小 diff だが、次のスロット追加で同じ停止が再発する（件数語の陳腐化クラス — count-comment-sync 系の既知アンチパターン）。"
+    },
+    {
+      "internalNo": 3,
+      "label": "Q1 裁定を反転し直接パス形（FR-A1 撤回）",
+      "description": "dispatcher を触らず live へ直接パス形で配線 — hook-dispatcher テストは無傷だが、Q1=A の裁定（形式統一・単一述語ガード）を覆す。live に形式混在が生じる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

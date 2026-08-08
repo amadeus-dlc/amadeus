@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASD-CGDEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "問A の是認は「t113 は FR-1 の欠陥クラスでない」までであり、順序契約の権威出典は t113 自身のヘッダ（:8-14, :255-257）と docs/reference/12-state-machine.md:32 の terminal 宣言に留まる — 独立した仕様文書での dead-last 明文は grep で見つからなかったため、別 Issue 起票時は「契約の出典 = t113 のピン + 状態機械の terminal 性」と明記すること。また FR-1 変換後の t113 パーサは schemaVersion===2 のときのみ正規化する（従前は無条件に attributes?.Event ?? event を読んだ）ため、schemaVersion 非2 で attributes.Event を持つ変則行の扱いが狭まる点を留意（実運用の emit 経路では同値）。問B の是認には要件側改訂の範囲明示を条件とする — AC-1a の 17→19 だけでなく、requirements.md:70 の「患部17列挙は完全（根拠 = 共有ハーネス import の有無で機械抽出）」の根拠記述が実際の RE 述語（re-scans:65 の \\.event\\b 連言）と食い違っており、この完全性主張自体を申告付きで訂正する必要がある。私はテストを実行していないため、builder の「失敗署名 byte 同一」は再実測しておらず、判断根拠は diff の構造的証拠に依る。",
+      "rationale": "【問A = (a) 妥当】git diff tests/e2e/t113.test.ts の削除行が決定的: 変換前のパーサは `const event = rec.attributes?.Event ?? rec.event;`（:176 相当）で既に両スキーマ対応だった。よって t113 が v1 キー pin による空読み（FR-1 の欠陥クラス）で赤になることは構造的にありえず、builder の主張は diff だけで裏取りできる。RE 述語（re-scans:65 の grep -lE '\\.event\\b'）は rec.event の出現で t113 を偽陽性に拾ったもので、t113 は述語の過剰包含。変換自体は tests/harness/audit-records.ts の normalizeAuditRecord（v2: attributes.Event / v1: 素通し）へ寄せるだけで v2 行に対し同値であり、リーダー統一として無害。よって「変換維持 + 順序バグ別 Issue + AC 申告付き再定義」が正しい。\n\n【問B = (a) 妥当】tests/e2e/t02.test.ts:116 と t06.test.ts:179 はいずれも `(JSON.parse(line) as { fields?: Record<string,string> }).fields?.[\"Bolt slug\"]` で、.event を一切参照しない v1 キー pin。RE 述語が \\.event\\b を連言に置いていたため構造的に漏れたことを実読で確認した。私自身の広げた述語（grep -rln audit tests/e2e | xargs grep -ln JSON.parse | xargs grep -lE '\\.event\\b|\\.fields\\b|fields\\?\\.\\[' | xargs grep -L harness/audit-records）の出力はちょうど t02.test.ts と t06.test.ts の2件のみで、builder の「追加候補はちょうど2件」を独立再現した。さらに tests/e2e 全域の fields 参照を走査し、残存する v1 pin が他に無い（他の .fields 参照は既に audit-records 正規化済みレコード上）ことも確認した。修正形は t65 の実 diff（自前 JSON.parse チェーン → auditRowsFrom(...).find、以後 rec.fields）と同型の1関数置換で済む。同根は同一変更で修正する cid:code-generation:same-root-inventory に整合し、別 Issue 化すると完了後も e2e に同クラスの空読みが2件残る。",
+      "submittedAt": "2026-08-07T23:17:01Z",
+      "receivedAt": "2026-08-07T23:17:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASD-CGDEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 3,
+      "reservation": "問A で推奨(a)を採らず(b)を選ぶ点が唯一の相違。ただし(a)の対抗論拠は強い — t113 の変換前 inline パーサ `rec.attributes?.Event ?? rec.event` は normalizeAuditRecord のロジックの手写しであり、construction.md『複数箇所で消費されるロジックは canonical な1定義から導出する』の射程に入りうる。したがって leader が本 intent の要件として『e2e の audit reader は例外なく harness helper 経由に統一する』を明示宣言する場合は(a)を受容する — その場合 AC は『t113 を免責する』ではなく『t113 の赤は本欠陥クラス外の emit 順序欠陥(別 Issue)』と患部分類として書くこと(cid:requirements-analysis:exemption-clause-must-not-substitute — 免責条項で基準を代替しない)。第2の留保: 別 Issue の『既存事象』分類は、worktree 内の変換前後 byte 同一署名だけでは足りない — cid:build-and-test:c4-260805-subagent-type-guard の要求どおり未改変 base の分離 worktree で失敗集合一致を実測して起票すること(現状の証拠は『変換起因でない』ことは示すが『origin/main で既に赤』は示さない)。自案非採用時(choice 1 採用時)の受容度: 6(不本意だが支持) — B は一致しており A のみの相違、かつ上記2条件が満たされるなら実害はない。",
+      "rationale": "【問A: 反対 — (b) revert を推す】独立検証: git diff tests/e2e/t113.test.ts を実読。変換前の inline パーサは `const event = rec.attributes?.Event ?? rec.event;` で既に v1/v2 両形対応であり、t113 は FR-1 の欠陥クラス(v1 キーの単独 pin による空読み)の member ではない — RE 述語 \\.event\\b の偽陽性。auditRowsFrom への置換は挙動等価(同じ blank 行 filter、同じ順序、pos は同順の tiebreaker なので絶対値差は無影響)であり、赤の実因はアサーション面(:255-257『WORKFLOW_COMPLETED is dead-last and fires exactly once』ほか)= product の emit 順序契約であって parser ではない、という builder の主張は diff から裏付けられる。したがって t113 への変更は『患部の修正』ではなく無欠陥ファイルへの refactor であり、P5 surgical と team.md『無関係なリファクタを単一 PR に束ねない』に照らして患部集合から外す(b)が正。加えて(a)は『変更したが赤のままのファイル』を PR に残し、AC を『16 green + 1 除外』へ書き換える形になる — これは exemption-clause-must-not-substitute が禁じる免責による基準充足の形状に近い。(b)なら AC は列挙訂正(偽陽性の除去)で済み、触れた全ファイルが green で示せる。emit 順序欠陥の別 Issue 起票は(a)(b)いずれでも必須で、これは A の可否と独立。\n\n【問B: 賛成 — (a) 本 unit へ取り込み】独立検証: t02.test.ts:116 と t06.test.ts:179 を実読、いずれも `(JSON.parse(line) as { fields?: Record<string,string> }).fields?.[\"Bolt slug\"]` で v1 の fields キーのみを pin(.event の言及なし)。v2 では payload が attributes 配下のため undefined = 空読みとなり、t60〜t67 と同一欠陥クラス・同一 tier・同一の1関数置換で修正可能。builder の『広げた述語で追加はちょうど2件』も自前で裏取りした: tests/e2e/ 全域で helper 未使用かつ JSON.parse を持つファイルを列挙し、audit を触る4件(t138/t265/t12/t341)を実読したところ、いずれも audit を素文字列 substring 照合ないし markdown ブロック解析で読んでおり JSONL の fields/event キーを pin していない(例 t265:290 `expect(preparedAudit).not.toContain(\"STAGE_COMPLETED\")` はスキーマ非依存)。よって e2e tier の raw JSONL フィールド pin は t02:116 / t06:179 の2件で尽きる。これは grant の prohibitedEffects: scope-out に当たらない — 新しいクラス・tier への拡張ではなく、欠陥述語の連言漏れによる列挙不足の訂正であり、cid:requirements-analysis:enumeration-reverify-at-implementation が実装段の再列挙訂正として明示的に想定する経路。same-root-inventory の二択のうち同一 PR 修正が正なのは、(i) #2328 の完了条件が『e2e の決定的観測』であり、2件を残すと完了後も同クラスの空読みが e2e に残存して完了条件自体が未達になる、(ii) 修正が t60〜t67 と byte レベルで同型で追加リスクがゼロに近い、ため。AC-1a/FR-1 の『17』は申告付き改訂を要する: 問A=(b) 採用なら 16 + 2 = 18(t113 は欠陥クラス外として列挙から除去)、問A=(a) 採用なら 17 + 2 = 19。いずれもユーザー可視契約の変更ではなく列挙の訂正なので、選挙裁定 + 申告での執行で足りユーザーエスカレーションは不要。\n\n【付帯(執行事項・異議なし)】FR-4 の非 e2e 件数14も同じ述語欠落の疑いがあり、Issue 起票時に広げた述語で再計測すべき点に同意。\n\n【検証の限界】読み取り専用制約のためテストは実行していない — t113 の赤の実在と失敗署名、および2件の追加患部の実赤は builder の実測に依拠し、私が独立に確認したのはソース実読と述語スイープの範囲。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-07T23:17:55Z"
+    }
+  ],
+  "late": []
+}

@@ -13,7 +13,7 @@ Activation has four read-only outcomes: `not-ready` when no valid declared
 model/config target exists, `never-run` when targets exist without a successful
 verdict, `changed` when targets differ from that verdict, and `current` when
 they match. Installation succeeds in `not-ready`; only an explicit model-check
-run requires a valid `specs/tla/model-map.json` target. Startup never launches
+run requires a valid `amadeus/spaces/<space>/specs/tla/model-map.json` target. Startup never launches
 TLC.
 
 An advisory-correlated local run receives the three all-or-none CLI options
@@ -65,9 +65,58 @@ reproducible: the same model + config + image digest yields the same verdict
 plugin absent (or dropped), the shipped `dist/` stage graph is byte-identical to
 a zero-plugin build.
 
+## Local execution requirements
+
+The planner verifies the JDK by **exact patch version** — it accepts only
+`openjdk version "26.0.1…"` from `$JAVA_HOME/bin/java`. That strictness is
+deliberate: the model-check receipt is a reproducibility contract (NFR-1), and a
+different JDK is a different toolchain identity.
+
+This repository pins it in `mise.toml`:
+
+```toml
+[tools]
+java = "temurin-26.0.1+8"
+```
+
+Run `mise trust` once after cloning. With the pin active, `bun` inside the
+repository resolves `JAVA_HOME` to 26.0.1 and `run-model-check` works with no
+prefix.
+
+**Why a repo-level pin rather than an exported variable.** When a machine's
+global mise activates a different JDK, `bun` resolved through a mise shim
+re-applies that global `JAVA_HOME` while resolving the shim — so `export
+JAVA_HOME=…` and even `JAVA_HOME=… bun …` arrive already overwritten. The only
+visible symptom was `ENVIRONMENT_UNAVAILABLE`, which cost four separate intents
+the same rediscovery (#2410). The repo-level pin removes the mismatch at the
+source.
+
+**Diagnosing a failure.** `ENVIRONMENT_UNAVAILABLE` now names the check, the
+expectation, and the observation:
+
+```
+run-model-check: HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE) — Darwin environment
+inspection failed: Error: OpenJDK 26.0.1 verification failed: expected `openjdk
+version "26.0.1…"` from JAVA_HOME=/…/temurin-26.0.2+10, observed `openjdk
+version "26.0.2" 2026-07-21` (see plugins/formal-model-check/README.md § Local
+execution requirements)
+```
+
+The same string is carried on the JSON line as `errorDetail`.
+
+**Fallback.** Without the repo pin (or outside the repository), force the
+toolchain explicitly:
+
+```
+mise x java@temurin-26.0.1+8 -- bun plugins/formal-model-check/tools/run-model-check.ts …
+```
+
+Local execution also needs `sandbox-exec` (macOS built-in). CI uses the Docker
+provider instead and does not read `JAVA_HOME`.
+
 ## Working with models
 
-All execution surfaces resolve targets from `specs/tla/model-map.json`. The
+All execution surfaces resolve targets from `amadeus/spaces/<space>/specs/tla/model-map.json`. The
 local runner selects one registered pair from the explicit `--model` / `--cfg`
 paths and binds source bytes, vocabulary, and receipt to that same model. CI
 and diagnostic runners check every registered pair when `--model` is omitted,
@@ -88,7 +137,7 @@ Two reference chapters cover the model lifecycle around this stage:
   revision.
 - [Supplying a Formal Model for a New Protocol](../../docs/reference/22-formal-model-supply.md)
   — choosing a subject, declaring the reduction manifest, registering the model
-  in `specs/tla/model-map.json`, and the falling proof plus vacuity guard a new
+  in `amadeus/spaces/<space>/specs/tla/model-map.json`, and the falling proof plus vacuity guard a new
   model must pass before it counts as evidence.
 
 ## Compose / doctor / drop

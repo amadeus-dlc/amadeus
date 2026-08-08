@@ -186,18 +186,18 @@ post-process で突合されます。両者は canonical な監査語彙の一�
 
 | ハーネス | start seam | 帰結 |
 |---|---|---|
-| Claude Code | dispatch ツールへの `PreToolUse` | hook が*すべての*ツールで発火するため、フィールド導出は dispatch ツール `Task` 以外を拒否する(`tools/amadeus-lib.ts:4430`、`:4456-4457`) |
+| Claude Code | dispatch ツールへの `PreToolUse` | hook が*すべての*ツールで発火するため、フィールド導出は dispatch ツール以外を拒否する — `Task` と、ペイロードが実際に運ぶ内部名 `Agent`(#2303)の両方を受理する(`tools/amadeus-lib.ts:4133`、`:4171`) |
 | Kimi | prompt を運ぶ専用の `SubagentStart` イベント | `Purpose` の導出元となる prompt を供給する |
 | Codex、Cursor、OpenCode、Kiro、Kiro IDE | なし | completed 側のみを発火する |
 
-2つのペイロード形状が1つの導出に収束します(`amadeus-lib.ts:4456-4467`): ツール
+2つのペイロード形状が1つの導出に収束します(`amadeus-lib.ts:4170-4182`): ツール
 エンベロープは `subagent_type`/`prompt` を `tool_input` の内側に運び、専用の start
 イベントはそれらを最上位に運んで tool 名を持ちません。
 
 `Purpose` は **dispatch prompt から導出した*ラベル*であり、prompt の転記ではあり
-ません**(`amadeus-lib.ts:4437-4442`): エスケープされた改行をまず正規化し、次に
+ません**(`amadeus-lib.ts:4140-4145`): エスケープされた改行をまず正規化し、次に
 1行目を取り、trim し、制御文字を除去し、`SUBAGENT_PURPOSE_MAX_LENGTH`
-(`amadeus-lib.ts:4425`)で長さを制限します。エスケープの正規化を先に行うことが
+(`amadeus-lib.ts:4123`)で長さを制限します。エスケープの正規化を先に行うことが
 本質的です — リテラルの `\n` を含んで届いた prompt は、さもなければ単一の「行」と
 なり、本文を監査行へ持ち込んでしまいます。
 

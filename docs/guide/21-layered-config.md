@@ -24,7 +24,8 @@ Project defaults:
 {
   "solo-election": { "trigger": { "mode": "manual" } },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
-  "plugin": { "activation": { "names": ["formal-model-check"] } }
+  "plugin": { "activation": { "names": ["formal-model-check"] } },
+  "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
 }
 ```
 
@@ -47,6 +48,7 @@ Space override:
 | `finding.github.issue.creation.mode` | `off \| prompt \| auto` | `prompt` |
 | `swarm.unit.concurrency.limit` | integer `1..4` | `4` |
 | `plugin.activation.names` | plugin-name array; Project only | `[]` |
+| `subagent.dispatch.enforced-models` | model-name array (aliases match full ids) | `["opus","sonnet"]` |
 
 Configuration is fail-closed. Unknown paths, legacy flat keys, `null`, malformed
 JSON, unreadable files, and invalid values reject the whole result. Diagnostics

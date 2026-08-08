@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PWF-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "(1) c1 の核心は (a)「env 変数がテスト隔離 seam として機能している既存契約を、resolver の段順を変える前に grep 棚卸しする」であり、これは memory 層に未被覆と実測確認した（project.md:209 cid:code-generation:c1-doctor-seam は『resolver 後に env を変えても結果が不変であること』= process-global 依存除去の面で、env が既存テストの隔離 seam であることの事前棚卸しは覆っていない。team.md cid:reverse-engineering:restart-loss-triple-grounding の追補は ambient 入力を RE の第一容疑にするだけで CG の変更前棚卸しではない）。一方 (b)「段順パリティ主張は両梯子の実装 verbatim で確定してから裁定に使う」は cid:requirements-analysis:mechanism-cite-verify-at-draft（機構の実在と意味論を起草時に実測確認）の射程内であり、E-PWF-CGDEV2 の subagent-1 留保が amadeus-lib.ts:327/330/339 の verbatim 読解で誤読を訂正した経緯はその適用実例である。したがって c1 は (a) を核心とする1追補として書き、(b) は独立の新規則ではなく mechanism-cite-verify-at-draft の適用を再確認する1文として同追補内に収めること。(2) c3 は persist する範囲を未被覆の核心1点に限定すること — 「副作用・汚染クラスの閉包はテストの緑では証明できず、副作用面の不変量（audit 行数・memory 層ハッシュ等）の不変を実測して初めて閉包となる」。既存 cid:requirements-analysis:fix-review-replays-origin-repro は再現手順の verbatim 再適用までを定め、観測対象が副作用面の不変量でなければならない点は覆っていない。intent 固有の数値（t408・295 行）は焼き込まず一般形で書き、実測は record 参照とすること。(3) c2 の不採用根拠を記録に残すこと — 前進修復（履歴 rewrite せず state フィールドのみ復旧・audit は append-only のまま無改変）は project.md cid:build-and-test:bt-workflow-completion-substance-gate と cid:deployment-pipeline:c3 が既に定めており、team.md/project.md の汚染行除去手順は本インシデント固有の運用であって record（construction/code-generation/memory.md の Deviations 3行）に残れば足りる。",
+      "rationale": "判定規準『一般化可能な新規知識（既存 cid の未被覆面）だけを persist』に照らして独立実測した結果、c1 の (a) 面と c3 の閉包観測対象の面は memory 層 grep で未被覆と確認でき、c2 は既存2 cid が実質同一手順を既に定めているため不採用が妥当と判断した。予防側（c1）と事後閉包側（c3）は直交する2面であり、片方だけの persist では汚染クラスの再発検出手段が残らない。",
+      "submittedAt": "2026-08-07T12:08:01Z",
+      "receivedAt": "2026-08-07T12:08:33Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PWF-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "(a) c1 の2教訓のうち『段順パリティ主張の verbatim 確定』は独立の新規知識として書かないこと — 既存 cid:requirements-analysis:mechanism-cite-verify-at-draft が『機構の実在と意味論を起草時に実測確認する』と既に命じており、本件（当初前提「hook は marker が env に勝つ」の誤読）はその違反実例である。追補本文に含める場合も、同 cid の射程に『段順・優先順位の主張』が入ることを明示する1句に留め、新規 cid を立てない。(b) c1 の採用面（教訓1）は既存の消費者棚卸しファミリ（cid:code-generation:stderr-addition-consumer-grep / cid:application-design:dual-key-consumer-inventory）への追補として統合し、独立 cid を新設しないこと。核心は2点に限定する: (i) 解決梯子の『段順』それ自体が消費者契約であり、段順変更は消費者棚卸しの発火条件である (ii) 隔離 seam の破壊は偽赤ではなく実ワークスペースへの書込汚染として顕在化するため、変更前の棚卸しが唯一の予防面である。(c) 実測値を根拠として併記し、intent 固有の行番号・テスト名は焼き込まないこと（行番号は既に code-summary の :317/:329-330 と現行 HEAD の :330/:339 で乖離している）。併記する実測は、コマンド `grep -rl \"CLAUDE_PROJECT_DIR\" tests/ | wc -l` → 109（測定 ref = worktree HEAD、2026-08-07 実測）。",
+      "rationale": "record と実コードを独立に実測した。(1) c1 教訓1 は既存 cid で未被覆と判定する。amadeus-lib.ts の resolveProjectDir は rung 2 の env に『callers that set it to a workspace OTHER than the one their cwd sits in (test fixtures, tools driving a scratch project) depend on it winning』という契約コメントを持ち、tests/ 配下 109 ファイルが CLAUDE_PROJECT_DIR を参照する（自前 grep 実測）— env が広範な隔離 seam であることは実在の契約である。既存の棚卸し系 cid（stderr-addition-consumer-grep / dual-key-consumer-inventory / fixture-propagation-grep / inventory-from-grep-each-time）はいずれも『出力・識別子・API 面の追加/改名』を発火条件とし、失敗様式は消費者テストの赤である。本件の発火条件は『解決梯子の段順変更』（追加でも改名でもない）、失敗様式は『テスト実行中の実 record・memory 層への書込汚染』（赤ではなく実データ破壊）— 発火条件と失敗様式の両方が既存の射程外であり、実害（team.md 管理ブロック置換・project.md へ fixture 規則 25 行注入・amadeus-state.md の Current Stage 偽前進・audit へ rogue イベント多数）も実測記録されている。team.md の scratch-script-discipline は同じ seam の『利用者側』（override を明示して汚染を避ける）を縛るが、『提供者側』（その override の優先順位を変えない／変えるなら棚卸しする）は未被覆であり、この非対称が今回の抜け道になった。(2) c1 教訓2 は既存 cid の違反実例と判定する — mechanism-cite-verify-at-draft は意味論の実測確認まで明文で命じており、実際 E-PWF-CGDEV2 で subagent-1 が hook 梯子を直読して（現行 HEAD 実測: :330 が env = rung 2、:339 が cwd marker 祖先探索 = rung 3、env より上は :327 の payload cwd のみ）誤前提を訂正している。新規知識ではないため留保 (a) を付す。(3) c3 は既存 cid:code-generation:ruling-premise-closure-verification（修正適用後に元症状の非再現まで実測）の逐語適用にとどまる。副作用不在を不変量（audit シャード 295 行不変・memory 層 md5 不変）で測る点は測定手法の具体化であり、cid:requirements-analysis:review-method-memo が『手法メモは後続検証者向けに記録へ残す』と定める通り record（code-summary.md の「汚染ベクタ消滅の閉包実証」節）に残れば足りる。(4) c2 は修復手順そのものがインシデント固有（team.md 復元・project.md 汚染行のみ除去・state フィールド復旧）で一般形が薄く、audit を append-only のまま無改変で保つ原則は既に cid:deployment-pipeline:c3（履歴 rewrite・force push をせず前進で回復）と cid:build-and-test:bt-workflow-completion-substance-gate（前進 revert）が縛っている。以上より c1 のみ採用（choice 1）が判定規準『一般化可能な新規知識（既存 cid の未被覆面）だけを persist する』に合致する。",
+      "submittedAt": "2026-08-07T12:05:00Z",
+      "receivedAt": "2026-08-07T12:09:15Z"
+    }
+  ],
+  "late": []
+}

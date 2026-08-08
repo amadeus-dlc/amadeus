@@ -26,7 +26,7 @@
 // the nearest-rank p95 is mirrored locally because the shipped surface must
 // not reach into tests.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { type Dirent, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type JournalRecord, journalRecordField, readJournalRecords } from "./amadeus-journal.ts";
@@ -77,6 +77,7 @@ export interface ExclusionCounts {
     readonly orphanComplete: number;
     readonly unclosedIdle: number;
     readonly zeroSecond: number;
+    readonly invalidTimestamp: number;
   };
   readonly review: { readonly unparseableReviewHeading: number };
 }
@@ -85,7 +86,7 @@ export interface ExclusionCounts {
 export function emptyExclusions(): ExclusionCounts {
   return {
     corpus: { brokenLine: 0, unreadableShard: 0 },
-    windowing: { unmatchedStart: 0, orphanComplete: 0, unclosedIdle: 0, zeroSecond: 0 },
+    windowing: { unmatchedStart: 0, orphanComplete: 0, unclosedIdle: 0, zeroSecond: 0, invalidTimestamp: 0 },
     review: { unparseableReviewHeading: 0 },
   };
 }
@@ -136,12 +137,17 @@ export function buildWindows(records: readonly AttributedRecord[]): { windows: S
   const windows: StageWindow[] = [];
   let unmatchedStart = 0;
   let orphanComplete = 0;
+  let invalidTimestamp = 0;
 
   for (const attributed of chronological(records)) {
     const event = eventOf(attributed.record);
     if (event !== "STAGE_STARTED" && event !== "STAGE_COMPLETED") continue;
     const stage = attrOf(attributed.record, "Stage");
     if (stage === null || stage === "") continue;
+    if (Number.isNaN(epochSeconds(attributed.record.timestamp))) {
+      invalidTimestamp += 1;
+      continue;
+    }
     const key = `${attributed.intent}\u0000${stage}`;
     if (event === "STAGE_STARTED") {
       const queue = pending.get(key);
@@ -166,7 +172,7 @@ export function buildWindows(records: readonly AttributedRecord[]): { windows: S
   for (const queue of pending.values()) unmatchedStart += queue.length;
 
   const zero = emptyExclusions();
-  return { windows, buckets: { ...zero, windowing: { ...zero.windowing, unmatchedStart, orphanComplete } } };
+  return { windows, buckets: { ...zero, windowing: { ...zero.windowing, unmatchedStart, orphanComplete, invalidTimestamp } } };
 }
 
 // --- idle subtraction ------------------------------------------------------
@@ -178,10 +184,13 @@ export interface IdleInterval {
   readonly end: number;
 }
 
-/** Per-intent idle spans plus the timestamps of openers that never closed. */
+/** Per-intent idle spans plus the timestamps of openers that never closed.
+ *  Idle events whose timestamp does not parse are counted rather than allowed
+ *  to poison the interval arithmetic with NaN. */
 export interface IdleIndex {
   readonly intervals: ReadonlyMap<string, readonly IdleInterval[]>;
   readonly unclosedOpeners: ReadonlyMap<string, readonly number[]>;
+  readonly invalidTimestampCount: number;
 }
 
 // The three idle shapes, as opener -> accepted closers. An opener that never
@@ -224,12 +233,17 @@ export function indexIdle(records: readonly AttributedRecord[]): IdleIndex {
   const intervals = new Map<string, IdleInterval[]>();
   const unclosedOpeners = new Map<string, number[]>();
   const openPerIntent: OpenerStacks = new Map();
+  let invalidTimestampCount = 0;
 
   for (const attributed of chronological(records)) {
     const event = eventOf(attributed.record);
     const shape = event === null ? null : idleShapeFor(event);
     if (shape === null) continue;
     const at = epochSeconds(attributed.record.timestamp);
+    if (Number.isNaN(at)) {
+      invalidTimestampCount += 1;
+      continue;
+    }
     const stack = openerStack(openPerIntent, attributed.intent, shape.kind);
     if (event === shape.open) {
       stack.push(at);
@@ -244,7 +258,7 @@ export function indexIdle(records: readonly AttributedRecord[]): IdleIndex {
     for (const stack of perKind.values()) leftovers.push(...stack);
     if (leftovers.length > 0) unclosedOpeners.set(intent, leftovers.sort((a, b) => a - b));
   }
-  return { intervals, unclosedOpeners };
+  return { intervals, unclosedOpeners, invalidTimestampCount };
 }
 
 // Clip each span to the window, then merge the survivors so overlapping spans
@@ -301,7 +315,10 @@ export function subtractIdle(
   }
 
   const zero = emptyExclusions();
-  return { measured, buckets: { ...zero, windowing: { ...zero.windowing, unclosedIdle, zeroSecond } } };
+  return {
+    measured,
+    buckets: { ...zero, windowing: { ...zero.windowing, unclosedIdle, zeroSecond, invalidTimestamp: index.invalidTimestampCount } },
+  };
 }
 
 // --- review iterations -----------------------------------------------------
@@ -358,11 +375,13 @@ export interface SensorTally {
   readonly failedRate: number;
 }
 
-const SENSOR_EVENTS: Record<string, "fired" | "passed" | "failed"> = {
-  SENSOR_FIRED: "fired",
-  SENSOR_PASSED: "passed",
-  SENSOR_FAILED: "failed",
-};
+// A Map, not an object literal: the corpus is outside the trust boundary, so an
+// event name like "constructor" must miss instead of hitting Object.prototype.
+const SENSOR_EVENTS: ReadonlyMap<string, "fired" | "passed" | "failed"> = new Map([
+  ["SENSOR_FIRED", "fired"],
+  ["SENSOR_PASSED", "passed"],
+  ["SENSOR_FAILED", "failed"],
+]);
 
 /** Tally sensor outcomes by the `Stage slug` attribute. The lifecycle events'
  *  `Stage` attribute is a different key with different values and is never read
@@ -371,7 +390,7 @@ export function tallySensors(records: readonly AttributedRecord[]): SensorTally[
   const counters = new Map<string, { fired: number; passed: number; failed: number }>();
   for (const { record } of records) {
     const event = eventOf(record);
-    const outcome = event === null ? undefined : SENSOR_EVENTS[event];
+    const outcome = event === null ? undefined : SENSOR_EVENTS.get(event);
     if (outcome === undefined) continue;
     const slug = attrOf(record, "Stage slug");
     if (slug === null || slug === "") continue;
@@ -395,8 +414,11 @@ export interface ModelAttribution {
   readonly totalCount: number;
 }
 
-/** Attribute subagent rows to models. A row without a usable `Model` is the
- *  UNKNOWN bucket: the absence of the attribute is itself the record, so it is
+/** Attribute subagent rows to models. Only SUBAGENT_COMPLETED rows join the
+ *  population — a start and its completion describe one dispatch, and the
+ *  sibling stats tool attributes on completion, so counting both would double
+ *  every per-model total. A row without a usable `Model` is the UNKNOWN
+ *  bucket: the absence of the attribute is itself the record, so it is
  *  reported rather than dropped from the denominator. */
 export function attributeModels(records: readonly AttributedRecord[]): ModelAttribution {
   const byModel = new Map<string, number>();
@@ -407,7 +429,7 @@ export function attributeModels(records: readonly AttributedRecord[]): ModelAttr
 
   for (const { record } of records) {
     const event = eventOf(record);
-    if (event !== "SUBAGENT_COMPLETED" && event !== "SUBAGENT_STARTED") continue;
+    if (event !== "SUBAGENT_COMPLETED") continue;
     totalCount += 1;
     const model = attrOf(record, "Model");
     if (model === null || model.trim() === "") {
@@ -542,6 +564,7 @@ export function composeReport(input: {
         orphanComplete: built.buckets.windowing.orphanComplete,
         unclosedIdle: subtracted.buckets.windowing.unclosedIdle,
         zeroSecond: subtracted.buckets.windowing.zeroSecond,
+        invalidTimestamp: built.buckets.windowing.invalidTimestamp + subtracted.buckets.windowing.invalidTimestamp,
       },
       review: { unparseableReviewHeading: input.unparseableReviewHeadingCount },
     },
@@ -593,6 +616,7 @@ function measurementRefLines(report: StageStatsReport): string[] {
     `orphan-complete: ${windowing.orphanComplete}`,
     `unclosed-idle: ${windowing.unclosedIdle}`,
     `zero-second: ${windowing.zeroSecond}`,
+    `invalid-timestamp: ${windowing.invalidTimestamp}`,
     `unparseable-review-heading: ${review.unparseableReviewHeading}`,
     `constructed-windows: ${report.constructedWindowCount}`,
     `net-population: ${report.populationCount}`,
@@ -812,10 +836,7 @@ function recordsFromShard(intent: string, body: string): { records: AttributedRe
     lines += 1;
     try {
       for (const record of readJournalRecords(line)) records.push({ intent, record });
-    } catch {
-      broken += 1;
-      continue;
-    }
+    } catch { broken += 1; continue; }
   }
   return { records, lines, broken };
 }
@@ -850,14 +871,19 @@ export function scanCorpus(spaceRoot: string): ScannedCorpus {
   return { records, unreadableShardCount, brokenLineCount, shardCount, lineCount };
 }
 
-/** Markdown artefacts under one intent, as intent-relative paths. */
+/** Markdown artefacts under one intent, as intent-relative paths. Dirent-typed
+ *  so only real directories recurse — a directory symlink pointing back at an
+ *  ancestor would otherwise recurse forever. */
 function markdownUnder(root: string, prefix: string, out: string[]): void {
-  for (const entry of listOrEmpty(root)) {
-    if (entry === "audit" || entry === "node_modules") continue;
-    const full = join(root, entry);
-    const relative = prefix === "" ? entry : `${prefix}/${entry}`;
-    if (entry.endsWith(".md")) out.push(relative);
-    else markdownUnder(full, relative, out);
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+  } catch { return; }
+  for (const entry of entries) {
+    if (entry.name === "audit" || entry.name === "node_modules") continue;
+    const relative = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+    if (entry.isFile() && entry.name.endsWith(".md")) out.push(relative);
+    else if (entry.isDirectory()) markdownUnder(join(root, entry.name), relative, out);
   }
 }
 
@@ -899,13 +925,11 @@ function resolveProjectDirLocal(explicitDir: string | undefined): string {
 }
 
 function activeSpaceLocal(projectDir: string): string {
+  let raw = "";
   try {
-    const raw = readFileSync(join(projectDir, "amadeus", "active-space"), "utf-8").trim();
-    if (SAFE_NAME.test(raw)) return raw;
-  } catch {
-    return "default";
-  }
-  return "default";
+    raw = readFileSync(join(projectDir, "amadeus", "active-space"), "utf-8").trim();
+  } catch { return "default"; }
+  return SAFE_NAME.test(raw) ? raw : "default";
 }
 
 const RENDERERS: Record<CliOptions["format"], (report: StageStatsReport) => string> = {

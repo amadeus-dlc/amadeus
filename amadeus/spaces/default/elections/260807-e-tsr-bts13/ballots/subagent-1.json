@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-TSR-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 文には隣接する既存 cid:reverse-engineering:restart-loss-triple-grounding の追補(E-DAGRE — ambient 入力 = env・cursor・gitignored 状態の第一容疑化)を相互参照として明記し、本追補の射程を build-and-test の帰属手続き(ベース側での ambient 再現)に限定すること。あわせて『ambient を再現しても失敗集合が一致しない残余は個別に依存を実証する』(本 intent の t-runtime-dispatch-seam = runtime-graph.json の実在依存)を文言に含めること — bt-20260730-2 の byte-identical 条件を無条件に緩める形で書かない。",
+  "rationale": "独立実測: (1) 候補全文を `bun .claude/tools/amadeus-learnings.ts surface --slug build-and-test` で取得し、diary(construction/build-and-test/memory.md)の Interpretations 2件 / Deviations 2件 / Tradeoffs 1件と1:1一致・未収載の学習なしを確認。(2) c4 の実測根拠は build-test-results.md:42-44,55 に実在(ベース cursor なし 184 pass/0 fail、本ツリー 181/3、ベース+cursor 182/2、stage-graph.json は JSON 正規化 diff で完全一致)。(3) 既存 cid 本文を実読 — project.md:400 bt-20260730-2 は『未改変ベースでの byte-identical 失敗集合の再現』までを定め、project.md:352(自己比較の縮退)と project.md:381 c4-260805(分離 worktree で失敗テスト名集合を diff、同一条件として lockfile/生成物/env を列挙)も per-user の gitignored 状態(active-intent cursor)をベース側へ注入する手続きは定めない。素の適用ではベースが green のため in-scope 誤帰属になる — 追補面は未被覆と確認。(4) 不採用4件: c1=project.md:169 phase-check-before-final-approve、c2=team.md:169 local-lcov-pre-push、c3=project.md:19 java-home-mise-shim-override、c5=project.md:253 build-and-test:c4 の各実適用記録であり新規面なし。GoA 2 の理由は上記留保(隣接 cid の相互参照と残余の但し書き)のみ。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T15:50:25Z"
+}

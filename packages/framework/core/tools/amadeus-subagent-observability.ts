@@ -291,3 +291,92 @@ export function resolvePersonaPin(agentType: string, agentsDir: string): Persona
   }
   return { pin, warnings };
 }
+
+// ---------------------------------------------------------------------------
+// #2438 — dispatch model enforcement (the deny half; #2279 is the advisory half)
+// ---------------------------------------------------------------------------
+
+/**
+ * The models a subagent dispatch may run on when nothing is configured
+ * (#2438). The active set is the layered `subagent.dispatch.enforced-models`
+ * configuration key resolved by amadeus-config.ts; this constant is that key's
+ * default and the fallback when resolution fails. A dispatch passes only
+ * through a compliant explicit request or a persona pin inside the active set
+ * — everything else would silently inherit the parent session's model, which
+ * is exactly the leak the guard exists to close.
+ */
+export const ENFORCED_SUBAGENT_MODELS = ["opus", "sonnet"] as const;
+
+// A full model id counts as compliant when its family prefix matches an
+// enforced alias (e.g. "claude-opus-5" for the alias "opus").
+function matchesEnforcedAlias(value: string, alias: string): boolean {
+  if (value === alias) return true;
+  return value.startsWith(`claude-${alias}`) && (value.length === alias.length + 7 || value[alias.length + 7] === "-");
+}
+
+function isEnforcedModel(value: string, enforcedModels: readonly string[]): boolean {
+  return enforcedModels.some((alias) => matchesEnforcedAlias(value, alias));
+}
+
+/** The already-resolved dispatch facts the decision consumes. */
+export interface DispatchModelInput {
+  /** classifyAgentType's verdict for the dispatched type. */
+  readonly typeVerdict: TypeVerdict;
+  /** The persona's frontmatter pin — attributable only to a persona verdict. */
+  readonly personaPin: string | undefined;
+  /** The dispatch call's explicit `model` request, verbatim. */
+  readonly requestedModel: string | undefined;
+  /** The active enforced set — the resolved config value; default when absent. */
+  readonly enforcedModels?: readonly string[];
+}
+
+export type DispatchModelDecision =
+  | { readonly kind: "allow"; readonly reason: string }
+  | { readonly kind: "deny"; readonly reason: string };
+
+function dispatchRemedy(enforcedModels: readonly string[]): string {
+  return (
+    "dispatch via a declared persona (harness agents/ definition with a model pin) " +
+    `or pass an explicit model from {${enforcedModels.join(", ")}}`
+  );
+}
+
+/**
+ * Decide whether a subagent dispatch complies with the enforced model set.
+ *
+ * Order is load-bearing: an explicit request is judged FIRST and on its own —
+ * a non-compliant explicit model must not be rescued by a compliant persona
+ * pin, because the harness honours the explicit request over the pin. A pin is
+ * consulted only for a persona verdict, so a stray pin passed alongside a
+ * builtin or ad-hoc verdict cannot open the gate.
+ */
+export function decideDispatchModel(input: DispatchModelInput): DispatchModelDecision {
+  const enforcedModels = input.enforcedModels ?? ENFORCED_SUBAGENT_MODELS;
+  if (input.requestedModel !== undefined) {
+    const requested = input.requestedModel.trim();
+    if (isEnforcedModel(requested, enforcedModels)) {
+      return { kind: "allow", reason: `explicit model "${requested}" is inside the enforced set` };
+    }
+    return {
+      kind: "deny",
+      reason:
+        `explicit model "${sanitizeAdvisoryValue(requested)}" is outside the enforced set ` +
+        `{${enforcedModels.join(", ")}} — ${dispatchRemedy(enforcedModels)} (#2438)`,
+    };
+  }
+  if (input.typeVerdict === "persona") {
+    const pin = input.personaPin?.trim() ?? "";
+    if (isEnforcedModel(pin, enforcedModels)) {
+      return { kind: "allow", reason: `persona pin "${pin}" is inside the enforced set` };
+    }
+    const pinShown = pin === "" ? "no model pin" : `non-compliant pin "${sanitizeAdvisoryValue(pin)}"`;
+    return {
+      kind: "deny",
+      reason: `persona has ${pinShown} — add a model pin from {${enforcedModels.join(", ")}} to its definition or pass an explicit model (#2438)`,
+    };
+  }
+  return {
+    kind: "deny",
+    reason: `${input.typeVerdict} dispatch without an explicit model would inherit the session model — ${dispatchRemedy(enforcedModels)} (#2438)`,
+  };
+}

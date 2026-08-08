@@ -1,5 +1,20 @@
 # Code Summary — claude-print-live
 
+> **訂正（2026-08-08、Issue #2235）**: 本文が実装済みと申告する native keychain 経路は**一度も実装されていない**。
+> 実装は当初から `tests/harness/claude-print-live.ts:58` の `if (!env.ANTHROPIC_API_KEY) return "provide ANTHROPIC_API_KEY";`
+> だけで、`claude auth status` を呼ぶコードは全履歴に存在しない（`git log --all -S "auth status" -- tests/harness/claude-print-live.ts` が 0 hit）。
+> 該当箇所は「実装概要」冒頭、「主な変更ファイル」の `claude-print-live.ts` 行、「主要な判断」2 と 5。
+>
+> さらに、この経路は**実装しても成立しない**。Claude Code は `claude.ai` ログインをソースの `HOME` 経由で解決するため、
+> BR-I06 が同時に要求する `HOME` 隔離と構造的に両立しない。allow-list 相当の環境（`PATH`/`HOME`(fresh)/`TMPDIR`）で
+> `claude -p` を実行すると `Not logged in · Please run /login` を返す（2026-08-08 実測、Claude Code 2.1.222）。
+> 対照として、実 `HOME` で `CLAUDE_CODE_OAUTH_TOKEN` と `CLAUDE_CONFIG_DIR` を除いた場合は
+> `claude auth status --json` が `loggedIn: true / authMethod: claude.ai` を返す — 認証自体は実在するが `HOME` に依存する。
+>
+> したがって承認済み設計の BR-I06「auth binding は native keychain または `ANTHROPIC_API_KEY`」自体が誤りであり、
+> 正しい契約は `ANTHROPIC_API_KEY` のみ。docs 側は同 Issue の修正で実装事実へ訂正済み。
+> 本文は当時の申告として保存し、書き換えない（虚偽申告が起きた事実そのものが記録対象のため）。
+
 ## 実装概要
 
 U03の承認済み設計どおり、Claude Code 2.1.220以降のprint/headless surfaceを既存live-E2E production kernelへ接続した。`claude-print`は専用opt-inとGitHub Actions hard denyを入口に、read-only version/help/dist/auth preflight、fresh project/home/tmp、project-only settings、native keychainまたは`ANTHROPIC_API_KEY` binding、closed argv、bounded output、structured result assertion、cleanup、ledger、matrixへ一方向で接続される。

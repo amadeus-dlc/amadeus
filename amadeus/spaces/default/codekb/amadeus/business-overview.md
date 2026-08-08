@@ -1,10 +1,114 @@
 # ビジネス概要
 
+## e2e 監査テストの偽 green と検証信頼性（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+本 intent の業務影響は**検証の信頼性**に集約される。実質は3点。
+
+1. **e2e 17ファイルが全て赤**でありながら、`--ci` が e2e を含まないため PR は green を返す。開発者が e2e を単独実行して初めて気づく状態であり、テストが果たすべき早期検知の役割を失っている。
+2. **vacuity 3件は赤にすらならない**（`t09:211` / `t07:371` / `t07:530`）。リーダーが壊れていても「イベント 0 件」の主張は通るため、これらは欠陥の存在下で緑を報告する。ゲート不在より悪い偽の信頼を生む。
+3. **同機序の再発が3度目**。`ci.yml:224-227` が #1569 のリリース到達を e2e 死角の帰結として自認しており、今回 #2328 が同じ経路を通った。手当てを本 intent に含めるかは裁定事項。
+
+書き手側（プロダクション監査ログ）に欠陥はない — v1/v2 いずれの経路も正しく行を書いている。影響範囲はテスト面に限定される。
+
 ## 260807-stage-perf-report（現在、observed `4a3da7d62`）
 
 **本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）にビジネス面の変更はない。#2405 が扱うのは既に永続化されている監査・record の**読み手**の追加であり、プロダクトの提供価値・対象利用者・課金面はいずれも変わらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## 監査 completeness — started/completed 非対称の業務影響（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### 何が失われているか
+
+Amadeus の監査証跡は subagent のライフサイクルを `SUBAGENT_STARTED` と `SUBAGENT_STOPPED` の**対**で記録する設計になっている。observed の Claude Code 環境では、配線（#2297）と語彙（#2303）の2重の欠落により **started 側が構造的に 0 件**であり、completed 側だけが残る。
+
+対の片側が恒久的に欠けることで失われる業務価値:
+
+| 用途 | started が要る理由 | 現状 |
+|---|---|---|
+| subagent の実行時間計測 | 開始時刻がなければ duration を出せない | 算出不能 |
+| dispatch 意図の記録（`Purpose`） | 起動時の prompt からのみ導出される。stop 側は持たない | 恒久欠落 |
+| 型・モデル帰属（`Agent Type` / `Type Verdict` / `Model`、#2279 の成果） | すべて start payload から導出される | 恒久欠落 |
+| 未完了 subagent の検出 | started あり・stopped なし の突合で初めて見える | 検出不能 |
+| セッション再生（`/amadeus-replay`）とコスト集計 | 起動側の文脈がないと dispatch の物語が繋がらない | 片側のみ |
+
+**業務上の重み**: #2279（subagent の型・モデル帰属）は直近の intent で設計・実装された機能だが、その出力先である start イベントが Claude Code では一切出ていない。⇒ **実装済みの観測機能が、配線と語彙の欠落によって業務価値ゼロで運用されている**状態にある。
+
+### ハーネス横断で見たときの位置づけ
+
+`docs/reference/23-telemetry-schema.md:192-196` が記す start seam の分布:
+
+| ハーネス | start seam | observed の実効 |
+|---|---|---|
+| Claude Code | `PreToolUse` on the dispatch tool | **配線・語彙とも欠落 → 0 件** |
+| kimi | 専用 `SubagentStart`（prompt を運ぶ） | 機能する（`tool_name` 不在の短絡が通す） |
+| Codex, Cursor, OpenCode, Kiro, Kiro IDE | なし | completed 半分のみが正常な定常状態 |
+
+⇒ 現状、started を出せる設計を持つ2ハーネスのうち、**主力である Claude Code だけが実質 kimi 未満の観測水準**にある。「started がないのは正常」という定常状態を持つハーネスが多数派であるため、**欠落が異常として気付かれにくい**構造になっている（読み手は未対応の対を落とす運用 — `06-hooks-and-tools.md:219` の `Readers pair the halves and drop unmatched rows.`）。
+
+### 修復の業務価値と受け入れの条件
+
+- **価値の発現には両方の修正が要る** — 配線だけ直しても語彙が拒否し、語彙だけ直しても seam が発火しない。どちらか一方の着地では業務価値は依然ゼロ。
+- **再発防止の価値** — live 設定の hook 集合を検査する面が存在しないため、同種の配線欠落は今後も CI グリーンのまま起きうる。ガードの新設は本修正の一回性を超えた価値を持つ。
+- **未解明の 5 件** — `260805-subagent-type-guard` の監査に 2026-08-06 の約 70 分間だけ `SUBAGENT_STARTED` が 5 件存在する（機序未確定）。この説明がつかないまま修正すると、**修正後も想定と異なる条件で emit が漏れる/重複する余地**が残る。要件段での解明が受け入れの前提として扱われるべき事項。
+
+### スコープ判断に関わる業務論点
+
+live の欠落は `plugin-compose`（SessionStart）を含む2件で、#2297 本文が名指すのは1件のみ。plugin 自動 compose がこのリポジトリ自身で発火していない可能性（**仮説、未実測**）は、本 intent の対象である監査 completeness とは別系統の業務影響であり、同梱の可否は要件段の裁定事項（詳細は `code-quality-assessment.md` §債務2 と `re-scans` §同梱可否）。
+
+## worktree セッションの record 汚染（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 利用者に約束されている価値
+
+worktree は並行作業の隔離単位である。`org.md` の Construction worktree 規範と `cid:code-generation:solo-bolt-worktree-required` は「本線ツリーを共有資源として汚さない」ことを前提に置く。したがって利用者への約束は、**worktree で走らせたワークフローの record は、その worktree の `amadeus/` の下にだけ書かれる**ことである。
+
+### 実際に成立していない境界（[Issue #2352](https://github.com/amadeus-dlc/amadeus/issues/2352)）
+
+| 業務シナリオ | 現状（observed 実測） |
+| --- | --- |
+| worktree でステージを進め、その worktree の record に書く | CLI ツールを**本線の絶対パス**で起動すると、record の書き先が**本線**になる（ケース B） |
+| 同じセッションの hook が書く先と CLI が書く先が一致する | 一致しない。hook 側は worktree、CLI 側は本線へ書く |
+| 誤った書き先を検知して停止する | **検知しない**。`resolveProjectDir`（`packages/framework/core/tools/amadeus-lib.ts:226-250`）に警告・例外は1つも無い（`grep "console\|warn\|throw"` → exit=1、出力ゼロ） |
+| `CLAUDE_PROJECT_DIR` を設定していれば安全 | 逆。env が段2で無条件に勝つため、worktree 内の正しい lib を読んでいても本線へ倒れる（ケース C+env） |
+
+**業務影響の形**: 隔離が破れることそのものより、**破れたことが誰にも見えない**ことが本質である。監査シャード・state・intents.json が本線側へ静かに混ざり、並行する別セッションの記録と交差する。`org.md` Forbidden の検証劇場禁止（P2）が禁じるのは「偽の緑」だが、本件はその隣接形 — **偽の隔離**である。
+
+### 5ケース再現（repo 外 scratch、observed lib と `cmp` byte 一致、全 exit=0）
+
+| ケース | cwd | 読込 lib | env | `resolveProjectDir()` | `resolveProjectDirFromHook()` |
+|---|---|---|---|---|---|
+| A | main | main | UNSET | main | main |
+| **B** | **worktree** | **main 絶対** | UNSET | **main** ← 欠陥 | worktree |
+| C | worktree | worktree | UNSET | worktree | worktree |
+| C+env | worktree | worktree | main | **main** | main |
+| B+payloadCwd | worktree | main 絶対 | UNSET | **main** | worktree |
+
+### 保護すべき対抗価値
+
+- **hook 側の解決順は既決**: `:306-309` の doc-comment が逐語で `It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree` と記す。これは #1482/#1493 の裁定の実装であり、緩和対象ではない。
+- **`--project-dir` の明示指定（段1）は既に広く受け口がある**: core/tools の 18 ツールが `"--project-dir"` を parse する。是正の方向として新機構を要さない。
+- **marker ベースのガードには構造的な穴がある**: `.claude/tools/` は完全に未追跡（`git ls-files .claude/tools` → **0件**、`.gitignore:24` が `.claude/**` を ignore）。したがって `bun run build` 前の fresh worktree は workspace marker（`amadeus/` + `<harness>/tools/` の両方がディレクトリ、`amadeus-lib.ts:283-286`）を構造的に満たさない。marker を足すだけでは build 前 worktree を検出できない。
+
+### 利用者から見た期待成果
+
+1. worktree セッションの record が本線へ混ざらない。
+2. 書き先が意図と食い違う状況が**無音でなくなる**（loud path の新設、または明示指定の強制）。
+3. 上記が `docs`／`skills`／allowlist の推奨形と整合し、片面だけの修正で終わらない。
+
+### 遡及性（点修正の反復）
+
+| Issue | state | 修正の形 |
+|---|---|---|
+| [#796](https://github.com/amadeus-dlc/amadeus/issues/796) | CLOSED | `7e6a7c33e` — `fire` に `--project-dir` を配線（段1 での点回避、梯子は無変更） |
+| [#1450](https://github.com/amadeus-dlc/amadeus/issues/1450) | CLOSED | `04efcd42c` — election の既定 pd を `resolveProjectDir` 経由へ（呼び出し側の点修正） |
+| [#1287](https://github.com/amadeus-dlc/amadeus/issues/1287) | OPEN | enhancement、解決順の再設計（ADR 前提） |
+
+2件の先例はいずれも**呼び出し側の点修正**で、梯子そのものには触れていない。#2352 は同じ根の4件目であり、点修正の反復が効いていないことを示す。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

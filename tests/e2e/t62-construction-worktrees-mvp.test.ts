@@ -85,6 +85,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   AMADEUS_SRC,
@@ -174,12 +175,8 @@ const auditText = (p: string): string => readAllAuditShards(p);
 const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 
 /** Parse a JSONL audit buffer into records (blank lines skipped). */
-function auditRecords(text: string): Array<Record<string, unknown>> {
-  return text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+function auditRecords(text: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(text);
 }
 
 /** Count audit records whose `event` is exactly <ev>. */

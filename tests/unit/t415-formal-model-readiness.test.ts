@@ -10,8 +10,8 @@ const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
 describe("t415 shared formal-model readiness seam", () => {
   test("a strict declaration with both assets is ready", () => {
     const present = new Set([
-      "specs/tla/FormalElection.tla",
-      "specs/tla/FormalElection.cfg",
+      "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      "amadeus/spaces/default/specs/tla/FormalElection.cfg",
     ]);
     const result = evaluateTlaModelReadiness(bytes(activationModelMap()), (path) => present.has(path));
     expect(result.ok).toBe(true);
@@ -35,7 +35,7 @@ describe("t415 shared formal-model readiness seam", () => {
     const missingModel = evaluateTlaModelReadiness(bytes(activationModelMap()), () => false);
     expect(missingModel).toMatchObject({
       ok: false,
-      error: { code: "MODEL_MISSING", relativePath: "specs/tla/FormalElection.tla" },
+      error: { code: "MODEL_MISSING", relativePath: "amadeus/spaces/default/specs/tla/FormalElection.tla" },
     });
     const missingCfg = evaluateTlaModelReadiness(
       bytes(activationModelMap()),
@@ -43,7 +43,7 @@ describe("t415 shared formal-model readiness seam", () => {
     );
     expect(missingCfg).toMatchObject({
       ok: false,
-      error: { code: "CFG_MISSING", relativePath: "specs/tla/FormalElection.cfg" },
+      error: { code: "CFG_MISSING", relativePath: "amadeus/spaces/default/specs/tla/FormalElection.cfg" },
     });
   });
 });

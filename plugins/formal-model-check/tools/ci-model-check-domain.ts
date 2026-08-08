@@ -169,6 +169,15 @@ function hasPair(argv: readonly string[], flag: string, value: string): boolean 
   return argv.some((argument, index) => argument === flag && argv[index + 1] === value);
 }
 
+// The spec bind mount in its normalised receipt form: src and dst are the same
+// canonical spec directory (`$WORKSPACE/amadeus/spaces/<space>/specs/tla`) and
+// the mount is read-only. The space segment follows the workspace entry-name
+// grammar; any safe space name is accepted.
+function isCanonicalSpecMount(mount: string): boolean {
+  const match = /^type=bind,src=(\$WORKSPACE\/amadeus\/spaces\/[A-Za-z0-9][A-Za-z0-9._-]*\/specs\/tla),dst=([^,]+),readonly$/.exec(mount);
+  return match !== null && match[1] === match[2];
+}
+
 function validateDockerReceipt(run: CiModelCheckRunEvidence): Result<void, string> {
   const expectedName = `amadeus-tlc-${run.runId}`;
   if (run.docker.imageRef !== FIXED_DOCKER_IMAGE || run.docker.exitCode !== 0) {
@@ -186,7 +195,7 @@ function validateDockerReceipt(run: CiModelCheckRunEvidence): Result<void, strin
   }
   const mounts = run.docker.argv.filter((argument) => argument.startsWith("type=bind,"));
   if (
-    !mounts.includes("type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly")
+    !mounts.some(isCanonicalSpecMount)
     || !mounts.includes("type=bind,src=$JAR,dst=$JAR,readonly")
     || !mounts.includes("type=bind,src=$SCRATCH,dst=$SCRATCH")
   ) {

@@ -20,7 +20,7 @@
     ├── amadeus/                                          # オーケストレーターskill
     └── amadeus-<stage-or-scope>/                         # stage runner / scope runner skill
 .claude/                                                  # Claude Codeハーネスのエンジン(生成物・上書き対象)
-├── agents/                                               # 14 agent persona定義(.md)
+├── agents/                                               # 15 agent persona定義(.md)
 │   └── amadeus-<role>-agent.md
 ├── amadeus-common/                                       # ハーネス非依存の共通プロンプト/プロトコル/ステージ定義
 │   ├── conductor.md
@@ -45,6 +45,7 @@
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
@@ -86,7 +87,7 @@
 ├── settings.local.json.example
 └── VERSION
 .codex/                                                   # Codex CLIのエンジン(生成物。ローカルのactive hookは更新時も保持)
-├── agents/                                               # Codex subagent定義(14 role、.md + .toml)
+├── agents/                                               # Codex subagent定義(15 role、.md + .toml)
 │   ├── amadeus-<role>-agent.md
 │   └── amadeus-<role>-agent.toml
 ├── amadeus-common/                                       # .claude/amadeus-common と同じ共通プロンプト/ステージ定義
@@ -107,6 +108,7 @@
 │   ├── amadeus-session-start.ts
 │   ├── amadeus-statusline.ts
 │   ├── amadeus-stop.ts
+│   ├── amadeus-subagent-model-guard.ts
 │   ├── amadeus-sync-statusline.ts
 │   └── amadeus-validate-state.ts
 ├── knowledge/                                            # フレームワーク方法論知識(共有 + agent別)
@@ -170,6 +172,9 @@ amadeus/
     │   ├── dependencies.md
     │   ├── code-quality-assessment.md
     │   └── reverse-engineering-timestamp.md              # 鮮度マーカー(staleなら再実行)
+    ├── specs/                                            # プロダクト規範層(コミット)
+    │   ├── tla/                                          # TLA+ 仕様の正準ルート: model・cfg・model-map.json
+    │   └── tla-evidence/                                 # TLC 実行証跡ストア(spec-hash watch glob の対象外)
     └── intents/
         ├── active-intent                                 # アクティブintentのカーソル(gitignore, per-user)
         ├── intents.json                                  # レジストリ {uuid, slug, dirName, scope, repos, status}

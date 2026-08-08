@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPC-RAS13",
+  "voter": "subagent-2",
+  "question": "intent 260807-merged-pr-convergence の requirements-analysis §13 学習選定: 候補2件(全文は record の inception/requirements-analysis/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(decide-question 経路での質問裁定): 既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary の適用実例(2例目だが同 cid が既に経路を正規化済みで新規則なし) / c2(§12a NIT 是正 + FOLLOW-UP 全件実測): 既存 cid:code-generation:c1-reviewer-scope-alignment 事後側と fix-diff-independent-reverify の適用実例。実在根拠は memory.md・requirements.md の Review block・requirements-analysis-questions.md の裁定記録で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "2候補とも既存ノルムの適用実例のため persist しない。"
+    }
+  ]
+}

@@ -125,7 +125,7 @@ const formalAdvisory = {
   code: "changed" as const,
   message: "advisory: formal-model-check spec hash CHANGED",
   stage: "functional-design",
-  target: "specs/tla",
+  target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:abc",
 };
 
@@ -134,9 +134,9 @@ function publishAdvisoryOutcome(
   route: { output_dir: string; advisory_instance: string },
   outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR",
 ): void {
-  const model = join(proj, "specs/tla/FormalElection.tla");
-  const cfg = join(proj, "specs/tla/FormalElection.cfg");
-  mkdirSync(join(proj, "specs/tla"), { recursive: true });
+  const model = join(proj, "amadeus/spaces/default/specs/tla/FormalElection.tla");
+  const cfg = join(proj, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
+  mkdirSync(join(proj, "amadeus/spaces/default/specs/tla"), { recursive: true });
   writeFileSync(model, "---- MODULE FormalElection ----\n====\n");
   writeFileSync(cfg, "SPECIFICATION Spec\n");
   const runId = "00000000-0000-4000-8000-000000000001";
@@ -163,8 +163,8 @@ function publishAdvisoryOutcome(
       instance: route.advisory_instance,
     },
     sourceProvenance: {
-      modelPath: "specs/tla/FormalElection.tla",
-      cfgPath: "specs/tla/FormalElection.cfg",
+      modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
       moduleIdentity: "registered-module",
       cfgIdentity: "registered-cfg",
       moduleSha256: createHash("sha256").update(readFileSync(model)).digest("hex"),

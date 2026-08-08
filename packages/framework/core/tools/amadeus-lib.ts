@@ -15,6 +15,8 @@ import {
 } from "./amadeus-harness.ts";
 import {
   classifyAgentType,
+  decideDispatchModel,
+  type DispatchModelDecision,
   isWarnableVerdict,
   resolveAllowedAgentTypes,
   resolveEffectiveModel,
@@ -227,17 +229,31 @@ export function resolveProjectDir(explicitDir?: string): string {
   // 1. Explicit --project-dir argument
   if (explicitDir) return explicitDir;
 
-  // 2. CLAUDE_PROJECT_DIR env var
+  // 2. CLAUDE_PROJECT_DIR env var. It stays ABOVE the marker rung below:
+  //    callers that set it to a workspace OTHER than the one their cwd sits in
+  //    (test fixtures, tools driving a scratch project) depend on it winning,
+  //    and it is the documented way to point a tool at another workspace
+  //    besides the --project-dir argument.
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
 
-  // 3. Script path derivation (open-set): this module ships at
+  // 3. CWD (or an ancestor) carries its own amadeus workspace marker
+  //    (issue #2352). With env unset, rung 4 below derives the project from
+  //    THIS module's own path, which for a worktree session is the main
+  //    checkout's harness tree — so the worktree's work would be written into
+  //    the main record. A worktree ships its own amadeus/ record tree, so
+  //    prefer it, using the same canonical predicate the hook ladder applies
+  //    at the same position (issue #641; resolveProjectDirFromHook rung 3).
+  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
+  if (markerDir) return markerDir;
+
+  // 4. Script path derivation (open-set): this module ships at
   //    <project>/<harness>/tools/, so strip "<harness>/tools" for ANY harness
   //    dir name — the project root is the dir two levels up.
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const fromScript = stripHarnessLeaf(scriptDir, "tools");
   if (fromScript) return fromScript;
 
-  // 4. CWD has a known harness directory (dev repo).
+  // 5. CWD has a known harness directory (dev repo).
   const cwd = process.cwd();
   for (const h of KNOWN_HARNESS_DIRS) {
     if (existsSync(join(cwd, h))) {
@@ -4108,10 +4124,15 @@ export function normalizeAgentType(raw: string | null | undefined): string {
 // whatever followed the first line into the audit row.
 export const SUBAGENT_PURPOSE_MAX_LENGTH = 200;
 
-// The tool whose invocation opens a subagent on the harnesses that have no
-// dedicated start event (Claude Code): the start seam there is PreToolUse, and
-// PreToolUse fires for EVERY tool.
-export const SUBAGENT_DISPATCH_TOOL = "Task";
+// The tool names whose invocation opens a subagent on the harnesses that have
+// no dedicated start event (Claude Code): the start seam there is PreToolUse,
+// and PreToolUse fires for EVERY tool.
+//
+// Two spellings, one dispatch: the settings matcher is written against "Task",
+// but the payload Claude Code hands the hook carries the INTERNAL name "Agent"
+// (#2303). Both must resolve or the dispatch is dropped on whichever spelling
+// the running harness happens to send.
+export const SUBAGENT_DISPATCH_TOOLS = ["Task", "Agent"] as const;
 
 // C0 control characters, tab excepted: the audit record is line-oriented, and a
 // stray control byte is invisible in review while corrupting the record frame.
@@ -4128,15 +4149,20 @@ export function subagentPurposeLine(prompt: unknown): string {
 // The SUBAGENT_STARTED field set, derived from whichever start seam fired.
 // Returns null when the payload is not a subagent dispatch at all, which is the
 // common case on Claude Code: its start seam is PreToolUse, so this runs on
-// every tool call and must decline all but the dispatch tool. The settings
+// every tool call and must decline all but the dispatch tools. The settings
 // matcher is an UNANCHORED regex, so "Task" also matches TaskUpdate/TaskCreate
 // — without this check every todo-list write would append a phantom subagent.
 //
-// Two payload shapes converge here: the tool envelope (PreToolUse{Task}, which
-// carries subagent_type/prompt inside tool_input) and a dedicated start event
-// (kimi's SubagentStart, which carries them at the top level and has no
-// tool_name at all). Absence of tool_name therefore means "a seam that only
-// fires for subagents", not "unknown tool".
+// The matcher spelling and the payload spelling differ, which reads as a
+// contradiction until you know it: the shipped matcher `^Task$` is what fires
+// this hook, yet the payload it delivers names the tool `Agent` (#2303) — so
+// the guard admits both names rather than the matcher's one.
+//
+// Two payload shapes converge here: the tool envelope (PreToolUse on a dispatch
+// tool, which carries subagent_type/prompt inside tool_input) and a dedicated
+// start event (kimi's SubagentStart, which carries them at the top level and
+// has no tool_name at all). Absence of tool_name therefore means "a seam that
+// only fires for subagents", not "unknown tool".
 //
 // When the caller supplies `agentsDir` (the harness agents dir under the
 // resolved project dir), the field set also gains the #2279 attribution: the
@@ -4144,7 +4170,7 @@ export function subagentPurposeLine(prompt: unknown): string {
 // (U2, ADR-3). The whole enrichment is advisory — any failure inside it drops
 // the extra fields and leaves the base three untouched (NFR-3).
 export function subagentStartFields(payload: ClaudeCodeHookInput, agentsDir?: string): Record<string, string> | null {
-  if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;
+  if (payload.tool_name !== undefined && !(SUBAGENT_DISPATCH_TOOLS as readonly string[]).includes(payload.tool_name)) return null;
   const toolInput = payload.tool_input ?? {};
   const rawType = payload.agent_type ?? toolInput.subagent_type;
   const fields: Record<string, string> = {
@@ -4204,6 +4230,34 @@ function enrichSubagentAttribution(
     process.stderr.write(`advisory: subagent attribution skipped: ${sanitizeAdvisoryValue(e instanceof Error ? e.message : String(e))}\n`);
     return;
   }
+}
+
+// #2438 — the enforcement face of the dispatch seam (#2279 is the advisory
+// face). Resolves a PreToolUse payload against the harness agents dir and
+// returns the model-compliance decision, or null when the payload is not a
+// subagent dispatch at all. Unlike subagentStartFields, an ABSENT tool_name
+// declines: this guard exists for the PreToolUse seam only, and a dedicated
+// start event (kimi's SubagentStart) must never be judged by it.
+export function evaluateDispatchGuard(
+  payload: ClaudeCodeHookInput,
+  agentsDir: string,
+  enforcedModels?: readonly string[],
+): DispatchModelDecision | null {
+  if (payload.tool_name === undefined) return null;
+  if (!(SUBAGENT_DISPATCH_TOOLS as readonly string[]).includes(payload.tool_name)) return null;
+  const toolInput = payload.tool_input ?? {};
+  const rawType = payload.agent_type ?? toolInput.subagent_type;
+  const agentType = normalizeAgentType(typeof rawType === "string" ? rawType : undefined);
+  const verdict = classifyAgentType(agentType, resolveAllowedAgentTypes(agentsDir));
+  // A pin is only attributable when the type IS a declared persona — a builtin
+  // or ad-hoc spawn must not inherit some persona's declaration.
+  const personaPin = verdict === "persona" ? resolvePersonaPin(agentType, agentsDir).pin : undefined;
+  return decideDispatchModel({
+    typeVerdict: verdict,
+    personaPin,
+    requestedModel: typeof toolInput.model === "string" ? toolInput.model : undefined,
+    enforcedModels,
+  });
 }
 
 // --- Worktree anchor resolution (shared by read and write paths) ----------------
@@ -6670,7 +6724,7 @@ let _scopeMapping: Record<string, ScopeDefinition> | null = null;
 // Override paths for fixture injection in tests. Read at call time (not
 // module load) so tests can mutate env vars between bun invocations
 // while still sharing a process in rare cases. AMADEUS_STAGE_GRAPH pattern
-// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.
+// matches CLAUDE_PROJECT_DIR in resolveProjectDir() above.
 function stageGraphPath(): string {
   return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
 }

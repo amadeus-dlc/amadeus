@@ -37,7 +37,7 @@ describe("TLA model adapter error mapping", () => {
       const mapped = toTlaModelHarnessError({
         kind: "MODEL_LOAD",
         code,
-        relativePath: "specs/tla/model-map.json",
+        relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
         detail: "test failure",
       });
       expect(mapped).toBeInstanceOf(TlaModelHarnessError);
@@ -49,7 +49,7 @@ describe("TLA model adapter error mapping", () => {
     const mapped = toTlaModelHarnessError({
       kind: "SOURCE_DRIFT",
       code: "SOURCE_DRIFT",
-      relativePath: "specs/tla/FormalElection.tla",
+      relativePath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
       detail: "identity differs",
     });
     expect(mapped).toMatchObject({
@@ -63,7 +63,7 @@ describe("TLA model adapter error mapping", () => {
     expect(() => toTlaModelHarnessError({
       kind: "MODEL_LOAD",
       code: "FUTURE_CODE",
-      relativePath: "specs/tla/model-map.json",
+      relativePath: "amadeus/spaces/default/specs/tla/model-map.json",
       detail: "unmapped",
     } as never)).toThrow("unhandled TLA model pipeline error");
   });

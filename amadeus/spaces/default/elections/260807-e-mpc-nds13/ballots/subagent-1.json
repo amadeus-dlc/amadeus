@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-MPC-NDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) construction/nfr-design/memory.md の Interpretations に候補1件のみ実在(2026-08-07T14:20:00Z 行)。(2) nfr-design 5成果物(logical-components/performance/security/scalability/reliability-design.md)全てに『nfr-requirements 系 5 consumes は … SKIP のため設計どおり不在』の負方向明記行を grep 確認。(3) performance-design.md:8 に predicate.ts:204-205 の引用追記実在、FOLLOW-UP 行(:27)と整合。plugins/pr-convergence/tools/pr-convergence-predicate.ts:204-205 で MERGEABLE_UNKNOWN_RETRY_MAX=5 / MERGEABLE_UNKNOWN_RETRY_INTERVAL_MS=10_000 を実読確認。(4) 既存 cid:nfr-design:c1-brief-skip-resolution / cid:code-generation:c1-reviewer-scope-alignment(E-SRA-ADS13 事後側追補)は project.md に実在し、候補の全要素(SKIP consumes の負方向明記+FOLLOW-UP の conductor 即時実測)を既に正規化済み。新規則性なし — 適用実例であり persist 0件が妥当。",
+  "submittedAt": "2026-08-07T15:05:00Z",
+  "receivedAt": "2026-08-07T11:30:30Z"
+}

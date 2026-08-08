@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は既存 cid の適用境界を明記する形で書く — 既存本文は『同一 iteration 内で verdict 未記録の再ディスパッチ』を主語とし『同一 invocationId でも成立する』と述べるため、iteration を跨ぐ再利用まで許すと誤読されうる。追補文は『iteration が変わる場合は scope 再実行で新 invocationId を採番する(旧 ID は最初に消費した iteration へ束縛され fail-closed 拒否される)』の1行に限定し、intent 固有の経緯・行番号は焼き込まない。",
+  "rationale": "独立実測: (1) 既存 cid c3-pcp-reviewer-retry-on-lost-verdict(project.md:321)の逐語を確認 — 主語は『verdict 未確立のまま失敗した場合、当該 iteration の再ディスパッチ』であり、iteration 跨ぎの invocationId 束縛には触れていない。むしろ『同一 invocationId でも新規 scope 発行の新 invocationId でも成立する』の文言は、iteration 2 でも旧 ID を使えるという誤読を誘発しうる。(2) 機構実測: amadeus-reviewer-runtime.ts:236-237 のコメント『An entry is minted unbound and binds to the FIRST iteration that consumes it; any later carrier naming a different iteration is a replay』と :335-337 の throw new Error(\"review invocation ID is bound to a different iteration\") — 一度 iteration に束縛された ID は別 iteration で fail-closed 拒否される。(3) record 実測: inception/requirements-analysis/memory.md:7 に iteration 1 の ID 流用が拒否された実測が残り、requirements.md:82/:98 に Review — Iteration 1/2 の両ブロックが実在する。以上より c2 は既存 cid の未被覆面(iteration 跨ぎの採番手順)であり追補に値する。choice 2 の『エラーメッセージで足りる』は、ノルムを文脈に持つ conductor が既存 cid の文言に沿って旧 ID を流用し1往復を消費した実測がある点で反証される。c1(decide-question 4裁定)と c3(conductor 直接 grep 裏取り)はそれぞれ c1-pcp-autonomy-grant-question-boundary / c1-reviewer-scope-alignment の適用実例にとどまり新規面がないため不採用に同意。",
+  "submittedAt": "2026-08-07T14:30:00Z",
+  "receivedAt": "2026-08-07T14:04:49Z"
+}

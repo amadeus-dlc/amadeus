@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-ASD-RES13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用に同意するが留保2件。(1) 既存 cid:requirements-analysis:numbers-from-command-output-only(team.md:262) は『数値を含む報告には集計コマンド名を併記する』と既に規定しており、grep スイープでは『コマンド名』と『述語』の距離が近い — persist 文では両者の射程差(コマンド名 vs パターン・対象集合・除外条件の3要素)を1句で明示し、二重規定として読まれないようにすること。(2) 適用は本候補文どおり『全数棚卸し(列挙を結論として成果物・報告へ書く場合)』に限定し、調査中の探索的 grep への一律義務化へ肥大させないこと(cid:requirements-analysis:enumeration-completeness-review の E-SDE-FD 追補が置いた適用限定の留保と同型)。persist は新規 cid でなく enumeration-completeness-review への1行追補とする。",
+  "rationale": "3点を独立検証した。(1) 不一致の実在: re-scans/260807-intent-2328-tests-e2e-au.md:102-108 に『非 e2e — 29ファイル(Developer scan の報告値 14 と不一致)』『scan 側の述語は記録されていないため、どちらが正しいかは本記録では確定しない』、:106 実装上の注意 (2) に『非 e2e 側の患部件数は未確定』、:205 の未決事項表に『§3 の件数不一致(scan 14 vs Architect 述語 29)を解消し』が実在する — 不一致が『未確定』として下流へ持ち越された事実は record 上で確認できた。(2) 述語依存の実感: observed 断面の worktree で述語を振って自分でも実測した。Architect 記録の述語(grep -rln audit | xargs grep -ln JSON.parse | xargs grep -lE '\\.event\\b' | xargs grep -L harness/audit-records、対象 tests/integration tests/unit tests/smoke)= 29、これに引用符付きキー \"event\" を or 追加しただけで 30、audit フィルタを外すと 81、JSON.parse 単独(integration+unit)では 337。件数は述語の微差で 29→30、粗さで 81/337 と一桁変わるため、件数だけを記録しても事後に述語を復元できないことが決定的に確かめられた。(3) 既存 cid の射程: enumeration-completeness-review(team.md:199)は『レビュー段で独立の再列挙を必須観点にする』『omission は検索語選択に依存する』とまで書くが、述語そのものの記録は求めていない — 本件で再列挙は機能して不一致を検出したのに、述語不在ゆえ裁定できず未確定に落ちた、という未被覆面が実測で顕在化した。measurement-ref-in-artifacts(team.md:265)は測定 ref(どの tree で数えたか)のみ、numbers-from-command-output-only(team.md:262)は『集計コマンド名』の併記までで、パターン・対象集合・除外条件の3要素を要求しない(留保(1))。肥大の懸念は理解するが、提案は新規 cid でなく既存 cid への1行追補という最小形であり、コストは1行、便益は不一致発生時の裁定可能性の回復で、実測された失敗1件に接地している。よって choice 1(C1 採用)を支持する。",
+  "submittedAt": "2026-08-07T22:13:02Z",
+  "receivedAt": "2026-08-07T22:13:34Z"
+}

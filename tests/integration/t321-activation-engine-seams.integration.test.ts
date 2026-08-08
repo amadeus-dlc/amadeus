@@ -112,9 +112,9 @@ describe("t321 emitActivationAdvisory (exported seam)", () => {
   test("build-and-test + composed + changed -> one stderr line", () => {
     host = makeHost(true);
     recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-    // The spec is a project asset — one level above the host root.
+    // The spec is a project asset — under the owning spec root.
     writeFileSync(
-      join(specRootForHost(host), "specs", "tla", "FormalElection.tla"),
+      join(specRootForHost(host), "tla", "FormalElection.tla"),
       "MODULE FormalElection\nVARIABLES x\n",
     );
     const sink: string[] = [];

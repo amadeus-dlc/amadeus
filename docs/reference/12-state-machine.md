@@ -397,7 +397,7 @@ route is numbered by is derived from the `run-now` receipts now gone.
 | `SESSION_COMPACTED` | `hooks/amadeus-validate-state.ts` | Emitted at PreCompact (not at next SessionStart) to avoid duplication |
 | `SESSION_ENDED` | `hooks/amadeus-session-end.ts` | Includes `Reason` field from Claude Code |
 | `HUMAN_TURN` | `tools/amadeus-presence-reservation.ts` | One per real human prompt or answered question widget; the approval/interview gate requires one since the last gate resolution. The append lives in the canonical presence seam (`mintHumanPresence` for an ordinary turn, `mintArmedPresenceReservation` for a targeted continuation armed in the same host session); the trusted prompt-submit hook and each harness prompt adapter call that seam and never append on their own (#1466) |
-| `SUBAGENT_STARTED` | `hooks/amadeus-log-subagent-start.ts` | Records subagent dispatch; only on harnesses with a start seam (Claude PreToolUse{Task}, Kimi SubagentStart) |
+| `SUBAGENT_STARTED` | `hooks/amadeus-log-subagent-start.ts` | Records subagent dispatch; only on harnesses with a start seam (Claude PreToolUse on a dispatch tool, Kimi SubagentStart) |
 | `SUBAGENT_COMPLETED` | `hooks/amadeus-log-subagent.ts` | Records subagent completion via SubagentStop hook |
 
 ### Diagnostics and workspace
@@ -482,6 +482,7 @@ The Loop Monitor commits delivery observations, cycle triggers, Judge reservatio
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | One atomic Loop Monitor delivery, Judge, or latch transition committed |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | One quality snapshot, progress, replan, stall, or resume transaction and its generic Monitor effects committed atomically |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | One Intent-scoped mode, grant, decision, workflow-effect, park, resume, or invocation-failure transaction committed atomically |
+| `INTENT_AUTONOMY_HUMAN_REQUIRED` | `tools/amadeus-intent-autonomy-production.ts` | An occurrence the active mode could not decide on its own, recorded with the reason (`SCOPE_OUT` or `MODE_REQUIRES_HUMAN`) it fell to a human |
 | `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review-production.ts` | A human accepted or flagged one immutable auto decision on the review surface (append-only; never replays the decided effect) |
 | `INTENT_COMPLETION_TRANSACTION_COMMITTED` | `tools/amadeus-intent-completion.ts` | The Core Intent completion transaction committed atomically, sealing the Intent record with its evidence digest |
 

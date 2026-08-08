@@ -11,7 +11,7 @@ produces: []
 consumes: []
 requires_stage: []
 inputs: the open pull request that carries this Bolt, plus the GitHub checks and review threads reachable through the `gh` boundary.
-outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written only by the plugin CLI.
+outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written only by the plugin CLI — a `converged`, `override`, or (for an already-merged pull request) `landed` record.
 sensors:
   - pr-convergence-report-format
 scopes: []
@@ -24,7 +24,12 @@ no merge conflict, every required check green, and every actionable review
 thread terminalised. It is an opt-in plugin stage (empty `scopes:`) — install
 is the opt-in boundary, so once composed it is reachable via
 `amadeus-orchestrate next --stage pr-convergence`. It never joins a stock
-scope's workflow and Amadeus never runs it automatically.
+scope's workflow. Whether a run starts depends on the Intent autonomy mode:
+under `none` a human decides when to start it; under `semi` or `full`, an
+engine advisory raised for this plugin is routed through the autonomy ladder
+as a `question` occurrence (`amadeus-advisory-choice.ts`), and a `run-now`
+decision can start it unattended — any other ladder outcome falls back to the
+human.
 
 Installing the plugin also overlays `pr-convergence-report` onto the
 `code-generation` stage's `produces`. From that point the existing per-unit
@@ -155,6 +160,17 @@ convergence, never an automatic gate.
 
 Announce convergence with the report's own counts. Do not paraphrase them and
 do not round them.
+
+**Already merged?** A pull request whose state is `MERGED` cannot converge —
+its mergeability stays `UNKNOWN` forever — so the CLI records the merge
+instead of chasing it. `status` reports the `landed` verdict with exit 0, and
+`report` writes a `landed` report carrying the merge instant, the merge
+commit, and (when GitHub reports one) the check rollup, every field machine-derived from GitHub. A
+landed report says `converged: false`: it is the record of a merge that
+already happened, **not** an approval and not a convergence claim — the
+Guardrail "Convergence is not merge" reads in both directions, and a merge
+performed outside this loop earns no retroactive convergence verdict from it.
+Fire the same sensor on the landed report as on any other.
 
 ## When GitHub is unreachable
 

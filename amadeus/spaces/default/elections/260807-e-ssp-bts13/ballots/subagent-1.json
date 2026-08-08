@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-BTS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用0件に同意するが、不採用理由は『error message の自己文書化で十分』だけではない — 本候補は既に norm 化済みで重複である。amadeus/spaces/default/memory/project.md:288 の cid:code-generation:c1-2358-declare-units-done が c1-degrade-batch-directive-capture への追補として、全 unit covered 後の emit が『明示宣言で解決可能な fail-closed』へ改訂されたこと、conductor が amadeus-state.ts declare-units-done --units <covered 全 unit のカンマ区切り> を宣言すると next が被覆集合と宣言の完全一致検証のうえゲート付き directive を発行することを既に記載している(#2358 修正、#2385 Q4-B 裁定、learned 2026-08-07、着地コミット d98dd9039)。したがって設問文の前提『c1-parallel-degrade-batch / c1-degrade-batch-directive-capture の本文に declare-units-done への言及が無い』は誤りであり、C1 採用は同一機構の三重記述になる。この訂正を裁定記録へ転記すること。",
+  "rationale": "独立検証: (1) amadeus-orchestrate.ts:3729 に該当 error 分岐が実在(degradeUnitResolutionError、uncovered.length===0 の枝)。move は :3733 で completionRefusal を優先し、それが null のときのみ既定文言。(2) completionRefusal の供給元は amadeus-lib.ts:5131 decideDegradeUnitCompletion で、DECLARE_MOVE(:5118-5119)が verb を usage 付きで逐語案内、stale 宣言の枝(:5146)も再宣言 verb を案内 — 自己文書化は強い。(3) amadeus-state.ts:5403 handleDeclareUnitsDone が verb の唯一の書込経路として実在(:1056 の dispatch、:5388-5395 の設計コメント)。(4) 設問前提と異なり declare-units-done は既に project.md:288 に norm 化済み。",
+  "submittedAt": "2026-08-08T00:00:00Z",
+  "receivedAt": "2026-08-07T15:38:33Z"
+}

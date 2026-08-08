@@ -55,6 +55,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -139,11 +140,9 @@ function readAudit(p: string): string {
 /** True if the audit shards carry a WORKTREE_MERGED record for the given slug.
  *  Record-scoped: the event and the slug must ride on the SAME ledger line. */
 function hasMergedAudit(p: string, slug: string): boolean {
-  return readAudit(p)
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as { event: string | null; fields?: Record<string, string> })
-    .some((r) => r.event === "WORKTREE_MERGED" && r.fields?.["Bolt slug"] === slug);
+  return auditRowsFrom(readAudit(p)).some(
+    (r) => r.event === "WORKTREE_MERGED" && r.fields?.["Bolt slug"] === slug,
+  );
 }
 
 describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 13)", () => {

@@ -30,6 +30,7 @@ import {
   parseDockerTrace,
 } from "./ci-docker-trace.ts";
 import { FIXED_DOCKER_IMAGE } from "./tlc-spawn-planner.ts";
+import { resolveSpecRoots } from "./tla-model-map.ts";
 import {
   FIXED_JDK_RUN_PROFILE,
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
@@ -308,12 +309,21 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
     const jarPath = this.#jarPath;
     if (!jarPath) return failure("JAR_CHECKSUM", "TLC artifact was not bootstrapped");
     const runId = this.dependencies.randomUuid();
+    // Resolve the spec root BEFORE reserving the artifact workspace: a legacy
+    // specs/tla layout throws LegacySpecError, and that stop must surface as a
+    // structured failure (the resolver's migration instructions), never as an
+    // unhandled throw that skips artifact bookkeeping.
+    let modelRoot: string;
+    try {
+      modelRoot = resolveSpecRoots(this.workspaceRoot).tlaDir;
+    } catch (cause) {
+      return failure("HARNESS_ERROR", cause instanceof Error ? cause.message : String(cause));
+    }
     const artifacts = beginModelCheckArtifacts(request.outDir, runId);
     if (!artifacts.ok) return failure(artifacts.error.code, artifacts.error.detail);
     const scratchRoot = artifacts.value.scratchRoot;
     const statesRoot = join(scratchRoot, "states");
     mkdirSync(statesRoot, { mode: 0o700 });
-    const modelRoot = join(this.workspaceRoot, "specs", "tla");
     const containerName = `amadeus-tlc-${runId}`;
     const argv = [
       "run", "--rm", "--network=none", "--name", containerName,

@@ -1,12 +1,104 @@
 # 依存関係
 
+## 監査リーダー面の依存関係（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+外部依存の追加・変更はない。内部依存の要点は2本。
+
+**共有ハーネス → dist**: `tests/harness/audit-records.ts:18` → `../../dist/claude/.claude/tools/amadeus-audit.ts`（`EVENT_HEADINGS`）。sandbox 配布形での解決性が理由でコメントに明記されている。この1本が、ハーネス採用テストに `bun run build` 前提を課す唯一の経路である。
+
+**患部 → 依存なし**: e2e 17ファイルの自前パーサはローカル `interface AuditRecord` + `JSON.parse` のみで、外部・内部いずれの依存も持たない。方式 B（in-file 正規化）を採ればこの状態が保たれ、方式 A（共有ハーネス寄せ）を採ると 17ファイルが dist 依存を新規に獲得する。
+
+**書き手側**: `amadeus-worktree.ts:635` → `:95` `emitAuditEvent` → `otel/audit-emit.ts:48` → `appendAuditEntryViaEvents`(v2)。v1 側は `amadeus-audit.ts:534` / `:597` / `amadeus-state.ts:3193` が `serializeJournalEntry` を直接呼ぶ。
+
 ## 260807-stage-perf-report（現在、observed `4a3da7d62`）
 
 **本 intent での増分なし。外部依存の変更 0 件**（`git diff --stat b8e3e664f..HEAD -- package.json bun.lock packages/setup/package.json` が空出力）。ビルドは bun 不変。
 
 内部の依存方向について記録すべき論点が1件ある: `packages/framework/core/tools/amadeus-journal.ts` の正規化層（`journalRecordField:130` / `readJournalRecords:534` ほか）を新レポータが共有するか否かは、`packages/framework/core/tools/amadeus-subagent-stats.ts:21-23` が逐語で記録する裁定 — *"This module deliberately does NOT import amadeus-lib.ts (the FD fixes the dependency direction stats -> observability only)"* — との整合を要する**設計判断**であり、import 可能性だけでは決まらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## subagent-start 経路の依存関係（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。外部依存の増減はなく、本節は患部の**内部依存**のみを記録する。
+
+### 依存鎖（emit まで）
+
+```
+.claude/settings.json（live 配線）
+  └─ amadeus-dispatch.ts（slug → HOOK_PATHS → spawn）※現状 subagent-start は未配線
+       └─ core/hooks/amadeus-log-subagent-start.ts
+            ├─ core/tools/amadeus-lib.ts :4160 subagentStartFields
+            │    └─ :4128 SUBAGENT_DISPATCH_TOOL（消費者は :4161 の1箇所のみ）
+            │    └─ :4108-4110 normalizeAgentType
+            │    └─ enrichSubagentAttribution（agentsDir 供給時、advisory）
+            ├─ ensureOtelBootstrap（:97）
+            └─ appendAuditEntryViaEvents("SUBAGENT_STARTED", …)（:98、唯一の emit）
+```
+
+kimi 経路は settings/dispatcher を経ず、`amadeus-hooks.snippet.toml:59-60` → `amadeus-kimi-adapter.ts role-start` → `amadeus-kimi-lib.ts:732-741`（payload 構築）→ 同じ core フックへ合流する。
+
+### 依存の方向性と修正影響
+
+| 依存 | 向き | 修正時の含意 |
+|---|---|---|
+| `SUBAGENT_DISPATCH_TOOL` → ガード `:4161` | 1対1（他に消費者なし） | 語彙変更の波及は機械的に確定。ただし型を単数から集合へ変える案では**定数名の変更**が派生し、`tests/.coverage-registry.json:4250` の `unitId: "function:SUBAGENT_DISPATCH_TOOL"` が同期対象になる |
+| `subagentStartFields` → 消費者 | 1対1（`amadeus-log-subagent-start.ts:64`） | シグネチャ変更の影響範囲は1箇所 |
+| dispatcher `HOOK_PATHS` → `.claude/hooks/amadeus-<name>.ts` | 全スロットが**実在必須** | スロット追加は build 生成物との**双方向依存**を作る。部分欠は全フック exit 1（`:50-57`） |
+| live 設定 → dispatcher | 現状 11 件すべて | 直接パス形を混ぜると依存形が2種になり、ガード述語も2項化する |
+| doc → 実装行 | cite による片方向 | `23-telemetry-schema.md:194` / `.ja.md:189` の cite が **stale**（`:4430`/`:4456-4457` は無関係行。正しくは `:4128` / `:4160-4161`） |
+
+### 追加候補フックの依存充足状況
+
+スロット追加候補2件は正本・自己インストール面の**両方に実在**しており、`ensureCompleteHookTree` の実在要件を現状で満たせる:
+
+| フック | `packages/framework/core/hooks/` | `.claude/hooks/` |
+|---|---|---|
+| `amadeus-log-subagent-start.ts` | 実在 | 実在 |
+| `amadeus-plugin-compose.ts` | 実在 | 実在 |
+
+### 交差する進行中変更
+
+open PR は **#2414 `bolt/landed-report`（pr-convergence plugin、8ファイル）の1件のみ**。変更面は `plugins/pr-convergence/**`、`amadeus-sensor-pr-convergence-report-format.ts`、`t450`/`t481-pr-convergence-lifecycle`/`t482` で、**本 intent の患部と非交差**。ただし t481 の採番が本線（`t481-resolve-project-dir-worktree-marker.test.ts`、#2413 で着地）と重複しており、新規テストの採番では t481/t482 を避ける必要がある。
+
+base→observed の2 commits は `amadeus-lib.ts` の hunk `@@ -227,17 +227,31 @@`（`resolveProjectDir`、+14行）と `@@ -6670,7 +6684,7 @@` のみで、SUBAGENT 領域（`:4128` / `:4160-4172`）とは**非交差**。
+
+## project-dir 解決への依存関係（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 外部依存の追加なし
+
+本 intent の患部は `node:fs` / `node:path` / `node:url` の標準 API のみに依存する（`statSync` / `existsSync` / `join` / `dirname` / `fileURLToPath`）。新規パッケージ依存は不要であり、`package.json` に変更を要さない。
+
+### 内部依存 — `resolveProjectDir` の被依存分布
+
+`resolveProjectDir` は core/tools 全域の **96 call site**（`core/tools` 内 95 / 15 ファイル、`core/otel/relay.ts:777` に 1）から呼ばれる。上位の依存元は `amadeus-state.ts`（33）、`amadeus-orchestrate.ts`（19）、`amadeus-swarm.ts`（12）、`amadeus-worktree.ts`（9）。
+
+**依存の性質**: いずれも「書き先の決定」に使われる。したがって解決の誤りは1箇所の欠陥ではなく、**state / audit / swarm / worktree の全書込面へ一様に伝播する**。梯子の修正は 96 箇所すべての挙動を同時に変える — 段順を触る変更は影響が広い。
+
+### 内部依存 — `--project-dir` の受け口
+
+18 ツールが `"--project-dir"` を parse し、共有ヘルパー `stripProjectDir`（`amadeus-lib.ts:212-224`）に依存する（runtime / sensor / learnings が使用）。段1 を正規形に据える設計は、**この既存の依存グラフをそのまま使う** — 新規機構を要さない。
+
+### 面間の同期依存
+
+| 依存 | 正本 | 従属面 | 同期手段 |
+|---|---|---|---|
+| allowlist | `packages/framework/harness/claude/settings.json.example:10` | `.claude/settings.json:39`（**tracked**） | 手動同時変更（両方 tracked） |
+| 起動形 | `packages/framework/harness/claude/skills/`（相対形 31） | `.claude/skills/`（相対形 113、未追跡） | `bun run build` |
+| tools 本体 | `packages/framework/core/tools/` | `dist/` / `.claude/tools/`（未追跡） | `bun run build` |
+
+**注意**: `.claude/settings.json` は `.claude/**` の gitignore 対象だが tracked ファイルは ignore を上書きするため、**allowlist だけは build ではなく手動同期の対象**である。他のセルフインストール面（`.claude/tools/` / `.claude/skills/`）とは同期経路が異なる。
+
+### テスト依存
+
+`tests/integration/t144-harness-seam.cli.test.ts` は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38`）。source-only 移行後 `dist/` は未追跡生成物のため、**t144 は `bun run build` 済みに依存する**。ケース B の回帰テストを t144 側へ足す場合、この build 依存を引き継ぐ。build 非依存にしたい場合は `tests/unit/t202-…`（正本を直 import する形）側の系譜を採る。
+
+### 交差する進行中変更
+
+`gh pr list --state open` → **0件**（exit=0）。base→observed の 12 commits も resolver 領域を触っていない（`amadeus-lib.ts` は `+143/-0` で全行 `:4983` 着地、患部区間 210-360 は review SHA `75a1c198d` と `cmp` IDENTICAL / exit=0）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

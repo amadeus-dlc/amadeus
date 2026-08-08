@@ -1,6 +1,41 @@
 # コード構造
 
-## 新規 core tool の配置と検証面（260807-stage-perf-report、現在、observed `4a3da7d62`）
+## 監査リーダー面の二分構造とテスト層配置（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### リーダー面の二分
+
+監査 JSONL を読むテストは構造的に2群へ分かれる。
+
+```
+tests/
+├── harness/audit-records.ts          ← canonical 正規化（v1/v2 両対応）
+│   └── 消費 59 ファイル               ← 正しい側
+└── e2e/ ほか
+    ├── 自前 JSON.parse（e2e 17）      ← 患部（全て単独実行で fail）
+    └── 自前 JSON.parse（非 e2e 14）   ← 同種、要棚卸し
+```
+
+判別子は import の有無であり、`tests/harness/audit-records.ts` を import するか、ファイル内でローカルに `interface AuditRecord` を定義して `JSON.parse` するか。
+
+### 層配置と実行プロファイルの構造
+
+| 層 | `--ci` 含む | CI 実行 |
+|---|---|---|
+| smoke / unit / integration | あり（`tests/lib/run-tests-args.ts:95-100`） | 全数 |
+| e2e | **なし** | `ci.yml:252` の `t341` 1本のみ |
+| perf | なし（`run-tests.ts:1113` で `--ci` 除外） | — |
+
+nightly の全層ジョブは不在。この層配置が「患部17ファイルが全て赤なのに CI は green」という構造を生む。
+
+### dist 依存の方向
+
+`tests/harness/audit-records.ts:18` は `../../dist/claude/.claude/tools/amadeus-audit.ts` を import する。これは `tests/` → `dist/` への依存であり、source-only 境界下では `dist/` は未追跡のローカル生成物である。現状は integration 層以下がこのハーネスを使うため `bun run build` 済みの前提が満たされているが、**e2e 層へ採用を広げると同じ前提が e2e にも及ぶ**。
+
+### tNNN 名前空間
+
+使用済み最大 `t483`。本 intent の新規テストは **`t484`** から採番する。
+
+## 新規 core tool の配置と検証面（260807-stage-perf-report、履歴、observed `4a3da7d62`）
 
 本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
@@ -57,7 +92,162 @@ const STATS_CLI = join(AMADEUS_SRC, "tools", "amadeus-subagent-stats.ts");
 
 `metrics/` 側のスナップショット機構（288 件）は**機能的に重複しない** — コレクタは lizard CCN / bun coverage / git LOC / テスト数の**リポジトリ健全性**であり、ワークフロー・ステージ・モデルの軸を持たない。ただし `{schema_version, captured_at, commit, collectors{tool, tool_version, values}}` というエンベロープは**このリポジトリで確立したバージョン付き決定的レポートの形**である。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## subagent-start 配線面と dispatcher スロット構造（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base は `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### dispatcher の HOOK_PATHS — 10スロットの静的テーブル
+
+`packages/framework/harness/claude/hooks/amadeus-dispatch.ts:4-15` verbatim:
+
+```ts
+const HOOK_PATHS = {
+  "mint-presence": ".claude/hooks/amadeus-mint-presence.ts",
+  "session-start": ".claude/hooks/amadeus-session-start.ts",
+  "session-end": ".claude/hooks/amadeus-session-end.ts",
+  "audit-logger": ".claude/hooks/amadeus-audit-logger.ts",
+  "sensor-fire": ".claude/hooks/amadeus-sensor-fire.ts",
+  "sync-statusline": ".claude/hooks/amadeus-sync-statusline.ts",
+  "runtime-compile": ".claude/hooks/amadeus-runtime-compile.ts",
+  "validate-state": ".claude/hooks/amadeus-validate-state.ts",
+  "log-subagent": ".claude/hooks/amadeus-log-subagent.ts",
+  stop: ".claude/hooks/amadeus-stop.ts",
+} as const;
+```
+
+**スロット追加時に満たすべき呼出し規約**（すべて同ファイルの実読）:
+
+| 関数 | 行 | 契約 |
+|---|---|---|
+| `parseHookSlug` | `:24-27` | 未知 slug を throw。`main` catch（`:107-110`）が exit 1 — **fail-closed** |
+| `ensureCompleteHookTree` | `:50-57` | 全スロットのファイル実在を要求。**全欠 → `not-built` で exit 0 / 部分欠 → throw で exit 1** |
+| `resolveHookPath` | `:59-66` | パス脱出ガード |
+| `forwardToHook` | `:68-92` | `[process.execPath, hookPath, ...args]` を spawn、`env: process.env`、stdio 3系すべて `inherit`、SIGINT/SIGHUP/SIGTERM 転送 |
+
+構造上の含意: `forwardToHook` が stdin を素通しするため、フック側 `readHookStdin()` の挙動は dispatcher 経由と直接パス形で同一。一方 `ensureCompleteHookTree` の**部分欠 throw** は、スロット追加が build 生成とセットでない限り既存全フックを exit 1 にする — スロット追加の副作用面はこの1点に集約される。
+
+### settings 3面のファイル分布と tracked 状態
+
+| 面 | パス | `git ls-files --error-unmatch` | hook 件数 | 形式 |
+|---|---|---|---|---|
+| 正本 | `packages/framework/harness/claude/settings.json.example` | exit=0（tracked） | 13 | 直接パス形 |
+| 投影 | `.claude/settings.json.example` | exit=1（**untracked**） | 13（正本と byte 一致） | 直接パス形 |
+| live | `.claude/settings.json` | exit=0（tracked、非 gitignore） | 11 | dispatcher 形 100% |
+
+live の11エントリ（event / matcher / slug / 行）:
+
+| event | matcher | slug | 行 |
+|---|---|---|---|
+| UserPromptSubmit | `""` | mint-presence | :58 |
+| SessionStart | `""` | session-start | :69 |
+| SessionEnd | `""` | session-end | :80 |
+| PostToolUse | `Write\|Edit` | audit-logger | :91 |
+| PostToolUse | `Write\|Edit` | sensor-fire | :95 |
+| PostToolUse | `TaskUpdate` | sync-statusline | :104 |
+| PostToolUse | `AskUserQuestion` | mint-presence | :113 |
+| PostToolUse | `Bash` | runtime-compile | :122 |
+| PreCompact | `""` | validate-state | :133 |
+| SubagentStop | `""` | log-subagent | :144 |
+| Stop | `""` | stop | :155 |
+
+正本にあって live に無い2件: `PreToolUse{^Task$}` → `amadeus-log-subagent-start.ts`（正本 `:60-68`）、`SessionStart` 2本目 → `amadeus-plugin-compose.ts`（正本 `:44`）。差集合は dispatcher スロット10 と example distinct hook script 12 の差と**完全一致**。
+
+### Unit B 患部の行分布（observed）
+
+| 対象 | observed 行 | 内容 |
+|---|---|---|
+| dispatch tool 定数 | `packages/framework/core/tools/amadeus-lib.ts:4128` | `export const SUBAGENT_DISPATCH_TOOL = "Task";` |
+| 定数の doc-comment | 同 `:4125-4127` | PreToolUse が全ツールで発火する旨 |
+| 判定関数シグネチャ | 同 `:4160` | `subagentStartFields(payload, agentsDir?)` |
+| ガード比較行 | 同 `:4161` | `if (payload.tool_name !== undefined && payload.tool_name !== SUBAGENT_DISPATCH_TOOL) return null;` |
+| 収斂設計コメント | 同 `:4149-4153` | 2 payload 形状の収斂意図 |
+| 型宣言 | 同 `:4774` | `tool_name?: string;`（`ClaudeCodeHookInput`） |
+| 消費側 | `packages/framework/core/hooks/amadeus-log-subagent-start.ts:64-65` / `:98` | 判定呼出しと唯一の emit |
+
+**定数の消費者は `:4161` の1箇所のみ**（repo 全域 grep、dist/self-install 除く。他ヒットは codekb 記述と `tests/.coverage-registry.json:4250` の `unitId: "function:SUBAGENT_DISPATCH_TOOL"` エントリ）。
+
+### テストピンの分布と駆動形
+
+`grep -rn 'tool_name: *"Task"' tests/` → **15件 / 3ファイル**（observed 実測、レビュー時点と件数・所在とも不変）:
+
+| ファイル | 行 | 件数 | 駆動形 |
+|---|---|---|---|
+| `tests/unit/t-subagent-purpose.test.ts` | 66, 89, 96, 97, 101, 113 | 6 | `subagentStartFields` を**正本から直 import**（`:15`）、in-process |
+| `tests/integration/t454-subagent-model-attribution.integration.test.ts` | 291, 369, 377, 387, 395, 407, 418, 426 | 8 | `dist/claude/.claude/tools/amadeus-lib.ts` から import（`:33`）= **生成物面**。`:291` は起動フック spawn 経路 |
+| `tests/integration/t-log-subagent-start.integration.test.ts` | 106 | 1 | `taskDispatch` ヘルパ（`:104-108`）でフックを **spawn**（`HOOK = join(AMADEUS_SRC, "hooks", …)` = dist 面） |
+
+⇒ 語彙変更の波及は「正本 import 面 / 生成物 import 面 / spawn 面」の3種に分かれ、生成物面2種は `bun run build` の再生成とセットで検証する必要がある。
+
+### 非患部の "Task" リテラル（誤爆させない面）
+
+| 面 | 行 | 性質 |
+|---|---|---|
+| `tests/smoke/t03-settings-json.test.ts` | :111 | `permissions.allow` の必須ツール一覧 |
+| `tests/unit/t04-agent-frontmatter.test.ts` | :168-170 | agent frontmatter の tools 一覧 |
+| `packages/framework/harness/claude/settings.json.example` | :14 | `permissions.allow` |
+| docs（13-customization ×2、14-claude-features ×2） | — | `permissions` 記述 |
+
+加えて **matcher `^Task$` は表示名の名前空間**で照合されるため、`settings.json.example:62` および `docs/reference/06-hooks-and-tools.md:46 / :215` の matcher 記述は語彙修正の対象外。旧語彙として同期すべきは **payload の `tool_name` に関する記述のみ**。
+
+## project-dir 解決の呼び出し分布（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### `resolveProjectDir` の呼び出し棚卸し
+
+`packages/framework/core/tools/` 内の `resolveProjectDir(` 出現 = **97**（`grep -roh | wc -l`、per-file 合計と一致、exit=0）。うち**2件は呼び出しではない**:
+
+- `amadeus-lib.ts:226` — 定義行 `export function resolveProjectDir(...)`
+- `amadeus-lib.ts:6673` — コメント `// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.` ← **stale comment**。実装が読むのは `CLAUDE_PROJECT_DIR`（`:231`）であり `AMADEUS_PROJECT_DIR` ではない
+
+したがって `core/tools` 内の実 call site = **95 / 15 ファイル**（`amadeus-lib.ts` 自身を除く）。`core/tools` 外に1件（`packages/framework/core/otel/relay.ts:777`）。**合計 96**。
+
+| ファイル | call site |
+|---|---|
+| `amadeus-state.ts` | 33 |
+| `amadeus-orchestrate.ts` | 19 |
+| `amadeus-swarm.ts` | 12 |
+| `amadeus-worktree.ts` | 9 |
+| `amadeus-jump.ts` | 4 |
+| `amadeus-graph.ts` / `amadeus-bolt.ts` | 各 3 |
+| `amadeus-utility.ts` / `-sensor` / `-runtime` / `-log` | 各 2 |
+| `amadeus-learnings` / `-goal` / `-election` / `-audit` | 各 1 |
+| `core/otel/relay.ts` | 1 |
+
+**名前シャドウの注意**: `packages/framework/core/hooks/amadeus-statusline.ts:31` に同名のローカル関数 `async function resolveProjectDir(input: Input)` が存在する（内部で `resolveProjectDirFromHook` を呼ぶ、`:42`）。lib 関数の caller ではないため、grep ベースの棚卸しで誤カウントしやすい。
+
+### `--project-dir` の受け口分布
+
+`"--project-dir"` を parse するツールは **18ファイル**（`advisory-choice` / `audit` / `bolt` / `finding` / `goal` / `jump` / `lib` / `log` / `migrate` / `mirror-lifecycle` / `mirror-presentation` / `orchestrate` / `sensor-model-completeness` / `state` / `subagent-stats` / `swarm` / `utility` / `worktree`）。共有ヘルパーは `stripProjectDir`（`amadeus-lib.ts:212-224`）で、runtime / sensor / learnings が使用する。
+
+`stage-protocol.md:1211` の `--project-dir <workspace-root>` は `amadeus-finding.ts create-github-issue` の呼び出し例（`:1209-1216`）である。
+
+### 起動形の分布 — 相対形と絶対形
+
+| 面 | 相対形 `bun .claude/tools/` | 絶対形 `bun $CLAUDE_PROJECT_DIR/.claude/tools/` |
+|---|---|---|
+| 正本 `packages/` 全域 | **31** | **1** |
+| セルフインストール面 `.claude/skills/` | **113** | **0** |
+
+**正本側の絶対形 1件は allowlist エントリ自身**（`packages/framework/harness/claude/settings.json.example:10`）であり、実際の起動行ではない。すなわち **allowlist が許可している形を、正本のスキルは1つも発行していない**。
+
+> 測定面の精密化: Developer scan が報告した「113」はセルフインストール面 `.claude/skills/`（未追跡の投影物）での計数であり、正本 `packages/framework/harness/claude/skills/` の計数は **31** である。両者は別の面であり、修正の対象面を決めるときに混同しない。
+
+### 同期面 — allowlist は2ファイル
+
+```
+packages/framework/harness/claude/settings.json.example:10
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+.claude/settings.json:39
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+```
+
+`.claude/settings.json` は **tracked**（`git ls-files --error-unmatch .claude/settings.json` exit=0）。`.claude/**` は gitignore 対象だが tracked ファイルは ignore を上書きする。したがって allowlist の変更は**正本とセルフインストール面の2ファイル同時変更**を要する。`dist/` 配下は未追跡生成物のため同期対象外（`bun run build` で再生成）。
+
+同一ファイル内の非対称（#1492 の指摘）も現存: hook 起動行 14本はすべて `${CLAUDE_PROJECT_DIR:-.}` のフォールバック付きクォート形だが、`:10` の allowlist だけが素の `$CLAUDE_PROJECT_DIR`。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

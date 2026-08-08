@@ -9,7 +9,7 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-inputs: all externalised TLA+ model + config pairs declared by specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
+inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
 outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors:
   - model-completeness
@@ -24,14 +24,18 @@ an exhaustive TLC exploration of a declared TLA+ model, driven by the
 the opt-in boundary, so once composed it is reachable via
 `amadeus-orchestrate next --stage formal-model-check` — `--single` optional
 (U6 activation-policy, FR-7(a)). It never joins a stock scope's workflow and
-never runs on `push` / `pull_request`. Amadeus never runs it automatically: the
-engine only emits a spec-hash advisory nudge when the watched spec changed
-(ADR-1 option A, U6).
+never runs on `push` / `pull_request`. When the watched spec changed, the
+engine emits a spec-hash advisory nudge (ADR-1 option A, U6); whether that
+advisory starts a run depends on the Intent autonomy mode: under `none` a
+human decides whether to run it; under `semi` or `full` the advisory is routed
+through the autonomy ladder as a `question` occurrence
+(`amadeus-advisory-choice.ts`), and a `run-now` decision starts the check
+unattended — any other ladder outcome falls back to the human.
 
 ## Stage body
 
 1. Resolve the model + config to check. CI acceptance checks every pair declared
-   in `specs/tla/model-map.json`, sequentially and in declaration order. The
+   in `amadeus/spaces/<space>/specs/tla/model-map.json`, sequentially and in declaration order. The
    optional `--model <registered-name>` selector narrows CI or diagnostics to
    one pair and rejects unknown names without falling back. `FormalElection`
    retains frozen-receipt normalization; other registered models use the
@@ -42,8 +46,8 @@ engine only emits a spec-hash advisory nudge when the watched spec changed
 
    ```
    bun plugins/formal-model-check/tools/run-model-check.ts \
-     --model specs/tla/FormalElection.tla \
-     --cfg   specs/tla/FormalElection.cfg \
+     --model amadeus/spaces/default/specs/tla/FormalElection.tla \
+     --cfg   amadeus/spaces/default/specs/tla/FormalElection.cfg \
      --out   <out-dir>
    ```
 

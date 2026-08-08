@@ -25,17 +25,17 @@ const roots: string[] = [];
 function makeProject(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-u4-registration-"));
   roots.push(root);
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), { recursive: true });
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), cfg);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), model);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), cfg);
   const implPath = "packages/framework/core/tools/amadeus-election-0.ts";
   const body = "// implementation 0\n";
   writeFileSync(join(root, implPath), body);
   writeFileSync(
-    join(root, "specs", "tla", "model-map.json"),
+    join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
         schemaVersion: 2,
@@ -43,11 +43,11 @@ function makeProject(): string {
           {
             name: "FormalElection",
             model: {
-              path: "specs/tla/FormalElection.tla",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.tla",
               identity: canonicalIdentity(model, "amadeus.formal-verif.tla.module.v1").sha256,
             },
             cfg: {
-              path: "specs/tla/FormalElection.cfg",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
               identity: canonicalIdentity(cfg, "amadeus.formal-verif.tla.cfg.v1").sha256,
             },
             entries: [{ implPath, sha256: Bun.CryptoHasher.hash("sha256", body, "hex") }],
@@ -63,7 +63,7 @@ function makeProject(): string {
 }
 
 function readMap(root: string): { models: { evidenceBundle?: { digest: string } }[] } {
-  return JSON.parse(readFileSync(join(root, "specs", "tla", "model-map.json"), "utf8"));
+  return JSON.parse(readFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"), "utf8"));
 }
 
 afterEach(() => {
@@ -93,8 +93,8 @@ const APPROVED_AT = "2026-08-05T00:00:00Z";
 function entryFor(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     name,
-    model: { path: `specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
-    cfg: { path: `specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
+    model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
+    cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
     entries: [{ implPath: "packages/framework/core/tools/amadeus-election.ts", sha256: IMPL_SHA }],
     ...extra,
   };
@@ -424,7 +424,7 @@ describe("registration hands the entry to the hold evaluator (FR-010 handoff)", 
 describe("existing model compatibility (FR-013, AC-008)", () => {
   test("registering a third model leaves every shipped entry unchanged", () => {
     const { root } = workspace();
-    const shipped = readFileSync(join(import.meta.dir, "..", "..", "specs", "tla", "model-map.json"), "utf8");
+    const shipped = readFileSync(join(import.meta.dir, "..", "..", "amadeus", "spaces", "default", "specs", "tla", "model-map.json"), "utf8");
     const mapPath = join(root, "shipped-map.json");
     writeFileSync(mapPath, shipped);
     const { approval } = shardWithApproval(root);

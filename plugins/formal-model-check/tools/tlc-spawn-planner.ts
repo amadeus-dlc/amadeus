@@ -152,7 +152,17 @@ export class NodePlannerEnvironmentPort implements PlannerEnvironmentPort {
       || !/^openjdk version "26\.0\.1(?:"|\+)/m.test(versionOutput)
       || !versionOutput.includes("OpenJDK")
     ) {
-      throw new Error("OpenJDK 26.0.1 verification failed");
+      // Name what was expected AND what was observed. The bare message cost
+      // four intents the same rediscovery: on a machine whose global mise
+      // activates a different JDK, `bun` resolved through a mise shim
+      // re-applies that JAVA_HOME, so even `JAVA_HOME=… bun …` arrives
+      // overwritten and the only visible symptom was ENVIRONMENT_UNAVAILABLE.
+      const observed = versionOutput.split("\n")[0]?.trim() ?? "(no output)";
+      throw new Error(
+        `OpenJDK 26.0.1 verification failed: expected \`openjdk version "26.0.1…"\` `
+          + `from JAVA_HOME=${canonicalJavaHome}, observed \`${observed}\` `
+          + "(see plugins/formal-model-check/README.md § Local execution requirements)",
+      );
     }
     const probe = new DarwinSandboxExecProvider(new NodeTlcProcessPort(), process.execPath);
     if (!probe.available()) throw new Error("sandbox-exec provider is unavailable");

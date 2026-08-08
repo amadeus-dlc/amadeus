@@ -16,12 +16,12 @@ const roots: string[] = [];
 function makeProject(entryCount = 2): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-u6-impl-only-"));
   roots.push(root);
-  mkdirSync(join(root, "specs", "tla"), { recursive: true });
+  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), { recursive: true });
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
-  writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);
-  writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), cfg);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), model);
+  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), cfg);
   const entries = Array.from({ length: entryCount }, (_, index) => {
     const implPath = `packages/framework/core/tools/amadeus-election-${index}.ts`;
     const body = `// implementation ${index}\n`;
@@ -29,7 +29,7 @@ function makeProject(entryCount = 2): string {
     return { implPath, sha256: Bun.CryptoHasher.hash("sha256", body, "hex") };
   });
   writeFileSync(
-    join(root, "specs", "tla", "model-map.json"),
+    join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
     `${JSON.stringify(
       {
         schemaVersion: 2,
@@ -37,11 +37,11 @@ function makeProject(entryCount = 2): string {
           {
             name: "FormalElection",
             model: {
-              path: "specs/tla/FormalElection.tla",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.tla",
               identity: canonicalIdentity(model, "amadeus.formal-verif.tla.module.v1").sha256,
             },
             cfg: {
-              path: "specs/tla/FormalElection.cfg",
+              path: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
               identity: canonicalIdentity(cfg, "amadeus.formal-verif.tla.cfg.v1").sha256,
             },
             entries,
@@ -57,9 +57,9 @@ function makeProject(entryCount = 2): string {
 
 function makeAuxProject(): string {
   const root = makeProject();
-  const mapPath = join(root, "specs", "tla", "model-map.json");
-  const modelPath = join(root, "specs", "tla", "FormalElection.tla");
-  const corePath = join(root, "specs", "tla", "FormalElectionCore.tla");
+  const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
+  const modelPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla");
+  const corePath = join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElectionCore.tla");
   const model = "---- MODULE FormalElection ----\nCore == INSTANCE FormalElectionCore\n====\n";
   const core = "---- MODULE FormalElectionCore ----\nEXTENDS Naturals\n====\n";
   writeFileSync(modelPath, model);
@@ -70,7 +70,7 @@ function makeAuxProject(): string {
     "amadeus.formal-verif.tla.module.v1",
   ).sha256;
   map.models[0].auxiliaries = [{
-    path: "specs/tla/FormalElectionCore.tla",
+    path: "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
     identity: canonicalIdentity(core, "amadeus.formal-verif.tla.module.v1").sha256,
   }];
   map.models[0].vocabulary = {
@@ -82,7 +82,7 @@ function makeAuxProject(): string {
 }
 
 function recordedEntry(root: string, implPath: string): { implPath: string; sha256: string } {
-  const map = JSON.parse(readFileSync(join(root, "specs", "tla", "model-map.json"), "utf-8"));
+  const map = JSON.parse(readFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"), "utf-8"));
   return map.models
     .flatMap((model: { entries: { implPath: string }[] }) => model.entries)
     .find((entry: { implPath: string }) => entry.implPath === implPath);
@@ -109,7 +109,7 @@ describe("updateModelMap --impl-only", () => {
       ok: true,
       code: "IMPL_ONLY_UPDATED",
       declared: "impl-only",
-      map: "specs/tla/model-map.json",
+      map: "amadeus/spaces/default/specs/tla/model-map.json",
     });
 
     const after = recordedEntry(root, drifted).sha256;
@@ -127,10 +127,10 @@ describe("updateModelMap --impl-only", () => {
 
   test("a changed model is refused and the map is left untouched", async () => {
     const root = makeProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
     writeFileSync(
-      join(root, "specs", "tla", "FormalElection.tla"),
+      join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"),
       "---- MODULE FormalElection ----\nVARIABLE x\n====\n",
     );
     writeFileSync(
@@ -146,9 +146,9 @@ describe("updateModelMap --impl-only", () => {
 
   test("a changed configuration is refused and the map is left untouched", async () => {
     const root = makeProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
-    writeFileSync(join(root, "specs", "tla", "FormalElection.cfg"), "SPECIFICATION Other\n");
+    writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), "SPECIFICATION Other\n");
 
     expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
       ok: false,
@@ -159,13 +159,13 @@ describe("updateModelMap --impl-only", () => {
 
   test("an --impl-only run without drift is refused instead of republishing", async () => {
     const root = makeProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
 
     expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
       ok: false,
       code: "MODEL_UNCHANGED",
-      detail: "specs/tla/model-map.json: impl-unchanged",
+      detail: "amadeus/spaces/default/specs/tla/model-map.json: impl-unchanged",
     });
     expect(readFileSync(mapPath)).toEqual(before);
   });
@@ -173,14 +173,14 @@ describe("updateModelMap --impl-only", () => {
   test("the flagless success shape is unchanged by the new branch", async () => {
     const root = makeProject(3);
     writeFileSync(
-      join(root, "specs", "tla", "FormalElection.tla"),
+      join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"),
       "---- MODULE FormalElection ----\nVARIABLE x\n====\n",
     );
 
     expect(await updateModelMap({ projectRoot: root })).toEqual({
       ok: true,
       entries: 3,
-      map: "specs/tla/model-map.json",
+      map: "amadeus/spaces/default/specs/tla/model-map.json",
     });
   });
 
@@ -199,7 +199,7 @@ describe("updateModelMap --impl-only", () => {
   test("an entry that stops being readable after the drift decision fails closed", async () => {
     const root = makeProject();
     const drifted = "packages/framework/core/tools/amadeus-election-0.ts";
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
     writeFileSync(join(root, drifted), "// implementation 0 revised\n");
 
@@ -227,7 +227,7 @@ describe("updateModelMap --impl-only", () => {
 
   test("a failing publish is reported instead of being swallowed", async () => {
     const root = makeProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
     writeFileSync(
       join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),
@@ -285,10 +285,10 @@ describe("updateModelMap --impl-only", () => {
 
   test("a changed auxiliary is refused and the map is left untouched", async () => {
     const root = makeAuxProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = readFileSync(mapPath);
     writeFileSync(
-      join(root, "specs", "tla", "FormalElectionCore.tla"),
+      join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElectionCore.tla"),
       "---- MODULE FormalElectionCore ----\nEXTENDS Integers\n====\n",
     );
     writeFileSync(
@@ -305,7 +305,7 @@ describe("updateModelMap --impl-only", () => {
 
   test("a declaration mismatch is refused instead of publishing an entries-only half update", async () => {
     const root = makeAuxProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const map = JSON.parse(readFileSync(mapPath, "utf8"));
     delete map.models[0].auxiliaries;
     writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
@@ -324,7 +324,7 @@ describe("updateModelMap --impl-only", () => {
 
   test("an entries-only update preserves model, cfg, auxiliaries, and vocabulary", async () => {
     const root = makeAuxProject();
-    const mapPath = join(root, "specs", "tla", "model-map.json");
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
     const before = JSON.parse(readFileSync(mapPath, "utf8"));
     writeFileSync(
       join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),

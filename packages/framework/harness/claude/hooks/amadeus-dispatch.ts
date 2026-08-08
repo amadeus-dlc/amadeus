@@ -1,7 +1,10 @@
 import { existsSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 
-const HOOK_PATHS = {
+// Exported as the single source of the slug table: tests derive their slug set
+// and their generated hook trees from this map instead of restating it, so a new
+// slot cannot drift from the fixtures that exercise it.
+export const HOOK_PATHS = {
   "mint-presence": ".claude/hooks/amadeus-mint-presence.ts",
   "session-start": ".claude/hooks/amadeus-session-start.ts",
   "session-end": ".claude/hooks/amadeus-session-end.ts",
@@ -11,6 +14,9 @@ const HOOK_PATHS = {
   "runtime-compile": ".claude/hooks/amadeus-runtime-compile.ts",
   "validate-state": ".claude/hooks/amadeus-validate-state.ts",
   "log-subagent": ".claude/hooks/amadeus-log-subagent.ts",
+  "log-subagent-start": ".claude/hooks/amadeus-log-subagent-start.ts",
+  "plugin-compose": ".claude/hooks/amadeus-plugin-compose.ts",
+  "subagent-model-guard": ".claude/hooks/amadeus-subagent-model-guard.ts",
   stop: ".claude/hooks/amadeus-stop.ts",
 } as const;
 

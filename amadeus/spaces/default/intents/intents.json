@@ -976,6 +976,44 @@
     "status": "complete"
   },
   {
+    "uuid": "019fdba8-b44c-7dcd-8fa4-60b494ff9457",
+    "slug": "merged-pr-convergence",
+    "dirName": "260807-merged-pr-convergence",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
+    "slug": "projectdir-worktree-fix",
+    "dirName": "260807-projectdir-worktree-fix",
+    "scope": "self-fix",
+    "status": "complete",
+    "docsOnly": {
+      "evidence": "GATE_APPROVED requirements-analysis"
+    }
+  },
+  {
+    "uuid": "019fdc46-ecdb-74a6-b70a-d1a8f39c5e3e",
+    "slug": "subagent-start-pair",
+    "dirName": "260807-subagent-start-pair",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fdb7a-041e-7afe-aaa3-d74c8871365f",
+    "slug": "tla-specs-relocation",
+    "dirName": "260807-tla-specs-relocation",
+    "scope": "self-refactor",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
+    "slug": "intent-2328-tests-e2e-au",
+    "dirName": "260807-intent-2328-tests-e2e-au",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
     "slug": "stage-perf-report",
     "dirName": "260807-stage-perf-report",

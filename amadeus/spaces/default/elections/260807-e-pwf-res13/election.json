@@ -1,0 +1,32 @@
+{
+  "electionId": "E-PWF-RES13",
+  "kind": "s13-adoption",
+  "question": "260807-projectdir-worktree-fix reverse-engineering ステージの §13 学習候補5件の採否を裁定する。候補は c1: xrev scan mode 適用の実例（cid:reverse-engineering:c1-xrev-single-issue の適用記録）/ c2: 行番号 currency の区間実測確定（E-XBB-RE-S13-c2 の適用実例 — review→observed で amadeus-lib.ts +143行が全て :4983 着地、患部区間 cmp IDENTICAL）/ c3: 差分 base 選定（rescan-base-ancestry の適用実例）/ c4: re-artifacts.md テンプレが greenfield 全域スキャン向け節構成のため xrev differential では依頼項目を主構造としテンプレの証拠規律のみ適用した様式判断 / c5: worktree 隔離ガードにより他 worktree 跨ぎの全域再計数が実行不能だった制約記録。各候補の実在根拠は record（inception/reverse-engineering/memory.md）と re-scans/260807-projectdir-worktree-fix.md を実測確認のこと。判定規準: 既存 cid の単なる適用実例は新規ノルムに値しない（persist は既存 cid の追補・新規 cid・退役のいずれかに実質があるときだけ）。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用0件",
+      "description": "5候補すべて不採用。c1/c2/c3 は既存 cid（c1-xrev-single-issue / E-XBB-RE-S13-c2 / rescan-base-ancestry）の適用実例にすぎず新規知識を含まない。c4 は軽微な様式判断で一般化に値しない。c5 は本セッション固有の制約記録で record に残れば足りる。"
+    },
+    {
+      "internalNo": 2,
+      "label": "c4 のみ採用（テンプレ適用境界の追補）",
+      "description": "c4 だけを採用し、re-artifacts.md テンプレの適用境界（greenfield 全域スキャン向け節構成 — xrev differential では依頼項目を主構造とし証拠規律のみ適用する）を既存 xrev 系 cid への1行追補として persist する。他4件は不採用。"
+    },
+    {
+      "internalNo": 3,
+      "label": "c5 のみ採用（worktree 隔離ガード下の RE 制約）",
+      "description": "c5 だけを採用し、worktree 隔離ガード下では他 worktree を跨ぐ全域計数が実行不能（構造的根拠のみで代替する）という制約を既存の隔離セッション系 cid（c1-pcp-isolated-session-swarm-incompat 等）への追補として persist する。他4件は不採用。"
+    },
+    {
+      "internalNo": 4,
+      "label": "c4 と c5 を採用",
+      "description": "c4（テンプレ適用境界）と c5（隔離ガード下の RE 制約）の両方を採用し、それぞれ既存 cid への追補として persist する。c1/c2/c3 は適用実例として不採用。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

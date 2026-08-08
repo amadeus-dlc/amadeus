@@ -1,0 +1,32 @@
+{
+  "electionId": "E-ASD-CGS13",
+  "kind": "s13-adoption",
+  "question": "260807-intent-2328-tests-e2e-au code-generation ステージの §13 学習選定。候補2件。C1: 欠陥クラスの患部列挙では、同一欠陥が現れうる**複数の消費 idiom を検索キーに含める** — 本 CG で v1 pin の患部列挙が `.event` キーの idiom だけを検索し、fields-only pin（t02/t06 — .event を読まず fields だけを pin）を構造的に取りこぼした（症状は同一の空読み）。既存 cid:application-design:dual-key-consumer-inventory は「変数名とリテラル」の2キーを定めるが、本件は「同一データ構造への複数のアクセス idiom」という別軸 — dual-key-consumer-inventory への追補として persist する案。C2: 患部集合内の1ファイルの赤が対象欠陥クラスと独立かの切り分けは、**修正（変換）を当該ファイルへ適用した前後で失敗署名（Expected/Received 実文）が byte 同一であることの実測**で行える — t113 で実施し、リーダー移行と無関係の別クラス（emit 順序）と確定、base 分離 worktree 再現と併せて #2456 起票の根拠になった。既存 c4-260805（未改変 base での失敗集合一致 = 環境起因の切り分け）と直交する「修正適用の前後比較 = クラス帰属の切り分け」面 — 新規または c4 ファミリ追補として persist する案。選択肢: 1 = C1+C2 採用、2 = C1 のみ、3 = C2 のみ、4 = 採用0件。record（code-summary・E-ASD-CGDEV record・既存 cid 本文）を独立検証して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "C1+C2 採用",
+      "description": "両候補とも未被覆面として persist（いずれも既存 cid への追補形）。"
+    },
+    {
+      "internalNo": 2,
+      "label": "C1 のみ採用",
+      "description": "C2 は既存の切り分け規範（c4-260805 / ruling-premise-closure）の射程内。"
+    },
+    {
+      "internalNo": 3,
+      "label": "C2 のみ採用",
+      "description": "C1 は E-ASD-RES13（述語記録）と dual-key の既存射程で読める。"
+    },
+    {
+      "internalNo": 4,
+      "label": "採用 0 件",
+      "description": "両方とも既存射程内。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

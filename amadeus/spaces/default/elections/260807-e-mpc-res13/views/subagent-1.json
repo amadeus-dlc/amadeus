@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPC-RES13",
+  "voter": "subagent-1",
+  "question": "intent 260807-merged-pr-convergence の reverse-engineering §13 学習選定: 候補3件(全文は record の inception/reverse-engineering/memory.md を実読)。conductor 提案は「persist 0件」。不採用理由 — c1(DIFFERENTIAL refresh + xrev 不主張の判定): 既存 cid:reverse-engineering:c1 / c1-xrev-single-issue の適用実例(前回 RE と同一判定の再演) / c2(t481 以降の番号予約): 既存 cid:code-generation:swarm-test-number-reservation の適用実例 / c3(explore/coder の役割分離・直列): 既存 cid:reverse-engineering:c3 / c4 の適用実例。いずれも新規則を含まない。実在根拠は memory.md・codekb/amadeus/reverse-engineering-timestamp.md・re-scans/260807-merged-pr-convergence.md で独立実測すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部候補を persist すべき",
+      "description": "persist すべき候補と理由を留保に明記する。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "persist 0件(提案どおり)",
+      "description": "3候補とも既存ノルムの適用実例のため persist しない。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "候補提示・不採用理由に欠落や誤りがある",
+      "description": "内容を留保に明記する。"
+    }
+  ]
+}

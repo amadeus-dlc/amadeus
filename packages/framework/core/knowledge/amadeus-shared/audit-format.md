@@ -147,7 +147,7 @@ formal-check attempt counts that reset with the discarded run-now receipts.
 | `DECISION_RECORDED` | Before presenting a structured question, to record the options shown | Stage, Decision | Options, Rationale | `tools/amadeus-log.ts decision` |
 | `GATE_APPROVED` | Human approved at gate | Stage | User Input, Grant Id, Swarm batch, Transaction Id | `tools/amadeus-state.ts approve` |
 | `GATE_REJECTED` | Human requested changes | Stage | Feedback, Recovered, Transaction Id | `tools/amadeus-state.ts reject` |
-| `QUESTION_ANSWERED` | Question answered by user | Stage, Details | — | `tools/amadeus-log.ts answer` |
+| `QUESTION_ANSWERED` | Question answered by user | Stage, Details | Resolution Route, Decision Id | `tools/amadeus-log.ts answer` |
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input, Grant Id | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
@@ -173,7 +173,7 @@ These event shapes are retained only so replay and migration projection code can
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `SUBAGENT_STARTED` | Subagent is dispatched | Agent Type | Agent ID, Purpose | `hooks/amadeus-log-subagent-start.ts` (PreToolUse{Task} / SubagentStart) |
+| `SUBAGENT_STARTED` | Subagent is dispatched | Agent Type | Agent ID, Purpose | `hooks/amadeus-log-subagent-start.ts` (PreToolUse on a dispatch tool / SubagentStart) |
 | `SUBAGENT_COMPLETED` | Subagent task finishes | Agent Type | Agent ID, Message | `hooks/amadeus-log-subagent.ts` (SubagentStop) |
 
 Harnesses do not agree on when a subagent BEGINS, so `SUBAGENT_STARTED` is
@@ -278,6 +278,7 @@ The event set is the atomic canonical stream for delivery observation, cycle tri
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | One atomic Loop Monitor delivery/Judge/latch transition commits | Partition Key, Event Set Id, Event Set | — | `tools/amadeus-loop-monitor-replay.ts` |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | One Quality snapshot/progress/replan/stall/resume transaction and its generic Monitor effects commit atomically | Quality Scope Id, Transaction Id, Transaction | — | `tools/amadeus-quality-repair-replay.ts` |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | One Intent-scoped mode/grant/decision/effect/park transaction commits atomically | Intent Uuid, Transaction Id, Transaction Digest, Transaction | Principal, Decider, Actor, Basis | `tools/amadeus-intent-autonomy-replay.ts` |
+| `INTENT_AUTONOMY_HUMAN_REQUIRED` | An occurrence the active mode could not decide on its own, recorded with the reason it fell to a human | Interaction Kind, Stage slug, Reason, Mode | — | `tools/amadeus-intent-autonomy-production.ts` |
 | `AUTO_DECISION_REVIEWED` | A real human accepts or flags one immutable automatic decision; completed Intent reviews extend the review chain without changing the completion seal | Intent Uuid, Decision Id, Review Id, Choice, Lifecycle, Review Principal, Review Actor, Source Human Turn, Audit Transaction Id, Payload Digest, Payload V1 | Decision Principal, Decision Actor, Decision Source, Basis Digest, Grant Id, Remediation, Note Digest, Redaction Status, Event Identity, Projection Revision, Trace Id, Span Id | `tools/amadeus-autonomy-review-production.ts` |
 | `INTENT_COMPLETION_TRANSACTION_COMMITTED` | The Core Intent completion transaction commits and seals the Intent record with its evidence digest | Intent Uuid, Transaction Id, Evidence Id, Evidence Digest, Completion Seal Digest, Transaction | — | `tools/amadeus-intent-completion.ts` |
 

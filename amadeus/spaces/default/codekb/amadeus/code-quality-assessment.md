@@ -1,6 +1,41 @@
 # コード品質評価
 
-## 監査コーパスのデータ品質債務（260807-stage-perf-report、現在、observed `4a3da7d62`）
+## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### 債務の性質
+
+本件は**書き手の欠陥ではなくリーダーの契約違反**である。`amadeus-journal.ts` は v1/v2 の共存を明示契約として持ち（`:28-30` のコメント、`JOURNAL_SCHEMA_VERSION_MAX`）、共有ハーネスのヘッダコメントは「a test that hand-parses the JSONL should do the same rather than pin one schema」と逐語で規範を宣言している。患部31ファイル（e2e 17 + 非 e2e 14）はこの規範に反して1スキーマを pin している。
+
+### 債務の重大度別内訳
+
+| クラス | 件数 | 症状 | 重大度 |
+|---|---|---|---|
+| e2e 自前パーサ | 17 | 単独実行で fail（scan が全数実測） | 高 — ただし CI 不可視 |
+| 非 e2e 自前パーサ | 14 | 同種の潜在債務 | 中 — 要棚卸し |
+| vacuity assertion | 3 | 壊れたリーダーでも通る**偽 green** | 高 — 検証劇場クラス |
+
+### 検証劇場クラスの 3 件
+
+`t09:211` / `t07:371` / `t07:530` はいずれも「イベント行が 0 件であること」を主張する negative invariant である。リーダーが v2 行を読めなければ、行が実在しても計数は 0 を返すため、**assertion は欠陥の存在下でも通過する**。これは org.md Forbidden の「検証劇場」— 結果を実行から導かない検査 — に該当する。修正時は Mandated に従い、失敗ケースを注入して実際に赤くなることを実証してから完成扱いとする。
+
+### CI 死角という二次債務
+
+`ci.yml:224-227` のコメントは、e2e が `--ci` に含まれない事実と、それが過去に #1569 をリリースまで到達させた機序を自認している。今回 #2328 が同じ死角を通った。これは patch 対象そのものではないが、**同じ機序の3度目を防ぐ手当てを本 intent に含めるか別 Issue とするかは裁定事項**である。
+
+### 修正方式のトレードオフ（requirements へ送る裁定候補）
+
+| 方式 | 利点 | 債務 |
+|---|---|---|
+| A: 共有ハーネス寄せ | canonical 1定義、59ファイルと同一様式、ヘッダコメントの規範に合致 | `dist/` import 前提が e2e へ波及 |
+| B: in-file 正規化 | dist 依存なし、`t-formal-verif-model-completeness-sensor:227-233` に実在先例 | 正規化ロジックが17箇所へ分散、canonical 1定義原則に反する |
+
+construction.md の「複数箇所で消費されるリスト・定数を手書きで複製しない — canonical な1定義から導出する」は A を支持するが、dist 依存の副作用は独立の判断材料である。
+
+### 良い側の実測
+
+共有ハーネスは責務分離が明確（record 単位 / shard 単位 / 計数の3関数）で、`heading` 復元の設計意図をコメントで説明し、未知イベントの fallback も定義済み。59ファイルの採用実績があり、修正の受け皿として成熟している。
+
+## 監査コーパスのデータ品質債務（260807-stage-perf-report、履歴、observed `4a3da7d62`）
 
 本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
@@ -38,7 +73,145 @@ amadeus/spaces/default/intents/260802-registry-drift-guard/construction/{unit-na
 
 `SUBAGENT_COMPLETED` の総数は**測定のたびに変わる移動値**である（Developer scan 時点 7,273 / Architect 再計測時点 7,274 — 本 RE セッション自身が監査へ追記するため）。監査コーパスの件数を成果物へ書くときは測定時刻とともに記録し、転記でなく再計測すること（`cid:requirements-analysis:numbers-from-command-output-only` / `cid:reverse-engineering:measurement-ref-in-artifacts`）。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## subagent-start 配線・語彙の品質債務（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### 債務1 — live 設定を検査する面の構造的不在
+
+settings を読む既存ガードは6面あるが、**そのすべてが example 側を読み、このリポジトリ自身が実際に読む `.claude/settings.json` を一切検査していない**（`AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude`、`tests/harness/fixtures.ts:57`）。`t416`/`t418` 系だけが live に触れるが、パス membership としてのみで hook 集合は見ない。
+
+**この不在が生む観測特性**: live から hook 配線が2件落ちても、CI は全面グリーンのまま通過する。#2297 は**症状（`SUBAGENT_STARTED` が 0 件）から逆算して初めて発見された**類型であり、ガードが先に鳴った事例ではない。
+
+**ガード設計に効く構造制約（事実）**:
+
+1. ground truth は正本（tracked）側でなければならない — 投影面 `.claude/settings.json.example` は untracked（`git ls-files --error-unmatch` exit=1）で、fresh clone の `bun run build` 前には不在。投影面基準のガードは build 依存の偽赤/未検出を作る。
+2. テキスト等価比較は成立しない — 正本は直接パス形、live は dispatcher 形で、11/13 件すべてが差分に見える。正規化キー候補は `(event, matcher, hook script 名)` の三つ組（dispatcher 形は `HOOK_PATHS[slug]` の basename、直接形は command 中の `amadeus-*.ts`）。
+3. 新設ガードは `cid:code-generation:corpus-sweep-for-new-guards` の両側実測を要する — 「欠落を注入して赤になる」ことと「正当な現状（修正後）で赤くならない」ことの両方。
+
+### 債務2 — 欠落は #2297 本文より1件広い
+
+live 欠落は `PreToolUse{^Task$}` だけでなく `SessionStart` の `plugin-compose` を含む**2件**で、両者は「dispatcher スロット不在」という**同一の構造原因**から出ている。
+
+品質上の帰結: 再発防止ガードを包含述語1本で入れると、**着地した瞬間に plugin-compose 側でも赤くなる**。⇒ ガードを本 intent で入れるなら plugin-compose の同梱が構造的に要求される。一方で #2297 本文・完了条件は PreToolUse のみを名指しており、同梱はスコープ拡大にあたる（`cid:requirements-analysis:implementation-deviation-election` の裁定事項）。**この緊張は要件段で明示的に裁定されるべきで、実装段で暗黙に解決してはならない。**
+
+影響（**仮説、未実測**）: live に plugin-compose が無いことで、このリポジトリ自身の plugin 自動 compose が発火していない可能性がある。`t327` の XOR closure は正本 example を見るため（債務1）この欠落を検出していない。
+
+### 債務3 — 修正候補ごとの品質リスク（材料のみ・裁定なし）
+
+| 候補 | テスト15箇所への影響 | 偽 green リスク | 追加の品質リスク |
+|---|---|---|---|
+| **C1: 定数を単一の新語彙へ置換** | 15箇所すべて改訂必須。`TaskUpdate`/`Write` の null 期待（`t-subagent-purpose.test.ts:77-78`）は不一致のまま**有効** | 低（既存ピンが全件赤くなるため修正漏れが顕在化） | matcher `^Task$` が別語彙 payload に発火する非直観を doc で説明する必要（`:4145-4147` のコメントは要書き換え）。旧版ハーネスが旧語彙を送る場合の後方非互換は**未実測** |
+| **C2: 両語彙受理** | 既存15箇所は**すべて緑のまま** | **高** — 新語彙を受理する新テストが無ければ、欠陥が閉包していなくても全面グリーンで通過する。両側実測が必須 | 単数定数では表現不能 → 集合型への型変更と `tests/.coverage-registry.json:4250` の `unitId` 同期が要る。`t189:81` の既存前例とは整合 |
+| **C3: 拒否リスト化** | `:77-78` の `TaskUpdate` null 期待は維持できるが `Write` の null 期待（`:78`）が**破れる** → 改訂必須 | 中 | PreToolUse が全ツールで発火するため通過側が全ツールへ広がる。`subagent_type` 不在時 `normalizeAgentType`（`:4108-4110`）が `"unknown"` を返し、**大量の phantom `SUBAGENT_STARTED`** を生む。誤 emit リスクが最大 |
+
+**C2 の偽 green リスクは本 intent 最大の品質論点**: 既存ピンが赤くならない設計は、`cid:code-generation:corpus-sweep-for-new-guards`（新設ガードの両側実測）と `cid:code-generation:inject-runtime-consumed-lines`（実行時に消費される行への注入）を満たす形でしか閉包を実証できない。
+
+### 債務4 — 例外5件の機序が未解明（引き継ぎ必須）
+
+両 Issue の reviewer が**独立に**検出し、いずれも「確定できず」とした事象: intent `260805-subagent-type-guard` の監査に、2026-08-06T02:31:14Z〜03:40:38Z の範囲で `SUBAGENT_STARTED` が **5件だけ**存在する（`Agent Type` は Claude Code ペルソナ名 — `amadeus-developer-agent` ×4 / `amadeus-architecture-reviewer-agent` ×1）。
+
+本スキャンでも新たな説明材料は得られていない（当該 worktree 不在、`git log --all` に該当する修正コミットなし、observed でも `:4128` は旧語彙のまま、live に `PreToolUse` なし）。
+
+**品質上の含意**: 「配線も語彙も壊れているのに 5 件だけ通った」という事実は、**現在のガード理解が不完全である可能性**を示す。reviewer-1（#2303）の提言「修正時にこの5件がなぜ通ったのかを確認する」は**未消化のまま要件段へ引き継ぐ**べき事項であり、修正形の妥当性判断に直接効く（例えば当時 payload が別形状だったなら、C2 の両語彙受理が正解に近づく）。
+
+### 債務5 — doc cite の stale（新規発見）
+
+`docs/reference/23-telemetry-schema.md:194` と `.ja.md:189` が引く `tools/amadeus-lib.ts:4430` / `:4456-4457` は、observed では無関係なコードを指す:
+
+```
+4430: // The recorded repo set for an intent (its intents.json row's `repos`), or [] when
+4456: }
+4457: （空行）
+```
+
+正しくは `:4128`（定数）/ `:4160-4161`（ガード）。両 reviewer 未検出。`cid:requirements-analysis:mechanism-cite-verify-at-draft` の違反実例であり、#2303 の doc 同期の射程に入れるべき。
+
+また旧語彙の doc 面は**レビューの4面より広く**、`docs/reference/06-hooks-and-tools.md`（:26/:205/:219）と `.ja.md`（:25/:203/:217）、`audit-format.md:181`（正本・投影の両方）が追加で存在する。ただし同 doc の `:46/:215`（ja `:44/:213`）は **matcher 記述であり修正対象外** — 語彙の切り分けを誤ると正しい記述を壊す。
+
+### 良質な既存構造（保全すべき面）
+
+| 面 | 評価 |
+|---|---|
+| emit 経路の単一性 | 判定1箇所・emit 1箇所・消費者1箇所。迂回路がなく、修正の影響範囲が機械的に確定できる |
+| 2 payload 収斂の設計コメント | `:4149-4153` が `undefined` 短絡の意図を逐語で残しており、修正時に意図を壊さずに済む |
+| dispatcher の fail-closed | 未知 slug throw / 部分欠 throw / パス脱出ガード。**部分欠 throw** はスロット追加の副作用面を1点に集約する良い性質でもある |
+| 両語彙受理の既存前例 | `t189:78-81` が SDK ビルド差を両語彙で吸収する前例を残す（両 reviewer 未言及） |
+
+### 隣接リスク — tNNN 採番衝突
+
+observed に `tests/unit/t481-resolve-project-dir-worktree-marker.test.ts`（#2413 で着地）が実在し、open PR #2414 が `tests/integration/t481-pr-convergence-lifecycle.test.ts` を追加する。**同一番号 t481 が本線と open PR で重複**（`cid:code-generation:c1-tnnn-collision-on-regrounding` 該当）。本 intent の患部ではないが、**新規テストを起こす際は t481 / t482 を避け、再接地時に固定 base SHA の `tests/` で採番を再確認**すること。
+
+## project-dir 解決の品質債務（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 債務1 — 同一責務の2実装が非対称に進化している（構造債務）
+
+`resolveProjectDir`（`amadeus-lib.ts:226-250`）と `resolveProjectDirFromHook`（同 `:310-347`）は同じ問い（このプロセスが書くべき workspace はどこか）に答えるが、段構成が異なる。marker 段2つ（`:317` / `:329-330`）は hook 側にのみ導入された（`392a2d781` = #641、`e12259ba7` = #1482）。
+
+`cid:requirements-analysis:symmetric-pair-review`（対操作の対称性を明示観点にする）が扱う「片側だけ実装された非対称」クラスタの典型である。**bootstrap 由来バグ14件の過半が同クラスタだった**という既存の実測と同型。
+
+### 債務2 — 無音の fail-open（検証劇場の隣接形）
+
+`resolveProjectDir` に警告・例外は**1つも無い**（`sed -n '226,250p' | grep "console\|warn\|throw"` → exit=1、出力ゼロ）。返り値は常に `string` で、「確信度の低い fallback に落ちた」ことを表現しない。ケース B は**正常な返り値として本線パスを返す**。
+
+`org.md` Forbidden の検証劇場禁止は「偽の緑」を禁じるが、本件はその隣接形 — **偽の隔離**。ガードが無いのではなく、誤りが誤りとして観測されない。
+
+### 債務3 — テストの非対称（テスト債務）
+
+| テスト | 対象梯子 | ケース B |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts`（`covers:` は `:4`） | CLI 側 | **被覆なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（`:5`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts`（`:1`） | hook 側 | 被覆（hook のみ） |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | hook 側（#1048） | 被覆（hook のみ） |
+
+**ケース B を固定するテストは repo 全域で不在。** 実装の非対称がテストの非対称としてそのまま写っている — 欠陥が「テストが緑のまま」生存できる構造。
+
+**t144 test 5 の紛らわしさ**: タイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir 存在）であって workspace marker ではない**。`resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "marker" 語が実体と対応していない — 読み手を誤らせる命名債務。
+
+### 債務4 — stale comment
+
+`amadeus-lib.ts:6673` の `// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.` は実装と食い違う。`resolveProjectDir` が読むのは `CLAUDE_PROJECT_DIR`（`:231`）であり `AMADEUS_PROJECT_DIR` ではない。
+
+（Developer scan の注記: reviewer-1 が `:6530` と報告した射程外指摘は、observed では `+143` 行の下流にあたるため `:6673` に着地する。）
+
+### 債務5 — 文書と実装の逆向き指示
+
+`stage-protocol.md:511` は絶対形（`$CLAUDE_PROJECT_DIR/.claude/tools/`）を推奨するが、その形がケース B を生む。ただし同じ文中にサブシェル代替が既に明記されており、**正しい代替は正本にすでに書かれている**。文書全体の書き換えではなく、推奨の順序の是正で足りる可能性が高い。
+
+### 債務6 — allowlist と実起動形の不一致
+
+allowlist（`settings.json.example:10` / `.claude/settings.json:39`）は絶対形のみを許可するが、正本スキルの起動行は**全 31 件が相対形**であり、正本における絶対形の唯一の出現は allowlist エントリ自身である。**allowlist が許可している形を、誰も発行していない。**
+
+同一ファイル内の非対称（#1492 の既指摘）も現存: hook 起動行 14本はすべて `${CLAUDE_PROJECT_DIR:-.}` のフォールバック付きクォート形だが、`:10` の allowlist だけが素の `$CLAUDE_PROJECT_DIR`。
+
+### 債務7 — 点修正の反復（プロセス債務）
+
+| Issue | state | 修正の形 |
+|---|---|---|
+| #796 | CLOSED | `7e6a7c33e` — `fire` に `--project-dir` を配線（段1 での点回避、梯子は無変更） |
+| #1450 | CLOSED | `04efcd42c` — election の既定 pd を `resolveProjectDir` 経由へ（呼び出し側の点修正） |
+| #1287 | OPEN | enhancement、解決順の再設計（ADR 前提） |
+| #2352 | OPEN | 本 intent |
+
+**2件の先例はいずれも呼び出し側の点修正で、梯子そのものには触れていない。** 同じ根から4件目が出ていることは、点修正が根本に届いていないことの実測である。`cid:code-generation:same-root-inventory`（同根パターンの全数棚卸し）の観点で見れば、本件は「4回目に初めて棚卸しが要る」状態。
+
+### 是正の制約（品質面から）
+
+- marker 段の追加だけでは**ケース C+env が閉じない**（env 段2 が上位に残る）。
+- marker 述語には構造的盲点がある（`git ls-files .claude/tools` → **0件**、build 前 worktree で偽）。marker ベースの drift ガードは build 前 worktree を検出できない。
+- 段順の再設計は #1287 と射程が重なるため、スコープ境界の裁定が要る。
+
+### 未測定として残る点（仮説・断定不可）
+
+- #641 の時点で CLI 側が「検討されなかった」のか「検討して見送られた」のか — コミット記録は前者を示唆するが、これは**証拠の不在**であって不在の証拠ではない。
+- 実運用でケース B が発生した監査証跡は未探索（頻度未測定）。
+- clone 内 worktree の marker 成立/不成立の全数再census は、本セッションの worktree 隔離ガードにより実行不能（構造的根拠のみ上記で確定）。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

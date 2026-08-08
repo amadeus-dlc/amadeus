@@ -1,0 +1,23 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-intent-2328-tests-e2e-au/construction/fix-2328-audit-reader/code-generation/code-summary.md",
+    "digest": "ac6931da54536325d04ea21fde92e48269e41f2145256a767e3fe20f5f693a84"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-intent-2328-tests-e2e-au/construction/fix-2328-audit-reader/code-generation/pr-convergence-report.md",
+    "digest": "ac88903c0b9b29e176d21fc05f0cbc205e6beb5540928fa6c8196506e40da9c4"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260807-intent-2328-tests-e2e-au/construction/build-and-test/build-test-results.md",
+    "digest": "40fb495849ff87270557f2277ac8c2457df8e2eec47542ce1a6f429d23578f23"
+   }
+  ]
+ }
+]

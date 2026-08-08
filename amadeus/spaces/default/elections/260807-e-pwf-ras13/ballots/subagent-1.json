@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-PWF-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "将来の実運用で decide-question 経路そのものに新しい摩擦（grant scope と質問種別の境界、auto-decision の後日レビュー運用など）が実測されたら、その時点で c1-pcp-autonomy-grant-question-boundary への追補として再提案する。",
+  "rationale": "record 実測: memory.md Interpretations の2行、questions ファイル（Q1-Q4 の [Answer] に auto-decision-4ef8fe28/b0f9b3d3/2266c8c1/54ea9644、basis: agent-recommendation、reviewState: unreviewed、grant intent-grant-cd4640053e8a2e0f8b0b8d9e97d10b29、承認 HUMAN_TURN 2026-08-07T10:46:46Z）、requirements.md Out of scope 節（完了条件1・2 の反証根拠と『FR-1 採用後は実害を失う』条件付き根拠、文書改訂は後続の独立判断へ）— 両候補とも実在を確認した。しかし c1 は既存 cid:requirements-analysis:c1-pcp-autonomy-grant-question-boundary が定める正規経路をそのまま踏んだ2例目であり、新しい機序・失敗様式・手順の差分がない（『初の実運用』の実測は既存 cid 本文に記載済みで、例数の加算は churn）。c2 も既存 cid:requirements-analysis:c7-upstream-universal-claim-unverified が定める『上流の断定を成立条件へ分解して受理する』手続きの素直な適用であり、条件付き Out of scope の記録自体は grant の prohibitedEffects: scope-out と no-silent-scope-narrowing が既に縛っている。判定規準（既存 cid の単なる適用実例は persist に値しない）に照らして採用0件が正しく、両実例は record に残ることで十分に追跡可能。",
+  "submittedAt": "2026-08-07T11:05:00Z",
+  "receivedAt": "2026-08-07T11:01:07Z"
+}

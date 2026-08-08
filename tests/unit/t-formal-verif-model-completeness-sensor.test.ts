@@ -38,7 +38,7 @@ describe("model-completeness sensor pure unit", () => {
       pass: false,
       reason: "map-missing",
       findings_count: 1,
-      findings: [{ path: "specs/tla/model-map.json", reason: "missing" }],
+      findings: [{ path: "amadeus/spaces/default/specs/tla/model-map.json", reason: "missing" }],
     });
   });
 
@@ -47,7 +47,7 @@ describe("model-completeness sensor pure unit", () => {
       pass: false,
       reason: "map-malformed",
       findings_count: 1,
-      findings: [{ path: "specs/tla/model-map.json", reason: "unreadable" }],
+      findings: [{ path: "amadeus/spaces/default/specs/tla/model-map.json", reason: "unreadable" }],
     });
   });
 });

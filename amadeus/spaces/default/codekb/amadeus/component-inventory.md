@@ -1,6 +1,70 @@
 # コンポーネント棚卸し
 
-## 監査・record の読み手生態（260807-stage-perf-report、現在、observed `4a3da7d62`）
+## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+判別子は「共有ハーネス `tests/harness/audit-records.ts` を使うか、自前で `JSON.parse` するか」。自前パーサは **e2e 17ファイル + 非 e2e 14ファイル**に実在する。
+
+### 患部（e2e 17ファイル — 全て単独実行で fail を scan が実測）
+
+`tests/e2e/` は review SHA `75a1c198d` → observed `a5621236c` で無変更（`git diff --name-only 75a1c198d HEAD -- tests/e2e/` が空を返すことを Architect が独立実測）。したがって行番号の再解決は不要（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。
+
+v1 形決め打ちパーサの逐語例:
+
+| ファイル | 型定義 | 消費点 |
+|---|---|---|
+| `t10-halt-and-ask-discard.test.ts` | `:126-130` `interface AuditRecord { event: string \| null; heading: string; fields?: Record<string, string>; }` | `:144` |
+| `t05.test.ts` | `:147`（同型 `interface AuditRecord`） | `:260-262` |
+| `t07-audit-fork-merge.test.ts` | — | `:249` 定義、消費 `:268` `:298` `:330` `:343` `:366` |
+
+残る14ファイルを含む全数列挙は `re-scans/260807-intent-2328-tests-e2e-au.md` を正本とする。
+
+**唯一 green な例外**: `t-formal-verif-model-completeness-sensor` は in-file で両対応正規化を内蔵する（`:227-233` の `event: record.event ?? record.attributes?.Event ?? null`）。これは「in-file 正規化」方式が実際に機能することの実在証拠であり、修正方式の選択肢の一方を裏づける。
+
+### canonical 修正様式のコンポーネント
+
+| コンポーネント | 所在 | 責務 |
+|---|---|---|
+| `normalizeAuditRecord` | `tests/harness/audit-records.ts:26` | 単一 record の v1/v2 正規化 |
+| `auditRowsFrom` | `:49` | shard 本文 → 正規化済み record 配列 |
+| `countAuditEvent` | `:57` | 両スキーマ横断のイベント計数 |
+| `EVENT_HEADINGS` import | `:18` | `../../dist/claude/.claude/tools/amadeus-audit.ts` 由来 — **dist ビルド前提**を持ち込む |
+
+消費実例 59ファイル（`t118.test.ts:219` / `t45-revision-loop.test.ts:161` 等）。
+
+### 書き手コンポーネント（v1/v2 共存 — 置換禁止）
+
+| 版 | コンポーネント | 所在 |
+|---|---|---|
+| v1 | lifecycle writer | `amadeus-audit.ts:534` |
+| v1 | raw body 経路（`event: null`） | `amadeus-audit.ts:597` |
+| v1 | state writer | `amadeus-state.ts:3193` |
+| v2 | `emitAudit` → `emitAuditEvent` → `appendAuditEntryViaEvents` | `amadeus-worktree.ts:635` → `:95` → `otel/audit-emit.ts:48` |
+
+### vacuity 3件（壊れたリーダーでも通る偽 green）
+
+| 所在 | assertion | 危険 |
+|---|---|---|
+| `t09-halt-and-ask-preservation.test.ts:211` | `eventCount(p, "WORKTREE_DISCARDED")).toBe(0)` | v2 行が実在しても v1 リーダーは 0 を返す |
+| `t07-audit-fork-merge.test.ts:371` | `countEvent(wtAuditPath(p, "demo"), "AUDIT_MERGED")).toBe(0)` | 同上 |
+| `t07-audit-fork-merge.test.ts:530` | `countEvent(auditPath(p), "AUDIT_FORKED")).toBe(0)` | 同上 |
+
+いずれも「行が存在しないこと」を主張する negative invariant であるため、リーダーが壊れていても通過する。修正時は**落ちる実証が必須**（Mandated: 新設・変更したガードは実際に赤くなることを実証する）。
+
+### 除外（患部でない）
+
+`t378` / `t380` / `t382` / `t388` — v1 不在 assert が設計意図であり、本件の患部に当たらない。
+
+### 検証面コンポーネント
+
+| コンポーネント | 所在 | 事実 |
+|---|---|---|
+| `--ci` プロファイル | `tests/lib/run-tests-args.ts:95-100` | `runSmoke` + `runUnit` + `runIntegration` のみ（e2e 非含） |
+| CI 認識 | `.github/workflows/ci.yml:224-227` | 死角を逐語で明記 |
+| CI 上の唯一の e2e | `ci.yml:252` | `t341-plugin-conformance-journey.serial.test.ts` 1本のみ |
+
+**tNNN 予約**: 使用済み最大 `t483`、次は **`t484`**。
+
+## 監査・record の読み手生態（260807-stage-perf-report、履歴、observed `4a3da7d62`）
 
 本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
@@ -32,7 +96,148 @@
 | unit | `tests/unit/t460-subagent-stats-compose.test.ts` | 純粋な compose |
 | integration | `tests/integration/t461-subagent-stats.integration.test.ts` | fs + CLI spawn、`MECHANISM: cli`、独立オラクル（`:5-23`） |
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## #2297/#2303 subagent-start 患部コンポーネント（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
+
+### Unit A — hook 配線（#2297）
+
+| コンポーネント | パス | observed 状態 | 役割 |
+|---|---|---|---|
+| live 設定 | `.claude/settings.json` | tracked、hook 11件、`PreToolUse` **不在**（`grep -c` → 0 / exit=1）、`plugin-compose` **不在** | このリポジトリ自身が実際に読む配線面 |
+| 正本 example | `packages/framework/harness/claude/settings.json.example` | tracked、hook 13件、`PreToolUse{^Task$}` を `:60-68` に、`plugin-compose` を `:44` に保持 | 配布・ガードの ground truth 候補 |
+| 投影 example | `.claude/settings.json.example` | **untracked**（source-only 生成物）、正本と byte 一致 | build 生成物。ガード基準にすると build 依存になる |
+| dispatcher | `packages/framework/harness/claude/hooks/amadeus-dispatch.ts` | `HOOK_PATHS` 10スロット（`:4-15`）、fail-closed 4契約 | slug → hook path の解決と forward |
+| 未配線フック（実在） | `packages/framework/core/hooks/amadeus-log-subagent-start.ts`<br>`packages/framework/core/hooks/amadeus-plugin-compose.ts` | 正本・自己インストール面 `.claude/hooks/` の**両方に実在** | スロット追加時の実在要件は充足済み |
+| **不在コンポーネント** | — | live 設定の hook 集合を検査するガードが**存在しない** | 再発防止の新設対象 |
+
+既存の settings 系ガード6面はいずれも live を見ない:
+
+| テスト | 対象 | live を見るか |
+|---|---|---|
+| `tests/smoke/t03-settings-json.test.ts` | `AMADEUS_SRC/settings.json.example`（= dist の example） | ✗ |
+| `tests/integration/t40-settings-hook-config.test.ts` | 同上 | ✗ |
+| `tests/integration/t131-hooks-settings-fire.test.ts` | 同上 | ✗ |
+| `tests/unit/t132-hooks-doc-count-sync.test.ts` | `AMADEUS_SRC/settings.json.example` + `AMADEUS_SRC/hooks/*.ts` + doc | ✗ |
+| `tests/integration/t327-hook-wiring-xor-closure.integration.test.ts` | `WIRING_SITE.claude = "packages/framework/harness/claude/settings.json.example"`（`:38`） | ✗（正本 example） |
+| `tests/unit/t416` / `t418`（+ integration 版） | `.claude/settings.json` を**パス membership としてのみ**参照 | 部分（hook 集合は不検査） |
+
+### Unit B — dispatch tool 語彙（#2303）
+
+| コンポーネント | パス:行 | 役割 | 修正影響 |
+|---|---|---|---|
+| dispatch tool 定数 | `packages/framework/core/tools/amadeus-lib.ts:4128` | `SUBAGENT_DISPATCH_TOOL = "Task"` | 患部の中核。消費者は `:4161` の1箇所のみ |
+| 判定ガード | 同 `:4160-4161` | `subagentStartFields` の入口。`tool_name !== undefined &&` 短絡が kimi 経路を通す | 語彙変更の適用点。短絡は保全必須 |
+| 型宣言 | 同 `:4774` | `tool_name?: string;`（`ClaudeCodeHookInput`） | optional のまま維持 |
+| emit フック | `packages/framework/core/hooks/amadeus-log-subagent-start.ts:64-65, :98` | 判定呼出しと唯一の `SUBAGENT_STARTED` append | 迂回路なし |
+| 旧語彙コメント | 同 `:10-12` | ヘッダ doc-comment | doc 同期対象 |
+| coverage registry | `tests/.coverage-registry.json:4250` | `unitId: "function:SUBAGENT_DISPATCH_TOOL"` | 定数名を変える案では同期対象 |
+
+**テストピン（15箇所 / 3ファイル）**:
+
+| ファイル | 行 | 件数 |
+|---|---|---|
+| `tests/unit/t-subagent-purpose.test.ts` | 66, 89, 96, 97, 101, 113 | 6 |
+| `tests/integration/t454-subagent-model-attribution.integration.test.ts` | 291, 369, 377, 387, 395, 407, 418, 426 | 8 |
+| `tests/integration/t-log-subagent-start.integration.test.ts` | 106 | 1 |
+
+**doc 面（旧語彙 `PreToolUse{Task}` / dispatch tool 記述）— レビューの4面より広い**:
+
+| 面 | observed 行 | レビュー言及 |
+|---|---|---|
+| `.claude/knowledge/amadeus-shared/audit-format.md` | :176、:181 | :176 のみ ✓ |
+| `packages/framework/core/knowledge/amadeus-shared/audit-format.md`（正本） | :176、:181 | :176 のみ ✓ |
+| `docs/reference/12-state-machine.md` | :400 | ✓ |
+| `packages/framework/core/tools/amadeus-lib.ts` コメント | :4149 | ✓ |
+| `packages/framework/core/hooks/amadeus-log-subagent-start.ts` | :10-12 | ✓ |
+| `docs/reference/06-hooks-and-tools.md` | :26, :46, :205, :215, :219 | **未列挙** |
+| `docs/reference/06-hooks-and-tools.ja.md` | :25, :44, :203, :213, :217 | **未列挙** |
+| `docs/reference/23-telemetry-schema.md` | :194 | **未列挙 + stale cite** |
+| `docs/reference/23-telemetry-schema.ja.md` | :189 | **未列挙 + stale cite** |
+
+うち `:46 / :215`（および ja の `:44 / :213`）は **matcher `^Task$` の記述であり修正対象外**（表示名の名前空間、語彙とは別軸）。
+
+**stale cite（両 reviewer 未検出、本スキャンの新規発見）**: `docs/reference/23-telemetry-schema.md:194` と `.ja.md:189` は `tools/amadeus-lib.ts:4430` / `:4456-4457` を引くが、observed の該当行は無関係:
+
+```
+4430: // The recorded repo set for an intent (its intents.json row's `repos`), or [] when
+4456: }
+4457: （空行）
+```
+
+正しい引用先は **`:4128`（定数）と `:4160-4161`（ガード）**。#2303 の doc 同期はこの2面の cite 訂正も射程に入る。
+
+### kimi 経路の保全コンポーネント
+
+| コンポーネント | パス:行 | 内容 |
+|---|---|---|
+| payload 構築 | `packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts:732-741` | `hook_event_name` / `agent_type` / `prompt` の3キーのみ。**`tool_name` を含まない** |
+| 配線 | `packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml:59-60` | `event = "SubagentStart"` → `amadeus-kimi-adapter.ts role-start` |
+| 回帰ピン | `tests/unit/t-subagent-purpose.test.ts:82-86` | `{hook_event_name:"SubagentStart", agent_type:"explore", prompt:"Look around"}` → フィールド返却を既にピン |
+
+### 設計材料としての既存前例
+
+`tests/integration/t189-compose-dispatch.sdk.test.ts:78-81` に**両語彙を受理する既存前例**が実在する（両 reviewer 未言及）:
+
+```ts
+        // subagent tool as "Task" or "Agent" depending on the SDK build -
+        // accept either; an inline-improvised grid would show neither.
+        const taskCalls = r.toolResults.filter(
+          (t) => t.toolName === "Task" || t.toolName === "Agent",
+        );
+```
+
+## pr-convergence landed 対応の対象コンポーネント（260807-merged-pr-convergence、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits / 108 files、`plugins/pr-convergence/` の区間内変更 0 件）。全数列挙は `re-scans/260807-merged-pr-convergence.md` を正本とする。
+
+- `plugins/pr-convergence/tools/pr-convergence-predicate.ts` — 収束述語（`evaluateConvergence :180-192`、`MergeStateStatus :90-98` に MERGED なし・未知値 throw `:117-121`、`resolveMergeable :249-269` retry 5×10s）
+- `plugins/pr-convergence/tools/pr-convergence-gh-runner.ts` — GraphQL 取得面（`PR_STATE_QUERY :191-195` は `mergeable mergeStateStatus` のみ、`RawPrState :76-79`）— landed 判定は fail-closed parse を弱めないフィールド追加が要る
+- `plugins/pr-convergence/tools/pr-convergence-cli.ts` — verb 閉集合 `:320`（status|report|override）、`ConvergenceReport` kind union `:61-76`、`renderReport :89-129`、refuse 2分岐 `:438-447` / `:468-474`、audit-before-report 順序（ヘッダ `:20-25`）
+- `packages/framework/core/tools/amadeus-sensor-pr-convergence-report-format.ts` — kind 閉集合 `:69`・整合分岐 `:122-130`・core→plugin import 禁止（`:16-20`）
+- `plugins/pr-convergence/stages/pr-convergence.md` — 「Convergence is not merge」宣言（`:34-37` / `:200-202`）— landed 語彙の文書整理対象
+- テスト: t444〜t450（全て in-process）。coverage 行ピンは `tests/.coverage-patch-allowlist.json:6365-6398` の4エントリ。tNNN 使用済み最大 t480、新規 t481 以降
+
+## project-dir 解決の患部コンポーネント（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### 患部コンポーネント
+
+| コンポーネント | 所在 | 役割 | #2352 での位置づけ |
+|---|---|---|---|
+| `resolveProjectDir` | `packages/framework/core/tools/amadeus-lib.ts:226-250` | CLI ツールの workspace root 解決（4段） | **患部本体**。marker 段が無く、env が段2で無条件に勝つ |
+| `resolveProjectDirFromHook` | 同 `:310-347` | hook の workspace root 解決（5段） | **対照実装**。marker 段2つを持つ。緩和対象ではない |
+| `hasWorkspaceMarker` | 同 `:283-286` | `amadeus/` + `<harness>/tools/` の両ディレクトリ存在判定 | marker 段の述語。build 前 worktree では偽 |
+| `findWorkspaceMarkerAncestor` | 同 `:290` 付近 | cwd から祖先方向へ marker 探索 | hook 段3 の実体 |
+| `isDir` | 同 `:266-272` | ディレクトリ限定の存在判定 | #641 レビュー是正で導入（ファイル名だけの偽 marker を排除） |
+| `stripProjectDir` | 同 `:212-224` | argv から `--project-dir` を剥がす共有ヘルパー | 段1 の受け口。runtime / sensor / learnings が使用 |
+| `resolveProjectDir`（ローカル） | `packages/framework/core/hooks/amadeus-statusline.ts:31` | 名前シャドウ。内部で `resolveProjectDirFromHook` を呼ぶ（`:42`） | **lib 関数の caller ではない**。grep 棚卸しの誤カウント源 |
+
+### 設定・文書面のコンポーネント
+
+| 面 | 所在 | 内容 |
+|---|---|---|
+| allowlist（正本） | `packages/framework/harness/claude/settings.json.example:10` | `"Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)"` |
+| allowlist（セルフインストール、tracked） | `.claude/settings.json:39` | 同上 |
+| プロトコル指示 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md:511` | CWD drift warning — 絶対形を推奨、サブシェル代替も明記 |
+| `--project-dir` 使用例 | 同 `:1209-1216` | `amadeus-finding.ts create-github-issue --project-dir <workspace-root>` |
+
+### テスト面 — 非対称がテストにも写っている
+
+| テスト | `covers:` 宣言 | ケース B 被覆 |
+|---|---|---|
+| `tests/integration/t144-harness-seam.cli.test.ts` | `function:harnessDir, function:resolveProjectDir, function:rulesSubdir, file:tools/amadeus-lib.ts`（`:4`） | **なし** |
+| `tests/unit/t202-hook-project-dir-worktree-marker.test.ts` | `function:resolveProjectDirFromHook, file:tools/amadeus-lib.ts`（`:5`） | hook 側のみ |
+| `tests/integration/t296-hook-launch-and-worktree-resolution.test.ts` | `hook:amadeus-mint-presence, function:resolveProjectDirFromHook, …, file:settings.json.example`（`:1`） | hook 側のみ |
+| `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` | opencode / cursor の marker 段（#1048） | hook 側のみ |
+
+**t144 の落とし穴**: test 5 のタイトルは `"resolveProjectDir CWD-marker rung accepts a .codex marker"` だが、body（`:134-146`）は `mkdirSync(join(project, ".codex"))` のみで `amadeus/` を作らない。これは**段4（既知 harness dir の存在）であって workspace marker ではない** — `resolveProjectDir` に workspace marker 段は存在しないため、タイトルの "CWD-marker rung" は段4を指す。t144 が pin するのは段1/2/3/4 のみであり、**ケース B（cwd=worktree marker 保有 × 本線絶対パス lib）を固定するテストは repo 全域で不在**。
+
+**t144 の前提条件**: t144 は `dist/claude/.claude/tools/amadeus-lib.ts` を読む（`:37-38` `const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools")`）。source-only 移行後 `dist/` は未追跡生成物のため、**このテストは `bun run build` 済みを前提とする**。ケース B の回帰テストを t144 に足す場合、この前提が引き継がれる。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、observed `b8e3e664f`）
 
 本節の file:line はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d` 時点。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 

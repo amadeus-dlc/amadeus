@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PWF-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用0件に同意するが軽微な留保1件。integration-test-instructions.md:38 のフルスイート統合証跡の引用が `cid:requirements-analysis:local-lcov-pre-push` となっており、memory 実測では正しい名前空間は `cid:code-generation:local-lcov-pre-push`(team.md:169)。§13 候補ではなく成果物側の引用名前空間誤記なので採用0件の結論は変えないが、ゲート報告時に是正されたい。",
+      "rationale": "record 実測（construction/build-and-test/ の7成果物+memory.md、および memory 層の cid 実在確認）に基づき、2候補とも既存 cid の適用実例で新規知識を含まないと確認した。候補1（perf/security の適用外宣言）: performance-test-instructions.md / security-test-instructions.md はいずれも「承認済み NFR と実在境界へ trace できない検査は機械追加しない」「生成しなかった検査は根拠付きで明記する」という cid:build-and-test:c4(project.md:252/351/377) および bt-proportional-selection(project.md:346)、c3(project.md:341/378)、c1-doctor-seam(project.md:31) の逐語適用であり、一般化可能な差分を含まない。候補2（PR CI 正判定＋無条件 READY）: build-test-results.md:28-30 と build-and-test-summary.md:20/27 は cid:code-generation:local-lcov-pre-push(team.md:169)、c1-coverage-single-owner(project.md:41/311)、c2-unconditional-ready-boundary(project.md:258) の適用で、後者は AC 外の未検証面という判定手続きまで既存則が規定済み。加えて第3の新規面がないかを独立走査した: (a) 閉包実証（t408 1本再実行＋audit 295行/md5 3点の前後不変）は既に CG 段の §13 で cid:code-generation:c3-pollution-closure-invariants(project.md:425、E-PWF-CGS13 GoA 2x2) として persist 済み、(b) fresh worktree の self-install bootstrap は cid:scope-definition:c3-worktree-selfinstall-bootstrap で既出、(c) t481 の in-process×integration 層配置は cid:code-generation:fs-tests-integration-first の既出2軸、(d) 逐語形ケース B の in-process Red 取得不能と t144 test 5b への pin 移譲は E-PWF-CGDEV 裁定として既に record 固定済み。いずれも B&T 段発の新規知識ではないため、採用0件（choice 1）を支持する。",
+      "submittedAt": "2026-08-07T12:40:00Z",
+      "receivedAt": "2026-08-07T12:29:19Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PWF-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用0件に同意するが、記録として1点付す: 「in-process 直 import では正本配置ゆえ到達不能な段（逐語形ケース B / rung 3）があり、その段の回帰 pin は shipped layout を subprocess で読む integration test（t144 test 5b）が担う」という分担は、既存 cid（fs-tests-integration-first は fs→層の軸、error-path-reach-lcov は偽経路 green の軸）と厳密には同一面ではない。ただしこれは CG 段の裁定 E-PWF-CGDEV に由来する CG 段の学びであり、B&T diary の候補にも挙がっていないため本ステージの §13 対象外と判断する。同型が再発した場合は次回 CG §13 または週次蒸留で再提案されるべき。",
+      "rationale": "record 実測（construction/build-and-test/ の7成果物 + memory.md、行数 235）で diary 候補2件を照合し、いずれも既存 cid の適用実例にとどまることを確認した。(1) perf/security の適用外宣言 = cid:build-and-test:c4（NFR 不在なら専用試験を新設せず、適用外の根拠と既存担保面を明記）と bt-proportional-selection の逐語適用。performance-test-instructions.md:5-16 / security-test-instructions.md:5-16 とも根拠・既存担保面を明記しており、名ばかり試験なし。両 cid は memory/project.md に実在（grep: c4=3件、bt-proportional-selection=1件）。(2) PR CI を coverage 正判定とし無条件 READY とした点 = local-lcov-pre-push（team.md 1件）+ c1-coverage-single-owner（project.md 2件）+ c2-unconditional-ready-boundary（project.md 1件）の適用実例。build-and-test-summary.md:27 は AC 外性の実文照合まで記載しており、既存則が要求する手順どおり。閉包実証（audit 295 行不変・md5 3点不変）は CG §13 で cid:code-generation:c3-pollution-closure-invariants として persist 済み（project.md:425）で重複。worktree bootstrap 注記も cid:scope-definition:c3-worktree-selfinstall-bootstrap で被覆済み。よって新規知識・追補に値する一般化可能な差分は本ステージ diary に存在しない。",
+      "submittedAt": "2026-08-07T12:30:00Z",
+      "receivedAt": "2026-08-07T12:29:28Z"
+    }
+  ],
+  "late": []
+}

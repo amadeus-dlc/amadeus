@@ -19,8 +19,11 @@ import {
   canonicalIdentity,
   diffModelMap,
   IMPL_ONLY_UPDATE_HINT,
+  LegacySpecError,
   parseTlaModelMap,
+  resolveSpecRoots,
   TLA_MODEL_MAP_SCHEMA_VERSION,
+  tlaModelMapPath,
   type ModelMap,
   type ModelMapAssetIdentity,
   type ModelMapEntry,
@@ -34,7 +37,17 @@ import {
   resolveAuxiliaryModules,
 } from "./tla-module-deps.ts";
 
-const MODEL_MAP_RELATIVE_PATH = "specs/tla/model-map.json";
+// The default-space canonical map location. Used ONLY as a failure-reporting
+// fallback label; the live map path is resolved per call through the shared
+// spec root resolver (BR-1).
+const DEFAULT_MODEL_MAP_RELATIVE_PATH = tlaModelMapPath();
+
+// The repo-relative model-map path for the workspace's active space, resolved
+// through the single spec-root path (E-1). Throws LegacySpecError when the
+// pre-relocation specs/tla layout still holds specs (fail-closed, BR-4).
+function modelMapRelativePath(projectRoot: string): string {
+  return tlaModelMapPath(resolveSpecRoots(projectRoot).space);
+}
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const DEFAULT_DEADLINE_MS = 9_000;
@@ -236,7 +249,7 @@ function canonicalRelativePath(path: string): boolean {
 }
 
 function displayPath(path: string): string {
-  return canonicalRelativePath(path) ? path : MODEL_MAP_RELATIVE_PATH;
+  return canonicalRelativePath(path) ? path : DEFAULT_MODEL_MAP_RELATIVE_PATH;
 }
 
 function rootContains(root: string, candidate: string): boolean {
@@ -346,7 +359,7 @@ function dependencies(
 function mapFailure(
   reason: "map-missing" | "map-malformed",
   findingReason: FindingReason = reason === "map-missing" ? "missing" : "unreadable",
-  mapRelativePath = MODEL_MAP_RELATIVE_PATH,
+  mapRelativePath = DEFAULT_MODEL_MAP_RELATIVE_PATH,
 ): CompletenessVerdict {
   return {
     pass: false,
@@ -373,7 +386,9 @@ async function loadMap(
   }
   try {
     const canonical = await deps.loadCanonical(projectRoot);
-    const parsed = canonical.parseTlaModelMap(outcome.content);
+    // mapRelativePath is the location actually read, so a map declaring
+    // assets outside its own space fails closed as map-malformed here.
+    const parsed = canonical.parseTlaModelMap(outcome.content, mapRelativePath);
     if (!parsed.ok) {
       return {
         ok: false,
@@ -496,6 +511,7 @@ function evaluateAssets(
 }
 
 function moduleDepsFailure(
+  tlaDir: string,
   moduleName: string,
   detail: string,
 ): { readonly ok: false; readonly error: ModuleDepsError } {
@@ -504,7 +520,7 @@ function moduleDepsFailure(
     error: {
       kind: "MODULE_DEPS",
       code: "MODULE_DEP_UNRESOLVED",
-      relativePath: `specs/tla/${moduleName}.tla`,
+      relativePath: `${tlaDir}/${moduleName}.tla`,
       detail,
     },
   };
@@ -529,21 +545,25 @@ function evaluateDeclarations(
     const declaredNames = (model.auxiliaries ?? []).map((aux) => basename(aux.path, ".tla"));
     if (declaredNames.some((name) => !modelAssets.moduleSources.has(name))) continue;
     const sources = new Map(modelAssets.moduleSources);
+    // Auxiliary modules live in the same canonical spec directory as the model
+    // (the map validator pins it), so the model's own declared path fixes the
+    // directory auxiliary reads resolve against.
+    const tlaDir = posix.dirname(model.model.path);
     const readModule = (name: string) => {
       const cached = sources.get(name);
       if (cached !== undefined) return { ok: true as const, value: cached };
-      const relativePath = `specs/tla/${name}.tla`;
+      const relativePath = `${tlaDir}/${name}.tla`;
       const outcome = deps.readFile(rootReal, relativePath, totalBytes);
       totalBytes += outcome.bytes;
       if (!outcome.content) {
-        return moduleDepsFailure(name, `${relativePath}: ${outcome.finding?.reason ?? "unreadable"}`);
+        return moduleDepsFailure(tlaDir, name, `${relativePath}: ${outcome.finding?.reason ?? "unreadable"}`);
       }
       try {
         const source = new TextDecoder("utf-8", { fatal: true }).decode(outcome.content);
         sources.set(name, source);
         return { ok: true as const, value: source };
       } catch {
-        return moduleDepsFailure(name, `${relativePath}: unreadable`);
+        return moduleDepsFailure(tlaDir, name, `${relativePath}: unreadable`);
       }
     };
     const resolved = resolveAuxiliaryModules(model.name, readModule);
@@ -694,10 +714,20 @@ async function checkModelCompletenessInternal(
 export async function checkModelCompleteness(
   options: CheckModelCompletenessOptions = {},
 ): Promise<CompletenessVerdict> {
-  return checkModelCompletenessInternal({
-    ...options,
-    mapRelativePath: MODEL_MAP_RELATIVE_PATH,
-  });
+  let mapRelativePath: string;
+  try {
+    mapRelativePath = modelMapRelativePath(resolve(options.projectRoot ?? process.cwd()));
+  } catch (err) {
+    // The legacy layout fails closed as a verdict, never a rejection: the
+    // check shape has no detail slot, so the finding names the errored
+    // space's canonical map path — the migration target the LegacySpecError
+    // message spells out for the update path below.
+    if (err instanceof LegacySpecError) {
+      return mapFailure("map-malformed", "unreadable", tlaModelMapPath(err.space));
+    }
+    throw err;
+  }
+  return checkModelCompletenessInternal({ ...options, mapRelativePath });
 }
 
 function canonicalRecord(
@@ -748,16 +778,22 @@ function canonicalRecord(
 function correctedAuxiliaries(
   declarations: DeclarationEvaluation,
   canonical: CanonicalModelMapModule,
+  map: ModelMap,
 ): ReadonlyMap<string, readonly ModelMapAssetIdentity[]> {
   const updates = new Map<string, readonly ModelMapAssetIdentity[]>();
   for (const drift of declarations.drifts) {
     const resolved = declarations.resolvedByModel.get(drift.modelName) ?? [];
     const sources = declarations.sourcesByModel.get(drift.modelName);
+    // Republished auxiliary paths keep the model's own canonical spec
+    // directory (the validator pins model and auxiliaries to one directory).
+    const model = map.models.find((entry) => entry.name === drift.modelName);
+    if (model === undefined) throw new Error(`drifted model missing from map: ${drift.modelName}`);
+    const tlaDir = posix.dirname(model.model.path);
     const auxiliaries = resolved.map((name) => {
       const source = sources?.get(name);
       if (source === undefined) throw new Error(`resolved module source missing: ${name}`);
       return {
-        path: `specs/tla/${name}.tla`,
+        path: `${tlaDir}/${name}.tla`,
         identity: canonical.canonicalIdentity(
           source,
           "amadeus.formal-verif.tla.module.v1",
@@ -796,7 +832,7 @@ function publishAtomic(
   const parent = dirname(mapPath);
   const tempPath = join(
     parent,
-    `.${MODEL_MAP_RELATIVE_PATH.split("/").at(-1)}.tmp-${process.pid}-${randomBytes(6).toString("hex")}`,
+    `.${mapRelativePath.split("/").at(-1)}.tmp-${process.pid}-${randomBytes(6).toString("hex")}`,
   );
   let fd: number | undefined;
   let renamed = false;
@@ -909,14 +945,14 @@ function performImplOnlyUpdate(
     return {
       ok: false,
       code: "INVALID_ARGUMENT",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: model-changed; --impl-only declares the model and configuration are unchanged - publish a model revision with updateModelMap and no flag`,
+      detail: `${mapRelativePath}: model-changed; --impl-only declares the model and configuration are unchanged - publish a model revision with updateModelMap and no flag`,
     };
   }
   if (declarations.findings.length > 0 || declarations.drifts.length > 0) {
     return {
       ok: false,
       code: "INVALID_ARGUMENT",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: declaration-drift; --impl-only cannot repair model declarations - publish the correction with updateModelMap and no flag`,
+      detail: `${mapRelativePath}: declaration-drift; --impl-only cannot repair model declarations - publish the correction with updateModelMap and no flag`,
     };
   }
   // Drift is decided by the check path's own machinery so the two cannot disagree.
@@ -937,7 +973,7 @@ function performImplOnlyUpdate(
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: impl-unchanged`,
+      detail: `${mapRelativePath}: impl-unchanged`,
     };
   }
   const refreshed = updatedEntries(
@@ -957,7 +993,7 @@ function performImplOnlyUpdate(
     return updateFailure(mapRelativePath, "publish-failed");
   }
   const changed = implOnlyChanges(registeredEntries(loaded.map), entries);
-  const map = MODEL_MAP_RELATIVE_PATH;
+  const map = mapRelativePath;
   return { ok: true, code: "IMPL_ONLY_UPDATED", declared: "impl-only", changed, map };
 }
 
@@ -981,7 +1017,7 @@ async function performModelMapUpdate(
   const assetFailure = assets.findings.find((finding) => finding.reason !== "changed");
   if (assetFailure) return updateFailure(assetFailure.path, assetFailure.reason);
   if (assets.models.some((model) => !model.modelIdentity || !model.cfgIdentity)) {
-    return updateFailure(MODEL_MAP_RELATIVE_PATH, "unreadable");
+    return updateFailure(mapRelativePath, "unreadable");
   }
   const declarations = evaluateDeclarations(
     loaded.rootReal,
@@ -1003,7 +1039,7 @@ async function performModelMapUpdate(
     return {
       ok: false,
       code: "MODEL_UNCHANGED",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: model-unchanged; ${IMPL_ONLY_UPDATE_HINT}`,
+      detail: `${mapRelativePath}: model-unchanged; ${IMPL_ONLY_UPDATE_HINT}`,
     };
   }
   const refreshed = updatedEntries(
@@ -1017,7 +1053,7 @@ async function performModelMapUpdate(
   }
   let auxiliaryUpdates: ReadonlyMap<string, readonly ModelMapAssetIdentity[]>;
   try {
-    auxiliaryUpdates = correctedAuxiliaries(declarations, loaded.canonical);
+    auxiliaryUpdates = correctedAuxiliaries(declarations, loaded.canonical, loaded.map);
   } catch {
     return updateFailure(mapRelativePath, "declaration-unresolved");
   }
@@ -1039,7 +1075,7 @@ async function performModelMapUpdate(
   return {
     ok: true,
     entries: refreshed.entries?.length ?? 0,
-    map: MODEL_MAP_RELATIVE_PATH,
+    map: mapRelativePath,
   };
 }
 
@@ -1066,7 +1102,7 @@ async function updateModelMapInternal(options: InternalOptions): Promise<UpdateM
     return {
       ok: false,
       code: "LOCKED",
-      detail: `${MODEL_MAP_RELATIVE_PATH}: locked`,
+      detail: `${options.mapRelativePath}: locked`,
     };
   }
   try {
@@ -1085,10 +1121,18 @@ async function updateModelMapInternal(options: InternalOptions): Promise<UpdateM
 export async function updateModelMap(
   options: UpdateModelMapOptions = {},
 ): Promise<UpdateModelMapResult> {
-  return updateModelMapInternal({
-    ...options,
-    mapRelativePath: MODEL_MAP_RELATIVE_PATH,
-  });
+  let mapRelativePath: string;
+  try {
+    mapRelativePath = modelMapRelativePath(resolve(options.projectRoot ?? process.cwd()));
+  } catch (err) {
+    // Fail closed as a typed failure (never a rejected promise); the detail
+    // carries the resolver's migration instructions verbatim.
+    if (err instanceof LegacySpecError) {
+      return { ok: false, code: "MAP_MALFORMED", detail: err.message };
+    }
+    throw err;
+  }
+  return updateModelMapInternal({ ...options, mapRelativePath });
 }
 
 function flagValue(argv: readonly string[], name: string): string | undefined {

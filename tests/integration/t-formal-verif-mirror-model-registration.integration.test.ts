@@ -22,7 +22,7 @@ const MIRROR_IMPLEMENTATION = [
 ];
 
 function repositoryModelMap(): ModelMap {
-  const bytes = readFileSync(join(REPOSITORY_ROOT, "specs/tla/model-map.json"));
+  const bytes = readFileSync(join(REPOSITORY_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"));
   const parsed = parseTlaModelMap(new Uint8Array(bytes));
   if (!parsed.ok) throw new Error(parsed.error.detail);
   return parsed.value;
@@ -65,8 +65,8 @@ describe("MirrorLifecycle model registration", () => {
   test("binds the MirrorLifecycle model and cfg identities to the AsIntended variant", () => {
     const mirror = findModelMapModel(repositoryModelMap(), "MirrorLifecycle");
     if (!mirror) throw new Error("MirrorLifecycle must be registered");
-    expect(mirror.model.path).toBe("specs/tla/MirrorLifecycle.tla");
-    expect(mirror.cfg.path).toBe("specs/tla/MirrorLifecycle.cfg");
+    expect(mirror.model.path).toBe("amadeus/spaces/default/specs/tla/MirrorLifecycle.tla");
+    expect(mirror.cfg.path).toBe("amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg");
     for (const [asset, domain] of [
       [mirror.model, "amadeus.formal-verif.tla.module.v1"],
       [mirror.cfg, "amadeus.formal-verif.tla.cfg.v1"],
@@ -82,7 +82,7 @@ describe("MirrorLifecycle model registration", () => {
     expect(mirror.auxiliaries).toHaveLength(1);
     const core = mirror.auxiliaries?.[0];
     if (!core) throw new Error("MirrorLifecycleCore must be declared");
-    expect(core.path).toBe("specs/tla/MirrorLifecycleCore.tla");
+    expect(core.path).toBe("amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla");
     const source = readFileSync(join(REPOSITORY_ROOT, core.path), "utf8");
     expect(core.identity).toBe(
       canonicalIdentity(source, "amadeus.formal-verif.tla.module.v1").sha256,

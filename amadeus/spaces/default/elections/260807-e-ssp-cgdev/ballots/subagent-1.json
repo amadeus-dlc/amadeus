@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SSP-CGDEV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "テスト名そのものが件数語を持つ点を改訂範囲に含めること。tests/integration/hook-dispatcher.integration.test.ts:107 のテスト名は逐語 \"settings route exactly 11 hook references through the fixed 10-slug table\" で、KNOWN_SLUGS・:112 の assert を導出形へ改めても、この名前は手動更新しない限り陳腐化する(cid:code-generation:count-comment-sync-on-catalog-change の件数語クラス)。同一変更で count-free な名前へ改めるか、導出値から件数を組む。あわせて export の範囲は HOOK_PATHS のみに限り、parseHookSlug/resolveHookPath 等の内部ヘルパーは非 export のまま維持すること — 目的は slug 集合の canonical 化であって dispatcher 内部 API の公開ではない。",
+  "rationale": "3重ピンの実在を許可範囲の read-only 実測で確認した。(1) tests/integration/hook-dispatcher.integration.test.ts:34-45 の KNOWN_SLUGS が mint-presence〜stop の10要素を as const でハードコード、(2) 同:112 expect(commands).toHaveLength(11) と :114 の mint-presence 2件、:115-119 の KNOWN_SLUGS 一致 assert、(3) 同:68-70 writeCompleteHookTree が KNOWN_SLUGS を回して hook ツリーを生成し、:124/:135/:166/:187/:202/:238 の6テストが依存。この KNOWN_SLUGS は packages/framework/harness/claude/hooks/amadeus-dispatch.ts:4-15 の HOOK_PATHS(同一10キー)の手書き複製であり、construction フェーズガードレール『複数箇所で消費されるリスト・コマンド列・定数を手書きで複製しない — canonical な1定義から導出するか、ディスクから discover する』に真正面から該当する。したがって choice 1 は既決ガードレールへの整合であって新しい設計判断ではない。実現可能性も確認した: HOOK_PATHS は :4 で非 export(export は :94 の main のみ)だが、モジュール末尾が `if (import.meta.main) process.exit(await main());` のガード付きであるため、テスト側から static import してもトップレベルで main が実行されない — export 追加は挙動不変で、テストが HOOK_PATHS から slug 集合を導出する経路は成立する。他案の評価: choice 2(数値の点更新 10→11 / 11→12)はハードコードのクラスを温存し次のスロット追加で同じ実装前停止を再発させるため、今回の停止コスト(注入実測1セット+選挙1回)を将来へ繰り越すだけで採らない — 受容度 6(不本意だが支持しうる。本 Bolt は着地するため)。choice 3(Q1 裁定の反転・FR-A1 撤回)は既決裁定を蒸し返す点と live に形式混在を持ち込む点の二重の後退で、既決ノルムを再議しない原則にも反する — 受容度 7。なお builder が注入→赤(9 pass → 3 pass/6 fail)→復元→残渣ゼロを1セットで実施し作業ツリーが clean であること、波及が同1ファイルに限局し他の settings/hook 系テストが注入状態でも green である点は、choice 1 の改訂範囲が当該1ファイルに閉じることの裏付けとして受理する(並行 builder 作業中のためテスト再実行は行っていない — この点は builder 報告への依拠であり自身の一次実測ではない)。",
+  "submittedAt": "2026-08-07T00:00:00Z",
+  "receivedAt": "2026-08-07T14:22:47Z"
+}

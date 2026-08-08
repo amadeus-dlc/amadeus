@@ -76,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 90;
+export const EXPECTED_CANONICAL_COUNT = 91;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -222,6 +222,15 @@ export const REGISTERED_EVENTS = [
     category: "grant",
     requiredAttributes: ["Intent Uuid", "Transaction Id", "Transaction Digest", "Transaction"],
     optionalAttributes: ["Principal", "Decider", "Actor", "Basis"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.intent_autonomy.human_required",
+    auditEvent: "INTENT_AUTONOMY_HUMAN_REQUIRED",
+    durability: "canonical",
+    category: "grant",
+    requiredAttributes: ["Interaction Kind", "Stage slug", "Reason", "Mode"],
+    optionalAttributes: [],
     schemaVersion: 1,
   },
   {
@@ -531,7 +540,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage", "Details"],
-    optionalAttributes: [],
+    // u3-question-route-observability (FR-3): the resolution-route attributes
+    // are OPTIONAL so pre-u3 rows (and any legacy emitter) stay valid; readers
+    // treat their absence as "route unknown (pre-u3)".
+    optionalAttributes: ["Resolution Route", "Decision Id"],
     schemaVersion: 1,
   },
   {

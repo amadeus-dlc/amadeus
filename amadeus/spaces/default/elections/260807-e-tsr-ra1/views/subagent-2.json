@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TSR-RA1",
+  "voter": "subagent-2",
+  "question": "intent 260807-tla-specs-relocation(Issue #2398: specs/tla/ を amadeus/spaces/<space>/specs/tla/ へ移設)の requirements-analysis 明確化質問4問(Q1〜Q4)の一括裁定。正本は record の inception/requirements-analysis/requirements-analysis-questions.md(全文を実読すること)。conductor 提案は各問の agent recommendation をそのまま採用: Q1=A(spec 解決を active-space カーソル連動にする — watch 基底・model-map ロード・センサー・loader のすべてを amadeus/spaces/<activeSpace>/specs/tla/ に解決)/ Q2=A(specs/tla-evidence の正準 store root を amadeus/spaces/<space>/specs/tla-evidence/ へ同移設し、watch 除外は新 root 基準で維持)/ Q3=A(watch 基底を amadeus/spaces/<activeSpace>/specs/ と所有ルートで明示宣言し、glob は tla/**)/ Q4=A(旧 specs/tla/ を spec root 解決の1経路で検出したら移設手順付きエラーで fail-closed。二重読みなし・互換シムなし)。各推奨の根拠と file:line は questions ファイル本文にある。既決事項(移設先は amadeus/spaces/<space>/specs/tla/、モデル意味論・TLC 実行契約・verdict 語彙は不変、無音の二重読み禁止、後方互換シム不設置、digest 再ピン込み、歴史記録の書換禁止)は質問対象外であり、これらと矛盾する選択肢を選ばないこと。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部の問で別案が正しい",
+      "description": "1問以上で推奨が誤り、または既決境界(Issue 完了条件・org.md Forbidden)と矛盾する。留保にどの問でどの選択肢が正しいか、その file:line 根拠とともに具体的に記すこと。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "質問自体に欠落・誤りがある",
+      "description": "選択肢の前提となる機構引用が実在しない、選択肢集合が網羅的でない、または既決事項を質問にしてしまっている。留保に具体を記すこと。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "4問すべて推奨どおり採用",
+      "description": "Q1=A / Q2=A / Q3=A / Q4=A。各問の推奨根拠を questions ファイルと実コードで検証したうえで、いずれも既決境界と矛盾せず実装可能と判断する場合。"
+    }
+  ]
+}

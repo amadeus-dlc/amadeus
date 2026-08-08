@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-TSR-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用3件はいずれも既存 cid への追補として persist し、新規 cid を立てない — 特に c6 は project.md の既存 cid:code-generation:cg-watch-root-separation(『watch/監視系の glob 解決基底は監視対象を所有するルートで明示宣言し、状態ファイルの所有ルート(hostRoot)と混同しない』)と同一機序であり、独立 cid 化は同族規範の分裂を招く。c4 は消費者棚卸しファミリ(cid:application-design:dual-key-consumer-inventory / cid:code-generation:c2-env-isolation-seam-inventory)へ『セグメント結合形はリテラル grep をすり抜ける』の1行追補。c2 は plugin overlay により外部 CLI 生成物が既存ステージの produces へ載る場合の段序知識として persist する。",
+  "rationale": "候補7件を独立実測した。(1) 候補列挙は diary(construction/code-generation/memory.md、Interpretations 2件・Deviations 4件・Tradeoffs 1件)と surface CLI 出力が完全一致。(2) c4: base 5f2ad9195 の node-ci-model-check-port.ts は `const modelRoot = join(this.workspaceRoot, \"specs\", \"tla\");`(実測 verbatim)であり、現行は resolveSpecRoots(this.workspaceRoot).tlaDir。リテラル \"specs/tla\" grep では捕捉不能なセグメント結合形が実在し、推奨理由は実コードに接地している。(3) c6: base の amadeus-plugin-activation.ts には specRootForHost のみが存在し(:100)、:424 で join(specRoot, \"specs\", \"tla\") として project root 意味で流用されていた。現行は projectRootForHost(:110)を新設し specRootForHost(:118-119)がそれを経由、amadeus-advisory-declaration.ts:318/320 が projectRootForHost を消費。単一 helper の2意味流用という機序は実在。(4) c2: plugins/pr-convergence/stages/pr-convergence.md が『Installing the plugin also overlays pr-convergence-report onto the code-generation stage's produces』と明記し、outputs は `<record>/construction/<unit>/code-generation/pr-convergence-report.md`。plan の Step 13 と検収基準に段序が明示され、当該 report が実在(5663B ではなく 379B、00:00 生成)。段序依存は実在し一般化可能。(5) 不採用4件も妥当: c1 は stage-protocol.md:131/135 が既に semi/full の五段ラダー(confirmed-policy / norm / history / solo-election / agent-recommendation)を canonical 規定しており新規性なし。c3(model-map identity 再ピン)・c5(validator pin 形状)・c7(2 wave 分割)はいずれも本 intent 固有の実測結果・設計判断・作業順で一般化価値が乏しい。diary 未収載の学習は発見できなかった。",
+  "submittedAt": "2026-08-07T15:21:00Z",
+  "receivedAt": "2026-08-07T15:20:49Z"
+}

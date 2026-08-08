@@ -66,6 +66,7 @@ import {
 } from "node:fs";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupWorktreeFixture,
@@ -144,18 +145,8 @@ const auditText = (p: string): string => {
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 };
 
-interface AuditRecord {
-  event: string | null;
-  heading: string;
-  fields?: Record<string, string>;
-}
-
 /** Parse the merged JSONL shards into records (blank lines skipped). */
-const auditRecords = (p: string): AuditRecord[] =>
-  auditText(p)
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+const auditRecords = (p: string): NormalizedAuditRecord[] => auditRowsFrom(auditText(p));
 
 /**
  * Probe whether this platform enforces read-only directory permissions —

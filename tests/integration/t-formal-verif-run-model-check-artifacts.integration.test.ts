@@ -57,13 +57,13 @@ describe("run-model-check artifact publisher", () => {
       startedAt: "2026-07-24T00:00:00.000Z",
       finishedAt: "2026-07-24T00:00:01.000Z",
       advisory: {
-        target: "specs/tla",
+        target: "amadeus/spaces/default/specs/tla",
         specIdentity: `sha256:${"a".repeat(64)}`,
         instance: "019fc698-ba1f-7000-8000-000000000001",
       },
       sourceProvenance: {
-        modelPath: "specs/tla/FormalElection.tla",
-        cfgPath: "specs/tla/FormalElection.cfg",
+        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
         moduleIdentity: "registered-module",
         cfgIdentity: "registered-cfg",
         moduleSha256: "b".repeat(64),
@@ -76,11 +76,11 @@ describe("run-model-check artifact publisher", () => {
     const manifest = JSON.parse(readFileSync(join(out, "manifest.json"), "utf8")) as ModelCheckManifest;
     expect(manifest.expectedArtifacts).toContain("completion-marker.json");
     expect(manifest.advisory).toEqual({
-      target: "specs/tla",
+      target: "amadeus/spaces/default/specs/tla",
       specIdentity: `sha256:${"a".repeat(64)}`,
       instance: "019fc698-ba1f-7000-8000-000000000001",
     });
-    expect(manifest.sourceProvenance?.modelPath).toBe("specs/tla/FormalElection.tla");
+    expect(manifest.sourceProvenance?.modelPath).toBe("amadeus/spaces/default/specs/tla/FormalElection.tla");
     for (const artifact of manifest.artifacts) {
       const bytes = readFileSync(join(out, artifact.path));
       expect(bytes.byteLength).toBe(artifact.bytes);

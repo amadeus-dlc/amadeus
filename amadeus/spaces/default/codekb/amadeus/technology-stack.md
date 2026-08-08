@@ -1,10 +1,107 @@
 # 技術スタック
 
+## テスト実行プロファイルと dist 依存（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+本 intent に関わる技術前提の変更はない。既存スタック上の2点のみ関連する。
+
+**実行プロファイル**: `tests/lib/run-tests-args.ts:95-100` の `--ci` は `runSmoke` / `runUnit` / `runIntegration` を立て、e2e と perf は含まない。CI 上の e2e は `.github/workflows/ci.yml:252` の1本のみ。
+
+**dist 依存**: `tests/harness/audit-records.ts:18` が `dist/claude/.claude/tools/amadeus-audit.ts` を import する。source-only 境界下で `dist/` は未追跡のローカル生成物であるため、このハーネスを使うテストは `bun run build` 済みを前提とする。e2e 層への採用可否はこの前提の波及を伴う。
+
 ## 260807-stage-perf-report（現在、observed `4a3da7d62`）
 
 **本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）に技術スタックの変更はない。#2405 が追加するのは Bun / TypeScript / ESM の既存規約に載る core tool 1本であり、新しいランタイム・言語・外部ライブラリを持ち込まない。パーセンタイル計算は既存の `tests/lib/percentile.ts:12` `nearestRankP95` の**意味論を写す**方針であり（`tests/` 配下のため core から import 不可）、依存の追加を伴わない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
 
-## fail-closed ガードの回復経路（履歴: 260807-failclosed-recovery-path、2026-08-07、observed `b8e3e664f`）
+## ハーネス hook seam と settings 面の技術前提（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
+
+測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。前 intent からの技術スタック変更はなく、本節は #2297/#2303 の患部に関わる**既存前提の切り出し**のみを記録する。
+
+### hook 実行基盤
+
+| 要素 | 前提 |
+|---|---|
+| 実行系 | `bun` 直接実行。live 設定の全 hook が `bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-dispatch.ts" <slug>` 形 |
+| 起動形式 | dispatcher が `[process.execPath, hookPath, ...args]` で spawn（`amadeus-dispatch.ts:68-92`）。`env: process.env`、stdin/stdout/stderr すべて `inherit` |
+| シグナル | SIGINT / SIGHUP / SIGTERM を子へ転送 |
+| stdin 契約 | 素通し。フック側 `readHookStdin()` は dispatcher 経由と直接パス形で挙動が同一 |
+
+⇒ 配線方式（dispatcher 形 / 直接パス形）の選択は**ランタイム挙動に差を生まない**。差は形式の一貫性とガード述語の形にのみ現れる。
+
+### settings の3面と source-only 境界
+
+| 面 | tracked | 生成タイミング |
+|---|---|---|
+| `packages/framework/harness/claude/settings.json.example`（正本） | tracked | 手書き正本 |
+| `.claude/settings.json.example`（投影） | **untracked** | `bun run build` の生成物（source-only 境界） |
+| `.claude/settings.json`（live） | tracked、非 gitignore | 手書き |
+
+`.claude/**` は `.gitignore` で ignore されるが、live 設定は明示的に tracked である（`git ls-files --error-unmatch .claude/settings.json` exit=0）。⇒ **fresh clone では正本と live は存在するが投影は存在しない**。この非対称は drift ガードの ground truth 選択に直接効く（`architecture.md` §ground truth 選択）。
+
+### ハーネス別 subagent-start seam の技術的可用性
+
+| ハーネス | seam | payload 形状 |
+|---|---|---|
+| Claude Code | `PreToolUse`（全ツールで発火、matcher で絞る） | tool envelope。`tool_name` 実在、型・prompt は `tool_input` 内 |
+| kimi | 専用 `SubagentStart` イベント | トップレベル `agent_type` / `prompt`、**`tool_name` キー無し** |
+| Codex / Cursor / OpenCode / Kiro / Kiro IDE | なし | — |
+
+kimi の配線は TOML スニペット `packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml:59-60`（`event = "SubagentStart"` → `amadeus-kimi-adapter.ts role-start`）。payload は `amadeus-kimi-lib.ts:732-741` が `JSON.stringify` で構築する3キー固定形。
+
+### テスト実行面の技術前提（語彙変更の波及先）
+
+`AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude`（`tests/harness/fixtures.ts:57`）。patient のテスト3ファイルは import 元が異なる:
+
+| 駆動形 | import 元 | 再生成の要否 |
+|---|---|---|
+| in-process 直 import | `packages/framework/core/tools/amadeus-lib.ts`（正本） | 不要 |
+| 生成物 import | `dist/claude/.claude/tools/amadeus-lib.ts` | **`bun run build` 必須** |
+| フック spawn | `join(AMADEUS_SRC, "hooks", "amadeus-log-subagent-start.ts")` | **`bun run build` 必須** |
+
+⇒ 語彙修正の検証は正本編集だけでは閉じず、生成物再生成とセットで走らせる必要がある。
+
+## worktree・生成物・環境変数の前提（260807-projectdir-worktree-fix、履歴、2026-08-07、observed `4a3da7d62`）
+
+本節の測定 ref はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（12 commits）。全数列挙は `re-scans/260807-projectdir-worktree-fix.md` を正本とする。
+
+### git worktree と harness ツリーの関係
+
+worktree セッションは**自前の `amadeus/` record ツリー**を持つが、**harness スクリプトは起点 checkout と共有する**（`amadeus-lib.ts:274-282` のコメントが逐語で説明）。この非対称が project-dir 解決の全問題の土台である。
+
+### source-only 境界の帰結
+
+| 対象 | 追跡状態 | 実測 |
+|---|---|---|
+| `.claude/**` | `.gitignore:24` で ignore | — |
+| `.claude/` 配下の tracked ファイル | 3件のみ | `CLAUDE.md` / `hooks/amadeus-dispatch.ts` / `settings.json` |
+| `.claude/tools/` | **完全に未追跡** | `git ls-files .claude/tools` → **0件** |
+| `dist/` | 未追跡生成物 | `bun run build` で再生成 |
+
+**技術的帰結**: fresh worktree は `bun run build` を通すまで `.claude/tools/` を持たない。したがって `hasWorkspaceMarker`（`amadeus/` かつ `<harness>/tools/` の両方がディレクトリ）は **build 前 worktree で構造的に偽**である。marker ベースの解決・ガードはこの窓を検出できない。
+
+この構造は `cid:scope-definition:c3-worktree-selfinstall-bootstrap`（新規 worktree はセルフインストール面を欠くため build まで framework CLI が起動しない）と同根であり、本件はその**解決ロジック側での顕在化**である。
+
+### 環境変数 `CLAUDE_PROJECT_DIR`
+
+- **性質**: 起動ディレクトリ（起点 checkout）に固定され、**セッションが worktree へ入っても追従しない**。根拠は `amadeus-lib.ts:306-309` の doc-comment 逐語 `that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree`（#1482）。
+- **CLI 側での扱い**: 段2 で**無条件に勝つ**（`:231`）。したがって env が設定されている限り、worktree 内の正しい lib を読んでいても解決は本線へ倒れる（ケース C+env）。
+- **hook 側での扱い**: marker 付き payload cwd（段1）に**負ける**（`:317` → `:320`）。
+
+### 起動形の技術的トレードオフ
+
+| 形 | 例 | 長所 | 短所 |
+|---|---|---|---|
+| 相対形 | `bun .claude/tools/amadeus-state.ts …` | cwd 追従 = worktree で worktree の lib を読む | `cd` 後に "Module not found"（`stage-protocol.md:511`） |
+| 絶対形 | `bun $CLAUDE_PROJECT_DIR/.claude/tools/…` | cwd 非依存 | **本線の lib を読み、ケース B を生む** |
+| サブシェル | `(cd subdir && …)` | 相対形の長所を保ったまま CWD drift を回避 | — |
+
+実分布（observed）: 正本 `packages/` は相対形 **31** / 絶対形 **1**（唯一の絶対形は allowlist エントリ自身）。セルフインストール面 `.claude/skills/` は相対形 **113** / 絶対形 **0**。
+
+### 診断ツールの前提
+
+`resolveProjectDir` は解決失敗を表現できない（返り値は常に `string`、警告・例外ゼロ）。したがって書き先の不一致は**実行時に一切のシグナルを出さない**。
+
+
+## fail-closed ガードの回復経路（260807-failclosed-recovery-path、履歴、2026-08-07、observed `b8e3e664f`）
 
 本節の測定 ref はすべて observed `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`。差分 base は `7060956c5617125dd2f4e284957aa180cb306484`（祖先性 exit 0、距離 76 commits / 1223 files）。全数列挙は `re-scans/260807-failclosed-recovery-path.md` を正本とする。
 
