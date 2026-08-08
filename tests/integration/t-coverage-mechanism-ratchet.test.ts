@@ -94,6 +94,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
   // when their segment stopped saying cli. Same predicate, same honesty ratchet:
   // a new spawning test still cannot land without a human edit here.
   const EXPECTED_NONE_TO_CLI = [
+    "integration/t-bare-state-env-isolation.integration.test.ts",
     "integration/t485-subagent-model-guard.integration.test.ts",
     "integration/t481-autonomy-canonical-state-write.integration.test.ts",
     "integration/t482-autonomy-refusal-event.integration.test.ts",
