@@ -3697,7 +3697,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t501-stage-progress-dollar-escape.test.ts",
+          "file": "tests/unit/t508-stage-progress-dollar-escape.test.ts",
           "mechanism": "none"
         }
       ],

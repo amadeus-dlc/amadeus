@@ -1,7 +1,7 @@
 // covers: function:replaceStageProgressSection
 // size: small
 //
-// t501 — Issue #2580 regression pin for replaceStageProgressSection.
+// t508 — Issue #2580 regression pin for replaceStageProgressSection.
 //
 // The function spliced the rebuilt `## Stage Progress` body via
 // `content.replace(STAGE_PROGRESS_SECTION_RE, \`## Stage Progress\n...\n${body}\`)`
@@ -39,7 +39,7 @@ const DOLLAR_BODIES: Array<[label: string, body: string]> = [
   ["trailing lone $", "- [x] stage-a — EXECUTE amount$"],
 ];
 
-describe("t501 replaceStageProgressSection stores $-special bodies verbatim (Issue #2580)", () => {
+describe("t508 replaceStageProgressSection stores $-special bodies verbatim (Issue #2580)", () => {
   for (const [label, body] of DOLLAR_BODIES) {
     test(label, () => {
       const out = replaceStageProgressSection(BASE_CONTENT, body);
