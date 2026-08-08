@@ -147,22 +147,28 @@ function bornProject(): string {
   return proj;
 }
 
-function recordDir(proj: string): string {
-  const intents = join(proj, "amadeus", "spaces", "default", "intents");
-  const active = readFileSync(join(intents, "active-intent"), "utf8").trim();
-  return join(intents, active);
+function intentsDir(proj: string): string {
+  return join(proj, "amadeus", "spaces", "default", "intents");
 }
 
-function auditRows(proj: string): ReturnType<typeof parseAuditRecords> {
-  const dir = join(recordDir(proj), "audit");
+function activeRecordName(proj: string): string {
+  return readFileSync(join(intentsDir(proj), "active-intent"), "utf8").trim();
+}
+
+function recordDir(proj: string, record?: string): string {
+  return join(intentsDir(proj), record ?? activeRecordName(proj));
+}
+
+function auditRows(proj: string, record?: string): ReturnType<typeof parseAuditRecords> {
+  const dir = join(recordDir(proj, record), "audit");
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl") || f.endsWith(".md"))
     .flatMap((f) => parseAuditRecords(readFileSync(join(dir, f), "utf8")));
 }
 
-function autonomyRows(proj: string): ReturnType<typeof parseAuditRecords> {
-  return auditRows(proj).filter((r) => r.event === "AUTONOMY_MODE_SET");
+function autonomyRows(proj: string, record?: string): ReturnType<typeof parseAuditRecords> {
+  return auditRows(proj, record).filter((r) => r.event === "AUTONOMY_MODE_SET");
 }
 
 describe("t495 a generic `set` of a projection-owned field is auditable (#2483)", () => {
@@ -221,6 +227,46 @@ describe("t495 a generic `set` of a projection-owned field is auditable (#2483)"
       "- **Construction Autonomy Mode**: gated",
     );
     expect(autonomyRows(projectDir).length).toBe(before + 1);
+  });
+
+  // The whole point of the row is attribution: it says WHICH record had its
+  // projection written out of band. `set` honours --intent/--space (Issue
+  // #1199) and pins the state write AND the lock to the selected record, so an
+  // audit row that lands on the ACTIVE intent's shard instead records the write
+  // against a record that never changed — and leaves the record that DID change
+  // exactly as unaudited as before this fix.
+  test("`set --intent <non-active>` audits the SELECTED record, not the active one", () => {
+    projectDir = bornProject();
+    const first = activeRecordName(projectDir);
+    // A second birth takes the cursor, so `first` is now the non-active record.
+    const second = spawnSync(
+      BUN,
+      [
+        join(projectDir, ".claude", "tools", "amadeus-utility.ts"),
+        "intent-birth",
+        "--scope",
+        "feature",
+        "--project-dir",
+        projectDir,
+      ],
+      { cwd: projectDir, encoding: "utf8", env: { ...process.env } },
+    );
+    expect(second.status ?? -1).toBe(0);
+    const active = activeRecordName(projectDir);
+    expect(active).not.toBe(first);
+
+    const beforeSelected = autonomyRows(projectDir, first).length;
+    const beforeActive = autonomyRows(projectDir, active).length;
+
+    handleSet(["--intent", first, "Construction Autonomy Mode=gated"]);
+
+    // The state write lands on the selected record...
+    expect(readFileSync(join(recordDir(projectDir, first), "amadeus-state.md"), "utf8")).toContain(
+      "- **Construction Autonomy Mode**: gated",
+    );
+    // ...and so does its audit row.
+    expect(autonomyRows(projectDir, first).length).toBe(beforeSelected + 1);
+    expect(autonomyRows(projectDir, active).length).toBe(beforeActive);
   });
 
   test("a field outside the projection set writes no autonomy audit row", () => {

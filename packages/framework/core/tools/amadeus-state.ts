@@ -1113,12 +1113,9 @@ export function handleSet(args: string[]): void {
   // sentinel lock bucket (byte-identical AND lock-bucket-identical to before);
   // a given selector pins state+lock to that record (mirrors handleFork).
   const resolvedIntent = resolveSelectedIntent(pd, intent, space);
-  // Publish the lock context so a mid-transaction error() routes ERROR_LOGGED to
-  // the SAME per-intent shard we lock (lock==write; sentinel when unselected).
-  // Cleared in the finally below so an in-process re-entry can't inherit it.
-  lockIntent = resolvedIntent;
-  lockSpace = space;
-  try {
+  // The locked transaction, named rather than inlined so the selector branch
+  // below can run it under a bound audit target without duplicating the body.
+  function runLockedSet(): void {
   // C2b lost-update safety: hold the audit lock across read→decide→write so
   // two concurrent `set`s of different fields can't clobber each other (A reads
   // V1, B reads V1, A writes V2, B writes V1.5 → A's field lost). The +1/-1
@@ -1201,10 +1198,39 @@ export function handleSet(args: string[]): void {
   }
   console.log(JSON.stringify({ updated: true, fields: rest.length }));
   }, resolvedIntent, space);
-  } finally {
-    lockIntent = undefined;
-    lockSpace = undefined;
   }
+
+  // Unselected: the pre-existing shape exactly — the sentinel lock bucket, the
+  // active cursor's state file, and an unbound audit target that resolves to the
+  // active intent's shard. Publish the lock context so a mid-transaction error()
+  // routes ERROR_LOGGED to the SAME bucket we lock (lock==write). Cleared in the
+  // finally so an in-process re-entry can't inherit it.
+  if (resolvedIntent === undefined) {
+    lockIntent = resolvedIntent;
+    lockSpace = space;
+    try {
+      runLockedSet();
+    } finally {
+      lockIntent = undefined;
+      lockSpace = undefined;
+    }
+    return;
+  }
+  // Selected: bind the audit target to the record being written (#2483).
+  // emitAudit resolves its shard from stateOperationTarget, which handleSet —
+  // unlike every handler routed through runSelectedIntentOperation — never
+  // published. A `set --intent <other>` therefore wrote the other record's state
+  // file while its AUTONOMY_MODE_SET row landed on the ACTIVE intent's shard:
+  // the row accused a record that never changed, and the record that DID change
+  // stayed as unaudited as before. withStateOperationTarget also carries the
+  // lock context (and restores the previous one), so the manual pair above is
+  // not repeated here. The space is normalised the way auditLockIdentity
+  // normalises it, so the emit re-enters the lock this call already holds
+  // instead of taking a second acquire against a different bucket.
+  withStateOperationTarget(
+    { intent: resolvedIntent, space: space ?? activeSpace(pd) },
+    runLockedSet,
+  );
 }
 
 export function handleMirrorBoundary(args: string[]): void {
