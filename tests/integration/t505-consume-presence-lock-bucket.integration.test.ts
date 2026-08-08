@@ -1,6 +1,6 @@
 // covers: function:consumePresenceReservation, file:tools/amadeus-presence-reservation.ts
 //
-// t504 — consumePresenceReservation must run its read-modify-write of the
+// t505 — consumePresenceReservation must run its read-modify-write of the
 // reservation marker under the SAME audit-lock bucket as the only other writer
 // of that marker (issue #2590).
 //
@@ -59,7 +59,7 @@ import {
 
 // Isolate this run's audit-lock dirs (#831): the planted "foreign holder" dirs
 // below must never alias a concurrent run's real lock in the shared tmpdir.
-const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t504-locks-"));
+const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t505-locks-"));
 process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
 
 // The default acquire budget is 50 x 100ms, so a blocked consume takes ~5s.
@@ -125,7 +125,7 @@ afterAll(() => {
   }
 });
 
-describe("t504 consume takes the owner-intent audit-lock bucket (#2590)", () => {
+describe("t505 consume takes the owner-intent audit-lock bucket (#2590)", () => {
   test(
     "a foreign holder of the owner-intent bucket blocks the consume write",
     () => {
@@ -179,7 +179,7 @@ describe("t504 consume takes the owner-intent audit-lock bucket (#2590)", () => 
 // pre-lock read that only resolved the lock identity. These cases pin that each
 // rejection still fires from in there, and that a rejected consume leaves the
 // marker exactly as it found it.
-describe("t504 consume rejects inside the locked section", () => {
+describe("t505 consume rejects inside the locked section", () => {
   test("a foreign session is refused and the marker is left minted", () => {
     const fixture = mintedReservation();
     expect(() =>
