@@ -22,7 +22,7 @@
 //   AMADEUS_SRC    = <REPO_ROOT>/dist/claude/.claude
 //   FIXTURES_DIR = <REPO_ROOT>/tests/fixtures
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import {
   copyFileSync,
   cpSync,
@@ -419,6 +419,42 @@ export function sedReplaceInFile(
 ): void {
   const text = readFileSync(file, "utf8");
   writeFileSync(file, text.replace(pattern, replacement));
+}
+
+/**
+ * Run `git <args>` in `cwd`, returning the raw spawnSync result on success.
+ * On failure, emit a diagnostic block to stderr before throwing — instrumentation
+ * for issue #2382: t206's `git commit` intermittently fails under full-suite
+ * parallel load with `unable to create temporary file` (ENOENT) + `failed to
+ * write commit object`, and a 2,404-trial repro harness could not pin the
+ * mechanism (a bare directory-deletion theory was structurally ruled out). The
+ * diagnostic block captures cwd/objects-dir existence, TMPDIR, and a fresh
+ * `git rev-parse --git-dir` probe so the next spontaneous occurrence in CI
+ * carries enough evidence to resolve the mechanism, rather than just the bare
+ * git stderr.
+ */
+export function gitOrThrow(cwd: string, args: string[]): SpawnSyncReturns<string> {
+  const r = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (r.status !== 0) {
+    const cwdExists = existsSync(cwd);
+    const gitDirExists = existsSync(join(cwd, ".git"));
+    const objectsDirExists = existsSync(join(cwd, ".git", "objects"));
+    const tmpdirEnv = process.env.TMPDIR ?? "(unset)";
+    const probe = spawnSync("git", ["rev-parse", "--git-dir"], { cwd, encoding: "utf-8" });
+    process.stderr.write(
+      [
+        `[gitOrThrow diagnostics] git ${args.join(" ")} failed in ${cwd}`,
+        `  cwd exists: ${cwdExists}`,
+        `  .git exists: ${gitDirExists}`,
+        `  .git/objects exists: ${objectsDirExists}`,
+        `  TMPDIR: ${tmpdirEnv}`,
+        `  rev-parse --git-dir: status=${probe.status} stdout=${JSON.stringify((probe.stdout ?? "").trim())} stderr=${JSON.stringify((probe.stderr ?? "").trim())}`,
+        "",
+      ].join("\n"),
+    );
+    throw new Error(`git ${args.join(" ")} failed: ${r.stderr?.trim() || r.stdout?.trim() || `exit ${r.status}`}`);
+  }
+  return r;
 }
 
 // ============================================================================

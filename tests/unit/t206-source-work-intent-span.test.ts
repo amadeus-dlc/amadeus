@@ -27,7 +27,6 @@
 // children. Import mirrors t205 (dist/claude copy) so coverage remaps to core.
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -35,14 +34,14 @@ import { gitHasSourceWork, workspaceHasSourceFile } from "../../dist/claude/.cla
 import {
   cleanupTestProject,
   createTestProject,
+  gitOrThrow,
   seededRecordDir,
 } from "../harness/fixtures.ts";
 
 let proj: string;
 
 function git(args: string[]): string {
-  const r = spawnSync("git", args, { cwd: proj, encoding: "utf-8" });
-  if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
+  const r = gitOrThrow(proj, args);
   return (r.stdout ?? "").trim();
 }
 
@@ -99,11 +98,51 @@ function mergeTaggedPrThroughMain(subject: string, path: string, body: string): 
   git(["merge", "-q", "--no-ff", "main", "-m", "Merge main into record"]);
 }
 
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Issue #2382: `git commit` has been observed to fail intermittently under
+// full-suite parallel load with `unable to create temporary file` (ENOENT) +
+// `failed to write commit object`. The mechanism is not yet pinned (a
+// 2,404-trial repro harness could not reproduce it deterministically), so
+// this bounds a retry to the commit step only (never `add`) and always
+// records — to stderr — whether the retry fired and what gitOrThrow's
+// diagnostic block showed on the first failure. Silent swallowing is
+// forbidden here: whether the retry actually rescues the commit is itself
+// evidence toward resolving the mechanism.
+const GIT_COMMIT_RETRY_ATTEMPTS = 2;
+const GIT_COMMIT_RETRY_DELAY_MS = 50;
+
+function gitCommitWithRetry(args: string[]): void {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= GIT_COMMIT_RETRY_ATTEMPTS; attempt++) {
+    try {
+      git(["commit", ...args]);
+      if (attempt > 1) {
+        process.stderr.write(
+          `[t206] git commit retry succeeded on attempt ${attempt}/${GIT_COMMIT_RETRY_ATTEMPTS} (issue #2382)\n`,
+        );
+      }
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < GIT_COMMIT_RETRY_ATTEMPTS) {
+        process.stderr.write(
+          `[t206] git commit failed on attempt ${attempt}/${GIT_COMMIT_RETRY_ATTEMPTS} (issue #2382), retrying after ${GIT_COMMIT_RETRY_DELAY_MS}ms: ${(err as Error).message}\n`,
+        );
+        sleepSync(GIT_COMMIT_RETRY_DELAY_MS);
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // A doc-only checkpoint/delegate commit on the current (record) branch.
 function commitDoc(name: string, body: string): void {
   writeRecordFile(name, body);
   git(["add", "amadeus"]);
-  git(["commit", "-q", "-m", `doc: ${name}`]);
+  gitCommitWithRetry(["-q", "-m", `doc: ${name}`]);
 }
 
 // A non-doc file committed DIRECTLY on the current (record) branch.
