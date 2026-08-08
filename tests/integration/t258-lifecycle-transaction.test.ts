@@ -14,6 +14,7 @@ import {
   runIntentLifecycleTransactionLocked,
   withIntentLifecyclePreflight,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { handleArchive } from "../../packages/framework/core/tools/amadeus-state.ts";
 
 const STATE = join(import.meta.dir, "../../packages/framework/core/tools/amadeus-state.ts");
 const roots: string[] = [];
@@ -172,6 +173,74 @@ describe("intent lifecycle transaction CLI", () => {
     const result = run(fixture.root, "archive", fixture.intent);
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(cursor, "utf-8")).toBe("260723-other\n");
+  });
+
+  // Issue #2583: the ledger read side trims string fields, so an untrimmed
+  // --user-input could never round-trip and wedged the space permanently
+  // (journalFailure, journal left behind, every retry replaying the same
+  // throw). The CLI normalizes at the entrance, so the value it records is
+  // already a fixed point of the read-side normalization.
+  test.each([
+    ["trailing space", "archive it ", "archive it"],
+    ["leading space", " archive it", "archive it"],
+    ["trailing tab", "archive it\t", "archive it"],
+    ["surrounding whitespace", " \t archive it \t ", "archive it"],
+    ["whitespace only", "   ", ""],
+  ])("archives with %s in --user-input and records the trimmed value", (_label, input, recorded) => {
+    const fixture = scaffold("in-flight");
+    const result = run(fixture.root, "archive", fixture.intent, input);
+    expect(result.status, result.stderr).toBe(0);
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter(
+      (r) => r.event === "INTENT_ARCHIVED",
+    );
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["User Input"]).toBe(recorded);
+    // No wedge: the transaction journal is cleared on success.
+    expect(() => readFileSync(join(
+      fixture.root,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      ".amadeus-intent-status-transaction.json",
+    ))).toThrow();
+  });
+
+  // The same normalization, driven IN-PROCESS through the exported handleArchive
+  // seam. The spawned arms above prove the CLI wiring; this one puts the
+  // normalization statement itself inside bun's coverage universe, which a
+  // spawned child is structurally outside of. handleIntentLifecycle resolves its
+  // project dir through resolveProjectDir(projectDir), and the module-level
+  // projectDir is only assigned by main()'s --project-dir parse — so an
+  // in-process caller points the handler at the fixture with CLAUDE_PROJECT_DIR,
+  // the documented env rung directly below the flag.
+  test("handleArchive trims --user-input in-process", () => {
+    const fixture = scaffold("in-flight");
+    const previous = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = fixture.root;
+    const printed: string[] = [];
+    const log = console.log;
+    console.log = (...parts: unknown[]) => {
+      printed.push(parts.map(String).join(" "));
+    };
+    try {
+      handleArchive([fixture.intent, "--user-input", "  archive it \t "]);
+    } finally {
+      console.log = log;
+      if (previous === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = previous;
+    }
+
+    expect(JSON.parse(printed[0]!)).toMatchObject({
+      intent: fixture.intent,
+      status: "archived",
+    });
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_ARCHIVED");
+    expect(archived).toHaveLength(1);
+    // The recorded value is already a fixed point of the read-side trim.
+    expect(archived[0]!.fields?.["User Input"]).toBe("archive it");
   });
 
   test("unarchives to in-flight without selecting the intent", () => {
