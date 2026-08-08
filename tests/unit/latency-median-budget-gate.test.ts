@@ -26,6 +26,8 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  ARCHIVE_LATENCY_BUDGET_MS,
+  RECOVERY_LATENCY_BUDGET_MS,
   exceedsMedianLatencyBudget,
   median,
 } from "../lib/latency-median-budget-gate.ts";
@@ -47,6 +49,10 @@ function spikeVector(normalMs: number, spikeMs: number, spikeCount: number): num
 }
 
 // Recorded #1511 aggregate spike magnitudes and #1424 healthy p95 magnitudes.
+// ARCHIVE_BUDGET_MS is the HISTORICAL #1424 budget these vectors were built
+// around (the p95-vs-median contrast band depends on it); the current budget
+// is ARCHIVE_LATENCY_BUDGET_MS from the gate lib (#1830 path B re-derivation,
+// pinned in its own describe below).
 const ARCHIVE_BUDGET_MS = 500;
 const ARCHIVE_NORMAL_MS = 41.177;
 const ARCHIVE_SPIKE_MS = 886.793806;
@@ -134,6 +140,36 @@ describe("median latency budget gate — edges and fail-closed", () => {
   test("median one unit over the budget reports", () => {
     const overBudget = Array.from({ length: 100 }, () => ARCHIVE_BUDGET_MS + 1);
     expect(exceedsMedianLatencyBudget(overBudget, ARCHIVE_BUDGET_MS)).toBe(true);
+  });
+});
+
+describe("archive budget re-derivation — fleet cross-section (#1830 path B)", () => {
+  // A slower CI runner (XEON PLATINUM 8573C) measured archiveMedianMs 562 on
+  // an unchanged workload — a false red of the historical 500 ms budget from
+  // machine variance, not a regression. Only the aggregate median survives in
+  // the CI logs, so the vector is synthetic per this file's convention: 100
+  // copies of the recorded median (median of a constant vector = the constant).
+  const XEON_ARCHIVE_MEDIAN_MS = 562;
+  const xeonCrossSection = Array.from({ length: 100 }, () => XEON_ARCHIVE_MEDIAN_MS);
+
+  test("the observed fleet cross-section was red under the historical 500 ms budget (origin repro) and is green under the re-derived budget", () => {
+    expect(exceedsMedianLatencyBudget(xeonCrossSection, ARCHIVE_BUDGET_MS)).toBe(true);
+    expect(exceedsMedianLatencyBudget(xeonCrossSection, ARCHIVE_LATENCY_BUDGET_MS)).toBe(false);
+  });
+
+  test("the re-derived budget still reports a genuine across-the-board regression", () => {
+    // Anything past 2x the slowest observed fleet median is a real slowdown,
+    // not machine variance the derivation accounted for.
+    const regressed = Array.from({ length: 100 }, () => ARCHIVE_LATENCY_BUDGET_MS + 1);
+    expect(exceedsMedianLatencyBudget(regressed, ARCHIVE_LATENCY_BUDGET_MS)).toBe(true);
+  });
+
+  test("recovery keeps #1424's budget: the projected slowest-fleet median stays green", () => {
+    // 8.8x machine-variance projection of the measured 46.77 ms recovery
+    // median (~412 ms) — the reason recovery was NOT re-derived.
+    const projected = Array.from({ length: 100 }, () => 412);
+    expect(RECOVERY_LATENCY_BUDGET_MS).toBe(RECOVERY_BUDGET_MS);
+    expect(exceedsMedianLatencyBudget(projected, RECOVERY_LATENCY_BUDGET_MS)).toBe(false);
   });
 });
 
