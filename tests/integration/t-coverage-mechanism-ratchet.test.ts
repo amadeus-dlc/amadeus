@@ -101,6 +101,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t483-preview-non-auto-kinds.integration.test.ts",
     "integration/t488-question-route-observability.integration.test.ts",
     "integration/t487-stage-stats.integration.test.ts",
+    "integration/t494-resync-last-updated-preservation.test.ts",
     "e2e/t-formal-verif-model-completeness-sensor.test.ts",
     "e2e/t237-election-walking-skeleton.test.ts",
     "e2e/t265-engine-boundary.test.ts",
