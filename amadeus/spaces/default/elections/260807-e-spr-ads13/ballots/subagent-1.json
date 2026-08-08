@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-ADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立検証: diary(memory.md:9)の唯一のエントリは、§12a iteration 1 の verdict が complete-review 未実行のまま前セッション終了で喪失し、新 scope(新 invocationId)で iteration 1 を再ディスパッチしたという事実で、cid:functional-design:c3-pcp-reviewer-retry-on-lost-verdict(project.md:321 — verdict 未記録(Review block 不在)なら新 invocationId での再実行が正規)の適用実績そのもの。components.md の Review — Iteration 1(:46, NOT-READY, BLOCKER 2件)と Iteration 2(:65, READY)は通常のレビュー閉包で、Review block 冪等ゲートの挙動も既存 cid の記載どおり。audit truncate による findings 喪失という細部はあるが、既存 cid の『verdict 未記録なら再ディスパッチ』で完全に覆われ、一般化可能な新規増分はない。0 件で可。",
+  "submittedAt": "2026-08-07T15:29:36Z",
+  "receivedAt": "2026-08-07T15:29:48Z"
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SPR-SDS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "Tradeoffs エントリ(記録側拡張の Won't 化)には、既存 cid の逐語には無い形 —『read-only な読み手側 intent は、対応する書き手側(記録側)の拡張を Won't に置き、そのギャップを成果物内の UNKNOWN 区分の可視化と完了時の別 Issue 起票で運ぶ』という、境界を切った上でギャップを落とさない運び方 — が含まれうる。ただし本 intent では実例が 1 件のみで、切り出しに起因する摩擦(見落とし・後続 intent での再発見コスト)がまだ観測されていないため、いま persist すると scope-definition:c2 の Won't 節と ideation.md § Scope Discipline の再述になる。同型の運び方が別 intent で再現し、かつギャップの取り落としが実際に起きた時点で候補化すべきと考える。",
+  "rationale": "独立に読んだもの: diary memory.md(Interpretations :5 / Tradeoffs :12 の 2 エントリのみ、Deviations・Open questions は空)、scope-document.md(:5-16 In Scope の 5 項目・:18-24 Out of Scope の 5 項目・:26-29 検証可能な境界)、intent-backlog.md(:7-16 の C1〜C7 全 Must 表・:17 の Should/Could を置かない根拠・:19-22 Won't・:24-26 シーケンス)、scope-definition-questions.md(:7-15 質問しない事項 5 件・:17-20 裁定の記録)。既存 cid の実在は自分で grep して確認した: project.md:198 = cid:scope-definition:c2(公開契約を完結させる proto-capability はすべて Must、Should/Could を置かず、除外分は Won't として厳格に切る)、project.md:199 = cid:scope-definition:c3(dependency と risk-first を raw WSJF より優先)、project.md:187 = cid:intent-capture:c1(既決事項は質問せず前提として成果物へ反映)。判定: diary エントリ 1(全 7 capability を Must)は c2 の適用そのもので、intent-backlog :17 が当の cid を逐語で引いており増分ゼロ。エントリ 2(記録側拡張の Won't 化)も c2 の後半(除外分を Won't へ厳格に切る)と ideation.md § Scope Discipline(承認されていないスコープ決定を持ち越さない)に収まり、本 intent 固有の境界裁定として scope-document :20 と intent-backlog :21 に成果物固定済みである。さらに §13 の発火源になる摩擦の不在も確認した — Deviations は空、questions は 0 件判定で一次証拠(Issue #2405 v2・ユーザー選択・クロスレビュー実測)に接地しており、レビュー往復や是正の記録がない。シーケンス裁定(:26 dependency-first)も c3 の適用で新規性がない。学習は観測された摩擦から採るものであり、摩擦ゼロのステージで persist を作ると既存 cid の再述になる。よって choice 1(0 件で可)。GoA 2 は上記 reservation のとおり、Tradeoffs エントリに将来 cid 化しうる形を見るが、単一実例かつ実害未観測のため現時点では persist の根拠にならないとする留保付き合意。",
+  "submittedAt": "2026-08-07T10:47:00Z",
+  "receivedAt": "2026-08-07T10:41:13Z"
+}

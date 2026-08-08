@@ -35,6 +35,63 @@ nightly の全層ジョブは不在。この層配置が「患部17ファイル�
 
 使用済み最大 `t483`。本 intent の新規テストは **`t484`** から採番する。
 
+## 新規 core tool の配置と検証面（260807-stage-perf-report、履歴、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+### 着地先と投影
+
+**着地先:** `packages/framework/core/tools/amadeus-<name>.ts`。性能/レポート系ツールの名前衝突はない — `packages/framework/core/tools/` 内で `stat|report|metric|perf` に一致するのは `amadeus-norm-metrics.ts` / `amadeus-sensor-pr-convergence-report-format.ts` / `amadeus-subagent-stats.ts`（ほか mirror-state / state 系）のみ。
+
+**投影:** `packages/framework/harness/claude/manifest.ts:55-56` の `coreDirs: [{ src: "tools", dst: "tools" }, …]` を `scripts/package.ts:438`（`for (const { src, dst } of m.coreDirs)`）が消費する。**`core/tools/` に置いたファイルは全ハーネス dist へ自動で到達する。** packager が検出する harness manifest ディレクトリは observed で **`claude` / `codex` / `cursor` / `kimi` / `kiro` / `kiro-ide` / `opencode` / `pi` の 8 件**（`ls packages/framework/harness/` 実測）。`cid:build-and-test:bt-dist-regen-seven-harnesses` に従い正は packager の検出集合であり、固定数ではない。
+
+⚠️ **境界ガード（t258）:** `tests/lib/boundary-guard.ts` の `scanDistributionTreeForScriptsRefs`（predicate 1、FR-5a）により、出荷される `core/tools` は `scripts/<file>` トークンを参照してはならない。**コメントと文字列も対象**（`cid:code-generation:c1-1569-shipped-comment-vocab` が直撃する面）。
+
+### テスト層と双子パターン
+
+ティアは `tests/run-tests.ts:116-125` の `--smoke` / `--unit` / `--integration` / `--e2e`。`--ci` = smoke+unit+integration、`--release` が e2e+perf を追加。エントリは `tests/run-tests.sh` → `run-tests.ts`。
+
+**サイズ ratchet:** `tests/lib/test-size.ts:37-39` は spawn / filesystem / timer の正規表現に一致するファイルを `medium` へ強制する — `node:fs` / `readFileSync` / `readdirSync` / `existsSync` / `spawnSync` / `Bun.spawn` / `setTimeout` はいずれも該当。`cid:code-generation:fs-tests-integration-first` により**実シャードに触れるものは `tests/integration/` へ置く**。`tests/unit/` に置けるのは純粋な集計・レンダー関数のみ。
+
+**双子テストの雛形が既に存在する** — subagent-stats の対:
+
+- `tests/unit/t460-subagent-stats-compose.test.ts`（純粋な compose）
+- `tests/integration/t461-subagent-stats.integration.test.ts`（fs + CLI spawn、`MECHANISM: cli`）
+
+t461 のヘッダ（`:5-23`）が写すべきパターンを文書化する: 混成スキーマの fixture コーパス、parse 破損行、`--json` の形、未知フラグの fail-closed、読めないシャードでの loud な非0 exit、空コーパスは正常なゼロ、**そして独立オラクル** — 逐語で *"the test's own shard walker … never the CLI under test (BR-U3-6: self-referential comparison is 検証劇場)"*。
+
+**dist コピーの消費が canonical 直実行の回避形である。** `cid:code-generation:no-canonical-direct-execution` は `packages/framework/core/tools/*` の canonical パス直実行を禁じ、t461 は次で回避する:
+
+```ts
+// tests/integration/t461-subagent-stats.integration.test.ts:51
+} from "../../dist/claude/.claude/tools/amadeus-subagent-stats.ts";
+// :55
+const STATS_CLI = join(AMADEUS_SRC, "tools", "amadeus-subagent-stats.ts");
+```
+
+`tests/harness/fixtures.ts:57` は `export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");`。**in-process import も spawn される CLI も、いずれもビルド済み dist ツリーから来る**（dist は untracked、`bun run build` が生成。`.gitignore:24` = `/.claude/**` により self-install ツリーも untracked）。`amadeus-subagent-stats.ts:377-386`（`resolveProjectDirLocal`）の dot-dir リーフ判定（`/^\.[a-z0-9][a-z0-9._-]*$/i`）が、ハーネスツリーから実行したときに project root を正しく解決させる — 新ツールは同じ idiom を持つか共有面を import する必要がある。
+
+**tNNN 予約: 使用済み最大は t480 → 新規は t481 以降**（`find tests -name 't[0-9]*'` で実測。区間で t466 / t470 / t480 が着地）。前回 RE の記録（`re-scans/260807-failclosed-recovery-path.md:111,300` の t465 / t466 以降）は**陳腐化している**。
+
+### 適用されるカバレッジ・品質ゲート
+
+- `tests/coverage-patch-gate.ts` — head LCOV に `DA` レコードとして現れる追加行は非ゼロヒットを要する。母集団は *lcov 常駐行のみ*（`:16-21`）。allowlist `tests/.coverage-patch-allowlist.json` は理由必須・AST セレクタ基準で、**stale エントリで hard-fail**（`:23-36`）。順序規則は `:32-35` に明示 — **seam リファクタが先、allowlist が後**
+- `tests/coverage-project-gate.ts` — 絶対下限 **AND** 相対 baseline 許容幅の両方が必須（`:278-301`）
+- `tests/.coverage-registry.json` — 617 ユニット / 7 `unitClasses`。`minMechanism.subcommand = "cli"` のため**新規 CLI サブコマンドは CLI メカニズムのカバレッジを要する**。再生成は `tests/gen-coverage-registry.ts`
+- 併走: `tests/complexity-gate.ts` / `tests/no-silent-drop-gate.ts` / `tests/unchecked-cast-guard.ts` / `tests/callsite-guard.ts` / `tests/deletion-gate.ts`
+
+### パーセンタイルヘルパ — 意味論のみ再利用可
+
+`tests/lib/percentile.ts:12` に `export function nearestRankP95(values: readonly number[]): number` が実在する（nearest-rank、`sorted[ceil(0.95*n)-1]`、空入力では `NaN` を返す — *"so a broken measurement propagates as a visibly non-finite number instead of a silent hole"*）。
+
+⚠️ **`tests/` 配下にあるため core ツールは import できない**（境界ガード＋出荷面）。**意味論を写し、ファイルは写さない。**
+
+### repo 側の read-only ビューア先例
+
+`scripts/metrics-timeseries.ts` のヘッダ `:1-8` は逐語で *"Read-only … Never writes: **this module must not import any fs write API (AC-1c; grep-checkable)**"* と宣言し、書き手と共有する env seam override（`AMADEUS_METRICS_ROOT`）を持つ。**grep で検査可能な no-write 契約**は安価かつ強い不変量であり、写す価値がある。
+
+`metrics/` 側のスナップショット機構（288 件）は**機能的に重複しない** — コレクタは lizard CCN / bun coverage / git LOC / テスト数の**リポジトリ健全性**であり、ワークフロー・ステージ・モデルの軸を持たない。ただし `{schema_version, captured_at, commit, collectors{tool, tool_version, values}}` というエンベロープは**このリポジトリで確立したバージョン付き決定的レポートの形**である。
+
 ## subagent-start 配線面と dispatcher スロット構造（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base は `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。

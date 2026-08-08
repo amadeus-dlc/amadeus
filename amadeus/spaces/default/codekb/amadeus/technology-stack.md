@@ -8,6 +8,10 @@
 
 **dist 依存**: `tests/harness/audit-records.ts:18` が `dist/claude/.claude/tools/amadeus-audit.ts` を import する。source-only 境界下で `dist/` は未追跡のローカル生成物であるため、このハーネスを使うテストは `bun run build` 済みを前提とする。e2e 層への採用可否はこの前提の波及を伴う。
 
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）に技術スタックの変更はない。#2405 が追加するのは Bun / TypeScript / ESM の既存規約に載る core tool 1本であり、新しいランタイム・言語・外部ライブラリを持ち込まない。パーセンタイル計算は既存の `tests/lib/percentile.ts:12` `nearestRankP95` の**意味論を写す**方針であり（`tests/` 配下のため core から import 不可）、依存の追加を伴わない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
 ## ハーネス hook seam と settings 面の技術前提（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。前 intent からの技術スタック変更はなく、本節は #2297/#2303 の患部に関わる**既存前提の切り出し**のみを記録する。

@@ -10,6 +10,10 @@
 
 書き手側（プロダクション監査ログ）に欠陥はない — v1/v2 いずれの経路も正しく行を書いている。影響範囲はテスト面に限定される。
 
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。** 区間（base `b8e3e664f` → observed `4a3da7d62`、12 commits / 108 files）にビジネス面の変更はない。#2405 が扱うのは既に永続化されている監査・record の**読み手**の追加であり、プロダクトの提供価値・対象利用者・課金面はいずれも変わらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
 ## 監査 completeness — started/completed 非対称の業務影響（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。全数列挙は `re-scans/260807-subagent-start-pair.md`。

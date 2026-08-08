@@ -10,6 +10,12 @@
 
 **書き手側**: `amadeus-worktree.ts:635` → `:95` `emitAuditEvent` → `otel/audit-emit.ts:48` → `appendAuditEntryViaEvents`(v2)。v1 側は `amadeus-audit.ts:534` / `:597` / `amadeus-state.ts:3193` が `serializeJournalEntry` を直接呼ぶ。
 
+## 260807-stage-perf-report（現在、observed `4a3da7d62`）
+
+**本 intent での増分なし。外部依存の変更 0 件**（`git diff --stat b8e3e664f..HEAD -- package.json bun.lock packages/setup/package.json` が空出力）。ビルドは bun 不変。
+
+内部の依存方向について記録すべき論点が1件ある: `packages/framework/core/tools/amadeus-journal.ts` の正規化層（`journalRecordField:130` / `readJournalRecords:534` ほか）を新レポータが共有するか否かは、`packages/framework/core/tools/amadeus-subagent-stats.ts:21-23` が逐語で記録する裁定 — *"This module deliberately does NOT import amadeus-lib.ts (the FD fixes the dependency direction stats -> observability only)"* — との整合を要する**設計判断**であり、import 可能性だけでは決まらない。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
 ## subagent-start 経路の依存関係（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。外部依存の増減はなく、本節は患部の**内部依存**のみを記録する。

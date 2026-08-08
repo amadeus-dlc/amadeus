@@ -216,7 +216,7 @@
     "scope": "bugfix",
     "status": "complete",
     "docsOnly": {
-      "evidence": "GATE_APPROVED requirements-analysis 2026-07-16T13:13Z \u2014 FR-3 \u306e pre-declared \u5206\u5c90(\u975e\u518d\u73fe\u2192\u9078\u6319)\u304c\u627f\u8a8d\u6e08\u307f\u8981\u4ef6\u3067\u3042\u308a\u3001E-1085-FIX \u88c1\u5b9a A(\u767a\u52d5\u6761\u4ef6\u4ed8\u304d\u4fdd\u7559)\u306b\u3088\u308a\u30ea\u30dd\u30b8\u30c8\u30ea\u5909\u66f4\u30bc\u30ed\u304c\u88c1\u5b9a\u3069\u304a\u308a\u306e\u6210\u679c\u3002\u8abf\u67fb\u6210\u679c\u306f Issue #1085 \u30b3\u30e1\u30f3\u30c8\u3068 record \u6210\u679c\u7269\u306b\u5b8c\u7d50\u3001scratch \u30cf\u30fc\u30cd\u30b9\u306f repo \u5916"
+      "evidence": "GATE_APPROVED requirements-analysis 2026-07-16T13:13Z — FR-3 の pre-declared 分岐(非再現→選挙)が承認済み要件であり、E-1085-FIX 裁定 A(発動条件付き保留)によりリポジトリ変更ゼロが裁定どおりの成果。調査成果は Issue #1085 コメントと record 成果物に完結、scratch ハーネスは repo 外"
     }
   },
   {
@@ -1011,6 +1011,13 @@
     "slug": "intent-2328-tests-e2e-au",
     "dirName": "260807-intent-2328-tests-e2e-au",
     "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
+    "slug": "stage-perf-report",
+    "dirName": "260807-stage-perf-report",
+    "scope": "self-feature",
     "status": "complete"
   }
 ]

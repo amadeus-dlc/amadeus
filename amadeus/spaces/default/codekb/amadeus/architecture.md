@@ -39,6 +39,105 @@ Issue #2328 の患部は「テストが1スキーマを決め打ちで読む」�
 
 CI 上で実行される e2e は `ci.yml:252` の `t341-plugin-conformance-journey.serial.test.ts` **1本のみ**であり、全層を回す nightly ジョブは存在しない。したがって **e2e 17ファイルの赤は CI から構造的に不可視**であり、これが #2328 が潜伏した機序である。
 
+## 監査イベント面と読み手の生態（260807-stage-perf-report、履歴、observed `4a3da7d62`）
+
+本節の file:line はすべて observed `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` 時点。差分 base は `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（祖先性 exit 0、距離 12 commits / 108 files）。全数列挙は `re-scans/260807-stage-perf-report.md` を正本とする。
+
+### 2世代のスキーマ、1つのエンベロープ
+
+監査ジャーナルは2つのスキーマ世代を同一のエンベロープで運ぶ。`packages/framework/core/tools/amadeus-journal.ts:30,34-35`:
+
+```ts
+export const JOURNAL_SCHEMA_VERSION = 1;
+export const JOURNAL_SCHEMA_VERSION_V2 = 2;
+export const JOURNAL_SCHEMA_VERSION_MAX = JOURNAL_SCHEMA_VERSION_V2;
+```
+
+`:28-29` のコメントは読み手にとって load-bearing である（verbatim）: `// v1 is the switchover wire format still produced by the live writers` / `// (amadeus-audit.ts / amadeus-state.ts); keep this constant at 1 for them.`
+
+**v1 は単なるレガシーではない** — 一部の書き手は現在も v1 で新規行を書く。読み手が「v1 = 過去 / v2 = 現在」と時系列で分けることはできない。
+
+v2 行は **v1 の監査イベント名を `attributes.Event` へ刻印**し、`eventName` は OTel 名（例 `amadeus.stage.started`）を運ぶ。したがって両スキーマとも `Stage` を同一キーで露出し、**`Event` が両スキーマで信頼できる判別子**になる。この正規化規約は `:113-129` に文書化されている。
+
+### イベントレジストリ（全件 `durability: "canonical"`）
+
+| イベント | file:line | requiredAttributes | 主な optional |
+| --- | --- | --- | --- |
+| `amadeus.stage.started` | `packages/framework/core/otel/event-registry.ts:317` | `["Stage", "Agent"]` | `Workflow`（`--single` の合成 id） |
+| `amadeus.stage.completed` | `:345` | `["Stage", "Details"]` | `Artifacts`、`Transaction Id`、`Workflow`、`Completion Instance` |
+| `amadeus.stage.awaiting.approval` | `:327` | `["Stage"]` | `Artifacts`、`Details`、`Recovered`、`Transaction Id` |
+| `amadeus.stage.revising` | `:336` | `["Stage", "Revision count"]` | — |
+| `amadeus.gate.approved` | `:511` | `["Stage"]` | `User Input`、`Grant Id`、`Swarm batch` |
+| `amadeus.gate.rejected` | `:520` | `["Stage"]` | `Feedback`、`Recovered` |
+| `amadeus.workflow.parked` | `:119` | `["Stage"]` | `Timestamp` |
+| `amadeus.workflow.unparked` | `:128` | **`[]`** | `Timestamp` |
+| `amadeus.session.started` | `:382` | `["Source"]` | — |
+| `amadeus.session.ended` | `:409` | `["Reason"]` | — |
+| `amadeus.session.resumed` | `:391` | `["Source"]` | — |
+| `amadeus.human.turn` | `:418` | **`[]`** | `Presence Reservation Id` |
+| `amadeus.sensor.fired` | `:849` | `["Fire id","Sensor ID","Stage slug","Output path"]` | — |
+| `amadeus.sensor.passed` | `:858` | 上記 + `["Duration ms"]` | `Note` |
+| `amadeus.sensor.failed` | `:867` | 上記 + `["Detail path","Findings count"]` | — |
+
+集計設計に効く構造事実3件:
+
+1. **`Harness` を宣言するイベントは存在しない。** `Model` / `Model Source` は subagent イベント（`:616` / `:629`）にのみ現れる（レジストリ全域 grep で確定）。**ハーネス軸の集計は監査からは組めない。**
+2. **`WORKFLOW_UNPARKED` と `HUMAN_TURN` は `Stage` を運ばない**（requiredAttributes が `[]`）。idle 減算はこれらを stage キーではなく **intent 内の時刻順序**で帰属させる必要がある。
+3. **`SENSOR_*` は `Stage slug`、stage ライフサイクル系は `Stage`。** 別キーであり、正規化層はこの2つを混同してはならない。
+
+### emit サイトと承認・完了の同時性
+
+- `STAGE_STARTED` — `amadeus-state.ts:2335`（`{Stage: nextSlug, Agent: nextStage.lead_agent}`）、`amadeus-jump.ts:619`（jump）、`amadeus-orchestrate.ts:4633`（`--single`）
+- `STAGE_COMPLETED` — `amadeus-state.ts:3431` / `:2165`、`amadeus-orchestrate.ts:4646`
+- `STAGE_AWAITING_APPROVAL` — `amadeus-state.ts:2877, 4064, 4138`
+- `GATE_APPROVED` — `amadeus-state.ts:3420`、`amadeus-bolt.ts:1142`
+
+**アルゴリズムが織り込むべき事実:** `GATE_APPROVED`（`:3420`）と `STAGE_COMPLETED`（`:3431`）は**同一 try ブロック内**で emit される。承認と完了はほぼ同時刻であり、したがって idle 区間 `STAGE_AWAITING_APPROVAL → GATE_APPROVED` はゲート付きステージの窓の**末尾**に位置する（中間ではない）。
+
+### タイムスタンプ粒度 — 秒未満は構造的に解像不能
+
+`amadeus-lib.ts:7740-7742`:
+
+```ts
+export function isoTimestamp(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+```
+
+**ミリ秒は書き込み時点で捨てられている。** 秒未満のステージは事後にどう集計しても解像できない。
+
+### `intentId` degradation とパス基準帰属
+
+observed で再計測: `intentId==="intents"` の v1 行が **86,744 / 96,269（90.1%）**、それらの行を保持する distinct な intent ディレクトリは **95**。**パス基準の帰属は必須であり、かつ機能する** — degraded な行は 95 の実 intent ディレクトリへ散っており、ディスク上のパスから intent を復元できる。
+
+### 読み手の生態 — 既存3面はいずれも本用途を満たさない
+
+| 面 | 性質 | 本用途に使えない理由 |
+| --- | --- | --- |
+| `amadeus-journal.ts` | スキーマ非依存の正規化層（export 済み） | **使える。ただし誰も使っていない** — `journalRecordField:130` / `readJournalRecords:534` ほか。doc `:113-129` が逐語で "so they never branch on the schema version" と述べる |
+| `amadeus-runtime.ts summary` | runtime-graph.json のスナップショット集計 | **構造的に遡及不能**。`:982-984` が "never re-walks audit" と宣言、`:1067-1070` はグラフのみを読む。`.gitignore:71` によりグラフは untracked（`git ls-files | grep -c` → 0）で過去 intent のグラフは存在しない。per-stage 所要時間・モデル・レビューイテレーションを持たない |
+| `amadeus-observability.ts` | opt-in の telemetry **書き手** seam | サブコマンド 0（`import.meta.main` / argv 処理なし）。ヘッダ `:1-19` が **fail-open**（"a buffer write failure never throws into the caller"）を宣言。読み手は fail-closed であり**契約が正反対** — 名前空間は使用不可 |
+
+`amadeus-journal.ts` の共有には反対圧力がある: `amadeus-subagent-stats.ts:21-23` が逐語で "This module deliberately does NOT import amadeus-lib.ts (the FD fixes the dependency direction stats -> observability only)" と依存方向の裁定を記録している。**共有層の採用は設計判断であり、import 可能性だけで機械的に決まらない。**
+
+### ⭐ idle 減算の実現可能性（D1、observed 実測）
+
+クロスレビュー2名は idle 混入を**フィルタ**（idle マーカーを含む窓を捨てる）で測り「clean な窓は median 0 秒 = trivial なステージしか clean でない」と結論した。observed で**減算**（#2405 が規定するアルゴリズム: `[AWAITING→GATE_APPROVED/REJECTED] ∪ [PARKED→UNPARKED] ∪ [SESSION_ENDED→SESSION_STARTED/RESUMED]` を区間マージし窓へクリップ）により再計測した結果:
+
+```
+windows=1532
+raw wall-clock: median=674s  p95=12188s  mean=3109.7s
+net (idle-sub): median=458s  p95= 7486s  mean=2076.8s
+減算で 0 になった窓 30 / 元から raw 0 の窓 394
+raw 1323.4h → net 883.8h（減算率 33.2%）
+```
+
+ステージ別 net 中央値は `code-generation` 5,183s（n=123）／`functional-design` 1,885s（n=64）／`reverse-engineering` 1,192s（n=127）／`build-and-test` 737s（n=115）／`delivery-planning` 297s（n=58）と**一桁の判別力**を持つ。
+
+**減算は 1,532 窓をすべて保持する**のに対し、フィルタは 74% を捨て、残差は `workspace-scaffold` / `workspace-detection` / `state-init` に支配される。すなわち idle 減算は #2405 の完了条件として充足可能であるだけでなく、**指標を機能させている当のもの**である。
+
+⚠️ **主張していないこと:** これらの net 値が*実作業時間を近似する*ことは検証されていない。検証されたのは、アルゴリズムが永続化コーパスに対して実装可能で非退化な出力を生むことのみである（`cid:requirements-analysis:c7-upstream-universal-claim-unverified`）。
+
 ## SUBAGENT_STARTED の emit 経路と hook 配線の3面構造（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 本節の測定 ref はすべて observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`（= 本 worktree HEAD）。差分 base は `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（distance 2 commits = #2413 修正 + record sync #2416）。全数列挙と行番号 currency の確定は `re-scans/260807-subagent-start-pair.md` を正本とする。
