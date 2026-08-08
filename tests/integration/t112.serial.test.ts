@@ -81,6 +81,14 @@ const REAL_RUN_TESTS_ARGS = join(
   "lib",
   "run-tests-args.ts",
 );
+// run-tests.ts also imports lib/run-tests-exit-code.ts (the exit-code clamp
+// seam, #2577). Same static-import reason as the files above.
+const REAL_RUN_TESTS_EXIT_CODE = join(
+  import.meta.dir,
+  "..",
+  "lib",
+  "run-tests-exit-code.ts",
+);
 
 const scratchRoots: string[] = [];
 
@@ -132,6 +140,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_RUN_TESTS_TOTALS, join(libDir, "run-tests-totals.ts"));
   copyFileSync(REAL_SIZE, join(libDir, "test-size.ts"));
   copyFileSync(REAL_RUN_TESTS_ARGS, join(libDir, "run-tests-args.ts"));
+  copyFileSync(REAL_RUN_TESTS_EXIT_CODE, join(libDir, "run-tests-exit-code.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions
   // between the fail/pass families.

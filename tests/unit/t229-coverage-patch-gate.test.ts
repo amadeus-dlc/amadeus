@@ -72,6 +72,50 @@ describe("t229 patch gate parsers", () => {
     expect([...(added.get("packages/framework/core/tools/example.ts") ?? [])].sort()).toEqual([10, 11, 12]);
     expect([...(added.get("docs/readme.md") ?? [])]).toEqual([2]);
   });
+
+  // #2574 — an added line whose CONTENT starts with "++ " renders as "+++ ..."
+  // in the diff. Inside a hunk it is content, never a file header: mistaking it
+  // for one retargets currentFile at a bogus path and drops the real file's
+  // added lines from the gate population (silent false PASS).
+  test("parseDiffAddedLines keeps '++ '-prefixed added content inside the hunk", () => {
+    const diff = [
+      "diff --git a/packages/framework/core/tools/example.ts b/packages/framework/core/tools/example.ts",
+      "--- a/packages/framework/core/tools/example.ts",
+      "+++ b/packages/framework/core/tools/example.ts",
+      "@@ -9,0 +10,3 @@",
+      "+++ b/decoy.ts",
+      "+const uncovered = 1;",
+      "+++ marker in prose",
+    ].join("\n");
+    const added = parseDiffAddedLines(diff);
+    expect([...(added.get("packages/framework/core/tools/example.ts") ?? [])].sort()).toEqual([10, 11, 12]);
+    expect(added.has("decoy.ts")).toBe(false);
+  });
+
+  // #2574 — the hunk's declared line counts are what close the hunk, so removal
+  // and context lines have to spend their share of the budget. With unified>0
+  // both arms run; the budgets must hit zero exactly at the hunk's end so the
+  // NEXT "+++ " is read as the file header it genuinely is.
+  test("parseDiffAddedLines spends the hunk budget on removal and context lines", () => {
+    const diff = [
+      "diff --git a/src/a.ts b/src/a.ts",
+      "--- a/src/a.ts",
+      "+++ b/src/a.ts",
+      "@@ -1,3 +1,3 @@",
+      " const keep = 0;",
+      "-const removed = 1;",
+      "+const added = 1;",
+      " const tail = 2;",
+      "diff --git a/src/b.ts b/src/b.ts",
+      "--- a/src/b.ts",
+      "+++ b/src/b.ts",
+      "@@ -5,0 +6,1 @@",
+      "+const second = 3;",
+    ].join("\n");
+    const added = parseDiffAddedLines(diff);
+    expect([...(added.get("src/a.ts") ?? [])]).toEqual([2]);
+    expect([...(added.get("src/b.ts") ?? [])]).toEqual([6]);
+  });
 });
 
 describe("t229 patch gate verdict (falling proof)", () => {

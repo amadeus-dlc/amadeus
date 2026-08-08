@@ -33,6 +33,7 @@ import {
   type ParsedArgs,
   parseArgs,
 } from "./lib/run-tests-args.ts";
+import { exitCodeFor } from "./lib/run-tests-exit-code.ts";
 import { buildTestsTotals, writeTestsTotals } from "./lib/run-tests-totals.ts";
 import {
   beginObservation,
@@ -1128,7 +1129,11 @@ async function main(): Promise<number> {
 try {
   const rc = await main();
   if (cleanupLogDir) rmSync(logDir, { recursive: true, force: true });
-  process.exit(rc);
+  // #2577: process.exit(N) truncates to N % 256 (POSIX 8-bit exit codes).
+  // main() returns failedFiles uncapped, so clamp here before it reaches
+  // process.exit -- otherwise a failure count that lands on an exact
+  // multiple of 256 wraps to exit code 0 (a false green).
+  process.exit(exitCodeFor(rc));
 } catch (err) {
   appendFileSync(2, `${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
   if (cleanupLogDir) rmSync(logDir, { recursive: true, force: true });
