@@ -81,7 +81,7 @@ function commitIntentBirth(boltSlugs: string[] = [], projectIssues: number[] = [
       : `- **Project**: GitHub issue ${projectIssues.map((n) => `#${n}`).join(" = ")}\n`;
   writeRecordFile("amadeus-state.md", `# State\n\n${project}- **Bolt Refs**: ${refs}\n`);
   git(["add", "amadeus"]);
-  git(["commit", "-q", "-m", "birth: create intent record"]);
+  gitCommitWithRetry(["-q", "-m", "birth: create intent record"]);
 }
 
 // Squash-merge a subject-tagged code commit onto `main`, then merge main into the
@@ -93,7 +93,7 @@ function mergeTaggedPrThroughMain(subject: string, path: string, body: string): 
   git(["checkout", "-q", "main"]);
   writeFileAt(path, body);
   git(["add", "-A"]);
-  git(["commit", "-q", "-m", subject]);
+  gitCommitWithRetry(["-q", "-m", subject]);
   git(["checkout", "-q", base]);
   git(["merge", "-q", "--no-ff", "main", "-m", "Merge main into record"]);
 }
@@ -135,6 +135,9 @@ function gitCommitWithRetry(args: string[]): void {
       }
     }
   }
+  process.stderr.write(
+    `[t206] git commit retry exhausted after ${GIT_COMMIT_RETRY_ATTEMPTS}/${GIT_COMMIT_RETRY_ATTEMPTS} attempts (issue #2382): ${(lastErr as Error).message}\n`,
+  );
   throw lastErr;
 }
 

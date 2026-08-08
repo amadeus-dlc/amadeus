@@ -503,9 +503,17 @@ export function setupWorktreeFixture(): string {
   };
   git(["init", "-q"]);
   git(["symbolic-ref", "HEAD", "refs/heads/main"]);
+  // Local (not just -c-scoped) identity: CI runners have no global git
+  // config, and callers (e.g. gitOrThrow in later commits, such as t493's
+  // fixture-corruption tests) invoke `git commit` without a per-call `-c`,
+  // so the repo needs its own committer identity to avoid
+  // `fatal: empty ident name` (mirrors t206's initGitRepo() style).
+  git(["config", "user.email", "t@x"]);
+  git(["config", "user.name", "t"]);
+  git(["config", "commit.gpgsign", "false"]);
   writeFileSync(join(proj, "README.md"), "seed\n");
   git(["add", "README.md"]);
-  git(["-c", "user.email=t@x", "-c", "user.name=t", "commit", "-qm", "init"]);
+  git(["commit", "-qm", "init"]);
   // Seed the per-intent workspace shell + default record so the data-path
   // helpers (and the worktree-mirror resolution that threads relativeRecordDir)
   // anchor under amadeus/spaces/default/intents/<record>/ instead of a flat

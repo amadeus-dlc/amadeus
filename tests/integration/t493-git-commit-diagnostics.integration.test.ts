@@ -123,6 +123,9 @@ function commitWithRetry(message: string, onRetryDelay?: () => void): void {
       }
     }
   }
+  process.stderr.write(
+    `[t493] retry exhausted after ${RETRY_ATTEMPTS}/${RETRY_ATTEMPTS} attempts\n`,
+  );
   throw lastErr;
 }
 
@@ -150,6 +153,7 @@ test("bounded retry exhausts and rethrows with a diagnostic + retry record when 
     expect(stderr).toContain("[gitOrThrow diagnostics]");
     expect(stderr).toContain(".git/objects exists: false");
     expect(stderr).toContain("attempt 1/2 failed, retrying");
+    expect(stderr).toContain("retry exhausted after 2/2 attempts");
     expect(stderr).not.toContain("retry succeeded");
   } finally {
     repairObjectsDir();
