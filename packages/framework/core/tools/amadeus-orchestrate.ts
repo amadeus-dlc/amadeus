@@ -87,6 +87,7 @@ import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
   type AwaitCompletionDirective,
+  type DepthLevel,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -96,6 +97,7 @@ import {
   renderAdvisoryChoiceQuestion,
   type RunStageDirective,
   type SelectIntentDirective,
+  VALID_DEPTH_VALUES,
   validateDirective,
 } from "./amadeus-directive.ts";
 import {
@@ -140,6 +142,7 @@ import {
   getField,
   intentRepos,
   listIntents,
+  loadScopeMapping,
   nextInScopeStage,
   normalizeUnitKind,
   parseCheckboxes,
@@ -1753,10 +1756,13 @@ export function emitComposedPluginStageIfInstalled(
   recordPrefix: string | null,
   codekbCtx: CodekbCtx | undefined,
   hostRoot: string,
+  // The live workflow's state, read by the caller. Only its **Depth** is used
+  // here (threaded on as a value) — this path stays free of routing state reads.
+  stateContent: string | null = null,
 ): boolean {
   if (!flags.stage || flags.phase) return false;
   if (!isComposedPluginStage(hostRoot, flags.stage)) return false;
-  emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx);
+  emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
   return true;
 }
 
@@ -2478,6 +2484,25 @@ function routeMainWorkflowDirective(
   return directive;
 }
 
+// resolveDepth — the single depth authority for directive emission (#2425):
+// amadeus-state.md → **Depth** wins. Values are normalized against
+// VALID_DEPTH_VALUES so a hand-edited lowercase state still emits the canonical
+// Capitalized form. Anything the state cannot supply a usable level for — no
+// Depth field, an unrecognizable value, or no state at all (the --single and
+// no-state jump paths pass stateContent: null) — falls back to the scope's
+// declared default, so a corrupted state degrades to the scope level rather
+// than leaving the stage with no depth signal. Only an unknown scope on top of
+// that yields undefined, and the directive then omits the optional field.
+function resolveDepth(stateContent: string | null, scope: string): DepthLevel | undefined {
+  const canon = (raw: string | undefined): DepthLevel | undefined => {
+    if (!raw) return undefined;
+    const needle = raw.trim().toLowerCase();
+    return VALID_DEPTH_VALUES.find((v) => v.toLowerCase() === needle);
+  };
+  const fromState = stateContent ? canon(getField(stateContent, "Depth") ?? undefined) : undefined;
+  return fromState ?? canon(loadScopeMapping()[scope]?.depth);
+}
+
 function buildRunStageDirective(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -2529,6 +2554,8 @@ function buildRunStageDirective(
   if (codekbCtx) {
     ensureStageDiaryForDirective(codekbCtx.projectDir, directive.memory_path, codekbCtx.space);
   }
+  const depth = resolveDepth(stateContent, scope);
+  if (depth !== undefined) directive.depth = depth;
   if (absent.length > 0) directive.consumes_absent = absent;
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;
@@ -3039,7 +3066,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       ));
       return;
     }
-    emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx);
+    emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
     return;
   }
 
@@ -3124,7 +3151,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // NO `--single` — the opt-in reach that install alone grants. This precedes
     // the jump path so a composed opt-in stage (scopes: []), which the jump would
     // reject as "skipped for scope", instead runs as an isolated single stage.
-    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginActivationHostRoot())) {
+    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginActivationHostRoot(), stateContent)) {
       return;
     }
     emitJumpDirective(flags, scope, pd, projectType);
@@ -4058,6 +4085,14 @@ function emitSingleRunStage(
   projectType: "brownfield" | "greenfield" | null,
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
+  // depth — resolved by the CALLER from the live state, threaded as a value
+  // rather than read here. This path deliberately passes stateContent: null to
+  // buildRunStageDirective (no routing read), but depth is workflow
+  // CONFIGURATION, not routing: a `--stage` jump or `--single` run inside a live
+  // workflow must still deliver the state's **Depth**, or a `--depth` override
+  // would be silently replaced by the scope default. Undefined (no state) leaves
+  // buildRunStageDirective's scope-default fallback in charge.
+  depth?: DepthLevel,
 ): void {
   // The SECOND activation-advisory call site (business-logic-model L3). A
   // stage-runner skill (/amadeus-requirements-analysis and friends) IS this
@@ -4112,6 +4147,7 @@ function emitSingleRunStage(
     codekbCtx,
   );
   directive.gate = resolveSingleGate(directive.gate);
+  if (depth !== undefined) directive.depth = depth;
   if (directive.conductor_persona === undefined) {
     const persona = readConductorPersona();
     if (persona !== null) directive.conductor_persona = persona;

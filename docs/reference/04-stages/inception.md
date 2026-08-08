@@ -306,7 +306,7 @@ On affirmation, content is promoted to:
 |------------------|------------------------------------------------------------------------|
 | Phase            | Inception                                                              |
 | Stage #          | 2.3                                                                    |
-| Condition        | ALWAYS -- depth adapts to complexity                                   |
+| Condition        | ALWAYS -- the engine-resolved depth scales its artifact volume          |
 | Lead Agent       | amadeus-product-agent                                                          |
 | Support Agents   | (none)                                                                 |
 | Mode             | inline                                                                 |
@@ -316,14 +316,17 @@ On affirmation, content is promoted to:
 
 Requirements Analysis transforms the user's intent and any reverse-engineered
 codebase understanding into formal, structured requirements. It assesses the
-request for clarity, type, scope, and complexity; determines the appropriate
+request for clarity, type, scope, and complexity; confirms the engine-resolved
 depth; extracts what is already known; runs a completeness analysis across six
 dimensions; generates clarifying questions; and produces a formal requirements
 document.
 
-This stage always executes but adapts its depth based on project complexity:
-minimal for clear/narrow scope, standard for moderate scope, comprehensive for
-large scope with significant unknowns.
+This stage always executes. Its depth comes from the engine on the run-stage
+directive's `directive.depth` field (fallback: `amadeus-state.md` ->
+`**Depth**`), and scales the volume of the requirements it writes. The
+complexity assessment is advisory: when it strongly disagrees with the resolved
+depth, the stage suggests a `--depth` override rather than changing depth
+itself.
 
 ### Inputs
 
@@ -347,10 +350,12 @@ large scope with significant unknowns.
    - **Scope**: Single component, multi-component, system-wide
    - **Complexity**: Simple, standard, complex
 
-4. **Determine Depth** -- Based on complexity assessment:
-   - **Minimal**: Clear request, narrow scope, well-understood domain
-   - **Standard**: Moderate scope, some unknowns, multiple stakeholders
-   - **Comprehensive**: Large scope, significant unknowns, complex domain
+4. **Confirm Depth** -- Read the resolved depth from the run-stage directive's
+   `directive.depth` field (fallback: `amadeus-state.md` -> `**Depth**`). Depth
+   authority is the engine (stage-protocol.md §8); the stage never re-derives it
+   from the complexity assessment. A strong disagreement between the assessment
+   and the resolved depth is surfaced as a one-line advisory suggesting a
+   `--depth` override, never applied by the stage itself.
 
 5. **Assess Current Requirements** -- Extract and organize what is already
    known from the user's input: explicit functional requirements, implied

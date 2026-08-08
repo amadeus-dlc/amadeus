@@ -69,6 +69,8 @@ Create `<record>/construction/build-and-test/build-instructions.md`:
 - Build verification steps
 - Troubleshooting common build issues
 
+Scale to `directive.depth`: **Minimal** — commands and env vars only, omit the troubleshooting section unless a build actually failed during Step 10; **Standard** — include verification steps and known troubleshooting; **Comprehensive** — full troubleshooting matrix and environment variants.
+
 ### Step 4-8: Generate Test Instructions (Strategy-Aware)
 
 Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**` (see stage-protocol.md §8 "Test Strategy"). Generate test instruction files based on the strategy level:
@@ -106,6 +108,8 @@ Create `<record>/construction/build-and-test/build-and-test-summary.md`:
 - Coverage expectations per unit
 - Readiness assessment (build-ready, test-ready, deployment-ready)
 - Known limitations or outstanding items
+
+Scale to `directive.depth`: **Minimal** — one status table plus a short readiness line; **Standard** — the listed sections at moderate detail; **Comprehensive** — add per-unit coverage narrative and outstanding-risk analysis.
 
 ### Step 10: Execute Build and Tests
 
