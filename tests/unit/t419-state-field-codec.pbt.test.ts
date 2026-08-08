@@ -13,10 +13,13 @@
 // P-ST4 turns "silently does nothing" into a pinned contract.
 //
 // The accepting domain is narrower than "no newline": under the m flag `.` and
-// `$` stop at all four JS line terminators, and setField writes through
-// String.prototype.replace, where $&, $`, $', $n and $$ expand instead of being
-// stored. fieldValueArb excludes both classes — describing the implementation,
-// not proposing to change it.
+// `$` stop at all four JS line terminators, so fieldValueArb excludes them —
+// describing the implementation, not proposing to change it. `$`-special
+// sequences ($&, $`, $', $n, $$) are NO LONGER excluded (Issue #2580):
+// setField/setFieldStrict/setOrInsertField write via a replacer FUNCTION, not
+// a template replacement string, so those sequences are stored verbatim. See
+// the P-ST5/P-ST6 pinned regressions below for the exact value classes that
+// used to corrupt the file.
 //
 // In-process: pure functions imported from core, no spawn, no filesystem.
 //
@@ -45,6 +48,8 @@ import {
   fieldExists,
   getField,
   setField,
+  setFieldStrict,
+  setOrInsertField,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 // Fixed seed: deterministic replay of any counterexample (convention #1).
@@ -85,5 +90,62 @@ describe("t419 state text field codec", () => {
       }),
       OPTS,
     );
+  });
+
+  // ── Issue #2580 regression pins ──────────────────────────────────────────
+  // setField/setFieldStrict/setOrInsertField wrote via String.prototype.replace
+  // with a TEMPLATE replacement string (`$1 ${value}`), so a `value` containing
+  // a `$`-special sequence was interpreted as a replacement pattern instead of
+  // being stored: `$1` re-substituted the captured field head, `$&` inserted
+  // the whole match, `` $` `` inserted the pre-match text, `$'` inserted the
+  // POST-match text (silently duplicating the rest of the file onto one line),
+  // and `$$` silently collapsed to a single `$`. Fixed by switching all three
+  // functions to a replacer FUNCTION, which never interprets `$` patterns in
+  // its return value. These six value classes are the shrunk counterexamples
+  // from the cross-review's decisive repro (Issue #2580) — pinned verbatim so
+  // the corruption can never silently return.
+  const DOLLAR_SPECIAL_VALUES: Array<[label: string, value: string]> = [
+    ["$1 (capture group)", "price is $1 today"],
+    ["backtick-quoted $1", "cost: `$1`"],
+    ["$& (whole match)", "echo $& now"],
+    ["$' (post-match)", "prefix-$'-suffix"],
+    ["$$ (silent collapse)", "total is $$5"],
+    ["trailing lone $ (must still round-trip)", "amount$"],
+  ];
+
+  const CONTENT_WITH_TWO_FIELDS = [
+    "# Amadeus State",
+    "",
+    "- **Current Stage**: intent-capture",
+    "- **Other Field**: original",
+    "",
+  ].join("\n");
+
+  describe("P-ST5: setField stores $-special values verbatim (Issue #2580)", () => {
+    for (const [label, value] of DOLLAR_SPECIAL_VALUES) {
+      test(label, () => {
+        const out = setField(CONTENT_WITH_TWO_FIELDS, "Current Stage", value);
+        expect(getField(out, "Current Stage")).toBe(value);
+        // The sibling field must be untouched — no $&/$'-driven duplication
+        // or cross-field bleed, and exactly one occurrence of its line.
+        expect(out.match(/^- \*\*Other Field\*\*: original$/gm)?.length).toBe(1);
+      });
+    }
+  });
+
+  describe("P-ST6: setFieldStrict / setOrInsertField mirror the same fix", () => {
+    for (const [label, value] of DOLLAR_SPECIAL_VALUES) {
+      test(`setFieldStrict: ${label}`, () => {
+        const out = setFieldStrict(CONTENT_WITH_TWO_FIELDS, "Current Stage", value);
+        expect(getField(out, "Current Stage")).toBe(value);
+        expect(out.match(/^- \*\*Other Field\*\*: original$/gm)?.length).toBe(1);
+      });
+
+      test(`setOrInsertField (update path): ${label}`, () => {
+        const out = setOrInsertField(CONTENT_WITH_TWO_FIELDS, "## Progress", "Current Stage", value);
+        expect(getField(out, "Current Stage")).toBe(value);
+        expect(out.match(/^- \*\*Other Field\*\*: original$/gm)?.length).toBe(1);
+      });
+    }
   });
 });

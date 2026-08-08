@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 181,
+      "function": 182,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -3695,8 +3695,13 @@
       "unitClass": "function",
       "unitId": "function:replaceStageProgressSection",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t501-stage-progress-dollar-escape.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

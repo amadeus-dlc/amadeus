@@ -62,14 +62,14 @@ export const stateContentWithoutFieldArb: fc.Arbitrary<{ content: string; field:
     field,
   }));
 
-// Values that survive the round-trip. Two exclusions, both measured against the
+// Values that survive the round-trip. One exclusion, measured against the
 // implementation: the four JS line terminators (`.` never matches them and the
-// m-flag `$` anchors before them, so the tail is unreadable), and `$` (setField
-// writes via String.prototype.replace, where $&, $`, $', $n and $$ expand into
-// something other than the value). Excluding `$` outright is stronger than
-// necessary but keeps the predicate a single-character test. Everything else
-// stays: empty string, surrounding whitespace, tabs and non-ASCII.
-const EXCLUDED_FROM_VALUES = /[\n\r\u2028\u2029$]/g;
+// m-flag `$` anchors before them, so the tail is unreadable). `$` is no longer
+// excluded (Issue #2580): setField/setFieldStrict/setOrInsertField now write
+// via a String.prototype.replace REPLACER FUNCTION, so `$&`, `$\``, `$'`, `$n`
+// and `$$` are inserted verbatim rather than expanded as replacement patterns.
+// Empty string, surrounding whitespace, tabs and non-ASCII all stay.
+const EXCLUDED_FROM_VALUES = /[\n\r\u2028\u2029]/g;
 
 const valueBodyArb: fc.Arbitrary<string> = fc
   .string({ unit: "grapheme", maxLength: 24 })
