@@ -1,6 +1,6 @@
 // covers: function:resyncStateToStageGraph
 //
-// t494 — plugin re-composition's `resyncOneIntent` (amadeus-lib.ts) must not
+// t500 — plugin re-composition's `resyncOneIntent` (amadeus-lib.ts) must not
 // bump `Last Updated` on an intent it is merely row-repairing (#2554).
 //
 // Mechanism: in-process (the exported seam), fixtures born by spawning the
@@ -80,7 +80,7 @@ function dropRow(proj: string, slug: string): void {
   writeState(proj, after);
 }
 
-describe("t494 resyncOneIntent must not touch Last Updated (#2554)", () => {
+describe("t500 resyncOneIntent must not touch Last Updated (#2554)", () => {
   test("resynced arm: rows repaired, but Last Updated is preserved byte-for-byte", () => {
     const proj = bornProject();
     try {
