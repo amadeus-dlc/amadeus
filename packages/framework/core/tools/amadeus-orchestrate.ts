@@ -193,6 +193,7 @@ import type {
 } from "./amadeus-intent-autonomy.ts";
 import {
   applyProductionAutonomyMode,
+  observeLaunchTurnToken,
   previewProductionAutonomyGrant,
   productionStageAutonomy,
   readProductionAutonomyProjection,
@@ -758,6 +759,16 @@ const DEFAULT_SCOPE = "feature";
 // boundaries), never a silent miss — we exit non-zero so a wiring bug surfaces
 // loudly rather than emitting a lie the conductor would act on.
 function emit(directive: Directive, recordError = true): void {
+  // A birth-bound declaration must have been consumed by birthPrintDirective
+  // before anything goes out. Still holding one means this invocation routed
+  // somewhere other than birth after the ladder decided it would not — so the
+  // mode would vanish. Refuse loudly rather than emit a directive that quietly
+  // drops what the user declared (#2378 BR-U2-1).
+  const strandedCarry = strandedCarryRefusal(takePendingAutonomyCarry()?.mode ?? null);
+  // One line on purpose: the condition is evaluated on every emission, so the
+  // process-terminating arm stays measurable instead of reading as a never-hit
+  // line the patch gate cannot distinguish from dead code.
+  if (strandedCarry !== null) { console.error(strandedCarry); process.exit(1); }
   const guardedDirective = applyPendingAdvisoryGuard(directive);
   const result = validateDirective(guardedDirective);
   if (!result.valid) {
@@ -1229,7 +1240,15 @@ export type LaunchAutonomyContext =
 
 export type LaunchAutonomyOutcome =
   | { readonly kind: "continue" }
+  // The declaration belongs to an intent this invocation is about to CREATE, so
+  // it rides on the birth command rather than being applied here (#2378 FR-1a).
+  | { readonly kind: "carry"; readonly mode: IntentAutonomyMode }
   | { readonly kind: "error"; readonly message: string };
+
+// Where the CURRENT `next` invocation is headed, as far as a declaration cares.
+// "birth" = it will name the intent-birth move; "ask" = it will surface the
+// scope-confirm question, which carries nothing; "none" = anything else.
+export type LaunchAutonomyReach = "birth" | "ask" | "none";
 
 // The I/O the declaration handler depends on, injected so the judgment ladder
 // can be exercised over every context without a real workspace on disk.
@@ -1279,6 +1298,27 @@ const PRODUCTION_LAUNCH_AUTONOMY_PORTS: LaunchAutonomyPorts = {
   },
 };
 
+// Judgment 0's refusal, split by where the invocation is headed. A freeform
+// description with no scope is bound for the scope-confirm ask, which has no
+// command line to carry a declaration; naming both ways forward keeps the mode
+// from disappearing behind the question (BR-U2-1). Every other shape gets the
+// original "declare after birth" wording.
+function noDeclarationTargetRefusal(
+  reach: LaunchAutonomyReach,
+  mode: IntentAutonomyMode,
+): LaunchAutonomyOutcome {
+  if (reach === "ask") {
+    return {
+      kind: "error",
+      message: `--autonomy cannot ride along with the scope-confirm question. Name the scope on the same command (\`/amadeus --scope <scope> --autonomy ${mode} "<description>"\`), or start the workflow first and declare the mode afterwards with \`/amadeus --autonomy ${mode}\`.`,
+    };
+  }
+  return {
+    kind: "error",
+    message: "--autonomy needs an active intent. Start the workflow first, then declare the mode with `/amadeus --autonomy <none|semi|full>` or `amadeus-bolt set-autonomy --mode <none|semi|full>`.",
+  };
+}
+
 // Decide what `--autonomy <mode>` means for the active intent, and delegate the
 // write when it means one. Returns "continue" when the caller should fall
 // through to the ordinary routing (either nothing needed doing, or the mode was
@@ -1287,16 +1327,12 @@ export function applyLaunchAutonomyDeclaration(
   projectDir: string,
   stateContent: string | null,
   flags: ParsedFlags,
+  reach: LaunchAutonomyReach,
   ports: LaunchAutonomyPorts = PRODUCTION_LAUNCH_AUTONOMY_PORTS,
 ): LaunchAutonomyOutcome {
-  // 0 — nothing to declare against. Birth first; the flag then has a target.
-  if (stateContent === null) {
-    return {
-      kind: "error",
-      message: "--autonomy needs an active intent. Start the workflow first, then declare the mode with `/amadeus --autonomy <none|semi|full>` or `amadeus-bolt set-autonomy --mode <none|semi|full>`.",
-    };
-  }
-  // 1 — the flag was passed with nothing to consume.
+  // 1 — the flag was passed with nothing to consume. Malformed input is reported
+  // by the flag the user got wrong, whatever this invocation is doing otherwise,
+  // so both malformed judgments precede every state- and reach-dependent one.
   if (flags.autonomyMissingValue) {
     return { kind: "error", message: "--autonomy requires a value: none, semi, or full." };
   }
@@ -1311,8 +1347,19 @@ export function applyLaunchAutonomyDeclaration(
     };
   }
   const mode = requested as IntentAutonomyMode;
-  // Judgments 0-2 rejected everything malformed, so the projection read happens
-  // only for input that could legitimately be applied.
+  // 2b — this invocation is about to BIRTH an intent (#2378 FR-1a, BR-U2-1). The
+  // declaration is for THAT intent, so it is carried onto the birth command and
+  // nothing here is read or written. This precedes judgment 0 because `--new-intent`
+  // arrives WITH a live state file — the intent already in flight — and applying
+  // the mode to it would declare against the wrong intent entirely. `full` is
+  // carried as well: intent-birth owns the ceremony (BR-U2-3), so judgment 7
+  // below is left to intents that already exist.
+  if (reach === "birth") return { kind: "carry", mode };
+  // 0 — nothing to declare against, and nothing in this call will create it.
+  if (stateContent === null) return noDeclarationTargetRefusal(reach, mode);
+  // Judgments 0-2 rejected everything malformed and every call that has no
+  // target yet, so the projection read happens only for input that could
+  // legitimately be applied to the intent in flight.
   const ctx = ports.readContext(projectDir);
   // 3 — fail closed: with neither the declaration state nor the grant state
   // known, no write is safe.
@@ -1359,6 +1406,77 @@ export function applyLaunchAutonomyDeclaration(
   return { kind: "continue" };
 }
 
+// Where this invocation is headed, mirroring the guards of the branches that
+// name the intent-birth move (4a `--new-intent`, 7b bare known-scope positional,
+// 9a explicit `--scope`) and of the one that surfaces the scope-confirm ask
+// (Branch 8). The order below is handleNext's own branch order, so a call that
+// two branches could claim resolves to the one that actually fires.
+//
+// A prediction is only ever an optimisation here: getting it wrong cannot drop a
+// declaration silently, because the carry latch is verified at emit time and a
+// carry that never reached a birth print is a hard error.
+export function launchAutonomyReach(
+  stateContent: string | null,
+  flags: ParsedFlags,
+  source: string,
+): LaunchAutonomyReach {
+  if (flags.compose || flags.newScope || flags.report) return "none";
+  if (flags.newIntent) return "birth";
+  if (stateContent !== null) return "none";
+  if (flags.stage || flags.phase) return "none";
+  if (flags.resume) return "none";
+  if (flags.intent && !flags.scope) {
+    return validScopes().has(flags.intent) ? "birth" : "ask";
+  }
+  if (source === "flag") return "birth";
+  return "none";
+}
+
+// The mode a birth-bound declaration is waiting to ride out on. Set when the
+// ladder returns `carry`, consumed by birthPrintDirective, and checked at every
+// emission: a latch still set when a directive goes out means the declaration
+// found no birth to attach to, which is the one outcome BR-U2-1 forbids.
+// The mode, plus the identity of the human turn observed AT LAUNCH while the
+// intent that received the keystroke is still active. The token travels with the
+// mode because the intent about to be born has no presence of its own to point
+// at, and a bare "find something recent" would let an unrelated intent's stale
+// turn stand in (#2378 ruling condition 2). A null token means this launch had
+// no turn to cite, which birth then refuses loudly (condition 3).
+type PendingAutonomyCarry = {
+  readonly mode: IntentAutonomyMode;
+  readonly turnToken: string | null;
+};
+
+let _pendingAutonomyCarry: PendingAutonomyCarry | null = null;
+
+function takePendingAutonomyCarry(): PendingAutonomyCarry | null {
+  const pending = _pendingAutonomyCarry;
+  _pendingAutonomyCarry = null;
+  return pending;
+}
+
+// Why a still-latched carry is refused at emission time, or null when nothing
+// was latched. Split out from emit so the wording is exercisable in-process:
+// emit's own arm ends the process, which no in-process driver can survive.
+export function strandedCarryRefusal(mode: IntentAutonomyMode | null): string | null {
+  if (mode === null) return null;
+  return `amadeus-orchestrate: refusing to drop the --autonomy ${mode} declaration: this invocation did not reach intent birth.`;
+}
+
+// A birth branch can still divert to the intent picker (a workspace that holds
+// intents with no cursor resolving one). That prompt has no command line to
+// carry a declaration onto, so the declaration is refused with guidance instead
+// of disappearing behind the prompt — the same treatment BR-U2-1 gives the
+// scope-confirm ask. Null when nothing was latched, in which case the picker
+// goes out unchanged.
+function autonomyCarryDivertError(): ErrorDirective | null {
+  const carry = takePendingAutonomyCarry();
+  if (carry === null) return null;
+  return errorDirective(
+    `--autonomy ${carry.mode} was not applied: this workspace has intents but none is active, so \`next\` needs one selected before there is anything to declare against. Choose an intent, then declare the mode with \`/amadeus --autonomy ${carry.mode}\`.`,
+  );
+}
+
 // The workflow-birth print for a resolved scope on a fresh workspace (no intent
 // record yet). A user who described what to build — `/amadeus "build the auth
 // service"`, the bare positional `next fix`, or `next --scope fix` — asked
@@ -1392,6 +1510,17 @@ function birthPrintDirective(scope: string, flags: ParsedFlags, description?: st
   }
   if (flags.depth) cmd.push(`--depth ${flags.depth}`);
   if (flags.testStrategy) cmd.push(`--test-strategy ${flags.testStrategy}`);
+  // The birth-bound declaration rides out here — the only place it can, since
+  // this is the command that creates the intent it declares against (#2378
+  // FR-1a). intent-birth applies `none`/`semi` through the canonical write path
+  // and stops on `full` with the grant ceremony (BR-U2-3).
+  const carry = takePendingAutonomyCarry();
+  if (carry !== null) {
+    cmd.push(`--autonomy ${carry.mode}`);
+    // The turn observed at launch. Omitted when there was none, so birth refuses
+    // for the honest reason instead of hunting for a substitute.
+    if (carry.turnToken !== null) cmd.push(`--autonomy-turn ${carry.turnToken}`);
+  }
   return printDirective(
     `Run \`bun ${harnessDir()}/tools/amadeus-utility.ts ${cmd.join(" ")}\` to start the workflow, then re-run \`next\` to continue.${labelHint}`,
   );
@@ -2747,6 +2876,9 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  // Per-invocation latch: an in-process driver reuses this module across calls,
+  // so a carry left behind by a previous run must never leak into this one.
+  _pendingAutonomyCarry = null;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
@@ -2967,20 +3099,35 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     return;
   }
 
-  // Branch 4ab - the `--autonomy` launch declaration (#2253). Placed after the
-  // scope checks (so a malformed invocation is reported by the flag the user got
-  // wrong) and before birth, so a declaration never rides along with a routing
-  // move. Refusals are ordinary error directives; an accepted declaration falls
-  // through to the routing that would have happened without the flag.
+  // Branch 4ab - the `--autonomy` launch declaration (#2253, widened by #2378).
+  // Placed after the scope checks (so a malformed invocation is reported by the
+  // flag the user got wrong) and before birth, so a declaration never rides
+  // along with a ROUTING move — birth is exempt, because birth creates the very
+  // intent the declaration is for rather than moving an existing workflow along
+  // (#2378 FR-1d). Refusals are ordinary error directives; an accepted
+  // declaration either applies to the intent in flight and falls through to the
+  // routing that would have happened without the flag, or latches for the birth
+  // command below.
   //
   // This branch does NOT touch directive.intent_autonomy_mode. Projecting the
   // mode onto the directive stays the sole job of routeMainWorkflowDirective,
   // which is what keeps `none` from ever being carried.
   if (flags.autonomy !== undefined || flags.autonomyMissingValue) {
-    const declaration = applyLaunchAutonomyDeclaration(pd, stateContent, flags);
+    const declaration = applyLaunchAutonomyDeclaration(
+      pd,
+      stateContent,
+      flags,
+      launchAutonomyReach(stateContent, flags, source),
+    );
     if (declaration.kind === "error") {
       emit(errorDirective(declaration.message));
       return;
+    }
+    // Observed HERE, not at birth: this is the last moment the intent that
+    // received the launching keystroke is still active, so it is the only moment
+    // this launch's own turn can be identified rather than guessed at.
+    if (declaration.kind === "carry") {
+      _pendingAutonomyCarry = { mode: declaration.mode, turnToken: observeLaunchTurnToken(pd) };
     }
   }
 
@@ -3187,7 +3334,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // zero intents → birth as before.
     const pick = intentPickPromptIfRecordsExist(pd);
     if (pick) {
-      emit(pick);
+      emit(autonomyCarryDivertError() ?? pick);
       return;
     }
     emit(birthPrintDirective(flags.intent, flags));
@@ -3253,7 +3400,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // duplicate. null → zero intents → birth as before.
     const pick = intentPickPromptIfRecordsExist(pd);
     if (pick) {
-      emit(pick);
+      emit(autonomyCarryDivertError() ?? pick);
       return;
     }
     // flags.intent here is freeform feature text typed alongside an explicit

@@ -21,6 +21,7 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  removeWorkspaceRecord,
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -80,11 +81,80 @@ afterEach(() => {
 });
 
 describe("t450 --autonomy branch in handleNext", () => {
-  test("without a state file the flag is refused, not silently dropped", () => {
+  // Revised for #2378 FR-1c. The original case asserted one answer for "no state
+  // file"; birth-at-declaration splits it by where the SAME invocation lands.
+  test("without a state file and with no birth ahead the flag is refused, not silently dropped", () => {
     proj = createTestProject();
     const { directive } = runNextInProcess(proj, ["--autonomy", "semi"]);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("--autonomy");
+  });
+
+  // createTestProject seeds one registry row, which sends the birth branches to
+  // the intent picker; these cases are about the birth itself, so they restore
+  // the zero-intent baseline first (the same move t171's beforeEach makes).
+  function freshWorkspace(): string {
+    const p = createTestProject();
+    removeWorkspaceRecord(p);
+    return p;
+  }
+
+  test("a birth-bound invocation carries the mode onto the intent-birth command", () => {
+    proj = freshWorkspace();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "semi", "--scope", "fix"]);
+    expect(directive.kind).toBe("print");
+    expect(String(directive.message)).toContain("intent-birth --scope fix");
+    expect(String(directive.message)).toContain("--autonomy semi");
+  });
+
+  test("a bare known-scope positional carries it too", () => {
+    proj = freshWorkspace();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "none", "fix"]);
+    expect(directive.kind).toBe("print");
+    expect(String(directive.message)).toContain("--autonomy none");
+  });
+
+  test("`full` is carried to birth, which owns the grant ceremony", () => {
+    proj = freshWorkspace();
+    const { directive, stderr } = runNextInProcess(proj, ["--autonomy", "full", "--scope", "fix"]);
+    expect(directive.kind).toBe("print");
+    expect(String(directive.message)).toContain("--autonomy full");
+    // No preview here: judgment 7 belongs to an intent that already exists.
+    expect(stderr).not.toContain("grant preview");
+  });
+
+  // A workspace with registry rows but no cursor takes the picker, which has no
+  // command line to carry a declaration (BR-U2-1). Both birth branches can land
+  // there, so both are pinned.
+  test("a birth branch that diverts to the intent picker refuses instead of swallowing it", () => {
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "semi", "--scope", "fix"]);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("--autonomy semi");
+  });
+
+  test("the bare known-scope positional diverts the same way", () => {
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "none", "fix"]);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("--autonomy none");
+  });
+
+  test("without a declaration the picker's own answer goes out unchanged", () => {
+    // The divert refusal must not displace whatever the picker would have said
+    // on an ordinary run — it only speaks when a declaration would be lost.
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["fix"]);
+    expect(String(directive.message)).not.toContain("--autonomy");
+  });
+
+  test("an invocation that falls into the scope-confirm ask is refused, not turned into an ask", () => {
+    // BR-U2-1: freeform prose with no scope lands on Branch 8's ask, which has
+    // nowhere to carry a declaration. The declaration must not vanish behind it.
+    proj = createTestProject();
+    const { directive } = runNextInProcess(proj, ["--autonomy", "semi", "build", "a", "widget", "shop"]);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("--scope");
   });
 
   test("an out-of-range value is refused before anything is applied", () => {

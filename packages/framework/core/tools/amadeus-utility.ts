@@ -19,7 +19,10 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
-import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
+import {
+  applyProductionAutonomyMode,
+  readProductionAutonomyProjection,
+} from "./amadeus-intent-autonomy-production.ts";
 import { projectIntentAutonomyStatus } from "./amadeus-intent-autonomy-runtime.ts";
 import {
   findCycles,
@@ -4179,6 +4182,160 @@ function ensureWorkspaceDirs(projectDir: string): void {
 // the workflow to its first post-init stage — relocated here, now writing into
 // the BORN intent's record (the active-intent cursor set first makes the
 // default-resolving state/audit helpers resolve there).
+const BIRTH_AUTONOMY_MODES = ["none", "semi", "full"] as const;
+type BirthAutonomyMode = (typeof BIRTH_AUTONOMY_MODES)[number];
+
+// What `--autonomy` said, before anything acts on it. Declared at module scope
+// so the type-only lines carry no in-body coverage records.
+export type BirthAutonomyFlag =
+  | { readonly kind: "absent" }
+  | { readonly kind: "invalid"; readonly message: string }
+  | { readonly kind: "mode"; readonly mode: BirthAutonomyMode };
+
+// Read `--autonomy` off the birth flags. Anything that is not one of the three
+// modes is invalid — INCLUDING a value-less flag, whose empty string is not a
+// mode. Pure: the caller decides what a refusal does, which is what lets every
+// arm be driven in-process (the birth handler itself is spawn-driven).
+export function classifyBirthAutonomyFlag(flags: Record<string, string>): BirthAutonomyFlag {
+  if (!("autonomy" in flags)) return { kind: "absent" };
+  const requested = (flags.autonomy ?? "").trim();
+  const match = BIRTH_AUTONOMY_MODES.find((mode) => mode === requested);
+  if (match === undefined) {
+    return {
+      kind: "invalid",
+      message: `Invalid --autonomy "${requested}". Valid values: ${BIRTH_AUTONOMY_MODES.join(", ")}.`,
+    };
+  }
+  return { kind: "mode", mode: match };
+}
+
+// What birth should say about a declaration once the transaction is over.
+// `reported` goes to stdout and birth still succeeds; `refused` is loud and
+// stops. Declared at module scope so the type-only lines carry no in-body
+// coverage records.
+export type BirthAutonomyOutcome =
+  | { readonly kind: "reported"; readonly message: string }
+  | { readonly kind: "refused"; readonly message: string };
+
+// The I/O the declaration depends on, injected so every arm is exercisable
+// without a real workspace (the same shape LaunchAutonomyPorts uses for the
+// engine-side ladder).
+export interface BirthAutonomyPorts {
+  readonly readState: (projectDir: string) => string;
+  readonly applyMode: (input: {
+    readonly projectDir: string;
+    readonly stateContent: string;
+    readonly mode: BirthAutonomyMode;
+    readonly provenanceScope: { readonly kind: "launch-chain"; readonly launchTurnId: string };
+  }) => { readonly ok: true } | { readonly ok: false; readonly error: string };
+}
+
+const PRODUCTION_BIRTH_AUTONOMY_PORTS: BirthAutonomyPorts = {
+  readState: (projectDir) => readStateFile(projectDir),
+  applyMode: (input) => applyProductionAutonomyMode(input),
+};
+
+// A declaration that arrived alongside a flat-layout MIGRATION. Migration moves
+// an existing workflow into a record rather than birthing one, so it returns
+// before the birth pipeline and the declaration is not applied. Saying so is the
+// point: dropping it in silence is the very shape this unit exists to close.
+//
+// Shape derived from the two neighbours, not invented: the migration branch
+// itself reports on stdout and SUCCEEDS (`Migrated flat workspace into intent:`),
+// and the additive birth advisories print a notice plus a `remedy:` line without
+// failing the run. The recovery wording is the one the refusal arm below already
+// uses, because the end state is identical — a live intent whose mode is unset,
+// with the first declaration still available (BR-U2-4).
+export function migratedDeclarationAdvisory(mode: BirthAutonomyMode): BirthAutonomyOutcome {
+  return {
+    kind: "reported",
+    message:
+      `Intent autonomy: ${mode} NOT applied — this run migrated an existing flat workspace instead of birthing an intent.\n` +
+      `  remedy: declare it against the migrated intent with \`/amadeus --autonomy ${mode}\`\n`,
+  };
+}
+
+// Resolve the birth-time declaration, AFTER the birth transaction has committed.
+//
+// `full` is accepted but never applied: the grant ceremony (FR-GRT-006) is not
+// something a launch flag may stand in for, so birth reports what issuing a
+// grant takes and stops there (BR-U2-3).
+//
+// `none`/`semi` go through the ONE canonical write path (BR-U2-6) under the
+// launch-chain provenance scope, because the intent that was just born has no
+// audit history of its own to carry the launching keystroke's HUMAN_TURN. The
+// flag is not provenance (BR-U2-2): with no real turn to cite the write path
+// refuses, and the refusal is loud — birth stands, the mode stays unset, and the
+// first declaration is still available against the now-live intent (BR-U2-4).
+export function resolveBirthAutonomyDeclaration(
+  projectDir: string,
+  mode: BirthAutonomyMode,
+  launchTurnId: string | null,
+  ports: BirthAutonomyPorts = PRODUCTION_BIRTH_AUTONOMY_PORTS,
+): BirthAutonomyOutcome {
+  const boltPath = `${harnessDir()}/tools/amadeus-bolt.ts`;
+  if (mode === "full") {
+    return {
+      kind: "reported",
+      message:
+        `Intent autonomy: full NOT applied — a grant must be issued first.\n` +
+        `  1. bun ${boltPath} preview-autonomy\n` +
+        `  2. bun ${boltPath} set-autonomy --mode full --confirmed-display-digest <digest>\n`,
+    };
+  }
+  // No turn was observed at launch, so there is nothing this declaration could
+  // cite. Refuse here rather than let the write path look for a substitute: an
+  // unrelated intent's unconsumed turn is not authorization for THIS launch
+  // (ruling conditions 2 and 3).
+  if (launchTurnId === null) {
+    return {
+      kind: "refused",
+      message:
+        `--autonomy ${mode} was not applied: this launch carried no human turn to cite as provenance. ` +
+        `The intent was born and its mode is unchanged; declare it again with \`/amadeus --autonomy ${mode}\` ` +
+        `(or \`bun ${boltPath} set-autonomy --mode ${mode}\`).`,
+    };
+  }
+  const applied = ports.applyMode({
+    projectDir,
+    stateContent: ports.readState(projectDir),
+    mode,
+    provenanceScope: { kind: "launch-chain", launchTurnId },
+  });
+  if (!applied.ok) {
+    return {
+      kind: "refused",
+      message:
+        `--autonomy ${mode} was not applied: ${applied.error}. The intent was born and its mode is unchanged; ` +
+        `declare it again with \`/amadeus --autonomy ${mode}\` (or \`bun ${boltPath} set-autonomy --mode ${mode}\`).`,
+    };
+  }
+  return { kind: "reported", message: `Intent autonomy: ${mode}\n` };
+}
+
+// The birth handler's two effectful edges, kept out of its body so the handler's
+// own branching does not grow. Both guards sit on one line: their conditions are
+// evaluated on every birth, which keeps the process-terminating arms measurable.
+function birthAutonomyOrDie(flags: Record<string, string>): BirthAutonomyMode | null {
+  const declared = classifyBirthAutonomyFlag(flags);
+  if (declared.kind === "invalid") die(declared.message);
+  return declared.kind === "mode" ? declared.mode : null;
+}
+
+function reportBirthAutonomyDeclaration(
+  projectDir: string,
+  autonomy: BirthAutonomyMode | null,
+  launchTurnId: string | null,
+  migrated: boolean,
+): void {
+  if (autonomy === null) return;
+  const outcome = migrated
+    ? migratedDeclarationAdvisory(autonomy)
+    : resolveBirthAutonomyDeclaration(projectDir, autonomy, launchTurnId);
+  if (outcome.kind === "refused") die(outcome.message);
+  process.stdout.write(outcome.message);
+}
+
 function isReservedHelpRecordName(raw: string, maxLength: number): boolean {
   const slug = slugify(raw, maxLength);
   return classifyHelpIntent([raw]).kind === "help" || classifyHelpIntent([slug]).kind === "help";
@@ -4205,6 +4362,10 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
   }
 
+  // Validated here, alongside --depth/--test-strategy, so a bad mode name dies
+  // before the birth transaction opens and nothing is minted.
+  const autonomy = birthAutonomyOrDie(flags);
+
   const description = flags.arguments?.trim();
   const label = flags.label?.trim();
   const slugSource = label || description || scope;
@@ -4225,6 +4386,10 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
   } catch (e) {
     die(errorMessage(e));
   }
+
+  // A migrated workspace short-circuits the birth pipeline below; its state was
+  // MOVED, not created, so there is no new declaration to apply afterwards.
+  let migratedInPlace = false;
 
   // The whole mutation runs under the WORKSPACE lock so a concurrent first-run
   // is serialized — both births append distinct rows to intents.json without a
@@ -4255,6 +4420,7 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       process.stdout.write(
         `Migrated flat workspace into intent: ${migration.intentDirName} (space: ${DEFAULT_SPACE})\n`,
       );
+      migratedInPlace = true;
       return;
     }
 
@@ -4371,6 +4537,22 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       initialGoal,
     );
   });
+
+  // Outside the lock: the autonomy transaction takes its own audit lock, and the
+  // acquire is not reentrant. Birth has fully committed by here, which is also
+  // what makes the failure path honest — the intent exists whether or not the
+  // declaration lands.
+  //
+  // A migration returns before the birth pipeline, so the declaration has no
+  // newly-born intent to land on. It is reported rather than applied — and
+  // rather than dropped in silence, which is the failure this unit exists to
+  // close.
+  reportBirthAutonomyDeclaration(
+    projectDir,
+    autonomy,
+    flags["autonomy-turn"]?.trim() || null,
+    migratedInPlace,
+  );
 }
 
 // Init-time Phase Progress status for one phase. Init PRE-CROSSES the

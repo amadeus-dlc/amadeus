@@ -3670,6 +3670,11 @@ type PresenceEvent = {
   human: boolean; // HUMAN_TURN or a verified delegation
   delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
   res?: "gate" | "answer"; // present iff this is a resolution
+  // The raw block + its origin shard path, carried for HUMAN_TURN events only.
+  // outstandingHumanTurns needs an identity for the turn it hands back; every
+  // other predicate here answers a yes/no question and ignores both fields.
+  block?: string;
+  shardPath?: string;
 };
 
 // Parse + verify the ledger once, tagging each event with its ORIGIN shard so the
@@ -3684,12 +3689,21 @@ type PresenceEvent = {
 // means no ledger → no presence tracking → fail open. (These notes live up here
 // rather than inside the body: bun's lcov stamps in-body comment lines as
 // never-hit DA records, which the codecov patch gate counts as misses.)
-function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
-  const shardPaths = auditShards(projectDir);
+function scanPresenceLedger(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): PresenceEvent[] | null {
+  const shardPaths = auditShards(projectDir, intent, space);
   const contents: string[] = [];
+  // Paths are collected ALONGSIDE the contents, not indexed back into
+  // shardPaths: a shard that vanishes mid-scan is skipped, so the two lists
+  // would otherwise drift and an event would name the wrong shard.
+  const readPaths: string[] = [];
   for (const path of shardPaths) {
     try {
       contents.push(readFileSync(path, "utf-8"));
+      readPaths.push(path);
     } catch {} // vanished between enumerate and read — skip (see doc above)
   }
   if (contents.join("\n").length === 0) return null;
@@ -3701,7 +3715,7 @@ function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
       if (!ev) continue;
       const ts = auditBlockField(blocks[pos], "Timestamp") ?? "";
       if (ev === "HUMAN_TURN") {
-        events.push({ ts, shard, pos, human: true });
+        events.push({ ts, shard, pos, human: true, block: blocks[pos], shardPath: readPaths[shard] });
       } else if (ev === "DELEGATED_APPROVAL") {
         if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
           events.push({ ts, shard, pos, human: true, delegVerb: "approve" });
@@ -3788,6 +3802,45 @@ export function humanActedSinceGate(
     (e) => e.delegVerb === verb,
     (e) => e.res === "gate",
   );
+}
+
+// One outstanding human turn: the block that carries it and the shard it came
+// from, so a caller can name WHICH turn it referenced. Declared at module scope
+// so the type-only lines carry no in-body coverage records.
+export type OutstandingHumanTurn = {
+  readonly timestamp: string;
+  readonly shardPath: string;
+  readonly block: string;
+};
+// The HUMAN_TURN events in ONE record's ledger that no resolution has consumed,
+// under the same fail-closed ordering humanActedSinceGate uses. Where that
+// predicate answers "is presence outstanding HERE?" for the ACTIVE record, this
+// enumerates the outstanding turns of an EXPLICITLY NAMED record, which is what
+// a cross-record reference needs: it must point at a turn that exists on disk
+// and is still unspent.
+//
+// Verified delegations are deliberately excluded. A delegation is a stand-in for
+// presence at an approval gate; the launch-chain reference wants the human's own
+// keystroke, so only real HUMAN_TURN blocks qualify.
+//
+// No ledger at all yields [] rather than humanActedSinceGate's fail-OPEN `true`:
+// the question here is "which real turn may I cite?", and the honest answer for
+// an empty ledger is "none".
+export function outstandingHumanTurns(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): OutstandingHumanTurn[] {
+  const events = scanPresenceLedger(projectDir, intent, space);
+  if (events === null) return [];
+  const outstanding: OutstandingHumanTurn[] = [];
+  for (const turn of events) {
+    if (!turn.human || turn.delegVerb !== undefined) continue;
+    if (turn.block === undefined || turn.shardPath === undefined) continue;
+    if (events.some((r) => r.res !== undefined && resolutionConsumesHuman(r, turn))) continue;
+    outstanding.push({ timestamp: turn.ts, shardPath: turn.shardPath, block: turn.block });
+  }
+  return outstanding;
 }
 
 // Verify a delegated-provenance block (#671 DELEGATED_APPROVAL, #685
