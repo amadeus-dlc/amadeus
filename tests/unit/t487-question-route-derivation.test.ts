@@ -16,6 +16,9 @@ import {
 import {
   autonomyDigest,
   createAutonomyProjection,
+  type GrantScopeDescriptor,
+  grantIssuanceDisplayDigest,
+  normalizeDecisionPolicies,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
 import {
   createIntentAutonomyCoordinator,
@@ -41,6 +44,49 @@ function semiTransactionEncoded(): string {
       commandOccurrenceId: "semi-command-1",
       expectedProjectionRevision: initial.projectionRevision,
       confirmedDisplayDigest: autonomyDigest("semi-display"),
+    }
+  );
+  if ("error" in result) throw new Error(String(result.error));
+  const transaction = repository.readTransactions(INTENT).at(-1);
+  if (!transaction) throw new Error("no transaction committed");
+  return encodeIntentAutonomyTransaction(transaction);
+}
+
+// The full-mode twin of semiTransactionEncoded: the bypass predicate treats
+// semi and full alike, so the detection needs a real full grant to stand on.
+function fullTransactionEncoded(): string {
+  const initial = createAutonomyProjection({ intentUuid: INTENT });
+  const repository = createMemoryIntentAutonomyRepository();
+  const coordinator = createIntentAutonomyCoordinator({ initialProjection: initial, repository });
+  const scope: GrantScopeDescriptor = {
+    intentUuid: INTENT,
+    scopeId: "self-feature",
+    scopeFingerprint: autonomyDigest("scope-fingerprint"),
+    normFingerprint: autonomyDigest("norm-fingerprint"),
+    allowedInteractionKinds: ["stage-gate", "phase-gate", "walking-skeleton", "question"],
+    permissionBoundaryFingerprint: autonomyDigest("host-policy"),
+    prohibitedEffects: ["new-permission", "irreversible", "scope-out", "norm-waiver", "quality-waiver"],
+  };
+  const policies = normalizeDecisionPolicies({
+    grantIdentitySeed: "grant-seed",
+    scopeFingerprint: scope.scopeFingerprint,
+    humanTurnId: "human-turn-1",
+    policies: [],
+  });
+  const result = coordinator.applyHumanCommand(
+    { kind: "issue-full", scope, policies },
+    {
+      targetIntentUuid: INTENT,
+      principalId: "principal-1",
+      humanTurn: { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" },
+      commandOccurrenceId: "full-command-1",
+      expectedProjectionRevision: initial.projectionRevision,
+      confirmedDisplayDigest: grantIssuanceDisplayDigest({
+        intentUuid: INTENT,
+        principalId: "principal-1",
+        scope,
+        policies,
+      }),
     }
   );
   if ("error" in result) throw new Error(String(result.error));
@@ -120,6 +166,17 @@ describe("t487 questionAnswerRouteRows (BR-U3-5 mode derivation)", () => {
     });
   });
 
+  test("an undecodable transaction row keeps the mode the last readable one set", () => {
+    const audit = [
+      autonomyRow(semiTransactionEncoded()),
+      autonomyRow("not-a-base64url-transaction"), // decode throws — sweep continues
+      answerRow({ "Resolution Route": "human" }),
+    ].join("\n");
+    const rows = questionAnswerRouteRows(audit);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ route: "human", autonomyMode: "semi" });
+  });
+
   test("a pre-u3 row without Resolution Route reads as unknown, not an error (BR-U3-4)", () => {
     const rows = questionAnswerRouteRows(answerRow({}));
     expect(rows).toHaveLength(1);
@@ -144,6 +201,31 @@ describe("t487 findBypassedQuestionAnswers (FR-3b detection predicate)", () => {
       autonomyMode: "semi",
       stage: "scope-definition",
     });
+  });
+
+  test("a human answer under full mode is flagged the same way semi is", () => {
+    const audit = [
+      autonomyRow(fullTransactionEncoded()),
+      answerRow({ "Resolution Route": "human", Stage: "delivery-planning" }),
+    ].join("\n");
+    const hits = findBypassedQuestionAnswers(audit);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({
+      route: "human",
+      autonomyMode: "full",
+      stage: "delivery-planning",
+    });
+  });
+
+  test("a human answer recorded after an undecodable transaction row is still flagged", () => {
+    const audit = [
+      autonomyRow(semiTransactionEncoded()),
+      autonomyRow("not-a-base64url-transaction"),
+      answerRow({ "Resolution Route": "human", Stage: "scope-definition" }),
+    ].join("\n");
+    const hits = findBypassedQuestionAnswers(audit);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ autonomyMode: "semi", stage: "scope-definition" });
   });
 
   test("falling proof: rewriting the violating row's route to ladder detects nothing", () => {
