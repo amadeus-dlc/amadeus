@@ -1,6 +1,14 @@
 # 技術スタック
 
-## ハーネス hook seam と settings 面の技術前提（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## テスト実行プロファイルと dist 依存（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+本 intent に関わる技術前提の変更はない。既存スタック上の2点のみ関連する。
+
+**実行プロファイル**: `tests/lib/run-tests-args.ts:95-100` の `--ci` は `runSmoke` / `runUnit` / `runIntegration` を立て、e2e と perf は含まない。CI 上の e2e は `.github/workflows/ci.yml:252` の1本のみ。
+
+**dist 依存**: `tests/harness/audit-records.ts:18` が `dist/claude/.claude/tools/amadeus-audit.ts` を import する。source-only 境界下で `dist/` は未追跡のローカル生成物であるため、このハーネスを使うテストは `bun run build` 済みを前提とする。e2e 層への採用可否はこの前提の波及を伴う。
+
+## ハーネス hook seam と settings 面の技術前提（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`。前 intent からの技術スタック変更はなく、本節は #2297/#2303 の患部に関わる**既存前提の切り出し**のみを記録する。
 

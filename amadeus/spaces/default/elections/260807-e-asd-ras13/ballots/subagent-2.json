@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-ASD-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "被覆の帰属先は conductor 提案（enumeration-completeness-review）だけでなく cid:requirements-analysis:mechanism-cite-verify-at-draft の追補 E-FSPRAS13（テスト引用は tNNN 短形でなくフルパスで書く — 短形引用は実在する別ファイルへ誤解決される）を主とすべきである。是正の実体が tNNN 短形へ tests/integration/ のパス限定を付す操作（requirements.md:47 / :64 の『いずれも tests/integration/ 配置』）であり、E-FSPRAS13 が名指す欠陥様式そのものだからである。したがって新規面ではなく 0 件で可。ただし同型（列挙跨ぎのドメイン誤帰属）が別 intent で2例目として観測されたら、既存 cid への追補として昇格提案する（E-STG-S13H の再発条件方式）。",
+  "rationale": "独立検証（読み取りのみ）: (1) requirements.md の Review — Iteration 1 が READY・reviewer amadeus-product-lead-agent・2026-08-07T22:27:38Z で実在（:88-96）、Findings に FOLLOW-UP 2件が『是正適用済み』と記載（:100-101）。是正の実在も確認 — 除外4ファイルは AC-1c ではなく FR-4 側 AC-4c（:47）へ移設され、Constraints（:64）と Intent analysis（:11）も同ドメイン表記で整合。t258 仮説の吸収は Intent analysis :14 に『RE が2層で実測確定済み（(a) amadeus-audit.ts:534 の v1 emit 実測 (b) t258:59-77 の自作 v1 fixture — re-scans §4）』として明記済み。(2) RE 正本 codekb/amadeus/re-scans/260807-intent-2328-tests-e2e-au.md §6 verbatim は当該4ファイルを『上記 §3 の非 e2e 29件の述語出力には含まれるため、再棚卸し時に除外すること』と定めており、正本側に曖昧さはない — 起草者の転記時ドメイン取り違えであることを確認。(3) 0件妥当性の批判的検討: FOLLOW-UP 1 は列挙の omission ではなく誤帰属のため enumeration-completeness-review 単独では射程がやや弱いが、E-FSPRAS13（フルパス引用）が同一様式を既に被覆しており、かつ reviewer の独立再列挙が iteration 1 内で設計どおり検出し FOLLOW-UP 止まり（BLOCKER 化せず）。単発かつ既存 cid の適用実例であり persist 基準を満たさない。他の2事象（decide-question 経路 = c1-pcp-autonomy-grant-question-boundary、必須節の契約照合 = c2-mandated-sections-precheck）も questions ファイルの Q1〜Q4 auto-decision 実在を確認したうえで既存 cid の適用実例と判断した。",
+  "submittedAt": "2026-08-07T22:30:26Z",
+  "receivedAt": "2026-08-07T22:30:48Z"
+}

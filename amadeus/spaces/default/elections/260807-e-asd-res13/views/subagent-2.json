@@ -1,0 +1,19 @@
+{
+  "electionId": "E-ASD-RES13",
+  "voter": "subagent-2",
+  "question": "260807-intent-2328-tests-e2e-au reverse-engineering ステージの §13 学習選定。候補は1件。C1: 全数棚卸し（grep スイープ）の結果を成果物・報告へ書くときは、**使用した検索述語（grep パターン・対象集合・除外条件）を結果と同じ場所に記録する** — 述語が記録されていないと、独立再列挙が異なる件数を得たとき（本 RE 実測: Developer scan の非 e2e 自前パーサ 14件 vs Architect 再列挙 29件）、どちらの述語が正しいかを事後に判定できず、不一致が「未確定」として下流へ持ち越される。既存 cid:requirements-analysis:enumeration-completeness-review は独立再列挙を義務づけるが（それが本件で不一致を検出した = 機能した）、再列挙が不一致を出した後の裁定可能性（述語の突き合わせ）は述語記録がなければ成立しない — その未被覆面を1行追補する案。選択肢: 1 = C1 採用（enumeration-completeness-review への追補）、2 = 採用 0 件（不一致は再棚卸し指示として下流へ引き継げば足り、述語記録の義務化はノルム肥大）。record（re-scans/260807-intent-2328-tests-e2e-au.md の実装上の注意 (2)、scan/synthesis の報告）と既存 cid 本文を独立検証して投票せよ。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "採用 0 件",
+      "description": "既存の独立再列挙義務が不一致を検出できており、述語記録は measurement-ref-in-artifacts / numbers-from-command-output-only の既存射程で読める。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "C1 採用（述語記録の追補）",
+      "description": "enumeration-completeness-review へ「全数列挙には検索述語を併記する — 独立再列挙の不一致を裁定可能にする」の1行を追補。"
+    }
+  ]
+}

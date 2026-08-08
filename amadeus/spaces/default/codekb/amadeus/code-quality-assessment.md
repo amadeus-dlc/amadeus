@@ -1,6 +1,41 @@
 # コード品質評価
 
-## subagent-start 配線・語彙の品質債務（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### 債務の性質
+
+本件は**書き手の欠陥ではなくリーダーの契約違反**である。`amadeus-journal.ts` は v1/v2 の共存を明示契約として持ち（`:28-30` のコメント、`JOURNAL_SCHEMA_VERSION_MAX`）、共有ハーネスのヘッダコメントは「a test that hand-parses the JSONL should do the same rather than pin one schema」と逐語で規範を宣言している。患部31ファイル（e2e 17 + 非 e2e 14）はこの規範に反して1スキーマを pin している。
+
+### 債務の重大度別内訳
+
+| クラス | 件数 | 症状 | 重大度 |
+|---|---|---|---|
+| e2e 自前パーサ | 17 | 単独実行で fail（scan が全数実測） | 高 — ただし CI 不可視 |
+| 非 e2e 自前パーサ | 14 | 同種の潜在債務 | 中 — 要棚卸し |
+| vacuity assertion | 3 | 壊れたリーダーでも通る**偽 green** | 高 — 検証劇場クラス |
+
+### 検証劇場クラスの 3 件
+
+`t09:211` / `t07:371` / `t07:530` はいずれも「イベント行が 0 件であること」を主張する negative invariant である。リーダーが v2 行を読めなければ、行が実在しても計数は 0 を返すため、**assertion は欠陥の存在下でも通過する**。これは org.md Forbidden の「検証劇場」— 結果を実行から導かない検査 — に該当する。修正時は Mandated に従い、失敗ケースを注入して実際に赤くなることを実証してから完成扱いとする。
+
+### CI 死角という二次債務
+
+`ci.yml:224-227` のコメントは、e2e が `--ci` に含まれない事実と、それが過去に #1569 をリリースまで到達させた機序を自認している。今回 #2328 が同じ死角を通った。これは patch 対象そのものではないが、**同じ機序の3度目を防ぐ手当てを本 intent に含めるか別 Issue とするかは裁定事項**である。
+
+### 修正方式のトレードオフ（requirements へ送る裁定候補）
+
+| 方式 | 利点 | 債務 |
+|---|---|---|
+| A: 共有ハーネス寄せ | canonical 1定義、59ファイルと同一様式、ヘッダコメントの規範に合致 | `dist/` import 前提が e2e へ波及 |
+| B: in-file 正規化 | dist 依存なし、`t-formal-verif-model-completeness-sensor:227-233` に実在先例 | 正規化ロジックが17箇所へ分散、canonical 1定義原則に反する |
+
+construction.md の「複数箇所で消費されるリスト・定数を手書きで複製しない — canonical な1定義から導出する」は A を支持するが、dist 依存の副作用は独立の判断材料である。
+
+### 良い側の実測
+
+共有ハーネスは責務分離が明確（record 単位 / shard 単位 / 計数の3関数）で、`heading` 復元の設計意図をコメントで説明し、未知イベントの fallback も定義済み。59ファイルの採用実績があり、修正の受け皿として成熟している。
+
+## subagent-start 配線・語彙の品質債務（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
 

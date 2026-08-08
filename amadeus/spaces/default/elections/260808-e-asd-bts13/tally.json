@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0 件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0 件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補あり（reservation で具体提案）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-08T00:11:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASD-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0 件は支持するが、conductor が示した包含先(cid:build-and-test:c4-260805-subagent-type-guard)は t17/t66 面の正しい射程ではない — 正しい包含先は project.md:345 の cid:build-and-test:c1-tsr-ambient-repro-on-base(E-TSR-BTS13、2026-08-07 採用 2-0)であり、逐語で『ベース比較の同一条件には per-user の gitignored な外部入力(active-intent cursor、env 等)も含め、ベース側へ同一値で再現してから失敗集合を比較する — 再現を欠くとベースが green になり…自変更由来への誤帰属が起きる』と本件と同型を規定している。裁定を採用する場合、この cid 名の訂正を record(build-and-test の diary または build-test-results.md)へ固定すること。あわせて、本 B&T は c1-tsr が要求する『ベース側へ active-intent cursor を注入した同型再現』を実施しておらず、帰属は PR CI green + import 交差ゼロ + #2464 の機序実測で代替されている — 結論(環境要因)自体は #2464 の再現手順と機序記述で裏取りされているため覆らないが、これは新規学習候補ではなく既存 cid の適用漏れであり、その旨も同じ record 追記で開示すること。",
+      "rationale": "独立検証(読み取り専用)。【成果物の実在】amadeus/spaces/default/intents/260807-intent-2328-tests-e2e-au/construction/build-and-test/ に build-and-test-summary.md / build-instructions.md / build-test-results.md / integration-test-instructions.md / memory.md / performance-test-instructions.md / security-test-instructions.md / unit-test-instructions.md の8ファイル(成果物7 + diary)が実在。build-test-results.md に帰属表(t113 / t267 / setup-install / setup-upgrade / t17 / t66 の6行、base 単独 vs 自ツリー vs 帰属の3列)が実在し、t17/t66 行は『base 0 fail / 自ツリー単独でも fail(t17:360 lookup が build-and-test を返す) / 環境要因 — #2464 起票済み』と記載。【#2464】gh issue view 2464 = OPEN、labels bug/P3/S4-MINOR、タイトルは ambient workspace 読取の環境依存。本文に base 6bef8206d 分離 worktree で t17 85 tests/0 fail・t66 90 tests/0 fail、自 worktree で計2 fail、失敗実文(Expected: market-research / Received: build-and-test)、機序(runStateBare が env 未設定で spawn → resolveProjectDir の cwd workspace-marker 段が worktree root へ解決 → 実 workspace の active intent を読む)、先例 #795 の CLOSED 確認まで記載。起票内容は record と整合。【既存 cid の射程判定】(1) t17/t66 = 未被覆ではない。conductor が挙げた c4-260805(project.md:384)は本文が『差分 0 件も回帰なしの根拠にならない』という偽陰性側の注意で、同一条件の列挙も node_modules/dist/bun 版/command/options/環境変数/lockfile までであり、cwd 由来の ambient workspace 状態は含まない — つまり『差分あり=自変更由来』の偽陽性側は c4 単独では閉じない。しかし翌日採用の c1-tsr-ambient-repro-on-base(project.md:345)が、まさに active-intent cursor を『比較条件の同一条件』へ明示的に繰り入れ、欠くと『自変更由来への誤帰属』が起きると逆向きを名指しで規定済み。よって新規学習ではなく既存 cid の適用実例(ただし cid 名は要訂正)。隣接則 cid:reverse-engineering:restart-loss-triple-grounding の E-DAGRE 追補(team.md:198、ambient 入力 = env・cursor・gitignored 状態の第一容疑化)も同方向で、二重に被覆されている。(2) 再接地 = team.md の base-advance-regrounding が merge-base 実測・正本変更時の dist 再生成・実 diff での交差判定を規定済みで、build-test-results.md の『再接地 merge 済み(parents a42070dcd + 6bef8206d)+ build 後 tracked 差分 tests/e2e/ のみ』はその適用実例。(3) perf/security 適用外 = project.md の c4(Comprehensive でも対応 NFR 不在なら専用試験を新設せず適用外根拠と既存面を明記)および bt-proportional-selection の適用実例で、performance/security-test-instructions.md が実在して根拠を書いている形は既存則どおり。(4) verdict 境界 = c2-unconditional-ready-boundary の適用実例で、build-test-results.md 末尾の『検証した面と未検証の面』節が同 cid を明示引用し、未検証面(#1981 の e2e CI 死角)を AC 外の申し送りとして分離している — 同 cid が要求する『AC 外の認定は requirements.md / RAID の実文照合で行う』の実施可否までは本票の読取範囲で確認していないが、少なくとも新規面ではない。以上より、4事象すべてが既存 cid の適用実例であり 0 件が妥当。GoA 2 の留保は上記 cid 名の訂正と適用漏れの開示に限る。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-08T00:10:44Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASD-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "0 件で可という結論には同意するが、t17/t66 の帰属根拠として提示された cid は誤りであり、record 側の記載を是正すべき。(i) c4-260805-subagent-type-guard の決定規則は『失敗集合の差分 0 件なら既存事象、差分があればその分が自分の回帰』であり、base 0 fail × 自ツリー fail という差分ありのケースを『環境要因で自変更由来でない』と判定する根拠を与えない — 同 cid の射程は同一条件下の比較に限られる。(ii) 本件を実際に被覆するのは前日 persist された cid:build-and-test:c1-tsr-ambient-repro-on-base(E-TSR-BTS13、2026-08-07)であり、active-intent cursor 等の per-user ambient 入力をベース側へ注入して再現してから失敗集合を比較することを求め、注入を欠くと『自変更由来への誤帰属』が起きると明記している。よって新規面ではなく既存 cid の適用対象であり、§13 候補にはならない。(iii) ただし record 上に同 cid が要求する対照(ベースへ active intent を持たせた条件での再現)が不在で、base 単独 0 fail のみが記載されている(build-test-results.md:39、integration-test-instructions.md:28、#2464 本文とも同じ)。結論自体は機序の verbatim 特定(t17:360 lookup が build-and-test を返す)・患部19ファイルとの import 交差ゼロ・PR CI 全 green で支持されるが、手続き適用の記録として build-test-results.md の帰属表と diary に、依拠 cid を c1-tsr-ambient-repro-on-base へ訂正のうえ『ベース注入対照は未実施、代替根拠は機序特定+交差ゼロ+CI green』と明記すること。この訂正は memory 層への persist ではなく record 側の是正として扱う。",
+      "rationale": "独立検証: (1) build-test-results.md:32-41 の帰属表を実読し、t113/t267/setup×2 が base 単独と自ツリーで同一署名(= c4-260805 の失敗集合 diff 0 件)、t17/t66 のみが base 0 fail × 自ツリー fail であることを確認。よって前者4件は c4-260805 の射程内、後者2件は射程外と判断した。(2) memory 層を grep(ambient)して cid:build-and-test:c1-tsr-ambient-repro-on-base(project.md:345)を実測発見 — 『ベース比較の同一条件には per-user の gitignored な外部入力(active-intent cursor、env 等)も含め、ベース側へ同一値で再現してから失敗集合を比較する』『再現を欠くとベースが green になり自変更由来への誤帰属が起きる』の逐語がまさに本ケースを被覆する。したがって被覆 cid の同定は誤っているが、未被覆の新規面は存在しない。(3) #2464 を gh issue view で実読し、先例 #795(CLOSED)が t27 面・#1389 が書込面と切り分けられ、t17/t66 の読取面が未起票であることの重複確認が記載済みであることを確認。#795 は Issue としての先例であって norm ではないため、知識としては c1-tsr が正本となる。(4) その他の事象 — 再接地(base-advance-regrounding + 共有台帳 union + dist 再生成)、perf/security 適用外宣言(bt-proportional-selection と project.md Testing の Comprehensive 条項)、verdict の AC 外境界(c2-unconditional-ready-boundary)— はいずれも memory 層に既存 cid の逐語を確認でき、record の記述もその適用形に収まる。新規面なし。",
+      "submittedAt": "2026-08-08T00:11:03Z",
+      "receivedAt": "2026-08-08T00:11:11Z"
+    }
+  ],
+  "resolutions": []
+}

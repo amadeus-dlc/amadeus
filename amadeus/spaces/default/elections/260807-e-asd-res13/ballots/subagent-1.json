@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-ASD-RES13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用に賛成するが、追補文は次の2点で限定すること。(1) 適用範囲を『全数棚卸し（grep スイープ）の結果として件数・ファイル列挙を成果物・報告へ書く場合』に限り、一般の grep 利用へ一律義務化しない。(2) 既存 cid:requirements-analysis:numbers-from-command-output-only の『数値を含む報告には集計コマンド名を併記する』との関係を追補文中に明記し、二重規定に見えないようにする — 本追補が要求するのは『コマンド名』ではなく再実行可能な述語本体（パターン・対象ディレクトリ集合・除外条件）である点が差分。独立 cid は立てず enumeration-completeness-review への1行追補に留める。",
+  "rationale": "独立検証: (1) re-scans/260807-intent-2328-tests-e2e-au.md:102-108 実読。:102 見出し『非 e2e — 29ファイル（Developer scan の報告値 14 と不一致）』、:104 逐語『Developer scan は 14 と報告しており、述語が異なる。scan 側の述語は記録されていないため、どちらが正しいかは本記録では確定しない。』、:106 実装上の注意 (2) 逐語『修正着手前に述語を確定して再棚卸しすること。』、:205 裁定候補 #5 へ不一致が未解決のまま繰り上がっている。C1 が主張する実害（述語未記録 → 不一致が事後裁定不能 → 未確定として下流へ持ち越し）は実在。対照として :62-66 に Architect 側の適用述語が verbatim 記録されており、記録した側だけが監査可能という非対称が同一記録内で観測できる。(2) 既存 cid 実読: team.md:199 enumeration-completeness-review は独立再列挙を義務づけ『omission は検索語選択に依存する』と述語依存性まで認識しているが述語の記録は求めない。team.md:262 numbers-from-command-output-only は『集計コマンド名を併記』を求めるが、対象は検証報告・ゲート報告の数値であり、要求は述語本体でなくコマンド名（grep スイープでは grep の一語となり再現に足りない）。team.md:265 measurement-ref-in-artifacts は測定 ref に限る。project.md:242 inventory-from-grep-each-time は grep 出力からの再構築を求めるが述語記録は求めない。よって『述語の記録』は既存 cid の射程に literal には含まれず、しかも 2026-07-16 発効の numbers-from-command-output-only が live な状態で本件の未記録が発生している（既存則では防げていない実測）。(3) 肥大の観点: 新規 cid ではなく既存 cid への1行追補であり当 stage の実測から直接導かれた最小形。留保の適用範囲限定を付せば費用対効果は正。",
+  "submittedAt": "2026-08-07T22:13:46Z",
+  "receivedAt": "2026-08-07T22:14:12Z"
+}
