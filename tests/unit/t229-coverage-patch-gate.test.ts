@@ -72,6 +72,25 @@ describe("t229 patch gate parsers", () => {
     expect([...(added.get("packages/framework/core/tools/example.ts") ?? [])].sort()).toEqual([10, 11, 12]);
     expect([...(added.get("docs/readme.md") ?? [])]).toEqual([2]);
   });
+
+  // #2574 — an added line whose CONTENT starts with "++ " renders as "+++ ..."
+  // in the diff. Inside a hunk it is content, never a file header: mistaking it
+  // for one retargets currentFile at a bogus path and drops the real file's
+  // added lines from the gate population (silent false PASS).
+  test("parseDiffAddedLines keeps '++ '-prefixed added content inside the hunk", () => {
+    const diff = [
+      "diff --git a/packages/framework/core/tools/example.ts b/packages/framework/core/tools/example.ts",
+      "--- a/packages/framework/core/tools/example.ts",
+      "+++ b/packages/framework/core/tools/example.ts",
+      "@@ -9,0 +10,3 @@",
+      "+++ b/decoy.ts",
+      "+const uncovered = 1;",
+      "+++ marker in prose",
+    ].join("\n");
+    const added = parseDiffAddedLines(diff);
+    expect([...(added.get("packages/framework/core/tools/example.ts") ?? [])].sort()).toEqual([10, 11, 12]);
+    expect(added.has("decoy.ts")).toBe(false);
+  });
 });
 
 describe("t229 patch gate verdict (falling proof)", () => {
