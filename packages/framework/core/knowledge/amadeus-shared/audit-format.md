@@ -206,7 +206,7 @@ Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.
 | `BOLT_STARTED` | Orchestrator begins a Bolt (or parallel batch of Bolts) | Bolt names, Batch number, Walking skeleton | Bolt slug | `tools/amadeus-bolt.ts start` |
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Bolt names, Batch number | Bolt slug | `tools/amadeus-bolt.ts complete` |
 | `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug, Reason, Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
-| `AUTONOMY_MODE_SET` | Historical Construction-mode evidence retained for replay and doctor diagnostics | Mode | — | Reserved legacy observation |
+| `AUTONOMY_MODE_SET` | An out-of-band `set` wrote one of the three fields the autonomy transaction owns (`Intent Autonomy Mode`, `Intent Grant`, `Construction Autonomy Mode`); also the historical Construction-mode evidence retained for replay and doctor diagnostics | Mode | Field | `tools/amadeus-state.ts` `set` (historical rows: reserved legacy observation) |
 
 ### Worktree (7 events)
 

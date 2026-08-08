@@ -14,6 +14,7 @@ import {
   runIntentLifecycleTransactionLocked,
   withIntentLifecyclePreflight,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { handleArchive } from "../../packages/framework/core/tools/amadeus-state.ts";
 
 const STATE = join(import.meta.dir, "../../packages/framework/core/tools/amadeus-state.ts");
 const roots: string[] = [];
@@ -174,6 +175,74 @@ describe("intent lifecycle transaction CLI", () => {
     expect(readFileSync(cursor, "utf-8")).toBe("260723-other\n");
   });
 
+  // Issue #2583: the ledger read side trims string fields, so an untrimmed
+  // --user-input could never round-trip and wedged the space permanently
+  // (journalFailure, journal left behind, every retry replaying the same
+  // throw). The CLI normalizes at the entrance, so the value it records is
+  // already a fixed point of the read-side normalization.
+  test.each([
+    ["trailing space", "archive it ", "archive it"],
+    ["leading space", " archive it", "archive it"],
+    ["trailing tab", "archive it\t", "archive it"],
+    ["surrounding whitespace", " \t archive it \t ", "archive it"],
+    ["whitespace only", "   ", ""],
+  ])("archives with %s in --user-input and records the trimmed value", (_label, input, recorded) => {
+    const fixture = scaffold("in-flight");
+    const result = run(fixture.root, "archive", fixture.intent, input);
+    expect(result.status, result.stderr).toBe(0);
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter(
+      (r) => r.event === "INTENT_ARCHIVED",
+    );
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["User Input"]).toBe(recorded);
+    // No wedge: the transaction journal is cleared on success.
+    expect(() => readFileSync(join(
+      fixture.root,
+      "amadeus",
+      "spaces",
+      "default",
+      "intents",
+      ".amadeus-intent-status-transaction.json",
+    ))).toThrow();
+  });
+
+  // The same normalization, driven IN-PROCESS through the exported handleArchive
+  // seam. The spawned arms above prove the CLI wiring; this one puts the
+  // normalization statement itself inside bun's coverage universe, which a
+  // spawned child is structurally outside of. handleIntentLifecycle resolves its
+  // project dir through resolveProjectDir(projectDir), and the module-level
+  // projectDir is only assigned by main()'s --project-dir parse — so an
+  // in-process caller points the handler at the fixture with CLAUDE_PROJECT_DIR,
+  // the documented env rung directly below the flag.
+  test("handleArchive trims --user-input in-process", () => {
+    const fixture = scaffold("in-flight");
+    const previous = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = fixture.root;
+    const printed: string[] = [];
+    const log = console.log;
+    console.log = (...parts: unknown[]) => {
+      printed.push(parts.map(String).join(" "));
+    };
+    try {
+      handleArchive([fixture.intent, "--user-input", "  archive it \t "]);
+    } finally {
+      console.log = log;
+      if (previous === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+      else process.env.CLAUDE_PROJECT_DIR = previous;
+    }
+
+    expect(JSON.parse(printed[0]!)).toMatchObject({
+      intent: fixture.intent,
+      status: "archived",
+    });
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_ARCHIVED");
+    expect(archived).toHaveLength(1);
+    // The recorded value is already a fixed point of the read-side trim.
+    expect(archived[0]!.fields?.["User Input"]).toBe("archive it");
+  });
+
   test("unarchives to in-flight without selecting the intent", () => {
     const fixture = scaffold("archived", false);
     const result = run(fixture.root, "unarchive", fixture.intent);
@@ -202,7 +271,11 @@ describe("intent lifecycle transaction CLI", () => {
     expect(readFileSync(fixture.audit, "utf-8")).toBe(beforeAudit);
   });
 
-  test("rejects duplicate HUMAN_TURN timestamps before journal creation", () => {
+  // #2585. Second-granular audit timestamps make two HUMAN_TURN blocks in one
+  // second a normal input, so the scan treats the pair as the single consumable
+  // slot the ledger already identifies by shard + timestamp, instead of
+  // refusing the operation outright.
+  test("resolves duplicate HUMAN_TURN timestamps without wedging", () => {
     const fixture = scaffold("in-flight");
     writeFileSync(
       fixture.audit,
@@ -216,9 +289,31 @@ describe("intent lifecycle transaction CLI", () => {
         ),
     );
     const result = run(fixture.root, "archive", fixture.intent);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Ambiguous HUMAN_TURN timestamp");
+    expect(result.status, result.stderr).toBe(0);
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_ARCHIVED");
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["Human Turn Timestamp"]).toBe("2026-07-23T10:00:00Z");
+  });
+
+  // #2585 regression pin: a same-second collision between turns that are ALREADY
+  // consumed must not lock the record out. The consumed/resolution filter runs
+  // before any tie handling, so a fresh later turn stays selectable.
+  test("stays usable when the duplicated HUMAN_TURN timestamps are already consumed", () => {
+    const fixture = scaffold("archived");
+    writeFileSync(
+      fixture.audit,
+      readFileSync(fixture.audit, "utf-8") +
+        ledgerLine(2, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:00Z", fixture.intent) +
+        lifecycleEventBlock("123e4567-e89b-42d3-a456-426614174111", fixture.intent, 3) +
+        ledgerLine(4, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:02Z", fixture.intent),
+    );
+    const result = run(fixture.root, "unarchive", fixture.intent);
+    expect(result.status, result.stderr).toBe(0);
     expect(registryStatus(fixture.root)).toBe("in-flight");
+    const unarchived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_UNARCHIVED");
+    expect(unarchived).toHaveLength(1);
+    expect(unarchived[0]!.fields?.["Human Turn Timestamp"]).toBe("2026-07-23T10:00:02Z");
   });
 
   test("rejects invalid source statuses without consuming the turn", () => {

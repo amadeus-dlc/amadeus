@@ -97,25 +97,30 @@ function env(graphPath: string, guard = false): NodeJS.ProcessEnv {
 
 function seedProject(
   units: Array<{ name: string; kind?: string }>,
+  // `dependencyDoc: false` omits the committed canonical unit-of-work-dependency.md
+  // so a case can drive the state where NEITHER kind source resolves (#2567).
+  opts: { dependencyDoc?: boolean } = {},
 ): string {
   const project = createTestProject();
   projects.push(project);
-  const dependencyDir = join(
-    seededRecordDir(project),
-    "inception",
-    "units-generation",
-  );
-  mkdirSync(dependencyDir, { recursive: true });
-  const rows = units.flatMap((unit) => [
-    `  - name: ${unit.name}`,
-    ...(unit.kind === undefined ? [] : [`    kind: ${unit.kind}`]),
-    "    depends_on: []",
-  ]);
-  writeFileSync(
-    join(dependencyDir, "unit-of-work-dependency.md"),
-    `# Unit dependencies\n\n\`\`\`yaml\nunits:\n${rows.join("\n")}\n\`\`\`\n`,
-    "utf-8",
-  );
+  if (opts.dependencyDoc !== false) {
+    const dependencyDir = join(
+      seededRecordDir(project),
+      "inception",
+      "units-generation",
+    );
+    mkdirSync(dependencyDir, { recursive: true });
+    const rows = units.flatMap((unit) => [
+      `  - name: ${unit.name}`,
+      ...(unit.kind === undefined ? [] : [`    kind: ${unit.kind}`]),
+      "    depends_on: []",
+    ]);
+    writeFileSync(
+      join(dependencyDir, "unit-of-work-dependency.md"),
+      `# Unit dependencies\n\n\`\`\`yaml\nunits:\n${rows.join("\n")}\n\`\`\`\n`,
+      "utf-8",
+    );
+  }
   writeFileSync(
     seededStateFile(project),
     `# AI-DLC State Tracking
@@ -744,10 +749,20 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
 
   // An absent primary artifact reads the same as an unreviewed one, and it
   // reaches the check through a different door: artifactCarriesReview cannot
-  // open the file at all. `scope` requires the stage's required produces to
-  // exist, so a unit missing its primary could not have been reviewed (#2359).
+  // open the file at all.
+  //
+  // The proposition this pins is narrower than it first looked (#2567): it holds
+  // only when the unit's kind is unresolved at BOTH points — emit and gate. Then
+  // the directive `scope` required was the unpruned matrix, so the reviewer's
+  // primary and this guard's primary are the same file, and its absence really
+  // does mean the unit was never reviewed. Both sources are removed here to hold
+  // that state: no runtime-graph.json AND no canonical unit-of-work-dependency.md.
+  // With either source present the kinds agree at both points and the pruned
+  // arms below apply instead.
   test("completion guard refuses when the primary artifact is absent entirely", () => {
-    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    const project = seedProject([{ name: "schema", kind: "spec" }], {
+      dependencyDoc: false,
+    });
     // Secondary artifacts only, each carrying a review the reviewer never wrote
     // there — the primary (business-logic-model, applicable because the kindless
     // fallback widens the set) is the one that is missing.
@@ -819,6 +834,139 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     }
     expect(stderr).toContain("no reviewer verdict recorded");
     expect(stderr).toContain("schema");
+  }, 30_000);
+
+  // --- Canonical kind fallback for the review gate (#2567) ------------------
+  //
+  // The reviewer writes its verdict to the primary of the KIND-PRUNED produces
+  // it was handed at emit time; this guard used to pick the primary of the
+  // UNPRUNED produces whenever the runtime graph could not name the kind, so it
+  // read a different file and refused a unit that was reviewed. These arms hold
+  // the three ways the runtime graph fails to name a kind while the committed
+  // unit-of-work-dependency.md still does. Each was red before the fallback
+  // landed ("no reviewer verdict recorded" naming `schema`) and is green after.
+  // `error()` ends the CLI through process.exit; stubbing it into a throw keeps a
+  // refusal inside the test instead of killing the runner, so an arm that is
+  // expected to pass reports its refusal message as a failed assertion.
+  function advanceCapturingExit(
+    project: string,
+    graphPath: string,
+  ): { refused: boolean; stderr: string } {
+    const originalExit = process.exit;
+    const originalError = console.error;
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(String).join(" ");
+    };
+    try {
+      advanceInProcess(project, graphPath);
+      return { refused: false, stderr };
+    } catch (e) {
+      if (!/exit 1/.test(String(e))) throw e;
+      return { refused: true, stderr };
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+    }
+  }
+
+  function expectAdvanceAccepted(project: string, graphPath: string): void {
+    // One workspace per process is an OTel bootstrap invariant; an arm that
+    // drives two temp projects resets the per-project state between them.
+    resetOtelPerProject();
+    const outcome = advanceCapturingExit(project, graphPath);
+    expect(outcome.stderr).toBe("");
+    expect(outcome.refused).toBe(false);
+  }
+
+  function expectAdvanceRefusal(project: string, graphPath: string): string {
+    resetOtelPerProject();
+    const outcome = advanceCapturingExit(project, graphPath);
+    expect(outcome.refused).toBe(true);
+    return outcome.stderr;
+  }
+
+  function seedReviewedSpecUnit(mutate: (runtimePath: string) => void): string {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    // Exactly the spec-applicable set. business-logic-model is NOT applicable to
+    // a spec unit, so the reviewer never saw it and it is absent on disk.
+    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    mutate(join(seededRecordDir(project), "runtime-graph.json"));
+    return project;
+  }
+
+  test("completion guard resolves the unit kind from the dependency doc when runtime-graph is missing", () => {
+    const project = seedReviewedSpecUnit((path) => rmSync(path, { force: true }));
+    expectAdvanceAccepted(project, sourceGraph());
+  }, 30_000);
+
+  test("completion guard resolves the unit kind from the dependency doc when the runtime row omits kind", () => {
+    const project = seedReviewedSpecUnit((path) => {
+      const graph = JSON.parse(readFileSync(path, "utf-8"));
+      delete graph.bolt_dag.units[0].kind;
+      writeFileSync(path, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
+    });
+    expectAdvanceAccepted(project, sourceGraph());
+  }, 30_000);
+
+  test("completion guard resolves the unit kind from the dependency doc when the runtime graph has no bolt_dag", () => {
+    const project = seedReviewedSpecUnit((path) => {
+      writeFileSync(
+        path,
+        `${JSON.stringify({ bolt_dag_absence: { reason: "units-pending" } }, null, 2)}\n`,
+        "utf-8",
+      );
+    });
+    expectAdvanceAccepted(project, sourceGraph());
+  }, 30_000);
+
+  test("completion guard accepts a service unit whose declared-first primary carries the review", () => {
+    // Non-regression control: for a service unit the pruned and unpruned primary
+    // are the same file (business-logic-model), so the fallback changes nothing —
+    // green with the runtime graph and green without it.
+    const withGraph = seedProject([{ name: "schema", kind: "service" }]);
+    writeFunctionalArtifacts(withGraph, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
+    expectAdvanceAccepted(withGraph, sourceGraph());
+
+    const withoutGraph = seedProject([{ name: "schema", kind: "service" }]);
+    writeFunctionalArtifacts(withoutGraph, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
+    rmSync(join(seededRecordDir(withoutGraph), "runtime-graph.json"), { force: true });
+    expectAdvanceAccepted(withoutGraph, sourceGraph());
+  }, 30_000);
+
+  test("completion guard still refuses when only a secondary artifact carries a review", () => {
+    // The primary-only invariant is untouched by the fallback: a heading on a
+    // secondary file was not written by `complete-review`, whichever source named
+    // the kind. Held on both surfaces — runtime graph present, and absent so the
+    // canonical doc supplies the same kind.
+    const seed = (dropGraph: boolean): string => {
+      const project = seedProject([{ name: "schema", kind: "spec" }]);
+      // Primary (business-rules) exists WITHOUT a review; the review sits on the
+      // secondary (domain-entities) where a hand could have placed it.
+      writeStageArtifacts(project, "schema", "functional-design", ["business-rules"]);
+      writeFunctionalArtifacts(project, "schema", ["domain-entities"]);
+      if (dropGraph) {
+        rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+      }
+      return project;
+    };
+    expect(expectAdvanceRefusal(seed(false), sourceGraph())).toContain(
+      "no reviewer verdict recorded",
+    );
+    expect(expectAdvanceRefusal(seed(true), sourceGraph())).toContain(
+      "no reviewer verdict recorded",
+    );
   }, 30_000);
 
   test("completion guard scans past a spec unit with no artifacts to one that has them", () => {

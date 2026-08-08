@@ -25,28 +25,53 @@ export type CommandRunner = {
 export const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
 const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
+// The subset of a `spawnSync` return this runner reads. Named so the normalisation below can be
+// driven in-process from a synthesised outcome: the fail-open it closes (#2397) is unreachable
+// through a real 8 MiB spawn, because a child large enough to overflow the buffer is always killed
+// before it can exit on its own.
+export type SpawnOutcome = {
+  status: number | null;
+  stdout?: string | null;
+  stderr?: string | null;
+  error?: Error;
+};
+
+// A spawn that sets `error` did not deliver what the caller asked for, whatever exit code came
+// back. bun returns `status: 0` together with `error: ENOBUFS` when a child overflows maxBuffer and
+// still exits on its own (measured on bun 1.3.13: a child writing 8 bytes against maxBuffer 2 gives
+// `{status: 0, code: "ENOBUFS"}`) - so trusting `status` alone hands the caller a truncated stdout
+// under a success verdict. Every error becomes a non-zero status, and `errorDetail` always reaches
+// stderr so the reason survives into the diagnostic.
+export function normalizeSpawnOutcome(result: SpawnOutcome, timeoutMs: number): CommandResult {
+  const failed = result.error !== undefined;
+  const timedOut = result.error !== undefined &&
+    "code" in result.error &&
+    result.error.code === "ETIMEDOUT";
+  const stderr = result.stderr ?? "";
+  const errorDetail = result.error === undefined ? "" : String(result.error);
+  const status = timedOut ? 124 : (result.status ?? 1);
+  return {
+    status: failed && status === 0 ? 1 : status,
+    stdout: result.stdout ?? "",
+    stderr: timedOut
+      ? [stderr.trim(), `command timed out after ${timeoutMs}ms (SIGTERM)`, errorDetail].filter(Boolean).join("\n")
+      : errorDetail === "" ? stderr : [stderr.trim(), errorDetail].filter(Boolean).join("\n"),
+  };
+}
+
 export const systemCommandRunner: CommandRunner = {
   run(command, options = {}) {
     const timeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
-    const result = spawnSync(command[0], command.slice(1), {
-      cwd: options.cwd,
-      encoding: "utf8",
-      env: process.env,
-      timeout: timeoutMs,
-      maxBuffer: COMMAND_MAX_BUFFER_BYTES,
-    });
-    const timedOut = result.error !== undefined &&
-      "code" in result.error &&
-      result.error.code === "ETIMEDOUT";
-    const stderr = result.stderr ?? "";
-    const errorDetail = result.error === undefined ? "" : String(result.error);
-    return {
-      status: timedOut ? 124 : (result.status ?? 1),
-      stdout: result.stdout ?? "",
-      stderr: timedOut
-        ? [stderr.trim(), `command timed out after ${timeoutMs}ms (SIGTERM)`, errorDetail].filter(Boolean).join("\n")
-        : (stderr || errorDetail),
-    };
+    return normalizeSpawnOutcome(
+      spawnSync(command[0], command.slice(1), {
+        cwd: options.cwd,
+        encoding: "utf8",
+        env: process.env,
+        timeout: timeoutMs,
+        maxBuffer: COMMAND_MAX_BUFFER_BYTES,
+      }),
+      timeoutMs,
+    );
   },
 };
 
@@ -99,9 +124,51 @@ function parseAssociatedPullRequest(value: unknown, index: number): AssociatedPu
   };
 }
 
-function parseTree(output: string, revision: string): string[] {
+// What the command that produced a tree output said about itself. `parseTree` is only reached once
+// the caller has already accepted the exit code, so carrying the verdict in is what lets the throw
+// state the contradiction — the command reported success and still handed back a partial stdout.
+export type TreeCommandContext = {
+  status: number;
+  stderr: string;
+};
+
+const FORENSIC_EDGE_BYTES = 16;
+const FORENSIC_STDERR_BYTES = 200;
+
+function hexEdge(bytes: Uint8Array, edge: "head" | "tail"): string {
+  const slice = edge === "head"
+    ? bytes.subarray(0, FORENSIC_EDGE_BYTES)
+    : bytes.subarray(Math.max(0, bytes.length - FORENSIC_EDGE_BYTES));
+  return Buffer.from(slice).toString("hex");
+}
+
+// #2397: under parallel load `git ls-tree -z` has been observed to exit 0 with its stdout cut
+// short, and the old throw ("tree output is not NUL terminated") kept none of the bytes needed to
+// tell that apart from a genuinely malformed tree. Record where the output actually stops so the
+// next occurrence is diagnosable from the failure message alone.
+function treeForensics(output: string, context: TreeCommandContext): string {
+  const bytes = Buffer.from(output, "utf8");
+  let nulCount = 0;
+  for (const byte of bytes) if (byte === 0) nulCount += 1;
+  const lastNul = bytes.lastIndexOf(0);
+  return [
+    `bytes=${bytes.length}`,
+    `head16=${hexEdge(bytes, "head")}`,
+    `tail16=${hexEdge(bytes, "tail")}`,
+    `nulCount=${nulCount}`,
+    `endsNul=${bytes.length > 0 && bytes[bytes.length - 1] === 0}`,
+    `bytesAfterLastNul=${lastNul < 0 ? bytes.length : bytes.length - lastNul - 1}`,
+    `status=${context.status}`,
+    `stderr=${JSON.stringify(context.stderr.slice(0, FORENSIC_STDERR_BYTES))}`,
+  ].join(" ");
+}
+
+function parseTree(output: string, revision: string, context: TreeCommandContext): string[] {
   if (!output.endsWith("\0") && output !== "") {
-    throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `${revision} tree output is not NUL terminated`);
+    throw new EvidenceRebindError(
+      "REBIND_GIT_TREE_INVALID",
+      `${revision} tree output is not NUL terminated: exit ${context.status} reported but stdout is incomplete (${treeForensics(output, context)})`,
+    );
   }
   return output
     .split("\0")
@@ -110,7 +177,10 @@ function parseTree(output: string, revision: string): string[] {
       const tab = entry.indexOf("\t");
       const metadata = tab < 0 ? [] : entry.slice(0, tab).split(" ");
       if (tab < 0 || metadata.length !== 3 || !/^[0-7]{6}$/.test(metadata[0] ?? "") || !fullSha(metadata[2])) {
-        throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `${revision} tree entry is malformed`);
+        throw new EvidenceRebindError(
+          "REBIND_GIT_TREE_INVALID",
+          `${revision} tree entry is malformed: exit ${context.status} reported and stdout did not parse (${treeForensics(output, context)})`,
+        );
       }
       return entry;
     });
@@ -369,7 +439,7 @@ export class NoSilentDropEvidenceAdapter {
   private recursiveTree(revision: string): string[] {
     const result = this.run(["git", "ls-tree", "-r", "-z", "--full-tree", revision]);
     if (result.status !== 0) throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `cannot read ${revision} tree: ${commandDetail(result)}`);
-    return parseTree(result.stdout, revision);
+    return parseTree(result.stdout, revision, { status: result.status, stderr: result.stderr });
   }
 
   assertOnlyExpectedChanges(expectedPaths: readonly string[]): void {

@@ -284,6 +284,48 @@ describe("t426 Issue Form contract", () => {
     expect(legacyBug.removed.sort()).toEqual(["P2", "S3-MAJOR"]);
   });
 
+  // #2561: a webhook payload can go stale against GitHub's live label state
+  // within the ~10s the job takes to run (TOCTOU). A DELETE 404 means the
+  // label is already gone — the intended end state — so removeLabel must be
+  // idempotent on 404 and must not abort the remaining removals in the loop.
+  // Any other status (403/429/5xx/...) stays fail-closed.
+  test("removeLabel 404 is idempotent and does not abort later removals (#2561)", async () => {
+    const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
+      jobs: { sync: { steps: Array<{ with?: { script?: string } }> } };
+    };
+    const script = workflow.jobs.sync.steps[0]?.with?.script ?? "";
+    const body = issueBody("bug", "P2 — 通常", [
+      ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+      ["原因の所在", "origin:bootstrap"],
+    ]);
+    // Starting labels reconcile down to {bug, P2, S3-MAJOR, origin:bootstrap}:
+    // "P1" and "S4-MINOR" must both be removed. "P1" 404s (stale payload);
+    // "S4-MINOR" must still be removed afterward — the #2561 regression was
+    // that the 404 on "P1" aborted the loop before "S4-MINOR" was reached.
+    const removedByMock: string[] = [];
+    const notFound = Object.assign(new Error("Label does not exist"), { status: 404 });
+    const idempotent = await executeWorkflow(script, body, ["bug", "P1", "S4-MINOR"], {
+      removeLabel: async ({ name }) => {
+        if (name === "P1") throw notFound;
+        removedByMock.push(name);
+      },
+    });
+    expect(idempotent.failures).toEqual([]);
+    // "P1" hit the 404 branch (not pushed onto removedByMock); "S4-MINOR"
+    // being present proves the loop continued past the 404 instead of
+    // aborting — the exact #2561 regression.
+    expect(removedByMock).toContain("S4-MINOR");
+    expect(idempotent.infos.some((line) => line.includes("P1"))).toBe(true);
+
+    const forbidden = Object.assign(new Error("Resource not accessible"), { status: 403 });
+    const failClosed = executeWorkflow(script, body, ["bug", "P1", "S4-MINOR"], {
+      removeLabel: async ({ name }) => {
+        if (name === "P1") throw forbidden;
+      },
+    });
+    await expect(failClosed).rejects.toThrow("Resource not accessible");
+  });
+
   // #2408: paren width is a rendering detail. Both the job gate and the script
   // must read a half-width body exactly like the full-width one the Form emits,
   // or CLI-filed Issues slip past the classification check in silence.
@@ -388,27 +430,39 @@ function issueBody(
   ].join("\n");
 }
 
-async function executeWorkflow(script: string, body: string, labels: string[]) {
+async function executeWorkflow(
+  script: string,
+  body: string,
+  labels: string[],
+  overrides: { removeLabel?: (args: { name: string }) => Promise<void> } = {},
+) {
   const added: string[][] = [];
   const removed: string[] = [];
   const failures: string[] = [];
+  const infos: string[] = [];
   const context = {
     payload: { issue: { number: 42, labels: labels.map((name) => ({ name })), body } },
     repo: { owner: "amadeus-dlc", repo: "amadeus" },
+  };
+  const defaultRemoveLabel = async ({ name }: { name: string }) => {
+    removed.push(name);
   };
   const github = {
     rest: {
       issues: {
         addLabels: async ({ labels: next }: { labels: string[] }) => added.push(next),
-        removeLabel: async ({ name }: { name: string }) => removed.push(name),
+        removeLabel: overrides.removeLabel ?? defaultRemoveLabel,
       },
     },
   };
-  const core = { setFailed: (message: string) => failures.push(message) };
+  const core = {
+    setFailed: (message: string) => failures.push(message),
+    info: (message: string) => infos.push(message),
+  };
   const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
     ...args: string[]
   ) => (context: unknown, github: unknown, core: unknown) => Promise<void>;
 
   await new AsyncFunction("context", "github", "core", script)(context, github, core);
-  return { added, removed, failures };
+  return { added, removed, failures, infos };
 }

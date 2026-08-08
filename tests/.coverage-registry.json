@@ -3914,6 +3914,10 @@
         {
           "file": "tests/integration/t411-compose-invalid-graph-visibility.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t500-resync-last-updated-preservation.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -5768,8 +5772,16 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t145-state-lock-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t507-approve-batch-idempotent.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t33.test.ts",
@@ -6859,6 +6871,10 @@
         },
         {
           "file": "tests/integration/t256-state-intent-selector.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t495-autonomy-projection-integrity.integration.test.ts",
           "mechanism": "cli"
         },
         {
