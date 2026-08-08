@@ -503,10 +503,11 @@ export function consumePresenceReservation(
       if (marker.sessionDigest !== digestSessionId(input.sessionId)) {
         throw new Error("Presence reservation session does not match");
       }
-      if (
-        marker.targetIntentId !== input.targetIntentId ||
-        marker.stage !== input.stage
-      ) {
+      // One line, not a wrapped condition: Bun's LCOV leaves the closing `) {`
+      // of a multi-line condition stamped DA:0 even when the branch is taken,
+      // which would put an unmeasurable row into the patch population.
+      const targetMatches = marker.targetIntentId === input.targetIntentId && marker.stage === input.stage;
+      if (!targetMatches) {
         throw new Error("Presence reservation target does not match");
       }
       if (marker.state === "consumed") return marker;

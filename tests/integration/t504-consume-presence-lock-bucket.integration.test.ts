@@ -41,10 +41,13 @@ import {
   AuditLockAcquireError,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
+  armPresenceReservation,
   consumePresenceReservation,
   readPresenceReservation,
 } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { DEFAULT_INTENT_UUID } from "../harness/fixtures.ts";
 import {
+  ROUTE_ID,
   SESSION_ID,
   STAGE,
   armAndMintTargetedApproval,
@@ -169,4 +172,67 @@ describe("t504 consume takes the owner-intent audit-lock bucket (#2590)", () => 
     },
     BLOCKED_ACQUIRE_TIMEOUT_MS,
   );
+});
+
+// The validations moved inside the critical section with the write, so they are
+// now evaluated against the marker re-read under the lock rather than the
+// pre-lock read that only resolved the lock identity. These cases pin that each
+// rejection still fires from in there, and that a rejected consume leaves the
+// marker exactly as it found it.
+describe("t504 consume rejects inside the locked section", () => {
+  test("a foreign session is refused and the marker is left minted", () => {
+    const fixture = mintedReservation();
+    expect(() =>
+      consumePresenceReservation({
+        projectDir: fixture.root,
+        sessionId: `${SESSION_ID}-impostor`,
+        targetIntentId: fixture.targetIntentId,
+        stage: STAGE,
+        reservationId: fixture.reservationId,
+      }),
+    ).toThrow("Presence reservation session does not match");
+    expect(
+      readPresenceReservation(fixture.root, fixture.reservationId)?.state,
+    ).toBe("minted");
+  });
+
+  test("a different stage is refused and the marker is left minted", () => {
+    const fixture = mintedReservation();
+    expect(() =>
+      consumePresenceReservation({
+        projectDir: fixture.root,
+        sessionId: SESSION_ID,
+        targetIntentId: fixture.targetIntentId,
+        stage: "user-stories",
+        reservationId: fixture.reservationId,
+      }),
+    ).toThrow("Presence reservation target does not match");
+    expect(
+      readPresenceReservation(fixture.root, fixture.reservationId)?.state,
+    ).toBe("minted");
+  });
+
+  test("an armed reservation is refused before it has been minted", () => {
+    const { root } = setup();
+    useSoloEnv(root);
+    const marker = armPresenceReservation({
+      projectDir: root,
+      sessionId: SESSION_ID,
+      space: "default",
+      targetIntentId: DEFAULT_INTENT_UUID,
+      stage: STAGE,
+      routeId: ROUTE_ID,
+    });
+    expect(marker.state).toBe("armed");
+    expect(() =>
+      consumePresenceReservation({
+        projectDir: root,
+        sessionId: SESSION_ID,
+        targetIntentId: marker.targetIntentId,
+        stage: STAGE,
+        reservationId: marker.reservationId,
+      }),
+    ).toThrow("Presence reservation has not been minted");
+    expect(readPresenceReservation(root, marker.reservationId)?.state).toBe("armed");
+  });
 });
