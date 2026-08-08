@@ -2425,6 +2425,16 @@ export type LifecycleTransactionHooks = {
   beforeJournalDelete?: () => void;
 };
 
+// Raised when the journal and the ledger disagree. The journal is deliberately
+// NOT removed here: the transition is half-applied and only a human can decide
+// what the ledger should say. Recovering a wedged workspace therefore means
+// repairing the journal in place so it agrees with what the append-only ledger
+// already recorded, then re-running the same verb — recovery replays forward,
+// reuses the existing event (matched by Operation Id), commits the registry and
+// cursor, and deletes the journal. Deleting the journal instead is wrong: the
+// HUMAN_TURN was already consumed by the appended event, so the next attempt
+// fails with "requires an unconsumed HUMAN_TURN" and the intent is left with an
+// audit event but an unmigrated registry row.
 export class IntentLifecycleJournalError extends Error {
   constructor(message: string) {
     super(`Intent lifecycle journal is corrupt: ${message}; manual investigation required`);
