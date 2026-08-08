@@ -199,4 +199,51 @@ describe("copyTreeWithRetry (#2397 real filesystem)", () => {
     // retry, never silently.
     expect(diagnostics.split("[copyTreeWithRetry diagnostics]").length - 1).toBe(3);
   });
+
+  test("diagnostics for a real, existing src walk its entries via safeReaddir (the srcExists===true branch, not the vanished-src short circuit above)", () => {
+    // reportCopyTreeFailure's existsSync(src)/safeReaddir(src) calls are
+    // real fs calls, unaffected by an injected `ops` — `ops` only stands in
+    // for the copy operation itself. The two cases above (in-process /fake/
+    // literals, and a src that never existed) both leave existsSync(src)
+    // false, so `srcExists ? safeReaddir(src).length : -1` never calls
+    // safeReaddir at all. A real, existing src drives that branch: src
+    // exists, so safeReaddir(src) runs (its try calls readdirSync, which
+    // succeeds here — the catch fallback is exercised implicitly by
+    // whatever real entries are present, not asserted separately since
+    // there is no failure mode to trigger it without a second race).
+    const src = tmp("t-copy-tree-retry-real-src-");
+    writeFileSync(join(src, "one.txt"), "1\n");
+    writeFileSync(join(src, "two.txt"), "2\n");
+    const dest = join(tmp("t-copy-tree-retry-real-dest-parent-"), "dest");
+
+    const enoent = Object.assign(new Error("ENOENT: no such file or directory, open"), {
+      code: "ENOENT",
+    });
+    let attempts = 0;
+    const ops = opsRecorder({
+      copy: () => {
+        attempts++;
+        throw enoent;
+      },
+    });
+
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    const captured: string[] = [];
+    process.stderr.write = ((chunk: unknown) => {
+      captured.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(() => copyTreeWithRetry(src, dest, ops)).toThrow(
+        "ENOENT: no such file or directory, open",
+      );
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    expect(attempts).toBe(3);
+    const diagnostics = captured.join("");
+    expect(diagnostics).toContain("src exists: true");
+    expect(diagnostics).toContain("src top-level entries: 2");
+  });
 });
