@@ -182,7 +182,7 @@ describe("t28 audit event-type sync (migrated from t28-audit-event-sync.sh, plan
   // .sh test 7: assert_eq TS_COUNT - the canonical baseline pin, bumped when
   // events are added or removed. (#367 added WORKFLOW_PARKED/UNPARKED -> 69;
   // #369 removed TEST_RUN_MODE_ENABLED -> 68; HUMAN_TURN took it to 69; the adaptive composer added RECOMPOSED -> 70; #671 added DELEGATED_APPROVAL -> 71; #685 added DELEGATED_REJECTION -> 72; #499/#848 added GUARD_EXEMPTED -> 73; #1125 added GRANT_ISSUED + GRANT_REVOKED -> 75; lifecycle transactions add two -> 77.)
-  test("VALID_EVENT_TYPES.size === 90 (baseline pin) [.sh test 7]", () => {
+  test("VALID_EVENT_TYPES.size === 91 (baseline pin) [.sh test 7]", () => {
     expect(TS_EVENTS.length).toBe(CANONICAL_COUNT);
   });
 });
