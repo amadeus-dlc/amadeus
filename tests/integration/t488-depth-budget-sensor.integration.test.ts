@@ -138,15 +138,19 @@ describe("t488 depth-budget manifest", () => {
 // 2. The predicate
 // ===========================================================================
 
-// Measured over the 50 requirements.md in the corpus that carry FR ids
-// (`evaluateDepthBudget` applied to each with its own recorded Depth), AFTER
-// the domain-prefix counting fix:
+// Measured with this sensor's own predicate over every
+// `amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md`
+// (132 files), each paired with its record's `**Depth**` field. 125 carry FR
+// ids under the fixed counting (this PR's final pattern, numeric-final-segment
+// included); one of those has no recognizable depth and drops out of the
+// per-level rows:
 //
-//   Minimal  n=28  min  556  p25 1389  median 1831  max 6544 B/FR
-//   Standard n=22  min  330  p25 1205  median 1894  max 2953 B/FR
+//   Minimal  n=72  min  861  p25 1587  median 1930  max  6544 B/FR
+//   Standard n=52  min  429  p25 1256  median 1654  max 12844 B/FR
 //
 // These replace an earlier set taken while prefixed ids went uncounted, which
-// inflated every figure (Minimal read median 2353 / min 1346). The ceilings are
+// inflated every figure and was quoted without its search predicate — the
+// numbers here are re-runnable from the enumeration above. The ceilings are
 // re-checked against the corrected numbers below rather than being re-derived
 // from them — a threshold moved in the same change that fixed its denominator
 // could not be told apart from one tuned to the new numbers.
@@ -154,10 +158,10 @@ describe("t488 depth-budget manifest", () => {
 // A ceiling has to sit INSIDE its level's range to carry information. Below the
 // minimum it reports "every artifact is too long", which says nothing about
 // which ones are outliers; above the maximum it reports nothing at all. The
-// original Minimal ceiling of 1,200 flagged 26/26 under the old counts — a
+// original Minimal ceiling of 1,200 flagged every artifact then measured — a
 // permanently red signal, which is noise rather than a detector.
-const MINIMAL_OBSERVED = { min: 556, p25: 1389, median: 1831, max: 6544 };
-const STANDARD_OBSERVED = { min: 330, median: 1894, max: 2953 };
+const MINIMAL_OBSERVED = { min: 861, p25: 1587, median: 1930, max: 6544 };
+const STANDARD_OBSERVED = { min: 429, median: 1654, max: 12844 };
 
 describe("t488 depth-budget thresholds", () => {
   test("each ceiling discriminates — it sits inside its level's observed range", () => {
@@ -172,15 +176,15 @@ describe("t488 depth-budget thresholds", () => {
   });
 
   test("the MINIMAL ceiling pulls its level down — under today's median", () => {
-    // Minimal is the level the inversion is about: its median (2,353) sits
-    // ABOVE Standard's (2,040) despite declaring less detail. A Minimal ceiling
+    // Minimal is the level the inversion is about: its median (1,930) sits
+    // ABOVE Standard's (1,654) despite declaring less detail. A Minimal ceiling
     // at or above its own median would ratify exactly that.
     expect(DEPTH_BUDGETS.Minimal).toBeLessThan(MINIMAL_OBSERVED.median);
   });
 
   test("the STANDARD ceiling deliberately sits above its median, admitting the level as it is", () => {
     // Not an oversight and not held to Minimal's rule: Standard's current
-    // volume was judged reasonable, so its ceiling catches the tail (3/17)
+    // volume was judged reasonable, so its ceiling catches the tail (7/52)
     // rather than the middle. Pinned as an intentional asymmetry so the two
     // levels cannot be silently collapsed into one rule.
     expect(DEPTH_BUDGETS.Standard as number).toBeGreaterThan(STANDARD_OBSERVED.median);
@@ -286,8 +290,9 @@ describe("t488 depth-budget FR counting", () => {
 
   // REGRESSION (#2425): the shipped pattern required a digit straight after
   // `FR-`, so every domain-prefixed id the corpus actually uses went uncounted.
-  // 13 of 52 artifacts were undercounted and 4 were reported as carrying no
-  // requirements at all. Because the count is the DENOMINATOR of bytes-per-FR,
+  // 17 of the 132 corpus artifacts were undercounted and 14 were reported as
+  // carrying no requirements at all (population: the enumeration documented at
+  // the OBSERVED constants above). Because the count is the DENOMINATOR of bytes-per-FR,
   // undercounting inflates the measurement and skews the ceilings derived from
   // it — the failure was not cosmetic.
   //
@@ -319,6 +324,29 @@ describe("t488 depth-budget FR counting", () => {
       "y".repeat(50),
     ].join("\n");
     expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(2);
+  });
+
+  test("an unnumbered id does not count — the contract says numbered", () => {
+    // `FR-AUTH` carries no number, so a document holding only such ids has NOT
+    // met the numbering requirement and must still report no-numbered-frs.
+    const body = ["- **FR-AUTH**: prefix but no number", "y".repeat(50)].join("\n");
+    const result = evaluateDepthBudget(writeRequirements(body), "Minimal");
+    expect(result.fr_count).toBe(0);
+    expect(result.reason).toBe("no-numbered-frs");
+  });
+
+  test("an id must END on its number — trailing junk disqualifies it", () => {
+    // `FR-AUTH-1x` and `FR-AUTH-1-` do not end on a numeric segment; counting
+    // them would accept ids downstream stages cannot address.
+    const body = [
+      "- **FR-AUTH-1x**: number followed by a letter",
+      "y".repeat(50),
+      "- **FR-AUTH-1-**: number followed by a dangling hyphen",
+      "y".repeat(50),
+    ].join("\n");
+    const result = evaluateDepthBudget(writeRequirements(body), "Minimal");
+    expect(result.fr_count).toBe(0);
+    expect(result.reason).toBe("no-numbered-frs");
   });
 
   test("a repeated id counts once (a cross-reference is not a new requirement)", () => {
