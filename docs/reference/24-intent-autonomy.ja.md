@@ -22,7 +22,7 @@ harness registry です。監査イベントの表と各イベントの emitter 
 | モード | 人間なしで裁定できる範囲 |
 | --- | --- |
 | `none` | なし。すべてのゲートと質問が `human-required` です。 |
-| `semi` | 内部ステージゲートのみ。phase boundary でないステージゲートに限り、かつモード自体が人間コマンドで設定されている場合だけです。 |
+| `semi` | 内部ステージゲートとステージ質問。phase boundary でないステージゲートと、phase boundary で提起されたものでない `question` に限り、かつモード自体が人間コマンドで設定されている場合だけです。 |
 | `full` | 現在のグラントの scope が許す範囲。 |
 
 `none` が既定であり、legacy または読解不能な projection の着地先でもあります。
@@ -45,7 +45,7 @@ bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
 `--autonomy <none|semi|full>` は同じ宣言を起動の一部として記録します。Intent を
 誕生させる起動でも有効です。
 
-```
+```sh
 /amadeus --autonomy semi 公開 API にレート制限を追加する
 /amadeus --autonomy none
 ```

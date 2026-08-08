@@ -23,7 +23,7 @@ The mode is one of three values, held on the Intent's autonomy projection
 | Mode | What may be decided without a human |
 | --- | --- |
 | `none` | Nothing. Every gate and question is `human-required`. |
-| `semi` | Internal stage gates only — a stage gate that is not a phase boundary, and only when the mode itself was set by a human command. |
+| `semi` | Internal stage gates and stage questions — a stage gate that is not a phase boundary, plus a `question` that is not raised at one, and only when the mode itself was set by a human command. |
 | `full` | Whatever the current grant's scope allows. |
 
 `none` is the default, and it is also where a legacy or unreadable projection
@@ -47,7 +47,7 @@ bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
 exist. `--autonomy <none|semi|full>` records the same declaration as part of the
 invocation, including the invocation that births the Intent:
 
-```
+```sh
 /amadeus --autonomy semi Add rate limiting to the public API
 /amadeus --autonomy none
 ```
