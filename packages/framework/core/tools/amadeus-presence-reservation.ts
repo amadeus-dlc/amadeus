@@ -465,27 +465,61 @@ export function mintArmedPresenceReservation(
   });
 }
 
+// Consuming is a read-modify-write of the marker, so it belongs in a critical
+// section like every sibling mutator (arm, cancel, the active-marker scan,
+// mint). The BUCKET is the marker's OWNER INTENT, not the workspace sentinel,
+// for two reasons:
+//
+//   1. Effect. A lock only serialises against the writers that share its
+//      identity. The sole other writer of THIS marker is mint's inner section,
+//      whose identity is (projectDir, targetIntentDir, space). A workspace-
+//      bucket lock here would serialise against nothing that writes the marker
+//      — the fix would be a no-op dressed as a lock.
+//   2. Order. The live prompt-submit path already runs workspace (outer) ->
+//      owner-intent (inner), and both callers in amadeus-state.ts (targeted
+//      approve/reject) hold the owner-intent bucket when they call in. Taking
+//      the workspace bucket here would make those calls owner-intent (outer) ->
+//      workspace (inner) — an AB-BA inversion that deadlocks the approval
+//      transaction into an AuditLockAcquireError. Matching the callers' bucket
+//      makes their acquire a re-entry instead (depth counter, no OS acquire),
+//      and leaves the lock-free orchestrate caller taking it cleanly.
+//
+// The pre-lock read resolves the lock identity ONLY; validation and the write
+// run against a marker re-read inside the section, so a mint that landed while
+// we waited is observed rather than clobbered.
 export function consumePresenceReservation(
   input: ConsumeReservationInput,
 ): PresenceReservation {
-  const marker = readPresenceReservation(input.projectDir, input.reservationId);
-  if (marker === null) throw new Error("Presence reservation was not found");
-  if (marker.sessionDigest !== digestSessionId(input.sessionId)) {
-    throw new Error("Presence reservation session does not match");
-  }
-  if (
-    marker.targetIntentId !== input.targetIntentId ||
-    marker.stage !== input.stage
-  ) {
-    throw new Error("Presence reservation target does not match");
-  }
-  if (marker.state === "consumed") return marker;
-  if (marker.state !== "minted") {
-    throw new Error("Presence reservation has not been minted");
-  }
-  const consumed: PresenceReservation = { ...marker, state: "consumed" };
-  writeReservation(input.projectDir, consumed);
-  return consumed;
+  const observed = readPresenceReservation(input.projectDir, input.reservationId);
+  if (observed === null) throw new Error("Presence reservation was not found");
+  return withAuditLock(
+    input.projectDir,
+    () => {
+      const marker = readPresenceReservation(
+        input.projectDir,
+        input.reservationId,
+      );
+      if (marker === null) throw new Error("Presence reservation was not found");
+      if (marker.sessionDigest !== digestSessionId(input.sessionId)) {
+        throw new Error("Presence reservation session does not match");
+      }
+      if (
+        marker.targetIntentId !== input.targetIntentId ||
+        marker.stage !== input.stage
+      ) {
+        throw new Error("Presence reservation target does not match");
+      }
+      if (marker.state === "consumed") return marker;
+      if (marker.state !== "minted") {
+        throw new Error("Presence reservation has not been minted");
+      }
+      const consumed: PresenceReservation = { ...marker, state: "consumed" };
+      writeReservation(input.projectDir, consumed);
+      return consumed;
+    },
+    observed.targetIntentDir,
+    observed.space,
+  );
 }
 
 export function verifyMintedPresenceReservation(
