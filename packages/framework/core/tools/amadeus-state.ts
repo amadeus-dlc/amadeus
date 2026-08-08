@@ -1666,7 +1666,9 @@ interface ProducedStage {
   phase: string;
   for_each?: string;
   produces?: string[];
+  optional_produces?: string[];
   produces_kinds?: Record<string, UnitKind[]>;
+  reviewer?: string;
 }
 
 function artifactsExistInDir(dir: string, artifacts: readonly string[]): boolean {
@@ -1702,6 +1704,76 @@ function kindAwareArtifactsExist(
     if (artifactsExistInDir(dir, applicable)) return true;
   }
   return !hasApplicableArtifact;
+}
+
+// Units whose artifacts landed but whose reviewer never ran (#2359).
+//
+// The artifact layers ask whether a Unit produced output; they cannot ask
+// whether the reviewer the protocol requires ("the orchestrator MUST invoke the
+// reviewer", stage-protocol §12a) actually ran. Those two states look identical
+// on disk, and once a Unit's produces exist the engine stops re-emitting its
+// run-stage (#2358 shares that root), so no later step revisits the gap. This
+// gate is where it is still visible.
+//
+// Detection only. A missing review is not something a gate can supply, and
+// synthesising the block would be exactly the fabricated evidence the review
+// exists to prevent — the refusal names the Units and stops there.
+//
+// Read as a review-bearing artifact: the `## Review — Iteration N` heading that
+// `complete-review` appends.
+//
+// Units come from disk (`producesDirsForStage`) rather than the runtime graph,
+// because the graph is the thing most likely to be stale or absent exactly when
+// this gap appears — a session that parked mid-Unit. Disk is what the artifact
+// layers already fall back to, and a Unit directory that exists is a Unit that
+// ran. `produces_kinds` still narrows which artifacts count when the runtime
+// snapshot can name the Unit's kind; without it every declared artifact is a
+// candidate, which is the fail-safe direction.
+function unitsMissingReview(pd: string, stage: ProducedStage): string[] {
+  // §12a binds the reviewer to stages that declare one. A stage with no
+  // `reviewer` has no verdict to be missing, so there is nothing here to check.
+  if (stage.reviewer === undefined || stage.reviewer.trim() === "") return [];
+  if (stage.for_each !== "unit-of-work") return [];
+  if ((stage.produces ?? []).length === 0) return [];
+  const kinds = readRuntimeUnitKinds(pd)?.kinds;
+  const missing: string[] = [];
+  for (const dir of producesDirsForStage(pd, stage)) {
+    const unit = basename(join(dir, ".."));
+    if (unitReviewIsMissing(dir, stage, kinds?.get(unit))) missing.push(unit);
+  }
+  return missing;
+}
+
+// One Unit's verdict, or the absence of one. Returns false for a Unit this layer
+// has no standing to judge: nothing applicable to its kind, or nothing produced
+// at all (which is the artifact layers' business, not this one's).
+function unitReviewIsMissing(
+  dir: string,
+  stage: ProducedStage,
+  kind: UnitKind | undefined,
+): boolean {
+  const produces = stage.produces ?? [];
+  const applicable = kind === undefined
+    ? produces
+    : requiredArtifactsForUnit({ produces, produces_kinds: stage.produces_kinds }, kind);
+  if (applicable.length === 0) return false;
+  if (!artifactsExistInDir(dir, applicable)) return false;
+  // The PRIMARY artifact only. `complete-review` appends its projection to the
+  // first non-optional produces entry and nowhere else, so a block on any other
+  // file was not written by the reviewer — accepting one would let a hand-placed
+  // heading stand in for the verdict this asks for.
+  const optional = new Set(stage.optional_produces ?? []);
+  const primary = applicable.find((name) => !optional.has(name));
+  if (primary === undefined) return false;
+  return !artifactCarriesReview(join(dir, `${primary}.md`));
+}
+
+function artifactCarriesReview(path: string): boolean {
+  try {
+    return /^## Review — Iteration \d+/m.test(readFileSync(path, "utf-8"));
+  } catch {
+    return false;
+  }
 }
 
 // True when at least one applicable declared produces[] artifact exists on disk
@@ -2012,7 +2084,9 @@ type VerifiableStage = {
   phase: string;
   for_each?: string;
   produces?: string[];
+  optional_produces?: string[];
   produces_kinds?: Record<string, UnitKind[]>;
+  reviewer?: string;
   workspace_requires?: boolean;
 };
 function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
@@ -2053,6 +2127,25 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
           `amadeus-state.ts declare-docs-only --evidence "<approval reference>".`
       );
     }
+  }
+
+  // Last, because it asks the narrowest question: the layers above establish
+  // that a Unit produced artifacts and that real work exists behind them, and
+  // only then is "was that work reviewed" a question worth asking. Ordering it
+  // ahead of those would answer a Unit that produced nothing with a complaint
+  // about its missing review.
+  const unreviewed = unitsMissingReview(pd, stage);
+  if (unreviewed.length > 0) {
+    // Built one statement per line rather than as a multi-line argument: a
+    // continuation line of a single call carries no DA record of its own under
+    // bun's union merge, so the patch gate reads it as never executed.
+    let message = `Refusing to complete "${stage.slug}": ${unreviewed.length} unit(s) produced `;
+    message += `artifacts with no reviewer verdict recorded on them — ${unreviewed.join(", ")}. `;
+    message += "The stage protocol requires the reviewer to run before the gate (§12a), and a ";
+    message += "unit whose artifacts already exist will not be re-emitted for one. Run §12a for ";
+    message += "each unit named above, or halt for human direction if its review cannot be ";
+    message += "established. Do not hand-write the Review block.";
+    error(message);
   }
 }
 

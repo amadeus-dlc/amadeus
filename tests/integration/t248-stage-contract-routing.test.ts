@@ -197,8 +197,14 @@ function writeFunctionalArtifacts(
     "functional-design",
   );
   mkdirSync(dir, { recursive: true });
+  // A unit whose artifacts reached the gate carries its reviewer verdict
+  // (#2359). These cases are about kind-aware applicability, so the review is
+  // seeded rather than left as a second reason for the guard to refuse.
+  const review = "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+    "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-08T00:00:00Z\n" +
+    "- **Iteration:** 1\n- **Scope decision:** none\n";
   for (const artifact of artifacts) {
-    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`, "utf-8");
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n${review}`, "utf-8");
   }
 }
 
@@ -736,14 +742,83 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.produces).toHaveLength(4);
   }, 30_000);
 
+  // An absent primary artifact reads the same as an unreviewed one, and it
+  // reaches the check through a different door: artifactCarriesReview cannot
+  // open the file at all. `scope` requires the stage's required produces to
+  // exist, so a unit missing its primary could not have been reviewed (#2359).
+  test("completion guard refuses when the primary artifact is absent entirely", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    // Secondary artifacts only, each carrying a review the reviewer never wrote
+    // there — the primary (business-logic-model, applicable because the kindless
+    // fallback widens the set) is the one that is missing.
+    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+
+    const originalExit = process.exit;
+    const originalError = console.error;
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(String).join(" ");
+    };
+    try {
+      expect(() => advanceInProcess(project, sourceGraph())).toThrow(/exit 1/);
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+    }
+    expect(stderr).toContain("no reviewer verdict recorded");
+  }, 30_000);
+
   test("completion guard falls back to on-disk artifacts when runtime-graph is missing", () => {
     // Missing runtime-graph.json drives the kind-aware reader's missing-file
     // catch (readRuntimeUnitKinds -> null), so the guard falls back to the
     // per-unit construction directories, where the artifacts exist.
     const project = seedProject([{ name: "schema", kind: "spec" }]);
-    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    // All three: without the runtime graph the unit's kind is unknown, so every
+    // declared artifact is applicable — including the primary one the reviewer
+    // writes its verdict to (#2359).
+    writeFunctionalArtifacts(project, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
     rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+  }, 30_000);
+
+  // The refusal itself, driven in-process. The spawned arms above cross a
+  // process boundary bun's coverage cannot see, so the branch that names the
+  // unreviewed units would otherwise never register as executed (#2359).
+  // `error()` ends the CLI through process.exit, so that is stubbed into a
+  // throw for the duration of the call.
+  test("completion guard refuses a unit whose artifacts carry no review in-process", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    const dir = join(seededRecordDir(project), "construction", "schema", "functional-design");
+    mkdirSync(dir, { recursive: true });
+    for (const artifact of ["business-rules", "domain-entities"]) {
+      writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`, "utf-8");
+    }
+
+    const originalExit = process.exit;
+    const originalError = console.error;
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(String).join(" ");
+    };
+    try {
+      expect(() => advanceInProcess(project, sourceGraph())).toThrow(/exit 1/);
+    } finally {
+      process.exit = originalExit;
+      console.error = originalError;
+    }
+    expect(stderr).toContain("no reviewer verdict recorded");
+    expect(stderr).toContain("schema");
   }, 30_000);
 
   test("completion guard scans past a spec unit with no artifacts to one that has them", () => {
