@@ -25,11 +25,32 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-/** Bytes per numbered FR each depth may spend. Comprehensive is deliberately
- *  absent — it declares no ceiling (stage-protocol.md §8), and an entry of
- *  Infinity would read as a threshold someone forgot to pick. */
+/** Bytes per numbered FR each depth may spend. Measured over the 43 corpus
+ *  artifacts carrying FR-n ids:
+ *
+ *    Minimal  n=26  min 1346  p25 1738  median 2353  max 6544 B/FR
+ *    Standard n=17  min  864  median 2040  max 3354 B/FR
+ *
+ *  Both ceilings sit INSIDE their level's observed range, which is what makes
+ *  each a detector rather than a verdict. Where they sit within that range
+ *  differs on purpose:
+ *
+ *  - Minimal 1,800 is BELOW its median (2,353), flagging 19/26. Minimal is the
+ *    level the inversion is about — it spends more per requirement than
+ *    Standard while declaring less detail — so its ceiling pulls the level down.
+ *  - Standard 2,400 is ABOVE its median (2,040), flagging 3/17. Standard's
+ *    current volume was judged reasonable, so its ceiling catches the tail
+ *    rather than the middle.
+ *
+ *  An earlier Minimal of 1,200 sat under the observed MINIMUM and flagged
+ *  26/26 — a permanently red signal says nothing about which artifacts are
+ *  outliers, so it was noise rather than a detector.
+ *
+ *  Comprehensive is deliberately absent — it declares no ceiling
+ *  (stage-protocol.md §8), and an entry of Infinity would read as a threshold
+ *  someone forgot to pick. */
 export const DEPTH_BUDGETS: Record<string, number | undefined> = {
-  Minimal: 1200,
+  Minimal: 1800,
   Standard: 2400,
   Comprehensive: undefined,
 };
