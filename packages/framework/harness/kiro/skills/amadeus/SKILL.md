@@ -6,7 +6,7 @@ description: >
   `.kiro/scopes/`; run
   `bun .kiro/tools/amadeus-utility.ts help` for the authoritative list
   and descriptions. Utilities: --status, --doctor, --migrate [path], --stage,
-  --phase, --scope, --depth, --test-strategy, --version,
+  --phase, --scope, --depth, --test-strategy, --autonomy, --version,
   --help, plus the intent and space verbs.
   Or describe what you want to build and the scope will be auto-detected.
 ---
@@ -41,7 +41,7 @@ Loop:
      not `done` alone: `await-completion` is terminal for this turn too.
 ```
 
-Each `next` reads the workflow state and the compiled stage graph and returns **exactly one** typed directive (JSON) on stdout. It mutates no workflow state (its only write is the machine-local sensor-invocation projection under the gitignored hooks-health runtime). The directive's `kind` names the single move to make; you make that move, then `report` commits the resulting transition so the next `next` reads fresh state. **Report once per directive; never call the state tools (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report` dispatches them, and a speculative direct call gets the engine's state-guard error. Pass `$ARGUMENTS` through to the first `next` verbatim — the engine parses flags (`--status`, `--stage`, `--scope`, `--depth`, freeform text, …) and resolves the scope, so you do not pre-parse or strip them.
+Each `next` reads the workflow state and the compiled stage graph and returns **exactly one** typed directive (JSON) on stdout. It mutates no workflow state (its only write is the machine-local sensor-invocation projection under the gitignored hooks-health runtime). The directive's `kind` names the single move to make; you make that move, then `report` commits the resulting transition so the next `next` reads fresh state. **Report once per directive; never call the state tools (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report` dispatches them, and a speculative direct call gets the engine's state-guard error. Pass `$ARGUMENTS` through to the first `next` verbatim — the engine parses flags (`--status`, `--stage`, `--scope`, `--depth`, `--autonomy`, freeform text, …) and resolves the scope, so you do not pre-parse or strip them.
 
 Run the engine binary directly via the shell tool. If a directive looks malformed or names a move you cannot make, that is an engine signal worth surfacing to the user, never a cue to improvise the routing in prose.
 
@@ -243,7 +243,8 @@ The engine reads the compiled `data/stage-graph.json` directly for all routing; 
 
 - **Adaptive scope**: Scope determines which stages execute and at what depth. The engine owns the resolution; you run the stages it hands you.
 - **STAGE RITUAL IS ATOMIC**: Once a stage starts, EVERY step fires: questions → artifact → reviewer (§12a, if declared) → learnings (§13) → gate. No step is skippable. "Skip to stage X" skips INTERMEDIATE stages, NOT the target stage's ritual. Complete the current stage fully (including learnings) before jumping.
-- **AUTONOMY IS NEVER INFERRED**: A user saying "go with recommended" for one stage is a one-time instruction for THAT stage. The next stage starts fresh. NEVER carry forward autonomy. NEVER self-answer questions without explicit permission for THIS specific stage.
+- **AUTONOMY IS NEVER INFERRED**: A user saying "go with recommended" for one stage is a one-time instruction for THAT stage. The next stage starts fresh. NEVER carry forward that permission, and NEVER self-answer a question on your own judgement. This forbids *inferring* authority — it does not forbid the authority the engine already holds: when the Intent's recorded autonomy mode (`semi` / `full`) resolves a gate or a question through the engine's own ladder, that is a recorded human declaration being executed, not an inference, and you follow the directive as given.
+- **Declaring Intent autonomy at launch**: `--autonomy <none|semi|full>` declares the Intent's autonomy mode as part of the invocation, including the invocation that births the intent. Pass it straight through to `next`; the engine owns the decision. `none` / `semi` are recorded through the canonical write path and take effect at once. `full` is never granted by the flag — the run prints the grant ceremony (`bun .kiro/tools/amadeus-bolt.ts preview-autonomy`, then `bun .kiro/tools/amadeus-bolt.ts set-autonomy --mode full --confirmed-display-digest <digest>`) and stops there. Never supply the flag on the user's behalf. See `docs/reference/24-intent-autonomy.md`.
 - **User control**: The user can override any stage decision at any approval gate.
 - **11 domain experts**: Each stage leverages the appropriate agent persona; personas load inline from `.kiro/agents/amadeus-<role>-agent.md` for 30 of 32 stages.
 - **Approval gates**: Every stage except the bootstrap initialization stages presents an approval gate.

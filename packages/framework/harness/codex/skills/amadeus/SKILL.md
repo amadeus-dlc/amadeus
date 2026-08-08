@@ -6,7 +6,7 @@ description: >
   `.codex/scopes/`; run
   `bun .codex/tools/amadeus-utility.ts help` for the authoritative list
   and descriptions. Utilities: --status, --doctor, --migrate [path], --stage,
-  --phase, --scope, --depth, --test-strategy, --version,
+  --phase, --scope, --depth, --test-strategy, --autonomy, --version,
   --help, plus the intent and space verbs.
   Or describe what you want to build and the scope will be auto-detected.
 ---
@@ -43,7 +43,7 @@ Loop:
      not `done` alone: `await-completion` is terminal for this turn too.
 ```
 
-Each `next` reads the workflow state and the compiled stage graph and returns **exactly one** typed directive (JSON) on stdout. It mutates no workflow state (its only write is the machine-local sensor-invocation projection under the gitignored hooks-health runtime). The directive's `kind` names the single move to make; you make that move, then `report` commits the resulting transition so the next `next` reads fresh state. **Report once per directive; never call the state tools (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report` dispatches them, and a speculative direct call gets the engine's state-guard error. Pass the user's invocation text through to the first `next` verbatim — the engine parses flags (`--status`, `--stage`, `--scope`, `--depth`, freeform text, …) and resolves the scope, so you do not pre-parse or strip them.
+Each `next` reads the workflow state and the compiled stage graph and returns **exactly one** typed directive (JSON) on stdout. It mutates no workflow state (its only write is the machine-local sensor-invocation projection under the gitignored hooks-health runtime). The directive's `kind` names the single move to make; you make that move, then `report` commits the resulting transition so the next `next` reads fresh state. **Report once per directive; never call the state tools (`amadeus-state.ts approve/advance/…`) directly** — the engine's `report` dispatches them, and a speculative direct call gets the engine's state-guard error. Pass the user's invocation text through to the first `next` verbatim — the engine parses flags (`--status`, `--stage`, `--scope`, `--depth`, `--autonomy`, freeform text, …) and resolves the scope, so you do not pre-parse or strip them.
 
 Run the engine binary directly via the shell tool. If a directive looks malformed or names a move you cannot make, that is an engine signal worth surfacing to the user, never a cue to improvise the routing in prose.
 
@@ -243,6 +243,7 @@ The engine reads the compiled `data/stage-graph.json` directly for all routing; 
 ## Key Principles
 
 - **Adaptive scope**: Scope determines which stages execute and at what depth — from 5-stage chore to 32-stage enterprise. The engine owns the resolution; you run the stages it hands you.
+- **Declaring Intent autonomy at launch**: `--autonomy <none|semi|full>` declares the Intent's autonomy mode as part of the invocation, including the invocation that births the intent. Pass it straight through to `next`; the engine owns the decision. `none` / `semi` are recorded through the canonical write path and take effect at once. `full` is never granted by the flag — the run prints the grant ceremony (`bun .codex/tools/amadeus-bolt.ts preview-autonomy`, then `bun .codex/tools/amadeus-bolt.ts set-autonomy --mode full --confirmed-display-digest <digest>`) and stops there. Never supply the flag on the user's behalf, and never infer autonomy from a previous answer: an autonomous ruling is only ever the engine executing a recorded human declaration. See `docs/reference/24-intent-autonomy.md`.
 - **User control**: The user can override any stage decision at any approval gate.
 - **11 domain experts**: Each stage leverages the appropriate agent persona (product, design, delivery, architect, aws-platform, compliance, devsecops, developer, quality, pipeline-deploy, operations).
 - **Approval gates**: Every stage except the bootstrap initialization stages presents an approval gate (the engine signals this via `run-stage`'s `gate` field).

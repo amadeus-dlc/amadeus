@@ -50,6 +50,7 @@
 - **[10の標準スコープ](docs/guide/05-scopes-and-depth.ja.md)**(enterprise から workshop まで)+ 自由記述からの自動検出、そしてタスクに合わせた EXECUTE/SKIP 計画を提案し、承認された計画を再利用可能な composed スコープとして登録する **adaptive composer**
 - **[3段階の depth と 3段階の test strategy](docs/guide/05-scopes-and-depth.ja.md)** — 成果物の詳細度とテスト量を独立に制御
 - **[全ステージの承認ゲート](docs/guide/07-interaction-modes.ja.md)** — エンジンが強制。1問ずつからファストトラックまでのインタラクションモード
+- **[Intent autonomy](docs/reference/24-intent-autonomy.ja.md)** — 1つの Intent をどこまで自律実行してよいかを `/amadeus --autonomy <none|semi|full>` で宣言(Intent を誕生させる起動でも有効)。`full` は人間によるグラント儀式が別途必要で、無人での裁定はすべてレビュー用に記録されます
 - **[スペースと intent](docs/guide/03-spaces-and-intents.ja.md)** — intent ごとの記録、チームごとのスペース、すべてリポジトリでバージョン管理
 - **[ルールと学習ループ](docs/guide/09-rules-and-the-learning-loop.ja.md)** — 人間の是正が層状のメソッドルールとして永続化。矛盾を拒否する admission check 付き
 - **[2層のナレッジ](docs/guide/08-knowledge.ja.md)** — メソドロジー知識はフレームワークに同梱、チーム・ドメイン知識はワークスペースに蓄積

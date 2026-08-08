@@ -262,6 +262,7 @@ Utilities:
   --scope <scope>   Set or change scope (standalone or with --stage/--phase)
   --depth <level>   Override depth (minimal, standard, comprehensive)
   --test-strategy <level>  Override test strategy (minimal, standard, comprehensive)
+  --autonomy <mode> Declare the Intent autonomy mode (none, semi, full) — works on the launch that births the intent; full still needs the grant ceremony
   --version         Show the framework version
   --help            Show this help message
 
@@ -279,7 +280,8 @@ Examples:
   /amadeus --phase construction --scope fix    Jump to construction with fix scope
   /amadeus --scope fix --depth comprehensive  Fix with comprehensive depth
   /amadeus --depth minimal                       Change depth of active workflow
-  /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
+  /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests
+  /amadeus --autonomy semi Add rate limiting       Start with semi autonomy declared`;
 
 /** Exported for t67 unit tests. */
 export function renderHelpText(): string {

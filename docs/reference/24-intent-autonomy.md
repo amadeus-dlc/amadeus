@@ -41,6 +41,33 @@ bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
   --confirmed-display-digest sha256:...
 ```
 
+### Declaring the mode at launch
+
+`set-autonomy` is the canonical recording path, but it needs an Intent to already
+exist. `--autonomy <none|semi|full>` records the same declaration as part of the
+invocation, including the invocation that births the Intent:
+
+```
+/amadeus --autonomy semi Add rate limiting to the public API
+/amadeus --autonomy none
+```
+
+The flag is an additional recording *means*, never a source of authority. It is
+accepted only as the **first** declaration — while the mode's provenance is still
+`system-default` — so it can never overwrite a mode a human already set; re-state
+the same mode and it is a no-op, name a different one and the run is refused and
+points at `set-autonomy`. `none` and `semi` go through the one canonical write
+path, and because a freshly born Intent has no audit history of its own to cite,
+the declaration is bound to the launching keystroke's human turn: a launch that
+carries no real human turn is refused loudly, the Intent stands with its mode
+unset, and the first declaration is still available.
+
+`--autonomy full` is accepted but never applied. Granting `full` is the ceremony
+above, and a launch flag may not stand in for it: the run reports the two
+commands that issue a grant and stops there. A launch that also revokes — asking
+for `none` while an active grant exists — is likewise refused, because revoking a
+grant is a deliberate act rather than the side effect of a flag.
+
 A grant is not a global switch. It carries a scope descriptor naming the Intent
 uuid, the scope and norm fingerprints it was issued against, the interaction
 kinds it covers (`stage-gate`, `phase-gate`, `walking-skeleton`, `question`),
