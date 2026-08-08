@@ -46,3 +46,24 @@ export function removeTreeVerified(root: string, io: RemoveTreeIo = realIo): voi
     `removeTreeVerified: tree still present after ${REMOVE_ATTEMPTS} removal attempts: ${root}`,
   );
 }
+
+/**
+ * Roll back after a setup failure without losing either error. Always throws,
+ * hence the `never` return: it exists to be the last statement of a `catch`.
+ *
+ * When `cleanup` succeeds the original `error` is rethrown unchanged, so
+ * callers and their tests see exactly the failure that started the rollback.
+ * Only when `cleanup` itself throws is an `AggregateError` raised, carrying the
+ * original setup failure first and the cleanup failure second — neither the
+ * reason the rollback ran nor the reason it failed is swallowed. Verified
+ * removal can throw (see `removeTreeVerified`), which is what made the plain
+ * `catch (error) { cleanup(); throw error; }` shape lossy.
+ */
+export function rollbackOrAggregate(error: unknown, cleanup: () => void): never {
+  try {
+    cleanup();
+  } catch (cleanupError) {
+    throw new AggregateError([error, cleanupError], "rollback cleanup failed after setup failure");
+  }
+  throw error;
+}

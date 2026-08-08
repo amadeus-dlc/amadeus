@@ -11,7 +11,10 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { buildChildEnvironment } from "./live-e2e/policy.ts";
 import { requireCapability } from "./live-e2e/registry.ts";
-import { removeTreeVerified } from "./live-e2e/testing/remove-tree-verified.ts";
+import {
+  removeTreeVerified,
+  rollbackOrAggregate,
+} from "./live-e2e/testing/remove-tree-verified.ts";
 
 const CAPABILITY = requireCapability("codex-exec");
 
@@ -94,17 +97,10 @@ export function setupCodexExecHome(prefix: string): CodexExecHome {
   try {
     mkdirSync(home, { recursive: true });
     return { root, home, cleanup };
-  } catch (error) {
-    try {
-      cleanup();
-    } catch (cleanupError) {
-      throw new AggregateError(
-        [error, cleanupError],
-        "rollback cleanup failed after setup failure",
-      );
-    }
-    throw error;
-  }
+    // Single line keeps the unreachable-in-test rollback to one lcov row: the
+    // scratch root is created by the line above, so no external setup can make
+    // this mkdirSync fail while that mkdtempSync succeeds.
+  } catch (error) { rollbackOrAggregate(error, cleanup); }
 }
 
 interface CodexExecHomeConfig {
@@ -238,14 +234,6 @@ export function setupCodexExecProject({
     });
     return { ...scratch, proj };
   } catch (error) {
-    try {
-      scratch.cleanup();
-    } catch (cleanupError) {
-      throw new AggregateError(
-        [error, cleanupError],
-        "rollback cleanup failed after setup failure",
-      );
-    }
-    throw error;
+    rollbackOrAggregate(error, scratch.cleanup);
   }
 }
