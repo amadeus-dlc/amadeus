@@ -167,21 +167,25 @@ export class NoSilentDropEvidenceAdapter {
     if (result.status !== 0) throw new EvidenceRebindError("REBIND_REVISION_UNRESOLVED", `revision is not a local commit: ${revision}`);
   }
 
-  // Without `--branch` a clean worktree and a truncated read are the same bytes: "". Under load
-  // git exits 0 with its stdout cut short (#2397 caught this on `git ls-tree -z`), and no
-  // NUL-termination check can see a cut that reaches all the way to empty. Reading empty as
-  // clean would wave a dirty tree past the last gate before evidence is rewritten. `--branch`
-  // makes that state unrepresentable instead of merely detected: git always emits the
-  // `## <branch>` header, so the header's absence IS truncation and cleanliness is the absence
-  // of entries AFTER a header we actually saw.
+  // This is the last gate before the evidence bundle is rewritten, so cleanliness has to survive
+  // a cut at ANY offset: under load git exits 0 with its stdout cut short (#2397 caught that on
+  // `git ls-tree -z`). Two guards divide the offsets between them and neither covers the other's
+  // share. NUL termination catches a record that stops mid-write — including a cut inside the
+  // header, which would otherwise leave a lone `## …` entry and read as clean. `--branch` catches
+  // the cut all the way to "", which is byte-identical to a clean worktree and which no
+  // termination check can see. Only past both is cleanliness the absence of entries after a
+  // header we actually saw.
   assertClean(): void {
     const status = this.mustRun(
       ["git", "status", "--porcelain=v1", "-z", "--branch", "--untracked-files=all"],
       "REBIND_GIT_FAILED",
     );
+    if (!status.endsWith("\0")) {
+      throw new EvidenceRebindError("REBIND_GIT_FAILED", "git status output is truncated: the final record has no NUL");
+    }
     const [header, ...entries] = status.split("\0").filter((entry) => entry.length > 0);
     if (header === undefined || !header.startsWith("##")) {
-      throw new EvidenceRebindError("REBIND_GIT_FAILED", "git status output is truncated: the branch header is missing");
+      throw new EvidenceRebindError("REBIND_GIT_FAILED", "git status output is missing the branch header");
     }
     if (entries.length > 0) {
       throw new EvidenceRebindError("REBIND_WORKTREE_DIRTY", "index and working tree must be clean before rebind");

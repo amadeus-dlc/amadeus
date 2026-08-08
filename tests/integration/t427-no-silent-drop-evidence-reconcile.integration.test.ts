@@ -280,10 +280,11 @@ describe("t427 pure rebind trust boundary", () => {
   });
 
   // #2397: `git status -z` can exit 0 with truncated stdout under load — t427 caught the
-  // `git ls-tree -z` face of it. Truncation to EMPTY is the shape no NUL-termination check can
-  // see, because "" is byte-identical to a clean worktree. `--branch` removes the ambiguity at
-  // the source: git always emits the `## <branch>` header, so an answer with no header is
-  // truncation and can never be mistaken for cleanliness.
+  // `git ls-tree -z` face of it. Cleanliness has to survive a cut at ANY offset, and the two
+  // guards divide that job: NUL termination catches a record that stops mid-write (including a
+  // cut inside the header itself), while `--branch` catches the cut to "", which is
+  // byte-identical to a clean worktree and which no termination check can see. Each case below
+  // pins one cut offset; drop either guard and one of them reads as clean.
   test("asks git for the branch header so an empty answer cannot pass as clean", () => {
     const root = initRepository();
     let asked: readonly string[] = [];
@@ -298,8 +299,27 @@ describe("t427 pure rebind trust boundary", () => {
     };
 
     expect(() => new NoSilentDropEvidenceAdapter(root, runner).assertClean())
-      .toThrow("git status output is truncated: the branch header is missing");
+      .toThrow("git status output is truncated");
     expect(asked).toContain("--branch");
+  });
+
+  test("rejects every truncated status shape instead of reading it as clean", () => {
+    const root = initRepository();
+    const statusRunner = (stdout: string): CommandRunner => ({
+      run(args, options = {}) {
+        return commandKey(args) === "git status" ? commandResult(0, stdout) : command(options.cwd ?? root, args);
+      },
+    });
+
+    // Cut after the header's bytes but before its NUL, and cut inside the header. Both leave a
+    // string whose only entry starts with "##", so the header check alone would call them clean.
+    for (const truncated of ["## main", "## ma", `## main${NUL} M implementation`.slice(0, -3)]) {
+      expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(truncated)).assertClean(), truncated)
+        .toThrow("git status output is truncated");
+    }
+    // Terminated, but git never omits the header — an answer without one is not a clean worktree.
+    expect(() => new NoSilentDropEvidenceAdapter(root, statusRunner(` M implementation.ts${NUL}`)).assertClean())
+      .toThrow("git status output is missing the branch header");
   });
 
   test("separates a clean worktree from a dirty one by what follows the branch header", () => {
