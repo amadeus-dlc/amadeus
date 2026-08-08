@@ -44,12 +44,15 @@ import {
   createTestProject,
   DEFAULT_RECORD_DIR,
   FIXTURE_CLONE_ID,
+  FIXTURES_DIR,
+  intentsDirOf,
   resetAidlcEnv,
   seededAuditShard,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { hostname } from "node:os";
 import { dirname } from "node:path";
 import { findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -486,6 +489,198 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
       const r = guarded(proj, ["reject", slug, "--feedback", "needs work"]);
       expect(r.rc).not.toBe(0);
       expect(eventCount(proj, "GATE_REJECTED")).toBe(0);
+    });
+  });
+
+  // --- cross-intent reject presence scope (#2588) ----------------------------
+  //
+  // `reject <slug> --intent <B>` routes its state/audit I/O through
+  // stateOperationTarget (the NAMED record B), but the presence check historically
+  // read humanActedSinceGate(pd) on the ACTIVE intent (A). Presence-judged-on-A
+  // while the reject mutates B is the #2588 gap: one HUMAN_TURN on A licenses
+  // unlimited rejects of B (over-accept), a turn only on B is falsely refused
+  // (over-reject), and A's turn is never consumed (the one-time property breaks —
+  // every GATE_REJECTED lands on B). The fix threads intent/space into the
+  // predicate so presence is judged on the SAME record the reject mutates, and an
+  // explicitly-named record with no ledger fails CLOSED (not the active-scope
+  // fail-open) so a fresh clone / empty target cannot be rejected with no turn.
+  //
+  // A stays the active cursor; B is a registered non-active record seeded from the
+  // mid-ideation fixture (slug feasibility). Both use the presence guard ENABLED
+  // (guarded clears AMADEUS_SKIP_HUMAN_PRESENCE_GUARD).
+  describe("cross-intent reject presence scope (#2588)", () => {
+    const B_RECORD = "reject-target-000000000000000b";
+    const SLUG_B = "feasibility"; // mid-ideation fixture's in-progress stage
+
+    // The audit shard a spawned tool resolves for the NAMED record B:
+    // <intents>/<B>/audit/<host>-<clone>.jsonl (seededAuditShard's logic for an
+    // explicit record dir rather than the default one).
+    function shardFor(record: string): string {
+      const host =
+        hostname()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 48) || "host";
+      return join(intentsDirOf(proj), record, "audit", `${host}-${FIXTURE_CLONE_ID}.jsonl`);
+    }
+
+    // Append a HUMAN_TURN block to a NAMED record's shard (test fixture, not the
+    // audit CLI which refuses HUMAN_TURN). Mirrors recordHumanTurn for record B.
+    function recordHumanTurnIn(record: string): void {
+      const shard = shardFor(record);
+      mkdirSync(dirname(shard), { recursive: true });
+      const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+      const seq = existsSync(shard)
+        ? readFileSync(shard, "utf-8").split("\n").filter((l) => l.trim() !== "").length + 1
+        : 1;
+      appendFileSync(
+        shard,
+        `${JSON.stringify({
+          schemaVersion: 1,
+          seq,
+          cloneId: FIXTURE_CLONE_ID,
+          intentId: record,
+          timestamp: ts,
+          heading: "Human Turn",
+          event: "HUMAN_TURN",
+          fields: {},
+        })}\n`,
+        "utf-8",
+      );
+    }
+
+    // Register a second NON-active intent record B seeded from the mid-ideation
+    // fixture; A remains the active cursor.
+    function seedIntentB(): void {
+      const recDir = join(intentsDirOf(proj), B_RECORD);
+      mkdirSync(recDir, { recursive: true });
+      copyFileSync(join(FIXTURES_DIR, MID_IDEATION), join(recDir, "amadeus-state.md"));
+      const idxPath = join(intentsDirOf(proj), "intents.json");
+      const rows = JSON.parse(readFileSync(idxPath, "utf-8"));
+      rows.push({ uuid: "00000000-0000-7000-8000-00000000000b", slug: "reject-target", status: "in-flight" });
+      writeFileSync(idxPath, `${JSON.stringify(rows, null, 2)}\n`, "utf-8");
+    }
+
+    // GATE_REJECTED events physically written to a NAMED record's shard.
+    function gateRejectedIn(record: string): number {
+      const shard = shardFor(record);
+      if (!existsSync(shard)) return 0;
+      return findAllEvents(readFileSync(shard, "utf-8"), "GATE_REJECTED").length;
+    }
+
+    // Read a field from the NAMED record B's state via the CLI selector.
+    function fieldB(name: string): string {
+      return guarded(proj, ["get", name, "--intent", B_RECORD]).out.trim();
+    }
+
+    // (a) OVER-ACCEPT: a HUMAN_TURN on A must NOT license a reject of B. Before the
+    // fix the active-scope predicate saw A's turn and accepted; after the fix
+    // presence is judged on B (events but no turn) → REFUSE, no GATE_REJECTED on B.
+    test("a: a HUMAN_TURN on A does not license rejecting B", () => {
+      seedIntentB();
+      recordHumanTurnIn(DEFAULT_RECORD_DIR); // A (active) has the only turn
+      guarded(proj, ["checkbox", `${SLUG_B}=in-progress`, "--intent", B_RECORD]);
+      guarded(proj, ["gate-start", SLUG_B, "--intent", B_RECORD]); // B awaits approval, no HUMAN_TURN
+      const r = guarded(proj, ["reject", SLUG_B, "--feedback", "no", "--intent", B_RECORD]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain("Refusing to reject");
+      expect(gateRejectedIn(B_RECORD)).toBe(0);
+      expect(fieldB("Current Stage")).toBe(SLUG_B); // B untouched, still [?]
+    });
+
+    // (b) OVER-REJECT (the inverse of (a) — both required, else "always refuse"
+    // would also pass (a)): a turn only on B must ACCEPT the reject of B. Before
+    // the fix the active-scope predicate saw A (no turn, non-empty ledger) and
+    // refused; after the fix presence is judged on B → ACCEPT.
+    test("b: a HUMAN_TURN on B accepts rejecting B (inverse of a)", () => {
+      seedIntentB();
+      // A's ledger is non-empty (gate-start) but carries NO HUMAN_TURN, so the
+      // old active-scope predicate refuses (not fail-open).
+      guarded(proj, ["checkbox", `${SLUG_B}=in-progress`]);
+      guarded(proj, ["gate-start", SLUG_B]);
+      // B has the turn.
+      guarded(proj, ["checkbox", `${SLUG_B}=in-progress`, "--intent", B_RECORD]);
+      recordHumanTurnIn(B_RECORD);
+      guarded(proj, ["gate-start", SLUG_B, "--intent", B_RECORD]);
+      const r = guarded(proj, ["reject", SLUG_B, "--feedback", "needs work", "--intent", B_RECORD]);
+      expect(r.rc).toBe(0);
+      expect(gateRejectedIn(B_RECORD)).toBe(1);
+    });
+
+    // (c) ONE-TIME: B's single HUMAN_TURN rejects B exactly once. Before the fix
+    // presence was judged on A (whose turn was NEVER consumed — every
+    // GATE_REJECTED lands on B), so a re-opened gate could be rejected again with
+    // no fresh turn. After the fix the first reject's GATE_REJECTED on B consumes
+    // B's turn, so a second reject after re-opening REFUSES. (Rejecting the SAME
+    // open gate three times is impossible — reject moves the slug to [R] — so the
+    // one-time property is exercised by re-opening between rejects, matching the
+    // approve-side cascade tests.)
+    test("c: B's single HUMAN_TURN rejects B once; a re-opened gate REFUSES", () => {
+      seedIntentB();
+      recordHumanTurnIn(DEFAULT_RECORD_DIR); // A also has a turn (the buggy path used it)
+      guarded(proj, ["checkbox", `${SLUG_B}=in-progress`, "--intent", B_RECORD]);
+      recordHumanTurnIn(B_RECORD); // B's one turn
+      guarded(proj, ["gate-start", SLUG_B, "--intent", B_RECORD]);
+
+      const r1 = guarded(proj, ["reject", SLUG_B, "--feedback", "1", "--intent", B_RECORD]);
+      expect(r1.rc).toBe(0); // first reject spends B's turn
+      expect(gateRejectedIn(B_RECORD)).toBe(1);
+
+      // Re-open B's gate with NO new HUMAN_TURN; the prior GATE_REJECTED now
+      // sits after B's only turn → second reject REFUSES.
+      guarded(proj, ["checkbox", `${SLUG_B}=in-progress`, "--intent", B_RECORD]);
+      guarded(proj, ["gate-start", SLUG_B, "--intent", B_RECORD]);
+      const r2 = guarded(proj, ["reject", SLUG_B, "--feedback", "2", "--intent", B_RECORD]);
+      expect(r2.rc).not.toBe(0);
+      expect(r2.out).toContain("Refusing to reject");
+      expect(gateRejectedIn(B_RECORD)).toBe(1); // still exactly one across both attempts
+    });
+
+    // In-process seam for the predicate itself: the propagate + scoped fail-open
+    // change lives in humanActedSinceGate. Exercise BOTH null-ledger outcomes
+    // directly (spawned reject only reaches the state.ts wiring): active/legacy
+    // scope (no intent) fails OPEN, an explicitly-named empty record fails CLOSED,
+    // and a named record carrying a HUMAN_TURN reads its OWN ledger.
+    test("seam: humanActedSinceGate scopes to the named record and fails closed when empty", async () => {
+      const { humanActedSinceGate } = await import(
+        "../../dist/claude/.claude/tools/amadeus-lib.ts"
+      );
+      seedIntentB();
+      // Active/legacy scope on an empty ledger: fail OPEN (unchanged).
+      expect(humanActedSinceGate(proj)).toBe(true);
+      // Explicitly-named record B with NO ledger: fail CLOSED (#2588).
+      expect(humanActedSinceGate(proj, "reject", B_RECORD, "default")).toBe(false);
+      // Named record B once it carries an outstanding HUMAN_TURN: presence there.
+      recordHumanTurnIn(B_RECORD);
+      expect(humanActedSinceGate(proj, "reject", B_RECORD, "default")).toBe(true);
+      // The turn on B does NOT leak into the active/legacy scope (still A's ledger).
+      expect(humanActedSinceGate(proj, "reject")).toBe(true); // A empty → fail open
+    });
+
+    // FAIL-CLOSED: the reviewer-2 finding — with the active cursor absent (fresh
+    // clone / CI) and B's ledger empty, the old active-scope predicate resolved no
+    // ledger and failed OPEN, so B could be rejected with NO human turn anywhere.
+    // The named-record scope fails CLOSED on an empty ledger → REFUSE. (Scoped to
+    // the cross-record reject path: active/legacy callers keep fail-open, asserted
+    // by scenario F above.)
+    test("fail-closed: empty named ledger + no active cursor REFUSES the reject", () => {
+      seedIntentB();
+      // B awaits approval WITHOUT any audit shard (empty ledger): edit the state
+      // directly instead of gate-start (which would write a ledger event).
+      const sfB = join(intentsDirOf(proj), B_RECORD, "amadeus-state.md");
+      writeFileSync(
+        sfB,
+        readFileSync(sfB, "utf-8").replace(`- [-] ${SLUG_B} — EXECUTE`, `- [?] ${SLUG_B} — EXECUTE`),
+        "utf-8",
+      );
+      // Remove the active-intent cursor: the pre-fix predicate scans the active
+      // ledger, finds none (>1 record, no cursor → null), and fails OPEN.
+      rmSync(join(intentsDirOf(proj), "active-intent"), { force: true });
+      const r = guarded(proj, ["reject", SLUG_B, "--feedback", "no", "--intent", B_RECORD]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain("Refusing to reject");
+      expect(gateRejectedIn(B_RECORD)).toBe(0);
     });
   });
 });
