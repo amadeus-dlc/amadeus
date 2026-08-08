@@ -103,6 +103,29 @@
 
 ## 実行メタデータ（履歴: 260807-failclosed-recovery-path）
 
+## 実行メタデータ（履歴: 260807-autonomy-reachability）
+
+- Date: `2026-08-07`
+- Base commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（`cid:reverse-engineering:rescan-base-ancestry` に従い、HEAD 祖先かつ距離最小の observed を選定。`git merge-base --is-ancestor b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d 4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` = exit 0 を実測。直前の現在断面 `260807-failclosed-recovery-path` の observed）
+- Observed commit: `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（= `origin/main` tip = 本 worktree のベース。`git rev-parse HEAD` で一致を実測。`cid:reverse-engineering:c2-observed-mainline-commit` により mainline 系譜のコミットを記録）
+- 区間規模: **12 commits / 108 files changed（+5711 / −200）**（`git log --oneline` / `git diff --name-only` / `git diff --shortstat` の実出力からの転記）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth: Standard、Test Strategy: Comprehensive
+- Focus: **Intent autonomy の到達性** — [#2378](https://github.com/amadeus-dlc/amadeus/issues/2378)。宣言できない（`--autonomy` が birth 時に使えない）／宣言しても効かない（state 投影の非対称）／宣言が誰にも見えない（導線ゼロ）の3層
+- Scan mode: DIFFERENTIAL refresh **+ xrev mode**。#2378 はクロスレビュー2名が成立している（run `xrev-2378-20260807T110535Z`）ため `cid:reverse-engineering:c1-xrev-single-issue` が発動する。**行番号再解決は不要** — xrev の検証 SHA `4a3da7d62` が observed と完全一致し（免除条件の充足）、かつ差分区間が autonomy 系ファイルを一切触っていないことも独立に実測した（区間実測による currency の確定）
+- Verification: 本 RE では新規テストを実行していない。coverage 実行は `cid:code-generation:c1-coverage-single-owner` に従い一切行っていない。接地手段は observed 断面での `git log` / `git diff` / `grep` の実測と患部の verbatim 直読、および本 intent 実行中の**ライブ実測4件**
+- Current decision: **到達性の欠落は3層に分かれ、いずれも「機構は実装済み・接続が欠けている」形である。** ①宣言できない — `amadeus-orchestrate.ts:1290-1294` の judgment 0（`stateContent === null`）が発火し、Branch 4ab（`:2952-2958`）が birth 分岐の手前に置かれているため、birth と `--autonomy` の同時宣言は必ず失敗する。②効かない — `Intent Autonomy Mode` を state へ書くコードは repo 全体で `amadeus-bolt.ts:1075` の1箇所のみで `applyProductionAutonomyMode` の外側にあり、C13（`amadeus-orchestrate.ts:1354`）経由の宣言では state 3フィールドが更新されない。③見えない — `--autonomy` の導線は `stage-protocol.md:125` の1件のみで、conductor が読む8面（SKILL.md 6 + commands 2）すべてで0件
+- **最も影響範囲が広い所見**: state 投影の非対称（②）の読み手は**6系統**ある（`amadeus-lib.ts:4942` statusline / `amadeus-orchestrate.ts:1894-1899` swarm スケジューリング / `amadeus-stop.ts:150-154` 継続キャップ / `:160-162` budget mode / `:196-198` question carve-out / `amadeus-log.ts:180` guard 免除）。とくに `amadeus-stop.ts:196-198` は state を**先に**読み `semi` でなければ projection を読まずに `false` を返すため、**`--autonomy semi` は、それが開くために作られた当の question carve-out を構造的に開けない**
+- **xrev verdict の訂正2件**: **(1)** 第3の理由コード `AUTHORITY_BOUNDARY` は production に存在しない（全域 grep で intent record 4件のみ。`260805-semi-redefine-autonomy-f/.../component-methods.md:111` が削除理由を、同 `business-rules.md:17` の R5 が2値固定を明記）。**(2)** advisory 起点の起動判断は「`InteractionKind` 4値のどれにも該当しない」という G2 の主張は誤り — `amadeus-advisory-choice.ts:521` が `kind: "question"` として構成済みで、`:576-586` が `run-now` の無人解決を許す。**完了条件6の後半は実装済みであり、残るのは `plugins/*/stages/*.md:27` の docs drift のみ**（要件を縮小できる）
+- **計測述語の訂正**: 完了条件4の回帰計測は `INTENT_AUTONOMY_TRANSACTION_COMMITTED`（`amadeus-intent-autonomy-replay.ts:24`）を使う。`AUTONOMY_MODE_SET` は legacy で**発行点ゼロ**（`amadeus-bolt.ts:7` 逐語「AUTONOMY_MODE_SET remains replay/doctor-only legacy data.」、`amadeus-intent-autonomy-production.ts:116` は読むだけ）。Issue 本文と xrev の母集団選定が legacy 語彙に依存しており、ベースライン自体の再定義が要る（C2 = 231件 / 63 intents は xrev 2名が再現不能と判定済み）
+- **ライブ実測4件（本セッション内）**: (a) birth と `--autonomy` の同時宣言が拒否された。(b) `--autonomy semi` 宣言後も `amadeus-state.md` の `Intent Autonomy Mode` が `none` のまま残存し `--status` のみ `semi` を表示した。(c) 発行イベントは `INTENT_AUTONOMY_TRANSACTION_COMMITTED` であり `AUTONOMY_MODE_SET` ではなかった。(d) `review-auto-decision` で3件キューの2件目が `PROVENANCE_REQUIRED` で失敗した（`amadeus-autonomy-review-production.ts:376` の `latestTurnIndex <= consumedTurnIndex`、batch 経路は存在しない）
+- テスト現況: `--autonomy` の現行挙動は `tests/integration/t450-autonomy-flag-branch.test.ts:83` と `tests/unit/t450-autonomy-flag-apply.test.ts:95` で**逆向きにピン留め済み**のため、birth-time 宣言は実装段で着手せず要件段の仕様裁定とテスト契約の明示改訂をセットで確定する（`cid:reverse-engineering:c1-pinned-behavior-ruling`）。`--autonomy` を含む grep は `tests/` 配下に0件で、CLI flag と help / SKILL の導線 parity を検査するテスト自体が repo に存在しない。`SCOPE_OUT` は戻り値の assert のみで audit 出現の検査は0件
+- Requirements Analysis へ送る裁定候補: **(1)** birth-time 宣言の実現形（Branch 4ab を birth 後段へ移すか、judgment 0 に latch を持たせるか）と t450 系2テストの明示改訂。**(2)** `authorizationReason` の可視化形（audit emit か preview 列挙か）と、判断が実効を持つのは semi 側のみである点の明記（full は `ALL_INTERACTIONS` で4値全許可）。**(3)** engine 迂回質問の観測手段（`QUESTION_ANSWERED` への属性追加か sensor か）。**(4)** 完了条件4のベースライン再定義。**(5)** 導線是正の8面（SKILL.md 6 + commands 2）と `claude SKILL.md:248`「AUTONOMY IS NEVER INFERRED」との整合、`stage-protocol.md:135` の semi 版 `decide-question` 手順の新設。**(6)** 完了条件6の要件縮小（docs drift のみ）。**(7)** 完了条件1と5の着地順序（導線だけ先行させると「書いてあるのに動かない」導線を作る）。**(8)** finding 4 の契約変更3点セット（`:376` 単調性 / `:392-397` digest / `:405` `commandOccurrenceId`）
+- Updated artifacts: 本ファイルの現在断面を更新し、直前の現在断面 `260807-failclosed-recovery-path` を本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。共有8テーマ成果物（`architecture.md` ほか）は本文を書き換えていない — 既存の autonomy 関連記述はすべて observed SHA 付きの履歴節であり、当時の断面として正しいため（詳細は per-intent record）。per-intent record `re-scans/260807-autonomy-reachability.md` を新設
+- Per-intent record: `re-scans/260807-autonomy-reachability.md`
+
+
+## 実行メタデータ（履歴: 260807-failclosed-recovery-path）
+
 - Date: `2026-08-07`
 - Base commit: `7060956c5617125dd2f4e284957aa180cb306484`（`cid:reverse-engineering:rescan-base-ancestry` に従い、`re-scans/*.md` の observed 候補 109 件から HEAD 祖先かつ距離最小のものを選定。距離 76 commits）
 - Observed commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（= 本 worktree HEAD = `origin/main`。`git rev-list --left-right --count origin/main...HEAD` = `0 0`。`cid:reverse-engineering:c2-observed-mainline-commit` により mainline 系譜のコミットを記録）

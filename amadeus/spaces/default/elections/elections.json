@@ -1,464 +1,110 @@
 [
   {
-    "electionId": "E-HPFR3",
-    "dirName": "260724-e-hpfr3",
-    "createdAt": "2026-07-24T12:00:39Z",
+    "electionId": "E-260802-RA-S13-C2",
+    "dirName": "260802-e-260802-ra-s13-c2",
+    "createdAt": "2026-08-02T21:54:22Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-WTFRA1",
-    "dirName": "260724-e-wtfra1",
-    "createdAt": "2026-07-24T12:24:09Z",
+    "electionId": "E-260803-AHC-BT-S13-Z0",
+    "dirName": "260803-e-260803-ahc-bt-s13-z0",
+    "createdAt": "2026-08-03T14:07:57Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-WTFRA2",
-    "dirName": "260724-e-wtfra2",
-    "createdAt": "2026-07-24T12:24:09Z",
+    "electionId": "E-260803-AHC-CG-S13-Z0",
+    "dirName": "260803-e-260803-ahc-cg-s13-z0",
+    "createdAt": "2026-08-03T13:18:33Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-MAMB1",
-    "dirName": "260724-e-mamb1",
-    "createdAt": "2026-07-24T12:41:09Z",
+    "electionId": "E-260803-BT-S13-Z0",
+    "dirName": "260802-e-260803-bt-s13-z0",
+    "createdAt": "2026-08-02T23:50:37Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-WTFRAS13",
-    "dirName": "260724-e-wtfras13",
-    "createdAt": "2026-07-24T12:52:41Z",
+    "electionId": "E-260803-CG-S13-Z0",
+    "dirName": "260802-e-260803-cg-s13-z0",
+    "createdAt": "2026-08-02T23:21:20Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-TLAU2",
-    "dirName": "260724-e-tlau2",
-    "createdAt": "2026-07-24T13:21:51Z",
+    "electionId": "E-260803-RA-S13-Z0",
+    "dirName": "260803-e-260803-ra-s13-z0",
+    "createdAt": "2026-08-03T10:49:17Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-HPUGS13",
-    "dirName": "260724-e-hpugs13",
-    "createdAt": "2026-07-24T13:22:48Z",
+    "electionId": "E-260803-RE-S13-Z0",
+    "dirName": "260803-e-260803-re-s13-z0",
+    "createdAt": "2026-08-03T08:10:18Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-TLACG13",
-    "dirName": "260724-e-tlacg13",
-    "createdAt": "2026-07-24T16:01:57Z",
+    "electionId": "E-260804-ERR-BT-S13-Z0",
+    "dirName": "260804-e-260804-err-bt-s13-z0",
+    "createdAt": "2026-08-04T06:35:32Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRF-RES13",
-    "dirName": "260730-e-srf-res13",
-    "createdAt": "2026-07-30T12:50:38Z",
+    "electionId": "E-260804-ERR-CG-S13-Z0",
+    "dirName": "260804-e-260804-err-cg-s13-z0",
+    "createdAt": "2026-08-04T05:45:20Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRF-RAS13",
-    "dirName": "260730-e-srf-ras13",
-    "createdAt": "2026-07-30T13:07:30Z",
+    "electionId": "E-260804-ERR-RA-S13-Z0",
+    "dirName": "260804-e-260804-err-ra-s13-z0",
+    "createdAt": "2026-08-04T03:12:01Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRF-CGS13",
-    "dirName": "260730-e-srf-cgs13",
-    "createdAt": "2026-07-30T14:28:23Z",
+    "electionId": "E-260804-ERR-RE-S13-Z0",
+    "dirName": "260804-e-260804-err-re-s13-z0",
+    "createdAt": "2026-08-04T02:18:23Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRF-BTS13",
-    "dirName": "260730-e-srf-bts13",
-    "createdAt": "2026-07-30T15:00:53Z",
+    "electionId": "E-ASD-BTS13",
+    "dirName": "260808-e-asd-bts13",
+    "createdAt": "2026-08-08T00:08:32Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB2-RES13",
-    "dirName": "260730-e-obb2-res13",
-    "createdAt": "2026-07-30T15:44:20Z",
+    "electionId": "E-ASD-CGDEV",
+    "dirName": "260807-e-asd-cgdev",
+    "createdAt": "2026-08-07T23:14:04Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB2-RAS13",
-    "dirName": "260730-e-obb2-ras13",
-    "createdAt": "2026-07-30T15:57:45Z",
+    "electionId": "E-ASD-CGS13",
+    "dirName": "260807-e-asd-cgs13",
+    "createdAt": "2026-08-07T23:56:57Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB2-CG1",
-    "dirName": "260730-e-obb2-cg1",
-    "createdAt": "2026-07-30T16:34:09Z",
+    "electionId": "E-ASD-RAS13",
+    "dirName": "260807-e-asd-ras13",
+    "createdAt": "2026-08-07T22:28:06Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB2-CGS13",
-    "dirName": "260730-e-obb2-cgs13",
-    "createdAt": "2026-07-30T21:09:49Z",
+    "electionId": "E-ASD-RES13",
+    "dirName": "260807-e-asd-res13",
+    "createdAt": "2026-08-07T22:11:39Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB3-RES13",
-    "dirName": "260730-e-obb3-res13",
-    "createdAt": "2026-07-30T23:53:50Z",
+    "electionId": "E-CDB-BT-ZERO",
+    "dirName": "260803-e-cdb-bt-zero",
+    "createdAt": "2026-08-03T00:22:16Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-OBB3-RAS13",
-    "dirName": "260731-e-obb3-ras13",
-    "createdAt": "2026-07-31T00:15:26Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB3-CGS13",
-    "dirName": "260731-e-obb3-cgs13",
-    "createdAt": "2026-07-31T04:24:29Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB3-BTS13",
-    "dirName": "260731-e-obb3-bts13",
-    "createdAt": "2026-07-31T04:34:12Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB4-RES13",
-    "dirName": "260731-e-obb4-res13",
-    "createdAt": "2026-07-31T05:43:38Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB4-RAS13",
-    "dirName": "260731-e-obb4-ras13",
-    "createdAt": "2026-07-31T05:51:05Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB4-CG1",
-    "dirName": "260731-e-obb4-cg1",
-    "createdAt": "2026-07-31T06:50:40Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB4-CGS13",
-    "dirName": "260731-e-obb4-cgs13",
-    "createdAt": "2026-07-31T07:50:37Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB4-BTS13",
-    "dirName": "260731-e-obb4-bts13",
-    "createdAt": "2026-07-31T08:05:51Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U7CG-Q1",
-    "dirName": "260730-e-u7cg-q1",
-    "createdAt": "2026-07-30T10:06:00Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U7CG-Q2",
-    "dirName": "260730-e-u7cg-q2",
-    "createdAt": "2026-07-30T10:06:00Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U7CG-Q3A",
-    "dirName": "260730-e-u7cg-q3a",
-    "createdAt": "2026-07-30T10:11:28Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U7CG-Q3B",
-    "dirName": "260730-e-u7cg-q3b",
-    "createdAt": "2026-07-30T10:11:28Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U7CG-Q2R",
-    "dirName": "260730-e-u7cg-q2r",
-    "createdAt": "2026-07-30T10:34:25Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U8PRE",
-    "dirName": "260730-e-u8pre",
-    "createdAt": "2026-07-30T11:57:53Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-U11RLY",
-    "dirName": "260730-e-u11rly",
-    "createdAt": "2026-07-30T16:14:29Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OTELCG-S13",
-    "dirName": "260730-e-otelcg-s13",
-    "createdAt": "2026-07-30T22:23:56Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OTELWD-C",
-    "dirName": "260731-e-otelwd-c",
-    "createdAt": "2026-07-31T09:58:14Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OTELCG-S13B",
-    "dirName": "260731-e-otelcg-s13b",
-    "createdAt": "2026-07-31T12:31:56Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OTELBT-S13",
-    "dirName": "260731-e-otelbt-s13",
-    "createdAt": "2026-07-31T12:46:08Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OTELFMC-S13",
-    "dirName": "260731-e-otelfmc-s13",
-    "createdAt": "2026-07-31T12:57:01Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSIC-S13",
-    "dirName": "260801-e-omsic-s13",
-    "createdAt": "2026-08-01T00:35:49Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSSD-S13",
-    "dirName": "260801-e-omssd-s13",
-    "createdAt": "2026-08-01T00:43:32Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSRE-S13",
-    "dirName": "260801-e-omsre-s13",
-    "createdAt": "2026-08-01T01:12:00Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSRA-S13",
-    "dirName": "260801-e-omsra-s13",
-    "createdAt": "2026-08-01T01:45:55Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSAD-S13",
-    "dirName": "260801-e-omsad-s13",
-    "createdAt": "2026-08-01T02:18:52Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSUG-S13",
-    "dirName": "260801-e-omsug-s13",
-    "createdAt": "2026-08-01T02:42:40Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSDP-S13",
-    "dirName": "260801-e-omsdp-s13",
-    "createdAt": "2026-08-01T02:47:38Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSFD-S13",
-    "dirName": "260801-e-omsfd-s13",
-    "createdAt": "2026-08-01T03:44:52Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSND-S13",
-    "dirName": "260801-e-omsnd-s13",
-    "createdAt": "2026-08-01T04:44:54Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSB1-DEV",
-    "dirName": "260801-e-omsb1-dev",
-    "createdAt": "2026-08-01T05:44:50Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB5-RES13",
-    "dirName": "260801-e-obb5-res13",
-    "createdAt": "2026-08-01T01:25:18Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB5-RAS13",
-    "dirName": "260801-e-obb5-ras13",
-    "createdAt": "2026-08-01T02:18:55Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB5-CGS13",
-    "dirName": "260801-e-obb5-cgs13",
-    "createdAt": "2026-08-01T04:39:47Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OBB5-BTS13",
-    "dirName": "260801-e-obb5-bts13",
-    "createdAt": "2026-08-01T05:39:38Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSB2A-DEV",
-    "dirName": "260801-e-omsb2a-dev",
-    "createdAt": "2026-08-01T07:30:31Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSB2C-DEV",
-    "dirName": "260801-e-omsb2c-dev",
-    "createdAt": "2026-08-01T08:52:34Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSB4-DEV",
-    "dirName": "260801-e-omsb4-dev",
-    "createdAt": "2026-08-01T14:03:12Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSCG-S13",
-    "dirName": "260801-e-omscg-s13",
-    "createdAt": "2026-08-01T19:48:50Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSBT-S13",
-    "dirName": "260801-e-omsbt-s13",
-    "createdAt": "2026-08-01T20:16:40Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-OMSFMC-S13",
-    "dirName": "260801-e-omsfmc-s13",
-    "createdAt": "2026-08-01T20:25:25Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-ICS13",
-    "dirName": "260801-e-cpg-ics13",
-    "createdAt": "2026-08-01T07:46:12Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-SDS13",
-    "dirName": "260801-e-cpg-sds13",
-    "createdAt": "2026-08-01T07:51:04Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-RES13",
-    "dirName": "260801-e-cpg-res13",
-    "createdAt": "2026-08-01T08:01:12Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-RAS13",
-    "dirName": "260801-e-cpg-ras13",
-    "createdAt": "2026-08-01T08:46:25Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-ADS13",
-    "dirName": "260801-e-cpg-ads13",
-    "createdAt": "2026-08-01T09:14:55Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-UGS13",
-    "dirName": "260801-e-cpg-ugs13",
-    "createdAt": "2026-08-01T09:37:30Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-DPS13",
-    "dirName": "260801-e-cpg-dps13",
-    "createdAt": "2026-08-01T09:50:01Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-FDS13",
-    "dirName": "260801-e-cpg-fds13",
-    "createdAt": "2026-08-01T10:52:17Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-NDS13",
-    "dirName": "260801-e-cpg-nds13",
-    "createdAt": "2026-08-01T11:58:40Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-U2ABS",
-    "dirName": "260801-e-cpg-u2abs",
-    "createdAt": "2026-08-01T15:26:21Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-CGS13",
-    "dirName": "260801-e-cpg-cgs13",
-    "createdAt": "2026-08-01T21:30:33Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-BTS13",
-    "dirName": "260801-e-cpg-bts13",
-    "createdAt": "2026-08-01T21:49:33Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CPG-FMCS13",
-    "dirName": "260801-e-cpg-fmcs13",
-    "createdAt": "2026-08-01T21:58:43Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBICS13",
-    "dirName": "260802-e-cdbics13",
-    "createdAt": "2026-08-02T02:10:06Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBFS13",
-    "dirName": "260802-e-cdbfs13",
-    "createdAt": "2026-08-02T02:27:12Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBSDS13",
-    "dirName": "260802-e-cdbsds13",
-    "createdAt": "2026-08-02T02:42:32Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBAHS13",
-    "dirName": "260802-e-cdbahs13",
-    "createdAt": "2026-08-02T02:51:23Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBRES13",
-    "dirName": "260802-e-cdbres13",
-    "createdAt": "2026-08-02T03:14:49Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBPD13",
-    "dirName": "260802-e-cdbpd13",
-    "createdAt": "2026-08-02T03:30:45Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBRA13",
-    "dirName": "260802-e-cdbra13",
-    "createdAt": "2026-08-02T03:45:35Z",
+    "electionId": "E-CDB-CG-ZERO",
+    "dirName": "260802-e-cdb-cg-zero",
+    "createdAt": "2026-08-02T23:09:13Z",
     "status": "recorded"
   },
   {
@@ -468,21 +114,9 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-CDBUGS13",
-    "dirName": "260802-e-cdbugs13",
-    "createdAt": "2026-08-02T04:29:54Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBDPS13",
-    "dirName": "260802-e-cdbdps13",
-    "createdAt": "2026-08-02T04:42:42Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-CDBFDS13",
-    "dirName": "260802-e-cdbfds13",
-    "createdAt": "2026-08-02T05:12:28Z",
+    "electionId": "E-CDBAHS13",
+    "dirName": "260802-e-cdbahs13",
+    "createdAt": "2026-08-02T02:51:23Z",
     "status": "recorded"
   },
   {
@@ -498,189 +132,213 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-CDB-CG-ZERO",
-    "dirName": "260802-e-cdb-cg-zero",
-    "createdAt": "2026-08-02T23:09:13Z",
+    "electionId": "E-CDBDPS13",
+    "dirName": "260802-e-cdbdps13",
+    "createdAt": "2026-08-02T04:42:42Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-CDB-BT-ZERO",
-    "dirName": "260803-e-cdb-bt-zero",
-    "createdAt": "2026-08-03T00:22:16Z",
+    "electionId": "E-CDBFDS13",
+    "dirName": "260802-e-cdbfds13",
+    "createdAt": "2026-08-02T05:12:28Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260802-RA-S13-C2",
-    "dirName": "260802-e-260802-ra-s13-c2",
-    "createdAt": "2026-08-02T21:54:22Z",
+    "electionId": "E-CDBFS13",
+    "dirName": "260802-e-cdbfs13",
+    "createdAt": "2026-08-02T02:27:12Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-CG-S13-Z0",
-    "dirName": "260802-e-260803-cg-s13-z0",
-    "createdAt": "2026-08-02T23:21:20Z",
+    "electionId": "E-CDBICS13",
+    "dirName": "260802-e-cdbics13",
+    "createdAt": "2026-08-02T02:10:06Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-BT-S13-Z0",
-    "dirName": "260802-e-260803-bt-s13-z0",
-    "createdAt": "2026-08-02T23:50:37Z",
+    "electionId": "E-CDBPD13",
+    "dirName": "260802-e-cdbpd13",
+    "createdAt": "2026-08-02T03:30:45Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RE-2072-LEARNINGS-1",
-    "dirName": "260802-e-re-2072-learnings-1",
-    "createdAt": "2026-08-02T23:25:15Z",
+    "electionId": "E-CDBRA13",
+    "dirName": "260802-e-cdbra13",
+    "createdAt": "2026-08-02T03:45:35Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RA-2072-LEARNINGS-1",
-    "dirName": "260803-e-ra-2072-learnings-1",
-    "createdAt": "2026-08-03T00:43:08Z",
+    "electionId": "E-CDBRES13",
+    "dirName": "260802-e-cdbres13",
+    "createdAt": "2026-08-02T03:14:49Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-AH-S13",
-    "dirName": "260802-e-sdg-ah-s13",
-    "createdAt": "2026-08-02T01:33:09Z",
+    "electionId": "E-CDBSDS13",
+    "dirName": "260802-e-cdbsds13",
+    "createdAt": "2026-08-02T02:42:32Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-RE-S13",
-    "dirName": "260802-e-sdg-re-s13",
-    "createdAt": "2026-08-02T02:09:04Z",
+    "electionId": "E-CDBUGS13",
+    "dirName": "260802-e-cdbugs13",
+    "createdAt": "2026-08-02T04:29:54Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-PD-S13",
-    "dirName": "260802-e-sdg-pd-s13",
-    "createdAt": "2026-08-02T02:23:08Z",
+    "electionId": "E-CGDRIFT",
+    "dirName": "260808-e-cgdrift",
+    "createdAt": "2026-08-08T10:59:57Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-RA-S13",
-    "dirName": "260802-e-sdg-ra-s13",
-    "createdAt": "2026-08-02T02:51:51Z",
-    "status": "open"
-  },
-  {
-    "electionId": "E-SDG-UG-S13",
-    "dirName": "260802-e-sdg-ug-s13",
-    "createdAt": "2026-08-02T03:51:28Z",
+    "electionId": "E-CHR-BTS13",
+    "dirName": "260805-e-chr-bts13",
+    "createdAt": "2026-08-05T22:35:44Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-DPL-S13",
-    "dirName": "260802-e-sdg-dpl-s13",
-    "createdAt": "2026-08-02T04:10:57Z",
+    "electionId": "E-CHR-CGS13",
+    "dirName": "260805-e-chr-cgs13",
+    "createdAt": "2026-08-05T21:41:27Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SDG-FD-S13",
-    "dirName": "260802-e-sdg-fd-s13",
-    "createdAt": "2026-08-02T05:24:23Z",
+    "electionId": "E-CHR-RAS13",
+    "dirName": "260805-e-chr-ras13",
+    "createdAt": "2026-08-05T13:47:27Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-NSD-NFR-S13",
-    "dirName": "260802-e-nsd-nfr-s13",
-    "createdAt": "2026-08-02T07:31:22Z",
+    "electionId": "E-CHR-RES13",
+    "dirName": "260805-e-chr-res13",
+    "createdAt": "2026-08-05T13:20:22Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-RES13",
-    "dirName": "260802-e-rrp-res13",
-    "createdAt": "2026-08-02T16:44:58Z",
+    "electionId": "E-CPG-ADS13",
+    "dirName": "260801-e-cpg-ads13",
+    "createdAt": "2026-08-01T09:14:55Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-RAS13",
-    "dirName": "260802-e-rrp-ras13",
-    "createdAt": "2026-08-02T17:07:57Z",
+    "electionId": "E-CPG-BTS13",
+    "dirName": "260801-e-cpg-bts13",
+    "createdAt": "2026-08-01T21:49:33Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-ADS13",
-    "dirName": "260802-e-rrp-ads13",
-    "createdAt": "2026-08-02T17:39:08Z",
+    "electionId": "E-CPG-CGS13",
+    "dirName": "260801-e-cpg-cgs13",
+    "createdAt": "2026-08-01T21:30:33Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-UGS13",
-    "dirName": "260802-e-rrp-ugs13",
-    "createdAt": "2026-08-02T17:51:40Z",
+    "electionId": "E-CPG-DPS13",
+    "dirName": "260801-e-cpg-dps13",
+    "createdAt": "2026-08-01T09:50:01Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-DPS13",
-    "dirName": "260802-e-rrp-dps13",
-    "createdAt": "2026-08-02T17:58:22Z",
+    "electionId": "E-CPG-FDS13",
+    "dirName": "260801-e-cpg-fds13",
+    "createdAt": "2026-08-01T10:52:17Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-FDS13",
-    "dirName": "260802-e-rrp-fds13",
-    "createdAt": "2026-08-02T18:27:49Z",
+    "electionId": "E-CPG-FMCS13",
+    "dirName": "260801-e-cpg-fmcs13",
+    "createdAt": "2026-08-01T21:58:43Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-NDS13",
-    "dirName": "260802-e-rrp-nds13",
-    "createdAt": "2026-08-02T23:32:28Z",
+    "electionId": "E-CPG-ICS13",
+    "dirName": "260801-e-cpg-ics13",
+    "createdAt": "2026-08-01T07:46:12Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-CG1",
-    "dirName": "260803-e-rrp-cg1",
-    "createdAt": "2026-08-03T01:18:43Z",
+    "electionId": "E-CPG-NDS13",
+    "dirName": "260801-e-cpg-nds13",
+    "createdAt": "2026-08-01T11:58:40Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-CG2",
-    "dirName": "260803-e-rrp-cg2",
-    "createdAt": "2026-08-03T05:29:39Z",
+    "electionId": "E-CPG-RAS13",
+    "dirName": "260801-e-cpg-ras13",
+    "createdAt": "2026-08-01T08:46:25Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-CGS13",
-    "dirName": "260803-e-rrp-cgs13",
-    "createdAt": "2026-08-03T05:53:05Z",
+    "electionId": "E-CPG-RES13",
+    "dirName": "260801-e-cpg-res13",
+    "createdAt": "2026-08-01T08:01:12Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-BTS13",
-    "dirName": "260803-e-rrp-bts13",
-    "createdAt": "2026-08-03T06:24:47Z",
+    "electionId": "E-CPG-SDS13",
+    "dirName": "260801-e-cpg-sds13",
+    "createdAt": "2026-08-01T07:51:04Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-RRP-FMCS13",
-    "dirName": "260803-e-rrp-fmcs13",
-    "createdAt": "2026-08-03T06:51:09Z",
+    "electionId": "E-CPG-U2ABS",
+    "dirName": "260801-e-cpg-u2abs",
+    "createdAt": "2026-08-01T15:26:21Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-RE-S13-Z0",
-    "dirName": "260803-e-260803-re-s13-z0",
-    "createdAt": "2026-08-03T08:10:18Z",
+    "electionId": "E-CPG-UGS13",
+    "dirName": "260801-e-cpg-ugs13",
+    "createdAt": "2026-08-01T09:37:30Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-RA-S13-Z0",
-    "dirName": "260803-e-260803-ra-s13-z0",
-    "createdAt": "2026-08-03T10:49:17Z",
+    "electionId": "E-FCR-BTS13",
+    "dirName": "260807-e-fcr-bts13",
+    "createdAt": "2026-08-07T09:14:20Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-AHC-CG-S13-Z0",
-    "dirName": "260803-e-260803-ahc-cg-s13-z0",
-    "createdAt": "2026-08-03T13:18:33Z",
+    "electionId": "E-FCR-CGS13",
+    "dirName": "260807-e-fcr-cgs13",
+    "createdAt": "2026-08-07T08:57:21Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-260803-AHC-BT-S13-Z0",
-    "dirName": "260803-e-260803-ahc-bt-s13-z0",
-    "createdAt": "2026-08-03T14:07:57Z",
+    "electionId": "E-FCR-RAS13",
+    "dirName": "260807-e-fcr-ras13",
+    "createdAt": "2026-08-07T04:59:53Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-FCR-RES13",
+    "dirName": "260807-e-fcr-res13",
+    "createdAt": "2026-08-07T03:51:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GRG-RA-S13-C1",
+    "dirName": "260804-e-grg-ra-s13-c1",
+    "createdAt": "2026-08-04T04:03:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE-AD13",
+    "dirName": "260803-e-hle-ad13",
+    "createdAt": "2026-08-03T11:58:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE-BT13",
+    "dirName": "260804-e-hle-bt13",
+    "createdAt": "2026-08-04T00:41:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE-FD13",
+    "dirName": "260803-e-hle-fd13",
+    "createdAt": "2026-08-03T23:57:09Z",
     "status": "recorded"
   },
   {
@@ -690,15 +348,9 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-HLE-SDS13",
-    "dirName": "260803-e-hle-sds13",
-    "createdAt": "2026-08-03T08:27:57Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE-RES13",
-    "dirName": "260803-e-hle-res13",
-    "createdAt": "2026-08-03T09:49:35Z",
+    "electionId": "E-HLE-ND13",
+    "dirName": "260804-e-hle-nd13",
+    "createdAt": "2026-08-04T00:04:09Z",
     "status": "recorded"
   },
   {
@@ -714,9 +366,15 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-HLE-AD13",
-    "dirName": "260803-e-hle-ad13",
-    "createdAt": "2026-08-03T11:58:45Z",
+    "electionId": "E-HLE-RES13",
+    "dirName": "260803-e-hle-res13",
+    "createdAt": "2026-08-03T09:49:35Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HLE-SDS13",
+    "dirName": "260803-e-hle-sds13",
+    "createdAt": "2026-08-03T08:27:57Z",
     "status": "recorded"
   },
   {
@@ -738,117 +396,9 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-HLE-FD13",
-    "dirName": "260803-e-hle-fd13",
-    "createdAt": "2026-08-03T23:57:09Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE-ND13",
-    "dirName": "260804-e-hle-nd13",
-    "createdAt": "2026-08-04T00:04:09Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE-BT13",
-    "dirName": "260804-e-hle-bt13",
-    "createdAt": "2026-08-04T00:41:43Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SIRE-S13",
-    "dirName": "260803-e-sire-s13",
-    "createdAt": "2026-08-03T12:34:35Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SIRA-S13",
-    "dirName": "260803-e-sira-s13",
-    "createdAt": "2026-08-03T13:31:04Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SIA-CGS13",
-    "dirName": "260803-e-sia-cgs13",
-    "createdAt": "2026-08-03T17:37:13Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-260804-ERR-RE-S13-Z0",
-    "dirName": "260804-e-260804-err-re-s13-z0",
-    "createdAt": "2026-08-04T02:18:23Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-260804-ERR-RA-S13-Z0",
-    "dirName": "260804-e-260804-err-ra-s13-z0",
-    "createdAt": "2026-08-04T03:12:01Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-260804-ERR-CG-S13-Z0",
-    "dirName": "260804-e-260804-err-cg-s13-z0",
-    "createdAt": "2026-08-04T05:45:20Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-260804-ERR-BT-S13-Z0",
-    "dirName": "260804-e-260804-err-bt-s13-z0",
-    "createdAt": "2026-08-04T06:35:32Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PI-DPS13",
-    "dirName": "260803-e-pi-dps13",
-    "createdAt": "2026-08-03T12:10:22Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PI-NFRD-S13",
-    "dirName": "260803-e-pi-nfrd-s13",
-    "createdAt": "2026-08-03T15:16:29Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-GRG-RA-S13-C1",
-    "dirName": "260804-e-grg-ra-s13-c1",
-    "createdAt": "2026-08-04T04:03:45Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE2-ICS13",
-    "dirName": "260804-e-hle2-ics13",
-    "createdAt": "2026-08-04T08:36:28Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE2-SDS13",
-    "dirName": "260804-e-hle2-sds13",
-    "createdAt": "2026-08-04T08:53:11Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE2-RES13",
-    "dirName": "260804-e-hle2-res13",
-    "createdAt": "2026-08-04T09:10:27Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE2-RAS13",
-    "dirName": "260804-e-hle2-ras13",
-    "createdAt": "2026-08-04T09:40:39Z",
-    "status": "recorded"
-  },
-  {
     "electionId": "E-HLE2-ADS13",
     "dirName": "260804-e-hle2-ads13",
     "createdAt": "2026-08-04T11:49:58Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-HLE2-UGS13",
-    "dirName": "260804-e-hle2-ugs13",
-    "createdAt": "2026-08-04T12:25:14Z",
     "status": "recorded"
   },
   {
@@ -858,33 +408,363 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-TLA-FDS13",
-    "dirName": "260804-e-tla-fds13",
-    "createdAt": "2026-08-04T23:50:55Z",
+    "electionId": "E-HLE2-ICS13",
+    "dirName": "260804-e-hle2-ics13",
+    "createdAt": "2026-08-04T08:36:28Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-ICS13",
-    "dirName": "260805-e-pcp-ics13",
-    "createdAt": "2026-08-05T05:38:58Z",
+    "electionId": "E-HLE2-RAS13",
+    "dirName": "260804-e-hle2-ras13",
+    "createdAt": "2026-08-04T09:40:39Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-SDS13",
-    "dirName": "260805-e-pcp-sds13",
-    "createdAt": "2026-08-05T05:44:23Z",
+    "electionId": "E-HLE2-RES13",
+    "dirName": "260804-e-hle2-res13",
+    "createdAt": "2026-08-04T09:10:27Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-RES13",
-    "dirName": "260805-e-pcp-res13",
-    "createdAt": "2026-08-05T06:15:24Z",
+    "electionId": "E-HLE2-SDS13",
+    "dirName": "260804-e-hle2-sds13",
+    "createdAt": "2026-08-04T08:53:11Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-RAS13",
-    "dirName": "260805-e-pcp-ras13",
-    "createdAt": "2026-08-05T06:33:40Z",
+    "electionId": "E-HLE2-UGS13",
+    "dirName": "260804-e-hle2-ugs13",
+    "createdAt": "2026-08-04T12:25:14Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HPFR3",
+    "dirName": "260724-e-hpfr3",
+    "createdAt": "2026-07-24T12:00:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HPUGS13",
+    "dirName": "260724-e-hpugs13",
+    "createdAt": "2026-07-24T13:22:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MAMB1",
+    "dirName": "260724-e-mamb1",
+    "createdAt": "2026-07-24T12:41:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-ADS13",
+    "dirName": "260807-e-mpc-ads13",
+    "createdAt": "2026-08-07T11:02:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-BTS13",
+    "dirName": "260807-e-mpc-bts13",
+    "createdAt": "2026-08-07T13:16:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGBLK",
+    "dirName": "260807-e-mpc-cgblk",
+    "createdAt": "2026-08-07T11:38:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGRV",
+    "dirName": "260807-e-mpc-cgrv",
+    "createdAt": "2026-08-07T12:40:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-CGS13",
+    "dirName": "260807-e-mpc-cgs13",
+    "createdAt": "2026-08-07T13:12:37Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-DPS13",
+    "dirName": "260807-e-mpc-dps13",
+    "createdAt": "2026-08-07T11:11:29Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-FDS13",
+    "dirName": "260807-e-mpc-fds13",
+    "createdAt": "2026-08-07T11:22:41Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-ICS13",
+    "dirName": "260807-e-mpc-ics13",
+    "createdAt": "2026-08-07T10:06:21Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-NDS13",
+    "dirName": "260807-e-mpc-nds13",
+    "createdAt": "2026-08-07T11:28:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-RAS13",
+    "dirName": "260807-e-mpc-ras13",
+    "createdAt": "2026-08-07T10:53:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-RES13",
+    "dirName": "260807-e-mpc-res13",
+    "createdAt": "2026-08-07T10:38:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-SDS13",
+    "dirName": "260807-e-mpc-sds13",
+    "createdAt": "2026-08-07T10:25:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-MPC-UGS13",
+    "dirName": "260807-e-mpc-ugs13",
+    "createdAt": "2026-08-07T11:07:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-NSD-NFR-S13",
+    "dirName": "260802-e-nsd-nfr-s13",
+    "createdAt": "2026-08-02T07:31:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB2-CG1",
+    "dirName": "260730-e-obb2-cg1",
+    "createdAt": "2026-07-30T16:34:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB2-CGS13",
+    "dirName": "260730-e-obb2-cgs13",
+    "createdAt": "2026-07-30T21:09:49Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB2-RAS13",
+    "dirName": "260730-e-obb2-ras13",
+    "createdAt": "2026-07-30T15:57:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB2-RES13",
+    "dirName": "260730-e-obb2-res13",
+    "createdAt": "2026-07-30T15:44:20Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB3-BTS13",
+    "dirName": "260731-e-obb3-bts13",
+    "createdAt": "2026-07-31T04:34:12Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB3-CGS13",
+    "dirName": "260731-e-obb3-cgs13",
+    "createdAt": "2026-07-31T04:24:29Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB3-RAS13",
+    "dirName": "260731-e-obb3-ras13",
+    "createdAt": "2026-07-31T00:15:26Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB3-RES13",
+    "dirName": "260730-e-obb3-res13",
+    "createdAt": "2026-07-30T23:53:50Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB4-BTS13",
+    "dirName": "260731-e-obb4-bts13",
+    "createdAt": "2026-07-31T08:05:51Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB4-CG1",
+    "dirName": "260731-e-obb4-cg1",
+    "createdAt": "2026-07-31T06:50:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB4-CGS13",
+    "dirName": "260731-e-obb4-cgs13",
+    "createdAt": "2026-07-31T07:50:37Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB4-RAS13",
+    "dirName": "260731-e-obb4-ras13",
+    "createdAt": "2026-07-31T05:51:05Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB4-RES13",
+    "dirName": "260731-e-obb4-res13",
+    "createdAt": "2026-07-31T05:43:38Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB5-BTS13",
+    "dirName": "260801-e-obb5-bts13",
+    "createdAt": "2026-08-01T05:39:38Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB5-CGS13",
+    "dirName": "260801-e-obb5-cgs13",
+    "createdAt": "2026-08-01T04:39:47Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB5-RAS13",
+    "dirName": "260801-e-obb5-ras13",
+    "createdAt": "2026-08-01T02:18:55Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OBB5-RES13",
+    "dirName": "260801-e-obb5-res13",
+    "createdAt": "2026-08-01T01:25:18Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSAD-S13",
+    "dirName": "260801-e-omsad-s13",
+    "createdAt": "2026-08-01T02:18:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSB1-DEV",
+    "dirName": "260801-e-omsb1-dev",
+    "createdAt": "2026-08-01T05:44:50Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSB2A-DEV",
+    "dirName": "260801-e-omsb2a-dev",
+    "createdAt": "2026-08-01T07:30:31Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSB2C-DEV",
+    "dirName": "260801-e-omsb2c-dev",
+    "createdAt": "2026-08-01T08:52:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSB4-DEV",
+    "dirName": "260801-e-omsb4-dev",
+    "createdAt": "2026-08-01T14:03:12Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSBT-S13",
+    "dirName": "260801-e-omsbt-s13",
+    "createdAt": "2026-08-01T20:16:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSCG-S13",
+    "dirName": "260801-e-omscg-s13",
+    "createdAt": "2026-08-01T19:48:50Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSDP-S13",
+    "dirName": "260801-e-omsdp-s13",
+    "createdAt": "2026-08-01T02:47:38Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSFD-S13",
+    "dirName": "260801-e-omsfd-s13",
+    "createdAt": "2026-08-01T03:44:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSFMC-S13",
+    "dirName": "260801-e-omsfmc-s13",
+    "createdAt": "2026-08-01T20:25:25Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSIC-S13",
+    "dirName": "260801-e-omsic-s13",
+    "createdAt": "2026-08-01T00:35:49Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSND-S13",
+    "dirName": "260801-e-omsnd-s13",
+    "createdAt": "2026-08-01T04:44:54Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSRA-S13",
+    "dirName": "260801-e-omsra-s13",
+    "createdAt": "2026-08-01T01:45:55Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSRE-S13",
+    "dirName": "260801-e-omsre-s13",
+    "createdAt": "2026-08-01T01:12:00Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSSD-S13",
+    "dirName": "260801-e-omssd-s13",
+    "createdAt": "2026-08-01T00:43:32Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OMSUG-S13",
+    "dirName": "260801-e-omsug-s13",
+    "createdAt": "2026-08-01T02:42:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELBT-S13",
+    "dirName": "260731-e-otelbt-s13",
+    "createdAt": "2026-07-31T12:46:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELCG-S13",
+    "dirName": "260730-e-otelcg-s13",
+    "createdAt": "2026-07-30T22:23:56Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELCG-S13B",
+    "dirName": "260731-e-otelcg-s13b",
+    "createdAt": "2026-07-31T12:31:56Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELFMC-S13",
+    "dirName": "260731-e-otelfmc-s13",
+    "createdAt": "2026-07-31T12:57:01Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-OTELWD-C",
+    "dirName": "260731-e-otelwd-c",
+    "createdAt": "2026-07-31T09:58:14Z",
     "status": "recorded"
   },
   {
@@ -900,27 +780,9 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-UGS13",
-    "dirName": "260805-e-pcp-ugs13",
-    "createdAt": "2026-08-05T07:44:50Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PCP-DPS13",
-    "dirName": "260805-e-pcp-dps13",
-    "createdAt": "2026-08-05T07:51:11Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PCP-FDS13",
-    "dirName": "260805-e-pcp-fds13",
-    "createdAt": "2026-08-05T08:49:56Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PCP-NDS13",
-    "dirName": "260805-e-pcp-nds13",
-    "createdAt": "2026-08-05T09:09:10Z",
+    "electionId": "E-PCP-BTS13",
+    "dirName": "260805-e-pcp-bts13",
+    "createdAt": "2026-08-05T12:39:17Z",
     "status": "recorded"
   },
   {
@@ -942,51 +804,309 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-PCP-BTS13",
-    "dirName": "260805-e-pcp-bts13",
-    "createdAt": "2026-08-05T12:39:17Z",
+    "electionId": "E-PCP-DPS13",
+    "dirName": "260805-e-pcp-dps13",
+    "createdAt": "2026-08-05T07:51:11Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-TLA-U4REV",
-    "dirName": "260805-e-tla-u4rev",
-    "createdAt": "2026-08-05T13:18:44Z",
+    "electionId": "E-PCP-FDS13",
+    "dirName": "260805-e-pcp-fds13",
+    "createdAt": "2026-08-05T08:49:56Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-TLA-U5COV",
-    "dirName": "260805-e-tla-u5cov",
-    "createdAt": "2026-08-05T16:37:03Z",
+    "electionId": "E-PCP-ICS13",
+    "dirName": "260805-e-pcp-ics13",
+    "createdAt": "2026-08-05T05:38:58Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-TLA-BTS13",
-    "dirName": "260805-e-tla-bts13",
-    "createdAt": "2026-08-05T23:03:37Z",
+    "electionId": "E-PCP-NDS13",
+    "dirName": "260805-e-pcp-nds13",
+    "createdAt": "2026-08-05T09:09:10Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-SDS13",
-    "dirName": "260805-e-sra-sds13",
-    "createdAt": "2026-08-05T05:11:17Z",
+    "electionId": "E-PCP-RAS13",
+    "dirName": "260805-e-pcp-ras13",
+    "createdAt": "2026-08-05T06:33:40Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-RES13",
-    "dirName": "260805-e-sra-res13",
-    "createdAt": "2026-08-05T05:44:01Z",
+    "electionId": "E-PCP-RES13",
+    "dirName": "260805-e-pcp-res13",
+    "createdAt": "2026-08-05T06:15:24Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-RA1",
-    "dirName": "260805-e-sra-ra1",
-    "createdAt": "2026-08-05T06:14:50Z",
+    "electionId": "E-PCP-SDS13",
+    "dirName": "260805-e-pcp-sds13",
+    "createdAt": "2026-08-05T05:44:23Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-RAS13",
-    "dirName": "260805-e-sra-ras13",
-    "createdAt": "2026-08-05T06:45:17Z",
+    "electionId": "E-PCP-UGS13",
+    "dirName": "260805-e-pcp-ugs13",
+    "createdAt": "2026-08-05T07:44:50Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PI-DPS13",
+    "dirName": "260803-e-pi-dps13",
+    "createdAt": "2026-08-03T12:10:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PI-NFRD-S13",
+    "dirName": "260803-e-pi-nfrd-s13",
+    "createdAt": "2026-08-03T15:16:29Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-BTS13",
+    "dirName": "260807-e-pwf-bts13",
+    "createdAt": "2026-08-07T12:27:27Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-CGDEV",
+    "dirName": "260807-e-pwf-cgdev",
+    "createdAt": "2026-08-07T11:11:14Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-CGDEV2",
+    "dirName": "260807-e-pwf-cgdev2",
+    "createdAt": "2026-08-07T11:31:16Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-CGS13",
+    "dirName": "260807-e-pwf-cgs13",
+    "createdAt": "2026-08-07T12:06:13Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-RAS13",
+    "dirName": "260807-e-pwf-ras13",
+    "createdAt": "2026-08-07T10:59:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-PWF-RES13",
+    "dirName": "260807-e-pwf-res13",
+    "createdAt": "2026-08-07T10:15:03Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RA-2072-LEARNINGS-1",
+    "dirName": "260803-e-ra-2072-learnings-1",
+    "createdAt": "2026-08-03T00:43:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RE-2072-LEARNINGS-1",
+    "dirName": "260802-e-re-2072-learnings-1",
+    "createdAt": "2026-08-02T23:25:15Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-ADS13",
+    "dirName": "260802-e-rrp-ads13",
+    "createdAt": "2026-08-02T17:39:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-BTS13",
+    "dirName": "260803-e-rrp-bts13",
+    "createdAt": "2026-08-03T06:24:47Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CG1",
+    "dirName": "260803-e-rrp-cg1",
+    "createdAt": "2026-08-03T01:18:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CG2",
+    "dirName": "260803-e-rrp-cg2",
+    "createdAt": "2026-08-03T05:29:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-CGS13",
+    "dirName": "260803-e-rrp-cgs13",
+    "createdAt": "2026-08-03T05:53:05Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-DPS13",
+    "dirName": "260802-e-rrp-dps13",
+    "createdAt": "2026-08-02T17:58:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-FDS13",
+    "dirName": "260802-e-rrp-fds13",
+    "createdAt": "2026-08-02T18:27:49Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-FMCS13",
+    "dirName": "260803-e-rrp-fmcs13",
+    "createdAt": "2026-08-03T06:51:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-NDS13",
+    "dirName": "260802-e-rrp-nds13",
+    "createdAt": "2026-08-02T23:32:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-RAS13",
+    "dirName": "260802-e-rrp-ras13",
+    "createdAt": "2026-08-02T17:07:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-RES13",
+    "dirName": "260802-e-rrp-res13",
+    "createdAt": "2026-08-02T16:44:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RRP-UGS13",
+    "dirName": "260802-e-rrp-ugs13",
+    "createdAt": "2026-08-02T17:51:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-AH-S13",
+    "dirName": "260802-e-sdg-ah-s13",
+    "createdAt": "2026-08-02T01:33:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-DPL-S13",
+    "dirName": "260802-e-sdg-dpl-s13",
+    "createdAt": "2026-08-02T04:10:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-FD-S13",
+    "dirName": "260802-e-sdg-fd-s13",
+    "createdAt": "2026-08-02T05:24:23Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-PD-S13",
+    "dirName": "260802-e-sdg-pd-s13",
+    "createdAt": "2026-08-02T02:23:08Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-RA-S13",
+    "dirName": "260802-e-sdg-ra-s13",
+    "createdAt": "2026-08-02T02:51:51Z",
+    "status": "open"
+  },
+  {
+    "electionId": "E-SDG-RE-S13",
+    "dirName": "260802-e-sdg-re-s13",
+    "createdAt": "2026-08-02T02:09:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SDG-UG-S13",
+    "dirName": "260802-e-sdg-ug-s13",
+    "createdAt": "2026-08-02T03:51:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SIA-CGS13",
+    "dirName": "260803-e-sia-cgs13",
+    "createdAt": "2026-08-03T17:37:13Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SIRA-S13",
+    "dirName": "260803-e-sira-s13",
+    "createdAt": "2026-08-03T13:31:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SIRE-S13",
+    "dirName": "260803-e-sire-s13",
+    "createdAt": "2026-08-03T12:34:35Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-ADS13",
+    "dirName": "260807-e-spr-ads13",
+    "createdAt": "2026-08-07T15:28:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-BTS13",
+    "dirName": "260808-e-spr-bts13",
+    "createdAt": "2026-08-08T05:08:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-CGS13",
+    "dirName": "260808-e-spr-cgs13",
+    "createdAt": "2026-08-08T03:31:30Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-DPS13",
+    "dirName": "260807-e-spr-dps13",
+    "createdAt": "2026-08-07T15:48:13Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-FDS13",
+    "dirName": "260807-e-spr-fds13",
+    "createdAt": "2026-08-07T22:13:14Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-ICS13",
+    "dirName": "260807-e-spr-ics13",
+    "createdAt": "2026-08-07T10:16:23Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-NDS13",
+    "dirName": "260807-e-spr-nds13",
+    "createdAt": "2026-08-07T22:22:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-RAS13",
+    "dirName": "260807-e-spr-ras13",
+    "createdAt": "2026-08-07T12:05:20Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-RES13",
+    "dirName": "260807-e-spr-res13",
+    "createdAt": "2026-08-07T11:19:35Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-SDS13",
+    "dirName": "260807-e-spr-sds13",
+    "createdAt": "2026-08-07T10:39:28Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SPR-UGS13",
+    "dirName": "260807-e-spr-ugs13",
+    "createdAt": "2026-08-07T15:38:40Z",
     "status": "recorded"
   },
   {
@@ -996,9 +1116,9 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-UGS13",
-    "dirName": "260805-e-sra-ugs13",
-    "createdAt": "2026-08-05T09:00:38Z",
+    "electionId": "E-SRA-CG1",
+    "dirName": "260805-e-sra-cg1",
+    "createdAt": "2026-08-05T13:40:06Z",
     "status": "recorded"
   },
   {
@@ -1020,45 +1140,87 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-SRA-CG1",
-    "dirName": "260805-e-sra-cg1",
-    "createdAt": "2026-08-05T13:40:06Z",
+    "electionId": "E-SRA-RA1",
+    "dirName": "260805-e-sra-ra1",
+    "createdAt": "2026-08-05T06:14:50Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-CHR-RES13",
-    "dirName": "260805-e-chr-res13",
-    "createdAt": "2026-08-05T13:20:22Z",
+    "electionId": "E-SRA-RAS13",
+    "dirName": "260805-e-sra-ras13",
+    "createdAt": "2026-08-05T06:45:17Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-CHR-RAS13",
-    "dirName": "260805-e-chr-ras13",
-    "createdAt": "2026-08-05T13:47:27Z",
+    "electionId": "E-SRA-RES13",
+    "dirName": "260805-e-sra-res13",
+    "createdAt": "2026-08-05T05:44:01Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-CHR-CGS13",
-    "dirName": "260805-e-chr-cgs13",
-    "createdAt": "2026-08-05T21:41:27Z",
+    "electionId": "E-SRA-SDS13",
+    "dirName": "260805-e-sra-sds13",
+    "createdAt": "2026-08-05T05:11:17Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-CHR-BTS13",
-    "dirName": "260805-e-chr-bts13",
-    "createdAt": "2026-08-05T22:35:44Z",
+    "electionId": "E-SRA-UGS13",
+    "dirName": "260805-e-sra-ugs13",
+    "createdAt": "2026-08-05T09:00:38Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-XBB-RE-S13",
-    "dirName": "260805-e-xbb-re-s13",
-    "createdAt": "2026-08-05T06:52:59Z",
+    "electionId": "E-SRF-BTS13",
+    "dirName": "260730-e-srf-bts13",
+    "createdAt": "2026-07-30T15:00:53Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-XBB-RA-S13",
-    "dirName": "260805-e-xbb-ra-s13",
-    "createdAt": "2026-08-05T08:31:08Z",
+    "electionId": "E-SRF-CGS13",
+    "dirName": "260730-e-srf-cgs13",
+    "createdAt": "2026-07-30T14:28:23Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SRF-RAS13",
+    "dirName": "260730-e-srf-ras13",
+    "createdAt": "2026-07-30T13:07:30Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SRF-RES13",
+    "dirName": "260730-e-srf-res13",
+    "createdAt": "2026-07-30T12:50:38Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-BTS13",
+    "dirName": "260807-e-ssp-bts13",
+    "createdAt": "2026-08-07T15:36:59Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-CGDEV",
+    "dirName": "260807-e-ssp-cgdev",
+    "createdAt": "2026-08-07T14:21:10Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-CGS13",
+    "dirName": "260807-e-ssp-cgs13",
+    "createdAt": "2026-08-07T15:26:26Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-RAS13",
+    "dirName": "260807-e-ssp-ras13",
+    "createdAt": "2026-08-07T14:03:11Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SSP-RES13",
+    "dirName": "260807-e-ssp-res13",
+    "createdAt": "2026-08-07T13:18:18Z",
     "status": "recorded"
   },
   {
@@ -1116,183 +1278,39 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-FCR-RES13",
-    "dirName": "260807-e-fcr-res13",
-    "createdAt": "2026-08-07T03:51:52Z",
+    "electionId": "E-TLA-BTS13",
+    "dirName": "260805-e-tla-bts13",
+    "createdAt": "2026-08-05T23:03:37Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-FCR-RAS13",
-    "dirName": "260807-e-fcr-ras13",
-    "createdAt": "2026-08-07T04:59:53Z",
+    "electionId": "E-TLA-FDS13",
+    "dirName": "260804-e-tla-fds13",
+    "createdAt": "2026-08-04T23:50:55Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-FCR-CGS13",
-    "dirName": "260807-e-fcr-cgs13",
-    "createdAt": "2026-08-07T08:57:21Z",
+    "electionId": "E-TLA-U4REV",
+    "dirName": "260805-e-tla-u4rev",
+    "createdAt": "2026-08-05T13:18:44Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-FCR-BTS13",
-    "dirName": "260807-e-fcr-bts13",
-    "createdAt": "2026-08-07T09:14:20Z",
+    "electionId": "E-TLA-U5COV",
+    "dirName": "260805-e-tla-u5cov",
+    "createdAt": "2026-08-05T16:37:03Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-MPC-ICS13",
-    "dirName": "260807-e-mpc-ics13",
-    "createdAt": "2026-08-07T10:06:21Z",
+    "electionId": "E-TLACG13",
+    "dirName": "260724-e-tlacg13",
+    "createdAt": "2026-07-24T16:01:57Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-MPC-SDS13",
-    "dirName": "260807-e-mpc-sds13",
-    "createdAt": "2026-08-07T10:25:48Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-RES13",
-    "dirName": "260807-e-mpc-res13",
-    "createdAt": "2026-08-07T10:38:22Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-RAS13",
-    "dirName": "260807-e-mpc-ras13",
-    "createdAt": "2026-08-07T10:53:52Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-ADS13",
-    "dirName": "260807-e-mpc-ads13",
-    "createdAt": "2026-08-07T11:02:08Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-UGS13",
-    "dirName": "260807-e-mpc-ugs13",
-    "createdAt": "2026-08-07T11:07:09Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-DPS13",
-    "dirName": "260807-e-mpc-dps13",
-    "createdAt": "2026-08-07T11:11:29Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-FDS13",
-    "dirName": "260807-e-mpc-fds13",
-    "createdAt": "2026-08-07T11:22:41Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-NDS13",
-    "dirName": "260807-e-mpc-nds13",
-    "createdAt": "2026-08-07T11:28:58Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-CGBLK",
-    "dirName": "260807-e-mpc-cgblk",
-    "createdAt": "2026-08-07T11:38:34Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-CGRV",
-    "dirName": "260807-e-mpc-cgrv",
-    "createdAt": "2026-08-07T12:40:40Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-CGS13",
-    "dirName": "260807-e-mpc-cgs13",
-    "createdAt": "2026-08-07T13:12:37Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-MPC-BTS13",
-    "dirName": "260807-e-mpc-bts13",
-    "createdAt": "2026-08-07T13:16:39Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-RES13",
-    "dirName": "260807-e-pwf-res13",
-    "createdAt": "2026-08-07T10:15:03Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-RAS13",
-    "dirName": "260807-e-pwf-ras13",
-    "createdAt": "2026-08-07T10:59:34Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-CGDEV",
-    "dirName": "260807-e-pwf-cgdev",
-    "createdAt": "2026-08-07T11:11:14Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-CGDEV2",
-    "dirName": "260807-e-pwf-cgdev2",
-    "createdAt": "2026-08-07T11:31:16Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-CGS13",
-    "dirName": "260807-e-pwf-cgs13",
-    "createdAt": "2026-08-07T12:06:13Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-PWF-BTS13",
-    "dirName": "260807-e-pwf-bts13",
-    "createdAt": "2026-08-07T12:27:27Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SSP-RES13",
-    "dirName": "260807-e-ssp-res13",
-    "createdAt": "2026-08-07T13:18:18Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SSP-RAS13",
-    "dirName": "260807-e-ssp-ras13",
-    "createdAt": "2026-08-07T14:03:11Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SSP-CGDEV",
-    "dirName": "260807-e-ssp-cgdev",
-    "createdAt": "2026-08-07T14:21:10Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SSP-CGS13",
-    "dirName": "260807-e-ssp-cgs13",
-    "createdAt": "2026-08-07T15:26:26Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SSP-BTS13",
-    "dirName": "260807-e-ssp-bts13",
-    "createdAt": "2026-08-07T15:36:59Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-TSR-RA1",
-    "dirName": "260807-e-tsr-ra1",
-    "createdAt": "2026-08-07T10:13:48Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-TSR-CGS13",
-    "dirName": "260807-e-tsr-cgs13",
-    "createdAt": "2026-08-07T15:18:25Z",
+    "electionId": "E-TLAU2",
+    "dirName": "260724-e-tlau2",
+    "createdAt": "2026-07-24T13:21:51Z",
     "status": "recorded"
   },
   {
@@ -1302,99 +1320,93 @@
     "status": "recorded"
   },
   {
-    "electionId": "E-ASD-RES13",
-    "dirName": "260807-e-asd-res13",
-    "createdAt": "2026-08-07T22:11:39Z",
+    "electionId": "E-TSR-CGS13",
+    "dirName": "260807-e-tsr-cgs13",
+    "createdAt": "2026-08-07T15:18:25Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-ASD-RAS13",
-    "dirName": "260807-e-asd-ras13",
-    "createdAt": "2026-08-07T22:28:06Z",
+    "electionId": "E-TSR-RA1",
+    "dirName": "260807-e-tsr-ra1",
+    "createdAt": "2026-08-07T10:13:48Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-ASD-CGDEV",
-    "dirName": "260807-e-asd-cgdev",
-    "createdAt": "2026-08-07T23:14:04Z",
+    "electionId": "E-U11RLY",
+    "dirName": "260730-e-u11rly",
+    "createdAt": "2026-07-30T16:14:29Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-ASD-CGS13",
-    "dirName": "260807-e-asd-cgs13",
-    "createdAt": "2026-08-07T23:56:57Z",
+    "electionId": "E-U2BLK",
+    "dirName": "260808-e-u2blk",
+    "createdAt": "2026-08-08T05:22:53Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-ASD-BTS13",
-    "dirName": "260808-e-asd-bts13",
-    "createdAt": "2026-08-08T00:08:32Z",
+    "electionId": "E-U7CG-Q1",
+    "dirName": "260730-e-u7cg-q1",
+    "createdAt": "2026-07-30T10:06:00Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-ICS13",
-    "dirName": "260807-e-spr-ics13",
-    "createdAt": "2026-08-07T10:16:23Z",
+    "electionId": "E-U7CG-Q2",
+    "dirName": "260730-e-u7cg-q2",
+    "createdAt": "2026-07-30T10:06:00Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-SDS13",
-    "dirName": "260807-e-spr-sds13",
-    "createdAt": "2026-08-07T10:39:28Z",
+    "electionId": "E-U7CG-Q2R",
+    "dirName": "260730-e-u7cg-q2r",
+    "createdAt": "2026-07-30T10:34:25Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-RES13",
-    "dirName": "260807-e-spr-res13",
-    "createdAt": "2026-08-07T11:19:35Z",
+    "electionId": "E-U7CG-Q3A",
+    "dirName": "260730-e-u7cg-q3a",
+    "createdAt": "2026-07-30T10:11:28Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-RAS13",
-    "dirName": "260807-e-spr-ras13",
-    "createdAt": "2026-08-07T12:05:20Z",
+    "electionId": "E-U7CG-Q3B",
+    "dirName": "260730-e-u7cg-q3b",
+    "createdAt": "2026-07-30T10:11:28Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-ADS13",
-    "dirName": "260807-e-spr-ads13",
-    "createdAt": "2026-08-07T15:28:09Z",
+    "electionId": "E-U8PRE",
+    "dirName": "260730-e-u8pre",
+    "createdAt": "2026-07-30T11:57:53Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-UGS13",
-    "dirName": "260807-e-spr-ugs13",
-    "createdAt": "2026-08-07T15:38:40Z",
+    "electionId": "E-WTFRA1",
+    "dirName": "260724-e-wtfra1",
+    "createdAt": "2026-07-24T12:24:09Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-DPS13",
-    "dirName": "260807-e-spr-dps13",
-    "createdAt": "2026-08-07T15:48:13Z",
+    "electionId": "E-WTFRA2",
+    "dirName": "260724-e-wtfra2",
+    "createdAt": "2026-07-24T12:24:09Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-FDS13",
-    "dirName": "260807-e-spr-fds13",
-    "createdAt": "2026-08-07T22:13:14Z",
+    "electionId": "E-WTFRAS13",
+    "dirName": "260724-e-wtfras13",
+    "createdAt": "2026-07-24T12:52:41Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-NDS13",
-    "dirName": "260807-e-spr-nds13",
-    "createdAt": "2026-08-07T22:22:57Z",
+    "electionId": "E-XBB-RA-S13",
+    "dirName": "260805-e-xbb-ra-s13",
+    "createdAt": "2026-08-05T08:31:08Z",
     "status": "recorded"
   },
   {
-    "electionId": "E-SPR-CGS13",
-    "dirName": "260808-e-spr-cgs13",
-    "createdAt": "2026-08-08T03:31:30Z",
-    "status": "recorded"
-  },
-  {
-    "electionId": "E-SPR-BTS13",
-    "dirName": "260808-e-spr-bts13",
-    "createdAt": "2026-08-08T05:08:39Z",
+    "electionId": "E-XBB-RE-S13",
+    "dirName": "260805-e-xbb-re-s13",
+    "createdAt": "2026-08-05T06:52:59Z",
     "status": "recorded"
   }
 ]

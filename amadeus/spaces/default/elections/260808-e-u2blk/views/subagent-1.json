@@ -1,0 +1,25 @@
+{
+  "electionId": "E-U2BLK",
+  "voter": "subagent-1",
+  "question": "u2-birth-declaration の実装ブロッカー: 新規 birth 直後の intent では applyProductionAutonomyMode が必ず PROVENANCE_REQUIRED で失敗する(latestHumanTurnId は当該 intent 自身のシャードのみ走査し、birth は HUMAN_TURN を mint しない。builder の scratch probe 実測: birth status 0 / APPLY(semi) => {\"ok\":false,\"error\":\"PROVENANCE_REQUIRED\"})。FD の business-logic-model.md:13-17 は intent-birth が none/semi を canonical 適用すると定めるため、この設計は現状のまま成立しない。どう解消するか。各投票者は投票前に (1) amadeus-intent-autonomy-production.ts の latestHumanTurnId の走査範囲 (2) amadeus-utility.ts の HUMAN_TURN 出現数 (3) amadeus-orchestrate.ts:2846 と Branch 4ab(:2975-2985)の stateContent 取り扱いと直上コメント (4) FD construction/u2-birth-declaration/functional-design/ と inception/requirements-analysis/requirements.md の FR-1 逐語 を自分で実測すること。GoA を 1-8 で明記し、2/3/6 なら留保を1文で述べること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "上記いずれでもない — 質問の前提に誤り・欠落がある",
+      "description": "上記の実測(latestHumanTurnId の走査範囲・birth の mint 不在・Branch 4ab の snapshot 取り扱い)、または BR-U2-3 の射程(節タイトルが『full の fail-closed・責務一意』であることから full 限定と読めるか否か)の読みに誤りがあると考える場合。その根拠を file:line と実測で留保に明記すること。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "birth が実打鍵の HUMAN_TURN を新 intent シャードへ記録してから適用する(FD 維持)",
+      "description": "intent-birth が、ユーザーが実際に打鍵した宣言コマンド(= 実 HUMAN_TURN)を新 intent のシャードへ記録し、そのうえで applyProductionAutonomyMode を呼ぶ。承認済み FD/要件を一切変更しない。FR-1d(birth → 最初のステージ directive が mode 搬送)は、適用が birth 内で完了し再実行 next が fresh state を読むため literal に成立する。Blocker 2(適用した next の directive が mode を搬送しない)は構造的に発生しない。短所: presence の産地が1つ増えるため、記録する HUMAN_TURN が実打鍵に接地していることを実装・テストで固定する必要がある(BR-U2-2 の遵守/偽装 presence の禁止 — 検証劇場 Forbidden)。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "適用を2回目の next(Branch 4ab)へ移し、Branch 4ab に適用後の state 再読を追加する",
+      "description": "birth print directive の再実行 tail に --autonomy <mode> を載せ、2回目の next の Branch 4ab が適用する。FR-1d を満たすため Branch 4ab に適用成功後の state 再読を追加し、同じ呼び出しの directive が mode を搬送するようにする。presence は既存 mint 経路(state 実在後)に自然に乗るため Blocker 1 は構造的に消える。短所: amadeus-orchestrate.ts:2975-2977 の既存設計コメント(mode の投影は routeMainWorkflowDirective の専任)の明示改訂と、FD の『intent-birth が適用』記述の改訂が必要(BR-U2-3 の full は intent-birth のままで矛盾しない)。"
+    }
+  ]
+}

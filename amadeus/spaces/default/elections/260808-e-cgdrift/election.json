@@ -1,0 +1,27 @@
+{
+  "electionId": "E-CGDRIFT",
+  "kind": "blocker",
+  "question": "intent 260807-autonomy-reachability の code-generation ステージゲートで、engine のプラン乖離ガードが report を拒否した。エラー全文: 「Observed: the compiled Bolt DAG declares these batches parallel and this run has no fan-out on record for them — batch 1 (3 units: u1-autonomy-core, u3-question-route-observability, u6-plugin-docs-drift); batch 3 (2 units: u4-conduit-parity, u5-measurement-report), but the audit trail records fan-out rows for [u1-autonomy-core, u3-question-route-observability, u6-plugin-docs-drift] and batch-completed convergence for none, so these units were built one at a time while the plan said they run in parallel.」 approved exit として engine は2つを名指ししている — (a) 直列化の依存を unit-of-work-dependency.md へ理由付きで記録して recompile する (b) 逸脱が意図的なら先に裁定を取る。事実関係: 本セッションは worktree 隔離ガード下にあり、cid:code-generation:c1-pcp-isolated-session-swarm-incompat が記録するとおり engine ツールが作る repo 内 worktree への直接 git 操作・Write・EnterWorktree が構造的に拒否されるため swarm referee(prepare/check/finalize)を使えず、実装は Agent の worktree isolation で1体ずつ起動して conductor が取り込む形になった。unit 間には技術的な直列依存は無い(u4 は u2 に、u5 は u1/u2/u3 に依存し、いずれも着地済み — u4 と u5 の間に依存は無い)。どの経路を採るか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(b) 環境強制の意図的逸脱として裁定し、record へ申告して進む",
+      "description": "直列化の原因は unit 間の依存ではなく実行環境の制約(worktree 隔離ガード下で swarm referee が使えない)である。したがって (a) を採って unit-of-work-dependency.md に依存エッジを書くと、存在しない技術的依存を graph に固定することになり、P2(記録は実測事実のみ)と検証劇場 Forbidden に抵触する。本選択肢は逸脱を逸脱として申告し、原因(環境制約)と実際に採った経路(Agent worktree isolation による逐次実装+conductor 取り込み+全検証再実行)を code-generation の diary と code-summary へ記録したうえでゲートを進める。既存 cid:code-generation:c1-pcp-isolated-session-swarm-incompat の適用実例として扱う。"
+    },
+    {
+      "internalNo": 2,
+      "label": "(a) unit-of-work-dependency.md へ直列依存を記録して recompile する",
+      "description": "engine が第一に名指しする経路。u4→u5(あるいは batch 1 の u1→u3→u6)へ依存エッジを追加し、理由として実行環境制約を書いて recompile し、graph 上も直列として整合させる。利点は engine のガードが自然に解消し、以後の再実行でも同じ判定になること。欠点は unit 間に実在しない技術的依存を graph へ焼き込むこと — 後続 intent が依存グラフを読んで並行化の判断材料にすると誤導する。"
+    },
+    {
+      "internalNo": 3,
+      "label": "ユーザーへエスカレーションする",
+      "description": "graph の意味論(依存エッジが技術的依存だけを表すのか、実行環境制約も含む運用上の直列化を表しうるのか)は仕様判断であり、選挙で決めずユーザー裁定に委ねる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
