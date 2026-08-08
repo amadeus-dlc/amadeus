@@ -19,7 +19,10 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
-import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
+import {
+  applyProductionAutonomyMode,
+  readProductionAutonomyProjection,
+} from "./amadeus-intent-autonomy-production.ts";
 import { projectIntentAutonomyStatus } from "./amadeus-intent-autonomy-runtime.ts";
 import {
   findCycles,
@@ -4179,6 +4182,61 @@ function ensureWorkspaceDirs(projectDir: string): void {
 // the workflow to its first post-init stage — relocated here, now writing into
 // the BORN intent's record (the active-intent cursor set first makes the
 // default-resolving state/audit helpers resolve there).
+const BIRTH_AUTONOMY_MODES = ["none", "semi", "full"] as const;
+type BirthAutonomyMode = (typeof BIRTH_AUTONOMY_MODES)[number];
+
+// Read `--autonomy` off the birth flags. Returns null when the flag is absent
+// and dies on anything that is not one of the three modes — INCLUDING a
+// value-less flag, whose empty string is not a mode. Called before the birth
+// transaction opens, so a malformed declaration mints nothing (BR-U2-4: the
+// declaration is unspent when birth does not happen).
+function parseBirthAutonomyFlag(flags: Record<string, string>): BirthAutonomyMode | null {
+  if (!("autonomy" in flags)) return null;
+  const requested = (flags.autonomy ?? "").trim();
+  const match = BIRTH_AUTONOMY_MODES.find((mode) => mode === requested);
+  if (match === undefined) {
+    die(`Invalid --autonomy "${requested}". Valid values: ${BIRTH_AUTONOMY_MODES.join(", ")}.`);
+  }
+  return match;
+}
+
+// Apply the birth-time declaration, AFTER the birth transaction has committed.
+//
+// `full` is accepted but never applied: the grant ceremony (FR-GRT-006) is not
+// something a launch flag may stand in for, so birth reports what issuing a
+// grant takes and stops there (BR-U2-3).
+//
+// `none`/`semi` go through the ONE canonical write path (BR-U2-6) under the
+// launch-chain provenance scope, because the intent that was just born has no
+// audit history of its own to carry the launching keystroke's HUMAN_TURN. The
+// flag is not provenance (BR-U2-2): with no real turn to cite the write path
+// refuses, and the refusal is loud — birth stands, the mode stays unset, and the
+// first declaration is still available against the now-live intent (BR-U2-4).
+function applyBirthAutonomyDeclaration(projectDir: string, mode: BirthAutonomyMode): void {
+  const boltPath = `${harnessDir()}/tools/amadeus-bolt.ts`;
+  if (mode === "full") {
+    process.stdout.write(
+      `Intent autonomy: full NOT applied — a grant must be issued first.\n` +
+        `  1. bun ${boltPath} preview-autonomy\n` +
+        `  2. bun ${boltPath} set-autonomy --mode full --confirmed-display-digest <digest>\n`,
+    );
+    return;
+  }
+  const applied = applyProductionAutonomyMode({
+    projectDir,
+    stateContent: readStateFile(projectDir),
+    mode,
+    provenanceScope: "launch-chain",
+  });
+  if (!applied.ok) {
+    die(
+      `--autonomy ${mode} was not applied: ${applied.error}. The intent was born and its mode is unchanged; ` +
+        `declare it again with \`/amadeus --autonomy ${mode}\` (or \`bun ${boltPath} set-autonomy --mode ${mode}\`).`,
+    );
+  }
+  process.stdout.write(`Intent autonomy: ${mode}\n`);
+}
+
 function isReservedHelpRecordName(raw: string, maxLength: number): boolean {
   const slug = slugify(raw, maxLength);
   return classifyHelpIntent([raw]).kind === "help" || classifyHelpIntent([slug]).kind === "help";
@@ -4205,6 +4263,10 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
   }
 
+  // Validated here, alongside --depth/--test-strategy, so a bad mode name dies
+  // before the birth transaction opens and nothing is minted.
+  const autonomy = parseBirthAutonomyFlag(flags);
+
   const description = flags.arguments?.trim();
   const label = flags.label?.trim();
   const slugSource = label || description || scope;
@@ -4225,6 +4287,10 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
   } catch (e) {
     die(errorMessage(e));
   }
+
+  // A migrated workspace short-circuits the birth pipeline below; its state was
+  // MOVED, not created, so there is no new declaration to apply afterwards.
+  let migratedInPlace = false;
 
   // The whole mutation runs under the WORKSPACE lock so a concurrent first-run
   // is serialized — both births append distinct rows to intents.json without a
@@ -4255,6 +4321,7 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       process.stdout.write(
         `Migrated flat workspace into intent: ${migration.intentDirName} (space: ${DEFAULT_SPACE})\n`,
       );
+      migratedInPlace = true;
       return;
     }
 
@@ -4371,6 +4438,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       initialGoal,
     );
   });
+
+  // Outside the lock: the autonomy transaction takes its own audit lock, and the
+  // acquire is not reentrant. Birth has fully committed by here, which is also
+  // what makes the failure path honest — the intent exists whether or not the
+  // declaration lands.
+  if (autonomy !== null && !migratedInPlace) {
+    applyBirthAutonomyDeclaration(projectDir, autonomy);
+  }
 }
 
 // Init-time Phase Progress status for one phase. Init PRE-CROSSES the

@@ -61,7 +61,10 @@ import {
   findAllEvents,
   getField,
   humanActedSinceGate,
+  listIntentDirs,
   listIntents,
+  outstandingHumanTurns,
+  splitAuditRecords,
   readAllAuditShards,
   readStateFile,
   setFieldStrict,
@@ -340,6 +343,103 @@ function latestHumanTurnId(projectDir: string, resolved: ResolvedIntent): string
   return latest?.turnId ?? null;
 }
 
+// Which turns a declaration may cite as its provenance.
+//
+//   "intent"       the default and the only scope for a grant: the turn must sit
+//                  in THIS intent's own shards.
+//   "launch-chain" the widened reference (#2378 ruling E-U2BLK): the turn that
+//                  authorized this LAUNCH may live in a sibling record, because a
+//                  just-born intent has no shards of its own yet. It is still a
+//                  real, already-minted turn — nothing is minted here.
+export type AutonomyProvenanceScope = "intent" | "launch-chain";
+
+// The earliest timestamp anywhere in this intent's audit — in practice its
+// WORKFLOW_STARTED, i.e. when the record came into existence. It is the upper
+// bound on "a turn that could have authorized this launch": a turn recorded
+// after the record was created did not cause it. Null when the record carries no
+// audit at all, which leaves the bound unknown and refuses (fail-closed).
+function earliestAuditTimestamp(projectDir: string, resolved: ResolvedIntent): string | null {
+  let earliest: string | null = null;
+  for (const shardPath of auditShards(projectDir, resolved.intentDir, resolved.space)) {
+    let shard: string;
+    try {
+      shard = readFileSync(shardPath, "utf-8");
+    } catch {
+      continue;
+    }
+    for (const block of splitAuditRecords(shard)) {
+      const timestamp = auditBlockField(block, "Timestamp");
+      if (timestamp === null || timestamp === "") continue;
+      if (earliest === null || timestamp < earliest) earliest = timestamp;
+    }
+  }
+  return earliest;
+}
+
+// The launch-chain turn id, or null when no turn in the space qualifies.
+//
+// Qualifying is deliberately narrow, so this stays a widened REFERENCE and not a
+// widened permission. A candidate must be (1) a real HUMAN_TURN block on disk,
+// (2) still unconsumed in ITS OWN record's presence ledger — the same
+// resolution-consumes-human ordering the strict path relies on — and (3) at or
+// before the moment this intent's record came into existence, which is what ties
+// it to the same launch rather than to any older presence lying around. The
+// bound is `<=` because two audit writes can share a second.
+//
+// Among the survivors the LATEST wins, with the turn id breaking a timestamp tie
+// exactly as latestHumanTurnId does. The id digests the SOURCE record's
+// coordinates alongside the target intent's, so a launch-chain reference can
+// never collide with an intent-scoped one over the same block.
+function launchChainHumanTurnId(projectDir: string, resolved: ResolvedIntent): string | null {
+  const bornAt = earliestAuditTimestamp(projectDir, resolved);
+  if (bornAt === null) return null;
+  let latest: { readonly timestamp: string; readonly turnId: string } | null = null;
+  for (const sourceDir of listIntentDirs(projectDir, resolved.space)) {
+    for (const turn of outstandingHumanTurns(projectDir, sourceDir, resolved.space)) {
+      if (turn.timestamp > bornAt) continue;
+      const turnId = autonomyDigest({
+        provenanceScope: "launch-chain",
+        intentUuid: resolved.intentUuid,
+        intentDir: resolved.intentDir,
+        space: resolved.space,
+        sourceIntentDir: sourceDir,
+        shard: basename(turn.shardPath),
+        blockDigest: autonomyDigest(turn.block),
+      });
+      if (latest === null || turn.timestamp > latest.timestamp ||
+        (turn.timestamp === latest.timestamp && turnId > latest.turnId)) {
+        latest = { timestamp: turn.timestamp, turnId };
+      }
+    }
+  }
+  return latest?.turnId ?? null;
+}
+
+// The turn a declaration will cite, or why it may not cite one. Declared at
+// module scope so the type-only lines carry no in-body coverage records.
+type DeclarationProvenance =
+  | { readonly ok: true; readonly humanTurnId: string }
+  | { readonly ok: false; readonly error: string };
+
+// Resolve the provenance for one declaration, ahead of every read the command
+// itself needs. `full` under the widened scope is refused here, which is what
+// keeps prepareFullGrantCommand unreachable from the launch-chain path rather
+// than merely gated off it.
+function resolveDeclarationProvenance(
+  projectDir: string,
+  resolved: ResolvedIntent,
+  mode: AutonomyMode,
+  scope: AutonomyProvenanceScope,
+): DeclarationProvenance {
+  if (scope === "launch-chain") {
+    if (mode === "full") return { ok: false, error: "PROVENANCE_SCOPE_FORBIDDEN" };
+    const chained = launchChainHumanTurnId(projectDir, resolved);
+    return chained === null ? { ok: false, error: "PROVENANCE_REQUIRED" } : { ok: true, humanTurnId: chained };
+  }
+  const latest = latestHumanTurnId(projectDir, resolved);
+  return latest === null ? { ok: false, error: "PROVENANCE_REQUIRED" } : { ok: true, humanTurnId: latest };
+}
+
 interface GrantScopeInput {
   readonly projection: AutonomyProjection;
   readonly stateContent: string;
@@ -506,6 +606,8 @@ interface ApplyProductionAutonomyModeInput {
   readonly principalId?: string;
   readonly policies?: readonly DecisionPolicyInput[];
   readonly confirmedDisplayDigest?: string;
+  // Opt-in. Absent means "intent" — the strict scope every existing caller keeps.
+  readonly provenanceScope?: AutonomyProvenanceScope;
 }
 
 // The state projection of a committed mode. Written HERE and nowhere else: an
@@ -553,8 +655,14 @@ function alreadyDeclared(before: AutonomyProjection, mode: AutonomyMode, command
 export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeInput): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
-  const humanTurnId = latestHumanTurnId(input.projectDir, resolved);
-  if (humanTurnId === null) return { ok: false, error: "PROVENANCE_REQUIRED" };
+  const provenance = resolveDeclarationProvenance(
+    input.projectDir,
+    resolved,
+    input.mode,
+    input.provenanceScope ?? "intent",
+  );
+  if (!provenance.ok) return { ok: false, error: provenance.error };
+  const humanTurnId = provenance.humanTurnId;
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const before = coordinator.readProjection();
   const commandOccurrenceId = `autonomy-mode-${input.mode}-${humanTurnId}`;

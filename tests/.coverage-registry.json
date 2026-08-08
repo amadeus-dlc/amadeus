@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 620,
+    "total": 621,
     "enumeratedByClass": {
-      "function": 350,
+      "function": 351,
       "audit": 91,
       "scope": 15,
       "stage": 32,
@@ -3012,6 +3012,13 @@
     {
       "unitClass": "function",
       "unitId": "function:numericStageOrder",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:outstandingHumanTurns",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -7224,6 +7231,10 @@
         },
         {
           "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t490-birth-declaration.integration.test.ts",
           "mechanism": "cli"
         },
         {
