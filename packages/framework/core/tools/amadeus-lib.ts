@@ -3719,7 +3719,7 @@ function cloneId(projectDir: string): string {
 // the split the per-delegate slots key off.
 type PresenceEvent = {
   ts: string;
-  shard: number; // index of the origin shard (auditShards order); the tie-break key
+  shard: number; // index of the origin shard (presenceLedgerShards order); the tie-break key
   pos: number; // append order WITHIN the origin shard (authoritative there only)
   human: boolean; // HUMAN_TURN or a verified delegation
   delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
@@ -3740,7 +3740,10 @@ type PresenceEvent = {
 // cannot tell which shard a same-second event came from. A shard that vanishes
 // between enumerate and read is skipped; the empty-merged-buffer fail-open signal
 // of readAllAuditShards (join by "\n") is preserved exactly — an empty buffer
-// means no ledger → no presence tracking → fail open. (These notes live up here
+// means no ledger → no presence tracking → fail open. Enumeration runs through
+// presenceLedgerShards, which also surfaces unconverted legacy Markdown shards
+// (#2582) so a not-yet-migrated ledger reads as a ledger rather than as absence.
+// (These notes live up here
 // rather than inside the body: bun's lcov stamps in-body comment lines as
 // never-hit DA records, which the codecov patch gate counts as misses.)
 function scanPresenceLedger(
@@ -3748,7 +3751,7 @@ function scanPresenceLedger(
   intent?: string,
   space?: string,
 ): PresenceEvent[] | null {
-  const shardPaths = auditShards(projectDir, intent, space);
+  const shardPaths = presenceLedgerShards(projectDir, intent, space);
   const contents: string[] = [];
   // Paths are collected ALONGSIDE the contents, not indexed back into
   // shardPaths: a shard that vanishes mid-scan is skipped, so the two lists
@@ -4149,6 +4152,36 @@ export function legacyAuditShards(projectDir: string, intent?: string, space?: s
     .filter((f) => f.endsWith(".md"))
     .sort()
     .map((f) => join(shardDir, f));
+}
+
+// Every shard the PRESENCE scan must see: the converted `.jsonl` shards plus any
+// legacy Markdown shard that has NO converted counterpart (Issue #2582). A `.md`
+// whose leaf normalises onto an existing `.jsonl` is superseded by that
+// conversion and is skipped — the same normalizeAuditShardLeaf mapping the
+// consumer side (verifyDelegatedProvenance) already applies to a referenced
+// issuer shard, so both sides resolve one leaf to one ledger file.
+//
+// Why presence needs a WIDER enumeration than every other reader: scanPresenceLedger
+// treats an empty merged buffer as "this record has no ledger at all" and fails
+// OPEN. On an unconverted record the ledger is right there on disk, so reading
+// `.jsonl` only turned "not yet migrated" into "no presence tracking" and let
+// every gate through. Including the unconverted shards makes the ledger visible,
+// and because splitAuditRecords deliberately yields no records from Markdown
+// lines (only amadeus-journal-convert.ts parses that format), an unconverted
+// shard grounds nothing: presence is DENIED until the record is converted. That
+// is exactly the verdict verifyDelegatedProvenance already returns when an issuer
+// shard is still Markdown — the asymmetry #2582 reported is what closes here.
+//
+// Every other auditShards() consumer reads events out of the ledger and treats
+// their absence as absence of evidence (fail-closed already), so none of them
+// needs this widening.
+export function presenceLedgerShards(projectDir: string, intent?: string, space?: string): string[] {
+  const converted = auditShards(projectDir, intent, space);
+  const convertedLeaves = new Set(converted.map((path) => basename(path)));
+  const unconverted = legacyAuditShards(projectDir, intent, space).filter(
+    (path) => !convertedLeaves.has(normalizeAuditShardLeaf(basename(path))),
+  );
+  return [...converted, ...unconverted].sort();
 }
 
 // Concatenate every audit shard's content for an intent into one buffer the
