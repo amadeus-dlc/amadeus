@@ -1734,31 +1734,38 @@ function unitsMissingReview(pd: string, stage: ProducedStage): string[] {
   // `reviewer` has no verdict to be missing, so there is nothing here to check.
   if (stage.reviewer === undefined || stage.reviewer.trim() === "") return [];
   if (stage.for_each !== "unit-of-work") return [];
-  const produces = stage.produces ?? [];
-  if (produces.length === 0) return [];
+  if ((stage.produces ?? []).length === 0) return [];
   const kinds = readRuntimeUnitKinds(pd)?.kinds;
-
   const missing: string[] = [];
   for (const dir of producesDirsForStage(pd, stage)) {
     const unit = basename(join(dir, ".."));
-    const kind = kinds?.get(unit);
-    const applicable = kind === undefined
-      ? produces
-      : requiredArtifactsForUnit({ produces, produces_kinds: stage.produces_kinds }, kind);
-    if (applicable.length === 0) continue;
-    // Only Units that actually produced something are in scope: one that never
-    // ran is the artifact layers' business, not this one's.
-    if (!artifactsExistInDir(dir, applicable)) continue;
-    // The PRIMARY artifact only. `complete-review` appends its projection to the
-    // first non-optional produces entry and nowhere else, so a block on any
-    // other file was not written by the reviewer — accepting one would let a
-    // hand-placed heading stand in for the verdict this asks for.
-    const optional = new Set(stage.optional_produces ?? []);
-    const primary = applicable.find((name) => !optional.has(name));
-    if (primary === undefined) continue;
-    if (!artifactCarriesReview(join(dir, `${primary}.md`))) missing.push(unit);
+    if (unitReviewIsMissing(dir, stage, kinds?.get(unit))) missing.push(unit);
   }
   return missing;
+}
+
+// One Unit's verdict, or the absence of one. Returns false for a Unit this layer
+// has no standing to judge: nothing applicable to its kind, or nothing produced
+// at all (which is the artifact layers' business, not this one's).
+function unitReviewIsMissing(
+  dir: string,
+  stage: ProducedStage,
+  kind: UnitKind | undefined,
+): boolean {
+  const produces = stage.produces ?? [];
+  const applicable = kind === undefined
+    ? produces
+    : requiredArtifactsForUnit({ produces, produces_kinds: stage.produces_kinds }, kind);
+  if (applicable.length === 0) return false;
+  if (!artifactsExistInDir(dir, applicable)) return false;
+  // The PRIMARY artifact only. `complete-review` appends its projection to the
+  // first non-optional produces entry and nowhere else, so a block on any other
+  // file was not written by the reviewer — accepting one would let a hand-placed
+  // heading stand in for the verdict this asks for.
+  const optional = new Set(stage.optional_produces ?? []);
+  const primary = applicable.find((name) => !optional.has(name));
+  if (primary === undefined) return false;
+  return !artifactCarriesReview(join(dir, `${primary}.md`));
 }
 
 function artifactCarriesReview(path: string): boolean {
