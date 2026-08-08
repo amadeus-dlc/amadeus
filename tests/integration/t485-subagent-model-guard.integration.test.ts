@@ -256,4 +256,51 @@ describe("t485 subagent-model-guard hook (#2438)", () => {
     expect(res.status).toBe(0);
     expect(denyReasonOf(res.stdout)).toBeUndefined();
   });
+
+  // ---- subagent.dispatch.enforced-models (layered config) -------------------
+
+  test("a configured enforced set replaces the default for the live hook", () => {
+    seed(proj);
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ subagent: { dispatch: { "enforced-models": ["haiku"] } } }),
+      "utf-8",
+    );
+    const allowed = runGuard(proj, {
+      tool_name: "Task",
+      tool_input: { subagent_type: "builder-adhoc-7", model: "haiku" },
+      cwd: proj,
+    });
+    expect(allowed.status).toBe(0);
+    expect(denyReasonOf(allowed.stdout)).toBeUndefined();
+
+    const denied = runGuard(proj, {
+      tool_name: "Task",
+      tool_input: { subagent_type: "builder-adhoc-7", model: "sonnet" },
+      cwd: proj,
+    });
+    expect(denied.status).toBe(0);
+    const reason = denyReasonOf(denied.stdout);
+    expect(reason).toBeDefined();
+    expect(reason).toContain("haiku");
+  });
+
+  test("an invalid config falls back to the default set with a stderr advisory", () => {
+    seed(proj);
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ subagent: { dispatch: { "enforced-models": [] } } }),
+      "utf-8",
+    );
+    const res = runGuard(proj, {
+      tool_name: "Task",
+      tool_input: { subagent_type: "builder-adhoc-7", model: "sonnet" },
+      cwd: proj,
+    });
+    // Defaulting keeps the enforcement posture: sonnet stays allowed, and the
+    // misconfiguration is announced instead of silently deciding either way.
+    expect(res.status).toBe(0);
+    expect(denyReasonOf(res.stdout)).toBeUndefined();
+    expect(res.stderr).toContain("advisory");
+  });
 });

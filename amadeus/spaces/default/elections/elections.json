@@ -1300,5 +1300,35 @@
     "dirName": "260807-e-tsr-bts13",
     "createdAt": "2026-08-07T15:48:43Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-ASD-RES13",
+    "dirName": "260807-e-asd-res13",
+    "createdAt": "2026-08-07T22:11:39Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-ASD-RAS13",
+    "dirName": "260807-e-asd-ras13",
+    "createdAt": "2026-08-07T22:28:06Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-ASD-CGDEV",
+    "dirName": "260807-e-asd-cgdev",
+    "createdAt": "2026-08-07T23:14:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-ASD-CGS13",
+    "dirName": "260807-e-asd-cgs13",
+    "createdAt": "2026-08-07T23:56:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-ASD-BTS13",
+    "dirName": "260808-e-asd-bts13",
+    "createdAt": "2026-08-08T00:08:32Z",
+    "status": "recorded"
   }
 ]

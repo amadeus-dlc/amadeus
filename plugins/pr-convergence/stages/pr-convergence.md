@@ -24,7 +24,12 @@ no merge conflict, every required check green, and every actionable review
 thread terminalised. It is an opt-in plugin stage (empty `scopes:`) — install
 is the opt-in boundary, so once composed it is reachable via
 `amadeus-orchestrate next --stage pr-convergence`. It never joins a stock
-scope's workflow and Amadeus never runs it automatically.
+scope's workflow. Whether a run starts depends on the Intent autonomy mode:
+under `none` a human decides when to start it; under `semi` or `full`, an
+engine advisory raised for this plugin is routed through the autonomy ladder
+as a `question` occurrence (`amadeus-advisory-choice.ts`), and a `run-now`
+decision can start it unattended — any other ladder outcome falls back to the
+human.
 
 Installing the plugin also overlays `pr-convergence-report` onto the
 `code-generation` stage's `produces`. From that point the existing per-unit

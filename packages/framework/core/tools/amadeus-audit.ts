@@ -93,6 +93,7 @@ const VALID_EVENT_TYPES = new Set([
   "LOOP_MONITOR_EVENT_SET_COMMITTED",
   "QUALITY_REPAIR_TRANSACTION_COMMITTED",
   "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
+  "INTENT_AUTONOMY_HUMAN_REQUIRED",
   "AUTO_DECISION_REVIEWED",
   "INTENT_COMPLETION_TRANSACTION_COMMITTED",
   // Session events (hook-owned)
@@ -239,6 +240,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   LOOP_MONITOR_EVENT_SET_COMMITTED: "Loop Monitor Event Set Committed",
   QUALITY_REPAIR_TRANSACTION_COMMITTED: "Quality Repair Transaction Committed",
   INTENT_AUTONOMY_TRANSACTION_COMMITTED: "Intent Autonomy Transaction Committed",
+  INTENT_AUTONOMY_HUMAN_REQUIRED: "Intent Autonomy Human Required",
   AUTO_DECISION_REVIEWED: "Auto Decision Reviewed",
   INTENT_COMPLETION_TRANSACTION_COMMITTED: "Intent Completion Transaction Committed",
   UNIT_POOL_EVENT_SET_COMMITTED: "Unit Pool Event Set Committed",

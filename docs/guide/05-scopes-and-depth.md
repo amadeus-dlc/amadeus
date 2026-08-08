@@ -239,11 +239,15 @@ Depth controls the detail level of artifacts produced at each stage. The scope s
 
 ### How depth affects stages
 
+The engine resolves depth once — the scope's default, recorded in `amadeus-state.md` → `**Depth**` at intent birth — and delivers it to every stage on the run-stage directive's `depth` field. That field is the single authority: a stage reads it rather than re-deriving depth from its own complexity assessment.
+
 At each stage, the agent adjusts its output based on the active depth:
 
 - **Minimal:** 1-2 page artifact, key decisions only, skip optional sections
 - **Standard:** Complete artifact, all required sections, concise rationale
 - **Comprehensive:** Expanded artifact, optional sections included, detailed justification, compliance cross-references
+
+Stages that write bulky artifacts state their own per-depth volume: Requirements Analysis scales the number and length of functional requirements, Code Generation scales plan and summary prose, and Build and Test scales its build instructions and summary. Depth governs prose volume only — test scope and volume stay with the test strategy (below).
 
 ### Overriding depth
 

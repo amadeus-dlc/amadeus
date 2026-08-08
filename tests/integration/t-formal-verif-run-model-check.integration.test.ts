@@ -10,8 +10,12 @@ import { runModelCheck } from "../../plugins/formal-model-check/tools/run-model-
 import { beginModelCheckArtifacts } from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
 import { DEFAULT_MODEL_CHECK_ARTIFACT_PUBLISHER } from "../../plugins/formal-model-check/tools/run-model-check-execution.ts";
 import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../plugins/formal-model-check/tools/run-model-check-paths.ts";
-import { StderrModelCheckReporter } from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
+import {
+  StderrModelCheckReporter,
+  terminalModelCheckLines,
+} from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
 import type { EnvReceipt } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import { toolchainErrorOutcome } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 import type { PlannedTlcOutcome } from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
@@ -248,6 +252,37 @@ describe("run-model-check orchestration", () => {
       schema: "amadeus.run-model-check.v1",
       exitCode: 0,
     });
+  });
+
+  // #2410: ENVIRONMENT_UNAVAILABLE named a class of failure and nothing else,
+  // so four separate intents each rediscovered the same JDK/JAVA_HOME mismatch
+  // by reading the planner source. The cause now reaches the terminal output.
+  test("ENVIRONMENT_UNAVAILABLE carries its cause; other codes keep withholding it", () => {
+    const environment = toolchainErrorOutcome({
+      kind: "InvocationError",
+      code: "ENVIRONMENT_UNAVAILABLE",
+      message: "Darwin environment inspection failed",
+      cause: 'Error: OpenJDK 26.0.1 verification failed: expected `openjdk version "26.0.1…"`',
+    });
+    const [envJson, envHuman] = terminalModelCheckLines("run-env", environment);
+    const parsed = JSON.parse(envJson) as { errorDetail: string | null };
+    expect(parsed.errorDetail).toContain("Darwin environment inspection failed");
+    expect(parsed.errorDetail).toContain("OpenJDK 26.0.1 verification failed");
+    expect(envHuman).toContain("HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE)");
+    expect(envHuman).toContain("OpenJDK 26.0.1 verification failed");
+
+    // The acquisition contract is unchanged: its message stays off stderr, and
+    // the published receipt remains its diagnostic surface. Widening that is a
+    // separate ruling, not a side effect of #2410.
+    const acquisition = toolchainErrorOutcome({
+      kind: "AcquisitionError",
+      code: "NETWORK",
+      message: "network unavailable",
+    });
+    const [netJson, netHuman] = terminalModelCheckLines("run-net", acquisition);
+    expect((JSON.parse(netJson) as { errorDetail: string | null }).errorDetail).toBeNull();
+    expect(netHuman).toBe("run-model-check: HARNESS_ERROR (NETWORK)");
+    expect(`${netJson}${netHuman}`).not.toContain("network unavailable");
   });
 
   test("publishes acquisition failure as an isolated partial receipt with exit 2", async () => {

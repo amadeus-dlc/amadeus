@@ -65,6 +65,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -178,12 +179,9 @@ describe("t67 construction worktrees — security-patch (migrated from t67-const
 
     // The audit row landed in the initialized project (the .sh's two greps).
     // P4: read the merged per-clone audit shards, not the retired flat audit.md.
-    const record = readAllAuditShards(proj)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .map((l) => JSON.parse(l) as Record<string, unknown>)
-      .find((rec) => rec.event === "MERGE_DISPATCH_INVOKED");
+    const record = auditRowsFrom(readAllAuditShards(proj)).find(
+      (rec) => rec.event === "MERGE_DISPATCH_INVOKED",
+    );
     expect(record).toBeDefined();
     // STRONGER: the exact slug value, not the .sh's loose "Bolt slug.*" pattern.
     expect((record!.fields as Record<string, string>)["Bolt slug"]).toBe(slug);

@@ -108,7 +108,7 @@ function seedActive(proj: string, opts: { intentAutonomy?: string } = {}): void 
     : "";
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: requirements-analysis\n${autonomyLine}`,
+    `## Current Status\n- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: requirements-analysis\n- **Construction Autonomy Mode**: unset\n${autonomyLine}`,
     "utf-8",
   );
 }

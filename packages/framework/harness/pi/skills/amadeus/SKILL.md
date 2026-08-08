@@ -64,6 +64,8 @@ Treat the directive returned by `report` as the next loop step. Continue for
   `consumes_absent`; never invent an absent artifact; required output paths are mandatory;
   optional output paths are candidates governed by the stage instructions.
   Pass only artifact paths that exist to reviewers and completion checks.
+  `directive.depth` (when present) is the workflow's resolved depth level —
+  pass it to the stage body's depth-scaled guidance instead of re-deriving depth.
 - `invoke-swarm`: use the Pi child-execution resource at
   `.pi/drivers/amadeus-pi-driver.ts` through the deterministic swarm protocol.
   Resolve the driver before preparing worktrees. Never pretend dispatch

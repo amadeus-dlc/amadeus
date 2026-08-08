@@ -286,7 +286,7 @@ function seedAuditShard(proj: string, body = `${auditRow(1)}\n`): void {
 function seedActive(proj: string, slug = "requirements-analysis"): void {
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: ${slug}\n`,
+    `## Current Status\n- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: ${slug}\n- **Construction Autonomy Mode**: unset\n`,
     "utf-8",
   );
   seedAuditShard(proj);
@@ -308,7 +308,7 @@ function seedActiveWithCheckbox(
 ): void {
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: ${slug}\n` +
+    `## Current Status\n- **Workflow**: feature\n- **Scope**: feature\n- **Current Stage**: ${slug}\n- **Construction Autonomy Mode**: unset\n` +
       `\n## Stage Progress\n- [${marker}] ${slug} — EXECUTE\n`,
     "utf-8",
   );
@@ -340,7 +340,7 @@ function seedInProgressWithQuestions(
   const intentModeLine = intentMode ? `- **Intent Autonomy Mode**: ${intentMode}\n` : "";
   writeFileSync(
     seededStateFile(proj),
-    `- **Workflow**: feature\n- **Scope**: feature\n- **Lifecycle Phase**: ${phase.toUpperCase()}\n` +
+    `## Current Status\n- **Workflow**: feature\n- **Scope**: feature\n- **Lifecycle Phase**: ${phase.toUpperCase()}\n- **Construction Autonomy Mode**: unset\n` +
       `- **Current Stage**: ${slug}\n${intentModeLine}${autonomyLine}` +
       `\n## Stage Progress\n- [-] ${slug} — EXECUTE\n`,
     "utf-8",

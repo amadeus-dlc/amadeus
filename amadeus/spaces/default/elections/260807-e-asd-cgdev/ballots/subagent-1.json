@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-ASD-CGDEV",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "問A の是認は「t113 は FR-1 の欠陥クラスでない」までであり、順序契約の権威出典は t113 自身のヘッダ（:8-14, :255-257）と docs/reference/12-state-machine.md:32 の terminal 宣言に留まる — 独立した仕様文書での dead-last 明文は grep で見つからなかったため、別 Issue 起票時は「契約の出典 = t113 のピン + 状態機械の terminal 性」と明記すること。また FR-1 変換後の t113 パーサは schemaVersion===2 のときのみ正規化する（従前は無条件に attributes?.Event ?? event を読んだ）ため、schemaVersion 非2 で attributes.Event を持つ変則行の扱いが狭まる点を留意（実運用の emit 経路では同値）。問B の是認には要件側改訂の範囲明示を条件とする — AC-1a の 17→19 だけでなく、requirements.md:70 の「患部17列挙は完全（根拠 = 共有ハーネス import の有無で機械抽出）」の根拠記述が実際の RE 述語（re-scans:65 の \\.event\\b 連言）と食い違っており、この完全性主張自体を申告付きで訂正する必要がある。私はテストを実行していないため、builder の「失敗署名 byte 同一」は再実測しておらず、判断根拠は diff の構造的証拠に依る。",
+  "rationale": "【問A = (a) 妥当】git diff tests/e2e/t113.test.ts の削除行が決定的: 変換前のパーサは `const event = rec.attributes?.Event ?? rec.event;`（:176 相当）で既に両スキーマ対応だった。よって t113 が v1 キー pin による空読み（FR-1 の欠陥クラス）で赤になることは構造的にありえず、builder の主張は diff だけで裏取りできる。RE 述語（re-scans:65 の grep -lE '\\.event\\b'）は rec.event の出現で t113 を偽陽性に拾ったもので、t113 は述語の過剰包含。変換自体は tests/harness/audit-records.ts の normalizeAuditRecord（v2: attributes.Event / v1: 素通し）へ寄せるだけで v2 行に対し同値であり、リーダー統一として無害。よって「変換維持 + 順序バグ別 Issue + AC 申告付き再定義」が正しい。\n\n【問B = (a) 妥当】tests/e2e/t02.test.ts:116 と t06.test.ts:179 はいずれも `(JSON.parse(line) as { fields?: Record<string,string> }).fields?.[\"Bolt slug\"]` で、.event を一切参照しない v1 キー pin。RE 述語が \\.event\\b を連言に置いていたため構造的に漏れたことを実読で確認した。私自身の広げた述語（grep -rln audit tests/e2e | xargs grep -ln JSON.parse | xargs grep -lE '\\.event\\b|\\.fields\\b|fields\\?\\.\\[' | xargs grep -L harness/audit-records）の出力はちょうど t02.test.ts と t06.test.ts の2件のみで、builder の「追加候補はちょうど2件」を独立再現した。さらに tests/e2e 全域の fields 参照を走査し、残存する v1 pin が他に無い（他の .fields 参照は既に audit-records 正規化済みレコード上）ことも確認した。修正形は t65 の実 diff（自前 JSON.parse チェーン → auditRowsFrom(...).find、以後 rec.fields）と同型の1関数置換で済む。同根は同一変更で修正する cid:code-generation:same-root-inventory に整合し、別 Issue 化すると完了後も e2e に同クラスの空読みが2件残る。",
+  "submittedAt": "2026-08-07T23:17:01Z",
+  "receivedAt": "2026-08-07T23:17:13Z"
+}

@@ -279,10 +279,14 @@ export function toModelCheckOutcome(exploration: TlcExploration): ModelCheckOutc
 export function toolchainErrorOutcome(
   error: TlcToolchainError,
 ): Extract<ModelCheckOutcome, { kind: "HARNESS_ERROR" }> {
+  // The planner records WHICH check failed in `cause`; the message only says
+  // which phase it failed in. Dropping the cause is what made
+  // ENVIRONMENT_UNAVAILABLE unreadable — carry both.
+  const cause = "cause" in error && typeof error.cause === "string" ? error.cause.trim() : "";
   return {
     kind: "HARNESS_ERROR",
     code: "code" in error ? error.code : error.kind,
-    detail: error.message,
+    detail: cause.length > 0 ? `${error.message}: ${cause}` : error.message,
   };
 }
 

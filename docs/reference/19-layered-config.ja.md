@@ -38,7 +38,8 @@ leaf がなければ継承し、空 object は何も変更せず、`null` は不
     "github": { "issue": { "creation": { "mode": "prompt" } } }
   },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
-  "plugin": { "activation": { "names": [] } }
+  "plugin": { "activation": { "names": [] } },
+  "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
 }
 ```
 
@@ -50,6 +51,7 @@ leaf がなければ継承し、空 object は何も変更せず、`null` は不
 | `finding.github.issue.creation.mode` | `off \| prompt \| auto`、`prompt` | Project、Space、Intent |
 | `swarm.unit.concurrency.limit` | 整数 `1..4`、`4` | Project、Space、Intent |
 | `plugin.activation.names` | 昇順で一意な plugin 名配列、`[]` | Project のみ |
+| `subagent.dispatch.enforced-models` | 空でない一意なモデル名配列、`["opus","sonnet"]` | Project, Space, Intent |
 
 未知のパスと旧フラットキーはエラーです。旧キーの診断には移行先を示しますが、alias や
 自動移行は行いません。`observability` は既存リゾルバーへ委譲したままなので、ルートでは

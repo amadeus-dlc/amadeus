@@ -1,0 +1,22 @@
+{
+  "electionId": "E-ASD-BTS13",
+  "kind": "s13-adoption",
+  "question": "260807-intent-2328-tests-e2e-au build-and-test ステージの §13 学習選定。conductor の候補提案は 0 件 — 本 B&T の主要事象はいずれも既存 cid の適用実例と判断した: (1) 残余赤の base 帰属（c4-260805-subagent-type-guard の分離 worktree 手続きの適用 — t267/setup×2 = 既存事象確定、t17/t66 = base 単独 green vs 自ツリー単独 red の対照で環境要因〔ambient active intent 読取〕と確定し #2464 起票。同クラス先例 #795 も既知） (2) 再接地（base-advance-regrounding + 共有台帳 union + c6 系 dist 再生成の適用） (3) perf/security 適用外宣言（c4 / bt-proportional-selection の適用） (4) verdict の AC 外境界（c2-unconditional-ready-boundary の適用）。t17/t66 の「active intent の有無を対照軸にした環境要因の切り分け」は c4-260805 の失敗集合 diff 手続きに包含されると判断したが、異論があれば choice 2 + reservation で候補提案せよ。record（build-test-results.md / #2464 本文）と既存 cid を独立検証して投票せよ。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0 件で可",
+      "description": "全事象が既存 cid の適用実例。"
+    },
+    {
+      "internalNo": 2,
+      "label": "候補あり（reservation で具体提案）",
+      "description": "未被覆の新規面が実在する — reservation に候補文と実測根拠を書くこと。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

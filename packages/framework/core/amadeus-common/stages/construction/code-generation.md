@@ -113,6 +113,13 @@ The plan MUST include steps for:
 
 If the plan presented to the user omits test file steps, add them before presenting. Tests are not deferred to Build and Test — that stage verifies and extends, not creates from scratch.
 
+**Depth-scaled plan volume** (read `directive.depth`; see stage-protocol.md §8):
+- **Minimal**: include only the checklist areas the unit actually touches; 1-2 lines per plan step; traceability as a single `step -> story/intent` list.
+- **Standard**: all applicable checklist areas; brief rationale per non-obvious step; traceability table.
+- **Comprehensive**: full checklist coverage, alternatives noted where a step embodies an ADR decision, per-step acceptance notes.
+
+Depth governs artifact PROSE volume only. Test scope and volume remain governed by the active test strategy (above) — do not conflate the two.
+
 Number each plan step sequentially (Step 1, Step 2, etc.) for clear execution ordering and traceability.
 
 **Recommended plan structure** (adapt if architecture warrants a different ordering):
@@ -167,6 +174,8 @@ After subagent completes, create `<record>/construction/{unit-name}/code-generat
 - Key implementation decisions
 - Test coverage summary
 - Any deviations from the plan
+
+Scale the summary to `directive.depth`: **Minimal** — bullet lists only, no narrative sections; **Standard** — brief prose per section; **Comprehensive** — full decision narrative including deviations and follow-ups.
 
 ### Step 6: Update State
 

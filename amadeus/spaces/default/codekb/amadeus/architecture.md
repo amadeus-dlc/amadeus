@@ -1,6 +1,45 @@
 # アーキテクチャ
 
-## SUBAGENT_STARTED の emit 経路と hook 配線の3面構造（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## 監査 journal の v1/v2 二重スキーマとリーダー面の構造（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+Issue #2328 の患部は「テストが1スキーマを決め打ちで読む」ことにあり、書き手側の欠陥ではない。監査 journal は **v1 と v2 が現役で共存する設計**であり、リーダーはその両方を受理しなければならない。
+
+### スキーマ2形の正準定義
+
+| 版 | 定数 | wire 形 | 定義 |
+|---|---|---|---|
+| v1 | `JOURNAL_SCHEMA_VERSION = 1` | `event` / `heading` / `fields` | `amadeus-journal.ts:30` |
+| v2 | `JOURNAL_SCHEMA_VERSION_V2 = 2` | `eventName` / `attributes`（`attributes.Event` が旧 `event` 相当） | `amadeus-journal.ts:34`、serializer `:329-345` |
+
+`amadeus-journal.ts:28-30` のコメントは v1 の現役性を逐語で宣言する — 「v1 is the switchover wire format still produced by the live writers (amadeus-audit.ts / amadeus-state.ts); keep this constant at 1 for them.」`JOURNAL_SCHEMA_VERSION_MAX = JOURNAL_SCHEMA_VERSION_V2`（`:36` 相当）が示すとおり、リーダーは MAX 以下の全版を受理する契約である。
+
+### 書き手の2経路（v1 は削除されていない）
+
+**v2 経路**（OTel 由来）: `amadeus-worktree.ts:635` `emitAudit` → `:95` `emitAuditEvent` → `packages/framework/core/otel/audit-emit.ts:48` → `appendAuditEntryViaEvents`。`WORKTREE_DISCARDED` はこの経路で v2 として書かれる。移行コミットは `771afe2a2`（#1850、HEAD 祖先であることを `git merge-base --is-ancestor` で実測確認）。
+
+**v1 経路（現役3箇所）**: `amadeus-audit.ts:534`（lifecycle writer、`schemaVersion: JOURNAL_SCHEMA_VERSION`）/ `amadeus-audit.ts:597`（raw body 経路、`event: null`）/ `amadeus-state.ts:3193`。`INTENT_ARCHIVED` が v1 で書かれることを scan が実測している。
+
+この2経路併存が本 intent の設計上の中核制約である — **v1 キーを v2 キーへ機械置換する修正は誤り**であり、リーダーは両形を正規化して受理する形でなければならない。
+
+### リーダー面の正準様式
+
+共有ハーネス `tests/harness/audit-records.ts` が canonical な正規化を提供する。
+
+- `normalizeAuditRecord`（`:26`）— `schemaVersion !== 2` なら素通し、v2 なら `attributes.Event` を `event` へ、`EVENT_HEADINGS` 経由で `heading` を復元
+- `auditRowsFrom`（`:49`）— shard 本文を行分割して全行正規化（空行のみ skip、他は parse 必須の loud 失敗）
+- `countAuditEvent`（`:57`）— 両スキーマ横断のイベント計数
+
+ヘッダコメントが設計意図を逐語で宣言する — 「a test that hand-parses the JSONL should do the same rather than pin one schema」。既に 59 ファイルがこのハーネスを消費している（`t118.test.ts:219` / `t45-revision-loop.test.ts:161` 等）。
+
+**採用時の構造的注意**: `audit-records.ts:18` は `EVENT_HEADINGS` を `../../dist/claude/.claude/tools/amadeus-audit.ts` から import する。理由はコメントに明記されており、このハーネスが dist + docs + tests のみを持つ sandbox へコピーされるため `packages/` からの import が解決しないことによる。**e2e 層がこのハーネスを採用すると `bun run build` 前提が e2e へ持ち込まれる** — これは設計判断であり、requirements で裁定を要する。
+
+### 検証面の非対称（CI 死角）
+
+`--ci` プロファイルは `tests/lib/run-tests-args.ts:95-100` で `runSmoke` / `runUnit` / `runIntegration` のみを立てる（e2e は含まない）。`.github/workflows/ci.yml:224-227` がこの事実を逐語で認識している — 「The e2e tier is NOT part of `test:ci` (run-tests --ci is smoke+unit+integration), so the shipped plugin install journey would otherwise never run on a PR — which is how #1569 reached a release.」
+
+CI 上で実行される e2e は `ci.yml:252` の `t341-plugin-conformance-journey.serial.test.ts` **1本のみ**であり、全層を回す nightly ジョブは存在しない。したがって **e2e 17ファイルの赤は CI から構造的に不可視**であり、これが #2328 が潜伏した機序である。
+
+## SUBAGENT_STARTED の emit 経路と hook 配線の3面構造（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 本節の測定 ref はすべて observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`（= 本 worktree HEAD）。差分 base は `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0`（distance 2 commits = #2413 修正 + record sync #2416）。全数列挙と行番号 currency の確定は `re-scans/260807-subagent-start-pair.md` を正本とする。
 

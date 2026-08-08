@@ -20,7 +20,7 @@
     ├── amadeus/                                          # オーケストレーターskill
     └── amadeus-<stage-or-scope>/                         # stage runner / scope runner skill
 .claude/                                                  # Claude Codeハーネスのエンジン(生成物・上書き対象)
-├── agents/                                               # 14 agent persona定義(.md)
+├── agents/                                               # 15 agent persona定義(.md)
 │   └── amadeus-<role>-agent.md
 ├── amadeus-common/                                       # ハーネス非依存の共通プロンプト/プロトコル/ステージ定義
 │   ├── conductor.md
@@ -87,7 +87,7 @@
 ├── settings.local.json.example
 └── VERSION
 .codex/                                                   # Codex CLIのエンジン(生成物。ローカルのactive hookは更新時も保持)
-├── agents/                                               # Codex subagent定義(14 role、.md + .toml)
+├── agents/                                               # Codex subagent定義(15 role、.md + .toml)
 │   ├── amadeus-<role>-agent.md
 │   └── amadeus-<role>-agent.toml
 ├── amadeus-common/                                       # .claude/amadeus-common と同じ共通プロンプト/ステージ定義

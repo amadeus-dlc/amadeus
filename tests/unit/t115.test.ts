@@ -313,8 +313,10 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     expect(report.status).toBe(0);
     expect(report.out).toContain('"kind":"done"');
     expect(report.out).toContain("Committed gate-start + approve");
+    // The refusal-visibility observation lands between gate open and approval
+    // whenever autonomy leaves the gate to the human (#2378).
     expect(auditEvents(p)).toContain(
-      "STAGE_AWAITING_APPROVAL GATE_APPROVED STAGE_COMPLETED STAGE_STARTED",
+      "STAGE_AWAITING_APPROVAL INTENT_AUTONOMY_HUMAN_REQUIRED GATE_APPROVED STAGE_COMPLETED STAGE_STARTED",
     );
     expect(countEvent(p, "STAGE_STARTED")).toBe(1);
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");

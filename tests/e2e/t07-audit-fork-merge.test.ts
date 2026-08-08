@@ -88,6 +88,7 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
@@ -246,21 +247,10 @@ function makeFixture(): string {
   return p;
 }
 
-interface AuditRecord {
-  event: string | null;
-  heading: string;
-  timestamp: string;
-  fields?: Record<string, string>;
-  rawBody?: string;
-}
-
 /** Parse a JSONL shard file into records ([] when the file is absent). */
-function records(file: string): AuditRecord[] {
+function records(file: string): NormalizedAuditRecord[] {
   if (!existsSync(file)) return [];
-  return readFileSync(file, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim().length > 0)
-    .map((l) => JSON.parse(l) as AuditRecord);
+  return auditRowsFrom(readFileSync(file, "utf-8"));
 }
 
 /** Count records carrying <event> in a file. */

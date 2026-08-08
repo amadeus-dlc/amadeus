@@ -1,6 +1,41 @@
 # コード構造
 
-## subagent-start 配線面と dispatcher スロット構造（260807-subagent-start-pair、現在、observed `5f2ad9195`）
+## 監査リーダー面の二分構造とテスト層配置（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+
+### リーダー面の二分
+
+監査 JSONL を読むテストは構造的に2群へ分かれる。
+
+```
+tests/
+├── harness/audit-records.ts          ← canonical 正規化（v1/v2 両対応）
+│   └── 消費 59 ファイル               ← 正しい側
+└── e2e/ ほか
+    ├── 自前 JSON.parse（e2e 17）      ← 患部（全て単独実行で fail）
+    └── 自前 JSON.parse（非 e2e 14）   ← 同種、要棚卸し
+```
+
+判別子は import の有無であり、`tests/harness/audit-records.ts` を import するか、ファイル内でローカルに `interface AuditRecord` を定義して `JSON.parse` するか。
+
+### 層配置と実行プロファイルの構造
+
+| 層 | `--ci` 含む | CI 実行 |
+|---|---|---|
+| smoke / unit / integration | あり（`tests/lib/run-tests-args.ts:95-100`） | 全数 |
+| e2e | **なし** | `ci.yml:252` の `t341` 1本のみ |
+| perf | なし（`run-tests.ts:1113` で `--ci` 除外） | — |
+
+nightly の全層ジョブは不在。この層配置が「患部17ファイルが全て赤なのに CI は green」という構造を生む。
+
+### dist 依存の方向
+
+`tests/harness/audit-records.ts:18` は `../../dist/claude/.claude/tools/amadeus-audit.ts` を import する。これは `tests/` → `dist/` への依存であり、source-only 境界下では `dist/` は未追跡のローカル生成物である。現状は integration 層以下がこのハーネスを使うため `bun run build` 済みの前提が満たされているが、**e2e 層へ採用を広げると同じ前提が e2e にも及ぶ**。
+
+### tNNN 名前空間
+
+使用済み最大 `t483`。本 intent の新規テストは **`t484`** から採番する。
+
+## subagent-start 配線面と dispatcher スロット構造（260807-subagent-start-pair、履歴、2026-08-08、observed `5f2ad9195`）
 
 測定 ref は observed `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`、差分 base は `4a3da7d62`（2 commits）。全数列挙は `re-scans/260807-subagent-start-pair.md`。
 

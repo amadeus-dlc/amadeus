@@ -1,0 +1,65 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "C1 のみ採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "C1+C2 採用",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "C1 のみ採用",
+        "count": 2
+      },
+      {
+        "internalNo": 3,
+        "label": "C2 のみ採用",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "採用 0 件",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-07T23:59:36Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASD-CGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "C1 は独立 cid を立てず「消費者棚卸しファミリ」(cid:application-design:dual-key-consumer-inventory)への追補として persist し、適用を「欠陥クラスの患部列挙」に限定すること — 同ファミリは同日 E-TSR-CGS13(セグメント結合形の検索キー軸)が同型で追補された先例があり、軸追加は既存様式に載る。C2 は不採用だが record 側には手続き知識として残すべきで、その際「変換適用前後の署名 byte 同一は『変換起因でない』ことしか示さず、cid:build-and-test:c4-260805-subagent-type-guard が要求する未改変 base の分離 worktree での失敗集合一致の代替にならない」を明記すること(本 CG でも subagent-2 の留保がまさにこれを条件化し、conductor が base a5621236c の分離 worktree で再現して初めて #2456 起票根拠が成立した)。",
+      "rationale": "独立検証(読み取り専用)。【C1 = 採用】E-ASD-CGDEV record の問B と code-summary:11 を照合し、RE 述語 `\\.event\\b` 連言が fields-only pin(t02:116 / t06:179)を構造的に取りこぼし、広げた述語での再測で追加候補ちょうど2件・症状は同一の空読み、患部 17→19 と確定した経緯を確認した(code-summary:19-23 の変更ファイル19件・`git diff --name-only -- tests/` = 19 と整合)。既存射程の判定: (a) cid:application-design:dual-key-consumer-inventory(project.md:239)の本文は「変数名」と「展開後のリテラル」の2キーで、対象は定数・識別子の廃止設計 — 同一データ構造への複数アクセス idiom という軸は本文に無い。(b) 同ファミリは 2026-08-07 の E-TSR-CGS13(project.md:342)で「セグメント結合形」という別の検索キー軸を追補済みであり、軸追加は確立した様式。(c) team.md:199 の enumeration-completeness-review 追補2(E-ASD-RES13)は「使用した検索述語を結果と同じ場所に記録する」= 追跡可能性の要求で、述語そのものの網羅性(どのキーを含めるべきか)は規定していない — 射程は交差せず、C1 は未被覆。よって C1 は追補として persist する価値がある。【C2 = 不採用】code-summary:38/42 を実読し、t113 の赤は変換適用前後で署名 byte 同一、かつ**未改変 base a5621236c の分離 worktree で 1 pass / 3 fail・同一署名 `Expected: \"WORKFLOW_COMPLETED\" / Received: \"INTENT_AUTONOMY_TRANSACTION_COMMITTED\"`** を実測して初めて #2456 起票に至ったことを確認した。すなわち帰属を決定したのは c4-260805 の手続き(base vs HEAD の失敗集合照合)であり、変換前後の署名比較は単独では帰属を閉じていない — E-ASD-CGDEV の subagent-2 留保も逐語で「worktree 内の変換前後 byte 同一署名だけでは足りない」と条件化している。また cid:build-and-test:c4-260805-subagent-type-guard 本文は既に「失敗テスト名の集合を diff で照合」を定めており、署名 byte 同一はその細粒度版に留まる。加えて team.md の ruling-premise-closure-verification(裁定の前提機序が不成立なら実装を止めて再選挙)が、まさに本件で発動した規範であり、C2 の実務はその具体例。単独で成立しない切り分け手段を規範化すると c4 の代替として誤用されうるため、規範化せず record の手続き知識に留めるのが安全。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-07T23:59:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASD-CGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "C1 採用に同意するが留保2件、C2 不採用の条件1件。(1) C1 の persist は独立 cid を立てず cid:application-design:dual-key-consumer-inventory への1行追補とし、既存2キー(変数名/展開後リテラル)との軸差 = 『同一データ構造への複数のアクセス idiom(トップレベル .event / .fields[...] / ブラケット表記など)』である旨を追補文中に明示すること。あわせて E-ASD-RES13 追補(述語記録)との射程差 — あちらは述語の『記録』(事後の裁定可能性)、本追補は述語の『設計』(検索キーの網羅性) — を1句で書き、二重規定として読まれないようにすること。(2) 適用は『欠陥クラスの患部を全数列挙する場合』に限定し、一般の grep 利用へ一律義務化しない(enumeration-completeness-review の E-SDE-FD 追補が置いた適用限定と同型)。(3) C2 不採用は『技法として無価値』の意味ではない — 本 CG の t113 で実際に載ったのは a5621236c の分離 worktree 再現(= c4-260805 の手続き)であり、byte 同一署名は補助証拠だった。将来、base 再現が構造的に不能な場面で byte 同一署名が唯一の帰属根拠になった実測が出たら、その時点で c4 ファミリへの追補として再提案してよい。",
+      "rationale": "3点を独立検証した。(1) C1 の実証は本物: 未改変 base a5621236c で `git show a5621236c:tests/e2e/t02.test.ts`(:115 付近)と `t06.test.ts`(:179 付近)を実読し、いずれも `(JSON.parse(line) as { fields?: Record<string, string> }).fields?.[\"Bolt slug\"]` の fields-only pin で、トップレベル `.event` を一切読まないことを確認した。したがって RE の狭義述語 P4 = `\\.event\\b`(code-summary.md:58 に逐語記録)はこの2件を構造的に取りこぼす一方、症状(v1→v2 schema drift による空読み)は同一であり、患部 17→19 の是正(code-summary.md:11 の E-ASD-CGDEV 問B)は述語設計の欠陥に直接帰属する。(2) C1 は既存射程外: E-ASD-RES13 追補(team.md:199 末尾)は『使用した検索述語(パターン・対象ディレクトリ集合・除外条件の3要素)を結果と同じ場所に記録する』であり、記録は義務化しても網羅性は保証しない — 実際、本 CG では P1〜P5 が逐語記録されていた(= RES13 準拠)にもかかわらず取りこぼしは発生し、発見したのは builder の実装時実測だった。enumeration-completeness-review 本体と enumeration-reverify-at-implementation は『独立に再列挙せよ』という手続き則で、再列挙時に何を振るべきかの正の指針を持たない。その正の指針を与えるのが dual-key-consumer-inventory(project.md — 変数名/リテラルの2キー)であり、C1 はまさに同じ形で軸だけが異なる(消費 idiom 軸)。よって同 cid への追補として採用が妥当。(3) C2 は既存射程内: code-summary.md:38/42 によれば t113 の帰属確定に載った一次証拠は『未改変 base a5621236c の分離 worktree(git worktree add --detach + build)で 1 pass / 3 fail・同一署名』であり、これは cid:build-and-test:c4-260805-subagent-type-guard(project.md:383 — 分離 worktree で失敗テスト集合を diff)の逐語手続きそのもの。『修正適用の前後で署名が変わらない』という観測自体も、cid:code-generation:c1-narrow-fix-post-apply-remeasure(project.md:268 — narrow fix 適用後に元症状を再実測し、残存すれば第2層/別クラスと判定)の射程で読める。加えて規範として弱い: assertion の Expected/Received 文言は機序に対して粗く、機序が変わっても署名が同一になりうるため、byte 同一署名を『クラス独立の証明』と昇格させると、より強い base 差分証拠を置き換える弱い述語を正当化しかねない(検証劇場側への滑り)。よって choice 2(C1 のみ採用)。",
+      "submittedAt": "2026-08-08T00:00:00Z",
+      "receivedAt": "2026-08-07T23:59:28Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -43,6 +43,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import { AMADEUS_SRC, setupIntegrationProject } from "../harness/fixtures.ts";
 // P4: init BIRTHS a per-intent record; state lives under
 // amadeus/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
@@ -113,12 +114,8 @@ const auditText = () => readAllAuditShards(PROJ);
 const statePath = () => join(recordDirOf(PROJ), "amadeus-state.md");
 
 /** Parse the merged JSONL audit shards into records (blank lines skipped). */
-function auditRecords(): Array<Record<string, unknown>> {
-  return auditText()
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+function auditRecords(): NormalizedAuditRecord[] {
+  return auditRowsFrom(auditText());
 }
 
 /** Fields of the FIRST audit record whose `event` matches <ev> ({} when absent). */

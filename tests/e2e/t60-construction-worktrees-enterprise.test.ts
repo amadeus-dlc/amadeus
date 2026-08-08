@@ -71,6 +71,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -160,12 +161,8 @@ function auditText(proj: string): string {
 }
 
 /** The JSONL audit records (blank lines skipped). */
-function auditRecords(proj: string): Array<Record<string, unknown>> {
-  return auditText(proj)
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+function auditRecords(proj: string): NormalizedAuditRecord[] {
+  return auditRowsFrom(auditText(proj));
 }
 
 /** The record whose `event` names `event` (first match, file order). */
