@@ -879,27 +879,36 @@ export function scanParsedSources(parsedSources: readonly ParsedSource[]): Seman
   const checker = program.getTypeChecker();
   const candidates: SourceFindingCandidate[] = [];
   const contractNames = new Map<string, number>();
+  const contractNamesByFile = new Map<string, Map<string, number>>();
   for (const parsed of parsedSources) {
     const sourceFile = program.getSourceFile(parsed.file);
     if (!sourceFile) throw new InfraFailure("RULE_INVALID", `${parsed.file}: TypeScript Program omitted the snapshot`);
     assertStructuralCoverage(parsed, sourceFile);
+    // Scanned paths reach here from path.relative (engine.ts, snapshot capture),
+    // which separates with backslashes on Windows while the catalog is written
+    // with forward slashes. Keying raw would put every host outside the scan
+    // there, skipping the census in silence -- the exact lapse the census exists
+    // to catch. Normalise the separator so the key is about the path.
+    const scannedFile = parsed.file.replaceAll("\\", "/");
+    const perFile = contractNamesByFile.get(scannedFile) ?? new Map<string, number>();
+    contractNamesByFile.set(scannedFile, perFile);
     for (const name of catalogImplementationNames(sourceFile)) {
       contractNames.set(name, (contractNames.get(name) ?? 0) + 1);
+      perFile.set(name, (perFile.get(name) ?? 0) + 1);
     }
     candidates.push(...semanticCandidates(parsed, sourceFile, checker));
   }
   if ([...contractNames.values()].some((count) => count > 1)) {
     throw new InfraFailure("RULE_INVALID", "multiple implementations resolve to one NSD003 catalog contract");
   }
-  // Scanned paths reach here from path.relative (engine.ts, snapshot capture),
-  // which separates with backslashes on Windows while the catalog is written
-  // with forward slashes. Comparing raw would put every host outside the scan
-  // there, skipping the census in silence -- the exact lapse the census exists
-  // to catch. Normalise the separator so the comparison is about the path.
-  const scannedFiles = new Set(parsedSources.map((parsed) => parsed.file.replaceAll("\\", "/")));
+  // Counted PER HOST, not repo-wide: a repo-wide count answers "does this name
+  // exist somewhere", which any same-named helper elsewhere satisfies — so
+  // renaming the catalogued implementation would still read as one match and
+  // pass. The contract is that THIS file declares it, so ask this file.
   for (const entry of NSD003_CATALOG) {
-    if (!scannedFiles.has(entry.file)) continue;
-    if ((contractNames.get(entry.name) ?? 0) !== 1) {
+    const perFile = contractNamesByFile.get(entry.file);
+    if (perFile === undefined) continue; // host outside this scan's inputs
+    if ((perFile.get(entry.name) ?? 0) !== 1) {
       throw new InfraFailure(
         "RULE_INVALID",
         `NSD003 catalog entry resolves to no implementation: ${entry.name} (${entry.file})`,

@@ -634,6 +634,20 @@ describe("no-silent-drop AST rules", () => {
     expect(() => scanParsedSources([parseSource(ast, host.file, renamed)]))
       .toThrow("NSD003 catalog entry resolves to no implementation: setCheckbox");
     expect(() => scanParsedSources([parseSource(ast, "fixture.ts", renamed)])).not.toThrow();
+
+    // A same-named helper elsewhere must not stand in for the host's own
+    // declaration: counted repo-wide, this scan has exactly one setCheckbox and
+    // the rename reads as fine. The contract is about THIS file.
+    const decoy = `
+      type ValidatedStageState = { readonly validated: true };
+      export function setCheckbox(state: ValidatedStageState, slug: string, desired: string) {
+        return { kind: "changed", content: desired };
+      }
+    `;
+    expect(() => scanParsedSources([
+      parseSource(ast, host.file, renamed),
+      parseSource(ast, "elsewhere.ts", decoy),
+    ])).toThrow("NSD003 catalog entry resolves to no implementation: setCheckbox");
   });
 
   test("semantic scan rejects structural omissions and escaping evidence paths", () => {
