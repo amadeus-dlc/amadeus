@@ -202,7 +202,11 @@ describe("intent lifecycle transaction CLI", () => {
     expect(readFileSync(fixture.audit, "utf-8")).toBe(beforeAudit);
   });
 
-  test("rejects duplicate HUMAN_TURN timestamps before journal creation", () => {
+  // #2585. Second-granular audit timestamps make two HUMAN_TURN blocks in one
+  // second a normal input, so the scan treats the pair as the single consumable
+  // slot the ledger already identifies by shard + timestamp, instead of
+  // refusing the operation outright.
+  test("resolves duplicate HUMAN_TURN timestamps without wedging", () => {
     const fixture = scaffold("in-flight");
     writeFileSync(
       fixture.audit,
@@ -216,9 +220,31 @@ describe("intent lifecycle transaction CLI", () => {
         ),
     );
     const result = run(fixture.root, "archive", fixture.intent);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Ambiguous HUMAN_TURN timestamp");
+    expect(result.status, result.stderr).toBe(0);
+    expect(registryStatus(fixture.root)).toBe("archived");
+    const archived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_ARCHIVED");
+    expect(archived).toHaveLength(1);
+    expect(archived[0]!.fields?.["Human Turn Timestamp"]).toBe("2026-07-23T10:00:00Z");
+  });
+
+  // #2585 regression pin: a same-second collision between turns that are ALREADY
+  // consumed must not lock the record out. The consumed/resolution filter runs
+  // before any tie handling, so a fresh later turn stays selectable.
+  test("stays usable when the duplicated HUMAN_TURN timestamps are already consumed", () => {
+    const fixture = scaffold("archived");
+    writeFileSync(
+      fixture.audit,
+      readFileSync(fixture.audit, "utf-8") +
+        ledgerLine(2, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:00Z", fixture.intent) +
+        lifecycleEventBlock("123e4567-e89b-42d3-a456-426614174111", fixture.intent, 3) +
+        ledgerLine(4, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:02Z", fixture.intent),
+    );
+    const result = run(fixture.root, "unarchive", fixture.intent);
+    expect(result.status, result.stderr).toBe(0);
     expect(registryStatus(fixture.root)).toBe("in-flight");
+    const unarchived = auditRecords(fixture.audit).filter((r) => r.event === "INTENT_UNARCHIVED");
+    expect(unarchived).toHaveLength(1);
+    expect(unarchived[0]!.fields?.["Human Turn Timestamp"]).toBe("2026-07-23T10:00:02Z");
   });
 
   test("rejects invalid source statuses without consuming the turn", () => {
