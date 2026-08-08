@@ -24,9 +24,13 @@ an exhaustive TLC exploration of a declared TLA+ model, driven by the
 the opt-in boundary, so once composed it is reachable via
 `amadeus-orchestrate next --stage formal-model-check` — `--single` optional
 (U6 activation-policy, FR-7(a)). It never joins a stock scope's workflow and
-never runs on `push` / `pull_request`. Amadeus never runs it automatically: the
-engine only emits a spec-hash advisory nudge when the watched spec changed
-(ADR-1 option A, U6).
+never runs on `push` / `pull_request`. When the watched spec changed, the
+engine emits a spec-hash advisory nudge (ADR-1 option A, U6); whether that
+advisory starts a run depends on the Intent autonomy mode: under `none` a
+human decides whether to run it; under `semi` or `full` the advisory is routed
+through the autonomy ladder as a `question` occurrence
+(`amadeus-advisory-choice.ts`), and a `run-now` decision starts the check
+unattended — any other ladder outcome falls back to the human.
 
 ## Stage body
 
