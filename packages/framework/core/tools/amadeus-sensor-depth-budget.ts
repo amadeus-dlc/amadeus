@@ -185,8 +185,8 @@ export function readRecordDepth(outputPath: string, projectDir: string): string 
     // when it yields no usable Depth: continuing would let an ancestor record
     // answer for this one, measuring the artifact against a ceiling from a
     // different workflow. No Depth here means fail-open, not "ask upstairs".
-    const state = stateFileIn(dir);
-    if (state !== null) return depthFrom(state);
+    const here = readStateHere(dir);
+    if (here.found) return here.depth;
     if (dir === root) return undefined;
     const parent = dirname(dir);
     // Stop at the filesystem root too, so a pathological input terminates
@@ -196,26 +196,23 @@ export function readRecordDepth(outputPath: string, projectDir: string): string 
   }
 }
 
-/** This directory's amadeus-state.md, or null when there is no readable regular
- *  file there — the signal the walk uses to keep climbing. */
-function stateFileIn(dir: string): string | null {
+/** One directory's worth of the walk. `found` tells the caller whether to stop;
+ *  `depth` is the canonical level, absent when the file carries no usable one.
+ *
+ *  A state file we cannot READ still counts as found: it is this record's state,
+ *  so the walk stops and measures nothing rather than letting an ancestor answer
+ *  for a record whose own answer was merely unreadable. Only the absence of a
+ *  state file here — or a path that is not a regular file — keeps the walk
+ *  going. Kept as one try so the failure path is a single branch. */
+function readStateHere(dir: string): { found: boolean; depth?: string } {
   const candidate = join(dir, "amadeus-state.md");
-  if (!existsSync(candidate)) return null;
+  if (!existsSync(candidate)) return { found: false };
   try {
-    return statSync(candidate).isFile() ? candidate : null;
+    if (!statSync(candidate).isFile()) return { found: false };
+    const match = readFileSync(candidate, "utf-8").match(/^-\s+\*\*Depth\*\*:\s*(.*)$/m);
+    return { found: true, depth: canonicalDepth(match?.[1]) };
   } catch {
-    return null;
-  }
-}
-
-/** The canonical Depth recorded in a state file, or undefined when the field is
- *  absent, unrecognizable, or the file cannot be read. */
-function depthFrom(statePath: string): string | undefined {
-  try {
-    const match = readFileSync(statePath, "utf-8").match(/^-\s+\*\*Depth\*\*:\s*(.*)$/m);
-    return canonicalDepth(match?.[1]);
-  } catch {
-    return undefined;
+    return { found: true };
   }
 }
 

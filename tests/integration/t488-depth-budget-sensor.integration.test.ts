@@ -386,6 +386,29 @@ describe("t488 readRecordDepth", () => {
     expect(readRecordDepth(out, tmp)).toBeUndefined();
   });
 
+  test("an UNREADABLE record state still stops the walk — no ancestor answers for it", () => {
+    // The nearest-state rule holds even when the nearest state cannot be read:
+    // it is still this record's state. Climbing past it would measure the
+    // artifact against an ancestor's ceiling on the strength of a permission
+    // error, which is exactly the wrong-workflow measurement being prevented.
+    const outer = join(tmp, "outer-unreadable");
+    mkdirSync(outer, { recursive: true });
+    writeFileSync(join(outer, "amadeus-state.md"), "- **Depth**: Comprehensive\n");
+    const record = join(outer, "intents", "260808-unreadable-inner");
+    const stageDir = join(record, "inception", "requirements-analysis");
+    mkdirSync(stageDir, { recursive: true });
+    const state = join(record, "amadeus-state.md");
+    writeFileSync(state, "- **Depth**: Minimal\n");
+    chmodSync(state, 0o000);
+    try {
+      const out = join(stageDir, "requirements.md");
+      writeFileSync(out, requirements(1, 100));
+      expect(readRecordDepth(out, tmp)).toBeUndefined();
+    } finally {
+      chmodSync(state, 0o600);
+    }
+  });
+
   test("a state file that cannot be READ yields undefined rather than throwing", () => {
     // Distinct from the case above: here the path IS a regular file, so the
     // walk gets past the isFile guard and the read itself fails. Without the
