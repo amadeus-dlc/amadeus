@@ -106,10 +106,21 @@ jobs:
             }
 
             for (const label of [...existing].filter((name) => managed.has(name) && !desired.has(name))) {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                name: label,
-              });
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: label,
+                });
+              } catch (error) {
+                // The webhook payload's label snapshot can go stale against
+                // GitHub's live state within the time this job takes to run
+                // (observed ~10s TOCTOU window, #2561). A DELETE 404 means the
+                // label is already gone — the intended end state — so this is
+                // idempotent, symmetric with addLabels. Any other status
+                // (403/429/5xx/...) stays fail-closed and aborts the run.
+                if (error?.status !== 404) throw error;
+                core.info(`removeLabel(${label}) 404: already absent, treating as success`);
+              }
             }
