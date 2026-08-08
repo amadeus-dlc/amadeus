@@ -287,7 +287,11 @@ function fixture(options: FixtureOptions = {}) {
       "",
       "- **Project**: Project status sync",
       `- **Lifecycle Phase**: ${options.lifecyclePhase ?? "CONSTRUCTION"}`,
+      // A completed record keeps Current Stage on the stage the workflow ended
+      // on; completion is carried by In Progress and Next Stage going none.
       "- **Current Stage**: code-generation",
+      `- **In Progress**: ${registryStatus === "complete" ? "none" : "code-generation"}`,
+      "- **Next Stage**: none",
       `- **Status**: ${registryStatus === "complete" ? "Completed" : "Running"}`,
       `- **Last Updated**: ${NOW}`,
       "",

@@ -17,6 +17,7 @@ import {
   type DriveMirrorBoundaryInput,
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import {
+  buildMirrorStatusRecordView,
   resolveMirrorRecordIdentity,
   runMirrorLifecycleBoundary,
   runMirrorLifecycleMain,
@@ -237,10 +238,11 @@ function adapterFixture(
   const recordPath = join(intentsPath, intentDir);
   mkdirSync(recordPath, { recursive: true });
   const statePath = join(recordPath, "amadeus-state.md");
-  const workflowStatus =
-    registryStatus === "complete" ? "Completed" : "Running";
-  const currentStage =
-    registryStatus === "complete" ? "none" : "scope-definition";
+  const complete = registryStatus === "complete";
+  const workflowStatus = complete ? "Completed" : "Running";
+  // A completed record keeps Current Stage on the stage the workflow ended on —
+  // the completion writer only clears In Progress and Next Stage.
+  const currentStage = complete ? "build-and-test" : "scope-definition";
   writeFileSync(
     statePath,
     [
@@ -249,6 +251,8 @@ function adapterFixture(
       "- **Project**: Adapter lifecycle",
       "- **Lifecycle Phase**: INCEPTION",
       `- **Current Stage**: ${currentStage}`,
+      `- **In Progress**: ${complete ? "none" : "scope-definition"}`,
+      "- **Next Stage**: none",
       `- **Status**: ${workflowStatus}`,
       `- **Last Updated**: ${NOW}`,
       "",
@@ -314,7 +318,7 @@ function boundaryInput(
         intentDir: "amadeus/spaces/default/intents/demo",
         projectSummary: "Mirror the complete Intent lifecycle",
         lifecyclePhase: kind === "completion" ? "OPERATION" : "INCEPTION",
-        currentStage: kind === "completion" ? "none" : "scope-definition",
+        currentStage: kind === "completion" ? "build-and-test" : "scope-definition",
         status: kind === "completion" ? "Completed" : "Running",
         registryStatus: kind === "completion" ? "complete" : "in-flight",
         updatedAt: NOW,
@@ -668,7 +672,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
       "- **Current Stage**: none\n",
     ],
     [
-      "completed workflow with a current stage",
+      "completed workflow still holding an in-progress stage",
       "- **Status**: Running\n",
       "- **Status**: Completed\n",
     ],
@@ -687,6 +691,51 @@ describe("t282 awaitable production lifecycle adapter", () => {
         space: fx.space,
         intentDir: fx.intentDir,
         boundary: { kind: "phase-verified", phase: "inception", instance: "invalid-snapshot" },
+      },
+      {
+        gateway: new LifecycleGateway(),
+        ports: fx.ports,
+        now: () => NOW,
+      },
+    );
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("lifecycle snapshot"),
+    });
+  });
+
+  // #2252 — the completion writer leaves Current Stage on the stage the
+  // workflow ended on, so a legitimate completed record must resolve instead of
+  // failing closed. Completion is asserted through In Progress and Next Stage.
+  test("resolves a completed record that kept its final stage slug", () => {
+    const fx = adapterFixture("platform", "260725-done-a1b2c3d4", "complete");
+    const view = buildMirrorStatusRecordView(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        repository: REPO,
+      },
+      { ports: fx.ports, now: () => NOW },
+    );
+    expect(view).toMatchObject({ kind: "ok", currentStatus: "Completed" });
+  });
+
+  test("fails closed when a completed record still names a next stage", async () => {
+    const fx = adapterFixture("platform", "260725-done-a1b2c3d4", "complete");
+    writeFileSync(
+      fx.statePath,
+      readFileSync(fx.statePath, "utf-8").replace(
+        "- **Next Stage**: none\n",
+        "- **Next Stage**: deployment-execution\n",
+      ),
+    );
+    const result = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: { kind: "workflow-completed", instance: "unterminated-next-stage" },
       },
       {
         gateway: new LifecycleGateway(),

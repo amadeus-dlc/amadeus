@@ -357,18 +357,32 @@ function snapshotCurrentStage(content: string): string {
   );
 }
 
+// Terminal fields the completion writer clears when it finishes a workflow.
+// Current Stage is deliberately absent: the writer leaves it on the final stage
+// slug so the record keeps a record of where the workflow ended.
+const SNAPSHOT_TERMINAL_FIELDS = ["In Progress", "Next Stage"] as const;
+
 function assertSnapshotConsistency(
+  content: string,
   status: "Running" | "Completed",
   currentStage: string,
   completion: ReturnType<typeof workflowCompletionPreparation>,
 ): void {
-  const workflowMismatch =
-    (status === "Running" && currentStage === "none") ||
-    (status === "Completed" && currentStage !== "none");
-  if (workflowMismatch) {
+  if (status === "Running" && currentStage === "none") {
     throw new Error(
       `lifecycle snapshot Status ${status} is inconsistent with Current Stage ${currentStage}`,
     );
+  }
+  if (status === "Completed") {
+    const unterminated = SNAPSHOT_TERMINAL_FIELDS
+      .map((field) => ({ field, value: getField(content, field)?.trim() || "(missing)" }))
+      .filter((entry) => entry.value !== "none");
+    if (unterminated.length > 0) {
+      throw new Error(
+        `lifecycle snapshot Status ${status} is inconsistent with ` +
+          unterminated.map((entry) => `${entry.field} ${entry.value}`).join(" and "),
+      );
+    }
   }
   const completionMismatch = completion?.status === "pending" &&
     (status !== "Running" || completion.stage !== currentStage);
@@ -387,7 +401,7 @@ function lifecycleSnapshot(
   const status = snapshotWorkflowStatus(target.stateContent);
   const currentStage = snapshotCurrentStage(target.stateContent);
   const completion = workflowCompletionPreparation(target.stateContent);
-  assertSnapshotConsistency(status, currentStage, completion);
+  assertSnapshotConsistency(target.stateContent, status, currentStage, completion);
   return {
     intentUuid: target.intentUuid,
     intentDir: target.intentDir,
