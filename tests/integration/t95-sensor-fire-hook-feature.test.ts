@@ -89,6 +89,11 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
+import {
+  firedSensorIdsFrom,
+  frameworkGraphPath,
+  sensorsFiringFor as sensorsFiringForStage,
+} from "../helpers/stage-sensor-fire-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
@@ -109,31 +114,14 @@ function pinnedShardName(): string {
       .slice(0, 48) || "host";
   return `${host}-${PINNED_CLONE_ID}.jsonl`;
 }
-const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = frameworkGraphPath(AMADEUS_SRC);
 
-/** Which of requirements-analysis's sensors the hook should fire for a given
- *  write, computed the way the hook itself decides: match each sensor's
- *  `matches` glob against the (normalized) path. Derived from the shipped graph
- *  rather than pinned, so adding a sensor to the stage does not turn these
- *  fire-path tests red for an unrelated reason.
- *
- *  Returns the ID SET, not a bare count: a count alone would still agree with
- *  the observed spawns if a sensor silently dropped out of the stage or its
- *  glob stopped matching, because expectation and reality would fall together.
- *  The callers assert membership as well as size. */
+/** Sensors the hook should fire for a requirements-analysis write. */
 function sensorsFiringFor(filePath: string): string[] {
-  const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
-    slug: string;
-    sensors_applicable?: { id: string; matches?: string }[];
-  }[];
-  const stage = graph.find((s) => s.slug === "requirements-analysis");
-  if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
-  const norm = filePath.replace(/\\/g, "/");
-  return (stage.sensors_applicable ?? [])
-    .filter((s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm))
-    .map((s) => s.id)
-    .sort();
+  return sensorsFiringForStage(FRAMEWORK_GRAPH, "requirements-analysis", filePath);
 }
+
+
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -307,9 +295,7 @@ function dropsPath(proj: string): string {
  *  is visible as a membership difference rather than two numbers agreeing on
  *  the wrong value. */
 function firedSensorIds(proj: string): string[] {
-  return spawnArgvs(proj)
-    .map((argv) => argv[argv.indexOf("fire") + 1])
-    .sort();
+  return firedSensorIdsFrom(spawnArgvs(proj));
 }
 
 describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — spawnSync)", () => {

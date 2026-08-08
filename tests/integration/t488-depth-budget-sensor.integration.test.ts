@@ -53,6 +53,11 @@ import {
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-depth-budget.md");
+// chmod 000 is the portable way to make a read fail — but root ignores mode
+// bits, so those cases would silently assert the wrong thing there. One shared
+// guard rather than a per-case skip (the repo's existing isRoot idiom).
+const isRoot = typeof process.getuid === "function" && process.getuid() === 0;
+
 const STAGE_FILE = join(
   REPO_ROOT,
   "packages/framework/core/amadeus-common/stages/inception/requirements-analysis.md",
@@ -386,7 +391,7 @@ describe("t488 readRecordDepth", () => {
     expect(readRecordDepth(out, tmp)).toBeUndefined();
   });
 
-  test("an UNREADABLE record state still stops the walk — no ancestor answers for it", () => {
+  test.skipIf(isRoot)("an UNREADABLE record state still stops the walk — no ancestor answers for it", () => {
     // The nearest-state rule holds even when the nearest state cannot be read:
     // it is still this record's state. Climbing past it would measure the
     // artifact against an ancestor's ceiling on the strength of a permission
@@ -409,13 +414,13 @@ describe("t488 readRecordDepth", () => {
     }
   });
 
-  test("a state file that cannot be READ yields undefined rather than throwing", () => {
+  test.skipIf(isRoot)("a state file that cannot be READ yields undefined rather than throwing", () => {
     // Distinct from the case above: here the path IS a regular file, so the
     // walk gets past the isFile guard and the read itself fails. Without the
     // catch, an unreadable state would take the whole sensor down instead of
-    // leaving it fail-open. chmod 000 produces EACCES portably for a non-root
-    // process; the precondition is asserted so a root environment reports that
-    // rather than silently leaving the branch undriven.
+    // leaving it fail-open. chmod 000 yields EACCES for a non-root process; the
+    // isRoot guard above keeps this case off the one environment where mode
+    // bits do not apply.
     const record = join(tmp, "amadeus", "spaces", "default", "intents", "260808-unreadable");
     const stageDir = join(record, "inception", "requirements-analysis");
     mkdirSync(stageDir, { recursive: true });

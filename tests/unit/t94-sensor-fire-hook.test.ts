@@ -99,30 +99,22 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { seedSensorInvocation } from "../helpers/sensor-invocation-fixture.ts";
+import {
+  firedSensorIdsFrom,
+  frameworkGraphPath,
+  sensorsFiringFor as sensorsFiringForStage,
+} from "../helpers/stage-sensor-fire-fixture.ts";
 
 const BUN = process.execPath; // the bun running this test
 const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
-const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = frameworkGraphPath(AMADEUS_SRC);
 
-/** How many of requirements-analysis's sensors the hook should fire for a given
- *  write, computed the way the hook itself decides: match each sensor's
- *  `matches` glob against the (normalized) path. Derived from the shipped graph
- *  rather than pinned, so adding a sensor to the stage does not turn this
- *  fire-path test red for an unrelated reason. The floor keeps the derivation
- *  from vacuously passing at zero. */
+/** Sensors the hook should fire for a requirements-analysis write. */
 function sensorsFiringFor(filePath: string): string[] {
-  const graph = JSON.parse(readFileSync(FRAMEWORK_GRAPH, "utf-8")) as {
-    slug: string;
-    sensors_applicable?: { id: string; matches?: string }[];
-  }[];
-  const stage = graph.find((s) => s.slug === "requirements-analysis");
-  if (stage === undefined) throw new Error("requirements-analysis missing from the shipped graph");
-  const norm = filePath.replace(/\\/g, "/");
-  return (stage.sensors_applicable ?? [])
-    .filter((s) => s.matches !== undefined && s.matches !== "" && new Bun.Glob(s.matches).match(norm))
-    .map((s) => s.id)
-    .sort();
+  return sensorsFiringForStage(FRAMEWORK_GRAPH, "requirements-analysis", filePath);
 }
+
+
 
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
 // emits the trailing Z; we anchor on the date+T to match the .sh's
@@ -335,7 +327,10 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
       .filter(Boolean);
     // Compared as an ID SET: a bare count would still agree if a sensor dropped
     // out of the stage, because expectation and reality would fall together.
-    expect(lines.map((l) => (JSON.parse(l) as string[])[3]).sort()).toEqual(sensorsFiringFor(filePath));
+    const fired = firedSensorIdsFrom(lines.map((l) => JSON.parse(l) as string[]));
+    expect(fired).toEqual(sensorsFiringFor(filePath));
+    // Named explicitly for the same reason: both sides are graph-derived.
+    expect(fired).toContain("depth-budget");
     const firstArgv = JSON.parse(lines[0]) as string[];
     expect(firstArgv.slice(2)).toEqual([
       "fire",
