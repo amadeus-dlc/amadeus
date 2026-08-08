@@ -91,14 +91,32 @@ describe("t499 spawn boundary fails closed", () => {
   test("bun really does return status 0 alongside an error", () => {
     // Grounds the synthesised outcome below: with a buffer small enough that the child finishes
     // before the overflow kill lands, bun reports success and a truncated stdout at the same time.
-    const measured = spawnSync("/bin/sh", ["-c", "printf 'abcdefgh'"], {
-      encoding: "utf8",
-      env: process.env,
-      maxBuffer: 2,
-    });
-    expect(measured.status).toBe(0);
-    expect(measured.error).toBeDefined();
-    expect((measured.error as Error & { code?: string }).code).toBe("ENOBUFS");
+    //
+    // That "before" is a race the child usually wins and a loaded machine can lose: when the
+    // SIGTERM lands first the same overflow surfaces as status null instead. A single sample
+    // therefore grounds nothing reliably -- it made this test fail on the coverage runner, whose
+    // instrumentation load flips the schedule. Sampling until the exit-0 shape appears keeps the
+    // claim the fix rests on (bun does pair a success status with an error) while making the
+    // race's other side a non-event: every attempt still has to report the ENOBUFS overflow, so
+    // a genuine change in bun's behaviour is caught on the first attempt rather than tolerated.
+    const attempts = 25;
+    let successWithError: ReturnType<typeof spawnSync> | null = null;
+    for (let i = 0; i < attempts && successWithError === null; i += 1) {
+      const measured = spawnSync("/bin/sh", ["-c", "printf 'abcdefgh'"], {
+        encoding: "utf8",
+        env: process.env,
+        maxBuffer: 2,
+      });
+      // Invariant on every sample, whoever wins the race: the overflow is reported, never dropped.
+      expect(measured.error).toBeDefined();
+      expect((measured.error as Error & { code?: string }).code).toBe("ENOBUFS");
+      // The child either finished first (status 0) or was killed by the overflow (status null).
+      expect(measured.status === 0 || measured.status === null).toBe(true);
+      if (measured.status === 0) successWithError = measured;
+    }
+    expect(successWithError).not.toBeNull();
+    expect(successWithError?.status).toBe(0);
+    expect(successWithError?.error).toBeDefined();
   });
 
   test("an exit-0 spawn that reports an error is not a success", () => {
