@@ -5917,7 +5917,6 @@ function resyncOneIntent(
   );
   if (inserted.some((slug) => !rowSlugsAfter.has(slug))) return outcome("section-unrecognized");
   next = rebuildDerivedPlanFields(next, graph, planOf).content;
-  next = setField(next, "Last Updated", isoTimestamp());
   writeStateFile(projectDir, next, intent, space);
   return outcome("resynced", inserted);
 }

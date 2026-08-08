@@ -3914,6 +3914,10 @@
         {
           "file": "tests/integration/t411-compose-invalid-graph-visibility.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t500-resync-last-updated-preservation.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
