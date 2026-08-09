@@ -56,12 +56,13 @@ At the start of every session, check for these two conditions before doing anyth
    ```bash
    mise trust && bun install --frozen-lockfile && bun run build
    ```
-   `bun run build` regenerates the self-install surface, including `.codex/hooks.json.example`, and auto-creates the active `.codex/hooks.json` from it when one is not already present — so on this path the next checklist item is handled for you.
+   `bun run build` regenerates the self-install surface, including `.codex/hooks.json.example`, and auto-creates the active `.codex/hooks.json` from it when one is not already present — no separate activate command is needed on this path. Then continue to step 3: the restart requirement below applies to this branch too.
 2. **`.codex/tools/` exists but `.codex/hooks.json` is missing** — run:
    ```bash
    bun .codex/tools/amadeus-codex-hooks.ts activate
    ```
-   then **tell the user a task restart (same worktree) is required, and stop**: an already-running Codex task does not reload `hooks.json`, so activating it mid-task leaves the UserPromptSubmit hook dark until the next task starts. The engine's `$amadeus next` fails fast with this same message (Issue #2703, fixed in PR #2709) if it is reached first.
+   The engine's `$amadeus next` fails fast with this same guidance (Issue #2703, fixed in PR #2709) if it is reached first.
+3. **If either step above created `.codex/hooks.json` during THIS task, tell the user a task restart (same worktree) is required, and stop**: an already-running Codex task does not reload `hooks.json`, so a hooks file created mid-task — by `bun run build` or by `activate`, it makes no difference — leaves the UserPromptSubmit hook dark until the next task starts.
    - **Restart correctly**: the restart must be a same-directory task fork that keeps this worktree (Codex App: `fork_thread`), never a fresh-thread creation that opens a NEW worktree (Codex App: `create_thread`) — the latter throws away everything this checklist just did (install, build, activate) and starts the whole bootstrap over in a different directory.
    - **Carry the handoff verbatim**: when forking/restarting, the handoff message to the new task must include the ORIGINAL instructions in full — scope, intent name, and Issue references verbatim — never a paraphrase or summary. A dropped or reworded scope silently changes what gets built.
 

@@ -136,11 +136,18 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
     expect(rendered).toContain("## Fresh worktree / clone checklist");
     // Branch 1: `.codex/tools/` missing → bootstrap this repo's own self-development worktree.
     expect(rendered).toContain("mise trust && bun install --frozen-lockfile && bun run build");
-    // Branch 2: `.codex/tools/` present but `.codex/hooks.json` missing → activate + restart.
+    // Branch 2: `.codex/tools/` present but `.codex/hooks.json` missing → activate.
     expect(rendered).toContain("bun .codex/tools/amadeus-codex-hooks.ts activate");
-    expect(rendered).toContain("task restart (same worktree) is required");
     expect(rendered).toContain("Issue #2703");
     expect(rendered).toContain("PR #2709");
+    // Step 3 — CodeRabbit review (PR #2718): the restart requirement applies to
+    // BOTH creation paths. A hooks.json created mid-task by `bun run build` is
+    // just as dark as one created by `activate`; branch 1 must not read as
+    // "handled for you, keep going".
+    expect(rendered).toContain("the restart requirement below applies to this branch too");
+    expect(rendered).toContain("If either step above created");
+    expect(rendered).toContain("task restart (same worktree) is required");
+    expect(rendered).toContain("by `bun run build` or by `activate`, it makes no difference");
     // Team-lead ruling (incident: 3 worktrees churned, 25 minutes lost):
     // restart must fork the SAME directory, never open a new worktree.
     expect(rendered).toContain("fork_thread");
