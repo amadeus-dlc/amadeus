@@ -154,14 +154,19 @@ async function forwardToHook(hookPath: string, args: string[], input: string): P
     process.on(signal, handler);
   }
 
-  let exitCode: number;
-  try {
+  const writeInput = async (): Promise<void> => {
     try {
       child.stdin.write(input);
       await child.stdin.end();
     } catch (error) {
-      if (!isBrokenPipe(error)) throw error;
+      if (isBrokenPipe(error)) return;
+      throw error;
     }
+  };
+
+  let exitCode: number;
+  try {
+    await writeInput();
     exitCode = await child.exited;
   } finally {
     for (const [signal, handler] of handlers) process.off(signal, handler);
