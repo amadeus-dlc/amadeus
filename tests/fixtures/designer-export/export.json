@@ -173,7 +173,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -222,6 +223,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -253,7 +260,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -296,6 +304,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -345,7 +359,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -391,6 +406,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -432,7 +453,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -479,6 +501,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -518,7 +546,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -562,6 +591,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -603,7 +638,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -648,6 +684,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -714,7 +756,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -759,6 +802,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -792,7 +841,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -845,6 +895,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -909,7 +965,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -955,6 +1012,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1011,6 +1074,7 @@
         "required-sections",
         "upstream-coverage",
         "answer-evidence",
+        "question-budget",
         "depth-budget"
       ],
       "scopes": [
@@ -1071,6 +1135,12 @@
           "category": "governance"
         },
         {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
           "id": "depth-budget",
           "path": ".claude/sensors/amadeus-depth-budget.md",
           "matches": "**/inception/requirements-analysis/requirements.md",
@@ -1121,7 +1191,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1168,6 +1239,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1220,7 +1297,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1266,6 +1344,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1322,7 +1406,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1370,6 +1455,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1428,7 +1519,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1476,6 +1568,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1540,7 +1638,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1586,6 +1685,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1666,7 +1771,8 @@
         "upstream-coverage",
         "linter",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1729,6 +1835,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -1797,6 +1909,7 @@
         "linter",
         "type-check",
         "answer-evidence",
+        "question-budget",
         "nfr-budget"
       ],
       "scopes": [
@@ -1858,6 +1971,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         },
@@ -1942,6 +2061,7 @@
         "linter",
         "type-check",
         "answer-evidence",
+        "question-budget",
         "nfr-budget"
       ],
       "scopes": [
@@ -2003,6 +2123,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         },
@@ -2101,7 +2227,8 @@
         "upstream-coverage",
         "linter",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2161,6 +2288,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -2227,6 +2360,7 @@
         "linter",
         "type-check",
         "answer-evidence",
+        "question-budget",
         "event-registry-drift",
         "self-scope-consistency"
       ],
@@ -2288,6 +2422,12 @@
           "category": "governance"
         },
         {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
           "id": "event-registry-drift",
           "path": ".claude/sensors/amadeus-event-registry-drift.md",
           "matches": "**/{event-registry,amadeus-audit}.ts",
@@ -2339,7 +2479,8 @@
         "required-sections",
         "upstream-coverage",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2401,6 +2542,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -2441,7 +2588,8 @@
         "upstream-coverage",
         "linter",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2501,6 +2649,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -2545,7 +2699,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2593,6 +2748,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
         }
       ]
     },
@@ -2635,7 +2796,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2680,6 +2842,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -2728,7 +2896,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2774,6 +2943,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -2828,7 +3003,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2872,6 +3048,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -2921,7 +3103,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -2964,6 +3147,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -3015,7 +3204,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -3058,6 +3248,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }
@@ -3117,7 +3313,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "answer-evidence"
+        "answer-evidence",
+        "question-budget"
       ],
       "scopes": [
         "enterprise",
@@ -3160,6 +3357,12 @@
         {
           "id": "answer-evidence",
           "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "question-budget",
+          "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
           "category": "governance"
         }

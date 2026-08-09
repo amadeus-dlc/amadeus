@@ -870,14 +870,20 @@ function emitTerminal(
 // the PostToolUse Write/Edit hook applies the same filter at fire time. This is a tiny
 // bespoke matcher — not a full minimatch — because the patterns we ship
 // are constrained to suffix + brace-expansion shapes.
-/** depth-budget's extra flag: the record's resolved depth, read by walking UP
- *  from the output path to amadeus-state.md. The per-sensor script gets only
- *  --stage/--output-path and must not guess the record root itself. A missing
- *  state, a missing Depth field, or an unrecognizable value yields no flag, and
- *  the sensor then passes fail-open (advisory). Kept out of handleFire so the
- *  dispatcher's per-sensor arm list does not grow that function's complexity. */
+/** The sensors that measure against a per-depth row of the §8 Depth-Level
+ *  Contract, and therefore need the record's resolved depth: depth-budget
+ *  (bytes per requirement) and question-budget (questions per stage). */
+const DEPTH_READING_SENSORS = new Set(["depth-budget", "question-budget"]);
+
+/** The depth-reading sensors' extra flag: the record's resolved depth, read by
+ *  walking UP from the output path to amadeus-state.md. The per-sensor script
+ *  gets only --stage/--output-path and must not guess the record root itself. A
+ *  missing state, a missing Depth field, or an unrecognizable value yields no
+ *  flag, and the sensor then passes fail-open (advisory). Kept out of handleFire
+ *  so the dispatcher's per-sensor arm list does not grow that function's
+ *  complexity. */
 export function depthBudgetArgs(id: string, outputPath: string, projectDir: string): string[] {
-	if (id !== "depth-budget") return [];
+	if (!DEPTH_READING_SENSORS.has(id)) return [];
 	const depth = readRecordDepth(outputPath, projectDir);
 	return depth === undefined ? [] : ["--depth", depth];
 }

@@ -139,9 +139,9 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // (linter, type-check, answer-evidence since the E-OC1 evidence guard,
   // event-registry-drift since the VER-1 drift guard + self-scope-consistency
   // since the self-scope rename guard).
-  test("basic-import: code-generation has 5 resolved sensors", () => {
+  test("basic-import: code-generation has 6 resolved sensors", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
-    expect(stageBySlug(stages, "code-generation").sensors_applicable).toHaveLength(5);
+    expect(stageBySlug(stages, "code-generation").sensors_applicable).toHaveLength(6);
   });
 
   // Case 2 (.sh:68-70): resolved entries carry id and .claude/... path.
@@ -204,6 +204,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "linter",
       "type-check",
       "answer-evidence",
+      "question-budget",
     ]);
   });
 
@@ -274,13 +275,13 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // Case 13 (.sh:170-173): unknown manifest keys tolerated; sensors still resolve.
   test("unknown-keys-tolerated: compile succeeds; sensors still resolve", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "unknown-keys-tolerated"));
-    expect(stageBySlug(stages, "intent-capture").sensors_applicable).toHaveLength(3);
+    expect(stageBySlug(stages, "intent-capture").sensors_applicable).toHaveLength(4);
   });
 
   // Case 14 (.sh:175-178): BOM-prefixed frontmatter parses correctly.
   test("BOM-frontmatter: leading BOM byte does not break the parser", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "bom-frontmatter"));
-    expect(stageBySlug(stages, "intent-capture").sensors_applicable).toHaveLength(3);
+    expect(stageBySlug(stages, "intent-capture").sensors_applicable).toHaveLength(4);
   });
 
   // Case 15 (.sh:180-187): round-trip determinism — same input, identical JSON.
@@ -341,15 +342,15 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
     expect(keys[idx + 1]).toBe("sensors_applicable");
   });
 
-  // Case 19 (.sh:230-241): per-stage matrix — code-generation=5, build-and-test=4,
+  // Case 19 (.sh:230-241): per-stage matrix — code-generation=6, build-and-test=5,
   // workspace-scaffold=0 (initialization stays sensors: [] — E-APG-AD-DEV
   // re-ruling (i): 29 participating stages, init 3 excluded), functional-design=5.
-  test("per-stage matrix: CG=5, BT=4, WS=0, FD=5", () => {
+  test("per-stage matrix: CG=6, BT=5, WS=0, FD=6", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
-    expect(stageBySlug(stages, "code-generation").sensors_applicable.length).toBe(5);
-    expect(stageBySlug(stages, "build-and-test").sensors_applicable.length).toBe(4);
+    expect(stageBySlug(stages, "code-generation").sensors_applicable.length).toBe(6);
+    expect(stageBySlug(stages, "build-and-test").sensors_applicable.length).toBe(5);
     expect(stageBySlug(stages, "workspace-scaffold").sensors_applicable.length).toBe(0);
-    expect(stageBySlug(stages, "functional-design").sensors_applicable.length).toBe(5);
+    expect(stageBySlug(stages, "functional-design").sensors_applicable.length).toBe(6);
   });
 
   // Direct-unit reinforcement (not a distinct .sh case, but pins the units the
@@ -365,6 +366,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "event-registry-drift",
       "linter",
       "nfr-budget",
+      "question-budget",
       "required-sections",
       "self-scope-consistency",
       "type-check",

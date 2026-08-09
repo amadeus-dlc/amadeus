@@ -34,6 +34,7 @@ sensors:
   - required-sections
   - upstream-coverage
   - answer-evidence
+  - question-budget
   - depth-budget
 scopes:
   - enterprise

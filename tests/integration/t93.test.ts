@@ -105,6 +105,7 @@ const EXPECTED_IDS = [
   "model-completeness",
   "nfr-budget",
   "pr-convergence-report-format",
+  "question-budget",
   "required-sections",
   "self-scope-consistency",
   "type-check",
