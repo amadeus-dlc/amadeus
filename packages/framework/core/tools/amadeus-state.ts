@@ -128,6 +128,7 @@ import {
   verifyMintedPresenceReservation,
 } from "./amadeus-presence-reservation.ts";
 import {
+  loadGraph,
   memoryDirFor,
   parseConstructionIteration,
   requiredArtifactsForUnit,
@@ -1617,6 +1618,170 @@ export function handleCount(args: string[]): void {
 
 function artifactGuardDisabled(): boolean {
   return process.env.AMADEUS_SKIP_ARTIFACT_GUARD === "1";
+}
+
+// --- Blocking sensor gate (#2671 (c)) ---------------------------------------
+//
+// A sensor manifest declares `default_severity: advisory | blocking`. Advisory
+// is the framework default and the severity every shipped manifest carries: the
+// sensor records SENSOR_* audit rows and never affects the workflow. `blocking`
+// makes the sensor's verdict a precondition of stage completion, checked here on
+// the single approve chokepoint (approveUnderLock) so both approve arms — the
+// targeted-human path and the ordinary one — are covered by one guard.
+//
+// Severity reaches this guard through the compiled stage graph
+// (SensorResolution.severity), NOT the audit row: the SENSOR_* field contract is
+// pinned at 8 fields and stays unchanged, so a reader of the trail alone cannot
+// distinguish severities. The graph is the sole carrier.
+//
+// Bypass: AMADEUS_SKIP_BLOCKING_SENSOR_GUARD=1, the same shape as the artifact
+// guard's own switch and independent of it (a fixture that wants artifacts
+// unchecked does not thereby want sensor verdicts unchecked).
+
+// Enforcement cutoff, mirroring the E-OC1 questions-evidence gate: intents are
+// dated by their record dir name (YYMMDD-...), and only intents born on or after
+// the guard's adoption day are enforced. Without it, adopting a blocking sensor
+// would retroactively block every in-flight intent whose stages were sensed
+// before the severity existed. Exported so the guard's own tests pin the same
+// constant the guard reads rather than a copy.
+export const BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809;
+
+// The events that close a SENSOR_FIRED pair. Only SENSOR_PASSED clears an
+// output: SENSOR_BUDGET_OVERRIDE closes the pair but reports that the sensor ran
+// out of budget, which is not a verdict of "clean". The order matters for the
+// equal-timestamp tie-break in sensorRowsForStage — PASSED is listed before
+// FAILED so a tie resolves to the failure.
+const SENSOR_TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"] as const;
+
+export type BlockingSensorFinding =
+  | { kind: "never-fired"; sensorId: string }
+  | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null };
+
+type SensorAuditRow = { event: string; sensorId: string; outputPath: string };
+
+type TimedSensorRow = { ts: string; row: SensorAuditRow };
+
+// Named rather than an inline arrow: the complexity baseline matches anonymous
+// functions by ordinal position, so a new arrow anywhere in this file renumbers
+// every later anonymous entry and reports a pre-existing violation as new.
+// Every helper below follows the same rule (plain loops, named comparators).
+function compareSensorRowTime(a: TimedSensorRow, b: TimedSensorRow): number {
+  if (a.ts === b.ts) return 0;
+  return a.ts < b.ts ? -1 : 1;
+}
+
+// Collect this stage's SENSOR_* rows for the sensors we care about, in
+// chronological order. findAllEvents already sorts each event type by timestamp
+// across shards; merging the per-event lists needs one more stable sort so a
+// FAILED and a later PASSED on the same output are read in the order they
+// happened. Equal timestamps keep the SENSOR_TERMINAL_EVENTS enumeration order,
+// which puts FAILED after PASSED — a second-granularity tie therefore resolves
+// to the failure, the fail-closed direction.
+function sensorRowsForStage(
+  audit: string,
+  stageSlug: string,
+  wanted: ReadonlySet<string>,
+): SensorAuditRow[] {
+  const collected: TimedSensorRow[] = [];
+  for (const event of ["SENSOR_FIRED", ...SENSOR_TERMINAL_EVENTS]) {
+    for (const { timestamp, block } of findAllEvents(audit, event)) {
+      if (auditBlockField(block, "Stage slug") !== stageSlug) continue;
+      const sensorId = auditBlockField(block, "Sensor ID");
+      if (sensorId === null || !wanted.has(sensorId)) continue;
+      const outputPath = auditBlockField(block, "Output path") ?? "";
+      collected.push({ ts: timestamp, row: { event, sensorId, outputPath } });
+    }
+  }
+  collected.sort(compareSensorRowTime);
+  const ordered: SensorAuditRow[] = [];
+  for (const entry of collected) ordered.push(entry.row);
+  return ordered;
+}
+
+// Decide whether a stage's blocking sensors permit completion. Returns the first
+// finding that refuses, or null when every blocking sensor is settled clean.
+//
+// Two refusal shapes, both fail-closed:
+//   never-fired — the sensor produced no SENSOR_FIRED for this stage at all.
+//     "It never ran" is not evidence that it would pass. A sensor whose
+//     `matches` glob excludes every artifact this stage wrote is NOT this case
+//     and is not judged here: SENSOR_FIRED presence is what marks an output as
+//     in scope, so a legitimately non-applicable output is simply never asked
+//     about — while a sensor that never applied to anything is refused.
+//   unresolved — some fired output's latest terminal is not SENSOR_PASSED
+//     (a FAILED, a budget override, or no terminal at all).
+export function evaluateBlockingSensors(
+  blockingSensorIds: readonly string[],
+  audit: string,
+  stageSlug: string,
+): BlockingSensorFinding | null {
+  const wanted = new Set(blockingSensorIds);
+  if (wanted.size === 0) return null;
+  const rows = sensorRowsForStage(audit, stageSlug, wanted);
+  for (const sensorId of blockingSensorIds) {
+    const firedOutputs: string[] = [];
+    const latestTerminal = new Map<string, string>();
+    for (const row of rows) {
+      if (row.sensorId !== sensorId) continue;
+      if (row.event === "SENSOR_FIRED") {
+        if (!firedOutputs.includes(row.outputPath)) firedOutputs.push(row.outputPath);
+        continue;
+      }
+      latestTerminal.set(row.outputPath, row.event);
+    }
+    if (firedOutputs.length === 0) return { kind: "never-fired", sensorId };
+    for (const outputPath of firedOutputs) {
+      const terminal = latestTerminal.get(outputPath) ?? null;
+      if (terminal === "SENSOR_PASSED") continue;
+      return { kind: "unresolved", sensorId, outputPath, terminal };
+    }
+  }
+  return null;
+}
+
+function blockingSensorGuardDisabled(): boolean {
+  return process.env.AMADEUS_SKIP_BLOCKING_SENSOR_GUARD === "1";
+}
+
+// The blocking sensor ids the compiled graph resolves for a stage. Reads the
+// same sensors_applicable array the PostToolUse fire hook dispatches from, so
+// the set that gates approval is by construction the set that fires.
+function blockingSensorIdsForStage(slug: string): string[] {
+  const ids: string[] = [];
+  for (const node of loadGraph()) {
+    if (node.slug !== slug) continue;
+    for (const row of node.sensors_applicable ?? []) {
+      if (row.severity === "blocking") ids.push(row.id);
+    }
+  }
+  return ids;
+}
+
+const BLOCKING_SENSOR_REMEDY =
+  "Fire the sensor and resolve its finding before completing the stage: " +
+  "amadeus-sensor.ts fire <sensor-id> --stage <slug> --output-path <artifact>.";
+
+export function verifyBlockingSensors(pd: string, stage: { slug: string; name: string }): void {
+  if (blockingSensorGuardDisabled()) return;
+  const blocking = blockingSensorIdsForStage(stage.slug);
+  if (blocking.length === 0) return;
+  const rd = operationRecordDir(pd);
+  const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
+  const enforced = intentDate !== null && Number.isFinite(intentDate) && intentDate >= BLOCKING_SENSOR_CUTOFF_YYMMDD;
+  if (!enforced) return;
+  const finding = evaluateBlockingSensors(blocking, operationReadAudit(pd), stage.slug);
+  if (finding === null) return;
+  if (finding.kind === "never-fired") {
+    let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
+    message += `"${finding.sensorId}" has no SENSOR_FIRED row for this stage, so its verdict is `;
+    message += `unknown. A blocking sensor that never ran is not a pass. ${BLOCKING_SENSOR_REMEDY}`;
+    error(message);
+  }
+  const terminal = finding.terminal ?? "no terminal row";
+  let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
+  message += `"${finding.sensorId}" has an unresolved verdict (${terminal}) on `;
+  message += `${finding.outputPath}. ${BLOCKING_SENSOR_REMEDY}`;
+  error(message);
 }
 
 // Resolve the directories a stage's produces[] artifacts would live under,
@@ -3707,6 +3872,11 @@ function approveUnderLock(
   validateSlugInState(content, slug, "awaiting-approval");
 
   verifyStageArtifacts(pd, stage);
+  // After the artifacts exist, before anything else: a blocking sensor judges
+  // the artifacts, so asking "is the verdict clean" is only meaningful once
+  // "did the stage produce anything" has been answered. Both approve arms
+  // (targeted-human and ordinary) reach this one call.
+  verifyBlockingSensors(pd, stage);
   const initialScopeIssue = approvalScopeIssue(content);
   if (initialScopeIssue !== null) failApprovalCommitValidation(initialScopeIssue);
   const authorization = authorizeApproval(pd, content, stage, override);

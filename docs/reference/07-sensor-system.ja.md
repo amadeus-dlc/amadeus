@@ -94,7 +94,7 @@ timeout_seconds: 5                           # optional
 | `id` | ✓ | kebab-case文字列 | ファイル名の語幹から `amadeus-` プレフィックスを除いたものに等しい。ルールファイルの `pairing:` フィールドから相互参照される([ルールシステム](08-rule-system.ja.md)を参照)。 |
 | `kind` | ✓ | enum | 現在は `deterministic` のみ受け付ける。`llm` は v0.11.0 の LLM-dispatch 章のために予約。下記の[`kind` enum](#kind-enum)を参照。 |
 | `command` | ✓ | string | 正典の呼び出しプレフィックス — 出荷された各センサーは自身のper-sensorスクリプトを名指しする(例 `bun .claude/tools/amadeus-sensor-required-sections.ts`)。ディスパッチャ(`amadeus-sensor.ts`)は `--stage <slug>` に加え、センサーの入力形状に一致するファイルフラグを追加する: document センサーは `--output-path <path>`、code センサー(`linter`、`type-check`)は `--file-path <path>`。 |
-| `default_severity` | ✓ | enum | 現在は `advisory` のみ受け付ける。`blocking` は将来の ralph-driver 作業のために予約。 |
+| `default_severity` | ✓ | enum | `advisory` または `blocking`。advisory は判定を記録するだけ、blocking はさらにステージの承認をゲートする。 |
 | `description` | ✓ | string | 1行の人間向け説明。 |
 | `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`formal-verification`、`framework-integrity` を使う。閉じたenumではない)。 |
 | `matches` | optional | glob文字列 | PostToolUse フックが発火時に消費する能力フィルタ。下記の[`matches` フィルタ](#matches-filter)を参照。 |
@@ -233,13 +233,32 @@ code-qualityセンサーはそれぞれの言語globに、drift/consistency 系�
 
 ## `default_severity`
 
-`advisory` が唯一の有効な値です。アドバイザリーなセンサーの
+有効な値は `advisory` と `blocking` の2つです。アドバイザリーなセンサーの
 失敗は監査行 + 詳細ファイルを生成しますが、ステージのゲートや
-ユーザーのワークフローをブロックしません。
+ユーザーのワークフローをブロックしません。フレームワークが出荷する
+マニフェストはすべて `advisory` を宣言しています。
 
-`blocking` は将来の ralph ドライバーのために予約されています。
-ドライバーが着地するまで、このフィールドは構造的には存在しますが意味的には
-単一値です。
+`blocking` はセンサーの判定をステージ完了の前提条件にします。
+`amadeus-state.ts approve` は、そのセンサーが発火した出力のいずれかで
+最新の終端イベントが `SENSOR_PASSED` でない間、ステージを拒否します。
+さらに fail-closed として、そのステージに `SENSOR_FIRED` が1件も
+記録されていない場合も拒否します — 一度も走っていない blocking センサーは
+パスではありません。指摘を修正してセンサーを再発火すればその出力は解消され、
+判定は `(Sensor ID, Output path)` 単位で、`Stage slug` によって
+当該ステージへ絞られます。
+
+severity が遡及的・不可視に作用しないよう、2つの境界を置いています:
+
+- **運搬** — severity はコンパイル済みグラフ
+  (`sensors_applicable[].severity`)を通り、`SENSOR_*` 監査行には
+  載りません(監査行のフィールド契約は不変)。行が出力されるのは
+  `blocking` のときだけで、`severity` の不在はフレームワークの
+  デフォルトを意味します。
+- **enforcement cutoff** — ゲートの対象は、record ディレクトリの日付が
+  導入日(`amadeus-state.ts` の `BLOCKING_SENSOR_CUTOFF_YYMMDD`)以降の
+  intent に限られます(E-OC1 の questions-evidence ゲートと同型)。
+  `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD=1` はこのゲートをバイパスします
+  (artifact guard 自身のスイッチと同じ形)。
 
 ---
 
@@ -335,7 +354,7 @@ selections-file はリプレイの成果物です: クラッシュした persist
 | `id` | ユーザーのフリーテキストから導出(kebab-case化) | |
 | `kind` | `deterministic` | 現在唯一の受け付けられる値 |
 | `command` | `bun .claude/tools/amadeus-sensor-<id>.ts` | プレースホルダーのper-sensorスクリプト。ユーザーがチェックを実装するスクリプトに更新する |
-| `default_severity` | `advisory` | 現在唯一の受け付けられる値 |
+| `default_severity` | `advisory` | `blocking` は承認をゲートする。スキャフォールドの既定は advisory |
 | `description` | ユーザーのフリーテキストから | |
 | `category` | `""` | 希望すればユーザーが記入 |
 | `matches` | 発火にはglobが必須 | スキャフォールドはセンサーが適用されるglob形状(artifact-tree globまたは `**/*.ts` のようなcode glob)を求める。`matches` のないエントリは決して発火しない |
@@ -380,18 +399,20 @@ enum型のフィールド(`default_severity`)にも適用されます。
 
 ## 将来のリリースのために予約
 
-いくつかのセンサー能力はスキーマ内で予約されていますが、まだ
+1つのセンサー能力はスキーマ内で予約されていますが、まだ
 アクティブではありません。着地したときにフィールド形状が安定するようにするためです:
 
 - **`kind: llm` ディスパッチ** — LLM評価センサー(v0.11.0)。
   スキーマは現在 `kind` を受け付けますが、`deterministic` 以外の値は
   パース時に拒否します。
-- **`blocking` severity** — アドバイザリーテレメトリを記録するのではなく
-  ゲートを停止するセンサー失敗(v0.10.0 ralph ドライバー)。現在は
-  `advisory` が唯一の受け付けられる値です。
 
-いずれも書き込み時に強制されます: 今それらを使うマニフェストを出荷することは
+これは書き込み時に強制されます: 今それを使うマニフェストを出荷することは
 パーサが拒否する作者のエラーです。
+
+`blocking` severity はもはや予約ではありません — 実装済みで、上記の
+[`default_severity`](#default_severity) に記述しています。出荷される
+マニフェストで宣言しているものはなく、フレームワークのセンサーへ採用するかは
+センサーごとの別判断です。
 
 ## 次のステップ
 
