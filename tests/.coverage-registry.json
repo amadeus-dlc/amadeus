@@ -6029,6 +6029,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t514-codex-mint-presence-chain.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t33.test.ts",
           "mechanism": "cli"
         }

@@ -2870,6 +2870,49 @@ function refuseUnauthorizedKimiCaller(
   return true;
 }
 
+// The two Codex hook faces, by relative path. The canonical example is tracked;
+// the active file is per-clone runtime state and gitignored, so a fresh clone or
+// worktree carries the example alone until someone activates it. Kept as plain
+// literals rather than an import: core stays harness-neutral and must not depend
+// on packages/framework/harness/codex. The contract that owns these two paths
+// (and their names) is amadeus-codex-hooks-contract.ts — CANONICAL_HOOKS_PATH
+// and ACTIVE_HOOKS_PATH there; keep the literals below in step with it.
+const CODEX_CANONICAL_HOOKS_RELATIVE_PATH = ".codex/hooks.json.example";
+const CODEX_ACTIVE_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
+
+// Issue #2703 — on Codex, hooks fire only from `.codex/hooks.json`. Without it
+// the UserPromptSubmit hook never runs, so no HUMAN_TURN is ever minted and the
+// workflow deadlocks silently at the first human checkpoint: `amadeus-log
+// answer` and `amadeus-bolt set-autonomy` refuse on a provenance guard whose
+// cause is nowhere near the command that failed. Refuse at `next` instead, where
+// the fix is still cheap. Inert on every other harness and on any project that
+// carries no Codex projection at all.
+//
+// The recovery command runs a tool inside the harness tree, so it is built
+// through harnessDir() rather than a hardcoded literal (the t153 seam) — on the
+// only harness that reaches this line that resolves to `.codex`.
+function refuseInactiveCodexHooks(projectDir: string | undefined): boolean {
+  if (detectHarnessType() !== "codex") return false;
+  const pd = resolveProjectDir(projectDir);
+  if (!existsSync(join(pd, CODEX_CANONICAL_HOOKS_RELATIVE_PATH))) return false;
+  if (existsSync(join(pd, CODEX_ACTIVE_HOOKS_RELATIVE_PATH))) return false;
+  emitStateNeutralError(
+    `Codex hooks are not active: ${CODEX_ACTIVE_HOOKS_RELATIVE_PATH} is missing, so no Amadeus hook fires and no HUMAN_TURN is recorded — the workflow would stall at the first human checkpoint. ` +
+      `Run \`bun ${harnessDir()}/tools/amadeus-codex-hooks.ts activate\`, then restart the Codex task: an already-running task does not reload hooks.json.`,
+  );
+  return true;
+}
+
+// Both `next` preconditions in one call site: the caller-authorization guard
+// runs first (it decides whether this process may speak for the workflow at
+// all), then the Codex hooks-activation guard. Composed here rather than as two
+// statements in handleNext so the handler's decision count — already at the
+// complexity ratchet's recorded ceiling — is unchanged.
+function refuseBlockedNextEnvironment(projectDir: string | undefined): boolean {
+  if (refuseUnauthorizedKimiCaller(projectDir)) return true;
+  return refuseInactiveCodexHooks(projectDir);
+}
+
 // Reads the Kiro readonly latch and turn counter; returns the command label
 // when the latch is fresh (stamped for the CURRENT turn), null otherwise.
 // Advisory: any failure returns null so a real `next` is never blocked. Inert
@@ -2910,7 +2953,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // Per-invocation latch: an in-process driver reuses this module across calls,
   // so a carry left behind by a previous run must never leak into this one.
   _pendingAutonomyCarry = null;
-  if (refuseUnauthorizedKimiCaller(projectDir)) return;
+  if (refuseBlockedNextEnvironment(projectDir)) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
