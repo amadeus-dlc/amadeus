@@ -49,21 +49,38 @@ stay silent in the other.
 ## Measurement
 
 Total UTF-8 bytes divided by the number of distinct numbered functional
-requirements. Requirements are counted in the three forms the stage contract
-allows:
+requirements. Requirements are counted in the forms the corpus uses to declare
+an id:
 
 - `### FR-1: <title>` (heading, two to four hashes)
 - `- **FR-1**: <title>` (bold list entry)
 - `**FR-1**: <title>` (bold line)
+- `- FR-1: <title>` (plain list entry)
+- `| FR-1 | <title> |` (Markdown table row)
 
 The id may carry a domain prefix — `FR-AUTH-1`, `FR-QRP-3`, `FR-GRT-004` — which
-is how the corpus overwhelmingly writes them, but it must END on a numeric
-segment: `FR-AUTH` alone and `FR-AUTH-1x` are not numbered requirements. Nothing
-is required to follow a valid id: a colon, an em dash, or a parenthesised title
-inside the same bold run all read the same. An earlier pattern demanded a digit
-straight after `FR-` and a closing `**` right after the id; over the corpus
-population below it undercounted 17 of 132 artifacts and read 14 as carrying no
-requirements at all.
+is how the corpus overwhelmingly writes them, and letters may be fused onto the
+final digits (`FR-A1`, `FR-B2`). It must END on those digits: `FR-AUTH` alone,
+`FR-AUTH-1x` and `FR-2b` are not numbered requirements. Nothing is required to
+follow a valid id in the heading, bold and table forms: a colon, an em dash, or
+a parenthesised title inside the same bold run all read the same.
+
+The two forms without a `**` boundary carry their own:
+
+- A **table row** declares in its FIRST cell only, so a dependency or notes
+  column naming `FR-09` stays the cross-reference it is, and the header
+  (`| FR ID |`) and separator (`|---|`) are rejected without needing to be
+  recognised as table furniture.
+- A **plain list entry** must reach a colon, optionally through one
+  parenthesised gloss (`- FR-A3（再発防止）: …`), so
+  `- FR-GRT-006(full grant の確認儀式)は不変` reads as prose about an id it does
+  not declare.
+
+Two earlier pattern sets each undercounted the corpus. The first demanded a
+digit straight after `FR-` and a closing `**` right after the id; it missed 17
+of 132 artifacts and read 14 as carrying no requirements. The second kept the
+three `**`-bounded forms only; over the population below it read 7 artifacts as
+carrying no requirements at all and undercounted 3 more (#2534).
 
 Distinct ids are counted, so restating `FR-1` in a later cross-reference does
 not inflate the denominator — which would otherwise make an over-long document
@@ -73,15 +90,18 @@ look proportionate.
 
 Measured by applying this sensor's own predicate (post-fix counting) to every
 `amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md`
-— 132 files, of which 125 carry `FR-n` ids; one of those has no recognizable
-`Depth` and is excluded from the per-level rows below. The other 124 are
-paired with the `**Depth**` recorded in their intent's `amadeus-state.md`:
+— 133 files, all of which carry `FR-n` ids; one has no recognizable `Depth` and
+is excluded from the per-level rows below. The other 132 are paired with the
+`**Depth**` recorded in their intent's `amadeus-state.md`:
 
 | Depth | Ceiling | min | median | max | Flags |
 |---|---|---|---|---|---|
-| Minimal (n=72) | 1,800 B per FR | 861 | 1,930 | 6,544 | 42/72 |
-| Standard (n=52) | 2,400 B per FR | 429 | 1,654 | 12,844 | 7/52 |
+| Minimal (n=74) | 1,800 B per FR | 681 | 1,857 | 6,544 | 40/74 |
+| Standard (n=58) | 2,400 B per FR | 428 | 1,546 | 3,354 | 6/58 |
 | Comprehensive | none | — | — | — | — |
+
+Both ceilings are unchanged by the #2534 widening — they were re-checked
+against the corrected numbers, not re-derived from them.
 
 Both ceilings sit **inside** their level's observed range, which is what makes
 each a detector rather than a verdict: above the minimum so it says something
