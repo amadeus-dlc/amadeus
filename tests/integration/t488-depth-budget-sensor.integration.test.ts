@@ -140,13 +140,17 @@ describe("t488 depth-budget manifest", () => {
 
 // Measured with this sensor's own predicate over every
 // `amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md`
-// (132 files), each paired with its record's `**Depth**` field. 125 carry FR
-// ids under the fixed counting (this PR's final pattern, numeric-final-segment
-// included); one of those has no recognizable depth and drops out of the
-// per-level rows:
+// (133 files), each paired with its record's `**Depth**` field. ALL 133 carry
+// FR ids under the current patterns (table rows and fused ids included, #2534);
+// one has no recognizable depth and drops out of the per-level rows:
 //
-//   Minimal  n=72  min  861  p25 1587  median 1930  max  6544 B/FR
-//   Standard n=52  min  429  p25 1256  median 1654  max 12844 B/FR
+//   Minimal  n=74  min  681  p25 1513  median 1857  max 6544 B/FR
+//   Standard n=58  min  428  p25 1191  median 1546  max 3354 B/FR
+//
+// Both levels move DOWN from the previous measurement because the widened
+// patterns find requirements the old ones missed, and the count is the
+// denominator. Standard's maximum falls hardest (12,844 -> 3,354): its old
+// extreme was a table-form artifact read as carrying a single requirement.
 //
 // These replace an earlier set taken while prefixed ids went uncounted, which
 // inflated every figure and was quoted without its search predicate — the
@@ -160,8 +164,8 @@ describe("t488 depth-budget manifest", () => {
 // which ones are outliers; above the maximum it reports nothing at all. The
 // original Minimal ceiling of 1,200 flagged every artifact then measured — a
 // permanently red signal, which is noise rather than a detector.
-const MINIMAL_OBSERVED = { min: 861, p25: 1587, median: 1930, max: 6544 };
-const STANDARD_OBSERVED = { min: 429, median: 1654, max: 12844 };
+const MINIMAL_OBSERVED = { min: 681, p25: 1513, median: 1857, max: 6544 };
+const STANDARD_OBSERVED = { min: 428, median: 1546, max: 3354 };
 
 describe("t488 depth-budget thresholds", () => {
   test("each ceiling discriminates — it sits inside its level's observed range", () => {
@@ -351,6 +355,84 @@ describe("t488 depth-budget FR counting", () => {
 
   test("a repeated id counts once (a cross-reference is not a new requirement)", () => {
     const body = ["### FR-1: the requirement", "z".repeat(50), "### FR-1: restated later", "z".repeat(50)].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(1);
+  });
+});
+
+// REGRESSION (#2534): seven corpus artifacts wrote every requirement in a form
+// the three shipped patterns could not see, so each measured as carrying NO
+// requirements at all. Two forms account for all seven: a Markdown table whose
+// first cell is the id, and a fused id (`FR-A1`) whose final segment mixes
+// letters and digits instead of ending on a bare number. The bodies below are
+// the real shapes, quoted from those artifacts.
+describe("t488 depth-budget FR counting — table and fused-id forms", () => {
+  test("counts ids written as the first cell of a table row", () => {
+    const body = [
+      "| ID | 要件 |",
+      "|---|---|",
+      "| FR-01 | 共通selector |",
+      "y".repeat(50),
+      "| FR-EVT-1 | Event Registry |",
+      "y".repeat(50),
+      "| FR-HAR-001 | harness 契約 |",
+      "y".repeat(50),
+    ].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(3);
+  });
+
+  test("a table header or separator row is not a requirement", () => {
+    // `| FR ID |` names the column; `|---|` draws the rule. Counting either
+    // would invent requirements out of table furniture.
+    const body = ["| FR ID | 要件 |", "|---|---|", "| FR-01 | the only requirement |", "y".repeat(50)].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(1);
+  });
+
+  test("an id mentioned in a later cell is a reference, not a definition", () => {
+    // Only the FIRST cell declares. A dependency column naming FR-09 must not
+    // add a requirement the document never defines.
+    const body = ["| FR-01 | depends on | FR-09 |", "y".repeat(50)].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(1);
+  });
+
+  test("counts fused ids in bold-list and plain-list forms", () => {
+    const body = [
+      "- **FR-A1(移設)**: `scripts/formal-verif/` を移設する",
+      "y".repeat(50),
+      "- FR-B2: dispatch tool 語彙の両受理",
+      "y".repeat(50),
+      "- FR-A3（再発防止）: 新規 drift ガードテストを追加する",
+      "y".repeat(50),
+    ].join("\n");
+    expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(3);
+  });
+
+  test("a fused id still has to end on its digits", () => {
+    // `FR-A` carries no number and `FR-A1x` does not end on one, so neither is
+    // an addressable numbered requirement.
+    const body = ["### FR-A: 配布自立化", "y".repeat(50), "- **FR-A1x**: trailing letter", "y".repeat(50)].join("\n");
+    const result = evaluateDepthBudget(writeRequirements(body), "Minimal");
+    expect(result.fr_count).toBe(0);
+    expect(result.reason).toBe("no-numbered-frs");
+  });
+
+  test("a plain-list line only declares when a label delimiter follows the id", () => {
+    // `- FR-3 は削除する` is prose about FR-3, not its declaration. Without the
+    // delimiter the plain-list form would count every passing mention.
+    const body = ["- FR-3 は本 intent のスコープ外", "y".repeat(50)].join("\n");
+    const result = evaluateDepthBudget(writeRequirements(body), "Minimal");
+    expect(result.fr_count).toBe(0);
+    expect(result.reason).toBe("no-numbered-frs");
+  });
+
+  test("a parenthesised gloss does not stand in for the label colon", () => {
+    // Quoted from the corpus: this line glosses an id decided elsewhere and
+    // declares nothing. Only the entry that reaches a colon is a declaration.
+    const body = [
+      "- FR-GRT-006(full grant の確認儀式)は不変 — #2253 既決",
+      "y".repeat(50),
+      "- FR-GRT-007（新規）: 本 intent が定める要件",
+      "y".repeat(50),
+    ].join("\n");
     expect(evaluateDepthBudget(writeRequirements(body), "Minimal").fr_count).toBe(1);
   });
 });

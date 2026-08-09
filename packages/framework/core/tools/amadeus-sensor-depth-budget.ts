@@ -28,21 +28,27 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 /** Bytes per numbered FR each depth may spend. Measured with this sensor's own
  *  predicate (post-fix counting) over every
  *  `amadeus/spaces/default/intents/<record>/inception/requirements-analysis/requirements.md`
- *  — 132 files, 125 carrying FR ids, each paired with its record's Depth:
+ *  — 133 files, all of them carrying FR ids, each paired with its record's
+ *  Depth:
  *
- *    Minimal  n=72  min  861  p25 1587  median 1930  max  6544 B/FR
- *    Standard n=52  min  429  p25 1256  median 1654  max 12844 B/FR
+ *    Minimal  n=74  min  681  p25 1513  median 1857  max 6544 B/FR
+ *    Standard n=58  min  428  p25 1191  median 1546  max 3354 B/FR
  *
  *  Both ceilings sit INSIDE their level's observed range, which is what makes
  *  each a detector rather than a verdict. Where they sit within that range
  *  differs on purpose:
  *
- *  - Minimal 1,800 is BELOW its median (1,930), flagging 42/72. Minimal is the
+ *  - Minimal 1,800 is BELOW its median (1,857), flagging 40/74. Minimal is the
  *    level the inversion is about — it spends more per requirement than
  *    Standard while declaring less detail — so its ceiling pulls the level down.
- *  - Standard 2,400 is ABOVE its median (1,654), flagging 7/52. Standard's
+ *  - Standard 2,400 is ABOVE its median (1,546), flagging 6/58. Standard's
  *    current volume was judged reasonable, so its ceiling catches the tail
  *    rather than the middle.
+ *
+ *  Both ceilings are UNCHANGED by the #2534 pattern widening: they were
+ *  re-checked against the corrected numbers rather than re-derived from them,
+ *  since a threshold moved in the same change that fixed its denominator could
+ *  not be told apart from one tuned to the new numbers.
  *
  *  An earlier Minimal of 1,200 sat under the minimum of the narrower corpus
  *  then measured and flagged every artifact — a permanently red signal says
@@ -96,9 +102,9 @@ function verdict(
 
 const NONE = { fr_count: 0, bytes: 0, bytes_per_fr: 0 };
 
-/** The three ways the stage contract lets a requirement carry its id:
- *  `### FR-1: …` (heading), `- **FR-1**: …` (bold list entry), and a bare
- *  `**FR-1**: …` line.
+/** The forms the corpus uses to declare a requirement's id: `### FR-1: …`
+ *  (heading), `- **FR-1**: …` (bold list entry), a bare `**FR-1**: …` line,
+ *  `- FR-1: …` (plain list entry), and `| FR-1 | … |` (Markdown table row).
  *
  *  The id itself may carry a DOMAIN PREFIX — `FR-AUTH-1`, `FR-QRP-3`,
  *  `FR-GRT-004` — which is how the corpus overwhelmingly writes them. An
@@ -112,18 +118,38 @@ const NONE = { fr_count: 0, bytes: 0, bytes_per_fr: 0 };
  *  Distinct ids are counted, so restating one in a later cross-reference does
  *  not inflate the denominator (which would make an over-long document look
  *  proportionate). */
-const FR_ID = "((?:[A-Za-z0-9]+-)*[0-9]+)(?![A-Za-z0-9-])";
-// The final segment must be NUMERIC — `FR-AUTH` alone is not a numbered
-// requirement, and `FR-AUTH-1x` does not end on its number — while what
-// follows a valid id — `:`, ` — `,
-// a parenthesised title, or the closing `**` — is not constrained. The corpus
-// writes `- **FR-AUTH-1(semi 専用 authorization 型の新設)** — …`, keeping the
-// title INSIDE the bold run, so a pattern demanding `**` right after the id
-// matches almost nothing.
+const FR_ID = "((?:[A-Za-z0-9]+-)*[A-Za-z]*[0-9]+)(?![A-Za-z0-9-])";
+// The final segment must END ON DIGITS — `FR-AUTH` alone is not a numbered
+// requirement, and `FR-AUTH-1x` does not end on its number. Letters may be
+// FUSED onto those digits (`FR-A1`, `FR-B2`) because the corpus writes group
+// ids that way, but only ahead of them: `FR-2b` still fails, so a suffixed
+// variant is not mistaken for a requirement of its own. What FOLLOWS a valid
+// id — `:`, ` — `, a parenthesised title, or the closing `**` — is not
+// constrained. The corpus writes
+// `- **FR-AUTH-1(semi 専用 authorization 型の新設)** — …`, keeping the title
+// INSIDE the bold run, so a pattern demanding `**` right after the id matches
+// almost nothing.
+//
+// Two of these forms need a boundary the bold ones get for free from `**`:
+//
+// - A TABLE row declares in its FIRST cell only. Anchoring at the leading `|`
+//   keeps a dependency or notes column naming FR-09 as the cross-reference it
+//   is, and rejects the header (`| FR ID |` — no hyphen) and the separator
+//   (`|---|`) without needing to recognise table furniture as such.
+// - A PLAIN list entry must reach a COLON, optionally through one
+//   parenthesised gloss (`- FR-A3（再発防止）: …` is how the corpus titles
+//   them). Accepting the opening parenthesis on its own was tried and admits
+//   references: `- FR-GRT-006(full grant の確認儀式)は不変` glosses an id it
+//   does not declare. The colon is what marks a label, so the gloss is allowed
+//   to precede it but cannot stand in for it. Both ASCII and full-width forms
+//   appear in the corpus.
+const PLAIN_LIST_LABEL = "\\s*(?:[(（][^)）]*[)）])?\\s*[:：]";
 const FR_PATTERNS = [
   new RegExp(`^#{2,4}\\s+FR-${FR_ID}`),
   new RegExp(`^[-*]\\s+\\*\\*FR-${FR_ID}`),
   new RegExp(`^\\*\\*FR-${FR_ID}`),
+  new RegExp(`^[-*]\\s+FR-${FR_ID}${PLAIN_LIST_LABEL}`),
+  new RegExp(`^\\|\\s*\\*{0,2}FR-${FR_ID}`),
 ];
 
 export function countFunctionalRequirements(body: string): number {
