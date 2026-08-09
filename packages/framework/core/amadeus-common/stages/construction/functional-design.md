@@ -116,6 +116,11 @@ stage-protocol.md §3.
 
 Generate the following in `<record>/construction/{unit-name}/functional-design/`:
 
+**Depth-scaled artifact volume** (read `directive.depth`, falling back to `amadeus-state.md` → `**Depth**` outside the engine loop; see stage-protocol.md §8 — the per-stage question ceiling is contract, the shapes below are guidance):
+- **Minimal**: brief business rules, simple domain entities; skip frontend-components.md when the unit's kind does not require it.
+- **Standard**: detailed business logic models, comprehensive business rules, domain entity lifecycle.
+- **Comprehensive**: decision trees, state machines, concurrency handling, error recovery flows, cross-unit interaction patterns.
+
 - **business-logic-model.md**: Detailed algorithms, workflows, data transformations, processing sequences, and decision trees for the unit's business logic
 - **business-rules.md**: Decision rules, validation logic, constraints, policies, conditional behavior, and business invariants
 - **domain-entities.md**: Entities, relationships, data structures, attributes, lifecycle states, and entity interaction patterns

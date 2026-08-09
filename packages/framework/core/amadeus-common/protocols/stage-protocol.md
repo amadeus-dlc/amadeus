@@ -721,23 +721,48 @@ Depth is resolved by the engine — the scope's default, recorded in `amadeus-st
 2. At scope confirmation — choose "Change depth"
 3. At any approval gate — request a different depth level
 
-### Depth-Level Examples
+### Depth-Level Contract
+
+The numeric ceilings below are **contract, not illustration**. A stage running at a
+given depth MUST hold to its row; exceeding a ceiling requires a recorded
+justification at the stage's approval gate. Only counted quantities live here —
+every qualitative shape belongs to the guidance subsection that follows, so no
+line in this table is unenforceable.
+
+| Depth | Primary questions per stage | Requirements Analysis: functional requirements |
+|-------|-----------------------------|------------------------------------------------|
+| Minimal | at most 4 | 5-10 |
+| Standard | at most 8 | 15-30 |
+| Comprehensive | at most 12 | 30+ |
+
+Stages that scale artifact volume by depth MUST read `directive.depth` and state
+what changes at each level: Requirements Analysis, Application Design, Functional
+Design, Code Generation, Build and Test. The `depth-budget` sensor measures the
+Requirements Analysis row against the produced `requirements.md` and reports
+overruns as advisory findings; the question ceiling is enforced by the stage
+agent at question-drafting time (§3).
+
+### Depth-Level Guidance
+
+The rest of each level is guidance — shape rather than ceiling. Follow it unless
+the problem demands otherwise, and say so at the gate when it does. No sensor
+measures these lines.
 
 **Minimal project** (e.g., fix, single-page internal tool):
-- Questions: at most 4 per stage, essentials only, skip what's inferable from code/context
-- Requirements Analysis: 5-10 requirements, brief descriptions, minimal NFR coverage
+- Questions: essentials only, skip what's inferable from code/context
+- Requirements Analysis: brief descriptions, minimal NFR coverage
 - Application Design: Single component diagram, basic data model, no ADRs needed
 - Functional Design: Brief business rules, simple domain entities, skip frontend-components.md
 
 **Standard project** (e.g., multi-page web application):
-- Questions: at most 8 per stage, cover material topic areas
-- Requirements Analysis: 15-30 requirements with acceptance criteria, moderate NFR coverage
+- Questions: cover material topic areas
+- Requirements Analysis: acceptance criteria per requirement, moderate NFR coverage
 - Application Design: Component diagrams with interactions, data model with relationships, 2-3 ADRs
 - Functional Design: Detailed business logic models, comprehensive business rules, domain entity lifecycle
 
 **Comprehensive project** (e.g., distributed system with integrations):
-- Questions: at most 12 per stage, cover material risk and contract decisions
-- Requirements Analysis: 30+ requirements, detailed acceptance criteria, comprehensive NFR coverage across all categories
+- Questions: cover material risk and contract decisions
+- Requirements Analysis: detailed acceptance criteria, comprehensive NFR coverage across all categories
 - Application Design: Multi-layer component diagrams, detailed data flow, integration sequence diagrams, 5+ ADRs with alternatives analysis
 - Functional Design: Decision trees, state machines, concurrency handling, error recovery flows, cross-unit interaction patterns
 

@@ -746,24 +746,43 @@ and problem complexity.
 
 User can override depth or test strategy at any approval gate.
 
-### Three Depth Levels
+### Depth-Level Contract
+
+The counted quantities are contract, not illustration. A stage running at a given
+depth must hold to its row; exceeding a ceiling requires a recorded justification
+at the approval gate.
+
+| Depth | Primary questions per stage | Requirements Analysis: functional requirements |
+|-------|-----------------------------|------------------------------------------------|
+| Minimal | at most 4 | 5-10 |
+| Standard | at most 8 | 15-30 |
+| Comprehensive | at most 12 | 30+ |
+
+Five stages read `directive.depth` and state what changes at each level:
+Requirements Analysis, Application Design, Functional Design, Code Generation,
+Build and Test. The `depth-budget` sensor measures the Requirements Analysis row
+against the produced `requirements.md` and reports overruns as advisory findings.
+
+### Depth-Level Guidance
+
+Everything else is guidance -- shape rather than ceiling, and no sensor measures
+it.
 
 **Minimal** (poc, fix, chore, refactor, security-patch) -- minimal artifacts,
 brief analysis, skip optional stages:
-- Requirements: 5-10 items, brief descriptions, minimal NFRs
+- Requirements: brief descriptions, minimal NFRs
 - App Design: single component diagram, basic data model, no ADRs
 - Functional Design: brief business rules, simple entities, skip
   `frontend-components.md`
 
 **Standard** (feature, mvp, infra) -- full artifacts at moderate detail:
-- Requirements: 15-30 with acceptance criteria, moderate NFRs
+- Requirements: acceptance criteria per requirement, moderate NFRs
 - App Design: component diagrams with interactions, relationships, 2-3 ADRs
 - Functional Design: detailed business logic, comprehensive rules, entity
   lifecycle
 
 **Comprehensive** (enterprise) -- deep analysis, all stages execute:
-- Requirements: 30+, detailed criteria, comprehensive NFRs across all
-  categories
+- Requirements: detailed criteria, comprehensive NFRs across all categories
 - App Design: multi-layer diagrams, detailed data flow, integration sequences,
   5+ ADRs with alternatives
 - Functional Design: decision trees, state machines, concurrency, error

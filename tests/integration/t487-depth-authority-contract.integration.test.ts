@@ -12,10 +12,14 @@
 //      complexity assessment with no write-back path — two decision systems,
 //      one of them floating. The re-derivation is gone; §8 names the engine
 //      and the directive field as the single authority.
-//   2. THE CONTRACTS SCALE BY IT. requirements-analysis / code-generation /
-//      build-and-test each read `directive.depth` and state what changes at
+//   2. THE CONTRACTS SCALE BY IT. The five stages §8 names — requirements-
+//      analysis / application-design / functional-design / code-generation /
+//      build-and-test — each read `directive.depth` and state what changes at
 //      each level. Before this, code-generation.md and build-and-test.md did
-//      not contain the word "depth" at all.
+//      not contain the word "depth" at all; application-design.md and
+//      functional-design.md were added by #2671 (ruling a2 + b2), which also
+//      split §8 into a numeric CONTRACT subsection and a qualitative GUIDANCE
+//      subsection so the two never mix in one list.
 //   3. EVERY CONDUCTOR SURFACE RELAYS IT. Each harness's authored conductor
 //      surface (SKILL.md, or commands/amadeus.md for the command-shaped
 //      harnesses) tells the conductor to pass the field through rather than
@@ -34,6 +38,8 @@ const PROTOCOL = join(CORE, "amadeus-common", "protocols", "stage-protocol.md");
 const REQUIREMENTS_ANALYSIS = join(CORE, "amadeus-common", "stages", "inception", "requirements-analysis.md");
 const CODE_GENERATION = join(CORE, "amadeus-common", "stages", "construction", "code-generation.md");
 const BUILD_AND_TEST = join(CORE, "amadeus-common", "stages", "construction", "build-and-test.md");
+const APPLICATION_DESIGN = join(CORE, "amadeus-common", "stages", "inception", "application-design.md");
+const FUNCTIONAL_DESIGN = join(CORE, "amadeus-common", "stages", "construction", "functional-design.md");
 const DOCS_INCEPTION = join(REPO_ROOT, "docs", "reference", "04-stages", "inception.md");
 const DOCS_INCEPTION_JA = join(REPO_ROOT, "docs", "reference", "04-stages", "inception.ja.md");
 
@@ -98,7 +104,7 @@ describe("t487 stage contracts scale artifact volume by depth", () => {
     // Stable FR-n ids are the addressable unit downstream stages and the
     // depth-budget sensor reference.
     expect(text).toContain("`FR-n`");
-    // The per-level numbers must agree with §8's Depth-Level Examples rather
+    // The per-level numbers must agree with §8's Depth-Level Contract rather
     // than starting a second, drifting system.
     expect(text).toContain("5-10 FRs");
     expect(text).toContain("15-30 FRs");
@@ -111,6 +117,38 @@ describe("t487 stage contracts scale artifact volume by depth", () => {
     // Depth and test strategy are separate dials; conflating them would let a
     // Minimal depth silently shrink the test plan the strategy mandates.
     expect(text).toContain("Depth governs artifact PROSE volume only");
+  });
+
+  test("§8 separates the numeric contract from the qualitative guidance (#2671 a2)", () => {
+    const text = read(PROTOCOL);
+    // Two distinct subsections: a MUST-bearing table of counted ceilings, and
+    // the shape guidance no sensor measures. The old single "Depth-Level
+    // Examples" list mixed both, which is what made the numbers unenforceable.
+    expect(text).toContain("### Depth-Level Contract");
+    expect(text).toContain("### Depth-Level Guidance");
+    expect(text).not.toContain("### Depth-Level Examples");
+    const contract = text.split("### Depth-Level Contract")[1]?.split("### Depth-Level Guidance")[0] ?? "";
+    expect(contract).toContain("MUST");
+    // The counted rows live in the contract half...
+    for (const row of ["| Minimal | at most 4 | 5-10 |", "| Standard | at most 8 | 15-30 |", "| Comprehensive | at most 12 | 30+ |"]) {
+      expect(contract).toContain(row);
+    }
+    // ...and the unmeasurable shapes stay out of it.
+    for (const qualitative of ["no ADRs needed", "Single component diagram", "Decision trees, state machines"]) {
+      expect({ qualitative, inContract: contract.includes(qualitative) }).toEqual({ qualitative, inContract: false });
+    }
+  });
+
+  test("application-design and functional-design scale their artifacts by depth (#2671 b2)", () => {
+    for (const path of [APPLICATION_DESIGN, FUNCTIONAL_DESIGN]) {
+      const text = read(path);
+      expect({ path, has: text.includes("`directive.depth`") }).toEqual({ path, has: true });
+      expect({ path, has: text.includes("Depth-scaled artifact volume") }).toEqual({ path, has: true });
+      // All three levels named, so no level silently inherits another's shape.
+      for (const level of ["**Minimal**", "**Standard**", "**Comprehensive**"]) {
+        expect({ path, level, has: text.includes(level) }).toEqual({ path, level, has: true });
+      }
+    }
   });
 
   test("build-and-test scales its instruction and summary artifacts", () => {
