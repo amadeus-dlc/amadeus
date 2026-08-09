@@ -137,8 +137,18 @@ function redateRecord(prefix: string): void {
   );
 }
 
-/** Patch one stage row of the shipped graph to declare a blocking sensor. */
-function useGraphWithBlockingSensor(stage: string = STAGE): void {
+/**
+ * Patch one stage row of the shipped graph so the probe sensor is APPLICABLE to
+ * that stage at the given severity.
+ *
+ * Both severities matter. `blocking` is the gate's subject; `advisory` is the
+ * control — seeding a SENSOR_FAILED for a sensor the stage does not declare
+ * would only prove that a NON-APPLICABLE sensor cannot gate, which no plausible
+ * regression would violate. Making the probe applicable-but-advisory is what
+ * pins "the gate reads severity", so a guard that blocked on any failed sensor
+ * regardless of severity goes red.
+ */
+function useGraphWithSensor(stage: string, severity: "advisory" | "blocking"): void {
   const shipped = readFileSync(join(AMADEUS_SRC, "tools", "data", "stage-graph.json"), "utf-8");
   const graph = JSON.parse(shipped) as {
     slug: string;
@@ -152,14 +162,22 @@ function useGraphWithBlockingSensor(stage: string = STAGE): void {
       id: SENSOR,
       path: `.claude/sensors/amadeus-${SENSOR}.md`,
       matches: "**/intents/**",
-      severity: "blocking",
+      severity,
     },
   ];
-  const path = join(proj, "stage-graph-with-blocking.json");
+  const path = join(proj, `stage-graph-with-${severity}.json`);
   writeFileSync(path, JSON.stringify(graph), "utf-8");
   process.env.AMADEUS_STAGE_GRAPH = path;
   __resetGraphCache();
   _resetStageGraphForTests();
+}
+
+function useGraphWithBlockingSensor(stage: string = STAGE): void {
+  useGraphWithSensor(stage, "blocking");
+}
+
+function useGraphWithAdvisorySensor(stage: string = STAGE): void {
+  useGraphWithSensor(stage, "advisory");
 }
 
 /** Write SENSOR_* rows into an audit shard the record's readers glob. */
@@ -257,9 +275,12 @@ describe("t511 — approve refuses on an unresolved blocking sensor (#2671 c)", 
     expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${STAGE}`);
   });
 
-  test("an advisory-only stage is unaffected by a SENSOR_FAILED in its trail", () => {
-    // No graph patch: requirements-analysis keeps its shipped, all-advisory
-    // sensor set. This is the green side of the two-sided proof.
+  test("an APPLICABLE advisory sensor's SENSOR_FAILED does not block approve", () => {
+    // The probe is declared on the stage at advisory severity, so the failing
+    // verdict is in scope and only its severity keeps the gate open — the green
+    // side of the two-sided proof. (The ten shipped manifests are all advisory,
+    // so this is the shape every real stage has today.)
+    useGraphWithAdvisorySensor();
     seedSensorAudit([FIRED, FAILED]);
     const r = captureExit(() => handleApprove([STAGE]));
     expect(r.threw).toBe(false);
@@ -422,9 +443,11 @@ for (const path of COMPLETION_PATHS) {
       expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${path.stage}`);
     });
 
-    test("an advisory-only stage is unaffected by a SENSOR_FAILED in its trail", () => {
-      // No graph patch: the stage keeps its shipped, all-advisory sensor set —
-      // the green side of the two-sided proof for this path.
+    test("an APPLICABLE advisory sensor's SENSOR_FAILED does not block this path", () => {
+      // Declared on the stage at advisory severity: the failing verdict is in
+      // scope and only its severity keeps the gate open — the green side of the
+      // two-sided proof for this path.
+      useGraphWithAdvisorySensor(path.stage);
       seedSensorAudit([FIRED, FAILED], path.stage);
       const r = captureExit(() => path.run(path.stage));
       expect(r.threw).toBe(false);
