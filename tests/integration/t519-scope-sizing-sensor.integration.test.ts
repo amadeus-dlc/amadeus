@@ -251,6 +251,13 @@ describe("t519 CLI — the measurement is in the output, not merely computed", (
     expect(res.stderr).toContain("--output-path is required");
   });
 
+  // #2741 revised this test's expected wording (ruling
+  // cg-2741-q5-t519-conflict / a-revise-t519; requirements FR-5 amended to "two
+  // revisions"). The contract it guards — exit 1, no stdout, the next flag never
+  // read as a value — is unchanged. What changed is that the sensor now NAMES
+  // the actual cause instead of collapsing it into "--output-path is required":
+  // the strict read is shared across every per-sensor CLI, so a stolen value and
+  // a genuinely absent flag are no longer reported identically.
   test("a flag written without a value is missing, not a value of `--depth`", () => {
     // `--output-path --depth Standard` must not read the next flag as the
     // path: that would report a real-looking measurement of a file named
@@ -261,7 +268,20 @@ describe("t519 CLI — the measurement is in the output, not merely computed", (
       env: process.env,
     });
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("--output-path is required");
+    expect(res.stderr).toContain('--output-path expects a value, got another flag: "--depth".');
+    expect(res.stdout).toBe("");
+  });
+
+  test("a trailing flag with no value at all is loud too", () => {
+    // The second malformed arm: `--depth` is last, so no token follows it. Before
+    // #2741 this was byte-identical to omitting `--depth` — an exit-0 no-depth
+    // measurement — which is why a typo read as a deliberate reading.
+    const res = spawnSync("bun", [SENSOR, "--stage", "scope-definition", "--output-path", "/tmp/x.md", "--depth"], {
+      encoding: "utf-8",
+      env: process.env,
+    });
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--depth expects a value, got end of arguments.");
     expect(res.stdout).toBe("");
   });
 

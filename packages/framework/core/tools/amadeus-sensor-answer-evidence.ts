@@ -17,6 +17,7 @@
 // because sensor verdicts are advisory.
 import { basename } from "node:path";
 import { checkQuestionsEvidence, QUESTIONS_EVIDENCE_CUTOFF_YYMMDD } from "./amadeus-lib.ts";
+import { requireFlagValue } from "./amadeus-sensor-flags.ts";
 
 // Result shape read by the dispatcher (amadeus-sensor.ts: `pass` gates
 // PASSED/FAILED, `findings_count` is emitted verbatim). `reason` and `skipped`
@@ -97,15 +98,20 @@ function parseFlags(argv: string[]): Flags {
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg === "--stage") {
-			out.stage = argv[++i];
+			out.stage = requireFlagValue(argv, ++i, "--stage", fail);
 		} else if (arg === "--output-path") {
-			out.outputPath = argv[++i];
+			out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
 		}
 	}
 	return out;
 }
 
-function fail(msg: string): never {
+// The only non-zero exit: a missing required flag, or a flag whose value is
+// missing / stolen by the next flag. Exported as an in-process seam — reached
+// from `main` it runs inside a spawned child, which bun's coverage does not
+// measure, so the arm would sit permanently uncovered while its behaviour is
+// genuinely tested.
+export function fail(msg: string): never {
 	process.stderr.write(`amadeus-sensor-answer-evidence: ${msg}\n`);
 	process.exit(1);
 }

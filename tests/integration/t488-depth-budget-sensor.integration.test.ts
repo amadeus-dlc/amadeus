@@ -692,7 +692,15 @@ describe("t488 CLI contract", () => {
     expect(JSON.parse(stdout)).toMatchObject({ pass: true, reason: "no-depth" });
   });
 
-  test("a missing flag is the only exit-1 path, and it names the flag", () => {
+  // #2741 revised this contract explicitly. It previously read "a missing flag
+  // is the only exit-1 path" — true then, and the reason a MALFORMED flag was
+  // fail-open: `--depth` with no value produced the same exit-0, no-depth
+  // measurement as omitting `--depth` entirely, so a typo was indistinguishable
+  // from a deliberate reading. A missing flag is still exit 1; it is no longer
+  // the ONLY one. The two malformed-value arms are pinned across every
+  // per-sensor CLI in t521; the two cases below keep this file's own coverage of
+  // the arm that reaches them.
+  test("a missing OR malformed flag exits 1, and it names the flag", () => {
     const missingOutput = run(["--stage", "requirements-analysis"]);
     expect(missingOutput.code).toBe(1);
     expect(missingOutput.stderr).toContain("--output-path is required");
@@ -700,5 +708,21 @@ describe("t488 CLI contract", () => {
     const missingStage = run(["--output-path", writeRequirements(requirements(1, 100))]);
     expect(missingStage.code).toBe(1);
     expect(missingStage.stderr).toContain("--stage is required");
+
+    // Arm 1 — the flag is last, so no value follows it at all.
+    const danglingDepth = run([
+      "--stage",
+      "requirements-analysis",
+      "--output-path",
+      writeRequirements(requirements(1, 100)),
+      "--depth",
+    ]);
+    expect(danglingDepth.code).toBe(1);
+    expect(danglingDepth.stderr).toContain("--depth expects a value, got end of arguments.");
+
+    // Arm 2 — the NEXT FLAG would have been swallowed as the value.
+    const stolenValue = run(["--stage", "requirements-analysis", "--output-path", "--depth", "Minimal"]);
+    expect(stolenValue.code).toBe(1);
+    expect(stolenValue.stderr).toContain('--output-path expects a value, got another flag: "--depth".');
   });
 });

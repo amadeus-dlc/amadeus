@@ -40,6 +40,7 @@
 // dispatcher and must not drag the library's module graph into that process.
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { requireFlagValue } from "./amadeus-sensor-flags.ts";
 
 /** The two scope-definition outputs this sensor reads. `intent-backlog.md` is
  *  the primary — the capability enumeration itself; `scope-document.md` is the
@@ -238,28 +239,25 @@ interface Flags {
   depth?: string;
 }
 
-/** The token after a flag, or undefined when the flag was written without a
- *  value. A following `--flag` is the NEXT flag, not this one's value: reading
- *  it as a value turns `--output-path --depth Standard` into a measurement of a
- *  path named "--depth", which the sensor would then report as a real (empty)
- *  reading instead of refusing. For a sensor whose only product is a number,
- *  silently measuring the wrong thing is worse than exiting. */
-function valueAt(argv: string[], index: number): string | undefined {
-  const value = argv[index];
-  return value === undefined || value.startsWith("--") ? undefined : value;
-}
-
+/** Every flag value is read strictly (#2741). A following `--flag` is the NEXT
+ *  flag, not this one's value: reading it as a value turns
+ *  `--output-path --depth Standard` into a measurement of a path named
+ *  "--depth". A flag written with no value at all used to yield `undefined` —
+ *  byte-identical to omitting the flag, so a typo read as a deliberate
+ *  no-depth measurement. For a sensor whose only product is a number, silently
+ *  measuring the wrong thing is worse than exiting; both arms are now loud. */
 function parseFlags(argv: string[]): Flags {
   const out: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--stage") out.stage = valueAt(argv, ++i);
-    else if (argv[i] === "--output-path") out.outputPath = valueAt(argv, ++i);
-    else if (argv[i] === "--depth") out.depth = valueAt(argv, ++i);
+    if (argv[i] === "--stage") out.stage = requireFlagValue(argv, ++i, "--stage", fail);
+    else if (argv[i] === "--output-path") out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
+    else if (argv[i] === "--depth") out.depth = requireFlagValue(argv, ++i, "--depth", fail);
   }
   return out;
 }
 
-/** The only non-zero exit: a missing required flag. Exported as an in-process
+/** The only non-zero exit: a missing required flag, or a flag whose value is
+ *  missing / stolen by the next flag. Exported as an in-process
  *  seam — reached from `main` it runs inside a spawned child, which bun's
  *  coverage does not measure, so the arm would sit permanently uncovered while
  *  its behaviour is genuinely tested. */

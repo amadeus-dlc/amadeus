@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { errorMessage, isMarkerArtifact, parseBoltDag } from "./amadeus-lib.ts";
+import { requireFlagValue } from "./amadeus-sensor-flags.ts";
 
 interface Result {
 	pass: boolean;
@@ -69,15 +70,15 @@ function parseFlags(argv: string[]): Flags {
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg === "--stage") {
-			out.stage = argv[++i];
+			out.stage = requireFlagValue(argv, ++i, "--stage", fail);
 		} else if (arg === "--output-path") {
-			out.outputPath = argv[++i];
+			out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
 		} else if (arg === "--templates-dir") {
-			out.templatesDir = argv[++i];
+			out.templatesDir = requireFlagValue(argv, ++i, "--templates-dir", fail);
 		} else if (arg === "--framework-templates-dir") {
-			out.frameworkTemplatesDir = argv[++i];
+			out.frameworkTemplatesDir = requireFlagValue(argv, ++i, "--framework-templates-dir", fail);
 		} else if (arg === "--template-eligible") {
-			out.templateEligible = (argv[++i] ?? "")
+			out.templateEligible = requireFlagValue(argv, ++i, "--template-eligible", fail)
 				.split(",")
 				.map((s) => s.trim())
 				.filter((s) => s.length > 0);
@@ -116,7 +117,12 @@ function resolveTemplatePath(stem: string, flags: Flags): string | null {
 	return null;
 }
 
-function fail(msg: string): never {
+// The only non-zero exit: a missing/unreadable required flag, or a flag whose
+// value is missing / stolen by the next flag. Exported as an in-process seam —
+// reached from `main` it runs inside a spawned child, which bun's coverage does
+// not measure, so the arm would sit permanently uncovered while its behaviour is
+// genuinely tested.
+export function fail(msg: string): never {
 	process.stderr.write(`amadeus-sensor-required-sections: ${msg}\n`);
 	process.exit(1);
 }
