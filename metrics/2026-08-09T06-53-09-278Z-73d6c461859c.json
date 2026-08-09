@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-09T06:53:09.278Z",
+  "commit": "73d6c461859c05c33ca14033ec4889be04e6cecd",
+  "collectors": {
+    "ccn": {
+      "tool": "lizard",
+      "tool_version": "1.23.0",
+      "values": {
+        "functions": 6475,
+        "p50": 2,
+        "p90": 8,
+        "max": 38,
+        "over_threshold": 33,
+        "threshold": 15
+      }
+    },
+    "coverage": {
+      "tool": "bun",
+      "tool_version": "1.3.13",
+      "values": {
+        "hits": 85887,
+        "lines": 92683,
+        "percent": 92.66747947304252
+      }
+    },
+    "loc": {
+      "tool": "git",
+      "tool_version": "git version 2.54.0",
+      "values": {
+        "core": 139676,
+        "scripts": 13515,
+        "tests": 368584
+      }
+    },
+    "tests": {
+      "tool": "amadeus-run-tests",
+      "tool_version": "73d6c461859c05c33ca14033ec4889be04e6cecd",
+      "values": {
+        "files": 929,
+        "failedFiles": 0,
+        "assertions": 12449,
+        "failedAssertions": 0
+      }
+    },
+    "test_pyramid": {
+      "tool": "amadeus-test-size",
+      "tool_version": "73d6c461859c05c33ca14033ec4889be04e6cecd",
+      "values": {
+        "harness_medium": 1,
+        "integration_medium": 505,
+        "integration_small": 14,
+        "lib_medium": 1,
+        "e2e_medium": 88,
+        "e2e_small": 8,
+        "e2e_large": 2,
+        "perf_small": 3,
+        "perf_medium": 7,
+        "unit_small": 231,
+        "unit_medium": 162,
+        "unit_large": 1,
+        "smoke_medium": 16
+      }
+    },
+    "dist_size": {
+      "tool": "node-fs",
+      "tool_version": "24.3.0",
+      "values": {
+        "bytes": 0
+      }
+    },
+    "bugs": {
+      "tool": "gh",
+      "tool_version": "gh version 2.96.0 (2026-07-02)",
+      "values": {
+        "total": 326,
+        "open": 1,
+        "closed": 325,
+        "fixed": 321,
+        "rejected": 4,
+        "s1_fatal": 11,
+        "s2_critical": 38,
+        "s3_major": 157,
+        "s4_minor": 59,
+        "unlabeled": 61
+      }
+    }
+  }
+}
