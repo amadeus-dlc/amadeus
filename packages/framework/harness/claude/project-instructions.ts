@@ -21,8 +21,9 @@ whenever the expected resource savings exceed the coordination overhead:
 
 - Use Sonnet for routine implementation with clear boundaries.
 - Use Opus for complex or high-risk implementation that requires stronger reasoning.
-- Use Fable 5 directly only for exceptionally difficult or tightly coupled work that
-  cannot be delegated safely or efficiently.
+- Use Fable 5 directly for exceptionally difficult or tightly coupled work that
+  cannot be delegated safely or efficiently. Keep small, well-scoped tasks in the
+  main session when delegation overhead would exceed the expected resource savings.
 
 Every delegation prompt must define the scope, owned files, acceptance criteria,
 and verification steps. Assign non-overlapping write scopes. The Fable 5 main
