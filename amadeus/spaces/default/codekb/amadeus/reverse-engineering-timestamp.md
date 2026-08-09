@@ -1,6 +1,25 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260807-intent-2328-tests-e2e-au）
+## 実行メタデータ（現在: 260809-sensor-parseflags-failop）
+
+- Date: `2026-08-09`
+- Base commit: `a5621236c6c69f1c54f3d496bdf91792d4ef12fc`（直前 intent `260807-intent-2328-tests-e2e-au` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor a5621236c HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count a5621236c..HEAD` = **232 commits**。祖先であるため merge-base fallback は不要）
+- Observed commit: `778567dd03b00f22cb887eec06f025557eeaaaf4`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #2741](https://github.com/amadeus-dlc/amadeus/issues/2741)（per-sensor `parseFlags` の fail-open — 値なしフラグが無言で握り潰される）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー2名成立済みの単発 Issue。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読と scratch 再現で二重化
+- 行番号引用の currency: レビュー target SHA ≡ observed（**完全一致**）。`review..observed` の実 diff が空のため行番号の再解決は構造的に no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`。測定区間は `review..observed` に固定、`..HEAD` ではない）
+- Verification: git 状態変更・GitHub 書込・engine 操作は**すべてゼロ**。coverage 実行もゼロ（`cid:code-generation:c1-coverage-single-owner`）。センサーの決定的再現はすべて **repo 外 scratch** で実施（`cid:requirements-analysis:scratch-script-discipline`）、exit code は非パイプで取得（`cid:code-generation:no-exit-capture-through-pipe`）
+- 患部の要旨: **3センサー**（depth-budget:294-302 / question-budget:340-348 / nfr-budget:1031-1040）の `parseFlags` が値なしフラグを両アームとも silent に受理し **exit 0** を返す。`--output-path F --depth`（値なし）は over-budget の finding 1件を**警告も非0 exit もなく消す**（scratch で決定的再現）。nfr-budget は `--kind --depth Minimal` で `unit_kind:"--depth"` として測定値そのものが変わる。**dispatcher（`amadeus-sensor.ts:886-926`）は値なしフラグを構造的に生まないため現発現はなく、潜在欠陥**
+- **⭐ 主要所見 — canonical 化の障害と目された self-contained 制約は障害ではない**: `amadeus-sensor-depth-budget.ts:23-24` の逐語コメントは「no amadeus-lib import」であって「no import」ではない。同一制約下の `amadeus-sensor-nfr-budget.ts:76` が既に兄弟センサーから `canonicalDepth` を import しており、配布面も manifest の `coreDirs` walk で自動投影される。裁定 (b) は「できるか」ではなく「どこに置くか」の選択問題
+- 既存テストピンとの関係: `t488:688-693` / `t514:645-651` がピンするのは **`--depth` の完全省略**であり値なしフラグではない → 値なしの loud 化は既存ピンと**非衝突**（`cid:reverse-engineering:c1-pinned-behavior-ruling` の適用外）。**明示改訂が要るのは `t488:695-703`「a missing flag is the only exit-1 path」の1本のみ**
+- Architect 独立再実測による scan 訂正2件: **(a)** amadeus-lib を import する per-sensor スクリプトは 4本ではなく **6本**（`sensor-invocation.ts:8` / `sensor-schema.ts:33` を追加。結論は不変で強化される）**(b)** 同一欠陥形の**名指しフラグ変種（T7b）を4箇所追加検出**（`jump.ts:192-194` / `state.ts:732-739` / `:4653-4656` / `:4788-4795`）— 汎用 `parseFlags`（T7、4箇所）とは誤消費の射程が異なるため重大度は別評価が要る
+- 未確定として引き継ぐ3点: (a) required-sections の同型が bootstrap commit `5cfb16165` に遡及するか（reviewer-2 主張、本 RE 未検証）(b) T7 / T7b（state/learnings/jump）の**実発現有無** — 呼出し元の argv 構成が値なしフラグを生みうるか未実測 (c) `?? ""` 変種のうち upstream-coverage 以外に意図宣言があるか（逐語コメント確認は `upstream-coverage:29-30` の1件のみ）
+- tNNN 予約: 使用済み最大 **`t519`**、新規は **`t520`** から（Architect 独立実測。直前節の「次は `t484`」は**陳腐化**）
+- Updated artifacts: `component-inventory.md` に「per-sensor argv parse の所在と現況」節を追加。`code-structure.md` / `architecture.md` は構造不変・患部が既存コンポーネント内のため**変更なし**。直前の現在断面（`260807-intent-2328-tests-e2e-au`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
+- Per-intent record: `re-scans/260809-sensor-parseflags-failop.md`（検索述語 P1〜P4・全数列挙・verbatim・exit code・裁定候補6件の正本）
+
+## 実行メタデータ（履歴、2026-08-08: 260807-intent-2328-tests-e2e-au）
 
 - Date: `2026-08-08`
 - Base commit: `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b`（直前 intent 260807-subagent-start-pair の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 5f2ad9195 HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count 5f2ad9195..HEAD` = **13 commits**。祖先であるため merge-base fallback は不要）
@@ -15,7 +34,7 @@
 - tNNN 予約: 使用済み最大 `t483`、次は **`t484`** から
 - 詳細記録: `re-scans/260807-intent-2328-tests-e2e-au.md`（全数列挙・verbatim・実装上の注意6点・裁定候補5件の正本）
 
-## 実行メタデータ（現在: 260807-stage-perf-report）
+## 実行メタデータ（履歴、2026-08-07: 260807-stage-perf-report）
 
 - Date: `2026-08-07`
 - Base commit: `b8e3e664f08185e0bd3e3b6d9b7f2dfb60c0ad7d`（前回 RE の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い HEAD 祖先かつ距離最小のものを選定。`git merge-base --is-ancestor b8e3e664f HEAD` exit 0 を実測。距離 **12 commits**）
