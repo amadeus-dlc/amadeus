@@ -6202,6 +6202,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t145-state-lock-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t25.test.ts",
           "mechanism": "sdk"
         },

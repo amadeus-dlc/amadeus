@@ -5460,109 +5460,119 @@ export function handleScopeChange(projectDir: string, flags: Record<string, stri
   const newScopeDef = scopeMapping[newScope];
   if (!newScopeDef) die(`Unknown scope: ${newScope}. Valid scopes: ${Object.keys(scopeMapping).join(", ")}`);
 
-  let content = readStateFile(projectDir, flags.intent, flags.space);
-  const oldScope = getField(content, "Scope");
-  if (!oldScope) die("Cannot read current Scope from state file.");
+  // Same wrap as its sibling handleRecompose (and every amadeus-state.ts RMW
+  // handler): the read->decide->write->emit section is serialised on the
+  // WORKSPACE sentinel bucket, so a concurrent writer's field is not clobbered
+  // by this handler's full-file rewrite from a stale snapshot (issue #2729).
+  // The inner appendAuditEvent keys the same sentinel, so it re-enters rather
+  // than self-deadlocking.
+  // The early `scope is already X` return needs no special handling:
+  // withAuditLock's finally releases on every exit path.
+  withAuditLock(projectDir, () => {
+    let content = readStateFile(projectDir, flags.intent, flags.space);
+    const oldScope = getField(content, "Scope");
+    if (!oldScope) die("Cannot read current Scope from state file.");
 
-  if (oldScope === newScope) {
-    process.stdout.write(`Scope is already ${newScope}\n`);
-    return;
-  }
-
-  const graph = loadStageGraph();
-  const projectType = getField(content, "Project Type") || "Greenfield";
-
-  // Compute adjusted mapping (greenfield reverse-engineering adjustment)
-  const adjustedMapping = { ...newScopeDef.stages };
-  if (projectType.toLowerCase() === "greenfield") {
-    if (adjustedMapping["reverse-engineering"] === "EXECUTE") {
-      adjustedMapping["reverse-engineering"] = "SKIP";
+    if (oldScope === newScope) {
+      process.stdout.write(`Scope is already ${newScope}\n`);
+      return;
     }
-  }
 
-  // Compute new execute/skip lists
-  const executeStages: string[] = [];
-  const skipStages: string[] = [];
-  for (const stage of graph) {
-    const action = adjustedMapping[stage.slug] || "SKIP";
-    if (action === "EXECUTE") {
-      executeStages.push(stage.number);
-    } else {
-      let reason = stage.slug;
-      if (stage.slug === "reverse-engineering" && projectType.toLowerCase() === "greenfield" &&
-          newScopeDef.stages["reverse-engineering"] === "EXECUTE") {
-        reason += " — greenfield";
+    const graph = loadStageGraph();
+    const projectType = getField(content, "Project Type") || "Greenfield";
+
+    // Compute adjusted mapping (greenfield reverse-engineering adjustment)
+    const adjustedMapping = { ...newScopeDef.stages };
+    if (projectType.toLowerCase() === "greenfield") {
+      if (adjustedMapping["reverse-engineering"] === "EXECUTE") {
+        adjustedMapping["reverse-engineering"] = "SKIP";
       }
-      skipStages.push(`${stage.number} (${reason})`);
     }
-  }
 
-  // Parse existing checkboxes to preserve states
-  const existingCheckboxes = parseCheckboxes(content);
-  const existingMap = new Map(existingCheckboxes.map(c => [c.slug, c]));
+    // Compute new execute/skip lists
+    const executeStages: string[] = [];
+    const skipStages: string[] = [];
+    for (const stage of graph) {
+      const action = adjustedMapping[stage.slug] || "SKIP";
+      if (action === "EXECUTE") {
+        executeStages.push(stage.number);
+      } else {
+        let reason = stage.slug;
+        if (stage.slug === "reverse-engineering" && projectType.toLowerCase() === "greenfield" &&
+            newScopeDef.stages["reverse-engineering"] === "EXECUTE") {
+          reason += " — greenfield";
+        }
+        skipStages.push(`${stage.number} (${reason})`);
+      }
+    }
 
-  // Rebuild Stage Progress section through the shared renderer (the same writer
-  // the post-compose re-sync uses), preserving each existing checkbox state via
-  // the canonical CHECKBOX_MAP \u2014 all six states round-trip; a stage the state
-  // does not list defaults to pending [ ].
-  content = replaceStageProgressSection(
-    content,
-    renderStageProgressSection(
+    // Parse existing checkboxes to preserve states
+    const existingCheckboxes = parseCheckboxes(content);
+    const existingMap = new Map(existingCheckboxes.map(c => [c.slug, c]));
+
+    // Rebuild Stage Progress section through the shared renderer (the same writer
+    // the post-compose re-sync uses), preserving each existing checkbox state via
+    // the canonical CHECKBOX_MAP \u2014 all six states round-trip; a stage the state
+    // does not list defaults to pending [ ].
+    content = replaceStageProgressSection(
+      content,
+      renderStageProgressSection(
+        graph,
+        (slug) => ((adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP"),
+        (slug) => existingMap.get(slug)?.state ?? "pending",
+        perUnitLineOf(content),
+      ),
+    );
+
+    // Update fields
+    content = setField(content, "Scope", newScope);
+    content = setField(content, "Stages to Execute", executeStages.join(", "));
+    content = setField(content, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
+    const effectiveDepth = depthOverride
+      ? VALID_DEPTHS[depthOverride.toLowerCase()]
+      : newScopeDef.depth;
+    content = setField(content, "Depth", effectiveDepth);
+    const effectiveTestStrategy = testStrategyOverride
+      ? VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]
+      : (newScopeDef.testStrategy ?? effectiveDepth);
+    content = setField(content, "Test Strategy", effectiveTestStrategy);
+    const rebuilt = rebuildDerivedPlanFields(
+      content,
       graph,
-      (slug) => ((adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP"),
-      (slug) => existingMap.get(slug)?.state ?? "pending",
-      perUnitLineOf(content),
-    ),
-  );
+      (slug) => (adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP",
+    );
+    content = rebuilt.content;
+    const completedCount = rebuilt.completedCount;
 
-  // Update fields
-  content = setField(content, "Scope", newScope);
-  content = setField(content, "Stages to Execute", executeStages.join(", "));
-  content = setField(content, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
-  const effectiveDepth = depthOverride
-    ? VALID_DEPTHS[depthOverride.toLowerCase()]
-    : newScopeDef.depth;
-  content = setField(content, "Depth", effectiveDepth);
-  const effectiveTestStrategy = testStrategyOverride
-    ? VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]
-    : (newScopeDef.testStrategy ?? effectiveDepth);
-  content = setField(content, "Test Strategy", effectiveTestStrategy);
-  const rebuilt = rebuildDerivedPlanFields(
-    content,
-    graph,
-    (slug) => (adjustedMapping[slug] || "SKIP") === "EXECUTE" ? "EXECUTE" : "SKIP",
-  );
-  content = rebuilt.content;
-  const completedCount = rebuilt.completedCount;
+    // Update Last Updated timestamp
+    content = setField(content, "Last Updated", isoTimestamp());
 
-  // Update Last Updated timestamp
-  content = setField(content, "Last Updated", isoTimestamp());
+    writeStateFile(projectDir, content, flags.intent, flags.space);
 
-  writeStateFile(projectDir, content, flags.intent, flags.space);
+    // Append SCOPE_CHANGED audit event
+    const oldScopeDef = scopeMapping[oldScope];
+    const oldExecuteCount = oldScopeDef
+      ? graph.filter(s => (oldScopeDef.stages[s.slug] || "SKIP") === "EXECUTE").length
+      : 0;
+    const stageDelta = executeStages.length - oldExecuteCount;
+    const deltaStr = stageDelta >= 0 ? `+${stageDelta}` : String(stageDelta);
 
-  // Append SCOPE_CHANGED audit event
-  const oldScopeDef = scopeMapping[oldScope];
-  const oldExecuteCount = oldScopeDef
-    ? graph.filter(s => (oldScopeDef.stages[s.slug] || "SKIP") === "EXECUTE").length
-    : 0;
-  const stageDelta = executeStages.length - oldExecuteCount;
-  const deltaStr = stageDelta >= 0 ? `+${stageDelta}` : String(stageDelta);
+    appendAuditEvent(projectDir, "SCOPE_CHANGED", {
+      "Old Scope": oldScope,
+      "New Scope": newScope,
+      "Stage Count Delta": deltaStr,
+      "Stages in Scope": String(executeStages.length),
+      Depth: effectiveDepth,
+    });
 
-  appendAuditEvent(projectDir, "SCOPE_CHANGED", {
-    "Old Scope": oldScope,
-    "New Scope": newScope,
-    "Stage Count Delta": deltaStr,
-    "Stages in Scope": String(executeStages.length),
-    Depth: effectiveDepth,
-  });
-
-  process.stdout.write(
-    `Scope changed: ${oldScope} → ${newScope}
+    process.stdout.write(
+      `Scope changed: ${oldScope} → ${newScope}
 Stages in scope: ${executeStages.length} (${deltaStr})
 Depth: ${effectiveDepth}
 Completed: ${completedCount}/${executeStages.length}
 `
-  );
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -5855,53 +5865,61 @@ function handleConfigChange(projectDir: string, flags: Record<string, string>): 
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
   if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
-  let content = readStateFile(projectDir, flags.intent, flags.space);
-  const oldDepth = getField(content, "Depth");
-  const oldStrategy = getField(content, "Test Strategy");
+  // Same wrap as its sibling handleRecompose (and every amadeus-state.ts RMW
+  // handler): the read->decide->write->emit section is serialised on the
+  // WORKSPACE sentinel bucket, so a concurrent writer's field is not clobbered
+  // by this handler's full-file rewrite from a stale snapshot (issue #2729).
+  // The inner appendAuditEvent keys the same sentinel, so it re-enters rather
+  // than self-deadlocking.
+  withAuditLock(projectDir, () => {
+    let content = readStateFile(projectDir, flags.intent, flags.space);
+    const oldDepth = getField(content, "Depth");
+    const oldStrategy = getField(content, "Test Strategy");
 
-  // Inline existence checks (instead of caching to a boolean) so TS narrows
-  // newDepth / newStrategy at each use site — avoids non-null assertions.
-  if (newDepth !== undefined && newDepth !== oldDepth) {
-    content = setField(content, "Depth", newDepth);
-  }
-  if (newStrategy !== undefined && newStrategy !== oldStrategy) {
-    content = setField(content, "Test Strategy", newStrategy);
-  }
-  const depthChanging = newDepth !== undefined && newDepth !== oldDepth;
-  const strategyChanging =
-    newStrategy !== undefined && newStrategy !== oldStrategy;
-  if (depthChanging || strategyChanging) {
-    content = setField(content, "Last Updated", isoTimestamp());
-    writeStateFile(projectDir, content, flags.intent, flags.space);
-  }
+    // Inline existence checks (instead of caching to a boolean) so TS narrows
+    // newDepth / newStrategy at each use site — avoids non-null assertions.
+    if (newDepth !== undefined && newDepth !== oldDepth) {
+      content = setField(content, "Depth", newDepth);
+    }
+    if (newStrategy !== undefined && newStrategy !== oldStrategy) {
+      content = setField(content, "Test Strategy", newStrategy);
+    }
+    const depthChanging = newDepth !== undefined && newDepth !== oldDepth;
+    const strategyChanging =
+      newStrategy !== undefined && newStrategy !== oldStrategy;
+    if (depthChanging || strategyChanging) {
+      content = setField(content, "Last Updated", isoTimestamp());
+      writeStateFile(projectDir, content, flags.intent, flags.space);
+    }
 
-  if (newDepth !== undefined && newDepth !== oldDepth) {
-    appendAuditEvent(projectDir, "DEPTH_CHANGED", {
-      "Old Depth": oldDepth || "unknown",
-      "New Depth": newDepth,
-    });
-  }
-  if (newStrategy !== undefined && newStrategy !== oldStrategy) {
-    appendAuditEvent(projectDir, "TEST_STRATEGY_CHANGED", {
-      "Old Strategy": oldStrategy || "unknown",
-      "New Strategy": newStrategy,
-    });
-  }
+    if (newDepth !== undefined && newDepth !== oldDepth) {
+      appendAuditEvent(projectDir, "DEPTH_CHANGED", {
+        "Old Depth": oldDepth || "unknown",
+        "New Depth": newDepth,
+      });
+    }
+    if (newStrategy !== undefined && newStrategy !== oldStrategy) {
+      appendAuditEvent(projectDir, "TEST_STRATEGY_CHANGED", {
+        "Old Strategy": oldStrategy || "unknown",
+        "New Strategy": newStrategy,
+      });
+    }
 
-  if (newDepth !== undefined) {
-    process.stdout.write(
-      depthChanging
-        ? `Depth changed: ${oldDepth} → ${newDepth}\n`
-        : `Depth is already ${newDepth}\n`
-    );
-  }
-  if (newStrategy !== undefined) {
-    process.stdout.write(
-      strategyChanging
-        ? `Test strategy changed: ${oldStrategy} → ${newStrategy}\n`
-        : `Test strategy is already ${newStrategy}\n`
-    );
-  }
+    if (newDepth !== undefined) {
+      process.stdout.write(
+        depthChanging
+          ? `Depth changed: ${oldDepth} → ${newDepth}\n`
+          : `Depth is already ${newDepth}\n`
+      );
+    }
+    if (newStrategy !== undefined) {
+      process.stdout.write(
+        strategyChanging
+          ? `Test strategy changed: ${oldStrategy} → ${newStrategy}\n`
+          : `Test strategy is already ${newStrategy}\n`
+      );
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
