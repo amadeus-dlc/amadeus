@@ -8,6 +8,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -15,7 +16,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { HOOK_PATHS } from "../../packages/framework/harness/claude/hooks/amadeus-dispatch.ts";
+import {
+  DISPATCH_TEST_SEAMS,
+  HOOK_PATHS,
+  main,
+} from "../../packages/framework/harness/claude/hooks/amadeus-dispatch.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const DISPATCHER_SOURCE = join(
@@ -117,6 +122,77 @@ function collectCommands(value: unknown): string[] {
 }
 
 describe("Claude hook dispatcher", () => {
+  test("routing and pipe branches are exercised in-process for coverage", async () => {
+    const marked = temporaryProject();
+    mkdirSync(join(marked, "amadeus"));
+    writeFileSync(join(marked, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+
+    expect(DISPATCH_TEST_SEAMS.payloadCwd(JSON.stringify({ cwd: marked }))).toBe(marked);
+    expect(DISPATCH_TEST_SEAMS.payloadCwd(JSON.stringify({ cwd: 1 }))).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.payloadCwd("not-json")).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(undefined)).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot("relative")).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(join(marked, "missing"))).toBeUndefined();
+    const markedRealpath = realpathSync(marked);
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(marked)).toBe(markedRealpath);
+
+    const missingMarker = temporaryProject();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(missingMarker)).toBeUndefined();
+    const missingDispatcher = temporaryProject();
+    mkdirSync(join(missingDispatcher, "amadeus"));
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(missingDispatcher)).toBeUndefined();
+    expect(
+      DISPATCH_TEST_SEAMS.resolveProjectRoot(
+        import.meta.dir,
+        missingMarker,
+        JSON.stringify({ cwd: marked }),
+      ),
+    ).toBe(markedRealpath);
+
+    const written: string[] = [];
+    await DISPATCH_TEST_SEAMS.writeHookInput(
+      {
+        write(input) {
+          written.push(input);
+        },
+        end() {},
+      },
+      "payload",
+    );
+    expect(written).toEqual(["payload"]);
+    await DISPATCH_TEST_SEAMS.writeHookInput(
+      {
+        write() {
+          throw { code: "EPIPE" };
+        },
+        end() {
+          throw new Error("unreachable");
+        },
+      },
+      "ignored",
+    );
+    expect(DISPATCH_TEST_SEAMS.isBrokenPipe({ code: "EPIPE" })).toBe(true);
+    expect(DISPATCH_TEST_SEAMS.isBrokenPipe(new Error("not a pipe"))).toBe(false);
+    expect(
+      DISPATCH_TEST_SEAMS.writeHookInput(
+        {
+          write() {
+            throw new Error("write failed");
+          },
+          end() {},
+        },
+        "rejected",
+      ),
+    ).rejects.toThrow("write failed");
+
+    const directHook = join(marked, "direct-hook.ts");
+    writeFileSync(directHook, "await Bun.stdin.text(); process.exit(23);\n");
+    expect(await DISPATCH_TEST_SEAMS.forwardToHook(directHook, [], "direct payload")).toBe(23);
+
+    writeCompleteHookTree(marked);
+    expect(await main(["stop"], marked)).toBe(0);
+  });
+
   test("settings route every hook reference through the dispatcher's slug table", () => {
     const commands = SETTINGS_FILES.flatMap((path) =>
       collectCommands(JSON.parse(readFileSync(path, "utf8"))),

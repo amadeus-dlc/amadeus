@@ -134,6 +134,21 @@ function isBrokenPipe(error: unknown): boolean {
   );
 }
 
+interface HookInputSink {
+  write(input: string): unknown;
+  end(): unknown;
+}
+
+async function writeHookInput(sink: HookInputSink, input: string): Promise<void> {
+  try {
+    sink.write(input);
+    await sink.end();
+  } catch (error) {
+    if (isBrokenPipe(error)) return;
+    throw error;
+  }
+}
+
 async function forwardToHook(hookPath: string, args: string[], input: string): Promise<number> {
   const child = Bun.spawn({
     cmd: [process.execPath, hookPath, ...args],
@@ -154,19 +169,9 @@ async function forwardToHook(hookPath: string, args: string[], input: string): P
     process.on(signal, handler);
   }
 
-  const writeInput = async (): Promise<void> => {
-    try {
-      child.stdin.write(input);
-      await child.stdin.end();
-    } catch (error) {
-      if (isBrokenPipe(error)) return;
-      throw error;
-    }
-  };
-
   let exitCode: number;
   try {
-    await writeInput();
+    await writeHookInput(child.stdin, input);
     exitCode = await child.exited;
   } finally {
     for (const [signal, handler] of handlers) process.off(signal, handler);
@@ -174,6 +179,18 @@ async function forwardToHook(hookPath: string, args: string[], input: string): P
   if (forwardedSignal !== undefined) process.kill(process.pid, forwardedSignal);
   return exitCode;
 }
+
+// Bun coverage does not instrument spawned subprocesses. Keep the dispatcher
+// integration tests subprocess-based for fidelity, and expose the same seams so
+// the coverage run can also execute the routing and pipe branches in-process.
+export const DISPATCH_TEST_SEAMS = {
+  findPayloadProjectRoot,
+  payloadCwd,
+  resolveProjectRoot,
+  isBrokenPipe,
+  writeHookInput,
+  forwardToHook,
+};
 
 export async function main(
   argv: string[] = process.argv.slice(2),
