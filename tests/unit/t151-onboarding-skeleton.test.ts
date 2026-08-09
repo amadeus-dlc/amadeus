@@ -123,4 +123,32 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
       }
     }
   });
+
+  test("4: Codex's rendered doc carries the fresh-worktree bootstrap checklist (#2714)", () => {
+    const fills = (
+      require(join(REPO_ROOT, "packages", "framework", "harness", "codex", "onboarding.fills.ts")) as {
+        default: OnboardingFills;
+      }
+    ).default;
+    let rendered = renderOnboarding(SKELETON, fills);
+    rendered = rendered.split("{{HARNESS_DIR}}").join(".codex");
+
+    expect(rendered).toContain("## Fresh worktree / clone checklist");
+    // Branch 1: `.codex/tools/` missing → bootstrap this repo's own self-development worktree.
+    expect(rendered).toContain("mise trust && bun install --frozen-lockfile && bun run build");
+    // Branch 2: `.codex/tools/` present but `.codex/hooks.json` missing → activate + restart.
+    expect(rendered).toContain("bun .codex/tools/amadeus-codex-hooks.ts activate");
+    expect(rendered).toContain("task restart (same worktree) is required");
+    expect(rendered).toContain("Issue #2703");
+    expect(rendered).toContain("PR #2709");
+    // Team-lead ruling (incident: 3 worktrees churned, 25 minutes lost):
+    // restart must fork the SAME directory, never open a new worktree.
+    expect(rendered).toContain("fork_thread");
+    expect(rendered).toContain("create_thread");
+    expect(rendered).toContain("throws away everything this checklist just did");
+    // Handoff discipline: fork/restart messages must carry the original
+    // scope/intent/Issue references verbatim, not a paraphrase.
+    expect(rendered).toContain("must include the ORIGINAL instructions in full");
+    expect(rendered).toContain("scope, intent name, and Issue references verbatim");
+  });
 });
