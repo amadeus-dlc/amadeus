@@ -118,6 +118,20 @@ Generate only the applicable output paths listed in the engine directive under `
 - **reliability-requirements.md**: Availability targets (SLA/SLO), fault tolerance requirements, backup/recovery, graceful degradation
 - **tech-stack-decisions.md**: Technology selections and rationale — languages, frameworks, databases, infrastructure tools, and justification for each choice
 
+#### Requirement identifiers
+
+Number every non-functional requirement with a stable identifier. Declare each id in one of these five positions and nowhere else:
+
+- a heading — `### SEC-1: <title>`
+- a bold list entry — `- **SEC-1**: <title>`
+- a bare bold line — `**SEC-1**: <title>`
+- a plain list entry that reaches a colon — `- SEC-1: <title>`
+- the first cell of a table row — `| SEC-1 | <title> | … |`
+
+An id is one or more uppercase-letter-led segments joined by `-`, ending on a segment that finishes in digits: `SEC-1`, `REL-3`, `P-12`, `NFR-PERF-1`, `U2-SCALE-4`, `SCL-CP-2`. Category-local prefixes are the convention here and stay valid — there is no requirement to prefix ids with `NFR-`. Pick one prefix per category (or per unit and category) and keep it stable across the unit's artifacts. A prefix that never reaches digits (`SEC-AUTH`) is a category name, not a requirement id.
+
+Naming an id anywhere else — a prose cross-reference, a dependency column in a later table — refers to that requirement; it does not declare a new one. NFR Design, Build and Test's proportional test selection, and reviewers address requirements by these ids, so an id that no artifact declares in one of the five positions is unaddressable.
+
 ### Step 7: Update State
 
 Update `<record>/amadeus-state.md`: mark NFR Requirements for {unit-name} as `[x]` completed and update "Current Status".

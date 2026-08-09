@@ -127,6 +127,10 @@ Generate only the applicable output paths listed in the engine directive under `
 - **reliability-design.md**: Resilience patterns, circuit breaker configuration, retry policies, health check design, failover procedures, backup strategy
 - **logical-components.md**: Logical infrastructure component inventory — service boundaries, failure domains, blast radius mapping, component isolation strategy, shared resource identification. Bridges NFR design decisions with Infrastructure Design by providing a component-level view of where NFR patterns apply.
 
+#### Referencing upstream requirement identifiers
+
+Trace each design decision to the requirements it satisfies. Cite the requirement ids verbatim as `<record>/construction/{unit-name}/nfr-requirements/` declares them (`SEC-1`, `REL-3`, `NFR-PERF-1`, …) — those ids are the addressing scheme between the two stages, so do not renumber, re-prefix, or invent ids the upstream artifacts do not declare. When a design element satisfies no declared requirement, state that in one line rather than minting an id for it; when a requirement you need is missing upstream, say so instead of writing one here.
+
 ### Step 7: Update State
 
 Update `<record>/amadeus-state.md`: mark NFR Design for {unit-name} as `[x]` completed and update "Current Status".
