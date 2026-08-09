@@ -161,10 +161,18 @@ Every case where the sensor cannot legitimately measure is a pass:
 - the record was born before the contract landed
 
 A fail-open result reports `record_birth: null` (hence `string-or-null` above)
-and `under_id_contract: false`. A birth timestamp that does not match the audit
-schema's UTC form is treated as unreadable rather than compared: the cutoff
-comparison is lexicographic, so a malformed value could otherwise sort above
-every real timestamp and pull a record into the reported cohort.
+and `under_id_contract: false`.
+
+Births are compared as **instants**, never as strings. A timestamp is read only
+when it matches the audit schema's UTC form, parses, and round-trips its own
+calendar fields — three checks because each admits what the others reject: the
+shape lets `2026-13-01` through, the parse rolls `2026-02-30` over into March,
+and neither notices `"z"`. Anything that fails leaves the record birth-unknown,
+which is the fail-open side.
+
+String order is not chronological order here: `.` sorts below `Z`, so
+`…:46.001Z` reads as earlier than `…:46Z` and a record born a millisecond after
+the cutoff would file itself as pre-contract.
 
 ## Failure mode
 

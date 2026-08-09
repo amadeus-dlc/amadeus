@@ -280,6 +280,24 @@ describe("t514 the id contract is enforced going forward only", () => {
     expect(result.reason).toBe("missing-nfr-ids");
   });
 
+  test("a unit born a MILLISECOND after the cutoff is reported", () => {
+    // The string form of this birth sorts BELOW the cutoff, so a lexicographic
+    // comparison would file it as pre-contract and never report it.
+    const root = record("2026-08-09T03:47:46.001Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const result = evaluateNfrBudget(path);
+    expect(result.under_id_contract).toBe(true);
+    expect(result.reason).toBe("missing-nfr-ids");
+  });
+
+  test("a unit born a millisecond BEFORE the cutoff is not", () => {
+    const root = record("2026-08-09T03:47:45.999Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const result = evaluateNfrBudget(path);
+    expect(result.under_id_contract).toBe(false);
+    expect(result.reason).toBe("measured");
+  });
+
   test("the same unit born BEFORE the contract is not", () => {
     const root = record("2026-08-09T03:47:45Z");
     const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);

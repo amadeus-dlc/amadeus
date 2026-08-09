@@ -197,13 +197,16 @@ export function collectNfrIds(body: string): Set<string> {
  *  record. */
 export function parseBirthTimestamp(shardText: string): string | undefined {
   let earliest: string | undefined;
+  let earliestMs = Number.POSITIVE_INFINITY;
   for (const line of shardText.split("\n")) {
     const timestamp = birthTimestampOfLine(line);
     if (timestamp === undefined) continue;
-    // ISO 8601 UTC strings order lexicographically, so no Date parse is needed
-    // to pick the earliest — and none is wanted, since a Date round-trip would
-    // make the answer depend on the runner's timezone.
-    if (earliest === undefined || timestamp < earliest) earliest = timestamp;
+    // Ordered as INSTANTS, not as strings: a shard mixing `…:46Z` with
+    // `…:46.001Z` orders the two the wrong way round lexicographically.
+    const ms = auditInstant(timestamp);
+    if (ms === undefined || ms >= earliestMs) continue;
+    earliest = timestamp;
+    earliestMs = ms;
   }
   return earliest;
 }
@@ -222,16 +225,41 @@ function birthTimestampOfLine(line: string): string | undefined {
   const attributes = isRecord(row.attributes) ? row.attributes : undefined;
   if ((row.event ?? attributes?.Event) !== BIRTH_EVENT) return undefined;
   const timestamp = row.timestamp;
-  if (typeof timestamp !== "string" || !AUDIT_TIMESTAMP.test(timestamp)) return undefined;
+  if (typeof timestamp !== "string" || auditInstant(timestamp) === undefined) return undefined;
   return timestamp;
 }
 
-/** The audit schema's UTC instant. The SHAPE is checked, not just the type,
- *  because the cutoff comparison is lexicographic: a malformed `"z"` sorts
- *  above every real timestamp and would report a record as written under the
- *  contract. A line whose timestamp does not parse is skipped, which leaves the
- *  record birth-unknown and therefore fail-open. */
-const AUDIT_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+/** The audit schema's UTC instant, as a shape to match its calendar fields
+ *  against. */
+const AUDIT_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/;
+
+/** An audit timestamp as epoch milliseconds, or undefined when it is not one.
+ *
+ *  EVERY comparison of a birth goes through this rather than comparing the
+ *  strings. Lexicographic order is not chronological order once fractional
+ *  seconds are in play: `.` sorts below `Z`, so `…:46.001Z` reads as EARLIER
+ *  than `…:46Z` — which would put a record born a millisecond after the cutoff
+ *  on the pre-contract side, and would make "earliest across the shards" pick
+ *  the wrong line whenever precisions are mixed.
+ *
+ *  Three checks, because each catches what the others let through: the shape
+ *  rejects `"z"` (which would otherwise sort above every real timestamp),
+ *  `Date.parse` rejects an impossible field (`2026-13-01`), and the round-trip
+ *  rejects an out-of-range day — `Date.parse` ROLLS `2026-02-30` over into
+ *  March rather than refusing it. A timestamp that fails any of them leaves the
+ *  record birth-unknown, which is the fail-open side. */
+export function auditInstant(raw: string): number | undefined {
+  const fields = raw.match(AUDIT_TIMESTAMP);
+  if (fields === null) return undefined;
+  const ms = Date.parse(raw);
+  if (Number.isNaN(ms)) return undefined;
+  const parsed = new Date(ms);
+  const sameDay =
+    parsed.getUTCFullYear() === Number(fields[1]) &&
+    parsed.getUTCMonth() + 1 === Number(fields[2]) &&
+    parsed.getUTCDate() === Number(fields[3]);
+  return sameDay ? ms : undefined;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -306,10 +334,17 @@ function isFile(path: string): boolean {
  *  cohort. */
 export function bornUnderIdContract(birth: string | undefined): boolean {
   if (birth === undefined) return false;
-  // Inclusive: a record born at the landing instant was written under the
-  // contract. ISO 8601 UTC strings compare lexicographically.
-  return birth >= NFR_ID_CONTRACT_LANDED;
+  const ms = auditInstant(birth);
+  // A birth that is not a readable instant is not evidence for either side.
+  if (ms === undefined) return false;
+  // Inclusive: a record born AT the landing instant was written under the
+  // contract. Compared as instants — `…:46.001Z` is a millisecond after
+  // `…:46Z` and sorts before it as a string.
+  return ms >= CONTRACT_LANDED_MS;
 }
+
+/** The cutoff as an instant, resolved once. */
+const CONTRACT_LANDED_MS = Date.parse(NFR_ID_CONTRACT_LANDED);
 
 // ---------------------------------------------------------------------------
 // Measurement

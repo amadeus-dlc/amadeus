@@ -20,6 +20,7 @@ import {
   NFR_DESIGN_ARTIFACTS,
   NFR_ID_CONTRACT_LANDED,
   NFR_REQUIREMENTS_ARTIFACTS,
+  auditInstant,
   bornUnderIdContract,
   countNfrIds,
   parseBirthTimestamp,
@@ -158,6 +159,28 @@ describe("t513 the id contract applies going forward only", () => {
   test("an unreadable birth is not evidence for either side", () => {
     // Fail-open: the sensor never guesses a record into the enforced cohort.
     expect(bornUnderIdContract(undefined)).toBe(false);
+    expect(bornUnderIdContract("z")).toBe(false);
+    // Date.parse REJECTS an impossible month…
+    expect(bornUnderIdContract("2026-13-01T00:00:00Z")).toBe(false);
+    // …but ROLLS an out-of-range day over into the next month, so the calendar
+    // fields are round-tripped rather than trusted.
+    expect(bornUnderIdContract("2026-02-30T00:00:00Z")).toBe(false);
+  });
+
+  test("a birth is compared as an INSTANT, not as a string", () => {
+    // `.` sorts below `Z`, so "…:46.001Z" < "…:46Z" lexicographically — a
+    // record born a millisecond AFTER the cutoff would read as pre-contract.
+    expect("2026-08-09T03:47:46.001Z" < NFR_ID_CONTRACT_LANDED).toBe(true);
+    expect(bornUnderIdContract("2026-08-09T03:47:46.001Z")).toBe(true);
+    expect(bornUnderIdContract("2026-08-09T03:47:45.999Z")).toBe(false);
+  });
+
+  test("auditInstant exposes the parse the comparisons share", () => {
+    expect(auditInstant("2026-08-09T03:47:46Z")).toBe(Date.parse("2026-08-09T03:47:46Z"));
+    expect(auditInstant("2026-08-09T03:47:46.001Z")).toBe(Date.parse("2026-08-09T03:47:46Z") + 1);
+    for (const bogus of ["z", "2026-13-01T00:00:00Z", "2026-02-30T00:00:00Z", "2026-08-09T03:47:60Z"]) {
+      expect(auditInstant(bogus)).toBeUndefined();
+    }
   });
 });
 
@@ -199,5 +222,22 @@ describe("t513 parseBirthTimestamp reads both audit schema idioms", () => {
     const fractional =
       '{"schemaVersion":1,"seq":1,"timestamp":"2026-07-09T08:53:13.482Z","event":"WORKFLOW_STARTED","fields":{}}';
     expect(parseBirthTimestamp(fractional)).toBe("2026-07-09T08:53:13.482Z");
+  });
+
+  test("picks the earliest by INSTANT across mixed precisions", () => {
+    // Lexicographically "…:13.482Z" sorts BELOW "…:13Z", so a string-ordered
+    // pick would call the later line the earliest.
+    const withFraction =
+      '{"schemaVersion":1,"seq":2,"timestamp":"2026-07-09T08:53:13.482Z","event":"WORKFLOW_STARTED","fields":{}}';
+    const whole =
+      '{"schemaVersion":1,"seq":1,"timestamp":"2026-07-09T08:53:13Z","event":"WORKFLOW_STARTED","fields":{}}';
+    expect(parseBirthTimestamp([withFraction, whole].join("\n"))).toBe("2026-07-09T08:53:13Z");
+    expect(parseBirthTimestamp([whole, withFraction].join("\n"))).toBe("2026-07-09T08:53:13Z");
+  });
+
+  test("skips a timestamp whose calendar fields do not round-trip", () => {
+    const rollover =
+      '{"schemaVersion":1,"seq":1,"timestamp":"2026-02-30T00:00:00Z","event":"WORKFLOW_STARTED","fields":{}}';
+    expect(parseBirthTimestamp(rollover)).toBeUndefined();
   });
 });
