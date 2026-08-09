@@ -745,6 +745,158 @@ describe("CLI create verb — pull-request presentation contract", () => {
     expect(s.argvs).toEqual([]);
   });
 
+  test("refuses work flags without an Intent record before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject orphan work flags",
+        "--body-file",
+        bodyFile,
+        "--bolt",
+        "ship-pr-metadata",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("--bolt and --unit require --record");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an invalid repository before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "not-a-repository",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject an invalid repository",
+        "--body-file",
+        bodyFile,
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("--repo is required and must be owner/name");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("reports an unavailable GitHub boundary without attempting creation", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const s = scriptedSpawn([{ code: 127, stdout: "", stderr: "command not found" }]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: report an unavailable boundary",
+        "--body-file",
+        bodyFile,
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("gh unavailable: not-runnable");
+    expect(s.argvs).toEqual([["gh", "--version"]]);
+  });
+
+  test("refuses a record outside the Amadeus Intent layout before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const root = mkdtempSync(join(tmpdir(), "pr-convergence-invalid-record-"));
+    roots.push(root);
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject an invalid record path",
+        "--body-file",
+        bodyFile,
+        "--record",
+        join(root, "not-an-intent"),
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("--record must name amadeus/spaces/<space>/intents/<intent>");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an invalid registry identity before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "pr-intent-metadata",
+      dirName: "260809-pr-intent-metadata",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    writeFileSync(
+      join(record, "..", "intents.json"),
+      `${JSON.stringify([
+        {
+          slug: "pr-intent-metadata",
+          dirName: "invalid/directory",
+          uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+        },
+      ])}\n`,
+      "utf-8",
+    );
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject an invalid registry identity",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("Intent registry contains an invalid identity");
+    expect(s.argvs).toEqual([]);
+  });
+
   test("refuses an empty legacy UUID suffix before touching GitHub", async () => {
     const bodyFile = makeBodyFile("## Summary\n");
     const record = makeIntentRecord({
