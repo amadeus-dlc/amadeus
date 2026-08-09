@@ -10,6 +10,8 @@
 
 import { spawnSync } from "node:child_process";
 import {
+  constants as fsConstants,
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -561,6 +563,31 @@ function ensureActiveSpaceCursor(repoRoot: string): void {
   writeFileSync(cursor, "default\n");
 }
 
+// Fresh-worktree bootstrap (#2714): --apply just wrote `.codex/hooks.json.example`
+// (the canonical, tracked Amadeus hook contract) as part of the managed
+// dist/codex/.codex sync. Auto-create the ignored, per-clone active
+// `.codex/hooks.json` from it, but ONLY when the active file is absent — this
+// mirrors packages/framework/harness/codex/tools/amadeus-codex-hooks-contract.ts's
+// activateCodexHooks() COPYFILE_EXCL semantics (canonical source, exclusive
+// create) WITHOUT its doctor validation: a pre-existing active file is
+// preservedRuntime (self-install-allowlist.ts) and may be deliberately
+// customized, so silent auto-activation must never touch or reject it, only
+// fill the gap when nothing is there yet. COPYFILE_EXCL itself is the
+// presence check — EEXIST (a file, a directory, anything already at the
+// path) IS the preserved verdict, with no pre-check racing the filesystem.
+export function activateCodexHooksIfMissing(repoRoot: string): "created" | "preserved" | "absent" {
+  const canonicalPath = join(repoRoot, ".codex", "hooks.json.example");
+  const activePath = join(repoRoot, ".codex", "hooks.json");
+  if (!existsSync(canonicalPath)) return "absent";
+  try {
+    copyFileSync(canonicalPath, activePath, fsConstants.COPYFILE_EXCL);
+    return "created";
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return "preserved";
+    throw error;
+  }
+}
+
 function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const problems = rootInstructionProblems(repoRoot);
   const ledgerFor = ledgerLookup(repoRoot);
@@ -801,6 +828,9 @@ export async function promoteSelfMain(
         `promote-self --apply FAILED: ${error instanceof Error ? error.message : String(error)}`,
       );
       return 1;
+    }
+    if (activateCodexHooksIfMissing(repoRoot) === "created") {
+      console.log("promote-self: created .codex/hooks.json from .codex/hooks.json.example");
     }
     if (postApply !== null) {
       const ran = await postApply.run(repoRoot);
