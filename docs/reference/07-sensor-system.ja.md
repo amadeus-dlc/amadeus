@@ -251,8 +251,9 @@ severity が遡及的・不可視に作用しないよう、2つの境界を置�
 
 - **運搬** — severity はコンパイル済みグラフ
   (`sensors_applicable[].severity`)を通り、`SENSOR_*` 監査行には
-  載りません(監査行のフィールド契約は不変)。行が出力されるのは
-  `blocking` のときだけで、`severity` の不在はフレームワークの
+  載りません(監査行の8フィールド契約は不変で、blocking センサーも
+  advisory と全く同じ行を出力します)。コンパイルが `severity` キーを
+  書くのは `blocking` のときだけなので、キーの不在はフレームワークの
   デフォルトを意味します。
 - **enforcement cutoff** — ゲートの対象は、record ディレクトリの日付が
   導入日(`amadeus-state.ts` の `BLOCKING_SENSOR_CUTOFF_YYMMDD`)以降の

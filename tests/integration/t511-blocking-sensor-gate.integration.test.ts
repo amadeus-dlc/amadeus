@@ -1,9 +1,9 @@
 // covers: function:verifyBlockingSensors, function:handleApprove
 //
-// t511 (integration) — Issue #2671 論点 (c): the approve-time blocking sensor
+// t511 (integration) — Issue #2671 item (c): the approve-time blocking sensor
 // gate, wired and driven against a real project tree.
 //
-// The pure decision table lives in tests/unit/t511-blocking-sensor-severity.ts;
+// The pure decision table lives in tests/unit/t511-blocking-sensor-severity.test.ts;
 // this file proves the parts that only exist against a filesystem:
 //   - the guard is reached from handleApprove (approveUnderLock is the single
 //     chokepoint both approve arms share), and a refusal leaves the state file

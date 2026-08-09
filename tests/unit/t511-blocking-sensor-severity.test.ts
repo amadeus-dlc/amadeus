@@ -1,6 +1,6 @@
 // covers: function:resolveSensorsForStage, function:evaluateBlockingSensors
 //
-// t511 (unit) — Issue #2671 論点 (c): the `blocking` sensor severity, in its two
+// t511 (unit) — Issue #2671 item (c): the `blocking` sensor severity, in its two
 // pure layers.
 //
 //   1. CARRIAGE (amadeus-graph.ts resolveSensorsForStage): a manifest's
@@ -15,8 +15,10 @@
 //        - no SENSOR_FIRED for the sensor at this stage  -> never-fired
 //        - a fired output whose latest terminal is not PASSED -> unresolved
 //        - a fired output with no terminal at all        -> unresolved
-//      A re-fire that PASSED after a FAILED resolves the output; the judgement
-//      is per (Sensor ID, Output path), scoped to the stage by `Stage slug`.
+//      A fire invalidates that output's previous terminal (the artifact
+//      changed), so a re-fire that PASSED resolves an earlier FAILED while a
+//      re-fire still in flight reopens an earlier PASSED. The judgement is per
+//      (Sensor ID, Output path), scoped to the stage by `Stage slug`.
 //
 // Both layers are driven in-process off the SHIPPED tree (dist/claude), the
 // same seam discipline as t-phase-check-gate-seam: a stale dist reds here.
@@ -190,6 +192,24 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
 
   test("a fire with no terminal row is unresolved, not a pass", () => {
     const audit = sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T01:00:00Z");
+    const finding = evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+    );
+    expect(finding?.kind).toBe("unresolved");
+    expect(finding?.kind === "unresolved" ? finding.terminal : "x").toBeNull();
+  });
+
+  test("a re-fire after a PASSED reopens the output until its own terminal lands", () => {
+    // PASSED → FIRED with no terminal yet: the artifact was edited again and the
+    // re-fire is still in flight. Reading the stale PASSED would approve a stage
+    // whose newest verdict does not exist yet.
+    const audit = [
+      sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T01:00:00Z"),
+      sensorRow("SENSOR_PASSED", "blocking-probe", OUT, "2026-08-10T01:00:01Z"),
+      sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T02:00:00Z"),
+    ].join("\n");
     const finding = evaluateBlockingSensors(
       ["blocking-probe"],
       audit,

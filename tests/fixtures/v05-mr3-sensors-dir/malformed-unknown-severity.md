@@ -11,7 +11,7 @@ timeout_seconds: 5
 
 # malformed-unknown-severity sensor
 
-Negative-case fixture for the `default_severity` vocabulary (#2671 論点 (c)).
+Negative-case fixture for the `default_severity` vocabulary (#2671 item (c)).
 Carries `default_severity: arbitrary-bogus` — the schema accepts only
 `advisory` and `blocking`, so validateSensorManifest rejects this file.
 

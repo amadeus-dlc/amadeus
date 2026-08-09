@@ -1725,6 +1725,11 @@ export function evaluateBlockingSensors(
       if (row.sensorId !== sensorId) continue;
       if (row.event === "SENSOR_FIRED") {
         if (!firedOutputs.includes(row.outputPath)) firedOutputs.push(row.outputPath);
+        // A fire INVALIDATES the output's previous terminal: the artifact changed
+        // and the verdict that cleared it describes bytes that no longer exist.
+        // Without this, a PASSED followed by an in-flight re-fire would read as
+        // settled-clean — the newest verdict has not landed yet.
+        latestTerminal.delete(row.outputPath);
         continue;
       }
       latestTerminal.set(row.outputPath, row.event);

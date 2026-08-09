@@ -253,8 +253,9 @@ Two boundaries keep the severity from acting retroactively or invisibly:
 
 - **Carriage** — severity travels on the compiled graph
   (`sensors_applicable[].severity`), not on the `SENSOR_*` audit rows,
-  whose field contract is unchanged. The row is emitted only for
-  `blocking`; an absent `severity` means the framework default.
+  whose 8-field contract is unchanged: a blocking sensor emits exactly
+  the same rows an advisory one does. Compile writes the `severity`
+  key only for `blocking`, so an absent key means the framework default.
 - **Enforcement cutoff** — only intents whose record dir is dated on or
   after the guard's adoption day (`BLOCKING_SENSOR_CUTOFF_YYMMDD` in
   `amadeus-state.ts`) are gated, mirroring the E-OC1 questions-evidence
