@@ -639,20 +639,34 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 ユーザーは任意の承認ゲートで深度またはテスト戦略をオーバーライドできます。
 
-### 3つの深度レベル
+### 深度レベルの契約
+
+数量を伴う上限は例示ではなく契約です。ある深度で実行するステージは自分の行を守らなければならず、上限を超える場合は承認ゲートで根拠を記録します。
+
+| 深度 | ステージあたりの主要質問数 | Requirements Analysis: 機能要件数 |
+|------|--------------------------|-----------------------------------|
+| Minimal | 最大 4 | 5-10 |
+| Standard | 最大 8 | 15-30 |
+| Comprehensive | 最大 12 | 30+ |
+
+`directive.depth` を読み、各レベルで何が変わるかを本文に明示するステージは5つです: Requirements Analysis、Application Design、Functional Design、Code Generation、Build and Test。`depth-budget` センサーは Requirements Analysis の行を生成された `requirements.md` に対して計測し、超過を advisory として報告します。
+
+### 深度レベルのガイダンス
+
+それ以外はガイダンスであり、上限ではなく形の指針です。センサーによる計測対象ではありません。
 
 **Minimal**(poc、fix、chore、refactor、security-patch)— 最小限の成果物、簡潔な分析、オプションステージをスキップ:
-- Requirements: 5-10 項目、簡潔な説明、最小限の NFR
+- Requirements: 簡潔な説明、最小限の NFR
 - App Design: 単一のコンポーネント図、基本的なデータモデル、ADR なし
 - Functional Design: 簡潔なビジネスルール、単純なエンティティ、`frontend-components.md` をスキップ
 
 **Standard**(feature、mvp、infra)— 中程度の詳細でフルの成果物:
-- Requirements: 受け入れ基準付きで 15-30、中程度の NFR
+- Requirements: 要件ごとの受け入れ基準、中程度の NFR
 - App Design: インタラクション付きのコンポーネント図、関係、2-3 ADR
 - Functional Design: 詳細なビジネスロジック、包括的なルール、エンティティライフサイクル
 
 **Comprehensive**(enterprise)— 深い分析、全ステージ実行:
-- Requirements: 30+、詳細な基準、全カテゴリにわたる包括的な NFR
+- Requirements: 詳細な基準、全カテゴリにわたる包括的な NFR
 - App Design: 多層図、詳細なデータフロー、統合シーケンス、代替案付きの 5+ ADR
 - Functional Design: 決定木、状態機械、並行性、エラーリカバリ、ユニット横断パターン
 

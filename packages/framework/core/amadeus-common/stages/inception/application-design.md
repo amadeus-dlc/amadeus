@@ -85,6 +85,11 @@ Collect answers following stage-protocol.md §3 question flow (offer interaction
 
 Create 5 design artifacts in `<record>/inception/application-design/`:
 
+**Depth-scaled artifact volume** (read `directive.depth`, falling back to `amadeus-state.md` → `**Depth**` outside the engine loop; see stage-protocol.md §8 — the per-stage question ceiling is contract, the shapes below are guidance):
+- **Minimal**: single component diagram, basic data model, no ADRs needed — decisions.md records only choices the unit actually made.
+- **Standard**: component diagrams with interactions, data model with relationships, 2-3 ADRs.
+- **Comprehensive**: multi-layer component diagrams, detailed data flow, integration sequence diagrams, 5+ ADRs with alternatives analysis.
+
 **components.md:**
 - Component names and purposes
 - Component responsibilities (what each component owns)
