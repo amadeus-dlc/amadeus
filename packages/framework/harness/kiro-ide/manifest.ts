@@ -53,6 +53,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus/issue-ref-contract.md", dst: "skills/amadeus/issue-ref-contract.md" },
     { src: "agents/amadeus.json", dst: "agents/amadeus.json" },
     { src: "agents/amadeus-architect-agent.json", dst: "agents/amadeus-architect-agent.json" },
+    { src: "agents/amadeus-builder-agent.json", dst: "agents/amadeus-builder-agent.json" },
     { src: "agents/amadeus-developer-agent.json", dst: "agents/amadeus-developer-agent.json" },
     { src: "agents/amadeus-product-lead-agent.json", dst: "agents/amadeus-product-lead-agent.json" },
     { src: "agents/amadeus-architecture-reviewer-agent.json", dst: "agents/amadeus-architecture-reviewer-agent.json" },
@@ -94,6 +95,7 @@ const manifest: HarnessManifest = {
   // delegation tool here - delegates must not nest.
   frontmatterAdditions: [
     { file: "agents/amadeus-composer-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
+    { file: "agents/amadeus-builder-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
     { file: "agents/amadeus-developer-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
     { file: "agents/amadeus-architect-agent.md", lines: [`tools: ["read", "write", "shell"]`] },
     { file: "agents/amadeus-product-lead-agent.md", lines: [`tools: ["read"]`] },

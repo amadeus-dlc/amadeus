@@ -36,6 +36,7 @@
     },
     "subagent": {
       "trustedAgents": [
+        "amadeus-builder-agent",
         "amadeus-developer-agent",
         "amadeus-architect-agent",
         "amadeus-architecture-reviewer-agent",

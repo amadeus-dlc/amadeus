@@ -13,6 +13,8 @@ This skill is the Pi-native entry to Amadeus. The deterministic engine owns all
 between-stage routing. Ask it for one directive, execute only that directive,
 report the result once, and repeat until it returns a terminal directive.
 
+Delegated implementation outside a named lifecycle stage — including swarm units, reviewed fixes, call-site migrations, and test builds — uses `amadeus-builder-agent`. Named `reverse-engineering` and `code-generation` lifecycle stages remain owned by `amadeus-developer-agent`.
+
 Project-local `.pi` skills and extensions run only after Pi's native project
 trust decision. Never approve that decision automatically, never edit Pi's
 trust store, and never describe project trust as a sandbox.
@@ -181,7 +183,8 @@ For each granted batch:
    multi-repository intent, pass the directive's repository as `--repo <name>`;
    never guess an omitted repository.
 3. Acquire one permit per ready unit and dispatch it through the packaged Pi
-   child driver. Confirm only a driver-accepted dispatch with its native handle.
+   child driver with `persona: "amadeus-builder-agent"`. Confirm only a
+   driver-accepted dispatch with its native handle.
 4. Run the referee's declared check, then settle and release the corresponding
    attempt exactly once.
 5. Finalize only after the pool is terminal. A failed or unverifiable unit halts
