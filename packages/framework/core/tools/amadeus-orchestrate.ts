@@ -80,6 +80,7 @@ import {
   readFileSync,
   readSync,
   realpathSync,
+  statSync,
 } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2891,11 +2892,23 @@ const CODEX_ACTIVE_HOOKS_RELATIVE_PATH = ".codex/hooks.json";
 // The recovery command runs a tool inside the harness tree, so it is built
 // through harnessDir() rather than a hardcoded literal (the t153 seam) — on the
 // only harness that reaches this line that resolves to `.codex`.
+// Only a regular file counts as an active hooks face: Codex cannot load hooks
+// from a directory (or any other node kind) at that path, so treating one as
+// active would re-open the silent #2703 deadlock. statSync (not lstat): a
+// symlink RESOLVING to a regular file is a working hooks.json.
+function activeCodexHooksFileIsUsable(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
 function refuseInactiveCodexHooks(projectDir: string | undefined): boolean {
   if (detectHarnessType() !== "codex") return false;
   const pd = resolveProjectDir(projectDir);
   if (!existsSync(join(pd, CODEX_CANONICAL_HOOKS_RELATIVE_PATH))) return false;
-  if (existsSync(join(pd, CODEX_ACTIVE_HOOKS_RELATIVE_PATH))) return false;
+  if (activeCodexHooksFileIsUsable(join(pd, CODEX_ACTIVE_HOOKS_RELATIVE_PATH))) return false;
   emitStateNeutralError(
     `Codex hooks are not active: ${CODEX_ACTIVE_HOOKS_RELATIVE_PATH} is missing, so no Amadeus hook fires and no HUMAN_TURN is recorded — the workflow would stall at the first human checkpoint. ` +
       `Run \`bun ${harnessDir()}/tools/amadeus-codex-hooks.ts activate\`, then restart the Codex task: an already-running task does not reload hooks.json.`,

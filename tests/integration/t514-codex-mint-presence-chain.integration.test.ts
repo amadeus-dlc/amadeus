@@ -1,4 +1,4 @@
-// covers: file:packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts, function:mintHumanPresence, cli:amadeus-log(answer), subcommand:amadeus-bolt:set-autonomy
+// covers: file:packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts, function:mintHumanPresence, subcommand:amadeus-log:answer, subcommand:amadeus-bolt:set-autonomy
 // size: medium
 //
 // t514 — the Codex presence chain a live hooks.json buys you (issue #2703).

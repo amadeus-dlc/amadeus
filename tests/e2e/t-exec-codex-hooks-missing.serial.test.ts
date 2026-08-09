@@ -121,6 +121,11 @@ describe("t-exec-codex-hooks-missing — the #2703 fail-fast guard on the shippe
         const allowed = execCodex(proj, home, nextPrompt());
         expect(allowed.rc).toBe(0);
         expect(allowed.out).not.toContain(RECOVERY_FRAGMENT);
+        // The engine actually ran and spoke: every `next` outcome — directive
+        // or a different error — is a JSON object with a "kind" discriminant,
+        // so its presence separates "guard cleared, engine answered" from a
+        // session that never executed the named command at all.
+        expect(allowed.out).toContain('"kind":');
       } finally {
         cleanup();
         // Scratch leak check: the helper's verified removal must leave nothing

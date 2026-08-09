@@ -155,6 +155,20 @@ describe("t513 next refuses an inactive Codex hooks projection (#2703)", () => {
     expect(out).toContain("restart");
   });
 
+  test("REFUSES when the active path is a directory, not a regular file", () => {
+    // Codex cannot load hooks from a directory at .codex/hooks.json, so a
+    // directory there must not count as activation — treating it as active
+    // would re-open the silent deadlock this guard exists to close.
+    asHarness("codex", ".codex");
+    writeCodexCanonical(proj);
+    mkdirSync(join(proj, ".codex", "hooks.json"), { recursive: true });
+
+    const out = runNext(proj);
+
+    expect(out).toContain('"kind":"error"');
+    expect(out).toContain("bun .codex/tools/amadeus-codex-hooks.ts activate");
+  });
+
   test("ALLOWS the same project once the active file exists", () => {
     asHarness("codex", ".codex");
     writeCodexCanonical(proj);
