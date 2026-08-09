@@ -1,7 +1,12 @@
 // Pi subagent chain step interpolation: {previous} must be substituted with a
 // function replacer, not a template-string replacer.
 // covers: packages/framework/harness/pi/extensions/subagent.ts
-// size: small
+// size: medium
+//
+// Placed under tests/integration/ (not tests/unit/) per
+// cid:code-generation:fs-tests-integration-first -- reading the vendored
+// source via node:fs is a real-FS boundary, which the test-size classifier
+// (and the size-purity ratchet) requires to live outside the unit tier.
 //
 // This vendored file (@earendil-works/pi-coding-agent 0.83.0) is intentionally
 // excluded from tsconfig's compiled surface and from any test's module graph
