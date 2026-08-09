@@ -209,7 +209,7 @@ describe("t487 nfr-requirements and nfr-design scale their artifacts by depth (#
   test("docs/reference/04-stage-protocol mirrors the seven-stage roster in both languages", () => {
     const en = read(DOCS_STAGE_PROTOCOL);
     expect(en).toContain(
-      "Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation,",
+      "Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation, Build and Test",
     );
     expect(en).not.toContain("Five stages read `directive.depth`");
 
