@@ -173,13 +173,16 @@ own reading, and it is what keeps `security-requirements` and
 `tech-stack-decisions` (which declare no key) required of every unit. Reading an
 absent key as "prunable" would silently stop requiring them of anyone.
 
-**This check is forward-looking.** `produces_kinds` landed on `nfr-requirements`
-in #1338 (2026-07-22); every unit that predates it was generated with no pruning
-at all, and no record born since declares a resolvable kind *and* ran
-`nfr-requirements`. The live corpus therefore holds zero positive instances
-today — the falling proof for this check is synthetic (a fixture record whose
-`unit-of-work-dependency.md` declares `kind: service`), and the corpus sweep
-asserts the other side: zero findings.
+**This check is forward-looking, though the corpus already has data to judge.**
+Measured with this sensor's own predicates: 231 of the 1,736 nfr artifacts on
+disk belong to units whose kind resolves (11 records; service 35, library 156,
+packaging 24, spec 16), and **none of them is missing an artifact its kind
+requires** — the check does not over-fire on what exists. What is zero is the
+*reportable* subset: no record with a resolvable kind was born under the id
+contract, so the cutoff suppresses every finding today. The falling proof is
+therefore synthetic (a fixture record whose `unit-of-work-dependency.md`
+declares `kind: service`), and the corpus sweep pins both facts — a non-empty
+judged population and zero gaps within it.
 
 The check is judged on the **unit's** stage directory, so every artifact of that
 unit yields the same verdict — a fire on any of them reaches the identical

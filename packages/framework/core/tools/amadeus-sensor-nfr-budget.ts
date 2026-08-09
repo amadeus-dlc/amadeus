@@ -565,13 +565,16 @@ export function idDeclarationDir(stageDir: string): string {
 // upstream-input headers describing a CONSUMED artifact's absence), so
 // contracting one here would be inventing a format before anything writes it.
 //
-// FORWARD-LOOKING BY CONSTRUCTION. `produces_kinds` landed on
-// nfr-requirements in #1338 (2026-07-22); every unit that predates it was
-// generated with no pruning at all, and no record born since declares a
-// resolvable kind AND ran nfr-requirements. So the live corpus contains zero
-// positive instances, and the falling proof for this check is synthetic
-// (a fixture record whose unit-of-work-dependency.md declares kind: service).
-// The corpus sweep asserts the other side: zero findings today.
+// FORWARD-LOOKING BY CONSTRUCTION, though not for want of data to judge.
+// Measured over the live corpus with this module's own predicates: 231 of the
+// 1,736 nfr artifacts on disk belong to units whose kind resolves (11 records;
+// service 35, library 156, packaging 24, spec 16), and NONE of them is missing
+// an artifact its kind requires — the check does not over-fire on what exists.
+// What is zero is the REPORTABLE subset: no record with a resolvable kind was
+// born under the id contract, so the cutoff suppresses every finding today.
+// The falling proof is therefore synthetic (a fixture record whose
+// unit-of-work-dependency.md declares kind: service), and the corpus sweep
+// pins both facts — a non-empty judged population and zero gaps in it.
 //
 // Gated on the SAME id-contract cutoff as the other reported cases — a record
 // written before the contract is never reported retroactively.
@@ -580,7 +583,20 @@ export function idDeclarationDir(stageDir: string): string {
  *  tree (`core/tools` → `core/amadeus-common/…`) and in every shipped harness
  *  (`<harness>/tools` → `<harness>/amadeus-common/…`), so one relative path
  *  serves both without the script resolving a project root. */
-const STAGES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "amadeus-common", "stages", "construction");
+const DEFAULT_STAGES_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "amadeus-common", "stages");
+
+/** The construction stage directory, honouring the same `AMADEUS_STAGES_DIR`
+ *  seam amadeus-graph.ts and amadeus-learnings.ts read (it names the stages
+ *  ROOT, so the phase segment is appended here).
+ *
+ *  Resolved per call rather than once at module load: the seam is set by tests
+ *  that drive a substituted stage tree, and a module-level constant would
+ *  capture whatever was set at import time. Missing the override would send the
+ *  lookup to the real tree — or to nothing, which fails open and disables the
+ *  coverage check in silence. */
+function stagesDirDefault(): string {
+  return join(process.env.AMADEUS_STAGES_DIR ?? DEFAULT_STAGES_ROOT, "construction");
+}
 
 /** One `produces_kinds` entry: `  <artifact>: [kind, kind]`, indented inside the
  *  frontmatter block. */
@@ -597,7 +613,11 @@ const PRODUCES_KINDS_ENTRY = /^\s+([A-Za-z0-9._-]+):\s*\[([^\]]*)\]\s*$/;
 export function parseProducesKinds(stageBody: string): Map<string, string[]> | undefined {
   const lines = stageBody.split("\n");
   if ((lines[0] ?? "").trim() !== "---") return undefined;
-  const end = lines.indexOf("---", 1);
+  // Trimmed on BOTH fences. Matching the terminator exactly while trimming the
+  // opener is an asymmetry a trailing space on the closing `---` turns into a
+  // silent no-map: fail-open is the safe side, but the check would simply stop
+  // running with nothing to say so.
+  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
   if (end === -1) return undefined;
   const start = lines.findIndex((line, i) => i > 0 && i < end && line.trimEnd() === "produces_kinds:");
   if (start === -1) return undefined;
@@ -621,10 +641,10 @@ export function parseProducesKinds(stageBody: string): Map<string, string[]> | u
 
 /** The stage's map read from disk, or undefined when the file is unreadable or
  *  declares none. Both are fail-open. */
-export function readProducesKinds(stage: string, stagesDir: string = STAGES_DIR): Map<string, string[]> | undefined {
+export function readProducesKinds(stage: string, stagesDir?: string): Map<string, string[]> | undefined {
   let body: string;
   try {
-    body = readFileSync(join(stagesDir, `${stage}.md`), "utf-8");
+    body = readFileSync(join(stagesDir ?? stagesDirDefault(), `${stage}.md`), "utf-8");
   } catch {
     return undefined;
   }
@@ -834,6 +854,18 @@ function missingRequiredForKind(stage: string, stageDir: string, kind: string | 
   return missingKindRequiredArtifacts(stageDir, stage, kind, producesKinds);
 }
 
+/** The (c) findings, one per missing artifact. Takes the kind rather than
+ *  reading it off the caller so the non-undefined narrowing the finding text
+ *  needs is carried by the type here, not inferred by a reader from the fact
+ *  that `missing` is only ever non-empty when a kind resolved. */
+function coverageFindings(stage: string, kind: string | undefined, missing: string[]): NfrBudgetFinding[] {
+  if (kind === undefined) return [];
+  return missing.map((artifact) => ({
+    field: `artifact:${artifact}`,
+    reason: `${stage} declares ${artifact} for a ${kind} unit (produces_kinds) and it is not present — an absence this kind does not explain`,
+  }));
+}
+
 /** Ids of this artifact that declare no measurable numeric threshold, or empty
  *  when the check does not apply here.
  *
@@ -923,15 +955,9 @@ export function evaluateNfrBudget(outputPath: string, depth?: string, kind?: str
   // Gated on the SAME id-contract cutoff as the other cases — a record written
   // before the contract predates unit kinds carrying this weight and is never
   // reported retroactively.
-  if (underContract && missingRequired.length > 0) {
-    return verdict(
-      "missing-kind-required-artifacts",
-      missingRequired.map((artifact) => ({
-        field: `artifact:${artifact}`,
-        reason: `${stage} declares ${artifact} for a ${kind} unit (produces_kinds) and it is not present — an absence this kind does not explain`,
-      })),
-      figures,
-    );
+  const coverage = coverageFindings(stage, kind, missingRequired);
+  if (underContract && coverage.length > 0) {
+    return verdict("missing-kind-required-artifacts", coverage, figures);
   }
 
   // The THIRD reported case (#2684 stage ⑥): an id THIS artifact declares has

@@ -506,6 +506,31 @@ describe("t513 parseProducesKinds reads the stage frontmatter map", () => {
     expect(parseProducesKinds(KIND_FRONTMATTER)?.has("should-not-be-read")).toBe(false);
   });
 
+  test("an indented line that is not an entry ends the block", () => {
+    // The second break condition, distinct from the unindented one above: a
+    // nested key under produces_kinds must not let the entries below it — which
+    // belong to whatever that key is — enter the map.
+    const body = [
+      "---",
+      "produces_kinds:",
+      "  performance-requirements: [service]",
+      "  nested:",
+      "    scalability-requirements: [service]",
+      "---",
+    ].join("\n");
+    const map = parseProducesKinds(body);
+    expect(map?.has("performance-requirements")).toBe(true);
+    expect(map?.has("scalability-requirements")).toBe(false);
+  });
+
+  test("a frontmatter terminator with trailing whitespace still ends the block", () => {
+    // Both fences are compared trimmed. Matching the terminator exactly while
+    // trimming the opener would make a trailing space silently yield no map,
+    // which switches the whole coverage check off without saying so.
+    const body = ["---", "produces_kinds:", "  performance-requirements: [service]", "---  ", "", "# body"].join("\n");
+    expect(parseProducesKinds(body)?.get("performance-requirements")).toEqual(["service"]);
+  });
+
   test("a stage declaring no produces_kinds yields undefined, not an empty map", () => {
     // Undefined is the fail-open signal: without a map there is no pruning to
     // reconstruct, so no absence can be classified either way.

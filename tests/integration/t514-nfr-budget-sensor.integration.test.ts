@@ -878,8 +878,16 @@ describe("t514 the dispatcher arm turns a resolved depth into nfr-budget's --dep
 // other side on live data: zero findings today.
 
 /** The stage's real `produces_kinds` map — the same one the sensor reads, so
- *  these fixtures are judged against the shipped contract rather than a copy. */
-const REQUIREMENTS_KINDS = readProducesKinds("nfr-requirements", STAGES_DIR) as Map<string, string[]>;
+ *  these fixtures are judged against the shipped contract rather than a copy.
+ *
+ *  Checked here rather than asserted away with a cast: if the stage ever stops
+ *  declaring `produces_kinds`, the failure belongs at the read, not several
+ *  tests later inside `artifactsRequiredForKind`. */
+function requirementsKinds(): Map<string, string[]> {
+  const map = readProducesKinds("nfr-requirements", STAGES_DIR);
+  if (map === undefined) throw new Error("nfr-requirements declares no produces_kinds — the coverage check has no map");
+  return map;
+}
 
 /** A record whose units-generation artifact declares one unit's kind, in the
  *  nested edge-block form parseBoltDag accepts. */
@@ -982,6 +990,30 @@ describe("t514 the kind coverage check separates pruning from a silent omission"
     expect(evaluateNfrBudget(first, "Standard", "service").missing_kind_required_count).toBe(0);
   });
 
+  test("AMADEUS_STAGES_DIR redirects the default lookup, as it does for the graph", () => {
+    // The seam names the stages ROOT; the phase segment is the sensor's own.
+    // Without honouring it, a run against a substituted stage tree would read
+    // the real one — or nothing, which fails open and disables the check in
+    // silence.
+    const root = join(tmp, "stages-seam");
+    mkdirSync(join(root, "construction"), { recursive: true });
+    writeFileSync(
+      join(root, "construction", "nfr-requirements.md"),
+      "---\nproduces_kinds:\n  security-requirements: [spec]\n---\n",
+    );
+    const before = process.env.AMADEUS_STAGES_DIR;
+    process.env.AMADEUS_STAGES_DIR = root;
+    try {
+      expect(readProducesKinds("nfr-requirements")?.get("security-requirements")).toEqual(["spec"]);
+    } finally {
+      if (before === undefined) delete process.env.AMADEUS_STAGES_DIR;
+      else process.env.AMADEUS_STAGES_DIR = before;
+    }
+    // Restored: the default resolves against the shipped tree again, where
+    // security-requirements declares no key at all.
+    expect(readProducesKinds("nfr-requirements")?.has("security-requirements")).toBe(false);
+  });
+
   test("an unreadable stage file yields no map — fail-open", () => {
     // Without the stage's produces_kinds there is no pruning to reconstruct,
     // so no absence can be classified either way.
@@ -992,8 +1024,9 @@ describe("t514 the kind coverage check separates pruning from a silent omission"
     // Pins the semantic the whole check rests on against the REAL frontmatter:
     // security-requirements and tech-stack-decisions declare no key, so no
     // kind prunes them.
+    const map = requirementsKinds();
     for (const kind of ["service", "ui", "library", "spec", "packaging"]) {
-      const required = artifactsRequiredForKind("nfr-requirements", kind, REQUIREMENTS_KINDS);
+      const required = artifactsRequiredForKind("nfr-requirements", kind, map);
       expect(required).toContain("security-requirements");
       expect(required).toContain("tech-stack-decisions");
     }
@@ -1052,26 +1085,44 @@ describe("t514 the dispatcher resolves a unit kind into nfr-budget's --kind flag
 describe("t514 the live corpus reports no kind-coverage omission", () => {
   test("every artifact whose unit kind resolves is complete for that kind", () => {
     // The other half of the synthetic falling proof
-    // (cid:code-generation:corpus-sweep-for-new-guards). ZERO is the expected
-    // result and is asserted as such: `produces_kinds` postdates every record
-    // that ran nfr-requirements with a resolvable kind, so no live unit can
-    // legitimately be in case (c) today. A non-zero count here means either a
-    // real silent omission has appeared or the predicate over-fires.
+    // (cid:code-generation:corpus-sweep-for-new-guards): the predicate must
+    // stay silent on legitimate existing data.
+    //
+    // The judged population is NOT empty — a meaningful number of live
+    // artifacts belong to units with a resolvable kind — and none of them is
+    // missing an artifact its kind requires. That is the substantive result:
+    // the check does not over-fire on the corpus as it stands.
+    //
+    // Separately, no such record was born under the id contract, so the cutoff
+    // means no finding can fire today regardless. Both are pinned below, since
+    // an empty `reported` alone would also be what a population of zero
+    // produces.
     const reported: string[] = [];
     let evaluated = 0;
+    let kindResolved = 0;
+    let reportable = 0;
     for (const entry of readdirSync(CORPUS).filter((e) => /^[0-9]{6}-/.test(e))) {
       const recordDir = join(CORPUS, entry);
       const depth = depthOf(recordDir);
       for (const path of nfrArtifactsOf(recordDir)) {
         const kind = unitKindArgs("nfr-budget", path, REPO_ROOT)[1];
         evaluated += 1;
+        if (kind !== undefined) kindResolved += 1;
         const result = evaluateNfrBudget(path, depth, kind);
+        if (kind !== undefined && result.under_id_contract) reportable += 1;
         if (result.missing_kind_required_count > 0) reported.push(path);
       }
     }
-    // Vacuity guard: the sweep must have walked the corpus for the zero to
-    // carry weight.
+    // Vacuity guards: the sweep walked the corpus, AND the kind-judged subset
+    // it walked is non-empty — so the zero below is a measurement, not an
+    // absence of measurement.
     expect(evaluated).toBeGreaterThan(0);
+    expect(kindResolved).toBeGreaterThan(0);
     expect(reported).toEqual([]);
+    // Pinned as its own fact rather than folded into the above: today the
+    // cutoff alone would suppress every finding, so when the first
+    // post-contract kind-resolvable unit appears this stops being true and the
+    // sweep's zero starts resting on the predicate instead.
+    expect(reportable).toBe(0);
   });
 });
