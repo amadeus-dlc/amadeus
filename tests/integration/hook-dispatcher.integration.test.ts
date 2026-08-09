@@ -173,7 +173,7 @@ describe("Claude hook dispatcher", () => {
     );
     expect(DISPATCH_TEST_SEAMS.isBrokenPipe({ code: "EPIPE" })).toBe(true);
     expect(DISPATCH_TEST_SEAMS.isBrokenPipe(new Error("not a pipe"))).toBe(false);
-    expect(
+    await expect(
       DISPATCH_TEST_SEAMS.writeHookInput(
         {
           write() {
@@ -190,7 +190,7 @@ describe("Claude hook dispatcher", () => {
     expect(await DISPATCH_TEST_SEAMS.forwardToHook(directHook, [], "direct payload")).toBe(23);
 
     writeCompleteHookTree(marked);
-    expect(await main(["stop"], marked)).toBe(0);
+    expect(await main(["stop"], marked, "")).toBe(0);
   });
 
   test("settings route every hook reference through the dispatcher's slug table", () => {

@@ -192,16 +192,21 @@ export const DISPATCH_TEST_SEAMS = {
   forwardToHook,
 };
 
+async function readHookInput(stdinInput: string | undefined): Promise<string> {
+  return stdinInput ?? (process.stdin.isTTY ? "" : await Bun.stdin.text());
+}
+
 export async function main(
   argv: string[] = process.argv.slice(2),
   configuredRoot: string | undefined = process.env.CLAUDE_PROJECT_DIR,
+  stdinInput: string | undefined = undefined,
 ): Promise<number> {
   try {
     const [rawSlug, ...hookArgs] = argv;
     const slug = parseHookSlug(rawSlug);
     // stdin cannot be inherited after inspecting the payload cwd; read it once
     // and forward the original hook payload text unchanged.
-    const input = process.stdin.isTTY ? "" : await Bun.stdin.text();
+    const input = await readHookInput(stdinInput);
     const projectRoot = resolveProjectRoot(import.meta.dir, configuredRoot, input);
     if (ensureCompleteHookTree(projectRoot) === "not-built") {
       console.error(NOT_BUILT_MESSAGE);
