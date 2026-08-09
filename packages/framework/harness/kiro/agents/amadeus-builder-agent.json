@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
-  "name": "amadeus-developer-agent",
-  "description": "AI-DLC Developer Agent \u2014 delegation target for the named reverse-engineering (2.1) and code-generation (3.5) lifecycle stages.",
-  "prompt": "file://amadeus-developer-agent.md",
+  "name": "amadeus-builder-agent",
+  "description": "AI-DLC Builder Agent — delegation target for swarm units, reviewed fixes, call-site migrations, test builds, and other scoped implementation work.",
+  "prompt": "file://amadeus-builder-agent.md",
   "tools": [
     "fs_read",
     "fs_write",
@@ -22,8 +22,7 @@
     }
   },
   "resources": [
-    "file://.kiro/agents/amadeus-developer-agent.md",
-    "file://.kiro/knowledge/amadeus-developer-agent/*.md",
+    "file://.kiro/agents/amadeus-builder-agent.md",
     "file://.kiro/knowledge/amadeus-shared/*.md",
     "file://amadeus/spaces/default/memory/**/*.md"
   ],

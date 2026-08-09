@@ -21,12 +21,10 @@
 //       be PRESENT in every shipped conductor SKILL. Catches a future fork that
 //       drops `--init` yet still lacks the current conductor contract.
 //
-// All five authored SKILLs (claude, codex, kimi, kiro, kiro-ide) carry the full
-// vocabulary today and none carry a bare `--init`, so the POSITIVE set needs no
-// per-harness carve-out — codex included. The gate asserts the shipped AUTHORED
-// surface (harness/<h>/skills/amadeus/SKILL.md), the FIRST surface that defines a
-// harness's orchestrator vocabulary; dist is its byte-parity-guarded copy (t148/
-// package.ts --check), so gating the authored source covers every tree.
+// Six harnesses author SKILL.md; Cursor and OpenCode author commands/amadeus.md.
+// Together these eight conductor surfaces define the complete shipped routing
+// contract. Dist is their byte-parity-guarded projection (t148/package.ts
+// --check), so gating the authored source covers every tree.
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -43,6 +41,20 @@ function harnessSkills(): string[] {
   return readdirSync(HARNESS_DIR)
     .filter((h) => existsSync(join(HARNESS_DIR, h, "skills", "amadeus", "SKILL.md")))
     .map((h) => `packages/framework/harness/${h}/skills/amadeus/SKILL.md`)
+    .sort();
+}
+
+/** Every authored conductor surface. Skill-native harnesses use SKILL.md;
+ * command-native harnesses use commands/amadeus.md. */
+function conductorSurfaces(): string[] {
+  return readdirSync(HARNESS_DIR)
+    .flatMap((h) => {
+      const candidates = [
+        `packages/framework/harness/${h}/skills/amadeus/SKILL.md`,
+        `packages/framework/harness/${h}/commands/amadeus.md`,
+      ];
+      return candidates.filter((rel) => existsSync(join(REPO_ROOT, rel)));
+    })
     .sort();
 }
 
@@ -80,13 +92,13 @@ const REQUIRED_TOKENS = [
 // them would demand edits SNR-W3 explicitly scopes out.
 const CODEX_SKILL = "packages/framework/harness/codex/skills/amadeus/SKILL.md";
 const CODEX_C2_TOKEN = "worktree-relative paths only";
-const CODEX_BUILDER_ROUTING_TOKENS = [
-  "use `amadeus-builder-agent` for every conductor-created implementation child",
-  "using the `amadeus-builder-agent` custom agent role",
-  "Keep `amadeus-developer-agent` for the named `reverse-engineering` and `code-generation` stage dispatches.",
+const SHARED_BUILDER_ROUTING_TOKENS = [
+  "Delegated implementation outside a named lifecycle stage",
+  "uses `amadeus-builder-agent`",
+  "Named `reverse-engineering` and `code-generation` lifecycle stages remain owned by `amadeus-developer-agent`.",
 ] as const;
 
-describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () => {
+describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
 
   test("the disk-derived harness-SKILL set covers every shipped tree (no vacuous pass)", () => {
@@ -138,9 +150,29 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
     expect(body.includes(CODEX_C2_TOKEN)).toBe(true);
   });
 
-  test("the Codex conductor routes bounded implementation children to builder while preserving developer-owned stages", () => {
-    const body = readFileSync(join(REPO_ROOT, CODEX_SKILL), "utf-8");
-    const missing = CODEX_BUILDER_ROUTING_TOKENS.filter((token) => !body.includes(token));
+  test("every harness routes bounded implementation to builder while preserving developer-owned stages", () => {
+    const surfaces = conductorSurfaces();
+    expect(surfaces).toHaveLength(8);
+    const missing: string[] = [];
+    for (const rel of surfaces) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      for (const token of SHARED_BUILDER_ROUTING_TOKENS) {
+        if (!body.includes(token)) missing.push(`${rel}  missing: ${token}`);
+      }
+      const builderMentions = body.match(/amadeus-builder-agent/g)?.length ?? 0;
+      if (builderMentions < 2) missing.push(`${rel}  builder dispatch is not explicit`);
+    }
     expect(missing).toEqual([]);
+  });
+
+  test("Kiro harnesses expose builder as a trusted native subagent", () => {
+    for (const harness of ["kiro", "kiro-ide"]) {
+      const root = join(REPO_ROOT, "packages", "framework", "harness", harness);
+      const builder = JSON.parse(readFileSync(join(root, "agents", "amadeus-builder-agent.json"), "utf-8"));
+      const conductor = JSON.parse(readFileSync(join(root, "agents", "amadeus.json"), "utf-8"));
+      expect(builder.name).toBe("amadeus-builder-agent");
+      expect(builder.description).toContain("swarm units");
+      expect(conductor.toolsSettings.subagent.trustedAgents).toContain("amadeus-builder-agent");
+    }
   });
 });
