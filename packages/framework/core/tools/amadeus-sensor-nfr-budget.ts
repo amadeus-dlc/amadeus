@@ -12,8 +12,8 @@
 // observed distribution exists is exactly the mistake #2525 had to undo — a
 // threshold under the observed minimum flags every artifact, and a permanently
 // red signal says nothing about which artifact is an outlier. The ceilings are
-// stage ③, and they are derived from the numbers this sensor and
-// scripts/depth-artifact-census.ts produce.
+// stage ③, and they are derived from the numbers this sensor and the
+// repository's depth artifact census produce.
 //
 // WHAT IS THE DENOMINATOR. NFR ids are declared in nfr-requirements and only
 // CITED in nfr-design — the stage ① contract says so in as many words ("do not
@@ -129,8 +129,16 @@ export function stageOfNfrArtifact(fileBasename: string): string | undefined {
  *  reason. Requiring an uppercase LETTER first drops a date (`2026-08-09`)
  *  without needing to recognise dates. Letters may be fused onto the final
  *  digits (`SEC-A1`) as on the FR side, but only ahead of them: `SEC-1x` and
- *  `SEC-2b` are not ids of their own. */
-const NFR_ID = "([A-Z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-[A-Za-z]*[0-9]+)(?![A-Za-z0-9-])";
+ *  `SEC-2b` are not ids of their own.
+ *
+ *  EVERY segment is uppercase-letter-led, which is what the contract says and
+ *  is narrower than the FR pattern's `[A-Za-z0-9]+` middle. The looser form
+ *  admits `SEC-lower-1`, `SEC-2-1` and `SEC-a1` — none of which the contract
+ *  calls an id, and each of which would enter the denominator and understate
+ *  bytes-per-NFR. Applying both forms to the corpus (708 nfr-requirements
+ *  artifacts) drops 0 ids from 0 files, so this is the contract's own wording
+ *  rather than a change to what the corpus measures. */
+const NFR_ID = "([A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-[A-Z]*[0-9]+)(?![A-Za-z0-9-])";
 
 /** A plain list entry must reach a colon, optionally through one parenthesised
  *  gloss — the form the corpus titles them in, both ASCII and full-width. The
@@ -213,8 +221,17 @@ function birthTimestampOfLine(line: string): string | undefined {
   if (!isRecord(row)) return undefined;
   const attributes = isRecord(row.attributes) ? row.attributes : undefined;
   if ((row.event ?? attributes?.Event) !== BIRTH_EVENT) return undefined;
-  return typeof row.timestamp === "string" ? row.timestamp : undefined;
+  const timestamp = row.timestamp;
+  if (typeof timestamp !== "string" || !AUDIT_TIMESTAMP.test(timestamp)) return undefined;
+  return timestamp;
 }
+
+/** The audit schema's UTC instant. The SHAPE is checked, not just the type,
+ *  because the cutoff comparison is lexicographic: a malformed `"z"` sorts
+ *  above every real timestamp and would report a record as written under the
+ *  contract. A line whose timestamp does not parse is skipped, which leaves the
+ *  record birth-unknown and therefore fail-open. */
+const AUDIT_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -301,6 +318,9 @@ export function bornUnderIdContract(birth: string | undefined): boolean {
 export interface NfrArtifactMeasurement {
   artifact: string;
   bytes: number;
+  /** Nothing but whitespace. Distinct from `bytes === 0`: a stage that has
+   *  written a newline has still written nothing. */
+  blank: boolean;
   ids: Set<string>;
 }
 
@@ -317,6 +337,7 @@ export function measureNfrArtifact(path: string): NfrArtifactMeasurement | undef
   return {
     artifact: basename(path, ".md"),
     bytes: Buffer.byteLength(body, "utf-8"),
+    blank: body.trim() === "",
     ids: collectNfrIds(body),
   };
 }
@@ -327,18 +348,24 @@ export interface NfrStageMeasurement {
   /** Distinct ids DECLARED by the measured artifacts. Zero for nfr-design by
    *  contract — that stage cites, it does not declare. */
   ids: Set<string>;
+  /** Per-artifact bytes, in `artifacts` order for those that exist. Carried out
+   *  of the one read so a caller wanting the per-artifact view does not read
+   *  the same files a second time — a second read can also disagree with the
+   *  first if the tree changes underneath it. */
+  artifactBytes: number[];
 }
 
 /** Measure every artifact of one stage that exists in `stageDir`. Absent
  *  artifacts are skipped rather than counted as zero: the expected set cannot be
  *  reconstructed from disk (see the pruning note at the top). */
 export function measureNfrStageDir(stageDir: string, artifacts: readonly string[]): NfrStageMeasurement {
-  const out: NfrStageMeasurement = { files: 0, bytes: 0, ids: new Set<string>() };
+  const out: NfrStageMeasurement = { files: 0, bytes: 0, ids: new Set<string>(), artifactBytes: [] };
   for (const name of artifacts) {
     const measured = measureNfrArtifact(join(stageDir, `${name}.md`));
     if (measured === undefined) continue;
     out.files += 1;
     out.bytes += measured.bytes;
+    out.artifactBytes.push(measured.bytes);
     for (const id of measured.ids) out.ids.add(id);
   }
   return out;
@@ -430,7 +457,10 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
   if (measured === undefined) return verdict("no-file", [], NONE);
   // A file that exists but holds nothing is a stage mid-write, not a contract
   // violation — reporting it would fire on every artifact's first keystroke.
-  if (measured.bytes === 0) return verdict("empty", [], NONE);
+  // WHITESPACE counts as nothing, matching the sibling depth-budget sensor: a
+  // file holding one newline has no ids because none have been written yet, and
+  // reporting it as an unmet id contract would be the same false alarm.
+  if (measured.blank) return verdict("empty", [], NONE);
 
   const stageDir = dirname(outputPath);
   const unit = measureNfrStageDir(stageDir, artifactsOfStage(stage));

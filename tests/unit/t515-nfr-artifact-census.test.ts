@@ -15,12 +15,17 @@
 import { describe, expect, test } from "bun:test";
 import {
   aggregateNfr,
+  type DepthGroup,
+  type NfrStage,
   type NfrUnitMeasurement,
 } from "../../scripts/depth-artifact-census";
 
+// The parameter types are the exported ones the measurement itself uses, so a
+// change to either union is caught here rather than drifting past a locally
+// re-spelled copy.
 function unit(
-  depth: "Minimal" | "Standard" | "Comprehensive" | "unknown",
-  stage: "nfr-requirements" | "nfr-design",
+  depth: DepthGroup,
+  stage: NfrStage,
   bytes: number,
   idCount: number,
   artifacts: number,
@@ -80,6 +85,20 @@ describe("t515 aggregateNfr summarizes bytes per declared id, per stage and dept
     expect(group?.unitsWithoutIds).toBe(1);
     expect(group?.bytesPerNfr?.n).toBe(1);
     expect(group?.bytesPerNfr?.median).toBe(200);
+  });
+
+  test("a group where NO unit declares an id reports no distribution at all", () => {
+    // Not zeroes: an absent sample and a sample of zeroes read differently, and
+    // the renderer shows the absent one as `-` rather than as a measured 0.
+    const census = aggregateNfr([
+      unit("Minimal", "nfr-design", 4000, 0, 2),
+      unit("Minimal", "nfr-design", 6000, 0, 3),
+    ]);
+    const group = census["nfr-design"]?.groups.Minimal;
+    expect(group?.units).toBe(2);
+    expect(group?.unitsWithoutIds).toBe(2);
+    expect(group?.bytesPerNfr).toBeUndefined();
+    expect(group?.artifactBytesPerNfr).toBeUndefined();
   });
 
   test("counts files and units so the population is auditable", () => {

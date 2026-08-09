@@ -20,7 +20,7 @@ output_schema:
   unit_nfr_count: integer
   bytes_per_nfr: integer
   unit_bytes_per_nfr: integer
-  record_birth: string
+  record_birth: string-or-null
   under_id_contract: boolean
   findings:
     - field: string
@@ -40,7 +40,7 @@ Stage ① (#2686) supplied the contract. This sensor supplies the measurement an
 the mistake #2525 had to undo: a threshold under the observed minimum flags
 every artifact, and a permanently red signal says nothing about which artifact
 is an outlier. Ceilings are the issue's stage ③ and are derived from the numbers
-this sensor and `scripts/depth-artifact-census.ts` produce.
+this sensor and the repository's depth artifact census produce.
 
 `advisory` is the only severity the shipped schema admits, so a finding is data
 for the human at the gate and never blocks. Raising it is additionally held by
@@ -159,6 +159,12 @@ Every case where the sensor cannot legitimately measure is a pass:
 - the record's birth cannot be read (no audit shard, no start event) — the
   sensor never guesses a record into the reported cohort
 - the record was born before the contract landed
+
+A fail-open result reports `record_birth: null` (hence `string-or-null` above)
+and `under_id_contract: false`. A birth timestamp that does not match the audit
+schema's UTC form is treated as unreadable rather than compared: the cutoff
+comparison is lexicographic, so a malformed value could otherwise sort above
+every real timestamp and pull a record into the reported cohort.
 
 ## Failure mode
 

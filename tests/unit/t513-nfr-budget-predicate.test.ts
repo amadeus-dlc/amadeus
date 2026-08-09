@@ -83,6 +83,18 @@ describe("t513 countNfrIds fixes the id shape from the stage ① contract", () =
     expect(countNfrIds("### SEC-2b: title")).toBe(0);
   });
 
+  test("rejects a segment that is not uppercase-letter-led", () => {
+    // Every segment is letter-led per the contract. These three forms are what
+    // a looser middle (`[A-Za-z0-9]+`) would admit; each would enter the
+    // denominator and understate bytes-per-NFR.
+    expect(countNfrIds("### SEC-lower-1: title")).toBe(0);
+    expect(countNfrIds("### SEC-2-1: title")).toBe(0);
+    expect(countNfrIds("### SEC-a1: title")).toBe(0);
+    // Fused UPPERCASE letters ahead of the digits stay valid (the FR side
+    // writes group ids that way).
+    expect(countNfrIds("### SEC-A1: title")).toBe(1);
+  });
+
   test("counts DISTINCT ids so a restated id does not inflate the denominator", () => {
     const body = ["### SEC-1: transport", "- **SEC-1**: restated", "| SEC-1 | again |"].join("\n");
     expect(countNfrIds(body)).toBe(1);
@@ -171,5 +183,21 @@ describe("t513 parseBirthTimestamp reads both audit schema idioms", () => {
 
   test("survives a malformed line rather than aborting the shard", () => {
     expect(parseBirthTimestamp(["{not json", V1].join("\n"))).toBe("2026-07-09T08:53:13Z");
+  });
+
+  test("skips a timestamp that is not the audit schema's UTC instant", () => {
+    // The cutoff comparison is lexicographic, so `"z"` would sort above every
+    // real timestamp and pull the record into the reported cohort. Shape is
+    // checked, not just type.
+    const bogus =
+      '{"schemaVersion":1,"seq":1,"timestamp":"z","event":"WORKFLOW_STARTED","fields":{}}';
+    expect(parseBirthTimestamp(bogus)).toBeUndefined();
+    expect(parseBirthTimestamp([bogus, V1].join("\n"))).toBe("2026-07-09T08:53:13Z");
+  });
+
+  test("accepts fractional seconds, which the schema also writes", () => {
+    const fractional =
+      '{"schemaVersion":1,"seq":1,"timestamp":"2026-07-09T08:53:13.482Z","event":"WORKFLOW_STARTED","fields":{}}';
+    expect(parseBirthTimestamp(fractional)).toBe("2026-07-09T08:53:13.482Z");
   });
 });

@@ -220,6 +220,16 @@ describe("t514 the sensor passes wherever it cannot legitimately measure", () =>
     expect(evaluateNfrBudget(path).pass).toBe(true);
   });
 
+  test("a file holding only whitespace, even under the contract", () => {
+    // A newline is still nothing written. Reporting it as an unmet id contract
+    // would fire on the first keystroke of every post-contract artifact.
+    const root = record("2026-08-09T10:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", "\n  \n\t\n");
+    const result = evaluateNfrBudget(path);
+    expect(result.reason).toBe("empty");
+    expect(result.pass).toBe(true);
+  });
+
   test("a record whose birth cannot be read", () => {
     // Fail-open: an unreadable audit trail never lands a record in the reported
     // cohort, so a missing shard cannot manufacture a finding.
@@ -248,6 +258,16 @@ describe("t514 the id contract is enforced going forward only", () => {
     expect(result.findings_count).toBe(1);
     expect(result.findings[0]?.field).toBe("nfr-ids");
     expect(result.under_id_contract).toBe(true);
+  });
+
+  test("a unit born AT the cutoff instant is reported", () => {
+    // The comparison is inclusive: a record born at the landing instant was
+    // written under the contract.
+    const root = record(NFR_ID_CONTRACT_LANDED);
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const result = evaluateNfrBudget(path);
+    expect(result.under_id_contract).toBe(true);
+    expect(result.reason).toBe("missing-nfr-ids");
   });
 
   test("the same unit born BEFORE the contract is not", () => {
@@ -332,8 +352,9 @@ describe("t514 the live corpus is not retroactively reported", () => {
     const paths = preContractRecords().flatMap(nfrArtifactsOf);
     const reported = paths.filter((path) => !evaluateNfrBudget(path).pass);
     // The sweep must actually have swept: a predicate that measured nothing
-    // would pass this vacuously.
-    expect(paths.length).toBeGreaterThan(1000);
+    // would pass this vacuously. A floor at today's corpus size would instead
+    // fail whenever records are archived, which says nothing about the guard.
+    expect(paths.length).toBeGreaterThan(0);
     expect(reported).toEqual([]);
   });
 });

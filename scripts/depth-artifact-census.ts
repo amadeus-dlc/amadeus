@@ -479,10 +479,9 @@ function measureNfrUnits(recordDir: string, record: string, depth: DepthGroup): 
         files: measured.files,
         bytes: measured.bytes,
         idCount: unitIdCount(stageDir),
-        artifactBytes: artifacts
-          .map((name) => join(stageDir, `${name}.md`))
-          .filter((path) => existsSync(path))
-          .map(byteLengthOf),
+        // Carried out of the same measurement rather than re-read: a second
+        // pass can disagree with the first if the tree changes underneath it.
+        artifactBytes: measured.artifactBytes,
       });
     }
   }
