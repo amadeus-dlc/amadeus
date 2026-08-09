@@ -191,7 +191,7 @@ function main(): void {
   // Extract --project-dir
   const filteredArgs: string[] = [];
   for (let i = 0; i < rawArgs.length; i++) {
-    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
+    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length && !rawArgs[i + 1].startsWith("--")) {
       projectDir = rawArgs[i + 1];
       i++;
     } else {
@@ -238,7 +238,11 @@ function parseFlags(
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith("--") && i + 1 < args.length) {
-      flags[args[i].slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      if (value.startsWith("--")) {
+        error(`${args[i]} expects a value, got another flag: "${value}". Did you forget the value?`);
+      }
+      flags[args[i].slice(2)] = value;
       i++;
     }
   }

@@ -501,3 +501,54 @@ describe("t19 amadeus-jump execute (migrated from t19-tool-jump.sh, plan 16)", (
     expect(JSON.parse(r.stdout).state_updated).toBe(true); // STRONGER
   });
 });
+
+// ============================================================
+// Issue #2763 — amadeus-jump.ts's own `parseFlags` and `--project-dir`
+// splice loops used the same unguarded `args[i + 1]` value-arm as #2741's
+// sensor-side flags. Every flag parseFlags feeds (scope/stage/phase/target/
+// direction) IS downstream-validated against a known literal set, so a
+// swallowed flag name was already loud (via "Unknown stage" / "Invalid
+// direction" / "Unknown scope") — never a silent success. The fix still
+// seals the value-arm (defense-in-depth, and it changes the ERROR MESSAGE
+// from a confusing "Unknown X: --y" to an immediate, precise
+// "--x expects a value, got another flag" — asserted below).
+// ============================================================
+
+describe("t19 Issue #2763: parseFlags value-arm no longer silently swaps flags", () => {
+  test("--stage immediately followed by --scope is refused with a precise message (was: confusing 'Unknown stage: --scope')", () => {
+    const p = proj("state-mid-ideation.md");
+    const r = jump(["resolve", "--stage", "--scope", "feature"], p);
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain('--stage expects a value, got another flag: \\"--scope\\"');
+    expect(r.out).not.toContain("Unknown stage: --scope");
+  });
+
+  test("--direction immediately followed by --scope is refused (execute subcommand)", () => {
+    const p = proj("state-mid-ideation.md");
+    const r = jump(
+      ["execute", "--target", "code-generation", "--direction", "--scope", "feature"],
+      p,
+    );
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain('--direction expects a value, got another flag: \\"--scope\\"');
+  });
+
+  // The --project-dir splice loop in main() shares the same fix: a swallowed
+  // flag NAME is left in the argv stream (rather than becoming the resolved
+  // project dir), where it then flows into handleResolve/handleExecute's own
+  // parseFlags and is caught there — the two fixes compose rather than one
+  // silently masking a defect in the other.
+  test("a leading --project-dir immediately followed by another flag is refused, not misdirected", () => {
+    const res = spawnSync(
+      BUN,
+      [TOOL, "resolve", "--project-dir", "--stage", "code-generation", "--scope", "feature"],
+      { encoding: "utf-8", env: { ...process.env } },
+    );
+    const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+    expect(res.status).not.toBe(0);
+    // Pre-fix, projectDir silently became the literal string "--stage" and
+    // the tool failed downstream trying to read state from a bogus path
+    // (an ENOENT-flavoured message, never this precise flag-usage error).
+    expect(out).toContain('--project-dir expects a value, got another flag: \\"--stage\\"');
+  });
+});
