@@ -121,6 +121,11 @@ Design concrete solutions for each NFR category:
 
 ### Step 6: Generate Artifacts
 
+**Depth-scaled artifact volume** (read `directive.depth`, falling back to `amadeus-state.md` → `**Depth**` outside the engine loop; see stage-protocol.md §8 — the per-stage question ceiling is contract, the shapes below are guidance. The `nfr-budget` sensor measures produced volume against depth as an advisory finding; it does not add a numeric row to §8's Depth-Level Contract):
+- **Minimal**: the most direct solution per applicable NFR category, skip pattern alternatives analysis.
+- **Standard**: a concrete solution per applicable NFR category with the key configuration decisions named.
+- **Comprehensive**: solutions with pattern alternatives considered, failure-mode handling, and cross-category interactions documented.
+
 Generate only the applicable output paths listed in the engine directive under `<record>/construction/{unit-name}/nfr-design/`. Do not create N/A placeholders for pruned outputs or extra files merely to complete the full list below. The possible output contracts are:
 
 - **performance-design.md**: Caching architecture, optimization strategies, resource pooling, async patterns, performance budgets
