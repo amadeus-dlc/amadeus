@@ -243,7 +243,11 @@ function parseFlags(argv: string[]): Flags {
   return out;
 }
 
-function fail(msg: string): never {
+/** The only non-zero exit: a missing required flag. Exported as an in-process
+ *  seam — reached from `main` it runs inside a spawned child, which bun's
+ *  coverage does not measure, so the arm would sit permanently uncovered while
+ *  its behaviour is genuinely tested. */
+export function fail(msg: string): never {
   process.stderr.write(`amadeus-sensor-scope-sizing: ${msg}\n`);
   process.exit(1);
 }

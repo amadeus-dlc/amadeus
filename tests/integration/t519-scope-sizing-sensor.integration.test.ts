@@ -33,6 +33,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   evaluateScopeSizing,
+  fail,
   main,
   measureCapabilities,
 } from "../../packages/framework/core/tools/amadeus-sensor-scope-sizing.ts";
@@ -248,6 +249,47 @@ describe("t519 CLI — the measurement is in the output, not merely computed", (
     });
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("--output-path is required");
+  });
+
+  test("the failure arm names the sensor and exits 1 — driven in-process", () => {
+    // The spawned twin above pins the real process contract; this drives the
+    // same arm in-process, where bun's coverage can see it. A spawn-only arm
+    // is measured as dead code even though its behaviour is tested.
+    const errors: string[] = [];
+    const exits: unknown[] = [];
+    const realWrite = process.stderr.write;
+    const realExit = process.exit;
+    Object.defineProperty(process.stderr, "write", {
+      configurable: true,
+      writable: true,
+      value: (chunk: string) => {
+        errors.push(chunk);
+        return true;
+      },
+    });
+    Object.defineProperty(process, "exit", {
+      configurable: true,
+      writable: true,
+      value: (code?: number) => {
+        exits.push(code);
+      },
+    });
+    try {
+      fail("--output-path is required");
+    } finally {
+      Object.defineProperty(process.stderr, "write", {
+        configurable: true,
+        writable: true,
+        value: realWrite,
+      });
+      Object.defineProperty(process, "exit", {
+        configurable: true,
+        writable: true,
+        value: realExit,
+      });
+    }
+    expect(errors).toEqual(["amadeus-sensor-scope-sizing: --output-path is required\n"]);
+    expect(exits).toEqual([1]);
   });
 });
 
