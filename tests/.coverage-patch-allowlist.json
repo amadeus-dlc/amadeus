@@ -6504,6 +6504,17 @@
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "selector": {
+      "function": "handleExecute",
+      "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The audit-failure catch arm of jump execute, the same shape already waived for amadeus-bolt handleApproveBatch. Its only statement is error(), amadeus-jump.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict, and it latches emitError's module-level _errorEmitInProgress flag, which is never reset — a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. Reaching it also needs emitAudit itself to throw, and there is no injectable audit port on this path. Everything the arm guards is covered: the emit-then-write happy path is driven in-process by t-jump-direction-seam / t-jump-phase-events-seam / t-phase-check-gate-seam / t19, and t145 spawns the real CLI across the #2729 lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way; it WAS applied to this function's other patch row, the SKIP-target guard, which is now measured (DA 76).",
+    "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
+  },
+  {
     "file": "tests/harness/fixtures.ts",
     "selector": {
       "function": "safeReaddir",
