@@ -3,7 +3,7 @@ id: nfr-budget
 kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-nfr-budget.ts
 default_severity: advisory
-description: Measures an NFR unit's bytes per declared requirement id, flags a Standard-depth unit over its per-stage ceiling, and reports a unit written under the id contract that declares none
+description: Measures an NFR unit's bytes per declared requirement id, flags a Standard-depth unit over its per-stage ceiling, reports a unit written under the id contract that declares none, and reports a performance-requirements id with no measurable numeric threshold
 category: document-shape
 matches: "**/nfr-*/*.md"
 input_schema:
@@ -23,6 +23,7 @@ output_schema:
   unit_bytes_per_nfr: integer
   record_birth: string-or-null
   under_id_contract: boolean
+  missing_numeric_threshold_count: integer
   findings:
     - field: string
       reason: string
@@ -45,6 +46,20 @@ says nothing about which artifact is an outlier. Stage ③ (issue comment
 numbers this sensor and the repository's depth artifact census produce.
 Minimal (n=3 today — too thin to rule on) and Comprehensive (no ceiling by
 convention, `stage-protocol.md` §8) are unchanged: measured, never flagged.
+
+Stage ⑥ (issue comment 5230806329) adds a third check, scoped to ONE
+artifact: `performance-requirements.md`. Applying the same
+comparator+value+unit predicate corpus-wide to every `nfr-requirements`
+artifact flagged performance at 126/302 = 41.7% and the other four at
+72.0%-90.2%; reading the flagged security/scalability/tech-stack samples
+confirmed those were NOT false positives ("does not retain the token", "adds
+zero new dependencies" are structurally qualitative and a numeric equality
+can never hold against them). A first attempt (comment 5230769702) covered
+all five `nfr-requirements` artifacts and stopped on this exact evidence;
+this ruling narrows the check to performance alone. Reliability and
+scalability (72%-75%, a mix this predicate cannot yet separate) are left for
+a future ruling; security and tech-stack-decisions stay permanently out of
+scope for this predicate.
 
 This manifest declares `advisory`, so a finding is data for the human at the
 gate and never blocks. Raising it to `blocking` (the schema's other severity,
@@ -190,7 +205,7 @@ depth-budget: walking up from the output path to the record's
 through the same lookup). A depth that cannot be resolved is simply absent,
 and the ceiling check passes fail-open.
 
-## The two reported cases
+## The three reported cases
 
 A unit written **under the id contract** whose `nfr-requirements` artifacts
 declare no id at all (`missing-nfr-ids`). Without ids there is no denominator to
@@ -204,6 +219,16 @@ squash-merged. Half the pre-contract corpus declares no id and could not have
 declared one — there was no contract to follow — so reporting those records
 would be a retroactive finding on every gate that reopens an old record: the
 permanently-red failure again in another shape.
+
+A `performance-requirements.md` artifact, **under the same cutoff**, that
+declares an id whose block (declaration line through the line before the
+next declaration) carries no comparator+value+unit numeric threshold
+(`missing-numeric-threshold`). One finding per offending id, each naming the
+id in its `field` (`nfr-id:<id>`). Fires only when the artifact itself
+declares at least one id — an artifact with none already reported
+`missing-nfr-ids` above if the unit's total is also zero, and otherwise has
+nothing here to check. Independent of the ceiling check below: a unit can be
+under budget and still report a missing threshold, or vice versa.
 
 ## Fail-open
 
@@ -247,4 +272,5 @@ the cutoff would file itself as pre-contract.
 Findings emit `SENSOR_FAILED` through the existing dispatcher and write detail
 under `.amadeus-sensors/<stage-slug>/`. `missing-nfr-ids` names the missing id
 contract; `nfr-budget-exceeded` names the unit's measured bytes, id count, and
-the ceiling it crossed. Neither finding echoes the artifact's contents.
+the ceiling it crossed; `missing-numeric-threshold` names each offending id
+(`nfr-id:<id>`). None of the three findings echoes the artifact's contents.

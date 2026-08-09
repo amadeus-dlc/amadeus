@@ -22,10 +22,12 @@ import {
   NFR_ID_CONTRACT_LANDED,
   NFR_REQUIREMENTS_ARTIFACTS,
   NFR_REQUIREMENTS_STANDARD_BUDGET,
+  PERFORMANCE_REQUIREMENTS_ARTIFACT,
   auditInstant,
   bornUnderIdContract,
   countNfrIds,
   flagsNfrBudget,
+  idsMissingNumericThreshold,
   nfrStandardBudget,
   parseBirthTimestamp,
   stageOfNfrArtifact,
@@ -361,5 +363,89 @@ describe("t513 flagsNfrBudget compares the EXACT total, not the rounded ratio", 
     const underDesign = NFR_DESIGN_STANDARD_BUDGET * count - 1;
     expect(flagsNfrBudget("nfr-requirements", "Standard", overRequirements, count)).toBe(true);
     expect(flagsNfrBudget("nfr-design", "Standard", underDesign, count)).toBe(false);
+  });
+});
+
+// #2684 stage ⑥ (issue comment 5230806329, scope narrowed from a stopped
+// first attempt by comment 5230769702) — the measurable-numeric-threshold
+// check, scoped to performance-requirements.md alone. The comparator+value+
+// unit predicate below is exactly what re-measured the corpus before this
+// check was written, reproducing the earlier exploratory sweep's 126/302 =
+// 41.7% figure for performance-requirements.md (the by-artifact corpus sweep
+// itself lives in tests/integration/t514, which walks the live corpus rather
+// than pinning a literal figure here).
+describe("t513 idsMissingNumericThreshold — #2684 stage ⑥ (performance-requirements only)", () => {
+  test("PERFORMANCE_REQUIREMENTS_ARTIFACT names the one scoped artifact", () => {
+    expect(PERFORMANCE_REQUIREMENTS_ARTIFACT).toBe("performance-requirements");
+  });
+
+  test("an id paired with a measurable threshold is satisfied", () => {
+    const body = "### PERF-1: p95 latency\n\np95 must stay under 200 ms.\n";
+    expect(idsMissingNumericThreshold(body)).toEqual([]);
+  });
+
+  test("an id declared but never paired with a number is reported", () => {
+    const body = "### PERF-1: p95 latency\n\nThe service should be fast enough.\n";
+    expect(idsMissingNumericThreshold(body)).toEqual(["PERF-1"]);
+  });
+
+  test("ASCII and Japanese comparator tokens all count as measurable", () => {
+    for (const line of [
+      "p95 must stay <=200 ms.",
+      "p95 must stay ≤200 ms.",
+      "処理は200ms以内に完了する。",
+      "スループットは約500 req/sを維持する。",
+      "メモリ使用量は512 MB以下とする。",
+      "同時接続は100件を超えない。",
+    ]) {
+      expect(idsMissingNumericThreshold(`### PERF-1: threshold\n\n${line}\n`)).toEqual([]);
+    }
+  });
+
+  test("Japanese time-unit tokens are recognised", () => {
+    for (const line of ["起動は5秒間で完了する。", "バッチは30分間以内に終わる。", "重い処理は1時間を超えない。"]) {
+      expect(idsMissingNumericThreshold(`### PERF-1: t\n\n${line}\n`)).toEqual([]);
+    }
+  });
+
+  test("vacuity guard: an id's own trailing digit does not satisfy the check", () => {
+    // If a bare digit were enough, every declaration would vacuously pass by
+    // citing its own id (`PERF-3`) — the check would never fire.
+    expect(idsMissingNumericThreshold("### PERF-3: title\n\nno numbers here.\n")).toEqual(["PERF-3"]);
+  });
+
+  test("vacuity guard: a heading/section number does not satisfy the check", () => {
+    expect(idsMissingNumericThreshold("### PERF-1: see section 3.2 for context\n\nprose only.\n")).toEqual(["PERF-1"]);
+  });
+
+  test("vacuity guard: a date does not satisfy the check", () => {
+    expect(idsMissingNumericThreshold("### PERF-1: measured on 2026-08-09\n\nno unit here.\n")).toEqual(["PERF-1"]);
+  });
+
+  test("vacuity guard: decorative digits alongside a real threshold still pass", () => {
+    // Confirms the predicate is not vacuously satisfied by ANY digit in the
+    // block — only one that reaches a unit token, even amid a date and a
+    // section number in the same block.
+    expect(
+      idsMissingNumericThreshold("### PERF-1: measured on 2026-08-09 (see section 3.2)\n\np95 under 200 ms.\n"),
+    ).toEqual([]);
+  });
+
+  test("multiple ids in one body are judged independently", () => {
+    const body = ["### PERF-1: latency", "p95 under 200 ms.", "", "### PERF-2: throughput", "should be fast."].join(
+      "\n",
+    );
+    expect(idsMissingNumericThreshold(body)).toEqual(["PERF-2"]);
+  });
+
+  test("an id restated later with a number satisfies the earlier bare declaration", () => {
+    // Mirrors countNfrIds' own "distinct ids" note: a later reference back to
+    // the same id can be where its number lives — the two blocks are unioned.
+    const body = ["### PERF-1: latency", "must be fast.", "", "- **PERF-1**: restated at 200 ms."].join("\n");
+    expect(idsMissingNumericThreshold(body)).toEqual([]);
+  });
+
+  test("an artifact with no declared ids has nothing to report", () => {
+    expect(idsMissingNumericThreshold("## Overview\n\nNo ids declared yet.\n")).toEqual([]);
   });
 });

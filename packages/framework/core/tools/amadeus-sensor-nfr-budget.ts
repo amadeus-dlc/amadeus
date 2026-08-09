@@ -18,6 +18,21 @@
 // census produce. Minimal (n=3, too thin to rule on) and Comprehensive (no
 // ceiling by convention, stage-protocol.md §8) stay unmeasured against one.
 //
+// Stage ⑥ (issue comment 5230806329, scope narrowed from a stopped first
+// attempt by comment 5230769702) adds a THIRD check, scoped to ONE artifact:
+// performance-requirements.md. The same measurable-numeric-threshold
+// predicate applied corpus-wide to every nfr-requirements artifact flagged
+// performance at 126/302 = 41.7% and the other four at 72.0%-90.2%; reading
+// the flagged security/scalability/tech-stack samples confirmed those were
+// NOT false positives — "does not retain the token", "adds zero new
+// dependencies" are structurally qualitative and a numeric equality can never
+// hold against them. Only performance carried a genuine gap between
+// "declared an id" and "declared a measurable number", so the check applies
+// to it alone; reliability and scalability are left for a future ruling
+// (their 72%-75% is a mix this predicate cannot yet separate). Gated on the
+// same id-contract cutoff as the missing-nfr-ids case, advisory-only, and
+// blocking is deferred to #2683 the same way the ceiling check is.
+//
 // WHAT IS THE DENOMINATOR. NFR ids are declared in nfr-requirements and only
 // CITED in nfr-design — the stage ① contract says so in as many words ("do not
 // renumber, re-prefix, or invent ids the upstream artifacts do not declare").
@@ -187,6 +202,95 @@ export function collectNfrIds(body: string): Set<string> {
     }
   }
   return ids;
+}
+
+// ---------------------------------------------------------------------------
+// The numeric-threshold predicate — #2684 stage ⑥, performance-requirements
+// only (issue comment 5230806329, scoped by the stopping ruling in comment
+// 5230769702)
+// ---------------------------------------------------------------------------
+
+/** The one artifact this check applies to. The same measurable-numeric
+ *  predicate applied corpus-wide to every nfr-requirements artifact flagged
+ *  performance at 126/302 = 41.7% and the other four at 72.0%-90.2%; a spot
+ *  read of the flagged security/scalability/tech-stack samples confirmed
+ *  those were NOT false positives ("does not retain the token", "adds zero
+ *  new dependencies") — structurally qualitative requirements a numeric
+ *  equality cannot hold against. Only performance carried a genuine gap
+ *  between "declared an id" and "declared a measurable number", so the
+ *  ruling scopes the check to this one artifact rather than all ten. */
+export const PERFORMANCE_REQUIREMENTS_ARTIFACT = "performance-requirements";
+
+/** A comparator token, optional: bare "180 ms" is as measurable as
+ *  "≤180 ms". Japanese comparators the corpus writes NFR prose in are
+ *  included alongside the ASCII/mathematical ones. */
+const NUMERIC_COMPARATOR = "(?:<=|>=|[<>≤≥=]|以内|以下|以上|未満|超|約|最大|最小|上限|下限)?";
+
+/** The value: digits, optionally grouped by one repeated separator (`.` or
+ *  `,`) — "200", "1,000", "99.9". A bare digit run with no unit token right
+ *  after it is not a threshold on its own (see NUMERIC_UNIT), which is what
+ *  keeps an id's own digits, a heading number, or a date from satisfying this
+ *  predicate by accident. */
+const NUMERIC_VALUE = "[0-9]+(?:[.,][0-9]+)*";
+
+/** A unit token immediately after the value (through optional whitespace),
+ *  with a negative lookahead so the match does not run on into an unrelated
+ *  word. Requiring this token IS the vacuity guard: an id's digits
+ *  (`PERF-3`), a heading number (`3.2`), or a date (`2026-08-09`) are never
+ *  followed by one of these, so none of the contract's own decorative
+ *  vocabulary can masquerade as a measured threshold. */
+const NUMERIC_UNIT =
+  "(?:ms|msec|sec(?:s|onds?)?|s|mins?|minutes?|hrs?|hours?|h|days?|day|weeks?|week|months?|month|秒間?|分間?|時間|日間?|週間?|ヶ月|か月|パーセント|percent|%|KB|MB|GB|TB|bytes?|byte|req\\/s|rps|qps|tps|ops|fps|件|回|台|人|個|条件|同時)(?![A-Za-z])";
+
+/** comparator? + value + unit, in that order — the full measurable-threshold
+ *  shape. Unchanged from the exploratory sweep the stopping ruling cites
+ *  (issue comment 5230769702), which measured this exact pattern against the
+ *  corpus and reported the 41.7% figure this predicate reproduces. */
+const NUMERIC_THRESHOLD = new RegExp(`${NUMERIC_COMPARATOR}\\s*${NUMERIC_VALUE}\\s*${NUMERIC_UNIT}`);
+
+/** One declared id's block: its declaration line through the line before the
+ *  next declaration (of any id, in any of the five contract positions), or
+ *  end of file for the last one. A separate line scan from collectNfrIds'
+ *  rather than shared state with it, so a future change to one does not
+ *  silently retarget the other. */
+function idBlocks(body: string): Map<string, string> {
+  const lines = body.split("\n");
+  const events: Array<{ index: number; id: string }> = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").trimStart();
+    for (const pattern of NFR_PATTERNS) {
+      const match = line.match(pattern);
+      if (match) {
+        events.push({ index: i, id: match[1] as string });
+        break;
+      }
+    }
+  }
+  const blocks = new Map<string, string>();
+  for (let e = 0; e < events.length; e += 1) {
+    const event = events[e] as { index: number; id: string };
+    const start = event.index;
+    const end = e + 1 < events.length ? (events[e + 1] as { index: number }).index : lines.length;
+    const text = lines.slice(start, end).join("\n");
+    const prior = blocks.get(event.id);
+    blocks.set(event.id, prior === undefined ? text : `${prior}\n${text}`);
+  }
+  return blocks;
+}
+
+/** Ids declared in a performance-requirements.md body whose block (see
+ *  idBlocks) carries no measurable numeric threshold — the id was declared
+ *  but never paired with an actual number. An id declared more than once is
+ *  satisfied if ANY of its blocks carries one, mirroring the exploratory
+ *  sweep's own per-id union rather than penalising a requirement whose
+ *  number is stated only at a later restatement. Returned sorted for a
+ *  deterministic findings order. */
+export function idsMissingNumericThreshold(body: string): string[] {
+  const missing: string[] = [];
+  for (const [id, text] of idBlocks(body)) {
+    if (!NUMERIC_THRESHOLD.test(text)) missing.push(id);
+  }
+  return missing.sort();
 }
 
 // ---------------------------------------------------------------------------
@@ -540,6 +644,10 @@ export interface NfrBudgetResult {
   unit_bytes_per_nfr: number;
   record_birth: string | null;
   under_id_contract: boolean;
+  /** #2684 stage ⑥ — count of ids THIS artifact declares with no measurable
+   *  numeric threshold. Always 0 outside performance-requirements.md (the
+   *  check's one scoped artifact — see PERFORMANCE_REQUIREMENTS_ARTIFACT). */
+  missing_numeric_threshold_count: number;
 }
 
 const NONE = {
@@ -552,6 +660,7 @@ const NONE = {
   unit_bytes_per_nfr: 0,
   record_birth: null,
   under_id_contract: false,
+  missing_numeric_threshold_count: 0,
 };
 
 function verdict(
@@ -604,6 +713,7 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
     unit_bytes_per_nfr: ratio(unit.bytes, unitNfrCount),
     record_birth: birth ?? null,
     under_id_contract: underContract,
+    missing_numeric_threshold_count: 0,
   };
 
   // The FIRST reported case: a unit written UNDER the contract that declares
@@ -625,7 +735,39 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
     );
   }
 
-  // The SECOND reported case: the unit's D2 figure (bytes for this stage over
+  // The SECOND reported case (#2684 stage ⑥, issue comment 5230806329, scope
+  // narrowed by 5230769702): an id THIS artifact declares has no measurable
+  // numeric threshold. Scoped to performance-requirements.md alone — the same
+  // predicate applied corpus-wide flagged the other four nfr-requirements
+  // artifacts at 72%-90%, all confirmed NOT false positives (structurally
+  // qualitative requirements), so only performance carries a genuine gap.
+  // Gated on the SAME id-contract cutoff as the first case above: a
+  // pre-contract artifact could not have followed a contract that did not yet
+  // exist, and this check reads the id declarations that contract fixed.
+  // Only fires when THIS artifact itself declares at least one id — an
+  // artifact with none either already returned missing-nfr-ids above (if the
+  // unit's total is also zero) or has nothing here to check.
+  if (
+    underContract &&
+    stage === NFR_REQUIREMENTS_STAGE_DIR &&
+    basename(outputPath, ".md") === PERFORMANCE_REQUIREMENTS_ARTIFACT &&
+    measured.ids.size > 0
+  ) {
+    const body = readFileSync(outputPath, "utf-8");
+    const missingIds = idsMissingNumericThreshold(body);
+    if (missingIds.length > 0) {
+      return verdict(
+        "missing-numeric-threshold",
+        missingIds.map((id) => ({
+          field: `nfr-id:${id}`,
+          reason: `${id} has no measurable numeric threshold (comparator+value+unit) in its declaration`,
+        })),
+        { ...figures, missing_numeric_threshold_count: missingIds.length },
+      );
+    }
+  }
+
+  // The THIRD reported case: the unit's D2 figure (bytes for this stage over
   // its declared ids) exceeds the Standard ceiling. Checked on the UNIT'S
   // total (unit.bytes), not this artifact's own bytes — D2 is the primary
   // axis a ceiling is placed against (see the module header). Independent of
