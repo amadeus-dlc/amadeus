@@ -208,6 +208,24 @@ describe("t517 record date", () => {
     });
   });
 
+  test("the walk is bounded — a deep path with no record above it gives up", () => {
+    // The bound only bites when the filesystem root is further away than the
+    // limit. On a shallow tmpdir (Linux `/tmp`) the walk hits `/` first, so the
+    // exhaustion arm needs a path built deep on purpose.
+    const projectDir = mkdtempSync(join(tmpdir(), "t517-deep-"));
+    scratch.push(projectDir);
+    const deep = join(projectDir, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j");
+    mkdirSync(deep, { recursive: true });
+    const path = join(deep, "x-questions.md");
+    writeFileSync(path, questions(5));
+    expect(resolveRecordRoot(path)).toBeUndefined();
+    expect(evaluateQuestionBudget(path, "Minimal")).toMatchObject({
+      pass: true,
+      reason: "pre-cutoff",
+      enforced: false,
+    });
+  });
+
   test("a record dir without a YYMMDD prefix is never reported", () => {
     const { questionsPath } = seedRecord({ dirName: "no-date-prefix", depth: "Minimal", body: questions(9) });
     expect(recordDateOf(resolveRecordRoot(questionsPath))).toBeUndefined();
