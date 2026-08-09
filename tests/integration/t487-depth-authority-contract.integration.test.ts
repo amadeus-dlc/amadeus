@@ -40,8 +40,12 @@ const CODE_GENERATION = join(CORE, "amadeus-common", "stages", "construction", "
 const BUILD_AND_TEST = join(CORE, "amadeus-common", "stages", "construction", "build-and-test.md");
 const APPLICATION_DESIGN = join(CORE, "amadeus-common", "stages", "inception", "application-design.md");
 const FUNCTIONAL_DESIGN = join(CORE, "amadeus-common", "stages", "construction", "functional-design.md");
+const NFR_REQUIREMENTS = join(CORE, "amadeus-common", "stages", "construction", "nfr-requirements.md");
+const NFR_DESIGN = join(CORE, "amadeus-common", "stages", "construction", "nfr-design.md");
 const DOCS_INCEPTION = join(REPO_ROOT, "docs", "reference", "04-stages", "inception.md");
 const DOCS_INCEPTION_JA = join(REPO_ROOT, "docs", "reference", "04-stages", "inception.ja.md");
+const DOCS_STAGE_PROTOCOL = join(REPO_ROOT, "docs", "reference", "04-stage-protocol.md");
+const DOCS_STAGE_PROTOCOL_JA = join(REPO_ROOT, "docs", "reference", "04-stage-protocol.ja.md");
 
 function read(path: string): string {
   return readFileSync(path, "utf-8");
@@ -157,6 +161,61 @@ describe("t487 stage contracts scale artifact volume by depth", () => {
     // Both artifact-writing steps scale, not just one.
     const occurrences = text.split("Scale to `directive.depth`").length - 1;
     expect(occurrences).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ===========================================================================
+// 2b. #2684 段④ — NFR Requirements / NFR Design join the depth-scaling roster
+// ===========================================================================
+
+describe("t487 nfr-requirements and nfr-design scale their artifacts by depth (#2684 段④)", () => {
+  test("nfr-requirements and nfr-design read directive.depth and name all three levels", () => {
+    for (const path of [NFR_REQUIREMENTS, NFR_DESIGN]) {
+      const text = read(path);
+      expect({ path, has: text.includes("`directive.depth`") }).toEqual({ path, has: true });
+      expect({ path, has: text.includes("Depth-scaled artifact volume") }).toEqual({ path, has: true });
+      for (const level of ["**Minimal**", "**Standard**", "**Comprehensive**"]) {
+        expect({ path, level, has: text.includes(level) }).toEqual({ path, level, has: true });
+      }
+      // The volume decision defers to the advisory nfr-budget sensor rather than
+      // inventing a second numeric contract outside §8's MUST table.
+      expect({ path, has: text.includes("nfr-budget") }).toEqual({ path, has: true });
+    }
+  });
+
+  test("§8 names seven depth-scaling stages, including NFR Requirements and NFR Design", () => {
+    const text = read(PROTOCOL);
+    expect(text).toContain(
+      "Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation, Build and Test",
+    );
+    // The old five-stage roster is gone from prose, not just superseded.
+    expect(text).not.toContain(
+      "Requirements Analysis, Application Design, Functional Design, Code Generation, Build and Test",
+    );
+  });
+
+  test("§8 Contract table stays numeric-only — no new NFR row (#2684 段④ item 3)", () => {
+    const text = read(PROTOCOL);
+    const contract = text.split("### Depth-Level Contract")[1]?.split("### Depth-Level Guidance")[0] ?? "";
+    // The MUST table itself gets no NFR row: only its three existing rows and
+    // header/separator lines start with "|".
+    const tableLines = contract.split("\n").filter((line) => line.trim().startsWith("|"));
+    expect(tableLines).toHaveLength(5); // header + separator + Minimal/Standard/Comprehensive
+    for (const line of tableLines) {
+      expect({ line, hasNfr: line.includes("NFR") }).toEqual({ line, hasNfr: false });
+    }
+  });
+
+  test("docs/reference/04-stage-protocol mirrors the seven-stage roster in both languages", () => {
+    const en = read(DOCS_STAGE_PROTOCOL);
+    expect(en).toContain(
+      "Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation, Build and Test",
+    );
+    expect(en).not.toContain("Five stages read `directive.depth`");
+
+    const ja = read(DOCS_STAGE_PROTOCOL_JA);
+    expect(ja).toContain("Requirements Analysis、Application Design、Functional Design、NFR Requirements、NFR Design、Code Generation、Build and Test");
+    expect(ja).not.toContain("ステージは5つです");
   });
 });
 

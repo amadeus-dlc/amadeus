@@ -649,7 +649,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 | Standard | 最大 8 | 15-30 |
 | Comprehensive | 最大 12 | 30+ |
 
-`directive.depth` を読み、各レベルで何が変わるかを本文に明示するステージは5つです: Requirements Analysis、Application Design、Functional Design、Code Generation、Build and Test。`depth-budget` センサーは Requirements Analysis の行を生成された `requirements.md` に対して計測し、超過を advisory として報告します。
+`directive.depth` を読み、各レベルで何が変わるかを本文に明示するステージは7つです: Requirements Analysis、Application Design、Functional Design、NFR Requirements、NFR Design、Code Generation、Build and Test。`depth-budget` センサーは Requirements Analysis の行を生成された `requirements.md` に対して計測し、超過を advisory として報告します。NFR Requirements と NFR Design の分量は advisory な `nfr-budget` センサーが別途計測し、どちらも上表の深度レベル契約に数値行は追加しません。
 
 ### 深度レベルのガイダンス
 
