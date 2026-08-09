@@ -419,11 +419,10 @@ export function handleExecute(args: string[]): void {
     // Scope validation - target must be EXECUTE on the EFFECTIVE plan (mirrors
     // resolve). Without this, an orchestrator bypassing resolve can land the
     // workflow on a stage the plan says should be skipped.
-    if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") {
-      error(
-        `Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`
-      );
-    }
+    // One line: bun's lcov leaves the continuation lines of a multi-line call at
+    // DA:0, so a wrapped call reads as two dead rows rather than one
+    // (spawn-blindspot-two-step (i) before the waiver).
+    if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") error(`Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`);
 
     const graph = loadStageGraph();
     const targetIdx = stageIndex(targetSlug);

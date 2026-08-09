@@ -5842,7 +5842,10 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
 // config-change — update depth and/or test-strategy without changing scope
 // ---------------------------------------------------------------------------
 
-function handleConfigChange(projectDir: string, flags: Record<string, string>): void {
+// Exported for the same reason handleScopeChange is: the audit-lock section is
+// only measurable when a test drives the handler in-process (bun --coverage does
+// not instrument a spawned child), and this is the seam that lets t523 do it.
+export function handleConfigChange(projectDir: string, flags: Record<string, string>): void {
   const rawDepth = flags.depth;
   const rawStrategy = flags["test-strategy"];
 

@@ -7049,6 +7049,10 @@
           "mechanism": "sdk"
         },
         {
+          "file": "tests/integration/t523-config-scope-change-lock-seam.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t27.test.ts",
           "mechanism": "cli"
         }
