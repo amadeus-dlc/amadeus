@@ -74,6 +74,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";
+import { requireFlagValue } from "./amadeus-sensor-flags.ts";
 
 /** The artifacts `nfr-requirements` declares in `produces`. Ids are DECLARED
  *  here. */
@@ -1031,15 +1032,20 @@ interface Flags {
 function parseFlags(argv: string[]): Flags {
   const out: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--stage") out.stage = argv[++i];
-    else if (argv[i] === "--output-path") out.outputPath = argv[++i];
-    else if (argv[i] === "--depth") out.depth = argv[++i];
-    else if (argv[i] === "--kind") out.kind = argv[++i];
+    if (argv[i] === "--stage") out.stage = requireFlagValue(argv, ++i, "--stage", fail);
+    else if (argv[i] === "--output-path") out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
+    else if (argv[i] === "--depth") out.depth = requireFlagValue(argv, ++i, "--depth", fail);
+    else if (argv[i] === "--kind") out.kind = requireFlagValue(argv, ++i, "--kind", fail);
   }
   return out;
 }
 
-function fail(msg: string): never {
+/** The only non-zero exit: a missing required flag, or a flag whose value is
+ *  missing / stolen by the next flag. Exported as an in-process seam — reached
+ *  from `main` it runs inside a spawned child, which bun's coverage does not
+ *  measure, so the arm would sit permanently uncovered while its behaviour is
+ *  genuinely tested. */
+export function fail(msg: string): never {
   process.stderr.write(`amadeus-sensor-nfr-budget: ${msg}\n`);
   process.exit(1);
 }
