@@ -42,10 +42,10 @@ every artifact, and a permanently red signal says nothing about which artifact
 is an outlier. Ceilings are the issue's stage ③ and are derived from the numbers
 this sensor and the repository's depth artifact census produce.
 
-`advisory` is the only severity the shipped schema admits, so a finding is data
-for the human at the gate and never blocks. Raising it is additionally held by
-the issue's stopping condition until #2683 rules on how many surfaces may block
-at once.
+This manifest declares `advisory`, so a finding is data for the human at the
+gate and never blocks. Raising it to `blocking` (the schema's other severity,
+#2689) is held by the issue's stopping condition until #2683 rules on how many
+surfaces may block at once.
 
 ## Scope
 
