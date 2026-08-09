@@ -28,7 +28,16 @@
 // hence the integration tier (fs-tests-integration-first).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,6 +47,7 @@ import {
   NFR_ID_CONTRACT_LANDED,
   NFR_REQUIREMENTS_ARTIFACTS,
   evaluateNfrBudget,
+  main as sensorMain,
   readRecordBirth,
   resolveRecordRoot,
 } from "../../packages/framework/core/tools/amadeus-sensor-nfr-budget.ts";
@@ -308,6 +318,95 @@ describe("t514 record resolution walks up to the record root", () => {
     mkdirSync(orphan, { recursive: true });
     writeFileSync(join(orphan, "security-requirements.md"), "x");
     expect(resolveRecordRoot(join(orphan, "security-requirements.md"))).toBeUndefined();
+  });
+
+  test("the walk is bounded — a record further up than the limit is not found", () => {
+    // Without the bound, a run inside a nested checkout would climb into
+    // whatever workspace sits above and read a stranger's record.
+    const root = join(tmp, "260809-deep");
+    mkdirSync(join(root, "audit"), { recursive: true });
+    writeFileSync(join(root, "audit", "clone.jsonl"), "");
+    const deep = join(root, "a", "b", "c", "d", "e", "f", "g", "h", "i");
+    mkdirSync(deep, { recursive: true });
+    const path = join(deep, "security-requirements.md");
+    writeFileSync(path, "x");
+    expect(resolveRecordRoot(path)).toBeUndefined();
+  });
+
+  test("an unreadable shard is skipped, not fatal", () => {
+    // A record's other shards still answer for it; only this one is lost.
+    //
+    // A DANGLING SYMLINK is the portable throw: readdir lists it, and the read
+    // fails with ENOENT on every platform. chmod 000 does not work under root,
+    // and a directory named *.jsonl throws only on macOS — Linux returns "".
+    const root = record("2026-08-09T04:00:00Z");
+    symlinkSync(join(root, "audit", "gone"), join(root, "audit", "dangling.jsonl"));
+    expect(readRecordBirth(root)).toBe("2026-08-09T04:00:00Z");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The CLI contract — advisory means exit 0 on BOTH verdicts
+// ---------------------------------------------------------------------------
+
+describe("t514 CLI contract", () => {
+  function run(argv: string[]): { code: number; stdout: string; stderr: string } {
+    let stdout = "";
+    let stderr = "";
+    let code = -1;
+    const outWrite = process.stdout.write.bind(process.stdout);
+    const errWrite = process.stderr.write.bind(process.stderr);
+    const exit = process.exit.bind(process);
+    // biome-ignore lint/suspicious/noExplicitAny: process.exit's never-return type
+    (process as any).exit = (c: number) => {
+      code = c;
+      throw new Error("__exit__");
+    };
+    process.stdout.write = ((chunk: string) => {
+      stdout += chunk;
+      return true;
+    }) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: string) => {
+      stderr += chunk;
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      sensorMain(argv);
+    } catch (err) {
+      if (!(err instanceof Error) || err.message !== "__exit__") throw err;
+    } finally {
+      process.stdout.write = outWrite;
+      process.stderr.write = errWrite;
+      // biome-ignore lint/suspicious/noExplicitAny: restore the real exit
+      (process as any).exit = exit;
+    }
+    return { code, stdout, stderr };
+  }
+
+  test("a measured artifact exits 0 with a JSON verdict", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(4, 500));
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: true, findings_count: 0, unit_nfr_count: 4 });
+  });
+
+  test("a reported artifact ALSO exits 0 — the verdict is data, not enforcement", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", "## Performance\n\nfast.\n");
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: false, reason: "missing-nfr-ids" });
+  });
+
+  test("a missing flag is the ONLY exit-1 path", () => {
+    const missingStage = run(["--output-path", "/nowhere/security-requirements.md"]);
+    expect(missingStage.code).toBe(1);
+    expect(missingStage.stderr).toContain("--stage is required");
+
+    const missingPath = run(["--stage", "nfr-requirements"]);
+    expect(missingPath.code).toBe(1);
+    expect(missingPath.stderr).toContain("--output-path is required");
   });
 });
 
