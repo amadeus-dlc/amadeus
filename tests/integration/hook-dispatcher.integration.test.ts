@@ -8,6 +8,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -15,7 +16,11 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { HOOK_PATHS } from "../../packages/framework/harness/claude/hooks/amadeus-dispatch.ts";
+import {
+  DISPATCH_TEST_SEAMS,
+  HOOK_PATHS,
+  main,
+} from "../../packages/framework/harness/claude/hooks/amadeus-dispatch.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const DISPATCHER_SOURCE = join(
@@ -117,6 +122,77 @@ function collectCommands(value: unknown): string[] {
 }
 
 describe("Claude hook dispatcher", () => {
+  test("routing and pipe branches are exercised in-process for coverage", async () => {
+    const marked = temporaryProject();
+    mkdirSync(join(marked, "amadeus"));
+    writeFileSync(join(marked, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+
+    expect(DISPATCH_TEST_SEAMS.payloadCwd(JSON.stringify({ cwd: marked }))).toBe(marked);
+    expect(DISPATCH_TEST_SEAMS.payloadCwd(JSON.stringify({ cwd: 1 }))).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.payloadCwd("not-json")).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(undefined)).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot("relative")).toBeUndefined();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(join(marked, "missing"))).toBeUndefined();
+    const markedRealpath = realpathSync(marked);
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(marked)).toBe(markedRealpath);
+
+    const missingMarker = temporaryProject();
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(missingMarker)).toBeUndefined();
+    const missingDispatcher = temporaryProject();
+    mkdirSync(join(missingDispatcher, "amadeus"));
+    expect(DISPATCH_TEST_SEAMS.findPayloadProjectRoot(missingDispatcher)).toBeUndefined();
+    expect(
+      DISPATCH_TEST_SEAMS.resolveProjectRoot(
+        import.meta.dir,
+        missingMarker,
+        JSON.stringify({ cwd: marked }),
+      ),
+    ).toBe(markedRealpath);
+
+    const written: string[] = [];
+    await DISPATCH_TEST_SEAMS.writeHookInput(
+      {
+        write(input) {
+          written.push(input);
+        },
+        end() {},
+      },
+      "payload",
+    );
+    expect(written).toEqual(["payload"]);
+    await DISPATCH_TEST_SEAMS.writeHookInput(
+      {
+        write() {
+          throw { code: "EPIPE" };
+        },
+        end() {
+          throw new Error("unreachable");
+        },
+      },
+      "ignored",
+    );
+    expect(DISPATCH_TEST_SEAMS.isBrokenPipe({ code: "EPIPE" })).toBe(true);
+    expect(DISPATCH_TEST_SEAMS.isBrokenPipe(new Error("not a pipe"))).toBe(false);
+    await expect(
+      DISPATCH_TEST_SEAMS.writeHookInput(
+        {
+          write() {
+            throw new Error("write failed");
+          },
+          end() {},
+        },
+        "rejected",
+      ),
+    ).rejects.toThrow("write failed");
+
+    const directHook = join(marked, "direct-hook.ts");
+    writeFileSync(directHook, "await Bun.stdin.text(); process.exit(23);\n");
+    expect(await DISPATCH_TEST_SEAMS.forwardToHook(directHook, [], "direct payload")).toBe(23);
+
+    writeCompleteHookTree(marked);
+    expect(await main(["stop"], marked, "")).toBe(0);
+  });
+
   test("settings route every hook reference through the dispatcher's slug table", () => {
     const commands = SETTINGS_FILES.flatMap((path) =>
       collectCommands(JSON.parse(readFileSync(path, "utf8"))),
@@ -198,6 +274,126 @@ process.exit(23);
       JSON.stringify({ args: ["alpha", "two words"], input: "payload\n" }),
     );
     expect(text(result.stderr)).toBe("child-stderr\n");
+  });
+
+  test("hook payload cwd routes stale CLAUDE_PROJECT_DIR dispatch into the active worktree", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    mkdirSync(join(main, "amadeus"));
+    mkdirSync(join(worktree, "amadeus"));
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(worktree);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(
+      worktree,
+      "stop",
+      'const input = await Bun.stdin.text(); process.stdout.write("WORKTREE\\n" + input);\n',
+    );
+    const input = ` \n${JSON.stringify({ cwd: worktree })}\n\t`;
+
+    const result = runDispatcher(main, "stop", {
+      cwd: worktree,
+      input,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe(`WORKTREE\n${input}`);
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a payload cwd below the worktree root falls back to CLAUDE_PROJECT_DIR", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    const child = join(worktree, "packages", "nested");
+    mkdirSync(join(main, "amadeus"));
+    mkdirSync(join(worktree, "amadeus"));
+    mkdirSync(child, { recursive: true });
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(worktree);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(worktree, "stop", 'process.stdout.write("WORKTREE\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: child,
+      input: JSON.stringify({ cwd: child }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a payload cwd without the Amadeus marker falls back to CLAUDE_PROJECT_DIR", () => {
+    const main = temporaryProject();
+    const unmarked = temporaryProject();
+    writeFileSync(join(unmarked, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(unmarked);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(unmarked, "stop", 'process.stdout.write("UNMARKED\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: unmarked,
+      input: JSON.stringify({ cwd: unmarked }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a dispatcher-named directory is not accepted as a payload project marker", () => {
+    const main = temporaryProject();
+    const malformed = temporaryProject();
+    mkdirSync(join(malformed, "amadeus"));
+    mkdirSync(join(malformed, ".claude", "hooks", "amadeus-dispatch.ts"));
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(malformed);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(malformed, "stop", 'process.stdout.write("MALFORMED\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: malformed,
+      input: JSON.stringify({ cwd: malformed }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a fresh marked worktree does not fall through to built hooks in the parent", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    mkdirSync(join(worktree, "amadeus"));
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: worktree,
+      input: JSON.stringify({ cwd: worktree }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("");
+    expect(text(result.stderr)).toBe(
+      "amadeus-dispatch: hooks are not built yet (fresh clone?) — run `bun run build` to generate them\n",
+    );
+  });
+
+  test("a large payload does not override a hook that exits without reading stdin", () => {
+    const root = temporaryProject();
+    writeCompleteHookTree(root);
+    writeHook(root, "stop", "process.exit(23);\n");
+
+    const result = runDispatcher(root, "stop", { input: "x".repeat(1024 * 1024) });
+
+    expect(result.exitCode).toBe(23);
+    expect(text(result.stdout)).toBe("");
+    expect(text(result.stderr)).toBe("");
   });
 
   test("a generated hook symlink cannot escape the configured project root", () => {

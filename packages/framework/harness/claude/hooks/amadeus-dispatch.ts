@@ -1,4 +1,4 @@
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 
 // Exported as the single source of the slug table: tests derive their slug set
@@ -43,7 +43,61 @@ function findRepositoryRoot(moduleDir: string): string {
   throw new Error(`cannot resolve repository root from dispatcher path ${moduleDir}`);
 }
 
-function resolveProjectRoot(moduleDir: string, configuredRoot: string | undefined): string {
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// Claude pins CLAUDE_PROJECT_DIR to the launch checkout when EnterWorktree
+// moves the session cwd. The payload cwd is the only current-worktree signal
+// available before a generated core hook starts, so resolve it in this
+// bootstrap dispatcher and replay the same payload to the selected hook.
+function findPayloadProjectRoot(payloadCwd: string | undefined): string | undefined {
+  if (payloadCwd === undefined || !isAbsolute(payloadCwd)) return undefined;
+
+  let candidate: string;
+  try {
+    candidate = realpathSync(payloadCwd);
+  } catch {
+    return undefined;
+  }
+  if (
+    isDirectory(join(candidate, "amadeus")) &&
+    isFile(join(candidate, ".claude", "hooks", "amadeus-dispatch.ts"))
+  ) {
+    return candidate;
+  }
+  return undefined;
+}
+
+function payloadCwd(input: string): string | undefined {
+  try {
+    const payload = JSON.parse(input) as { cwd?: unknown };
+    return typeof payload.cwd === "string" ? payload.cwd : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveProjectRoot(
+  moduleDir: string,
+  configuredRoot: string | undefined,
+  input: string,
+): string {
+  const payloadRoot = findPayloadProjectRoot(payloadCwd(input));
+  if (payloadRoot !== undefined) return payloadRoot;
+
   if (configuredRoot !== undefined && configuredRoot.length > 0) {
     if (!isAbsolute(configuredRoot)) {
       throw new Error("CLAUDE_PROJECT_DIR must be an absolute path");
@@ -71,11 +125,35 @@ function resolveHookPath(projectRoot: string, slug: HookSlug): string {
   return hookPath;
 }
 
-async function forwardToHook(hookPath: string, args: string[]): Promise<number> {
+function isBrokenPipe(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "EPIPE"
+  );
+}
+
+interface HookInputSink {
+  write(input: string): unknown;
+  end(): unknown;
+}
+
+async function writeHookInput(sink: HookInputSink, input: string): Promise<void> {
+  try {
+    sink.write(input);
+    await sink.end();
+  } catch (error) {
+    if (isBrokenPipe(error)) return;
+    throw error;
+  }
+}
+
+async function forwardToHook(hookPath: string, args: string[], input: string): Promise<number> {
   const child = Bun.spawn({
     cmd: [process.execPath, hookPath, ...args],
     env: process.env,
-    stdin: "inherit",
+    stdin: "pipe",
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -91,25 +169,50 @@ async function forwardToHook(hookPath: string, args: string[]): Promise<number> 
     process.on(signal, handler);
   }
 
-  const exitCode = await child.exited;
-  for (const [signal, handler] of handlers) process.off(signal, handler);
+  let exitCode: number;
+  try {
+    await writeHookInput(child.stdin, input);
+    exitCode = await child.exited;
+  } finally {
+    for (const [signal, handler] of handlers) process.off(signal, handler);
+  }
   if (forwardedSignal !== undefined) process.kill(process.pid, forwardedSignal);
   return exitCode;
+}
+
+// Bun coverage does not instrument spawned subprocesses. Keep the dispatcher
+// integration tests subprocess-based for fidelity, and expose the same seams so
+// the coverage run can also execute the routing and pipe branches in-process.
+export const DISPATCH_TEST_SEAMS = {
+  findPayloadProjectRoot,
+  payloadCwd,
+  resolveProjectRoot,
+  isBrokenPipe,
+  writeHookInput,
+  forwardToHook,
+};
+
+async function readHookInput(stdinInput: string | undefined): Promise<string> {
+  return stdinInput ?? (process.stdin.isTTY ? "" : await Bun.stdin.text());
 }
 
 export async function main(
   argv: string[] = process.argv.slice(2),
   configuredRoot: string | undefined = process.env.CLAUDE_PROJECT_DIR,
+  stdinInput: string | undefined = undefined,
 ): Promise<number> {
   try {
     const [rawSlug, ...hookArgs] = argv;
     const slug = parseHookSlug(rawSlug);
-    const projectRoot = resolveProjectRoot(import.meta.dir, configuredRoot);
+    // stdin cannot be inherited after inspecting the payload cwd; read it once
+    // and forward the original hook payload text unchanged.
+    const input = await readHookInput(stdinInput);
+    const projectRoot = resolveProjectRoot(import.meta.dir, configuredRoot, input);
     if (ensureCompleteHookTree(projectRoot) === "not-built") {
       console.error(NOT_BUILT_MESSAGE);
       return 0;
     }
-    return await forwardToHook(resolveHookPath(projectRoot, slug), hookArgs);
+    return await forwardToHook(resolveHookPath(projectRoot, slug), hookArgs, input);
   } catch (error) {
     console.error(`amadeus-dispatch: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
