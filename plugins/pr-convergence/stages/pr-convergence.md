@@ -10,7 +10,7 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-inputs: the open pull request that carries this Bolt, plus the GitHub checks and review threads reachable through the `gh` boundary.
+inputs: the Bolt branch and authored pull-request body, an optional existing open pull request, plus the GitHub checks and review threads reachable through the `gh` boundary.
 outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written only by the plugin CLI — a `converged`, `override`, or (for an already-merged pull request) `landed` record.
 sensors:
   - pr-convergence-report-format
@@ -72,6 +72,35 @@ wait indefinitely.
 Create the pull request for this Bolt if it does not exist yet. One Bolt, one
 pull request: do not fold several units, workflow-record commits, or unrelated
 refactors into it. Record the number — every later step needs it.
+
+Write the authored body to a machine-local file, then create the pull request
+through the plugin CLI:
+
+```
+bun plugins/pr-convergence/tools/pr-convergence-cli.ts create \
+  --repo <owner/repo> \
+  --head <bolt-branch> \
+  --title "<change summary>" \
+  --body-file <authored-body.md> \
+  --record <record-root> \
+  --bolt <bolt-name> \
+  --unit <unit-name> \
+  [--base <base-branch>]
+```
+
+`--head` is required and is passed explicitly to `gh pr create`; the current
+working directory and checked-out branch never select the pull request source.
+
+Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
+to an Amadeus Intent. The CLI resolves the record against the adjacent
+`intents.json`, prefixes the title as `[<intent>/<bolt>/<unit>] <change summary>`,
+and appends one canonical `## Amadeus Work` section containing the Intent, Bolt,
+and Unit names, the repository-relative record path (`dirName`), and the UUID.
+A missing, malformed, or ambiguous identity refuses before touching GitHub. For
+a pull request that is not linked to an Intent, omit all three flags; the title
+and authored body are passed unchanged. Do not hand-copy workflow identity into
+the title or body. A linked body that already contains `## Amadeus Work` is
+rejected rather than receiving a duplicate canonical section.
 
 ### (2) Observe
 
