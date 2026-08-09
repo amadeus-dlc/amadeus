@@ -79,6 +79,7 @@ through the plugin CLI:
 ```
 bun plugins/pr-convergence/tools/pr-convergence-cli.ts create \
   --repo <owner/repo> \
+  --head <bolt-branch> \
   --title "<change summary>" \
   --body-file <authored-body.md> \
   --record <record-root> \
@@ -86,6 +87,9 @@ bun plugins/pr-convergence/tools/pr-convergence-cli.ts create \
   --unit <unit-name> \
   [--base <base-branch>]
 ```
+
+`--head` is required and is passed explicitly to `gh pr create`; the current
+working directory and checked-out branch never select the pull request source.
 
 Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
 to an Amadeus Intent. The CLI resolves the record against the adjacent
@@ -95,7 +99,8 @@ and Unit names, the repository-relative record path (`dirName`), and the UUID.
 A missing, malformed, or ambiguous identity refuses before touching GitHub. For
 a pull request that is not linked to an Intent, omit all three flags; the title
 and authored body are passed unchanged. Do not hand-copy workflow identity into
-the title or body.
+the title or body. A linked body that already contains `## Amadeus Work` is
+rejected rather than receiving a duplicate canonical section.
 
 ### (2) Observe
 

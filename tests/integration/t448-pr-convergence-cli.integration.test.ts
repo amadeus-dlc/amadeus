@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createGhRunner,
+  digestStderr,
   fetchRawPrState,
   type GhSpawn,
   type GhSpawnResult,
@@ -280,6 +281,7 @@ function makeIntentRecord(input: {
   readonly slug: string;
   readonly dirName: string;
   readonly uuid: string;
+  readonly omitRegistryDirName?: boolean;
 }): string {
   const root = mkdtempSync(join(tmpdir(), "pr-convergence-intent-"));
   roots.push(root);
@@ -288,7 +290,18 @@ function makeIntentRecord(input: {
   mkdirSync(record, { recursive: true });
   writeFileSync(
     join(intents, "intents.json"),
-    `${JSON.stringify([{ ...input, status: "in-flight" }], null, 2)}\n`,
+    `${JSON.stringify(
+      [
+        {
+          slug: input.slug,
+          uuid: input.uuid,
+          ...(!input.omitRegistryDirName ? { dirName: input.dirName } : {}),
+          status: "in-flight",
+        },
+      ],
+      null,
+      2,
+    )}\n`,
     "utf-8",
   );
   return record;
@@ -347,6 +360,8 @@ describe("CLI create verb — pull-request presentation contract", () => {
         "create",
         "--repo",
         "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
         "--title",
         "feat: add deterministic PR creation",
         "--body-file",
@@ -366,6 +381,8 @@ describe("CLI create verb — pull-request presentation contract", () => {
       "create",
       "--repo",
       "amadeus-dlc/amadeus",
+      "--head",
+      "codex/pr-intent-metadata",
       "--title",
       "feat: add deterministic PR creation",
       "--body",
@@ -391,6 +408,8 @@ describe("CLI create verb — pull-request presentation contract", () => {
         "create",
         "--repo",
         "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
         "--title",
         "feat: add deterministic PR creation",
         "--body-file",
@@ -421,6 +440,48 @@ describe("CLI create verb — pull-request presentation contract", () => {
     );
   });
 
+  test("resolves a legacy Intent directory from the trailing UUID hex", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "legacy-intent",
+      dirName: "legacy-intent-72abd6",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+      omitRegistryDirName: true,
+    });
+    const s = scriptedSpawn([
+      ok("gh version 2.97.0"),
+      ok("Logged in"),
+      ok("https://github.com/amadeus-dlc/amadeus/pull/3002\n"),
+    ]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: preserve legacy Intent resolution",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(0);
+    const argv = s.argvs.at(-1) ?? [];
+    expect(argv.at(argv.indexOf("--title") + 1)).toBe(
+      "[legacy-intent/ship-pr-metadata/create-pr-command] feat: preserve legacy Intent resolution",
+    );
+  });
+
   test("requires Bolt and Unit together with an Intent record before touching GitHub", async () => {
     const bodyFile = makeBodyFile("## Summary\n");
     const record = makeIntentRecord({
@@ -435,6 +496,8 @@ describe("CLI create verb — pull-request presentation contract", () => {
         "create",
         "--repo",
         "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
         "--title",
         "feat: add deterministic PR creation",
         "--body-file",
@@ -466,8 +529,241 @@ describe("CLI create verb — pull-request presentation contract", () => {
         "create",
         "--repo",
         "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
         "--title",
         "feat: add deterministic PR creation",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("0 Intent registry entries");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("requires an explicit head branch before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const s = scriptedSpawn([
+      ok("gh version 2.97.0"),
+      ok("Logged in"),
+      ok("https://github.com/amadeus-dlc/amadeus/pull/3003\n"),
+    ]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--title",
+        "feat: require an explicit head",
+        "--body-file",
+        bodyFile,
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("--head is required");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("reports a safe digest and exit code when GitHub creation fails", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const rawStderr = "no commits between base and head";
+    const s = scriptedSpawn([
+      ok("gh version 2.97.0"),
+      ok("Logged in"),
+      { code: 1, stdout: "", stderr: rawStderr },
+    ]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: surface safe GitHub failure details",
+        "--body-file",
+        bodyFile,
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain(`command-failed (exit 1, stderr ${digestStderr(rawStderr)})`);
+    expect(out.stderr).not.toContain(rawStderr);
+  });
+
+  test("refuses a duplicate Amadeus Work section before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n\n## Amadeus Work\n");
+    const record = makeIntentRecord({
+      slug: "pr-intent-metadata",
+      dirName: "260809-pr-intent-metadata",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject duplicate work identity",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("already contains ## Amadeus Work");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an ambiguous Intent registry match before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "first-intent",
+      dirName: "260809-shared-intent",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    const registry = join(record, "..", "intents.json");
+    const rows = JSON.parse(readFileSync(registry, "utf-8")) as unknown[];
+    rows.push({
+      slug: "second-intent",
+      dirName: "260809-shared-intent",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abcd",
+      status: "in-flight",
+    });
+    writeFileSync(registry, `${JSON.stringify(rows, null, 2)}\n`, "utf-8");
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject ambiguous Intent identity",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("2 Intent registry entries");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an unreadable Intent registry before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "pr-intent-metadata",
+      dirName: "260809-pr-intent-metadata",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    writeFileSync(join(record, "..", "intents.json"), "{broken", "utf-8");
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject an unreadable registry",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("cannot read the Intent registry");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses a missing body file before touching GitHub", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pr-convergence-missing-body-"));
+    roots.push(root);
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject a missing body",
+        "--body-file",
+        join(root, "missing.md"),
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("cannot read --body-file");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an empty legacy UUID suffix before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "legacy-intent",
+      dirName: "legacy-intent-",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+      omitRegistryDirName: true,
+    });
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--head",
+        "codex/pr-intent-metadata",
+        "--title",
+        "feat: reject an empty legacy suffix",
         "--body-file",
         bodyFile,
         "--record",

@@ -317,6 +317,7 @@ interface ConvergenceOptions {
 interface CreateBaseOptions {
   readonly verb: "create";
   readonly repo: string;
+  readonly head: string;
   readonly title: string;
   readonly bodyFile: string;
   readonly base: string | null;
@@ -398,11 +399,13 @@ function parseCreateWork(flags: Map<string, string>): CreateWorkParse {
 
 function parseCreateOptions(flags: Map<string, string>): OptionParse {
   const repo = flags.get("repo");
+  const head = flags.get("head")?.trim();
   const title = flags.get("title")?.trim();
   const bodyFile = flags.get("body-file");
   if (repo === undefined || parsePrRef(repo, 1) === null) {
     return { ok: false, message: "--repo is required and must be owner/name" };
   }
+  if (head === undefined || head === "") return { ok: false, message: "--head is required" };
   if (title === undefined || title === "") return { ok: false, message: "--title is required" };
   if (bodyFile === undefined) return { ok: false, message: "--body-file is required" };
   const work = parseCreateWork(flags);
@@ -412,6 +415,7 @@ function parseCreateOptions(flags: Map<string, string>): OptionParse {
     value: {
       verb: "create",
       repo,
+      head,
       title,
       bodyFile,
       ...work.value,
@@ -454,6 +458,9 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
     return { exitCode: 2, stdout: "", stderr: `cannot read --body-file: ${String(err)}\n` };
   }
   if (options.record !== null) {
+    if (/^## Amadeus Work\s*$/mu.test(body)) {
+      return { exitCode: 2, stdout: "", stderr: "--body-file already contains ## Amadeus Work\n" };
+    }
     const intent = resolveIntentReference(options.record);
     if (!intent.ok) return { exitCode: 2, stdout: "", stderr: `${intent.message}\n` };
     const work = {
@@ -474,6 +481,8 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
     "create",
     "--repo",
     options.repo,
+    "--head",
+    options.head,
     "--title",
     title,
     "--body",
@@ -482,7 +491,11 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
   ];
   const created = await runner.value(argv);
   if (!created.ok) {
-    return { exitCode: 2, stdout: "", stderr: `gh failed creating pull request: ${created.error.kind}\n` };
+    const detail =
+      created.error.kind === "command-failed"
+        ? `${created.error.kind} (exit ${created.error.exitCode}, stderr ${created.error.stderrDigest})`
+        : created.error.kind;
+    return { exitCode: 2, stdout: "", stderr: `gh failed creating pull request: ${detail}\n` };
   }
   return { exitCode: 0, stdout: created.value, stderr: "" };
 }

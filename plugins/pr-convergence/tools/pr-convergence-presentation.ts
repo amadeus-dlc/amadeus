@@ -44,8 +44,8 @@ function registryRow(value: unknown): RegistryRow | null {
 function rowMatchesRecord(row: RegistryRow, recordDir: string): boolean {
   if (row.dirName !== undefined) return row.dirName === recordDir;
   if (!recordDir.startsWith(`${row.slug}-`)) return false;
-  const suffix = recordDir.slice(row.slug.length + 1).replaceAll("-", "");
-  return row.uuid.replaceAll("-", "").startsWith(suffix);
+  const suffix = recordDir.slice(row.slug.length + 1);
+  return /^[0-9a-f]+$/.test(suffix) && row.uuid.replaceAll("-", "").endsWith(suffix);
 }
 
 export function resolveIntentReference(recordRoot: string): IntentReferenceResult {
