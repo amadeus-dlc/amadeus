@@ -59,8 +59,13 @@ const DEPTH_LEVELS = ["Minimal", "Standard", "Comprehensive"] as const;
  *  header rather than a body row. */
 const TABLE_SEPARATOR = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 
-/** A top-level list item: `1. …`, `- …`, `* …`. */
-const LIST_ITEM = /^\s*(\d+\.|[-*])\s+/;
+/** A TOP-LEVEL list item: `1. …`, `- …`, `* …`, written flush to the margin.
+ *  Indented bullets are a capability's own detail, not another capability —
+ *  admitting them would inflate the fallback count and corrupt the very
+ *  distribution this sensor accumulates. Measured over the corpus: no committed
+ *  record's count changes either way, so this is the safe reading of a case the
+ *  corpus has not yet exercised. */
+const LIST_ITEM = /^(\d+\.|[-*])\s+/;
 
 /** The `## In` heading that opens a scope document's in-scope section. */
 const IN_SECTION_HEADING = /^##\s+In\b/i;
@@ -233,12 +238,23 @@ interface Flags {
   depth?: string;
 }
 
+/** The token after a flag, or undefined when the flag was written without a
+ *  value. A following `--flag` is the NEXT flag, not this one's value: reading
+ *  it as a value turns `--output-path --depth Standard` into a measurement of a
+ *  path named "--depth", which the sensor would then report as a real (empty)
+ *  reading instead of refusing. For a sensor whose only product is a number,
+ *  silently measuring the wrong thing is worse than exiting. */
+function valueAt(argv: string[], index: number): string | undefined {
+  const value = argv[index];
+  return value === undefined || value.startsWith("--") ? undefined : value;
+}
+
 function parseFlags(argv: string[]): Flags {
   const out: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--stage") out.stage = argv[++i];
-    else if (argv[i] === "--output-path") out.outputPath = argv[++i];
-    else if (argv[i] === "--depth") out.depth = argv[++i];
+    if (argv[i] === "--stage") out.stage = valueAt(argv, ++i);
+    else if (argv[i] === "--output-path") out.outputPath = valueAt(argv, ++i);
+    else if (argv[i] === "--depth") out.depth = valueAt(argv, ++i);
   }
   return out;
 }

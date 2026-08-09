@@ -251,6 +251,20 @@ describe("t519 CLI — the measurement is in the output, not merely computed", (
     expect(res.stderr).toContain("--output-path is required");
   });
 
+  test("a flag written without a value is missing, not a value of `--depth`", () => {
+    // `--output-path --depth Standard` must not read the next flag as the
+    // path: that would report a real-looking measurement of a file named
+    // "--depth" instead of refusing. For a sensor whose only product is a
+    // number, silently measuring the wrong thing is worse than exiting.
+    const res = spawnSync("bun", [SENSOR, "--stage", "scope-definition", "--output-path", "--depth", "Standard"], {
+      encoding: "utf-8",
+      env: process.env,
+    });
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--output-path is required");
+    expect(res.stdout).toBe("");
+  });
+
   test("the failure arm names the sensor and exits 1 — driven in-process", () => {
     // The spawned twin above pins the real process contract; this drives the
     // same arm in-process, where bun's coverage can see it. A spawn-only arm

@@ -87,9 +87,9 @@ the corpus. So the measurement is **column-name-independent**: the body-row
 count of the largest table in the file, MoSCoW breakdown not attempted.
 
 No backlog format contract is imposed to make a narrower predicate possible.
-#2692's ruling declines to write one while the column-name-independent predicate
-already answers 56 of 58 records — a format contract for a need that has not
-been measured is a contract written ahead of its evidence.
+The ruling on #2692 declines to write one while the column-name-independent
+predicate already answers 56 of 58 records — a format contract for a need that
+has not been measured is a contract written ahead of its evidence.
 
 ## Fallback chain
 

@@ -121,6 +121,14 @@ describe("t518 in-scope list fallback", () => {
   test("no `## In` heading is zero, not a scan of the whole file", () => {
     expect(inScopeListItems("## Scope\n\n- a\n- b\n")).toBe(0);
   });
+
+  test("nested bullets are a capability's detail, not another capability", () => {
+    // An indented bullet elaborates the item above it. Counting it would
+    // inflate the fallback reading and corrupt the distribution the sensor
+    // exists to accumulate.
+    const nested = ["## In", "", "- capability one", "  - detail a", "  - detail b", "- capability two"].join("\n");
+    expect(inScopeListItems(nested)).toBe(2);
+  });
 });
 
 describe("t518 capability measurement and its fallback chain", () => {
