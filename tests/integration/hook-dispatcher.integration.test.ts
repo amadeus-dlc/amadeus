@@ -209,7 +209,92 @@ process.exit(23);
     writeCompleteHookTree(main);
     writeCompleteHookTree(worktree);
     writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(
+      worktree,
+      "stop",
+      'const input = await Bun.stdin.text(); process.stdout.write("WORKTREE\\n" + input);\n',
+    );
+    const input = ` \n${JSON.stringify({ cwd: worktree })}\n\t`;
+
+    const result = runDispatcher(main, "stop", {
+      cwd: worktree,
+      input,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe(`WORKTREE\n${input}`);
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a payload cwd below the worktree root falls back to CLAUDE_PROJECT_DIR", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    const child = join(worktree, "packages", "nested");
+    mkdirSync(join(main, "amadeus"));
+    mkdirSync(join(worktree, "amadeus"));
+    mkdirSync(child, { recursive: true });
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(worktree);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
     writeHook(worktree, "stop", 'process.stdout.write("WORKTREE\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: child,
+      input: JSON.stringify({ cwd: child }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a payload cwd without the Amadeus marker falls back to CLAUDE_PROJECT_DIR", () => {
+    const main = temporaryProject();
+    const unmarked = temporaryProject();
+    writeFileSync(join(unmarked, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(unmarked);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(unmarked, "stop", 'process.stdout.write("UNMARKED\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: unmarked,
+      input: JSON.stringify({ cwd: unmarked }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a dispatcher-named directory is not accepted as a payload project marker", () => {
+    const main = temporaryProject();
+    const malformed = temporaryProject();
+    mkdirSync(join(malformed, "amadeus"));
+    mkdirSync(join(malformed, ".claude", "hooks", "amadeus-dispatch.ts"));
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(malformed);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(malformed, "stop", 'process.stdout.write("MALFORMED\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: malformed,
+      input: JSON.stringify({ cwd: malformed }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("MAIN\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
+  test("a fresh marked worktree does not fall through to built hooks in the parent", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    mkdirSync(join(worktree, "amadeus"));
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
 
     const result = runDispatcher(main, "stop", {
       cwd: worktree,
@@ -217,7 +302,21 @@ process.exit(23);
     });
 
     expect(result.exitCode).toBe(0);
-    expect(text(result.stdout)).toBe("WORKTREE\n");
+    expect(text(result.stdout)).toBe("");
+    expect(text(result.stderr)).toBe(
+      "amadeus-dispatch: hooks are not built yet (fresh clone?) — run `bun run build` to generate them\n",
+    );
+  });
+
+  test("a large payload does not override a hook that exits without reading stdin", () => {
+    const root = temporaryProject();
+    writeCompleteHookTree(root);
+    writeHook(root, "stop", "process.exit(23);\n");
+
+    const result = runDispatcher(root, "stop", { input: "x".repeat(1024 * 1024) });
+
+    expect(result.exitCode).toBe(23);
+    expect(text(result.stdout)).toBe("");
     expect(text(result.stderr)).toBe("");
   });
 

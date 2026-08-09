@@ -51,6 +51,14 @@ function isDirectory(path: string): boolean {
   }
 }
 
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
 // Claude pins CLAUDE_PROJECT_DIR to the launch checkout when EnterWorktree
 // moves the session cwd. The payload cwd is the only current-worktree signal
 // available before a generated core hook starts, so resolve it in this
@@ -64,14 +72,11 @@ function findPayloadProjectRoot(payloadCwd: string | undefined): string | undefi
   } catch {
     return undefined;
   }
-  while (dirname(candidate) !== candidate) {
-    if (
-      isDirectory(join(candidate, "amadeus")) &&
-      existsSync(join(candidate, ".claude", "hooks", "amadeus-dispatch.ts"))
-    ) {
-      return candidate;
-    }
-    candidate = dirname(candidate);
+  if (
+    isDirectory(join(candidate, "amadeus")) &&
+    isFile(join(candidate, ".claude", "hooks", "amadeus-dispatch.ts"))
+  ) {
+    return candidate;
   }
   return undefined;
 }
@@ -120,6 +125,15 @@ function resolveHookPath(projectRoot: string, slug: HookSlug): string {
   return hookPath;
 }
 
+function isBrokenPipe(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "EPIPE"
+  );
+}
+
 async function forwardToHook(hookPath: string, args: string[], input: string): Promise<number> {
   const child = Bun.spawn({
     cmd: [process.execPath, hookPath, ...args],
@@ -128,8 +142,6 @@ async function forwardToHook(hookPath: string, args: string[], input: string): P
     stdout: "inherit",
     stderr: "inherit",
   });
-  child.stdin.write(input);
-  child.stdin.end();
   let forwardedSignal: ForwardedSignal | undefined;
   const handlers = new Map<ForwardedSignal, () => void>();
 
@@ -142,8 +154,18 @@ async function forwardToHook(hookPath: string, args: string[], input: string): P
     process.on(signal, handler);
   }
 
-  const exitCode = await child.exited;
-  for (const [signal, handler] of handlers) process.off(signal, handler);
+  let exitCode: number;
+  try {
+    try {
+      child.stdin.write(input);
+      await child.stdin.end();
+    } catch (error) {
+      if (!isBrokenPipe(error)) throw error;
+    }
+    exitCode = await child.exited;
+  } finally {
+    for (const [signal, handler] of handlers) process.off(signal, handler);
+  }
   if (forwardedSignal !== undefined) process.kill(process.pid, forwardedSignal);
   return exitCode;
 }
