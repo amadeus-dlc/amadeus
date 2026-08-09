@@ -386,7 +386,7 @@ describe("t514 the numeric-threshold check is scoped to performance-requirements
     expect(result.missing_numeric_threshold_count).toBe(0);
   });
 
-  test("the check is INDEPENDENT of the id-contract cutoff — pre-contract measures clean", () => {
+  test("the check is GATED on the id-contract cutoff — pre-contract measures clean", () => {
     // Falling proof, other side: the same body that reports post-contract must
     // NOT report pre-contract — the cutoff gates this check exactly as it
     // gates missing-nfr-ids.

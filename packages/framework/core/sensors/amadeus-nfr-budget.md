@@ -227,8 +227,10 @@ next declaration) carries no comparator+value+unit numeric threshold
 id in its `field` (`nfr-id:<id>`). Fires only when the artifact itself
 declares at least one id — an artifact with none already reported
 `missing-nfr-ids` above if the unit's total is also zero, and otherwise has
-nothing here to check. Independent of the ceiling check below: a unit can be
-under budget and still report a missing threshold, or vice versa.
+nothing here to check. Evaluated BEFORE the ceiling check below and reported
+instead of it: an artifact that both lacks a threshold and sits over the
+ceiling reports `missing-numeric-threshold` only, the same precedence
+`missing-nfr-ids` already has.
 
 ## Fail-open
 

@@ -177,6 +177,27 @@ const NFR_PATTERNS = [
   new RegExp(`^\\|\\s*\\*{0,2}${NFR_ID}`),
 ];
 
+/** One id declaration event: the (0-based) line it was found on and the id
+ *  itself. The single scan both countNfrIds/collectNfrIds (which id, how
+ *  many distinct) and idBlocks (which line ranges) are derived from, so a
+ *  future pattern addition to NFR_PATTERNS cannot land on one consumer and
+ *  miss the other. */
+function nfrIdDeclarations(body: string): Array<{ index: number; id: string }> {
+  const events: Array<{ index: number; id: string }> = [];
+  const lines = body.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").trimStart();
+    for (const pattern of NFR_PATTERNS) {
+      const match = line.match(pattern);
+      if (match) {
+        events.push({ index: i, id: match[1] as string });
+        break;
+      }
+    }
+  }
+  return events;
+}
+
 /** Distinct ids declared in one artifact body.
  *
  *  DISTINCT, so restating an id in a later cross-reference does not inflate the
@@ -190,18 +211,7 @@ export function countNfrIds(body: string): number {
 /** The id SET, so a unit's total can be a union across its artifacts rather
  *  than a sum that double-counts an id declared in two of them. */
 export function collectNfrIds(body: string): Set<string> {
-  const ids = new Set<string>();
-  for (const rawLine of body.split("\n")) {
-    const line = rawLine.trimStart();
-    for (const pattern of NFR_PATTERNS) {
-      const match = line.match(pattern);
-      if (match) {
-        ids.add(match[1] as string);
-        break;
-      }
-    }
-  }
-  return ids;
+  return new Set(nfrIdDeclarations(body).map((event) => event.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -243,29 +253,26 @@ const NUMERIC_UNIT =
   "(?:ms|msec|sec(?:s|onds?)?|s|mins?|minutes?|hrs?|hours?|h|days?|day|weeks?|week|months?|month|秒間?|分間?|時間|日間?|週間?|ヶ月|か月|パーセント|percent|%|KB|MB|GB|TB|bytes?|byte|req\\/s|rps|qps|tps|ops|fps|件|回|台|人|個|条件|同時)(?![A-Za-z])";
 
 /** comparator? + value + unit, in that order — the full measurable-threshold
- *  shape. Unchanged from the exploratory sweep the stopping ruling cites
- *  (issue comment 5230769702), which measured this exact pattern against the
- *  corpus and reported the 41.7% figure this predicate reproduces. */
-const NUMERIC_THRESHOLD = new RegExp(`${NUMERIC_COMPARATOR}\\s*${NUMERIC_VALUE}\\s*${NUMERIC_UNIT}`);
+ *  shape. The whitespace between the parts is intra-line only ([ \t], not the
+ *  \s that also matches a newline): a comparator/value/unit split across a
+ *  line boundary (e.g. a value at the end of a table cell and a unit token
+ *  that starts the next line) is not a threshold on that line, and letting
+ *  \s bridge the boundary would misread it as one, hiding a genuinely missing
+ *  threshold. Otherwise unchanged from the exploratory sweep the stopping
+ *  ruling cites (issue comment 5230769702), which measured this exact pattern
+ *  against the corpus and reported the 41.7% figure this predicate
+ *  reproduces. */
+const NUMERIC_THRESHOLD = new RegExp(`${NUMERIC_COMPARATOR}[ \\t]*${NUMERIC_VALUE}[ \\t]*${NUMERIC_UNIT}`);
 
 /** One declared id's block: its declaration line through the line before the
  *  next declaration (of any id, in any of the five contract positions), or
- *  end of file for the last one. A separate line scan from collectNfrIds'
- *  rather than shared state with it, so a future change to one does not
- *  silently retarget the other. */
+ *  end of file for the last one. Sliced from the same declaration-event scan
+ *  countNfrIds/collectNfrIds use (nfrIdDeclarations), not a second copy of
+ *  it — the two consumers share the scan, not mutable state, so this does
+ *  not reintroduce the shared-state coupling the original separation avoided. */
 function idBlocks(body: string): Map<string, string> {
   const lines = body.split("\n");
-  const events: Array<{ index: number; id: string }> = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = (lines[i] ?? "").trimStart();
-    for (const pattern of NFR_PATTERNS) {
-      const match = line.match(pattern);
-      if (match) {
-        events.push({ index: i, id: match[1] as string });
-        break;
-      }
-    }
-  }
+  const events = nfrIdDeclarations(body);
   const blocks = new Map<string, string>();
   for (let e = 0; e < events.length; e += 1) {
     const event = events[e] as { index: number; id: string };
