@@ -43,6 +43,7 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 | [Intent Mirror リファレンス](20-intent-mirror.ja.md) | Intent Mirror の runtime と配布 contract |
 | [形式モデルを実装に追従させる](21-formal-model-following.ja.md) | `model-completeness` の drift シグナルの読み方と、実装 hash 更新 / モデル改訂の分岐 |
 | [形式モデルを供給する](22-formal-model-supply.ja.md) | 新規並行プロトコルへの TLA+ モデル追加: 題材選定・縮約申告・登録・落ちる実証・空文化ガード |
+| [Depth 制御アーキテクチャ](25-depth-control-architecture.ja.md) | L0〜L5 の depth 制御点マップ、層別の目標強制度、blocking 化の総量規制、着手順 |
 | [Diagrams](diagrams.ja.md) | すべての Mermaid 図を一箇所に集約 |
 | [Agents](agents/) | 技術的なエージェントリファレンス(フロントマター、ツーリング、ステージ所有権) |
 

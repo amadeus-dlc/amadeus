@@ -43,6 +43,7 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Intent Mirror Reference](20-intent-mirror.md) | The Intent Mirror runtime and distribution contract |
 | [Keeping a Formal Model in Step](21-formal-model-following.md) | Reading the `model-completeness` drift signal and choosing between an implementation-hash refresh and a model revision |
 | [Supplying a Formal Model](22-formal-model-supply.md) | Adding a TLA+ model for a new concurrent protocol: subject choice, reduction manifest, registration, falling proof, vacuity guard |
+| [Depth Control Architecture](25-depth-control-architecture.md) | The L0–L5 depth-control point map, target enforcement strength per layer, blocking-conversion governance, and rollout order |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |
 | [Agents](agents/) | Technical agent reference (frontmatter, tooling, stage ownership) |
 
