@@ -1,6 +1,6 @@
 // covers: file:scripts/depth-artifact-census.ts
 //
-// t520 (fs) — depth-artifact-census.ts CLI entry must drain stdout before
+// t521 (fs) — depth-artifact-census.ts CLI entry must drain stdout before
 // exiting (Issue #2732, same class as #2700/#2702/#2706).
 //
 // THE BUG: `if (import.meta.main) process.exit(main(process.argv.slice(2)));`
@@ -30,7 +30,7 @@ import { describe, expect, test } from "bun:test";
 
 const SOURCE_PATH = join(import.meta.dir, "..", "..", "scripts", "depth-artifact-census.ts");
 
-describe("t520 depth-artifact-census.ts CLI entry drains stdout before exit", () => {
+describe("t521 depth-artifact-census.ts CLI entry drains stdout before exit", () => {
   test("never calls process.exit(main(...)) — the drain-unsafe idiom", () => {
     const source = readFileSync(SOURCE_PATH, "utf8");
     expect(source).not.toMatch(/process\.exit\(main\(/);
