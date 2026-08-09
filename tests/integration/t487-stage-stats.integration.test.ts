@@ -379,8 +379,9 @@ describe("pipe integrity — Issue #2700, stdout must fully drain before exit", 
     // Piped capture: reproduce the exact shape from the issue report
     // (`... | wc -c`) — a downstream reader racing the producer's exit.
     // Positional params (`--`) keep the scratch paths out of the shell
-    // script string entirely.
-    const piped = spawnSync("sh", ["-c", 'set -o pipefail; bun "$1" --project-dir "$2" --space default --format json | wc -c', "--", TOOL, projectDir], RUN_OPTIONS);
+    // script string entirely. bash, not sh: on Linux runners sh is dash,
+    // which rejects `set -o pipefail` with exit 2.
+    const piped = spawnSync("bash", ["-c", 'set -o pipefail; bun "$1" --project-dir "$2" --space default --format json | wc -c', "--", TOOL, projectDir], RUN_OPTIONS);
     expect(piped.status).toBe(0);
     const pipedBytes = Number((piped.stdout ?? "").trim());
     expect(pipedBytes).toBe(fullBytes);
