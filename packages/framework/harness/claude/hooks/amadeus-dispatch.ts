@@ -1,4 +1,4 @@
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 
 // Exported as the single source of the slug table: tests derive their slug set
@@ -43,7 +43,56 @@ function findRepositoryRoot(moduleDir: string): string {
   throw new Error(`cannot resolve repository root from dispatcher path ${moduleDir}`);
 }
 
-function resolveProjectRoot(moduleDir: string, configuredRoot: string | undefined): string {
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+// Claude pins CLAUDE_PROJECT_DIR to the launch checkout when EnterWorktree
+// moves the session cwd. The payload cwd is the only current-worktree signal
+// available before a generated core hook starts, so resolve it in this
+// bootstrap dispatcher and replay the same payload to the selected hook.
+function findPayloadProjectRoot(payloadCwd: string | undefined): string | undefined {
+  if (payloadCwd === undefined || !isAbsolute(payloadCwd)) return undefined;
+
+  let candidate: string;
+  try {
+    candidate = realpathSync(payloadCwd);
+  } catch {
+    return undefined;
+  }
+  while (dirname(candidate) !== candidate) {
+    if (
+      isDirectory(join(candidate, "amadeus")) &&
+      existsSync(join(candidate, ".claude", "hooks", "amadeus-dispatch.ts"))
+    ) {
+      return candidate;
+    }
+    candidate = dirname(candidate);
+  }
+  return undefined;
+}
+
+function payloadCwd(input: string): string | undefined {
+  try {
+    const payload = JSON.parse(input) as { cwd?: unknown };
+    return typeof payload.cwd === "string" ? payload.cwd : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveProjectRoot(
+  moduleDir: string,
+  configuredRoot: string | undefined,
+  input: string,
+): string {
+  const payloadRoot = findPayloadProjectRoot(payloadCwd(input));
+  if (payloadRoot !== undefined) return payloadRoot;
+
   if (configuredRoot !== undefined && configuredRoot.length > 0) {
     if (!isAbsolute(configuredRoot)) {
       throw new Error("CLAUDE_PROJECT_DIR must be an absolute path");
@@ -71,14 +120,16 @@ function resolveHookPath(projectRoot: string, slug: HookSlug): string {
   return hookPath;
 }
 
-async function forwardToHook(hookPath: string, args: string[]): Promise<number> {
+async function forwardToHook(hookPath: string, args: string[], input: string): Promise<number> {
   const child = Bun.spawn({
     cmd: [process.execPath, hookPath, ...args],
     env: process.env,
-    stdin: "inherit",
+    stdin: "pipe",
     stdout: "inherit",
     stderr: "inherit",
   });
+  child.stdin.write(input);
+  child.stdin.end();
   let forwardedSignal: ForwardedSignal | undefined;
   const handlers = new Map<ForwardedSignal, () => void>();
 
@@ -104,12 +155,15 @@ export async function main(
   try {
     const [rawSlug, ...hookArgs] = argv;
     const slug = parseHookSlug(rawSlug);
-    const projectRoot = resolveProjectRoot(import.meta.dir, configuredRoot);
+    // stdin cannot be inherited after inspecting the payload cwd; read it once
+    // and forward the original hook payload text unchanged.
+    const input = process.stdin.isTTY ? "" : await Bun.stdin.text();
+    const projectRoot = resolveProjectRoot(import.meta.dir, configuredRoot, input);
     if (ensureCompleteHookTree(projectRoot) === "not-built") {
       console.error(NOT_BUILT_MESSAGE);
       return 0;
     }
-    return await forwardToHook(resolveHookPath(projectRoot, slug), hookArgs);
+    return await forwardToHook(resolveHookPath(projectRoot, slug), hookArgs, input);
   } catch (error) {
     console.error(`amadeus-dispatch: ${error instanceof Error ? error.message : String(error)}`);
     return 1;

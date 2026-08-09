@@ -200,6 +200,27 @@ process.exit(23);
     expect(text(result.stderr)).toBe("child-stderr\n");
   });
 
+  test("hook payload cwd routes stale CLAUDE_PROJECT_DIR dispatch into the active worktree", () => {
+    const main = temporaryProject();
+    const worktree = temporaryProject();
+    mkdirSync(join(main, "amadeus"));
+    mkdirSync(join(worktree, "amadeus"));
+    writeFileSync(join(worktree, ".claude", "hooks", "amadeus-dispatch.ts"), "// fixture\n");
+    writeCompleteHookTree(main);
+    writeCompleteHookTree(worktree);
+    writeHook(main, "stop", 'process.stdout.write("MAIN\\n");\n');
+    writeHook(worktree, "stop", 'process.stdout.write("WORKTREE\\n");\n');
+
+    const result = runDispatcher(main, "stop", {
+      cwd: worktree,
+      input: JSON.stringify({ cwd: worktree }),
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(text(result.stdout)).toBe("WORKTREE\n");
+    expect(text(result.stderr)).toBe("");
+  });
+
   test("a generated hook symlink cannot escape the configured project root", () => {
     const root = temporaryProject();
     writeCompleteHookTree(root);
