@@ -695,6 +695,8 @@ amadeus-product-agent, amadeus-design-agent, amadeus-delivery-agent, amadeus-arc
 
 ## 8. Depth Guidance
 
+See [Depth Control Architecture](../../../../../docs/reference/25-depth-control-architecture.md) for how this contract fits into the full L0–L5 control-point map and its blocking-conversion governance.
+
 Create exactly the detail needed — no more, no less. Depth adapts to scope and problem complexity:
 
 ### Scope-to-depth mapping
