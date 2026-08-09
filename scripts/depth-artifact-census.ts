@@ -27,53 +27,27 @@ import {
   countFunctionalRequirements,
   readRecordDepth,
 } from "../packages/framework/core/tools/amadeus-sensor-depth-budget";
+import {
+  NFR_DESIGN_ARTIFACTS,
+  NFR_REQUIREMENTS_ARTIFACTS,
+  measureNfrStageDir,
+  parseBirthTimestamp,
+  readRecordBirth,
+  unitIdCount,
+} from "../packages/framework/core/tools/amadeus-sensor-nfr-budget";
+
+// Re-exported because this module owned the birth predicate before the NFR
+// sensor needed the same one at a gate. The definition moved to the sensor
+// rather than being copied, so a census cohort and a gate finding cannot
+// disagree about when a record was born.
+export { parseBirthTimestamp };
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(SCRIPTS_DIR, "..");
 
-/** The audit event that marks an intent's birth. */
+/** The audit event that marks an intent's birth. Named here for the census
+ *  predicate block; the reader lives in the NFR sensor. */
 const BIRTH_EVENT = "WORKFLOW_STARTED";
-
-/** Read the earliest WORKFLOW_STARTED timestamp out of one audit shard.
- *
- *  The corpus carries TWO audit schema generations and they name the event
- *  differently: schemaVersion 1 puts it at the top level (`event`), while
- *  schemaVersion 2 nests it under `attributes.Event`. Measured over
- *  `amadeus/spaces/default/intents/<record>/audit/*.jsonl`, 99 records use the
- *  v1 spelling and 39 the v2 one, so a predicate that knows a single idiom
- *  would report most of the corpus as birth-unknown and quietly shrink the
- *  population.
- *
- *  A malformed line is skipped rather than fatal: audit shards are append-only
- *  and a torn final write must not erase the birth of an otherwise readable
- *  record. */
-export function parseBirthTimestamp(shardText: string): string | undefined {
-  let earliest: string | undefined;
-  for (const line of shardText.split("\n")) {
-    if (line.trim() === "") continue;
-    let row: unknown;
-    try {
-      row = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (!isRecord(row)) continue;
-    const attributes = isRecord(row.attributes) ? row.attributes : undefined;
-    const name = row.event ?? attributes?.Event;
-    if (name !== BIRTH_EVENT) continue;
-    const timestamp = row.timestamp;
-    if (typeof timestamp !== "string") continue;
-    // ISO 8601 UTC strings order lexicographically, so no Date parse is needed
-    // to pick the earliest — and none is wanted, since a Date round-trip would
-    // make the output depend on the runner's timezone.
-    if (earliest === undefined || timestamp < earliest) earliest = timestamp;
-  }
-  return earliest;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** The group an artifact is counted under. The three canonical depth levels
  *  plus an explicit `unknown` — a record whose Depth cannot be resolved is
@@ -277,25 +251,34 @@ function isDirectory(path: string): boolean {
  *  than guessed at: a record with no `audit/` directory (measured: 2 in the live
  *  corpus) and a record whose shards carry no start event. */
 export function readBirth(recordDir: string): string | undefined {
-  const auditDir = join(recordDir, "audit");
-  let shards: string[];
-  try {
-    shards = readdirSync(auditDir);
-  } catch {
-    return undefined;
-  }
-  let earliest: string | undefined;
-  for (const shard of shards.filter((name) => name.endsWith(".jsonl")).sort()) {
-    let text: string;
-    try {
-      text = readFileSync(join(auditDir, shard), "utf-8");
-    } catch {
-      continue;
-    }
-    const found = parseBirthTimestamp(text);
-    if (found !== undefined && (earliest === undefined || found < earliest)) earliest = found;
-  }
-  return earliest;
+  return readRecordBirth(recordDir);
+}
+
+/** The two NFR stages, and the artifact set each produces. Imported from the
+ *  sensor so the census measures exactly the files a gate would. */
+export const NFR_STAGES = [
+  { stage: "nfr-requirements", artifacts: NFR_REQUIREMENTS_ARTIFACTS },
+  { stage: "nfr-design", artifacts: NFR_DESIGN_ARTIFACTS },
+] as const;
+
+export type NfrStage = (typeof NFR_STAGES)[number]["stage"];
+
+/** One unit's worth of NFR measurement, for one stage.
+ *
+ *  `idCount` is the UNIT's denominator — the distinct ids its nfr-requirements
+ *  artifacts declare — so both stages of the same unit divide by the same
+ *  number. nfr-design cites ids rather than declaring them, so an in-file count
+ *  there would be zero for every design artifact ever written. */
+export interface NfrUnitMeasurement {
+  record: string;
+  unit: string;
+  stage: NfrStage;
+  depth: DepthGroup;
+  files: number;
+  bytes: number;
+  idCount: number;
+  /** Per-artifact bytes, for the D1 diagnostic. */
+  artifactBytes: number[];
 }
 
 /** The unit directories of one record that carry a code-generation plan. */
@@ -325,6 +308,8 @@ export interface RecordMeasurement {
   requirements?: { bytes: number; frCount: number; flagged: boolean };
   /** One entry per unit carrying a plan; empty when the record has none. */
   planBytes: number[];
+  /** One entry per unit × NFR stage that produced anything. */
+  nfr: NfrUnitMeasurement[];
 }
 
 /** Per-depth-group requirements figures.
@@ -364,11 +349,40 @@ export interface RequirementsCensus {
   fileCount: number;
 }
 
+/** Per-depth-group NFR figures for one stage.
+ *
+ *  `bytesPerNfr` is the headline (D2): the unit's bytes for this stage over the
+ *  unit's declared id count. `artifactBytesPerNfr` is the same denominator
+ *  applied to one artifact (D1) — a diagnostic for which category of a unit is
+ *  the outlier, not a second denominator.
+ *
+ *  A unit declaring no id has no denominator, so it is counted in
+ *  `unitsWithoutIds` and excluded from both distributions rather than folded in
+ *  as zero, which would drag every median toward nothing. */
+export interface NfrGroup {
+  units: number;
+  files: number;
+  unitsWithoutIds: number;
+  bytesPerNfr?: Distribution;
+  artifactBytesPerNfr?: Distribution;
+  unitBytes?: Distribution;
+  idCount?: Distribution;
+}
+
+export interface NfrStageCensus {
+  groups: Partial<Record<DepthGroup, NfrGroup>>;
+  unitCount: number;
+  fileCount: number;
+}
+
+export type NfrCensus = Record<NfrStage, NfrStageCensus>;
+
 export interface CohortCensus {
   cohort: BirthClass;
   recordCount: number;
   requirements: RequirementsCensus;
   plans: PlansCensus;
+  nfr: NfrCensus;
 }
 
 export interface Census {
@@ -378,6 +392,8 @@ export interface Census {
     excludedEntries: string[];
     requirementsGlob: string;
     plansGlob: string;
+    nfrGlob: string;
+    nfrDenominator: string;
     birthEvent: string;
     birthEventIdioms: string[];
     quantileMethod: string;
@@ -403,6 +419,7 @@ function measureRecord(intentsDir: string, record: string, projectDir: string): 
     planBytes: listPlanUnits(recordDir).map((unit) =>
       byteLengthOf(join(recordDir, CONSTRUCTION_SUBDIR, unit, PLAN_RELPATH)),
     ),
+    nfr: measureNfrUnits(recordDir, record, depth),
   };
   const requirements = measureRequirements(join(recordDir, REQUIREMENTS_RELPATH), depth);
   if (requirements !== undefined) measurement.requirements = requirements;
@@ -430,6 +447,47 @@ function measureRequirements(
   return { bytes, frCount, flagged: flagsRequirement(depth, bytes, frCount) };
 }
 
+/** Every unit × NFR stage of one record that produced at least one artifact.
+ *
+ *  Units come from the construction directory rather than from a resolved kind:
+ *  `produces_kinds` pruning cannot be reconstructed from disk (130 of the
+ *  corpus's 142 nfr-requirements units belong to units whose kind is
+ *  unresolvable from the committed unit-of-work-dependency.md, and the engine's
+ *  kindless fallback hands those every declared artifact). So the census
+ *  measures what EXISTS and never assumes an expected set — the same choice the
+ *  sensor makes, for the same reason. */
+function measureNfrUnits(recordDir: string, record: string, depth: DepthGroup): NfrUnitMeasurement[] {
+  const constructionDir = join(recordDir, CONSTRUCTION_SUBDIR);
+  let units: string[];
+  try {
+    units = readdirSync(constructionDir).sort();
+  } catch {
+    return [];
+  }
+  const out: NfrUnitMeasurement[] = [];
+  for (const unit of units) {
+    for (const { stage, artifacts } of NFR_STAGES) {
+      const stageDir = join(constructionDir, unit, stage);
+      if (!existsSync(stageDir)) continue;
+      const measured = measureNfrStageDir(stageDir, artifacts);
+      if (measured.files === 0) continue;
+      out.push({
+        record,
+        unit,
+        stage,
+        depth,
+        files: measured.files,
+        bytes: measured.bytes,
+        idCount: unitIdCount(stageDir),
+        // Carried out of the same measurement rather than re-read: a second
+        // pass can disagree with the first if the tree changes underneath it.
+        artifactBytes: measured.artifactBytes,
+      });
+    }
+  }
+  return out;
+}
+
 function byteLengthOf(path: string): number {
   return Buffer.byteLength(readFileSync(path, "utf-8"), "utf-8");
 }
@@ -444,7 +502,63 @@ export function aggregate(cohort: BirthClass, measurements: readonly RecordMeasu
     recordCount: measurements.length,
     requirements: aggregateRequirements(measurements),
     plans: aggregatePlans(measurements),
+    nfr: aggregateNfr(measurements.flatMap((m) => m.nfr)),
   };
+}
+
+/** Aggregate NFR unit measurements into per-stage, per-depth distributions.
+ *
+ *  Takes the flat unit list rather than records so the pure aggregation is
+ *  drivable in-process from literal fixtures — `bun --coverage` does not
+ *  instrument a subprocess, so a fs-only seam would leave this unmeasured. */
+export function aggregateNfr(units: readonly NfrUnitMeasurement[]): NfrCensus {
+  const out = {} as NfrCensus;
+  for (const { stage } of NFR_STAGES) out[stage] = aggregateNfrStage(units.filter((u) => u.stage === stage));
+  return out;
+}
+
+function aggregateNfrStage(units: readonly NfrUnitMeasurement[]): NfrStageCensus {
+  const perUnit = new Buckets();
+  const perArtifact = new Buckets();
+  const unitBytes = new Buckets();
+  const idCounts = new Buckets();
+  const groups = new Map<DepthGroup, NfrGroup>();
+  let fileCount = 0;
+
+  for (const u of units) {
+    fileCount += u.files;
+    const group = upsertNfrGroup(groups, u.depth);
+    group.units += 1;
+    group.files += u.files;
+    unitBytes.push(u.depth, u.bytes);
+    idCounts.push(u.depth, u.idCount);
+    if (u.idCount === 0) {
+      group.unitsWithoutIds += 1;
+      continue;
+    }
+    perUnit.push(u.depth, Math.round(u.bytes / u.idCount));
+    for (const bytes of u.artifactBytes) perArtifact.push(u.depth, Math.round(bytes / u.idCount));
+  }
+
+  const out: Partial<Record<DepthGroup, NfrGroup>> = {};
+  for (const depth of DEPTH_GROUPS) {
+    const group = groups.get(depth);
+    if (group === undefined) continue;
+    group.bytesPerNfr = perUnit.summarize(depth);
+    group.artifactBytesPerNfr = perArtifact.summarize(depth);
+    group.unitBytes = unitBytes.summarize(depth);
+    group.idCount = idCounts.summarize(depth);
+    out[depth] = group;
+  }
+  return { groups: out, unitCount: units.length, fileCount };
+}
+
+function upsertNfrGroup(groups: Map<DepthGroup, NfrGroup>, depth: DepthGroup): NfrGroup {
+  const existing = groups.get(depth);
+  if (existing !== undefined) return existing;
+  const fresh: NfrGroup = { units: 0, files: 0, unitsWithoutIds: 0 };
+  groups.set(depth, fresh);
+  return fresh;
 }
 
 export function aggregateRequirements(measurements: readonly RecordMeasurement[]): RequirementsCensus {
@@ -572,6 +686,9 @@ export function collectCensus(projectDir: string, since: string | undefined): Ce
       excludedEntries: listExcludedEntries(intentsDir),
       requirementsGlob: join(INTENTS_SUBDIR, "*", REQUIREMENTS_RELPATH),
       plansGlob: join(INTENTS_SUBDIR, "*", CONSTRUCTION_SUBDIR, "*", PLAN_RELPATH),
+      nfrGlob: join(INTENTS_SUBDIR, "*", CONSTRUCTION_SUBDIR, "*", "nfr-{requirements,design}", "*.md"),
+      nfrDenominator:
+        "distinct ids declared by the unit's nfr-requirements artifacts (amadeus-sensor-nfr-budget countNfrIds)",
       birthEvent: BIRTH_EVENT,
       birthEventIdioms: ["schemaVersion 1: .event", "schemaVersion 2: .attributes.Event"],
       quantileMethod: "nearest rank, sorted[ceil(q*n)-1], no interpolation",
@@ -604,6 +721,8 @@ export function renderTable(census: Census): string {
   lines.push("");
   lines.push(`  corpus            ${census.predicate.requirementsGlob}`);
   lines.push(`                    ${census.predicate.plansGlob}`);
+  lines.push(`                    ${census.predicate.nfrGlob}`);
+  lines.push(`  NFR denominator   ${census.predicate.nfrDenominator}`);
   lines.push(`  record predicate  dirname matches /${census.predicate.recordDirPattern}/`);
   lines.push(`  excluded entries  ${census.predicate.excludedEntries.join(", ") || "(none)"}`);
   lines.push(`  birth event       ${census.predicate.birthEvent} (${census.predicate.birthEventIdioms.join(" | ")})`);
@@ -611,41 +730,77 @@ export function renderTable(census: Census): string {
   lines.push(`  records           ${num(census.recordCount)}`);
   lines.push(`  --since           ${census.since ?? "(whole corpus)"}`);
 
-  for (const cohort of census.cohorts) {
-    lines.push("");
-    lines.push(`cohort ${cohort.cohort} — ${num(cohort.recordCount)} records`);
-    lines.push("");
-    lines.push(`  requirements.md — B/FR (${num(cohort.requirements.fileCount)} files)`);
-    lines.push(`    depth         ${DIST_HEADER}   flagged  no-FRs`);
-    for (const depth of DEPTH_GROUPS) {
-      const group = cohort.requirements.groups[depth];
-      if (group === undefined) continue;
-      const rate = group.flagRate === null ? "    -" : `${(group.flagRate * 100).toFixed(0).padStart(3)}%`;
-      const flagged = `${num(group.flagged).padStart(4)}/${rate}`;
-      lines.push(
-        `    ${depth.padEnd(14)}${dist(group.bytesPerFr)}  ${flagged}  ${num(group.noNumberedFrs).padStart(6)}`,
-      );
-    }
-    lines.push("");
-    lines.push(
-      `  code-generation-plan.md — bytes per file (${num(cohort.plans.fileCount)} files across ${num(cohort.plans.intentCount)} intents)`,
-    );
-    lines.push(`    depth         ${DIST_HEADER}`);
-    for (const depth of DEPTH_GROUPS) {
-      const d = cohort.plans.perFile[depth];
-      if (d === undefined) continue;
-      lines.push(`    ${depth.padEnd(14)}${dist(d)}`);
-    }
-    lines.push("");
-    lines.push("  code-generation-plan.md — bytes per intent (units summed)");
-    lines.push(`    depth         ${DIST_HEADER}`);
-    for (const depth of DEPTH_GROUPS) {
-      const d = cohort.plans.perIntent[depth];
-      if (d === undefined) continue;
-      lines.push(`    ${depth.padEnd(14)}${dist(d)}`);
-    }
-  }
+  for (const cohort of census.cohorts) lines.push(...renderCohort(cohort));
   return `${lines.join("\n")}\n`;
+}
+
+/** One cohort's blocks: the two #2425 artifacts, then each NFR stage. */
+function renderCohort(cohort: CohortCensus): string[] {
+  const lines: string[] = ["", `cohort ${cohort.cohort} — ${num(cohort.recordCount)} records`, ""];
+  lines.push(`  requirements.md — B/FR (${num(cohort.requirements.fileCount)} files)`);
+  lines.push(`    depth         ${DIST_HEADER}   flagged  no-FRs`);
+  for (const depth of DEPTH_GROUPS) {
+    const group = cohort.requirements.groups[depth];
+    if (group === undefined) continue;
+    const rate = group.flagRate === null ? "    -" : `${(group.flagRate * 100).toFixed(0).padStart(3)}%`;
+    const flagged = `${num(group.flagged).padStart(4)}/${rate}`;
+    lines.push(`    ${depth.padEnd(14)}${dist(group.bytesPerFr)}  ${flagged}  ${num(group.noNumberedFrs).padStart(6)}`);
+  }
+  lines.push("");
+  lines.push(
+    `  code-generation-plan.md — bytes per file (${num(cohort.plans.fileCount)} files across ${num(cohort.plans.intentCount)} intents)`,
+  );
+  lines.push(...distRows(cohort.plans.perFile));
+  lines.push("");
+  lines.push("  code-generation-plan.md — bytes per intent (units summed)");
+  lines.push(...distRows(cohort.plans.perIntent));
+  for (const { stage } of NFR_STAGES) lines.push(...renderNfrStage(stage, cohort.nfr[stage]));
+  return lines;
+}
+
+/** A header plus one row per depth group that has a distribution. */
+function distRows(byDepth: Partial<Record<DepthGroup, Distribution>>): string[] {
+  const lines = [`    depth         ${DIST_HEADER}`];
+  for (const depth of DEPTH_GROUPS) {
+    const d = byDepth[depth];
+    if (d === undefined) continue;
+    lines.push(`    ${depth.padEnd(14)}${dist(d)}`);
+  }
+  return lines;
+}
+
+/** One NFR stage's block: the unit figure (D2) that a ceiling would be placed
+ *  against, then the per-artifact diagnostic (D1). */
+function renderNfrStage(stage: NfrStage, census: NfrStageCensus): string[] {
+  const lines: string[] = [""];
+  lines.push(
+    `  ${stage} — B per declared NFR id, per unit (${num(census.unitCount)} units, ${num(census.fileCount)} files)`,
+  );
+  lines.push(`    depth         ${DIST_HEADER}  no-ids/units`);
+  for (const depth of DEPTH_GROUPS) {
+    const group = census.groups[depth];
+    if (group === undefined) continue;
+    const absent = `${num(group.unitsWithoutIds).padStart(6)}/${num(group.units).padStart(5)}`;
+    lines.push(`    ${depth.padEnd(14)}${dist(group.bytesPerNfr)}  ${absent}`);
+  }
+  lines.push("");
+  lines.push(`  ${stage} — B per declared NFR id, per artifact (diagnostic)`);
+  lines.push(...distRows(mapGroups(census, (group) => group.artifactBytesPerNfr)));
+  return lines;
+}
+
+function mapGroups(
+  census: NfrStageCensus,
+  pick: (group: NfrGroup) => Distribution | undefined,
+): Partial<Record<DepthGroup, Distribution>> {
+  const out: Partial<Record<DepthGroup, Distribution>> = {};
+  for (const depth of DEPTH_GROUPS) {
+    const group = census.groups[depth];
+    if (group === undefined) continue;
+    const d = pick(group);
+    if (d !== undefined) out[depth] = d;
+  }
+  return out;
 }
 
 /** CLI entry / in-process test seam. Returns the exit code rather than calling
