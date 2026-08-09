@@ -42,17 +42,23 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { canonicalDepth, readRecordDepth } from "../../packages/framework/core/tools/amadeus-sensor-depth-budget.ts";
 import {
   NFR_DESIGN_ARTIFACTS,
+  NFR_DESIGN_STANDARD_BUDGET,
   NFR_ID_CONTRACT_LANDED,
   NFR_REQUIREMENTS_ARTIFACTS,
+  NFR_REQUIREMENTS_STANDARD_BUDGET,
   evaluateNfrBudget,
+  flagsNfrBudget,
   main as sensorMain,
+  measureNfrStageDir,
   readRecordBirth,
   resolveRecordRoot,
+  unitIdCount,
 } from "../../packages/framework/core/tools/amadeus-sensor-nfr-budget.ts";
 import { parseSensorManifest, validateSensorManifest } from "../../packages/framework/core/tools/amadeus-sensor-schema.ts";
-import { matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
+import { depthBudgetArgs, matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-nfr-budget.md");
@@ -426,6 +432,89 @@ describe("t514 CLI contract", () => {
     expect(missingPath.code).toBe(1);
     expect(missingPath.stderr).toContain("--output-path is required");
   });
+
+  test("--depth Standard applies the ceiling; a within-budget unit still exits 0", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(4, 100));
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path, "--depth", "Standard"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: true, reason: "measured" });
+  });
+
+  test("--depth Standard on an over-budget unit ALSO exits 0 — advisory, not blocking", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1300));
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path, "--depth", "Standard"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: false, reason: "nfr-budget-exceeded" });
+  });
+
+  test("without --depth the same over-budget unit measures clean — never guesses a level", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1300));
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ pass: true, reason: "measured" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2684 stage ③ — the Standard-depth ceiling, both-side falling proof
+// ---------------------------------------------------------------------------
+
+describe("t514 the Standard ceiling flags an over-budget unit, independent of the id-contract cutoff", () => {
+  test("nfr-requirements: exceeding the ceiling flags, even for a PRE-contract unit", () => {
+    const root = record("2026-08-09T03:00:00Z"); // before NFR_ID_CONTRACT_LANDED
+    // 2 ids * 1,300 B/id = 2,600 B, over the 2 * 1,200 = 2,400 B ceiling.
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1300));
+    const result = evaluateNfrBudget(path, "Standard");
+    expect(result.pass).toBe(false);
+    expect(result.reason).toBe("nfr-budget-exceeded");
+    expect(result.findings_count).toBe(1);
+    expect(result.findings[0]?.field).toBe("unit-bytes-per-nfr");
+    // The unit predates the id contract; the flag fired anyway.
+    expect(result.under_id_contract).toBe(false);
+  });
+
+  test("nfr-design: exceeding the ceiling flags, using the shared id denominator", () => {
+    const root = record("2026-08-09T03:00:00Z");
+    writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 100));
+    // nfr-design's own bytes (not nfr-requirements') are compared against the
+    // same 2-id denominator: 2 * NFR_DESIGN_STANDARD_BUDGET is the ceiling.
+    const designBody = `## Design\n\nSatisfies SEC-1 and SEC-2.\n${"x".repeat(2 * NFR_DESIGN_STANDARD_BUDGET)}\n`;
+    const path = writeArtifact(root, "u1", "nfr-design", "security-design", designBody);
+    const result = evaluateNfrBudget(path, "Standard");
+    expect(result.pass).toBe(false);
+    expect(result.reason).toBe("nfr-budget-exceeded");
+  });
+
+  test("the same over-budget unit measures clean at Minimal — no ceiling declared there", () => {
+    const root = record("2026-08-09T03:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1300));
+    expect(evaluateNfrBudget(path, "Minimal").reason).toBe("measured");
+  });
+
+  test("the same over-budget unit measures clean at Comprehensive — no ceiling declared there", () => {
+    const root = record("2026-08-09T03:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1300));
+    expect(evaluateNfrBudget(path, "Comprehensive").reason).toBe("measured");
+  });
+
+  test("exactly at the ceiling does not flag; one byte over does (strict inequality, exact total)", () => {
+    const root = record("2026-08-09T03:00:00Z");
+    const atCeiling = writeArtifact(
+      root,
+      "u1",
+      "nfr-requirements",
+      "security-requirements",
+      requirementsBody(2, NFR_REQUIREMENTS_STANDARD_BUDGET),
+    );
+    expect(evaluateNfrBudget(atCeiling, "Standard").reason).toBe("measured");
+
+    const overRoot = record("2026-08-09T03:00:00Z");
+    const overPath = writeArtifact(overRoot, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 1201));
+    expect(evaluateNfrBudget(overPath, "Standard").reason).toBe("nfr-budget-exceeded");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -451,9 +540,9 @@ function nfrArtifactsOf(recordDir: string): string[] {
   return paths;
 }
 
-/** The records the contract does NOT reach. A record born at or after the
- *  cutoff is entitled to be reported, and asserting on it would pin the corpus
- *  rather than the guard. */
+/** The records the id-contract cutoff does NOT reach. A record born at or
+ *  after the cutoff is entitled to be reported for missing-nfr-ids, and
+ *  asserting on it would pin the corpus rather than the guard. */
 function preContractRecords(): string[] {
   return readdirSync(CORPUS)
     .filter((entry) => /^[0-9]{6}-/.test(entry))
@@ -464,14 +553,120 @@ function preContractRecords(): string[] {
     });
 }
 
-describe("t514 the live corpus is not retroactively reported", () => {
-  test("no artifact of a pre-contract record produces a finding", () => {
+/** The record's own resolved depth, read the same way the dispatcher's
+ *  --depth flag is derived (depthBudgetArgs / readRecordDepth). */
+function depthOf(recordDir: string): string | undefined {
+  return canonicalDepth(readRecordDepth(join(recordDir, "amadeus-state.md"), REPO_ROOT));
+}
+
+describe("t514 the live corpus is not retroactively reported for missing ids", () => {
+  test("no artifact of a pre-contract record is reported for missing-nfr-ids", () => {
     const paths = preContractRecords().flatMap(nfrArtifactsOf);
-    const reported = paths.filter((path) => !evaluateNfrBudget(path).pass);
+    const reasons = paths.map((path) => evaluateNfrBudget(path).reason);
     // The sweep must actually have swept: a predicate that measured nothing
     // would pass this vacuously. A floor at today's corpus size would instead
     // fail whenever records are archived, which says nothing about the guard.
     expect(paths.length).toBeGreaterThan(0);
-    expect(reported).toEqual([]);
+    expect(reasons).not.toContain("missing-nfr-ids");
+  });
+
+  test("a pre-contract record's own resolved depth can still surface nfr-budget-exceeded — the ceiling check is independent of the cutoff", () => {
+    // Distinct from the assertion above: the id-contract cutoff governs ONLY
+    // missing-nfr-ids (flagsNfrBudget's own comment says so). When --depth
+    // resolves to the record's actual Standard depth, any finding a
+    // pre-contract record produces must be the budget flag, never the
+    // missing-id one.
+    const reported: string[] = [];
+    let evaluated = 0;
+    for (const recordDir of preContractRecords()) {
+      const depth = depthOf(recordDir);
+      for (const path of nfrArtifactsOf(recordDir)) {
+        const result = evaluateNfrBudget(path, depth);
+        evaluated += 1;
+        if (!result.pass) reported.push(result.reason);
+      }
+    }
+    // Vacuity guard: `every` on an empty list proves nothing. The corpus must
+    // actually have been walked for the assertion below to carry weight.
+    expect(evaluated).toBeGreaterThan(0);
+    expect(reported.every((reason) => reason === "nfr-budget-exceeded")).toBe(true);
+  });
+});
+
+describe("t514 the corpus sweep holds the ruling's invariants", () => {
+  test("each stage's Standard population is non-empty and its flags stay a strict subset", () => {
+    // Walks the live corpus with this sensor's own shipped predicates end to
+    // end (measureNfrStageDir + unitIdCount + flagsNfrBudget) rather than a
+    // re-derived count. The ruling's exact figures at its measurement ref
+    // (comment 5230416035: 12/78 and 16/78) are NOT pinned here — the live
+    // corpus legitimately grows and archives records, and a count drift is
+    // not a sensor defect (the same reason Line 566-569 avoids corpus-count
+    // literals). What must hold regardless of corpus motion: the population
+    // was actually walked, and flagging stays a subset of it. The ruling
+    // figures themselves live in the manifest table and the unit-test
+    // OBSERVED constants, both pinned to the measurement ref.
+    const counts: Record<"nfr-requirements" | "nfr-design", { n: number; flagged: number }> = {
+      "nfr-requirements": { n: 0, flagged: 0 },
+      "nfr-design": { n: 0, flagged: 0 },
+    };
+    for (const entry of readdirSync(CORPUS).filter((e) => /^[0-9]{6}-/.test(e))) {
+      const recordDir = join(CORPUS, entry);
+      const depth = depthOf(recordDir);
+      if (depth !== "Standard") continue;
+      const constructionDir = join(recordDir, "construction");
+      if (!existsSync(constructionDir)) continue;
+      for (const unit of readdirSync(constructionDir)) {
+        for (const [stage, artifacts] of [
+          ["nfr-requirements", NFR_REQUIREMENTS_ARTIFACTS],
+          ["nfr-design", NFR_DESIGN_ARTIFACTS],
+        ] as const) {
+          const stageDir = join(constructionDir, unit, stage);
+          if (!existsSync(stageDir)) continue;
+          const measured = measureNfrStageDir(stageDir, artifacts);
+          if (measured.files === 0) continue;
+          const idCount = unitIdCount(stageDir);
+          if (idCount === 0) continue; // population = units WITH declared ids
+          counts[stage].n += 1;
+          if (flagsNfrBudget(stage, "Standard", measured.bytes, idCount)) counts[stage].flagged += 1;
+        }
+      }
+    }
+    for (const stage of ["nfr-requirements", "nfr-design"] as const) {
+      const { n, flagged } = counts[stage];
+      expect(n).toBeGreaterThan(0);
+      expect(flagged).toBeGreaterThan(0);
+      expect(flagged).toBeLessThan(n);
+    }
+  });
+});
+
+describe("t514 the dispatcher arm turns a resolved depth into nfr-budget's --depth flag", () => {
+  let seq = 0;
+  function seedRecord(depthLine: string | null): string {
+    seq += 1;
+    const root = join(tmp, "amadeus", "spaces", "default", "intents", `260809-x-${seq}`);
+    if (depthLine !== null) {
+      mkdirSync(root, { recursive: true });
+      writeFileSync(join(root, "amadeus-state.md"), `# State\n\n## Scope Configuration\n\n${depthLine}\n`);
+    } else {
+      mkdirSync(root, { recursive: true });
+    }
+    const stageDir = join(root, "construction", "u1", "nfr-requirements");
+    mkdirSync(stageDir, { recursive: true });
+    const out = join(stageDir, "security-requirements.md");
+    writeFileSync(out, requirementsBody(1, 100));
+    return out;
+  }
+
+  test("resolves --depth for nfr-budget, the same as depth-budget", () => {
+    const out = seedRecord("- **Depth**: Standard");
+    expect(depthBudgetArgs("nfr-budget", out, tmp)).toEqual(["--depth", "Standard"]);
+    expect(depthBudgetArgs("depth-budget", out, tmp)).toEqual(["--depth", "Standard"]);
+  });
+
+  test("is silent for an unrelated sensor and for an unresolved depth", () => {
+    const withDepth = seedRecord("- **Depth**: Standard");
+    expect(depthBudgetArgs("required-sections", withDepth, tmp)).toEqual([]);
+    expect(depthBudgetArgs("nfr-budget", seedRecord(null), tmp)).toEqual([]);
   });
 });

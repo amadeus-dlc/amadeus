@@ -3,12 +3,13 @@ id: nfr-budget
 kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-nfr-budget.ts
 default_severity: advisory
-description: Measures an NFR unit's bytes per declared requirement id, and reports a unit written under the id contract that declares none
+description: Measures an NFR unit's bytes per declared requirement id, flags a Standard-depth unit over its per-stage ceiling, and reports a unit written under the id contract that declares none
 category: document-shape
 matches: "**/nfr-*/*.md"
 input_schema:
   output_path: string
   stage_slug: string
+  depth: string
 output_schema:
   pass: boolean
   findings_count: integer
@@ -35,12 +36,15 @@ than any other stage in the corpus, with a per-artifact spread wider than the
 one #2425 was filed about, and until #2686 they carried no id contract at all —
 so no denominator existed to measure volume against.
 
-Stage ① (#2686) supplied the contract. This sensor supplies the measurement and
-**carries no ceiling**. Placing one before the observed distribution exists is
-the mistake #2525 had to undo: a threshold under the observed minimum flags
-every artifact, and a permanently red signal says nothing about which artifact
-is an outlier. Ceilings are the issue's stage ③ and are derived from the numbers
-this sensor and the repository's depth artifact census produce.
+Stage ① (#2686) supplied the contract. Stage ② (this sensor, before the ruling
+below) supplied the measurement and no ceiling — placing one before the
+observed distribution exists is the mistake #2525 had to undo: a threshold
+under the observed minimum flags every artifact, and a permanently red signal
+says nothing about which artifact is an outlier. Stage ③ (issue comment
+5230416035) ships the first ceiling, **Standard depth only**, derived from the
+numbers this sensor and the repository's depth artifact census produce.
+Minimal (n=3 today — too thin to rule on) and Comprehensive (no ceiling by
+convention, `stage-protocol.md` §8) are unchanged: measured, never flagged.
 
 This manifest declares `advisory`, so a finding is data for the human at the
 gate and never blocks. Raising it to `blocking` (the schema's other severity,
@@ -133,7 +137,60 @@ this sensor measures the artifacts that EXIST and never assumes an expected set.
 Separating pruning from a silent omission is the issue's stage ⑤ (coverage) and
 needs the directive's resolved kind rather than the filesystem.
 
-## The one reported case
+## Budgets
+
+Measured by applying this sensor's own predicate to every Standard-depth unit
+with at least one declared id, from the same corpus the repository's depth
+artifact census walks (which imports this sensor's predicates rather than
+re-deriving them):
+
+| Stage | Ceiling | n | min | median | max | Flags |
+|---|---|---:|---:|---:|---:|---:|
+| nfr-requirements | 1,200 B per id | 78 | 299 | 657 | 2,290 | 12/78 = 15.4% |
+| nfr-design | 1,200 B per id | 78 | 130 | 769 | 2,553 | 16/78 = 20.5% |
+
+Both ceilings compare against `unit_bytes_per_nfr` (D2), the unit's total bytes
+for that stage over its declared id count — not `bytes_per_nfr` (D1), which
+stays a diagnostic.
+
+Both ceilings sit **inside** their stage's observed range — above the minimum
+so the ceiling says something about WHICH units are outliers, below the
+maximum so it says anything at all
+(cid:code-generation:c1-threshold-inside-observed-range) — and both sit ABOVE
+their stage's median (roughly 1.8x for nfr-requirements, 1.6x for nfr-design),
+so each catches the tail rather than the middle. The two ceilings landing on
+the same 1,200 is **coincidence, not a shared rule**: they were derived
+independently, one stage at a time, and a future ruling may move one without
+the other — see the `NFR_REQUIREMENTS_STANDARD_BUDGET` and
+`NFR_DESIGN_STANDARD_BUDGET` constants for the per-stage reasoning.
+
+**The ceiling check is independent of the id-contract cutoff.** A unit
+written before the id contract landed that nonetheless declares ids is
+measured against the ceiling exactly like a unit written after — the cutoff in
+"The one reported case" below governs only the missing-id finding.
+Consequently, and only because the id contract landed moments before this
+ruling, every Standard-depth unit measured in the table above predates the
+contract; the ceiling could not yet have anything else to measure against.
+
+Minimal declares no ceiling: its Standard-depth sibling had 78 units to derive
+a range from, Minimal has 3 — too thin to place a threshold inside without it
+being either an accident of three data points or, at the corpus's current
+size, a permanently-red signal. Comprehensive declares no ceiling by the
+depth-budget sensor's own convention (`stage-protocol.md` §8). Both stay
+absent from the CLI's Standard-only comparison rather than an entry of
+Infinity, which would read as a threshold someone forgot to pick.
+
+## Depth delivery
+
+The per-sensor script receives `--stage`, `--output-path` and — new for this
+ruling — `--depth`. The dispatcher resolves depth the same way it does for
+depth-budget: walking up from the output path to the record's
+`amadeus-state.md`, bounded by the project root
+(`amadeus-sensor.ts`'s `depthBudgetArgs`, which now threads both sensors
+through the same lookup). A depth that cannot be resolved is simply absent,
+and the ceiling check passes fail-open.
+
+## The two reported cases
 
 A unit written **under the id contract** whose `nfr-requirements` artifacts
 declare no id at all (`missing-nfr-ids`). Without ids there is no denominator to
@@ -163,6 +220,17 @@ Every case where the sensor cannot legitimately measure is a pass:
 A fail-open result reports `record_birth: null` (hence `string-or-null` above)
 and `under_id_contract: false`.
 
+The ceiling check adds its own fail-open cases, evaluated independently of the
+missing-id case above:
+
+- the depth cannot be resolved from the `--depth` flag (unset, unresolved
+  ancestry) — no ceiling applies, not just Minimal/Comprehensive
+- the depth resolves to anything other than `Standard` — Minimal and
+  Comprehensive report `measured` and nothing else
+- `unit_nfr_count` is zero — a ceiling divides by the id count; zero ids means
+  no ratio to compare, and (for post-contract units) the missing-id case
+  already reports the more useful finding
+
 Births are compared as **instants**, never as strings. A timestamp is read only
 when it matches the audit schema's UTC form, parses, and round-trips its own
 calendar fields — three checks because each admits what the others reject: the
@@ -177,5 +245,6 @@ the cutoff would file itself as pre-contract.
 ## Failure mode
 
 Findings emit `SENSOR_FAILED` through the existing dispatcher and write detail
-under `.amadeus-sensors/<stage-slug>/`. A finding names the missing id contract;
-the artifact's contents are never echoed.
+under `.amadeus-sensors/<stage-slug>/`. `missing-nfr-ids` names the missing id
+contract; `nfr-budget-exceeded` names the unit's measured bytes, id count, and
+the ceiling it crossed. Neither finding echoes the artifact's contents.

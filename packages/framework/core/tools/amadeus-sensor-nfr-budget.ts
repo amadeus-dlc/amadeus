@@ -7,13 +7,16 @@
 // files than any other stage in the corpus and a per-artifact spread wider than
 // the one #2425 was filed about.
 //
-// Stage ① (#2686) supplied the id contract. This sensor supplies the
-// measurement and NOTHING ELSE: it carries no ceiling. Placing one before the
-// observed distribution exists is exactly the mistake #2525 had to undo — a
-// threshold under the observed minimum flags every artifact, and a permanently
-// red signal says nothing about which artifact is an outlier. The ceilings are
-// stage ③, and they are derived from the numbers this sensor and the
-// repository's depth artifact census produce.
+// Stage ① (#2686) supplied the id contract. Stage ② (this sensor, before the
+// ruling on GitHub issue comment 5230416035) supplied the measurement and
+// NOTHING ELSE: no ceiling. Placing one before the observed distribution
+// exists is exactly the mistake #2525 had to undo — a threshold under the
+// observed minimum flags every artifact, and a permanently red signal says
+// nothing about which artifact is an outlier. Stage ③ (that ruling) ships the
+// first ceiling — Standard depth only, one independently-derived constant per
+// stage — from the numbers this sensor and the repository's depth artifact
+// census produce. Minimal (n=3, too thin to rule on) and Comprehensive (no
+// ceiling by convention, stage-protocol.md §8) stay unmeasured against one.
 //
 // WHAT IS THE DENOMINATOR. NFR ids are declared in nfr-requirements and only
 // CITED in nfr-design — the stage ① contract says so in as many words ("do not
@@ -45,8 +48,13 @@
 //
 // Self-contained (no amadeus-lib import): a per-sensor script is spawned by the
 // dispatcher and must not drag the library's module graph into that process.
+// The one cross-sensor import below (canonicalDepth from the sibling
+// depth-budget script) is not that: depth normalization is canonicalized
+// there already and re-deriving it here would let this sensor's idea of
+// "Standard" drift from that one's — the same reuse the census script makes.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";
 
 /** The artifacts `nfr-requirements` declares in `produces`. Ids are DECLARED
  *  here. */
@@ -427,6 +435,86 @@ export function unitIdCount(stageDir: string): number {
   return measureNfrStageDir(declarationDir, NFR_REQUIREMENTS_ARTIFACTS).ids.size;
 }
 
+// ---------------------------------------------------------------------------
+// Ceilings — Standard depth only (#2684 stage ③, ruling comment 5230416035)
+// ---------------------------------------------------------------------------
+
+/** Bytes per declared NFR id nfr-requirements's Standard-depth UNITS (D2,
+ *  `unit_bytes_per_nfr`) may spend. Measured with this sensor's own predicate
+ *  over every Standard-depth unit with at least one declared id — n=78, min
+ *  299, median 657, max 2290. 1,200 sits inside that range, which is what
+ *  makes it a detector rather than a verdict
+ *  (cid:code-generation:c1-threshold-inside-observed-range): below the
+ *  minimum it would flag every unit, above the maximum it would flag none.
+ *  It sits above the median (roughly 1.8x) so it catches the tail rather than
+ *  the middle, inside the 10-30% flag-rate band (925-1425 B/id) the sweep
+ *  found for this stage, and flags 12/78 = 15.4% of the measured population.
+ *
+ *  A SEPARATE, independently-derived constant from nfr-design's, per
+ *  cid:code-generation:c1-threshold-inside-observed-range's "水準ごとの規則" —
+ *  landing on the same 1,200 as nfr-design (below) is coincidence, not a
+ *  shared rule, and the two may move independently in a future ruling. */
+export const NFR_REQUIREMENTS_STANDARD_BUDGET = 1200;
+
+/** Bytes per declared NFR id nfr-design's Standard-depth units may spend — the
+ *  same measurement as above, applied to nfr-design's own D2 figure. n=78,
+ *  min 130, median 769, max 2553. 1,200 sits inside that range, above the
+ *  median (roughly 1.6x), inside this stage's 10-30% band (975-1725 B/id),
+ *  and flags 16/78 = 20.5% of the measured population.
+ *
+ *  Independently derived from nfr-requirements' constant above — see that
+ *  constant's comment for why the two are not the same rule despite sharing
+ *  a value today. */
+export const NFR_DESIGN_STANDARD_BUDGET = 1200;
+
+/** Minimal declares no ceiling yet: its Standard-depth sibling had 78 units to
+ *  measure from, Minimal has 3 — too thin for a range a ceiling could sit
+ *  inside without being either an accident of three data points or a
+ *  permanently-red signal. Comprehensive declares no ceiling by the same
+ *  convention depth-budget's DEPTH_BUDGETS.Comprehensive uses
+ *  (stage-protocol.md §8). Both stay undefined here rather than an entry of
+ *  Infinity, which would read as a threshold someone forgot to pick.
+ *
+ *  The ceiling for a stage at a depth, or undefined when this pair declares
+ *  none. Depth is normalized through the depth-budget sensor's own
+ *  `canonicalDepth`, so this and that sensor can never disagree about what
+ *  "Standard" means. */
+export function nfrStandardBudget(stage: string, level: string | undefined): number | undefined {
+  if (level !== "Standard") return undefined;
+  if (stage === NFR_REQUIREMENTS_STAGE_DIR) return NFR_REQUIREMENTS_STANDARD_BUDGET;
+  if (stage === "nfr-design") return NFR_DESIGN_STANDARD_BUDGET;
+  return undefined;
+}
+
+/** Does this unit's stage measurement exceed its Standard ceiling?
+ *
+ *  Compared on the EXACT total (`unitBytes > ceiling * unitIdCount`), not on
+ *  the rounded per-id ratio — rounding first would let a sub-integer overrun
+ *  slip under the ceiling, the same reasoning depth-budget's own comparison
+ *  uses. A unit with no declared ids (`unitIdCount === 0`) has no denominator
+ *  and is never flagged here: that unit is either fail-open (pre-contract) or
+ *  already reported as `missing-nfr-ids` (post-contract) by the caller, and a
+ *  zero-denominator comparison (`bytes > 0`) would flag every such unit on
+ *  its first byte. THIS CHECK IS INDEPENDENT OF THE ID-CONTRACT CUTOFF — a
+ *  unit written before the contract that nonetheless declares ids is measured
+ *  exactly like one written after (ruling comment 5230416035: "超過 flag は
+ *  cutoff と独立"). Measured against the live corpus, every Standard-depth
+ *  unit with declared ids today predates the contract (it landed moments
+ *  before this ruling), so the corpus sweep below is necessarily a sweep of
+ *  pre-contract units — the ceiling could not otherwise be measured against
+ *  anything yet. */
+export function flagsNfrBudget(
+  stage: string,
+  level: string | undefined,
+  unitBytes: number,
+  unitNfrCount: number,
+): boolean {
+  if (unitNfrCount === 0) return false;
+  const ceiling = nfrStandardBudget(stage, level);
+  if (ceiling === undefined) return false;
+  return unitBytes > ceiling * unitNfrCount;
+}
+
 export interface NfrBudgetFinding {
   field: string;
   reason: string;
@@ -474,17 +562,19 @@ function verdict(
   return { pass: findings.length === 0, findings_count: findings.length, reason, findings, ...measured };
 }
 
-/** Ratio to report. Rounded for readability; nothing COMPARES against it, since
- *  this sensor carries no ceiling yet (stage ③). A zero denominator reports 0
- *  rather than Infinity — the id-absence finding is what says the denominator
- *  was missing. */
+/** Ratio to report. Rounded for readability; the budget COMPARISON below uses
+ *  the exact totals rather than this rounded figure (see flagsNfrBudget). A
+ *  zero denominator reports 0 rather than Infinity — the id-absence finding is
+ *  what says the denominator was missing. */
 function ratio(bytes: number, count: number): number {
   return count === 0 ? 0 : Math.round(bytes / count);
 }
 
 /** Pure evaluation core (in-process test seam). Reads the files itself so the
- *  CLI entry stays a thin argv shim. */
-export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
+ *  CLI entry stays a thin argv shim. `depth` is optional and, when absent or
+ *  unrecognizable, simply measures with no ceiling applied — the sensor never
+ *  guesses a level, matching the sibling depth-budget sensor. */
+export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudgetResult {
   const stage = stageOfNfrArtifact(basename(outputPath));
   if (stage === undefined) return verdict("not-nfr-artifact", [], NONE);
 
@@ -502,6 +592,7 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
   const unitNfrCount = unitIdCount(stageDir);
   const birth = recordBirthOf(outputPath);
   const underContract = bornUnderIdContract(birth);
+  const level = canonicalDepth(depth);
 
   const figures = {
     bytes: measured.bytes,
@@ -515,8 +606,8 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
     under_id_contract: underContract,
   };
 
-  // The one reported case: a unit written UNDER the contract that declares no
-  // id at all. Without ids there is no denominator, so the volume cannot be
+  // The FIRST reported case: a unit written UNDER the contract that declares
+  // no id at all. Without ids there is no denominator, so the volume cannot be
   // measured at all — and nothing downstream (nfr-design's tracing,
   // build-and-test's proportional selection, a reviewer checking that an
   // absence claim is falsifiable) can address the requirement by name.
@@ -533,6 +624,28 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
       figures,
     );
   }
+
+  // The SECOND reported case: the unit's D2 figure (bytes for this stage over
+  // its declared ids) exceeds the Standard ceiling. Checked on the UNIT'S
+  // total (unit.bytes), not this artifact's own bytes — D2 is the primary
+  // axis a ceiling is placed against (see the module header). Independent of
+  // the id-contract cutoff above: a pre-contract unit that happens to declare
+  // ids is measured exactly like a post-contract one (flagsNfrBudget's own
+  // comment explains why).
+  const ceiling = nfrStandardBudget(stage, level);
+  if (ceiling !== undefined && flagsNfrBudget(stage, level, unit.bytes, unitNfrCount)) {
+    return verdict(
+      "nfr-budget-exceeded",
+      [
+        {
+          field: "unit-bytes-per-nfr",
+          reason: `this unit's ${unit.bytes} B of ${stage} artifacts over ${unitNfrCount} declared ids exceeds the ${level} guidance of ${ceiling} B per id`,
+        },
+      ],
+      figures,
+    );
+  }
+
   return verdict("measured", [], figures);
 }
 
@@ -562,6 +675,7 @@ function recordBirthOf(outputPath: string): string | undefined {
 interface Flags {
   stage?: string;
   outputPath?: string;
+  depth?: string;
 }
 
 function parseFlags(argv: string[]): Flags {
@@ -569,6 +683,7 @@ function parseFlags(argv: string[]): Flags {
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--stage") out.stage = argv[++i];
     else if (argv[i] === "--output-path") out.outputPath = argv[++i];
+    else if (argv[i] === "--depth") out.depth = argv[++i];
   }
   return out;
 }
@@ -579,12 +694,14 @@ function fail(msg: string): never {
 }
 
 /** CLI entry / in-process test seam. Exits 1 ONLY on a missing required flag;
- *  every check outcome is stdout JSON with exit 0 (advisory contract). */
+ *  every check outcome is stdout JSON with exit 0 (advisory contract).
+ *  --depth is optional, matching depth-budget: an absent or unrecognizable
+ *  value leaves the ceiling check fail-open rather than guessing a level. */
 export function main(argv: string[] = process.argv.slice(2)): void {
   const flags = parseFlags(argv);
   if (!flags.stage) fail("--stage is required");
   if (!flags.outputPath) fail("--output-path is required");
-  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath))}\n`);
+  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath, flags.depth))}\n`);
   process.exit(0);
 }
 
