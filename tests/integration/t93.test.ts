@@ -103,6 +103,7 @@ const EXPECTED_IDS = [
   "event-registry-drift",
   "linter",
   "model-completeness",
+  "nfr-budget",
   "pr-convergence-report-format",
   "required-sections",
   "self-scope-consistency",

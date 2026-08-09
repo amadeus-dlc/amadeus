@@ -1796,7 +1796,8 @@
         "upstream-coverage",
         "linter",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "nfr-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1859,6 +1860,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "nfr-budget",
+          "path": ".claude/sensors/amadeus-nfr-budget.md",
+          "matches": "**/nfr-*/*.md",
+          "category": "document-shape"
         }
       ]
     },
@@ -1934,7 +1941,8 @@
         "upstream-coverage",
         "linter",
         "type-check",
-        "answer-evidence"
+        "answer-evidence",
+        "nfr-budget"
       ],
       "scopes": [
         "enterprise",
@@ -1997,6 +2005,12 @@
           "path": ".claude/sensors/amadeus-answer-evidence.md",
           "matches": "**/*-questions.md",
           "category": "governance"
+        },
+        {
+          "id": "nfr-budget",
+          "path": ".claude/sensors/amadeus-nfr-budget.md",
+          "matches": "**/nfr-*/*.md",
+          "category": "document-shape"
         }
       ]
     },

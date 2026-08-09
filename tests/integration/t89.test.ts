@@ -364,6 +364,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "depth-budget",
       "event-registry-drift",
       "linter",
+      "nfr-budget",
       "required-sections",
       "self-scope-consistency",
       "type-check",

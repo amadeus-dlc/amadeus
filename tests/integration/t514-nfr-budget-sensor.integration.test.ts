@@ -1,0 +1,339 @@
+// covers: file:packages/framework/core/tools/amadeus-sensor-nfr-budget.ts,
+//         file:packages/framework/core/sensors/amadeus-nfr-budget.md
+// size: medium
+//
+// #2684 stage ② — the NFR measurement sensor, at its filesystem and manifest
+// boundaries.
+//
+// Three halves:
+//
+//   1. The manifest is well-formed by the SHIPPED schema, advisory-only, and
+//      its `matches` glob addresses the artifacts the two NFR stages produce —
+//      under BOTH glob engines that read it (the dispatcher's own matcher and
+//      Bun.Glob in the PostToolUse hook), which disagree on some patterns.
+//   2. The predicate measures a unit: bytes for the stage over the unit's
+//      declared id count, with the per-artifact figure kept as a diagnostic.
+//      Both stages divide by the SAME denominator, because nfr-design cites
+//      ids rather than declaring them.
+//   3. The enforcement cutoff holds in both directions — the falling proof
+//      (a post-contract unit with no ids IS reported) and its other side (a
+//      pre-contract unit with no ids is NOT), which is what keeps the sensor
+//      from being a retroactive block on a corpus written before the contract.
+//
+// The corpus sweep — no pre-contract record anywhere in the live workspace is
+// reported — lives here too, since it is the other half of the falling proof
+// (cid:code-generation:corpus-sweep-for-new-guards).
+//
+// Touches a real filesystem (fixtures on disk + the real manifest and corpus),
+// hence the integration tier (fs-tests-integration-first).
+
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  NFR_DESIGN_ARTIFACTS,
+  NFR_ID_CONTRACT_LANDED,
+  NFR_REQUIREMENTS_ARTIFACTS,
+  evaluateNfrBudget,
+  readRecordBirth,
+  resolveRecordRoot,
+} from "../../packages/framework/core/tools/amadeus-sensor-nfr-budget.ts";
+import { parseSensorManifest, validateSensorManifest } from "../../packages/framework/core/tools/amadeus-sensor-schema.ts";
+import { matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-nfr-budget.md");
+const STAGES_DIR = join(REPO_ROOT, "packages/framework/core/amadeus-common/stages/construction");
+const CORPUS = join(REPO_ROOT, "amadeus/spaces/default/intents");
+
+let tmp = "";
+beforeEach(() => {
+  tmp = mkdtempSync(join(tmpdir(), "amadeus-t514-"));
+});
+afterEach(() => {
+  if (tmp) rmSync(tmp, { recursive: true, force: true });
+});
+
+/** A record on disk: `<root>/construction/<unit>/<stage>/<artifact>.md`, with an
+ *  audit shard carrying the birth the cutoff is read from. */
+function record(birth: string | undefined): string {
+  const root = join(tmp, "260809-fixture");
+  mkdirSync(root, { recursive: true });
+  writeFileSync(join(root, "amadeus-state.md"), "- **Depth**: Standard\n");
+  if (birth !== undefined) {
+    mkdirSync(join(root, "audit"), { recursive: true });
+    writeFileSync(
+      join(root, "audit", "clone.jsonl"),
+      `${JSON.stringify({ schemaVersion: 1, seq: 1, timestamp: birth, event: "WORKFLOW_STARTED", fields: {} })}\n`,
+    );
+  }
+  return root;
+}
+
+function writeArtifact(root: string, unit: string, stage: string, artifact: string, body: string): string {
+  const dir = join(root, "construction", unit, stage);
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, `${artifact}.md`);
+  writeFileSync(path, body);
+  return path;
+}
+
+/** A requirements body of EXACTLY `count * bytesPerId` bytes declaring `count`
+ *  ids, so a fixture sized at a figure measures at that figure. */
+function requirementsBody(count: number, bytesPerId: number, prefix = "SEC"): string {
+  const parts: string[] = [];
+  for (let n = 1; n <= count; n += 1) {
+    const head = `### ${prefix}-${n}: requirement ${n}\n`;
+    // The filler ends on its own newline so the next heading starts a line —
+    // a declaration position is anchored at the start of one.
+    parts.push(`${head}${"x".repeat(Math.max(0, bytesPerId - head.length - 1))}\n`);
+  }
+  return parts.join("");
+}
+
+// ---------------------------------------------------------------------------
+// 1. Manifest
+// ---------------------------------------------------------------------------
+
+describe("t514 the nfr-budget manifest is shippable and advisory", () => {
+  test("parses and validates against the shipped schema", () => {
+    const parsed = parseSensorManifest(readFileSync(MANIFEST, "utf-8"));
+    expect(() => validateSensorManifest(parsed, MANIFEST, "nfr-budget")).not.toThrow();
+    expect(parsed.id).toBe("nfr-budget");
+    // Advisory is the only severity the schema ships; the issue's stopping
+    // condition also forbids raising it before #2683 rules on the total.
+    expect(parsed.default_severity).toBe("advisory");
+  });
+
+  test("the matches glob addresses the artifacts both NFR stages produce", () => {
+    const parsed = parseSensorManifest(readFileSync(MANIFEST, "utf-8"));
+    const matches = parsed.matches as string;
+    for (const artifact of NFR_REQUIREMENTS_ARTIFACTS) {
+      const path = `/w/amadeus/spaces/default/intents/260809-x/construction/u1/nfr-requirements/${artifact}.md`;
+      expect(matchesGlob(matches, path)).toBe(true);
+      expect(new Bun.Glob(matches).match(path)).toBe(true);
+    }
+    for (const artifact of NFR_DESIGN_ARTIFACTS) {
+      const path = `/w/amadeus/spaces/default/intents/260809-x/construction/u1/nfr-design/${artifact}.md`;
+      expect(matchesGlob(matches, path)).toBe(true);
+      expect(new Bun.Glob(matches).match(path)).toBe(true);
+    }
+  });
+
+  test("an unrelated artifact is out of the glob's reach", () => {
+    const parsed = parseSensorManifest(readFileSync(MANIFEST, "utf-8"));
+    const matches = parsed.matches as string;
+    const path = "/w/amadeus/spaces/default/intents/260809-x/inception/requirements-analysis/requirements.md";
+    expect(matchesGlob(matches, path)).toBe(false);
+    expect(new Bun.Glob(matches).match(path)).toBe(false);
+  });
+});
+
+describe("t514 both NFR stages import the sensor", () => {
+  for (const stage of ["nfr-requirements", "nfr-design"]) {
+    test(`${stage} declares nfr-budget in its sensors list`, () => {
+      // The graph compile rejects an unknown sensor id, so the manifest and
+      // this declaration must land together.
+      const text = readFileSync(join(STAGES_DIR, `${stage}.md`), "utf-8");
+      const frontmatter = text.split("---")[1] as string;
+      expect(frontmatter).toContain("- nfr-budget");
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 2. Measurement
+// ---------------------------------------------------------------------------
+
+describe("t514 the sensor measures a unit against its declared ids", () => {
+  test("reports bytes, the unit roll-up, and both ratios", () => {
+    const root = record("2026-08-09T10:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(4, 500));
+    writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", requirementsBody(2, 300, "PERF"));
+
+    const result = evaluateNfrBudget(path);
+    expect(result.reason).toBe("measured");
+    expect(result.pass).toBe(true);
+    expect(result.bytes).toBe(2000);
+    expect(result.declared_ids).toBe(4);
+    // The unit: two artifacts, 2,000 + 600 bytes, six distinct ids.
+    expect(result.unit_files).toBe(2);
+    expect(result.unit_bytes).toBe(2600);
+    expect(result.unit_nfr_count).toBe(6);
+    // D2 (primary) and D1 (diagnostic) share the unit denominator.
+    expect(result.unit_bytes_per_nfr).toBe(Math.round(2600 / 6));
+    expect(result.bytes_per_nfr).toBe(Math.round(2000 / 6));
+  });
+
+  test("nfr-design divides by the ids nfr-requirements declared", () => {
+    // The stage ① contract has nfr-design CITE ids, never declare them, so an
+    // in-file count would be zero for every design artifact ever written.
+    const root = record("2026-08-09T10:00:00Z");
+    writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(5, 400));
+    const path = writeArtifact(
+      root,
+      "u1",
+      "nfr-design",
+      "security-design",
+      "## Design\n\nThe token store satisfies SEC-1 and SEC-2.\n",
+    );
+
+    const result = evaluateNfrBudget(path);
+    expect(result.reason).toBe("measured");
+    expect(result.declared_ids).toBe(0);
+    expect(result.unit_nfr_count).toBe(5);
+    expect(result.unit_bytes_per_nfr).toBe(Math.round(result.unit_bytes / 5));
+  });
+
+  test("an absent sibling artifact is skipped, not counted as zero", () => {
+    // `produces_kinds` prunes artifacts by unit kind and the expected set
+    // cannot be reconstructed from disk, so the measurement never assumes one.
+    const root = record("2026-08-09T10:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", requirementsBody(2, 500));
+    const result = evaluateNfrBudget(path);
+    expect(result.unit_files).toBe(1);
+    expect(result.unit_bytes).toBe(1000);
+  });
+});
+
+describe("t514 the sensor passes wherever it cannot legitimately measure", () => {
+  test("a path that is not an NFR artifact", () => {
+    const root = record("2026-08-09T10:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "memory", "## Diary\n");
+    expect(evaluateNfrBudget(path).reason).toBe("not-nfr-artifact");
+    expect(evaluateNfrBudget(path).pass).toBe(true);
+  });
+
+  test("a file that does not exist", () => {
+    const result = evaluateNfrBudget(join(tmp, "nowhere", "security-requirements.md"));
+    expect(result.reason).toBe("no-file");
+    expect(result.pass).toBe(true);
+  });
+
+  test("a file mid-write, still empty", () => {
+    const root = record("2026-08-09T10:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", "");
+    expect(evaluateNfrBudget(path).reason).toBe("empty");
+    expect(evaluateNfrBudget(path).pass).toBe(true);
+  });
+
+  test("a record whose birth cannot be read", () => {
+    // Fail-open: an unreadable audit trail never lands a record in the reported
+    // cohort, so a missing shard cannot manufacture a finding.
+    const root = record(undefined);
+    const path = writeArtifact(root, "u1", "nfr-requirements", "security-requirements", "## No ids here\n\ntext\n");
+    const result = evaluateNfrBudget(path);
+    expect(result.record_birth).toBeNull();
+    expect(result.under_id_contract).toBe(false);
+    expect(result.pass).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3. The cutoff, both sides
+// ---------------------------------------------------------------------------
+
+describe("t514 the id contract is enforced going forward only", () => {
+  const NO_IDS = "## Performance\n\nThe service should be fast enough.\n";
+
+  test("a unit born AFTER the contract with no ids is reported", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const result = evaluateNfrBudget(path);
+    expect(result.pass).toBe(false);
+    expect(result.reason).toBe("missing-nfr-ids");
+    expect(result.findings_count).toBe(1);
+    expect(result.findings[0]?.field).toBe("nfr-ids");
+    expect(result.under_id_contract).toBe(true);
+  });
+
+  test("the same unit born BEFORE the contract is not", () => {
+    const root = record("2026-08-09T03:47:45Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const result = evaluateNfrBudget(path);
+    expect(result.pass).toBe(true);
+    expect(result.reason).toBe("measured");
+    expect(result.under_id_contract).toBe(false);
+  });
+
+  test("a post-contract unit that declares ids passes", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", requirementsBody(3, 400, "PERF"));
+    expect(evaluateNfrBudget(path).pass).toBe(true);
+  });
+
+  test("a design artifact inherits its unit's id absence", () => {
+    // The finding is a property of the UNIT, so it surfaces from either stage's
+    // artifacts rather than only from the one that should have declared.
+    const root = record("2026-08-09T04:00:00Z");
+    writeArtifact(root, "u1", "nfr-requirements", "performance-requirements", NO_IDS);
+    const path = writeArtifact(root, "u1", "nfr-design", "performance-design", "## Design\n\nprose\n");
+    expect(evaluateNfrBudget(path).reason).toBe("missing-nfr-ids");
+  });
+});
+
+describe("t514 record resolution walks up to the record root", () => {
+  test("finds the root from an artifact four levels down", () => {
+    const root = record("2026-08-09T04:00:00Z");
+    const path = writeArtifact(root, "u1", "nfr-design", "security-design", "x");
+    expect(resolveRecordRoot(path)).toBe(root);
+    expect(readRecordBirth(root)).toBe("2026-08-09T04:00:00Z");
+  });
+
+  test("a path with no record above it resolves to nothing", () => {
+    const orphan = join(tmp, "loose");
+    mkdirSync(orphan, { recursive: true });
+    writeFileSync(join(orphan, "security-requirements.md"), "x");
+    expect(resolveRecordRoot(join(orphan, "security-requirements.md"))).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Corpus sweep — the other side of the falling proof
+// ---------------------------------------------------------------------------
+
+/** Every NFR artifact of one record that exists on disk. */
+function nfrArtifactsOf(recordDir: string): string[] {
+  const construction = join(recordDir, "construction");
+  if (!existsSync(construction)) return [];
+  const paths: string[] = [];
+  for (const unit of readdirSync(construction)) {
+    for (const [stage, artifacts] of [
+      ["nfr-requirements", NFR_REQUIREMENTS_ARTIFACTS],
+      ["nfr-design", NFR_DESIGN_ARTIFACTS],
+    ] as const) {
+      for (const artifact of artifacts) {
+        const path = join(construction, unit, stage, `${artifact}.md`);
+        if (existsSync(path)) paths.push(path);
+      }
+    }
+  }
+  return paths;
+}
+
+/** The records the contract does NOT reach. A record born at or after the
+ *  cutoff is entitled to be reported, and asserting on it would pin the corpus
+ *  rather than the guard. */
+function preContractRecords(): string[] {
+  return readdirSync(CORPUS)
+    .filter((entry) => /^[0-9]{6}-/.test(entry))
+    .map((entry) => join(CORPUS, entry))
+    .filter((dir) => {
+      const birth = readRecordBirth(dir);
+      return birth === undefined || birth < NFR_ID_CONTRACT_LANDED;
+    });
+}
+
+describe("t514 the live corpus is not retroactively reported", () => {
+  test("no artifact of a pre-contract record produces a finding", () => {
+    const paths = preContractRecords().flatMap(nfrArtifactsOf);
+    const reported = paths.filter((path) => !evaluateNfrBudget(path).pass);
+    // The sweep must actually have swept: a predicate that measured nothing
+    // would pass this vacuously.
+    expect(paths.length).toBeGreaterThan(1000);
+    expect(reported).toEqual([]);
+  });
+});
