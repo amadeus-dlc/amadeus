@@ -872,8 +872,9 @@ function emitTerminal(
 // are constrained to suffix + brace-expansion shapes.
 /** The sensors that measure against a per-depth row of the §8 Depth-Level
  *  Contract, and therefore need the record's resolved depth: depth-budget
- *  (bytes per requirement) and question-budget (questions per stage). */
-const DEPTH_READING_SENSORS = new Set(["depth-budget", "question-budget"]);
+ *  (bytes per requirement), question-budget (questions per stage), and
+ *  nfr-budget (bytes per declared NFR id, #2684 stage ③). */
+const DEPTH_READING_SENSORS = new Set(["depth-budget", "question-budget", "nfr-budget"]);
 
 /** The depth-reading sensors' extra flag: the record's resolved depth, read by
  *  walking UP from the output path to amadeus-state.md. The per-sensor script
