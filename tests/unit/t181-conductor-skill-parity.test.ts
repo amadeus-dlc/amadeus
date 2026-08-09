@@ -58,6 +58,25 @@ function conductorSurfaces(): string[] {
     .sort();
 }
 
+function sectionStartingAt(body: string, heading: string): string {
+  const start = body.indexOf(heading);
+  if (start < 0) return "";
+  const nextHeading = heading.startsWith("### ") ? "\n### " : "\n## ";
+  const next = body.indexOf(nextHeading, start + heading.length);
+  return body.slice(start, next < 0 ? undefined : next);
+}
+
+function invokeSwarmDispatchScope(body: string): string {
+  const tableRow = body
+    .split("\n")
+    .find((line) => line.startsWith("| `invoke-swarm` |"));
+  return [
+    tableRow ?? "",
+    sectionStartingAt(body, "### Harness-neutral fixed Unit pool"),
+    sectionStartingAt(body, "## Construction swarm on Pi"),
+  ].join("\n");
+}
+
 // A bare `--init` flag token: `--init` not preceded by another flag char — the
 // retired amadeus command. NOT `git init`/`npm init` (no leading hyphen). Same
 // predicate as t174's `--init` scan.
@@ -159,10 +178,25 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
       for (const token of SHARED_BUILDER_ROUTING_TOKENS) {
         if (!body.includes(token)) missing.push(`${rel}  missing: ${token}`);
       }
-      const builderMentions = body.match(/amadeus-builder-agent/g)?.length ?? 0;
-      if (builderMentions < 2) missing.push(`${rel}  builder dispatch is not explicit`);
+      const swarmScope = invokeSwarmDispatchScope(body);
+      if (!swarmScope.includes("amadeus-builder-agent")) {
+        missing.push(`${rel}  invoke-swarm missing builder dispatch`);
+      }
+      if (swarmScope.includes("amadeus-developer-agent")) {
+        missing.push(`${rel}  invoke-swarm incorrectly dispatches developer`);
+      }
     }
     expect(missing).toEqual([]);
+  });
+
+  test("named implementation lifecycle stages remain developer-owned in the projected core", () => {
+    for (const rel of [
+      "packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md",
+      "packages/framework/core/amadeus-common/stages/construction/code-generation.md",
+    ]) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      expect(body).toContain("lead_agent: amadeus-developer-agent");
+    }
   });
 
   test("Kiro harnesses expose builder as a trusted native subagent", () => {
