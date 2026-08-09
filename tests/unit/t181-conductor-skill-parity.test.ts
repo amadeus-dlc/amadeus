@@ -80,6 +80,11 @@ const REQUIRED_TOKENS = [
 // them would demand edits SNR-W3 explicitly scopes out.
 const CODEX_SKILL = "packages/framework/harness/codex/skills/amadeus/SKILL.md";
 const CODEX_C2_TOKEN = "worktree-relative paths only";
+const CODEX_BUILDER_ROUTING_TOKENS = [
+  "use `amadeus-builder-agent` for every conductor-created implementation child",
+  "using the `amadeus-builder-agent` custom agent role",
+  "Keep `amadeus-developer-agent` for the named `reverse-engineering` and `code-generation` stage dispatches.",
+] as const;
 
 describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
@@ -131,5 +136,11 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
     // purpose; the shared set above stays common to all four trees.
     const body = readFileSync(join(REPO_ROOT, CODEX_SKILL), "utf-8");
     expect(body.includes(CODEX_C2_TOKEN)).toBe(true);
+  });
+
+  test("the Codex conductor routes bounded implementation children to builder while preserving developer-owned stages", () => {
+    const body = readFileSync(join(REPO_ROOT, CODEX_SKILL), "utf-8");
+    const missing = CODEX_BUILDER_ROUTING_TOKENS.filter((token) => !body.includes(token));
+    expect(missing).toEqual([]);
   });
 });
