@@ -334,6 +334,59 @@ describe("main — the whole pipeline over a real corpus", () => {
   });
 });
 
+// --- Issue #2700: piped stdout must not be truncated at the pipe buffer ----
+
+function isoAt(offsetSeconds: number): string {
+  return new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + offsetSeconds * 1000).toISOString();
+}
+
+// A corpus with enough distinct stages that the rendered JSON report exceeds
+// the 64KiB pipe buffer that reproduced Issue #2700 (measured: 1200 stages ->
+// ~104,000 bytes, comfortably past 65536 with margin for renderer changes).
+function buildOversizedCorpus(projectDir: string, stageCount: number): string {
+  const spaceRoot = join(projectDir, "amadeus", "spaces", "default");
+  const lines: string[] = [];
+  let seq = 1;
+  for (let i = 0; i < stageCount; i++) {
+    const stage = `bulk-stage-${String(i).padStart(5, "0")}`;
+    lines.push(v1Line(seq++, "STAGE_STARTED", isoAt(i * 2), { Stage: stage }));
+    lines.push(v1Line(seq++, "STAGE_COMPLETED", isoAt(i * 2 + 1), { Stage: stage }));
+  }
+  writeShard(spaceRoot, "bulk", "shard-bulk.jsonl", lines);
+  return spaceRoot;
+}
+
+describe("pipe integrity — Issue #2700, stdout must fully drain before exit", () => {
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+
+  test("output bigger than the 64KiB pipe buffer is not truncated when piped", () => {
+    const projectDir = scratch();
+    buildOversizedCorpus(projectDir, 1200);
+
+    // Full capture: spawnSync reads the child's stdout pipe to EOF itself, so
+    // this number is what a correct, fully-drained run actually produces.
+    const full = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--format", "json"], {
+      ...RUN_OPTIONS,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    expect(full.status).toBe(0);
+    const fullBytes = Buffer.byteLength(full.stdout ?? "", "utf-8");
+    // Fixture precondition, checked mechanically rather than assumed: the
+    // report must actually exceed the pipe buffer size that reproduced the
+    // defect, or the byte-count comparison below proves nothing.
+    expect(fullBytes).toBeGreaterThan(65536);
+
+    // Piped capture: reproduce the exact shape from the issue report
+    // (`... | wc -c`) — a downstream reader racing the producer's exit.
+    // Positional params (`--`) keep the scratch paths out of the shell
+    // script string entirely.
+    const piped = spawnSync("sh", ["-c", 'set -o pipefail; bun "$1" --project-dir "$2" --space default --format json | wc -c', "--", TOOL, projectDir], RUN_OPTIONS);
+    expect(piped.status).toBe(0);
+    const pipedBytes = Number((piped.stdout ?? "").trim());
+    expect(pipedBytes).toBe(fullBytes);
+  });
+});
+
 // --- FR-7: exit ladder and the read-only invariant --------------------------
 
 describe("exit ladder — measured by spawning the CLI", () => {
