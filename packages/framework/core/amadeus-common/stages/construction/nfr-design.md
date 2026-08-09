@@ -43,6 +43,7 @@ sensors:
   - linter
   - type-check
   - answer-evidence
+  - question-budget
   - nfr-budget
 scopes:
   - enterprise

@@ -27,6 +27,7 @@ sensors:
   - upstream-coverage
   - type-check
   - answer-evidence
+  - question-budget
 scopes:
   - enterprise
   - feature

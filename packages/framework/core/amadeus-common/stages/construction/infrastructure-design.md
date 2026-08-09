@@ -49,6 +49,7 @@ sensors:
   - linter
   - type-check
   - answer-evidence
+  - question-budget
 scopes:
   - enterprise
   - feature

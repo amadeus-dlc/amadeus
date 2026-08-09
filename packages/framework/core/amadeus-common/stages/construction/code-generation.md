@@ -40,6 +40,7 @@ sensors:
   - linter
   - type-check
   - answer-evidence
+  - question-budget
   - event-registry-drift
   - self-scope-consistency
 scopes:
