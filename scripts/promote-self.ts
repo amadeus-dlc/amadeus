@@ -569,15 +569,16 @@ function ensureActiveSpaceCursor(repoRoot: string): void {
 // `.codex/hooks.json` from it, but ONLY when the active file is absent — this
 // mirrors packages/framework/harness/codex/tools/amadeus-codex-hooks-contract.ts's
 // activateCodexHooks() COPYFILE_EXCL semantics (canonical source, exclusive
-// create, TOCTOU-safe) WITHOUT its doctor validation: a pre-existing active
-// file is preservedRuntime (self-install-allowlist.ts) and may be
-// deliberately customized, so silent auto-activation must never touch or
-// reject it, only fill the gap when nothing is there yet.
-function activateCodexHooksIfMissing(repoRoot: string): "created" | "preserved" | "absent" {
+// create) WITHOUT its doctor validation: a pre-existing active file is
+// preservedRuntime (self-install-allowlist.ts) and may be deliberately
+// customized, so silent auto-activation must never touch or reject it, only
+// fill the gap when nothing is there yet. COPYFILE_EXCL itself is the
+// presence check — EEXIST (a file, a directory, anything already at the
+// path) IS the preserved verdict, with no pre-check racing the filesystem.
+export function activateCodexHooksIfMissing(repoRoot: string): "created" | "preserved" | "absent" {
   const canonicalPath = join(repoRoot, ".codex", "hooks.json.example");
   const activePath = join(repoRoot, ".codex", "hooks.json");
   if (!existsSync(canonicalPath)) return "absent";
-  if (existsSync(activePath)) return "preserved";
   try {
     copyFileSync(canonicalPath, activePath, fsConstants.COPYFILE_EXCL);
     return "created";

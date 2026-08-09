@@ -32,11 +32,11 @@
 //         and does not throw.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
-import { promoteSelfMain } from "../../scripts/promote-self.ts";
+import { activateCodexHooksIfMissing, promoteSelfMain } from "../../scripts/promote-self.ts";
 
 let root: string;
 
@@ -139,5 +139,22 @@ describe("t516 promote-self codex hooks auto-activate (#2714)", () => {
     expect(code).toBe(0);
     expect(existsSync(join(root, ".codex", "hooks.json.example"))).toBe(false);
     expect(existsSync(join(root, ".codex", "hooks.json"))).toBe(false);
+  });
+
+  test("(iv) a non-EEXIST copy failure is rethrown loud, not swallowed as preserved", () => {
+    // Driven through the exported helper directly: inside --apply an unwritable
+    // .codex/ already fails the managed sync before activation is reached, so
+    // the rethrow arm is only reachable at this seam. The contract it pins is
+    // the same: a failure that is NOT a presence verdict must propagate,
+    // because swallowing it would report a healthy bootstrap over a broken one.
+    write(".codex/hooks.json.example", HOOKS_EXAMPLE);
+    chmodSync(join(root, ".codex"), 0o555);
+    try {
+      expect(() => activateCodexHooksIfMissing(root)).toThrow();
+    } finally {
+      chmodSync(join(root, ".codex"), 0o755);
+    }
+    // Writable again: the same call now completes and reports the creation.
+    expect(activateCodexHooksIfMissing(root)).toBe("created");
   });
 });
