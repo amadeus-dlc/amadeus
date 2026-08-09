@@ -18,6 +18,7 @@
     "tools/pr-convergence-cli.ts",
     "tools/pr-convergence-gh-runner.ts",
     "tools/pr-convergence-ledger.ts",
-    "tools/pr-convergence-predicate.ts"
+    "tools/pr-convergence-predicate.ts",
+    "tools/pr-convergence-presentation.ts"
   ]
 }

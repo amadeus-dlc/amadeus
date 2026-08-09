@@ -268,6 +268,32 @@ function makeRecord(options: { readonly humanTurn: boolean }): string {
   return root;
 }
 
+function makeBodyFile(body: string): string {
+  const root = mkdtempSync(join(tmpdir(), "pr-convergence-body-"));
+  roots.push(root);
+  const path = join(root, "body.md");
+  writeFileSync(path, body, "utf-8");
+  return path;
+}
+
+function makeIntentRecord(input: {
+  readonly slug: string;
+  readonly dirName: string;
+  readonly uuid: string;
+}): string {
+  const root = mkdtempSync(join(tmpdir(), "pr-convergence-intent-"));
+  roots.push(root);
+  const intents = join(root, "amadeus", "spaces", "default", "intents");
+  const record = join(intents, input.dirName);
+  mkdirSync(record, { recursive: true });
+  writeFileSync(
+    join(intents, "intents.json"),
+    `${JSON.stringify([{ ...input, status: "in-flight" }], null, 2)}\n`,
+    "utf-8",
+  );
+  return record;
+}
+
 /**
  * Drives the CLI with a scripted gh: readiness, then the pull-request state,
  * then the review-thread pages.
@@ -306,6 +332,159 @@ function seams(
     ...extra,
   };
 }
+
+describe("CLI create verb — pull-request presentation contract", () => {
+  test("creates an unlinked pull request without changing its body", async () => {
+    const bodyFile = makeBodyFile("## Summary\n\nAdd deterministic PR creation.\n");
+    const s = scriptedSpawn([
+      ok("gh version 2.97.0"),
+      ok("Logged in"),
+      ok("https://github.com/amadeus-dlc/amadeus/pull/3000\n"),
+    ]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--title",
+        "feat: add deterministic PR creation",
+        "--body-file",
+        bodyFile,
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out).toEqual({
+      exitCode: 0,
+      stdout: "https://github.com/amadeus-dlc/amadeus/pull/3000\n",
+      stderr: "",
+    });
+    expect(s.argvs.at(-1)).toEqual([
+      "gh",
+      "pr",
+      "create",
+      "--repo",
+      "amadeus-dlc/amadeus",
+      "--title",
+      "feat: add deterministic PR creation",
+      "--body",
+      "## Summary\n\nAdd deterministic PR creation.\n",
+    ]);
+  });
+
+  test("adds the linked Intent, Bolt, and Unit identity to the pull request", async () => {
+    const bodyFile = makeBodyFile("## Summary\n\nAdd deterministic PR creation.\n");
+    const record = makeIntentRecord({
+      slug: "pr-intent-metadata",
+      dirName: "260809-pr-intent-metadata",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    const s = scriptedSpawn([
+      ok("gh version 2.97.0"),
+      ok("Logged in"),
+      ok("https://github.com/amadeus-dlc/amadeus/pull/3001\n"),
+    ]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--title",
+        "feat: add deterministic PR creation",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(0);
+    const argv = s.argvs.at(-1) ?? [];
+    expect(argv.at(argv.indexOf("--title") + 1)).toBe(
+      "[pr-intent-metadata/ship-pr-metadata/create-pr-command] feat: add deterministic PR creation",
+    );
+    expect(argv.at(argv.indexOf("--body") + 1)).toBe(
+      "## Summary\n\nAdd deterministic PR creation.\n\n" +
+        "## Amadeus Work\n\n" +
+        "- Intent: `pr-intent-metadata`\n" +
+        "- Bolt: `ship-pr-metadata`\n" +
+        "- Unit: `create-pr-command`\n" +
+        "- Record: `amadeus/spaces/default/intents/260809-pr-intent-metadata/`\n" +
+        "- UUID: `019fe41b-a33a-71d1-8a29-fab83872abd6`\n",
+    );
+  });
+
+  test("requires Bolt and Unit together with an Intent record before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "pr-intent-metadata",
+      dirName: "260809-pr-intent-metadata",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    });
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--title",
+        "feat: add deterministic PR creation",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("--record requires --bolt and --unit slugs");
+    expect(s.argvs).toEqual([]);
+  });
+
+  test("refuses an unregistered Intent record before touching GitHub", async () => {
+    const bodyFile = makeBodyFile("## Summary\n");
+    const record = makeIntentRecord({
+      slug: "another-intent",
+      dirName: "260809-another-intent",
+      uuid: "019fe41b-a33a-71d1-8a29-fab83872abd6",
+    }).replace("260809-another-intent", "260809-missing-intent");
+    const s = scriptedSpawn([ok("gh version 2.97.0")]);
+
+    const out = await runCli(
+      [
+        "create",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--title",
+        "feat: add deterministic PR creation",
+        "--body-file",
+        bodyFile,
+        "--record",
+        record,
+        "--bolt",
+        "ship-pr-metadata",
+        "--unit",
+        "create-pr-command",
+      ],
+      seams(s.spawn),
+    );
+
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("0 Intent registry entries");
+    expect(s.argvs).toEqual([]);
+  });
+});
 
 describe("CLI status verb — exit-code contract", () => {
   test("a converged pull request prints the verdict and exits 0", async () => {

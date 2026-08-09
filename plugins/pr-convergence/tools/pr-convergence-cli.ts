@@ -1,7 +1,10 @@
 // pr-convergence-cli.ts — U2 convergence-toolchain, component C5.
 //
-// The three verbs of the convergence tool:
+// The four verbs of the convergence tool:
 //
+//   create    creates the Bolt pull request. When --record is present, resolves
+//             the linked Intent from its registry and adds the Intent, Bolt,
+//             and Unit identity to the title and authored body.
 //   status    read-only. Prints the verdict as JSON. 0 = converged,
 //             1 = not converged, 2 = the gh boundary failed.
 //   report    the same evaluation, and on convergence ONLY, writes the
@@ -55,6 +58,11 @@ import {
   resolveMergeable,
   type Sleep,
 } from "./pr-convergence-predicate.ts";
+import {
+  renderPullRequestBody,
+  renderPullRequestTitle,
+  resolveIntentReference,
+} from "./pr-convergence-presentation.ts";
 
 // ---------------------------------------------------------------------------
 // The report (the artifact the guard reads)
@@ -297,7 +305,7 @@ export const defaultSeams: CliSeams = {
 
 const UNIT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
-interface CliOptions {
+interface ConvergenceOptions {
   readonly verb: "status" | "report" | "override";
   readonly ref: PrRef;
   readonly unit: string;
@@ -305,6 +313,22 @@ interface CliOptions {
   readonly reason: string | null;
   readonly logTool: string;
 }
+
+interface CreateBaseOptions {
+  readonly verb: "create";
+  readonly repo: string;
+  readonly title: string;
+  readonly bodyFile: string;
+  readonly base: string | null;
+}
+
+type CreateWorkOptions =
+  | { readonly record: null; readonly bolt: null; readonly unit: null }
+  | { readonly record: string; readonly bolt: string; readonly unit: string };
+
+type CreateOptions = CreateBaseOptions & CreateWorkOptions;
+
+type CliOptions = ConvergenceOptions | CreateOptions;
 
 type OptionParse =
   | { readonly ok: true; readonly value: CliOptions }
@@ -352,13 +376,58 @@ function resolveTarget(flags: Map<string, string>): TargetParse {
   return { ok: true, value: { ref, unit, record } };
 }
 
+type CreateWorkParse =
+  | { readonly ok: true; readonly value: CreateWorkOptions }
+  | { readonly ok: false; readonly message: string };
+
+function parseCreateWork(flags: Map<string, string>): CreateWorkParse {
+  const record = flags.get("record") ?? null;
+  const bolt = flags.get("bolt") ?? null;
+  const unit = flags.get("unit") ?? null;
+  if (record === null) {
+    if (bolt !== null || unit !== null) {
+      return { ok: false, message: "--bolt and --unit require --record" };
+    }
+    return { ok: true, value: { record: null, bolt: null, unit: null } };
+  }
+  if (bolt === null || unit === null || !UNIT_RE.test(bolt) || !UNIT_RE.test(unit)) {
+    return { ok: false, message: "--record requires --bolt and --unit slugs" };
+  }
+  return { ok: true, value: { record, bolt, unit } };
+}
+
+function parseCreateOptions(flags: Map<string, string>): OptionParse {
+  const repo = flags.get("repo");
+  const title = flags.get("title")?.trim();
+  const bodyFile = flags.get("body-file");
+  if (repo === undefined || parsePrRef(repo, 1) === null) {
+    return { ok: false, message: "--repo is required and must be owner/name" };
+  }
+  if (title === undefined || title === "") return { ok: false, message: "--title is required" };
+  if (bodyFile === undefined) return { ok: false, message: "--body-file is required" };
+  const work = parseCreateWork(flags);
+  if (!work.ok) return work;
+  return {
+    ok: true,
+    value: {
+      verb: "create",
+      repo,
+      title,
+      bodyFile,
+      ...work.value,
+      base: flags.get("base") ?? null,
+    },
+  };
+}
+
 function parseOptions(argv: readonly string[]): OptionParse {
   const [verb, ...rest] = argv;
-  if (verb !== "status" && verb !== "report" && verb !== "override") {
-    return { ok: false, message: `unknown verb: ${String(verb)} (expected status|report|override)` };
-  }
   const flags = parseFlags(rest);
   if (flags === null) return { ok: false, message: "malformed flags: expected --key value pairs" };
+  if (verb === "create") return parseCreateOptions(flags);
+  if (verb !== "status" && verb !== "report" && verb !== "override") {
+    return { ok: false, message: `unknown verb: ${String(verb)} (expected create|status|report|override)` };
+  }
   const target = resolveTarget(flags);
   if (!target.ok) return target;
   const reason = flags.get("reason") ?? null;
@@ -374,6 +443,48 @@ function parseOptions(argv: readonly string[]): OptionParse {
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
     },
   };
+}
+
+async function createPullRequest(options: CreateOptions, seams: CliSeams): Promise<CliOutcome> {
+  let title = options.title;
+  let body: string;
+  try {
+    body = readFileSync(options.bodyFile, "utf-8");
+  } catch (err) {
+    return { exitCode: 2, stdout: "", stderr: `cannot read --body-file: ${String(err)}\n` };
+  }
+  if (options.record !== null) {
+    const intent = resolveIntentReference(options.record);
+    if (!intent.ok) return { exitCode: 2, stdout: "", stderr: `${intent.message}\n` };
+    const work = {
+      intent: intent.value,
+      bolt: options.bolt,
+      unit: options.unit,
+    };
+    title = renderPullRequestTitle(title, work);
+    body = renderPullRequestBody(body, work);
+  }
+  const runner = await createGhRunner(seams.ghSpawn);
+  if (!runner.ok) {
+    return { exitCode: 2, stdout: "", stderr: `gh unavailable: ${runner.error.kind}\n` };
+  }
+  const argv = [
+    "gh",
+    "pr",
+    "create",
+    "--repo",
+    options.repo,
+    "--title",
+    title,
+    "--body",
+    body,
+    ...(options.base === null ? [] : ["--base", options.base]),
+  ];
+  const created = await runner.value(argv);
+  if (!created.ok) {
+    return { exitCode: 2, stdout: "", stderr: `gh failed creating pull request: ${created.error.kind}\n` };
+  }
+  return { exitCode: 0, stdout: created.value, stderr: "" };
 }
 
 // ---------------------------------------------------------------------------
@@ -459,7 +570,7 @@ function primed(first: RawPrState, fetch: typeof fetchRawPrState): RawPrStateFet
   };
 }
 
-async function evaluate(options: CliOptions, seams: CliSeams): Promise<EvaluationResult> {
+async function evaluate(options: ConvergenceOptions, seams: CliSeams): Promise<EvaluationResult> {
   const runner = await createGhRunner(seams.ghSpawn);
   if (!runner.ok) return { ok: false, message: `gh unavailable: ${runner.error.kind}` };
   const gh = runner.value;
@@ -509,7 +620,7 @@ async function evaluate(options: CliOptions, seams: CliSeams): Promise<Evaluatio
 // under the complexity ceiling. A merged pull request gets its factual record
 // (#2401): no human turn is read and no decision is emitted — landing is a
 // merge that already happened, not an approval.
-function reportOutcome(options: CliOptions, seams: CliSeams, evaluation: Evaluation): CliOutcome {
+function reportOutcome(options: ConvergenceOptions, seams: CliSeams, evaluation: Evaluation): CliOutcome {
   if (evaluation.kind === "landed") {
     const facts = evaluation.facts;
     const path = writeReport(options, {
@@ -543,7 +654,7 @@ function reportOutcome(options: CliOptions, seams: CliSeams, evaluation: Evaluat
   return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
 }
 
-function writeReport(options: CliOptions, report: ConvergenceReport): string {
+function writeReport(options: ConvergenceOptions, report: ConvergenceReport): string {
   const path = reportPathFor(options.record, options.unit);
   mkdirSync(join(options.record, "construction", options.unit, "code-generation"), {
     recursive: true,
@@ -566,11 +677,7 @@ export interface CliOutcome {
   readonly stderr: string;
 }
 
-export async function runCli(argv: readonly string[], seams: CliSeams): Promise<CliOutcome> {
-  const parsed = parseOptions(argv);
-  if (!parsed.ok) return { exitCode: 2, stdout: "", stderr: `${parsed.message}\n` };
-  const options = parsed.value;
-
+async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Promise<CliOutcome> {
   let evaluation: EvaluationResult;
   try {
     evaluation = await evaluate(options, seams);
@@ -652,6 +759,14 @@ export async function runCli(argv: readonly string[], seams: CliSeams): Promise<
     override: { humanTurnId: humanTurn.eventId, reason: options.reason ?? "", recordedAt },
   });
   return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+}
+
+export async function runCli(argv: readonly string[], seams: CliSeams): Promise<CliOutcome> {
+  const parsed = parseOptions(argv);
+  if (!parsed.ok) return { exitCode: 2, stdout: "", stderr: `${parsed.message}\n` };
+  const options = parsed.value;
+  if (options.verb === "create") return createPullRequest(options, seams);
+  return runConvergence(options, seams);
 }
 
 if (import.meta.main) {
