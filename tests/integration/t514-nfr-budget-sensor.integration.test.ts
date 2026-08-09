@@ -982,6 +982,12 @@ describe("t514 the kind coverage check separates pruning from a silent omission"
     expect(evaluateNfrBudget(first, "Standard", "service").missing_kind_required_count).toBe(0);
   });
 
+  test("an unreadable stage file yields no map — fail-open", () => {
+    // Without the stage's produces_kinds there is no pruning to reconstruct,
+    // so no absence can be classified either way.
+    expect(readProducesKinds("nfr-requirements", join(tmp, "no-such-stages-dir"))).toBeUndefined();
+  });
+
   test("the shipped map keeps the keyless artifacts required of every kind", () => {
     // Pins the semantic the whole check rests on against the REAL frontmatter:
     // security-requirements and tech-stack-decisions declare no key, so no
@@ -1001,7 +1007,7 @@ describe("t514 the dispatcher resolves a unit kind into nfr-budget's --kind flag
     expect(unitKindArgs("nfr-budget", path, tmp)).toEqual(["--kind", "service"]);
   });
 
-  test("is silent for an unrelated sensor, an absent edge block, and a kindless unit", () => {
+  test("is silent for an unrelated sensor, a kindless unit, and a unit the block does not list", () => {
     const withKind = recordWithUnitKind("2026-08-09T10:00:00Z", "u1", "service");
     const withKindPath = serviceUnitMissingTwo(withKind, "u1")[0] as string;
     expect(unitKindArgs("depth-budget", withKindPath, tmp)).toEqual([]);
@@ -1009,8 +1015,26 @@ describe("t514 the dispatcher resolves a unit kind into nfr-budget's --kind flag
     const kindless = recordWithUnitKind("2026-08-09T10:00:00Z", "u2", null);
     expect(unitKindArgs("nfr-budget", serviceUnitMissingTwo(kindless, "u2")[0] as string, tmp)).toEqual([]);
 
-    const noBlock = record("2026-08-09T10:00:00Z");
-    expect(unitKindArgs("nfr-budget", serviceUnitMissingTwo(noBlock, "u3")[0] as string, tmp)).toEqual([]);
+    // The block exists and parses, but names no unit "u3".
+    expect(unitKindArgs("nfr-budget", serviceUnitMissingTwo(kindless, "u3")[0] as string, tmp)).toEqual([]);
+  });
+
+  test("a record with no units-generation artifact resolves nothing", () => {
+    // Its OWN root, not the shared fixture one: a sibling fixture's edge block
+    // would otherwise satisfy the read and this branch would never run.
+    const stageDir = join(tmp, "260809-no-units", "construction", "u1", "nfr-requirements");
+    mkdirSync(stageDir, { recursive: true });
+    const path = join(stageDir, "security-requirements.md");
+    writeFileSync(path, requirementsBody(1, 200));
+    expect(unitKindArgs("nfr-budget", path, tmp)).toEqual([]);
+  });
+
+  test("a path that is not under a construction directory resolves nothing", () => {
+    const dir = join(tmp, "260809-flat", "nfr-requirements");
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, "security-requirements.md");
+    writeFileSync(path, requirementsBody(1, 200));
+    expect(unitKindArgs("nfr-budget", path, tmp)).toEqual([]);
   });
 
   test("a path outside the project directory resolves nothing", () => {
