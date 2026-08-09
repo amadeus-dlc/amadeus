@@ -1026,5 +1026,12 @@
     "dirName": "260807-tla-specs-relocation",
     "scope": "self-refactor",
     "status": "complete"
+  },
+  {
+    "uuid": "019fe6e2-ced1-7307-9b4f-4d5ff49ed3f1",
+    "slug": "sensor-parseflags-failop",
+    "dirName": "260809-sensor-parseflags-failop",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

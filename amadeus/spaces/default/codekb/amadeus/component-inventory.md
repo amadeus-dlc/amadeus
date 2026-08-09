@@ -1,6 +1,61 @@
 # コンポーネント棚卸し
 
-## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## per-sensor argv parse の所在と現況（260809-sensor-parseflags-failop、現在、observed `778567dd0`）
+
+**観測 ref**: すべて observed = `778567dd03b00f22cb887eec06f025557eeaaaf4`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
+
+判別子は「値なしフラグ（`--depth` が argv 末尾、または直後が別のフラグ）をどう扱うか」。**loud に拒否する house idiom** と、**次トークンを無条件に飲む fail-open 形**が同一 repo 内に併存する。
+
+### 欠陥クラスの所在（T1〜T7b）
+
+| クラス | 所在（`packages/framework/core/tools/`） | 現況（実測、exit code は非パイプ取得） |
+|---|---|---|
+| **T1 コア3本** | `amadeus-sensor-depth-budget.ts:294-302` / `amadeus-sensor-question-budget.ts:340-348` / `amadeus-sensor-nfr-budget.ts:1031-1040` | `out.depth = argv[++i]`。**両アーム silent・exit 0**。over-budget の finding 1件が無言で消える。nfr は `--kind --depth Minimal` で `unit_kind:"--depth"` となり測定値が変わる。**最悪ケース（受け皿なし）** |
+| **T2 scope-sizing 残渣** | `amadeus-sensor-scope-sizing.ts:247-260`（`valueAt` + 逐語コメント） | アームB（`--output-path --depth S`）は exit 1 で封鎖済み。アームA（`--output-path P --depth`）は `depth:null` の残渣 — `valueAt(argv, ++i)` の `++i` 副作用で次フラグが値化されず飲まれる |
+| **T3 センサー・偽 green** | `amadeus-sensor-required-sections.ts:67-87` | **完全偽 green を実測再現**。`--templates-dir --template-eligible requirements` でテンプレート違反1件が警告も非0 exit もなく消える。本 Issue の3本より重い |
+| **T4 センサー・偶然 loud** | `amadeus-sensor-answer-evidence.ts:95-106` / `amadeus-sensor-pr-convergence-report-format.ts:166-173` | parse 欠陥は同一だが、下流の必須チェックで偶然 exit 1 |
+| **T5 意図宣言済み例外** | `amadeus-sensor-upstream-coverage.ts:19-35`（`:29-30` 逐語コメント） | `--consumes` 末尾 = 空リストと**同一扱いを意図宣言**。一律修正は意図破壊 |
+| **T6 別イディオム・両アーム loud** | `amadeus-sensor-linter.ts:93-119` / `amadeus-sensor-type-check.ts:112` 以降 | **実測 exit 1 ×4**。機序 = `?? ""` の後の `if (!stage) exit(1)`（linter:110-117）と未知トークンの `else { unknown flag → exit 1 }`（linter:104-107）。**欠陥クラスから外してよい**（メッセージ誤帰属の質は残る） |
+| **T7 汎用 `parseFlags`（センサー外・engine 系 CLI）** | `amadeus-learnings.ts:858-867` / `amadeus-jump.ts:238-244` / `amadeus-state.ts:705-715` / `amadeus-state.ts:5029-5036`（`handlePracticesPromote` インライン） | ガードは `a.startsWith("--") && i + 1 < args.length` のみ。**任意のフラグ**が次トークンを飲む。末尾フラグは無言ドロップ |
+| **T7b 名指しフラグ変種**（Architect 追加検出） | `amadeus-jump.ts:192-194`（`--project-dir`）/ `amadeus-state.ts:732-739`（`extractIntentSelector` の `--intent` / `--space`）/ `:4653-4656`（`--choice`）/ `:4788-4795`（`--type` / `--field`） | 同一欠陥形だが**対象は名指しフラグのみ**で誤消費の射程が狭い。`--intent --space X` → intent = `"--space"`。`--choice --foo` は非空になるため後段 `if (!choice) error()`（`:4659`）を通過し偶然 loud にもならない。**重大度は T7 と同一ではない** |
+
+**T7 / T7b は実発現有無が未実測（仮説）** — 呼出し元の argv 構成が値なしフラグを生みうるかは本 RE では確認していない。
+
+**列挙述語の注意**: `[++i]` 単独の述語は `args[i+1]; i++` 形を構造的に取りこぼす。T7 / T7b はいずれも後者の形で、`grep -rnE '\[(i|idx|index) \+ 1\]'` でのみ現れる（`cid:application-design:c1-asd-multi-idiom-inventory`）。
+
+### house idiom（loud 拒否形）の所在 — 5本
+
+`grep -rn "expects a value" packages/ tests/` で現れる。代表は `amadeus-state.ts:4076-4087` の `getFlagValue`:
+
+> `` `${flag} expects a value, got end of arguments.` `` / `` `${flag} expects a value, got another flag: "${val}". Did you forget the value?` ``
+
+逐語コメントが「silently wrong. This helper errors cleanly when the value starts with `--`」と述べる。**`amadeus-state.ts` は house idiom（`:4076-4087`）と T7（`:705-715` / `:5029-5036`）と T7b（`:732-739` / `:4653-4656` / `:4788-4795`）を1ファイル内に同居させており、非対称が最も濃い**。文言の先例テストは `tests/unit/t31.test.ts:223-244`（両アームを assert）。
+
+### canonical 化の配置制約（実測）
+
+- `amadeus-sensor-depth-budget.ts:23-24` の逐語コメントは「**no amadeus-lib import**」であり「no import」ではない。同ファイルの import は `node:fs` / `node:path` のみ（`:25-26`）
+- **cross-sensor import の現役先例**: `amadeus-sensor-nfr-budget.ts:76` `import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";`
+- amadeus-lib を import する per-sensor スクリプトは **6本**: `amadeus-sensor-invocation.ts:8` / `answer-evidence:19` / `schema:33` / `upstream-coverage:2` / `required-sections:3` / `type-check:90` → self-contained は per-sensor 全体の規約ではなく **budget 系のローカル方針**
+- 配布面: `packages/framework/harness/*/manifest.ts` の `coreDirs` が `{ src: "tools", dst: "tools" }`（claude:56）で `walk(srcDir)` の全ファイルを投影 → **core/tools への新規小モジュールは全ハーネスへ自動で乗る**（手動同期不要）
+
+### in-process seam の現況（falling-proof の書きやすさ）
+
+| センサー | `main` export | `fail` export |
+|---|---|---|
+| depth-budget | `:311` ✅ | `:304` ❌ |
+| question-budget | `:357` ✅ | `:350` ❌ |
+| nfr-budget | `:1054` ✅ | `:1042` ❌ |
+| scope-sizing | `:275` ✅ | `:266` ✅ |
+
+`fail` の export は scope-sizing のみ。`tests/integration/t519-scope-sizing-sensor.integration.test.ts:275-306` の in-process falling-proof を他3本へ移植するには `fail` の export 化が要る（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）。
+
+### 発火経路（dispatcher）は構造的に安全
+
+`amadeus-sensor.ts:886-898`（`depthBudgetArgs`）と `:900-926`（`unitKindArgs`）はいずれも `return X === undefined ? [] : ["--flag", X];` の形で、値なしフラグを構造的に生まない。dispatcher 自身の `parseFlags`（`amadeus-sensor.ts:179-195`）は**両アーム loud** — 「dispatcher は loud、dispatch される側は silent」の非対称。
+
+詳細と決定的再現の全出力は `re-scans/260809-sensor-parseflags-failop.md` を正本とする。
+
+## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 判別子は「共有ハーネス `tests/harness/audit-records.ts` を使うか、自前で `JSON.parse` するか」。自前パーサは **e2e 17ファイル + 非 e2e 14ファイル**に実在する。
 
