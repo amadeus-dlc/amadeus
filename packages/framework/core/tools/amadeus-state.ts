@@ -2429,6 +2429,30 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   }
 }
 
+// The completion chokepoint. FOUR handlers mark a stage [x] — approve, advance,
+// finalize and complete-workflow — each under its own lock, with no shared
+// transition function between them. A guard wired into only one of them leaves
+// the other three an unguarded rubber-stamp backdoor on the direct-CLI surface,
+// so every completion guard belongs here rather than at the individual call
+// sites (issue #2671 item (c) shipped the sensor gate on approve alone; this
+// function is the fix for that gap and the place any fifth guard goes).
+//
+// Order is load-bearing and each layer asks a narrower question than the last:
+// verifyStageArtifacts answers "did the stage produce anything", and only then
+// is "is the blocking sensor's verdict on those artifacts clean" meaningful —
+// a sensor complaint about a stage that produced nothing names the wrong fault.
+// The two carry independent bypass switches (AMADEUS_SKIP_ARTIFACT_GUARD vs
+// AMADEUS_SKIP_BLOCKING_SENSOR_GUARD): a fixture that wants artifacts unchecked
+// does not thereby want sensor verdicts unchecked, so neither disables the other.
+//
+// Callers own the "is this transition actually completing" question: the three
+// direct paths skip this when the slug is already [x] (an approve-delegated or
+// replayed call already passed it), while approve always runs it.
+function verifyStageCompletionGuards(pd: string, stage: VerifiableStage): void {
+  verifyStageArtifacts(pd, stage);
+  verifyBlockingSensors(pd, stage);
+}
+
 function advanceScopeOrError(content: string): string {
   const scope = getField(content, "Scope");
   if (!scope) {
@@ -2640,14 +2664,15 @@ export function handleAdvance(args: string[]): void {
     return;
   }
 
-  // Artifact guard (issue #366). Only enforce when THIS advance is the
-  // transition that completes the stage - i.e. it was not already [x]. When
-  // approve delegates here the slug is already [x] and approve ran the guard
-  // itself, so skip to avoid a double check. A direct `advance <active-slug>`
-  // (the gate-skipping attack path) is NOT alreadyMarkedCompleted, so it is
-  // guarded. Runs before any mutation; error() exits leaving state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671). Only enforce
+  // when THIS advance is the transition that completes the stage - i.e. it was
+  // not already [x]. When approve delegates here the slug is already [x] and
+  // approve ran the guards itself, so skip to avoid a double check. A direct
+  // `advance <active-slug>` (the gate-skipping attack path) is NOT
+  // alreadyMarkedCompleted, so it is guarded. Runs before any mutation;
+  // error() exits leaving state untouched.
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
   }
 
   // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
@@ -2750,17 +2775,18 @@ export function handleFinalize(args: string[]): void {
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
 
-  // Artifact guard (issue #366). finalize also marks a stage [x], so it is a
-  // completing transition that must not rubber-stamp. Guard only when the slug
-  // is not already [x] (an idempotent re-finalize already passed the guard),
-  // and before any mutation so a refusal leaves state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671). finalize also
+  // marks a stage [x], so it is a completing transition that must not
+  // rubber-stamp. Guard only when the slug is not already [x] (an idempotent
+  // re-finalize already passed the guards), and before any mutation so a
+  // refusal leaves state untouched.
   const alreadyMarkedCompleted = stageCheckboxOrError(
     content,
     completedSlug,
     `finalize:${completedSlug}`,
   ).state === "completed";
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
   }
 
   // 1. Mark completed
@@ -2927,14 +2953,16 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";
 
-  // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
-  // it is a completing transition too. Guard only when the slug is not already
-  // [x]: approve delegates here AFTER marking the slug [x] and running the guard
-  // itself, so this skips the double-check on that path while still refusing a
-  // direct `complete-workflow <active-slug>` that never produced artifacts. Runs
-  // before any mutation so a refusal leaves state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671).
+  // complete-workflow marks the FINAL stage [x], so it is a completing
+  // transition too. Guard only when the slug is not already [x]: approve
+  // delegates here AFTER marking the slug [x] and running the guards itself, so
+  // this skips the double-check on that path while still refusing a direct
+  // `complete-workflow <active-slug>` that never produced artifacts or left a
+  // blocking sensor unresolved. Runs before any mutation so a refusal leaves
+  // state untouched.
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
     // Phase-check artifact gate (#886). complete-workflow always closes
     // completedStage.phase (an implicit "phase → end" boundary) and flips it
     // Verified below, so gate it the same way as advance's boundary block.
@@ -3876,12 +3904,9 @@ function approveUnderLock(
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "awaiting-approval");
 
-  verifyStageArtifacts(pd, stage);
-  // After the artifacts exist, before anything else: a blocking sensor judges
-  // the artifacts, so asking "is the verdict clean" is only meaningful once
-  // "did the stage produce anything" has been answered. Both approve arms
-  // (targeted-human and ordinary) reach this one call.
-  verifyBlockingSensors(pd, stage);
+  // Both approve arms (targeted-human and ordinary) reach this one call, and
+  // approve always completes the stage, so there is no already-[x] skip here.
+  verifyStageCompletionGuards(pd, stage);
   const initialScopeIssue = approvalScopeIssue(content);
   if (initialScopeIssue !== null) failApprovalCommitValidation(initialScopeIssue);
   const authorization = authorizeApproval(pd, content, stage, override);
