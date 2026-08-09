@@ -61,8 +61,11 @@ function conductorSurfaces(): string[] {
 function sectionStartingAt(body: string, heading: string): string {
   const start = body.indexOf(heading);
   if (start < 0) return "";
-  const nextHeading = heading.startsWith("### ") ? "\n### " : "\n## ";
-  const next = body.indexOf(nextHeading, start + heading.length);
+  const headingMarkers = heading.startsWith("### ") ? ["\n### ", "\n## "] : ["\n## "];
+  const candidates = headingMarkers
+    .map((marker) => body.indexOf(marker, start + heading.length))
+    .filter((index) => index >= 0);
+  const next = candidates.length > 0 ? Math.min(...candidates) : -1;
   return body.slice(start, next < 0 ? undefined : next);
 }
 
@@ -206,6 +209,7 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
       const conductor = JSON.parse(readFileSync(join(root, "agents", "amadeus.json"), "utf-8"));
       expect(builder.name).toBe("amadeus-builder-agent");
       expect(builder.description).toContain("swarm units");
+      expect(builder.resources).toContain("file://.kiro/knowledge/amadeus-builder-agent/*.md");
       expect(conductor.toolsSettings.subagent.trustedAgents).toContain("amadeus-builder-agent");
     }
   });

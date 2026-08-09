@@ -23,6 +23,7 @@
   },
   "resources": [
     "file://.kiro/agents/amadeus-builder-agent.md",
+    "file://.kiro/knowledge/amadeus-builder-agent/*.md",
     "file://.kiro/knowledge/amadeus-shared/*.md",
     "file://amadeus/spaces/default/memory/**/*.md"
   ],
