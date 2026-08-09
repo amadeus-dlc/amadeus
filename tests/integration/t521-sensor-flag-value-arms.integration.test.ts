@@ -157,6 +157,13 @@ const CASES: readonly SensorCase[] = [
       // set became empty and every template was ignored, so the sensor passed on
       // the generic floor while claiming to have checked the template.
       { label: "--templates-dir swallows --template-eligible", argv: ["--output-path", OUT, "--templates-dir", "--template-eligible", "requirements"], flag: "--templates-dir", swallowed: "--template-eligible" },
+      // This sensor declares the most flags, so each remaining branch gets its
+      // own arm — a per-flag read is only as strict as the branch that calls it,
+      // and an unexercised branch is exactly where the old naive read survived.
+      { label: "trailing --stage", argv: ["--stage"], flag: "--stage" },
+      { label: "trailing --framework-templates-dir", argv: ["--output-path", OUT, "--framework-templates-dir"], flag: "--framework-templates-dir" },
+      { label: "trailing --template-eligible", argv: ["--output-path", OUT, "--template-eligible"], flag: "--template-eligible" },
+      { label: "--framework-templates-dir swallows --output-path", argv: ["--framework-templates-dir", "--output-path", OUT], flag: "--framework-templates-dir", swallowed: "--output-path" },
     ],
   },
   {
