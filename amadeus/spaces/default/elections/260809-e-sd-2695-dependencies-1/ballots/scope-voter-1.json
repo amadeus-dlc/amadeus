@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-DEPENDENCIES-1",
+  "voter": "scope-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "母集団・identity・区間会計と共通 semantic model は event adapter、renderer、回帰検証の前提になるため、semantic-model-first の依存順が統合リスクを最小化する。",
+  "submittedAt": "2026-08-09T11:15:09Z",
+  "receivedAt": "2026-08-09T11:15:25Z"
+}

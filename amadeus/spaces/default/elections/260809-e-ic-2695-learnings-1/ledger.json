@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-IC-2695-LEARNINGS-1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Intent成果物を正本として維持し、project/team の永続ルールは追加しないため、0件で可と判断する。",
+      "submittedAt": "2026-08-09T10:22:48Z",
+      "receivedAt": "2026-08-09T10:22:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-IC-2695-LEARNINGS-1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Issue #2695 固有の学習候補は Intent 成果物に記録済みであり、project/team の永続ルールを追加せず成果物を正本として維持するのが妥当なため。",
+      "submittedAt": "2026-08-09T10:24:32Z",
+      "receivedAt": "2026-08-09T10:24:43Z"
+    }
+  ],
+  "late": []
+}

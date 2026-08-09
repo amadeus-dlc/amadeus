@@ -1408,5 +1408,41 @@
     "dirName": "260805-e-xbb-re-s13",
     "createdAt": "2026-08-05T06:52:59Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-IC-2695-LEARNINGS-1",
+    "dirName": "260809-e-ic-2695-learnings-1",
+    "createdAt": "2026-08-09T10:21:00Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SD-2695-MODE-1",
+    "dirName": "260809-e-sd-2695-mode-1",
+    "createdAt": "2026-08-09T11:14:42Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SD-2695-DEPENDENCIES-1",
+    "dirName": "260809-e-sd-2695-dependencies-1",
+    "createdAt": "2026-08-09T11:14:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SD-2695-SEQUENCING-1",
+    "dirName": "260809-e-sd-2695-sequencing-1",
+    "createdAt": "2026-08-09T11:14:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SD-2695-DEADLINE-1",
+    "dirName": "260809-e-sd-2695-deadline-1",
+    "createdAt": "2026-08-09T11:14:46Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-SD-2695-LEARNINGS-1",
+    "dirName": "260809-e-sd-2695-learnings-1",
+    "createdAt": "2026-08-09T11:22:18Z",
+    "status": "recorded"
   }
 ]

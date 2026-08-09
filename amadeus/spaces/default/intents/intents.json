@@ -1026,5 +1026,12 @@
     "dirName": "260807-tla-specs-relocation",
     "scope": "self-refactor",
     "status": "complete"
+  },
+  {
+    "uuid": "019fe5fc-00f2-7cb7-b6c7-aeb00cedb203",
+    "slug": "cg-attribution-stats",
+    "dirName": "260809-cg-attribution-stats",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

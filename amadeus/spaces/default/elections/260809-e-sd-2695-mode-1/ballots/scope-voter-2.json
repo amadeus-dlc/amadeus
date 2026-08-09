@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-MODE-1",
+  "voter": "scope-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "3つの運用質問を順番に裁定し、判断過程と回答を確実に記録できるため、guide-me を選ぶ。",
+  "submittedAt": "2026-08-09T11:15:20Z",
+  "receivedAt": "2026-08-09T11:15:37Z"
+}
