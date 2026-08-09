@@ -3,13 +3,14 @@ id: nfr-budget
 kind: deterministic
 command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-nfr-budget.ts
 default_severity: advisory
-description: Measures an NFR unit's bytes per declared requirement id, flags a Standard-depth unit over its per-stage ceiling, reports a unit written under the id contract that declares none, and reports a performance-requirements id with no measurable numeric threshold
+description: Measures an NFR unit's bytes per declared requirement id, flags a Standard-depth unit over its per-stage ceiling, reports a unit written under the id contract that declares none, reports an artifact the unit's kind requires but that is absent, and reports a performance-requirements id with no measurable numeric threshold
 category: document-shape
 matches: "**/nfr-*/*.md"
 input_schema:
   output_path: string
   stage_slug: string
   depth: string
+  kind: string
 output_schema:
   pass: boolean
   findings_count: integer
@@ -24,6 +25,8 @@ output_schema:
   record_birth: string-or-null
   under_id_contract: boolean
   missing_numeric_threshold_count: integer
+  unit_kind: string-or-null
+  missing_kind_required_count: integer
   findings:
     - field: string
       reason: string
@@ -140,17 +143,47 @@ prose tokens the corpus already carries (`NFR-design`, `NFR-only`,
 (`2026-08-09`) without needing to recognise dates. Distinct ids are counted, so
 restating one in a cross-reference does not inflate the denominator.
 
-### What is not measured
+### Kind coverage — separating pruning from a silent omission
 
 `produces_kinds` prunes artifacts by unit kind, and **the expected set cannot be
-reconstructed from disk**. Measured over the corpus: of the 142
+reconstructed from disk alone**. Measured over the corpus: of the 142
 `nfr-requirements` unit directories, 130 belong to units whose kind is
 unresolvable from the committed `unit-of-work-dependency.md`, and the engine's
-kindless fallback hands those every declared artifact. "Artifact absent" and
-"artifact pruned" are therefore indistinguishable for most of the corpus, so
-this sensor measures the artifacts that EXIST and never assumes an expected set.
-Separating pruning from a silent omission is the issue's stage ⑤ (coverage) and
-needs the directive's resolved kind rather than the filesystem.
+kindless fallback hands those every declared artifact. For those, "artifact
+absent" and "artifact pruned" stay indistinguishable and the sensor measures
+only the artifacts that EXIST.
+
+Stage ⑤ (ruling comment 5230791793) resolves the remaining ones with the unit's
+**kind**, delivered as `--kind` (see "Kind delivery"). With a kind in hand the
+two absences separate into exactly two cases:
+
+- **(a) pruning** — the kind does not require the artifact. Nothing is
+  reported; this is the correct shape for that unit.
+- **(c) silent omission** — the kind *does* require the artifact and it is not
+  on disk. One advisory finding per missing artifact
+  (`missing-kind-required-artifacts`, `field: artifact:<name>`).
+
+There is no case (b) — an explicit "not applicable for this kind" marker. No
+such form exists in the corpus (the prose hits that mention kind pruning all
+describe a *consumed* artifact's absence in an upstream-input header), so
+contracting one before anything writes it is deferred.
+
+**An absent `produces_kinds` key applies to every kind.** That is the engine's
+own reading, and it is what keeps `security-requirements` and
+`tech-stack-decisions` (which declare no key) required of every unit. Reading an
+absent key as "prunable" would silently stop requiring them of anyone.
+
+**This check is forward-looking.** `produces_kinds` landed on `nfr-requirements`
+in #1338 (2026-07-22); every unit that predates it was generated with no pruning
+at all, and no record born since declares a resolvable kind *and* ran
+`nfr-requirements`. The live corpus therefore holds zero positive instances
+today — the falling proof for this check is synthetic (a fixture record whose
+`unit-of-work-dependency.md` declares `kind: service`), and the corpus sweep
+asserts the other side: zero findings.
+
+The check is judged on the **unit's** stage directory, so every artifact of that
+unit yields the same verdict — a fire on any of them reaches the identical
+finding set rather than a per-file variant.
 
 ## Budgets
 
@@ -205,7 +238,23 @@ depth-budget: walking up from the output path to the record's
 through the same lookup). A depth that cannot be resolved is simply absent,
 and the ceiling check passes fail-open.
 
-## The three reported cases
+## Kind delivery
+
+The unit kind arrives the same way, as `--kind`, resolved by the dispatcher
+(`amadeus-sensor.ts`'s `unitKindArgs`) so the per-sensor script never walks for
+the record root itself. The kind is read from the record's **committed**
+`inception/units-generation/unit-of-work-dependency.md` — parsed by the same
+`parseBoltDag` the engine uses — and **not** from `runtime-graph.json`, which is
+gitignored and regenerated per clone: a check keyed off it would answer
+differently in two checkouts of the same commit.
+
+The record root is derived from the path rather than walked for
+(`<record>/construction/<unit>/<stage>/<artifact>.md` fixes the layout), bounded
+by the project root for the same reason the depth walk is. A kind that cannot be
+resolved — the kindless generation, an absent or malformed edge block, a unit
+not listed — yields no flag, and the coverage check does not run.
+
+## The four reported cases
 
 A unit written **under the id contract** whose `nfr-requirements` artifacts
 declare no id at all (`missing-nfr-ids`). Without ids there is no denominator to
@@ -219,6 +268,13 @@ squash-merged. Half the pre-contract corpus declares no id and could not have
 declared one — there was no contract to follow — so reporting those records
 would be a retroactive finding on every gate that reopens an old record: the
 permanently-red failure again in another shape.
+
+A unit, **under the same cutoff**, whose declared kind requires an artifact
+that is not on disk (`missing-kind-required-artifacts`) — case (c) above. One
+finding per missing artifact, each naming it in its `field`
+(`artifact:<name>`). Reported before the numeric check below because it is a
+*unit*-level judgement: reaching it only from `performance-requirements.md`
+would make the verdict depend on which artifact happened to fire.
 
 A `performance-requirements.md` artifact, **under the same cutoff**, that
 declares an id whose block (declaration line through the line before the
@@ -258,6 +314,14 @@ missing-id case above:
   no ratio to compare, and (for post-contract units) the missing-id case
   already reports the more useful finding
 
+The kind coverage check adds its own:
+
+- the kind cannot be resolved from the `--kind` flag (kindless unit, absent or
+  malformed edge block, path outside the project root) — the two absences stay
+  indistinguishable, so neither is reported
+- the stage's `produces_kinds` map cannot be read — without it there is no
+  pruning to reconstruct either way
+
 Births are compared as **instants**, never as strings. A timestamp is read only
 when it matches the audit schema's UTC form, parses, and round-trips its own
 calendar fields — three checks because each admits what the others reject: the
@@ -274,5 +338,7 @@ the cutoff would file itself as pre-contract.
 Findings emit `SENSOR_FAILED` through the existing dispatcher and write detail
 under `.amadeus-sensors/<stage-slug>/`. `missing-nfr-ids` names the missing id
 contract; `nfr-budget-exceeded` names the unit's measured bytes, id count, and
-the ceiling it crossed; `missing-numeric-threshold` names each offending id
-(`nfr-id:<id>`). None of the three findings echoes the artifact's contents.
+the ceiling it crossed; `missing-kind-required-artifacts` names each missing
+artifact (`artifact:<name>`) and the kind that requires it;
+`missing-numeric-threshold` names each offending id (`nfr-id:<id>`). None of the
+findings echoes the artifact's contents.

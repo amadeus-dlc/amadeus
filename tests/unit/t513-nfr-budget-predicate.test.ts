@@ -23,6 +23,7 @@ import {
   NFR_REQUIREMENTS_ARTIFACTS,
   NFR_REQUIREMENTS_STANDARD_BUDGET,
   PERFORMANCE_REQUIREMENTS_ARTIFACT,
+  artifactsRequiredForKind,
   auditInstant,
   bornUnderIdContract,
   countNfrIds,
@@ -30,6 +31,7 @@ import {
   idsMissingNumericThreshold,
   nfrStandardBudget,
   parseBirthTimestamp,
+  parseProducesKinds,
   stageOfNfrArtifact,
 } from "../../packages/framework/core/tools/amadeus-sensor-nfr-budget.ts";
 
@@ -447,5 +449,103 @@ describe("t513 idsMissingNumericThreshold — #2684 stage ⑥ (performance-requi
 
   test("an artifact with no declared ids has nothing to report", () => {
     expect(idsMissingNumericThreshold("## Overview\n\nNo ids declared yet.\n")).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2684 stage ⑤ — kind coverage: the (a)/(c) split
+// ---------------------------------------------------------------------------
+//
+// A unit whose kind prunes an artifact and a unit that silently omitted one
+// look identical on disk. The kind resolves that: (a) an absence the kind does
+// not require is a pruning and reports nothing, (c) an absence the kind DOES
+// require is a silent omission and reports one advisory finding per artifact.
+//
+// The pruning map is `produces_kinds` in the stage's own frontmatter, and its
+// governing semantic is that a KEY THAT IS ABSENT applies to every kind — the
+// same reading the engine's requiredArtifactsForUnit uses. Getting that
+// backwards would treat security-requirements / tech-stack-decisions (which
+// declare no key) as prunable and silently stop requiring them.
+
+const KIND_FRONTMATTER = [
+  "---",
+  "slug: nfr-requirements",
+  "produces:",
+  "  - performance-requirements",
+  "  - security-requirements",
+  "produces_kinds:",
+  "  performance-requirements: [service, ui]",
+  "  scalability-requirements: [service]",
+  "consumes:",
+  "  - artifact: requirements",
+  "---",
+  "",
+  "# body",
+  "produces_kinds:",
+  "  should-not-be-read: [service]",
+].join("\n");
+
+describe("t513 parseProducesKinds reads the stage frontmatter map", () => {
+  test("reads each declared artifact's kind list", () => {
+    const map = parseProducesKinds(KIND_FRONTMATTER);
+    expect(map?.get("performance-requirements")).toEqual(["service", "ui"]);
+    expect(map?.get("scalability-requirements")).toEqual(["service"]);
+  });
+
+  test("an artifact with no key is absent from the map — never an empty list", () => {
+    // Absent and empty are opposite verdicts downstream: absent means "applies
+    // to every kind", empty would mean "applies to none".
+    expect(parseProducesKinds(KIND_FRONTMATTER)?.has("security-requirements")).toBe(false);
+  });
+
+  test("the map stops at the block's end — a sibling key is not swallowed", () => {
+    expect(parseProducesKinds(KIND_FRONTMATTER)?.has("artifact")).toBe(false);
+  });
+
+  test("body text after the frontmatter is not read", () => {
+    expect(parseProducesKinds(KIND_FRONTMATTER)?.has("should-not-be-read")).toBe(false);
+  });
+
+  test("a stage declaring no produces_kinds yields undefined, not an empty map", () => {
+    // Undefined is the fail-open signal: without a map there is no pruning to
+    // reconstruct, so no absence can be classified either way.
+    expect(parseProducesKinds("---\nslug: x\nproduces:\n  - a\n---\n")).toBeUndefined();
+  });
+});
+
+describe("t513 artifactsRequiredForKind applies the absent-key-means-every-kind rule", () => {
+  const MAP = new Map<string, string[]>([
+    ["performance-requirements", ["service", "ui"]],
+    ["scalability-requirements", ["service"]],
+    ["reliability-requirements", ["service"]],
+  ]);
+
+  test("a service unit requires every nfr-requirements artifact", () => {
+    expect(artifactsRequiredForKind("nfr-requirements", "service", MAP)).toEqual([...NFR_REQUIREMENTS_ARTIFACTS]);
+  });
+
+  test("a ui unit keeps performance and the two keyless artifacts, drops the service-only pair", () => {
+    expect(artifactsRequiredForKind("nfr-requirements", "ui", MAP)).toEqual([
+      "performance-requirements",
+      "security-requirements",
+      "tech-stack-decisions",
+    ]);
+  });
+
+  test("a library unit keeps ONLY the keyless artifacts — the ones no key prunes", () => {
+    // The rule under test: security-requirements and tech-stack-decisions
+    // declare no key and are therefore required of every kind. Reading an
+    // absent key as "prunable" would return an empty list here.
+    expect(artifactsRequiredForKind("nfr-requirements", "library", MAP)).toEqual([
+      "security-requirements",
+      "tech-stack-decisions",
+    ]);
+  });
+
+  test("nfr-design's own artifact set is used for that stage", () => {
+    const designMap = new Map<string, string[]>([["logical-components", ["service", "ui", "library"]]]);
+    expect(artifactsRequiredForKind("nfr-design", "spec", designMap)).toEqual(
+      NFR_DESIGN_ARTIFACTS.filter((name) => name !== "logical-components"),
+    );
   });
 });

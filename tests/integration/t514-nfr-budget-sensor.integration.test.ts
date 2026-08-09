@@ -50,18 +50,20 @@ import {
   NFR_REQUIREMENTS_ARTIFACTS,
   NFR_REQUIREMENTS_STANDARD_BUDGET,
   PERFORMANCE_REQUIREMENTS_ARTIFACT,
+  artifactsRequiredForKind,
   countNfrIds,
   evaluateNfrBudget,
   flagsNfrBudget,
   idsMissingNumericThreshold,
   main as sensorMain,
   measureNfrStageDir,
+  readProducesKinds,
   readRecordBirth,
   resolveRecordRoot,
   unitIdCount,
 } from "../../packages/framework/core/tools/amadeus-sensor-nfr-budget.ts";
 import { parseSensorManifest, validateSensorManifest } from "../../packages/framework/core/tools/amadeus-sensor-schema.ts";
-import { depthBudgetArgs, matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
+import { depthBudgetArgs, matchesGlob, unitKindArgs } from "../../packages/framework/core/tools/amadeus-sensor.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-nfr-budget.md");
@@ -591,6 +593,29 @@ describe("t514 CLI contract", () => {
     expect(JSON.parse(stdout)).toMatchObject({ pass: false, reason: "missing-numeric-threshold" });
   });
 
+  test("--kind threads through to the coverage verdict, which ALSO exits 0", () => {
+    // The CLI half of the stage ⑤ falling proof: the same fixture reported
+    // in-process must report through the argv shim, and stay advisory.
+    const root = recordWithUnitKind("2026-08-09T04:00:00Z", "u1", "service");
+    const path = serviceUnitMissingTwo(root, "u1")[0] as string;
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path, "--kind", "service"]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({
+      pass: false,
+      reason: "missing-kind-required-artifacts",
+      unit_kind: "service",
+      missing_kind_required_count: 2,
+    });
+  });
+
+  test("without --kind the same fixture is not reported — the flag is what enables the check", () => {
+    const root = recordWithUnitKind("2026-08-09T04:00:00Z", "u2", "service");
+    const path = serviceUnitMissingTwo(root, "u2")[0] as string;
+    const { code, stdout } = run(["--stage", "nfr-requirements", "--output-path", path]);
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ unit_kind: null, missing_kind_required_count: 0 });
+  });
+
   test("a missing flag is the ONLY exit-1 path", () => {
     const missingStage = run(["--output-path", "/nowhere/security-requirements.md"]);
     expect(missingStage.code).toBe(1);
@@ -836,5 +861,193 @@ describe("t514 the dispatcher arm turns a resolved depth into nfr-budget's --dep
     const withDepth = seedRecord("- **Depth**: Standard");
     expect(depthBudgetArgs("required-sections", withDepth, tmp)).toEqual([]);
     expect(depthBudgetArgs("nfr-budget", seedRecord(null), tmp)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Kind coverage — #2684 stage ⑤ (ruling comment 5230791793)
+// ---------------------------------------------------------------------------
+//
+// FORWARD-LOOKING ONLY. `produces_kinds` landed on nfr-requirements in #1338
+// (2026-07-22) and no record born since declares a resolvable unit kind AND
+// ran nfr-requirements, so the live corpus holds zero positive instances. Both
+// sides of the falling proof are therefore synthetic: a fixture record whose
+// unit-of-work-dependency.md declares `kind: service` reports the omission,
+// and the same omission under a kind that does not require the artifact — or
+// with no kind at all — reports nothing. The corpus sweep below asserts the
+// other side on live data: zero findings today.
+
+/** The stage's real `produces_kinds` map — the same one the sensor reads, so
+ *  these fixtures are judged against the shipped contract rather than a copy. */
+const REQUIREMENTS_KINDS = readProducesKinds("nfr-requirements", STAGES_DIR) as Map<string, string[]>;
+
+/** A record whose units-generation artifact declares one unit's kind, in the
+ *  nested edge-block form parseBoltDag accepts. */
+function recordWithUnitKind(birth: string | undefined, unit: string, kind: string | null): string {
+  const root = record(birth);
+  const dir = join(root, "inception", "units-generation");
+  mkdirSync(dir, { recursive: true });
+  const kindLine = kind === null ? "" : `    kind: ${kind}\n`;
+  writeFileSync(
+    join(dir, "unit-of-work-dependency.md"),
+    ["# Units", "", "```yaml", "units:", `  - name: ${unit}`, kindLine + "    depends_on: []", "```", ""].join("\n"),
+  );
+  return root;
+}
+
+/** A service unit missing scalability + reliability: two artifacts its kind
+ *  requires. The remaining three exist so the sensor has something to fire on. */
+function serviceUnitMissingTwo(root: string, unit: string): string[] {
+  const present = ["performance-requirements", "security-requirements", "tech-stack-decisions"];
+  return present.map((artifact) =>
+    writeArtifact(root, unit, "nfr-requirements", artifact, requirementsBody(1, 400, "PERF").concat("p95 200 ms.\n")),
+  );
+}
+
+describe("t514 the kind coverage check separates pruning from a silent omission", () => {
+  test("falling proof: a service unit missing artifacts its kind requires is reported", () => {
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u1", "service");
+    const paths = serviceUnitMissingTwo(root, "u1");
+    const result = evaluateNfrBudget(paths[0] as string, "Standard", "service");
+    expect(result.reason).toBe("missing-kind-required-artifacts");
+    expect(result.pass).toBe(false);
+    expect(result.unit_kind).toBe("service");
+    expect(result.findings.map((f) => f.field)).toEqual([
+      "artifact:reliability-requirements",
+      "artifact:scalability-requirements",
+    ]);
+    expect(result.missing_kind_required_count).toBe(2);
+  });
+
+  test("the other side: the same absence under a kind that prunes it reports nothing", () => {
+    // `library` requires neither scalability nor reliability (neither lists it
+    // in produces_kinds), so the identical filesystem is case (a) — pruning.
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u2", "library");
+    const paths = serviceUnitMissingTwo(root, "u2");
+    const result = evaluateNfrBudget(paths[0] as string, "Standard", "library");
+    expect(result.reason).not.toBe("missing-kind-required-artifacts");
+    expect(result.missing_kind_required_count).toBe(0);
+    expect(result.unit_kind).toBe("library");
+  });
+
+  test("an unresolved kind is fail-open: measured, never classified", () => {
+    // The kindless generation (most of the corpus) reaches here. Without a kind
+    // the two absences are indistinguishable, so neither is reported.
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u3", null);
+    const paths = serviceUnitMissingTwo(root, "u3");
+    const result = evaluateNfrBudget(paths[0] as string, "Standard");
+    expect(result.reason).not.toBe("missing-kind-required-artifacts");
+    expect(result.unit_kind).toBeNull();
+    expect(result.missing_kind_required_count).toBe(0);
+  });
+
+  test("the cutoff holds: a pre-contract record with a resolvable kind is not reported", () => {
+    const root = recordWithUnitKind("2026-07-01T00:00:00Z", "u4", "service");
+    const paths = serviceUnitMissingTwo(root, "u4");
+    const result = evaluateNfrBudget(paths[0] as string, "Standard", "service");
+    expect(result.under_id_contract).toBe(false);
+    expect(result.reason).not.toBe("missing-kind-required-artifacts");
+  });
+
+  test("vacuity guard: the verdict is the same whichever artifact of the unit fired", () => {
+    // The check is judged on the UNIT's stage directory, so a fire on any
+    // present artifact must reach the identical finding set — otherwise one
+    // unit would be reported once per artifact with drifting content.
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u5", "service");
+    const paths = serviceUnitMissingTwo(root, "u5");
+    expect(paths.length).toBeGreaterThan(1);
+    const verdicts = paths.map((path) => {
+      const r = evaluateNfrBudget(path, "Standard", "service");
+      return { reason: r.reason, fields: r.findings.map((f) => f.field).join(","), count: r.missing_kind_required_count };
+    });
+    for (const verdict of verdicts) {
+      expect(verdict).toEqual(verdicts[0] as (typeof verdicts)[number]);
+    }
+    expect(verdicts[0]?.reason).toBe("missing-kind-required-artifacts");
+  });
+
+  test("a complete service unit is not reported", () => {
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u6", "service");
+    let first = "";
+    for (const artifact of NFR_REQUIREMENTS_ARTIFACTS) {
+      const path = writeArtifact(
+        root,
+        "u6",
+        "nfr-requirements",
+        artifact,
+        `${requirementsBody(1, 400, "PERF")}p95 200 ms.\n`,
+      );
+      if (first === "") first = path;
+    }
+    expect(evaluateNfrBudget(first, "Standard", "service").missing_kind_required_count).toBe(0);
+  });
+
+  test("the shipped map keeps the keyless artifacts required of every kind", () => {
+    // Pins the semantic the whole check rests on against the REAL frontmatter:
+    // security-requirements and tech-stack-decisions declare no key, so no
+    // kind prunes them.
+    for (const kind of ["service", "ui", "library", "spec", "packaging"]) {
+      const required = artifactsRequiredForKind("nfr-requirements", kind, REQUIREMENTS_KINDS);
+      expect(required).toContain("security-requirements");
+      expect(required).toContain("tech-stack-decisions");
+    }
+  });
+});
+
+describe("t514 the dispatcher resolves a unit kind into nfr-budget's --kind flag", () => {
+  test("reads the kind from the record's committed unit-of-work-dependency.md", () => {
+    const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u1", "service");
+    const path = serviceUnitMissingTwo(root, "u1")[0] as string;
+    expect(unitKindArgs("nfr-budget", path, tmp)).toEqual(["--kind", "service"]);
+  });
+
+  test("is silent for an unrelated sensor, an absent edge block, and a kindless unit", () => {
+    const withKind = recordWithUnitKind("2026-08-09T10:00:00Z", "u1", "service");
+    const withKindPath = serviceUnitMissingTwo(withKind, "u1")[0] as string;
+    expect(unitKindArgs("depth-budget", withKindPath, tmp)).toEqual([]);
+
+    const kindless = recordWithUnitKind("2026-08-09T10:00:00Z", "u2", null);
+    expect(unitKindArgs("nfr-budget", serviceUnitMissingTwo(kindless, "u2")[0] as string, tmp)).toEqual([]);
+
+    const noBlock = record("2026-08-09T10:00:00Z");
+    expect(unitKindArgs("nfr-budget", serviceUnitMissingTwo(noBlock, "u3")[0] as string, tmp)).toEqual([]);
+  });
+
+  test("a path outside the project directory resolves nothing", () => {
+    const outside = mkdtempSync(join(tmpdir(), "amadeus-t514-outside-"));
+    try {
+      const root = recordWithUnitKind("2026-08-09T10:00:00Z", "u1", "service");
+      const path = serviceUnitMissingTwo(root, "u1")[0] as string;
+      expect(unitKindArgs("nfr-budget", path, outside)).toEqual([]);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("t514 the live corpus reports no kind-coverage omission", () => {
+  test("every artifact whose unit kind resolves is complete for that kind", () => {
+    // The other half of the synthetic falling proof
+    // (cid:code-generation:corpus-sweep-for-new-guards). ZERO is the expected
+    // result and is asserted as such: `produces_kinds` postdates every record
+    // that ran nfr-requirements with a resolvable kind, so no live unit can
+    // legitimately be in case (c) today. A non-zero count here means either a
+    // real silent omission has appeared or the predicate over-fires.
+    const reported: string[] = [];
+    let evaluated = 0;
+    for (const entry of readdirSync(CORPUS).filter((e) => /^[0-9]{6}-/.test(e))) {
+      const recordDir = join(CORPUS, entry);
+      const depth = depthOf(recordDir);
+      for (const path of nfrArtifactsOf(recordDir)) {
+        const kind = unitKindArgs("nfr-budget", path, REPO_ROOT)[1];
+        evaluated += 1;
+        const result = evaluateNfrBudget(path, depth, kind);
+        if (result.missing_kind_required_count > 0) reported.push(path);
+      }
+    }
+    // Vacuity guard: the sweep must have walked the corpus for the zero to
+    // carry weight.
+    expect(evaluated).toBeGreaterThan(0);
+    expect(reported).toEqual([]);
   });
 });
