@@ -81,10 +81,7 @@ const RECORD_WALK_LIMIT = 8;
  *  are all headings the corpus writes inside question files, and none of them
  *  is an ask. Anchoring on the `Q` needs no per-prefix allowlist to grow as
  *  stages invent their own codes. */
-const QUESTION_CODE = "((?:[A-Z]{1,4}Q-)?Q?[0-9]+[a-z]?)";
 const CODE_BOUNDARY = "(?![A-Za-z0-9-])";
-/** `Q` is optional above only so the prefixed form (`FDQ-1`) reuses the same
- *  digits; a bare number is not a code, so the bare arm demands the `Q`. */
 const BARE_CODE = `(Q[0-9]+[a-z]?)${CODE_BOUNDARY}`;
 const PREFIXED_CODE = `([A-Z]{1,4}Q-[0-9]+[a-z]?)${CODE_BOUNDARY}`;
 

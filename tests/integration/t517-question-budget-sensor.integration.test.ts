@@ -1,3 +1,7 @@
+// covers: file:packages/framework/core/tools/amadeus-sensor-question-budget.ts,
+//         file:packages/framework/core/sensors/amadeus-question-budget.md
+// size: medium
+//
 // t517 — the question-budget sensor's filesystem, cutoff and CLI edges (#2693).
 //
 // The predicate itself is pure and lives in the unit sibling t516. Everything

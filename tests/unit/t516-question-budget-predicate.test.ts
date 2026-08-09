@@ -1,3 +1,5 @@
+// covers: file:packages/framework/core/tools/amadeus-sensor-question-budget.ts
+//
 // t516 — the question-budget predicate (#2693, the L2 row of #2683).
 //
 // Pure string work only: every case here is a body the corpus actually writes,

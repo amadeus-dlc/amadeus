@@ -36,8 +36,8 @@ moves the enforcement style from self-judgement to machine measurement.
 
 This manifest declares `advisory`, so a finding is data for the human at the
 gate and never blocks. Raising it to `blocking` (the schema's other severity,
-#2689) is held by #2683's ruling on how many surfaces may block at once — it is
-not this sensor's decision to make.
+added by #2689) is held by #2683's ruling on how many surfaces may block at
+once — it is not this sensor's decision to make.
 
 ## Scope
 

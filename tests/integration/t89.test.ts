@@ -344,7 +344,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
 
   // Case 19 (.sh:230-241): per-stage matrix — code-generation=6, build-and-test=5,
   // workspace-scaffold=0 (initialization stays sensors: [] — E-APG-AD-DEV
-  // re-ruling (i): 29 participating stages, init 3 excluded), functional-design=5.
+  // re-ruling (i): 29 participating stages, init 3 excluded), functional-design=6.
   test("per-stage matrix: CG=6, BT=5, WS=0, FD=6", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
     expect(stageBySlug(stages, "code-generation").sensors_applicable.length).toBe(6);
