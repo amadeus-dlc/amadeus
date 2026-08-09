@@ -454,7 +454,8 @@
         "required-sections",
         "upstream-coverage",
         "answer-evidence",
-        "question-budget"
+        "question-budget",
+        "scope-sizing"
       ],
       "scopes": [
         "enterprise",
@@ -506,6 +507,12 @@
           "id": "question-budget",
           "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "scope-sizing",
+          "path": ".claude/sensors/amadeus-scope-sizing.md",
+          "matches": "**/scope-definition/*.md",
           "category": "governance"
         }
       ]

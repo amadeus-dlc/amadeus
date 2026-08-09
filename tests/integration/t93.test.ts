@@ -107,6 +107,7 @@ const EXPECTED_IDS = [
   "pr-convergence-report-format",
   "question-budget",
   "required-sections",
+  "scope-sizing",
   "self-scope-consistency",
   "type-check",
   "upstream-coverage",
