@@ -30,8 +30,9 @@ run-stage directive's `depth` field and `requirements-analysis.md` states a
 per-depth requirement volume, but "brief descriptions" carried no measurable
 meaning — so nothing distinguished a proportionate artifact from one many times
 larger. This sensor measures the result and reports overruns as advisory data
-for the human at the gate. It never enforces; `advisory` is the only severity
-the schema ships.
+for the human at the gate. It never enforces: this manifest declares `advisory`,
+and raising it to `blocking` (the schema's other severity, #2689) is gated on
+the #2553 threshold re-ruling and the #2683 blocking-conversion governance.
 
 ## Scope
 
