@@ -465,4 +465,4 @@ export function main(argv: readonly string[]): number {
   return scanned.unreadableShardCount > 0 ? 1 : 0;
 }
 
-if (import.meta.main) process.exit(main(process.argv.slice(2)));
+if (import.meta.main) process.exitCode = main(process.argv.slice(2));

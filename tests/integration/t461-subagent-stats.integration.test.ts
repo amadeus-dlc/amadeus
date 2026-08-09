@@ -570,3 +570,60 @@ describe("t461 subagent-stats seams — in-process (#2279)", () => {
     }
   });
 });
+
+// buildOversizedCorpus seeds a shard with enough distinct Agent Type values
+// that the --json per-type breakdown exceeds the 64KiB pipe buffer that
+// reproduced Issue #2700 (measured: 4000 distinct types -> ~428,612 bytes,
+// comfortably past 65536 with margin for renderer changes).
+function buildOversizedCorpus(proj: string, count: number): void {
+  const models = ["claude-sonnet-5", "claude-opus-5", "claude-haiku-4-5-20251001"];
+  const lines: string[] = [];
+  for (let i = 0; i < count; i++) {
+    lines.push(
+      v1Row("SUBAGENT_COMPLETED", {
+        "Agent Type": `bulk-type-${String(i).padStart(4, "0")}`,
+        Model: models[i % models.length],
+        "Type Verdict": "unknown-type",
+      }),
+    );
+  }
+  seedShard(proj, "t461-bulk-deadbeef09", "host-bulk.jsonl", lines);
+}
+
+describe("pipe integrity — Issue #2700, stdout must fully drain before exit", () => {
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+
+  test("output bigger than the 64KiB pipe buffer is not truncated when piped", () => {
+    const proj = mkdtempSync(join(tmpdir(), "t461-oversized-"));
+    seedPersonas(proj, [PERSONA]);
+    buildOversizedCorpus(proj, 4000);
+    try {
+      // Full capture: spawnSync reads the child's stdout pipe to EOF itself,
+      // so this number is what a correct, fully-drained run actually
+      // produces.
+      const full = spawnSync(BUN, [STATS_CLI, "--project-dir", proj, "--json"], { ...RUN_OPTIONS, maxBuffer: 16 * 1024 * 1024 });
+      expect(full.status).toBe(0);
+      const fullBytes = Buffer.byteLength(full.stdout ?? "", "utf-8");
+      // Fixture precondition, checked mechanically rather than assumed: the
+      // report must actually exceed the pipe buffer size that reproduced the
+      // defect, or the byte-count comparison below proves nothing.
+      expect(fullBytes).toBeGreaterThan(65536);
+
+      // Piped capture: reproduce the exact shape from the issue report
+      // (`... | wc -c`) — a downstream reader racing the producer's exit.
+      // Positional params (`--`) keep the scratch paths out of the shell
+      // script string entirely. bash, not sh: on Linux runners sh is dash,
+      // which rejects `set -o pipefail` with exit 2.
+      const piped = spawnSync(
+        "bash",
+        ["-c", 'set -o pipefail; "$1" "$2" --project-dir "$3" --json | wc -c', "--", BUN, STATS_CLI, proj],
+        RUN_OPTIONS,
+      );
+      expect(piped.status).toBe(0);
+      const pipedBytes = Number((piped.stdout ?? "").trim());
+      expect(pipedBytes).toBe(fullBytes);
+    } finally {
+      rmSync(proj, { recursive: true, force: true });
+    }
+  });
+});
