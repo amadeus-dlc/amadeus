@@ -714,7 +714,17 @@ export default function (pi: ExtensionAPI) {
 
 				for (let i = 0; i < params.chain.length; i++) {
 					const step = params.chain[i];
-					const taskWithContext = step.task.replace(/\{previous\}/g, previousOutput);
+					// Amadeus addition; not in the upstream example. Use a replacer
+					// FUNCTION, not a template-string replacement value: previousOutput
+					// is the prior chain step's model output, which is untrusted
+					// caller-uncontrolled content. String.prototype.replace interprets
+					// $&, $`, $', and $$ in a STRING replacement as special patterns, so
+					// previousOutput containing any of those sequences would be silently
+					// reinterpreted instead of substituted verbatim (#2731, same defect
+					// shape as #2580/#2607; that fix intentionally excluded this vendored
+					// file as out of scope/tracked upstream -- this closes it locally
+					// while upstream tracking continues).
+					const taskWithContext = step.task.replace(/\{previous\}/g, () => previousOutput);
 
 					// Create update callback that includes all previous results
 					const chainUpdate: OnUpdateCallback | undefined = onUpdate
