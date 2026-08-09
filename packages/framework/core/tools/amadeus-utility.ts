@@ -4540,10 +4540,15 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     );
   });
 
-  // Outside the lock: the autonomy transaction takes its own audit lock, and the
-  // acquire is not reentrant. Birth has fully committed by here, which is also
-  // what makes the failure path honest — the intent exists whether or not the
-  // declaration lands.
+  // Outside the lock: the autonomy transaction takes an owner-intent audit lock
+  // of its own, and its state projection takes the workspace sentinel — the same
+  // bucket the birth transaction above holds. Running it out here keeps the
+  // declaration's lock sections theirs alone rather than nested inside birth's.
+  // (Nesting would not deadlock — withAuditLock is reentrant per key within a
+  // process, so the sentinel re-entry is a depth bump — but it would hold birth's
+  // lock across work birth does not own.) Birth has fully committed by here,
+  // which is also what makes the failure path honest — the intent exists whether
+  // or not the declaration lands.
   //
   // A migration returns before the birth pipeline, so the declaration has no
   // newly-born intent to land on. It is reported rather than applied — and
