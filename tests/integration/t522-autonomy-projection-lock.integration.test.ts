@@ -1,7 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts
 // size: medium
 //
-// t520 — the autonomy state projection write must run its read-modify-write of
+// t522 — the autonomy state projection write must run its read-modify-write of
 // the Intent's amadeus-state.md under the same audit-lock bucket as every other
 // writer of that file (issue #2730).
 //
@@ -56,7 +56,7 @@ import { join } from "node:path";
 // planted "foreign holder" dirs below must never alias a concurrent run's real
 // lock in the shared tmpdir. Set before the tool import so every spawned child
 // inherits it too.
-const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t520-locks-"));
+const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t522-locks-"));
 process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
 
 import { auditLockDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -188,7 +188,7 @@ afterAll(() => {
   }
 });
 
-describe("t520 the autonomy state projection takes the workspace audit-lock bucket (#2730)", () => {
+describe("t522 the autonomy state projection takes the workspace audit-lock bucket (#2730)", () => {
   test(
     "a foreign holder of the workspace bucket blocks the projection write",
     () => {
