@@ -577,24 +577,34 @@ describe("t514 the live corpus is not retroactively reported for missing ids", (
     // pre-contract record produces must be the budget flag, never the
     // missing-id one.
     const reported: string[] = [];
+    let evaluated = 0;
     for (const recordDir of preContractRecords()) {
       const depth = depthOf(recordDir);
       for (const path of nfrArtifactsOf(recordDir)) {
         const result = evaluateNfrBudget(path, depth);
+        evaluated += 1;
         if (!result.pass) reported.push(result.reason);
       }
     }
+    // Vacuity guard: `every` on an empty list proves nothing. The corpus must
+    // actually have been walked for the assertion below to carry weight.
+    expect(evaluated).toBeGreaterThan(0);
     expect(reported.every((reason) => reason === "nfr-budget-exceeded")).toBe(true);
   });
 });
 
-describe("t514 the corpus sweep reproduces the ruling's exact flag counts", () => {
-  test("nfr-requirements flags 12/78 and nfr-design flags 16/78 (Standard depth, units with declared ids)", () => {
-    // Reproduces the ruling comment 5230416035 measurement over the live
-    // corpus: every Standard-depth unit with at least one declared id, per
-    // stage, using this sensor's own shipped predicates end to end
-    // (measureNfrStageDir + unitIdCount + flagsNfrBudget) rather than a
-    // re-derived count.
+describe("t514 the corpus sweep holds the ruling's invariants", () => {
+  test("each stage's Standard population is non-empty and its flags stay a strict subset", () => {
+    // Walks the live corpus with this sensor's own shipped predicates end to
+    // end (measureNfrStageDir + unitIdCount + flagsNfrBudget) rather than a
+    // re-derived count. The ruling's exact figures at its measurement ref
+    // (comment 5230416035: 12/78 and 16/78) are NOT pinned here — the live
+    // corpus legitimately grows and archives records, and a count drift is
+    // not a sensor defect (the same reason Line 566-569 avoids corpus-count
+    // literals). What must hold regardless of corpus motion: the population
+    // was actually walked, and flagging stays a subset of it. The ruling
+    // figures themselves live in the manifest table and the unit-test
+    // OBSERVED constants, both pinned to the measurement ref.
     const counts: Record<"nfr-requirements" | "nfr-design", { n: number; flagged: number }> = {
       "nfr-requirements": { n: 0, flagged: 0 },
       "nfr-design": { n: 0, flagged: 0 },
@@ -621,8 +631,12 @@ describe("t514 the corpus sweep reproduces the ruling's exact flag counts", () =
         }
       }
     }
-    expect(counts["nfr-requirements"]).toEqual({ n: 78, flagged: 12 });
-    expect(counts["nfr-design"]).toEqual({ n: 78, flagged: 16 });
+    for (const stage of ["nfr-requirements", "nfr-design"] as const) {
+      const { n, flagged } = counts[stage];
+      expect(n).toBeGreaterThan(0);
+      expect(flagged).toBeGreaterThan(0);
+      expect(flagged).toBeLessThan(n);
+    }
   });
 });
 

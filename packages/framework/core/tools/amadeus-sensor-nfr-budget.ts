@@ -632,8 +632,8 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
   // the id-contract cutoff above: a pre-contract unit that happens to declare
   // ids is measured exactly like a post-contract one (flagsNfrBudget's own
   // comment explains why).
-  if (flagsNfrBudget(stage, level, unit.bytes, unitNfrCount)) {
-    const ceiling = nfrStandardBudget(stage, level) as number;
+  const ceiling = nfrStandardBudget(stage, level);
+  if (ceiling !== undefined && flagsNfrBudget(stage, level, unit.bytes, unitNfrCount)) {
     return verdict(
       "nfr-budget-exceeded",
       [
