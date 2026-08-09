@@ -92,6 +92,7 @@ import {
 import {
   parseSensorManifest,
   type SensorManifest,
+  type SensorSeverity,
   validateSensorManifest,
 } from "./amadeus-sensor-schema.ts";
 import { type StageFrontmatter, validateStageFrontmatter } from "./amadeus-stage-schema.ts";
@@ -127,6 +128,16 @@ export interface SensorResolution {
   path: string;
   matches?: string;
   category?: string;
+  // severity — the manifest's default_severity, carried here because the
+  // SENSOR_* audit rows do not carry it (their field contract is pinned by
+  // t92) and the approval guard must be able to tell a gating sensor from a
+  // logging one. ABSENT for the framework default "advisory", present only
+  // for "blocking": emitting the default would rewrite every sensors_applicable
+  // row of every stage on a graph whose behaviour is unchanged, so the 0-plugin
+  // baseline (and the designer-export golden) stays byte-identical, exactly as
+  // for the optional `matches` / `category` rows above. Compile is the only
+  // writer; readers gate on `severity === "blocking"`.
+  severity?: SensorSeverity;
 }
 
 // Authoritative graph stage shape — fully-populated, no optionals
@@ -794,6 +805,9 @@ export function resolveSensorsForStage(
     }
     if (sensor.manifest.category !== undefined) {
       entry.category = sensor.manifest.category;
+    }
+    if (sensor.manifest.default_severity !== "advisory") {
+      entry.severity = sensor.manifest.default_severity;
     }
     out.push(entry);
   }

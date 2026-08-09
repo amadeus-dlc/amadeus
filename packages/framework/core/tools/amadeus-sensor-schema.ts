@@ -13,7 +13,12 @@
 //                                      `amadeus-` prefix and before `.md`
 //   - kind: "deterministic"         — required; sole accepted value today
 //   - command: string               — required; sensor invocation
-//   - default_severity: "advisory"  — required; sole accepted value today
+//   - default_severity: severity    — required; one of SENSOR_SEVERITIES.
+//                                      "advisory" records SENSOR_* audit rows
+//                                      only; "blocking" additionally gates the
+//                                      stage's approval on the sensor's latest
+//                                      terminal verdict (amadeus-state.ts
+//                                      verifyBlockingSensors).
 //   - description: string           — required; one-line capability summary
 //   - category: string              — optional grouping label
 //   - input_schema: object          — optional invocation contract
@@ -27,11 +32,20 @@
 
 import { scalarField } from "./amadeus-lib.ts";
 
+// The closed severity vocabulary. "advisory" is the framework default and the
+// severity every shipped manifest declares: the sensor records its verdict in
+// the audit trail and nothing else. "blocking" is consumed by the approval
+// guard — a stage whose blocking sensor has an unresolved FAILED verdict (or
+// never fired at all) cannot be completed. Runtime carriage is via the compiled
+// stage graph (SensorResolution.severity), not the audit row.
+export const SENSOR_SEVERITIES = ["advisory", "blocking"] as const;
+export type SensorSeverity = (typeof SENSOR_SEVERITIES)[number];
+
 export interface SensorManifest {
   id: string;
   kind: "deterministic";
   command: string;
-  default_severity: "advisory";
+  default_severity: SensorSeverity;
   description: string;
   category?: string;
   input_schema?: Record<string, unknown>;
@@ -111,10 +125,10 @@ function requireNonEmptyString(
 }
 
 // Helper: throw if obj[field] !== expected. Centralises the literal-
-// match check used for kind ("deterministic") and default_severity
-// ("advisory"). Optional `hint` appends a trailing clause to the
-// thrown message (e.g., "; other kinds reserved for future releases").
-function requireExactValue<K extends "kind" | "default_severity">(
+// match check used for kind ("deterministic"). Optional `hint` appends a
+// trailing clause to the thrown message (e.g., "; other kinds reserved for
+// future releases").
+function requireExactValue<K extends "kind">(
   obj: SensorManifest,
   field: K,
   expected: SensorManifest[K],
@@ -125,6 +139,21 @@ function requireExactValue<K extends "kind" | "default_severity">(
     const tail = hint ? `; ${hint}` : "";
     throw new Error(
       `${file}: ${field} must be "${expected}" (got "${obj[field]}")${tail}`,
+    );
+  }
+}
+
+// Helper: throw unless obj.default_severity is a member of SENSOR_SEVERITIES.
+// Set membership rather than the single-literal equality the field used to
+// carry: the vocabulary is closed but no longer a singleton. An unrecognised
+// value is a loud rejection at compile — never a silent downgrade to advisory,
+// which would turn a manifest that MEANT to gate into one that only logs.
+function requireSeverity(obj: SensorManifest, file: string): void {
+  const accepted: readonly string[] = SENSOR_SEVERITIES;
+  if (!accepted.includes(obj.default_severity)) {
+    throw new Error(
+      `${file}: default_severity must be one of ${accepted.join(", ")} ` +
+        `(got "${obj.default_severity}")`,
     );
   }
 }
@@ -181,7 +210,7 @@ export function validateSensorManifest(
     "other kinds reserved for future releases",
   );
   requireNonEmptyString(obj, "command", file);
-  requireExactValue(obj, "default_severity", "advisory", file);
+  requireSeverity(obj, file);
   requireNonEmptyString(obj, "description", file);
 
   if (obj.matches !== undefined) {

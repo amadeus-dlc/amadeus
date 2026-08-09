@@ -95,7 +95,7 @@ timeout_seconds: 5                           # optional
 | `id` | ✓ | kebab-case string | Equals filename stem minus `amadeus-` prefix; cross-referenced from rule files' `pairing:` field (see [Rule System](08-rule-system.md)). |
 | `kind` | ✓ | enum | Only `deterministic` is accepted today; `llm` reserved for the v0.11.0 LLM-dispatch chapter. See [`kind` enum](#kind-enum) below. |
 | `command` | ✓ | string | Canonical invocation prefix — each shipped sensor names its own per-sensor script (e.g. `bun .claude/tools/amadeus-sensor-required-sections.ts`). The dispatcher (`amadeus-sensor.ts`) appends `--stage <slug>` plus the file flag matching the sensor's input shape: `--output-path <path>` for document sensors, `--file-path <path>` for the code sensors (`linter`, `type-check`). |
-| `default_severity` | ✓ | enum | Only `advisory` is accepted today; `blocking` reserved for the future ralph-driver work. |
+| `default_severity` | ✓ | enum | `advisory` or `blocking`. Advisory records a verdict; blocking additionally gates the stage's approval. |
 | `description` | ✓ | string | One-line human description. |
 | `category` | optional | string | Free-form descriptive label (the shipped manifests use `document-shape`, `code-quality`, `governance`, `formal-verification`, and `framework-integrity`; not a closed enum). |
 | `matches` | optional | glob string | Capability filter consumed by the PostToolUse hook at fire time. See [`matches` filter](#matches-filter) below. |
@@ -235,13 +235,32 @@ before matching against the manifest `id`.
 
 ## `default_severity`
 
-`advisory` is the only valid value. An advisory sensor
+`advisory` and `blocking` are the two valid values. An advisory sensor
 failure produces an audit row + a detail file but does NOT block the
-stage's gate or the user's workflow.
+stage's gate or the user's workflow. Every manifest the framework ships
+declares `advisory`.
 
-`blocking` is reserved for the future ralph driver. Until
-the driver lands, the field is structurally present but semantically
-single-valued.
+`blocking` makes the sensor's verdict a precondition of stage
+completion. `amadeus-state.ts approve` refuses the stage while any
+output the sensor fired against carries a latest terminal that is not
+`SENSOR_PASSED`, and — fail-closed — also refuses when the sensor
+recorded no `SENSOR_FIRED` for the stage at all: a blocking sensor that
+never ran is not a pass. Re-firing the sensor after fixing the finding
+resolves the output; the judgement is per `(Sensor ID, Output path)`,
+scoped to the stage by `Stage slug`.
+
+Two boundaries keep the severity from acting retroactively or invisibly:
+
+- **Carriage** — severity travels on the compiled graph
+  (`sensors_applicable[].severity`), not on the `SENSOR_*` audit rows,
+  whose 8-field contract is unchanged: a blocking sensor emits exactly
+  the same rows an advisory one does. Compile writes the `severity`
+  key only for `blocking`, so an absent key means the framework default.
+- **Enforcement cutoff** — only intents whose record dir is dated on or
+  after the guard's adoption day (`BLOCKING_SENSOR_CUTOFF_YYMMDD` in
+  `amadeus-state.ts`) are gated, mirroring the E-OC1 questions-evidence
+  gate. `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD=1` bypasses the gate, the
+  same shape as the artifact guard's own switch.
 
 ---
 
@@ -338,7 +357,7 @@ framework-distribution paths are rejected). Fields default to:
 | `id` | derived from user free-text (kebab-case it) | |
 | `kind` | `deterministic` | sole accepted value today |
 | `command` | `bun .claude/tools/amadeus-sensor-<id>.ts` | placeholder per-sensor script; user updates to the script that implements the check |
-| `default_severity` | `advisory` | sole accepted value today |
+| `default_severity` | `advisory` | `blocking` gates approval; scaffold defaults to advisory |
 | `description` | from user free-text | |
 | `category` | `""` | user fills if desired |
 | `matches` | a glob is required to fire | scaffold prompts for the glob shape the sensor applies to (an artifact-tree glob or a code glob like `**/*.ts`); an entry with no `matches` never fires |
@@ -383,18 +402,20 @@ other enum-shaped fields (`default_severity`).
 
 ## Reserved for future releases
 
-A few sensor capabilities are reserved in the schema but not yet
-active, so the field shape is stable when they land:
+One sensor capability is reserved in the schema but not yet active, so
+the field shape is stable when it lands:
 
 - **`kind: llm` dispatch** — LLM-evaluated sensors (v0.11.0). The
   schema accepts `kind` today but rejects any value other than
   `deterministic` at parse time.
-- **`blocking` severity** — a sensor failure that halts the gate
-  rather than logging advisory telemetry (v0.10.0 ralph driver). Today
-  `advisory` is the sole accepted value.
 
-Both are enforced at write time: shipping a manifest that uses them now
-is an author error that the parser rejects.
+It is enforced at write time: shipping a manifest that uses it now is an
+author error that the parser rejects.
+
+`blocking` severity is no longer reserved — it is implemented and
+described under [`default_severity`](#default_severity) above. No
+shipped manifest declares it; adopting it for a framework sensor is a
+separate decision per sensor.
 
 ## Next Steps
 

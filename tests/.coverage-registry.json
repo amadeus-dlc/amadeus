@@ -3890,6 +3890,10 @@
         {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t511-blocking-sensor-severity.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

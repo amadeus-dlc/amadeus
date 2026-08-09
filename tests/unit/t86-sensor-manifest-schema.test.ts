@@ -281,6 +281,50 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
     ).toBe(true);
   });
 
+  // ===========================================================================
+  // Issue #2671 (c) — default_severity vocabulary. The field was a single
+  // accepted literal ("advisory"); the severity extension widens it to the
+  // closed set {advisory, blocking} so a manifest can declare that its FAILED
+  // verdict gates stage approval. The widening is purely additive: every
+  // shipped manifest stays valid unchanged (pinned per-manifest in Part 2
+  // above), and a value outside the set is still a loud rejection — an
+  // unrecognised severity must never degrade silently to advisory.
+  //
+  // These rows sit OUTSIDE the migrated .sh TAP plan (28), exactly like the
+  // FR-7 and #1296 rows above: the plan pins the .sh's row roster, not this
+  // file's total test count.
+  // ===========================================================================
+  test("#2671 (c): default_severity blocking is accepted by validateSensorManifest", () => {
+    const m = { ...baseManifest(), default_severity: "blocking" as const };
+    expect(() => validateSensorManifest(m, FILE, ID)).not.toThrow();
+  });
+
+  test("#2671 (c): the blocking fixture manifest parses and validates", () => {
+    const file = join(FIXTURES_DIR, "blocking-sensor", "amadeus-blocking-probe.md");
+    const obj = parseSensorManifest(readFileSync(file, "utf-8"));
+    expect(obj.default_severity).toBe("blocking");
+    expect(() => validateSensorManifest(obj, file, "blocking-probe")).not.toThrow();
+  });
+
+  test("#2671 (c): an unrecognised default_severity is rejected, not downgraded", () => {
+    const file = join(NEG_DIR, "malformed-unknown-severity.md");
+    const obj = parseSensorManifest(readFileSync(file, "utf-8"));
+    // The parser is a trust boundary: it copies the frontmatter scalar through
+    // unchecked, so the out-of-vocabulary value survives to the validator (which
+    // is what makes the rejection observable rather than a parse-time coercion).
+    expect(String(obj.default_severity)).toBe("arbitrary-bogus");
+    expect(() =>
+      validateSensorManifest(obj, file, "malformed-unknown-severity"),
+    ).toThrow(/default_severity must be one of/);
+  });
+
+  test("#2671 (c): every shipped manifest still declares advisory", () => {
+    for (const name of SENSOR_NAMES) {
+      const obj = parseSensorManifest(readFileSync(manifestPath(name), "utf-8"));
+      expect(obj.default_severity, `${name} changed severity`).toBe("advisory");
+    }
+  });
+
   // .sh L36: plan 28. Re-count the assertion budget so a silently dropped
   // manifest or negative case is caught (5 existence + 4×5 frontmatter + 3
   // negatives = 28).
