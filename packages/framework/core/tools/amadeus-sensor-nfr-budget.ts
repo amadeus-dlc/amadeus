@@ -47,15 +47,18 @@
 // The per-artifact figure is kept as a diagnostic (D1: which category of one
 // unit is the outlier), not as a second denominator.
 //
-// PRUNING CANNOT BE RECONSTRUCTED FROM DISK, which is why the measurement does
-// not try. Measured over the corpus: of the 142 nfr-requirements unit
-// directories, 130 belong to units whose kind is unresolvable from the
-// committed unit-of-work-dependency.md, and the engine's kindless fallback
-// hands those every declared artifact. So "artifact absent" and "artifact
-// pruned" are indistinguishable for most of the corpus. This sensor measures
-// the artifacts that EXIST and never assumes an expected set; separating
-// pruning from a silent omission is the issue's stage ⑤ (coverage), which needs
-// the directive's resolved kind rather than the filesystem.
+// PRUNING CANNOT BE RECONSTRUCTED FROM DISK ALONE, which is why the
+// MEASUREMENT does not try. Measured over the corpus: of the 142
+// nfr-requirements unit directories, 130 belong to units whose kind is
+// unresolvable from the committed unit-of-work-dependency.md, and the engine's
+// kindless fallback hands those every declared artifact. So "artifact absent"
+// and "artifact pruned" are indistinguishable for most of the corpus. The
+// measurement therefore covers the artifacts that EXIST and never assumes an
+// expected set.
+//
+// Stage ⑤ (ruling comment 5230791793) separates the two for the units where a
+// kind IS resolvable, using the unit's kind rather than the filesystem — see
+// the "Kind coverage" section below.
 //
 // Advisory by construction: the shipped schema admits no other severity, so a
 // finding is data for the human at the gate and never blocks. Every check
@@ -69,6 +72,7 @@
 // "Standard" drift from that one's — the same reuse the census script makes.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";
 
 /** The artifacts `nfr-requirements` declares in `produces`. Ids are DECLARED
@@ -539,6 +543,146 @@ export function idDeclarationDir(stageDir: string): string {
     : join(dirname(stageDir), NFR_REQUIREMENTS_STAGE_DIR);
 }
 
+// ---------------------------------------------------------------------------
+// Kind coverage — #2684 stage ⑤, the (a)/(c) split (ruling comment 5230791793)
+// ---------------------------------------------------------------------------
+//
+// The pruning note at the top of this file says the expected artifact set
+// cannot be reconstructed from disk. It cannot be reconstructed from disk
+// ALONE — a unit whose kind prunes three artifacts and a unit that silently
+// omitted three look identical there. What resolves them is the unit's KIND,
+// which the dispatcher passes in as --kind (the same shape as --depth: the
+// per-sensor script never walks for the record root itself).
+//
+// With a kind in hand the two absences separate:
+//
+//   (a) the kind does not require the artifact → a pruning → report nothing.
+//   (c) the kind DOES require it and it is not on disk → a silent omission →
+//       one advisory finding per missing artifact.
+//
+// There is no (b): an explicit "not applicable for this kind" marker. The
+// corpus carries no such form (the prose hits that mention kind pruning are all
+// upstream-input headers describing a CONSUMED artifact's absence), so
+// contracting one here would be inventing a format before anything writes it.
+//
+// FORWARD-LOOKING BY CONSTRUCTION, though not for want of data to judge.
+// Measured over the live corpus with this module's own predicates: 231 of the
+// 1,736 nfr artifacts on disk belong to units whose kind resolves (11 records;
+// service 35, library 156, packaging 24, spec 16), and NONE of them is missing
+// an artifact its kind requires — the check does not over-fire on what exists.
+// What is zero is the REPORTABLE subset: no record with a resolvable kind was
+// born under the id contract, so the cutoff suppresses every finding today.
+// The falling proof is therefore synthetic (a fixture record whose
+// unit-of-work-dependency.md declares kind: service), and the corpus sweep
+// pins both facts — a non-empty judged population and zero gaps in it.
+//
+// Gated on the SAME id-contract cutoff as the other reported cases — a record
+// written before the contract is never reported retroactively.
+
+/** Where the stage files sit relative to this script. Identical in the canonical
+ *  tree (`core/tools` → `core/amadeus-common/…`) and in every shipped harness
+ *  (`<harness>/tools` → `<harness>/amadeus-common/…`), so one relative path
+ *  serves both without the script resolving a project root. */
+const DEFAULT_STAGES_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "amadeus-common", "stages");
+
+/** The construction stage directory, honouring the same `AMADEUS_STAGES_DIR`
+ *  seam amadeus-graph.ts and amadeus-learnings.ts read (it names the stages
+ *  ROOT, so the phase segment is appended here).
+ *
+ *  Resolved per call rather than once at module load: the seam is set by tests
+ *  that drive a substituted stage tree, and a module-level constant would
+ *  capture whatever was set at import time. Missing the override would send the
+ *  lookup to the real tree — or to nothing, which fails open and disables the
+ *  coverage check in silence. */
+function stagesDirDefault(): string {
+  return join(process.env.AMADEUS_STAGES_DIR ?? DEFAULT_STAGES_ROOT, "construction");
+}
+
+/** One `produces_kinds` entry: `  <artifact>: [kind, kind]`, indented inside the
+ *  frontmatter block. */
+const PRODUCES_KINDS_ENTRY = /^\s+([A-Za-z0-9._-]+):\s*\[([^\]]*)\]\s*$/;
+
+/** The stage's `produces_kinds` map, read out of its frontmatter.
+ *
+ *  Undefined when the frontmatter declares none — the fail-open signal. An
+ *  EMPTY map would say "this stage prunes nothing", which is a different claim
+ *  and would make every absence a reportable omission.
+ *
+ *  Scoped to the frontmatter block so a `produces_kinds:` line quoted in the
+ *  stage's prose cannot contribute entries. */
+export function parseProducesKinds(stageBody: string): Map<string, string[]> | undefined {
+  const lines = stageBody.split("\n");
+  if ((lines[0] ?? "").trim() !== "---") return undefined;
+  // Trimmed on BOTH fences. Matching the terminator exactly while trimming the
+  // opener is an asymmetry a trailing space on the closing `---` turns into a
+  // silent no-map: fail-open is the safe side, but the check would simply stop
+  // running with nothing to say so.
+  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
+  if (end === -1) return undefined;
+  const start = lines.findIndex((line, i) => i > 0 && i < end && line.trimEnd() === "produces_kinds:");
+  if (start === -1) return undefined;
+  const map = new Map<string, string[]>();
+  for (let i = start + 1; i < end; i += 1) {
+    const line = lines[i] ?? "";
+    // A line that is not indented ends the block: the next frontmatter key.
+    if (line.trim() === "" || !/^\s/.test(line)) break;
+    const entry = line.match(PRODUCES_KINDS_ENTRY);
+    // An indented line that is not an entry ends the block rather than being
+    // skipped — skipping would let a later key's values leak in.
+    if (entry === null) break;
+    const kinds = (entry[2] as string)
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k) => k !== "");
+    map.set(entry[1] as string, kinds);
+  }
+  return map.size === 0 ? undefined : map;
+}
+
+/** The stage's map read from disk, or undefined when the file is unreadable or
+ *  declares none. Both are fail-open. */
+export function readProducesKinds(stage: string, stagesDir?: string): Map<string, string[]> | undefined {
+  let body: string;
+  try {
+    body = readFileSync(join(stagesDir ?? stagesDirDefault(), `${stage}.md`), "utf-8");
+  } catch {
+    return undefined;
+  }
+  return parseProducesKinds(body);
+}
+
+/** The artifacts a unit of `kind` must produce for `stage`.
+ *
+ *  AN ABSENT KEY APPLIES TO EVERY KIND. That is the engine's own reading
+ *  (requiredArtifactsForUnit includes an artifact whose kind list is
+ *  undefined), and it is the whole load-bearing detail here:
+ *  security-requirements and tech-stack-decisions declare no key and are
+ *  therefore required of every kind. Reading an absent key as "prunable"
+ *  would silently stop requiring them of anyone. */
+export function artifactsRequiredForKind(stage: string, kind: string, producesKinds: Map<string, string[]>): string[] {
+  return artifactsOfStage(stage).filter((name) => {
+    const kinds = producesKinds.get(name);
+    return kinds === undefined || kinds.includes(kind);
+  });
+}
+
+/** The (c) set: artifacts this unit's kind requires that are not on disk.
+ *
+ *  Judged on the UNIT's stage directory, not on the artifact that fired, so
+ *  every artifact of the same unit yields the same answer — the check is
+ *  idempotent across which file triggered it. Sorted for a deterministic
+ *  findings order. */
+export function missingKindRequiredArtifacts(
+  stageDir: string,
+  stage: string,
+  kind: string,
+  producesKinds: Map<string, string[]>,
+): string[] {
+  return artifactsRequiredForKind(stage, kind, producesKinds)
+    .filter((name) => !existsSync(join(stageDir, `${name}.md`)))
+    .sort();
+}
+
 /** The unit's id count — the denominator both stages divide by. */
 export function unitIdCount(stageDir: string): number {
   const declarationDir = idDeclarationDir(stageDir);
@@ -655,6 +799,13 @@ export interface NfrBudgetResult {
    *  numeric threshold. Always 0 outside performance-requirements.md (the
    *  check's one scoped artifact — see PERFORMANCE_REQUIREMENTS_ARTIFACT). */
   missing_numeric_threshold_count: number;
+  /** #2684 stage ⑤ — the unit's declared kind, or null when the dispatcher
+   *  could not resolve one (the kindless generation, which is most of the
+   *  corpus). Null is what makes the coverage check fail-open. */
+  unit_kind: string | null;
+  /** #2684 stage ⑤ — count of artifacts this unit's kind requires that are not
+   *  on disk. Always 0 without a resolved kind. */
+  missing_kind_required_count: number;
 }
 
 const NONE = {
@@ -668,6 +819,8 @@ const NONE = {
   record_birth: null,
   under_id_contract: false,
   missing_numeric_threshold_count: 0,
+  unit_kind: null,
+  missing_kind_required_count: 0,
 };
 
 function verdict(
@@ -690,7 +843,49 @@ function ratio(bytes: number, count: number): number {
  *  CLI entry stays a thin argv shim. `depth` is optional and, when absent or
  *  unrecognizable, simply measures with no ceiling applied — the sensor never
  *  guesses a level, matching the sibling depth-budget sensor. */
-export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudgetResult {
+/** The (c) set for one unit, or empty when it cannot legitimately be computed:
+ *  no resolved kind (the kindless generation — pruning and omission stay
+ *  indistinguishable) or no readable produces_kinds map for the stage. Both are
+ *  fail-open, which is why they collapse to the same empty answer. */
+function missingRequiredForKind(stage: string, stageDir: string, kind: string | undefined): string[] {
+  if (kind === undefined) return [];
+  const producesKinds = readProducesKinds(stage);
+  if (producesKinds === undefined) return [];
+  return missingKindRequiredArtifacts(stageDir, stage, kind, producesKinds);
+}
+
+/** The (c) findings, one per missing artifact. Takes the kind rather than
+ *  reading it off the caller so the non-undefined narrowing the finding text
+ *  needs is carried by the type here, not inferred by a reader from the fact
+ *  that `missing` is only ever non-empty when a kind resolved. */
+function coverageFindings(stage: string, kind: string | undefined, missing: string[]): NfrBudgetFinding[] {
+  if (kind === undefined) return [];
+  return missing.map((artifact) => ({
+    field: `artifact:${artifact}`,
+    reason: `${stage} declares ${artifact} for a ${kind} unit (produces_kinds) and it is not present — an absence this kind does not explain`,
+  }));
+}
+
+/** Ids of this artifact that declare no measurable numeric threshold, or empty
+ *  when the check does not apply here.
+ *
+ *  Scoped to performance-requirements.md alone (#2684 stage ⑥, issue comment
+ *  5230806329, narrowed by 5230769702): the same predicate applied corpus-wide
+ *  flagged the other four nfr-requirements artifacts at 72%-90%, all confirmed
+ *  NOT false positives (structurally qualitative requirements), so only
+ *  performance carries a genuine gap. Gated on the id-contract cutoff — a
+ *  pre-contract artifact could not have followed a contract that did not yet
+ *  exist, and this check reads the id declarations that contract fixed. Only
+ *  fires when the artifact itself declares at least one id: one with none
+ *  either already reported missing-nfr-ids (if the unit's total is also zero)
+ *  or has nothing here to check. */
+function idsWithoutThreshold(outputPath: string, stage: string, underContract: boolean, declaredIds: number): string[] {
+  if (!underContract || stage !== NFR_REQUIREMENTS_STAGE_DIR || declaredIds === 0) return [];
+  if (basename(outputPath, ".md") !== PERFORMANCE_REQUIREMENTS_ARTIFACT) return [];
+  return idsMissingNumericThreshold(readFileSync(outputPath, "utf-8"));
+}
+
+export function evaluateNfrBudget(outputPath: string, depth?: string, kind?: string): NfrBudgetResult {
   const stage = stageOfNfrArtifact(basename(outputPath));
   if (stage === undefined) return verdict("not-nfr-artifact", [], NONE);
 
@@ -710,6 +905,11 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
   const underContract = bornUnderIdContract(birth);
   const level = canonicalDepth(depth);
 
+  // The (c) set, computed before the branches so every verdict reports the
+  // count — a unit whose FIRST reported case is a missing id still carries its
+  // coverage figure for the human at the gate.
+  const missingRequired = missingRequiredForKind(stage, stageDir, kind);
+
   const figures = {
     bytes: measured.bytes,
     declared_ids: measured.ids.size,
@@ -721,6 +921,8 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
     record_birth: birth ?? null,
     under_id_contract: underContract,
     missing_numeric_threshold_count: 0,
+    unit_kind: kind ?? null,
+    missing_kind_required_count: missingRequired.length,
   };
 
   // The FIRST reported case: a unit written UNDER the contract that declares
@@ -742,39 +944,37 @@ export function evaluateNfrBudget(outputPath: string, depth?: string): NfrBudget
     );
   }
 
-  // The SECOND reported case (#2684 stage ⑥, issue comment 5230806329, scope
-  // narrowed by 5230769702): an id THIS artifact declares has no measurable
-  // numeric threshold. Scoped to performance-requirements.md alone — the same
-  // predicate applied corpus-wide flagged the other four nfr-requirements
-  // artifacts at 72%-90%, all confirmed NOT false positives (structurally
-  // qualitative requirements), so only performance carries a genuine gap.
-  // Gated on the SAME id-contract cutoff as the first case above: a
-  // pre-contract artifact could not have followed a contract that did not yet
-  // exist, and this check reads the id declarations that contract fixed.
-  // Only fires when THIS artifact itself declares at least one id — an
-  // artifact with none either already returned missing-nfr-ids above (if the
-  // unit's total is also zero) or has nothing here to check.
-  if (
-    underContract &&
-    stage === NFR_REQUIREMENTS_STAGE_DIR &&
-    basename(outputPath, ".md") === PERFORMANCE_REQUIREMENTS_ARTIFACT &&
-    measured.ids.size > 0
-  ) {
-    const body = readFileSync(outputPath, "utf-8");
-    const missingIds = idsMissingNumericThreshold(body);
-    if (missingIds.length > 0) {
-      return verdict(
-        "missing-numeric-threshold",
-        missingIds.map((id) => ({
-          field: `nfr-id:${id}`,
-          reason: `${id} has no measurable numeric threshold (comparator+value+unit) in its declaration`,
-        })),
-        { ...figures, missing_numeric_threshold_count: missingIds.length },
-      );
-    }
+  // The SECOND reported case (#2684 stage ⑤, ruling comment 5230791793): the
+  // unit's kind REQUIRES an artifact that is not on disk — case (c), a silent
+  // omission, as opposed to case (a) where the kind prunes it and the same
+  // absence is correct. Judged on the UNIT's directory, so it lands before the
+  // per-artifact numeric check below: reaching it only from
+  // performance-requirements.md would make the verdict depend on which
+  // artifact happened to fire.
+  //
+  // Gated on the SAME id-contract cutoff as the other cases — a record written
+  // before the contract predates unit kinds carrying this weight and is never
+  // reported retroactively.
+  const coverage = coverageFindings(stage, kind, missingRequired);
+  if (underContract && coverage.length > 0) {
+    return verdict("missing-kind-required-artifacts", coverage, figures);
   }
 
-  // The THIRD reported case: the unit's D2 figure (bytes for this stage over
+  // The THIRD reported case (#2684 stage ⑥): an id THIS artifact declares has
+  // no measurable numeric threshold. See idsWithoutThreshold for the scoping.
+  const missingIds = idsWithoutThreshold(outputPath, stage, underContract, measured.ids.size);
+  if (missingIds.length > 0) {
+    return verdict(
+      "missing-numeric-threshold",
+      missingIds.map((id) => ({
+        field: `nfr-id:${id}`,
+        reason: `${id} has no measurable numeric threshold (comparator+value+unit) in its declaration`,
+      })),
+      { ...figures, missing_numeric_threshold_count: missingIds.length },
+    );
+  }
+
+  // The FOURTH reported case: the unit's D2 figure (bytes for this stage over
   // its declared ids) exceeds the Standard ceiling. Checked on the UNIT'S
   // total (unit.bytes), not this artifact's own bytes — D2 is the primary
   // axis a ceiling is placed against (see the module header). Independent of
@@ -825,6 +1025,7 @@ interface Flags {
   stage?: string;
   outputPath?: string;
   depth?: string;
+  kind?: string;
 }
 
 function parseFlags(argv: string[]): Flags {
@@ -833,6 +1034,7 @@ function parseFlags(argv: string[]): Flags {
     if (argv[i] === "--stage") out.stage = argv[++i];
     else if (argv[i] === "--output-path") out.outputPath = argv[++i];
     else if (argv[i] === "--depth") out.depth = argv[++i];
+    else if (argv[i] === "--kind") out.kind = argv[++i];
   }
   return out;
 }
@@ -845,12 +1047,15 @@ function fail(msg: string): never {
 /** CLI entry / in-process test seam. Exits 1 ONLY on a missing required flag;
  *  every check outcome is stdout JSON with exit 0 (advisory contract).
  *  --depth is optional, matching depth-budget: an absent or unrecognizable
- *  value leaves the ceiling check fail-open rather than guessing a level. */
+ *  value leaves the ceiling check fail-open rather than guessing a level.
+ *  --kind is optional for the same reason: without the unit's kind, a pruned
+ *  artifact and a silently omitted one are indistinguishable, so the coverage
+ *  check does not run at all. */
 export function main(argv: string[] = process.argv.slice(2)): void {
   const flags = parseFlags(argv);
   if (!flags.stage) fail("--stage is required");
   if (!flags.outputPath) fail("--output-path is required");
-  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath, flags.depth))}\n`);
+  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath, flags.depth, flags.kind))}\n`);
   process.exit(0);
 }
 
