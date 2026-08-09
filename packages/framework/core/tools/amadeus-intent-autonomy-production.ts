@@ -69,6 +69,7 @@ import {
   readStateFile,
   setFieldStrict,
   setOrInsertField,
+  withAuditLock,
   writeStateFile,
 } from "./amadeus-lib.ts";
 
@@ -681,16 +682,37 @@ interface ApplyProductionAutonomyModeInput {
 // that argument describes the scope the caller previewed, and writing the whole
 // file back from it would let a stale or partial copy overwrite whatever else
 // the record has gained since the caller read it.
+//
+// Re-reading is only half of it: the read→edit→write must also be SERIALISED,
+// or a concurrent writer of the same file loses its edit to this whole-file
+// write (#2730). Of the three entrances into this section only `set-autonomy`
+// wrapped its call; the `--autonomy` launch flag and the intent-birth
+// declaration reached it bare. Wrapping HERE covers all three at once.
+//
+// THE BUCKET is the WORKSPACE SENTINEL — `withAuditLock(projectDir)` with no
+// selector — because that is what LOCK == WRITE means for this file: the write
+// below resolves the main record through the active cursor, and the other
+// writers of that same file (amadeus-state.ts's set / checkbox /
+// mirror-boundary handlers with no `--intent`) take exactly that bucket. An
+// owner-intent bucket would serialise against none of them.
+//
+// Nesting is safe in both directions this section is reached from:
+// handleSetAutonomy already holds the sentinel, and withAuditLock is reentrant
+// per key within a process, so its wrap becomes a depth bump. The autonomy
+// TRANSACTION's own owner-intent lock has been released by the time we get
+// here, so the only order ever taken is sentinel-outer → intent-inner.
 function writeAutonomyStateProjection(
   projectDir: string,
   mode: AutonomyMode,
   projection: AutonomyProjection,
 ): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   try {
-    let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
-    updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
-    updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
-    writeStateFile(projectDir, updated);
+    withAuditLock(projectDir, () => {
+      let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
+      updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
+      updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+      writeStateFile(projectDir, updated);
+    });
   } catch (cause) {
     return {
       ok: false,
