@@ -498,14 +498,43 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     seedReviewHeadingOnly(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
     reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
     const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
     expect(d.review_only).toBe(true);
   }, 30000);
 
-  // 9b: with every unit covered, the approve is ALLOWED (the guard passes) and
+  test("9b: a whitespace-only Scope decision is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    writeFileSync(
+      alphaArtifact,
+      readFileSync(alphaArtifact, "utf-8").replace(
+        "- **Scope decision:** none",
+        "- **Scope decision:**   ",
+      ),
+    );
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, 30000);
+
+  // 9c: with every unit covered, the approve is ALLOWED (the guard passes) and
   // the transition commits (kind=done, not error).
-  test("9b: approving once every unit is covered is allowed and commits", () => {
+  test("9c: approving once every unit is covered is allowed and commits", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);

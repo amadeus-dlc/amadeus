@@ -32,6 +32,7 @@ describe("t245 reviewer protocol public seams", () => {
       complete.replace("- **Reviewer:** amadeus-architecture-reviewer-agent\n", ""),
       complete.replace("- **Iteration:** 2", "- **Iteration:** 1"),
       complete.replace("2026-08-10T00:00:00Z", "2026-02-30T00:00:00Z"),
+      `${complete}\n\n${complete}`,
     ]) {
       expect(reviewer.hasDurableReviewProjection(
         partial,

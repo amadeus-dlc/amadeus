@@ -56,7 +56,8 @@ function durableReviewBlockIsValid(
     reviewer !== expectedReviewer ||
     date === null ||
     iteration !== headingIteration ||
-    scopeDecision === null
+    scopeDecision === null ||
+    scopeDecision.trim().length === 0
   ) {
     return false;
   }
