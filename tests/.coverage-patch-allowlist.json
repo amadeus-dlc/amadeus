@@ -3856,15 +3856,202 @@
     "expiry": "remove if modelCheckResultText becomes public or gains a caller that can pass verified-not-detected"
   },
   {
-    "file": "tests/harness/live-e2e/codex.ts",
+    "file": "tests/harness/kiro-ide-driver.ts",
     "selector": {
-      "function": "CodexExecAdapter.cleanup",
-      "fingerprint": "sha256:5f766d97d133060a2497f94f88fca7d69dae45ff523926be70627f3f8ee57fe9",
+      "function": "CdpTarget.send",
+      "fingerprint": "sha256:6df316523ca9b6abf003c9e8f3dc38af9f0080d6a199707d9f69282112b32fde",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "The scaled CDP command deadline requires a live Kiro IDE websocket target; CI covers the timing resolver separately without launching the credential-bearing desktop application.",
+    "expiry": "remove when CdpTarget accepts an injectable websocket/timer port"
+  },
+  {
+    "file": "tests/harness/kiro-ide-driver.ts",
+    "selector": {
+      "function": "CdpTarget.enableContexts",
+      "fingerprint": "sha256:116c019adfc2fa7cb56e3a96dbfbc510558d495b68202efd049de8aed778411e",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Context settling requires a live Kiro IDE CDP session; CI covers the common scaling helper while the desktop journey remains opt-in.",
+    "expiry": "remove when the Kiro CDP context lifecycle has an injectable test port"
+  },
+  {
+    "file": "tests/harness/kiro-ide-driver.ts",
+    "selector": {
+      "function": "waitForCdp",
+      "fingerprint": "sha256:0cd9f027a2545441e3e67120fe44a0c31932e05a91b93ea9f6ceb94e63a2a8aa",
+      "anchorLines": 11,
+      "targetLines": "1-11"
+    },
+    "reason": "The CDP readiness poll is reachable only after launching the opt-in Kiro desktop application; resolver-level scaling is covered in unit tests.",
+    "expiry": "remove when Kiro IDE launch and HTTP readiness are injectable"
+  },
+  {
+    "file": "tests/harness/kiro-ide-driver.ts",
+    "selector": {
+      "function": "waitForChatInput",
+      "fingerprint": "sha256:ed0bd882068e74b71a469dba6e5d7949928499578d16e8cc5430d9ba1537588c",
+      "anchorLines": 31,
+      "targetLines": "1-31"
+    },
+    "reason": "Chat-input polling requires live Kiro webview targets; CI covers the shared timeout and polling calculation without a desktop session.",
+    "expiry": "remove when target discovery and CDP evaluation are injectable"
+  },
+  {
+    "file": "tests/harness/kiro-ide-driver.ts",
+    "selector": {
+      "function": "typeAndSubmit",
+      "fingerprint": "sha256:5df3c3798652a5d6d37925f7ff83e4cab03a941b9be20142022384f645c2f749",
+      "anchorLines": 40,
+      "targetLines": "1-40"
+    },
+    "reason": "The scaled editor settle loops drive a real Kiro IDE input surface and are covered only by the opt-in desktop checkpoint journey.",
+    "expiry": "remove when editor input and chat text reads have injectable ports"
+  },
+  {
+    "file": "tests/harness/kiro-ide-driver.ts",
+    "selector": {
+      "function": "watchMarkers",
+      "fingerprint": "sha256:1afc6e64671149e0d576abefa9cd5b6c5ab69d3cc20e82f00ca4bf55a48859fe",
+      "anchorLines": 8,
+      "targetLines": "1-8"
+    },
+    "reason": "Marker watching is exercised by the opt-in Kiro desktop checkpoint; CI covers its final-budget and scaled-poll resolver directly.",
+    "expiry": "remove when watchMarkers receives an injectable clock and sleeper"
+  },
+  {
+    "file": "tests/harness/live-e2e/claude.ts",
+    "selector": {
+      "function": "ClaudePrintAdapter.cleanup",
+      "fingerprint": "sha256:b1e2a73bbe8eb22f6868f35d41eccb3d8b7c4fc45033cb6810519bcd540b270a",
       "anchorLines": 4,
       "targetLines": "1-4"
     },
+    "reason": "The reap deadline is constructed only while cleaning an active real Claude child; offline lifecycle coverage uses a short-lived fake process.",
+    "expiry": "remove when ClaudePrintAdapter receives an injectable child-process port"
+  },
+  {
+    "file": "tests/harness/live-e2e/codex.ts",
+    "selector": {
+      "function": "CodexExecAdapter.cleanup",
+      "fingerprint": "sha256:9a3f01622b1912a8793f2526352b79ddb5b5ac7492107275173df625e268edd8",
+      "anchorLines": 5,
+      "targetLines": "1-5"
+    },
     "reason": "The reap deadline is constructed only while cleaning an active real Codex child. Offline lifecycle tests exercise cleanup success and failure through fake adapters; CI intentionally does not spawn a credential-bearing live Codex journey.",
     "expiry": "remove when CodexExecAdapter receives an injectable child-process port"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdWait",
+      "fingerprint": "sha256:c04bc10cb302a3e527659f9c84eb1ef21cfcb041c2bc13be9ced4bae26300f2e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The scaled polling sleep follows a real tmux capture miss; CI covers the wait timing resolver while live terminal driving is opt-in.",
+    "expiry": "remove when cmdWait receives injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "chooseNumberedMenuOption",
+      "fingerprint": "sha256:6af42a5a521e6bb398bb565f99feca4ed8f471ab5d0db60b0170b4a545654451",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The inter-key settle delay requires a live numbered terminal menu; CI covers its scaleTestTime primitive separately.",
+    "expiry": "remove when menu key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "handleRevisionRecovery",
+      "fingerprint": "sha256:fc9a6d55744614650b0d21452fa1a233fb19e7f93b8e037243977017b696d01c",
+      "anchorLines": 21,
+      "targetLines": "1-21"
+    },
+    "reason": "Revision recovery deadlines and settle sleeps require transient live TUI screen states that the deterministic CI fixture cannot synthesize.",
+    "expiry": "remove when revision recovery accepts injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "handleRevisionRecovery",
+      "fingerprint": "sha256:2712e79017d3870db2ae8a396d32b884abfe04ddd826b16aa058953216ba8aaa",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "The late free-text revision recovery branch depends on elapsed live-terminal time and remains covered by the opt-in TUI journey.",
+    "expiry": "remove when revision recovery accepts injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:b3c41b9e51634ce245747b3553e5d2cd2939472e16874d4fd8e742d245ff70dd",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This scaled poll occurs only while waiting on a live answer-gate menu; resolver-level timing is covered in CI.",
+    "expiry": "remove when answer-gate capture and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:7cd7737d669d31d871291d2c76a9f4088359d0644ef84d3d2fbab080814a9b81",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "The multi-tab menu settle delay requires a live terminal menu transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:dd347f1f11881a5a53590a70d1594057eb37386036f856b423b782716919d5a7",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "The rejection-menu settle delay requires a live terminal transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:c2a16d6991773be76bdf853de93f9ecf882367dcaf5d223dede4224917189be1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The post-answer settle delay requires a live terminal screen transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/lib/test-time-factor.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:4bb43d005045ca3abe93d212b7a5279cbe5cb5d207057fbf20cd7a81b7b99a6c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Bun LCOV records the erased environment type alias as a zero-hit line even though it has no runtime branch or statement.",
+    "expiry": "remove when Bun no longer emits DA records for erased TypeScript declarations"
+  },
+  {
+    "file": "tests/lib/test-time-factor-guard.ts",
+    "selector": {
+      "function": "scanTestTimingSinks",
+      "fingerprint": "sha256:32d4bca32a36db1f1cf6e117b148c5e88250312f015090cbd3236ec8048b0f1f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Bun LCOV records the erased return-object type members as zero-hit lines even while the scanner function executes in the census test.",
+    "expiry": "remove when Bun no longer emits DA records for erased TypeScript return types"
   },
   {
     "file": "tests/harness/live-e2e/ledger.ts",

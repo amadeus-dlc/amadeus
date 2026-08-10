@@ -39,6 +39,14 @@ describe("TEST_TIME_FACTOR", () => {
   test("rejects a non-finite or unsafe scaled result", () => {
     expect(() => scaleTestTime(Number.MAX_SAFE_INTEGER, 2)).toThrow("safe integer");
     expect(() => scaleTestTime(1, Number.MAX_VALUE)).toThrow("safe integer");
+    expect(() => scaleTestTime(1, 0.5)).toThrow("test time factor");
+  });
+
+  test("rejects invalid final timeout inputs", () => {
+    expect(() => resolveFinalTestTimeoutMs(0, {})).toThrow("defaultSeconds");
+    expect(() => resolveFinalTestTimeoutMs(600, { AMADEUS_TEST_TIMEOUT: "-1" })).toThrow(
+      "AMADEUS_TEST_TIMEOUT",
+    );
   });
 
   test("an AMADEUS_TEST_TIMEOUT final override is never multiplied again", () => {

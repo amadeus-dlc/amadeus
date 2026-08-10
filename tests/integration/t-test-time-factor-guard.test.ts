@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   evaluateTimingSinks,
   scanTimingSource,
   validateTimingAllowlist,
   type TimingAllowlistEntry,
 } from "../lib/test-time-factor-guard.ts";
+import { runTestTimeFactorGuard } from "../test-time-factor-guard.ts";
 
 describe("test timing sink guard", () => {
   test("the failing fixture is detected while helper-routed timing is accepted", () => {
@@ -115,8 +119,9 @@ describe("test timing sink guard", () => {
       { path, sink: "sleep", count: 1, reason: "" },
       { path, sink: "sleep", count: 1, reason: "duplicate" },
       { path: "tests/unit/missing.test.ts", sink: "timer", count: 1, reason: "missing" },
+      { path, sink: "deadline", count: 0, reason: "invalid count" },
     ];
-    expect(validateTimingAllowlist(malformed, new Set([path]))).toHaveLength(3);
+    expect(validateTimingAllowlist(malformed, new Set([path]))).toHaveLength(4);
 
     const findings = scanTimingSource(path, "await Bun.sleep(500); await Bun.sleep(600);");
     expect(
@@ -124,5 +129,22 @@ describe("test timing sink guard", () => {
         { path, sink: "sleep", count: 1, reason: "FR-7 intentional fixture" },
       ]),
     ).toEqual({ ok: false, errors: [expect.stringContaining("count")] });
+  });
+
+  test("the CLI reports classified violations and malformed input", () => {
+    const root = mkdtempSync(join(tmpdir(), "test-time-factor-guard-"));
+    const testsDir = join(root, "tests");
+    const unitDir = join(testsDir, "unit");
+    try {
+      mkdirSync(unitDir, { recursive: true });
+      writeFileSync(join(unitDir, "raw.test.ts"), `await Bun.${"sleep"}(500);\n`);
+      writeFileSync(join(testsDir, ".test-time-factor-allowlist.json"), "[]\n");
+      expect(runTestTimeFactorGuard(root)).toBe(1);
+
+      writeFileSync(join(testsDir, ".test-time-factor-allowlist.json"), "not-json\n");
+      expect(runTestTimeFactorGuard(root)).toBe(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
