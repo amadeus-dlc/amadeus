@@ -7,7 +7,6 @@ import {
   subtractIntervals,
   unionIntervals,
   type AttributionPopulationInput,
-  type PopulationAccountingInvariantError,
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-intervals.ts";
 import {
   createAttributionWindow,
@@ -17,6 +16,7 @@ import {
   createLifecycleIdentity,
   createSecondInterval,
   parseTargetStage,
+  type AccountingInvariantError,
   type AttributionCategory,
   type AttributionResult,
   type AttributionWindow,
@@ -25,6 +25,11 @@ import {
   type SecondInterval,
   type TargetStage,
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-domain.ts";
+
+type PopulationAccountingError = Extract<
+  AccountingInvariantError,
+  { readonly code: "invalid-population-accounting" }
+>;
 
 function unwrap<T, E>(result: AttributionResult<T, E>): T {
   if (!result.ok) throw new TypeError("expected successful construction");
@@ -339,7 +344,7 @@ describe("population interval accounting", () => {
     const mismatchedWindow = window("window-mismatch", 0, 20, 20);
     const invalidInputs: Array<[
       AttributionPopulationInput,
-      PopulationAccountingInvariantError["invariant"],
+      PopulationAccountingError["invariant"],
     ]> = [
       [{ ...valid, windows: [valid.windows[0]!, valid.windows[0]!] }, "duplicate-window-id"],
       [{ ...valid, intervals: [valid.intervals[0]!, valid.intervals[0]!] }, "duplicate-candidate-id"],

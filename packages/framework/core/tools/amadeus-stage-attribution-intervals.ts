@@ -11,7 +11,6 @@ import {
   type AttributionWindow,
   type AttributionWindowId,
   type CandidateAccountingDisposition,
-  type CandidateId,
   type CandidateWindowContribution,
   type ExplicitLifecycleInterval,
   type IntentIdentity,
@@ -62,40 +61,15 @@ export type AttributionPopulationInput = {
   readonly idleIndex: IdleIndex;
 };
 
-export type PopulationAccountingInvariantError = {
-  readonly type: "accounting-invariant";
-  readonly code: "invalid-population-accounting";
-  readonly subject: {
-    readonly type: "population";
-    readonly candidateId?: CandidateId;
-    readonly windowId?: AttributionWindowId;
-    readonly intent?: IntentIdentity;
-  };
-  readonly invariant:
-    | "unsafe-interval-seconds"
-    | "invalid-interval"
-    | "duplicate-window-id"
-    | "duplicate-candidate-id"
-    | "invalid-window-net-seconds"
-    | "invalid-window-id"
-    | "invalid-candidate-id"
-    | "candidate-category-mismatch"
-    | "invalid-idle-intent"
-    | "window-net-idle-mismatch"
-    | "duplicate-idle-intent"
-    | "non-canonical-idle-index"
-    | "candidate-disposition-bijection"
-    | "window-result-bijection"
-    | "unknown-window-contribution"
-    | "invalid-window-accounting";
-};
-
-export type AttributionPopulationError = AccountingInvariantError | PopulationAccountingInvariantError;
+type PopulationAccountingError = Extract<
+  AccountingInvariantError,
+  { readonly code: "invalid-population-accounting" }
+>;
 
 function populationError(
-  invariant: PopulationAccountingInvariantError["invariant"],
-  subject: Omit<PopulationAccountingInvariantError["subject"], "type"> = {},
-): PopulationAccountingInvariantError {
+  invariant: PopulationAccountingError["invariant"],
+  subject: Omit<PopulationAccountingError["subject"], "type"> = {},
+): PopulationAccountingError {
   return {
     type: "accounting-invariant",
     code: "invalid-population-accounting",
@@ -159,7 +133,7 @@ export function intervalSeconds(
 
 export function accountAttributionPopulation(
   input: AttributionPopulationInput,
-): AttributionResult<AttributionPopulationAccounting, AttributionPopulationError> {
+): AttributionResult<AttributionPopulationAccounting, AccountingInvariantError> {
   const preflight = validateInput(input);
   if (!preflight.ok) return preflight;
 
@@ -248,7 +222,7 @@ function recordCategoryFragments(
 
 function validateInput(
   input: AttributionPopulationInput,
-): AttributionResult<true, PopulationAccountingInvariantError> {
+): AttributionResult<true, PopulationAccountingError> {
   const windows = validateWindows(input.windows);
   if (!windows.ok) return windows;
   const candidates = validateCandidates(input.intervals);
@@ -260,7 +234,7 @@ function validateInput(
 
 function validateWindows(
   windows: readonly AttributionWindow[],
-): AttributionResult<true, PopulationAccountingInvariantError> {
+): AttributionResult<true, PopulationAccountingError> {
   const windowIds = new Set<string>();
   for (const window of windows) {
     if (!isValidIdentity(window.windowId)) return { ok: false, error: populationError("invalid-window-id", { windowId: window.windowId }) };
@@ -277,7 +251,7 @@ function validateWindows(
 
 function validateCandidates(
   candidates: readonly ExplicitLifecycleInterval[],
-): AttributionResult<true, PopulationAccountingInvariantError> {
+): AttributionResult<true, PopulationAccountingError> {
   const candidateIds = new Set<string>();
   for (const candidate of candidates) {
     if (!isValidIdentity(candidate.candidateId)) {
@@ -299,7 +273,7 @@ function validateCandidates(
 function validateWindowNetSeconds(
   windows: readonly AttributionWindow[],
   idleIndex: IdleIndex,
-): AttributionResult<true, PopulationAccountingInvariantError> {
+): AttributionResult<true, PopulationAccountingError> {
   const idleByIntent = new Map(idleIndex.byIntent.map(({ intent, intervals }) => [intent, intervals]));
   for (const window of windows) {
     let expectedNet: number;
@@ -315,7 +289,7 @@ function validateWindowNetSeconds(
   return { ok: true, value: true };
 }
 
-function validateIdleIndex(idleIndex: IdleIndex): AttributionResult<true, PopulationAccountingInvariantError> {
+function validateIdleIndex(idleIndex: IdleIndex): AttributionResult<true, PopulationAccountingError> {
   const intents = new Set<string>();
   let previousIntent: string | null = null;
   for (const entry of idleIndex.byIntent) {
@@ -334,7 +308,7 @@ function validateIdleIndex(idleIndex: IdleIndex): AttributionResult<true, Popula
 
 function validateIdleIntervals(
   entry: IntentIdleIntervals,
-): AttributionResult<true, PopulationAccountingInvariantError> {
+): AttributionResult<true, PopulationAccountingError> {
   let previous: SecondInterval | null = null;
   for (const interval of entry.intervals) {
     const intervalError = validateInterval(interval, { intent: entry.intent });
@@ -350,7 +324,7 @@ function validateIdleIntervals(
 function createWindowAttributions(
   windows: readonly AttributionWindow[],
   fragmentsByWindow: CandidateAccumulation["fragmentsByWindow"],
-): AttributionResult<WindowAttribution[], PopulationAccountingInvariantError> {
+): AttributionResult<WindowAttribution[], PopulationAccountingError> {
   const attributedWindows: WindowAttribution[] = [];
   for (const window of windows) {
     const attributed = createWindowAttribution(window, fragmentsByWindow.get(window.windowId));
@@ -363,7 +337,7 @@ function createWindowAttributions(
 function createWindowAttribution(
   window: AttributionWindow,
   fragmentsByCategory: ReadonlyMap<AttributionCategory, readonly SecondInterval[]> | undefined,
-): AttributionResult<WindowAttribution, PopulationAccountingInvariantError> {
+): AttributionResult<WindowAttribution, PopulationAccountingError> {
   try {
     const categories = ATTRIBUTION_CATEGORIES.map((category) => {
       const fragments = unionIntervals(fragmentsByCategory?.get(category) ?? []);
@@ -413,7 +387,7 @@ function createWindowAttribution(
 function validateResult(
   input: AttributionPopulationInput,
   result: AttributionPopulationAccounting,
-): AttributionResult<never, PopulationAccountingInvariantError> | null {
+): AttributionResult<never, PopulationAccountingError> | null {
   const inputCandidates = new Set(input.intervals.map(({ candidateId }) => candidateId));
   const resultCandidates = new Set(result.dispositions.map(({ candidateId }) => candidateId));
   if (inputCandidates.size !== result.dispositions.length || !setsEqual(inputCandidates, resultCandidates)) {
@@ -444,8 +418,8 @@ function compareWindows(left: AttributionWindow, right: AttributionWindow): numb
 
 function validateInterval(
   interval: SecondInterval,
-  subject: Omit<PopulationAccountingInvariantError["subject"], "type">,
-): PopulationAccountingInvariantError | null {
+  subject: Omit<PopulationAccountingError["subject"], "type">,
+): PopulationAccountingError | null {
   if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start >= interval.end) {
     return populationError("invalid-interval", subject);
   }
