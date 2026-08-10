@@ -6524,5 +6524,60 @@
     },
     "reason": "The catch arm of safeReaddir, a diagnostics-only helper on the copyTreeWithRetry failure path. Its caller reportCopyTreeFailure only calls it when existsSync(src) already returned true, so reaching the arm needs src to disappear or turn unreadable BETWEEN that check and the readdir — the very race the arm exists to survive, and one that cannot be scheduled deterministically. The arm is also downstream of an injected copy failure, so a driver would have to force cpSync to throw first. Everything the helper decides on the reachable path (the entry count that lands in the diagnostic line) is exercised whenever the retry path runs.",
     "expiry": "remove when reportCopyTreeFailure takes an injectable readdir port"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:70ff12b7b7118403282ee8e14db25705a47a533c3df6940eec185b5e1af9ae3b",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Top-level Stop-hook wiring inside import.meta.main: the engine consult and its fail-open null branch. t121 drives the shipped hook process through both outcomes, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii); the seam itself (runEngineNextDirective) is driven in-process by t121.",
+    "expiry": "remove when the Stop hook's main wiring gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:25797785297ae9e6f75bfcc294a3a6e766f03cc93ffaa14b36e5c57cc00c3876",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Top-level Stop-hook wiring inside import.meta.main: binding the directive kind for the branches below. t121 drives the shipped hook process through those branches, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the Stop hook's main wiring gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:a3941988a6ff3a9a3280727bd484d1465b29c3716ebc3ad6a92993aa8a03cfa3",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Top-level Stop-hook wiring inside import.meta.main: the terminal-done stop allow (issue #2762). t121 drives the shipped hook process through both the terminal done (stop allowed) and the non-terminal done (falls through to the cap-bounded block), which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the Stop hook's main wiring gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleNext",
+      "fingerprint": "sha256:30108cf112ccda8414762ccdfe3efaf82ef6ac0277a603f5122d4e001e34131e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The workflow-complete done directive's terminal discriminator (issue #2762) is emitted only inside the spawned orchestrator CLI; t524 asserts it through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the orchestrator CLI's directive sink is injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "handleReport",
+      "fingerprint": "sha256:b163bf0af31ff8ca9acafbec8a72d27cba36f895db011837dc9dd4c231acfe5e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The already-completed re-report done directive's terminal discriminator (issue #2762) is emitted only inside the spawned orchestrator CLI; t524 asserts it through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when the orchestrator CLI's directive sink is injectable in-process"
   }
 ]
