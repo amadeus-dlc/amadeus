@@ -278,9 +278,7 @@ function emitBoltStarted(
     }
     emitAudit(pd, "BOLT_STARTED", fields, flags.intent, flags.space);
   } catch (e) {
-    if (useWorktree) {
-      failJson("start-worktree", flags.slug, "audit-emit-failed", errorMessage(e));
-    }
+    if (useWorktree) failJson("start-worktree", flags.slug, "audit-emit-failed", errorMessage(e));
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 }

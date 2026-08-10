@@ -382,11 +382,8 @@ function normalizeFailureOrBaton(
 }
 
 function normalizedTerminalRecords(state: NormalizationState): ConstructionOutcomeRecord[] {
-  const groups = new Map<string, {
-    eventId: string;
-    sequence: number;
-    terminals: UnitOutcomeEntry[];
-  }>();
+  // biome-ignore format: Keep the erased generic on the evaluated initializer so Bun reports the added line as executed.
+  const groups = new Map<string, { eventId: string; sequence: number; terminals: UnitOutcomeEntry[] }>();
   for (const value of state.currentTerminals.values()) {
     const identity = `${value.eventId}:${value.sequence}`;
     const group = groups.get(identity) ?? {

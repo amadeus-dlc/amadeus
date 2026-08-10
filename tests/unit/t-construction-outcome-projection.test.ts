@@ -304,4 +304,105 @@ describe("projectConstructionOutcomes", () => {
       },
     });
   });
+
+  test("fails closed on malformed canonical audit correlation", () => {
+    const missingSoloKeys = auditRow("solo-missing", 1, "BOLT_STARTED", {
+      Stage: "code-generation",
+    });
+    const malformedPool = auditRow("pool-malformed", 2, "UNIT_POOL_EVENT_SET_COMMITTED", {
+      "Event Set": "{",
+    });
+    const nonObjectPool = auditRow("pool-non-object", 3, "UNIT_POOL_EVENT_SET_COMMITTED", {
+      "Event Set": "[]",
+    });
+
+    expect(normalizeConstructionOutcomeAudit([
+      "{not-json",
+      auditRow("ignored", 0, "UNKNOWN_EVENT", {}),
+      missingSoloKeys,
+      malformedPool,
+      nonObjectPool,
+    ].join("\n"))).toEqual({
+      ok: false,
+      diagnostics: [
+        {
+          eventId: "solo-missing",
+          sequence: 1,
+          code: "missing-join-key",
+          missing: ["unit", "attempt", "batch"],
+        },
+        {
+          eventId: "pool-malformed",
+          sequence: 2,
+          code: "missing-join-key",
+          missing: ["unit", "attempt", "batch"],
+        },
+        {
+          eventId: "pool-non-object",
+          sequence: 3,
+          code: "missing-join-key",
+          missing: ["unit", "attempt", "batch"],
+        },
+      ],
+    });
+  });
+
+  test("canonical ordering falls back to identity for tied clone sequences", () => {
+    const tiedRow = (eventId: string, idempotencyKey?: string) => {
+      const row = JSON.parse(auditRow(eventId, 1, "BOLT_STARTED", {})) as Record<string, unknown>;
+      row.timestamp = "2026-08-10T00:00:00Z";
+      if (idempotencyKey === undefined) delete row.idempotencyKey;
+      else row.idempotencyKey = idempotencyKey;
+      return JSON.stringify(row);
+    };
+
+    expect(normalizeConstructionOutcomeAudit([
+      tiedRow("event-z"),
+      tiedRow("event-a", "identity-a"),
+    ].join("\n"))).toEqual({ ok: true, records: [] });
+  });
+
+  test("a requeue removes the previous terminal outcome from normalized state", () => {
+    const poolRow = (eventId: string, sequence: number, events: unknown[]) => auditRow(
+      eventId,
+      sequence,
+      "UNIT_POOL_EVENT_SET_COMMITTED",
+      {
+        "Event Set": JSON.stringify({ batchId: "1", events }),
+      },
+    );
+    const audit = [
+      poolRow("settled", 1, [{
+        type: "unit-settled",
+        terminal: { unitId: "alpha", attemptId: "attempt-a", outcome: "failed" },
+      }]),
+      poolRow("requeued", 2, [{
+        type: "unit-requeued",
+        entry: { unitId: "alpha" },
+      }]),
+    ].join("\n");
+
+    expect(normalizeConstructionOutcomeAudit(audit)).toEqual({ ok: true, records: [] });
+  });
+
+  test("orders custom batch identities by DAG membership before unknown Units", () => {
+    const beta = { ...key("beta", "attempt-b"), batch: "custom-beta", outcome: "failed" as const, sequence: 1 };
+    const alpha = { ...key("alpha", "attempt-a"), batch: "custom-alpha", outcome: "failed" as const, sequence: 1 };
+    const records: ConstructionOutcomeRecord[] = [
+      { event: "UNIT_POOL_EVENT_SET_COMMITTED", eventId: "pool", sequence: 1, terminals: [alpha, beta] },
+      { event: "BOLT_FAILED", eventId: "failed-alpha", sequence: 2, target: alpha, reason: "red" },
+      { event: "BOLT_FAILED", eventId: "failed-beta", sequence: 3, target: beta, reason: "red" },
+      { event: "SWARM_BATON_RETURNED", eventId: "baton-alpha", sequence: 4, target: alpha },
+      { event: "SWARM_BATON_RETURNED", eventId: "baton-beta", sequence: 5, target: beta },
+    ];
+
+    const projected = projectConstructionOutcomes(records, {
+      intent: "intent-a",
+      stage: "code-generation",
+      batches: [["beta"]],
+    });
+    expect(projected.ok).toBe(true);
+    if (!projected.ok) return;
+    expect(projected.projection.unresolvedFailures.map((entry) => entry.unit)).toEqual(["beta", "alpha"]);
+  });
 });

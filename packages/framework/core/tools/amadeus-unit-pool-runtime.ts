@@ -16,6 +16,7 @@ import {
   UNIT_POOL_OUTCOMES,
   type UnitPlanEntry,
   type UnitPoolCommand,
+  type UnitPoolMutationCommand,
   type UnitPoolEvent,
   type UnitPoolEventSet,
   type UnitPoolOutcome,
@@ -243,7 +244,7 @@ function replay(sets: readonly UnitPoolEventSet[], batchId: string, idempotencyK
 export function createUnitPoolCoordinator(repository: UnitPoolRepository): UnitPoolCoordinator {
   function mutate(
     request: BaseRequest,
-    makeCommand: (projection: UnitPoolProjection, mint: (namespace: string, extra?: unknown) => string) => UnitPoolCommand | { readonly error: string },
+    makeCommand: (projection: UnitPoolProjection, mint: (namespace: string, extra?: unknown) => string) => UnitPoolMutationCommand | { readonly error: string },
     fillReleasedSlots = false,
   ): UnitPoolMutationResult {
     const payloadFingerprint = fingerprintUnitPoolRequest(request);

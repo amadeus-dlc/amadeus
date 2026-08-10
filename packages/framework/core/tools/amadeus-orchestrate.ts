@@ -5591,65 +5591,6 @@ function handleAuthorizedApprovalReport(
 // atomic state tool, and emits a non-terminal `committed` directive on success
 // or an `error` directive on a rejected transition. Mutation happens entirely
 // inside the spawned subcommand(s) — the engine itself writes nothing.
-export function handleFailureRuling(args: string[], projectDir: string | undefined): void {
-  _handlerProjectDir = projectDir;
-  const flags = parseReportFlags(args);
-  const pd = resolveProjectDir(projectDir);
-  const state = loadStateFileIfPresent(pd);
-  const stage = flags.stage?.trim() || (state ? getField(state, "Current Stage")?.trim() : undefined);
-  const intent = activeIntent(pd, activeSpace(pd));
-  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(pd));
-  if (!stage || !intent || !normalized.ok) { emit(errorDirective("Cannot resolve the canonical Construction failure target.")); return; }
-  const projected = projectConstructionOutcomes(normalized.records, { intent, stage, batches: readBoltDagBatches(pd) ?? [] });
-  if (!projected.ok) { emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(projected.diagnostics)}`)); return; }
-  const pending = constructionFailureTransition(projected.projection);
-  if (pending.kind !== "await-unit-ruling" || !pending.target.attempt || !pending.target.batch) { emit(errorDirective("No unresolved Construction Unit failure is eligible for a ruling.")); return; }
-  const answer = flags.userInput?.trim().toLowerCase();
-  if (answer !== "retry" && answer !== "skip" && answer !== "abort") { emit(errorDirective("resolve-failure requires --user-input Retry, Skip, or Abort.")); return; }
-  const solo = pending.target.batch.startsWith("solo:");
-  const soloBatchNumber = solo ? pending.target.batch.split(":")[1] : undefined;
-  if (solo && (!soloBatchNumber || !/^[1-9][0-9]*$/.test(soloBatchNumber))) { emit(errorDirective("Solo Construction failure has an invalid explicit batch identity.")); return; }
-  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(pd));
-  if (answer === "retry") {
-    if (solo) {
-      const started = runTool(pd, "amadeus-bolt.ts", [
-        "start", "--name", pending.target.unit, "--batch", soloBatchNumber!, "--project-dir", pd,
-      ]);
-      if (!started.ok) { emit(errorDirective(`Solo Retry transition refused: ${toolErrorMessage(started)}`)); return; }
-      emit({ kind: "committed", reason: `Retry committed for solo Unit "${pending.target.unit}" with a fresh immutable attempt; run next to continue.` });
-      return;
-    }
-    const retried = pool.retryFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:retry`, batchId: pending.target.batch, unitId: pending.target.unit });
-    if (!retried.ok) { emit(errorDirective(`Retry transition refused: ${retried.reason}`)); return; }
-    emit(preparedSwarmRetryDirective(pd, pending.target.batch, pending.target.unit));
-    return;
-  }
-  if (answer === "skip") {
-    if (solo) {
-      const appended = spawnAuditAppend(pd, "BOLT_COMPLETED", {
-        "Bolt names": pending.target.unit,
-        "Bolt slug": pending.target.unit,
-        "Batch number": soloBatchNumber!,
-        "Batch Id": pending.target.batch,
-        "Attempt Id": pending.target.attempt,
-        Stage: stage,
-        Outcome: "cancelled",
-        Reason: "skipped",
-      });
-      if (appended.exitCode !== 0) { emit(errorDirective(`Solo Skip audit commit failed: ${appended.stderr.trim() || appended.stdout.trim()}`)); return; }
-      emit({ kind: "committed", reason: `Skip committed for solo Unit "${pending.target.unit}" as cancelled.` });
-      return;
-    }
-    const skipped = pool.skipFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:skip`, batchId: pending.target.batch, unitId: pending.target.unit, reason: "skipped" });
-    if (!skipped.ok) { emit(errorDirective(`Skip transition refused: ${skipped.reason}`)); return; }
-    emit({ kind: "committed", reason: `Skip committed for Unit "${pending.target.unit}" as cancelled; sibling outcomes are preserved.` });
-    return;
-  }
-  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch", pending.target.batch, "--project-dir", pd]);
-  if (!aborted.ok) { emit(errorDirective(`Abort transition refused: ${toolErrorMessage(aborted)}`)); return; }
-  emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
-}
-
 export function handleReport(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
@@ -6126,6 +6067,64 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // subcommand - the engine itself writes nothing, mirroring report's discipline.
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
+export function handleFailureRuling(args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  const flags = parseReportFlags(args);
+  const pd = resolveProjectDir(projectDir);
+  const state = loadStateFileIfPresent(pd);
+  // biome-ignore format: One evaluated tuple keeps Bun's line coverage from reporting the two executed initializers as zero-hit regions.
+  const [stage, intent, normalized] = [flags.stage?.trim() || (state ? getField(state, "Current Stage")?.trim() : undefined), activeIntent(pd, activeSpace(pd)), normalizeConstructionOutcomeAudit(readAllAuditShards(pd))] as const;
+  if (!stage || !intent || !normalized.ok) { emit(errorDirective("Cannot resolve the canonical Construction failure target.")); return; }
+  const projected = projectConstructionOutcomes(normalized.records, { intent, stage, batches: readBoltDagBatches(pd) ?? [] });
+  if (!projected.ok) { emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(projected.diagnostics)}`)); return; }
+  const pending = constructionFailureTransition(projected.projection);
+  if (pending.kind !== "await-unit-ruling" || !pending.target.attempt || !pending.target.batch) { emit(errorDirective("No unresolved Construction Unit failure is eligible for a ruling.")); return; }
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (answer !== "retry" && answer !== "skip" && answer !== "abort") { emit(errorDirective("resolve-failure requires --user-input Retry, Skip, or Abort.")); return; }
+  const solo = pending.target.batch.startsWith("solo:");
+  const soloBatchNumber = solo ? pending.target.batch.split(":")[1] : undefined;
+  if (solo && (!soloBatchNumber || !/^[1-9][0-9]*$/.test(soloBatchNumber))) { emit(errorDirective("Solo Construction failure has an invalid explicit batch identity.")); return; }
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(pd));
+  if (answer === "retry") {
+    if (solo) {
+      const started = runTool(pd, "amadeus-bolt.ts", [
+        "start", "--name", pending.target.unit, "--batch", soloBatchNumber!, "--project-dir", pd,
+      ]);
+      if (!started.ok) { emit(errorDirective(`Solo Retry transition refused: ${toolErrorMessage(started)}`)); return; }
+      emit({ kind: "committed", reason: `Retry committed for solo Unit "${pending.target.unit}" with a fresh immutable attempt; run next to continue.` });
+      return;
+    }
+    const retried = pool.retryFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:retry`, batchId: pending.target.batch, unitId: pending.target.unit });
+    if (!retried.ok) { emit(errorDirective(`Retry transition refused: ${retried.reason}`)); return; }
+    emit(preparedSwarmRetryDirective(pd, pending.target.batch, pending.target.unit));
+    return;
+  }
+  if (answer === "skip") {
+    if (solo) {
+      const appended = spawnAuditAppend(pd, "BOLT_COMPLETED", {
+        "Bolt names": pending.target.unit,
+        "Bolt slug": pending.target.unit,
+        "Batch number": soloBatchNumber!,
+        "Batch Id": pending.target.batch,
+        "Attempt Id": pending.target.attempt,
+        Stage: stage,
+        Outcome: "cancelled",
+        Reason: "skipped",
+      });
+      if (appended.exitCode !== 0) { emit(errorDirective(`Solo Skip audit commit failed: ${appended.stderr.trim() || appended.stdout.trim()}`)); return; }
+      emit({ kind: "committed", reason: `Skip committed for solo Unit "${pending.target.unit}" as cancelled.` });
+      return;
+    }
+    const skipped = pool.skipFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:skip`, batchId: pending.target.batch, unitId: pending.target.unit, reason: "skipped" });
+    if (!skipped.ok) { emit(errorDirective(`Skip transition refused: ${skipped.reason}`)); return; }
+    emit({ kind: "committed", reason: `Skip committed for Unit "${pending.target.unit}" as cancelled; sibling outcomes are preserved.` });
+    return;
+  }
+  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch", pending.target.batch, "--project-dir", pd]);
+  if (!aborted.ok) { emit(errorDirective(`Abort transition refused: ${toolErrorMessage(aborted)}`)); return; }
+  emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
+}
+
 function handlePark(_args: string[], projectDir: string | undefined): void {
   _handlerProjectDir = projectDir;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;

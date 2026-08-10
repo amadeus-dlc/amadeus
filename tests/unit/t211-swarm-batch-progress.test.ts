@@ -41,7 +41,7 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
-import { handleNext, handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleNext, handleReport, runEngineMain } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { handleFailureRuling } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { emitAuditEventGuarded } from "../../packages/framework/core/otel/audit-emit.ts";
 import { activeIntent, activeSpace, readAllAuditShards } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -219,7 +219,7 @@ function runReport(proj: string, args: string[]): Directive {
   return JSON.parse(raw) as Directive;
 }
 
-function runFailureRuling(proj: string, answer: "Retry" | "Skip" | "Abort"): Directive {
+function runFailureRuling(proj: string, answer: string): Directive {
   let raw = "";
   const log = spyOn(console, "log").mockImplementation((value) => {
     raw = String(value);
@@ -232,7 +232,7 @@ function runFailureRuling(proj: string, answer: "Retry" | "Skip" | "Abort"): Dir
   return JSON.parse(raw) as Directive;
 }
 
-function seedFailedSwarmUnit(): { proj: string; attempt: string } {
+function seedFailedSwarmUnit(withClosure = true): { proj: string; attempt: string } {
   const proj = seedSwarmProject([["alpha"]]);
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
   expect(pool.initialEnqueue({
@@ -255,21 +255,23 @@ function seedFailedSwarmUnit(): { proj: string; attempt: string } {
     attemptId: attempt,
     outcome: "failed",
   }).ok).toBe(true);
-  emitAuditEventGuarded("BOLT_FAILED", {
-    "Failed Bolt": "alpha",
-    "Bolt slug": "alpha",
-    "Error summary": "red",
-    Stage: "code-generation",
-    "Attempt Id": attempt,
-    "Batch Id": "1",
-  }, proj);
-  emitAuditEventGuarded("SWARM_BATON_RETURNED", {
-    "Batch number": "1",
-    "Unit name": "alpha",
-    Reason: "error",
-    Stage: "code-generation",
-    "Attempt Id": attempt,
-  }, proj);
+  if (withClosure) {
+    emitAuditEventGuarded("BOLT_FAILED", {
+      "Failed Bolt": "alpha",
+      "Bolt slug": "alpha",
+      "Error summary": "red",
+      Stage: "code-generation",
+      "Attempt Id": attempt,
+      "Batch Id": "1",
+    }, proj);
+    emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+      "Batch number": "1",
+      "Unit name": "alpha",
+      Reason: "error",
+      Stage: "code-generation",
+      "Attempt Id": attempt,
+    }, proj);
+  }
   return { proj, attempt };
 }
 
@@ -317,6 +319,119 @@ function projectedUnits(proj: string) {
 }
 
 describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
+  test("next asks for a ruling when the failed Unit has canonical closure evidence", () => {
+    const { proj } = seedFailedSwarmUnit();
+
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("next fails closed while a terminal failure is missing lifecycle closure evidence", () => {
+    const { proj } = seedFailedSwarmUnit(false);
+
+    expect(runNext(proj)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("join is incomplete"),
+    });
+  });
+
+  test("next fails closed on malformed pool audit evidence", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    emitAuditEventGuarded("UNIT_POOL_EVENT_SET_COMMITTED", {
+      Stage: "code-generation",
+      "Batch Id": "1",
+      "Event Set Id": "malformed-event-set",
+      "Event Set": "{",
+    }, proj);
+
+    expect(runNext(proj)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("audit is incomplete"),
+    });
+  });
+
+  test("next and failure ruling fail closed on a terminal missing its attempt identity", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    emitAuditEventGuarded("UNIT_POOL_EVENT_SET_COMMITTED", {
+      Stage: "code-generation",
+      "Batch Id": "1",
+      "Event Set Id": "missing-attempt-event-set",
+      "Event Set": JSON.stringify({
+        batchId: "1",
+        events: [{
+          type: "unit-settled",
+          terminal: { unitId: "alpha", attemptId: null, outcome: "failed" },
+        }],
+      }),
+    }, proj);
+
+    expect(runNext(proj)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("join failed closed"),
+    });
+    expect(runFailureRuling(proj, "Retry")).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("join failed closed"),
+    });
+  });
+
+  test("failure ruling rejects an absent failure", () => {
+    expect(runFailureRuling(seedSwarmProject([["alpha"]]), "Retry")).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("No unresolved Construction Unit failure"),
+    });
+  });
+
+  test("failure ruling rejects an invalid answer", () => {
+    const { proj } = seedFailedSwarmUnit();
+    expect(runFailureRuling(proj, "Later")).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("the CLI dispatcher routes resolve-failure to the canonical handler", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    const originalArgv = process.argv;
+    let raw = "";
+    const log = spyOn(console, "log").mockImplementation((value) => {
+      raw = String(value);
+    });
+    process.argv = [originalArgv[0]!, originalArgv[1]!, "resolve-failure", "--project-dir", proj, "--stage", "code-generation", "--user-input", "Retry"];
+    try {
+      runEngineMain();
+    } finally {
+      process.argv = originalArgv;
+      log.mockRestore();
+    }
+
+    expect(JSON.parse(raw)).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("No unresolved Construction Unit failure"),
+    });
+  });
+
+  test("the CLI dispatcher lists resolve-failure when rejecting an unknown subcommand", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    const originalArgv = process.argv;
+    const originalExit = process.exit;
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.argv = [originalArgv[0]!, originalArgv[1]!, "unknown", "--project-dir", proj];
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => runEngineMain()).toThrow("exit 1");
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("resolve-failure"));
+    } finally {
+      process.argv = originalArgv;
+      process.exit = originalExit;
+      error.mockRestore();
+    }
+  });
+
   test("Retry requeues without acquiring and returns a prepared retry directive", () => {
     const { proj, attempt } = seedFailedSwarmUnit();
 
