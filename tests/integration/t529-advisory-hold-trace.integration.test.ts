@@ -60,7 +60,7 @@ describe("t529 the advisory hold leaves a trace across its transitions", () => {
     const pending = storeOf(projectDir).pending;
     expect(pending).toHaveLength(1);
     expect(pending[0]?.identity.checkpoint).toBe("requirements-analysis");
-    expect(pending[0]?.identity.code).toBe("authoring-hold");
+    expect(String(pending[0]?.identity.code)).toBe("authoring-hold");
     expect(typeof pending[0]?.createdAt).toBe("string");
     expect(pending[0]?.closedAt).toBeUndefined();
   });
