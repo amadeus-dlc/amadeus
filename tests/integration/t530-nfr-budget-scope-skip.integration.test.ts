@@ -124,6 +124,20 @@ describe("t530 an intentionally skipped nfr-requirements is not a missing id con
     expect(evaluateNfrBudget(path).reason).toBe("missing-nfr-ids");
   });
 
+  test("a record with no state file at all keeps the finding", () => {
+    // An audit shard alone makes a record root (2 of the corpus's records carry
+    // no state file), so the scope is simply unreadable — the finding stands.
+    useGrid(SKIP_SCOPE);
+    const root = join(tmp, "260810-stateless");
+    mkdirSync(join(root, "audit"), { recursive: true });
+    writeFileSync(
+      join(root, "audit", "clone.jsonl"),
+      `${JSON.stringify({ schemaVersion: 1, seq: 1, timestamp: POST_CUTOFF, event: "WORKFLOW_STARTED", fields: {} })}\n`,
+    );
+    const path = writeArtifact(root, "nfr-design", "performance-design", NO_IDS);
+    expect(evaluateNfrBudget(path).reason).toBe("missing-nfr-ids");
+  });
+
   test("a state file with no Scope keeps the finding", () => {
     useGrid(SKIP_SCOPE);
     const root = record(undefined, POST_CUTOFF);
