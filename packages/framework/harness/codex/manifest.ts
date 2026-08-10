@@ -39,7 +39,11 @@ const manifest: HarnessManifest = {
     { src: "sensors", dst: "sensors" },
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
-    { src: "hooks", dst: "hooks" },
+    // amadeus-mint-presence.ts is never invoked here — the "mint" adapter
+    // target (amadeus-codex-adapter.ts "case mint") mints HUMAN_TURN inline
+    // through the canonical mintHumanPresence seam, never as a subprocess
+    // call to the core hook. Shipping it would be dead code (#860).
+    { src: "hooks", dst: "hooks", exclude: ["amadeus-mint-presence.ts"] },
   ],
 
   // Codex-only runtime surfaces. The hooks ownership helper belongs to this
