@@ -12,8 +12,8 @@ self-feature Intentとしてはじめてみてください。
 - **Harness**: codex
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
-- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-attribution-domain-contracts
-- **Bolt Refs**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-candidate-evidence-inventory
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 - **Merge-Held**: false
@@ -112,6 +112,7 @@ Per unit: [TBD]
 - **Construction Autonomy Mode**: gated
 - **Last Updated**: 2026-08-10T01:03:40Z
 
+- **Swarm Gated Batch Approvals**: 1
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
 - **Next Action**: Execute Code Generation
