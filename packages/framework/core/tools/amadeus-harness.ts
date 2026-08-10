@@ -60,7 +60,9 @@ const KNOWN_RULES_SUBDIR: Readonly<Record<string, string>> = {
   ".claude": "rules",
   ".kiro": "steering",
   ".codex": "amadeus-rules",
+  ".cursor": "amadeus-rules",
   ".kimi-code": "rules",
+  ".opencode": "amadeus-rules",
   ".pi": "rules",
 };
 

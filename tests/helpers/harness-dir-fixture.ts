@@ -12,6 +12,15 @@ import type { HarnessManifest } from "../../scripts/manifest-types.ts";
 
 const HARNESS_ROOT = join(import.meta.dir, "..", "..", "packages", "framework", "harness");
 
+export type HarnessProjectionFacts = Readonly<
+  Pick<HarnessManifest, "name" | "harnessDir" | "rulesRename">
+>;
+
+function harnessManifestOf(name: string): HarnessManifest {
+  const mod = require(join(HARNESS_ROOT, name, "manifest.ts")) as { default: HarnessManifest };
+  return mod.default;
+}
+
 export function harnessNames(): readonly string[] {
   return readdirSync(HARNESS_ROOT)
     .sort()
@@ -19,8 +28,18 @@ export function harnessNames(): readonly string[] {
 }
 
 export function harnessDirOf(name: string): string {
-  const mod = require(join(HARNESS_ROOT, name, "manifest.ts")) as { default: HarnessManifest };
-  return mod.default.harnessDir;
+  return harnessManifestOf(name).harnessDir;
+}
+
+export function harnessProjectionFacts(): readonly HarnessProjectionFacts[] {
+  return harnessNames().map((name) => {
+    const manifest = harnessManifestOf(name);
+    return {
+      name: manifest.name,
+      harnessDir: manifest.harnessDir,
+      rulesRename: manifest.rulesRename,
+    };
+  });
 }
 
 // Every DISTINCT harness dir across all packaged harnesses. Fewer entries than
