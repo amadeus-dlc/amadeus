@@ -390,6 +390,28 @@ describe("registration commit on the real filesystem (FR-010)", () => {
     expect(() => ports.publish("{}")).toThrow();
     expect(existsSync(missingDir)).toBe(false);
   });
+
+  test("the real publish rethrows the original write failure, not a cleanup error (#2784)", () => {
+    // The staging parent is an existing FILE, so the write itself throws
+    // ENOTDIR — and the catch arm's own `rmSync(staging, { force: true })`
+    // throws a second, unrelated error (EFAULT on macOS/bun) because `force`
+    // only suppresses ENOENT. Before the fix, that cleanup error replaces the
+    // original write failure; after the fix, the write failure propagates.
+    const { root } = workspace();
+    const blocker = join(root, "not-a-dir");
+    writeFileSync(blocker, "occupied", "utf8");
+    const ports = createRegistrationPorts({ mapPath: join(blocker, "model-map.json") });
+
+    let caught: unknown;
+    try {
+      ports.publish("{}");
+    } catch (cause) {
+      caught = cause;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as NodeJS.ErrnoException).code).toBe("ENOTDIR");
+    expect((caught as NodeJS.ErrnoException).syscall).not.toBe("rm");
+  });
 });
 
 describe("registration hands the entry to the hold evaluator (FR-010 handoff)", () => {
