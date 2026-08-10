@@ -86,8 +86,9 @@ recomputing the tree. Questions that depend on another question still open in
 this round belong to a later round.
 
 **Termination is coverage, not counting.** A session ends when the pruned
-frontier is empty — every branch of the design tree visited, nothing left
-silently assumed — or when the user says `done`. The number of questions asked
+frontier is empty — every branch admitted by the active materiality
+threshold visited, nothing left silently assumed — or when the user says
+`done`. The number of questions asked
 is an emergent value of the tree: it is never a termination condition, never a
 target, and no rule in this protocol obliges a session to end at a count. The
 only count-shaped rule is the circuit breaker in §2.4, which is a disclosed
@@ -137,6 +138,17 @@ Silent truncation is forbidden. Never present a summary as a completed
 traversal when the breaker fired, and never end a session by quietly not asking
 the next round — an unasked frontier is disclosed or it is asked.
 
+**Rounds are atomic at the breaker boundary (appended ⇔ presented).** When the
+remaining capacity before the breaker cannot present the whole next round, do
+not append that round to the questions file and do not present a partial round
+— the round is either fully appended-and-presented or neither. Its questions
+stay in the frontier and pass to C-4 as the disclosed open frontier, so the
+questions file never carries appended-but-unpresented blank `[Answer]:` tags
+and `stage-protocol.md` §3 Step 4's blank-tag check cannot silently reopen the
+session after the breaker. A consequence: the breaker may fire at a round
+boundary before the numeric ceiling is exactly reached — the count is a
+ceiling, not a target (§2.1).
+
 ### 2.5 Recording obligations (workflow only)
 
 - **Mode marker.** The questions file is created header-only in
@@ -155,7 +167,7 @@ the next round — an unasked frontier is disclosed or it is asked.
   expected under frontier-driven termination. At the moment the total crosses
   it, append exactly one line to the questions file:
 
-  ```
+  ```text
   <!-- amadeus-grilling:justification depth=<Depth> questions=<N> frontier-driven -->
   ```
 

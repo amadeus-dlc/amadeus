@@ -274,14 +274,14 @@ options:
   - label: Guide me
     description: Walk through each question interactively here
   - label: Grill me
-    description: Round-by-round interview over the whole design tree — recommended answers included, until every branch is settled
+    description: Round-by-round interview over the whole design tree — recommended answers included, until every branch is settled. Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling
   - label: I'll edit the file
     description: I'll fill in the answers in the file directly
   - label: Chat
     description: Discuss freely — I'll extract decisions from our conversation
 ```
 
-Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. The `[N]` budget governs Guide me, file-edit, and Chat; Grill me does not consume `[N]` as a budget — it consumes depth as a materiality pruning threshold, with the §8 numeric ceiling crossing recorded via the standing justification line and the circuit breaker as the upper bound (see `grilling-protocol.md` §2). When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
 
 While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options — grilling is a human-in-the-loop discipline whose every round waits on a person, and unattended question resolution runs through `amadeus-bolt decide-question` (§1) instead.
 
