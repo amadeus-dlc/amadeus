@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-NPG-CGBLK",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Abortを支持する。保存worktreeで入力集合8,637件とcontent/stage digestを再計算し、evidence commitと一致したため同条件Retryに改善根拠はない。U2はU1 mappingを直接消費しU3はU2を投影するのでSkipは依存契約を破る。仕様変更権限を保ったままfail-closed停止するAbortが唯一整合する。",
+      "submittedAt": "2026-08-10T11:24:45Z",
+      "receivedAt": "2026-08-10T11:24:53Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-NPG-CGBLK",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Abortを全面支持する。独立実測では、証拠commit 55f0027e321f8b1aa4aa8ec5d0e1e67a0e1223a6 は branch bolt-numeric-provenance-mapping-contract に実在し、観測SHA 8402e5c5eceec24232e4d8de4f5adec0f5341b09 を直接親に持つ1 commitである。worktree filesystemを再列挙し、sweep出力自身を除くと intent Markdown 8,511 + active codekb re-scan 126 = 8,637となり、指定規則(relative path + NUL + raw-byte SHA-256 + LF)で再計算したcontent digestは13e4c59b66e4bd9405c3b45b9f63aabff7b58ae0be672ac0a6178f0394c67249で証拠と一致した。machine-readable sectionを再評価するとpre-label eligible 21、interior window 0、enforcement 0で、代表6 groupもすべてmin < p95 < maxがfalseだった。さらにt532を実行し、predicate/threshold契約5件はPASS、authority/projection境界は意図どおりno-enforcement-groupでfail-closedした。requirements FR-SWP-2はenforcement 1組未満をBLOCKERとし、unit/bolt契約はU1 mappingをU2が消費しU2 sourceをU3が投影すると定め、未承認mapping利用を禁止する。同一snapshot・同一規則でのRetryは結果を変えず、SkipはU2/U3の必須入力を欠く。したがってworktreeを保存してConstructionを停止し、W規則を変えるならユーザー専権のtargeted redoへ戻すAbortだけが現契約を守る。非採用時受容度は8: 仕様変更またはcorpus変更の新証拠なしのRetry/Skipは、再現済みBLOCKERか未承認mapping依存を執行するため受容しない。",
+      "submittedAt": "2026-08-10T11:24:44Z",
+      "receivedAt": "2026-08-10T11:24:57Z"
+    }
+  ],
+  "late": []
+}
