@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-RAS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "行数・ファイル数を独立再実測(git grep -n vs -in)して逐語一致を確認: 大小文字区別 8行/7ユニークファイル、大小文字非区別 14行/12ユニークファイル、差分6行はすべて記録どおりの箇所(stage-protocol.md:277 含む)。requirements.md の Review Iteration 1/2 と re-scans 訂正節の記述も file:line 完全一致。既存 cid(E-ASD-RES13=述語の記録、E-ASD-CGS13=同一構造への複数アクセス形式)は『述語のデフォルトを大小文字非区別にする』面を扱っておらず、本候補は射程外の新規知見と判断する。1件のみでファミリ肥大は限定的であり採用に賛成するが、既存2 cid との差分明示は persist 文に必須とする。",
+  "rationale": null,
+  "submittedAt": "2026-08-10T05:06:02Z",
+  "receivedAt": "2026-08-10T05:07:26Z"
+}

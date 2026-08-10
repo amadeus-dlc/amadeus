@@ -1410,6 +1410,66 @@
     "status": "recorded"
   },
   {
+    "electionId": "E-GFR-ICS13",
+    "dirName": "260810-e-gfr-ics13",
+    "createdAt": "2026-08-10T03:48:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-SDS13",
+    "dirName": "260810-e-gfr-sds13",
+    "createdAt": "2026-08-10T03:57:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-RES13",
+    "dirName": "260810-e-gfr-res13",
+    "createdAt": "2026-08-10T04:15:54Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-RAS13",
+    "dirName": "260810-e-gfr-ras13",
+    "createdAt": "2026-08-10T05:04:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-ADS13",
+    "dirName": "260810-e-gfr-ads13",
+    "createdAt": "2026-08-10T05:22:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-UGS13",
+    "dirName": "260810-e-gfr-ugs13",
+    "createdAt": "2026-08-10T05:44:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-DPS13",
+    "dirName": "260810-e-gfr-dps13",
+    "createdAt": "2026-08-10T06:27:11Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-FDS13",
+    "dirName": "260810-e-gfr-fds13",
+    "createdAt": "2026-08-10T07:55:02Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-NDS13",
+    "dirName": "260810-e-gfr-nds13",
+    "createdAt": "2026-08-10T08:21:37Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-CG1",
+    "dirName": "260810-e-gfr-cg1",
+    "createdAt": "2026-08-10T09:33:38Z",
+    "status": "recorded"
+  },
+  {
     "electionId": "E-IC-2695-LEARNINGS-1",
     "dirName": "260809-e-ic-2695-learnings-1",
     "createdAt": "2026-08-09T10:21:00Z",
@@ -1485,6 +1545,24 @@
     "electionId": "E-ND-2695-LEARNINGS",
     "dirName": "260810-e-nd-2695-learnings",
     "createdAt": "2026-08-10T00:57:40Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-CG2",
+    "dirName": "260810-e-gfr-cg2",
+    "createdAt": "2026-08-10T11:49:14Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-CGS13",
+    "dirName": "260810-e-gfr-cgs13",
+    "createdAt": "2026-08-10T14:09:15Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-BTS13",
+    "dirName": "260810-e-gfr-bts13",
+    "createdAt": "2026-08-10T14:33:38Z",
     "status": "recorded"
   }
 ]

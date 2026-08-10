@@ -17,6 +17,8 @@ import {
 const MERGED_RAW: RawPrState = {
   mergeable: "UNKNOWN",
   mergeStateStatus: "UNKNOWN",
+  title: "",
+  body: "",
   state: "MERGED",
   mergedAt: "2026-08-07T01:00:00Z",
   mergeCommitOid: "0123456789abcdef0123456789abcdef01234567",

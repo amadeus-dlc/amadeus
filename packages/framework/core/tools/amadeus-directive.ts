@@ -109,6 +109,11 @@ export interface RunStageDirective {
   // reviewer_max_iterations — how many review cycles before escalating to the
   // human. Default 2 when reviewer is present. Absent when no reviewer.
   reviewer_max_iterations?: number;
+  // review_only — recovery directive emitted when a per-unit stage's required
+  // artifacts already exist but the reviewer verdict does not. The conductor
+  // skips the stage body and runs only stage-protocol.md §12a, then re-runs
+  // `next`. Present only as the literal true with unit + reviewer + gate:false.
+  review_only?: true;
   // Intent-scoped autonomy metadata is present only after a human selected
   // semi/full. The conductor still runs the full quality ritual; auto approval
   // changes only the final human-wait boundary.
@@ -460,6 +465,7 @@ const RUN_STAGE_FIELDS = [
   "depth",
   "reviewer",
   "reviewer_max_iterations",
+  "review_only",
   "intent_autonomy_mode",
   "autonomy_auto_approve",
   "intent_grant_id",
@@ -686,6 +692,24 @@ function checkRunStageShared(
   // an optional string, reviewer_max_iterations an optional positive integer.
   checkOptionalString(o, "reviewer", kind, errors);
   checkOptionalPositiveInteger(o, "reviewer_max_iterations", kind, errors);
+  checkOptionalBoolean(o, "review_only", kind, errors);
+  if ("review_only" in o) {
+    if (kind !== "run-stage") {
+      errors.push(`${kind}: review_only is valid only on run-stage`);
+    }
+    if (o.review_only !== true) {
+      errors.push(`${kind}: review_only must be true when present`);
+    }
+    if (typeof o.unit !== "string" || o.unit.length === 0) {
+      errors.push(`${kind}: review_only requires a non-empty unit`);
+    }
+    if (typeof o.reviewer !== "string" || o.reviewer.length === 0) {
+      errors.push(`${kind}: review_only requires a non-empty reviewer`);
+    }
+    if (o.gate !== false) {
+      errors.push(`${kind}: review_only requires gate:false`);
+    }
+  }
   checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);
   checkOptionalBoolean(o, "autonomy_auto_approve", kind, errors);
   checkOptionalString(o, "intent_grant_id", kind, errors);

@@ -1,6 +1,57 @@
 # コンポーネント棚卸し
 
-## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+### advisory 宣言の消費者側コンポーネント（Issue #2823 の患部）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `pluginManifestPath` | `packages/framework/core/tools/amadeus-advisory-declaration.ts:295-297` | 宣言の唯一の解決規則: `<projectRoot>/plugins/<name>/plugin.json`。doc comment `:289-294` は authoring レイアウト前提を明言 |
+| `declaredAdvisoriesForPlugin` | `amadeus-advisory-declaration.ts:305-329` | checkpoint 発火。`:312-313` manifest 不在 → **無音 `return []`** |
+| `declarationFor` | `amadeus-advisory-declaration.ts:386-400` | `:393` / `:397-399` で無音 null |
+| `declaredFormalCheckArgv` / `declaredHandoffStage` | `amadeus-advisory-declaration.ts:403-410` / `:413-420` | null をそのまま伝播（silent-null degradation） |
+| `spawnEvaluator` | `amadeus-advisory-declaration.ts:347-357` | `cwd: projectRoot`・shell なし spawn。timeout 60s / 8MiB、失敗は unreadable verdict → hold（fail-closed） |
+| `advisoriesForHost` | `amadeus-advisory-declaration.ts:366-383` | activation 判定 + composed plugins の宣言を flatMap |
+| `verdictSummary` / `advisoryFromEvaluatorRun` | `amadeus-advisory-declaration.ts:214-232` / `:241-257` | verdict が権威。no-hold 以外は raise |
+| `projectRootForHost` | `amadeus-plugin-activation.ts:110-112` | hostRoot（harness ディレクトリ）の親 = projectRoot |
+| `declaredFormalCheckRoute` | `amadeus-advisory-choice.ts:948-978` | run-now ルートを宣言 argv から構築（トークン解決 `:962-967`） |
+| `directiveItemFor` | `amadeus-advisory-choice.ts:729-741` | handoff_stage を宣言から載せる（null なら素の item） |
+| `DECLARED_RELEASE_RULE` | `amadeus-advisory-choice.ts:980-986` | formalCheck:null は engine 側 release 経路なし |
+| engine 側双子 argv | `amadeus-advisory-choice.ts:925` | hard-coded `"bun", "plugins/formal-model-check/tools/run-model-check.ts"` — repo ルート相対、宣言 argv `:61` と同根 |
+| 宣言の出荷形 | `plugins/formal-model-check/plugin.json:50-71` | `advisories` キーはこの 1 plugin のみ（全 2 plugin 中）。機械的 root-relative argv は `:61` の 1 本 |
+
+### 供給側コンポーネント（PR #2811 後の行番号で取り直し）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `PLUGIN_SOURCE_DIR_NAME` / `pluginSourceRootOf` | `amadeus-plugin.ts:563` / `:570-572` | staging root `.amadeus-plugin-src` |
+| `PLUGIN_AUTHORING_DIR_NAME` | `amadeus-plugin.ts:578` | 権威ディレクトリ名 `plugins` |
+| `stagingHarnessDirOf` / `seedBytesForHarness` | `amadeus-plugin.ts:659-664` / `:669-675` | **#2811 で新設**。staging 宛てコピー時に `{{HARNESS_DIR}}` を解決（authoring 宛ては除外）。`rulesSubdirFor` は `amadeus-harness.ts:71` |
+| `copyPluginSource` / `copyRealFiles` | `amadeus-plugin.ts:702-741` | tmp+rename swap。`copyRealFiles` は `harnessDir` 非 null なら散文を解決しつつコピー |
+| `collectPluginSources` / `seedStaging` | `amadeus-plugin.ts:874-906` | repo ルート `plugins/` 優先 → 各ツリー staging。seed は absent のみ |
+| `prepareInstall` / `handleInstall` | `amadeus-plugin.ts:1102-1129` / `:1154-1174` | `:1117-1118` `persistentInstall = selected.projectDir !== hostRoot`、`:1160` で **FULL bundle を `<projectRoot>/plugins/<name>/` へ永続化**（project supply） |
+| tools/stages push | `amadeus-plugin-compose.ts:370-415` | 生バイトを `posix.join("plugins", pluginName, rel)` へ（`:386` / `:412`） |
+| `ownedPaths` | `amadeus-plugin-compose.ts:895` | compose が manifest から集めるのは stages/tools のみ — **plugin.json は配送されない** |
+| `composeWriteSet` | `amadeus-plugin-compose.ts:1390-1408` | hostWrites は stage/tool/shared コピーのみ |
+| `ownedRecordDigests` / `pluginContentDigest` | `amadeus-plugin-compose.ts:921-972` | manifest の stages/tools のバイトを sha256 |
+| `installDoc` | `scripts/plugin-projection.ts:613-664` | `:634` folder-drop（primary、project supply を作らない）/ `:636` install verb 言及（persistent 腕の project supply 永続化は**未開示**） |
+| `transform` / `isMarkdownProsePath` | `scripts/harness-transform.ts:33-45` / `:27-29` | 拡張子のみで分岐。`.json` / `.ts` は逐語 — manifest は経路Aでも変換されない |
+
+### 検証面コンポーネント
+
+| テスト | 位置 | 何を pin するか |
+|---|---|---|
+| t445-advisory-declaration-supply | `:155-160` / `:224-226` | 無音 fail-open を**契約として** pin / dogfood レイアウトで宣言供給 |
+| t526 / t528 | `:59-61` / `:103-105` | 同じく dogfood レイアウト（`<projectDir>/plugins/demo/plugin.json` 手書き） |
+| t353-plugin-install-verb | `:254-274` / `:276-324` | persistentInstall=true の 4 面永続化と rollback。**advisory 消費との join は未 pin** |
+| t340-plugin-drop-fs-restore | `:196` / `:220` / `:240` | project supply を `cpSync` で手作り |
+| t531-plugin-harness-literal-guard | 新設（#2811） | plugin **散文**のハーネスリテラル走査。manifest argv は対象外 |
+
+consumer レイアウト（staging のみで project supply なし）を組むテストは **0 件**。
+
+## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
 
 **観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（8 コミット、非 record 面 16 files / +721 / -101）。正本は `re-scans/260810-plugin-prose-seed-guard.md`。構造的含意は `architecture.md` の同 intent 節。
 
@@ -2187,3 +2238,24 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
+
+## grilling 対話契約の棚卸し（260810-grilling-frontier-resync）
+
+Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈り閾値へ再定義）に向けた対応表。全数は `re-scans/260810-grilling-frontier-resync.md` を正本とする。observed `5564dccd1`。
+
+| 層 | コンポーネント | 責務 | 患部箇所（file:line） |
+|---|---|---|---|
+| 正本 | `packages/framework/core/amadeus-common/protocols/grilling-protocol.md`（137行） | grilling 対話規律の単一正本。D1-D7（Dialogue Discipline）、8ステップループ、質問テンプレート、workflow/standalone 分岐を定義 | D1 :29、D6（Bounded termination）:34、§2 ループ :37-69、§3 テンプレート :71-122、§4 :124-137、帰属ヘッダ :1-6 |
+| 参照面 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md`（1304行） | grilling を workflow ステージへ配線する薄い呼び出し面。depth 別の質問数予算契約そのものはこちらが正本 | §3 depth 表 :300-311、Step 3d「Grill me」:348-356（`hybrid termination` 残存 :349）、§8 Depth-Level Contract :726-746、semi decide-question 経路 :137 |
+| 参照面 | `packages/framework/core/amadeus-common/conductor.md` | interaction-mode 一覧で grilling を1行言及 | :50-53（"one question at a time" 言及 :51） |
+| 参照面 | `packages/framework/core/skills/amadeus-grilling/SKILL.md`（58行） | standalone grilling スキルのエントリポイント。read-only 保証と depth 既定値（Standard=8）を明記 | Purpose 節、Standalone rules 規則2（depth 言及の唯一箇所） |
+| 機械契約 | `packages/framework/core/tools/amadeus-directive.ts` | depth 値の閉語彙契約（3値）を directive validation に強制 | `VALID_DEPTH_VALUES` :62、呼び出し :664 |
+| 機械契約 | `packages/framework/core/tools/amadeus-sensor-question-budget.ts` | depth 別の質問数上限をセンサーとして29ステージへ強制 | `QUESTION_BUDGETS` :39-43、`DEPTH_LEVELS`（directive.ts からの mirror）:47、`QUESTION_BUDGET_CUTOFF_YYMMDD` :63 |
+| 機械契約 | `packages/framework/core/amadeus-common/stages/*.md`（29ファイル） | `question-budget` センサーの宣言側。ideation 7 / inception 8 / construction 7 / operation 7 | `git grep -l "question-budget"` で全数列挙、専用 manifest ファイルなし |
+| 検証面 | `tests/integration/t415-interaction-budget-contract.test.ts` | `stage-protocol.md` の数値予算文言 + `grilling-protocol.md` D6/C-3 文言を verbatim `toContain`/`not.toContain` で29個ピン | grilling/depth 関連ピン :26-54 |
+| 検証面 | `tests/unit/t199-grilling-distribution.test.ts` | 4ハーネス `dist/` への `SKILL.md` / `grilling-protocol.md` 投影の存在・frontmatter・MIT 表示を検査（`hybrid`/`bounded` 用語は非対象、dist 読みのため正本編集後は要リビルド） | 6アサーション全数、非 verbatim |
+| 投影 | `dist/{claude,codex,kiro,kiro-ide}/**/amadeus-common/protocols/{grilling-protocol.md,stage-protocol.md}` | `bun run build` によるハーネス別投影コピー | `existsSync` のみで内容検証は t199 の限定範囲 |
+| 用語ドリフト | `docs/reference/04-stage-protocol.md` / `.ja.md` | canonical D6 改称（→ Bounded termination）に未追従の旧称 `hybrid termination` / `ハイブリッド終了` が残存 | `.md:320`、`.ja.md:264` |
+| prose 消費者 | `docs/guide/02-your-first-workflow.{md,ja.md}` / `docs/guide/07-interaction-modes.{md,ja.md}` | "one question at a time" を利用者向けガイドで踏襲説明（英語のみ、和訳は「一度に1質問」で別語彙） | `02-*.md:89` / `.ja.md:89`、`07-*.md:22,37` / `.ja.md:18`、和訳: `04-stage-protocol.ja.md:264` |
+
+**未確定**: frontier 駆動（上流 `mattpocock/skills`、ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d`）が具体的にどの層（正本のみか、機械契約の閉語彙・数値も含むか）まで置き換えるかは要件段の裁定事項。本棚卸しは現行構造の全数把握であり、再定義後の to-be 構造は含まない。

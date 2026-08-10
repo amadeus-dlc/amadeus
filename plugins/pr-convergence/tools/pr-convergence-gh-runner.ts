@@ -83,6 +83,8 @@ export type GhRunner = (argv: readonly string[]) => Promise<Result<string, GhErr
 export interface RawPrState {
   readonly mergeable: string;
   readonly mergeStateStatus: string;
+  readonly title: string;
+  readonly body: string;
   readonly state?: string;
   readonly mergedAt?: string | null;
   readonly mergeCommitOid?: string | null;
@@ -205,7 +207,7 @@ export async function createGhRunner(
 
 export const PR_STATE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
-    pullRequest(number:$number){ mergeable mergeStateStatus state mergedAt mergeCommit { oid statusCheckRollup { state } } }
+    pullRequest(number:$number){ mergeable mergeStateStatus title body state mergedAt mergeCommit { oid statusCheckRollup { state } } }
   }
 }`;
 
@@ -247,11 +249,19 @@ export async function fetchRawPrState(
   const repository = isRecord(data) ? data.repository : undefined;
   const pullRequest = isRecord(repository) ? repository.pullRequest : undefined;
   if (!isRecord(pullRequest)) return { ok: false, error: malformedResponse(out.value) };
-  const { mergeable, mergeStateStatus } = pullRequest;
-  if (typeof mergeable !== "string" || typeof mergeStateStatus !== "string") {
+  const { mergeable, mergeStateStatus, title, body } = pullRequest;
+  if (
+    typeof mergeable !== "string" ||
+    typeof mergeStateStatus !== "string" ||
+    typeof title !== "string" ||
+    typeof body !== "string"
+  ) {
     return { ok: false, error: malformedResponse(out.value) };
   }
-  return { ok: true, value: { mergeable, mergeStateStatus, ...lifecycleFields(pullRequest) } };
+  return {
+    ok: true,
+    value: { mergeable, mergeStateStatus, title, body, ...lifecycleFields(pullRequest) },
+  };
 }
 
 // Lifecycle fields (#2401), raw and unparsed like mergeable/mergeStateStatus.

@@ -1,0 +1,24 @@
+{
+  "electionId": "E-GFR-NDS13",
+  "kind": "s13-adoption",
+  "question": "260810-grilling-frontier-resync nfr-design の §13 学習候補の採否。conductor 提案 = 候補1件(diary c2 由来): 『cid:nfr-design:c1-engine-produces-all-five ファミリ(produces_kinds / upstream-coverage の判定分母)への追補 — nfr-budget センサーの missing-nfr-ids は、nfr-requirements を SKIP するスコープでは構造的 advisory 赤になる: unitIdCount は id 宣言 dir(construction/<unit>/nfr-requirements/)を読み(amadeus-sensor-nfr-budget.ts idDeclarationDir / unitIdCount — dir 不在で 0)、record が id contract cutoff 後生まれなら missing-nfr-ids を必ず report する。センサーはスコープの SKIP 解決を知らない。扱い: 偽陽性として無視せず、(i) diary へ構造的原因(SKIP → 宣言 dir 不在 → denominator 0)を実読 file 根拠付きで記録 (ii) 設計側は requirements.md の FR id を verbatim 引用し独自 id を発明しない (iii) ゲートで開示する。センサー側の skip-aware 化は enhancement 起票の別判断』。検証対象: .claude/tools/amadeus-sensor-nfr-budget.ts の idDeclarationDir / unitIdCount / missing-nfr-ids 分岐の実在、record の .amadeus-sensors/nfr-design/nfr-budget-*.md の reason=missing-nfr-ids、construction/nfr-design/memory.md の 08:12:00Z 行、既存 memory 層(project.md の nfr-design 系 cid)に同内容が未被覆であること。choice 1 = この1件を採用。choice 2 = 0件(既存 cid の射程内)。choice 3 = 修正案あり(留保に記す)",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件(新規性なし)"
+    },
+    {
+      "internalNo": 3,
+      "label": "修正案あり(留保に記す)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

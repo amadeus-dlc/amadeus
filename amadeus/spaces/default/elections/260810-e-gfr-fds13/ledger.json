@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-FDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文の新規性は「E-STG-S13I の complete-review summary 開示という文言が reviewer_max_iterations 設定下では機械的に実行不能」という境界の明文化に置き、ゲート開示そのものは既存 cid:code-generation:cg-20260730-3 の再述としない — あわせて機序引用(complete-review 側のみ限度検査、scope 側は無検査)を file:line で焼き込み再検証可能にすること。",
+      "rationale": "独立実測: (a) construction/functional-design/memory.md:16 に 2026-08-10T09:20:00Z の Deviations 行が実在し、invocationId 23bddf0a-b9d4-48bf-bacc-e188aba09eca・READY GoA2・complete-review 拒否・scratch 保存が逐語で記録済み。(b) construction/budget-sensor/functional-design/ の3成果物を grep '^## Review — Iteration' したところ business-logic-model.md:97 (Iteration 1) と :114 (Iteration 2) のみで Iteration 3 は不在 — 拒否により §12a への追記が起きていないことを確認。(c) .claude/tools/amadeus-reviewer-runtime.ts:713-716 の completeReview 内に `directive.reviewer_max_iterations && result.iteration > directive.reviewer_max_iterations` → `throw new Error(\"review iteration exceeds the directive limit\")` が実在。対して scope 経路は :757 の issueInvocation(:300-315) で iteration=null のまま採番するのみで限度検査を持たず、checkRead/completeReview の bindInvocation(:317-337) で初めて iteration が束縛される — 「scope は採番するが complete-review が拒否する」という非対称は実装事実。(d) 既存被覆の判定: cg-20260730-3 は「予算消費済みで fresh READY が追記不能なときはゲートで開示」という結果面を既に覆う一方、E-STG-S13I(c3-fix-induced-blocker-lssads13)は「予算超過は complete-review の summary に開示する」と書いており、reviewer_max_iterations が directive に設定されている場合は :713-716 により complete-review 自体が exit 1 になるため当該文言は機械的に実行不能。両 cid 間のこの潜在矛盾を機序接地で解消し適用境界(限度未設定時に限り summary 開示が成立)を明示する点が新規増分であり、既存 cid への追補として採用が妥当と判断した。",
+      "submittedAt": "2026-08-10T09:45:00Z",
+      "receivedAt": "2026-08-10T07:57:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-FDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文の増分は (a) 機構 file:line の verbatim 引用(.claude/tools/amadeus-reviewer-runtime.ts:712-716 の reviewer_max_iterations 検査と、同ファイル :357-380 scopeForDirective が iteration を見ないという scope/complete-review の非対称)と (b) cid:nfr-design:c3-fix-induced-blocker-lssads13(E-STG-S13I)の『予算超過は complete-review の summary に開示』が complete-review 受理時に限るという境界の明文化の2点に限定し、ゲート開示形そのものは既存 cid:code-generation:cg-20260730-3 の再述にしないこと。あわせて既存 cid:application-design:c2-pcp-quality-repair-first-use(予算消費後の残余 BLOCKER を quality_repair 観測経路で閉包・その subagent-2 留保が diary 記録とゲート開示の維持を既に留保済み)との関係を1句で明示し、本件の3点記録形が同経路の代替なのか非適用時のフォールバックなのかを判別可能にすること。",
+      "rationale": "実測検証: (a) construction/functional-design/memory.md:16 に 09:20:00Z の Deviations 行が実在し invocationId 23bddf0a-b9d4-48bf-bacc-e188aba09eca と fail-closed 拒否文言を含む (b) construction/budget-sensor/functional-design/ の Review ブロックは business-logic-model.md:97/:114 の Iteration 1/2 のみで Iteration 3 は 0 hit (c) amadeus-reviewer-runtime.ts:712-716 に reviewer_max_iterations 超過の throw 'review iteration exceeds the directive limit' が実在し、scopeForDirective(:357-380)は iteration を参照しないため scope 側は制限しない (d) 既存 memory 層は project.md:415(cg-20260730-3)が『予算消費で fresh READY が追記不能・ゲートで開示』を、:340(c3-fix-induced-blocker-lssads13)が『設計ギャップクラスは閉包確認限定の追加イテレーション必須・予算超過は complete-review の summary に開示』を、:323(c2-pcp-quality-repair-first-use)が閉包経路とゲート開示を既に持つ。よって重複は実在するが、機構 file:line と『閉包確認イテレーション必須』と『complete-review 拒否』の構造的両立不能の境界は未被覆であり、増分は新規。留保付きで採用。",
+      "submittedAt": "2026-08-10T07:57:53Z",
+      "receivedAt": "2026-08-10T07:57:56Z"
+    }
+  ],
+  "late": []
+}

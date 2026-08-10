@@ -172,6 +172,90 @@ export function countQuestions(body: string): number {
 }
 
 // ---------------------------------------------------------------------------
+// The grilling tokens — a session that terminates on coverage, not counting
+//
+// Grilling consumes depth as a pruning threshold rather than a question budget
+// (`grilling-protocol.md` §2.2), so its total is an emergent value that may
+// exceed the §8 row. Against a grilling file the ceiling is therefore not the
+// question: what is checked is whether the crossing was RECORDED and the
+// pruning DISCLOSED (§2.5, §2.3).
+//
+// All three tokens are HTML comments rather than headings, and the protocol
+// says why: this sensor ships to every project, and a heading matched in one
+// team's record language is structurally unmatchable in another's. The heading
+// beside the deferred marker is free prose in whatever language the record
+// uses; only the marker is matched.
+//
+// `grilling-protocol.md` is the single definition of all three. These constants
+// mirror it verbatim and never vary it.
+// ---------------------------------------------------------------------------
+
+/** §2.5 Mode marker — the questions file's first line under grilling. */
+export const GRILLING_MODE_MARKER = "<!-- amadeus-grilling:v1 mode=grilling -->";
+
+/** §2.3 Deferred-node section marker, written once per session — including
+ *  when nothing was pruned, so an absent marker means "not recorded" rather
+ *  than "nothing to record". */
+export const DEFERRED_MARKER = "<!-- amadeus-grilling:deferred -->";
+
+/** How far into the body the mode marker may sit. §2.5 puts it on line 1; the
+ *  slack absorbs a leading title or blank without letting a quotation of the
+ *  protocol deeper in the file switch that file into grilling mode. */
+const MARKER_HEAD_LINES = 10;
+
+/** Any `amadeus-grilling:` tag in the head window. A tag that is present but
+ *  not the canonical marker is a near miss, and the sensor says so rather than
+ *  reading it as absence — see `detectGrillingMarker`. */
+const GRILLING_TAG = /<!--\s*amadeus-grilling:/;
+
+/** §2.5 justification line, matched with `<N>` parsed as a number. The
+ *  protocol's own template (`questions=<N>`) therefore does not match, which is
+ *  what keeps the protocol text from reading as a recorded crossing. */
+const JUSTIFICATION_LINE =
+  /<!--\s*amadeus-grilling:justification\s+depth=(\S+)\s+questions=(\S+)\s+frontier-driven\s*-->/;
+
+export type GrillingMarker = { kind: "none" } | { kind: "valid" } | { kind: "malformed" };
+
+/** Does this file declare itself a grilling session?
+ *
+ *  Three outcomes, not two. A mistyped marker cannot collapse into "none": that
+ *  would measure a frontier-driven session against a fixed ceiling it was never
+ *  written for, and say nothing to the author — the fail-open shape this sensor
+ *  exists to close. */
+export function detectGrillingMarker(body: string): GrillingMarker {
+  const head = body.split("\n", MARKER_HEAD_LINES);
+  let sawTag = false;
+  for (const line of head) {
+    if (line.trim() === GRILLING_MODE_MARKER) return { kind: "valid" };
+    if (GRILLING_TAG.test(line)) sawTag = true;
+  }
+  return sawTag ? { kind: "malformed" } : { kind: "none" };
+}
+
+/** The recorded depth-ceiling crossing, or null when the body records none.
+ *
+ *  Whole-body scan: §2.5 appends the line at the moment the total crosses, so
+ *  its position is wherever the session had reached by then. */
+export function parseJustificationLine(
+  body: string,
+): { depth: string; questions: number } | null {
+  const match = body.match(JUSTIFICATION_LINE);
+  if (match === null) return null;
+  const questions = Number.parseInt(match[2] as string, 10);
+  if (!Number.isFinite(questions)) return null;
+  return { depth: match[1] as string, questions };
+}
+
+/** Was the pruning disclosed? Presence alone is the judgement — §2.3 requires
+ *  the section even when nothing was pruned, so a predicate that read the
+ *  entries would report a Free session's explicit "none" as an omission.
+ *
+ *  Whole-body scan: the agreement summary closes the file. */
+export function detectDeferredSection(body: string): { present: boolean } {
+  return { present: body.includes(DEFERRED_MARKER) };
+}
+
+// ---------------------------------------------------------------------------
 // Record date — which side of the enforcement cutoff a file was written on
 // ---------------------------------------------------------------------------
 
@@ -244,6 +328,13 @@ export function canonicalDepth(raw: string | undefined | null): string | undefin
 export interface QuestionBudgetFinding {
   field: string;
   reason: string;
+  /** Whether this finding fails the file. Two of the checks here are faults in
+   *  the record's FORM — a mistyped marker, a depth value the engine does not
+   *  define — which must be loud without being failures: this sensor is
+   *  advisory and its verdict is data for the human at the gate. Required
+   *  rather than optional, so the distinction is carried by the type instead of
+   *  by a default a caller has to remember. */
+  severity: "error" | "warning";
 }
 
 export interface QuestionBudgetResult {
@@ -271,7 +362,14 @@ function verdict(
   findings: QuestionBudgetFinding[],
   measured: Omit<QuestionBudgetResult, "pass" | "findings_count" | "reason" | "findings">,
 ): QuestionBudgetResult {
-  return { pass: findings.length === 0, findings_count: findings.length, reason, findings, ...measured };
+  // `findings_count` stays the number OBSERVED, warnings included: it answers
+  // "how much did this file have to say", not "how much of it failed".
+  const pass = findings.every(isWarning);
+  return { pass, findings_count: findings.length, reason, findings, ...measured };
+}
+
+function isWarning(finding: QuestionBudgetFinding): boolean {
+  return finding.severity === "warning";
 }
 
 /** Pure evaluation core (in-process test seam). Reads the file itself so the
@@ -307,25 +405,108 @@ export function evaluateQuestionBudget(
     enforced,
   };
 
-  // Without a depth there is no row to hold to. The count is still reported —
-  // the measurement is the point, and a ceiling comparison is one use of it.
-  if (ceiling === undefined) return verdict("no-depth", [], figures);
-  if (questions <= ceiling) return verdict("within-budget", [], figures);
-  // Over the row, but written before this sensor existed: measured, reported
-  // as such, and not a finding.
-  if (!enforced) return verdict("pre-cutoff", [], figures);
-  return verdict(
-    "over-budget",
-    [
-      {
-        field: "questions",
-        reason:
-          `${questions} questions exceed the ${level} ceiling of ${ceiling} ` +
-          "(stage-protocol §8 Depth-Level Contract; primaries and follow-ups share one total)",
-      },
-    ],
-    figures,
-  );
+  const assessed = assess(body, questions, depth, level, ceiling);
+  // ONE enforcement gate, applied after every check has had its say. The checks
+  // above collect candidates and none of them returns a verdict of its own, so
+  // there is no branch that can reach a reader without passing through here —
+  // which is what makes "a record written before this sensor existed is
+  // untouched by it" a property of the shape rather than of nine branches each
+  // remembering to ask.
+  if (!enforced) return verdict(withheldReason(assessed.reason), [], figures);
+  return verdict(assessed.reason, assessed.findings, figures);
+}
+
+interface Assessment {
+  reason: string;
+  findings: QuestionBudgetFinding[];
+}
+
+/** What this file says about itself, before the cutoff has any say. */
+function assess(
+  body: string,
+  questions: number,
+  depth: string | undefined,
+  level: string | undefined,
+  ceiling: number | undefined,
+): Assessment {
+  const findings: QuestionBudgetFinding[] = [];
+
+  // A near-miss marker is reported wherever it appears, and never changes what
+  // the file is measured AS: a marker that is not the marker does not declare
+  // a grilling session, so the file is read as an ordinary one.
+  const marker = detectGrillingMarker(body);
+  if (marker.kind === "malformed") {
+    const notTheMarker = "malformed-marker — a `amadeus-grilling:` tag that is not the mode marker";
+    const expected = `(expected \`${GRILLING_MODE_MARKER}\`, grilling-protocol.md §2.5)`;
+    findings.push({
+      field: "marker",
+      reason: `${notTheMarker} ${expected}`,
+      severity: "warning",
+    });
+  }
+
+  // A depth the engine does not define. Reported rather than passed over: the
+  // ceiling comparison is switched off either way, and saying so is the
+  // difference between "no row applies to this stage" and "a value nobody can
+  // read" — states this sensor used to return the same silent pass for.
+  if (ceiling === undefined) {
+    if (depth === undefined || depth.trim() === "") return { reason: "no-depth", findings };
+    const unknownValue = `"${depth.trim()}" is not one of ${DEPTH_LEVELS.join(" / ")}`;
+    const consequence = "so no ceiling applies and the count was measured against nothing";
+    findings.push({
+      field: "depth",
+      reason: `unknown-depth — ${unknownValue}, ${consequence}`,
+      severity: "warning",
+    });
+    return { reason: "unknown-depth", findings };
+  }
+  if (questions <= ceiling) return { reason: "within-budget", findings };
+
+  if (marker.kind !== "valid") {
+    const contract = "(stage-protocol §8 Depth-Level Contract; primaries and follow-ups share one total)";
+    findings.push({
+      field: "questions",
+      reason: `${questions} questions exceed the ${level} ceiling of ${ceiling} ${contract}`,
+      severity: "error",
+    });
+    return { reason: "over-budget", findings };
+  }
+
+  // A grilling session past the row. The total is an emergent value here
+  // (grilling-protocol.md §2.2), so the overrun is expected — what is checked
+  // is whether it was recorded and what it was traded against was disclosed.
+  const justification = parseJustificationLine(body);
+  const deferred = detectDeferredSection(body);
+  if (justification !== null && deferred.present) {
+    return { reason: "justified-overrun", findings };
+  }
+  if (justification === null) {
+    const crossing = `${questions} questions crossed the ${level} ceiling of ${ceiling}`;
+    findings.push({
+      field: "questions",
+      reason: `missing-justification — ${crossing} with no recorded crossing (grilling-protocol.md §2.5)`,
+      severity: "error",
+    });
+  }
+  if (!deferred.present) {
+    const unrecorded = `pruned is unrecorded (expected \`${DEFERRED_MARKER}\`, grilling-protocol.md §2.3)`;
+    findings.push({
+      field: "deferred",
+      reason: `missing-deferred-list — no deferred-node section, so what the threshold ${unrecorded}`,
+      severity: "error",
+    });
+  }
+  return { reason: "over-budget-unjustified", findings };
+}
+
+/** The reason a withheld (pre-cutoff) record carries. Only the vocabulary that
+ *  existed before the grilling checks did, so a word introduced by one of them
+ *  appearing on a pre-cutoff verdict is evidence of a branch that skipped the
+ *  gate rather than a wording choice. */
+function withheldReason(reason: string): string {
+  if (reason === "no-depth" || reason === "unknown-depth") return "no-depth";
+  if (reason === "within-budget") return "within-budget";
+  return "pre-cutoff";
 }
 
 // ---------------------------------------------------------------------------

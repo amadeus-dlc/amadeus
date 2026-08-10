@@ -1,6 +1,29 @@
 # コード品質評価
 
-## 二重化した rename 規則にガードが無い — サンプルが乖離キーを外している（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+## advisory 宣言の無音 degradation とガード空白（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（13 commits / 302 files、PR #2811 を含む）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+### ガード現況（直下の履歴節からの更新、PROVEN）
+
+直下の履歴節が記した「plugin コーパスが全ガードの死角」は **#2811 で部分的に解消**されている — `t531-plugin-harness-literal-guard` が新設され、plugin **散文**のハーネスリテラル走査は存在する。ただし本 Issue（#2823）のクラスに対する空白は残る:
+
+- **`plugins/**/plugin.json` の evaluator argv を走査するガードは存在しない**。Issue 完了条件 3 の述語は新規であり、現行配置では恒久赤になりうる注意（permanent-red caveat）が Issue 自身に付されている
+- consumer レイアウト（staging のみ、project supply なし）で advisory 経路を通すテストは **0 件**。t445 `:155-160` は逆に無音 fail-open を**契約として pin** しており、loud 化はこのテストの意図的書き換えを要する
+
+### 品質所見（PROVEN）
+
+1. **無音 degradation の全面性**: manifest 不在（`amadeus-advisory-declaration.ts:312-313`）・parse 不能・宣言なし（`:393` / `:397-399`）・route なし（`amadeus-advisory-choice.ts:960` / `:968`）のすべてが audit event・stderr・ログを出さない。fail-open（発火側）と fail-closed（spawn 失敗 → unreadable verdict → hold、`:340-343`）が混在し、向きの使い分けは設計コメントにのみ存在する
+2. **doc comment と配送契約の矛盾**: `:289-294` は「宣言は project ルート隣の plugin source tree から読む」と前提を明言するが、配送契約（前 intent `requirements.md:86` / `:90`）はそのレイアウトを consumer に供給しない。コメントが前提とするレイアウトを primary な導入経路（folder-drop、`plugin-projection.ts:634`）が作らない
+3. **installDoc の 2 腕が欠陥露出を変える**: folder-drop では advisory が無音で全滅し（(a)）、install verb の persistent 腕（`amadeus-plugin.ts:1117-1118` / `:1160`）では FULL bundle が project ルートへ永続化されて動く（(c)）。**同じ plugin の振る舞いが導入手順の選択だけで変わるのに、その差は未開示**（`:636` は verb に言及するが project supply 永続化には触れない）
+4. **dogfood masking**: advisory テスト 3 本（t445 `:224-226` / t526 `:59-61` / t528 `:103-105`）はすべて dogfood レイアウトで宣言を供給し、self-install では常に (c) が成立するため、本 repo 内のどの検証でも欠陥は見えない構造
+
+### 検証面（failing-first テストの置き場）
+
+- **t445 consumer-layout variant**: staging-only レイアウトで宣言読み手を呼び、現行の無音 `[]` を可視化
+- **t353-adjacent dot-dir-host install テスト**: install verb（persistent 腕）→ 宣言読取 → evaluator spawn の join を pin（現行は 4 面永続化までしか pin されていない、t353 `:254-274`）
+
+## 二重化した rename 規則にガードが無い — サンプルが乖離キーを外している（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
 
 **観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`。正本は `re-scans/260810-plugin-prose-seed-guard.md`。
 

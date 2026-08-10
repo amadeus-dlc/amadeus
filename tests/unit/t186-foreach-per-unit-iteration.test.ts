@@ -42,7 +42,7 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -237,6 +237,29 @@ function coverUnit(
   for (const name of producesNames) {
     writeFileSync(join(dir, `${name}.md`), `# ${name} for ${unit}\n`);
   }
+}
+
+/** Project the validated reviewer verdict onto the unit's primary artifact. */
+function reviewUnit(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-10T00:00:00Z\n" +
+      "- **Iteration:** 1\n" +
+      "- **Scope decision:** none\n",
+  );
+}
+
+/** Append an incomplete projection that must not satisfy recovery. */
+function seedReviewHeadingOnly(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n`,
+  );
 }
 
 /**
@@ -450,14 +473,16 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.gate).toBe(false);
   }, 30000);
 
-  // 9: all-covered settle. Both units covered on disk but the checkbox is still
-  // in-flight -> next emits the LAST unit with the stage's REAL gate (true), so
-  // the single human approval is presented only after every unit is built.
-  test("9: with every unit covered, next presents the real gate on the last unit", () => {
+  // 9: all-covered-and-reviewed settle. Both units carry their artifacts and
+  // verdicts but the checkbox is still in-flight -> next emits the LAST unit
+  // with the stage's REAL gate (true), so approval cannot precede §12a.
+  test("9: with every unit covered and reviewed, next presents the real gate on the last unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");
@@ -465,9 +490,73 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.gate).toBe(true);
   }, 30000);
 
-  // 9b: with every unit covered, the approve is ALLOWED (the guard passes) and
+  test("9a: a heading-only Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    seedReviewHeadingOnly(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, 30000);
+
+  test("9b: a whitespace-only Scope decision is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    writeFileSync(
+      alphaArtifact,
+      readFileSync(alphaArtifact, "utf-8").replace(
+        "- **Scope decision:** none",
+        "- **Scope decision:**   ",
+      ),
+    );
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, 30000);
+
+  test("9c: an unreadable Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    rmSync(alphaArtifact);
+    mkdirSync(alphaArtifact);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, 30000);
+
+  // 9d: with every unit covered, the approve is ALLOWED (the guard passes) and
   // the transition commits (kind=done, not error).
-  test("9b: approving once every unit is covered is allowed and commits", () => {
+  test("9d: approving once every unit is covered is allowed and commits", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);

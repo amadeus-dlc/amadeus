@@ -1,0 +1,25 @@
+{
+  "electionId": "E-GFR-BTS13",
+  "voter": "subagent-1",
+  "question": "260810-grilling-frontier-resync build-and-test ステージの §13 学習候補の採否。conductor 提案 = 採用1件 / 不採用3件。\n\n【採用案 A(既存 cid への追補)】cid:code-generation:mirror-merge-before-approve への追補(同 intent の code-generation 段で採択した cid:code-generation:c1-mirror-and-rebuild-before-review の姉妹面): **Bolt のコードが conductor ツリーへ「マージ経由」で到達している場合、workspace_requires ガードの経路 (a)(b) は構造的に不成立になる** — (a) `recordBranchSourceWork` は `git log --first-parent --no-merges` で merge 到来コードを設計上除外し(他 intent の PR を自 intent の作業と数えない帰属規律)、(b) `boltRefHasSourceWork` は取込後 merge-base == bolt tip となり diff が空になるため。残る経路 (c) `mergedPrSourceWork` は「birth..HEAD の commit subject が**この intent の宣言 issue 番号**を参照し、かつ非 doc ファイルに触れる」ことを要求するので、Bolt PR の squash 着地(subject に PR 番号が入る)を取り込んだうえで、state の `Project` フィールドへ**実装 PR 番号の事実記載**を追記して満たす。虚偽参照による guard 迂回は検証劇場として禁止であり、追記は実在する実装 PR の記載に限る(既存規範の再確認)。実測: 本 intent の code-generation approve が本機序で拒否され、origin/main(Bolt 2/3 の squash 着地)取込 + Project への `#2828 / #2843 / #2844` 追記で通過した。\n\n【不採用】c1(Comprehensive でも NFR へ trace できる範囲に限る)= 既存 cid:build-and-test:bt-proportional-selection / c2-no-test-theatre-for-absent-nfr の射程内で新規性なし。c3(main 取込後に plugin 投影を再生成しないと advisory evaluator が exit 1 になり engine が malformed directive を拒否する)= 同 intent で採択済みの cid:code-generation:c1-mirror-and-rebuild-before-review が『取込後に build して配送先ツリーで再実測する』を既に定めており、その engine 面の実例に留まる。c4(builder の隔離 worktree で赤だった4件が main 着地後の conductor ツリーで全解消)= 既存 cid:build-and-test:bt-20260730-2 / c1-tsr-ambient-repro-on-base の帰属規律の適用実例で、新規規則ではない。\n\nchoice 1 = A の1件を採用(推奨)。choice 2 = 一部変更・別案(留保に記す)。choice 3 = 0件(A も既存 cid の射程内)または質問自体に欠落・誤り。\n\n検証対象: `packages/framework/core/tools/amadeus-state.ts` の `recordBranchSourceWork` / `boltRefHasSourceWork` / `mergedPrSourceWork` / `intentScopedSourceWork` / `intentIssueRefs` の実装、`amadeus/spaces/default/intents/260810-grilling-frontier-resync/construction/build-and-test/memory.md` の Deviations、同 intent の `amadeus-state.md` の Project フィールド、`amadeus/spaces/default/memory/project.md` の既存 cid 群。既存 cid の射程内かどうかを独立に実測して判断すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A の1件を採用(推奨)",
+      "description": "workspace_requires の経路 (a)(b) が merge 到来コードでは不成立になる機序と、経路 (c) を満たす正当な手順(実装 PR 番号の事実記載)を既存 cid への追補として persist する。独立 cid は新設しない。"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "一部変更 / 別案",
+      "description": "文面の修正や追補先 cid の変更が必要と判断する場合。どこをどう変えるかを留保に明記すること。"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "0件",
+      "description": "A も既存 cid の射程内で新規 persist は不要、または質問の前提に誤りがあると判断する場合。根拠を留保に明記すること。"
+    }
+  ]
+}

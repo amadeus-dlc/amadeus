@@ -1,0 +1,22 @@
+{
+  "electionId": "E-GFR-CG1",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync Bolt 1 PR #2828 の外部レビュー指摘(CodeRabbit、Major)への対応裁定 — 設計逸脱クラス。指摘: grilling-protocol.md の overlay で、回路遮断器到達時の『未提示質問』の扱いが未規定。§2.5 はラウンド内の全質問を提示前に空 [Answer]: として questions ファイルへ追記する契約(FR-PROTO-9 / BR-U1-7 の1問1件)だが、遮断器の残り枠がラウンド全体より小さい場合、追記済み・未提示の空タグが残り、stage-protocol §3 Step 4 の空タグ検査が遮断器後にそれらを再提示しうる(silent 打ち切り禁止と矛盾する再開経路)。承認済み BR-U1-5(遮断器)/ BR-U1-7(1問1件)はこの境界を規定していない — 新契約条項の追加は設計判断。choice 1 = 追記前ゲート形: 残り枠でラウンド全体を提示できない場合、そのラウンドの質問を questions ファイルへ追記せず、frontier を未解決として C-4(合意サマリ)へ渡し、未完走 frontier を開示する1段落を overlay §2.4(遮断器)へ追加する(CodeRabbit 提案準拠 — 追記と提示の原子性を保ち、空タグ残骸ゼロ)。choice 2 = 対応見送り: 本 Bolt では追加せず、レビュースレッドへ理由(境界ケースの契約化は別 enhancement)を返信して未解決のまま申し送る。choice 3 = 別案(留保に具体形を記す)。検証対象: PR #2828 の grilling-protocol.md §2.4/§2.5 実文、stage-protocol.md §3 Step 4 の空タグ検査の実在、BR-U1-5/7(record の business-rules.md)に当該境界規定が無いこと",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "追記前ゲート形を追加"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "別案(留保)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "対応見送り(返信して申し送り)"
+    }
+  ]
+}

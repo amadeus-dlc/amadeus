@@ -148,9 +148,15 @@ where the phase's usual final stage was skipped. Never report first and try to
 repair a rejected transition afterward.
 
 For a per-unit directive, write only beneath the current unit's declared
-construction path. Run any declared reviewer inside its runtime-scoped
-read-only evidence boundary. A validated `READY` verdict is required; a failed
-review validation establishes no trustworthy verdict.
+construction path. On a normal per-unit directive, run the body and any declared
+reviewer inside its runtime-scoped read-only evidence boundary, then re-run
+`next` without reporting. `gate:false` suppresses only the human gate and §13;
+it never suppresses the reviewer. `review_only:true` skips the stage body and
+runs only the declared reviewer for the current unit, then re-runs `next`
+without reporting. A `gate:true` per-unit re-entry means every body and verdict
+already exists: do not regenerate either; run completion verification and §13,
+then present the single stage gate. A validated `READY` verdict is required; a
+failed review validation establishes no trustworthy verdict.
 
 When a stage gate is open, present exactly:
 

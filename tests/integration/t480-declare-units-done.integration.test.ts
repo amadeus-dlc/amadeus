@@ -146,6 +146,15 @@ function seedCoveredUnit(proj: string, unit: string): void {
   for (const name of ["code-generation-plan.md", "code-summary.md"]) {
     writeFileSync(join(dir, name), `# ${unit} ${name}\n`);
   }
+  writeFileSync(
+    join(dir, "code-generation-plan.md"),
+    `# ${unit} code-generation-plan.md\n\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-10T00:00:00Z\n" +
+      "- **Iteration:** 1\n" +
+      "- **Scope decision:** none\n",
+  );
 }
 
 function stateOf(proj: string): string {

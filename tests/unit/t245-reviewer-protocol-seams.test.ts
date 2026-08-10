@@ -5,11 +5,40 @@ import { describe, expect, test } from "bun:test";
 import * as reviewer from "../../packages/framework/core/tools/amadeus-reviewer.ts";
 
 describe("t245 reviewer protocol public seams", () => {
-  test("exports only the two approved public functions", () => {
+  test("exports only the three approved public functions", () => {
     expect(Object.keys(reviewer).sort()).toEqual([
+      "hasDurableReviewProjection",
       "reviewerReadScope",
       "runtimeReviewIdentity",
     ]);
+  });
+
+  test("accepts only complete durable Review projections for the expected reviewer", () => {
+    const complete = [
+      "## Review — Iteration 2",
+      "",
+      "- **Verdict:** READY",
+      "- **Reviewer:** amadeus-architecture-reviewer-agent",
+      "- **Date:** 2026-08-10T00:00:00Z",
+      "- **Iteration:** 2",
+      "- **Scope decision:** none",
+    ].join("\n");
+    expect(reviewer.hasDurableReviewProjection(
+      complete,
+      "amadeus-architecture-reviewer-agent",
+    )).toBe(true);
+    for (const partial of [
+      "## Review — Iteration 2",
+      complete.replace("- **Reviewer:** amadeus-architecture-reviewer-agent\n", ""),
+      complete.replace("- **Iteration:** 2", "- **Iteration:** 1"),
+      complete.replace("2026-08-10T00:00:00Z", "2026-02-30T00:00:00Z"),
+      `${complete}\n\n${complete}`,
+    ]) {
+      expect(reviewer.hasDurableReviewProjection(
+        partial,
+        "amadeus-architecture-reviewer-agent",
+      )).toBe(false);
+    }
   });
 
   test("builds the declared current-unit review scope without a missing optional artifact", () => {

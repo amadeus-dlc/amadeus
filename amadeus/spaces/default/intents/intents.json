@@ -1070,6 +1070,20 @@
     "status": "complete"
   },
   {
+    "uuid": "019fe9c1-1949-74d5-a30c-6b8073d6164e",
+    "slug": "grilling-frontier-resync",
+    "dirName": "260810-grilling-frontier-resync",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019feb2a-1562-7a8a-9388-a4543a5d52a1",
+    "slug": "plugin-manifest-resoluti",
+    "dirName": "260810-plugin-manifest-resoluti",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019feab2-7563-7d45-b7ac-828621c7e1ab",
     "slug": "plugin-prose-seed-guard",
     "dirName": "260810-plugin-prose-seed-guard",

@@ -6,7 +6,8 @@
 //             the linked Intent from its registry and adds the Intent, Bolt,
 //             and Unit identity to the title and authored body.
 //   status    read-only. Prints the verdict as JSON. 0 = converged,
-//             1 = not converged, 2 = the gh boundary failed.
+//             1 = not converged, 2 = the gh boundary failed, 3 = linked
+//             pull-request provenance failed.
 //   report    the same evaluation, and on convergence ONLY, writes the
 //             machine-rendered report the artifact guard looks for. A
 //             non-converged run writes nothing: a report that exists without
@@ -63,6 +64,10 @@ import {
   renderPullRequestTitle,
   resolveIntentReference,
 } from "./pr-convergence-presentation.ts";
+import {
+  checkProvenance,
+  renderProvenanceRemediation,
+} from "./pr-convergence-provenance.ts";
 
 // ---------------------------------------------------------------------------
 // The report (the artifact the guard reads)
@@ -312,6 +317,7 @@ interface ConvergenceOptions {
   readonly record: string;
   readonly reason: string | null;
   readonly logTool: string;
+  readonly unlinked: boolean;
 }
 
 interface CreateBaseOptions {
@@ -424,6 +430,19 @@ function parseCreateOptions(flags: Map<string, string>): OptionParse {
   };
 }
 
+type UnlinkedParse =
+  | { readonly ok: true; readonly value: boolean }
+  | { readonly ok: false; readonly message: string };
+
+function parseUnlinked(flags: Map<string, string>): UnlinkedParse {
+  const value = flags.get("unlinked");
+  if (value === undefined) return { ok: true, value: false };
+  if (value !== "true") {
+    return { ok: false, message: "--unlinked must be exactly true when provided" };
+  }
+  return { ok: true, value: true };
+}
+
 function parseOptions(argv: readonly string[]): OptionParse {
   const [verb, ...rest] = argv;
   const flags = parseFlags(rest);
@@ -435,6 +454,8 @@ function parseOptions(argv: readonly string[]): OptionParse {
   const target = resolveTarget(flags);
   if (!target.ok) return target;
   const reason = flags.get("reason") ?? null;
+  const unlinked = parseUnlinked(flags);
+  if (!unlinked.ok) return unlinked;
   if (verb === "override" && (reason === null || reason.trim() === "")) {
     return { ok: false, message: "--reason is required for override" };
   }
@@ -445,6 +466,7 @@ function parseOptions(argv: readonly string[]): OptionParse {
       ...target.value,
       reason,
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
+      unlinked: unlinked.value,
     },
   };
 }
@@ -516,13 +538,20 @@ type Evaluation =
       readonly facts: LandedFacts;
       readonly verdict: EvaluatedVerdict;
       readonly summary: LedgerSummary;
+      readonly provenanceSource: ProvenanceSource;
     }
   | {
       readonly kind: "active";
       readonly core: ConvergenceVerdict;
       readonly verdict: EvaluatedVerdict;
       readonly summary: LedgerSummary;
+      readonly provenanceSource: ProvenanceSource;
     };
+
+interface ProvenanceSource {
+  readonly title: string;
+  readonly body: string;
+}
 
 type EvaluationResult =
   | { readonly ok: true; readonly value: Evaluation }
@@ -540,7 +569,7 @@ const EMPTY_LEDGER_SUMMARY: LedgerSummary = {
 };
 
 type PrLifecycleResolution =
-  | { readonly kind: "merged"; readonly facts: LandedFacts }
+  | { readonly kind: "merged"; readonly facts: LandedFacts; readonly first: RawPrState }
   | { readonly kind: "active"; readonly first: RawPrState };
 
 type LifecycleResult =
@@ -562,7 +591,7 @@ async function resolvePrLifecycle(gh: GhRunner, ref: PrRef): Promise<LifecycleRe
   // but unknown still throws (AC-1b stays fail-closed).
   if (first.state === undefined) return { ok: true, value: { kind: "active", first } };
   if (PrLifecycleState.parse(first.state) === "MERGED") {
-    return { ok: true, value: { kind: "merged", facts: LandedFacts.parse(first) } };
+    return { ok: true, value: { kind: "merged", facts: LandedFacts.parse(first), first } };
   }
   return { ok: true, value: { kind: "active", first } };
 }
@@ -599,6 +628,7 @@ async function evaluate(options: ConvergenceOptions, seams: CliSeams): Promise<E
         facts,
         verdict: landedVerdict(facts),
         summary: EMPTY_LEDGER_SUMMARY,
+        provenanceSource: lifecycle.value.first,
       },
     };
   }
@@ -625,7 +655,13 @@ async function evaluate(options: ConvergenceOptions, seams: CliSeams): Promise<E
   });
   return {
     ok: true,
-    value: { kind: "active", core, verdict: labeledVerdict(core), summary: ledger.summary() },
+    value: {
+      kind: "active",
+      core,
+      verdict: labeledVerdict(core),
+      summary: ledger.summary(),
+      provenanceSource: lifecycle.value.first,
+    },
   };
 }
 
@@ -690,6 +726,32 @@ export interface CliOutcome {
   readonly stderr: string;
 }
 
+function provenanceOutcome(
+  options: ConvergenceOptions,
+  evaluation: Evaluation,
+): CliOutcome | null {
+  if (options.verb === "override" || options.unlinked) return null;
+  const provenance = checkProvenance({
+    ...evaluation.provenanceSource,
+    record: options.record,
+    unit: options.unit,
+  });
+  if (provenance.ok) return null;
+  return {
+    exitCode: 3,
+    stdout: JSON.stringify(
+      {
+        kind: "provenance-violation",
+        prRef: refValue(options.ref),
+        violations: provenance.violations,
+      },
+      null,
+      2,
+    ),
+    stderr: `${renderProvenanceRemediation(provenance.violations)}\n`,
+  };
+}
+
 async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Promise<CliOutcome> {
   let evaluation: EvaluationResult;
   try {
@@ -701,6 +763,8 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   }
   if (!evaluation.ok) return { exitCode: 2, stdout: "", stderr: `${evaluation.message}\n` };
   const { verdict, summary } = evaluation.value;
+  const provenanceFailure = provenanceOutcome(options, evaluation.value);
+  if (provenanceFailure !== null) return provenanceFailure;
 
   if (options.verb === "status") {
     const payload = JSON.stringify(
