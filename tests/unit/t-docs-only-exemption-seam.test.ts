@@ -189,6 +189,21 @@ describe("t-docs-only-exemption-seam: handleDeclareDocsOnly guard edges (#499/#8
     expect(r.threw).toBe(true);
     expect(r.stderr).toContain("no registry row in intents.json matches");
   });
+
+  // Issue #2763: amadeus-state.ts's own generic parseFlags (shared by
+  // handleDeclareDocsOnly/handleFork/handleMerge/handleDeclareUnitsDone) had
+  // the same unguarded `args[i + 1]` value-arm as #2741's sensor-side flags.
+  // --evidence IS downstream-validated (verifyDocsOnlyEvidence requires an
+  // allowlisted event type), so a swallowed flag name was already loud here —
+  // the fix moves the failure earlier and names the real cause precisely
+  // instead of the confusing "must reference a human-approval audit event".
+  test("Issue #2763: --evidence immediately followed by another flag is refused with a precise message", () => {
+    seedStateFile(proj, "state-construction-bolt1.md");
+    const r = captureExit(() => handleDeclareDocsOnly(["--evidence", "--project-dir", "/tmp"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain('--evidence expects a value, got another flag: \\"--project-dir\\"');
+    expect(r.stderr).not.toContain("must reference a human-approval audit event");
+  });
 });
 
 describe("t-docs-only-exemption-seam: handleDeclareDocsOnly (#499/#848)", () => {

@@ -259,3 +259,62 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     expect(reasons).toContain("write-failure-permission-denied");
   });
 });
+
+// ============================================================
+// Issue #2763 — handlePracticesEvent --type/--field flag-value arm
+// ============================================================
+//
+// --field's own value-shaped check (kv.indexOf(":") > 0) means a swallowed
+// flag NAME (no colon) used to be silently DROPPED — no error, the field
+// simply never lands in the `fields` map, and (since --type is unaffected in
+// this exact ordering) the event still emits successfully missing that field.
+// --type's flag-value arm was ALREADY loud (an unknown type falls through the
+// `switch` to `default: error(...)`) — the fix touches it too (both branches
+// share the same loop) with no behaviour change for it; the falling test below
+// is on --field, the genuinely silent one.
+describe("t81 Issue #2763: --type/--field flag-value arm", () => {
+  test("--field immediately followed by another flag (no colon) is refused, not silently dropped", () => {
+    const p = proj();
+    // Pre-fix, decisive repro: --type affirmed (PRACTICES_AFFIRMED, whose
+    // event-registry schema carries ZERO requiredAttributes — unlike
+    // PRACTICES_OVERRIDE's mandatory "Reason") is ALREADY validly set (its
+    // own value, parsed BEFORE the swallow) so eventTypeArg stays truthy;
+    // --field's swallowed value "--some-other-flag" has no ":"
+    // (kv.indexOf(":") === -1, idx > 0 is false) so the field is silently
+    // skipped — no error, not even a malformed-field warning — and the
+    // trailing "ignored-tail" token matches neither --type nor --field, so
+    // the loop just drops it too. Because PRACTICES_AFFIRMED requires no
+    // attributes, the tool exits 0 and emits it successfully with the field
+    // silently missing (genuinely exhibitable: a real caller's --field value
+    // never registers, and nothing in the observable output says so).
+    const r = practicesEvent(
+      ["--type", "affirmed", "--field", "--some-other-flag", "ignored-tail"],
+      p,
+    );
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain('--field expects a value, got another flag: \\"--some-other-flag\\"');
+    expect(auditEventCount(readAudit(p), "PRACTICES_AFFIRMED")).toBe(0);
+  });
+
+  test("control: --field \"Key: Value\" then --type override still succeeds", () => {
+    const p = proj();
+    const r = practicesEvent(["--field", "Reason: t2763-control", "--type", "override"], p);
+    expect(r.status).toBe(0);
+    const f = readAudit(p);
+    expect(auditEventCount(f, "PRACTICES_OVERRIDE")).toBe(1);
+    expect(auditField(f, "PRACTICES_OVERRIDE", "Reason")).toBe("t2763-control");
+  });
+
+  test("--type immediately followed by --field is refused with the new clear message", () => {
+    const p = proj();
+    // Pre-fix this already failed loud via the `switch` default arm
+    // ("Invalid --type: --field. Must be discovered, affirmed, override, or
+    // empty.") — GREEN asserts the EARLIER, clearer parse-layer message now
+    // fires instead (defense-in-depth for the shared loop, no exhibited
+    // behaviour change since both are exit non-zero, no audit row).
+    const r = practicesEvent(["--type", "--field", "Reason: x"], p);
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain('--type expects a value, got another flag: \\"--field\\"');
+    expect(auditEventCount(readAudit(p), "PRACTICES_OVERRIDE")).toBe(0);
+  });
+});

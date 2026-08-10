@@ -188,16 +188,9 @@ let projectDir: string | undefined;
 function main(): void {
   const rawArgs = process.argv.slice(2);
 
-  // Extract --project-dir
-  const filteredArgs: string[] = [];
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
-      projectDir = rawArgs[i + 1];
-      i++;
-    } else {
-      filteredArgs.push(rawArgs[i]);
-    }
-  }
+  const extracted = extractProjectDirArg(rawArgs);
+  projectDir = extracted.projectDir;
+  const filteredArgs = extracted.filteredArgs;
 
   const subcommand = filteredArgs[0];
 
@@ -230,6 +223,27 @@ if (import.meta.main) {
   main();
 }
 
+// Splits `--project-dir <value>` out of raw argv, leaving every other token
+// (including a `--project-dir` with no value, or one immediately followed by
+// another flag, which is left in `filteredArgs` to fail loudly downstream
+// rather than being silently mis-consumed — Issue #2763) untouched. Exported
+// as a pure seam so this branch is exercisable in-process (bun --coverage
+// cannot see argv splitting that only runs inside main()'s
+// `if (import.meta.main)` guard).
+export function extractProjectDirArg(rawArgs: string[]): { projectDir: string | undefined; filteredArgs: string[] } {
+  const filteredArgs: string[] = [];
+  let extracted: string | undefined;
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length && !rawArgs[i + 1].startsWith("--")) {
+      extracted = rawArgs[i + 1];
+      i++;
+    } else {
+      filteredArgs.push(rawArgs[i]);
+    }
+  }
+  return { projectDir: extracted, filteredArgs };
+}
+
 // --- Parse named flags ---
 
 function parseFlags(
@@ -238,7 +252,11 @@ function parseFlags(
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith("--") && i + 1 < args.length) {
-      flags[args[i].slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      if (value.startsWith("--")) {
+        error(`${args[i]} expects a value, got another flag: "${value}". Did you forget the value?`);
+      }
+      flags[args[i].slice(2)] = value;
       i++;
     }
   }

@@ -586,23 +586,23 @@
     "file": "packages/framework/core/tools/amadeus-jump.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:55e7fe69ef64c96cef5b0dcd1fa9484dcf579d9eccd6cb74e3629cbfa5a906b3",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-jump.ts",
-    "selector": {
-      "function": "main",
       "fingerprint": "sha256:bd2368e0b6a6b67acb08e30c740df410f2d91db1d9f8f6db9e87a16bdfc9064c",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:1e9d1b41078d0d500a6fb6b97ae73690e19591ca311ffd998b04e811f762e99c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Issue #2763's extractProjectDirArg call site + assignments inside main(), same spawn-only entrypoint as the telemetry-wiring entry above (main() only runs under `if (import.meta.main)`, never in-process). extractProjectDirArg's own body IS driven in-process (tests/unit/t-jump-parseflags-seam.test.ts calls it directly with every value-arm shape), and the wiring's outcome (projectDir/filteredArgs assignment) is exercised at the process boundary by tests/unit/t19.test.ts's spawn cases. Spawn-blindspot-two-step (ii): moving these 3 lines out of main() to make them importable would just relocate the same spawn-only call/assign pair, not remove it.",
+    "expiry": "remove when main() gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-learnings.ts",
@@ -3490,6 +3490,28 @@
       "targetLines": "1-4"
     },
     "reason": "Marker-write wiring inside handleFork (spawn-only, as above): the try, the seam call, and its failure branch. The write itself IS driven in-process — writeBoltContextMarker is exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts including the overwrite case — and the spawned fork in the same file asserts the marker the CLI produced. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when handleFork gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleFork",
+      "fingerprint": "sha256:9f8802251cf35b4501264fea5b70aa8dd4315a0179c0f00c5a23d3b207b57104",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Issue #2763's --unit boolean-flag filter (`args.filter((a) => a !== \"--unit\")`) inside handleFork, same spawn-only handler as above (git worktree creation, real locking — no in-process driver exists). The filter's effect IS exercised at the process boundary: tests/integration/t166-multi-repo-construction.test.ts's swarm-prepare path spawns amadeus-bolt.ts -> amadeus-state.ts fork with the exact \"--unit --repo <name>\" shape this line guards against, and asserts the fork succeeds (pre-fix regression, caught and fixed against this same test). Spawn-blindspot-two-step (ii): no behaviour-preserving refactor moves this filter out of handleFork without losing the boltContextKind(args) vs parseFlags(filtered) split it exists to make.",
+    "expiry": "remove when handleFork gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleFork",
+      "fingerprint": "sha256:284e4cdca6eced8d6bfb58699fafce94d4eacee1241c83b0d557d1db95c4c388",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "handleFork's own `export function handleFork(args: string[]): void {` signature line. Issue #2763 exported handleFork (for parity with the other now-exported handlers, and so tests can reference it by name in comments/allowlist reasons), which changed the line's text and made it register as a newly-added line even though the function's body and behaviour are unchanged. Same spawn-only handler as the two entries above (no in-process driver exists — git worktree creation, real locking).",
     "expiry": "remove when handleFork gains an in-process driver"
   },
   {
