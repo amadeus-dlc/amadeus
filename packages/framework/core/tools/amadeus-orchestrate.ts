@@ -93,6 +93,7 @@ import {
   type ErrorDirective,
   GATE_UNRESOLVED,
   type GateValue,
+  type InvokeSwarmDirective,
   type ParkedDirective,
   type PrintDirective,
   renderAdvisoryChoiceQuestion,
@@ -226,6 +227,12 @@ import {
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { createAuditUnitPoolRepository, createUnitPoolCoordinator } from "./amadeus-unit-pool-runtime.ts";
+import {
+  constructionFailureTransition,
+  normalizeConstructionOutcomeAudit,
+  projectConstructionOutcomes,
+} from "./amadeus-construction-outcome-projection.ts";
 import {
   mirrorIssueNumberFromDocument,
   succeededMirrorCreateExists,
@@ -3548,6 +3555,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // stage (one unit per `next`, gate suppressed on every uncovered unit with
     // the real gate only on the all-covered re-entry; issue #368) and emits a
     // single directive for every other stage — or stops on a plan mismatch.
+    if (emitConstructionFailureIfPresent(pd, currentSlug, flags.resume === true)) return;
     emitSwarmOrPerUnit(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
     return;
   }
@@ -3590,6 +3598,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
   // otherwise — unless the refusal breaks the compiled plan, which stops.
+  if (emitConstructionFailureIfPresent(pd, next.slug, flags.resume === true)) return;
   emitSwarmOrPerUnit(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
 }
 
@@ -3631,15 +3640,38 @@ function firstUncoveredBatch(
   codekbCtx: CodekbCtx,
 ): { units: string[]; batchNumber: number } | null {
   const unitKinds = readUnitKinds(projectDir);
+  const cancelledUnits = cancelledConstructionUnits(projectDir, node.slug);
   for (let index = 0; index < batches.length; index++) {
     const batch = batches[index];
     if (!Array.isArray(batch) || batch.length === 0) continue;
+    const terminalOutcomes = new Map(
+      createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir))
+        .readProjection(String(index + 1)).terminal
+        .map((entry) => [entry.unitId, entry.outcome] as const),
+    );
     const uncovered = batch.filter(
-      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+      (u) => !cancelledUnits.has(u) &&
+        terminalOutcomes.get(u) !== "cancelled" &&
+        terminalOutcomes.get(u) !== "succeeded" &&
+        !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
     );
     if (uncovered.length > 0) return { units: uncovered, batchNumber: index + 1 };
   }
   return null;
+}
+
+function cancelledConstructionUnits(projectDir: string, stage: string): ReadonlySet<string> {
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!intent) return new Set();
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) return new Set();
+  const projected = projectConstructionOutcomes(normalized.records, { intent, stage });
+  if (!projected.ok) return new Set();
+  return new Set(
+    projected.projection.units
+      .filter((entry) => entry.outcome === "cancelled")
+      .map((entry) => entry.unit),
+  );
 }
 
 // The batch-end gate question owed before batch `nextBatchNumber` (1-origin) may
@@ -3784,6 +3816,80 @@ function emitConfiguredSwarm(projectDir: string, units: string[]): void {
   };
   const repos = intentRepos(projectDir);
   emit(repos.length === 1 ? { ...directive, repo: repos[0] } : directive);
+}
+
+export function preparedSwarmRetryDirective(
+  projectDir: string,
+  batch: string,
+  unit: string,
+): InvokeSwarmDirective {
+  const repos = intentRepos(projectDir);
+  const directive: InvokeSwarmDirective = {
+    kind: "invoke-swarm",
+    units: [unit],
+    cap: 1,
+    prepared_batch: batch,
+    retry_unit: unit,
+  };
+  return repos.length === 1 ? { ...directive, repo: repos[0] } : directive;
+}
+
+function canonicalConstructionFailurePending(projectDir: string): boolean {
+  const state = loadStateFileIfPresent(projectDir);
+  const stage = state ? getField(state, "Current Stage")?.trim() : undefined;
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!stage || !intent) return false;
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) return false;
+  const projected = projectConstructionOutcomes(normalized.records, {
+    intent,
+    stage,
+    batches: readBoltDagBatches(projectDir) ?? [],
+  });
+  return projected.ok && constructionFailureTransition(projected.projection).kind === "await-unit-ruling";
+}
+
+function emitConstructionFailureIfPresent(
+  projectDir: string,
+  stageSlug: string,
+  resume: boolean,
+): boolean {
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!intent) return false;
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) {
+    emit(errorDirective(`Construction outcome audit is incomplete: ${JSON.stringify(normalized.diagnostics)}`));
+    return true;
+  }
+  const result = projectConstructionOutcomes(normalized.records, {
+    intent,
+    stage: stageSlug,
+    batches: readBoltDagBatches(projectDir) ?? [],
+  });
+  if (!result.ok) {
+    emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(result.diagnostics)}`));
+    return true;
+  }
+  if (result.projection.constructionSuspended && !resume) {
+    emit(parkedDirective(
+      `Construction parked after an Abort ruling at "${stageSlug}". Failure evidence and Unit worktrees are preserved. Resume explicitly with /amadeus --resume.`,
+      stageSlug,
+    ));
+    return true;
+  }
+  const transition = constructionFailureTransition(result.projection);
+  if (transition.kind === "await-unit-ruling") {
+    const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
+    emit(askDirective(
+      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    ));
+    return true;
+  }
+  if (result.projection.units.some((entry) => entry.outcome === "failed")) {
+    emit(errorDirective("Construction Unit failure is terminal but its BOLT_FAILED / batch-closure join is incomplete; waiting fail-closed."));
+    return true;
+  }
+  return false;
 }
 
 function tryEmitSwarm(
@@ -4255,6 +4361,7 @@ function emitPerUnitRunStage(
   // it downstream.
   const units = orderedUnits(projectDir);
   const unitKinds = readUnitKinds(projectDir);
+  const cancelledUnits = cancelledConstructionUnits(projectDir, node.slug);
   if (units.length === 0) {
     const degradeUnits = unitDirsUnderConstruction(projectDir, recordPrefix);
     const picked = resolveDegradeUnit(
@@ -4321,7 +4428,7 @@ function emitPerUnitRunStage(
   const pickUnit = selectNextUnitForStage(
     node.slug,
     units,
-    (u) => unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+    (u) => cancelledUnits.has(u) || unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
     readConstructionIteration(stateContent),
   );
   if (pickUnit === null) {
@@ -5652,6 +5759,16 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     }
   }
 
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (
+    flags.result === undefined &&
+    (answer === "retry" || answer === "skip" || answer === "abort") &&
+    canonicalConstructionFailurePending(resolveProjectDir(projectDir))
+  ) {
+    handleFailureRuling(args, projectDir);
+    return;
+  }
+
   // A verdict is required: report commits the outcome of an acted directive, so
   // it cannot run without one. An unrecognised verdict is a hard error (clean
   // boundaries) rather than a silent no-op.
@@ -5974,6 +6091,65 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // subcommand - the engine itself writes nothing, mirroring report's discipline.
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
+export function handleFailureRuling(args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  const flags = parseReportFlags(args);
+  const pd = resolveProjectDir(projectDir);
+  const state = loadStateFileIfPresent(pd);
+  // biome-ignore format: One evaluated tuple keeps Bun's line coverage from reporting the two executed initializers as zero-hit regions.
+  const [stage, intent, normalized] = [flags.stage?.trim() || (state ? getField(state, "Current Stage")?.trim() : undefined), activeIntent(pd, activeSpace(pd)), normalizeConstructionOutcomeAudit(readAllAuditShards(pd))] as const;
+  if (!stage || !intent || !normalized.ok) { emit(errorDirective("Cannot resolve the canonical Construction failure target.")); return; }
+  const projected = projectConstructionOutcomes(normalized.records, { intent, stage, batches: readBoltDagBatches(pd) ?? [] });
+  if (!projected.ok) { emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(projected.diagnostics)}`)); return; }
+  if (projected.projection.constructionSuspended) { emit(errorDirective("Construction is suspended after Abort; resume explicitly before any new failure ruling.")); return; }
+  const pending = constructionFailureTransition(projected.projection);
+  if (pending.kind !== "await-unit-ruling" || !pending.target.attempt || !pending.target.batch) { emit(errorDirective("No unresolved Construction Unit failure is eligible for a ruling.")); return; }
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (answer !== "retry" && answer !== "skip" && answer !== "abort") { emit(errorDirective("resolve-failure requires --user-input Retry, Skip, or Abort.")); return; }
+  const solo = pending.target.batch.startsWith("solo:");
+  const soloBatchNumber = solo ? pending.target.batch.split(":")[1] : undefined;
+  if (solo && (!soloBatchNumber || !/^[1-9][0-9]*$/.test(soloBatchNumber))) { emit(errorDirective("Solo Construction failure has an invalid explicit batch identity.")); return; }
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(pd));
+  if (answer === "retry") {
+    if (solo) {
+      const started = runTool(pd, "amadeus-bolt.ts", [
+        "start", "--name", pending.target.unit, "--batch", soloBatchNumber!, "--project-dir", pd,
+      ]);
+      if (!started.ok) { emit(errorDirective(`Solo Retry transition refused: ${toolErrorMessage(started)}`)); return; }
+      emit({ kind: "committed", reason: `Retry committed for solo Unit "${pending.target.unit}" with a fresh immutable attempt; run next to continue.` });
+      return;
+    }
+    const retried = pool.retryFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:retry`, batchId: pending.target.batch, unitId: pending.target.unit });
+    if (!retried.ok) { emit(errorDirective(`Retry transition refused: ${retried.reason}`)); return; }
+    emit(preparedSwarmRetryDirective(pd, pending.target.batch, pending.target.unit));
+    return;
+  }
+  if (answer === "skip") {
+    if (solo) {
+      const appended = spawnAuditAppend(pd, "BOLT_COMPLETED", {
+        "Bolt names": pending.target.unit,
+        "Bolt slug": pending.target.unit,
+        "Batch number": soloBatchNumber!,
+        "Batch Id": pending.target.batch,
+        "Attempt Id": pending.target.attempt,
+        Stage: stage,
+        Outcome: "cancelled",
+        Reason: "skipped",
+      });
+      if (appended.exitCode !== 0) { emit(errorDirective(`Solo Skip audit commit failed: ${appended.stderr.trim() || appended.stdout.trim()}`)); return; }
+      emit({ kind: "committed", reason: `Skip committed for solo Unit "${pending.target.unit}" as cancelled.` });
+      return;
+    }
+    const skipped = pool.skipFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:skip`, batchId: pending.target.batch, unitId: pending.target.unit, reason: "skipped" });
+    if (!skipped.ok) { emit(errorDirective(`Skip transition refused: ${skipped.reason}`)); return; }
+    emit({ kind: "committed", reason: `Skip committed for Unit "${pending.target.unit}" as cancelled; sibling outcomes are preserved.` });
+    return;
+  }
+  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch-id", pending.target.batch, "--project-dir", pd]);
+  if (!aborted.ok) { emit(errorDirective(`Abort transition refused: ${toolErrorMessage(aborted)}`)); return; }
+  emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
+}
+
 function handlePark(_args: string[], projectDir: string | undefined): void {
   _handlerProjectDir = projectDir;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
@@ -6380,6 +6556,9 @@ function main(): void {
     case "report":
       handleReport(subArgs, projectDir);
       break;
+    case "resolve-failure":
+      handleFailureRuling(subArgs, projectDir);
+      break;
     case "park":
       handlePark(subArgs, projectDir);
       break;
@@ -6394,7 +6573,7 @@ function main(): void {
       // sibling tools (amadeus-state.ts default -> error()): record an
       // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
       // evidence, not just a stderr line (Issue #878). No-op pre-init.
-      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park, gate-reserve, gate-reject`;
+      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, resolve-failure, park, gate-reserve, gate-reject`;
       recordEngineError(usage, projectDir);
       console.error(usage);
       process.exit(1);

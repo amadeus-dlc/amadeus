@@ -119,6 +119,14 @@ describe("t528 the `committed` directive is part of the frozen contract", () => 
 });
 
 describe("t528 report's commit ack is non-terminal", () => {
+  test("a failed result remains a typed error directive", () => {
+    handleReport(["--stage", "code-generation", "--result", "failed"], undefined);
+
+    const directive = lastDirective();
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain('Unknown --result "failed"');
+  });
+
   test("a gated approve acks with `committed`, never the terminal `done`", () => {
     proj = freshProject();
 

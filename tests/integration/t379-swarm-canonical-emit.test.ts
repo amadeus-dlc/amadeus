@@ -64,6 +64,10 @@ beforeEach(() => {
   resetOtelBootstrapForTests();
   ensureContextManager();
   recordDir = birthIntent(proj, "swarm-emit", "default", "feature").recordDir;
+  writeFileSync(
+    join(recordDir, "amadeus-state.md"),
+    "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+  );
 });
 
 afterEach(() => {

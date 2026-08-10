@@ -15,12 +15,26 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  birthIntent,
+  readAllAuditShards,
+  stateFilePath,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
   claimedUnitsFailureEnvelope,
   claimedUnitsOutsideBatch,
+  currentStageOrFail,
   fileTamperResultForStatuses,
   handleFinalize,
   verdictFor,
 } from "../../packages/framework/core/tools/amadeus-swarm.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+} from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
+import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
+import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
+import { resetLoggerProviderForTests } from "../../packages/framework/core/otel/logger-provider.ts";
+import { resetTracerProviderForTests } from "../../packages/framework/core/otel/tracer-provider.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -28,6 +42,10 @@ afterEach(() => {
   for (const dir of temporaryDirectories.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+  resetFatalLatchForTests();
+  resetLoggerProviderForTests();
+  resetTracerProviderForTests();
+  resetOtelBootstrapForTests();
 });
 
 function makeTemporaryDirectory(prefix: string): string {
@@ -57,6 +75,209 @@ function makeVerdictFixture(): { projectDir: string; worktreeDir: string } {
 const passingCheckCommand = process.platform === "win32" ? "exit /b 0" : "true";
 
 describe("t207 claimed/units guard (#738)", () => {
+  test("failure correlation rejects missing workflow state before audit emission", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-missing-state-");
+    const originalExit = process.exit;
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => currentStageOrFail(projectDir)).toThrow("exit 1");
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("Current Stage"));
+    } finally {
+      process.exit = originalExit;
+      error.mockRestore();
+    }
+  });
+
+  test("failure correlation resolves a non-empty Current Stage", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-current-stage-");
+    birthIntent(projectDir, "failure-correlation", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+
+    expect(currentStageOrFail(projectDir)).toBe("code-generation");
+  });
+
+  test("finalize carries the resolved stage into failed Bolt emission", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-failed-bolt-");
+    birthIntent(projectDir, "failed-bolt", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+    pool.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "1",
+      cap: 1,
+      units: [{ unitId: "alpha", dependsOn: [] }],
+    });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "1" });
+    const attempt = pool.readProjection("1").active[0];
+    pool.confirmDispatch({
+      idempotencyKey: "confirm",
+      batchId: "1",
+      attemptId: attempt.attemptId,
+      nativeHandle: "native-alpha",
+    });
+    pool.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "1",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    });
+    const originalExit = process.exit;
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => handleFinalize([
+        "--project-dir",
+        projectDir,
+        "--batch",
+        "1",
+        "--units",
+        "alpha",
+        "--claimed",
+        "alpha",
+        "--check-cmd",
+        passingCheckCommand,
+      ])).toThrow("exit 2");
+      const audit = readAllAuditShards(projectDir);
+      expect(audit).toContain('"Stage":"code-generation"');
+      expect(audit).toContain(`"Attempt Id":"${attempt.attemptId}"`);
+      expect(audit).toContain('"Batch Id":"1"');
+    } finally {
+      process.exit = originalExit;
+      log.mockRestore();
+    }
+  });
+
+  test("finalize rejects a failed Unit without a terminal attempt before audit emission", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-missing-attempt-");
+    birthIntent(projectDir, "missing-attempt", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+    pool.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "2",
+      cap: 1,
+      units: [{ unitId: "alpha", dependsOn: [] }],
+    });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "2" });
+    const attempt = pool.readProjection("2").active[0];
+    pool.confirmDispatch({
+      idempotencyKey: "confirm",
+      batchId: "2",
+      attemptId: attempt.attemptId,
+      nativeHandle: "native-alpha",
+    });
+    pool.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "2",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    });
+    let exitCode = -1;
+    const originalExit = process.exit;
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      exitCode = code ?? 0;
+      return undefined as never;
+    }) as typeof process.exit;
+    try {
+      handleFinalize([
+        "--project-dir",
+        projectDir,
+        "--batch",
+        "2",
+        "--units",
+        "alpha,beta",
+        "--check-cmd",
+        passingCheckCommand,
+      ], (code) => {
+        exitCode = code;
+      });
+      expect(exitCode).toBe(2);
+      const audit = readAllAuditShards(projectDir);
+      expect(audit).not.toContain("amadeus.swarm.unit.failed");
+      expect(audit).not.toContain("amadeus.bolt.failed");
+      expect(audit).not.toContain("amadeus.swarm.baton.returned");
+      expect(audit).not.toContain("amadeus.swarm.completed");
+    } finally {
+      process.exit = originalExit;
+      log.mockRestore();
+    }
+  });
+
+  test("finalize stops after amadeus-bolt fail cannot emit", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-bolt-fail-");
+    birthIntent(projectDir, "bolt-fail", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+    pool.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "3",
+      cap: 1,
+      units: [{ unitId: "alpha", dependsOn: [] }],
+    });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "3" });
+    const attempt = pool.readProjection("3").active[0];
+    pool.confirmDispatch({
+      idempotencyKey: "confirm",
+      batchId: "3",
+      attemptId: attempt.attemptId,
+      nativeHandle: "native-alpha",
+    });
+    pool.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "3",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    });
+    const originalExit = process.exit;
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => handleFinalize([
+        "--project-dir",
+        projectDir,
+        "--batch",
+        "3",
+        "--units",
+        "alpha",
+        "--check-cmd",
+        passingCheckCommand,
+      ], process.exit, () => ({
+        ok: false,
+        stdout: "",
+        stderr: "synthetic bolt failure",
+      }))).toThrow("exit 1");
+      const audit = readAllAuditShards(projectDir);
+      expect(audit).toContain("amadeus.swarm.unit.failed");
+      expect(audit).not.toContain("amadeus.swarm.baton.returned");
+      expect(audit).not.toContain("amadeus.swarm.completed");
+    } finally {
+      process.exit = originalExit;
+      log.mockRestore();
+      error.mockRestore();
+    }
+  });
+
   test("reports every claimed unit outside the batch and accepts a valid subset", () => {
     expect(claimedUnitsOutsideBatch(["alpha", "beta"], ["alpha", "gamma", "gamma"]))
       .toEqual(["gamma"]);

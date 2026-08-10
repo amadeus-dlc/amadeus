@@ -4,9 +4,10 @@
 // scheduling decisions.
 
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
-import { auditBlockField, findAllEvents, readAllAuditShards, withAuditLock } from "./amadeus-lib.ts";
+import { auditBlockField, findAllEvents, getField, readAllAuditShards, stateFilePath, withAuditLock } from "./amadeus-lib.ts";
 import {
   applyUnitPoolEvent,
   finalizeUnitPoolProjection,
@@ -15,6 +16,7 @@ import {
   UNIT_POOL_OUTCOMES,
   type UnitPlanEntry,
   type UnitPoolCommand,
+  type UnitPoolMutationCommand,
   type UnitPoolEvent,
   type UnitPoolEventSet,
   type UnitPoolOutcome,
@@ -69,7 +71,8 @@ function isAttempt(value: unknown): boolean {
 
 function isTerminal(value: unknown): boolean {
   return isRecord(value) && typeof value.unitId === "string" &&
-    (value.attemptId === null || typeof value.attemptId === "string") && isOutcome(value.outcome);
+    (value.attemptId === null || typeof value.attemptId === "string") && isOutcome(value.outcome) &&
+    (value.reason === undefined || typeof value.reason === "string");
 }
 
 function isReconciliation(value: unknown): boolean {
@@ -142,12 +145,17 @@ export function createAuditUnitPoolRepository(projectDir: string): UnitPoolRepos
     transaction(body) {
       ensureOtelBootstrap(projectDir);
       return withAuditLock<unknown>(projectDir, () => body(readUnitPoolEventSetsFromAudit(projectDir), (set) => {
+        const statePath = stateFilePath(projectDir);
+        const stage = existsSync(statePath)
+          ? getField(readFileSync(statePath, "utf8"), "Current Stage")?.trim()
+          : undefined;
         emitAuditEventGuarded(
           "UNIT_POOL_EVENT_SET_COMMITTED",
           {
             "Batch Id": set.batchId,
             "Event Set Id": set.eventSetId,
             "Event Set": JSON.stringify(set),
+            ...(stage ? { Stage: stage } : {}),
           },
           projectDir,
         );
@@ -220,6 +228,8 @@ export interface UnitPoolCoordinator {
   settleReleaseCancelDependents(request: SettleRequest): UnitPoolMutationResult;
   terminateBatch(request: BaseRequest & { readonly result: "completed" | "partial-failure" | "cancelled" | "terminated"; readonly queuedOutcome: "batch-unsafe" | "cancelled" }): UnitPoolMutationResult;
   lateResultObserved(request: SettleRequest): UnitPoolMutationResult;
+  retryFailedUnit(request: BaseRequest & { readonly unitId: string }): UnitPoolMutationResult;
+  skipFailedUnit(request: BaseRequest & { readonly unitId: string; readonly reason: string }): UnitPoolMutationResult;
   readProjection(batchId: string): UnitPoolProjection;
 }
 
@@ -234,7 +244,7 @@ function replay(sets: readonly UnitPoolEventSet[], batchId: string, idempotencyK
 export function createUnitPoolCoordinator(repository: UnitPoolRepository): UnitPoolCoordinator {
   function mutate(
     request: BaseRequest,
-    makeCommand: (projection: UnitPoolProjection, mint: (namespace: string, extra?: unknown) => string) => UnitPoolCommand | { readonly error: string },
+    makeCommand: (projection: UnitPoolProjection, mint: (namespace: string, extra?: unknown) => string) => UnitPoolMutationCommand | { readonly error: string },
     fillReleasedSlots = false,
   ): UnitPoolMutationResult {
     const payloadFingerprint = fingerprintUnitPoolRequest(request);
@@ -330,6 +340,12 @@ export function createUnitPoolCoordinator(repository: UnitPoolRepository): UnitP
     },
     lateResultObserved(request) {
       return mutate(request, () => ({ kind: "late-result-observed", batchId: request.batchId, attemptId: request.attemptId, outcome: request.outcome }));
+    },
+    retryFailedUnit(request) {
+      return mutate(request, (_projection, mint) => ({ kind: "retry-failed-unit", batchId: request.batchId, unitId: request.unitId, queueEntryId: mint("queue-entry", request.unitId) }));
+    },
+    skipFailedUnit(request) {
+      return mutate(request, () => ({ kind: "skip-failed-unit", batchId: request.batchId, unitId: request.unitId, reason: request.reason }));
     },
     readProjection(batchId) {
       return foldUnitPoolEventSets(repository.readEventSets(), batchId);

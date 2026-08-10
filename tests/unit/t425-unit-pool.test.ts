@@ -39,6 +39,23 @@ describe("t425 unit plan validation", () => {
 });
 
 describe("t425 fixed pool", () => {
+  test("skip rejects a Unit without a failed terminal attempt", () => {
+    const pool = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
+    expect(pool.initialEnqueue({
+      idempotencyKey: "skip-missing:init",
+      batchId: "1",
+      cap: 1,
+      units: [{ unitId: "alpha", dependsOn: [] }],
+    }).ok).toBe(true);
+
+    expect(proposeUnitPoolCommand(pool.readProjection("1"), {
+      kind: "skip-failed-unit",
+      batchId: "1",
+      unitId: "missing",
+      reason: "skipped",
+    })).toEqual({ ok: false, reason: "failed-unit-not-found" });
+  });
+
   test("a released slot promotes the next ready Unit in FIFO order", () => {
     const coordinator = createUnitPoolCoordinator(createMemoryUnitPoolRepository());
     coordinator.initialEnqueue({ idempotencyKey: "init", batchId: "b", cap: 2, units: units(4) });
