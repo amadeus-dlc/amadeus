@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import * as childProcess from "node:child_process";
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   cleanupTestProject,
@@ -162,10 +162,11 @@ describe("bolt lifecycle failure transitions", () => {
     ["amadeus-audit.ts", "audit-fork-failed"],
     ["amadeus-runtime.ts", "fragment-fork-failed"],
   ] as const)("worktree start preserves a %s failure", (tool, reason) => {
-    const projectDir = setupProject(tool.replace("amadeus-", "").replace(".ts", ""));
+    const slug = tool.replace("amadeus-", "").replace(".ts", "");
+    const projectDir = setupProject(slug);
     failedTool = tool;
 
-    const result = start(projectDir, tool.replace("amadeus-", "").replace(".ts", ""), true);
+    const result = start(projectDir, slug, true);
 
     expect(result.status).toBe(1);
     expect(result.out).toContain(reason);
@@ -214,6 +215,50 @@ describe("bolt lifecycle failure transitions", () => {
     expect(result.out).toContain("no Current Stage for solo correlation");
   });
 
+  test("solo completion reports state-read failure as state correlation failure", () => {
+    const projectDir = setupProject("solo-missing-state");
+    rmSync(seededStateFile(projectDir), { force: true });
+
+    const result = directArgs(projectDir, handleComplete, [
+      "--name",
+      "solo-missing-state",
+      "--batch",
+      "1",
+      "--attempt",
+      "attempt-a",
+    ]);
+
+    expect(result.status).toBe(1);
+    expect(result.out).toContain("Active workflow state not found");
+    expect(result.out).not.toContain("Audit emission failed");
+  });
+
+  test("fail records the explicit batch identity from --batch-id", () => {
+    const projectDir = setupProject("failed-correlation");
+
+    const result = directArgs(projectDir, (args, explicitProjectDir) => {
+      handleBoltCommand("fail", args, explicitProjectDir);
+    }, [
+      "--name",
+      "failed-correlation",
+      "--slug",
+      "failed-correlation",
+      "--stage",
+      "code-generation",
+      "--attempt",
+      "attempt-a",
+      "--batch-id",
+      "solo:1:failed-correlation",
+      "--error",
+      "red",
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(readFileSync(seededAuditShard(projectDir), "utf8")).toContain(
+      '"Batch Id":"solo:1:failed-correlation"',
+    );
+  });
+
   test("merge completion preserves a runtime fragment failure", () => {
     const projectDir = setupProject("fragment-merge");
     expect(start(projectDir, "fragment-merge", true).status).toBe(0);
@@ -250,7 +295,8 @@ describe("bolt lifecycle failure transitions", () => {
         "- **Bolt Refs**: [merge-audit-emit]",
       ),
     );
-    chmodSync(seededAuditShard(projectDir), 0o444);
+    rmSync(seededAuditShard(projectDir), { force: true });
+    mkdirSync(seededAuditShard(projectDir));
 
     const result = directArgs(projectDir, handleComplete, [
       "--name",

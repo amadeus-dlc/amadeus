@@ -41,8 +41,12 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
-import { handleNext, handleReport, runEngineMain } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import { handleFailureRuling } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  handleFailureRuling,
+  handleNext,
+  handleReport,
+  runEngineMain,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { emitAuditEventGuarded } from "../../packages/framework/core/otel/audit-emit.ts";
 import { activeIntent, activeSpace, readAllAuditShards } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
@@ -413,6 +417,17 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     });
   });
 
+  test("ordinary ask reporting commits a pending failure ruling", () => {
+    const { proj } = seedFailedSwarmUnit();
+
+    expect(runReport(proj, ["--user-input", "Retry"])).toMatchObject({
+      kind: "invoke-swarm",
+      units: ["alpha"],
+      prepared_batch: "1",
+      retry_unit: "alpha",
+    });
+  });
+
   test("the CLI dispatcher lists resolve-failure when rejecting an unknown subcommand", () => {
     const proj = seedSwarmProject([["alpha"]]);
     const originalArgv = process.argv;
@@ -467,6 +482,10 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
 
     expect(runFailureRuling(proj, "Abort")).toMatchObject({ kind: "parked", stage: "code-generation" });
     expect(runNext(proj)).toMatchObject({ kind: "parked", stage: "code-generation" });
+    expect(runFailureRuling(proj, "Retry")).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("suspended"),
+    });
   });
 
   test("solo Retry starts a fresh immutable attempt and returns to the per-Unit selector", () => {

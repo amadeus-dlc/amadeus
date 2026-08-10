@@ -148,10 +148,7 @@ function canonicalAuditRows(audit: string): AuditRow[] {
     try {
       const row: unknown = JSON.parse(line);
       if (isRecord(row) && row.schemaVersion === 2 && row.canonical === true) rows.push(row);
-    } catch {
-      // Unreadable lines never become outcome evidence.
-      continue;
-    }
+      } catch {}
   }
   return rows.sort(auditRowOrder);
 }
@@ -256,7 +253,12 @@ function normalizeSoloLifecycle(
     return;
   }
   if (!target.batch?.startsWith("solo:") || !state.soloStarts.has(keyId(target))) return;
-  const outcome = context.attributes.Outcome === "cancelled" ? "cancelled" : "succeeded";
+  const declared = stringField(context.attributes.Outcome);
+  if (declared !== undefined && declared !== "succeeded" && declared !== "failed" && declared !== "cancelled") {
+    missingKeyDiagnostic(state, context, []);
+    return;
+  }
+  const outcome = declared ?? "succeeded";
   state.currentTerminals.set(currentTerminalKey(target), {
     entry: {
       ...target,
@@ -287,7 +289,10 @@ function normalizePoolTerminal(
   if (typeof value !== "object" || value === null) return;
   const terminal = value as Record<string, unknown>;
   const outcome = terminal.outcome;
-  if (outcome !== "succeeded" && outcome !== "failed" && outcome !== "cancelled") return;
+  if (outcome !== "succeeded" && outcome !== "failed" && outcome !== "cancelled") {
+    missingKeyDiagnostic(state, context, []);
+    return;
+  }
   const entry: UnitOutcomeEntry = {
     intent: context.intent,
     stage: context.stage,
@@ -309,13 +314,13 @@ function parsePoolEventSet(
   context: AuditRowContext,
   state: NormalizationState,
 ): Record<string, unknown> | undefined {
+  let parsed: unknown;
   try {
-    const eventSet: unknown = JSON.parse(String(context.attributes["Event Set"] ?? ""));
-    if (isRecord(eventSet)) return eventSet;
+    parsed = JSON.parse(String(context.attributes["Event Set"] ?? ""));
   } catch {
-    missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
-    return undefined;
+    parsed = undefined;
   }
+  if (isRecord(parsed)) return parsed;
   missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
   return undefined;
 }
@@ -436,9 +441,14 @@ function normalizeConstructionAuditRow(
   seen: Set<string>,
 ): void {
   const context = auditRowContext(raw);
-  if (context === undefined || seen.has(context.eventId)) return;
+  if (context === undefined) return;
   const event = constructionAuditEvent(context.attributes.Event);
   if (event === undefined) return;
+  if (context.eventId === "(missing-event-identity)") {
+    missingKeyDiagnostic(state, context, []);
+    return;
+  }
+  if (seen.has(context.eventId)) return;
   seen.add(context.eventId);
   normalizeConstructionAuditEvent(event, context, state);
 }

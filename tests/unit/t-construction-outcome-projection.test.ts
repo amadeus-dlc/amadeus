@@ -1,3 +1,5 @@
+// covers: file:packages/framework/core/tools/amadeus-construction-outcome-projection.ts
+
 import { describe, expect, test } from "bun:test";
 import {
   constructionFailureTransition,
@@ -349,17 +351,100 @@ describe("projectConstructionOutcomes", () => {
 
   test("canonical ordering falls back to identity for tied clone sequences", () => {
     const tiedRow = (eventId: string, idempotencyKey?: string) => {
-      const row = JSON.parse(auditRow(eventId, 1, "BOLT_STARTED", {})) as Record<string, unknown>;
+      const row = JSON.parse(auditRow(eventId, 1, "BOLT_FAILED", {
+        "Failed Bolt": eventId,
+        Stage: "code-generation",
+        "Attempt Id": `attempt-${eventId}`,
+        "Batch Id": `solo:1:${eventId}`,
+        Reason: "red",
+      })) as Record<string, unknown>;
       row.timestamp = "2026-08-10T00:00:00Z";
       if (idempotencyKey === undefined) delete row.idempotencyKey;
       else row.idempotencyKey = idempotencyKey;
       return JSON.stringify(row);
     };
 
-    expect(normalizeConstructionOutcomeAudit([
+    const normalized = normalizeConstructionOutcomeAudit([
       tiedRow("event-z"),
-      tiedRow("event-a", "identity-a"),
-    ].join("\n"))).toEqual({ ok: true, records: [] });
+      tiedRow("event-a"),
+    ].join("\n"));
+    expect(normalized.ok).toBe(true);
+    if (!normalized.ok) return;
+    expect(normalized.records.map((record) => record.eventId)).toEqual(["event-a", "event-z"]);
+  });
+
+  test("normalizes failed solo completion without rounding it to succeeded", () => {
+    const correlation = {
+      "Bolt names": "alpha",
+      Stage: "code-generation",
+      "Attempt Id": "attempt-a",
+      "Batch Id": "solo:1:alpha",
+    };
+    const normalized = normalizeConstructionOutcomeAudit([
+      auditRow("started", 1, "BOLT_STARTED", correlation),
+      auditRow("completed", 2, "BOLT_COMPLETED", { ...correlation, Outcome: "failed" }),
+    ].join("\n"));
+
+    expect(normalized.ok).toBe(true);
+    if (!normalized.ok) return;
+    expect(normalized.records).toContainEqual(expect.objectContaining({
+      event: "UNIT_POOL_EVENT_SET_COMMITTED",
+      terminals: [expect.objectContaining({ unit: "alpha", outcome: "failed" })],
+    }));
+  });
+
+  test("fails closed on unsupported solo and Unit Pool outcomes", () => {
+    const correlation = {
+      "Bolt names": "alpha",
+      Stage: "code-generation",
+      "Attempt Id": "attempt-a",
+      "Batch Id": "solo:1:alpha",
+    };
+    const pool = auditRow("pool", 3, "UNIT_POOL_EVENT_SET_COMMITTED", {
+      Stage: "code-generation",
+      "Batch Id": "1",
+      "Event Set": JSON.stringify({
+        batchId: "1",
+        events: [{
+          type: "unit-settled",
+          terminal: { unitId: "beta", attemptId: "attempt-b", outcome: "unknown" },
+        }],
+      }),
+    });
+
+    const normalized = normalizeConstructionOutcomeAudit([
+      auditRow("started", 1, "BOLT_STARTED", correlation),
+      auditRow("completed", 2, "BOLT_COMPLETED", { ...correlation, Outcome: "unknown" }),
+      pool,
+    ].join("\n"));
+
+    expect(normalized.ok).toBe(false);
+    if (normalized.ok) return;
+    expect(normalized.diagnostics.map((diagnostic) => diagnostic.eventId)).toEqual(["completed", "pool"]);
+  });
+
+  test("fails closed on each canonical construction row missing event identity", () => {
+    const missingIdentity = (unit: string) => {
+      const row = JSON.parse(auditRow(`event-${unit}`, 1, "BOLT_FAILED", {
+        "Failed Bolt": unit,
+        Stage: "code-generation",
+        "Attempt Id": `attempt-${unit}`,
+        "Batch Id": `solo:1:${unit}`,
+        Reason: "red",
+      })) as Record<string, unknown>;
+      delete row.eventId;
+      return JSON.stringify(row);
+    };
+
+    const normalized = normalizeConstructionOutcomeAudit([
+      missingIdentity("alpha"),
+      missingIdentity("beta"),
+    ].join("\n"));
+
+    expect(normalized.ok).toBe(false);
+    if (normalized.ok) return;
+    expect(normalized.diagnostics).toHaveLength(2);
+    expect(normalized.diagnostics.every((diagnostic) => diagnostic.eventId === "(missing-event-identity)")).toBe(true);
   });
 
   test("a requeue removes the previous terminal outcome from normalized state", () => {

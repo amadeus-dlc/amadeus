@@ -3834,6 +3834,21 @@ export function preparedSwarmRetryDirective(
   return repos.length === 1 ? { ...directive, repo: repos[0] } : directive;
 }
 
+function canonicalConstructionFailurePending(projectDir: string): boolean {
+  const state = loadStateFileIfPresent(projectDir);
+  const stage = state ? getField(state, "Current Stage")?.trim() : undefined;
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!stage || !intent) return false;
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) return false;
+  const projected = projectConstructionOutcomes(normalized.records, {
+    intent,
+    stage,
+    batches: readBoltDagBatches(projectDir) ?? [],
+  });
+  return projected.ok && constructionFailureTransition(projected.projection).kind === "await-unit-ruling";
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -3866,8 +3881,7 @@ function emitConstructionFailureIfPresent(
   if (transition.kind === "await-unit-ruling") {
     const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
     emit(askDirective(
-      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). ` +
-      `Choose exactly one: Retry, Skip, or Abort. Record the ruling with \`amadeus-orchestrate.ts resolve-failure --stage ${stageSlug} --user-input <Retry|Skip|Abort>\`.`,
+      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
     ));
     return true;
   }
@@ -5745,6 +5759,16 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     }
   }
 
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (
+    flags.result === undefined &&
+    (answer === "retry" || answer === "skip" || answer === "abort") &&
+    canonicalConstructionFailurePending(resolveProjectDir(projectDir))
+  ) {
+    handleFailureRuling(args, projectDir);
+    return;
+  }
+
   // A verdict is required: report commits the outcome of an acted directive, so
   // it cannot run without one. An unrecognised verdict is a hard error (clean
   // boundaries) rather than a silent no-op.
@@ -6077,6 +6101,7 @@ export function handleFailureRuling(args: string[], projectDir: string | undefin
   if (!stage || !intent || !normalized.ok) { emit(errorDirective("Cannot resolve the canonical Construction failure target.")); return; }
   const projected = projectConstructionOutcomes(normalized.records, { intent, stage, batches: readBoltDagBatches(pd) ?? [] });
   if (!projected.ok) { emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(projected.diagnostics)}`)); return; }
+  if (projected.projection.constructionSuspended) { emit(errorDirective("Construction is suspended after Abort; resume explicitly before any new failure ruling.")); return; }
   const pending = constructionFailureTransition(projected.projection);
   if (pending.kind !== "await-unit-ruling" || !pending.target.attempt || !pending.target.batch) { emit(errorDirective("No unresolved Construction Unit failure is eligible for a ruling.")); return; }
   const answer = flags.userInput?.trim().toLowerCase();
@@ -6120,7 +6145,7 @@ export function handleFailureRuling(args: string[], projectDir: string | undefin
     emit({ kind: "committed", reason: `Skip committed for Unit "${pending.target.unit}" as cancelled; sibling outcomes are preserved.` });
     return;
   }
-  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch", pending.target.batch, "--project-dir", pd]);
+  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch-id", pending.target.batch, "--project-dir", pd]);
   if (!aborted.ok) { emit(errorDirective(`Abort transition refused: ${toolErrorMessage(aborted)}`)); return; }
   emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
 }

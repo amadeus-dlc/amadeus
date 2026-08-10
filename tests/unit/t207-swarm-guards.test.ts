@@ -15,12 +15,25 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  birthIntent,
+  stateFilePath,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
   claimedUnitsFailureEnvelope,
   claimedUnitsOutsideBatch,
+  currentStageOrFail,
   fileTamperResultForStatuses,
   handleFinalize,
   verdictFor,
 } from "../../packages/framework/core/tools/amadeus-swarm.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+} from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
+import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
+import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
+import { resetLoggerProviderForTests } from "../../packages/framework/core/otel/logger-provider.ts";
+import { resetTracerProviderForTests } from "../../packages/framework/core/otel/tracer-provider.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -28,6 +41,10 @@ afterEach(() => {
   for (const dir of temporaryDirectories.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+  resetFatalLatchForTests();
+  resetLoggerProviderForTests();
+  resetTracerProviderForTests();
+  resetOtelBootstrapForTests();
 });
 
 function makeTemporaryDirectory(prefix: string): string {
@@ -57,6 +74,85 @@ function makeVerdictFixture(): { projectDir: string; worktreeDir: string } {
 const passingCheckCommand = process.platform === "win32" ? "exit /b 0" : "true";
 
 describe("t207 claimed/units guard (#738)", () => {
+  test("failure correlation rejects missing workflow state before audit emission", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-missing-state-");
+    const originalExit = process.exit;
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => currentStageOrFail(projectDir)).toThrow("exit 1");
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("Current Stage"));
+    } finally {
+      process.exit = originalExit;
+      error.mockRestore();
+    }
+  });
+
+  test("failure correlation resolves a non-empty Current Stage", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-current-stage-");
+    birthIntent(projectDir, "failure-correlation", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+
+    expect(currentStageOrFail(projectDir)).toBe("code-generation");
+  });
+
+  test("finalize carries the resolved stage into failed Bolt emission", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-failed-bolt-");
+    birthIntent(projectDir, "failed-bolt", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+    pool.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "1",
+      cap: 1,
+      units: [{ unitId: "alpha", dependsOn: [] }],
+    });
+    pool.acquire({ idempotencyKey: "acquire", batchId: "1" });
+    const attempt = pool.readProjection("1").active[0];
+    pool.confirmDispatch({
+      idempotencyKey: "confirm",
+      batchId: "1",
+      attemptId: attempt.attemptId,
+      nativeHandle: "native-alpha",
+    });
+    pool.settleRelease({
+      idempotencyKey: "settle",
+      batchId: "1",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    });
+    const originalExit = process.exit;
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() => handleFinalize([
+        "--project-dir",
+        projectDir,
+        "--batch",
+        "1",
+        "--units",
+        "alpha",
+        "--claimed",
+        "alpha",
+        "--check-cmd",
+        passingCheckCommand,
+      ])).toThrow("exit 2");
+    } finally {
+      process.exit = originalExit;
+      log.mockRestore();
+    }
+  });
+
   test("reports every claimed unit outside the batch and accepts a valid subset", () => {
     expect(claimedUnitsOutsideBatch(["alpha", "beta"], ["alpha", "gamma", "gamma"]))
       .toEqual(["gamma"]);

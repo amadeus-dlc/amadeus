@@ -275,6 +275,12 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(errs({ ...invokeSwarm(), prepared_batch: "1", retry_unit: "missing" })).toContain(
       "invoke-swarm: retry_unit must name exactly one member of units",
     );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "", retry_unit: "" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "   ", retry_unit: "auth" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
   });
 
   test("present-gate well-formed -> VALID", () => {

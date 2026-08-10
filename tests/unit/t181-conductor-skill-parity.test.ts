@@ -58,6 +58,27 @@ function conductorSurfaces(): string[] {
     .sort();
 }
 
+function preparedRetryBlock(body: string): string | null {
+  const lines = body.split("\n");
+  const anchor = lines.findIndex((line) => line.includes("prepared_batch"));
+  if (anchor < 0) return null;
+  let start = anchor;
+  while (
+    start > 0 &&
+    lines[start - 1].trim().length > 0 &&
+    !/^#{1,6}\s/.test(lines[start - 1]) &&
+    !/^\s*-\s/.test(lines[start])
+  ) start--;
+  let end = anchor;
+  while (
+    end + 1 < lines.length &&
+    lines[end + 1].trim().length > 0 &&
+    !/^#{1,6}\s/.test(lines[end + 1]) &&
+    !/^\s*-\s/.test(lines[end + 1])
+  ) end++;
+  return lines.slice(start, end + 1).map((line) => line.trim()).join(" ");
+}
+
 function sectionStartingAt(body: string, heading: string): string {
   const start = body.indexOf(heading);
   if (start < 0) return "";
@@ -172,15 +193,18 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
     const missing: string[] = [];
     for (const rel of skills) {
       const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
-      const start = body.indexOf("prepared_batch");
-      const scope = start < 0 ? "" : body.slice(start, start + 900);
+      const scope = preparedRetryBlock(body);
+      if (scope === null) {
+        missing.push(`${rel}  prepared retry missing: prepared_batch`);
+        continue;
+      }
       for (const token of ["retry_unit", "acquire", "confirm"]) {
         if (!scope.includes(token)) missing.push(`${rel}  prepared retry missing: ${token}`);
       }
-      if (!/(?:skip|Do not).*?(?:driver resolution|resolve the driver)/s.test(scope)) {
+      if (!/(?:skip|do not).*(?:driver resolution|resolve the driver)/i.test(scope)) {
         missing.push(`${rel}  prepared retry does not skip driver resolution`);
       }
-      if (!/(?:skip|do not run).*?prepar/is.test(scope)) {
+      if (!/(?:skip|do not run).*(?:ordinary|normal|run )?prepar/i.test(scope)) {
         missing.push(`${rel}  prepared retry does not skip preparation`);
       }
     }

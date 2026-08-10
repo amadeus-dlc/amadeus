@@ -231,21 +231,21 @@ function readStartState(
 }
 
 interface SoloStartCorrelation {
-  readonly unit?: string;
-  readonly stage?: string;
-  readonly attempt?: string;
-  readonly batch?: string;
+  readonly unit: string;
+  readonly stage: string;
+  readonly attempt: string;
+  readonly batch: string;
 }
 
 function soloStartCorrelation(
   stateContent: string,
   flags: Record<string, string>,
   useWorktree: boolean,
-): SoloStartCorrelation {
+): SoloStartCorrelation | undefined {
   const unit = !useWorktree && !flags.name.includes(",")
     ? flags.slug ?? flags.name
     : undefined;
-  if (unit === undefined) return {};
+  if (unit === undefined) return undefined;
   const stage = getField(stateContent, "Current Stage")?.trim();
   if (!stage) error("Active workflow state has no Current Stage for solo correlation.");
   return {
@@ -261,7 +261,7 @@ function emitBoltStarted(
   flags: Record<string, string>,
   useWorktree: boolean,
   walkingSkeleton: boolean,
-  solo: SoloStartCorrelation,
+  solo: SoloStartCorrelation | undefined,
 ): void {
   try {
     const fields: Record<string, string> = {
@@ -270,7 +270,7 @@ function emitBoltStarted(
       "Walking skeleton": String(walkingSkeleton),
     };
     if (useWorktree) fields["Bolt slug"] = flags.slug;
-    if (solo.unit && solo.stage && solo.attempt && solo.batch) {
+    if (solo !== undefined) {
       fields["Bolt slug"] = solo.unit;
       fields.Stage = solo.stage;
       fields["Attempt Id"] = solo.attempt;
@@ -390,9 +390,9 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
         bolt_names: flags.name,
         batch: flags.batch,
         walking_skeleton: walkingSkeleton,
-        ...(solo.stage ? { stage: solo.stage } : {}),
-        ...(solo.attempt ? { attempt_id: solo.attempt } : {}),
-        ...(solo.batch ? { batch_id: solo.batch } : {}),
+        ...(solo === undefined
+          ? {}
+          : { stage: solo.stage, attempt_id: solo.attempt, batch_id: solo.batch }),
       })
     );
     return;
@@ -542,10 +542,15 @@ function soloCompletionStage(
   pd: string,
   flags: Record<string, string>,
 ): string {
-  const stage = flags.stage ?? getField(
-    readStateFile(pd, flags.intent, flags.space),
-    "Current Stage",
-  )?.trim();
+  let stateContent: string | undefined;
+  if (flags.stage === undefined) {
+    try {
+      stateContent = readStateFile(pd, flags.intent, flags.space);
+    } catch (cause) {
+      error(`Active workflow state not found: ${errorMessage(cause)}`, pd);
+    }
+  }
+  const stage = flags.stage ?? getField(stateContent ?? "", "Current Stage")?.trim();
   if (!stage) error("Active workflow state has no Current Stage for solo correlation.", pd);
   return stage;
 }
@@ -556,18 +561,20 @@ function emitBoltCompleted(
   useMerge: boolean,
   recovery: MergeRecoveryAssessment,
 ): void {
+  const solo = isSoloCompletion(flags, useMerge)
+    ? { unit: flags.slug ?? flags.name, stage: soloCompletionStage(pd, flags) }
+    : undefined;
   try {
     const fields: Record<string, string> = {
       "Bolt names": flags.name,
       "Batch number": flags.batch,
     };
     if (useMerge) fields["Bolt slug"] = flags.slug;
-    if (isSoloCompletion(flags, useMerge)) {
-      const unit = flags.slug ?? flags.name;
-      fields["Bolt slug"] = unit;
-      fields.Stage = soloCompletionStage(pd, flags);
+    if (solo !== undefined) {
+      fields["Bolt slug"] = solo.unit;
+      fields.Stage = solo.stage;
       fields["Attempt Id"] = flags.attempt;
-      fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
+      fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${solo.unit}`;
     }
     if (recovery.status === "pending") {
       emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
@@ -650,7 +657,8 @@ export function handleComplete(args: string[], explicitProjectDir?: string): voi
 
 // --- Subcommand: fail ---
 // Usage: amadeus-bolt fail --name <failed-bolt> --error <summary>
-//                        [--slug <kebab-slug>] [--succeeded-siblings <csv>]
+//                        [--slug <kebab-slug>] [--batch-id <batch-identity>]
+//                        [--succeeded-siblings <csv>]
 //
 // `--slug` is optional but should be passed by halt-and-ask flows so
 // downstream `amadeus-worktree info --slug` can correlate the failed Bolt
@@ -675,7 +683,7 @@ function handleFail(args: string[], explicitProjectDir?: string): void {
   }
   if (flags.stage) fields.Stage = flags.stage;
   if (flags.attempt) fields["Attempt Id"] = flags.attempt;
-  if (flags.batch) fields["Batch Id"] = flags.batch;
+  if (flags["batch-id"]) fields["Batch Id"] = flags["batch-id"];
 
   try {
     emitAudit(pd, "BOLT_FAILED", fields);
@@ -750,7 +758,7 @@ function handleAbort(args: string[], explicitProjectDir?: string): void {
       Reason: "aborted",
       ...(flags.stage ? { Stage: flags.stage } : {}),
       ...(flags.attempt ? { "Attempt Id": flags.attempt } : {}),
-      ...(flags.batch ? { "Batch Id": flags.batch } : {}),
+      ...(flags["batch-id"] ? { "Batch Id": flags["batch-id"] } : {}),
     }, flags.intent, flags.space);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);

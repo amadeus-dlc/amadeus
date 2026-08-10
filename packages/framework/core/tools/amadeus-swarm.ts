@@ -430,9 +430,9 @@ function emitBatonReturned(
   batch: string,
   unit: string,
   attempt: string,
+  stage: string,
   reason: FailureReason
 ): void {
-  const stage = getField(readFileSync(stateFilePath(pd), "utf8"), "Current Stage")?.trim() ?? "";
   emitSwarmAudit(
     "SWARM_BATON_RETURNED",
     { "Batch number": batch, "Unit name": unit, "Attempt Id": attempt, Stage: stage, Reason: reason },
@@ -462,13 +462,24 @@ function emitSwarmCompleted(
 // Preserves the worktree per the halt-and-ask contract. Best-effort: the swarm's
 // own SWARM_UNIT_FAILED is the authoritative swarm signal, so a failure to emit
 // BOLT_FAILED must not mask it.
-function emitBoltFailed(pd: string, batch: string, unit: string, attempt: string, errorSummary: string): void {
-  const stage = getField(readFileSync(stateFilePath(pd), "utf8"), "Current Stage")?.trim() ?? "";
+function emitBoltFailed(pd: string, batch: string, unit: string, attempt: string, stage: string, errorSummary: string): void {
   runTool(
     "amadeus-bolt.ts",
-    ["fail", "--name", unit, "--slug", unit, "--batch", batch, "--attempt", attempt, "--stage", stage, "--error", errorSummary],
+    ["fail", "--name", unit, "--slug", unit, "--batch-id", batch, "--attempt", attempt, "--stage", stage, "--error", errorSummary],
     pd
   );
+}
+
+export function currentStageOrFail(pd: string): string {
+  let content: string;
+  try {
+    content = readFileSync(stateFilePath(pd), "utf8");
+  } catch {
+    fail("finalize requires an active workflow state with Current Stage for failure correlation");
+  }
+  const stage = getField(content, "Current Stage")?.trim();
+  if (!stage) fail("finalize requires an active workflow state with Current Stage for failure correlation");
+  return stage;
 }
 
 // --- prepare ----------------------------------------------------------------
@@ -1057,19 +1068,23 @@ export function handleFinalize(
 
   // Authoritative audit trail: one row per unit, the baton per failed unit, the
   // batch tally to close.
+  let failureStage: string | undefined;
+  if (results.some((result) => result.status === "failed")) {
+    failureStage = currentStageOrFail(projectDir);
+  }
   for (const r of results) {
     if (r.status === "converged") {
       emitUnitConverged(projectDir, batch, r.unit);
     } else {
       emitUnitFailed(projectDir, batch, r.unit, r.reason ?? "error");
       const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
-      emitBoltFailed(projectDir, batch, r.unit, attempt, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
+      emitBoltFailed(projectDir, batch, r.unit, attempt, failureStage!, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
     }
   }
   const failedResults = results.filter((r) => r.status === "failed");
   for (const r of failedResults) {
     const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
-    emitBatonReturned(projectDir, batch, r.unit, attempt, r.reason ?? "error");
+    emitBatonReturned(projectDir, batch, r.unit, attempt, failureStage!, r.reason ?? "error");
   }
 
   // Merge-result basis (issue #674): a unit only counts as converged once its

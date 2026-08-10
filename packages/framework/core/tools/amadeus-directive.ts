@@ -556,9 +556,14 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkOptionalString(o, "repo", "invoke-swarm", errors);
     checkOptionalString(o, "prepared_batch", "invoke-swarm", errors);
     checkOptionalString(o, "retry_unit", "invoke-swarm", errors);
-    const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.length > 0;
-    const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.length > 0;
-    if (hasPreparedBatch !== hasRetryUnit) {
+    const preparedBatchProvided = "prepared_batch" in o;
+    const retryUnitProvided = "retry_unit" in o;
+    const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.trim().length > 0;
+    const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.trim().length > 0;
+    if (
+      preparedBatchProvided !== retryUnitProvided ||
+      (preparedBatchProvided && (!hasPreparedBatch || !hasRetryUnit))
+    ) {
       errors.push("invoke-swarm: prepared_batch and retry_unit must be provided together");
     }
     if (
