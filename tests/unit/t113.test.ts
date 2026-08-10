@@ -134,7 +134,7 @@ function error(): Record<string, unknown> {
 }
 
 function done(): Record<string, unknown> {
-  return { kind: "done", reason: "Workflow complete." };
+  return { kind: "done", reason: "Workflow complete.", terminal: true };
 }
 
 function parked(): Record<string, unknown> {

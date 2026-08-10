@@ -327,11 +327,19 @@ export interface ErrorDirective {
   message: string;
 }
 
-// done — stop the loop (workflow or single-stage complete). `reason` records
-// why the loop ended.
+// done — a transition landed. `reason` records what happened; `terminal` says
+// whether the loop ends here (issue #2762). The engine emits `done` for two
+// structurally different outcomes: the workflow (or single-stage run) is over
+// and there is nothing left to drive — `terminal: true`, the loop stops — OR a
+// `report` committed a mid-workflow transition and state moved forward —
+// `terminal: false`, the conductor runs `next` again. Reading `kind` alone
+// cannot tell those apart, so `terminal` is required rather than optional: an
+// emit site that forgets it is rejected by the validator instead of silently
+// defaulting to "stop".
 export interface DoneDirective {
   kind: "done";
   reason: string;
+  terminal: boolean;
 }
 
 // parked - the workflow was intentionally parked mid-flow (a human resumes it
@@ -471,7 +479,7 @@ const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
 const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
-const DONE_FIELDS = ["kind", "reason"] as const;
+const DONE_FIELDS = ["kind", "reason", "terminal"] as const;
 const PARKED_FIELDS = ["kind", "reason", "stage"] as const;
 const AWAIT_COMPLETION_FIELDS = ["kind", "reason"] as const;
 const AWAIT_APPROVAL_FIELDS = [
@@ -545,7 +553,10 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
   },
   print: (o, errors) => checkString(o, "message", "print", errors),
   error: (o, errors) => checkString(o, "message", "error", errors),
-  done: (o, errors) => checkString(o, "reason", "done", errors),
+  done: (o, errors) => {
+    checkString(o, "reason", "done", errors);
+    checkBoolean(o, "terminal", "done", errors);
+  },
   parked: (o, errors) => {
     checkString(o, "reason", "parked", errors);
     checkString(o, "stage", "parked", errors);
@@ -835,6 +846,24 @@ function checkOptionalString(
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${kind}: ${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+// checkBoolean — a required boolean field (e.g. done's `terminal`). Absence is
+// an error rather than a default, so a new emit site cannot skip the
+// discriminator and have it read as `false`.
+function checkBoolean(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) {
+    errors.push(`${kind}: missing required field: ${field}`);
+    return;
+  }
+  if (typeof o[field] !== "boolean") {
+    errors.push(`${kind}: ${field} must be boolean, got ${describe(o[field])}`);
   }
 }
 
@@ -1198,7 +1227,14 @@ export const directiveSelfCheckExamples: Directive[] = [
     },
     { kind: "print", message: "AIDLC framework version 0.0.0" },
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
-    { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
+    { kind: "done", reason: "Workflow complete — all in-scope stages approved.", terminal: true },
+    // The non-terminal done: a report ack that committed a mid-workflow
+    // transition. Same kind, opposite loop consequence (issue #2762).
+    {
+      kind: "done",
+      reason: 'Committed advance for "feasibility" (scope: mvp). State advanced. Run next to continue.',
+      terminal: false,
+    },
     { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /amadeus --resume.', stage: "feasibility" },
     {
       kind: "await-completion",

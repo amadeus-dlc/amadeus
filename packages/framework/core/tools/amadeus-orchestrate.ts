@@ -2986,6 +2986,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
       emit({
         kind: "done",
         reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
+        terminal: true,
       });
       return;
     }
@@ -3581,6 +3582,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     emit({
       kind: "done",
       reason: `Workflow complete — no in-scope stage remains after ${currentSlug} (scope: ${scope}).`,
+      terminal: true,
     });
     return;
   }
@@ -4934,6 +4936,7 @@ function handleSingleReport(
     reason:
       `Single-stage run of "${node.slug}" committed under synthetic workflow "${wfId}". ` +
       "The main workflow's Current Stage is untouched.",
+    terminal: true,
   });
 }
 
@@ -5274,6 +5277,12 @@ function gatedApproveRefusal(
   );
 }
 
+// The authorized-approval report path. Its terminal `done` ack reads terminality
+// off the SAME `isFinal` the transition itself was decided by (issue #2762): an
+// approve of the last in-scope stage self-delegates to complete-workflow, so the
+// ack ends the loop; any earlier stage leaves work pending. `committed` cannot
+// stand in for this — on the gated final path the commit list still names
+// approve, with the completion folded inside it.
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
@@ -5379,14 +5388,19 @@ function handleAuthorizedApprovalReport(
     return;
   }
   const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
-  emit({ kind: "done", reason: approvedReason });
+  emit({ kind: "done", reason: approvedReason, terminal: isFinal });
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
-// atomic state tool, and emits a terminal `done` directive on success or an
-// `error` directive on a rejected transition. Mutation happens entirely inside
-// the spawned subcommand(s) — the engine itself writes nothing.
+// atomic state tool, and emits a `done` directive on success or an `error`
+// directive on a rejected transition. Mutation happens entirely inside the
+// spawned subcommand(s) — the engine itself writes nothing. The ack's
+// `terminal` comes from the SAME `isFinal` that chose the committing
+// subcommand(s) — not from `committed`, which still reads "approve" on the gated
+// final path because approve self-delegates to complete-workflow (issue #2762).
+// The wording follows: a terminal ack must not tell the conductor to run next,
+// which is exactly what the old single string did.
 export function handleReport(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
@@ -5744,6 +5758,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
           kind: "done",
           reason:
             `Workflow is already completed at "${slug}" (scope: ${scope}); no transition was needed.`,
+          terminal: true,
         });
         return;
       }
@@ -5761,11 +5776,14 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       const currentCb =
         slug === currentSlug ? undefined : checkboxForSlug(stateContent, currentSlug);
       if (currentCb && currentCb.state !== "pending") {
+        // Non-terminal: nothing was committed, but the workflow itself is still
+        // mid-flight at `currentSlug` — the conductor keeps driving the loop.
         emit({
           kind: "done",
           reason:
             `Stage "${slug}" is already completed and the workflow has moved on to ` +
             `"${currentSlug}" (scope: ${scope}); idempotent re-report, no transition needed.`,
+          terminal: false,
         });
         return;
       }
@@ -5847,9 +5865,12 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       : "";
   emit({
     kind: "done",
-    reason:
-      `Committed ${committed.join(" + ")} for "${slug}" (scope: ${scope}). ` +
-      `State advanced.${intentCaptureMirror} Run next to continue.`,
+    reason: isFinal
+      ? `Committed ${committed.join(" + ")} for "${slug}" (scope: ${scope}). ` +
+        `Workflow complete — no in-scope stage remains.${intentCaptureMirror}`
+      : `Committed ${committed.join(" + ")} for "${slug}" (scope: ${scope}). ` +
+        `State advanced.${intentCaptureMirror} Run next to continue.`,
+    terminal: isFinal,
   });
 }
 

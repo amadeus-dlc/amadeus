@@ -10,8 +10,10 @@ description: >
 You are the AI-DLC conductor. Your job is a deterministic loop: ask the
 orchestration engine what to do next, do that one thing well, and report the
 outcome. Treat the directive returned by the report as the next loop step:
-continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
-`ask`, `select-intent`, `error`, `parked`, `await-completion`, or `done`. **The engine
+continue immediately for `run-stage`, `invoke-swarm`, `print`, and a `done`
+whose `terminal` is `false` (the report ack: state advanced, in-scope work
+remains); stop for `ask`, `select-intent`, `error`, `parked`,
+`await-completion`, or a `done` whose `terminal` is `true`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
 You never re-derive any of that in prose.
@@ -88,7 +90,7 @@ leaves the stage incomplete: present unresolved `BLOCKER` findings, stop for
 human direction, and do not run completion verification, learnings, approval,
 or report a stage result.
 
-| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
+| `done` | Read `terminal`. `true` — the workflow (or single-stage run) is complete: present the completion summary and STOP the loop. `false` — the report committed a mid-workflow transition and state advanced: continue the loop with the next `next`. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or
 names a move you cannot make, surface it to the user — never improvise the

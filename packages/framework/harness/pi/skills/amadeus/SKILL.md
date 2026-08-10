@@ -66,8 +66,10 @@ bun .pi/tools/amadeus-orchestrate.ts report --stage <stage> --result <outcome>
 ```
 
 Treat the directive returned by `report` as the next loop step. Continue for
-`run-stage`, `invoke-swarm`, and `print`. Stop for `ask`, `select-intent`,
-`error`, `parked`, `await-completion`, and `done`. Never call state-transition tools directly.
+`run-stage`, `invoke-swarm`, `print`, and a `done` whose `terminal` is `false`
+(the report ack: state advanced, in-scope work remains). Stop for `ask`,
+`select-intent`, `error`, `parked`, `await-completion`, and a `done` whose
+`terminal` is `true`. Never call state-transition tools directly.
 
 ## Directive handling
 
@@ -118,7 +120,9 @@ Treat the directive returned by `report` as the next loop step. Continue for
   settle it. Print `directive.reason` verbatim (it names the reason and the
   command that settles it) and stop. This is an expected waiting state, not a
   failure.
-- `done`: present the completion summary and stop.
+- `done`: read `terminal`. `true` — present the completion summary and stop.
+  `false` — the report committed a mid-workflow transition and state advanced;
+  run `next` again.
 
 Only Pi input events whose native source is `interactive` establish a human
 turn. RPC input, extension input, tool results, and custom messages do not

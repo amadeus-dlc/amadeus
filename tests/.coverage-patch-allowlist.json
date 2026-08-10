@@ -299,7 +299,7 @@
   {
     "file": "packages/framework/core/hooks/amadeus-stop.ts",
     "selector": {
-      "function": "runEngineNextKind",
+      "function": "runEngineNextDirective",
       "fingerprint": "sha256:5c45b368aa34b7cb767579d6693bd26b8e87cc088e1a61eb5b2dfa88f91ebd98",
       "anchorLines": 1,
       "targetLines": "1"
@@ -1674,12 +1674,12 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:5490377cfd485960787fc0c716b79bae41b72512220d8405173fc1c2e95d214a",
-      "anchorLines": 13,
-      "targetLines": "1-13"
+      "function": "handleAuthorizedApprovalReport",
+      "fingerprint": "sha256:7851fc6b4fc9358ee2103db7171eea369b0ffc7bf78627324e2e262d1ce56443",
+      "anchorLines": 4,
+      "targetLines": "1-4"
     },
-    "reason": "Invalid mirror report phase/result/answer combinations are exercised through the generated CLI by t265 integration. The error-emitting child process is outside parent LCOV.",
+    "reason": "The authorized-approval done ack is exercised through the generated CLI by t265 and t524 integration; the emitting child process is outside parent LCOV. Narrowed from the former 13-line module-scope span to the four executable rows when #2762 added the terminal discriminator — the surrounding comment and signature rows are no longer waived.",
     "expiry": "remove when handleReport receives an injected directive sink"
   },
   {
@@ -1807,11 +1807,11 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:79ae5c584bfb30feb892fe0ac00cb1d20e10398249fb9a9e32b815b4396bbf99",
-      "anchorLines": 2,
-      "targetLines": "1-2"
+      "fingerprint": "sha256:fda2d800fde18094ae930bb1a6ce501a619bdc65e94956a7063fffd964c153e2",
+      "anchorLines": 5,
+      "targetLines": "1-5"
     },
-    "reason": "handlePark project-dir binding and Kimi caller guard run only inside the spawned orchestrator CLI; t365 drives park's authorized and unauthorized outcomes through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
+    "reason": "The report ack's reason expression runs only inside the spawned orchestrator CLI; t115 and t524 drive it through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii). The span grew from 2 to 5 rows when #2762 split the single reason string into the terminal/non-terminal ternary — the added rows are the same expression, not unrelated code inheriting the waiver.",
     "expiry": "remove when the orchestrator CLI main() receives an in-process argv driver"
   },
   {

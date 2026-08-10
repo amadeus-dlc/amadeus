@@ -754,13 +754,25 @@ export function isConversationalStop(
 
 // --- Compose the engine -------------------------------------------------------
 //
-// Run `amadeus-orchestrate.ts next` and return its parsed directive kind, or null
-// if the engine could not be consulted (spawn failure, non-zero exit, or
-// unparseable stdout). A null kind fails OPEN — the caller allows the stop —
-// because we will not trap a turn on the engine's behalf when we cannot read a
-// directive. We pass --project-dir explicitly so the engine resolves the same
-// workspace regardless of the spawned process's cwd.
-export function runEngineNextKind(resolvedProjectDir: string = projectDir): string | null {
+// What the Stop hook needs off the engine's directive: the kind, plus — for
+// `done` — whether the loop actually ends there (issue #2762). `terminal` is
+// false ONLY when the engine said so explicitly; a `done` whose terminal is
+// absent or non-boolean reads as terminal, keeping the hook's fail-OPEN posture
+// (a malformed directive must never trap the turn).
+export interface EngineNextDirective {
+  kind: string;
+  terminal: boolean;
+}
+
+// Run `amadeus-orchestrate.ts next` and return its parsed directive kind (plus
+// terminality), or null if the engine could not be consulted (spawn failure,
+// non-zero exit, or unparseable stdout). A null result fails OPEN — the caller
+// allows the stop — because we will not trap a turn on the engine's behalf when
+// we cannot read a directive. We pass --project-dir explicitly so the engine
+// resolves the same workspace regardless of the spawned process's cwd.
+export function runEngineNextDirective(
+  resolvedProjectDir: string = projectDir,
+): EngineNextDirective | null {
   const enginePath = join(resolvedProjectDir, harnessDir(), "tools", "amadeus-orchestrate.ts");
   if (!existsSync(enginePath)) return null;
   // The spawn MUST be time-bounded. Without a timeout a hung `next` (an engine
@@ -786,12 +798,21 @@ export function runEngineNextKind(resolvedProjectDir: string = projectDir): stri
       "kind" in parsed &&
       typeof (parsed as { kind: unknown }).kind === "string"
     ) {
-      return (parsed as { kind: string }).kind;
+      const terminal = (parsed as { terminal?: unknown }).terminal;
+      return {
+        kind: (parsed as { kind: string }).kind,
+        terminal: terminal !== false,
+      };
     }
   } catch {
     // Unparseable directive — fail open.
   }
   return null;
+}
+
+// The kind-only view, kept as the narrow seam the in-process suites drive.
+export function runEngineNextKind(resolvedProjectDir: string = projectDir): string | null {
+  return runEngineNextDirective(resolvedProjectDir)?.kind ?? null;
 }
 
 // Build the on-task continuation injected when blocking. It names the pending
@@ -922,14 +943,20 @@ if (stopInputObject !== null) {
 
 // Consult the engine for the next move. A null kind (engine unavailable /
 // unparseable) fails open — allow the stop.
-const kind = runEngineNextKind();
-if (kind === null) {
+const engineNext = runEngineNextDirective();
+if (engineNext === null) {
   recordHookDrop(projectDir, HOOK_NAME, "engine next returned no parseable directive; allowing stop");
   allowStop();
 }
+const kind = engineNext.kind;
 
-// `done` → the workflow is complete; allow the turn to end.
-if (kind === "done") {
+// `done` → allow the turn to end only when the engine says the loop actually
+// ends there. A `done` carrying terminal:false is a mid-workflow acknowledgement
+// (state moved forward, more stages pending) — treating it as "complete" would
+// end the turn on a workflow that still has work (issue #2762). Falling through
+// leaves it to the cap-bounded block below, exactly like any other pending
+// directive.
+if (kind === "done" && engineNext.terminal) {
   allowStop();
 }
 

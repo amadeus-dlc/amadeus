@@ -114,6 +114,7 @@ import {
   isPendingComposeStop,
   isPendingQuestionStop,
   isQuestionCarveoutIntent,
+  runEngineNextDirective,
   runEngineNextKind,
   transcriptIsConversational,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
@@ -213,13 +214,16 @@ afterAll(() => {
 });
 
 // The MOCK engine, byte-for-byte the .sh's heredoc: emit one directive of
-// kind=$MOCK_KIND. `done` carries the terminal shape; `__nonzero__` simulates
-// an engine that fails to answer (non-zero exit, no directive). The hook
-// spawns this via join(projectDir, ".claude/tools/amadeus-orchestrate.ts").
+// kind=$MOCK_KIND. `done` carries the terminal shape and `done-nonterminal` the
+// mid-workflow report ack (issue #2762); `__nonzero__` simulates an engine that
+// fails to answer (non-zero exit, no directive). The hook spawns this via
+// join(projectDir, ".claude/tools/amadeus-orchestrate.ts").
 const MOCK_ENGINE = `// t121 mock engine: emit one directive of kind=$MOCK_KIND.
 const kind = process.env.MOCK_KIND ?? "run-stage";
 if (kind === "done") {
-  console.log(JSON.stringify({ kind: "done", reason: "Workflow complete." }));
+  console.log(JSON.stringify({ kind: "done", reason: "Workflow complete.", terminal: true }));
+} else if (kind === "done-nonterminal") {
+  console.log(JSON.stringify({ kind: "done", reason: "Committed advance. Run next to continue.", terminal: false }));
 } else if (kind === "parked") {
   console.log(JSON.stringify({ kind: "parked", reason: "Workflow parked at \\"requirements-analysis\\".", stage: "requirements-analysis" }));
 } else if (kind === "__nonzero__") {
@@ -853,6 +857,32 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(runEngineNextKind(proj)).toBeNull();
     expect(runEngineNextKind(join(proj, "missing"))).toBeNull();
 
+    // issue #2762: a `done` is only a stop signal when the engine says the loop
+    // ends there. The hook reads terminality off the directive, so a
+    // mid-workflow report ack (terminal:false) must NOT be mistaken for a
+    // completed workflow. Absent/non-boolean terminal stays fail-OPEN.
+    writeFileSync(
+      enginePath,
+      'console.log(JSON.stringify({ kind: "done", terminal: false }));\n',
+      "utf-8",
+    );
+    expect(runEngineNextDirective(proj)).toEqual({ kind: "done", terminal: false });
+    writeFileSync(
+      enginePath,
+      'console.log(JSON.stringify({ kind: "done", terminal: true }));\n',
+      "utf-8",
+    );
+    expect(runEngineNextDirective(proj)).toEqual({ kind: "done", terminal: true });
+    writeFileSync(enginePath, 'console.log(JSON.stringify({ kind: "done" }));\n', "utf-8");
+    expect(runEngineNextDirective(proj)).toEqual({ kind: "done", terminal: true });
+    writeFileSync(
+      enginePath,
+      'console.log(JSON.stringify({ kind: "run-stage", terminal: false }));\n',
+      "utf-8",
+    );
+    expect(runEngineNextDirective(proj)).toEqual({ kind: "run-stage", terminal: false });
+    expect(runEngineNextDirective(join(proj, "missing"))).toBeNull();
+
     const transcript = seedTranscript(proj, { format: "claude", engineCall: false });
     const semiState = "- **Intent Autonomy Mode**: semi\n";
     expect(isConversationalStop(semiState, transcript, "claude")).toBe(true);
@@ -923,6 +953,19 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "done");
     expect(r.out).toBe("");
+  }, 30000);
+
+  // issue #2762: a NON-terminal done is a mid-workflow report ack, not a
+  // finished workflow — it must fall through to the same cap-bounded block a
+  // run-stage gets, never be mistaken for "complete" and end the turn.
+  test("(b2) a non-terminal done directive does not allow the stop", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+    const r = runHook(proj, '{"stop_hook_active":false}', "done-nonterminal");
+    expect(r.rc).toBe(0);
+    const parsed = JSON.parse(r.out) as { decision?: string; reason?: string };
+    expect(parsed.decision).toBe("block");
+    expect(parsed.reason).toContain("pending step");
   }, 30000);
 
   test.each(["ask", "select-intent"])(

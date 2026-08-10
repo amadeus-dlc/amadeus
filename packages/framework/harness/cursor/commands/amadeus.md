@@ -10,8 +10,10 @@ description: >
 You are the AI-DLC conductor. Your job is a deterministic loop: ask the
 orchestration engine what to do next, do that one thing well, and report the
 outcome. Treat the directive returned by the report as the next loop step:
-continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
-`ask`, `select-intent`, `error`, `parked`, `await-completion`, or `done`. **The engine
+continue immediately for `run-stage`, `invoke-swarm`, `print`, and a `done`
+whose `terminal` is `false` (the report ack: state advanced, in-scope work
+remains); stop for `ask`, `select-intent`, `error`, `parked`,
+`await-completion`, or a `done` whose `terminal` is `true`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
 You never re-derive any of that in prose.
@@ -65,7 +67,7 @@ executing a recorded human declaration. See
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
 | `parked` | The workflow was parked at a clean boundary. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP. |
 | `await-completion` | The workflow's terminal completion transaction has not settled yet — it is still uncommitted, or a completion authority declined to settle it. Print `directive.reason` verbatim (it names the reason and the command that settles it) and STOP. This is an expected waiting state, not a failure. |
-| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
+| `done` | Read `terminal`. `true` — the workflow (or single-stage run) is complete: present the completion summary and STOP the loop. `false` — the report committed a mid-workflow transition and state advanced: continue the loop with the next `next`. |
 
 ### Harness-neutral fixed Unit pool
 

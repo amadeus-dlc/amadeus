@@ -35,7 +35,7 @@
 |--------|----------------|--------------------------|
 | `print` | Yes | `directive.message` が言うことを正確に行う — それが権威的です。2つの形式: **terminal**(status/help/doctor/version のような読み取り専用ユーティリティを指名; 実行し、stdout をそのまま表示し、STOP)と **run-then-continue**(スコープ変更、ジャンプ `execute`、またはユーザーが新規ワークスペースでスコープを明示的に指名した(フラグまたは位置引数)ときに発行される workflow-birth `init --scope <scope>` のような変更を伴うツールを指名; 実行し、ループのステップ1に戻る)。変更は指名されたツールに存在し、`next` には決して存在しない。 |
 | `error` | Yes | `directive.message` をそのまま表示し、STOP。回復したり取り繕ったりしない — メッセージはユーザー向けのエラーそのものです。 |
-| `done` | Yes | ワークフロー(または single-stage 実行)が完了した。完了サマリを提示し、STOP。 |
+| `done` | Yes | `directive.terminal` で分岐する。`true` — ワークフロー(または single-stage 実行)が完了した: 完了サマリを提示し、STOP。`false` — `report` がワークフロー途中のトランジションをコミットして状態が前進した: 次の `next` でループを継続する。このフィールドは必須であり、`done` は `kind` だけでは停止シグナルにならない(#2762)。 |
 | `parked` | Yes | ワークフローは後のセッションのために、クリーンなステージ間境界(`directive.stage`)でフロー途中で park された。park されたこととどう resume するか(`/amadeus --resume`)をユーザーに伝え、STOP。`Parked` マーカーがセットされている間(`amadeus-orchestrate park` によって書き込まれる)の素の `next` で発行される; ステージは前進しない。Stop フックは `parked` を terminal allow として扱うため、コンダクターは `done` に到達するためにステージをラバースタンプするのではなく park する(#367)。 |
 | `run-stage` | Yes | リードエージェントのペルソナと任意の `support_agents` をロードし、`directive.stage_file` を読み、ステージ本体を実行し、`produces` を書き、`directive.memory_path` にダイアリーを保持し、`directive.gate` で分岐する([Orchestrator](03-orchestrator.ja.md) を参照)。解決されたルーティングフィールドをグラフノードからそのまま持ち込む: `lead_agent`、`support_agents`、`mode`、`gate`、`consumes`、`produces`、`rules_in_context`、`sensors_applicable`、`stage_file`。 |
 | `ask` | Yes | `directive.question` を `AskUserQuestion` 経由でレンダリングし、次の `report` で `--user-input` を通じて人間の答えをフィードバックする。エンジン自体は決して `AskUserQuestion` を呼ばない — 人間のターンをコンダクターに委ねる。 |
@@ -60,7 +60,7 @@ Loop:
   1. directive = `bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`
   2. act on directive.kind
   3. `bun .claude/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]` when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat unless directive.kind == done
+  4. repeat unless the directive stopped the loop (directive.kind == done AND directive.terminal)
 ```
 
 ```mermaid
@@ -70,14 +70,15 @@ flowchart LR
   C --> D["report --stage ... --result ..."]
   D --> A
   B -->|"print (run-then-continue)"| C
-  B -->|"print (terminal) / error / done"| E["STOP"]
+  B -->|"print (terminal) / error / done (terminal:true)"| E["STOP"]
+  B -->|"done (terminal:false)"| A
 ```
 
-図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。terminal の `print`、`error`、`done` に対してはループを停止します。
+図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。terminal の `print`、`error`、および `terminal` が `true` の `done` に対してはループを停止します; `terminal` が `false` の `done` は、ワークフロー途中のトランジションがコミットされたという report の受領応答であり、ループは `next` に戻ります。
 
 `$ARGUMENTS` は最初の `next` にそのまま渡されます — エンジンがフラグ(`--status`、`--stage`、`--scope`、`--depth`、自由形式テキスト)をパースするため、コンダクターは決して事前パースやストリップをしません。`next` は何も変更しないため、ループは `report` が遷移をコミットしたときにのみ前進し、次の `next` は常に新鮮な状態を読みます。
 
-インタラクティブなパスではコンダクターがループを保持します。人間に質問できるのはコンダクターだけだからです。ループが LLM の良い振る舞いに依存しないように、**Stop フック**(`hooks/amadeus-stop.ts`)がそれを決定論的に強制します - フレームワークで最初のフロー変更フックです(他のすべてのフレームワークフックは advisory で常に 0 で終了します)。コンダクターがターンを終えようとすると、Stop フックは `amadeus-orchestrate next` を実行します; ディレクティブがまだ保留中の場合、停止をブロックし、`reason` フィールドを通じてディレクティブを再注入し、**on-task continuation**(タスク継続)として表現します(まだ owed の作業 - ループを実行し、動作し、report する - を指名し、override 形式の指示は決して指名しません。それはコンダクターの安全訓練が拒否するでしょう)。`done` または `parked` ディレクティブ(後者は `amadeus-orchestrate park` から、後のセッションのためのサポートされる mid-flow 一時停止)は停止を許可します。一部の保留ケースも*ブロックされません*: **human-wait carve-out** は、コンダクターが正しく人間に park されている(または単にチャットしている)ときに停止を許可します - 現在のステージが positively `[?]` の awaiting-approval、`[R]` の revising、`[-]` の in-progress で `<slug>-questions.md` に未回答の `[Answer]:` タグがある(保留中の mid-stage 明確化質問)場合、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしで回答された、ハーネストランスクリプトから読み取る; 読み取り専用の `--status`/`--doctor` クエリは engagement とみなされない)場合です。質問タグのケースは Intent autonomy `full` と人間コマンド由来の `semi` の下で、会話ケースは `full` の下でだけ抑制され、無人実行が動き続けます; 会話ケースも Kiro では inert です。Kiro はトランスクリプトを配信せず、そこではインタラクティブキャップがリリースパスの代わりになります。そこでブロックしても nudge をスパムするだけです(positive-confirmation のみ; human-wait チェックは fail open、会話チェックは fail closed; ステートレスケースと真の mid-stage quit は依然としてブロックします)。2つの境界が、スタックしたループがセッションをトラップするのを防ぎます: Claude Code の `stop_hook_active` シグナルと、`<record>/.amadeus-stop-hook/`(アクティブな intent のレコードディレクトリ内)配下に永続化される no-progress カウンタです。連続した no-progress ブロックが上限(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`、そのデフォルトは run-mode 認識: **インタラクティブ実行では 2、autonomous Construction では 8**)に達すると、フックは手放します; ワークフローの前進は位置シグネチャを変え、カウンタを 0 にリセットするため、健全なループが throttle されることは決してありません。アクティブなワークフローがない場合、または予期しないエラーの場合、フックは fail open します - 非 AIDLC セッションを決してブロックしません。
+インタラクティブなパスではコンダクターがループを保持します。人間に質問できるのはコンダクターだけだからです。ループが LLM の良い振る舞いに依存しないように、**Stop フック**(`hooks/amadeus-stop.ts`)がそれを決定論的に強制します - フレームワークで最初のフロー変更フックです(他のすべてのフレームワークフックは advisory で常に 0 で終了します)。コンダクターがターンを終えようとすると、Stop フックは `amadeus-orchestrate next` を実行します; ディレクティブがまだ保留中の場合、停止をブロックし、`reason` フィールドを通じてディレクティブを再注入し、**on-task continuation**(タスク継続)として表現します(まだ owed の作業 - ループを実行し、動作し、report する - を指名し、override 形式の指示は決して指名しません。それはコンダクターの安全訓練が拒否するでしょう)。terminal な `done`(`terminal: true`)または `parked` ディレクティブ(後者は `amadeus-orchestrate park` から、後のセッションのためのサポートされる mid-flow 一時停止)は停止を許可します; `terminal: false` を持つ `done` は、ワークフローにまだスコープ内の作業が残っているため停止を許可しません(#2762)。一部の保留ケースも*ブロックされません*: **human-wait carve-out** は、コンダクターが正しく人間に park されている(または単にチャットしている)ときに停止を許可します - 現在のステージが positively `[?]` の awaiting-approval、`[R]` の revising、`[-]` の in-progress で `<slug>-questions.md` に未回答の `[Answer]:` タグがある(保留中の mid-stage 明確化質問)場合、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしで回答された、ハーネストランスクリプトから読み取る; 読み取り専用の `--status`/`--doctor` クエリは engagement とみなされない)場合です。質問タグのケースは Intent autonomy `full` と人間コマンド由来の `semi` の下で、会話ケースは `full` の下でだけ抑制され、無人実行が動き続けます; 会話ケースも Kiro では inert です。Kiro はトランスクリプトを配信せず、そこではインタラクティブキャップがリリースパスの代わりになります。そこでブロックしても nudge をスパムするだけです(positive-confirmation のみ; human-wait チェックは fail open、会話チェックは fail closed; ステートレスケースと真の mid-stage quit は依然としてブロックします)。2つの境界が、スタックしたループがセッションをトラップするのを防ぎます: Claude Code の `stop_hook_active` シグナルと、`<record>/.amadeus-stop-hook/`(アクティブな intent のレコードディレクトリ内)配下に永続化される no-progress カウンタです。連続した no-progress ブロックが上限(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`、そのデフォルトは run-mode 認識: **インタラクティブ実行では 2、autonomous Construction では 8**)に達すると、フックは手放します; ワークフローの前進は位置シグネチャを変え、カウンタを 0 にリセットするため、健全なループが throttle されることは決してありません。アクティブなワークフローがない場合、または予期しないエラーの場合、フックは fail open します - 非 AIDLC セッションを決してブロックしません。
 
 ---
 
