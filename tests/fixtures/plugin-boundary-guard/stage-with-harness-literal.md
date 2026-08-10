@@ -12,7 +12,7 @@ sweep must flag. A shipped plugin runs on every harness's own tree, where a
 literal `.claude/` path resolves to nothing on `.codex/`, `.cursor/`,
 `.kimi-code/`, `.kiro/`, `.opencode/`, or `.pi/`.
 
-```
+```bash
 bun .claude/tools/amadeus-sensor.ts fire pr-convergence-report-format \
   --stage pr-convergence \
   --output-path <record-root>/construction/<unit>/code-generation/pr-convergence-report.md

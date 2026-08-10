@@ -1,4 +1,4 @@
-// covers: none (guard predicate is defined in tests/lib/boundary-guard.ts)
+// covers: function:scanPluginProseForHarnessLiterals
 //
 // t531 (integration) — plugin harness-neutrality LIVE scan (Issue #2790).
 //
@@ -30,7 +30,15 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AllowRule, type Finding, type RawAllowRule, scanPluginProseForHarnessLiterals } from "../lib/boundary-guard.ts";
-import { transform } from "../../scripts/harness-transform.ts";
+import {
+  buildPluginProjection,
+  discoverPluginSources,
+  harnessProjectionSpec,
+  PACKAGE_HARNESSES,
+  type PackageHarness,
+  type PluginSource,
+  SELF_INSTALL_HARNESSES,
+} from "../../scripts/plugin-projection.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
@@ -108,18 +116,45 @@ describe("t531 fixture falling-proof — an injected harness literal is flagged"
   });
 });
 
-describe("t531 positive projection proof — the real fix resolves on every non-Claude harness", () => {
-  test("scripts/harness-transform.ts transform() resolves the fixed line's tool path per harnessDir", () => {
-    const path = "plugins/pr-convergence/stages/pr-convergence.md";
-    const content = readFileSync(join(REPO_ROOT, path), "utf8");
-    const line180 = content.split("\n")[179];
-    expect(line180).toContain("{{HARNESS_DIR}}/tools/amadeus-sensor.ts fire pr-convergence-report-format");
+// The pr-convergence.md's own tool-path line, as the real projector emits it
+// for one harness. `undefined` when the artifact or the line is missing —
+// callers assert both are present rather than crashing on a bad index.
+function projectedSensorFireLine(plugin: PluginSource, harness: PackageHarness): string | undefined {
+  const artifacts = buildPluginProjection(plugin, harness).artifacts;
+  const artifact = artifacts.find((a) => a.relativePath === "plugins/pr-convergence/stages/pr-convergence.md");
+  return artifact?.bytes
+    .toString("utf8")
+    .split("\n")
+    .find((l) => l.includes("amadeus-sensor.ts fire"));
+}
 
-    for (const harnessDir of [".codex", ".cursor", ".kimi-code", ".kiro", ".opencode", ".pi"]) {
-      const projected = transform(path, Buffer.from(content, "utf8"), harnessDir, null).toString("utf8");
-      const projectedLine180 = projected.split("\n")[179];
-      expect(projectedLine180).toBe(`bun ${harnessDir}/tools/amadeus-sensor.ts fire pr-convergence-report-format \\`);
-      expect(projectedLine180).not.toContain(".claude/");
+describe("t531 positive projection proof — the real fix resolves on every package and self-install face", () => {
+  // Package harnesses are discovered from packages/framework/harness/*/manifest.ts
+  // (scripts/plugin-projection.ts's own canonical set — not re-typed here), so a
+  // ninth harness lands in this sweep the moment it ships a manifest. Self-install
+  // is not a separate transform (buildPluginProjection is harness-keyed, and
+  // promote-self.ts copies a package projection's bytes verbatim into the project
+  // root); it is asserted here only as a closed-subset fact of PACKAGE_HARNESSES,
+  // not re-derived from a second source.
+  test("PACKAGE_HARNESSES enumerates every self-install face", () => {
+    expect(SELF_INSTALL_HARNESSES.length).toBeGreaterThan(0);
+    for (const harness of SELF_INSTALL_HARNESSES) {
+      expect(PACKAGE_HARNESSES).toContain(harness);
+    }
+  });
+
+  test("every package face resolves the sensor-fire line to its own tool path, never Claude's", () => {
+    const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find((p) => p.directoryName === "pr-convergence");
+    if (!plugin) throw new Error("pr-convergence plugin source not found under plugins/");
+
+    expect(PACKAGE_HARNESSES.length).toBeGreaterThan(0);
+    for (const harness of PACKAGE_HARNESSES) {
+      const { harnessDir } = harnessProjectionSpec(harness);
+      const line = projectedSensorFireLine(plugin, harness);
+      expect(line).toBe(`bun ${harnessDir}/tools/amadeus-sensor.ts fire pr-convergence-report-format \\`);
+      // Claude's own harnessDir legitimately IS `.claude` (harness === "claude"
+      // resolves to itself); every OTHER harness must carry no Claude literal.
+      if (harness !== "claude") expect(line).not.toContain(".claude/");
     }
   });
 });
