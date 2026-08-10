@@ -140,6 +140,7 @@ function canonicalAuditRows(audit: string): Record<string, unknown>[] {
       if (isRecord(row) && row.schemaVersion === 2 && row.canonical === true) rows.push(row);
     } catch {
       // Unreadable lines never become outcome evidence.
+      continue;
     }
   }
   return rows.sort(auditRowOrder);
@@ -302,7 +303,8 @@ function parsePoolEventSet(
     const eventSet: unknown = JSON.parse(String(context.attributes["Event Set"] ?? ""));
     if (isRecord(eventSet)) return eventSet;
   } catch {
-    // Invalid event sets fall through to the deterministic diagnostic below.
+    missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
+    return undefined;
   }
   missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
   return undefined;
