@@ -994,6 +994,16 @@ provenance-verified `NOT_DETECTED` result releases the hold. `DETECTED`,
 `HARNESS_ERROR`, missing/corrupt evidence, or an identity mismatch keeps the
 hold active and requires a fresh retry or explicit risk defer.
 
+An advisory whose declaration names a destination carries
+`advisories[].handoff_stage`. A run-now answer on that advisory opens that stage
+— run `/amadeus --stage <handoff_stage> --single` — instead of executing a
+`formal_checks` command, because the work the advisory holds for is authored in
+a stage rather than verified by a command this engine runs. Opening the stage
+does **not** release the hold: the hold lifts only when the declaring plugin's
+own evaluator returns no-hold on a later `next`. An advisory may carry a
+`handoff_stage`, a `formal_checks` entry, or neither; when it carries both,
+`formal_checks` is what the engine verifies a release against.
+
 The engine applies this contract at `requirements-analysis`,
 `functional-design`, and `build-and-test`, including main workflow, `--single`,
 and the first `gate:false` per-unit directive. A directive without advisories is

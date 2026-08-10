@@ -199,6 +199,11 @@ export type AdvisoryChoiceDirectiveAdvisory = {
   intent_run: string;
   advisory_instance: string;
   result?: string;
+  // The stage a run-now choice opens for this advisory, when its declaration
+  // names one (D2 of #2766). Opening the stage is an entry point into the work
+  // the advisory is holding for, never a release: the hold still lifts only
+  // when the declaring plugin's own evaluator returns no-hold (BR-U2-05).
+  handoff_stage?: string;
 };
 
 export type AdvisoryFormalCheckDirective = {
@@ -775,6 +780,9 @@ function checkAwaitAdvisoryChoice(
     }
     if ("result" in item && (typeof item.result !== "string" || item.result.length === 0)) {
       errors.push(`${prefix}.result must be non-empty string, got ${describe(item.result)}`);
+    }
+    if ("handoff_stage" in item && (typeof item.handoff_stage !== "string" || item.handoff_stage.length === 0)) {
+      errors.push(`${prefix}.handoff_stage must be non-empty string, got ${describe(item.handoff_stage)}`);
     }
   });
 }

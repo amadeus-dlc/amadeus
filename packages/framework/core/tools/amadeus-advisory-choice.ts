@@ -18,6 +18,7 @@ import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
 import {
   advisoriesForHost,
   declaredFormalCheckArgv,
+  declaredHandoffStage,
   isDeclaredAdvisoryCode,
   isKnownAdvisoryCode,
   resolveArgvTokens,
@@ -157,6 +158,8 @@ export type AdvisoryChoiceDirectiveItem = {
   intent_run: string;
   advisory_instance: string;
   result?: string;
+  /** The stage a run-now choice opens for a declared advisory (D2 of #2766). */
+  handoff_stage?: string;
 };
 
 export type AdvisoryFormalCheckRoute = {
@@ -717,6 +720,26 @@ function directiveItem(pending: PendingAdvisory): AdvisoryChoiceDirectiveItem {
   };
 }
 
+// Generalization point 3 of ADR-6 (revised), ruled by D2 of #2766. The stage a
+// declared advisory hands run-now to comes from its own manifest; an activation
+// advisory declares none, so its item is byte-identical to the pre-#2766 shape.
+// Carrying it on the item rather than on a formal-check route is what keeps the
+// two apart: a handoff opens a stage, a formal check is something this engine
+// runs and verifies, and only the latter can bear on a release.
+function directiveItemFor(
+  pending: PendingAdvisory,
+  activationHostRoot: string | undefined,
+): AdvisoryChoiceDirectiveItem {
+  const item = directiveItem(pending);
+  if (activationHostRoot === undefined || !isDeclaredAdvisoryCode(pending.identity.code)) return item;
+  const stage = declaredHandoffStage(
+    dirname(activationHostRoot),
+    pending.identity.plugin,
+    pending.identity.code,
+  );
+  return stage === null ? item : { ...item, handoff_stage: stage };
+}
+
 const ADVISORY_PRESENTATION_RATIONALE_PREFIX = "Advisory instances: ";
 
 function advisoryPresentationRationale(pending: readonly PendingAdvisory[]): string {
@@ -991,10 +1014,10 @@ function resolveRunRequiredHold(
       const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
       const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
       if (route === null) {
-        directiveItems.push({ ...directiveItem(pending), result: DECLARED_RELEASE_RULE });
+        directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: DECLARED_RELEASE_RULE });
         continue;
       }
-      directiveItems.push(directiveItem(pending));
+      directiveItems.push(directiveItemFor(pending, activationHostRoot));
       formalChecks.push(route);
       continue;
     }
@@ -1002,7 +1025,7 @@ function resolveRunRequiredHold(
     const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
     const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
     if (outcome.kind === "verified-not-detected") continue;
-    directiveItems.push({ ...directiveItem(pending), result: modelCheckResultText(outcome) });
+    directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: modelCheckResultText(outcome) });
     if (outcome.kind === "not-run") formalChecks.push(formalCheckRoute(projectDir, pending, attempt));
   }
   if (directiveItems.length === 0) {
@@ -1038,7 +1061,7 @@ function guardAdvisoryChoicesLocked(
   return {
     kind: "hold",
     stage,
-    advisories: verdict.unresolved.map(directiveItem),
+    advisories: verdict.unresolved.map((pending) => directiveItemFor(pending, activationHostRoot)),
     runRequired: false,
     formalChecks: [],
   };

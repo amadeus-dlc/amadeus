@@ -29,6 +29,14 @@ export type AdvisoryDeclaration = {
   readonly evaluatorArgv: readonly string[];
   /** The run-now command, or null for an advisory with no executable side. */
   readonly formalCheckArgv: readonly string[] | null;
+  /**
+   * The stage a run-now choice opens, or null when the declaration names none.
+   * Generalization point 3 of ADR-6 (revised), ruled by D2 of #2766: the engine
+   * reads the destination out of the manifest instead of hard-coding it. It is
+   * an entry point only — the hold still releases solely on the plugin's own
+   * evaluator returning no-hold (BR-U2-05).
+   */
+  readonly handoffStage: string | null;
 };
 
 export type AdvisoryDeclarationParse = {
@@ -40,6 +48,9 @@ export type AdvisoryDeclarationParse = {
 // without escaping either (the same shape the activation codes already have).
 const DECLARED_CODE_RE = /^[a-z][a-z0-9-]*$/;
 const ACTIVATION_CODES: ReadonlySet<string> = new Set(["not-ready", "changed", "never-run"]);
+// A handoff destination is a stage slug, the same shape the stage graph keys on,
+// so a declaration cannot smuggle a path or an argument into the directive.
+const STAGE_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
 export function isDeclaredAdvisoryCode(code: string): boolean {
   return !ACTIVATION_CODES.has(code) && DECLARED_CODE_RE.test(code);
@@ -97,7 +108,15 @@ function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDec
     invalid.push(`advisories[${index}].formalCheck.argv must be a non-empty string array`);
     return null;
   }
-  return { code: asDeclaredCode(code), checkpoints, evaluatorArgv, formalCheckArgv };
+  const handoff = entry.handoff ?? null;
+  const handoffStage = isRecord(handoff) && typeof handoff.stage === "string" && STAGE_SLUG_RE.test(handoff.stage)
+    ? handoff.stage
+    : null;
+  if (handoff !== null && handoffStage === null) {
+    invalid.push(`advisories[${index}].handoff.stage must be a stage slug`);
+    return null;
+  }
+  return { code: asDeclaredCode(code), checkpoints, evaluatorArgv, formalCheckArgv, handoffStage };
 }
 
 /**
@@ -330,6 +349,23 @@ export function advisoriesForHost(
   ];
 }
 
+/** The declaration one (plugin, code) carries, or null when the manifest has none. */
+function declarationFor(
+  projectRoot: string,
+  plugin: string,
+  code: string,
+  fs: DeclarationFs,
+): AdvisoryDeclaration | null {
+  const path = pluginManifestPath(projectRoot, plugin);
+  if (!fs.existsSync(path)) return null;
+  try {
+    const parsed = parseAdvisoryDeclarations(fs.readFileSync(path));
+    return parsed.declarations.find((declaration) => declaration.code === code) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** The declared run-now argv for one (plugin, code), or null when there is none. */
 export function declaredFormalCheckArgv(
   projectRoot: string,
@@ -337,12 +373,15 @@ export function declaredFormalCheckArgv(
   code: string,
   fs: DeclarationFs = defaultDeclarationFs,
 ): readonly string[] | null {
-  const path = pluginManifestPath(projectRoot, plugin);
-  if (!fs.existsSync(path)) return null;
-  try {
-    const parsed = parseAdvisoryDeclarations(fs.readFileSync(path));
-    return parsed.declarations.find((declaration) => declaration.code === code)?.formalCheckArgv ?? null;
-  } catch {
-    return null;
-  }
+  return declarationFor(projectRoot, plugin, code, fs)?.formalCheckArgv ?? null;
+}
+
+/** The stage a declared advisory hands a run-now choice to, or null when it names none. */
+export function declaredHandoffStage(
+  projectRoot: string,
+  plugin: string,
+  code: string,
+  fs: DeclarationFs = defaultDeclarationFs,
+): string | null {
+  return declarationFor(projectRoot, plugin, code, fs)?.handoffStage ?? null;
 }
