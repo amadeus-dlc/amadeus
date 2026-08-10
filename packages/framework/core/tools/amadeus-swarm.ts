@@ -459,11 +459,11 @@ function emitSwarmCompleted(
 
 // Close a failed unit's per-Bolt lifecycle by composing `amadeus-bolt fail` (emits
 // BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
-// Preserves the worktree per the halt-and-ask contract. Best-effort: the swarm's
-// own SWARM_UNIT_FAILED is the authoritative swarm signal, so a failure to emit
-// BOLT_FAILED must not mask it.
-function emitBoltFailed(pd: string, batch: string, unit: string, attempt: string, stage: string, errorSummary: string): void {
-  runTool(
+// Preserves the worktree per the halt-and-ask contract. The caller verifies the
+// result so BOLT_FAILED cannot be skipped before the baton and batch close; an
+// emission failure stops the remaining failure-transition audit sequence.
+function emitBoltFailed(pd: string, batch: string, unit: string, attempt: string, stage: string, errorSummary: string): ToolRun {
+  return runTool(
     "amadeus-bolt.ts",
     ["fail", "--name", unit, "--slug", unit, "--batch-id", batch, "--attempt", attempt, "--stage", stage, "--error", errorSummary],
     pd
@@ -897,6 +897,7 @@ function finishFinalizeInputFailure(
 export function handleFinalize(
   rest: string[],
   exit: (code: number) => void = process.exit,
+  boltFailureEmitter: typeof emitBoltFailed = emitBoltFailed,
 ): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -1068,8 +1069,28 @@ export function handleFinalize(
 
   // Authoritative audit trail: one row per unit, the baton per failed unit, the
   // batch tally to close.
+  const failedResults = results.filter((result) => result.status === "failed");
+  const terminalAttempts = new Map(
+    poolProjection.terminal.map((entry) => [entry.unitId, entry.attemptId?.trim() ?? ""] as const),
+  );
+  const missingAttempts = failedResults.filter((result) => !terminalAttempts.get(result.unit));
+  if (missingAttempts.length > 0) {
+    finishFinalizeInputFailure({
+      batch,
+      units: missingAttempts.map((result) => ({
+        unit: result.unit,
+        status: "failed",
+        reason: "error",
+        detail: "fixed Unit pool terminal attempt is missing",
+      })),
+      converged: 0,
+      failed: missingAttempts.length,
+      merge_failures: [],
+    }, exit);
+    return;
+  }
   let failureStage: string | undefined;
-  if (results.some((result) => result.status === "failed")) {
+  if (failedResults.length > 0) {
     failureStage = currentStageOrFail(projectDir);
   }
   for (const r of results) {
@@ -1077,13 +1098,15 @@ export function handleFinalize(
       emitUnitConverged(projectDir, batch, r.unit);
     } else {
       emitUnitFailed(projectDir, batch, r.unit, r.reason ?? "error");
-      const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
-      emitBoltFailed(projectDir, batch, r.unit, attempt, failureStage!, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
+      const attempt = terminalAttempts.get(r.unit)!;
+      const emitted = boltFailureEmitter(projectDir, batch, r.unit, attempt, failureStage!, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
+      if (!emitted.ok) {
+        fail(`amadeus-bolt fail could not emit BOLT_FAILED for unit "${r.unit}": ${emitted.stderr.trim() || emitted.stdout.trim() || "unknown failure"}`);
+      }
     }
   }
-  const failedResults = results.filter((r) => r.status === "failed");
   for (const r of failedResults) {
-    const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
+    const attempt = terminalAttempts.get(r.unit)!;
     emitBatonReturned(projectDir, batch, r.unit, attempt, failureStage!, r.reason ?? "error");
   }
 

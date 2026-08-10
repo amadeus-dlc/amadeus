@@ -537,6 +537,31 @@ type DirectiveFieldCheck = (
   errors: string[],
 ) => void;
 
+function checkPreparedRetryCorrelation(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkOptionalString(o, "prepared_batch", "invoke-swarm", errors);
+  checkOptionalString(o, "retry_unit", "invoke-swarm", errors);
+  const preparedBatchProvided = "prepared_batch" in o;
+  const retryUnitProvided = "retry_unit" in o;
+  const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.trim().length > 0;
+  const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.trim().length > 0;
+  if (
+    preparedBatchProvided !== retryUnitProvided ||
+    (preparedBatchProvided && (!hasPreparedBatch || !hasRetryUnit))
+  ) {
+    errors.push("invoke-swarm: prepared_batch and retry_unit must be provided together");
+  }
+  if (
+    hasRetryUnit &&
+    Array.isArray(o.units) &&
+    o.units.filter((unit) => unit === o.retry_unit).length !== 1
+  ) {
+    errors.push("invoke-swarm: retry_unit must name exactly one member of units");
+  }
+}
+
 const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>> = {
   "run-stage": (o, errors) => checkRunStageShared(o, "run-stage", errors),
   "dispatch-subagent": (o, errors) => {
@@ -554,25 +579,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
       errors.push("invoke-swarm: cap must not exceed units.length");
     }
     checkOptionalString(o, "repo", "invoke-swarm", errors);
-    checkOptionalString(o, "prepared_batch", "invoke-swarm", errors);
-    checkOptionalString(o, "retry_unit", "invoke-swarm", errors);
-    const preparedBatchProvided = "prepared_batch" in o;
-    const retryUnitProvided = "retry_unit" in o;
-    const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.trim().length > 0;
-    const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.trim().length > 0;
-    if (
-      preparedBatchProvided !== retryUnitProvided ||
-      (preparedBatchProvided && (!hasPreparedBatch || !hasRetryUnit))
-    ) {
-      errors.push("invoke-swarm: prepared_batch and retry_unit must be provided together");
-    }
-    if (
-      hasRetryUnit &&
-      Array.isArray(o.units) &&
-      o.units.filter((unit) => unit === o.retry_unit).length !== 1
-    ) {
-      errors.push("invoke-swarm: retry_unit must name exactly one member of units");
-    }
+    checkPreparedRetryCorrelation(o, errors);
   },
   "present-gate": (o, errors) => {
     checkString(o, "stage", "present-gate", errors);
