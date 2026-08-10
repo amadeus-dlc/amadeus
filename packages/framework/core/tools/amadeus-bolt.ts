@@ -533,28 +533,23 @@ function completionRecoveryFor(
   return recovery;
 }
 
-function completionAuditFields(
-  pd: string,
+function isSoloCompletion(
   flags: Record<string, string>,
   useMerge: boolean,
-): Record<string, string> {
-  const fields: Record<string, string> = {
-    "Bolt names": flags.name,
-    "Batch number": flags.batch,
-  };
-  if (useMerge) fields["Bolt slug"] = flags.slug;
-  if (useMerge || !flags.attempt || flags.name.includes(",")) return fields;
-  const unit = flags.slug ?? flags.name;
+): boolean {
+  return !useMerge && flags.attempt !== undefined && !flags.name.includes(",");
+}
+
+function soloCompletionStage(
+  pd: string,
+  flags: Record<string, string>,
+): string {
   const stage = flags.stage ?? getField(
     readStateFile(pd, flags.intent, flags.space),
     "Current Stage",
   )?.trim();
   if (!stage) error("Active workflow state has no Current Stage for solo correlation.", pd);
-  fields["Bolt slug"] = unit;
-  fields.Stage = stage;
-  fields["Attempt Id"] = flags.attempt;
-  fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
-  return fields;
+  return stage;
 }
 
 function emitBoltCompleted(
@@ -564,7 +559,18 @@ function emitBoltCompleted(
   recovery: MergeRecoveryAssessment,
 ): void {
   try {
-    const fields = completionAuditFields(pd, flags, useMerge);
+    const fields: Record<string, string> = {
+      "Bolt names": flags.name,
+      "Batch number": flags.batch,
+    };
+    if (useMerge) fields["Bolt slug"] = flags.slug;
+    if (isSoloCompletion(flags, useMerge)) {
+      const unit = flags.slug ?? flags.name;
+      fields["Bolt slug"] = unit;
+      fields.Stage = soloCompletionStage(pd, flags);
+      fields["Attempt Id"] = flags.attempt;
+      fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
+    }
     if (recovery.status === "pending") {
       emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
     }
