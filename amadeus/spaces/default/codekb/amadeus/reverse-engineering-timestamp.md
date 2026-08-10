@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260810-tla-applicability-wiring）
+## 実行メタデータ（現在: 260810-plugin-harness-dir-token）
+
+- Date: `2026-08-10`
+- Base commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`re-scans/` 中で最新の observed。HEAD の祖先であることを実測確認。`git rev-list --count 91f37ec85..HEAD` = **20 commits**、**117 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（= 本 worktree HEAD = `origin/main`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2790](https://github.com/amadeus-dlc/amadeus/issues/2790)（ミラー #2799）— `plugins/pr-convergence/stages/pr-convergence.md:180` がハーネス中立であるべき plugin stage doc に Claude 固有リテラル `.claude/tools/amadeus-sensor.ts` を焼き込んでいる。クロスレビュー 2/2 CONFIRMED（run `xrev-2790-20260810T033737Z`）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— レビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: `git diff --name-only 91f37ec85..HEAD` を患部 7 パス（`plugins/pr-convergence/**`、`scripts/harness-transform.ts`、`scripts/plugin-projection.ts`、`packages/framework/core/tools/amadeus-plugin.ts`、`tests/unit/t146-core-hygiene.test.ts`）へ絞った結果は**空**。クロスレビュー target SHA `5564dccd1` / `d95d719ce` についても同パスに変更なし。よって全 file:line は observed で有効（`cid:reverse-engineering:E-XBB-RE-S13-c2`）
+- 中核知見: plugin 配布には**二経路**があり、`{{HARNESS_DIR}}` 置換器は経路A（build-time packager）にしか存在しない。N-3 により **self-install 5 面は build script（`promote-self.ts:382` → `projectInTemporaryWorkspace`）の中から経路B（runtime compose）に乗り、`transform()` を一度も通らない**。「build-time = 置換済み / runtime = 逐語」という二分法は偽。加えて同根の兄弟欠陥が **計 12 行**あり、必要な機構は 1 つ（`{{HARNESS_DIR}}` 置換）
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（「plugin 配布の二経路と非対称なトークン置換器」節を新設。Mermaid 経路図 + テキスト代替つき）/ `code-quality-assessment.md`（「ハーネス中立性ガードの穴」節を新設 — N-5 / N-6 / t377 の述語・corpus ミスマッチ）/ `component-inventory.md`（「plugin 配布経路の構成要素棚卸し」節を新設）。直前の現在節はいずれも本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `technology-stack.md` / `dependencies.md` / `api-documentation.md` / `business-overview.md` の 5 面。理由 — 本 focus は既存コンポーネントの**配置・技術スタック・外部依存・公開 API 契約・業務価値**のいずれも変更しておらず（患部は散文 1 行と、その散文を運ぶ配布経路の非対称性）、既存記述を無効化する事実が区間 `91f37ec85..HEAD` に存在しない（患部 7 パス非交差）。テスト層の棚卸しは `code-quality-assessment.md` の検証面小節に集約した
+- Per-intent record: `re-scans/260810-plugin-harness-dir-token.md`（述語 P0〜P11、N-1〜N-9、12 行の全数列挙、harnessDir 実測表、検証面ピン、UNMEASURED 5 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定（(a) compose 側置換 / (b) パス規約変更 / (c) packager 経由 seed）は requirements-analysis / application-design の所掌。本 RE は裁定を証拠から下せる状態にすることのみを行った
+
+## 実行メタデータ（履歴、2026-08-10: 260810-tla-applicability-wiring）
 
 - Date: `2026-08-10`
 - Base commit: `778567dd03b00f22cb887eec06f025557eeaaaf4`（直前 intent `260809-sensor-parseflags-failop` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 778567dd03b00f22cb887eec06f025557eeaaaf4 HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count 778567dd0..HEAD` = **17 commits**。祖先であるため merge-base fallback は不要）
