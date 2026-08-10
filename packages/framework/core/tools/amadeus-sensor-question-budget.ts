@@ -436,11 +436,11 @@ function assess(
   // a grilling session, so the file is read as an ordinary one.
   const marker = detectGrillingMarker(body);
   if (marker.kind === "malformed") {
+    const notTheMarker = "malformed-marker — a `amadeus-grilling:` tag that is not the mode marker";
+    const expected = `(expected \`${GRILLING_MODE_MARKER}\`, grilling-protocol.md §2.5)`;
     findings.push({
       field: "marker",
-      reason:
-        "malformed-marker — a `amadeus-grilling:` tag that is not the mode marker " +
-        `(expected \`${GRILLING_MODE_MARKER}\`, grilling-protocol.md §2.5)`,
+      reason: `${notTheMarker} ${expected}`,
       severity: "warning",
     });
   }
@@ -451,11 +451,11 @@ function assess(
   // read" — states this sensor used to return the same silent pass for.
   if (ceiling === undefined) {
     if (depth === undefined || depth.trim() === "") return { reason: "no-depth", findings };
+    const unknownValue = `"${depth.trim()}" is not one of ${DEPTH_LEVELS.join(" / ")}`;
+    const consequence = "so no ceiling applies and the count was measured against nothing";
     findings.push({
       field: "depth",
-      reason:
-        `unknown-depth — "${depth.trim()}" is not one of ${DEPTH_LEVELS.join(" / ")}, ` +
-        "so no ceiling applies and the count was measured against nothing",
+      reason: `unknown-depth — ${unknownValue}, ${consequence}`,
       severity: "warning",
     });
     return { reason: "unknown-depth", findings };
@@ -463,11 +463,10 @@ function assess(
   if (questions <= ceiling) return { reason: "within-budget", findings };
 
   if (marker.kind !== "valid") {
+    const contract = "(stage-protocol §8 Depth-Level Contract; primaries and follow-ups share one total)";
     findings.push({
       field: "questions",
-      reason:
-        `${questions} questions exceed the ${level} ceiling of ${ceiling} ` +
-        "(stage-protocol §8 Depth-Level Contract; primaries and follow-ups share one total)",
+      reason: `${questions} questions exceed the ${level} ceiling of ${ceiling} ${contract}`,
       severity: "error",
     });
     return { reason: "over-budget", findings };
@@ -482,20 +481,18 @@ function assess(
     return { reason: "justified-overrun", findings };
   }
   if (justification === null) {
+    const crossing = `${questions} questions crossed the ${level} ceiling of ${ceiling}`;
     findings.push({
       field: "questions",
-      reason:
-        `missing-justification — ${questions} questions crossed the ${level} ceiling of ` +
-        `${ceiling} with no recorded crossing (grilling-protocol.md §2.5)`,
+      reason: `missing-justification — ${crossing} with no recorded crossing (grilling-protocol.md §2.5)`,
       severity: "error",
     });
   }
   if (!deferred.present) {
+    const unrecorded = `pruned is unrecorded (expected \`${DEFERRED_MARKER}\`, grilling-protocol.md §2.3)`;
     findings.push({
       field: "deferred",
-      reason:
-        "missing-deferred-list — no deferred-node section, so what the threshold " +
-        `pruned is unrecorded (expected \`${DEFERRED_MARKER}\`, grilling-protocol.md §2.3)`,
+      reason: `missing-deferred-list — no deferred-node section, so what the threshold ${unrecorded}`,
       severity: "error",
     });
   }
