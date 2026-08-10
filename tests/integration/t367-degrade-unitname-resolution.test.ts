@@ -32,7 +32,7 @@
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -461,12 +461,21 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
   }, 30000);
 
-  test("13c: a declared finished unit without a Review projection is recovered", () => {
+  test("13c: a declared finished unit with an unreadable Review projection is recovered", () => {
     const proj = seedFixProject();
     seedUnitArtifacts(proj, "unit-alpha", "code-generation", [
       "code-generation-plan.md",
       "code-summary.md",
     ]);
+    const alphaPrimary = join(
+      seededRecordDir(proj),
+      "construction",
+      "unit-alpha",
+      "code-generation",
+      "code-generation-plan.md",
+    );
+    rmSync(alphaPrimary);
+    mkdirSync(alphaPrimary);
     seedCoveredUnitDir(proj, "unit-beta");
     declareUnitsDone(proj, ["unit-alpha", "unit-beta"]);
     const d = runNextInProcess(proj);
