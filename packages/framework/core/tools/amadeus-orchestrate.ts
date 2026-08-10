@@ -5379,14 +5379,14 @@ function handleAuthorizedApprovalReport(
     return;
   }
   const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
-  emit({ kind: "done", reason: approvedReason });
+  emit({ kind: "committed", reason: approvedReason });
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
-// atomic state tool, and emits a terminal `done` directive on success or an
-// `error` directive on a rejected transition. Mutation happens entirely inside
-// the spawned subcommand(s) — the engine itself writes nothing.
+// atomic state tool, and emits a non-terminal `committed` directive on success
+// or an `error` directive on a rejected transition. Mutation happens entirely
+// inside the spawned subcommand(s) — the engine itself writes nothing.
 export function handleReport(args: string[], projectDir: string | undefined): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
@@ -5762,7 +5762,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
         slug === currentSlug ? undefined : checkboxForSlug(stateContent, currentSlug);
       if (currentCb && currentCb.state !== "pending") {
         emit({
-          kind: "done",
+          kind: "committed",
           reason:
             `Stage "${slug}" is already completed and the workflow has moved on to ` +
             `"${currentSlug}" (scope: ${scope}); idempotent re-report, no transition needed.`,
@@ -5828,9 +5828,11 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 
   closeAdvisoryInstancesForStage(pd, slug);
 
-  // The transition committed. Emit a terminal `done` directive naming the move
-  // — the loop driver reads this to know the report landed and the next `next`
-  // will see fresh state.
+  // The transition committed. Emit a non-terminal `committed` directive naming
+  // the move — the loop driver reads this to know the report landed and the next
+  // `next` will see fresh state. Deliberately NOT `done`: `done` tells the
+  // conductor to present a completion summary and stop, which mid-workflow is a
+  // false completion (issue #2762).
   const intentCaptureMirror =
     slug === "intent-capture"
       ? (() => {
@@ -5846,7 +5848,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
         })()
       : "";
   emit({
-    kind: "done",
+    kind: "committed",
     reason:
       `Committed ${committed.join(" + ")} for "${slug}" (scope: ${scope}). ` +
       `State advanced.${intentCaptureMirror} Run next to continue.`,

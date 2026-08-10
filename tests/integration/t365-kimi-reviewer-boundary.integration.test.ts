@@ -785,7 +785,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
         ], completedRoot)
       )
     );
-    expect(completedReplay.kind).toBe("done");
+    expect(completedReplay.kind).toBe("committed");
     expect(String(completedReplay.reason)).toContain("idempotent re-report");
 
     const first = reserveInProcess(root);
@@ -1744,7 +1744,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       "--presence-reservation-id",
       reservation.reservationId,
     ]);
-    expect(JSON.parse(approved.stdout).kind).toBe("done");
+    expect(JSON.parse(approved.stdout).kind).toBe("committed");
     const reservedTurns = splitAuditRecords(readAllAuditShards(root)).filter(
       (block) =>
         auditBlockField(block, "Event") === "HUMAN_TURN" &&
@@ -1841,7 +1841,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       "--presence-reservation-id",
       second.presence_reservation_id,
     ]);
-    expect(JSON.parse(approved.stdout).kind).toBe("done");
+    expect(JSON.parse(approved.stdout).kind).toBe("committed");
     expect(readFileSync(seededStateFile(root), "utf-8")).toContain(
       "- [x] requirements-analysis",
     );
@@ -2390,7 +2390,7 @@ describe("Kimi reviewer boundary and gate provenance", () => {
       "--presence-reservation-id",
       carrier.presence_reservation_id,
     ]);
-    expect(JSON.parse(approved.stdout).kind).toBe("done");
+    expect(JSON.parse(approved.stdout).kind).toBe("committed");
     expect(readFileSync(seededStateFile(root), "utf-8")).toContain(
       "- [x] requirements-analysis",
     );
