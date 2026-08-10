@@ -3859,7 +3859,7 @@
     "file": "tests/harness/live-e2e/codex.ts",
     "selector": {
       "function": "CodexExecAdapter.cleanup",
-      "fingerprint": "sha256:256826ec26b54f46aef765feb9b471bfd826fe0c8c262f73eeb096d445bbe46c",
+      "fingerprint": "sha256:d06263f107b9023aa3adefbe47e333ab9fc1ac14292ef56718cb147aa5dfb6ae",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
