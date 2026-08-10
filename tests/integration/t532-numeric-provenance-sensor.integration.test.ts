@@ -828,21 +828,37 @@ describe("t532 performance budget", () => {
         content: { kind: "present", markdown },
       };
     }
-    function durations(input) {
-      for (let index = 0; index < 5; index += 1) evaluateNumericProvenance(input, deps);
-      return Array.from({ length: 20 }, () => {
-        const started = Bun.nanoseconds();
-        evaluateNumericProvenance(input, deps);
-        return (Bun.nanoseconds() - started) / 1_000_000;
-      }).sort((left, right) => left - right);
+    const batchRepetitions = 3;
+    function batchedDuration(input) {
+      const started = Bun.nanoseconds();
+      for (let index = 0; index < batchRepetitions; index += 1) evaluateNumericProvenance(input, deps);
+      return (Bun.nanoseconds() - started) / 1_000_000 / batchRepetitions;
     }
 
-    const fifty = durations(adversarialInput(50));
-    const hundred = durations(adversarialInput(100));
+    const fiftyInput = adversarialInput(50);
+    const hundredInput = adversarialInput(100);
+    for (let pair = 0; pair < 8; pair += 1) {
+      const inputs = pair % 2 === 0 ? [fiftyInput, hundredInput] : [hundredInput, fiftyInput];
+      for (const input of inputs) evaluateNumericProvenance(input, deps);
+    }
+
+    const fifty = [];
+    const hundred = [];
+    for (let pair = 0; pair < 21; pair += 1) {
+      if (pair % 2 === 0) {
+        fifty.push(batchedDuration(fiftyInput));
+        hundred.push(batchedDuration(hundredInput));
+      } else {
+        hundred.push(batchedDuration(hundredInput));
+        fifty.push(batchedDuration(fiftyInput));
+      }
+    }
+    fifty.sort((left, right) => left - right);
+    hundred.sort((left, right) => left - right);
     process.stdout.write(JSON.stringify({
-      fiftyMedian: fifty[9],
-      hundredMedian: hundred[9],
-      hundredP95: hundred[18],
+      fiftyMedian: fifty[10],
+      hundredMedian: hundred[10],
+      hundredP95: hundred[19],
     }));
   `;
 
@@ -861,9 +877,11 @@ describe("t532 performance budget", () => {
       hundredP95: number;
     };
     expect(Object.values(measurements).every(Number.isFinite)).toBe(true);
+    const linearity = measurements.hundredMedian / measurements.fiftyMedian;
+    console.info("numeric provenance performance", { ...measurements, linearity });
 
     expect(measurements.hundredMedian).toBeLessThanOrEqual(100);
     expect(measurements.hundredP95).toBeLessThanOrEqual(250);
-    expect(measurements.hundredMedian / measurements.fiftyMedian).toBeLessThanOrEqual(2.5);
+    expect(linearity).toBeLessThanOrEqual(2.5);
   });
 });
