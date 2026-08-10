@@ -1,0 +1,758 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amadeus-dlc.dev/contracts/numeric-provenance-mapping-contract.schema.json",
+  "title": "Numeric Provenance Mapping Contract",
+  "description": "Static design-time contract consumed by the numeric provenance index, sweep, mapping generator, and acceptance tests. It does not define a runtime data source.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaRevision",
+    "predicateRevision",
+    "predicate",
+    "artifactIndexContract",
+    "approvedSampleSet",
+    "classificationCases",
+    "mapping",
+    "approval"
+  ],
+  "properties": {
+    "schemaRevision": {
+      "const": 1
+    },
+    "predicateRevision": {
+      "const": "fr-pred-v1"
+    },
+    "predicate": {
+      "$ref": "#/$defs/fixedPredicate"
+    },
+    "artifactIndexContract": {
+      "$ref": "#/$defs/designTimeArtifactIndexContract"
+    },
+    "approvedSampleSet": {
+      "$ref": "#/$defs/labeledSampleSet"
+    },
+    "classificationCases": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/classificationCase"
+      }
+    },
+    "mapping": {
+      "$ref": "#/$defs/numericProvenanceMapping"
+    },
+    "approval": {
+      "$ref": "#/$defs/mappingApproval"
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rational": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "fixedPredicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimClasses",
+        "provenanceKinds",
+        "structuralRegions",
+        "countUnits",
+        "commandTokens",
+        "measurementReferences",
+        "measuredValueForwardCharacters",
+        "sampleIdentityExpression",
+        "machineExclusions",
+        "lightweightReports",
+        "relativeLinkAllowRules"
+      ],
+      "properties": {
+        "claimClasses": {
+          "const": [
+            "count",
+            "ratio",
+            "percentage",
+            "measured-value"
+          ]
+        },
+        "provenanceKinds": {
+          "const": [
+            "command-token",
+            "measurement-reference",
+            "hex-sha",
+            "relative-link"
+          ]
+        },
+        "structuralRegions": {
+          "const": [
+            "paragraph",
+            "list-item",
+            "table-row"
+          ]
+        },
+        "countUnits": {
+          "const": [
+            "件",
+            "個",
+            "本",
+            "行",
+            "ファイル",
+            "file",
+            "files",
+            "item",
+            "items",
+            "line",
+            "lines",
+            "test",
+            "tests"
+          ]
+        },
+        "commandTokens": {
+          "const": [
+            "git",
+            "grep",
+            "rg",
+            "wc",
+            "find",
+            "ls",
+            "jq",
+            "gh",
+            "bun"
+          ]
+        },
+        "measurementReferences": {
+          "const": [
+            "測定 ref",
+            "measurement ref",
+            "observed at",
+            "HEAD",
+            "origin/main"
+          ]
+        },
+        "measuredValueForwardCharacters": {
+          "const": 40
+        },
+        "sampleIdentityExpression": {
+          "const": "sha256(relativePath + line + normalizedText)"
+        },
+        "machineExclusions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "questionBasenameSuffix",
+            "exactBasenames",
+            "recordRelativePrefixes",
+            "recordRelativeExactPaths",
+            "acknowledgementBasenamePattern"
+          ],
+          "properties": {
+            "questionBasenameSuffix": {
+              "const": "-questions.md"
+            },
+            "exactBasenames": {
+              "const": [
+                "memory.md"
+              ]
+            },
+            "recordRelativePrefixes": {
+              "const": [
+                "verification/",
+                "audit/"
+              ]
+            },
+            "recordRelativeExactPaths": {
+              "const": [
+                "amadeus-state.md"
+              ]
+            },
+            "acknowledgementBasenamePattern": {
+              "const": "(^|[-_])(ack|acknowledgement)([-_.]|$)"
+            }
+          }
+        },
+        "lightweightReports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "exactBasenames",
+            "exactProducesKeys"
+          ],
+          "properties": {
+            "exactBasenames": {
+              "const": [
+                "status.md",
+                "progress.md",
+                "completion.md",
+                "receipt.md",
+                "run-status.md",
+                "deployment-status.md"
+              ]
+            },
+            "exactProducesKeys": {
+              "const": [
+                "status",
+                "progress",
+                "completion",
+                "receipt"
+              ]
+            }
+          }
+        },
+        "relativeLinkAllowRules": {
+          "const": [
+            "record:verification/**",
+            "record:construction/**/measurements/**",
+            "record:construction/**/verification/**",
+            "record:basename *-{measurement,measurements,sweep,benchmark,test-results}.{md,json}",
+            "codekb:<active-space>/<repo>/re-scans/*.md"
+          ]
+        }
+      }
+    },
+    "corpusSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedSha",
+        "graphRevision",
+        "predicateRevision",
+        "corpusContentDigest"
+      ],
+      "properties": {
+        "observedSha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "graphRevision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predicateRevision": {
+          "const": "fr-pred-v1"
+        },
+        "corpusContentDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "declaredProducesRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stageSlug",
+        "recordRelativeOutputPattern",
+        "producesKey"
+      ],
+      "properties": {
+        "stageSlug": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recordRelativeOutputPattern": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "producesKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "designTimeArtifactIndexInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot",
+        "declaredProduces",
+        "codekbRescanPaths"
+      ],
+      "properties": {
+        "snapshot": {
+          "$ref": "#/$defs/corpusSnapshot"
+        },
+        "declaredProduces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/declaredProducesRow"
+          }
+        },
+        "codekbRescanPaths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
+        }
+      }
+    },
+    "artifactDescriptor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "relativePath",
+            "stageSlug",
+            "recordRelativeOutputPattern",
+            "producesKey",
+            "artifactKind",
+            "eligibility",
+            "reasonCode"
+          ],
+          "properties": {
+            "source": {
+              "const": "declared-artifact"
+            },
+            "relativePath": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "stageSlug": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recordRelativeOutputPattern": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "producesKey": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artifactKind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "eligibility": {
+              "enum": [
+                "candidate",
+                "excluded",
+                "lightweight"
+              ]
+            },
+            "reasonCode": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "relativePath",
+            "artifactKind",
+            "eligibility",
+            "reasonCode"
+          ],
+          "properties": {
+            "source": {
+              "const": "codekb-re-scan"
+            },
+            "relativePath": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "artifactKind": {
+              "const": "codekb-re-scan"
+            },
+            "eligibility": {
+              "const": "scan-only"
+            },
+            "reasonCode": {
+              "const": "codekb-scan-only"
+            }
+          }
+        }
+      ]
+    },
+    "designTimeArtifactIndexOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "descriptors"
+      ],
+      "properties": {
+        "descriptors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifactDescriptor"
+          }
+        }
+      }
+    },
+    "designTimeArtifactIndexContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input",
+        "output"
+      ],
+      "properties": {
+        "input": {
+          "$ref": "#/$defs/designTimeArtifactIndexInput"
+        },
+        "output": {
+          "$ref": "#/$defs/designTimeArtifactIndexOutput"
+        }
+      }
+    },
+    "labeledSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "relativePath",
+        "line",
+        "normalizedText",
+        "meaningfulNumericClaim",
+        "validProvenanceNotMissed",
+        "reason",
+        "labelerRole",
+        "provenanceDistance"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/digest"
+        },
+        "relativePath": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "normalizedText": {
+          "type": "string",
+          "minLength": 1
+        },
+        "meaningfulNumericClaim": {
+          "type": "boolean"
+        },
+        "validProvenanceNotMissed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": ".*\\S.*"
+        },
+        "labelerRole": {
+          "const": "amadeus-quality-agent"
+        },
+        "provenanceDistance": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/nonNegativeInteger"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "labeledSampleSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactKind",
+        "claimClass",
+        "samples"
+      ],
+      "properties": {
+        "artifactKind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claimClass": {
+          "enum": [
+            "count",
+            "ratio",
+            "percentage",
+            "measured-value"
+          ]
+        },
+        "samples": {
+          "type": "array",
+          "minItems": 30,
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/labeledSample"
+          }
+        }
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "min",
+        "median",
+        "p95",
+        "max"
+      ],
+      "properties": {
+        "count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "min": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "median": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "p95": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "max": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "searchScope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "window"
+          ],
+          "properties": {
+            "kind": {
+              "const": "bounded"
+            },
+            "window": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "full-structural-region"
+            }
+          }
+        }
+      ]
+    },
+    "classificationExpected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "searchScope",
+        "statistics",
+        "coverage",
+        "downgradeReasons"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "enforcement",
+            "measurement-only"
+          ]
+        },
+        "searchScope": {
+          "$ref": "#/$defs/searchScope"
+        },
+        "statistics": {
+          "$ref": "#/$defs/statistics"
+        },
+        "coverage": {
+          "$ref": "#/$defs/rational"
+        },
+        "downgradeReasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "classificationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "labeledCount",
+        "falsePositiveRate",
+        "provenancePositiveCount",
+        "distances",
+        "expected"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "labeledCount": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "falsePositiveRate": {
+          "$ref": "#/$defs/rational"
+        },
+        "provenancePositiveCount": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "distances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonNegativeInteger"
+          }
+        },
+        "expected": {
+          "$ref": "#/$defs/classificationExpected"
+        }
+      }
+    },
+    "artifactPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stageSlug",
+        "recordRelativeOutputPattern",
+        "producesKey",
+        "claimClass",
+        "mode",
+        "searchScope",
+        "evidenceId"
+      ],
+      "properties": {
+        "stageSlug": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recordRelativeOutputPattern": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "producesKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claimClass": {
+          "enum": [
+            "count",
+            "ratio",
+            "percentage",
+            "measured-value"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "enforcement",
+            "measurement-only"
+          ]
+        },
+        "searchScope": {
+          "$ref": "#/$defs/searchScope"
+        },
+        "evidenceId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "numericProvenanceMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authoritySweepDigest",
+        "mechanicalExclusionRevision",
+        "policies",
+        "wiredStages"
+      ],
+      "properties": {
+        "authoritySweepDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "mechanicalExclusionRevision": {
+          "const": "fr-pred-v1"
+        },
+        "policies": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifactPolicy"
+          }
+        },
+        "wiredStages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "mappingApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaRevision",
+        "snapshotDigest",
+        "mappingDigest",
+        "recomputationDigest",
+        "approverRole",
+        "verdict",
+        "approvalReceiptDigest"
+      ],
+      "properties": {
+        "schemaRevision": {
+          "const": 1
+        },
+        "snapshotDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "mappingDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "recomputationDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "approverRole": {
+          "const": "amadeus-quality-agent"
+        },
+        "verdict": {
+          "const": "READY"
+        },
+        "approvalReceiptDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    }
+  }
+}
