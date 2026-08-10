@@ -1030,6 +1030,15 @@ unchanged.
 
 If the `run-stage` directive includes a `reviewer` field (non-null), the orchestrator MUST invoke the reviewer as a **separate sub-agent** after the stage body produces its artifacts and before the §13 learnings ritual.
 
+For a per-unit directive, `gate:false` suppresses only the human approval gate
+and §13; it never suppresses this reviewer invocation. If the engine detects
+that all required unit artifacts exist without the durable verdict, it emits
+the same `run-stage` with `review_only:true`, `unit`, `reviewer`, and
+`gate:false`. Skip the stage body for that recovery directive, execute only this
+§12a flow for the named unit, and re-run `next` without reporting. The later
+per-unit `gate:true` re-entry means all bodies and reviewer verdicts already
+exist; do not regenerate either before completion verification and §13.
+
 ### Closed finding severity and verdict contract
 
 Every reviewer and worker finding uses exactly one of these prefixes:

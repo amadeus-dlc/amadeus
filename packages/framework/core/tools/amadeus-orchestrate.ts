@@ -3923,9 +3923,10 @@ function emitRunStageForSlug(
 // completes the unit's body, writes its artifacts, and re-runs `next` WITHOUT
 // reporting; the single checkbox stays in-flight and the engine hands back the
 // next uncovered unit. Once the LAST unit's artifacts land on disk, the next
-// `next` re-enters with no uncovered units and presents the stage's real gate
+// `next` recovers any missing reviewer verdicts before it presents the real gate
 // (see emitPerUnitRunStage's pick === null branch), so the human approves once
-// (covering all units, only after every unit is built) and the checkbox flips.
+// (covering all units, only after every unit is built and reviewed) and the
+// checkbox flips.
 // No unit DAG (a scope that SKIPs units-generation, or pre-compile) degrades to
 // today's single {unit-name} directive, zero behaviour change.
 
@@ -4129,12 +4130,96 @@ function nextUncoveredUnit(
   return { unit: uncovered[0], uncovered };
 }
 
+// A reviewer verdict is projected onto the first required output path. This is
+// the same observable contract enforced by amadeus-state.ts at approval time,
+// but `next` checks it earlier so a covered unit can be recovered before the
+// conductor reaches a terminal gate refusal (#2836).
+function directiveCarriesReview(
+  projectDir: string,
+  directive: RunStageDirective,
+): boolean {
+  const optional = new Set(directive.optional_produces ?? []);
+  const primary = directive.produces.find((path) => !optional.has(path));
+  if (primary === undefined) return true;
+  try {
+    return /^## Review — Iteration \d+/m.test(
+      readFileSync(join(projectDir, ...primary.split("/")), "utf-8"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildReviewerRecoveryDirective(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  unit: string,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKind: UnitKind | undefined,
+): RunStageDirective | null {
+  const directive = buildRunStageDirective(
+    node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx, unitKind,
+  );
+  directive.unit = unit;
+  if (directive.reviewer === undefined || directiveCarriesReview(projectDir, directive)) {
+    return null;
+  }
+  directive.gate = false;
+  directive.review_only = true;
+  delete directive.next_stage;
+  return directive;
+}
+
+function firstReviewerRecoveryDirective(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  units: string[],
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+): RunStageDirective | null {
+  for (const unit of units) {
+    const recovery = buildReviewerRecoveryDirective(
+      node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds.get(unit),
+    );
+    if (recovery !== null) return recovery;
+  }
+  return null;
+}
+
+function reviewerRecoveryForCoveredUnit(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  picked: ReturnType<typeof resolveDegradeUnit>,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKind: UnitKind | undefined,
+): RunStageDirective | null {
+  if (picked.unit === null || picked.uncovered.includes(picked.unit)) return null;
+  return buildReviewerRecoveryDirective(
+    node, projectType, picked.unit, scope, stateContent, recordPrefix, codekbCtx,
+    projectDir, unitKind,
+  );
+}
+
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
 // for_each loop here: it resolves the next uncovered unit, substitutes the real
 // unit name for {unit-name} in every path, and suppresses the gate for EVERY
 // not-yet-covered unit. The stage's real gate is presented exactly once, on the
-// all-covered re-entry (pick === null), after the last unit's artifacts exist on
-// disk. See the ledger note above emitRunStageForSlug's per-unit section.
+// all-covered-and-reviewed re-entry (pick === null), after the last unit's
+// artifacts and every reviewer verdict exist on disk. See the ledger note above
+// emitRunStageForSlug's per-unit section.
 function emitPerUnitRunStage(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -4185,6 +4270,14 @@ function emitPerUnitRunStage(
         ? decideDegradeUnitCompletion(parseDegradeUnitDeclaration(stateContent), degradeUnits)
         : null;
       if (completion !== null && completion.kind === "gate") {
+        const recovery = firstReviewerRecoveryDirective(
+          node, projectType, degradeUnits, scope, stateContent, recordPrefix,
+          codekbCtx, projectDir, unitKinds,
+        );
+        if (recovery !== null) {
+          emit(recovery);
+          return;
+        }
         emitDegradeCompletionGate(
           node, projectType, scope, stateContent, recordPrefix, codekbCtx,
           completion.unit, unitKinds.get(completion.unit),
@@ -4193,6 +4286,14 @@ function emitPerUnitRunStage(
       }
       const refusal = completion !== null && completion.kind === "refuse" ? completion.reason : null;
       emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered, refusal));
+      return;
+    }
+    const recovery = reviewerRecoveryForCoveredUnit(
+      node, projectType, picked, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds.get(picked.unit),
+    );
+    if (recovery !== null) {
+      emit(recovery);
       return;
     }
     emitRunStageForSlug(
@@ -4227,10 +4328,18 @@ function emitPerUnitRunStage(
     // stage. There is nothing left to PRODUCE, so present the stage gate now (its
     // REAL computed gate) on the last unit, so the human approves once and the
     // engine advances. This is the ONLY directive on which the gate fires, so the
-    // approval is reached only after every unit's artifacts exist (closing the
-    // last-unit hole: no unit, not even the final one, can be skipped). It is also
+    // approval is reached only after every unit's artifacts and reviewer verdict
+    // exist (closing both last-unit holes). It is also
     // the re-entry after a "request changes" that re-ran a unit and then
     // everything is covered again.
+    const recovery = firstReviewerRecoveryDirective(
+      node, projectType, units, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds,
+    );
+    if (recovery !== null) {
+      emit(recovery);
+      return;
+    }
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
       node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,

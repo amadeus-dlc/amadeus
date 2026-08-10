@@ -188,6 +188,10 @@ function seedCoveredUnitDir(proj: string, unit: string): void {
     "code-generation-plan.md",
     "code-summary.md",
   ]);
+  writeFileSync(
+    join(seededRecordDir(proj), "construction", unit, "code-generation", "code-generation-plan.md"),
+    `# ${unit} code-generation-plan.md\n\n## Review — Iteration 1\n\n- Verdict: APPROVE\n`,
+  );
 }
 
 /**

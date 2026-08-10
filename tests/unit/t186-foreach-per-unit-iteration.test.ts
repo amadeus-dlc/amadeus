@@ -239,6 +239,15 @@ function coverUnit(
   }
 }
 
+/** Project the validated reviewer verdict onto the unit's primary artifact. */
+function reviewUnit(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n- **Verdict:** READY\n`,
+  );
+}
+
 /**
  * Create a bare Unit-of-Work directory under construction/ with no artifacts.
  * On the degrade path (no compiled Bolt DAG) this listing IS the unit ledger,
@@ -450,14 +459,16 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.gate).toBe(false);
   }, 30000);
 
-  // 9: all-covered settle. Both units covered on disk but the checkbox is still
-  // in-flight -> next emits the LAST unit with the stage's REAL gate (true), so
-  // the single human approval is presented only after every unit is built.
-  test("9: with every unit covered, next presents the real gate on the last unit", () => {
+  // 9: all-covered-and-reviewed settle. Both units carry their artifacts and
+  // verdicts but the checkbox is still in-flight -> next emits the LAST unit
+  // with the stage's REAL gate (true), so approval cannot precede §12a.
+  test("9: with every unit covered and reviewed, next presents the real gate on the last unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");

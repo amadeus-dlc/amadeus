@@ -146,6 +146,10 @@ function seedCoveredUnit(proj: string, unit: string): void {
   for (const name of ["code-generation-plan.md", "code-summary.md"]) {
     writeFileSync(join(dir, name), `# ${unit} ${name}\n`);
   }
+  writeFileSync(
+    join(dir, "code-generation-plan.md"),
+    `# ${unit} code-generation-plan.md\n\n## Review — Iteration 1\n\n- Verdict: APPROVE\n`,
+  );
 }
 
 function stateOf(proj: string): string {
