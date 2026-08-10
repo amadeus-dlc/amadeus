@@ -13,6 +13,11 @@ export interface PullRequestWorkReference {
   readonly unit: string;
 }
 
+export const AMADEUS_WORK_HEADING = "## Amadeus Work";
+export const AMADEUS_WORK_FIELD_LABELS = ["Intent", "Bolt", "Unit", "Record", "UUID"] as const;
+export type AmadeusWorkFieldName = (typeof AMADEUS_WORK_FIELD_LABELS)[number];
+export const PR_TITLE_PREFIX_PATTERN: RegExp = /^\[([^/\]\r\n]+)\/([^/\]\r\n]+)\/([^/\]\r\n]+)\] /;
+
 export type IntentReferenceResult =
   | { readonly ok: true; readonly value: IntentReference }
   | { readonly ok: false; readonly message: string };
@@ -98,14 +103,15 @@ export function renderPullRequestTitle(title: string, work: PullRequestWorkRefer
 
 export function renderPullRequestBody(body: string, work: PullRequestWorkReference): string {
   const separator = body === "" ? "" : body.endsWith("\n") ? "\n" : "\n\n";
+  const [intentLabel, boltLabel, unitLabel, recordLabel, uuidLabel] = AMADEUS_WORK_FIELD_LABELS;
   return [
-    `${body}${separator}## Amadeus Work`,
+    `${body}${separator}${AMADEUS_WORK_HEADING}`,
     "",
-    `- Intent: \`${work.intent.name}\``,
-    `- Bolt: \`${work.bolt}\``,
-    `- Unit: \`${work.unit}\``,
-    `- Record: \`${work.intent.recordPath}\``,
-    `- UUID: \`${work.intent.uuid}\``,
+    `- ${intentLabel}: \`${work.intent.name}\``,
+    `- ${boltLabel}: \`${work.bolt}\``,
+    `- ${unitLabel}: \`${work.unit}\``,
+    `- ${recordLabel}: \`${work.intent.recordPath}\``,
+    `- ${uuidLabel}: \`${work.intent.uuid}\``,
     "",
   ].join("\n");
 }
