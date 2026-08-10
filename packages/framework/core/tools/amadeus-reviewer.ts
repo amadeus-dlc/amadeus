@@ -31,6 +31,43 @@ const REVIEWER_PERSONAS = new Set([
   "amadeus-product-lead-agent",
 ]);
 const UTC_SECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const REVIEW_HEADING = /^## Review — Iteration ([1-9]\d*)$/gm;
+
+function durableReviewField(block: string, label: string): string | null {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = [
+    ...block.matchAll(new RegExp(`^- \\*\\*${escaped}:\\*\\* (.+)$`, "gm")),
+  ];
+  return matches.length === 1 ? matches[0][1] : null;
+}
+
+function durableReviewBlockIsValid(
+  block: string,
+  headingIteration: string,
+  expectedReviewer: ReviewerPersona,
+): boolean {
+  const verdict = durableReviewField(block, "Verdict");
+  const reviewer = durableReviewField(block, "Reviewer");
+  const date = durableReviewField(block, "Date");
+  const iteration = durableReviewField(block, "Iteration");
+  const scopeDecision = durableReviewField(block, "Scope decision");
+  if (
+    (verdict !== "READY" && verdict !== "NOT-READY") ||
+    reviewer !== expectedReviewer ||
+    date === null ||
+    iteration !== headingIteration ||
+    scopeDecision === null ||
+    scopeDecision.trim().length === 0
+  ) {
+    return false;
+  }
+  try {
+    runtimeReviewIdentity(reviewer, date);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function assertNonEmptyPath(path: string): void {
   if (path.trim() === "" || path.includes("\n") || path.includes("\r")) {
@@ -106,4 +143,23 @@ export function runtimeReviewIdentity(
     throw new Error("review date is not a real UTC timestamp");
   }
   return { reviewer: persona, date: utcDate };
+}
+
+/** True only when a complete-review-shaped durable projection is present. */
+export function hasDurableReviewProjection(
+  content: string,
+  expectedReviewer: ReviewerPersona,
+): boolean {
+  const headings = [...content.matchAll(REVIEW_HEADING)];
+  const iterations = headings.map((heading) => heading[1]);
+  if (new Set(iterations).size !== iterations.length) return false;
+  return headings.some((heading, index) => {
+    const start = heading.index!;
+    const end = headings[index + 1]?.index ?? content.length;
+    return durableReviewBlockIsValid(
+      content.slice(start, end),
+      heading[1],
+      expectedReviewer,
+    );
+  });
 }

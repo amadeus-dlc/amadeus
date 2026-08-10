@@ -428,6 +428,19 @@ describe("t248 kind-aware consume projection", () => {
       "security-design",
       "logical-components",
     ]);
+    writeFileSync(
+      join(
+        seededRecordDir(project),
+        "construction/library/nfr-design/security-design.md",
+      ),
+      "# security-design\n\n## Review — Iteration 1\n\n" +
+        "- **Verdict:** READY\n" +
+        "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+        "- **Date:** 2026-08-10T00:00:00Z\n" +
+        "- **Iteration:** 1\n" +
+        "- **Scope decision:** none\n",
+      "utf-8",
+    );
 
     const directive = next(project, sourceGraph());
 
@@ -721,6 +734,39 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     const directive = nextInProcess(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
+  }, 30_000);
+
+  test("next re-emits a covered unit in reviewer-only mode when its verdict is missing", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    writeStageArtifacts(project, "schema", "functional-design", [
+      "business-rules",
+      "domain-entities",
+    ]);
+
+    const directive = nextInProcess(project, sourceGraph());
+
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.unit).toBe("schema");
+    expect(directive.gate).toBe(false);
+    expect(directive.review_only).toBe(true);
+    expect(directive.reviewer).toBe("amadeus-architecture-reviewer-agent");
+    expect("next_stage" in directive).toBe(false);
+  }, 30_000);
+
+  test("next recovers a missing verdict without a compiled unit DAG", () => {
+    const project = seedProject([{ name: "legacy" }], { dependencyDoc: false });
+    writeStageArtifacts(project, "legacy", "functional-design", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+
+    const directive = nextInProcess(project, sourceGraph());
+
+    expect(directive.unit).toBe("legacy");
+    expect(directive.gate).toBe(false);
+    expect(directive.review_only).toBe(true);
   }, 30_000);
 
   test("completion guard accepts an all-vacuous packaging stage in-process", () => {
