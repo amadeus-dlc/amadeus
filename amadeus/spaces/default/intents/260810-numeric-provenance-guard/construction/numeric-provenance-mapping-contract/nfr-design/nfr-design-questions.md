@@ -21,6 +21,6 @@ sweep authority、Generated Mapping、approvalをlatest-file-winsとimmutable di
 ## 曖昧性分析
 
 - security-requirements.mdとtech-stack-decisions.mdは本scopeで意図的に生成されていないため、SEC-* IDやcloud controlを新設しない。
-- U1はlocal、read-only、networkなしのspec/sweep Unitであり、authentication、authorization service、TLS、KMS、AWS resourceは非該当である。
+- U1は実行コードを持たないlocal spec contractであり、authentication、authorization service、TLS、KMS、AWS resourceは非該当である。corpus readerとsweep実行のsecurity controlは、このcontractを実装するU2が所有する。
 - 主な保護対象はcorpus境界、path containment、label/mapping integrity、approval provenanceであり、機密情報保管systemではない。
-- fail-openはU2 runtime verdictの業務契約であり、U1 authority生成時のsnapshot driftやdigest不一致を黙って許容する意味ではない。
+- fail-openはU2 runtime verdictの業務契約であり、同じU2のdesign-time authority生成時にsnapshot driftやdigest不一致を黙って許容する意味ではない。

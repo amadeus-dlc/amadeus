@@ -63,7 +63,19 @@ function resolveProvenance(
 ): ProvenanceMatch | undefined;
 ```
 
-Generated Mappingの `W` とMarkdown構造境界の両方を満たす範囲だけを探索する。相対リンクはnormalize後の許可rootと実在通常ファイルを注入依存で検証し、絶対path、URL、root脱出、別intent、一般成果物を拒否する。
+runtime専用の判定seam。`measureNearestProvenanceDistance` が返す構造境界内の最短matchを取得し、Generated Mappingの `W` 以内の場合だけ返す。相対リンクはnormalize後の許可rootと実在通常ファイルを注入依存で検証し、絶対path、URL、root脱出、別intent、一般成果物を拒否する。
+
+### `measureNearestProvenanceDistance`
+
+```ts
+function measureNearestProvenanceDistance(
+  claim: NumericClaim,
+  context: ProvenanceContext,
+  deps: EvaluationDeps,
+): ProvenanceMatch | undefined;
+```
+
+runtimeとsweepが共有する受理述語seam。空行・次見出し・次の同階層list item・table rowというMarkdown構造境界内を、`W`や既存mappingで打ち切らず全探索し、受理可能な根拠の最短論理行距離を返す。sweepはこの値からmin/median/p95/maxを作り、mapping生成後のruntimeだけが `resolveProvenance` で `distance <= W` を適用する。これにより`W`生成と探索上限の循環を作らない。
 
 ### `classifyArtifact`
 
@@ -78,6 +90,16 @@ record日付、basename、record相対path、stage slugを入力にGenerated Map
 
 ## sweep・CLIメソッド
 
+### `indexSweepArtifacts`
+
+```ts
+function indexSweepArtifacts(
+  graph: RuntimeGraphSnapshot,
+): readonly SweepArtifactDescriptor[];
+```
+
+注入されたruntime graph snapshotのstage宣言とdeclared producesを安定順で走査し、`stage + record相対output pattern -> produces key` と既存artifact pathを導出するdesign-time専用seam。生成前の`NumericProvenanceMapping`を受け取らず、runtime `classifyArtifact` / `evaluateNumericProvenance`も呼ばない。除外はgraph宣言から機械的に判定できる対象と、明示されたlightweight produces keyに限定し、本文substringでは分類しない。
+
 ### `sweepNumericProvenance`
 
 ```ts
@@ -87,7 +109,7 @@ function sweepNumericProvenance(
 ): SweepReport;
 ```
 
-Construction時に決定的sample identity、二値label、距離統計、偽陽性率、`W`、mode、配線stage集合を再計算する。入力読込とgraph取得は注入し、同一HEADで同じ順序と内容を返す。30 labels等の要件を満たさない組を自動的にmeasurement-onlyへ落とす。
+Construction時に`indexSweepArtifacts`で対象を列挙し、`scanNumericClaims`と`measureNearestProvenanceDistance`を使って、決定的sample identity、二値label、打切りなしの距離統計、偽陽性率、`W`、mode、配線stage集合を再計算する。runtime Evaluator / Artifact Classifierは呼ばない。`W` は `max(nearest-rank p95, min + 1)` とし、`W < max` の組だけをenforcementへ採用する。これによりlower-bound saturationでは95% coverageを維持して最小のstrict-interior値を選び、upper-bound saturationはmeasurement-onlyへ落とす。入力読込とgraph snapshot取得は注入し、同一HEADで同じ順序と内容を返す。30 labels等の他要件を満たさない組も自動的にmeasurement-onlyへ落とす。
 
 ### `main`
 

@@ -32,7 +32,7 @@ enforcement、measurement-only、skippedの出力不変条件をどう構築す�
 
 ## 曖昧性分析
 
-- U2はU1のApproved Mappingをreadonlyに消費し、mode、`W`、配線stage集合を再計算しない。
+- U2はU1のschema・fixture・受け入れ条件を変更せず、Design-time Artifact Index、sweep generator/report、Generated Mapping、runtime評価を実装する。runtime評価は同じU2内で生成・承認済みのMappingをreadonlyに消費し、mode、`W`、配線stage集合を再計算しない。
 - `single-pass-region-scanner` はCommonMark完全parserを意味せず、FR-PRED-3が要求する構造境界とFR-PRED-1のcode-fence除外だけを決定的に識別する。
 - 相対linkの実在確認だけが注入I/Oを必要とし、pure evaluatorはprocess、network、runtime graph、databaseへアクセスしない。
 - file-not-foundは起動エラーではない。CLI adapterがmissing stateへ変換し、Evaluatorがskipped verdictを返す。

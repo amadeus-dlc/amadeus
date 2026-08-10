@@ -29,10 +29,13 @@ tracked bootstrap/configuration allowlistの唯一の正本は `packages/framewo
 
 配送検証は次のliteral authorityと解決規則を使用する。検証実装がdirectory走査や文書解釈から対象を推測してはならない。
 
-- Approved Mapping authorityは `amadeus/spaces/default/intents/260810-numeric-provenance-guard/construction/numeric-provenance-mapping-contract/measurements/numeric-provenance-corpus-sweep.md` 内のmachine section `numeric-provenance-mapping/v1` とする。sectionが公開する `stageSlug` の重複なしexact setだけをenforcement対象として読む。section欠落、schema不一致、unknown stage、重複はclosed failureとする。
+- Approved Mapping authorityは `amadeus/spaces/default/intents/260810-numeric-provenance-guard/construction/numeric-provenance-sensor-cli/measurements/numeric-provenance-corpus-sweep.md` 内のmachine section `numeric-provenance-mapping/v1` とする。U1はそのschema・fixture・受け入れ条件だけを所有し、U2がreportを生成する。sectionが公開する `stageSlug` の重複なしexact setだけをenforcement対象として読む。section欠落、schema不一致、unknown stage、重複はclosed failureとする。
 - package projection対象の正本は `packages/framework/core/tools/amadeus-harness-registry.ts` の `PACKAGE_HARNESS_IDS` とする。そのsorted exact setが `scripts/package.ts` の `discoverHarnessNames()` 結果と一致しなければ、build前にfailureとする。
 - self-install runtime acceptance対象の正本は同registryの `SELF_INSTALL_HARNESS_IDS` とする。package projectionは全 `PACKAGE_HARNESS_IDS`、実delivery fireは全 `SELF_INSTALL_HARNESS_IDS` に対して省略なく実行する。
-- 各生成対象のharness rootは、そのtreeに生成された `tools/data/harness.json` の `harnessDir` を読み、対象treeのreal path配下に正規化・containment検証して解決する。絶対path、`..`、symlink escape、未知harness idはclosed failureとする。
+- package treeのID→root解決authorityは `packages/framework/harness/<id>/manifest.ts` の `name` と `harnessDir` とする。`name` はregistry IDとexact一致させ、`bun scripts/package.ts <id>` が `scripts/package.ts` の `writeHarness` 契約どおり `${AMADEUS_DIST_ROOT ?? "<repo>/dist"}/<name>/<harnessDir>` を生成する。この固定式からrootを作り、manifest欠落、name不一致、dist root脱出、重複rootをclosed failureとする。directory走査からrootを発見しない。
+- self-install treeのID→root解決authorityは `scripts/promote-self.ts` の `managedDirs` と `scripts/plugin-projection.ts` の `SELF_INSTALL_HARNESSES` とする。literal rootは `claude -> <repo>/.claude`、`codex -> <repo>/.codex`、`cursor -> <repo>/.cursor`、`opencode -> <repo>/.opencode`、`kimi -> <repo>/.kimi-code` である。`bun scripts/promote-self.ts --apply --no-build` が対応する `dist/<id>/<harnessDir>` からこのrootへ投影し、両authorityのID集合・src/dst mappingがこの表とexact一致しない場合はfire前にfailureとする。
+- `bun run build` は `bun run dist` と `bun run promote:self` を順に実行する公式producerである。隔離buildでは `AMADEUS_DIST_ROOT` を各root専用に固定して `bun scripts/package.ts` を実行しpackage treeを検証し、self-install acceptanceでは検証済みdistを持つ専用project root内だけでpromoteを実行する。
+- 生成後の各固定rootにある `tools/data/harness.json` はbootstrap起点に使わず、root解決後のmetadata確認に限定する。記録された `harnessDir` がmanifest/managedDirsの期待値と一致し、root real path内にcontainされることを検証する。絶対path、`..`、symlink escape、未知harness idはclosed failureとする。
 - 解決済みharness rootに対し、dispatcherは `<harnessRoot>/tools/amadeus-sensor.ts`、manifestは `<harnessRoot>/sensors/amadeus-numeric-provenance.md`、toolは `<harnessRoot>/tools/amadeus-sensor-numeric-provenance.ts` と固定する。代替entrypoint探索や最初に見つかったfileの採用は禁止する。
 - core stage wiringはmachine sectionの `stageSlug` exact setと各core stage frontmatterのsensor idを比較する。各delivery treeでも同じstage集合だけに `numeric-provenance` が存在することを確認し、過不足をfailureとする。
 
@@ -134,32 +137,29 @@ partial copy、generated hotfix、last-known-good配送面へのsilent fallback�
 
 既存build pipelineまたはCI runner自体が侵害された場合は本Unitだけでtrust rootを回復できない。現scopeはrepository内のdeterministic projectionとdelivery-tree acceptanceまでであり、署名・provenance attestationサービスは別initiativeとする。
 
-
 ## Review — Iteration 1
 
 - **Verdict:** NOT-READY
 - **Reviewer:** amadeus-architecture-reviewer-agent
-- **Date:** 2026-08-10T11:02:23Z
+- **Date:** 2026-08-10T11:59:55Z
 - **Iteration:** 1
 - **Scope decision:** none
 
-core正本、生成surface禁止、delivery-tree fire、source-only/CI gate、依存禁止の方針は整合している。しかし、配送対象と再現性隔離境界が具体化されておらず、開発者が推測なしに検証を実装できない。
+absent-and-expected入力、core-only authority、U2所有のApproved Mapping、A/B隔離条件は整合している。一方、delivery treeの起点解決が未定義で、完全な対象集合を実装可能な形で列挙できない。
 
 ### Findings
 
-- BLOCKER | `Approved Mapping`、enforcement対象stage集合、全harness配送面、既知dispatcher entrypointのliteral pathまたは解決規則が定義されていないため、stage wiringのexact-set比較とdelivery-tree fireを一意に実装できない。
-- BLOCKER | isolated buildはtemporary directoryだけを分離しているが、依存cache、環境変数、platform、既存install stateの隔離・固定条件が未定義である。同一のambient stateに依存する2 buildが一致しても再現性gateを通過でき、supply-chain driftを検出できない。
-- FOLLOW-UP | `tracked bootstrap/configuration allowlist`のauthoritative pathまたは列挙がない。source-only gateで意図したtracked例外と禁止generated surfaceを区別できるよう、機械可読な参照先を明記する必要がある。
+- BLOCKER | Resolution contractsは対象をdirectory走査や推測で決めることを禁止しているが、PACKAGE_HARNESS_IDS／SELF_INSTALL_HARNESS_IDSから各生成treeのcanonical rootへ解決するmapping、producer command、または固定output pathを定義していない。harness rootは「そのtree」のtools/data/harness.jsonから読むため、先にtreeを特定できなければharness.jsonへ到達できない循環的bootstrapになる。実装者は禁じられた探索・推測を行うほかなく、全SELF_INSTALL_HARNESS_IDSのruntime fire、package-only harnessのprojection検証、および不足・重複・未知IDのclosed failureを保証できない。各harness IDから生成tree rootまでのliteral authorityと生成手順を明記する必要がある。
 
 ## Review — Iteration 2
 
 - **Verdict:** READY
 - **Reviewer:** amadeus-architecture-reviewer-agent
-- **Date:** 2026-08-10T11:05:40Z
+- **Date:** 2026-08-10T12:01:49Z
 - **Iteration:** 2
 - **Scope decision:** none
 
-Iteration 1の全指摘は解消され、Mapping・harness集合・dispatcher・allowlistのauthoritative解決規則、A/B buildの独立状態と環境固定、delivery-tree fireおよびsource-only/CI gateが推測なく実装可能な粒度で定義されている。
+前回BLOCKERは解消された。package treeはmanifest.tsのname/harnessDirとwriteHarness固定式、self-install treeはmanagedDirs・SELF_INSTALL_HARNESSES・5件のliteral rootで探索なしに解決でき、公式producer commandとbootstrap後のharness.json検証も分離されている。registry、実装authority、literal mapping間のexact-set検証とclosed failureが定義され、全対象のprojection/runtime acceptanceを実装可能である。A/Bはproject root、node_modules、cache、HOME、TMPDIR、dist root、install stateを分離し、self-install promotionも専用project root内に限定されており、対象解決契約との矛盾はない。
 
 ### Findings
 

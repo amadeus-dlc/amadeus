@@ -4,7 +4,7 @@
 
 ## Aggregate overview
 
-`NumericProvenanceEvaluation` aggregateが1成果物の入力context、classification、claim、evidence、集計、終端verdictを所有する。U1の `NumericProvenanceMapping` はaggregate外部のreadonly authority projectionである。
+`NumericProvenanceEvaluation` aggregateが1成果物の入力context、classification、claim、evidence、集計、終端verdictを所有する。U2のdesign-time pipelineがU1 contractから生成した `NumericProvenanceMapping` はaggregate外部のreadonly authority projectionである。
 
 ```text
 NumericProvenanceEvaluation
@@ -94,11 +94,11 @@ acceptedとrejected reasonを同じoptional field群で表現しない。
 
 ### `GeneratedMapping`
 
-U1のApproved Mappingから生成されたreadonly projection。schema revision、authority digest、cutoff、artifact rows、class policies、wired stage setを持つ。runtime側でentryを追加・上書きしない。
+U2のSweepReport authorityから生成され、U1 contractへの適合承認を得たreadonly projection。schema revision、authority digest、cutoff、artifact rows、class policies、wired stage setを持つ。runtime側でentryを追加・上書きしない。
 
 ### `ArtifactPolicy`
 
-`stageSlug + recordRelativeOutputPattern + producesKey + claimClass` に対するmodeと `W` を持つ。modeはenforcement/measurement-only、`W` は非負整数で、authority evidence IDへtraceできる。
+`stageSlug + recordRelativeOutputPattern + producesKey + claimClass` に対するmodeと `searchScope` を持つ。modeはenforcement/measurement-only、`searchScope` は `bounded(W)` または `full-structural-region` で、bounded時の`W`は非負整数かつauthority evidence IDへtraceできる。
 
 ### `ArtifactClassification`
 
@@ -113,7 +113,7 @@ discriminated unionで次を表す。
 
 ### `ProvenanceMatch`
 
-1 claimに採用されたexactly 1つのcandidate。claimと同一region、distance `<= W`、kind固有受理条件を満たす。複数候補からの選択順を決定的に保持する。
+1 claimに採用されたexactly 1つのcandidate。claimと同一regionに属し、`bounded(W)` ではdistance `<= W`、`full-structural-region` ではregion内、かつkind固有受理条件を満たす。複数候補からの選択順を決定的に保持する。
 
 ### `ClaimEvaluation`
 

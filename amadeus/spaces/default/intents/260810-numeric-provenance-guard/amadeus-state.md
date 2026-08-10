@@ -107,7 +107,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-637c32aed3f69d2db6a64fc18336aaa6
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-10T11:06:15Z
+- **Last Updated**: 2026-08-10T12:03:22Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design

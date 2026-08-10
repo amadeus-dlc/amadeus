@@ -36,7 +36,7 @@ Option Bは現時点で物理分割の便益が単一consumerを上回らない�
 
 ### Context
 
-成果物種別×意味クラスのmodeと近傍窓 `W` はcorpus実測から決まり、runtime判定は決定的かつ高速でなければならない。mappingの根拠、runtime読込、配線stage集合のdriftを防ぐ必要がある。
+成果物種別×意味クラスのmodeと近傍窓 `W` はcorpus実測から決まり、runtime判定は決定的かつ高速でなければならない。code-generation実測で `p95 = min = 0` のlower-bound saturationが確認されたため、95% coverageとstrict interiorを同時に満たす導出規則もmapping contractに含める。mappingの根拠、runtime読込、配線stage集合のdriftを防ぐ必要がある。
 
 ### Options
 
@@ -46,13 +46,14 @@ Option Bは現時点で物理分割の便益が単一consumerを上回らない�
 
 ### Decision
 
-Option Aを採用する。Construction配下の機械生成sweep成果物を根拠の正本とし、runtime graphのdeclared producesから導出した `stage + record相対output pattern -> produces key`、mode、`W`、配線stage集合をtool module内のreadonly mapping定数へ投影する。runtimeは `--stage` と `--output-path` だけからproduces keyを解決し、統合テストでbyte/集合一致を検証する。
+Option Aを採用する。Construction配下の機械生成sweep成果物を根拠の正本とし、runtime graphのdeclared producesから導出した `stage + record相対output pattern -> produces key`、mode、`W = max(nearest-rank p95, min + 1)`、配線stage集合をtool module内のreadonly mapping定数へ投影する。`W < max` の組だけをenforcementとし、upper-bound saturationはmeasurement-onlyを維持する。runtimeは `--stage` と `--output-path` だけからproduces keyを解決し、統合テストでbyte/集合一致を検証する。
 
 ### Consequences
 
 - runtimeはO(成果物サイズ)の評価だけとなり、NFRの100KB線形性に集中できる。
 - mapping変更にはsweep再実行と生成が必須になる。
 - 根拠と実装の二重編集を防ぐ生成手順・drift testが完成条件になる。
+- sweepは注入されたruntime graph snapshotからDesign-time Artifact Indexを作り、生成前Mapping、runtime Classifier、Evaluatorを読まない。共通受理述語で構造境界内の最短距離を打切りなしに測定し、生成済み`W`の適用はruntimeだけに限定する。
 
 ### Alternatives Rejected
 

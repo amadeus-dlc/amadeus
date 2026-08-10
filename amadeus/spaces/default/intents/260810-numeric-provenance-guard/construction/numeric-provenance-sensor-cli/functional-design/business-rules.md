@@ -1,6 +1,6 @@
 # Business Rules — numeric-provenance-sensor-cli
 
-上流参照: `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。本UnitはU1のApproved Mappingを消費し、FR-PREDの固定語彙とFR-CUTのcutoffをruntime verdictへ写す。
+上流参照: `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。本UnitはU1のschema・fixture・受け入れ条件を実装してApproved Mappingを生成し、FR-PREDの固定語彙とFR-CUTのcutoffをruntime verdictへ写す。
 
 ## Rule catalogue
 
@@ -25,10 +25,12 @@
 
 ### BR-U2-04: Mapping authority
 
-- runtime classificationはApproved Mappingのgenerated projectionだけを読む。
+- U2のdesign-time経路は `indexSweepArtifacts`、`scanNumericClaims`、`measureNearestProvenanceDistance` を使い、runtime Evaluator / Classifierや生成前Mappingへ依存せずSweepReportとGenerated Mappingを作る。
+- `W = max(nearest-rank p95, min + 1)` かつ `W < max` のgroupだけをenforcementとし、lower-bound saturationはstrict interiorへ補正、upper-bound saturationはmeasurement-onlyとする。
+- runtime classificationはU2内で生成・承認されたMappingのgenerated projectionだけを読む。
 - 公開seamは `evaluateNumericProvenance(input, deps)` の2引数とし、`deps` はfile capabilityだけを持つ。Evaluatorは同一moduleの検証済みreadonly生成定数を参照し、mapping単体testは `classifyArtifact(context, mapping)` seamへfixtureを注入する。
 - lookup不一致、競合row、invalid modeはenforcementへfallbackせずskippedまたは起動時検証failureとする。
-- U2はsweep統計、label、mode、`W`、wired stage集合を変更しない。
+- runtime経路はsweep統計、label、mode、`W`、wired stage集合を変更しない。
 
 ### BR-U2-05: Fixed claim classes
 
@@ -124,5 +126,5 @@ silent widening、runtime threshold tuning、best-effort link acceptanceは行�
 - skipped verdictにfindingを含めず、measurement-only verdictをskippedにしない。
 - 1 claimを複数findingへ展開しない。
 - `W` 内でも構造境界を越えたprovenanceを受理しない。
-- U1 authorityとU2 projectionの意味集合を変更しない。
+- U1 contract、U2 SweepReport authority、U2 Generated Mapping projectionの意味集合を変更しない。
 - dispatcher、runtime graph compiler、audit schemaを変更しない。

@@ -19,8 +19,8 @@ InceptionからConstructionへ進む前に、`requirements.md`、Application Des
 ## Gate evidence
 
 - Requirements Analysisはreviewer READYとdeclared sensors PASSで承認済み。
-- Application Designはreviewer iteration 2でREADY、品質修復scope READY、declared sensors PASSで承認済み。
-- Units Generationはreviewer iteration 1でREADY、YAML DAGを含むdeclared sensors PASSで承認済み。
+- Application Designはreviewer iteration 2のBLOCKERを品質修復で閉じ、Design-time Artifact Indexとruntime Classifierの循環を解消して品質モニターREADY、declared sensors PASSで承認済み。
+- Units Generationはreviewer iteration 2でREADY。U1を実行コード非所有spec、U2をindex/sweep/generated mapping/runtimeの単一所有とし、YAML DAGを含むdeclared sensors PASSで承認済み。
 - Delivery Planning成果物はwalking-skeleton、team allocation、risk rationale、external dependencyを相互参照している。
 - `requirements.md` のmanifest投影差UNMEASUREDはU3のbuild再生成・drift検査で解消判定する明示済みConstruction項目であり、開始前のcontract欠落ではない。
 
@@ -43,11 +43,11 @@ InceptionからConstructionへ進む前に、`requirements.md`、Application Des
 
 ## Verdict
 
-**READY**。要件、behavior trace、architecture、Unit、DAG、Bolt、risk controlに孤児や矛盾はない。Constructionは単一walking-skeleton Boltとして開始できる。enforcement mappingが要件閾値を満たさない場合はContract checkpointでBLOCKERとなり、要件を暗黙に緩和せず停止する。
+**READY**。要件、behavior trace、architecture、Unit、DAG、Bolt、risk controlに孤児や矛盾はない。Constructionは単一walking-skeleton Boltとして開始できる。enforcement mappingが要件閾値を満たさない場合はU2のRuntime checkpointでBLOCKERとなり、要件を暗黙に緩和せず停止する。
 
 ## Construction handoff
 
 - Bolt: `numeric-provenance-walking-skeleton`
 - Unit contract: `spec` → `service` → `packaging` のdirect dependencyを同一Bolt内で維持。
 - Test posture: 合意済みpure seamでTDD、最終変更後にfull blocking集合、配送先treeでacceptance。
-- Human boundaries: Bolt完了後のwalking-skeleton gateとPR merge承認を自動化しない。
+- Approval boundaries: walking-skeletonは品質READY後にactive Intent full grantで自動承認し、PR merge承認は自動化しない。

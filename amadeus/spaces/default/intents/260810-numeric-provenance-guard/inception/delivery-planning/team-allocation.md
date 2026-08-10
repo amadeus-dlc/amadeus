@@ -15,7 +15,7 @@
 ### Driver — `amadeus-developer-agent`
 
 - 合意済みpure evaluator seamへRed testを作り、最小実装でGreenにする。
-- U1 mapping contractを再計算せず消費し、単一tool moduleの境界を維持する。
+- U1のschema・fixture・受け入れ条件を変更せず、Design-time Artifact Index、sweep generator、generated mapping、runtimeを単一tool moduleへ実装する。
 - core source、manifest、stage frontmatter、integration testをsurgicalに変更する。
 - 生成されたdist/self-install面を直接編集・commitしない。
 
@@ -39,10 +39,10 @@
 
 ## Handoff contract
 
-- U1→U2: sweep成果物、Generated Mapping、fixture identity、quality leadの再計算結果。
+- U1→U2: mapping schema、Design-time Artifact Index契約、承認fixture、W/mode受け入れ条件。
 - U2→U3: greenなcore source、manifest/stage配線、対象testと性能結果。
 - Mob→reviewer: requirements/design/plan trace、最終diff、全verification exit、未検証面の明示。
-- Mob→human gate: expected demo、reviewer verdict、blocking gate結果、PR/merge状態。
+- Mob→approval boundary: expected demo、reviewer verdict、blocking gate結果、active Intent grant、PR/merge状態。
 
 ## Capacity and escalation
 

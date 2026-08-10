@@ -6,19 +6,19 @@
 
 sweep成果物とGenerated Mappingのどちらを編集可能な正本とするか。
 
-[Answer]: E-FDU1-1 `sweep-authority-generated-projection`。機械生成sweep成果物を根拠の唯一のauthorityとし、TypeScript mappingは同内容のruntime projectionとする。両者の手編集を許さず、drift testでbyte/集合一致を強制する。自動裁定: `auto-decision-f283996c19af89a031e32fa61840cbce`。
+[Answer]: E-FDU1-1 `sweep-authority-generated-projection`。U1はsweep schema、承認fixture、受け入れ条件を正本contractとする。U2が機械生成するsweep reportを実測authority、TypeScript mappingを同内容のruntime projectionとし、両者の手編集を許さずdrift testでbyte/集合一致を強制する。自動裁定: `auto-decision-f283996c19af89a031e32fa61840cbce`。
 
 ## Q2. Classification workflow
 
 modeと近傍窓 `W` を手動curation、runtime adaptive、決定的pipelineのどれで確定するか。
 
-[Answer]: E-FDU1-2 `deterministic-threshold-pipeline`。固定predicate→決定的sample→二値label→距離統計→要件threshold→mode/`W`→stage配線集合の順で一意に導出する。runtimeで再分類しない。自動裁定: `auto-decision-5ceb8f97dc32f95280deb26dca87a25a`。
+[Answer]: E-FDU1-2 `deterministic-threshold-pipeline`。U1は固定predicate→決定的sample→二値label→距離統計→要件threshold→mode/`W = max(nearest-rank p95, min + 1)`→stage配線集合のcontractを固定し、U2が一意に実装・実行する。runtimeで再分類しない。自動裁定: `auto-decision-5ceb8f97dc32f95280deb26dca87a25a`。
 
 ## Q3. Domain lifecycleとerror境界
 
 evidenceをmutable workbookやdatabase workflowで管理するか、immutable snapshotの状態遷移として管理するか。
 
-[Answer]: E-FDU1-3 `immutable-evidence-state-machine`。同一HEADのCorpusSnapshotからSweepReport、LabeledSample、ClassificationEvidence、ApprovedMappingへ進むimmutable lifecycleとする。入力欠落・identity衝突・閾値不成立・driftは型付きfailureとして停止し、暗黙補完しない。自動裁定: `auto-decision-a116b1a19cbf5de468b36c9a74f1cb9a`。
+[Answer]: E-FDU1-3 `immutable-evidence-state-machine`。U1は同一HEADのCorpusSnapshotからSweepReport、LabeledSample、ClassificationEvidence、ApprovedMappingへ進むimmutable lifecycle schemaを定義し、U2がそのvalueとtransitionを実装する。入力欠落・identity衝突・閾値不成立・driftは型付きfailureとして停止し、暗黙補完しない。自動裁定: `auto-decision-a116b1a19cbf5de468b36c9a74f1cb9a`。
 
 ## 対話方式
 
@@ -26,7 +26,7 @@ evidenceをmutable workbookやdatabase workflowで管理するか、immutable sn
 
 ## 曖昧性分析
 
-- `spec` は散文だけではなく、再計算可能なsweep artifact、mapping schema、fixture identityをconsumed-in-placeで提供するUnit kindである。
-- U1はfixed predicateのcontractとdesign-time測定を所有する。runtime verdictとCLI error表現はU2、build projectionはU3が所有する。
+- `spec` は散文だけではなく、mapping schema、fixture identity、W/mode期待値をconsumed-in-placeで提供するUnit kindである。実行可能generatorや機械生成artifactは所有しない。
+- U1はfixed predicateとdesign-time測定のcontractだけを所有する。Design-time Artifact Index、sweep generator/report、Generated Mapping、runtime verdictとCLI error表現はU2、build projectionはU3が所有する。
 - quality leadの承認はthresholdを変更する裁量ではなく、同一入力からの再計算一致を確認する行為である。
 - UI、network、database、concurrency writerは存在しない。並行scanを実装するかは性能実測後の実装判断であり、contractの意味論に含めない。

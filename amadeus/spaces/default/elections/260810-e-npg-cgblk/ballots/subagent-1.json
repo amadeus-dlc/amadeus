@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-NPG-CGBLK",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Abortを支持する。保存worktreeで入力集合8,637件とcontent/stage digestを再計算し、evidence commitと一致したため同条件Retryに改善根拠はない。U2はU1 mappingを直接消費しU3はU2を投影するのでSkipは依存契約を破る。仕様変更権限を保ったままfail-closed停止するAbortが唯一整合する。",
+  "submittedAt": "2026-08-10T11:24:45Z",
+  "receivedAt": "2026-08-10T11:24:53Z"
+}

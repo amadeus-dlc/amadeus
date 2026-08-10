@@ -18,7 +18,7 @@
 
 外部API、外部data window、他team hand-offに依存するか。どのriskを最初にfail-closedで判定するか。
 
-[Answer]: E-DP3 `local-only-with-human-gates`。実装入力はrepository corpus、runtime graph、Bun toolchainだけで、外部API/data/team hand-offはない。corpus分類が要件閾値を満たさずenforcement groupを作れない場合を最初の停止条件とする。walking-skeleton確認とPR mergeは人間承認境界として残す。自動裁定: `auto-decision-d00d3cdb324e8aaf07048f642e2ea2d7`。
+[Answer]: E-DP3 `local-only-with-human-gates`。実装入力はrepository corpus、runtime graph、Bun toolchainだけで、外部API/data/team hand-offはない。U1 contract確定後、U2のindex/sweep実装が要件閾値を満たすenforcement groupを作れない場合を最初の実測停止条件とする。walking-skeletonはactive Intent full grantで品質READY後に自動承認し、PR mergeだけを人間承認境界として残す。自動裁定: `auto-decision-d00d3cdb324e8aaf07048f642e2ea2d7`。
 
 ## 対話方式
 

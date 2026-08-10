@@ -4,7 +4,7 @@
 
 ## Security scope and non-applicability
 
-保護対象は次のlocal design-time assetsである。
+U1が定義し、U2が実装・生成する次のlocal design-time assetsを保護対象とする。
 
 - 同一HEADに固定されたCorpusSnapshotと全ArtifactDescriptor。
 - 決定的sample identity、二値label、distance/statistics。
@@ -15,9 +15,9 @@
 
 ## Trust boundaries
 
-### TB-1: Repository root to corpus reader
+### TB-1: Repository root to U2 corpus reader
 
-corpus readerは入力pathを信頼せず、read前にrepository root基準でPOSIX normalizeし、次のallowlistだけを受理する。
+U2のcorpus readerは入力pathを信頼せず、read前にrepository root基準でPOSIX normalizeし、次のallowlistだけを受理する。
 
 - active spaceのintent record配下にある対象phase/stage Markdown。
 - active spaceの各repositoryにある `codekb/<repo>/re-scans/*.md`。
@@ -30,7 +30,7 @@ Markdown本文はuntrusted dataとして扱う。backtick内のcommand、SHA、r
 
 ### TB-3: Sweep authority to generated projection
 
-Generated Mappingとstage配線はauthority artifactからの一方向projectionであり、runtime-side editを入力へ逆流させない。projection consumerはauthority digest/schema revisionを照合し、不一致をfallbackやlatest-file-winsで吸収しない。
+U2が生成するGenerated Mappingとstage配線はauthority artifactからの一方向projectionであり、runtime-side editを入力へ逆流させない。projection consumerはauthority digest/schema revisionを照合し、不一致をfallbackやlatest-file-winsで吸収しない。
 
 ## Integrity controls
 
@@ -53,7 +53,7 @@ canonicalizationはUTF-8、LF、POSIX relative path、bytewise collection order�
 
 ### Snapshot consistency
 
-sweep開始時にallowlistを全件列挙し、各regular fileの `relativePath + SHA-256(raw file bytes)` をbytewise path順で束ねた `corpusContentDigest` をCorpusSnapshotへ固定する。完了直前にallowlistを再列挙して全file digestを再計算し、開始時と一致することを確認する。これによりHEADが同じでもdirty/untracked fileの追加・削除・内容変更を検出する。
+U2のsweep開始時にallowlistを全件列挙し、各regular fileの `relativePath + SHA-256(raw file bytes)` をbytewise path順で束ねた `corpusContentDigest` をCorpusSnapshotへ固定する。完了直前にallowlistを再列挙して全file digestを再計算し、開始時と一致することを確認する。これによりHEADが同じでもdirty/untracked fileの追加・削除・内容変更を検出する。
 
 同時にobserved Git SHA、graph revision、predicate revisionも開始/終了で比較する。いずれかが異なればpartial resultを承認せず `snapshot-changed` として全体を新snapshotで再実行する。入力欠落、identity衝突、label不備、mapping conflictもtyped failureとし、silent skipや部分承認を許さない。
 
@@ -87,7 +87,7 @@ authority artifactには再計算に必要なrelative path、line、normalized s
 - sweepはnetwork、AWS API、external registryを呼ばない。
 - provenance commandを再実行しない。第1段は併記存在の分類だけを行う。
 - child processを使う場合でも、固定されたrepository introspection commandに限定し、Markdown由来tokenをargvへ流さない。実装が直接Git/file APIで完結する場合はchild process自体を使わない。
-- output先はactive intentのConstruction record内に固定し、任意path上書きを受け付けない。
+- U2のoutput先はactive intentの `numeric-provenance-sensor-cli` Construction record内に固定し、任意path上書きを受け付けない。
 
 ## Threat and control matrix
 
@@ -103,7 +103,7 @@ authority artifactには再計算に必要なrelative path、line、normalized s
 
 ## Security verification gates
 
-Build and Testで次を独立に確認する。
+Build and TestでU2実装に対して次を独立に確認する。
 
 1. allowlist内intent/codekb regular fileだけがcatalogへ入る。
 2. absolute、URL、root escape、別intent、directory、missing targetを拒否する。

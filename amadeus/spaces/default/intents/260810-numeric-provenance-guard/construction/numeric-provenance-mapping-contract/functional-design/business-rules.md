@@ -6,7 +6,7 @@
 
 ### BR-U1-01: Snapshot identity
 
-- sweepはrepository root、observed Git SHA、runtime graph revision、predicate revisionを含む `CorpusSnapshot` を開始時に固定する。
+- U1 contractを実装するU2のsweepは、repository root、observed Git SHA、runtime graph revision、predicate revisionを含む `CorpusSnapshot` を開始時に固定する。
 - scan途中でいずれかが変わった場合、結果を継続利用せず `snapshot-changed` failureとする。
 - 相対pathはPOSIX separatorへ正規化し、同一snapshot内で一意とする。
 
@@ -42,12 +42,12 @@ artifact kind×claim classのgroupをenforcementにするには、requirements�
 - 条件が全て成立するgroupだけをenforcementとする。
 - 1条件でも未達ならmeasurement-onlyとし、未達条件と測定値を記録する。
 - 実装者やapproverが測定値を丸め、sampleを除外し、閾値を緩めてenforcementへ昇格できない。
-- 全groupがmeasurement-onlyの場合、U1/Boltを `no-enforcement-group` BLOCKERとして停止する。
+- 全groupがmeasurement-onlyの場合、U2/Boltを `no-enforcement-group` BLOCKERとして停止する。
 
 ### BR-U1-07: Neighborhood window
 
-- provenance-positive pairの論理距離分布から、要件percentileを覆う最小整数を `W` candidateとする。
-- `min < W < max` を満たす場合だけ採用する。満たさないgroupはmeasurement-onlyとする。
+- provenance-positive pairの論理距離分布から `nearest-rank p95` を求め、`W = max(nearest-rank p95, min + 1)` とする。
+- `W < max` を満たす場合だけ採用する。これによりlower-bound saturationは95%以上のcoverageを保つ最小strict-interior値へ補正し、upper-bound saturationはmeasurement-onlyとする。
 - `W` はclaim finding許容量ではなく探索窓である。enforcement runtimeでは窓内根拠がない各claimがfindingになる。
 - 各runtime policyは `searchScope` を必ず持つ。enforcementは `bounded(W)` のみ、measurement-onlyはvalidな `W` が得られれば `bounded(W)`、得られなければ `full-structural-region` とする。
 - `full-structural-region` は同一paragraph/list item/table rowの全論理行を測定対象とし、境界を越えない。候補数・根拠あり/なし・未併記率を算出するがfindingを生成しない。これは `W` の代替値やenforcementへの昇格ではない。
@@ -62,18 +62,18 @@ Approved Mappingは少なくとも次を含む。
 - mechanical exclusion/lightweight report rule revision
 - enforcementを1つ以上持つstage slug集合
 
-TypeScript projectionとstage frontmatter配線はこのMappingから生成する。projection側の変更でauthorityを更新しない。
+U2がTypeScript projectionとstage frontmatter配線をこのMappingから生成する。projection側の変更でauthorityを更新しない。
 
 ### BR-U1-09: Approval
 
-- approverは `amadeus-quality-agent` とし、同一snapshot/predicateでsample identity、labels、statistics、mode、`W`、stage集合を再計算する。
+- approverは `amadeus-quality-agent` とし、U2が生成した結果を同一snapshot/predicateでsample identity、labels、statistics、mode、`W`、stage集合まで再計算する。
 - 再計算一致と全invariant成立だけがapproval条件である。裁量承認、部分承認、未達waiverは許可しない。
 - approval receiptはsnapshotとmapping digestへ結び付け、base前進やmapping変更後に流用しない。
 
 ## Processing workflow
 
 ```text
-fix CorpusSnapshot
+U2: fix CorpusSnapshot
   -> enumerate ArtifactDescriptor
   -> scan fixed NumericClaim / ProvenanceCandidate
   -> group by artifact kind + claim class
@@ -98,10 +98,10 @@ fix CorpusSnapshot
 | false-positive率超過 | measurement-only、sample/分母を保持 |
 | distanceに有意なrangeなし | measurement-only、`W` を生成しない |
 | measurement-onlyでvalidな `W` なし | `full-structural-region` でmetricsのみ測定 |
-| 全groupがmeasurement-only | U1/Bolt BLOCKER |
+| 全groupがmeasurement-only | U2/Bolt BLOCKER |
 | runtime graphにpath対応なし | unresolved artifactとして記録し、mappingへ推定行を足さない |
 | codekb re-scan | scan-only groupとして集計し、runtime mappingへ投影しない |
-| mappingとTypeScript projection不一致 | drift failure、U2へhandoffしない |
+| mappingとTypeScript projection不一致 | U2のdrift failure、runtime評価へhandoffしない |
 
 ## Error and recovery policy
 
@@ -112,7 +112,7 @@ fix CorpusSnapshot
 | incomplete label | label補完で回復可能 | group分類を停止し、補完後に全groupを再計算 |
 | threshold not met | contract上の正常な降格 | measurement-onlyへ機械分類 |
 | no enforcement group | 要件変更なしには回復不能 | BLOCKERとして停止 |
-| projection drift | 再生成で回復可能 | authorityからprojectionを再生成し一致testを再実行 |
+| projection drift | 再生成で回復可能 | U2がauthorityからprojectionを再生成し一致testを再実行 |
 
 silent skip、best-effort approval、runtime adaptive classificationは行わない。
 

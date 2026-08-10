@@ -1,10 +1,10 @@
 # Domain Entities — numeric-provenance-mapping-contract
 
-上流参照: `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。本Unitは永続databaseやnetwork serviceを持たず、全entityはsweep実行中とversioned artifact内のimmutable valueである。
+上流参照: `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。本Unitは永続databaseやnetwork serviceを持たず、U2が実装するsweep valueとversioned artifactのimmutable schema・fixture・受け入れ条件だけを定義する。
 
 ## Aggregate overview
 
-`MappingContract` aggregateが、1つの `CorpusSnapshot` に属するartifact、candidate、label、statistics、policy、approvalを一貫したdigest chainとして所有する。
+`MappingContract` schemaが、1つの `CorpusSnapshot` に属するartifact、candidate、label、statistics、policy、approvalを一貫したdigest chainとして定義する。実行時のaggregate valueとtransitionはU2が所有する。
 
 ```text
 MappingContract
@@ -85,7 +85,7 @@ provenance-positive pairのlogical distance collection。count、min、median、
 
 ### `ClassificationEvidence`
 
-1つのartifact kind×claim class groupについて、labeled count、false-positive numerator/denominator、provenance-positive count、DistanceDistribution、各eligibility condition、resulting mode、`W`または降格reason、測定用 `searchScope` を束ねる。modeとcondition結果が矛盾するvalueは構築できない。scan-only groupはclassification evidenceを保持するがruntime policyを生成しない。
+1つのartifact kind×claim class groupについて、labeled count、false-positive numerator/denominator、provenance-positive count、DistanceDistribution、各eligibility condition、resulting mode、`W`または降格reason、測定用 `searchScope` を束ねる。`W` は `max(nearest-rank p95, min + 1)` で導出し、`W < max` の場合だけvalidとする。modeとcondition結果が矛盾するvalueは構築できない。scan-only groupはclassification evidenceを保持するがruntime policyを生成しない。
 
 ### `ArtifactPolicy`
 
@@ -120,7 +120,7 @@ snapshot digest、mapping digest、recomputation digest、approver role、verdic
 | `labeled` | complete LabeledSampleSet | statistics/classification |
 | `classified` | ClassificationEvidenceSet、enforcement groupあり | mapping emission |
 | `mapped` | SweepReport + NumericProvenanceMapping | independent recomputation |
-| `approved` | MappingApproval READY | TypeScript/stage projection handoff |
+| `approved` | MappingApproval READY | U2内のTypeScript/stage projection生成 |
 | `blocked` | typed failure + evidence | 入力修復後に新snapshotまたは該当predecessorから再実行 |
 
 `approved` からmappingをmutateしない。変更は新snapshot/revisionで新aggregateを作る。
@@ -133,7 +133,7 @@ snapshot digest、mapping digest、recomputation digest、approver role、verdic
 - SampleIdentity 1つにLabeledSample exactly 1つ。
 - artifact kind×claim class group 1つにClassificationEvidence exactly 1つ。
 - declared-artifactのClassificationEvidence 1つからArtifactPolicy 0または複数を生成し、measurement-onlyでもevidenceを保持する。scan-only codekb evidenceからは生成しない。
-- NumericProvenanceMapping 1つにMappingApproval 0または1つ。approval前はU2へhandoff不可。
+- NumericProvenanceMapping 1つにMappingApproval 0または1つ。approval前はU2内のruntime projectionへhandoff不可。
 
 ## Invalid states made unrepresentable
 
@@ -148,4 +148,4 @@ snapshot digest、mapping digest、recomputation digest、approver role、verdic
 
 ## Serialization and compatibility
 
-SweepReportは人間が監査できるMarkdownと、生成・一致testが読める決定的machine sectionを同じauthority artifactに持つ。key順序、collection順序、path separator、number renderingをcanonical化する。schema revisionが変わる場合は旧approvalを無効化し、silent migrationやruntime fallbackを行わない。
+U2が生成するSweepReportは、人間が監査できるMarkdownと、生成・一致testが読める決定的machine sectionを同じauthority artifactに持つ。key順序、collection順序、path separator、number renderingをcanonical化する。schema revisionが変わる場合は旧approvalを無効化し、silent migrationやruntime fallbackを行わない。

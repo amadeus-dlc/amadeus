@@ -18,7 +18,7 @@ Bolt間parallelismはない。これは人員制約ではなくDAGとwalking-ske
 
 | Risk | Signal | Earliest control | Failure disposition |
 | --- | --- | --- | --- |
-| R1 enforcement mappingが成立しない | label数、偽陽性率、provenance-positive数、距離rangeのいずれかが閾値未達 | Contract checkpointで全条件を再計算 | Bolt BLOCKER。runtime実装で閾値を緩めない |
+| R1 enforcement mappingが成立しない | label数、偽陽性率、provenance-positive数、距離rangeのいずれかが閾値未達 | Runtime checkpointでU2のindex/sweep generatorにより全条件を再計算 | Bolt BLOCKER。runtime判定で閾値を緩めない |
 | R2 provenance resolverが一般文書やescape linkを受理する | rejection fixtureがPASSになる | Pure evaluatorのRed fixture | 許可root・normalize・regular-file契約を修復 |
 | R3 regexが敵対Markdownで非線形になる | median/p95または入力倍増比が予算超過 | Runtime checkpointの専用benchmark | predicateを線形な構成へ修復し再測定 |
 | R4 fail-openとadvisory契約が崩れる | skipped条件がfinding/非zero exit、graph severity変化 | verdict/cutoff/graph golden test | 既存dispatcher変更を戻しtool境界で修復 |
@@ -28,8 +28,8 @@ Bolt間parallelismはない。これは人員制約ではなくDAGとwalking-ske
 
 ## Confidence ladder
 
-- Contract checkpoint: 固定predicateとcorpusから有効なmappingを再現できる。
-- Runtime checkpoint: mapping consumerが正負・skipped境界と性能予算を満たす。
+- Contract checkpoint: U1のschema、承認fixture、W/mode期待値が実行コードなしで検証できる。
+- Runtime checkpoint: U2が固定predicateとcorpusから有効なmappingを再現し、そのconsumerが正負・skipped境界と性能予算を満たす。
 - Distribution checkpoint: coreの意味論が全配送面で変わらずauditへ到達する。
 - Walking-skeleton gate: 人間がexpected demoと残存riskを確認する。
 

@@ -40,3 +40,7 @@ D. Park — 現在地点でワークフローを一時停止する
 X. Other (please specify)
 
 [Answer]: Targeted redo。AUTO_DECIDED `auto-decision-0d5cdfb543a39abf7997bd1edd0e043a`(basis: agent-recommendation、reviewState: unreviewed)。現行成果物を `archive/2026-08-10T095453Z-requirements-analysis-targeted-redo/` へ保存し、残る2 BLOCKER のみを修正して reviewer iteration を再開する。
+
+### D4. code-generation実測で判明したlower-bound saturationの扱い
+
+[Answer]: `interior-coverage-threshold`。正当ペア距離の95%を覆い、かつ観測minより大きい最小整数として `W = max(nearest-rank p95, min + 1)` を採用する。`W < max` の組だけenforcementとし、`p95 = max` のupper-bound saturationはmeasurement-onlyを維持する。根拠: 証拠commit `55f0027e321f8b1aa4aa8ec5d0e1e67a0e1223a6` の8,637 files・184 groups sweepでは、`p95 = min = 0` かつ `max = 2` の組が存在し、旧規則 `W = p95` は95% coverageを満たしているにもかかわらず下端一致だけで全組を失格にした。新規則はcoverageを低下させずstrict interiorを確保し、上端張り付きは昇格させない。ユーザーの再開指示を受けたfull grant下のtargeted redoとして裁定。

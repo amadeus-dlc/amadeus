@@ -1,6 +1,16 @@
 # Business Logic Model — numeric-provenance-sensor-cli
 
-上流参照: `unit-of-work.md` のU2境界、`unit-of-work-story-map.md` のDS-1〜DS-3/DS-6、`requirements.md` のFR-SEN/FR-PRED/FR-CUT/NFR、`components.md` の単一tool module責務、`component-methods.md` のpure evaluator seam、`services.md` の同期短命CLI契約。U1のApproved Mappingをreadonly入力とし、runtimeで再計算しない。
+上流参照: `unit-of-work.md` のU2境界、`unit-of-work-story-map.md` のDS-1〜DS-4/DS-6、`requirements.md` のFR-SEN/FR-PRED/FR-CUT/FR-SWP/NFR、`components.md` の単一tool module責務、`component-methods.md` のdesign-time index/sweepとpure evaluator seam、`services.md` の同期短命CLI契約。U1のschema・fixture・受け入れ条件を実装してApproved Mappingを生成し、runtimeは承認済みMappingをreadonly入力として再計算しない。
+
+## Design-time mapping pipeline
+
+1. `indexSweepArtifacts(graphSnapshot)` がdeclared producesからMapping非依存のdescriptorを安定順で導出し、codekb re-scanをscan-only descriptorとして加える。
+2. `scanNumericClaims` と `measureNearestProvenanceDistance` がruntime Evaluator / Classifierと生成前Mappingを呼ばず、構造境界内を`W`なしで全探索する。
+3. U1 contractどおりlabel、false-positive率、provenance-positive数、距離分布を集計し、`W = max(nearest-rank p95, min + 1)` かつ `W < max` のgroupだけをenforcementとする。
+4. lower-bound saturationはstrict interiorへ補正し、upper-bound saturationと他の閾値未達はmeasurement-onlyへ分類する。
+5. SweepReportを実測authorityとして保存し、同じ意味集合からreadonly Generated Mappingとstage配線を生成する。
+
+このpipelineはU2が所有する単一tool module内のdesign-time経路であり、U1は実行コードや生成結果を所有しない。
 
 ## End-to-end evaluation pipeline
 
@@ -14,7 +24,7 @@
 6. exact lightweight basename、またはGenerated Mappingのexact produces keyがlightweight集合なら `lightweight-report`。
 7. `stage + normalized record-relative output path` がMappingに一致しなければ `unmapped-artifact`。
 8. Markdownを単一passでregion化し、固定4クラスのclaimを抽出する。候補0件かつ100行未満なら `not-applicable`。
-9. claimごとにMappingのclass policyを参照し、同一regionの前後 `W` 論理行だけでprovenanceを探索する。
+9. claimごとにMappingのclass policyを参照し、`bounded(W)` は同一regionの前後 `W` 論理行、`full-structural-region` は同一region全体でprovenanceを探索する。
 10. enforcement policyの未併記claimは1 claim = 1 findingへ変換する。measurement-only policyはfindingを作らずmetricsだけへ集計する。
 11. 全class集計からmode別のtotal verdictを構築する。
 
@@ -50,7 +60,7 @@ region identityは入力順で単調増加する整数とkindから構成する�
 
 ## Provenance resolution
 
-各claimは同一region内の `[-W, +W]` 論理行だけを候補範囲とする。次の固定kindを抽出し、受理条件を個別に評価する。
+各claimはpolicyの `searchScope` に従い、同一region内の `[-W, +W]` 論理行またはregion全体だけを候補範囲とする。次の固定kindを抽出し、受理条件を個別に評価する。
 
 1. backtick code内のcommand token: token境界で `git|grep|rg|wc|find|ls|jq|gh|bun` のいずれか。
 2. measurement reference: `測定 ref|measurement ref|observed at|HEAD|origin/main` のいずれか。
@@ -74,7 +84,7 @@ linkは次の順序で処理する。
 
 ## Artifact classification and mapping use
 
-Generated Mappingのlookup keyは `stageSlug + normalized record-relative output path + claimClass` である。artifact rowはruntime graphから設計時に固定されたproduces keyを持つため、runtime CLIはgraphを読まない。
+Generated Mappingのlookup keyは `stageSlug + normalized record-relative output path + claimClass` である。artifact rowはU2のDesign-time Artifact Indexがruntime graph snapshotから固定したproduces keyを持つため、runtime CLIはgraphを読まない。
 
 公開seamはApplication Designどおり `evaluateNumericProvenance(input, deps)` の2引数を維持し、`deps` は `fileExists` と `isRegularFile` だけを持つ。Evaluatorは同一moduleのreadonly生成定数 `GENERATED_NUMERIC_PROVENANCE_MAPPING` を参照する。この定数はmodule評価後に変更されず、runtime I/Oやgraph読込を伴わないため、同じinput/depsに対してEvaluatorは純粋である。mapping固有の単体testは既存の `classifyArtifact(context, mapping)` seamへfixture mappingを明示注入し、Evaluatorの統合testは生成定数に存在するfixture pathを使う。
 
