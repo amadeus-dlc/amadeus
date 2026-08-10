@@ -1,6 +1,27 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260809-sensor-parseflags-failop）
+## 実行メタデータ（現在: 260809-report-done-kind-split）
+
+- Date: `2026-08-09`
+- Base commit: `778567dd03b00f22cb887eec06f025557eeaaaf4`（直前 intent `260809-sensor-parseflags-failop` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 778567dd03b00f22cb887eec06f025557eeaaaf4 HEAD` で**祖先性を実測確認**（exit 0）。祖先であるため merge-base fallback は不要）
+- Observed commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`git rev-parse HEAD` で実測。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #2762](https://github.com/amadeus-dlc/amadeus/issues/2762)（`kind:"done"` の2義衝突 — 非終端の commit ack が終端 directive と同じ kind で返り、conductor がループを誤停止する）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー2名 ESTABLISHED_WITH_REFINEMENTS 済みの単発 Issue。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency: レビュー検証 SHA ≡ observed（**完全一致**）→ 行番号の再解決は構造的に no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`。測定区間は `review..observed` に固定、`..HEAD` ではない）。加えて `base..observed` の変更 68 ファイルに患部（`amadeus-orchestrate.ts` / `amadeus-directive.ts` / harness SKILL.md / `docs/reference/`）は**含まれない**
+- Verification: git 状態変更・GitHub 書込・engine 操作は**すべてゼロ**。coverage 実行もゼロ（`cid:code-generation:c1-coverage-single-owner`）。検証は observed 断面の verbatim 直読（`git show "<SHA>:<path>"` — `cid:requirements-analysis:zsh-revpath-brace-quoting` に従いブレース明示）と `grep` / `find` による全数列挙
+- **⭐ 主要所見 — 患部は「非終端 ack 3箇所」ではなく「多義 emit 点2箇所」**: 両レビュアーは `:5382` / `:5765` / `:5849` を一律「非終端 ack」と分類したが、Architect 実測では **`:5382` と `:5849` は terminal と non-terminal の両方を単一 emit 点から出す多義サイト**である（`:5790-5796` の3分岐が `:5848` へ合流 / `:5352`・`:5377` の defer 経路のみ先に return）。「3箇所を別 kind へ替える」という素朴な修正は**終端ケースを非終端として出す新たな欠陥を作る**。純・非終端は `:5765` の1箇所のみ
+- 判別子は既存: `isFinal` が両多義サイトのスコープ内に実在（`:5298-5299` / `:5674`）→ 新規の状態読取なしで分岐可能。`committed` 配列は判別子として**不十分**（gated 最終は `approve` が `complete-workflow` へ自己委譲するため）
+- 設計先例が既に存在: `deferWorkflowCompletion` 経路は両サイトとも先に return し `await-completion` / mirror boundary directive を出す = 「終端だが未コミット」を別 kind へ切り出した設計が既に実装済み
+- 契約面（同期対象）: harness SKILL.md **6面**（claude:60 / codex:58 / kimi:60 / kiro:56 / kiro-ide:56 が逐語同一、pi:121 のみ別文言）+ `amadeus-directive.ts` 8箇所 + **`docs/reference` 6ファイル**（`17-skill-system` / `06-hooks-and-tools` / `14-claude-features` の英日対）。`packages/framework/core/amadeus-common/`（stage-protocol）は **0 hit**
+- Architect 独立再実測による scan 訂正1件: `interface DoneDirective` は **`:332-335`**（scan 記載の `:333-336` は off-by-one）。他の directive.ts 座標（`:52` / `:407` / `:474` / `:495` / `:548` / `:1201`）はすべて一致
+- **reviewer-1「訂正4」の反証**（Architect が独立確認）: 逐語「stage-protocol.md と docs/reference には `done` kind の契約はありません」のうち **docs/reference 側は誤り** — `docs/reference/17-skill-system.md:38` に SKILL.md と同一の契約行が実在（`.ja.md:38` も同じ）。stage-protocol に無いという半分は正
+- 既存の件数語ドリフト（**本 issue の患部外**、`cid:code-generation:same-root-inventory` の同根棚卸し候補）: `VALID_KINDS` 実数 = **13**（`git show` + `awk` で機械再計算）に対し、SKILL.md 5面が「ten kinds today」、`docs/reference/17-skill-system.md:32` が「**nine** directive kinds」「emits **seven** kinds today」、`.ja.md:32` が「**9つ**」「今日**7つ**の種別」。**4値がすでに乖離**しており、別 kind 新設方式を採る場合はこの群に触れざるを得ない
+- tNNN 予約: 使用済み最大 **`t523`**（`find tests -name 't[0-9]*' | grep -oE '/t([0-9]+)' | grep -oE '[0-9]+' | sort -n | tail -1` で機械再計算）、本 intent は **`t524`** を予約（`cid:code-generation:swarm-test-number-reservation` / `c1-tnnn-collision-on-regrounding` — PR 発行前・マージ直前に固定 base SHA の `tests/` で再確認すること）
+- Updated artifacts: `component-inventory.md` に「directive kind の terminal/非terminal 分類」節を追加。`code-structure.md` / `architecture.md` は構造不変・患部が既存コンポーネント内のため**変更なし**。直前の現在断面（`260809-sensor-parseflags-failop`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
+- Per-intent record: `re-scans/260809-report-done-kind-split.md`（7サイト全数分類・多義2サイトの合流構造・契約面棚卸し・修正方式2案の surgical 比較の正本）
+
+## 実行メタデータ（履歴、2026-08-09: 260809-sensor-parseflags-failop）
 
 - Date: `2026-08-09`
 - Base commit: `a5621236c6c69f1c54f3d496bdf91792d4ef12fc`（直前 intent `260807-intent-2328-tests-e2e-au` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor a5621236c HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count a5621236c..HEAD` = **232 commits**。祖先であるため merge-base fallback は不要）

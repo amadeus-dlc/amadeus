@@ -1033,5 +1033,12 @@
     "dirName": "260809-sensor-parseflags-failop",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
+    "slug": "report-done-kind-split",
+    "dirName": "260809-report-done-kind-split",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
