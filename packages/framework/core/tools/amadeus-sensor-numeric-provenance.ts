@@ -222,10 +222,10 @@ function nearestRank(sorted: readonly number[], percentile: number): number | nu
   return sorted[Math.ceil((percentile / 100) * sorted.length) - 1]!;
 }
 
-export function classifyNumericProvenanceEvidence(
-  input: NumericProvenanceClassificationInput,
-): NumericProvenanceClassificationEvidence {
-  if (!Number.isSafeInteger(input.labeledCount) || input.labeledCount < 0) throw new Error("invalid-labeled-count");
+function validateClassificationInput(input: NumericProvenanceClassificationInput): void {
+  if (!Number.isSafeInteger(input.labeledCount) || input.labeledCount < 0) {
+    throw new Error("invalid-labeled-count");
+  }
   if (
     !Number.isSafeInteger(input.falsePositiveCount) ||
     input.falsePositiveCount < 0 ||
@@ -236,20 +236,57 @@ export function classifyNumericProvenanceEvidence(
   if (input.provenancePositiveDistances.some((distance) => !Number.isSafeInteger(distance) || distance < 0)) {
     throw new Error("invalid-provenance-distance");
   }
+}
 
+function strictInteriorWindow(min: number | null, p95: number | null): number | null {
+  if (min === null) return null;
+  if (p95 === null) return null;
+  return Math.max(p95, min + 1);
+}
+
+function exceedsFalsePositiveThreshold(input: NumericProvenanceClassificationInput): boolean {
+  if (input.labeledCount === 0) return true;
+  return input.falsePositiveCount * 10 > input.labeledCount;
+}
+
+function lacksObservedDistanceRange(min: number | null, max: number | null): boolean {
+  if (min === null) return true;
+  if (max === null) return true;
+  return min >= max;
+}
+
+function saturatesUpperBound(window: number | null, max: number | null): boolean {
+  if (window === null) return true;
+  if (max === null) return true;
+  return window >= max;
+}
+
+function classificationDowngradeReasons(
+  input: NumericProvenanceClassificationInput,
+  distances: readonly number[],
+  min: number | null,
+  max: number | null,
+  window: number | null,
+): string[] {
+  const reasons: string[] = [];
+  if (input.labeledCount < 30) reasons.push("labeled-count-below-30");
+  if (exceedsFalsePositiveThreshold(input)) reasons.push("false-positive-rate-above-0.10");
+  if (distances.length < 20) reasons.push("provenance-positive-count-below-20");
+  if (lacksObservedDistanceRange(min, max)) reasons.push("distance-range-not-observed");
+  if (saturatesUpperBound(window, max)) reasons.push("upper-bound-saturation");
+  return reasons;
+}
+
+export function classifyNumericProvenanceEvidence(
+  input: NumericProvenanceClassificationInput,
+): NumericProvenanceClassificationEvidence {
+  validateClassificationInput(input);
   const distances = [...input.provenancePositiveDistances].sort((left, right) => left - right);
   const min = distances[0] ?? null;
   const max = distances.at(-1) ?? null;
   const p95 = nearestRank(distances, 95);
-  const window = min === null || p95 === null ? null : Math.max(p95, min + 1);
-  const reasons: string[] = [];
-  if (input.labeledCount < 30) reasons.push("labeled-count-below-30");
-  if (input.labeledCount === 0 || input.falsePositiveCount * 10 > input.labeledCount) {
-    reasons.push("false-positive-rate-above-0.10");
-  }
-  if (distances.length < 20) reasons.push("provenance-positive-count-below-20");
-  if (min === null || max === null || min >= max) reasons.push("distance-range-not-observed");
-  if (window === null || max === null || window >= max) reasons.push("upper-bound-saturation");
+  const window = strictInteriorWindow(min, p95);
+  const reasons = classificationDowngradeReasons(input, distances, min, max, window);
   const mode: NumericProvenanceMode = reasons.length === 0 ? "enforcement" : "measurement-only";
   const covered = window === null ? distances.length : distances.filter((distance) => distance <= window).length;
   return {

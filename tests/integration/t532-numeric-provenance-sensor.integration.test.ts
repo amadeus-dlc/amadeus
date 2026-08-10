@@ -224,6 +224,26 @@ describe("t532 fixed numeric claim predicate", () => {
 });
 
 describe("t532 design-time threshold classification", () => {
+  test("fails closed for invalid label counts and provenance distances", () => {
+    const base = {
+      artifactKind: "requirements",
+      claimClass: "count" as const,
+      labeledCount: 30,
+      falsePositiveCount: 0,
+      provenancePositiveDistances: [0, 2],
+    };
+
+    expect(() => classifyNumericProvenanceEvidence({ ...base, labeledCount: -1 })).toThrow(
+      "invalid-labeled-count",
+    );
+    expect(() => classifyNumericProvenanceEvidence({ ...base, falsePositiveCount: 31 })).toThrow(
+      "invalid-false-positive-count",
+    );
+    expect(() =>
+      classifyNumericProvenanceEvidence({ ...base, provenancePositiveDistances: [0, -1] }),
+    ).toThrow("invalid-provenance-distance");
+  });
+
   test("moves a lower-bound saturated p95 to the smallest strict interior window", () => {
     const result = classifyNumericProvenanceEvidence({
       artifactKind: "requirements",
