@@ -1,6 +1,70 @@
 # コンポーネント棚卸し
 
-## formal-model-check advisory 供給チェーンの棚卸し（260810-tla-applicability-wiring、現在、observed `91f37ec85`）
+## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+
+**観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files。患部 7 パスは区間の変更集合と**非交差** — `git diff --name-only base..HEAD` を患部語彙で絞って **0 hit**）。正本は `re-scans/260810-plugin-harness-dir-token.md`。構造的含意は `architecture.md` の同 intent 節。
+
+### 経路A — build-time packager
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `HARNESS_TOKEN` | `scripts/harness-transform.ts:11` | `/\{\{HARNESS_DIR\}\}/g` |
+| `substituteToken` | `harness-transform.ts:14` | トークン置換本体 |
+| `applyRulesRename` | `harness-transform.ts:23` | `${harnessDir}/rules/` にアンカー。claude は `rulesRename === null` で no-op |
+| `isMarkdownProsePath` | `harness-transform.ts:27` | `.md` / `.md.example` のみ真 |
+| `transform` | `harness-transform.ts:33-46` | 拡張子だけで分岐。`.json` / `.ts` / `.snippet` は Buffer 素通し |
+| `projectPluginArtifacts` | `scripts/plugin-projection.ts:262-278` | `:274` で `transform` 適用 |
+| `pluginHostPrefix` | `plugin-projection.ts:148-150` | 出力を `plugins/<name>` へ名前空間化 |
+| `buildPluginBundle` | `plugin-projection.ts:283-293` | 中立バンドル（逐語） |
+| `buildPluginProjection` | `plugin-projection.ts:304-307` | — |
+| `installArtifacts` | `plugin-projection.ts:670-685` | — |
+| `projectPluginForHarness` | `plugin-projection.ts:696-714` | — |
+| `buildHarnessTree` | `plugin-projection.ts:718-731` | **呼び出し元はテストのみ** |
+| `checkHarnessTree` | `plugin-projection.ts:786-800` | **呼び出し元はテストのみ** |
+| `installDoc` | `plugin-projection.ts:620-664` | 消費者への導入手順。**repo ルート `plugins/` を作る指示は無い** |
+| `projectInTemporaryWorkspace` | `plugin-projection.ts:1019-1067` | `:1025` dist コピー / `:1031` `plugins/` を逐語 `cpSync` / `:1035` compose を spawn |
+| `buildSelfInstallProjection` | `scripts/promote-self.ts:382` | 上記の呼び出し元 |
+
+`scripts/package.ts` は `pluginBundleExpected` のみを import（`:67`、`:873`）。
+
+### 経路B — runtime compose
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `KNOWN_HARNESS_DIRS` import | `packages/framework/core/tools/amadeus-plugin.ts:32` | **置換器ではなく名前列挙**。compose 側の置換器関連ヒットはこれ 1 件のみ |
+| `copyPluginSource` | `amadeus-plugin.ts:659-671` | tmp + rename swap |
+| `copyRealFiles` | `amadeus-plugin.ts:676-688` | `:686` でバイト逐語コピー、symlink は `:681-684` で skip |
+| `collectPluginSources` | `amadeus-plugin.ts:821-838` | repo ルート `plugins/` 優先 → 各ツリーの staging root |
+| `PLUGIN_AUTHORING_DIR_NAME` | `amadeus-plugin.ts:578` | 権威ディレクトリ名 |
+| `pluginSourceRootOf` | `amadeus-plugin.ts:570-572`（`:563`） | staging root `.amadeus-plugin-src` |
+| `seedStaging` | `amadeus-plugin.ts:841-853` | 逐語コピー |
+| tools push | `amadeus-plugin-compose.ts:381-386` | 生バイトを `posix.join("plugins", pluginName, rel)` へ |
+| stages push | `amadeus-plugin-compose.ts:407-412` | 同上 |
+| `pluginContentDigest` / `digestBytes` | `amadeus-plugin-compose.ts:921-972` | manifest の stages/tools の**バイト**を sha256（N-7 の隠れ結合） |
+| `resolveHarnessToolsDir` | `amadeus-plugin.ts:368` | 非散文ランタイム経路のハーネス差吸収。吸収範囲は **UNMEASURED** |
+
+### harnessDir 実測（`packages/framework/harness/*/manifest.ts`）
+
+claude `.claude`（:45）/ codex `.codex`（:24）/ cursor `.cursor`（:30）/ kimi `.kimi-code`（:35）/ kiro `.kiro`（:27）/ kiro-ide `.kiro`（:24）/ opencode `.opencode`（:35）/ pi `.pi`（:15）。**8 ハーネス、7 個の相異なるディレクトリ**（`.kiro` 共有）。`amadeus-harness.ts:38-46` `KNOWN_HARNESS_DIRS` と一致。self-install 面は 5（claude / codex / cursor / opencode / kimi）。
+
+### ガード側の構成要素
+
+| 構成要素 | file:line | 現況 |
+|---|---|---|
+| `CORE` | `tests/unit/t146-core-hygiene.test.ts` | `packages/framework/core` のみ（`plugins/` 非対象） |
+| `HARNESS_PATH_RE` | 同上 | `/\.(claude\|kiro\|codex)\//` — 7 ディレクトリ中 3 個のみ（N-5） |
+| `isCarvedOut` | 同上 | carve-out ちょうど 2 件 |
+| `PLUGIN_SCAN_ROOTS` | `tests/integration/t377-plugin-boundary-guard.integration.test.ts:33-35` | `["plugins"]` — corpus は正しい |
+| `scanDistributionTreeForScriptsRefs` | `tests/lib/boundary-guard.ts:152` | `scripts/` トークンのみ照合 — 述語が噛み合わない |
+| `SCAN_ROOTS` | `tests/lib/boundary-guard.ts:54-66` | `plugins/` / `dist/kimi` / `dist/pi` / `.kimi-code` / `.pi` を欠く |
+
+### 漏洩している生成物（tracked ではない）
+
+self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファイル**が同一ブロックを運ぶ（例 `.codex/plugins/pr-convergence/stages/pr-convergence.md:180` が `.claude/tools/` を指す）。`git ls-files` → `dist/` tracked **0**、self-install `plugins/` tracked **0**。**修正が触るのはソースのみ**。
+
+`plugin.json` は composed ツリーへ配送されない（N-9）— `.claude/plugins/pr-convergence/` は `stages/` と `tools/` のみを持つ。
+
+## formal-model-check advisory 供給チェーンの棚卸し（260810-tla-applicability-wiring、履歴、2026-08-10、observed `91f37ec85`）
 
 **観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。正本は `re-scans/260810-tla-applicability-wiring.md`。
 
