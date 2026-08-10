@@ -29,8 +29,8 @@ export function resolveFinalTestTimeoutMs(
   const parsed = raw === undefined ? defaultSeconds : Number.parseInt(raw, 10);
   const seconds = Number.isFinite(parsed) ? parsed : defaultSeconds;
   const timeoutMs = seconds * 1000;
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
-    throw new Error(`${FINAL_TEST_TIMEOUT_ENV} must resolve to a positive safe millisecond value`);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0) {
+    throw new Error(`${FINAL_TEST_TIMEOUT_ENV} must resolve to a non-negative safe millisecond value`);
   }
   return timeoutMs;
 }

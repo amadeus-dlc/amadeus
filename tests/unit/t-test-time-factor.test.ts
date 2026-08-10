@@ -10,6 +10,7 @@ describe("TEST_TIME_FACTOR", () => {
     expect(resolveTestTimeFactor({})).toBe(1);
     expect(resolveTestTimeFactor({ TEST_TIME_FACTOR: "1" })).toBe(1);
     expect(resolveTestTimeFactor({ TEST_TIME_FACTOR: "2" })).toBe(2);
+    expect(resolveTestTimeFactor({ TEST_TIME_FACTOR: "2.5" })).toBe(2.5);
     expect(resolveTestTimeFactor({ TEST_TIME_FACTOR: "3" })).toBe(3);
   });
 
@@ -41,10 +42,14 @@ describe("TEST_TIME_FACTOR", () => {
   });
 
   test("an AMADEUS_TEST_TIMEOUT final override is never multiplied again", () => {
-    expect(resolveFinalTestTimeoutMs(120, { TEST_TIME_FACTOR: "2" })).toBe(120_000);
+    expect(resolveFinalTestTimeoutMs(600, { TEST_TIME_FACTOR: "2" })).toBe(600_000);
     expect(resolveFinalTestTimeoutMs(600, {
       AMADEUS_TEST_TIMEOUT: "120",
       TEST_TIME_FACTOR: "2",
     })).toBe(120_000);
+    expect(resolveFinalTestTimeoutMs(600, {
+      AMADEUS_TEST_TIMEOUT: "0",
+      TEST_TIME_FACTOR: "2",
+    })).toBe(0);
   });
 });

@@ -51,6 +51,19 @@ export function resolveKiroWaitTiming(
   };
 }
 
+export function resolveKiroFinalWaitTiming(
+  timeoutMs: number,
+  pollBaseMs: number,
+): { timeoutMs: number; pollMs: number } {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error(`timeoutMs must be a positive safe integer (got: ${timeoutMs})`);
+  }
+  return {
+    timeoutMs,
+    pollMs: scaleTestTime(pollBaseMs),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Raw CDP target (the substrate, ported from cdp.mjs:13-107).
 // ---------------------------------------------------------------------------
@@ -695,11 +708,11 @@ export function countMarkers(file: string, field: string, value: string): number
  *  onPoll each tick (e.g. autoApprove) so gates get clicked while we wait. */
 export async function watchMarkers(
   predicate: () => boolean,
-  budgetBaseMs: number,
+  budgetMs: number,
   onPoll?: () => Promise<void>,
   intervalBaseMs = 1500,
 ): Promise<boolean> {
-  const timing = resolveKiroWaitTiming(budgetBaseMs, intervalBaseMs);
+  const timing = resolveKiroFinalWaitTiming(budgetMs, intervalBaseMs);
   const end = Date.now() + timing.timeoutMs;
   while (Date.now() < end) {
     if (onPoll) await onPoll();

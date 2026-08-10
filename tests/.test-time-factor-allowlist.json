@@ -42,12 +42,6 @@
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
-    "path": "tests/integration/hook-dispatcher.integration.test.ts",
-    "sink": "timer",
-    "count": 1,
-    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
-  },
-  {
     "path": "tests/integration/t-formal-verif-node-toolchain-ports.integration.test.ts",
     "sink": "deadline",
     "count": 3,
@@ -98,7 +92,7 @@
   {
     "path": "tests/integration/t-pi-child-driver.integration.test.ts",
     "sink": "timer",
-    "count": 2,
+    "count": 1,
     "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
   },
   {
@@ -106,12 +100,6 @@
     "sink": "deadline",
     "count": 1,
     "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
-  },
-  {
-    "path": "tests/integration/t-team-up-run-lifecycle.serial.test.ts",
-    "sink": "timer",
-    "count": 2,
-    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
   },
   {
     "path": "tests/integration/t-team-up-run-lifecycle.serial.test.ts",
@@ -192,22 +180,10 @@
     "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
   },
   {
-    "path": "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
-    "sink": "timer",
-    "count": 1,
-    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
-  },
-  {
     "path": "tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts",
     "sink": "timeout-ms",
     "count": 1,
     "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
-  },
-  {
-    "path": "tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts",
-    "sink": "timer",
-    "count": 1,
-    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
   },
   {
     "path": "tests/integration/t49-bolt-sensor-failures.test.ts",

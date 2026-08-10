@@ -80,6 +80,7 @@ import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
@@ -205,7 +206,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
           const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (grid.includes("Enter to select")) sawSelectFooter = true;
           if (grid.includes("Submit")) sawSubmitStrip = true;
-        }, 1000);
+        }, scaleTestTime(1000));
 
         // --- answer the gate(s) via the shared answer-gate primitive (§3) ------
         // It answers each menu (single-select Enter / multi-select Space-toggle +

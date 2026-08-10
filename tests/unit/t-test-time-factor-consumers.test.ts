@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { resolveKiroWaitTiming } from "../harness/kiro-ide-driver.ts";
+import {
+  resolveKiroFinalWaitTiming,
+  resolveKiroWaitTiming,
+} from "../harness/kiro-ide-driver.ts";
+import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import { resolveTuiWaitTiming } from "../harness/tui-drive.ts";
 
 const originalFactor = process.env.TEST_TIME_FACTOR;
@@ -24,9 +28,20 @@ describe("load-sensitive harness timing", () => {
   test("Kiro IDE timeout and polling baselines scale together", () => {
     process.env.TEST_TIME_FACTOR = "2";
     const expectedTimeoutMs = 120_000;
+    const expectedFinalTimeoutMs = 60_000;
     expect(resolveKiroWaitTiming(60_000, 400)).toEqual({
       timeoutMs: expectedTimeoutMs,
       pollMs: 800,
     });
+    expect(resolveKiroFinalWaitTiming(60_000, 400)).toEqual({
+      timeoutMs: expectedFinalTimeoutMs,
+      pollMs: 800,
+    });
+  });
+
+  test("Claude SDK explicit and default journey timeout baselines scale once", () => {
+    process.env.TEST_TIME_FACTOR = "2";
+    expect(createClaudeSdkJourney().timeoutMs).toBe(180_000);
+    expect(createClaudeSdkJourney(10_000).timeoutMs).toBe(20_000);
   });
 });

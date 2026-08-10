@@ -3859,9 +3859,9 @@
     "file": "tests/harness/live-e2e/codex.ts",
     "selector": {
       "function": "CodexExecAdapter.cleanup",
-      "fingerprint": "sha256:d06263f107b9023aa3adefbe47e333ab9fc1ac14292ef56718cb147aa5dfb6ae",
-      "anchorLines": 3,
-      "targetLines": "1-3"
+      "fingerprint": "sha256:5f766d97d133060a2497f94f88fca7d69dae45ff523926be70627f3f8ee57fe9",
+      "anchorLines": 4,
+      "targetLines": "1-4"
     },
     "reason": "The reap deadline is constructed only while cleaning an active real Codex child. Offline lifecycle tests exercise cleanup success and failure through fake adapters; CI intentionally does not spawn a credential-bearing live Codex journey.",
     "expiry": "remove when CodexExecAdapter receives an injectable child-process port"

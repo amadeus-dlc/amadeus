@@ -49,11 +49,11 @@ function numericField(event: ClaudeSdkWorkerEvent, key: string): number | undefi
   return typeof value === "number" ? value : undefined;
 }
 
-export function createClaudeSdkJourney(timeoutMs = scaleTestTime(90_000)): LiveJourney {
+export function createClaudeSdkJourney(timeoutBaseMs = 90_000): LiveJourney {
   return {
     id: "claude-sdk-structured-v1",
     prompt: CLAUDE_SDK_PROMPT,
-    timeoutMs,
+    timeoutMs: scaleTestTime(timeoutBaseMs),
     retryPolicy: { maxAttempts: 1 },
     assert: (execution) => {
       const rawEvents = execution.structured?.sdkEvents;

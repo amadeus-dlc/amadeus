@@ -31,7 +31,6 @@ export interface TimingAllowlistEntry {
 const NUMBER = String.raw`[1-9][0-9_]*`;
 const PATTERNS: ReadonlyArray<readonly [TimingSinkKind, RegExp]> = [
   ["sleep", new RegExp(String.raw`\b(?:Bun\.)?sleep\(\s*${NUMBER}\s*\)`, "g")],
-  ["timer", new RegExp(String.raw`\bset(?:Timeout|Interval)\s*\([^\n]*?,\s*${NUMBER}\s*\)`, "g")],
   ["process-timeout", new RegExp(String.raw`\btimeout\s*:\s*${NUMBER}\b`, "g")],
   ["timeout-ms", new RegExp(String.raw`\btimeoutMs\s*:\s*${NUMBER}\b`, "g")],
   [
@@ -134,6 +133,18 @@ export function scanTimingSource(path: string, source: string): TimingSinkFindin
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const expression = node.expression;
+      const isTimer =
+        ts.isIdentifier(expression) &&
+        (expression.text === "setTimeout" || expression.text === "setInterval");
+      const timerDelay = node.arguments[1];
+      if (isTimer && timerDelay && ts.isNumericLiteral(timerDelay) && Number(timerDelay.text) > 0) {
+        findings.push({
+          path,
+          sink: "timer",
+          line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+          expression: node.getText(sourceFile),
+        });
+      }
       const isScaleTestTime =
         ts.isIdentifier(expression) && expression.text === "scaleTestTime";
       if (

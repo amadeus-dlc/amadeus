@@ -241,7 +241,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
           if (grid.includes("Enter to select") || grid.includes("Submit answers")) {
             sawMenu = true;
           }
-        }, 1000);
+        }, scaleTestTime(1000));
 
         // --- answer the workshop gates via the shared answer-gate primitive ------
         // It presses Enter (= the Recommended default) on every menu and TERMINATES

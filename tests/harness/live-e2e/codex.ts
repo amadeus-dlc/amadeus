@@ -268,17 +268,22 @@ export class CodexExecAdapter implements LiveAdapter {
   async cleanup(target: CleanupTarget): Promise<CleanupReceipt> {
     const failures: string[] = [];
     if (this.#activeProcess !== undefined) {
+      let reapTimer: ReturnType<typeof setTimeout> | undefined;
       try {
         this.#activeProcess.kill();
         await Promise.race([
           this.#activeProcess.exited,
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Codex reap timed out")), scaleTestTime(10_000))
-          ),
+          new Promise<never>((_, reject) => {
+            reapTimer = setTimeout(
+              () => reject(new Error("Codex reap timed out")),
+              scaleTestTime(10_000),
+            );
+          }),
         ]);
       } catch (error) {
         failures.push(sanitizeText(String(error)));
       } finally {
+        if (reapTimer !== undefined) clearTimeout(reapTimer);
         this.#activeProcess = undefined;
       }
     }

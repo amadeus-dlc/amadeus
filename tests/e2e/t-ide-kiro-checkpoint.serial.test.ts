@@ -71,6 +71,9 @@ import {
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
+const MARKER_WAIT_TIMEOUT_MS = TEST_TIMEOUT_MS === 0
+  ? scaleTestTime(2_280_000)
+  : Math.max(1, TEST_TIMEOUT_MS - 120_000);
 
 // TEST-GRADE: a per-process port so back-to-back runs never collide on a fixed
 // debug port (the spike hardcoded 9337/9340/9341). The runner pins this file serial
@@ -210,7 +213,7 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
         // human-presence hooks). Budget leaves headroom under the timeout.
         await watchMarkers(
           () => gateApprovedCountFor(sandbox, COMMITTED_SLUG) >= 1,
-          TEST_TIMEOUT_MS - 120_000,
+          MARKER_WAIT_TIMEOUT_MS,
           async () => {
             await autoApprove(handle.port);
           },
@@ -294,7 +297,7 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
         // proceed and fire their postToolUse hooks.
         await watchMarkers(
           () => humanTurnCount(sandbox) >= 1,
-          TEST_TIMEOUT_MS - 120_000,
+          MARKER_WAIT_TIMEOUT_MS,
           async () => {
             await autoApprove(handle.port);
           },

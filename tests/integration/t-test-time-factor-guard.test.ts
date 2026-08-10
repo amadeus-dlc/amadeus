@@ -8,13 +8,27 @@ import {
 
 describe("test timing sink guard", () => {
   test("the failing fixture is detected while helper-routed timing is accepted", () => {
-    const fixture = "tests/fixtures/test-time-factor/raw-timing.ts";
-    expect(scanTimingSource(fixture, "await Bun.sleep(500);")).toEqual([
-      expect.objectContaining({ path: fixture, sink: "sleep" }),
+    const path = "tests/unit/raw-timing.test.ts";
+    expect(scanTimingSource(path, "await Bun.sleep(500);")).toEqual([
+      expect.objectContaining({ path, sink: "sleep" }),
     ]);
     expect(
       scanTimingSource("tests/unit/scaled.test.ts", "await Bun.sleep(scaleTestTime(500));"),
     ).toEqual([]);
+  });
+
+  test("multiline fixed timers are detected through the syntax tree", () => {
+    const findings = scanTimingSource(
+      "tests/unit/multiline-timer.test.ts",
+      `
+        setTimeout(
+          () => cleanup(),
+          500,
+        );
+        setInterval(callback, dynamicDelay);
+      `,
+    );
+    expect(findings).toEqual([expect.objectContaining({ sink: "timer" })]);
   });
 
   test("explicit test timeouts and suite defaults are detected", () => {

@@ -104,6 +104,7 @@ import {
 import { gridHasMenu } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 // The space-level per-repo codekb dir the RE stage writes into
 // (amadeus/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
@@ -226,7 +227,7 @@ describe("t-tui-t50-fix-scope (answering gates advances fix lifecycle on disk)",
           if (gridHasMenu(grid)) {
             sawMenu = true;
           }
-        }, 1000);
+        }, scaleTestTime(1000));
 
         // --- answer the gates via the shared answer-gate primitive (§3) --------
         // It answers all tabs/gates by taking the Recommended default and

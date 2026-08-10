@@ -107,7 +107,7 @@ describe("Context maintained and isolated across async boundaries (FR-TRC-3)", (
           setTimeout(() => {
             expect(trace.getSpan(context.active())?.spanContext().spanId).toBe(parent.spanContext().spanId);
             resolve();
-          }, 1)
+          }, scaleTestTime(1))
         );
       } finally {
         parent.end();
