@@ -1,6 +1,48 @@
 # コード品質評価
 
-## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## ハーネス中立性ガードの穴 — plugin コーパスが全ガードの死角（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+
+**観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files、患部 7 パスは非交差）。正本は `re-scans/260810-plugin-harness-dir-token.md`。
+
+Issue #2790 が漏れた機序は「誰も見ていなかった」である。ハーネス中立性を守るガードは 2 本あるが、**いずれも `plugins/` の散文リテラルを検査しない**。
+
+### t146-core-hygiene の corpus 境界（PROVEN）
+
+`tests/unit/t146-core-hygiene.test.ts`:
+
+- `const CORE = join(REPO_ROOT,"packages","framework","core")` — **`plugins/` を含まない**
+- `const HARNESS_PATH_RE = /\.(claude|kiro|codex)\//;`
+- `isCarvedOut` の carve-out は**ちょうど 2 件**（`workspace-detection.md` の `.kiro/` と `.codex/` を同時に運ぶ行、`stage-protocol.md` の `$CLAUDE_PROJECT_DIR/.claude/tools/` を運ぶ行）
+- 第2のテストが「core の `.md` 50 件超がトークンを運ぶ」ことを assert する
+
+**N-5（品質債務）**: `HARNESS_PATH_RE` は**相異なる 7 個のハーネスディレクトリのうち 3 個しかカバーしない**。`.opencode` / `.cursor` / `.kimi-code` / `.pi` は今日の core 散文でもガードを素通りする。これは #2790 とは独立に現存する穴である。
+
+**N-6（拡張コスト、PROVEN）**: 述語 `grep -rnE "\.(claude|kiro|codex)/" plugins/ --include="*.md"` → **1 hit**（patient のみ）。7 ディレクトリ全部へ広げても **同じ 1 hit**。すなわち **t146 の corpus に `plugins/` を足しても偽陽性は 0 で、新しい carve-out も不要**。
+
+⚠ ただし制約が 1 つある: 「トークン 50 件超」の下限テストは core を前提にしているため、**corpus 拡張は 2 つのテストの walk scope を分離する形でなければならない**（`plugins/` は `.md` 4 ファイルしか持たないため下限を満たさない）。
+
+### t377-plugin-boundary-guard の述語／corpus ミスマッチ（PROVEN）
+
+`tests/integration/t377-plugin-boundary-guard.integration.test.ts:33-35` は既に `PLUGIN_SCAN_ROOTS = ["plugins"]` を走査している。**corpus は正しいが述語が違う** — `tests/lib/boundary-guard.ts:152` `scanDistributionTreeForScriptsRefs` は `scripts/` トークンしか照合しない。したがってハーネスディレクトリのリテラルは検出対象外である。corpus は git-tracked ファイルに限定（`:56-62`）、`RAW_PLUGIN_ALLOWLIST = []` で fail-closed。
+
+**構造的評価**: #2790 は「corpus を持つガード（t377）と述語を持つガード（t146）が 1 対 1 で噛み合っていない」ことで漏れた。片方は正しい場所を見て違うものを探し、もう片方は正しいものを探して違う場所を見ている。
+
+### boundary-guard の SCAN_ROOTS 欠落（PROVEN な欠落、影響は UNMEASURED）
+
+`tests/lib/boundary-guard.ts:54-66` の `SCAN_ROOTS`（t258 用）には `plugins/` が無く、さらに `dist/kimi` / `dist/pi` / `.kimi-code` / `.pi` も無い。この 4 面が走査外であることの blast radius は本 intent では**未測定**。
+
+### 散文中のパス表記の一貫性債務（12 行、DEDUCED 強）
+
+述語 `grep -rn "amadeus-sensor.ts\|bun plugins/\|bun \.claude" plugins/ --include="*.md"` → **12 行**。patient 1 行がハーネスを**固定**し、残り 11 行がハーネス接頭辞を**落とす**。両者は同一機構（`{{HARNESS_DIR}}` 置換）の不在という 1 つの根に帰着する。詳細と根拠は `architecture.md` の同 intent 節を参照。
+
+**確立した先例との落差（N-8、PROVEN）**: core では `{{HARNESS_DIR}}/tools/` 形が **92 箇所**（`grep -rn "{{HARNESS_DIR}}/tools/" packages/framework/core/ --include="*.md" | wc -l`）で確立している。plugin 側だけがこの規約から外れている。一方、**散文中の手動センサー fire は core に先例が 0**（`grep -rn "amadeus-sensor.ts fire" packages/framework/core/` は `.md` に 0 hit）であり、patient は既存規約に単純に合わせるだけでは済まない形をしている。
+
+### 検証面（failing-first テストの置き場、PROVEN な棚卸し）
+
+- 経路A のピン: `tests/unit/t-plugin-projection.test.ts:201-244`（`{{HARNESS_DIR}}` を使う唯一の plugin 側 fixture）、`tests/integration/t-plugin-projection-packaging.test.ts:101-112`、t303、t308、t309/t312、t310、t311、`t254-reference-plugin-lifecycle.test.ts:191-337`
+- 経路B のピン: `tests/integration/t416-self-install-plugin-projection.integration.test.ts`（冪等性／決定性 `:51-52`、`:111-113` — **`plugins/` → temp workspace → compose を実際に走らせる唯一の層**）、`tests/e2e/t416-self-projection-fresh-git.serial.test.ts`、`t-plugin-projection.test.ts:317-319`、t146、t377
+
+## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、履歴、2026-08-07、observed `a5621236c`）
 
 ### 債務の性質
 

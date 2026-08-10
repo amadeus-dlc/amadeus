@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { harnessStageEntry } from "../../packages/framework/core/tools/amadeus-harness.ts";
+import { foreignHarnessDirs, harnessDirOf } from "../helpers/harness-dir-fixture.ts";
 import type { PluginRecord } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import { defaultPluginCliDeps } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 import { renderStageRunner } from "../../packages/framework/core/tools/amadeus-runner-gen.ts";
@@ -65,6 +66,30 @@ describe("t416 deterministic self-install plugin projections", () => {
       expect(composition, harness).toContain('\n  "plugins":');
     }
   }, 120_000);
+
+  // #2790: the self-install faces are seeded by projectInTemporaryWorkspace, which
+  // fed the authoring plugins/ tree into compose VERBATIM — so a {{HARNESS_DIR}}
+  // token in plugin prose reached every face unresolved, and a raw `.claude/…`
+  // literal reached every face as a foreign path. Asserted on the composed stage
+  // (the surface a host actually reads), face by face.
+  test("plugin prose resolves to each self-install face's own harness dir", () => {
+    const composedStage = "plugins/pr-convergence/stages/pr-convergence.md";
+    for (const harness of SELF_INSTALL_HARNESSES) {
+      const dir = harnessDirOf(harness);
+      const projection = buildSelfInstallProjection(harness, REPO_ROOT);
+      const entry = [...(projection.artifacts ?? [])].find(([path]) => path === `${dir}/${composedStage}`);
+      expect(entry, `${harness}: composed ${composedStage} missing`).toBeDefined();
+      const text = entry![1].toString("utf-8");
+      // (i) the sensor-fire line names THIS face's tools dir, exactly once.
+      expect(text.split(`${dir}/tools/amadeus-sensor.ts`).length - 1, harness).toBe(1);
+      // (ii) no unresolved token survived the seeding copy.
+      expect(text.includes("{{HARNESS_DIR}}"), `${harness}: raw token survived`).toBe(false);
+      // (iii) no other harness's dir leaked into this face.
+      for (const foreign of foreignHarnessDirs(harness)) {
+        expect(text.includes(`${foreign}/`), `${harness}: foreign literal ${foreign}/`).toBe(false);
+      }
+    }
+  }, 300_000);
 
   test("Codex emits only the project-root .agents runner", () => {
     const projection = buildSelfInstallProjection("codex", REPO_ROOT);

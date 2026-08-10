@@ -1,6 +1,127 @@
 # アーキテクチャ
 
-## 監査 journal の v1/v2 二重スキーマとリーダー面の構造（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+
+**観測 ref**: 本節の file:line はすべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）時点。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（HEAD の祖先、`git rev-list --count base..HEAD` = **20 commits / 117 files**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-harness-dir-token.md`。
+
+**Focus**: [Issue #2790](https://github.com/amadeus-dlc/amadeus/issues/2790)（ミラー Issue #2799）— ハーネス中立であるべき plugin stage doc に Claude 固有リテラルが焼き込まれている。クロスレビュー 2/2 CONFIRMED（run `xrev-2790-20260810T033737Z`）。**Scan mode**: xrev differential scan。
+
+### 患部（PROVEN）
+
+`plugins/pr-convergence/stages/pr-convergence.md:180` = `bun .claude/tools/amadeus-sensor.ts fire pr-convergence-report-format \`。この行を含むブロックの散文は逐語で次を宣言する — "The manual fire IS the normal delivery path, not a fallback: the report is written by the CLI through Bash, so the harness's write-time hook (which watches Write/Edit turns of the active stage) never observes it."
+
+述語 `grep -rn "\.claude/\|\.codex/\|{{HARNESS_DIR}}" plugins/` → **ちょうど 1 hit**（この行のみ）。`plugins/` 配下の `.md` は **4 ファイル**。すなわち **`plugins/` にはトークンが 1 件も存在しない**。
+
+### 二経路の構造（本 intent の中核）
+
+plugin の権威ソースは repo ルートの `plugins/<name>/`（`PLUGIN_AUTHORING_DIR_NAME`、`amadeus-plugin.ts:578`）。ここから配布先へ至る経路は**2 本あり、トークン置換器は片方にしか存在しない**。
+
+**経路A — build-time packager（置換器あり）**
+
+- `scripts/harness-transform.ts:11` `const HARNESS_TOKEN = /\{\{HARNESS_DIR\}\}/g;` / `:14` `substituteToken` / `:23` `applyRulesRename`（`${harnessDir}/rules/` にアンカー。claude は `rulesRename === null` で no-op）/ `:27` `isMarkdownProsePath` は `.md` と `.md.example` のみ / `:33-46` `transform()` は**拡張子だけで分岐**し、`.json` / `.ts` / `.snippet` は Buffer のまま素通しする。設計意図は header `:8-9` に逐語で書かれている。
+- `scripts/plugin-projection.ts:262-278` `projectPluginArtifacts` が `:274` で `transform` を適用し、出力を `pluginHostPrefix(name)` = `plugins/<name>`（`:148-150`）配下へ名前空間化する。`:283-293` `buildPluginBundle` は逐語（中立バンドル）、`:304-307` `buildPluginProjection`、`:670-685` `installArtifacts`、`:696-714` `projectPluginForHarness`、`:718-731` `buildHarnessTree`、`:786-800` `checkHarnessTree`。
+
+**経路B — runtime compose（置換器なし）**
+
+- 述語 `grep -rn "substituteToken\|HARNESS_DIR\|harness-transform" packages/framework/core/tools/amadeus-plugin*.ts` → **1 hit**、`amadeus-plugin.ts:32` のみ。これは `KNOWN_HARNESS_DIRS`（名前の列挙）の import であって置換器ではない。**compose 側に置換器は存在しない**。
+- `amadeus-plugin.ts:659-671` `copyPluginSource`（tmp + rename swap）、`:676-688` `copyRealFiles`、`:686` `writeFileSync(join(outDir,name), readFileSync(abs))` が**バイト逐語**コピー、symlink は `:681-684` で skip。
+- `amadeus-plugin-compose.ts:381-386`（tools）/ `:407-412`（stages）が生バイトを `posix.join("plugins", pluginName, rel)` へ push する。
+- ソース探索は `amadeus-plugin.ts:821-838` `collectPluginSources` — repo ルートの `plugins/` を優先し、次に各ツリーの staging root `.amadeus-plugin-src`（`:563`、`pluginSourceRootOf` `:570-572`）。`:841-853` `seedStaging` も逐語コピー。
+
+### 経路図
+
+```mermaid
+flowchart TD
+    SRC["plugins/NAME 権威ソース。トークン 0 件"]
+
+    subgraph PATH_A["経路A build-time packager 置換器あり"]
+        PPA["projectPluginArtifacts plugin-projection.ts:262-278"]
+        TRANS["transform harness-transform.ts:33-46 md のみ置換"]
+        NEUTRAL["dist/plugins/NAME 中立バンドル 逐語"]
+        FACES["dist/plugins/NAME/HARNESS 導入バンドル"]
+        TREE["dist/HARNESS/HARNESSDIR/plugins 実在せず 0/8"]
+    end
+
+    subgraph PATH_B["経路B runtime compose 置換器なし"]
+        COPY["copyRealFiles amadeus-plugin.ts:676-688 バイト逐語"]
+        COMPOSE["amadeus-plugin-compose.ts:381-412"]
+        OUT["HARNESSDIR/plugins/NAME 配置先"]
+    end
+
+    SELF["promote-self.ts:382 から projectInTemporaryWorkspace plugin-projection.ts:1019-1067"]
+    STAGING["HARNESSDIR/.amadeus-plugin-src/NAME"]
+
+    SRC --> PPA
+    PPA --> TRANS
+    TRANS --> NEUTRAL
+    TRANS --> FACES
+    PPA -.->|buildHarnessTree と checkHarnessTree は test-only 呼び出しのみ| TREE
+    FACES --> STAGING
+    STAGING --> COPY
+    SRC --> SELF
+    SELF -->|plugins を cpSync で逐語コピー| COPY
+    COPY --> COMPOSE
+    COMPOSE --> OUT
+```
+
+**テキスト代替**: 権威ソース `plugins/<name>` から出る枝は 2 本ある。経路A は `projectPluginArtifacts` → `transform` → 中立バンドル `dist/plugins/<name>` と各ハーネス導入バンドル `dist/plugins/<name>/<harness>`。`buildHarnessTree` / `checkHarnessTree` が作るはずの `dist/<harness>/<harnessDir>/plugins/` は実在しない（8 面すべてで 0）。経路B は `copyRealFiles` のバイト逐語コピー → `amadeus-plugin-compose` → `<harnessDir>/plugins/<name>`。経路B の入力は導入バンドル経由の staging（`.amadeus-plugin-src`）と、self-install では `projectInTemporaryWorkspace` が `plugins/` を temp workspace へ逐語 `cpSync` した結果の2系統。置換器は経路A にしかない。
+
+### N-1 / N-2 — 経路A の実効は現状 no-op（PROVEN）
+
+- **N-1**: 述語 `diff -r plugins/pr-convergence dist/plugins/pr-convergence/<h>/plugins/pr-convergence` を 8 面すべてで実行 → **8/8 IDENTICAL**。`sed -n '180p'` を中立バンドル + 8 面に適用 → **9/9 が `.claude/tools/` を運ぶ**。`plugins/` にトークンが 0 件であるため、**`transform()` は plugins コーパスに対して現状 100% no-op**であり、置換器はこのコーパスで一度も発火していない。
+- **N-2**: `buildHarnessTree` / `checkHarnessTree` の呼び出し元は**テストのみ**。`scripts/package.ts` は `pluginBundleExpected` だけを import する（`:67`、`:873`）。述語 `find dist/<harness> -maxdepth 3 -name plugins` を 8 面すべてに適用 → **0 hit**。すなわち `dist/<harness>/<harnessDir>/plugins/` は**一度も生成されない**。これは `plugin-projection.ts:4-5` の header コメントと矛盾する。実際に生成されるのは `dist/plugins/<name>/`（中立・逐語）と `dist/plugins/<name>/<harness>/`（導入バンドル・transform 適用）の 2 つだけ。
+
+### N-3 — self-install は build script の中から経路B に乗る（PROVEN、本節で最重要）
+
+`plugin-projection.ts:1019-1067` `projectInTemporaryWorkspace` は、`:1025` で `dist/<harness>` を temp workspace へコピーし、`:1031` `cpSync(pluginsSource, join(workspace,"plugins"))` で**権威 `plugins/` を逐語コピー**し、`:1035` で `amadeus-plugin.ts compose` を spawn する。呼び出し元は `scripts/promote-self.ts:382` `buildSelfInstallProjection`。
+
+したがって **`.claude/` / `.codex/` / `.cursor/` / `.opencode/` / `.kimi-code/` の plugin ツリーは 100% 経路B の産物であり、`transform()` を一度も通らない**。「build-time = 置換済み / runtime = 逐語」という素直な二分法は**成立しない** — build script が経路B を起動しているためである。修正案を「packager 側だけ直す」形で置くと self-install 5 面には届かない。
+
+### N-4 — 生きた漏洩（PROVEN）
+
+self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファイル**すべてが同一ブロックを運ぶ。例: `.codex/plugins/pr-convergence/stages/pr-convergence.md:180` が `.claude/tools/` を指す。述語 `git ls-files` → `dist/` の tracked ファイル **0**、self-install `plugins/` の tracked ファイル **0**（すべてマシンローカル生成物）。**修正が触るのはソースと、必要なら transform ロジックのみ**である。
+
+### 同根の兄弟欠陥 — 計 12 行、機序は1つ
+
+述語 `grep -rn "amadeus-sensor.ts\|bun plugins/\|bun \.claude" plugins/ --include="*.md"` → **12 行**。内訳は patient `pr-convergence.md:180` と、repo ルート相対 `bun plugins/<name>/tools/<tool>.ts` 形の 11 行（`pr-convergence.md:54/:80/:162/:214`、`formal-model-check.md:48`、`tla-authoring.md:65/:68/:110/:113/:116`、`formal-model-check/README.md:111`）。
+
+**DEDUCED（強）**: この 11 行は消費者ワークスペースでは解決しない。compose の書き出し先は `<harnessDir>/plugins/<name>/tools/…` であり（上記経路B）、`installDoc`（`plugin-projection.ts:620-664`）は消費者ワークスペースに repo ルート `plugins/` を作る指示を**一度も出さない**（指示は導入バンドルを `<harnessDir>/.amadeus-plugin-src/<name>/` へ置くか `bun <harnessDir>/tools/amadeus-plugin.ts install <path>` を実行する形のみ）。本 repo で動いているのは権威ソースがルートに在るからにすぎない。
+
+構造的含意: patient はハーネスを**固定**し、他 11 行はハーネス接頭辞を**落とした**。**両者が要求する機構は同一の `{{HARNESS_DIR}}` 置換である** — 入れれば 12 行すべてが射程に入り、入れなければ 12 行すべてが壊れたまま残る。（`formal-model-check/README.md` は `plugin.json` の stages/tools に無く compose 対象外だが、導入バンドルには同梱される。）
+
+### N-7 — compose 側へ置換を移す場合の隠れ結合（PROVEN な所在、影響は DEDUCED）
+
+`amadeus-plugin-compose.ts:921-972` の `pluginContentDigest` / `digestBytes` は `plugin.manifest.stages` / `.tools` の**バイト**を sha256 する。置換を compose 内へ移す場合、digest を置換前に取るか置換後に取るかで**クロスハーネスの staleness 意味論**が変わり、t416 の determinism テストの意味も変わる。設計段で明示裁定を要する。
+
+### N-8 / N-9 — 先例と配送範囲（PROVEN）
+
+- **N-8**: 述語 `grep -rn "{{HARNESS_DIR}}/tools/" packages/framework/core/ --include="*.md" | wc -l` → **92**。散文中のツール呼び出しに対するトークン形は core で確立している（`conductor.md:105`、`reverse-engineering.md:139` 等）。ただし **core には散文中の手動センサー fire の先例が無い**（`grep -rn "amadeus-sensor.ts fire" packages/framework/core/` は `.ts` / hooks のみにヒットし `.md` は 0）。
+- **N-9**: `plugin.json` は composed ツリーへ配送されない。`.claude/plugins/pr-convergence/` は `stages/` と `tools/` のみを持ち、manifest は staging `.amadeus-plugin-src/` にのみ存在する。
+
+### harnessDir 実測値（`packages/framework/harness/*/manifest.ts`）
+
+| harness | harnessDir | 定義 |
+|---|---|---|
+| claude | `.claude` | `:45` |
+| codex | `.codex` | `:24` |
+| cursor | `.cursor` | `:30` |
+| kimi | `.kimi-code` | `:35` |
+| kiro | `.kiro` | `:27` |
+| kiro-ide | `.kiro` | `:24` |
+| opencode | `.opencode` | `:35` |
+| pi | `.pi` | `:15` |
+
+**8 ハーネス / 7 個の相異なるディレクトリ**（`.kiro` が共有）。`amadeus-harness.ts:38-46` `KNOWN_HARNESS_DIRS` と一致。self-install 面は 5（claude / codex / cursor / opencode / kimi）。
+
+### UNMEASURED（本 intent で測っていない。設計段へ持ち越し）
+
+- 実際にトークンを挿入して `bun run build` / `promote-self` を通した end-to-end 挙動
+- dogfood でない実消費者ワークスペースでの試行
+- `dist/pi` / `dist/kimi` / `.pi` / `.kimi-code` が `SCAN_ROOTS` に無いことの blast radius
+- `harnessStageEntry` がホスト側 stage 読み取りをどう解決するか
+- `resolveHarnessToolsDir`（`amadeus-plugin.ts:368`）が非散文ランタイム経路のハーネス差をどこまで吸収するか
+
+## 監査 journal の v1/v2 二重スキーマとリーダー面の構造（260807-intent-2328-tests-e2e-au、履歴、2026-08-07、observed `a5621236c`）
 
 Issue #2328 の患部は「テストが1スキーマを決め打ちで読む」ことにあり、書き手側の欠陥ではない。監査 journal は **v1 と v2 が現役で共存する設計**であり、リーダーはその両方を受理しなければならない。
 

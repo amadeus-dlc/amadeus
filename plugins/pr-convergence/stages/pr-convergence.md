@@ -177,7 +177,7 @@ is written by the CLI through Bash, so the harness's write-time hook (which
 watches Write/Edit turns of the active stage) never observes it.
 
 ```
-bun .claude/tools/amadeus-sensor.ts fire pr-convergence-report-format \
+bun {{HARNESS_DIR}}/tools/amadeus-sensor.ts fire pr-convergence-report-format \
   --stage pr-convergence \
   --output-path <record-root>/construction/<unit>/code-generation/pr-convergence-report.md
 ```
