@@ -80,7 +80,42 @@ assertAllowlistWellFormed(BINARY_ALLOWLIST);
 // names included — survive the round trip untouched by shell quoting rules.
 // ---------------------------------------------------------------------------
 
-function gitTrackedFiles(repoRoot: string): string[] {
+// A tracked path as git reports it. `bytes` is what git stored and what every
+// filesystem call must use; `display` is a lossy decode for diagnostics only.
+//
+// The two cannot be collapsed. A path may contain bytes that are not valid
+// UTF-8 — the filesystems git runs on permit it, even where macOS does not —
+// and decoding those to a string replaces them with U+FFFD. Re-encoding that
+// string names a DIFFERENT file, so a gate that scanned the decoded path would
+// report a spurious read error for a file that is present and perfectly
+// readable. `keyOf` uses latin1, which is a lossless byte-for-byte mapping, so
+// Set and Map lookups stay exact where a UTF-8 key would collide.
+type TrackedPath = {
+  readonly bytes: Buffer;
+  readonly display: string;
+};
+
+function trackedPath(bytes: Buffer): TrackedPath {
+  return { bytes, display: bytes.toString("utf-8") };
+}
+
+function keyOf(bytes: Buffer): string {
+  return bytes.toString("latin1");
+}
+
+function splitNul(stdout: Buffer): Buffer[] {
+  const paths: Buffer[] = [];
+  let start = 0;
+  for (let i = 0; i < stdout.length; i += 1) {
+    if (stdout[i] !== 0) continue;
+    if (i > start) paths.push(stdout.subarray(start, i));
+    start = i + 1;
+  }
+  if (stdout.length > start) paths.push(stdout.subarray(start));
+  return paths;
+}
+
+function gitTrackedFiles(repoRoot: string): TrackedPath[] {
   const proc = spawnSync("git", ["ls-files", "-z"], {
     cwd: repoRoot,
     encoding: "buffer",
@@ -94,10 +129,7 @@ function gitTrackedFiles(repoRoot: string): string[] {
     const stderr = proc.stderr?.toString("utf-8").trim() ?? "";
     throw new Error(`git ls-files exited ${String(proc.status)} in ${repoRoot}: ${stderr}`);
   }
-  return proc.stdout
-    .toString("utf-8")
-    .split("\0")
-    .filter((path) => path.length > 0);
+  return splitNul(proc.stdout).map(trackedPath);
 }
 
 // ---------------------------------------------------------------------------
@@ -111,24 +143,37 @@ export type GateOptions = {
   readonly listFiles?: () => string[];
 };
 
+// The absolute location of a tracked path, kept in bytes end to end. Node's fs
+// accepts a Buffer path and passes it to the syscall unchanged, so a path git
+// reported is handed back to the filesystem exactly as git spelled it.
+function absoluteBytes(repoRoot: string, path: TrackedPath): Buffer {
+  return Buffer.concat([Buffer.from(`${repoRoot}/`, "utf-8"), path.bytes]);
+}
+
 // The bytes git stores for this path: the link target string for a symlink,
 // the file content otherwise.
-function trackedBytes(absolute: string): Uint8Array {
+function trackedBytes(absolute: Buffer): Uint8Array {
   if (lstatSync(absolute).isSymbolicLink()) {
-    return new TextEncoder().encode(readlinkSync(absolute));
+    return readlinkSync(absolute, "buffer");
   }
   return readFileSync(absolute);
 }
 
 export function runControlByteGate(options: GateOptions): GateResult {
-  const listFiles = options.listFiles ?? (() => gitTrackedFiles(options.repoRoot));
-  const tracked = listFiles();
-  const trackedSet = new Set(tracked);
+  const listFiles = options.listFiles;
+  // An injected listing is authored as JS strings, so encoding them is exact;
+  // the default listing already carries git's own bytes.
+  const tracked: TrackedPath[] =
+    listFiles === undefined
+      ? gitTrackedFiles(options.repoRoot)
+      : listFiles().map((path) => trackedPath(Buffer.from(path, "utf-8")));
+  const trackedKeys = new Set(tracked.map((path) => keyOf(path.bytes)));
 
   const allowed = new Set<string>();
   const staleAllowlist: string[] = [];
   for (const entry of BINARY_ALLOWLIST) {
-    if (trackedSet.has(entry.path)) allowed.add(entry.path);
+    const key = keyOf(Buffer.from(entry.path, "utf-8"));
+    if (trackedKeys.has(key)) allowed.add(key);
     else staleAllowlist.push(entry.path);
   }
 
@@ -140,17 +185,19 @@ export function runControlByteGate(options: GateOptions): GateResult {
   let scannedCount = 0;
 
   for (const path of tracked) {
-    if (allowed.has(path)) continue;
+    if (allowed.has(keyOf(path.bytes))) continue;
     scannedCount += 1;
     let bytes: Uint8Array;
     try {
-      bytes = trackedBytes(join(options.repoRoot, path));
+      bytes = trackedBytes(absoluteBytes(options.repoRoot, path));
     } catch (err) {
-      readErrors.push({ path, message: (err as Error).message });
+      readErrors.push({ path: path.display, message: (err as Error).message });
       continue;
     }
     const found = findControlByte(bytes);
-    if (found !== null) violations.push({ path, offset: found.offset, byte: found.byte });
+    if (found !== null) {
+      violations.push({ path: path.display, offset: found.offset, byte: found.byte });
+    }
   }
 
   return { scannedCount, violations, staleAllowlist, readErrors };

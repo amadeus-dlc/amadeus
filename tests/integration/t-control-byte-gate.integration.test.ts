@@ -286,6 +286,54 @@ describe("runCheck over a real git repository", () => {
   });
 });
 
+describe("tracked paths that are not valid UTF-8", () => {
+  // git stores a path as bytes, and the filesystems it runs on accept bytes
+  // that are not valid UTF-8. Decoding such a path to a string replaces them
+  // with U+FFFD, and re-encoding that string names a different file — so a gate
+  // that scanned the decoded path would report a read error for a file that is
+  // present, and would never look at its contents. Both halves are pinned here:
+  // the file is read, and a control byte inside it is still found.
+  const INVALID_UTF8_NAME = Buffer.from([0x62, 0x61, 0x64, 0xff, 0x2e, 0x74, 0x78, 0x74]);
+
+  function writeRawNamed(bytes: Uint8Array): boolean {
+    const target = Buffer.concat([Buffer.from(`${root}/`, "utf-8"), INVALID_UTF8_NAME]);
+    try {
+      writeFileSync(target, bytes);
+      return true;
+    } catch (err) {
+      // macOS refuses to create a filename that is not valid UTF-8 (EILSEQ), so
+      // the defect cannot exist there at all. Linux — where CI runs — allows it.
+      // Assert the refusal rather than passing vacuously on some other error.
+      expect((err as NodeJS.ErrnoException).code).toBe("EILSEQ");
+      return false;
+    }
+  }
+
+  test("a control byte inside one is found, not reported as a read error", () => {
+    if (!writeRawNamed(Buffer.from([0x41, 0x00, 0x42]))) return;
+    write(ALLOWLISTED_PATH, "stand-in\n");
+    gitAddAll(root);
+
+    const { code, lines } = capture(() => runCheck(root));
+
+    expect(code).toBe(1);
+    // The display form is the lossy decode; the SCAN used the raw bytes.
+    expect(lines).toEqual(["bad�.txt: control byte 0x00 at offset 1"]);
+  });
+
+  test("a clean one is scanned and passes", () => {
+    if (!writeRawNamed(Buffer.from("clean\n", "utf-8"))) return;
+    write(ALLOWLISTED_PATH, "stand-in\n");
+    gitAddAll(root);
+
+    const { code, lines } = capture(() => runCheck(root));
+
+    expect(code).toBe(0);
+    // 2 tracked - 1 allowlist hit.
+    expect(lines).toEqual(["scanned 1 files, no control bytes found"]);
+  });
+});
+
 describe("main", () => {
   test("--check returns the gate's exit code", () => {
     write("a.txt", "clean\n");
