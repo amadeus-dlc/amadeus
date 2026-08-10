@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-CGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "B の追補先 cid は再考の余地がある。B の機序は unit pool の attempt ライフサイクル(active スロット占有 → acquire の capacity-exhausted、record-reconciliation --effect no-effect-confirmed による tail-requeue と fillReleasedSlots による自動再取得)であり、c1-degrade-batch-directive-capture ファミリが縛る directive 捕捉(record 側の produces/consumes 解決)とは機序が異なる。persist 時は swarm 運用系 cid(swarm-finalize-claimed-required / c2 / swarm-unit-artifact-backfill)への追補として置くか、少なくとも『directive 捕捉とは別面の pool 復旧手順である』ことを本文に明記して射程差を可視化すること。文面そのものの正確性には異議なし。",
+  "rationale": "独立実測。(1) A の未被覆性: cid:code-generation:mirror-merge-before-approve(project.md:173)は『engine の code-generation approve(workspace_requires ガード)』を主語とし approve 前の取込のみを規定、review 前の取込順序は文面に不在。reviewer scope 系(c1-reviewer-scope-alignment と 2 追補、project.md:270/352/463)はいずれも『何を読ませるか』の許可集合面で『conductor ツリーに何が取り込まれているか』は射程外。(2) A の実測接地: projection-sweep/code-generation-plan.md:25-32 で i1 BLOCKER 4件が全件『レビュー環境に Bolt 3 未取込』、:44-50 で i2 BLOCKER 3件が全件『自己インストール投影(.claude/.codex)未再生成』、code-summary.md:65 で bun run build 後の R4 述語再実行 exit 1(0 hit)による閉包を確認 — c2-acceptance-at-delivery-tree(project.md:406)の配送先ツリー述語の実例として整合。(3) B の未被覆性: memory 層全域で record-reconciliation / capacity-exhausted / tail-requeue の grep hit は 0 件。(4) B の機序: amadeus-unit-pool.ts:297 proposeAcquire が active.length >= cap で capacity-exhausted を返す(未確定 attempt が active を占有し恒久ブロック)、:373-374 proposeNoEffectReconciliation が unit-requeued(ordinal = queue.length = 末尾)を発行、amadeus-unit-pool-runtime.ts:317 が no-effect-confirmed に限り fillReleasedSlots=true を渡し :257-260 が空きスロットを FIFO から自動再取得する — 『同ツールが新 attempt を自動再取得する』の記述は実装と一致。(5) B の実測接地: audit シャード j5ik2o-mac-studio-lan-7e855145ebfb.jsonl の seq 289/290(batch 2、idempotencyKey gfr-b2-reconcile-attempt-*)に reconcile 2件が実在、UNIT_POOL_EVENT_SET_COMMITTED は同シャードに 13 行。CG diary Deviations 12:10Z の記述(両 worktree tracked 変更なし → tail-requeue → prepare ok:false で既存 worktree 再利用、base a5e05d2af)と一致。以上より両案とも既存 cid の射程外の新規知識であり、文面は実装・record と矛盾しない。",
+  "submittedAt": "2026-08-10T15:05:00Z",
+  "receivedAt": "2026-08-10T14:11:18Z"
+}

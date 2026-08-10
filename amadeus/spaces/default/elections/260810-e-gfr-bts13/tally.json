@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A の1件を採用(推奨)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A の1件を採用(推奨)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "一部変更 / 別案",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "0件",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T14:37:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-BTS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 時に2点を精密化すること。(1) 追補先 cid:code-generation:mirror-merge-before-approve の既存本文は『ミラー/本線マージは経路 (a) を満たすための運用』と書いており、本追補はこの節の**訂正**でもある — 本線マージは (a) を満たさない(recordBranchSourceWork が --first-parent --no-merges で merge 第2親側を除外)ことを追補本文で明示し、旧文言との関係を可視化する。単なる追加として書くと矛盾した2文が同一 cid に残る。(2) 経路 (b) 不成立の条件を『bolt ブランチ自体を(squash でなく)マージで取り込んだ場合に merge-base == bolt tip となり diff が空』と限定して書く — squash 着地のみで bolt ブランチを直接マージしていない場合は boltRefHasSourceWork のコメント通り merge-base != tip となり (b) は成立しうるため、無条件の『merge 到来なら (b) 不成立』は過大主張になる。あわせて既存 cid が引く機構行 amadeus-state.ts:1013 は現行 :2278(mergedPrSourceWork)へ drift しているので追補時に更新する(cid:requirements-analysis:mechanism-cite-verify-at-draft)。",
+      "rationale": "独立実測。(1) 機序の実装照合: packages/framework/core/tools/amadeus-state.ts:2194-2204 recordBranchSourceWork は `git log --first-parent --no-merges` で、コメント逐語『--first-parent --no-merges deliberately excludes merge-arrived code』— conductor ツリーへ merge 第2親で到達したコードは構造的に不可視。:2239-2246 boltRefHasSourceWork は merge-base(HEAD, ref) と ref の diff を見るため、bolt ブランチをマージ取込済みなら merge-base == tip で diff 空。:2251-2263 intentIssueRefs は state の Project フィールドの `#<digits>` 全数を拾い、:2278-2292 mergedPrSourceWork は birth..HEAD の commit subject が当該番号を `#<num>\\b` で参照しかつ非 doc に触れることを要求(--first-parent 制限なし = merge 到来 squash commit も可視)。:2305-2315 intentScopedSourceWork が (a)(b)(c) の順で評価。候補文の機序記述は実装と一致。(2) 実測接地: git log に `merge: bolt-budget-sensor (Bolt 2) into conductor tree`(d7ab1a532)/ `merge: bolt-projection-sweep (Bolt 3) into conductor tree`(4a7d7500b)が実在し bolt はマージ取込済み = (b) 不成立条件を満たす。squash 着地 315bb29d2 `feat(grilling): ... (Bolt 2) (#2843)` / 373566c7f `docs(grilling): ... (Bolt 3) (#2844)` が subject に PR 番号を持ち、c11a9ba05 で origin/main を取込。amadeus-state.md:4 の Project に『実装 PR: Bolt 1 #2828 / Bolt 2 #2843 / Bolt 3 #2844』が実在 = (c) 成立経路が実データで確認できる。B&T diary memory.md:20 の Deviations が同機序と回復手順を記録。(3) 既存 cid との差分: project.md:173 の mirror-merge-before-approve は3経路の**列挙**と『ミラー/本線マージは経路 (a) を満たすための運用』までしか述べず、merge 到来時に (a)(b) が**構造的に不成立**である点は不在(むしろ (a) 充足と誤記)。よって新規性あり、追補として妥当。(4) 不採用3件の妥当性: c1 は project.md の bt-proportional-selection / c2-no-test-theatre-for-absent-nfr が既に同旨(diary:17 も両 cid を引用)、c3 は同 intent で採択済み c1-mirror-and-rebuild-before-review(project.md:469)が『取込後に bun run build して配送先ツリーの述語で再実測』を既に定めており engine 面の実例に留まる、c4 は bt-20260730-2 / c1-tsr-ambient-repro-on-base の適用実例(diary:24 自身が『逆方向確認』と記す)— いずれも射程内で不採用に異議なし。",
+      "submittedAt": "2026-08-10T15:32:00Z",
+      "receivedAt": "2026-08-10T14:35:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-BTS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文には次の3点を明記すること。(1) 本追補が言う経路 (a)(b)(c) は intentScopedSourceWork 内部の三段(amadeus-state.ts:2294-2315 の設計コメントと実装)であり、既存 cid:code-generation:mirror-merge-before-approve の E-TU5 追補が言う『(a) 直近コミットのコード面』(= gitHasSourceWork 第2プローブ `git diff --name-only HEAD~1 HEAD`、:2348-2352)とは別番号体系である。内部三段へ落ちるのは『直近コミットが doc-only』のときだけ(:2353-2354)なので、追補は『マージ取込の後に doc-only の checkpoint コミットが積まれた場合』という前提条件を明示する。(2) (b) の不成立条件は『bolt tip が HEAD の祖先になる実マージ取込』に限定して書く — squash 着地のみなら merge-base != tip で (b) は成立しうる(:2234-2238 の設計コメント『the squash sha is not on the branch, so merge-base != tip』と矛盾させない)。(3) team.md:283 cid:code-generation:bolt-refs-path-b-dual-condition の『確実なのは経路 (a) ミラー/本線マージ』は本追補の条件下では成立しない(マージが最終コミットである場合に限る)ため、相互参照を1句添える。",
+      "rationale": "独立実測(worktree-grilling-frontier-resync-2、HEAD)で機序を全数再現した。(a): birth=763c93dcb52a7b37dba156e3ef3d3bd68a5ee0ab(`git log --diff-filter=A --format=%H -- <record>/amadeus-state.md | tail -1`)に対し `git log --first-parent --no-merges --pretty=format: --name-only $BIRTH..HEAD` の第1セグメントは `amadeus` のみ = HARNESS_DOC_DIRS(:450 `new Set([\"amadeus\", \".git\", ...KNOWN_HARNESS_DIRS])`)に含まれ isNonDocPath 偽 → false。実装 :2194-2204 の逐語コメント『--first-parent --no-merges deliberately excludes merge-arrived code』も一致。(b): Bolt Refs = budget-sensor, projection-sweep。refs/heads/bolt-budget-sensor = refs/remotes/origin/bolt-budget-sensor = 64a88fe4dbade2f6d786a61066ac791f9ea8024e、bolt-projection-sweep = e7d962bf6ac8fadee595ef44ea56f1af8a780139。両者とも `git merge-base HEAD <ref>` == tip、`git diff --name-only <mb> <ref>` は 0 行 → :2239-2246 で false。(c): Project フィールドは #2785/#2828/#2843/#2844 を含み、birth..HEAD の subject 一致コミットのうち 315bb29d2004e55531ff1a00e554a03fff489ccb(#2843、packages/tests に触れる)と a5e05d2af301c6595739701591e2786668c97896(#2828、同)と 373566c7f22ad70bc0f21762137af0a8e9b73487(#2844、.claude/.agents/CLAUDE.md)が非 doc パスを持ち :2278-2292 で true。既存 cid との射程差: mirror-merge-before-approve は3経路の存在と Project 追記の正当性(実在 PR 番号の事実記載のみ)を既に述べるが、『本線マージが (a) を満たす』という運用結論は内部三段の (a)=recordBranchSourceWork には当てはまらない — merge 到来コードが設計上除外される点と、(b) が実マージ取込で祖先化して空になる点は memory 層に不在(grep で mirror-merge-before-approve / bolt-refs-path-b-dual-condition / bolt-refs-slug-form / c1-mirror-and-rebuild-before-review を実読して確認)。よって新規性ありと判断し choice 1。ただし番号体系の衝突は下流の読み手を誤らせるため留保を付す。",
+      "submittedAt": "2026-08-10T15:05:00Z",
+      "receivedAt": "2026-08-10T14:36:35Z"
+    }
+  ],
+  "resolutions": []
+}

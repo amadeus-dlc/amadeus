@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-CG1",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追加する段落には『残り枠がラウンド全体に満たない場合、遮断器は数値上限より手前のラウンド境界で発火しうる(count は目標でなく上限 — §2.1)』を1文明記し、実装者が数値上限ちょうどまで部分ラウンドを提示する解釈へ流れないようにすること。",
+      "rationale": "指摘の再開経路は実在: §2.5 は『each question is appended ... before the round is presented』でラウンド一括追記を要求し、§2.4 は総 rendered 質問数で発火して『Proceed directly to C-4; do not open another round』と規定するため、残り枠<ラウンド規模のとき追記済み・未提示の空 [Answer] が残る。stage-protocol.md:360 Step 4 は『confirm ALL [Answer]: tags are filled in. If any are blank, present the unanswered questions ... Do NOT proceed with partial answers』で、その残骸を機械的に再提示する — §2.4 の『開示して止める』と正面から矛盾する。BR-U1-5(:13)/BR-U1-7(:15) は当該境界を規定しておらず新契約条項=設計判断。choice 1 は追記と提示の原子性を回復するだけで、BR-U1-7/FR-PROTO-9(提示される質問の1問1件・提示前追記)を弱めない(提示されない質問は契約の対象外)。§2.4 は既に未完走 frontier の開示と C-4 直行を要求しており、追加は1段落で自然に載る。choice 2 は出荷プロトコル内に silent 再開経路を残すため、silent truncation 禁止の趣旨と両立しない。",
+      "submittedAt": "2026-08-10T00:00:00Z",
+      "receivedAt": "2026-08-10T09:35:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-CG1",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "choice 1 の段落追加は、cid:code-generation:c1-external-review-contract-change に従い上流 FD(business-rules.md の BR-U1-5)への明示改訂+申告付き逸脱として同一変更で反映すること。あわせて追加段落は『残り枠がラウンド全体に満たない場合、そのラウンドは追記も提示もしない(ラウンドは全体提示か非提示かの二値)』という原子性の明文として書き、§2.4 既存文の『an unasked frontier is disclosed or it is asked』および BR-U1-5 の『提示済み全ラウンドの合計』という計数基準と整合させること — 追記抑止だけを書いて計数基準の原子性を明文化しないと、同じ曖昧さが計数側へ移るだけになる。",
+      "rationale": "指摘の実在を独立実測で確認した。(1) 再開経路は成立しうる。stage-protocol.md:360 Step 4 が逐語で『Read the file and confirm ALL `[Answer]:` tags are filled in. If any are blank, present the unanswered questions as structured questions and write answers back. Do NOT proceed with partial answers.』と規定し、:396 も同趣旨の再提示を要求する。一方 grilling-protocol.md §2.5(:148-152)は『each question is appended to the questions file with a blank `[Answer]:` tag **before** the round is presented』と追記を提示前に義務づける。したがって、追記済みかつ未提示の空タグが1件でも残れば、§2.4(:132-139)が『disclosed abort』として明示停止した直後に Step 4 が同じ質問を再提示する — §2.4 自身の『Silent truncation is forbidden ... never end a session by quietly not asking the next round』が守ろうとした disclosed-abort の意味論を、逆方向(無音の再開)で破る。(2) ただし exposure は CodeRabbit の書きぶりより狭い。§2.1(:82-83)が『The round is the unit of presentation』、§2.4(:135)が『Proceed directly to C-4; do not open another round』とラウンド原子的な読みを強く示唆し、BR-U1-5(business-rules.md:13)も計数基準を『提示済み全ラウンドの合計』と提示済み基準で書く。この読みなら未提示の追記済みタグは発生しない。しかし §2.4 は同時に『**Minimal 12, Standard 24, Comprehensive 36** rendered questions in total across all rounds』という硬い上限としても読め、ラウンド途中で打ち切る実装は禁じられていない — どちらの読みも文面から導けるのが本件の実体で、これは規定の欠落であって仕様の存在ではない。(3) 当該境界が承認済み BR に無いことも確認した。business-rules.md:13 の BR-U1-5 は開示停止と silent 打ち切り禁止のみ、:15 の BR-U1-7 は1問1件と提示前 blank 追記のみで、『残り枠 < ラウンド規模』の場合の追記可否には一切触れない。よって新条項の追加は既決契約の機械的執行ではなく設計判断であり、本選挙への回付は正しい。(4) choice 1 の設計妥当性: FR-PROTO-9 / BR-U1-7 の『1問1件・提示前追記』は追記の粒度と順序を縛る規則であって、提示しない質問まで追記する義務を課すものではない。追記前ゲートは『追記された ⇔ 提示された(または提示済み未回答)』という不変条件を強め、Step 4 の空タグ検査が構造的に空振りする状態を作る — 空タグ残骸ゼロなら再提示経路自体が存在しなくなる、fail-closed 方向の是正である。未提示 frontier は C-4(§3 C-4、:209-214 が既に『any frontier left open by the circuit breaker (§2.4)』を要求)へ開示されるため、§2.4 の『an unasked frontier is disclosed or it is asked』も満たす。既存契約と衝突する箇所は見当たらない。(5) choice 3(別案)を採らない理由: 代替は『Step 4 側に grilling モードマーカー時の空タグ免除を書く』形が考えられるが、これは検査側を緩める方向で、breaker 非発火時の真の記入漏れまで見逃す fail-open を作る。追記側を絞る choice 1 の方が安全側。(6) choice 2(見送り)を採らない理由: 残る曖昧さの帰結が『disclosed abort の直後に無音再開』であり、これは当該 overlay が最も強く禁じた性質(silent truncation の裏面)そのものである。修正コストは編集中の同一ファイルへの1段落+上流 BR への1行であり、別 enhancement へ送るコストの方が大きい。",
+      "submittedAt": "2026-08-10T09:36:07Z",
+      "receivedAt": "2026-08-10T09:36:16Z"
+    }
+  ],
+  "late": []
+}

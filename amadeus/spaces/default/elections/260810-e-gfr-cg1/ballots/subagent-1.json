@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-CG1",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追加する段落には『残り枠がラウンド全体に満たない場合、遮断器は数値上限より手前のラウンド境界で発火しうる(count は目標でなく上限 — §2.1)』を1文明記し、実装者が数値上限ちょうどまで部分ラウンドを提示する解釈へ流れないようにすること。",
+  "rationale": "指摘の再開経路は実在: §2.5 は『each question is appended ... before the round is presented』でラウンド一括追記を要求し、§2.4 は総 rendered 質問数で発火して『Proceed directly to C-4; do not open another round』と規定するため、残り枠<ラウンド規模のとき追記済み・未提示の空 [Answer] が残る。stage-protocol.md:360 Step 4 は『confirm ALL [Answer]: tags are filled in. If any are blank, present the unanswered questions ... Do NOT proceed with partial answers』で、その残骸を機械的に再提示する — §2.4 の『開示して止める』と正面から矛盾する。BR-U1-5(:13)/BR-U1-7(:15) は当該境界を規定しておらず新契約条項=設計判断。choice 1 は追記と提示の原子性を回復するだけで、BR-U1-7/FR-PROTO-9(提示される質問の1問1件・提示前追記)を弱めない(提示されない質問は契約の対象外)。§2.4 は既に未完走 frontier の開示と C-4 直行を要求しており、追加は1段落で自然に載る。choice 2 は出荷プロトコル内に silent 再開経路を残すため、silent truncation 禁止の趣旨と両立しない。",
+  "submittedAt": "2026-08-10T00:00:00Z",
+  "receivedAt": "2026-08-10T09:35:10Z"
+}

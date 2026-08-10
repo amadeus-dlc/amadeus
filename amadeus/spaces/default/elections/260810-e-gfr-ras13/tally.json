@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "候補1件を採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件(新規性なし)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "修正案あり(留保に記す)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T05:07:38Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-RAS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立検証: requirements.md Iteration 1/2 の Review block、re-scans 訂正節、RA diary Tradeoffs を実読し、git grep -n と git grep -in を自ら再実行して差分を確認した。case-sensitive では 7ファイル8行、case-insensitive では追加6行(stage-protocol.md:277、docs/reference/04-stage-protocol.md:294、.ja.md:244、docs/guide/14-artifacts-reference.md:208、docs/guide/16-worked-examples.md:102/.ja.md:115)が加わり、合計12ファイル14行と主張どおり一致した。E-ASD-RES13 は述語の記録(再現可能性)を求めるが、記録された述語自体の大小文字扱いという検出力の欠落は別面であり、既存 cid ファミリの射程外の新規知見と判断する。",
+      "submittedAt": "2026-08-10T05:35:00Z",
+      "receivedAt": "2026-08-10T05:06:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-RAS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "行数・ファイル数を独立再実測(git grep -n vs -in)して逐語一致を確認: 大小文字区別 8行/7ユニークファイル、大小文字非区別 14行/12ユニークファイル、差分6行はすべて記録どおりの箇所(stage-protocol.md:277 含む)。requirements.md の Review Iteration 1/2 と re-scans 訂正節の記述も file:line 完全一致。既存 cid(E-ASD-RES13=述語の記録、E-ASD-CGS13=同一構造への複数アクセス形式)は『述語のデフォルトを大小文字非区別にする』面を扱っておらず、本候補は射程外の新規知見と判断する。1件のみでファミリ肥大は限定的であり採用に賛成するが、既存2 cid との差分明示は persist 文に必須とする。",
+      "rationale": null,
+      "submittedAt": "2026-08-10T05:06:02Z",
+      "receivedAt": "2026-08-10T05:07:26Z"
+    }
+  ],
+  "resolutions": []
+}

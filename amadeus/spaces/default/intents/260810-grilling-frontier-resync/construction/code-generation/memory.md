@@ -1,0 +1,25 @@
+<!-- INVARIANT: examples are single-line HTML comments so a fresh template parses to total=0 (MEMORY_EMPTY). Do NOT un-comment or split across lines. t100 guards this. -->
+> This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
+
+## Interpretations
+- 2026-08-10T09:55:00Z — Bolt 1 は標準 swarm 経路(resolve=subagent → prepare(--base origin/main) → acquire/confirm → check → settle → finalize)で実行。bolt-plan の「worktree 隔離ガード下につき Agent isolation 経路」注記に対し、engine worktree への書込可否を実測(touch probe write OK)して標準経路が有効と確定 — ガード挙動はハーネス世代依存(cid:code-generation:c1-pcp-isolated-session-swarm-incompat の但し書きどおり現存を再判定した)。
+- 2026-08-10T10:20:00Z — builder 開示2点を執行クラスと裁定: (1) Step 3d write-back 文言のラウンド化は FR-PROTO-9/BR-U1-7/8 からの一意帰結 (2) 節番号配置は stage-protocol.md:320 既存参照の意味保存。
+
+## Deviations
+- 2026-08-10T14:30:00Z — §12a reviewer は **conductor ツリーを読む**ため、Bolt の取込前にレビューへ出すと成果物の申告(sweep 0 hit 等)を再現できず、実装の欠陥でない BLOCKER を量産する(projection-sweep i1 = BLOCKER 4件、全件が未取込起因)。cid:code-generation:mirror-merge-before-approve は「approve 前の取込」を縛るが、**review 前の取込**は未規定だった。さらに source-only 境界下では取込直後の conductor ツリーは gitignored な自己インストール投影(.claude/.codex 等)が旧内容のままで、`git status --porcelain` 空は追跡ファイルの不変を示すのみ — i2 の BLOCKER 3件はこれが原因で、`bun run build` 後に R4 述語を再実行して 0 hit を実測して閉包した(cid:requirements-analysis:c2-acceptance-at-delivery-tree の配送先ツリー述語の実例)。
+- 2026-08-10T14:35:00Z — engine の per-unit gate:true directive は unit を1つしか名指さないため、複数 unit の §12a を回すには残り unit の directive を conductor が構成する必要があった。unitKind が異なる(packaging / library)ため cid:functional-design:c5-per-unit-directive-template-capture のテンプレート流用は不可で、当該 unit の**実在成果物**から produces/consumes を構成して scope へ投入した(申告付き逸脱)。
+- 2026-08-10T12:55:00Z — Bolt 2 builder が実装前停止(設計逸脱ブロッカー): BR-U2-2b の検出対象『閾値未満として明示的に先送りした点』が着地 U1 正本に不在(出荷面 0 hit)、正本は英語 "Deferred as below the threshold" を §2.3 で規定し配置は合意サマリ。§4 表 :253 の questions ファイル義務列挙にも列挙節は不在で、承認済み AD components.md:31(C3 → questions ファイル書き手の様式)と非対称。conductor 独立再実測で全数裏取り。ソロ選挙 E-GFR-CG2(blocker, --trigger auto)を発動し choice B(言語中立マーカーへ統一して U1 へ追補)が 2-0 established / GoA 2x2。両票が「着地済み出荷 protocol の改訂はエスカレーション正準リスト(4)該当の可能性」を留保したためユーザーへエスカレーションし、2026-08-10 に「承認(Bolt 2 に同梱)」の裁定を受領。留保転記2件を builder 指示へ焼き込み: (i) 追補は §2.5 Recording obligations と §4 表 Questions file 行の両列挙面へ同時に入れる(片側追補は同型非対称の再生産、cid:requirements-analysis:enumeration-completeness-review) (ii) トークン様式の正本は C1 単一定義・U2 は verbatim 参照、刈り0件でもマーカー+節必須を明記(Free の偽 FAIL 封鎖)。
+- 2026-08-10T12:58:00Z — Bolt 3 の申し送り(packages/framework/core/templates/onboarding.md:13 の `one-question-at-a-time` 残存が CLAUDE.md ほか3投影面へ配布)は、ユーザー裁定で Bolt 3 へ同梱是正(cid:code-generation:c6 の対称適用・申告付きスコープ拡張)。
+- 2026-08-10T12:40:00Z — projection-sweep は referee check converged/tampered=false を経て settle-release succeeded 済みだが、その後に上記スコープ拡張の追加コミットが載る。pool は事象ログであり最終検証は finalize の再検証が担うため、finalize で同一 check-cmd による再実測を行う(claimed 再検証の lying-conductor ガードが有効面)。
+- 2026-08-10T12:05:00Z — セッション再開。conductor ツリーを origin/main へ再接地(--no-ff、parents 2 / ls-files -u 0)。共有台帳2件の衝突を定型 union で解消: elections.json は3ステージ blob から base 235 + ours 10(E-GFR 系)+ theirs 13(2695 系)= 258 で重複ゼロ再構成、project.md は同一アンカーへの両側純追加(GFR 4行 + 2695 系 7行)を union。マーカー機械検査 0。
+- 2026-08-10T12:10:00Z — batch 2 の pool は前セッションで initial-enqueue + acquire 済み(attempt ordinal 1、dispatchConfirmed false)。builder は 10:33 に SUBAGENT_STARTED まで到達していたがセッション断で成果ゼロ(両 worktree の tracked 変更なし = 未追跡の .briefing/ と record dir のみ)を実測し、`record-reconciliation --effect no-effect-confirmed` で両 attempt を tail-requeue(ordinal 2 へ再取得)。prepare は worktree 既存で ok:false のため、既存 worktree(base a5e05d2af = Bolt 1 着地済み)を再利用した。
+- 2026-08-10T09:50:00Z — prepare --base main が local main の遅れ(28e1f40c3 vs origin f1270d710)で拒否。local main は本線ツリーがチェックアウト中のため fast-forward せず(割当ツリー外の git 状態変更禁止)、--base origin/main で fork。
+- 2026-08-10T10:05:00Z — finalize exit 0(converged)だがマージはどのブランチにも未着地 — cid:code-generation:c2 の回収手順どおり conductor が --no-ff 明示マージ(parents 2・ls-files -u 0・fidelity diff 空)。共有台帳2件(re-timestamp / intents.json)の衝突は定型 union で解消(現在=260810-plugin-harness-dir-token、自 intent ブロックは履歴へ全文保存 / intents 152 エントリ parse OK)。
+- 2026-08-10T10:30:00Z — builder の最終報告は narration でターン終了(disk-evidence 引き取り)→ その後 task-notification で完全報告が遅着し、conductor 独立再実測(骨格 sha・hybrid 0 hit・typecheck/lint)と一致を確認(cid:requirements-analysis:late-verdict-diff-absorption)。再実測時、conductor 自身の非アンカー awk による偽の骨格不一致(2533 bytes)を自己捕捉 — protocol 自己記述の行頭アンカー awk で 1872 bytes / sha 完全一致。
+
+## Tradeoffs
+- 2026-08-10T11:00:00Z — PR #2828 の CodeRabbit 指摘4件のうち3件(終了条件の閾値限定 / MD040 / Grill me 予算表現分離)は承認済み FR からの一意導出=執行として即是正、1件(遮断器×未提示質問)は BR 未規定の新契約条項につき設計逸脱ソロ選挙 E-GFR-CG1(2-0、GoA 2x2)で「追記前ゲート形(ラウンド原子性)」を採択 — overlay §2.4 追加+BR-U1-5 申告付き追補の両面同期(cid:code-generation:c1-external-review-contract-change)。
+
+- 2026-08-10T11:40:00Z — CodeRabbit 追指摘2件: (1) :277 の終了範囲を閾値採用ブランチへ限定(執行・即是正) (2) conductor.md:51 の `one question at a time` は U3 所掌の sweep 対象だが、conductor_persona として実行時配布され本 Bolt 出荷契約と即時矛盾するため、cid:code-generation:c6(先行 Bolt の設計必然による副次是正+後続スコープ縮小)により Bolt 1 で是正。U3 の sweep スコープから当該行を縮小(交差は実 diff で再評価する)。
+
+## Open questions

@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-ICS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Interpretations 2件目(standalone は監査を出さない設計のため実利用観測の出典を会話記録ベースと明示)は cid:reverse-engineering:measurement-ref-in-artifacts(成果物に書く実測値へ測定 ref を明記)の適用実例と読めるが境界に近い — 同型(監査を出さない read-only スキル由来の観測を成果物へ書く)が再発したら同 cid への追補として提案することを予約する。",
+      "rationale": "実測(worktree grilling-frontier-resync): diary memory.md は Interpretations 2件・Deviations 0・Tradeoffs 0・Open questions 1件。Interpretations 1件目は質問票を3問へ絞った判断で、project.md:189 の cid:intent-capture:c1(事前整理で裁定済みの intent では未決判断のみ質問し確定裁定は前提知識として成果物へ反映)の逐語適用であり新規性なし。Interpretations 2件目は出典明示の実例で measurement-ref-in-artifacts の射程内。Open questions は要件段で裁定する3点(Free の depth 第4値/専用パラメータ、depth 契約の緊張一意化、semi 下の Grill me 除外契約)の持ち越しであり intent-statement.md:37 に未決4点として引き継がれている — ノルムでなく次段の入力。成果物3点(intent-capture-questions.md 3問・全問に [Answer] と『ユーザー承認: 2026-08-10T03:43:30Z』の ISO 承認行、intent-statement.md、stakeholder-map.md)を実読し、既存ノルムへ昇格すべき一般化可能な学びは検出できなかった。よって 0 件で可。",
+      "submittedAt": "2026-08-10T04:05:00Z",
+      "receivedAt": "2026-08-10T03:50:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-ICS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Interpretations 2(standalone grilling は監査を出さないため実利用観測の出典を「会話記録ベース」と明示した)は既存 provenance ファミリの適用実例として 0 件で可だが、同型が再発した場合は新規 cid ではなく cid:requirements-analysis:agmsg-git-evidence-split(project.md、機械検証可能な事実と非検証系出典の分離)への1行追補として「read-only session skill の実利用観測は監査に載らないため出典種別を明示する」を検討すべき。",
+      "rationale": "3成果物と diary を実測確認し、0 件が正しいと判断した。(1) diary Interpretations の1件目(質問票を3問へ絞り、#2785/#2783 の既決事項を前提知識として直接反映)は amadeus/spaces/default/memory/project.md:189 の cid:intent-capture:c1 の逐語(『事前整理(standalone grilling 等)で裁定済みの intent では、intent-capture の質問を未決の判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映する — 質問の重複再演をしない』)にそのまま該当する適用実例であり、diary 自身も『(cid:intent-capture:c1 準拠)』と自己申告している。既決ノルムの再 persist は team.md:norm-consistency-review が禁ずる重複ノルムを作る。(2) 2件目(standalone は監査を出さないため出典を会話記録ベースと明示)は、機構事実が既に .claude/CLAUDE.md の read-only session skills 節(逐語『never emit audit events』1 hit)に文書化済みで、出典種別の明示という規律は cid:requirements-analysis:agmsg-git-evidence-split(project.md 1 hit)および cid:reverse-engineering:measurement-ref-in-artifacts(project.md 2 hits / team.md 1 hit)の射程内。新規面ではなく既存ファミリの適用実例。(3) Open questions の3点((a) Free = depth 第4値 vs standalone 専用パラメータ (b)『depth は上限でない』と §8 depth 契約の緊張一意化 (c) semi 下 Grill me 除外契約の要否)は intent-statement.md:37 で要件段の未決事項として持ち越されており、裁定未了の設計判断であって一般化可能な学びではない — cid:requirements-analysis:ruling-dependent-placeholder の趣旨どおり裁定前に結論を書かない扱いが正しい。(4) diary の Deviations / Tradeoffs は空(テンプレのコメント例のみ)で、逸脱起因の学び候補は不在。(5) 監査シャード(audit/j5ik2o-mac-studio-lan-632c4f2f9c6a.jsonl、54 行)を機械集計し SENSOR_PASSED 8 / SENSOR_FAILED 0 を確認 — センサー FAILED 起因のノルム候補も不在。(6) 質問票は3問すべて [Answer] に『ユーザー承認: 2026-08-10T03:43:30Z』を持ち answer-evidence 述語(承認語彙+ISO タイムスタンプ)を満たしており、cid:requirements-analysis:c4-answer-evidence-approval-vocab / eoc1-evidence-in-questions-header 系の様式違反も観測されない。以上より新規に昇格すべき一般化可能な学びは無く 0 件で可。検証で読んだ file:line: ideation/intent-capture/memory.md:5-6(Interpretations)、:9-13(Deviations/Tradeoffs 空)、:16(Open questions)、intent-capture-questions.md:5(前提節)、:16/:26/:36([Answer] 3件)、intent-statement.md:5(上流入力)、:23(dogfood)、:35-37(スコープ境界と未決4点)、stakeholder-map.md:15-16(#2683/#2063 の扱い)、amadeus/spaces/default/memory/project.md:189(cid:intent-capture:c1)、.claude/CLAUDE.md(read-only skills の監査非発行)。",
+      "submittedAt": "2026-08-10T03:51:52Z",
+      "receivedAt": "2026-08-10T03:52:02Z"
+    }
+  ],
+  "late": []
+}

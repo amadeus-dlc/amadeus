@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "候補1件を採用",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件(新規性なし)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "修正案あり(留保に記す)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T08:28:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-NDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist は既存 cid:nfr-design:c1-engine-produces-all-five ファミリへの追補として統合し独立 cid を新設せず、intent 固有の unit 名・ハッシュ・件数を落とした一般形(『判定分母を上流ステージの成果物 dir から読むセンサーは、その上流が SKIP されたスコープで分母 0 となり構造的 advisory 赤になる』)で書くこと。",
+      "rationale": "独立実測: (a) .claude/tools/amadeus-sensor-nfr-budget.ts:541-546 idDeclarationDir(nfr-design の stageDir から兄弟 nfr-requirements を join)、:688-692 unitIdCount(declarationDir 不在で return 0)、:934-946 の underContract && unitNfrCount === 0 → verdict('missing-nfr-ids') 分岐を実読確認。(b) record の .amadeus-sensors/nfr-design/nfr-budget-*.md 11件すべてが reason='missing-nfr-ids' / unit_nfr_count=0 / under_id_contract=true。(c) construction/nfr-design/memory.md:7 に 2026-08-10T08:12:00Z の構造的原因記録(SKIP → 宣言 dir 不在 → unitIdCount=0)が実在し、amadeus-state.md:19,83 で nfr-requirements(3.2)が SKIP と確認、実際に construction/<unit>/ 配下に nfr-requirements dir は存在しない。(d) memory 層(org/team/project)を 'nfr-budget|missing-nfr-ids|unitIdCount|idDeclarationDir' で grep して 0 hit — 既存の c1-engine-produces-all-five 追補2件(E-PCP-RES13 / E-PCP-NDS13)は produces_kinds と upstream-coverage の frontmatter 分母を扱い、上流ステージ SKIP に起因する id 宣言 dir 不在という機序は未被覆。よって choice 1(1件採用)。",
+      "submittedAt": "2026-08-10T09:05:00Z",
+      "receivedAt": "2026-08-10T08:23:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-NDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用に同意するが、persist 文では機序の主語を『スコープが nfr-requirements を SKIP すること』ではなく『id 宣言 dir(construction/<unit>/nfr-requirements/)が不在で unitIdCount が 0 になること』に置くこと — SKIP は不在を保証する十分条件のひとつにすぎず(未実施・kind pruning でも同じ 0 になりうる)、主語を SKIP に固定すると同型の advisory 赤を別経路で取りこぼす。",
+      "rationale": "独立実測(読み取りのみ)で4点すべてを確認した。(a) 機構: amadeus-sensor-nfr-budget.ts:541-545 idDeclarationDir は nfr-design の stageDir から join(dirname(stageDir), 'nfr-requirements') を返す(=unit dir 直下の兄弟)、:688-692 unitIdCount は `if (!existsSync(declarationDir)) return 0;` で dir 不在なら 0、:934-946 が `if (underContract && unitNfrCount === 0)` で verdict('missing-nfr-ids', ...) を返す分岐。よって『record が id contract 後に生まれ、かつ宣言 dir 不在なら必ず report』は実装どおり。(b) record: .amadeus-sensors/nfr-design/ の nfr-budget-*.md 11件すべてが reason='missing-nfr-ids' / declared_ids: 0 / unit_nfr_count: 0(protocol-core・budget-sensor・projection-sweep 各 unit)。(c) diary: construction/nfr-design/memory.md:7 に 2026-08-10T08:12:00Z の1行が実在し、構造的原因(SKIP → 宣言 dir 不在 → unitIdCount=0)と実読 file 根拠、代替証拠(FR id の verbatim 引用)、ゲート開示を記載。(d) 前提の裏取り: amadeus-state.md:19/:83 で本 intent の scope=self-feature が 3.2 nfr-requirements を SKIP、construction/<unit>/ には functional-design と nfr-design のみで nfr-requirements dir は実在しない。(e) 新規性: memory 層全域(amadeus/spaces/default/memory/)で 'nfr-budget' / 'missing-nfr-ids' / 'unitIdCount' / 'idDeclarationDir' は 0 hit。既存の nfr-design 系 cid 12件のうち最近傍は c1-engine-produces-all-five(produces_kinds が engine 完了判定の適用成果物を絞る)と c1-pcp-upstream-coverage-frontmatter-authority(upstream-coverage の判定分母は frontmatter 宣言)だが、いずれも別センサー・別分母であり、ディスク実在から分母を導くセンサーがスコープ解決に対して盲目である面は未被覆。よって『既存 cid の射程内』(choice 2)は成立しない。",
+      "submittedAt": "2026-08-10T08:23:33Z",
+      "receivedAt": "2026-08-10T08:23:39Z"
+    }
+  ],
+  "resolutions": []
+}

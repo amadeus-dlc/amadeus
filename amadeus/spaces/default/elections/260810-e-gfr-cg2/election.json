@@ -1,0 +1,27 @@
+{
+  "electionId": "E-GFR-CG2",
+  "kind": "blocker",
+  "question": "Bolt 2 (budget-sensor) の実装前停止ブロッカー: 刈りノード列挙節の write⇔check 非対称をどう解消するか。\n\n【実測された事実(conductor 独立再実測済み)】\n(1) 設計 BR-U2-2b(construction/budget-sensor/functional-design/business-rules.md:11)は、センサーの検出対象を questions ファイル本文中の見出し逐語『閾値未満として明示的に先送りした点』と規定する。出典は BR-U1-4(construction/protocol-core/functional-design/business-rules.md:12)と FR-PROTO-7(inception/requirements-analysis/requirements.md:25)。\n(2) しかし着地済み U1 正本(PR #2828)は当該節を英語トークン \"Deferred as below the threshold\" として grilling-protocol.md:118 (§2.3) に規定し、その配置は『合意サマリ(§3, C-4)』である。当該日本語見出しは repo 全域で 0 hit(git grep -in '閾値未満として明示的に先送り' -- . はレコード成果物のみ hit、出荷面 0)。\n(3) grilling-protocol.md:253 (§4 表)の Questions file 行(Grill me 列)が列挙する questions ファイル義務は『mode marker / one entry per question / blank [Answer] / write-back / justification line』のみで、列挙節は不在。stage-protocol.md の Step 3d・§8 接続段落も questions ファイルへ append するものとして justification line のみを名指す。\n(4) 一方 components.md:31(承認済み AD)は『C3 → questions ファイル書き手(conductor): グリリングモードマーカーの1行契約と、超過記録行・刈りノード列挙節の様式』と規定し、列挙節を questions ファイル面に置いている。\n\n【帰結】BR-U2-7 (iii) の missing-deferred-list(error)をこのまま実装すると、契約に完全準拠した grilling questions ファイルが全件 FAIL する恒久赤になる(検証劇場 Forbidden / cid:code-generation:c1-threshold-inside-observed-range に該当)。\n\n【追加の制約(投票時に検証してほしい点)】Amadeus はフレームワークとして他プロジェクトへ配布される。『amadeus/**/*.md は日本語』は本プロジェクト固有のルール(ユーザーのグローバル指示)であり、フレームワークの契約ではない。出荷センサーが日本語逐語見出しを機械照合すると、他言語で questions ファイルを書く利用者の環境で構造的に恒久 FAIL する可能性がある。既存の他2トークン(モードマーカー・超過記録行)はいずれも言語中立な HTML コメントである。\n\n各選択肢は『U1 正本(着地済み)への申告付き追補が必要か』『検出トークンは何か』『U2 の検査 severity』の3点で異なる。実測で裏取りしたうえで投票すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: 日本語見出し逐語を questions ファイル契約として U1 へ追補",
+      "description": "U1 正本(grilling-protocol.md §2.3/§4 表、stage-protocol.md Step 3d)へ『Grill me では当該節を questions ファイルへも書く』義務を申告付きで追補し、機械照合トークンを BR-U1-4/FR-PROTO-7 の日本語見出し逐語『閾値未満として明示的に先送りした点』に固定する。U2 は questions ファイル本文全域を走査し、missing-deferred-list を error のまま実装する。write⇔check は対称化されるが、出荷センサーが日本語逐語に依存する。"
+    },
+    {
+      "internalNo": 2,
+      "label": "B(推奨): 言語中立マーカーへ統一して U1 へ追補",
+      "description": "U1 正本へ questions ファイル側の書き手義務を申告付きで追補する点は A と同じだが、機械照合トークンを既存2トークンと同形の言語中立な HTML コメント(例 <!-- amadeus-grilling:deferred -->)に統一する。人間可視の見出し文言(日本語なら『閾値未満として明示的に先送りした点』/ 英語なら Deferred as below the threshold)は言語規約に従って自由とし、センサーはマーカーのみを照合する。U2 は missing-deferred-list を error で実装。FR-PROTO-7 の『空の明示は必要』は、刈り0件でも節とマーカーを置くことで満たす。トークン様式の正本は C1(U1)側に置き、U2 は verbatim 参照する。"
+    },
+    {
+      "internalNo": 3,
+      "label": "C: check 側を降格し U1 正本は不変のまま",
+      "description": "着地済み U1 正本には触れず、U2 の missing-deferred-list を error から warning へ降格する(または当該検査を U2 スコープから外し、FR-PROTO-7 の機械面の所有を FR-DOG-1 の dogfood 実走へ移す)。FR-PROTO-8 が BLOCKER B のユーザー裁定で FR-DOG-1 へ移された前例と同型。U1 の追補リスク(ユーザー可視契約の変更)を負わない代わりに、FR-PROTO-7 の AC が要求する『センサー検査対象』は事後検査としては成立しなくなる。"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

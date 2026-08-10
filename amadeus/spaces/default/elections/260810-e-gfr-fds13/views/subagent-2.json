@@ -1,0 +1,22 @@
+{
+  "electionId": "E-GFR-FDS13",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync functional-design の §13 学習候補の採否。conductor 提案 = 候補1件: 『cid:nfr-design:c3-fix-induced-blocker-lssads13(設計ギャップクラスの閉包確認イテレーション)/ cid:code-generation:cg-20260730-3(予算消費後の fresh READY 非追記)への追補 — 設計ギャップクラスの閉包確認限定イテレーションは、直前 iteration の verdict が complete-review で記録済み(= reviewer_max_iterations 全消費)の場合、reviewer-runtime の scope は新 invocationId を正常採番するが complete-review は「review iteration exceeds the directive limit」で fail-closed 拒否する — 閉包確認の記録経路は §12a Review ブロックではなく、(i) stage diary への invocationId・verdict・GoA の固定 (ii) verdict 全文の record 外 scratch 保存 (iii) ゲート報告での開示、の3点で構成する。E-STG-S13I の「予算超過は complete-review の summary に開示」という文言は complete-review が受理される場合に限る、その境界の明文化』。実測: 260810-grilling-frontier-resync FD U2 で BLOCKER B ユーザー裁定後の閉包確認 i3(invocationId 23bddf0a-b9d4-48bf-bacc-e188aba09eca、READY GoA2)が complete-review exit 1 で拒否され、diary 09:20:00Z+scratch complete-u2-i3.json+ゲート開示の3点で記録した。検証対象: construction/functional-design/memory.md の Deviations 09:20:00Z 行、construction/budget-sensor/functional-design/*.md の Review ブロック(i3 が追記されていないこと)、amadeus-reviewer-runtime.ts の iteration limit 検査の実在。choice 1 = この1件を採用。choice 2 = 0件(既存 cid の射程内)。choice 3 = 修正案あり(留保に記す)",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "修正案あり(留保に記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "0件(新規性なし)"
+    }
+  ]
+}
