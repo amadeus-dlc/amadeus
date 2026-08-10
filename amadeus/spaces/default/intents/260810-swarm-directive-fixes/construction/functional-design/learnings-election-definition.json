@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDF-FD-S13-1",
+  "kind": "zero-confirm",
+  "question": "Functional Designの候補c1〜c5は、library Unitのfrontend非適用という既存stage契約、1 Issue=1 vertical Unit/PRという既存norm、または今回intent固有のfail-closed設計に重複するため、新規persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存normとintent成果物を正本として維持し、永続ルール・sensorを追加しない。"
+    }
+  ],
+  "voters": ["subagent-1", "subagent-2"]
+}

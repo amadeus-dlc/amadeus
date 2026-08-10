@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDF-DP-S13-1",
+  "kind": "zero-confirm",
+  "question": "Delivery Planningの候補は既存normまたは今回intent限定のユーザー裁定に重複するため、新規persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存normとintent成果物を正本として維持する"
+    }
+  ],
+  "voters": ["subagent-1", "subagent-2"]
+}

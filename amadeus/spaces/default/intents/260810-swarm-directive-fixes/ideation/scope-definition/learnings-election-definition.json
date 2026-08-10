@@ -1,0 +1,16 @@
+{
+  "electionId": "E-SDF-SD-S13-1",
+  "kind": "zero-confirm",
+  "question": "Scope Definition の学習候補 c1〜c5 は、既存 norm（クロスレビュー訂正の保存、cid:intent-capture:c4-2、full autonomy ladder、cid:scope-definition:c3、parallel-bolts）と今回固有の適用記録に重複するため、新規 persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "新しい project rule を追加せず、既存 norm を正本として維持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}
