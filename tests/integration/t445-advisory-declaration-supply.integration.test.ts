@@ -9,6 +9,7 @@ import {
   declaredFormalCheckArgv,
   declaredHandoffStage,
   parseAdvisoryDeclarations,
+  resolveEvaluatorArgv,
   resolvePluginManifest,
   spawnEvaluator,
   type DeclarationFs,
@@ -505,5 +506,82 @@ describe("a manifest that exists but cannot be read", () => {
 
   test("yields no declared run-now argv", () => {
     expect(declaredFormalCheckArgv("/nowhere", "demo", "authoring-hold", unreadable)).toBeNull();
+  });
+});
+
+// ─── Resolver units (FR-1/FR-2) ─────────────────────────────────────────────
+// These cases are in-memory, but the fake DeclarationFs literal names the
+// existsSync/readFileSync keys, and the layer×size purity classifier is
+// token-based — so they live in the integration tier, not tests/unit.
+
+// FR-2: a relative path-like argv element resolves against the located plugin
+// root; flags, their values, bare commands, absolute paths, and reserved
+// tokens pass through untouched.
+describe("resolveEvaluatorArgv", () => {
+  const root = "/workspace/plugins/demo";
+
+  test("joins a relative path-like element to the plugin root", () => {
+    expect(resolveEvaluatorArgv(["bun", "tools/evaluate.ts", "hold"], root))
+      .toEqual(["bun", "/workspace/plugins/demo/tools/evaluate.ts", "hold"]);
+  });
+
+  test("leaves flags and their values untouched", () => {
+    expect(resolveEvaluatorArgv(["bun", "tools/check.ts", "--model", "MirrorLifecycle"], root))
+      .toEqual(["bun", "/workspace/plugins/demo/tools/check.ts", "--model", "MirrorLifecycle"]);
+  });
+
+  test("leaves an absolute path untouched", () => {
+    expect(resolveEvaluatorArgv(["bun", "/opt/tools/evaluate.ts"], root))
+      .toEqual(["bun", "/opt/tools/evaluate.ts"]);
+  });
+
+  test("leaves bare words and reserved tokens untouched (no path separator)", () => {
+    expect(resolveEvaluatorArgv(["bun", "evaluate.ts", "{out}", "--out"], root))
+      .toEqual(["bun", "evaluate.ts", "{out}", "--out"]);
+  });
+});
+
+// FR-1: the manifest is located on the authoring face first, the staging face
+// second; the plugin root is the located manifest's own directory.
+describe("resolvePluginManifest", () => {
+  const fsFor = (existing: readonly string[]): DeclarationFs => ({
+    existsSync: (path) => existing.includes(path),
+    readFileSync: () => {
+      throw new Error("not needed for location");
+    },
+  });
+
+  test("the authoring face wins when both faces carry a manifest", () => {
+    const resolved = resolvePluginManifest("/repo", "/repo/.harness/.amadeus-plugin-src", "demo", fsFor([
+      "/repo/plugins/demo/plugin.json",
+      "/repo/.harness/.amadeus-plugin-src/demo/plugin.json",
+    ]));
+    expect(resolved).toEqual({
+      manifestPath: "/repo/plugins/demo/plugin.json",
+      pluginRoot: "/repo/plugins/demo",
+    });
+  });
+
+  test("falls back to the staging face when the authoring face is absent", () => {
+    const resolved = resolvePluginManifest("/repo", "/repo/.harness/.amadeus-plugin-src", "demo", fsFor([
+      "/repo/.harness/.amadeus-plugin-src/demo/plugin.json",
+    ]));
+    expect(resolved).toEqual({
+      manifestPath: "/repo/.harness/.amadeus-plugin-src/demo/plugin.json",
+      pluginRoot: "/repo/.harness/.amadeus-plugin-src/demo",
+    });
+  });
+
+  test("returns null when neither face carries a manifest", () => {
+    expect(resolvePluginManifest("/repo", "/repo/.harness/.amadeus-plugin-src", "demo", fsFor([]))).toBeNull();
+  });
+
+  test("no staging root means the authoring face only (backward compatible)", () => {
+    expect(resolvePluginManifest("/repo", undefined, "demo", fsFor([
+      "/repo/.harness/.amadeus-plugin-src/demo/plugin.json",
+    ]))).toBeNull();
+    expect(resolvePluginManifest("/repo", undefined, "demo", fsFor([
+      "/repo/plugins/demo/plugin.json",
+    ]))?.pluginRoot).toBe("/repo/plugins/demo");
   });
 });
