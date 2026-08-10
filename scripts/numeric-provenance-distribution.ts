@@ -2,7 +2,7 @@
 // This module owns no sensor semantics: it closes the package/self-install
 // target sets and resolves their roots from the existing registry + manifests.
 
-import { isAbsolute, join, normalize, relative, sep, win32 } from "node:path";
+import { isAbsolute, join, win32 } from "node:path";
 
 import {
   PACKAGE_HARNESS_IDS,
@@ -49,13 +49,6 @@ function safeHarnessDirectory(harnessDir: string): boolean {
   return segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
-function assertContained(root: string, target: string): void {
-  const rel = relative(normalize(root), normalize(target));
-  if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) {
-    throw new Error("distribution-root-escape");
-  }
-}
-
 export function resolveNumericProvenanceDistributionTargets(
   input: NumericProvenanceDistributionTargetInput,
 ): readonly NumericProvenanceDistributionTarget[] {
@@ -83,13 +76,11 @@ export function resolveNumericProvenanceDistributionTargets(
 
     const packageBase = join("dist", id);
     const packageRoot = join(packageBase, manifest.harnessDir);
-    assertContained(packageBase, packageRoot);
     if (packageRoots.has(packageRoot)) throw new Error(`duplicate-package-root:${packageRoot}`);
     packageRoots.add(packageRoot);
 
     const selfInstallRoot = selfInstallIds.has(id) ? manifest.harnessDir : null;
     if (selfInstallRoot !== null) {
-      assertContained(".", selfInstallRoot);
       if (selfInstallRoots.has(selfInstallRoot)) {
         throw new Error(`duplicate-self-install-root:${selfInstallRoot}`);
       }
