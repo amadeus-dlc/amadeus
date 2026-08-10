@@ -99,7 +99,7 @@ The conductor offers interaction modes:
 ```
 How would you like to answer these questions?
 - Guide me        -> Walk through each question interactively
-- Grill me        -> One question at a time, in depth, with recommended answers
+- Grill me        -> Round-by-round interview over the design tree, with recommended answers
 - I'll edit the file -> Fill in answers directly
 - Chat            -> Discuss freely
 ```
