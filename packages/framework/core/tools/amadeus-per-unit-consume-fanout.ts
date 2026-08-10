@@ -46,6 +46,13 @@ export type PerUnitConsumeFanoutErrorCode =
   | "producer-outcome-ambiguous"
   | "unresolved-unit-placeholder";
 
+interface PerUnitConsumerInventory {
+  readonly expectedConsumers: readonly string[];
+  readonly actualConsumers: readonly string[];
+  readonly expectedEdges: readonly string[];
+  readonly actualEdges: readonly string[];
+}
+
 export class PerUnitConsumeFanoutError extends Error {
   readonly code: PerUnitConsumeFanoutErrorCode;
   readonly units: readonly string[];
@@ -57,12 +64,7 @@ export class PerUnitConsumeFanoutError extends Error {
   constructor(
     code: PerUnitConsumeFanoutErrorCode,
     units: readonly string[],
-    inventory?: {
-      readonly expectedConsumers: readonly string[];
-      readonly actualConsumers: readonly string[];
-      readonly expectedEdges: readonly string[];
-      readonly actualEdges: readonly string[];
-    },
+    inventory?: PerUnitConsumerInventory,
   ) {
     super(inventory
       ? `${code}: ${JSON.stringify(inventory)}`

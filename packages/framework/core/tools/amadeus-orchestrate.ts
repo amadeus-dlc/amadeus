@@ -2163,7 +2163,7 @@ function loadRuntimeUnitRows(projectDir: string, intent?: string): unknown[] | n
   }
 }
 
-function loadRuntimeUnitBatches(projectDir: string): string[][] | null {
+export function loadRuntimeUnitBatches(projectDir: string): string[][] | null {
   try {
     const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
     const batches = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "batches");
@@ -2333,7 +2333,7 @@ function isCodekb(node: GraphStage): boolean {
 // codekbRepoName(projectDir); `space` is the active-space cursor. When absent
 // (a non-codekb caller, e.g. a test invoking buildRunStageDirective with
 // defaults) the codekb branch never fires and the record-dir path stands.
-type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
+export type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
 
 // Build the CodekbCtx for a live projectDir, resolving the active-space cursor
 // and the deterministic codekb repo name (both read-only). One place so the
@@ -2433,19 +2433,21 @@ function projectTypeFrom(
 // the resolved path, so the presence split downstream can key producer lookups
 // and required-ness off the authored vocabulary instead of re-deriving the
 // name from the path shape.
-type ResolvedConsume = {
+export type ResolvedConsume = {
   artifact: string;
   required: boolean;
   path: string;
   perUnitSucceeded?: true;
 };
 
-interface PerUnitConsumePopulation {
+export interface PerUnitConsumePopulation {
   readonly declaredUnits: readonly string[];
   readonly outcomes: readonly PerUnitConsumeOutcome[];
 }
 
-function readPerUnitConsumePopulation(projectDir: string): PerUnitConsumePopulation | undefined {
+export function readPerUnitConsumePopulation(
+  projectDir: string,
+): PerUnitConsumePopulation | undefined {
   const rows = loadRuntimeUnitRows(projectDir);
   if (rows === null || rows.length === 0) return undefined;
   const declaredUnits = rows.flatMap((row) => {
@@ -2478,7 +2480,7 @@ function hasRequiredPerUnitConsumes(node: GraphStage): boolean {
   });
 }
 
-function resolveConsumes(
+export function resolveConsumes(
   consumes: Consume[],
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -2564,7 +2566,7 @@ function resolveConsumes(
 //     check against; everything stays in `consumes`, exactly as before.
 //   - a path still carrying the {unit-name} placeholder → existence is
 //     unknowable pre-Bolt; it stays in `consumes`.
-function consumePresentOnDisk(consume: ResolvedConsume, absolutePath: string): boolean {
+export function consumePresentOnDisk(consume: ResolvedConsume, absolutePath: string): boolean {
   if (!consume.perUnitSucceeded) return existsSync(absolutePath);
   try {
     return statSync(absolutePath).isFile();

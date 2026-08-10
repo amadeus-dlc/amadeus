@@ -6,10 +6,23 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  consumePresentOnDisk,
+  loadRuntimeUnitBatches,
+  readPerUnitConsumePopulation,
+  resolveConsumes,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  __resetGraphCache,
+  loadGraph,
+} from "../../packages/framework/core/tools/amadeus-graph.ts";
+import {
   createAuditUnitPoolRepository,
   createUnitPoolCoordinator,
 } from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
-import { extractPerUnitConsumerEdges } from "../../packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts";
+import {
+  extractPerUnitConsumerEdges,
+  PerUnitConsumeFanoutError,
+} from "../../packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts";
 import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
 import { ensureContextManager } from "../../packages/framework/core/otel/context.ts";
 import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
@@ -170,6 +183,95 @@ function next(project: string) {
 }
 
 describe("t533 orchestrator per-unit consume fan-out", () => {
+  test("reads the current runtime population in-process and rejects malformed batches", () => {
+    const project = projectWithOutcomes();
+    const runtimeGraph = join(seededRecordDir(project), "runtime-graph.json");
+
+    const population = readPerUnitConsumePopulation(project);
+    expect(population?.declaredUnits).toEqual(["unit-z", "unit-a"]);
+    expect([...(population?.outcomes ?? [])].sort((a, b) => a.unit.localeCompare(b.unit)))
+      .toEqual([
+        { unit: "unit-a", outcome: "succeeded" },
+        { unit: "unit-z", outcome: "succeeded" },
+      ]);
+
+    writeFileSync(runtimeGraph, JSON.stringify({
+      bolt_dag: {
+        units: [{ name: "unit-z" }],
+        batches: [["unit-z", ""]],
+      },
+    }));
+    expect(loadRuntimeUnitBatches(project)).toBeNull();
+
+    writeFileSync(runtimeGraph, "{");
+    expect(loadRuntimeUnitBatches(project)).toBeNull();
+  });
+
+  test("expands required per-unit consumes in-process at the first candidate", () => {
+    const previousGraph = process.env.AMADEUS_STAGE_GRAPH;
+    process.env.AMADEUS_STAGE_GRAPH = join(
+      import.meta.dir,
+      "../../dist/claude/.claude/tools/data/stage-graph.json",
+    );
+    __resetGraphCache();
+    try {
+      const node = loadGraph().find((stage) => stage.slug === "build-and-test");
+      if (node === undefined) throw new Error("build-and-test fixture missing");
+
+      const resolved = resolveConsumes(
+        node.consumes,
+        node,
+        "brownfield",
+        "{unit-name}",
+        "amadeus/spaces/default/intents/test-record",
+        undefined,
+        undefined,
+        {
+          declaredUnits: ["unit-z", "unit-a"],
+          outcomes: [
+            { unit: "unit-z", outcome: "succeeded" },
+            { unit: "unit-a", outcome: "succeeded" },
+          ],
+        },
+      );
+
+      expect(
+        resolved.filter((consume) => consume.perUnitSucceeded).map((consume) => consume.path),
+      ).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+        ["code-generation-plan", "code-summary"].map((artifact) =>
+          `amadeus/spaces/default/intents/test-record/construction/${unit}/code-generation/${artifact}.md`
+        )
+      ));
+    } finally {
+      if (previousGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+      else process.env.AMADEUS_STAGE_GRAPH = previousGraph;
+      __resetGraphCache();
+    }
+  });
+
+  test("checks succeeded consume presence in-process and fails closed on stat errors", () => {
+    const project = projectWithOutcomes();
+    const existing = join(
+      seededRecordDir(project),
+      "construction/unit-a/code-generation/code-summary.md",
+    );
+    const consume = {
+      artifact: "code-summary",
+      required: true,
+      path: "construction/unit-a/code-generation/code-summary.md",
+      perUnitSucceeded: true as const,
+    };
+
+    expect(consumePresentOnDisk(consume, existing)).toBe(true);
+    expect(consumePresentOnDisk(consume, join(project, "missing.md"))).toBe(false);
+
+    const loop = join(project, "stat-loop");
+    symlinkSync("stat-loop", loop);
+    expect(() => consumePresentOnDisk(consume, loop)).toThrow(
+      new PerUnitConsumeFanoutError("consume-presence-read-failed", [consume.path]),
+    );
+  });
+
   test("compiled graph retains the pinned 7-consumer 19-edge inventory", () => {
     const graph = JSON.parse(readFileSync(
       join(import.meta.dir, "../../dist/claude/.claude/tools/data/stage-graph.json"),
