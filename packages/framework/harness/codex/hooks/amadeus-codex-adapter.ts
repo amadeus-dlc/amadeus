@@ -256,6 +256,13 @@ switch (target) {
       ...(codex.session_id ? { session_id: codex.session_id } : {}),
     });
     const r = runCore("amadeus-session-start.ts", fwd);
+    // Auto-compose opted-in plugins into the host (U4 hook-wiring-remaining,
+    // BR-U4-1). A 1-point invocation of the SAME core hook the claude face
+    // wires from settings.json (U2): it re-implements NO composition logic and
+    // takes the compose entry's own --if-stale no-op fast path. Advisory — its
+    // stdout is not part of Codex's context channel, and any failure is a
+    // stderr line + exit 0 inside the core hook (BR-U4-5).
+    runCore("amadeus-plugin-compose.ts", "{}");
     const wrapped = wrapContext(r.stdout, "SessionStart");
     persistResponse(wrapped, 0);
     if (wrapped) process.stdout.write(wrapped);

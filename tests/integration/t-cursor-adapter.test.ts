@@ -66,6 +66,11 @@ describe("ToolNameMap — 工程0 measured identities only", () => {
 describe("reconstruct — 正常写像 (each target → core stdin)", () => {
   const firstInput = (calls: CoreCall[]): Record<string, unknown> =>
     JSON.parse(calls[0].input) as Record<string, unknown>;
+  // The session-start core call — session-start now shares the reconstruction
+  // with the U4 auto-compose invocation (which runs first), so its payload is no
+  // longer calls[0].
+  const sessionStartInput = (calls: CoreCall[]): Record<string, unknown> =>
+    JSON.parse(calls.find((c) => c.hookFile === "amadeus-session-start.ts")!.input) as Record<string, unknown>;
 
   test("afterShellExecution → runtime-compile {Bash, tool_input.command}", () => {
     const r = reconstruct("runtime-compile", { hook_event_name: "afterShellExecution", command: "git status" });
@@ -87,13 +92,16 @@ describe("reconstruct — 正常写像 (each target → core stdin)", () => {
     const r = reconstruct("session-start", { session_id: "s1" });
     if ("error" in r) throw new Error("unexpected error");
     expect(r.forwardStdout).toBe(true);
-    expect(firstInput(r.calls)).toEqual({ hook_event_name: "SessionStart", source: "startup", session_id: "s1" });
+    expect(sessionStartInput(r.calls)).toEqual({ hook_event_name: "SessionStart", source: "startup", session_id: "s1" });
+    // U4 auto-compose rides session-start: compose runs FIRST so session-start
+    // stays the last (forwarded) call and keeps owning the context channel.
+    expect(r.calls.map((c) => c.hookFile)).toEqual(["amadeus-plugin-compose.ts", "amadeus-session-start.ts"]);
   });
 
   test("session-start omits session_id when absent", () => {
     const r = reconstruct("session-start", { source: "resume" });
     if ("error" in r) throw new Error("unexpected error");
-    expect(firstInput(r.calls)).toEqual({ hook_event_name: "SessionStart", source: "resume" });
+    expect(sessionStartInput(r.calls)).toEqual({ hook_event_name: "SessionStart", source: "resume" });
   });
 
   test("beforeSubmitPrompt → mint {prompt}", () => {

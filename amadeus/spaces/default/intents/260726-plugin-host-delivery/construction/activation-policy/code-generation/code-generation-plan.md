@@ -48,3 +48,17 @@ fork 点は 4ea02e41a（U2 walking skeleton 込み）。追加 173 行すべて 
 ## 逸脱
 
 宣言なき逸脱なし。`--single` は撤廃ではなく任意化(既存 `--single` 経路は不変・compose 済み stage で --single なし到達を追加)であり、requirements FR-7(a)「`--single` なしでの到達経路」の充足として実装した。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-27T01:15:14Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U6 activation-policy はADR-1案Aどおりspec-hash advisory・単方向state・stderr限定・0-plugin無影響で一貫実装され、無申告逸脱や検証劇場は検出されなかった。
+
+### Findings
+
+- None

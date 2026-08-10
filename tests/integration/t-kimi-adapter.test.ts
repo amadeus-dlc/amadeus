@@ -91,9 +91,13 @@ describe("parseKimiEnvelope — parse-don't-validate", () => {
 describe("normalizePayload + routeTarget — fixture-driven 正常写像", () => {
   test("SessionStart capture → session-start {source, session_id}, translate session-start", () => {
     const calls = routeTarget("session-start", fixtureEnv("session-start"));
-    expect(calls).toHaveLength(1);
+    // session-start core hook first, then the U4 auto-compose hook (translate
+    // "none" so its empty stdout is dropped and does not touch the context relay).
+    expect(calls).toHaveLength(2);
     expect(calls[0].hookPath).toBe("amadeus-session-start.ts");
     expect(calls[0].translate).toBe("session-start");
+    expect(calls[1].hookPath).toBe("amadeus-plugin-compose.ts");
+    expect(calls[1].translate).toBe("none");
     expect(JSON.parse(calls[0].stdin)).toEqual({
       hook_event_name: "SessionStart",
       source: "startup",
@@ -305,7 +309,8 @@ describe("runAdapter — end-to-end with the spawn spy", () => {
     const res = runAdapter("session-start", fixture("session-start"), "/proj", spy.fn);
     expect(res.exitCode).toBe(0);
     expect(res.stdout).toBe("");
-    expect(spy.calls).toHaveLength(1);
+    // session-start core hook + the U4 auto-compose hook both fire.
+    expect(spy.calls).toHaveLength(2);
   });
 
   test("advisory targets never forward stdout even when core prints", () => {

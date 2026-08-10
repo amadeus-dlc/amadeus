@@ -649,6 +649,11 @@ if (target === "session-start") {
   } catch {
     if (result.stdout) process.stdout.write(result.stdout);
   }
+  // Auto-compose opted-in plugins (U4 hook-wiring-remaining, BR-U4-1). A
+  // 1-point invocation of the SAME core hook the claude face wires (U2), on
+  // Kiro's agentSpawn→session-start path; NO composition logic here, --if-stale
+  // no-op fast path, advisory (stderr line + exit 0 on failure — BR-U4-5).
+  runCore("amadeus-plugin-compose.ts", {});
   process.exit(0);
 }
 
