@@ -1061,5 +1061,12 @@
     "dirName": "260810-plugin-harness-dir-token",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019feacc-c0e2-7f4d-85e3-4579b7dd064c",
+    "slug": "numeric-provenance-guard",
+    "dirName": "260810-numeric-provenance-guard",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
