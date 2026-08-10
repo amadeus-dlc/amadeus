@@ -1,3 +1,4 @@
+// covers: function:resolveEvaluatorArgv, function:resolvePluginManifest
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
