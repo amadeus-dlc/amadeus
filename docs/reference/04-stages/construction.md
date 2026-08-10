@@ -359,9 +359,10 @@ infrastructure and platform input.
    Load amadeus-aws-platform-agent persona and knowledge for infrastructure and
    platform input.
 
-2. **Read Prior Artifacts** -- Read the present NFR requirements (none when the
-   scope skipped that stage), functional design artifacts (if they exist), and
-   application design for architectural context.
+2. **Read Prior Artifacts** -- Read only the inputs the directive's `consumes`
+   lists: the present NFR requirements (none when the scope skipped that
+   stage), functional design artifacts (if they exist), and application design
+   for architectural context (if it exists).
 
 3. **Generate Design Questions** -- Create a questions file at
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`

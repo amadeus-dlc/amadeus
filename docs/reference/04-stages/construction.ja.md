@@ -350,9 +350,10 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
    インフラストラクチャとプラットフォームのインプット用に amadeus-aws-platform-agent
    のペルソナと知識をロード。
 
-2. **Read Prior Artifacts** -- 存在する NFR 要件(scope がそのステージを SKIP した
-   場合は不在)、機能設計成果物(存在する場合)、およびアーキテクチャコンテキストの
-   ためのアプリケーション設計を読む。
+2. **Read Prior Artifacts** -- directive の `consumes` に列挙された入力のみを読む:
+   存在する NFR 要件(scope がそのステージを SKIP した場合は不在)、機能設計成果物
+   (存在する場合)、およびアーキテクチャコンテキストのためのアプリケーション設計
+   (存在する場合)。
 
 3. **Generate Design Questions** -- `[Answer]:` タグを使った文脈に適した質問ファイルを
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`
