@@ -1,6 +1,62 @@
 # コンポーネント棚卸し
 
-## per-sensor argv parse の所在と現況（260809-sensor-parseflags-failop、現在、observed `778567dd0`）
+## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、現在、observed `91f37ec85`）
+
+**観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
+
+判別軸は「その emit 点が返す `kind:"done"` が、conductor にとってループ終端を意味するか、単なる commit ack（続行すべき）を意味するか」。**同一 kind が両方の意味を担っており**、`amadeus-directive.ts` の型にも harness 契約にも区別は存在しない。
+
+### `kind:"done"` の全 emit 点（`packages/framework/core/tools/amadeus-orchestrate.ts`、7サイト）
+
+述語: `git show "91f37ec85…:packages/framework/core/tools/amadeus-orchestrate.ts" | grep -nE 'kind: ?"done"'` → 7 hit（`:4635` の `FORWARD_RESULTS` 内リテラル `"done"` は kind ではないため除外）。
+
+| 行 | 到達経路 | 分類 |
+|---|---|---|
+| `:2987` | `handleNext` read-only latch（`:2983-2992`） | turn 終端・正（ただし SKILL.md の「completion summary」文言は不適合 — 分類は裁定事項） |
+| `:3582` | `handleNext` 完了判定 | 終端・正 |
+| `:4933` | single-stage run 完了 | 終端・正 |
+| **`:5382`** | `handleAuthorizedApprovalReport` | **多義（terminal / non-terminal の両方）** |
+| `:5744` | `handleReport` already-Completed 再 report | 終端・正 |
+| **`:5765`** | `handleReport` stale re-report guard（`:5754-5771`） | **純・非終端** |
+| **`:5849`** | `handleReport` 通常 commit ack | **多義（terminal / non-terminal の両方）** |
+
+### 多義2サイトの合流構造と判別子
+
+- `:5849` — `:5790` gated→`approve` / `:5791-5794` 非gated かつ最終→`complete-workflow`（**terminal**）/ `:5795-5796` 非gated 途中→`advance`（**non-terminal**）の3分岐がすべて `:5848-5849` の単一 emit へ合流する
+- `:5382` — `:5352` / `:5377` の `deferWorkflowCompletion` 経路のみ先に return し、それ以外の terminal / non-terminal が同一 emit へ落ちる
+- **判別子 `isFinal` は両サイトのスコープ内に既存**: `:5674`（`const isFinal = nextInScopeStage(slug, scope, stateContent) === null;`）/ `:5298-5299`（同、`scope !== null &&` 付き）。新規の状態読取なしで分岐できる
+- **`committed` 配列は判別子として不十分** — gated 最終ステージは `approve` が `complete-workflow` へ自己委譲するため、配列の中身では最終か否かを決められない
+- **設計先例**: `deferWorkflowCompletion` 経路は「終端だが未コミット」を `await-completion` / mirror boundary directive として既に別 kind へ切り出している
+
+### 契約面（同期対象コンポーネント）
+
+| 面 | 実体 | 備考 |
+|---|---|---|
+| harness SKILL.md **6面** | claude `:60` / codex `:58` / kimi `:60` / kiro `:56` / kiro-ide `:56`（**逐語同一**）+ pi `:121`（**別文言**） | 加えて全6面が forwarding-loop の stop 集合に `done` を含む（claude `:22` / codex `:20` / kimi `:22` / kiro `:20` / kiro-ide `:20` / pi `:70`）— report 返り値を loop step として stop 判定する契約なので多義が直撃する |
+| `amadeus-directive.ts` | `:52`（union）/ `:330-331`（doc）/ **`:332-335`**（`interface DoneDirective`）/ `:407`（`VALID_KINDS`）/ `:474`（`DONE_FIELDS`）/ `:495`（`KNOWN_FIELDS_BY_KIND`）/ `:548`（`FIELD_CHECKS_BY_KIND`）/ `:1201`（golden sample） | rule 3（`:590-594`）が unknown key を **strict 拒否**。両 Record は total（`:503` 逐語「Adding a DirectiveKind without a row here is a compile error (Record is total).」）でフィールド追加・kind 追加のいずれも漏れが検出される |
+| `docs/reference` **6ファイル** | `17-skill-system.md:38`（SKILL.md と同一の契約行）/ `:76` / `:80` と `.ja.md` 同座標、`06-hooks-and-tools.md:50,250,259` / `.ja.md:48,248,257`、`14-claude-features.md:333` / `.ja.md:328` | **reviewer-1「docs/reference には契約なし」は誤り**（本 RE が反証）。`06-…` / `14-…` の各 hit が契約行か散文言及かの逐語分類は未実施 |
+| stage-protocol | `packages/framework/core/amadeus-common/` は **0 hit** | reviewer-1 のこの半分は正 |
+| Stop hook | `packages/framework/core/hooks/amadeus-stop.ts:931-932`（`// \`done\` → the workflow is complete; allow the turn to end.` / `if (kind === "done") {`） | kind の出所は report の stdout ではなく `runEngineNextKind()`（`next` の再 spawn）= バックストップとして機能。実害は conductor 判断層に限定 |
+
+### 既存の件数語ドリフト（**本 intent の患部外**、同根棚卸し候補）
+
+`VALID_KINDS` 実数 = **13**（`awk '/VALID_KINDS = \[/,/\] as const/' | grep -cE '^\s*"'` で機械再計算。要素: `run-stage` / `dispatch-subagent` / `await-advisory-choice` / `invoke-swarm` / `present-gate` / `ask` / `select-intent` / `print` / `error` / `done` / `parked` / `await-completion` / `await-approval`）に対し、契約面の件数語が乖離している:
+
+| 所在 | 逐語 |
+|---|---|
+| SKILL.md 5面（claude `:73` / codex `:71` / kimi `:71` / kiro `:67` / kiro-ide `:67`） | 「The orchestration engine emits **ten** kinds today」 |
+| `docs/reference/17-skill-system.md:32` | 「a discriminated union over **nine** directive kinds」「The engine **emits seven kinds today**」 |
+| `docs/reference/17-skill-system.ja.md:32` | 「**9つ**のディレクティブ種別」「エンジンは**今日7つの種別を発行**します」 |
+
+新 kind 追加方式を採る場合はこの群を全て触ることになり、`cid:code-generation:count-comment-sync-on-catalog-change`（件数語は隣接列挙がある場合のみ許容）と `cid:functional-design:c3-adjacent-enum-numerals` の適用対象になる。
+
+### テストピンの所在
+
+`t115`（`tests/unit/t115.test.ts`）が中核 — `.sh` からの CLI 契約ポート（TAP plan 22）で、ヘッダ逐語「An in-process twin would lose the directive-JSON-to-stdout half (every "kind":"done"/"kind":"error" assertion)」。非終端サイトを pin する assert は `t115:287,314,332,350,373,538,557,586` / `t118:52,441,457` / `t-solo-gate-transaction-carrier:167` / `t435-intent-autonomy-production:564` / `t186:481` に分布。Stop hook 側は `t121-stop-hook-enforce:846-847`（スタブ engine が `done` を返す）が分岐を固定しており、Stop hook 改訂の落ちる実証の注入面になる。`cid:reverse-engineering:c1-pinned-behavior-ruling` の対象。
+
+---
+
+## per-sensor argv parse の所在と現況（260809-sensor-parseflags-failop、履歴、observed `778567dd0`）
 
 **観測 ref**: すべて observed = `778567dd03b00f22cb887eec06f025557eeaaaf4`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
 
