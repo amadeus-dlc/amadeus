@@ -1028,6 +1028,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
+    "slug": "stage-attribution",
+    "dirName": "260809-stage-attribution",
+    "scope": "self-feature",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019fe6e2-ced1-7307-9b4f-4d5ff49ed3f1",
     "slug": "sensor-parseflags-failop",
     "dirName": "260809-sensor-parseflags-failop",
