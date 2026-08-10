@@ -29,7 +29,7 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
+import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS, rulesSubdirFor } from "./amadeus-harness.ts";
 import type { GraphStage } from "./amadeus-graph.ts";
 import {
   resolveProjectDirFromHook,
@@ -635,15 +635,58 @@ function readTreeFiles(root: string): Map<string, Buffer> {
   return files;
 }
 
+// ---------------------------------------------------------------------------
+// Harness-neutral → harness-specific prose, applied at the STAGING SEED (#2790).
+//
+// Plugin prose is authored harness-neutral, exactly like core prose: a path that
+// names the harness directory is written `{{HARNESS_DIR}}/…`. The build-time
+// packager resolves the token per face with its own prose transform, but the
+// runtime path — seeding a harness tree's staging dir from the project's
+// authoring `plugins/` — copied bytes verbatim, so a dogfood compose from a
+// repo-root `plugins/` shipped the raw token into every tree.
+//
+// The substitution belongs HERE, at the seed, not in the composition engine:
+// compose stays a byte-faithful copier over whatever staging holds, and the
+// staleness digests it computes keep comparing like against like.
+// ---------------------------------------------------------------------------
+
+const HARNESS_TOKEN = /\{\{HARNESS_DIR\}\}/g;
+
+// The harness dir a staging landing path belongs to, or null when `dst` is not
+// `<harnessTree>/.amadeus-plugin-src/<name>`. The authoring `plugins/<name>`
+// dir (an install --force write target) is deliberately NOT a match: the
+// authoring tree must stay harness-neutral.
+export function stagingHarnessDirOf(dst: string): string | null {
+  const stagingRoot = dirname(dst);
+  if (basename(stagingRoot) !== PLUGIN_SOURCE_DIR_NAME) return null;
+  const host = basename(dirname(stagingRoot));
+  return isHarnessDirName(host) ? host : null;
+}
+
+// One prose file's bytes, resolved for `harnessDir`. Mirrors the packager's
+// transform(): Markdown prose only (.md / .md.example), everything else — the
+// plugin manifest, any shipped .ts — byte-for-byte verbatim.
+export function seedBytesForHarness(relPath: string, bytes: Buffer, harnessDir: string | null): Buffer {
+  if (harnessDir === null) return bytes;
+  if (!relPath.endsWith(".md") && !relPath.endsWith(".md.example")) return bytes;
+  const rules = rulesSubdirFor(harnessDir);
+  const text = bytes.toString("utf-8").replace(HARNESS_TOKEN, harnessDir);
+  return Buffer.from(text.replaceAll(`${harnessDir}/rules/`, `${harnessDir}/${rules}/`), "utf-8");
+}
+
 // Compare the staged landing path against the source it would be replaced by.
+// The source is read THROUGH the same seed transform the copy applies, so a
+// correctly-seeded tree reads `identical` instead of drifting forever against
+// its own harness-neutral source.
 export function stagingEntryState(dst: string, src: string): StagingEntryState {
   if (!existsSync(dst)) return "absent";
+  const harnessDir = stagingHarnessDirOf(dst);
   const staged = readTreeFiles(dst);
   const source = readTreeFiles(src);
   if (staged.size !== source.size) return "different";
   for (const [rel, bytes] of source) {
     const other = staged.get(rel);
-    if (other === undefined || !other.equals(bytes)) return "different";
+    if (other === undefined || !other.equals(seedBytesForHarness(rel, bytes, harnessDir))) return "different";
   }
   return "identical";
 }
@@ -664,7 +707,7 @@ export function copyPluginSource(src: string, dst: string, warn: (line: string) 
   rmSync(tmp, { recursive: true, force: true });
   rmSync(old, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
-  copyRealFiles(src, tmp, src, warn);
+  copyRealFiles(src, tmp, src, warn, stagingHarnessDirOf(dst));
   if (existsSync(dst)) renameSync(dst, old);
   renameSync(tmp, dst);
   rmSync(old, { recursive: true, force: true });
@@ -672,8 +715,16 @@ export function copyPluginSource(src: string, dst: string, warn: (line: string) 
 
 // Recursive real-file copy. Symlinks (of any target kind) are skipped with one
 // stderr line each rather than followed — an install must not import whatever a
-// symlink happens to point at.
-function copyRealFiles(dir: string, outDir: string, srcRoot: string, warn: (line: string) => void): void {
+// symlink happens to point at. `harnessDir` non-null means the destination is a
+// harness tree's staging dir, so prose is resolved for that harness on the way
+// in (#2790); null copies every byte verbatim, as before.
+function copyRealFiles(
+  dir: string,
+  outDir: string,
+  srcRoot: string,
+  warn: (line: string) => void,
+  harnessDir: string | null = null,
+): void {
   mkdirSync(outDir, { recursive: true });
   for (const name of [...readdirSync(dir)].sort()) {
     const abs = join(dir, name);
@@ -682,8 +733,10 @@ function copyRealFiles(dir: string, outDir: string, srcRoot: string, warn: (line
       warn(`amadeus-plugin: install skipped symlink ${toPosixRel(srcRoot, abs)}`);
       continue;
     }
-    if (st.isDirectory()) copyRealFiles(abs, join(outDir, name), srcRoot, warn);
-    else if (st.isFile()) writeFileSync(join(outDir, name), readFileSync(abs));
+    if (st.isDirectory()) copyRealFiles(abs, join(outDir, name), srcRoot, warn, harnessDir);
+    else if (st.isFile()) {
+      writeFileSync(join(outDir, name), seedBytesForHarness(toPosixRel(srcRoot, abs), readFileSync(abs), harnessDir));
+    }
   }
 }
 
