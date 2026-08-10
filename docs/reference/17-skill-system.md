@@ -61,7 +61,8 @@ Loop:
   1. directive = `bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`
   2. act on directive.kind
   3. `bun .claude/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]` when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat unless directive.kind == done
+  4. repeat while the directive continues the loop (`committed` — the report
+     ack — plus `run-stage`, `invoke-swarm`, run-then-continue `print`)
 ```
 
 ```mermaid
@@ -71,10 +72,11 @@ flowchart LR
   C --> D["report --stage ... --result ..."]
   D --> A
   B -->|"print (run-then-continue)"| C
+  B -->|"committed (report ack)"| A
   B -->|"print (terminal) / error / done"| E["STOP"]
 ```
 
-Text description of the diagram: `next` (passed `$ARGUMENTS` verbatim) returns one directive. The conductor branches on `directive.kind`. For `run-stage`, `ask`, `invoke-swarm`, and run-then-continue `print` directives it performs the named move and calls `report`, which loops back to `next`. For terminal `print`, `error`, and `done` it stops the loop.
+Text description of the diagram: `next` (passed `$ARGUMENTS` verbatim) returns one directive. The conductor branches on `directive.kind`. For `run-stage`, `ask`, `invoke-swarm`, and run-then-continue `print` directives it performs the named move and calls `report`, which loops back to `next`. A `committed` directive — what a successful `report` returns — goes straight back to `next` with no second `report`. For terminal `print`, `error`, and `done` it stops the loop.
 
 `$ARGUMENTS` passes through to the first `next` verbatim — the engine parses the flags (`--status`, `--stage`, `--scope`, `--depth`, freeform text), so the conductor never pre-parses or strips them. Because `next` mutates nothing, the loop only advances when `report` commits a transition, so the next `next` always reads fresh state.
 

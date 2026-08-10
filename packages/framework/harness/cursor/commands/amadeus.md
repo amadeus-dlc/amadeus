@@ -28,7 +28,8 @@ Loop:
   2. act on directive.kind (table below)
   3. `bun .cursor/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]`
      when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat only when the report result is `continue`
+  4. repeat when the report returns a continuing directive (`committed`,
+     `run-stage`, `invoke-swarm`, `print`); stop on the stop set above
 ```
 
 Each `next` reads the workflow state and the compiled stage graph and returns

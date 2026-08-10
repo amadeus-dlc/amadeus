@@ -61,7 +61,8 @@ Loop:
   1. directive = `bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`
   2. act on directive.kind
   3. `bun .claude/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]` when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat unless directive.kind == done
+  4. repeat while the directive continues the loop (`committed` — the report
+     ack — plus `run-stage`, `invoke-swarm`, run-then-continue `print`)
 ```
 
 ```mermaid
@@ -71,10 +72,11 @@ flowchart LR
   C --> D["report --stage ... --result ..."]
   D --> A
   B -->|"print (run-then-continue)"| C
+  B -->|"committed (report ack)"| A
   B -->|"print (terminal) / error / done"| E["STOP"]
 ```
 
-図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。terminal の `print`、`error`、`done` に対してはループを停止します。
+図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。`report` の成功が返す `committed` ディレクティブは、2度目の `report` を挟まずそのまま `next` へ戻ります。terminal の `print`、`error`、`done` に対してはループを停止します。
 
 `$ARGUMENTS` は最初の `next` にそのまま渡されます — エンジンがフラグ(`--status`、`--stage`、`--scope`、`--depth`、自由形式テキスト)をパースするため、コンダクターは決して事前パースやストリップをしません。`next` は何も変更しないため、ループは `report` が遷移をコミットしたときにのみ前進し、次の `next` は常に新鮮な状態を読みます。
 
