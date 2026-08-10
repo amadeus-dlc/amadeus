@@ -430,6 +430,19 @@ function parseCreateOptions(flags: Map<string, string>): OptionParse {
   };
 }
 
+type UnlinkedParse =
+  | { readonly ok: true; readonly value: boolean }
+  | { readonly ok: false; readonly message: string };
+
+function parseUnlinked(flags: Map<string, string>): UnlinkedParse {
+  const value = flags.get("unlinked");
+  if (value === undefined) return { ok: true, value: false };
+  if (value !== "true") {
+    return { ok: false, message: "--unlinked must be exactly true when provided" };
+  }
+  return { ok: true, value: true };
+}
+
 function parseOptions(argv: readonly string[]): OptionParse {
   const [verb, ...rest] = argv;
   const flags = parseFlags(rest);
@@ -441,10 +454,8 @@ function parseOptions(argv: readonly string[]): OptionParse {
   const target = resolveTarget(flags);
   if (!target.ok) return target;
   const reason = flags.get("reason") ?? null;
-  const unlinked = flags.get("unlinked");
-  if (unlinked !== undefined && unlinked !== "true") {
-    return { ok: false, message: "--unlinked must be exactly true when provided" };
-  }
+  const unlinked = parseUnlinked(flags);
+  if (!unlinked.ok) return unlinked;
   if (verb === "override" && (reason === null || reason.trim() === "")) {
     return { ok: false, message: "--reason is required for override" };
   }
@@ -455,7 +466,7 @@ function parseOptions(argv: readonly string[]): OptionParse {
       ...target.value,
       reason,
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
-      unlinked: unlinked === "true",
+      unlinked: unlinked.value,
     },
   };
 }
