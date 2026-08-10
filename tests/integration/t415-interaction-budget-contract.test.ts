@@ -21,6 +21,18 @@ function compact(content: string): string {
   return content.replace(/\s+/g, " ");
 }
 
+/** The text from a heading to the next heading of the same or shallower level.
+ *  Section-scoped rather than whole-file, so a pin that names one enumeration
+ *  cannot be satisfied by the same token sitting in a different one. */
+function section(content: string, heading: string): string {
+  const start = content.indexOf(heading);
+  if (start === -1) return "";
+  const depth = heading.startsWith("#") ? (heading.match(/^#+/) as RegExpMatchArray)[0].length : 0;
+  const rest = content.slice(start + heading.length);
+  const next = depth === 0 ? rest.search(/\n\*\*Step |\n#{1,6} /) : rest.search(new RegExp(`\\n#{1,${depth}} `));
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
 describe("#1999 bounded interaction and completion contracts", () => {
   test("defines finite primary and follow-up question budgets", () => {
     expect(PROTOCOL).toContain("Minimal | at most 4 per stage");
@@ -52,6 +64,51 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(compact(standalone)).toContain("Default to Free when the user names no level");
     expect(compact(standalone)).toContain("unresolved material points");
     expect(standalone).not.toContain("default to Standard (8)");
+  });
+
+  test("the three machine-matched grilling tokens are language-neutral markers", () => {
+    // The question-budget sensor reads a questions file and matches these three
+    // verbatim. All three are HTML comments rather than prose headings because
+    // the sensor ships to every project: a heading in one team's record language
+    // would be structurally unmatchable in another's, and a shipped check that
+    // can never match is worse than no check. The human-visible headings around
+    // them stay in whatever language the record is written in.
+    const grilling = read("amadeus-common/protocols/grilling-protocol.md");
+    expect(grilling).toContain("<!-- amadeus-grilling:v1 mode=grilling -->");
+    expect(grilling).toContain(
+      "<!-- amadeus-grilling:justification depth=<Depth> questions=<N> frontier-driven -->",
+    );
+    expect(grilling).toContain("<!-- amadeus-grilling:deferred -->");
+
+    // The deferred section is a QUESTIONS-FILE obligation, not only a terminal
+    // one. The sensor reads that file and nothing else, so a section that lives
+    // only in the spoken summary is unreachable to it — the write side has to
+    // land where the check side looks (symmetric-pair-review).
+    expect(compact(grilling)).toContain(
+      "append the same section to the questions file",
+    );
+    // Pruning nothing still writes the section. Without this, every Free or
+    // nothing-pruned session would be a false `missing-deferred-list`.
+    expect(compact(grilling)).toContain(
+      "the marker and the section are written even when nothing was pruned",
+    );
+
+    // Both enumerations of what a grilling session writes to the questions file
+    // carry it. Amending one and not the other reproduces the same write/check
+    // asymmetry in the other list (enumeration-completeness-review).
+    const recordingObligations = section(grilling, "### 2.5 Recording obligations");
+    expect(recordingObligations).toContain("<!-- amadeus-grilling:deferred -->");
+    const questionsFileRow = grilling
+      .split("\n")
+      .find((line) => line.startsWith("| Questions file |"));
+    expect(questionsFileRow).toContain("deferred-node section");
+
+    // stage-protocol names the questions-file obligations twice as well.
+    expect(compact(PROTOCOL)).toContain(
+      "the deferred-node section carrying the `<!-- amadeus-grilling:deferred -->` marker",
+    );
+    const step3d = section(PROTOCOL, "**Step 3d: If \"Grill me\" (grilling mode):**");
+    expect(step3d).toContain("<!-- amadeus-grilling:deferred -->");
   });
 
   test("limits follow-ups to material ambiguity and records reversible defaults", () => {
