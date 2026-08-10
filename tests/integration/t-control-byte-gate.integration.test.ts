@@ -164,6 +164,17 @@ describe("runControlByteGate", () => {
     // fails loudly rather than reporting an empty, clean corpus.
     expect(() => runControlByteGate({ repoRoot: root })).toThrow();
   });
+
+  test("git failing to launch at all is loud, not an empty corpus", () => {
+    // The two enumeration failures are distinct and neither may report a clean
+    // repository: git RAN and refused (previous test, non-zero exit), versus
+    // git never started. A root that does not exist makes the spawn itself fail
+    // — posix_spawn cannot chdir into it — which is the only lever a caller has
+    // on that branch, and it reaches it through the public seam.
+    expect(() => runControlByteGate({ repoRoot: join(root, "no-such-directory") })).toThrow(
+      /git ls-files could not be run in/,
+    );
+  });
 });
 
 describe("assertAllowlistWellFormed", () => {
