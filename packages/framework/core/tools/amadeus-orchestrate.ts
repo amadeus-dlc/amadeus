@@ -223,6 +223,13 @@ import {
   subgraphForScope,
 } from "./amadeus-graph.ts";
 import {
+  PerUnitConsumeFanoutError,
+  resolvePerUnitConsumeFanout,
+  type PerUnitConsumeOutcome,
+} from "./amadeus-per-unit-consume-fanout.ts";
+import { foldUnitPoolEventSets } from "./amadeus-unit-pool.ts";
+import { readUnitPoolEventSetsFromAudit } from "./amadeus-unit-pool-runtime.ts";
+import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
@@ -2164,6 +2171,22 @@ function loadRuntimeUnitRows(projectDir: string, intent?: string): unknown[] | n
   }
 }
 
+export function loadRuntimeUnitBatches(projectDir: string): string[][] | null {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    const batches = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "batches");
+    if (!Array.isArray(batches)) return null;
+    const validBatches = batches.filter((batch): batch is string[] =>
+      Array.isArray(batch) && batch.every((unit) => typeof unit === "string" && unit.trim() !== "")
+    );
+    return validBatches.length === batches.length
+      ? validBatches.map((batch) => [...batch])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 interface RuntimeUnitKindRow {
   name: string;
   kind?: UnitKind;
@@ -2318,7 +2341,7 @@ function isCodekb(node: GraphStage): boolean {
 // codekbRepoName(projectDir); `space` is the active-space cursor. When absent
 // (a non-codekb caller, e.g. a test invoking buildRunStageDirective with
 // defaults) the codekb branch never fires and the record-dir path stands.
-type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
+export type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
 
 // Build the CodekbCtx for a live projectDir, resolving the active-space cursor
 // and the deterministic codekb repo name (both read-only). One place so the
@@ -2418,9 +2441,54 @@ function projectTypeFrom(
 // the resolved path, so the presence split downstream can key producer lookups
 // and required-ness off the authored vocabulary instead of re-deriving the
 // name from the path shape.
-type ResolvedConsume = { artifact: string; required: boolean; path: string };
+export type ResolvedConsume = {
+  artifact: string;
+  required: boolean;
+  path: string;
+  perUnitSucceeded?: true;
+};
 
-function resolveConsumes(
+export interface PerUnitConsumePopulation {
+  readonly declaredUnits: readonly string[];
+  readonly outcomes: readonly PerUnitConsumeOutcome[];
+}
+
+export function readPerUnitConsumePopulation(
+  projectDir: string,
+): PerUnitConsumePopulation | undefined {
+  const rows = loadRuntimeUnitRows(projectDir);
+  if (rows === null || rows.length === 0) return undefined;
+  const declaredUnits = rows.flatMap((row) => {
+    const name = runtimeObjectField(row, "name");
+    return typeof name === "string" && name.trim() !== "" ? [name] : [];
+  });
+  const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
+  const outcomes: PerUnitConsumeOutcome[] = [];
+  const batches = loadRuntimeUnitBatches(projectDir) ?? [];
+  for (const [index, units] of batches.entries()) {
+    const projection = foldUnitPoolEventSets(eventSets, String(index + 1));
+    const currentUnits = new Set(units);
+    for (const terminal of projection.terminal) {
+      if (!currentUnits.has(terminal.unitId)) continue;
+      outcomes.push({
+        unit: terminal.unitId,
+        outcome: terminal.outcome === "succeeded" || terminal.outcome === "cancelled"
+          ? terminal.outcome
+          : "failed",
+      });
+    }
+  }
+  return { declaredUnits, outcomes };
+}
+
+function hasRequiredPerUnitConsumes(node: GraphStage): boolean {
+  return !isPerUnit(node) && (node.consumes ?? []).some((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+}
+
+export function resolveConsumes(
   consumes: Consume[],
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -2428,6 +2496,7 @@ function resolveConsumes(
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): ResolvedConsume[] {
   const resolved: ResolvedConsume[] = [];
   for (const consume of consumes) {
@@ -2455,7 +2524,34 @@ function resolveConsumes(
       path: resolveConsumePath(consume.artifact, node, unit, recordPrefix, codekbCtx),
     });
   }
-  return resolved;
+  if (population === undefined || isPerUnit(node)) return resolved;
+  const fanoutCandidates = resolved.filter((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+  if (fanoutCandidates.length === 0) return resolved;
+  const fanout = resolvePerUnitConsumeFanout({
+    graph: loadGraph(),
+    declaredUnits: population.declaredUnits,
+    outcomes: population.outcomes,
+    templates: fanoutCandidates.map((consume) => ({
+      artifact: consume.artifact,
+      path: consume.path,
+    })),
+  });
+  const expanded = fanout.map((consume) => ({
+    artifact: consume.artifact,
+    required: true,
+    path: consume.path,
+    perUnitSucceeded: true as const,
+  }));
+  const fanoutArtifacts = new Set(fanoutCandidates.map((consume) => consume.artifact));
+  const firstFanoutIndex = resolved.findIndex((consume) => fanoutArtifacts.has(consume.artifact));
+  return [
+    ...resolved.slice(0, firstFanoutIndex),
+    ...expanded,
+    ...resolved.slice(firstFanoutIndex).filter((consume) => !fanoutArtifacts.has(consume.artifact)),
+  ];
 }
 
 // Split resolved consumes into PRESENT (file exists on disk) and ABSENT
@@ -2478,6 +2574,21 @@ function resolveConsumes(
 //     check against; everything stays in `consumes`, exactly as before.
 //   - a path still carrying the {unit-name} placeholder → existence is
 //     unknowable pre-Bolt; it stays in `consumes`.
+export function consumePresentOnDisk(consume: ResolvedConsume, absolutePath: string): boolean {
+  if (!consume.perUnitSucceeded) return existsSync(absolutePath);
+  try {
+    return statSync(absolutePath).isFile();
+  } catch (error) {
+    const code = error !== null && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+    if (code !== "ENOENT" && code !== "ENOTDIR") {
+      throw new PerUnitConsumeFanoutError("consume-presence-read-failed", [consume.path]);
+    }
+    return false;
+  }
+}
+
 function splitConsumesByPresence(
   consumes: ResolvedConsume[],
   scope: string,
@@ -2493,14 +2604,14 @@ function splitConsumesByPresence(
       continue;
     }
     const abs = join(codekbCtx.projectDir, ...c.path.split("/"));
-    if (existsSync(abs)) {
+    if (consumePresentOnDisk(c, abs)) {
       present.push(c.path);
       continue;
     }
     if (!c.required) continue; // optional + missing → not an input, not a gap
     const producers = producersOf(c.artifact);
     const producerOnPath = producers.some((p) => onPath.has(p.slug));
-    absent.push({ path: c.path, expected: !producerOnPath });
+    absent.push({ path: c.path, expected: c.perUnitSucceeded ? false : !producerOnPath });
   }
   return { present, absent };
 }
@@ -2681,9 +2792,11 @@ function buildRunStageDirective(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx, unitKind,
+    population,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
   const resolvedProduces = resolveProduces(
@@ -4011,6 +4124,9 @@ function emitRunStageForSlug(
     recordPrefix,
     codekbCtx,
     unitKind,
+    stateContent !== null && codekbCtx !== undefined && hasRequiredPerUnitConsumes(node)
+      ? readPerUnitConsumePopulation(codekbCtx.projectDir)
+      : undefined,
   );
   if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
