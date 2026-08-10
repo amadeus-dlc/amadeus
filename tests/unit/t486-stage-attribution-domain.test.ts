@@ -17,6 +17,8 @@ import {
   createIntentIdentity,
   createLifecycleIdentity,
   createSecondInterval,
+  type AccountingInvariantError,
+  type AttributionError,
   type AttributionResult,
   type CandidateFinding,
   type CandidateRejectionReason,
@@ -27,6 +29,30 @@ import {
   parseOutlierLimit,
   parseTargetStage,
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-domain.ts";
+
+type PopulationAccountingError = Extract<
+  AccountingInvariantError,
+  { readonly code: "invalid-population-accounting" }
+>;
+
+const POPULATION_ACCOUNTING_INVARIANTS = [
+  "unsafe-interval-seconds",
+  "invalid-interval",
+  "duplicate-window-id",
+  "duplicate-candidate-id",
+  "invalid-window-net-seconds",
+  "invalid-window-id",
+  "invalid-candidate-id",
+  "candidate-category-mismatch",
+  "invalid-idle-intent",
+  "window-net-idle-mismatch",
+  "duplicate-idle-intent",
+  "non-canonical-idle-index",
+  "candidate-disposition-bijection",
+  "window-result-bijection",
+  "unknown-window-contribution",
+  "invalid-window-accounting",
+] as const satisfies readonly PopulationAccountingError["invariant"][];
 
 function unwrapResult<T, E>(result: AttributionResult<T, E>): T {
   if (!result.ok) throw new TypeError("expected successful domain construction");
@@ -213,6 +239,82 @@ describe("SecondInterval", () => {
         expect(result.error.subject).toEqual({ type: "population" });
       }
     }
+  });
+});
+
+describe("AccountingInvariantError", () => {
+  test("keeps population accounting invariants and subjects in the shared closed error union", () => {
+    const candidateId = unwrapResult(createCandidateId("candidate-a"));
+    const windowId = unwrapResult(createAttributionWindowId("window-a"));
+    const intent = unwrapResult(createIntentIdentity("intent-a"));
+    const subjects = [
+      { type: "population" as const },
+      { type: "population" as const, candidateId },
+      { type: "population" as const, windowId },
+      { type: "population" as const, intent },
+      { type: "population" as const, candidateId, windowId, intent },
+    ] satisfies readonly PopulationAccountingError["subject"][];
+    const vocabularyCoversUnion: PopulationAccountingError["invariant"] extends
+      (typeof POPULATION_ACCOUNTING_INVARIANTS)[number] ? true : false = true;
+    const populationErrors = POPULATION_ACCOUNTING_INVARIANTS.map((invariant, index) => ({
+      type: "accounting-invariant" as const,
+      code: "invalid-population-accounting" as const,
+      invariant,
+      subject: subjects[index % subjects.length]!,
+    })) satisfies readonly PopulationAccountingError[];
+    const existingErrors = [
+      {
+        type: "accounting-invariant",
+        code: "invalid-second-interval",
+        subject: { type: "population" },
+        start: 1,
+        end: 1,
+      },
+      {
+        type: "accounting-invariant",
+        code: "invalid-attribution-window",
+        subject: { type: "window", windowId },
+        invariant: "missing-intent",
+      },
+      {
+        type: "accounting-invariant",
+        code: "invalid-candidate-contribution",
+        subject: { type: "window", windowId },
+        invariant: "empty-fragments",
+      },
+      {
+        type: "accounting-invariant",
+        code: "invalid-accounting-disposition",
+        subject: { type: "population", candidateId },
+        invariant: "empty-contributions",
+      },
+      {
+        type: "accounting-invariant",
+        code: "invalid-attribution-population",
+        subject: { type: "population", candidateId },
+        invariant: "unknown-window-id",
+        windowId,
+      },
+    ] as const satisfies readonly AccountingInvariantError[];
+    const sharedErrors = [...existingErrors, ...populationErrors] satisfies readonly AttributionError[];
+
+    expect(vocabularyCoversUnion).toBe(true);
+    expect(populationErrors.map(({ invariant }) => invariant)).toEqual([...POPULATION_ACCOUNTING_INVARIANTS]);
+    expect(subjects).toEqual([
+      { type: "population" },
+      { type: "population", candidateId },
+      { type: "population", windowId },
+      { type: "population", intent },
+      { type: "population", candidateId, windowId, intent },
+    ]);
+    expect(sharedErrors.map(({ code }) => code)).toEqual([
+      "invalid-second-interval",
+      "invalid-attribution-window",
+      "invalid-candidate-contribution",
+      "invalid-accounting-disposition",
+      "invalid-attribution-population",
+      ...POPULATION_ACCOUNTING_INVARIANTS.map(() => "invalid-population-accounting" as const),
+    ]);
   });
 });
 
