@@ -17,7 +17,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
 import { GENERATED_NUMERIC_PROVENANCE_MAPPING } from "../../packages/framework/core/tools/amadeus-sensor-numeric-provenance.ts";
@@ -30,7 +29,7 @@ import {
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const SENSOR_ID = "numeric-provenance";
-const HOOK_TIMEOUT_MS = 120_000;
+const DISTRIBUTION_TIMEOUT_MS = 120_000;
 const CORE_MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-numeric-provenance.md");
 const CORE_TOOL = join(REPO_ROOT, "packages/framework/core/tools/amadeus-sensor-numeric-provenance.ts");
 const ROOT_IMPORTS = "@.agents/rules/amadeus.md\n@.agents/rules/amadeus-codex-suffix.md\n";
@@ -127,22 +126,16 @@ function preflightDeliveryTool(
   expect(verdict.pass, JSON.stringify(verdict)).toBe(expectedPass);
 }
 
-class TestProcessExit extends Error {
-  constructor(readonly code: number) {
-    super(`process-exit-${code}`);
-  }
-}
-
-async function fire(
+function fire(
   root: string,
   harnessDir: string,
   outputPath: string,
   project: string,
-): Promise<number> {
-  const module = (await import(pathToFileURL(join(root, "tools/amadeus-sensor.ts")).href)) as {
-    main: (argv: string[]) => Promise<void>;
-  };
-  const argv = [
+): void {
+  const result = spawnSync(
+    process.execPath,
+    [
+      join(root, "tools/amadeus-sensor.ts"),
       "fire",
       SENSOR_ID,
       "--stage",
@@ -151,32 +144,26 @@ async function fire(
       outputPath,
       "--project-dir",
       project,
-  ];
-  const env = {
-    AMADEUS_HARNESS_DIR: harnessDir,
-    AMADEUS_STAGE_GRAPH: join(root, "tools/data/stage-graph.json"),
-    AMADEUS_SENSORS_DIR: join(root, "sensors"),
-    AMADEUS_SENSOR_SCRIPT_DIR: join(root, "tools"),
-  };
-  const previousEnv = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
-  const originalExit = process.exit;
-  Object.assign(process.env, env);
-  process.exit = ((code = 0): never => {
-    throw new TestProcessExit(typeof code === "number" ? code : 1);
-  }) as typeof process.exit;
-  try {
-    await module.main(argv);
-    throw new Error("sensor-dispatcher-returned-without-exit");
-  } catch (error) {
-    if (error instanceof TestProcessExit) return error.code;
-    throw error;
-  } finally {
-    process.exit = originalExit;
-    for (const [key, value] of Object.entries(previousEnv)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  }
+    ],
+    {
+      cwd: project,
+      encoding: "utf8",
+      timeout: DISTRIBUTION_TIMEOUT_MS,
+      env: {
+        ...process.env,
+        AMADEUS_HARNESS_DIR: harnessDir,
+        AMADEUS_STAGE_GRAPH: join(root, "tools/data/stage-graph.json"),
+        AMADEUS_SENSORS_DIR: join(root, "sensors"),
+        AMADEUS_SENSOR_SCRIPT_DIR: join(root, "tools"),
+      },
+    },
+  );
+  const diagnostics = `stdout:\n${result.stdout}\nstderr:\n${result.stderr}`;
+  expect(result.error, diagnostics).toBeUndefined();
+  expect(result.signal, diagnostics).toBeNull();
+  expect(result.status, diagnostics).toBe(0);
+  expect(result.stdout, diagnostics).toBe("");
+  expect(result.stderr, diagnostics).toBe("");
 }
 
 beforeAll(async () => {
@@ -198,11 +185,11 @@ beforeAll(async () => {
 
   const promoted = await promoteSelfMain(["--apply", "--no-build"], projectRoot, () => undefined, null);
   expect(promoted).toBe(0);
-}, HOOK_TIMEOUT_MS);
+}, DISTRIBUTION_TIMEOUT_MS);
 
 afterAll(() => {
   if (projectRoot !== "") rmSync(projectRoot, { recursive: true, force: true });
-}, HOOK_TIMEOUT_MS);
+}, DISTRIBUTION_TIMEOUT_MS);
 
 describe("t533 numeric provenance distribution", () => {
   test("fails closed for registry drift, duplicate roots, and unsafe manifest paths", () => {
@@ -260,7 +247,7 @@ describe("t533 numeric provenance distribution", () => {
     }
   });
 
-  test("fires paired pass and failure audit terminals from every self-install harness", async () => {
+  test("fires paired pass and failure audit terminals from every self-install harness", () => {
     const selfInstallTargets = targets.filter((target) => target.selfInstallRoot !== null);
     expect(selfInstallTargets.map((target) => target.id).sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
     const fixture = seedIntent(projectRoot);
@@ -280,8 +267,7 @@ describe("t533 numeric provenance distribution", () => {
       ] as const) {
         preflightDeliveryTool(promotedRoot, target.harnessDir, outputPath, projectRoot, expectedPass);
         const before = sensorRows(fixture.auditDir).length;
-        const exitCode = await fire(promotedRoot, target.harnessDir, outputPath, projectRoot);
-        expect(exitCode, target.id).toBe(0);
+        fire(promotedRoot, target.harnessDir, outputPath, projectRoot);
         const rows = sensorRows(fixture.auditDir).slice(before);
         expect(rows.map((row) => row.eventName), JSON.stringify(rows[1]?.attributes)).toEqual([
           "amadeus.sensor.fired",
@@ -294,5 +280,5 @@ describe("t533 numeric provenance distribution", () => {
         expect(terminalAttrs["Fire id"]).toBe(firedAttrs["Fire id"]);
       }
     }
-  });
+  }, DISTRIBUTION_TIMEOUT_MS);
 });
