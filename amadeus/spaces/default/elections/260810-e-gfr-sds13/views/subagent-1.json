@@ -1,0 +1,17 @@
+{
+  "electionId": "E-GFR-SDS13",
+  "voter": "subagent-1",
+  "question": "260810-grilling-frontier-resync scope-definition の §13 学習候補は 0 件(選定なし)でよいか。diary の Interpretations 2件は既存規定(ステージ Step 3 の SETTLED 分類ゲート・前ステージのモード選択継続)の適用実例、Deviations 1件は既存 cid(election-answer-after-ruling / ruling-dependent-placeholder)の違反未遂の自己捕捉記録であり新規ノルムではない、と conductor は判断した。各自 diary(amadeus/spaces/default/intents/260810-grilling-frontier-resync/ideation/scope-definition/memory.md)と成果物3点(scope-document.md / intent-backlog.md / scope-definition-questions.md)を実測確認して投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補がある(留保に具体候補を記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

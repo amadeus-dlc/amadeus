@@ -1047,5 +1047,12 @@
     "dirName": "260810-tla-applicability-wiring",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fe9c1-1949-74d5-a30c-6b8073d6164e",
+    "slug": "grilling-frontier-resync",
+    "dirName": "260810-grilling-frontier-resync",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

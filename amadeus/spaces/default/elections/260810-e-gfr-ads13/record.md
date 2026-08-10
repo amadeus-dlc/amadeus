@@ -1,0 +1,11 @@
+# Election Record — E-GFR-ADS13
+
+- question: 260810-grilling-frontier-resync application-design の §13 学習候補は 0 件(選定なし)でよいか。diary の Interpretations 2件はいずれも既存 cid(requirements-analysis:c5 の執行判断・E-OC1 判定様式・citation-semantics-check)の適用実例であり、§12a は i1 READY(GoA 2、FOLLOW-UP 2件は同一ターン反映済み)で新規の欠陥機序も観測されていない、と conductor は判断した。各自 diary(amadeus/spaces/default/intents/260810-grilling-frontier-resync/inception/application-design/memory.md)と成果物5点+questions(0問様式)を実測確認して投票すること。
+
+裁定: 0件で可(choice 1 — tie 裁定)
+- 留保(subagent-2, GoA2): GoA2の留保: components.md の Review — Iteration 1(READY, GoA2)を実読確認 — FOLLOW-UP 2件(FR-PROJ-4/DOG/LAND 表外注記、C6 stage-protocol残存語彙の所有物明記)は同一ターンで反映済みと本文・Findings両方に記載されており、新規欠陥機序の指摘はない。diary Interpretations 2件はいずれも骨格識別(ADR-1)とマーカー様式(ADR-2)の既存慣行接地であり、cid:requirements-analysis:c5(既存流儀への接地は問わない)およびcid:application-design:citation-semantics-check(引用元との意味論相違の明示照合)の適用実例として questions ファイルのE-OC1判定・ADR-2『意味論適合の明示』節で確認できる。よって0件で可。
+- 留保(subagent-1, GoA2): 独立実測: ADR-2(decisions.md:20)の citation-semantics-check 記述は「引用元 amadeus-issue-form:v1 マーカーの消費者(issue-labels.yml)は『マーカー不在=非フォーム』としてfail-openに扱う」と断定するが、.github/workflows/issue-labels.yml を全文実読した結果、同ワークフローは amadeus-issue-form マーカーを一切参照しない(grep 0件)。実際の分類ゲートは `if: contains(github.event.issue.body, '### 優先度')` と各種別の見出し文字列(重大度/エレベーターピッチ/対象読者/回答してほしい問い)の hasField 判定であり、HTML コメントマーカーはこの分類ロジックの入力になっていない(marker はテンプレ本文にのみ存在し、tests/integration/t426-issue-form-contract.test.ts が構造チェックするだけ)。§12a reviewer は『機構引用...amadeus-issue-form マーカー...の実コード照合すべて一致』と READY(GoA2)理由に明記しているが、この特定の意味論主張(citation-semantics-check の対比先)は実装と食い違っており、機構引用検証(cid:requirements-analysis:mechanism-cite-verify-at-draft)と意味論適合照合(cid:application-design:citation-semantics-check)がすり抜けた実例と考えられる。ADR-1の cid:code-generation:allowlist-line-pin-stale 引用は実在確認できた(team.md 該当行)ため誤りはADR-2の対比先consumer記述に限定される。§13候補として『ADRの意味論適合照合(citation-semantics-check)は、対比対象として引用したconsumerファイルが実際に当該マーカー/機構を参照しているかをgrep等で直接確認してから相違点を記述する』という手順強化を検討候補として記す(0件ではなく候補ありと判断)。なお本件はブロッカー級ではなく、decisions.md ADR-2 の一文修正で足りる規模の指摘であり、component/services等の他成果物やFR網羅性には影響しない。
+票タイムライン: 配信 2026-08-10T05:22:43Z → 配信 2026-08-10T05:22:43Z → subagent-2 2026-08-10T05:23:54Z → subagent-1 2026-08-10T05:27:41Z → 開票 2026-08-10T05:27:55Z
+GoA[E-GFR-ADS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0
+
+- hold 裁定履歴: tie → choice:1(2026-08-10T05:29:34Z、復帰先 tallied)

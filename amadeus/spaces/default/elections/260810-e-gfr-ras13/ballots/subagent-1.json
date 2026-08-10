@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-RAS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立検証: requirements.md Iteration 1/2 の Review block、re-scans 訂正節、RA diary Tradeoffs を実読し、git grep -n と git grep -in を自ら再実行して差分を確認した。case-sensitive では 7ファイル8行、case-insensitive では追加6行(stage-protocol.md:277、docs/reference/04-stage-protocol.md:294、.ja.md:244、docs/guide/14-artifacts-reference.md:208、docs/guide/16-worked-examples.md:102/.ja.md:115)が加わり、合計12ファイル14行と主張どおり一致した。E-ASD-RES13 は述語の記録(再現可能性)を求めるが、記録された述語自体の大小文字扱いという検出力の欠落は別面であり、既存 cid ファミリの射程外の新規知見と判断する。",
+  "submittedAt": "2026-08-10T05:35:00Z",
+  "receivedAt": "2026-08-10T05:06:07Z"
+}

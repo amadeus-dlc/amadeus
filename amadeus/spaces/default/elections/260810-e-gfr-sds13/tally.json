@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補がある(留保に具体候補を記す)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T03:59:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-SDS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-10T04:10:00Z",
+      "receivedAt": "2026-08-10T03:59:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-SDS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-08-10T03:59:02Z",
+      "receivedAt": "2026-08-10T03:59:12Z"
+    }
+  ],
+  "resolutions": []
+}

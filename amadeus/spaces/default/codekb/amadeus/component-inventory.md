@@ -2035,3 +2035,24 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
+
+## grilling 対話契約の棚卸し（260810-grilling-frontier-resync）
+
+Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈り閾値へ再定義）に向けた対応表。全数は `re-scans/260810-grilling-frontier-resync.md` を正本とする。observed `5564dccd1`。
+
+| 層 | コンポーネント | 責務 | 患部箇所（file:line） |
+|---|---|---|---|
+| 正本 | `packages/framework/core/amadeus-common/protocols/grilling-protocol.md`（137行） | grilling 対話規律の単一正本。D1-D7（Dialogue Discipline）、8ステップループ、質問テンプレート、workflow/standalone 分岐を定義 | D1 :29、D6（Bounded termination）:34、§2 ループ :37-69、§3 テンプレート :71-122、§4 :124-137、帰属ヘッダ :1-6 |
+| 参照面 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md`（1304行） | grilling を workflow ステージへ配線する薄い呼び出し面。depth 別の質問数予算契約そのものはこちらが正本 | §3 depth 表 :300-311、Step 3d「Grill me」:348-356（`hybrid termination` 残存 :349）、§8 Depth-Level Contract :726-746、semi decide-question 経路 :137 |
+| 参照面 | `packages/framework/core/amadeus-common/conductor.md` | interaction-mode 一覧で grilling を1行言及 | :50-53（"one question at a time" 言及 :51） |
+| 参照面 | `packages/framework/core/skills/amadeus-grilling/SKILL.md`（58行） | standalone grilling スキルのエントリポイント。read-only 保証と depth 既定値（Standard=8）を明記 | Purpose 節、Standalone rules 規則2（depth 言及の唯一箇所） |
+| 機械契約 | `packages/framework/core/tools/amadeus-directive.ts` | depth 値の閉語彙契約（3値）を directive validation に強制 | `VALID_DEPTH_VALUES` :62、呼び出し :664 |
+| 機械契約 | `packages/framework/core/tools/amadeus-sensor-question-budget.ts` | depth 別の質問数上限をセンサーとして29ステージへ強制 | `QUESTION_BUDGETS` :39-43、`DEPTH_LEVELS`（directive.ts からの mirror）:47、`QUESTION_BUDGET_CUTOFF_YYMMDD` :63 |
+| 機械契約 | `packages/framework/core/amadeus-common/stages/*.md`（29ファイル） | `question-budget` センサーの宣言側。ideation 7 / inception 8 / construction 7 / operation 7 | `git grep -l "question-budget"` で全数列挙、専用 manifest ファイルなし |
+| 検証面 | `tests/integration/t415-interaction-budget-contract.test.ts` | `stage-protocol.md` の数値予算文言 + `grilling-protocol.md` D6/C-3 文言を verbatim `toContain`/`not.toContain` で29個ピン | grilling/depth 関連ピン :26-54 |
+| 検証面 | `tests/unit/t199-grilling-distribution.test.ts` | 4ハーネス `dist/` への `SKILL.md` / `grilling-protocol.md` 投影の存在・frontmatter・MIT 表示を検査（`hybrid`/`bounded` 用語は非対象、dist 読みのため正本編集後は要リビルド） | 6アサーション全数、非 verbatim |
+| 投影 | `dist/{claude,codex,kiro,kiro-ide}/**/amadeus-common/protocols/{grilling-protocol.md,stage-protocol.md}` | `bun run build` によるハーネス別投影コピー | `existsSync` のみで内容検証は t199 の限定範囲 |
+| 用語ドリフト | `docs/reference/04-stage-protocol.md` / `.ja.md` | canonical D6 改称（→ Bounded termination）に未追従の旧称 `hybrid termination` / `ハイブリッド終了` が残存 | `.md:320`、`.ja.md:264` |
+| prose 消費者 | `docs/guide/02-your-first-workflow.{md,ja.md}` / `docs/guide/07-interaction-modes.{md,ja.md}` | "one question at a time" を利用者向けガイドで踏襲説明（英語のみ、和訳は「一度に1質問」で別語彙） | `02-*.md:89` / `.ja.md:89`、`07-*.md:22,37` / `.ja.md:18`、和訳: `04-stage-protocol.ja.md:264` |
+
+**未確定**: frontier 駆動（上流 `mattpocock/skills`、ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d`）が具体的にどの層（正本のみか、機械契約の閉語彙・数値も含むか）まで置き換えるかは要件段の裁定事項。本棚卸しは現行構造の全数把握であり、再定義後の to-be 構造は含まない。

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-UGS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "Interpretations行(U1へのC1/C2/C5統合、U2 kind変更)はcid:units-generation:c1(a)の適用実例、Deviations行(Step 6必須項目欠落)はcid:requirements-analysis:c2-mandated-sections-precheckの違反実例(i1 BLOCKER→i2で是正済み)であることをunit-of-work.mdのReview Iteration 1/2ブロックとmemory.mdを突合して確認した。両cidとも既存文言と一致し、新規の一般化可能なノルムは見当たらない。0件で可。",
+  "rationale": null,
+  "submittedAt": "2026-08-10T06:00:00Z",
+  "receivedAt": "2026-08-10T05:45:56Z"
+}

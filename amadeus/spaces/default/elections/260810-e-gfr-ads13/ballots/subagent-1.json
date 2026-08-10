@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-ADS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "独立実測: ADR-2(decisions.md:20)の citation-semantics-check 記述は「引用元 amadeus-issue-form:v1 マーカーの消費者(issue-labels.yml)は『マーカー不在=非フォーム』としてfail-openに扱う」と断定するが、.github/workflows/issue-labels.yml を全文実読した結果、同ワークフローは amadeus-issue-form マーカーを一切参照しない(grep 0件)。実際の分類ゲートは `if: contains(github.event.issue.body, '### 優先度')` と各種別の見出し文字列(重大度/エレベーターピッチ/対象読者/回答してほしい問い)の hasField 判定であり、HTML コメントマーカーはこの分類ロジックの入力になっていない(marker はテンプレ本文にのみ存在し、tests/integration/t426-issue-form-contract.test.ts が構造チェックするだけ)。§12a reviewer は『機構引用...amadeus-issue-form マーカー...の実コード照合すべて一致』と READY(GoA2)理由に明記しているが、この特定の意味論主張(citation-semantics-check の対比先)は実装と食い違っており、機構引用検証(cid:requirements-analysis:mechanism-cite-verify-at-draft)と意味論適合照合(cid:application-design:citation-semantics-check)がすり抜けた実例と考えられる。ADR-1の cid:code-generation:allowlist-line-pin-stale 引用は実在確認できた(team.md 該当行)ため誤りはADR-2の対比先consumer記述に限定される。§13候補として『ADRの意味論適合照合(citation-semantics-check)は、対比対象として引用したconsumerファイルが実際に当該マーカー/機構を参照しているかをgrep等で直接確認してから相違点を記述する』という手順強化を検討候補として記す(0件ではなく候補ありと判断)。なお本件はブロッカー級ではなく、decisions.md ADR-2 の一文修正で足りる規模の指摘であり、component/services等の他成果物やFR網羅性には影響しない。",
+  "rationale": null,
+  "submittedAt": "2026-08-10T05:27:07Z",
+  "receivedAt": "2026-08-10T05:27:41Z"
+}

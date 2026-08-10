@@ -1408,5 +1408,47 @@
     "dirName": "260805-e-xbb-re-s13",
     "createdAt": "2026-08-05T06:52:59Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-ICS13",
+    "dirName": "260810-e-gfr-ics13",
+    "createdAt": "2026-08-10T03:48:45Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-SDS13",
+    "dirName": "260810-e-gfr-sds13",
+    "createdAt": "2026-08-10T03:57:58Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-RES13",
+    "dirName": "260810-e-gfr-res13",
+    "createdAt": "2026-08-10T04:15:54Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-RAS13",
+    "dirName": "260810-e-gfr-ras13",
+    "createdAt": "2026-08-10T05:04:34Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-ADS13",
+    "dirName": "260810-e-gfr-ads13",
+    "createdAt": "2026-08-10T05:22:43Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-UGS13",
+    "dirName": "260810-e-gfr-ugs13",
+    "createdAt": "2026-08-10T05:44:52Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-GFR-DPS13",
+    "dirName": "260810-e-gfr-dps13",
+    "createdAt": "2026-08-10T06:27:11Z",
+    "status": "recorded"
   }
 ]
