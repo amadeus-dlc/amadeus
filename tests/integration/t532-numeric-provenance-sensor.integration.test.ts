@@ -3,6 +3,7 @@
 // size: medium
 
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -428,37 +429,58 @@ describe("t532 generated authority projection", () => {
 });
 
 describe("t532 performance budget", () => {
-  function adversarialInput(kibibytes: number) {
-    let markdown = "";
-    const row =
-      "- adversarial 123 files, 29/30 PASS, 9.5%, observed 42, [escape](../../outside.md), `not-a-command` xxxxxxxxxx\n";
-    while (Buffer.byteLength(markdown) < kibibytes * 1024) markdown += row;
-    return {
-      stage: "code-generation",
-      outputPath:
-        "/workspace/amadeus/spaces/default/intents/260810-performance/construction/u/code-generation/code-summary.md",
-      content: { kind: "present" as const, markdown },
-    };
-  }
+  const row =
+    "- adversarial 123 files, 29/30 PASS, 9.5%, observed 42, [escape](../../outside.md), `not-a-command` xxxxxxxxxx\n";
+  const performanceWorker = `
+    import { evaluateNumericProvenance } from "./packages/framework/core/tools/amadeus-sensor-numeric-provenance.ts";
 
-  function durations(input: ReturnType<typeof adversarialInput>): number[] {
-    for (let index = 0; index < 5; index += 1) evaluateNumericProvenance(input, DEPS);
-    return Array.from({ length: 20 }, () => {
-      const started = Bun.nanoseconds();
-      evaluateNumericProvenance(input, DEPS);
-      return (Bun.nanoseconds() - started) / 1_000_000;
-    }).sort((left, right) => left - right);
-  }
+    const deps = { fileExists: () => false, isRegularFile: () => false };
+    const row = ${JSON.stringify(row)};
+    function adversarialInput(kibibytes) {
+      let markdown = "";
+      while (Buffer.byteLength(markdown) < kibibytes * 1024) markdown += row;
+      return {
+        stage: "code-generation",
+        outputPath: "/workspace/amadeus/spaces/default/intents/260810-performance/construction/u/code-generation/code-summary.md",
+        content: { kind: "present", markdown },
+      };
+    }
+    function durations(input) {
+      for (let index = 0; index < 5; index += 1) evaluateNumericProvenance(input, deps);
+      return Array.from({ length: 20 }, () => {
+        const started = Bun.nanoseconds();
+        evaluateNumericProvenance(input, deps);
+        return (Bun.nanoseconds() - started) / 1_000_000;
+      }).sort((left, right) => left - right);
+    }
 
-  test("stays within the 50KB/100KB latency and linearity budgets", () => {
     const fifty = durations(adversarialInput(50));
     const hundred = durations(adversarialInput(100));
-    const fiftyMedian = fifty[9]!;
-    const hundredMedian = hundred[9]!;
-    const hundredP95 = hundred[18]!;
+    process.stdout.write(JSON.stringify({
+      fiftyMedian: fifty[9],
+      hundredMedian: hundred[9],
+      hundredP95: hundred[18],
+    }));
+  `;
 
-    expect(hundredMedian).toBeLessThanOrEqual(100);
-    expect(hundredP95).toBeLessThanOrEqual(250);
-    expect(hundredMedian / fiftyMedian).toBeLessThanOrEqual(2.5);
+  test("stays within the 50KB/100KB latency and linearity budgets", () => {
+    const worker = spawnSync(process.execPath, ["--eval", performanceWorker], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    if (worker.status !== 0) {
+      throw new Error(`numeric provenance performance worker failed: ${worker.stderr}`);
+    }
+    const measurements = JSON.parse(worker.stdout) as {
+      fiftyMedian: number;
+      hundredMedian: number;
+      hundredP95: number;
+    };
+    expect(Object.values(measurements).every(Number.isFinite)).toBe(true);
+
+    expect(measurements.hundredMedian).toBeLessThanOrEqual(100);
+    expect(measurements.hundredP95).toBeLessThanOrEqual(250);
+    expect(measurements.hundredMedian / measurements.fiftyMedian).toBeLessThanOrEqual(2.5);
   });
 });
