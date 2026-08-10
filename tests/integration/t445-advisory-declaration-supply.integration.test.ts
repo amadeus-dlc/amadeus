@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   advisoriesForHost,
   declaredAdvisoriesForPlugin,
   declaredFormalCheckArgv,
+  declaredHandoffStage,
   parseAdvisoryDeclarations,
+  resolvePluginManifest,
   spawnEvaluator,
   type DeclarationFs,
+  type DeclarationWarn,
   type RunEvaluator,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 import {
@@ -74,21 +77,34 @@ function declareAdvisories(advisories: unknown): void {
   );
 }
 
+// The consumer layout: no `<projectRoot>/plugins/` authoring face at all, the
+// manifest lives only on the staging face under the host root.
+function declareAdvisoriesInStaging(advisories: unknown): void {
+  mkdirSync(join(hostRoot, ".amadeus-plugin-src", "demo"), { recursive: true });
+  writeFileSync(
+    join(hostRoot, ".amadeus-plugin-src", "demo", "plugin.json"),
+    JSON.stringify({ name: "demo", tools: [], advisories }),
+    "utf8",
+  );
+}
+
+// Evaluator argv paths are plugin-root-relative (FR-2): the engine joins them
+// to the located plugin root before running the evaluator.
 const HOLD_DECLARATION = [
   {
     code: "authoring-hold",
     checkpoints: ["requirements-analysis"],
-    evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
+    evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
     formalCheck: null,
   },
 ];
 
-function advisoriesFor(stage: string, stdout: string, status = 1) {
+function advisoriesFor(stage: string, stdout: string, status = 1, warn?: DeclarationWarn) {
   const seen: string[][] = [];
   const raised = advisoriesForHost(hostRoot, stage, undefined, (argv) => {
     seen.push([...argv]);
     return { status, stdout };
-  });
+  }, warn);
   return { raised, seen };
 }
 
@@ -114,7 +130,8 @@ describe("declared advisory supply", () => {
     expect(String(raised[0]?.code)).toBe("authoring-hold");
     expect(raised[0]?.message).toContain("no-applicability-receipt");
     // argv only: the declaration is executed as a vector, never a shell string.
-    expect(seen).toEqual([["bun", "plugins/demo/tools/evaluate.ts", "hold"]]);
+    // The relative script path resolves against the located plugin root (FR-2).
+    expect(seen).toEqual([["bun", join(projectRoot, "plugins", "demo", "tools", "evaluate.ts"), "hold"]]);
   });
 
   test("raises nothing when the evaluator returns no-hold", () => {
@@ -152,11 +169,94 @@ describe("declared advisory supply", () => {
     expect(seen).toEqual([]);
   });
 
-  test("a composed plugin with no manifest on disk raises nothing", () => {
+  // FR-4: the pin's essence is that no advisory fires (fail-open) — but the
+  // absence is loud now: exactly one warning per composed plugin per call.
+  test("a composed plugin with no manifest on either face raises nothing but warns once", () => {
     composeDemo();
-    const { raised, seen } = advisoriesFor("requirements-analysis", "");
+    const warnings: string[] = [];
+    const { raised, seen } = advisoriesFor("requirements-analysis", "", 1, (message) => warnings.push(message));
     expect(raised).toEqual([]);
     expect(seen).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("demo");
+    expect(warnings[0]).toContain("no manifest");
+  });
+});
+
+// FR-7(a): the consumer layout — a workspace with no repo-root `plugins/`
+// authoring face at all, where the bundle's manifest lives only under the
+// host's staging dir — must supply the declared advisories exactly like the
+// dogfood layout does.
+describe("declared advisory supply from the staging face (consumer layout)", () => {
+  test("raises the declared advisory with argv resolved against the staging plugin root", () => {
+    composeDemo();
+    declareAdvisoriesInStaging(HOLD_DECLARATION);
+    const warnings: string[] = [];
+    const { raised, seen } = advisoriesFor(
+      "requirements-analysis",
+      JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] } }),
+      1,
+      (message) => warnings.push(message),
+    );
+    expect(raised).toHaveLength(1);
+    expect(String(raised[0]?.code)).toBe("authoring-hold");
+    expect(seen).toEqual([["bun", join(hostRoot, ".amadeus-plugin-src", "demo", "tools", "evaluate.ts"), "hold"]]);
+    expect(warnings).toEqual([]);
+  });
+
+  test("the authoring face wins when both faces carry a manifest", () => {
+    composeDemo();
+    declareAdvisories(HOLD_DECLARATION);
+    declareAdvisoriesInStaging([
+      {
+        code: "staging-only-hold",
+        checkpoints: ["requirements-analysis"],
+        evaluator: { argv: ["bun", "tools/other.ts", "hold"] },
+        formalCheck: null,
+      },
+    ]);
+    const { raised, seen } = advisoriesFor(
+      "requirements-analysis",
+      JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] } }),
+    );
+    expect(raised).toHaveLength(1);
+    expect(String(raised[0]?.code)).toBe("authoring-hold");
+    expect(seen).toEqual([["bun", join(projectRoot, "plugins", "demo", "tools", "evaluate.ts"), "hold"]]);
+  });
+
+  // FR-5: the run-now lookup paths read the staging face too, so a consumer
+  // workspace's directive does not silently drop handoff_stage.
+  test("declaredHandoffStage and declaredFormalCheckArgv resolve from the staging face", () => {
+    composeDemo();
+    declareAdvisoriesInStaging([
+      {
+        code: "authoring-hold",
+        checkpoints: ["requirements-analysis"],
+        evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
+        formalCheck: { argv: ["bun", "tools/check.ts", "--out", "{out}"] },
+        handoff: { stage: "tla-authoring" },
+      },
+    ]);
+    expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
+      .toBe("tla-authoring");
+    expect(declaredFormalCheckArgv(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
+      .toEqual(["bun", "tools/check.ts", "--out", "{out}"]);
+  });
+
+  test("a declaration lookup with no manifest on either face returns null and warns", () => {
+    composeDemo();
+    const warnings: string[] = [];
+    const stage = declaredHandoffStage(
+      projectRoot,
+      "demo",
+      "authoring-hold",
+      undefined,
+      join(hostRoot, ".amadeus-plugin-src"),
+      (message) => warnings.push(message),
+    );
+    expect(stage).toBeNull();
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("demo");
   });
 });
 
@@ -174,6 +274,19 @@ describe("the shipped formal-model-check declaration", () => {
       "functional-design",
       "build-and-test",
     ]);
+  });
+
+  // FR-3: in the dogfood layout both declared tool paths — the manifest's own
+  // evaluator argv and the engine's run-now runner — resolve to real files
+  // against the located plugin root.
+  test("both declared tool paths resolve to real files against the located plugin root", () => {
+    const repoRoot = join(import.meta.dir, "..", "..");
+    const located = resolvePluginManifest(repoRoot, undefined, "formal-model-check");
+    expect(located).not.toBeNull();
+    if (located === null) return;
+    expect(located.pluginRoot).toBe(join(repoRoot, "plugins", "formal-model-check"));
+    expect(existsSync(join(located.pluginRoot, "tools", "tla-authoring.ts"))).toBe(true);
+    expect(existsSync(join(located.pluginRoot, "tools", "run-model-check.ts"))).toBe(true);
   });
 });
 
