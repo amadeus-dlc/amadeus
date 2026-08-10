@@ -17,8 +17,23 @@ import {
   latestHumanTurn,
   renderReport,
   reportPathFor,
-  runCli,
+  runCli as invokeCli,
 } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+
+/**
+ * t448 predates Intent-linked provenance. Its status/report cases exercise the
+ * unlinked convergence contract explicitly; t533 owns the linked matrix.
+ */
+function runCli(
+  argv: readonly string[],
+  seams: Parameters<typeof invokeCli>[1],
+): ReturnType<typeof invokeCli> {
+  const verb = argv[0];
+  return invokeCli(
+    verb === "status" || verb === "report" ? [...argv, "--unlinked", "true"] : argv,
+    seams,
+  );
+}
 
 // U2 convergence-toolchain: the gh execution boundary (C6) and the CLI (C5).
 // Integration layer — these touch the real filesystem and the process seam.
@@ -182,7 +197,14 @@ describe("parsePrRef / fetchRawPrState", () => {
   test("fetches the raw merge state as strings, leaving the parse to C3", async () => {
     const payload = JSON.stringify({
       data: {
-        repository: { pullRequest: { mergeable: "UNKNOWN", mergeStateStatus: "BLOCKED" } },
+        repository: {
+          pullRequest: {
+            mergeable: "UNKNOWN",
+            mergeStateStatus: "BLOCKED",
+            title: "",
+            body: "",
+          },
+        },
       },
     });
     const s = scriptedSpawn([ok("v"), ok("auth"), ok(payload)]);
@@ -190,7 +212,14 @@ describe("parsePrRef / fetchRawPrState", () => {
     if (!runner.ok) throw new Error("unreachable");
     const raw = await fetchRawPrState(runner.value, REF);
     expect(raw.ok).toBe(true);
-    if (raw.ok) expect(raw.value).toEqual({ mergeable: "UNKNOWN", mergeStateStatus: "BLOCKED" });
+    if (raw.ok) {
+      expect(raw.value).toEqual({
+        mergeable: "UNKNOWN",
+        mergeStateStatus: "BLOCKED",
+        title: "",
+        body: "",
+      });
+    }
     // Owner, name and number travel as separate -F arguments, never interpolated.
     const argv = s.argvs.at(-1) ?? [];
     expect(argv).toContain("owner=amadeus-dlc");
@@ -323,7 +352,7 @@ function cliSpawn(state: { mergeable: string; mergeStateStatus: string }, pages:
       return ok(fixture(page));
     }
     return ok(
-      JSON.stringify({ data: { repository: { pullRequest: { ...state } } } }),
+      JSON.stringify({ data: { repository: { pullRequest: { ...state, title: "", body: "" } } } }),
     );
   };
   let pageCalls = 0;
@@ -1051,7 +1080,11 @@ describe("CLI status verb — exit-code contract", () => {
       if (joined.includes("--version")) return ok("v");
       if (joined.includes("auth status")) return ok("in");
       if (joined.includes("reviewThreads")) return { code: 1, stdout: "", stderr: "boom" };
-      return ok(JSON.stringify({ data: { repository: { pullRequest: { ...CLEAN } } } }));
+      return ok(
+        JSON.stringify({
+          data: { repository: { pullRequest: { ...CLEAN, title: "", body: "" } } },
+        }),
+      );
     };
     const out = await runCli(
       ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "1", "--unit", "u2", "--record", record],
