@@ -132,10 +132,14 @@ describe("IdentityDigest.extractStableSections", () => {
     expect(sections.map((s) => String(s.id))).toEqual(["FR-007"]);
   });
 
-  test("does not match ids whose digit run continues past the grammar", () => {
+  // Revised with FR-2 of #2766 (user-ruled grammar widening, Q1=A): a digit run
+  // of any length is a valid id under the corpus grammar, so FR-0061 now
+  // extracts; a non-digit suffix still breaks the word boundary and never
+  // matches.
+  test("accepts any digit-run length but not a non-digit suffix", () => {
     const requirements = ["### FR-0061 過剰桁", "本文", "", "### FR-006x 接尾辞", "本文2"].join("\n");
     const sections = unwrap(IdentityDigest.extractStableSections(requirements, "requirements"));
-    expect(sections).toEqual([]);
+    expect(sections.map((s) => String(s.id))).toEqual(["FR-0061"]);
   });
 
   test("rejects duplicate ids, enumerating every duplicate", () => {

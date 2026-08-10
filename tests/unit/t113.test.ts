@@ -234,6 +234,9 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], result: "" }] })).toContain(
       "advisories[0].result must be non-empty string",
     );
+    expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], handoff_stage: "" }] })).toContain(
+      "advisories[0].handoff_stage must be non-empty string",
+    );
   });
 
   test("dispatch-subagent well-formed -> VALID", () => {

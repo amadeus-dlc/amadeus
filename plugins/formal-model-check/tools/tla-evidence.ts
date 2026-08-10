@@ -42,7 +42,12 @@ export type IdentityComparison =
 const STABLE_ID_RE = /^(?:(?:FR|NFR|AC)-\d{3}|ADR-\d+)$/;
 // The functional design fixes both heading grammars to a \b boundary after the
 // id, so real headings like "## ADR-1: title" stay extractable.
-const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;
+// FR-2 (#2766) widened the requirements side to the corpus this repository
+// writes — `FR-1`, `NFR-1`, `AC-1`, `FR-CROSS-1`, `FR-1-1` — while keeping the
+// zero-padded `FR-001` form. The trailing segment must be numeric, so a
+// digitless id like `FR-NA` stays outside the grammar, and the qualifier
+// segments are greedy so `FR-1-1` reads as one id rather than as `FR-1`.
+const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-(?:[A-Z0-9]+-)*\d+)\b/;
 const DECISIONS_HEADING_RE = /^##\s+(ADR-\d+)\b/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 
