@@ -4,6 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   mkdirSync,
   mkdtempSync,
@@ -139,11 +140,39 @@ describe("u7 CI build-before-test contract", () => {
     expect(spawnSync("bash", ["-n"], { input: build }).status).toBe(0);
     expect(build).toContain('git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"');
     expect(build).toContain('git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"');
-    expect(build).toContain('(cd "${tree}" && bun run build)');
-    expect(build).toContain('(cd "${tree}" && bun scripts/release-dist.ts --version "${version}")');
+    expect(build).toContain('(cd "${tree}" && run_isolated "${tree}" bun run build)');
+    expect(build).toContain(
+      '(cd "${tree}" && run_isolated "${tree}" bun scripts/release-dist.ts --version "${version}")',
+    );
     expect(build.indexOf('prepare_tree "${REPRO_ROOT}/tree-a"')).toBeLessThan(
       build.indexOf('prepare_tree "${REPRO_ROOT}/tree-b"'),
     );
+  });
+
+  test("reproducibility builds isolate mutable state and preserve the frozen lockfile", () => {
+    const build = stepByName(
+      jobByName("reproducible-build"),
+      "Build isolated distributions",
+    ).run ?? "";
+    expect(build).toContain('SOURCE_DATE_EPOCH="$(git -C "${GITHUB_WORKSPACE}" show -s --format=%ct "${GITHUB_SHA}")"');
+    expect(build).toContain("env -i \\");
+    for (const binding of [
+      'PATH="${PATH}"',
+      'HOME="${tree}-env/home"',
+      'TMPDIR="${tree}-env/tmp"',
+      'BUN_INSTALL_CACHE_DIR="${tree}-env/cache"',
+      "TZ=UTC",
+      "LC_ALL=C",
+      'SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}"',
+      'AMADEUS_DIST_ROOT="${tree}/dist"',
+    ]) {
+      expect(build).toContain(binding);
+    }
+    expect(build).toContain('(cd "${tree}" && run_isolated "${tree}" bun install --frozen-lockfile)');
+    expect(build).toContain('if [[ -e "${tree}/node_modules" || -e "${tree}/dist" ]]');
+    expect(build).toContain('lockfile_before="$(sha256sum "${tree}/bun.lock" | cut -d\' \' -f1)"');
+    expect(build).toContain('lockfile_after="$(sha256sum "${tree}/bun.lock" | cut -d\' \' -f1)"');
+    expect(build).toContain('if [[ "${lockfile_before}" != "${lockfile_after}" ]]');
   });
 
   test("reproducibility steps share a RUNNER_TEMP-derived isolated root", () => {
@@ -200,6 +229,15 @@ describe("u7 CI build-before-test contract", () => {
       expect(different.status).toBe(1);
       expect(different.stdout + different.stderr).toContain("release-assets/asset");
       expect(different.stdout + different.stderr).not.toContain("SECRET-CONTENT");
+
+      writeFileSync(join(root, "tree-b", "release-assets", "asset"), "same\n");
+      chmodSync(join(root, "tree-b", "release-assets", "asset"), 0o755);
+      const differentMode = spawnSync("bash", ["-c", compare], {
+        encoding: "utf8",
+        env: { ...process.env, RUNNER_TEMP: runnerTemp },
+      });
+      expect(differentMode.status).toBe(1);
+      expect(differentMode.stdout + differentMode.stderr).toContain("release-assets/asset");
     } finally {
       rmSync(runnerTemp, { recursive: true, force: true });
     }

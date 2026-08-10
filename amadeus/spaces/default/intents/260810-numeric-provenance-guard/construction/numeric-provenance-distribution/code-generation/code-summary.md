@@ -11,7 +11,13 @@ U2 が定義した numeric-provenance sensor の意味論には変更を加え�
 - `tests/integration/t533-numeric-provenance-distribution.integration.test.ts`
   - package harness 8 種（claude、codex、cursor、kimi、kiro、kiro-ide、opencode、pi）について、core tool bytes、manifest projection、advisory metadata、`harness.json`、stage graph の enforcement stage exact set を確認する。
   - self-install harness 5 種（claude、codex、cursor、kimi、opencode）について、公式 build 出力を既存 `promoteSelfMain` で temporary project へ投影し、promotion 後の固定 dispatcher から正負 fixture を fire する。
-  - 各 fire が同一 Fire id の `SENSOR_FIRED` と `SENSOR_PASSED` / `SENSOR_FAILED` の組で audit 終端へ到達することを確認する。
+  - 各 harness で manifest discovery、正負 verdict、audit 属性、advisory severity・stage graph、package/self-install の tool・manifest raw bytes 一致を確認する。
+- `.github/workflows/ci.yml`
+  - A/Bごとにproject root、node_modules、cache、HOME、TMPDIR、dist rootを分離し、生成済みinstall stateがないことをpreflightする。
+  - `env -i` から `PATH`、隔離済み4 root、`TZ=UTC`、`LC_ALL=C`、固定 `SOURCE_DATE_EPOCH`、専用 `AMADEUS_DIST_ROOT` だけを渡す。
+  - `bun install --frozen-lockfile` の前後で `bun.lock` SHA-256を照合し、`diff -qr` と `git diff --no-index` でbytes・path・file type・executable bitを比較する。
+- `tests/integration/t-ci-build-before-test.integration.test.ts`
+  - 上記のbuild隔離契約とlockfile guardをworkflow公開面で固定し、byte差と実行権限差の両方が比較stepを失敗させることを実行確認する。
 
 runtime dependency、test configuration、生成済み配送 tree への手編集は追加していない。
 
@@ -19,7 +25,21 @@ runtime dependency、test configuration、生成済み配送 tree への手編�
 
 - Red: 未実装の `scripts/numeric-provenance-distribution.ts` を focused integration test から import し、module not found で exit 1 を確認した。
 - Green: exact-set / path containment resolver と package/self-install vertical acceptance を実装した。
-- Final focused: `bun test --timeout 120000 tests/integration/t533-numeric-provenance-distribution.integration.test.ts` は 3 pass / 0 fail / 168 assertions、exit 0。
+- Review BLOCKER Red: `t-ci-build-before-test.integration.test.ts` は隔離環境・lockfile不変・mode差検出の不足により 8 pass / 3 fail。生成済みinstall state preflightの追加sliceは 10 pass / 1 fail。
+- Review BLOCKER Green: 同テストは 11 pass / 0 fail / 104 assertions、exit 0。
+- Final focused: `bun run build` 後の `bun test --timeout 120000 tests/integration/t533-numeric-provenance-distribution.integration.test.ts` は 3 pass / 0 fail / 228 assertions、exit 0。
+
+## Self-install harness別5項目receipt
+
+| Harness | 1. Discovery | 2. 正負verdict | 3. Audit対応 | 4. Advisory/graph | 5. Tool/manifest bytes |
+| --- | --- | --- | --- | --- | --- |
+| claude | PASS | PASS/FAIL | PASS | PASS | PASS |
+| codex | PASS | PASS/FAIL | PASS | PASS | PASS |
+| cursor | PASS | PASS/FAIL | PASS | PASS | PASS |
+| kimi | PASS | PASS/FAIL | PASS | PASS | PASS |
+| opencode | PASS | PASS/FAIL | PASS | PASS | PASS |
+
+各行は同じ `t533` loop の観測である。固定dispatcherがmanifestを解決し、正fixtureを `SENSOR_PASSED`、負fixtureを `SENSOR_FAILED` としてemitする。audit行はsensor ID、stage、record相対output path、同一fire IDをassertする。promotion後manifestのadvisory severityとstage graph exact setをassertし、tool／manifestのraw bytesを対応package出力と比較する。
 
 ## 検証結果
 
@@ -31,8 +51,9 @@ runtime dependency、test configuration、生成済み配送 tree への手編�
 - `bun run source-only:check`: exit 0
 - `bun .codex/tools/amadeus-graph.ts compile --check`: exit 0
 - `bun run distribution:check`: exit 0（payload 444 + docs 4 = 448 files）
-- 独立した A/B package 出力（各 428 files）の `diff -qr`: exit 0
-- `bun run test:ci -- -P 4`: exit 1。964 files / 12,962 assertions を実行し、1 file / 1 assertion の既存 full-suite failure が残った。U3 の t533 は同 run 内で 3 pass / 0 fail だった。非 verbose runner が終了時に一時 log directory を削除するため、終了後に failure file 名を復元できなかった。
+- workflow の実 `Build isolated distributions` と `Compare generated outputs and release assets` stepを専用 `RUNNER_TEMP` で同期実行: exit 0。A/Bともrelease self-checkは version `0.1.7`、`find` 集計で5,072 files、SHA-256 `c56e3e2f65abb572d06b2617c575d03971d632bd4a592c4746871855b76e36d5` で一致した。
+- `bun test --timeout 120000 tests/integration/t-ci-build-before-test.integration.test.ts`: 11 pass / 0 fail / 104 assertions、exit 0
+- GitHub Actions の [CI run 31415039320](https://github.com/amadeus-dlc/amadeus/actions/runs/31415039320): conclusion `success`。非 skip の12 job（Tests、Typecheck、Source-only and graph invariants、Lint and complexity、Reproducible build、Coverage Report など）はすべて success、条件非該当の2 jobは skipped。U3 を含む [PR #2863](https://github.com/amadeus-dlc/amadeus/pull/2863) の blocking CI 集合は green。
 
 ## 実装上の判断
 

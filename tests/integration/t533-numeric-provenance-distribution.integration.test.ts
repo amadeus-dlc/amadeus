@@ -261,6 +261,10 @@ describe("t533 numeric provenance distribution", () => {
       expect(readFileSync(join(promotedRoot, "sensors/amadeus-numeric-provenance.md"))).toEqual(
         readFileSync(join(packageRoot(target), "sensors/amadeus-numeric-provenance.md")),
       );
+      expect(readFileSync(join(promotedRoot, "sensors/amadeus-numeric-provenance.md"), "utf8")).toContain(
+        "default_severity: advisory",
+      );
+      expect(graphWiredStages(promotedRoot)).toEqual([...GENERATED_NUMERIC_PROVENANCE_MAPPING.wiredStages].sort());
       for (const [outputPath, expectedPass, terminal] of [
         [fixture.positive, true, "amadeus.sensor.passed"],
         [fixture.negative, false, "amadeus.sensor.failed"],
@@ -277,6 +281,7 @@ describe("t533 numeric provenance distribution", () => {
         const terminalAttrs = rows[1]?.attributes as Record<string, unknown>;
         expect(firedAttrs["Sensor ID"]).toBe(SENSOR_ID);
         expect(firedAttrs["Stage slug"]).toBe("code-generation");
+        expect(firedAttrs["Output path"]).toBe(relative(projectRoot, outputPath).split(sep).join("/"));
         expect(terminalAttrs["Fire id"]).toBe(firedAttrs["Fire id"]);
       }
     }

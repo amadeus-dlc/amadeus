@@ -311,6 +311,22 @@ jobs:
         run: |
           set -euo pipefail
           REPRO_ROOT="${RUNNER_TEMP}/amadeus-reproducible-build"
+          SOURCE_DATE_EPOCH="$(git -C "${GITHUB_WORKSPACE}" show -s --format=%ct "${GITHUB_SHA}")"
+
+          run_isolated() {
+            local tree="$1"
+            shift
+            env -i \
+              PATH="${PATH}" \
+              HOME="${tree}-env/home" \
+              TMPDIR="${tree}-env/tmp" \
+              BUN_INSTALL_CACHE_DIR="${tree}-env/cache" \
+              TZ=UTC \
+              LC_ALL=C \
+              SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
+              AMADEUS_DIST_ROOT="${tree}/dist" \
+              "$@"
+          }
 
           prepare_tree() {
             local tree="$1"
@@ -320,11 +336,24 @@ jobs:
             fi
             git clone --quiet --no-hardlinks "${GITHUB_WORKSPACE}" "${tree}"
             git -C "${tree}" checkout --quiet --detach "${GITHUB_SHA}"
-            (cd "${tree}" && bun install --frozen-lockfile)
-            (cd "${tree}" && bun run build)
+            if [[ -e "${tree}/node_modules" || -e "${tree}/dist" ]]; then
+              echo "::error::isolated build tree contains generated install state: ${tree}"
+              exit 1
+            fi
+            mkdir -p "${tree}-env/home" "${tree}-env/tmp" "${tree}-env/cache"
+            local lockfile_before
+            lockfile_before="$(sha256sum "${tree}/bun.lock" | cut -d' ' -f1)"
+            (cd "${tree}" && run_isolated "${tree}" bun install --frozen-lockfile)
+            (cd "${tree}" && run_isolated "${tree}" bun run build)
             local version
-            version="$(cd "${tree}" && bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')"
-            (cd "${tree}" && bun scripts/release-dist.ts --version "${version}")
+            version="$(cd "${tree}" && run_isolated "${tree}" bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')"
+            (cd "${tree}" && run_isolated "${tree}" bun scripts/release-dist.ts --version "${version}")
+            local lockfile_after
+            lockfile_after="$(sha256sum "${tree}/bun.lock" | cut -d' ' -f1)"
+            if [[ "${lockfile_before}" != "${lockfile_after}" ]]; then
+              echo "::error::frozen install or build changed bun.lock in ${tree}"
+              exit 1
+            fi
           }
 
           mkdir -p "${REPRO_ROOT}"
@@ -357,6 +386,12 @@ jobs:
             fi
             if ! diff -qr "${tree_a}" "${tree_b}"; then
               echo "::error::isolated builds produced different bytes: ${output}"
+              exit 1
+            fi
+            if ! git diff --no-index --quiet -- "${tree_a}" "${tree_b}"; then
+              git diff --no-index --name-status -- "${tree_a}" "${tree_b}" || true
+              git diff --no-index --summary -- "${tree_a}" "${tree_b}" || true
+              echo "::error::isolated builds produced different paths, file types, or executable bits: ${output}"
               exit 1
             fi
           done
