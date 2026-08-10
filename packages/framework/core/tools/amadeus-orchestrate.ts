@@ -221,6 +221,13 @@ import {
   subgraphForScope,
 } from "./amadeus-graph.ts";
 import {
+  PerUnitConsumeFanoutError,
+  resolvePerUnitConsumeFanout,
+  type PerUnitConsumeOutcome,
+} from "./amadeus-per-unit-consume-fanout.ts";
+import { foldUnitPoolEventSets } from "./amadeus-unit-pool.ts";
+import { readUnitPoolEventSetsFromAudit } from "./amadeus-unit-pool-runtime.ts";
+import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
@@ -2410,7 +2417,49 @@ function projectTypeFrom(
 // the resolved path, so the presence split downstream can key producer lookups
 // and required-ness off the authored vocabulary instead of re-deriving the
 // name from the path shape.
-type ResolvedConsume = { artifact: string; required: boolean; path: string };
+type ResolvedConsume = {
+  artifact: string;
+  required: boolean;
+  path: string;
+  perUnitSucceeded?: true;
+};
+
+interface PerUnitConsumePopulation {
+  readonly declaredUnits: readonly string[];
+  readonly outcomes: readonly PerUnitConsumeOutcome[];
+}
+
+function readPerUnitConsumePopulation(projectDir: string): PerUnitConsumePopulation {
+  const rows = loadRuntimeUnitRows(projectDir);
+  const declaredUnits = rows === null
+    ? []
+    : rows.flatMap((row) => {
+      const name = runtimeObjectField(row, "name");
+      return typeof name === "string" && name.trim() !== "" ? [name] : [];
+    });
+  const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
+  const batchIds = [...new Set(eventSets.map((set) => set.batchId))];
+  const outcomes: PerUnitConsumeOutcome[] = [];
+  for (const batchId of batchIds) {
+    const projection = foldUnitPoolEventSets(eventSets, batchId);
+    for (const terminal of projection.terminal) {
+      outcomes.push({
+        unit: terminal.unitId,
+        outcome: terminal.outcome === "succeeded" || terminal.outcome === "cancelled"
+          ? terminal.outcome
+          : "failed",
+      });
+    }
+  }
+  return { declaredUnits, outcomes };
+}
+
+function hasRequiredPerUnitConsumes(node: GraphStage): boolean {
+  return !isPerUnit(node) && (node.consumes ?? []).some((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+}
 
 function resolveConsumes(
   consumes: Consume[],
@@ -2420,6 +2469,7 @@ function resolveConsumes(
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): ResolvedConsume[] {
   const resolved: ResolvedConsume[] = [];
   for (const consume of consumes) {
@@ -2447,7 +2497,35 @@ function resolveConsumes(
       path: resolveConsumePath(consume.artifact, node, unit, recordPrefix, codekbCtx),
     });
   }
-  return resolved;
+  if (population === undefined || isPerUnit(node)) return resolved;
+  const fanoutCandidates = resolved.filter((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+  if (fanoutCandidates.length === 0) return resolved;
+  const fanout = resolvePerUnitConsumeFanout({
+    consumer: node.slug,
+    graph: loadGraph(),
+    declaredUnits: population.declaredUnits,
+    outcomes: population.outcomes,
+    templates: fanoutCandidates.map((consume) => ({
+      artifact: consume.artifact,
+      path: consume.path,
+    })),
+  });
+  const expanded = fanout.map((consume) => ({
+    artifact: consume.artifact,
+    required: true,
+    path: consume.path,
+    perUnitSucceeded: true as const,
+  }));
+  const fanoutArtifacts = new Set(fanoutCandidates.map((consume) => consume.artifact));
+  const firstFanoutIndex = resolved.findIndex((consume) => fanoutArtifacts.has(consume.artifact));
+  return [
+    ...resolved.slice(0, firstFanoutIndex),
+    ...expanded,
+    ...resolved.slice(firstFanoutIndex).filter((consume) => !fanoutArtifacts.has(consume.artifact)),
+  ];
 }
 
 // Split resolved consumes into PRESENT (file exists on disk) and ABSENT
@@ -2470,6 +2548,21 @@ function resolveConsumes(
 //     check against; everything stays in `consumes`, exactly as before.
 //   - a path still carrying the {unit-name} placeholder → existence is
 //     unknowable pre-Bolt; it stays in `consumes`.
+function consumePresentOnDisk(consume: ResolvedConsume, absolutePath: string): boolean {
+  if (!consume.perUnitSucceeded) return existsSync(absolutePath);
+  try {
+    return statSync(absolutePath).isFile();
+  } catch (error) {
+    const code = error !== null && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+    if (code !== "ENOENT" && code !== "ENOTDIR") {
+      throw new PerUnitConsumeFanoutError("consume-presence-read-failed", [consume.path]);
+    }
+    return false;
+  }
+}
+
 function splitConsumesByPresence(
   consumes: ResolvedConsume[],
   scope: string,
@@ -2485,14 +2578,14 @@ function splitConsumesByPresence(
       continue;
     }
     const abs = join(codekbCtx.projectDir, ...c.path.split("/"));
-    if (existsSync(abs)) {
+    if (consumePresentOnDisk(c, abs)) {
       present.push(c.path);
       continue;
     }
     if (!c.required) continue; // optional + missing → not an input, not a gap
     const producers = producersOf(c.artifact);
     const producerOnPath = producers.some((p) => onPath.has(p.slug));
-    absent.push({ path: c.path, expected: !producerOnPath });
+    absent.push({ path: c.path, expected: c.perUnitSucceeded ? false : !producerOnPath });
   }
   return { present, absent };
 }
@@ -2673,9 +2766,11 @@ function buildRunStageDirective(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx, unitKind,
+    population,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
   const resolvedProduces = resolveProduces(
@@ -3904,6 +3999,9 @@ function emitRunStageForSlug(
     recordPrefix,
     codekbCtx,
     unitKind,
+    stateContent !== null && codekbCtx && hasRequiredPerUnitConsumes(node)
+      ? readPerUnitConsumePopulation(codekbCtx.projectDir)
+      : undefined,
   );
   if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
