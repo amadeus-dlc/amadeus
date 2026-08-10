@@ -468,7 +468,7 @@ export function advisoriesForHost(
   ];
 }
 
-/** The declaration one (plugin, code) carries, or null when the manifest has none. */
+/** The declaration one (plugin, code) carries, plus the located plugin root, or null when the manifest has none. */
 function declarationFor(
   projectRoot: string,
   plugin: string,
@@ -476,7 +476,7 @@ function declarationFor(
   fs: DeclarationFs,
   stagingRoot?: string,
   warn: DeclarationWarn = defaultDeclarationWarn,
-): AdvisoryDeclaration | null {
+): { declaration: AdvisoryDeclaration; pluginRoot: string } | null {
   const resolved = resolvePluginManifest(projectRoot, stagingRoot, plugin, fs);
   if (resolved === null) {
     warn(missingPluginManifestWarning(projectRoot, stagingRoot, plugin));
@@ -484,7 +484,8 @@ function declarationFor(
   }
   try {
     const parsed = parseAdvisoryDeclarations(fs.readFileSync(resolved.manifestPath));
-    return parsed.declarations.find((declaration) => declaration.code === code) ?? null;
+    const declaration = parsed.declarations.find((entry) => entry.code === code) ?? null;
+    return declaration === null ? null : { declaration, pluginRoot: resolved.pluginRoot };
   } catch {
     return null;
   }
@@ -499,7 +500,12 @@ export function declaredFormalCheckArgv(
   stagingRoot?: string,
   warn: DeclarationWarn = defaultDeclarationWarn,
 ): readonly string[] | null {
-  return declarationFor(projectRoot, plugin, code, fs, stagingRoot, warn)?.formalCheckArgv ?? null;
+  const found = declarationFor(projectRoot, plugin, code, fs, stagingRoot, warn);
+  if (found === null || found.declaration.formalCheckArgv === null) return null;
+  // The same plugin-root-relative convention as the evaluator argv (FR-2): a
+  // formal-check argv is spawned from the consumer workspace too, so relative
+  // elements must resolve against the located plugin root, not projectRoot.
+  return resolveEvaluatorArgv(found.declaration.formalCheckArgv, found.pluginRoot);
 }
 
 /** The stage a declared advisory hands a run-now choice to, or null when it names none. */
@@ -511,5 +517,5 @@ export function declaredHandoffStage(
   stagingRoot?: string,
   warn: DeclarationWarn = defaultDeclarationWarn,
 ): string | null {
-  return declarationFor(projectRoot, plugin, code, fs, stagingRoot, warn)?.handoffStage ?? null;
+  return declarationFor(projectRoot, plugin, code, fs, stagingRoot, warn)?.declaration.handoffStage ?? null;
 }

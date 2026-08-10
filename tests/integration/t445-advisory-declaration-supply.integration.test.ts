@@ -240,7 +240,7 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
     expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
       .toBe("tla-authoring");
     expect(declaredFormalCheckArgv(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
-      .toEqual(["bun", "tools/check.ts", "--out", "{out}"]);
+      .toEqual(["bun", join(hostRoot, ".amadeus-plugin-src", "demo", "tools", "check.ts"), "--out", "{out}"]);
   });
 
   test("a declaration lookup with no manifest on either face returns null and warns", () => {
@@ -411,8 +411,8 @@ describe("declared advisory hold symmetry across next and report", () => {
     {
       code: "authoring-hold",
       checkpoints: ["requirements-analysis"],
-      evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
-      formalCheck: { argv: ["bun", "plugins/demo/tools/check.ts", "--out", "{out}", "--id", "{advisory-instance}"] },
+      evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
+      formalCheck: { argv: ["bun", "tools/check.ts", "--out", "{out}", "--id", "{advisory-instance}"] },
     },
   ];
 
@@ -427,7 +427,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     if (guarded.kind !== "hold") return;
     expect(guarded.runRequired).toBe(true);
     const route = guarded.formalChecks[0];
-    expect(route?.command).toContain("plugins/demo/tools/check.ts");
+    expect(route?.command).toContain(JSON.stringify(join(projectDir, "plugins", "demo", "tools", "check.ts")));
     expect(route?.command).not.toContain("{out}");
     expect(route?.command).toContain(JSON.stringify(route?.output_dir));
     expect(route?.command).toContain(JSON.stringify(route?.advisory_instance));
