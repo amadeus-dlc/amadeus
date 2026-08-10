@@ -335,7 +335,10 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
 
 ### 入力
 
-- `<record>/construction/{unit-name}/nfr-requirements/` からの NFR 要件
+- `<record>/construction/{unit-name}/nfr-requirements/` からの NFR 要件(存在する場合)。
+  NFR Requirements を SKIP する scope(self-feature が該当)でも本ステージは実行され、
+  engine はそれらの入力を「不在かつ想定内」として渡す。directive の `consumes` に
+  列挙された入力のみを読み、不在と示された入力を再作成したり欠落として報告したりしない。
 - `<record>/construction/{unit-name}/functional-design/` からの機能設計成果物
   (存在する場合)
 - アーキテクチャコンテキストのための `<record>/inception/application-design/` からの
@@ -347,8 +350,9 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
    インフラストラクチャとプラットフォームのインプット用に amadeus-aws-platform-agent
    のペルソナと知識をロード。
 
-2. **Read Prior Artifacts** -- NFR 要件、機能設計成果物(存在する場合)、および
-   アーキテクチャコンテキストのためのアプリケーション設計を読む。
+2. **Read Prior Artifacts** -- 存在する NFR 要件(scope がそのステージを SKIP した
+   場合は不在)、機能設計成果物(存在する場合)、およびアーキテクチャコンテキストの
+   ためのアプリケーション設計を読む。
 
 3. **Generate Design Questions** -- `[Answer]:` タグを使った文脈に適した質問ファイルを
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`

@@ -344,6 +344,10 @@ infrastructure and platform input.
 ### Inputs
 
 - NFR requirements from `<record>/construction/{unit-name}/nfr-requirements/`
+  when they exist. A scope that SKIPs NFR Requirements (self-feature does)
+  runs this stage anyway, and the engine marks those inputs
+  absent-and-expected: read only what the directive's `consumes` lists, and
+  never recreate or report a marked-absent input as missing.
 - Functional design artifacts from
   `<record>/construction/{unit-name}/functional-design/` (if they exist)
 - Application design from `<record>/inception/application-design/` for
@@ -355,8 +359,9 @@ infrastructure and platform input.
    Load amadeus-aws-platform-agent persona and knowledge for infrastructure and
    platform input.
 
-2. **Read Prior Artifacts** -- Read NFR requirements, functional design
-   artifacts (if they exist), and application design for architectural context.
+2. **Read Prior Artifacts** -- Read the present NFR requirements (none when the
+   scope skipped that stage), functional design artifacts (if they exist), and
+   application design for architectural context.
 
 3. **Generate Design Questions** -- Create a questions file at
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`
