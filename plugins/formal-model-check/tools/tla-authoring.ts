@@ -7,8 +7,9 @@
 // exit 0 on success, 1 on a typed failure, 2 on a usage error. Dispatch only —
 // every judgement lives in tla-evidence.ts.
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
   ApplicabilityJudge,
   AuthoringHoldEvaluator,
@@ -75,6 +76,8 @@ const USAGE = [
   "  applicability series --subjects <id,id,...>",
   "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
   "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
+  "  subjects declare --document <path> --kind <requirements|decisions> --id <stable-id>",
+  "                   [--document/--kind/--id repeated] [--out <path>]",
   "  trace --subjects <path> --rows <path> --invariants <path>",
   "  proof --model <tla> --cfg <cfg> --reduction <manifest> --invariants <path> --identity <digest>",
   "  commit --draft <path> --bundle <digest> --preconditions <path>",
@@ -450,8 +453,13 @@ function holdEvaluate(flags: Record<string, string>): Emitted {
 // The governed-subjects declaration lives in the active space's canonical spec
 // directory, resolved through the shared spec root resolver (BR-1). Throws
 // LegacySpecError on a legacy layout (fail-closed, BR-4).
+//
+// It sits at the specs root rather than under `tla/`, so it is outside
+// ACTIVATION_WATCH_GLOBS (`tla/**`) the same way the evidence store is: editing
+// the governance declaration must not change the watched spec hash and raise
+// the sibling activation advisory (D4 of #2766).
 export function defaultSubjectsPath(workspaceRoot: string = process.cwd()): string {
-  return join(resolveSpecRoots(workspaceRoot).tlaDir, "authoring-subjects.json");
+  return join(resolveSpecRoots(workspaceRoot).specsRoot, "authoring-subjects.json");
 }
 
 interface GovernedSubjects {
@@ -529,6 +537,61 @@ function advisoryHold(flags: Record<string, string>): Emitted {
     identity,
     series: ApplicabilityJudge.subjectSeriesKey(governed.subjects),
   });
+}
+
+// The sole writer of the governed-subjects declaration (D1 of #2766). Repeated
+// flags are read off the raw argv because the shared `--name value` parser
+// keeps only the last occurrence, and a declaration names several documents and
+// ids at once.
+function repeatedFlags(argv: readonly string[]): Record<string, string[]> {
+  const collected: Record<string, string[]> = Object.create(null);
+  for (let index = 0; index < argv.length; index += 2) {
+    const name = (argv[index] as string).slice(2);
+    const values = collected[name] ?? (collected[name] = []);
+    values.push(argv[index + 1] as string);
+  }
+  return collected;
+}
+
+type IoFailure = { readonly kind: "io-failure"; readonly path: string; readonly detail: string };
+
+// The rename is the declaration's only visible moment: a reader sees either the
+// previous declaration or the new one, never a half-written file. Same shape as
+// the model map's publish (tla-registration.ts), including the staging cleanup.
+function publishSubjects(path: string, governed: GovernedSubjects): IoFailure | null {
+  const staging = `${path}.${randomUUID()}.tmp`;
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(staging, `${JSON.stringify(governed, null, 2)}\n`);
+    renameSync(staging, path);
+    return null;
+  } catch (cause) {
+    rmSync(staging, { force: true });
+    return { kind: "io-failure", path, detail: cause instanceof Error ? cause.message : String(cause) };
+  }
+}
+
+function subjectsDeclare(flags: Record<string, string>, argv: readonly string[]): Emitted {
+  const repeated = repeatedFlags(argv);
+  const paths = repeated.document ?? [];
+  const kinds = repeated.kind ?? [];
+  const subjects = repeated.id ?? [];
+  if (paths.length === 0 || paths.length !== kinds.length) {
+    return usageError("subjects declare requires one --kind for every --document");
+  }
+  if (subjects.length === 0) return usageError("subjects declare requires at least one --id");
+  const governed = parseGovernedSubjects({
+    documents: paths.map((path, index) => ({ path, kind: kinds[index] })),
+    subjects,
+  });
+  if (governed === null) return usageError("--kind must be requirements or decisions");
+  // Nothing is written until the declaration resolves: a supply the evaluator
+  // would fail closed on must not reach disk in the first place.
+  const identity = governedIdentity(governed);
+  if (typeof identity !== "string") return identity;
+  const path = flags.out ?? defaultSubjectsPath();
+  const failure = publishSubjects(path, governed);
+  return failure === null ? succeeded({ path, identity, subjects: governed.subjects }) : failed(failure);
 }
 
 // --- U3: trace coverage ----------------------------------------------------
@@ -735,7 +798,9 @@ function subjectIdentityOf(candidate: Record<string, unknown>): AggregateDigest 
   return typeof raw === "string" ? asAggregateDigest(raw) : null;
 }
 
-type Handler = (flags: Record<string, string>) => Emitted;
+// The raw argv is handed alongside the parsed flags so a verb whose contract
+// takes repeated flags can read them; every other handler ignores it.
+type Handler = (flags: Record<string, string>, argv: readonly string[]) => Emitted;
 // A flat handler may be sync or async; dispatch already returns a Promise, so
 // a sync return is folded in for free.
 type FlatHandler = (
@@ -758,6 +823,7 @@ const COMMANDS: Readonly<Record<string, Readonly<Record<string, Handler>>>> = {
     series: applicabilitySeries,
   },
   advisory: { hold: advisoryHold },
+  subjects: { declare: subjectsDeclare },
 };
 
 // Commands whose whole contract is one verb, so they take flags directly.
@@ -788,7 +854,7 @@ async function dispatch(
   if (handler === undefined) return usageError(`unknown ${group} subcommand: ${verb}`);
   const flags = parseFlags(rest);
   if (flags === null) return usageError("flags must be given as --name value pairs");
-  return handler(flags);
+  return handler(flags, rest);
 }
 
 /** In-process entry point: argv without the runtime prefix, one JSON line per run. */
