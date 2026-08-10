@@ -1,6 +1,58 @@
 # コンポーネント棚卸し
 
-## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、現在、observed `91f37ec85`）
+## formal-model-check advisory 供給チェーンの棚卸し（260810-tla-applicability-wiring、現在、observed `91f37ec85`）
+
+**観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。正本は `re-scans/260810-tla-applicability-wiring.md`。
+
+対象は [Issue #2766](https://github.com/amadeus-dlc/amadeus/issues/2766)（TLA+ applicability 判定が常に no-hold）とユーザー裁定 **案A**（接続完成 + FR-005 receipt 閉包）。判別子は「**宣言 → 発火 → 評価 → 解除の鎖のどこが実装済みで、どこに書き手が居ないか**」。結論を先に言えば、**鎖は両端が完成していて中央（subjects の書き手）だけが空**である。
+
+### 供給チェーンのコンポーネントと現況
+
+| 段 | コンポーネント（`packages/framework/core/tools/` ほか） | 現況（observed 実測） |
+|---|---|---|
+| **宣言 parse** | `amadeus-advisory-declaration.ts` — `parseAdvisoryDeclarations` :110-128 / `parseOne` :90-99 / `declaredAdvisoriesForPlugin` :253-277 | **実装済み・稼働中**。`pluginManifestPath` :243-245 = `<projectRoot>/plugins/<plugin>/plugin.json` が本 repo に実在するため経路は生きている |
+| **no-hold の痕跡消失** | 同 :171 逐語 `if (isRecord(verdict) && verdict.kind === "no-hold") return null;` | **#2766 の症状面**。「評価器が走って no-hold」と「そもそも走っていない」が観測上区別できない |
+| **checkpoint 発火** | `amadeus-orchestrate.ts` — `ACTIVATION_ADVISORY_STAGES` :1785-1789（`requirements-analysis` / `functional-design` / `build-and-test`）、`emitActivationAdvisory` :1808-1820、`raiseActivationAdvisoriesFor` :1844-1858 | **実装済み・2 call site**。コメント :1796-1803 が両者の乖離を戒める → 供給側に触る変更は**両方を必ず棚卸し** |
+| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 実装済み |
+| **run-now ルート供給** | `amadeus-advisory-choice.ts` — `declaredFormalCheckRoute` :925-955、予約トークン4種 :939-944、`resolveRunRequiredHold` :978-1019、`DECLARED_RELEASE_RULE` :962-963 | **実装済み・テストで両側固定**（`t445-advisory-declaration-supply.integration.test.ts:297-322`）。実 manifest の `formalCheck` を非 null にすれば **engine 変更なしでルートが立つ** |
+| **subjects 供給** | `plugins/formal-model-check/tools/tla-authoring.ts` — `defaultSubjectsPath` :453-455、`GovernedSubjects` :457-476、`governedIdentity` :479-496、`advisoryHold` :498-532 | **🔴 書き手が存在しない**。解決先 `amadeus/spaces/default/specs/tla/authoring-subjects.json` は**未作成**（`ls -d` 実測）。`advisoryHold` は ENOENT のみ no-hold（:507-508）で、それ以外は fail-closed |
+| **model-map 書込** | `plugins/formal-model-check/tools/tla-registration.ts:265-270`（staging + `renameSync` の atomic replace） | model-map **のみ**を書く。subjects 宣言の書き手はここにも無い |
+| **判定表** | `plugins/formal-model-check/tools/tla-applicability.ts` — `judge` :121-138、`ApplicabilityReceipt` :147-157、`buildReceipt` :176-198、`HoldReason` :211-214、`evaluate` :319-352 | 実装済み。終端2経路（:169）は検証済み human approval 必須（:183-185 `approval-missing`） |
+| **evidence store** | `amadeus/spaces/default/specs/tla-evidence` | **未作成**（`ls -d` 実測）。案A で hold を実発火させると全 intent の RA/FD/B&T で `no-applicability-receipt` hold が立つ |
+
+**書き手不在の全数根拠**（述語 `git grep -n "authoring-subjects"`、全 tracked・除外なし → **7 hit**）: record 3 / docs 2 / 読み手 1（`tla-authoring.ts:454`）/ テスト 1（`t481-spec-root-resolver.integration.test.ts:227`）= **書き手 0 件**。
+
+### applicability judge の CLI verb 全数（`tla-authoring.ts` :746-792 の argv dispatch）
+
+| 形 | verb | ハンドラ |
+|---|---|---|
+| group+verb | `identity extract` / `identity compare` | :150 / :173 |
+| group+verb | `bundle build` / `verify` / `read` / `list` / `head` | :201 / :237 / :258 / :267 |
+| group+verb | `applicability judge` / `receipt` / `series` | :351 / :373 / :399 |
+| group+verb | `advisory hold` | :498 |
+| flat | `hold` / `trace` / `proof`（async）/ `commit` | :407 / :592 / :625 / :669 |
+
+フラグ形式は `--name value` の対のみ（`parseFlags` :101-112、奇数長・非 `--` 先頭は null → usage exit 2）。in-process seam は `runTlaAuthoring` :795-803、エントリ :805-807。
+
+### FR-005 receipt surface — owner が存在しない
+
+- 永続 kind は2つ（`tla-evidence.ts:229-231`）= `authoring-bundle` / `terminal-route-receipt`。必須 part は :274-275
+- **書き手は `bundle build` のみ**（`tla-authoring.ts:201-228` → `EvidenceBundle.build`）。`applicability receipt`（:373-397）は receipt JSON を **stdout に返すだけで永続化しない**
+- `tla-authoring` stage は終端経路を明示拒否（`plugins/formal-model-check/stages/tla-authoring.md:40-44` 逐語「Refuse to start on a terminal route as well. `impl-only` and `non-target` carry no authoring work, so a receipt naming either one ends the stage instead of opening it.」）
+- → **非対象 receipt を発行する owner がワークフロー上どこにも無い**。案A 項目3 はこの欠落を埋める設計を要する。`t450-tla-authoring-stage-e2e.integration.test.ts:163` が「owner は stage 外」を固定しているピンで、**衝突しうる**
+
+### ADR-6 の一般化点と残る非一般化点
+
+- 一般化済み（改訂1 で承認、`260804-tla-authoring/inception/application-design/decisions.md:65`）: **宣言 parse** と **formal-check route の argv**（`declaredFormalCheckArgv` :334-348）
+- call site: `declaredFormalCheckArgv` = `amadeus-advisory-choice.ts:20`（import）/ `:932`（唯一の呼び出し）。`advisoriesForHost` = `amadeus-advisory-choice.ts:974` / `amadeus-orchestrate.ts:1816` / `:1817` / `:1847`
+- **🔴 非一般化点（案A 項目2 の核心）**: ルートの遷移先 stage は `declaredFormalCheckRoute` 内でハードコード。`amadeus-advisory-choice.ts:948` 逐語 `stage: "formal-model-check",` → **`tla-authoring` を指す手段が現行の一般化点に存在しない**。ADR-6 が一般化したのは argv だけで**遷移先 stage は一般化されていない**
+
+### 設計段へ持ち上げる2リスク
+
+- **🔴 R1 見出し文法の不一致（測定）**: `tla-evidence.ts:45` 逐語 `const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;` は3桁ゼロ埋めを要求するが、実コーパスは **134 ファイル中 3 ファイルのみ一致**（述語は re-scan の P2/P3）。対照として decisions 側（:46 `/^##\s+(ADR-\d+)\b/`）は **56 中 54** で健全。intent 要件を直接読む供給設計は現行文法では大半で `unresolvable-id` fail-closed になる
+- **🔴 R2 subjects の置き場（演繹、未実測）**: `amadeus-plugin-activation.ts:51` 逐語 `export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];`。直前の :49-50 が「the evidence store (`<specsRoot>/tla-evidence`) sits outside the glob by construction」と設計意図を明言する一方、`defaultSubjectsPath` の解決先 `specs/tla/authoring-subjects.json` は **glob の内側**。subjects 更新のたび spec-hash が変わり兄弟 advisory が発火する見込み — **ハッシュ再計算の実測は未実施**
+
+## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、履歴、2026-08-09、observed `91f37ec85`）
 
 **観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
 
