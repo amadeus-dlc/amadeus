@@ -232,6 +232,30 @@ describe("checkProvenance — complete ordered verdict", () => {
 });
 
 describe("renderProvenanceRemediation", () => {
+  test("renders every violation kind with actionable detail", () => {
+    const violations: readonly ProvenanceViolation[] = [
+      { kind: "title-prefix-missing" },
+      { kind: "title-unit-mismatch", expected: "unit-a", actual: "unit-b" },
+      { kind: "work-section-missing" },
+      { kind: "work-field-missing", field: "UUID" },
+      { kind: "record-mismatch", expected: "record-a", actual: "record-b" },
+      { kind: "unit-mismatch", expected: "unit-a", actual: "unit-b" },
+      { kind: "title-body-inconsistent", segment: "bolt" },
+    ];
+
+    expect(renderProvenanceRemediation(violations)).toContain(
+      [
+        "- Title must start with [intent/bolt/unit] .",
+        "- Title Unit mismatch: expected=unit-a actual=unit-b.",
+        `- Body is missing ${AMADEUS_WORK_HEADING}.`,
+        `- ${AMADEUS_WORK_HEADING} is missing UUID.`,
+        "- Record mismatch: expected=record-a actual=record-b.",
+        "- Body Unit mismatch: expected=unit-a actual=unit-b.",
+        "- Title and body disagree on bolt.",
+      ].join("\n"),
+    );
+  });
+
   test("is deterministic, keeps values single-line, and gives fixed body-file guidance", () => {
     const violation: ProvenanceViolation = {
       kind: "record-mismatch",
