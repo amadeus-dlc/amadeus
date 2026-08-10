@@ -503,7 +503,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
     expect(d.review_only).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9b: a whitespace-only Scope decision is recovered before the gate", () => {
     const proj = seedProject("functional-design", "on");
@@ -531,7 +531,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
     expect(d.review_only).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9c: an unreadable Review projection is recovered before the gate", () => {
     const proj = seedProject("functional-design", "on");
@@ -553,7 +553,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
     expect(d.review_only).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 9d: with every unit covered, the approve is ALLOWED (the guard passes) and
   // the transition commits (kind=done, not error).

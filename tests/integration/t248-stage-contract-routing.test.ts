@@ -419,7 +419,7 @@ describe("t248 kind-aware consume projection", () => {
     expect(directive.kind).toBe("run-stage");
     expect(artifactNames(directive.consumes)).toEqual([...expected]);
     expect("consumes_absent" in directive).toBe(false);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("covers a library NFR Design with only its two applicable outputs", () => {
     const project = seedProject([{ name: "library", kind: "library" }]);
@@ -752,7 +752,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.review_only).toBe(true);
     expect(directive.reviewer).toBe("amadeus-architecture-reviewer-agent");
     expect("next_stage" in directive).toBe(false);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("next recovers a missing verdict without a compiled unit DAG", () => {
     const project = seedProject([{ name: "legacy" }], { dependencyDoc: false });
@@ -768,7 +768,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.unit).toBe("legacy");
     expect(directive.gate).toBe(false);
     expect(directive.review_only).toBe(true);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard accepts an all-vacuous packaging stage in-process", () => {
     const project = seedProject([{ name: "package", kind: "packaging" }]);

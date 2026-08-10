@@ -495,7 +495,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.unit).toBe("unit-alpha");
     expect(d.gate).toBe(false);
     expect(d.review_only).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 14 pins the asymmetry E-OBB2-CG1 ruled INTENTIONAL: a LONE unit resolves
   // whether or not its artifacts already exist, because the resulting directive
