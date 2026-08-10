@@ -15,7 +15,7 @@ U1 `numeric-provenance-mapping-contract` の静的specとして、U2がconsumed-
   - lower-bound saturationとupper-bound saturation、codekb scan-only、stage/record-relative patternからproduces keyへの写像、quality-agent承認を固定した。
   - authority / snapshot / mapping / receiptのcanonical SHA-256 digest chainを実データから再計算可能な形で収録した。
 - `tests/integration/numeric-provenance-mapping-contract.integration.test.ts`
-  - schemaとfixtureの閉包性、固定語彙、index discriminator、sample identity、二値label、nearest-rank p95、mode/searchScope、mapping、wired stage、approval digest chainを検証する8件のintegration contract test。
+  - schemaとfixtureの閉包性、固定語彙、index discriminator、sample identity、二値label、nearest-rank p95、mode/searchScope、mapping、wired stage、approval digest chainを検証する9件のintegration contract test。
   - dependency追加を避けるため、U1で必要なJSON Schema subsetだけを検証するtest-local validatorを使用した。
 - `amadeus/spaces/default/intents/260810-numeric-provenance-guard/construction/numeric-provenance-mapping-contract/code-generation/code-generation-plan.md`
   - TDD順序、実装境界、traceability、test configurationを記録した。
@@ -27,6 +27,7 @@ U1 `numeric-provenance-mapping-contract` の静的specとして、U2がconsumed-
 3. 承認fixtureはsynthetic corpusに限定し、30分以上の二値label、20件以上のpositive sample、false-positive rate上限10%を機械検証可能にした。
 4. `W = max(nearest-rank p95, min + 1)` のlower-bound saturationは`W=1`かつ19/20 coverageのenforcement、upper-bound saturationは`p95=max`のためmeasurement-onlyとなる境界を固定した。
 5. U2/U3所有面を変更せず、静的contractの意味と承認証跡だけをU1へ閉じ込めた。
+6. 区切りなし`relativePath + line + normalizedText`が異なるtupleを同一preimageへ写す欠陥を修正し、sample identityをUTF-8 `JSON.stringify([relativePath,line,normalizedText])`（空白なし・要素順固定）のlowercase hex SHA-256へ変更した。承認fixtureの30 identitiesとauthority / mapping / receipt digest chainは新しいpreimageから再計算した。
 
 ## 要件traceability
 
@@ -42,7 +43,8 @@ U1 `numeric-provenance-mapping-contract` の静的specとして、U2がconsumed-
 
 - TDD Red: `bun test tests/integration/numeric-provenance-mapping-contract.integration.test.ts` — exit 1（schema未作成による`ENOENT`）。
 - JSON parse: `bun -e 'JSON.parse(await Bun.file(...).text())'` — exit 0。
-- Focused test: `bun test tests/integration/numeric-provenance-mapping-contract.integration.test.ts` — exit 0、8 pass / 0 fail、4466 expect calls。
+- Identity correction Red: 同一pathの`[5,"10件"]`と`[51,"0件"]`を区切りなし連結した旧preimageの衝突caseを追加し、旧schema式とfixture identityを検出してexit 1、7 pass / 2 fail。
+- Focused test: `bun test tests/integration/numeric-provenance-mapping-contract.integration.test.ts` — exit 0、9 pass / 0 fail、4472 expect calls。
 - Focused Biome: `bunx biome check tests/integration/numeric-provenance-mapping-contract.integration.test.ts` — exit 0、diagnosticなし。
 - Typecheck: `bun run typecheck` — exit 0。
 - Lint: `bun run lint` — exit 0。既存baselineの457 warnings / 17 infosのみで、新規testのfocused checkはclean。

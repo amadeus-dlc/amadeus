@@ -159,7 +159,7 @@
           "const": 40
         },
         "sampleIdentityExpression": {
-          "const": "sha256(relativePath + line + normalizedText)"
+          "const": "sha256(utf8(JSON.stringify([relativePath,line,normalizedText])))"
         },
         "machineExclusions": {
           "type": "object",
