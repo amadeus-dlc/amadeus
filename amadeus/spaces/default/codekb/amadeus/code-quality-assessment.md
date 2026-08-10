@@ -102,6 +102,45 @@ composed 面は危険要因にならない: `git ls-files dist .claude | wc -l` 
 
 `tests/helpers/harness-dir-fixture.ts` は既に `HarnessManifest` 型を import（`:11`）し `harnessDirOf` が manifest を `require`（`:22`）しているが、**`rulesRename` を返すヘルパーは持たない**。等価性テストが必要とする「`(harnessDir, rulesRename)` ペアの供給」はここへの最小追加で足りる。新規テスト追加時の付随作業（`tests/integration/t-coverage-mechanism-ratchet.test.ts` への台帳追記）は #2811 が t2790 追加時に 1 行行った先例がある。
 
+## 制御バイト混入クラスの防御在庫と CI ゲート先例（260810-control-byte-gate、履歴、2026-08-10、observed `f1270d710`）
+
+**観測 ref**: すべて observed = `f1270d710193d102b6fe8a728873a1c3e27dc094`（origin/main 系譜上。`origin/main` は 1 コミット先行 `40056d0ec`）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（10 commits）。正本は `re-scans/260810-control-byte-gate.md`。
+
+Issue #2814 が対象とする欠陥クラスは `cid:requirements-analysis:control-byte-guard`（PM1-8 2026-07-10、#786 実測）が記録するとおり、**tracked ソースへの制御バイト混入は git diff にも grep にもレビューにも構造的に見えない**。品質面から見た現況は「認識はあるが面の防御がない」である。
+
+### 現在の防御在庫（PROVEN、4 面すべてが射程外）
+
+| 面 | 所在 | 性質 | 射程外である理由 |
+|---|---|---|---|
+| `isUtf8` 述語 | `packages/framework/core/tools/amadeus-migrate.ts:477`（関数定義 `:476`）。呼び出し 5 箇所 = `:1461` / `:1994` / `:2038` / `:2385` / `:2388` | NUL 含有を非 UTF-8 と判定して拒否 | **入力面限定** — migrate が読む個別ファイルの検証であり、コーパス走査ではない |
+| `CONTROL_CHARS` strip | `packages/framework/core/tools/amadeus-lib.ts:4298` 定義 / `:4304` 適用（`subagentPurposeLine`） | 派生表示文字列から C0 を除去 | **表示層かつ除去** — 検出・拒否ではなく、ファイル内容をゲートしない |
+| #786 リグレッション guard | `tests/integration/t-learnings-persist-seam.test.ts:246-262` | `amadeus-learnings.ts` 1 ファイルの NUL 不在を assert | **単一ファイル・ハードコードパス** |
+| t55 の NUL-skip | `tests/unit/t55-test-suite-drift.test.ts:664-678`（`grepFile`） | NUL 含有ファイルを列挙から除外 | **同じ fail-open 側** — `grep -r` の binary スキップの意図的模倣であり、欠陥機序の側にある |
+
+**債務の性質**: 制御バイトが害であるという認識は `amadeus-lib.ts:4295-4297` のコメント（逐語「a stray control byte is invisible in review while corrupting the record frame」）としてコードベースに明文で存在する。にもかかわらず防御は点に留まり、#786 が実際に通った経路（tracked ソースへの直接混入）に対する面がない。**認識と機構の非対称**であり、`cid:requirements-analysis:symmetric-pair-review` の観点（write⇔check）で見れば check 側の欠落にあたる。
+
+### コーパス清浄度の実測（測定 ref = observed `f1270d710`）
+
+Python 直走査（`git ls-files -z` 起点、binary モード）:
+
+| 対象 | tracked files | 制御バイト hit |
+|---|---|---|
+| repo 全域 | **16124**（read errors 0） | **1** — `assets/AI-DLC-Workflows-2.0-Specification.pdf`（first NUL offset 248） |
+| Issue 宣言スコープ（core / harness / scripts / tests / docs） | **2576** | **0** |
+| `.github/` | **15** | **0** |
+| `dist/` | **0**（`.gitignore:19` `/dist/**`） | — |
+
+**品質上の含意**: 新設ゲートは宣言スコープにおいて **allowlist / carve-out ゼロで初日から green** になる。`cid:code-generation:corpus-sweep-for-new-guards` が要求する両側実測のうち「正当な既存データで赤くならないこと」は成立済み。残る側（落ちる実証）は本 RE では**未実施**であり、注入は一切行っていない。
+
+⚠ 手法メモ（`cid:requirements-analysis:review-method-memo`）: この清浄度測定を再実行する際、**grep 系ラッパを使うと偽陰性になる**。NUL 含有ファイルは binary 扱いで無音脱落する — それが検出したい当の欠陥機序である。走査は binary モード直走査で行い、read error 数も併せて報告する。
+
+### CI ゲート先例パターン（PROVEN）
+
+- **走査ルートの先例は非対称**: `tests/no-silent-drop/engine.ts:46-50` = core + harness + scripts / `tests/unchecked-cast-guard.ts:74` = core + scripts。後者の `:51-53` コメントは `tests/` を走査外と逐語で宣言。**どちらも `docs/` を走査しない**。Issue 宣言スコープは両者の上位集合であり、`tests/` と `docs/` の追加は先例からの意図的拡張として根拠の明文化を要する。
+- **配線の先例は単一ステップ**: `.github/workflows/ci.yml` の `lint` job（`:96-98`、`if: needs.changes.outputs.full == 'true'`）内に、各ゲートが `bun tests/<name>.ts --check` の兄弟ステップとして並ぶ（`:157` no-silent-drop / `:164` callsite / `:172` unchecked-cast / `:199` complexity）。これら 3 ゲートは `tests/run-tests.ts` の tier オーケストレーション**外**の standalone スクリプトであり、`package.json` エイリアスを持つのは no-silent-drop のみ（`:24`）。
+- **sensor 形態は CI をブロックしない**: `grep -n "amadeus-sensor\|sensors/" .github/workflows/ci.yml` は **0 hit（exit 1）**。sensors は hook 起動のランタイム機構で CI に一切配線されていない。「決定的に CI をブロックする」要件を sensor 単独で満たすことはできない。
+- **docs スコープの死角**: `scripts/detect-ci-changes.sh` は docs について `docs/reference/15-stage-definition.md|docs/reference/15-stage-definition.ja.md` の 2 ファイル名指しでのみ `full=true` を立て、`docs/*` ワイルドカードを持たない。docs-only PR は `full=false` で `lint` job 自体が skip されるため、`docs/` をスコープに含めたゲートを同 job のステップとして置くと **docs-only PR では走らない**。これは `cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` が記録する既知の構造的死角と同型である。
+
 ## ハーネス中立性ガードの穴 — plugin コーパスが全ガードの死角（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
 
 **観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files、患部 7 パスは非交差）。正本は `re-scans/260810-plugin-harness-dir-token.md`。

@@ -1089,5 +1089,12 @@
     "dirName": "260810-plugin-prose-seed-guard",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019feacc-4b02-78ab-86d8-1425caeb18da",
+    "slug": "control-byte-gate",
+    "dirName": "260810-control-byte-gate",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
