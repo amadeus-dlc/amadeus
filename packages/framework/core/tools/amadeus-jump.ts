@@ -185,19 +185,33 @@ export function directionReconcile(
 
 let projectDir: string | undefined;
 
-function main(): void {
-  const rawArgs = process.argv.slice(2);
-
-  // Extract --project-dir
+// Splits `--project-dir <value>` out of raw argv, leaving every other token
+// (including a `--project-dir` with no value, or one immediately followed by
+// another flag, which is left in `filteredArgs` to fail loudly downstream
+// rather than being silently mis-consumed — Issue #2763) untouched. Exported
+// as a pure seam so this branch is exercisable in-process (bun --coverage
+// cannot see argv splitting that only runs inside main()'s
+// `if (import.meta.main)` guard).
+export function extractProjectDirArg(rawArgs: string[]): { projectDir: string | undefined; filteredArgs: string[] } {
   const filteredArgs: string[] = [];
+  let extracted: string | undefined;
   for (let i = 0; i < rawArgs.length; i++) {
     if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length && !rawArgs[i + 1].startsWith("--")) {
-      projectDir = rawArgs[i + 1];
+      extracted = rawArgs[i + 1];
       i++;
     } else {
       filteredArgs.push(rawArgs[i]);
     }
   }
+  return { projectDir: extracted, filteredArgs };
+}
+
+function main(): void {
+  const rawArgs = process.argv.slice(2);
+
+  const extracted = extractProjectDirArg(rawArgs);
+  projectDir = extracted.projectDir;
+  const filteredArgs = extracted.filteredArgs;
 
   const subcommand = filteredArgs[0];
 

@@ -4825,7 +4825,7 @@ export function handleSessionTakeover(args: string[]): void {
 // in .ts code so t48's emitter-pairing check passes. Called by the
 // practices-discovery stage at Step 4 (discovered), Step 7 (affirmed), and
 // Step 6 on write failure (override).
-function handlePracticesEvent(args: string[]): void {
+export function handlePracticesEvent(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   let eventTypeArg = "";
   const fields: Record<string, string> = {};
@@ -5442,7 +5442,7 @@ export function handleLookup(args: string[]): void {
 // Forks main's amadeus-state.md to <worktreePath>/amadeus-docs/amadeus-state.md.
 // Adds slug to main's Bolt Refs list. Decorative Worktree Path on the
 // worktree-side state file (recoverable from cwd; debugging breadcrumb only).
-function handleFork(args: string[]): void {
+export function handleFork(args: string[]): void {
   // "--unit" (see boltContextKind below) is a bare boolean marker forwarded
   // verbatim by amadeus-bolt.ts's start handler — it never carries a value.
   // parseFlags's value-carrying-flag scan has no boolean-flag concept (unlike

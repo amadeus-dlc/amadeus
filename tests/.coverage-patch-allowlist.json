@@ -3493,6 +3493,17 @@
     "expiry": "remove when handleFork gains an in-process driver"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleFork",
+      "fingerprint": "sha256:9f8802251cf35b4501264fea5b70aa8dd4315a0179c0f00c5a23d3b207b57104",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Issue #2763's --unit boolean-flag filter (`args.filter((a) => a !== \"--unit\")`) inside handleFork, same spawn-only handler as above (git worktree creation, real locking — no in-process driver exists). The filter's effect IS exercised at the process boundary: tests/integration/t166-multi-repo-construction.test.ts's swarm-prepare path spawns amadeus-bolt.ts -> amadeus-state.ts fork with the exact \"--unit --repo <name>\" shape this line guards against, and asserts the fork succeeds (pre-fix regression, caught and fixed against this same test). Spawn-blindspot-two-step (ii): no behaviour-preserving refactor moves this filter out of handleFork without losing the boltContextKind(args) vs parseFlags(filtered) split it exists to make.",
+    "expiry": "remove when handleFork gains an in-process driver"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "handlePrepare",
