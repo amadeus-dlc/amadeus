@@ -181,9 +181,11 @@ describe("t-exec-codex-review-recovery — missing per-unit verdict (#2836)", ()
       try {
         const result = execCodex(setup.proj, setup.home);
         expect(result.rc).toBe(0);
-        expect(readFileSync(join(setup.proj, PRIMARY_REL), "utf-8")).toMatch(
-          /^## Review — Iteration \d+/m,
-        );
+        const artifact = readFileSync(join(setup.proj, PRIMARY_REL), "utf-8");
+        expect(artifact).toMatch(/^## Review — Iteration \d+/m);
+        for (const field of ["Verdict", "Reviewer", "Date", "Iteration", "Scope decision"]) {
+          expect(artifact).toMatch(new RegExp(`^- \\*\\*${field}:\\*\\* .+$`, "m"));
+        }
         expect(result.output).not.toContain("produced artifacts with no reviewer verdict");
       } finally {
         setup.cleanup();

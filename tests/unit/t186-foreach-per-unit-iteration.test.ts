@@ -244,7 +244,21 @@ function reviewUnit(proj: string, unit: string, slug: string, primary: string): 
   const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
   writeFileSync(
     path,
-    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n- **Verdict:** READY\n`,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-10T00:00:00Z\n" +
+      "- **Iteration:** 1\n" +
+      "- **Scope decision:** none\n",
+  );
+}
+
+/** Append an incomplete projection that must not satisfy recovery. */
+function seedReviewHeadingOnly(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n`,
   );
 }
 
@@ -474,6 +488,19 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.stage).toBe("functional-design");
     expect(d.unit).toBe("beta"); // the last unit in topo order
     expect(d.gate).toBe(true);
+  }, 30000);
+
+  test("9a: a heading-only Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    seedReviewHeadingOnly(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
   }, 30000);
 
   // 9b: with every unit covered, the approve is ALLOWED (the guard passes) and

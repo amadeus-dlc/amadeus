@@ -148,7 +148,12 @@ function seedCoveredUnit(proj: string, unit: string): void {
   }
   writeFileSync(
     join(dir, "code-generation-plan.md"),
-    `# ${unit} code-generation-plan.md\n\n## Review — Iteration 1\n\n- Verdict: APPROVE\n`,
+    `# ${unit} code-generation-plan.md\n\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-10T00:00:00Z\n" +
+      "- **Iteration:** 1\n" +
+      "- **Scope decision:** none\n",
   );
 }
 

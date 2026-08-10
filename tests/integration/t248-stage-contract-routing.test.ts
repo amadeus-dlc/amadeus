@@ -433,7 +433,12 @@ describe("t248 kind-aware consume projection", () => {
         seededRecordDir(project),
         "construction/library/nfr-design/security-design.md",
       ),
-      "# security-design\n\n## Review — Iteration 1\n\n- **Verdict:** READY\n",
+      "# security-design\n\n## Review — Iteration 1\n\n" +
+        "- **Verdict:** READY\n" +
+        "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+        "- **Date:** 2026-08-10T00:00:00Z\n" +
+        "- **Iteration:** 1\n" +
+        "- **Scope decision:** none\n",
       "utf-8",
     );
 

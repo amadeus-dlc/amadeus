@@ -101,6 +101,7 @@ import {
   VALID_DEPTH_VALUES,
   validateDirective,
 } from "./amadeus-directive.ts";
+import { hasDurableReviewProjection } from "./amadeus-reviewer.ts";
 import {
   ADVISORY_CHOICE_OPTIONS,
   advisoryReportHoldReason,
@@ -4142,8 +4143,9 @@ function directiveCarriesReview(
   const primary = directive.produces.find((path) => !optional.has(path));
   if (primary === undefined) return true;
   try {
-    return /^## Review — Iteration \d+/m.test(
+    return hasDurableReviewProjection(
       readFileSync(join(projectDir, ...primary.split("/")), "utf-8"),
+      directive.reviewer!,
     );
   } catch {
     return false;
