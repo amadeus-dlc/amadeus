@@ -64,6 +64,7 @@ const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 interface Directive {
   unit?: string;
+  review_only?: true;
   gate?: unknown;
   kind: string;
   stage?: string;
@@ -458,6 +459,21 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.unit).toBe("unit-beta");
     expect(d.gate).toBeDefined();
     expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
+  }, 30000);
+
+  test("13c: a declared finished unit without a Review projection is recovered", () => {
+    const proj = seedFixProject();
+    seedUnitArtifacts(proj, "unit-alpha", "code-generation", [
+      "code-generation-plan.md",
+      "code-summary.md",
+    ]);
+    seedCoveredUnitDir(proj, "unit-beta");
+    declareUnitsDone(proj, ["unit-alpha", "unit-beta"]);
+    const d = runNextInProcess(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("unit-alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
   }, 30000);
 
   // 14 pins the asymmetry E-OBB2-CG1 ruled INTENTIONAL: a LONE unit resolves

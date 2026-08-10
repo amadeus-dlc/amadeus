@@ -42,7 +42,7 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -532,9 +532,31 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.review_only).toBe(true);
   }, 30000);
 
-  // 9c: with every unit covered, the approve is ALLOWED (the guard passes) and
+  test("9c: an unreadable Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    rmSync(alphaArtifact);
+    mkdirSync(alphaArtifact);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, 30000);
+
+  // 9d: with every unit covered, the approve is ALLOWED (the guard passes) and
   // the transition commits (kind=done, not error).
-  test("9c: approving once every unit is covered is allowed and commits", () => {
+  test("9d: approving once every unit is covered is allowed and commits", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
