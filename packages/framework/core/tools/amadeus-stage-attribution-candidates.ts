@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  isJournalEntryV2,
   journalRecordKey,
   journalRecordField,
   serializeJournalRecord,
@@ -30,6 +31,9 @@ import {
   type TargetStage,
 } from "./amadeus-stage-attribution-domain.ts";
 import type { AttributedRecord } from "./amadeus-stage-stats.ts";
+import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import { decodeIntentAutonomyTransaction } from "./amadeus-intent-autonomy-replay.ts";
+import { decodeQualityRepairTransaction } from "./amadeus-quality-repair-replay.ts";
 
 export { candidatePrimaryReason } from "./amadeus-stage-attribution-domain.ts";
 
@@ -130,6 +134,54 @@ const BOUNDARIES = new Map<string, NormalizedCandidateEvent["boundary"]>([
   ["MERGE_DISPATCH_FALLBACK", "terminal"],
 ]);
 
+const EXECUTION_INNER_EVENTS = new Set([
+  "operation-started",
+  "reservation-updated",
+  "attempt-started",
+  "attempt-finished",
+  "budget-exhausted",
+  "operation-finished",
+]);
+
+const UNIT_POOL_INNER_EVENTS = new Set([
+  "batch-initialized",
+  "unit-acquired",
+  "dispatch-confirmed",
+  "reconciliation-recorded",
+  "unit-settled",
+  "unit-requeued",
+  "units-cancelled",
+  "batch-draining",
+  "batch-terminated",
+  "late-result-observed",
+]);
+
+const LOOP_MONITOR_INNER_EVENTS = new Set([
+  "LOOP_DELIVERY_OBSERVED",
+  "LOOP_MONITOR_TRIGGERED",
+  "LOOP_JUDGE_STARTED",
+  "LOOP_JUDGE_ATTEMPT_STARTED",
+  "LOOP_JUDGE_RESULT_OBSERVED",
+  "LOOP_JUDGE_COMPLETED",
+  "LOOP_ROUTE_APPLIED",
+  "LOOP_LATCH_SET",
+  "LOOP_LATCH_CLEARED",
+  "WORKFLOW_UNPARKED",
+  "LOOP_JUDGE_AWAITING_HUMAN",
+  "LIVE_SMOKE_AUTHORIZED",
+]);
+
+const AUTONOMY_TRANSACTION_INNER_EVENTS = new Set([
+  "AUTONOMY_MODE_CHANGED",
+  "GRANT_ISSUED",
+  "GRANT_REVOKED",
+  "AUTO_DECIDED",
+  "WORKFLOW_EFFECT_APPLIED",
+  "WORKFLOW_PARKED",
+  "WORKFLOW_UNPARKED",
+  "INVOCATION_FAILED",
+]);
+
 function finding(reason: CandidateRejectionReason): CandidateFinding {
   return Object.freeze({ type: "candidate-finding", reason });
 }
@@ -141,6 +193,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function stringField(value: Record<string, unknown>, key: string): string | null {
   const field = value[key];
   return typeof field === "string" && field.length > 0 ? field : null;
+}
+
+function exactRecordField(record: AttributedRecord, key: string): string | null {
+  if (isJournalEntryV2(record.record)) {
+    const value = record.record.attributes[key];
+    return typeof value === "string" ? value : null;
+  }
+  return record.record.fields?.[key] ?? null;
 }
 
 function digest(value: string): string {
@@ -255,10 +315,112 @@ function explicitEvidenceFindings(record: AttributedRecord): CandidateFinding[] 
   return findings;
 }
 
+function parsedJsonObject(encoded: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(encoded);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function requiredOuterFields(record: AttributedRecord, fields: readonly string[]): boolean {
+  return fields.every((field) => journalRecordField(record.record, field) !== null);
+}
+
+function unverifiableTransactionDigestFinding(record: AttributedRecord): CandidateFinding {
+  return finding(
+    journalRecordField(record.record, "Transaction Digest") === null
+      ? "malformed-event-set"
+      : "unsupported-event-set-schema",
+  );
+}
+
+function qualityTransactionFindings(record: AttributedRecord, encoded: string): CandidateFinding[] {
+  if (parsedJsonObject(encoded) === null) return [finding("malformed-event-set")];
+  let transaction: ReturnType<typeof decodeQualityRepairTransaction>;
+  try {
+    transaction = decodeQualityRepairTransaction(encoded);
+  } catch {
+    return [finding("unsupported-event-set-schema")];
+  }
+  if (!requiredOuterFields(record, ["Quality Scope Id", "Transaction Id"])) {
+    return [finding("malformed-event-set")];
+  }
+  if (
+    journalRecordField(record.record, "Transaction Id") !== transaction.transactionId ||
+    journalRecordField(record.record, "Quality Scope Id") !== transaction.qualityScopeId
+  ) return [finding("malformed-event-set")];
+  return [unverifiableTransactionDigestFinding(record)];
+}
+
+function autonomyTransactionFindings(record: AttributedRecord, encoded: string): CandidateFinding[] {
+  let transaction: ReturnType<typeof decodeIntentAutonomyTransaction>;
+  try {
+    transaction = decodeIntentAutonomyTransaction(encoded);
+  } catch {
+    return [finding("unsupported-event-set-schema")];
+  }
+  if (!transaction.events.every((event) =>
+    isRecord(event) && AUTONOMY_TRANSACTION_INNER_EVENTS.has(stringField(event, "type") ?? "")
+  )) return [finding("unsupported-event-set-schema")];
+  if (!requiredOuterFields(record, ["Intent Uuid", "Transaction Id", "Transaction Digest"])) {
+    return [finding("malformed-event-set")];
+  }
+  if (
+    journalRecordField(record.record, "Transaction Id") !== transaction.transactionId ||
+    journalRecordField(record.record, "Intent Uuid") !== transaction.intentUuid
+  ) return [finding("malformed-event-set")];
+  if (journalRecordField(record.record, "Transaction Digest") !== autonomyDigest(transaction)) {
+    return [finding("digest-mismatch")];
+  }
+  return [];
+}
+
+function validCompletionTransaction(value: Record<string, unknown>): boolean {
+  const transaction = isRecord(value.transaction) ? value.transaction : null;
+  return value.eventType === "INTENT_COMPLETION_TRANSACTION_COMMITTED" &&
+    transaction !== null && stringField(transaction, "transactionId") !== null &&
+    Number.isInteger(transaction.expectedRevision) &&
+    Array.isArray(value.expectedEventIdentities) &&
+    value.expectedEventIdentities.every((identity) => typeof identity === "string") &&
+    Number.isInteger(value.expectedStateProjectionRevision);
+}
+
+function completionTransactionFindings(record: AttributedRecord, encoded: string): CandidateFinding[] {
+  const value = parsedJsonObject(encoded);
+  if (value === null) return [finding("malformed-event-set")];
+  if (!validCompletionTransaction(value)) return [finding("unsupported-event-set-schema")];
+  if (!requiredOuterFields(record, [
+    "Intent Uuid",
+    "Transaction Id",
+    "Evidence Id",
+    "Evidence Digest",
+    "Completion Seal Digest",
+  ])) return [finding("malformed-event-set")];
+  const transaction = value.transaction as Record<string, unknown>;
+  if (journalRecordField(record.record, "Transaction Id") !== stringField(transaction, "transactionId")) {
+    return [finding("malformed-event-set")];
+  }
+  return [unverifiableTransactionDigestFinding(record)];
+}
+
+function transactionEnvelopeFindings(record: AttributedRecord, event: string): CandidateFinding[] {
+  const encoded = exactRecordField(record, "Transaction");
+  if (encoded === null) return [finding("malformed-event-set")];
+  if (event === "QUALITY_REPAIR_TRANSACTION_COMMITTED") return qualityTransactionFindings(record, encoded);
+  if (event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED") return autonomyTransactionFindings(record, encoded);
+  if (event === "INTENT_COMPLETION_TRANSACTION_COMMITTED") return completionTransactionFindings(record, encoded);
+  return [finding("unsupported-event-set-schema")];
+}
+
 function projectPrefixRecord(record: AttributedRecord, event: string, family: CandidateFamily): ProjectedEvent {
   return {
     event: baseEvent(record, family, recordIdentity(record, family), BOUNDARIES.get(event) ?? "evidence-only"),
-    findings: explicitEvidenceFindings(record),
+    findings: [
+      ...explicitEvidenceFindings(record),
+      ...(family === "transaction-envelope" ? transactionEnvelopeFindings(record, event) : []),
+    ],
   };
 }
 
@@ -288,7 +450,7 @@ function supportedEventSetShape(value: Record<string, unknown>, family: Candidat
   const common = stringField(value, "eventSetId") !== null &&
     stringField(value, "idempotencyKey") !== null &&
     stringField(value, "payloadFingerprint") !== null &&
-    Array.isArray(value.events);
+    Array.isArray(value.events) && supportedInnerEvents(value.events, family);
   if (!common) return false;
   if (family === "execution-event-set") {
     return stringField(value, "rootOperationId") !== null && stringField(value, "digest") !== null;
@@ -297,11 +459,43 @@ function supportedEventSetShape(value: Record<string, unknown>, family: Candidat
   return family === "loop-monitor" && isRecord(value.partition) && stringField(value, "partitionKey") !== null;
 }
 
+function supportedInnerEvents(events: readonly unknown[], family: CandidateFamily): boolean {
+  const types = family === "execution-event-set"
+    ? EXECUTION_INNER_EVENTS
+    : family === "unit-pool-event-set"
+      ? UNIT_POOL_INNER_EVENTS
+      : family === "loop-monitor"
+        ? LOOP_MONITOR_INNER_EVENTS
+        : null;
+  return types !== null && events.every((event) =>
+    isRecord(event) && types.has(stringField(event, "type") ?? "")
+  );
+}
+
 function eventSetIdentity(value: Record<string, unknown>): EventSetId | null {
   const raw = stringField(value, "eventSetId");
   if (raw === null) return null;
   const result = createEventSetId(raw);
   return result.ok ? result.value : null;
+}
+
+function executionDigestFindings(
+  record: AttributedRecord,
+  value: Record<string, unknown>,
+  setId: string | null,
+): CandidateFinding[] {
+  if (setId === null || !Array.isArray(value.events)) return [];
+  const computed = digest(JSON.stringify({ eventSetId: setId, events: value.events }));
+  const embedded = stringField(value, "digest");
+  const outer = journalRecordField(record.record, "Event Set Digest");
+  return embedded === computed && outer === computed ? [] : [finding("digest-mismatch")];
+}
+
+function encodedEventSetDigestFindings(record: AttributedRecord): CandidateFinding[] {
+  const encoded = exactRecordField(record, "Event Set");
+  const declared = journalRecordField(record.record, "Event Set Digest");
+  if (encoded === null || declared === null) return [finding("malformed-event-set")];
+  return declared === digest(encoded) ? [] : [finding("digest-mismatch")];
 }
 
 function eventSetEnvelopeFindings(
@@ -317,11 +511,9 @@ function eventSetEnvelopeFindings(
   if (family === "loop-monitor" && journalRecordField(record.record, "Partition Key") !== stringField(value, "partitionKey")) {
     findings.push(finding("malformed-event-set"));
   }
-  if (family === "execution-event-set" && setId !== null && Array.isArray(value.events)) {
-    const computed = digest(JSON.stringify({ eventSetId: setId, events: value.events }));
-    const embedded = stringField(value, "digest");
-    const outer = journalRecordField(record.record, "Event Set Digest");
-    if (embedded !== computed || outer !== computed) findings.push(finding("digest-mismatch"));
+  if (family === "execution-event-set") findings.push(...executionDigestFindings(record, value, setId));
+  if (family === "unit-pool-event-set" || family === "loop-monitor") {
+    findings.push(...encodedEventSetDigestFindings(record));
   }
   return findings;
 }
@@ -379,7 +571,10 @@ function projectEventSet(record: AttributedRecord, family: CandidateFamily): Eve
   const setId = eventSetIdentity(value);
   const findings = [...parsed.findings, ...eventSetEnvelopeFindings(record, family, value)];
   const outer = { event: baseEvent(record, family, recordIdentity(record, family), "evidence-only", setId), findings };
-  if (!supportedEventSetShape(value, family) || setId === null || family === "loop-monitor") {
+  const integrityFailure = findings.some(({ reason }) =>
+    reason === "malformed-event-set" || reason === "digest-mismatch" || reason === "unsupported-event-set-schema"
+  );
+  if (integrityFailure || setId === null || family === "loop-monitor") {
     return { outer, inner: [], parsedEventSetId: setId === null ? null : String(setId) };
   }
   const inner = (value.events as unknown[]).map((item): ProjectedEvent => {
