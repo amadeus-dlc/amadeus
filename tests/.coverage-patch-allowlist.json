@@ -4043,17 +4043,6 @@
     "expiry": "remove when Bun no longer emits DA records for erased TypeScript declarations"
   },
   {
-    "file": "tests/lib/test-time-factor-guard.ts",
-    "selector": {
-      "function": "scanTestTimingSinks",
-      "fingerprint": "sha256:32d4bca32a36db1f1cf6e117b148c5e88250312f015090cbd3236ec8048b0f1f",
-      "anchorLines": 2,
-      "targetLines": "1-2"
-    },
-    "reason": "Bun LCOV records the erased return-object type members as zero-hit lines even while the scanner function executes in the census test.",
-    "expiry": "remove when Bun no longer emits DA records for erased TypeScript return types"
-  },
-  {
     "file": "tests/harness/live-e2e/ledger.ts",
     "selector": {
       "function": "inspectLedgerLock",
