@@ -66,6 +66,43 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(standalone).not.toContain("default to Standard (8)");
   });
 
+  test("depth is grilling's pruning threshold, and the breaker is its only ceiling", () => {
+    // The half of #2785 that the budget pins above cannot state: grilling reads
+    // the same depth value as every other mode but spends it on WHICH nodes
+    // enter the tree, not on how many questions may be asked. Without these,
+    // the file could drift back to a counted mode and the pins above would
+    // still pass.
+    const grilling = read("amadeus-common/protocols/grilling-protocol.md");
+    expect(grilling).toContain("### 2.2 Depth is a materiality threshold");
+    expect(grilling).toContain("| Level | Nodes that enter the tree | Circuit breaker (§2.4) |");
+    expect(grilling).toContain("| Free *(standalone only)* | No pruning — every branch of the tree | none |");
+    expect(compact(grilling)).toContain(
+      "Depth decides **which nodes enter the tree**, not how many questions may be asked",
+    );
+    expect(compact(grilling)).toContain(
+      "`Free` never appears on the wire, in state, or on a directive",
+    );
+
+    // The breaker is an abort that must announce itself. A silent truncation
+    // presented as a finished traversal is the failure this clause exists for.
+    expect(compact(grilling)).toContain("disclose that the tree was not fully traversed");
+    expect(grilling).toContain("Silent truncation is forbidden");
+
+    // stage-protocol carries the same split, so a stage author reading only
+    // §8 does not apply the ceiling to a grilling session.
+    expect(compact(PROTOCOL)).toContain(
+      "Grill me mode consumes depth as a pruning threshold, not as a question budget",
+    );
+    expect(compact(PROTOCOL)).toContain("Grill me does not consume `[N]` as a budget");
+    expect(compact(PROTOCOL)).toContain("The ceilings above are unchanged");
+
+    // Grilling waits on a person every round, so it is not offered when the
+    // Intent is running unattended.
+    expect(compact(PROTOCOL)).toContain(
+      "While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options",
+    );
+  });
+
   test("the three machine-matched grilling tokens are language-neutral markers", () => {
     // The question-budget sensor reads a questions file and matches these three
     // verbatim. All three are HTML comments rather than prose headings because
