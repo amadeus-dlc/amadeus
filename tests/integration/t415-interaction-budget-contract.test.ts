@@ -32,17 +32,26 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(PROTOCOL).not.toContain("8-12+");
     expect(PROTOCOL).not.toContain("These are guidelines, not hard caps");
 
+    // Grilling terminates on frontier coverage (#2785), so its bound is the
+    // disclosed circuit breaker rather than a total question ceiling. The
+    // ceilings above stay in force for every other interaction mode.
+    expect(PROTOCOL).not.toContain("hybrid termination");
+
     const grilling = read("amadeus-common/protocols/grilling-protocol.md");
-    expect(grilling).toContain("Do not offer continuation beyond the total ceiling");
+    expect(compact(grilling)).toContain("The session is done when the frontier is empty");
+    expect(grilling).toContain("Termination is coverage, not counting");
+    expect(compact(grilling)).toContain("Minimal 12, Standard 24, Comprehensive 36");
     expect(compact(grilling)).toContain("Proceed directly to C-4");
-    expect(grilling).toContain("including estimate confirmations");
-    expect(grilling).toContain("defaults to Standard when none is requested");
-    expect(grilling).toContain("standalone terminal agreement summary");
+    expect(compact(grilling)).toContain("including estimate confirmations");
+    expect(compact(grilling)).toContain("defaults to Free when none is requested");
+    expect(compact(grilling)).toContain("standalone terminal agreement summary");
     expect(grilling).not.toContain('label: "Continue"');
+    expect(grilling).not.toContain("Do not offer continuation beyond the total ceiling");
 
     const standalone = read("skills/amadeus-grilling/SKILL.md");
-    expect(standalone).toContain("default to Standard (8)");
-    expect(standalone).toContain("unresolved material points");
+    expect(compact(standalone)).toContain("Default to Free when the user names no level");
+    expect(compact(standalone)).toContain("unresolved material points");
+    expect(standalone).not.toContain("default to Standard (8)");
   });
 
   test("limits follow-ups to material ambiguity and records reversible defaults", () => {
