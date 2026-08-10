@@ -1,0 +1,7 @@
+{
+  "electionId": "E-SDF-AD-S13-1",
+  "kind": "zero-confirm",
+  "question": "Application Design の学習候補 c1〜c5 は既存 norm（既決契約の機械適用、並行Unitのshared-file ownership、最小変更）または今回intent固有設計に重複するため、新規 persist 0件でよいか",
+  "choices": [{"internalNo": 1, "label": "0件で可", "description": "既存normとApplication Design成果物を正本として維持する"}],
+  "voters": ["subagent-1", "subagent-2"]
+}

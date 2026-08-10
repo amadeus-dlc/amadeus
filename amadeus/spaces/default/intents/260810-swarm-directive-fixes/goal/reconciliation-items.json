@@ -1,0 +1,10 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {"kind":"deterministic-check","reference":"amadeus/spaces/default/intents/260810-swarm-directive-fixes/construction/issue-2833-failure-transition/code-generation/code-summary.md","digest":"0dc81e8c5098b78e886abcd4b2b2a4ef0df98515fd1f45d815fd8cb5b0cbc063"},
+      {"kind":"deterministic-check","reference":"amadeus/spaces/default/intents/260810-swarm-directive-fixes/construction/build-and-test/build-test-results.md","digest":"1a626954bebb5e1261cc8158b9c10009edd615307a3a9af5888896221af8cc88"}
+    ]
+  }
+]

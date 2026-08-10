@@ -1,0 +1,16 @@
+{
+  "electionId": "E-SDF-IC-S13-1",
+  "kind": "zero-confirm",
+  "question": "Intent Capture の学習候補 c1〜c3 は既存 norm（Issue コメント優先、cid:intent-capture:c4-2、ideation の実装詳細延期）と重複するため、新規 persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "新しい project rule を追加せず、既存 norm を正本として維持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}
