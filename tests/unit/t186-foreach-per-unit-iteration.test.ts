@@ -478,7 +478,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
       "--result",
       "approved",
     ]);
-    expect(d.kind).toBe("done");
+    expect(d.kind).toBe("committed");
   }, 30000);
 
   // 10: re-reporting an ALREADY-completed ([x]) per-unit stage with a DAG present

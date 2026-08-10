@@ -94,7 +94,7 @@ SKILL.md §CONSTRUCTION Flow for the canonical specification.
 |-------|-----------------------|-------------|----------------------------------------------------------------------------------------------------|---------------------|-------------------|-----------------------------|----------|
 | 3.1   | Functional Design     | CONDITIONAL | New data models, complex business logic, or business rules need design                             | amadeus-architect-agent     | amadeus-developer-agent   | inline                      | Yes      |
 | 3.2   | NFR Requirements      | CONDITIONAL | Performance, security, scalability concerns, or tech stack selection needed                         | amadeus-architect-agent     | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent   | inline                      | Yes      |
-| 3.3   | NFR Design            | CONDITIONAL | NFR Requirements was executed and NFR patterns need design                                          | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
+| 3.3   | NFR Design            | CONDITIONAL | NFR patterns need design (the scope decides; NFR Requirements need not have run)                    | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
 | 3.4   | Infrastructure Design | CONDITIONAL | Infrastructure services need mapping, deployment architecture required, or cloud resources needed   | amadeus-aws-platform-agent  | amadeus-devsecops-agent, amadeus-compliance-agent   | inline                      | Yes      |
 | 3.5   | Code Generation       | ALWAYS      | Always executes for every unit in the execution plan                                               | amadeus-developer-agent     | (none)            | subagent (amadeus-developer-agent)  | Yes      |
 | 3.6   | Build and Test        | ALWAYS      | Always executes once after all per-unit stages are finished                                         | amadeus-quality-agent       | amadeus-devsecops-agent   | inline                      | No       |
@@ -326,8 +326,8 @@ tech-stack-decisions.md for technology selection rationale.
 |-------------------|---------------------------------------------------------------------------------------------------|
 | Stage             | 3.3                                                                                               |
 | Phase             | Construction                                                                                      |
-| Execution         | CONDITIONAL (only if NFR Requirements was executed)                                               |
-| Condition         | NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped. |
+| Execution         | CONDITIONAL (scope membership decides; NFR Requirements need not have run)                        |
+| Condition         | NFR patterns need design. Membership is decided by the scopes: list alone, and a scope may run this stage while skipping NFR Requirements (self-feature does) -- the upstream inputs then arrive marked absent-and-expected. |
 | Per-Unit          | Yes                                                                                               |
 | Lead Agent        | amadeus-architect-agent                                                                                   |
 | support_agents    | amadeus-aws-platform-agent                                                                                |
@@ -344,10 +344,14 @@ infrastructure and platform input.
 ### Inputs
 
 - NFR requirements from `<record>/construction/{unit-name}/nfr-requirements/`
+  when they exist. A scope that SKIPs NFR Requirements (self-feature does)
+  runs this stage anyway, and the engine marks those inputs
+  absent-and-expected: read only what the directive's `consumes` lists, and
+  never recreate or report a marked-absent input as missing.
 - Functional design artifacts from
   `<record>/construction/{unit-name}/functional-design/` (if they exist)
 - Application design from `<record>/inception/application-design/` for
-  architectural context
+  architectural context (if it exists)
 
 ### Steps
 
@@ -355,8 +359,10 @@ infrastructure and platform input.
    Load amadeus-aws-platform-agent persona and knowledge for infrastructure and
    platform input.
 
-2. **Read Prior Artifacts** -- Read NFR requirements, functional design
-   artifacts (if they exist), and application design for architectural context.
+2. **Read Prior Artifacts** -- Read only the inputs the directive's `consumes`
+   lists: the present NFR requirements (none when the scope skipped that
+   stage), functional design artifacts (if they exist), and application design
+   for architectural context (if it exists).
 
 3. **Generate Design Questions** -- Create a questions file at
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`

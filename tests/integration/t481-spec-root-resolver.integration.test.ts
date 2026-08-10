@@ -223,8 +223,11 @@ describe("t481 activation + wrapper consumers on a legacy layout (BR-4/BR-13a)",
     expect(defaultModelMapPath(root)).toBe(
       join(root, "amadeus", "spaces", "feature-x", "specs", "tla", "model-map.json"),
     );
+    // Explicitly revised by D4 of #2766: the governed-subjects declaration
+    // moved off `specs/tla/` to the specs root so editing it stays outside the
+    // `tla/**` activation watch glob, like the evidence store beside it.
     expect(defaultSubjectsPath(root)).toBe(
-      join(root, "amadeus", "spaces", "feature-x", "specs", "tla", "authoring-subjects.json"),
+      join(root, "amadeus", "spaces", "feature-x", "specs", "authoring-subjects.json"),
     );
     expect(defaultStoreRoot(root)).toBe(
       join(root, "amadeus", "spaces", "feature-x", "specs", "tla-evidence"),

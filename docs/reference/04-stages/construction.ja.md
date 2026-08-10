@@ -92,7 +92,7 @@ N 個の `Task` 呼び出しを発行することにより並行してディス�
 |-------|-----------------------|-------------|----------------------------------------------------------------------------------------------------|---------------------|-------------------|-----------------------------|----------|
 | 3.1   | Functional Design     | CONDITIONAL | 新しいデータモデル、複雑なビジネスロジック、またはビジネスルールの設計が必要                             | amadeus-architect-agent     | amadeus-developer-agent   | inline                      | Yes      |
 | 3.2   | NFR Requirements      | CONDITIONAL | パフォーマンス、セキュリティ、スケーラビリティの懸念、または技術スタック選定が必要                         | amadeus-architect-agent     | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent   | inline                      | Yes      |
-| 3.3   | NFR Design            | CONDITIONAL | NFR Requirements が実行され、NFR パターンの設計が必要                                          | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
+| 3.3   | NFR Design            | CONDITIONAL | NFR パターンの設計が必要(scope が決定。NFR Requirements の実行は前提ではない)                  | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
 | 3.4   | Infrastructure Design | CONDITIONAL | インフラストラクチャサービスのマッピング、デプロイアーキテクチャ、またはクラウドリソースが必要   | amadeus-aws-platform-agent  | amadeus-devsecops-agent, amadeus-compliance-agent   | inline                      | Yes      |
 | 3.5   | Code Generation       | ALWAYS      | 実行計画内のすべてのユニットに対して常に実行                                               | amadeus-developer-agent     | (none)            | subagent (amadeus-developer-agent)  | Yes      |
 | 3.6   | Build and Test        | ALWAYS      | すべてのユニットごとのステージ完了後に常に1回実行                                         | amadeus-quality-agent       | amadeus-devsecops-agent   | inline                      | No       |
@@ -318,8 +318,8 @@ tech-stack-decisions.md を追加します。
 |-------------------|---------------------------------------------------------------------------------------------------|
 | Stage             | 3.3                                                                                               |
 | Phase             | Construction                                                                                      |
-| Execution         | CONDITIONAL (NFR Requirements が実行された場合のみ)                                               |
-| Condition         | NFR Requirements が実行され、NFR パターンの設計が必要。NFR Requirements がスキップされた場合はスキップ。 |
+| Execution         | CONDITIONAL (scope のメンバーシップで決まる。NFR Requirements の実行は前提ではない)                |
+| Condition         | NFR パターンの設計が必要。メンバーシップは scopes: リストのみで決まり、NFR Requirements をスキップしたまま本ステージを実行する scope もある(self-feature)。その場合、上流入力は「不在かつ想定内」として届く。 |
 | Per-Unit          | Yes                                                                                               |
 | Lead Agent        | amadeus-architect-agent                                                                                   |
 | support_agents    | amadeus-aws-platform-agent                                                                                |
@@ -335,11 +335,14 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
 
 ### 入力
 
-- `<record>/construction/{unit-name}/nfr-requirements/` からの NFR 要件
+- `<record>/construction/{unit-name}/nfr-requirements/` からの NFR 要件(存在する場合)。
+  NFR Requirements を SKIP する scope(self-feature が該当)でも本ステージは実行され、
+  engine はそれらの入力を「不在かつ想定内」として渡す。directive の `consumes` に
+  列挙された入力のみを読み、不在と示された入力を再作成したり欠落として報告したりしない。
 - `<record>/construction/{unit-name}/functional-design/` からの機能設計成果物
   (存在する場合)
 - アーキテクチャコンテキストのための `<record>/inception/application-design/` からの
-  アプリケーション設計
+  アプリケーション設計(存在する場合)
 
 ### 手順
 
@@ -347,8 +350,10 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
    インフラストラクチャとプラットフォームのインプット用に amadeus-aws-platform-agent
    のペルソナと知識をロード。
 
-2. **Read Prior Artifacts** -- NFR 要件、機能設計成果物(存在する場合)、および
-   アーキテクチャコンテキストのためのアプリケーション設計を読む。
+2. **Read Prior Artifacts** -- directive の `consumes` に列挙された入力のみを読む:
+   存在する NFR 要件(scope がそのステージを SKIP した場合は不在)、機能設計成果物
+   (存在する場合)、およびアーキテクチャコンテキストのためのアプリケーション設計
+   (存在する場合)。
 
 3. **Generate Design Questions** -- `[Answer]:` タグを使った文脈に適した質問ファイルを
    `<record>/construction/{unit-name}/nfr-design/nfr-design-questions.md`

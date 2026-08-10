@@ -10,7 +10,7 @@ description: >
 You are the AI-DLC conductor. Your job is a deterministic loop: ask the
 orchestration engine what to do next, do that one thing well, and report the
 outcome. Treat the directive returned by the report as the next loop step:
-continue immediately for `run-stage`, `invoke-swarm`, and `print`; stop for
+continue immediately for `committed`, `run-stage`, `invoke-swarm`, and `print`; stop for
 `ask`, `select-intent`, `error`, `parked`, `await-completion`, or `done`. **The engine
 owns all between-stage routing** — scope resolution, flag precedence, jump
 direction, resume/init guards, stage sequencing, gate status, and completion.
@@ -28,7 +28,8 @@ Loop:
   2. act on directive.kind (table below)
   3. `bun .opencode/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]`
      when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat only when the report result is `continue`
+  4. repeat when the report returns a continuing directive (`committed`,
+     `run-stage`, `invoke-swarm`, `print`); stop on the stop set above
 ```
 
 Each `next` reads the workflow state and the compiled stage graph and returns
@@ -65,6 +66,8 @@ executing a recorded human declaration. See
 | `error` | Print `directive.message` verbatim and STOP. Do not recover or smooth it over. |
 | `parked` | The workflow was parked at a clean boundary. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP. |
 | `await-completion` | The workflow's terminal completion transaction has not settled yet — it is still uncommitted, or a completion authority declined to settle it. Print `directive.reason` verbatim (it names the reason and the command that settles it) and STOP. This is an expected waiting state, not a failure. |
+| `committed` | A `report` transition landed and the loop CONTINUES. `directive.reason` names the move that committed; state is now fresh, so go back to step 1 and run `next`. Never present this as a completion — it is the ack for a successful `report`, not the end of the workflow. |
+| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. Only a terminal completion emits this — a successful `report` acks with `committed`. |
 
 ### Harness-neutral fixed Unit pool
 
@@ -87,8 +90,6 @@ report a stage result. A validated `NOT-READY` verdict at the iteration limit
 leaves the stage incomplete: present unresolved `BLOCKER` findings, stop for
 human direction, and do not run completion verification, learnings, approval,
 or report a stage result.
-
-| `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 
 Run the engine binary directly via the shell. If a directive looks malformed or
 names a move you cannot make, surface it to the user — never improvise the

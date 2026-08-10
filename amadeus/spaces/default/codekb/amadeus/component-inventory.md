@@ -1,6 +1,169 @@
 # コンポーネント棚卸し
 
-## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## formal-model-check advisory 供給チェーンの棚卸し（260810-tla-applicability-wiring、現在、observed `91f37ec85`）
+
+**観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。正本は `re-scans/260810-tla-applicability-wiring.md`。
+
+対象は [Issue #2766](https://github.com/amadeus-dlc/amadeus/issues/2766)（TLA+ applicability 判定が常に no-hold）とユーザー裁定 **案A**（接続完成 + FR-005 receipt 閉包）。判別子は「**宣言 → 発火 → 評価 → 解除の鎖のどこが実装済みで、どこに書き手が居ないか**」。結論を先に言えば、**鎖は両端が完成していて中央（subjects の書き手）だけが空**である。
+
+### 供給チェーンのコンポーネントと現況
+
+| 段 | コンポーネント（`packages/framework/core/tools/` ほか） | 現況（observed 実測） |
+|---|---|---|
+| **宣言 parse** | `amadeus-advisory-declaration.ts` — `parseAdvisoryDeclarations` :110-128 / `parseOne` :90-99 / `declaredAdvisoriesForPlugin` :253-277 | **実装済み・稼働中**。`pluginManifestPath` :243-245 = `<projectRoot>/plugins/<plugin>/plugin.json` が本 repo に実在するため経路は生きている |
+| **no-hold の痕跡消失** | 同 :171 逐語 `if (isRecord(verdict) && verdict.kind === "no-hold") return null;` | **#2766 の症状面**。「評価器が走って no-hold」と「そもそも走っていない」が観測上区別できない |
+| **checkpoint 発火** | `amadeus-orchestrate.ts` — `ACTIVATION_ADVISORY_STAGES` :1785-1789（`requirements-analysis` / `functional-design` / `build-and-test`）、`emitActivationAdvisory` :1808-1820、`raiseActivationAdvisoriesFor` :1844-1858 | **実装済み・2 call site**。コメント :1796-1803 が両者の乖離を戒める → 供給側に触る変更は**両方を必ず棚卸し** |
+| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 実装済み |
+| **run-now ルート供給** | `amadeus-advisory-choice.ts` — `declaredFormalCheckRoute` :925-955、予約トークン4種 :939-944、`resolveRunRequiredHold` :978-1019、`DECLARED_RELEASE_RULE` :962-963 | **実装済み・テストで両側固定**（`t445-advisory-declaration-supply.integration.test.ts:297-322`）。実 manifest の `formalCheck` を非 null にすれば **engine 変更なしでルートが立つ** |
+| **subjects 供給** | `plugins/formal-model-check/tools/tla-authoring.ts` — `defaultSubjectsPath` :453-455、`GovernedSubjects` :457-476、`governedIdentity` :479-496、`advisoryHold` :498-532 | **🔴 書き手が存在しない**。解決先 `amadeus/spaces/default/specs/tla/authoring-subjects.json` は**未作成**（`ls -d` 実測）。`advisoryHold` は ENOENT のみ no-hold（:507-508）で、それ以外は fail-closed |
+| **model-map 書込** | `plugins/formal-model-check/tools/tla-registration.ts:265-270`（staging + `renameSync` の atomic replace） | model-map **のみ**を書く。subjects 宣言の書き手はここにも無い |
+| **判定表** | `plugins/formal-model-check/tools/tla-applicability.ts` — `judge` :121-138、`ApplicabilityReceipt` :147-157、`buildReceipt` :176-198、`HoldReason` :211-214、`evaluate` :319-352 | 実装済み。終端2経路（:169）は検証済み human approval 必須（:183-185 `approval-missing`） |
+| **evidence store** | `amadeus/spaces/default/specs/tla-evidence` | **未作成**（`ls -d` 実測）。案A で hold を実発火させると全 intent の RA/FD/B&T で `no-applicability-receipt` hold が立つ |
+
+**書き手不在の全数根拠**（述語 `git grep -n "authoring-subjects"`、全 tracked・除外なし → **7 hit**）: record 3 / docs 2 / 読み手 1（`tla-authoring.ts:454`）/ テスト 1（`t481-spec-root-resolver.integration.test.ts:227`）= **書き手 0 件**。
+
+### applicability judge の CLI verb 全数（`tla-authoring.ts` :746-792 の argv dispatch）
+
+| 形 | verb | ハンドラ |
+|---|---|---|
+| group+verb | `identity extract` / `identity compare` | :150 / :173 |
+| group+verb | `bundle build` / `verify` / `read` / `list` / `head` | :201 / :237 / :258 / :267 |
+| group+verb | `applicability judge` / `receipt` / `series` | :351 / :373 / :399 |
+| group+verb | `advisory hold` | :498 |
+| flat | `hold` / `trace` / `proof`（async）/ `commit` | :407 / :592 / :625 / :669 |
+
+フラグ形式は `--name value` の対のみ（`parseFlags` :101-112、奇数長・非 `--` 先頭は null → usage exit 2）。in-process seam は `runTlaAuthoring` :795-803、エントリ :805-807。
+
+### FR-005 receipt surface — owner が存在しない
+
+- 永続 kind は2つ（`tla-evidence.ts:229-231`）= `authoring-bundle` / `terminal-route-receipt`。必須 part は :274-275
+- **書き手は `bundle build` のみ**（`tla-authoring.ts:201-228` → `EvidenceBundle.build`）。`applicability receipt`（:373-397）は receipt JSON を **stdout に返すだけで永続化しない**
+- `tla-authoring` stage は終端経路を明示拒否（`plugins/formal-model-check/stages/tla-authoring.md:40-44` 逐語「Refuse to start on a terminal route as well. `impl-only` and `non-target` carry no authoring work, so a receipt naming either one ends the stage instead of opening it.」）
+- → **非対象 receipt を発行する owner がワークフロー上どこにも無い**。案A 項目3 はこの欠落を埋める設計を要する。`t450-tla-authoring-stage-e2e.integration.test.ts:163` が「owner は stage 外」を固定しているピンで、**衝突しうる**
+
+### ADR-6 の一般化点と残る非一般化点
+
+- 一般化済み（改訂1 で承認、`260804-tla-authoring/inception/application-design/decisions.md:65`）: **宣言 parse** と **formal-check route の argv**（`declaredFormalCheckArgv` :334-348）
+- call site: `declaredFormalCheckArgv` = `amadeus-advisory-choice.ts:20`（import）/ `:932`（唯一の呼び出し）。`advisoriesForHost` = `amadeus-advisory-choice.ts:974` / `amadeus-orchestrate.ts:1816` / `:1817` / `:1847`
+- **🔴 非一般化点（案A 項目2 の核心）**: ルートの遷移先 stage は `declaredFormalCheckRoute` 内でハードコード。`amadeus-advisory-choice.ts:948` 逐語 `stage: "formal-model-check",` → **`tla-authoring` を指す手段が現行の一般化点に存在しない**。ADR-6 が一般化したのは argv だけで**遷移先 stage は一般化されていない**
+
+### 設計段へ持ち上げる2リスク
+
+- **🔴 R1 見出し文法の不一致（測定）**: `tla-evidence.ts:45` 逐語 `const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;` は3桁ゼロ埋めを要求するが、実コーパスは **134 ファイル中 3 ファイルのみ一致**（述語は re-scan の P2/P3）。対照として decisions 側（:46 `/^##\s+(ADR-\d+)\b/`）は **56 中 54** で健全。intent 要件を直接読む供給設計は現行文法では大半で `unresolvable-id` fail-closed になる
+- **🔴 R2 subjects の置き場（演繹、未実測）**: `amadeus-plugin-activation.ts:51` 逐語 `export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];`。直前の :49-50 が「the evidence store (`<specsRoot>/tla-evidence`) sits outside the glob by construction」と設計意図を明言する一方、`defaultSubjectsPath` の解決先 `specs/tla/authoring-subjects.json` は **glob の内側**。subjects 更新のたび spec-hash が変わり兄弟 advisory が発火する見込み — **ハッシュ再計算の実測は未実施**
+
+## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、履歴、2026-08-09、observed `91f37ec85`）
+
+**観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
+
+判別軸は「その emit 点が返す `kind:"done"` が、conductor にとってループ終端を意味するか、単なる commit ack（続行すべき）を意味するか」。**同一 kind が両方の意味を担っており**、`amadeus-directive.ts` の型にも harness 契約にも区別は存在しない。
+
+### `kind:"done"` の全 emit 点（`packages/framework/core/tools/amadeus-orchestrate.ts`、7サイト）
+
+述語: `git show "91f37ec85…:packages/framework/core/tools/amadeus-orchestrate.ts" | grep -nE 'kind: ?"done"'` → 7 hit（`:4635` の `FORWARD_RESULTS` 内リテラル `"done"` は kind ではないため除外）。
+
+| 行 | 到達経路 | 分類 |
+|---|---|---|
+| `:2987` | `handleNext` read-only latch（`:2983-2992`） | turn 終端・正（ただし SKILL.md の「completion summary」文言は不適合 — 分類は裁定事項） |
+| `:3582` | `handleNext` 完了判定 | 終端・正 |
+| `:4933` | single-stage run 完了 | 終端・正 |
+| **`:5382`** | `handleAuthorizedApprovalReport` | **多義（terminal / non-terminal の両方）** |
+| `:5744` | `handleReport` already-Completed 再 report | 終端・正 |
+| **`:5765`** | `handleReport` stale re-report guard（`:5754-5771`） | **純・非終端** |
+| **`:5849`** | `handleReport` 通常 commit ack | **多義（terminal / non-terminal の両方）** |
+
+### 多義2サイトの合流構造と判別子
+
+- `:5849` — `:5790` gated→`approve` / `:5791-5794` 非gated かつ最終→`complete-workflow`（**terminal**）/ `:5795-5796` 非gated 途中→`advance`（**non-terminal**）の3分岐がすべて `:5848-5849` の単一 emit へ合流する
+- `:5382` — `:5352` / `:5377` の `deferWorkflowCompletion` 経路のみ先に return し、それ以外の terminal / non-terminal が同一 emit へ落ちる
+- **判別子 `isFinal` は両サイトのスコープ内に既存**: `:5674`（`const isFinal = nextInScopeStage(slug, scope, stateContent) === null;`）/ `:5298-5299`（同、`scope !== null &&` 付き）。新規の状態読取なしで分岐できる
+- **`committed` 配列は判別子として不十分** — gated 最終ステージは `approve` が `complete-workflow` へ自己委譲するため、配列の中身では最終か否かを決められない
+- **設計先例**: `deferWorkflowCompletion` 経路は「終端だが未コミット」を `await-completion` / mirror boundary directive として既に別 kind へ切り出している
+
+### 契約面（同期対象コンポーネント）
+
+| 面 | 実体 | 備考 |
+|---|---|---|
+| harness SKILL.md **6面** | claude `:60` / codex `:58` / kimi `:60` / kiro `:56` / kiro-ide `:56`（**逐語同一**）+ pi `:121`（**別文言**） | 加えて全6面が forwarding-loop の stop 集合に `done` を含む（claude `:22` / codex `:20` / kimi `:22` / kiro `:20` / kiro-ide `:20` / pi `:70`）— report 返り値を loop step として stop 判定する契約なので多義が直撃する |
+| `amadeus-directive.ts` | `:52`（union）/ `:330-331`（doc）/ **`:332-335`**（`interface DoneDirective`）/ `:407`（`VALID_KINDS`）/ `:474`（`DONE_FIELDS`）/ `:495`（`KNOWN_FIELDS_BY_KIND`）/ `:548`（`FIELD_CHECKS_BY_KIND`）/ `:1201`（golden sample） | rule 3（`:590-594`）が unknown key を **strict 拒否**。両 Record は total（`:503` 逐語「Adding a DirectiveKind without a row here is a compile error (Record is total).」）でフィールド追加・kind 追加のいずれも漏れが検出される |
+| `docs/reference` **6ファイル** | `17-skill-system.md:38`（SKILL.md と同一の契約行）/ `:76` / `:80` と `.ja.md` 同座標、`06-hooks-and-tools.md:50,250,259` / `.ja.md:48,248,257`、`14-claude-features.md:333` / `.ja.md:328` | **reviewer-1「docs/reference には契約なし」は誤り**（本 RE が反証）。`06-…` / `14-…` の各 hit が契約行か散文言及かの逐語分類は未実施 |
+| stage-protocol | `packages/framework/core/amadeus-common/` は **0 hit** | reviewer-1 のこの半分は正 |
+| Stop hook | `packages/framework/core/hooks/amadeus-stop.ts:931-932`（`// \`done\` → the workflow is complete; allow the turn to end.` / `if (kind === "done") {`） | kind の出所は report の stdout ではなく `runEngineNextKind()`（`next` の再 spawn）= バックストップとして機能。実害は conductor 判断層に限定 |
+
+### 既存の件数語ドリフト（**本 intent の患部外**、同根棚卸し候補）
+
+`VALID_KINDS` 実数 = **13**（`awk '/VALID_KINDS = \[/,/\] as const/' | grep -cE '^\s*"'` で機械再計算。要素: `run-stage` / `dispatch-subagent` / `await-advisory-choice` / `invoke-swarm` / `present-gate` / `ask` / `select-intent` / `print` / `error` / `done` / `parked` / `await-completion` / `await-approval`）に対し、契約面の件数語が乖離している:
+
+| 所在 | 逐語 |
+|---|---|
+| SKILL.md 5面（claude `:73` / codex `:71` / kimi `:71` / kiro `:67` / kiro-ide `:67`） | 「The orchestration engine emits **ten** kinds today」 |
+| `docs/reference/17-skill-system.md:32` | 「a discriminated union over **nine** directive kinds」「The engine **emits seven kinds today**」 |
+| `docs/reference/17-skill-system.ja.md:32` | 「**9つ**のディレクティブ種別」「エンジンは**今日7つの種別を発行**します」 |
+
+新 kind 追加方式を採る場合はこの群を全て触ることになり、`cid:code-generation:count-comment-sync-on-catalog-change`（件数語は隣接列挙がある場合のみ許容）と `cid:functional-design:c3-adjacent-enum-numerals` の適用対象になる。
+
+### テストピンの所在
+
+`t115`（`tests/unit/t115.test.ts`）が中核 — `.sh` からの CLI 契約ポート（TAP plan 22）で、ヘッダ逐語「An in-process twin would lose the directive-JSON-to-stdout half (every "kind":"done"/"kind":"error" assertion)」。非終端サイトを pin する assert は `t115:287,314,332,350,373,538,557,586` / `t118:52,441,457` / `t-solo-gate-transaction-carrier:167` / `t435-intent-autonomy-production:564` / `t186:481` に分布。Stop hook 側は `t121-stop-hook-enforce:846-847`（スタブ engine が `done` を返す）が分岐を固定しており、Stop hook 改訂の落ちる実証の注入面になる。`cid:reverse-engineering:c1-pinned-behavior-ruling` の対象。
+
+---
+
+## per-sensor argv parse の所在と現況（260809-sensor-parseflags-failop、履歴、observed `778567dd0`）
+
+**観測 ref**: すべて observed = `778567dd03b00f22cb887eec06f025557eeaaaf4`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
+
+判別子は「値なしフラグ（`--depth` が argv 末尾、または直後が別のフラグ）をどう扱うか」。**loud に拒否する house idiom** と、**次トークンを無条件に飲む fail-open 形**が同一 repo 内に併存する。
+
+### 欠陥クラスの所在（T1〜T7b）
+
+| クラス | 所在（`packages/framework/core/tools/`） | 現況（実測、exit code は非パイプ取得） |
+|---|---|---|
+| **T1 コア3本** | `amadeus-sensor-depth-budget.ts:294-302` / `amadeus-sensor-question-budget.ts:340-348` / `amadeus-sensor-nfr-budget.ts:1031-1040` | `out.depth = argv[++i]`。**両アーム silent・exit 0**。over-budget の finding 1件が無言で消える。nfr は `--kind --depth Minimal` で `unit_kind:"--depth"` となり測定値が変わる。**最悪ケース（受け皿なし）** |
+| **T2 scope-sizing 残渣** | `amadeus-sensor-scope-sizing.ts:247-260`（`valueAt` + 逐語コメント） | アームB（`--output-path --depth S`）は exit 1 で封鎖済み。アームA（`--output-path P --depth`）は `depth:null` の残渣 — `valueAt(argv, ++i)` の `++i` 副作用で次フラグが値化されず飲まれる |
+| **T3 センサー・偽 green** | `amadeus-sensor-required-sections.ts:67-87` | **完全偽 green を実測再現**。`--templates-dir --template-eligible requirements` でテンプレート違反1件が警告も非0 exit もなく消える。本 Issue の3本より重い |
+| **T4 センサー・偶然 loud** | `amadeus-sensor-answer-evidence.ts:95-106` / `amadeus-sensor-pr-convergence-report-format.ts:166-173` | parse 欠陥は同一だが、下流の必須チェックで偶然 exit 1 |
+| **T5 意図宣言済み例外** | `amadeus-sensor-upstream-coverage.ts:19-35`（`:29-30` 逐語コメント） | `--consumes` 末尾 = 空リストと**同一扱いを意図宣言**。一律修正は意図破壊 |
+| **T6 別イディオム・両アーム loud** | `amadeus-sensor-linter.ts:93-119` / `amadeus-sensor-type-check.ts:112` 以降 | **実測 exit 1 ×4**。機序 = `?? ""` の後の `if (!stage) exit(1)`（linter:110-117）と未知トークンの `else { unknown flag → exit 1 }`（linter:104-107）。**欠陥クラスから外してよい**（メッセージ誤帰属の質は残る） |
+| **T7 汎用 `parseFlags`（センサー外・engine 系 CLI）** | `amadeus-learnings.ts:858-867` / `amadeus-jump.ts:238-244` / `amadeus-state.ts:705-715` / `amadeus-state.ts:5029-5036`（`handlePracticesPromote` インライン） | ガードは `a.startsWith("--") && i + 1 < args.length` のみ。**任意のフラグ**が次トークンを飲む。末尾フラグは無言ドロップ |
+| **T7b 名指しフラグ変種**（Architect 追加検出） | `amadeus-jump.ts:192-194`（`--project-dir`）/ `amadeus-state.ts:732-739`（`extractIntentSelector` の `--intent` / `--space`）/ `:4653-4656`（`--choice`）/ `:4788-4795`（`--type` / `--field`） | 同一欠陥形だが**対象は名指しフラグのみ**で誤消費の射程が狭い。`--intent --space X` → intent = `"--space"`。`--choice --foo` は非空になるため後段 `if (!choice) error()`（`:4659`）を通過し偶然 loud にもならない。**重大度は T7 と同一ではない** |
+
+**T7 / T7b は実発現有無が未実測（仮説）** — 呼出し元の argv 構成が値なしフラグを生みうるかは本 RE では確認していない。
+
+**列挙述語の注意**: `[++i]` 単独の述語は `args[i+1]; i++` 形を構造的に取りこぼす。T7 / T7b はいずれも後者の形で、`grep -rnE '\[(i|idx|index) \+ 1\]'` でのみ現れる（`cid:application-design:c1-asd-multi-idiom-inventory`）。
+
+### house idiom（loud 拒否形）の所在 — 5本
+
+`grep -rn "expects a value" packages/ tests/` で現れる。代表は `amadeus-state.ts:4076-4087` の `getFlagValue`:
+
+> `` `${flag} expects a value, got end of arguments.` `` / `` `${flag} expects a value, got another flag: "${val}". Did you forget the value?` ``
+
+逐語コメントが「silently wrong. This helper errors cleanly when the value starts with `--`」と述べる。**`amadeus-state.ts` は house idiom（`:4076-4087`）と T7（`:705-715` / `:5029-5036`）と T7b（`:732-739` / `:4653-4656` / `:4788-4795`）を1ファイル内に同居させており、非対称が最も濃い**。文言の先例テストは `tests/unit/t31.test.ts:223-244`（両アームを assert）。
+
+### canonical 化の配置制約（実測）
+
+- `amadeus-sensor-depth-budget.ts:23-24` の逐語コメントは「**no amadeus-lib import**」であり「no import」ではない。同ファイルの import は `node:fs` / `node:path` のみ（`:25-26`）
+- **cross-sensor import の現役先例**: `amadeus-sensor-nfr-budget.ts:76` `import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";`
+- amadeus-lib を import する per-sensor スクリプトは **6本**: `amadeus-sensor-invocation.ts:8` / `answer-evidence:19` / `schema:33` / `upstream-coverage:2` / `required-sections:3` / `type-check:90` → self-contained は per-sensor 全体の規約ではなく **budget 系のローカル方針**
+- 配布面: `packages/framework/harness/*/manifest.ts` の `coreDirs` が `{ src: "tools", dst: "tools" }`（claude:56）で `walk(srcDir)` の全ファイルを投影 → **core/tools への新規小モジュールは全ハーネスへ自動で乗る**（手動同期不要）
+
+### in-process seam の現況（falling-proof の書きやすさ）
+
+| センサー | `main` export | `fail` export |
+|---|---|---|
+| depth-budget | `:311` ✅ | `:304` ❌ |
+| question-budget | `:357` ✅ | `:350` ❌ |
+| nfr-budget | `:1054` ✅ | `:1042` ❌ |
+| scope-sizing | `:275` ✅ | `:266` ✅ |
+
+`fail` の export は scope-sizing のみ。`tests/integration/t519-scope-sizing-sensor.integration.test.ts:275-306` の in-process falling-proof を他3本へ移植するには `fail` の export 化が要る（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）。
+
+### 発火経路（dispatcher）は構造的に安全
+
+`amadeus-sensor.ts:886-898`（`depthBudgetArgs`）と `:900-926`（`unitKindArgs`）はいずれも `return X === undefined ? [] : ["--flag", X];` の形で、値なしフラグを構造的に生まない。dispatcher 自身の `parseFlags`（`amadeus-sensor.ts:179-195`）は**両アーム loud** — 「dispatcher は loud、dispatch される側は silent」の非対称。
+
+詳細と決定的再現の全出力は `re-scans/260809-sensor-parseflags-failop.md` を正本とする。
+
+## #2328 audit schema drift の患部コンポーネント（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 判別子は「共有ハーネス `tests/harness/audit-records.ts` を使うか、自前で `JSON.parse` するか」。自前パーサは **e2e 17ファイル + 非 e2e 14ファイル**に実在する。
 

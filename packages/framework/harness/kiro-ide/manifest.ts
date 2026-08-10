@@ -36,7 +36,11 @@ const manifest: HarnessManifest = {
     { src: "sensors", dst: "sensors" },
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
-    { src: "hooks", dst: "hooks" },
+    // amadeus-mint-presence.ts is never invoked here — amadeus-kiro-adapter.ts
+    // mints HUMAN_TURN inline through the canonical mintHumanPresence seam,
+    // never as a subprocess call to the core hook. Shipping it would be dead
+    // code (#860).
+    { src: "hooks", dst: "hooks", exclude: ["amadeus-mint-presence.ts"] },
     { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },

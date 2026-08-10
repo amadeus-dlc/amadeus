@@ -48,6 +48,24 @@ gate).
 ## Documentation
 
 For full documentation, see `docs/guide/` (User Guide), `docs/harness-engineering/` (Harness Engineer Guide), and `docs/reference/` (Developer Reference); start at `docs/README.md`. The Codex-specific guide (prerequisites, trust pre-seed, provider config, the git-repo requirement) is `docs/guide/harnesses/codex-cli.md`.
+## Fresh worktree / clone checklist
+
+At the start of every session, check for these two conditions before doing anything else and self-resolve them (Issue #2714 — Codex opens a new worktree per task, and each one needs this bootstrap once):
+
+1. **`.codex/tools/` is missing** — this is a fresh worktree of the Amadeus framework's own self-development repository (a source-only boundary: it ships no generated output). Run, in order:
+   ```bash
+   mise trust && bun install --frozen-lockfile && bun run build
+   ```
+   `bun run build` regenerates the self-install surface, including `.codex/hooks.json.example`, and auto-creates the active `.codex/hooks.json` from it when one is not already present — no separate activate command is needed on this path. Then continue to step 3: the restart requirement below applies to this branch too.
+2. **`.codex/tools/` exists but `.codex/hooks.json` is missing** — run:
+   ```bash
+   bun .codex/tools/amadeus-codex-hooks.ts activate
+   ```
+   The engine's `$amadeus next` fails fast with this same guidance (Issue #2703, fixed in PR #2709) if it is reached first.
+3. **If either step above created `.codex/hooks.json` during THIS task, tell the user a task restart (same worktree) is required, and stop**: an already-running Codex task does not reload `hooks.json`, so a hooks file created mid-task — by `bun run build` or by `activate`, it makes no difference — leaves the UserPromptSubmit hook dark until the next task starts.
+   - **Restart correctly**: the restart must be a same-directory task fork that keeps this worktree (Codex App: `fork_thread`), never a fresh-thread creation that opens a NEW worktree (Codex App: `create_thread`) — the latter throws away everything this checklist just did (install, build, activate) and starts the whole bootstrap over in a different directory.
+   - **Carry the handoff verbatim**: when forking/restarting, the handoff message to the new task must include the ORIGINAL instructions in full — scope, intent name, and Issue references verbatim — never a paraphrase or summary. A dropped or reworded scope silently changes what gets built.
+
 ## What's different on this harness
 
 This is the same AI-DLC core that ships to every harness, rendered onto Codex CLI. On Codex:

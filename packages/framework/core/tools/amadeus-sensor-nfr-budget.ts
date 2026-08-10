@@ -7,13 +7,31 @@
 // files than any other stage in the corpus and a per-artifact spread wider than
 // the one #2425 was filed about.
 //
-// Stage ① (#2686) supplied the id contract. This sensor supplies the
-// measurement and NOTHING ELSE: it carries no ceiling. Placing one before the
-// observed distribution exists is exactly the mistake #2525 had to undo — a
-// threshold under the observed minimum flags every artifact, and a permanently
-// red signal says nothing about which artifact is an outlier. The ceilings are
-// stage ③, and they are derived from the numbers this sensor and the
-// repository's depth artifact census produce.
+// Stage ① (#2686) supplied the id contract. Stage ② (this sensor, before the
+// ruling on GitHub issue comment 5230416035) supplied the measurement and
+// NOTHING ELSE: no ceiling. Placing one before the observed distribution
+// exists is exactly the mistake #2525 had to undo — a threshold under the
+// observed minimum flags every artifact, and a permanently red signal says
+// nothing about which artifact is an outlier. Stage ③ (that ruling) ships the
+// first ceiling — Standard depth only, one independently-derived constant per
+// stage — from the numbers this sensor and the repository's depth artifact
+// census produce. Minimal (n=3, too thin to rule on) and Comprehensive (no
+// ceiling by convention, stage-protocol.md §8) stay unmeasured against one.
+//
+// Stage ⑥ (issue comment 5230806329, scope narrowed from a stopped first
+// attempt by comment 5230769702) adds a THIRD check, scoped to ONE artifact:
+// performance-requirements.md. The same measurable-numeric-threshold
+// predicate applied corpus-wide to every nfr-requirements artifact flagged
+// performance at 126/302 = 41.7% and the other four at 72.0%-90.2%; reading
+// the flagged security/scalability/tech-stack samples confirmed those were
+// NOT false positives — "does not retain the token", "adds zero new
+// dependencies" are structurally qualitative and a numeric equality can never
+// hold against them. Only performance carried a genuine gap between
+// "declared an id" and "declared a measurable number", so the check applies
+// to it alone; reliability and scalability are left for a future ruling
+// (their 72%-75% is a mix this predicate cannot yet separate). Gated on the
+// same id-contract cutoff as the missing-nfr-ids case, advisory-only, and
+// blocking is deferred to #2683 the same way the ceiling check is.
 //
 // WHAT IS THE DENOMINATOR. NFR ids are declared in nfr-requirements and only
 // CITED in nfr-design — the stage ① contract says so in as many words ("do not
@@ -29,15 +47,18 @@
 // The per-artifact figure is kept as a diagnostic (D1: which category of one
 // unit is the outlier), not as a second denominator.
 //
-// PRUNING CANNOT BE RECONSTRUCTED FROM DISK, which is why the measurement does
-// not try. Measured over the corpus: of the 142 nfr-requirements unit
-// directories, 130 belong to units whose kind is unresolvable from the
-// committed unit-of-work-dependency.md, and the engine's kindless fallback
-// hands those every declared artifact. So "artifact absent" and "artifact
-// pruned" are indistinguishable for most of the corpus. This sensor measures
-// the artifacts that EXIST and never assumes an expected set; separating
-// pruning from a silent omission is the issue's stage ⑤ (coverage), which needs
-// the directive's resolved kind rather than the filesystem.
+// PRUNING CANNOT BE RECONSTRUCTED FROM DISK ALONE, which is why the
+// MEASUREMENT does not try. Measured over the corpus: of the 142
+// nfr-requirements unit directories, 130 belong to units whose kind is
+// unresolvable from the committed unit-of-work-dependency.md, and the engine's
+// kindless fallback hands those every declared artifact. So "artifact absent"
+// and "artifact pruned" are indistinguishable for most of the corpus. The
+// measurement therefore covers the artifacts that EXIST and never assumes an
+// expected set.
+//
+// Stage ⑤ (ruling comment 5230791793) separates the two for the units where a
+// kind IS resolvable, using the unit's kind rather than the filesystem — see
+// the "Kind coverage" section below.
 //
 // Advisory by construction: the shipped schema admits no other severity, so a
 // finding is data for the human at the gate and never blocks. Every check
@@ -45,8 +66,15 @@
 //
 // Self-contained (no amadeus-lib import): a per-sensor script is spawned by the
 // dispatcher and must not drag the library's module graph into that process.
+// The one cross-sensor import below (canonicalDepth from the sibling
+// depth-budget script) is not that: depth normalization is canonicalized
+// there already and re-deriving it here would let this sensor's idea of
+// "Standard" drift from that one's — the same reuse the census script makes.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { canonicalDepth } from "./amadeus-sensor-depth-budget.ts";
+import { requireFlagValue } from "./amadeus-sensor-flags.ts";
 
 /** The artifacts `nfr-requirements` declares in `produces`. Ids are DECLARED
  *  here. */
@@ -154,6 +182,27 @@ const NFR_PATTERNS = [
   new RegExp(`^\\|\\s*\\*{0,2}${NFR_ID}`),
 ];
 
+/** One id declaration event: the (0-based) line it was found on and the id
+ *  itself. The single scan both countNfrIds/collectNfrIds (which id, how
+ *  many distinct) and idBlocks (which line ranges) are derived from, so a
+ *  future pattern addition to NFR_PATTERNS cannot land on one consumer and
+ *  miss the other. */
+function nfrIdDeclarations(body: string): Array<{ index: number; id: string }> {
+  const events: Array<{ index: number; id: string }> = [];
+  const lines = body.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").trimStart();
+    for (const pattern of NFR_PATTERNS) {
+      const match = line.match(pattern);
+      if (match) {
+        events.push({ index: i, id: match[1] as string });
+        break;
+      }
+    }
+  }
+  return events;
+}
+
 /** Distinct ids declared in one artifact body.
  *
  *  DISTINCT, so restating an id in a later cross-reference does not inflate the
@@ -167,18 +216,93 @@ export function countNfrIds(body: string): number {
 /** The id SET, so a unit's total can be a union across its artifacts rather
  *  than a sum that double-counts an id declared in two of them. */
 export function collectNfrIds(body: string): Set<string> {
-  const ids = new Set<string>();
-  for (const rawLine of body.split("\n")) {
-    const line = rawLine.trimStart();
-    for (const pattern of NFR_PATTERNS) {
-      const match = line.match(pattern);
-      if (match) {
-        ids.add(match[1] as string);
-        break;
-      }
-    }
+  return new Set(nfrIdDeclarations(body).map((event) => event.id));
+}
+
+// ---------------------------------------------------------------------------
+// The numeric-threshold predicate — #2684 stage ⑥, performance-requirements
+// only (issue comment 5230806329, scoped by the stopping ruling in comment
+// 5230769702)
+// ---------------------------------------------------------------------------
+
+/** The one artifact this check applies to. The same measurable-numeric
+ *  predicate applied corpus-wide to every nfr-requirements artifact flagged
+ *  performance at 126/302 = 41.7% and the other four at 72.0%-90.2%; a spot
+ *  read of the flagged security/scalability/tech-stack samples confirmed
+ *  those were NOT false positives ("does not retain the token", "adds zero
+ *  new dependencies") — structurally qualitative requirements a numeric
+ *  equality cannot hold against. Only performance carried a genuine gap
+ *  between "declared an id" and "declared a measurable number", so the
+ *  ruling scopes the check to this one artifact rather than all ten. */
+export const PERFORMANCE_REQUIREMENTS_ARTIFACT = "performance-requirements";
+
+/** A comparator token, optional: bare "180 ms" is as measurable as
+ *  "≤180 ms". Japanese comparators the corpus writes NFR prose in are
+ *  included alongside the ASCII/mathematical ones. */
+const NUMERIC_COMPARATOR = "(?:<=|>=|[<>≤≥=]|以内|以下|以上|未満|超|約|最大|最小|上限|下限)?";
+
+/** The value: digits, optionally grouped by one repeated separator (`.` or
+ *  `,`) — "200", "1,000", "99.9". A bare digit run with no unit token right
+ *  after it is not a threshold on its own (see NUMERIC_UNIT), which is what
+ *  keeps an id's own digits, a heading number, or a date from satisfying this
+ *  predicate by accident. */
+const NUMERIC_VALUE = "[0-9]+(?:[.,][0-9]+)*";
+
+/** A unit token immediately after the value (through optional whitespace),
+ *  with a negative lookahead so the match does not run on into an unrelated
+ *  word. Requiring this token IS the vacuity guard: an id's digits
+ *  (`PERF-3`), a heading number (`3.2`), or a date (`2026-08-09`) are never
+ *  followed by one of these, so none of the contract's own decorative
+ *  vocabulary can masquerade as a measured threshold. */
+const NUMERIC_UNIT =
+  "(?:ms|msec|sec(?:s|onds?)?|s|mins?|minutes?|hrs?|hours?|h|days?|day|weeks?|week|months?|month|秒間?|分間?|時間|日間?|週間?|ヶ月|か月|パーセント|percent|%|KB|MB|GB|TB|bytes?|byte|req\\/s|rps|qps|tps|ops|fps|件|回|台|人|個|条件|同時)(?![A-Za-z])";
+
+/** comparator? + value + unit, in that order — the full measurable-threshold
+ *  shape. The whitespace between the parts is intra-line only ([ \t], not the
+ *  \s that also matches a newline): a comparator/value/unit split across a
+ *  line boundary (e.g. a value at the end of a table cell and a unit token
+ *  that starts the next line) is not a threshold on that line, and letting
+ *  \s bridge the boundary would misread it as one, hiding a genuinely missing
+ *  threshold. Otherwise unchanged from the exploratory sweep the stopping
+ *  ruling cites (issue comment 5230769702), which measured this exact pattern
+ *  against the corpus and reported the 41.7% figure this predicate
+ *  reproduces. */
+const NUMERIC_THRESHOLD = new RegExp(`${NUMERIC_COMPARATOR}[ \\t]*${NUMERIC_VALUE}[ \\t]*${NUMERIC_UNIT}`);
+
+/** One declared id's block: its declaration line through the line before the
+ *  next declaration (of any id, in any of the five contract positions), or
+ *  end of file for the last one. Sliced from the same declaration-event scan
+ *  countNfrIds/collectNfrIds use (nfrIdDeclarations), not a second copy of
+ *  it — the two consumers share the scan, not mutable state, so this does
+ *  not reintroduce the shared-state coupling the original separation avoided. */
+function idBlocks(body: string): Map<string, string> {
+  const lines = body.split("\n");
+  const events = nfrIdDeclarations(body);
+  const blocks = new Map<string, string>();
+  for (let e = 0; e < events.length; e += 1) {
+    const event = events[e] as { index: number; id: string };
+    const start = event.index;
+    const end = e + 1 < events.length ? (events[e + 1] as { index: number }).index : lines.length;
+    const text = lines.slice(start, end).join("\n");
+    const prior = blocks.get(event.id);
+    blocks.set(event.id, prior === undefined ? text : `${prior}\n${text}`);
   }
-  return ids;
+  return blocks;
+}
+
+/** Ids declared in a performance-requirements.md body whose block (see
+ *  idBlocks) carries no measurable numeric threshold — the id was declared
+ *  but never paired with an actual number. An id declared more than once is
+ *  satisfied if ANY of its blocks carries one, mirroring the exploratory
+ *  sweep's own per-id union rather than penalising a requirement whose
+ *  number is stated only at a later restatement. Returned sorted for a
+ *  deterministic findings order. */
+export function idsMissingNumericThreshold(body: string): string[] {
+  const missing: string[] = [];
+  for (const [id, text] of idBlocks(body)) {
+    if (!NUMERIC_THRESHOLD.test(text)) missing.push(id);
+  }
+  return missing.sort();
 }
 
 // ---------------------------------------------------------------------------
@@ -420,11 +544,336 @@ export function idDeclarationDir(stageDir: string): string {
     : join(dirname(stageDir), NFR_REQUIREMENTS_STAGE_DIR);
 }
 
+// ---------------------------------------------------------------------------
+// Kind coverage — #2684 stage ⑤, the (a)/(c) split (ruling comment 5230791793)
+// ---------------------------------------------------------------------------
+//
+// The pruning note at the top of this file says the expected artifact set
+// cannot be reconstructed from disk. It cannot be reconstructed from disk
+// ALONE — a unit whose kind prunes three artifacts and a unit that silently
+// omitted three look identical there. What resolves them is the unit's KIND,
+// which the dispatcher passes in as --kind (the same shape as --depth: the
+// per-sensor script never walks for the record root itself).
+//
+// With a kind in hand the two absences separate:
+//
+//   (a) the kind does not require the artifact → a pruning → report nothing.
+//   (c) the kind DOES require it and it is not on disk → a silent omission →
+//       one advisory finding per missing artifact.
+//
+// There is no (b): an explicit "not applicable for this kind" marker. The
+// corpus carries no such form (the prose hits that mention kind pruning are all
+// upstream-input headers describing a CONSUMED artifact's absence), so
+// contracting one here would be inventing a format before anything writes it.
+//
+// FORWARD-LOOKING BY CONSTRUCTION, though not for want of data to judge.
+// Measured over the live corpus with this module's own predicates: 231 of the
+// 1,736 nfr artifacts on disk belong to units whose kind resolves (11 records;
+// service 35, library 156, packaging 24, spec 16), and NONE of them is missing
+// an artifact its kind requires — the check does not over-fire on what exists.
+// What is zero is the REPORTABLE subset: no record with a resolvable kind was
+// born under the id contract, so the cutoff suppresses every finding today.
+// The falling proof is therefore synthetic (a fixture record whose
+// unit-of-work-dependency.md declares kind: service), and the corpus sweep
+// pins both facts — a non-empty judged population and zero gaps in it.
+//
+// Gated on the SAME id-contract cutoff as the other reported cases — a record
+// written before the contract is never reported retroactively.
+
+/** Where the stage files sit relative to this script. Identical in the canonical
+ *  tree (`core/tools` → `core/amadeus-common/…`) and in every shipped harness
+ *  (`<harness>/tools` → `<harness>/amadeus-common/…`), so one relative path
+ *  serves both without the script resolving a project root. */
+const DEFAULT_STAGES_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "amadeus-common", "stages");
+
+/** The construction stage directory, honouring the same `AMADEUS_STAGES_DIR`
+ *  seam amadeus-graph.ts and amadeus-learnings.ts read (it names the stages
+ *  ROOT, so the phase segment is appended here).
+ *
+ *  Resolved per call rather than once at module load: the seam is set by tests
+ *  that drive a substituted stage tree, and a module-level constant would
+ *  capture whatever was set at import time. Missing the override would send the
+ *  lookup to the real tree — or to nothing, which fails open and disables the
+ *  coverage check in silence. */
+function stagesDirDefault(): string {
+  return join(process.env.AMADEUS_STAGES_DIR ?? DEFAULT_STAGES_ROOT, "construction");
+}
+
+/** One `produces_kinds` entry: `  <artifact>: [kind, kind]`, indented inside the
+ *  frontmatter block. */
+const PRODUCES_KINDS_ENTRY = /^\s+([A-Za-z0-9._-]+):\s*\[([^\]]*)\]\s*$/;
+
+/** The stage's `produces_kinds` map, read out of its frontmatter.
+ *
+ *  Undefined when the frontmatter declares none — the fail-open signal. An
+ *  EMPTY map would say "this stage prunes nothing", which is a different claim
+ *  and would make every absence a reportable omission.
+ *
+ *  Scoped to the frontmatter block so a `produces_kinds:` line quoted in the
+ *  stage's prose cannot contribute entries. */
+export function parseProducesKinds(stageBody: string): Map<string, string[]> | undefined {
+  const lines = stageBody.split("\n");
+  if ((lines[0] ?? "").trim() !== "---") return undefined;
+  // Trimmed on BOTH fences. Matching the terminator exactly while trimming the
+  // opener is an asymmetry a trailing space on the closing `---` turns into a
+  // silent no-map: fail-open is the safe side, but the check would simply stop
+  // running with nothing to say so.
+  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
+  if (end === -1) return undefined;
+  const start = lines.findIndex((line, i) => i > 0 && i < end && line.trimEnd() === "produces_kinds:");
+  if (start === -1) return undefined;
+  const map = new Map<string, string[]>();
+  for (let i = start + 1; i < end; i += 1) {
+    const line = lines[i] ?? "";
+    // A line that is not indented ends the block: the next frontmatter key.
+    if (line.trim() === "" || !/^\s/.test(line)) break;
+    const entry = line.match(PRODUCES_KINDS_ENTRY);
+    // An indented line that is not an entry ends the block rather than being
+    // skipped — skipping would let a later key's values leak in.
+    if (entry === null) break;
+    const kinds = (entry[2] as string)
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k) => k !== "");
+    map.set(entry[1] as string, kinds);
+  }
+  return map.size === 0 ? undefined : map;
+}
+
+/** The stage's map read from disk, or undefined when the file is unreadable or
+ *  declares none. Both are fail-open. */
+export function readProducesKinds(stage: string, stagesDir?: string): Map<string, string[]> | undefined {
+  let body: string;
+  try {
+    body = readFileSync(join(stagesDir ?? stagesDirDefault(), `${stage}.md`), "utf-8");
+  } catch {
+    return undefined;
+  }
+  return parseProducesKinds(body);
+}
+
+/** The artifacts a unit of `kind` must produce for `stage`.
+ *
+ *  AN ABSENT KEY APPLIES TO EVERY KIND. That is the engine's own reading
+ *  (requiredArtifactsForUnit includes an artifact whose kind list is
+ *  undefined), and it is the whole load-bearing detail here:
+ *  security-requirements and tech-stack-decisions declare no key and are
+ *  therefore required of every kind. Reading an absent key as "prunable"
+ *  would silently stop requiring them of anyone. */
+export function artifactsRequiredForKind(stage: string, kind: string, producesKinds: Map<string, string[]>): string[] {
+  return artifactsOfStage(stage).filter((name) => {
+    const kinds = producesKinds.get(name);
+    return kinds === undefined || kinds.includes(kind);
+  });
+}
+
+/** The (c) set: artifacts this unit's kind requires that are not on disk.
+ *
+ *  Judged on the UNIT's stage directory, not on the artifact that fired, so
+ *  every artifact of the same unit yields the same answer — the check is
+ *  idempotent across which file triggered it. Sorted for a deterministic
+ *  findings order. */
+export function missingKindRequiredArtifacts(
+  stageDir: string,
+  stage: string,
+  kind: string,
+  producesKinds: Map<string, string[]>,
+): string[] {
+  return artifactsRequiredForKind(stage, kind, producesKinds)
+    .filter((name) => !existsSync(join(stageDir, `${name}.md`)))
+    .sort();
+}
+
+// ---------------------------------------------------------------------------
+// Intentionally skipped upstream — #2773
+// ---------------------------------------------------------------------------
+//
+// A scope may SKIP nfr-requirements while EXECUTing nfr-design — `self-feature`
+// does exactly that, and the engine issues the design directive with every one
+// of its nfr-requirements inputs marked `consumes_absent.expected=true`. The
+// ids that would be this measurement's denominator are declared in a stage that
+// scope never runs, so `missing-nfr-ids` on such a record names an omission
+// nobody committed and no artifact content can clear.
+//
+// The grid is the authority, not the stage frontmatter: a COMPOSED scope's
+// EXECUTE/SKIP row exists only in the compiled scope-grid.json, and transposing
+// `scopes:` here would read every composed scope as skipping every stage. Any
+// input the suppression cannot resolve — no state file, no `Scope` field, no
+// grid, a scope the grid does not name — leaves the finding exactly where it
+// was. The reported side stays fail-closed; only a positive, decisive SKIP
+// suppresses.
+
+/** The scope grid path, honouring the same `AMADEUS_SCOPE_GRID` seam
+ *  amadeus-graph.ts reads. `data/` sits beside this script in every shipped
+ *  harness (the canonical tree carries no compiled grid, which resolves as
+ *  "cannot decide"). Resolved per call: the seam is set by tests. */
+function scopeGridPath(): string {
+  return process.env.AMADEUS_SCOPE_GRID ?? join(dirname(fileURLToPath(import.meta.url)), "data", "scope-grid.json");
+}
+
+/** The one cell this sensor asks the grid for, narrowed off an `unknown` parse
+ *  rather than cast into a shape nobody proved (#1980 FR-3a). Undefined for
+ *  every shape that does not carry a string at
+ *  `<scope>.stages.<stage>` — a malformed grid answers "cannot decide", the
+ *  same as an absent one. */
+function gridCell(parsed: unknown, scope: string, stage: string): string | undefined {
+  if (typeof parsed !== "object" || parsed === null) return undefined;
+  const row: unknown = (parsed as Record<string, unknown>)[scope];
+  if (typeof row !== "object" || row === null) return undefined;
+  const stages: unknown = (row as Record<string, unknown>).stages;
+  if (typeof stages !== "object" || stages === null) return undefined;
+  const cell: unknown = (stages as Record<string, unknown>)[stage];
+  return typeof cell === "string" ? cell : undefined;
+}
+
+/** The record's `Scope`, read from the nearest state file the record root
+ *  carries. Undefined when the record has no state file (2 of the corpus's
+ *  records do not) or declares no scope. */
+export function readRecordScope(recordRoot: string): string | undefined {
+  let body: string;
+  try {
+    body = readFileSync(join(recordRoot, "amadeus-state.md"), "utf-8");
+  } catch {
+    return undefined;
+  }
+  const match = body.match(/^-\s+\*\*Scope\*\*:\s*(\S+)\s*$/m);
+  return match?.[1];
+}
+
+/** Does the compiled grid say `scope` SKIPs `stage`? Undefined whenever the
+ *  question cannot be answered from the grid — an unreadable or malformed file,
+ *  a scope the grid does not carry, a stage the row does not list. */
+export function scopeSkipsStage(scope: string, stage: string, gridPath = scopeGridPath()): boolean | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(gridPath, "utf-8"));
+  } catch {
+    return undefined;
+  }
+  const cell = gridCell(parsed, scope, stage);
+  if (cell === undefined) return undefined;
+  return cell === "SKIP";
+}
+
+/** Is this artifact's missing denominator the scope's own doing?
+ *
+ *  Only ever true for the CITING stage: an nfr-requirements artifact on disk
+ *  was written by whoever ran that stage, and a grid row claiming it was
+ *  skipped does not excuse the ids it failed to declare. */
+export function upstreamProducerSkipped(outputPath: string, stage: string): boolean {
+  if (stage === NFR_REQUIREMENTS_STAGE_DIR) return false;
+  const root = resolveRecordRoot(outputPath);
+  if (root === undefined) return false;
+  const scope = readRecordScope(root);
+  if (scope === undefined) return false;
+  return scopeSkipsStage(scope, NFR_REQUIREMENTS_STAGE_DIR) === true;
+}
+
+/** What the unit's id count means for this artifact.
+ *
+ *  `not-reported`   — there is a denominator, or the record predates the
+ *                     contract (the fail-open cohort). Measured as before.
+ *  `scope-omitted`  — no denominator, and the scope skipped the stage that
+ *                     would have declared one. Nobody omitted anything.
+ *  `reportable`     — no denominator and no explanation: the id contract is
+ *                     unmet and the finding stands. */
+export type NfrIdStatus = "not-reported" | "scope-omitted" | "reportable";
+
+export function nfrIdStatus(
+  outputPath: string,
+  stage: string,
+  unitNfrCount: number,
+  underContract: boolean,
+): NfrIdStatus {
+  if (!underContract || unitNfrCount > 0) return "not-reported";
+  return upstreamProducerSkipped(outputPath, stage) ? "scope-omitted" : "reportable";
+}
+
 /** The unit's id count — the denominator both stages divide by. */
 export function unitIdCount(stageDir: string): number {
   const declarationDir = idDeclarationDir(stageDir);
   if (!existsSync(declarationDir)) return 0;
   return measureNfrStageDir(declarationDir, NFR_REQUIREMENTS_ARTIFACTS).ids.size;
+}
+
+// ---------------------------------------------------------------------------
+// Ceilings — Standard depth only (#2684 stage ③, ruling comment 5230416035)
+// ---------------------------------------------------------------------------
+
+/** Bytes per declared NFR id nfr-requirements's Standard-depth UNITS (D2,
+ *  `unit_bytes_per_nfr`) may spend. Measured with this sensor's own predicate
+ *  over every Standard-depth unit with at least one declared id — n=78, min
+ *  299, median 657, max 2290. 1,200 sits inside that range, which is what
+ *  makes it a detector rather than a verdict
+ *  (cid:code-generation:c1-threshold-inside-observed-range): below the
+ *  minimum it would flag every unit, above the maximum it would flag none.
+ *  It sits above the median (roughly 1.8x) so it catches the tail rather than
+ *  the middle, inside the 10-30% flag-rate band (925-1425 B/id) the sweep
+ *  found for this stage, and flags 12/78 = 15.4% of the measured population.
+ *
+ *  A SEPARATE, independently-derived constant from nfr-design's, per
+ *  cid:code-generation:c1-threshold-inside-observed-range's "水準ごとの規則" —
+ *  landing on the same 1,200 as nfr-design (below) is coincidence, not a
+ *  shared rule, and the two may move independently in a future ruling. */
+export const NFR_REQUIREMENTS_STANDARD_BUDGET = 1200;
+
+/** Bytes per declared NFR id nfr-design's Standard-depth units may spend — the
+ *  same measurement as above, applied to nfr-design's own D2 figure. n=78,
+ *  min 130, median 769, max 2553. 1,200 sits inside that range, above the
+ *  median (roughly 1.6x), inside this stage's 10-30% band (975-1725 B/id),
+ *  and flags 16/78 = 20.5% of the measured population.
+ *
+ *  Independently derived from nfr-requirements' constant above — see that
+ *  constant's comment for why the two are not the same rule despite sharing
+ *  a value today. */
+export const NFR_DESIGN_STANDARD_BUDGET = 1200;
+
+/** Minimal declares no ceiling yet: its Standard-depth sibling had 78 units to
+ *  measure from, Minimal has 3 — too thin for a range a ceiling could sit
+ *  inside without being either an accident of three data points or a
+ *  permanently-red signal. Comprehensive declares no ceiling by the same
+ *  convention depth-budget's DEPTH_BUDGETS.Comprehensive uses
+ *  (stage-protocol.md §8). Both stay undefined here rather than an entry of
+ *  Infinity, which would read as a threshold someone forgot to pick.
+ *
+ *  The ceiling for a stage at a depth, or undefined when this pair declares
+ *  none. Depth is normalized through the depth-budget sensor's own
+ *  `canonicalDepth`, so this and that sensor can never disagree about what
+ *  "Standard" means. */
+export function nfrStandardBudget(stage: string, level: string | undefined): number | undefined {
+  if (level !== "Standard") return undefined;
+  if (stage === NFR_REQUIREMENTS_STAGE_DIR) return NFR_REQUIREMENTS_STANDARD_BUDGET;
+  if (stage === "nfr-design") return NFR_DESIGN_STANDARD_BUDGET;
+  return undefined;
+}
+
+/** Does this unit's stage measurement exceed its Standard ceiling?
+ *
+ *  Compared on the EXACT total (`unitBytes > ceiling * unitIdCount`), not on
+ *  the rounded per-id ratio — rounding first would let a sub-integer overrun
+ *  slip under the ceiling, the same reasoning depth-budget's own comparison
+ *  uses. A unit with no declared ids (`unitIdCount === 0`) has no denominator
+ *  and is never flagged here: that unit is either fail-open (pre-contract) or
+ *  already reported as `missing-nfr-ids` (post-contract) by the caller, and a
+ *  zero-denominator comparison (`bytes > 0`) would flag every such unit on
+ *  its first byte. THIS CHECK IS INDEPENDENT OF THE ID-CONTRACT CUTOFF — a
+ *  unit written before the contract that nonetheless declares ids is measured
+ *  exactly like one written after (ruling comment 5230416035: "超過 flag は
+ *  cutoff と独立"). Measured against the live corpus, every Standard-depth
+ *  unit with declared ids today predates the contract (it landed moments
+ *  before this ruling), so the corpus sweep below is necessarily a sweep of
+ *  pre-contract units — the ceiling could not otherwise be measured against
+ *  anything yet. */
+export function flagsNfrBudget(
+  stage: string,
+  level: string | undefined,
+  unitBytes: number,
+  unitNfrCount: number,
+): boolean {
+  if (unitNfrCount === 0) return false;
+  const ceiling = nfrStandardBudget(stage, level);
+  if (ceiling === undefined) return false;
+  return unitBytes > ceiling * unitNfrCount;
 }
 
 export interface NfrBudgetFinding {
@@ -452,6 +901,17 @@ export interface NfrBudgetResult {
   unit_bytes_per_nfr: number;
   record_birth: string | null;
   under_id_contract: boolean;
+  /** #2684 stage ⑥ — count of ids THIS artifact declares with no measurable
+   *  numeric threshold. Always 0 outside performance-requirements.md (the
+   *  check's one scoped artifact — see PERFORMANCE_REQUIREMENTS_ARTIFACT). */
+  missing_numeric_threshold_count: number;
+  /** #2684 stage ⑤ — the unit's declared kind, or null when the dispatcher
+   *  could not resolve one (the kindless generation, which is most of the
+   *  corpus). Null is what makes the coverage check fail-open. */
+  unit_kind: string | null;
+  /** #2684 stage ⑤ — count of artifacts this unit's kind requires that are not
+   *  on disk. Always 0 without a resolved kind. */
+  missing_kind_required_count: number;
 }
 
 const NONE = {
@@ -464,6 +924,9 @@ const NONE = {
   unit_bytes_per_nfr: 0,
   record_birth: null,
   under_id_contract: false,
+  missing_numeric_threshold_count: 0,
+  unit_kind: null,
+  missing_kind_required_count: 0,
 };
 
 function verdict(
@@ -474,17 +937,61 @@ function verdict(
   return { pass: findings.length === 0, findings_count: findings.length, reason, findings, ...measured };
 }
 
-/** Ratio to report. Rounded for readability; nothing COMPARES against it, since
- *  this sensor carries no ceiling yet (stage ③). A zero denominator reports 0
- *  rather than Infinity — the id-absence finding is what says the denominator
- *  was missing. */
+/** Ratio to report. Rounded for readability; the budget COMPARISON below uses
+ *  the exact totals rather than this rounded figure (see flagsNfrBudget). A
+ *  zero denominator reports 0 rather than Infinity — the id-absence finding is
+ *  what says the denominator was missing. */
 function ratio(bytes: number, count: number): number {
   return count === 0 ? 0 : Math.round(bytes / count);
 }
 
 /** Pure evaluation core (in-process test seam). Reads the files itself so the
- *  CLI entry stays a thin argv shim. */
-export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
+ *  CLI entry stays a thin argv shim. `depth` is optional and, when absent or
+ *  unrecognizable, simply measures with no ceiling applied — the sensor never
+ *  guesses a level, matching the sibling depth-budget sensor. */
+/** The (c) set for one unit, or empty when it cannot legitimately be computed:
+ *  no resolved kind (the kindless generation — pruning and omission stay
+ *  indistinguishable) or no readable produces_kinds map for the stage. Both are
+ *  fail-open, which is why they collapse to the same empty answer. */
+function missingRequiredForKind(stage: string, stageDir: string, kind: string | undefined): string[] {
+  if (kind === undefined) return [];
+  const producesKinds = readProducesKinds(stage);
+  if (producesKinds === undefined) return [];
+  return missingKindRequiredArtifacts(stageDir, stage, kind, producesKinds);
+}
+
+/** The (c) findings, one per missing artifact. Takes the kind rather than
+ *  reading it off the caller so the non-undefined narrowing the finding text
+ *  needs is carried by the type here, not inferred by a reader from the fact
+ *  that `missing` is only ever non-empty when a kind resolved. */
+function coverageFindings(stage: string, kind: string | undefined, missing: string[]): NfrBudgetFinding[] {
+  if (kind === undefined) return [];
+  return missing.map((artifact) => ({
+    field: `artifact:${artifact}`,
+    reason: `${stage} declares ${artifact} for a ${kind} unit (produces_kinds) and it is not present — an absence this kind does not explain`,
+  }));
+}
+
+/** Ids of this artifact that declare no measurable numeric threshold, or empty
+ *  when the check does not apply here.
+ *
+ *  Scoped to performance-requirements.md alone (#2684 stage ⑥, issue comment
+ *  5230806329, narrowed by 5230769702): the same predicate applied corpus-wide
+ *  flagged the other four nfr-requirements artifacts at 72%-90%, all confirmed
+ *  NOT false positives (structurally qualitative requirements), so only
+ *  performance carries a genuine gap. Gated on the id-contract cutoff — a
+ *  pre-contract artifact could not have followed a contract that did not yet
+ *  exist, and this check reads the id declarations that contract fixed. Only
+ *  fires when the artifact itself declares at least one id: one with none
+ *  either already reported missing-nfr-ids (if the unit's total is also zero)
+ *  or has nothing here to check. */
+function idsWithoutThreshold(outputPath: string, stage: string, underContract: boolean, declaredIds: number): string[] {
+  if (!underContract || stage !== NFR_REQUIREMENTS_STAGE_DIR || declaredIds === 0) return [];
+  if (basename(outputPath, ".md") !== PERFORMANCE_REQUIREMENTS_ARTIFACT) return [];
+  return idsMissingNumericThreshold(readFileSync(outputPath, "utf-8"));
+}
+
+export function evaluateNfrBudget(outputPath: string, depth?: string, kind?: string): NfrBudgetResult {
   const stage = stageOfNfrArtifact(basename(outputPath));
   if (stage === undefined) return verdict("not-nfr-artifact", [], NONE);
 
@@ -502,6 +1009,12 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
   const unitNfrCount = unitIdCount(stageDir);
   const birth = recordBirthOf(outputPath);
   const underContract = bornUnderIdContract(birth);
+  const level = canonicalDepth(depth);
+
+  // The (c) set, computed before the branches so every verdict reports the
+  // count — a unit whose FIRST reported case is a missing id still carries its
+  // coverage figure for the human at the gate.
+  const missingRequired = missingRequiredForKind(stage, stageDir, kind);
 
   const figures = {
     bytes: measured.bytes,
@@ -513,14 +1026,23 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
     unit_bytes_per_nfr: ratio(unit.bytes, unitNfrCount),
     record_birth: birth ?? null,
     under_id_contract: underContract,
+    missing_numeric_threshold_count: 0,
+    unit_kind: kind ?? null,
+    missing_kind_required_count: missingRequired.length,
   };
 
-  // The one reported case: a unit written UNDER the contract that declares no
-  // id at all. Without ids there is no denominator, so the volume cannot be
+  // The FIRST reported case: a unit written UNDER the contract that declares
+  // no id at all. Without ids there is no denominator, so the volume cannot be
   // measured at all — and nothing downstream (nfr-design's tracing,
   // build-and-test's proportional selection, a reviewer checking that an
   // absence claim is falsifiable) can address the requirement by name.
-  if (underContract && unitNfrCount === 0) {
+  //
+  // Unless the scope SKIPs the stage those ids are declared in (#2773): then
+  // the absent denominator is the scope's own decision, already carried by the
+  // engine as `consumes_absent.expected=true` on this stage's inputs, and
+  // reporting it would flag every artifact of every such record forever.
+  const idStatus = nfrIdStatus(outputPath, stage, unitNfrCount, underContract);
+  if (idStatus === "reportable") {
     return verdict(
       "missing-nfr-ids",
       [
@@ -533,7 +1055,63 @@ export function evaluateNfrBudget(outputPath: string): NfrBudgetResult {
       figures,
     );
   }
-  return verdict("measured", [], figures);
+
+  // The SECOND reported case (#2684 stage ⑤, ruling comment 5230791793): the
+  // unit's kind REQUIRES an artifact that is not on disk — case (c), a silent
+  // omission, as opposed to case (a) where the kind prunes it and the same
+  // absence is correct. Judged on the UNIT's directory, so it lands before the
+  // per-artifact numeric check below: reaching it only from
+  // performance-requirements.md would make the verdict depend on which
+  // artifact happened to fire.
+  //
+  // Gated on the SAME id-contract cutoff as the other cases — a record written
+  // before the contract predates unit kinds carrying this weight and is never
+  // reported retroactively.
+  const coverage = coverageFindings(stage, kind, missingRequired);
+  if (underContract && coverage.length > 0) {
+    return verdict("missing-kind-required-artifacts", coverage, figures);
+  }
+
+  // The THIRD reported case (#2684 stage ⑥): an id THIS artifact declares has
+  // no measurable numeric threshold. See idsWithoutThreshold for the scoping.
+  const missingIds = idsWithoutThreshold(outputPath, stage, underContract, measured.ids.size);
+  if (missingIds.length > 0) {
+    return verdict(
+      "missing-numeric-threshold",
+      missingIds.map((id) => ({
+        field: `nfr-id:${id}`,
+        reason: `${id} has no measurable numeric threshold (comparator+value+unit) in its declaration`,
+      })),
+      { ...figures, missing_numeric_threshold_count: missingIds.length },
+    );
+  }
+
+  // The FOURTH reported case: the unit's D2 figure (bytes for this stage over
+  // its declared ids) exceeds the Standard ceiling. Checked on the UNIT'S
+  // total (unit.bytes), not this artifact's own bytes — D2 is the primary
+  // axis a ceiling is placed against (see the module header). Independent of
+  // the id-contract cutoff above: a pre-contract unit that happens to declare
+  // ids is measured exactly like a post-contract one (flagsNfrBudget's own
+  // comment explains why).
+  const ceiling = nfrStandardBudget(stage, level);
+  if (ceiling !== undefined && flagsNfrBudget(stage, level, unit.bytes, unitNfrCount)) {
+    return verdict(
+      "nfr-budget-exceeded",
+      [
+        {
+          field: "unit-bytes-per-nfr",
+          reason: `this unit's ${unit.bytes} B of ${stage} artifacts over ${unitNfrCount} declared ids exceeds the ${level} guidance of ${ceiling} B per id`,
+        },
+      ],
+      figures,
+    );
+  }
+
+  // `upstream-omitted` rather than `measured`: nothing was measured against a
+  // denominator here, and a human at the gate reading `measured` on a unit with
+  // zero ids would have to rediscover why. The kind-coverage check above still
+  // ran — the scope's decision explains the missing ids, not a missing file.
+  return verdict(idStatus === "scope-omitted" ? "upstream-omitted" : "measured", [], figures);
 }
 
 /** Birth per record root, memoized.
@@ -562,29 +1140,43 @@ function recordBirthOf(outputPath: string): string | undefined {
 interface Flags {
   stage?: string;
   outputPath?: string;
+  depth?: string;
+  kind?: string;
 }
 
 function parseFlags(argv: string[]): Flags {
   const out: Flags = {};
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--stage") out.stage = argv[++i];
-    else if (argv[i] === "--output-path") out.outputPath = argv[++i];
+    if (argv[i] === "--stage") out.stage = requireFlagValue(argv, ++i, "--stage", fail);
+    else if (argv[i] === "--output-path") out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
+    else if (argv[i] === "--depth") out.depth = requireFlagValue(argv, ++i, "--depth", fail);
+    else if (argv[i] === "--kind") out.kind = requireFlagValue(argv, ++i, "--kind", fail);
   }
   return out;
 }
 
-function fail(msg: string): never {
+/** The only non-zero exit: a missing required flag, or a flag whose value is
+ *  missing / stolen by the next flag. Exported as an in-process seam — reached
+ *  from `main` it runs inside a spawned child, which bun's coverage does not
+ *  measure, so the arm would sit permanently uncovered while its behaviour is
+ *  genuinely tested. */
+export function fail(msg: string): never {
   process.stderr.write(`amadeus-sensor-nfr-budget: ${msg}\n`);
   process.exit(1);
 }
 
 /** CLI entry / in-process test seam. Exits 1 ONLY on a missing required flag;
- *  every check outcome is stdout JSON with exit 0 (advisory contract). */
+ *  every check outcome is stdout JSON with exit 0 (advisory contract).
+ *  --depth is optional, matching depth-budget: an absent or unrecognizable
+ *  value leaves the ceiling check fail-open rather than guessing a level.
+ *  --kind is optional for the same reason: without the unit's kind, a pruned
+ *  artifact and a silently omitted one are indistinguishable, so the coverage
+ *  check does not run at all. */
 export function main(argv: string[] = process.argv.slice(2)): void {
   const flags = parseFlags(argv);
   if (!flags.stage) fail("--stage is required");
   if (!flags.outputPath) fail("--output-path is required");
-  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath))}\n`);
+  process.stdout.write(`${JSON.stringify(evaluateNfrBudget(flags.outputPath, flags.depth, flags.kind))}\n`);
   process.exit(0);
 }
 

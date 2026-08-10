@@ -241,7 +241,10 @@ stage's gate or the user's workflow. Every manifest the framework ships
 declares `advisory`.
 
 `blocking` makes the sensor's verdict a precondition of stage
-completion. `amadeus-state.ts approve` refuses the stage while any
+completion. The gate sits on every transition that marks a stage `[x]` —
+`approve`, `advance`, `finalize` and `complete-workflow` — so the three
+direct-CLI paths cannot rubber-stamp past a verdict the gated path
+refuses. Each of them refuses the stage while any
 output the sensor fired against carries a latest terminal that is not
 `SENSOR_PASSED`, and — fail-closed — also refuses when the sensor
 recorded no `SENSOR_FIRED` for the stage at all: a blocking sensor that

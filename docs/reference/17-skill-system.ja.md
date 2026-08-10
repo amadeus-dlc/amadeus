@@ -29,13 +29,14 @@
 
 ## 2. 型付きディレクティブ契約
 
-`amadeus-directive.ts` は、`kind` フィールドをキーとする**9つ**のディレクティブ種別にわたる判別可能な共用体(discriminated union)を定義します。各ディレクティブは、その種別が必要とするフィールドのみを持ち、種別ごとの許可キーセットによって強制されます(種別のセット外のフィールドは未知のキーとして拒否されます)。エンジンは**今日7つの種別を発行**します。2つは、後のウェーブがそれらを配線するまでループを complete-shaped に保つ文書化されたプレースホルダです。
+`amadeus-directive.ts` は、`kind` フィールドをキーとする判別可能な共用体(discriminated union)を定義します。各ディレクティブは、その種別が必要とするフィールドのみを持ち、種別ごとの許可キーセットによって強制されます(種別のセット外のフィールドは未知のキーとして拒否されます)。以下の表はコンダクターが分岐する種別です。2つは、後のウェーブがそれらを配線するまでループを complete-shaped に保つ文書化されたプレースホルダで、残りは今日発行されます。
 
 | `kind` | 今日発行される? | コンダクターが行うこと |
 |--------|----------------|--------------------------|
 | `print` | Yes | `directive.message` が言うことを正確に行う — それが権威的です。2つの形式: **terminal**(status/help/doctor/version のような読み取り専用ユーティリティを指名; 実行し、stdout をそのまま表示し、STOP)と **run-then-continue**(スコープ変更、ジャンプ `execute`、またはユーザーが新規ワークスペースでスコープを明示的に指名した(フラグまたは位置引数)ときに発行される workflow-birth `init --scope <scope>` のような変更を伴うツールを指名; 実行し、ループのステップ1に戻る)。変更は指名されたツールに存在し、`next` には決して存在しない。 |
 | `error` | Yes | `directive.message` をそのまま表示し、STOP。回復したり取り繕ったりしない — メッセージはユーザー向けのエラーそのものです。 |
-| `done` | Yes | ワークフロー(または single-stage 実行)が完了した。完了サマリを提示し、STOP。 |
+| `committed` | Yes | `report` のトランジションが着地し、ループは**継続**する。`report` の成功する非終端コミット(通常のコミット ack、authorized carrier 経由の承認 ack、冪等な stale re-report)すべてで発行される。`directive.reason` が着地した遷移を示す; コンダクターは再び `next` を実行する。#2762 で `done` から分離された — 単一の kind が「ワークフローが終わったので停止」と「コミットが着地したので継続」の両方を意味していた。 |
+| `done` | Yes | ワークフロー(または single-stage 実行)が完了した。完了サマリを提示し、STOP。これを発行するのは終端の完了だけであり、`report` の成功は `committed` で ack される。 |
 | `parked` | Yes | ワークフローは後のセッションのために、クリーンなステージ間境界(`directive.stage`)でフロー途中で park された。park されたこととどう resume するか(`/amadeus --resume`)をユーザーに伝え、STOP。`Parked` マーカーがセットされている間(`amadeus-orchestrate park` によって書き込まれる)の素の `next` で発行される; ステージは前進しない。Stop フックは `parked` を terminal allow として扱うため、コンダクターは `done` に到達するためにステージをラバースタンプするのではなく park する(#367)。 |
 | `run-stage` | Yes | リードエージェントのペルソナと任意の `support_agents` をロードし、`directive.stage_file` を読み、ステージ本体を実行し、`produces` を書き、`directive.memory_path` にダイアリーを保持し、`directive.gate` で分岐する([Orchestrator](03-orchestrator.ja.md) を参照)。解決されたルーティングフィールドをグラフノードからそのまま持ち込む: `lead_agent`、`support_agents`、`mode`、`gate`、`consumes`、`produces`、`rules_in_context`、`sensors_applicable`、`stage_file`。 |
 | `ask` | Yes | `directive.question` を `AskUserQuestion` 経由でレンダリングし、次の `report` で `--user-input` を通じて人間の答えをフィードバックする。エンジン自体は決して `AskUserQuestion` を呼ばない — 人間のターンをコンダクターに委ねる。 |
@@ -60,7 +61,8 @@ Loop:
   1. directive = `bun .claude/tools/amadeus-orchestrate.ts next $ARGUMENTS`
   2. act on directive.kind
   3. `bun .claude/tools/amadeus-orchestrate.ts report --stage <directive.stage> --result <outcome> [--user-input "<text>"]` when the directive names a stage; omit `--stage` only for non-stage report round-trips.
-  4. repeat unless directive.kind == done
+  4. repeat while the directive continues the loop (`committed` — the report
+     ack — plus `run-stage`, `invoke-swarm`, run-then-continue `print`)
 ```
 
 ```mermaid
@@ -70,10 +72,11 @@ flowchart LR
   C --> D["report --stage ... --result ..."]
   D --> A
   B -->|"print (run-then-continue)"| C
+  B -->|"committed (report ack)"| A
   B -->|"print (terminal) / error / done"| E["STOP"]
 ```
 
-図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。terminal の `print`、`error`、`done` に対してはループを停止します。
+図のテキスト説明: `next`(`$ARGUMENTS` がそのまま渡される)は1つのディレクティブを返します。コンダクターは `directive.kind` で分岐します。`run-stage`、`ask`、`invoke-swarm`、および run-then-continue の `print` ディレクティブに対しては、指名された move を実行し `report` を呼び、これが `next` にループバックします。`report` の成功が返す `committed` ディレクティブは、2度目の `report` を挟まずそのまま `next` へ戻ります。terminal の `print`、`error`、`done` に対してはループを停止します。
 
 `$ARGUMENTS` は最初の `next` にそのまま渡されます — エンジンがフラグ(`--status`、`--stage`、`--scope`、`--depth`、自由形式テキスト)をパースするため、コンダクターは決して事前パースやストリップをしません。`next` は何も変更しないため、ループは `report` が遷移をコミットしたときにのみ前進し、次の `next` は常に新鮮な状態を読みます。
 

@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 185,
+      "function": 186,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -1832,8 +1832,21 @@
       "unitClass": "function",
       "unitId": "function:docsRoot",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t526-advisory-handoff-stage.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t528-authoring-hold-end-to-end.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t529-advisory-hold-trace.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -6202,6 +6215,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t145-state-lock-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t25.test.ts",
           "mechanism": "sdk"
         },
@@ -7043,6 +7060,10 @@
         {
           "file": "tests/integration/t28-integration-test-strategy.test.ts",
           "mechanism": "sdk"
+        },
+        {
+          "file": "tests/integration/t523-config-scope-change-lock-seam.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t27.test.ts",

@@ -107,6 +107,36 @@ function runPromote(fx: Fixture): CliResult {
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
+// Issue #2763 falling test: --affirming-user immediately followed by ANOTHER
+// flag (`--target-dir`, itself value-carrying) used to be silently accepted by
+// the hand-rolled parseFlags loop — the loop only checked "is there a NEXT
+// token", never "does the next token look like a flag". flags["affirming-user"]
+// has zero downstream validation (it lands verbatim in the PRACTICES_AFFIRMED
+// audit row), so the swap was a genuine SILENT fail-open: exit 0, the intended
+// "--target-dir /custom/path" value never registers as a flag at all (dropped,
+// not even reaching the flags map), and the promoted files land under the
+// DEFAULT memoryDirFor(pd) instead of the caller's intended --target-dir.
+function runPromoteFlagSwallow(fx: Fixture, badTargetDir: string): CliResult {
+  const res = spawnSync(
+    BUN,
+    [
+      STATE_TS,
+      "practices-promote",
+      "--project-dir",
+      fx.proj,
+      "--team-practices",
+      fx.teamPractices,
+      "--discovered-rules",
+      fx.discoveredRules,
+      "--affirming-user",
+      "--target-dir",
+      badTargetDir,
+    ],
+    { encoding: "utf-8", env: process.env },
+  );
+  return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
+}
+
 function auditEventCount(file: string, ev: string): number {
   if (!existsSync(file)) return 0;
   return readFileSync(file, "utf-8")
@@ -471,5 +501,43 @@ KEEP_WAY_TEXT
     expect(r.stderr).toContain("managed markers malformed");
     expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
     expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
+  });
+});
+
+// ============================================================
+// Issue #2763 — optional flag-value arm no longer silently swallows the
+// FOLLOWING flag's name as its own value
+// ============================================================
+
+describe("t-practices-promote-contract: Issue #2763 flag-value arm (--affirming-user / --target-dir)", () => {
+  test("--affirming-user immediately followed by --target-dir -> exit non-zero, no write, no audit", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const projectBefore = readFileSync(fx.projectMd, "utf-8");
+    const badTargetDir = join(fx.proj, "should-not-be-used");
+
+    const r = runPromoteFlagSwallow(fx, badTargetDir);
+
+    // Pre-fix this exited 0: flags["affirming-user"] silently became the
+    // literal string "--target-dir" (the swallowed flag NAME, not a value),
+    // the caller's intended `badTargetDir` value was dropped entirely (never
+    // reaches the flags map — parseFlags only assigns on a "--"-prefixed
+    // token), and BOTH targets were written under the DEFAULT memoryDirFor(pd)
+    // instead of failing or honouring --target-dir. Fixed: parseFlags now
+    // refuses to bind a flag to a value that itself looks like another flag.
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain('--affirming-user expects a value, got another flag: \\"--target-dir\\"');
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
+    expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
+    // The unintended target-dir must never have been created as a side effect.
+    expect(existsSync(badTargetDir)).toBe(false);
+    expect(auditEventCount(seededAuditShard(fx.proj), "PRACTICES_AFFIRMED")).toBe(0);
+  });
+
+  test("control: --affirming-user <name> (a real value, not a flag) still succeeds", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    const r = runPromote(fx);
+    expect(r.status).toBe(0);
+    expect(auditEventCount(seededAuditShard(fx.proj), "PRACTICES_AFFIRMED")).toBe(1);
   });
 });

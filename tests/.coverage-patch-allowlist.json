@@ -586,23 +586,23 @@
     "file": "packages/framework/core/tools/amadeus-jump.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:55e7fe69ef64c96cef5b0dcd1fa9484dcf579d9eccd6cb74e3629cbfa5a906b3",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-jump.ts",
-    "selector": {
-      "function": "main",
       "fingerprint": "sha256:bd2368e0b6a6b67acb08e30c740df410f2d91db1d9f8f6db9e87a16bdfc9064c",
       "anchorLines": 3,
       "targetLines": "1-3"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:1e9d1b41078d0d500a6fb6b97ae73690e19591ca311ffd998b04e811f762e99c",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "Issue #2763's extractProjectDirArg call site + assignments inside main(), same spawn-only entrypoint as the telemetry-wiring entry above (main() only runs under `if (import.meta.main)`, never in-process). extractProjectDirArg's own body IS driven in-process (tests/unit/t-jump-parseflags-seam.test.ts calls it directly with every value-arm shape), and the wiring's outcome (projectDir/filteredArgs assignment) is exercised at the process boundary by tests/unit/t19.test.ts's spawn cases. Spawn-blindspot-two-step (ii): moving these 3 lines out of main() to make them importable would just relocate the same spawn-only call/assign pair, not remove it.",
+    "expiry": "remove when main() gains an in-process driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-learnings.ts",
@@ -1675,7 +1675,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:5490377cfd485960787fc0c716b79bae41b72512220d8405173fc1c2e95d214a",
+      "fingerprint": "sha256:198681ec50b3ee7e87001333623d68e671536b5d72a43feaa59d953b411e5569",
       "anchorLines": 13,
       "targetLines": "1-13"
     },
@@ -1774,7 +1774,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:232edb4cb1102ef83053dd1554116ff32d0e8322d180acd8528091b0c56a7955",
+      "fingerprint": "sha256:e658d6f24e2a2b980d03a82d29533abd8efe3c5e88789623a5e4cffa0519b69f",
       "anchorLines": 18,
       "targetLines": "1-18"
     },
@@ -1785,7 +1785,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "handleReport",
-      "fingerprint": "sha256:cd3096c5e4bd936e9dd0805156a8c2473a80bd7c49c91a54ea9da2af10c97467",
+      "fingerprint": "sha256:26b068cde6a7fc4ee9bbce3b0950eaa7d7cb95ef1ba4196aaf169b87b093f820",
       "anchorLines": 10,
       "targetLines": "1-10"
     },
@@ -3365,9 +3365,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:a38019bbe255814b001a342c4f78f75ab472de1f216d672993d0dbcf8a39a21f",
-      "anchorLines": 44,
-      "targetLines": "1-44"
+      "fingerprint": "sha256:a1999ebc644745bc5ca4f65347ab8df5495cbd094b868567ed508f1c39fa34f2",
+      "anchorLines": 46,
+      "targetLines": "1-46"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
@@ -3490,6 +3490,28 @@
       "targetLines": "1-4"
     },
     "reason": "Marker-write wiring inside handleFork (spawn-only, as above): the try, the seam call, and its failure branch. The write itself IS driven in-process — writeBoltContextMarker is exercised directly by tests/integration/t-otel-bolt-context-marker.test.ts including the overwrite case — and the spawned fork in the same file asserts the marker the CLI produced. Spawn-blindspot-two-step (ii).",
+    "expiry": "remove when handleFork gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleFork",
+      "fingerprint": "sha256:9f8802251cf35b4501264fea5b70aa8dd4315a0179c0f00c5a23d3b207b57104",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Issue #2763's --unit boolean-flag filter (`args.filter((a) => a !== \"--unit\")`) inside handleFork, same spawn-only handler as above (git worktree creation, real locking — no in-process driver exists). The filter's effect IS exercised at the process boundary: tests/integration/t166-multi-repo-construction.test.ts's swarm-prepare path spawns amadeus-bolt.ts -> amadeus-state.ts fork with the exact \"--unit --repo <name>\" shape this line guards against, and asserts the fork succeeds (pre-fix regression, caught and fixed against this same test). Spawn-blindspot-two-step (ii): no behaviour-preserving refactor moves this filter out of handleFork without losing the boltContextKind(args) vs parseFlags(filtered) split it exists to make.",
+    "expiry": "remove when handleFork gains an in-process driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "handleFork",
+      "fingerprint": "sha256:284e4cdca6eced8d6bfb58699fafce94d4eacee1241c83b0d557d1db95c4c388",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "handleFork's own `export function handleFork(args: string[]): void {` signature line. Issue #2763 exported handleFork (for parity with the other now-exported handlers, and so tests can reference it by name in comments/allowlist reasons), which changed the line's text and made it register as a newly-added line even though the function's body and behaviour are unchanged. Same spawn-only handler as the two entries above (no in-process driver exists — git worktree creation, real locking).",
     "expiry": "remove when handleFork gains an in-process driver"
   },
   {
@@ -6501,6 +6523,17 @@
       "targetLines": "1"
     },
     "reason": "The audit-failure catch arm of approve-batch. Its only statement is error(), which is amadeus-bolt.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict — measured directly, an in-process driver never survives to assert. It also latches emitError's module-level _errorEmitInProgress flag, which is never reset, so a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. The lines this arm guards are covered: the happy path (emit then write) and the idempotent early return are both driven in-process by t507, and t145 spawns the real CLI across the lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way.",
+    "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "selector": {
+      "function": "handleExecute",
+      "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The audit-failure catch arm of jump execute, the same shape already waived for amadeus-bolt handleApproveBatch. Its only statement is error(), amadeus-jump.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict, and it latches emitError's module-level _errorEmitInProgress flag, which is never reset — a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. Reaching it also needs emitAudit itself to throw, and there is no injectable audit port on this path. Everything the arm guards is covered: the emit-then-write happy path is driven in-process by t-jump-direction-seam / t-jump-phase-events-seam / t-phase-check-gate-seam / t19, and t145 spawns the real CLI across the #2729 lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way; it WAS applied to this function's other patch row, the SKIP-target guard, which is now measured (DA 76).",
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
   },
   {

@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-state:set, subcommand:amadeus-state:reject, subcommand:amadeus-state:approve, subcommand:amadeus-state:skip, subcommand:amadeus-state:set-skeleton-stance, subcommand:amadeus-bolt:approve-batch, function:withAuditLock, function:holdsAuditLock
+// covers: subcommand:amadeus-state:set, subcommand:amadeus-state:reject, subcommand:amadeus-state:approve, subcommand:amadeus-state:skip, subcommand:amadeus-state:set-skeleton-stance, subcommand:amadeus-bolt:approve-batch, subcommand:amadeus-jump:execute, function:withAuditLock, function:holdsAuditLock
 //
 // t145 — C2b lost-update safety: the 11 state read-modify-write handlers in
 // amadeus-state.ts now hold the audit lock across their whole read→decide→
@@ -518,6 +518,141 @@ describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli
   // ---------------------------------------------------------------------------
   test("approve-batch releases the audit lock on success", () => {
     expect(boltSync(["approve-batch", "--batch", "1"], proj).status).toBe(0);
+    expect(existsSync(auditLockDir(proj))).toBe(false);
+  }, 60000);
+});
+
+// -----------------------------------------------------------------------------
+// #2729 — amadeus-jump `execute` ran its state read-modify-write OUTSIDE
+// withAuditLock, the same defect #2589 fixed in approve-batch. handleExecute
+// read the state file, rewrote every checkbox and eight header fields, emitted
+// its audit rows and wrote the whole file back, all unserialised. The audit lock
+// each emitAudit takes internally is released before writeStateFile, so it never
+// covered the state transaction: a concurrent writer's field is clobbered by
+// jump's full-file rewrite from a stale snapshot.
+//
+// Same two-part shape as the #2589 section: a DETERMINISTIC gap-write (a lock
+// this process holds live separates jump's read from its write) plus a real
+// two-process lost-update race, and a release check.
+// -----------------------------------------------------------------------------
+
+const JUMP_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-jump.ts");
+
+/** Run the jump tool synchronously against a project. */
+function jumpSync(args: string[], p: string): { status: number; stdout: string; stderr: string } {
+  const r = Bun.spawnSync({
+    cmd: [BUN, JUMP_TOOL, ...args, "--project-dir", p],
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env },
+  });
+  return {
+    status: r.exitCode,
+    stdout: r.stdout.toString(),
+    stderr: r.stderr.toString(),
+  };
+}
+
+describe("t145 #2729 jump execute state RMW under the audit lock (mechanism cli)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    const init = Bun.spawnSync({
+      cmd: [BUN, UTIL_TOOL, "init", "--scope", "fix", "--project-dir", proj],
+      stdout: "ignore",
+      stderr: "ignore",
+      env: { ...process.env },
+    });
+    if (init.exitCode !== 0) throw new Error("t145 #2729 fixture init failed");
+  });
+
+  afterEach(() => {
+    rmSync(auditLockDir(proj), { recursive: true, force: true });
+    cleanupTestProject(proj);
+  });
+
+  // ---------------------------------------------------------------------------
+  // The load-bearing one — deterministic, no interleaving luck. We hold the
+  // workspace-sentinel bucket (the identity withAuditLock(pd) keys on, and the
+  // one jump's own untargeted readStateFile/writeStateFile pair belongs to),
+  // stamped with THIS live pid so the acquire path can never reap it, and spawn
+  // `jump execute` against it:
+  //   pre-fix  — nothing guards the read, so jump snapshots the state file at
+  //              once, computes every edit, and only blocks later inside
+  //              emitAudit's own acquire. Its snapshot is stale by construction.
+  //   post-fix — it blocks on the outer withAuditLock BEFORE reading anything.
+  // We then write an unrelated field under the lock we hold and release. The
+  // pre-fix jump resumes and rewrites the whole file from its stale snapshot, so
+  // our field reverts. The post-fix jump acquires, reads fresh, and both survive.
+  // ---------------------------------------------------------------------------
+  test("a write into jump execute's read-to-write gap is not clobbered", async () => {
+    const lockDir = auditLockDir(proj);
+    mkdirSync(lockDir);
+    writeFileSync(
+      join(lockDir, "owner.json"),
+      JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) }),
+      "utf-8",
+    );
+
+    const proc = Bun.spawn({
+      cmd: [BUN, JUMP_TOOL, "execute", "--target", "code-generation", "--direction", "forward", "--project-dir", proj],
+      stdout: "ignore",
+      stderr: "ignore",
+      env: { ...process.env },
+    });
+
+    // Long enough for the spawned tool to boot and reach its first blocking
+    // acquire (pre-fix: emitAudit's, with the state already read and every edit
+    // already computed against it).
+    await Bun.sleep(1500);
+
+    // Our own protected write, under the lock we hold.
+    writeFileSync(statePath(proj), setField(readState(proj), "Languages", "under-the-lock"), "utf-8");
+    rmSync(lockDir, { recursive: true, force: true });
+
+    expect(await proc.exited).toBe(0);
+
+    const finalState = readState(proj);
+    // The jump landed...
+    expect(getField(finalState, "Current Stage")).toBe("code-generation");
+    // ...without clobbering the write that happened while it waited.
+    expect(getField(finalState, "Languages")).toBe("under-the-lock");
+  }, 60000);
+
+  // ---------------------------------------------------------------------------
+  // The lost-update twin: a real two-process race between jump (which rewrites
+  // the WHOLE file) and a `state set` of an unrelated field. The set handler is
+  // already serialised, so an unserialised jump is the only way either edit can
+  // be lost — and both must survive.
+  // ---------------------------------------------------------------------------
+  test("concurrent jump execute ∥ state set — neither edit is lost [lost update]", async () => {
+    const procs = [
+      Bun.spawn({
+        cmd: [BUN, JUMP_TOOL, "execute", "--target", "code-generation", "--direction", "forward", "--project-dir", proj],
+        stdout: "ignore",
+        stderr: "ignore",
+        env: { ...process.env },
+      }),
+      Bun.spawn({
+        cmd: [BUN, STATE_TOOL, "set", "Languages=concurrent-set", "--project-dir", proj],
+        stdout: "ignore",
+        stderr: "ignore",
+        env: { ...process.env },
+      }),
+    ];
+    const codes = await Promise.all(procs.map((c) => c.exited));
+    expect(codes.every((c) => c === 0)).toBe(true);
+
+    const finalState = readState(proj);
+    expect(getField(finalState, "Current Stage")).toBe("code-generation");
+    expect(getField(finalState, "Languages")).toBe("concurrent-set");
+  }, 60000);
+
+  // ---------------------------------------------------------------------------
+  // The lock must be RELEASED on the happy path (the withAuditLock finally), or
+  // it poisons the next operation for the full retry budget.
+  // ---------------------------------------------------------------------------
+  test("jump execute releases the audit lock on success", () => {
+    expect(jumpSync(["execute", "--target", "code-generation", "--direction", "forward"], proj).status).toBe(0);
     expect(existsSync(auditLockDir(proj))).toBe(false);
   }, 60000);
 });

@@ -561,7 +561,7 @@ describe("Intent-scoped autonomy production path", () => {
       true,
     );
     expect(reported.status).toBe(0);
-    expect(reported.output).toContain('"kind":"done"');
+    expect(reported.output).toContain('"kind":"committed"');
     expect(auditEvents(projectDir).filter((event) => event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length)
       .toBeGreaterThanOrEqual(2);
   });

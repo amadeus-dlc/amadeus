@@ -860,7 +860,11 @@ function parseFlags(args: string[]): Record<string, string> {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.startsWith("--") && i + 1 < args.length) {
-      flags[a.slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      if (value.startsWith("--")) {
+        fail(`${a} expects a value, got another flag: "${value}". Did you forget the value?`, 2);
+      }
+      flags[a.slice(2)] = value;
       i++;
     }
   }

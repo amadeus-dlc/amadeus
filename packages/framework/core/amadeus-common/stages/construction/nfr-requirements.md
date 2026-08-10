@@ -41,6 +41,7 @@ sensors:
   - linter
   - type-check
   - answer-evidence
+  - question-budget
   - nfr-budget
 scopes:
   - enterprise
@@ -110,6 +111,11 @@ Apply the material-ambiguity definition and single follow-up-round budget in
 stage-protocol.md §3.
 
 ### Step 6: Generate Artifacts
+
+**Depth-scaled artifact volume** (read `directive.depth`, falling back to `amadeus-state.md` → `**Depth**` outside the engine loop; see stage-protocol.md §8 — the per-stage question ceiling is contract, the shapes below are guidance. The `nfr-budget` sensor measures produced volume against depth as an advisory finding; it does not add a numeric row to §8's Depth-Level Contract):
+- **Minimal**: brief NFR descriptions, quantified only where a target is load-bearing for the unit's scope.
+- **Standard**: moderate NFR coverage across the applicable categories with concrete quantitative targets.
+- **Comprehensive**: comprehensive NFR coverage across all applicable categories, with targets, rationale, and edge-case handling for each.
 
 Generate only the applicable output paths listed in the engine directive under `<record>/construction/{unit-name}/nfr-requirements/`. Do not create N/A placeholders for pruned outputs or extra files merely to complete the full list below. The possible output contracts are:
 

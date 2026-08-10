@@ -737,12 +737,14 @@ line in this table is unenforceable.
 | Standard | at most 8 | 15-30 |
 | Comprehensive | at most 12 | 30+ |
 
-Stages that scale artifact volume by depth MUST read `directive.depth` and state
-what changes at each level: Requirements Analysis, Application Design, Functional
-Design, Code Generation, Build and Test. The `depth-budget` sensor measures the
-Requirements Analysis row against the produced `requirements.md` and reports
-overruns as advisory findings; the question ceiling is enforced by the stage
-agent at question-drafting time (§3).
+Stages that scale artifact volume by depth MUST read `directive.depth` and state what changes at each level:
+Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation, Build and Test.
+The `depth-budget` sensor measures the Requirements Analysis row against the produced
+`requirements.md` and reports overruns as advisory findings; the question ceiling
+is enforced by the stage agent at question-drafting time (§3). NFR Requirements
+and NFR Design volume is measured separately by the advisory `nfr-budget` sensor
+— neither stage gets a numeric row in the Depth-Level Contract table above, which
+holds only counted quantities common to every scope.
 
 ### Depth-Level Guidance
 
@@ -991,6 +993,16 @@ risk defer releases only that checkpoint. A run-now answer returns
 provenance-verified `NOT_DETECTED` result releases the hold. `DETECTED`,
 `HARNESS_ERROR`, missing/corrupt evidence, or an identity mismatch keeps the
 hold active and requires a fresh retry or explicit risk defer.
+
+An advisory whose declaration names a destination carries
+`advisories[].handoff_stage`. A run-now answer on that advisory opens that stage
+— run `/amadeus --stage <handoff_stage> --single` — instead of executing a
+`formal_checks` command, because the work the advisory holds for is authored in
+a stage rather than verified by a command this engine runs. Opening the stage
+does **not** release the hold: the hold lifts only when the declaring plugin's
+own evaluator returns no-hold on a later `next`. An advisory may carry a
+`handoff_stage`, a `formal_checks` entry, or neither; when it carries both,
+`formal_checks` is what the engine verifies a release against.
 
 The engine applies this contract at `requirements-analysis`,
 `functional-design`, and `build-and-test`, including main workflow, `--single`,

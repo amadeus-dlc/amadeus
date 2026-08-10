@@ -63,7 +63,10 @@
           "hold"
         ]
       },
-      "formalCheck": null
+      "formalCheck": null,
+      "handoff": {
+        "stage": "tla-authoring"
+      }
     }
   ]
 }

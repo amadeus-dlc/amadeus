@@ -758,10 +758,13 @@ at the approval gate.
 | Standard | at most 8 | 15-30 |
 | Comprehensive | at most 12 | 30+ |
 
-Five stages read `directive.depth` and state what changes at each level:
-Requirements Analysis, Application Design, Functional Design, Code Generation,
-Build and Test. The `depth-budget` sensor measures the Requirements Analysis row
-against the produced `requirements.md` and reports overruns as advisory findings.
+Seven stages read `directive.depth` and state what changes at each level:
+Requirements Analysis, Application Design, Functional Design, NFR Requirements, NFR Design, Code Generation, Build and Test.
+The `depth-budget` sensor measures
+the Requirements Analysis row against the produced `requirements.md` and reports
+overruns as advisory findings. NFR Requirements and NFR Design volume is measured
+separately by the advisory `nfr-budget` sensor -- neither stage gets a numeric row
+in the Depth-Level Contract table above.
 
 ### Depth-Level Guidance
 

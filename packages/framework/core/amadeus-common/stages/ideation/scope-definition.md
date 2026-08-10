@@ -25,6 +25,8 @@ sensors:
   - required-sections
   - upstream-coverage
   - answer-evidence
+  - question-budget
+  - scope-sizing
 scopes:
   - enterprise
   - feature

@@ -1033,5 +1033,26 @@
     "dirName": "260809-stage-attribution",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fe6e2-ced1-7307-9b4f-4d5ff49ed3f1",
+    "slug": "sensor-parseflags-failop",
+    "dirName": "260809-sensor-parseflags-failop",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
+    "slug": "report-done-kind-split",
+    "dirName": "260809-report-done-kind-split",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
+    "slug": "tla-applicability-wiring",
+    "dirName": "260810-tla-applicability-wiring",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
