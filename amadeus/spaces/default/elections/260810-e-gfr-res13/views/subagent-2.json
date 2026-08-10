@@ -1,0 +1,22 @@
+{
+  "electionId": "E-GFR-RES13",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync reverse-engineering の §13 学習候補の採否。conductor 提案 = 候補1件: 『cid:application-design:dual-key-consumer-inventory への追補 — 対訳 docs(en/ja ペア)を持つ repo の prose 消費者棚卸しでは、英語キーに加えて対訳側の実語彙(逐語訳とは限らない)を対で棚卸しする。実測: 260810-grilling-frontier-resync RE で英語 \"one question at a time\" は 7箇所 hit したが、和訳は「1問ずつ」でなく「一度に1質問」(docs/reference/04-stage-protocol.ja.md:264)であり、日本語直訳キーの grep は 0 hit だった — 対訳語彙は英語キーからも直訳キーからも構造的に不可視』。検証対象: re-scans/260810-grilling-frontier-resync.md と reverse-engineering-timestamp.md の所見4、および実際の grep 再実行(英語キー7箇所 / 1問ずつ 0 hit / 一度に1質問の実在)。choice 1 = この1件を採用(persist は既存 cid への追補形)。choice 2 = 0件(既存 cid の射程内で新規性なしと判断する場合、留保に根拠を記す)。choice 3 = 候補の修正案あり(留保に記す)",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "修正案あり(留保に記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件(新規性なし)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    }
+  ]
+}

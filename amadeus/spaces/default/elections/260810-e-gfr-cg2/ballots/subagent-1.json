@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-CG2",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "B の U1 追補は出荷 protocol(ユーザー可視契約)へ questions ファイル書き手義務を新設する変更であり、エスカレーション正準リスト(4)の仕様変更に触れうる。追補の着地前に、追補内容(questions ファイルへも deferred 節+マーカーを書く義務の新設)をユーザーへ明示確認するか、少なくともゲート報告で申告付き逸脱として開示すること。あわせて、マーカー様式の正本は C1(U1)側に一意に置き、U2 は verbatim 参照のみとする(候補文の規定を弱めない)。",
+  "rationale": "独立実測: (1) BR-U2-2b(construction/budget-sensor/functional-design/business-rules.md)は見出し逐語『閾値未満として明示的に先送りした点』を検出対象と規定し、出典 BR-U1-4(protocol-core/.../business-rules.md:12)・FR-PROTO-7(inception/requirements-analysis/requirements.md:25)を確認。(2) 着地済み U1 正本 grilling-protocol.md:118 (§2.3) は当該節を英語トークン \\\"Deferred as below the threshold\\\" として規定し、配置は §3 C-4。C-4(:220-224)は『Present immediately after printing the full decision table ... to the terminal, followed by the required \\\"Deferred as below the threshold\\\" section』とあり、当該節は端末出力義務であって questions ファイルへの書込義務ではない。(3) grilling-protocol.md:253 の §4 表 Questions file 行が列挙する義務は mode marker / one entry per question / blank [Answer]: / write-back / justification line のみで列挙節は不在、§2.5 Recording obligations(:152-179)も同3項のみ。よって write⇔check 非対称は実在し、BR-U2-7 (iii) の error 実装は契約準拠ファイルを全件 FAIL させる恒久赤(検証劇場 Forbidden)。(4) 日本語見出しは git grep -in '閾値未満として明示的に先送り' で record 成果物5ファイルのみ hit、packages/docs/.claude の出荷面は 0 hit。(5) 既存2トークンは grilling-protocol.md:156 の <!-- amadeus-grilling:v1 mode=grilling --> と :171 の <!-- amadeus-grilling:justification depth=<Depth> questions=<N> frontier-driven --> でいずれも言語中立な HTML コメント。docs は en/ja 対訳ペアで出荷されており(docs/reference/04-stage-protocol.{md,ja.md} 等)、フレームワークが多言語配布前提であることを裏付ける。以上より A は、出荷センサーが出荷面に 0 hit の日本語逐語へ依存し、他言語利用者環境で構造的恒久 FAIL を作るため不可。C は U1 不変で安全だが FR-PROTO-7 の AC が明記する『FR-CONTRACT-4 のセンサー検査対象』を事後検査として放棄し、機械面の所有を dogfood 実走へ委ねるため、検査可能な不変量を検査しないまま残す。B は既存2トークンと同形の言語中立マーカーで write⇔check を対称化し、severity error と FR-PROTO-7 の AC を保ったまま多言語配布に耐える唯一の選択肢。",
+  "submittedAt": "2026-08-10T11:51:24Z",
+  "receivedAt": "2026-08-10T11:51:24Z"
+}

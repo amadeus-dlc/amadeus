@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-ADS13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "GoA2の留保: components.md の Review — Iteration 1(READY, GoA2)を実読確認 — FOLLOW-UP 2件(FR-PROJ-4/DOG/LAND 表外注記、C6 stage-protocol残存語彙の所有物明記)は同一ターンで反映済みと本文・Findings両方に記載されており、新規欠陥機序の指摘はない。diary Interpretations 2件はいずれも骨格識別(ADR-1)とマーカー様式(ADR-2)の既存慣行接地であり、cid:requirements-analysis:c5(既存流儀への接地は問わない)およびcid:application-design:citation-semantics-check(引用元との意味論相違の明示照合)の適用実例として questions ファイルのE-OC1判定・ADR-2『意味論適合の明示』節で確認できる。よって0件で可。",
+  "rationale": null,
+  "submittedAt": "2026-08-10T06:00:00Z",
+  "receivedAt": "2026-08-10T05:23:54Z"
+}

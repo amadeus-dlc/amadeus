@@ -1,0 +1,24 @@
+{
+  "electionId": "E-GFR-RAS13",
+  "kind": "s13-adoption",
+  "question": "260810-grilling-frontier-resync requirements-analysis の §13 学習候補の採否。conductor 提案 = 候補1件: 『cid:application-design:c1-asd-multi-idiom-inventory / cid:requirements-analysis:enumeration-completeness-review(E-ASD-RES13 追補)ファミリへの追補 — 自然言語 prose 語彙の全数 sweep は既定を大小文字非区別(git grep -i)とし、大小文字区別が必要な場合のみ明示して理由を述語記録に書く。prose は文頭・見出し・表セルで大文字化が起きるため、区別ありの述語は同一語彙の変種を構造的に見落とす。実測: 260810-grilling-frontier-resync RA §12a i1 で、E-ASD-RES13 準拠で述語を記録済みの RE sweep(区別あり)が文頭大文字形 One question at a time の6箇所(stage-protocol.md:277 のモード選択説明文を含む)を見落とし、product-lead reviewer の -i 再実行で BLOCKER として捕捉、全数は 12ファイル14行へ訂正された — 述語の記録(E-ASD-RES13)は再実行可能性を守るが、述語自体の検出力は守らない、その補完』。検証対象: requirements.md の Review — Iteration 1/2 ブロック、re-scans/260810-grilling-frontier-resync.md 末尾の訂正節、RA diary の Tradeoffs、および git grep -in と -n の実差分再実行。choice 1 = この1件を採用。choice 2 = 0件(既存 cid の射程内)。choice 3 = 修正案あり(留保に記す)",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "候補1件を採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件(新規性なし)"
+    },
+    {
+      "internalNo": 3,
+      "label": "修正案あり(留保に記す)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

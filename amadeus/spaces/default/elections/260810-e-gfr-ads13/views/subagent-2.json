@@ -1,0 +1,17 @@
+{
+  "electionId": "E-GFR-ADS13",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync application-design の §13 学習候補は 0 件(選定なし)でよいか。diary の Interpretations 2件はいずれも既存 cid(requirements-analysis:c5 の執行判断・E-OC1 判定様式・citation-semantics-check)の適用実例であり、§12a は i1 READY(GoA 2、FOLLOW-UP 2件は同一ターン反映済み)で新規の欠陥機序も観測されていない、と conductor は判断した。各自 diary(amadeus/spaces/default/intents/260810-grilling-frontier-resync/inception/application-design/memory.md)と成果物5点+questions(0問様式)を実測確認して投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補がある(留保に具体候補を記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

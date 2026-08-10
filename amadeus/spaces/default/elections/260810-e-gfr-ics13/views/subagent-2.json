@@ -1,0 +1,17 @@
+{
+  "electionId": "E-GFR-ICS13",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync intent-capture の §13 学習候補は 0 件(選定なし)でよいか。ステージは #2785 クロスレビュー済みの前提を消費して 3 問の質問票で完了し、diary の Interpretations は既存 cid(intent-capture:c1)の適用実例、Open questions は要件段への持ち越し事項であり、いずれも新規ノルムに昇格する一般化可能な学びではないと conductor は判断した。各自 diary(amadeus/spaces/default/intents/260810-grilling-frontier-resync/ideation/intent-capture/memory.md)と成果物 3 点を実測確認して投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補がある(留保に具体候補を記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

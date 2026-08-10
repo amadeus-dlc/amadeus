@@ -1,0 +1,18 @@
+# Election Record — E-GFR-BTS13
+
+- question: 260810-grilling-frontier-resync build-and-test ステージの §13 学習候補の採否。conductor 提案 = 採用1件 / 不採用3件。
+
+【採用案 A(既存 cid への追補)】cid:code-generation:mirror-merge-before-approve への追補(同 intent の code-generation 段で採択した cid:code-generation:c1-mirror-and-rebuild-before-review の姉妹面): **Bolt のコードが conductor ツリーへ「マージ経由」で到達している場合、workspace_requires ガードの経路 (a)(b) は構造的に不成立になる** — (a) `recordBranchSourceWork` は `git log --first-parent --no-merges` で merge 到来コードを設計上除外し(他 intent の PR を自 intent の作業と数えない帰属規律)、(b) `boltRefHasSourceWork` は取込後 merge-base == bolt tip となり diff が空になるため。残る経路 (c) `mergedPrSourceWork` は「birth..HEAD の commit subject が**この intent の宣言 issue 番号**を参照し、かつ非 doc ファイルに触れる」ことを要求するので、Bolt PR の squash 着地(subject に PR 番号が入る)を取り込んだうえで、state の `Project` フィールドへ**実装 PR 番号の事実記載**を追記して満たす。虚偽参照による guard 迂回は検証劇場として禁止であり、追記は実在する実装 PR の記載に限る(既存規範の再確認)。実測: 本 intent の code-generation approve が本機序で拒否され、origin/main(Bolt 2/3 の squash 着地)取込 + Project への `#2828 / #2843 / #2844` 追記で通過した。
+
+【不採用】c1(Comprehensive でも NFR へ trace できる範囲に限る)= 既存 cid:build-and-test:bt-proportional-selection / c2-no-test-theatre-for-absent-nfr の射程内で新規性なし。c3(main 取込後に plugin 投影を再生成しないと advisory evaluator が exit 1 になり engine が malformed directive を拒否する)= 同 intent で採択済みの cid:code-generation:c1-mirror-and-rebuild-before-review が『取込後に build して配送先ツリーで再実測する』を既に定めており、その engine 面の実例に留まる。c4(builder の隔離 worktree で赤だった4件が main 着地後の conductor ツリーで全解消)= 既存 cid:build-and-test:bt-20260730-2 / c1-tsr-ambient-repro-on-base の帰属規律の適用実例で、新規規則ではない。
+
+choice 1 = A の1件を採用(推奨)。choice 2 = 一部変更・別案(留保に記す)。choice 3 = 0件(A も既存 cid の射程内)または質問自体に欠落・誤り。
+
+検証対象: `packages/framework/core/tools/amadeus-state.ts` の `recordBranchSourceWork` / `boltRefHasSourceWork` / `mergedPrSourceWork` / `intentScopedSourceWork` / `intentIssueRefs` の実装、`amadeus/spaces/default/intents/260810-grilling-frontier-resync/construction/build-and-test/memory.md` の Deviations、同 intent の `amadeus-state.md` の Project フィールド、`amadeus/spaces/default/memory/project.md` の既存 cid 群。既存 cid の射程内かどうかを独立に実測して判断すること。
+
+裁定: A の1件を採用(推奨)(choice 1: 2票)
+内訳: choice1=2票 choice2=0票 choice3=0票
+- 留保(subagent-2, GoA2): persist 時に2点を精密化すること。(1) 追補先 cid:code-generation:mirror-merge-before-approve の既存本文は『ミラー/本線マージは経路 (a) を満たすための運用』と書いており、本追補はこの節の**訂正**でもある — 本線マージは (a) を満たさない(recordBranchSourceWork が --first-parent --no-merges で merge 第2親側を除外)ことを追補本文で明示し、旧文言との関係を可視化する。単なる追加として書くと矛盾した2文が同一 cid に残る。(2) 経路 (b) 不成立の条件を『bolt ブランチ自体を(squash でなく)マージで取り込んだ場合に merge-base == bolt tip となり diff が空』と限定して書く — squash 着地のみで bolt ブランチを直接マージしていない場合は boltRefHasSourceWork のコメント通り merge-base != tip となり (b) は成立しうるため、無条件の『merge 到来なら (b) 不成立』は過大主張になる。あわせて既存 cid が引く機構行 amadeus-state.ts:1013 は現行 :2278(mergedPrSourceWork)へ drift しているので追補時に更新する(cid:requirements-analysis:mechanism-cite-verify-at-draft)。
+- 留保(subagent-1, GoA2): 追補文には次の3点を明記すること。(1) 本追補が言う経路 (a)(b)(c) は intentScopedSourceWork 内部の三段(amadeus-state.ts:2294-2315 の設計コメントと実装)であり、既存 cid:code-generation:mirror-merge-before-approve の E-TU5 追補が言う『(a) 直近コミットのコード面』(= gitHasSourceWork 第2プローブ `git diff --name-only HEAD~1 HEAD`、:2348-2352)とは別番号体系である。内部三段へ落ちるのは『直近コミットが doc-only』のときだけ(:2353-2354)なので、追補は『マージ取込の後に doc-only の checkpoint コミットが積まれた場合』という前提条件を明示する。(2) (b) の不成立条件は『bolt tip が HEAD の祖先になる実マージ取込』に限定して書く — squash 着地のみなら merge-base != tip で (b) は成立しうる(:2234-2238 の設計コメント『the squash sha is not on the branch, so merge-base != tip』と矛盾させない)。(3) team.md:283 cid:code-generation:bolt-refs-path-b-dual-condition の『確実なのは経路 (a) ミラー/本線マージ』は本追補の条件下では成立しない(マージが最終コミットである場合に限る)ため、相互参照を1句添える。
+票タイムライン: 配信 2026-08-10T14:33:38Z → 配信 2026-08-10T14:33:38Z → subagent-2 2026-08-10T14:35:25Z → subagent-1 2026-08-10T14:36:35Z → 開票 2026-08-10T14:37:24Z
+GoA[E-GFR-BTS13]: 1x0 2x2 3x0 4x0 5x0 6x0 7x0 8x0

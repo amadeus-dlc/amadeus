@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-RES13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": "独立再実測(git grep, scope: packages/framework/core/**/* docs/**/* :!tests :!*/record/* :!*/intents/*): 英語 \"one question at a time\" = 8行/7ファイル一致(docs/guide/02-your-first-workflow.{md,ja.md}:89, 07-interaction-modes.md:22,37 / ja.md:18, conductor.md:51, stage-protocol.md:349, SKILL.md:5)。日本語直訳 \"1問ずつ\" は同スコープで0 hit(exit 1)。実際の和訳は docs/reference/04-stage-protocol.ja.md:264 の「一度に1質問」であることを確認。re-scans/260810-grilling-frontier-resync.md:162-231 および reverse-engineering-timestamp.md:16 の所見4と一致。候補は cid:application-design:dual-key-consumer-inventory への追補として妥当な新規面(対訳ペア文書における逐語不一致による検索キー不可視性)であり、cid:application-design:c1-asd-multi-idiom-inventory(同一データ構造への複数アクセス形式)とは軸が異なるため射程重複なし。",
+      "rationale": null,
+      "submittedAt": "2026-08-10T04:17:01Z",
+      "receivedAt": "2026-08-10T04:17:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-RES13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測で候補の全数値を再確認した: (1) `git grep -n \"one question at a time\" -- 'packages/framework/core/**/*' 'docs/**/*' ':!tests' ':!*/record/*' ':!*/intents/*'` の出力は8行(7ファイル: docs/guide/02-your-first-workflow.{md,ja.md}:89、docs/guide/07-interaction-modes.{ja.md:18, md:22, md:37}、packages/framework/core/amadeus-common/conductor.md:51、packages/framework/core/amadeus-common/protocols/stage-protocol.md:349、packages/framework/core/skills/amadeus-grilling/SKILL.md:5)。(2) 同スコープでの `git grep -n \"1問ずつ\"` は0 hit(exit 1)。(3) `docs/reference/04-stage-protocol.ja.md:264` を直読し「一度に1質問。各質問は根拠付きの推奨回答を運ぶ。」の実在を確認 — 日本語直訳キーとは異なる語彙で同一規律を表現している。re-scans/260810-grilling-frontier-resync.md:162-231 とreverse-engineering-timestamp.md:16 の所見4の記載と一致する。cid:application-design:c1-asd-multi-idiom-inventory(同一データ構造への複数アクセス形式)は同一言語内の表記ゆれを扱うのに対し、本候補は対訳ペア(en/ja)を持つ prose 消費者棚卸しにおける言語間の非直訳という別軸を追加しており、既存 cid の射程外の新規性がある。追補形での persist は既存ファミリへの統合として適切であり、独立 cid の新設や記述の恣意的な拡張も見られない。",
+      "submittedAt": "2026-08-10T04:17:20Z",
+      "receivedAt": "2026-08-10T04:17:39Z"
+    }
+  ],
+  "late": []
+}
