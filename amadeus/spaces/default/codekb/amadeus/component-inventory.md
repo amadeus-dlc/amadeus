@@ -1,6 +1,57 @@
 # コンポーネント棚卸し
 
-## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+
+**観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（8 コミット、非 record 面 16 files / +721 / -101）。正本は `re-scans/260810-plugin-prose-seed-guard.md`。構造的含意は `architecture.md` の同 intent 節。
+
+### PR #2811（`c51afbd0a`）が新設した構成要素
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `rulesSubdirFor(dir)` | `packages/framework/core/tools/amadeus-harness.ts:71-73` | `KNOWN_RULES_SUBDIR[dir] ?? "rules"`。**明示指定されたハーネス**の rename を返す（`rulesSubdir()` は ambient 用） |
+| `KNOWN_RULES_SUBDIR` | 同 `:59-65` | **5 キー**（`.claude` / `.kiro` / `.codex` / `.kimi-code` / `.pi`）。`.opencode` / `.cursor` は不在 |
+| `HARNESS_TOKEN`（core 側） | `amadeus-plugin.ts:653` | `/\{\{HARNESS_DIR\}\}/g`。`scripts/harness-transform.ts:11` と**別実体**（core は `scripts/` を import できない） |
+| `stagingHarnessDirOf(dst)` | `amadeus-plugin.ts:659-664` | 書き出し先が `<harnessTree>/.amadeus-plugin-src/<name>` のときのみハーネス dir、authoring 宛は `null` |
+| `seedBytesForHarness(relPath, bytes, harnessDir)` | `amadeus-plugin.ts:669-675` | 経路B の置換器。prose ゲート `:671`、rename `:672`、token `:673` |
+| `stagingEntryState(dst, src)` | `amadeus-plugin.ts:681-692` | staging の drift 判定を **seed 適用後のソース**と比較（`:689`）— 恒久 drift の回避 |
+| seed 適用点 | `amadeus-plugin.ts:738` | `copyRealFiles` の `writeFileSync` |
+| `harnessNames` / `harnessDirOf` / `allHarnessDirs` / `foreignHarnessDirs` | `tests/helpers/harness-dir-fixture.ts:15/21/28/34` | manifest 由来のハーネス事実供給。**`rulesRename` を返すヘルパーは未実装** |
+| `scanPluginProseForHarnessLiterals` | `tests/lib/boundary-guard.ts:205-210` | predicate 3。`HARNESS_LITERAL_TOKEN_RE`（`:122`）を plugin 散文へ適用 |
+
+### rename のデータ源 — 2 面 3 消費点
+
+| 消費点 | file:line | データ源 | descriptor を見るか |
+|---|---|---|---|
+| `transform()` の rename | `scripts/harness-transform.ts:22-24`（引数 `:37`） | **harness manifest の `rulesRename`** | — （呼び出し元が manifest から渡す） |
+| `seedBytesForHarness` の rename | `amadeus-plugin.ts:672` → `rulesSubdirFor` | `KNOWN_RULES_SUBDIR` | 見ない |
+| `rulesSubdir()` env 分岐 | `amadeus-harness.ts:194` | `KNOWN_RULES_SUBDIR` | **見ない**（両レビュー未指摘） |
+| `rulesSubdir()` fallback | `amadeus-harness.ts:196` | `shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR` | descriptor 優先 |
+
+manifest 実測 8 面（`harnessDir` / `rulesRename` 行）: claude `.claude` `null`(:112) / codex `.codex` `"amadeus-rules"`(:74) / **cursor `.cursor` `"amadeus-rules"`(:74)** / kimi `.kimi-code` `null`(:109) / kiro `.kiro` `"steering"`(:91) / kiro-ide `.kiro` `"steering"`(:111) / **opencode `.opencode` `"amadeus-rules"`(:76)** / pi `.pi` `null`(:114)。**8 manifest → distinct `(harnessDir, rulesRename)` ペアは 7**、うち 2 面が `KNOWN_RULES_SUBDIR` と乖離。
+
+### 4 系統の rename 実装（emit 層 — `transform()` とは別面）
+
+| 系統 | file:line | 形 |
+|---|---|---|
+| codex emit | `packages/framework/harness/codex/emit.ts:227-228` | `substituteToken(s).replaceAll(".codex/rules/", ".codex/amadeus-rules/")` |
+| codex emit（否定先読み） | 同 `:245` | `s.replace(/\.codex\/rules\/(?!default\.rules)/g, ".codex/amadeus-rules/")` — **例外規則は他 3 系統に不在** |
+| opencode emit | `packages/framework/harness/opencode/emit.ts:160-161` | `substituteToken(s).replaceAll(\`${harnessDir}/rules/\`, \`${harnessDir}/amadeus-rules/\`)` |
+| cursor emit | — | **hardcode なし**（`git grep -nE 'amadeus-rules' "${S}" -- packages/framework/harness/cursor/` → **6 hits = manifest 5 行（`:3` / `:11` / `:33` / `:44` / `:74`）+ `emit.ts:3` のコメント 1 行**。実行コードのヒットは 0。scan の「manifest 6 行」は内訳誤りで Architect 独立再実測により訂正） |
+
+emit 層は core ソース由来 prose の**生成器**であり、`transform()` / `seedBytesForHarness` の経路とは別面。実装時の評価対象として棚卸ししておく。
+
+### 患部ファイルの棚卸し（#2810、11 行）
+
+| ファイル | 行 | 件数 |
+|---|---|---|
+| `plugins/pr-convergence/stages/pr-convergence.md` | 54, 80, 162, 214 | 4 |
+| `plugins/formal-model-check/stages/formal-model-check.md` | 48 | 1 |
+| `plugins/formal-model-check/stages/tla-authoring.md` | 65, 68, 110, 113, 116 | 5 |
+| `plugins/formal-model-check/README.md` | 111 | 1 |
+
+スコープ隣接（要件段で採否裁定）: `formal-model-check.md:12`（frontmatter `inputs:` の説明参照）、`README.md:101`（自ファイルへの自己ポインタ）。トークンが届かない面: `plugin.json:61`（**#2823** へ分離）、`node-ci-model-check-port.ts:223`、`run-skeleton-ci.ts:19` / `:60`。
+
+## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
 
 **観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files。患部 7 パスは区間の変更集合と**非交差** — `git diff --name-only base..HEAD` を患部語彙で絞って **0 hit**）。正本は `re-scans/260810-plugin-harness-dir-token.md`。構造的含意は `architecture.md` の同 intent 節。
 

@@ -1,6 +1,85 @@
 # コード品質評価
 
-## ハーネス中立性ガードの穴 — plugin コーパスが全ガードの死角（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+## 二重化した rename 規則にガードが無い — サンプルが乖離キーを外している（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+
+**観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`。正本は `re-scans/260810-plugin-prose-seed-guard.md`。
+
+### 中核の品質債務（#2812）— ガードに見えてガードではない
+
+`transform()`（`scripts/harness-transform.ts:33-45`）と `seedBytesForHarness()`（`packages/framework/core/tools/amadeus-plugin.ts:669-675`）は同一の規則形を持つが、rename のデータ源が異なる（manifest `rulesRename` vs `KNOWN_RULES_SUBDIR`）。**両者の等価性を検査するテストは存在しない。**
+
+述語と実測:
+
+| 述語 | 結果 |
+|---|---|
+| `git grep -ln 'harness-transform' "${S}" -- tests/` | **6 ファイル**。うち `transform` を実 import するのは `tests/smoke/t-pi-dist-structure.test.ts:11` の **1 件のみ**、残り 5 件はコメント内の言及 |
+| `git grep -ln 'seedBytesForHarness' "${S}" -- tests/ scripts/` | **1 ファイル**（`tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts`） |
+| 両者を参照するファイル | **0**（上記 2 集合の交わりは空） |
+
+差分比較は現状**構造的に不可能**である。
+
+**サンプル選択による遮蔽（PROVEN）**: `t2790:87-102` の `seedBytesForHarness transforms prose only, and applies the rules rename` が叩くキーは `.claude`（`:89`）/ `.codex`（`:92`）/ `.kiro`（`:95`）と、非 prose `.codex`（`:99` / `:100`）/ `null`（`:101`）のみ。**乖離している `.cursor` / `.opencode` は不在** — サンプルされたキー集合は `KNOWN_RULES_SUBDIR` と manifest が**一致する部分集合と完全に一致**する。テストは緑だが、生きた乖離を 1 件も観測していない。
+
+これは「keyed map を叩くテストは、叩いているキーを map の全キー空間と突き合わせて初めてガードになる」という一般則の実例である（`cid:code-generation:vocabulary-collision-vacuity-guard` の姉妹形 — 述語ではなく**サンプル空間**が空文化の経路）。
+
+**コーパス側の遮蔽**: `git grep -nE '/rules/' "${S}" -- plugins/` → **exit 1 / 0 行**。plugin `.md` コーパスは 4 ファイルのみで、`{{HARNESS_DIR}}` の出現は `pr-convergence.md:180` の 1 件（`tools/` パス）。したがって rename 規則は plugin コーパスでは一度も発火せず、**#2810 の 11 行を修正しても #2812 の乖離は自然には露出しない**。ガードは明示的に作らないと生まれない。
+
+### #2811 が閉じたガードの穴（直前節 N-5 / N-6 の帰結）
+
+直前 intent が指摘した穴のうち 2 つは着地済みである。
+
+| 直前節の指摘 | 現況（observed 実測） |
+|---|---|
+| `HARNESS_PATH_RE` が 7 ディレクトリ中 3 個しか見ない（N-5） | **解消**。`tests/unit/t146-core-hygiene.test.ts:80-82` が `allHarnessDirs()`（manifest 導出）から正規表現を構築（`const HARNESS_PATH_RE = new RegExp(` `:80`） |
+| t146 の corpus に `plugins/` が無い（N-6） | **解消**。`:42-43` `const PLUGINS = join(REPO_ROOT, "plugins"); const STRAY_ROOTS: readonly string[] = [CORE, PLUGINS];`。トークンフロアテストは core-only スコープを維持（`:40-41` のコメントが逐語で理由を宣言） |
+| plugin 散文へハーネスリテラル述語が無い | **解消**。`tests/lib/boundary-guard.ts:205-210` `scanPluginProseForHarnessLiterals`（predicate 3）+ `tests/integration/t531-plugin-harness-literal-guard.integration.test.ts` |
+
+### 残る非対称 — ガード 2 本のコーパスが揃っていない
+
+#2810 のガードをどこへ置くかは、この非対称が決める（要件段の裁定事項）。
+
+| 候補 | コーパスの実体 | `plugin.json:61` と `.ts` の扱い |
+|---|---|---|
+| `tests/unit/t146-core-hygiene.test.ts` | `STRAY_ROOTS = [CORE, PLUGINS]`（`:42-43`）だが `walkMd`（`:66-72`）の `full.endsWith(".md")`（`:70`）により **`.md` のみ** | **構造的にコーパス外** → カーブアウト不要 |
+| `tests/integration/t531-…` | `PLUGIN_SCAN_ROOTS = ["plugins"]`（`:47`）+ `git grep -lE …`（`:71`）で **全 tracked file** | `.json` / `.ts` が入る → **恒久赤かカーブアウトの二択** |
+
+すなわち **t146 に置けば #2823（`plugin.json:61`）の裁定を待つ順序制約自体が発生せず、t531 に置く場合のみ待ちが生じる。** `t531` の `RAW_PLUGIN_ALLOWLIST` は `:53` で空（fail-closed、`:49-52` のコメントが逐語で理由を宣言）。
+
+既存述語の射程: `boundary-guard.ts:122` `HARNESS_LITERAL_TOKEN_RE = /\.(?:claude|codex|cursor|kimi-code|kiro-ide|kiro|opencode|pi)\/[A-Za-z0-9._/-]*/g` は harness dotdir 専用で、`plugins/<name>/tools/…` 形（#2810 の患部）を**捕捉しない**。新述語が要る。
+
+### 新述語のコーパス危険度（PROVEN）
+
+t146 に `plugins/` 相対述語を足す場合、CORE 半分の偽陽性は 1 件のみ。述語 `git grep -nE '(^|[^/A-Za-z0-9._-])plugins/[a-z0-9-]+/' "${S}" -- 'packages/framework/core/**/*.md'` → **1 hit**:
+
+```
+packages/framework/core/sensors/amadeus-pr-convergence-report-format.md:54
+  importing `plugins/pr-convergence/tools/pr-convergence-cli.ts`. Core ships to
+```
+
+`:51-58` を実読すると「The checker re-reads the report with its own minimal line reader **instead of** importing …」— **意図的な非 import を説明する散文**であり患部ではない。CORE 根も走査する設計ならこの 1 件が唯一のカーブアウト対象（`isCarvedOut` `:46-64` の既存 2 件と同様式）、PLUGINS 根に限定すれば発生しない。
+
+composed 面は危険要因にならない: `git ls-files dist .claude | wc -l` → **3**（`.claude/CLAUDE.md` / `.claude/hooks/amadeus-dispatch.ts` / `.claude/settings.json`）で `.gitignore` が `/dist/**`（`:19`）と `/.claude/**`（`:24`）を除外。合成 `.claude/plugins/` 配下は untracked のため、t531 の `git grep` 走査にも t146 の `walkMd(REPO_ROOT/plugins)` にも入らない。
+
+### 既存ピンとの衝突（PROVEN な不在）
+
+両 Issue の修正で**明示改訂が必要なテストは 1 件も検出されなかった**（`cid:reverse-engineering:c1-pinned-behavior-ruling` の適用対象外）。
+
+| テスト | 固定内容 | 修正後 |
+|---|---|---|
+| `t2790:87-102` | `.claude`/`.codex`/`.kiro`/非prose/`null` の出力文字列 | 緑維持（乖離キーを触らない） |
+| `t2790:104-120` compose E2E | `${harnessDir}/tools/amadeus-sensor.ts` がちょうど 1 回（`:96`）/ 生トークン残存なし（`:97`）/ foreign dir リテラルなし（`:98-100`） | 緑維持（置換後は自 dir） |
+| `t2790:122-131` 再 compose no-op | 2 回目の compose がバイト同一 | 緑維持 |
+| `t-plugin-projection-packaging.test.ts:180-196` | 上記同形を 8 面で | 緑維持 |
+| `t531:88-94` / `:96-110` / `:162-171` | dotdir リテラル 0 件 / 落ちる実証 / vacuity guard | 緑維持（トークン形は dotdir でない） |
+| `t146:104-118` ほか | CORE+PLUGINS の `.md` に dotdir 0 件 | 緑維持 |
+| `t144-harness-seam.cli.test.ts:207-220, 228-243, 245-255` | `rulesSubdir()` の descriptor / `AMADEUS_HARNESS_DIR`（`.kiro`/`.codex`）/ `AMADEUS_RULES_SUBDIR` 解決 | 緑維持。述語 `git grep -nE '(cursor\|opencode)' "${S}" -- tests/integration/t144-harness-seam.cli.test.ts` → **0 hits** = 現行 `.cursor`/`.opencode` fallback を pin するテストは**存在しない** |
+| `tests/smoke/t149-…:81` / `:87` | 両面の `harness.json` の `rulesSubdir` が `"amadeus-rules"` | **緑維持かつ整合強化** — descriptor は既に `amadeus-rules` を出荷しており、map 追加はこれと一致する方向 |
+
+### 拡張点
+
+`tests/helpers/harness-dir-fixture.ts` は既に `HarnessManifest` 型を import（`:11`）し `harnessDirOf` が manifest を `require`（`:22`）しているが、**`rulesRename` を返すヘルパーは持たない**。等価性テストが必要とする「`(harnessDir, rulesRename)` ペアの供給」はここへの最小追加で足りる。新規テスト追加時の付随作業（`tests/integration/t-coverage-mechanism-ratchet.test.ts` への台帳追記）は #2811 が t2790 追加時に 1 行行った先例がある。
+
+## ハーネス中立性ガードの穴 — plugin コーパスが全ガードの死角（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
 
 **観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files、患部 7 パスは非交差）。正本は `re-scans/260810-plugin-harness-dir-token.md`。
 
