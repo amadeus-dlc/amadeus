@@ -963,6 +963,10 @@ describe("t245 reviewer protocol production caller", () => {
       });
       expect(emitted.status).toBe(0);
       directive = JSON.parse(emitted.stdout) as Record<string, unknown>;
+      expect(
+        (directive.consumes_absent as Array<{ expected: boolean }> | undefined)
+          ?.filter((gap) => !gap.expected) ?? [],
+      ).toEqual([]);
     }
     expect(directive.kind).toBe("run-stage");
     expect(directive.reviewer).toBe("amadeus-architecture-reviewer-agent");

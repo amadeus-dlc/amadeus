@@ -259,6 +259,15 @@ function materialiseReviewSurface(proj: string, d: Directive, unit: string): voi
   }
 }
 
+function materialiseUnexpectedConsumes(proj: string, d: Directive): void {
+  for (const consume of d.consumes_absent ?? []) {
+    if (consume.expected) continue;
+    const abs = join(proj, ...consume.path.split("/"));
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, `# ${consume.path}\n`);
+  }
+}
+
 /** Drive `next` IN-PROCESS and return the emitted directive. */
 function runNextInProcess(proj: string): Directive {
   let raw = "";
@@ -320,6 +329,8 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
   test("3: the emitted directive drives reviewer-runtime scope to exit 0", () => {
     const proj = seedFixProject();
     seedUnitDir(proj, "fix-1711-unitname");
+    const initial = runNext(proj);
+    materialiseUnexpectedConsumes(proj, initial);
     const d = runNext(proj);
     materialiseReviewSurface(proj, d, "fix-1711-unitname");
     const r = runReviewerScope(proj, d);

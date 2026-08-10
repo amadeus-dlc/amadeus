@@ -2163,6 +2163,22 @@ function loadRuntimeUnitRows(projectDir: string, intent?: string): unknown[] | n
   }
 }
 
+function loadRuntimeUnitBatches(projectDir: string): string[][] | null {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    const batches = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "batches");
+    if (!Array.isArray(batches)) return null;
+    const validBatches = batches.filter((batch): batch is string[] =>
+      Array.isArray(batch) && batch.every((unit) => typeof unit === "string" && unit.trim() !== "")
+    );
+    return validBatches.length === batches.length
+      ? validBatches.map((batch) => [...batch])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 interface RuntimeUnitKindRow {
   name: string;
   kind?: UnitKind;
@@ -2429,20 +2445,21 @@ interface PerUnitConsumePopulation {
   readonly outcomes: readonly PerUnitConsumeOutcome[];
 }
 
-function readPerUnitConsumePopulation(projectDir: string): PerUnitConsumePopulation {
+function readPerUnitConsumePopulation(projectDir: string): PerUnitConsumePopulation | undefined {
   const rows = loadRuntimeUnitRows(projectDir);
-  const declaredUnits = rows === null
-    ? []
-    : rows.flatMap((row) => {
-      const name = runtimeObjectField(row, "name");
-      return typeof name === "string" && name.trim() !== "" ? [name] : [];
-    });
+  if (rows === null || rows.length === 0) return undefined;
+  const declaredUnits = rows.flatMap((row) => {
+    const name = runtimeObjectField(row, "name");
+    return typeof name === "string" && name.trim() !== "" ? [name] : [];
+  });
   const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
-  const batchIds = [...new Set(eventSets.map((set) => set.batchId))];
   const outcomes: PerUnitConsumeOutcome[] = [];
-  for (const batchId of batchIds) {
-    const projection = foldUnitPoolEventSets(eventSets, batchId);
+  const batches = loadRuntimeUnitBatches(projectDir) ?? [];
+  for (const [index, units] of batches.entries()) {
+    const projection = foldUnitPoolEventSets(eventSets, String(index + 1));
+    const currentUnits = new Set(units);
     for (const terminal of projection.terminal) {
+      if (!currentUnits.has(terminal.unitId)) continue;
       outcomes.push({
         unit: terminal.unitId,
         outcome: terminal.outcome === "succeeded" || terminal.outcome === "cancelled"
@@ -2504,7 +2521,6 @@ function resolveConsumes(
   });
   if (fanoutCandidates.length === 0) return resolved;
   const fanout = resolvePerUnitConsumeFanout({
-    consumer: node.slug,
     graph: loadGraph(),
     declaredUnits: population.declaredUnits,
     outcomes: population.outcomes,
@@ -3999,7 +4015,7 @@ function emitRunStageForSlug(
     recordPrefix,
     codekbCtx,
     unitKind,
-    stateContent !== null && codekbCtx && hasRequiredPerUnitConsumes(node)
+    stateContent !== null && codekbCtx !== undefined && hasRequiredPerUnitConsumes(node)
       ? readPerUnitConsumePopulation(codekbCtx.projectDir)
       : undefined,
   );

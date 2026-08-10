@@ -1,5 +1,5 @@
 // covers: subcommand:amadeus-orchestrate:next
-// size: medium
+// size: large
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -9,6 +9,7 @@ import {
   createAuditUnitPoolRepository,
   createUnitPoolCoordinator,
 } from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
+import { extractPerUnitConsumerEdges } from "../../packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts";
 import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
 import { ensureContextManager } from "../../packages/framework/core/otel/context.ts";
 import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
@@ -80,7 +81,7 @@ afterEach(() => {
 function projectWithOutcomes(
   missing?: { unit: string; artifact: string },
   stage: keyof typeof consumerEdges = "build-and-test",
-  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled" | "pending">> = {},
+  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
 ): string {
   const project = setupIntegrationProject({ withState: "state-brownfield-feature.md" });
   projects.push(project);
@@ -136,7 +137,6 @@ function projectWithOutcomes(
       nativeHandle: `native-${attempt.unitId}`,
     }).ok).toBe(true);
     const outcome = outcomeOverrides[attempt.unitId] ?? "succeeded";
-    if (outcome === "pending") continue;
     expect(pool.settleRelease({
       idempotencyKey: `settle-${attempt.unitId}`,
       batchId: "1",
@@ -144,10 +144,10 @@ function projectWithOutcomes(
       outcome,
     }).ok).toBe(true);
   }
+  const artifacts = new Map(
+    Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
+  );
   for (const unit of ["unit-z", "unit-a"]) {
-    const artifacts = new Map(
-      Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
-    );
     for (const [artifact, producer] of artifacts) {
       if (missing?.unit === unit && missing.artifact === artifact) continue;
       const directory = join(record, "construction", unit, producer);
@@ -161,11 +161,28 @@ function projectWithOutcomes(
 function next(project: string) {
   return spawnSync(process.execPath, [join(project, ".claude/tools/amadeus-orchestrate.ts"), "next", "--project-dir", project], {
     encoding: "utf8",
-    env: { ...process.env, AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1" },
+    env: {
+      ...process.env,
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+      AMADEUS_STAGE_GRAPH: join(project, ".claude/tools/data/stage-graph.json"),
+    },
   });
 }
 
 describe("t533 orchestrator per-unit consume fan-out", () => {
+  test("compiled graph retains the pinned 7-consumer 19-edge inventory", () => {
+    const graph = JSON.parse(readFileSync(
+      join(import.meta.dir, "../../dist/claude/.claude/tools/data/stage-graph.json"),
+      "utf8",
+    ));
+    const expected = Object.entries(consumerEdges).flatMap(([consumer, edges]) =>
+      edges.map(([artifact, producer]) => `${consumer}:${artifact}:${producer}`)
+    ).sort();
+
+    expect(extractPerUnitConsumerEdges(graph).map((edge) => edge.join(":")).sort())
+      .toEqual(expected);
+  });
+
   test("build-and-test lists every existing concrete plan and summary in stable order", () => {
     const project = projectWithOutcomes();
     const result = next(project);
@@ -182,6 +199,43 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
       `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${tail}`
     ));
     expect(directive.consumes_absent).toBeUndefined();
+  });
+
+  test("ignores terminal outcomes from a batch outside the current runtime population", () => {
+    const project = projectWithOutcomes();
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
+    expect(pool.initialEnqueue({
+      idempotencyKey: "historical-init",
+      batchId: "99",
+      cap: 1,
+      units: [{ unitId: "unit-z", dependsOn: [] }],
+    }).ok).toBe(true);
+    const acquired = pool.acquire({ idempotencyKey: "historical-acquire", batchId: "99" });
+    expect(acquired.ok).toBe(true);
+    if (!acquired.ok) throw new Error(acquired.reason);
+    const attempt = acquired.projection.active[0];
+    expect(pool.confirmDispatch({
+      idempotencyKey: "historical-confirm",
+      batchId: "99",
+      attemptId: attempt.attemptId,
+      nativeHandle: "historical-native",
+    }).ok).toBe(true);
+    expect(pool.settleRelease({
+      idempotencyKey: "historical-settle",
+      batchId: "99",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    }).ok).toBe(true);
+
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
   });
 
   test("classifies a succeeded Unit required gap as unexpected without a partial path", () => {

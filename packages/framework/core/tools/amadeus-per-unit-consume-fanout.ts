@@ -22,7 +22,6 @@ export interface PerUnitConsumeTemplate {
 }
 
 export interface PerUnitConsumeFanoutInput {
-  readonly consumer: string;
   readonly graph: readonly PerUnitConsumeGraphStage[];
   readonly declaredUnits: readonly string[];
   readonly outcomes: readonly PerUnitConsumeOutcome[];
@@ -141,17 +140,18 @@ function sortedUnique(values: readonly string[]): string[] {
 }
 
 function assertConsumerEdgeInventory(graph: readonly PerUnitConsumeGraphStage[]): void {
+  const actual = extractPerUnitConsumerEdges(graph);
   const expectedEdges = sortedUnique(
-    EXPECTED_PER_UNIT_CONSUMER_EDGES.map(([consumer, artifact]) => `${consumer}:${artifact}`),
+    EXPECTED_PER_UNIT_CONSUMER_EDGES.map((edge) => edge.join(":")),
   );
   const actualEdges = sortedUnique(
-    extractPerUnitConsumerEdges(graph).map(([consumer, artifact]) => `${consumer}:${artifact}`),
+    actual.map((edge) => edge.join(":")),
   );
   const expectedConsumers = sortedUnique(
     EXPECTED_PER_UNIT_CONSUMER_EDGES.map(([consumer]) => consumer),
   );
   const actualConsumers = sortedUnique(
-    extractPerUnitConsumerEdges(graph).map(([consumer]) => consumer),
+    actual.map(([consumer]) => consumer),
   );
   if (
     JSON.stringify(expectedConsumers) !== JSON.stringify(actualConsumers) ||

@@ -2,19 +2,12 @@
 // size: small
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
-  extractPerUnitConsumerEdges,
   PerUnitConsumeFanoutError,
   resolvePerUnitConsumeFanout,
   type PerUnitConsumeGraphStage,
 } from "../../packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts";
-
-const realGraph = JSON.parse(readFileSync(
-  join(import.meta.dir, "../../.codex/tools/data/stage-graph.json"),
-  "utf8",
-)) as PerUnitConsumeGraphStage[];
+import { PER_UNIT_CONSUMER_GRAPH_FIXTURE } from "../harness/per-unit-consumer-graph-fixture.ts";
 
 const graph: PerUnitConsumeGraphStage[] = [
   {
@@ -36,7 +29,6 @@ const graph: PerUnitConsumeGraphStage[] = [
 describe("t533 per-unit consume fan-out", () => {
   test("expands succeeded Units in declaration then artifact order", () => {
     expect(resolvePerUnitConsumeFanout({
-      consumer: "build-and-test",
       graph,
       declaredUnits: ["unit-z", "unit-a"],
       outcomes: [
@@ -80,7 +72,6 @@ describe("t533 per-unit consume fan-out", () => {
 
   test("deduplicates normalized concrete paths by first occurrence", () => {
     expect(resolvePerUnitConsumeFanout({
-      consumer: "build-and-test",
       graph,
       declaredUnits: ["unit-a"],
       outcomes: [{ unit: "unit-a", outcome: "succeeded" }],
@@ -104,7 +95,6 @@ describe("t533 per-unit consume fan-out", () => {
 
   test("fails closed when a declared producer Unit failed", () => {
     expect(() => resolvePerUnitConsumeFanout({
-      consumer: "build-and-test",
       graph,
       declaredUnits: ["unit-a", "unit-b"],
       outcomes: [
@@ -123,7 +113,6 @@ describe("t533 per-unit consume fan-out", () => {
     const codeFor = (outcomes: Array<{ unit: string; outcome: string }>) => {
       try {
         resolvePerUnitConsumeFanout({
-          consumer: "build-and-test",
           graph,
           declaredUnits: ["unit-a"],
           outcomes,
@@ -161,7 +150,6 @@ describe("t533 per-unit consume fan-out", () => {
 
   test("requires declared and succeeded producer populations while excluding cancelled Units", () => {
     const input = {
-      consumer: "build-and-test",
       graph,
       templates: [{
         artifact: "code-summary",
@@ -198,7 +186,6 @@ describe("t533 per-unit consume fan-out", () => {
 
   test("rejects a concrete path that retains the Unit placeholder", () => {
     expect(() => resolvePerUnitConsumeFanout({
-      consumer: "build-and-test",
       graph,
       declaredUnits: ["broken-{unit-name}"],
       outcomes: [{ unit: "broken-{unit-name}", outcome: "succeeded" }],
@@ -213,38 +200,13 @@ describe("t533 per-unit consume fan-out", () => {
     ));
   });
 
-  test("extracts the pinned 7-consumer 19-edge inventory from graph metadata", () => {
-    expect(extractPerUnitConsumerEdges(realGraph).map((edge) => edge.join(":")).sort()).toEqual([
-      ["build-and-test", "code-generation-plan", "code-generation"],
-      ["build-and-test", "code-summary", "code-generation"],
-      ["ci-pipeline", "code-summary", "code-generation"],
-      ["performance-validation", "performance-requirements", "nfr-requirements"],
-      ["performance-validation", "scalability-requirements", "nfr-requirements"],
-      ["performance-validation", "performance-design", "nfr-design"],
-      ["performance-validation", "scalability-design", "nfr-design"],
-      ["observability-setup", "performance-design", "nfr-design"],
-      ["observability-setup", "security-design", "nfr-design"],
-      ["observability-setup", "reliability-design", "nfr-design"],
-      ["observability-setup", "monitoring-design", "infrastructure-design"],
-      ["observability-setup", "infrastructure-services", "infrastructure-design"],
-      ["incident-response", "reliability-design", "nfr-design"],
-      ["incident-response", "security-design", "nfr-design"],
-      ["incident-response", "deployment-architecture", "infrastructure-design"],
-      ["deployment-pipeline", "deployment-architecture", "infrastructure-design"],
-      ["deployment-pipeline", "cicd-pipeline", "infrastructure-design"],
-      ["environment-provisioning", "deployment-architecture", "infrastructure-design"],
-      ["environment-provisioning", "infrastructure-services", "infrastructure-design"],
-    ].map((edge) => edge.join(":")).sort());
-  });
-
   test("fails closed with expected and actual inventories when graph edges drift", () => {
-    const drifted = realGraph.map((stage) =>
+    const drifted = PER_UNIT_CONSUMER_GRAPH_FIXTURE.map((stage) =>
       stage.slug === "build-and-test" ? { ...stage, consumes: [] } : stage
     );
     let thrown: unknown;
     try {
       resolvePerUnitConsumeFanout({
-        consumer: "ci-pipeline",
         graph: drifted,
         declaredUnits: ["unit-a"],
         outcomes: [{ unit: "unit-a", outcome: "succeeded" }],
@@ -287,5 +249,23 @@ describe("t533 per-unit consume fan-out", () => {
       expectedEdgeCount: 19,
       actualEdgeCount: 17,
     });
+  });
+
+  test("fails closed when an artifact moves to a different per-unit producer", () => {
+    const movedProducer = PER_UNIT_CONSUMER_GRAPH_FIXTURE.map((stage) =>
+      stage.slug === "code-generation"
+        ? { ...stage, slug: "replacement-code-generation" }
+        : stage
+    );
+
+    expect(() => resolvePerUnitConsumeFanout({
+      graph: movedProducer,
+      declaredUnits: ["unit-a"],
+      outcomes: [{ unit: "unit-a", outcome: "succeeded" }],
+      templates: [{
+        artifact: "code-summary",
+        path: "amadeus-docs/construction/{unit-name}/code-generation/code-summary.md",
+      }],
+    })).toThrow("consumer-edge-inventory-mismatch");
   });
 });
