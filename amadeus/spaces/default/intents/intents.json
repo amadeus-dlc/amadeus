@@ -1040,5 +1040,12 @@
     "dirName": "260809-report-done-kind-split",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
+    "slug": "tla-applicability-wiring",
+    "dirName": "260810-tla-applicability-wiring",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
