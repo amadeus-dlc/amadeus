@@ -67,6 +67,12 @@ interval and then reports `UNKNOWN` as *not converged* rather than blocking —
 an unresolved `UNKNOWN` is a reason to come back at step (4), never a reason to
 wait indefinitely.
 
+`status` and `report` treat the pull request as Intent-linked by default. For a
+pull request that is explicitly not linked to an Intent, append
+`--unlinked true`; only the exact lowercase value `true` is accepted. This flag
+skips only provenance checking. It does not skip GitHub reads, convergence
+evaluation, or the report contract.
+
 ### (1) Create the pull request
 
 Create the pull request for this Bolt if it does not exist yet. One Bolt, one
@@ -113,6 +119,15 @@ human's reading of the web UI. Exit codes:
 | 0 | converged | go to (5) |
 | 1 | not converged — the JSON names the violating threads | go to (3) |
 | 2 | the `gh` boundary failed (absent, unauthenticated, rate-limited, API fault) | stop; see *When GitHub is unreachable* |
+| 3 | linked PR provenance is invalid — JSON names every violation and stderr gives remediation | edit the PR title/body, then re-run (2) |
+
+The state query reads the title and body in the same GraphQL snapshot as the
+merge state; provenance checking adds no GitHub request. A linked pull request
+must retain the canonical title prefix and `## Amadeus Work` section created in
+step (1). A provenance failure is fail-closed for both active and already-merged
+pull requests: `status`/`report` exits 3, raw body content is not printed, and
+`report` writes no file. Remediate with `gh pr edit --title ... --body-file ...`;
+the CLI never rewrites authored pull-request content automatically.
 
 ### (3) Triage each actionable thread
 
@@ -219,6 +234,8 @@ bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts override 
 `override` requires a real human turn in the record's audit shards, refuses to
 override an already-converged pull request, writes the ruling to the audit
 trail, and only then writes a report that says `converged: false` permanently.
+It remains the explicit human ruling path and is not subject to provenance
+checking.
 There is no environment variable, flag, or state field that skips the guard
 silently: a bypass that leaves no record is not offered.
 
