@@ -159,7 +159,7 @@ The three bootstrap **initialization** stages ship no stage-runner — birthing 
 | Stage-runner | `/amadeus-application-design`, `/amadeus-code-generation`, … (29 total) | One stage in isolation, never advances your workflow | `/amadeus --stage <slug> --single` |
 | Init wrapper | `/amadeus-init` | Birth the first intent (run Initialization) | `/amadeus` on a fresh workspace |
 | Session views | `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack` | Read-only workflow reports | see [Session Management](11-session-management.md) |
-| Grilling interview | `/amadeus-grilling` | Read-only one-question-at-a-time interview about a plan or design | see [Interaction Modes](07-interaction-modes.md) |
+| Grilling interview | `/amadeus-grilling` | Read-only round-by-round interview over the design tree of a plan or design | see [Interaction Modes](07-interaction-modes.md) |
 | Utility skills | `/amadeus-compose`, `/amadeus-election`, `/amadeus-upstream-sync` | Compose a tailored plan, drive a team election, plan an upstream sync | `/amadeus compose "<task>"` for the first |
 
 There's one stage-runner for every runnable stage in the lifecycle. To see the full set, list your skills directory:

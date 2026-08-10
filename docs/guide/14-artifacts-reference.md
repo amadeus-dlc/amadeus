@@ -205,7 +205,7 @@ You choose how to answer at each stage:
 | Mode | How it works |
 |------|-------------|
 | **Guide Me** | Interactive walkthrough, batches of up to 4 questions |
-| **Grill Me** | One question at a time, in depth, with recommended answers — until shared understanding is confirmed |
+| **Grill Me** | Round-by-round interview over the design tree, with recommended answers — until every admitted branch is settled |
 | **I'll Edit the File** | Edit the question file directly, signal "done" when finished |
 | **Chat** | Freeform conversation; decisions are extracted and written to the file |
 

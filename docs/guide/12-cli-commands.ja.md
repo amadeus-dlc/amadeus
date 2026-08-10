@@ -524,7 +524,7 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 
 3 つとも読み取り専用 — ステージ前進なし、監査発火なし — で、すべての数値を `amadeus-runtime summary --json` から取得します。完全なウォークスルーは [Session Management § セッションスキル](11-session-management.ja.md#session-skills) を参照してください。
 
-4 つ目の読み取り専用スキル `/amadeus-grilling <file-or-topic>` は、プランや設計についての一度に 1 問の grilling インタビューを実行します — ワークフローは任意、ターミナルのみ。[インタラクションモード](07-interaction-modes.ja.md) を参照してください。
+4 つ目の読み取り専用スキル `/amadeus-grilling <file-or-topic>` は、プランや設計の設計ツリーをラウンド単位でたどる grilling インタビューを実行します — ワークフローは任意、ターミナルのみ。[インタラクションモード](07-interaction-modes.ja.md) を参照してください。
 
 ---
 

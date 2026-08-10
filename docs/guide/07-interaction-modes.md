@@ -19,7 +19,7 @@ When a stage gathers your input, the agent presents four interaction modes. You 
 ```
 ▸ Choose interaction mode:
   (1) Guide Me — agent asks structured questions
-  (2) Grill Me — one question at a time, in depth, with recommended answers
+  (2) Grill Me — round-by-round interview over the design tree, with recommended answers
   (3) Edit File — write directly to the artifact
   (4) Chat — freeform discussion
 ```
@@ -34,11 +34,12 @@ The agent walks you through each question interactively using structured prompts
 
 ### Grill Me
 
-The agent interviews you relentlessly — strictly one question at a time, each with a recommended answer and its rationale — until you and the agent reach a shared understanding. Best when you want to stress-test a plan or design before the stage generates artifacts.
+The agent interviews you relentlessly — mapping the decision space as a design tree and asking the whole pruned frontier round by round, every question carrying a recommended answer and its rationale — until every admitted branch is settled and you and the agent reach a shared understanding. Best when you want to stress-test a plan or design before the stage generates artifacts.
 
 - Facts the agent can determine from the codebase or prior artifacts are looked up, not asked; only decisions come to you
 - Uncertain facts are presented as confidence-tagged estimates for confirmation
-- The depth setting is a guideline, not a cap: extend with "continue" or stop at any time with "done"
+- Depth is a materiality threshold, not a question budget: it decides which nodes enter the tree, and pruned nodes are named in the agreement summary rather than silently dropped
+- The session ends when the pruned frontier is empty or you say "done"; a circuit breaker at three times the depth guideline (Minimal 12 / Standard 24 / Comprehensive 36) is the disclosed upper bound, and firing it discloses the frontier still open
 - The session ends with an agreement summary you explicitly confirm before anything is generated
 - Every question and answer is written to the stage's questions file, and each is audit-logged individually
 - In Construction and Operation phases the option is marked as exceptional use — by then most decisions should already be made

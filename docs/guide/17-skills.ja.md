@@ -193,7 +193,7 @@ basename だけを受け入れ、単一引数として渡します。basename �
 | ステージランナー | `/amadeus-application-design`、`/amadeus-code-generation`、…(計 29) | 1 ステージを単独で、ワークフローを決して進めない | `/amadeus --stage <slug> --single` |
 | Init ラッパー | `/amadeus-init` | 最初の intent を誕生させる(Initialization を実行) | 新規ワークスペースでの `/amadeus` |
 | セッションビュー | `/amadeus-session-cost`、`/amadeus-replay`、`/amadeus-outcomes-pack` | 読み取り専用のワークフローレポート | [セッション管理](11-session-management.ja.md) を参照 |
-| Grilling インタビュー | `/amadeus-grilling` | プランや設計についての読み取り専用の一問一答インタビュー | [インタラクションモード](07-interaction-modes.ja.md) を参照 |
+| Grilling インタビュー | `/amadeus-grilling` | プランや設計の設計ツリーをラウンド単位でたどる読み取り専用インタビュー | [インタラクションモード](07-interaction-modes.ja.md) を参照 |
 | ユーティリティスキル | `/amadeus-compose`、`/amadeus-election`、`/amadeus-upstream-sync` | 合わせたプランの提案、チーム選挙の駆動、本家同期の計画 | 最初のものは `/amadeus compose "<task>"` |
 
 ライフサイクル内の実行可能なステージごとにステージランナーが 1 つあります。全体の
