@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-RE-2695-LEARNINGS",
+  "voter": "reverse-engineering-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 6,
+  "goa": 2,
+  "reservation": "measured population を不変に保てる明示的な eligibility 判定境界がある場合に限り採用し、境界を定義できない場合は集計せず観測欠損として扱う。",
+  "rationale": "attribution eligibility の分離は、zero-net や FIFO の曖昧窓だけを fail-closed にしつつ、既存の測定母集団と統計互換性を守れる。特定の Sensor や stage に依存せず、将来の帰属・集計機能にも再利用できるため、候補中で最も project practice としての波及価値が高い。",
+  "submittedAt": "2026-08-09T13:49:19Z",
+  "receivedAt": "2026-08-09T13:49:35Z"
+}

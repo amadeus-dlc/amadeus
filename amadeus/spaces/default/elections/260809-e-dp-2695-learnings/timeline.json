@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:40:29Z",
+    "receivedAt": "2026-08-09T15:40:29Z",
+    "detail": "ballot accepted: delivery-planning-learning-voter-1",
+    "voter": "delivery-planning-learning-voter-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:40:54Z",
+    "receivedAt": "2026-08-09T15:40:54Z",
+    "detail": "ballot accepted: delivery-planning-learning-voter-2",
+    "voter": "delivery-planning-learning-voter-2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:41:11Z",
+    "receivedAt": "2026-08-09T15:41:11Z",
+    "detail": "delivered via subagent: delivery-planning-learning-voter-1 (reported-by-conductor)",
+    "voter": "delivery-planning-learning-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:41:11Z",
+    "receivedAt": "2026-08-09T15:41:11Z",
+    "detail": "delivered via subagent: delivery-planning-learning-voter-2 (reported-by-conductor)",
+    "voter": "delivery-planning-learning-voter-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T15:41:19Z",
+    "receivedAt": "2026-08-09T15:41:25Z",
+    "detail": "tally: established"
+  }
+]

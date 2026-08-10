@@ -1,6 +1,31 @@
 # ビジネス概要
 
-## e2e 監査テストの偽 green と検証信頼性（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## CG 観測可能区間と帰属不能残余（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+
+[Issue #2695](https://github.com/amadeus-dlc/amadeus/issues/2695) の利用者価値は、code-generation（CG）が重いという既存の stage duration 統計を、**現行 audit が実際に説明できる時間**と**説明できない残余**へ分け、次の計装投資を推測でなく実測から決められるようにすることである。現行 `stage-stats` はステージ窓・idle 除外・sensor/model/review の集計を提供するが、観測可能 lifecycle の区間帰属は report model に存在しない（`packages/framework/core/tools/amadeus-stage-stats.ts:515-527`, `:545-577`）。
+
+本 intent の業務境界は `scope-document.md:25-34,122` と `intent-backlog.md:9-20,119` が固定する CAP-01〜CAP-10 の **全 Must** であり、Issue 記載からの縮小はしない。成果は次を一体で満たす。
+
+- 既存 event だけを使い、決定的な stage・開始・終端・identity が揃った半開区間だけを採用する。window 内にあるという事実から stage や業務フェーズを推定しない。
+- `sensor-execution` 等の lifecycle 名をそのまま使い、「検証時間」「実装時間」へ意味を読み替えない。観測不能時間を review/test/PR convergence へ配分しない。
+- measured population と既存 stage duration 統計を保存しつつ、`netSeconds > 0` かつ window identity が一意な attribution population を別に設ける。
+- category ごとの union、全 category の union、coverage、帰属不能残余、overlap、上位 outlier、candidate×reason の不採用件数を同じ semantic model から Markdown/CSV/JSON へ出す。
+- `--stage`（既定 `code-generation`）と `--outliers`（整数 0〜100、既定 10）を提供し、誤入力は exit 2、対象窓ゼロは正常な `n=0` / `n/a` レポートにする。
+- 実 corpus 相当の3形式を pipe して完走させる。#2700 の先行修正は JSON の 64 KiB 超でのみ既存証明があり（`tests/integration/t487-stage-stats.integration.test.ts:337-389`）、本 intent では Markdown/CSV も含む条件10を完結させる。
+
+### 現況の観測事実
+
+Developer scan の再実行可能 probe（2026-08-09、現 worktree）では、監査 229 shards / 136,011 rows、構成窓 1,603、measured 1,154、CG measured `n=109`。Issue 規則を適用する前処理では `zero-net-attribution=4`、`ambiguous-window-identity=3`、eligible attribution windows `=102` だった。sensor-only の observable union は 4,501 秒 / eligible net 1,009,424 秒（coverage 0.446%）で、102/102 窓が `unattributableRate > 0.5` だった。これは「CG の実装時間」を示す値ではなく、**現行計装だけでは説明不能時間が支配的**という不足境界の観測事実である。
+
+### ステークホルダーと成功判断
+
+- Amadeus の運用・自己開発チーム: category/coverage/outlier から追加計装候補を絞る。
+- observability / audit 実装者: missing stage/start/terminal/identity/duplicate/malformed の理由別件数から契約欠落を特定する。
+- レビュー担当者: `observableSeconds + unattributableSeconds = netSeconds` と `coverage + unattributableRate = 1`、3形式 parity、既存出力非退行を機械検証する。
+
+成功は Issue #2695 の完了条件1〜10がすべて成立した時点であり、新規 audit event の追加、効率化施策、モデル/ハーネス帰属（#2518）は今回の成果ではない。
+
+## e2e 監査テストの偽 green と検証信頼性（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 本 intent の業務影響は**検証の信頼性**に集約される。実質は3点。
 

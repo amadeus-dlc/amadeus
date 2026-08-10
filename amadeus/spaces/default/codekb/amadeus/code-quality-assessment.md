@@ -121,6 +121,74 @@ Issue #2790 が漏れた機序は「誰も見ていなかった」である。�
 - 経路A のピン: `tests/unit/t-plugin-projection.test.ts:201-244`（`{{HARNESS_DIR}}` を使う唯一の plugin 側 fixture）、`tests/integration/t-plugin-projection-packaging.test.ts:101-112`、t303、t308、t309/t312、t310、t311、`t254-reference-plugin-lifecycle.test.ts:191-337`
 - 経路B のピン: `tests/integration/t416-self-install-plugin-projection.integration.test.ts`（冪等性／決定性 `:51-52`、`:111-113` — **`plugins/` → temp workspace → compose を実際に走らせる唯一の層**）、`tests/e2e/t416-self-projection-fresh-git.serial.test.ts`、`t-plugin-projection.test.ts:317-319`、t146、t377
 
+## CG attribution の品質評価（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+### 現行品質ベースライン
+
+- focused suites `tests/unit/t486-stage-stats.test.ts` と `tests/integration/t487-stage-stats.integration.test.ts`: Developer scan 実測 **80 pass / 0 fail / 221 expect**。
+- 現 corpus: 229 shards / 136,011 rows、constructed 1,603、measured 1,154、CG `n=109`。既存値は raw median 5,902s、net mean 10,814.93s、net median 4,721s、p95 49,247s。
+- 既存除外: unmatched 36、orphan 5、unclosed-idle 34、zero-second 415。Issue規則probeは zero-net attribution 4、ambiguous identity 3、eligible 102。
+- sensor-only observable union 4,501s / eligible net 1,009,424s = coverage 0.446%。eligible 102/102 が unattributable rate 50%超。
+- 出力実測は Markdown 53,121 bytes、CSV 48,619 bytes、JSON 107,248 bytes。現 `t487:337-389` が64 KiB超を証明するのはJSONのみ。
+
+これらは2026-08-09のDeveloper probeであり、監査は本workflow自身でも増える移動値である。後続要件・テストの数値はコマンド出力から再測定し、固定された永続真理として転記しない。
+
+### 良質な既存構造
+
+1. 集計の主要関数はexportされ、unit testがin-processでpure logicを直接被覆する（`t486:1-28`）。filesystem/CLIはintegrationへ分離されている。
+2. `composeReport` は同じcorpusから決定的reportを作り（`amadeus-stage-stats.ts:545-577`）、3 rendererは一つのreportを消費する。
+3. idleはwindowへclip後unionされ、重複を二重減算しない（`:264-285`）。interval algebraの先例として再利用できる。
+4. external stringsのsanitize、CSV quote、JSON fixed orderingが既にある（`:582-603`, `:670-723`）。
+5. real workspace 60秒以内とbyte-identical output、JSON pipe integrityのintegration proofがある（`t487:305-389`）。
+
+### 技術的負債とリスク
+
+| 債務 | 根拠 | 品質リスク |
+| --- | --- | --- |
+| `journalRecordKey` 相当の重複 | stage-stats独自scanとjournal merge/dedupの分離 | cross-shard duplicateをlifecycle duplicateと誤認しうる |
+| window collision metadata欠落 | `buildWindows` はpending queueをshiftするだけ（`:135-176`） | FIFOで測定値は出ても意味的identityが曖昧な窓を帰属へ混入 |
+| zero-net attribution未分離 | `subtractIdle` はraw=0だけ除外し、idle差引後net=0を残す（`:287-315`） | coverage除算でNaN/Infinity、既存populationを変える誘惑 |
+| interval algebra不在 | idle用private clip/mergeのみ（`:267-285`） | category/global unionの実装重複、overlap二重計上 |
+| decoder failure semantics不統一 | executionはinvalid silent skip（`:336-359`）、unit poolはthrow+dedup（`:113-159`） | 不採用イベントが無音で消え、missing instrumentation評価を歪める |
+| runtime inferenceとの意味非互換 | runtimeはcontainment/latest-wins（`amadeus-runtime.ts:498-760`） | snapshot用推定を遡及会計へ誤再利用する危険 |
+| 単一CLI肥大化 | `amadeus-stage-stats.ts` 968行、lint CCN `buildWindows=17`, `indexIdle=16` | candidate family追加で巨大条件分岐化しやすい |
+| 3 renderer独立記述 | MD/CSV/JSONに個別section追加が必要 | semantic parity drift |
+| oversized proofの形式偏り | `t487:337-389` はJSONだけ | Markdown/CSVが64 KiB未満のfixtureで偽証明になる |
+
+### fail-closed 品質条件
+
+- stage identity は event/envelope の canonical `Stage` / `Stage slug` / `origin.stage` 完全一致のみ。window containment・timestampから推定しない。
+- identity無し、start/terminal欠落、duplicate start/terminal、terminal<=start、malformed/digest/duplicate event set、FIFO collision、net<=0は区間を作らない。
+- 不採用は candidate×reason として Markdown/CSV/JSON 全てに現れ、silent skipを許さない。
+- measured population/既存duration/sensor/model/reviewBucketsは変えず、attribution eligibilityを別会計にする。
+- `GATE_*` はidle subtraction済みなのでcategoryへ再投入しない。
+- category名はlifecycle意味を保存し、人間向けフェーズ名へ推定変換しない。
+
+### 完了条件への検証マップ（スコープ縮小なし）
+
+| Issue #2695 条件 | 必須proof |
+| --- | --- |
+| 1 合成分節 | Fire id、nested/parallel、idle交差、別stage同秒、開始/終端欠落を独立oracleで固定 |
+| 2 恒等式 | zero-net/ambiguous除外後の全窓で秒・率の2恒等式、finite値を全件assert |
+| 3 union | category内とglobalの重複秒を故意に作り、二重計上時に赤くなるfixture |
+| 4 理由出力 | 全candidate familyとidentity/ambiguity/missing/malformed/duplicate理由を3形式で照合 |
+| 5 real corpus / argv | `--stage code-generation --outliers 10`再実行、0/100/-1/101/小数/非数値境界 |
+| 6 50%超 | observed factと不足境界を出し、`candidateBoundary`仮説を別fieldで確認 |
+| 7 falling proof | union/identity/恒等式のいずれかを壊す注入でテストが実際に赤くなる |
+| 8 3形式 parity | 同一semantic modelから母集団/rule/exclusion/valueをcross-render比較 |
+| 9 非退行 | focused 80 cases +既存report snapshot/shape、全stage durationを維持 |
+| 10 pipe完全性 | 各形式が機械的に>65,536 bytesであるfixture前提をassertし、MD/CSV consumer完走、JSON `jq empty` |
+
+### テスト設計上の注意
+
+既存 `t486` はv1/v2 recordsと`MeasuredWindow`を手で作り、scanner/constructor自身をoracleにしない（`:30-64`）。新しいinterval proofも、被検union関数の出力同士を比較する自己参照を避け、手計算可能な短い半開区間fixtureを使う。real corpus値はfixtureの正しさのoracleにせず、再実行可能性・性能・出力完全性の統合証拠に限定する。
+
+oversized testは「出力が64 KiBを超えた」という前提assertを形式ごとに置く。現実測ではMD/CSVが閾値未満なので、JSON用1200 distinct stages fixtureの流用だけでは条件10を証明しない。attribution rows/categories/outliersを十分生成する合成corpusで3形式それぞれのbytesを測り、full captureとpipe consumerの一致を比較する。
+
+### 保守性判断
+
+単一用途の汎用framework化は不要だが、candidate parsing・lifecycle pairing・interval accounting・aggregation・renderingをpure function境界で分ける必要がある。特にfamilyごとの条件を1つの巨大`if`へ増殖させず、閉じたrule tableと共通rejection resultに揃える。これにより、新規計装を将来追加する際も「採用できない候補を消さない」という観測契約を保てる。
+
 ## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、履歴、2026-08-07、observed `a5621236c`）
 
 ### 債務の性質

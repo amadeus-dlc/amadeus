@@ -1028,6 +1028,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fe5fc-00f2-7cb7-b6c7-aeb00cedb203",
+    "slug": "cg-attribution-stats",
+    "dirName": "260809-cg-attribution-stats",
+    "scope": "self-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
     "slug": "stage-attribution",
     "dirName": "260809-stage-attribution",

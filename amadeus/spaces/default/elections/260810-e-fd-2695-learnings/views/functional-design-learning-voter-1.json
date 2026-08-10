@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FD-2695-LEARNINGS",
+  "voter": "functional-design-learning-voter-1",
+  "question": "Functional Designの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "Event Set検証の実行順とprimary rejection reasonの優先順位を分離する",
+      "description": "安全に検証可能なfindingを全収集してからclosed precedenceを一度だけ適用する。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "Unit別reviewerへ渡すFunctional Design成果物は、そのUnitの公開境界を自己完結して記述する",
+      "description": "review scopeがcurrent Unitと宣言済み上流成果物に閉じる場合、sibling Unitの同stage成果物だけにcontractを置かない。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "partial reportのattribution referenceへscan scopeとunreadable shard countを保持する",
+      "description": "各rendererが同じ帰属母集団を単独で再現・照合できるようにする。→ project.md ## Corrections"
+    }
+  ]
+}

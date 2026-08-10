@@ -219,6 +219,112 @@ self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファ�
 - `harnessStageEntry` がホスト側 stage 読み取りをどう解決するか
 - `resolveHarnessToolsDir`（`amadeus-plugin.ts:368`）が非散文ランタイム経路のハーネス差をどこまで吸収するか
 
+## 観測可能区間集計のアーキテクチャ（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+### 現行構造と変更境界
+
+現行 `amadeus-stage-stats.ts` は、監査シャードを直接列挙し（`:847-872`）、`intent×stage` ごとの FIFO で `STAGE_STARTED → STAGE_COMPLETED` を窓化し（`:132-176`）、idle 区間を clip/union して差し引き（`:200-321`）、単一 `StageStatsReport`（`:515-527`）から3 renderer（`:632-723`, `:935-939`）へ出力する、Bun 上の単一プロセス read-only CLI である。
+
+本 intent はこの流れを置換せず、既存 report の後方互換フィールドへ **attribution section を append-only で追加**する。設計境界は次の2層で分ける。
+
+1. **既存 measured 層**: `scanCorpus → buildWindows → subtractIdle` と既存 stage duration/sensor/model/reviewBuckets の意味・母集団を保存する。
+2. **新規 attribution 層**: measured window に stable internal identity と FIFO collision metadata を結び、`netSeconds > 0` かつ identity が一意な窓だけを lifecycle interval 会計へ送る。
+
+この分離により、`zero-net-attribution` と `ambiguous-window-identity` は attribution から fail-closed で除外・報告できる一方、既存の measured population を改変しない。`buildWindows` は現在 pending queue を `shift()` するだけで collision を記録しない（`:135-176`）ため、window identity の診断 metadata は window 構築時に採取し、意味的な対応推定は行わない。
+
+### 正準データフロー
+
+```mermaid
+flowchart LR
+    A["audit shard JSONL v1/v2"] --> B["journal の正規化・canonical dedup"]
+    B --> C["既存 stage/idle 再構成"]
+    B --> D["candidate inventory"]
+    D --> E["event-set inner 展開"]
+    C --> F["measured population（既存契約）"]
+    F --> G["identity 一意性・net>0 eligibility"]
+    E --> H["stage/start/terminal/identity の明示検証"]
+    G --> I["attribution population"]
+    H --> J["明示 lifecycle intervals"]
+    I --> K["window clip + idle intersection 除去"]
+    J --> K
+    K --> L["category 内 union"]
+    L --> M["全 category union + overlap + residual"]
+    M --> N["canonical attribution report model"]
+    F --> O["既存 StageStatsReport fields"]
+    O --> P["Markdown / CSV / JSON"]
+    N --> P
+```
+
+監査 codec の正本は mixed v1/v2 reader と shard merge/dedup を持つ `amadeus-journal.ts`（`:30-35`, `:99`, `:109-110`, `:130-143`, `:481-497`, `:534-549`, `:608-640`）である。現 `scanCorpus` は shard ごとに `readJournalRecords` を呼ぶが `mergeShards` を使わない（`amadeus-stage-stats.ts:827-872`）。したがって **事実**として duplicate clone/idempotency の扱いが正本と分離している。**設計判断**として、attribution は journal 正準 dedup 後の列を入力にし、その後に同一 lifecycle identity の重複 start/terminal を fail-closed で理由計数する。canonical dedup と lifecycle collision を混同しない。
+
+### event eligibility と interval 会計
+
+event は intent が window と一致し、event 自身または同じ event-set envelope 内の canonical `Stage` / `Stage slug` / `origin.stage` が対象 stage と完全一致するときだけ eligible である。containment や同一 timestamp は stage identity に使わない。候補 inventory は全て保持し、区間化できないものも candidate×reason に残す。
+
+| candidate | 対応 | identity | category | 現断面での根拠・扱い |
+| --- | --- | --- | --- | --- |
+| `SENSOR_*` | `FIRED → PASSED/FAILED/BUDGET_OVERRIDE` | `Fire id` | `sensor-execution` | `Stage slug` が明示される（`amadeus-sensor.ts:521-536`, `:819-865`）。現 corpus で唯一すぐ区間採用可能 |
+| `EXECUTION_EVENT_SET_COMMITTED` | inner `operation-started → operation-finished` | `operationId` | `execution-lifecycle` | contract は ID と `origin.stage` を持つ（`amadeus-execution-contract.ts:30-46`, `:101-154`）が現 corpus の terminal は0。missing terminal を報告 |
+| `UNIT_POOL_EVENT_SET_COMMITTED` | inner `unit-acquired → unit-settled` | `attemptId` | `unit-pool-lifecycle` | inner lifecycle は存在（`amadeus-unit-pool.ts:80-93`, `:130-148`）するが outer の stage 明示が現 corpus で0。不採用理由 `stage-identity-missing` |
+| `BOLT_*` / `SWARM_*` / `SUBAGENT_*` / `LOOP_MONITOR_*` / `MERGE_DISPATCH_*` | event 固有 | event 固有 | event 固有 | stage/start/terminal/identity の全条件が揃うまで inventory のみ。runtime の containment 補完は再利用しない |
+| transaction envelope | envelope 固有 | envelope 固有 | envelope 固有 | 同じ fail-closed 規則で inventory。不足理由を出す |
+| `GATE_*` | 対象外 | 対象外 | 対象外 | approval wait は既存 idle subtraction 済みで category に二重計上しない |
+
+区間は整数秒の半開区間 `[start,end)`。terminal が start より後でない、identity がない、開始/終端が欠ける、同一 identity が重複する、malformed/digest/duplicate event set は区間化しない。採用区間は measured window へ clip し、既存 idle span との交差を除き、category 内 union を取る。category 間は独立軸なので単純加算せず、全 category の別 union を `observableSeconds` とする。
+
+各 attribution window で次を不変条件にする。
+
+```text
+0 <= observableSeconds <= netSeconds
+unattributableSeconds = netSeconds - observableSeconds
+coverage = observableSeconds / netSeconds
+unattributableRate = unattributableSeconds / netSeconds
+observableSeconds + unattributableSeconds = netSeconds
+coverage + unattributableRate = 1
+```
+
+`netSeconds > 0` が attribution の前提なので NaN/Infinity は生成しない。category `n` は union が正の窓数、duration median/p95 はその集合、category share median/p95 は0秒窓を含む attribution population 全体を母集団にする。overlap は category 合計と全体 union の差を観測するが、category share 合計100%は要求しない。
+
+## Interaction Diagrams
+
+```mermaid
+sequenceDiagram
+    actor Operator as 利用者/CI
+    participant CLI as stage-stats CLI
+    participant Journal as Journal normalizer
+    participant Window as Window/idle builder
+    participant Inv as Candidate inventory
+    participant Ledger as Interval accounting
+    participant Model as Canonical report model
+    participant Render as MD/CSV/JSON renderer
+
+    Operator->>CLI: --stage code-generation --outliers N
+    CLI->>Journal: 全 intent audit shard を読む
+    Journal-->>CLI: canonical records + corpus diagnostics
+    CLI->>Window: stage窓とidleを再構成
+    Window-->>CLI: measured windows + collision metadata
+    CLI->>Inv: outer eventとEvent Set innerを列挙
+    Inv-->>CLI: eligible pairs + candidate×reason counts
+    CLI->>Ledger: 一意かつnet>0の窓、explicit intervals
+    Ledger->>Ledger: [start,end) clip、idle除去、category/global union
+    Ledger-->>Model: category/coverage/overlap/residual/outliers
+    Window-->>Model: 既存duration/sensor/model/review fields
+    Model->>Render: 単一semantic model
+    Render-->>Operator: 同じ母集団・規則・除外件数
+```
+
+別 stage の同秒 event は `Stage` 完全一致で落ち、stage 属性のない Bolt/Swarm/Subagent 等は window 内にあっても落ちる。runtime graph が行う latest-wins/containment attribution（`amadeus-runtime.ts:498-760`）は snapshot 用の別意味論であり、`RuntimeStage` 自体も terminal/interval を持たない（`:71-110`）。したがって本レポートの一次資料には使わず、raw normalized journal から再構成する。
+
+### 出力境界と後方互換
+
+`--stage` は attribution target の選択であり、既存 `stages[]` の全 stage 統計を削らない。`--outliers` は表示件数だけを制御し、集計母集団を変えない。全 renderer は `StageStatsReport` の同じ attribution section を読む。現在の JSON-only oversized pipe 証明（`t487:337-389`）を3形式へ広げ、Markdown/CSV は consumer 完走、JSON は `jq empty` まで証明する。
+
+### 事実と推論の区別
+
+- **事実**: 現 corpus probe は eligible 102窓すべてで帰属不能率50%超、execution terminal 0、unit-pool outer stage 0を示した。
+- **推論**: sensor 以外の明示 lifecycle 区間を採れるようにするには、event-set の終端/stage identity など追加計装候補がある。ただし本 intent は計装を追加せず、`candidateBoundary` 仮説として observed facts と別フィールドに出す。
+- **決定**: category 名を業務フェーズへ読み替えず、観測不能残余を保持する。これが Issue #2695 の「推定しない」境界を守る。
+
 ## 監査 journal の v1/v2 二重スキーマとリーダー面の構造（260807-intent-2328-tests-e2e-au、履歴、2026-08-07、observed `a5621236c`）
 
 Issue #2328 の患部は「テストが1スキーマを決め打ちで読む」ことにあり、書き手側の欠陥ではない。監査 journal は **v1 と v2 が現役で共存する設計**であり、リーダーはその両方を受理しなければならない。

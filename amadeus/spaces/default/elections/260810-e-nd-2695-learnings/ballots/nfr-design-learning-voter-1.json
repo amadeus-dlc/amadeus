@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-ND-2695-LEARNINGS",
+  "voter": "nfr-design-learning-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choiceInternalNo 1を支持する。NFR Design stage正本は、上流NFR Requirementsが宣言したIDだけをaddressing schemeとして使い、未宣言IDを発明せず必要要件がmissingなら明記する契約を持つ。実際にpopulation-interval-accountingのarchitecture review iteration 1はRequirements AnalysisのNFR-1〜7をfallback addressing schemeへ転用した点をBLOCKERとし、各decisionをMissing＋requirements.mdはcontext evidenceへ是正したiteration 2でREADYになった。続くstage-stats-attribution-serviceは同じ方式を5成果物へ適用してiteration 1 READYであり、再発予防効果も実証されている。対してchoice 3はproject.md既存cid:nfr-design:c1（CLI/libraryへ常駐service向けcache・horizontal scaling・circuit breakerを機械適用せず、決定的file境界とfail-closed契約へ置換）と実質重複する。choice 2はself-feature scope・stage condition・sensorの矛盾を扱うIssue #2773の暫定運用で、修正着地後に退役すべきため永続practiceとしての再利用価値はchoice 1より低い。GoA1、留保なし。",
+  "submittedAt": "2026-08-10T01:00:06Z",
+  "receivedAt": "2026-08-10T01:01:26Z"
+}

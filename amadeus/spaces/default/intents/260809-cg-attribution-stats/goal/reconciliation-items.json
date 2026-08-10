@@ -1,0 +1,38 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/construction/build-and-test/build-test-results.md",
+        "digest": "f79f5ec22cbef5531b1e7af3f43d95833f02b1681999e79c1d67382e51ecd5ea"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/inception/requirements-analysis/requirements.md",
+        "digest": "8625880d6b631a834f79d1fac9b9ffbe5c09b316a7fae728d45c0c3b7482de67"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/construction/attribution-domain-contracts/code-generation/code-summary.md",
+        "digest": "aea611db06310541cd8c9dd0590e7df2ec0a011715d0249f713cab6184781519"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/construction/candidate-evidence-inventory/code-generation/code-summary.md",
+        "digest": "8c5a4ef0de82d2f03beaabe80e9e09f01f3c5ae5576cbc8febf782c4d03ae79c"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/construction/population-interval-accounting/code-generation/code-summary.md",
+        "digest": "94d322807a21174554d1d5d7edaf80cbb55145438d69304cd699fc137167f367"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260809-cg-attribution-stats/construction/stage-stats-attribution-service/code-generation/code-summary.md",
+        "digest": "0a511ac302c40e0a4ead77b15d9d08a4d93a9cfe87c21567072f1983a8469cf5"
+      }
+    ]
+  }
+]

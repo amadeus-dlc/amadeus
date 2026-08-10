@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-UG-2695-LEARNINGS",
+  "voter": "units-generation-learning-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 6,
+  "goa": 3,
+  "reservation": "sourceとtestの非交差ownershipを保ちつつ、複数Unitを横断する統合検証には単一の明示的ownerと実行順を割り当て、検証責任を分割の隙間に落とさないこと。",
+  "rationale": "受入条件を実際に変更するsource/test fileのownerへ分配し、各UnitのDoDがdownstream Unitの所有物に依存しないようにする原則は、機能固有の構造を越えて再利用できる。並行作業時の編集衝突を減らし、Unit単体で完了判定できるclosed contractを作り、暗黙の依存による偽の完了や作業順序の直列化を防げるため、最も実務的なproject practiceである。",
+  "submittedAt": "2026-08-09T15:23:51Z",
+  "receivedAt": "2026-08-09T15:24:08Z"
+}

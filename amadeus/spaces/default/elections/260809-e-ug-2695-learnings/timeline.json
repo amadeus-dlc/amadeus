@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:23:19Z",
+    "receivedAt": "2026-08-09T15:23:19Z",
+    "detail": "delivered via subagent: units-generation-learning-voter-1 (reported-by-conductor)",
+    "voter": "units-generation-learning-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:23:19Z",
+    "receivedAt": "2026-08-09T15:23:19Z",
+    "detail": "delivered via subagent: units-generation-learning-voter-2 (reported-by-conductor)",
+    "voter": "units-generation-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:24:08Z",
+    "receivedAt": "2026-08-09T15:24:08Z",
+    "detail": "ballot accepted: units-generation-learning-voter-1",
+    "voter": "units-generation-learning-voter-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:24:26Z",
+    "receivedAt": "2026-08-09T15:24:26Z",
+    "detail": "ballot accepted: units-generation-learning-voter-2",
+    "voter": "units-generation-learning-voter-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T15:24:50Z",
+    "receivedAt": "2026-08-09T15:24:54Z",
+    "detail": "tally: hold"
+  }
+]

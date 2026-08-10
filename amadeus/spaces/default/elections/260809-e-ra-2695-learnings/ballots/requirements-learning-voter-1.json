@@ -1,0 +1,17 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-RA-2695-LEARNINGS",
+    "voter": "requirements-learning-voter-1",
+    "submittedAt": "2026-08-09T00:00:00Z"
+  },
+  "electionId": "E-RA-2695-LEARNINGS",
+  "voter": "requirements-learning-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "追加するmaterial questionは、回答によって公開契約が変わる論点に限定すること。内部実装だけで閉じる判断は質問化しない。",
+  "rationale": "discussionを通じ、reviewで初めて公開値を左右する未確定のprecedenceが判明した場合、その判断を後続の内部設計へ暗黙に委ねずmaterial questionとして公開契約の決定者へ戻すことが合意された。この境界を明示すれば、初回分析で質問が不要と判断した後でも契約上の重要な欠落を安全に補正でき、同種のrequirements reviewへ再利用できる。",
+  "submittedAt": "2026-08-09T14:10:29Z",
+  "receivedAt": "2026-08-09T14:10:47Z"
+}

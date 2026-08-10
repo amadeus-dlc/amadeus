@@ -1,6 +1,37 @@
 # 技術スタック
 
-## テスト実行プロファイルと dist 依存（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## CG attribution に関わる技術断面（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+
+本 intent は既存の Bun/TypeScript CLI と監査 JSONL 上で完結し、新規 runtime dependency・database・service を追加しない。
+
+| 技術 | version / 設定 | 本 intent での用途 | 根拠 |
+| --- | --- | --- | --- |
+| Bun | CI `1.3.13`、types `^1.3.13` | CLI、unit/integration test、filesystem、stdout pipe | `package.json:18-22,50`; `.github/workflows/ci.yml:83-95,270-282` |
+| TypeScript | `^6.0.3`、strict / ESNext / bundler | discriminated report model、pure interval functions、argv validation | `package.json:53`; `tsconfig.json:2-22` |
+| Biome | `2.5.5` | lint / format / complexity warning | `package.json:22-23,46` |
+| `bun:test` | Bun同梱 | `t486` pure unit、`t487` integration | `tests/unit/t486-stage-stats.test.ts:1-28` |
+| fast-check | `^4.9.0` | 既存devDependency。区間代数のproperty proofに利用可能だが導入必須とは断定しない | `package.json:51` |
+| OpenTelemetry packages | API `1.9.1`、logs `0.221.0`、context `2.10.0` | journal v2 / execution event の既存背景。集計に新規OTel exportは不要 | `package.json:47-49` |
+| JSONL journal v1/v2 | schema max 2 | raw audit正規化、event/event-set入力 | `amadeus-journal.ts:30-35`, `:65-99` |
+| Node/Bun標準API | `node:fs`, `node:path`, `node:crypto`, stdout | shard scan、hash/dedup、pipe出力 | stage-stats / journal現実装 |
+| GitHub Actions | `ubuntu-latest` | typecheck、lint/complexity、test:ci、reproducible build | `.github/workflows/ci.yml:94-119,281-299` |
+
+### package / build 構造
+
+root は `packages/*` を workspace に持つ Bun-only TypeScript monorepo（`package.json:2-25`）。framework 正本は `packages/framework/core/`、installer は `packages/setup/`（scan 時点 `@amadeus-dlc/setup` 0.1.7）。`bun run build` は distribution 生成と self promotion、`bun run check` は typecheck/lint/distribution check を組み合わせる（`package.json:10-25`）。stage-stats の正本変更は生成 `dist/` を直接編集せず build で投影する。
+
+### 実装技術上の判断
+
+- interval は integer epoch seconds の `{start,end}` として扱い、半開区間 `[start,end)` の sort/clip/merge を pure function で実装できる。新規 interval library は不要。
+- percentile は現行 `nearestRankP95` を再利用し、duration とshareの母集団差だけをreport modelで明示する。
+- JSON/CSV/Markdown は現行 renderer を拡張し、stdout write後の `process.exitCode` パターンを維持する。#2700 の修正経路と整合する。
+- `jq` はJSON consumerの統合検証に使う外部CLIであり、production dependencyではない。Markdown/CSVは標準consumer（byte count/EOF/read）で完全性を証明できる。
+
+### 制約
+
+監査 timestamp は秒粒度で、同一秒内は元の shard orderをtie-breakにする（`amadeus-stage-stats.ts:123-129`）。ゆえに0秒区間やterminal<=startを意味的な実時間へ補間せず、除外理由として報告する。新規高分解能 timestampや計装はIssue #2695のOutである。
+
+## テスト実行プロファイルと dist 依存（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 本 intent に関わる技術前提の変更はない。既存スタック上の2点のみ関連する。
 

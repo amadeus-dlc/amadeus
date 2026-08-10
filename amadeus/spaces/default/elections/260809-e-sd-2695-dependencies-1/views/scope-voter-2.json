@@ -1,0 +1,31 @@
+{
+  "electionId": "E-SD-2695-DEPENDENCIES-1",
+  "voter": "scope-voter-2",
+  "question": "確定済み能力群の主要依存関係をどう整理するか",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "semantic-model-first",
+      "description": "母集団・identity・区間会計と共通 semantic model を先に固定し、event adapter、CLI・3形式 renderer、回帰検証を依存順に積む"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "parallel-streams",
+      "description": "会計、event adapter、renderer、検証を独立並行で進め、最後に統合する"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "no-dependencies",
+      "description": "能力群の依存関係を設けず任意順で実装する"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "renderer-first",
+      "description": "出力形式を先に作り、後から semantic model と会計規則を接続する"
+    }
+  ]
+}

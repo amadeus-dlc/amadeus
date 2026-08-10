@@ -1,6 +1,69 @@
 # API ドキュメント
 
-## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## stage-stats attribution API 契約（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+
+### CLI 契約
+
+現行 usage は `--project-dir` / `--space` / `--format` / `--json`（`packages/framework/core/tools/amadeus-stage-stats.ts:728-798`）。Issue #2695 は次を追加する。
+
+```text
+bun amadeus-stage-stats.ts \
+  [--project-dir <path>] [--space <name>] \
+  [--stage <safe-slug>] [--outliers <0..100>] \
+  [--format markdown|csv|json] [--json]
+```
+
+| option | 既定値 | 検証・意味 |
+| --- | --- | --- |
+| `--stage <slug>` | `code-generation` | 安全な stage slug。attribution target だけを選び、既存の全 stage duration 表は維持する |
+| `--outliers <N>` | `10` | 10進整数かつ0〜100。0は outlier 行を表示しないが集計は変えない |
+
+`--outliers -1` / `101` / 小数 / 非数値、値欠落、安全でない stage slug、未知 flag は usage error（exit 2）。安全な stage でも attribution population が0なら exit 0 の正常空レポートで、`n=0` と比率 `n/a` を返す。既存 exit ladder（正常0、unreadable shardを含む部分 sweep=1、usage=2）は `main`（`:941-965`）のまま保存する。
+
+### report semantic model
+
+既存 `StageStatsReport`（`:515-527`）の `scanScope` / `exclusions` / `stages` / `sensors` / `models` / `reviewBuckets` は不変。次の attribution section を同じ report に追加する（名称の最終確定は後続 design stage、意味契約は固定）。
+
+| セクション | 必須意味 |
+| --- | --- |
+| measurement ref | target stage、scan scope、measured/attribution population、`zero-net-attribution` / `ambiguous-window-identity`、採用・不採用 event rule |
+| category stats | category、正の union を持つ `n`、observable duration median/p95、attribution 全窓を母集団とする net share median/p95 |
+| coverage stats | observable/unattributable seconds、coverage/unattributable rate の median/p95 |
+| overlap stats | category 間で重なった秒数と「category 値を単純加算できない」注記 |
+| outliers | `unattributableSeconds` 降順上位N。tie は `intent → startedAt → completedAt` 昇順 |
+| missing instrumentation candidates | candidate×reason、`unattributableRate > 0.5` 件数、exact lifecycle の terminal 欠落。`candidateBoundary` 仮説は observed facts と別フィールド |
+| methodology | event→category rule、identity key、stage identity、half-open、clip、idle subtraction、category/global union、除外条件 |
+
+各 window の機械契約は次である。
+
+```text
+observableSeconds + unattributableSeconds = netSeconds
+coverage + unattributableRate = 1
+0 <= observableSeconds <= netSeconds
+```
+
+category share は `categoryUnionSeconds / netSeconds`。category 間の overlap を許すため、その合計を100%にしない。category 名は lifecycle 名であり、`sensor-execution` を「検証時間」、`unit-pool-lifecycle` を「実装時間」へ変換しない。
+
+### event / event-set 入力契約
+
+| family | start | terminal | identity | stage identity |
+| --- | --- | --- | --- | --- |
+| Sensor | `SENSOR_FIRED` | `PASSED` / `FAILED` / `BUDGET_OVERRIDE` | `Fire id` | `Stage slug` |
+| Execution event set | inner `operation-started` | inner `operation-finished` | `operationId` | outer/inner `origin.stage` |
+| Unit-pool event set | inner `unit-acquired` | inner `unit-settled` | `attemptId` | 同 envelope 内の明示 stage 属性 |
+| Bolt/Swarm/Subagent/Loop monitor/Merge dispatch/transaction | event固有 | event固有 | event固有 | 明示 `Stage` / `Stage slug` / `origin.stage` |
+
+intent と target stage は完全一致のみ。window containment / timestamp containment は stage identity API ではない。missing stage/start/terminal/identity、duplicate start/terminal、terminal<=start、malformed/digest/duplicate event set は fail-closed の理由コードとして出力し、区間を作らない。`GATE_*` は idle subtraction で消費済みなので candidate category API から除外する。
+
+Execution contract は operation lifecycle と `origin.stage` を定義済み（`amadeus-execution-contract.ts:30-46`, `:101-154`）。一方、現 execution decoder は invalid inner を silent skip する（`amadeus-execution-lifecycle.ts:336-359`）、unit-pool decoder は throw と Event Set ID dedup を行う（`amadeus-unit-pool-runtime.ts:113-159`）。本 report API はこの差を隠さず、candidate×reason で malformed/duplicate を観測可能にする。
+
+### 出力形式の同値契約
+
+Markdown（`:632-667`）、CSV（`:676-699`）、JSON（`:701-723`）は同じ semantic model を描画する。見た目の表現は異なっても、target、母集団、rule、exclusion、category/coverage/overlap/outlier/missing-instrumentation の値は一致しなければならない。JSON は Map を決定的配列へ変換する現行 ordering 契約を維持し、Markdown/CSV の外部値 sanitization と CSV quoting も維持する（`:582-603`, `:670-673`）。
+
+実 corpus 相当サイズでは、Markdown/CSV consumer が EOF まで読め、JSON は pipe 後に `jq empty` が成功することを契約に含む。既存 #2700 テストは JSON 約104 KiBだけを証明する（`tests/integration/t487-stage-stats.integration.test.ts:337-389`）ため、3形式を個別に64 KiB超へする fixture が必要である。
+
+## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 ### wire 形の2版
 
