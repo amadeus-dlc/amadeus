@@ -1,0 +1,13 @@
+{
+  "stage": "scope-definition",
+  "phase": "ideation",
+  "questionId": "scope-definition-capability-dependencies",
+  "selector": "scope-definition:capability-dependencies",
+  "question": "確定済み能力群の主要依存関係をどう整理するか？",
+  "optionIds": ["semantic-model-first", "renderer-first", "parallel-streams", "no-dependencies"],
+  "recommendedOptionId": "semantic-model-first",
+  "election": {
+    "optionId": "semantic-model-first",
+    "evidenceFingerprint": "sha256:6685fe4e702b829c79e391aac8330f6b898efd8d19d75ae0fd4f86576271945c"
+  }
+}

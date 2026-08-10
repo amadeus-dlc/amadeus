@@ -1,0 +1,32 @@
+{
+  "electionId": "E-SD-2695-DEADLINE-1",
+  "kind": "single-choice",
+  "question": "能力固有の hard deadline をどう扱うか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "no-calendar-deadline",
+      "description": "P2として暦日締切は置かず、Issue #2695 の完了条件 1〜10 を満たす品質ゲートを優先する"
+    },
+    {
+      "internalNo": 2,
+      "label": "immediate-deadline",
+      "description": "最短日程を優先して即時完了を求める"
+    },
+    {
+      "internalNo": 3,
+      "label": "fixed-date",
+      "description": "特定の暦日を締切として設定する"
+    },
+    {
+      "internalNo": 4,
+      "label": "dependency-deadline",
+      "description": "別Issueやリリース日を締切として同期する"
+    }
+  ],
+  "voters": [
+    "scope-voter-1",
+    "scope-voter-2"
+  ],
+  "state": "recorded"
+}

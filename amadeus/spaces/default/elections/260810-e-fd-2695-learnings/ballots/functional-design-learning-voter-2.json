@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-FD-2695-LEARNINGS",
+  "voter": "functional-design-learning-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "4 Unit中3 Unitが初回NOT-READYで、U-01では後続Unitが必要とする公開型・属性の欠落が複数BLOCKERになった。current Unitと宣言済み上流成果物だけに閉じたreview scopeで検証できるよう、各Unitが公開境界を自己完結して記述するpracticeは、候補2・3の局所的な契約修正より再利用範囲と波及防止効果が大きい。",
+  "submittedAt": "2026-08-10T00:09:34Z",
+  "receivedAt": "2026-08-10T00:10:07Z"
+}

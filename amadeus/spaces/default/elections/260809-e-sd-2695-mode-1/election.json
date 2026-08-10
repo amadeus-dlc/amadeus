@@ -1,0 +1,32 @@
+{
+  "electionId": "E-SD-2695-MODE-1",
+  "kind": "single-choice",
+  "question": "Scope Definition の質問対話モードを選ぶ",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "guide-me",
+      "description": "3つの運用質問を順番に自動裁定し、各回答を記録する"
+    },
+    {
+      "internalNo": 2,
+      "label": "grill-me",
+      "description": "各論点を深掘りするが、確定済みスコープは再交渉しない"
+    },
+    {
+      "internalNo": 3,
+      "label": "edit-file",
+      "description": "質問ファイルを人間が直接編集する"
+    },
+    {
+      "internalNo": 4,
+      "label": "chat",
+      "description": "自由対話から運用判断を抽出する"
+    }
+  ],
+  "voters": [
+    "scope-voter-1",
+    "scope-voter-2"
+  ],
+  "state": "recorded"
+}

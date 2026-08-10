@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-LEARNINGS-1",
+  "voter": "scope-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "65,536 bytes 超の検証を #2700 解消後も維持する判断は、Issue #2695 の完了時点を越えて再利用される明示的な testing posture であるため、keep-c2 として永続化する価値がある。",
+  "submittedAt": "2026-08-09T11:22:37Z",
+  "receivedAt": "2026-08-09T11:22:44Z"
+}

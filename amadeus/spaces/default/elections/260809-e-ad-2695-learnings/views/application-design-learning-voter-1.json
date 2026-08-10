@@ -1,0 +1,43 @@
+{
+  "electionId": "E-AD-2695-LEARNINGS",
+  "voter": "application-design-learning-voter-1",
+  "question": "Application Designの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "prior requirementsとBrownfield CodeKBで実行形・互換境界・禁止事項が確定済みだったため、質問はmodule boundaryの1問に限定した。質問省略によるscope縮小はなく、未質問事項は出典付き設計契約として反映した。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "本stageの「service」は既存one-shot Bun CLIのみを指す。AWS、network、database、UIのsupport perspectiveは、追加基盤が不要でread-only process境界を維持すべきことの確認に用いた。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 5,
+      "label": "C-01を唯一のorchestratorにし、C-04がcandidate単位のpost-accounting dispositionを返す設計にした。C-03/C-04/C-05の責任境界を増やす代わりに、`empty-after-idle`の一意計数とtyped fail-closed経路を実装可能にした。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 6,
+      "label": "複数windowでcandidate dispositionが重複しないよう、C-04をwindow単位呼出しからpopulation単位の単一呼出しへ修正した。candidateは1 dispositionを持ち、`accounted`の場合だけ1件以上のwindow contributionを持つため、複数windowへの正当な寄与とprimary rejectionの一意性を両立する。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 2,
+      "label": "measured populationは既存raw record列のまま、attributionだけをdedup済みreadonly viewへ分岐する。Issue #2695の全完了条件はこの分離の上でC-01〜C-06へownerを割り当てた。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 6,
+      "internalNo": 4,
+      "label": "既存約1,000行のCLIを互換façadeとして維持し、domain/candidates/intervals/reportをpure moduleへ分離した。import/type数は増えるが、変更理由、PBT seam、既存consumer互換を守れる。",
+      "description": "→ project.md ## Corrections"
+    }
+  ]
+}

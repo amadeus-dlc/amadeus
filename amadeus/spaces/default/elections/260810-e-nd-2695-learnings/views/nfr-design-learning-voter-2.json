@@ -1,0 +1,25 @@
+{
+  "electionId": "E-ND-2695-LEARNINGS",
+  "voter": "nfr-design-learning-voter-2",
+  "question": "NFR Designの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "`self-feature` は NFR Requirements を SKIP し NFR Design を EXECUTE するため、NFR Design の「NFR Requirements が skipped なら skip」という条件を適用しなかった",
+      "description": "engine directiveのconsumes_absent.expected=trueとscope定義を優先する。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "NFR Requirements が意図的に省略された場合、Requirements Analysis の識別子を NFR Design の addressing ID として再利用しない",
+      "description": "各設計判断では宣言済みNFR requirementをMissingとし、requirements.mdは文脈証拠としてのみ扱う。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "one-shot read-only CLI と純粋ライブラリには service 運用機構を追加しない",
+      "description": "非該当の運用機構を明示し、process/module failure boundaryと決定論的data contractで担保する。→ project.md ## Corrections"
+    }
+  ]
+}

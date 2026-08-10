@@ -79,6 +79,24 @@
 - Updated artifacts: `component-inventory.md` に「per-sensor argv parse の所在と現況」節を追加。`code-structure.md` / `architecture.md` は構造不変・患部が既存コンポーネント内のため**変更なし**。直前の現在断面（`260807-intent-2328-tests-e2e-au`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
 - Per-intent record: `re-scans/260809-sensor-parseflags-failop.md`（検索述語 P1〜P4・全数列挙・verbatim・exit code・裁定候補6件の正本）
 
+## 実行メタデータ（履歴、2026-08-09: 260809-cg-attribution-stats）
+
+- Date: `2026-08-09T13:37:08Z`
+- Base commit: `a5621236c6c69f1c54f3d496bdf91792d4ef12fc`（直前の共有 CodeKB 現在断面 `260807-intent-2328-tests-e2e-au` の observed。`git merge-base --is-ancestor a5621236c HEAD` = exit 0、距離220 commitsを実測）
+- Observed commit: `82e2f30c0c6d1bbebeb3d6201584a314306d00ac`（本 worktree HEAD。self-feature intent のScope Definitionまでをparkしたrecord commit）
+- Reachable upstream tip: `origin/main` = `fefbbcf0158b47a76cf8873c518fdd6e295e2dbd`（HEADより10 commits先、branchは1 commit ahead。`HEAD..origin/main` で CodeKB と `amadeus-stage-stats.ts` は無変更。関連差分はNFR sensor面のみ）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth `Standard`、Test Strategy `Comprehensive`（`amadeus-state.md:4-23`）
+- Focus: [Issue #2695](https://github.com/amadeus-dlc/amadeus/issues/2695) — CG window 内の既存 audit から、決定的に閉じた観測可能 lifecycle 区間、全category union、coverage、帰属不能残余、overlap、outliers、候補×不採用理由を遡及集計する。CAP-01〜CAP-10は全Mustで縮小なし（`scope-document.md:25-34,122`; `intent-backlog.md:9-20,119`）
+- Scan mode: differential refresh + Issue本文の全契約照合 + Developer real-corpus probe。現 worktree と到達可能 `origin/main` の差分を確認し、患部が同じことを検証した
+- Corpus probe: 229 shards / 136,011 rows、constructed 1,603、measured 1,154、CG measured 109、attribution eligible 102（zero-net 4、ambiguous 3を除外）。sensor-only coverage 0.446%、eligible 102/102がunattributable rate 50%超
+- Focused verification: `t486` + `t487` = 80 pass / 0 fail / 221 expect（Developer scan）。現出力 bytesはMD 53,121 / CSV 48,619 / JSON 107,248で、既存#2700 oversized pipe proofはJSONのみ
+- Updated artifacts: 8 body artifacts、本 freshness pointer、per-intent `re-scans/260809-cg-attribution-stats.md`、stage memory。`architecture.md` には正準データフローとInteraction Diagramを含む
+- Main decisions: 既存measured statsを保存しattribution populationを分離、raw normalized journalを正本としruntime containmentを不使用、explicit stage/start/terminal/identityだけを採用、category/global unionとresidualを単一semantic modelから3形式へ描画、全candidate familyを理由付きinventory、#2700既修正後も3形式>65,536 bytes証明を本intentに残す
+
+## 差分スキャン結果
+
+現行 `amadeus-stage-stats.ts` はwindow/idle/既存stats/3 rendererを持つが、attribution model、`--stage`、`--outliers`、event-set inner展開、interval union、candidate×reasonを持たない。execution/unit-pool等の契約は部分的に素材を提供する一方、現corpusではterminalまたはstage identityが不足する。したがって観測できない残余を推定配分せず、採用可能なsensor lifecycle等だけを明示区間化し、残りを帰属不能として会計する設計断面へ更新した。
+
 ## 実行メタデータ（履歴、2026-08-08: 260807-intent-2328-tests-e2e-au）
 
 - Date: `2026-08-08`

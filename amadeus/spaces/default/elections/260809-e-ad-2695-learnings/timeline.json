@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:07:11Z",
+    "receivedAt": "2026-08-09T15:07:11Z",
+    "detail": "delivered via subagent: application-design-learning-voter-1 (reported-by-conductor)",
+    "voter": "application-design-learning-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T15:07:11Z",
+    "receivedAt": "2026-08-09T15:07:11Z",
+    "detail": "delivered via subagent: application-design-learning-voter-2 (reported-by-conductor)",
+    "voter": "application-design-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:08:03Z",
+    "receivedAt": "2026-08-09T15:08:03Z",
+    "detail": "ballot accepted: application-design-learning-voter-1",
+    "voter": "application-design-learning-voter-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T15:08:05Z",
+    "receivedAt": "2026-08-09T15:08:05Z",
+    "detail": "ballot accepted: application-design-learning-voter-2",
+    "voter": "application-design-learning-voter-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T15:08:23Z",
+    "receivedAt": "2026-08-09T15:08:27Z",
+    "detail": "tally: established"
+  }
+]

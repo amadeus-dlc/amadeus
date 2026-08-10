@@ -6546,5 +6546,185 @@
     },
     "reason": "The catch arm of safeReaddir, a diagnostics-only helper on the copyTreeWithRetry failure path. Its caller reportCopyTreeFailure only calls it when existsSync(src) already returned true, so reaching the arm needs src to disappear or turn unreadable BETWEEN that check and the readdir — the very race the arm exists to survive, and one that cannot be scheduled deterministically. The arm is also downstream of an injected copy failure, so a driver would have to force cpSync to throw first. Everything the helper decides on the reachable path (the entry count that lands in the diagnostic line) is exercised whenever the retry path runs.",
     "expiry": "remove when reportCopyTreeFailure takes an injectable readdir port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-candidates.ts",
+    "selector": {
+      "function": "innerIdentity",
+      "fingerprint": "sha256:8de110f1847c3739404cbd69e4d47da5d71b6c82a1326d25a4cff48caaa53d60",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Defensive fallthrough of innerIdentity for families whose inner events are never projected (loop-monitor is short-circuited before inner projection), so no public seam reaches this arm; kept as defence in depth."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-candidates.ts",
+    "selector": {
+      "function": "projectEventSet",
+      "fingerprint": "sha256:43702229bfca5de160af4534fe83faf7732ea16fc1617d54a05168304422692a",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "A non-record inner event is rejected upstream by supportedEventSetShape (unsupported-event-set-schema integrity failure suppresses inner projection), so this inner-level malformed arm is unreachable via the decode seam; kept as defence in depth."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateCandidates",
+      "fingerprint": "sha256:f50478e48db02af8e3c6507573c46b037486d24f16da093a4fac6cf5f5e57633",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateCandidates",
+      "fingerprint": "sha256:d4642d050cb661fa5b508dfa737fa68d4362bc3f39cdc8ab5817936939f597a4",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateWindowNetSeconds",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "createWindowAttribution",
+      "fingerprint": "sha256:ea0201f272c8e24d02d72d5661d44ed1fb7dd4e2d16649a01f2f20b395146cc2",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "createWindowAttribution",
+      "fingerprint": "sha256:f6ddf33011fbc9232fb563f7dc4ca014f936ddeccc5d6cfb0c15d4dc6e157a3b",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "createWindowAttribution",
+      "fingerprint": "sha256:f325af5443fe2245124df422a9efd0002a3ec1ab385380e92c3ce1ddb3ae81b9",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateResult",
+      "fingerprint": "sha256:381a2d660b9c30ec542637f8e594ff3b95b9acd4d9472f35a7d2c1ab67b19103",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateResult",
+      "fingerprint": "sha256:ef0f43fa97748b6fb5aff23f3f3cd83fa953952aaf62dc4ca6f106fa084b2ee6",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "selector": {
+      "function": "validateResult",
+      "fingerprint": "sha256:258d7782f3174b3ad2a13d5fa0d919c6bda68c1d3e2d68c9f65948fad1d7cc34",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateWindowAccounting",
+      "fingerprint": "sha256:c07554a09171fe0cbdafdc9b6a2f7abd5f1115bcf8283d67abad1eadb0a5ce34",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateWindowBijection",
+      "fingerprint": "sha256:8ca4503a4a370efdd71eb1ad31346a3dfd86d313e8d6c5121f8a8fcaed4f9872",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateCandidateBijection",
+      "fingerprint": "sha256:b554e37dca4d5bd92adafc688557d5690c36326530951dbb2c4a22bc3fbee03b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateCandidateBijection",
+      "fingerprint": "sha256:1a64caa944b160f9f9d68d282bc2ddff273b7d237414d7e5546adbfbbbf1ee95",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateFamilyCounts",
+      "fingerprint": "sha256:b554e37dca4d5bd92adafc688557d5690c36326530951dbb2c4a22bc3fbee03b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "validateFamilyCounts",
+      "fingerprint": "sha256:cb544d5f8783102cf412bb16ccf3bf37077dc5890fdc8987291c49b78ecd8f76",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "selector": {
+      "function": "composeAttributionReport",
+      "fingerprint": "sha256:b554e37dca4d5bd92adafc688557d5690c36326530951dbb2c4a22bc3fbee03b",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
   }
 ]

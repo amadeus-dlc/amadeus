@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-MODE-1",
+  "voter": "scope-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "確定済みスコープを再交渉せず、3つの運用質問を順番に裁定して回答を記録できる guide-me が、Scope Definition の判断を最も一貫して進められるため。",
+  "submittedAt": "2026-08-09T11:15:09Z",
+  "receivedAt": "2026-08-09T11:15:25Z"
+}

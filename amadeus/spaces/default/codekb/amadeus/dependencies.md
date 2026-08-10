@@ -1,6 +1,61 @@
 # 依存関係
 
-## 監査リーダー面の依存関係（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## CG attribution の依存グラフ（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+
+### 内部依存
+
+```mermaid
+flowchart TD
+    CLI["stage-stats CLI"] --> Scan["corpus scan"]
+    Scan --> Journal["journal v1/v2 normalize + canonical dedup"]
+    Journal --> Window["existing windows + idle"]
+    Journal --> Inventory["candidate inventory + event-set expansion"]
+    Inventory --> Registry["event registry"]
+    Inventory --> Exec["execution contract/decoder"]
+    Inventory --> Pool["unit-pool contract/decoder"]
+    Inventory --> Writers["sensor/bolt/swarm/subagent/loop/merge/transaction contracts"]
+    Window --> Eligibility["attribution eligibility"]
+    Inventory --> Rules["lifecycle rules"]
+    Eligibility --> Algebra["interval accounting"]
+    Rules --> Algebra
+    Algebra --> Report["StageStatsReport attribution section"]
+    Window --> Report
+    Report --> MD["Markdown"]
+    Report --> CSV["CSV"]
+    Report --> JSON["JSON"]
+```
+
+現 `amadeus-stage-stats.ts` は journal の `readJournalRecords` に依存する一方、`scanCorpus` は shard merge/dedup を使用しない（`:827-872`）。journal 側には mixed reader と cross-shard merge がある（`amadeus-journal.ts:481-497`, `:534-549`, `:608-640`）。attribution の重複診断を正しくするため、依存順は **wire canonical dedup → lifecycle identity duplicate判定** とする。
+
+### event producer / contract への依存
+
+| 依存先 | 得る契約 | 現 corpus での制約 |
+| --- | --- | --- |
+| `amadeus-sensor.ts` | `Fire id`、`Stage slug`、terminal | stage明示がありsensor interval採用可（`:521-536`, `:819-865`） |
+| `amadeus-execution-contract.ts` | `operationId`、operation start/finish、`origin.stage` | outer 259、start 61、terminal 0。CG window内outer 49/start 14、origin CG 8/other 6（Developer probe） |
+| `amadeus-execution-lifecycle.ts` | Event Set inner decode | invalid innerをsilent skip（`:336-359`）。report側は無音化せず理由計数が必要 |
+| `amadeus-unit-pool.ts` | `attemptId`、acquired/settled | outer 180、acquired 50、settled 50だがouter Stage 0（Developer probe） |
+| `amadeus-unit-pool-runtime.ts` | decoder、Event Set ID dedup | throw + dedup（`:113-159`）。executionとのfailure semantics差を吸収せず表面化 |
+| Bolt/Swarm/Subagent/Loop monitor/Merge dispatch writers | 各event payload | 現 payloadは対象stage/start/terminal/identityの一部が不足。containmentで補わない |
+| `packages/framework/core/otel/event-registry.ts` | 正式event vocabulary/field schema | candidate family の閉じたinventoryを構成 |
+
+Bolt/Swarm/Subagent/Merge dispatch は stage 属性を持たず、Loop monitor は stage instance を持つが完全 lifecycle identity ではない（Developer scan: `packages/framework/core/tools/amadeus-bolt.ts:266-274,501-510,594-603,827-883`; `packages/framework/core/tools/amadeus-swarm.ts:381-455`; `packages/framework/core/hooks/amadeus-log-subagent-start.ts:75-100`; `packages/framework/core/hooks/amadeus-log-subagent.ts:130-154`; `packages/framework/core/tools/amadeus-loop-monitor-runtime.ts:74-117`）。これらへの依存は「区間を採るため」ではなく「候補を理由付きで棄却するため」も含む。
+
+### runtime graph との非依存境界
+
+`amadeus-runtime.ts` は stageのlatest-mapとwindow containmentでBolt/sensorをsnapshotへ帰属する（`:214-271`, `:498-760`）が、`RuntimeStage` は汎用terminal/intervalを持たず（`:71-110`）、summaryはmaterialized snapshotだけを読む（`:980-1044`）。Issue #2695 は containment推定を禁止するため、runtime graphを入力依存に加えない。必要な関係はraw normalized journalから再構成する。
+
+### 外部依存
+
+新規production dependencyはない。既存Bun/TypeScript/Node標準APIで完結する。CI依存はBun 1.3.13、Biome、TypeScript、既存build/test job（`package.json:10-25`; `.github/workflows/ci.yml:83-119,275-282`）。JSONのconsumer検証に使う`jq`はテスト環境ツールで、runtime graphやOpenTelemetry backendとの接続は不要。
+
+### Issue / PR の順序依存
+
+[#2700](https://github.com/amadeus-dlc/amadeus/issues/2700) は [PR #2702](https://github.com/amadeus-dlc/amadeus/pull/2702) / [PR #2706](https://github.com/amadeus-dlc/amadeus/pull/2706) によりJSONのpipe drain修正と既存証明が着地済み。ただし #2695 完了条件10は、拡張後の実サイズ相当でMarkdown/CSV consumerとJSON `jq empty`の**3形式**を求める。したがってコード修正へのブロックは解消済みでも、検証依存は本 intent に残る。
+
+`origin/main` は現branchより10 commits先だが、`HEAD..origin/main` の変更は選挙recordとNFR sensor面で、CodeKBおよび `amadeus-stage-stats.ts` への変更はない。よって本断面の患部判断は現在のworktreeと到達可能mainの双方で同じである。
+
+## 監査リーダー面の依存関係（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 外部依存の追加・変更はない。内部依存の要点は2本。
 
