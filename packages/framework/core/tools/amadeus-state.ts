@@ -702,12 +702,30 @@ function sha256(buf: string): string {
   return createHash("sha256").update(buf).digest("hex");
 }
 
+// Shared value-arm guard for hand-rolled `--flag <value>` loops (Issue #2763):
+// a bare `for`-loop consuming `args[i + 1]` as a flag's value has no way to
+// tell "the caller omitted the value" from "the caller's value IS another
+// flag" (`--foo --bar` silently binds `--bar` to `--foo`, then leaves `--bar`
+// itself unconsumed). requireFlagValue (amadeus-sensor-flags.ts) is the
+// canonical form for `for`-loops driven by an explicit `if (argv[i] ===
+// "--flag")` per flag; this is the same check factored out so callers that
+// still collect into a generic flags map (this file's `parseFlags`,
+// `handlePracticesPromote`, `handlePracticesEvent`) don't each grow their own
+// inline branch (and their own cognitive-complexity cost).
+function rejectFlagLikeValue(flag: string, value: string): void {
+  if (value.startsWith("--")) {
+    error(`${flag} expects a value, got another flag: "${value}". Did you forget the value?`);
+  }
+}
+
 function parseFlags(args: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.startsWith("--") && i + 1 < args.length) {
-      flags[a.slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue(a, value);
+      flags[a.slice(2)] = value;
       i++;
     }
   }
@@ -720,21 +738,23 @@ function parseFlags(args: string[]): Record<string, string> {
 // all-flags and use parseFlags). Returns the selector plus the positional
 // remainder. Whole-token match on `--intent`/`--space` only, so a field=value
 // operand whose value merely contains those substrings (e.g. `Foo=--intent`) is
-// never mis-consumed. A selector token with no following value is left in `rest`
-// (it then fails the operand parse loudly, never a silent drop). `--project-dir`
-// is already spliced out by main() before dispatch, so it never reaches here.
+// never mis-consumed. A selector token with no following value, OR whose
+// following token itself looks like another flag (starts with `--`), is left
+// in `rest` (it then fails the operand parse loudly, never a silent drop or a
+// mis-consumed selector — Issue #2763). `--project-dir` is already spliced out
+// by main() before dispatch, so it never reaches here.
 export function extractIntentSelector(args: string[]): { intent?: string; space?: string; rest: string[] } {
   const rest: string[] = [];
   let intent: string | undefined;
   let space: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === "--intent" && i + 1 < args.length) {
+    if (a === "--intent" && i + 1 < args.length && !args[i + 1].startsWith("--")) {
       intent = args[i + 1];
       i++;
       continue;
     }
-    if (a === "--space" && i + 1 < args.length) {
+    if (a === "--space" && i + 1 < args.length && !args[i + 1].startsWith("--")) {
       space = args[i + 1];
       i++;
       continue;
@@ -2429,6 +2449,30 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   }
 }
 
+// The completion chokepoint. FOUR handlers mark a stage [x] — approve, advance,
+// finalize and complete-workflow — each under its own lock, with no shared
+// transition function between them. A guard wired into only one of them leaves
+// the other three an unguarded rubber-stamp backdoor on the direct-CLI surface,
+// so every completion guard belongs here rather than at the individual call
+// sites (issue #2671 item (c) shipped the sensor gate on approve alone; this
+// function is the fix for that gap and the place any fifth guard goes).
+//
+// Order is load-bearing and each layer asks a narrower question than the last:
+// verifyStageArtifacts answers "did the stage produce anything", and only then
+// is "is the blocking sensor's verdict on those artifacts clean" meaningful —
+// a sensor complaint about a stage that produced nothing names the wrong fault.
+// The two carry independent bypass switches (AMADEUS_SKIP_ARTIFACT_GUARD vs
+// AMADEUS_SKIP_BLOCKING_SENSOR_GUARD): a fixture that wants artifacts unchecked
+// does not thereby want sensor verdicts unchecked, so neither disables the other.
+//
+// Callers own the "is this transition actually completing" question: the three
+// direct paths skip this when the slug is already [x] (an approve-delegated or
+// replayed call already passed it), while approve always runs it.
+function verifyStageCompletionGuards(pd: string, stage: VerifiableStage): void {
+  verifyStageArtifacts(pd, stage);
+  verifyBlockingSensors(pd, stage);
+}
+
 function advanceScopeOrError(content: string): string {
   const scope = getField(content, "Scope");
   if (!scope) {
@@ -2640,14 +2684,15 @@ export function handleAdvance(args: string[]): void {
     return;
   }
 
-  // Artifact guard (issue #366). Only enforce when THIS advance is the
-  // transition that completes the stage - i.e. it was not already [x]. When
-  // approve delegates here the slug is already [x] and approve ran the guard
-  // itself, so skip to avoid a double check. A direct `advance <active-slug>`
-  // (the gate-skipping attack path) is NOT alreadyMarkedCompleted, so it is
-  // guarded. Runs before any mutation; error() exits leaving state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671). Only enforce
+  // when THIS advance is the transition that completes the stage - i.e. it was
+  // not already [x]. When approve delegates here the slug is already [x] and
+  // approve ran the guards itself, so skip to avoid a double check. A direct
+  // `advance <active-slug>` (the gate-skipping attack path) is NOT
+  // alreadyMarkedCompleted, so it is guarded. Runs before any mutation;
+  // error() exits leaving state untouched.
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
   }
 
   // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
@@ -2750,17 +2795,18 @@ export function handleFinalize(args: string[]): void {
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
 
-  // Artifact guard (issue #366). finalize also marks a stage [x], so it is a
-  // completing transition that must not rubber-stamp. Guard only when the slug
-  // is not already [x] (an idempotent re-finalize already passed the guard),
-  // and before any mutation so a refusal leaves state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671). finalize also
+  // marks a stage [x], so it is a completing transition that must not
+  // rubber-stamp. Guard only when the slug is not already [x] (an idempotent
+  // re-finalize already passed the guards), and before any mutation so a
+  // refusal leaves state untouched.
   const alreadyMarkedCompleted = stageCheckboxOrError(
     content,
     completedSlug,
     `finalize:${completedSlug}`,
   ).state === "completed";
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
   }
 
   // 1. Mark completed
@@ -2927,14 +2973,16 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";
 
-  // Artifact guard (issue #366). complete-workflow marks the FINAL stage [x], so
-  // it is a completing transition too. Guard only when the slug is not already
-  // [x]: approve delegates here AFTER marking the slug [x] and running the guard
-  // itself, so this skips the double-check on that path while still refusing a
-  // direct `complete-workflow <active-slug>` that never produced artifacts. Runs
-  // before any mutation so a refusal leaves state untouched.
+  // Completion guards (artifacts #366 + blocking sensors #2671).
+  // complete-workflow marks the FINAL stage [x], so it is a completing
+  // transition too. Guard only when the slug is not already [x]: approve
+  // delegates here AFTER marking the slug [x] and running the guards itself, so
+  // this skips the double-check on that path while still refusing a direct
+  // `complete-workflow <active-slug>` that never produced artifacts or left a
+  // blocking sensor unresolved. Runs before any mutation so a refusal leaves
+  // state untouched.
   if (!alreadyMarkedCompleted) {
-    verifyStageArtifacts(pd, completedStage);
+    verifyStageCompletionGuards(pd, completedStage);
     // Phase-check artifact gate (#886). complete-workflow always closes
     // completedStage.phase (an implicit "phase → end" boundary) and flips it
     // Verified below, so gate it the same way as advance's boundary block.
@@ -3876,12 +3924,9 @@ function approveUnderLock(
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "awaiting-approval");
 
-  verifyStageArtifacts(pd, stage);
-  // After the artifacts exist, before anything else: a blocking sensor judges
-  // the artifacts, so asking "is the verdict clean" is only meaningful once
-  // "did the stage produce anything" has been answered. Both approve arms
-  // (targeted-human and ordinary) reach this one call.
-  verifyBlockingSensors(pd, stage);
+  // Both approve arms (targeted-human and ordinary) reach this one call, and
+  // approve always completes the stage, so there is no already-[x] skip here.
+  verifyStageCompletionGuards(pd, stage);
   const initialScopeIssue = approvalScopeIssue(content);
   if (initialScopeIssue !== null) failApprovalCommitValidation(initialScopeIssue);
   const authorization = authorizeApproval(pd, content, stage, override);
@@ -4780,16 +4825,19 @@ export function handleSessionTakeover(args: string[]): void {
 // in .ts code so t48's emitter-pairing check passes. Called by the
 // practices-discovery stage at Step 4 (discovered), Step 7 (affirmed), and
 // Step 6 on write failure (override).
-function handlePracticesEvent(args: string[]): void {
+export function handlePracticesEvent(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   let eventTypeArg = "";
   const fields: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--type" && i + 1 < args.length) {
-      eventTypeArg = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue("--type", value);
+      eventTypeArg = value;
       i++;
     } else if (args[i] === "--field" && i + 1 < args.length) {
       const kv = args[i + 1];
+      rejectFlagLikeValue("--field", kv);
       const idx = kv.indexOf(":");
       if (idx > 0) {
         const key = kv.slice(0, idx).trim();
@@ -5030,7 +5078,9 @@ export function handlePracticesPromote(args: string[]): void {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.startsWith("--") && i + 1 < args.length) {
-      flags[a.slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue(a, value);
+      flags[a.slice(2)] = value;
       i++;
     }
   }
@@ -5392,8 +5442,18 @@ export function handleLookup(args: string[]): void {
 // Forks main's amadeus-state.md to <worktreePath>/amadeus-docs/amadeus-state.md.
 // Adds slug to main's Bolt Refs list. Decorative Worktree Path on the
 // worktree-side state file (recoverable from cwd; debugging breadcrumb only).
-function handleFork(args: string[]): void {
-  const flags = parseFlags(args);
+export function handleFork(args: string[]): void {
+  // "--unit" (see boltContextKind below) is a bare boolean marker forwarded
+  // verbatim by amadeus-bolt.ts's start handler — it never carries a value.
+  // parseFlags's value-carrying-flag scan has no boolean-flag concept (unlike
+  // amadeus-bolt.ts's own splitBooleanFlags), so strip it before that scan:
+  // otherwise a call shaped "--unit --repo <name>" (bolt.ts:299-306's
+  // unitFlagArgs()+selectorArgs() pass-through) reads as --unit's value being
+  // swallowed by the NEXT flag and is now refused (Issue #2763's
+  // rejectFlagLikeValue guard) instead of the pre-existing silent-and-harmless
+  // mis-capture into an unread flags.unit. boltContextKind still reads the
+  // ORIGINAL args below so its `--unit` presence check is unaffected.
+  const flags = parseFlags(args.filter((a) => a !== "--unit"));
   const slug = validateSlug(flags.slug);
   const pd = resolveProjectDir(projectDir);
   // Whether the slug names a swarm unit or a Bolt, for the telemetry marker

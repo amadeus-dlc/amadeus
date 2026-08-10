@@ -31,6 +31,7 @@ import {
   setField,
   stageIndex,
   validateStageState,
+  withAuditLock,
   writeStateFile,
 } from "./amadeus-lib.js";
 
@@ -187,16 +188,9 @@ let projectDir: string | undefined;
 function main(): void {
   const rawArgs = process.argv.slice(2);
 
-  // Extract --project-dir
-  const filteredArgs: string[] = [];
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
-      projectDir = rawArgs[i + 1];
-      i++;
-    } else {
-      filteredArgs.push(rawArgs[i]);
-    }
-  }
+  const extracted = extractProjectDirArg(rawArgs);
+  projectDir = extracted.projectDir;
+  const filteredArgs = extracted.filteredArgs;
 
   const subcommand = filteredArgs[0];
 
@@ -229,6 +223,27 @@ if (import.meta.main) {
   main();
 }
 
+// Splits `--project-dir <value>` out of raw argv, leaving every other token
+// (including a `--project-dir` with no value, or one immediately followed by
+// another flag, which is left in `filteredArgs` to fail loudly downstream
+// rather than being silently mis-consumed — Issue #2763) untouched. Exported
+// as a pure seam so this branch is exercisable in-process (bun --coverage
+// cannot see argv splitting that only runs inside main()'s
+// `if (import.meta.main)` guard).
+export function extractProjectDirArg(rawArgs: string[]): { projectDir: string | undefined; filteredArgs: string[] } {
+  const filteredArgs: string[] = [];
+  let extracted: string | undefined;
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length && !rawArgs[i + 1].startsWith("--")) {
+      extracted = rawArgs[i + 1];
+      i++;
+    } else {
+      filteredArgs.push(rawArgs[i]);
+    }
+  }
+  return { projectDir: extracted, filteredArgs };
+}
+
 // --- Parse named flags ---
 
 function parseFlags(
@@ -237,7 +252,11 @@ function parseFlags(
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith("--") && i + 1 < args.length) {
-      flags[args[i].slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      if (value.startsWith("--")) {
+        error(`${args[i]} expects a value, got another flag: "${value}". Did you forget the value?`);
+      }
+      flags[args[i].slice(2)] = value;
       i++;
     }
   }
@@ -367,7 +386,6 @@ function assertTargetCheckboxExists(
 export function handleExecute(args: string[]): void {
   const flags = parseFlags(args);
   const pd = resolveProjectDir(projectDir);
-  let content = readStateFile(pd);
 
   const targetSlug = flags.target;
   if (!targetSlug) error("Usage: execute --target <slug> --direction <forward|backward|redo> [--scope <scope>]");
@@ -381,265 +399,284 @@ export function handleExecute(args: string[]): void {
     error(`Invalid direction: ${flags.direction}. Valid: forward, backward, redo`);
   }
 
-  const scope = flags.scope || getField(content, "Scope") || "feature";
-  const scopeMapping = loadScopeMapping()[scope];
-  if (!scopeMapping) error(`Unknown scope: ${scope}`);
-  // The live plan's suffix overrides - execute resolves the same EFFECTIVE
-  // plan resolve does (see effectiveAction), so a recomposed stage is
-  // reachable and a recompose-SKIPped one refused here too. Same
-  // scope-matches-state guard as resolve: a foreign --scope consults the
-  // static grid only.
-  const suffixes =
-    scope === (getField(content, "Scope") || "")
-      ? parseStateStageSuffixes(content)
-      : new Map<string, "EXECUTE" | "SKIP">();
+  // The whole read->decide->emit->write section runs under withAuditLock, the
+  // same wrap every amadeus-state.ts RMW handler (and amadeus-bolt's
+  // approve-batch, #2589) uses: the audit lock each emitAudit takes internally
+  // is released before writeStateFile, so only an outer lock serialises the
+  // state transaction. Unserialised, jump rewrites the WHOLE file from a stale
+  // snapshot and clobbers a concurrent writer's field (issue #2729).
+  //
+  // THE BUCKET is the workspace sentinel: readStateFile/writeStateFile here take
+  // no intent/space, so they resolve through the active cursor — exactly the
+  // bucket the untargeted amadeus-state.ts handlers that write the same file
+  // take. LOCK == WRITE holds because both sides omit the selector.
+  //
+  // The inner emits do not self-deadlock: withAuditLock's per-identity depth
+  // counter re-enters (amadeus-lib.ts, "ONE PATH, LOCK HELD OR NOT"), and the
+  // identities match — this wrap passes no intent/space and neither does
+  // emitAudit, so both key the same sentinel.
+  withAuditLock(pd, () => {
+    let content = readStateFile(pd);
 
-  const targetStage = findStageBySlug(targetSlug);
-  if (!targetStage) error(`Unknown stage: ${targetSlug}`);
+    const scope = flags.scope || getField(content, "Scope") || "feature";
+    const scopeMapping = loadScopeMapping()[scope];
+    if (!scopeMapping) error(`Unknown scope: ${scope}`);
+    // The live plan's suffix overrides - execute resolves the same EFFECTIVE
+    // plan resolve does (see effectiveAction), so a recomposed stage is
+    // reachable and a recompose-SKIPped one refused here too. Same
+    // scope-matches-state guard as resolve: a foreign --scope consults the
+    // static grid only.
+    const suffixes =
+      scope === (getField(content, "Scope") || "")
+        ? parseStateStageSuffixes(content)
+        : new Map<string, "EXECUTE" | "SKIP">();
 
-  // Scope validation - target must be EXECUTE on the EFFECTIVE plan (mirrors
-  // resolve). Without this, an orchestrator bypassing resolve can land the
-  // workflow on a stage the plan says should be skipped.
-  if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") {
-    error(
-      `Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`
-    );
-  }
+    const targetStage = findStageBySlug(targetSlug);
+    if (!targetStage) error(`Unknown stage: ${targetSlug}`);
 
-  const graph = loadStageGraph();
-  const targetIdx = stageIndex(targetSlug);
-  const checkboxes = parseCheckboxes(content);
+    // Scope validation - target must be EXECUTE on the EFFECTIVE plan (mirrors
+    // resolve). Without this, an orchestrator bypassing resolve can land the
+    // workflow on a stage the plan says should be skipped.
+    // One line: bun's lcov leaves the continuation lines of a multi-line call at
+    // DA:0, so a wrapped call reads as two dead rows rather than one
+    // (spawn-blindspot-two-step (i) before the waiver).
+    if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") error(`Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`);
 
-  // Build a lookup of current checkbox states
-  const checkboxMap = new Map(checkboxes.map((c) => [c.slug, c.state]));
-  assertTargetCheckboxExists(checkboxMap, targetSlug);
+    const graph = loadStageGraph();
+    const targetIdx = stageIndex(targetSlug);
+    const checkboxes = parseCheckboxes(content);
 
-  const stagesSkipped: string[] = [];
-  const stagesReset: string[] = [];
+    // Build a lookup of current checkbox states
+    const checkboxMap = new Map(checkboxes.map((c) => [c.slug, c.state]));
+    assertTargetCheckboxExists(checkboxMap, targetSlug);
 
-  // Get current stage for audit
-  const currentSlug = getField(content, "Current Stage") || "state-init";
-  const currentIdx = stageIndex(currentSlug);
+    const stagesSkipped: string[] = [];
+    const stagesReset: string[] = [];
 
-  const reconcile = directionReconcile(direction, currentIdx, targetIdx);
-  if (!reconcile.ok)
-    error(
-      `Direction mismatch: --direction ${direction}, but ${currentSlug} → ${targetSlug} is a ${reconcile.expected} transition. Re-run with --direction ${reconcile.expected}.`
-    );
+    // Get current stage for audit
+    const currentSlug = getField(content, "Current Stage") || "state-init";
+    const currentIdx = stageIndex(currentSlug);
 
-  // States that count as "in-flight" (skip on forward jump, reset on backward jump)
-  const IN_FLIGHT_STATES: CheckboxState[] = [
-    "pending",
-    "in-progress",
-    "awaiting-approval",
-    "revising",
-  ];
+    const reconcile = directionReconcile(direction, currentIdx, targetIdx);
+    if (!reconcile.ok)
+      error(
+        `Direction mismatch: --direction ${direction}, but ${currentSlug} → ${targetSlug} is a ${reconcile.expected} transition. Re-run with --direction ${reconcile.expected}.`
+      );
 
-  if (direction === "forward") {
-    // Mark intermediate in-flight stages → [S], leave [x] alone. Gate on the
-    // EFFECTIVE plan so a recompose-ADDed stage (grid SKIP, suffix EXECUTE)
-    // is marked [S] like any other on-plan stage, and a recompose-SKIPped one
-    // is passed over.
-    for (let i = currentIdx + 1; i < targetIdx; i++) {
-      const slug = graph[i].slug;
-      if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
-      const state = checkboxMap.get(slug);
-      if (state && IN_FLIGHT_STATES.includes(state)) {
-        content = requireChanged(
-          setCheckbox(validateStageState(content), slug, "skipped"),
-          `jump:skip:${slug}`,
-        );
-        stagesSkipped.push(slug);
-      }
-    }
-    // Also mark the current stage if it's in-flight AND the target is further
-    // forward (target !== current). When target === current, direction is "redo"
-    // not "forward" — but guard explicitly in case caller mis-specifies.
-    if (currentSlug !== targetSlug) {
-      const currentState = checkboxMap.get(currentSlug);
-      if (
-        currentState &&
-        currentState !== "pending" &&
-        IN_FLIGHT_STATES.includes(currentState)
-      ) {
-        content = requireChanged(
-          setCheckbox(validateStageState(content), currentSlug, "skipped"),
-          `jump:skip-current:${currentSlug}`,
-        );
-        stagesSkipped.push(currentSlug);
-      }
-    }
-  } else if (direction === "backward") {
-    // Reset target + downstream [x]/[-]/[?]/[R]/[S] → [ ]
-    const RESETTABLE: CheckboxState[] = [
-      "completed",
+    // States that count as "in-flight" (skip on forward jump, reset on backward jump)
+    const IN_FLIGHT_STATES: CheckboxState[] = [
+      "pending",
       "in-progress",
       "awaiting-approval",
       "revising",
-      "skipped",
     ];
-    for (let i = targetIdx; i < graph.length; i++) {
-      const slug = graph[i].slug;
-      // Effective plan again: a recompose-ADDed stage's [x] is reset by a
-      // backward jump like any on-plan stage (ADD-then-jump consistency).
-      if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
-      const state = checkboxMap.get(slug);
-      if (state && RESETTABLE.includes(state)) {
-        content = requireChanged(
-          setCheckbox(validateStageState(content), slug, "pending"),
-          `jump:reset:${slug}`,
-        );
-        stagesReset.push(slug);
+
+    if (direction === "forward") {
+      // Mark intermediate in-flight stages → [S], leave [x] alone. Gate on the
+      // EFFECTIVE plan so a recompose-ADDed stage (grid SKIP, suffix EXECUTE)
+      // is marked [S] like any other on-plan stage, and a recompose-SKIPped one
+      // is passed over.
+      for (let i = currentIdx + 1; i < targetIdx; i++) {
+        const slug = graph[i].slug;
+        if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
+        const state = checkboxMap.get(slug);
+        if (state && IN_FLIGHT_STATES.includes(state)) {
+          content = requireChanged(
+            setCheckbox(validateStageState(content), slug, "skipped"),
+            `jump:skip:${slug}`,
+          );
+          stagesSkipped.push(slug);
+        }
+      }
+      // Also mark the current stage if it's in-flight AND the target is further
+      // forward (target !== current). When target === current, direction is "redo"
+      // not "forward" — but guard explicitly in case caller mis-specifies.
+      if (currentSlug !== targetSlug) {
+        const currentState = checkboxMap.get(currentSlug);
+        if (
+          currentState &&
+          currentState !== "pending" &&
+          IN_FLIGHT_STATES.includes(currentState)
+        ) {
+          content = requireChanged(
+            setCheckbox(validateStageState(content), currentSlug, "skipped"),
+            `jump:skip-current:${currentSlug}`,
+          );
+          stagesSkipped.push(currentSlug);
+        }
+      }
+    } else if (direction === "backward") {
+      // Reset target + downstream [x]/[-]/[?]/[R]/[S] → [ ]
+      const RESETTABLE: CheckboxState[] = [
+        "completed",
+        "in-progress",
+        "awaiting-approval",
+        "revising",
+        "skipped",
+      ];
+      for (let i = targetIdx; i < graph.length; i++) {
+        const slug = graph[i].slug;
+        // Effective plan again: a recompose-ADDed stage's [x] is reset by a
+        // backward jump like any on-plan stage (ADD-then-jump consistency).
+        if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
+        const state = checkboxMap.get(slug);
+        if (state && RESETTABLE.includes(state)) {
+          content = requireChanged(
+            setCheckbox(validateStageState(content), slug, "pending"),
+            `jump:reset:${slug}`,
+          );
+          stagesReset.push(slug);
+        }
+      }
+    } else {
+      // redo: reset target only → [ ]
+      content = requireChanged(
+        setCheckbox(validateStageState(content), targetSlug, "pending"),
+        `jump:reset-target:${targetSlug}`,
+      );
+      stagesReset.push(targetSlug);
+    }
+
+    // Mark target [-] so state and checkbox agree. This was missing before the
+    // refactor — jump set Current Stage=target but left the checkbox at [ ]/[S]/
+    // pending, causing an orchestrator to see an inconsistent state.
+    content = requireChanged(
+      setCheckbox(validateStageState(content), targetSlug, "in-progress"),
+      `jump:start:${targetSlug}`,
+    );
+
+    // Detect phase-boundary crossing. Jump asymmetry was a MAJOR finding —
+    // advance emits PHASE_COMPLETED/VERIFIED/STARTED when crossing phases,
+    // but jump did not. Now it does, matching the state machine contract.
+    //
+    // The crossing must honour the direction contract (Issue #842 / #481):
+    //   - forward: each phase being CLOSED is Verified (has [x] stages) or
+    //     Skipped (no [x] stages — PHASE_SKIPPED), enumerated one per phase in
+    //     canonical order, then a single PHASE_STARTED for the target phase.
+    //   - backward: NO phase events at all, and Phase Progress is never rolled
+    //     back — the audit ledger is append-only and Verified is monotonic;
+    //     rework is expressed by the stage-level resets above.
+    const currentStageForPhase = findStageBySlug(currentSlug);
+    const crossesPhaseBoundary =
+      !!currentStageForPhase && currentStageForPhase.phase !== targetStage.phase;
+
+    // Phases this forward jump CLOSES (backward / non-crossing → empty list).
+    const closedPhases = enumerateClosedPhases(
+      graph,
+      checkboxMap,
+      currentStageForPhase,
+      targetStage,
+      direction,
+      crossesPhaseBoundary,
+    );
+
+    // Phase-check artifact gate (#886). Every phase this forward jump closes WITH
+    // executed work is flipped Verified (applyClosedPhaseProgress) and emits
+    // PHASE_VERIFIED below — so each such phase must have its phase-check artifact
+    // on disk, the same gate advance / approve apply. verifyPhaseCheckArtifact
+    // no-ops for phases outside the required set; closing-with-no-work phases go
+    // Skipped (no artifact demanded), so gate only hasExecuted. Runs before
+    // writeStateFile → a refusal leaves the state file untouched.
+    for (const { phase, hasExecuted } of closedPhases) {
+      if (hasExecuted) verifyPhaseCheckArtifact(pd, phase);
+    }
+
+    // Update state fields. Thread the (post-edit) state content so the Next
+    // Stage projection honours suffix overrides + checkboxes - the advance
+    // precedent's threading, applied to the jump path.
+    const nextAfterTarget = nextInScopeStage(targetSlug, scope, content);
+    const timestamp = isoTimestamp();
+
+    content = setField(content, "Lifecycle Phase", targetStage.phase.toUpperCase());
+    content = setField(content, "Current Stage", targetSlug);
+    content = setField(content, "Next Stage", nextAfterTarget ? nextAfterTarget.slug : "none");
+    content = setField(content, "Active Agent", targetStage.lead_agent);
+    content = setField(content, "Status", "Running");
+    content = setField(content, "Last Updated", timestamp);
+    content = setField(content, "In Progress", targetSlug);
+    content = setField(content, "Next Action", `Execute ${targetStage.name}`);
+
+    const rebuilt = rebuildCompletedFieldFromState(content, graph);
+    content = rebuilt.content;
+    const completedCount = rebuilt.completedCount;
+
+    // Find last completed stage before target
+    const allCheckboxes = parseCheckboxes(content);
+    let lastCompleted = "state-init";
+    for (let i = targetIdx - 1; i >= 0; i--) {
+      const cb = allCheckboxes.find((c) => c.slug === graph[i].slug);
+      if (cb && cb.state === "completed") {
+        lastCompleted = graph[i].slug;
+        break;
       }
     }
-  } else {
-    // redo: reset target only → [ ]
-    content = requireChanged(
-      setCheckbox(validateStageState(content), targetSlug, "pending"),
-      `jump:reset-target:${targetSlug}`,
-    );
-    stagesReset.push(targetSlug);
-  }
+    content = setField(content, "Last Completed Stage", lastCompleted);
 
-  // Mark target [-] so state and checkbox agree. This was missing before the
-  // refactor — jump set Current Stage=target but left the checkbox at [ ]/[S]/
-  // pending, causing an orchestrator to see an inconsistent state.
-  content = requireChanged(
-    setCheckbox(validateStageState(content), targetSlug, "in-progress"),
-    `jump:start:${targetSlug}`,
-  );
+    // Phase Progress: each closed phase goes Verified/Skipped in the SAME
+    // transaction as the audit emissions below (empty for backward → no-op).
+    content = applyClosedPhaseProgress(content, closedPhases);
 
-  // Detect phase-boundary crossing. Jump asymmetry was a MAJOR finding —
-  // advance emits PHASE_COMPLETED/VERIFIED/STARTED when crossing phases,
-  // but jump did not. Now it does, matching the state machine contract.
-  //
-  // The crossing must honour the direction contract (Issue #842 / #481):
-  //   - forward: each phase being CLOSED is Verified (has [x] stages) or
-  //     Skipped (no [x] stages — PHASE_SKIPPED), enumerated one per phase in
-  //     canonical order, then a single PHASE_STARTED for the target phase.
-  //   - backward: NO phase events at all, and Phase Progress is never rolled
-  //     back — the audit ledger is append-only and Verified is monotonic;
-  //     rework is expressed by the stage-level resets above.
-  const currentStageForPhase = findStageBySlug(currentSlug);
-  const crossesPhaseBoundary =
-    !!currentStageForPhase && currentStageForPhase.phase !== targetStage.phase;
+    // Atomic audit emissions (audit-first — throws before writeStateFile if any fail)
+    try {
+      // Per-stage STAGE_SKIPPED for every skipped stage (one event per [S] transition)
+      for (const skippedSlug of stagesSkipped) {
+        emitAudit(pd, "STAGE_SKIPPED", {
+          Stage: skippedSlug,
+          Reason: `Skipped by jump to ${targetSlug} (${direction})`,
+        });
+      }
 
-  // Phases this forward jump CLOSES (backward / non-crossing → empty list).
-  const closedPhases = enumerateClosedPhases(
-    graph,
-    checkboxMap,
-    currentStageForPhase,
-    targetStage,
-    direction,
-    crossesPhaseBoundary,
-  );
+      // Phase boundary events. Forward only: one PHASE_COMPLETED + (VERIFIED for
+      // a with-work phase | SKIPPED for a no-work phase) per closed phase, then a
+      // single PHASE_STARTED for the target phase — matching advance's per-boundary
+      // contract. Backward jumps emit NO phase events (Issue #842 — a backward
+      // jump abandons work-in-progress; it does not complete, verify, or skip any
+      // phase, and Verified never rolls back on the append-only ledger).
+      emitClosedPhaseEvents(
+        pd,
+        closedPhases,
+        targetStage,
+        scope,
+        completedCount,
+        direction,
+      );
 
-  // Phase-check artifact gate (#886). Every phase this forward jump closes WITH
-  // executed work is flipped Verified (applyClosedPhaseProgress) and emits
-  // PHASE_VERIFIED below — so each such phase must have its phase-check artifact
-  // on disk, the same gate advance / approve apply. verifyPhaseCheckArtifact
-  // no-ops for phases outside the required set; closing-with-no-work phases go
-  // Skipped (no artifact demanded), so gate only hasExecuted. Runs before
-  // writeStateFile → a refusal leaves the state file untouched.
-  for (const { phase, hasExecuted } of closedPhases) {
-    if (hasExecuted) verifyPhaseCheckArtifact(pd, phase);
-  }
-
-  // Update state fields. Thread the (post-edit) state content so the Next
-  // Stage projection honours suffix overrides + checkboxes - the advance
-  // precedent's threading, applied to the jump path.
-  const nextAfterTarget = nextInScopeStage(targetSlug, scope, content);
-  const timestamp = isoTimestamp();
-
-  content = setField(content, "Lifecycle Phase", targetStage.phase.toUpperCase());
-  content = setField(content, "Current Stage", targetSlug);
-  content = setField(content, "Next Stage", nextAfterTarget ? nextAfterTarget.slug : "none");
-  content = setField(content, "Active Agent", targetStage.lead_agent);
-  content = setField(content, "Status", "Running");
-  content = setField(content, "Last Updated", timestamp);
-  content = setField(content, "In Progress", targetSlug);
-  content = setField(content, "Next Action", `Execute ${targetStage.name}`);
-
-  const rebuilt = rebuildCompletedFieldFromState(content, graph);
-  content = rebuilt.content;
-  const completedCount = rebuilt.completedCount;
-
-  // Find last completed stage before target
-  const allCheckboxes = parseCheckboxes(content);
-  let lastCompleted = "state-init";
-  for (let i = targetIdx - 1; i >= 0; i--) {
-    const cb = allCheckboxes.find((c) => c.slug === graph[i].slug);
-    if (cb && cb.state === "completed") {
-      lastCompleted = graph[i].slug;
-      break;
-    }
-  }
-  content = setField(content, "Last Completed Stage", lastCompleted);
-
-  // Phase Progress: each closed phase goes Verified/Skipped in the SAME
-  // transaction as the audit emissions below (empty for backward → no-op).
-  content = applyClosedPhaseProgress(content, closedPhases);
-
-  // Atomic audit emissions (audit-first — throws before writeStateFile if any fail)
-  try {
-    // Per-stage STAGE_SKIPPED for every skipped stage (one event per [S] transition)
-    for (const skippedSlug of stagesSkipped) {
-      emitAudit(pd, "STAGE_SKIPPED", {
-        Stage: skippedSlug,
-        Reason: `Skipped by jump to ${targetSlug} (${direction})`,
+      // The canonical STAGE_JUMPED event for the target itself
+      emitAudit(pd, "STAGE_JUMPED", {
+        Direction: direction.toUpperCase(),
+        Source: currentSlug,
+        Target: targetSlug,
+        Scope: scope,
+        Details: `${direction.toUpperCase()} jump from ${currentSlug} to ${targetSlug} (${targetStage.number}). Scope: ${scope}.`,
       });
+
+      // Target enters Active state — emit STAGE_STARTED so audit reflects the
+      // stage transition symmetric with advance's STAGE_STARTED emission.
+      emitAudit(pd, "STAGE_STARTED", {
+        Stage: targetSlug,
+        Agent: targetStage.lead_agent,
+      });
+    } catch (e) {
+      error(`Audit emission failed: ${errorMessage(e)}`);
     }
 
-    // Phase boundary events. Forward only: one PHASE_COMPLETED + (VERIFIED for
-    // a with-work phase | SKIPPED for a no-work phase) per closed phase, then a
-    // single PHASE_STARTED for the target phase — matching advance's per-boundary
-    // contract. Backward jumps emit NO phase events (Issue #842 — a backward
-    // jump abandons work-in-progress; it does not complete, verify, or skip any
-    // phase, and Verified never rolls back on the append-only ledger).
-    emitClosedPhaseEvents(
-      pd,
-      closedPhases,
-      targetStage,
-      scope,
-      completedCount,
-      direction,
+    writeStateFile(pd, content);
+
+    console.log(
+      JSON.stringify({
+        direction,
+        target: targetSlug,
+        target_phase: targetStage.phase.toUpperCase(),
+        stages_skipped: stagesSkipped,
+        stages_reset: stagesReset,
+        state_updated: true,
+        audit_appended: true,
+        completed_count: completedCount,
+        workflow_stopped: false,
+        timestamp,
+      })
     );
-
-    // The canonical STAGE_JUMPED event for the target itself
-    emitAudit(pd, "STAGE_JUMPED", {
-      Direction: direction.toUpperCase(),
-      Source: currentSlug,
-      Target: targetSlug,
-      Scope: scope,
-      Details: `${direction.toUpperCase()} jump from ${currentSlug} to ${targetSlug} (${targetStage.number}). Scope: ${scope}.`,
-    });
-
-    // Target enters Active state — emit STAGE_STARTED so audit reflects the
-    // stage transition symmetric with advance's STAGE_STARTED emission.
-    emitAudit(pd, "STAGE_STARTED", {
-      Stage: targetSlug,
-      Agent: targetStage.lead_agent,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-
-  console.log(
-    JSON.stringify({
-      direction,
-      target: targetSlug,
-      target_phase: targetStage.phase.toUpperCase(),
-      stages_skipped: stagesSkipped,
-      stages_reset: stagesReset,
-      state_updated: true,
-      audit_appended: true,
-      completed_count: completedCount,
-      workflow_stopped: false,
-      timestamp,
-    })
-  );
+  });
 }
 
 // --- Utility ---

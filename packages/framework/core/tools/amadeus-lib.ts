@@ -6037,6 +6037,26 @@ function resyncOneIntent(
 // Re-sync every intent of every space (or one named space/intent) against the
 // host stage graph. Returns one outcome per intent examined — the caller is
 // expected to print them, so a skipped record is visible rather than silent.
+//
+// Each per-intent re-sync runs under withAuditLock (#2729): resyncOneIntent's
+// read->decide->write is a read-modify-write, and unserialised its full-file
+// rewrite clobbers a concurrent writer's field from a stale snapshot.
+//
+// THE LOCK IS TAKEN HERE, at the ONE call site, rather than inside
+// resyncOneIntent: the NSD003 contract for that function reads the ORDER of its
+// body's TOP-LEVEL statements (tests/no-silent-drop/ast-scan.ts,
+// composeResyncIsSafe: replaceStageProgressSection -> the section-unrecognized
+// postcondition -> writeStateFile), so moving the body into a callback puts the
+// contract out of the analyzer's reach and the gate reports it unverifiable.
+// Wrapping the call keeps both the serialisation and the analyzable shape.
+//
+// THE BUCKET is (intent, space) — the same pair resyncOneIntent hands to
+// readStateFile and writeStateFile, so LOCK == WRITE by construction, and the
+// bucket a targeted amadeus-state.ts handler takes for that record. Per intent,
+// not once around the whole sweep: this walks EVERY intent including inactive
+// ones, and one lock over all of them would block unrelated records for the
+// length of the sweep. The section emits no audit rows, so it takes no inner
+// lock and cannot invert a lock order.
 export function resyncStateToStageGraph(
   projectDir: string,
   opts?: { graph?: StageEntry[]; space?: string; intent?: string },
@@ -6050,7 +6070,9 @@ export function resyncStateToStageGraph(
       .filter((d): d is string => d !== null)
       .filter((d) => opts?.intent === undefined || d === opts.intent);
     for (const intent of intents) {
-      outcomes.push(resyncOneIntent(projectDir, space, intent, graph));
+      outcomes.push(
+        withAuditLock(projectDir, () => resyncOneIntent(projectDir, space, intent, graph), intent, space),
+      );
     }
   }
   return outcomes;

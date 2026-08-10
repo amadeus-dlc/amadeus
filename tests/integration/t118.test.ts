@@ -49,7 +49,7 @@
 //       print; the old --force re-init guard is gone).
 //   SP6 scope-change (2): kind==="print" + out contains "scope-change --scope mvp".
 //   SP7 normal gate (1):
-//     - report --result approved --user-input -> kind==="done".
+//     - report --result approved --user-input -> kind==="committed".
 //       (The --test-run round-trip was dropped per #369; only the normal-gate
 //       control survives.)
 //   WALK A non-gated advance (3): N1 stage==="workspace-detection" gate===false;
@@ -438,11 +438,11 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
 
   // ============================================================
   // Special path 7: NORMAL GATE - report drives amadeus-state.ts approve through
-  // the report dispatcher; the gate closes (kind==="done"). The --test-run
+  // the report dispatcher; the gate closes (kind==="committed"). The --test-run
   // round-trip that used to sit here was removed with the test-run mechanism
   // (#369); this control proves the normal gate path is observable, not a no-op.
   // ============================================================
-  test("SP7-control: report --result approved --user-input -> done", () => {
+  test("SP7-control: report --result approved --user-input -> committed", () => {
     const p = projWithState("state-mid-ideation.md");
     run(STATE, ["gate-start", "feasibility", "--project-dir", p]);
     const r = run(ORCHESTRATE, [
@@ -454,7 +454,7 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
       "--project-dir",
       p,
     ]);
-    expect(directive(r).kind).toBe("done");
+    expect(directive(r).kind).toBe("committed");
   }, 30000);
 
   // ============================================================

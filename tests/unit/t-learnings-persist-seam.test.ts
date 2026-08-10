@@ -76,6 +76,32 @@ function callPersist(pd: string, selPath: string): { status: number; stderr: str
   return { status, stderr };
 }
 
+/** Same wiring as callPersist, but with a caller-supplied raw args array —
+ * for Issue #2763's parseFlags flag-value-arm falling test below. */
+function callPersistArgs(pd: string, args: string[]): { status: number; stderr: string } {
+  let stderr = "";
+  const origWrite = process.stderr.write.bind(process.stderr);
+  const origExit = process.exit.bind(process);
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8");
+    return true;
+  }) as typeof process.stderr.write;
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  let status = 0;
+  try {
+    handlePersist(args, pd);
+  } catch (e) {
+    if (e instanceof ExitSignal) status = e.code;
+    else throw e;
+  } finally {
+    process.stderr.write = origWrite;
+    process.exit = origExit;
+  }
+  return { status, stderr };
+}
+
 interface Selection {
   candidate_id: string;
   scope: "project" | "team";
@@ -232,5 +258,28 @@ describe("t-learnings-persist-seam — emit-key separator is text-safe (#786)", 
   test("core amadeus-learnings.ts contains no NUL byte", () => {
     const bytes = readFileSync(coreLearnings);
     expect(bytes.includes(0)).toBe(false);
+  });
+});
+
+// ============================================================
+// Issue #2763 — amadeus-learnings.ts's own parseFlags used the same
+// unguarded `args[i + 1]` value-arm as #2741's sensor-side flags. Both
+// consumers (`--slug`, `--selections-json`) are REQUIRED and checked with
+// `if (!x) fail(...)`, so a swallowed flag name was already loud in the
+// specific case below (selections-json ends up undefined -> the existing
+// Usage error) — the fix still tightens the message to name the actual
+// cause immediately, before the file is ever touched.
+// ============================================================
+
+describe("t-learnings-persist-seam: Issue #2763 parseFlags value-arm", () => {
+  test("--slug immediately followed by --selections-json is refused with a precise message", () => {
+    const pd = mkproj();
+    const selPath = join(pd, "sel.json");
+    writeFileSync(selPath, JSON.stringify({ stage_slug: "user-stories", selections: [] }));
+
+    const r = callPersistArgs(pd, ["--slug", "--selections-json", selPath]);
+
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain('--slug expects a value, got another flag: "--selections-json"');
   });
 });

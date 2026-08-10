@@ -9,8 +9,14 @@
 import type { OnboardingFills } from "./onboarding.ts";
 import type { MirrorSurfaceId } from "../packages/framework/harness/projections.ts";
 
-/** A single core dir projected from core/<src> into <harnessDir>/<dst>. */
-export type DirMap = { src: string; dst: string };
+/**
+ * A single core dir projected from core/<src> into <harnessDir>/<dst>.
+ * `exclude` names files (relative to <src>, POSIX-separated) this harness's
+ * projection skips — e.g. a harness whose adapter mints HUMAN_TURN inline
+ * (no subprocess call to the core hook) excludes hooks/amadeus-mint-presence.ts
+ * so the unwired core hook is not shipped as dead code (#860).
+ */
+export type DirMap = { src: string; dst: string; exclude?: readonly string[] };
 
 /**
  * An authored harness file copied from harness/<name>/<src> into the dist tree.

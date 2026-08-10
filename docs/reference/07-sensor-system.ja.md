@@ -239,7 +239,10 @@ code-qualityセンサーはそれぞれの言語globに、drift/consistency 系�
 マニフェストはすべて `advisory` を宣言しています。
 
 `blocking` はセンサーの判定をステージ完了の前提条件にします。
-`amadeus-state.ts approve` は、そのセンサーが発火した出力のいずれかで
+ゲートはステージを `[x]` にする全遷移 — `approve`、`advance`、`finalize`、
+`complete-workflow` — に置かれるため、ゲート経路が拒否する判定を
+直接 CLI の3経路が素通しでラバースタンプすることはできません。
+いずれの経路も、そのセンサーが発火した出力のいずれかで
 最新の終端イベントが `SENSOR_PASSED` でない間、ステージを拒否します。
 さらに fail-closed として、そのステージに `SENSOR_FIRED` が1件も
 記録されていない場合も拒否します — 一度も走っていない blocking センサーは

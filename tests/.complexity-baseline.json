@@ -28,6 +28,12 @@
     },
     {
       "path": "packages/framework/core/tools/amadeus-jump.ts",
+      "name": "(anonymous)",
+      "ordinal": 4,
+      "ccn": 33
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-jump.ts",
       "name": "handleExecute",
       "ordinal": 0,
       "ccn": 37
@@ -133,6 +139,12 @@
       "name": "main",
       "ordinal": 0,
       "ccn": 38
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "(anonymous)",
+      "ordinal": 92,
+      "ccn": 19
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",

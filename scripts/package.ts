@@ -185,6 +185,18 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
+// Like walk(), but skips files a manifest's coreDirs entry names in `exclude`
+// (POSIX-relative to dir) — e.g. a core hook this harness's own wiring never
+// invokes as a subprocess, so shipping it would be dead code (#860). Isolated
+// from buildTree so the skip decision does not add to its cyclomatic
+// complexity (tests/.complexity-baseline.json pins buildTree's CCN).
+function* walkExcluding(dir: string, exclude: readonly string[] | undefined): Generator<string> {
+  const excluded = new Set(exclude ?? []);
+  for (const file of walk(dir)) {
+    if (!excluded.has(relative(dir, file).split(sep).join("/"))) yield file;
+  }
+}
+
 // Compiled graph outputs whose embedded rule paths may need a harness rename.
 const COMPILED_DATA = ["tools/data/stage-graph.json", "tools/data/scope-grid.json"];
 
@@ -441,11 +453,11 @@ function buildTree(m: HarnessManifest, outRoot: string): BuildResult {
     (m.frontmatterAdditions ?? []).map(({ file, lines }) => [file, lines]),
   );
   const fmApplied = new Set<string>();
-  for (const { src, dst } of m.coreDirs) {
+  for (const { src, dst, exclude } of m.coreDirs) {
     const srcDir = join(CORE_ROOT, src);
     if (!existsSync(srcDir)) continue;
     const finalDst = m.rulesRename && dst === "rules" ? m.rulesRename : dst;
-    for (const file of walk(srcDir)) {
+    for (const file of walkExcluding(srcDir, exclude)) {
       const rel = relative(srcDir, file);
       const outPath = join(treeRoot, finalDst, rel);
       mkdirSync(dirname(outPath), { recursive: true });

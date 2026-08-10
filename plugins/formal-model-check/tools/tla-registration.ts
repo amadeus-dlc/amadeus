@@ -267,7 +267,11 @@ export function createRegistrationPorts(options: RegistrationPortOptions): Regis
         writeFileSync(staging, bytes);
         renameSync(staging, mapPath);
       } catch (cause) {
-        rmSync(staging, { force: true });
+        try {
+          rmSync(staging, { force: true });
+        } catch {
+          // Best-effort cleanup — the rethrown cause below carries the real failure.
+        }
         throw cause;
       }
     },

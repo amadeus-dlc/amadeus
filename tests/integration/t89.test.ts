@@ -368,6 +368,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "nfr-budget",
       "question-budget",
       "required-sections",
+      "scope-sizing",
       "self-scope-consistency",
       "type-check",
       "upstream-coverage",

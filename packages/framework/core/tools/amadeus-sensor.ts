@@ -32,8 +32,8 @@
 
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve as pathResolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve as pathResolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	frameworkTemplatesDir,
@@ -50,6 +50,7 @@ import {
 	isoTimestamp,
 	isPlainObject,
 	KNOWN_CODEKB_STAGES,
+	parseBoltDag,
 	recordDir,
 	resolveProjectDir,
 	sensorsDir,
@@ -495,6 +496,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 		scriptArgs.push("--framework-templates-dir", frameworkTemplatesDir());
 	}
 	scriptArgs.push(...depthBudgetArgs(id, outputPath, projectDir));
+	scriptArgs.push(...unitKindArgs(id, outputPath, projectDir));
 	const detailDir = join(sensorsDir(projectDir), stageSlug);
 	const detailPath = join(detailDir, `${id}-${fireId}.md`);
 
@@ -874,7 +876,12 @@ function emitTerminal(
  *  Contract, and therefore need the record's resolved depth: depth-budget
  *  (bytes per requirement), question-budget (questions per stage), and
  *  nfr-budget (bytes per declared NFR id, #2684 stage ③). */
-const DEPTH_READING_SENSORS = new Set(["depth-budget", "question-budget", "nfr-budget"]);
+const DEPTH_READING_SENSORS = new Set([
+	"depth-budget",
+	"question-budget",
+	"nfr-budget",
+	"scope-sizing",
+]);
 
 /** The depth-reading sensors' extra flag: the record's resolved depth, read by
  *  walking UP from the output path to amadeus-state.md. The per-sensor script
@@ -887,6 +894,57 @@ export function depthBudgetArgs(id: string, outputPath: string, projectDir: stri
 	if (!DEPTH_READING_SENSORS.has(id)) return [];
 	const depth = readRecordDepth(outputPath, projectDir);
 	return depth === undefined ? [] : ["--depth", depth];
+}
+
+/** The sensors that judge an artifact against its UNIT's declared kind, and so
+ *  need that kind resolved for them: nfr-budget's coverage check (#2684 stage
+ *  ⑤), which separates a `produces_kinds` pruning from a silent omission. */
+const KIND_READING_SENSORS = new Set(["nfr-budget"]);
+
+/** The kind-reading sensors' extra flag: the unit's declared kind.
+ *
+ *  Read from the record's COMMITTED `unit-of-work-dependency.md` rather than
+ *  runtime-graph.json — the graph is gitignored and regenerated per clone, so
+ *  a check keyed off it would answer differently in two checkouts of the same
+ *  commit. The committed artifact is the same source nfr-budget's sibling
+ *  flags already rely on.
+ *
+ *  Same contract as depthBudgetArgs: the per-sensor script gets only
+ *  --stage/--output-path and must not resolve the record root itself. An
+ *  unresolvable kind yields no flag and the sensor then passes fail-open —
+ *  which is most of the corpus, generated before unit kinds existed. */
+export function unitKindArgs(id: string, outputPath: string, projectDir: string): string[] {
+	if (!KIND_READING_SENSORS.has(id)) return [];
+	const kind = readUnitKind(outputPath, projectDir);
+	return kind === undefined ? [] : ["--kind", kind];
+}
+
+/** The unit kind for `<record>/construction/<unit>/<stage>/<artifact>.md`.
+ *
+ *  Derived from the path rather than walked for: the produces contract fixes
+ *  this layout, so the record root is exactly three levels up and the unit name
+ *  is the directory two up. The `construction` check keeps a path of another
+ *  shape from naming a stranger's directory as a record.
+ *
+ *  BOUNDED by projectDir for the same reason readRecordDepth is: without it a
+ *  run inside a nested checkout could read an unrelated workspace's units. */
+function readUnitKind(outputPath: string, projectDir: string): string | undefined {
+	const stageDir = dirname(pathResolve(outputPath));
+	const unitDir = dirname(stageDir);
+	const constructionDir = dirname(unitDir);
+	if (basename(constructionDir) !== "construction") return undefined;
+	const recordRoot = dirname(constructionDir);
+	const rel = relative(pathResolve(projectDir), recordRoot);
+	if (rel.startsWith("..") || isAbsolute(rel)) return undefined;
+	let body: string;
+	try {
+		body = readFileSync(join(recordRoot, "inception", "units-generation", "unit-of-work-dependency.md"), "utf-8");
+	} catch {
+		return undefined;
+	}
+	const parsed = parseBoltDag(body);
+	if (!parsed.ok) return undefined;
+	return parsed.units.find((unit) => unit.name === basename(unitDir))?.kind;
 }
 
 export function matchesGlob(pattern: string, path: string): boolean {

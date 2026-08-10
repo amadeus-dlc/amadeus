@@ -164,7 +164,7 @@ describe("targeted human approval", () => {
       "--presence-reservation-id",
       ids.reservationId,
     ], root))) as { kind: string };
-    expect(directive.kind).toBe("done");
+    expect(directive.kind).toBe("committed");
     expect(readFileSync(join(owner, "amadeus-state.md"), "utf-8"))
       .toContain(`- [x] ${STAGE}`);
   });

@@ -454,7 +454,8 @@
         "required-sections",
         "upstream-coverage",
         "answer-evidence",
-        "question-budget"
+        "question-budget",
+        "scope-sizing"
       ],
       "scopes": [
         "enterprise",
@@ -506,6 +507,12 @@
           "id": "question-budget",
           "path": ".claude/sensors/amadeus-question-budget.md",
           "matches": "**/*-questions.md",
+          "category": "governance"
+        },
+        {
+          "id": "scope-sizing",
+          "path": ".claude/sensors/amadeus-scope-sizing.md",
+          "matches": "**/scope-definition/*.md",
           "category": "governance"
         }
       ]
@@ -1994,7 +2001,7 @@
       "name": "Nfr Design",
       "phase": "construction",
       "execution": "CONDITIONAL",
-      "condition": "NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.",
+      "condition": "NFR patterns need design. Membership is decided by the scopes: list alone, and a scope may run this stage while skipping NFR Requirements (self-feature does) — the upstream inputs then arrive marked absent-and-expected.",
       "lead_agent": "amadeus-architect-agent",
       "support_agents": [
         "amadeus-aws-platform-agent"
