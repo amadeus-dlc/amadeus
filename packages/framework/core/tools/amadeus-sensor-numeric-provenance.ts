@@ -329,6 +329,7 @@ export interface SweepDeps {
   readonly labels: ReadonlyMap<string, SweepLabel>;
   readonly evaluationDeps: EvaluationDeps;
   readonly requireEnforcement?: boolean;
+  readonly sampleIdentity?: (relativePath: string, line: number, normalizedText: string) => string;
 }
 
 export interface SweepLabeledSample extends SweepLabel {
@@ -368,14 +369,15 @@ interface SweepObservation {
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (typeof value === "object" && value !== null) {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(",")}}`;
-  }
+  if (typeof value === "object" && value !== null) return canonicalObjectJson(value as Record<string, unknown>);
   return JSON.stringify(value);
+}
+
+function canonicalObjectJson(record: Record<string, unknown>): string {
+  const entries = Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
+  return `{${entries.join(",")}}`;
 }
 
 function matchesOutputPattern(pattern: string, path: string): boolean {
@@ -410,9 +412,13 @@ function descriptorForPath(
   return undefined;
 }
 
-export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): SweepReport {
-  const descriptors = indexSweepArtifacts(deps.indexInput);
+function observeSweepCorpus(
+  corpusRoot: string,
+  deps: SweepDeps,
+  descriptors: readonly SweepArtifactDescriptor[],
+): SweepObservation[] {
   const observations: SweepObservation[] = [];
+  const sampleIdentity = deps.sampleIdentity ?? sampleNumericClaimIdentity;
   for (const relativePath of [...deps.listMarkdownFiles(corpusRoot)].sort()) {
     const descriptor = descriptorForPath(relativePath, descriptors);
     if (!descriptor) continue;
@@ -426,11 +432,14 @@ export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): Swe
         relativePath,
         claim,
         provenanceDistance: match?.distance ?? null,
-        identity: sampleNumericClaimIdentity(relativePath, claim.line, claim.normalizedText),
+        identity: sampleIdentity(relativePath, claim.line, claim.normalizedText),
       });
     }
   }
+  return observations;
+}
 
+function groupSweepObservations(observations: readonly SweepObservation[]): Map<string, SweepObservation[]> {
   const grouped = new Map<string, SweepObservation[]>();
   for (const observation of observations) {
     const key = `${observation.descriptor.artifactKind}\0${observation.claim.claimClass}`;
@@ -438,44 +447,55 @@ export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): Swe
     group.push(observation);
     grouped.set(key, group);
   }
+  return grouped;
+}
 
+function sameSweepTuple(left: SweepObservation, right: SweepObservation): boolean {
+  return (
+    left.relativePath === right.relativePath &&
+    left.claim.line === right.claim.line &&
+    left.claim.normalizedText === right.claim.normalizedText
+  );
+}
+
+function labeledSweepSamples(group: readonly SweepObservation[], deps: SweepDeps): SweepLabeledSample[] {
+  const uniqueSamples = new Map<string, SweepObservation>();
+  for (const observation of [...group].sort((left, right) => left.identity.localeCompare(right.identity))) {
+    const previous = uniqueSamples.get(observation.identity);
+    if (previous && !sameSweepTuple(previous, observation)) throw new Error("sample-identity-collision");
+    if (!previous) uniqueSamples.set(observation.identity, observation);
+  }
+  const selected = [...uniqueSamples.values()]
+    .filter((observation) => deps.labels.has(observation.identity))
+    .slice(0, 50);
+  return selected.flatMap((observation): SweepLabeledSample[] => {
+    const label = deps.labels.get(observation.identity);
+    if (!label) return [];
+    return [
+      {
+        identity: observation.identity,
+        relativePath: observation.relativePath,
+        line: observation.claim.line,
+        normalizedText: observation.claim.normalizedText,
+        meaningfulNumericClaim: label.meaningfulNumericClaim,
+        validProvenanceNotMissed: label.validProvenanceNotMissed,
+        reason: label.reason,
+        labelerRole: "amadeus-quality-agent",
+        provenanceDistance: observation.provenanceDistance,
+      },
+    ];
+  });
+}
+
+function classifySweepEvidence(
+  grouped: ReadonlyMap<string, readonly SweepObservation[]>,
+  deps: SweepDeps,
+): { evidence: NumericProvenanceClassificationEvidence[]; samples: SweepLabeledSample[] } {
   const evidence: NumericProvenanceClassificationEvidence[] = [];
   const samples: SweepLabeledSample[] = [];
   for (const [key, group] of [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right))) {
     const [artifactKind, claimClass] = key.split("\0") as [string, NumericClaimClass];
-    const uniqueSamples = new Map<string, SweepObservation>();
-    for (const observation of [...group].sort((left, right) => left.identity.localeCompare(right.identity))) {
-      const previous = uniqueSamples.get(observation.identity);
-      if (
-        previous &&
-        (previous.relativePath !== observation.relativePath ||
-          previous.claim.line !== observation.claim.line ||
-          previous.claim.normalizedText !== observation.claim.normalizedText)
-      ) {
-        throw new Error("sample-identity-collision");
-      }
-      if (!previous) uniqueSamples.set(observation.identity, observation);
-    }
-    const selected = [...uniqueSamples.values()]
-      .filter((observation) => deps.labels.has(observation.identity))
-      .slice(0, 50);
-    const labeled = selected.flatMap((observation): SweepLabeledSample[] => {
-      const label = deps.labels.get(observation.identity);
-      if (!label) return [];
-      return [
-        {
-          identity: observation.identity,
-          relativePath: observation.relativePath,
-          line: observation.claim.line,
-          normalizedText: observation.claim.normalizedText,
-          meaningfulNumericClaim: label.meaningfulNumericClaim,
-          validProvenanceNotMissed: label.validProvenanceNotMissed,
-          reason: label.reason,
-          labelerRole: "amadeus-quality-agent",
-          provenanceDistance: observation.provenanceDistance,
-        },
-      ];
-    });
+    const labeled = labeledSweepSamples(group, deps);
     samples.push(...labeled);
     evidence.push(
       classifyNumericProvenanceEvidence({
@@ -491,10 +511,24 @@ export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): Swe
       }),
     );
   }
+  return { evidence, samples };
+}
 
-  if ((deps.requireEnforcement ?? true) && !evidence.some((row) => row.mode === "enforcement")) {
-    throw new Error("no-enforcement-group");
-  }
+function compareNumericProvenancePolicies(
+  left: NumericProvenancePolicy,
+  right: NumericProvenancePolicy,
+): number {
+  return (
+    left.stageSlug.localeCompare(right.stageSlug) ||
+    left.recordRelativeOutputPattern.localeCompare(right.recordRelativeOutputPattern) ||
+    left.claimClass.localeCompare(right.claimClass)
+  );
+}
+
+function generatedPolicies(
+  evidence: readonly NumericProvenanceClassificationEvidence[],
+  descriptors: readonly SweepArtifactDescriptor[],
+): { policies: NumericProvenancePolicy[]; wiredStages: string[] } {
   const allPolicies: NumericProvenancePolicy[] = [];
   for (const row of evidence) {
     for (const descriptor of descriptors) {
@@ -516,12 +550,20 @@ export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): Swe
     ),
   ].sort();
   const policies = allPolicies.filter((policy) => wiredStages.includes(policy.stageSlug));
-  policies.sort(
-    (left, right) =>
-      left.stageSlug.localeCompare(right.stageSlug) ||
-      left.recordRelativeOutputPattern.localeCompare(right.recordRelativeOutputPattern) ||
-      left.claimClass.localeCompare(right.claimClass),
-  );
+  policies.sort(compareNumericProvenancePolicies);
+  return { policies, wiredStages };
+}
+
+export function sweepNumericProvenance(corpusRoot: string, deps: SweepDeps): SweepReport {
+  const descriptors = indexSweepArtifacts(deps.indexInput);
+  const observations = observeSweepCorpus(corpusRoot, deps, descriptors);
+  const grouped = groupSweepObservations(observations);
+  const { evidence, samples } = classifySweepEvidence(grouped, deps);
+
+  if ((deps.requireEnforcement ?? true) && !evidence.some((row) => row.mode === "enforcement")) {
+    throw new Error("no-enforcement-group");
+  }
+  const { policies, wiredStages } = generatedPolicies(evidence, descriptors);
   const authoritySweepDigest = createHash("sha256")
     .update(canonicalJson({ snapshot: deps.indexInput.snapshot, descriptors, samples, evidence, policies, wiredStages }))
     .digest("hex");
@@ -821,20 +863,33 @@ function isWithin(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}/`);
 }
 
-function acceptedRelativeLink(outputPath: string, rawTarget: string, deps: EvaluationDeps): string | undefined {
+function relativeTarget(rawTarget: string): string | undefined {
   const withoutFragment = rawTarget.split("#", 1)[0]!;
-  if (withoutFragment === "" || /^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/|\/)/.test(withoutFragment)) {
-    return undefined;
-  }
+  if (withoutFragment === "") return undefined;
+  if (/^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/|\/)/.test(withoutFragment)) return undefined;
+  return withoutFragment;
+}
+
+function resolvedRepositoryLink(outputPath: string, target: string): string | undefined {
   const output = outputPath.replace(/\\/g, "/");
   const segments = output.split("/");
   const amadeusIndex = segments.lastIndexOf("amadeus");
   if (amadeusIndex < 0) return undefined;
   const repositoryPrefix = segments.slice(0, amadeusIndex).join("/") || "/";
-  const resolved = normalizePosixPath(`${output.slice(0, output.lastIndexOf("/"))}/${withoutFragment}`);
+  const resolved = normalizePosixPath(`${output.slice(0, output.lastIndexOf("/"))}/${target}`);
   const repositoryRoot = repositoryPrefix === "/" ? "/" : repositoryPrefix;
   if (!isWithin(resolved, repositoryRoot)) return undefined;
+  return resolved;
+}
 
+interface RelativeLinkIntentContext {
+  readonly workspacePrefix: string;
+  readonly space: string;
+  readonly recordRoot: string;
+}
+
+function relativeLinkIntentContext(outputPath: string): RelativeLinkIntentContext | undefined {
+  const output = outputPath.replace(/\\/g, "/");
   const marker = "/amadeus/spaces/";
   const markerIndex = output.indexOf(marker);
   if (markerIndex < 0) return undefined;
@@ -846,7 +901,11 @@ function acceptedRelativeLink(outputPath: string, rawTarget: string, deps: Evalu
   if (intentIndex < 0) return undefined;
   const intentTail = output.slice(intentIndex + intentMarker.length);
   const intentRecord = intentTail.split("/", 1)[0]!;
-  const recordRoot = `${workspacePrefix}${intentMarker}${intentRecord}`;
+  return { workspacePrefix, space, recordRoot: `${workspacePrefix}${intentMarker}${intentRecord}` };
+}
+
+function allowedMeasurementLink(resolved: string, context: RelativeLinkIntentContext): boolean {
+  const { workspacePrefix, space, recordRoot } = context;
   const recordRelative = isWithin(resolved, recordRoot) ? resolved.slice(recordRoot.length + 1) : undefined;
   const basename = resolved.split("/").at(-1) ?? "";
   const allowedRecord =
@@ -858,7 +917,16 @@ function acceptedRelativeLink(outputPath: string, rawTarget: string, deps: Evalu
   const allowedCodekb =
     isWithin(resolved, codekbRoot.slice(0, -1)) &&
     /^.+\/re-scans\/[^/]+\.md$/.test(resolved.slice(codekbRoot.length));
-  if (!allowedRecord && !allowedCodekb) return undefined;
+  return allowedRecord || allowedCodekb;
+}
+
+function acceptedRelativeLink(outputPath: string, rawTarget: string, deps: EvaluationDeps): string | undefined {
+  const target = relativeTarget(rawTarget);
+  if (!target) return undefined;
+  const resolved = resolvedRepositoryLink(outputPath, target);
+  if (!resolved) return undefined;
+  const context = relativeLinkIntentContext(outputPath);
+  if (!context || !allowedMeasurementLink(resolved, context)) return undefined;
   if (!deps.fileExists(resolved) || !deps.isRegularFile(resolved)) return undefined;
   return resolved;
 }
@@ -973,15 +1041,16 @@ export function resolveProvenance(
 export function evaluateNumericProvenance(
   input: EvaluationInput,
   deps: EvaluationDeps,
+  mapping: NumericProvenanceMapping = GENERATED_NUMERIC_PROVENANCE_MAPPING,
 ): NumericProvenanceVerdict {
   if (input.content.kind === "missing") return skipped("file-not-found");
   if (input.content.kind === "unavailable") return skipped("not-applicable");
   const context = artifactContext(input);
   if (!context || context.stageSlug === "") return skipped("not-applicable");
-  if (context.recordDate < GENERATED_NUMERIC_PROVENANCE_MAPPING.cutoffYymmdd) return skipped("pre-cutoff");
+  if (context.recordDate < mapping.cutoffYymmdd) return skipped("pre-cutoff");
   const exclusion = mechanicallyExcluded(context);
   if (exclusion) return skipped(exclusion);
-  const classification = classifyArtifact(context, GENERATED_NUMERIC_PROVENANCE_MAPPING);
+  const classification = classifyArtifact(context, mapping);
   if (classification.kind === "skipped") return skipped(classification.reason);
 
   const markdownIndex = indexMarkdown(input.content.markdown);
@@ -1051,13 +1120,17 @@ interface Flags {
   outputPath?: string;
 }
 
+function invalidCliArgument(message: string): never {
+  throw new Error(message);
+}
+
 function parseFlags(argv: string[]): Flags {
   const flags: Flags = {};
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--stage") {
-      flags.stage = requireFlagValue(argv, ++index, "--stage", fail);
+      flags.stage = requireFlagValue(argv, ++index, "--stage", invalidCliArgument);
     } else if (argv[index] === "--output-path") {
-      flags.outputPath = requireFlagValue(argv, ++index, "--output-path", fail);
+      flags.outputPath = requireFlagValue(argv, ++index, "--output-path", invalidCliArgument);
     }
   }
   return flags;
@@ -1080,44 +1153,73 @@ function sameObject(
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-function readArtifact(
+interface NumericProvenanceFileStat {
+  readonly dev: number | bigint;
+  readonly ino: number | bigint;
+  readonly isFile: () => boolean;
+}
+
+export interface NumericProvenanceArtifactFileSystem {
+  readonly noFollow: number | undefined;
+  readonly exists: (path: string) => boolean;
+  readonly realpath: (path: string) => string;
+  readonly stat: (path: string) => NumericProvenanceFileStat;
+  readonly open: (path: string, flags: number) => number;
+  readonly fstat: (descriptor: number) => NumericProvenanceFileStat;
+  readonly read: (descriptor: number) => string;
+  readonly close: (descriptor: number) => void;
+}
+
+const NODE_ARTIFACT_FILE_SYSTEM: NumericProvenanceArtifactFileSystem = {
+  noFollow: fsConstants.O_NOFOLLOW as number | undefined,
+  exists: existsSync,
+  realpath: (path) => realpathSync(path),
+  stat: (path) => statSync(path, { bigint: true }),
+  open: openSync,
+  fstat: (descriptor) => fstatSync(descriptor, { bigint: true }),
+  read: (descriptor) => readFileSync(descriptor, "utf8"),
+  close: closeSync,
+};
+
+export function readNumericProvenanceArtifact(
   requestedPath: string,
   projectRoot: string,
+  fileSystem: NumericProvenanceArtifactFileSystem = NODE_ARTIFACT_FILE_SYSTEM,
 ): EvaluationInput["content"] {
-  const root = realpathSync(projectRoot);
+  const root = fileSystem.realpath(projectRoot);
   const requested = resolve(root, requestedPath);
   if (!isContainedPath(requested, root)) return { kind: "unavailable", reason: "outside-root" };
-  if (!existsSync(requested)) return { kind: "missing" };
+  if (!fileSystem.exists(requested)) return { kind: "missing" };
 
   let descriptor: number | undefined;
   try {
-    const canonical = realpathSync(requested);
+    const canonical = fileSystem.realpath(requested);
     if (!isContainedPath(canonical, root)) return { kind: "unavailable", reason: "outside-root" };
-    const before = statSync(canonical, { bigint: true });
+    const before = fileSystem.stat(canonical);
     if (!before.isFile()) return { kind: "unavailable", reason: "not-regular-file" };
-    const noFollow = fsConstants.O_NOFOLLOW as number | undefined;
+    const noFollow = fileSystem.noFollow;
     if (typeof noFollow !== "number") throw new Error("O_NOFOLLOW is unavailable");
-    descriptor = openSync(canonical, fsConstants.O_RDONLY | noFollow);
-    const opened = fstatSync(descriptor, { bigint: true });
+    descriptor = fileSystem.open(canonical, fsConstants.O_RDONLY | noFollow);
+    const opened = fileSystem.fstat(descriptor);
     if (!opened.isFile() || !sameObject(before, opened)) {
       return { kind: "unavailable", reason: "path-race" };
     }
-    const afterCanonical = realpathSync(requested);
-    const after = statSync(afterCanonical, { bigint: true });
+    const afterCanonical = fileSystem.realpath(requested);
+    const after = fileSystem.stat(afterCanonical);
     if (!isContainedPath(afterCanonical, root) || !sameObject(opened, after)) {
       return { kind: "unavailable", reason: "path-race" };
     }
-    return { kind: "present", markdown: readFileSync(descriptor, "utf8") };
+    return { kind: "present", markdown: fileSystem.read(descriptor) };
   } catch (error) {
     if (errorCode(error) === "ENOENT") return { kind: "missing" };
     if (errorCode(error) === "ELOOP") return { kind: "unavailable", reason: "path-race" };
     throw error;
   } finally {
-    if (descriptor !== undefined) closeSync(descriptor);
+    if (descriptor !== undefined) fileSystem.close(descriptor);
   }
 }
 
-function productionEvaluationDeps(projectRoot: string): EvaluationDeps {
+export function productionNumericProvenanceEvaluationDeps(projectRoot: string): EvaluationDeps {
   const canonicalRoot = realpathSync(projectRoot);
   const facts = new Map<string, { exists: boolean; regular: boolean }>();
   function fact(path: string): { exists: boolean; regular: boolean } {
@@ -1145,28 +1247,66 @@ function productionEvaluationDeps(projectRoot: string): EvaluationDeps {
   };
 }
 
-export function fail(message: string): never {
-  process.stderr.write(`amadeus-sensor-numeric-provenance: ${message}\n`);
-  process.exit(1);
+export interface NumericProvenanceCliDeps {
+  readonly cwd: () => string;
+  readonly mapping: NumericProvenanceMapping;
+  readonly readArtifact: (requestedPath: string, projectRoot: string) => EvaluationInput["content"];
+  readonly evaluationDeps: (projectRoot: string) => EvaluationDeps;
 }
 
-export function main(argv: string[] = process.argv.slice(2)): void {
+export interface NumericProvenanceCliProcess {
+  readonly stdout: (text: string) => void;
+  readonly stderr: (text: string) => void;
+  readonly exit: (code: number) => never;
+}
+
+const PRODUCTION_CLI_DEPS: NumericProvenanceCliDeps = {
+  cwd: () => process.cwd(),
+  mapping: GENERATED_NUMERIC_PROVENANCE_MAPPING,
+  readArtifact: readNumericProvenanceArtifact,
+  evaluationDeps: productionNumericProvenanceEvaluationDeps,
+};
+
+const PRODUCTION_CLI_PROCESS: NumericProvenanceCliProcess = {
+  stdout: (text) => process.stdout.write(text),
+  stderr: (text) => process.stderr.write(text),
+  exit: (code) => process.exit(code),
+};
+
+export function runNumericProvenanceCli(
+  argv: string[],
+  deps: NumericProvenanceCliDeps = PRODUCTION_CLI_DEPS,
+): string {
   const flags = parseFlags(argv);
-  if (!flags.stage) fail("--stage is required");
-  if (!flags.outputPath) fail("--output-path is required");
+  if (!flags.stage) throw new Error("--stage is required");
+  if (!flags.outputPath) throw new Error("--output-path is required");
+  validateGeneratedMapping(deps.mapping);
+  const projectRoot = deps.cwd();
+  const content = deps.readArtifact(flags.outputPath, projectRoot);
+  const verdict = evaluateNumericProvenance(
+    { stage: flags.stage, outputPath: resolve(projectRoot, flags.outputPath), content },
+    deps.evaluationDeps(projectRoot),
+    deps.mapping,
+  );
+  return `${JSON.stringify(verdict)}\n`;
+}
+
+export function fail(message: string, cliProcess: NumericProvenanceCliProcess = PRODUCTION_CLI_PROCESS): never {
+  cliProcess.stderr(`amadeus-sensor-numeric-provenance: ${message}\n`);
+  return cliProcess.exit(1);
+}
+
+export function main(
+  argv: string[] = process.argv.slice(2),
+  deps: NumericProvenanceCliDeps = PRODUCTION_CLI_DEPS,
+  cliProcess: NumericProvenanceCliProcess = PRODUCTION_CLI_PROCESS,
+): void {
   try {
-    validateGeneratedMapping(GENERATED_NUMERIC_PROVENANCE_MAPPING);
-    const projectRoot = process.cwd();
-    const content = readArtifact(flags.outputPath, projectRoot);
-    const verdict = evaluateNumericProvenance(
-      { stage: flags.stage, outputPath: resolve(projectRoot, flags.outputPath), content },
-      productionEvaluationDeps(projectRoot),
-    );
-    process.stdout.write(`${JSON.stringify(verdict)}\n`);
-    process.exit(0);
+    cliProcess.stdout(runNumericProvenanceCli(argv, deps));
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error));
+    fail(error instanceof Error ? error.message : String(error), cliProcess);
   }
+  cliProcess.exit(0);
 }
 
 if (import.meta.main) main();

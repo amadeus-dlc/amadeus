@@ -4,14 +4,26 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  classifyArtifact,
   classifyNumericProvenanceEvidence,
   evaluateNumericProvenance,
   GENERATED_NUMERIC_PROVENANCE_MAPPING,
   indexSweepArtifacts,
+  main,
+  measureNearestProvenanceDistance,
+  type NumericProvenanceArtifactFileSystem,
+  type NumericProvenanceCliDeps,
+  type NumericProvenanceCliProcess,
+  type NumericProvenanceMapping,
+  productionNumericProvenanceEvaluationDeps,
+  readNumericProvenanceArtifact,
+  resolveProvenance,
+  runNumericProvenanceCli,
   sampleNumericClaimIdentity,
   scanNumericClaims,
   sweepNumericProvenance,
@@ -39,6 +51,10 @@ const DEPS = {
   fileExists: () => false,
   isRegularFile: () => false,
 };
+
+function mappingWith(overrides: Partial<NumericProvenanceMapping>): NumericProvenanceMapping {
+  return { ...GENERATED_NUMERIC_PROVENANCE_MAPPING, ...overrides };
+}
 
 describe("t532 numeric provenance evaluator", () => {
   test("maps a missing artifact to an observable fail-open verdict", () => {
@@ -178,6 +194,87 @@ describe("t532 numeric provenance evaluator", () => {
 
     expect(result.findings_count).toBe(0);
     expect({ existsCalls, regularCalls }).toEqual({ existsCalls: 1, regularCalls: 1 });
+  });
+
+  test("covers skip classifications and deterministically sorts same-line findings", () => {
+    const base = {
+      stage: "code-generation",
+      outputPath:
+        "/workspace/amadeus/spaces/default/intents/260810-fixture/construction/example/code-generation/code-summary.md",
+    } as const;
+    expect(evaluateNumericProvenance({ ...base, content: { kind: "unavailable", reason: "path-race" } }, DEPS).reason).toBe(
+      "not-applicable",
+    );
+    expect(
+      evaluateNumericProvenance(
+        { ...base, stage: "", content: { kind: "present", markdown: "10 files\n" } },
+        DEPS,
+      ).reason,
+    ).toBe("not-applicable");
+    expect(
+      evaluateNumericProvenance(
+        {
+          ...base,
+          outputPath:
+            "/workspace/amadeus/spaces/default/intents/260810-fixture/verification/results.md",
+          content: { kind: "present", markdown: "10 files\n" },
+        },
+        DEPS,
+      ).reason,
+    ).toBe("excluded");
+    expect(
+      evaluateNumericProvenance({ ...base, content: { kind: "present", markdown: "prose only\n" } }, DEPS).reason,
+    ).toBe("not-applicable");
+
+    const findings = evaluateNumericProvenance(
+      { ...base, content: { kind: "present", markdown: "10 files and 20 tests\n" } },
+      DEPS,
+    ).findings;
+    expect(findings.map((finding) => finding.column)).toEqual([...findings.map((finding) => finding.column)].sort((a, b) => a - b));
+  });
+
+  test("resolves measurement and SHA evidence while rejecting invalid links and bounded misses", () => {
+    const outputPath =
+      "/workspace/amadeus/spaces/default/intents/260810-fixture/construction/example/code-generation/code-summary.md";
+    const markdown = "10 files\nmeasurement ref 0123456789abcdef [external](https://example.com)\n";
+    const claim = scanNumericClaims(markdown)[0]!;
+    const context = { markdown, outputPath };
+
+    expect(measureNearestProvenanceDistance(claim, context, DEPS)).toMatchObject({
+      kind: "measurement-reference",
+      distance: 1,
+    });
+    expect(resolveProvenance(claim, context, DEPS, { kind: "bounded", window: 0 })).toBeUndefined();
+    expect(resolveProvenance(claim, context, DEPS, { kind: "full-structural-region" })).toMatchObject({
+      kind: "measurement-reference",
+    });
+  });
+
+  test("classifies lightweight custom policies without changing the generated mapping", () => {
+    const result = classifyArtifact(
+      {
+        recordDate: 260810,
+        recordRelativePath: "construction/u/code-generation/status.md",
+        basename: "status.md",
+        stageSlug: "code-generation",
+      },
+      mappingWith({
+        policies: [
+          {
+            stageSlug: "code-generation",
+            recordRelativeOutputPattern: "construction/*/code-generation/status.md",
+            producesKey: "status",
+            claimClass: "count",
+            mode: "measurement-only",
+            searchScope: { kind: "full-structural-region" },
+            evidenceId: "status/count",
+          },
+        ],
+        wiredStages: [],
+      }),
+    );
+
+    expect(result).toEqual({ kind: "skipped", reason: "lightweight-report" });
   });
 });
 
@@ -325,20 +422,21 @@ describe("t532 corpus sweep generator", () => {
         "construction/example/code-generation/code-summary.md";
       const markdown =
         index < 19
-          ? "`rg --files` found 10 files.\n"
+          ? "`rg --files` found 10 files at 12%.\n"
           : index === 19
-            ? "`rg --files`\ncontext\nfound 10 files.\n"
-            : "found 10 files.\n";
+            ? "`rg --files`\ncontext\nfound 10 files at 12%.\n"
+            : "found 10 files at 12%.\n";
       files.set(relativePath, markdown);
     }
     const labels = new Map<string, { meaningfulNumericClaim: true; validProvenanceNotMissed: true; reason: string }>();
     for (const [relativePath, markdown] of files) {
-      const claim = scanNumericClaims(markdown)[0]!;
-      labels.set(sampleNumericClaimIdentity(relativePath, claim.line, claim.normalizedText), {
-        meaningfulNumericClaim: true,
-        validProvenanceNotMissed: true,
-        reason: "Fixture claim and provenance classification reviewed.",
-      });
+      for (const claim of scanNumericClaims(markdown)) {
+        labels.set(sampleNumericClaimIdentity(relativePath, claim.line, claim.normalizedText), {
+          meaningfulNumericClaim: true,
+          validProvenanceNotMissed: true,
+          reason: "Fixture claim and provenance classification reviewed.",
+        });
+      }
     }
 
     const report = sweepNumericProvenance("/repo", {
@@ -364,15 +462,78 @@ describe("t532 corpus sweep generator", () => {
       evaluationDeps: DEPS,
     });
 
-    expect(report.evidence).toHaveLength(1);
-    expect(report.evidence[0]).toMatchObject({
+    expect(report.evidence).toHaveLength(2);
+    expect(report.evidence.find((row) => row.claimClass === "count")).toMatchObject({
       artifactKind: "code-summary",
       claimClass: "count",
       mode: "enforcement",
       searchScope: { kind: "bounded", window: 1 },
     });
     expect(report.mapping.wiredStages).toEqual(["code-generation"]);
-    expect(report.mapping.policies).toHaveLength(1);
+    expect(report.mapping.policies).toHaveLength(2);
+  });
+
+  test("scans codekb descriptors and fails closed when no evidence group is enforceable", () => {
+    const codekbPath = "amadeus/spaces/default/codekb/amadeus/re-scans/260810-fixture.md";
+    const deps = {
+      indexInput: {
+        snapshot: {
+          observedSha: "1111111",
+          graphRevision: "runtime-graph-v1",
+          predicateRevision: "fr-pred-v1" as const,
+          corpusContentDigest: "a".repeat(64),
+        },
+        declaredProduces: [],
+        codekbRescanPaths: [codekbPath],
+      },
+      listMarkdownFiles: () => [codekbPath, "README.md"],
+      readFile: () => "found 10 files\n",
+      labels: new Map(),
+      evaluationDeps: DEPS,
+    };
+
+    expect(() => sweepNumericProvenance("/repo", deps)).toThrow("no-enforcement-group");
+    const report = sweepNumericProvenance("/repo", { ...deps, requireEnforcement: false });
+    expect(report.artifactIndex.output.descriptors[0]).toMatchObject({ source: "codekb-re-scan" });
+    expect(report.mapping.policies).toEqual([]);
+  });
+
+  test("fails closed when an injected identity collides across distinct corpus tuples", () => {
+    const files = new Map([
+      [
+        "amadeus/spaces/default/intents/260810-a/construction/u/code-generation/code-summary.md",
+        "10 files\n",
+      ],
+      [
+        "amadeus/spaces/default/intents/260810-b/construction/u/code-generation/code-summary.md",
+        "20 files\n",
+      ],
+    ]);
+    expect(() =>
+      sweepNumericProvenance("/repo", {
+        indexInput: {
+          snapshot: {
+            observedSha: "1111111",
+            graphRevision: "runtime-graph-v1",
+            predicateRevision: "fr-pred-v1",
+            corpusContentDigest: "a".repeat(64),
+          },
+          declaredProduces: [
+            {
+              stageSlug: "code-generation",
+              recordRelativeOutputPattern: "construction/*/code-generation/code-summary.md",
+              producesKey: "code-summary",
+            },
+          ],
+          codekbRescanPaths: [],
+        },
+        listMarkdownFiles: () => [...files.keys()],
+        readFile: (path) => files.get(path)!,
+        labels: new Map([["collision", { meaningfulNumericClaim: true, validProvenanceNotMissed: true, reason: "reviewed" }]]),
+        evaluationDeps: DEPS,
+        sampleIdentity: () => "collision",
+      }),
+    ).toThrow("sample-identity-collision");
   });
 });
 
@@ -417,14 +578,236 @@ describe("t532 generated authority projection", () => {
 
   test("fails closed for corrupt or conflicting generated mappings", () => {
     expect(() => validateGeneratedMapping(GENERATED_NUMERIC_PROVENANCE_MAPPING)).not.toThrow();
-    const conflict = {
-      ...GENERATED_NUMERIC_PROVENANCE_MAPPING,
+    const conflict = mappingWith({
       policies: [
         ...GENERATED_NUMERIC_PROVENANCE_MAPPING.policies,
         GENERATED_NUMERIC_PROVENANCE_MAPPING.policies[0]!,
       ],
-    };
+    });
     expect(() => validateGeneratedMapping(conflict)).toThrow("numeric-provenance-policy-conflict");
+    expect(() => validateGeneratedMapping(mappingWith({ schemaRevision: 2 as 1 }))).toThrow(
+      "numeric-provenance-mapping-schema-mismatch",
+    );
+    expect(() =>
+      validateGeneratedMapping(mappingWith({ predicateRevision: "other" as "fr-pred-v1" })),
+    ).toThrow("numeric-provenance-predicate-revision-mismatch");
+    expect(() => validateGeneratedMapping(mappingWith({ authorityDigest: "bad" }))).toThrow(
+      "numeric-provenance-authority-digest-invalid",
+    );
+    expect(() => validateGeneratedMapping(mappingWith({ cutoffYymmdd: -1 }))).toThrow(
+      "numeric-provenance-cutoff-invalid",
+    );
+    expect(() => validateGeneratedMapping(mappingWith({ policies: [] }))).toThrow(
+      "numeric-provenance-policies-empty",
+    );
+    expect(() =>
+      validateGeneratedMapping(
+        mappingWith({
+          policies: [
+            {
+              ...GENERATED_NUMERIC_PROVENANCE_MAPPING.policies[0]!,
+              searchScope: { kind: "bounded", window: -1 },
+            },
+          ],
+          wiredStages: [],
+        }),
+      ),
+    ).toThrow("numeric-provenance-window-invalid");
+    expect(() => validateGeneratedMapping(mappingWith({ wiredStages: [] }))).toThrow(
+      "numeric-provenance-wired-stages-mismatch",
+    );
+  });
+});
+
+describe("t532 safe artifact read and production probes", () => {
+  const fileStat = (dev = 1, ino = 1, file = true) => ({ dev, ino, isFile: () => file });
+  const fakeFileSystem = (
+    overrides: Partial<NumericProvenanceArtifactFileSystem> = {},
+  ): NumericProvenanceArtifactFileSystem => ({
+    noFollow: 1,
+    exists: () => true,
+    realpath: (path) => path,
+    stat: () => fileStat(),
+    open: () => 7,
+    fstat: () => fileStat(),
+    read: () => "artifact body",
+    close: () => undefined,
+    ...overrides,
+  });
+
+  test("reads one verified descriptor and classifies lexical and filesystem refusals", () => {
+    const closed: number[] = [];
+    const present = readNumericProvenanceArtifact(
+      "artifact.md",
+      "/repo",
+      fakeFileSystem({ close: (descriptor) => closed.push(descriptor) }),
+    );
+    expect(present).toEqual({ kind: "present", markdown: "artifact body" });
+    expect(closed).toEqual([7]);
+    expect(readNumericProvenanceArtifact("../escape.md", "/repo", fakeFileSystem())).toEqual({
+      kind: "unavailable",
+      reason: "outside-root",
+    });
+    expect(
+      readNumericProvenanceArtifact("missing.md", "/repo", fakeFileSystem({ exists: () => false })),
+    ).toEqual({ kind: "missing" });
+    expect(
+      readNumericProvenanceArtifact(
+        "artifact.md",
+        "/repo",
+        fakeFileSystem({ realpath: (path) => (path === "/repo/artifact.md" ? "/outside/artifact.md" : path) }),
+      ),
+    ).toEqual({ kind: "unavailable", reason: "outside-root" });
+    expect(
+      readNumericProvenanceArtifact(
+        "artifact.md",
+        "/repo",
+        fakeFileSystem({ stat: () => fileStat(1, 1, false) }),
+      ),
+    ).toEqual({ kind: "unavailable", reason: "not-regular-file" });
+    expect(() =>
+      readNumericProvenanceArtifact("artifact.md", "/repo", fakeFileSystem({ noFollow: undefined })),
+    ).toThrow("O_NOFOLLOW is unavailable");
+  });
+
+  test("detects descriptor races, maps expected errors, and closes every opened descriptor", () => {
+    const closed: number[] = [];
+    const openedNonFile = fakeFileSystem({
+      fstat: () => fileStat(1, 1, false),
+      close: (descriptor) => closed.push(descriptor),
+    });
+    expect(readNumericProvenanceArtifact("artifact.md", "/repo", openedNonFile)).toEqual({
+      kind: "unavailable",
+      reason: "path-race",
+    });
+    const openedMismatch = fakeFileSystem({ fstat: () => fileStat(2, 1) });
+    expect(readNumericProvenanceArtifact("artifact.md", "/repo", openedMismatch)).toEqual({
+      kind: "unavailable",
+      reason: "path-race",
+    });
+    let statCalls = 0;
+    const changedAfterOpen = fakeFileSystem({
+      stat: () => (++statCalls === 1 ? fileStat() : fileStat(2, 2)),
+    });
+    expect(readNumericProvenanceArtifact("artifact.md", "/repo", changedAfterOpen)).toEqual({
+      kind: "unavailable",
+      reason: "path-race",
+    });
+    expect(closed).toEqual([7]);
+
+    const throwsCode = (code: string) => {
+      const error = new Error(code) as Error & { code: string };
+      error.code = code;
+      return error;
+    };
+    for (const [code, expected] of [
+      ["ENOENT", { kind: "missing" }],
+      ["ELOOP", { kind: "unavailable", reason: "path-race" }],
+    ] as const) {
+      let calls = 0;
+      const fileSystem = fakeFileSystem({
+        realpath: (path) => {
+          if (++calls === 1) return path;
+          throw throwsCode(code);
+        },
+      });
+      expect(readNumericProvenanceArtifact("artifact.md", "/repo", fileSystem)).toEqual(expected);
+    }
+    expect(() =>
+      readNumericProvenanceArtifact(
+        "artifact.md",
+        "/repo",
+        fakeFileSystem({
+          realpath: (path) => {
+            if (path === "/repo") return path;
+            throw "unexpected-read-failure";
+          },
+        }),
+      ),
+    ).toThrow("unexpected-read-failure");
+  });
+
+  test("uses the real filesystem adapters and memoizes production probes", () => {
+    const root = mkdtempSync(join(tmpdir(), "numeric-provenance-read-"));
+    try {
+      writeFileSync(join(root, "artifact.md"), "real body", "utf8");
+      mkdirSync(join(root, "directory"));
+      expect(readNumericProvenanceArtifact("artifact.md", root)).toEqual({
+        kind: "present",
+        markdown: "real body",
+      });
+      const deps = productionNumericProvenanceEvaluationDeps(realpathSync(root));
+      expect(deps.fileExists("artifact.md")).toBe(true);
+      expect(deps.isRegularFile("artifact.md")).toBe(true);
+      expect(deps.fileExists("directory")).toBe(true);
+      expect(deps.isRegularFile("directory")).toBe(false);
+      expect(deps.fileExists("missing.md")).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("t532 in-process CLI adapter", () => {
+  const outputPath =
+    "amadeus/spaces/default/intents/260810-fixture/construction/u/code-generation/code-summary.md";
+  const cliDeps = (overrides: Partial<NumericProvenanceCliDeps> = {}): NumericProvenanceCliDeps => ({
+    cwd: () => "/repo",
+    mapping: GENERATED_NUMERIC_PROVENANCE_MAPPING,
+    readArtifact: () => ({ kind: "present", markdown: "`rg --files` found 10 files\n" }),
+    evaluationDeps: () => DEPS,
+    ...overrides,
+  });
+
+  test("renders one success JSON line and fails closed during argument or mapping validation", () => {
+    const rendered = runNumericProvenanceCli(["--stage", "code-generation", "--output-path", outputPath], cliDeps());
+    expect(rendered.endsWith("\n")).toBe(true);
+    expect(JSON.parse(rendered)).toMatchObject({ pass: true, skipped: false, findings_count: 0 });
+    expect(() => runNumericProvenanceCli([], cliDeps())).toThrow("--stage is required");
+    expect(() => runNumericProvenanceCli(["--stage"], cliDeps())).toThrow(
+      "--stage expects a value, got end of arguments.",
+    );
+    expect(() => runNumericProvenanceCli(["--stage", "code-generation"], cliDeps())).toThrow(
+      "--output-path is required",
+    );
+    expect(() =>
+      runNumericProvenanceCli(
+        ["--stage", "code-generation", "--output-path", outputPath],
+        cliDeps({ mapping: mappingWith({ wiredStages: [] }) }),
+      ),
+    ).toThrow("numeric-provenance-wired-stages-mismatch");
+  });
+
+  test("main writes success or error through the injected process and preserves exit codes", () => {
+    const runMain = (deps: NumericProvenanceCliDeps) => {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      let exitCode: number | undefined;
+      const cliProcess: NumericProvenanceCliProcess = {
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text),
+        exit: (code): never => {
+          exitCode = code;
+          throw new Error(`exit-${code}`);
+        },
+      };
+      expect(() => main(["--stage", "code-generation", "--output-path", outputPath], deps, cliProcess)).toThrow(
+        /^exit-/,
+      );
+      return { stdout, stderr, exitCode };
+    };
+
+    expect(runMain(cliDeps())).toMatchObject({ stderr: [], exitCode: 0 });
+    const failed = runMain(
+      cliDeps({
+        readArtifact: () => {
+          throw "injected-read-failure";
+        },
+      }),
+    );
+    expect(failed.stdout).toEqual([]);
+    expect(failed.stderr.join("")).toContain("amadeus-sensor-numeric-provenance: injected-read-failure");
+    expect(failed.exitCode).toBe(1);
   });
 });
 
