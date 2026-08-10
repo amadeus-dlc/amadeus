@@ -73,6 +73,7 @@ const USAGE = [
   "  applicability receipt --declaration <path> --identity <digest> --approval <path|none>",
   "                        [--model-map <path>] [--store <dir>] [--audit-dir <dir>]",
   "                        [--predecessor <root|digest>] [--generated-at <iso>] [--generated-by <name>]",
+  "                        [--persist true]",
   "  applicability series --subjects <id,id,...>",
   "  hold --identity <digest> --series <digest> [--model-map <path>] [--store <dir>]",
   "  advisory hold [--subjects-file <path>] [--model-map <path>] [--store <dir>]",
@@ -373,30 +374,88 @@ function readApproval(flags: Record<string, string>): HumanApprovalRef | null | 
   return { shard, timestamp, eventIdentity };
 }
 
+// The two routes that end the workflow carry no authoring work, so the stage
+// refuses them (stages/tla-authoring.md) and the receipt has to be issued here
+// instead. Persisting it is what gives FR-005 an owner: a stored
+// terminal-route-receipt is the only thing the hold table accepts as the
+// release for a terminal route.
+const TERMINAL_ROUTES: ReadonlySet<string> = new Set(["impl-only", "non-target"]);
+
+// The receipt and its approval are the two parts a terminal-route bundle
+// carries (tla-evidence.ts TERMINAL_RECEIPTS), so the store write needs nothing
+// the judge did not already produce.
+function persistTerminalReceipt(
+  context: JudgeContext,
+  receipt: Record<string, unknown>,
+  approval: HumanApprovalRef,
+  settings: ReceiptSettings,
+): Emitted {
+  const parts: EvidenceParts = {
+    kind: "terminal-route-receipt",
+    parts: { applicability: receipt, approval: approval as unknown as Record<string, unknown> },
+  };
+  const stored = EvidenceBundle.build(context.store, parts, settings.predecessor, {
+    subjectIdentity: context.input.subjectIdentity,
+    generatedAt: settings.generatedAt,
+    generatedBy: settings.generatedBy,
+  });
+  return stored.ok ? succeeded({ receipt, digest: stored.value.digest }) : failed(stored.error);
+}
+
+interface ReceiptSettings {
+  readonly persist: boolean;
+  readonly predecessor: PredecessorRef;
+  readonly auditDir: string;
+  readonly generatedAt: string;
+  readonly generatedBy: string;
+}
+
+// `--persist` is spelled with its value because the shared flag parser reads
+// `--name value` pairs only; a bare switch would break the argv into an odd
+// length and be refused as a usage error before it reached this verb.
+function receiptSettings(flags: Record<string, string>): ReceiptSettings | Emitted {
+  const persist = flags.persist === "true";
+  if (flags.persist !== undefined && !persist) return usageError("--persist takes the literal value true");
+  const predecessor = parsePredecessorFlag(flags.predecessor ?? "root");
+  if (predecessor === null) return usageError("--predecessor must be root or sha256:<hex64>");
+  return {
+    persist,
+    predecessor,
+    auditDir: flags["audit-dir"] ?? DEFAULT_AUDIT_DIR,
+    generatedAt: flags["generated-at"] ?? new Date().toISOString(),
+    generatedBy: flags["generated-by"] ?? "tla-authoring",
+  };
+}
+
 function applicabilityReceipt(flags: Record<string, string>): Emitted {
   const context = judgeContext(flags);
   if (isEmitted(context)) return context;
   const approval = readApproval(flags);
   if (approval !== null && isEmitted(approval)) return approval;
+  const settings = receiptSettings(flags);
+  if (isEmitted(settings)) return settings;
 
   const judged = ApplicabilityJudge.judge(context.input);
   if (!judged.ok) return failed(judged.error);
+  if (settings.persist && !TERMINAL_ROUTES.has(judged.value)) {
+    return failed({ kind: "not-a-terminal-route", route: judged.value });
+  }
 
-  const predecessorRaw = flags.predecessor ?? "root";
-  const predecessor = parsePredecessorFlag(predecessorRaw);
-  if (predecessor === null) return usageError("--predecessor must be root or sha256:<hex64>");
-
-  const auditDir = flags["audit-dir"] ?? DEFAULT_AUDIT_DIR;
   const built = ApplicabilityJudge.buildReceipt(judged.value, context.input, approval, {
-    judgedBy: flags["generated-by"] ?? "tla-authoring",
-    generatedAt: flags["generated-at"] ?? new Date().toISOString(),
-    predecessor,
+    judgedBy: settings.generatedBy,
+    generatedAt: settings.generatedAt,
+    predecessor: settings.predecessor,
     verifyApproval: (ref) => {
-      const shard = readTextFile(join(auditDir, ref.shard));
+      const shard = readTextFile(join(settings.auditDir, ref.shard));
       return shard.ok && verifyHumanApproval(shard.text, ref);
     },
   });
-  return built.ok ? succeeded({ receipt: built.value }) : failed(built.error);
+  if (!built.ok) return failed(built.error);
+  // buildReceipt already refused a terminal route without a verified approval,
+  // so reaching the store write means the approval is present and checked.
+  return settings.persist && approval !== null
+    ? persistTerminalReceipt(context, built.value as unknown as Record<string, unknown>, approval, settings)
+    : succeeded({ receipt: built.value });
 }
 
 function applicabilitySeries(flags: Record<string, string>): Emitted {
@@ -547,8 +606,9 @@ function repeatedFlags(argv: readonly string[]): Record<string, string[]> {
   const collected: Record<string, string[]> = Object.create(null);
   for (let index = 0; index < argv.length; index += 2) {
     const name = (argv[index] as string).slice(2);
-    const values = collected[name] ?? (collected[name] = []);
+    const values = collected[name] ?? [];
     values.push(argv[index + 1] as string);
+    collected[name] = values;
   }
   return collected;
 }

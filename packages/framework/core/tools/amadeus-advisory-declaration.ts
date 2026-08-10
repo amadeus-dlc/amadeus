@@ -76,6 +76,47 @@ function stringArray(value: unknown): readonly string[] | null {
     : null;
 }
 
+// Each optional block of a declaration parses on its own: absent is a valid
+// "no such side", present-but-broken is an `invalid` entry, and the two must
+// never collapse into each other (BR-U2-18).
+type ParsedField<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
+
+function parseFormalCheck(
+  entry: Record<string, unknown>,
+  index: number,
+  invalid: string[],
+): ParsedField<readonly string[] | null> {
+  const formalCheck = entry.formalCheck ?? null;
+  if (formalCheck === null) return { ok: true, value: null };
+  if (!isRecord(formalCheck)) {
+    invalid.push(`advisories[${index}].formalCheck must be an object or null`);
+    return { ok: false };
+  }
+  // argv arrays only: a declaration never carries a shell string, so nothing
+  // the manifest holds can be word-split or expanded (BR-U2-19).
+  const argv = stringArray(formalCheck.argv);
+  if (argv === null) {
+    invalid.push(`advisories[${index}].formalCheck.argv must be a non-empty string array`);
+    return { ok: false };
+  }
+  return { ok: true, value: argv };
+}
+
+function parseHandoff(
+  entry: Record<string, unknown>,
+  index: number,
+  invalid: string[],
+): ParsedField<string | null> {
+  const handoff = entry.handoff ?? null;
+  if (handoff === null) return { ok: true, value: null };
+  const named = isRecord(handoff) && typeof handoff.stage === "string" ? handoff.stage : "";
+  if (!STAGE_SLUG_RE.test(named)) {
+    invalid.push(`advisories[${index}].handoff.stage must be a stage slug`);
+    return { ok: false };
+  }
+  return { ok: true, value: named };
+}
+
 function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDeclaration | null {
   if (!isRecord(entry)) {
     invalid.push(`advisories[${index}] must be an object`);
@@ -98,25 +139,17 @@ function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDec
     invalid.push(`advisories[${index}].evaluator.argv must be a non-empty string array`);
     return null;
   }
-  const formalCheck = entry.formalCheck ?? null;
-  if (formalCheck !== null && !isRecord(formalCheck)) {
-    invalid.push(`advisories[${index}].formalCheck must be an object or null`);
-    return null;
-  }
-  const formalCheckArgv = formalCheck === null ? null : stringArray(formalCheck.argv);
-  if (formalCheck !== null && formalCheckArgv === null) {
-    invalid.push(`advisories[${index}].formalCheck.argv must be a non-empty string array`);
-    return null;
-  }
-  const handoff = entry.handoff ?? null;
-  const handoffStage = isRecord(handoff) && typeof handoff.stage === "string" && STAGE_SLUG_RE.test(handoff.stage)
-    ? handoff.stage
-    : null;
-  if (handoff !== null && handoffStage === null) {
-    invalid.push(`advisories[${index}].handoff.stage must be a stage slug`);
-    return null;
-  }
-  return { code: asDeclaredCode(code), checkpoints, evaluatorArgv, formalCheckArgv, handoffStage };
+  const formalCheck = parseFormalCheck(entry, index, invalid);
+  if (!formalCheck.ok) return null;
+  const handoff = parseHandoff(entry, index, invalid);
+  if (!handoff.ok) return null;
+  return {
+    code: asDeclaredCode(code),
+    checkpoints,
+    evaluatorArgv,
+    formalCheckArgv: formalCheck.value,
+    handoffStage: handoff.value,
+  };
 }
 
 /**
