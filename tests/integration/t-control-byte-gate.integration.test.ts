@@ -302,9 +302,12 @@ describe("tracked paths that are not valid UTF-8", () => {
       return true;
     } catch (err) {
       // macOS refuses to create a filename that is not valid UTF-8 (EILSEQ), so
-      // the defect cannot exist there at all. Linux — where CI runs — allows it.
-      // Assert the refusal rather than passing vacuously on some other error.
+      // the defect cannot exist there at all. Pinning BOTH the error code and
+      // the platform is what stops this from becoming a test that passes by
+      // never running: on Linux — where CI runs — a refusal is itself a failure,
+      // so a green Linux run proves the assertions below actually executed.
       expect((err as NodeJS.ErrnoException).code).toBe("EILSEQ");
+      expect(process.platform).toBe("darwin");
       return false;
     }
   }
