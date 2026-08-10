@@ -46,6 +46,7 @@
 // asserts the two counts equal AND both equal 5 (the .sh only asserted the
 // counts equal).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import {
   afterEach,
@@ -173,14 +174,14 @@ describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated 
     // worst case the last waits ~500ms. The .sh ceilinged at 10s to catch real
     // hangs while leaving headroom. Same ceiling here (in ms).
     expect(race.elapsedMs).toBeLessThan(10_000);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("all 5 BOLT_STARTED entries land (no lost writes) [.sh 2]", () => {
     // The .sh: grep -cE '^\*\*Event\*\*: BOLT_STARTED'. Count exactly 5 — a
     // lost write under the race would drop this below 5.
     const eventCount = auditRecords(race.body).filter((r) => r.event === "BOLT_STARTED").length;
     expect(eventCount).toBe(5);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("each of bolt-1..bolt-5 appears exactly once [.sh 3]", () => {
     // The .sh grepped presence per name; STRONGER here — assert EXACTLY one
@@ -191,7 +192,7 @@ describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated 
       const hits = records.filter((r) => r.fields?.["Bolt names"] === `bolt-${i}`).length;
       expect(hits).toBe(1);
     }
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("every BOLT_STARTED has a matching heading (no half-writes) [.sh 4]", () => {
     // The .sh compared #'**Event**: BOLT_STARTED' to #'## Bolt Started': any
@@ -204,7 +205,7 @@ describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated 
     expect(headingCount).toBe(eventCount);
     expect(eventCount).toBe(5);
     expect(headingCount).toBe(5);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("record count == fixture (3) + 5 bolts == 8 [.sh 5]", () => {
     // The .sh: expected = #'^---$' in audit-sample.md (3) + 5. In JSONL one
@@ -217,5 +218,5 @@ describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated 
     expect(fixtureRecords).toBe(3); // pin the fixture precondition the .sh relied on
     expect(actualRecords).toBe(fixtureRecords + 5);
     expect(actualRecords).toBe(8);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });

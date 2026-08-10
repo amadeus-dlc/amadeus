@@ -26,6 +26,7 @@
 // The commands here are read out of the shipped settings.json.example rather
 // than retyped, so the test cannot drift from what actually ships.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -94,7 +95,7 @@ function runWithoutProjectDirEnv(
     cwd,
     input: stdin,
     encoding: "utf-8",
-    timeout: 60_000,
+    timeout: scaleTestTime(60_000),
     env,
   });
   return { status: r.status ?? -1, stderr: r.stderr ?? "" };
@@ -165,7 +166,7 @@ describe("t296 (A) #1492 — hook launch lines survive an unset CLAUDE_PROJECT_D
         cwd: root,
         input: "",
         encoding: "utf-8",
-        timeout: 60_000,
+        timeout: scaleTestTime(60_000),
         env: { ...process.env, CLAUDE_PROJECT_DIR: root },
       });
 

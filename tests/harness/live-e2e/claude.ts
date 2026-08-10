@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -197,7 +198,7 @@ function probeClaudeCli(
     encoding: "utf8",
     env: base.value,
     maxBuffer: 64 * 1024,
-    timeout: 15_000,
+    timeout: scaleTestTime(15_000),
   });
   if (version.status !== 0) {
     return {
@@ -220,7 +221,7 @@ function probeClaudeCli(
     encoding: "utf8",
     env: base.value,
     maxBuffer: 1024 * 1024,
-    timeout: 15_000,
+    timeout: scaleTestTime(15_000),
   });
   const missingFlags = CLAUDE_REQUIRED_HELP_FLAGS.filter((flag) => !help.stdout.includes(flag));
   return {
@@ -351,7 +352,7 @@ export class ClaudePrintAdapter implements LiveAdapter {
         this.#activeProcess.kill();
         await Promise.race([
           this.#activeProcess.exited,
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Claude reap timed out")), 10_000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Claude reap timed out")), scaleTestTime(10_000))),
         ]);
       } catch (error) {
         failures.push(sanitizeText(String(error)));

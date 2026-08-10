@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import {
@@ -39,7 +40,7 @@ export function claudePrintLiveRequirementsSkipReason({
     encoding: "utf8",
     env: isolated.value,
     maxBuffer: 64 * 1024,
-    timeout: 15_000,
+    timeout: scaleTestTime(15_000),
   });
   const parsed = version.status === 0 ? claudeContext.parseVersion(version.stdout) : null;
   if (parsed === null || !claudeContext.versionAtLeast(parsed, minimumVersion)) {
@@ -49,7 +50,7 @@ export function claudePrintLiveRequirementsSkipReason({
     encoding: "utf8",
     env: isolated.value,
     maxBuffer: 1024 * 1024,
-    timeout: 15_000,
+    timeout: scaleTestTime(15_000),
   });
   if (help.status !== 0 || CLAUDE_REQUIRED_HELP_FLAGS.some((flag) => !help.stdout.includes(flag))) {
     return "claude print structured-output capability is unavailable";

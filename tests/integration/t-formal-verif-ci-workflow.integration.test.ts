@@ -76,6 +76,9 @@ const BASELINE_SHA = readFileSync(
 //   - Review-thread resolution gate: add the PR-only reusable-workflow job,
 //     make CI Success fail when unresolved review feedback remains, and ignore
 //     Cursor's author-scoped usage-limit notification.
+//   - 260810-test-time-factor: the test, plugin-conformance, coverage-head, and
+//     coverage-base jobs set TEST_TIME_FACTOR=2, runner-bypass tests resolve a
+//     scaled Bun timeout, and lint runs the timing-sink guard.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

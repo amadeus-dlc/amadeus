@@ -16,6 +16,7 @@
 // longer payload-shaped: upstream 300b640 CHANGELOG.md:28-31 and local U07 make
 // it a shell registration whose stage comes only from the audit tail.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -155,7 +156,7 @@ function runAdapter(
         CLAUDE_PROJECT_DIR: projectDir,
         USER_PROMPT: JSON.stringify(payload),
       },
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     },
   );
   return { stdout: r.stdout ?? "", code: r.status ?? -1 };
@@ -310,7 +311,7 @@ function runAdapterFrom(
       input: "stdin-must-not-be-read",
       encoding: "utf-8",
       env: { ...env, USER_PROMPT: JSON.stringify(payload) },
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     },
   );
   return { stdout: r.stdout ?? "", code: r.status ?? -1 };

@@ -3,6 +3,7 @@
 // covers: packages/framework/core/tools/amadeus-mirror-executor.ts
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { executeMirrorOperation } from "../../packages/framework/core/tools/amadeus-mirror-executor.ts";
 import { mirrorEventKey } from "../../packages/framework/core/tools/amadeus-mirror-policy.ts";
@@ -51,7 +52,7 @@ describe("t364 Project reconciliation freshness", () => {
     expect(first.acquire()).toBe(true);
     process.env.AMADEUS_LOCK_STALE_MS = "1";
     try {
-      await Bun.sleep(10);
+      await Bun.sleep(scaleTestTime(10));
       expect(second.acquire()).toBe(false);
     } finally {
       delete process.env.AMADEUS_LOCK_STALE_MS;

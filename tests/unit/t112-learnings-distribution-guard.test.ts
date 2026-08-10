@@ -46,6 +46,7 @@
 //    offending manifest path; test 3 also asserts exit 0 AND the two-write
 //    bind appended the sensor id to the seeded stage's frontmatter.)
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -225,7 +226,7 @@ describe("t112 amadeus-learnings persist — framework-distribution guard (migra
       "refusing to scaffold a sensor manifest under the framework distribution",
     );
     expect(r.out).toContain(join("dist", "claude", ".claude", "sensors", "amadeus-bad.md"));
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("refusal leaves no amadeus-bad.md scaffolded under the framework tree [.sh test 2]", () => {
     const fwroot = join(mkTempRoot(), "fw", "dist", "claude");
@@ -235,7 +236,7 @@ describe("t112 amadeus-learnings persist — framework-distribution guard (migra
     // no manifest scaffolded despite the refusal.
     expect(r.status).toBe(1);
     expect(existsSync(join(fwroot, ".claude", "sensors", "amadeus-bad.md"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Case 3 — ordinary PROJECT path (no dist/claude tail). Must PASS the guard,
@@ -270,5 +271,5 @@ describe("t112 amadeus-learnings persist — framework-distribution guard (migra
       "utf-8",
     );
     expect(stageFile).toMatch(/^[ \t]+-[ \t]+bad\s*$/m);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

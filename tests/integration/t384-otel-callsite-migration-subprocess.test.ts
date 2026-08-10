@@ -28,6 +28,7 @@
 // with an origin, and none has a compiled graph. A non-zero exit is a perfectly
 // good observation — what the migration owes is that the observation is a span.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -133,7 +134,7 @@ describe("amadeus-migrate: the git wrapper is a span", () => {
     const run = spawnSync(
       process.execPath,
       [MIGRATE_CLI, "--project-dir", proj, "--from", "aidlc", "--json"],
-      { cwd: proj, encoding: "utf-8", timeout: 60_000 }
+      { cwd: proj, encoding: "utf-8", timeout: scaleTestTime(60_000) }
     );
     // The inspection is expected to fail its preflight (the fixture is not a Git
     // clone); what must hold is that the child ran to completion rather than

@@ -78,6 +78,7 @@
 // cleaned in afterAll, and every chmod is restored to 0644 in a finally so a
 // failed assertion can't leave an unremovable read-only dir behind.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { auditRowsFrom } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
@@ -347,7 +348,7 @@ describe("t137 F2 — missing audit shard (ensureAuditFile recovers)", () => {
         true,
       );
     },
-    30000,
+    scaleTestTime(30000),
   );
 });
 

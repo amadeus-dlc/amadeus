@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
@@ -181,7 +182,7 @@ export class KiroTuiAdapter implements LiveAdapter {
       encoding: "utf8",
       env: base.value,
       maxBuffer: 64 * 1024,
-      timeout: 15_000,
+      timeout: scaleTestTime(15_000),
     });
     if (version.status !== 0) {
       return { findings: [{

@@ -64,6 +64,7 @@
 //   - A8: the .sh only checked the `"path":` substring; here we ALSO assert
 //     info exits 0 and the resolved path equals the live bolt-x worktree dir.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -170,7 +171,7 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     expect(existsSync(wtDir(p, "x"))).toBe(true);
     // A2: the audit-first WORKTREE_CREATED row is present.
     expect(eventCount(p, "WORKTREE_CREATED")).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("fail: amadeus-bolt fail --slug x emits BOLT_FAILED with the Bolt slug field [.sh A3, A4]", () => {
     const f = run(p, BOLT_TOOL, [
@@ -193,7 +194,7 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
         (r) => r.event === "BOLT_FAILED" && r.fields?.["Bolt slug"] === "x",
       ),
     ).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("preservation: worktree still on disk + git-registered + ZERO WORKTREE_DISCARDED after BOLT_FAILED [.sh A5, A6, A7]", () => {
     // A5: the directory survives the failure (no auto-discard) — the v0.4.0 milestone 12
@@ -204,7 +205,7 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     // A7 (negative invariant): the discard event must NOT have fired. Exactly
     // zero WORKTREE_DISCARDED rows — halt-and-ask did not auto-discard.
     expect(eventCount(p, "WORKTREE_DISCARDED")).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("info: amadeus-worktree info --slug x resolves the live path even after the failure [.sh A8]", () => {
     const i = run(p, WT_TOOL, ["info", "--slug", "x"]);
@@ -216,5 +217,5 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     const parsed = JSON.parse(i.stdout.trim());
     expect(comparableWorktreePath(parsed.path)).toBe(comparableWorktreePath(wtDir(p, "x")));
     expect(parsed.slug).toBe("x");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

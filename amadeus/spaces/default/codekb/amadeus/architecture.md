@@ -1,5 +1,24 @@
 # アーキテクチャ
 
+## テスト時間係数の未接続境界（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+現行は `.github/workflows/*.yml` からテスト runner へ環境能力を渡す境界がない。`tests/lib/run-tests-args.ts` が固定の既定 timeout を解決し、`tests/run-tests.ts` が各 Bun child へ `--timeout` として配布する。一方、テスト内の `Bun.sleep`、poll、settle、child process timeout は各ファイルの固定値であり、runner の上限だけを伸ばしても内部待機は伸びない。
+
+設計候補は `tests/lib/test-time-factor.ts` をテスト時間解決の正本とし、`scaleTestTime(baseMs)` を runner と負荷依存 wait から共用する形である。既存 `AMADEUS_TEST_TIMEOUT` は live driver の明示 override として意味が異なるため、二重乗算にしない。
+
+### Interaction Diagrams
+
+```mermaid
+flowchart LR
+    CI["GitHub Actions"] -->|"TEST_TIME_FACTOR=2 or 3"| Factor["test-time-factor resolver"]
+    Local["Local execution"] -->|"unset = 1"| Factor
+    Factor --> Runner["run-tests argument resolution"]
+    Runner -->|"scaled --timeout"| BunChild["Bun test child"]
+    Factor --> Waits["load-sensitive test waits"]
+    Explicit["explicit live-test override"] -->|"final value; no double scaling"| BunChild
+```
+<!-- Text fallback: GitHub Actions は TEST_TIME_FACTOR=2/3、ローカルは未指定=1として共通 resolver へ渡し、runner timeout と負荷依存 wait を拡張する。明示 live-test override は最終値として二重乗算しない。 -->
+
 ## plugin manifest 解決の所在非対称と advisory 消費者グラフ（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
 
 **観測 ref**: 本節の file:line はすべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）時点。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（HEAD の祖先、**13 commits / 302 files**、**PR #2811 を含む**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-manifest-resoluti.md`。

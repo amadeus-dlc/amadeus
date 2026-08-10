@@ -9,6 +9,7 @@
 // `-p 'await Bun.sleep(...)'` hangs on cue, so every branch is exercised
 // without spending credits.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -89,20 +90,20 @@ describe("runPrintSession — spawn failure handling (deterministic parts)", () 
     });
     expect(r.timedOut).toBe(true);
     expect(r.rc).toBe(-1);
-  }, 15000);
+  }, scaleTestTime(15000));
 
   test("a succeeding session carries stdout and exit 0", async () => {
     const r = await runPrintSession({
       cwd: root("ok"),
       prompt: "'engine-output-123'",
       bin: process.execPath,
-      timeoutMs: 15000,
+      timeoutMs: scaleTestTime(15000),
     });
     expect(r.error).toBeUndefined();
     expect(r.timedOut).toBe(false);
     expect(r.rc).toBe(0);
     expect(r.out).toContain("engine-output-123");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("writeKimiConfig — the minimal managed config kimi startup requires", () => {

@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -34,5 +35,5 @@ describe("t220 runner totals boundary", () => {
       failedAssertions: Number(/Failed assertions: (\d+)/.exec(result.stdout)?.[1]),
     });
     expect(result.stdout).toContain(`Total assertions: ${totals.assertions}`);
-  }, 10_000);
+  }, scaleTestTime(10_000));
 });

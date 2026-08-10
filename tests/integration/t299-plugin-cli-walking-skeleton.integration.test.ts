@@ -12,6 +12,7 @@
 // host + record byte-invariant (BR-U2-5). The real subprocess start (BR-U2-6) is
 // in t299b below.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -229,7 +230,7 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
     const cli = join(REPO_ROOT, "packages", "framework", "core", "tools", "amadeus-plugin.ts");
     const res = spawnSync("bun", [cli, "compose", "--if-stale", "--project-root", host], {
       encoding: "utf-8",
-      timeout: 60_000,
+      timeout: scaleTestTime(60_000),
       env: process.env,
     });
     // The real subprocess ran the engine: the composition record now records the plugin.
@@ -281,7 +282,7 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
       const res = spawnSync("bun", [HOOK], {
         encoding: "utf-8",
         input: "{}",
-        timeout: 60_000,
+        timeout: scaleTestTime(60_000),
         env: { ...process.env, CLAUDE_PROJECT_DIR: clean },
       });
       // No plugins staged → compose --if-stale is a no-op → the hook exits 0.
@@ -306,7 +307,7 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
       const res = spawnSync("bun", [HOOK], {
         encoding: "utf-8",
         input: "{}",
-        timeout: 60_000,
+        timeout: scaleTestTime(60_000),
         env: { ...process.env, CLAUDE_PROJECT_DIR: bad },
       });
       // The session is NOT blocked (exit 0) and the failure is loud on stderr.

@@ -53,6 +53,7 @@
 // release-merge (the .sh's prose pin "second call same outcome") is also
 // exercised inside T1/T2 setup implicitly and asserted explicitly in T1.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -193,7 +194,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
       .split("\n")
       .filter((l) => l === "- **Merge-Held**: true").length;
     expect(trueLines).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("release-merge sets `- **Merge-Held**: false` in forked state [.sh T2]", () => {
     const proj = setupForkedProject("hm2");
@@ -206,7 +207,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
       true,
     );
     expect(body.includes("- **Merge-Held**: true")).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("hold-merge stdout envelope carries slug + merge_held:true [.sh T3]", () => {
     const proj = setupForkedProject("hm3");
@@ -221,7 +222,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     expect(line).toBeDefined();
     const parsed = JSON.parse(line as string);
     expect(parsed).toEqual({ slug: "hm3", merge_held: true });
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("release-merge stdout envelope reports merge_held:false [.sh T4]", () => {
     const proj = setupForkedProject("hm4");
@@ -236,7 +237,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     expect(line).toBeDefined();
     const parsed = JSON.parse(line as string);
     expect(parsed).toEqual({ slug: "hm4", merge_held: false });
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("complete --merge refuses with exit 1 when held [.sh T5]", () => {
     const proj = setupForkedProject("hm5");
@@ -253,7 +254,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     ]);
     // .sh: assert_eq "$RC" "1".
     expect(r.status).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("complete --merge refusal envelope reports reason=merge-held [.sh T6]", () => {
     const proj = setupForkedProject("hm6");
@@ -282,7 +283,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     expect(parsed.reason).toBe("merge-held");
     expect(parsed.slug).toBe("hm6");
     expect(parsed.stage).toBe("complete-merge");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("complete --merge refusal detail names release-merge [.sh T7]", () => {
     const proj = setupForkedProject("hm7");
@@ -300,7 +301,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     expect(r.status).toBe(1);
     // .sh: assert_contains "$OUT" "release-merge".
     expect(r.out).toContain("release-merge");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("complete --merge refusal does NOT emit BOLT_COMPLETED [.sh T8]", () => {
     const proj = setupForkedProject("hm8");
@@ -321,7 +322,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     // BEFORE the BOLT_COMPLETED emit (amadeus-bolt.ts:336 < :354), so no such row
     // exists in main audit.md.
     expect(hasAuditEvent(proj, "BOLT_COMPLETED")).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("complete --merge proceeds (exit 0) after release-merge [.sh T9]", () => {
     const proj = setupForkedProject("hm9");
@@ -343,7 +344,7 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     // Positive complement to T8: now that the hold lifted, BOLT_COMPLETED IS in
     // main audit.md (the merge pipeline ran).
     expect(hasAuditEvent(proj, "BOLT_COMPLETED")).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("hold-merge errors (exit 1) when forked state absent [.sh T10]", () => {
     // No setup_forked_project here: a plain construction project with NO
@@ -360,5 +361,5 @@ describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-in
     // message names the missing forked state file and the start command that
     // would create it.
     expect(r.out).toContain("nonexistent");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

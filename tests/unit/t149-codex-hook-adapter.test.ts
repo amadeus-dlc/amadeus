@@ -29,6 +29,7 @@
 // would bypass the exact stdin/stdout/exit-code surface being contracted.
 // (Same idiom as kiro's t142.)
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -181,7 +182,7 @@ function runAdapter(
       input: typeof payload === "string" ? payload : JSON.stringify(payload),
       encoding: "utf-8",
       env: { ...process.env, CLAUDE_PROJECT_DIR: undefined } as NodeJS.ProcessEnv,
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     },
   );
   return { stdout: r.stdout ?? "", code: r.status ?? -1 };

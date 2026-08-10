@@ -40,6 +40,7 @@
 // rm-rf'd in afterEach. The lock dir lives under tmpdir() (auditLockDir) and is
 // cleaned between generations. Nothing is written under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -157,7 +158,7 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
       // Clean the winner's held lock before the next generation.
       rmSync(auditLockDir(proj, INTENT, SPACE), { recursive: true, force: true });
     }
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // -------------------------------------------------------------------------
   // A LIVE holder is never robbed under contention, at any age: seed a live
@@ -192,5 +193,5 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
     expect(wins).toBe(0);
     // The original live lock dir is intact (the CAS restore never destroyed it).
     expect(existsSync(lockDir)).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 });

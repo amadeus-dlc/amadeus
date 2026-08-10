@@ -40,6 +40,7 @@
 // lock lives under tmpdir() and is asserted-then-removed (afterEach safety).
 // Nothing is written under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
@@ -202,7 +203,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     expect(codes.every((c) => c === 0)).toBe(true);
     // The counter reflects ALL N increments. Pre-fix this is < N (lost updates).
     expect(field(proj, "Revision Count")).toBe(String(N));
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // TEST 2 — two concurrent `set` of DISTINCT fields. Both updates must survive
@@ -218,7 +219,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     // at its template default ("Unknown").
     expect(field(proj, "Languages")).toBe("concurrent-A");
     expect(field(proj, "Frameworks")).toBe("concurrent-B");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // TEST 3 — approve ∥ skip on two DIFFERENT stages, fired concurrently. Both
@@ -272,7 +273,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     // And it names a real stage that exists as a checkbox in the state file
     // (not a corrupted/partial value).
     expect(new RegExp(`- \\[[ xSR?-]\\] ${cur} `).test(finalState)).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // TEST 4 — reentrancy under the wrap. `approve` holds the outer lock and then
@@ -294,7 +295,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     expect(getField(finalState, "Current Stage")).not.toBe("requirements-analysis");
     // The lock dir must be released after the (reentrant) transaction completes.
     expect(existsSync(auditLockDir(proj))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // TEST 6 — concurrent `reject` on ONE gate-held [?] stage. reject is the
@@ -343,7 +344,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     expect(eventCount(proj, "GATE_REJECTED")).toBe(1);
     // The stage landed in the revising [R] state.
     expect(/- \[R\] requirements-analysis /.test(readState(proj))).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // TEST 7 — sequential reject→revise cycles drive Revision Count up the reject
@@ -369,7 +370,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
     // that many GATE_REJECTED rows. No burst double-counted.
     expect(field(proj, "Revision Count")).toBe(String(CYCLES));
     expect(eventCount(proj, "GATE_REJECTED")).toBe(CYCLES);
-  }, 90000);
+  }, scaleTestTime(90000));
 
   // ---------------------------------------------------------------------------
   // TEST 5 — after a burst of concurrent writes the mkdir audit lock is fully
@@ -384,7 +385,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
       ["set-skeleton-stance", "on"],
     ]);
     expect(existsSync(auditLockDir(proj))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 });
 
 // -----------------------------------------------------------------------------
@@ -475,7 +476,7 @@ describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli
 
     // Long enough for the spawned tool to boot and reach its first blocking
     // acquire (pre-fix: emitAudit's, with the state already read).
-    await Bun.sleep(1500);
+    await Bun.sleep(scaleTestTime(1500));
 
     // Our own protected write, under the lock we hold.
     writeFileSync(statePath(proj), setField(readState(proj), "Languages", "under-the-lock"), "utf-8");
@@ -488,7 +489,7 @@ describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli
     expect(getField(finalState, SWARM_BATCH_APPROVALS_FIELD)).toBe("1");
     // ...without clobbering the write that happened while it waited.
     expect(getField(finalState, "Languages")).toBe("under-the-lock");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // The lost-update twin: two processes approve DIFFERENT batches at once. Each
@@ -510,7 +511,7 @@ describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli
 
     // Both approvals on the ledger — a lost update leaves only one.
     expect(getField(readState(proj), SWARM_BATCH_APPROVALS_FIELD)).toBe("1, 2");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // The lock must be RELEASED on the happy path (the withAuditLock finally), or
@@ -519,7 +520,7 @@ describe("t145 #2589 approve-batch state RMW under the audit lock (mechanism cli
   test("approve-batch releases the audit lock on success", () => {
     expect(boltSync(["approve-batch", "--batch", "1"], proj).status).toBe(0);
     expect(existsSync(auditLockDir(proj))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 });
 
 // -----------------------------------------------------------------------------
@@ -603,7 +604,7 @@ describe("t145 #2729 jump execute state RMW under the audit lock (mechanism cli)
     // Long enough for the spawned tool to boot and reach its first blocking
     // acquire (pre-fix: emitAudit's, with the state already read and every edit
     // already computed against it).
-    await Bun.sleep(1500);
+    await Bun.sleep(scaleTestTime(1500));
 
     // Our own protected write, under the lock we hold.
     writeFileSync(statePath(proj), setField(readState(proj), "Languages", "under-the-lock"), "utf-8");
@@ -616,7 +617,7 @@ describe("t145 #2729 jump execute state RMW under the audit lock (mechanism cli)
     expect(getField(finalState, "Current Stage")).toBe("code-generation");
     // ...without clobbering the write that happened while it waited.
     expect(getField(finalState, "Languages")).toBe("under-the-lock");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // The lost-update twin: a real two-process race between jump (which rewrites
@@ -645,7 +646,7 @@ describe("t145 #2729 jump execute state RMW under the audit lock (mechanism cli)
     const finalState = readState(proj);
     expect(getField(finalState, "Current Stage")).toBe("code-generation");
     expect(getField(finalState, "Languages")).toBe("concurrent-set");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ---------------------------------------------------------------------------
   // The lock must be RELEASED on the happy path (the withAuditLock finally), or
@@ -654,5 +655,5 @@ describe("t145 #2729 jump execute state RMW under the audit lock (mechanism cli)
   test("jump execute releases the audit lock on success", () => {
     expect(jumpSync(["execute", "--target", "code-generation", "--direction", "forward"], proj).status).toBe(0);
     expect(existsSync(auditLockDir(proj))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 });

@@ -1,5 +1,11 @@
 # ビジネス概要
 
+## CI 能力差を吸収できないテスト時間設計（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+Amadeus のテスト runner は実行環境の処理能力差を表す共通係数を持たず、既定30秒の Bun test timeout、個別の明示 timeout、固定 sleep をそのまま使う。そのため、ローカルでは十分な上限が、処理能力の低い CI ではテスト本体の完了より先に失効する。
+
+本 intent の利用者価値は、`TEST_TIME_FACTOR` を未指定時 `1`、CI で `2` または `3` とし、テスト用の待機と上限を同じ基準時間から拡張できるようにすることである。本番 CLI の deadline、性能閾値、timeout 発火を検証する slow fixture は別契約であり、一律の倍率対象ではない。
+
 ## plugin advisory が consumer に届かない業務影響（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。

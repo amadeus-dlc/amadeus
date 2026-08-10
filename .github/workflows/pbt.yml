@@ -38,6 +38,7 @@ jobs:
     # setup (~120s) is about 2.4 min; 2 x 2.4 = 4.9, rounded up to 5.
     timeout-minutes: 5
     env:
+      TEST_TIME_FACTOR: "2"
       PBT_DEEP_PATHS: |
         tests/unit/t416-election-model-roundtrip.pbt.test.ts
         tests/integration/t417-election-store-failclosed.pbt.test.ts
@@ -91,14 +92,14 @@ jobs:
           AMADEUS_PBT_DEEP: "1"
         run: |
           set -o pipefail
-          # Match the repository runner's 30-second per-test timeout. The deep
-          # integration property exceeds Bun's 5-second default under load.
+          # Match the repository runner's 30-second baseline and apply the CI
+          # factor. The deep integration property exceeds Bun's 5-second default.
           paths=()
           while IFS= read -r path; do
             [ -n "${path}" ] || continue
             paths+=("${path}")
           done <<< "${PBT_DEEP_PATHS}"
-          bun test --timeout=30000 "${paths[@]}" 2>&1 | tee pbt-deep-run.log
+          bun test --timeout="$(bun tests/test-timeout-ms.ts 30000)" "${paths[@]}" 2>&1 | tee pbt-deep-run.log
 
       - name: Verify every target file actually ran
         env:

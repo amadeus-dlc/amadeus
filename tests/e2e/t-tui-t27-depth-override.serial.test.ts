@@ -75,6 +75,7 @@
 // mechanism (Phase 0) — no filename mechanism
 // segment. Assertions use the plain-text tmux grid without colour escapes.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   runTuiDriver,
@@ -109,7 +110,7 @@ async function waitForDisk(pred: () => boolean, timeoutMs: number): Promise<bool
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (pred()) return true;
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, scaleTestTime(500)));
   }
   return pred();
 }

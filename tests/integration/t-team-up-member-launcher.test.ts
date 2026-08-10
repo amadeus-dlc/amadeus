@@ -1,4 +1,5 @@
 // size: medium
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
@@ -23,7 +24,7 @@ const CODEX_HOOKS_HELPER_FILES = [
 ];
 const tempDirs: string[] = [];
 
-setDefaultTimeout(15_000);
+setDefaultTimeout(scaleTestTime(15_000));
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });

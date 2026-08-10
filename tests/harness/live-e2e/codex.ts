@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -272,7 +273,7 @@ export class CodexExecAdapter implements LiveAdapter {
         await Promise.race([
           this.#activeProcess.exited,
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Codex reap timed out")), 10_000)
+            setTimeout(() => reject(new Error("Codex reap timed out")), scaleTestTime(10_000))
           ),
         ]);
       } catch (error) {

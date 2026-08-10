@@ -14,6 +14,7 @@
 //
 // Pure functions only — no fs, no spawn.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { redactStacktrace } from "../../dist/claude/.claude/otel/redaction.ts";
 
@@ -317,7 +318,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         expect(out).toContain("<external>");
       }
     });
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("the drive-letter and file:// forms scan in the same linear time", () => {
     withHome(HOME, () => {
@@ -332,7 +333,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         }
       }
     });
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("a long scheme-ish run in front of the separator stays linear", () => {
     // This fixture IS a URL by the scheme rule, so the assertion is that it
@@ -348,7 +349,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         expect(out).toBe(input);
       }
     });
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("a 100KB stack of real-looking frames is rewritten completely", () => {
     withHome(HOME, () => {
@@ -361,5 +362,5 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
       expect(out).not.toContain(HOME);
       expect(out.split("<home>").length - 1).toBe(lines);
     });
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });

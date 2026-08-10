@@ -63,6 +63,7 @@
 //   .sh (5) SWARM_BATON_RETURNED naming lose       -> "5: SWARM_BATON_RETURNED emitted for the failed unit (lose)"
 //   .sh (6) rc==2 + converged:1 + failed:1         -> "6: mixed batch exits 2 (baton returns) with 1 converged + 1 failed"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
@@ -326,7 +327,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
   test("1: autonomy granted + eligible batch -> engine emits invoke-swarm", () => {
     const { directive } = runNext(seedCodegenProject("autonomous"));
     expect(directive.kind).toBe("invoke-swarm");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("1b: invoke-swarm names the batch units off the compiled bolt_dag (order-preserved)", () => {
     const { directive } = runNext(seedCodegenProject("autonomous"));
@@ -334,7 +335,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     // parsed units array equals the first batch, in order, off the DAG.
     expect(directive.units).toEqual(["a", "b"]);
     expect(directive.cap).toBe(2);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("1c: invoke-swarm bakes the intent-over-space-over-project swarm.unit.concurrency.limit cap", () => {
     const proj = seedCodegenProject("autonomous");
@@ -353,7 +354,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     expect(runNext(proj).directive.cap).toBe(1);
     unlinkSync(join(seededRecordDir(proj), "config.json"));
     expect(runNext(proj).directive.cap).toBe(3);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // Semi-autonomous Intent execution still preserves the declared parallel
   // topology; its human boundaries are enforced by Intent-level authorization.
@@ -361,7 +362,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     const { directive } = runNext(seedCodegenProject("gated"));
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["a", "b"]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 2b: unset autonomy AFTER the walking skeleton completed (state-construction.md
   // marks functional-design — the feature-scope skeleton-gate stage — [x]) must
@@ -372,14 +373,14 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     const { directive } = runNext(seedCodegenProject(""));
     expect(directive.kind).toBe("ask");
     expect(String(directive.question)).toContain("set-autonomy");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 2c: an unrecognised autonomy value reads as unset (safe side) — it never
   // activates the swarm fan-out.
   test("2c: unrecognised autonomy value never swarms", () => {
     const { directive } = runNext(seedCodegenProject("autonomouss"));
     expect(directive.kind).not.toBe("invoke-swarm");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("7: skeleton-gate stage is never swarmed even under autonomy (structural guard)", () => {
     // fix scope: code-generation IS the walking-skeleton gate stage (the
@@ -391,7 +392,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     const { directive } = runNext(proj);
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("invoke-swarm");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 7b: the same structural guard under the gated grant (#1612). Widening the
   // swarm trigger to `gated` must not widen it past the skeleton-gate stage.
@@ -401,7 +402,7 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     const { directive } = runNext(proj);
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("invoke-swarm");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ---------------------------------------------------------------------------
@@ -446,7 +447,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
       spawnSync("chmod", ["-R", "u+w", proj]);
       cleanupWorktreeFixture(proj);
     }
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("invalid degraded-from is rejected before worktrees or pool state are created", () => {
     const proj = setupWorktreeFixture();
@@ -464,7 +465,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     } finally {
       cleanupWorktreeFixture(proj);
     }
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("prepare failure leaves no orphan Unit pool", () => {
     const proj = setupWorktreeFixture();
@@ -485,7 +486,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
       spawnSync("chmod", ["-R", "u+w", proj]);
       cleanupWorktreeFixture(proj);
     }
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("3: SWARM_STARTED emitted at batch start (prepare)", () => {
     setupReferee();
@@ -493,7 +494,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     expect(auditBody).toContain("UNIT_POOL_EVENT_SET_COMMITTED");
     expect(auditBody).toContain("unit-acquired");
     expect(auditBody).toContain("unit-settled");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("4: SWARM_COMPLETED emitted with converged/failed tally (finalize)", () => {
     setupReferee();
@@ -506,7 +507,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     const completed = auditRecords().find((r) => r.event === "SWARM_COMPLETED");
     expect(completed?.fields?.["Converged count"]).toBe("1");
     expect(completed?.fields?.["Failed count"]).toBe("1");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("5: SWARM_BATON_RETURNED emitted for the failed unit (lose)", () => {
     setupReferee();
@@ -517,7 +518,7 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     const returned = auditRecords().filter((r) => r.event === "SWARM_BATON_RETURNED");
     expect(returned.length).toBeGreaterThanOrEqual(1);
     expect(returned.some((r) => r.fields?.["Unit name"] === "lose")).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("6: mixed batch exits 2 (baton returns) with 1 converged + 1 failed", () => {
     setupReferee();
@@ -526,5 +527,5 @@ describe("t135 referee — batch-level swarm audit taxonomy + baton return (the 
     expect(finalizeStatus).toBe(2);
     expect(finalizeOut).toContain('"converged": 1');
     expect(finalizeOut).toContain('"failed": 1');
-  }, 60000);
+  }, scaleTestTime(60000));
 });

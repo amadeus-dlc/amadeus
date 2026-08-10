@@ -6,6 +6,7 @@
 // persist/restore (FR-TRC-4), and W3C Trace Context subprocess injection
 // (FR-TRC-5 minimal).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { context, trace } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
 import type { Span } from "../../dist/claude/.claude/vendor/opentelemetry/api/index.js";
@@ -55,7 +56,7 @@ describe("Context maintained and isolated across async boundaries (FR-TRC-3)", (
     const tracer = getAmadeusTracer();
     await tracer.startActiveSpan("parent", async (parent: Span) => {
       try {
-        await new Promise((r) => setTimeout(r, 1));
+        await new Promise((r) => setTimeout(r, scaleTestTime(1)));
         const active = trace.getSpan(context.active());
         expect(active?.spanContext().spanId).toBe(parent.spanContext().spanId);
       } finally {
@@ -73,7 +74,7 @@ describe("Context maintained and isolated across async boundaries (FR-TRC-3)", (
         await Promise.all([
           tracer.startActiveSpan("sib-a", async (s: Span) => {
             try {
-              await new Promise((r) => setTimeout(r, 5));
+              await new Promise((r) => setTimeout(r, scaleTestTime(5)));
               seen.a = { self: s.spanContext().spanId, parent: trace.getSpan(context.active())!.spanContext().spanId };
             } finally {
               s.end();
@@ -81,7 +82,7 @@ describe("Context maintained and isolated across async boundaries (FR-TRC-3)", (
           }),
           tracer.startActiveSpan("sib-b", async (s: Span) => {
             try {
-              await new Promise((r) => setTimeout(r, 1));
+              await new Promise((r) => setTimeout(r, scaleTestTime(1)));
               seen.b = { self: s.spanContext().spanId, parent: trace.getSpan(context.active())!.spanContext().spanId };
             } finally {
               s.end();
@@ -158,7 +159,7 @@ describe("startActiveSpan contract (FR-TRC-2) and completed-span export", () => 
     const tracer = getAmadeusTracer();
     let duringCallback = 0;
     await tracer.startActiveSpan("op", async (span: Span) => {
-      await new Promise((r) => setTimeout(r, 1));
+      await new Promise((r) => setTimeout(r, scaleTestTime(1)));
       duringCallback = spans.length; // callback finished but span not yet ended
       span.end();
     });

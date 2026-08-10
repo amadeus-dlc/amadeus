@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -349,7 +350,7 @@ describe("model-completeness sensor E2E", () => {
       input,
       env: environment(p.root, p.graphPath),
       encoding: "utf-8",
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     });
     expect(result.status).toBe(0);
     expect(auditRecords(p.root).some((r) => r.event === "SENSOR_PASSED")).toBe(true);

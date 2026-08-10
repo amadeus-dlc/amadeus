@@ -1,0 +1,21 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "test-time-factor-c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Testing Posture",
+      "text": "`TEST_TIME_FACTOR` の中心契約はテスト用 timeout の基準値への乗算とし、`sleep`、poll、settle は timeout の成立と検証に対応する場合に同じ係数を適用する。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "test-time-factor-c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "CI/CD",
+      "text": "CI の `TEST_TIME_FACTOR` 既定値は `2` とし、`3` はより低速な実行環境の override として残す。",
+      "source": "orchestrator"
+    }
+  ]
+}

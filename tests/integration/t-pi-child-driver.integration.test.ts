@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -74,7 +75,7 @@ function fixture() {
       rootOperationId: parent.value.operation.rootOperationId,
     },
     childOrdinal: 1,
-    timeoutMs: 2_000,
+    timeoutMs: scaleTestTime(2_000),
     outputLimitBytes: 1_024,
   } as const;
   return { root, fakePi, lifecycle, base };
@@ -177,7 +178,7 @@ describe("Pi child driver process boundary", () => {
   test("closes a settled one-shot RPC child instead of timing out", async () => {
     const { root, fakePi, lifecycle, base } = fixture();
     const result = await executePiChild(
-      { ...base, deliveryKey: "settled-1", prompt: "wait-for-eof", timeoutMs: 1_000 },
+      { ...base, deliveryKey: "settled-1", prompt: "wait-for-eof", timeoutMs: scaleTestTime(1_000) },
       { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle },
     );
 

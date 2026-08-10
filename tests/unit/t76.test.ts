@@ -96,6 +96,7 @@
 // did. All temp dirs cleaned in afterAll, plus a best-effort chmod-restore +
 // lock-dir rmdir to mirror the .sh's cleanup_all trap.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -438,7 +439,7 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
         rmSync(lockDir, { recursive: true, force: true });
       }
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test("6: fork strict audit-first Part B — STATE_FORKED + ERROR_LOGGED with [slug=part-b] tag", () => {
@@ -487,7 +488,7 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
     await Promise.all([spawnAsync("bolt-x"), spawnAsync("bolt-y")]);
     // emitRefsList sorts alphabetically → [bolt-x, bolt-y] (x < y).
     expect(stateField(proj, "Bolt Refs")).toBe("[bolt-x, bolt-y]");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("14: (B2) duplicate-slug fork — no phantom STATE_FORKED row, recovery hint in error", () => {
     const proj = makeFixture();
@@ -501,7 +502,7 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
     expect(r.out).toContain("slug already in Bolt Refs");
     // No phantom row — count stays at 1.
     expect(auditEventCount(proj, "STATE_FORKED")).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test(
     "15: (B1) errorWithSlug inside locked block releases lock cleanly",
@@ -525,7 +526,7 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
       expect(followup.status).toBe(0);
       expect(elapsed).toBeLessThan(3000);
     },
-    30000,
+    scaleTestTime(30000),
   );
 });
 
@@ -571,7 +572,7 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
 - [-] build-and-test — EXECUTE
 `;
     expect(readFileSync(statePath(proj), "utf-8")).toBe(EXPECTED);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("8: merge — workflow-level Active Agent untouched (main wins, worktree value ignored)", () => {
     const proj = makeFixture();
@@ -590,7 +591,7 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
     expect(state(proj, "merge", "--slug", "wftest").status).toBe(0);
     // STRONGER than the .sh substring grep: exact field value.
     expect(stateField(proj, "Active Agent")).toBe("amadeus-developer-agent");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9+10: merge — alphabetical-slug tiebreak (beta defers, alpha wins) + Bolt Refs reverts to [empty list]", () => {
     // Test 10 in the .sh reuses test 9's project, so they're one case here.
@@ -634,7 +635,7 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
     expect(cgAfterAlpha).toContain("[S]");
     // Test 10: Bolt Refs reverts to [empty list] after the last merge.
     expect(stateField(proj, "Bolt Refs")).toBe("[empty list]");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("11: merge idempotency — re-run exits non-zero 'already merged', no second STATE_MERGED row", () => {
     const proj = makeFixture();
@@ -648,7 +649,7 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
     expect(r.out).toContain("already merged");
     // No second row.
     expect(auditEventCount(proj, "STATE_MERGED")).toBe(mergedBefore);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test(
     "12: merge audit-lock timeout — slug-tagged failure, no partial state write",
@@ -678,7 +679,7 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
         rmSync(lockDir, { recursive: true, force: true });
       }
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test("16: (M1) audit Target state hash matches actual main state SHA after merge", () => {
@@ -702,5 +703,5 @@ describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 1
     const targetHash = m?.[1];
     const actualHash = sha256File(statePath(proj));
     expect(targetHash).toBe(actualHash);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

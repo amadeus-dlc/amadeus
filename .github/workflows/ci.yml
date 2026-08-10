@@ -118,6 +118,9 @@ jobs:
       - name: Lint (biome)
         run: bun run lint
 
+      - name: Test timing sink guard
+        run: bun tests/test-time-factor-guard.ts
+
       - name: No silent drop (trusted base ratchet)
         timeout-minutes: 1
         env:
@@ -257,6 +260,8 @@ jobs:
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TEST_TIME_FACTOR: "2"
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -273,7 +278,7 @@ jobs:
         run: bun run build
 
       - name: Plugin conformance journey (e2e)
-        run: bun test tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+        run: bun test --timeout="$(bun tests/test-timeout-ms.ts 30000)" tests/e2e/t341-plugin-conformance-journey.serial.test.ts
 
   tests:
     name: Tests
@@ -281,6 +286,8 @@ jobs:
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TEST_TIME_FACTOR: "2"
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -420,6 +427,8 @@ jobs:
     if: ${{ needs.changes.outputs.coverage == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TEST_TIME_FACTOR: "2"
     permissions:
       contents: read
       id-token: write
@@ -489,6 +498,8 @@ jobs:
     if: ${{ needs.changes.outputs.coverage == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TEST_TIME_FACTOR: "2"
     steps:
       - name: Checkout
         if: ${{ github.event_name == 'pull_request' }}

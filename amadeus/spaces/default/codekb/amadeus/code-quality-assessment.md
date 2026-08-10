@@ -1,5 +1,17 @@
 # コード品質評価
 
+## タイムアウト安定性評価（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+| 観点 | 観測 | リスク |
+|---|---|---|
+| 係数の正本 | `TEST_TIME_FACTOR`/`testTimeFactor` 実装0件 | CI 能力差をテスト値へ伝播できない |
+| runner 上限 | 既定30秒、上限300秒 | 低速 CI で正常テストが先に失効する |
+| 個別 timeout | 約555箇所/94ファイル | runner だけの修正では残存する |
+| 負荷依存 sleep | lock concurrency、IDE checkpoint、TUI/IDE driver に存在 | 起動・settle 完了前の観測で flake になる |
+| CI 配線 | ci/coverage/PBT/release で係数未注入 | 入口間で改善が不揃いになる |
+
+品質上の最小闉包は、helper の parse/scale 契約テスト、runner の既定値と明示値の係数適用テスト、workflow 注入の契約テスト、高優先 wait の乗算実証である。perf suite、時計境界テスト、timeout 発火用 fixture は対象外とする彼我分類が必要である。
+
 ## advisory 宣言の無音 degradation とガード空白（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（13 commits / 302 files、PR #2811 を含む）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。

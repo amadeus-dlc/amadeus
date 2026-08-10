@@ -19,6 +19,7 @@
 //     for shard selection writes a row into the target ledger that claims the
 //     ISSUER's intent — the shape migration-adapter.ts fails closed over.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -144,7 +145,7 @@ describe("O-L1 — reentrant v2 journal append", () => {
     } finally {
       releaseAuditLock(proj);
     }
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
 
 describe("O-L1 — withAuditLock retry budget is a parameter", () => {

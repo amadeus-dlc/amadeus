@@ -83,6 +83,7 @@
 // state-jumped.md, state-pre-workspace-detection.md, state-construction-bolt1.md).
 // Nothing is written under tests/fixtures/**. All temp dirs cleaned in afterAll.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
@@ -455,7 +456,7 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
       p,
     ]);
     expect(directive(r).kind).toBe("committed");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ============================================================
   // WALK A: non-gated advance (next -> report -> next). workspace-detection is a
@@ -477,7 +478,7 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
     expect(r.out).toContain("Committed advance for");
     const n2 = directive(run(ORCHESTRATE, ["next", "--project-dir", p]));
     expect(n2.stage).toBe("state-init");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ============================================================
   // WALK B: gated approve (next -> report -> next). feasibility is a gated
@@ -503,7 +504,7 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
     expect(eventCount(p, "STAGE_STARTED")).toBe(1);
     const n2 = directive(run(ORCHESTRATE, ["next", "--project-dir", p]));
     expect(n2.stage).toBe("scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ============================================================
   // WALK C: the classify round-trip (next -> report --skeleton-stance -> next).
@@ -548,5 +549,5 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
     const n2 = directive(run(ORCHESTRATE, ["next", "--project-dir", p]));
     expect(n2.stage).toBe("functional-design");
     expect(n2.gate).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

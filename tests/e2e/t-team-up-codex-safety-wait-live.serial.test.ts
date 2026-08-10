@@ -3,6 +3,7 @@
 // session, launches the installed Codex CLI in a named pane, and verifies that
 // the production supervisor publishes exact readiness only after Herdr can
 // resolve that live Codex role.
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -45,11 +46,11 @@ function run(command: string[], cwd = ROOT): CommandResult {
   };
 }
 
-async function waitUntil(predicate: () => boolean, timeoutMs = 15_000): Promise<void> {
+async function waitUntil(predicate: () => boolean, timeoutMs = scaleTestTime(15_000)): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (predicate()) return;
-    await Bun.sleep(100);
+    await Bun.sleep(scaleTestTime(100));
   }
   throw new Error(`condition did not become true within ${timeoutMs}ms`);
 }

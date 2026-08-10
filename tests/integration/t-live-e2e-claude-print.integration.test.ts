@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -161,7 +162,7 @@ describe("Claude print live adapter", () => {
           kind: "recorded",
           adapterId: "claude-print",
           measuredVersion: "2.1.220",
-          timeoutMs: 90_000,
+          timeoutMs: scaleTestTime(90_000),
           outcome: { code: "AMADEUS_LIVE_E2E:PASS:SUCCESS" },
           cleanup: { failures: [], leakFindings: [] },
         },

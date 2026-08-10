@@ -20,6 +20,7 @@
 // fail — the wrong control for an all-or-nothing FAILURE test. Prerelease
 // TRANSITION success is proven by the in-process seam suite (t-release-sync-plan).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -95,5 +96,5 @@ describe("release-version-sync FR-702-2 — validate before writing (all-or-noth
     // version.ts before failing on the README — that partial write is the bug.
     expect(readFileSync(versionPath).equals(versionBefore)).toBe(true);
     expect(readFileSync(readmePath).equals(readmeBefore)).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

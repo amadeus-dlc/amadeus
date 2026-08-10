@@ -1,6 +1,7 @@
 // size: medium
 // covers: hook:amadeus-dispatch, FR-3.2, BR-U4-1..7, ADR-A5
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
@@ -434,7 +435,7 @@ setInterval(() => {}, 1000);
       stdout += chunk;
     });
     while (!stdout.includes("READY\n")) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, scaleTestTime(10)));
     }
 
     dispatcher.kill("SIGTERM");
@@ -445,7 +446,7 @@ setInterval(() => {}, 1000);
     expect(exitCode).toBeNull();
     expect(signal).toBe("SIGTERM");
     expect(readFileSync(marker, "utf8")).toBe("SIGTERM");
-  }, 5_000);
+  }, scaleTestTime(5_000));
 
   test("import.meta.dir fallback resolves a copied project while execution cwd is elsewhere", () => {
     const root = temporaryProject();

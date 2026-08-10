@@ -1,6 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-completion.ts, file:packages/framework/core/tools/amadeus-harness-registry.ts
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { HARNESS_REGISTRY } from "../../packages/framework/core/tools/amadeus-harness-registry.ts";
 
@@ -36,7 +37,7 @@ describe("opt-in five-harness credential seam", () => {
         })]),
         stdout: "pipe",
         stderr: "pipe",
-        timeout: 25_000,
+        timeout: scaleTestTime(25_000),
       });
       const [exitCode, stdout, stderr] = await Promise.all([
         child.exited,

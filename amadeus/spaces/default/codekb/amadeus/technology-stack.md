@@ -1,5 +1,16 @@
 # 技術スタック
 
+## テスト時間面（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+- ランタイム/テスト: Bun 1.3.13、`bun:test`
+- 言語: TypeScript 6.0.3、strict/noEmit
+- runner: `tests/run-tests.ts`、smoke は直列、その他は最大4ファイル並列
+- CI: GitHub Actions、通常 test、coverage head/base、PBT、release の複数入口
+- 現行 timeout: runner 既定30秒、明示 bun:test timeout 約555箇所/94ファイル
+- 共通環境係数: 未実装
+
+`TEST_TIME_FACTOR` 導入に新たな外部依存は不要で、`process.env`、`Number`、`Number.isFinite` と既存 Bun/TypeScript だけで実装可能である。
+
 ## CG attribution に関わる技術断面（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
 
 本 intent は既存の Bun/TypeScript CLI と監査 JSONL 上で完結し、新規 runtime dependency・database・service を追加しない。

@@ -20,6 +20,7 @@
 //
 // Mechanism: cli - stdin JSON + env + stdout decision, exactly t121's seam.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
@@ -143,7 +144,7 @@ function runHook(proj: string): { rc: number; out: string } {
       CLAUDE_PROJECT_DIR: proj,
       CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "",
     },
-    timeout: 20_000,
+    timeout: scaleTestTime(20_000),
   });
   return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
 }

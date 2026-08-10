@@ -4,6 +4,7 @@
 // Uses mkdtemp workspaces and injected Git/Gh ports; production code contains
 // no fixture mode.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import * as realOs from "node:os";
@@ -222,7 +223,7 @@ describe("t245 real filesystem ownership and transient corpus", () => {
     } finally {
       gitStdout(["worktree", "remove", "--force", root], projectDir);
     }
-  }, 120_000); // full origin/main corpus plus real Git worktree I/O can exceed Bun's 30s default on CI
+  }, scaleTestTime(120_000)); // full origin/main corpus plus real Git worktree I/O can exceed Bun's 30s default on CI
 });
 
 describe("t245 E-PM10A falling proofs", () => {

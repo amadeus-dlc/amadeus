@@ -67,6 +67,7 @@
 // 0 (the .sh only grepped stdout); (c.1) asserts the abort subcommand reported
 // discarded:true on its stdout envelope on top of the on-disk teardown.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -256,7 +257,7 @@ describe("t12 (a) single-Bolt round-trip (migrated from t12-bolt-runtime-graph-f
     expect(start.status).toBe(0);
     expect(start.stdout).toContain("RUNTIME_GRAPH_FORKED");
     expect(existsSync(wtFragment(proj, "solo"))).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("a.2 single-Bolt complete --merge: fragment removed + success-JSON carries RUNTIME_GRAPH_MERGED", () => {
     const proj = makeBoltFixture();
@@ -267,7 +268,7 @@ describe("t12 (a) single-Bolt round-trip (migrated from t12-bolt-runtime-graph-f
     expect(comp.status).toBe(0);
     expect(comp.stdout).toContain("RUNTIME_GRAPH_MERGED");
     expect(existsSync(wtFragment(proj, "solo"))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("a.3 single-Bolt compile: no instances[] on the parent (L5 >=2 slug threshold)", () => {
     const proj = makeBoltFixture();
@@ -304,7 +305,7 @@ describe("t12 (a) single-Bolt round-trip (migrated from t12-bolt-runtime-graph-f
       // bun -e printed Boolean(cg && 'instances' in cg) === false in that case.
       expect(cg).toBeNull();
     }
-  }, 60000);
+  }, scaleTestTime(60000));
 });
 
 // ===========================================================================
@@ -346,7 +347,7 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     expect(existsSync(frags.pay)).toBe(true);
     expect(existsSync(frags.auth)).toBe(true);
     expect(existsSync(frags.cart)).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("b.2 3-Bolt complete --merge (arbitrary order): all three fragments removed", () => {
     const { proj, frags } = buildThreeBoltFixture();
@@ -358,7 +359,7 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     expect(existsSync(frags.pay)).toBe(false);
     expect(existsSync(frags.auth)).toBe(false);
     expect(existsSync(frags.cart)).toBe(false);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("b.3 3-Bolt compile: instances[].bolt = [auth, cart, pay] (alphabetical, NOT merge order)", () => {
     const { proj } = buildThreeBoltFixture();
@@ -374,7 +375,7 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     // Alphabetical by Bolt slug regardless of the user's merge order
     // (amadeus-runtime.ts:485-486).
     expect((instances ?? []).map((i) => i.bolt)).toEqual(["auth", "cart", "pay"]);
-  }, 120000);
+  }, scaleTestTime(120000));
 });
 
 // ===========================================================================
@@ -395,7 +396,7 @@ describe("t12 (c) abort-discard leaves no orphan fragments", () => {
     // via git worktree remove — no manual fragment-merge call needed.
     expect(existsSync(wtDir(proj, "doomed"))).toBe(false);
     expect(existsSync(wtFragment(proj, "doomed"))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("c.2 abort without --discard: worktree + fragment preserved (halt-and-ask default)", () => {
     const proj = makeBoltFixture();
@@ -406,7 +407,7 @@ describe("t12 (c) abort-discard leaves no orphan fragments", () => {
     // No --discard => worktree dir + fragment both preserved for inspection.
     expect(existsSync(wtDir(proj, "kept"))).toBe(true);
     expect(existsSync(wtFragment(proj, "kept"))).toBe(true);
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("c.3 manual amadeus-worktree discard: fragment removed transitively (defense-in-depth)", () => {
     const proj = makeBoltFixture();
@@ -421,5 +422,5 @@ describe("t12 (c) abort-discard leaves no orphan fragments", () => {
     expect(discard.status).toBe(0);
     expect(existsSync(wtDir(proj, "kept"))).toBe(false);
     expect(existsSync(wtFragment(proj, "kept"))).toBe(false);
-  }, 60000);
+  }, scaleTestTime(60000));
 });

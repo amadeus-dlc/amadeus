@@ -1,6 +1,7 @@
 // covers: script:scripts/plugin-projection.ts, tool:amadeus-plugin, harness:codex
 // size: large
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -35,7 +36,7 @@ function run(projectRoot: string, command: string, args: readonly string[]): str
   const result = spawnSync(command, args, {
     cwd: projectRoot,
     encoding: "utf-8",
-    timeout: 120_000,
+    timeout: scaleTestTime(120_000),
     env: { ...process.env },
   });
   expect(result.error, `${command} process error`).toBeUndefined();
@@ -127,7 +128,7 @@ describe("t416 committed self projection in a fresh Git checkout", () => {
     expect(compose(project, "codex")).toContain("composed 1 plugin(s)");
     expect(readFileSync(codexStage)).toEqual(expectedStage);
     expect(run(project, "git", ["status", "--porcelain"]), "Codex drift repair changed committed bytes or a sibling face").toBe("");
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   test("an unselected checkout remains neutral and Kiro stays package-only", () => {
     project = freshProjectedCheckout(false);
@@ -144,5 +145,5 @@ describe("t416 committed self projection in a fresh Git checkout", () => {
     expect(existsSync(join(project, ".kiro"))).toBe(false);
     expect(existsSync(join(REPO_ROOT, "dist", "plugins", PLUGIN, "kiro", "plugins", PLUGIN, "plugin.json"))).toBe(true);
     expect(existsSync(join(REPO_ROOT, "dist", "plugins", PLUGIN, "kiro-ide", "plugins", PLUGIN, "plugin.json"))).toBe(true);
-  }, 120_000);
+  }, scaleTestTime(120_000));
 });

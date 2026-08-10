@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   createPiRpcCollector,
@@ -14,7 +15,7 @@ const request = {
   projectDir: "/project",
   parentExecution: { operationId: "parent", rootOperationId: "root" },
   childOrdinal: 1,
-  timeoutMs: 1_000,
+  timeoutMs: scaleTestTime(1_000),
   outputLimitBytes: 1_024,
 } as const;
 

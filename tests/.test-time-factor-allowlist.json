@@ -1,0 +1,512 @@
+[
+  {
+    "path": "tests/e2e/t-tui-t73-intent-capture.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t-tui-t74-requirements-analysis.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t01-helpers.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/e2e/t113.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/e2e/t122-stop-hook-e2e.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/harness/live-e2e/tmux.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/book-pack-verify.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 4,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/hook-dispatcher.integration.test.ts",
+    "sink": "timer",
+    "count": 1,
+    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
+  },
+  {
+    "path": "tests/integration/t-formal-verif-node-toolchain-ports.integration.test.ts",
+    "sink": "deadline",
+    "count": 3,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t-formal-verif-tlc-cache.integration.test.ts",
+    "sink": "timer",
+    "count": 3,
+    "reason": "FR-7 intentional timing-boundary assertion must remain exact."
+  },
+  {
+    "path": "tests/integration/t-kimi-print-drive.test.ts",
+    "sink": "sleep",
+    "count": 1,
+    "reason": "FR-7 intentional slow/hang fixture triggers the tested timeout."
+  },
+  {
+    "path": "tests/integration/t-kimi-print-drive.test.ts",
+    "sink": "timeout-ms",
+    "count": 1,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t-live-e2e-codex.integration.test.ts",
+    "sink": "timeout-ms",
+    "count": 1,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t-live-e2e-hardening-kit.integration.test.ts",
+    "sink": "timeout-ms",
+    "count": 1,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t-live-e2e-lifecycle.integration.test.ts",
+    "sink": "timeout-ms",
+    "count": 2,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t-pi-child-driver.integration.test.ts",
+    "sink": "timeout-ms",
+    "count": 1,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t-pi-child-driver.integration.test.ts",
+    "sink": "timer",
+    "count": 2,
+    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
+  },
+  {
+    "path": "tests/integration/t-solo-gate-transaction-prefix.test.ts",
+    "sink": "deadline",
+    "count": 1,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t-team-up-run-lifecycle.serial.test.ts",
+    "sink": "timer",
+    "count": 2,
+    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
+  },
+  {
+    "path": "tests/integration/t-team-up-run-lifecycle.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t-team-up-watcher-arming.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t162-per-intent-layout-cli.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t19.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t20.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t23.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t25.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t257-doctor-inprocess-seam.test.ts",
+    "sink": "sleep",
+    "count": 1,
+    "reason": "FR-7 intentional slow/hang fixture triggers the tested timeout."
+  },
+  {
+    "path": "tests/integration/t26.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t28-integration-test-strategy.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t365-kimi-reviewer-boundary.integration.test.ts",
+    "sink": "deadline",
+    "count": 1,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t368-safe-contained-file.integration.test.ts",
+    "sink": "deadline",
+    "count": 1,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t372-otlp-relay.test.ts",
+    "sink": "deadline",
+    "count": 2,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t413-no-silent-drop-ci-adoption.test.ts",
+    "sink": "timer",
+    "count": 1,
+    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
+  },
+  {
+    "path": "tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts",
+    "sink": "timeout-ms",
+    "count": 1,
+    "reason": "FR-7 intentional timeout/cancellation fixture uses an exact trigger value."
+  },
+  {
+    "path": "tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts",
+    "sink": "timer",
+    "count": 1,
+    "reason": "FR-7 intentional slow/hang fixture triggers cancellation or cleanup."
+  },
+  {
+    "path": "tests/integration/t49-bolt-sensor-failures.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t505-consume-presence-lock-bucket.integration.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t506-merge-held-lock-bucket.integration.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t522-autonomy-projection-lock.integration.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t70.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t72-stage-reverse-engineering.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-4 final AMADEUS_TEST_TIMEOUT override must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t95-sensor-fire-hook-feature.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/lib/run-tests-args.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/smoke/t05-run-tests-parallel.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/unit/gen-coverage-registry.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/unit/t-package-unreferenced-source.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/unit/t-package-write-sweep.serial.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/unit/t-test-size-dynamic.test.ts",
+    "sink": "deadline",
+    "count": 1,
+    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
+  },
+  {
+    "path": "tests/integration/t-test-time-factor-guard.test.ts",
+    "sink": "sleep",
+    "count": 5,
+    "reason": "FR-8 guard self-test embeds deliberately unscaled failing examples."
+  },
+  {
+    "path": "tests/unit/t160-workspace-record-resolution.test.ts",
+    "sink": "timer",
+    "count": 1,
+    "reason": "FR-7 intentional timing-boundary assertion must remain exact."
+  },
+  {
+    "path": "tests/unit/t177-workspace-journey-fixture.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/e2e/t122-stop-hook-e2e.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t126-emitter-pairing-cofire.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t138-scope-exclusion-counts.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t52-workflow-state-progression.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t53.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t54-workflow-audit-completeness.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t55-workflow-init-then-resume.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t56-workflow-forward-jump.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t57-workflow-backward-jump.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/e2e/t59-workflow-depth-override.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/sdk-drive.calibration.test.ts",
+    "sink": "test-timeout",
+    "count": 3,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t-journey-workspace.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t141-enterprise-scope-routing.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t143-scope-start-birth.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t176-new-work-offer-second-intent.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t183-codekb-placement-reverify.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t187-park-conversational.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t189-compose-dispatch.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t19.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t192-compose-front-journey.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t193-compose-report-journey.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t196-compose-inflight.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t197-compose-chat-inflight.sdk.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t20.test.ts",
+    "sink": "test-timeout",
+    "count": 2,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t21.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t21b.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t22.test.ts",
+    "sink": "test-timeout",
+    "count": 2,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t23.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t25.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t26.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t28-integration-test-strategy.test.ts",
+    "sink": "test-timeout",
+    "count": 2,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t70.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t71-stage-workspace-detection-brownfield.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/integration/t72-stage-reverse-engineering.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  }
+]

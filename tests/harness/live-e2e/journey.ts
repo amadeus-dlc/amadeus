@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LiveJourney } from "./adapter.ts";
@@ -16,7 +17,7 @@ export function createClaudeStructuredJourney(): LiveJourney {
   return {
     id: "claude-print-structured-v1",
     prompt: CLAUDE_PRINT_PROMPT,
-    timeoutMs: 90_000,
+    timeoutMs: scaleTestTime(90_000),
     retryPolicy: { maxAttempts: 1 },
     assert: (execution) => {
       const structuredOutput = execution.structured?.structured_output;
@@ -48,7 +49,7 @@ function numericField(event: ClaudeSdkWorkerEvent, key: string): number | undefi
   return typeof value === "number" ? value : undefined;
 }
 
-export function createClaudeSdkJourney(timeoutMs = 90_000): LiveJourney {
+export function createClaudeSdkJourney(timeoutMs = scaleTestTime(90_000)): LiveJourney {
   return {
     id: "claude-sdk-structured-v1",
     prompt: CLAUDE_SDK_PROMPT,
@@ -149,7 +150,7 @@ export function createClaudeTuiJourney(): LiveJourney {
   return createTuiAnchorJourney({
     id: "claude-tui-anchor-v1",
     prompt: CLAUDE_TUI_PROMPT,
-    timeoutMs: 120_000,
+    timeoutMs: scaleTestTime(120_000),
     evidenceKind: "claude-tui-anchor",
     passedDiagnostic: "private TUI session, current-run file anchor, and bounded pane evidence passed",
     failedDiagnostic: "Claude TUI anchor mismatch",
@@ -160,7 +161,7 @@ export function createKiroTuiJourney(): LiveJourney {
   return createTuiAnchorJourney({
     id: "kiro-tui-anchor-v1",
     prompt: KIRO_TUI_PROMPT,
-    timeoutMs: 180_000,
+    timeoutMs: scaleTestTime(180_000),
     evidenceKind: "kiro-tui-anchor",
     passedDiagnostic: "private Kiro TUI session, current-run file anchor, and bounded pane evidence passed",
     failedDiagnostic: "Kiro TUI anchor mismatch",

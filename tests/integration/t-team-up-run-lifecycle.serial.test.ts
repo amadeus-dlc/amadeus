@@ -1,4 +1,5 @@
 // size: large
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
@@ -20,7 +21,7 @@ const tempDirs: string[] = [];
 // These process- and Git-heavy tests share the runner with other files under
 // -P N. Keep functional assertions strict without treating CPU contention as a
 // product failure.
-setDefaultTimeout(15_000);
+setDefaultTimeout(scaleTestTime(15_000));
 
 // Issue #1811: a test that ends without `--kill` leaves its fixture
 // safety-wait supervisors orphaned, and their pid files live inside the temp
@@ -161,7 +162,7 @@ if (process.env.FAKE_SAFETY_WAIT_FAIL_ROLE === role) {
   await Bun.write(join(barrier, \`\${role}.alive\`), "");
   for (let attempt = 0; attempt < 100; attempt++) {
     if (await Bun.file(join(barrier, \`\${role}.release\`)).exists()) process.exit(9);
-    await Bun.sleep(25);
+    await Bun.sleep(${scaleTestTime(25)});
   }
   process.exit(9);
 }
@@ -187,7 +188,7 @@ process.on("SIGTERM", () => process.exit(0));
 // gone exits instead of leaking. A supervisor started against a record that
 // never existed (the foreign-run ownership fixture) keeps waiting for SIGTERM.
 if (existsSync(runRecord)) {
-  while (existsSync(runRecord)) await Bun.sleep(100);
+  while (existsSync(runRecord)) await Bun.sleep(${scaleTestTime(100)});
   process.exit(0);
 }
 setInterval(() => {}, 1_000);
@@ -702,7 +703,7 @@ describe("team-up safety-wait supervisor: ownership and readiness", () => {
       stderr: "ignore",
       stdout: "ignore",
     });
-    await Bun.sleep(50);
+    await Bun.sleep(scaleTestTime(50));
     writeFileSync(join(memberRecord, "safety-wait.pid"), `${foreign.pid}\n`);
 
     try {
@@ -715,7 +716,7 @@ describe("team-up safety-wait supervisor: ownership and readiness", () => {
       expect(killed.exitCode, killed.stderr.toString()).toBe(0);
       const foreignStillRunning = await Promise.race([
         foreign.exited.then(() => false),
-        Bun.sleep(100).then(() => true),
+        Bun.sleep(scaleTestTime(100)).then(() => true),
       ]);
       expect(foreignStillRunning).toBe(true);
       expect(() => process.kill(ownedPid, 0)).toThrow();
@@ -747,7 +748,7 @@ describe("team-up safety-wait supervisor: ownership and readiness", () => {
       stderr: "ignore",
       stdout: "ignore",
     });
-    await Bun.sleep(50);
+    await Bun.sleep(scaleTestTime(50));
     writeFileSync(join(memberRecord, "safety-wait.pid"), `${foreign.pid}\n`);
 
     try {
@@ -796,7 +797,7 @@ describe("team-up safety-wait supervisor: ownership and readiness", () => {
     expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
     const deadPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
     process.kill(deadPid, "SIGTERM");
-    await Bun.sleep(100);
+    await Bun.sleep(scaleTestTime(100));
 
     try {
       const resumed = Bun.spawnSync({

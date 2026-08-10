@@ -9,6 +9,7 @@
 // Every expectation is checked against an INDEPENDENT ORACLE — a walker
 // written here in the test that counts shards, lines and events on its own —
 // so a defect in the scanner cannot cancel out against the expectation.
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -458,7 +459,7 @@ function buildScaleCorpus(projectDir: string, shardCount: number, rowCount: numb
 }
 
 describe("pipe integrity — Issue #2700, stdout must fully drain before exit", () => {
-  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: scaleTestTime(60_000), killSignal: "SIGKILL" } as const;
 
   test("229 shards and 136,011 rows fully drain with digest parity in all formats", () => {
     const projectDir = scratch();
@@ -470,7 +471,7 @@ describe("pipe integrity — Issue #2700, stdout must fully drain before exit", 
     for (const format of ["markdown", "csv", "json"] as const) {
       const full = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--format", format], {
         ...RUN_OPTIONS,
-        timeout: 120_000,
+        timeout: scaleTestTime(120_000),
         maxBuffer: 64 * 1024 * 1024,
       });
       expect(full.status).toBe(0);
@@ -488,7 +489,7 @@ describe("pipe integrity — Issue #2700, stdout must fully drain before exit", 
         projectDir,
         format,
         capture,
-      ], { ...RUN_OPTIONS, timeout: 120_000 });
+      ], { ...RUN_OPTIONS, timeout: scaleTestTime(120_000) });
       expect(piped.status).toBe(0);
       const captured = readFileSync(capture, "utf-8");
       expect(createHash("sha256").update(captured).digest("hex")).toBe(fullDigest);
@@ -499,7 +500,7 @@ describe("pipe integrity — Issue #2700, stdout must fully drain before exit", 
 // --- FR-7: exit ladder and the read-only invariant --------------------------
 
 describe("exit ladder — measured by spawning the CLI", () => {
-  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: scaleTestTime(60_000), killSignal: "SIGKILL" } as const;
 
   test("a healthy corpus exits 0", () => {
     const projectDir = scratch();

@@ -30,6 +30,7 @@
 // driven in-process through the exported `handleNext` (the seam t198/t211/t213
 // already use) — same branch, real line attribution.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -320,7 +321,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     // The resolved unit rides the directive itself so downstream consumers
     // (reviewer-runtime unit-belonging checks) see the same resolution.
     expect(d.unit).toBe("fix-1711-unitname");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("2: consumes are resolved with the same unit (produces/consumes symmetry)", () => {
     const proj = seedFixProject();
@@ -334,7 +335,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
       if (!p.includes("/construction/")) continue;
       expect(p).toContain("/construction/fix-1711-unitname/");
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("3: the emitted directive drives reviewer-runtime scope to exit 0", () => {
     const proj = seedFixProject();
@@ -346,7 +347,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     const r = runReviewerScope(proj, d);
     expect(r.stderr).toBe("");
     expect(r.status).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("4: no unit directory is refused with an actionable error", () => {
     const proj = seedFixProject();
@@ -356,7 +357,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.message).toContain("no unit directory exists");
     expect(d.message).toContain(`${RP}/construction/`);
     expect(d.message).not.toContain("{unit-name}");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5: several unit directories are refused, naming the candidates", () => {
     const proj = seedFixProject();
@@ -367,7 +368,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.message).toContain("unit-alpha");
     expect(d.message).toContain("unit-beta");
     expect(d.message).not.toContain("{unit-name}");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 7-9 drive the SAME branch in-process. Spawned runs prove the shipped
   // surface; these prove the decision with the lines actually attributed.
@@ -382,14 +383,14 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
         p.includes("/construction/fix-1711-unitname/code-generation/"),
       ),
     ).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("8: in-process, no unit directory is refused", () => {
     const proj = seedFixProject();
     const d = runNextInProcess(proj);
     expect(d.kind).toBe("error");
     expect(d.message).toContain("no unit directory exists");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9: in-process, several unit directories are refused with the candidates", () => {
     const proj = seedFixProject();
@@ -399,7 +400,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.kind).toBe("error");
     expect(d.message).toContain("unit-alpha");
     expect(d.message).toContain("unit-beta");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 10-13 pin the #1769 refinement: several unit directories no longer refuse
   // outright. A record that accumulated a finished unit from an earlier Bolt
@@ -417,7 +418,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
         p.startsWith(`${RP}/construction/fix-1769-degrade-multiunit/code-generation/`),
       ),
     ).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("11: in-process, the outstanding unit is resolved the same way", () => {
     const proj = seedFixProject();
@@ -426,7 +427,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("unit-beta");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("12: two outstanding units are refused, naming the outstanding ones", () => {
     const proj = seedFixProject();
@@ -441,7 +442,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.message).toContain("unit-done");
     expect(d.message).toContain("Narrow this stage to one unit");
     expect(d.message).not.toContain("{unit-name}");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 13 was a single pin: several finished units ALWAYS refused, and the only
   // move offered was "create another unit directory" — which left a conductor
@@ -458,7 +459,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.message).toContain("Every one of them already holds this stage's required artifacts");
     expect(d.message).toContain("declare-units-done");
     expect(d.message).not.toContain("{unit-name}");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("13b: a declaration matching the finished units presents the stage gate", () => {
     const proj = seedFixProject();
@@ -470,7 +471,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.unit).toBe("unit-beta");
     expect(d.gate).toBeDefined();
     expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("13c: a declared finished unit with an unreadable Review projection is recovered", () => {
     const proj = seedFixProject();
@@ -509,7 +510,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(d.unit).toBe("fix-1711-unitname");
     expect(d.gate).toBeDefined();
     expect((d.produces ?? []).filter((p) => p.includes("{unit-name}"))).toEqual([]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 15 pins the unit-KIND arm of the coverage predicate on this branch. A stage
   // with produces_kinds requires only the artifacts its unit's kind declares, so
@@ -539,7 +540,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("unit-svc");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("16: degrade directives apply the resolved unit kind to outputs and inputs", () => {
     const proj = createTestProject();
@@ -566,7 +567,7 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
     expect(
       (d.consumes_absent ?? []).map((consume) => consume.path.split("/").at(-1)),
     ).toEqual(["business-logic-model.md"]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("6: a construction stage's own diary dir is not mistaken for a unit", () => {
     const proj = seedFixProject();
@@ -583,5 +584,5 @@ describe("t367 degrade-scope {unit-name} resolution (issue #1711)", () => {
         p.includes("/construction/fix-1711-unitname/"),
       ),
     ).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

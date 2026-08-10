@@ -64,6 +64,7 @@
 // 6 .sh asserts -> 6 expect()-bearing test() cases here (same count, same
 // observables, several STRONGER via single-line co-location + prefix pinning).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -155,7 +156,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     expect(r.out).toContain(
       "Rule drift: 1 team/project rule(s) overlap org policy (review for contradiction)",
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("2: detail carries file + heading + quoted org sentence (co-located on one line)", () => {
     const r = runDoctor(rulesDir(DRIFT_RULES));
@@ -168,7 +169,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     expect(line).toContain(
       "We require 80% line coverage on every Bolt before merge.",
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("3: drift row prefixed ✓ (advisory pass — does NOT push failed)", () => {
     const r = runDoctor(rulesDir(DRIFT_RULES));
@@ -176,7 +177,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     // amadeus-utility.ts:1361); a fail row would carry `✗  ` (:1364).
     // Mirrors the .sh `grep -q "^✓"` on the drift line.
     expect(driftLine(r.out).startsWith("✓  ")).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Case 4 — N=0 fixture (no overlap) → quiet headline, ✓.
@@ -193,7 +194,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     const line = driftLine(r.out);
     expect(line).toContain("Rule drift: no team/project rule overlaps org policy");
     expect(line.startsWith("✓  ")).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Case 5 — Org-absent fixture → informational pass, no crash.
@@ -211,7 +212,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     // STRONGER than the .sh (which only grepped the label): the informational
     // row is also an advisory pass (amadeus-utility.ts:1239), so it carries ✓.
     expect(line.startsWith("✓  ")).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Case 6 — Fixture isolation: the fixture's ## Testing Posture (NOT the
@@ -236,5 +237,5 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
     expect(line).toContain(
       "Rule drift: 1 team/project rule(s) overlap org policy",
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 });

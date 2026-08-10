@@ -49,6 +49,7 @@
 // REFUSED by the core gate (and the preToolUse hook hard-blocks the tool call
 // besides). One human turn commits at most one gate.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { platform, tmpdir } from "node:os";
@@ -215,7 +216,7 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
           },
         );
         // Settle a beat so a (wrongly) committed second gate would also have landed.
-        await new Promise((r) => setTimeout(r, 8000));
+        await new Promise((r) => setTimeout(r, scaleTestTime(8000)));
 
         // ---- ASSERTIONS (disk only; never chat prose) - the REAL fix surfaces ----
 
@@ -299,7 +300,7 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
           },
         );
         // Settle so any (wrongly) re-fired mint on a continuation would have landed.
-        await new Promise((r) => setTimeout(r, 8000));
+        await new Promise((r) => setTimeout(r, scaleTestTime(8000)));
 
         // RATIO: exactly one human turn => exactly one HUMAN_TURN event, regardless of
         // how many model continuations / postToolUse firings happened in between.
@@ -313,4 +314,3 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
     TEST_TIMEOUT_MS,
   );
 });
-

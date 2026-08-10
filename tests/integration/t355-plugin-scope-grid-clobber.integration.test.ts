@@ -16,6 +16,7 @@
 // AMADEUS_STAGE_GRAPH / AMADEUS_SCOPE_GRID seams over a temp host, so the
 // assertions read the bytes compile actually writes.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -205,7 +206,7 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
       [...seededExec, STAGE_SLUG].sort(),
     );
     expect(grid[COMPOSED_SCOPE].stages[STAGE_SLUG]).toBe("EXECUTE");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("a plugin declaring a stock scope joins it without disturbing existing cells", async () => {
     const root = makeHost(["feature"]);
@@ -221,13 +222,13 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
     }
     // Other stock scopes gain no cell for the plugin stage (no redundant SKIP).
     expect(grid.fix.stages[STAGE_SLUG]).toBeUndefined();
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("a plugin declaring a brand-new scope gets a row holding only its own cell", async () => {
     const root = makeHost(["t355-plugin-only"]);
     const grid = await compileHost(root);
     expect(grid["t355-plugin-only"].stages).toEqual({ [STAGE_SLUG]: "EXECUTE" });
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // Declared revision (#1863): this test used to assert the cell was GC'd on
   // drop. That GC destroyed the approved plan — an opt-in stage (`scopes: []`)
@@ -277,12 +278,12 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
     expect(executeSlugs(recomposed[COMPOSED_SCOPE])).toEqual(
       executeSlugs(withPlugin[COMPOSED_SCOPE]),
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("a zero-plugin host recompiles the shipped grid byte-identically", async () => {
     const root = makeHost(null);
     const before = readFileSync(join(root, "scope-grid.json"), "utf-8");
     await compileHost(root);
     expect(readFileSync(join(root, "scope-grid.json"), "utf-8")).toBe(before);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

@@ -1,5 +1,17 @@
 # コード構造
 
+## 時間制御の分散（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+| 領域 | 現在の配置 | 観測した役割 |
+|---|---|---|
+| runner 引数 | `tests/lib/run-tests-args.ts` | 既定 `30_000ms`、上限 `300_000ms`、`--test-timeout-ms` の parse |
+| child 起動 | `tests/run-tests.ts` | 解決値を各 child の `--timeout` へ渡す |
+| 負荷依存 wait | `tests/integration/t145-state-lock-concurrency.test.ts`、`tests/e2e/t-ide-kiro-checkpoint.serial.test.ts` | child 起動や UI settle を固定 sleep で待つ |
+| TUI/IDE harness | `tests/harness/tui-drive.ts`、`tests/harness/kiro-ide-driver.ts` | deadline、poll、settle の固定値が集中 |
+| CI 入口 | `.github/workflows/ci.yml`、`pbt.yml`、`release.yml` | 現在は係数を注入しない |
+
+共通 timing helper は現在存在しない。新設する場合は `tests/lib/` が runner、harness、個別テストから参照できる最小の共通境界である。
+
 ## plugin 散文ガードとテストヘルパーの配置（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
 
 **観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`。正本は `re-scans/260810-plugin-prose-seed-guard.md`。

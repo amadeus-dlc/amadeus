@@ -6,6 +6,7 @@
 // minting, fail-open extraction with a diagnostic log (BR-5), carrier content
 // restricted to correlation IDs (BR-4), and context isolation under Promise.all.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -261,7 +262,7 @@ describe("context isolation under Promise.all (FR-TRC-3)", () => {
           await Promise.all([
             tracer.startActiveSpan("sib-a", async (s: Span) => {
               try {
-                await new Promise((r) => setTimeout(r, 5));
+                await new Promise((r) => setTimeout(r, scaleTestTime(5)));
                 injected.a = injectToSubprocess({}).TRACEPARENT;
               } finally {
                 s.end();
@@ -269,7 +270,7 @@ describe("context isolation under Promise.all (FR-TRC-3)", () => {
             }),
             tracer.startActiveSpan("sib-b", async (s: Span) => {
               try {
-                await new Promise((r) => setTimeout(r, 1));
+                await new Promise((r) => setTimeout(r, scaleTestTime(1)));
                 injected.b = injectToSubprocess({}).TRACEPARENT;
               } finally {
                 s.end();

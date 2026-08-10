@@ -4,6 +4,7 @@
 // real committed fixture, invokes the public CLI, and proves that refusal is
 // read-only at both the filesystem and Git levels.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -71,7 +72,7 @@ function migrate(project: UpstreamV2Fixture, source = project.sourceRoot): CliRe
     {
       cwd: project.projectDir,
       encoding: "utf-8",
-      timeout: 20_000,
+      timeout: scaleTestTime(20_000),
     },
   );
   return {
@@ -99,7 +100,7 @@ function migrateWithEnv(
       cwd: project.projectDir,
       encoding: "utf-8",
       env: { ...process.env, ...extraEnv },
-      timeout: 20_000,
+      timeout: scaleTestTime(20_000),
     },
   );
   return {

@@ -77,6 +77,7 @@
 // built inline (the .sh's L1 rationale — too combinatorial for an on-disk
 // fixtures dir). All temp dirs cleaned in afterAll.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -438,5 +439,5 @@ describe("t103 doctor determinism", () => {
     expect(a).toContain("Rule drift:");
     expect(a).toContain("Paired sensor coverage:");
     expect(b).toBe(a);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

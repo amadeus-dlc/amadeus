@@ -76,6 +76,7 @@
 // (Phase 0) — no filename mechanism segment. Assertions use the plain-text tmux
 // grid and on-disk reads.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   runTuiDriver,
@@ -136,7 +137,7 @@ async function waitForScopeLanding(
       answeredBootstrap = true;
     }
 
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, scaleTestTime(1000)));
   }
 
   if (scopeLanded(projectDir, scope)) return { landed: true, pane };

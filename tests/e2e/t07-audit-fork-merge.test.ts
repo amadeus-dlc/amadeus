@@ -74,6 +74,7 @@
 // shape on the SAME [fork-emitted:...] tag AND that an integer Fork-Boundary
 // value was NOT used as the correlation key.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -335,7 +336,7 @@ describe("t07 Phase A — primitive smoke (migrated from t07-audit-fork-merge.sh
       ] ?? "";
     expect(fb(auditPath(p))).not.toBe("");
     expect(fb(wtAuditPath(p, "demo"))).toBe(fb(auditPath(p)));
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("A8-A11: merge happy path — exit 0, delta + AUDIT_MERGED in main, AUDIT_MERGED NOT in worktree", () => {
     const p = makeFixture();
@@ -359,7 +360,7 @@ describe("t07 Phase A — primitive smoke (migrated from t07-audit-fork-merge.sh
     expect(countEvent(auditPath(p), "AUDIT_MERGED")).toBeGreaterThanOrEqual(1); // A10
     // A11 (Decision 5: main-only emit): worktree audit has no AUDIT_MERGED row.
     expect(countEvent(wtAuditPath(p, "demo"), "AUDIT_MERGED")).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ===========================================================================
@@ -377,7 +378,7 @@ describe("t07 Phase B — edge cases", () => {
     expect(merge.out).toContain('"entries_merged":0'); // B1.2
     // B1.3: empty-delta merge appends exactly one record (the AUDIT_MERGED row).
     expect(countRecords(auditPath(p)) - preRecords).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B2: missing worktree audit shard is mkdir -p'd at fork", () => {
     const p = makeFixture();
@@ -397,7 +398,7 @@ describe("t07 Phase B — edge cases", () => {
     runAudit(["audit-fork", "--slug", "e2", "--project-dir", p]);
     // B2.2: audit-fork's mkdir -p created the worktree mirror's audit shard.
     expect(existsSync(wtAuditPath(p, "e2"))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B3: missing main audit — fork fails loud, no side effect", () => {
     const p = makeFixture();
@@ -411,7 +412,7 @@ describe("t07 Phase B — edge cases", () => {
     expect(existsSync(wtAuditPath(p, "e3"))).toBe(false);
     // Restore so the trap/afterAll cleanup doesn't choke.
     writeFileSync(auditPath(p), "", "utf-8");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B4: prefix-hash mismatch — merge refuses after a length-preserving main-audit edit", () => {
     const p = makeFixture();
@@ -438,7 +439,7 @@ describe("t07 Phase B — edge cases", () => {
     const merge = runAudit(["audit-merge", "--slug", "e4", "--project-dir", p]);
     expect(merge.status).not.toBe(0); // B4.1
     expect(merge.out).toContain("prefix-hash"); // B4.2
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B5: lock contention — staggered N=2 mergers both exit 0, exactly 2 AUDIT_MERGED rows", async () => {
     const p = makeFixture();
@@ -465,7 +466,7 @@ describe("t07 Phase B — edge cases", () => {
       });
 
     const bg = mergeAsync("lock-a");
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, scaleTestTime(50)));
     const fgRc = await mergeAsync("lock-b");
     const bgRc = await bg;
 
@@ -473,7 +474,7 @@ describe("t07 Phase B — edge cases", () => {
     expect(fgRc).toBe(0); // B5.1 (fg)
     // B5.2: both merges landed; exactly 2 AUDIT_MERGED rows in main audit.
     expect(countEvent(auditPath(p), "AUDIT_MERGED")).toBe(2);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B6: lock-timeout — planted stuck lock + dialled-down retries → non-zero with clear error", () => {
     const p = makeFixture();
@@ -505,7 +506,7 @@ describe("t07 Phase B — edge cases", () => {
     } finally {
       rmSync(lock, { recursive: true, force: true });
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B7: 65-char slug rejected before any disk side effect", () => {
     const p = makeFixture();
@@ -518,7 +519,7 @@ describe("t07 Phase B — edge cases", () => {
     // audit, no AUDIT_FORKED row landed for the rejected slug.
     expect(existsSync(wtAuditPath(p, longSlug))).toBe(false);
     expect(countEvent(auditPath(p), "AUDIT_FORKED")).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("B8: post-emit failure path — ERROR_LOGGED carries [fork-emitted:<iso-ts>] for doctor correlation", () => {
     const p = makeFixture();
@@ -552,7 +553,7 @@ describe("t07 Phase B — edge cases", () => {
     );
     // STRONGER: the tag is NOT a bare integer (Fork Boundary value).
     expect(main).not.toMatch(/\[fork-emitted:\d+\]/);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ===========================================================================
@@ -578,13 +579,13 @@ describe("t07 Phase C — property", () => {
     const p = makeFixture();
     runN4(p, ["alpha", "bravo", "charlie", "delta"]);
     expect(bracketOrderViolation(auditPath(p))).toBeNull();
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("C2: reverse-alphabetical N=4 — bracket order preserved", () => {
     const p = makeFixture();
     runN4(p, ["delta", "charlie", "bravo", "alpha"]);
     expect(bracketOrderViolation(auditPath(p))).toBeNull();
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("C3: same-second-timestamps N=4 — bracket order preserved", () => {
     const p = makeFixture();
@@ -612,7 +613,7 @@ describe("t07 Phase C — property", () => {
       runAudit(["audit-merge", "--slug", s, "--project-dir", p]);
     }
     expect(bracketOrderViolation(auditPath(p))).toBeNull();
-  }, 60000);
+  }, scaleTestTime(60000));
 
   test("C4-C6: N=4 with one empty delta — bracket order preserved + exactly 4 forks / 4 merges", () => {
     const p = makeFixture();
@@ -636,5 +637,5 @@ describe("t07 Phase C — property", () => {
     expect(countEvent(auditPath(p), "AUDIT_MERGED")).toBe(4);
     // C6: exactly 4 AUDIT_FORKED rows.
     expect(countEvent(auditPath(p), "AUDIT_FORKED")).toBe(4);
-  }, 60000);
+  }, scaleTestTime(60000));
 });

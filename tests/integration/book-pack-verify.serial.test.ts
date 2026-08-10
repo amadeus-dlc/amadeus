@@ -10,6 +10,7 @@
 // asserts checks A-F) against the current tree on every CI run.
 // Provenance: amadeus-dlc/amadeus#643 (ruling), PR #1339 (pack landing).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -96,7 +97,7 @@ describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
       setTimeout(() => {
         emit("child-complete");
         emit("cleanup-start");
-        setTimeout(() => emit("cleanup-complete"), 10);
+        setTimeout(() => emit("cleanup-complete"), ${scaleTestTime(10)});
       }, 20);
     `;
     const result = runVerifier(
@@ -190,7 +191,7 @@ exec ${JSON.stringify(realCp)} "$@"
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
-  }, TEST_TIMEOUT_MS);
+  }, scaleTestTime(TEST_TIMEOUT_MS));
 
   test("the same cleanup-race fixture is red for a raw trap and green for idempotent verifier cleanup", () => {
     const scratch = mkdtempSync(join(tmpdir(), "book-pack-cleanup-race-"));
@@ -265,5 +266,5 @@ exec ${JSON.stringify(realRm)} "$@"
     const workspace = verifierWorkspace(r.stdout);
     expect(workspace).not.toBeNull();
     expect(existsSync(workspace ?? "")).toBe(false);
-  }, TEST_TIMEOUT_MS);
+  }, scaleTestTime(TEST_TIMEOUT_MS));
 });

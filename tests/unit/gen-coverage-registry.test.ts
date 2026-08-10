@@ -23,6 +23,7 @@
 // source root + committed-baseline paths at a temp tree — the real shipped
 // source and the real tests/.coverage-registry.json are NEVER mutated.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -309,7 +310,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  }, FRESHNESS_DIFF_TIMEOUT_MS);
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("inject a NEW audit event into the temp source: --check exits 1 naming the gap", () => {
     const t = buildTempTree();
@@ -338,7 +339,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  }, FRESHNESS_DIFF_TIMEOUT_MS);
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("inject a NEW subcommand into the temp source: --check exits 1 naming the gap", () => {
     const t = buildTempTree();
@@ -362,7 +363,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     } finally {
       rmSync(t.root, { recursive: true, force: true });
     }
-  }, FRESHNESS_DIFF_TIMEOUT_MS);
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("missing committed registry: --check exits 1", () => {
     const t = buildTempTree();

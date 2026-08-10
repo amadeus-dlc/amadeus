@@ -21,6 +21,7 @@
 // the require.cache harvest, checkHarness's source scan, or emit.ts's
 // readHarnessSource consumption. An in-process call exercises all of them.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -77,13 +78,13 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
     // consumption (codex composes its orchestrator SKILL.md through it), the
     // require.cache harvest of the codex module graph, and the clean source scan.
     expect(() => writeHarness("codex")).not.toThrow();
-  }, CHECK_TIMEOUT_MS);
+  }, scaleTestTime(CHECK_TIMEOUT_MS));
 
   test("kiro (non-emit harness) clean → no UNREFERENCED problems", () => {
     // Covers the harnessSrcRoot+sep require.cache boundary for a second harness
     // dir (the trailing separator is what keeps "kiro" from matching "kiro-ide").
     expect(() => writeHarness("kiro")).not.toThrow();
-  }, CHECK_TIMEOUT_MS);
+  }, scaleTestTime(CHECK_TIMEOUT_MS));
 
   test("pi projects its closed resource catalog and package metadata in process", () => {
     const isolatedDistRoot = mkdtempSync(join(import.meta.dir, "..", "..", ".amadeus-package-pi-"));
@@ -94,7 +95,7 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
     } finally {
       rmSync(isolatedDistRoot, { recursive: true, force: true });
     }
-  }, CHECK_TIMEOUT_MS);
+  }, scaleTestTime(CHECK_TIMEOUT_MS));
 
   test("planted stale source under harness/codex/ → writeHarness rejects it (red path)", () => {
     purgeProbe();
@@ -107,7 +108,7 @@ describe("writeHarness in-process — #735 source scan against the real trees", 
       purgeProbe();
     }
     expect(existsSync(CODEX_PROBE)).toBe(false);
-  }, CHECK_TIMEOUT_MS);
+  }, scaleTestTime(CHECK_TIMEOUT_MS));
 });
 
 // A harness name that no manifest.ts backs — lets the CLI dispatch reach its

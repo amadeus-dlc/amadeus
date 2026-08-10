@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -131,7 +132,7 @@ function probeWorkerSurface(options: ClaudeSdkAdapterOptions): WorkerSurfaceProb
     encoding: "utf8",
     env: isolated.value,
     maxBuffer: 64 * 1024,
-    timeout: 5_000,
+    timeout: scaleTestTime(5_000),
   });
   try {
     const surface = probe.status === 0

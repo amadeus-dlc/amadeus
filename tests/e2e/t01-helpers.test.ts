@@ -53,6 +53,7 @@
 // the literal "amadeus-worktree-" so a rename of WORKTREE_FIXTURE_PREFIX that
 // would silently disarm the cleanup guard is caught.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
@@ -111,7 +112,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     // STRONGER: the canonical path's basename carries the fixture prefix, so
     // cleanup's defence-in-depth guard will accept it.
     expect(basename(fixture).startsWith(WORKTREE_FIXTURE_PREFIX)).toBe(true);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("2: the fixture is a git repo", () => {
     const fixture = freshFixture();
@@ -120,7 +121,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
       encoding: "utf-8",
     });
     expect(r.status).toBe(0);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("3: the fixture has exactly one commit", () => {
     const fixture = freshFixture();
@@ -130,7 +131,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     });
     expect(r.status).toBe(0);
     expect(Number.parseInt((r.stdout ?? "").trim(), 10)).toBe(1);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("4: registered as a worktree of itself (the main checkout)", () => {
     const fixture = freshFixture();
@@ -138,7 +139,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     // on creation is the main checkout, so its own path is registered. Proves
     // the porcelain parsing finds the canonical main-checkout path.
     expect(worktreeRegistered(fixture, fixture)).toBe(true);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("5: a child worktree is registered after `git worktree add`", () => {
     const fixture = freshFixture();
@@ -152,7 +153,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     );
     expect(add.status).toBe(0);
     expect(worktreeRegistered(fixture, childWt)).toBe(true);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("6: cleanup refuses a path outside the fixture prefix (defence-in-depth)", () => {
     // .sh test 6: create a sentinel dir whose basename does NOT start with the
@@ -173,7 +174,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
       }
     }
     expect(existsSync(sentinel)).toBe(false);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 
   test("7: cleanup removes the fixture and the second call is a no-op (idempotent)", () => {
     // Standalone fixture (NOT registered for afterAll — this test consumes it).
@@ -185,5 +186,5 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     // Second call must not throw and must leave things removed.
     expect(() => cleanupWorktreeFixture(fixture)).not.toThrow();
     expect(existsSync(fixture)).toBe(false);
-  }, GIT_FIXTURE_TEST_TIMEOUT_MS);
+  }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));
 });

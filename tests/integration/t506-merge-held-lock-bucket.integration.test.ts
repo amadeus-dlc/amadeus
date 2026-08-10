@@ -42,6 +42,7 @@
 // what acquireAuditLock's reaper refuses to steal — the same shape t161 and
 // t505 use.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -185,7 +186,7 @@ describe("t506 hold-merge/release-merge take the owner-intent audit-lock bucket 
       // A blocked acquire never enters the section, so the marker never lands.
       expect(readFileSync(forkedState(proj, "hmlock1"), "utf-8")).toBe(before);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   test(
@@ -203,7 +204,7 @@ describe("t506 hold-merge/release-merge take the owner-intent audit-lock bucket 
       // Still held: the release never reached the write.
       expect(readFileSync(forkedState(proj, "hmlock2"), "utf-8")).toBe(held);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   // The regression pin. It passes trivially today (setMergeHeld never touches
@@ -226,7 +227,7 @@ describe("t506 hold-merge/release-merge take the owner-intent audit-lock bucket 
         "- **Merge-Held**: false",
       );
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   // The lock must be RELEASED on the happy path (the withAuditLock finally), or
@@ -240,6 +241,6 @@ describe("t506 hold-merge/release-merge take the owner-intent audit-lock bucket 
       handleBoltCommand("release-merge", ["--slug", "hmlock4"], proj);
       expect(existsSync(ownerIntentLockDir(proj))).toBe(false);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 });

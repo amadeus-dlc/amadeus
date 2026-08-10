@@ -80,6 +80,7 @@
 // {"decision":"block"} stdout; the guard/release/fail-open cases prove the hook
 // lets go — a happy-path-only twin would not be equal-or-stronger.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -674,7 +675,7 @@ function runHook(
     input: payload,
     encoding: "utf-8",
     env,
-    timeout: 20_000,
+    timeout: scaleTestTime(20_000),
   });
   return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
 }
@@ -693,7 +694,7 @@ function runRuntimeCompileHook(
     }),
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: proj },
-    timeout: 20_000,
+    timeout: scaleTestTime(20_000),
   });
   return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
 }
@@ -871,7 +872,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(a) pending run-stage directive emits {\"decision\":\"block\"} on stdout", () => {
     const proj = makeProject();
@@ -882,7 +883,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const parsed = JSON.parse(r.out) as { decision?: string; reason?: string };
     expect(parsed.decision).toBe("block");
     expect(typeof parsed.reason).toBe("string");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(a) reason names the pending run-stage work as on-task continuation", () => {
     const proj = makeProject();
@@ -895,7 +896,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(reason).toContain("run-stage");
     // The directive's stage context is carried into the continuation too.
     expect(reason).toContain("requirements-analysis");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(a) reason is a sanctioned continuation (re-feeds the loop, no override verbs)", () => {
     const proj = makeProject();
@@ -906,7 +907,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     // engine), NEVER an override-shaped instruction.
     expect(reason).toContain("amadeus-orchestrate");
     expect(/ignore|override|disregard|bypass/i.test(reason)).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (b) `done` directive -> stop ALLOWED (no block, exit 0).
@@ -916,14 +917,14 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "done");
     expect(r.rc).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(b) done directive emits nothing (stop allowed, no block)", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "done");
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test.each(["ask", "select-intent"])(
     "(b1) %s directive waits for the human without a forwarding-loop block",
@@ -948,7 +949,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "parked");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(b2) parked does not consume the durable continuation budget", () => {
     const proj = makeProject();
@@ -960,7 +961,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(first.out).toContain('"decision":"block"');
     expect(second.out).toContain('"decision":"block"');
     expect(exhausted.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(b2) parked under Intent autonomy full ALLOWS a safe abnormal stop", () => {
     const proj = makeProject();
@@ -968,7 +969,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "parked");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (c) RECURSION GUARD — asserted hardest. The session must ALWAYS release.
@@ -989,7 +990,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":true}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toContain('"decision":"block"');
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // (c2) The cap-th delivery is authorized; cap+1 is rejected and remains terminal.
   test("(c2) durable budget (cap 3): block,block,block,RELEASE — cap-th is allowed", () => {
@@ -1006,7 +1007,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     // The cap-th delivery is still a real, parseable block decision.
     expect((JSON.parse(b1.out) as { decision: string }).decision).toBe("block");
     expect((JSON.parse(b3.out) as { decision: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(c2b) audit noise cannot reset a stage budget: three deliveries then cap+1 RELEASE", () => {
     const proj = makeProject();
@@ -1024,7 +1025,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       true,
     );
     expect(outputs[3]).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // (c3) A stage pivot creates a new semantic subject with its own budget.
   test("(c3) progress (stage pivot) starts a fresh durable stage budget", () => {
@@ -1045,7 +1046,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(runHook(proj, '{"stop_hook_active":true}', "run-stage", "2").out).toContain(
       '"decision":"block"',
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (d) No-op outside AIDLC — no state file -> exit 0, no block.
@@ -1054,13 +1055,13 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const proj = makeProject(); // NO seedActive => no amadeus-state.md
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(d) no active workflow emits nothing (non-AIDLC session is never blocked)", () => {
     const proj = makeProject();
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (e) HUMAN-WAIT CARVE-OUT — when the current stage is positively in a
@@ -1078,7 +1079,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed: empty stdout, no decision:block
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(e) current stage revising [R] allows the stop (human-wait carve-out)", () => {
     const proj = makeProject();
@@ -1086,7 +1087,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(e) carve-out is positive-only — [-] in-progress still BLOCKS (cap is the only release)", () => {
     const proj = makeProject();
@@ -1099,7 +1100,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect(r.rc).toBe(0);
     const parsed = JSON.parse(r.out) as { decision?: string };
     expect(parsed.decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (f) TIER-2 PENDING-QUESTION CARVE-OUT — a mid-stage [-] stage with a
@@ -1118,7 +1119,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed — a question is genuinely pending
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) [-] with an underscore-only [Answer]: also allows (treated as blank)", () => {
     const proj = makeProject();
@@ -1128,7 +1129,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) [-] with an ANSWERED question still BLOCKS (no pending question)", () => {
     const proj = makeProject();
@@ -1138,7 +1139,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) [-] with NO questions file still BLOCKS (a genuine mid-stage quit)", () => {
     const proj = makeProject();
@@ -1146,7 +1147,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) AUTONOMY GUARD — full + blank question still BLOCKS", () => {
     const proj = makeProject();
@@ -1163,7 +1164,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) semi declared by a human + blank question BLOCKS because semi may rule on it", () => {
     const proj = makeProject();
@@ -1183,7 +1184,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) a corrupt autonomy audit row CLOSES the semi carve-out (projection read failure answers false)", () => {
     const proj = makeProject();
@@ -1229,7 +1230,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {
     const proj = makeProject();
@@ -1244,7 +1245,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (f) TIER-3 CONVERSATIONAL CARVE-OUT (issue #365 broader reading): when the
@@ -1271,7 +1272,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed (the turn was conversational)
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) Claude transcript with an amadeus-orchestrate Bash call after the prompt still BLOCKS (engine was engaged)", () => {
     const proj = makeProject();
@@ -1286,7 +1287,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) Codex rollout chat transcript allows the stop (conversational carve-out, codex reader)", () => {
     const proj = makeProject();
@@ -1301,7 +1302,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) Codex rollout with a function_call amadeus-orchestrate after the prompt still BLOCKS", () => {
     const proj = makeProject();
@@ -1314,7 +1315,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) AUTONOMY GUARD - a chat transcript under Construction Autonomy Mode=autonomous still BLOCKS (carve-out disabled)", () => {
     const proj = makeProject();
@@ -1330,7 +1331,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) semi does NOT reach the compose or conversational carve-outs (#2253 opens tier-2 only)", () => {
     // The counterpart to the reversed tier-2 pin above. Redefining `semi`
@@ -1379,7 +1380,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) AUTONOMY cap is 8 - autonomous workflow does NOT release at the interactive cap (2)", () => {
     const proj = makeProject();
@@ -1392,7 +1393,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
         (output) => (JSON.parse(output) as { decision?: string }).decision === "block",
       ),
     ).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(f) FAIL-CLOSED - a transcript_path pointing at a nonexistent file falls through to the cap-bounded block", () => {
     const proj = makeProject();
@@ -1410,7 +1411,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (g) RUN-MODE-AWARE DEFAULT BLOCK CAP: with no CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
@@ -1432,7 +1433,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(b1.out) as { decision?: string }).decision).toBe("block");
     expect((JSON.parse(b2.out) as { decision?: string }).decision).toBe("block");
     expect(b3.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(g) AUTONOMOUS default cap (8): eight blocks then cap+1 RELEASE", () => {
     const proj = makeProject();
@@ -1449,7 +1450,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       expect((JSON.parse(outs[i]) as { decision?: string }).decision).toBe("block");
     }
     expect(outs[8]).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // Robustness — garbage stdin must never crash and never trap (fail open).
@@ -1475,7 +1476,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     const n = runHook(proj, '{"stop_hook_active":false}', "__nonzero__");
     expect(n.rc).toBe(0);
     expect(n.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (h) CLASSIFIER REFINEMENTS (commit 92b94a2): two hardenings of the tier-3
@@ -1521,7 +1522,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed: read-only query is not engagement
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) chat + `amadeus-utility status` after the human prompt allows the stop", () => {
     const proj = makeProject();
@@ -1539,7 +1540,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) chat + `amadeus-orchestrate --doctor` / `--help` / `--version` each allow the stop", () => {
     for (const flag of ["--doctor", "--help", "--version"]) {
@@ -1557,7 +1558,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       expect(r.rc).toBe(0);
       expect(r.out).toBe(""); // each read-only flag stays conversational
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- (h.1) loop-advancing / mutating calls are engagement (BLOCK) ---
   test("(h) engaged: bare `amadeus-orchestrate next` after the human prompt BLOCKS", () => {
@@ -1576,7 +1577,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) engaged: `amadeus-orchestrate report --stage x --result approved` BLOCKS", () => {
     const proj = makeProject();
@@ -1596,7 +1597,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) engaged: `amadeus-state approve foo` BLOCKS", () => {
     const proj = makeProject();
@@ -1612,7 +1613,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- (h.2) the hook's own re-prompt is excluded from "genuine human prompt" ---
   test("(h) isMeta exclusion: an isMeta 'Stop hook feedback:' re-prompt does NOT reset the human anchor; engine call after the REAL prompt still BLOCKS", () => {
@@ -1640,7 +1641,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) content exclusion (no isMeta): a 'Stop hook feedback:' user entry is excluded by content, so the last GENUINE prompt was a chat answer -> ALLOW", () => {
     const proj = makeProject();
@@ -1662,7 +1663,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed: feedback entry excluded by content prefix
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- (h) Codex-format equivalents (read-only ALLOW + bare-next BLOCK) ---
   test("(h) Codex: chat + read-only `amadeus-orchestrate next --status` allows the stop", () => {
@@ -1681,7 +1682,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(h) Codex: engaged bare `amadeus-orchestrate next` BLOCKS", () => {
     const proj = makeProject();
@@ -1697,7 +1698,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (i) CLASSIFIER-LEAK REGRESSIONS (commit e9b6e48). Three precision fixes to
@@ -1752,7 +1753,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(i) `amadeus-orchestrate report --reason \"checked --status earlier\"` BLOCKS (flag inside an argument is not an exemption)", () => {
     const proj = makeProject();
@@ -1775,7 +1776,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- (i.2) MISSED COMMANDS: jump / state-skip count as engagement; bolt --help does not ---
   test("(i) engaged: `amadeus-jump.ts execute application-design` after the human prompt BLOCKS", () => {
@@ -1794,7 +1795,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(i) engaged: `amadeus-state.ts skip foo` after the human prompt BLOCKS", () => {
     const proj = makeProject();
@@ -1812,7 +1813,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(i) read-only `amadeus-bolt.ts --help` after a chat prompt allows the stop (read-only verb is not engagement)", () => {
     const proj = makeProject();
@@ -1831,7 +1832,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed: read-only --help is not engagement
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- (i.3) CODEX RAW CONTINUATION: the raw nudge body must not reset the human anchor ---
   // The hook's continuationReason body (amadeus-stop.ts:781-792) is excluded from
@@ -1866,7 +1867,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("(i) Codex: a RAW continuation body (no wrapper) does NOT reset the human anchor; the engaged turn still BLOCKS", () => {
     const proj = makeProject();
@@ -1885,7 +1886,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test.each([
     "bun .claude/tools/amadeus-utility.ts migrate --apply",
@@ -2016,7 +2017,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(missingSession.out) as { decision?: string }).decision).toBe(
       "block",
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // =========================================================================
   // (k) MACHINE-INJECTED TURN EXCLUSION (#755). The tier-3 conversational
@@ -2049,7 +2050,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     );
     expect(r.rc).toBe(0);
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   for (const [formName, injectedTurn] of MACHINE_INJECTED_TURNS) {
     for (const format of ["claude", "codex"] as const) {
@@ -2069,7 +2070,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
         );
         expect(r.rc).toBe(0);
         expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-      }, 30000);
+      }, scaleTestTime(30000));
     }
   }
 });

@@ -37,6 +37,7 @@
 // assert_not_contains becomes .not.toContain; the assert_lt timing check
 // (Test 16) becomes an elapsed-ms expect(<500). STRONGER additions are tagged.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -265,7 +266,7 @@ describe("t11 amadeus-statusline hook (migrated from t11-hook-statusline.sh, pla
     // assert_lt "$ELAPSED_MS" 500. spawnSync includes process startup, which is
     // the same wall-clock the .sh measured around `bun "$HOOK"`.
     expect(elapsed).toBeLessThan(500);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- .sh Test 17: [S] stages excluded from construction progress total ---
   test("17: [S] stages excluded from construction total (0/3 + empty bar)", () => {

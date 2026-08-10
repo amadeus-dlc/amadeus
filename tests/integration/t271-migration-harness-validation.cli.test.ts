@@ -1,5 +1,6 @@
 // covers: cli:amadeus-migrate(dry-run)
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -67,7 +68,7 @@ function migrate(project: UpstreamV2Fixture): {
     {
       cwd: project.projectDir,
       encoding: "utf-8",
-      timeout: 20_000,
+      timeout: scaleTestTime(20_000),
     },
   );
   return {

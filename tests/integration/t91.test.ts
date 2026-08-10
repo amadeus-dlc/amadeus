@@ -65,6 +65,7 @@
 // Each .sh `ok` / assert_eq maps to one expect()-bearing test() case here, plus
 // the MR9 orchestrate-report command-filter regression.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -214,7 +215,7 @@ function runHook(proj: string, json: string): HookResult {
     input: json,
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: proj },
-    timeout: 20_000,
+    timeout: scaleTestTime(20_000),
   });
   return {
     status: res.status ?? -1,
@@ -228,7 +229,7 @@ function runHookEmptyStdin(proj: string): HookResult {
     input: "",
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: proj },
-    timeout: 20_000,
+    timeout: scaleTestTime(20_000),
   });
   return {
     status: res.status ?? -1,
@@ -283,7 +284,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     );
     expect(r.status).toBe(0); // STRONGER: the .sh discarded the hook exit code
     expect(existsSync(graphPath(p))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("1b: amadeus-orchestrate report command -> compile dispatched", () => {
     const p = makeProject();
@@ -296,7 +297,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     );
     expect(r.status).toBe(0);
     expect(existsSync(graphPath(p))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 2: terminal-WORKFLOW (WORKFLOW_COMPLETED in last 3) -> dispatch -
   test("2: terminal-WORKFLOW (WORKFLOW_COMPLETED in last-3) -> compile dispatched", () => {
@@ -307,7 +308,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
       payload("bun .claude/tools/amadeus-state.ts approve --stage intent-capture"),
     );
     expect(existsSync(graphPath(p))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 2b: STAGE_AWAITING_APPROVAL in last 3 (gate-start refresh) -----
   test("3: STAGE_AWAITING_APPROVAL in last-3 -> compile dispatched (gate-start refresh)", () => {
@@ -318,7 +319,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
       payload("bun .claude/tools/amadeus-state.ts gate-start intent-capture"),
     );
     expect(existsSync(graphPath(p))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 3: non-amadeus Bash (git status) -> no dispatch + no heartbeat ---
   test("4: non-amadeus Bash -> no compile dispatched", () => {
@@ -326,7 +327,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHook(p, payload("git status"));
     expect(existsSync(graphPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5: non-amadeus Bash -> cheap exit before heartbeat (no heartbeat file)", () => {
     const p = makeProject();
@@ -334,7 +335,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     runHook(p, payload("git status"));
     // The command filter rejects before the heartbeat write (hook step 3 < 5).
     expect(existsSync(heartbeatPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 4: amadeus-runtime.ts -> recursion guard, no dispatch -----------
   test("6: amadeus-runtime.ts -> recursion-guarded (no compile)", () => {
@@ -342,7 +343,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHook(p, payload("bun .claude/tools/amadeus-runtime.ts compile"));
     expect(existsSync(graphPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 4b: composite with amadeus-runtime.ts AND amadeus-state.ts --------
   test("7: composite Bash with amadeus-runtime.ts -> recursion-guarded (explicit reject first, no compile)", () => {
@@ -355,7 +356,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
       ),
     );
     expect(existsSync(graphPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 5: amadeus Bash but no transition in last 3 --------------------
   test("8: no transition in last-3 -> no compile dispatched", () => {
@@ -363,7 +364,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     writeFileSync(auditPath(p), AUDIT_NO_TRANSITION, "utf-8");
     runHook(p, payload("bun .claude/tools/amadeus-state.ts session"));
     expect(existsSync(graphPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9: no transition in last-3 -> heartbeat still updated (filter passed, only event-class failed)", () => {
     const p = makeProject();
@@ -372,7 +373,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     // The command filter passed (amadeus-state.ts), so the heartbeat write at
     // hook step 5 runs even though the event-class filter (step 7) bailed.
     expect(existsSync(heartbeatPath(p))).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 6: empty-stdin guard ------------------------------------------
   test("10: empty stdin -> exit 0", () => {
@@ -380,14 +381,14 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     const r = runHookEmptyStdin(p);
     expect(r.status).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("11: empty stdin -> no compile (exits before work)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHookEmptyStdin(p);
     expect(existsSync(graphPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- Case 7: malformed JSON stdin -> exit 0, no work --------------------
   test("12: malformed stdin JSON -> exit 0", () => {
@@ -395,7 +396,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     const r = runHook(p, "this is not json");
     expect(r.status).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // Case 8 / test 13 (Test-Run propagation -> MEMORY_EMPTY row carries
   // Test-Run: true) was dropped per #369 when the test-run mechanism was removed.

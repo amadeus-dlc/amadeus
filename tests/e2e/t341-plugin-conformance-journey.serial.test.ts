@@ -30,6 +30,7 @@
 // Fixture: the SHIPPED reference plugin `plugins/formal-model-check`, copied
 // read-only (the repo's own plugins/ and dist/ are never written — asserted).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -73,7 +74,7 @@ function run(command: string, args: readonly string[], extraEnv: NodeJS.ProcessE
   const res = spawnSync(command, [...args], {
     cwd: ws,
     encoding: "utf-8",
-    timeout: 180_000,
+    timeout: scaleTestTime(180_000),
     env: subprocessEnv(extraEnv),
     input: "{}",
   });
@@ -90,7 +91,7 @@ const cli = (...args: string[]): Run => {
     {
       cwd: ws,
       encoding: "utf-8",
-      timeout: 180_000,
+      timeout: scaleTestTime(180_000),
       env: subprocessEnv(),
       input: "{}",
     },

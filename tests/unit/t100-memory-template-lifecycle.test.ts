@@ -59,6 +59,7 @@
 //   .sh 15 (memory_path forward-slash, relative)       -> cli  "advance memory_path uses no backslashes and is projectDir-relative (amadeus-docs/ prefix)"
 //   .sh 16 (approve inherits memory_path)              -> cli  "approve inherits the memory_path key via handleAdvance delegation"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
@@ -298,7 +299,7 @@ describe("t100 advance/approve memory_path key (Bun spawn — CLI env seam)", ()
     expect(memoryPath(r.out)).toBe(
       `${RP}/ideation/scope-definition/memory.md`,
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("advance memory_path uses no backslashes and is projectDir-relative (record prefix) [.sh 15]", () => {
     const proj = midIdeationProject();
@@ -309,7 +310,7 @@ describe("t100 advance/approve memory_path key (Bun spawn — CLI env seam)", ()
     // Forward-slash only (worktree/Windows-portable) and relative.
     expect(mp).not.toContain("\\");
     expect(mp?.startsWith(`${RP}/`)).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("approve inherits the memory_path key via handleAdvance delegation [.sh 16]", () => {
     const proj = midIdeationProject();
@@ -323,5 +324,5 @@ describe("t100 advance/approve memory_path key (Bun spawn — CLI env seam)", ()
     expect(memoryPath(ap.out)).toBe(
       `${RP}/ideation/scope-definition/memory.md`,
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 });

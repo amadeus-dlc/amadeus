@@ -88,6 +88,7 @@
 // mechanism segment. Every assertion is a plain-text tmux grid read or an
 // on-disk read (no colour escapes).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   runTuiDriver,
@@ -150,7 +151,7 @@ async function waitForDisk(pred: () => boolean, timeoutMs: number): Promise<bool
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (pred()) return true;
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, scaleTestTime(1000)));
   }
   return pred();
 }

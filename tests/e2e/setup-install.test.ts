@@ -8,6 +8,7 @@
 // offline by default (cicd-pipeline.md). A separate, real-network variant is
 // gated behind AMADEUS_SETUP_E2E_NETWORK=1 and skipped otherwise.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
 import { spawn, spawnSync } from "node:child_process";
@@ -111,7 +112,7 @@ describe("amadeus-setup install (E2E, offline fixture)", () => {
         await close();
       }
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 });
 
