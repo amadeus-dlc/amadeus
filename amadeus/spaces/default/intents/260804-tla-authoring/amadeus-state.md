@@ -14,6 +14,7 @@
 - **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
+- **Merge-Held**: false
 ## Scope Configuration
 - **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.4, 2.1, 2.3, 2.6, 2.7, 2.8, 3.1, 3.3, 3.5, 3.6
 - **Stages to Skip**: 1.2 (market-research), 1.3 (feasibility), 1.5 (team-formation), 1.6 (rough-mockups), 1.7 (approval-handoff), 2.2 (practices-discovery), 2.4 (user-stories), 2.5 (refined-mockups), 3.2 (nfr-requirements), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 3.8 (formal-model-check), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
