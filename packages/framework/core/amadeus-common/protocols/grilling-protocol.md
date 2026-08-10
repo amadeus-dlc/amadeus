@@ -120,6 +120,30 @@ listing each pruned node and the level that would have admitted it. Under Free
 nothing is pruned: state that explicitly ("none — Free prunes nothing") rather
 than omitting the section.
 
+In workflow grilling, append the same section to the questions file, opened by
+the marker
+
+```text
+<!-- amadeus-grilling:deferred -->
+```
+
+on its own line directly above the section heading. The marker is what the
+question-budget sensor matches: it reads the questions file and nothing else,
+so a section that exists only in the spoken summary is unreachable to it.
+
+The heading above the marker is human-facing prose and is written in whatever
+language the record uses ("Deferred as below the threshold",
+「閾値未満として明示的に先送りした点」). The marker is not — it is machine-matched
+verbatim, so it is never translated, reworded, or merged into another line. The
+same reasoning applies to the mode marker (§2.5) and the justification line
+(§2.5): all three are language-neutral by construction, because a check that
+matched a heading in one team's language could never match another's.
+
+Pruning nothing does not remove the obligation: the marker and the section are
+written even when nothing was pruned, carrying the same explicit "none" the
+paragraph above requires. An absent section means "not recorded", never
+"nothing to record".
+
 ### 2.4 Circuit breaker
 
 A level in force (Minimal / Standard / Comprehensive) bounds session length with
@@ -176,6 +200,10 @@ ceiling, not a target (§2.1).
   in `stage-protocol.md` §8. Fixed shape, one line, no free text, written once
   per session — it is machine-matched verbatim, so it is never reworded and
   never merged into another line.
+- **Deferred-node section.** The agreement summary's deferred section (§2.3) is
+  appended to the questions file as well, opened by
+  `<!-- amadeus-grilling:deferred -->` on its own line. Written once per
+  session, including when nothing was pruned.
 
 ### 2.6 Facts, estimates, decisions
 
@@ -250,7 +278,7 @@ and the recording obligations differ:
 | Level source | Active stage depth (Minimal / Standard / Comprehensive) | Explicitly requested level; Free by default |
 | Pruning | Per §2.2 at the active depth | Only when a level is requested; Free prunes nothing |
 | Circuit breaker | Per §2.4 | Per §2.4 when a level is requested; exempt under Free |
-| Questions file | REQUIRED — mode marker, one entry per question, blank `[Answer]:` before presenting, write-back before the next round, justification line on the depth-ceiling crossing | None — terminal only |
+| Questions file | REQUIRED — mode marker, one entry per question, blank `[Answer]:` before presenting, write-back before the next round, justification line on the depth-ceiling crossing, deferred-node section with its marker | None — terminal only |
 | Audit log | REQUIRED — `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision` before each question, `... answer` after each answer (per question; existing event types only) | None — read-only classification, no audit events |
 | After confirmation | Stage artifact generation (stage-protocol Step 4+) | Terminal summary including deferred nodes and unresolved material points; file written only on explicit user request |
 | State | Stage pointer advances via the normal stage lifecycle | Never touches the workflow stage pointer |

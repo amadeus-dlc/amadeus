@@ -22,6 +22,7 @@ output_schema:
   findings:
     - field: string
       reason: string
+      severity: string
 timeout_seconds: 5
 ---
 
@@ -124,11 +125,52 @@ Every case where the sensor cannot legitimately compare is a pass:
   business
 - the file exists but holds only whitespace (`empty`) — a stage mid-write, not a
   contract violation
-- no depth reached the sensor, or the state file names one it does not
-  recognise (`no-depth`) — a level is never guessed, since guessing Minimal
-  would report at the strictest row on exactly the runs where the row is unknown
+- no depth reached the sensor (`no-depth`) — a level is never guessed, since
+  guessing Minimal would report at the strictest row on exactly the runs where
+  the row is unknown
 - the record root or its date cannot be read — an unreadable layout is not
   evidence that a record is new, so it is never reported
+
+A depth the sensor does not recognise is the one case here that is a pass but
+not a silence: no ceiling applies, and the value is reported as an
+`unknown-depth` warning. Returning the same `no-depth` pass as a stage with no
+depth at all let a typo'd or invented level switch the comparison off with
+nothing said.
+
+## Grilling sessions
+
+A questions file opening with `<!-- amadeus-grilling:v1 mode=grilling -->`
+(`grilling-protocol.md` §2.5) is not measured against the row. Grilling spends
+depth as a materiality threshold on which nodes enter the design tree rather
+than as a question budget, and terminates on frontier coverage, so its total is
+an emergent value that may legitimately exceed the ceiling.
+
+What is checked instead is whether the overrun was recorded. Past the ceiling,
+the file must carry both the justification line (§2.5) and the deferred-node
+section marker (§2.3); either missing is an error finding
+(`missing-justification`, `missing-deferred-list`), both present is
+`justified-overrun`. Inside the ceiling nothing is required — the obligations
+attach to the crossing.
+
+A near-miss marker — an `amadeus-grilling:` tag that is not the mode marker —
+is a `malformed-marker` warning, and the file is measured as an ordinary one.
+Reading a typo as "no marker" would compare a frontier-driven session against a
+ceiling it was never written for and say nothing about why.
+
+All three tokens are HTML comments rather than headings. This sensor ships to
+every project, and a heading matched in one team's record language could never
+match another's; the human-facing heading beside the deferred marker is written
+in whatever language the record uses.
+
+### Severity
+
+`findings_count` is the number of findings OBSERVED, warnings included. `pass`
+is false when at least one finding is an `error` — the two warnings above are
+faults in the record's form, loud but not failures, which is what an advisory
+sensor's verdict is for.
+
+The enforcement cutoff below applies to every check here through a single gate,
+so a record written before this sensor existed is unaffected by any of them.
 
 ## Failure mode
 

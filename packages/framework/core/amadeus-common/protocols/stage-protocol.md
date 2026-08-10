@@ -352,6 +352,7 @@ For multi-select questions (where user may choose more than one option), add "(s
 - Workflow-specific obligations on top of the protocol:
   - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — one entry per question even when the round is presented at once, the same Stop-hook human-wait convention as the other modes.
   - Write each answer back to its own `[Answer]:` tag immediately after it is received. Do not present the next round before the write-back.
+  - Append the deferred-node section (`grilling-protocol.md` §2.3) to the questions file, opened by `<!-- amadeus-grilling:deferred -->` on its own line — once per session, including when nothing was pruned. The heading follows the record's language; the marker is matched verbatim and is never translated.
   - Audit per question, existing contract only: `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision ...` before presenting, `bun {{HARNESS_DIR}}/tools/amadeus-log.ts answer ...` after the response — one `decision`/`answer` pair per question, with the same write-back, audit, and fresh-timestamp discipline as Step 3a. No new event types.
 - After the agreement summary is explicitly confirmed, continue with Step 4 as usual — grilling replaces only the Step 3 dialogue; verification, contradiction analysis, artifact generation, §13, and the approval gate are unchanged.
 
@@ -754,7 +755,10 @@ coverage, so the question total is an emergent value and may exceed the row
 above. When it does, the recorded justification required by this contract takes
 a standing machine-readable form: grilling appends the fixed justification line
 (`grilling-protocol.md` §2.5) to the questions file at the crossing, recording
-the depth, the total, and `frontier-driven` as the reason. The circuit breaker
+the depth, the total, and `frontier-driven` as the reason. Alongside it the same
+file carries the deferred-node section carrying the
+`<!-- amadeus-grilling:deferred -->` marker (`grilling-protocol.md` §2.3), so
+the overrun is readable next to the pruning it was traded against. The circuit breaker
 (three times the row's ceiling — Minimal 12 / Standard 24 / Comprehensive 36)
 is the disclosed upper bound on that overrun. The ceilings above are unchanged
 and continue to bind every other interaction mode.

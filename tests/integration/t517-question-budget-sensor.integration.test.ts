@@ -130,9 +130,18 @@ describe("t517 ceiling comparison", () => {
     });
   });
 
-  test("an unrecognizable depth is not guessed into Minimal", () => {
+  test("an unrecognizable depth is not guessed into Minimal, and is now reported", () => {
+    // The ceiling is still switched off — the sensor never guesses a level.
+    // What changed is the silence beside it: an unreadable depth used to return
+    // the same `no-depth` pass as a stage that simply has no depth, so a typo'd
+    // value quietly disabled the comparison. It is now a warning, which is loud
+    // without failing the file. See t531 for the finding's shape.
     const { questionsPath } = seedRecord({ dirName: POST, depth: "Brief", body: questions(9) });
-    expect(evaluateQuestionBudget(questionsPath, "Brief")).toMatchObject({ reason: "no-depth", ceiling: null });
+    expect(evaluateQuestionBudget(questionsPath, "Brief")).toMatchObject({
+      pass: true,
+      reason: "unknown-depth",
+      ceiling: null,
+    });
   });
 
   test("depth matching is case-insensitive, as the state file is hand-written", () => {
