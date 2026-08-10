@@ -36,7 +36,105 @@ evaluator argv（`plugins/formal-model-check/plugin.json:59-65`）の第 2 要�
 
 `advisoriesForHost`（`:366-383`）→ `declaredAdvisoriesForPlugin`（`:305-329`）→ `spawnEvaluator`（`:347-357`）の checkpoint 発火経路と、`amadeus-advisory-choice.ts:948-978`（`declaredFormalCheckRoute`）/ `:729-741`（`directiveItemFor` → `declaredHandoffStage`）/ `:980-986`（`DECLARED_RELEASE_RULE`）の run-now/handoff 経路が、すべて同じ `pluginManifestPath` 解決に依存する。**全経路で degradation は無音**であり、t445-advisory-declaration-supply `:155-160` がその無音 fail-open を契約として pin している。
 
-## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、履歴、observed `df1c874cf`）
+## plugin 散文のパス規約と rename データ源の二重化（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
+
+**観測 ref**: 本節の file:line はすべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`（`origin/main` 系譜。worktree HEAD `ff06d945b` は record-only merge なので observed には採らない — `cid:reverse-engineering:c2-observed-mainline-commit`）時点。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent の observed）。区間は **8 コミット**、非 record 面で **16 files / +721 / -101**（`git diff --shortstat "${B}" "${S}" -- . ':(exclude)amadeus/'`）。全述語・全数列挙の正本は `re-scans/260810-plugin-prose-seed-guard.md`。
+
+**Focus**: [Issue #2810](https://github.com/amadeus-dlc/amadeus/issues/2810)（plugin 散文の repo ルート相対ツール参照 11 行）+ [#2812](https://github.com/amadeus-dlc/amadeus/issues/2812)（`transform()` と `seedBytesForHarness()` の規則集合乖離）。兄弟欠陥 `plugin.json:61` は [#2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（S2-CRITICAL）へ分離済みで本 intent の射程外。**Scan mode**: xrev differential scan（run `xrev-2810-20260810T080817Z` / `xrev-2812-20260810T080817Z`、いずれも 2 名 ESTABLISHED_WITH_REFINEMENTS）。
+
+### ⭐ 直前節の中核前提は解消された — 経路B に置換器が入った
+
+直前節（`260810-plugin-harness-dir-token`、`df1c874cf`）の N-3 は「経路B（runtime compose）に置換器は存在せず、self-install 5 面は `transform()` を一度も通らない」ことを中核所見としていた。**この非対称は PR #2811（`c51afbd0a`）で解消されている。**
+
+`packages/framework/core/tools/amadeus-plugin.ts:669-675` 逐語:
+
+```ts
+export function seedBytesForHarness(relPath: string, bytes: Buffer, harnessDir: string | null): Buffer {
+  if (harnessDir === null) return bytes;
+  if (!relPath.endsWith(".md") && !relPath.endsWith(".md.example")) return bytes;
+  const rules = rulesSubdirFor(harnessDir);
+  const text = bytes.toString("utf-8").replace(HARNESS_TOKEN, harnessDir);
+  return Buffer.from(text.replaceAll(`${harnessDir}/rules/`, `${harnessDir}/${rules}/`), "utf-8");
+}
+```
+
+配線は `copyRealFiles` の書き出し点 `:738` — `writeFileSync(join(outDir, name), seedBytesForHarness(toPosixRel(srcRoot, abs), readFileSync(abs), harnessDir))`。`harnessDir` は**書き出し先**から導かれる（`stagingHarnessDirOf(dst)`、`:659-664`）。`seedStaging`（`:894-900`）の宛先は常に `pluginSourceRootOf(hostRoot)/<name>` = `<harnessTree>/.amadeus-plugin-src/<name>` なので、ソースが authoring `plugins/` でも staging でも解決は効く。`null` を返すのは authoring `plugins/<name>` **へ書き戻す**場合（`install --force`）だけで、これは意図的な設計である（`:656-658` 逐語「The authoring `plugins/<name>` dir (an install --force write target) is deliberately NOT a match: the authoring tree must stay harness-neutral.」）。`HARNESS_TOKEN` は core 側のローカル定義 `:653`（`scripts/` は core から import できないため、正規表現は packager と別実体）。
+
+### 新しい非対称 — 規則の**形**は同一だが**データ源**が二重
+
+置換器の並置により、非対称は「置換器の有無」から「rename 値の出所」へ移動した。
+
+| 面 | トークン置換 | rename のデータ源 | 適用ゲート |
+|---|---|---|---|
+| 経路A `transform()`（`scripts/harness-transform.ts:33-45`） | `substituteToken`（`:14`） | **呼び出し元が渡す引数 `rulesRename`**（`:37`。実体は harness manifest） | `isMarkdownProsePath`（`:27-29`、`.md` / `.md.example`） |
+| 経路B `seedBytesForHarness()`（`amadeus-plugin.ts:669-675`） | `.replace(HARNESS_TOKEN, harnessDir)`（`:673`） | **`rulesSubdirFor(harnessDir)`**（`:672`）= `KNOWN_RULES_SUBDIR` 表 | 同形の inline 判定（`:671`） |
+
+規則の形（token → rename の順序、`replaceAll` によるアンカー `${harnessDir}/rules/`）は逐語で同一であり、設計コメント `:666-668` も「Mirrors the packager's transform()」と自称する。**差はデータ源のみ**である。
+
+### この二重化はすでに乖離している（PROVEN）
+
+`amadeus-harness.ts:59-65` の表は **5 キー**、`KNOWN_HARNESS_DIRS`（`:38-46`）は **7 個の相異なるディレクトリ**。差分 2 個（`.opencode` / `.cursor`）は `:72` の `?? "rules"` fallback に落ちる。一方 harness manifest 側の実測値（述語 `git show "${S}:packages/framework/harness/<h>/manifest.ts" | grep -n 'rulesRename\|harnessDir:'`、8 面）:
+
+| harness | harnessDir | manifest `rulesRename` | `rulesSubdirFor` | 一致 |
+|---|---|---|---|---|
+| claude | `.claude` | `null`（`:112`） | `rules` | ✅ 双方 no-op |
+| codex | `.codex` | `"amadeus-rules"`（`:74`） | `amadeus-rules` | ✅ |
+| **cursor** | `.cursor` | **`"amadeus-rules"`（`:74`）** | **`rules`** | ❌ **乖離** |
+| kimi | `.kimi-code` | `null`（`:109`） | `rules` | ✅ |
+| kiro | `.kiro` | `"steering"`（`:91`） | `steering` | ✅ |
+| kiro-ide | `.kiro` | `"steering"`（`:111`） | `steering` | ✅ |
+| **opencode** | `.opencode` | **`"amadeus-rules"`（`:76`）** | **`rules`** | ❌ **乖離** |
+| pi | `.pi` | `null`（`:114`） | `rules` | ✅ |
+
+すなわち #2812 は「将来ドリフトしうる」という予防的懸念ではなく、**着地時点ですでに 2 面が乖離している現存欠陥**である（Issue の reframe と一致。S3-MAJOR / P2）。
+
+### `KNOWN_RULES_SUBDIR` の消費点は 3 つ（1 つは両レビュー未指摘）
+
+述語 `git grep -n 'rulesSubdirFor' "${S}"` の非 record ヒットは **3 件のみ**（定義 `amadeus-harness.ts:71`、import `amadeus-plugin.ts:32`、呼び出し `:672`）。**しかし表そのものを直接読む第二の消費者が存在する** — `amadeus-harness.ts:191-197`:
+
+```ts
+export function rulesSubdir(): string {
+  if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
+  if (process.env.AMADEUS_HARNESS_DIR) {
+    return KNOWN_RULES_SUBDIR[process.env.AMADEUS_HARNESS_DIR] ?? "rules";   // :194
+  }
+  return shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR[harnessDir()] ?? "rules"; // :196
+}
+```
+
+したがって 2 キー追加が効く観測点は (1) `rulesSubdirFor` → `seedBytesForHarness`、(2) `:194` の env 分岐 — **descriptor を一切見ない**、(3) `:196` の descriptor 欠落時 fallback、の 3 つ。(2) を「descriptor 優先 + map fallback」と記述するのは誤りで、env 分岐に descriptor 優先は無い。これはクロスレビュー両名が指摘していない第 4 の面である。
+
+方向性の評価（事実に接地）: (2)(3) は `.cursor` / `.opencode` で現在 `"rules"` を返すが、実インストールの descriptor は `"amadeus-rules"` を出荷しており（`tests/smoke/t149-opencode-cursor-dist-structure.test.ts:81` / `:87` が両面の `harness.json` の `rulesSubdir` を pin。**scan 報告の `tests/integration/t149-…` はパス誤りで、Architect 独立再実測により `tests/smoke/` へ訂正**）、`cursor/manifest.ts:44` の `{ src: "rules", dst: "amadeus-rules" }` が実ディレクトリ名も `amadeus-rules` であることを示す。**2 キー追加は (2)(3) をより正しい値へ寄せる**方向である。
+
+### #2810 — 11 行は両経路の実測済み通過面に乗る
+
+述語 `git grep -nE '(^|[^/A-Za-z0-9._-])plugins/[a-z0-9-]+/(tools|stages|specs|hooks)/' "${S}" -- plugins/` → **16 hits**（対象は observed の tracked plugin ファイル 44 件すべて、除外なし）。うち患部本体は **11 行**（`pr-convergence.md:54/:80/:162/:214`、`formal-model-check.md:48`、`tla-authoring.md:65/:68/:110/:113/:116`、`formal-model-check/README.md:111`）。
+
+トークン化が両経路で解決することは実証済みである。
+
+- **経路A**: `t-plugin-projection-packaging.test.ts:171` のコメントが逐語で「the consumer install bundle is path A (build-time packager), which DOES run harness-transform's transform()」と述べ、`:180-196` が患部 4 行を含む `pr-convergence.md` を全 8 面で `installArtifacts` から取り出しトークン解決を assert する。
+- **経路B**: `copyPluginSource`（`:702`）→ `copyRealFiles(..., stagingHarnessDirOf(dst))`（`:710`）→ `:738` の seed 適用。`t2790-plugin-staging-seed-harness-dir.integration.test.ts:104-120` が実 CLI で compose を駆動し、合成後 `<harnessDir>/plugins/pr-convergence/stages/pr-convergence.md` でのトークン解決・生トークン残存ゼロ・foreign dir リテラルゼロを assert する。
+
+すなわち **11 行の `{{HARNESS_DIR}}/plugins/<name>/tools/…` 化は新しい機構を必要とせず、既存の 2 置換器にそのまま乗る**。直前節が指摘した `pr-convergence.md:180`（ハーネス**固定**側）は #2811 で既に `{{HARNESS_DIR}}/tools/…` へ置換済みで、残るのはハーネス接頭辞**欠落**側 11 行である。
+
+### トークンが構造的に届かない面（#2823 と同クラス）
+
+`.ts` / `.json` はどちらの置換器でも拡張子分岐により Buffer 素通しになる（`harness-transform.ts:39`・`amadeus-plugin.ts:671`）。したがって以下は `{{HARNESS_DIR}}` トークン化という手段自体が届かない:
+
+- `plugins/formal-model-check/plugin.json:61`（**#2823** へ分離済み）
+- `plugins/formal-model-check/tools/node-ci-model-check-port.ts:223`（spawn argv）
+- `plugins/formal-model-check/tools/run-skeleton-ci.ts:19`（`// Usage:` コメント）と `:60`（`"usage: …"` 実文字列）
+
+後者 3 件の consumer 実挙動は本 RE では未計測であり、患部に含めるかは要件段の裁定事項。
+
+### UNMEASURED（本 intent で測っていない。設計段へ持ち越し）
+
+- #2810 の中核主張「consumer ワークスペースで解決しない」は依然 **DEDUCED**。reviewer-1 が repo 外の同型レイアウトで A/B 対照（A: exit 1 Module not found / B: exit 2 CLI 到達）を取り measured-supported へ昇格させたが、`INSTALL.md → compose → 実行` の end-to-end は本 scan でも未実行。
+- `rulesSubdir():196` fallback の到達条件（descriptor 不在ツリーの実在形態）
+- `.cursor` / `.opencode` が plugin staging の compose 対象として実運用されるか（`SELF_INSTALL_HARNESSES` への所属は `plugin-projection.ts:20` で実測済み、実運用は未確認）
+- `.ts` 内 usage 文字列 3 件の consumer 実挙動
+
+## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
 
 **観測 ref**: 本節の file:line はすべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）時点。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（HEAD の祖先、`git rev-list --count base..HEAD` = **20 commits / 117 files**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-harness-dir-token.md`。
 

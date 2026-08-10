@@ -81,6 +81,14 @@ const HARNESS_PATH_RE = new RegExp(
   `(?:${allHarnessDirs().map((dir) => dir.replace(/[.]/g, "\\.")).join("|")})/`,
 );
 
+// A plugin-local path without a project/harness anchor resolves only in the
+// dogfood repository. Consumer workspaces execute the projected prose from a
+// harness tree, so authored plugin prose must carry {{HARNESS_DIR}} before the
+// plugin path. Keep this predicate plugin-only: core prose legitimately
+// discusses plugin source paths that are not executable references.
+const ROOT_RELATIVE_PLUGIN_PATH_RE =
+  /(^|\.{1,2}\/|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//;
+
 // The scan itself, over an arbitrary root list — reused by the positive-control
 // test below so the guard is exercised through the SAME code path a real stray
 // literal would take, not through a hand-rolled regex probe.
@@ -93,6 +101,20 @@ function strayLiterals(roots: readonly string[]): string[] {
       lines.forEach((line, i) => {
         if (!HARNESS_PATH_RE.test(line)) return;
         if (isCarvedOut(rel, line)) return;
+        stray.push(`${relative(REPO_ROOT, file)}:${i + 1}: ${line.trim()}`);
+      });
+    }
+  }
+  return stray;
+}
+
+function rootRelativePluginPaths(roots: readonly string[]): string[] {
+  const stray: string[] = [];
+  for (const root of roots) {
+    for (const file of walkMd(root)) {
+      const lines = readFileSync(file, "utf-8").split("\n");
+      lines.forEach((line, i) => {
+        if (!ROOT_RELATIVE_PLUGIN_PATH_RE.test(line)) return;
         stray.push(`${relative(REPO_ROOT, file)}:${i + 1}: ${line.trim()}`);
       });
     }
@@ -161,5 +183,25 @@ describe("t146 core hygiene — no stray harness-dir path literals in core/ pros
     // 60 core .md files carried a tokenizable path at migration time; assert a
     // healthy floor so a botched migration (token stripped) fails loudly.
     expect(tokenFiles).toBeGreaterThan(50);
+  });
+
+  test("plugin prose contains no repo-root-relative executable plugin paths", () => {
+    expect(rootRelativePluginPaths([PLUGINS])).toEqual([]);
+  });
+
+  test("the plugin-path guard catches injected relative paths and accepts an anchored path", () => {
+    const injected = mkdtempSync(join(tmpdir(), "amadeus-t146-plugin-path-"));
+    try {
+      const file = join(injected, "stray.md");
+      for (const prefix of ["", "./", "../"]) {
+        writeFileSync(file, `Run \`bun ${prefix}plugins/example/tools/cli.ts\`.\n`);
+        expect(rootRelativePluginPaths([injected]), prefix || "bare").toHaveLength(1);
+      }
+
+      writeFileSync(file, "Run `bun {{HARNESS_DIR}}/plugins/example/tools/cli.ts`.\n");
+      expect(rootRelativePluginPaths([injected])).toEqual([]);
+    } finally {
+      rmSync(injected, { recursive: true, force: true });
+    }
   });
 });

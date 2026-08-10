@@ -1,0 +1,18 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-plugin-prose-seed-guard/construction/build-and-test/build-test-results.md",
+        "digest": "b14ec5368f4e16e4d71765997db51c2a9555db003884c6e0ada8529f86c11de8"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-plugin-prose-seed-guard/.amadeus-advisory-check/1a4e0b15-03be-4ce9-8daf-99e14874de2f/completion-marker.json",
+        "digest": "6efaa56209daa769d5fb5455c36a22b48d5a53d59fab5262271e40be4b79bbd1"
+      }
+    ]
+  }
+]

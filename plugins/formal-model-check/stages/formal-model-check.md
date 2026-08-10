@@ -9,7 +9,7 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
+inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under {{HARNESS_DIR}}/plugins/formal-model-check/tools/.
 outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors:
   - model-completeness
@@ -45,7 +45,7 @@ unattended — any other ladder outcome falls back to the human.
    environment (see the README for the local vs CI dependency contract):
 
    ```
-   bun plugins/formal-model-check/tools/run-model-check.ts \
+   bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/run-model-check.ts \
      --model amadeus/spaces/default/specs/tla/FormalElection.tla \
      --cfg   amadeus/spaces/default/specs/tla/FormalElection.cfg \
      --out   <out-dir>

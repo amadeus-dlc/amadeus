@@ -98,7 +98,7 @@ expectation, and the observation:
 run-model-check: HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE) — Darwin environment
 inspection failed: Error: OpenJDK 26.0.1 verification failed: expected `openjdk
 version "26.0.1…"` from JAVA_HOME=/…/temurin-26.0.2+10, observed `openjdk
-version "26.0.2" 2026-07-21` (see plugins/formal-model-check/README.md § Local
+version "26.0.2" 2026-07-21` (see {{HARNESS_DIR}}/plugins/formal-model-check/README.md § Local
 execution requirements)
 ```
 
@@ -108,7 +108,7 @@ The same string is carried on the JSON line as `errorDetail`.
 toolchain explicitly:
 
 ```
-mise x java@temurin-26.0.1+8 -- bun plugins/formal-model-check/tools/run-model-check.ts …
+mise x java@temurin-26.0.1+8 -- bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/run-model-check.ts …
 ```
 
 Local execution also needs `sandbox-exec` (macOS built-in). CI uses the Docker

@@ -48,8 +48,8 @@ other — only you, the conductor, delegate.
   options — the file is always the source of truth. Use a structured question for
   1-3 simple options where the structured UI is clearer (rendering per the harness question-rendering annex).
 - Offer the interaction-mode flow per `stage-protocol.md` §3: guided
-  (interactive walkthrough), grilling (one question at a time, per
-  `grilling-protocol.md`), self-guided (edit the file directly), or chat
+  (interactive walkthrough), grilling (round-by-round over the
+  pruned frontier, per `grilling-protocol.md`), self-guided (edit the file directly), or chat
   (freeform). All four converge on the file.
 - A freeform request is ambiguous by definition. When the engine emits an `ask`
   for scope confirmation, surface the detected scope and let the user
