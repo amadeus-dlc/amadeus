@@ -5,11 +5,15 @@ import {
   buildAttributionCorpus,
   decodeCandidateInventory,
   decodeEventSetEnvelope,
+  lifecycleIdentityOf,
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-candidates.ts";
 import {
+  attributionCategoryForFamily,
   createAttributionWindow,
   createAttributionWindowId,
+  createCandidateId,
   createIntentIdentity,
+  createLifecycleIdentity,
   createSecondInterval,
   parseTargetStage,
   type AttributionResult,
@@ -554,5 +558,185 @@ describe("decodeCandidateInventory", () => {
     ]);
     expect(inventory.rejected.flatMap(({ secondaryReasons }) => secondaryReasons)).not.toContain("outside-window");
     expect(inventory.rejected.flatMap(({ secondaryReasons }) => secondaryReasons)).not.toContain("empty-after-idle");
+  });
+});
+
+describe("transaction and event-set defensive arms", () => {
+  const rejectedOf = (records: readonly AttributedRecord[]) => decodeCandidateInventory({
+    corpus: buildAttributionCorpus(records),
+    targetStage: TARGET_STAGE,
+    eligibleWindows: [window()],
+  }).rejected;
+
+  test("quality-repair arms: non-JSON payload, undecodable object, and a missing outer field", () => {
+    const quality = {
+      schemaVersion: 1,
+      transactionId: "quality-a",
+      qualityScopeId: "scope-a",
+      qualityEvents: [],
+      loopEventSets: [],
+    };
+    const rejected = rejectedOf([
+      row("QUALITY_REPAIR_TRANSACTION_COMMITTED", "2026-08-10T00:03:00Z", {
+        "Quality Scope Id": "scope-a",
+        "Transaction Id": "quality-a",
+        Transaction: "not-json",
+        Stage: "code-generation",
+      }, { seq: 70 }),
+      row("QUALITY_REPAIR_TRANSACTION_COMMITTED", "2026-08-10T00:03:01Z", {
+        "Quality Scope Id": "scope-a",
+        "Transaction Id": "quality-b",
+        Transaction: JSON.stringify({ schemaVersion: 999 }),
+        Stage: "code-generation",
+      }, { seq: 71 }),
+      row("QUALITY_REPAIR_TRANSACTION_COMMITTED", "2026-08-10T00:03:02Z", {
+        "Transaction Id": "quality-c",
+        Transaction: JSON.stringify(quality),
+        Stage: "code-generation",
+      }, { seq: 72 }),
+    ]);
+    expect(rejected.map(({ primaryReason }) => primaryReason).sort()).toEqual([
+      "malformed-event-set",
+      "malformed-event-set",
+      "unsupported-event-set-schema",
+    ]);
+  });
+
+  test("autonomy arms: undecodable transaction and a missing outer field", () => {
+    const projection = createAutonomyProjection({ intentUuid: "intent-a" });
+    const transaction: IntentAutonomyTransaction = {
+      schemaVersion: 1,
+      transactionId: "transaction-a",
+      intentUuid: "intent-a",
+      expectedRevision: 0,
+      beforeProjection: null,
+      beforeProjectionDigest: autonomyDigest(null),
+      afterProjectionDigest: autonomyDigest(projection),
+      events: [{
+        type: "AUTONOMY_MODE_CHANGED",
+        beforeMode: "none",
+        afterMode: "none",
+        principalId: "principal-a",
+        humanTurnId: "turn-a",
+      }],
+      projection,
+    };
+    const rejected = rejectedOf([
+      row("INTENT_AUTONOMY_TRANSACTION_COMMITTED", "2026-08-10T00:03:03Z", {
+        "Intent Uuid": "intent-a",
+        "Transaction Id": "transaction-b",
+        "Transaction Digest": "sha256:whatever",
+        Transaction: JSON.stringify({ schemaVersion: 999 }),
+        Stage: "code-generation",
+      }, { seq: 73 }),
+      row("INTENT_AUTONOMY_TRANSACTION_COMMITTED", "2026-08-10T00:03:04Z", {
+        "Transaction Id": "transaction-a",
+        "Transaction Digest": autonomyDigest(transaction),
+        Transaction: encodeIntentAutonomyTransaction(transaction),
+        Stage: "code-generation",
+      }, { seq: 74 }),
+    ]);
+    expect(rejected.map(({ primaryReason }) => primaryReason).sort()).toEqual([
+      "malformed-event-set",
+      "unsupported-event-set-schema",
+    ]);
+  });
+
+  test("completion arms: outer id mismatch, declared digest downgrade, and an unknown transaction event", () => {
+    const completion = {
+      eventType: "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+      transaction: { transactionId: "completion-a", expectedRevision: 1 },
+      expectedEventIdentities: ["event-a"],
+      expectedStateProjectionRevision: 1,
+    };
+    const outer = {
+      "Intent Uuid": "intent-a",
+      "Evidence Id": "evidence-a",
+      "Evidence Digest": "sha256:evidence",
+      "Completion Seal Digest": "sha256:seal",
+      Transaction: JSON.stringify(completion),
+      Stage: "code-generation",
+    };
+    const rejected = rejectedOf([
+      row("INTENT_COMPLETION_TRANSACTION_COMMITTED", "2026-08-10T00:03:05Z", {
+        ...outer,
+        "Transaction Id": "other-completion",
+      }, { seq: 75 }),
+      row("INTENT_COMPLETION_TRANSACTION_COMMITTED", "2026-08-10T00:03:06Z", {
+        ...outer,
+        "Transaction Id": "completion-a",
+        "Transaction Digest": "sha256:declared",
+      }, { seq: 76 }),
+      row("FUTURE_TRANSACTION_COMMITTED", "2026-08-10T00:03:07Z", {
+        "Transaction Id": "future-a",
+        Transaction: JSON.stringify({ anything: true }),
+        Stage: "code-generation",
+      }, { seq: 77 }),
+    ]);
+    expect(rejected.map(({ primaryReason }) => primaryReason)).toEqual([
+      "malformed-event-set",
+      "unsupported-event-set-schema",
+      "unsupported-event-set-schema",
+    ]);
+  });
+
+  test("loop-monitor partition mismatch and a non-record unit-pool inner event stay loud", () => {
+    const loopSet = {
+      eventSetId: "partition-mismatch-loop",
+      partition: { intentUuid: "intent-a", monitorId: "monitor-a", stageInstanceId: "u-a", graphRevision: "g-a" },
+      partitionKey: "partition-a",
+      idempotencyKey: "loop-a",
+      payloadFingerprint: "fp",
+      events: [],
+    };
+    const loopRow = eventSetRow("LOOP_MONITOR_EVENT_SET_COMMITTED", "2026-08-10T00:03:08Z", loopSet, 78, false);
+    const mismatched = {
+      ...loopRow,
+      record: { ...(loopRow.record as JournalEntry), fields: { ...(loopRow.record as JournalEntry).fields, "Partition Key": "partition-other" } },
+    };
+    const unitSet = {
+      eventSetId: "nonrecord-inner-unit",
+      batchId: "batch-a",
+      idempotencyKey: "unit-a",
+      payloadFingerprint: "fp",
+      events: [42],
+    };
+    const rejected = rejectedOf([
+      mismatched,
+      eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:03:09Z", unitSet, 79, false),
+    ]);
+    // The non-record inner is stopped upstream by the schema check, so the
+    // unit outer classifies as unsupported; the loop partition mismatch is
+    // the malformed arm under test.
+    expect(rejected.map(({ primaryReason }) => primaryReason).sort()).toEqual([
+      "malformed-event-set",
+      "unsupported-event-set-schema",
+    ]);
+  });
+});
+
+describe("lifecycleIdentityOf", () => {
+  const base = {
+    type: "decoded-candidate" as const,
+    candidateId: unwrap(createCandidateId("candidate-a")),
+    sourceIds: [],
+    family: "sensor" as const,
+    category: attributionCategoryForFamily("sensor"),
+    explicitIntent: null,
+    explicitStage: null,
+    starts: [],
+    terminals: [],
+    findings: [],
+  };
+
+  test("returns the identity when present and a candidate-id-diagnosed decode error when absent", () => {
+    const identity = unwrap(createLifecycleIdentity("lifecycle-a"));
+    const present = lifecycleIdentityOf({ ...base, lifecycleIdentity: identity });
+    expect(present).toEqual({ ok: true, value: identity });
+    const absent = lifecycleIdentityOf({ ...base, lifecycleIdentity: null });
+    expect(absent).toEqual({
+      ok: false,
+      error: { type: "decode", code: "invalid-identity", identity: "lifecycle", value: base.candidateId },
+    });
   });
 });

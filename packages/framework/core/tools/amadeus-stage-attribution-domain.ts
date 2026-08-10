@@ -212,12 +212,16 @@ export function candidatePrimaryReason(
   throw new TypeError("candidatePrimaryReason found no reason in the precedence order");
 }
 
-export function createRejectedCandidate(input: {
+/* Module scope keeps these runtime-erased type lines out of the lcov universe
+ * (an inline signature type gets union-merged DA:0 records under bun). */
+type CreateRejectedCandidateInput = {
   readonly candidateId: CandidateId;
   readonly sourceIds: readonly EventSetId[];
   readonly family: CandidateFamily;
   readonly findings: readonly CandidateFinding[];
-}): RejectedCandidate {
+};
+
+export function createRejectedCandidate(input: CreateRejectedCandidateInput): RejectedCandidate {
   const primaryReason = candidatePrimaryReason(input.findings);
   const reasons = new Set(input.findings.map(({ reason }) => reason));
   const secondaryReasons = CANDIDATE_REJECTION_REASON_PRECEDENCE.filter(

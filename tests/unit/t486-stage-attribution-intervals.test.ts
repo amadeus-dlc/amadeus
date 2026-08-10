@@ -128,6 +128,12 @@ describe("interval primitives", () => {
   test("counts union seconds and rejects unsafe totals", () => {
     expect(intervalSeconds([interval(0, 5), interval(3, 8), interval(10, 12)])).toBe(10);
     expect(() => intervalSeconds([{ start: Number.MIN_SAFE_INTEGER, end: Number.MAX_SAFE_INTEGER }])).toThrow(RangeError);
+    // Two individually safe durations whose SUM overflows hit the
+    // accumulation guard rather than the per-interval guard.
+    expect(() => intervalSeconds([
+      { start: -(Number.MAX_SAFE_INTEGER - 1), end: 0 },
+      { start: 1, end: Number.MAX_SAFE_INTEGER },
+    ])).toThrow(RangeError);
     expect(() => intervalSeconds([interval(0, 10), { start: 5, end: 4 }])).toThrow(RangeError);
   });
 

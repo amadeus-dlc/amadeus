@@ -30,6 +30,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-report.ts";
 import {
   type AttributedRecord,
+  buildStageWindowEvidence,
   buildWindows,
   composeReportWithAttribution,
   composeStageStats,
@@ -103,6 +104,20 @@ function evidenceFor(window: MeasuredWindow, identity: StageWindowEvidence["iden
     identity,
   };
 }
+
+describe("buildStageWindowEvidence — population invariants stay loud", () => {
+  test("a measured window with no lifecycle evidence fails closed as window-result-bijection", () => {
+    const result = buildStageWindowEvidence([], [win("code-generation", 10, 10)]);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected a population invariant failure");
+    expect(result.error).toEqual({
+      type: "accounting-invariant",
+      code: "invalid-population-accounting",
+      subject: { type: "population" },
+      invariant: "window-result-bijection",
+    });
+  });
+});
 
 describe("selectAttributionWindows — exclusive identity then net selection", () => {
   test("ambiguous identity wins over zero net before eligible windows are constructed", () => {
