@@ -1054,5 +1054,12 @@
     "dirName": "260810-tla-applicability-wiring",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019feab2-7563-7d45-b7ac-828621c7e1ab",
+    "slug": "plugin-prose-seed-guard",
+    "dirName": "260810-plugin-prose-seed-guard",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
