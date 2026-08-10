@@ -618,6 +618,8 @@ type IoFailure = { readonly kind: "io-failure"; readonly path: string; readonly 
 // The rename is the declaration's only visible moment: a reader sees either the
 // previous declaration or the new one, never a half-written file. Same shape as
 // the model map's publish (tla-registration.ts), including the staging cleanup.
+// The cleanup itself must never mask the original failure — rm throws its own
+// error when the staging parent is not a directory (force only covers ENOENT).
 function publishSubjects(path: string, governed: GovernedSubjects): IoFailure | null {
   const staging = `${path}.${randomUUID()}.tmp`;
   try {
@@ -626,7 +628,11 @@ function publishSubjects(path: string, governed: GovernedSubjects): IoFailure | 
     renameSync(staging, path);
     return null;
   } catch (cause) {
-    rmSync(staging, { force: true });
+    try {
+      rmSync(staging, { force: true });
+    } catch {
+      // Best-effort cleanup: the io-failure below carries the real cause.
+    }
     return { kind: "io-failure", path, detail: cause instanceof Error ? cause.message : String(cause) };
   }
 }

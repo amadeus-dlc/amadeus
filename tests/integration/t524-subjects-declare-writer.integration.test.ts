@@ -102,4 +102,21 @@ describe("t524 the governed subjects writer", () => {
     expect(declared.exitCode).toBe(2);
     expect(existsSync(subjectsPath)).toBe(false);
   });
+
+  test("a publish that cannot reach disk fails closed as an io-failure", async () => {
+    // The parent of --out is an existing FILE, so mkdirSync throws ENOTDIR on
+    // every platform — the portable injection for the publish catch arm.
+    const blocker = join(workspace, "not-a-dir");
+    writeFileSync(blocker, "occupied", "utf8");
+    const declared = await run([
+      "subjects", "declare",
+      "--document", requirementsPath,
+      "--kind", "requirements",
+      "--id", "FR-1",
+      "--out", join(blocker, "authoring-subjects.json"),
+    ]);
+    expect(declared.exitCode).toBe(1);
+    expect((declared.body.failure as { kind: string }).kind).toBe("io-failure");
+    expect(readdirSync(workspace).filter((entry) => entry.includes(".tmp"))).toEqual([]);
+  });
 });
