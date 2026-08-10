@@ -39,6 +39,7 @@
 // the t48 emitter-pairing rule.
 
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
@@ -244,19 +245,28 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
   // non-worktree paths emit the same BOLT_STARTED, so both require the same
   // pre-audit state-read guard; --worktree keeps its failJson exit contract,
   // non-worktree uses the plain error() exit.
+  let stateContent: string;
   if (useWorktree) {
     try {
-      readStateFile(pd);
+      stateContent = readStateFile(pd);
     } catch (e) {
       failJson("start-worktree", flags.slug, "state-read-failed", errorMessage(e));
     }
   } else {
     try {
-      readStateFile(pd, flags.intent, flags.space);
+      stateContent = readStateFile(pd, flags.intent, flags.space);
     } catch (e) {
       error(`Active workflow state not found: ${errorMessage(e)}`);
     }
   }
+
+  const soloUnit = !useWorktree && !flags.name.includes(",")
+    ? flags.slug ?? flags.name
+    : undefined;
+  const soloStage = soloUnit ? getField(stateContent, "Current Stage")?.trim() : undefined;
+  if (soloUnit && !soloStage) error("Active workflow state has no Current Stage for solo correlation.");
+  const soloAttempt = soloUnit ? randomUUID() : undefined;
+  const soloBatch = soloUnit ? `solo:${flags.batch}:${soloUnit}` : undefined;
 
   // Audit-first within validated context: emit BOLT_STARTED only after
   // shape checks pass. The state-fork / audit-fork primitives below emit
@@ -270,6 +280,12 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
     };
     if (useWorktree) {
       fields["Bolt slug"] = flags.slug;
+    }
+    if (soloUnit && soloStage && soloAttempt && soloBatch) {
+      fields["Bolt slug"] = soloUnit;
+      fields.Stage = soloStage;
+      fields["Attempt Id"] = soloAttempt;
+      fields["Batch Id"] = soloBatch;
     }
     emitAudit(pd, "BOLT_STARTED", fields, flags.intent, flags.space);
   } catch (e) {
@@ -286,6 +302,9 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
         bolt_names: flags.name,
         batch: flags.batch,
         walking_skeleton: walkingSkeleton,
+        ...(soloStage ? { stage: soloStage } : {}),
+        ...(soloAttempt ? { attempt_id: soloAttempt } : {}),
+        ...(soloBatch ? { batch_id: soloBatch } : {}),
       })
     );
     return;
@@ -505,6 +524,18 @@ export function handleComplete(args: string[], explicitProjectDir?: string): voi
     if (useMerge) {
       fields["Bolt slug"] = flags.slug;
     }
+    if (!useMerge && flags.attempt && !flags.name.includes(",")) {
+      const unit = flags.slug ?? flags.name;
+      const stage = flags.stage ?? getField(
+        readStateFile(pd, flags.intent, flags.space),
+        "Current Stage",
+      )?.trim();
+      if (!stage) error("Active workflow state has no Current Stage for solo correlation.", pd);
+      fields["Bolt slug"] = unit;
+      fields.Stage = stage;
+      fields["Attempt Id"] = flags.attempt;
+      fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
+    }
     if (completionRecovery.status === "pending") {
       emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
     }
@@ -597,6 +628,9 @@ function handleFail(args: string[], explicitProjectDir?: string): void {
   if (flags["succeeded-siblings"]) {
     fields["Succeeded siblings"] = flags["succeeded-siblings"];
   }
+  if (flags.stage) fields.Stage = flags.stage;
+  if (flags.attempt) fields["Attempt Id"] = flags.attempt;
+  if (flags.batch) fields["Batch Id"] = flags.batch;
 
   try {
     emitAudit(pd, "BOLT_FAILED", fields);
@@ -669,6 +703,9 @@ function handleAbort(args: string[], explicitProjectDir?: string): void {
       "Bolt slug": flags.slug,
       "Error summary": `aborted: ${flags.reason}`,
       Reason: "aborted",
+      ...(flags.stage ? { Stage: flags.stage } : {}),
+      ...(flags.attempt ? { "Attempt Id": flags.attempt } : {}),
+      ...(flags.batch ? { "Batch Id": flags.batch } : {}),
     }, flags.intent, flags.space);
   } catch (e) {
     error(`Audit emission failed: ${errorMessage(e)}`);

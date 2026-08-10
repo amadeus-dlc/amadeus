@@ -256,6 +256,27 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(errs(d)).toBe("VALID");
   });
 
+  test("invoke-swarm accepts a prepared retry correlation as one typed pair", () => {
+    const d = invokeSwarm();
+    d.units = ["auth"];
+    d.cap = 1;
+    d.prepared_batch = "1";
+    d.retry_unit = "auth";
+    expect(errs(d)).toBe("VALID");
+  });
+
+  test("invoke-swarm rejects partial or mismatched prepared retry correlation", () => {
+    expect(errs({ ...invokeSwarm(), prepared_batch: "1" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), retry_unit: "auth" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "1", retry_unit: "missing" })).toContain(
+      "invoke-swarm: retry_unit must name exactly one member of units",
+    );
+  });
+
   test("present-gate well-formed -> VALID", () => {
     expect(validateDirective(presentGate()).valid).toBe(true);
   });

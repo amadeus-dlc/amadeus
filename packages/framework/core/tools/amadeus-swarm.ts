@@ -429,11 +429,13 @@ function emitBatonReturned(
   pd: string,
   batch: string,
   unit: string,
+  attempt: string,
   reason: FailureReason
 ): void {
+  const stage = getField(readFileSync(stateFilePath(pd), "utf8"), "Current Stage")?.trim() ?? "";
   emitSwarmAudit(
     "SWARM_BATON_RETURNED",
-    { "Batch number": batch, "Unit name": unit, Reason: reason },
+    { "Batch number": batch, "Unit name": unit, "Attempt Id": attempt, Stage: stage, Reason: reason },
     pd
   );
 }
@@ -460,10 +462,11 @@ function emitSwarmCompleted(
 // Preserves the worktree per the halt-and-ask contract. Best-effort: the swarm's
 // own SWARM_UNIT_FAILED is the authoritative swarm signal, so a failure to emit
 // BOLT_FAILED must not mask it.
-function emitBoltFailed(pd: string, unit: string, errorSummary: string): void {
+function emitBoltFailed(pd: string, batch: string, unit: string, attempt: string, errorSummary: string): void {
+  const stage = getField(readFileSync(stateFilePath(pd), "utf8"), "Current Stage")?.trim() ?? "";
   runTool(
     "amadeus-bolt.ts",
-    ["fail", "--name", unit, "--slug", unit, "--error", errorSummary],
+    ["fail", "--name", unit, "--slug", unit, "--batch", batch, "--attempt", attempt, "--stage", stage, "--error", errorSummary],
     pd
   );
 }
@@ -1059,12 +1062,14 @@ export function handleFinalize(
       emitUnitConverged(projectDir, batch, r.unit);
     } else {
       emitUnitFailed(projectDir, batch, r.unit, r.reason ?? "error");
-      emitBoltFailed(projectDir, r.unit, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
+      const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
+      emitBoltFailed(projectDir, batch, r.unit, attempt, r.detail ?? `unit "${r.unit}" failed: ${r.reason}`);
     }
   }
   const failedResults = results.filter((r) => r.status === "failed");
   for (const r of failedResults) {
-    emitBatonReturned(projectDir, batch, r.unit, r.reason ?? "error");
+    const attempt = poolProjection.terminal.find((entry) => entry.unitId === r.unit)?.attemptId ?? "";
+    emitBatonReturned(projectDir, batch, r.unit, attempt, r.reason ?? "error");
   }
 
   // Merge-result basis (issue #674): a unit only counts as converged once its

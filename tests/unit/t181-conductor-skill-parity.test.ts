@@ -163,6 +163,25 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
     expect(missing).toEqual([]);
   });
 
+  test("every harness distinguishes prepared retries from ordinary swarm preparation", () => {
+    const missing: string[] = [];
+    for (const rel of skills) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      const start = body.indexOf("prepared_batch");
+      const scope = start < 0 ? "" : body.slice(start, start + 900);
+      for (const token of ["retry_unit", "acquire", "confirm"]) {
+        if (!scope.includes(token)) missing.push(`${rel}  prepared retry missing: ${token}`);
+      }
+      if (!/(?:skip|Do not).*?(?:driver resolution|resolve the driver)/s.test(scope)) {
+        missing.push(`${rel}  prepared retry does not skip driver resolution`);
+      }
+      if (!/(?:skip|do not run).*?prepar/is.test(scope)) {
+        missing.push(`${rel}  prepared retry does not skip preparation`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
   test("the Codex conductor SKILL burns the c2 worktree-isolation discipline into its native fan-out prose", () => {
     // BR-W6(i) / SNR-W3: the one new spawn prose in this intent (codex native
     // fan-out) must carry the c2 discipline verbatim so every child task inherits

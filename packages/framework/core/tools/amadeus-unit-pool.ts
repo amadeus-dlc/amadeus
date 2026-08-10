@@ -90,6 +90,7 @@ export interface TerminalUnit {
   readonly unitId: string;
   readonly attemptId: string | null;
   readonly outcome: UnitPoolOutcome;
+  readonly reason?: string;
 }
 
 export interface ReconciliationRecord {
@@ -181,7 +182,7 @@ export function applyUnitPoolEvent(current: UnitPoolProjection, event: UnitPoolE
       next = { ...current, active: current.active.filter((attempt) => attempt.attemptId !== event.terminal.attemptId), terminal: [...current.terminal.filter((unit) => unit.unitId !== event.terminal.unitId), event.terminal] };
       break;
     case "unit-requeued":
-      next = { ...current, queue: [...current.queue, event.entry], terminal: current.terminal.filter((unit) => unit.unitId !== event.entry.unitId) };
+      next = { ...current, phase: "open", result: null, queue: [...current.queue, event.entry], terminal: current.terminal.filter((unit) => unit.unitId !== event.entry.unitId) };
       break;
     case "units-cancelled": {
       const ids = new Set(event.units.map((unit) => unit.unitId));
@@ -223,7 +224,9 @@ export type UnitPoolCommand =
   | { readonly kind: "settle-release-requeue"; readonly batchId: string; readonly attemptId: string; readonly outcome: "dispatch-not-started"; readonly queueEntryId: string }
   | { readonly kind: "settle-release-cancel-dependents"; readonly batchId: string; readonly attemptId: string; readonly outcome: UnitPoolOutcome }
   | { readonly kind: "terminate-batch"; readonly batchId: string; readonly result: Exclude<UnitPoolResult, null>; readonly queuedOutcome: "batch-unsafe" | "cancelled" }
-  | { readonly kind: "late-result-observed"; readonly batchId: string; readonly attemptId: string; readonly outcome: UnitPoolOutcome };
+  | { readonly kind: "late-result-observed"; readonly batchId: string; readonly attemptId: string; readonly outcome: UnitPoolOutcome }
+  | { readonly kind: "retry-failed-unit"; readonly batchId: string; readonly unitId: string; readonly queueEntryId: string }
+  | { readonly kind: "skip-failed-unit"; readonly batchId: string; readonly unitId: string; readonly reason: string };
 
 export type UnitPoolProposal =
   | { readonly ok: true; readonly events: readonly UnitPoolEvent[] }
@@ -427,6 +430,18 @@ export function proposeUnitPoolCommand(projection: UnitPoolProjection, command: 
   if (command.kind === "initial-enqueue") return proposeInitialEnqueue(projection, command);
   if (projection.batchId !== command.batchId) return { ok: false, reason: "batch-not-found" };
   if (command.kind === "late-result-observed") return { ok: true, events: [{ type: "late-result-observed", attemptId: command.attemptId, outcome: command.outcome }] };
+  if (command.kind === "retry-failed-unit") {
+    const terminal = projection.terminal.find((entry) => entry.unitId === command.unitId && entry.outcome === "failed");
+    return terminal === undefined
+      ? { ok: false, reason: "failed-unit-not-found" }
+      : { ok: true, events: [{ type: "unit-requeued", entry: { queueEntryId: command.queueEntryId, unitId: command.unitId, ordinal: projection.queue.length } }] };
+  }
+  if (command.kind === "skip-failed-unit") {
+    const terminal = projection.terminal.find((entry) => entry.unitId === command.unitId && entry.outcome === "failed");
+    return terminal?.attemptId
+      ? { ok: true, events: [{ type: "unit-settled", terminal: { ...terminal, outcome: "cancelled", reason: command.reason } }] }
+      : { ok: false, reason: "failed-unit-not-found" };
+  }
   if (projection.phase === "terminal") return { ok: false, reason: "pool-not-open" };
   if (command.kind === "acquire") return proposeAcquire(projection, command);
   if (command.kind === "confirm-dispatch") return proposeDispatchConfirmation(projection, command);

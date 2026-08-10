@@ -40,7 +40,19 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { handleNext, handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleFailureRuling } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { emitAuditEventGuarded } from "../../packages/framework/core/otel/audit-emit.ts";
+import { activeIntent, activeSpace, readAllAuditShards } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  normalizeConstructionOutcomeAudit,
+  projectConstructionOutcomes,
+} from "../../packages/framework/core/tools/amadeus-construction-outcome-projection.ts";
+import {
+  createAuditUnitPoolRepository,
+  createUnitPoolCoordinator,
+} from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
 
 // The core source has no co-located compiled graph — point the engine at the
 // packaged dist copy (regenerated from the same core in this commit).
@@ -57,6 +69,7 @@ const CG_PRODUCES = ["code-generation-plan", "code-summary"];
 
 const tempDirs: string[] = [];
 afterEach(() => {
+  resetOtelPerProject();
   while (tempDirs.length) cleanupTestProject(tempDirs.pop());
 });
 
@@ -206,7 +219,177 @@ function runReport(proj: string, args: string[]): Directive {
   return JSON.parse(raw) as Directive;
 }
 
+function runFailureRuling(proj: string, answer: "Retry" | "Skip" | "Abort"): Directive {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleFailureRuling(["--stage", "code-generation", "--user-input", answer], proj);
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw) as Directive;
+}
+
+function seedFailedSwarmUnit(): { proj: string; attempt: string } {
+  const proj = seedSwarmProject([["alpha"]]);
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+  expect(pool.initialEnqueue({
+    idempotencyKey: "failure:init",
+    batchId: "1",
+    cap: 1,
+    units: [{ unitId: "alpha", dependsOn: [] }],
+  }).ok).toBe(true);
+  expect(pool.acquire({ idempotencyKey: "failure:acquire", batchId: "1" }).ok).toBe(true);
+  const attempt = pool.readProjection("1").active[0].attemptId;
+  expect(pool.confirmDispatch({
+    idempotencyKey: "failure:confirm",
+    batchId: "1",
+    attemptId: attempt,
+    nativeHandle: "native-alpha",
+  }).ok).toBe(true);
+  expect(pool.settleRelease({
+    idempotencyKey: "failure:settle",
+    batchId: "1",
+    attemptId: attempt,
+    outcome: "failed",
+  }).ok).toBe(true);
+  emitAuditEventGuarded("BOLT_FAILED", {
+    "Failed Bolt": "alpha",
+    "Bolt slug": "alpha",
+    "Error summary": "red",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+    "Batch Id": "1",
+  }, proj);
+  emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+    "Batch number": "1",
+    "Unit name": "alpha",
+    Reason: "error",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+  }, proj);
+  return { proj, attempt };
+}
+
+function seedFailedSoloUnit(): { proj: string; attempt: string; batch: string } {
+  const proj = seedSwarmProject([["alpha"]]);
+  writeFileSync(
+    seededStateFile(proj),
+    readFileSync(seededStateFile(proj), "utf-8").replace("- **Scope**: feature", "- **Scope**: fix"),
+  );
+  const attempt = "solo-attempt-alpha";
+  const batch = "solo:1:alpha";
+  emitAuditEventGuarded("BOLT_STARTED", {
+    "Bolt names": "alpha",
+    "Bolt slug": "alpha",
+    "Batch number": "1",
+    "Walking skeleton": "false",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+    "Batch Id": batch,
+  }, proj);
+  emitAuditEventGuarded("BOLT_FAILED", {
+    "Failed Bolt": "alpha",
+    "Bolt slug": "alpha",
+    "Error summary": "red",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+    "Batch Id": batch,
+  }, proj);
+  return { proj, attempt, batch };
+}
+
+function projectedUnits(proj: string) {
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(proj));
+  expect(normalized.ok).toBe(true);
+  if (!normalized.ok) throw new TypeError("expected normalized Construction audit");
+  const intent = activeIntent(proj, activeSpace(proj));
+  expect(intent).not.toBeNull();
+  const projected = projectConstructionOutcomes(normalized.records, {
+    intent: intent!,
+    stage: "code-generation",
+  });
+  expect(projected.ok).toBe(true);
+  if (!projected.ok) throw new TypeError("expected projected Construction outcomes");
+  return projected.projection;
+}
+
 describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
+  test("Retry requeues without acquiring and returns a prepared retry directive", () => {
+    const { proj, attempt } = seedFailedSwarmUnit();
+
+    expect(runFailureRuling(proj, "Retry")).toMatchObject({
+      kind: "invoke-swarm",
+      units: ["alpha"],
+      cap: 1,
+      prepared_batch: "1",
+      retry_unit: "alpha",
+    });
+    const projection = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj)).readProjection("1");
+    expect(projection.active).toEqual([]);
+    expect(projection.queue).toEqual([expect.objectContaining({ unitId: "alpha" })]);
+    expect(projection.terminal).toEqual([]);
+    expect(readAllAuditShards(proj)).toContain(attempt);
+  });
+
+  test("Skip commits the failed Unit as cancelled and next does not redispatch it", () => {
+    const { proj, attempt } = seedFailedSwarmUnit();
+
+    expect(runFailureRuling(proj, "Skip")).toMatchObject({ kind: "committed" });
+    expect(createUnitPoolCoordinator(createAuditUnitPoolRepository(proj)).readProjection("1").terminal).toContainEqual({
+      unitId: "alpha",
+      attemptId: attempt,
+      outcome: "cancelled",
+      reason: "skipped",
+    });
+    expect(runNext(proj).kind).not.toBe("invoke-swarm");
+  });
+
+  test("Abort parks Construction and next never redispatches the failed Unit", () => {
+    const { proj } = seedFailedSwarmUnit();
+
+    expect(runFailureRuling(proj, "Abort")).toMatchObject({ kind: "parked", stage: "code-generation" });
+    expect(runNext(proj)).toMatchObject({ kind: "parked", stage: "code-generation" });
+  });
+
+  test("solo Retry starts a fresh immutable attempt and returns to the per-Unit selector", () => {
+    const { proj, attempt } = seedFailedSoloUnit();
+
+    expect(runFailureRuling(proj, "Retry")).toMatchObject({ kind: "committed" });
+    expect(projectedUnits(proj).unresolvedFailures).toEqual([]);
+    const audit = readAllAuditShards(proj);
+    expect(audit.match(/"Event":"BOLT_STARTED"/g)?.length).toBe(2);
+    expect(audit).toContain(attempt);
+    expect(runNext(proj)).toMatchObject({ kind: "run-stage", unit: "alpha", gate: false });
+  });
+
+  test("solo Skip closes the failed attempt as cancelled and presents only the stage gate", () => {
+    const { proj, attempt, batch } = seedFailedSoloUnit();
+
+    expect(runFailureRuling(proj, "Skip")).toMatchObject({ kind: "committed" });
+    expect(projectedUnits(proj).units).toContainEqual(expect.objectContaining({
+      unit: "alpha",
+      attempt,
+      batch,
+      outcome: "cancelled",
+      reason: "skipped",
+    }));
+    expect(runNext(proj)).toMatchObject({ kind: "run-stage", unit: "alpha", gate: true });
+  });
+
+  test("solo Abort suspends Construction without changing the failed attempt", () => {
+    const { proj, attempt } = seedFailedSoloUnit();
+
+    expect(runFailureRuling(proj, "Abort")).toMatchObject({ kind: "parked", stage: "code-generation" });
+    expect(projectedUnits(proj)).toMatchObject({
+      constructionSuspended: true,
+      units: [expect.objectContaining({ attempt, outcome: "failed" })],
+    });
+    expect(runNext(proj)).toMatchObject({ kind: "parked", stage: "code-generation" });
+  });
+
   test("a: batch 1 covered -> engine advances and fans out batch 2's units", () => {
     const proj = seedSwarmProject([["alpha"], ["beta"]]);
     // Batch 1 (alpha) merged its artifacts; batch 2 (beta) has not.

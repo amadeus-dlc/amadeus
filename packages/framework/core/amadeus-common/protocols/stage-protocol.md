@@ -140,7 +140,7 @@ For a question under `semi`, the conductor runs the **same** `amadeus-bolt decid
 
 When a Bolt's code-generation returns failure, **always halt regardless of autonomy mode** — the Bolt never proceeds on its own. This is the one case where `autonomous` mode stops to consult. Halting is unconditional; who rules on the halt is decided by the solo auto-election hook below, which names the one branch that does not present the prompt.
 
-- Solo Bolt failure: halt immediately, emit `BOLT_FAILED` (with `--slug` for halt-and-ask correlation), present retry / skip / abort.
+- Solo Bolt failure: preserve the explicit `batch_id` and `attempt_id` returned by `amadeus-bolt start`, halt immediately, emit `BOLT_FAILED` with `--slug`, `--batch`, `--attempt`, and the current `--stage`, then present retry / skip / abort. Never recover these immutable keys by selecting the latest Bolt event.
 - Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts, emit `BOLT_FAILED` for the failed Bolt with `Succeeded=[names]`, present `"Bolts [X, Y] succeeded, Bolt [Z] failed with: [error]. Options: retry Z, skip Z, abort Construction."`
 - Retry: re-run the failed Bolt only inside the existing worktree.
 - Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.

@@ -290,6 +290,10 @@ export interface InvokeSwarmDirective {
   // conductor's knowledge call, so it supplies --repo from the intent's recorded
   // set). When present, the conductor passes it straight through as `prepare --repo`.
   repo?: string;
+  // Retry correlation. Both fields are present together only when the named
+  // batch already owns its worktrees and Unit Pool.
+  prepared_batch?: string;
+  retry_unit?: string;
 }
 
 // present-gate — run the stage-protocol §13 learnings ritual, then render the
@@ -484,7 +488,7 @@ const AWAIT_ADVISORY_CHOICE_FIELDS = [
   "formal_checks",
 ] as const;
 
-const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo"] as const;
+const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
@@ -544,6 +548,20 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
       errors.push("invoke-swarm: cap must not exceed units.length");
     }
     checkOptionalString(o, "repo", "invoke-swarm", errors);
+    checkOptionalString(o, "prepared_batch", "invoke-swarm", errors);
+    checkOptionalString(o, "retry_unit", "invoke-swarm", errors);
+    const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.length > 0;
+    const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.length > 0;
+    if (hasPreparedBatch !== hasRetryUnit) {
+      errors.push("invoke-swarm: prepared_batch and retry_unit must be provided together");
+    }
+    if (
+      hasRetryUnit &&
+      Array.isArray(o.units) &&
+      o.units.filter((unit) => unit === o.retry_unit).length !== 1
+    ) {
+      errors.push("invoke-swarm: retry_unit must name exactly one member of units");
+    }
   },
   "present-gate": (o, errors) => {
     checkString(o, "stage", "present-gate", errors);

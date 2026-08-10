@@ -85,7 +85,13 @@ state-transition tools directly.
   `.pi/drivers/amadeus-pi-driver.ts` through the deterministic swarm protocol.
   Resolve the driver before preparing worktrees. Never pretend dispatch
   succeeded when the driver is missing, incompatible, or returns no accepted
-  native handle.
+  native handle. When the directive carries both `prepared_batch` and
+  `retry_unit`, skip driver resolution and preparation. Acquire from the
+  existing batch with `bun .pi/tools/amadeus-swarm.ts acquire --batch
+  <directive.prepared_batch> --idempotency-key <stable-delivery-id>`, verify the
+  unconfirmed permit names `directive.retry_unit`, dispatch only that permit,
+  and immediately confirm it with the accepted native handle. A partial pair is
+  an invalid directive.
 - `ask`: render `directive.question` as numbered prose using
   `question-rendering.md`, then end the turn. For a fresh-workflow routing question
   (`Starting a ...` or `No stock scope clearly fits ...`), preserve the original
