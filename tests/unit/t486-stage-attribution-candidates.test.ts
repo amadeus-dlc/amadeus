@@ -363,9 +363,13 @@ describe("decodeCandidateInventory", () => {
       targetStage: TARGET_STAGE,
       eligibleWindows: [window()],
     });
-    const reasons = inventory.rejected.map(({ primaryReason }) => primaryReason);
-    expect(reasons).not.toContain("malformed-event-set");
-    expect(reasons).not.toContain("digest-mismatch");
+    // Pin the exact candidates so a vacuous pass (both outers dropped before
+    // projection) cannot satisfy this contract.
+    expect(inventory.accepted).toHaveLength(0);
+    expect(inventory.rejected.map(({ family, primaryReason }) => `${family}:${primaryReason}`).sort()).toEqual([
+      "loop-monitor:missing-start",
+      "unit-pool-event-set:missing-terminal",
+    ]);
   });
 
   test("rejects unknown inner event types despite valid event-set digests", () => {
