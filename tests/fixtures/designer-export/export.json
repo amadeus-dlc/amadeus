@@ -2369,7 +2369,8 @@
         "answer-evidence",
         "question-budget",
         "event-registry-drift",
-        "self-scope-consistency"
+        "self-scope-consistency",
+        "numeric-provenance"
       ],
       "scopes": [
         "enterprise",
@@ -2445,6 +2446,12 @@
           "path": ".claude/sensors/amadeus-self-scope-consistency.md",
           "matches": "**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}",
           "category": "framework-integrity"
+        },
+        {
+          "id": "numeric-provenance",
+          "path": ".claude/sensors/amadeus-numeric-provenance.md",
+          "matches": "**/*.md",
+          "category": "evidence"
         }
       ]
     },
