@@ -65,6 +65,8 @@ const BASELINE_SHA = readFileSync(
 //     remaining-debt count literally ("the existing 33"). Fixing the
 //     over-count changes that number, so the comment now names the debt
 //     without a literal count.
+//   - 260810-numeric-provenance-distribution: isolate reproducible-build state,
+//     preserve the frozen lockfile, and compare generated file types and modes.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
