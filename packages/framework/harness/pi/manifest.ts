@@ -81,7 +81,11 @@ const manifest: HarnessManifest = {
     { src: "sensors", dst: "sensors" },
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
-    { src: "hooks", dst: "hooks" },
+    // amadeus-mint-presence.ts is never invoked here — Pi has no
+    // prompt-submit hook wiring at all (drivers/extensions own its lifecycle
+    // instead of a UserPromptSubmit-style hook), so the core hook is
+    // unreachable dead code on this shell (#860).
+    { src: "hooks", dst: "hooks", exclude: ["amadeus-mint-presence.ts"] },
     { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
