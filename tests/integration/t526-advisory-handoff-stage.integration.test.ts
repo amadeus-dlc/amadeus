@@ -1,27 +1,15 @@
+// covers: function:docsRoot
 import { afterEach, describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   declaredHandoffStage,
   parseAdvisoryDeclarations,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
-import {
-  advisoryChoicePresentationFields,
-  choiceFromExactPrompt,
-  guardAdvisoryChoices,
-  recordAdvisoryChoice,
-  type AdvisoryChoiceStore,
-} from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
-import {
-  auditFilePath,
-  auditShardName,
-  docsRoot,
-  findAllEvents,
-} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { guardAdvisoryChoices } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import { chooseRunNow } from "../harness/advisory-choice-fixture.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
-import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
 // FR-3 + D2 (#2766): a declared advisory could raise a hold but had no way to
 // name the stage the run-now choice should open. `declaredFormalCheckRoute`
@@ -77,32 +65,6 @@ function seedDeclaredProject(advisories: unknown): { projectDir: string; hostRoo
   return { projectDir, hostRoot: host };
 }
 
-function chooseRunNow(projectDir: string): void {
-  const store = JSON.parse(
-    readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
-  ) as AdvisoryChoiceStore;
-  const pending = store.pending[0];
-  if (pending === undefined) throw new Error("no pending advisory to choose for");
-  const fields = advisoryChoicePresentationFields(
-    projectDir,
-    pending.identity.checkpoint,
-    [pending.identity.advisoryInstance],
-  );
-  if (!fields.ok) throw new Error(fields.reason);
-  plantV1AuditRow("DECISION_RECORDED", fields.value, projectDir);
-  const planted = plantV1AuditRow("HUMAN_TURN", {}, projectDir);
-  const event = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN").at(-1);
-  if (event === undefined) throw new Error("no HUMAN_TURN was planted");
-  const choice = choiceFromExactPrompt("run-now");
-  if (choice === null) throw new Error("run-now did not classify");
-  const recorded = recordAdvisoryChoice(projectDir, choice, {
-    kind: "human-turn",
-    shard: auditShardName(projectDir),
-    timestamp: planted.timestamp,
-    eventIdentity: createHash("sha256").update(event.block).digest("hex"),
-  });
-  if (!recorded) throw new Error("the advisory choice was not recorded");
-}
 
 describe("t526 declared advisory handoff stage", () => {
   test("the declaration carries the handoff stage through the parser", () => {

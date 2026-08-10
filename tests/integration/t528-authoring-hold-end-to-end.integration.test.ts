@@ -1,6 +1,7 @@
+// covers: function:docsRoot
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
@@ -8,27 +9,17 @@ import {
   advisoriesForHost,
   type EvaluatorRun,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
-import {
-  advisoryChoicePresentationFields,
-  choiceFromExactPrompt,
-  guardAdvisoryChoices,
-  recordAdvisoryChoice,
-  type AdvisoryChoiceStore,
-} from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
-import {
-  auditFilePath,
-  auditShardName,
-  docsRoot,
-  findAllEvents,
-} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { guardAdvisoryChoices } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import { docsRoot } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { chooseRunNow } from "../harness/advisory-choice-fixture.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
-import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
-// FR-5 + FR-6 (#2766). The whole chain, both sides of the falling proof:
-// with no declaration the checkpoint passes through exactly as it did before,
-// and with one it holds, hands off to the authoring stage, refuses to release
-// on the run-now choice, and releases only once the plugin's own evaluator
-// returns no-hold off a persisted terminal receipt.
+// FR-5 + FR-6 (#2766). The whole chain, both sides of the falling proof: the
+// advisory declaration is always installed, and with no governed subjects the
+// evaluator returns no-hold so the checkpoint passes through exactly as it did
+// before; once subjects are declared it holds, hands off to the authoring
+// stage, refuses to release on the run-now choice, and releases only once the
+// plugin's own evaluator returns no-hold off a persisted terminal receipt.
 //
 // The evaluator is the real CLI, run in-process and its verdict handed to the
 // engine as the evaluator run — the same bytes the spawn would carry, without
@@ -72,28 +63,6 @@ async function raisedAdvisories(): Promise<ReturnType<typeof advisoriesForHost>>
   return advisoriesForHost(hostRoot, CHECKPOINT, undefined, () => run);
 }
 
-function chooseRunNow(): void {
-  const store = JSON.parse(
-    readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
-  ) as AdvisoryChoiceStore;
-  const pending = store.pending[0];
-  if (pending === undefined) throw new Error("no pending advisory to choose for");
-  const fields = advisoryChoicePresentationFields(projectDir, CHECKPOINT, [pending.identity.advisoryInstance]);
-  if (!fields.ok) throw new Error(fields.reason);
-  plantV1AuditRow("DECISION_RECORDED", fields.value, projectDir);
-  const planted = plantV1AuditRow("HUMAN_TURN", {}, projectDir);
-  const event = findAllEvents(readFileSync(auditFilePath(projectDir), "utf-8"), "HUMAN_TURN").at(-1);
-  if (event === undefined) throw new Error("no HUMAN_TURN was planted");
-  const choice = choiceFromExactPrompt("run-now");
-  if (choice === null) throw new Error("run-now did not classify");
-  const recorded = recordAdvisoryChoice(projectDir, choice, {
-    kind: "human-turn",
-    shard: auditShardName(projectDir),
-    timestamp: planted.timestamp,
-    eventIdentity: createHash("sha256").update(event.block).digest("hex"),
-  });
-  if (!recorded) throw new Error("the advisory choice was not recorded");
-}
 
 beforeEach(() => {
   fixture = mkdtempSync(join(tmpdir(), "authoring-hold-e2e-"));
@@ -157,7 +126,7 @@ afterEach(() => {
 });
 
 describe("t528 the authoring hold end to end", () => {
-  test("with no declaration the checkpoint passes through untouched", async () => {
+  test("with no governed subjects the declared evaluator returns no-hold and the checkpoint passes through", async () => {
     expect(await raisedAdvisories()).toEqual([]);
     expect(guardAdvisoryChoices(projectDir, CHECKPOINT, [], hostRoot).kind).toBe("allow");
     expect(existsSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"))).toBe(false);
@@ -183,7 +152,7 @@ describe("t528 the authoring hold end to end", () => {
     if (held.kind !== "hold") return;
     expect(held.advisories[0]?.handoff_stage).toBe("tla-authoring");
 
-    chooseRunNow();
+    chooseRunNow(projectDir);
     const afterRunNow = guardAdvisoryChoices(projectDir, CHECKPOINT, raised, hostRoot);
     expect(afterRunNow.kind).toBe("hold");
     if (afterRunNow.kind !== "hold") return;

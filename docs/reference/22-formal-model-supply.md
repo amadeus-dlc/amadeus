@@ -245,7 +245,7 @@ before it writes anything, and publishes through a staging file and a rename so
 a reader sees either the old declaration or the new one. An id the documents do
 not define is refused and nothing reaches disk:
 
-```
+```sh
 bun plugins/formal-model-check/tools/tla-authoring.ts subjects declare \
   --document amadeus/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md \
   --kind requirements --id FR-1 --id FR-2

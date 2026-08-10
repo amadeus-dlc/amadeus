@@ -111,14 +111,14 @@ bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
 
 `advisory hold` は、plugin が `requirements-analysis`・`functional-design`・`build-and-test` の各チェックポイントへ `authoring-hold` advisory として登録するラッパーです。チェックポイントは subject を知らないため、ラッパーが `amadeus/spaces/<space>/specs/authoring-subjects.json` から解決します。これはワークスペースが形式検証の統治下に置く文書と stable id の宣言です。何も宣言しないワークスペースは何も統治しておらず、これは抑制された no-hold ではなく真の no-hold です。一方、存在するが読めない宣言ファイルや、文書が定義しない id を名指す宣言は fail-closed します。
 
-```
+```sh
 bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
 {"ok":true,"verdict":{"kind":"no-hold"},"reason":"no governed subjects are declared"}
 ```
 
 その宣言ファイルの唯一の書き手が `subjects declare` です。統治対象の文書と stable id を受け取り、書き込む前に全 id を文書に対して解決し、staging ファイルと rename を経て公開します。読み手が見るのは常に旧宣言か新宣言のどちらかです。文書が定義しない id は拒否され、ディスクには何も残りません。
 
-```
+```sh
 bun plugins/formal-model-check/tools/tla-authoring.ts subjects declare \
   --document amadeus/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md \
   --kind requirements --id FR-1 --id FR-2
