@@ -92,7 +92,7 @@ N 個の `Task` 呼び出しを発行することにより並行してディス�
 |-------|-----------------------|-------------|----------------------------------------------------------------------------------------------------|---------------------|-------------------|-----------------------------|----------|
 | 3.1   | Functional Design     | CONDITIONAL | 新しいデータモデル、複雑なビジネスロジック、またはビジネスルールの設計が必要                             | amadeus-architect-agent     | amadeus-developer-agent   | inline                      | Yes      |
 | 3.2   | NFR Requirements      | CONDITIONAL | パフォーマンス、セキュリティ、スケーラビリティの懸念、または技術スタック選定が必要                         | amadeus-architect-agent     | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent   | inline                      | Yes      |
-| 3.3   | NFR Design            | CONDITIONAL | NFR Requirements が実行され、NFR パターンの設計が必要                                          | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
+| 3.3   | NFR Design            | CONDITIONAL | NFR パターンの設計が必要(scope が決定。NFR Requirements の実行は前提ではない)                  | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
 | 3.4   | Infrastructure Design | CONDITIONAL | インフラストラクチャサービスのマッピング、デプロイアーキテクチャ、またはクラウドリソースが必要   | amadeus-aws-platform-agent  | amadeus-devsecops-agent, amadeus-compliance-agent   | inline                      | Yes      |
 | 3.5   | Code Generation       | ALWAYS      | 実行計画内のすべてのユニットに対して常に実行                                               | amadeus-developer-agent     | (none)            | subagent (amadeus-developer-agent)  | Yes      |
 | 3.6   | Build and Test        | ALWAYS      | すべてのユニットごとのステージ完了後に常に1回実行                                         | amadeus-quality-agent       | amadeus-devsecops-agent   | inline                      | No       |
@@ -318,8 +318,8 @@ tech-stack-decisions.md を追加します。
 |-------------------|---------------------------------------------------------------------------------------------------|
 | Stage             | 3.3                                                                                               |
 | Phase             | Construction                                                                                      |
-| Execution         | CONDITIONAL (NFR Requirements が実行された場合のみ)                                               |
-| Condition         | NFR Requirements が実行され、NFR パターンの設計が必要。NFR Requirements がスキップされた場合はスキップ。 |
+| Execution         | CONDITIONAL (scope のメンバーシップで決まる。NFR Requirements の実行は前提ではない)                |
+| Condition         | NFR パターンの設計が必要。メンバーシップは scopes: リストのみで決まり、NFR Requirements をスキップしたまま本ステージを実行する scope もある(self-feature)。その場合、上流入力は「不在かつ想定内」として届く。 |
 | Per-Unit          | Yes                                                                                               |
 | Lead Agent        | amadeus-architect-agent                                                                                   |
 | support_agents    | amadeus-aws-platform-agent                                                                                |

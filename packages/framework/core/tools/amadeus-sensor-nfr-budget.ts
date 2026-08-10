@@ -684,6 +684,111 @@ export function missingKindRequiredArtifacts(
     .sort();
 }
 
+// ---------------------------------------------------------------------------
+// Intentionally skipped upstream — #2773
+// ---------------------------------------------------------------------------
+//
+// A scope may SKIP nfr-requirements while EXECUTing nfr-design — `self-feature`
+// does exactly that, and the engine issues the design directive with every one
+// of its nfr-requirements inputs marked `consumes_absent.expected=true`. The
+// ids that would be this measurement's denominator are declared in a stage that
+// scope never runs, so `missing-nfr-ids` on such a record names an omission
+// nobody committed and no artifact content can clear.
+//
+// The grid is the authority, not the stage frontmatter: a COMPOSED scope's
+// EXECUTE/SKIP row exists only in the compiled scope-grid.json, and transposing
+// `scopes:` here would read every composed scope as skipping every stage. Any
+// input the suppression cannot resolve — no state file, no `Scope` field, no
+// grid, a scope the grid does not name — leaves the finding exactly where it
+// was. The reported side stays fail-closed; only a positive, decisive SKIP
+// suppresses.
+
+/** The scope grid path, honouring the same `AMADEUS_SCOPE_GRID` seam
+ *  amadeus-graph.ts reads. `data/` sits beside this script in every shipped
+ *  harness (the canonical tree carries no compiled grid, which resolves as
+ *  "cannot decide"). Resolved per call: the seam is set by tests. */
+function scopeGridPath(): string {
+  return process.env.AMADEUS_SCOPE_GRID ?? join(dirname(fileURLToPath(import.meta.url)), "data", "scope-grid.json");
+}
+
+/** The one cell this sensor asks the grid for, narrowed off an `unknown` parse
+ *  rather than cast into a shape nobody proved (#1980 FR-3a). Undefined for
+ *  every shape that does not carry a string at
+ *  `<scope>.stages.<stage>` — a malformed grid answers "cannot decide", the
+ *  same as an absent one. */
+function gridCell(parsed: unknown, scope: string, stage: string): string | undefined {
+  if (typeof parsed !== "object" || parsed === null) return undefined;
+  const row: unknown = (parsed as Record<string, unknown>)[scope];
+  if (typeof row !== "object" || row === null) return undefined;
+  const stages: unknown = (row as Record<string, unknown>).stages;
+  if (typeof stages !== "object" || stages === null) return undefined;
+  const cell: unknown = (stages as Record<string, unknown>)[stage];
+  return typeof cell === "string" ? cell : undefined;
+}
+
+/** The record's `Scope`, read from the nearest state file the record root
+ *  carries. Undefined when the record has no state file (2 of the corpus's
+ *  records do not) or declares no scope. */
+export function readRecordScope(recordRoot: string): string | undefined {
+  let body: string;
+  try {
+    body = readFileSync(join(recordRoot, "amadeus-state.md"), "utf-8");
+  } catch {
+    return undefined;
+  }
+  const match = body.match(/^-\s+\*\*Scope\*\*:\s*(\S+)\s*$/m);
+  return match?.[1];
+}
+
+/** Does the compiled grid say `scope` SKIPs `stage`? Undefined whenever the
+ *  question cannot be answered from the grid — an unreadable or malformed file,
+ *  a scope the grid does not carry, a stage the row does not list. */
+export function scopeSkipsStage(scope: string, stage: string, gridPath = scopeGridPath()): boolean | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(gridPath, "utf-8"));
+  } catch {
+    return undefined;
+  }
+  const cell = gridCell(parsed, scope, stage);
+  if (cell === undefined) return undefined;
+  return cell === "SKIP";
+}
+
+/** Is this artifact's missing denominator the scope's own doing?
+ *
+ *  Only ever true for the CITING stage: an nfr-requirements artifact on disk
+ *  was written by whoever ran that stage, and a grid row claiming it was
+ *  skipped does not excuse the ids it failed to declare. */
+export function upstreamProducerSkipped(outputPath: string, stage: string): boolean {
+  if (stage === NFR_REQUIREMENTS_STAGE_DIR) return false;
+  const root = resolveRecordRoot(outputPath);
+  if (root === undefined) return false;
+  const scope = readRecordScope(root);
+  if (scope === undefined) return false;
+  return scopeSkipsStage(scope, NFR_REQUIREMENTS_STAGE_DIR) === true;
+}
+
+/** What the unit's id count means for this artifact.
+ *
+ *  `not-reported`   — there is a denominator, or the record predates the
+ *                     contract (the fail-open cohort). Measured as before.
+ *  `scope-omitted`  — no denominator, and the scope skipped the stage that
+ *                     would have declared one. Nobody omitted anything.
+ *  `reportable`     — no denominator and no explanation: the id contract is
+ *                     unmet and the finding stands. */
+export type NfrIdStatus = "not-reported" | "scope-omitted" | "reportable";
+
+export function nfrIdStatus(
+  outputPath: string,
+  stage: string,
+  unitNfrCount: number,
+  underContract: boolean,
+): NfrIdStatus {
+  if (!underContract || unitNfrCount > 0) return "not-reported";
+  return upstreamProducerSkipped(outputPath, stage) ? "scope-omitted" : "reportable";
+}
+
 /** The unit's id count — the denominator both stages divide by. */
 export function unitIdCount(stageDir: string): number {
   const declarationDir = idDeclarationDir(stageDir);
@@ -931,7 +1036,13 @@ export function evaluateNfrBudget(outputPath: string, depth?: string, kind?: str
   // measured at all — and nothing downstream (nfr-design's tracing,
   // build-and-test's proportional selection, a reviewer checking that an
   // absence claim is falsifiable) can address the requirement by name.
-  if (underContract && unitNfrCount === 0) {
+  //
+  // Unless the scope SKIPs the stage those ids are declared in (#2773): then
+  // the absent denominator is the scope's own decision, already carried by the
+  // engine as `consumes_absent.expected=true` on this stage's inputs, and
+  // reporting it would flag every artifact of every such record forever.
+  const idStatus = nfrIdStatus(outputPath, stage, unitNfrCount, underContract);
+  if (idStatus === "reportable") {
     return verdict(
       "missing-nfr-ids",
       [
@@ -996,7 +1107,11 @@ export function evaluateNfrBudget(outputPath: string, depth?: string, kind?: str
     );
   }
 
-  return verdict("measured", [], figures);
+  // `upstream-omitted` rather than `measured`: nothing was measured against a
+  // denominator here, and a human at the gate reading `measured` on a unit with
+  // zero ids would have to rediscover why. The kind-coverage check above still
+  // ran — the scope's decision explains the missing ids, not a missing file.
+  return verdict(idStatus === "scope-omitted" ? "upstream-omitted" : "measured", [], figures);
 }
 
 /** Birth per record root, memoized.
