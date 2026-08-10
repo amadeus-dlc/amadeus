@@ -3962,6 +3962,28 @@ function canonicalConstructionFailurePending(projectDir: string): boolean {
   return projected.ok && constructionFailureTransition(projected.projection).kind === "await-unit-ruling";
 }
 
+// A terminal `failed` without its BOLT_FAILED / batch-closure join stops `next`
+// only where the ruling loop lives: the per-unit build stage that dispatched the
+// Unit, and only for a batch the compiled Bolt DAG still carries. A failure from
+// a batch outside the current runtime population is history, and at a downstream
+// consumer stage a failed producer is reported by the per-unit consume fan-out
+// (`producer-outcome-failed`) — neither may freeze the workflow here.
+function terminalFailureStopsNext(
+  projectDir: string,
+  stageSlug: string,
+  units: readonly { unit: string; batch?: string; outcome: string }[],
+): boolean {
+  const node = nodeForSlug(stageSlug);
+  if (node === undefined || !isPerUnit(node)) return false;
+  const batches = readBoltDagBatches(projectDir) ?? [];
+  return units.some((entry) => {
+    if (entry.outcome !== "failed") return false;
+    const index = entry.batch === undefined ? Number.NaN : Number.parseInt(entry.batch, 10) - 1;
+    return Number.isInteger(index) && index >= 0 && index < batches.length &&
+      batches[index].includes(entry.unit);
+  });
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -3998,7 +4020,7 @@ function emitConstructionFailureIfPresent(
     ));
     return true;
   }
-  if (result.projection.units.some((entry) => entry.outcome === "failed")) {
+  if (terminalFailureStopsNext(projectDir, stageSlug, result.projection.units)) {
     emit(errorDirective("Construction Unit failure is terminal but its BOLT_FAILED / batch-closure join is incomplete; waiting fail-closed."));
     return true;
   }
