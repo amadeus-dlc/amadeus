@@ -365,7 +365,7 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     expect(runNext(proj)).toMatchObject({ kind: "run-stage", unit: "alpha", gate: false });
   });
 
-  test("solo Skip closes the failed attempt as cancelled and presents only the stage gate", () => {
+  test("solo Skip closes the failed attempt as cancelled and preserves per-Unit review recovery", () => {
     const { proj, attempt, batch } = seedFailedSoloUnit();
 
     expect(runFailureRuling(proj, "Skip")).toMatchObject({ kind: "committed" });
@@ -376,7 +376,12 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
       outcome: "cancelled",
       reason: "skipped",
     }));
-    expect(runNext(proj)).toMatchObject({ kind: "run-stage", unit: "alpha", gate: true });
+    expect(runNext(proj)).toMatchObject({
+      kind: "run-stage",
+      unit: "alpha",
+      gate: false,
+      review_only: true,
+    });
   });
 
   test("solo Abort suspends Construction without changing the failed attempt", () => {
