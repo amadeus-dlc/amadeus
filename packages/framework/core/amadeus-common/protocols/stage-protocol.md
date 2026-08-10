@@ -274,7 +274,7 @@ options:
   - label: Guide me
     description: Walk through each question interactively here
   - label: Grill me
-    description: One question at a time, in depth — recommended answers included, until we reach a shared understanding
+    description: Round-by-round interview over the whole design tree — recommended answers included, until every branch is settled
   - label: I'll edit the file
     description: I'll fill in the answers in the file directly
   - label: Chat
@@ -282,6 +282,8 @@ options:
 ```
 
 Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+
+While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options — grilling is a human-in-the-loop discipline whose every round waits on a person, and unattended question resolution runs through `amadeus-bolt decide-question` (§1) instead.
 
 Log the user's mode choice to `<record>/audit/<host>-<clone>.jsonl` using the Question interaction log format.
 
@@ -346,10 +348,10 @@ For multi-select questions (where user may choose more than one option), add "(s
 - Best for: exploratory stages, brainstorming, when questions need discussion before answering
 
 **Step 3d: If "Grill me" (grilling mode):**
-- Follow `grilling-protocol.md` (same directory) — the single source for the grilling discipline (one question at a time, recommended answer with rationale, facts self-researched and only decisions asked, hybrid termination, confirmed agreement summary). Do not re-define the discipline here.
+- Follow `grilling-protocol.md` (same directory) — the single source for the grilling discipline (the design tree worked in rounds, the whole pruned frontier asked per round with recommended answers and rationale, depth consumed as the pruning threshold rather than a question budget, facts self-researched and only decisions asked, termination when the pruned frontier is empty or the user says `done`, the circuit breaker as the disclosed upper bound, confirmed agreement summary listing deferred nodes). Do not re-define the discipline here.
 - Workflow-specific obligations on top of the protocol:
-  - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — the same Stop-hook human-wait convention as the other modes.
-  - Write each answer back to its `[Answer]:` tag immediately after it is received. Do not present the next question before the write-back.
+  - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — one entry per question even when the round is presented at once, the same Stop-hook human-wait convention as the other modes.
+  - Write each answer back to its own `[Answer]:` tag immediately after it is received. Do not present the next round before the write-back.
   - Audit per question, existing contract only: `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision ...` before presenting, `bun {{HARNESS_DIR}}/tools/amadeus-log.ts answer ...` after the response — one `decision`/`answer` pair per question, with the same write-back, audit, and fresh-timestamp discipline as Step 3a. No new event types.
 - After the agreement summary is explicitly confirmed, continue with Step 4 as usual — grilling replaces only the Step 3 dialogue; verification, contradiction analysis, artifact generation, §13, and the approval gate are unchanged.
 
@@ -745,6 +747,17 @@ is enforced by the stage agent at question-drafting time (§3). NFR Requirements
 and NFR Design volume is measured separately by the advisory `nfr-budget` sensor
 — neither stage gets a numeric row in the Depth-Level Contract table above, which
 holds only counted quantities common to every scope.
+
+**Grill me mode consumes depth as a pruning threshold, not as a question
+budget** (`grilling-protocol.md` §2.2). Its sessions terminate on frontier
+coverage, so the question total is an emergent value and may exceed the row
+above. When it does, the recorded justification required by this contract takes
+a standing machine-readable form: grilling appends the fixed justification line
+(`grilling-protocol.md` §2.5) to the questions file at the crossing, recording
+the depth, the total, and `frontier-driven` as the reason. The circuit breaker
+(three times the row's ceiling — Minimal 12 / Standard 24 / Comprehensive 36)
+is the disclosed upper bound on that overrun. The ceilings above are unchanged
+and continue to bind every other interaction mode.
 
 ### Depth-Level Guidance
 
