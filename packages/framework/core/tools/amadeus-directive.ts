@@ -49,6 +49,7 @@ export type DirectiveKind =
   | "select-intent"
   | "print"
   | "error"
+  | "committed"
   | "done"
   | "parked"
   | "await-completion"
@@ -327,8 +328,19 @@ export interface ErrorDirective {
   message: string;
 }
 
+// committed — a `report` transition landed and the loop CONTINUES. Distinct
+// from `done`, which is terminal: a commit ack says the state moved (or, for an
+// idempotent stale re-report, that it had already moved) and the conductor's
+// next move is another `next`. The two shared one kind until issue #2762, which
+// left the free-text `reason` as the only discriminator and made a
+// contract-obeying conductor stop mid-workflow on a successful commit.
+export interface CommittedDirective {
+  kind: "committed";
+  reason: string;
+}
+
 // done — stop the loop (workflow or single-stage complete). `reason` records
-// why the loop ended.
+// why the loop ended. Never a `report` commit ack — that is `committed`.
 export interface DoneDirective {
   kind: "done";
   reason: string;
@@ -381,6 +393,7 @@ export type Directive =
   | SelectIntentDirective
   | PrintDirective
   | ErrorDirective
+  | CommittedDirective
   | DoneDirective
   | ParkedDirective
   | AwaitCompletionDirective
@@ -404,6 +417,7 @@ export const VALID_KINDS = [
   "select-intent",
   "print",
   "error",
+  "committed",
   "done",
   "parked",
   "await-completion",
@@ -471,6 +485,7 @@ const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
 const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
+const COMMITTED_FIELDS = ["kind", "reason"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
 const PARKED_FIELDS = ["kind", "reason", "stage"] as const;
 const AWAIT_COMPLETION_FIELDS = ["kind", "reason"] as const;
@@ -492,6 +507,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   "select-intent": SELECT_INTENT_FIELDS,
   print: PRINT_FIELDS,
   error: ERROR_FIELDS,
+  committed: COMMITTED_FIELDS,
   done: DONE_FIELDS,
   parked: PARKED_FIELDS,
   "await-completion": AWAIT_COMPLETION_FIELDS,
@@ -545,6 +561,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
   },
   print: (o, errors) => checkString(o, "message", "print", errors),
   error: (o, errors) => checkString(o, "message", "error", errors),
+  committed: (o, errors) => checkString(o, "reason", "committed", errors),
   done: (o, errors) => checkString(o, "reason", "done", errors),
   parked: (o, errors) => {
     checkString(o, "reason", "parked", errors);
@@ -1198,6 +1215,12 @@ export const directiveSelfCheckExamples: Directive[] = [
     },
     { kind: "print", message: "AIDLC framework version 0.0.0" },
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
+    {
+      kind: "committed",
+      reason:
+        'Committed gate-start + approve for "feasibility" (scope: feature). ' +
+        "State advanced. Run next to continue.",
+    },
     { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
     { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /amadeus --resume.', stage: "feasibility" },
     {

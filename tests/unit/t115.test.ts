@@ -18,7 +18,8 @@
 // boundary — SPAWN the real binaries via node:child_process spawnSync (BUN +
 // the tool .ts path) and assert on res.status / res.stdout / res.stderr and the
 // audit.md / amadeus-state.md the tools write. An in-process twin would lose the
-// directive-JSON-to-stdout half (every "kind":"done"/"kind":"error" assertion)
+// directive-JSON-to-stdout half (every "kind":"committed"/"kind":"done"/
+// "kind":"error" assertion)
 // and the cross-process atomic-lock / audit-row-order effects the .sh relies on.
 //
 // PARITY NOTES — every .sh assertion has an equal-or-stronger counterpart:
@@ -27,7 +28,8 @@
 //                                                         -> Test 2 (same).
 //   .sh T3  report no state file -> '"kind":"error"'      -> Test 3 (same).
 //   .sh T4  next before report -> '"stage":"feasibility"' -> Test 4 (same).
-//   .sh T5  report gated stage -> '"kind":"done"'         -> Test 5 (same).
+//   .sh T5  report gated stage -> '"kind":"committed"'    -> Test 5 (same move;
+//           #2762 renamed the non-terminal commit ack away from `done`).
 //   .sh T6  gated approve emits "GATE_APPROVED STAGE_COMPLETED STAGE_STARTED"
 //           in order                                      -> Test 6 (same: the
 //           full space-joined event sequence is asserted to contain that run).
@@ -54,7 +56,8 @@
 //   .sh T21 replayed commit is not an error (ERROR_LOGGED == 0) -> Test 21.
 //   .sh T22 re-report on a completed workflow -> '"kind":"error"' (clean error,
 //           not a crash)                                  -> Test 22 (STRONGER:
-//           also asserts no '"kind":"done"' leaked to stdout).
+//           also asserts the already-completed reply is the terminal
+//           '"kind":"done"', never the non-terminal commit ack).
 //
 // 22 .sh asserts -> 22 expect()-bearing test() cases. STRONGER additions are
 // noted inline (S1..S3).
@@ -284,7 +287,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     );
 
     // .sh T5: report on a gated stage emits a done directive.
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
 
     // .sh T6: gated approve emits GATE_APPROVED then STAGE_COMPLETED then
     // STAGE_STARTED in taxonomy order (approve self-delegates to advance, which
@@ -311,7 +314,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     );
 
     expect(report.status).toBe(0);
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
     expect(report.out).toContain("Committed gate-start + approve");
     // The refusal-visibility observation lands between gate open and approval
     // whenever autonomy leaves the gate to the human (#2378).
@@ -329,7 +332,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     const report = orchestrate(["report", "--result", "approved"], p);
 
     expect(report.status).toBe(0);
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
     expect(report.out).toContain("Committed advance");
     expect(auditEvents(p)).toContain("STAGE_COMPLETED STAGE_STARTED");
     expect(countEvent(p, "STAGE_COMPLETED")).toBe(1);
@@ -347,7 +350,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     const report = orchestrate(["report", "--stage", "feasibility", "--result", "approved"], p);
 
     expect(report.status).toBe(0);
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
     expect(totalEvents(p)).toBe(before);
     expect(countEvent(p, "GATE_APPROVED")).toBe(1);
     expect(countEvent(p, "STAGE_STARTED")).toBe(1);
@@ -370,7 +373,7 @@ describe("t115 non-gated advance (report -> amadeus-state advance)", () => {
     // JSON-escaped in stdout, so match the quote-free substring.
     expect(report.out).toContain("Committed advance for");
     // S1: STRONGER — also pin the directive kind and a clean exit.
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
     expect(report.status).toBe(0);
 
     // .sh T11: non-gated advance emits STAGE_COMPLETED then STAGE_STARTED.
@@ -423,7 +426,7 @@ describe("t115 final gated approve -> complete-workflow (report -> amadeus-state
     expect(gs.status).toBe(0);
 
     const report = orchestrate(["report", "--result", "approved"], p);
-    expect(report.out).toContain('"kind":"done"'); // committed cleanly
+    expect(report.out).toContain('"kind":"committed"'); // committed cleanly
 
     // .sh T16: final gated approve emits WORKFLOW_COMPLETED exactly once.
     expect(countEvent(p, "WORKFLOW_COMPLETED")).toBe(1);
@@ -493,7 +496,7 @@ describe("t115 re-report on a completed workflow", () => {
 
     // First report completes the workflow.
     const first = orchestrate(["report", "--result", "approved"], p);
-    expect(first.out).toContain('"kind":"done"');
+    expect(first.out).toContain('"kind":"committed"');
     const before = totalEvents(p);
 
     // Second report: the workflow is already complete, so the engine returns a
@@ -535,7 +538,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     const replay = orchestrate(["report", "--stage", "feasibility", "--result", "approved"], p);
 
     expect(replay.status).toBe(0);
-    expect(replay.out).toContain('"kind":"done"');
+    expect(replay.out).toContain('"kind":"committed"');
     expect(replay.out).toContain("already completed");
     expect(replay.out).toContain("idempotent re-report");
     // The held gate survives — no [?] -> [-] demotion.
@@ -554,7 +557,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     const replay = orchestrate(["report", "--stage", "feasibility", "--result", "approved"], p);
 
     expect(replay.status).toBe(0);
-    expect(replay.out).toContain('"kind":"done"');
+    expect(replay.out).toContain('"kind":"committed"');
     expect(replay.out).toContain("idempotent re-report");
     expect(readFileSync(statePath(p), "utf-8")).toContain("[R] scope-definition");
     expect(totalEvents(p)).toBe(before);
@@ -583,7 +586,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     const report = orchestrate(["report", "--stage", "feasibility", "--result", "approved"], p);
 
     expect(report.status).toBe(0);
-    expect(report.out).toContain('"kind":"done"');
+    expect(report.out).toContain('"kind":"committed"');
     expect(report.out).toContain("Committed advance");
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");
     expect(readFileSync(statePath(p), "utf-8")).toContain("[-] scope-definition");
