@@ -101,6 +101,8 @@ export type ConstructionAuditNormalization =
   | { readonly ok: true; readonly records: readonly ConstructionOutcomeRecord[] }
   | { readonly ok: false; readonly diagnostics: readonly ProjectionDiagnostic[] };
 
+type AuditRow = Record<string, unknown>;
+
 function stringField(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -110,29 +112,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function compareStrings(left: string, right: string): number {
-  return left === right ? 0 : left < right ? -1 : 1;
+  if (left === right) return 0;
+  return [left, right].sort()[0] === left ? -1 : 1;
 }
 
-function auditRowOrder(left: Record<string, unknown>, right: Record<string, unknown>): number {
-  const byTimestamp = compareStrings(
-    stringField(left.timestamp) ?? "",
-    stringField(right.timestamp) ?? "",
-  );
+function sortableString(row: AuditRow, field: string): string {
+  return stringField(row[field]) ?? "";
+}
+
+function auditSequence(row: AuditRow): number {
+  return Number.isInteger(row.seq) ? row.seq as number : 0;
+}
+
+function auditIdentity(row: AuditRow): string {
+  return stringField(row.idempotencyKey) ?? stringField(row.eventId) ?? "";
+}
+
+function auditRowOrder(left: AuditRow, right: AuditRow): number {
+  const byTimestamp = compareStrings(sortableString(left, "timestamp"), sortableString(right, "timestamp"));
   if (byTimestamp !== 0) return byTimestamp;
-  const leftClone = stringField(left.cloneId) ?? "";
-  const rightClone = stringField(right.cloneId) ?? "";
+  const leftClone = sortableString(left, "cloneId");
+  const rightClone = sortableString(right, "cloneId");
   if (leftClone === rightClone) {
-    const leftSequence = Number.isInteger(left.seq) ? left.seq as number : 0;
-    const rightSequence = Number.isInteger(right.seq) ? right.seq as number : 0;
+    const leftSequence = auditSequence(left);
+    const rightSequence = auditSequence(right);
     if (leftSequence !== rightSequence) return leftSequence - rightSequence;
   }
-  const leftIdentity = stringField(left.idempotencyKey) ?? stringField(left.eventId) ?? "";
-  const rightIdentity = stringField(right.idempotencyKey) ?? stringField(right.eventId) ?? "";
-  return bytewise(leftIdentity, rightIdentity);
+  return bytewise(auditIdentity(left), auditIdentity(right));
 }
 
-function canonicalAuditRows(audit: string): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
+function canonicalAuditRows(audit: string): AuditRow[] {
+  const rows: AuditRow[] = [];
   for (const line of audit.split("\n")) {
     if (!line.startsWith("{")) continue;
     try {
@@ -148,7 +158,7 @@ function canonicalAuditRows(audit: string): Record<string, unknown>[] {
 
 function boltTarget(
   intent: string,
-  attributes: Record<string, unknown>,
+  attributes: AuditRow,
   unitField: "Bolt names" | "Failed Bolt",
 ): UnitKey {
   const names = stringField(attributes[unitField]);
@@ -164,7 +174,7 @@ function boltTarget(
   };
 }
 
-function hasExplicitCorrelation(attributes: Record<string, unknown>): boolean {
+function hasExplicitCorrelation(attributes: AuditRow): boolean {
   return ["Stage", "Attempt Id", "Batch Id"].some((field) => stringField(attributes[field]) !== undefined);
 }
 
@@ -193,7 +203,7 @@ interface NormalizationState {
 }
 
 interface AuditRowContext {
-  readonly attributes: Record<string, unknown>;
+  readonly attributes: AuditRow;
   readonly eventId: string;
   readonly sequence: number;
   readonly intent: string;
@@ -393,6 +403,49 @@ function normalizedTerminalRecords(state: NormalizationState): ConstructionOutco
   }));
 }
 
+function auditRowContext(raw: AuditRow): AuditRowContext | undefined {
+  if (!isRecord(raw.attributes)) return undefined;
+  return {
+    attributes: raw.attributes,
+    eventId: stringField(raw.eventId) ?? "(missing-event-identity)",
+    sequence: auditSequence(raw),
+    intent: stringField(raw.intentId) ?? "",
+    stage: stringField(raw.attributes.Stage) ?? "",
+  };
+}
+
+function normalizeConstructionAuditEvent(
+  event: ConstructionAuditEvent,
+  context: AuditRowContext,
+  state: NormalizationState,
+): void {
+  switch (event) {
+    case "BOLT_STARTED":
+    case "BOLT_COMPLETED":
+      normalizeSoloLifecycle(event, context, state);
+      return;
+    case "UNIT_POOL_EVENT_SET_COMMITTED":
+      normalizePoolCommit(context, state);
+      return;
+    case "BOLT_FAILED":
+    case "SWARM_BATON_RETURNED":
+      normalizeFailureOrBaton(event, context, state);
+  }
+}
+
+function normalizeConstructionAuditRow(
+  raw: AuditRow,
+  state: NormalizationState,
+  seen: Set<string>,
+): void {
+  const context = auditRowContext(raw);
+  if (context === undefined || seen.has(context.eventId)) return;
+  const event = constructionAuditEvent(context.attributes.Event);
+  if (event === undefined) return;
+  seen.add(context.eventId);
+  normalizeConstructionAuditEvent(event, context, state);
+}
+
 export function normalizeConstructionOutcomeAudit(audit: string): ConstructionAuditNormalization {
   const state: NormalizationState = {
     records: [],
@@ -402,32 +455,7 @@ export function normalizeConstructionOutcomeAudit(audit: string): ConstructionAu
   };
   const seen = new Set<string>();
   for (const raw of canonicalAuditRows(audit)) {
-    const attributes = raw.attributes as Record<string, unknown> | undefined;
-    const event = constructionAuditEvent(attributes?.Event);
-    if (!attributes || event === undefined) continue;
-    const eventId = stringField(raw.eventId) ?? "(missing-event-identity)";
-    if (seen.has(eventId)) continue;
-    seen.add(eventId);
-    const context: AuditRowContext = {
-      attributes,
-      eventId,
-      sequence: Number.isInteger(raw.seq) ? raw.seq as number : 0,
-      intent: stringField(raw.intentId) ?? "",
-      stage: stringField(attributes.Stage) ?? "",
-    };
-    switch (event) {
-      case "BOLT_STARTED":
-      case "BOLT_COMPLETED":
-        normalizeSoloLifecycle(event, context, state);
-        break;
-      case "UNIT_POOL_EVENT_SET_COMMITTED":
-        normalizePoolCommit(context, state);
-        break;
-      case "BOLT_FAILED":
-      case "SWARM_BATON_RETURNED":
-        normalizeFailureOrBaton(event, context, state);
-        break;
-    }
+    normalizeConstructionAuditRow(raw, state, seen);
   }
   state.records.push(...normalizedTerminalRecords(state));
   return state.diagnostics.length > 0

@@ -125,7 +125,7 @@ const BOOLEAN_FLAGS = new Set(["--worktree", "--merge", "--discard", "--unit"]);
 // The `--unit` pass-through for the state fork. A named helper rather than an
 // inline conditional so the branch is not counted against handleStart, which
 // sits at the complexity baseline's ceiling.
-function unitFlagArgs(booleans: Set<string>): string[] {
+function unitFlagArgs(booleans: ReadonlySet<string>): string[] {
   return booleans.has("unit") ? ["--unit"] : [];
 }
 
@@ -213,6 +213,137 @@ function parseFlags(args: string[]): Record<string, string> {
 // slug-derivation rule). Single-bolt only — csv batch with --worktree is
 // rejected. Per-Bolt parallel batches issue N start --worktree calls, one
 // per slug.
+function readStartState(
+  pd: string,
+  flags: Record<string, string>,
+  useWorktree: boolean,
+): string {
+  try {
+    return useWorktree
+      ? readStateFile(pd)
+      : readStateFile(pd, flags.intent, flags.space);
+  } catch (e) {
+    if (useWorktree) {
+      failJson("start-worktree", flags.slug, "state-read-failed", errorMessage(e));
+    }
+    error(`Active workflow state not found: ${errorMessage(e)}`);
+  }
+}
+
+interface SoloStartCorrelation {
+  readonly unit?: string;
+  readonly stage?: string;
+  readonly attempt?: string;
+  readonly batch?: string;
+}
+
+function soloStartCorrelation(
+  stateContent: string,
+  flags: Record<string, string>,
+  useWorktree: boolean,
+): SoloStartCorrelation {
+  const unit = !useWorktree && !flags.name.includes(",")
+    ? flags.slug ?? flags.name
+    : undefined;
+  if (unit === undefined) return {};
+  const stage = getField(stateContent, "Current Stage")?.trim();
+  if (!stage) error("Active workflow state has no Current Stage for solo correlation.");
+  return {
+    unit,
+    stage,
+    attempt: randomUUID(),
+    batch: `solo:${flags.batch}:${unit}`,
+  };
+}
+
+function emitBoltStarted(
+  pd: string,
+  flags: Record<string, string>,
+  useWorktree: boolean,
+  walkingSkeleton: boolean,
+  solo: SoloStartCorrelation,
+): void {
+  try {
+    const fields: Record<string, string> = {
+      "Bolt names": flags.name,
+      "Batch number": flags.batch,
+      "Walking skeleton": String(walkingSkeleton),
+    };
+    if (useWorktree) fields["Bolt slug"] = flags.slug;
+    if (solo.unit && solo.stage && solo.attempt && solo.batch) {
+      fields["Bolt slug"] = solo.unit;
+      fields.Stage = solo.stage;
+      fields["Attempt Id"] = solo.attempt;
+      fields["Batch Id"] = solo.batch;
+    }
+    emitAudit(pd, "BOLT_STARTED", fields, flags.intent, flags.space);
+  } catch (e) {
+    if (useWorktree) {
+      failJson("start-worktree", flags.slug, "audit-emit-failed", errorMessage(e));
+    }
+    error(`Audit emission failed: ${errorMessage(e)}`);
+  }
+}
+
+function forkBoltState(
+  pd: string,
+  flags: Record<string, string>,
+  booleans: ReadonlySet<string>,
+): void {
+  const result = spawnSibling(pd, "amadeus-state.ts", [
+    "fork",
+    "--slug",
+    flags.slug,
+    ...unitFlagArgs(booleans),
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const reason = result.signal === "SIGTERM" ? "state-fork-timeout" : "state-fork-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "start-worktree",
+    flags.slug,
+    reason,
+    `amadeus-state fork --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
+function forkBoltAudit(pd: string, flags: Record<string, string>): void {
+  const result = spawnSibling(pd, "amadeus-audit.ts", [
+    "audit-fork",
+    "--slug",
+    flags.slug,
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const reason = result.signal === "SIGTERM" ? "audit-fork-timeout" : "audit-fork-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "start-worktree",
+    flags.slug,
+    reason,
+    `amadeus-audit audit-fork --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
+function forkBoltFragment(pd: string, flags: Record<string, string>): void {
+  const result = spawnSibling(pd, "amadeus-runtime.ts", [
+    "fragment-fork",
+    "--slug",
+    flags.slug,
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const reason = result.signal === "SIGTERM" ? "fragment-fork-timeout" : "fragment-fork-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "start-worktree",
+    flags.slug,
+    reason,
+    `amadeus-runtime fragment-fork --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
 function handleStart(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
@@ -245,55 +376,14 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
   // non-worktree paths emit the same BOLT_STARTED, so both require the same
   // pre-audit state-read guard; --worktree keeps its failJson exit contract,
   // non-worktree uses the plain error() exit.
-  let stateContent: string;
-  if (useWorktree) {
-    try {
-      stateContent = readStateFile(pd);
-    } catch (e) {
-      failJson("start-worktree", flags.slug, "state-read-failed", errorMessage(e));
-    }
-  } else {
-    try {
-      stateContent = readStateFile(pd, flags.intent, flags.space);
-    } catch (e) {
-      error(`Active workflow state not found: ${errorMessage(e)}`);
-    }
-  }
-
-  const soloUnit = !useWorktree && !flags.name.includes(",")
-    ? flags.slug ?? flags.name
-    : undefined;
-  const soloStage = soloUnit ? getField(stateContent, "Current Stage")?.trim() : undefined;
-  if (soloUnit && !soloStage) error("Active workflow state has no Current Stage for solo correlation.");
-  const soloAttempt = soloUnit ? randomUUID() : undefined;
-  const soloBatch = soloUnit ? `solo:${flags.batch}:${soloUnit}` : undefined;
+  const stateContent = readStartState(pd, flags, useWorktree);
+  const solo = soloStartCorrelation(stateContent, flags, useWorktree);
 
   // Audit-first within validated context: emit BOLT_STARTED only after
   // shape checks pass. The state-fork / audit-fork primitives below emit
   // their own STATE_FORKED / AUDIT_FORKED rows inside withAuditLock — we
   // must not duplicate that here (per t48 emitter-pairing check).
-  try {
-    const fields: Record<string, string> = {
-      "Bolt names": flags.name,
-      "Batch number": flags.batch,
-      "Walking skeleton": String(walkingSkeleton),
-    };
-    if (useWorktree) {
-      fields["Bolt slug"] = flags.slug;
-    }
-    if (soloUnit && soloStage && soloAttempt && soloBatch) {
-      fields["Bolt slug"] = soloUnit;
-      fields.Stage = soloStage;
-      fields["Attempt Id"] = soloAttempt;
-      fields["Batch Id"] = soloBatch;
-    }
-    emitAudit(pd, "BOLT_STARTED", fields, flags.intent, flags.space);
-  } catch (e) {
-    if (useWorktree) {
-      failJson("start-worktree", flags.slug, "audit-emit-failed", errorMessage(e));
-    }
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+  emitBoltStarted(pd, flags, useWorktree, walkingSkeleton, solo);
 
   if (!useWorktree) {
     console.log(
@@ -302,9 +392,9 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
         bolt_names: flags.name,
         batch: flags.batch,
         walking_skeleton: walkingSkeleton,
-        ...(soloStage ? { stage: soloStage } : {}),
-        ...(soloAttempt ? { attempt_id: soloAttempt } : {}),
-        ...(soloBatch ? { batch_id: soloBatch } : {}),
+        ...(solo.stage ? { stage: solo.stage } : {}),
+        ...(solo.attempt ? { attempt_id: solo.attempt } : {}),
+        ...(solo.batch ? { batch_id: solo.batch } : {}),
       })
     );
     return;
@@ -315,76 +405,18 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
   // file). On failure, BOLT_STARTED is already in audit — emit BOLT_FAILED
   // recovery row so audit reflects the real outcome and doctor can
   // reconcile.
-  const stateForkResult = spawnSibling(pd, "amadeus-state.ts", [
-    "fork",
-    "--slug",
-    flags.slug,
-    // Forwarded so the fork's telemetry marker names a unit when the swarm
-    // drove this start, and a Bolt otherwise. The caller is the only side that
-    // knows which — the slug alone reads the same either way.
-    ...unitFlagArgs(booleans),
-    ...selectorArgs(flags),
-  ]);
-  if (!stateForkResult.ok) {
-    const reason =
-      stateForkResult.signal === "SIGTERM" ? "state-fork-timeout" : "state-fork-failed";
-    failBolt(pd, flags.name, flags.slug, reason, stateForkResult.stderr || stateForkResult.stdout);
-    failJson(
-      "start-worktree",
-      flags.slug,
-      reason,
-      `amadeus-state fork --slug ${flags.slug} exited ${stateForkResult.status}: ${stateForkResult.stderr || stateForkResult.stdout || "(no output)"}`
-    );
-  }
+  // The caller is the only side that knows whether the slug names a unit or a
+  // Bolt, so forward that marker with the state fork.
+  forkBoltState(pd, flags, booleans);
 
   // Audit-fork primitive. Emits AUDIT_FORKED audit-of-intent.
-  const auditForkResult = spawnSibling(pd, "amadeus-audit.ts", [
-    "audit-fork",
-    "--slug",
-    flags.slug,
-    ...selectorArgs(flags),
-  ]);
-  if (!auditForkResult.ok) {
-    const reason =
-      auditForkResult.signal === "SIGTERM" ? "audit-fork-timeout" : "audit-fork-failed";
-    failBolt(pd, flags.name, flags.slug, reason, auditForkResult.stderr || auditForkResult.stdout);
-    failJson(
-      "start-worktree",
-      flags.slug,
-      reason,
-      `amadeus-audit audit-fork --slug ${flags.slug} exited ${auditForkResult.status}: ${auditForkResult.stderr || auditForkResult.stdout || "(no output)"}`
-    );
-  }
+  forkBoltAudit(pd, flags);
 
   // Fragment-fork primitive. Byte-copies main runtime-graph.json into
   // the worktree's fragment path; one-shot guard. No audit emit — the
   // fragment lifecycle rides on the existing STATE_FORKED + AUDIT_FORKED
   // boundary.
-  const fragmentForkResult = spawnSibling(pd, "amadeus-runtime.ts", [
-    "fragment-fork",
-    "--slug",
-    flags.slug,
-    ...selectorArgs(flags),
-  ]);
-  if (!fragmentForkResult.ok) {
-    const reason =
-      fragmentForkResult.signal === "SIGTERM"
-        ? "fragment-fork-timeout"
-        : "fragment-fork-failed";
-    failBolt(
-      pd,
-      flags.name,
-      flags.slug,
-      reason,
-      fragmentForkResult.stderr || fragmentForkResult.stdout
-    );
-    failJson(
-      "start-worktree",
-      flags.slug,
-      reason,
-      `amadeus-runtime fragment-fork --slug ${flags.slug} exited ${fragmentForkResult.status}: ${fragmentForkResult.stderr || fragmentForkResult.stdout || "(no output)"}`
-    );
-  }
+  forkBoltFragment(pd, flags);
 
   console.log(
     JSON.stringify({
@@ -501,6 +533,67 @@ function completionRecoveryFor(
   return recovery;
 }
 
+function completionAuditFields(
+  pd: string,
+  flags: Record<string, string>,
+  useMerge: boolean,
+): Record<string, string> {
+  const fields: Record<string, string> = {
+    "Bolt names": flags.name,
+    "Batch number": flags.batch,
+  };
+  if (useMerge) fields["Bolt slug"] = flags.slug;
+  if (useMerge || !flags.attempt || flags.name.includes(",")) return fields;
+  const unit = flags.slug ?? flags.name;
+  const stage = flags.stage ?? getField(
+    readStateFile(pd, flags.intent, flags.space),
+    "Current Stage",
+  )?.trim();
+  if (!stage) error("Active workflow state has no Current Stage for solo correlation.", pd);
+  fields["Bolt slug"] = unit;
+  fields.Stage = stage;
+  fields["Attempt Id"] = flags.attempt;
+  fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
+  return fields;
+}
+
+function emitBoltCompleted(
+  pd: string,
+  flags: Record<string, string>,
+  useMerge: boolean,
+  recovery: MergeRecoveryAssessment,
+): void {
+  try {
+    const fields = completionAuditFields(pd, flags, useMerge);
+    if (recovery.status === "pending") {
+      emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
+    }
+  } catch (e) {
+    if (useMerge) {
+      failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
+    }
+    error(`Audit emission failed: ${errorMessage(e)}`);
+  }
+}
+
+function mergeBoltFragment(pd: string, flags: Record<string, string>): void {
+  const result = spawnSibling(pd, "amadeus-runtime.ts", [
+    "fragment-merge",
+    "--slug",
+    flags.slug,
+    ...selectorArgs(flags),
+  ]);
+  if (result.ok) return;
+  const reason = result.signal === "SIGTERM" ? "fragment-merge-timeout" : "fragment-merge-failed";
+  failBolt(pd, flags.name, flags.slug, reason, result.stderr || result.stdout);
+  failJson(
+    "complete-merge",
+    flags.slug,
+    reason,
+    `amadeus-runtime fragment-merge --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`,
+  );
+}
+
 export function handleComplete(args: string[], explicitProjectDir?: string): void {
   const { booleans, rest } = splitBooleanFlags(args);
   const flags = parseFlags(rest);
@@ -516,35 +609,7 @@ export function handleComplete(args: string[], explicitProjectDir?: string): voi
 
   const completionRecovery = completionRecoveryFor(pd, flags, useMerge);
 
-  try {
-    const fields: Record<string, string> = {
-      "Bolt names": flags.name,
-      "Batch number": flags.batch,
-    };
-    if (useMerge) {
-      fields["Bolt slug"] = flags.slug;
-    }
-    if (!useMerge && flags.attempt && !flags.name.includes(",")) {
-      const unit = flags.slug ?? flags.name;
-      const stage = flags.stage ?? getField(
-        readStateFile(pd, flags.intent, flags.space),
-        "Current Stage",
-      )?.trim();
-      if (!stage) error("Active workflow state has no Current Stage for solo correlation.", pd);
-      fields["Bolt slug"] = unit;
-      fields.Stage = stage;
-      fields["Attempt Id"] = flags.attempt;
-      fields["Batch Id"] = flags["batch-id"] ?? `solo:${flags.batch}:${unit}`;
-    }
-    if (completionRecovery.status === "pending") {
-      emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
-    }
-  } catch (e) {
-    if (useMerge) {
-      failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
-    }
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+  emitBoltCompleted(pd, flags, useMerge, completionRecovery);
 
   if (!useMerge) {
     console.log(
@@ -566,31 +631,7 @@ export function handleComplete(args: string[], explicitProjectDir?: string): voi
   // hook fires after this Bash invocation returns, sees AUDIT_MERGED in
   // the last 3 audit blocks (per amadeus-runtime-compile.ts:87), and rebuilds
   // main runtime-graph with instances[] populated for this slug.
-  const fragmentMergeResult = spawnSibling(pd, "amadeus-runtime.ts", [
-    "fragment-merge",
-    "--slug",
-    flags.slug,
-    ...selectorArgs(flags),
-  ]);
-  if (!fragmentMergeResult.ok) {
-    const reason =
-      fragmentMergeResult.signal === "SIGTERM"
-        ? "fragment-merge-timeout"
-        : "fragment-merge-failed";
-    failBolt(
-      pd,
-      flags.name,
-      flags.slug,
-      reason,
-      fragmentMergeResult.stderr || fragmentMergeResult.stdout
-    );
-    failJson(
-      "complete-merge",
-      flags.slug,
-      reason,
-      `amadeus-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`
-    );
-  }
+  mergeBoltFragment(pd, flags);
 
   console.log(
     JSON.stringify({
