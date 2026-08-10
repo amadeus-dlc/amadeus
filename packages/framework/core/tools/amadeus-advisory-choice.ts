@@ -19,11 +19,15 @@ import {
   advisoriesForHost,
   declaredFormalCheckArgv,
   declaredHandoffStage,
+  defaultDeclarationWarn,
   isDeclaredAdvisoryCode,
   isKnownAdvisoryCode,
+  missingPluginManifestWarning,
   resolveArgvTokens,
+  resolvePluginManifest,
   type RunEvaluator,
 } from "./amadeus-advisory-declaration.ts";
+import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin.ts";
 import {
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
@@ -736,6 +740,8 @@ function directiveItemFor(
     dirname(activationHostRoot),
     pending.identity.plugin,
     pending.identity.code,
+    undefined,
+    join(activationHostRoot, PLUGIN_SOURCE_DIR_NAME),
   );
   return stage === null ? item : { ...item, handoff_stage: stage };
 }
@@ -915,14 +921,31 @@ function formalCheckRoute(
   projectDir: string,
   pending: PendingAdvisory,
   attempt: number,
+  activationHostRoot?: string,
 ): AdvisoryFormalCheckRoute {
   const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
   mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
   // The execution model's canonical paths follow the active space (BR-1/BR-2);
   // a legacy spec layout stops here with the resolver's migration instructions.
   const specSpace = resolveSpecRoots(projectDir).space;
+  // The runner script ships inside the formal-model-check plugin. Locate the
+  // plugin root through the same two-face manifest resolver the declaration
+  // side uses (authoring face under the project root, staging face under the
+  // host) and resolve the script against it, so a consumer workspace whose
+  // manifest lives only on the staging face still gets a runnable path. When
+  // neither face holds the manifest, keep the historical project-root-relative
+  // path and warn — the route degrades, it is never invented.
+  const projectRoot = activationHostRoot === undefined ? projectDir : dirname(activationHostRoot);
+  const stagingRoot = activationHostRoot === undefined
+    ? undefined
+    : join(activationHostRoot, PLUGIN_SOURCE_DIR_NAME);
+  const located = resolvePluginManifest(projectRoot, stagingRoot, "formal-model-check");
+  if (located === null) defaultDeclarationWarn(missingPluginManifestWarning(projectRoot, stagingRoot, "formal-model-check"));
+  const runner = located === null
+    ? "plugins/formal-model-check/tools/run-model-check.ts"
+    : join(located.pluginRoot, "tools", "run-model-check.ts");
   const args = [
-    "bun", "plugins/formal-model-check/tools/run-model-check.ts",
+    "bun", runner,
     "--model", tlaModelPath(TLA_EXECUTION_MODEL_NAME, specSpace),
     "--cfg", tlaCfgPath(TLA_EXECUTION_MODEL_NAME, specSpace),
     "--out", output,
@@ -956,6 +979,8 @@ function declaredFormalCheckRoute(
     dirname(activationHostRoot),
     pending.identity.plugin,
     pending.identity.code,
+    undefined,
+    join(activationHostRoot, PLUGIN_SOURCE_DIR_NAME),
   );
   if (argv === null) return null;
   const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
@@ -1026,7 +1051,7 @@ function resolveRunRequiredHold(
     const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
     if (outcome.kind === "verified-not-detected") continue;
     directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: modelCheckResultText(outcome) });
-    if (outcome.kind === "not-run") formalChecks.push(formalCheckRoute(projectDir, pending, attempt));
+    if (outcome.kind === "not-run") formalChecks.push(formalCheckRoute(projectDir, pending, attempt, activationHostRoot));
   }
   if (directiveItems.length === 0) {
     if (activationHostRoot !== undefined) recordActivationVerdict(activationHostRoot, ACTIVATION_WATCH_GLOBS);

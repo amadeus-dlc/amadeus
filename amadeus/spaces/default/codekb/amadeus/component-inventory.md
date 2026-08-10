@@ -1,6 +1,57 @@
 # コンポーネント棚卸し
 
-## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+### advisory 宣言の消費者側コンポーネント（Issue #2823 の患部）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `pluginManifestPath` | `packages/framework/core/tools/amadeus-advisory-declaration.ts:295-297` | 宣言の唯一の解決規則: `<projectRoot>/plugins/<name>/plugin.json`。doc comment `:289-294` は authoring レイアウト前提を明言 |
+| `declaredAdvisoriesForPlugin` | `amadeus-advisory-declaration.ts:305-329` | checkpoint 発火。`:312-313` manifest 不在 → **無音 `return []`** |
+| `declarationFor` | `amadeus-advisory-declaration.ts:386-400` | `:393` / `:397-399` で無音 null |
+| `declaredFormalCheckArgv` / `declaredHandoffStage` | `amadeus-advisory-declaration.ts:403-410` / `:413-420` | null をそのまま伝播（silent-null degradation） |
+| `spawnEvaluator` | `amadeus-advisory-declaration.ts:347-357` | `cwd: projectRoot`・shell なし spawn。timeout 60s / 8MiB、失敗は unreadable verdict → hold（fail-closed） |
+| `advisoriesForHost` | `amadeus-advisory-declaration.ts:366-383` | activation 判定 + composed plugins の宣言を flatMap |
+| `verdictSummary` / `advisoryFromEvaluatorRun` | `amadeus-advisory-declaration.ts:214-232` / `:241-257` | verdict が権威。no-hold 以外は raise |
+| `projectRootForHost` | `amadeus-plugin-activation.ts:110-112` | hostRoot（harness ディレクトリ）の親 = projectRoot |
+| `declaredFormalCheckRoute` | `amadeus-advisory-choice.ts:948-978` | run-now ルートを宣言 argv から構築（トークン解決 `:962-967`） |
+| `directiveItemFor` | `amadeus-advisory-choice.ts:729-741` | handoff_stage を宣言から載せる（null なら素の item） |
+| `DECLARED_RELEASE_RULE` | `amadeus-advisory-choice.ts:980-986` | formalCheck:null は engine 側 release 経路なし |
+| engine 側双子 argv | `amadeus-advisory-choice.ts:925` | hard-coded `"bun", "plugins/formal-model-check/tools/run-model-check.ts"` — repo ルート相対、宣言 argv `:61` と同根 |
+| 宣言の出荷形 | `plugins/formal-model-check/plugin.json:50-71` | `advisories` キーはこの 1 plugin のみ（全 2 plugin 中）。機械的 root-relative argv は `:61` の 1 本 |
+
+### 供給側コンポーネント（PR #2811 後の行番号で取り直し）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `PLUGIN_SOURCE_DIR_NAME` / `pluginSourceRootOf` | `amadeus-plugin.ts:563` / `:570-572` | staging root `.amadeus-plugin-src` |
+| `PLUGIN_AUTHORING_DIR_NAME` | `amadeus-plugin.ts:578` | 権威ディレクトリ名 `plugins` |
+| `stagingHarnessDirOf` / `seedBytesForHarness` | `amadeus-plugin.ts:659-664` / `:669-675` | **#2811 で新設**。staging 宛てコピー時に `{{HARNESS_DIR}}` を解決（authoring 宛ては除外）。`rulesSubdirFor` は `amadeus-harness.ts:71` |
+| `copyPluginSource` / `copyRealFiles` | `amadeus-plugin.ts:702-741` | tmp+rename swap。`copyRealFiles` は `harnessDir` 非 null なら散文を解決しつつコピー |
+| `collectPluginSources` / `seedStaging` | `amadeus-plugin.ts:874-906` | repo ルート `plugins/` 優先 → 各ツリー staging。seed は absent のみ |
+| `prepareInstall` / `handleInstall` | `amadeus-plugin.ts:1102-1129` / `:1154-1174` | `:1117-1118` `persistentInstall = selected.projectDir !== hostRoot`、`:1160` で **FULL bundle を `<projectRoot>/plugins/<name>/` へ永続化**（project supply） |
+| tools/stages push | `amadeus-plugin-compose.ts:370-415` | 生バイトを `posix.join("plugins", pluginName, rel)` へ（`:386` / `:412`） |
+| `ownedPaths` | `amadeus-plugin-compose.ts:895` | compose が manifest から集めるのは stages/tools のみ — **plugin.json は配送されない** |
+| `composeWriteSet` | `amadeus-plugin-compose.ts:1390-1408` | hostWrites は stage/tool/shared コピーのみ |
+| `ownedRecordDigests` / `pluginContentDigest` | `amadeus-plugin-compose.ts:921-972` | manifest の stages/tools のバイトを sha256 |
+| `installDoc` | `scripts/plugin-projection.ts:613-664` | `:634` folder-drop（primary、project supply を作らない）/ `:636` install verb 言及（persistent 腕の project supply 永続化は**未開示**） |
+| `transform` / `isMarkdownProsePath` | `scripts/harness-transform.ts:33-45` / `:27-29` | 拡張子のみで分岐。`.json` / `.ts` は逐語 — manifest は経路Aでも変換されない |
+
+### 検証面コンポーネント
+
+| テスト | 位置 | 何を pin するか |
+|---|---|---|
+| t445-advisory-declaration-supply | `:155-160` / `:224-226` | 無音 fail-open を**契約として** pin / dogfood レイアウトで宣言供給 |
+| t526 / t528 | `:59-61` / `:103-105` | 同じく dogfood レイアウト（`<projectDir>/plugins/demo/plugin.json` 手書き） |
+| t353-plugin-install-verb | `:254-274` / `:276-324` | persistentInstall=true の 4 面永続化と rollback。**advisory 消費との join は未 pin** |
+| t340-plugin-drop-fs-restore | `:196` / `:220` / `:240` | project supply を `cpSync` で手作り |
+| t531-plugin-harness-literal-guard | 新設（#2811） | plugin **散文**のハーネスリテラル走査。manifest argv は対象外 |
+
+consumer レイアウト（staging のみで project supply なし）を組むテストは **0 件**。
+
+## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
 
 **観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（8 コミット、非 record 面 16 files / +721 / -101）。正本は `re-scans/260810-plugin-prose-seed-guard.md`。構造的含意は `architecture.md` の同 intent 節。
 

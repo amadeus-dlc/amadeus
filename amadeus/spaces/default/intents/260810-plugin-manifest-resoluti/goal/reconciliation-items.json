@@ -1,0 +1,28 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-plugin-manifest-resoluti/inception/requirements-analysis/requirements.md",
+        "digest": "f42076908b47d169829766ce9f138e11ba6750651ae8eb5284911b1b6b25e08b"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-plugin-manifest-resoluti/construction/fix-2823-plugin-manifest-resolution/code-generation/code-summary.md",
+        "digest": "d1729b622db0caf5889f7507ebb4cb77cac734beef322a04cace67e023660fa7"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-plugin-manifest-resoluti/construction/build-and-test/build-test-results.md",
+        "digest": "00e79a69361b215fa8974b183352304df42afffaa8522561799b0276e00dd96d"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-10T12:26:27Z",
+        "digest": "66d41150dfc5d467c5242671238f1de7be29fd3b227034309cfa9a1c376366c2"
+      }
+    ]
+  }
+]

@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260810-plugin-prose-seed-guard）
+## 実行メタデータ（現在: 260810-plugin-manifest-resoluti）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（`re-scans/` 中で最新の observed = 直前 intent `260810-plugin-harness-dir-token` の測定 ref。HEAD の祖先であることを実測確認。`git rev-list --count df1c874cf..HEAD` = **13 commits**、**302 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `7b9391be2db4fad791d637293ea442d5a1462bac`（= 本 worktree HEAD。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（ミラー #2829）— plugin manifest 所在非対称（composed ツリーに `plugin.json` が配送されないのに宣言の読み手は `<projectRoot>/plugins/<name>/plugin.json` のみ）+ evaluator argv の repo ルート相対（`plugins/formal-model-check/plugin.json:61`）。クロスレビュー 2/2 CONFIRMED_WITH_REFINEMENTS → ESTABLISHED_WITH_REFINEMENTS（run `xrev-2823-20260810T094918Z`）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— レビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: `git diff --name-only c51afbd0a..HEAD`（cross-review target SHA）を引用パスで絞った結果は**空** → 行番号再解決は構造的 no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。base..observed は **PR #2811**（staging seed での `{{HARNESS_DIR}}` 解決、`amadeus-plugin.ts` / `plugin-projection.ts` / `amadeus-harness.ts` / t531 新設）を含むため、`amadeus-plugin.ts` 系の行番号は observed で取り直した（`copyPluginSource`/`copyRealFiles` `:702-741`、`collectPluginSources`/`seedStaging` `:874-906`）
+- 中核知見: 欠陥は**契約の継ぎ目**にある — 配送側（compose は stages/tools のみ、`amadeus-plugin-compose.ts:895`/`:1390-1408`）も消費側（`pluginManifestPath` = `<projectRoot>/plugins/<name>/plugin.json` のみ、`amadeus-advisory-declaration.ts:295-297`、読み手は `:312`/`:392` の 2 箇所）も個々には設計どおり。**新規発見**: `install <path>` verb の persistent 腕（`amadeus-plugin.ts:1117-1118`/`:1160`）は FULL bundle を `<projectRoot>/plugins/<name>/` へ永続化し、両レビュアの共有前提「repo ルート `plugins/` を作らせる文書化経路は無い」を falsify する。folder-drop（installDoc primary 腕、`plugin-projection.ts:634`）では advisory は無音で全滅（(a)）、self-install では常に動く（dogfood masking、(c)）。t445:155-160 が無音 fail-open を**契約として pin**
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（新現在節「plugin manifest 解決の所在非対称と advisory 消費者グラフ」— #2811 差分 + 消費者グラフ + install 経路 settlement）/ `component-inventory.md`（新現在節、行番号を observed で取り直し + advisory 宣言コンポーネント追加）/ `code-quality-assessment.md`（新現在節 — t531 着地済みのガード現況、無音 degradation、doc 矛盾、installDoc 2 腕）/ `api-documentation.md`（新現在節 — manifest 解決契約と evaluator spawn 契約）/ `business-overview.md`（新現在節 — 文書化経路で advisory 価値が届かない業務影響）。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `dependencies.md` / `technology-stack.md` の 3 面。理由 — 本 scan の新規事実は既存モジュール間の**読み点と解決規則**に関するもので、モジュールの配置・依存エッジの追加削除・技術スタックのいずれも変えない（消費者グラフの構造面は `component-inventory.md` と `architecture.md` に集約した）
+- Per-intent record: `re-scans/260810-plugin-manifest-resoluti.md`（述語 P0〜P11、N-1〜N-9、install 経路 4 分類の settlement、#2267 との関係、テスト/ガード面、UNMEASURED 3 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定、および Issue #2267 との統合/分離の裁定は requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴: 260810-plugin-prose-seed-guard）
 
 - Date: `2026-08-10`
 - Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent `260810-plugin-harness-dir-token` の observed。`git merge-base --is-ancestor df1c874cf HEAD` で祖先性を実測確認。区間 `git rev-list --count df1c874cf..c51afbd0a` = **8 commits**、非 record の実質変更は PR #2811 の squash 1 本。`cid:reverse-engineering:rescan-base-ancestry`）

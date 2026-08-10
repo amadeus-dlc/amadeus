@@ -1,6 +1,34 @@
 # API ドキュメント
 
-## stage-stats attribution API 契約（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+## plugin advisory 宣言の解決契約（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+Issue #2823 が欠陥とするのは、次の 3 契約の**継ぎ目**である（個々の契約はすべて実装どおりに動く）。
+
+### 契約 1 — manifest 解決（読み手側）
+
+`pluginManifestPath(projectRoot, plugin)` = `<projectRoot>/plugins/<name>/plugin.json`（`amadeus-advisory-declaration.ts:295-297`）が宣言の**唯一の**解決規則。読み手は `declaredAdvisoriesForPlugin`（`:312`）と `declarationFor`（`:392`）の 2 箇所のみ。`projectRoot` は `projectRootForHost(hostRoot) = dirname(hostRoot)`（`amadeus-plugin-activation.ts:110-112`）で導かれる。**manifest 不在はエラーではなく zero-impact**（`:312-313` で `return []`、無音）。`declaredFormalCheckArgv`（`:403-410`）/ `declaredHandoffStage`（`:413-420`）は宣言が読めないとき `null` を返し、呼び出し側（`amadeus-advisory-choice.ts:948-978` / `:729-741`）は route/handoff なしの素の振る舞いへ落ちる — すべて無音。
+
+### 契約 2 — evaluator spawn
+
+`spawnEvaluator(projectRoot)`（`:347-357`）は argv ベクトルを shell なし・`cwd: projectRoot` で同期 spawn する（timeout 60s、maxBuffer 8MiB）。manifest が持つ argv の相対要素は **projectRoot 基準**で解決される。timeout・truncation・非 JSON verdict は unreadable verdict として **hold 方向に fail-closed**（`:340-343` の設計コメント）。出荷 manifest の argv（`plugins/formal-model-check/plugin.json:59-65`）は `:61` が repo ルート相対 `plugins/formal-model-check/tools/tla-authoring.ts` であり、この契約の下では projectRoot に authoring ツリーが在る場合のみ解決する。
+
+### 契約 3 — 供給側（何が consumer の projectRoot に届くか）
+
+- compose は `plugin.json` を**配送しない**（`amadeus-plugin-compose.ts:895` / `:1390-1408` — stages/tools のみ）
+- folder-drop（`installDoc` primary 腕、`plugin-projection.ts:634`）は `<harnessDir>/.amadeus-plugin-src/<name>/` にのみ置く — project supply は作られない
+- `install <path>` verb は dot-dir ホストへ投げると persistent 腕（`amadeus-plugin.ts:1117-1118`）に入り、**FULL bundle（plugin.json + tools）を `<projectRoot>/plugins/<name>/` へ永続化する**（`:1160`）。永続化の pin は t353 `:254-274`（4 面: project supply / config / staging / composition）と rollback `:276-324`
+
+### ワイヤ上の振る舞いまとめ
+
+| 供給状態 | 発火（checkpoint） | run-now route | handoff |
+|---|---|---|---|
+| manifest なし（folder-drop / marketplace 経路） | 無音でゼロ | null → 提示なし | null → 素の item |
+| manifest あり・argv 解決可（install verb / self-install） | 宣言どおり発火 | 宣言 argv から構築 | 宣言 stage を載せる |
+| manifest あり・argv 解決不可（手作り hybrid のみ） | 発火するが unreadable verdict → **hold** | — | — |
+
+## stage-stats attribution API 契約（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
 
 ### CLI 契約
 

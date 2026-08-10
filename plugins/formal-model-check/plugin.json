@@ -58,7 +58,7 @@
       "evaluator": {
         "argv": [
           "bun",
-          "plugins/formal-model-check/tools/tla-authoring.ts",
+          "tools/tla-authoring.ts",
           "advisory",
           "hold"
         ]
