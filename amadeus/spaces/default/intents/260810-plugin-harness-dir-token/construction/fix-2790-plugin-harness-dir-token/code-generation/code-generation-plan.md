@@ -111,3 +111,20 @@ brownfield の code knowledge base `amadeus/spaces/default/codekb/amadeus/`（N-
 - compose 本体への置換器導入（Q1 で却下）
 - 兄弟 11 行の**修正**（Step 11 の起票のみ）
 - N-2 / `SCAN_ROOTS` 欠落 4 面の是正
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-10T07:31:22Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 の BLOCKER 2 件と ADVISORY 4 件はすべて CLOSED。FR-3 に実測 3 条件と判定テスト名が入り、FR-9 の自己矛盾が解消。新規 BLOCKER なし。
+
+### Findings
+
+- FOLLOW-UP | 主要な実装判断 — transform() と seedBytesForHarness() の乖離ガード不在は留保として妥当だが、共有コーパスでの等価性テスト 1 本で閉じられるため追跡項目化を推奨
+- FOLLOW-UP | FR-9 — 記録された相互リンクは PR->#2810 の一方向。#2790 側は GitHub の自動 mention backlink である旨を 1 句添えるか明示コメントを置く
+- FOLLOW-UP | code-generation-plan.md Step 10 — FR-3 の決定的証跡は Step 6 のテストで得たため Step 10 の追跡性記述が過大。1 行の注記で解消
+- FOLLOW-UP | 未充足・留保 — 乖離ガード不在が実装判断節にのみ在り、留保節に鏡像が無い

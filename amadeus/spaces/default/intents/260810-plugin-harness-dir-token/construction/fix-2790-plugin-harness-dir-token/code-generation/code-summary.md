@@ -26,8 +26,8 @@ requirements.md（FR-1〜FR-9）と codekb（N-1〜N-9）から scope した。�
 ## 主要な実装判断
 
 - 置換点は **seeding の 2 箇所**に置いた。compose 本体は byte-faithful なコピー機のまま（Q1-A の裁定どおり。N-7 の staleness digest 問題に触れない）
-- core 側（`seedBytesForHarness`）とパッケージャ側（`transform()`）は**意図的な二実装**。`amadeus-plugin.ts` は dist へ出荷されるため `scripts/` を import できない（t442 の import closure 制約）。両者が同じ 2 規則（トークン置換 + rules rename）を適用することはテストで固定
-- `stagingEntryState` を同一変換越しの比較に変更したのは**必須の付随修正**。入れないと staged（変換済み）と src（中立）が永久に `different` になり、毎回再シード + drop 時の staging 残留という 2 つの退行が出る
+- core 側（`seedBytesForHarness`）とパッケージャ側（`transform()`）は**意図的な二実装**。`amadeus-plugin.ts` は dist へ出荷されるため `scripts/` を import できない（t442 の import closure 制約）。rules rename 側は `rulesSubdirFor()` の export 共有により**単一ソース化**されているが、**トークン置換規則は複製されたまま**である。等価性を固定しているテスト `t2790 > seedBytesForHarness transforms prose only, and applies the rules rename` は `seedBytesForHarness` の出力を単独で assert しており、`transform()` との差分比較ではない。⚠️ **したがって規則集合の乖離を検出するガードは存在しない** — `harness-transform.ts` に第 3 の規則が入っても core 側は無変更のまま全テストが緑を保ち、経路A と経路B が静かに乖離しうる（本 Issue と同一クラスの再発経路）。要件の「未解決事項」が二実装を許容しているため本 intent では是正しないが、留保として記録し FOLLOW-UP 化を推奨する
+- `stagingEntryState` を同一変換越しの比較に変更したのは**必須の付随修正**。入れないと staged（変換済み）と src（中立）が永久に `different` になる。比較が `different` に落ちること自体は実装の論理から確定（PROVEN）だが、そこから導かれる「毎回再シード」「drop 時の staging 残留」の 2 退行は**DEDUCED**（この 2 つを実際に赤として観測したわけではない）。冪等性側は `t2790 > a re-compose … is a no-op` が実測で固定している
 
 ## 受け入れ判定（すべて実測）
 
@@ -35,13 +35,13 @@ requirements.md（FR-1〜FR-9）と codekb（N-1〜N-9）から scope した。�
 |---|---|---|
 | FR-1 | PASS | `.claude/tools` = 0 件（exit 1）、`{{HARNESS_DIR}}/tools/amadeus-sensor.ts` = 1 件 |
 | FR-2 | PASS | self-install 5 面すべてで (i)=1 / (ii)=0 / (iii)=none |
-| FR-3 | PASS | dogfood codex 1 面 + claude 面の冪等性。実証面数は **codex 1 面**に固定（Review FOLLOW-UP への回答） |
+| FR-3 | PASS | 実証面数は **codex 1 面**に固定（Review FOLLOW-UP への回答）。`t2790 > compose from an empty staging dir resolves plugin prose to the tree's own harness dir` が、staging 不在（`existsSync(...) === false` を先に assert）から compose した composed stage に対し (i) `.codex/tools/amadeus-sensor.ts` = 1 件、(ii) `{{HARNESS_DIR}}` 生リテラル = 0 件、(iii) 自面以外の 6 harnessDir = 各 0 件 を判定。冪等性は `t2790 > a re-compose over the seeded staging dir is a no-op, not a perpetual re-seed`（claude 面、再 compose のバイト一致） |
 | FR-4 | PASS | consumer 導入バンドル 8 面すべてで (i)=1 / (ii)=0 / (iii)=none。`kiro` / `kiro-ide` はともに `.kiro` |
 | FR-5 | PASS | FR-2 / FR-4 の両面で修正前の赤を実測（下記） |
 | FR-6 | PASS | 患部を戻すと赤（報告は患部 1 件のみ = 偽陽性 0）、復元で緑 |
 | FR-7 | PASS | 新規 4 dir それぞれで実コーパス挿入により赤を実測（4/4）。既存 corpus 緑、carve-out 2 件維持 |
 | FR-8 | PASS | 下限テストは `walkMd(CORE)` のみ走査。core 78 件（> 50）/ plugins 1 件 |
-| FR-9 | PASS | [Issue #2810](https://github.com/amadeus-dlc/amadeus/issues/2810) を起票（人間の確認を経て conductor が実施）。判定が DEDUCED である旨と実測での確定を完了条件 1 に明記。#2790 / #2799 / intent record と相互リンク |
+| FR-9 | PASS | [Issue #2810](https://github.com/amadeus-dlc/amadeus/issues/2810) を起票（人間の確認を経て conductor が実施）。判定が DEDUCED である旨と実測での確定を完了条件 1 に明記。相互リンクの実測: Issue 本文が #2790 / #2799 / intent record を参照し、**PR [#2811](https://github.com/amadeus-dlc/amadeus/pull/2811) 本文の `2810` 出現数 = 3 件**（`gh pr view 2811 --json body --jq .body \| grep -c 2810`） |
 
 ## failing-first の断面（FR-5）
 
@@ -82,7 +82,7 @@ N-4 が実測した漏洩 10 ファイル（composed 5 + staging 5）は全 10 �
 | 分類 | ファイル | 判定根拠 |
 |---|---|---|
 | 本変更起因（修正済み） | `t-coverage-mechanism-ratchet`, `t258-boundary-guard` | 決定的に再現。上記のとおり修正し緑 |
-| 負荷起因（前景の個別実行が並走していた） | `t222-migration-routing`, `t227-codex-migration-walking-skeleton`, `t222-metrics-publication`, `t225-upstream-v2-migration-preflight`, `t231-harness-hook-correctness`, `t416-self-install-plugin-projection`, `t435-intent-autonomy-production` | いずれもタイムアウト。静かな状態での単独実行および最終全スイートで緑 |
+| 負荷起因（緑化は PROVEN / 原因帰属「前景の個別実行が並走していた」は **DEDUCED**） | `t222-migration-routing`, `t227-codex-migration-walking-skeleton`, `t222-metrics-publication`, `t225-upstream-v2-migration-preflight`, `t231-harness-hook-correctness`, `t416-self-install-plugin-projection`, `t435-intent-autonomy-production` | いずれもタイムアウト。静かな状態での単独実行および最終全スイートで緑 |
 | 既存（本変更と無関係） | `t224-upstream-v2-migration-cli` | ソース変更を stash して HEAD 断面で再ビルドしても同一の 1 件が失敗（symlink clone-id の lock path、5s タイムアウト）。最終全スイートでは緑 |
 
 **訂正の記録**: 切り分けの初期段階で「`t227` は HEAD で緑・本変更で赤ゆえ実際の退行」と判断したが、これは**誤り**だった。
@@ -95,9 +95,9 @@ N-4 が実測した漏洩 10 ファイル（composed 5 + staging 5）は全 10 �
 3. `stagingEntryState` の変更（計画に明記なし）— 上記「主要な実装判断」の必須付随修正
 4. FR-7 の陽性判定を、要求された 4 件の一時挿入に加えて恒久テストとしても残した — 一時挿入は測定後に消え、将来 dir が増えたときに再発するため
 5. core 側の変換が `harness-transform.ts` の再利用でなく二実装になった — import closure 制約（上記）
+6. `packages/framework/core/tools/amadeus-harness.ts` の `KNOWN_RULES_SUBDIR` を `rulesSubdirFor(dir)` として export した（計画のどの Step にも無い）— 出荷される core の公開面を広げる変更である。必要性: `seedBytesForHarness` は**明示指定された** harnessDir の rules rename を引く必要があり、既存の `rulesSubdir()` はアンビエント解決（実行中プロセスのハーネス）のため cross-harness な seed には使えない。影響: 公開面が 1 関数増えるが、既存の非公開マップを読み取り専用で引くだけの純関数で、未知の dir には中立の `rules` を返す。既存 `rulesSubdir()` は無変更
 
 ## 未充足・留保
 
-- FR-9 は [#2810](https://github.com/amadeus-dlc/amadeus/issues/2810) 起票により充足。PR 本文からの相互リンクは PR 作成時に付与する
 - 兄弟 11 行の判定は **DEDUCED のまま**（実 consumer ワークスペースでの実行実測なし）。Issue 本文の完了条件 1 に送った
 - `.pi` / `.kiro` / `.kiro-ide` の self-install 面は存在しない（`SELF_INSTALL_HARNESSES` は closed five）ため、これらは consumer 導入バンドル 8 面の実測のみが証跡
