@@ -274,7 +274,7 @@ options:
   - label: Guide me
     description: Walk through each question interactively here
   - label: Grill me
-    description: Round-by-round interview over the whole design tree — recommended answers included, until every branch is settled. Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling
+    description: Round-by-round interview over the design tree admitted by the active materiality threshold — recommended answers included, until every admitted branch is settled (deferred nodes remain listed in the agreement summary). Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling
   - label: I'll edit the file
     description: I'll fill in the answers in the file directly
   - label: Chat
