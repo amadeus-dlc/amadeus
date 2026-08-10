@@ -87,7 +87,7 @@ const HARNESS_PATH_RE = new RegExp(
 // plugin path. Keep this predicate plugin-only: core prose legitimately
 // discusses plugin source paths that are not executable references.
 const ROOT_RELATIVE_PLUGIN_PATH_RE =
-  /(^|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//;
+  /(^|\.{1,2}\/|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//;
 
 // The scan itself, over an arbitrary root list — reused by the positive-control
 // test below so the guard is exercised through the SAME code path a real stray
@@ -189,12 +189,14 @@ describe("t146 core hygiene — no stray harness-dir path literals in core/ pros
     expect(rootRelativePluginPaths([PLUGINS])).toEqual([]);
   });
 
-  test("the plugin-path guard catches an injected stray and accepts an anchored path", () => {
+  test("the plugin-path guard catches injected relative paths and accepts an anchored path", () => {
     const injected = mkdtempSync(join(tmpdir(), "amadeus-t146-plugin-path-"));
     try {
       const file = join(injected, "stray.md");
-      writeFileSync(file, "Run `bun plugins/example/tools/cli.ts`.\n");
-      expect(rootRelativePluginPaths([injected])).toHaveLength(1);
+      for (const prefix of ["", "./", "../"]) {
+        writeFileSync(file, `Run \`bun ${prefix}plugins/example/tools/cli.ts\`.\n`);
+        expect(rootRelativePluginPaths([injected]), prefix || "bare").toHaveLength(1);
+      }
 
       writeFileSync(file, "Run `bun {{HARNESS_DIR}}/plugins/example/tools/cli.ts`.\n");
       expect(rootRelativePluginPaths([injected])).toEqual([]);

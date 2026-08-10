@@ -27,7 +27,7 @@ const COMPOSED_STAGE = join("plugins", "pr-convergence", "stages", "pr-convergen
 const COMPOSED_FORMAL_STAGE = join("plugins", "formal-model-check", "stages", "formal-model-check.md");
 const COMPOSED_TLA_STAGE = join("plugins", "formal-model-check", "stages", "tla-authoring.md");
 const ROOT_RELATIVE_PLUGIN_PATH_RE =
-  /(^|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//m;
+  /(^|\.{1,2}\/|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//m;
 const scratch: string[] = [];
 
 afterAll(() => {
@@ -103,6 +103,17 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     expect(seedBytesForHarness("plugin.json", prose, ".codex")).toEqual(prose);
     expect(seedBytesForHarness("tools/x.ts", prose, ".codex")).toEqual(prose);
     expect(seedBytesForHarness("stages/x.md", prose, null)).toEqual(prose);
+  });
+
+  test("the staged-prose guard rejects unanchored relative plugin paths", () => {
+    for (const prefix of ["", "./", "../"]) {
+      expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test(`bun ${prefix}plugins/example/tools/cli.ts`), prefix || "bare").toBe(
+        true,
+      );
+    }
+    expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test("bun .codex/plugins/example/tools/cli.ts"), "staged anchor").toBe(
+      false,
+    );
   });
 
   test("compose from an empty staging dir resolves plugin prose to the tree's own harness dir", () => {
