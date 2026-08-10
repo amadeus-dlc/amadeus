@@ -515,6 +515,8 @@ export type AccountingInvariantSubject =
   | {
       readonly type: "population";
       readonly candidateId?: CandidateId;
+      readonly windowId?: AttributionWindowId;
+      readonly intent?: IntentIdentity;
     };
 
 export type AccountingInvariantError =
@@ -554,6 +556,28 @@ export type AccountingInvariantError =
       readonly subject: Extract<AccountingInvariantSubject, { readonly type: "population" }>;
       readonly invariant: "duplicate-window-id" | "unknown-window-id";
       readonly windowId: AttributionWindowId;
+    }
+  | {
+      readonly type: "accounting-invariant";
+      readonly code: "invalid-population-accounting";
+      readonly subject: Extract<AccountingInvariantSubject, { readonly type: "population" }>;
+      readonly invariant:
+        | "unsafe-interval-seconds"
+        | "invalid-interval"
+        | "duplicate-window-id"
+        | "duplicate-candidate-id"
+        | "invalid-window-net-seconds"
+        | "invalid-window-id"
+        | "invalid-candidate-id"
+        | "candidate-category-mismatch"
+        | "invalid-idle-intent"
+        | "window-net-idle-mismatch"
+        | "duplicate-idle-intent"
+        | "non-canonical-idle-index"
+        | "candidate-disposition-bijection"
+        | "window-result-bijection"
+        | "unknown-window-contribution"
+        | "invalid-window-accounting";
     };
 
 export type AttributionError = UsageError | DecodeError | AccountingInvariantError;
