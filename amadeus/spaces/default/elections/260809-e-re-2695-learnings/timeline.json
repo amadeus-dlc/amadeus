@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T13:48:03Z",
+    "receivedAt": "2026-08-09T13:48:03Z",
+    "detail": "delivered via subagent: reverse-engineering-voter-1 (reported-by-conductor)",
+    "voter": "reverse-engineering-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T13:48:03Z",
+    "receivedAt": "2026-08-09T13:48:03Z",
+    "detail": "delivered via subagent: reverse-engineering-voter-2 (reported-by-conductor)",
+    "voter": "reverse-engineering-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T13:49:35Z",
+    "receivedAt": "2026-08-09T13:49:35Z",
+    "detail": "ballot accepted: reverse-engineering-voter-1",
+    "voter": "reverse-engineering-voter-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T13:49:39Z",
+    "receivedAt": "2026-08-09T13:49:39Z",
+    "detail": "ballot accepted: reverse-engineering-voter-2",
+    "voter": "reverse-engineering-voter-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T13:49:56Z",
+    "receivedAt": "2026-08-09T13:49:56Z",
+    "detail": "tally: hold"
+  }
+]

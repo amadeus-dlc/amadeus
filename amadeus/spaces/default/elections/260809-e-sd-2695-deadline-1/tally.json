@@ -1,0 +1,65 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "no-calendar-deadline"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "no-calendar-deadline",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "immediate-deadline",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "fixed-date",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "dependency-deadline",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-09T11:15:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SD-2695-DEADLINE-1",
+      "voter": "scope-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "能力固有の外部期限が示されていないため暦日締切は設けず、Issue #2695 の完了条件 1〜10 を満たす品質ゲートを優先するのが妥当である。",
+      "submittedAt": "2026-08-09T11:15:09Z",
+      "receivedAt": "2026-08-09T11:15:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SD-2695-DEADLINE-1",
+      "voter": "scope-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "根拠のない暦日締切を置くより、Issue #2695 の完了条件 1〜10 を満たす品質ゲートを優先する方が適切なため。",
+      "submittedAt": "2026-08-09T11:15:20Z",
+      "receivedAt": "2026-08-09T11:15:37Z"
+    }
+  ],
+  "resolutions": []
+}

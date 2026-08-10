@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ND-2695-LEARNINGS",
+      "voter": "nfr-design-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "この practice は expected-absent 時の正直な traceability 表現に限定し、NFR Requirements を SKIP しつつ NFR Design を EXECUTE する stage/sensor の構造矛盾を正当化または恒久化する根拠にはしない。",
+      "rationale": "NFR Design の architecture reviewer iteration 1 は population-interval-accounting で nfr-u3-id-contract と nfr-u3-decision-traceability を BLOCKER とし、Requirements Analysis の NFR 番号を addressing ID に転用しないこと、各 design decision を Missing と文脈証拠へ分離することを要求した。是正後の iteration 2 は READY となっており、失敗→修正→独立再検証の実証がある。候補3は既存 project memory の cid:nfr-design:c1 と実質重複し、候補2は self-feature 固有の scope/stage/sensor 矛盾として Issue #2773 に切り出されているため、複数 scope・複数 unit に再利用できる traceability 原則である候補1を選ぶ。",
+      "submittedAt": "2026-08-10T01:00:09Z",
+      "receivedAt": "2026-08-10T01:00:21Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ND-2695-LEARNINGS",
+      "voter": "nfr-design-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "choiceInternalNo 1を支持する。NFR Design stage正本は、上流NFR Requirementsが宣言したIDだけをaddressing schemeとして使い、未宣言IDを発明せず必要要件がmissingなら明記する契約を持つ。実際にpopulation-interval-accountingのarchitecture review iteration 1はRequirements AnalysisのNFR-1〜7をfallback addressing schemeへ転用した点をBLOCKERとし、各decisionをMissing＋requirements.mdはcontext evidenceへ是正したiteration 2でREADYになった。続くstage-stats-attribution-serviceは同じ方式を5成果物へ適用してiteration 1 READYであり、再発予防効果も実証されている。対してchoice 3はproject.md既存cid:nfr-design:c1（CLI/libraryへ常駐service向けcache・horizontal scaling・circuit breakerを機械適用せず、決定的file境界とfail-closed契約へ置換）と実質重複する。choice 2はself-feature scope・stage condition・sensorの矛盾を扱うIssue #2773の暫定運用で、修正着地後に退役すべきため永続practiceとしての再利用価値はchoice 1より低い。GoA1、留保なし。",
+      "submittedAt": "2026-08-10T01:00:06Z",
+      "receivedAt": "2026-08-10T01:01:26Z"
+    }
+  ],
+  "late": []
+}

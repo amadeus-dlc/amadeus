@@ -1,0 +1,17 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-RA-2695-LEARNINGS",
+    "voter": "requirements-learning-voter-2",
+    "submittedAt": "2026-08-09T14:08:27Z"
+  },
+  "electionId": "E-RA-2695-LEARNINGS",
+  "voter": "requirements-learning-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "material question の追加対象は、公開値や外部観測可能な振る舞いを変える公開契約上の論点に限定する。内部実装だけで閉じる論点まで Requirements Analysis に戻してはならない。",
+  "rationale": "discussion 後、候補3『review後にmaterial question追加』を採用することで合意した。初回の質問不要判断を固定せず、レビューで公開契約を変える未確定事項が判明した場合に Requirements Analysis へ戻して解消することは、後続の内部設計によって利用者向けの意味が偶然決まることを防ぐ。一方、適用範囲を公開契約に限定する条件が必要なため、無条件の強い賛成ではなく GoA 2 とする。",
+  "submittedAt": "2026-08-09T14:10:40Z",
+  "receivedAt": "2026-08-09T14:10:56Z"
+}

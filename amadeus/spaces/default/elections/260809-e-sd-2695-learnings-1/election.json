@@ -1,0 +1,37 @@
+{
+  "electionId": "E-SD-2695-LEARNINGS-1",
+  "kind": "single-choice",
+  "question": "Scope Definition の4候補を project/team の永続ルールへ保存するか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "skip-all",
+      "description": "4候補はいずれも Issue #2695／本 Intent 固有で成果物へ記録済みのため、永続ルールを追加しない"
+    },
+    {
+      "internalNo": 2,
+      "label": "keep-c1",
+      "description": "Issue #2695 の全境界を SETTLED とし縮小質問を生成しない判断だけを project Corrections へ保存する"
+    },
+    {
+      "internalNo": 3,
+      "label": "keep-c2",
+      "description": "#2700 解消後も新出力3形式の 65,536 bytes 超検証を維持する判断だけを project Testing Posture へ保存する"
+    },
+    {
+      "internalNo": 4,
+      "label": "keep-c3",
+      "description": "semantic model first と risk-first の順序判断だけを project Testing Posture へ保存する"
+    },
+    {
+      "internalNo": 5,
+      "label": "keep-c4",
+      "description": "暦日締切より完了条件を優先する判断だけを project Corrections へ保存する"
+    }
+  ],
+  "voters": [
+    "scope-voter-1",
+    "scope-voter-2"
+  ],
+  "state": "recorded"
+}

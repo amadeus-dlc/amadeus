@@ -1,0 +1,47 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-09T13:49:56Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RE-2695-LEARNINGS",
+      "voter": "reverse-engineering-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 2,
+      "reservation": "measured population を不変に保てる明示的な eligibility 判定境界がある場合に限り採用し、境界を定義できない場合は集計せず観測欠損として扱う。",
+      "rationale": "attribution eligibility の分離は、zero-net や FIFO の曖昧窓だけを fail-closed にしつつ、既存の測定母集団と統計互換性を守れる。特定の Sensor や stage に依存せず、将来の帰属・集計機能にも再利用できるため、候補中で最も project practice としての波及価値が高い。",
+      "submittedAt": "2026-08-09T13:49:19Z",
+      "receivedAt": "2026-08-09T13:49:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RE-2695-LEARNINGS",
+      "voter": "reverse-engineering-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "この学習は帰属・監査・再計算の正本を raw journal に置く範囲に限定し、runtime graph は運用上の projection として維持すること。journal 側の event identity・順序・canonical dedup 境界を明示し、欠落や曖昧な対応は推測で補わず fail-closed にすること。",
+      "rationale": "raw journal は containment や latest-wins による不可逆な情報縮約より前の事実を保持するため、帰属方式を後から変更しても同じ観測母集団から再計算できる。この性質は今回の stage attribution に限らず、監査、重複排除、replay、時系列集計へ横断的に再利用でき、候補中で最も長期的な価値が高い。",
+      "submittedAt": "2026-08-09T13:49:21Z",
+      "receivedAt": "2026-08-09T13:49:39Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:6",
+      "resumedTo": "tallied",
+      "at": "2026-08-09T13:50:48Z"
+    }
+  ]
+}

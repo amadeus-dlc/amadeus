@@ -116,6 +116,43 @@ self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファ�
 - **🔴 R1 見出し文法の不一致（測定）**: `tla-evidence.ts:45` 逐語 `const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;` は3桁ゼロ埋めを要求するが、実コーパスは **134 ファイル中 3 ファイルのみ一致**（述語は re-scan の P2/P3）。対照として decisions 側（:46 `/^##\s+(ADR-\d+)\b/`）は **56 中 54** で健全。intent 要件を直接読む供給設計は現行文法では大半で `unresolvable-id` fail-closed になる
 - **🔴 R2 subjects の置き場（演繹、未実測）**: `amadeus-plugin-activation.ts:51` 逐語 `export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];`。直前の :49-50 が「the evidence store (`<specsRoot>/tla-evidence`) sits outside the glob by construction」と設計意図を明言する一方、`defaultSubjectsPath` の解決先 `specs/tla/authoring-subjects.json` は **glob の内側**。subjects 更新のたび spec-hash が変わり兄弟 advisory が発火する見込み — **ハッシュ再計算の実測は未実施**
 
+## CG attribution のコンポーネント棚卸し（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+| コンポーネント | 現在の責務・根拠 | 本 intent での役割 | 依存 |
+| --- | --- | --- | --- |
+| `amadeus-stage-stats.ts` corpus scanner | intent audit shardをpath帰属で走査（`:844-872`） | canonical records と corpus diagnostics を供給。dedup境界をjournal正本へ合わせる | filesystem、`readJournalRecords` |
+| stage window builder | `intent×stage` FIFO pairing（`:132-176`） | measured windowを保存し、stable internal IDとcollision group metadataを追加 | chronological records |
+| idle index/subtractor | awaiting/parked/session-gapのclip/union（`:180-321`） | attribution intervalから同じidle交差を除去。zero-net判定はattribution側 | measured windows、audit records |
+| candidate inventory | **未実装** | 全 candidate family、outer/inner event、採否理由を無音廃棄なく列挙 | event registry、journal、event-set decoders |
+| lifecycle rule evaluator | **未実装** | explicit stage/start/terminal/identityが揃うpairだけinterval化 | candidate inventory |
+| interval accountant | **未実装** | `[start,end)` clip、idle差引、category/global union、overlap、residual、恒等式 | eligible windows、explicit intervals |
+| `StageStatsReport` composer | 既存duration/sensor/model/reviewを合成（`:515-577`） | append-only attribution sectionの唯一のsemantic model | measured stats、attribution aggregate |
+| Markdown renderer | 人間向け表（`:632-667`） | attributionの全意味軸とmethodologyを表示 | report model |
+| CSV renderer | section型CSV（`:676-699`） | 同じ値をconsumer向けに表示 | report model |
+| JSON serializer | 決定的配列化（`:701-723`） | machine-readable attributionと`candidateBoundary`の事実/仮説分離 | report model |
+| argv/parser/main | option検証、scan、stdout、exit ladder（`:728-798`, `:941-968`） | `--stage` / `--outliers`、正常空レポート、exit 2境界 | renderers、project/space解決 |
+| journal codec/merge | v1/v2 reader、canonical merge/dedup（`amadeus-journal.ts:30-35`, `:481-497`, `:534-549`, `:608-640`） | attributionの正準入力とcross-shard dedup | crypto、pure codec |
+| `packages/framework/core/otel/event-registry.ts` | event vocabulary/required fields | candidate inventoryの閉じた候補集合 | audit schema |
+| Sensor lifecycle | Fire id + Stage slugを持つ start/terminal | `sensor-execution` interval | `amadeus-sensor.ts:521-536`, `:819-865` |
+| Execution event set | operation ID + origin stage contract | `execution-lifecycle`。現 corpus terminal欠落を理由報告 | `amadeus-execution-contract.ts:30-46`, `:101-154` |
+| Unit-pool event set | attempt acquired/settled + dedup | `unit-pool-lifecycle`。現 corpus stage属性欠落を理由報告 | `amadeus-unit-pool.ts:80-93`, `:130-148`; runtime `:113-159` |
+| Other lifecycle families | Bolt/Swarm/Subagent/Loop monitor/Merge dispatch/transaction | interval要件を満たすまではinventoryのみ | 各writer、event registry |
+| runtime graph compiler | stage snapshot、containment/latest-wins帰属 | 本集計の一次資料には使わない比較対象 | `amadeus-runtime.ts:71-110`, `:498-760`, `:980-1044` |
+| `t486-stage-stats.test.ts` | pure unit、renderer、argv | interval代数・恒等式・理由計数・parity・flag境界 | core source import |
+| `t487-stage-stats.integration.test.ts` | filesystem/CLI/real corpus/pipe | event-set合成fixture、実 corpus、3形式oversized consumer | Bun spawn、scratch filesystem、`jq` |
+
+### candidate family の完全性
+
+inventory は `SENSOR_*`、`SWARM_*`、`BOLT_*`、`SUBAGENT_*`、`LOOP_MONITOR_*`、`MERGE_DISPATCH_*`、`UNIT_POOL_EVENT_SET_COMMITTED`、`EXECUTION_EVENT_SET_COMMITTED`、transaction envelope を全て対象にする。区間採用できない family を削るのではなく、`stage-identity-missing` / `start-missing` / `terminal-missing` / `identity-missing` / `duplicate-start` / `duplicate-terminal` / `terminal-not-after-start` / `malformed-event-set` / `digest-mismatch` / `duplicate-event-set` 等の理由別件数として report に残す。
+
+### 所有境界
+
+- journal codec はwire正規化とcanonical dedupを所有し、業務上のstage attributionを所有しない。
+- window builderは既存 measured identityとFIFO collision診断を所有し、event containmentからstageを推論しない。
+- lifecycle rule evaluatorはcandidateごとの明示契約を所有し、categoryを「実装/検証/review」へ読み替えない。
+- interval accountantは時間代数と恒等式を所有し、rendererは再計算しない。
+- report modelが3形式 parityの正本であり、各renderer固有の集計分岐を作らない。
+
 ## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、履歴、2026-08-09、observed `91f37ec85`）
 
 **観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。

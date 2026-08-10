@@ -1,0 +1,43 @@
+{
+  "electionId": "E-UG-2695-LEARNINGS",
+  "voter": "units-generation-learning-voter-2",
+  "question": "Units Generationの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "user-storiesがscopeで未生成のため、story mapはrequirements.mdのFR/NFRを実装ナラティブとして全数写像し、未割当0件を検証する。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "single feature Unitはdelivery surfaceに忠実だがpure seamの独立所有を失い、5 component UnitはC-05/C-01統合を不自然に分離するため、4 change-reason Unitを採用した。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 5,
+      "label": "U-01を小さなfoundation Unitとして独立させた。Unit overheadは増えるが、U-02/U-03の相互edgeを避けてparallelizableなDAGとclosed contract ownerを得る。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "implementation order prioritiesはStage 2.8へ留保し、Units Generationではacyclic topologyと独立枝だけを記録した。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 1,
+      "label": "canonical kindはsource file形状ではなくdelivery/runtime意味で分類した。U-01〜U-03はstandalone runtimeを持たないlibrary、U-04は既存one-shot CLI executableを変更するserviceである。",
+      "description": "→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 6,
+      "internalNo": 6,
+      "label": "C-06をU-04へ一括帰属させるとprovider UnitのDoDがdownstream所有fileへ依存するため、domain/candidate/interval/report-integrationの4 test file ownershipへ分配した。U-02/U-03はsourceだけでなくtest fileも非交差になった。",
+      "description": "→ project.md ## Corrections"
+    }
+  ]
+}

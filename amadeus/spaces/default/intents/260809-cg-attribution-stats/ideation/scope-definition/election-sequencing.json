@@ -1,0 +1,12 @@
+{
+  "electionId": "E-SD-2695-SEQUENCING-1",
+  "kind": "single-choice",
+  "question": "依存制約の中でどの sequencing preference を採るか",
+  "choices": [
+    { "internalNo": 1, "label": "risk-first", "description": "FIFO 衝突、event eligibility、interval union、会計恒等式の高リスク部分を先に赤いテストで固定し、その後に出力と実サイズ検証を積む" },
+    { "internalNo": 2, "label": "dependency-first", "description": "依存DAGだけを基準に最短のトポロジカル順で進める" },
+    { "internalNo": 3, "label": "value-first", "description": "可視レポートを最初に作り、内部の厳密化を後続へ回す" },
+    { "internalNo": 4, "label": "deadline-first", "description": "期限達成を優先し、検証面を後続へ送る" }
+  ],
+  "voters": ["scope-voter-1", "scope-voter-2"]
+}

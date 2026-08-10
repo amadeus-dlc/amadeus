@@ -1,6 +1,60 @@
 # コード構造
 
-## 監査リーダー面の二分構造とテスト層配置（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## attribution 集計の患部配置（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+
+### 変更の中心
+
+| パス | 現在の責務 | Issue #2695 で必要な構造 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-stage-stats.ts` | 監査 scan、stage FIFO window、idle、統計、CLI、3 rendererを単一ファイル968行で所有 | measured 契約を保存し、candidate inventory、event-set 展開、eligibility、interval union、attribution model、CLI 2 flag、rendererを追加 |
+| `packages/framework/core/tools/amadeus-journal.ts` | v1/v2正規化、mixed reader、shard merge/dedup | attribution 入力の正準化規則。stage-stats の独自 shard walk と dedup の境界を揃える |
+| `packages/framework/core/otel/event-registry.ts` | event vocabulary / field schema の正本 | 候補 event と Event Set outer を正式語彙から識別（`:193`, `:202`, `:629-708`, `:840-895`, `:942-1000`） |
+| `packages/framework/core/tools/amadeus-execution-contract.ts` | execution event-set の operation ID・origin stage 契約 | `operation-started/finished` の inner decoder と stage identity 根拠（`:30-46`, `:101-154`） |
+| `packages/framework/core/tools/amadeus-unit-pool.ts` / `amadeus-unit-pool-runtime.ts` | attempt lifecycle と event-set decode/dedup | `unit-acquired/settled` の対応規則と malformed/duplicate semantics の参照（unit pool runtime `:113-159`） |
+| `tests/unit/t486-stage-stats.test.ts` | pure aggregation / renderer / argv の in-process テスト | identity collision、全 candidate/reason、区間代数、恒等式、flag境界、3 renderer parity の主検証 |
+| `tests/integration/t487-stage-stats.integration.test.ts` | filesystem scan、CLI、実 workspace、pipe 統合 | event-set fixture、real corpus、3形式の64 KiB超 consumer完走を検証 |
+
+現ファイルの主要 seam は次のとおり。
+
+- `buildWindows`（`:135-176`）: `intent×stage` queue を FIFO pairing するが、pending depth、collision group、stable window identity を結果に残さない。
+- `indexIdle` / `subtractIdle`（`:200-321`）: half-open 相当の clip/merge は既にあるが、`rawSeconds !== 0` でも idle 差引後 `netSeconds=0` の窓を measured に残す。これは measured 契約として維持し、attribution 側だけ `net<=0` を除外する。
+- `StageStatsReport` / `composeReport`（`:515-577`）: attribution section 不在。後方互換の追加点。
+- renderers（`:632-723`）: 既存 measurement ref と semantic axes を個別に描画。新 section は同一 report data から3形式へ展開する。
+- `parseArgs`（`:728-798`）: 現 option は projectDir/space/format のみ。`--stage` / `--outliers` と usage 境界を追加する。
+- `scanCorpus`（`:847-872`）: `readJournalRecords` は使うが `mergeShards` を使わず、cross-shard canonical dedup がない。
+- `main`（`:941-968`）: exit 0/1/2 と read-only stdout の shell。新 flag 不正は既存 usage error=2へ統合する。
+
+### 推奨する内部配置
+
+新規 public package や外部サービスは不要である。現 CLI の pure seam を保ち、同一 tool module 内でも責務を次の順に分ける。
+
+1. window identity metadata の採取（既存 window 統計から独立）
+2. normalized event / event-set inner の candidate inventory
+3. lifecycle rule table による explicit pair と rejection reason
+4. half-open interval の clip / subtract / union
+5. per-window attribution と aggregate stats / deterministic outliers
+6. report section と3 renderer
+
+これは将来の汎用 telemetry framework を先取りする分割ではない。Issue #2695 の候補 family と会計規則に閉じた pure functions とし、既存 `composeReport` の「同じ corpus は同じ report」の性質（`:545-577`）を維持する。
+
+### テスト配置と未証明面
+
+`t486` / `t487` の focused baseline は Developer scan で **80 pass / 0 fail / 221 expect**。既存 test は window pairing、idle、統計、format deterministicity、real workspace 60秒以内、JSON pipeを被覆するが、次は未証明である。
+
+- FIFO collision group 全体の `ambiguous-window-identity` 化と未閉鎖 group 診断
+- idle 差引後 zero-net と measured population 保存の両立
+- outer/inner stage identity、malformed/digest/duplicate event set、全 candidate family の理由別 inventory
+- nested/parallel/overlap、window clip、idle intersection、category union、global union
+- 2つの恒等式と NaN/Infinity 不在
+- `--stage` / `--outliers` の0/100/-1/101/小数/非数値と正常空レポート
+- Markdown/CSV/JSON semantic parity、3形式すべての64 KiB超 pipe 完走
+- `--stage code-generation --outliers 10` の real corpus 再実行
+
+### 配布面
+
+正本は `packages/framework/core/tools/` にあり、build が各 harness の配布面へ投影する（root `package.json:10-15`）。実装時は正本だけを編集し、生成 `dist/` / self-install 面は `bun run build` で再生成し、source-only / distribution / reproducible build の既存ゲートへ通す。テストは正本を in-process import する `t486` と CLI tool を spawn する `t487` の2層を保つ。
+
+## 監査リーダー面の二分構造とテスト層配置（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 ### リーダー面の二分
 

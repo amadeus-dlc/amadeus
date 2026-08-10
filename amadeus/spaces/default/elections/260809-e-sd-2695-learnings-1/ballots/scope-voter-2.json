@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-LEARNINGS-1",
+  "voter": "scope-voter-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "4候補はいずれも Issue #2695 または本 Intent に固有で、成果物へ記録済みであるため、project/team の永続ルールへ追加しない。",
+  "submittedAt": "2026-08-09T11:22:38Z",
+  "receivedAt": "2026-08-09T11:22:49Z"
+}

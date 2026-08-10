@@ -5,9 +5,34 @@
 // measures the whole aggregation contract (the FS scan and the CLI spawn live
 // in t487's integration layer — cid:code-generation:fs-tests-integration-first).
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import {
+  ATTRIBUTION_CATEGORIES,
+  CANDIDATE_FAMILIES,
+  createAttributionWindowId,
+  createCandidateId,
+  createIntentIdentity,
+  createLifecycleIdentity,
+  type AttributionWindow,
+  type CandidateFamily,
+} from "../../packages/framework/core/tools/amadeus-stage-attribution-domain.ts";
+import type { CandidateInventory } from "../../packages/framework/core/tools/amadeus-stage-attribution-candidates.ts";
+import type {
+  AttributionPopulationAccounting,
+  WindowAttribution,
+} from "../../packages/framework/core/tools/amadeus-stage-attribution-intervals.ts";
+import {
+  composeAttributionReport,
+  nearestRankSummary,
+  selectAttributionWindows,
+  sortOutliers,
+  type StageWindowEvidence,
+} from "../../packages/framework/core/tools/amadeus-stage-attribution-report.ts";
 import {
   type AttributedRecord,
+  buildStageWindowEvidence,
   buildWindows,
+  composeReportWithAttribution,
   composeStageStats,
   emptyExclusions,
   indexIdle,
@@ -63,6 +88,298 @@ function v2(intent: string, event: string, timestamp: string, attrs: Record<stri
 function win(stage: string, raw: number, net: number): MeasuredWindow {
   return { intent: "i", stage, startedAt: "2026-01-01T00:00:00Z", completedAt: "2026-01-01T00:00:01Z", rawSeconds: raw, idleSeconds: raw - net, netSeconds: net };
 }
+
+function windowId(value: string) {
+  const result = createAttributionWindowId(value);
+  if (!result.ok) throw new Error("invalid test window id");
+  return result.value;
+}
+
+function evidenceFor(window: MeasuredWindow, identity: StageWindowEvidence["identity"]): StageWindowEvidence {
+  return {
+    intent: window.intent,
+    stage: window.stage,
+    startedAt: window.startedAt,
+    completedAt: window.completedAt,
+    identity,
+  };
+}
+
+describe("buildStageWindowEvidence — population invariants stay loud", () => {
+  test("a measured window with no lifecycle evidence fails closed as window-result-bijection", () => {
+    const result = buildStageWindowEvidence([], [win("code-generation", 10, 10)]);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected a population invariant failure");
+    expect(result.error).toEqual({
+      type: "accounting-invariant",
+      code: "invalid-population-accounting",
+      subject: { type: "population" },
+      invariant: "window-result-bijection",
+    });
+  });
+});
+
+describe("selectAttributionWindows — exclusive identity then net selection", () => {
+  test("ambiguous identity wins over zero net before eligible windows are constructed", () => {
+    const completedAt = "2026-01-01T00:00:10Z";
+    const ambiguous = { ...win("code-generation", 10, 0), intent: "ambiguous", completedAt };
+    const zeroNet = { ...win("code-generation", 10, 0), intent: "zero", completedAt };
+    const eligible = { ...win("code-generation", 10, 10), intent: "eligible", completedAt };
+    const otherStage = { ...win("functional-design", 10, 10), intent: "other", completedAt };
+    const options = parseArgs([]);
+    if (!options.ok) throw new Error("invalid test options");
+    const result = selectAttributionWindows({
+      measured: [ambiguous, zeroNet, eligible, otherStage],
+      evidence: [
+        evidenceFor(ambiguous, { type: "ambiguous", correlationKey: "a", collisionMemberCount: 2 }),
+        evidenceFor(zeroNet, { type: "unique", correlationKey: "z", windowId: windowId("window-zero") }),
+        evidenceFor(eligible, { type: "unique", correlationKey: "e", windowId: windowId("window-eligible") }),
+        evidenceFor(otherStage, { type: "unique", correlationKey: "o", windowId: windowId("window-other") }),
+      ],
+      targetStage: options.value.stage,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.measuredWindowCount).toBe(4);
+    expect(result.value.targetMeasuredWindowCount).toBe(3);
+    expect(result.value.eligible.map(({ windowId: id }) => String(id))).toEqual(["window-eligible"]);
+    expect(result.value.exclusions).toEqual([
+      { reason: "zero-net-attribution", count: 1 },
+      { reason: "ambiguous-window-identity", count: 1 },
+    ]);
+    expect(result.value.eligible.length + result.value.exclusions[0]!.count + result.value.exclusions[1]!.count).toBe(3);
+  });
+});
+
+describe("nearestRankSummary — canonical attribution population summaries", () => {
+  test("empty, odd, and even populations use null, center, and middle average with nearest-rank p95", () => {
+    expect(nearestRankSummary([])).toEqual({ n: 0, median: null, p95: null });
+    expect(nearestRankSummary([9, 1, 5])).toEqual({ n: 3, median: 5, p95: 9 });
+    expect(nearestRankSummary([8, 2, 4, 6])).toEqual({ n: 4, median: 5, p95: 8 });
+  });
+});
+
+function domainValue<T>(result: { ok: true; value: T } | { ok: false }): T {
+  if (!result.ok) throw new Error("invalid test domain value");
+  return result.value;
+}
+
+function accountedWindow(
+  window: AttributionWindow,
+  secondsByCategory: Partial<Record<(typeof ATTRIBUTION_CATEGORIES)[number], number>>,
+): WindowAttribution {
+  const categories = ATTRIBUTION_CATEGORIES.map((category) => {
+    const seconds = secondsByCategory[category] ?? 0;
+    return {
+      category,
+      fragments: seconds === 0 ? [] : [{ start: window.measuredInterval.start, end: window.measuredInterval.start + seconds }],
+      seconds,
+      share: seconds / window.netSeconds,
+    };
+  });
+  const categorySumSeconds = categories.reduce((sum, category) => sum + category.seconds, 0);
+  const observableSeconds = Math.max(...categories.map(({ seconds }) => seconds), 0);
+  return {
+    windowId: window.windowId,
+    intent: window.intent,
+    stage: window.stage,
+    measuredInterval: window.measuredInterval,
+    netSeconds: window.netSeconds,
+    categories,
+    categorySumSeconds,
+    observableFragments: observableSeconds === 0 ? [] : [{ start: window.measuredInterval.start, end: window.measuredInterval.start + observableSeconds }],
+    observableSeconds,
+    overlapSeconds: categorySumSeconds - observableSeconds,
+    unattributableSeconds: window.netSeconds - observableSeconds,
+    coverage: observableSeconds / window.netSeconds,
+    unattributableRate: 1 - observableSeconds / window.netSeconds,
+  };
+}
+
+describe("composeAttributionReport — one reconciled semantic model", () => {
+  test("summarizes positive durations, all-window shares, candidates, facts, and sorted outliers", () => {
+    const parsed = parseArgs(["--outliers", "1"]);
+    if (!parsed.ok) throw new Error("invalid test options");
+    const intentA = domainValue(createIntentIdentity("intent-a"));
+    const intentB = domainValue(createIntentIdentity("intent-b"));
+    const lifecycle = domainValue(createLifecycleIdentity("fire-1"));
+    const candidateId = domainValue(createCandidateId("candidate-accounted"));
+    const rejectedId = domainValue(createCandidateId("candidate-rejected"));
+    const first: AttributionWindow = {
+      type: "attribution-window",
+      windowId: windowId("window-a"),
+      intent: intentA,
+      stage: parsed.value.stage,
+      measuredInterval: { start: 0, end: 10 },
+      netSeconds: 10,
+    };
+    const second: AttributionWindow = {
+      type: "attribution-window",
+      windowId: windowId("window-b"),
+      intent: intentB,
+      stage: parsed.value.stage,
+      measuredInterval: { start: 20, end: 40 },
+      netSeconds: 20,
+    };
+    const accepted = {
+      type: "explicit-lifecycle-interval" as const,
+      candidateId,
+      explicitIntent: intentA,
+      lifecycleIdentity: lifecycle,
+      family: "sensor" as const,
+      category: "sensor-execution" as const,
+      stage: parsed.value.stage,
+      interval: { start: 0, end: 4 },
+    };
+    const familyCounts = CANDIDATE_FAMILIES.map((family: CandidateFamily) => ({
+      family,
+      observed: family === "sensor" || family === "bolt" ? 1 : 0,
+      accepted: family === "sensor" ? 1 : 0,
+      rejected: family === "bolt" ? 1 : 0,
+    }));
+    const inventory: CandidateInventory = {
+      accepted: [accepted],
+      rejected: [{
+        type: "rejected-candidate",
+        candidateId: rejectedId,
+        sourceIds: [],
+        family: "bolt",
+        primaryReason: "stage-mismatch",
+        secondaryReasons: ["missing-terminal"],
+      }],
+      familyCounts,
+      secondaryDiagnostics: [{
+        candidateId: rejectedId,
+        family: "bolt",
+        reasons: ["missing-terminal"],
+        sourceIds: [],
+      }],
+    };
+    const accounting: AttributionPopulationAccounting = {
+      windows: [
+        accountedWindow(first, { "sensor-execution": 4 }),
+        accountedWindow(second, { "bolt-lifecycle": 10 }),
+      ],
+      dispositions: [{
+        type: "accounted",
+        candidateId,
+        contributions: [{
+          type: "candidate-window-contribution",
+          windowId: first.windowId,
+          fragments: [{ start: 0, end: 4 }],
+        }],
+      }],
+    };
+    const result = composeAttributionReport({
+      selection: {
+        targetStage: parsed.value.stage,
+        measuredWindowCount: 3,
+        targetMeasuredWindowCount: 2,
+        eligible: [first, second],
+        exclusions: [
+          { reason: "zero-net-attribution", count: 0 },
+          { reason: "ambiguous-window-identity", count: 0 },
+        ],
+      },
+      inventory,
+      accounting,
+      outlierLimit: parsed.value.outliers,
+      scanReference: { scanScope: "fixture", unreadableShardCount: 0 },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect({
+      ...result.value.reference,
+      targetStage: String(result.value.reference.targetStage),
+      outlierLimit: Number(result.value.reference.outlierLimit),
+    }).toEqual({
+      scanScope: "fixture",
+      unreadableShardCount: 0,
+      targetStage: "code-generation",
+      outlierLimit: 1,
+      measuredWindowCount: 3,
+      targetMeasuredWindowCount: 2,
+      eligibleWindowCount: 2,
+    });
+    const sensor = result.value.categories.find(({ category }) => category === "sensor-execution");
+    expect(sensor?.durationSeconds).toEqual({ n: 1, median: 4, p95: 4 });
+    expect(sensor?.share).toEqual({ n: 2, median: 0.2, p95: 0.4 });
+    expect(result.value.coverage.observableSeconds).toEqual({ n: 2, median: 7, p95: 10 });
+    expect(result.value.candidateFamilies.find(({ family }) => family === "sensor")).toMatchObject({ observed: 1, accounted: 1, rejected: 0 });
+    expect(result.value.candidateFamilies.find(({ family }) => family === "bolt")).toMatchObject({ observed: 1, accounted: 0, rejected: 1 });
+    expect(result.value.candidateReasons).toHaveLength(9 * 17);
+    expect(result.value.candidateReasons.find(({ family, reason }) => family === "bolt" && reason === "missing-terminal")?.count).toBe(1);
+    expect(result.value.candidateReasons.find(({ family, reason }) => family === "bolt" && reason === "stage-mismatch")?.count).toBe(1);
+    expect(result.value.observedFacts).toEqual({ highUnattributableWindowCount: 1, missingTerminalCandidateCount: 1 });
+    expect(result.value.outliers.map(({ windowId: id }) => String(id))).toEqual(["window-b"]);
+  });
+
+  test("fails closed on a selection/accounting window bijection break", () => {
+    const options = parseArgs(["--outliers", "0"]);
+    if (!options.ok) throw new Error("invalid test options");
+    const selected: AttributionWindow = {
+      type: "attribution-window",
+      windowId: windowId("selected-window"),
+      intent: domainValue(createIntentIdentity("intent-a")),
+      stage: options.value.stage,
+      measuredInterval: { start: 0, end: 10 },
+      netSeconds: 10,
+    };
+    const result = composeAttributionReport({
+      selection: {
+        targetStage: options.value.stage,
+        measuredWindowCount: 1,
+        targetMeasuredWindowCount: 1,
+        eligible: [selected],
+        exclusions: [
+          { reason: "zero-net-attribution", count: 0 },
+          { reason: "ambiguous-window-identity", count: 0 },
+        ],
+      },
+      inventory: {
+        accepted: [],
+        rejected: [],
+        familyCounts: CANDIDATE_FAMILIES.map((family) => ({ family, observed: 0, accepted: 0, rejected: 0 })),
+        secondaryDiagnostics: [],
+      },
+      accounting: { windows: [], dispositions: [] },
+      outlierLimit: options.value.outliers,
+      scanReference: { scanScope: "fixture", unreadableShardCount: 0 },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("invalid-population-accounting");
+      expect("invariant" in result.error && result.error.invariant).toBe("window-result-bijection");
+    }
+  });
+});
+
+describe("sortOutliers — complete deterministic tie-break", () => {
+  test("sorts by unattributable seconds desc then intent/start/end/window id asc", () => {
+    const options = parseArgs([]);
+    if (!options.ok) throw new Error("invalid test options");
+    const make = (id: string, intent: string, start: number): WindowAttribution => accountedWindow({
+      type: "attribution-window",
+      windowId: windowId(id),
+      intent: domainValue(createIntentIdentity(intent)),
+      stage: options.value.stage,
+      measuredInterval: { start, end: start + 10 },
+      netSeconds: 10,
+    }, {});
+    const sorted = sortOutliers([
+      make("window-b", "intent-b", 0),
+      make("window-a-2", "intent-a", 0),
+      make("window-a-late", "intent-a", 20),
+      make("window-a-1", "intent-a", 0),
+    ]);
+    expect(sorted.map(({ windowId: id }) => String(id))).toEqual([
+      "window-a-1",
+      "window-a-2",
+      "window-a-late",
+      "window-b",
+    ]);
+  });
+});
 
 describe("nearestRankP95 — nearest rank, NaN on empty", () => {
   test("empty input propagates NaN instead of collapsing to 0", () => {
@@ -433,6 +750,10 @@ function sampleReport() {
   });
 }
 
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 describe("composeReport — measurement ref, buckets, and the layered identity", () => {
   test("carries every corpus counter into the report", () => {
     const report = sampleReport();
@@ -476,6 +797,19 @@ describe("composeReport — measurement ref, buckets, and the layered identity",
 });
 
 describe("renderers — deterministic, header-first, hypothesis stated", () => {
+  test("legacy reports without attribution remain byte-compatible", () => {
+    const report = sampleReport();
+    expect({
+      markdown: sha256(renderMarkdown(report)),
+      csv: sha256(renderCsv(report)),
+      json: sha256(JSON.stringify(serializeJson(report), null, 2)),
+    }).toEqual({
+      markdown: "77f128429f7817b13baeb5d6ec3058887c788171d67fed548d5f821e96b448ce",
+      csv: "e83d387b750a579cb81fd63c526c0b92338ebd4259139741102b239472ed56a1",
+      json: "2524b96b91acbba513953168994c866204904dd6ac996a7a4604bffefc1103d2",
+    });
+  });
+
   test("markdown opens with the measurement ref and states the hypothesis", () => {
     const text = renderMarkdown(sampleReport());
     const head = text.split("\n").slice(0, 20).join("\n");
@@ -531,13 +865,87 @@ describe("renderers — deterministic, header-first, hypothesis stated", () => {
     expect(Array.isArray((json.models as Record<string, unknown>).byModel)).toBe(true);
     expect(json.constructedWindowCount).toBe(3);
   });
+
+  test("all formats append the same empty attribution semantic model", () => {
+    const options = parseArgs(["--stage", "code-generation", "--outliers", "0"]);
+    if (!options.ok) throw new Error("invalid test options");
+    const attributed = composeReportWithAttribution({
+      scanScope: "empty fixture",
+      corpus: { records: [], unreadableShardCount: 0, brokenLineCount: 0, shardCount: 0, lineCount: 0 },
+      reviewBlocks: [],
+      unparseableReviewHeadingCount: 0,
+      targetStage: options.value.stage,
+      outlierLimit: options.value.outliers,
+    });
+    expect(attributed.ok).toBe(true);
+    if (!attributed.ok) return;
+    const markdown = renderMarkdown(attributed.value);
+    const csv = renderCsv(attributed.value);
+    const json = serializeJson(attributed.value) as {
+      attribution?: { reference: { eligibleWindowCount: number }; candidateReasons: unknown[]; outliers: unknown[] };
+    };
+    for (const heading of [
+      "## Stage attribution",
+      "### Window exclusions",
+      "### Category statistics",
+      "### Coverage and overlap statistics",
+      "### Candidate families",
+      "### Candidate reason matrix",
+      "### Observed facts",
+      "### Instrumentation hypotheses",
+      "### Unattributable outliers",
+      "### Methodology",
+    ]) expect(markdown).toContain(heading);
+    for (const section of [
+      "attribution_reference",
+      "attribution_exclusion_reason",
+      "attribution_category",
+      "attribution_coverage_measure",
+      "attribution_candidate_family,observed,accounted,rejected",
+      "attribution_candidate_reason,reason,count",
+      "attribution_observed_fact",
+      "attribution_hypothesis",
+      "attribution_outlier_window",
+      "attribution_methodology,value",
+      "attribution_rule_family",
+    ]) expect(csv).toContain(section);
+    // Section names are unique per column shape, and methodology rows lead
+    // with the key itself, matching every other section's first column.
+    expect(csv).not.toContain("attribution_candidate_family,reason");
+    expect(csv).not.toContain("\nmethodology,");
+    expect(markdown).toContain("zero-net-attribution");
+    expect(csv).toContain("ambiguous-window-identity");
+    expect(json.attribution?.reference.eligibleWindowCount).toBe(0);
+    expect(json.attribution?.candidateReasons).toHaveLength(9 * 17);
+    expect(json.attribution?.outliers).toEqual([]);
+  });
 });
 
 describe("parseArgs — parse, do not validate", () => {
-  test("no arguments default to markdown", () => {
+  test("no arguments default the legacy format and attribution controls", () => {
     const parsed = parseArgs([]);
     expect(parsed.ok).toBe(true);
-    if (parsed.ok) expect(parsed.value.format).toBe("markdown");
+    if (parsed.ok) {
+      expect(parsed.value.format).toBe("markdown");
+      expect(String(parsed.value.stage)).toBe("code-generation");
+      expect(Number(parsed.value.outliers)).toBe(10);
+    }
+  });
+  test("--stage and --outliers accept their closed boundaries", () => {
+    const zero = parseArgs(["--stage", "functional-design", "--outliers", "0"]);
+    expect(zero.ok && String(zero.value.stage)).toBe("functional-design");
+    expect(zero.ok && Number(zero.value.outliers)).toBe(0);
+    const hundred = parseArgs(["--outliers", "100"]);
+    expect(hundred.ok && Number(hundred.value.outliers)).toBe(100);
+  });
+  test("--stage and --outliers reject unsafe or out-of-range values", () => {
+    for (const argv of [
+      ["--stage", "../code-generation"],
+      ["--outliers", "-1"],
+      ["--outliers", "101"],
+      ["--outliers", "1.5"],
+      ["--outliers", "many"],
+    ]) expect(parseArgs(argv).ok).toBe(false);
   });
   test("--json selects the json form", () => {
     const parsed = parseArgs(["--json"]);

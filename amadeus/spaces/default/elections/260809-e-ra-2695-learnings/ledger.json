@@ -1,0 +1,63 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-RA-2695-LEARNINGS",
+      "voter": "requirements-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 5,
+      "reservation": "レビュー後の追加質問を無制限に認めると手戻りが常態化するため、追加対象は公開値や外部観測可能な振る舞いを変える material question に限定し、内部実装だけで閉じる論点は後続設計へ委ねるべきである。",
+      "rationale": "internalNo 3 を選ぶ。初回質問0件という判断自体よりも、レビューで material な未確定事項が判明した時点で判断を更新し、公開値を左右する precedence を Requirements Analysis 内で明示的な質問として解消する実践の方が再利用価値が高い。これは特定の candidate family や指標に依存せず、要件レビュー全般で『外部契約を変える曖昧さを内部設計へ先送りしない』という検証可能な完了条件になる。未承認 SLA を発明しないことや primary reason の precedence 固定も重要だが、それら個別の曖昧さを requirements 境界で発見・解消する上位の学習として適用できる。",
+      "submittedAt": "2026-08-09T14:08:27Z",
+      "receivedAt": "2026-08-09T14:08:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-RA-2695-LEARNINGS",
+      "voter": "requirements-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 5,
+      "reservation": "precedence順はドメイン上の優先度として明示的に合意し、選外となった原因もsecondary diagnosticsとして必ず保持すること。",
+      "rationale": "primary reasonを固定precedenceで一意に決め、secondary diagnosticsと分離する規約は、複数原因が同時成立する判定全般に再利用できる。公開値の決定性、利用者への説明可能性、競合ケースのテスト容易性を同時に高め、実装ごとの暗黙な優先順位による互換性破壊を防げるため、最も再利用価値が高い。",
+      "submittedAt": "2026-08-09T00:00:00Z",
+      "receivedAt": "2026-08-09T14:09:17Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-RA-2695-LEARNINGS",
+        "voter": "requirements-learning-voter-1",
+        "submittedAt": "2026-08-09T00:00:00Z"
+      },
+      "electionId": "E-RA-2695-LEARNINGS",
+      "voter": "requirements-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "追加するmaterial questionは、回答によって公開契約が変わる論点に限定すること。内部実装だけで閉じる判断は質問化しない。",
+      "rationale": "discussionを通じ、reviewで初めて公開値を左右する未確定のprecedenceが判明した場合、その判断を後続の内部設計へ暗黙に委ねずmaterial questionとして公開契約の決定者へ戻すことが合意された。この境界を明示すれば、初回分析で質問が不要と判断した後でも契約上の重要な欠落を安全に補正でき、同種のrequirements reviewへ再利用できる。",
+      "submittedAt": "2026-08-09T14:10:29Z",
+      "receivedAt": "2026-08-09T14:10:47Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-RA-2695-LEARNINGS",
+        "voter": "requirements-learning-voter-2",
+        "submittedAt": "2026-08-09T14:08:27Z"
+      },
+      "electionId": "E-RA-2695-LEARNINGS",
+      "voter": "requirements-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "material question の追加対象は、公開値や外部観測可能な振る舞いを変える公開契約上の論点に限定する。内部実装だけで閉じる論点まで Requirements Analysis に戻してはならない。",
+      "rationale": "discussion 後、候補3『review後にmaterial question追加』を採用することで合意した。初回の質問不要判断を固定せず、レビューで公開契約を変える未確定事項が判明した場合に Requirements Analysis へ戻して解消することは、後続の内部設計によって利用者向けの意味が偶然決まることを防ぐ。一方、適用範囲を公開契約に限定する条件が必要なため、無条件の強い賛成ではなく GoA 2 とする。",
+      "submittedAt": "2026-08-09T14:10:40Z",
+      "receivedAt": "2026-08-09T14:10:56Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,16 @@
+{
+  "electionId": "E-IC-2695-LEARNINGS-1",
+  "kind": "zero-confirm",
+  "question": "Intent Capture の学習候補は Issue #2695 固有で成果物に記録済みのため、永続化0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "project/team の永続ルールを追加せず、Intent成果物を正本として維持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}
