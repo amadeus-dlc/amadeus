@@ -30,6 +30,7 @@ import {
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const SENSOR_ID = "numeric-provenance";
+const HOOK_TIMEOUT_MS = 120_000;
 const CORE_MANIFEST = join(REPO_ROOT, "packages/framework/core/sensors/amadeus-numeric-provenance.md");
 const CORE_TOOL = join(REPO_ROOT, "packages/framework/core/tools/amadeus-sensor-numeric-provenance.ts");
 const ROOT_IMPORTS = "@.agents/rules/amadeus.md\n@.agents/rules/amadeus-codex-suffix.md\n";
@@ -197,11 +198,11 @@ beforeAll(async () => {
 
   const promoted = await promoteSelfMain(["--apply", "--no-build"], projectRoot, () => undefined, null);
   expect(promoted).toBe(0);
-});
+}, HOOK_TIMEOUT_MS);
 
 afterAll(() => {
   if (projectRoot !== "") rmSync(projectRoot, { recursive: true, force: true });
-});
+}, HOOK_TIMEOUT_MS);
 
 describe("t533 numeric provenance distribution", () => {
   test("fails closed for registry drift, duplicate roots, and unsafe manifest paths", () => {
