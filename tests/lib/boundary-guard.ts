@@ -112,6 +112,15 @@ const EXCERPT_MAX = 80;
 // just `scripts/`.
 const SCRIPTS_TOKEN_RE = /scripts\/[A-Za-z0-9._/-]*/g;
 
+// Every maximal hardcoded-harness-dir path token on a line (Issue #2790): a
+// tracked harness dotdir (self-install shape, packages/framework/harness/*/manifest.ts
+// harnessDir values) written as a literal instead of the `{{HARNESS_DIR}}`
+// projection token (scripts/harness-transform.ts HARNESS_TOKEN). The token
+// substitution rewrites `{{HARNESS_DIR}}` only — a literal like `.claude/tools/`
+// passes through every per-harness projection unchanged, so it resolves on the
+// harness it was written for and nowhere else.
+const HARNESS_LITERAL_TOKEN_RE = /\.(?:claude|codex|cursor|kimi-code|kiro-ide|kiro|opencode|pi)\/[A-Za-z0-9._/-]*/g;
+
 // Minimal glob matcher: literal segments, `*` (within a path segment), `**` (any
 // depth). Sufficient for AllowRule.fileGlob (`**` = every file, or a scoped glob).
 export function fileMatchesGlob(file: string, glob: string): boolean {
@@ -145,13 +154,15 @@ function excerpt(line: string): string {
   return trimmed.length <= EXCERPT_MAX ? trimmed : trimmed.slice(0, EXCERPT_MAX);
 }
 
-// Predicate 1 (FR-5a): every `scripts/` path reference in the distribution tree
-// that is NOT exempted by an applicable AllowRule. An occurrence is exempted iff
-// some AllowRule whose fileGlob matches the file has a pattern that matches the
-// occurrence's token. Pure over the supplied file set (no FS).
-export function scanDistributionTreeForScriptsRefs(
+// Shared line-scan core for the two token-based predicates below (BR-1: every
+// maximal token occurrence on a line, not a line-level exclusion — a violation
+// token on a line that also carries an allowed token is still detected). Pure
+// over the supplied file set (no FS); `tokenRe` is caller-owned so callers can
+// pass a `g`-flag regex without state leaking across invocations.
+function scanForTokenRefs(
   files: ReadonlyArray<{ readonly path: string; readonly content: string }>,
   allowlist: ReadonlyArray<AllowRule>,
+  tokenRe: RegExp,
 ): Finding[] {
   const findings: Finding[] = [];
   for (const file of files) {
@@ -159,7 +170,7 @@ export function scanDistributionTreeForScriptsRefs(
     const lines = file.content.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const re = new RegExp(SCRIPTS_TOKEN_RE.source, "g");
+      const re = new RegExp(tokenRe.source, "g");
       let match: RegExpExecArray | null = re.exec(line);
       while (match !== null) {
         const token = match[0];
@@ -172,6 +183,30 @@ export function scanDistributionTreeForScriptsRefs(
     }
   }
   return findings;
+}
+
+// Predicate 1 (FR-5a): every `scripts/` path reference in the distribution tree
+// that is NOT exempted by an applicable AllowRule. An occurrence is exempted iff
+// some AllowRule whose fileGlob matches the file has a pattern that matches the
+// occurrence's token. Pure over the supplied file set (no FS).
+export function scanDistributionTreeForScriptsRefs(
+  files: ReadonlyArray<{ readonly path: string; readonly content: string }>,
+  allowlist: ReadonlyArray<AllowRule>,
+): Finding[] {
+  return scanForTokenRefs(files, allowlist, SCRIPTS_TOKEN_RE);
+}
+
+// Predicate 3 (Issue #2790): every hardcoded harness-dir path reference in
+// plugin-authored prose that is NOT exempted by an applicable AllowRule. A
+// plugin's neutral stage body must use the `{{HARNESS_DIR}}` projection token
+// (stage-protocol.md's own convention) for any core-tool path, since the
+// projector substitutes only that token — a literal harness dotdir survives
+// every per-harness projection unchanged.
+export function scanPluginProseForHarnessLiterals(
+  files: ReadonlyArray<{ readonly path: string; readonly content: string }>,
+  allowlist: ReadonlyArray<AllowRule>,
+): Finding[] {
+  return scanForTokenRefs(files, allowlist, HARNESS_LITERAL_TOKEN_RE);
 }
 
 // Predicate 2 (residual invariant): the basenames present in BOTH `scripts/` and
