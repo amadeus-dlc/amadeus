@@ -17,6 +17,9 @@ import {
 } from "../../packages/framework/core/tools/amadeus-stage-attribution-domain.ts";
 import type { AttributedRecord } from "../../packages/framework/core/tools/amadeus-stage-stats.ts";
 import type { JournalEntry } from "../../packages/framework/core/tools/amadeus-journal.ts";
+import { autonomyDigest, createAutonomyProjection } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { encodeIntentAutonomyTransaction } from "../../packages/framework/core/tools/amadeus-intent-autonomy-replay.ts";
+import type { IntentAutonomyTransaction } from "../../packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts";
 
 function row(
   event: string,
@@ -67,13 +70,19 @@ function eventSetRow(
   timestamp: string,
   set: Readonly<Record<string, unknown>>,
   seq: number,
+  includeDigest = true,
 ): AttributedRecord {
+  const encoded = JSON.stringify(set);
   const fields: Record<string, string> = {
-    "Event Set": JSON.stringify(set),
+    "Event Set": encoded,
     "Event Set Id": String(set.eventSetId),
     Stage: "code-generation",
   };
-  if (event === "EXECUTION_EVENT_SET_COMMITTED") fields["Event Set Digest"] = String(set.digest);
+  if (includeDigest) {
+    fields["Event Set Digest"] = event === "EXECUTION_EVENT_SET_COMMITTED"
+      ? String(set.digest)
+      : createHash("sha256").update(encoded).digest("hex");
+  }
   if (event === "LOOP_MONITOR_EVENT_SET_COMMITTED") fields["Partition Key"] = String(set.partitionKey);
   return row(event, timestamp, fields, { seq });
 }
@@ -237,6 +246,213 @@ describe("decodeCandidateInventory", () => {
       "duplicate-event-set-id",
     ]);
     expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
+  });
+
+  test("rejects each unit-pool and loop-monitor outer when its declared digest is missing", () => {
+    const unitStart = {
+      eventSetId: "missing-digest-unit-start",
+      batchId: "batch-a",
+      idempotencyKey: "unit-start",
+      payloadFingerprint: "fp",
+      events: [{ type: "unit-acquired", queueEntryId: "q-a", attempt: { attemptId: "attempt-a" } }],
+    };
+    const unitTerminal = {
+      eventSetId: "missing-digest-unit-terminal",
+      batchId: "batch-a",
+      idempotencyKey: "unit-terminal",
+      payloadFingerprint: "fp",
+      events: [{ type: "unit-settled", terminal: { attemptId: "attempt-a" } }],
+    };
+    const loopSet = {
+      eventSetId: "missing-digest-loop",
+      partition: { intentUuid: "intent-a", monitorId: "monitor-a", stageInstanceId: "u-a", graphRevision: "g-a" },
+      partitionKey: "partition-a",
+      idempotencyKey: "loop-a",
+      payloadFingerprint: "fp",
+      events: [],
+    };
+    const inventory = decodeCandidateInventory({
+      corpus: buildAttributionCorpus([
+        eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:02:10Z", unitStart, 42, false),
+        eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:02:11Z", unitTerminal, 43, false),
+        eventSetRow("LOOP_MONITOR_EVENT_SET_COMMITTED", "2026-08-10T00:02:12Z", loopSet, 44, false),
+      ]),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    });
+
+    expect(inventory.accepted).toHaveLength(0);
+    expect(inventory.rejected).toHaveLength(3);
+    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual([
+      "malformed-event-set",
+      "malformed-event-set",
+      "malformed-event-set",
+    ]);
+    expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
+  });
+
+  test("decodes correct unit-pool and loop-monitor digests and rejects mismatches per outer", () => {
+    const unitSet = {
+      eventSetId: "digest-unit",
+      batchId: "batch-a",
+      idempotencyKey: "unit-a",
+      payloadFingerprint: "fp",
+      events: [{ type: "unit-acquired", queueEntryId: "q-a", attempt: { attemptId: "attempt-a" } }],
+    };
+    const loopSet = {
+      eventSetId: "digest-loop",
+      partition: { intentUuid: "intent-a", monitorId: "monitor-a", stageInstanceId: "u-a", graphRevision: "g-a" },
+      partitionKey: "partition-a",
+      idempotencyKey: "loop-a",
+      payloadFingerprint: "fp",
+      events: [],
+    };
+    const validUnit = eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:02:13Z", unitSet, 51);
+    const validLoop = eventSetRow("LOOP_MONITOR_EVENT_SET_COMMITTED", "2026-08-10T00:02:14Z", loopSet, 52);
+    const wrongDigest = (entry: AttributedRecord, seq: number): AttributedRecord => {
+      const record = entry.record as JournalEntry;
+      return { ...entry, record: { ...record, seq, fields: { ...record.fields, "Event Set Digest": "wrong" } } };
+    };
+
+    const decodedUnit = decodeEventSetEnvelope(validUnit);
+    const decodedLoop = decodeEventSetEnvelope(validLoop);
+    expect(decodedUnit.ok && decodedUnit.value.map(({ boundary }) => boundary)).toEqual(["start"]);
+    expect(decodedLoop.ok && decodedLoop.value).toEqual([]);
+
+    const inventory = decodeCandidateInventory({
+      corpus: buildAttributionCorpus([wrongDigest(validUnit, 53), wrongDigest(validLoop, 54)]),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    });
+    expect(inventory.accepted).toHaveLength(0);
+    expect(inventory.rejected).toHaveLength(2);
+    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual([
+      "digest-mismatch",
+      "digest-mismatch",
+    ]);
+    expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
+  });
+
+  test("rejects unknown inner event types despite valid event-set digests", () => {
+    const execution = executionSet("unknown-execution", [{ type: "future-execution-event" }]);
+    const unit = {
+      eventSetId: "unknown-unit",
+      batchId: "batch-a",
+      idempotencyKey: "unknown-unit",
+      payloadFingerprint: "fp",
+      events: [{ type: "future-unit-event" }],
+    };
+    const loop = {
+      eventSetId: "unknown-loop",
+      partition: { intentUuid: "intent-a", monitorId: "monitor-a", stageInstanceId: "u-a", graphRevision: "g-a" },
+      partitionKey: "partition-a",
+      idempotencyKey: "unknown-loop",
+      payloadFingerprint: "fp",
+      events: [{ type: "FUTURE_LOOP_EVENT" }],
+    };
+    const inventory = decodeCandidateInventory({
+      corpus: buildAttributionCorpus([
+        eventSetRow("EXECUTION_EVENT_SET_COMMITTED", "2026-08-10T00:02:15Z", execution, 55),
+        eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:02:16Z", unit, 56),
+        eventSetRow("LOOP_MONITOR_EVENT_SET_COMMITTED", "2026-08-10T00:02:17Z", loop, 57),
+      ]),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    });
+
+    expect(inventory.accepted).toHaveLength(0);
+    expect(inventory.rejected).toHaveLength(3);
+    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual([
+      "unsupported-event-set-schema",
+      "unsupported-event-set-schema",
+      "unsupported-event-set-schema",
+    ]);
+  });
+
+  test("validates supported transaction payload schema, identity, and digest before inventorying the outer", () => {
+    const projection = createAutonomyProjection({ intentUuid: "intent-a" });
+    const transaction: IntentAutonomyTransaction = {
+      schemaVersion: 1,
+      transactionId: "transaction-a",
+      intentUuid: "intent-a",
+      expectedRevision: 0,
+      beforeProjection: null,
+      beforeProjectionDigest: autonomyDigest(null),
+      afterProjectionDigest: autonomyDigest(projection),
+      events: [{
+        type: "AUTONOMY_MODE_CHANGED",
+        beforeMode: "none",
+        afterMode: "none",
+        principalId: "principal-a",
+        humanTurnId: "turn-a",
+      }],
+      projection,
+    };
+    const encoded = encodeIntentAutonomyTransaction(transaction);
+    const validFields = {
+      "Intent Uuid": "intent-a",
+      "Transaction Id": "transaction-a",
+      "Transaction Digest": autonomyDigest(transaction),
+      Transaction: encoded,
+      Stage: "code-generation",
+    };
+    const decode = (fields: Readonly<Record<string, string>>, seq: number) => decodeCandidateInventory({
+      corpus: buildAttributionCorpus([
+        row("INTENT_AUTONOMY_TRANSACTION_COMMITTED", `2026-08-10T00:02:${seq}Z`, fields, { seq }),
+      ]),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    }).rejected[0]!;
+
+    expect(decode(validFields, 45).primaryReason).toBe("missing-start");
+    expect(decode({ ...validFields, "Transaction Digest": "sha256:wrong" }, 46).primaryReason).toBe("digest-mismatch");
+    expect(decode({ ...validFields, "Transaction Id": "other-transaction" }, 47).primaryReason).toBe("malformed-event-set");
+    expect(decode({ "Transaction Id": "quality-a", Stage: "code-generation" }, 48).primaryReason).toBe("malformed-event-set");
+  });
+
+  test("rejects valid quality-repair and intent-completion envelopes without a verifiable transaction digest", () => {
+    const quality = {
+      schemaVersion: 1,
+      transactionId: "quality-a",
+      qualityScopeId: "scope-a",
+      qualityEvents: [],
+      loopEventSets: [],
+    };
+    const completion = {
+      eventType: "INTENT_COMPLETION_TRANSACTION_COMMITTED",
+      transaction: { transactionId: "completion-a", expectedRevision: 1 },
+      expectedEventIdentities: ["event-a"],
+      expectedStateProjectionRevision: 1,
+    };
+    const records = [
+      row("QUALITY_REPAIR_TRANSACTION_COMMITTED", "2026-08-10T00:02:49Z", {
+        "Quality Scope Id": "scope-a",
+        "Transaction Id": "quality-a",
+        Transaction: JSON.stringify(quality),
+        Stage: "code-generation",
+      }, { seq: 49 }),
+      row("INTENT_COMPLETION_TRANSACTION_COMMITTED", "2026-08-10T00:02:50Z", {
+        "Intent Uuid": "intent-a",
+        "Transaction Id": "completion-a",
+        "Evidence Id": "evidence-a",
+        "Evidence Digest": "sha256:evidence",
+        "Completion Seal Digest": "sha256:seal",
+        Transaction: JSON.stringify(completion),
+        Stage: "code-generation",
+      }, { seq: 50 }),
+    ];
+    const inventory = decodeCandidateInventory({
+      corpus: buildAttributionCorpus(records),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    });
+
+    expect(inventory.accepted).toHaveLength(0);
+    expect(inventory.rejected).toHaveLength(2);
+    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual([
+      "malformed-event-set",
+      "malformed-event-set",
+    ]);
   });
 
   test("keeps reused lifecycle identities separate across explicit intents and stages", () => {
