@@ -43,6 +43,7 @@ sensors:
   - question-budget
   - event-registry-drift
   - self-scope-consistency
+  - numeric-provenance
 scopes:
   - enterprise
   - feature

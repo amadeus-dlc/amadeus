@@ -16,7 +16,7 @@
 // (dist/claude/.claude/sensors/), resolved by loadSensors() as
 // __FILE_DIR/../sensors (amadeus-graph.ts:168) — independent of cwd, so no temp
 // project, no fixtures, no audit.md. This port therefore writes NOTHING to disk
-// and seeds nothing; it doubles as a forward-check that the 7 shipped manifests
+// and seeds nothing; it doubles as a forward-check that the shipped manifests
 // stay parseable, exactly as the .sh comment (t93:17-19) states.
 //
 // COVERS ID: this .cli file credits the `amadeus-sensor list` subcommand unit
@@ -26,15 +26,14 @@
 //
 // PARITY NOTES (every .sh `ok`/`assert_eq` line maps to an expect() below;
 // several are STRONGER than the original grep/awk):
-//   - .sh Case 1  list emits the framework sensors (now 7) -> Test 1:
-//       rows.length === 7 (same observable: count of tab-bearing rows).
+//   - .sh Case 1  list emits the framework sensors -> Test 1:
+//       rows.length === EXPECTED_IDS.length (same observable: count of tab-bearing rows).
 //   - .sh Case 2  every row column 2 == "deterministic" (awk != count) -> Test 2:
 //       every row's cols[1] === "deterministic" (same observable, per-row).
 //   - .sh Case 3  list is alpha-sorted by id (IDS == sort IDS)        -> Test 3:
 //       ids deep-equals ids.slice().sort() (same observable).
-//   - .sh Case 4  list returns exactly the 4 expected ids (assert_eq) -> Test 4:
-//       ids === ["linter","required-sections","type-check","upstream-coverage"]
-//       (same sentinel set, exact).
+//   - .sh Case 4  list returns exactly EXPECTED_IDS (assert_eq) -> Test 4:
+//       same sentinel set, exact.
 //   - .sh Case 5  describe required-sections: id, kind=deterministic,
 //       command, default_severity=advisory, matches: **/{amadeus-docs,intents,codekb}/**  -> Test 5:
 //       all five field lines asserted (STRONGER: the .sh grep'd 5 anchored
@@ -104,6 +103,7 @@ const EXPECTED_IDS = [
   "linter",
   "model-completeness",
   "nfr-budget",
+  "numeric-provenance",
   "pr-convergence-report-format",
   "question-budget",
   "required-sections",
