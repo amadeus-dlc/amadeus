@@ -4,6 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { VALID_DEPTH_VALUES } from "../../packages/framework/core/tools/amadeus-directive.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CORE = join(REPO_ROOT, "packages/framework/core");
@@ -101,6 +102,21 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(compact(PROTOCOL)).toContain(
       "While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options",
     );
+
+    // Free is a grilling level, not a depth. The engine's depth vocabulary is
+    // unchanged, and none of the files grilling touches passes Free where a
+    // depth value is expected — a fourth value reaching the wire would fail the
+    // directive validator at a distance from where it was introduced.
+    expect([...VALID_DEPTH_VALUES]).toEqual(["Minimal", "Standard", "Comprehensive"]);
+    const depthWireUse = /(?:depth[=:]\s*|--depth\s+)"?Free/i;
+    for (const relativePath of [
+      "amadeus-common/protocols/grilling-protocol.md",
+      "amadeus-common/protocols/stage-protocol.md",
+      "skills/amadeus-grilling/SKILL.md",
+      "tools/amadeus-sensor-question-budget.ts",
+    ]) {
+      expect(read(relativePath), relativePath).not.toMatch(depthWireUse);
+    }
   });
 
   test("the three machine-matched grilling tokens are language-neutral markers", () => {
