@@ -586,17 +586,6 @@
     "file": "packages/framework/core/tools/amadeus-jump.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:55e7fe69ef64c96cef5b0dcd1fa9484dcf579d9eccd6cb74e3629cbfa5a906b3",
-      "anchorLines": 3,
-      "targetLines": "1-3"
-    },
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-jump.ts",
-    "selector": {
-      "function": "main",
       "fingerprint": "sha256:bd2368e0b6a6b67acb08e30c740df410f2d91db1d9f8f6db9e87a16bdfc9064c",
       "anchorLines": 3,
       "targetLines": "1-3"
