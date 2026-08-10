@@ -1068,5 +1068,12 @@
     "dirName": "260810-plugin-harness-dir-token",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019feb2a-1562-7a8a-9388-a4543a5d52a1",
+    "slug": "plugin-manifest-resoluti",
+    "dirName": "260810-plugin-manifest-resoluti",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
