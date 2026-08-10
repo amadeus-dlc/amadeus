@@ -172,6 +172,90 @@ export function countQuestions(body: string): number {
 }
 
 // ---------------------------------------------------------------------------
+// The grilling tokens — a session that terminates on coverage, not counting
+//
+// Grilling consumes depth as a pruning threshold rather than a question budget
+// (`grilling-protocol.md` §2.2), so its total is an emergent value that may
+// exceed the §8 row. Against a grilling file the ceiling is therefore not the
+// question: what is checked is whether the crossing was RECORDED and the
+// pruning DISCLOSED (§2.5, §2.3).
+//
+// All three tokens are HTML comments rather than headings, and the protocol
+// says why: this sensor ships to every project, and a heading matched in one
+// team's record language is structurally unmatchable in another's. The heading
+// beside the deferred marker is free prose in whatever language the record
+// uses; only the marker is matched.
+//
+// `grilling-protocol.md` is the single definition of all three. These constants
+// mirror it verbatim and never vary it.
+// ---------------------------------------------------------------------------
+
+/** §2.5 Mode marker — the questions file's first line under grilling. */
+export const GRILLING_MODE_MARKER = "<!-- amadeus-grilling:v1 mode=grilling -->";
+
+/** §2.3 Deferred-node section marker, written once per session — including
+ *  when nothing was pruned, so an absent marker means "not recorded" rather
+ *  than "nothing to record". */
+export const DEFERRED_MARKER = "<!-- amadeus-grilling:deferred -->";
+
+/** How far into the body the mode marker may sit. §2.5 puts it on line 1; the
+ *  slack absorbs a leading title or blank without letting a quotation of the
+ *  protocol deeper in the file switch that file into grilling mode. */
+const MARKER_HEAD_LINES = 10;
+
+/** Any `amadeus-grilling:` tag in the head window. A tag that is present but
+ *  not the canonical marker is a near miss, and the sensor says so rather than
+ *  reading it as absence — see `detectGrillingMarker`. */
+const GRILLING_TAG = /<!--\s*amadeus-grilling:/;
+
+/** §2.5 justification line, matched with `<N>` parsed as a number. The
+ *  protocol's own template (`questions=<N>`) therefore does not match, which is
+ *  what keeps the protocol text from reading as a recorded crossing. */
+const JUSTIFICATION_LINE =
+  /<!--\s*amadeus-grilling:justification\s+depth=(\S+)\s+questions=(\S+)\s+frontier-driven\s*-->/;
+
+export type GrillingMarker = { kind: "none" } | { kind: "valid" } | { kind: "malformed" };
+
+/** Does this file declare itself a grilling session?
+ *
+ *  Three outcomes, not two. A mistyped marker cannot collapse into "none": that
+ *  would measure a frontier-driven session against a fixed ceiling it was never
+ *  written for, and say nothing to the author — the fail-open shape this sensor
+ *  exists to close. */
+export function detectGrillingMarker(body: string): GrillingMarker {
+  const head = body.split("\n", MARKER_HEAD_LINES);
+  let sawTag = false;
+  for (const line of head) {
+    if (line.trim() === GRILLING_MODE_MARKER) return { kind: "valid" };
+    if (GRILLING_TAG.test(line)) sawTag = true;
+  }
+  return sawTag ? { kind: "malformed" } : { kind: "none" };
+}
+
+/** The recorded depth-ceiling crossing, or null when the body records none.
+ *
+ *  Whole-body scan: §2.5 appends the line at the moment the total crosses, so
+ *  its position is wherever the session had reached by then. */
+export function parseJustificationLine(
+  body: string,
+): { depth: string; questions: number } | null {
+  const match = body.match(JUSTIFICATION_LINE);
+  if (match === null) return null;
+  const questions = Number.parseInt(match[2] as string, 10);
+  if (!Number.isFinite(questions)) return null;
+  return { depth: match[1] as string, questions };
+}
+
+/** Was the pruning disclosed? Presence alone is the judgement — §2.3 requires
+ *  the section even when nothing was pruned, so a predicate that read the
+ *  entries would report a Free session's explicit "none" as an omission.
+ *
+ *  Whole-body scan: the agreement summary closes the file. */
+export function detectDeferredSection(body: string): { present: boolean } {
+  return { present: body.includes(DEFERRED_MARKER) };
+}
+
+// ---------------------------------------------------------------------------
 // Record date — which side of the enforcement cutoff a file was written on
 // ---------------------------------------------------------------------------
 
