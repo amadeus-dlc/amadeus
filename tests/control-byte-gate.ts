@@ -22,7 +22,12 @@
 // SYMLINKS. git tracks a symlink as a blob whose content is the TARGET PATH
 // STRING. The gate judges that string, not the dereferenced file: the bytes in
 // the repository are the link text, and dereferencing would both scan an
-// untracked file and break on a dangling link.
+// untracked file and break on a dangling link. Measured 2026-08-11 in a scratch
+// repository: for a mode-120000 entry, `git cat-file blob` and `readlink` yield
+// the same bytes ("real.txt", no trailing newline) while `readFileSync` yields
+// the target's content instead. The tracked corpus itself currently holds no
+// symlinks — `git ls-files -s | awk '$1=="120000"'` returns 0 of 16651 entries
+// — so this path is exercised by test rather than by the repository.
 //
 // FAIL-CLOSED ENUMERATION. If `git ls-files` cannot run or exits non-zero, the
 // gate throws rather than scanning an empty list — a broken enumeration must
@@ -54,6 +59,21 @@ export const BINARY_ALLOWLIST: readonly AllowlistEntry[] = [
     reason: "the repository's only legitimate tracked binary: the AI-DLC specification PDF asset",
   },
 ] as const;
+
+// The type makes `reason` present; only a runtime check makes it MEAN anything.
+// An entry excuses a file from the gate, so the justification for that excuse
+// has to exist in the source where the excuse is granted — an empty string is a
+// silent exemption, which is the one thing the allowlist must never be.
+export function assertAllowlistWellFormed(entries: readonly AllowlistEntry[]): void {
+  for (const entry of entries) {
+    if (entry.path.trim().length === 0) throw new Error("allowlist entry has an empty path");
+    if (entry.reason.trim().length === 0) {
+      throw new Error(`allowlist entry ${entry.path} has an empty reason`);
+    }
+  }
+}
+
+assertAllowlistWellFormed(BINARY_ALLOWLIST);
 
 // ---------------------------------------------------------------------------
 // Enumeration. NUL-separated so paths with any byte in them — Japanese file
@@ -114,6 +134,9 @@ export function runControlByteGate(options: GateOptions): GateResult {
 
   const violations: Violation[] = [];
   const readErrors: { path: string; message: string }[] = [];
+  // scannedCount = enumerated entries MINUS allowlist hits. A file whose read
+  // failed still counts: the gate attempted it and reported the failure, so
+  // excluding it would make the summary understate the corpus it stood over.
   let scannedCount = 0;
 
   for (const path of tracked) {
@@ -162,9 +185,9 @@ const USAGE =
   "usage: bun tests/control-byte-gate.ts --check\n" +
   "  --check   scan every tracked file for raw control bytes (CI gate)";
 
-export function main(args: string[]): number {
+export function main(args: string[], repoRoot: string = REPO_ROOT): number {
   try {
-    if (args.length === 1 && args[0] === "--check") return runCheck();
+    if (args.length === 1 && args[0] === "--check") return runCheck(repoRoot);
     console.error(USAGE);
     return 2;
   } catch (err) {
