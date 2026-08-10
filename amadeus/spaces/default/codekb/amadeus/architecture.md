@@ -1,6 +1,42 @@
 # アーキテクチャ
 
-## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+## plugin manifest 解決の所在非対称と advisory 消費者グラフ（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: 本節の file:line はすべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）時点。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（HEAD の祖先、**13 commits / 302 files**、**PR #2811 を含む**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+**Focus**: [Issue #2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（ミラー #2829）— plugin manifest 所在非対称 + evaluator argv root-relative。クロスレビュー 2/2 ESTABLISHED_WITH_REFINEMENTS（run `xrev-2823-20260810T094918Z`）。
+
+### 直下の履歴節からの差分（PR #2811、PROVEN）
+
+base..observed で PR #2811（`c51afbd0a`、staging seed での `{{HARNESS_DIR}}` 解決）が着地し、直下の履歴節（observed `df1c874cf`）の次の記述は**更新済み**である:
+
+- `copyPluginSource` / `copyRealFiles` は **`amadeus-plugin.ts:702-741`**（旧 `:659-688`）。`copyRealFiles` は `harnessDir` パラメータを取り、staging 宛てコピーでは `seedBytesForHarness`（`:669-675`）が `{{HARNESS_DIR}}` を解決する（`stagingHarnessDirOf` `:659-664`、authoring 宛ては意図的に除外）。**「self-install 5 面は置換を一度も通らない」という旧 N-3 の帰結は解消済み**。
+- `collectPluginSources` / `seedStaging` は **`:874-906`**（旧 `:821-853`）。
+- ガード `t531-plugin-harness-literal-guard` が新設され、plugin **散文**のハーネスリテラルは走査済み。**`plugins/**/plugin.json` の argv は依然として誰も走査しない**。
+- compose 本体に置換器が無い事実、`plugin.json` が composed ツリーに配送されない事実（旧 N-9）は**不変**。
+
+### 所在非対称の構造（PROVEN）
+
+欠陥は**契約の継ぎ目**にある。配送側 — compose が manifest から集めるのは `stages`/`tools` のみ（`amadeus-plugin-compose.ts:895` の `ownedPaths`、書き出しは `:1390-1408` `composeWriteSet`）。消費側 — advisory 宣言の唯一の読み点は `pluginManifestPath(projectRoot, plugin)` = `<projectRoot>/plugins/<name>/plugin.json`（`amadeus-advisory-declaration.ts:295-297`、読み手は `:312` / `:392` の 2 箇所のみ）。manifest 不在は `:312-313` で**無音 fail-open**（`return []`、監査・ログなし）。`projectRoot` は `projectRootForHost(hostRoot) = dirname(hostRoot)`（`amadeus-plugin-activation.ts:110-112`）。
+
+evaluator argv（`plugins/formal-model-check/plugin.json:59-65`）の第 2 要素 `:61` は repo ルート相対で、`spawnEvaluator`（`:347-357`）が `cwd: projectRoot`・shell なしで spawn するため、**projectRoot に authoring ツリーが在る環境でのみ解決する**。engine 側双子は `amadeus-advisory-choice.ts:925`。
+
+### install 経路の全列挙（mechanism settlement、PROVEN）
+
+| 経路 | project supply（`<projectRoot>/plugins/<name>/`） | advisory の運命 |
+|---|---|---|
+| folder-drop（installDoc primary、`plugin-projection.ts:634`） | 作られない | (a) 無音で全滅 |
+| `install <path>` verb + dot-dir ホスト（`amadeus-plugin.ts:1117-1118`/`:1160`、persistentInstall=true） | **FULL bundle が永続化される** | (c) both-working |
+| marketplace / native-manifest（installDoc `:622-631`） | repo 内に証拠なし（`CLAUDE_PLUGIN_ROOT` 0 hit） | せいぜい (a)、UNMEASURED |
+| self-install / promote-self | 常に存在 | (c) dogfood masking |
+
+**新規知見**: install verb の persistent 腕は両レビュアの共有前提（「repo ルート `plugins/` を作らせる文書化経路は無い」）と、前 intent `requirements.md:90` を falsify する。installDoc（`:636`）は verb に言及するが project supply 永続化は未開示。分岐 (b)（hold-without-clean-release）は手作り hybrid（manifest のみ供給）でのみ到達可能。詳細は re-scan 正本 §mechanism settlement。
+
+### 消費者グラフの要点（PROVEN）
+
+`advisoriesForHost`（`:366-383`）→ `declaredAdvisoriesForPlugin`（`:305-329`）→ `spawnEvaluator`（`:347-357`）の checkpoint 発火経路と、`amadeus-advisory-choice.ts:948-978`（`declaredFormalCheckRoute`）/ `:729-741`（`directiveItemFor` → `declaredHandoffStage`）/ `:980-986`（`DECLARED_RELEASE_RULE`）の run-now/handoff 経路が、すべて同じ `pluginManifestPath` 解決に依存する。**全経路で degradation は無音**であり、t445-advisory-declaration-supply `:155-160` がその無音 fail-open を契約として pin している。
+
+## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、履歴、observed `df1c874cf`）
 
 **観測 ref**: 本節の file:line はすべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）時点。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（HEAD の祖先、`git rev-list --count base..HEAD` = **20 commits / 117 files**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-harness-dir-token.md`。
 

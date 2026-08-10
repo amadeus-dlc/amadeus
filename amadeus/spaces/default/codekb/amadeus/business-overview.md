@@ -1,6 +1,20 @@
 # ビジネス概要
 
-## CG 観測可能区間と帰属不能残余（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
+## plugin advisory が consumer に届かない業務影響（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+**利用者から見た問題**: formal-model-check plugin の advisory 宣言（`plugins/formal-model-check/plugin.json:50-71`、checkpoint での hold 判定と handoff）は、**文書化された primary 導入経路（folder-drop、`plugin-projection.ts:634`）では一度も発火しない**。宣言の読み手は `<projectRoot>/plugins/<name>/plugin.json` だけを見るが、この経路は consumer の project ルートに `plugins/<name>/` を作らない。しかも見落としは**完全に無音**（監査・ログ・stderr なし、`amadeus-advisory-declaration.ts:312-313`）であるため、利用者は「advisory が無い」のか「黙って読めていない」のかを区別できない。
+
+**業務影響の構造**:
+
+- 導入手順の選択だけで同じ plugin の品質ゲートが効いたり効かなかったりする — folder-drop（全滅）と install verb の persistent 腕（`amadeus-plugin.ts:1160` で FULL bundle が project ルートへ永続化され動作）で**欠陥露出が異なるのに未開示**
+- 本 repo 自身（self-install / dogfood）では常に動くため、**開発側の検証では欠陥が見えない**（dogfood masking）。advisory テスト 3 本（t445 / t526 / t528）はすべて dogfood レイアウトで宣言を供給している
+- 影響する plugin は現行 1 つ（formal-model-check）だが、宣言機構は一般化点（ADR-6）として設計されており、**今後 advisory を宣言する plugin はすべてこの非対称を踏む**
+
+修正案の設計・選定、および Issue #2267 との統合/分離の裁定は requirements-analysis 以降の所掌。
+
+## CG 観測可能区間と帰属不能残余（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
 
 [Issue #2695](https://github.com/amadeus-dlc/amadeus/issues/2695) の利用者価値は、code-generation（CG）が重いという既存の stage duration 統計を、**現行 audit が実際に説明できる時間**と**説明できない残余**へ分け、次の計装投資を推測でなく実測から決められるようにすることである。現行 `stage-stats` はステージ窓・idle 除外・sensor/model/review の集計を提供するが、観測可能 lifecycle の区間帰属は report model に存在しない（`packages/framework/core/tools/amadeus-stage-stats.ts:515-527`, `:545-577`）。
 
