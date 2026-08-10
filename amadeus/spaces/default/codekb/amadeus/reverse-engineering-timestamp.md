@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260810-plugin-harness-dir-token）
+## 実行メタデータ（現在: 260810-plugin-prose-seed-guard）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent `260810-plugin-harness-dir-token` の observed。`git merge-base --is-ancestor df1c874cf HEAD` で祖先性を実測確認。区間 `git rev-list --count df1c874cf..c51afbd0a` = **8 commits**、非 record の実質変更は PR #2811 の squash 1 本。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`（= PR #2811 squash 着地後の `origin/main`。worktree HEAD `ff06d945b` は record-only merge のため observed に採らない。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2810](https://github.com/amadeus-dlc/amadeus/issues/2810)（bug/P2/S3-MAJOR — plugin stage prose の root-relative ツール参照 11 行）+ [Issue #2812](https://github.com/amadeus-dlc/amadeus/issues/2812)（bug/P2/S3-MAJOR — reframe 済み: rename 規則は `KNOWN_RULES_SUBDIR` 2 キー欠落により `.cursor`/`.opencode` で既に乖離。`KNOWN_RULES_SUBDIR` 修正 in scope）。兄弟 [#2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（plugin.json:61 evaluator argv、S2-CRITICAL）は分離済みで射程外
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode`）— 収束: #2810 = ESTABLISHED_WITH_REFINEMENTS / #2812 = REFRAME_REQUIRED → ユーザー裁定で reframe 適用。run `xrev-2810-20260810T080817Z` / `xrev-2812-20260810T080817Z`。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化（scan 訂正 2 件を検出）
+- 行番号引用の currency: #2810 の 11 行は observed で全数逐語一致・シフトゼロ。#2812 の患部（`amadeus-harness.ts` / `amadeus-plugin.ts`）は区間内 M のため免除不成立 — レビュアー2名+scan+Architect が observed で再解決済み（`cid:reverse-engineering:E-XBB-RE-S13-c2`）
+- 中核知見: (1) 直前 intent の中核前提「経路B に置換器なし」は #2811 の `seedBytesForHarness` 新設で解消済み。(2) 新たな非対称は rename 規則の**データ源二重化** — packager = manifest `rulesRename` / core = `KNOWN_RULES_SUBDIR`（5 キー、`.cursor`/`.opencode` 欠落 → `?? "rules"` fail-open）で、両実装を突き合わせるテストは 0 件（P6∩P7=∅）。(3) `KNOWN_RULES_SUBDIR` の消費経路は `rulesSubdirFor` 経由に加え `rulesSubdir()` の env 分岐 `:194`・descriptor 欠落 fallback `:196` の計 3 面（第 4 の面 = env 分岐は descriptor を見ない、はレビュー未指摘で scan が検出）。(4) 11 行のトークン化は両経路の実測済み通過面に乗り、compose-time seeding の新設不要。(5) 既存テストで明示改訂が必要なものは 0 件
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作はすべてゼロ（クロスレビューのコメント投稿・Issue 訂正・#2823 起票は RE 外の conductor 工程として実施済み）。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（rename データ源二重化と 3 消費経路の節を追加）/ `code-structure.md`（#2811 新規ファイル: harness-dir-fixture / t2790 / t531 / boundary-guard predicate 3）/ `component-inventory.md`（seedBytesForHarness / stagingHarnessDirOf / stagingEntryState / rulesSubdirFor）/ `code-quality-assessment.md`(ガード不在: 両実装を import するテスト 0 件、t2790 は一致キーのみサンプル、corpus 遮蔽)。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。`technology-stack.md` / `dependencies.md` / `api-documentation.md` / `business-overview.md` は**変更なし**(区間が患部と非交差で既存記述を無効化する事実なし)
+- Per-intent record: `re-scans/260810-plugin-prose-seed-guard.md`（述語 P1〜P13、manifest 8 面実測表、patch-surface inventory、テストピン棚卸し、仮説 4 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定(#2810 のトークン化範囲、ガード述語の設置先 t146 vs t531、#2812 の等価性テストの層と形)は requirements-analysis 以降の所掌
+
+## 実行メタデータ（履歴、2026-08-10: 260810-plugin-harness-dir-token）
 
 - Date: `2026-08-10`
 - Base commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`re-scans/` 中で最新の observed。HEAD の祖先であることを実測確認。`git rev-list --count 91f37ec85..HEAD` = **20 commits**、**117 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）

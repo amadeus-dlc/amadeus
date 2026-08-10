@@ -24,6 +24,10 @@ import { foreignHarnessDirs, harnessDirOf } from "../helpers/harness-dir-fixture
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const COMPOSED_STAGE = join("plugins", "pr-convergence", "stages", "pr-convergence.md");
+const COMPOSED_FORMAL_STAGE = join("plugins", "formal-model-check", "stages", "formal-model-check.md");
+const COMPOSED_TLA_STAGE = join("plugins", "formal-model-check", "stages", "tla-authoring.md");
+const ROOT_RELATIVE_PLUGIN_PATH_RE =
+  /(^|\.{1,2}\/|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//m;
 const scratch: string[] = [];
 
 afterAll(() => {
@@ -45,7 +49,7 @@ function dogfoodWorkspace(harness: string): string {
   mkdirSync(join(workspace, "amadeus"), { recursive: true });
   writeFileSync(
     join(workspace, "amadeus", "config.json"),
-    `${JSON.stringify({ plugin: { activation: { names: ["pr-convergence"] } } }, null, 2)}\n`,
+    `${JSON.stringify({ plugin: { activation: { names: ["pr-convergence", "formal-model-check"] } } }, null, 2)}\n`,
   );
   return workspace;
 }
@@ -101,6 +105,17 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     expect(seedBytesForHarness("stages/x.md", prose, null)).toEqual(prose);
   });
 
+  test("the staged-prose guard rejects unanchored relative plugin paths", () => {
+    for (const prefix of ["", "./", "../"]) {
+      expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test(`bun ${prefix}plugins/example/tools/cli.ts`), prefix || "bare").toBe(
+        true,
+      );
+    }
+    expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test("bun .codex/plugins/example/tools/cli.ts"), "staged anchor").toBe(
+      false,
+    );
+  });
+
   test("compose from an empty staging dir resolves plugin prose to the tree's own harness dir", () => {
     const harness = "codex";
     const harnessDir = harnessDirOf(harness);
@@ -116,6 +131,29 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     expect(text.includes("{{HARNESS_DIR}}"), "raw token survived the seed").toBe(false);
     for (const foreign of foreignHarnessDirs(harness)) {
       expect(text.includes(`${foreign}/`), `foreign literal ${foreign}/`).toBe(false);
+    }
+
+    const formalText = readFileSync(join(workspace, harnessDir, COMPOSED_FORMAL_STAGE), "utf-8");
+    const tlaText = readFileSync(join(workspace, harnessDir, COMPOSED_TLA_STAGE), "utf-8");
+    for (const [stage, stageText] of [
+      ["pr-convergence", text],
+      ["formal-model-check", formalText],
+      ["tla-authoring", tlaText],
+    ] as const) {
+      expect(stageText.includes("{{HARNESS_DIR}}"), `${stage}: raw token survived`).toBe(false);
+      expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test(stageText), `${stage}: repo-root-relative plugin path survived`).toBe(
+        false,
+      );
+    }
+
+    const prCli = `${harnessDir}/plugins/pr-convergence/tools/pr-convergence-cli.ts`;
+    for (const subcommand of ["status", "create", "report", "override"]) {
+      expect(text).toContain(`bun ${prCli} ${subcommand}`);
+    }
+    const formalTools = `${harnessDir}/plugins/formal-model-check/tools`;
+    expect(formalText).toContain(`bun ${formalTools}/run-model-check.ts`);
+    for (const subcommand of ["trace", "proof", "bundle build", "bundle verify", "commit"]) {
+      expect(tlaText).toContain(`bun ${formalTools}/tla-authoring.ts ${subcommand}`);
     }
   }, 180_000);
 

@@ -1,5 +1,41 @@
 # コード構造
 
+## plugin 散文ガードとテストヘルパーの配置（260810-plugin-prose-seed-guard、現在、observed `c51afbd0a`）
+
+**観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`。正本は `re-scans/260810-plugin-prose-seed-guard.md`。
+
+### 区間が持ち込んだファイル（述語 `git diff --name-status "${B}" "${S}" -- tests/ scripts/ packages/ plugins/`）
+
+| 状態 | パス | 位置づけ |
+|---|---|---|
+| **A** | `tests/helpers/harness-dir-fixture.ts` | **新設ディレクトリ層**。manifest 由来のハーネス事実をテストへ供給する共有ヘルパー。`tests/lib/`（述語・スキャナ本体）とは別で、`tests/helpers/` は fixture 供給側 |
+| **A** | `tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts` | seed 単体 assert + compose E2E（実 CLI spawn） |
+| **A** | `tests/integration/t531-plugin-harness-literal-guard.integration.test.ts` | plugin 散文のライブスイープ（`git grep` 前段フィルタ + predicate 3） |
+| **A** | `tests/fixtures/plugin-boundary-guard/stage-with-harness-literal.md` | t531 の落ちる実証用 fixture |
+| M | `packages/framework/core/tools/amadeus-harness.ts` | `rulesSubdirFor` を export（+8） |
+| M | `packages/framework/core/tools/amadeus-plugin.ts` | seed 置換器一式（+67） |
+| M | `scripts/plugin-projection.ts` | 経路A 側（+25） |
+| M | `tests/lib/boundary-guard.ts` | predicate 3 を追加（+47） |
+| M | `tests/unit/t146-core-hygiene.test.ts` | 走査根に `plugins/` 追加、述語を manifest 導出化（+91） |
+| M | `tests/integration/t-plugin-projection-packaging.test.ts` / `t416-…` / `t-coverage-mechanism-ratchet.test.ts` | 既存ピンの追随 |
+| M | `plugins/pr-convergence/stages/pr-convergence.md` | `:180` の 1 行置換のみ |
+
+**`scripts/harness-transform.ts` は区間に含まれない**（`git diff --name-status` の列に不在）— 経路A 側の置換器は無変更で、#2811 が触ったのは経路B 側だけである。
+
+### テスト層の配置規約（本区間で確認された実態）
+
+- **`tests/lib/`** = 述語・スキャナの実装（`boundary-guard.ts` の predicate 1/2/3）。テスト本体ではない
+- **`tests/helpers/`** = fixture・事実供給（`harness-dir-fixture.ts`）
+- **`tests/unit/`** = 実 FS を走査しても `walkMd` のような純ディレクトリ走査に留まるもの（t146）
+- **`tests/integration/`** = `git grep` の spawn や実 CLI 駆動を伴うもの（t531 は `git` spawn、t2790 は `bun … compose` spawn）
+- **`tests/smoke/`** = dist 構造の pin（t149、t-pi-dist-structure）
+
+この非対称は `cid:code-generation:fs-tests-integration-first` と整合する。#2812 の等価性テストは実 FS を触らない純関数比較になるため unit 層も選択肢だが、`harness-dir-fixture.ts` が `readdirSync` / `require` で manifest を実読するため、ヘルパー経由なら integration 層が既存流儀に沿う。
+
+### `tests/` から `scripts/` への import 可否
+
+述語 `git grep -lE 'from "[^"]*scripts/' "${S}" -- tests/ | wc -l` → **88 ファイル**。層の壁は無い。integration 層の先例は `tests/integration/t-package-generated-plugin-sources.integration.test.ts:19`（`scripts/package.ts`）、`tests/e2e/t416-self-projection-fresh-git.serial.test.ts:15`（`scripts/plugin-projection.ts`）。`transform` の実 import は `tests/smoke/t-pi-dist-structure.test.ts:11` の 1 件のみ。
+
 ## attribution 集計の患部配置（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
 
 ### 変更の中心

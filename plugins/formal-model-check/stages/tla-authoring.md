@@ -62,10 +62,10 @@ here rather than discovering the gap in step 3.
 Run the trace referee and then the proof referee:
 
 ```
-bun plugins/formal-model-check/tools/tla-authoring.ts trace \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts trace \
   --subjects <subjects.json> --rows <trace-rows.json> --invariants <invariants.json>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts proof \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts proof \
   --model <module.tla> --cfg <module.cfg> --reduction <reduction.json> \
   --invariants <invariants.json> --identity <sha256:...>
 ```
@@ -107,13 +107,13 @@ no verified approval the stage does not reach step 6.
 Build the authoring bundle, verify it, and commit the entry:
 
 ```
-bun plugins/formal-model-check/tools/tla-authoring.ts bundle build \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts bundle build \
   --parts <parts.json> --predecessor <root|sha256:...> --identity <sha256:...>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts bundle verify \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts bundle verify \
   --ref <sha256:...> --identity <sha256:...>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts commit \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts commit \
   --draft <entry.json> --bundle <sha256:...> --preconditions <preconditions.json>
 ```
 
