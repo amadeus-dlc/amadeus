@@ -259,6 +259,33 @@ describe("bolt lifecycle failure transitions", () => {
     );
   });
 
+  test("abort preserves every supplied failure correlation field", () => {
+    const projectDir = setupProject("aborted-correlation");
+
+    const result = directArgs(projectDir, (args, explicitProjectDir) => {
+      handleBoltCommand("abort", args, explicitProjectDir);
+    }, [
+      "--name",
+      "aborted-correlation",
+      "--slug",
+      "aborted-correlation",
+      "--stage",
+      "code-generation",
+      "--attempt",
+      "attempt-a",
+      "--batch-id",
+      "batch-custom",
+      "--reason",
+      "operator-stop",
+    ]);
+
+    expect(result.status).toBe(0);
+    const audit = readFileSync(seededAuditShard(projectDir), "utf8");
+    expect(audit).toContain('"Stage":"code-generation"');
+    expect(audit).toContain('"Attempt Id":"attempt-a"');
+    expect(audit).toContain('"Batch Id":"batch-custom"');
+  });
+
   test("merge completion preserves a runtime fragment failure", () => {
     const projectDir = setupProject("fragment-merge");
     expect(start(projectDir, "fragment-merge", true).status).toBe(0);

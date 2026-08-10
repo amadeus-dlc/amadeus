@@ -23,7 +23,8 @@ export interface UnitOutcomeEntry extends UnitKey {
 export type ProjectionDiagnosticCode =
   | "missing-join-key"
   | "ambiguous-attempt"
-  | "contradictory-terminal";
+  | "contradictory-terminal"
+  | "malformed-audit-row";
 
 export interface ProjectionDiagnostic {
   readonly eventId: string;
@@ -141,14 +142,25 @@ function auditRowOrder(left: AuditRow, right: AuditRow): number {
   return bytewise(auditIdentity(left), auditIdentity(right));
 }
 
-function canonicalAuditRows(audit: string): AuditRow[] {
+function canonicalAuditRows(
+  audit: string,
+  diagnostics: ProjectionDiagnostic[],
+): AuditRow[] | undefined {
   const rows: AuditRow[] = [];
   for (const line of audit.split("\n")) {
     if (!line.startsWith("{")) continue;
     try {
       const row: unknown = JSON.parse(line);
       if (isRecord(row) && row.schemaVersion === 2 && row.canonical === true) rows.push(row);
-      } catch {}
+    } catch {
+      diagnostics.push({
+        eventId: "(malformed-audit-row)",
+        sequence: 0,
+        code: "malformed-audit-row",
+        missing: [],
+      });
+      return undefined;
+    }
   }
   return rows.sort(auditRowOrder);
 }
@@ -318,7 +330,8 @@ function parsePoolEventSet(
   try {
     parsed = JSON.parse(String(context.attributes["Event Set"] ?? ""));
   } catch {
-    parsed = undefined;
+    missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
+    return undefined;
   }
   if (isRecord(parsed)) return parsed;
   missingKeyDiagnostic(state, context, ["unit", "attempt", "batch"]);
@@ -461,7 +474,9 @@ export function normalizeConstructionOutcomeAudit(audit: string): ConstructionAu
     currentTerminals: new Map<string, CurrentTerminal>(),
   };
   const seen = new Set<string>();
-  for (const raw of canonicalAuditRows(audit)) {
+  const rows = canonicalAuditRows(audit, state.diagnostics);
+  if (rows === undefined) return { ok: false, diagnostics: state.diagnostics };
+  for (const raw of rows) {
     normalizeConstructionAuditRow(raw, state, seen);
   }
   state.records.push(...normalizedTerminalRecords(state));

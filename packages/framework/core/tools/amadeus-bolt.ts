@@ -580,9 +580,7 @@ function emitBoltCompleted(
       emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
     }
   } catch (e) {
-    if (useMerge) {
-      failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
-    }
+    if (useMerge) failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 }

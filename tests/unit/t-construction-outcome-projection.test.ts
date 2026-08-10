@@ -319,7 +319,6 @@ describe("projectConstructionOutcomes", () => {
     });
 
     expect(normalizeConstructionOutcomeAudit([
-      "{not-json",
       auditRow("ignored", 0, "UNKNOWN_EVENT", {}),
       missingSoloKeys,
       malformedPool,
@@ -346,6 +345,18 @@ describe("projectConstructionOutcomes", () => {
           missing: ["unit", "attempt", "batch"],
         },
       ],
+    });
+  });
+
+  test("fails closed on a malformed canonical JSON row", () => {
+    expect(normalizeConstructionOutcomeAudit("{not-json")).toEqual({
+      ok: false,
+      diagnostics: [{
+        eventId: "(malformed-audit-row)",
+        sequence: 0,
+        code: "malformed-audit-row",
+        missing: [],
+      }],
     });
   });
 
