@@ -65,7 +65,7 @@ command、measurement reference、SHA、relative linkのいずれかを表す。
 
 ### `SampleIdentity`
 
-`relativePath + line + normalizedText` のSHA-256 digestを包むvalue object。digest format検証後だけ生成できる。元candidateへの一意な対応を `LabeledSampleSet` が保証する。
+要素順を固定した空白なしのcanonical JSON tuple `JSON.stringify([relativePath,line,normalizedText])` のUTF-8 bytesに対するlowercase hex SHA-256 digestを包むvalue object。区切りなし文字列連結はpreimageに使わない。digest format検証後だけ生成できる。元candidateへの一意な対応を `LabeledSampleSet` が保証する。
 
 ### `LabeledSample`
 

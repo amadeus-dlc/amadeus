@@ -33,7 +33,11 @@ function array(value: unknown): unknown[] {
 }
 
 function sha256(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function sampleIdentity(relativePath: string, line: number, normalizedText: string): string {
+  return sha256(JSON.stringify([relativePath, line, normalizedText]));
 }
 
 function canonicalJson(value: unknown): string {
@@ -213,6 +217,9 @@ describe("numeric provenance mapping schema", () => {
       "gh",
       "bun",
     ]);
+    expect(object(properties.sampleIdentityExpression).const).toBe(
+      "sha256(utf8(JSON.stringify([relativePath,line,normalizedText])))",
+    );
   });
 
   test("defines mapping-independent index input/output discriminators", () => {
@@ -283,7 +290,7 @@ describe("approved mapping fixture", () => {
       expect(typeof sample.validProvenanceNotMissed).toBe("boolean");
       expect(sample.labelerRole).toBe("amadeus-quality-agent");
       expect(String(sample.reason).trim().length).toBeGreaterThan(0);
-      const expected = sha256(`${sample.relativePath}${sample.line}${sample.normalizedText}`);
+      const expected = sampleIdentity(String(sample.relativePath), Number(sample.line), String(sample.normalizedText));
       expect(sample.identity).toBe(expected);
       identities.add(expected);
     }
@@ -293,6 +300,25 @@ describe("approved mapping fixture", () => {
     );
     expect(samples.flatMap((sample) => (typeof sample.provenanceDistance === "number" ? [sample.provenanceDistance] : [])))
       .toEqual(array(object(array(fixture.classificationCases)[0]).distances) as number[]);
+  });
+
+  test("uses an unambiguous canonical JSON tuple for sample identity", () => {
+    const relativePath = "amadeus/spaces/default/intents/fixture/requirements.md";
+    const first = { line: 5, normalizedText: "10件" };
+    const second = { line: 51, normalizedText: "0件" };
+
+    expect(`${relativePath}${first.line}${first.normalizedText}`).toBe(
+      `${relativePath}${second.line}${second.normalizedText}`,
+    );
+    expect(JSON.stringify([relativePath, first.line, first.normalizedText])).toBe(
+      '["amadeus/spaces/default/intents/fixture/requirements.md",5,"10件"]',
+    );
+    expect(JSON.stringify([relativePath, second.line, second.normalizedText])).toBe(
+      '["amadeus/spaces/default/intents/fixture/requirements.md",51,"0件"]',
+    );
+    expect(sampleIdentity(relativePath, first.line, first.normalizedText)).not.toBe(
+      sampleIdentity(relativePath, second.line, second.normalizedText),
+    );
   });
 
   test("derives the lower-bound window and rejects upper-bound saturation", () => {

@@ -7,7 +7,7 @@
 U1が定義し、U2が実装・生成する次のlocal design-time assetsを保護対象とする。
 
 - 同一HEADに固定されたCorpusSnapshotと全ArtifactDescriptor。
-- 決定的sample identity、二値label、distance/statistics。
+- UTF-8 canonical JSON tupleから導出する決定的sample identity、二値label、distance/statistics。
 - authorityとなるSweepReportとNumericProvenanceMapping。
 - mapping digestへ結び付くMappingApprovalと生成projection。
 
@@ -69,7 +69,7 @@ MappingApprovalは `schemaRevision`、snapshot digest（corpusContentDigestを�
 | artifact path | allowlisted relative path、root containment、regular file | typed unreadable/disallowed artifact |
 | runtime graph row | declared stage/produces、duplicateなし | mapping emission停止 |
 | codekb re-scan | exact re-scans path、scan-only discriminator | statisticsには含め、runtime policyへ非投影 |
-| sample identity | SHA-256 format、一意candidate対応 | collision failure |
+| sample identity | 空白なし・要素順固定のUTF-8 `JSON.stringify([relativePath,line,normalizedText])`、lowercase hex SHA-256 format、一意candidate対応 | collision failure |
 | labels | 2 boolean + non-empty reason + approved role | group classification停止 |
 | distance/statistics | finite non-negative values、canonical order | evidence invalid |
 | mapping policy | unique lookup key、valid mode/searchScope | projection停止 |

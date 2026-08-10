@@ -51,7 +51,7 @@ sequenceDiagram
 
 1. Design-time Artifact Indexが注入されたruntime graph snapshotのdeclared producesを安定順で読み、Mapping非依存の `SweepArtifactDescriptor` を導出する。
 2. Corpus Sweepがdescriptorの既存成果物だけを読み、Scannerの固定predicateで候補を抽出する。
-3. `W`未適用の `measureNearestProvenanceDistance` でMarkdown構造境界内の最短距離を全件計測し、決定的sample identityとlabelを記録する。
+3. `W`未適用の `measureNearestProvenanceDistance` でMarkdown構造境界内の最短距離を全件計測し、UTF-8 `JSON.stringify([relativePath,line,normalizedText])`（空白なし・要素順固定）のlowercase hex SHA-256で決定的sample identityを作り、labelとともに記録する。
 4. 打切りなしの距離母集団とdescriptorの `stage + record相対output pattern -> produces key` から、成果物種別×意味クラスごとに `W = max(nearest-rank p95, min + 1)` を算出する。`W < max` と他のenforcement条件を満たす組だけをenforcementとし、upper-bound saturationをmeasurement-onlyへ分類する。
 5. sweep成果物を根拠の正本として保存し、path・produces key対応を含む同じmappingをreadonly TypeScript定数へ生成する。
 6. enforcementを1件以上持つstage集合だけをfrontmatter配線へ反映する。

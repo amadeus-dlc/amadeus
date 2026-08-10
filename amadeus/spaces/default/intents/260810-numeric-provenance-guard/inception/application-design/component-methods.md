@@ -109,7 +109,7 @@ function sweepNumericProvenance(
 ): SweepReport;
 ```
 
-Construction時に`indexSweepArtifacts`で対象を列挙し、`scanNumericClaims`と`measureNearestProvenanceDistance`を使って、決定的sample identity、二値label、打切りなしの距離統計、偽陽性率、`W`、mode、配線stage集合を再計算する。runtime Evaluator / Artifact Classifierは呼ばない。`W` は `max(nearest-rank p95, min + 1)` とし、`W < max` の組だけをenforcementへ採用する。これによりlower-bound saturationでは95% coverageを維持して最小のstrict-interior値を選び、upper-bound saturationはmeasurement-onlyへ落とす。入力読込とgraph snapshot取得は注入し、同一HEADで同じ順序と内容を返す。30 labels等の他要件を満たさない組も自動的にmeasurement-onlyへ落とす。
+Construction時に`indexSweepArtifacts`で対象を列挙し、`scanNumericClaims`と`measureNearestProvenanceDistance`を使って、決定的sample identity、二値label、打切りなしの距離統計、偽陽性率、`W`、mode、配線stage集合を再計算する。sample identityはUTF-8 `JSON.stringify([relativePath,line,normalizedText])`（空白なし・要素順固定）のlowercase hex SHA-256とし、区切りなし文字列連結を使わない。runtime Evaluator / Artifact Classifierは呼ばない。`W` は `max(nearest-rank p95, min + 1)` とし、`W < max` の組だけをenforcementへ採用する。これによりlower-bound saturationでは95% coverageを維持して最小のstrict-interior値を選び、upper-bound saturationはmeasurement-onlyへ落とす。入力読込とgraph snapshot取得は注入し、同一HEADで同じ順序と内容を返す。30 labels等の他要件を満たさない組も自動的にmeasurement-onlyへ落とす。
 
 ### `main`
 
