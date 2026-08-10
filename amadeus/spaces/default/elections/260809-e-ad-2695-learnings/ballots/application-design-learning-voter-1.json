@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-AD-2695-LEARNINGS",
+  "voter": "application-design-learning-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 4,
+  "goa": 3,
+  "reservation": "pure moduleの境界は、実在する変更理由と独立して検証できる契約に対応させ、単なるファイル分割や抽象化の増加にしないこと。互換façadeには既存consumer向けの挙動だけを残すこと。",
+  "rationale": "既存の大きなCLIを互換façadeとして維持しながら、domain/candidates/intervals/reportをpure moduleへ分離する方針は、Brownfield変更全般で再利用できる。外部互換を壊さずに変更理由を局所化し、property-based testingを含む検証seamを得られるため、固有のattribution仕様に依存する候補よりproject practiceとしての適用範囲と事故防止効果が大きい。",
+  "submittedAt": "2026-08-09T15:07:48Z",
+  "receivedAt": "2026-08-09T15:08:03Z"
+}

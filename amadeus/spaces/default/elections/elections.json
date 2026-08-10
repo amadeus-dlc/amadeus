@@ -1444,5 +1444,47 @@
     "dirName": "260809-e-sd-2695-learnings-1",
     "createdAt": "2026-08-09T11:22:18Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-RE-2695-LEARNINGS",
+    "dirName": "260809-e-re-2695-learnings",
+    "createdAt": "2026-08-09T13:47:50Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-RA-2695-LEARNINGS",
+    "dirName": "260809-e-ra-2695-learnings",
+    "createdAt": "2026-08-09T14:07:22Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-AD-2695-LEARNINGS",
+    "dirName": "260809-e-ad-2695-learnings",
+    "createdAt": "2026-08-09T15:06:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-UG-2695-LEARNINGS",
+    "dirName": "260809-e-ug-2695-learnings",
+    "createdAt": "2026-08-09T15:23:19Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-DP-2695-LEARNINGS",
+    "dirName": "260809-e-dp-2695-learnings",
+    "createdAt": "2026-08-09T15:39:04Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-FD-2695-LEARNINGS",
+    "dirName": "260810-e-fd-2695-learnings",
+    "createdAt": "2026-08-10T00:07:57Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-ND-2695-LEARNINGS",
+    "dirName": "260810-e-nd-2695-learnings",
+    "createdAt": "2026-08-10T00:57:40Z",
+    "status": "recorded"
   }
 ]

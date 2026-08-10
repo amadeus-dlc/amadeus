@@ -1,0 +1,42 @@
+{
+  "electionId": "E-RA-2695-LEARNINGS",
+  "kind": "learnings-selection",
+  "question": "Requirements Analysisの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "--stageはattribution target",
+      "description": "既存全stage duration統計をfilterしない"
+    },
+    {
+      "internalNo": 2,
+      "label": "初回質問は0問",
+      "description": "当初はmaterial contractが全て確定と判断した"
+    },
+    {
+      "internalNo": 3,
+      "label": "review後にmaterial question追加",
+      "description": "公開値を変えるprecedenceを後続内部設計へ残さない"
+    },
+    {
+      "internalNo": 4,
+      "label": "全scopeを24 FRへ分解",
+      "description": "全candidate familyと完了条件1〜10を検証可能にする"
+    },
+    {
+      "internalNo": 5,
+      "label": "未承認runtime SLAを発明しない",
+      "description": "実測corpus scaleだけを下限にする"
+    },
+    {
+      "internalNo": 6,
+      "label": "primary reasonを固定precedence化",
+      "description": "1 primary reasonとsecondary diagnosticsを分離する"
+    }
+  ],
+  "voters": [
+    "requirements-learning-voter-1",
+    "requirements-learning-voter-2"
+  ],
+  "state": "recorded"
+}

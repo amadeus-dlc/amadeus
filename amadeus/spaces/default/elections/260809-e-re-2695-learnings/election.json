@@ -1,0 +1,47 @@
+{
+  "electionId": "E-RE-2695-LEARNINGS",
+  "kind": "learnings-selection",
+  "question": "Reverse Engineering の学習候補から、次回以降の project practice として最も価値の高い1件を選ぶ",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "Issue全条件をMustとして保持",
+      "description": "Issue #2695 の完了条件1〜10とCAP-01〜10を縮小せず扱う"
+    },
+    {
+      "internalNo": 2,
+      "label": "--stageはattribution target",
+      "description": "既存の全stage duration統計をfilterせず後方互換を守る"
+    },
+    {
+      "internalNo": 3,
+      "label": "raw journalを帰属の正本にする",
+      "description": "runtime graphのcontainment/latest-winsを帰属推定に使わない"
+    },
+    {
+      "internalNo": 4,
+      "label": "dirty worktreeへmergeしない",
+      "description": "origin/mainとの差分を調べ、workflow recordを壊さず判断する"
+    },
+    {
+      "internalNo": 5,
+      "label": "duplicateを二段階で扱う",
+      "description": "canonical journal dedupとlifecycle identity duplicateを分離する"
+    },
+    {
+      "internalNo": 6,
+      "label": "attribution eligibilityを分離",
+      "description": "measured populationを変えずzero-net/FIFO曖昧窓をfail-closedにする"
+    },
+    {
+      "internalNo": 7,
+      "label": "全candidate familyを棚卸し",
+      "description": "採用可能なSensorだけへ縮めず、不採用理由も観測する"
+    }
+  ],
+  "voters": [
+    "reverse-engineering-voter-1",
+    "reverse-engineering-voter-2"
+  ],
+  "state": "recorded"
+}

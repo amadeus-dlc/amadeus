@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-10T00:08:02Z",
+    "receivedAt": "2026-08-10T00:08:02Z",
+    "detail": "delivered via subagent: functional-design-learning-voter-1 (reported-by-conductor)",
+    "voter": "functional-design-learning-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-10T00:08:02Z",
+    "receivedAt": "2026-08-10T00:08:02Z",
+    "detail": "delivered via subagent: functional-design-learning-voter-2 (reported-by-conductor)",
+    "voter": "functional-design-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-10T00:10:07Z",
+    "receivedAt": "2026-08-10T00:10:07Z",
+    "detail": "ballot accepted: functional-design-learning-voter-2",
+    "voter": "functional-design-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-10T00:10:19Z",
+    "receivedAt": "2026-08-10T00:10:19Z",
+    "detail": "ballot accepted: functional-design-learning-voter-1",
+    "voter": "functional-design-learning-voter-1"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-10T00:10:48Z",
+    "receivedAt": "2026-08-10T00:10:48Z",
+    "detail": "tally: established"
+  }
+]
