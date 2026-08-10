@@ -135,7 +135,13 @@ describe("t530 an intentionally skipped nfr-requirements is not a missing id con
       `${JSON.stringify({ schemaVersion: 1, seq: 1, timestamp: POST_CUTOFF, event: "WORKFLOW_STARTED", fields: {} })}\n`,
     );
     const path = writeArtifact(root, "nfr-design", "performance-design", NO_IDS);
-    expect(evaluateNfrBudget(path).reason).toBe("missing-nfr-ids");
+    const result = evaluateNfrBudget(path);
+    // The whole verdict, not just its label: a reason that says missing-nfr-ids
+    // while pass is true or findings are empty is the same false green the
+    // suppression must never produce.
+    expect(result.reason).toBe("missing-nfr-ids");
+    expect(result.pass).toBe(false);
+    expect(result.findings).not.toHaveLength(0);
   });
 
   test("a state file with no Scope keeps the finding", () => {

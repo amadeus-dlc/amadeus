@@ -342,7 +342,7 @@ amadeus-architect-agent が主導し、amadeus-aws-platform-agent がインフ�
 - `<record>/construction/{unit-name}/functional-design/` からの機能設計成果物
   (存在する場合)
 - アーキテクチャコンテキストのための `<record>/inception/application-design/` からの
-  アプリケーション設計
+  アプリケーション設計(存在する場合)
 
 ### 手順
 

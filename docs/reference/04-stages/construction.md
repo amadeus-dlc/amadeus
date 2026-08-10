@@ -351,7 +351,7 @@ infrastructure and platform input.
 - Functional design artifacts from
   `<record>/construction/{unit-name}/functional-design/` (if they exist)
 - Application design from `<record>/inception/application-design/` for
-  architectural context
+  architectural context (if it exists)
 
 ### Steps
 
