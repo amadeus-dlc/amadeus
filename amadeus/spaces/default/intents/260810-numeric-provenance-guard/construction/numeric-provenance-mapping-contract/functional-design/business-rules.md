@@ -25,7 +25,7 @@
 
 ### BR-U1-04: Deterministic sample identity
 
-- 各candidateのidentityは `sha256(relativePath + line + normalizedText)` から導出する。
+- 各candidateのidentityは、要素順を固定した空白なしのcanonical JSON tuple `JSON.stringify([relativePath,line,normalizedText])` のUTF-8 bytesからlowercase hex SHA-256として導出する。区切りなし文字列連結は使用しない。
 - artifact kind×claim classごとにbytewise ascendingで並べ、要件上限まで採る。上限未満は全件を採る。
 - 同一identityが異なるcandidateを指す場合は `sample-identity-collision` failureとし、片方を捨てない。
 

@@ -1,0 +1,164 @@
+{
+  "schemaRevision": 1,
+  "predicateRevision": "fr-pred-v1",
+  "predicate": {
+    "claimClasses": ["count", "ratio", "percentage", "measured-value"],
+    "provenanceKinds": ["command-token", "measurement-reference", "hex-sha", "relative-link"],
+    "structuralRegions": ["paragraph", "list-item", "table-row"],
+    "countUnits": ["件", "個", "本", "行", "ファイル", "file", "files", "item", "items", "line", "lines", "test", "tests"],
+    "commandTokens": ["git", "grep", "rg", "wc", "find", "ls", "jq", "gh", "bun"],
+    "measurementReferences": ["測定 ref", "measurement ref", "observed at", "HEAD", "origin/main"],
+    "measuredValueForwardCharacters": 40,
+    "sampleIdentityExpression": "sha256(utf8(JSON.stringify([relativePath,line,normalizedText])))",
+    "machineExclusions": {
+      "questionBasenameSuffix": "-questions.md",
+      "exactBasenames": ["memory.md"],
+      "recordRelativePrefixes": ["verification/", "audit/"],
+      "recordRelativeExactPaths": ["amadeus-state.md"],
+      "acknowledgementBasenamePattern": "(^|[-_])(ack|acknowledgement)([-_.]|$)"
+    },
+    "lightweightReports": {
+      "exactBasenames": ["status.md", "progress.md", "completion.md", "receipt.md", "run-status.md", "deployment-status.md"],
+      "exactProducesKeys": ["status", "progress", "completion", "receipt"]
+    },
+    "relativeLinkAllowRules": [
+      "record:verification/**",
+      "record:construction/**/measurements/**",
+      "record:construction/**/verification/**",
+      "record:basename *-{measurement,measurements,sweep,benchmark,test-results}.{md,json}",
+      "codekb:<active-space>/<repo>/re-scans/*.md"
+    ]
+  },
+  "artifactIndexContract": {
+    "input": {
+      "snapshot": {
+        "observedSha": "1111111111111111111111111111111111111111",
+        "graphRevision": "runtime-graph-v1",
+        "predicateRevision": "fr-pred-v1",
+        "corpusContentDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "declaredProduces": [
+        {
+          "stageSlug": "requirements-analysis",
+          "recordRelativeOutputPattern": "inception/requirements-analysis/requirements.md",
+          "producesKey": "requirements"
+        }
+      ],
+      "codekbRescanPaths": [
+        "amadeus/spaces/default/codekb/amadeus/re-scans/260810-contract-fixture.md"
+      ]
+    },
+    "output": {
+      "descriptors": [
+        {
+          "source": "declared-artifact",
+          "relativePath": "amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md",
+          "stageSlug": "requirements-analysis",
+          "recordRelativeOutputPattern": "inception/requirements-analysis/requirements.md",
+          "producesKey": "requirements",
+          "artifactKind": "requirements",
+          "eligibility": "candidate",
+          "reasonCode": "declared-candidate"
+        },
+        {
+          "source": "codekb-re-scan",
+          "relativePath": "amadeus/spaces/default/codekb/amadeus/re-scans/260810-contract-fixture.md",
+          "artifactKind": "codekb-re-scan",
+          "eligibility": "scan-only",
+          "reasonCode": "codekb-scan-only"
+        }
+      ]
+    }
+  },
+  "approvedSampleSet": {
+    "artifactKind": "requirements",
+    "claimClass": "count",
+    "samples": [
+      {"identity":"5a1cd68574684583752cc4335fd2e89c26360c12bb9f940474ec3242f1f88aff","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":1,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"398174b9133197fcf46c8368a46c068d3fb39cfb9ea74513294528688aea77d0","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":2,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"31910cb7a5942fae780e745892d90f3b4de655859e0dad1b65237b582be0a05e","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":3,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"903b1a1460c83f4f318836c8c21cb496928916d22636c441913bc9086403957b","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":4,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"6e191c4679f917bb1140a1b9409cfd60de297d20d4f654e24ecc8de176e7b3e6","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":5,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"692fad702fe2ad25bf4cbc77d71c6d734d19cf3fd9cbcc2c77e9c8aabe2c015c","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":6,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"e0dda9d50f67d7b74752a1bacb920866baba4c9f6f13d2e6f1dc42650d6d2d1e","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":7,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"a985de151ac7fd93e594add74fe529097cd9d973571466f4d6d90fd87595bb71","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":8,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"8b1d00d468d7c1bb501917d2ea5fbffa2897bbb0e85e3d3f0a773a8ba1094547","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":9,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"eb07d2e1297d8a0d781825123878e3557b14e8f06e991b21ba2da99cfe281bbf","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":10,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"5c85824a11dce5d23ef6975b24edef65c697e26776d9cd27fd93756c85664110","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":11,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"d8a6ed17835de7a32b440a9e4e8be4d05acc0ef1f803cc104b29baf00fe9e2e0","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":12,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"8b6ebf1dd742d6a4966ac9d1d41b90e440cf9027a4b8666d9e0eef0f191afc31","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":13,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"3c1b206dd86d8b66b5485a9d14ea641523cbfeaa7630357fe419f1afc45c6734","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":14,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"22886375ea311bc728b4b89973077eb8bfeb73c971ad180e4d01833906cc22b1","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":15,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"4a75de801ca42d12dd9ffb473fbcec8f380baf99d166741a6a675a4869a1bcb4","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":16,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"ac190ccebdfec5dd8690e88458de90b6f57753019ba138355a4ee87be4c439dd","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":17,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"bce3c4a4c1b69a9751ebfb031744c04a37ca3bdddb96770266db5064f21eeba9","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":18,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"8bfa2127c3d76213bc628069373693df4c3878bdf3ea8d1ebd51af38bb973ac2","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":19,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":0},
+      {"identity":"7467a9962eda784f1f8953824d95c20f902eb99a762b910fa47d01902c0affcc","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":20,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count with accepted command provenance.","labelerRole":"amadeus-quality-agent","provenanceDistance":2},
+      {"identity":"f2257ef3e141f9fe96789788979f070de696d118a2355fa2959fe1c810a6cb0c","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":21,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"f98ceb5443f47f63da3bb6e3c9fa002d8900a9f2f6fd57499ffcc7f448c7e2bb","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":22,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"5440399d2e07905a4e65c4e5c4d8a8f208478e3fab76408a3635cc584a23adf2","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":23,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"55a70416830a9788db42d038c94aa71b7a45fa0143f27b15292453496679c03c","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":24,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"da1f9a0de4147dfdf9b0152153a5ab81e377266bc98cf96a4ff411bf4bd24be8","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":25,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"b8409d867f53060b7953f58e76c2c02d4ad1cf894bc90da21217f1a7e6baa509","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":26,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"a6c62e3ab6381acb3726fbed95ddfef8156a068eafe5450358706ec427e44f67","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":27,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"ed99d5e968e44a227a4a7c525321c5e2d68092f3b406bd9487f2d123d1046bd7","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":28,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"25563fa510644ed36630da85c43ce98f22e7c00a20482a2b9cef25501e50504c","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":29,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null},
+      {"identity":"9ce6db6decdbc5d32e3bf38e0228d8abfc585433b293b2a6d7c699ee8a928f80","relativePath":"amadeus/spaces/default/intents/260810-contract-fixture/inception/requirements-analysis/requirements.md","line":30,"normalizedText":"Observed 10 files.","meaningfulNumericClaim":true,"validProvenanceNotMissed":true,"reason":"Meaningful count without provenance; no valid evidence was missed.","labelerRole":"amadeus-quality-agent","provenanceDistance":null}
+    ]
+  },
+  "classificationCases": [
+    {
+      "id": "lower-bound-saturation",
+      "labeledCount": 30,
+      "falsePositiveRate": {"numerator": 0, "denominator": 30},
+      "provenancePositiveCount": 20,
+      "distances": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      "expected": {
+        "mode": "enforcement",
+        "searchScope": {"kind": "bounded", "window": 1},
+        "statistics": {"count": 20, "min": 0, "median": 0, "p95": 0, "max": 2},
+        "coverage": {"numerator": 19, "denominator": 20},
+        "downgradeReasons": []
+      }
+    },
+    {
+      "id": "upper-bound-saturation",
+      "labeledCount": 30,
+      "falsePositiveRate": {"numerator": 0, "denominator": 30},
+      "provenancePositiveCount": 20,
+      "distances": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2],
+      "expected": {
+        "mode": "measurement-only",
+        "searchScope": {"kind": "full-structural-region"},
+        "statistics": {"count": 20, "min": 0, "median": 0, "p95": 2, "max": 2},
+        "coverage": {"numerator": 20, "denominator": 20},
+        "downgradeReasons": ["upper-bound-saturation"]
+      }
+    }
+  ],
+  "mapping": {
+    "authoritySweepDigest": "ab01de420f4f8caa4a79bb4956c3a9bd5d6bf8d8b9992c3f66e70df3c5dd6722",
+    "mechanicalExclusionRevision": "fr-pred-v1",
+    "policies": [
+      {
+        "stageSlug": "requirements-analysis",
+        "recordRelativeOutputPattern": "inception/requirements-analysis/requirements.md",
+        "producesKey": "requirements",
+        "claimClass": "count",
+        "mode": "enforcement",
+        "searchScope": {"kind": "bounded", "window": 1},
+        "evidenceId": "lower-bound-saturation"
+      }
+    ],
+    "wiredStages": ["requirements-analysis"]
+  },
+  "approval": {
+    "schemaRevision": 1,
+    "snapshotDigest": "eebf5c04f2b37e41eea9c7016ea65cda32e5f5951f7aa339d0601d87b9faff4e",
+    "mappingDigest": "102482529a18f2e5c03e56abac3ac8f0865e11d219822c23a54669cfeb4c74f2",
+    "recomputationDigest": "102482529a18f2e5c03e56abac3ac8f0865e11d219822c23a54669cfeb4c74f2",
+    "approverRole": "amadeus-quality-agent",
+    "verdict": "READY",
+    "approvalReceiptDigest": "8d1a27277bbe88cb070af514cc85b40945c073783b4e166d4f46fde5ce028dee"
+  }
+}

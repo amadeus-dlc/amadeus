@@ -12,7 +12,7 @@ Unitは経済的な実装順序を表さない。direct dependencyと選択可�
 
 - **Canonical kind:** `spec`
 - **目的:** 固定4 claim class、provenance語彙、除外、成果物種別別mode、近傍窓 `W`、配線stage集合のschemaと受け入れ条件を、実行コードに依存しないconsumed-in-place contractとして確定する。
-- **所有する成果物:** sample identityと二値labelのschema・承認fixture、距離統計と偽陽性率のschema、Design-time Artifact Indexの入出力契約、`stage + record相対output pattern -> produces key` を含むmapping schema、W/mode/stage集合の受け入れ条件、生成結果との一致contract。
+- **所有する成果物:** UTF-8 `JSON.stringify([relativePath,line,normalizedText])`（空白なし・要素順固定）のlowercase hex SHA-256 sample identityと二値labelのschema・承認fixture、距離統計と偽陽性率のschema、Design-time Artifact Indexの入出力契約、`stage + record相対output pattern -> produces key` を含むmapping schema、W/mode/stage集合の受け入れ条件、生成結果との一致contract。
 - **境界:** 実行可能なindex/sweep generator、機械生成sweep report、生成TypeScript定数、sensor manifest、CLI flag処理、runtime verdict出力、harness投影を所有しない。固定predicateの変更はrequirements変更なしに行わない。
 - **統合面:** U2がschema、承認済みfixture、受け入れ条件をconsumed-in-placeで読み、単一tool moduleのindex/sweep generatorとruntimeへ実装する。runtime network/APIはない。
 - **Deployment model:** `embedded`。独立processを持たず、U2のsource定数とテストfixtureへ埋め込まれる。

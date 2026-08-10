@@ -64,7 +64,7 @@ flowchart LR
 | ArtifactPolicy | stage、record相対output pattern、produces key、claim class | Generated Mappingの1行へ対応 |
 | SweepArtifactDescriptor | stage、record相対output pattern、produces key、artifact path | runtime graph snapshotからMapping非依存で導出 |
 | NumericProvenanceVerdict | pass、skipped、findings、metrics、reason | 1 EvaluationInputにつき1件 |
-| SweepReport | sample identity、labels、distance stats、mapping | Generated Mappingと配線stage集合の生成根拠 |
+| SweepReport | UTF-8 canonical JSON tupleのSHA-256 sample identity、labels、distance stats、mapping | Generated Mappingと配線stage集合の生成根拠 |
 
 永続データストアは設けない。runtime入力は既存成果物ファイル、runtime出力はdispatcherが既存auditへ記録するverdictである。
 
