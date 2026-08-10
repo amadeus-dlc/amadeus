@@ -1,6 +1,68 @@
 # コンポーネント棚卸し
 
-## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、現在、observed `df1c874cf`）
+## センサー機構の構成要素棚卸し（260810-numeric-provenance-guard、現在、observed `40056d0ec`）
+
+**観測 ref**: すべて observed = `40056d0ec`（`origin/main`。コード面は本 worktree HEAD `8402e5c5eceec24232e4d8de4f5adec0f5341b09` と **byte 同一**）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（11 commits + record 2 commits。`git diff --name-only c909b6130..40056d0ec` は **sensor 正本に非交差** — `packages/framework/core/sensors/**` と `amadeus-sensor*.ts` に変更なし）。正本は `re-scans/260810-numeric-provenance-guard.md`（述語 P0〜P11、UNMEASURED 3 件を含む）。
+
+### ⭐ 新センサー追加の配線点は 2 つ（registry も switch も存在しない）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `REQUIRED_FIELDS` | `amadeus-sensor-schema.ts:57-63` | `id` / `kind` / `command` / `default_severity` / `description` の 5 必須。optional は `category` / `input_schema` / `output_schema` / `matches` / `timeout_seconds`（`:44-52`） |
+| `default_severity` 検証 | 同 `:153-158` | `SENSOR_SEVERITIES` 集合 membership。非該当は **compile 時 loud reject** |
+| `resolveScriptPath` | `amadeus-sensor.ts:213-229` | **manifest 駆動 dispatcher**。`command:` から `.ts` basename を抜き `__FILE_DIR` の隣で解決（`AMADEUS_SENSOR_SCRIPT_DIR` で上書き可） |
+| ハーネス投影 | `packages/framework/harness/<name>/manifest.ts`（例: `claude/manifest.ts:63`） | `{ src: "sensors", dst: "sensors" }` を**ディレクトリ単位**で 8/8 ハーネスが 1 件ずつ保持 → 投影は自動 |
+| per-sensor 引数アーム（**例外配線**） | `amadeus-sensor.ts:455-500` | `linter` / `type-check` の `--file-path`、`upstream-coverage` の `--consumes`、`required-sections` の `--templates-dir`、`depthBudgetArgs` / `unitKindArgs`。**追加入力が不要なセンサーはここに触れない**（`--stage` + `--output-path` のみ） |
+
+### advisory 契約と compile 面（golden byte 不変の根拠）
+
+| 構成要素 | file:line | 意味 |
+|---|---|---|
+| severity 契約 | `amadeus-sensor-schema.ts:16-19` | verbatim `"advisory" records SENSOR_* audit rows only; "blocking" additionally gates the stage's approval` |
+| compile の severity 省略 | `amadeus-graph.ts:809-811` / `:134-139` | `advisory` は **グラフに書かれない**（`ABSENT for the framework default "advisory"`。readers は `severity === "blocking"` で gate） |
+| `sensors_applicable` 生成 | `amadeus-graph.ts:2388` / `SensorResolution` `:127-142` | stage frontmatter `sensors:` の pull import を解決 |
+| 未知 id の拒否 | `amadeus-graph.ts:716` | verbatim `Unknown ids fail loud at compile — not silently` |
+| directive 搬送 | `amadeus-orchestrate.ts:2704` | `sensors_applicable: (node.sensors_applicable ?? []).map((s) => s.id)` |
+| fire hook | `packages/framework/core/hooks/amadeus-sensor-fire.ts:14-18` | verbatim `Exit-code contract (G5): always exit 0.` |
+| 承認ガード側の読み手 | `amadeus-state.ts:1772-1778` | `for (const row of node.sensors_applicable ?? [])` |
+| dispatcher exit code 契約 | `amadeus-sensor.ts:29-30` | 非ゼロは**起動エラーのみ**（unknown id / missing flag / missing path / matches-rejection）。**verdict は exit code で読めない** |
+
+### 出荷センサーの現況（**先行節の件数を更新**）
+
+`packages/framework/core/sensors/*.md` = **13 件**（述語 `ls packages/framework/core/sensors/*.md`）。`.claude/sensors/` も**同名 13 件で 1:1 一致**（各ファイルのサイズが 8 バイト小 — 内容差は **UNMEASURED**）。
+
+> 本節は、下段の履歴節「センサー実行面」（`260805-pr-convergence-plugin`、observed `8409c2039`）が記す「出荷センサーは **8 件**」を **13 件へ更新**する。履歴節は当時の断面として本文を保持する（`cid:reverse-engineering:c3-relabel` / `cid:requirements-analysis:historical-section-cite-check-at-observed`）。全件 `default_severity: advisory` という当時の記述は本断面でも変更なし。
+
+### 数値検査の既存実装（第1段の再利用候補）
+
+| 構成要素 | file:line | 再利用可能な面 | 制約 |
+|---|---|---|---|
+| `NUMERIC_THRESHOLD` 群 | `amadeus-sensor-nfr-budget.ts:242-270` | 比較子・値・単位の 3 部品 regex。単位トークン必須が **vacuity guard**（id 数字・見出し番号・日付の誤検出を防ぐ）。空白は `[ \t]` のみで `\s` にしない | 母集団の向きが逆（`nfr-budget` は「しきい値の**不在**」検出）。単位必須をそのまま持ち込むと単位なし件数語が母集団から落ちる |
+| `idBlocks` / `nfrIdDeclarations` | 同 `:278-297` / `:300-306` | **近傍窓ヘルパの唯一の先例**。宣言行〜次の宣言行直前を 1 ブロック、同一 id 複数宣言は union | **export されていない** — 同型を自前で持つか export 化を提案するかの選択が要る |
+| `verdict()` / `NONE` | 同 `:930-935` / `:915-928` | `pass: findings.length === 0` の機械導出。エラーを投げず全て verdict で返す | — |
+| 閾値定数の根拠様式 | 同 `:818` / `:829` | `n` / `min` / `median` / `max` / flag-rate をコメントに併記し `cid:code-generation:c1-threshold-inside-observed-range` を明示引用 | 第1段も同じ両側契約（観測最小値 < 閾値 < 観測最大値）を要求される |
+| `intentDateFromPath` | `amadeus-sensor-answer-evidence.ts:62-69` | outputPath の `intents/<dir>/` から `dir.slice(0,6)` を parse する **cutoff 機構**。undatable も pre-cutoff で fail-open（`:83-85`） | 8,503 件の既存コーパスへ遡及適用しないための必須機構 |
+| `requireFlagValue` | `amadeus-sensor-flags.ts` | 全 per-sensor CLI が使う厳格な flag 読み（fail 注入型） | 新センサーも必ずこれを使う（#2741 fail-open 是正の着地面） |
+| `canonicalDepth` / `readRecordDepth` | `amadeus-sensor-depth-budget.ts` | `nfr-budget` が直 import 済み。**sensor 間の相互 import は既存イディオム**（`amadeus-sensor-flags.ts:20-24` が明示許容） | — |
+| `measureCapabilities` | `amadeus-sensor-scope-sizing.ts:146-159` | **閾値を置かず測るだけ**の先例（manifest description verbatim `so the depth-versus-size band can be set once the distribution exists`） | 分布未知の第1段が取りうる正当な形 |
+
+**汎用の md 走査ユーティリティは存在しない**（`amadeus-sensor-required-sections.ts` の export は `fail` と `main` のみ）。各センサーが `readFileSync` + `split("\n")` を自前で持つのが現行の一貫パターン。
+
+### 数値 provenance の供給側（受理語彙の候補）
+
+| 供給元 | file:line | 出力様式 |
+|---|---|---|
+| `stage-stats` | `amadeus-stage-stats.ts:964` / `measurementRefLines:938-956` | `# stage-stats — measurement ref` ヘッダ + `scan scope:` / `shards:` / `lines:` などの `key: value` 行 |
+| 同（恒等式行） | 同 `:970-971` | `Identity W: <n> constructed = ...` / `Identity M: <n> total = ...` |
+| `subagent-stats` | `amadeus-subagent-stats.ts:193-198` | `subagent-stats — measurement ref` + `measured at:` / `scan scope:` / `shards:` / `events:` |
+
+⚠ 成果物コーパス内でこの様式が実際に使われている**出現率は UNMEASURED**（供給側の出力形式のみ確認）。
+
+### 引用実在チェッカーの不在（反証確認済み）
+
+`cid:requirements-analysis:absence-claim-grep-verify` に従い全域 grep で反証確認済み（述語 P3〜P6 は `re-scans/260810-numeric-provenance-guard.md`）。`file:line` の実在を検証するコンポーネントは **0 件**。`amadeus-mirror-provenance.ts` は GitHub mirror の所有権 provenance、`amadeus-advisory-choice.ts` の provenance は TLA モデル digest 検証で、いずれも無関係。唯一の近縁 `amadeus-norm-metrics.ts:10-24` は memory 層の **cid 引用回数の集計**であって実在検証ではない。
+
+## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
 
 **観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files。患部 7 パスは区間の変更集合と**非交差** — `git diff --name-only base..HEAD` を患部語彙で絞って **0 hit**）。正本は `re-scans/260810-plugin-harness-dir-token.md`。構造的含意は `architecture.md` の同 intent 節。
 
