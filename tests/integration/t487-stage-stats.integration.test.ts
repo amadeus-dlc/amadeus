@@ -11,6 +11,7 @@
 // so a defect in the scanner cannot cancel out against the expectation.
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -33,8 +34,8 @@ function scratch(): string {
 
 // --- fixture builders -------------------------------------------------------
 
-function v1Line(seq: number, event: string, timestamp: string, fields: Record<string, string> = {}): string {
-  return JSON.stringify({ schemaVersion: 1, seq, cloneId: "c1", intentId: "intents", timestamp, heading: event, event, fields });
+function v1Line(seq: number, event: string, timestamp: string, fields: Record<string, string> = {}, intentId = "intents"): string {
+  return JSON.stringify({ schemaVersion: 1, seq, cloneId: "c1", intentId, timestamp, heading: event, event, fields });
 }
 
 function v2Line(seq: number, event: string, timestamp: string, attrs: Record<string, unknown> = {}): string {
@@ -97,6 +98,46 @@ function buildCorpus(projectDir: string): string {
   writeArtefact(spaceRoot, "alpha", "construction/unit-x/functional-design/business-rules.md", "## Review — Iteration 1\nbody\n## Review — Iteration 2\n");
   writeArtefact(spaceRoot, "alpha", "construction/{unit-name}/code-generation/code-summary.md", "## Review — Iteration 1\n");
   writeArtefact(spaceRoot, "beta", "inception/requirements-analysis/requirements.md", "## Review — Iteration 1 (follow-up)\n");
+  return spaceRoot;
+}
+
+function buildAttributionFixture(projectDir: string): string {
+  const spaceRoot = join(projectDir, "amadeus", "spaces", "default");
+  writeShard(spaceRoot, "intent-a", "attribution.jsonl", [
+    v1Line(1, "STAGE_STARTED", "2026-01-01T00:00:00Z", { Stage: "code-generation" }, "intent-a"),
+    v1Line(2, "SENSOR_FIRED", "2026-01-01T00:00:02Z", { "Fire id": "fire-a", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(3, "SENSOR_FIRED", "2026-01-01T00:00:04Z", { "Fire id": "fire-b", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(4, "BOLT_STARTED", "2026-01-01T00:00:06Z", { "Bolt slug": "bolt-a", Stage: "code-generation" }, "intent-a"),
+    v1Line(5, "SENSOR_FIRED", "2026-01-01T00:00:02Z", { "Fire id": "other-stage", "Stage slug": "functional-design" }, "intent-a"),
+    v1Line(6, "SENSOR_PASSED", "2026-01-01T00:00:06Z", { "Fire id": "other-stage", "Stage slug": "functional-design" }, "intent-a"),
+    v1Line(7, "WORKFLOW_PARKED", "2026-01-01T00:00:08Z", {}, "intent-a"),
+    v1Line(8, "SENSOR_FIRED", "2026-01-01T00:00:08Z", { "Fire id": "idle-only", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(9, "WORKFLOW_UNPARKED", "2026-01-01T00:00:10Z", {}, "intent-a"),
+    v1Line(10, "SENSOR_PASSED", "2026-01-01T00:00:10Z", { "Fire id": "idle-only", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(11, "SENSOR_PASSED", "2026-01-01T00:00:12Z", { "Fire id": "fire-a", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(12, "SENSOR_PASSED", "2026-01-01T00:00:14Z", { "Fire id": "fire-b", "Stage slug": "code-generation" }, "intent-a"),
+    v1Line(13, "BOLT_COMPLETED", "2026-01-01T00:00:16Z", { "Bolt slug": "bolt-a", Stage: "code-generation" }, "intent-a"),
+    v1Line(14, "STAGE_COMPLETED", "2026-01-01T00:00:20Z", { Stage: "code-generation" }, "intent-a"),
+  ]);
+  writeShard(spaceRoot, "intent-zero", "zero.jsonl", [
+    v1Line(1, "STAGE_STARTED", "2026-01-01T00:00:20Z", { Stage: "code-generation" }, "intent-zero"),
+    v1Line(2, "WORKFLOW_PARKED", "2026-01-01T00:00:20Z", {}, "intent-zero"),
+    v1Line(3, "WORKFLOW_UNPARKED", "2026-01-01T00:00:30Z", {}, "intent-zero"),
+    v1Line(4, "STAGE_COMPLETED", "2026-01-01T00:00:30Z", { Stage: "code-generation" }, "intent-zero"),
+  ]);
+  writeShard(spaceRoot, "intent-collision", "collision.jsonl", [
+    v1Line(1, "STAGE_STARTED", "2026-01-01T00:00:40Z", { Stage: "code-generation" }, "intent-collision"),
+    v1Line(2, "STAGE_STARTED", "2026-01-01T00:00:41Z", { Stage: "code-generation" }, "intent-collision"),
+    v1Line(3, "STAGE_COMPLETED", "2026-01-01T00:00:50Z", { Stage: "code-generation" }, "intent-collision"),
+    v1Line(4, "STAGE_COMPLETED", "2026-01-01T00:00:51Z", { Stage: "code-generation" }, "intent-collision"),
+  ]);
+  writeShard(spaceRoot, "intent-empty", "empty.jsonl", [
+    v1Line(1, "SENSOR_FIRED", "2026-01-01T00:00:50Z", { "Fire id": "outside", "Stage slug": "code-generation" }, "intent-empty"),
+    v1Line(2, "SENSOR_PASSED", "2026-01-01T00:00:55Z", { "Fire id": "outside", "Stage slug": "code-generation" }, "intent-empty"),
+    v1Line(3, "STAGE_STARTED", "2026-01-01T00:01:00Z", { Stage: "code-generation" }, "intent-empty"),
+    v1Line(4, "SENSOR_FIRED", "2026-01-01T00:01:01Z", { "Fire id": "missing-terminal", "Stage slug": "code-generation" }, "intent-empty"),
+    v1Line(5, "STAGE_COMPLETED", "2026-01-01T00:01:10Z", { Stage: "code-generation" }, "intent-empty"),
+  ]);
   return spaceRoot;
 }
 
@@ -259,6 +300,57 @@ describe("collectReviewBlocks — record artefacts, literal unit dirs kept", () 
 // --- FR-2 / FR-4 / FR-5 / FR-6 through the assembled report -----------------
 
 describe("main — the whole pipeline over a real corpus", () => {
+  test("attributes only explicit eligible lifecycles and reports exclusive window exclusions in every format", () => {
+    const projectDir = scratch();
+    buildAttributionFixture(projectDir);
+    const jsonRun = capturedMain(["--project-dir", projectDir, "--space", "default", "--json"]);
+    expect(jsonRun.code).toBe(0);
+    const report = JSON.parse(jsonRun.stdout) as {
+      attribution: {
+        reference: { targetMeasuredWindowCount: number; eligibleWindowCount: number };
+        windowExclusions: { reason: string; count: number }[];
+        categories: { category: string; durationSeconds: { median: number | null }; share: { n: number } }[];
+        coverage: {
+          observableSeconds: { median: number | null };
+          unattributableSeconds: { median: number | null };
+          overlapSeconds: { median: number | null; p95: number | null };
+        };
+        candidateFamilies: { family: string; observed: number; accounted: number; rejected: number }[];
+        candidateReasons: { family: string; reason: string; count: number }[];
+        observedFacts: { highUnattributableWindowCount: number; missingTerminalCandidateCount: number };
+        outliers: { unattributableSeconds: number }[];
+      };
+    };
+    expect(report.attribution.reference).toMatchObject({ targetMeasuredWindowCount: 5, eligibleWindowCount: 2 });
+    expect(report.attribution.windowExclusions).toEqual([
+      { reason: "zero-net-attribution", count: 1 },
+      { reason: "ambiguous-window-identity", count: 2 },
+    ]);
+    const sensor = report.attribution.categories.find(({ category }) => category === "sensor-execution");
+    expect(sensor?.durationSeconds.median).toBe(10);
+    expect(sensor?.share.n).toBe(2);
+    expect(report.attribution.coverage.observableSeconds.median).toBe(6);
+    expect(report.attribution.coverage.unattributableSeconds.median).toBe(8);
+    expect(report.attribution.coverage.overlapSeconds).toMatchObject({ median: 3, p95: 6 });
+    expect(report.attribution.candidateFamilies.find(({ family }) => family === "sensor")).toMatchObject({ observed: 6, accounted: 2, rejected: 4 });
+    expect(report.attribution.candidateFamilies.find(({ family }) => family === "bolt")).toMatchObject({ observed: 1, accounted: 1, rejected: 0 });
+    expect(report.attribution.observedFacts.highUnattributableWindowCount).toBe(1);
+    expect(report.attribution.observedFacts.missingTerminalCandidateCount).toBe(1);
+    for (const reason of ["missing-terminal", "stage-mismatch", "outside-window", "empty-after-idle"]) {
+      expect(report.attribution.candidateReasons.find((row) => row.family === "sensor" && row.reason === reason)?.count).toBe(1);
+    }
+    expect(report.attribution.outliers[0]?.unattributableSeconds).toBe(10);
+
+    const markdown = capturedMain(["--project-dir", projectDir, "--format", "markdown"]).stdout;
+    const csv = capturedMain(["--project-dir", projectDir, "--format", "csv"]).stdout;
+    for (const output of [markdown, csv]) {
+      expect(output).toContain("zero-net-attribution");
+      expect(output).toContain("ambiguous-window-identity");
+      expect(output).toContain("sensor-execution");
+      expect(output).toContain("missing-terminal");
+    }
+  });
+
   test("the report opens with the measurement ref and states the hypothesis", () => {
     const projectDir = scratch();
     buildCorpus(projectDir);
@@ -340,51 +432,67 @@ function isoAt(offsetSeconds: number): string {
   return new Date(Date.UTC(2026, 0, 1, 0, 0, 0) + offsetSeconds * 1000).toISOString();
 }
 
-// A corpus with enough distinct stages that the rendered JSON report exceeds
-// the 64KiB pipe buffer that reproduced Issue #2700 (measured: 1200 stages ->
-// ~104,000 bytes, comfortably past 65536 with margin for renderer changes).
-function buildOversizedCorpus(projectDir: string, stageCount: number): string {
+// Issue #2695's accepted real-corpus floor. The first 1,400 stage pairs make
+// every renderer exceed 64KiB; the remaining rows exercise scan/decode/account
+// in the same process without manufacturing attribution evidence.
+function buildScaleCorpus(projectDir: string, shardCount: number, rowCount: number, stageCount: number): string {
   const spaceRoot = join(projectDir, "amadeus", "spaces", "default");
-  const lines: string[] = [];
   let seq = 1;
-  for (let i = 0; i < stageCount; i++) {
-    const stage = `bulk-stage-${String(i).padStart(5, "0")}`;
-    lines.push(v1Line(seq++, "STAGE_STARTED", isoAt(i * 2), { Stage: stage }));
-    lines.push(v1Line(seq++, "STAGE_COMPLETED", isoAt(i * 2 + 1), { Stage: stage }));
+  let row = 0;
+  for (let shard = 0; shard < shardCount; shard++) {
+    const rowsInShard = Math.floor(rowCount / shardCount) + (shard < rowCount % shardCount ? 1 : 0);
+    const lines: string[] = [];
+    for (let index = 0; index < rowsInShard; index++, row++) {
+      if (row < stageCount * 2) {
+        const stageIndex = Math.floor(row / 2);
+        const stage = `bulk-stage-${String(stageIndex).padStart(5, "0")}`;
+        const event = row % 2 === 0 ? "STAGE_STARTED" : "STAGE_COMPLETED";
+        lines.push(v1Line(seq++, event, isoAt(row), { Stage: stage }, "bulk"));
+      } else {
+        lines.push(v1Line(seq++, "SCALE_FIXTURE_ROW", isoAt(row), {}, "bulk"));
+      }
+    }
+    writeShard(spaceRoot, "bulk", `shard-${String(shard).padStart(3, "0")}.jsonl`, lines);
   }
-  writeShard(spaceRoot, "bulk", "shard-bulk.jsonl", lines);
   return spaceRoot;
 }
 
 describe("pipe integrity — Issue #2700, stdout must fully drain before exit", () => {
   const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
 
-  test("output bigger than the 64KiB pipe buffer is not truncated when piped", () => {
+  test("229 shards and 136,011 rows fully drain with digest parity in all formats", () => {
     const projectDir = scratch();
-    buildOversizedCorpus(projectDir, 1200);
+    const spaceRoot = buildScaleCorpus(projectDir, 229, 136_011, 3000);
+    const precondition = scanCorpus(spaceRoot);
+    expect(precondition.shardCount).toBe(229);
+    expect(precondition.lineCount).toBe(136_011);
 
-    // Full capture: spawnSync reads the child's stdout pipe to EOF itself, so
-    // this number is what a correct, fully-drained run actually produces.
-    const full = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--format", "json"], {
-      ...RUN_OPTIONS,
-      maxBuffer: 16 * 1024 * 1024,
-    });
-    expect(full.status).toBe(0);
-    const fullBytes = Buffer.byteLength(full.stdout ?? "", "utf-8");
-    // Fixture precondition, checked mechanically rather than assumed: the
-    // report must actually exceed the pipe buffer size that reproduced the
-    // defect, or the byte-count comparison below proves nothing.
-    expect(fullBytes).toBeGreaterThan(65536);
-
-    // Piped capture: reproduce the exact shape from the issue report
-    // (`... | wc -c`) — a downstream reader racing the producer's exit.
-    // Positional params (`--`) keep the scratch paths out of the shell
-    // script string entirely. bash, not sh: on Linux runners sh is dash,
-    // which rejects `set -o pipefail` with exit 2.
-    const piped = spawnSync("bash", ["-c", 'set -o pipefail; bun "$1" --project-dir "$2" --space default --format json | wc -c', "--", TOOL, projectDir], RUN_OPTIONS);
-    expect(piped.status).toBe(0);
-    const pipedBytes = Number((piped.stdout ?? "").trim());
-    expect(pipedBytes).toBe(fullBytes);
+    for (const format of ["markdown", "csv", "json"] as const) {
+      const full = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--format", format], {
+        ...RUN_OPTIONS,
+        timeout: 120_000,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      expect(full.status).toBe(0);
+      const fullOutput = full.stdout ?? "";
+      expect(Buffer.byteLength(fullOutput, "utf-8")).toBeGreaterThan(65_536);
+      if (format === "json") expect(() => JSON.parse(fullOutput)).not.toThrow();
+      const fullDigest = createHash("sha256").update(fullOutput).digest("hex");
+      const capture = join(projectDir, `${format}.capture`);
+      const consumer = format === "json" ? "jq empty" : "wc -c >/dev/null";
+      const piped = spawnSync("bash", [
+        "-c",
+        `set -o pipefail; bun "$1" --project-dir "$2" --space default --format "$3" | tee "$4" | ${consumer}`,
+        "--",
+        TOOL,
+        projectDir,
+        format,
+        capture,
+      ], { ...RUN_OPTIONS, timeout: 120_000 });
+      expect(piped.status).toBe(0);
+      const captured = readFileSync(capture, "utf-8");
+      expect(createHash("sha256").update(captured).digest("hex")).toBe(fullDigest);
+    }
   });
 });
 
@@ -408,12 +516,28 @@ describe("exit ladder — measured by spawning the CLI", () => {
     const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--space", "default", "--json"], RUN_OPTIONS);
     expect(run.status).toBe(1);
     expect(run.stdout).toContain('"unreadableShard": 1');
+    expect(run.stderr).toContain("stage-stats: unreadable:");
   });
 
   test("an unknown flag exits 2 and prints usage", () => {
     const run = spawnSync("bun", [TOOL, "--nope"], RUN_OPTIONS);
     expect(run.status).toBe(2);
+    expect(run.stdout).toBe("");
     expect(run.stderr).toContain("Unknown argument");
+  });
+
+  test("a typed attribution invariant exits 1 with stderr and no partial legacy stdout", () => {
+    const projectDir = scratch();
+    const spaceRoot = join(projectDir, "amadeus", "spaces", "default");
+    const invalidIntent = "invalid\nintent";
+    writeShard(spaceRoot, invalidIntent, "bad-identity.jsonl", [
+      v1Line(1, "STAGE_STARTED", "2026-01-01T00:00:00Z", { Stage: "code-generation" }, invalidIntent),
+      v1Line(2, "STAGE_COMPLETED", "2026-01-01T00:00:10Z", { Stage: "code-generation" }, invalidIntent),
+    ]);
+    const run = spawnSync("bun", [TOOL, "--project-dir", projectDir, "--json"], RUN_OPTIONS);
+    expect(run.status).toBe(1);
+    expect(run.stdout).toBe("");
+    expect(run.stderr).toContain("stage-stats: invariant:");
   });
 });
 

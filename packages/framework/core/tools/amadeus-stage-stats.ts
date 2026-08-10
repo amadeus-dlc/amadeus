@@ -2,6 +2,7 @@
 //
 //   Usage: bun amadeus-stage-stats.ts [--project-dir <path>] [--space <name>]
 //                                     [--format markdown|csv|json] [--json]
+//                                     [--stage <name>] [--outliers <0..100>]
 //
 // One command derives the per-stage duration baseline from the audit shards
 // (amadeus/spaces/<space>/intents/* /audit/*.jsonl) plus the §12a review
@@ -26,10 +27,36 @@
 // the nearest-rank p95 is mirrored locally because the shipped surface must
 // not reach into tests.
 
+import { createHash } from "node:crypto";
 import { type Dirent, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type JournalRecord, journalRecordField, readJournalRecords } from "./amadeus-journal.ts";
+import {
+  createAttributionWindowId,
+  parseOutlierLimit,
+  parseTargetStage,
+  type AccountingInvariantError,
+  type AttributionResult,
+  type AttributionWindow,
+  type AttributionWindowId,
+  type OutlierLimit,
+  type TargetStage,
+} from "./amadeus-stage-attribution-domain.ts";
+import {
+  buildAttributionCorpus,
+  decodeCandidateInventory,
+} from "./amadeus-stage-attribution-candidates.ts";
+import {
+  accountAttributionPopulation,
+  unionIntervals,
+} from "./amadeus-stage-attribution-intervals.ts";
+import {
+  composeAttributionReport,
+  selectAttributionWindows,
+  type StageAttributionReport,
+  type StageWindowEvidence,
+} from "./amadeus-stage-attribution-report.ts";
 
 // --- domain types ----------------------------------------------------------
 
@@ -524,6 +551,7 @@ export interface StageStatsReport {
   readonly sensors: readonly SensorTally[];
   readonly models: ModelAttribution;
   readonly reviewBuckets: readonly ReviewBucket[];
+  readonly attribution?: StageAttributionReport;
 }
 
 /** Fold review blocks into per-stage-path buckets, count-desc then path-asc. */
@@ -552,6 +580,19 @@ export function composeReport(input: {
 }): StageStatsReport {
   const built = buildWindows(input.corpus.records);
   const subtracted = subtractIdle(built.windows, input.corpus.records);
+  return composeLegacyReport(input, built, subtracted);
+}
+
+function composeLegacyReport(
+  input: {
+    readonly scanScope: string;
+    readonly corpus: ScannedCorpus;
+    readonly reviewBlocks: readonly ReviewBlock[];
+    readonly unparseableReviewHeadingCount: number;
+  },
+  built: ReturnType<typeof buildWindows>,
+  subtracted: ReturnType<typeof subtractIdle>,
+): StageStatsReport {
   return {
     scanScope: input.scanScope,
     hypothesisNotice: HYPOTHESIS_NOTICE,
@@ -577,6 +618,197 @@ export function composeReport(input: {
   };
 }
 
+type EvidenceDraft = Omit<StageWindowEvidence, "identity"> & {
+  readonly correlationKey: string;
+  readonly windowId: AttributionWindowId;
+  readonly collision: CollisionGroup | null;
+};
+
+type CollisionGroup = {
+  memberCount: number;
+};
+
+type EvidencePendingStart = {
+  readonly attributed: AttributedRecord;
+  collision: CollisionGroup | null;
+};
+
+type EvidenceIdentityState = {
+  readonly queue: EvidencePendingStart[];
+  collision: CollisionGroup | null;
+};
+
+type EvidenceAccumulator = {
+  readonly states: Map<string, EvidenceIdentityState>;
+  readonly drafts: EvidenceDraft[];
+  ordinal: number;
+};
+
+function evidencePopulationError(
+  invariant: Extract<AccountingInvariantError, { code: "invalid-population-accounting" }>["invariant"],
+): AttributionResult<never, AccountingInvariantError> {
+  return {
+    ok: false,
+    error: {
+      type: "accounting-invariant",
+      code: "invalid-population-accounting",
+      subject: { type: "population" },
+      invariant,
+    },
+  };
+}
+
+function windowCorrelationKey(window: Pick<StageWindow, "intent" | "stage" | "startedAt" | "completedAt">): string {
+  return JSON.stringify([window.intent, window.stage, window.startedAt, window.completedAt]);
+}
+
+function lifecycleEvent(attributed: AttributedRecord): { event: "STAGE_STARTED" | "STAGE_COMPLETED"; stage: string } | null {
+  const event = eventOf(attributed.record);
+  if (event !== "STAGE_STARTED" && event !== "STAGE_COMPLETED") return null;
+  const stage = attrOf(attributed.record, "Stage");
+  if (stage === null || stage === "" || Number.isNaN(epochSeconds(attributed.record.timestamp))) return null;
+  return { event, stage };
+}
+
+function applyEvidenceRecord(
+  attributed: AttributedRecord,
+  accumulator: EvidenceAccumulator,
+): AttributionResult<true, AccountingInvariantError> {
+  const lifecycle = lifecycleEvent(attributed);
+  if (lifecycle === null) return { ok: true, value: true };
+  const stateKey = `${attributed.intent}\u0000${lifecycle.stage}`;
+  const state = accumulator.states.get(stateKey) ?? { queue: [], collision: null };
+  accumulator.states.set(stateKey, state);
+  if (lifecycle.event === "STAGE_STARTED") {
+    if (state.queue.length > 0 && state.collision === null) {
+      state.collision = { memberCount: state.queue.length };
+      for (const pending of state.queue) pending.collision = state.collision;
+    }
+    if (state.collision !== null) state.collision.memberCount += 1;
+    state.queue.push({ attributed, collision: state.collision });
+    return { ok: true, value: true };
+  }
+  const started = state.queue.shift();
+  if (started === undefined) return { ok: true, value: true };
+  const window = {
+    intent: attributed.intent,
+    stage: lifecycle.stage,
+    startedAt: started.attributed.record.timestamp,
+    completedAt: attributed.record.timestamp,
+  };
+  const correlationKey = windowCorrelationKey(window);
+  const hashInput = `${correlationKey}\u0000${accumulator.ordinal++}`;
+  const createdId = createAttributionWindowId(`window-${createHash("sha256").update(hashInput).digest("hex")}`);
+  if (!createdId.ok) return evidencePopulationError("invalid-window-id");
+  accumulator.drafts.push({ ...window, correlationKey, windowId: createdId.value, collision: started.collision });
+  if (state.queue.length === 0) state.collision = null;
+  return { ok: true, value: true };
+}
+
+function deriveEvidenceDrafts(
+  records: readonly AttributedRecord[],
+): AttributionResult<readonly EvidenceDraft[], AccountingInvariantError> {
+  const accumulator: EvidenceAccumulator = { states: new Map(), drafts: [], ordinal: 0 };
+  for (const attributed of chronological(records)) {
+    const applied = applyEvidenceRecord(attributed, accumulator);
+    if (!applied.ok) return applied;
+  }
+  return { ok: true, value: accumulator.drafts };
+}
+
+/** Build identity evidence beside the legacy FIFO pipeline without mutating or
+ * reinterpreting its measured windows. Collision groups stay ambiguous until
+ * their pending queue drains to zero. */
+export function buildStageWindowEvidence(
+  records: readonly AttributedRecord[],
+  measured: readonly MeasuredWindow[],
+): AttributionResult<readonly StageWindowEvidence[], AccountingInvariantError> {
+  const derived = deriveEvidenceDrafts(records);
+  if (!derived.ok) return derived;
+  const byWindow = new Map<string, EvidenceDraft[]>();
+  for (const draft of derived.value) {
+    const entries = byWindow.get(draft.correlationKey) ?? [];
+    entries.push(draft);
+    byWindow.set(draft.correlationKey, entries);
+  }
+  const evidence: StageWindowEvidence[] = [];
+  for (const window of measured) {
+    const draft = byWindow.get(windowCorrelationKey(window))?.shift();
+    if (draft === undefined) return evidencePopulationError("window-result-bijection");
+    evidence.push({
+      intent: draft.intent,
+      stage: draft.stage,
+      startedAt: draft.startedAt,
+      completedAt: draft.completedAt,
+      identity: draft.collision === null
+        ? { type: "unique", correlationKey: draft.correlationKey, windowId: draft.windowId }
+        : { type: "ambiguous", correlationKey: draft.correlationKey, collisionMemberCount: draft.collision.memberCount },
+    });
+  }
+  return { ok: true, value: Object.freeze(evidence) };
+}
+
+function attributionIdleIndex(records: readonly AttributedRecord[], eligible: readonly AttributionWindow[]) {
+  const indexed = indexIdle(records);
+  const intents = [...new Set(eligible.map(({ intent }) => String(intent)))].sort();
+  return {
+    byIntent: intents.map((intent) => ({
+      intent: eligible.find((window) => String(window.intent) === intent)!.intent,
+      intervals: unionIntervals((indexed.intervals.get(intent) ?? [])
+        .filter(({ start, end }) => start < end)
+        .map(({ start, end }) => ({ start, end }))),
+    })),
+  };
+}
+
+/** Compatibility façade plus the one-shot attribution service. */
+export function composeReportWithAttribution(input: {
+  readonly scanScope: string;
+  readonly corpus: ScannedCorpus;
+  readonly reviewBlocks: readonly ReviewBlock[];
+  readonly unparseableReviewHeadingCount: number;
+  readonly targetStage: TargetStage;
+  readonly outlierLimit: OutlierLimit;
+}): AttributionResult<StageStatsReport, AccountingInvariantError> {
+  const built = buildWindows(input.corpus.records);
+  const subtracted = subtractIdle(built.windows, input.corpus.records);
+  const legacy = composeLegacyReport(input, built, subtracted);
+  const evidence = buildStageWindowEvidence(input.corpus.records, subtracted.measured);
+  if (!evidence.ok) return evidence;
+  const selection = selectAttributionWindows({
+    measured: subtracted.measured,
+    evidence: evidence.value,
+    targetStage: input.targetStage,
+  });
+  if (!selection.ok) return selection;
+
+  const attributionCorpus = buildAttributionCorpus(input.corpus.records);
+  const inventory = decodeCandidateInventory({
+    corpus: attributionCorpus,
+    targetStage: input.targetStage,
+    eligibleWindows: selection.value.eligible,
+  });
+  const accounting = accountAttributionPopulation({
+    windows: selection.value.eligible,
+    intervals: inventory.accepted,
+    idleIndex: attributionIdleIndex(input.corpus.records, selection.value.eligible),
+  });
+  if (!accounting.ok) return accounting;
+  const attribution = composeAttributionReport({
+    selection: selection.value,
+    inventory,
+    accounting: accounting.value,
+    outlierLimit: input.outlierLimit,
+    scanReference: {
+      scanScope: input.scanScope,
+      unreadableShardCount: input.corpus.unreadableShardCount,
+    },
+  });
+  return attribution.ok
+    ? { ok: true, value: Object.freeze({ ...legacy, attribution: attribution.value }) }
+    : attribution;
+}
+
 // --- rendering -------------------------------------------------------------
 
 // Values from the corpus reach a terminal here. The corpus is outside the
@@ -600,6 +832,104 @@ function safe(value: string): string {
 // A number the reader must be able to tell apart from a real zero.
 function num(value: number): string {
   return Number.isNaN(value) ? "n/a" : `${Math.round(value * 100) / 100}`;
+}
+
+function optionalNum(value: number | null): string {
+  return value === null ? "n/a" : num(value);
+}
+
+function appendAttributionMarkdown(lines: string[], attribution: StageAttributionReport): void {
+  const reference = attribution.reference;
+  lines.push(
+    "",
+    "## Stage attribution",
+    "",
+    `- target stage: ${safe(reference.targetStage)}`,
+    `- scan scope: ${safe(reference.scanScope)}`,
+    `- unreadable shards: ${reference.unreadableShardCount}`,
+    `- outlier limit: ${reference.outlierLimit}`,
+    `- measured windows: ${reference.measuredWindowCount}`,
+    `- target measured windows: ${reference.targetMeasuredWindowCount}`,
+    `- eligible windows: ${reference.eligibleWindowCount}`,
+    "",
+    "### Window exclusions",
+    "",
+    "| reason | count |",
+    "| --- | --- |",
+  );
+  for (const exclusion of attribution.windowExclusions) lines.push(`| ${exclusion.reason} | ${exclusion.count} |`);
+  lines.push(
+    "",
+    "### Category statistics",
+    "",
+    "| category | n | duration median | duration p95 | share n | share median | share p95 |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  );
+  for (const category of attribution.categories) {
+    lines.push(`| ${category.category} | ${category.durationSeconds.n} | ${optionalNum(category.durationSeconds.median)} | ${optionalNum(category.durationSeconds.p95)} | ${category.share.n} | ${optionalNum(category.share.median)} | ${optionalNum(category.share.p95)} |`);
+  }
+  lines.push(
+    "",
+    "### Coverage and overlap statistics",
+    "",
+    "| measure | n | median | p95 |",
+    "| --- | --- | --- | --- |",
+  );
+  for (const [measure, summary] of Object.entries(attribution.coverage)) {
+    lines.push(`| ${measure} | ${summary.n} | ${optionalNum(summary.median)} | ${optionalNum(summary.p95)} |`);
+  }
+  lines.push(
+    "",
+    "> Category shares are independent axes and must not be summed; overlap is reported separately.",
+    "",
+    "### Candidate families",
+    "",
+    "| family | observed | accounted | rejected |",
+    "| --- | --- | --- | --- |",
+  );
+  for (const family of attribution.candidateFamilies) {
+    lines.push(`| ${family.family} | ${family.observed} | ${family.accounted} | ${family.rejected} |`);
+  }
+  lines.push("", "### Candidate reason matrix", "", "| family | reason | count |", "| --- | --- | --- |");
+  for (const reason of attribution.candidateReasons) lines.push(`| ${reason.family} | ${reason.reason} | ${reason.count} |`);
+  lines.push(
+    "",
+    "### Observed facts",
+    "",
+    `- windows with unattributable rate > 0.5: ${attribution.observedFacts.highUnattributableWindowCount}`,
+    `- candidates with missing terminal: ${attribution.observedFacts.missingTerminalCandidateCount}`,
+    "",
+    "### Instrumentation hypotheses",
+    "",
+  );
+  for (const hypothesis of attribution.instrumentationHypotheses) {
+    lines.push(`- ${hypothesis.type}: ${hypothesis.boundary}`);
+  }
+  lines.push(
+    "",
+    "### Unattributable outliers",
+    "",
+    "| window id | intent | started | completed | net | observable | unattributable | coverage | unattributable rate |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  );
+  for (const outlier of attribution.outliers) {
+    lines.push(`| ${safe(outlier.windowId)} | ${safe(outlier.intent)} | ${outlier.startedAt} | ${outlier.completedAt} | ${outlier.netSeconds} | ${outlier.observableSeconds} | ${outlier.unattributableSeconds} | ${num(outlier.coverage)} | ${num(outlier.unattributableRate)} |`);
+  }
+  lines.push(
+    "",
+    "### Methodology",
+    "",
+    `- intervals: ${attribution.methodology.interval}`,
+    `- accounting: ${attribution.methodology.accounting}`,
+    `- overlap: ${attribution.methodology.overlap}`,
+    `- window selection: ${attribution.methodology.windowSelection}`,
+    "",
+    "| family | category | identity key | lifecycle |",
+    "| --- | --- | --- | --- |",
+  );
+  for (const rule of attribution.methodology.candidateRules) {
+    lines.push(`| ${rule.family} | ${rule.category} | ${safe(rule.identityKey)} | ${safe(rule.lifecycle)} |`);
+  }
 }
 
 /** The measurement ref lines, shared by every output form: what was scanned,
@@ -664,6 +994,7 @@ export function renderMarkdown(report: StageStatsReport): string {
   for (const bucket of report.reviewBuckets) {
     lines.push(`| ${safe(bucket.stagePath)} | ${safe(bucket.unit ?? "")} | ${bucket.blocks} | ${bucket.maxIteration} |`);
   }
+  if (report.attribution !== undefined) appendAttributionMarkdown(lines, report.attribution);
   return `${lines.join("\n")}\n`;
 }
 
@@ -671,6 +1002,44 @@ export function renderMarkdown(report: StageStatsReport): string {
 // quote cannot forge an extra column.
 function csvCell(value: string): string {
   return `"${safe(value).replace(/"/g, '""')}"`;
+}
+
+function appendAttributionCsv(lines: string[], attribution: StageAttributionReport): void {
+  for (const [key, value] of Object.entries(attribution.reference)) {
+    lines.push(`attribution_reference,${csvCell(key)},${csvCell(String(value))}`);
+  }
+  lines.push("", "attribution_exclusion_reason,count");
+  for (const exclusion of attribution.windowExclusions) lines.push(`${exclusion.reason},${exclusion.count}`);
+  lines.push("", "attribution_category,n,duration_median,duration_p95,share_n,share_median,share_p95");
+  for (const category of attribution.categories) {
+    lines.push(`${category.category},${category.durationSeconds.n},${optionalNum(category.durationSeconds.median)},${optionalNum(category.durationSeconds.p95)},${category.share.n},${optionalNum(category.share.median)},${optionalNum(category.share.p95)}`);
+  }
+  lines.push("", "attribution_coverage_measure,n,median,p95");
+  for (const [measure, summary] of Object.entries(attribution.coverage)) {
+    lines.push(`${measure},${summary.n},${optionalNum(summary.median)},${optionalNum(summary.p95)}`);
+  }
+  lines.push("", "attribution_candidate_family,observed,accounted,rejected");
+  for (const family of attribution.candidateFamilies) {
+    lines.push(`${family.family},${family.observed},${family.accounted},${family.rejected}`);
+  }
+  lines.push("", "attribution_candidate_family,reason,count");
+  for (const reason of attribution.candidateReasons) lines.push(`${reason.family},${reason.reason},${reason.count}`);
+  lines.push("", "attribution_observed_fact,value");
+  for (const [fact, value] of Object.entries(attribution.observedFacts)) lines.push(`${fact},${value}`);
+  lines.push("", "attribution_hypothesis,boundary");
+  for (const hypothesis of attribution.instrumentationHypotheses) lines.push(`${hypothesis.type},${hypothesis.boundary}`);
+  lines.push("", "attribution_outlier_window,intent,started,completed,net,observable,unattributable,coverage,unattributable_rate");
+  for (const outlier of attribution.outliers) {
+    lines.push(`${csvCell(outlier.windowId)},${csvCell(outlier.intent)},${csvCell(outlier.startedAt)},${csvCell(outlier.completedAt)},${outlier.netSeconds},${outlier.observableSeconds},${outlier.unattributableSeconds},${num(outlier.coverage)},${num(outlier.unattributableRate)}`);
+  }
+  lines.push("", "attribution_methodology,key,value");
+  for (const [key, value] of Object.entries(attribution.methodology).filter(([key]) => key !== "candidateRules")) {
+    lines.push(`methodology,${csvCell(key)},${csvCell(String(value))}`);
+  }
+  lines.push("", "attribution_rule_family,category,identity_key,lifecycle");
+  for (const rule of attribution.methodology.candidateRules) {
+    lines.push(`${rule.family},${rule.category},${csvCell(rule.identityKey)},${csvCell(rule.lifecycle)}`);
+  }
 }
 
 /** The spreadsheet form: the same measurement ref, then one section per axis. */
@@ -695,6 +1064,7 @@ export function renderCsv(report: StageStatsReport): string {
   for (const bucket of report.reviewBuckets) {
     lines.push(`${csvCell(bucket.stagePath)},${csvCell(bucket.unit ?? "")},${bucket.blocks},${bucket.maxIteration}`);
   }
+  if (report.attribution !== undefined) appendAttributionCsv(lines, report.attribution);
   return `${lines.join("\n")}\n`;
 }
 
@@ -719,6 +1089,7 @@ export function serializeJson(report: StageStatsReport): Record<string, unknown>
       totalCount: report.models.totalCount,
     },
     reviewBuckets: report.reviewBuckets,
+    ...(report.attribution === undefined ? {} : { attribution: report.attribution }),
   };
 }
 
@@ -729,6 +1100,8 @@ export interface CliOptions {
   readonly projectDir?: string;
   readonly space?: string;
   readonly format: "markdown" | "csv" | "json";
+  readonly stage: TargetStage;
+  readonly outliers: OutlierLimit;
 }
 
 /** The one thing a usage error carries. */
@@ -740,7 +1113,7 @@ export interface UsageError {
 export type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
 const USAGE =
-  "Usage: bun amadeus-stage-stats.ts [--project-dir <path>] [--space <name>] [--format markdown|csv|json] [--json]";
+  "Usage: bun amadeus-stage-stats.ts [--project-dir <path>] [--space <name>] [--stage <slug>] [--outliers <0..100>] [--format markdown|csv|json] [--json]";
 
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const FORMATS: readonly CliOptions["format"][] = ["markdown", "csv", "json"];
@@ -749,7 +1122,7 @@ function isFormat(value: string): value is CliOptions["format"] {
   return (FORMATS as readonly string[]).includes(value);
 }
 
-const VALUE_FLAGS = ["--project-dir", "--space", "--format"] as const;
+const VALUE_FLAGS = ["--project-dir", "--space", "--stage", "--outliers", "--format"] as const;
 type ValueFlag = (typeof VALUE_FLAGS)[number];
 
 function isValueFlag(arg: string): arg is ValueFlag {
@@ -762,7 +1135,13 @@ function usageError(message: string): { ok: false; error: UsageError } {
 
 /** Apply one already-paired flag/value to the accumulating options, or refuse
  *  the value. Keeping the per-flag rules here leaves the loop a plain walk. */
-function applyValueFlag(flag: ValueFlag, value: string, into: { projectDir?: string; space?: string; format: CliOptions["format"] }): UsageError | null {
+function applyValueFlag(flag: ValueFlag, value: string, into: {
+  projectDir?: string;
+  space?: string;
+  format: CliOptions["format"];
+  stage: TargetStage;
+  outliers: OutlierLimit;
+}): UsageError | null {
   if (flag === "--project-dir") {
     into.projectDir = value;
     return null;
@@ -770,6 +1149,18 @@ function applyValueFlag(flag: ValueFlag, value: string, into: { projectDir?: str
   if (flag === "--space") {
     if (!SAFE_NAME.test(value)) return { message: `Invalid --space value: ${value}\n${USAGE}` };
     into.space = value;
+    return null;
+  }
+  if (flag === "--stage") {
+    const parsed = parseTargetStage(value);
+    if (!parsed.ok) return { message: `Invalid --stage value: ${value}\n${USAGE}` };
+    into.stage = parsed.value;
+    return null;
+  }
+  if (flag === "--outliers") {
+    const parsed = parseOutlierLimit(value);
+    if (!parsed.ok) return { message: `Invalid --outliers value: ${value}\n${USAGE}` };
+    into.outliers = parsed.value;
     return null;
   }
   if (!isFormat(value)) return { message: `Invalid --format value: ${value}\n${USAGE}` };
@@ -780,7 +1171,16 @@ function applyValueFlag(flag: ValueFlag, value: string, into: { projectDir?: str
 /** Parse, do not validate: an unknown flag, a missing value, an unsupported
  *  format, or an unsafe space name never reaches the rest of the program. */
 export function parseArgs(argv: readonly string[]): Result<CliOptions, UsageError> {
-  const options: { projectDir?: string; space?: string; format: CliOptions["format"] } = { format: "markdown" };
+  const defaultStage = parseTargetStage(undefined);
+  const defaultOutliers = parseOutlierLimit(undefined);
+  if (!defaultStage.ok || !defaultOutliers.ok) return usageError("Invalid attribution defaults");
+  const options: {
+    projectDir?: string;
+    space?: string;
+    format: CliOptions["format"];
+    stage: TargetStage;
+    outliers: OutlierLimit;
+  } = { format: "markdown", stage: defaultStage.value, outliers: defaultOutliers.value };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
     if (arg === "--json") {
@@ -951,13 +1351,19 @@ export function main(argv: readonly string[]): number {
 
   const corpus = scanCorpus(spaceRoot);
   const reviews = collectReviewBlocks(join(spaceRoot, "intents"));
-  const report = composeReport({
+  const report = composeReportWithAttribution({
     scanScope: `space "${space}" — amadeus/spaces/${space}/intents/*/audit/*.jsonl + record *.md`,
     corpus,
     reviewBlocks: reviews.blocks,
     unparseableReviewHeadingCount: reviews.unparseableHeadingCount,
+    targetStage: parsed.value.stage,
+    outlierLimit: parsed.value.outliers,
   });
-  process.stdout.write(`${RENDERERS[parsed.value.format](report)}`);
+  if (!report.ok) {
+    process.stderr.write(`stage-stats: invariant: ${safe(JSON.stringify(report.error))}\n`);
+    return 1;
+  }
+  process.stdout.write(`${RENDERERS[parsed.value.format](report.value)}`);
 
   // A shard that existed but could not be read means the report covers less
   // than the observable corpus — say so in the exit code so a caller does not
