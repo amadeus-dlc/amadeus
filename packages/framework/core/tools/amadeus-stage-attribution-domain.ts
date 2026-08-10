@@ -205,13 +205,11 @@ export function candidatePrimaryReason(
   if (findings.length === 0) {
     throw new TypeError("candidatePrimaryReason requires at least one finding");
   }
-  let primary = findings[0]!.reason;
-  for (const finding of findings.slice(1)) {
-    if (CANDIDATE_REJECTION_REASON_PRECEDENCE.indexOf(finding.reason) < CANDIDATE_REJECTION_REASON_PRECEDENCE.indexOf(primary)) {
-      primary = finding.reason;
-    }
+  const present = new Set(findings.map(({ reason }) => reason));
+  for (const reason of CANDIDATE_REJECTION_REASON_PRECEDENCE) {
+    if (present.has(reason)) return reason;
   }
-  return primary;
+  throw new TypeError("candidatePrimaryReason found no reason in the precedence order");
 }
 
 export function createRejectedCandidate(input: {

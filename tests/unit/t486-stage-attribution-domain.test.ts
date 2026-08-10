@@ -1,3 +1,4 @@
+// covers: file:packages/framework/core/tools/amadeus-stage-attribution-domain.ts
 import { describe, expect, test } from "bun:test";
 import {
   ATTRIBUTION_CATEGORIES,

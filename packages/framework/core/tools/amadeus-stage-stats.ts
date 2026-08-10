@@ -750,10 +750,11 @@ export function buildStageWindowEvidence(
 
 function attributionIdleIndex(records: readonly AttributedRecord[], eligible: readonly AttributionWindow[]) {
   const indexed = indexIdle(records);
-  const intents = [...new Set(eligible.map(({ intent }) => String(intent)))].sort();
+  const identityByIntent = new Map(eligible.map(({ intent }) => [String(intent), intent]));
+  const intents = [...identityByIntent.keys()].sort();
   return {
     byIntent: intents.map((intent) => ({
-      intent: eligible.find((window) => String(window.intent) === intent)!.intent,
+      intent: identityByIntent.get(intent) as (typeof eligible)[number]["intent"],
       intervals: unionIntervals((indexed.intervals.get(intent) ?? [])
         .filter(({ start, end }) => start < end)
         .map(({ start, end }) => ({ start, end }))),
@@ -1022,7 +1023,7 @@ function appendAttributionCsv(lines: string[], attribution: StageAttributionRepo
   for (const family of attribution.candidateFamilies) {
     lines.push(`${family.family},${family.observed},${family.accounted},${family.rejected}`);
   }
-  lines.push("", "attribution_candidate_family,reason,count");
+  lines.push("", "attribution_candidate_reason,reason,count");
   for (const reason of attribution.candidateReasons) lines.push(`${reason.family},${reason.reason},${reason.count}`);
   lines.push("", "attribution_observed_fact,value");
   for (const [fact, value] of Object.entries(attribution.observedFacts)) lines.push(`${fact},${value}`);
@@ -1032,9 +1033,9 @@ function appendAttributionCsv(lines: string[], attribution: StageAttributionRepo
   for (const outlier of attribution.outliers) {
     lines.push(`${csvCell(outlier.windowId)},${csvCell(outlier.intent)},${csvCell(outlier.startedAt)},${csvCell(outlier.completedAt)},${outlier.netSeconds},${outlier.observableSeconds},${outlier.unattributableSeconds},${num(outlier.coverage)},${num(outlier.unattributableRate)}`);
   }
-  lines.push("", "attribution_methodology,key,value");
+  lines.push("", "attribution_methodology,value");
   for (const [key, value] of Object.entries(attribution.methodology).filter(([key]) => key !== "candidateRules")) {
-    lines.push(`methodology,${csvCell(key)},${csvCell(String(value))}`);
+    lines.push(`${csvCell(key)},${csvCell(String(value))}`);
   }
   lines.push("", "attribution_rule_family,category,identity_key,lifecycle");
   for (const rule of attribution.methodology.candidateRules) {

@@ -1,3 +1,4 @@
+// covers: file:packages/framework/core/tools/amadeus-stage-attribution-candidates.ts
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
@@ -248,7 +249,7 @@ describe("decodeCandidateInventory", () => {
     expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
   });
 
-  test("rejects each unit-pool and loop-monitor outer when its declared digest is missing", () => {
+  test("accepts a digest-less unit-pool pair and classifies the digest-less loop-monitor outer by its real reason", () => {
     const unitStart = {
       eventSetId: "missing-digest-unit-start",
       batchId: "batch-a",
@@ -281,14 +282,12 @@ describe("decodeCandidateInventory", () => {
       eligibleWindows: [window()],
     });
 
-    expect(inventory.accepted).toHaveLength(0);
-    expect(inventory.rejected).toHaveLength(3);
-    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual([
-      "malformed-event-set",
-      "malformed-event-set",
-      "malformed-event-set",
-    ]);
-    expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
+    // Per the event registry these families declare no "Event Set Digest"
+    // attribute, so the digest-less shape is the writers' contract shape: the
+    // paired unit-pool start/terminal is accepted rather than misclassified
+    // as malformed-event-set.
+    expect(inventory.accepted).toHaveLength(1);
+    expect(inventory.rejected.map(({ primaryReason }) => primaryReason)).toEqual(["missing-start"]);
   });
 
   test("decodes correct unit-pool and loop-monitor digests and rejects mismatches per outer", () => {
@@ -331,6 +330,38 @@ describe("decodeCandidateInventory", () => {
       "digest-mismatch",
     ]);
     expect(inventory.rejected.every(({ sourceIds }) => sourceIds.length === 1)).toBe(true);
+  });
+
+  test("accepts unit-pool and loop-monitor outers without a declared digest, per the registry contract", () => {
+    // The event registry requires only ["Batch Id"|"Partition Key", "Event Set Id",
+    // "Event Set"] for these two families — no "Event Set Digest" attribute — so
+    // the corpus shape the real writers emit has no outer digest to verify.
+    const unitSet = {
+      eventSetId: "nodigest-unit",
+      batchId: "batch-a",
+      idempotencyKey: "unit-a",
+      payloadFingerprint: "fp",
+      events: [{ type: "unit-acquired", queueEntryId: "q-a", attempt: { attemptId: "attempt-a" } }],
+    };
+    const loopSet = {
+      eventSetId: "nodigest-loop",
+      partition: { intentUuid: "intent-a", monitorId: "monitor-a", stageInstanceId: "u-a", graphRevision: "g-a" },
+      partitionKey: "partition-a",
+      idempotencyKey: "loop-a",
+      payloadFingerprint: "fp",
+      events: [],
+    };
+    const inventory = decodeCandidateInventory({
+      corpus: buildAttributionCorpus([
+        eventSetRow("UNIT_POOL_EVENT_SET_COMMITTED", "2026-08-10T00:02:18Z", unitSet, 58, false),
+        eventSetRow("LOOP_MONITOR_EVENT_SET_COMMITTED", "2026-08-10T00:02:19Z", loopSet, 59, false),
+      ]),
+      targetStage: TARGET_STAGE,
+      eligibleWindows: [window()],
+    });
+    const reasons = inventory.rejected.map(({ primaryReason }) => primaryReason);
+    expect(reasons).not.toContain("malformed-event-set");
+    expect(reasons).not.toContain("digest-mismatch");
   });
 
   test("rejects unknown inner event types despite valid event-set digests", () => {

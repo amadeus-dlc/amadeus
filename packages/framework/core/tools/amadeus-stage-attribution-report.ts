@@ -468,7 +468,10 @@ function createEligibleWindow(
   targetStage: TargetStage,
 ): AttributionResult<AttributionWindow, AccountingInvariantError> {
   const intent = createIntentIdentity(measured.intent);
-  if (!intent.ok) return populationError("invalid-window-id");
+  // The window's intent string failed identity decoding; the invalid raw value
+  // cannot be carried as a branded IntentIdentity, so the window id locates
+  // the offending window instead.
+  if (!intent.ok) return populationError("invalid-window-id", { windowId: evidence.windowId });
   const interval = createSecondInterval(
     Math.floor(Date.parse(measured.startedAt) / 1000),
     Math.floor(Date.parse(measured.completedAt) / 1000),

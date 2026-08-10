@@ -886,13 +886,18 @@ describe("renderers — deterministic, header-first, hypothesis stated", () => {
       "attribution_exclusion_reason",
       "attribution_category",
       "attribution_coverage_measure",
-      "attribution_candidate_family",
+      "attribution_candidate_family,observed,accounted,rejected",
+      "attribution_candidate_reason,reason,count",
       "attribution_observed_fact",
       "attribution_hypothesis",
       "attribution_outlier_window",
-      "attribution_methodology",
+      "attribution_methodology,value",
       "attribution_rule_family",
     ]) expect(csv).toContain(section);
+    // Section names are unique per column shape, and methodology rows lead
+    // with the key itself, matching every other section's first column.
+    expect(csv).not.toContain("attribution_candidate_family,reason");
+    expect(csv).not.toContain("\nmethodology,");
     expect(markdown).toContain("zero-net-attribution");
     expect(csv).toContain("ambiguous-window-identity");
     expect(json.attribution?.reference.eligibleWindowCount).toBe(0);

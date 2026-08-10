@@ -1,3 +1,4 @@
+// covers: file:packages/framework/core/tools/amadeus-stage-attribution-intervals.ts
 import { describe, expect, test } from "bun:test";
 import fc from "fast-check";
 import {
@@ -134,13 +135,15 @@ describe("interval primitives", () => {
     fc.assert(
       fc.property(
         fc.array(fc.tuple(fc.integer({ min: -100, max: 99 }), fc.integer({ min: 1, max: 20 })), { maxLength: 40 }),
-        fc.integer(),
-        (pairs, seed) => {
+        fc.array(fc.integer(), { maxLength: 40 }),
+        (pairs, orderKeys) => {
           const intervals = pairs.map(([start, length]) => ({ start, end: start + length }));
-          const shuffled = fc.sample(fc.shuffledSubarray(intervals, { minLength: intervals.length, maxLength: intervals.length }), {
-            seed,
-            numRuns: 1,
-          })[0]!;
+          // Permute via a shrinkable order-key input instead of fc.sample,
+          // which would sit outside the property's shrink tree.
+          const shuffled = intervals
+            .map((value, index) => ({ key: orderKeys[index] ?? 0, index, value }))
+            .sort((left, right) => left.key - right.key || left.index - right.index)
+            .map(({ value }) => value);
           const expected = unionIntervals(intervals);
           expect(unionIntervals(shuffled)).toEqual(expected);
           expect(unionIntervals(expected)).toEqual(expected);

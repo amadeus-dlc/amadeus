@@ -217,7 +217,9 @@ function canonicalWire(entry: AttributedRecord): string {
 
 function sourceIdentity(record: AttributedRecord): { sourceId: string; sourceOrder: string } {
   const sourceId = journalRecordKey(record.record);
-  return { sourceId, sourceOrder: `${record.record.timestamp}\u0000${sourceId}\u0000${digest(canonicalWire(record))}` };
+  // The corpus deduplicates by journalRecordKey, so sourceId is unique and
+  // timestamp + sourceId already totally orders the corpus.
+  return { sourceId, sourceOrder: `${record.record.timestamp}\u0000${sourceId}` };
 }
 
 function explicitIntent(record: AttributedRecord): IntentIdentity | null {
@@ -493,8 +495,12 @@ function executionDigestFindings(
 
 function encodedEventSetDigestFindings(record: AttributedRecord): CandidateFinding[] {
   const encoded = exactRecordField(record, "Event Set");
+  if (encoded === null) return [finding("malformed-event-set")];
+  // The event registry requires no "Event Set Digest" attribute for the
+  // unit-pool and loop-monitor families, so an absent declaration is the
+  // contract shape, not a defect; a declared digest is still verified.
   const declared = journalRecordField(record.record, "Event Set Digest");
-  if (encoded === null || declared === null) return [finding("malformed-event-set")];
+  if (declared === null) return [];
   return declared === digest(encoded) ? [] : [finding("digest-mismatch")];
 }
 
@@ -607,9 +613,10 @@ export function lifecycleIdentityOf(
   candidate: DecodedCandidate,
 ): AttributionResult<LifecycleIdentity, CandidateDecodeError> {
   if (candidate.lifecycleIdentity !== null) return { ok: true, value: candidate.lifecycleIdentity };
-  const result = createLifecycleIdentity("");
-  if (result.ok) throw new TypeError("empty lifecycle identity unexpectedly accepted");
-  return result;
+  return {
+    ok: false,
+    error: { type: "decode", code: "invalid-identity", identity: "lifecycle", value: candidate.candidateId },
+  };
 }
 
 export function buildAttributionCorpus(
