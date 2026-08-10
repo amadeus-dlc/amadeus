@@ -39,6 +39,14 @@ export interface ProvenanceInput {
 type FieldKey = keyof AmadeusWorkFields;
 type PartialFields = Partial<Record<FieldKey, string>>;
 
+const FIELD_KEYS = {
+  Intent: "intent",
+  Bolt: "bolt",
+  Unit: "unit",
+  Record: "record",
+  UUID: "uuid",
+} satisfies Record<AmadeusWorkFieldName, FieldKey>;
+
 interface SectionScan {
   readonly found: boolean;
   readonly fields: PartialFields;
@@ -92,7 +100,7 @@ function isH2(line: string): boolean {
 }
 
 function lineKey(label: AmadeusWorkFieldName): FieldKey {
-  return label.toLowerCase() as FieldKey;
+  return FIELD_KEYS[label];
 }
 
 function fieldValue(line: string, label: AmadeusWorkFieldName): string | null {
@@ -263,7 +271,7 @@ function visibleControlCharacters(value: string): string {
 function renderViolation(violation: ProvenanceViolation): string {
   switch (violation.kind) {
     case "title-prefix-missing":
-      return "- Title must start with [intent/bolt/unit] .";
+      return '- Title must start with "[intent/bolt/unit] " (the trailing space is required).';
     case "title-unit-mismatch":
       return `- Title Unit mismatch: expected=${visibleControlCharacters(violation.expected)} actual=${visibleControlCharacters(violation.actual)}.`;
     case "work-section-missing":

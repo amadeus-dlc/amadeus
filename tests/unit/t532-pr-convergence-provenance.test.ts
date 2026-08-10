@@ -245,7 +245,7 @@ describe("renderProvenanceRemediation", () => {
 
     expect(renderProvenanceRemediation(violations)).toContain(
       [
-        "- Title must start with [intent/bolt/unit] .",
+        '- Title must start with "[intent/bolt/unit] " (the trailing space is required).',
         "- Title Unit mismatch: expected=unit-a actual=unit-b.",
         `- Body is missing ${AMADEUS_WORK_HEADING}.`,
         `- ${AMADEUS_WORK_HEADING} is missing UUID.`,
@@ -266,6 +266,9 @@ describe("renderProvenanceRemediation", () => {
     expect(renderProvenanceRemediation([violation])).toBe(first);
     expect(first).toContain("want\\nline\\t\\0\\u009f");
     expect(first).toContain("got\\rdel\\x7f");
+    expect(renderProvenanceRemediation([{ ...violation, expected: "a\\nb", actual: "a\nb" }])).toContain(
+      "expected=a\\\\nb actual=a\\nb.",
+    );
     expect(first).toContain("gh pr edit --title ... --body-file ...");
     expect(first).not.toContain("want\nline");
     expect(first).not.toContain("got\rdel");
