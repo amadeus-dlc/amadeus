@@ -35,6 +35,18 @@ describe("test timing sink guard", () => {
     expect(findings).toEqual([expect.objectContaining({ sink: "timer" })]);
   });
 
+  test("qualified fixed timers are detected through the property access", () => {
+    const findings = scanTimingSource(
+      "tests/unit/qualified-timer.test.ts",
+      `
+        globalThis.setTimeout(() => cleanup(), 500);
+        window.setInterval(callback, 500);
+        globalThis.setTimeout(() => cleanup(), scaleTestTime(500));
+      `,
+    );
+    expect(findings.map(({ sink }) => sink)).toEqual(["timer", "timer"]);
+  });
+
   test("explicit test timeouts and suite defaults are detected", () => {
     const findings = scanTimingSource(
       "tests/unit/example.test.ts",

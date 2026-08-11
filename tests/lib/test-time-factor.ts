@@ -26,8 +26,14 @@ export function resolveFinalTestTimeoutMs(
     throw new Error(`defaultSeconds must be a positive safe integer (got: ${defaultSeconds})`);
   }
   const raw = env[FINAL_TEST_TIMEOUT_ENV];
-  const parsed = raw === undefined ? defaultSeconds : Number.parseInt(raw, 10);
-  const seconds = Number.isFinite(parsed) ? parsed : defaultSeconds;
+  // Strict: Number.parseInt would read "0abc" as 0 and silently disable the
+  // timeout, so a malformed override must fail instead of degrading.
+  if (raw !== undefined && !/^\d+$/.test(raw.trim())) {
+    throw new Error(
+      `${FINAL_TEST_TIMEOUT_ENV} must be a non-negative integer number of seconds (got: '${raw}')`,
+    );
+  }
+  const seconds = raw === undefined ? defaultSeconds : Number.parseInt(raw.trim(), 10);
   const timeoutMs = seconds * 1000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0) {
     throw new Error(`${FINAL_TEST_TIMEOUT_ENV} must resolve to a non-negative safe millisecond value`);

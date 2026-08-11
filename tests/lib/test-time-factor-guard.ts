@@ -133,9 +133,14 @@ export function scanTimingSource(path: string, source: string): TimingSinkFindin
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const expression = node.expression;
-      const isTimer =
-        ts.isIdentifier(expression) &&
-        (expression.text === "setTimeout" || expression.text === "setInterval");
+      // `globalThis.setTimeout(...)` parses as a property access, so a plain
+      // identifier check would let a qualified fixed-delay timer through.
+      const timerName = ts.isIdentifier(expression)
+        ? expression.text
+        : ts.isPropertyAccessExpression(expression)
+          ? expression.name.text
+          : undefined;
+      const isTimer = timerName === "setTimeout" || timerName === "setInterval";
       const timerDelay = node.arguments[1];
       if (isTimer && timerDelay && ts.isNumericLiteral(timerDelay) && Number(timerDelay.text) > 0) {
         findings.push({

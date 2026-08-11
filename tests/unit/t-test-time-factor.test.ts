@@ -47,6 +47,11 @@ describe("TEST_TIME_FACTOR", () => {
     expect(() => resolveFinalTestTimeoutMs(600, { AMADEUS_TEST_TIMEOUT: "-1" })).toThrow(
       "AMADEUS_TEST_TIMEOUT",
     );
+    for (const raw of ["0abc", "600abc", ""]) {
+      expect(() => resolveFinalTestTimeoutMs(600, { AMADEUS_TEST_TIMEOUT: raw })).toThrow(
+        "AMADEUS_TEST_TIMEOUT",
+      );
+    }
   });
 
   test("an AMADEUS_TEST_TIMEOUT final override is never multiplied again", () => {
