@@ -1103,5 +1103,12 @@
     "dirName": "260810-test-time-factor",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ff109-86d3-7bf0-a906-98e8be106ef7",
+    "slug": "allowlist-semantic-audit",
+    "dirName": "260811-allowlist-semantic-audit",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

@@ -1,6 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 260810-test-time-factor
+## 実行メタデータ（現在: 260811-allowlist-semantic-audit）
+
+- Date: `2026-08-11`
+- Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（直前 intent `260810-test-time-factor` の observed。`git merge-base --is-ancestor ce3c3ccfdb3f93e619a081386a70c8185b84f1db 854692fd7a11b124236b0427fe3d59e2fe6bf785` = **exit 0**、`git rev-list --count ce3c3ccfd..854692fd7` = **34 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`git rev-parse HEAD` の実出力。`cid:reverse-engineering:measurement-ref-in-artifacts`）
+- Scope: Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: [Issue #1622](https://github.com/amadeus-dlc/amadeus/issues/1622)（`enhancement` / `P1` / `in-progress`）— `tests/.coverage-patch-allowlist.json` の全エントリを `reason` と現行行内容で直読照合し、無音転位を棚卸しする
+- Scan mode: **台帳の全数機械解決を一次証拠とする差分リフレッシュ**。xrev differential scan（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）は**採らなかった** — #1622 のクロスレビュー verdict 2 件（2026-07-28、いずれも CONFIRMED）は `tests/coverage-patch-gate.ts:125-151` / `:154-170` / `:266-277` と「300件」を引くが、PR #2127 の意味的セレクタ移行により台帳スキーマも実装座標も置換済みで、verdict の file:line と件数がいずれも observed に対応しない（現行の同機構は `parseAllowlist` `:360` / `findStaleAllowlistEntries` `:407-419`、件数 **623**）。`cid:reverse-engineering:E-XBB-RE-S13-c2` の免除条件は成立せず、verdict を一次入力にできない
+- 行番号引用の currency: 本 RE の全 file:line は observed 断面で実読・機械解決して採取している（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。区間 `ce3c3ccfd..854692fd7` の患部交差は `git diff --name-only` の実測で `amadeus-graph.ts` と `amadeus-orchestrate.ts` の 2 件のみ（被引用 11 ソースパスで絞った結果）。ゲート実装 `tests/coverage-patch-gate.ts` と t229 両テストは**区間内無変更**、台帳のみ `+109/−10`（614 → 623）
+- 中核知見: **解決は fail-closed、意味は fail-open という非対称が構造の本体**。`resolveSemanticSelector`（`:288-313`）はスコープ名・指紋の非一意を throw し `runCheck`（`:552`）が exit 1 へ落とすが、`findStaleAllowlistEntries`（`:407-419`）は引数が `entries` / `lcov` のみで `reason` を受け取らず、判定は DA レコードの**存在**のみ。免除の適用も `allowlisted`（`:421-426`）の行番号包含だけ。PR #2127 の意味的セレクタ移行は「行シフト起因の stale」を消した一方、**誤った行から採取された指紋を固定**し、以後シフトを跨いで正確に追従させる（`amadeus-election.ts` の実測: Issue 報告時 `:317` → observed `:417`、指紋は同一）。**確定転位 18 件**（下限、全数照合は未実施）。腐敗はエントリ単位で混在し、同一 `reason` 文字列の群でも一致と転位が並存する。さらに**反証不能な選言型 `reason` が 45 件**存在する（「defensive, type-only, or spawned-boundary path」20 件 + 「Residual defensive, invalid-input, replay, or process-boundary」25 件）
+- コーパス実測（測定 ref = observed）: エントリ **623** / 対象ファイル **106** / distinct `reason` **310** / `expiry` 保持 **597** / `<module>` スコープ **90** / 単一行アンカー **233**（37%）/ 旧行ピン **0** / セレクタ解決失敗 **0**（`entries=623 resolveFailures=0`）
+- 手法メモ: 全数解決は repo 外 scratch の bun スクリプトから `resolveSemanticSelector` を直 import して実行し、出力の md5 が Developer scan の dump と**バイト一致**することで決定性を確認した。ガード不在の確認に選択肢を `|` で長く連ねた 1 本の `grep -rniE` を使わない — ローカルの `grep`（ugrep ラッパ）が複雑度上限で exit 1 になり、その空出力が「0 hit」と誤読される（本 intent で Developer scan の述語1がこれに該当し、`git grep` の分割述語で再実測して訂正した）
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（新現在節「coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称」）/ `architecture.md`（新現在節「patch coverage ゲートの判定パイプラインと免除の適用段」）/ `component-inventory.md`（新現在節「coverage patch gate の構成要素棚卸し」）/ `api-documentation.md`（新現在節「coverage 免除台帳のデータ契約」）。各成果物の直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel` — 降格対象は `260810-test-time-factor` と `260810-plugin-manifest-resoluti` の 2 節で、両者が現在マーカーを併存させていた状態も同時に解消した）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `dependencies.md` / `technology-stack.md` / `business-overview.md` の 4 面。理由 — 本 scan の新規事実は既存の単一ファイル `tests/coverage-patch-gate.ts` と単一データファイルの**意味論**に関するもので、(a) モジュール配置・新規ファイル・ディレクトリ構造の変化はゼロ（区間内でゲート実装は無変更、追加されたのは台帳エントリのみ）、(b) 依存エッジの追加削除はゼロ（`ts` は既に import 済み）、(c) 技術スタック（Bun / TypeScript / Biome / LCOV）に変更なし、(d) 業務価値面の所見（免除の正当性が検証不能であることの統制上の意味）は品質評価節へ集約した
+- Per-intent record: `re-scans/260811-allowlist-semantic-audit.md`（述語 P0〜P7、scan mode 選定根拠、確定転位 18 件の一覧、候補 51 件と未判定 43 件の扱い、Developer scan への訂正 5 件、UNMEASURED-1〜6 の正本）
+- 適用範囲外（明示）: 転位 18 件の是正方法の選定、全数照合の進め方と工数見積り、機械ガードの設置先と CI 配線位置、選言型 `reason` 45 件の可否方針、#1622 と #2162 / #2135 / #2134 / #2216 / #2112 / #2133 の統合・分離の裁定はいずれも requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴: 260810-test-time-factor）
 
 - Date: `2026-08-10T14:26:50Z`
 - Base commit: `7b9391be2db4fad791d637293ea442d5a1462bac`
@@ -9,7 +27,7 @@
 - Focus: `TEST_TIME_FACTOR` によるテスト timeout/wait の CI 能力係数化
 - Scan record: `re-scans/260810-test-time-factor.md`
 
-## 実行メタデータ（現在: 260810-plugin-manifest-resoluti）
+## 実行メタデータ（履歴: 260810-plugin-manifest-resoluti）
 
 - Date: `2026-08-10`
 - Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（`re-scans/` 中で最新の observed = 直前 intent `260810-plugin-harness-dir-token` の測定 ref。HEAD の祖先であることを実測確認。`git rev-list --count df1c874cf..HEAD` = **13 commits**、**302 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）

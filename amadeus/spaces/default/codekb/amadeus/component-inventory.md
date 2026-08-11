@@ -1,6 +1,85 @@
 # コンポーネント棚卸し
 
-## テスト時間制御コンポーネント（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、現在、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### `tests/coverage-patch-gate.ts` の公開面（`grep -n "^export "` の全 16 件）
+
+| 行 | シンボル | 種別 | `reason` を受け取るか |
+|---|---|---|---|
+| `:68` | `parseLcovLineHits` | 関数 | — |
+| `:109` | `parseDiffAddedLines` | 関数 | — |
+| `:155` | `SemanticSelector` | interface | — |
+| `:162` | `ResolvedLineRange` | interface | — |
+| `:237` | `createSemanticSelector` | 関数 | — |
+| `:288` | `resolveSemanticSelector` | 関数 | **否**（`file` / `source` / `selector`） |
+| `:318` | `AllowlistEntry` | interface | 型として保持 |
+| `:325` | `ResolvedAllowlistEntry` | interface | 型として保持 |
+| `:360` | `parseAllowlist` | 関数 | 非空検査のみ |
+| `:384` | `resolveAllowlistEntries` | 関数 | 素通し |
+| `:407` | `findStaleAllowlistEntries` | 関数 | **否**（`entries` / `lcov`） |
+| `:431` | `PatchGateResult` | interface | — |
+| `:438` | `evaluatePatch` | 関数 | **否**（`added` / `lcov` / `allowlist`） |
+| `:463` | `renderSummary` | 関数 | — |
+| `:481` | `runCheck` | 関数 | — |
+| `:571` | `main` | 関数 | — |
+
+**`reason` を判定に用いる公開関数は 0 件。** 非公開の `allowlisted`（`:421-426`）も `file` / `start` / `end` のみを見る。
+
+### 台帳 `tests/.coverage-patch-allowlist.json` のデータ形状
+
+| フィールド | 型 | 検査 |
+|---|---|---|
+| `file` | string | `join(repoRoot, entry.file)` で読取、LCOV の `SF:` と突合 |
+| `selector.function` | string | AST スコープ名。トップレベルは `<module>`（`:190`）。クラスメンバは `Class.member` 形 |
+| `selector.fingerprint` | string | `sha256:` + アンカー窓の sha256（`sourceFingerprint` `:181-183`） |
+| `selector.anchorLines` | number | アンカー窓の行数。1 が最多（233 件 = 37%） |
+| `selector.targetLines` | string | アンカー窓**内の相対**範囲。絶対化は `:312` |
+| `reason` | string | **非空のみ**。内容は無検査 |
+| `expiry` | string?（597 件が保持） | string 型のみ検査 |
+
+### 台帳が張る対象コンポーネント（上位 10、`jq` の group_by 出力からの転記）
+
+| 件数 | ファイル |
+|---|---|
+| 63 | `packages/framework/core/tools/amadeus-orchestrate.ts` |
+| 61 | `packages/framework/core/tools/amadeus-state.ts` |
+| 19 | `packages/framework/core/tools/amadeus-quality-repair-runtime.ts` |
+| 18 | `packages/framework/core/tools/amadeus-advisory-choice.ts` |
+| 18 | `packages/framework/core/tools/amadeus-intent-completion.ts` |
+| 18 | `packages/framework/core/tools/amadeus-utility.ts` |
+| 17 | `packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts` |
+| 16 | `packages/framework/core/tools/amadeus-process-runner.ts` |
+| 16 | `packages/framework/core/tools/amadeus-quality-repair.ts` |
+| 16 | `scripts/pi-live-rpc.ts` |
+
+### 転位が確定したコンポーネント（18 件の分布）
+
+| ファイル | 確定転位数 | 該当エントリの解決先 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-state.ts` | 6 | `:916` / `:925-940` / `:961-964` / `:1070` / `:5683` / `:5736-5739` |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 3 | `:944-951` / `:1707` / `:6189-6190` |
+| `packages/framework/core/tools/amadeus-graph.ts` | 2 | `:1711-1716` / `:1715-1720` |
+| `packages/framework/core/tools/amadeus-mirror-executor.ts` | 2 | `:1471-1475` / `:1480-1484` |
+| `packages/framework/core/tools/amadeus-election.ts` | 1 | `:417` |
+| `packages/framework/core/tools/amadeus-runtime.ts` | 1 | `:878` |
+| `packages/framework/core/tools/amadeus-learnings.ts` | 1 | `:902-904` |
+| `packages/framework/core/tools/amadeus-utility.ts` | 1 | `:820-822` |
+| `plugins/formal-model-check/tools/tla-arm.ts` | 1 | `:199` |
+
+各エントリの `reason` と真の対象所在は `re-scans/260811-allowlist-semantic-audit.md` §4 が正本。**全数照合は未実施のため本表は下限**。
+
+### 契約を固定しているテスト
+
+| ファイル | 固定している allowlist 契約 |
+|---|---|
+| `tests/unit/t229-coverage-patch-gate.test.ts` | 旧行ピンの拒否（`:176`）、指紋の行シフト耐性（`:182`）、指紋窓の拡張（`:197`）、解決の fail-closed（`:283`）、ソース不在の fail-closed（`:308`）、`reason` 非空（`:315`）、`targetLines` 形式（`:321`）、契約外セレクタフィールド（`:329`）、`expiry` 型（`:337`）、stale 範囲検出（`:343`） |
+| `tests/integration/t229-coverage-patch-gate-check.test.ts` | プロセス境界での `--check` 挙動 |
+
+**`reason` の内容を検査するテストは両ファイルに 0 件。**
+
+## テスト時間制御コンポーネント（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 | コンポーネント | 責務 | 係数対応状況 |
 |---|---|---|
@@ -12,7 +91,7 @@
 
 追加候補 `tests/lib/test-time-factor.ts` は環境値の parse と基準時間の scale だけを担い、scheduler や個別 driver のドメイン判定は持たない小さな共通モジュールが妥当である。
 
-## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 
