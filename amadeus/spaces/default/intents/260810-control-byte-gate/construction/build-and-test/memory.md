@@ -15,3 +15,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-08-11T07:00:00Z — サブエージェントの最終テキスト配送がこのセッションで構造的に不安定だった: 5体中、reviewer-1/reviewer-2 は OAuth 失効で停止(成果物はディスクに残存)、cg-reviewer-i1/i2 は idle 通知後の明示要求で回収、closure-verifier は5回の idle 返しで一度も verdict を返さず停止させた。transcript も期待した task ディレクトリに現れなかった。閉包検証は conductor が引き取り(差分検分と検証コマンドの再実行を自分で実施)、その過程で委任先が指摘するはずだった以上の欠陥(測定 ref の失効・t222 数値の陳腐化)を自力で検出・訂正した。委任は verdict の所有を移さないという原則が、配送不能時の退避経路としても効いた。
