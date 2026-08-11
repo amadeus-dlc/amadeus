@@ -127,9 +127,26 @@ function projectWithOutcomes(
         { name: "unit-z", depends_on: [], kind: "library" },
         { name: "unit-a", depends_on: [], kind: "library" },
       ],
-      batches: [["unit-z", "unit-a"]],
+      batches: [["unit-a", "unit-z"]],
     },
   })}\n`);
+  // readBoltDagBatches refuses the runtime-graph cache when the canonical
+  // units-generation edge block is absent (recoverBoltDag returns "none"), so
+  // the fixture must carry the source doc for the DAG to resolve at all.
+  const unitsGeneration = join(record, "inception", "units-generation");
+  mkdirSync(unitsGeneration, { recursive: true });
+  writeFileSync(join(unitsGeneration, "unit-of-work-dependency.md"), [
+    "# Unit of Work Dependency",
+    "",
+    "```yaml",
+    "units:",
+    "  - name: unit-z",
+    "    depends_on: []",
+    "  - name: unit-a",
+    "    depends_on: []",
+    "```",
+    "",
+  ].join("\n"));
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
   expect(pool.initialEnqueue({
     idempotencyKey: "init",
