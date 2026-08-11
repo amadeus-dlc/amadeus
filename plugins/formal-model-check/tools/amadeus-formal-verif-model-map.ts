@@ -234,8 +234,10 @@ type Result<T, E> =
 export type TlaModelReadiness = Result<ModelMap, ModelLoadError>;
 
 const SHA256 = /^[0-9a-f]{64}$/;
-const IMPLEMENTATION_PREFIX = "packages/framework/core/tools/";
-const IMPLEMENTATION_FILE = /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/;
+const IMPLEMENTATION_PATHS: readonly [string, RegExp][] = [
+  ["packages/framework/core/tools/", /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/],
+  ["plugins/formal-model-check/tools/", /^[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/],
+];
 // TLA module identifiers, which also fix the file names a model owns inside
 // the canonical spec directory.
 const MODEL_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
@@ -317,8 +319,9 @@ function parseAssetIdentity(
 function isCanonicalImplementationPath(value: unknown): value is string {
   if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
   if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
-  if (!value.startsWith(IMPLEMENTATION_PREFIX)) return false;
-  return IMPLEMENTATION_FILE.test(posix.basename(value));
+  return IMPLEMENTATION_PATHS.some(([prefix, file]) =>
+    value.startsWith(prefix) && file.test(posix.basename(value))
+  );
 }
 
 function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoadError> {

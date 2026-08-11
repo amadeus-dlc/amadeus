@@ -1,13 +1,13 @@
-// covers: function:applyPluginScopeOptIns, function:mergeComposedScopes
+// covers: function:applyPluginScopeBindings, function:mergeComposedScopes
 //
-// t355 (unit) — #1630: a plugin stage declaring a scope must JOIN that
-// scope's plan, never replace it.
+// t355 (unit) — #1630: a host binding a plugin stage to a scope must JOIN
+// that scope's plan, never replace it.
 //
 // Before the fix, `compileStageGraph` fed plugin stages into
 // `transposeScopeGrid` alongside the core stages. The transpose mints one
 // row per declared name with EXECUTE only on the stages that named it, so a
-// plugin declaring an existing COMPOSED scope produced a fresh row holding
-// just that plugin stage. `mergeComposedScopes` skips any name already in
+// a plugin stage assigned to an existing COMPOSED scope produced a fresh row
+// holding just that plugin stage. `mergeComposedScopes` skips any name already in
 // the fresh grid (`if (name in merged) continue`), so the on-disk composed
 // row — the approved plan — was dropped and the scope silently collapsed
 // from N EXECUTE stages to 1.
@@ -15,8 +15,8 @@
 // The fix splits the two roles:
 //   - core frontmatter DERIVES rows (transpose, compile-side filtered to
 //     non-plugin stages);
-//   - a plugin stage OVERLAYS EXECUTE cells after the composed fold
-//     (applyPluginScopeOptIns) — strictly additive, never authoring SKIP.
+//   - host-owned plugin bindings OVERLAY EXECUTE cells after the composed fold
+//     (applyPluginScopeBindings) — strictly additive, never authoring SKIP.
 // (`mergeComposedScopes` used to also GC folded cells whose slug had left the
 // graph. That GC destroyed a composed plan across a drop -> compose cycle and
 // was removed in #1863; the fold now preserves cells verbatim.)
@@ -27,11 +27,11 @@
 //
 // Source under test (dist/claude/.claude/tools/amadeus-graph.ts):
 //   mergeComposedScopes(fresh, onDiskJson, registeredScopes?): ScopeGrid
-//   applyPluginScopeOptIns(grid, pluginStages): ScopeGrid
+//   applyPluginScopeBindings(grid, pluginStages, bindings): ScopeGrid
 
 import { describe, expect, test } from "bun:test";
 import {
-  applyPluginScopeOptIns,
+  applyPluginScopeBindings,
   canonicalScopeGridJson,
   mergeComposedScopes,
   type ScopeGrid,
@@ -51,14 +51,20 @@ function stage(slug: string, scopes: string[], plugin = false): Stages[number] {
 function compileGrid(
   coreStages: Stages,
   pluginStages: Stages,
+  boundScopes: string[],
   onDiskJson: string | null,
 ): ScopeGrid {
-  return applyPluginScopeOptIns(
+  return applyPluginScopeBindings(
     mergeComposedScopes(
       transposeScopeGrid(coreStages.filter((s) => (s.scopes?.length ?? 0) > 0)),
       onDiskJson,
     ),
-    pluginStages,
+    pluginStages.map((pluginStage) => ({ plugin: "fixture-plugin", stage: pluginStage })),
+    {
+      "fixture-plugin": Object.fromEntries(
+        pluginStages.map((pluginStage) => [pluginStage.slug, boundScopes]),
+      ),
+    },
   );
 }
 
@@ -76,11 +82,12 @@ const COMPOSED_ON_DISK = JSON.stringify({
   },
 });
 
-describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => {
-  test("a plugin declaring a composed scope joins it — the composed plan survives", () => {
+describe("host-owned plugin scope binding does not clobber a composed scope (#1630)", () => {
+  test("binding a plugin to a composed scope preserves the composed plan", () => {
     const grid = compileGrid(
       CORE,
-      [stage("model-check", ["self-feature"], true)],
+      [stage("model-check", [], true)],
+      ["self-feature"],
       COMPOSED_ON_DISK,
     );
     // Regression assertion: the composed row keeps ALL THREE core EXECUTE
@@ -98,10 +105,11 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
     expect(execCount).toBe(4);
   });
 
-  test("a plugin declaring an unknown scope creates a row holding only its own cell", () => {
+  test("binding a plugin to an unknown scope creates a row holding only its own cell", () => {
     const grid = compileGrid(
       CORE,
-      [stage("model-check", ["tla-only"], true)],
+      [stage("model-check", [], true)],
+      ["tla-only"],
       COMPOSED_ON_DISK,
     );
     // No redundant SKIP cells for stages with no membership — same treatment
@@ -109,10 +117,11 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
     expect(grid["tla-only"].stages).toEqual({ "model-check": "EXECUTE" });
   });
 
-  test("a plugin opting into a STOCK scope leaves every existing cell untouched", () => {
+  test("binding a plugin to a STOCK scope leaves every existing cell untouched", () => {
     const grid = compileGrid(
       CORE,
-      [stage("model-check", ["feature"], true)],
+      [stage("model-check", [], true)],
+      ["feature"],
       COMPOSED_ON_DISK,
     );
     // `gamma` declares no scopes, so compile keeps it out of the transpose
@@ -125,7 +134,7 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
   });
 
   test("zero plugins leave the grid byte-identical to the plugin-free compile", () => {
-    const withNone = compileGrid(CORE, [], COMPOSED_ON_DISK);
+    const withNone = compileGrid(CORE, [], [], COMPOSED_ON_DISK);
     const baseline = mergeComposedScopes(
       transposeScopeGrid(CORE.filter((s) => (s.scopes?.length ?? 0) > 0)),
       COMPOSED_ON_DISK,
@@ -136,7 +145,8 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
   test("scope keys stay sorted after an overlay adds a new row", () => {
     const grid = compileGrid(
       CORE,
-      [stage("model-check", ["aaa-first", "zzz-last"], true)],
+      [stage("model-check", [], true)],
+      ["aaa-first", "zzz-last"],
       COMPOSED_ON_DISK,
     );
     expect(Object.keys(grid)).toEqual([...Object.keys(grid)].sort());
@@ -148,7 +158,7 @@ describe("plugin scope opt-in does not clobber a composed scope (#1630)", () => 
 // Declared revision (#1863): this block used to pin the OPPOSITE contract —
 // the fold GC'd every cell whose slug had left the graph. That GC was a
 // tidiness measure added alongside the #1630 clobber fix, not part of it (the
-// clobber fix is applyPluginScopeOptIns, pinned above and unchanged here), and
+// clobber fix is applyPluginScopeBindings, pinned above and unchanged here), and
 // it destroyed a composed plan on a drop -> compose cycle. The cells are now
 // preserved and reported instead; the full cycle proof lives in
 // tests/unit/t397-composed-scope-drop-compose.test.ts.

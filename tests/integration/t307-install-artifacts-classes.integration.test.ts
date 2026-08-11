@@ -79,7 +79,7 @@ describe("t307 installArtifacts (class-driven layout)", () => {
   // #1569 + #1591 (ruling B): the INSTALL.md copy destination must match the
   // CLI's discovery root — the shared PLUGIN_SOURCE_DIR_NAME under the HARNESS
   // dir, which is also the root the engine reads plugin stages back from
-  // (pluginActivationHostRoot / pluginsHostRoot). NOT a project-root-relative
+  // (pluginHostRoot / pluginsHostRoot). NOT a project-root-relative
   // path (the pre-#1591 direction, invisible to the harness-rooted scan) and
   // NOT a `<harnessDir>/plugins/<name>/` path (the pre-#1569 direction, the
   // composed OUTPUT namespace the scan never reads). Import the constant from

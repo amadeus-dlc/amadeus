@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import * as canonicalModule from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+import * as canonicalModule from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import * as pluginModule from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 // The plugin ships a byte-identical copy of the canonical parser (ADR-2); the

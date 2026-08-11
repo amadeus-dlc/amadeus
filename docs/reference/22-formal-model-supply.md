@@ -143,12 +143,14 @@ can be wrong in a way that no run will reveal.
 
 ## Running a check
 
-When the plugin is composed, every Amadeus `self-*` scope runs the formal
-lifecycle after build and test. `tla-authoring` first assesses the active
+When the plugin is composed and the host binds its stages to a workflow scope,
+that scope runs the formal lifecycle after build and test. `tla-authoring` first assesses the active
 requirements: an unregistered applicable subject takes the `author-new` route,
 a semantic change to a registered subject takes `revise-model`, and a terminal
 or not-applicable outcome skips TLC. `formal-model-check` then checks the model
-that was created or revised. The checker can also be invoked explicitly:
+that was created or revised. Scope assignment belongs to the host's
+`plugin.scope-bindings` project configuration, so custom scopes can opt in
+without changing the plugin. The checker can also be invoked explicitly:
 
 ```
 bun .claude/tools/amadeus-orchestrate.ts next --stage formal-model-check --single

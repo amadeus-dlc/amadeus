@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
 // size: medium
 //
 // U6 activation-policy — the spec-hash machinery driven IN-PROCESS against a real
@@ -31,7 +31,7 @@ import {
   resolveActivationJudgment,
   specRootForHost,
   writeActivationState,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
@@ -239,7 +239,7 @@ describe("t320 BR-U6-2 falling proof: no TLC invocation reference", () => {
     // rejected option D). Source-level guard: a future auto-run wiring would add
     // one of these references and redden this test.
     const src = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "..", "..", "packages", "framework", "core", "tools", "amadeus-plugin-activation.ts"),
+      join(dirname(fileURLToPath(import.meta.url)), "..", "..", "plugins", "formal-model-check", "tools", "plugin-activation.ts"),
       "utf-8",
     );
     for (const forbidden of ["run-model-check", "executeReservedModelCheck", "TlcProcess", "spawnSync", "child_process"]) {

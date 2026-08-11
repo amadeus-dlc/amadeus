@@ -8,7 +8,7 @@ import {
   type AdvisoryChoiceStore,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 import { docsRoot } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 
 // FR-7 + D5 (#2766): `advisoryFromEvaluatorRun` returns null on no-hold, so a

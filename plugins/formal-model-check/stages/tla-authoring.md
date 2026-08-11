@@ -4,7 +4,7 @@ number: 3.8
 name: TLA+ Authoring
 phase: construction
 execution: CONDITIONAL
-condition: Every Amadeus self-development scope assesses formal-model applicability; authoring continues only for an author-new or revise-model route. Explicit single-stage runs remain supported.
+condition: When selected by the host workflow, assess formal-model applicability; continue authoring only for an author-new or revise-model route. Explicit single-stage runs remain supported.
 lead_agent: amadeus-architect-agent
 support_agents: []
 mode: inline
@@ -14,23 +14,19 @@ consumes:
     required: false
 requires_stage:
   - build-and-test
-inputs: the active intent's requirements path when this stage is reached from a self-* workflow, or an existing ApplicabilityReceipt for an explicit run, plus the model map and evidence store.
+inputs: the active workflow's requirements path when the host selects this stage, or an existing ApplicabilityReceipt for an explicit run, plus the model map and evidence store.
 outputs: the model deliverables (.tla / .cfg / reduction manifest / trace rows), the referee evidence, the review receipt, the human approval reference, the authoring evidence bundle, and the model-map registration receipt.
-scopes:
-  - self-document
-  - self-feature
-  - self-fix
-  - self-refactor
+scopes: []
 ---
 
 # TLA+ Authoring
 
-The `tla-authoring` plugin stage assesses the active self-development change
+The `tla-authoring` plugin stage assesses the active change
 and, when required, carries its governed subjects to a registered TLA+ model.
 It is the authoring counterpart of `formal-model-check`: this stage supplies or
-revises a model, and that stage checks the resulting registration. It is part of
-all four `self-*` scopes and remains directly reachable through an explicit
-single-stage invocation.
+revises a model, and that stage checks the resulting registration. It joins
+only the scopes assigned by the host and remains directly reachable through an
+explicit single-stage invocation.
 
 The conductor running this stage owns the progression. The referees, the
 evidence store and the registration committer are called by it; none of them
@@ -43,7 +39,7 @@ starts the next step on its own.
 When an explicit run supplies an `ApplicabilityReceipt`, validate it and build
 the work plan from its `route`, `subjects` and `subjectIdentity`.
 
-When a self-* workflow supplies requirements instead, perform the applicability
+When a host workflow supplies requirements instead, perform the applicability
 assessment here rather than assuming that an absent model means non-target:
 
 1. Read the requirements path from the directive's `consumes` entries and
@@ -159,12 +155,12 @@ receipts rather than the markdown artefacts the universal shape sensors
 is the referees in step 3 and the precondition gate in step 6 — deterministic
 checks that already fail closed.
 
-## Self-development lifecycle
+## Host-assigned lifecycle
 
-The stage belongs to `self-document`, `self-feature`, `self-fix`, and
-`self-refactor`. Plugin composition remains the installation boundary: dropping
-the plugin removes both this assessment and the following model check, restoring
-the 0-plugin baseline.
+The plugin declares no host scope. Project configuration assigns this stage to
+the host's workflow scopes. Plugin composition remains the installation
+boundary: dropping the plugin removes both this assessment and the following
+model check, restoring the 0-plugin baseline.
 
 ## Learn
 

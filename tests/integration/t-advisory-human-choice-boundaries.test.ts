@@ -14,7 +14,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  advisoryModelCheckOutputDir,
   advisoryChoicePresentationFields,
   advisoryReportHoldReason,
   choiceFromExactPrompt,
@@ -23,10 +22,13 @@ import {
   guardAdvisoryChoices,
   recordAdvisoryChoice,
   revokeMisattributedAdvisoryChoice,
-  verifyAdvisoryModelCheckOutcome,
   type AdvisoryChoiceStore,
   type PendingAdvisory,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  advisoryModelCheckOutputDir,
+  verifyAdvisoryModelCheckOutcome,
+} from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
 import {
   auditFilePath,
   auditShardName,
@@ -34,7 +36,7 @@ import {
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -434,10 +436,9 @@ describe("protected advisory choice persistence", () => {
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", humanTurn)).toBe(false);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
     const rerun = guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]);
-    expect(rerun).toMatchObject({ kind: "hold", runRequired: true });
+    expect(rerun.kind).toBe("hold");
     if (rerun.kind === "hold") {
-      expect(rerun.formalChecks[0]?.command).toContain("run-model-check.ts");
-      expect(rerun.advisories[0]?.result).toContain("artifacts are missing");
+      expect(rerun.advisories[0]?.result).toContain("plugin's own evaluator");
     }
     expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("advisory hold remains");
   });
@@ -450,7 +451,7 @@ describe("protected advisory choice persistence", () => {
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 
-  test("副作用のない未提示run-nowだけを補正し、検査証跡があれば拒否する", () => {
+  test("未提示run-nowをplugin固有の証跡解釈なしで補正する", () => {
     {
       const { projectDir, pending } = project();
       const humanTurn = plantHumanTurn(projectDir);
@@ -488,7 +489,7 @@ describe("protected advisory choice persistence", () => {
         projectDir,
         pending.identity.advisoryInstance,
         humanTurn.eventIdentity,
-      )).toEqual({ ok: false, reason: "model-check evidence exists for this receipt" });
+      )).toEqual({ ok: true });
     }
   });
 
@@ -615,25 +616,14 @@ describe("protected advisory choice persistence", () => {
     }
   });
 
-  test("run-now hold reports detected, harness-error, invalid, and verified outcomes", () => {
+  test("run-now holdはplugin証跡を解釈せずevaluatorのno-holdを待つ", () => {
     const { projectDir, pending } = project();
     plantAdvisoryPresentation(projectDir, pending);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
 
     writeEvidence(projectDir, pending, "DETECTED");
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("DETECTED counterexample-1");
-
-    writeEvidence(projectDir, pending, "HARNESS_ERROR");
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("HARNESS_ERROR TOOL_FAILED");
-
-    const invalidEvidence = writeEvidence(projectDir, pending);
-    invalidEvidence.manifest.outcome = "UNKNOWN";
-    invalidEvidence.writeManifest(invalidEvidence.manifest);
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("manifest outcome is invalid");
-
-    writeEvidence(projectDir, pending);
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toBeNull();
-    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]).kind).toBe("allow");
+    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("plugin's own evaluator");
+    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]).kind).toBe("hold");
     expect(existsSync(storePath(projectDir))).toBe(true);
   });
 });
@@ -660,37 +650,11 @@ describe("core advisory directive validation boundaries", () => {
     return result.valid ? "" : result.errors.join("|");
   };
 
-  test("malformed optional routes and advisory items fail closed in the source validator", () => {
-    expect(errors({ ...base(), run_required: "yes" })).toContain("run_required must be boolean");
-    expect(errors({ ...base(), run_required: true, formal_checks: [null] })).toContain("must be object");
-    expect(errors({
-      ...base(),
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("command must be non-empty string");
-    expect(errors({
-      ...base(),
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "run",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("stage must be formal-model-check");
+  test("malformed advisory items fail closed in the source validator", () => {
     expect(errors({ ...base(), advisories: [] })).toContain("advisories must be a non-empty array");
     expect(errors({ ...base(), advisories: [null] })).toContain("advisories[0] must be object");
-    expect(errors({ ...base(), advisories: [{ ...base().advisories[0], code: "unknown" }] })).toContain(
-      "code must be one of",
+    expect(errors({ ...base(), advisories: [{ ...base().advisories[0], code: "Not A Slug" }] })).toContain(
+      "code must be a slug",
     );
     expect(errors({ ...base(), advisories: [{ ...base().advisories[0], result: "" }] })).toContain(
       "result must be non-empty string",

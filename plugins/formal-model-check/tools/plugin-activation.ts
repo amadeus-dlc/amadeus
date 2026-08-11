@@ -1,4 +1,4 @@
-// packages/framework/core/tools/amadeus-plugin-activation.ts — C6 activation
+// Plugin-owned activation policy.
 // policy (U6). The Amadeus-independent spec-hash mechanism behind ADR-1 option A
 // (spec-hash advisory, NO automatic run): compute a deterministic hash of the
 // formal-model-check spec files, compare it against the last recorded verdict,
@@ -537,3 +537,24 @@ export function recordActivationVerdict(
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);
   return true;
 }
+
+export function main(argv: string[] = process.argv.slice(2)): number {
+  const [command, hostRoot, stage = ""] = argv;
+  if ((command !== "advisory" && command !== "record") || !hostRoot) {
+    process.stderr.write("plugin-activation: expected advisory|record <host-root> [stage]\n");
+    return 2;
+  }
+  if (command === "record") return recordActivationVerdict(hostRoot) ? 0 : 1;
+  const raised = activationAdvisoriesForHost(hostRoot, stage);
+  const verdict = raised.length === 0
+    ? { kind: "no-hold" }
+    : {
+      kind: "hold",
+      reasons: raised.map((advisory) => ({ kind: String(advisory.code) })),
+      message: raised[0]?.message,
+    };
+  process.stdout.write(`${JSON.stringify({ verdict })}\n`);
+  return raised.length === 0 ? 0 : 1;
+}
+
+if (import.meta.main) process.exitCode = main();

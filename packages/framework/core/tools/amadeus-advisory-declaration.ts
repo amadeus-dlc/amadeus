@@ -3,33 +3,27 @@
 // it evaluates itself, so a second hard-coded advisory does not have to be
 // carved into the engine for every plugin that needs a checkpoint hold.
 //
-// The generalization is deliberately two points and no more: this module turns
-// a declaration plus one evaluator run into an `Advisory` (supply), and hands
-// the declared run-now argv to the choice route (execution). The checkpoint
-// itself — where it fires, its directive contract, and the provenance-verified
-// release rule — is untouched.
+// The host only supplies the declaration and invokes its evaluator. A run-now
+// choice may open the plugin-declared handoff stage; execution and release
+// policy remain owned by the plugin.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin.ts";
 import {
-  activationAdvisoriesForHost,
   composedPluginNames,
-  defaultActivationFs,
+  defaultPluginRuntimeFs,
   projectRootForHost,
-  type ActivationFs,
   type Advisory,
-  type DeclaredAdvisoryCode,
-} from "./amadeus-plugin-activation.ts";
+  type PluginRuntimeFs,
+} from "./amadeus-plugin-runtime.ts";
 
 export type AdvisoryDeclaration = {
-  readonly code: DeclaredAdvisoryCode;
+  readonly code: string;
   readonly checkpoints: readonly string[];
   readonly evaluatorArgv: readonly string[];
-  /** The run-now command, or null for an advisory with no executable side. */
-  readonly formalCheckArgv: readonly string[] | null;
   /**
    * The stage a run-now choice opens, or null when the declaration names none.
    * Generalization point 3 of ADR-6 (revised), ruled by D2 of #2766: the engine
@@ -48,23 +42,18 @@ export type AdvisoryDeclarationParse = {
 // A declared code is a slug so it can key a latch file and an audit field
 // without escaping either (the same shape the activation codes already have).
 const DECLARED_CODE_RE = /^[a-z][a-z0-9-]*$/;
-const ACTIVATION_CODES: ReadonlySet<string> = new Set(["not-ready", "changed", "never-run"]);
 // A handoff destination is a stage slug, the same shape the stage graph keys on,
 // so a declaration cannot smuggle a path or an argument into the directive.
 const STAGE_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
 export function isDeclaredAdvisoryCode(code: string): boolean {
-  return !ACTIVATION_CODES.has(code) && DECLARED_CODE_RE.test(code);
+  return DECLARED_CODE_RE.test(code);
 }
 
 // The one place a plain string becomes a DeclaredAdvisoryCode: after the
 // parser's own validation. Everything downstream carries the brand.
-function asDeclaredCode(code: string): DeclaredAdvisoryCode {
-  return code as DeclaredAdvisoryCode;
-}
-
 export function isKnownAdvisoryCode(code: string): boolean {
-  return ACTIVATION_CODES.has(code) || DECLARED_CODE_RE.test(code);
+  return DECLARED_CODE_RE.test(code);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -81,27 +70,6 @@ function stringArray(value: unknown): readonly string[] | null {
 // "no such side", present-but-broken is an `invalid` entry, and the two must
 // never collapse into each other (BR-U2-18).
 type ParsedField<T> = { readonly ok: true; readonly value: T } | { readonly ok: false };
-
-function parseFormalCheck(
-  entry: Record<string, unknown>,
-  index: number,
-  invalid: string[],
-): ParsedField<readonly string[] | null> {
-  const formalCheck = entry.formalCheck ?? null;
-  if (formalCheck === null) return { ok: true, value: null };
-  if (!isRecord(formalCheck)) {
-    invalid.push(`advisories[${index}].formalCheck must be an object or null`);
-    return { ok: false };
-  }
-  // argv arrays only: a declaration never carries a shell string, so nothing
-  // the manifest holds can be word-split or expanded (BR-U2-19).
-  const argv = stringArray(formalCheck.argv);
-  if (argv === null) {
-    invalid.push(`advisories[${index}].formalCheck.argv must be a non-empty string array`);
-    return { ok: false };
-  }
-  return { ok: true, value: argv };
-}
 
 function parseHandoff(
   entry: Record<string, unknown>,
@@ -125,7 +93,7 @@ function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDec
   }
   const code = entry.code;
   if (typeof code !== "string" || !isDeclaredAdvisoryCode(code)) {
-    invalid.push(`advisories[${index}].code must be a slug that is not an activation code`);
+    invalid.push(`advisories[${index}].code must be a slug`);
     return null;
   }
   const checkpoints = stringArray(entry.checkpoints);
@@ -140,15 +108,12 @@ function parseOne(entry: unknown, index: number, invalid: string[]): AdvisoryDec
     invalid.push(`advisories[${index}].evaluator.argv must be a non-empty string array`);
     return null;
   }
-  const formalCheck = parseFormalCheck(entry, index, invalid);
-  if (!formalCheck.ok) return null;
   const handoff = parseHandoff(entry, index, invalid);
   if (!handoff.ok) return null;
   return {
-    code: asDeclaredCode(code),
+    code,
     checkpoints,
     evaluatorArgv,
-    formalCheckArgv: formalCheck.value,
     handoffStage: handoff.value,
   };
 }
@@ -212,24 +177,29 @@ export type EvaluatorRun = {
   readonly stdout: string;
 };
 
-function verdictSummary(run: EvaluatorRun): string | null {
+type EvaluatorHold = { readonly summary: string; readonly message?: string };
+
+function evaluatorHold(run: EvaluatorRun): EvaluatorHold | null {
   let document: unknown;
   try {
     document = JSON.parse(run.stdout.trim().split("\n").at(-1) ?? "") as unknown;
   } catch {
-    return `evaluator produced no readable verdict (exit ${run.status})`;
+    return { summary: `evaluator produced no readable verdict (exit ${run.status})` };
   }
-  if (!isRecord(document)) return `evaluator produced no readable verdict (exit ${run.status})`;
+  if (!isRecord(document)) return { summary: `evaluator produced no readable verdict (exit ${run.status})` };
   const verdict = document.verdict;
   if (isRecord(verdict) && verdict.kind === "no-hold") return null;
   if (isRecord(verdict) && verdict.kind === "hold") {
     const reasons = Array.isArray(verdict.reasons)
       ? verdict.reasons.map((reason) => (isRecord(reason) ? String(reason.kind) : "unknown")).join(", ")
       : "unspecified";
-    return `hold (${reasons})`;
+    return {
+      summary: `hold (${reasons})`,
+      ...(typeof verdict.message === "string" && verdict.message.length > 0 ? { message: verdict.message } : {}),
+    };
   }
-  if (isRecord(document.failure)) return `evaluation failed (${String(document.failure.kind)})`;
-  return `evaluator produced no readable verdict (exit ${run.status})`;
+  if (isRecord(document.failure)) return { summary: `evaluation failed (${String(document.failure.kind)})` };
+  return { summary: `evaluator produced no readable verdict (exit ${run.status})` };
 }
 
 /**
@@ -245,15 +215,15 @@ export function advisoryFromEvaluatorRun(
   stage: string,
   run: EvaluatorRun,
 ): Advisory | null {
-  const summary = verdictSummary(run);
-  if (summary === null) return null;
+  const hold = evaluatorHold(run);
+  if (hold === null) return null;
   return {
     plugin,
     code: declaration.code,
-    message: `advisory: ${plugin} ${declaration.code} — ${summary}`,
+    message: hold.message ?? `advisory: ${plugin} ${declaration.code} — ${hold.summary}`,
     stage,
     target: `${plugin}:${declaration.code}`,
-    specIdentity: createHash("sha256").update(summary).digest("hex"),
+    specIdentity: createHash("sha256").update(hold.summary).digest("hex"),
   };
 }
 
@@ -262,7 +232,7 @@ export function invalidDeclarationAdvisory(plugin: string, stage: string, invali
   const detail = invalid.join("; ");
   return {
     plugin,
-    code: "not-ready",
+    code: "invalid-declaration",
     message: `advisory: ${plugin} declares advisories that cannot be read (${detail})`,
     stage,
     target: `${plugin}:advisories`,
@@ -380,6 +350,7 @@ export function declaredAdvisoriesForPlugin(
   fs: DeclarationFs = defaultDeclarationFs,
   stagingRoot?: string,
   warn: DeclarationWarn = defaultDeclarationWarn,
+  tokens: Readonly<Record<string, string>> = {},
 ): Advisory[] {
   const resolved = resolvePluginManifest(projectRoot, stagingRoot, plugin, fs);
   if (resolved === null) {
@@ -399,11 +370,14 @@ export function declaredAdvisoriesForPlugin(
   if (parsed.invalid.length > 0) raised.push(invalidDeclarationAdvisory(plugin, stage, parsed.invalid));
   for (const declaration of parsed.declarations) {
     if (!declaration.checkpoints.includes(stage)) continue;
+    const argv = resolveArgvTokens(declaration.evaluatorArgv, tokens);
     const advisory = advisoryFromEvaluatorRun(
       plugin,
       declaration,
       stage,
-      runEvaluator(resolveEvaluatorArgv(declaration.evaluatorArgv, resolved.pluginRoot)),
+      argv === null
+        ? { status: 1, stdout: "" }
+        : runEvaluator(resolveEvaluatorArgv(argv, resolved.pluginRoot)),
     );
     if (advisory !== null) raised.push(advisory);
   }
@@ -415,9 +389,7 @@ export function declaredAdvisoriesForPlugin(
  * manifest holds can be word-split or expanded (BR-U2-19). `env` is passed
  * explicitly because Bun does not fold a mutated process.env into a child.
  *
- * The spawn lives here rather than in amadeus-plugin-activation.ts: that module
- * starts no process by construction (BR-U6-2, the ADR-1 option-A boundary), and
- * a declared evaluator must not smuggle one in through it.
+ * Evaluators are launched only through this generic declaration boundary.
  */
 // The evaluator runs synchronously on the checkpoint path (next/report), so a
 // hung plugin must not block the CLI forever, and a runaway stdout must not
@@ -428,7 +400,11 @@ const EVALUATOR_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
 export function spawnEvaluator(projectRoot: string): RunEvaluator {
   return (argv) => {
-    const result = spawnSync(argv[0] as string, [...argv.slice(1)], {
+    const args = [...argv.slice(1)];
+    if (args[0] !== undefined && isAbsolute(args[0]) && existsSync(args[0])) {
+      args[0] = realpathSync(args[0]);
+    }
+    const result = spawnSync(argv[0] as string, args, {
       cwd: projectRoot,
       env: process.env,
       encoding: "utf-8",
@@ -439,16 +415,11 @@ export function spawnEvaluator(projectRoot: string): RunEvaluator {
   };
 }
 
-/**
- * Every advisory this host raises at `stage`: the engine's own spec-hash
- * judgment plus the ones composed plugins declare. Generalization point 1 of
- * ADR-6 (revised) — the declaration route is an addition to the hard-coded one,
- * never a replacement (BR-U2-21).
- */
+/** Every advisory declared by a plugin composed into this host at `stage`. */
 export function advisoriesForHost(
   hostRoot: string,
   stage: string,
-  fs: ActivationFs = defaultActivationFs,
+  fs: PluginRuntimeFs = defaultPluginRuntimeFs,
   runEvaluator: RunEvaluator = spawnEvaluator(projectRootForHost(hostRoot)),
   warn: DeclarationWarn = defaultDeclarationWarn,
 ): Advisory[] {
@@ -460,12 +431,18 @@ export function advisoriesForHost(
     existsSync: (path) => fs.existsSync(path),
     readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),
   };
-  return [
-    ...activationAdvisoriesForHost(hostRoot, stage, fs),
-    ...composedPluginNames(hostRoot, fs).flatMap((plugin) =>
-      declaredAdvisoriesForPlugin(projectRoot, plugin, stage, runEvaluator, declarationFs, stagingRoot, warn)
-    ),
-  ];
+  return composedPluginNames(hostRoot, fs).flatMap((plugin) =>
+    declaredAdvisoriesForPlugin(
+      projectRoot,
+      plugin,
+      stage,
+      runEvaluator,
+      declarationFs,
+      stagingRoot,
+      warn,
+      { "host-root": hostRoot, stage },
+    )
+  );
 }
 
 /** The declaration one (plugin, code) carries, plus the located plugin root, or null when the manifest has none. */
@@ -489,23 +466,6 @@ function declarationFor(
   } catch {
     return null;
   }
-}
-
-/** The declared run-now argv for one (plugin, code), or null when there is none. */
-export function declaredFormalCheckArgv(
-  projectRoot: string,
-  plugin: string,
-  code: string,
-  fs: DeclarationFs = defaultDeclarationFs,
-  stagingRoot?: string,
-  warn: DeclarationWarn = defaultDeclarationWarn,
-): readonly string[] | null {
-  const found = declarationFor(projectRoot, plugin, code, fs, stagingRoot, warn);
-  if (found === null || found.declaration.formalCheckArgv === null) return null;
-  // The same plugin-root-relative convention as the evaluator argv (FR-2): a
-  // formal-check argv is spawned from the consumer workspace too, so relative
-  // elements must resolve against the located plugin root, not projectRoot.
-  return resolveEvaluatorArgv(found.declaration.formalCheckArgv, found.pluginRoot);
 }
 
 /** The stage a declared advisory hands a run-now choice to, or null when it names none. */

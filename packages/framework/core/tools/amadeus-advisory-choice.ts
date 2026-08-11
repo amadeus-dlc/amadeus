@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import {
   activeIntent,
   activeIntentUuid,
@@ -17,29 +17,13 @@ import {
 import { renderAdvisoryChoiceQuestion } from "./amadeus-directive.ts";
 import {
   advisoriesForHost,
-  declaredFormalCheckArgv,
   declaredHandoffStage,
-  defaultDeclarationWarn,
   isDeclaredAdvisoryCode,
   isKnownAdvisoryCode,
-  missingPluginManifestWarning,
-  resolveArgvTokens,
-  resolvePluginManifest,
   type RunEvaluator,
 } from "./amadeus-advisory-declaration.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin.ts";
-import {
-  ACTIVATION_WATCH_GLOBS,
-  recordActivationVerdict,
-  type Advisory,
-  type AdvisoryCode,
-} from "./amadeus-plugin-activation.ts";
-import {
-  resolveSpecRoots,
-  TLA_EXECUTION_MODEL_NAME,
-  tlaCfgPath,
-  tlaModelPath,
-} from "./amadeus-formal-verif-model-map.ts";
+import type { Advisory, AdvisoryCode } from "./amadeus-plugin-runtime.ts";
 import type {
   AutoDecisionRecord,
   DecisionBasisKind,
@@ -166,231 +150,21 @@ export type AdvisoryChoiceDirectiveItem = {
   handoff_stage?: string;
 };
 
-export type AdvisoryFormalCheckRoute = {
-  stage: "formal-model-check";
-  command: string;
-  output_dir: string;
-  target: string;
-  spec_identity: string;
-  advisory_instance: string;
-};
-
 export type AdvisoryChoiceGuardResult =
   | { kind: "allow" }
   | {
       kind: "hold";
       stage: string;
       advisories: AdvisoryChoiceDirectiveItem[];
-      runRequired: boolean;
-      formalChecks: AdvisoryFormalCheckRoute[];
     };
 
 const STORE_FILE = ".amadeus-advisory-choice.json";
-const MODEL_CHECK_DIR = ".amadeus-advisory-check";
 const CHOICES = new Set<string>(ADVISORY_CHOICE_OPTIONS.map((option) => option.choice));
 // The three activation kinds plus any plugin-declared slug (ADR-6 revision).
 // Validation lives in the declaration parser so both sides read one rule.
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value === value.trim();
-}
-
-export function advisoryModelCheckOutputDir(
-  projectDir: string,
-  advisoryInstance: string,
-  attempt = 1,
-): string {
-  const safeInstance = advisoryInstance.replace(/[^A-Za-z0-9._-]+/g, "-");
-  const suffix = attempt <= 1 ? "" : `-retry-${attempt}`;
-  return join(docsRoot(projectDir), MODEL_CHECK_DIR, `${safeInstance}${suffix}`);
-}
-
-export type AdvisoryModelCheckVerdict =
-  | { kind: "not-run"; reason: string }
-  | { kind: "verified-not-detected"; runId: string }
-  | { kind: "detected"; runId: string; counterexampleIdentity: string }
-  | { kind: "harness-error"; runId: string; code: string; detail: string }
-  | { kind: "invalid"; reason: string };
-
-function digestFile(path: string): string {
-  return createHash("sha256").update(readFileSync(path)).digest("hex");
-}
-
-function safeProjectFile(projectDir: string, candidate: unknown): string | null {
-  if (!nonEmptyString(candidate) || isAbsolute(candidate) || candidate.includes("\\")) return null;
-  const path = resolve(projectDir, candidate);
-  const rel = relative(resolve(projectDir), path);
-  if (rel === "" || rel === ".." || rel.startsWith("../")) return null;
-  try {
-    const stat = lstatSync(path);
-    return stat.isFile() && !stat.isSymbolicLink() ? path : null;
-  } catch {
-    return null;
-  }
-}
-
-function readJson(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf-8"));
-}
-
-function artifactDirectory(projectDir: string, pending: PendingAdvisory, attempt: number): string | null {
-  const requested = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
-  if (existsSync(join(requested, "manifest.json"))) return requested;
-  const parent = join(docsRoot(projectDir), MODEL_CHECK_DIR);
-  if (!existsSync(parent)) return null;
-  const prefix = `${pending.identity.advisoryInstance}.failure-`;
-  const failures = readdirSync(parent)
-    .filter((name) => name.startsWith(prefix) && existsSync(join(parent, name, "manifest.json")))
-    .sort();
-  return failures.length === 0 ? null : join(parent, failures.at(-1)!);
-}
-
-function invalid(reason: string): AdvisoryModelCheckVerdict {
-  return { kind: "invalid", reason };
-}
-
-function manifestEnvelopeProblem(manifest: Record<string, unknown>, pending: PendingAdvisory): string | null {
-  if (manifest.schema !== "amadeus.model-check-manifest.v1") return "manifest schema is invalid";
-  if (!nonEmptyString(manifest.runId)) return "manifest has no run ID";
-  if (manifest.partial !== (manifest.outcome === "HARNESS_ERROR")) {
-    return "manifest partial flag does not match its outcome";
-  }
-  const correlation = manifest.advisory;
-  if (!isPlainObject(correlation)) return "manifest advisory correlation does not match the pending instance";
-  if (correlation.target !== pending.identity.target) {
-    return "manifest advisory correlation does not match the pending instance";
-  }
-  if (correlation.specIdentity !== pending.identity.specIdentity) {
-    return "manifest advisory correlation does not match the pending instance";
-  }
-  if (correlation.instance !== pending.identity.advisoryInstance) {
-    return "manifest advisory correlation does not match the pending instance";
-  }
-  return null;
-}
-
-function sourceProvenanceProblem(
-  projectDir: string,
-  pending: PendingAdvisory,
-  manifest: Record<string, unknown>,
-): string | null {
-  const provenance = manifest.sourceProvenance;
-  if (!isPlainObject(provenance)) return "source provenance is missing";
-  const modelPath = safeProjectFile(projectDir, provenance.modelPath);
-  const cfgPath = safeProjectFile(projectDir, provenance.cfgPath);
-  if (modelPath === null || cfgPath === null) {
-    return "source provenance does not match current model/config bytes";
-  }
-  if (!String(provenance.modelPath).startsWith(`${pending.identity.target}/`)) {
-    return "source provenance does not match current model/config bytes";
-  }
-  if (!String(provenance.cfgPath).startsWith(`${pending.identity.target}/`)) {
-    return "source provenance does not match current model/config bytes";
-  }
-  if (!nonEmptyString(provenance.moduleIdentity) || !nonEmptyString(provenance.cfgIdentity)) {
-    return "source provenance does not match current model/config bytes";
-  }
-  if (provenance.moduleSha256 !== digestFile(modelPath)) {
-    return "source provenance does not match current model/config bytes";
-  }
-  if (provenance.cfgSha256 !== digestFile(cfgPath)) {
-    return "source provenance does not match current model/config bytes";
-  }
-  return null;
-}
-
-function artifactInventoryProblem(directory: string, manifest: Record<string, unknown>): string | null {
-  if (!Array.isArray(manifest.expectedArtifacts) || !Array.isArray(manifest.artifacts)) {
-    return "artifact inventory is missing";
-  }
-  for (const name of manifest.expectedArtifacts) {
-    if (!nonEmptyString(name) || name.includes("/") || name.includes("\\")) {
-      return "artifact path is unsafe";
-    }
-    const recorded = manifest.artifacts.find((item) => isPlainObject(item) && item.path === name);
-    const path = join(directory, name);
-    if (!isPlainObject(recorded) || !existsSync(path)) return `artifact evidence is invalid: ${name}`;
-    if (recorded.bytes !== readFileSync(path).byteLength) return `artifact evidence is invalid: ${name}`;
-    if (recorded.sha256 !== digestFile(path)) return `artifact evidence is invalid: ${name}`;
-  }
-  return null;
-}
-
-function verifyNotDetected(directory: string, manifest: Record<string, unknown>): AdvisoryModelCheckVerdict {
-  if (manifest.exitCode !== 0 || !(manifest.expectedArtifacts as unknown[]).includes("completion-marker.json")) {
-    return invalid("NOT_DETECTED manifest is incomplete");
-  }
-  const marker = readJson(join(directory, "completion-marker.json"));
-  const receipt = readJson(join(directory, "env-receipt.json"));
-  if (!isPlainObject(marker) || marker.complete !== true || marker.runId !== manifest.runId) {
-    return invalid("completion marker is invalid");
-  }
-  if (!isPlainObject(receipt) || receipt.schema !== "amadeus.env-receipt.v1") {
-    return invalid("environment provenance is invalid");
-  }
-  if (receipt.runId !== manifest.runId || !Array.isArray(receipt.inspections)) {
-    return invalid("environment provenance is invalid");
-  }
-  if (receipt.inspections.some((item) =>
-    !isPlainObject(item) || (item.status !== "passed" && item.status !== "not-applicable")
-  )) return invalid("environment provenance is invalid");
-  return { kind: "verified-not-detected", runId: manifest.runId as string };
-}
-
-function verifyDetected(directory: string, manifest: Record<string, unknown>): AdvisoryModelCheckVerdict {
-  if (manifest.exitCode !== 1 || !(manifest.expectedArtifacts as unknown[]).includes("counterexample.json")) {
-    return invalid("DETECTED manifest has no counterexample evidence");
-  }
-  const counterexample = readJson(join(directory, "counterexample.json"));
-  if (!isPlainObject(counterexample) || counterexample.runId !== manifest.runId) {
-    return invalid("counterexample evidence is invalid");
-  }
-  if (!nonEmptyString(counterexample.counterexampleIdentity)) {
-    return invalid("counterexample evidence is invalid");
-  }
-  return {
-    kind: "detected",
-    runId: manifest.runId as string,
-    counterexampleIdentity: counterexample.counterexampleIdentity,
-  };
-}
-
-function verifyHarnessError(manifest: Record<string, unknown>): AdvisoryModelCheckVerdict {
-  if (manifest.exitCode !== 2 || !nonEmptyString(manifest.errorCode)) {
-    return invalid("HARNESS_ERROR evidence is invalid");
-  }
-  if (typeof manifest.errorDetail !== "string") return invalid("HARNESS_ERROR evidence is invalid");
-  return {
-    kind: "harness-error",
-    runId: manifest.runId as string,
-    code: manifest.errorCode,
-    detail: manifest.errorDetail,
-  };
-}
-
-export function verifyAdvisoryModelCheckOutcome(
-  projectDir: string,
-  pending: PendingAdvisory,
-  attempt = 1,
-): AdvisoryModelCheckVerdict {
-  const directory = artifactDirectory(projectDir, pending, attempt);
-  if (directory === null) return { kind: "not-run", reason: "formal model check artifacts are missing" };
-  try {
-    const manifest = readJson(join(directory, "manifest.json"));
-    if (!isPlainObject(manifest)) return invalid("manifest schema is invalid");
-    const envelopeProblem = manifestEnvelopeProblem(manifest, pending);
-    if (envelopeProblem !== null) return invalid(envelopeProblem);
-    const provenanceProblem = sourceProvenanceProblem(projectDir, pending, manifest);
-    if (provenanceProblem !== null) return invalid(provenanceProblem);
-    const inventoryProblem = artifactInventoryProblem(directory, manifest);
-    if (inventoryProblem !== null) return invalid(inventoryProblem);
-    if (manifest.outcome === "NOT_DETECTED") return verifyNotDetected(directory, manifest);
-    if (manifest.outcome === "DETECTED") return verifyDetected(directory, manifest);
-    if (manifest.outcome === "HARNESS_ERROR") return verifyHarnessError(manifest);
-    return invalid("manifest outcome is invalid");
-  } catch (error) {
-    return invalid(`model check evidence is unreadable: ${String(error)}`);
-  }
 }
 
 function parseIdentity(value: unknown): ParseResult<AdvisoryIdentity> {
@@ -492,12 +266,8 @@ export function advisorySelector(identity: AdvisoryIdentity): string {
   return `advisory:${identity.plugin}:${identity.code}:${identity.advisoryInstance}`;
 }
 
-// FR-ADV-4, PRIMARY mechanism: a run-required advisory offers ONE option, so
-// `defer-with-risk` is not something the unattended route declines to pick — it
-// is not in the space it picks from. The human route's two-option presentation
-// (ADVISORY_CHOICE_OPTIONS) is untouched.
-export function advisoryChoiceOptionIds(runRequired: boolean): readonly string[] {
-  return runRequired ? ["run-now"] : ["run-now", "defer-with-risk"];
+export function advisoryChoiceOptionIds(): readonly string[] {
+  return ["run-now", "defer-with-risk"];
 }
 
 // FR-ADV-4, SECONDARY mechanism: deferring past a raised advisory waives a
@@ -727,9 +497,9 @@ function directiveItem(pending: PendingAdvisory): AdvisoryChoiceDirectiveItem {
 // Generalization point 3 of ADR-6 (revised), ruled by D2 of #2766. The stage a
 // declared advisory hands run-now to comes from its own manifest; an activation
 // advisory declares none, so its item is byte-identical to the pre-#2766 shape.
-// Carrying it on the item rather than on a formal-check route is what keeps the
-// two apart: a handoff opens a stage, a formal check is something this engine
-// runs and verifies, and only the latter can bear on a release.
+// Carrying it on the item keeps the host generic: the declaring plugin owns the
+// destination and its evaluator remains the sole authority for releasing the
+// hold.
 function directiveItemFor(
   pending: PendingAdvisory,
   activationHostRoot: string | undefined,
@@ -862,8 +632,6 @@ function fallbackAdvisoryHold(
     kind: "hold",
     stage,
     advisories: fallback.map(directiveItem),
-    runRequired: false,
-    formalChecks: [],
   };
 }
 
@@ -896,117 +664,6 @@ function currentPendingAdvisories(
   return current;
 }
 
-function modelCheckResultText(outcome: AdvisoryModelCheckVerdict): string {
-  if (outcome.kind === "detected") return `DETECTED: counterexample ${outcome.counterexampleIdentity}`;
-  if (outcome.kind === "harness-error") return `HARNESS_ERROR ${outcome.code}: ${outcome.detail}`;
-  if (outcome.kind === "not-run" || outcome.kind === "invalid") return outcome.reason;
-  throw new Error("verified outcome has no hold result");
-}
-
-function hasVerifiedModelCheckAttempt(
-  projectDir: string,
-  pending: PendingAdvisory,
-  receipts: readonly AdvisoryChoiceReceipt[],
-): boolean {
-  const attempts = receipts.filter((receipt) =>
-    activeReceiptMatches(receipt, pending) && receipt.choice === "run-now"
-  ).length;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    if (verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt).kind === "verified-not-detected") return true;
-  }
-  return false;
-}
-
-function formalCheckRoute(
-  projectDir: string,
-  pending: PendingAdvisory,
-  attempt: number,
-  activationHostRoot?: string,
-): AdvisoryFormalCheckRoute {
-  const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
-  mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
-  // The execution model's canonical paths follow the active space (BR-1/BR-2);
-  // a legacy spec layout stops here with the resolver's migration instructions.
-  const specSpace = resolveSpecRoots(projectDir).space;
-  // The runner script ships inside the formal-model-check plugin. Locate the
-  // plugin root through the same two-face manifest resolver the declaration
-  // side uses (authoring face under the project root, staging face under the
-  // host) and resolve the script against it, so a consumer workspace whose
-  // manifest lives only on the staging face still gets a runnable path. When
-  // neither face holds the manifest, keep the historical project-root-relative
-  // path and warn — the route degrades, it is never invented.
-  const projectRoot = activationHostRoot === undefined ? projectDir : dirname(activationHostRoot);
-  const stagingRoot = activationHostRoot === undefined
-    ? undefined
-    : join(activationHostRoot, PLUGIN_SOURCE_DIR_NAME);
-  const located = resolvePluginManifest(projectRoot, stagingRoot, "formal-model-check");
-  if (located === null) defaultDeclarationWarn(missingPluginManifestWarning(projectRoot, stagingRoot, "formal-model-check"));
-  const runner = located === null
-    ? "plugins/formal-model-check/tools/run-model-check.ts"
-    : join(located.pluginRoot, "tools", "run-model-check.ts");
-  const args = [
-    "bun", runner,
-    "--model", tlaModelPath(TLA_EXECUTION_MODEL_NAME, specSpace),
-    "--cfg", tlaCfgPath(TLA_EXECUTION_MODEL_NAME, specSpace),
-    "--out", output,
-    "--advisory-target", pending.identity.target,
-    "--advisory-spec-identity", pending.identity.specIdentity,
-    "--advisory-instance", pending.identity.advisoryInstance,
-  ];
-  return {
-    stage: "formal-model-check",
-    command: args.map((arg) => JSON.stringify(arg)).join(" "),
-    output_dir: output,
-    target: pending.identity.target,
-    spec_identity: pending.identity.specIdentity,
-    advisory_instance: pending.identity.advisoryInstance,
-  };
-}
-
-// Generalization point 2 of ADR-6 (revised): a declared advisory's run-now
-// command comes from its own manifest, resolved through the reserved tokens.
-// A declaration with no executable side (formalCheck: null) contributes no
-// route — its release is the plugin's own evaluator saying no-hold on the next
-// `next`, never a verification this engine invents on its behalf.
-function declaredFormalCheckRoute(
-  projectDir: string,
-  activationHostRoot: string | undefined,
-  pending: PendingAdvisory,
-  attempt: number,
-): AdvisoryFormalCheckRoute | null {
-  if (activationHostRoot === undefined) return null;
-  const argv = declaredFormalCheckArgv(
-    dirname(activationHostRoot),
-    pending.identity.plugin,
-    pending.identity.code,
-    undefined,
-    join(activationHostRoot, PLUGIN_SOURCE_DIR_NAME),
-  );
-  if (argv === null) return null;
-  const output = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance, attempt);
-  const resolved = resolveArgvTokens([...argv], {
-    out: output,
-    "advisory-instance": pending.identity.advisoryInstance,
-    target: pending.identity.target,
-    "spec-identity": pending.identity.specIdentity,
-  });
-  if (resolved === null) return null;
-  mkdirSync(join(docsRoot(projectDir), MODEL_CHECK_DIR), { recursive: true });
-  return {
-    stage: "formal-model-check",
-    command: resolved.map((argument) => JSON.stringify(argument)).join(" "),
-    output_dir: output,
-    target: pending.identity.target,
-    spec_identity: pending.identity.specIdentity,
-    advisory_instance: pending.identity.advisoryInstance,
-  };
-}
-
-// A declared advisory with no executable side (formalCheck: null) has nothing
-// this engine can run and verify on the plugin's behalf, so a run-now choice
-// releases nothing: the hold stands until the plugin's own evaluator stops
-// raising it (BR-U2-05). The human's explicit defer-with-risk remains the
-// checkpoint's own escape hatch and is untouched by this rule.
 const DECLARED_RELEASE_RULE =
   "declared advisory: release requires the plugin's own evaluator to return no-hold";
 
@@ -1024,45 +681,24 @@ function raisedDeclaredCodes(
 }
 
 function resolveRunRequiredHold(
-  projectDir: string,
   stage: string,
   pendingItems: readonly PendingAdvisory[],
   receipts: readonly AdvisoryChoiceReceipt[],
   activationHostRoot?: string,
 ): AdvisoryChoiceGuardResult {
   const directiveItems: AdvisoryChoiceDirectiveItem[] = [];
-  const formalChecks: AdvisoryFormalCheckRoute[] = [];
   for (const pending of pendingItems) {
     const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
     if (matching.at(-1)?.choice !== "run-now") continue;
-    if (isDeclaredAdvisoryCode(pending.identity.code)) {
-      const attempts = matching.filter((receipt) => receipt.choice === "run-now").length;
-      const route = declaredFormalCheckRoute(projectDir, activationHostRoot, pending, attempts);
-      if (route === null) {
-        directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: DECLARED_RELEASE_RULE });
-        continue;
-      }
-      directiveItems.push(directiveItemFor(pending, activationHostRoot));
-      formalChecks.push(route);
-      continue;
-    }
-    if (hasVerifiedModelCheckAttempt(projectDir, pending, matching)) continue;
-    const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
-    const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
-    if (outcome.kind === "verified-not-detected") continue;
-    directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: modelCheckResultText(outcome) });
-    if (outcome.kind === "not-run") formalChecks.push(formalCheckRoute(projectDir, pending, attempt, activationHostRoot));
+    directiveItems.push({ ...directiveItemFor(pending, activationHostRoot), result: DECLARED_RELEASE_RULE });
   }
   if (directiveItems.length === 0) {
-    if (activationHostRoot !== undefined) recordActivationVerdict(activationHostRoot, ACTIVATION_WATCH_GLOBS);
     return { kind: "allow" };
   }
   return {
     kind: "hold",
     stage,
     advisories: directiveItems,
-    runRequired: formalChecks.length > 0,
-    formalChecks,
   };
 }
 
@@ -1081,14 +717,12 @@ function guardAdvisoryChoicesLocked(
   const verdict = evaluateAdvisoryHold(current, store.receipts);
   if (verdict.kind === "resolved") return { kind: "allow" };
   if (verdict.kind === "run-required") {
-    return resolveRunRequiredHold(projectDir, stage, verdict.pending, store.receipts, activationHostRoot);
+    return resolveRunRequiredHold(stage, verdict.pending, store.receipts, activationHostRoot);
   }
   return {
     kind: "hold",
     stage,
     advisories: verdict.unresolved.map((pending) => directiveItemFor(pending, activationHostRoot)),
-    runRequired: false,
-    formalChecks: [],
   };
 }
 
@@ -1148,30 +782,13 @@ export function advisoryReportHoldReason(
         .filter((receipt) => activeReceiptMatches(receipt, item))
         .at(-1);
       const label = `${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}`;
-      if (isDeclaredAdvisoryCode(item.identity.code)) {
-        if (latestChoice?.choice !== "run-now") return [];
-        if (declaredRaised === undefined) {
-          declaredRaised = raisedDeclaredCodes(activationHostRoot, stage, runEvaluator);
-        }
-        const key = `${item.identity.plugin}/${item.identity.code}`;
-        if (declaredRaised !== null && !declaredRaised.has(key)) return [];
-        return [`${label}: ${DECLARED_RELEASE_RULE}`];
+      if (latestChoice?.choice !== "run-now") return [];
+      if (declaredRaised === undefined) {
+        declaredRaised = raisedDeclaredCodes(activationHostRoot, stage, runEvaluator);
       }
-      if (hasVerifiedModelCheckAttempt(projectDir, item, storeResult.value.receipts)) return [];
-      const latest = latestChoice;
-      if (latest?.choice !== "run-now") return [];
-      const attempt = storeResult.value.receipts.filter((receipt) =>
-        activeReceiptMatches(receipt, item) && receipt.choice === "run-now"
-      ).length;
-      const outcome = verifyAdvisoryModelCheckOutcome(projectDir, item, attempt);
-      if (outcome.kind === "verified-not-detected") return [];
-      if (outcome.kind === "detected") {
-        return [`${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}: DETECTED ${outcome.counterexampleIdentity}`];
-      }
-      if (outcome.kind === "harness-error") {
-        return [`${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}: HARNESS_ERROR ${outcome.code}`];
-      }
-      return [`${item.identity.plugin}/${item.identity.code}/${item.identity.advisoryInstance}: ${outcome.reason}`];
+      const key = `${item.identity.plugin}/${item.identity.code}`;
+      if (declaredRaised !== null && !declaredRaised.has(key)) return [];
+      return [`${label}: ${DECLARED_RELEASE_RULE}`];
     });
     return failures.length === 0 ? null : `advisory hold remains: ${failures.join(", ")}`;
   });
@@ -1187,17 +804,14 @@ export function choiceFromExactPrompt(prompt: string): AdvisoryChoice | null {
 }
 
 function acceptsFreshChoice(
-  projectDir: string,
+  _projectDir: string,
   pending: PendingAdvisory,
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
   const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
   const latest = matching.at(-1);
   if (latest === undefined) return true;
-  if (latest.choice === "defer-with-risk") return false;
-  const attempt = matching.filter((receipt) => receipt.choice === "run-now").length;
-  const outcome = verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt);
-  return outcome.kind === "detected" || outcome.kind === "harness-error" || outcome.kind === "invalid";
+  return false;
 }
 
 function isGroundedHumanTurn(projectDir: string, humanTurn: HumanTurnProvenance): boolean {
@@ -1516,10 +1130,6 @@ export function revokeMisattributedAdvisoryChoice(
     if (hasMatchingAdvisoryPresentation(projectDir, [pending], receipt.provenance)) {
       return { ok: false, reason: "receipt is grounded in a matching advisory presentation" };
     }
-    const attempt = matching.filter((item) => item.choice === "run-now").length;
-    if (verifyAdvisoryModelCheckOutcome(projectDir, pending, attempt).kind !== "not-run") {
-      return { ok: false, reason: "model-check evidence exists for this receipt" };
-    }
     receipt.revokedAt = now;
     receipt.revocationReason = "misattributed-unpresented-choice";
     writeStore(projectDir, storeResult.value);
@@ -1531,15 +1141,11 @@ export type AdvisoryStoreRecovery = {
   readonly pendingSalvaged: number;
   readonly receiptsDropped: number;
   readonly rePresentationRequired: boolean;
-  readonly formalCheckAttemptsReset: number;
+  readonly runNowReceiptsReset: number;
 };
 
-// The ONE thing a discarded legacy receipt is read for, and it is a count, not a
-// meaning: the formal-check attempt a route is numbered by is
-// `receipts.filter(choice === "run-now").length` everywhere it is computed, so
-// this is how far those counters wind back. A receipt too malformed to show a
-// choice simply does not count — it is being thrown away either way, and
-// guessing at it is the exact thing ADR-9 refuses.
+// Count discarded run-now receipts without assigning plugin-specific meaning to
+// them. A receipt too malformed to expose a choice does not count.
 function droppedRunNowCount(receipts: readonly unknown[]): number {
   return receipts.filter((receipt) => isPlainObject(receipt) && receipt.choice === "run-now").length;
 }
@@ -1621,7 +1227,7 @@ export function recoverSchema1AdvisoryStore(projectDir: string): ParseResult<Adv
         pendingSalvaged: pending.length,
         receiptsDropped: raw.receipts.length,
         rePresentationRequired: pending.some((item) => item.closedAt === undefined),
-        formalCheckAttemptsReset: droppedRunNowCount(raw.receipts),
+        runNowReceiptsReset: droppedRunNowCount(raw.receipts),
       },
     };
   });
@@ -1642,7 +1248,7 @@ export function recoverSchema1AdvisoryStoreCli(projectDir: string): number {
     pending_salvaged: result.value.pendingSalvaged,
     receipts_dropped: result.value.receiptsDropped,
     re_presentation_required: result.value.rePresentationRequired,
-    formal_check_attempts_reset: result.value.formalCheckAttemptsReset,
+    run_now_receipts_reset: result.value.runNowReceiptsReset,
   }));
   return 0;
 }
@@ -1666,7 +1272,7 @@ export function resolveAdvisoryChoiceAutonomously(input: {
   readonly graphRevision: string;
 }): AdvisoryAutoResolution {
   if (input.hold.advisories.length === 0) return { kind: "human-required", reason: "empty-advisory-hold" };
-  const optionIds = advisoryChoiceOptionIds(input.hold.runRequired);
+  const optionIds = advisoryChoiceOptionIds();
   let first: Extract<AdvisoryAutoResolution, { kind: "resolved" }> | null = null;
   for (const item of input.hold.advisories) {
     const identity: AdvisoryIdentity = {

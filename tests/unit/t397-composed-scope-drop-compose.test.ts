@@ -23,7 +23,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  applyPluginScopeOptIns,
+  applyPluginScopeBindings,
   canonicalScopeGridJson,
   mergeComposedScopes,
   type ScopeGrid,
@@ -45,13 +45,14 @@ function compileGrid(
   pluginStages: Stages,
   onDiskJson: string | null,
 ): ScopeGrid {
-  return applyPluginScopeOptIns(
+  return applyPluginScopeBindings(
     mergeComposedScopes(
       transposeScopeGrid(coreStages.filter((s) => (s.scopes?.length ?? 0) > 0)),
       onDiskJson,
       REGISTERED,
     ),
-    pluginStages,
+    pluginStages.map((pluginStage) => ({ plugin: "fixture-plugin", stage: pluginStage })),
+    {},
   );
 }
 

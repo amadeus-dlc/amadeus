@@ -9,10 +9,12 @@ import {
   createPendingAdvisory,
   evaluateAdvisoryHold,
   parseAdvisoryChoiceReceipt,
-  advisoryModelCheckOutputDir,
-  verifyAdvisoryModelCheckOutcome,
   type AdvisoryChoiceReceipt,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  advisoryModelCheckOutputDir,
+  verifyAdvisoryModelCheckOutcome,
+} from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
 
 const base = {
   plugin: "formal-model-check",

@@ -40,6 +40,22 @@
         "formal-model-check",
         "pr-convergence"
       ]
+    },
+    "scope-bindings": {
+      "formal-model-check": {
+        "formal-model-check": [
+          "self-document",
+          "self-feature",
+          "self-fix",
+          "self-refactor"
+        ],
+        "tla-authoring": [
+          "self-document",
+          "self-feature",
+          "self-fix",
+          "self-refactor"
+        ]
+      }
     }
   }
 }

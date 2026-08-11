@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-formal-verif-model-map.ts
+// covers: file:plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts
 // size: medium
 //
 // 260807-tla-specs-relocation — the single spec-root resolver (E-1). Pins:
@@ -19,7 +19,7 @@ import { pathToFileURL } from "node:url";
 import {
   LegacySpecError,
   resolveSpecRoots,
-} from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+} from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
   LegacySpecError as PluginLegacySpecError,
   resolveSpecRoots as pluginResolveSpecRoots,
@@ -28,7 +28,7 @@ import { loadVerifiedTlaSourcesInternal } from "../../plugins/formal-model-check
 import {
   activationAdvisoriesForHost,
   activationAdvisoryForHost,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { defaultModelMapPath } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 import { defaultSubjectsPath } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { defaultStoreRoot } from "../../plugins/formal-model-check/tools/tla-evidence.ts";

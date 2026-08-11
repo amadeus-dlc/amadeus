@@ -1,5 +1,5 @@
-// covers: file:packages/framework/core/tools/amadeus-sensor-pr-convergence-report-format.ts,
-//         file:packages/framework/core/sensors/amadeus-pr-convergence-report-format.md
+// covers: file:plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts,
+//         file:plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md
 // size: medium
 //
 // U3 C8 — the advisory report-format sensor (FR-6a/6b, NFR-3). Two halves:
@@ -34,13 +34,13 @@ import {
 import {
   evaluateReportFormat,
   main as sensorMain,
-} from "../../packages/framework/core/tools/amadeus-sensor-pr-convergence-report-format.ts";
+} from "../../plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
 import { renderReport } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(
   REPO_ROOT,
-  "packages/framework/core/sensors/amadeus-pr-convergence-report-format.md",
+  "plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
 );
 
 const VERDICT = {

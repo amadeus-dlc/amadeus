@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
 // size: small
 //
 // U6 activation-policy — judgeActivation is the pure 3-value map (current hash ×
@@ -14,7 +14,7 @@ import {
   ACTIVATION_PLUGIN,
   activationAdvisoryLine,
   judgeActivation,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 
 describe("t319 judgeActivation (pure 3-value map)", () => {
   test("equal current/last hash -> current (silent)", () => {

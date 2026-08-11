@@ -181,7 +181,7 @@ export type StageAttributionReport = {
   };
   readonly instrumentationHypotheses: readonly {
     readonly type: "candidate-boundary";
-    readonly boundary: "review-lifecycle" | "test-lifecycle" | "pr-convergence-lifecycle";
+    readonly boundary: "review-lifecycle" | "test-lifecycle" | "pull-request-lifecycle";
   }[];
   readonly outliers: readonly AttributionOutlier[];
   readonly methodology: {
@@ -426,7 +426,7 @@ export function composeAttributionReport(input: {
       instrumentationHypotheses: Object.freeze([
         Object.freeze({ type: "candidate-boundary" as const, boundary: "review-lifecycle" as const }),
         Object.freeze({ type: "candidate-boundary" as const, boundary: "test-lifecycle" as const }),
-        Object.freeze({ type: "candidate-boundary" as const, boundary: "pr-convergence-lifecycle" as const }),
+        Object.freeze({ type: "candidate-boundary" as const, boundary: "pull-request-lifecycle" as const }),
       ]),
       outliers: Object.freeze(outliers),
       methodology: Object.freeze({

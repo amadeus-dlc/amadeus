@@ -18,7 +18,7 @@
 // amadeus-lib.ts.
 
 import { isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
-import type { AdvisoryCode } from "./amadeus-plugin-activation.ts";
+import type { AdvisoryCode } from "./amadeus-plugin-runtime.ts";
 
 // --- Public types ---
 
@@ -179,7 +179,7 @@ export interface RunStageDirective {
   advisories?: DirectiveAdvisory[];
 }
 
-// DirectiveAdvisory — the wire shape of amadeus-plugin-activation.ts's
+// DirectiveAdvisory — the wire shape of a plugin advisory.
 // `Advisory`. Declared here (rather than imported) so the directive contract
 // module stays dependency-free, and kept structurally identical so the
 // producing type assigns to it without a cast; the plugin module remains the
@@ -212,15 +212,6 @@ export type AdvisoryChoiceDirectiveAdvisory = {
   handoff_stage?: string;
 };
 
-export type AdvisoryFormalCheckDirective = {
-  stage: "formal-model-check";
-  command: string;
-  output_dir: string;
-  target: string;
-  spec_identity: string;
-  advisory_instance: string;
-};
-
 const ADVISORY_CHOICE_QUESTION_SUFFIX =
   "各advisoryについて次のいずれかを選択してください。";
 
@@ -240,8 +231,6 @@ export interface AwaitAdvisoryChoiceDirective {
   question: string;
   options: ["今すぐ実行する", "リスクを承知して延期する"];
   advisories: AdvisoryChoiceDirectiveAdvisory[];
-  run_required?: boolean;
-  formal_checks?: AdvisoryFormalCheckDirective[];
 }
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
@@ -490,8 +479,6 @@ const AWAIT_ADVISORY_CHOICE_FIELDS = [
   "question",
   "options",
   "advisories",
-  "run_required",
-  "formal_checks",
 ] as const;
 
 const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
@@ -797,32 +784,6 @@ function checkAwaitAdvisoryChoice(
   ) {
     errors.push("await-advisory-choice: options must be the canonical two choices");
   }
-  if ("run_required" in o && typeof o.run_required !== "boolean") {
-    errors.push(`await-advisory-choice: run_required must be boolean, got ${describe(o.run_required)}`);
-  }
-  if (o.run_required === true && (!Array.isArray(o.formal_checks) || o.formal_checks.length === 0)) {
-    errors.push("await-advisory-choice: run_required requires non-empty formal_checks");
-  }
-  if (o.run_required !== true && "formal_checks" in o) {
-    errors.push("await-advisory-choice: formal_checks requires run_required=true");
-  }
-  if (Array.isArray(o.formal_checks)) {
-    o.formal_checks.forEach((item, index) => {
-      const prefix = `await-advisory-choice: formal_checks[${index}]`;
-      if (!isPlainObject(item)) {
-        errors.push(`${prefix} must be object, got ${describe(item)}`);
-        return;
-      }
-      for (const key of ["command", "output_dir", "target", "spec_identity", "advisory_instance"]) {
-        if (typeof item[key] !== "string" || item[key].length === 0) {
-          errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
-        }
-      }
-      if (item.stage !== "formal-model-check") {
-        errors.push(`${prefix}.stage must be formal-model-check, got ${describe(item.stage)}`);
-      }
-    });
-  }
   if (!Array.isArray(o.advisories) || o.advisories.length === 0) {
     errors.push("await-advisory-choice: advisories must be a non-empty array");
     return;
@@ -846,8 +807,8 @@ function checkAwaitAdvisoryChoice(
         errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
       }
     }
-    if (typeof item.code !== "string" || !(ADVISORY_CODES as readonly string[]).includes(item.code)) {
-      errors.push(`${prefix}.code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`);
+    if (typeof item.code !== "string" || !ADVISORY_CODE_RE.test(item.code)) {
+      errors.push(`${prefix}.code must be a slug, got ${describe(item.code)}`);
     }
     if ("result" in item && (typeof item.result !== "string" || item.result.length === 0)) {
       errors.push(`${prefix}.result must be non-empty string, got ${describe(item.result)}`);
@@ -1110,11 +1071,9 @@ function checkOptionalConsumesAbsent(
   });
 }
 
-// The advisory codes the channel accepts — the two FIRING judgment values.
-// `current` is deliberately absent: a silent judgment produces no entry at all,
-// so a "current" advisory would be a rendered decision with no decision behind
-// it (the validator refuses to carry one).
-const ADVISORY_CODES = ["not-ready", "changed", "never-run"] as const;
+// Advisory codes are plugin-owned identifiers. The host validates only their
+// transport-safe shape and never enumerates a concrete plugin's vocabulary.
+const ADVISORY_CODE_RE = /^[a-z][a-z0-9-]*$/;
 
 function checkOptionalAdvisoryStrings(
   item: Record<string, unknown>,
@@ -1129,7 +1088,7 @@ function checkOptionalAdvisoryStrings(
 }
 
 // checkOptionalAdvisories — each entry must be
-// {plugin, code, message, stage} with `code` in ADVISORY_CODES. Same
+// {plugin, code, message, stage} with a slug-shaped `code`. Same
 // presence-then-type shape as checkOptionalConsumesAbsent, the sibling
 // object-array field.
 function checkOptionalAdvisories(
@@ -1158,12 +1117,9 @@ function checkOptionalAdvisories(
       }
     }
     checkOptionalAdvisoryStrings(item, `${kind}: ${field}[${i}]`, errors);
-    if (
-      typeof item.code !== "string" ||
-      !(ADVISORY_CODES as readonly string[]).includes(item.code)
-    ) {
+    if (typeof item.code !== "string" || !ADVISORY_CODE_RE.test(item.code)) {
       errors.push(
-        `${kind}: ${field}[${i}].code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`,
+        `${kind}: ${field}[${i}].code must be a slug, got ${describe(item.code)}`,
       );
     }
   });

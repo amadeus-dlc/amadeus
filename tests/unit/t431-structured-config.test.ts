@@ -53,7 +53,7 @@ describe("t431 structured config", () => {
           github: { issue: { creation: { mode: "prompt" } } },
         },
         swarm: { unit: { concurrency: { limit: 4 } } },
-        plugin: { activation: { names: [] } },
+        plugin: { activation: { names: [] }, scopeBindings: {} },
         subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
       },
       sources: [],
@@ -146,7 +146,7 @@ describe("t431 structured config", () => {
       soloElection: { trigger: { mode: "auto" } },
       finding: { github: { issue: { creation: { mode: "off" } } } },
       swarm: { unit: { concurrency: { limit: 1 } } },
-      plugin: { activation: { names: ["alpha", "zeta"] } },
+      plugin: { activation: { names: ["alpha", "zeta"] }, scopeBindings: {} },
       subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
     });
     expect(outcome.sources).toEqual([
@@ -265,6 +265,45 @@ describe("t431 structured config", () => {
       if (outcome.kind === "invalid") {
         expect(outcome.issues[0]?.key).toBe("plugin.activation.names");
       }
+    }
+  });
+
+  test("resolves host-owned plugin scope bindings only from project config", () => {
+    const outcome = parseAmadeusConfigLayers([
+      present("project", {
+        plugin: {
+          "scope-bindings": {
+            "fixture-plugin": {
+              "fixture-stage": ["team-z", "team-a"],
+            },
+          },
+        },
+      }),
+    ]);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.plugin.scopeBindings).toEqual({
+        "fixture-plugin": { "fixture-stage": ["team-a", "team-z"] },
+      });
+    }
+    const forbidden = parseAmadeusConfigLayers([
+      present("space", {
+        plugin: { "scope-bindings": { "fixture-plugin": { "fixture-stage": ["team-a"] } } },
+      }),
+    ]);
+    expect(forbidden.kind).toBe("invalid");
+
+    for (const scopeBindings of [
+      { "INVALID PLUGIN": { "fixture-stage": ["team-a"] } },
+      { "fixture-plugin": { "INVALID STAGE": ["team-a"] } },
+      { "fixture-plugin": { "fixture-stage": [] } },
+      { "fixture-plugin": { "fixture-stage": ["INVALID SCOPE"] } },
+      { "fixture-plugin": { "fixture-stage": ["team-a", "team-a"] } },
+    ]) {
+      const invalid = parseAmadeusConfigLayers([
+        present("project", { plugin: { "scope-bindings": scopeBindings } }),
+      ]);
+      expect(invalid.kind).toBe("invalid");
     }
   });
 

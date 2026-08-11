@@ -7,7 +7,6 @@ import { join } from "node:path";
 import {
   advisoriesForHost,
   declaredAdvisoriesForPlugin,
-  declaredFormalCheckArgv,
   declaredHandoffStage,
   parseAdvisoryDeclarations,
   resolveEvaluatorArgv,
@@ -31,7 +30,7 @@ import {
   docsRoot,
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
@@ -97,7 +96,6 @@ const HOLD_DECLARATION = [
     code: "authoring-hold",
     checkpoints: ["requirements-analysis"],
     evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
-    formalCheck: null,
   },
 ];
 
@@ -214,7 +212,6 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
         code: "staging-only-hold",
         checkpoints: ["requirements-analysis"],
         evaluator: { argv: ["bun", "tools/other.ts", "hold"] },
-        formalCheck: null,
       },
     ]);
     const { raised, seen } = advisoriesFor(
@@ -228,21 +225,18 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
 
   // FR-5: the run-now lookup paths read the staging face too, so a consumer
   // workspace's directive does not silently drop handoff_stage.
-  test("declaredHandoffStage and declaredFormalCheckArgv resolve from the staging face", () => {
+  test("declaredHandoffStage resolves from the staging face", () => {
     composeDemo();
     declareAdvisoriesInStaging([
       {
         code: "authoring-hold",
         checkpoints: ["requirements-analysis"],
         evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
-        formalCheck: { argv: ["bun", "tools/check.ts", "--out", "{out}"] },
         handoff: { stage: "tla-authoring" },
       },
     ]);
     expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
       .toBe("tla-authoring");
-    expect(declaredFormalCheckArgv(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
-      .toEqual(["bun", join(hostRoot, ".amadeus-plugin-src", "demo", "tools", "check.ts"), "--out", "{out}"]);
   });
 
   test("a declaration lookup with no manifest on either face returns null and warns", () => {
@@ -270,18 +264,17 @@ describe("the shipped formal-model-check declaration", () => {
     );
     const parsed = parseAdvisoryDeclarations(manifest);
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["authoring-hold"]);
-    expect(parsed.declarations[0]?.checkpoints).toEqual([
+    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["spec-change", "authoring-hold"]);
+    expect(parsed.declarations[1]?.checkpoints).toEqual([
       "requirements-analysis",
       "functional-design",
       "build-and-test",
     ]);
   });
 
-  // FR-3: in the dogfood layout both declared tool paths — the manifest's own
-  // evaluator argv and the engine's run-now runner — resolve to real files
-  // against the located plugin root.
-  test("both declared tool paths resolve to real files against the located plugin root", () => {
+  // FR-3: the plugin's declared evaluator and handoff implementation exist on
+  // its own authoring face.
+  test("declared plugin tool paths exist against the located plugin root", () => {
     const repoRoot = join(import.meta.dir, "..", "..");
     const located = resolvePluginManifest(repoRoot, undefined, "formal-model-check");
     expect(located).not.toBeNull();
@@ -292,8 +285,8 @@ describe("the shipped formal-model-check declaration", () => {
   });
 });
 
-// BR-U2-05: a declared advisory with no runnable check (formalCheck: null) is
-// released only by its own evaluator returning no-hold. `next` and `report`
+// BR-U2-05: a declared advisory is released only by its own evaluator returning
+// no-hold. `next` and `report`
 // must agree on that — a run-now choice releases neither side.
 describe("declared advisory hold symmetry across next and report", () => {
   const projects: string[] = [];
@@ -378,8 +371,6 @@ describe("declared advisory hold symmetry across next and report", () => {
     const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
     expect(guarded.kind).toBe("hold");
     if (guarded.kind === "hold") {
-      expect(guarded.runRequired).toBe(false);
-      expect(guarded.formalChecks).toEqual([]);
       expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
     }
 
@@ -404,51 +395,6 @@ describe("declared advisory hold symmetry across next and report", () => {
     const reason = advisoryReportHoldReason(projectDir, stage) ?? "";
     expect(reason).toContain("authoring-hold");
     expect(reason).toContain("evaluator to return no-hold");
-  });
-
-  // Generalization point 2: a declaration that DOES carry a runnable check keeps
-  // the run-now route, resolved from its own manifest through the reserved
-  // tokens rather than from anything the engine hard-codes.
-  const RUNNABLE_DECLARATION = [
-    {
-      code: "authoring-hold",
-      checkpoints: ["requirements-analysis"],
-      evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
-      formalCheck: { argv: ["bun", "tools/check.ts", "--out", "{out}", "--id", "{advisory-instance}"] },
-    },
-  ];
-
-  test("a declared runnable check becomes the run-now route with its tokens resolved", () => {
-    const { projectDir, hostRoot } = seedDeclaredProject(RUNNABLE_DECLARATION);
-    const stage = DECLARED_ADVISORY.stage;
-    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    chooseAtCheckpoint(projectDir, "run-now");
-
-    const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    expect(guarded.kind).toBe("hold");
-    if (guarded.kind !== "hold") return;
-    expect(guarded.runRequired).toBe(true);
-    const route = guarded.formalChecks[0];
-    expect(route?.command).toContain(JSON.stringify(join(projectDir, "plugins", "demo", "tools", "check.ts")));
-    expect(route?.command).not.toContain("{out}");
-    expect(route?.command).toContain(JSON.stringify(route?.output_dir));
-    expect(route?.command).toContain(JSON.stringify(route?.advisory_instance));
-    expect(guarded.advisories[0]?.result).toBeUndefined();
-  });
-
-  test("a declared check whose argv holds an unknown token contributes no route", () => {
-    const { projectDir, hostRoot } = seedDeclaredProject([
-      { ...RUNNABLE_DECLARATION[0], formalCheck: { argv: ["bun", "check.ts", "{nowhere}"] } },
-    ]);
-    const stage = DECLARED_ADVISORY.stage;
-    guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    chooseAtCheckpoint(projectDir, "run-now");
-
-    const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    expect(guarded.kind).toBe("hold");
-    if (guarded.kind !== "hold") return;
-    expect(guarded.runRequired).toBe(false);
-    expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
   });
 
   test("the human's explicit deferral still releases both sides", () => {
@@ -505,9 +451,6 @@ describe("a manifest that exists but cannot be read", () => {
     expect(raised[0]?.message).toContain("cannot be read");
   });
 
-  test("yields no declared run-now argv", () => {
-    expect(declaredFormalCheckArgv("/nowhere", "demo", "authoring-hold", unreadable)).toBeNull();
-  });
 });
 
 // ─── Resolver units (FR-1/FR-2) ─────────────────────────────────────────────

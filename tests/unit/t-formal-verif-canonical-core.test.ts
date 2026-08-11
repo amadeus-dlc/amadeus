@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
   canonicalIdentity,
   parseTlaModelMap,
-} from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+} from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);

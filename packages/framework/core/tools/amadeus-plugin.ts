@@ -524,7 +524,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
 
 // The plugin host root when the caller names none (#1591 ruling B): the HARNESS
 // directory, i.e. the same root the engine reads back
-// (amadeus-orchestrate.ts:pluginActivationHostRoot and
+// (amadeus-orchestrate.ts:pluginHostRoot and
 // amadeus-graph.ts:pluginsHostRoot both resolve to the harness dir). Derived
 // from THIS file's own installed location, so the compose command the shipped
 // INSTALL doc prints — run from the project root, through the harness copy of
@@ -1301,7 +1301,6 @@ function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: 
     diagnostics: deps.diagnosePlugins(host, journalPending),
     drops: readDropsRecord(hostRoot),
     revision: backend.auditCount(),
-    activation: null,
   });
   const selected = resolvePluginSelection(hostRoot);
   if (selected.kind === "invalid") {
@@ -1402,16 +1401,10 @@ function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: 
 // 8-row branch table also requires the DropsRecord (the SOLE source of the
 // degraded/advisory states — domain-entities.md) and the record's revision (the
 // `composed@<rev>` line). Those two inputs cannot be realized from `record` alone,
-// so the observation bundles diag + drops + revision + activation. Bundling keeps
+// so the observation bundles diagnostics, drops, and revision. Bundling keeps
 // the function a pure port-free projection (performance-design's structural
-// acceptance — it reads nothing beyond its argument). The U6 ActivationJudgment is
-// display-only here (U5 owns no activation logic); until U6 lands the handler
-// passes `activation: null`.
+// acceptance — it reads nothing beyond its argument).
 // ---------------------------------------------------------------------------
-
-// The U6 (activation-policy) judgment, reduced to the one fact this Unit displays.
-// U6 owns the judgment logic; U5 only renders whether the spec-hash changed.
-export type DoctorActivationInput = { readonly specHashChanged: boolean };
 
 // Read-only observation of the host's plugin state (the projection input). No
 // Buffers / composition ledger — only the fields the branch table maps.
@@ -1419,7 +1412,6 @@ export type DoctorPluginObservation = {
   readonly diagnostics: readonly PluginDiagnostic[];
   readonly drops: DropsRecord;
   readonly revision: number;
-  readonly activation: DoctorActivationInput | null;
 };
 
 // The projected --doctor plugin section. `installed` is the discovered-plugin
@@ -1480,8 +1472,7 @@ export function buildDoctorPluginSection(obs: DoctorPluginObservation): DoctorPl
   for (const [plugin, entries] of dropPlugins) {
     for (const entry of entries) lines.push(dropEntryToDoctorLine(plugin, entry));
   }
-  const activation = obs.activation?.specHashChanged ? "formal-model-check: spec-hash CHANGED" : null;
-  return { installed: obs.diagnostics.length, lines, activation };
+  return { installed: obs.diagnostics.length, lines, activation: null };
 }
 
 // The display string for one plugin DoctorLine (branch table display forms).
@@ -1525,7 +1516,7 @@ export function doctorPluginRows(section: DoctorPluginSection): readonly DoctorP
 // readDropsRecord), so a pristine project creates nothing. The full host walk
 // (buildHostSnapshot) is skipped unless a plugin is composed or a recovery
 // journal exists — the 0-plugin common case pays only three existsSync probes
-// (BR-U5-4 / performance-design). U6 activation is null until that Unit lands.
+// (BR-U5-4 / performance-design).
 export function readDoctorPluginObservation(hostRoot: string): DoctorPluginObservation {
   const backend = createNodeBackend(hostRoot);
   const record = backend.readComposition();
@@ -1535,7 +1526,7 @@ export function readDoctorPluginObservation(hostRoot: string): DoctorPluginObser
   const diagnostics = record.plugins.size > 0 || journalPending
     ? diagnosePlugins(buildHostSnapshot(hostRoot, backend), journalPending)
     : [];
-  return { diagnostics, drops, revision, activation: null };
+  return { diagnostics, drops, revision };
 }
 
 // ---------------------------------------------------------------------------

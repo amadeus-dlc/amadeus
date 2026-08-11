@@ -53,7 +53,7 @@ import {
   docsRoot,
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
@@ -197,15 +197,12 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
       provenance: { kind: "auto-decision", decisionId: resolution.decision.decisionId },
     });
 
-    // The choice itself is settled: what the checkpoint still wants is the model
-    // check the `run-now` choice asked for, carried as a formal-check route
-    // rather than as an unanswered question. (Executing that route is not this
-    // unit's business — FR-ADV-5 keeps it plugin-specific.)
+    // The choice itself is settled, but the plugin still raises the advisory.
+    // The host therefore keeps the hold without inventing a plugin command.
     const after = guardAdvisoryChoices(projectDir, STAGE, [advisory]);
     expect(after.kind).toBe("hold");
     if (after.kind !== "hold") return;
-    expect(after.runRequired).toBe(true);
-    expect(after.formalChecks).toHaveLength(1);
+    expect(after.advisories[0]?.result).toContain("plugin's own evaluator");
   });
 
   // #2479: a ladder decision names ONE advisory occurrence. The grounding check

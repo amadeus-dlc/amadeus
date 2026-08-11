@@ -96,6 +96,10 @@ import {
   validateSensorManifest,
 } from "./amadeus-sensor-schema.ts";
 import { type StageFrontmatter, validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+import {
+  type PluginScopeBindings,
+  resolveAmadeusConfig,
+} from "./amadeus-config.ts";
 
 // --- Types ---
 
@@ -1435,7 +1439,7 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  an approved plan: `drop` takes the plugin stage out of the graph, the cell
  *  was GC'd and written back, and a later `compose` could not restore it
  *  because an opt-in stage (`scopes: []`) mints no cell through
- *  `applyPluginScopeOptIns`. The on-disk grid is the ONLY copy of a composed
+ *  `applyPluginScopeBindings`. The on-disk grid is the ONLY copy of a composed
  *  plan, and the recompile that destroyed it runs under `stdio: "ignore"`
  *  (amadeus-plugin.ts spawnRecompile), so the loss was both silent and
  *  unrecoverable (#1863). A cell for an absent slug is inert — every consumer
@@ -1476,16 +1480,16 @@ export function mergeComposedScopes(
   return sorted;
 }
 
-/** Overlay a plugin stage's `scopes:` opt-ins onto an already-merged grid.
+/** Overlay host-owned plugin scope bindings onto an already-merged grid.
  *
  *  A plugin stage is NOT a producer of scope columns: the stock grid rows are
  *  derived from core frontmatter, and composed rows are owned by the composer.
  *  Letting a plugin stage into the transpose makes it a producer — it mints a
  *  fresh row for every name it declares, and that fresh row wins over the
  *  on-disk row of the same name in `mergeComposedScopes` (which skips names
- *  already present). A plugin declaring an existing composed scope therefore
+ *  already present). A binding targeting an existing composed scope therefore
  *  REPLACED that scope's plan with one holding only the plugin's own stage
- *  (#1630). So the opt-in is applied here instead, as a strictly ADDITIVE
+ *  (#1630). So the host binding is applied here instead, as a strictly ADDITIVE
  *  overlay after the fold:
  *
  *   - row exists -> set this stage's cell to EXECUTE, touch nothing else;
@@ -1494,16 +1498,19 @@ export function mergeComposedScopes(
  *     the compile-side treatment of `scopes: []`.
  *
  *  Pure — no I/O. Keys re-sort so the canonical emitter stays deterministic. */
-export function applyPluginScopeOptIns(
+export type PluginScopeStage = Readonly<{ plugin: string; stage: GraphStage }>;
+
+export function applyPluginScopeBindings(
   grid: ScopeGrid,
-  pluginStages: GraphStage[],
+  pluginStages: readonly PluginScopeStage[],
+  bindings: PluginScopeBindings,
 ): ScopeGrid {
   const out: ScopeGrid = {};
   for (const [name, entry] of Object.entries(grid)) {
     out[name] = { stages: { ...entry.stages } };
   }
-  for (const stage of pluginStages) {
-    for (const scope of stage.scopes ?? []) {
+  for (const { plugin, stage } of pluginStages) {
+    for (const scope of bindings[plugin]?.[stage.slug] ?? []) {
       const row = out[scope] ?? { stages: {} };
       row.stages[stage.slug] = "EXECUTE";
       out[scope] = row;
@@ -1800,8 +1807,8 @@ function titleCaseSlug(slug: string): string {
 // <slug>.md` (plugin-composition.ts writes StageCopy.path verbatim into the
 // host tree). The core walk above only reads stagesDir() (amadeus-common/
 // stages), so composed plugin stages are invisible to the graph until this
-// discovery joins them. The extension is generic — no formal-model-check
-// hardcoding (BR-U2-1) — and the only core file it touches is this one
+// discovery joins them. The extension is generic and the only core file it
+// touches is this one
 // (BR-U2-7: plugin-composition.ts / plugin-projection.ts stay untouched).
 // ---------------------------------------------------------------------------
 
@@ -2138,7 +2145,7 @@ function pluginIndexError(
  *  for the SCHEMA_INVALID error's `field`. */
 function firstErrorField(errors: readonly string[]): string {
   const first = errors[0] ?? "";
-  const m = /^([A-Za-z0-9_.\[\]]+)\b/.exec(first);
+  const m = /^([A-Za-z0-9_.[\]]+)\b/.exec(first);
   return m ? m[1] : "frontmatter";
 }
 
@@ -2194,6 +2201,7 @@ export function compileStageGraph(): {
   }
 
   const stages: GraphStage[] = [];
+  const pluginScopeStages: PluginScopeStage[] = [];
   // Track slug-to-first-file so duplicate-slug errors name both files.
   const slugToFile = new Map<string, string>();
   // Known agent slugs (the `name:` field of each .claude/agents/*.md), passed
@@ -2292,13 +2300,24 @@ export function compileStageGraph(): {
   const sensorsById = loadSensors();
   for (const { file, data } of readTrustedPluginStageIndex(pluginHost)) {
     const slug = data.slug;
+    const plugin = file.path.split("/")[1] ?? file.path;
+    if ((data.scopes?.length ?? 0) > 0) {
+      throw new PluginStageError({
+        code: "SCHEMA_INVALID",
+        plugin,
+        slug,
+        pluginPath: file.path,
+        field: "scopes",
+        reason: "plugin stages leave scope assignment to plugin.scope-bindings in host project configuration",
+      });
+    }
     // Collision against a core stage OR an earlier plugin stage -> loud reject
     // with both paths (BR-U2-2). Emitted as the plugin-stage error schema.
     const previousFile = slugToFile.get(slug);
     if (previousFile) {
       throw new PluginStageError({
         code: "SLUG_COLLISION",
-        plugin: file.path.split("/")[1] ?? file.path,
+        plugin,
         slug,
         existingPath: hostRel(pluginHost, previousFile),
         pluginPath: file.path,
@@ -2308,7 +2327,7 @@ export function compileStageGraph(): {
       if (!sensorsById.has(sensorId)) {
         throw new PluginStageError({
           code: "UNKNOWN_SENSOR",
-          plugin: file.path.split("/")[1] ?? file.path,
+          plugin,
           slug,
           pluginPath: file.path,
           sensorId,
@@ -2326,7 +2345,7 @@ export function compileStageGraph(): {
       if (prefix < 0) {
         throw new PluginStageError({
           code: "SCHEMA_INVALID",
-          plugin: file.path.split("/")[1] ?? file.path,
+          plugin,
           slug,
           pluginPath: file.path,
           field: "phase",
@@ -2344,6 +2363,7 @@ export function compileStageGraph(): {
     const pluginStage = buildGraphStage(data, phase, number, name);
     pluginStage.plugin_source = true;
     stages.push(pluginStage);
+    pluginScopeStages.push({ plugin, stage: pluginStage });
   }
 
   // Sort by numeric order (phase-prefix.index).
@@ -2426,8 +2446,8 @@ export function compileStageGraph(): {
     /* first compile: no grid on disk yet */
   }
   // Scope columns are derived from CORE frontmatter only. A plugin stage
-  // never mints a row (see applyPluginScopeOptIns): its declarations are an
-  // additive overlay applied after the composed fold, so a plugin naming an
+  // never mints a row (see applyPluginScopeBindings): host declarations are an
+  // additive overlay applied after the composed fold, so a binding naming an
   // existing scope joins that plan instead of replacing it (#1630).
   // `scopes: []` is the explicit opt-in contract used by plugin stages
   // reached through `--single`. It has no stock workflow membership, so do
@@ -2437,17 +2457,21 @@ export function compileStageGraph(): {
   const stockScopeStages = stages.filter(
     (stage) => !stage.plugin_source && (stage.scopes?.length ?? 0) > 0,
   );
-  const pluginScopeStages = stages.filter((stage) => stage.plugin_source === true);
+  const config = resolveAmadeusConfig(resolveProjectDir());
+  if (config.kind === "invalid") {
+    throw new Error(`invalid Amadeus configuration: ${config.issues.map((issue) => issue.path).join(", ")}`);
+  }
   return {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
-      applyPluginScopeOptIns(
+      applyPluginScopeBindings(
         mergeComposedScopes(
           transposeScopeGrid(stockScopeStages),
           onDiskGrid,
           new Set(Object.keys(loadScopeMetadata())),
         ),
         pluginScopeStages,
+        config.config.plugin.scopeBindings,
       ),
     ),
     stages,

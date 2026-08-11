@@ -15,11 +15,13 @@
   ],
   "fragments": [],
   "tools": [
+    "tools/amadeus-sensor-pr-convergence-report-format.ts",
     "tools/pr-convergence-cli.ts",
     "tools/pr-convergence-gh-runner.ts",
     "tools/pr-convergence-ledger.ts",
     "tools/pr-convergence-predicate.ts",
     "tools/pr-convergence-presentation.ts",
-    "tools/pr-convergence-provenance.ts"
+    "tools/pr-convergence-provenance.ts",
+    "tools/sensor-flags.ts"
   ]
 }

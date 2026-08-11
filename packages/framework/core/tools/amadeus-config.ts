@@ -62,9 +62,14 @@ export type AmadeusConfigKey =
   | "finding.github.issue.creation.mode"
   | "swarm.unit.concurrency.limit"
   | "plugin.activation.names"
+  | "plugin.scope-bindings"
   | "subagent.dispatch.enforced-models";
 
 export type SoloElectionTriggerMode = "manual" | "auto";
+
+export type PluginScopeBindings = Readonly<
+  Record<string, Readonly<Record<string, readonly string[]>>>
+>;
 
 export type AmadeusConfig = Readonly<{
   intentMirror: Readonly<{
@@ -86,6 +91,7 @@ export type AmadeusConfig = Readonly<{
   }>;
   plugin: Readonly<{
     activation: Readonly<{ names: readonly string[] }>;
+    scopeBindings: PluginScopeBindings;
   }>;
   subagent: Readonly<{
     dispatch: Readonly<{ enforcedModels: readonly string[] }>;
@@ -412,7 +418,8 @@ type ConfigLeafValue =
   | SoloElectionTriggerMode
   | number
   | readonly MirrorProjectTarget[]
-  | readonly string[];
+  | readonly string[]
+  | PluginScopeBindings;
 
 type LeafParseOutcome =
   | { ok: true; value: ConfigLeafValue }
@@ -470,6 +477,35 @@ function parsePluginNames(value: unknown): LeafParseOutcome {
         expected: "unique array of valid plugin names",
       }
     : { ok: true, value: parsed };
+}
+
+const STAGE_OR_SCOPE_RE = /^[a-z][a-z0-9-]*$/;
+
+function parsePluginScopeBindings(value: unknown): LeafParseOutcome {
+  const expected = "object mapping plugin names to stage slugs and unique scope slug arrays";
+  if (!isPlainObject(value)) return { ok: false, actualType: valueKind(value), expected };
+  const bindings: Record<string, Record<string, readonly string[]>> = {};
+  for (const [plugin, stages] of Object.entries(value)) {
+    if (!PLUGIN_NAME_RE.test(plugin) || !isPlainObject(stages)) {
+      return { ok: false, actualType: valueKind(stages), expected };
+    }
+    const stageBindings: Record<string, readonly string[]> = {};
+    for (const [stage, scopes] of Object.entries(stages)) {
+      if (!STAGE_OR_SCOPE_RE.test(stage) || !Array.isArray(scopes) || scopes.length === 0) {
+        return { ok: false, actualType: valueKind(scopes), expected };
+      }
+      const unique = new Set<string>();
+      for (const scope of scopes) {
+        if (typeof scope !== "string" || !STAGE_OR_SCOPE_RE.test(scope) || unique.has(scope)) {
+          return { ok: false, actualType: valueKind(scope), expected };
+        }
+        unique.add(scope);
+      }
+      stageBindings[stage] = [...unique].sort();
+    }
+    bindings[plugin] = stageBindings;
+  }
+  return { ok: true, value: bindings };
 }
 
 // #2438: the models a subagent dispatch may run on. Malformed sets are
@@ -549,6 +585,14 @@ export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
     defaultValue: [],
     parse: parsePluginNames,
     legacy: { key: "plugins", valueConversion: "unchanged" },
+  },
+  {
+    path: "plugin.scope-bindings",
+    domain: "plugin",
+    layers: ["project"],
+    merge: "replace",
+    defaultValue: {},
+    parse: parsePluginScopeBindings,
   },
   {
     path: "subagent.dispatch.enforced-models",
@@ -737,6 +781,7 @@ function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>):
       activation: {
         names: value("plugin.activation.names") as readonly string[],
       },
+      scopeBindings: value("plugin.scope-bindings") as PluginScopeBindings,
     },
     subagent: {
       dispatch: {

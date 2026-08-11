@@ -15,7 +15,7 @@ import { loadVerifiedTlaSourcesInternal } from "../../plugins/formal-model-check
 import {
   checkModelCompleteness,
   updateModelMap,
-} from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
+} from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MODULE_DOMAIN = "amadeus.formal-verif.tla.module.v1";

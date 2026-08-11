@@ -12,8 +12,7 @@ consumes: []
 requires_stage: []
 inputs: the Bolt branch and authored pull-request body, an optional existing open pull request, plus the GitHub checks and review threads reachable through the `gh` boundary.
 outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written only by the plugin CLI — a `converged`, `override`, or (for an already-merged pull request) `landed` record.
-sensors:
-  - pr-convergence-report-format
+sensors: []
 scopes: []
 ---
 
@@ -192,7 +191,7 @@ is written by the CLI through Bash, so the harness's write-time hook (which
 watches Write/Edit turns of the active stage) never observes it.
 
 ```
-bun {{HARNESS_DIR}}/tools/amadeus-sensor.ts fire pr-convergence-report-format \
+bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts \
   --stage pr-convergence \
   --output-path <record-root>/construction/<unit>/code-generation/pr-convergence-report.md
 ```

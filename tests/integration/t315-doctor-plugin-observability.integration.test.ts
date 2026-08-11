@@ -207,7 +207,6 @@ describe("t315 doctor plugin observability — real read path", () => {
     const projectDir = healthyProject();
     const obs = readDoctorPluginObservation(pluginHost(projectDir));
     expect(obs.diagnostics).toEqual([]);
-    expect(obs.activation).toBeNull();
     const section = buildDoctorPluginSection(obs);
     expect(doctorPluginRows(section)).toEqual([{ pass: true, label: "Plugins: 0 installed" }]);
   });

@@ -77,7 +77,7 @@ describe("t301 defaultPluginCliDeps (real dependency bag)", () => {
 });
 
 // #1591 (ruling B): the plugin host root is the HARNESS dir, so compose writes
-// where the engine reads (pluginActivationHostRoot / pluginsHostRoot). Both
+// where the engine reads (pluginHostRoot / pluginsHostRoot). Both
 // resolvers are pure over their injected script path, hence unit tier.
 describe("t301 default plugin host root (#1591 ruling B)", () => {
   test("an installed CLI at <project>/<harness>/tools resolves the harness dir, ignoring cwd", () => {

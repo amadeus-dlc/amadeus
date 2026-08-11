@@ -268,21 +268,14 @@ import {
 // import is safe (amadeus-utility.ts main() runs only under import.meta.main,
 // and utility never imports this module - no cycle).
 import { inferScopeFromText } from "./amadeus-utility.ts";
-// U6 activation-policy (C6). The spec-hash judgment + advisory + verdict-record
-// machinery lives in amadeus-plugin-activation.ts as pure, injectable-FS seams;
-// this module only wires the three engine touch points (advisory before
-// build-and-test, `--single`-free reach of a composed plugin stage, verdict
-// record on stage completion). It re-implements none of that logic.
+// Generic plugin runtime seams: advisory presentation, composition lookup, and
+// direct reach of a composed plugin stage.
 import {
-  ACTIVATION_PLUGIN,
-  ACTIVATION_WATCH_GLOBS,
   type Advisory,
   isComposedPluginStage,
-  recordActivationVerdict,
   unlatchedAdvisories,
-} from "./amadeus-plugin-activation.ts";
-// The advisory supply the engine consumes: the spec-hash judgment plus whatever
-// composed plugins declare (ADR-6 revision).
+} from "./amadeus-plugin-runtime.ts";
+// The advisory supply declared by plugins composed into the current host.
 import { advisoriesForHost } from "./amadeus-advisory-declaration.ts";
 
 function trustedHostSessionId(projectDir: string | undefined): string | undefined {
@@ -835,7 +828,7 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     advisoryProjectDir,
     directive.stage,
     pending,
-    pluginActivationHostRoot(),
+    pluginHostRoot(),
   );
   if (guard.kind === "allow") return directive;
   // #2253 FR-ADV-1/2. A hold is offered to the autonomy ladder before it is
@@ -873,9 +866,6 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     question: renderAdvisoryChoiceQuestion(guard.advisories),
     options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label) as AwaitAdvisoryChoiceDirective["options"],
     advisories: guard.advisories,
-    ...(guard.runRequired
-      ? { run_required: true, formal_checks: guard.formalChecks }
-      : {}),
   };
   return choiceDirective;
 }
@@ -1773,15 +1763,14 @@ export function _trustedPluginStageFileForTests(slug: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// U6 activation-policy engine touch points (C6). All three delegate the DECISION
-// to amadeus-plugin-activation.ts (in-process seams) and keep the engine glue
-// thin. The plugin host root is the same one trustedPluginStageFile resolves
+// Plugin runtime touch points. The plugin host root is the same one
+// trustedPluginStageFile resolves
 // (env override, else the harness dir), so the composition record + spec files +
 // state file are all read from one consistent root. Resolution is total: a
 // missing/misconfigured root degrades to the raw path so an advisory failure can
 // never break `next`.
 // ---------------------------------------------------------------------------
-export function pluginActivationHostRoot(): string {
+export function pluginHostRoot(): string {
   const configured = process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(TOOLS_DIR);
   try {
     return realpathSync(configured);
@@ -1790,49 +1779,25 @@ export function pluginActivationHostRoot(): string {
   }
 }
 
-// The CHECKPOINTS whose imminent directive triggers the advisory (U5 / FR-B3,
-// ruling Q3=A). Was the single build-and-test slug; a spec change that
-// contradicts the requirements should surface while the requirements are being
-// written, not one phase later, so the set is:
-//   requirements-analysis — the upstream catch (a spec/requirement conflict)
-//   functional-design     — the design-time catch
-//   build-and-test        — the final safety net (the original, retained)
-const ACTIVATION_ADVISORY_STAGES: ReadonlySet<string> = new Set([
-  "requirements-analysis",
-  "functional-design",
-  "build-and-test",
-]);
 
-// Flow 2 — raise the formal-model-check activation advisories for the stage the
-// engine is about to emit a directive for. Silent when the slug is not a
-// checkpoint, when formal-model-check is not composed (0-plugin zero-impact), or
-// when the spec is unchanged (`current`).
-//
-// TWO CALL SITES, NOT ONE (U5 / business-logic-model L3): emitForSlug (the main
-// workflow) AND emitSingleRunStage (the `--single` stage-runner path). The
-// earlier "single guarded call site so no latch is needed" invariant is
-// RETIRED — with three checkpoints reachable from two paths, the same judgment
-// would otherwise be repeated at every `next`. `latchDir` supplies the run-level
-// de-duplication (business-logic-model L4): the first raise per (plugin, code)
-// wins for the run and later ones are dropped. Passing null/undefined disables
-// the latch (every raise fires), which is what the pure-decision seam tests use.
-//
-// Returns the advisories it raised so the caller can put them on the directive
-// (the machine channel, FR-B2); the `err` sink still receives one line each, so
-// the human channel is unchanged (L5 — additive, never a replacement).
-export function emitActivationAdvisory(
+// Raise every composed plugin advisory declared for the stage the engine is
+// about to emit. Both the main workflow and direct stage-runner call this seam.
+// `latchDir` de-duplicates by (plugin, code) for one run; null disables the
+// latch for pure decision tests. The return value feeds the machine-readable
+// directive while `err` preserves the human-readable channel.
+export function emitPluginAdvisories(
   slug: string,
   hostRoot: string,
   err: (line: string) => void,
   latchDir?: string | null,
 ): Advisory[] {
-  if (!ACTIVATION_ADVISORY_STAGES.has(slug)) return [];
   const raised = latchDir
     ? unlatchedAdvisories(latchDir, advisoriesForHost(hostRoot, slug))
     : advisoriesForHost(hostRoot, slug);
   for (const advisory of raised) err(advisory.message);
   return raised;
 }
+
 
 // The advisories raised for the directive currently being composed. A
 // module-scoped slot rather than a parameter on every emit call site: the two
@@ -1856,12 +1821,10 @@ function takePendingAdvisories(): Advisory[] {
 // The activation advisory work for one about-to-be-emitted slug: raise (with the
 // run latch), write the human line to stderr, and stage the structured result
 // for emit(). Shared by BOTH emit paths so the two can never drift.
-function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
-  const hostRoot = pluginActivationHostRoot();
-  const advisories = ACTIVATION_ADVISORY_STAGES.has(slug)
-    ? advisoriesForHost(hostRoot, slug)
-    : [];
-  emitActivationAdvisory(
+function raisePluginAdvisoriesFor(slug: string, projectDir: string): void {
+  const hostRoot = pluginHostRoot();
+  const advisories = advisoriesForHost(hostRoot, slug);
+  emitPluginAdvisories(
     slug,
     hostRoot,
     (line) => process.stderr.write(`${line}\n`),
@@ -1909,14 +1872,6 @@ export function emitComposedPluginStageIfInstalled(
   if (!isComposedPluginStage(hostRoot, flags.stage)) return false;
   emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
   return true;
-}
-
-// Flow 4 — record the activation verdict when the formal-model-check stage
-// completes (the explicit-run completion signal). The SOLE writer of
-// SpecHashState (BR-U6-6); every advisory/doctor read path is read-only.
-export function recordActivationVerdictIfActivationStage(slug: string, hostRoot: string): void {
-  if (slug !== ACTIVATION_PLUGIN) return;
-  recordActivationVerdict(hostRoot, ACTIVATION_WATCH_GLOBS);
 }
 
 // --- The conductor persona (decision D-E, SPIKE 6) ---
@@ -3506,7 +3461,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // NO `--single` — the opt-in reach that install alone grants. This precedes
     // the jump path so a composed opt-in stage (scopes: []), which the jump would
     // reject as "skipped for scope", instead runs as an isolated single stage.
-    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginActivationHostRoot(), stateContent)) {
+    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginHostRoot(), stateContent)) {
       return;
     }
     emitJumpDirective(flags, scope, pd, projectType);
@@ -4663,11 +4618,11 @@ function emitForSlug(
   codekbCtx: CodekbCtx,
   projectDir: string,
 ): void {
-  // Flow 2: the formal-model-check activation advisories are raised here — the
+  // Plugin advisories are raised here — the
   // MAIN-WORKFLOW call site — just before this stage's directive is emitted. The
   // `--single` path raises them at its own site (emitSingleRunStage); the run
   // latch is what keeps the two from repeating each other.
-  raiseActivationAdvisoriesFor(slug, projectDir);
+  raisePluginAdvisoriesFor(slug, projectDir);
   const node = nodeForSlug(slug);
   if (node && isPerUnit(node)) {
     emitPerUnitRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
@@ -4714,15 +4669,9 @@ function emitSingleRunStage(
   // buildRunStageDirective's scope-default fallback in charge.
   depth?: DepthLevel,
 ): void {
-  // The SECOND activation-advisory call site (business-logic-model L3). A
-  // stage-runner skill (/amadeus-requirements-analysis and friends) IS this
-  // path, so without a raise here the two new upstream checkpoints would be
-  // unreachable for every stage-runner user — the exact "the signal exists but
-  // never arrives" failure U5 removes. Raised before the guards below because
-  // the advisory is about the HOST, not about whether this stage resolves; a
-  // guard that returns an error directive simply drops the pending raise
-  // (an error directive carries no advisories field).
-  raiseActivationAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
+  // Plugin declarations are evaluated on the single-stage path as well as the
+  // main workflow path.
+  raisePluginAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(
@@ -4734,12 +4683,8 @@ function emitSingleRunStage(
     emit(errorDirective(SINGLE_INIT_ERROR));
     return;
   }
-  // `--single` is the explicit entry point for plugin capabilities, including a
-  // plugin stage that also opts into selected workflow scopes. Scope membership
-  // controls automatic selection; it must not revoke direct invocation for
-  // other scopes. Empty-scope stages retain the original opt-in exemption, while
-  // stock stages skipped by the selected scope are still rejected.
-  const isOptInStage = node.plugin_source === true || (node.scopes ?? []).length === 0;
+  // Empty-scope stages are explicit capabilities and remain directly runnable.
+  const isOptInStage = (node.scopes ?? []).length === 0;
   const inScopeSlugs = new Set(subgraphForScope(scope).map((s) => s.slug));
   if (!isOptInStage && !inScopeSlugs.has(node.slug)) {
     emit(errorDirective(
@@ -5274,7 +5219,7 @@ function handleSingleReport(
   }
 
   const pd = resolveProjectDir(projectDir);
-  const advisoryHold = advisoryReportHoldReason(pd, node.slug, pluginActivationHostRoot());
+  const advisoryHold = advisoryReportHoldReason(pd, node.slug, pluginHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${node.slug}": ${advisoryHold}.`));
     return;
@@ -5964,7 +5909,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       ));
       return;
     }
-    const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
+    const advisoryHold = advisoryReportHoldReason(pd, slug, pluginHostRoot());
     if (advisoryHold !== null) {
       emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
       return;
@@ -5997,7 +5942,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   }
   const explicitStage = flags.stage?.trim();
   const slug = explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
-  const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
+  const advisoryHold = advisoryReportHoldReason(pd, slug, pluginHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
     return;

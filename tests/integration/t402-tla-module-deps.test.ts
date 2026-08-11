@@ -3,7 +3,7 @@
 //
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import * as canonicalDeps from "../../packages/framework/core/tools/tla-module-deps.ts";
+import * as canonicalDeps from "../../plugins/formal-model-check/tools/tla-module-deps.ts";
 import {
   compareModuleDeclarations,
   extractModuleRefs,

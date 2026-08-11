@@ -43,7 +43,7 @@ import {
   docsRoot,
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import {
   cleanupTestProject,
   createTestProject,

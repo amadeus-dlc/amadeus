@@ -11,7 +11,7 @@ export function activationModelMap(name = "FormalElection"): string {
       model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: SHA256_PLACEHOLDER },
       cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: SHA256_PLACEHOLDER },
       entries: [{
-        implPath: "packages/framework/core/tools/amadeus-plugin-activation.ts",
+        implPath: "plugins/formal-model-check/tools/plugin-activation.ts",
         sha256: SHA256_PLACEHOLDER,
       }],
     }],
@@ -22,6 +22,9 @@ export function writeActivationModelMap(projectRoot: string, name = "FormalElect
   const path = join(projectRoot, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, activationModelMap(name));
+  const implementation = join(projectRoot, "plugins", "formal-model-check", "tools", "plugin-activation.ts");
+  mkdirSync(dirname(implementation), { recursive: true });
+  writeFileSync(implementation, "export const fixture = true;\n");
 }
 
 export function writeActivationModelAssets(

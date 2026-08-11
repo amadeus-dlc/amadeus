@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseTlaModelMap } from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+import { parseTlaModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import { parseTlaModelMap as parseShippedModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
   checkPreconditions,

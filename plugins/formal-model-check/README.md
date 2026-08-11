@@ -1,9 +1,9 @@
 # formal-model-check plugin
 
 An opt-in Amadeus plugin that adds the `tla-authoring` and
-`formal-model-check` construction stages. Once the plugin is installed, every
-Amadeus `self-*` scope assesses whether the active requirements need a new or
-revised formal model. Authoring runs first; the checker then performs an
+`formal-model-check` construction stages. The plugin declares no workflow
+scope; the host assigns either stage to its own scopes in project configuration.
+Authoring runs first; the checker then performs an
 exhaustive TLC exploration only when the applicability outcome requires one.
 Both stages also remain directly invocable with `--single`. A spec-hash
 advisory remains an additional trigger when a watched model changes.
@@ -18,25 +18,30 @@ TLC.
 An advisory-correlated local run receives the three all-or-none CLI options
 `--advisory-target`, `--advisory-spec-identity`, and `--advisory-instance`.
 They are copied into `manifest.json` alongside source provenance for the actual
-model/config bytes. The engine accepts only a complete, non-partial,
-provenance-matching `NOT_DETECTED` result for that exact advisory instance.
+model/config bytes. Validation of that plugin-specific evidence remains in this
+plugin; core does not interpret its schema.
 
 ## Bundle layout
 
 ```
 formal-model-check/
   plugin.json
+  sensors/amadeus-model-completeness.md
   stages/formal-model-check.md
   stages/tla-authoring.md
+  tools/
   README.md
 ```
 
-The bundle supplies two stages: `tla-authoring` assesses self-development
-requirements and carries applicable subjects to a registered model (authoring,
-referees, independent review, human gate, registration), then
-`formal-model-check` checks the resulting registration. Both join
-`self-document`, `self-feature`, `self-fix`, and `self-refactor` when the plugin
-is composed; direct stage invocation remains available for other scopes.
+The bundle supplies two stages: `tla-authoring` assesses requirements and
+carries applicable subjects to a registered model (authoring, referees,
+independent review, human gate, registration), then `formal-model-check` checks
+the resulting registration. Both retain `scopes: []`; direct stage invocation
+works without a binding, while automatic workflow selection is host-owned.
+
+For this repository, `amadeus/config.json` binds both stages to the four
+`self-*` scopes through `plugin.scope-bindings`. A consumer can bind the same
+stages to any scope it defines; the plugin contains no concrete host scope.
 
 `plugin.json`'s `stages[].path` is declared relative to the plugin root
 (`stages/formal-model-check.md`). The compose engine resolves the bytes from
