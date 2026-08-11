@@ -73,6 +73,8 @@ const BASELINE_SHA = readFileSync(
 //     to that job's checkout, matching the jobs that already disable credential
 //     persistence: the job runs PR-authored code, so the token must not sit in
 //     the local git config while it does.
+//   - Review-thread resolution gate: add the PR-only reusable-workflow job and
+//     make CI Success fail when unresolved review feedback remains.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

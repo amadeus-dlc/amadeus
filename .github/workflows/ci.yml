@@ -787,6 +787,22 @@ jobs:
           echo "all registered formal models completed with NOT_DETECTED"
   # U4 formal-model-check end
 
+  review-thread-resolution:
+    name: CI Review Thread Gate
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      checks: write
+      issues: read
+      pull-requests: read
+      statuses: write
+    uses: j5ik2o/ci/.github/workflows/review-thread-resolution.yml@9cf0e9a8cd74c72de704763025003ed3b7608c65
+    with:
+      wait_for_other_checks: "false"
+      base_branch: main
+      required_context: Check unresolved comments
+      ci_ref: 9cf0e9a8cd74c72de704763025003ed3b7608c65
+
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
@@ -800,6 +816,7 @@ jobs:
       - reproducible-build
       - drift-check
       - coverage
+      - review-thread-resolution
     if: ${{ always() }}
     steps:
       - name: All checks passed
@@ -814,6 +831,13 @@ jobs:
           }
 
           require_result "changes" "${{ needs.changes.result }}"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            require_result "review-thread-resolution" "${{ needs['review-thread-resolution'].result }}"
+          elif [[ "${{ needs['review-thread-resolution'].result }}" != "skipped" ]]; then
+            echo "review-thread-resolution was ${{ needs['review-thread-resolution'].result }}; expected skipped"
+            exit 1
+          fi
 
           ran=false
 
