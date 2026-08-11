@@ -31,7 +31,7 @@
 // always emit a paired terminal row.
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve as pathResolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,6 +98,18 @@ interface FireContext {
 	scriptArgs: string[]; // CLI args appended to the script invocation
 	scriptAbsPath: string; // sibling-resolved absolute path
 	timeoutMs: number;
+	outputDigest: string;
+}
+
+export function digestFile(path: string): string {
+	try {
+		return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+	} catch {
+		// The path is validated before this point, but it can disappear in the
+		// gap before hashing. Preserve dispatcher fail-closed bookkeeping without
+		// leaking a filesystem exception across the audit boundary.
+		return "missing";
+	}
 }
 
 type SensorTraceContext = {
@@ -228,6 +240,10 @@ function resolveScriptPath(command: string): string {
 	// string without a non-null assertion.
 	const parts = tsToken.split("/");
 	const basename = parts[parts.length - 1];
+	const harnessMarker = "{{HARNESS_DIR}}/";
+	if (tsToken.startsWith(harnessMarker)) {
+		return pathResolve(__FILE_DIR, "..", tsToken.slice(harnessMarker.length));
+	}
 	const scriptDir = process.env.AMADEUS_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
 	return join(scriptDir, basename);
 }
@@ -518,6 +534,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 		scriptArgs,
 		scriptAbsPath,
 		timeoutMs,
+		outputDigest: digestFile(outputPath),
 	};
 
 	// --- 4. Lock window A — emit SENSOR_FIRED ---
@@ -532,6 +549,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 				"Sensor ID": id,
 				"Stage slug": stageSlug,
 				"Output path": relativizePath(outputPath, projectDir),
+				"Output digest": ctx.outputDigest,
 			},
 			projectDir,
 		);
@@ -831,6 +849,7 @@ function emitTerminal(
 		"Sensor ID": id,
 		"Stage slug": stageSlug,
 		"Output path": relativizePath(outputPath, projectDir),
+		"Output digest": ctx.outputDigest,
 	};
 
 	if (outcome.kind === "passed") {

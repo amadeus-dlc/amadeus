@@ -2,7 +2,7 @@
 //         file:plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md
 // size: medium
 //
-// U3 C8 — the advisory report-format sensor (FR-6a/6b, NFR-3). Two halves:
+// U3 C8 — the blocking report-format sensor (FR-4, NFR-3). Two halves:
 //
 //   1. The manifest is a well-formed sensor manifest by the SHIPPED schema
 //      (parseSensorManifest + validateSensorManifest), advisory-only, and its
@@ -113,15 +113,14 @@ afterEach(() => {
 });
 
 describe("t450 manifest conforms to the shipped sensor schema", () => {
-  test("parses, validates, and is advisory-only", () => {
+  test("parses, validates, and is blocking", () => {
     const manifest = parseSensorManifest(readFileSync(MANIFEST, "utf-8"));
     expect(() =>
       validateSensorManifest(manifest, MANIFEST, "pr-convergence-report-format"),
     ).not.toThrow();
     expect(manifest.id).toBe("pr-convergence-report-format");
     expect(manifest.kind).toBe("deterministic");
-    // FR-6a: the sensor never enforces. Advisory is the only severity shipped.
-    expect(manifest.default_severity).toBe("advisory");
+    expect(manifest.default_severity).toBe("blocking");
     expect(manifest.command).toContain("amadeus-sensor-pr-convergence-report-format.ts");
   });
 
@@ -149,10 +148,9 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.reason).toBe("override");
   });
 
-  test("a landed report passes with zero findings (#2401)", () => {
+  test("a landed report is not convergence evidence", () => {
     const result = evaluateReportFormat(reportAt(landedReport()));
-    expect(result.findings).toEqual([]);
-    expect(result.pass).toBe(true);
+    expect(result.pass).toBe(false);
     expect(result.reason).toBe("landed");
   });
 
@@ -162,9 +160,9 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.reason).toBe("not-a-report");
   });
 
-  test("an absent file is a pass — the guard, not the sensor, owns absence", () => {
+  test("an absent file fails closed", () => {
     const result = evaluateReportFormat(join(dir, "pr-convergence-report.md"));
-    expect(result.pass).toBe(true);
+    expect(result.pass).toBe(false);
     expect(result.reason).toBe("no-file");
   });
 });

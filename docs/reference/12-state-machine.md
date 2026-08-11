@@ -378,6 +378,7 @@ route is numbered by is derived from the `run-now` receipts now gone.
 | `ARTIFACT_CREATED` | `hooks/amadeus-audit-logger.ts` | Write to net-new path — distinguished from UPDATED via `mtimeMs == birthtimeMs` stat check |
 | `ARTIFACT_UPDATED` | `hooks/amadeus-audit-logger.ts` | Edit tool or Write overwriting existing file |
 | `ARTIFACT_REUSED` | `tools/amadeus-state.ts` | `reuse-artifact` subcommand — keep/modify/redo decisions |
+| `ARTIFACT_ATTESTED` | `tools/amadeus-audit.ts` | The PR-convergence plugin submits a canonical report identity through the audit append gateway, bound to the intent, unit, repository, PR, and matching local/remote/PR head SHA |
 
 ### Construction Bolts
 

@@ -22,8 +22,9 @@
 // corpus for the same id; no shipped manifest declares blocking.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { __resetGraphCache } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
@@ -187,8 +188,15 @@ function seedSensorAudit(
 ): void {
   const dir = join(recordDir(), "audit");
   mkdirSync(dir, { recursive: true });
-  const lines = rows.map((row, index) =>
-    JSON.stringify({
+  const output = join(recordDir(), `${stage}-output.md`);
+  const outputBytes = `# ${stage} output\n`;
+  writeFileSync(output, outputBytes, "utf-8");
+  const outputPath = relative(proj, output);
+  const outputDigest = `sha256:${createHash("sha256").update(outputBytes).digest("hex")}`;
+  let activeFireId = "";
+  const lines = rows.map((row, index) => {
+    if (row.event === "SENSOR_FIRED") activeFireId = `fire${index}`;
+    return JSON.stringify({
       schemaVersion: 1,
       seq: index + 1,
       cloneId: "fixturecloneid01",
@@ -197,13 +205,14 @@ function seedSensorAudit(
       heading: row.event,
       event: row.event,
       fields: {
-        "Fire id": `fire${index}`,
+        "Fire id": activeFireId,
         "Sensor ID": row.sensor ?? SENSOR,
         "Stage slug": row.stage ?? stage,
-        "Output path": `${recordDirName}/${stage}-output.md`,
+        "Output path": outputPath,
+        "Output digest": outputDigest,
       },
-    }),
-  );
+    });
+  });
   writeFileSync(join(dir, "t511-seeded.jsonl"), `${lines.join("\n")}\n`, "utf-8");
 }
 
@@ -216,6 +225,7 @@ function seedArtifacts(): void {
   const stageDir = join(recordDir(), "inception", STAGE);
   mkdirSync(stageDir, { recursive: true });
   writeFileSync(join(stageDir, "requirements.md"), "# reqs\n");
+  writeFileSync(join(stageDir, "requirements-analysis-questions.md"), "# questions\n");
   const verification = join(recordDir(), "verification");
   mkdirSync(verification, { recursive: true });
   writeFileSync(join(verification, "phase-check-inception.md"), "# phase-check\n");

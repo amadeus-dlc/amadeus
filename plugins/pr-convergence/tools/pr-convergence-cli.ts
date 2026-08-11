@@ -66,8 +66,26 @@ import {
 } from "./pr-convergence-presentation.ts";
 import {
   checkProvenance,
+  parseAmadeusWork,
   renderProvenanceRemediation,
 } from "./pr-convergence-provenance.ts";
+import {
+  ATTESTATION_EVENT,
+  auditCarriesAttestation,
+  attestationId,
+  isSelfRecord,
+  parseAttestation,
+  type ReportAttestation,
+  renderAttestation,
+  reportPayload,
+  reportPayloadDigest,
+} from "./pr-convergence-attestation.ts";
+import {
+  type GitSpawn,
+  nodeGitSpawn,
+  verifyCreatePrerequisites,
+  verifyCurrentPrerequisites,
+} from "./pr-convergence-git-runner.ts";
 
 // ---------------------------------------------------------------------------
 // The report (the artifact the guard reads)
@@ -81,11 +99,18 @@ export interface OverrideRecord {
 
 export type ConvergenceReport =
   | {
+      readonly kind: "created";
+      readonly generatedAt: string;
+      readonly prRef: { readonly repo: string; readonly number: number };
+      readonly attestation?: ReportAttestation;
+    }
+  | {
       readonly kind: "converged";
       readonly generatedAt: string;
       readonly prRef: { readonly repo: string; readonly number: number };
       readonly verdict: ConvergenceVerdict;
       readonly ledgerSummary: LedgerSummary;
+      readonly attestation?: ReportAttestation;
     }
   | {
       // The override verdict admits the labelled shape so a human may still
@@ -96,6 +121,7 @@ export type ConvergenceReport =
       readonly verdict: ConvergenceVerdict | EvaluatedVerdict;
       readonly ledgerSummary: LedgerSummary;
       readonly override: OverrideRecord;
+      readonly attestation?: ReportAttestation;
     }
   | {
       // The factual record of a merged pull request (#2401). No verdict and no
@@ -107,6 +133,7 @@ export type ConvergenceReport =
       readonly mergeCommitOid: string;
       readonly checkRollupState: string | null;
       readonly generatedAt: string;
+      readonly attestation?: ReportAttestation;
     };
 
 export const REPORT_BASENAME = "pr-convergence-report.md";
@@ -121,8 +148,16 @@ export function reportPathFor(recordRoot: string, unit: string): string {
  * is detectable precisely because every field here is derived.
  */
 export function renderReport(report: ConvergenceReport): string {
+  if (report.kind === "created") {
+    const payload = [
+      "# PR Convergence Report", "", "- kind: created",
+      `- pull request: ${report.prRef.repo}#${report.prRef.number}`,
+      `- generated at: ${report.generatedAt}`, "- converged: false", "",
+    ].join("\n");
+    return report.attestation === undefined ? payload : `${payload}${renderAttestation(report.attestation)}`;
+  }
   if (report.kind === "landed") {
-    return [
+    const payload = [
       "# PR Convergence Report",
       "",
       "- kind: landed",
@@ -136,6 +171,7 @@ export function renderReport(report: ConvergenceReport): string {
       `- generated at: ${report.generatedAt}`,
       "",
     ].join("\n");
+    return report.attestation === undefined ? payload : `${payload}${renderAttestation(report.attestation)}`;
   }
   const { verdict, ledgerSummary: s, prRef } = report;
   const lines = [
@@ -175,7 +211,8 @@ export function renderReport(report: ConvergenceReport): string {
     );
   }
   lines.push("");
-  return lines.join("\n");
+  const payload = lines.join("\n");
+  return report.attestation === undefined ? payload : `${payload}${renderAttestation(report.attestation)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -256,6 +293,7 @@ function isNewer(candidate: HumanTurn, incumbent: HumanTurn): boolean {
 export interface DecisionResult {
   readonly code: number;
   readonly stderr: string;
+  readonly stdout?: string;
 }
 
 /** Spawns the host's amadeus-log tool. Injected so tests never emit real audit. */
@@ -266,6 +304,9 @@ export interface CliSeams {
   readonly sleep: Sleep;
   readonly now: () => string;
   readonly emitDecision: DecisionEmitter;
+  readonly emitAttestation?: DecisionEmitter;
+  readonly fireSensor?: DecisionEmitter;
+  readonly gitSpawn?: GitSpawn;
 }
 
 /**
@@ -276,9 +317,15 @@ export interface CliSeams {
  * and naming any one of them here would break the others.
  */
 export const DEFAULT_LOG_TOOL_RELATIVE = "../../../tools/amadeus-log.ts";
+export const DEFAULT_AUDIT_TOOL_RELATIVE = "../../../tools/amadeus-audit.ts";
+export const DEFAULT_SENSOR_TOOL_RELATIVE = "../../../tools/amadeus-sensor.ts";
 
 export function defaultLogToolPath(): string {
   return resolve(import.meta.dir, DEFAULT_LOG_TOOL_RELATIVE);
+}
+
+function siblingCoreTool(relativePath: string): string {
+  return resolve(import.meta.dir, relativePath);
 }
 
 export const nodeDecisionEmitter: DecisionEmitter = (argv) =>
@@ -288,13 +335,15 @@ export const nodeDecisionEmitter: DecisionEmitter = (argv) =>
       resolve({ code: -1, stderr: "empty argv" });
       return;
     }
-    const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
     let stderr = "";
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf-8"); });
     child.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString("utf-8");
     });
     child.on("error", (err) => resolve({ code: -1, stderr: String(err) }));
-    child.on("close", (code) => resolve({ code: code ?? -1, stderr }));
+    child.on("close", (code) => resolve({ code: code ?? -1, stdout, stderr }));
   });
 
 export const defaultSeams: CliSeams = {
@@ -302,6 +351,9 @@ export const defaultSeams: CliSeams = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   now: () => new Date().toISOString().replace(/\.\d+Z$/, "Z"),
   emitDecision: nodeDecisionEmitter,
+  emitAttestation: nodeDecisionEmitter,
+  fireSensor: nodeDecisionEmitter,
+  gitSpawn: nodeGitSpawn,
 };
 
 // ---------------------------------------------------------------------------
@@ -471,9 +523,183 @@ function parseOptions(argv: readonly string[]): OptionParse {
   };
 }
 
+interface DeliveryHeads {
+  readonly localHead: string;
+  readonly remoteHead: string;
+  readonly prHead: string;
+}
+
+interface DeliveryWork {
+  readonly intent: string;
+  readonly intentUuid: string;
+  readonly record: string;
+  readonly bolt: string;
+  readonly unit: string;
+}
+
+type SelfContext =
+  | { readonly ok: true; readonly work: DeliveryWork; readonly heads: DeliveryHeads }
+  | { readonly ok: false; readonly outcome: CliOutcome };
+
+function projectRootForRecord(record: string): string {
+  return resolve(record, "../../../../..");
+}
+
+function existingReportKind(path: string): {
+  kind: string;
+  attestation: ReportAttestation | null;
+  payloadDigest: string;
+} | null {
+  try {
+    const body = readFileSync(path, "utf-8");
+    const kind = body.match(/^- kind:\s*(\S+)\s*$/m)?.[1];
+    return kind === undefined ? null : {
+      kind,
+      attestation: parseAttestation(body),
+      payloadDigest: reportPayloadDigest(reportPayload(body)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function transitionAllowed(current: string, next: string): boolean {
+  if (current === "created") return next === "converged" || next === "override";
+  return current === "override" && next === "converged";
+}
+
+function currentSelfContext(
+  options: ConvergenceOptions,
+  evaluation: Evaluation,
+  seams: CliSeams,
+): SelfContext {
+  if (!isSelfRecord(options.record)) {
+    return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "not a self record\n" } };
+  }
+  if (options.unlinked) {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "--unlinked true is forbidden for self-* scopes\n" } };
+  }
+  const prHead = evaluation.provenanceSource.headRefOid;
+  if (prHead === undefined) {
+    return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "PR head SHA is unavailable\n" } };
+  }
+  const git = verifyCurrentPrerequisites(options.record, prHead, seams.gitSpawn ?? nodeGitSpawn);
+  if (!git.ok) {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `delivery prerequisite failed: ${git.message}\n` } };
+  }
+  const intent = resolveIntentReference(options.record);
+  const provenance = parseAmadeusWork(evaluation.provenanceSource.body);
+  if (!intent.ok || provenance === null || provenance.uuid !== intent.value.uuid) {
+    return { ok: false, outcome: { exitCode: 3, stdout: "", stderr: "linked PR identity does not match the active Intent\n" } };
+  }
+  const path = reportPathFor(options.record, options.unit);
+  let body: string;
+  try { body = readFileSync(path, "utf-8"); } catch {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "created report is missing; run create first\n" } };
+  }
+  const receipt = parseAttestation(body);
+  const expected = receipt === null ? null : attestationId({
+    intent: receipt.intent, intentUuid: receipt.intentUuid, record: receipt.record,
+    bolt: receipt.bolt, unit: receipt.unit, repo: receipt.repo, pr: receipt.pr,
+    localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
+    contentDigest: receipt.contentDigest,
+  });
+  if (
+    receipt === null || receipt.id !== expected || receipt.contentDigest !== reportPayloadDigest(reportPayload(body)) ||
+    receipt.intent !== intent.value.name || receipt.intentUuid !== intent.value.uuid ||
+    receipt.record !== intent.value.recordPath || receipt.bolt !== provenance.bolt ||
+    receipt.unit !== options.unit || receipt.repo !== options.ref.repo || receipt.pr !== options.ref.number ||
+    receipt.localHead !== git.localHead || receipt.remoteHead !== git.remoteHead || receipt.prHead !== prHead ||
+    !auditCarriesAttestation(options.record, receipt)
+  ) {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "report attestation is missing, stale, tampered, copied, or replayed\n" } };
+  }
+  return {
+    ok: true,
+    work: { intent: intent.value.name, intentUuid: intent.value.uuid, record: intent.value.recordPath, bolt: provenance.bolt, unit: options.unit },
+    heads: { localHead: git.localHead, remoteHead: git.remoteHead, prHead },
+  };
+}
+
+async function writeSelfReport(
+  record: string,
+  report: ConvergenceReport,
+  work: DeliveryWork,
+  heads: DeliveryHeads,
+  seams: CliSeams,
+  stage: "code-generation" | "pr-convergence",
+): Promise<CliOutcome> {
+  if (report.kind === "landed") return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
+  const path = reportPathFor(record, work.unit);
+  const previous = existingReportKind(path);
+  if (previous !== null) {
+    if (previous.attestation === null) {
+      return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: current report has no valid CLI attestation\n" };
+    }
+    if (previous.attestation.prHead !== heads.prHead) {
+      if (report.kind !== "created") {
+        return { exitCode: 1, stdout: "", stderr: "report lifecycle stale: PR head changed; run create to begin a new created epoch\n" };
+      }
+    } else if (previous.kind === report.kind) {
+      const { id, ...unsigned } = previous.attestation;
+      if (
+        id !== attestationId(unsigned) ||
+        previous.attestation.contentDigest !== previous.payloadDigest ||
+        !auditCarriesAttestation(record, previous.attestation)
+      ) {
+        return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: current attestation is stale, tampered, copied, or replayed\n" };
+      }
+      return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+    } else if (!transitionAllowed(previous.kind, report.kind)) {
+      return { exitCode: 1, stdout: "", stderr: `report lifecycle refused: ${previous.kind} -> ${report.kind}\n` };
+    }
+  } else if (report.kind !== "created") {
+    return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: create must establish the created state first\n" };
+  }
+
+  const payload = renderReport(report);
+  const withoutId = {
+    intent: work.intent, intentUuid: work.intentUuid, record: work.record,
+    bolt: work.bolt, unit: work.unit, repo: report.prRef.repo, pr: report.prRef.number,
+    localHead: heads.localHead, remoteHead: heads.remoteHead, prHead: heads.prHead,
+    contentDigest: reportPayloadDigest(payload),
+  };
+  const attestation: ReportAttestation = { id: attestationId(withoutId), ...withoutId };
+  const body = renderReport({ ...report, attestation } as ConvergenceReport);
+  mkdirSync(join(record, "construction", work.unit, "code-generation"), { recursive: true });
+  writeFileSync(path, body, "utf-8");
+
+  const emit = seams.emitAttestation ?? seams.emitDecision;
+  const fields: ReadonlyArray<readonly [string, string]> = [
+    ["Attestation Id", attestation.id], ["Intent", attestation.intent], ["Intent UUID", attestation.intentUuid],
+    ["Record", attestation.record], ["Bolt", attestation.bolt], ["Unit", attestation.unit],
+    ["Repository", attestation.repo], ["PR", String(attestation.pr)], ["Local Head", attestation.localHead],
+    ["Remote Head", attestation.remoteHead], ["PR Head", attestation.prHead], ["Content Digest", attestation.contentDigest],
+  ];
+  const emitted = await emit([
+    "bun", siblingCoreTool(DEFAULT_AUDIT_TOOL_RELATIVE), "append", ATTESTATION_EVENT,
+    "--project-dir", projectRootForRecord(record),
+    ...fields.flatMap(([key, value]) => ["--field", `${key}=${value}`]),
+  ]);
+  if (emitted.code !== 0) {
+    return { exitCode: 2, stdout: "", stderr: `attestation emission failed (exit ${emitted.code}) ${emitted.stderr}\n` };
+  }
+  const fire = seams.fireSensor ?? seams.emitDecision;
+  const fired = await fire([
+    "bun", siblingCoreTool(DEFAULT_SENSOR_TOOL_RELATIVE), "fire", "pr-convergence-report-format",
+    "--stage", stage, "--output-path", path, "--project-dir", projectRootForRecord(record),
+  ]);
+  if (fired.code !== 0) {
+    return { exitCode: 2, stdout: "", stderr: `sensor fire failed (exit ${fired.code}) ${fired.stderr}\n` };
+  }
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+}
+
 async function createPullRequest(options: CreateOptions, seams: CliSeams): Promise<CliOutcome> {
   let title = options.title;
   let body: string;
+  let linkedWork: DeliveryWork | null = null;
+  let prerequisite: ReturnType<typeof verifyCreatePrerequisites> | null = null;
   try {
     body = readFileSync(options.bodyFile, "utf-8");
   } catch (err) {
@@ -492,6 +718,24 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
     };
     title = renderPullRequestTitle(title, work);
     body = renderPullRequestBody(body, work);
+    linkedWork = {
+      intent: intent.value.name,
+      intentUuid: intent.value.uuid,
+      record: intent.value.recordPath,
+      bolt: options.bolt,
+      unit: options.unit,
+    };
+    if (isSelfRecord(options.record)) {
+      prerequisite = verifyCreatePrerequisites(
+        options.record,
+        options.head,
+        options.base,
+        seams.gitSpawn ?? nodeGitSpawn,
+      );
+      if (!prerequisite.ok) {
+        return { exitCode: 1, stdout: "", stderr: `create prerequisite failed: ${prerequisite.message}\n` };
+      }
+    }
   }
   const runner = await createGhRunner(seams.ghSpawn);
   if (!runner.ok) {
@@ -518,6 +762,27 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
         ? `${created.error.kind} (exit ${created.error.exitCode}, stderr ${created.error.stderrDigest})`
         : created.error.kind;
     return { exitCode: 2, stdout: "", stderr: `gh failed creating pull request: ${detail}\n` };
+  }
+  if (options.record !== null && linkedWork !== null && prerequisite?.ok) {
+    const match = created.value.match(/\/pull\/(\d+)/);
+    const ref = match === null ? null : parsePrRef(options.repo, match[1]);
+    if (ref === null) return { exitCode: 2, stdout: "", stderr: "created PR response did not contain a PR number\n" };
+    const state = await fetchRawPrState(runner.value, ref);
+    if (!state.ok || state.value.headRefOid === undefined) {
+      return { exitCode: 2, stdout: "", stderr: "created PR head could not be verified\n" };
+    }
+    if (state.value.headRefOid !== prerequisite.localHead) {
+      return { exitCode: 1, stdout: "", stderr: "created PR head differs from local/remote HEAD\n" };
+    }
+    const delivered = await writeSelfReport(
+      options.record,
+      { kind: "created", generatedAt: seams.now(), prRef: refValue(ref) },
+      linkedWork,
+      { localHead: prerequisite.localHead, remoteHead: prerequisite.remoteHead, prHead: state.value.headRefOid },
+      seams,
+      "code-generation",
+    );
+    if (delivered.exitCode !== 0) return delivered;
   }
   return { exitCode: 0, stdout: created.value, stderr: "" };
 }
@@ -551,6 +816,7 @@ type Evaluation =
 interface ProvenanceSource {
   readonly title: string;
   readonly body: string;
+  readonly headRefOid?: string;
 }
 
 type EvaluationResult =
@@ -669,8 +935,14 @@ async function evaluate(options: ConvergenceOptions, seams: CliSeams): Promise<E
 // under the complexity ceiling. A merged pull request gets its factual record
 // (#2401): no human turn is read and no decision is emitted — landing is a
 // merge that already happened, not an approval.
-function reportOutcome(options: ConvergenceOptions, seams: CliSeams, evaluation: Evaluation): CliOutcome {
+async function reportOutcome(
+  options: ConvergenceOptions,
+  seams: CliSeams,
+  evaluation: Evaluation,
+  self: Extract<SelfContext, { ok: true }> | null,
+): Promise<CliOutcome> {
   if (evaluation.kind === "landed") {
+    if (self !== null) return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
     const facts = evaluation.facts;
     const path = writeReport(options, {
       kind: "landed",
@@ -693,13 +965,15 @@ function reportOutcome(options: ConvergenceOptions, seams: CliSeams, evaluation:
         `mergeable=${verdict.mergeableResolution}\n`,
     };
   }
-  const path = writeReport(options, {
+  const report: ConvergenceReport = {
     kind: "converged",
     generatedAt: seams.now(),
     prRef: refValue(options.ref),
     verdict: evaluation.core,
     ledgerSummary: summary,
-  });
+  };
+  if (self !== null) return writeSelfReport(options.record, report, self.work, self.heads, seams, "pr-convergence");
+  const path = writeReport(options, report);
   return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
 }
 
@@ -730,10 +1004,11 @@ function provenanceOutcome(
   options: ConvergenceOptions,
   evaluation: Evaluation,
 ): CliOutcome | null {
-  if (options.verb === "override" || options.unlinked) return null;
+  if (options.unlinked || (options.verb === "override" && !isSelfRecord(options.record))) return null;
+  const intent = resolveIntentReference(options.record);
   const provenance = checkProvenance({
     ...evaluation.provenanceSource,
-    record: options.record,
+    record: intent.ok ? intent.value.recordPath : options.record,
     unit: options.unit,
   });
   if (provenance.ok) return null;
@@ -763,8 +1038,15 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   }
   if (!evaluation.ok) return { exitCode: 2, stdout: "", stderr: `${evaluation.message}\n` };
   const { verdict, summary } = evaluation.value;
+  if (isSelfRecord(options.record) && evaluation.value.kind === "landed") {
+    return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
+  }
   const provenanceFailure = provenanceOutcome(options, evaluation.value);
   if (provenanceFailure !== null) return provenanceFailure;
+  const selfContext = isSelfRecord(options.record)
+    ? currentSelfContext(options, evaluation.value, seams)
+    : null;
+  if (selfContext !== null && !selfContext.ok) return selfContext.outcome;
 
   if (options.verb === "status") {
     const payload = JSON.stringify(
@@ -785,7 +1067,7 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
     return { exitCode: settled ? 0 : 1, stdout: payload, stderr: "" };
   }
 
-  if (options.verb === "report") return reportOutcome(options, seams, evaluation.value);
+  if (options.verb === "report") return reportOutcome(options, seams, evaluation.value, selfContext);
 
   // override
   const humanTurn = latestHumanTurn(options.record);
@@ -827,14 +1109,18 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
     };
   }
 
-  const path = writeReport(options, {
+  const report: ConvergenceReport = {
     kind: "override",
     generatedAt: recordedAt,
     prRef: refValue(options.ref),
     verdict,
     ledgerSummary: summary,
     override: { humanTurnId: humanTurn.eventId, reason: options.reason ?? "", recordedAt },
-  });
+  };
+  if (selfContext !== null) {
+    return writeSelfReport(options.record, report, selfContext.work, selfContext.heads, seams, "pr-convergence");
+  }
+  const path = writeReport(options, report);
   return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
 }
 

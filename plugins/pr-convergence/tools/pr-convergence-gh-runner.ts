@@ -85,6 +85,7 @@ export interface RawPrState {
   readonly mergeStateStatus: string;
   readonly title: string;
   readonly body: string;
+  readonly headRefOid?: string;
   readonly state?: string;
   readonly mergedAt?: string | null;
   readonly mergeCommitOid?: string | null;
@@ -93,7 +94,7 @@ export interface RawPrState {
 
 // The mutable projection of RawPrState's lifecycle slice, built up field by
 // field so an absent response field stays absent (ruling E-MPC-CGBLK).
-type RawLifecycleFields = { state?: string; mergedAt?: string | null; mergeCommitOid?: string | null; checkRollupState?: string | null };
+type RawLifecycleFields = { state?: string; headRefOid?: string; mergedAt?: string | null; mergeCommitOid?: string | null; checkRollupState?: string | null };
 
 // ---------------------------------------------------------------------------
 // The process seam
@@ -207,7 +208,7 @@ export async function createGhRunner(
 
 export const PR_STATE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
-    pullRequest(number:$number){ mergeable mergeStateStatus title body state mergedAt mergeCommit { oid statusCheckRollup { state } } }
+    pullRequest(number:$number){ mergeable mergeStateStatus title body state mergedAt mergeCommit { oid statusCheckRollup { state } } headRefOid }
   }
 }`;
 
@@ -271,6 +272,7 @@ export async function fetchRawPrState(
 function lifecycleFields(pullRequest: Record<string, unknown>): RawLifecycleFields {
   const fields: RawLifecycleFields = {};
   if (typeof pullRequest.state === "string") fields.state = pullRequest.state;
+  if (typeof pullRequest.headRefOid === "string") fields.headRefOid = pullRequest.headRefOid;
   if ("mergedAt" in pullRequest) {
     fields.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;
   }

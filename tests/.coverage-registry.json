@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 622,
+    "total": 623,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 91,
+      "audit": 92,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 186,
-      "audit": 44,
+      "audit": 45,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -41,6 +41,18 @@
     }
   },
   "units": [
+    {
+      "unitClass": "audit",
+      "unitId": "ARTIFACT_ATTESTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t534-pr-convergence-report-attestation.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
     {
       "unitClass": "audit",
       "unitId": "ARTIFACT_CREATED",

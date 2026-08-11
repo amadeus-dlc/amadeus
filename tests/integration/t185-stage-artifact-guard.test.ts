@@ -20,8 +20,8 @@
 //
 // Source under test (dist/claude/.claude/tools/amadeus-state.ts):
 //   verifyStageArtifacts(pd, stage) - two layers:
-//     1. producesArtifactsExist - a stage that declares produces[] must have at
-//        least one declared .md on disk under <record>/<phase>/<slug>/ (or
+//     1. producesArtifactsExist - a stage that declares produces[] must have
+//        every required declared .md on disk under <record>/<phase>/<slug>/ (or
 //        <record>/construction/<unit>/<slug>/ for per-unit stages, or
 //        <space>/codekb/<repo>/ for codekb stages). Empty-produces stages
 //        vacuously pass.
@@ -181,10 +181,22 @@ describe("t185: stage-completion artifact guard (#366)", () => {
     expect(r.rc).toBe(0);
   });
 
-  test("approve PASSES once a declared produces[] artifact exists", () => {
+  test("approve REFUSES while any required produces[] artifact is absent", () => {
     const slug = field(proj, "Current Stage"); // feasibility, phase ideation
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     writeRecordDoc(proj, `ideation/${slug}/feasibility-assessment.md`);
+    guarded(proj, ["gate-start", slug]);
+    const r = guarded(proj, ["approve", slug, "--user-input", "ok"]);
+    expect(r.rc).not.toBe(0);
+    expect(r.out).toContain("missing required");
+  });
+
+  test("approve PASSES once every required produces[] artifact exists", () => {
+    const slug = field(proj, "Current Stage");
+    guarded(proj, ["checkbox", `${slug}=in-progress`]);
+    for (const artifact of ["feasibility-assessment", "constraint-register", "raid-log", "feasibility-questions"]) {
+      writeRecordDoc(proj, `ideation/${slug}/${artifact}.md`);
+    }
     guarded(proj, ["gate-start", slug]);
     const r = guarded(proj, ["approve", slug, "--user-input", "ok"]);
     expect(r.rc).toBe(0);
@@ -321,10 +333,14 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       expect(r.out).toContain("Refusing to complete");
     });
 
-    test("PASSES reverse-engineering once a codekb artifact exists", () => {
+    test("PASSES reverse-engineering once every codekb artifact exists", () => {
       guarded(proj, ["set", "Current Stage=reverse-engineering"]);
       guarded(proj, ["checkbox", "reverse-engineering=in-progress"]);
-      writeCodekbDoc("business-overview"); // a declared produces[] of RE
+      for (const artifact of [
+        "business-overview", "architecture", "code-structure", "api-documentation",
+        "component-inventory", "technology-stack", "dependencies",
+        "code-quality-assessment", "reverse-engineering-timestamp",
+      ]) writeCodekbDoc(artifact);
       guarded(proj, ["gate-start", "reverse-engineering"]);
       const r = guarded(proj, ["approve", "reverse-engineering", "--user-input", "ok"]);
       expect(r.rc).toBe(0);

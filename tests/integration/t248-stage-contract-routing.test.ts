@@ -794,9 +794,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.produces).toHaveLength(4);
   }, scaleTestTime(30_000));
 
-  // An absent primary artifact reads the same as an unreviewed one, and it
-  // reaches the check through a different door: artifactCarriesReview cannot
-  // open the file at all.
+  // Required-all rejects an absent primary before the reviewer-verdict guard.
   //
   // The proposition this pins is narrower than it first looked (#2567): it holds
   // only when the unit's kind is unresolved at BOTH points — emit and gate. Then
@@ -806,7 +804,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
   // that state: no runtime-graph.json AND no canonical unit-of-work-dependency.md.
   // With either source present the kinds agree at both points and the pruned
   // arms below apply instead.
-  test("completion guard refuses when the primary artifact is absent entirely", () => {
+  test("completion guard refuses a kindless unit when a required artifact is absent", () => {
     const project = seedProject([{ name: "schema", kind: "spec" }], {
       dependencyDoc: false,
     });
@@ -831,7 +829,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
       process.exit = originalExit;
       console.error = originalError;
     }
-    expect(stderr).toContain("no reviewer verdict recorded");
+    expect(stderr).toContain("missing required artifacts");
   }, scaleTestTime(30_000));
 
   test("completion guard falls back to on-disk artifacts when runtime-graph is missing", () => {
@@ -938,9 +936,14 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
 
   function seedReviewedSpecUnit(mutate: (runtimePath: string) => void): string {
     const project = seedProject([{ name: "schema", kind: "spec" }]);
-    // Exactly the spec-applicable set. business-logic-model is NOT applicable to
-    // a spec unit, so the reviewer never saw it and it is absent on disk.
-    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    // The state guard widens to the declared set when the runtime kind cannot
+    // be trusted. Seed that full set so these cases isolate dependency-document
+    // kind recovery in the reviewer guard rather than required-all refusal.
+    writeFunctionalArtifacts(project, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
     mutate(join(seededRecordDir(project), "runtime-graph.json"));
     return project;
   }
@@ -999,9 +1002,13 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // canonical doc supplies the same kind.
     const seed = (dropGraph: boolean): string => {
       const project = seedProject([{ name: "schema", kind: "spec" }]);
-      // Primary (business-rules) exists WITHOUT a review; the review sits on the
-      // secondary (domain-entities) where a hand could have placed it.
-      writeStageArtifacts(project, "schema", "functional-design", ["business-rules"]);
+      // Both possible primaries exist WITHOUT a review; the review sits on the
+      // secondary (domain-entities) where a hand could have placed it. Seeding
+      // the widened required set keeps the no-runtime arm past required-all.
+      writeStageArtifacts(project, "schema", "functional-design", [
+        "business-logic-model",
+        "business-rules",
+      ]);
       writeFunctionalArtifacts(project, "schema", ["domain-entities"]);
       if (dropGraph) {
         rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
@@ -1016,16 +1023,18 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     );
   }, scaleTestTime(30_000));
 
-  test("completion guard scans past a spec unit with no artifacts to one that has them", () => {
-    // Two spec units: the first has NO artifacts on disk (artifactsExistInDir
-    // returns false and the scan continues), the second has them (returns true),
-    // so the guard is satisfied without erroring.
+  test("completion guard requires artifacts for every spec unit", () => {
+    // Two spec units: the first has no artifacts while the second is complete.
+    // Required-all must refuse instead of letting one covered sibling stand in
+    // for the missing owner directory.
     const project = seedProject([
       { name: "schema-a", kind: "spec" },
       { name: "schema-b", kind: "spec" },
     ]);
     writeFunctionalArtifacts(project, "schema-b", ["business-rules", "domain-entities"]);
-    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+    expect(expectAdvanceRefusal(project, sourceGraph())).toContain(
+      "missing required artifacts",
+    );
   }, scaleTestTime(30_000));
 
   test("report on a per-unit stage with uncovered units emits the coverage-gate error", () => {

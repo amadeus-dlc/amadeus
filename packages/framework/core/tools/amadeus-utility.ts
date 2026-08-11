@@ -158,6 +158,7 @@ import {
 } from "./amadeus-pi-doctor.ts";
 import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+import { requiredPluginStagesForScope, resolveAmadeusConfig } from "./amadeus-config.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
 import {
@@ -5708,6 +5709,15 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
     }
     const scope = getField(content, "Scope");
     if (!scope) die("Cannot read current Scope from state file.");
+    const config = resolveAmadeusConfig(projectDir, flags.intent, flags.space);
+    if (config.kind === "invalid") {
+      die(`Cannot enforce plugin scope bindings: ${config.issues.map((issue) => issue.path).join(", ")}.`);
+    }
+    const mandatory = requiredPluginStagesForScope(config.config.plugin.scopeBindings, scope);
+    const forbiddenSkip = skipList.find((slug) => mandatory.includes(slug));
+    if (forbiddenSkip !== undefined) {
+      die(`Cannot recompose "${forbiddenSkip}": it is a host-bound mandatory plugin stage for scope "${scope}".`);
+    }
     const scopeDef = loadScopeMapping()[scope];
     if (!scopeDef) die(`Unknown scope in state file: ${scope}.`);
 

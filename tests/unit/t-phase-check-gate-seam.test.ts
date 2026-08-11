@@ -77,13 +77,25 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
 function seedReqProduces(proj: string): void {
   const dir = join(seededRecordDir(proj), "inception", "requirements-analysis");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "requirements.md"), "# reqs\n");
+  for (const artifact of ["requirements", "requirements-analysis-questions"]) {
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+  }
 }
 
 function seedBuildProduces(proj: string): void {
   const dir = join(seededRecordDir(proj), "construction", "build-and-test");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "build-test-results.md"), "# green\n");
+  for (const artifact of [
+    "build-instructions",
+    "unit-test-instructions",
+    "integration-test-instructions",
+    "performance-test-instructions",
+    "security-test-instructions",
+    "build-and-test-summary",
+    "build-test-results",
+  ]) {
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+  }
   const sourceDir = join(proj, "src");
   mkdirSync(sourceDir, { recursive: true });
   writeFileSync(join(sourceDir, "index.ts"), "export {};\n");
@@ -92,12 +104,14 @@ function seedBuildProduces(proj: string): void {
 // Seed one declared produces file for an arbitrary stage, in both the
 // phase-level and the per-unit produces directory, so verifyStageArtifacts
 // passes and ONLY the phase-check gate can refuse (#2143 FR-3).
-function seedProduces(proj: string, phase: string, slug: string, artifact: string, unit?: string): void {
+function seedProduces(proj: string, phase: string, slug: string, artifacts: readonly string[], unit?: string): void {
   const dirs = [join(seededRecordDir(proj), phase, slug)];
   if (unit !== undefined) dirs.push(join(seededRecordDir(proj), phase, unit, slug));
   for (const dir of dirs) {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+    for (const artifact of artifacts) {
+      writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+    }
   }
 }
 
@@ -394,7 +408,11 @@ describe("t-phase-check-gate-seam: approve at the ideation→inception boundary 
     // which sits at [?]. nextInScopeStage → reverse-engineering (inception).
     seedStateFile(proj, "state-ideation-boundary.md");
     saveEnv();
-    seedProduces(proj, "ideation", "approval-handoff", "initiative-brief");
+    seedProduces(proj, "ideation", "approval-handoff", [
+      "initiative-brief",
+      "decision-log",
+      "approval-handoff-questions",
+    ]);
   });
   afterEach(() => {
     restoreEnv();
@@ -429,7 +447,11 @@ describe("t-phase-check-gate-seam: approve at the construction→operation bound
     // [?]. nextInScopeStage → deployment-pipeline (operation).
     seedStateFile(proj, "state-construction-boundary.md");
     saveEnv();
-    seedProduces(proj, "construction", "ci-pipeline", "ci-config", "todo-core");
+    seedProduces(proj, "construction", "ci-pipeline", [
+      "ci-config",
+      "quality-gates",
+      "ci-pipeline-questions",
+    ], "todo-core");
   });
   afterEach(() => {
     restoreEnv();
@@ -512,7 +534,12 @@ describe("t-phase-check-gate-seam: a non-boundary approve is not gated (#2143 ne
     const sf = seededStateFile(proj);
     writeFileSync(sf, readFileSync(sf, "utf-8").replace("- [-] feasibility", "- [?] feasibility"));
     saveEnv();
-    seedProduces(proj, "ideation", "feasibility", "feasibility-assessment");
+    seedProduces(proj, "ideation", "feasibility", [
+      "feasibility-assessment",
+      "constraint-register",
+      "raid-log",
+      "feasibility-questions",
+    ]);
   });
   afterEach(() => {
     restoreEnv();
