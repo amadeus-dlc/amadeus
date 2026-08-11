@@ -19,8 +19,9 @@ scopes: []
 # PR Convergence
 
 The `pr-convergence` plugin stage drives one pull request to **convergence**:
-no merge conflict, every required check green, and every actionable review
-thread terminalised. Its empty `scopes:` keeps scope ownership in the host:
+there is no merge conflict, every required check is green, and every actionable
+review thread is terminalised. Its empty `scopes:` keeps scope ownership in the
+host:
 once composed, the host can assign it through `plugin.scope-bindings`, and it
 remains directly reachable via `amadeus-orchestrate next --stage
 pr-convergence`. Whether a run starts depends on the Intent autonomy mode:
