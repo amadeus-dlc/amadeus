@@ -184,6 +184,58 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     )?.kind).toBe("stale");
   });
 
+  test("a later passed output supersedes a passed path removed by an artifact move", () => {
+    const oldDigest = `sha256:${"a".repeat(64)}`;
+    const newDigest = `sha256:${"b".repeat(64)}`;
+    const oldFields = {
+      "Fire id": "old-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      "Output digest": oldDigest,
+    };
+    const newFields = {
+      "Fire id": "new-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT2,
+      "Output digest": newDigest,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", oldFields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", oldFields, "2026-08-10T01:00:01Z"),
+      auditLine("SENSOR_FIRED", newFields, "2026-08-10T02:00:00Z"),
+      auditLine("SENSOR_PASSED", newFields, "2026-08-10T02:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      (path) => path === OUT2 ? newDigest : null,
+    )).toBeNull();
+  });
+
+  test("an absent output remains stale without a newer passed path", () => {
+    const digest = `sha256:${"a".repeat(64)}`;
+    const fields = {
+      "Fire id": "only-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      "Output digest": digest,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      () => null,
+    )?.kind).toBe("stale");
+  });
+
   test("a legacy PASS without a digest must be re-fired before completion", () => {
     const audit = [
       sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T01:00:00Z"),

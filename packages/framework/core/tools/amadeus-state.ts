@@ -1754,6 +1754,7 @@ export function evaluateBlockingSensors(
   const rows = sensorRowsForStage(audit, stageSlug, wanted);
   for (const sensorId of blockingSensorIds) {
     const firedOutputs: string[] = [];
+    let latestOutputPath = "";
     const latestFire = new Map<string, { fireId: string; outputDigest: string | null }>();
     const latestTerminal = new Map<string, {
       event: string;
@@ -1764,6 +1765,7 @@ export function evaluateBlockingSensors(
       if (row.sensorId !== sensorId) continue;
       if (row.event === "SENSOR_FIRED") {
         if (!firedOutputs.includes(row.outputPath)) firedOutputs.push(row.outputPath);
+        latestOutputPath = row.outputPath;
         latestFire.set(row.outputPath, { fireId: row.fireId, outputDigest: row.outputDigest });
         // A fire INVALIDATES the output's previous terminal: the artifact changed
         // and the verdict that cleared it describes bytes that no longer exist.
@@ -1783,13 +1785,25 @@ export function evaluateBlockingSensors(
       });
     }
     if (firedOutputs.length === 0) return { kind: "never-fired", sensorId };
+    const latest = latestTerminal.get(latestOutputPath) ?? null;
+    const latestDigest = currentDigest?.(latestOutputPath);
+    const latestOutputPassed = latest?.event === "SENSOR_PASSED" && latest.receiptMatches && (
+      currentDigest === undefined || (
+        latest.outputDigest !== null && latestDigest === latest.outputDigest
+      )
+    );
     for (const outputPath of firedOutputs) {
       const terminal = latestTerminal.get(outputPath) ?? null;
       if (terminal?.event !== "SENSOR_PASSED" || !terminal.receiptMatches) {
         return { kind: "unresolved", sensorId, outputPath, terminal: terminal?.event ?? null };
       }
       if (currentDigest !== undefined) {
-        if (terminal.outputDigest === null || currentDigest(outputPath) !== terminal.outputDigest) {
+        const digest = currentDigest(outputPath);
+        // A later successful fire on a different path represents an artifact
+        // move. Do not make a formerly valid, now-absent path a permanent gate;
+        // unresolved or changed sibling outputs remain fail-closed.
+        if (digest === null && outputPath !== latestOutputPath && latestOutputPassed) continue;
+        if (terminal.outputDigest === null || digest !== terminal.outputDigest) {
           return { kind: "stale", sensorId, outputPath };
         }
       }
