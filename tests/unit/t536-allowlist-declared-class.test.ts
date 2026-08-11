@@ -18,9 +18,11 @@ import { describe, expect, test } from "bun:test";
 import {
   type AllowlistEntry,
   createSemanticSelector,
+  classifyRange,
   DECLARABLE_SYNTAX_CLASSES,
   type DeclaredSyntaxClass,
   findSyntaxClassMismatches,
+  matchesSyntaxClass,
   parseAllowlist,
   renderSyntaxClassMismatches,
 } from "../coverage-patch-gate.ts";
@@ -120,6 +122,18 @@ describe("t536 declared class against the AST", () => {
   test("a range that is a different decidable class is reported as that class", () => {
     const [mismatch] = findSyntaxClassMismatches([entryFor("11", "catch-arm")], SOURCES);
     expect(mismatch.actual).toBe("type-only");
+  });
+
+  // unmeasurable-other names the absence of a class rather than a class, so
+  // asking whether a range satisfies it is always answered no — including for
+  // ranges the classifier itself labels unmeasurable-other. Being unable to
+  // declare it is the point; it would assert nothing.
+  test("unmeasurable-other is satisfied by nothing, not even by itself", () => {
+    for (const lines of ["3", "5", "11"]) {
+      const range = { start: Number(lines), end: Number(lines) };
+      expect(matchesSyntaxClass(FILE, SOURCE, range, "unmeasurable-other")).toBe(false);
+    }
+    expect(classifyRange(FILE, SOURCE, { start: 3, end: 3 })).toBe("unmeasurable-other");
   });
 
   // NFR-2: an input the check cannot read is an error, never an implicit match.

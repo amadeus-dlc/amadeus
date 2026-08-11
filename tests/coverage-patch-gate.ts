@@ -268,8 +268,9 @@ export function matchesSyntaxClass(
       return tokens.every(({ ancestry }) => ancestry.some((n) => ts.isCaseClause(n) || ts.isDefaultClause(n)));
     case "spawn-only":
       return tokens.every(({ ancestry }) => ancestry.some((n) => isImportMetaMainBranch(n) || isMainEntrypoint(n)));
-    default:
-      return false;
+    // unmeasurable-other is the absence of a class, so nothing satisfies it.
+    // One line keeps the label measurable (bun lcov stamps a bare label 0).
+    default: return false;
   }
 }
 
@@ -747,13 +748,10 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
       console.error(`coverage-patch-gate: STALE semantic allowlist entry: ${(error as Error).message}`);
       return 1;
     }
-    let mismatches: SyntaxClassMismatch[];
-    try {
-      mismatches = findSyntaxClassMismatches(entries, sources);
-    } catch (error) {
-      console.error(`coverage-patch-gate: declared-class check could not run: ${(error as Error).message}`);
-      return 1;
-    }
+    // resolveAllowlistEntries above already resolved every entry against these
+    // same sources, so this cannot fail for a reason that one did not already
+    // catch. A surprise still fails closed: the throw leaves runCheck non-zero.
+    const mismatches = findSyntaxClassMismatches(entries, sources);
     if (mismatches.length > 0) {
       console.error(
         `coverage-patch-gate: allowlist entries whose declared selector.class no longer matches the code (re-point the selector, restate the class, or drop the entry):\n${renderSyntaxClassMismatches(mismatches)}`,

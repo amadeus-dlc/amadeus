@@ -13,7 +13,7 @@
 // value. The sweep over the real ledger — real files, real selectors — lives in
 // the integration sibling t535.
 import { describe, expect, test } from "bun:test";
-import { auditEntry, extractReasonClaim } from "../allowlist-semantic-audit.ts";
+import { auditAllowlist, auditEntry, extractReasonClaim } from "../allowlist-semantic-audit.ts";
 import { classifyRange, createSemanticSelector, matchesSyntaxClass } from "../coverage-patch-gate.ts";
 
 const FILE = "fixture.ts";
@@ -239,5 +239,13 @@ describe("t534 three-valued entry audit", () => {
   test("a reason claiming no decidable class is undecidable", () => {
     const audit = auditEntry(entryFor("3", "Focused suites cover this; residual row stamped DA:0 by Bun."), source);
     expect(audit.verdict).toBe("判定不能");
+  });
+
+  // A ledger pointing at a file the sweep was not given is a broken ledger, not
+  // an undecidable reason. Reporting it as a verdict would launder the gap.
+  test("a sweep missing an entry's source throws rather than grading it", () => {
+    expect(() => auditAllowlist([entryFor("3", "Runtime-erased type.")], new Map())).toThrow(
+      /source not found for fixture\.ts/,
+    );
   });
 });
