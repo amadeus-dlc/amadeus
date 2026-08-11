@@ -42,6 +42,12 @@ describe("t525 requirements heading grammar", () => {
     expect(ids(corpus)).toEqual(["FR-1", "NFR-1", "AC-1", "FR-CROSS-1", "FR-1-1", "FR-001"]);
   });
 
+  test("every extracted corpus form is also accepted as an explicit trace subject", () => {
+    for (const id of ["FR-1", "NFR-1", "AC-1", "FR-CROSS-1", "FR-1-1", "FR-001"]) {
+      expect(IdentityDigest.normalizeStableId(id)).toEqual({ ok: true, value: id });
+    }
+  });
+
   test("a heading that ends in no digit stays outside the grammar", () => {
     const corpus = ["### FR-NA", "no digit terminates this id", "", "### FR-2", "kept", ""].join("\n");
     expect(ids(corpus)).toEqual(["FR-2"]);
