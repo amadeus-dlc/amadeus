@@ -10,7 +10,15 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -377,5 +385,42 @@ describe("main", () => {
     }
     expect(errors.length).toBe(2);
     expect(errors[0]).toContain("usage: bun tests/control-byte-gate.ts --check");
+  });
+});
+
+// FR-CBG-7 requires the scan to run as a CI *blocking* step. An independent
+// top-level job goes red on detection but does not by itself block a merge:
+// the repository ruleset requires exactly one status check, "CI Success", so a
+// job absent from `ci-success`'s `needs` is advisory no matter how loudly it
+// fails. These assertions pin the wiring that makes the gate actually blocking.
+describe("control-byte gate is wired into the aggregate CI gate (FR-CBG-7)", () => {
+  const workflow = readFileSync(
+    join(import.meta.dir, "../../.github/workflows/ci.yml"),
+    "utf8",
+  );
+
+  function ciSuccessBlock(source: string): string {
+    const start = source.indexOf("\n  ci-success:");
+    if (start < 0) throw new Error("ci-success job not found in ci.yml");
+    return source.slice(start);
+  }
+
+  test("ci-success declares control-byte-gate among its needs", () => {
+    const needs = ciSuccessBlock(workflow).split("\n    if:")[0] ?? "";
+    expect(needs).toContain("      - control-byte-gate\n");
+  });
+
+  test("ci-success asserts the control-byte-gate result unconditionally", () => {
+    // Unconditional: the gate runs on every event with no path filter, so its
+    // result must be required outside the `changes`-driven case branches that
+    // excuse the other jobs on docs-only or amadeus-only pull requests.
+    const block = ciSuccessBlock(workflow);
+    const assertion =
+      'require_result "control-byte-gate" "${{ needs.control-byte-gate.result }}"';
+    expect(block).toContain(assertion);
+    const assertionAt = block.indexOf(assertion);
+    const firstCase = block.indexOf("          case ");
+    expect(assertionAt).toBeGreaterThan(-1);
+    expect(assertionAt).toBeLessThan(firstCase);
   });
 });

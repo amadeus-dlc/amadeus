@@ -820,6 +820,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - changes
+      - control-byte-gate
       - typecheck
       - lint
       - distribution-contract
@@ -850,6 +851,13 @@ jobs:
             echo "review-thread-resolution was ${{ needs['review-thread-resolution'].result }}; expected skipped"
             exit 1
           fi
+
+          # Required outside the `changes` case branches below: the gate runs on
+          # every event with no path filter, so a docs-only or amadeus-only pull
+          # request — the very class a filter would excuse — must still be held
+          # to it. "CI Success" is the only required status check, so a job left
+          # out of this assertion is advisory however loudly it fails.
+          require_result "control-byte-gate" "${{ needs.control-byte-gate.result }}"
 
           ran=false
 
