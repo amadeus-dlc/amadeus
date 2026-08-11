@@ -6,6 +6,7 @@
 - 入力は `requirements.md`、`requirements-analysis-questions.md`、CodeKB の `architecture.md`、`code-structure.md`、`api-documentation.md`。Units、Functional Design、NFR Design は本 Intent では生成されていないため、要件と現行コードを直接トレースする。
 - 実装対象は Bun/TypeScript の既存 CLI・プラグイン境界に限定する。DB、UI、IaC、外部 API、テスト設定は追加しない。
 - core は汎用の必須ステージ、成果物、センサー、監査証跡の仕組みだけを扱い、GitHub・PR レポートのスキーマと判定は `plugins/pr-convergence/` に閉じ込める。
+- per-unit degrade path の Unit identity は stage slug と衝突しない `issue-2838` とする。
 
 ## 実装 Steps
 
@@ -45,7 +46,7 @@
 ### Step 6 — PR レポート生成はユーザーの明示許可後に分離実行する（FR-2、FR-6、FR-8）
 
 - [x] 実装・検証・code summary 完了後、ユーザーから commit、push、GitHub 提出の明示許可を受領した。
-- [ ] 記録を含む commit と push、Issue #2838 に紐づく GitHub 提出を行い、linked PR と head identity が成立した後に限り、plugin CLI の `create` で `created` report/attestation/sensor を生成する。
+- [x] 記録を含む commit と push、Issue #2838 に紐づく GitHub 提出を行い、linked PR と head identity が成立した後、plugin CLI の `create` で `created` report/attestation/sensor を生成した。
 
 ## 完了条件
 

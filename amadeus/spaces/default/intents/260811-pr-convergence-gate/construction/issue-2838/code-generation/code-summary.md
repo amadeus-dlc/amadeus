@@ -20,4 +20,7 @@
 - validation 後に output が消える race も digest emitter が `missing` marker を記録して例外を漏らさないようにし、completion の current digest 照合では stale として拒否する。
 - workspace 全体の `git diff --check` は成功した。
 - 実装計画にあった独立 `pr-convergence-report.ts` / core attestation module は、plugin schema を core に漏らさないため `pr-convergence-attestation.ts` と既存 audit emitter の canonical event 拡張へ集約した。
-- Step 6 の commit、push、GitHub 提出はユーザーの明示許可を受領した。実 linked report は、記録 commit を含む公開 head と linked PR が成立した後に生成する。
+- Step 6 の commit、push、GitHub 提出、実 linked report の生成を完了した。
+- live blocking sensor で plugin script の projected path が basename 化される不具合を検出し、plugin subtree を保持する resolver と回帰試験を追加した。修正後の live fire は同一 digest の `SENSOR_PASSED` を記録した。
+- [GitHub Pull Request #2905](https://github.com/amadeus-dlc/amadeus/pull/2905) を CLI から作成し、local/remote/PR head `076489e6d4abfd62020114dcd3e6bb69ac3c5c5f` に束縛した `created` report、canonical attestation、blocking sensor PASS を生成した。
+- degrade-path の Unit 名を stage slug と衝突しない `issue-2838` に修正した。
