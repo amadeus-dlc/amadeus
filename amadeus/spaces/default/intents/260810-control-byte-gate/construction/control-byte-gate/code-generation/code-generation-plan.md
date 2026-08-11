@@ -64,3 +64,20 @@ swarm batch 1(cap 1、単一 Unit)。worktree 分離で実装し、finalize 後�
 ## 実測結果
 
 Step 6〜8 の実測値・exit code・診断文言の逐語は `code-summary.md` に記録する。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-11T01:35:41Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+Implementation matches its declared design closely (BR-1..BR-11, the byte predicate, allowlist handling with assertAllowlistWellFormed, fail-closed enumeration and read paths, the verbatim diagnostic wording, the exit contract, and the in-process seam all verified against the real code). Two blockers stand: the new CI job is structurally excluded from ci-success, which the repository ruleset names as the only required check, so FR-CBG-7's blocking requirement is unmet despite the job going red on detection; and code-summary.md's measured tables are stale against the merged state. Both are closeable with bounded, concrete fixes.
+
+### Findings
+
+- BLOCKER | .github/workflows/ci.yml:790-802 — the new `control-byte-gate` job is absent from `ci-success`'s `needs:` (changes, typecheck, lint, distribution-contract, plugin-conformance-e2e, tests, reproducible-build, drift-check, coverage) and from the require_result assertions at :805-860. The repository ruleset (id 18843917, enforcement ACTIVE) lists exactly one required status check: "CI Success". Therefore a red Control byte gate does not block merge, and FR-CBG-7 (requirements.md:31-32 "検査は CI の blocking step として実行する") is unsatisfied. The falling-proof shows the job CAN go red, not that a red job blocks. Closed by adding control-byte-gate to ci-success needs plus an unconditional require_result branch.
+- BLOCKER | code-summary.md:19,21,26,100 — the measured tables are stale relative to the merged state. At the declared measurement ref (bolt-control-byte-gate head b5e514dd8) `git diff --stat cac41363a b5e514dd8 -- tests/ .github/` yields 199 / 319 / 674 as written, but the branch advanced afterwards (5197a16af, 901af89c8, 4133e8cc0, a6496fd2c) and at merged HEAD `wc -l` reports tests/control-byte-gate.ts = 246 and tests/integration/t-control-byte-gate.integration.test.ts = 381 (new-file total 756). The 33-test verification row likewise predates the final edits. The numbers were true when measured and the ref is declared, so this is staleness rather than fabrication, but the summary purports to describe what shipped. Closed by re-measuring against the merge commit cc775f87b and correcting the tables, or by explicitly scoping each table to its ref and adding a merged-state row.
+- FOLLOW-UP | business-rules.md 例外・エッジケース vs tests/control-byte-gate.ts:22-30,153-160 — the FD still says dereference failure (dangling / directory) is loud via BR-5, but the implemented design never dereferences a symlink (lstatSync + readlinkSync on the link text), so that failure mode is structurally unreachable. Behaviour is correct and tested (t-control-byte-gate.integration.test.ts:134-149). Recommend updating the FD so it stops describing a path the implementation deliberately does not take.
+- NIT | code-generation-plan.md:13 — cites component-methods.md as the signature source of truth, but that artifact is not among this stage's declared consumes; the equivalent signature is available via the declared domain-entities.md.
