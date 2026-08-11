@@ -215,11 +215,10 @@ export { stripProjectDir };
 
 // --- Sibling-script resolver ---
 //
-// Manifest `command:` is `bun <harness>/tools/amadeus-sensor-<id>.ts`. The
-// dispatcher extracts the .ts basename and resolves it next to itself.
-// This decouples script discovery from cwd — works in tests where
-// projectDir doesn't carry a .claude/tools/ tree, AND in production where
-// it does. Sibling resolution mirrors amadeus-bolt.ts:84.
+// Manifest `command:` is either a core sibling under `<harness>/tools/` or a
+// plugin-owned script under `<harness>/plugins/`. Preserve the latter path;
+// reducing every command to its basename incorrectly searches core tools.
+// Resolution remains independent of cwd and mirrors amadeus-bolt.ts:84.
 //
 // AMADEUS_SENSOR_SCRIPT_DIR overrides the resolution directory — the script
 // seam mirroring AMADEUS_SENSORS_DIR for manifests. Tests that exercise stub
@@ -228,7 +227,7 @@ export { stripProjectDir };
 // version-controlled artifact on a crashed run and makes concurrent test
 // files race on a shared directory). Unset in production → sibling resolution
 // against __FILE_DIR, exactly as before.
-function resolveScriptPath(command: string): string {
+export function resolveScriptPath(command: string): string {
 	const tokens = command.trim().split(/\s+/);
 	// Find the first .ts token (drops the "bun" prefix or any flags).
 	const tsToken = tokens.find((t) => t.endsWith(".ts"));
@@ -239,13 +238,18 @@ function resolveScriptPath(command: string): string {
 	// is always defined — indexed access keeps the basename typed as
 	// string without a non-null assertion.
 	const parts = tsToken.split("/");
-	const basename = parts[parts.length - 1];
+	const scriptBasename = parts[parts.length - 1];
 	const harnessMarker = "{{HARNESS_DIR}}/";
 	if (tsToken.startsWith(harnessMarker)) {
 		return pathResolve(__FILE_DIR, "..", tsToken.slice(harnessMarker.length));
 	}
+	const harnessRoot = pathResolve(__FILE_DIR, "..");
+	const projectedHarnessPrefix = `${basename(harnessRoot)}/`;
+	if (tsToken.startsWith(projectedHarnessPrefix)) {
+		return pathResolve(harnessRoot, "..", tsToken);
+	}
 	const scriptDir = process.env.AMADEUS_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
-	return join(scriptDir, basename);
+	return join(scriptDir, scriptBasename);
 }
 
 // --- Fire id ---

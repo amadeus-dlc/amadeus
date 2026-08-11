@@ -1,4 +1,4 @@
-// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors
+// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, function:resolveScriptPath
 //
 // t511 (unit) — Issue #2671 item (c): the `blocking` sensor severity, in its two
 // pure layers.
@@ -33,7 +33,10 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import type { SensorSeverity } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 import { evaluateBlockingSensors } from "../../dist/claude/.claude/tools/amadeus-state.ts";
-import { digestFile } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
+import {
+  digestFile,
+  resolveScriptPath,
+} from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
 
 // --- Layer 1 helpers: a minimal sensor roster -------------------------------
 
@@ -133,6 +136,14 @@ describe("t511 — severity carriage through the compiled stage graph (#2671 c)"
 });
 
 describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
+  test("a projected plugin sensor command resolves inside the plugin subtree", () => {
+    expect(resolveScriptPath(
+      "bun .claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+    )).toEndWith(
+      "/dist/claude/.claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+    );
+  });
+
   test("a vanished output hashes to a deterministic missing marker", () => {
     expect(digestFile("/definitely/missing/t511-output.md")).toBe("missing");
   });
