@@ -23,6 +23,7 @@ import {
   extractPerUnitConsumerEdges,
   PerUnitConsumeFanoutError,
 } from "../../packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts";
+import { emitAuditEventGuarded } from "../../packages/framework/core/otel/audit-emit.ts";
 import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
 import { ensureContextManager } from "../../packages/framework/core/otel/context.ts";
 import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
@@ -126,9 +127,26 @@ function projectWithOutcomes(
         { name: "unit-z", depends_on: [], kind: "library" },
         { name: "unit-a", depends_on: [], kind: "library" },
       ],
-      batches: [["unit-z", "unit-a"]],
+      batches: [["unit-a", "unit-z"]],
     },
   })}\n`);
+  // readBoltDagBatches refuses the runtime-graph cache when the canonical
+  // units-generation edge block is absent (recoverBoltDag returns "none"), so
+  // the fixture must carry the source doc for the DAG to resolve at all.
+  const unitsGeneration = join(record, "inception", "units-generation");
+  mkdirSync(unitsGeneration, { recursive: true });
+  writeFileSync(join(unitsGeneration, "unit-of-work-dependency.md"), [
+    "# Unit of Work Dependency",
+    "",
+    "```yaml",
+    "units:",
+    "  - name: unit-z",
+    "    depends_on: []",
+    "  - name: unit-a",
+    "    depends_on: []",
+    "```",
+    "",
+  ].join("\n"));
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
   expect(pool.initialEnqueue({
     idempotencyKey: "init",
@@ -338,6 +356,97 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
         `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
       )
     ));
+  });
+
+  test("ignores a closed terminal failure from a batch outside the current runtime population", () => {
+    const project = projectWithOutcomes();
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
+    expect(pool.initialEnqueue({
+      idempotencyKey: "historical-init",
+      batchId: "99",
+      cap: 1,
+      units: [{ unitId: "unit-z", dependsOn: [] }],
+    }).ok).toBe(true);
+    const acquired = pool.acquire({ idempotencyKey: "historical-acquire", batchId: "99" });
+    expect(acquired.ok).toBe(true);
+    if (!acquired.ok) throw new Error(acquired.reason);
+    const attempt = acquired.projection.active[0];
+    expect(pool.confirmDispatch({
+      idempotencyKey: "historical-confirm",
+      batchId: "99",
+      attemptId: attempt.attemptId,
+      nativeHandle: "historical-native",
+    }).ok).toBe(true);
+    expect(pool.settleRelease({
+      idempotencyKey: "historical-settle",
+      batchId: "99",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    }).ok).toBe(true);
+    // The closed join (SWARM_BATON_RETURNED) lands the failure in
+    // unresolvedFailures; the runtime-population scope must keep the
+    // await-unit-ruling prompt from stopping next for a foreign batch.
+    emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+      "Batch number": "99",
+      "Unit name": "unit-z",
+      Reason: "historical",
+      Stage: "build-and-test",
+      "Attempt Id": attempt.attemptId,
+    }, project);
+
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
+  });
+
+  test("keeps the ruling prompt fail-closed for a malformed numeric batch identity", () => {
+    const project = projectWithOutcomes();
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
+    expect(pool.initialEnqueue({
+      idempotencyKey: "malformed-init",
+      batchId: "99x",
+      cap: 1,
+      units: [{ unitId: "unit-z", dependsOn: [] }],
+    }).ok).toBe(true);
+    const acquired = pool.acquire({ idempotencyKey: "malformed-acquire", batchId: "99x" });
+    expect(acquired.ok).toBe(true);
+    if (!acquired.ok) throw new Error(acquired.reason);
+    const attempt = acquired.projection.active[0];
+    expect(pool.confirmDispatch({
+      idempotencyKey: "malformed-confirm",
+      batchId: "99x",
+      attemptId: attempt.attemptId,
+      nativeHandle: "malformed-native",
+    }).ok).toBe(true);
+    expect(pool.settleRelease({
+      idempotencyKey: "malformed-settle",
+      batchId: "99x",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    }).ok).toBe(true);
+    // "99x" partial-parses to 99 via Number.parseInt, but a malformed numeric
+    // identity cannot be proven historical: the ruling prompt must stay
+    // fail-closed instead of silently treating the failure as out of scope.
+    emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+      "Batch number": "99x",
+      "Unit name": "unit-z",
+      Reason: "malformed",
+      Stage: "build-and-test",
+      "Attempt Id": attempt.attemptId,
+    }, project);
+
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("ask");
   });
 
   test("classifies a succeeded Unit required gap as unexpected without a partial path", () => {
