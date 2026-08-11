@@ -38,7 +38,32 @@ describe("review-thread resolution CI gate", () => {
       "schedule",
       "workflow_dispatch",
     ]);
+    expect(workflow.on?.pull_request_review).toEqual({
+      types: ["submitted", "edited", "dismissed"],
+    });
+    expect(workflow.on?.pull_request_review_comment).toEqual({
+      types: ["created", "edited", "deleted"],
+    });
+    expect(workflow.on?.issue_comment).toEqual({
+      types: ["created", "edited", "deleted"],
+    });
     expect(workflow.on?.schedule).toEqual([{ cron: "*/15 * * * *" }]);
+    expect(workflow.on?.workflow_dispatch).toEqual({
+      inputs: {
+        pr_number: {
+          description: "PR number to refresh. Leave empty to refresh all open main PRs.",
+          required: false,
+          type: "string",
+        },
+        wait_for_other_checks: {
+          description: "Wait for other PR checks before evaluating review threads.",
+          required: false,
+          default: "true",
+          type: "choice",
+          options: ["true", "false"],
+        },
+      },
+    });
     expect(workflow.permissions).toEqual({
       contents: "read",
       checks: "write",
@@ -78,6 +103,16 @@ describe("review-thread resolution CI gate", () => {
     });
     expect(ciSuccess?.needs).toBeArray();
     expect(ciSuccess?.needs).toContain("review-thread-resolution");
-    expect(ciSuccess?.steps?.[0]?.run).toContain("needs['review-thread-resolution'].result");
+    const ciSuccessScript = ciSuccess?.steps?.[0]?.run;
+    expect(ciSuccessScript).toMatch(
+      /if \[\[ "\$\{\{ github\.event_name \}\}" == "pull_request" \]\]/,
+    );
+    expect(ciSuccessScript).toMatch(
+      /require_result "review-thread-resolution" "\$\{\{ needs\['review-thread-resolution'\]\.result \}\}"/,
+    );
+    expect(ciSuccessScript).toMatch(
+      /elif \[\[ "\$\{\{ needs\['review-thread-resolution'\]\.result \}\}" != "skipped" \]\]/,
+    );
+    expect(ciSuccessScript).toContain("expected skipped");
   });
 });
