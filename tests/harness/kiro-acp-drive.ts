@@ -39,6 +39,7 @@
 // again with the answer text on the same session (sessionId is returned).
 // This driver supports that via opts.sessionId + opts.keepAlive.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -493,7 +494,7 @@ export async function driveKiroAcp(opts: AcpDriveOptions): Promise<AcpDriveResul
     });
     // Trailing updates can stream after the cancelled reply resolves; give
     // them a beat before snapshotting.
-    if (cancelled) await new Promise((r) => setTimeout(r, 1500));
+    if (cancelled) await new Promise((r) => setTimeout(r, scaleTestTime(1500)));
 
     const statePath = stateFilePathOf(opts.projectDir);
     return {

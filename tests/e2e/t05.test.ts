@@ -53,6 +53,7 @@
 // expects incl. the STRONGER no-ERROR_LOGGED check; Part B = 1 case / 4
 // expects). Grouped where the .sh shared one fixture per part.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -218,7 +219,7 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
       // was itself read-only, so emitError's best-effort write also failed).
       expect(after).not.toContain("ERROR_LOGGED");
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test(
@@ -259,6 +260,6 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
         errors.some((r) => Object.values(r.fields ?? {}).some((v) => v.includes("[slug=demo]"))),
       ).toBe(true);
     },
-    30000,
+    scaleTestTime(30000),
   );
 });

@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
@@ -61,7 +62,7 @@ export function codexExecLiveRequirementsSkipReason({
         encoding: "utf-8",
         env: probeEnvironment.value,
         maxBuffer: 64 * 1024,
-        timeout: 15_000,
+        timeout: scaleTestTime(15_000),
       })
     : null;
   const match = (version?.stdout ?? "").match(/(\d+)\.(\d+)\.(\d+)/);

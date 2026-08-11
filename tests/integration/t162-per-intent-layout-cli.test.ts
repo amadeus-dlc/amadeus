@@ -28,6 +28,7 @@
 // per-intent record paths and process exit codes. cwd contract mirrors t49: every
 // worktree/bolt spawn runs with `cwd: proj` (resolveWorktreeAnchor checks CWD).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -241,7 +242,7 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
       expect(existsSync(join(proj, "amadeus-docs", "audit.md"))).toBe(false);
     },
-    TEST_TIMEOUT,
+    scaleTestTime(TEST_TIMEOUT),
   );
 
   // ===========================================================================
@@ -282,7 +283,7 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       // this clone — fork, merge, and the seeding append all wrote the same one).
       expect(shardNames(proj, RECORD_A).length).toBe(1);
     },
-    TEST_TIMEOUT,
+    scaleTestTime(TEST_TIMEOUT),
   );
 
   // ===========================================================================
@@ -324,6 +325,6 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       // And the flat fallback still does not exist.
       expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
     },
-    TEST_TIMEOUT,
+    scaleTestTime(TEST_TIMEOUT),
   );
 });

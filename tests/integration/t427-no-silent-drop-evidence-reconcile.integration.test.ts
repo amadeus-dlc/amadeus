@@ -1,4 +1,5 @@
 // covers: cli:no-silent-drop-evidence, workflow:no-silent-drop-evidence-reconcile, contract:no-silent-drop:identity-only-rebind
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -219,7 +220,7 @@ describe("t427 pure rebind trust boundary", () => {
   test("does not misclassify a child-initiated SIGTERM as a timeout", () => {
     const result = systemCommandRunner.run(
       [process.execPath, "-e", 'process.kill(process.pid, "SIGTERM")'],
-      { timeoutMs: 1_000 },
+      { timeoutMs: scaleTestTime(1_000) },
     );
     expect(result.status).toBe(1);
     expect(result.stderr).not.toContain("command timed out");

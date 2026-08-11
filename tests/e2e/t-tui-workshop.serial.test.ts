@@ -42,6 +42,7 @@ import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
@@ -141,7 +142,7 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
           const grid = runTuiDriver(["capture", "--session", session]).stdout;
           if (grid.includes("Submit")) sawSubmitStrip = true;
           if (grid.includes("Enter to select")) sawSelectFooter = true;
-        }, 1000);
+        }, scaleTestTime(1000));
 
         // --- answer the gates via the shared answer-gate primitive (§3) -------
         // It answers all tabs/gates by taking the Recommended default and

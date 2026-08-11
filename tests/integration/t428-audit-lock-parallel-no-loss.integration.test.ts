@@ -31,6 +31,7 @@
 // outside the repository, plus a per-run temp project dir; both rm-rf'd in
 // afterAll. Nothing under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -142,6 +143,6 @@ describe("t428 — parallel state mutation under the audit lock loses nothing", 
       const observed = rows.map((line) => JSON.parse(line).before).sort((a: number, b: number) => a - b);
       expect(observed).toEqual(Array.from({ length: WORKERS }, (_, index) => index));
     },
-    120_000,
+    scaleTestTime(120_000),
   );
 });

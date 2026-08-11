@@ -3,6 +3,7 @@
 // covers: packages/framework/core/tools/amadeus-mirror-runner.ts
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawn as realSpawn } from "node:child_process";
 import { EventEmitter } from "node:events";
@@ -367,7 +368,7 @@ describe("runner real process termination (POSIX)", () => {
       for (let i = 0; i < 40 && alive; i++) {
         try {
           process.kill(-pgid, 0);
-          await new Promise((r) => setTimeout(r, 50));
+          await new Promise((r) => setTimeout(r, scaleTestTime(50)));
         } catch {
           alive = false;
         }

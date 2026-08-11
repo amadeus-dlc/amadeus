@@ -29,6 +29,7 @@
 // the tree byte-identical to committed. Every planted file is removed in a
 // try/finally AND an afterEach backstop.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -69,7 +70,7 @@ describe("t-package-write-sweep — #771: write mode sweeps stale project-root o
   test("(a) a clean regenerate succeeds", () => {
     cleanup();
     expect(() => writeHarness("kiro")).not.toThrow();
-  }, WRITE_TIMEOUT_MS);
+  }, scaleTestTime(WRITE_TIMEOUT_MS));
 
   test("(b) planted stale outputs are swept by write, and --check passes after", () => {
     cleanup();
@@ -85,7 +86,7 @@ describe("t-package-write-sweep — #771: write mode sweeps stale project-root o
     } finally {
       cleanup();
     }
-  }, WRITE_TIMEOUT_MS);
+  }, scaleTestTime(WRITE_TIMEOUT_MS));
 
   test("(c) write does NOT delete legitimate project-root outputs", () => {
     cleanup();
@@ -93,7 +94,7 @@ describe("t-package-write-sweep — #771: write mode sweeps stale project-root o
     // reproduce it, not sweep it. Its survival proves the expected-set guard.
     writeHarness("kiro");
     expect(existsSync(join(DIST_KIRO, "AGENTS.md"))).toBe(true);
-  }, WRITE_TIMEOUT_MS);
+  }, scaleTestTime(WRITE_TIMEOUT_MS));
 });
 // applyModelPin is the projection that turns a charter's tier alias into a
 // harness-native model id. It is exercised here in-process for the same reason

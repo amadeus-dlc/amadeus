@@ -22,6 +22,7 @@
 // doctor is spawned with cwd pinned to the sibling, and a failed git setup throws
 // immediately so a command can never continue in an unintended repository.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -159,7 +160,7 @@ describe("t210 doctor worktree Check 1/3 anchor at the main checkout (#830)", ()
     const stateLine =
       out.split("\n").find((l) => l.includes("state files for")) ?? "";
     expect(stateLine).toContain("orphananchor");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("in-file consistency: Check 1/3 agree with Check 2's anchored resolution", () => {
     // Same planted orphan; assert no worktree check reports the sibling's empty
@@ -168,5 +169,5 @@ describe("t210 doctor worktree Check 1/3 anchor at the main checkout (#830)", ()
     const { out } = runDoctor(scratch.sibling, scratch.sibling);
     expect(out).not.toContain("Orphan worktrees: 0 observed");
     expect(out).not.toContain("Orphan state files: 0 observed");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

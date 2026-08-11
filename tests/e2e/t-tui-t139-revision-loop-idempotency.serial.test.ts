@@ -77,6 +77,7 @@ import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { gridHasMenu } from "../harness/tui-drive.ts";
 import { canonicalCompletedSlugs } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 
@@ -269,7 +270,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
           pollTimer = setInterval(() => {
             const grid = runTuiDriver(["capture", "--session", revisedSession]).stdout;
             if (gridHasMenu(grid)) sawMenu = true;
-          }, 1000);
+          }, scaleTestTime(1000));
           const revisedRc = await runAnswerGateToMilestone(
             revisedSession,
             revisedSandbox,

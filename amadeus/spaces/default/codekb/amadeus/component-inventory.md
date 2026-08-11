@@ -1,5 +1,17 @@
 # コンポーネント棚卸し
 
+## テスト時間制御コンポーネント（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+| コンポーネント | 責務 | 係数対応状況 |
+|---|---|---|
+| run-tests argument parser | suite/perf/coverage/test timeout 引数の解決 | 固定値のみ |
+| run-tests scheduler | file 分類、並列実行、Bun child 起動 | 係数未使用 |
+| GitHub Actions workflows | CI、coverage、PBT、release の実行 | 係数未注入 |
+| TUI/IDE test drivers | 外部 UI の poll、settle、deadline | 固定値 |
+| test fixtures/perf suites | timeout 発火や wall-clock 上限の検証 | 意味保持のため対象外候補 |
+
+追加候補 `tests/lib/test-time-factor.ts` は環境値の parse と基準時間の scale だけを担い、scheduler や個別 driver のドメイン判定は持たない小さな共通モジュールが妥当である。
+
 ## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。

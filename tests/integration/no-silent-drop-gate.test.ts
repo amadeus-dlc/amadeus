@@ -1,5 +1,6 @@
 // covers: subcommand:no-silent-drop:check, subcommand:no-silent-drop:census-evidence
 // size: medium
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -1271,7 +1272,7 @@ describe("no-silent-drop boundaries", () => {
     ], {
       cwd: REPO_ROOT,
       encoding: "utf8",
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     });
     expect(result.status).toBe(0);
     expect(result.stdout.trim().split("\n")).toHaveLength(1);

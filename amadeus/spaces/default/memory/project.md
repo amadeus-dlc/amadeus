@@ -44,6 +44,8 @@
 - ハーネス横断のlifecycle parityはcurrent hostの成功だけで判定せず、各非current hostの関連ファイルが実行前とbyte-identicalであることも検証する。 (learned 2026-08-02) <!-- cid:code-generation:c1-260802-plugin-optin-parity -->
 - failure injectionによるrollback検証ではファイル内容の復元だけでなく、開始前に存在しなかった空の親ディレクトリが残らないことも確認する。 (learned 2026-08-02) <!-- cid:code-generation:c3-260802-plugin-optin-parity -->
 - `coverage:ci` をfull CIとcoverageの統合証跡として扱う。同じ `--ci` runnerをcoverage付きで実行し、全test files・assertionsを完走するため (learned 2026-08-02) <!-- cid:build-and-test:c1-260802-plugin-optin-parity -->
+- `TEST_TIME_FACTOR` はテストのタイムアウト時間の基準値に乗算する。`sleep(scaleTestTime(500))` のように timeout を構成・検証する待機値にも同じ係数を適用し、乗算を直接書かず `tests/lib/test-time-factor.ts` の `scaleTestTime`(係数の検証と `Math.ceil` を担う中心契約)を経由する。性能基準や本番 CLI の timeout 契約は対象外とする (learned 2026-08-10) <!-- cid:reverse-engineering:test-time-factor-timeout -->
+- `TEST_TIME_FACTOR` の中心契約はテスト用 timeout の基準値への乗算とし、`sleep`、poll、settle は timeout の成立と検証に対応する場合に同じ係数を適用する。 (learned 2026-08-10) <!-- cid:requirements-analysis:test-time-factor-c1 -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布、GitHub Release Asset、タグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、隔離2回ビルドの再現性検査、source-only境界検査、グラフ不変量検査、smoke+unit+integration tests を実行する。
@@ -385,6 +387,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
 - Code Generationで既存workflowへ実装済みなら、CI Pipelineで新規workflowを二重生成せず、既存workflowを唯一の正本として文書化・検証する。 (learned 2026-07-12) <!-- cid:ci-pipeline:c2 -->
 
+- CI の `TEST_TIME_FACTOR` 既定値は `2` とし、`3` はより低速な実行環境の override として残す。 (learned 2026-08-10) <!-- cid:requirements-analysis:test-time-factor-c2 -->
 ## Provisioning
 - Provisioning inventoryでは実在対象とN/A対象を分離し、N/Aには人間決定・承認scope・上流成果物等の反証可能な不存在/非適用根拠を併記する。N/Aを未検証やPASSと表現せず、実在resourceや必須検査の省略理由にしない。 (learned 2026-07-12) <!-- cid:environment-provisioning:c3 -->
 

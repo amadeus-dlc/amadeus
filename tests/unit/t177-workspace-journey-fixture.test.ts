@@ -24,6 +24,7 @@
 // harnesses (the packager substitutes only the harness-dir token), so importing
 // them from the claude dist exercises every harness's seeded root correctly.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -86,6 +87,6 @@ describe("t177 workspace-journey fixture (deterministic, no LLM)", () => {
       }
       // Cleanup removed the tmp root (cleanup ran in the finally above).
       expect(existsSync(journey.root)).toBe(false);
-    }, CASE_TIMEOUT_MS);
+    }, scaleTestTime(CASE_TIMEOUT_MS));
   }
 });

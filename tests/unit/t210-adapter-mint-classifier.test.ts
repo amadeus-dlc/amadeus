@@ -27,6 +27,7 @@
 // adapter through each harness's measured input channel and reading back the
 // audit shard is the exact path the harness drives (same idiom as t149 / t203).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -196,7 +197,7 @@ function fireMint(dir: string, adapterRel: string, target: string, stdin: string
       CLAUDE_PROJECT_DIR: undefined,
       USER_PROMPT: kiroIde ? userPrompt : undefined,
     } as NodeJS.ProcessEnv,
-    timeout: 30_000,
+    timeout: scaleTestTime(30_000),
   });
   return r.status ?? -1;
 }
@@ -216,7 +217,7 @@ function fireCodexState(dir: string, args: string[]): { rc: number; out: string 
   const r = spawnSync(
     "bun",
     [join(dir, ".codex", "tools", "amadeus-state.ts"), ...args, "--project-dir", dir],
-    { cwd: dir, encoding: "utf-8", env, timeout: 30_000 },
+    { cwd: dir, encoding: "utf-8", env, timeout: scaleTestTime(30_000) },
   );
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }

@@ -48,6 +48,7 @@
 // CLI compile/check seeds a fresh tempfile from the committed stage-graph.json — never
 // the real graph — exactly as the .sh did.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -572,7 +573,7 @@ describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 10 scopes)",
       if (actual !== expected) fails.push(scope);
     }
     expect(fails).toEqual([]);
-  }, 120000); // many sequential CLI spawns across 10 scopes (workshop ~25 steps)
+  }, scaleTestTime(120000)); // many sequential CLI spawns across 10 scopes (workshop ~25 steps)
 });
 
 // =============================================================================
@@ -596,7 +597,7 @@ describe("t66 firstInScopeStageOfPhase parity (spawnSync CLI-boundary)", () => {
       if (actual !== expected) fails.push(scope);
     }
     expect(fails).toEqual([]);
-  }, 120000); // 10 scopes x 5 phases = 50 sequential CLI spawns
+  }, scaleTestTime(120000)); // 10 scopes x 5 phases = 50 sequential CLI spawns
 });
 
 // =============================================================================

@@ -74,6 +74,7 @@
 // === "error" on the parsed envelope row), and audit-event presence is an exact
 // `**Event**: <type>` row count rather than a `grep -q`.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -337,7 +338,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(fEnv.converged).toBe(1);
     expect(fEnv.merge_failures).toEqual([]);
     expect(eventCount(proj, "SWARM_UNIT_CONVERGED")).toBe(1);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // Cases 2, 3, 4, 6 are asserted inside test 1's shared-fixture flow above
   // (the .sh ran them sequentially against the same PROJ). Named here for the
@@ -351,7 +352,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const c = runRef(proj, ["check", "g2", "--check-cmd", "test -f impl.txt"]);
     expect(c.rc).toBe(0);
     expect(JSON.parse(c.out).converged).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("3 check is stateless: repeat call same verdict (no counter)", () => {
     const proj = makeSwarmFixture();
@@ -364,7 +365,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(second.rc).toBe(0);
     expect(JSON.parse(second.out)).toEqual(JSON.parse(first.out));
     expect(JSON.parse(second.out).converged).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("4 check: not-yet-converged unit -> exit non-zero, converged:false", () => {
     const proj = makeSwarmFixture();
@@ -373,7 +374,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const c = runRef(proj, ["check", "g4", "--check-cmd", "test -f impl.txt"]);
     expect(c.rc).not.toBe(0);
     expect(JSON.parse(c.out).converged).toBe(false);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 5: anti-tamper on check — editing the protected --test-file is refused,
@@ -405,7 +406,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // true, convergence refused (exit non-zero).
     expect(c.rc).not.toBe(0);
     expect(JSON.parse(c.out).tampered).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Cases 7 + 9: the LYING-CONDUCTOR GUARD + mixed batch. The conductor claims
@@ -445,7 +446,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(env.failed).toBe(1);
     expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
     expect(f.rc).toBe(2);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("9 finalize mixed batch: 1 converged + 1 failed; SWARM_COMPLETED; exit 2", () => {
     // The .sh asserted cases 7 + 9 on a single finalize run; re-prove case 9
@@ -471,7 +472,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(env.failed).toBe(1);
     expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
     expect(f.rc).toBe(2);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 8: finalize anti-tamper — a claimed unit whose protected file was
@@ -512,7 +513,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(delta).toBeDefined();
     expect(delta.tampered).toBe(true);
     expect(delta.status).toBe("failed");
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 10: loud-degrade — prepare --degraded-from claude-ultra emits SWARM_DEGRADED.
@@ -537,7 +538,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
         (r) => r.event === "SWARM_DEGRADED" && r.fields?.["Requested driver"] === "claude-ultra",
       ),
     ).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 11: path-confinement — a --test-file escaping the worktree (../) is a
@@ -561,7 +562,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const out = JSON.parse(c.out);
     expect(out.reason).toBe("error");
     expect(out.detail).toContain("resolves outside the unit worktree");
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 12: conductor attribution — a DECLINED (unclaimed) unit for which the
@@ -600,7 +601,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
         (r) => r.event === "SWARM_UNIT_FAILED" && r.fields?.Reason === "unsatisfiable",
       ),
     ).toBe(true);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 13: --reasons cannot override the lying-conductor guard. A unit CLAIMED
@@ -637,7 +638,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // "error", never the laundered "unsatisfiable".
     expect(sneaky.reason).toBe("error");
     expect(sneaky.reason).not.toBe("unsatisfiable");
-  }, 120000);
+  }, scaleTestTime(120000));
 
   // ===========================================================================
   // Case 14 (issue #674): a unit that genuinely re-verifies converged but whose
@@ -730,5 +731,5 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(eventCount(proj, "SWARM_UNIT_FAILED")).toBe(1);
     expect(eventCount(proj, "SWARM_BATON_RETURNED")).toBe(1);
     expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
-  }, 120000);
+  }, scaleTestTime(120000));
 });

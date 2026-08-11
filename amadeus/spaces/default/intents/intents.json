@@ -1096,5 +1096,12 @@
     "dirName": "260810-control-byte-gate",
     "scope": "self-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fec0c-9e96-7df8-b0e6-daa3682b857b",
+    "slug": "test-time-factor",
+    "dirName": "260810-test-time-factor",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

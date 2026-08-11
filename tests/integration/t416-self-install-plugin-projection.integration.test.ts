@@ -2,6 +2,7 @@
 // covers: contract:self-install-plugin-projection-matrix
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,7 +66,7 @@ describe("t416 deterministic self-install plugin projections", () => {
       expect(composition, harness).toEndWith("\n");
       expect(composition, harness).toContain('\n  "plugins":');
     }
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   // #2790: the self-install faces are seeded by projectInTemporaryWorkspace, which
   // fed the authoring plugins/ tree into compose VERBATIM — so a {{HARNESS_DIR}}
@@ -89,13 +90,13 @@ describe("t416 deterministic self-install plugin projections", () => {
         expect(text.includes(`${foreign}/`), `${harness}: foreign literal ${foreign}/`).toBe(false);
       }
     }
-  }, 300_000);
+  }, scaleTestTime(300_000));
 
   test("Codex emits only the project-root .agents runner", () => {
     const projection = buildSelfInstallProjection("codex", REPO_ROOT);
     expect(projection.expectedPaths.has(".agents/skills/amadeus-formal-model-check/SKILL.md")).toBe(true);
     expect([...projection.expectedPaths].some((path) => path.startsWith(".codex/skills/"))).toBe(false);
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   test("Cursor and OpenCode use their existing command entry instead of plugin runner skills", () => {
     for (const harness of ["cursor", "opencode"] as const) {
@@ -103,7 +104,7 @@ describe("t416 deterministic self-install plugin projections", () => {
       expect([...projection.expectedPaths].some((path) => path.includes("amadeus-formal-model-check/SKILL.md"))).toBe(false);
       expect([...projection.expectedPaths].some((path) => path.endsWith("tools/data/stage-graph.json"))).toBe(true);
     }
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   test("missing or empty selection has zero self-projection impact", () => {
     const missing = mkdtempSync(join(tmpdir(), "amadeus-t416-missing-"));
@@ -140,7 +141,7 @@ describe("t416 deterministic self-install plugin projections", () => {
       if (previous === undefined) delete process.env.AMADEUS_RULES_DIR;
       else process.env.AMADEUS_RULES_DIR = previous;
     }
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   test("packaged stage entries accept native relative surfaces and reject escapes", () => {
     const dataDir = mkdtempSync(join(tmpdir(), "amadeus-t416-stage-entry-"));

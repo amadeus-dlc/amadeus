@@ -77,6 +77,7 @@
 // seeded from the SAME on-disk state fixtures the .sh used. All temp dirs are
 // cleaned in afterAll. Nothing is written under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -303,7 +304,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
 
     // .sh T9: no orphan audit lock dir after report (gated path).
     expect(existsSync(lockDir(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5b: explicit-stage report opens a missing gate before approving", () => {
     const p = projWithState("state-mid-ideation.md");
@@ -323,7 +324,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     );
     expect(countEvent(p, "STAGE_STARTED")).toBe(1);
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5c: completed active-stage recovery advances and emits the missing completion event", () => {
     const p = projWithState("state-mid-ideation.md");
@@ -337,7 +338,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     expect(auditEvents(p)).toContain("STAGE_COMPLETED STAGE_STARTED");
     expect(countEvent(p, "STAGE_COMPLETED")).toBe(1);
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5d: explicit-stage report is idempotent when Current Stage has already advanced", () => {
     const p = projWithState("state-mid-ideation.md");
@@ -355,7 +356,7 @@ describe("t115 gated approve round-trip (report -> amadeus-state approve)", () =
     expect(countEvent(p, "GATE_APPROVED")).toBe(1);
     expect(countEvent(p, "STAGE_STARTED")).toBe(1);
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -378,7 +379,7 @@ describe("t115 non-gated advance (report -> amadeus-state advance)", () => {
 
     // .sh T11: non-gated advance emits STAGE_COMPLETED then STAGE_STARTED.
     expect(auditEvents(p)).toContain("STAGE_COMPLETED STAGE_STARTED");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -403,7 +404,7 @@ describe("t115 non-gated phase-boundary advance (report -> amadeus-state advance
     expect(auditEvents(p)).toContain(
       "STAGE_COMPLETED PHASE_COMPLETED PHASE_VERIFIED PHASE_STARTED STAGE_STARTED",
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -440,7 +441,7 @@ describe("t115 final gated approve -> complete-workflow (report -> amadeus-state
     // get subcommand — the .sh's `amadeus-state.ts get "Status"`).
     const status = state(["get", "Status"], p);
     expect(status.stdout.trim()).toBe("Completed");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -472,7 +473,7 @@ describe("t115 advance replay guard (amadeus-state advance double-commit)", () =
 
     // .sh T21: a replayed commit is not an error (no ERROR_LOGGED).
     expect(countEvent(p, "ERROR_LOGGED")).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -505,7 +506,7 @@ describe("t115 re-report on a completed workflow", () => {
     expect(second.out).toContain('"kind":"done"');
     expect(second.out).toContain("already completed");
     expect(totalEvents(p)).toBe(before);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -546,7 +547,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     // ZERO new audit rows — in particular no second STAGE_STARTED.
     expect(totalEvents(p)).toBe(before);
     expect(countEvent(p, "STAGE_STARTED")).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("stale re-report with next revising [R] is an idempotent done: [R] preserved, zero new rows", () => {
     const p = projAtHeldGate();
@@ -561,7 +562,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     expect(replay.out).toContain("idempotent re-report");
     expect(readFileSync(statePath(p), "utf-8")).toContain("[R] scope-definition");
     expect(totalEvents(p)).toBe(before);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("engine-level: direct advance replay with next gate-held [?] short-circuits, zero new rows", () => {
     const p = projAtHeldGate();
@@ -575,7 +576,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     expect(replay.out).toContain('"replay":true');
     expect(readFileSync(statePath(p), "utf-8")).toContain("[?] scope-definition");
     expect(totalEvents(p)).toBe(before);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("regression: legit recovery (slug [x] === Current Stage, next pending) still advances", () => {
     const p = projWithState("state-mid-ideation.md");
@@ -590,7 +591,7 @@ describe("t115 stale re-report guard (report on a completed stage after the work
     expect(report.out).toContain("Committed advance");
     expect(state(["get", "Current Stage"], p).stdout.trim()).toBe("scope-definition");
     expect(readFileSync(statePath(p), "utf-8")).toContain("[-] scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -614,7 +615,7 @@ describe("t115 report-path gate backfill carries Recovered", () => {
     const gateRows = auditBlocksFor(p, "STAGE_AWAITING_APPROVAL");
     expect(gateRows.length).toBe(1);
     expect(gateRows[0].fields?.Recovered).toBe("true");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("organic gate-start emits no Recovered field", () => {
     const p = projWithState("state-mid-ideation.md");
@@ -623,5 +624,5 @@ describe("t115 report-path gate backfill carries Recovered", () => {
     const gateRows = auditBlocksFor(p, "STAGE_AWAITING_APPROVAL");
     expect(gateRows.length).toBe(1);
     expect(gateRows[0].fields ?? {}).not.toHaveProperty("Recovered");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

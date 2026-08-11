@@ -8,6 +8,8 @@
 // The runner keeps `usage()` (whose text tests/smoke/t05 pins) and supplies the
 // stderr/stdout writes and exit codes through `io`.
 
+import { resolveTestTimeFactor, scaleTestTime } from "./test-time-factor.ts";
+
 export type Level = "smoke" | "unit" | "integration" | "e2e" | "perf";
 
 export const DEFAULT_TEST_TIMEOUT_MS = 30_000;
@@ -51,7 +53,11 @@ function parseTestTimeoutMs(value: string, io: ParseArgsIo): number {
   return Number(value);
 }
 
-export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
+export function parseArgs(
+  argv: string[],
+  io: ParseArgsIo,
+  testTimeFactor: number = resolveTestTimeFactor(),
+): ParsedArgs {
   const out: ParsedArgs = {
     runSmoke: false,
     runUnit: false,
@@ -143,7 +149,7 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
       }
       case "--test-timeout-ms": {
         const value = argv[++i] ?? "";
-      out.testTimeoutMs = parseTestTimeoutMs(value, io);
+        out.testTimeoutMs = parseTestTimeoutMs(value, io);
         break;
       }
       case "--help":
@@ -160,5 +166,6 @@ export function parseArgs(argv: string[], io: ParseArgsIo): ParsedArgs {
     out.runUnit = true;
     out.runIntegration = true;
   }
+  out.testTimeoutMs = scaleTestTime(out.testTimeoutMs, testTimeFactor);
   return out;
 }

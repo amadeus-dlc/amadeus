@@ -73,6 +73,7 @@
 //   (the .sh's `plan 14` = 3 invalid-value rows + 1 no-arg + 8 numbered tests;
 //    this twin keeps all 14 distinct behavioural assertions and adds 2 MR8 assertions.)
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -331,7 +332,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       // STRONGER than the .sh's bare label grep: the message echoes the bad
       // value back (run-tests.sh:90 `(got: '${PARALLEL...}')`).
       expect(r.out).toContain(`(got: '${bad}')`);
-    }, PER_TEST_TIMEOUT);
+    }, scaleTestTime(PER_TEST_TIMEOUT));
   }
 
   // --- 2. Bare --parallel (no following value) -> exit 2 --------------------
@@ -344,7 +345,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     // (run-tests.sh:90 `${PARALLEL:-<missing>}`). STRONGER than the .sh, which
     // only checked rc==2 here.
     expect(r.out).toContain("ERROR: --parallel requires a positive integer");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 3. --parallel 1 ≡ serial on the smoke tier --------------------------
   // .sh compared the (Test files / Total assertions) summary lines between
@@ -370,7 +371,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     // Sanity: the comparison is over real, populated lines, not two empties.
     expect(s).toContain("Test files:");
     expect(s).toContain("Total assertions:");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 4. Smoke tier stays serial under --parallel 4 -----------------------
   // run-tests.sh:573 forces smoke -> effective_parallel=1, so :576-579 prints
@@ -381,7 +382,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       r.out.split("\n").find((l) => l.startsWith("## Smoke Tests")) ?? "";
     expect(banner).not.toBe("");
     expect(banner).not.toContain("(parallel=");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 5. Integration level honours --parallel: banner tagged --------------
   // The integration level is NOT pinned serial, so effective_parallel=4 and the
@@ -393,7 +394,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     const banner =
       r.out.split("\n").find((l) => l.startsWith("## Integration Tests")) ?? "";
     expect(banner).toContain("(parallel=4)");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   test("unit tier uses default parallelism documented by the Japanese testing guide", () => {
     const expectedParallel = Math.min(availableParallelism(), 4);
@@ -410,7 +411,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     }
     expect(guide).toContain("デフォルト: 利用可能な CPU 数と 4 のうち小さい方");
     expect(guide).toContain("利用可能な CPU 数と `4` のうち小さい方");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 6. Interleaving observed under --parallel 4 -------------------------
   // With >=4 files fanned out 4-wide, at least two "=== START ===" markers
@@ -425,7 +426,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
         plant,
         plantedBunTestSource(
           `planted slow ${idx + 1}`,
-          "  await new Promise((resolve) => setTimeout(resolve, 300));\n  expect(true).toBe(true);",
+          `  await new Promise((resolve) => setTimeout(resolve, ${scaleTestTime(300)}));\n  expect(true).toBe(true);`,
         ),
         "utf-8",
       );
@@ -447,7 +448,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       for (const plant of plants) rmSync(plant, { force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 7. Summary counts identical: serial vs --parallel 4 (integration) ---
   // .sh compared (Test files / Total assertions / Failed files / Failed
@@ -486,7 +487,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       for (const plant of plants) rmSync(plant, { force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 8. Failure propagation under parallelism (§6-E: the failure FIRES) ---
   // The .sh planted a real failing TAP file into a runnable test level and asserted
@@ -523,7 +524,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       rmSync(plant, { force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- MR8. Legacy t*.sh files are no longer discovered --------------------
   // The runner is still a bash script, but the test suite it dispatches is now
@@ -550,14 +551,14 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       rmSync(plant, { force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   test("retired shell harness files are gone except runner allowlist", () => {
     expect(shellFilesUnder(TESTS_ROOT)).toEqual([
       "tests/harness/windows/sync.sh",
       "tests/run-tests.sh",
     ]);
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 9. --e2e dispatches; banner printed --------------------------------
   // The e2e level registers and prints its label (run-tests.sh:689).
@@ -568,7 +569,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     expect(
       r.out.split("\n").some((l) => l.startsWith("## E2E Tests")),
     ).toBe(true);
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 10. --e2e reports a positive test-file count ------------------------
   test("--e2e reports >0 test files", () => {
@@ -578,7 +579,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     const m = line.match(/^Test files: (\d+)$/);
     expect(m).not.toBeNull();
     expect(Number(m?.[1])).toBeGreaterThan(0);
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 11. --ci profile dispatches the integration level -------------------
   // run-tests.sh:81 — --ci enables RUN_INTEGRATION=true, so the integration
@@ -588,7 +589,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     expect(
       r.out.split("\n").some((l) => l.startsWith("## Integration Tests")),
     ).toBe(true);
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   test("--coverage writes a normalized combined LCOV report", () => {
     const tmpRoot = join(REPO_ROOT, "tmp");
@@ -614,7 +615,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   test("--coverage folds temporary packaged harness sources into canonical core paths", () => {
     const tmpRoot = join(REPO_ROOT, "tmp");
@@ -640,7 +641,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   // --- 12. _results sidecar dir ends the run empty -------------------------
   // run-tests.sh:556 deletes every *.meta after each tier aggregates. The .sh
@@ -668,7 +669,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       f.endsWith(".meta"),
     );
     expect(leftoverMeta.length).toBe(0);
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 
   test("--all --debug defaults live TUI coverage unless AMADEUS_TUI_LIVE is explicit", () => {
     const defaulted = run(
@@ -684,5 +685,5 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     );
     expect(explicitOff.status).toBe(0);
     expect(explicitOff.out).toContain("Live TUI coverage: AMADEUS_TUI_LIVE=0 (explicit");
-  }, PER_TEST_TIMEOUT);
+  }, scaleTestTime(PER_TEST_TIMEOUT));
 });

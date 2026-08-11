@@ -20,6 +20,7 @@
 //     forgets the badge ships a wrong public number — v0.5.0 missed this)
 // (.test.ts has no TAP `plan`, so changing case bodies does not drift t55.)
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -61,7 +62,7 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
     const res = spawnSync(BUN, [UTILITY_TS, "version"], { encoding: "utf-8" });
     expect(res.status).toBe(0);
     expect((res.stdout ?? "").trim()).toBe(`amadeus ${tsVersion}`);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // The repo has ONE version: packages/setup's package.json (which drives
   // the v* release tags) must equal AMADEUS_VERSION. The release-it

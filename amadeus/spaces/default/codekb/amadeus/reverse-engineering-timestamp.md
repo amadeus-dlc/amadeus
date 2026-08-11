@@ -1,5 +1,14 @@
 # リバースエンジニアリング実施記録
 
+## 260810-test-time-factor
+
+- Date: `2026-08-10T14:26:50Z`
+- Base commit: `7b9391be2db4fad791d637293ea442d5a1462bac`
+- Observed commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: `TEST_TIME_FACTOR` によるテスト timeout/wait の CI 能力係数化
+- Scan record: `re-scans/260810-test-time-factor.md`
+
 ## 実行メタデータ（現在: 260810-plugin-manifest-resoluti）
 
 - Date: `2026-08-10`

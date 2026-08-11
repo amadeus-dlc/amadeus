@@ -21,6 +21,7 @@
 // body (the `amadeus-orchestrate.ts next <ARGS>` forwarding anchor), and
 // pretool-block reads only the counter/latch files we seed.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -51,7 +52,7 @@ function runAdapter(
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     encoding: "utf-8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
-    timeout: 30_000,
+    timeout: scaleTestTime(30_000),
   });
   return { stdout: r.stdout ?? "", code: r.status ?? -1 };
 }

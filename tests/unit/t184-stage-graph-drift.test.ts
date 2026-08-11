@@ -24,6 +24,7 @@
 // but absent from the compiled graph must be NAMED in both the doctor advisory
 // and the hook NOTE, not a happy path that only proves the in-sync case.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -261,7 +262,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       expect(r.out).toContain(
         "Uncompiled stage files: 0 stage files missing from the compiled graph",
       );
-    }, 30000);
+    }, scaleTestTime(30000));
 
     test("drifted sandbox: doctor NAMES the uncompiled stage as an advisory, exit stays 0", () => {
       const proj = newSandbox();
@@ -279,7 +280,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       // ADVISORY: an uncompiled stage alone must NOT fail the health check.
       // (A clean sandbox doctor exits 0; injecting only this drift keeps it 0.)
       expect(r.status).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
   });
 
   // ===========================================================================
@@ -292,7 +293,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       const ctx = sessionStartContext(proj);
       expect(ctx).toContain("AIDLC WORKFLOW ACTIVE");
       expect(ctx).not.toContain("not in the compiled stage graph");
-    }, 30000);
+    }, scaleTestTime(30000));
 
     test("drifted sandbox: NOTE names the uncompiled stage and the compile command", () => {
       const proj = newSandbox();
@@ -309,6 +310,6 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       expect(ctx).toContain("amadeus-graph.ts compile");
       // Hook still emits its normal workflow context (advisory is additive).
       expect(ctx).toContain("AIDLC WORKFLOW ACTIVE");
-    }, 30000);
+    }, scaleTestTime(30000));
   });
 });

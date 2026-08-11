@@ -1,5 +1,15 @@
 # API ドキュメント
 
+## テスト時間設定 API の現状（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+| 入力/API | 現状 | 備考 |
+|---|---|---|
+| `TEST_TIME_FACTOR` | 未実装 | 環境変数参照、parse、scale helper は0件 |
+| `--test-timeout-ms <ms>` | 実装済み | `tests/lib/run-tests-args.ts` が正整数と上限を検証 |
+| `AMADEUS_TEST_TIMEOUT` | 実装済み | live model/driver 用の秒単位 override。共通係数ではない |
+
+要件化すべき公開契約候補は、未指定時 `1`、有限の正値のみ受理、基準ミリ秒に係数を乗算することである。丸めと上限、明示 `--test-timeout-ms` に係数を掛けるかは requirements-analysis で固定する。
+
 ## plugin advisory 宣言の解決契約（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。

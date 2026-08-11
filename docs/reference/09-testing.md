@@ -452,9 +452,24 @@ To add artifact assertions to an existing e2e workflow test under `tests/e2e/`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `TEST_TIME_FACTOR` | `1` | Multiplies test-only timeouts, deadlines, polls, sleeps, and settle waits. CI, coverage, PBT, and release test jobs use `2`; use `3` on unusually slow local machines. Values must be finite numbers greater than or equal to `1`. |
 | `AMADEUS_TEST_TIMEOUT` | `1800` | Per-`claude -p` call timeout in seconds. Set to `0` to disable. |
 | `AMADEUS_TUI_SETTING_SOURCES` | `project` | Setting sources injected into live `claude` TUI launches. Use `default` or an empty value only for focused calibration that intentionally includes user/local Claude settings. |
 | `AMADEUS_TUI_TRACE_POLL_MS` | `10000` | Minimum interval between `answer_gate_poll` snapshots in TUI NDJSON traces while a long journey is waiting for the next menu or disk terminator. |
+
+All new test timing must pass an unscaled baseline through `scaleTestTime` from
+`tests/lib/test-time-factor.ts`. Scale the timeout/deadline and its associated
+poll, sleep, and settle values together. Do not scale performance thresholds,
+intentional timeout or hang triggers, timestamp-boundary assertions, production
+timeouts, or the final `AMADEUS_TEST_TIMEOUT` override. Fixed exceptions are
+recorded with an exact path, sink kind, count, and reason in
+`tests/.test-time-factor-allowlist.json`; run
+`bun tests/test-time-factor-guard.ts` after adding or changing test timing.
+Workflows that invoke `bun test` directly must pass
+`--timeout="$(bun tests/test-timeout-ms.ts 30000)"`; Bun does not interpret
+`TEST_TIME_FACTOR` itself. A live test's `AMADEUS_TEST_TIMEOUT` value and any
+relative driver budget derived from it are final overrides and must remain
+unscaled even when `TEST_TIME_FACTOR` is set.
 
 ## CLI Reference
 

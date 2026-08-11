@@ -1,4 +1,5 @@
 // size: medium
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -356,7 +357,7 @@ describe("t257 doctor CLI boundary and fatal ordering", () => {
     expect(String(thrown)).toContain("Failed to acquire audit lock");
     expect(writeCount).toBe(0);
     expect(exitCount).toBe(0);
-  }, 10_000);
+  }, scaleTestTime(10_000));
 
   test("a HEALTH_CHECKED failure writes the full output then rethrows its cause", async () => {
     const projectDir = healthyProject(true);
@@ -416,7 +417,7 @@ describe("t257 doctor CLI boundary and fatal ordering", () => {
         if (watcher.exitCode !== null) {
           throw new Error(`watcher exited before READY with code ${watcher.exitCode}`);
         }
-        await Bun.sleep(1);
+        await Bun.sleep(scaleTestTime(1));
       }
       writeFileSync(watcherStart, "start\n", "utf-8");
       runUtilityMain();
@@ -451,5 +452,5 @@ describe("t257 doctor CLI boundary and fatal ordering", () => {
     expect(writes[0]).toMatch(/\d+ passed, \d+ failed\n$/);
     expect(String(thrown)).toMatch(/EISDIR|is a directory/i);
     expect(exitCount).toBe(0);
-  }, 75_000);
+  }, scaleTestTime(75_000));
 });

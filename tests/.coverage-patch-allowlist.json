@@ -3856,15 +3856,125 @@
     "expiry": "remove if modelCheckResultText becomes public or gains a caller that can pass verified-not-detected"
   },
   {
+    "file": "tests/harness/live-e2e/claude.ts",
+    "selector": {
+      "function": "ClaudePrintAdapter.cleanup",
+      "fingerprint": "sha256:b1e2a73bbe8eb22f6868f35d41eccb3d8b7c4fc45033cb6810519bcd540b270a",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "The reap deadline is constructed only while cleaning an active real Claude child; offline lifecycle coverage uses a short-lived fake process.",
+    "expiry": "remove when ClaudePrintAdapter receives an injectable child-process port"
+  },
+  {
     "file": "tests/harness/live-e2e/codex.ts",
     "selector": {
       "function": "CodexExecAdapter.cleanup",
-      "fingerprint": "sha256:256826ec26b54f46aef765feb9b471bfd826fe0c8c262f73eeb096d445bbe46c",
-      "anchorLines": 3,
-      "targetLines": "1-3"
+      "fingerprint": "sha256:9a3f01622b1912a8793f2526352b79ddb5b5ac7492107275173df625e268edd8",
+      "anchorLines": 5,
+      "targetLines": "1-5"
     },
     "reason": "The reap deadline is constructed only while cleaning an active real Codex child. Offline lifecycle tests exercise cleanup success and failure through fake adapters; CI intentionally does not spawn a credential-bearing live Codex journey.",
     "expiry": "remove when CodexExecAdapter receives an injectable child-process port"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdWait",
+      "fingerprint": "sha256:c04bc10cb302a3e527659f9c84eb1ef21cfcb041c2bc13be9ced4bae26300f2e",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The scaled polling sleep follows a real tmux capture miss; CI covers the wait timing resolver while live terminal driving is opt-in.",
+    "expiry": "remove when cmdWait receives injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "chooseNumberedMenuOption",
+      "fingerprint": "sha256:6af42a5a521e6bb398bb565f99feca4ed8f471ab5d0db60b0170b4a545654451",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The inter-key settle delay requires a live numbered terminal menu; CI covers its scaleTestTime primitive separately.",
+    "expiry": "remove when menu key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "handleRevisionRecovery",
+      "fingerprint": "sha256:fc9a6d55744614650b0d21452fa1a233fb19e7f93b8e037243977017b696d01c",
+      "anchorLines": 21,
+      "targetLines": "1-21"
+    },
+    "reason": "Revision recovery deadlines and settle sleeps require transient live TUI screen states that the deterministic CI fixture cannot synthesize.",
+    "expiry": "remove when revision recovery accepts injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "handleRevisionRecovery",
+      "fingerprint": "sha256:2712e79017d3870db2ae8a396d32b884abfe04ddd826b16aa058953216ba8aaa",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "The late free-text revision recovery branch depends on elapsed live-terminal time and remains covered by the opt-in TUI journey.",
+    "expiry": "remove when revision recovery accepts injectable capture, clock, and sleeper ports"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:b3c41b9e51634ce245747b3553e5d2cd2939472e16874d4fd8e742d245ff70dd",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "This scaled poll occurs only while waiting on a live answer-gate menu; resolver-level timing is covered in CI.",
+    "expiry": "remove when answer-gate capture and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:7cd7737d669d31d871291d2c76a9f4088359d0644ef84d3d2fbab080814a9b81",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "The multi-tab menu settle delay requires a live terminal menu transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:dd347f1f11881a5a53590a70d1594057eb37386036f856b423b782716919d5a7",
+      "anchorLines": 3,
+      "targetLines": "2"
+    },
+    "reason": "The rejection-menu settle delay requires a live terminal transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "cmdAnswerGate",
+      "fingerprint": "sha256:c2a16d6991773be76bdf853de93f9ecf882367dcaf5d223dede4224917189be1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The post-answer settle delay requires a live terminal screen transition and is exercised only by opt-in TUI journeys.",
+    "expiry": "remove when answer-gate key delivery and sleeping are injectable"
+  },
+  {
+    "file": "tests/lib/test-time-factor.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:4bb43d005045ca3abe93d212b7a5279cbe5cb5d207057fbf20cd7a81b7b99a6c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Bun LCOV records the erased environment type alias as a zero-hit line even though it has no runtime branch or statement.",
+    "expiry": "remove when Bun no longer emits DA records for erased TypeScript declarations"
   },
   {
     "file": "tests/harness/live-e2e/ledger.ts",

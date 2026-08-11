@@ -50,6 +50,7 @@
 //   .sh (7) fragment-merge fails after audit-merge     -> "7: soft-gap — fragment-merge fails after audit-merge => AUDIT_MERGED + BOLT_FAILED(fragment-merge-failed)"
 //   .sh (8) determinism: re-compile byte-equivalent    -> "8: determinism (L11) — re-compile after BOLT_FAILED + recovery is byte-equivalent"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
@@ -386,7 +387,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(stage).toBeDefined();
     const slugs = (stage.instances ?? []).map((i: StageRow) => i.bolt);
     expect(slugs).toEqual(["auth", "cart", "pay"]); // length 3, alphabetical-by-slug
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   test("2: sensors advisory — SENSOR_FAILED in main audit yet all 3 instances approved", () => {
     buildBatch();
@@ -397,7 +398,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(instances.every((i: StageRow) => i.outcome === "approved")).toBe(true);
     // The merged worktree audit carries ≥1 SENSOR_FAILED row into main.
     expect(countEvent(batchProj, "SENSOR_FAILED")).toBeGreaterThanOrEqual(1);
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   test("3: milestone 11 contract — instances[].sensor_firings:[] despite SENSOR_FAILED in main", () => {
     buildBatch();
@@ -408,7 +409,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(
       instances.every((i: StageRow) => Array.isArray(i.sensor_firings) && i.sensor_firings.length === 0),
     ).toBe(true);
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   // ===========================================================================
   // Case 4 — Bolt failure rollup: pay aborts mid-Bolt (abort --discard).
@@ -433,7 +434,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(pay?.outcome).toBe("failed");
     // Any failed instance rolls the parent up to failed.
     expect(stage.outcome).toBe("failed");
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   // ===========================================================================
   // Case 5 — Idempotent re-merge: second complete --merge verifies prior evidence.
@@ -449,7 +450,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(second.out).toContain(
       '"merged":["STATE_MERGED","AUDIT_MERGED","RUNTIME_GRAPH_MERGED"]',
     );
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   // ===========================================================================
   // Case 6 — Audit-merge fails before fragment-merge (lock-acquire failure).
@@ -492,7 +493,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
       /(state-merge-failed|audit-merge-failed|audit-emit-failed|Failed to acquire audit lock)/,
     );
     expect(existsSync(fragPath(proj, "solo"))).toBe(true);
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   // ===========================================================================
   // Case 7 — Fragment-merge fails after audit-merge succeeds (soft-gap closure).
@@ -533,7 +534,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     // Restore the fragment so case 8's compile + teardown work.
     rmSync(softGapFrag, { recursive: true, force: true });
     if (existsSync(`${softGapFrag}.bak`)) renameSync(`${softGapFrag}.bak`, softGapFrag);
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 
   // ===========================================================================
   // Case 8 — Determinism: re-compile after the chaos is byte-equivalent.
@@ -550,5 +551,5 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     const sha2 = createHash("sha256").update(readFileSync(graphPath)).digest("hex");
     expect(sha1.length).toBeGreaterThan(0);
     expect(sha1).toBe(sha2);
-  }, TEST_TIMEOUT);
+  }, scaleTestTime(TEST_TIMEOUT));
 });

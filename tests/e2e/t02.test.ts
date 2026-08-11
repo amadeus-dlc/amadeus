@@ -44,6 +44,7 @@
 // NO audit row and NO worktree dir landed (the .sh's "pre-audit" intent, which
 // it only documented in comments).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -136,7 +137,7 @@ describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, pla
       { encoding: "utf-8" },
     );
     expect((branch.stdout ?? "").trim()).toBe("bolt-demo");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("6-7: invalid slug rejected pre-audit (non-zero, names the flag, no side effects)", () => {
     const p = freshFixture();
@@ -147,7 +148,7 @@ describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, pla
     // STRONGER: the .sh's "pre-audit" intent — nothing landed.
     expect(boltSlugRows(p)).not.toContain("Foo_Bar");
     expect(existsSync(wtPath(p, "Foo_Bar"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("8: nonexistent base branch rejected pre-audit", () => {
     const p = freshFixture();
@@ -157,7 +158,7 @@ describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, pla
     expect(r.out).toContain("Base branch does not exist"); // T8b
     // STRONGER: no worktree dir created for the rejected base.
     expect(existsSync(wtPath(p, "demo"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9-10: double-create on the same slug fails with already-exists", () => {
     const p = freshFixture();
@@ -167,7 +168,7 @@ describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, pla
     const second = create(p, ["--slug", "demo", "--base", "main"]);
     expect(second.status).not.toBe(0); // T9
     expect(second.out).toContain("already exists"); // T10
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("11-14: parallel creates with distinct slugs all succeed and emit distinct events", async () => {
     const p = freshFixture();
@@ -197,5 +198,5 @@ describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, pla
     expect(rows).toContain("a");
     expect(rows).toContain("b");
     expect(rows).toContain("c");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

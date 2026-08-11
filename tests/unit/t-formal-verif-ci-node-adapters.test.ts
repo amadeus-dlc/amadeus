@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   digestCiArtifact,
@@ -11,7 +12,7 @@ describe("CI Node adapters", () => {
     const result = runCiCommand("/usr/bin/printf", ["%s", "ok"], {
       cwd: process.cwd(),
       env: { PATH: "/usr/bin:/bin" },
-      timeoutMs: 1_000,
+      timeoutMs: scaleTestTime(1_000),
     });
     expect(result).toEqual({ status: 0, stdout: "ok", stderr: "" });
     expect(digestCiArtifact(new TextEncoder().encode("ok"))).toBe(

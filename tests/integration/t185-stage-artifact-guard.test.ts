@@ -36,6 +36,7 @@
 // test re-enables enforcement by DELETING that var from the spawned tool's env
 // - otherwise it would be testing the bypass, not the guard.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -384,7 +385,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       const r = approveCodeGen();
       expect(r.rc).not.toBe(0);
       expect(r.out).toContain("workspace_requires");
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // Uncommitted/untracked new source this session -> PASS.
     test("PASSES with an uncommitted new source file this session", () => {
@@ -394,7 +395,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       writeWorkspaceFile(proj, "src/auth/login.ts"); // untracked, uncommitted
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // commit-then-approve (clean tree, code in the LAST commit) -> PASS. This is
     // the exact pattern #366 Update 3 reported as a false-block under a naive
@@ -408,7 +409,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       git(["commit", "-q", "-m", "code-generation output"]);
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // SINGLE-commit clean tree, the source IS in the sole commit -> PASS. The
     // greenfield "git init, generate, commit, approve" path: there is no parent,
@@ -427,6 +428,6 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       git(["commit", "-q", "-m", "first commit: code-generation output"]);
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
   });
 });

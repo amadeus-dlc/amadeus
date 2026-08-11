@@ -10,6 +10,7 @@
 // a project whose `plugins/` tree is the untouched authoring source — end to end
 // through the real CLI, plus the two pure seams the copy is built from.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -71,7 +72,7 @@ function compose(workspace: string, harnessDir: string): void {
   const result = spawnSync(
     "bun",
     [join(hostRoot, "tools", "amadeus-plugin.ts"), "compose", "--if-stale", "--project-root", hostRoot],
-    { cwd: workspace, env, encoding: "utf-8", timeout: 120_000 },
+    { cwd: workspace, env, encoding: "utf-8", timeout: scaleTestTime(120_000) },
   );
   if (result.status !== 0) {
     throw new Error(`compose failed: ${`${result.stdout ?? ""}${result.stderr ?? ""}`.trim()}`);
@@ -155,7 +156,7 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     for (const subcommand of ["trace", "proof", "bundle build", "bundle verify", "commit"]) {
       expect(tlaText).toContain(`bun ${formalTools}/tla-authoring.ts ${subcommand}`);
     }
-  }, 180_000);
+  }, scaleTestTime(180_000));
 
   test("a re-compose over the seeded staging dir is a no-op, not a perpetual re-seed", () => {
     const harness = "claude";
@@ -166,5 +167,5 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     const first = readFileSync(composed);
     compose(workspace, harnessDir);
     expect(readFileSync(composed).equals(first)).toBe(true);
-  }, 180_000);
+  }, scaleTestTime(180_000));
 });

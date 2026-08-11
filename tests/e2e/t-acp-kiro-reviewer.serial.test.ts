@@ -55,6 +55,7 @@ import { join } from "node:path";
 import { seededRecordDir } from "../harness/fixtures.ts";
 import { AcpSession, driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 // One live stage body + reviewer sub-agent round-trip; the poc/Minimal
 // requirements pass is small but the reviewer invocation adds a second model
@@ -110,7 +111,7 @@ async function driveUntilReview(
       cancelled = true;
       session.notify("session/cancel", { sessionId: session.sessionId });
     }
-  }, 2000);
+  }, scaleTestTime(2000));
   try {
     return await driveKiroAcp({
       projectDir: proj,

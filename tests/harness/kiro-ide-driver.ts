@@ -27,6 +27,11 @@
 //     never a 44MB clone of a real profile (spike gotcha: leaks personal/internal
 //     state, must never ship in a public repo).
 
+import {
+  resolveKiroFinalWaitTiming,
+  resolveKiroWaitTiming,
+} from "../lib/harness-wait-timing.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { type ChildProcess, spawn } from "node:child_process";
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -116,7 +121,7 @@ export class CdpTarget {
 
   /** JSON-RPC send with an auto-incrementing id and a per-call reject timeout
    *  (cdp.mjs:56-68: the spike used a fixed 20_000ms). */
-  send(method: string, params: Record<string, unknown> = {}, timeoutMs = 20_000): Promise<unknown> {
+  send(method: string, params: Record<string, unknown> = {}, timeoutBaseMs = 20_000): Promise<unknown> {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -126,7 +131,7 @@ export class CdpTarget {
           this.pending.delete(id);
           reject(new Error(`CDP timeout: ${method}`));
         }
-      }, timeoutMs);
+      }, scaleTestTime(timeoutBaseMs));
     });
   }
 
@@ -147,9 +152,9 @@ export class CdpTarget {
   /** Enable Runtime and wait briefly so executionContextCreated events for every
    *  frame (including nested OOPIF webviews) arrive into this.contexts
    *  (cdp.mjs:83-87). */
-  async enableContexts(waitMs = 1500): Promise<ExecContext[]> {
+  async enableContexts(waitBaseMs = 1500): Promise<ExecContext[]> {
     await this.send("Runtime.enable").catch(() => {});
-    await sleep(waitMs);
+    await sleep(scaleTestTime(waitBaseMs));
     return this.contexts;
   }
 
@@ -293,8 +298,9 @@ export function launchKiroIde(opts: LaunchOptions): KiroIdeHandle {
 
 /** Poll GET /json/version until the CDP endpoint answers (drive-unblocked.mjs:48-56
  *  - this is already a proper poll in the spike; kept verbatim in shape). */
-export async function waitForCdp(port: number, timeoutMs = 60_000): Promise<boolean> {
-  const end = Date.now() + timeoutMs;
+export async function waitForCdp(port: number, timeoutBaseMs = 60_000): Promise<boolean> {
+  const timing = resolveKiroWaitTiming(timeoutBaseMs, 400);
+  const end = Date.now() + timing.timeoutMs;
   while (Date.now() < end) {
     try {
       const r = await fetch(`http://127.0.0.1:${port}/json/version`);
@@ -302,7 +308,7 @@ export async function waitForCdp(port: number, timeoutMs = 60_000): Promise<bool
     } catch {
       /* not up yet */
     }
-    await sleep(400);
+    await sleep(timing.pollMs);
   }
   return false;
 }
@@ -376,8 +382,9 @@ const FIND_CHAT_INPUT_EXPR = `(() => {
 
 /** Poll all contexts for the chat-input placeholder before driving keystrokes.
  *  Replaces the spike's fixed settle sleeps (drive-unblocked.mjs:57-58,119). */
-export async function waitForChatInput(port: number, timeoutMs = 60_000): Promise<boolean> {
-  const end = Date.now() + timeoutMs;
+export async function waitForChatInput(port: number, timeoutBaseMs = 60_000): Promise<boolean> {
+  const timing = resolveKiroWaitTiming(timeoutBaseMs, 800);
+  const end = Date.now() + timing.timeoutMs;
   while (Date.now() < end) {
     const targets = await listTargets(port);
     for (const tgt of targets) {
@@ -405,7 +412,7 @@ export async function waitForChatInput(port: number, timeoutMs = 60_000): Promis
         t.close();
       }
     }
-    await sleep(800);
+    await sleep(timing.pollMs);
   }
   return false;
 }
@@ -531,14 +538,14 @@ export async function typeAndSubmit(t: CdpTarget, text: string, port: number): P
   let landed = false;
   for (let attempt = 0; attempt < 12 && !landed; attempt++) {
     await focusChat(t);
-    await sleep(700);
+    await sleep(scaleTestTime(700));
     await t.send("Input.insertText", { text });
-    await sleep(600);
+    await sleep(scaleTestTime(600));
     const cur = (await readChatText(port)).toLowerCase();
     landed = want.length > 0 && cur.includes(want);
     if (!landed) {
       await selectAllAndDelete(t);
-      await sleep(1500);
+      await sleep(scaleTestTime(1500));
     }
   }
   if (!landed) {
@@ -570,7 +577,7 @@ export async function typeAndSubmit(t: CdpTarget, text: string, port: number): P
   // editor settles. If it never clears, the prompt is stuck in the input; throw so
   // the caller fails fast rather than waiting out a watch budget on an unsent turn.
   for (let attempt = 0; attempt < 6; attempt++) {
-    await sleep(700);
+    await sleep(scaleTestTime(700));
     const cur = (await readChatText(port)).toLowerCase();
     if (!cur.includes(want)) return; // editor cleared => submitted
     await t.send("Input.dispatchKeyEvent", {
@@ -684,13 +691,14 @@ export async function watchMarkers(
   predicate: () => boolean,
   budgetMs: number,
   onPoll?: () => Promise<void>,
-  intervalMs = 1500,
+  intervalBaseMs = 1500,
 ): Promise<boolean> {
-  const end = Date.now() + budgetMs;
+  const timing = resolveKiroFinalWaitTiming(budgetMs, intervalBaseMs);
+  const end = Date.now() + timing.timeoutMs;
   while (Date.now() < end) {
     if (onPoll) await onPoll();
     if (predicate()) return true;
-    await sleep(intervalMs);
+    await sleep(timing.pollMs);
   }
   return predicate();
 }

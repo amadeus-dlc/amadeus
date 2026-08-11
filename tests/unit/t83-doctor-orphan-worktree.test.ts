@@ -75,6 +75,7 @@
 //   .sh test 15 preserved-by-abort sub-class (MAJOR)    -> test 15
 //   .sh test 16 unknown Reason tracked (MINOR)          -> test 16
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { hostname } from "node:os";
@@ -228,7 +229,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     expect(out).toContain("Orphan worktrees: 0 observed");
     expect(out).toContain("Orphan state files: 0 observed");
     expect(out).toContain("Orphan audit: 0 observed");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("2: active fork (slug in Bolt Refs) does not flag as orphan", () => {
     const proj = freshProject();
@@ -242,7 +243,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // .sh grepped two ERE lines; assert the same two literals render.
     expect(out).toContain("Orphan worktrees: 0 (1 active fork)");
     expect(out).toContain("Orphan state files: 0 (1 active)");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("3: cleanup-orphan classification (WORKTREE_MERGED + dir persists)", () => {
     const proj = freshProject();
@@ -254,7 +255,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("cleanup-orphan")) ?? "";
     expect(line).toContain("cleanup-orphan");
     expect(line).toContain("cleanuptest");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("4: unmatched orphan (no Bolt Refs, no audit row)", () => {
     const proj = freshProject();
@@ -264,7 +265,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("unmatched")) ?? "";
     expect(line).toContain("unmatched");
     expect(line).toContain("orphanunmatched");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5: orphan state file flagged when slug not in Bolt Refs and no DISCARDED row", () => {
     const proj = freshProject();
@@ -279,7 +280,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // The slug is named in the fix string for this drift row.
     expect(out).toContain("orphanstate");
     expect(line).toContain("Orphan state files: 1 drift");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("6: orphan state paired with WORKTREE_DISCARDED is not flagged (legit pre-discard)", () => {
     const proj = freshProject();
@@ -293,7 +294,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // Observed but reconciled → "0 (1 active)", NOT a drift row.
     expect(out).toContain("Orphan state files: 0 (1 active)");
     expect(out).not.toContain("Orphan state files: 1 drift");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("7: AUDIT_FORKED-without-disk-state flagged (sub-case a)", () => {
     const proj = freshProject();
@@ -303,7 +304,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("AUDIT_FORKED-without-disk")) ?? "";
     expect(line).toContain("AUDIT_FORKED-without-disk");
     expect(line).toContain("noaudit");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("8: orphan-delta drift flagged (sub-case b: no AUDIT_MERGED, no active, no discard)", () => {
     const proj = freshProject();
@@ -332,7 +333,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("orphan-delta")) ?? "";
     expect(line).toContain("orphan-delta");
     expect(line).toContain("deltatest");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("9: PRACTICES_OVERRIDE write-failure-* without follow-up AFFIRMED is flagged", () => {
     const proj = freshProject();
@@ -341,7 +342,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // Both phrases the .sh grepped land on the Check-4 fix string.
     expect(out).toContain("PRACTICES_OVERRIDE write-failure");
     expect(out).toContain("without follow-up PRACTICES_AFFIRMED");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("10: PRACTICES_OVERRIDE bolt-plan-marker-conflict is expected (not flagged)", () => {
     const proj = freshProject();
@@ -354,7 +355,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("Orphan audit:")) ?? "";
     expect(line).toMatch(/Orphan audit: 0(\s|$)/);
     expect(out).not.toContain("Orphan audit: 1 drift");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("11: MERGE_DISPATCH_INVOKED orphan is advisory (pass=true with advisory label)", () => {
     const proj = freshProject();
@@ -364,7 +365,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("MERGE_DISPATCH:")) ?? "";
     expect(line).toContain("MERGE_DISPATCH: 1 orphan INVOKED");
     expect(line).toContain("advisory");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("12: merged-and-cleaned Bolt does not flag as orphan (BLOCKER regression)", () => {
     const proj = freshProject();
@@ -376,7 +377,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const { out } = runDoctor(proj);
     expect(out).toContain("Orphan audit: 0 (1 reconciled)");
     expect(out).not.toContain("AUDIT_FORKED-without-disk");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("13: multi-INVOKED pair-matching — 2 INVOKED + 1 RETURNED reports 1 orphan", () => {
     const proj = freshProject();
@@ -386,7 +387,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const { out } = runDoctor(proj);
     // Each terminal consumes one preceding INVOKED → exactly 1 orphan, not 0.
     expect(out).toContain("MERGE_DISPATCH: 1 orphan INVOKED");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("14: ms-precision PRACTICES_AFFIRMED reconciles seconds-precision OVERRIDE", () => {
     const proj = freshProject();
@@ -398,7 +399,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const { out } = runDoctor(proj);
     expect(out).toContain("Orphan audit: 0 (1 reconciled)");
     expect(out).not.toContain("without follow-up");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("15: preserved-by-abort sub-classification distinguishes from active forks", () => {
     const proj = freshProject();
@@ -412,7 +413,7 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     const line = out.split("\n").find((l) => l.includes("preserved-by-abort")) ?? "";
     expect(line).toContain("preserved-by-abort");
     expect(line).toContain("active fork");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("16: unknown PRACTICES_OVERRIDE Reason value surfaces as advisory", () => {
     const proj = freshProject();
@@ -421,5 +422,5 @@ describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated 
     // Both phrases the .sh grepped land on the Check-4 advisory label.
     expect(out).toContain("unknown Reason");
     expect(out).toContain("track for follow-up");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

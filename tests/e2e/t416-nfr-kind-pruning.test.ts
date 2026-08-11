@@ -2,6 +2,7 @@
 //         function:requiredArtifactsForUnit
 // size: large
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -197,5 +198,5 @@ units:
     } finally {
       cleanupTestProject(project);
     }
-  }, 120_000);
+  }, scaleTestTime(120_000));
 });

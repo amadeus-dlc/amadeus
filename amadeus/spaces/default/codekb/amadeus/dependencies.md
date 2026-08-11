@@ -1,5 +1,22 @@
 # 依存関係
 
+## 時間値の依存グラフ（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+
+```text
+GitHub Actions env
+  -> run-tests argument resolution
+     -> Bun child --timeout
+
+test-time helper candidate
+  -> load-sensitive integration waits
+  -> TUI/IDE driver deadlines and settle waits
+
+explicit AMADEUS_TEST_TIMEOUT
+  -> live driver final timeout
+```
+
+現行は最上流の GitHub Actions env から runner への係数辺と、runner/driver が共用できる helper 辺が欠けている。明示 override を helper 入力に再投入すると二重乗算になるため、「基準時間を scale する辺」と「最終値を override する辺」は分離が必要である。
+
 ## CG attribution の依存グラフ（260809-cg-attribution-stats、現在、observed `82e2f30c0`）
 
 ### 内部依存

@@ -16,6 +16,7 @@
 // output path) is preserved exactly. Mechanism = cli (real dispatcher
 // subprocess + the audit.md it writes), matching t92.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -137,5 +138,5 @@ describe("t92 e2e: linter FAILED real eslint round-trip (relocated case 15)", ()
   // Real eslint spawn (manifest timeout_seconds=30) — override bun's 5s default.
   test("15: linter — failing TS (no-unused-vars error) -> Findings count=1", () => {
     runFailedTsReal("linter", "code-generation", join(FIXTURES_ROOT, "failing-linter"), "1");
-  }, 60000);
+  }, scaleTestTime(60000));
 });

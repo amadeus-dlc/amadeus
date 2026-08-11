@@ -37,6 +37,7 @@
 // shards are written directly under the record's audit/ dir. Lock dir under
 // tmpdir() is cleaned in afterEach. Nothing under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -216,5 +217,5 @@ describe("t164 PART B — omitted-intent fork serializes with an explicit-intent
     const refsLine = mainState.split("\n").find((l) => l.startsWith("- **Bolt Refs**:")) ?? "";
     expect(refsLine).toContain("slug-omitted");
     expect(refsLine).toContain("slug-explicit");
-  }, 60000);
+  }, scaleTestTime(60000));
 });

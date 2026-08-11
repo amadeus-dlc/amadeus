@@ -1,5 +1,6 @@
 // size: large
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -21,7 +22,7 @@ describe("book-pack verifier user journey", () => {
     expect(result.stdout).toContain("ALL CHECKS PASSED");
     expect(workspace).not.toBeNull();
     expect(existsSync(workspace ?? "")).toBe(false);
-  }, 210_000);
+  }, scaleTestTime(210_000));
 
   test("a real pack failure stays non-zero and is not hidden by cleanup", () => {
     const result = runVerifier("bash", [VERIFY_SH, join(REPO_ROOT, "missing-framework")], 5_000);

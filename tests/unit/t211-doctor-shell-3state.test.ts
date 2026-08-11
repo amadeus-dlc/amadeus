@@ -24,6 +24,7 @@
 //      the "pending first workflow" marker and NO "copy the workspace shell from
 //      dist/" mis-direction. RED (pre-fix): a ✗ line with the dist-copy fix.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
@@ -101,5 +102,5 @@ describe("t211 doctor CLI — state-(b) fresh install is advisory, not a FAIL (#
     } finally {
       rmSync(proj, { recursive: true, force: true });
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 });
