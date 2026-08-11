@@ -40,7 +40,7 @@ describe("load-sensitive harness timing", () => {
   });
 
   test("a final Kiro budget that is not a positive safe integer is refused", () => {
-    for (const timeoutMs of [0, -1, 1.5, Number.NaN]) {
+    for (const timeoutMs of [0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
       expect(() => resolveKiroFinalWaitTiming(timeoutMs, 400)).toThrow("timeoutMs");
     }
   });

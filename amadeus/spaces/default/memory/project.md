@@ -44,7 +44,7 @@
 - ハーネス横断のlifecycle parityはcurrent hostの成功だけで判定せず、各非current hostの関連ファイルが実行前とbyte-identicalであることも検証する。 (learned 2026-08-02) <!-- cid:code-generation:c1-260802-plugin-optin-parity -->
 - failure injectionによるrollback検証ではファイル内容の復元だけでなく、開始前に存在しなかった空の親ディレクトリが残らないことも確認する。 (learned 2026-08-02) <!-- cid:code-generation:c3-260802-plugin-optin-parity -->
 - `coverage:ci` をfull CIとcoverageの統合証跡として扱う。同じ `--ci` runnerをcoverage付きで実行し、全test files・assertionsを完走するため (learned 2026-08-02) <!-- cid:build-and-test:c1-260802-plugin-optin-parity -->
-- `TEST_TIME_FACTOR` はテストのタイムアウト時間の基準値に乗算する。`sleep(500 * testTimeFactor)` のように timeout を構成・検証する待機値にも同じ係数を適用する。性能基準や本番 CLI の timeout 契約は対象外とする (learned 2026-08-10) <!-- cid:reverse-engineering:test-time-factor-timeout -->
+- `TEST_TIME_FACTOR` はテストのタイムアウト時間の基準値に乗算する。`sleep(scaleTestTime(500))` のように timeout を構成・検証する待機値にも同じ係数を適用し、乗算を直接書かず `tests/lib/test-time-factor.ts` の `scaleTestTime`(係数の検証と `Math.ceil` を担う中心契約)を経由する。性能基準や本番 CLI の timeout 契約は対象外とする (learned 2026-08-10) <!-- cid:reverse-engineering:test-time-factor-timeout -->
 - `TEST_TIME_FACTOR` の中心契約はテスト用 timeout の基準値への乗算とし、`sleep`、poll、settle は timeout の成立と検証に対応する場合に同じ係数を適用する。 (learned 2026-08-10) <!-- cid:requirements-analysis:test-time-factor-c1 -->
 ## Deployment
 
