@@ -1,4 +1,4 @@
-// covers: file:tests/allowlist-semantic-audit.ts
+// covers: harness-instrument:coverage-patch-gate
 //
 // t535 — the semantic audit run over the real ledger (#1622).
 //
@@ -30,11 +30,12 @@ describe("t535 ledger sweep", () => {
     expect(audits.length).toBe(entries.length);
   });
 
-  test("the three verdicts partition the ledger", () => {
-    const agree = audits.filter((a) => a.verdict === "一致").length;
-    const drifted = audits.filter((a) => a.verdict === "転位").length;
-    const undecidable = audits.filter((a) => a.verdict === "判定不能").length;
-    expect(agree + drifted + undecidable).toBe(entries.length);
+  // The count alone cannot catch a sweep that audits some entry twice and skips
+  // another, so the audits are matched to the ledger position by position.
+  test("each audit is the audit of the ledger entry in its place", () => {
+    expect(audits.map((a) => `${a.file}#${a.function}`)).toEqual(
+      entries.map((e) => `${e.file}#${e.selector.function}`),
+    );
   });
 
   test("every selector resolves — an unresolvable ledger is a hard failure, not an undecidable one", () => {

@@ -101,7 +101,9 @@ export function extractReasonClaim(reason: string): ReasonClaim {
   const hits: Array<{ cls: SyntaxClass; phrase: string; sentence: string }> = [];
   for (const sentence of sentences(reason)) {
     for (const { cls, pattern } of CLAIM_VOCABULARY) {
-      for (const match of sentence.matchAll(new RegExp(pattern.source, pattern.flags))) {
+      // matchAll clones the regexp, so a shared /g pattern carries no lastIndex
+      // between sentences and needs no recompile here.
+      for (const match of sentence.matchAll(pattern)) {
         hits.push({ cls, phrase: match[0], sentence });
       }
     }

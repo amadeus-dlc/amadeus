@@ -1,4 +1,4 @@
-// covers: file:tests/allowlist-semantic-audit.ts
+// covers: harness-instrument:coverage-patch-gate
 //
 // t534 — the semantic audit of tests/.coverage-patch-allowlist.json (#1622).
 //
