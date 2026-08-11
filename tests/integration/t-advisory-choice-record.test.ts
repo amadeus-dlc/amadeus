@@ -43,7 +43,7 @@ import {
   docsRoot,
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -234,6 +234,17 @@ describe("advisory choice record: idempotence (#2143 plan D-1)", () => {
 });
 
 describe("advisory choice record: fail-closed refusals (#2232 FR-5d)", () => {
+  test("presentation fields reject missing and duplicate advisory instances", () => {
+    const { projectDir, pending } = track(seedPendingProject());
+
+    expect(advisoryChoicePresentationFields(projectDir, "", [])).toMatchObject({ ok: false });
+    expect(advisoryChoicePresentationFields(
+      projectDir,
+      pending.identity.checkpoint,
+      [pending.identity.advisoryInstance, pending.identity.advisoryInstance],
+    )).toMatchObject({ ok: false });
+  });
+
   test("an empty advisory instance is refused before any store read", () => {
     const { projectDir } = track(seedPendingProject());
     const result = recordAdvisoryChoiceDecision(projectDir, "", "run-now");

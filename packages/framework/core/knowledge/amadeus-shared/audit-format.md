@@ -120,7 +120,7 @@ recovery as well: with no pending row to name the owner, passing such a receipt
 over would delete it without ever establishing whose it was, and silence is not
 evidence of belonging. The outcome
 reports the receipts dropped, whether re-presentation is required, and the
-formal-check attempt counts that reset with the discarded run-now receipts.
+number of discarded run-now receipts.
 
 ### Initialization Events (3 events — fire IN ADDITION TO `STAGE_COMPLETED`)
 

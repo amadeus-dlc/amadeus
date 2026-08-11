@@ -81,8 +81,11 @@ describe("t416 deterministic self-install plugin projections", () => {
       const entry = [...(projection.artifacts ?? [])].find(([path]) => path === `${dir}/${composedStage}`);
       expect(entry, `${harness}: composed ${composedStage} missing`).toBeDefined();
       const text = entry![1].toString("utf-8");
-      // (i) the sensor-fire line names THIS face's tools dir, exactly once.
-      expect(text.split(`${dir}/tools/amadeus-sensor.ts`).length - 1, harness).toBe(1);
+      // (i) the plugin-owned sensor line names THIS face's plugin tools dir, exactly once.
+      expect(
+        text.split(`${dir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
+        harness,
+      ).toBe(1);
       // (ii) no unresolved token survived the seeding copy.
       expect(text.includes("{{HARNESS_DIR}}"), `${harness}: raw token survived`).toBe(false);
       // (iii) no other harness's dir leaked into this face.

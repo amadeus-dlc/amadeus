@@ -1,4 +1,4 @@
-// packages/framework/core/tools/amadeus-plugin-activation.ts — C6 activation
+// Plugin-owned activation policy.
 // policy (U6). The Amadeus-independent spec-hash mechanism behind ADR-1 option A
 // (spec-hash advisory, NO automatic run): compute a deterministic hash of the
 // formal-model-check spec files, compare it against the last recorded verdict,
@@ -22,7 +22,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   existsSync as fsExistsSync,
-  mkdirSync as fsMkdirSync,
   readdirSync as fsReaddirSync,
   readFileSync as fsReadFileSync,
   renameSync as fsRenameSync,
@@ -100,8 +99,8 @@ export const defaultActivationFs: ActivationFs = {
 
 // projectRootForHost — the project root derived from the plugin host root.
 // The two are DIFFERENT directories and conflating them is the defect these
-// helpers name: the host root is the harness directory (`.claude/`,
-// `dirname(TOOLS_DIR)`) and owns host state (the composition record, the
+// helpers name: the host root is the active harness directory and owns host
+// state (the composition record, the
 // verdict file), while the watched TLA+ specs are a PROJECT asset under
 // `amadeus/spaces/<space>/specs/` — the formal-model-check stage body names
 // them project-relative (`--model amadeus/spaces/default/specs/tla/FormalElection.tla`).
@@ -261,36 +260,12 @@ export function activationAdvisoryLine(
 //
 // The stderr line above is the HUMAN channel. `Advisory` is the same decision
 // as structured data, so the engine can put it on the directive JSON and the
-// conductor can relay it (domain-entities.md E1). This module OWNS the type —
-// the directive-composing side imports it rather than re-declaring the shape
-// (canonical 1 definition).
+// conductor can relay it (domain-entities.md E1). Core owns the generic channel
+// shape; this plugin only returns a structurally compatible activation judgment.
 
 // The two FIRING judgment kinds, 1:1 with judgeActivation's non-silent values.
 // `current` has no code because it produces no Advisory at all.
 export type ActivationAdvisoryCode = "not-ready" | "changed" | "never-run";
-
-// A plugin-declared advisory carries its own code (ADR-6 revision), so the code
-// space is the three activation kinds plus any declared slug. The branded arm
-// keeps a declared code from being written where an activation kind is meant
-// without going through the declaration parser's validation.
-export type DeclaredAdvisoryCode = string & { readonly __brand: "DeclaredAdvisoryCode" };
-export type AdvisoryCode = ActivationAdvisoryCode | DeclaredAdvisoryCode;
-
-export type Advisory = {
-  // The plugin the advisory is about (formal-model-check today; the type is
-  // general because the channel is not plugin-specific).
-  plugin: string;
-  code: AdvisoryCode;
-  // BR-U5-2 — byte-identical to the stderr line (activationAdvisoryLine). The
-  // wording is NOT re-authored here; both channels render the same string.
-  message: string;
-  // The checkpoint slug this fired at, so a relayed advisory says WHERE it was
-  // raised (the same judgment can surface at any of ACTIVATION_ADVISORY_STAGES).
-  stage: string;
-  target?: string;
-  specIdentity?: string;
-  reason?: string;
-};
 
 // activationAdvisoriesForHost — the structured sibling of
 // activationAdvisoryForHost: the same two gates (composed? judgment firing?)
@@ -301,14 +276,14 @@ export function activationAdvisoriesForHost(
   hostRoot: string,
   stage: string,
   fs: ActivationFs = defaultActivationFs,
-): Advisory[] {
+) {
   return specHashAdvisories(hostRoot, stage, fs);
 }
 
 // The spec-hash advisory of ADR-1 option A. Declared plugin advisories are
 // supplied by amadeus-advisory-declaration.ts instead: this module starts no
 // process (BR-U6-2), so the evaluator side cannot live here.
-function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): Advisory[] {
+function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs) {
   if (!formalModelCheckComposed(hostRoot, fs)) return [];
   const judgment = resolveActivationJudgment(hostRoot, ACTIVATION_WATCH_GLOBS, fs);
   // Narrow on the judgment (not on the line being non-null) so `code` is the
@@ -345,70 +320,6 @@ function specHashAdvisories(hostRoot: string, stage: string, fs: ActivationFs): 
     // rather than a silent continue.
     return emitAdvisory(tlaSpecDirPath(err.space), "unreadable-spec");
   }
-}
-
-// --- The run latch (business-logic-model L4 / domain-entities.md E3) ---
-//
-// Three checkpoints reachable from two emit paths means the SAME judgment would
-// be raised on every `next` of a run. The latch keeps one raise per
-// (plugin, code) per run: one marker file per key, holding the emit instant.
-//
-// FAIL-OPEN throughout (BR-U5-3): if the latch cannot be read or written we
-// treat the advisory as UNLATCHED and raise it. The failure mode we refuse is a
-// silently dropped nudge; a duplicate nudge is merely noise. This is the same
-// direction as the judgment's own fail-closed rule (unknown => fire).
-
-export type AdvisoryLatchFs = {
-  existsSync: (path: string) => boolean;
-  mkdirSync: (path: string) => void;
-  writeFileSync: (path: string, data: string) => void;
-};
-
-export const defaultAdvisoryLatchFs: AdvisoryLatchFs = {
-  existsSync: fsExistsSync,
-  mkdirSync: (p) => {
-    fsMkdirSync(p, { recursive: true });
-  },
-  writeFileSync: (p, data) => fsWriteFileSync(p, data),
-};
-
-// The marker path for one latch key. The key is sanitised to the slug shape so
-// a plugin name can never escape the latch dir (path traversal / separators).
-export function advisoryLatchPath(latchDir: string, plugin: string, code: AdvisoryCode): string {
-  const key = `${plugin}.${code}`.replace(/[^A-Za-z0-9._-]+/g, "-");
-  return join(latchDir, key);
-}
-
-// unlatchedAdvisories — the advisories that have NOT yet been raised this run,
-// marking each returned one as raised. Filter and mark are one operation so a
-// caller cannot read the latch and then forget to set it (which would make the
-// latch decorative). Both the read and the write are individually fail-open.
-export function unlatchedAdvisories(
-  latchDir: string,
-  advisories: readonly Advisory[],
-  now: string = new Date().toISOString(),
-  fs: AdvisoryLatchFs = defaultAdvisoryLatchFs,
-): Advisory[] {
-  const fresh: Advisory[] = [];
-  for (const advisory of advisories) {
-    const path = advisoryLatchPath(latchDir, advisory.plugin, advisory.code);
-    let alreadyRaised = false;
-    try {
-      alreadyRaised = fs.existsSync(path);
-    } catch {
-      alreadyRaised = false; // unreadable latch => raise (fail-open)
-    }
-    if (alreadyRaised) continue;
-    fresh.push(advisory);
-    try {
-      fs.mkdirSync(latchDir);
-      fs.writeFileSync(path, `${now}\n`);
-    } catch {
-      // Unwritable latch: the advisory is still raised (it is already in
-      // `fresh`); only the de-duplication for the rest of the run is lost.
-    }
-  }
-  return fresh;
 }
 
 // The composition record's plugin entries: [name, record][]. We only need the
@@ -537,3 +448,24 @@ export function recordActivationVerdict(
   writeActivationState(hostRoot, { schema: 1, lastVerdictHash: current.hash, recordedAt: now }, fs);
   return true;
 }
+
+export function main(argv: string[] = process.argv.slice(2)): number {
+  const [command, hostRoot, stage = ""] = argv;
+  if ((command !== "advisory" && command !== "record") || !hostRoot) {
+    process.stderr.write("plugin-activation: expected advisory|record <host-root> [stage]\n");
+    return 2;
+  }
+  if (command === "record") return recordActivationVerdict(hostRoot) ? 0 : 1;
+  const raised = activationAdvisoriesForHost(hostRoot, stage);
+  const verdict = raised.length === 0
+    ? { kind: "no-hold" }
+    : {
+      kind: "hold",
+      reasons: raised.map((advisory) => ({ kind: String(advisory.code) })),
+      message: raised[0]?.message,
+    };
+  process.stdout.write(`${JSON.stringify({ verdict })}\n`);
+  return raised.length === 0 ? 0 : 1;
+}
+
+if (import.meta.main) process.exitCode = main();

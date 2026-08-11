@@ -8,9 +8,7 @@
 //   1. the occurrence mapping (FR-ADV-1): an advisory becomes a `question`
 //      occurrence whose interactionId and selector both carry the advisory
 //      INSTANCE, so two raises of the same advisory never share an occurrence;
-//   2. the option space (FR-ADV-4, PRIMARY mechanism): `run_required: true`
-//      removes `defer-with-risk` from the option ids entirely, so the unattended
-//      route cannot select it — it is not in the space at all;
+//   2. the host-owned option space, which carries no plugin execution route;
 //   3. the translation (FR-ADV-2): `decided` AND `run-now` is the ONLY path to
 //      `resolved`. Every other ladder outcome — including a `decided` that chose
 //      `defer-with-risk` — becomes `human-required`, which is what makes the
@@ -121,14 +119,9 @@ describe("advisory auto-resolution: occurrence mapping", () => {
   });
 });
 
-describe("advisory auto-resolution: option space (FR-ADV-4 primary)", () => {
-  test("run_required:trueならdefer-with-riskは選択肢空間に存在しない", () => {
-    expect(advisoryChoiceOptionIds(true)).toEqual(["run-now"]);
-    expect(advisoryChoiceOptionIds(true)).not.toContain("defer-with-risk");
-  });
-
-  test("run_required:falseなら2択のまま", () => {
-    expect(advisoryChoiceOptionIds(false)).toEqual(["run-now", "defer-with-risk"]);
+describe("advisory auto-resolution: option space", () => {
+  test("hostはplugin固有の実行経路を選択肢へ埋め込まない", () => {
+    expect(advisoryChoiceOptionIds()).toEqual(["run-now", "defer-with-risk"]);
   });
 });
 

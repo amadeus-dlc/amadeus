@@ -128,7 +128,10 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     const composed = join(workspace, harnessDir, COMPOSED_STAGE);
     expect(existsSync(composed), `composed stage missing at ${harnessDir}/${COMPOSED_STAGE}`).toBe(true);
     const text = readFileSync(composed, "utf-8");
-    expect(text.split(`${harnessDir}/tools/amadeus-sensor.ts`).length - 1).toBe(1);
+    expect(
+      text.split(`${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length -
+        1,
+    ).toBe(1);
     expect(text.includes("{{HARNESS_DIR}}"), "raw token survived the seed").toBe(false);
     for (const foreign of foreignHarnessDirs(harness)) {
       expect(text.includes(`${foreign}/`), `foreign literal ${foreign}/`).toBe(false);

@@ -23,7 +23,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-  applyPluginScopeOptIns,
+  applyPluginScopeBindings,
   canonicalScopeGridJson,
   mergeComposedScopes,
   type ScopeGrid,
@@ -45,13 +45,14 @@ function compileGrid(
   pluginStages: Stages,
   onDiskJson: string | null,
 ): ScopeGrid {
-  return applyPluginScopeOptIns(
+  return applyPluginScopeBindings(
     mergeComposedScopes(
       transposeScopeGrid(coreStages.filter((s) => (s.scopes?.length ?? 0) > 0)),
       onDiskJson,
       REGISTERED,
     ),
-    pluginStages,
+    pluginStages.map((pluginStage) => ({ plugin: "fixture-plugin", stage: pluginStage })),
+    {},
   );
 }
 
@@ -60,7 +61,7 @@ function compileGrid(
 // — exactly the shape of the real `self-feature` row that carries
 // `formal-model-check: EXECUTE` (#1634).
 const CORE: Stages = [stage("alpha", ["feature"]), stage("beta", ["feature"])];
-// The opt-in plugin stage: `scopes: []`, mirroring formal-model-check.
+// An explicit-invocation-only plugin stage uses `scopes: []`.
 const PLUGIN: Stages = [stage("model-check", [], true)];
 const REGISTERED = new Set(["feature", "self-feature"]);
 

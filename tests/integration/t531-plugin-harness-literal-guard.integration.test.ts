@@ -119,13 +119,13 @@ describe("t531 fixture falling-proof — an injected harness literal is flagged"
 // The pr-convergence.md's own tool-path line, as the real projector emits it
 // for one harness. `undefined` when the artifact or the line is missing —
 // callers assert both are present rather than crashing on a bad index.
-function projectedSensorFireLine(plugin: PluginSource, harness: PackageHarness): string | undefined {
+function projectedSensorLine(plugin: PluginSource, harness: PackageHarness): string | undefined {
   const artifacts = buildPluginProjection(plugin, harness).artifacts;
   const artifact = artifacts.find((a) => a.relativePath === "plugins/pr-convergence/stages/pr-convergence.md");
   return artifact?.bytes
     .toString("utf8")
     .split("\n")
-    .find((l) => l.includes("amadeus-sensor.ts fire"));
+    .find((l) => l.includes("amadeus-sensor-pr-convergence-report-format.ts"));
 }
 
 describe("t531 positive projection proof — the real fix resolves on every package and self-install face", () => {
@@ -143,15 +143,17 @@ describe("t531 positive projection proof — the real fix resolves on every pack
     }
   });
 
-  test("every package face resolves the sensor-fire line to its own tool path, never Claude's", () => {
+  test("every package face resolves the plugin sensor line to its own tool path, never Claude's", () => {
     const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find((p) => p.directoryName === "pr-convergence");
     if (!plugin) throw new Error("pr-convergence plugin source not found under plugins/");
 
     expect(PACKAGE_HARNESSES.length).toBeGreaterThan(0);
     for (const harness of PACKAGE_HARNESSES) {
       const { harnessDir } = harnessProjectionSpec(harness);
-      const line = projectedSensorFireLine(plugin, harness);
-      expect(line).toBe(`bun ${harnessDir}/tools/amadeus-sensor.ts fire pr-convergence-report-format \\`);
+      const line = projectedSensorLine(plugin, harness);
+      expect(line).toBe(
+        `bun ${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts \\`,
+      );
       // Claude's own harnessDir legitimately IS `.claude` (harness === "claude"
       // resolves to itself); every OTHER harness must carry no Claude literal.
       if (harness !== "claude") expect(line).not.toContain(".claude/");

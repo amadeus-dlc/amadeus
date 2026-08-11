@@ -6,7 +6,7 @@
 
 - **ブランチ**: `bolt/fix-2330-advisory-store-recovery`、head `82d5235d2f01577e7edb81646711d83fc0a24219`(**再接地後** base = `edfee5818` — Bolt 1 の2 PR 着地を取り込み。rebase 競合ゼロ、merge-tree 非破壊プローブでマーカー 0 を事前実測、3コミット保持)
 - **コミット**: `6cb9bb4d8` fix(advisory): add a recovery verb for schema 1 advisory choice stores / `bce4adb00` test(advisory): record t470 as a deterministic CLI spawner / `7b8b5ac60` fix(advisory): defend a receipts-only store from cross-intent recovery
-- **verb**: `recover-schema-1`。CLI 契約: `bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 [--project-dir <path>]` — 成功時 stdout 1行 `{"recovered":true,"pending_salvaged":N,"receipts_dropped":M,"re_presentation_required":bool,"formal_check_attempts_reset":K}` exit 0 / 失敗時 stderr 理由 exit 1
+- **verb**: `recover-schema-1`。CLI 契約: `bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 [--project-dir <path>]` — 成功時 stdout 1行 `{"recovered":true,"pending_salvaged":N,"receipts_dropped":M,"re_presentation_required":bool,"run_now_receipts_reset":K}` exit 0 / 失敗時 stderr 理由 exit 1
 - seam: `recoverSchema1AdvisoryStore` / `recoverSchema1AdvisoryStoreCli`(全ロジック in-process 被覆、module 行は dispatch 1行のみ = allowlist 1エントリ)
 
 ## FR 対応
@@ -16,7 +16,7 @@
 | FR-2.1 | `parseStore` 無変更。salvage 別関数(`parsePending` 再利用)。schema 1 receipts は翻訳せず破棄 |
 | FR-2.2 | 単一 store のみ(`--project-dir`、既定 cwd 解決 active intent)。探索なし |
 | FR-2.3(精密化込み) | pending identity 検証 + **receipts-only store では `foreignReceiptIntentRuns` が receipts の `identity.intentRun` を防御的に読み不一致を loud 拒否**(読めない receipt は何も返さない = 拒否を足すことはあっても許可を広げない)。実装時精密化はユーザー承認(2026-08-07)済み・requirements FR-2.3 に反映済み |
-| FR-2.4 | dropped 件数 / re_presentation_required / formal_check_attempts_reset を出力 |
+| FR-2.4 | dropped 件数 / re_presentation_required / run_now_receipts_reset を出力 |
 | FR-2.5 | t458 無改変 green(diff --numstat 0行)。allowlist 1エントリ(:1629 に一意解決を実測 — 当初 :1614、行シフト後の再解決を確認)。EXPECTED_NONE_TO_CLI 追記 |
 | FR-2.6 | 12-state-machine.md / .ja.md / audit-format.md の3面に移行経路を記述(FR-2.3 精密化の帰結で docs 記述も同一コミットで整合) |
 

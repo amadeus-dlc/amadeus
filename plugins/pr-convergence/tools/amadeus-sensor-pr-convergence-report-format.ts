@@ -1,4 +1,4 @@
-// pr-convergence-report-format sensor — advisory surface for the convergence
+// Plugin-owned report-format check — advisory surface for the convergence
 // report's shape (FR-6a/6b, ADR-3).
 //
 // The `pr-convergence` plugin's CLI is the only legitimate writer of
@@ -25,7 +25,7 @@
 // artifact guard's business, not the sensor's.
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { requireFlagValue } from "./amadeus-sensor-flags.ts";
+import { requireFlagValue } from "./sensor-flags.ts";
 
 /** Result shape read by the dispatcher: `pass` gates PASSED/FAILED and
  *  `findings_count` is emitted verbatim; `reason` and `findings` are advisory

@@ -30,7 +30,6 @@ function obs(overrides: Partial<DoctorPluginObservation> = {}): DoctorPluginObse
     diagnostics: [],
     drops: { plugins: new Map() },
     revision: 0,
-    activation: null,
     ...overrides,
   };
 }
@@ -89,14 +88,6 @@ describe("t313 buildDoctorPluginSection — branch table projection", () => {
     // The composed line and its two drop lines coexist (t188 #21-22 — degrade is
     // additive to the plugin's own diagnostic).
     expect(section.lines).toHaveLength(3);
-  });
-
-  test("U6 activation changed → activation display line; unchanged/null → none", () => {
-    expect(buildDoctorPluginSection(obs({ activation: { specHashChanged: true } })).activation).toBe(
-      "formal-model-check: spec-hash CHANGED",
-    );
-    expect(buildDoctorPluginSection(obs({ activation: { specHashChanged: false } })).activation).toBeNull();
-    expect(buildDoctorPluginSection(obs({ activation: null })).activation).toBeNull();
   });
 
   test("fail-closed: a diagnostic status outside the engine union → unknown line", () => {

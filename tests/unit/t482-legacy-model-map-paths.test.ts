@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-formal-verif-model-map.ts
+// covers: file:plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts
 // size: small
 //
 // 260807-tla-specs-relocation — BR-13c: a model map whose path values still
@@ -6,7 +6,7 @@
 // the strict validator, on both byte-identical parser copies (ADR-2).
 
 import { describe, expect, test } from "bun:test";
-import * as canonicalModule from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+import * as canonicalModule from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import * as pluginModule from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const modules = [

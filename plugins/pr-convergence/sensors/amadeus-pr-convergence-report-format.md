@@ -1,7 +1,7 @@
 ---
 id: pr-convergence-report-format
 kind: deterministic
-command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-pr-convergence-report-format.ts
+command: bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
 default_severity: advisory
 description: Flags a pr-convergence-report.md whose required fields the plugin CLI would have written are missing, blank, or self-contradictory
 category: governance
@@ -51,11 +51,11 @@ claiming `converged: true` contradicts itself and is reported.
 ## Independence from the plugin
 
 The checker re-reads the report with its own minimal line reader instead of
-importing `plugins/pr-convergence/tools/pr-convergence-cli.ts`. Core ships to
-every harness whether or not the plugin is installed, so a core-to-plugin
-import would break the composed host the moment the plugin is dropped. The
-shipped integration test renders its fixtures from the plugin's own
-`renderReport`, so the two readers cannot drift unobserved.
+importing `tools/pr-convergence-cli.ts`. The sensor and CLI are sibling plugin
+resources, but keeping the reader independent prevents report validation from
+sharing the implementation that renders the report. The shipped integration
+test renders its fixtures from the plugin's own `renderReport`, so the two
+readers cannot drift unobserved.
 
 ## Failure mode
 

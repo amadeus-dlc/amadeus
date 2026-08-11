@@ -1003,28 +1003,14 @@ state alone is never proof that this question was shown.
 
 The engine persists one identity per pending advisory and accepts a choice only
 from the trusted human-prompt hook after that protected presentation. Re-run
-`next` after the human answers. A
-risk defer releases only that checkpoint. A run-now answer returns
-`run_required: true` plus one or more structured `formal_checks`; execute each
-`command` exactly as supplied, then re-run `next`. Only a complete, non-partial,
-provenance-verified `NOT_DETECTED` result releases the hold. `DETECTED`,
-`HARNESS_ERROR`, missing/corrupt evidence, or an identity mismatch keeps the
-hold active and requires a fresh retry or explicit risk defer.
+`next` after the human answers. A risk defer releases only that checkpoint.
 
 An advisory whose declaration names a destination carries
 `advisories[].handoff_stage`. A run-now answer on that advisory opens that stage
-— run `/amadeus --stage <handoff_stage> --single` — instead of executing a
-`formal_checks` command, because the work the advisory holds for is authored in
-a stage rather than verified by a command this engine runs. Opening the stage
+— run `/amadeus --stage <handoff_stage> --single`. Opening the stage
 does **not** release the hold: the hold lifts only when the declaring plugin's
-own evaluator returns no-hold on a later `next`. An advisory may carry a
-`handoff_stage`, a `formal_checks` entry, or neither; when it carries both,
-`formal_checks` is what the engine verifies a release against.
-
-The engine applies this contract at `requirements-analysis`,
-`functional-design`, and `build-and-test`, including main workflow, `--single`,
-and the first `gate:false` per-unit directive. A directive without advisories is
-unchanged.
+own evaluator returns no-hold on a later `next`. A directive without advisories
+is unchanged.
 
 ## 12. Phase Boundary Verification
 

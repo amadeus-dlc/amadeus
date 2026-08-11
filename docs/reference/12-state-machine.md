@@ -358,7 +358,7 @@ name the owner, so passing that receipt over would delete it without ever
 establishing whose it was, and silence is not evidence of belonging. The outcome
 names what changed: `receipts_dropped`, `re_presentation_required` (false when
 no open advisory was salvaged — the store is simply normalised for whatever
-comes next), and `formal_check_attempts_reset`, since the attempt a formal-check
+comes next), and `run_now_receipts_reset`, since the attempt a formal-check
 route is numbered by is derived from the `run-now` receipts now gone.
 
 ### Scope and configuration

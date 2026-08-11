@@ -1,7 +1,7 @@
 ---
 id: model-completeness
 kind: deterministic
-command: bun {{HARNESS_DIR}}/tools/amadeus-sensor-model-completeness.ts
+command: bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts
 default_severity: advisory
 description: Detects drift between each registered TLA model and its canonical implementation files
 category: formal-verification

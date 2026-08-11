@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
 // size: medium
 //
 // U6 activation-policy — the spec-hash machinery driven IN-PROCESS against a real
@@ -22,6 +22,7 @@ import {
   ACTIVATION_WATCH_GLOBS,
   type ActivationFs,
   activationAdvisoryForHost,
+  composedPluginNames,
   computeSpecHash,
   defaultActivationFs,
   formalModelCheckComposed,
@@ -31,7 +32,7 @@ import {
   resolveActivationJudgment,
   specRootForHost,
   writeActivationState,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";
@@ -163,6 +164,7 @@ describe("t320 composition reads", () => {
     expect(formalModelCheckComposed(host)).toBe(false);
     composeFormalModelCheck();
     expect(formalModelCheckComposed(host)).toBe(true);
+    expect(composedPluginNames(host)).toEqual([ACTIVATION_PLUGIN]);
   });
 
   test("isComposedPluginStage: only the composed plugin stage slug is a match (FR-7(a))", () => {
@@ -180,6 +182,21 @@ describe("t320 composition reads", () => {
 });
 
 describe("t320 judgment + advisory (host level)", () => {
+  test("an unreadable model map is a not-ready judgment", () => {
+    const throwing: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        if (path.endsWith("model-map.json")) throw new Error("EACCES (injected)");
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+
+    expect(resolveActivationJudgment(host, ACTIVATION_WATCH_GLOBS, throwing)).toEqual({
+      kind: "not-ready",
+      reason: "model map is invalid",
+    });
+  });
+
   test("0-plugin: activationAdvisoryForHost returns null without touching the spec (BR-U6-4)", () => {
     // No composition record → null fast return. A throwing reader proves the
     // spec is never read on the 0-plugin path.
@@ -239,7 +256,7 @@ describe("t320 BR-U6-2 falling proof: no TLC invocation reference", () => {
     // rejected option D). Source-level guard: a future auto-run wiring would add
     // one of these references and redden this test.
     const src = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), "..", "..", "packages", "framework", "core", "tools", "amadeus-plugin-activation.ts"),
+      join(dirname(fileURLToPath(import.meta.url)), "..", "..", "plugins", "formal-model-check", "tools", "plugin-activation.ts"),
       "utf-8",
     );
     for (const forbidden of ["run-model-check", "executeReservedModelCheck", "TlcProcess", "spawnSync", "child_process"]) {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { modelCompletenessTestSeams } from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
+import { modelCompletenessTestSeams } from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 
 describe("model-completeness sensor pure unit", () => {
   test("read error codeを固定reasonへ写像する", () => {

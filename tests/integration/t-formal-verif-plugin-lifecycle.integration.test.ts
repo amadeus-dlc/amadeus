@@ -158,7 +158,14 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     const node = composedGraph.stages.find((s) => s.slug === PLUGIN);
     expect(node, "formal-model-check must be in the compiled graph after compose").toBeDefined();
     expect(node!.phase).toBe("construction");
-    expect(node!.scopes ?? []).toEqual([]); // opt-in — no stock scope
+    expect(node!.scopes ?? []).toEqual([]);
+    const scopeGrid = JSON.parse(composedGraph.gridJson) as Record<
+      string,
+      { stages: Record<string, "EXECUTE" | "SKIP"> }
+    >;
+    for (const scope of ["self-document", "self-feature", "self-fix", "self-refactor"]) {
+      expect(scopeGrid[scope]?.stages[PLUGIN]).toBe("EXECUTE");
+    }
 
     expect(node!.lead_agent).toBe("amadeus-quality-agent");
     expect(node!.execution).toBe("CONDITIONAL");
@@ -168,10 +175,9 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     expect(_trustedPluginStageFileForTests("missing-plugin-stage")).toBeNull();
 
     // 4. `next --stage formal-model-check --single` emits a run-stage directive
-    //    for the composed opt-in stage (FR-1.4, real orchestrate — no verify stub,
-    //    BR-U2-4). orchestrate reads the plugin-inclusive graph via
-    //    AMADEUS_STAGE_GRAPH; the --single scope-skip exemption for empty-scopes
-    //    stages (ruling E-TLAU2 A) is what lets an opt-in plugin stage run.
+    //    for the composed plugin stage (FR-1.4, real orchestrate — no verify stub,
+    //    BR-U2-4). Automatic self-* membership and direct invocation are
+    //    independent: plugin provenance preserves the latter for other scopes.
     const graphFile = join(freshDir("fmc-graph-"), "stage-graph.json");
     writeFileSync(graphFile, composedGraph.json);
     const proj = freshDir("fmc-proj-");

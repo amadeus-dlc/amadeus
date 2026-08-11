@@ -187,7 +187,10 @@ describe("consumer install bundle resolves plugin prose per face (#2790)", () =>
       const artifact = installArtifacts(plugin!, harness).find((a) => a.relativePath === composedStage);
       expect(artifact, `${harness}: ${composedStage} missing from install bundle`).toBeDefined();
       const text = artifact!.bytes.toString("utf-8");
-      expect(text.split(`${dir}/tools/amadeus-sensor.ts`).length - 1, harness).toBe(1);
+      expect(
+        text.split(`${dir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
+        harness,
+      ).toBe(1);
       expect(text.includes("{{HARNESS_DIR}}"), `${harness}: raw token survived`).toBe(false);
       for (const foreign of foreignHarnessDirs(harness)) {
         expect(text.includes(`${foreign}/`), `${harness}: foreign literal ${foreign}/`).toBe(false);

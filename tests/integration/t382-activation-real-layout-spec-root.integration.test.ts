@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
 // size: medium
 //
 // U8 (FR-B3 grounding) — the activation judgment driven against the REAL
@@ -35,7 +35,7 @@ import {
   recordActivationVerdict,
   resolveActivationJudgment,
   specRootForHost,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { activationModelMap, writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 
 const COMPOSITION_FILE = ".amadeus-plugin-composition.json";

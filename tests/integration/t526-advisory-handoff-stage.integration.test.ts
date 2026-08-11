@@ -7,7 +7,7 @@ import {
   parseAdvisoryDeclarations,
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 import { guardAdvisoryChoices } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import { chooseRunNow } from "../harness/advisory-choice-fixture.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 
@@ -25,7 +25,6 @@ const HANDOFF_DECLARATION = [
     code: "authoring-hold",
     checkpoints: ["requirements-analysis"],
     evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
-    formalCheck: null,
     handoff: { stage: "tla-authoring" },
   },
 ];
@@ -71,7 +70,6 @@ describe("t526 declared advisory handoff stage", () => {
     const parsed = parseAdvisoryDeclarations(JSON.stringify({ advisories: HANDOFF_DECLARATION }));
     expect(parsed.invalid).toEqual([]);
     expect(parsed.declarations[0]?.handoffStage).toBe("tla-authoring");
-    expect(parsed.declarations[0]?.formalCheckArgv).toBeNull();
   });
 
   test("a declaration with no handoff carries none", () => {
@@ -111,8 +109,6 @@ describe("t526 declared advisory handoff stage", () => {
     expect(guarded.advisories[0]?.handoff_stage).toBe("tla-authoring");
     // BR-U2-05 stands: the run-now route is an entry point into authoring, and
     // only the plugin's own evaluator returning no-hold releases the hold.
-    expect(guarded.runRequired).toBe(false);
-    expect(guarded.formalChecks).toEqual([]);
     expect(guarded.advisories[0]?.result ?? "").toContain("evaluator to return no-hold");
   });
 
@@ -132,8 +128,6 @@ describe("t526 declared advisory handoff stage", () => {
     ) as { advisories: ReadonlyArray<Record<string, unknown>> };
     const declared = manifest.advisories.find((advisory) => advisory.code === "authoring-hold");
     expect(declared?.handoff).toEqual({ stage: "tla-authoring" });
-    // formalCheck stays null: the engine invents no verification on the
-    // plugin's behalf (BR-U2-05).
-    expect(declared?.formalCheck).toBeNull();
+    expect(declared).not.toHaveProperty("formalCheck");
   });
 });

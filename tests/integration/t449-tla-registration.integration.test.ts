@@ -1,9 +1,10 @@
+// covers: file:plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
-import { updateModelMap } from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
+import { updateModelMap } from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { EvidenceBundle, EvidenceEnvelopeCodec } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 import { readModelMapSnapshot, traceSubjectsOf } from "../../plugins/formal-model-check/tools/tla-applicability.ts";

@@ -40,7 +40,10 @@ writes.
     "github": { "issue": { "creation": { "mode": "prompt" } } }
   },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
-  "plugin": { "activation": { "names": [] } },
+  "plugin": {
+    "activation": { "names": [] },
+    "scope-bindings": {}
+  },
   "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
 }
 ```
@@ -53,6 +56,7 @@ writes.
 | `finding.github.issue.creation.mode` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
 | `swarm.unit.concurrency.limit` | integer `1..4`; `4` | Project, Space, Intent |
 | `plugin.activation.names` | sorted unique plugin-name array; `[]` | Project only |
+| `plugin.scope-bindings` | plugin-to-stage-to-unique-scope-array map; `{}` | Project only |
 | `subagent.dispatch.enforced-models` | non-empty unique model-name array; `["opus","sonnet"]` | Project, Space, Intent |
 
 Unknown paths and legacy flat keys are errors. Legacy-key diagnostics identify

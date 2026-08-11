@@ -111,7 +111,6 @@ beforeEach(() => {
           code: "authoring-hold",
           checkpoints: [CHECKPOINT],
           evaluator: { argv: evaluatorArgv },
-          formalCheck: null,
           handoff: { stage: "tla-authoring" },
         },
       ],
