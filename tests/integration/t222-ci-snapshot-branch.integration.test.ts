@@ -238,10 +238,14 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     // Asserted unconditionally, ahead of the `changes`-driven case branches:
     // the control-byte gate has no path filter, so a docs-only or amadeus-only
-    // pull request must still be held to its result (Issue #2814).
-    expect(ciSuccessJob).toContain(
-      `require_result "control-byte-gate" "\${{ needs.control-byte-gate.result }}"`,
-    );
+    // pull request must still be held to its result (Issue #2814). Containment
+    // alone would not catch the assertion being moved INTO a case branch, which
+    // is the way this contract actually breaks, so pin the position too.
+    const controlByteAssertion =
+      `require_result "control-byte-gate" "\${{ needs.control-byte-gate.result }}"`;
+    const controlByteAt = ciSuccessJob.indexOf(controlByteAssertion);
+    expect(controlByteAt).toBeGreaterThan(-1);
+    expect(ciSuccessJob.indexOf("          case ")).toBeGreaterThan(controlByteAt);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.drift }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.coverage }}" in`);
