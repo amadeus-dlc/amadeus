@@ -65,6 +65,14 @@ const BASELINE_SHA = readFileSync(
 //     remaining-debt count literally ("the existing 33"). Fixing the
 //     over-count changes that number, so the comment now names the debt
 //     without a literal count.
+//   - Issue #2814 (control-byte gate): the always-run `control-byte-gate` job.
+//     It carries no `needs` and no `if` on purpose — a path filter would excuse
+//     exactly the changes the gate exists to catch — so it is an independent
+//     job rather than a lint step, and ci-success's needs set is untouched.
+//     Re-baselined once more in the same PR to add `persist-credentials: false`
+//     to that job's checkout, matching the jobs that already disable credential
+//     persistence: the job runs PR-authored code, so the token must not sit in
+//     the local git config while it does.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

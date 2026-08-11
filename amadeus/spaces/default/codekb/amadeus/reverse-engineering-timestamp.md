@@ -31,6 +31,24 @@
 - Per-intent record: `re-scans/260810-plugin-prose-seed-guard.md`（述語 P1〜P13、manifest 8 面実測表、patch-surface inventory、テストピン棚卸し、仮説 4 項目の正本）
 - 適用範囲外（明示）: 修正案の設計・選定(#2810 のトークン化範囲、ガード述語の設置先 t146 vs t531、#2812 の等価性テストの層と形)は requirements-analysis 以降の所掌
 
+## 実行メタデータ（履歴、2026-08-10: 260810-control-byte-gate）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent `260810-plugin-harness-dir-token` の observed。`git merge-base --is-ancestor df1c874cf HEAD` = 真、`git rev-list --count df1c874cf..HEAD` = **10 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `f1270d710193d102b6fe8a728873a1c3e27dc094`（= 本 worktree HEAD。`git branch -r --contains f1270d710` が `origin/main` にヒットするため **origin/main 系譜上**であることを実測確認。`origin/main` は 1 コミット先行し `40056d0ecf140daa5636ddd2916734047098108b`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Standard**
+- Focus: [Issue #2814](https://github.com/amadeus-dlc/amadeus/issues/2814)（ミラー #2821）— tracked source への制御バイト（NUL 等）混入を CI で決定的にブロックするゲートが存在しない。既知の機序は `cid:requirements-analysis:control-byte-guard`（PM1-8 2026-07-10、#786 実測）— 制御バイトは git diff（8KB 以降不可視）にも grep（binary 化で偽陰性）にもレビューにも構造的に見えない
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: 述語は逐語 `git diff --name-only c909b61300e0a5b770e39a96fe38280879bb8bbd f1270d710193d102b6fe8a728873a1c3e27dc094`（exit 0、36 files）。被引用 13 パス（`amadeus-migrate.ts` / `amadeus-lib.ts` / `amadeus-stage-stats.ts` / `amadeus-subagent-stats.ts` / `t-learnings-persist-seam.test.ts` / `t55-test-suite-drift.test.ts` / `detect-ci-changes.sh` / `ci.yml` / `no-silent-drop/engine.ts` / `unchecked-cast-guard.ts` / `.gitignore` / `assets/AI-DLC-Workflows-2.0-Specification.pdf`）との**交差は空**。よって全 file:line は observed で有効（`cid:reverse-engineering:E-XBB-RE-S13-c2` — 測定区間は `review..observed` に固定）
+- 中核知見: **全域制御バイトゲートは 0 件**。既存の検出面は 4 つだけで、いずれも射程外 — `isUtf8`（`amadeus-migrate.ts:477` + 呼び出し 5 箇所）は**入力面限定**、`CONTROL_CHARS`（`amadeus-lib.ts:4298`/`:4304`）は**表示層の除去**、#786 guard（`t-learnings-persist-seam.test.ts:246-262`）は**単一ファイル**、t55 の NUL-skip（`t55-test-suite-drift.test.ts:664-678`）は**同じ fail-open 側**。CI 配線では sensors が **ci.yml に 0 hit** のため sensor 形態単独では CI ブロック不成立。Issue 宣言スコープは先例 SCAN_ROOTS 2 本の**上位集合**（`tests/` は両先例が明示除外、`docs/` はどちらも未走査）。`docs/` を含める場合は `detect-ci-changes.sh` が docs を 2 ファイル名指しでしか `full=true` にしないため分岐追加が必須
+- コーパス実測（測定 ref = observed）: tracked **16124** files 中、制御バイト含有は **1 件**（`assets/AI-DLC-Workflows-2.0-Specification.pdf`、first NUL offset 248）のみ。Issue 宣言スコープ 5 ルート **2576** files は NUL/C0（TAB/LF/CR 除く）**0 hit**。`.github/` 15 files も 0 hit。`dist/` は tracked **0**（`.gitignore:19`）のため投影増幅は不成立
+- 手法メモ: バイト検査に grep 系ラッパを使わない（NUL 含有ファイルを binary 扱いで無音脱落させ偽陰性を作る = 欠陥機序そのもの）。走査は `git ls-files -z` を起点に Python/perl の binary モード直走査で行い read error 数も報告する
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（「制御バイト混入クラスの防御在庫」節を新設）/ `re-scans/260810-control-byte-gate.md`（新規・正本）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `architecture.md` / `code-structure.md` / `technology-stack.md` / `dependencies.md` / `api-documentation.md` / `component-inventory.md` / `business-overview.md` — 本 intent は新規ゲートの追加であり、既存のアーキテクチャ・依存・API 記述を変更する所見は出ていない
+- Per-intent record: `re-scans/260810-control-byte-gate.md`（述語 P0〜P11、N-1〜N-6、検証面ピン、UNMEASURED 6 項目の正本）
+- 適用範囲外（明示）: ゲートの実装形態（standalone script / sensor / 併設）、走査スコープの最終確定、allowlist 機構の有無、CI 配線位置の選定は requirements-analysis / application-design の所掌。本 RE は裁定を証拠から下せる状態にすることのみを行った
+
 ## 実行メタデータ（履歴、2026-08-10: 260810-plugin-harness-dir-token）
 
 - Date: `2026-08-10`
