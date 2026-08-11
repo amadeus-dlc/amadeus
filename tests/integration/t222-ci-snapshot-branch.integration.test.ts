@@ -91,7 +91,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain(`coverage: \${{ steps.filter.outputs.coverage }}`);
     expect(changesJob).toContain("git diff --name-only -z");
     expect(changesJob).toContain("--no-renames");
-    expect(changesJob).toContain(`if [[ "\${EVENT_NAME}" == "pull_request" ]]`);
+    expect(changesJob).toContain(
+      `if [[ "\${EVENT_NAME}" == "pull_request" || "\${EVENT_NAME}" == "merge_group" ]]`,
+    );
     expect(changesJob).toContain(`"\${BASE_SHA}...\${HEAD_SHA}"`);
     expect(changesJob).toContain("bash scripts/detect-ci-changes.sh");
     for (const fullJob of [typecheckJob, lintJob, contractJob, testsJob]) {
