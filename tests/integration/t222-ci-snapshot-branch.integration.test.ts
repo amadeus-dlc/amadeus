@@ -145,6 +145,7 @@ describe("t222 CI snapshot publication boundary", () => {
         "reproducible-build",
         "drift-check",
         "coverage",
+        "review-thread-resolution",
       ]),
     );
     expect(Object.keys(jobs)).toContain("distribution-contract");
