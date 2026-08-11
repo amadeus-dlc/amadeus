@@ -144,6 +144,19 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     );
   });
 
+  test("the test seam overrides projected host-tool commands by basename", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    process.env.AMADEUS_SENSOR_SCRIPT_DIR = "/tmp/t511-sensor-scripts";
+    try {
+      expect(resolveScriptPath(
+        "bun .claude/tools/amadeus-sensor-stub-pass.ts",
+      )).toBe("/tmp/t511-sensor-scripts/amadeus-sensor-stub-pass.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
   test("a vanished output hashes to a deterministic missing marker", () => {
     expect(digestFile("/definitely/missing/t511-output.md")).toBe("missing");
   });

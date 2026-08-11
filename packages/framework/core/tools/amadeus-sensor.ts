@@ -239,6 +239,10 @@ export function resolveScriptPath(command: string): string {
 	// string without a non-null assertion.
 	const parts = tsToken.split("/");
 	const scriptBasename = parts[parts.length - 1];
+	const scriptDirOverride = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+	if (scriptDirOverride !== undefined) {
+		return join(scriptDirOverride, scriptBasename);
+	}
 	const harnessMarker = "{{HARNESS_DIR}}/";
 	if (tsToken.startsWith(harnessMarker)) {
 		return pathResolve(__FILE_DIR, "..", tsToken.slice(harnessMarker.length));
@@ -248,8 +252,7 @@ export function resolveScriptPath(command: string): string {
 	if (tsToken.startsWith(projectedHarnessPrefix)) {
 		return pathResolve(harnessRoot, "..", tsToken);
 	}
-	const scriptDir = process.env.AMADEUS_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
-	return join(scriptDir, scriptBasename);
+	return join(__FILE_DIR, scriptBasename);
 }
 
 // --- Fire id ---

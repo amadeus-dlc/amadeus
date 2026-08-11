@@ -104,6 +104,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t487-stage-stats.integration.test.ts",
     "integration/t500-resync-last-updated-preservation.test.ts",
     "integration/t506-merge-held-lock-bucket.integration.test.ts",
+    "integration/t511-blocking-sensor-gate.integration.test.ts",
     "integration/t514-codex-mint-presence-chain.integration.test.ts",
     "integration/t519-scope-sizing-sensor.integration.test.ts",
     "integration/t522-autonomy-projection-lock.integration.test.ts",
