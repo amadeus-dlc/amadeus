@@ -660,6 +660,20 @@ function emitWorkflowCompletionAuditRows(input: {
 
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
+// Enforcement cutoff, mirroring the E-OC1 questions-evidence gate: intents are
+// dated by their record dir name (YYMMDD-...), and only intents born on or after
+// the guard's adoption day are enforced. Keep this above main() because direct
+// CLI completion dispatch reads it before later module declarations initialize.
+export const BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809;
+
+// The events that close a SENSOR_FIRED pair. Only SENSOR_PASSED clears an
+// output. Order is the equal-timestamp tie-break: PASSED before FAILED makes a
+// tie resolve to failure. These runtime constants must also stay above main().
+const SENSOR_TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"] as const;
+const BLOCKING_SENSOR_REMEDY =
+  "Fire the sensor and resolve its finding before completing the stage: " +
+  "amadeus-sensor.ts fire <sensor-id> --stage <slug> --output-path <artifact>.";
+
 // Exported for the in-process coverage seam (t220); production callers reach it
 // through main()'s handler dispatch. Record-side display names (Unnn-<slug>,
 // uppercase) are normalized to the lowercase canonical form and judged post-
@@ -1658,25 +1672,10 @@ function artifactGuardDisabled(): boolean {
 // guard's own switch and independent of it (a fixture that wants artifacts
 // unchecked does not thereby want sensor verdicts unchecked).
 
-// Enforcement cutoff, mirroring the E-OC1 questions-evidence gate: intents are
-// dated by their record dir name (YYMMDD-...), and only intents born on or after
-// the guard's adoption day are enforced. Without it, adopting a blocking sensor
-// would retroactively block every in-flight intent whose stages were sensed
-// before the severity existed. Exported so the guard's own tests pin the same
-// constant the guard reads rather than a copy.
-export const BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809;
-
 // Canonical name consumed by plugin-owned artifact writers through the audit
 // boundary. Exporting it keeps the core registry's writer-reference invariant
 // explicit without importing a plugin schema into core.
 export const ARTIFACT_ATTESTED_EVENT = "ARTIFACT_ATTESTED";
-
-// The events that close a SENSOR_FIRED pair. Only SENSOR_PASSED clears an
-// output: SENSOR_BUDGET_OVERRIDE closes the pair but reports that the sensor ran
-// out of budget, which is not a verdict of "clean". The order matters for the
-// equal-timestamp tie-break in sensorRowsForStage — PASSED is listed before
-// FAILED so a tie resolves to the failure.
-const SENSOR_TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"] as const;
 
 export type BlockingSensorFinding =
   | { kind: "never-fired"; sensorId: string }
@@ -1816,10 +1815,6 @@ function blockingSensorIdsForStage(slug: string): string[] {
   }
   return ids;
 }
-
-const BLOCKING_SENSOR_REMEDY =
-  "Fire the sensor and resolve its finding before completing the stage: " +
-  "amadeus-sensor.ts fire <sensor-id> --stage <slug> --output-path <artifact>.";
 
 export function verifyBlockingSensors(pd: string, stage: { slug: string; name: string }): void {
   if (blockingSensorGuardDisabled()) return;

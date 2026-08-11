@@ -22,6 +22,7 @@
 // corpus for the same id; no shipped manifest declares blocking.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -282,6 +283,20 @@ describe("t511 — approve refuses on an unresolved blocking sensor (#2671 c)", 
     seedSensorAudit([FIRED, FAILED, { event: "SENSOR_FIRED", ts: "2026-08-10T01:00:01Z" }, PASSED]);
     const r = captureExit(() => handleApprove([STAGE]));
     expect(r.threw).toBe(false);
+    expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${STAGE}`);
+  });
+
+  test("the direct CLI initializes blocking-gate constants before approve dispatch", () => {
+    useGraphWithBlockingSensor();
+    seedSensorAudit([FIRED, PASSED]);
+    const result = spawnSync(
+      process.execPath,
+      [join(AMADEUS_SRC, "tools", "amadeus-state.ts"), "approve", STAGE],
+      { cwd: proj, env: process.env, encoding: "utf-8" },
+    );
+    expect(`${result.stdout}${result.stderr}`).not.toContain("before initialization");
+    if (result.status !== 0) throw new Error(`${result.stdout}${result.stderr}`);
+    expect(result.status).toBe(0);
     expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${STAGE}`);
   });
 
