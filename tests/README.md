@@ -34,11 +34,11 @@ The vocabulary is closed and has exactly three members — `type-only`, `catch-a
 
 **What this does not do.** The gate reads `selector.class` and nothing else; it never reads `reason`. That is deliberate, and it leaves three things unchecked:
 
-- **The other 620-odd entries.** Only declared entries are checked, so a full semantic audit of the ledger is not automated. `tests/allowlist-semantic-audit.ts` grades every entry's prose against its code and is worth running by hand when triaging the ledger, but its verdicts are advisory and no CI step consumes them.
+- **Every entry that has not taken the declaration on yet.** Only declared entries are checked, so a full semantic audit of the ledger is not automated. `tests/allowlist-semantic-audit.ts` grades every entry's prose against its code and is worth running by hand when triaging the ledger, but its verdicts are advisory and no CI step consumes them.
 - **`spawn-only` reachability.** Most of the ledger claims lines are unmeasurable because only a spawned process reaches them. That is a claim about reachability, not about syntax, and nothing here verifies it.
 - **Drift that only the prose reveals.** An entry whose `reason` describes a different function than its selector lands in is invisible to a check that never reads the prose. Four designs tried to extract the subject from `reason` and each was measured false-positive-prone: the field mixes target, rationale, coverage status and reachability in one human sentence. Finding this kind of drift is still a reading task.
 
-Each of these is tracked separately rather than pretended away.
+All three are tracked in amadeus-dlc/amadeus#2901 rather than pretended away. The ledger's `expiry` field is the same shape of gap — nothing reads the release conditions either — and is tracked in amadeus-dlc/amadeus#2900.
 
 ## Prerequisites / running the suite
 
