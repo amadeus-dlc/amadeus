@@ -3962,6 +3962,45 @@ function canonicalConstructionFailurePending(projectDir: string): boolean {
   return projected.ok && constructionFailureTransition(projected.projection).kind === "await-unit-ruling";
 }
 
+// A terminal `failed` without its BOLT_FAILED / batch-closure join stops `next`
+// only where the ruling loop lives: the per-unit build stage that dispatched the
+// Unit, and only for a batch the compiled Bolt DAG still carries. A failure from
+// a batch outside the current runtime population is history, and at a downstream
+// consumer stage a failed producer is reported by the per-unit consume fan-out
+// (`producer-outcome-failed`) — neither may freeze the workflow here.
+function terminalFailureStopsNext(
+  projectDir: string,
+  stageSlug: string,
+  units: readonly { unit: string; batch?: string; outcome: string }[],
+): boolean {
+  const node = nodeForSlug(stageSlug);
+  if (node === undefined || !isPerUnit(node)) return false;
+  const batches = readBoltDagBatches(projectDir) ?? [];
+  return units.some((entry) => {
+    if (entry.outcome !== "failed") return false;
+    const index = entry.batch === undefined ? Number.NaN : Number.parseInt(entry.batch, 10) - 1;
+    return Number.isInteger(index) && index >= 0 && index < batches.length &&
+      batches[index].includes(entry.unit);
+  });
+}
+
+// The ruling prompt shares the same population scope as the terminal guard
+// above: a closed failure (terminal + SWARM_BATON_RETURNED) whose batch the
+// compiled Bolt DAG no longer carries is history and must not stop `next`
+// with `await-unit-ruling` either. Anything that is not a strict positive
+// decimal batch id — non-numeric identities (solo retries), malformed
+// numerics ("99x" partial-parse), zero-padded or zero ids — and a missing
+// batch id cannot be proven historical, so they keep the fail-closed
+// ruling behavior.
+function failureOutsideRuntimePopulation(
+  entry: { unit: string; batch?: string },
+  batches: readonly (readonly string[])[],
+): boolean {
+  if (entry.batch === undefined || !/^[1-9][0-9]*$/.test(entry.batch)) return false;
+  const index = Number.parseInt(entry.batch, 10) - 1;
+  return index >= batches.length || !batches[index].includes(entry.unit);
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -3974,10 +4013,11 @@ function emitConstructionFailureIfPresent(
     emit(errorDirective(`Construction outcome audit is incomplete: ${JSON.stringify(normalized.diagnostics)}`));
     return true;
   }
+  const batches = readBoltDagBatches(projectDir);
   const result = projectConstructionOutcomes(normalized.records, {
     intent,
     stage: stageSlug,
-    batches: readBoltDagBatches(projectDir) ?? [],
+    batches: batches ?? [],
   });
   if (!result.ok) {
     emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(result.diagnostics)}`));
@@ -3990,7 +4030,19 @@ function emitConstructionFailureIfPresent(
     ));
     return true;
   }
-  const transition = constructionFailureTransition(result.projection);
+  // Scope the ruling loop to the current runtime population, mirroring the
+  // terminal guard below: without a compiled DAG there is no population to
+  // scope against, so the fail-closed ruling behavior is kept as-is.
+  const transition = constructionFailureTransition(
+    batches === null
+      ? result.projection
+      : {
+        ...result.projection,
+        unresolvedFailures: result.projection.unresolvedFailures.filter(
+          (entry) => !failureOutsideRuntimePopulation(entry, batches),
+        ),
+      },
+  );
   if (transition.kind === "await-unit-ruling") {
     const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
     emit(askDirective(
@@ -3998,7 +4050,7 @@ function emitConstructionFailureIfPresent(
     ));
     return true;
   }
-  if (result.projection.units.some((entry) => entry.outcome === "failed")) {
+  if (terminalFailureStopsNext(projectDir, stageSlug, result.projection.units)) {
     emit(errorDirective("Construction Unit failure is terminal but its BOLT_FAILED / batch-closure join is incomplete; waiting fail-closed."));
     return true;
   }
