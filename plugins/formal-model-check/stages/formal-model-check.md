@@ -1,40 +1,46 @@
 ---
 slug: formal-model-check
+number: 3.9
+name: Formal Model Check
 phase: construction
 execution: CONDITIONAL
-condition: Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).
+condition: In self-* workflows, run after TLA+ authoring when applicability produced or revised a model; otherwise record the terminal applicability outcome without invoking TLC. Explicit single-stage runs check the selected registered model or all registered models.
 lead_agent: amadeus-quality-agent
 support_agents: []
 mode: inline
 produces: []
 consumes: []
-requires_stage: []
+requires_stage:
+  - tla-authoring
 inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under {{HARNESS_DIR}}/plugins/formal-model-check/tools/.
 outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors:
   - model-completeness
-scopes: []
+scopes:
+  - self-document
+  - self-feature
+  - self-fix
+  - self-refactor
 ---
 
 # Formal Model Check
 
-The `formal-model-check` plugin stage runs a **single formal-model-check pass**:
-an exhaustive TLC exploration of a declared TLA+ model, driven by the
-`run-model-check` CLI. It is an opt-in plugin stage (empty `scopes:`): install is
-the opt-in boundary, so once composed it is reachable via
-`amadeus-orchestrate next --stage formal-model-check` — `--single` optional
-(U6 activation-policy, FR-7(a)). It never joins a stock scope's workflow and
-never runs on `push` / `pull_request`. When the watched spec changed, the
-engine emits a spec-hash advisory nudge (ADR-1 option A, U6); whether that
-advisory starts a run depends on the Intent autonomy mode: under `none` a
-human decides whether to run it; under `semi` or `full` the advisory is routed
-through the autonomy ladder as a `question` occurrence
-(`amadeus-advisory-choice.ts`), and a `run-now` decision starts the check
-unattended — any other ladder outcome falls back to the human.
+The `formal-model-check` plugin stage runs an exhaustive TLC exploration of a
+declared TLA+ model, driven by the `run-model-check` CLI. It follows
+`tla-authoring` in all four self-development scopes, so a missing model can be
+supplied before the check is selected. Explicit `--stage formal-model-check`
+runs remain supported. It never runs on `push` / `pull_request`. When a watched
+spec changes, the existing spec-hash advisory remains an additional trigger.
 
 ## Stage body
 
-1. Resolve the model + config to check. CI acceptance checks every pair declared
+1. Read the immediately preceding applicability outcome when this is a self-*
+   workflow. An `author-new` or `revise-model` route must name the model just
+   registered by `tla-authoring`; check that model. An `impl-only`, `non-target`,
+   or `not-applicable` outcome records `NOT_APPLICABLE` and does not invoke TLC.
+   A missing or contradictory outcome is a halt. For an explicit run with no
+   preceding applicability outcome, resolve the requested model + config as
+   before. CI acceptance checks every pair declared
    in `amadeus/spaces/<space>/specs/tla/model-map.json`, sequentially and in declaration order. The
    optional `--model <registered-name>` selector narrows CI or diagnostics to
    one pair and rejects unknown names without falling back. `FormalElection`
@@ -84,8 +90,8 @@ frontmatter. The sensor is supplied by the core framework, not the plugin, so
 the stage graph compile resolves the id against the core sensor registry; an
 unknown id fails the compile loudly.
 
-## Not a stock-scope stage
+## Self-development lifecycle
 
-`scopes:` is intentionally empty. The stage is a plugin-supplied capability that
-a team opts into per run. Dropping the plugin removes this stage from the graph
-and restores the 0-plugin baseline.
+The stage belongs to all four self-* scopes and is ordered after
+`tla-authoring`. Dropping the plugin removes both stages from the graph and
+restores the 0-plugin baseline.

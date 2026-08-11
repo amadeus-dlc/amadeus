@@ -127,22 +127,25 @@ describe("the authoring stage document (BR-U5-07, BR-U5-13)", () => {
     expect(manifest.stages).toContainEqual({ slug: STAGE_SLUG, path: `stages/${STAGE_SLUG}.md` });
   });
 
-  test("the frontmatter keeps the opt-in plugin shape", () => {
+  test("the frontmatter joins every self scope after build-and-test", () => {
     const frontmatter = parseStageFrontmatter(stageText) as Record<string, unknown>;
     expect(frontmatter.slug).toBe(STAGE_SLUG);
     expect(frontmatter.phase).toBe("construction");
-    expect(frontmatter.scopes ?? []).toEqual([]);
+    expect(frontmatter.number).toBe("3.8");
+    expect(frontmatter.scopes ?? []).toEqual(["self-document", "self-feature", "self-fix", "self-refactor"]);
+    expect(frontmatter.requires_stage).toEqual(["build-and-test"]);
+    expect(frontmatter.consumes).toEqual([{ artifact: "requirements", required: false }]);
     expect(frontmatter.execution).toBe("CONDITIONAL");
     expect(frontmatter.mode).toBe("inline");
   });
 
-  test("the six procedure sections stand 1:1 with the functional design's contract table", () => {
+  test("the six procedure sections start by assessing applicability", () => {
     const headings = stageText
       .split("\n")
       .filter((line) => line.startsWith("### "))
       .map((line) => line.replace(/^###\s+/, ""));
     expect(headings).toEqual([
-      "1. Receive the route",
+      "1. Assess applicability and receive the route",
       "2. Author or revise the model",
       "3. Run the referees",
       "4. Independent review",
@@ -160,11 +163,14 @@ describe("the authoring stage document (BR-U5-07, BR-U5-13)", () => {
     expect(registration).toContain("VerifiedBundle");
   });
 
-  test("the terminal-route refusal is declared as the functional design's own addition", () => {
-    const receiving = stageText.slice(stageText.indexOf("### 1. Receive the route"));
-    expect(receiving).toContain("ADR-7");
+  test("the self-scope entry assesses missing models and closes terminal routes", () => {
+    const receiving = stageText.slice(stageText.indexOf("### 1. Assess applicability and receive the route"));
+    expect(receiving).toContain("subjects declare");
+    expect(receiving).toContain("author-new");
+    expect(receiving).toContain("revise-model");
     expect(receiving).toContain("impl-only");
     expect(receiving).toContain("non-target");
+    expect(receiving).toContain("stop successfully");
   });
 
   test("each step states how it fails closed", () => {

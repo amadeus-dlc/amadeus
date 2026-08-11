@@ -1441,9 +1441,8 @@ export function canonicalScopeGridJson(grid: ScopeGrid): string {
  *  unrecoverable (#1863). A cell for an absent slug is inert — every consumer
  *  indexes `.stages` by a slug taken from the graph — so preserving it costs
  *  nothing and makes the cycle lossless. Nor is such a cell an anomaly worth
- *  reporting: the shipped grid carries `self-feature.formal-model-check`, so
- *  every workspace that has not composed that opt-in plugin holds one by
- *  design.
+ *  reporting: a grid may legitimately preserve a previously composed plugin
+ *  cell while that plugin is absent from the current graph.
  *
  *  When `registeredScopes` is provided, only folded rows that still have a
  *  scope metadata file survive; this removes renamed stock scopes without
@@ -2616,11 +2615,24 @@ export function discoverScopeGridSurfaces(projectDir: string): ScopeGridSurface[
     .map((path) => ({ path: toPosix(relative(projectDir, path)), json: readFileSync(path, "utf-8") }));
 }
 
+/** Keep exact grid parity within one installation family. Repository-local
+ * self installs may compose plugins that the zero-plugin dist packages do not
+ * carry, so comparing root and dist grids to one compiler output would make a
+ * valid scoped plugin look like drift in both directions. */
+function scopeGridSurfacesForCompiler(
+  projectDir: string,
+  surfaces: readonly ScopeGridSurface[],
+): readonly ScopeGridSurface[] {
+  const compilerPath = toPosix(relative(projectDir, __FILE_DIR));
+  const compilerIsDist = compilerPath === "dist" || compilerPath.startsWith("dist/");
+  return surfaces.filter((surface) => surface.path.startsWith("dist/") === compilerIsDist);
+}
+
 export function runCompileCheck(projectDir: string = resolveProjectDir()): void {
   const { gridJson } = compileStageGraph();
   const violations = graphCompileInvariantViolations(
     gridJson,
-    discoverScopeGridSurfaces(projectDir),
+    scopeGridSurfacesForCompiler(projectDir, discoverScopeGridSurfaces(projectDir)),
   );
   if (violations.length > 0) {
     throw new Error(`compile invariant check failed:\n${violations.join("\n")}`);

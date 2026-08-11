@@ -235,7 +235,7 @@ describe("compile: plugin scope opt-in over a real plugin host (#1630)", () => {
   // mints no cell on the way back, so the on-disk grid was the only copy and a
   // re-compose could not restore it. The contract is now the round trip below.
   test("drop -> compose is lossless for an opt-in plugin's composed-scope cell", async () => {
-    // `scopes: []` — the opt-in shape formal-model-check ships with, so the
+    // `scopes: []` — the explicit-invocation-only plugin shape, so the
     // cell can only come from the composed row on disk.
     const root = makeHost([]);
     const seeded = seedComposedScope(root, "feature");

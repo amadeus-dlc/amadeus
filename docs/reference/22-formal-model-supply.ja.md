@@ -73,7 +73,7 @@ module 冒頭に縮約申告を置きます。縮約ごとに、何を落とし�
 
 ## 検査を実行する
 
-`formal-model-check` ステージは opt-in です。`scopes:` が空リストのため stock scope からは選ばれず、Amadeus が自発的に走らせることもありません。明示的に起動します。
+plugin を compose すると、Amadeus の全 `self-*` スコープが build-and-test 後に形式モデルのライフサイクルを実行します。まず `tla-authoring` が active requirements の適用可否を評価し、未登録の対象は `author-new`、登録済み対象の意味変更は `revise-model` へ送ります。終端経路または非対象なら TLC を省略し、モデルを新規作成・改訂した場合は続く `formal-model-check` がそのモデルを検査します。checker は従来どおり明示起動もできます。
 
 ```
 bun .claude/tools/amadeus-orchestrate.ts next --stage formal-model-check --single

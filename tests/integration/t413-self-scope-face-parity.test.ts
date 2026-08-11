@@ -8,9 +8,8 @@
 // rows as extras with no dist counterpart, compile --check preserves folded
 // cells verbatim and runs on .claude only, and the self-scope-consistency
 // sensor compares name sets, never cell values. Stage keys NOT present on
-// every face are exempt on purpose: plugin composition is per-face
-// (self-feature.formal-model-check exists on .claude alone by design, see
-// 242e4175a), so the parity contract covers only the shared cells.
+// every face are exempt on purpose because third-party plugin composition can
+// still be per-face, so the parity contract covers only the shared cells.
 // covers: file:scripts/promote-self.ts
 // size: medium
 

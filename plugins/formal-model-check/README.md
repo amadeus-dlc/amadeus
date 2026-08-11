@@ -1,13 +1,12 @@
 # formal-model-check plugin
 
-An opt-in Amadeus plugin that adds one construction-phase stage,
-`formal-model-check`, which runs an exhaustive TLC exploration of a TLA+ model
-via the `run-model-check` CLI. The stage carries an empty `scopes:` list, so it
-is never selected by a stock scope. Install is the opt-in boundary: once
-composed it runs on an explicit `amadeus-orchestrate next --stage
-formal-model-check` invocation (`--single` optional). Amadeus never runs it
-automatically — the engine only emits a spec-hash advisory when the watched
-spec changed (U6 activation-policy).
+An opt-in Amadeus plugin that adds the `tla-authoring` and
+`formal-model-check` construction stages. Once the plugin is installed, every
+Amadeus `self-*` scope assesses whether the active requirements need a new or
+revised formal model. Authoring runs first; the checker then performs an
+exhaustive TLC exploration only when the applicability outcome requires one.
+Both stages also remain directly invocable with `--single`. A spec-hash
+advisory remains an additional trigger when a watched model changes.
 
 Activation has four read-only outcomes: `not-ready` when no valid declared
 model/config target exists, `never-run` when targets exist without a successful
@@ -32,10 +31,12 @@ formal-model-check/
   README.md
 ```
 
-The bundle supplies two stages: `formal-model-check` checks a registered model,
-and `tla-authoring` carries a subject from an applicability route to a
-registered one (authoring, referees, independent review, human gate,
-registration). Both are opt-in — neither joins a stock scope.
+The bundle supplies two stages: `tla-authoring` assesses self-development
+requirements and carries applicable subjects to a registered model (authoring,
+referees, independent review, human gate, registration), then
+`formal-model-check` checks the resulting registration. Both join
+`self-document`, `self-feature`, `self-fix`, and `self-refactor` when the plugin
+is composed; direct stage invocation remains available for other scopes.
 
 `plugin.json`'s `stages[].path` is declared relative to the plugin root
 (`stages/formal-model-check.md`). The compose engine resolves the bytes from

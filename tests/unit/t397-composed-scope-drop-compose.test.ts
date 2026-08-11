@@ -60,7 +60,7 @@ function compileGrid(
 // — exactly the shape of the real `self-feature` row that carries
 // `formal-model-check: EXECUTE` (#1634).
 const CORE: Stages = [stage("alpha", ["feature"]), stage("beta", ["feature"])];
-// The opt-in plugin stage: `scopes: []`, mirroring formal-model-check.
+// An explicit-invocation-only plugin stage uses `scopes: []`.
 const PLUGIN: Stages = [stage("model-check", [], true)];
 const REGISTERED = new Set(["feature", "self-feature"]);
 

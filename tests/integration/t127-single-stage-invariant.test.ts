@@ -361,6 +361,50 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
     expect(directive?.stage).toBe("zz-optin-probe");
   });
 
+  test("15c: next --single RUNS a scoped plugin stage outside its automatic scopes", () => {
+    const proj = freshProject();
+    const graph = JSON.parse(readFileSync(SEED_GRAPH, "utf8")) as Array<Record<string, unknown>>;
+    const template = graph.find((s) => s.slug === "code-generation")!;
+    graph.push({
+      ...template,
+      slug: "zz-scoped-plugin-probe",
+      number: "3.99",
+      name: "ZZ Scoped Plugin Probe",
+      plugin_source: true,
+      scopes: ["self-feature"],
+      requires_stage: [],
+      produces: [],
+      consumes: [],
+      sensors: [],
+      sensors_applicable: [],
+    });
+    const graphDir = mkdtempSync(join(tmpdir(), "t127-scoped-plugin-"));
+    tempDirs.push(graphDir);
+    const graphFile = join(graphDir, "stage-graph.json");
+    writeFileSync(graphFile, `${JSON.stringify(graph, null, 2)}\n`);
+
+    const res = spawnSync(
+      BUN,
+      [
+        TOOL,
+        "next",
+        "--stage",
+        "zz-scoped-plugin-probe",
+        "--single",
+        "--scope",
+        "fix",
+        "--project-dir",
+        proj,
+      ],
+      { encoding: "utf-8", env: { ...process.env, AMADEUS_STAGE_GRAPH: graphFile } },
+    );
+    const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+    expect(out, out).not.toContain("is skipped for scope");
+    const directive = JSON.parse((res.stdout ?? "").trim().split("\n").filter(Boolean).at(-1) ?? "null");
+    expect(directive?.kind, out).toBe("run-stage");
+    expect(directive?.stage).toBe("zz-scoped-plugin-probe");
+  });
+
   // =========================================================================
   // Test 16: --single + --phase is mutually exclusive.
   // =========================================================================
