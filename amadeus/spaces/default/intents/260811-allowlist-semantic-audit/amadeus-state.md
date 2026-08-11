@@ -41,8 +41,6 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-08-11T16:05:36Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -106,10 +104,10 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Intent Autonomy Mode**: semi
-- **Intent Grant**: none
-- **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-11T16:05:36Z
+- **Intent Autonomy Mode**: full
+- **Intent Grant**: intent-grant-1642e86062e5c0cd0cfa70e93725e9df
+- **Construction Autonomy Mode**: autonomous
+- **Last Updated**: 2026-08-11T16:06:42Z
 
 ## Session Resume Point
 - **Last Completed Stage**: requirements-analysis

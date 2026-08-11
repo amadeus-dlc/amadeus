@@ -6,13 +6,15 @@
 // TypeScript AST and answer "what kind of unmeasurable row is this line
 // range?"; `extractReasonClaim` reads the ledger's prose and answers "what kind
 // does the reason CLAIM it is?". The three-valued verdict is their agreement.
+// It is a reading aid, not a gate — the blocking check is the declared-class
+// one in coverage-patch-gate.ts, pinned by t536 and t537.
 //
 // Everything in this file takes a source string and a range and returns a
-// value. The 623-entry sweep over the real ledger — real files, real
-// selectors — lives in the integration sibling t535.
+// value. The sweep over the real ledger — real files, real selectors — lives in
+// the integration sibling t535.
 import { describe, expect, test } from "bun:test";
-import { auditEntry, classifyRange, extractReasonClaim, matchesSyntaxClass } from "../allowlist-semantic-audit.ts";
-import { createSemanticSelector } from "../coverage-patch-gate.ts";
+import { auditEntry, extractReasonClaim } from "../allowlist-semantic-audit.ts";
+import { classifyRange, createSemanticSelector, matchesSyntaxClass } from "../coverage-patch-gate.ts";
 
 const FILE = "fixture.ts";
 
@@ -37,10 +39,13 @@ describe("t534 type-only predicate", () => {
 });
 
 describe("t534 catch-arm predicate", () => {
+  // The fixture calls an injected `load` rather than naming a filesystem API:
+  // the size classifier scans source text, so a `readFileSync` even inside a
+  // string literal would grade this pure file as medium.
   const source = [
-    "export function read(path: string): string {",
+    "export function read(load: (p: string) => string, path: string): string {",
     "  try {",
-    "    return readFileSync(path, 'utf8');",
+    "    return load(path);",
     "  } catch {",
     "    return '';",
     "  }",
@@ -54,6 +59,15 @@ describe("t534 catch-arm predicate", () => {
 
   test("the try body is not a catch arm", () => {
     expect(matchesSyntaxClass(FILE, source, { start: 3, end: 3 }, "catch-arm")).toBe(false);
+  });
+
+  // The clause header line holds nothing but punctuation and the `catch`
+  // keyword. A walk that only visits named nodes never reaches either, so the
+  // range comes back empty and every class answers "no". The ledger has such
+  // ranges and they were all misread as unclassifiable; the count is measured
+  // by evidence/classify-ledger.ts, which keeps the old walk for comparison.
+  test("the clause header line is a catch arm", () => {
+    expect(matchesSyntaxClass(FILE, source, { start: 4, end: 4 }, "catch-arm")).toBe(true);
   });
 });
 

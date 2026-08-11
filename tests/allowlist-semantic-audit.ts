@@ -9,14 +9,23 @@
 // claim. A reason that no longer describes its code is a waiver granted for a
 // property the code no longer has — the ledger equivalent of a stale line pin.
 //
-// HOW IT DECIDES. Two independent readings meet:
-//   1. `matchesSyntaxClass` / `classifyRange` read the TypeScript AST and say
-//      what the resolved lines actually are.
+// NOT THE GATE. Nothing in this file blocks anything. The blocking check lives
+// in coverage-patch-gate.ts and reads exactly one input — the entry's declared
+// `selector.class` — held against the AST. It never touches `reason`.
+//
+// This module is the record instead: it grades every entry's prose against its
+// code and reports 一致 / 転位 / 判定不能 (#1622 FR-1, FR-7). Two readings meet:
+//   1. `matchesSyntaxClass` / `classifyRange` (from the gate) read the AST and
+//      say what the resolved lines actually are.
 //   2. `extractReasonClaim` reads the prose and says what class it claims.
-// Their agreement is the verdict. A reason that names several possibilities
-// ("defensive, type-only, or spawned-boundary path") claims nothing decidable,
-// so it is reported as undecidable rather than guessed at — this audit reports,
-// it does not adjudicate prose.
+// A reason that names several possibilities ("defensive, type-only, or
+// spawned-boundary path") claims nothing decidable, so it is reported as
+// undecidable rather than guessed at.
+//
+// The prose half stays advisory on purpose. Four designs tried to make it
+// blocking and each was measured false-positive-prone, because `reason` mixes
+// target, rationale, coverage status and reachability in one human sentence.
+// Reading it is useful for a human triaging the ledger; it is not a verdict.
 //
 // This module is pure: sources come in as strings, verdicts go out as values.
 // The sweep over the real ledger lives in tests/integration.
@@ -24,17 +33,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { type AllowlistEntry, parseAllowlist, resolveSemanticSelector } from "./coverage-patch-gate.ts";
-
-// ---------------------------------------------------------------------------
-// Syntax classes. The five kinds of row the ledger's reasons appeal to.
-// ---------------------------------------------------------------------------
-export type SyntaxClass = "type-only" | "catch-arm" | "dispatch-case" | "spawn-only" | "unmeasurable-other";
-
-export interface LineRange {
-  start: number;
-  end: number;
-}
+import {
+  type AllowlistEntry,
+  classifyRange,
+  matchesSyntaxClass,
+  parseAllowlist,
+  type ResolvedLineRange,
+  resolveSemanticSelector,
+  type SyntaxClass,
+} from "./coverage-patch-gate.ts";
 
 const sourceFileCache = new Map<string, ts.SourceFile>();
 
@@ -45,95 +52,6 @@ function sourceFileFor(file: string, source: string): ts.SourceFile {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   sourceFileCache.set(key, parsed);
   return parsed;
-}
-
-interface TokenWithAncestry {
-  token: ts.Node;
-  ancestry: ts.Node[];
-}
-
-/** Every leaf token whose text touches [range.start, range.end], with its ancestor chain. */
-function tokensInRange(file: string, source: string, range: LineRange): TokenWithAncestry[] {
-  const sourceFile = sourceFileFor(file, source);
-  const found: TokenWithAncestry[] = [];
-  const stack: ts.Node[] = [];
-  const visit = (node: ts.Node): void => {
-    const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-    const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
-    if (end < range.start || start > range.end) return;
-    if (node.getChildCount(sourceFile) === 0) {
-      if (start >= range.start && start <= range.end) found.push({ token: node, ancestry: [...stack] });
-      return;
-    }
-    stack.push(node);
-    ts.forEachChild(node, visit);
-    stack.pop();
-  };
-  ts.forEachChild(sourceFile, visit);
-  return found;
-}
-
-/** `if (import.meta.main) …` — the branch that only a spawned process enters. */
-function isImportMetaMainBranch(node: ts.Node): boolean {
-  if (!ts.isIfStatement(node)) return false;
-  const test = node.expression;
-  if (!ts.isPropertyAccessExpression(test) || test.name.text !== "main") return false;
-  const target = test.expression;
-  return ts.isMetaProperty(target) && target.keywordToken === ts.SyntaxKind.ImportKeyword;
-}
-
-/** The `main` entrypoint itself: only the spawned CLI boundary calls it. */
-function isMainEntrypoint(node: ts.Node): boolean {
-  if (ts.isFunctionDeclaration(node)) return node.name?.text === "main";
-  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
-    const parent = node.parent;
-    return ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name) && parent.name.text === "main";
-  }
-  return false;
-}
-
-/** Constructs that TypeScript erases before the code ever runs. */
-function isTypeErasedNode(node: ts.Node): boolean {
-  if (ts.isTypeNode(node)) return true;
-  if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) return true;
-  if (ts.isTypeParameterDeclaration(node)) return true;
-  if (ts.isTypeOnlyImportOrExportDeclaration(node)) return true;
-  return false;
-}
-
-// ---------------------------------------------------------------------------
-// The predicates. Each answers a yes/no about a resolved range.
-// ---------------------------------------------------------------------------
-export function matchesSyntaxClass(file: string, source: string, range: LineRange, cls: SyntaxClass): boolean {
-  const tokens = tokensInRange(file, source, range);
-  if (tokens.length === 0) return false;
-  switch (cls) {
-    case "type-only":
-      return tokens.every(({ ancestry }) => ancestry.some(isTypeErasedNode));
-    case "catch-arm":
-      return tokens.every(({ ancestry }) => ancestry.some(ts.isCatchClause));
-    case "dispatch-case":
-      return tokens.every(({ ancestry }) => ancestry.some((n) => ts.isCaseClause(n) || ts.isDefaultClause(n)));
-    case "spawn-only":
-      return tokens.every(({ ancestry }) =>
-        ancestry.some((n) => isImportMetaMainBranch(n) || isMainEntrypoint(n)),
-      );
-    default:
-      return false;
-  }
-}
-
-// Reporting order for "what is this range actually?". The three syntactic forms
-// come first because they are properties of the lines themselves; spawn-only is
-// a property of the enclosing entrypoint and so is the weaker claim. A catch arm
-// inside `main` is reported as a catch arm.
-const CLASS_PRECEDENCE: readonly SyntaxClass[] = ["type-only", "catch-arm", "dispatch-case", "spawn-only"];
-
-export function classifyRange(file: string, source: string, range: LineRange): SyntaxClass {
-  for (const cls of CLASS_PRECEDENCE) {
-    if (matchesSyntaxClass(file, source, range, cls)) return cls;
-  }
-  return "unmeasurable-other";
 }
 
 // ---------------------------------------------------------------------------
@@ -218,9 +136,9 @@ function declaredFunction(node: ts.Node): { name: string; node: ts.Node } | null
   return null;
 }
 
-export function functionRanges(file: string, source: string): Map<string, LineRange[]> {
+export function functionRanges(file: string, source: string): Map<string, ResolvedLineRange[]> {
   const sourceFile = sourceFileFor(file, source);
-  const ranges = new Map<string, LineRange[]>();
+  const ranges = new Map<string, ResolvedLineRange[]>();
   const record = (name: string, node: ts.Node): void => {
     const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
     const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
@@ -246,7 +164,7 @@ export type AuditVerdict = "一致" | "転位" | "判定不能";
 export interface EntryAudit {
   file: string;
   function: string;
-  resolved: LineRange;
+  resolved: ResolvedLineRange;
   verdict: AuditVerdict;
   claimedClass: SyntaxClass | null;
   actualClass: SyntaxClass;

@@ -39,7 +39,7 @@ describe("t535 ledger sweep", () => {
 
   test("every selector resolves — an unresolvable ledger is a hard failure, not an undecidable one", () => {
     // auditAllowlist throws on an unresolvable selector; reaching here proves
-    // all 623 resolved. The range itself must be a real, ordered line span.
+    // every entry resolved. The range itself must be a real, ordered line span.
     for (const audit of audits) {
       expect(audit.resolved.start).toBeGreaterThan(0);
       expect(audit.resolved.end).toBeGreaterThanOrEqual(audit.resolved.start);
