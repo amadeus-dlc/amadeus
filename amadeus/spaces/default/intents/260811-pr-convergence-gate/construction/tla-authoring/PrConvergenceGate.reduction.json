@@ -1,0 +1,52 @@
+{
+  "declaredIdentity": "sha256:4c6bf2d4791d00bbae9474f1c2e62c334182dc878d23a6e9b476930610f0b988",
+  "items": [
+    {
+      "reductionItem": "Two alternating PR head epochs",
+      "preservedMeaning": "A new head differs from the report-bound head and invalidates its evidence; more than two concrete SHA values do not add a distinct safety behavior.",
+      "sourceSubjects": ["FR-2", "FR-3"]
+    },
+    {
+      "reductionItem": "Boolean required-all artifact completion",
+      "preservedMeaning": "The unsafe distinction is whether every declared artifact is present, so the missing-member identity is abstracted into a single false value.",
+      "sourceSubjects": ["FR-5"]
+    }
+  ],
+  "injections": {
+    "TypeOK": {
+      "witness": "head = 0",
+      "fallingMutation": {
+        "find": "TypeOK ==\n  /\\ head",
+        "replace": "TypeOK == FALSE\n  /\\ head"
+      }
+    },
+    "EvidenceCurrentHead": {
+      "witness": "attested",
+      "fallingMutation": {
+        "find": "EvidenceCurrentHead ==\n  (attested",
+        "replace": "EvidenceCurrentHead == FALSE /\\\n  (attested"
+      }
+    },
+    "SensorRequiresAttestation": {
+      "witness": "sensorPassed",
+      "fallingMutation": {
+        "find": "SensorRequiresAttestation ==\n  sensorPassed",
+        "replace": "SensorRequiresAttestation == FALSE /\\\n  sensorPassed"
+      }
+    },
+    "CodeGenerationGuarded": {
+      "witness": "codeGenerationDone",
+      "fallingMutation": {
+        "find": "CodeGenerationGuarded ==\n  codeGenerationDone",
+        "replace": "CodeGenerationGuarded == FALSE /\\\n  codeGenerationDone"
+      }
+    },
+    "WorkflowGuarded": {
+      "witness": "workflowDone",
+      "fallingMutation": {
+        "find": "WorkflowGuarded ==\n  workflowDone",
+        "replace": "WorkflowGuarded == FALSE /\\\n  workflowDone"
+      }
+    }
+  }
+}

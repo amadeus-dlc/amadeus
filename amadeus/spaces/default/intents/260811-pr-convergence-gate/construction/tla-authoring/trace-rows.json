@@ -1,0 +1,32 @@
+[
+  {
+    "subject": "FR-2",
+    "invariant": "TypeOK",
+    "rationale": "The report lifecycle remains within the declared head epochs and verdict states."
+  },
+  {
+    "subject": "FR-2",
+    "invariant": "EvidenceCurrentHead",
+    "rationale": "A head change invalidates evidence from the previous report lifecycle epoch."
+  },
+  {
+    "subject": "FR-3",
+    "invariant": "EvidenceCurrentHead",
+    "rationale": "Attestation and sensor evidence are bound to the current PR head."
+  },
+  {
+    "subject": "FR-4",
+    "invariant": "SensorRequiresAttestation",
+    "rationale": "A blocking sensor verdict cannot pass before the current report is attested."
+  },
+  {
+    "subject": "FR-5",
+    "invariant": "CodeGenerationGuarded",
+    "rationale": "Code Generation completion requires current evidence and all required artifacts."
+  },
+  {
+    "subject": "FR-5",
+    "invariant": "WorkflowGuarded",
+    "rationale": "Workflow completion additionally requires a converged or human-override verdict."
+  }
+]

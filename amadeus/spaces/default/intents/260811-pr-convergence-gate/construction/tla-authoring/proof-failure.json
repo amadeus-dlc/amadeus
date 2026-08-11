@@ -1,0 +1,22 @@
+{
+  "ok": false,
+  "failure": {
+    "missing": ["tlc-exploration", "falling-proof", "vacuity-proof"],
+    "failedFallingInvariants": [
+      "TypeOK",
+      "EvidenceCurrentHead",
+      "SensorRequiresAttestation",
+      "CodeGenerationGuarded",
+      "WorkflowGuarded"
+    ],
+    "failedVacuityInvariants": [
+      "TypeOK",
+      "EvidenceCurrentHead",
+      "SensorRequiresAttestation",
+      "CodeGenerationGuarded",
+      "WorkflowGuarded"
+    ],
+    "detail": "The production referee adapter creates a receipt for the unregistered PrConvergenceGate model, but FsTlcToolchain validates that receipt through loadVerifiedTlaSources and rejects it because model-map.json cannot contain the model until proof succeeds. Every baseline, falling, and vacuity run therefore fails with PreparationError/MODEL_RECEIPT: verified model is unavailable: PrConvergenceGate."
+  },
+  "reason": "The author-new route requires proof before registration, while the real proof toolchain requires registration before accepting the model receipt. No transient referee-only verification path exists."
+}
