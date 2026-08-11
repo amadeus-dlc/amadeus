@@ -6,6 +6,8 @@ name: CI
 # substrate is absent (as it is on the runner), so this stays green without credentials.
 on:
   workflow_dispatch: {}
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
     # Snapshot-only merges must not create another snapshot review branch.
@@ -48,8 +50,8 @@ jobs:
         id: filter
         env:
           EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'merge_group' && github.event.merge_group.head_sha || github.sha }}
         run: |
           set -euo pipefail
 
@@ -59,7 +61,7 @@ jobs:
           fi
 
           list_changed_files() {
-            if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            if [[ "${EVENT_NAME}" == "pull_request" || "${EVENT_NAME}" == "merge_group" ]]; then
               git diff --name-only -z --no-renames "${BASE_SHA}...${HEAD_SHA}"
             elif [[ "${BASE_SHA}" =~ ^0+$ ]]; then
               git ls-tree -r --name-only -z "${HEAD_SHA}"
@@ -126,12 +128,14 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
 
           case "${EVENT_NAME}" in
             pull_request) BASE_REVISION="${PULL_REQUEST_BASE_SHA}" ;;
+            merge_group) BASE_REVISION="${MERGE_GROUP_BASE_SHA}" ;;
             push) BASE_REVISION="${PUSH_BEFORE_SHA}" ;;
             workflow_dispatch)
               if ! BASE_REVISION="$(git rev-parse --verify --quiet HEAD^)"; then
