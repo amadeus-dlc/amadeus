@@ -273,13 +273,24 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     expect(result.kind === "ready" ? "ready" : JSON.stringify(result)).toBe("ready");
   });
 
-  test("the plugin stage declares the empty scope set — install is the only door", () => {
+  test("the plugin stage leaves scope assignment to the host", () => {
     const parsed = parseStageFrontmatter(readFileSync(join(PLUGIN_SRC, "stages", "pr-convergence.md")));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.value.slug).toBe(PLUGIN);
     expect(parsed.value.seams.sensors).toEqual([]);
     expect(existsSync(join(PLUGIN_SRC, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(true);
+  });
+
+  test("the shipped host binds PR convergence to every self scope", () => {
+    const config = JSON.parse(readFileSync(join(REPO_ROOT, "amadeus", "config.json"), "utf8")) as {
+      plugin?: { "scope-bindings"?: Record<string, Record<string, string[]>> };
+    };
+    const bindings = config.plugin?.["scope-bindings"];
+    const selfScopes = ["self-document", "self-feature", "self-fix", "self-refactor"];
+
+    expect(bindings?.[PLUGIN]?.[PLUGIN]).toEqual(selfScopes);
+    expect(bindings?.["formal-model-check"]?.["formal-model-check"]).toEqual(selfScopes);
   });
 });
 

@@ -2,7 +2,7 @@
 slug: pr-convergence
 phase: construction
 execution: CONDITIONAL
-condition: Opt-in — install is the boundary. Once composed, runs on an explicit `--stage pr-convergence` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).
+condition: Runs when selected by a host-owned scope binding or by an explicit `--stage pr-convergence` invocation (with or without `--single`).
 lead_agent: amadeus-developer-agent
 support_agents:
   - amadeus-quality-agent
@@ -20,10 +20,10 @@ scopes: []
 
 The `pr-convergence` plugin stage drives one pull request to **convergence**:
 no merge conflict, every required check green, and every actionable review
-thread terminalised. It is an opt-in plugin stage (empty `scopes:`) — install
-is the opt-in boundary, so once composed it is reachable via
-`amadeus-orchestrate next --stage pr-convergence`. It never joins a stock
-scope's workflow. Whether a run starts depends on the Intent autonomy mode:
+thread terminalised. Its empty `scopes:` keeps scope ownership in the host:
+once composed, the host can assign it through `plugin.scope-bindings`, and it
+remains directly reachable via `amadeus-orchestrate next --stage
+pr-convergence`. Whether a run starts depends on the Intent autonomy mode:
 under `none` a human decides when to start it; under `semi` or `full`, an
 engine advisory raised for this plugin is routed through the autonomy ladder
 as a `question` occurrence (`amadeus-advisory-choice.ts`), and a `run-now`

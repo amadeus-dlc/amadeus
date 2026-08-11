@@ -55,6 +55,14 @@
           "self-fix",
           "self-refactor"
         ]
+      },
+      "pr-convergence": {
+        "pr-convergence": [
+          "self-document",
+          "self-feature",
+          "self-fix",
+          "self-refactor"
+        ]
       }
     }
   }
