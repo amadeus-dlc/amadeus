@@ -389,6 +389,49 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     ));
   });
 
+  test("keeps the ruling prompt fail-closed for a malformed numeric batch identity", () => {
+    const project = projectWithOutcomes();
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
+    expect(pool.initialEnqueue({
+      idempotencyKey: "malformed-init",
+      batchId: "99x",
+      cap: 1,
+      units: [{ unitId: "unit-z", dependsOn: [] }],
+    }).ok).toBe(true);
+    const acquired = pool.acquire({ idempotencyKey: "malformed-acquire", batchId: "99x" });
+    expect(acquired.ok).toBe(true);
+    if (!acquired.ok) throw new Error(acquired.reason);
+    const attempt = acquired.projection.active[0];
+    expect(pool.confirmDispatch({
+      idempotencyKey: "malformed-confirm",
+      batchId: "99x",
+      attemptId: attempt.attemptId,
+      nativeHandle: "malformed-native",
+    }).ok).toBe(true);
+    expect(pool.settleRelease({
+      idempotencyKey: "malformed-settle",
+      batchId: "99x",
+      attemptId: attempt.attemptId,
+      outcome: "failed",
+    }).ok).toBe(true);
+    // "99x" partial-parses to 99 via Number.parseInt, but a malformed numeric
+    // identity cannot be proven historical: the ruling prompt must stay
+    // fail-closed instead of silently treating the failure as out of scope.
+    emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+      "Batch number": "99x",
+      "Unit name": "unit-z",
+      Reason: "malformed",
+      Stage: "build-and-test",
+      "Attempt Id": attempt.attemptId,
+    }, project);
+
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("ask");
+  });
+
   test("classifies a succeeded Unit required gap as unexpected without a partial path", () => {
     const project = projectWithOutcomes({ unit: "unit-a", artifact: "code-summary" });
     const result = next(project);

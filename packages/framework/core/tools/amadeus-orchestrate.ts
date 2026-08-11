@@ -3987,16 +3987,17 @@ function terminalFailureStopsNext(
 // The ruling prompt shares the same population scope as the terminal guard
 // above: a closed failure (terminal + SWARM_BATON_RETURNED) whose batch the
 // compiled Bolt DAG no longer carries is history and must not stop `next`
-// with `await-unit-ruling` either. Non-numeric batch identities (solo
-// retries) and missing batch ids cannot be proven historical, so they keep
-// the fail-closed ruling behavior.
+// with `await-unit-ruling` either. Anything that is not a strict positive
+// decimal batch id — non-numeric identities (solo retries), malformed
+// numerics ("99x" partial-parse), zero-padded or zero ids — and a missing
+// batch id cannot be proven historical, so they keep the fail-closed
+// ruling behavior.
 function failureOutsideRuntimePopulation(
   entry: { unit: string; batch?: string },
   batches: readonly (readonly string[])[],
 ): boolean {
-  if (entry.batch === undefined) return false;
+  if (entry.batch === undefined || !/^[1-9][0-9]*$/.test(entry.batch)) return false;
   const index = Number.parseInt(entry.batch, 10) - 1;
-  if (!Number.isInteger(index) || index < 0) return false;
   return index >= batches.length || !batches[index].includes(entry.unit);
 }
 
