@@ -61,7 +61,7 @@ describe("t432 config vocabulary drift", () => {
       readFileSync(join(ROOT, "docs", "reference", "19-layered-config.md"), "utf-8"),
     ];
     for (const entry of AMADEUS_CONFIG_REGISTRY) {
-      const defaultText = Array.isArray(entry.defaultValue)
+      const defaultText = typeof entry.defaultValue === "object"
         ? JSON.stringify(entry.defaultValue)
         : String(entry.defaultValue);
       for (const document of documents) {

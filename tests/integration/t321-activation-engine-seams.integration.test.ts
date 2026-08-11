@@ -1,5 +1,5 @@
 // covers: file:packages/framework/core/tools/amadeus-plugin-runtime.ts, function:emitPluginAdvisories
-// size: small
+// size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";

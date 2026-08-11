@@ -100,8 +100,8 @@ export const defaultActivationFs: ActivationFs = {
 
 // projectRootForHost — the project root derived from the plugin host root.
 // The two are DIFFERENT directories and conflating them is the defect these
-// helpers name: the host root is the harness directory (`.claude/`,
-// `dirname(TOOLS_DIR)`) and owns host state (the composition record, the
+// helpers name: the host root is the active harness directory and owns host
+// state (the composition record, the
 // verdict file), while the watched TLA+ specs are a PROJECT asset under
 // `amadeus/spaces/<space>/specs/` — the formal-model-check stage body names
 // them project-relative (`--model amadeus/spaces/default/specs/tla/FormalElection.tla`).

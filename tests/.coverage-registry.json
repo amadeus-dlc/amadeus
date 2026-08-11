@@ -1151,7 +1151,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:applyPluginScopeOptIns",
+      "unitId": "function:applyPluginScopeBindings",
       "minMechanism": "none",
       "coveredBy": [
         {

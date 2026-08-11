@@ -1,5 +1,5 @@
 // covers: file:scripts/package.ts
-// size: small
+// size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";

@@ -297,11 +297,20 @@ describe("t353 plugin install verb (U2, #1597)", () => {
         seen.push([...argv]);
         return { status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) };
       }, (message) => warnings.push(message));
-      // The engine's own activation advisory may fire on this bare fixture
-      // (no spec model map); the declared route is what this test joins.
+      // The plugin-owned activation evaluator runs before the declared
+      // authoring-hold route on this bare fixture (no spec model map).
       expect(raised.some((advisory) => String(advisory.code) === "authoring-hold")).toBe(false);
-      expect(seen).toEqual([["bun", join(project, "plugins", PLUGIN, "tools", "tla-authoring.ts"), "advisory", "hold"]]);
-      expect(existsSync(seen[0]?.[1] as string)).toBe(true);
+      expect(seen).toEqual([
+        [
+          "bun",
+          join(project, "plugins", PLUGIN, "tools", "plugin-activation.ts"),
+          "advisory",
+          harness,
+          "requirements-analysis",
+        ],
+        ["bun", join(project, "plugins", PLUGIN, "tools", "tla-authoring.ts"), "advisory", "hold"],
+      ]);
+      expect(seen.every((argv) => existsSync(argv[1] as string))).toBe(true);
       expect(warnings).toEqual([]);
       expect(declaredHandoffStage(project, PLUGIN, "authoring-hold")).toBe("tla-authoring");
     } finally {

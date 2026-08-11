@@ -1,5 +1,5 @@
-// covers: file:plugins/formal-model-check/tools/plugin-activation.ts, file:packages/framework/core/tools/amadeus-plugin-runtime.ts
-// size: small
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts, file:packages/framework/core/tools/amadeus-plugin-runtime.ts, function:advisoryLatchDir
+// size: medium
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -18,6 +18,7 @@ import {
   unlatchedAdvisories,
   type Advisory,
 } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
+import { advisoryLatchDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { writeActivationModelAssets } from "../harness/formal-model-fixture.ts";
 
 const roots: string[] = [];
@@ -62,6 +63,9 @@ describe("plugin-owned activation and generic host latch", () => {
     expect(unlatchedAdvisories(dir, [advisory], "2026-08-11T00:00:00Z")).toEqual([advisory]);
     expect(unlatchedAdvisories(dir, [advisory])).toEqual([]);
     expect(advisoryLatchPath(dir, advisory.plugin, advisory.code)).toEndWith("fixture-plugin.fixture-hold");
+    expect(advisoryLatchDir("/project", "intent-a", "space-a")).toEndWith(
+      "amadeus/spaces/space-a/intents/intent-a/.amadeus-advisory-latch",
+    );
   });
 
   test("an unreadable latch fails open", () => {

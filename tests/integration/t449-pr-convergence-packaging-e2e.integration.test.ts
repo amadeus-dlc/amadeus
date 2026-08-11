@@ -23,7 +23,16 @@
 // (fs-tests-integration-first).
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -269,7 +278,8 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.value.slug).toBe(PLUGIN);
-    expect(parsed.value.seams.sensors).toEqual(["pr-convergence-report-format"]);
+    expect(parsed.value.seams.sensors).toEqual([]);
+    expect(existsSync(join(PLUGIN_SRC, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(true);
   });
 });
 
@@ -287,21 +297,21 @@ describe("t449 install overlays the guard's produces (FR-2a/2b, ADR-5)", () => {
     expect(after).toBe(before.toString("utf-8").replace("  - code-summary\n", `  - code-summary\n  - ${SEAM_ENTRY}\n`));
   });
 
-  test("installed: the plugin stage compiles with its sensor resolved (FR-6b)", () => {
+  test("installed: the plugin stage compiles without a host sensor dependency (FR-6b)", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
     const stage = compileFromHost().stages.find((s) => s.slug === PLUGIN);
     expect(stage).toBeDefined();
     expect(stage?.scopes ?? []).toEqual([]);
-    expect((stage?.sensors_applicable ?? []).map((s) => s.id)).toEqual(["pr-convergence-report-format"]);
+    expect(stage?.sensors_applicable ?? []).toEqual([]);
+    expect(existsSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"))).toBe(false);
   });
 
-  test("a stage declaring an unknown sensor id would fail the compile loudly", () => {
-    // The fail-closed ordering constraint of ADR-5, demonstrated on the same
-    // host: had the core manifest not landed first, compose would compile a
-    // stage whose sensor cannot resolve.
+  test("the plugin-owned sensor tool remains available after compose", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
-    rmSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"));
-    expect(() => compileFromHost()).toThrow(/UNKNOWN_SENSOR: plugin pr-convergence stage pr-convergence/);
+    expect(existsSync(join(host, "plugins", PLUGIN, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(
+      true,
+    );
+    expect(() => compileFromHost()).not.toThrow();
   });
 });
 

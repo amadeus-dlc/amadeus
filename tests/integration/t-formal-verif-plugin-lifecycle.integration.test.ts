@@ -158,7 +158,14 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     const node = composedGraph.stages.find((s) => s.slug === PLUGIN);
     expect(node, "formal-model-check must be in the compiled graph after compose").toBeDefined();
     expect(node!.phase).toBe("construction");
-    expect(node!.scopes ?? []).toEqual(["self-document", "self-feature", "self-fix", "self-refactor"]);
+    expect(node!.scopes ?? []).toEqual([]);
+    const scopeGrid = JSON.parse(composedGraph.gridJson) as Record<
+      string,
+      { stages: Record<string, "EXECUTE" | "SKIP"> }
+    >;
+    for (const scope of ["self-document", "self-feature", "self-fix", "self-refactor"]) {
+      expect(scopeGrid[scope]?.stages[PLUGIN]).toBe("EXECUTE");
+    }
 
     expect(node!.lead_agent).toBe("amadeus-quality-agent");
     expect(node!.execution).toBe("CONDITIONAL");

@@ -1,5 +1,5 @@
 // covers: dir:packages/framework/core, dir:plugins
-// size: small
+// size: medium
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";

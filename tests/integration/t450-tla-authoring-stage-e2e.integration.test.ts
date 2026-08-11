@@ -132,7 +132,7 @@ describe("the authoring stage document (BR-U5-07, BR-U5-13)", () => {
     expect(frontmatter.slug).toBe(STAGE_SLUG);
     expect(frontmatter.phase).toBe("construction");
     expect(frontmatter.number).toBe("3.8");
-    expect(frontmatter.scopes ?? []).toEqual(["self-document", "self-feature", "self-fix", "self-refactor"]);
+    expect(frontmatter.scopes ?? []).toEqual([]);
     expect(frontmatter.requires_stage).toEqual(["build-and-test"]);
     expect(frontmatter.consumes).toEqual([{ artifact: "requirements", required: false }]);
     expect(frontmatter.execution).toBe("CONDITIONAL");
