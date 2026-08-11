@@ -1103,5 +1103,12 @@
     "dirName": "260810-test-time-factor",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ff124-287b-77ff-8667-8565a8b879fd",
+    "slug": "pr-convergence-gate",
+    "dirName": "260811-pr-convergence-gate",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
