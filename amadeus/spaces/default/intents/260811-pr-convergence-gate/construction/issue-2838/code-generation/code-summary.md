@@ -23,5 +23,6 @@
 - Step 6 の commit、push、GitHub 提出、実 linked report の生成を完了した。
 - live blocking sensor で plugin script の projected path が basename 化される不具合を検出し、plugin subtree を保持する resolver と回帰試験を追加した。修正後の live fire は同一 digest の `SENSOR_PASSED` を記録した。
 - 実 CLI の approval gate で blocking sensor 定数の TDZ を検出し、`import.meta.main` dispatch より前へ runtime 定数を移動した。direct CLI 回帰試験を追加し、47 tests・90 assertions、typecheck、lint、build の成功を確認した。
+- Unit path 移行後も過去の成功済み出力を永久に current 扱いする問題を修正した。より新しい別 path の digest-bound PASS がある場合だけ、欠落した旧 PASS を supersede し、unresolved・改変済み・唯一の欠落出力は引き続き fail closed とする。targeted suite は49 tests・92 assertionsで成功した。
 - GitHub 提出後、sibling `pr-convergence-report.md` に記録する現行 PR と local/remote/PR head へ `created` report、canonical attestation、blocking sensor PASS を束縛する手順を完了した。
 - degrade-path の Unit 名を stage slug と衝突しない `issue-2838` に修正した。
