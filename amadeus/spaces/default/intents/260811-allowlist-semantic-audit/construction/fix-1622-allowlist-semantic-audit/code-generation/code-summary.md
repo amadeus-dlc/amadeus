@@ -104,6 +104,23 @@ FR-6 が求める 2 クラスの検出は、`reason` 面から `selector.class` 
   「別 Issue へ分離する。起票は construction までに行い、Issue 番号は construction の記録側へ残す」
   と定めた分離先であり、承認済み requirements.md は書き戻していない
 
+## §12a レビュー後の是正(iteration 1、verdict READY)
+
+reviewer(`amadeus-architecture-reviewer-agent`)が MAJOR 1 件を捕捉した。conductor が実測で追認し是正済み。
+
+- **MAJOR(是正済み)**: `evidence/ci-wiring.md` がガードの所属ジョブを `coverage` と誤記していた。実測
+  (`grep -nE "^  [a-z-]+:" .github/workflows/ci.yml`)では `:471-477` の Patch coverage gate ステップは
+  `coverage-head`(`:428`)の内側で、`coverage`(`:573`)は別ジョブ。blocking 性自体は成立している —
+  `coverage` が `needs: coverage-head` を持ち、先頭ステップ `test "${{ needs.coverage-head.result }}" = success`
+  (`:583-586`)が既定シェル `bash -e` の下で結果を assert するため赤が伝播する。`ci-wiring.md` と PR 本文の
+  両方を訂正した(`cid:code-generation:same-root-inventory`)
+- **FOLLOW-UP(conductor が閉包)**: FR-3 撤回のユーザー承認の実在は reviewer の read scope 外だった。
+  audit シャードの実測で当該時間帯に `HUMAN_TURN` 18 件(seq 226-259、2026-08-11T15:20Z〜16:15Z)を確認し、
+  plan の「契約改訂」3 段が記録する裁定の時間窓と一致する。裁定文そのものの正本は
+  `code-generation-plan.md` の当該節である
+- **NIT(不採用)**: FR-6 の 2 クラスが同一コードパス(`validSemanticSelector` の拒否)を 2 通りに解釈している
+  という指摘。t536 の 2 テストで区別しており実害がないため、記録のみとする
+
 ## 変更ファイル
 
 **正本**

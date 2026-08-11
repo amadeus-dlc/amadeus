@@ -6,13 +6,15 @@ FR-5 は「ガードを CI へ blocking で配線する」ことを求め、`cid
 により **集約ジョブ `ci-success` の `needs` に載る経路**であることを要求する。
 
 結論: **新規ジョブは追加しない**。宣言クラス検査は `tests/coverage-patch-gate.ts --check` の
-内側にあり、その `--check` は既に集約 `needs` に載る `coverage` ジョブのステップである。
+内側にあり、その `--check` は `coverage-head` ジョブ(`ci.yml:428`)のステップである。
+`coverage-head` は集約 `needs` に**直接は載らない**が、集約に載る `coverage` ジョブ(`:573`)が
+`needs: coverage-head` を持ち、その先頭ステップで結果を assert するため赤は伝播する(下記 2 節)。
 `cid:code-generation:c1-2814-runs-when-vs-blocks-merge` が区別する 2 面(いつ走るか / 赤が止めるか)を
 それぞれ実読で確認した。
 
 ## 1. ガードが走る場所
 
-`.github/workflows/ci.yml:471-477`(逐語):
+`.github/workflows/ci.yml:428`(逐語 `  coverage-head:`)のジョブ内、`:471-477`(逐語):
 
 ```yaml
       - name: Patch coverage gate
@@ -24,9 +26,33 @@ FR-5 は「ガードを CI へ blocking で配線する」ことを求め、`cid
           bun tests/coverage-patch-gate.ts --check | tee /tmp/patch-gate-summary.txt
 ```
 
-`set -euo pipefail` があるため `--check` の非0終了はステップを、ひいては `coverage` ジョブを落とす。
+`set -euo pipefail` があるため `--check` の非0終了はステップを、ひいては `coverage-head` ジョブを落とす。
 宣言クラス検査はこの `--check` の内部(`runCheck` の allowlist 解決直後)にあり、
 別の入口を持たない — requirements.md Constraints の「第 2 の解釈器を作らない」に従う。
+
+`coverage-head` の赤が集約へ届く経路(`ci.yml:573-586`、逐語):
+
+```yaml
+  coverage:
+    name: Coverage Report
+    needs:
+      - changes
+      - coverage-head
+      - coverage-base
+    if: ${{ always() && needs.changes.outputs.coverage == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require coverage jobs
+        run: |
+          test "${{ needs.coverage-head.result }}" = success
+          test "${{ needs.coverage-base.result }}" = success
+```
+
+`coverage` は `if: always()` で必ず起動し、先頭ステップの `test` が `coverage-head` の結果を
+assert する。GitHub Actions の既定シェルは `bash -e` なので、この `test` が偽なら `coverage` ジョブが
+落ちる。**この 1 段の伝播があるため、`coverage-head` が集約 `needs` に直接載っていなくても
+赤はマージを止める**(2 節の `require_result "coverage"` が拾う)。
 
 ## 2. 赤がマージを止めること
 

@@ -314,3 +314,19 @@ Step 3 の全数分類で `転位` が RE の下限 18 件を大きく超えた�
 Step 4 の是正工数が本 intent の想定を超える。その場合は**実装を止めて報告する** —
 スコープを縮めるかどうかは利用者の裁定である(`cid:build-and-test:no-silent-scope-narrowing` /
 requirements.md OQ-3)。builder は独断でスコープを縮小しない。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-11T18:50:02Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+改訂後の契約(selector.class データフィールド方式)の実装と成果物の数値主張を evidence/ の述語スクリプトと台帳の実体から独立に再計算して一致を確認した。MAJOR 1 件(ci-wiring.md がガードの所属ジョブを coverage と誤記。実際は coverage-head で blocking 性は coverage の needs 経由で成立)は conductor が実測追認のうえ是正済み。
+
+### Findings
+
+- FOLLOW-UP | (MAJOR) evidence/ci-wiring.md:8-9 がガードの所属ジョブを coverage と記載していたが、ci.yml:471-477 の Patch coverage gate ステップは coverage-head(:428)の内側で、coverage(:573)は別ジョブ。blocking 性は coverage の needs: coverage-head と :583-586 の test assert 経由で成立するため FR-5 の実効は否定されない。ci-wiring.md と PR 本文の両方を訂正済み。
+- FOLLOW-UP | FR-3 撤回のユーザー承認の実在は reviewer の read scope 外で検証できなかった。conductor が audit シャードで HUMAN_TURN 18 件(seq 226-259、2026-08-11T15:20Z〜16:15Z)を実測し、plan の契約改訂 3 段が記録する裁定の時間窓と一致することを確認した。
+- NIT | FR-6 の 2 クラス(規約違反 / 構文クラス不定)が実質同一のコードパス(validSemanticSelector の拒否)を 2 通りに解釈している。t536 の 2 テストで区別しており実害がないため記録のみ。
