@@ -22,5 +22,6 @@
 - 実装計画にあった独立 `pr-convergence-report.ts` / core attestation module は、plugin schema を core に漏らさないため `pr-convergence-attestation.ts` と既存 audit emitter の canonical event 拡張へ集約した。
 - Step 6 の commit、push、GitHub 提出、実 linked report の生成を完了した。
 - live blocking sensor で plugin script の projected path が basename 化される不具合を検出し、plugin subtree を保持する resolver と回帰試験を追加した。修正後の live fire は同一 digest の `SENSOR_PASSED` を記録した。
-- [GitHub Pull Request #2905](https://github.com/amadeus-dlc/amadeus/pull/2905) を CLI から作成し、local/remote/PR head `076489e6d4abfd62020114dcd3e6bb69ac3c5c5f` に束縛した `created` report、canonical attestation、blocking sensor PASS を生成した。
+- 実 CLI の approval gate で blocking sensor 定数の TDZ を検出し、`import.meta.main` dispatch より前へ runtime 定数を移動した。direct CLI 回帰試験を追加し、47 tests・90 assertions、typecheck、lint、build の成功を確認した。
+- [GitHub Pull Request #2906](https://github.com/amadeus-dlc/amadeus/pull/2906) を CLI から作成し、local/remote/PR head `8e5c09ab072335f1035e01ba60ee320dfe2f5a05` に束縛した `created` report、canonical attestation、blocking sensor PASS を生成した。
 - degrade-path の Unit 名を stage slug と衝突しない `issue-2838` に修正した。

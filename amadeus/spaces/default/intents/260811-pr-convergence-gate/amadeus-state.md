@@ -45,6 +45,7 @@ autonomy=fullで
 
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
+- **Skeleton Stance**: off
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -87,7 +88,7 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
+- [?] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] tla-authoring — EXECUTE
@@ -111,7 +112,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-d3ae578b5ba56163ec64ca08a19b4186
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-11T15:05:03Z
+- **Last Updated**: 2026-08-11T22:50:50Z
 
 ## Session Resume Point
 - **Last Completed Stage**: requirements-analysis

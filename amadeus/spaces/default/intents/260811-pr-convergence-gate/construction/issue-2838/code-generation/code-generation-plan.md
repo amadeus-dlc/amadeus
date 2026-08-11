@@ -54,3 +54,17 @@
 - self scope は有効な linked PR、canonical attestation、fresh blocking sensor pass なしに完了できず、non-self opt-in の既存挙動は変わらない。
 - plugin drop/recompose 後も host-owned 契約が復元可能で、core に GitHub または PR レポート固有スキーマを持ち込まない。
 - lint、typecheck、test、build、distribution、source-only の各検証が成功し、tracked generated surface を追加しない。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-11T22:50:39Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-8は計画、実装要約、検証結果に一貫してトレースされている。generic coreとplugin固有PR schemaの境界、全completion chokepointのfail-closed化、head/content/eventに束縛されたattestationとblocking sensor、self/non-self scopeの互換境界はいずれも整合する。created reportはconverged=falseのCode Generation時点として正しく、Intent・Unit・PR・3種head・content digestが要約記載の現行headと一致する。包括的なunit/integration/distribution検証も成功しており、実装可能性、保守性、依存関係、blast radiusにBLOCKER根拠は認められない。
+
+### Findings
+
+- None
