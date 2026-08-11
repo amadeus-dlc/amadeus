@@ -132,11 +132,19 @@ describe("t222 CI snapshot publication boundary", () => {
 
     // The full blocking dependency set: dropping any entry must be as loud as
     // re-introducing a benchmark job.
+    //
+    // `control-byte-gate` joined this set for Issue #2814. It runs with no
+    // `needs` and no `if` — a path filter would excuse exactly the changes it
+    // exists to catch — but "CI Success" is this repository's only required
+    // status check, so a job outside this set is advisory however loudly it
+    // fails. Independence governs WHEN the job runs; membership here governs
+    // whether a red run blocks the merge.
     const ciSuccessNeeds = jobs["ci-success"]?.needs;
     expect(Array.isArray(ciSuccessNeeds)).toBe(true);
     expect(new Set(ciSuccessNeeds as string[])).toEqual(
       new Set([
         "changes",
+        "control-byte-gate",
         "typecheck",
         "lint",
         "distribution-contract",
@@ -225,9 +233,15 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
+      "- changes\n      - control-byte-gate\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
+    // Asserted unconditionally, ahead of the `changes`-driven case branches:
+    // the control-byte gate has no path filter, so a docs-only or amadeus-only
+    // pull request must still be held to its result (Issue #2814).
+    expect(ciSuccessJob).toContain(
+      `require_result "control-byte-gate" "\${{ needs.control-byte-gate.result }}"`,
+    );
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.drift }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.coverage }}" in`);
