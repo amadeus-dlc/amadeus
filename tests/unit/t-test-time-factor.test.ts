@@ -52,6 +52,10 @@ describe("TEST_TIME_FACTOR", () => {
         "AMADEUS_TEST_TIMEOUT",
       );
     }
+    // A well-formed number of seconds can still overflow once it becomes milliseconds.
+    expect(() =>
+      resolveFinalTestTimeoutMs(600, { AMADEUS_TEST_TIMEOUT: `${Number.MAX_SAFE_INTEGER}` })
+    ).toThrow("safe millisecond value");
   });
 
   test("an AMADEUS_TEST_TIMEOUT final override is never multiplied again", () => {

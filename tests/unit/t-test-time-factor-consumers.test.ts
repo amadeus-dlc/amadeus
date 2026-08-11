@@ -39,6 +39,12 @@ describe("load-sensitive harness timing", () => {
     });
   });
 
+  test("a final Kiro budget that is not a positive safe integer is refused", () => {
+    for (const timeoutMs of [0, -1, 1.5, Number.NaN]) {
+      expect(() => resolveKiroFinalWaitTiming(timeoutMs, 400)).toThrow("timeoutMs");
+    }
+  });
+
   test("Claude SDK explicit and default journey timeout baselines scale once", () => {
     process.env.TEST_TIME_FACTOR = "2";
     expect(createClaudeSdkJourney().timeoutMs).toBe(180_000);
