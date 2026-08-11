@@ -29,6 +29,22 @@
 
 > **測定 ref の訂正記録**: 本節は当初 bolt ブランチ head `b5e514dd8` を測定 ref とし 199 / 319 / 674 行と記載していた。その値は当該 ref では正しい(`git diff --stat cac41363a b5e514dd8 -- tests/ .github/` が逐語でそれを返す)が、その後 `5197a16af` 以降の収束コミット4件が積まれたため、出荷断面とは乖離していた。§12a レビュー iteration 1 の BLOCKER として捕捉され、出荷断面での再測定値へ差し替えた。
 
+### FR-CBG-7 追随修正の差分(出荷断面より後)
+
+上表は**出荷断面 `cc775f87b` で閉じている**。その後 §FR-CBG-7 の是正(PR #2880)で加えた差分は次のとおり。`git diff --numstat cc775f87b HEAD -- tests/ .github/` の出力からの転記(`--stat` の表示幅ではなく numstat の insertions/deletions):
+
+| ファイル | 追加 | 削除 | 内容 |
+|---|---|---|---|
+| `.github/workflows/ci.yml` | 8 | 0 | `ci-success` の needs 追加と無条件 `require_result` |
+| `tests/integration/t-control-byte-gate.integration.test.ts` | 46 | 1 | FR-CBG-7 配線の2アサーション(import 行の再構成で1行置換) |
+| `tests/integration/t222-ci-snapshot-branch.integration.test.ts` | 15 | 1 | needs 集合 pin 2箇所の伝播 |
+| `tests/integration/t-formal-verif-ci-workflow.integration.test.ts` | 7 | 1 | 設計注記の訂正 |
+| `tests/fixtures/formal-verif-ci-baseline.sha256` | 1 | 1 | 正規化 digest の再ベースライン |
+
+合計 5 files changed, 77 insertions(+), 4 deletions(-)(8+46+15+7+1 = 77 / 0+1+1+1+1 = 4 の機械再計算と一致)。
+
+**行数を照合する際の注意(後続検証者向け)**: 上の出荷断面表の行数は `cc775f87b` 断面の値であり、現作業ツリーの `wc -l` とは一致しない。例えば `t-control-byte-gate.integration.test.ts` は出荷断面で 381 行、本追随修正後の作業ツリーで 426 行(差 45 = 46 追加 − 1 削除)。照合は必ず `git show cc775f87b:<path> | wc -l` のように**節が宣言する ref で解決**すること。§12a レビュー iteration 2 は作業ツリーの 426 行を出荷断面表と突き合わせて BLOCKER を提起したが、conductor が宣言 ref で再測定して 381 を再現し、不成立と確定した(`cid:requirements-analysis:historical-section-cite-check-at-observed` の読み手側の実例)。
+
 ## 契約適合の監査(BR-1〜11)
 
 conductor が BR を逐条照合した結果と是正:
