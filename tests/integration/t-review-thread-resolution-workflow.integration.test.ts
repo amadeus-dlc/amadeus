@@ -5,6 +5,7 @@ const CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
 const REFRESH_WORKFLOW_PATH = ".github/workflows/review-thread-resolution.yml";
 const SHARED_CI_SHA = "9cf0e9a8cd74c72de704763025003ed3b7608c65";
 const SHARED_WORKFLOW = `j5ik2o/ci/.github/workflows/review-thread-resolution.yml@${SHARED_CI_SHA}`;
+const IGNORED_CURSOR_USAGE_LIMIT = "cursor\tBugbot couldn't run - usage limit reached";
 
 interface WorkflowJob {
   readonly if?: string;
@@ -49,6 +50,7 @@ describe("review-thread resolution CI gate", () => {
     expect(refresh?.with).toMatchObject({
       base_branch: "main",
       required_context: "Check unresolved comments",
+      extra_ignored_auto_report_author_patterns: IGNORED_CURSOR_USAGE_LIMIT,
       ci_ref: SHARED_CI_SHA,
     });
   });
@@ -71,6 +73,7 @@ describe("review-thread resolution CI gate", () => {
       wait_for_other_checks: "false",
       base_branch: "main",
       required_context: "Check unresolved comments",
+      extra_ignored_auto_report_author_patterns: IGNORED_CURSOR_USAGE_LIMIT,
       ci_ref: SHARED_CI_SHA,
     });
     expect(ciSuccess?.needs).toBeArray();
