@@ -85,6 +85,8 @@ const BASELINE_SHA = readFileSync(
 //   - 260810-test-time-factor: the test, plugin-conformance, coverage-head, and
 //     coverage-base jobs set TEST_TIME_FACTOR=2, runner-bypass tests resolve a
 //     scaled Bun timeout, and lint runs the timing-sink guard.
+//   - Merge Queue CI: trigger required checks for merge groups and resolve the
+//     changed-file and no-silent-drop bases from the event's trusted SHAs.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
