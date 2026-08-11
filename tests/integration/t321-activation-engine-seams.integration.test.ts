@@ -65,5 +65,10 @@ describe("generic plugin engine seams", () => {
     }));
     expect(composedPluginNames(root)).toEqual(["fixture-plugin"]);
     expect(isComposedPluginStage(root, "fixture-stage")).toBe(true);
+
+    for (const malformed of [null, {}, { stageIndex: null }, { stageIndex: {} }, { stageIndex: [null, 1, {}] }]) {
+      writeFileSync(record, JSON.stringify({ plugins: [["fixture-plugin", malformed]] }));
+      expect(isComposedPluginStage(root, "fixture-stage")).toBe(false);
+    }
   });
 });

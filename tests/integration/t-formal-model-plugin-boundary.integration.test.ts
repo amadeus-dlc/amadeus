@@ -41,7 +41,8 @@ describe("plugin dependency boundary", () => {
       for (const stage of manifest.stages ?? []) {
         const text = readFileSync(join(PLUGINS, plugin, stage.path ?? ""), "utf8");
         const frontmatter = text.split("---")[1] ?? "";
-        expect(frontmatter).toMatch(/scopes:\s*\[\]/);
+        const scopeLines = frontmatter.match(/^scopes:[ \t]*\[[^\]\r\n]*\][ \t]*$/gm) ?? [];
+        expect(scopeLines).toEqual(["scopes: []"]);
       }
     }
   });

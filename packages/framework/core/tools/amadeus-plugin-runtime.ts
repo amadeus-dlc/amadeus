@@ -67,8 +67,12 @@ export function isComposedPluginStage(
   fs: PluginRuntimeFs = defaultPluginRuntimeFs,
 ): boolean {
   for (const [, record] of readCompositionPlugins(hostRoot, fs)) {
-    const stageIndex = (record as { stageIndex?: { slug?: string }[] }).stageIndex ?? [];
-    if (stageIndex.some((entry) => entry.slug === slug)) return true;
+    if (typeof record !== "object" || record === null || !("stageIndex" in record)) continue;
+    const stageIndex = record.stageIndex;
+    if (!Array.isArray(stageIndex)) continue;
+    if (stageIndex.some((entry) =>
+      typeof entry === "object" && entry !== null && "slug" in entry && entry.slug === slug
+    )) return true;
   }
   return false;
 }

@@ -13,7 +13,7 @@ consumes: []
 requires_stage:
   - tla-authoring
 inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under {{HARNESS_DIR}}/plugins/formal-model-check/tools/.
-outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
+outputs: the TLC exhaustive-exploration verdict (exit 0 not-detected / 1 detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
 sensors: []
 scopes: []
 ---

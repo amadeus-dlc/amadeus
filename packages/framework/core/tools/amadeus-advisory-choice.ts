@@ -19,7 +19,6 @@ import {
   advisoriesForHost,
   declaredHandoffStage,
   isDeclaredAdvisoryCode,
-  isKnownAdvisoryCode,
   type RunEvaluator,
 } from "./amadeus-advisory-declaration.ts";
 import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin.ts";
@@ -180,7 +179,7 @@ function parseIdentity(value: unknown): ParseResult<AdvisoryIdentity> {
   for (const key of required) {
     if (!nonEmptyString(value[key])) return { ok: false, reason: `identity.${key} must be a non-empty string` };
   }
-  if (!nonEmptyString(value.code) || !isKnownAdvisoryCode(value.code)) {
+  if (!nonEmptyString(value.code) || !isDeclaredAdvisoryCode(value.code)) {
     return { ok: false, reason: "identity.code is invalid" };
   }
   return { ok: true, value: value as unknown as AdvisoryIdentity };
@@ -804,14 +803,10 @@ export function choiceFromExactPrompt(prompt: string): AdvisoryChoice | null {
 }
 
 function acceptsFreshChoice(
-  _projectDir: string,
   pending: PendingAdvisory,
   receipts: readonly AdvisoryChoiceReceipt[],
 ): boolean {
-  const matching = receipts.filter((receipt) => activeReceiptMatches(receipt, pending));
-  const latest = matching.at(-1);
-  if (latest === undefined) return true;
-  return false;
+  return !receipts.some((receipt) => activeReceiptMatches(receipt, pending));
 }
 
 function isGroundedHumanTurn(projectDir: string, humanTurn: HumanTurnProvenance): boolean {
@@ -892,7 +887,7 @@ export function recordAdvisoryChoice(
         pending.closedAt === undefined &&
         (provenance.kind === "auto-decision" ||
           Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000)) &&
-        acceptsFreshChoice(projectDir, pending, store.receipts),
+        acceptsFreshChoice(pending, store.receipts),
     );
     if (open.length === 0) return false;
     // What the evidence settles, not merely that it is valid. A human turn
@@ -1011,7 +1006,7 @@ function freshRecordRefusal(
     const instance = open[0]?.identity.advisoryInstance ?? "this instance";
     return `no advisory presentation is recorded for ${instance}; present it before recording the choice`;
   }
-  if (!open.every((pending) => acceptsFreshChoice(projectDir, pending, store.receipts))) {
+  if (!open.every((pending) => acceptsFreshChoice(pending, store.receipts))) {
     return "this advisory instance does not accept a fresh choice";
   }
   return null;

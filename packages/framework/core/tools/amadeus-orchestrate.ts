@@ -4669,9 +4669,6 @@ function emitSingleRunStage(
   // buildRunStageDirective's scope-default fallback in charge.
   depth?: DepthLevel,
 ): void {
-  // Plugin declarations are evaluated on the single-stage path as well as the
-  // main workflow path.
-  raisePluginAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(
@@ -4693,6 +4690,9 @@ function emitSingleRunStage(
     ));
     return;
   }
+  // Evaluate plugin declarations only after the requested stage is known to be
+  // runnable, immediately before its directive is built.
+  raisePluginAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   // Build the directive from the graph node alone (stateContent: null → no main
   // state read, no skeleton round-trip, no main-pointer persona signal), then
   // attach the persona explicitly: this is the conductor's first directive of the

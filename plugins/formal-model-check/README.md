@@ -23,7 +23,7 @@ plugin; core does not interpret its schema.
 
 ## Bundle layout
 
-```
+```text
 formal-model-check/
   plugin.json
   sensors/amadeus-model-completeness.md

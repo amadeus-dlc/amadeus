@@ -50,12 +50,6 @@ export function isDeclaredAdvisoryCode(code: string): boolean {
   return DECLARED_CODE_RE.test(code);
 }
 
-// The one place a plain string becomes a DeclaredAdvisoryCode: after the
-// parser's own validation. Everything downstream carries the brand.
-export function isKnownAdvisoryCode(code: string): boolean {
-  return DECLARED_CODE_RE.test(code);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -371,13 +365,17 @@ export function declaredAdvisoriesForPlugin(
   for (const declaration of parsed.declarations) {
     if (!declaration.checkpoints.includes(stage)) continue;
     const argv = resolveArgvTokens(declaration.evaluatorArgv, tokens);
+    if (argv === null) {
+      raised.push(invalidDeclarationAdvisory(plugin, stage, [
+        `advisories[${declaration.code}].evaluator.argv names an unknown token`,
+      ]));
+      continue;
+    }
     const advisory = advisoryFromEvaluatorRun(
       plugin,
       declaration,
       stage,
-      argv === null
-        ? { status: 1, stdout: "" }
-        : runEvaluator(resolveEvaluatorArgv(argv, resolved.pluginRoot)),
+      runEvaluator(resolveEvaluatorArgv(argv, resolved.pluginRoot)),
     );
     if (advisory !== null) raised.push(advisory);
   }
@@ -398,11 +396,29 @@ export function declaredAdvisoriesForPlugin(
 const EVALUATOR_TIMEOUT_MS = 60_000;
 const EVALUATOR_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 
-export function spawnEvaluator(projectRoot: string): RunEvaluator {
+type EvaluatorPathFs = {
+  existsSync: (path: string) => boolean;
+  realpathSync: (path: string) => string;
+};
+
+const defaultEvaluatorPathFs: EvaluatorPathFs = { existsSync, realpathSync };
+
+export function spawnEvaluator(
+  projectRoot: string,
+  pathFs: EvaluatorPathFs = defaultEvaluatorPathFs,
+): RunEvaluator {
   return (argv) => {
     const args = [...argv.slice(1)];
-    if (args[0] !== undefined && isAbsolute(args[0]) && existsSync(args[0])) {
-      args[0] = realpathSync(args[0]);
+    // resolveEvaluatorArgv already resolves path-like manifest arguments. The
+    // first child argument is the evaluator script for runtimes such as Bun;
+    // canonicalize that script only, while leaving the resolved command name
+    // and evaluator-owned arguments untouched.
+    if (args[0] !== undefined && isAbsolute(args[0]) && pathFs.existsSync(args[0])) {
+      try {
+        args[0] = pathFs.realpathSync(args[0]);
+      } catch {
+        return { status: 1, stdout: "" };
+      }
     }
     const result = spawnSync(argv[0] as string, args, {
       cwd: projectRoot,

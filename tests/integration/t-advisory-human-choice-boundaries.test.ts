@@ -36,7 +36,7 @@ import {
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import type { Advisory } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -232,6 +232,20 @@ describe("advisory model-check evidence boundaries", () => {
       code: "TOOL_FAILED",
       detail: "synthetic failure",
     });
+  });
+
+  test("failure-directory lookup uses the sanitized advisory instance", () => {
+    const root = mkdtempSync(join(tmpdir(), "advisory-evidence-safe-instance-"));
+    roots.push(root);
+    const pending = createPendingAdvisory(identity, () => "unsafe/instance");
+    const detected = writeEvidence(root, pending, "DETECTED");
+    const failureDir = `${advisoryModelCheckOutputDir(root, pending.identity.advisoryInstance)}.failure-001`;
+    mkdirSync(failureDir, { recursive: true });
+    for (const name of ["manifest.json", "counterexample.json"]) {
+      writeFileSync(join(failureDir, name), readFileSync(join(detected.directory, name)));
+    }
+    rmSync(detected.directory, { recursive: true, force: true });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending)).toMatchObject({ kind: "detected" });
   });
 
   test("manifest correlation and provenance reject every mismatched identity or byte source", () => {
@@ -491,6 +505,25 @@ describe("protected advisory choice persistence", () => {
         humanTurn.eventIdentity,
       )).toEqual({ ok: true });
     }
+    {
+      const { projectDir, pending } = project();
+      const humanTurn = plantHumanTurn(projectDir);
+      const store = readStore(projectDir);
+      store.receipts.push({
+        schema: 2,
+        identity: pending.identity,
+        choice: "run-now",
+        provenance: { kind: "human-turn", ...humanTurn },
+        recordedAt: "2026-08-03T12:00:00.001Z",
+      });
+      writeJson(storePath(projectDir), store);
+      unlinkSync(auditFilePath(projectDir));
+      expect(revokeMisattributedAdvisoryChoice(
+        projectDir,
+        pending.identity.advisoryInstance,
+        humanTurn.eventIdentity,
+      )).toEqual({ ok: true });
+    }
   });
 
   test("invalid store, shard, audit provenance, closed instances, and repeat-after-defer are rejected", () => {
@@ -614,16 +647,62 @@ describe("protected advisory choice persistence", () => {
       writeJson(storePath(projectDir), store);
       expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("evidence is invalid");
     }
+    for (const revoked of [
+      { revokedAt: "2026-08-03T12:00:01.000Z" },
+      { revokedAt: "invalid", revocationReason: "misattributed-human-turn" },
+    ]) {
+      const { projectDir } = project();
+      const store = readStore(projectDir);
+      store.receipts.push({
+        schema: 2,
+        identity: store.pending[0]!.identity,
+        choice: "run-now",
+        provenance: {
+          kind: "human-turn",
+          timestamp: "2026-08-03T12:00:00.000Z",
+          shard: "shard",
+          eventIdentity: "event",
+        },
+        recordedAt: "2026-08-03T12:00:00.000Z",
+        ...revoked,
+      } as AdvisoryChoiceStore["receipts"][number]);
+      writeJson(storePath(projectDir), store);
+      expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("evidence is invalid");
+    }
   });
 
   test("run-now holdはplugin証跡を解釈せずevaluatorのno-holdを待つ", () => {
     const { projectDir, pending } = project();
+    const hostRoot = join(projectDir, ".harness");
+    mkdirSync(hostRoot, { recursive: true });
+    writeJson(join(hostRoot, ".amadeus-plugin-composition.json"), {
+      plugins: [[identity.plugin, { stageIndex: [] }]],
+    });
+    mkdirSync(join(projectDir, "plugins", identity.plugin), { recursive: true });
+    writeJson(join(projectDir, "plugins", identity.plugin, "plugin.json"), {
+      name: identity.plugin,
+      tools: [],
+      advisories: [{
+        code: identity.code,
+        checkpoints: [identity.checkpoint],
+        evaluator: { argv: ["bun", "tools/evaluate.ts"] },
+      }],
+    });
     plantAdvisoryPresentation(projectDir, pending);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
 
     writeEvidence(projectDir, pending, "DETECTED");
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("plugin's own evaluator");
-    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]).kind).toBe("hold");
+    let evaluatorCalls = 0;
+    const reportHold = advisoryReportHoldReason(projectDir, identity.checkpoint, hostRoot, () => {
+      evaluatorCalls += 1;
+      return {
+        status: 1,
+        stdout: JSON.stringify({ verdict: { kind: "hold", reasons: [{ kind: "changed" }] } }),
+      };
+    });
+    expect(evaluatorCalls).toBe(1);
+    expect(reportHold).toContain("plugin's own evaluator");
+    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory], hostRoot).kind).toBe("hold");
     expect(existsSync(storePath(projectDir))).toBe(true);
   });
 });

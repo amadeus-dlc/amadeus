@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   checkGeneratedPluginSources,
+  GENERATED_PLUGIN_SOURCES,
   writeGeneratedPluginSources,
 } from "../../scripts/package.ts";
 
@@ -19,6 +20,7 @@ describe("plugin sources are canonical in their owning plugin", () => {
   });
 
   test("the packager has no core-to-plugin generated source pairs", () => {
+    expect(GENERATED_PLUGIN_SOURCES).toEqual([]);
     const root = mkdtempSync(join(tmpdir(), "pkg-owned-plugin-"));
     roots.push(root);
     writeGeneratedPluginSources(root);

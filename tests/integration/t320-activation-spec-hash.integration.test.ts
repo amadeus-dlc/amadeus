@@ -22,6 +22,7 @@ import {
   ACTIVATION_WATCH_GLOBS,
   type ActivationFs,
   activationAdvisoryForHost,
+  composedPluginNames,
   computeSpecHash,
   defaultActivationFs,
   formalModelCheckComposed,
@@ -163,6 +164,7 @@ describe("t320 composition reads", () => {
     expect(formalModelCheckComposed(host)).toBe(false);
     composeFormalModelCheck();
     expect(formalModelCheckComposed(host)).toBe(true);
+    expect(composedPluginNames(host)).toEqual([ACTIVATION_PLUGIN]);
   });
 
   test("isComposedPluginStage: only the composed plugin stage slug is a match (FR-7(a))", () => {
@@ -180,6 +182,21 @@ describe("t320 composition reads", () => {
 });
 
 describe("t320 judgment + advisory (host level)", () => {
+  test("an unreadable model map is a not-ready judgment", () => {
+    const throwing: ActivationFs = {
+      ...defaultActivationFs,
+      readFileSync: (path) => {
+        if (path.endsWith("model-map.json")) throw new Error("EACCES (injected)");
+        return defaultActivationFs.readFileSync(path);
+      },
+    };
+
+    expect(resolveActivationJudgment(host, ACTIVATION_WATCH_GLOBS, throwing)).toEqual({
+      kind: "not-ready",
+      reason: "model map is invalid",
+    });
+  });
+
   test("0-plugin: activationAdvisoryForHost returns null without touching the spec (BR-U6-4)", () => {
     // No composition record → null fast return. A throwing reader proves the
     // spec is never read on the 0-plugin path.

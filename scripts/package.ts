@@ -821,7 +821,7 @@ type GeneratedPluginSource = { readonly from: string; readonly to: string };
 
 // Repo-relative POSIX source → destination pairs. Data, not code: a further
 // duplicate is one row here and nothing else.
-const GENERATED_PLUGIN_SOURCES: readonly GeneratedPluginSource[] = [];
+export const GENERATED_PLUGIN_SOURCES: readonly GeneratedPluginSource[] = [];
 
 // `root` is a seam (defaults to the repo) so a test can drive write and check
 // against a temp tree in-process — bun --coverage does not instrument spawned

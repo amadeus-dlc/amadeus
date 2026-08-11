@@ -63,7 +63,8 @@ function artifactDirectory(projectDir: string, pending: PendingAdvisory, attempt
   if (existsSync(join(requested, "manifest.json"))) return requested;
   const parent = join(docsRoot(projectDir), OUTPUT_DIR);
   if (!existsSync(parent)) return null;
-  const prefix = `${pending.identity.advisoryInstance}.failure-`;
+  const safeInstance = pending.identity.advisoryInstance.replace(/[^A-Za-z0-9._-]+/g, "-");
+  const prefix = `${safeInstance}.failure-`;
   const failures = readdirSync(parent)
     .filter((name) => name.startsWith(prefix) && existsSync(join(parent, name, "manifest.json")))
     .sort();

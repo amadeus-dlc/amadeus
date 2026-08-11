@@ -63,7 +63,7 @@
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -289,10 +289,40 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
   test("14: next --single rejects an initialization stage (use --init) [.sh 14]", () => {
     const proj = freshProject();
     seedStateFile(proj, STATE_FIXTURE);
-    const r = run(TOOL, [
-      "next", "--stage", "workspace-detection", "--single", "--project-dir", proj,
-    ]);
-    expect(r.out).toContain("initialization stage with --single");
+    const hostRoot = join(proj, ".plugin-host");
+    const pluginRoot = join(proj, "plugins", "single-stage-probe");
+    const marker = join(proj, "evaluator-ran");
+    mkdirSync(join(pluginRoot, "tools"), { recursive: true });
+    mkdirSync(hostRoot, { recursive: true });
+    writeFileSync(
+      join(hostRoot, ".amadeus-plugin-composition.json"),
+      JSON.stringify({ plugins: [["single-stage-probe", { stageIndex: [] }]] }),
+    );
+    writeFileSync(
+      join(pluginRoot, "plugin.json"),
+      JSON.stringify({
+        name: "single-stage-probe",
+        tools: [],
+        advisories: [{
+          code: "must-not-run",
+          checkpoints: ["workspace-detection"],
+          evaluator: { argv: [process.execPath, "tools/evaluate.ts"] },
+        }],
+      }),
+    );
+    writeFileSync(join(pluginRoot, "tools", "evaluate.ts"), `await Bun.write(${JSON.stringify(marker)}, "ran");\n`);
+    const previousHostRoot = process.env.AMADEUS_PLUGINS_HOST_ROOT;
+    process.env.AMADEUS_PLUGINS_HOST_ROOT = hostRoot;
+    try {
+      const r = run(TOOL, [
+        "next", "--stage", "workspace-detection", "--single", "--project-dir", proj,
+      ]);
+      expect(r.out).toContain("initialization stage with --single");
+      expect(existsSync(marker)).toBe(false);
+    } finally {
+      if (previousHostRoot === undefined) delete process.env.AMADEUS_PLUGINS_HOST_ROOT;
+      else process.env.AMADEUS_PLUGINS_HOST_ROOT = previousHostRoot;
+    }
   });
 
   // =========================================================================

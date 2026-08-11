@@ -44,7 +44,7 @@ import {
   type PendingAdvisory,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 import { docsRoot } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   cleanupTestProject,
   createTestProject,

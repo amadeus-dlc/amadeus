@@ -1,3 +1,4 @@
+// covers: file:plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts
 import { describe, expect, test } from "bun:test";
 import * as canonicalModule from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import * as pluginModule from "../../plugins/formal-model-check/tools/tla-model-map.ts";

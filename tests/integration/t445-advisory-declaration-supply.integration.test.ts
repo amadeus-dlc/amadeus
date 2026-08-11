@@ -153,6 +153,18 @@ describe("declared advisory supply", () => {
     expect(seen).toEqual([]);
   });
 
+  test("an unknown evaluator token raises an actionable declaration advisory", () => {
+    composeDemo();
+    declareAdvisories([{
+      ...HOLD_DECLARATION[0],
+      evaluator: { argv: ["bun", "tools/evaluate.ts", "{unknown-token}"] },
+    }]);
+    const { raised, seen } = advisoriesFor("requirements-analysis", "");
+    expect(seen).toEqual([]);
+    expect(raised).toHaveLength(1);
+    expect(raised[0]?.message).toContain("unknown token");
+  });
+
   test("a broken declaration holds instead of reading as no advisory (BR-U2-18)", () => {
     composeDemo();
     declareAdvisories([{ code: "Bad Code", checkpoints: [], evaluator: {} }]);
@@ -253,6 +265,17 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
     expect(stage).toBeNull();
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain("demo");
+  });
+
+  test("an unreadable declaration manifest fails closed", () => {
+    const fs: DeclarationFs = {
+      existsSync: () => true,
+      readFileSync: () => {
+        throw new Error("EACCES");
+      },
+    };
+
+    expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", fs)).toBeNull();
   });
 });
 
@@ -424,6 +447,16 @@ describe("spawnEvaluator", () => {
     const result = spawnEvaluator(projectRoot)(["amadeus-no-such-evaluator-t445"]);
     expect(result.status).not.toBe(0);
     expect(result.stdout).toBe("");
+  });
+
+  test("a script removed between existence and realpath checks reads as a failure", () => {
+    const result = spawnEvaluator(projectRoot, {
+      existsSync: () => true,
+      realpathSync: () => {
+        throw new Error("ENOENT");
+      },
+    })(["bun", join(projectRoot, "removed-evaluator.ts")]);
+    expect(result).toEqual({ status: 1, stdout: "" });
   });
 });
 
