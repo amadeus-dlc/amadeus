@@ -3984,6 +3984,22 @@ function terminalFailureStopsNext(
   });
 }
 
+// The ruling prompt shares the same population scope as the terminal guard
+// above: a closed failure (terminal + SWARM_BATON_RETURNED) whose batch the
+// compiled Bolt DAG no longer carries is history and must not stop `next`
+// with `await-unit-ruling` either. Non-numeric batch identities (solo
+// retries) and missing batch ids cannot be proven historical, so they keep
+// the fail-closed ruling behavior.
+function failureOutsideRuntimePopulation(
+  entry: { unit: string; batch?: string },
+  batches: readonly (readonly string[])[],
+): boolean {
+  if (entry.batch === undefined) return false;
+  const index = Number.parseInt(entry.batch, 10) - 1;
+  if (!Number.isInteger(index) || index < 0) return false;
+  return index >= batches.length || !batches[index].includes(entry.unit);
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -3996,10 +4012,11 @@ function emitConstructionFailureIfPresent(
     emit(errorDirective(`Construction outcome audit is incomplete: ${JSON.stringify(normalized.diagnostics)}`));
     return true;
   }
+  const batches = readBoltDagBatches(projectDir);
   const result = projectConstructionOutcomes(normalized.records, {
     intent,
     stage: stageSlug,
-    batches: readBoltDagBatches(projectDir) ?? [],
+    batches: batches ?? [],
   });
   if (!result.ok) {
     emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(result.diagnostics)}`));
@@ -4012,7 +4029,19 @@ function emitConstructionFailureIfPresent(
     ));
     return true;
   }
-  const transition = constructionFailureTransition(result.projection);
+  // Scope the ruling loop to the current runtime population, mirroring the
+  // terminal guard below: without a compiled DAG there is no population to
+  // scope against, so the fail-closed ruling behavior is kept as-is.
+  const transition = constructionFailureTransition(
+    batches === null
+      ? result.projection
+      : {
+        ...result.projection,
+        unresolvedFailures: result.projection.unresolvedFailures.filter(
+          (entry) => !failureOutsideRuntimePopulation(entry, batches),
+        ),
+      },
+  );
   if (transition.kind === "await-unit-ruling") {
     const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
     emit(askDirective(
