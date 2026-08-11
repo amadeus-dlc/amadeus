@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
 import {
   resolveKiroFinalWaitTiming,
   resolveKiroWaitTiming,
-} from "../harness/kiro-ide-driver.ts";
-import { createClaudeSdkJourney } from "../harness/live-e2e/journey.ts";
+} from "../lib/harness-wait-timing.ts";
 import { resolveTuiWaitTiming } from "../harness/tui-drive.ts";
 
 const originalFactor = process.env.TEST_TIME_FACTOR;

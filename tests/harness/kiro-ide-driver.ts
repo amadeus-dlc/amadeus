@@ -27,6 +27,10 @@
 //     never a 44MB clone of a real profile (spike gotcha: leaks personal/internal
 //     state, must never ship in a public repo).
 
+import {
+  resolveKiroFinalWaitTiming,
+  resolveKiroWaitTiming,
+} from "../lib/harness-wait-timing.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { type ChildProcess, spawn } from "node:child_process";
 import { Database } from "bun:sqlite";
@@ -40,29 +44,6 @@ export const KIRO_IDE_BIN =
   process.env.AMADEUS_KIRO_IDE_BIN ?? "/Applications/Kiro.app/Contents/MacOS/Electron";
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
-export function resolveKiroWaitTiming(
-  timeoutBaseMs: number,
-  pollBaseMs: number,
-): { timeoutMs: number; pollMs: number } {
-  return {
-    timeoutMs: scaleTestTime(timeoutBaseMs),
-    pollMs: scaleTestTime(pollBaseMs),
-  };
-}
-
-export function resolveKiroFinalWaitTiming(
-  timeoutMs: number,
-  pollBaseMs: number,
-): { timeoutMs: number; pollMs: number } {
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
-    throw new Error(`timeoutMs must be a positive safe integer (got: ${timeoutMs})`);
-  }
-  return {
-    timeoutMs,
-    pollMs: scaleTestTime(pollBaseMs),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Raw CDP target (the substrate, ported from cdp.mjs:13-107).
