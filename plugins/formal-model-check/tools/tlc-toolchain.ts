@@ -531,6 +531,29 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
 export const traceLabelPattern = (moduleName: string): RegExp =>
   new RegExp(`^<[A-Za-z_][A-Za-z0-9_]* line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module ${escapeRegExp(moduleName)}>$`);
 
+// TLC prints a state of two or more variables as a conjunction list, one
+// "/\ name = value" line per variable, but a single-variable state as a bare
+// "name = value" line with no conjunct prefix (measured 2026-08-12 against a
+// one-variable referee model, issue #2918).
+const CONJUNCT_VARIABLE = /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/;
+const BARE_VARIABLE = /^([A-Za-z_][A-Za-z0-9_]*) =/;
+
+function stateVariableNames(body: readonly string[]): string[] {
+  const conjuncts = body.flatMap((line) => CONJUNCT_VARIABLE.exec(line)?.[1] ?? []);
+  if (conjuncts.length > 0) return conjuncts;
+  const bare = BARE_VARIABLE.exec(body[0] ?? "")?.[1];
+  return bare === undefined ? [] : [bare];
+}
+
+// The print ORDER is TLC's internal UniqueString order — neither the VARIABLES
+// declaration order nor alphabetical (measured 2026-08-12, issue #2918) — so
+// the printed tuple is compared to the frozen vocabulary by NAME, order aside.
+// The comparison stays exact: a missing, repeated, or undeclared variable is
+// still a rejection. NUL cannot occur in a TLA identifier, so it separates.
+function stateVariablesMatchVocabulary(body: readonly string[], declared: readonly string[]): boolean {
+  return [...stateVariableNames(body)].sort().join("\0") === [...declared].sort().join("\0");
+}
+
 function parseTrace(envelopes: TlcEnvelope[], vocabulary: TraceVocabulary): TlcTraceState[] | null {
   const labelPattern = traceLabelPattern(vocabulary.moduleName);
   const trace: TlcTraceState[] = [];
@@ -543,11 +566,10 @@ function parseTrace(envelopes: TlcEnvelope[], vocabulary: TraceVocabulary): TlcT
     const validLabel = ordinal === 1
       ? label === "<Initial predicate>"
       : labelPattern.test(label);
-    const variables = lines.slice(1).flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
+    const body = lines.slice(1);
     if (ordinal === null || ordinal !== trace.length + 1 || !validLabel
-      || variables.length !== vocabulary.traceStateVariables.length
-      || variables.some((name, index) => name !== vocabulary.traceStateVariables[index])) return null;
-    trace.push({ ordinal, label: header[2]!, body: lines.slice(1) });
+      || !stateVariablesMatchVocabulary(body, vocabulary.traceStateVariables)) return null;
+    trace.push({ ordinal, label: header[2]!, body });
   }
   return trace;
 }
@@ -626,9 +648,8 @@ function initialStateCounterexampleExploration(input: TlcOutputInput, parsed: Tl
   if (!input.vocabulary.namedInvariants.includes(invariantName)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
   const sourceLocation = model.invariantSourceMap[invariantName];
   const body = lines.slice(1);
-  const variables = body.flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
-  if (sourceLocation === undefined || variables.length !== input.vocabulary.traceStateVariables.length
-    || variables.some((name, index) => name !== input.vocabulary.traceStateVariables[index])) {
+  if (sourceLocation === undefined
+    || !stateVariablesMatchVocabulary(body, input.vocabulary.traceStateVariables)) {
     return failed("GRAMMAR", "counterexample source map or initial state is invalid");
   }
   const trace: TlcTraceState[] = [{ ordinal: 1, label: lines[0]!, body }];
