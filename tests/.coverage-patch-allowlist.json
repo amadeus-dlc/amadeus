@@ -3354,11 +3354,33 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:bd4d2e8d007dd66054f41f03bc86092739ff23fde57bc22cd2ca96c6ae433296",
-      "anchorLines": 30,
-      "targetLines": "1-30"
+      "fingerprint": "sha256:87a7a70776dcc5accfdf4e25f5ac102b9c6f54e32d621e2af4f563ea218c6732",
+      "anchorLines": 17,
+      "targetLines": "1-17"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:dd13014ab067fd13e5b65c2b745738279a3a970703b65b0726cc0f855a357b30",
+      "anchorLines": 13,
+      "targetLines": "1-13"
+    },
+    "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:40f48c860e6d8ee3191a1b560b66e5810a20602e389230809df1ce5eae918420",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The verifyMandatoryPluginStages guard call sits inside the same spawn-only complete-workflow CLI adapter; its behavior (mandatory plugin stage refusal) is pinned by the shipped-process integration tests of this intent, and Bun does not attribute child-process execution to the parent LCOV report. Split out from the surrounding waiver so the new guard line is waived explicitly, not inherited silently.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
   },
   {
