@@ -440,6 +440,8 @@ Bolt ごとの構造:
 
 blockingなreviewer指摘、sensor、必須成果物、完了条件はquality obligationです。`semi` / `full`ではfirst-party Quality Repair Pluginを必須とし、証拠が健全になるまでrepairまたはreplanします。生産的な進捗が止まった場合は`REPAIR_STALLED`としてparkし、activeなIntent grantを維持したまま明示的な再開条件を記録します。mode表で人間を必要とするgateは引き続き人間を待ちます。
 
+stage所有のrefereeがfail-closedした失敗も同じloopへ取り込みます。`semi` / `full`では`report --stage <slug> --result failed --failure <detail>`が型付き失敗を未解決のquality obligationとして記録し、directiveは次のbounded repairラウンド、1回のreplan、または`REPAIR_STALLED` parkのいずれかを指名します。その理由でIntentがsuspend中は、`next`は同じstageを再発行せず再開条件付きの`parked` directiveを再発行します。`none`にはrepair loopが無いため、`report`は従来どおりforward outcomeのみを受け付けます。
+
 - 単独Boltの失敗は`BOLT_FAILED`を記録し、影響を受けた作業だけをrepairします。
 - 並列バッチの部分失敗では、すべてのTaskの完了を待ち、成功した兄弟の成果物を保持し、失敗した作業だけをrepair対象にします。独立した兄弟は完了状態のままです。
 
