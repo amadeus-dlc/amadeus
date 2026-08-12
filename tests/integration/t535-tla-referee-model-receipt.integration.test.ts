@@ -16,7 +16,10 @@ import {
   validateModelCheckReceipt,
   validateVerifiedTlaModelReceipt,
 } from "../../plugins/formal-model-check/tools/tla-model-receipt.ts";
-import { createRefereeTlaModelReceipt } from "../../plugins/formal-model-check/tools/tla-referee-toolchain.ts";
+import {
+  createRefereeToolchain,
+  createRefereeTlaModelReceipt,
+} from "../../plugins/formal-model-check/tools/tla-referee-toolchain.ts";
 import { RefereeToolchainInternals } from "../../plugins/formal-model-check/tools/tla-referee-toolchain.ts";
 import { parseTlcOutput174 } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 import { FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
@@ -44,20 +47,47 @@ const MODULE = [
 
 const CONFIG = ["SPECIFICATION Spec", "INVARIANT TypeOK", ""].join("\n");
 
+// The module defines TypeOK but never Absent, so the source map cannot locate
+// every invariant the config declares.
+const MISSING_INVARIANT_CONFIG = ["SPECIFICATION Spec", "INVARIANT TypeOK, Absent", ""].join("\n");
+
+const HELPER_MODULE = [
+  "---- MODULE Helper ----",
+  "EXTENDS Naturals",
+  "Cap == 3",
+  "====",
+  "",
+].join("\n");
+
+const MODULE_WITH_AUXILIARY = MODULE
+  .replace("EXTENDS Naturals", "EXTENDS Naturals, Helper")
+  .replace("ticks \\in 0..3", "ticks \\in 0..Cap");
+
 const roots: string[] = [];
 
-function workspace(module = MODULE, config = CONFIG): { modulePath: string; configPath: string } {
+function workspace(
+  module = MODULE,
+  config = CONFIG,
+  auxiliaries: Readonly<Record<string, string>> = {},
+): { modulePath: string; configPath: string } {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t535-"));
   roots.push(root);
   const modulePath = join(root, "Counter.tla");
   const configPath = join(root, "Counter.cfg");
   writeFileSync(modulePath, module, "utf8");
   writeFileSync(configPath, config, "utf8");
+  for (const [name, source] of Object.entries(auxiliaries)) {
+    writeFileSync(join(root, `${name}.tla`), source, "utf8");
+  }
   return { modulePath, configPath };
 }
 
-function refereeReceipt(module = MODULE, config = CONFIG) {
-  const { modulePath, configPath } = workspace(module, config);
+function refereeReceipt(
+  module = MODULE,
+  config = CONFIG,
+  auxiliaries: Readonly<Record<string, string>> = {},
+) {
+  const { modulePath, configPath } = workspace(module, config, auxiliaries);
   const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
   if (!described.ok) throw new Error(JSON.stringify(described.error));
   const receipt = createRefereeTlaModelReceipt(described.value.source);
@@ -136,6 +166,86 @@ describe("the referee receipt is a self-contained receipt kind", () => {
   test("a receipt missing a key is refused", () => {
     const { vocabulary, ...tampered } = refereeReceipt();
     expect(validateModelCheckReceipt(tampered).ok).toBe(false);
+  });
+
+  // "0".repeat(64) is well-formed hex, so the tampering tests above reach the
+  // identity comparison instead of the byte-identity shape check.
+  test("a receipt whose byte identity is not hex is refused", () => {
+    const tampered = { ...refereeReceipt(), moduleBytesIdentity: "z".repeat(64) };
+    const validated = validateModelCheckReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message).toBe("receipt byte identities are invalid");
+  });
+
+  test("a receipt whose auxiliary modules are malformed is refused", () => {
+    const tampered = { ...refereeReceipt(), auxiliaryModules: [{ name: "Helper" }] };
+    const validated = validateModelCheckReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message).toBe("receipt auxiliary modules are invalid");
+  });
+
+  test("a receipt whose source map misses a declared invariant is refused", () => {
+    const tampered = { ...refereeReceipt(), invariantSourceMap: {} };
+    const validated = validateModelCheckReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message)
+      .toBe("receipt invariant source map does not cover the declared invariants");
+  });
+});
+
+describe("the referee receipt records the modules the mutant extends", () => {
+  test("an extended local module appears as an auxiliary module", () => {
+    const receipt = refereeReceipt(MODULE_WITH_AUXILIARY, CONFIG, { Helper: HELPER_MODULE });
+    expect(receipt.auxiliaryModules.map(({ name }) => name)).toEqual(["Helper"]);
+    expect(receipt.auxiliaryModules[0]?.moduleBytesIdentity).toMatch(/^[0-9a-f]{64}$/);
+    expect(validateModelCheckReceipt(receipt).ok).toBe(true);
+  });
+
+  test("the auxiliary module bytes bind the identity", () => {
+    const baseline = refereeReceipt(MODULE_WITH_AUXILIARY, CONFIG, { Helper: HELPER_MODULE });
+    const mutated = refereeReceipt(MODULE_WITH_AUXILIARY, CONFIG, {
+      Helper: HELPER_MODULE.replace("Cap == 3", "Cap == 2"),
+    });
+    expect(mutated.auxiliaryModules[0]?.moduleBytesIdentity)
+      .not.toBe(baseline.auxiliaryModules[0]?.moduleBytesIdentity);
+    expect(mutated.modelIdentity).not.toBe(baseline.modelIdentity);
+  });
+});
+
+describe("the referee receipt constructor refuses an underivable model", () => {
+  test("a source without a declared vocabulary is refused", () => {
+    const { modulePath, configPath } = workspace();
+    const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
+    if (!described.ok) throw new Error(JSON.stringify(described.error));
+    const receipt = createRefereeTlaModelReceipt({
+      ...described.value.source,
+      model: { ...described.value.source.model, vocabulary: undefined },
+    });
+    expect(receipt.ok).toBe(false);
+    if (receipt.ok) throw new Error("the receipt was minted");
+    expect(receipt.error.message).toBe("model Counter has no declared vocabulary");
+  });
+
+  test("a config naming an undefined invariant is refused", () => {
+    const { modulePath, configPath } = workspace(MODULE, MISSING_INVARIANT_CONFIG);
+    const described = RefereeToolchainInternals.describeMutant(modulePath, configPath);
+    if (!described.ok) throw new Error(JSON.stringify(described.error));
+    const receipt = createRefereeTlaModelReceipt(described.value.source);
+    expect(receipt.ok).toBe(false);
+    if (receipt.ok) throw new Error("the receipt was minted");
+    expect(receipt.error.message).toBe("model Counter is missing invariant formula Absent");
+  });
+});
+
+describe("the referee toolchain refuses to run a model it cannot mint a receipt for", () => {
+  test("the run fails before the toolchain is acquired", async () => {
+    const { modulePath, configPath } = workspace(MODULE, MISSING_INVARIANT_CONFIG);
+    const toolchain = createRefereeToolchain({});
+    await expect(toolchain.run({ kind: "baseline", modulePath, configPath } as never))
+      .rejects.toThrow("referee toolchain: model Counter is missing invariant formula Absent");
   });
 });
 
