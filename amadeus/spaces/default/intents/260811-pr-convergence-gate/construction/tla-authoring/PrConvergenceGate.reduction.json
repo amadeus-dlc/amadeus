@@ -16,36 +16,36 @@
     "TypeOK": {
       "witness": "head = 0",
       "fallingMutation": {
-        "find": "TypeOK ==\n  /\\ head",
-        "replace": "TypeOK == FALSE\n  /\\ head"
+        "find": "  /\\ head \\in {0, 1}",
+        "replace": "  /\\ head \\in {1}"
       }
     },
     "EvidenceCurrentHead": {
       "witness": "attested",
       "fallingMutation": {
-        "find": "EvidenceCurrentHead ==\n  (attested",
-        "replace": "EvidenceCurrentHead == FALSE /\\\n  (attested"
+        "find": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead = head",
+        "replace": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead # head"
       }
     },
     "SensorRequiresAttestation": {
       "witness": "sensorPassed",
       "fallingMutation": {
-        "find": "SensorRequiresAttestation ==\n  sensorPassed",
-        "replace": "SensorRequiresAttestation == FALSE /\\\n  sensorPassed"
+        "find": "SensorRequiresAttestation ==\n  sensorPassed => attested",
+        "replace": "SensorRequiresAttestation ==\n  sensorPassed => ~attested"
       }
     },
     "CodeGenerationGuarded": {
       "witness": "codeGenerationDone",
       "fallingMutation": {
-        "find": "CodeGenerationGuarded ==\n  codeGenerationDone",
-        "replace": "CodeGenerationGuarded == FALSE /\\\n  codeGenerationDone"
+        "find": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead = head",
+        "replace": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead # head"
       }
     },
     "WorkflowGuarded": {
       "witness": "workflowDone",
       "fallingMutation": {
-        "find": "WorkflowGuarded ==\n  workflowDone",
-        "replace": "WorkflowGuarded == FALSE /\\\n  workflowDone"
+        "find": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead = head",
+        "replace": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead # head"
       }
     }
   }

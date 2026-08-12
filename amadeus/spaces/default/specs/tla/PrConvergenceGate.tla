@@ -1,8 +1,12 @@
 ---- MODULE PrConvergenceGate ----
 EXTENDS Integers
 
-VARIABLES head, reportHead, verdict, attested, sensorPassed,
-          artifactsComplete, codeGenerationDone, workflowDone
+\* The declaration order is the order TLC prints state variables in a trace
+\* (measured, not alphabetical). The referee reads the trace vocabulary from
+\* this list and compares it position by position, so any other order makes
+\* every counterexample unparsable (#2918).
+VARIABLES workflowDone, artifactsComplete, verdict, codeGenerationDone,
+          sensorPassed, reportHead, head, attested
 
 vars == << head, reportHead, verdict, attested, sensorPassed,
            artifactsComplete, codeGenerationDone, workflowDone >>
