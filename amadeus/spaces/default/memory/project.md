@@ -147,4 +147,4 @@ TypeScript / ESM と Bun 直接実行を前提に、既存の `amadeus-` プレ�
 
 日常の §13 学習・些細なノルム追加はまずこの節へ追記する。定期蒸留ラウンドで本文への昇格(一般化・機械化)または削除を裁定する。蒸留済み本文と未蒸留の具象学習を混在させない。
 
-(現時点で項目なし)
+- pr-convergence report はマージ後でも `kind: landed` で生成できる — `landed` は第一級 verdict であり、`converged` はマージ前専用(`plugins/pr-convergence/tools/pr-convergence-predicate.ts` の定義: converged は mergeStateStatus CLEAN 等を要求、landed は「マージ済みは収束させる状態でなく記録する事実」)。report の check rollup はマージ後は **merge commit の check-runs** を読むため、PR と無関係な post-merge workflow の失敗で偽 FAILURE 化しうる(実測: Issue #2925(Metrics Snapshot の merge queue 非互換)により rollup PENDING→FAILURE→是正後 SUCCESS の全経路を観測。FAILURE の一次証跡は run 31562759226 の **attempt 1**(`gh api repos/amadeus-dlc/amadeus/actions/runs/31562759226/attempts/1/jobs` で Metrics Snapshot job 94010255732 = failure を再取得可能)— 失敗ジョブの再実行により最新 check-runs では success に置換されているため、attempt 指定なしでは再導出できない)。rollup 赤は PR 自体の欠陥と即断せず、merge commit の failing check を帰属してから対処する (learned 2026-08-12, intent 260812-tla-proof-receipt code-generation, semi 梯子 AUTO_DECIDED `auto-decision-7eadb3d0e5a28b0a04d2457e6e0bfb8a`) <!-- cid:code-generation:c1-landed-rollup-attribution -->
