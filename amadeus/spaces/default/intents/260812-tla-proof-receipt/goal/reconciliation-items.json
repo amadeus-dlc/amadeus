@@ -1,0 +1,28 @@
+[
+ {
+  "id": "goal-statement",
+  "verdict": "ACHIEVED",
+  "evidence": [
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260812-tla-proof-receipt/construction/build-and-test/build-test-results.md",
+    "digest": "e50cf189e4c59f9a95a4f2c1e57c7851e4f62f76138c47dfacfefdbf61f79178"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260812-tla-proof-receipt/construction/fix-2913-proof-receipt/code-generation/code-summary.md",
+    "digest": "5c0ed35b7e33a89caa8486fada70739c75cd4c97571b762583cb79b74bb30130"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260812-tla-proof-receipt/construction/fix-2913-proof-receipt/code-generation/pr-convergence-report.md",
+    "digest": "4efc6f0db469f2ba435fb17a73e2956a752c9dc4bdb34fba5b4915ea8f5240b2"
+   },
+   {
+    "kind": "deterministic-check",
+    "reference": "amadeus/spaces/default/intents/260812-tla-proof-receipt/construction/formal-model-check/model-check-results.md",
+    "digest": "ef76850e4706f6a01b2d2b0bb3ff93344ae58f419346805ee245c62f9ddf152f"
+   }
+  ]
+ }
+]
