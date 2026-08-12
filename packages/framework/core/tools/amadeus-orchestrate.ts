@@ -5787,11 +5787,8 @@ export function stageFailureDirective(
   const move = admitted.kind === "replanned"
     ? "Quality Repair replanned the repair context"
     : "Quality Repair recorded the obligation for another repair round";
-  return printDirective(
-    `Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} ` +
-      `(evidence ${admitted.evidenceFingerprint}). Repair the recorded obligation, re-run the stage, and report ` +
-      "its outcome again.",
-  );
+  const next = "Repair the recorded obligation, re-run the stage, and report its outcome again.";
+  return printDirective(`Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} (evidence ${admitted.evidenceFingerprint}). ${next}`);
 }
 
 // Admit a typed stage-referee failure into Quality Repair and name the move the
