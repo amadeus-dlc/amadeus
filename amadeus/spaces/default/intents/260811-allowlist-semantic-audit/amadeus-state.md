@@ -6,7 +6,7 @@
 - **Scope**: self-fix
 - **Start Date**: 2026-08-11T13:36:01Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Harness**: claude-code
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 10
-- **Completed**: 8
-- **In Progress**: pr-convergence
+- **Completed**: 9
+- **In Progress**: formal-model-check
 
 ## Runtime State
 - **Revision Count**: 0
@@ -87,8 +87,8 @@ Per unit: [TBD]
 - [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [x] tla-authoring — EXECUTE
-- [-] pr-convergence — EXECUTE
-- [ ] formal-model-check — EXECUTE
+- [x] pr-convergence — EXECUTE
+- [-] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
@@ -101,17 +101,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: pr-convergence
-- **Next Stage**: formal-model-check
+- **Current Stage**: formal-model-check
+- **Next Stage**: none
 - **Status**: Running
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-1642e86062e5c0cd0cfa70e93725e9df
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-11T19:15:38Z
+- **Last Updated**: 2026-08-11T23:58:40Z
 
 ## Session Resume Point
-- **Last Completed Stage**: tla-authoring
-- **Next Action**: Execute Pr Convergence
+- **Last Completed Stage**: pr-convergence
+- **Next Action**: Execute Formal Model Check
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
