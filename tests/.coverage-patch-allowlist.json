@@ -6442,11 +6442,11 @@
     "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
     "selector": {
       "function": "runOnce",
-      "fingerprint": "sha256:af98c90e918326c337f9d3ce6e9c2dbc797929e733a7ff75f78be39b9010360d",
-      "anchorLines": 41,
-      "targetLines": "1-41"
+      "fingerprint": "sha256:d175dc8f599731a74800b0a219b8dedc76eba3e18ef5f6cbe2b85a32cf594864",
+      "anchorLines": 36,
+      "targetLines": "1-36"
     },
-    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the standalone real-TLC probe (tests/formal-verif/support/tla-referee-real-toolchain-probe.ts, exercised per ruling A). The pre-toolchain rows of runOnce are driven in-process by t447 via a broken mutant.",
+    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the real-TLC surface (tests/formal-verif/tla-referee-real-toolchain.test.ts and the standalone probe, exercised per ruling A). The pre-toolchain rows of runOnce (describeMutant and the referee receipt mint) are driven in-process by t447 and t535.",
     "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
   },
   {
