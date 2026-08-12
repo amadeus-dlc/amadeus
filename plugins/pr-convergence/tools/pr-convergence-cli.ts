@@ -647,7 +647,7 @@ function currentSelfContext(
     receipt === null || !attestationIsIntact(receipt, body) ||
     !attestationBindsIdentity(receipt, work, heads, options.ref)
   ) {
-    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "report attestation is missing, stale, tampered, copied, or replayed\n" } };
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: refusalFor(receipt, body, work, heads, options.ref) } };
   }
   // A receipt with no audit line is an interrupted run, not a forgery: the
   // caller replays the emission rather than refusing the record forever.
@@ -662,6 +662,18 @@ function attestationIsIntact(receipt: ReportAttestation, body: string): boolean 
     receipt.contentDigest === reportPayloadDigest(reportPayload(body));
 }
 
+/** The receipt names THIS delivery's Intent, Bolt, Unit and pull request — the
+ *  half of identity that no push can change. */
+function attestationBindsDelivery(
+  receipt: ReportAttestation,
+  work: DeliveryWork,
+  ref: { readonly repo: string; readonly number: number },
+): boolean {
+  return receipt.intent === work.intent && receipt.intentUuid === work.intentUuid &&
+    receipt.record === work.record && receipt.bolt === work.bolt && receipt.unit === work.unit &&
+    receipt.repo === ref.repo && receipt.pr === ref.number;
+}
+
 /** The receipt names THIS delivery — a receipt copied from another intent, unit,
  *  pull request, or head is intact but not ours. */
 function attestationBindsIdentity(
@@ -670,11 +682,35 @@ function attestationBindsIdentity(
   heads: DeliveryHeads,
   ref: { readonly repo: string; readonly number: number },
 ): boolean {
-  return receipt.intent === work.intent && receipt.intentUuid === work.intentUuid &&
-    receipt.record === work.record && receipt.bolt === work.bolt && receipt.unit === work.unit &&
-    receipt.repo === ref.repo && receipt.pr === ref.number &&
+  return attestationBindsDelivery(receipt, work, ref) &&
     receipt.localHead === heads.localHead && receipt.remoteHead === heads.remoteHead &&
     receipt.prHead === heads.prHead;
+}
+
+/**
+ * Why the receipt was refused, phrased so the operator can act on it (#2931).
+ *
+ * The refusal itself is unchanged — every case below exits 1 and writes
+ * nothing. Only ONE case is separable without weakening that: a receipt that is
+ * intact and names this exact delivery, and differs solely in the heads it was
+ * bound to. That is a head that moved on, and its remedy is the in-band epoch
+ * restart — `create` again for the same pull request, which is reused rather
+ * than re-created. Every other shape keeps the undifferentiated message: a
+ * tampered, copied, or replayed receipt earns no diagnosis it could steer.
+ */
+function refusalFor(
+  receipt: ReportAttestation | null,
+  body: string,
+  work: DeliveryWork,
+  heads: DeliveryHeads,
+  ref: { readonly repo: string; readonly number: number },
+): string {
+  const staleHeads = receipt !== null && attestationIsIntact(receipt, body) &&
+    attestationBindsDelivery(receipt, work, ref);
+  if (!staleHeads) return "report attestation is missing, stale, tampered, copied, or replayed\n";
+  return `report attestation is stale: the PR head advanced to ${heads.prHead} since this report was attested at ${receipt.prHead}. ` +
+    "Push the current HEAD, then run the create verb again for this pull request to open a new created epoch; " +
+    "the existing pull request is reused, never closed and reopened.\n";
 }
 
 /**
